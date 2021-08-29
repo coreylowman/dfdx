@@ -1,19 +1,21 @@
 use crate::traits::{Module, Optimizer, Tensor};
 use std::ops::{Deref, DerefMut};
 
-#[derive(Default, Debug)]
-pub struct Sgd<M: Module> {
+#[derive(Debug)]
+pub struct SgdConfig {
     lr: f32,
-    module: M,
 }
 
-impl<M: Module> Sgd<M> {
-    pub fn new(lr: f32) -> Self {
-        Self {
-            lr,
-            module: Default::default(),
-        }
+impl Default for SgdConfig {
+    fn default() -> Self {
+        Self { lr: 1e-3 }
     }
+}
+
+#[derive(Default, Debug)]
+pub struct Sgd<M: Module> {
+    cfg: SgdConfig,
+    module: M,
 }
 
 impl<M: Module> Deref for Sgd<M> {
@@ -33,7 +35,7 @@ impl<M: Module> DerefMut for Sgd<M> {
 impl<M: Module> Optimizer<M> for Sgd<M> {
     fn step<T: Tensor>(&mut self, loss: &mut T) {
         let mut tape = *loss.backward();
-        tape.scale(self.lr);
+        tape.scale(self.cfg.lr);
         self.update(&tape);
     }
 }

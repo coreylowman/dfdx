@@ -66,7 +66,7 @@ pub trait Module: Params + Default {
 pub trait Optimizer<M: Module>: DerefMut<Target = M> {
     fn step<T: Tensor>(&mut self, loss: &mut T);
 
-    fn forward_with_grads(&mut self, input: &mut M::Input) -> M::Output {
+    fn forward_with_derivatives(&mut self, input: &mut M::Input) -> M::Output {
         let mut tape = GradientTape::new();
 
         // register module's params

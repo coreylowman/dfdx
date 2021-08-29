@@ -15,13 +15,13 @@ use crate::{
 };
 
 #[derive(Default, Debug)]
-struct Agent {
+struct MyCoolNN {
     l1: Linear<5, 4>,
     l2: Linear<4, 3>,
     l3: Linear<3, 2>,
 }
 
-impl Params for Agent {
+impl Params for MyCoolNN {
     fn randomize<R: Rng>(&mut self, rng: &mut R) {
         self.l1.randomize(rng);
         self.l2.randomize(rng);
@@ -41,7 +41,7 @@ impl Params for Agent {
     }
 }
 
-impl Module for Agent {
+impl Module for MyCoolNN {
     type Input = Tensor1D<5>;
     type Output = Tensor1D<2>;
 
@@ -56,7 +56,7 @@ impl Module for Agent {
 fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
-    let mut opt: Sgd<Agent> = Sgd::new(1e-3);
+    let mut opt: Sgd<MyCoolNN> = Default::default();
     opt.randomize(&mut rng);
 
     let mut x: Tensor1D<5> = Default::default();
@@ -68,7 +68,7 @@ fn main() {
     println!("y={:?}", y);
 
     for _ in 0..15 {
-        let mut output = opt.forward_with_grads(&mut x);
+        let mut output = opt.forward_with_derivatives(&mut x);
 
         let mut loss = (&mut output - &mut y).square().mean();
         println!(
