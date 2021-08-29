@@ -5,12 +5,14 @@ mod tensor;
 mod traits;
 
 use ndarray_rand::rand::{rngs::StdRng, Rng, SeedableRng};
-use nn::Linear;
-use optim::{Optimizer, Sgd};
-use tensor::Tensor1D;
-use traits::{Module, Params};
 
-use crate::{gradients::GradientTape, traits::Tensor};
+use crate::{
+    gradients::GradientTape,
+    nn::Linear,
+    optim::{Optimizer, Sgd},
+    tensor::Tensor1D,
+    traits::{Module, Params, Tensor},
+};
 
 #[derive(Default, Debug)]
 struct Agent {
@@ -69,7 +71,12 @@ fn main() {
         let mut output = opt.forward(&mut x);
 
         let mut loss = (&mut output - &mut y).square().mean();
-        println!("y={:#} output={:#} loss={:#}", y.data(), output.data(), loss.data());
+        println!(
+            "y={:#} output={:#} loss={:#}",
+            y.data(),
+            output.data(),
+            loss.data()
+        );
 
         opt.step(&mut loss);
     }
