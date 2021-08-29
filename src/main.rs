@@ -67,10 +67,9 @@ fn main() {
 
     for _ in 0..15 {
         let mut output = opt.forward(&mut x);
-        println!("output = {:?}", output.data());
 
         let mut loss = (&mut output - &mut y).square().mean();
-        // println!("loss={:?}", loss);
+        println!("y={:#} output={:#} loss={:#}", y.data(), output.data(), loss.data());
 
         opt.step(&mut loss);
     }
