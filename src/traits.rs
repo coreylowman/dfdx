@@ -11,8 +11,8 @@ pub trait Params {
 
 pub trait Tensor: Params {
     type Dimension;
+    const SHAPE: &'static [usize];
 
-    fn shape(&self) -> &[usize];
     fn grad(&self) -> &GradientRef;
     fn mut_grad(&mut self) -> &mut GradientRef;
     fn data(&self) -> &Array<f32, Self::Dimension>;

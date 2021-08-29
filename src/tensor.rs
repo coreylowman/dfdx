@@ -19,7 +19,7 @@ impl Params for Tensor0D {
 
     fn register(&mut self, tape: &mut GradientTape) {
         if !self.grad.has_tag() {
-            self.set_tag(Some(tape.advance(self.shape())));
+            self.set_tag(Some(tape.advance(Self::SHAPE)));
         }
     }
 
@@ -31,11 +31,8 @@ impl Params for Tensor0D {
 }
 
 impl Tensor for Tensor0D {
+    const SHAPE: &'static [usize] = &[];
     type Dimension = Ix0;
-
-    fn shape(&self) -> &[usize] {
-        &[]
-    }
 
     fn grad(&self) -> &GradientRef {
         &self.grad
@@ -76,7 +73,7 @@ impl<const N: usize> Params for Tensor1D<N> {
 
     fn register(&mut self, tape: &mut GradientTape) {
         if !self.grad.has_tag() {
-            self.set_tag(Some(tape.advance(self.shape())));
+            self.set_tag(Some(tape.advance(Self::SHAPE)));
         }
     }
 
@@ -89,10 +86,7 @@ impl<const N: usize> Params for Tensor1D<N> {
 
 impl<const N: usize> Tensor for Tensor1D<N> {
     type Dimension = Ix1;
-
-    fn shape(&self) -> &[usize] {
-        &[N]
-    }
+    const SHAPE: &'static [usize] = &[N];
 
     fn grad(&self) -> &GradientRef {
         &self.grad
@@ -223,7 +217,7 @@ impl<const M: usize, const N: usize> Params for Tensor2D<M, N> {
 
     fn register(&mut self, tape: &mut GradientTape) {
         if !self.grad.has_tag() {
-            self.set_tag(Some(tape.advance(self.shape())));
+            self.set_tag(Some(tape.advance(Self::SHAPE)));
         }
     }
 
@@ -236,10 +230,7 @@ impl<const M: usize, const N: usize> Params for Tensor2D<M, N> {
 
 impl<const M: usize, const N: usize> Tensor for Tensor2D<M, N> {
     type Dimension = Ix2;
-
-    fn shape(&self) -> &[usize] {
-        &[M, N]
-    }
+    const SHAPE: &'static [usize] = &[M, N];
 
     fn grad(&self) -> &GradientRef {
         &self.grad

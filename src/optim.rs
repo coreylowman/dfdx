@@ -46,7 +46,7 @@ impl<M: Module> Module for Sgd<M> {
         self.register(&mut tape);
 
         // register input params
-        input.set_tag(Some(tape.advance(input.shape())));
+        input.set_tag(Some(tape.advance(Self::Input::SHAPE)));
 
         // put tape in input
         input.keep_tape(Some(Box::new(tape)));
