@@ -6,28 +6,31 @@ use ndarray::prelude::*;
 use ndarray_rand::rand::Rng;
 use std::ops::{Add, Mul, Sub};
 
-#[derive(Default, Debug)]
-pub struct Tensor0D {
-    data: Array0<f32>,
-    grad: GradientRef,
-}
-
-impl Params for Tensor0D {
+impl<T> Params for T
+where
+    T: Tensor,
+{
     fn randomize<R: Rng>(&mut self, rng: &mut R) {
-        self.data.map_inplace(|f| *f = rng.gen())
+        self.mut_data().map_inplace(|f| *f = rng.gen())
     }
 
     fn register(&mut self, tape: &mut GradientTape) {
-        if !self.grad.has_tag() {
+        if !self.grad().has_tag() {
             self.set_tag(Some(tape.advance(Self::SHAPE)));
         }
     }
 
     fn update(&mut self, tape: &GradientTape) {
         let gradient = &tape[self.grad().tag()];
-        self.data -= gradient;
+        *self.mut_data() -= gradient;
         self.set_tag(None);
     }
+}
+
+#[derive(Default, Debug)]
+pub struct Tensor0D {
+    data: Array0<f32>,
+    grad: GradientRef,
 }
 
 impl Tensor for Tensor0D {
@@ -63,24 +66,6 @@ impl<const N: usize> Default for Tensor1D<N> {
             data: Array1::<f32>::zeros((N,)),
             grad: Default::default(),
         }
-    }
-}
-
-impl<const N: usize> Params for Tensor1D<N> {
-    fn randomize<R: Rng>(&mut self, rng: &mut R) {
-        self.data.map_inplace(|f| *f = rng.gen());
-    }
-
-    fn register(&mut self, tape: &mut GradientTape) {
-        if !self.grad.has_tag() {
-            self.set_tag(Some(tape.advance(Self::SHAPE)));
-        }
-    }
-
-    fn update(&mut self, tape: &GradientTape) {
-        let gradient = &tape[self.grad().tag()];
-        self.data -= gradient;
-        self.set_tag(None);
     }
 }
 
@@ -207,24 +192,6 @@ impl<const M: usize, const N: usize> Default for Tensor2D<M, N> {
             data: Array2::<f32>::zeros((M, N)),
             grad: Default::default(),
         }
-    }
-}
-
-impl<const M: usize, const N: usize> Params for Tensor2D<M, N> {
-    fn randomize<R: Rng>(&mut self, rng: &mut R) {
-        self.data.map_inplace(|f| *f = rng.gen());
-    }
-
-    fn register(&mut self, tape: &mut GradientTape) {
-        if !self.grad.has_tag() {
-            self.set_tag(Some(tape.advance(Self::SHAPE)));
-        }
-    }
-
-    fn update(&mut self, tape: &GradientTape) {
-        let gradient = &tape[self.grad().tag()];
-        self.data -= gradient;
-        self.set_tag(None);
     }
 }
 

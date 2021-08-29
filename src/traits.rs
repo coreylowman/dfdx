@@ -1,4 +1,4 @@
-use ndarray::Array;
+use ndarray::{Array, Dimension};
 use ndarray_rand::rand::prelude::*;
 
 use crate::gradients::{GradientRef, GradientTape};
@@ -9,8 +9,8 @@ pub trait Params {
     fn update(&mut self, tape: &GradientTape);
 }
 
-pub trait Tensor: Params {
-    type Dimension;
+pub trait Tensor: Params + Default {
+    type Dimension: Dimension;
     const SHAPE: &'static [usize];
 
     fn grad(&self) -> &GradientRef;
