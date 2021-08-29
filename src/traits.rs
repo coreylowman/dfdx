@@ -62,3 +62,7 @@ pub trait Module: Params + Default {
 
     fn forward(&mut self, input: &mut Self::Input) -> Self::Output;
 }
+
+pub trait Optimizer<M: Module>: Module {
+    fn step<T: Tensor>(&mut self, loss: &mut T);
+}

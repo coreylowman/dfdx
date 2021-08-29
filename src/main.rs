@@ -9,9 +9,9 @@ use ndarray_rand::rand::{rngs::StdRng, Rng, SeedableRng};
 use crate::{
     gradients::GradientTape,
     nn::Linear,
-    optim::{Optimizer, Sgd},
+    optim::Sgd,
     tensor::Tensor1D,
-    traits::{Module, Params, Tensor},
+    traits::{Module, Optimizer, Params, Tensor},
 };
 
 #[derive(Default, Debug)]

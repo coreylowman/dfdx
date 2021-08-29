@@ -1,10 +1,6 @@
 use crate::gradients::GradientTape;
-use crate::traits::{Module, Params, Tensor};
+use crate::traits::{Module, Optimizer, Params, Tensor};
 use ndarray_rand::rand::Rng;
-
-pub trait Optimizer<M: Module>: Module {
-    fn step<T: Tensor>(&mut self, loss: &mut T);
-}
 
 #[derive(Default, Debug)]
 pub struct Sgd<M: Module> {
