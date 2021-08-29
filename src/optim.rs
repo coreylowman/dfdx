@@ -1,6 +1,5 @@
-use crate::gradients::GradientTape;
-use crate::traits::{Module, Optimizer, Params, Tensor};
-use ndarray_rand::rand::Rng;
+use crate::traits::{Module, Optimizer, Tensor};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Default, Debug)]
 pub struct Sgd<M: Module> {
@@ -17,38 +16,17 @@ impl<M: Module> Sgd<M> {
     }
 }
 
-impl<M: Module> Params for Sgd<M> {
-    fn randomize<R: Rng>(&mut self, rng: &mut R) {
-        self.module.randomize(rng);
-    }
+impl<M: Module> Deref for Sgd<M> {
+    type Target = M;
 
-    fn register(&mut self, tape: &mut GradientTape) {
-        self.module.register(tape);
-    }
-
-    fn update(&mut self, tape: &GradientTape) {
-        self.module.update(tape);
+    fn deref(&self) -> &Self::Target {
+        &self.module
     }
 }
 
-impl<M: Module> Module for Sgd<M> {
-    type Input = M::Input;
-    type Output = M::Output;
-
-    fn forward(&mut self, input: &mut Self::Input) -> Self::Output {
-        let mut tape = GradientTape::new();
-
-        // register module's params
-        self.register(&mut tape);
-
-        // register input params
-        input.set_tag(Some(tape.advance(Self::Input::SHAPE)));
-
-        // put tape in input
-        input.keep_tape(Some(Box::new(tape)));
-
-        // go!
-        self.module.forward(input)
+impl<M: Module> DerefMut for Sgd<M> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.module
     }
 }
 

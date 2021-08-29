@@ -68,7 +68,7 @@ fn main() {
     println!("y={:?}", y);
 
     for _ in 0..15 {
-        let mut output = opt.forward(&mut x);
+        let mut output = opt.forward_with_grads(&mut x);
 
         let mut loss = (&mut output - &mut y).square().mean();
         println!(

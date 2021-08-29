@@ -1,7 +1,7 @@
+use crate::gradients::{GradientRef, GradientTape};
 use ndarray::{Array, Dimension};
 use ndarray_rand::rand::prelude::*;
-
-use crate::gradients::{GradientRef, GradientTape};
+use std::ops::DerefMut;
 
 pub trait Params {
     fn randomize<R: Rng>(&mut self, rng: &mut R);
@@ -63,6 +63,22 @@ pub trait Module: Params + Default {
     fn forward(&mut self, input: &mut Self::Input) -> Self::Output;
 }
 
-pub trait Optimizer<M: Module>: Module {
+pub trait Optimizer<M: Module>: DerefMut<Target = M> {
     fn step<T: Tensor>(&mut self, loss: &mut T);
+
+    fn forward_with_grads(&mut self, input: &mut M::Input) -> M::Output {
+        let mut tape = GradientTape::new();
+
+        // register module's params
+        self.register(&mut tape);
+
+        // register input params
+        input.set_tag(Some(tape.advance(M::Input::SHAPE)));
+
+        // put tape in input
+        input.keep_tape(Some(Box::new(tape)));
+
+        // go!
+        self.forward(input)
+    }
 }
