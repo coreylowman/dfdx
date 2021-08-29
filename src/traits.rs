@@ -35,6 +35,27 @@ pub trait Tensor: Params + Default {
     }
 }
 
+impl<T> Params for T
+where
+    T: Tensor,
+{
+    fn randomize<R: Rng>(&mut self, rng: &mut R) {
+        self.mut_data().map_inplace(|f| *f = rng.gen())
+    }
+
+    fn register(&mut self, tape: &mut GradientTape) {
+        if !self.grad().has_tag() {
+            self.set_tag(Some(tape.advance(Self::SHAPE)));
+        }
+    }
+
+    fn update(&mut self, tape: &GradientTape) {
+        let gradient = &tape[self.grad().tag()];
+        *self.mut_data() -= gradient;
+        self.set_tag(None);
+    }
+}
+
 pub trait Module: Params + Default {
     type Input: Tensor;
     type Output: Tensor;
