@@ -2,41 +2,50 @@ use std::ops::Index;
 
 use ndarray::prelude::*;
 
+#[derive(Debug, Clone, Copy)]
+pub struct DerivativeRef {
+    index: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct GradientRef {
+    index: usize,
+}
+
 #[derive(Debug)]
-pub enum Op {
+pub enum OpType {
     Add,
     Sub,
-    Matmul { m: usize, n: usize },
+    MatVec { m: usize, n: usize },
+    MatMul { m: usize, n: usize, o: usize },
     Square,
     Mean,
 }
 
 #[derive(Debug)]
-struct UnaryOp {
-    op: Op,
-    parent: usize,
-    deriv: usize,
-    result: usize,
+pub struct UnaryOp {
+    pub op_type: OpType,
+    pub parent: GradientRef,
+    pub deriv: DerivativeRef,
+    pub result: GradientRef,
 }
 
 #[derive(Debug)]
-struct BinaryOp {
-    op: Op,
-    parents: [usize; 2],
-    derivs: [usize; 2],
-    result: usize,
+pub struct BinaryOp {
+    pub op_type: OpType,
+    pub parents: [GradientRef; 2],
+    pub derivs: [DerivativeRef; 2],
+    pub result: GradientRef,
 }
 
 #[derive(Debug)]
-enum Operation {
-    Advance,
+pub enum Operation {
     Unary(UnaryOp),
     Binary(BinaryOp),
 }
 
 #[derive(Debug)]
 pub struct GradientTape {
-    num_tensors: usize,
     operations: Vec<Operation>,
     derivatives: Vec<ArrayD<f32>>,
     gradients: Vec<ArrayD<f32>>,
@@ -45,10 +54,9 @@ pub struct GradientTape {
 impl GradientTape {
     pub fn new() -> Self {
         Self {
-            num_tensors: 0,
-            operations: Vec::new(),
             derivatives: Vec::new(),
             gradients: Vec::new(),
+            operations: Vec::new(),
         }
     }
 
@@ -58,91 +66,54 @@ impl GradientTape {
         }
     }
 
-    pub fn advance(&mut self, result_shape: &[usize]) -> usize {
-        let index = self.num_tensors;
-        self.num_tensors += 1;
-        self.gradients.push(ArrayD::zeros(result_shape));
-        self.operations.push(Operation::Advance);
-        index
-    }
-
-    pub fn unary_op(
-        &mut self,
-        op: Op,
-        parent: usize,
-        deriv: ArrayD<f32>,
-        result_shape: &[usize],
-    ) -> usize {
-        let result_index = self.advance(result_shape);
-
-        let deriv_index = self.derivatives.len();
+    pub fn store_derivative(&mut self, deriv: ArrayD<f32>) -> DerivativeRef {
+        let index = self.derivatives.len();
         self.derivatives.push(deriv);
-        self.operations.push(Operation::Unary(UnaryOp {
-            op,
-            parent,
-            result: result_index,
-            deriv: deriv_index,
-        }));
-
-        result_index
+        DerivativeRef { index }
     }
 
-    pub fn binary_op(
-        &mut self,
-        op: Op,
-        lhs_parent: usize,
-        rhs_parent: usize,
-        lhs_deriv: ArrayD<f32>,
-        rhs_deriv: ArrayD<f32>,
-        result_shape: &[usize],
-    ) -> usize {
-        let result_index = self.advance(result_shape);
-
-        let deriv_index = self.derivatives.len();
-        self.derivatives.push(lhs_deriv);
-        self.derivatives.push(rhs_deriv);
-        self.operations.push(Operation::Binary(BinaryOp {
-            op,
-            parents: [lhs_parent, rhs_parent],
-            result: result_index,
-            derivs: [deriv_index, deriv_index + 1],
-        }));
-
-        result_index
+    pub fn store_gradient(&mut self, shape: &[usize]) -> GradientRef {
+        let index = self.gradients.len();
+        self.gradients.push(ArrayD::zeros(shape));
+        GradientRef { index }
     }
 
-    pub fn backward(&mut self, tag: Option<usize>) {
-        let index: usize = tag.unwrap();
-        self.gradients[index].fill(1.0);
+    pub fn add_operation(&mut self, operation: Operation) {
+        self.operations.push(operation);
+    }
+
+    pub fn backward(&mut self, gradient_ref: GradientRef) {
+        self.gradients[gradient_ref.index].fill(1.0);
         for operation in self.operations.iter().rev() {
             match operation {
-                Operation::Advance => {}
                 Operation::Unary(op) => {
-                    let d_grad = &self.derivatives[op.deriv] * &self.gradients[op.result];
-                    self.gradients[op.parent] += &d_grad;
+                    let d_grad =
+                        &self.derivatives[op.deriv.index] * &self.gradients[op.result.index];
+                    self.gradients[op.parent.index] += &d_grad;
                 }
-                Operation::Binary(op) => match op.op {
-                    Op::Matmul { m, n } => {
-                        let d_grad = (&self.gradients[op.result] * &self.derivatives[op.derivs[0]])
+                Operation::Binary(op) => match op.op_type {
+                    OpType::MatVec { m, n } => {
+                        let d_grad = (&self.gradients[op.result.index]
+                            * &self.derivatives[op.derivs[0].index])
                             .reversed_axes();
-                        self.gradients[op.parents[0]] += &d_grad;
+                        self.gradients[op.parents[0].index] += &d_grad;
 
-                        let wt = (&self.derivatives[op.derivs[1]])
+                        let wt = (&self.derivatives[op.derivs[1].index])
                             .clone()
                             .into_shape((n, m))
                             .expect("");
-                        let x = (&self.gradients[op.result])
+                        let x = (&self.gradients[op.result.index])
                             .clone()
                             .into_shape((m, 1))
                             .expect("");
                         let d_grad = wt.dot(&x).into_shape((n,)).expect("");
-                        self.gradients[op.parents[1]] += &d_grad;
+                        self.gradients[op.parents[1].index] += &d_grad;
                     }
                     _ => {
                         for i in 0..2 {
-                            let d_grad =
-                                &self.derivatives[op.derivs[i]] * &self.gradients[op.result];
-                            self.gradients[op.parents[i]] += &d_grad;
+                            let d_grad = &self.derivatives[op.derivs[i].index]
+                                * &self.gradients[op.result.index];
+                            self.gradients[op.parents[i].index] += &d_grad;
                         }
                     }
                 },
@@ -151,23 +122,38 @@ impl GradientTape {
     }
 }
 
+impl Index<GradientRef> for GradientTape {
+    type Output = ArrayD<f32>;
+    fn index(&self, gradient_ref: GradientRef) -> &Self::Output {
+        &self.gradients[gradient_ref.index]
+    }
+}
+
 #[derive(Debug)]
-pub struct GradientRef {
-    tag: Option<usize>,
+pub struct Grad {
+    gradient_ref: Option<GradientRef>,
     tape: Option<Box<GradientTape>>,
 }
 
-impl GradientRef {
-    pub fn set_tag(&mut self, tag: Option<usize>) {
-        self.tag = tag;
+impl Grad {
+    pub fn set_gradient_ref(&mut self, gradient_ref: GradientRef) {
+        self.gradient_ref = Some(gradient_ref);
     }
 
-    pub fn has_tag(&self) -> bool {
-        self.tag.is_some()
+    pub fn is_registered(&self) -> bool {
+        self.gradient_ref.is_some()
     }
 
-    pub fn tag(&self) -> usize {
-        self.tag.unwrap()
+    pub fn gradient_ref(&self) -> GradientRef {
+        self.gradient_ref.unwrap()
+    }
+
+    pub fn take_gradient_ref(&mut self) -> GradientRef {
+        self.gradient_ref.take().unwrap()
+    }
+
+    pub fn clear_gradient_ref(&mut self) {
+        self.gradient_ref = None;
     }
 
     pub fn keep_tape(&mut self, tape: Option<Box<GradientTape>>) {
@@ -180,23 +166,16 @@ impl GradientRef {
 
     pub fn backward(&mut self) -> Box<GradientTape> {
         let mut tape = self.tape.take().unwrap();
-        tape.backward(self.tag);
+        tape.backward(self.gradient_ref.unwrap());
         tape
     }
 }
 
-impl Default for GradientRef {
+impl Default for Grad {
     fn default() -> Self {
         Self {
-            tag: None,
+            gradient_ref: None,
             tape: None,
         }
-    }
-}
-
-impl Index<usize> for GradientTape {
-    type Output = ArrayD<f32>;
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.gradients[index]
     }
 }

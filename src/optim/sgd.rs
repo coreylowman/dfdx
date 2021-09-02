@@ -8,7 +8,7 @@ pub struct SgdConfig {
 
 impl Default for SgdConfig {
     fn default() -> Self {
-        Self { lr: 1e-3 }
+        Self { lr: 1e-2 }
     }
 }
 

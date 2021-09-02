@@ -1,4 +1,4 @@
-use crate::gradients::{GradientRef, GradientTape};
+use crate::gradients::{Grad, GradientRef, GradientTape};
 use ndarray::{Array, Dimension};
 use ndarray_rand::rand::prelude::*;
 use std::ops::DerefMut;
@@ -13,17 +13,17 @@ pub trait Tensor: Params + Default {
     type Dimension: Dimension;
     const SHAPE: &'static [usize];
 
-    fn grad(&self) -> &GradientRef;
-    fn mut_grad(&mut self) -> &mut GradientRef;
+    fn grad(&self) -> &Grad;
+    fn mut_grad(&mut self) -> &mut Grad;
     fn data(&self) -> &Array<f32, Self::Dimension>;
     fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension>;
 
-    fn backward(&mut self) -> Box<GradientTape> {
-        self.mut_grad().backward()
+    fn gradient_ref(&self) -> GradientRef {
+        self.grad().gradient_ref()
     }
 
-    fn set_tag(&mut self, tag: Option<usize>) {
-        self.mut_grad().set_tag(tag);
+    fn backward(&mut self) -> Box<GradientTape> {
+        self.mut_grad().backward()
     }
 
     fn take_tape(&mut self) -> Option<Box<GradientTape>> {
@@ -44,15 +44,15 @@ where
     }
 
     fn register(&mut self, tape: &mut GradientTape) {
-        if !self.grad().has_tag() {
-            self.set_tag(Some(tape.advance(Self::SHAPE)));
+        if !self.grad().is_registered() {
+            self.mut_grad()
+                .set_gradient_ref(tape.store_gradient(Self::SHAPE));
         }
     }
 
     fn update(&mut self, tape: &GradientTape) {
-        let gradient = &tape[self.grad().tag()];
+        let gradient = &tape[self.mut_grad().take_gradient_ref()];
         *self.mut_data() -= gradient;
-        self.set_tag(None);
     }
 }
 
@@ -73,7 +73,7 @@ pub trait Optimizer<M: Module>: DerefMut<Target = M> {
         self.register(&mut tape);
 
         // register input params
-        input.set_tag(None);
+        input.mut_grad().clear_gradient_ref();
         input.register(&mut tape);
 
         // put tape in input

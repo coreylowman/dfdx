@@ -1,5 +1,5 @@
 use crate::{
-    gradients::{GradientRef, Op},
+    gradients::*,
     traits::{Params, Tensor},
 };
 use ndarray::prelude::*;
@@ -8,18 +8,18 @@ use std::ops::{Add, Mul, Sub};
 #[derive(Default, Debug)]
 pub struct Tensor0D {
     data: Array0<f32>,
-    grad: GradientRef,
+    grad: Grad,
 }
 
 impl Tensor for Tensor0D {
     const SHAPE: &'static [usize] = &[];
     type Dimension = Ix0;
 
-    fn grad(&self) -> &GradientRef {
+    fn grad(&self) -> &Grad {
         &self.grad
     }
 
-    fn mut_grad(&mut self) -> &mut GradientRef {
+    fn mut_grad(&mut self) -> &mut Grad {
         &mut self.grad
     }
 
@@ -35,7 +35,7 @@ impl Tensor for Tensor0D {
 #[derive(Debug)]
 pub struct Tensor1D<const N: usize> {
     data: Array1<f32>,
-    grad: GradientRef,
+    grad: Grad,
 }
 
 impl<const N: usize> Default for Tensor1D<N> {
@@ -51,11 +51,11 @@ impl<const N: usize> Tensor for Tensor1D<N> {
     type Dimension = Ix1;
     const SHAPE: &'static [usize] = &[N];
 
-    fn grad(&self) -> &GradientRef {
+    fn grad(&self) -> &Grad {
         &self.grad
     }
 
-    fn mut_grad(&mut self) -> &mut GradientRef {
+    fn mut_grad(&mut self) -> &mut Grad {
         &mut self.grad
     }
 
@@ -77,19 +77,23 @@ impl<const N: usize> Add for &mut Tensor1D<N> {
         };
 
         let mut opt_tape = self.take_tape().or(rhs.take_tape());
-        result.set_tag(opt_tape.as_mut().map(|tape| {
+        opt_tape.as_mut().map(|tape| {
             self.register(tape);
             rhs.register(tape);
 
-            tape.binary_op(
-                Op::Add,
-                self.grad.tag(),
-                rhs.grad.tag(),
-                Array1::<f32>::ones((N,)).into_dyn(),
-                Array1::<f32>::ones((N,)).into_dyn(),
-                &[N],
-            )
-        }));
+            let lhs_deriv_ref = tape.store_derivative(Array1::<f32>::ones((N,)).into_dyn());
+            let rhs_deriv_ref = tape.store_derivative(Array1::<f32>::ones((N,)).into_dyn());
+            let result_grad_ref = tape.store_gradient(&[N]);
+
+            tape.add_operation(Operation::Binary(BinaryOp {
+                op_type: OpType::Add,
+                parents: [self.gradient_ref(), rhs.gradient_ref()],
+                derivs: [lhs_deriv_ref, rhs_deriv_ref],
+                result: result_grad_ref,
+            }));
+
+            result.mut_grad().set_gradient_ref(result_grad_ref);
+        });
         result.keep_tape(opt_tape);
 
         result
@@ -105,19 +109,24 @@ impl<const N: usize> Sub for &mut Tensor1D<N> {
         };
 
         let mut opt_tape = self.take_tape().or(rhs.take_tape());
-        result.set_tag(opt_tape.as_mut().map(|tape| {
+        opt_tape.as_mut().map(|tape| {
             self.register(tape);
             rhs.register(tape);
 
-            tape.binary_op(
-                Op::Sub,
-                self.grad.tag(),
-                rhs.grad.tag(),
-                Array1::<f32>::ones((N,)).into_dyn(),
-                -1.0 * Array1::<f32>::ones((N,)).into_dyn(),
-                &[N],
-            )
-        }));
+            let lhs_deriv_ref = tape.store_derivative(Array1::<f32>::ones((N,)).into_dyn());
+            let rhs_deriv_ref =
+                tape.store_derivative((-1.0 * Array1::<f32>::ones((N,))).into_dyn());
+            let result_grad_ref = tape.store_gradient(&[N]);
+
+            tape.add_operation(Operation::Binary(BinaryOp {
+                op_type: OpType::Sub,
+                parents: [self.gradient_ref(), rhs.gradient_ref()],
+                derivs: [lhs_deriv_ref, rhs_deriv_ref],
+                result: result_grad_ref,
+            }));
+
+            result.mut_grad().set_gradient_ref(result_grad_ref);
+        });
         result.keep_tape(opt_tape);
 
         result
@@ -132,10 +141,21 @@ impl<const N: usize> Tensor1D<N> {
         };
 
         let mut opt_tape = self.take_tape();
-        result.set_tag(opt_tape.as_mut().map(|tape| {
-            let deriv = 2.0 * &self.data;
-            tape.unary_op(Op::Square, self.grad.tag(), deriv.into_dyn(), &[N])
-        }));
+        opt_tape.as_mut().map(|tape| {
+            self.register(tape);
+
+            let deriv_ref = tape.store_derivative((2.0 * &self.data).into_dyn());
+            let result_grad_ref = tape.store_gradient(&[N]);
+
+            tape.add_operation(Operation::Unary(UnaryOp {
+                op_type: OpType::Square,
+                parent: self.gradient_ref(),
+                deriv: deriv_ref,
+                result: result_grad_ref,
+            }));
+
+            result.mut_grad().set_gradient_ref(result_grad_ref);
+        });
         result.keep_tape(opt_tape);
 
         result
@@ -148,10 +168,22 @@ impl<const N: usize> Tensor1D<N> {
         };
 
         let mut opt_tape = self.take_tape();
-        result.set_tag(opt_tape.as_mut().map(|tape| {
-            let deriv = 2.0 * &Array1::<f32>::ones((N,));
-            tape.unary_op(Op::Mean, self.grad.tag(), deriv.into_dyn(), &[])
-        }));
+        opt_tape.as_mut().map(|tape| {
+            self.register(tape);
+
+            let scalar = 1.0 / N as f32;
+            let deriv_ref = tape.store_derivative((scalar * &Array1::<f32>::ones((N,))).into_dyn());
+            let result_grad_ref = tape.store_gradient(&[]);
+
+            tape.add_operation(Operation::Unary(UnaryOp {
+                op_type: OpType::Mean,
+                parent: self.gradient_ref(),
+                deriv: deriv_ref,
+                result: result_grad_ref,
+            }));
+
+            result.mut_grad().set_gradient_ref(result_grad_ref);
+        });
         result.keep_tape(opt_tape);
 
         result
@@ -161,7 +193,7 @@ impl<const N: usize> Tensor1D<N> {
 #[derive(Debug)]
 pub struct Tensor2D<const M: usize, const N: usize> {
     data: Array2<f32>,
-    grad: GradientRef,
+    grad: Grad,
 }
 
 impl<const M: usize, const N: usize> Default for Tensor2D<M, N> {
@@ -177,11 +209,11 @@ impl<const M: usize, const N: usize> Tensor for Tensor2D<M, N> {
     type Dimension = Ix2;
     const SHAPE: &'static [usize] = &[M, N];
 
-    fn grad(&self) -> &GradientRef {
+    fn grad(&self) -> &Grad {
         &self.grad
     }
 
-    fn mut_grad(&mut self) -> &mut GradientRef {
+    fn mut_grad(&mut self) -> &mut Grad {
         &mut self.grad
     }
 
@@ -203,22 +235,24 @@ impl<const M: usize, const N: usize> Mul<&mut Tensor1D<N>> for &mut Tensor2D<M, 
         };
 
         let mut opt_tape = self.take_tape().or(rhs.take_tape());
-        result.set_tag(opt_tape.as_mut().map(|tape| {
+        opt_tape.as_mut().map(|tape| {
             self.register(tape);
             rhs.register(tape);
 
-            let lhs_deriv = rhs.data.clone().into_shape((N, 1)).expect("");
-            let rhs_deriv = self.data.clone().reversed_axes();
+            let lhs_deriv_ref =
+                tape.store_derivative(rhs.data.clone().into_shape((N, 1)).expect("").into_dyn());
+            let rhs_deriv_ref = tape.store_derivative(self.data.clone().reversed_axes().into_dyn());
+            let result_grad_ref = tape.store_gradient(&[M]);
 
-            tape.binary_op(
-                Op::Matmul { m: M, n: N },
-                self.grad.tag(),
-                rhs.grad.tag(),
-                lhs_deriv.into_dyn(),
-                rhs_deriv.into_dyn(),
-                &[M],
-            )
-        }));
+            tape.add_operation(Operation::Binary(BinaryOp {
+                op_type: OpType::MatVec { m: M, n: N },
+                parents: [self.gradient_ref(), rhs.gradient_ref()],
+                derivs: [lhs_deriv_ref, rhs_deriv_ref],
+                result: result_grad_ref,
+            }));
+
+            result.mut_grad().set_gradient_ref(result_grad_ref);
+        });
         result.keep_tape(opt_tape);
 
         result
