@@ -114,7 +114,7 @@ impl<const N: usize> Sub for &mut Tensor1D<N> {
                 self.grad.tag(),
                 rhs.grad.tag(),
                 Array1::<f32>::ones((N,)).into_dyn(),
-                Array1::<f32>::ones((N,)).into_dyn(),
+                -1.0 * Array1::<f32>::ones((N,)).into_dyn(),
                 &[N],
             )
         }));

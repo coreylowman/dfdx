@@ -73,7 +73,8 @@ pub trait Optimizer<M: Module>: DerefMut<Target = M> {
         self.register(&mut tape);
 
         // register input params
-        input.set_tag(Some(tape.advance(M::Input::SHAPE)));
+        input.set_tag(None);
+        input.register(&mut tape);
 
         // put tape in input
         input.keep_tape(Some(Box::new(tape)));
