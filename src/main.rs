@@ -80,4 +80,8 @@ fn main() {
 
         opt.step(&mut loss);
     }
+
+    println!("{:#?}", opt.l1);
+    println!("{:#?}", opt.l2);
+    println!("{:#?}", opt.l3);
 }

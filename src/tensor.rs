@@ -5,6 +5,12 @@ use crate::{
 use ndarray::prelude::*;
 use std::ops::{Add, Mul, Sub};
 
+// #[derive(Default, Debug)]
+// struct TensorBase<D: Dimension> {
+//     data: Array<f32, D>,
+//     grad: Grad,
+// }
+
 #[derive(Default, Debug)]
 pub struct Tensor0D {
     data: Array0<f32>,
@@ -81,8 +87,8 @@ impl<const N: usize> Add for &mut Tensor1D<N> {
             self.register(tape);
             rhs.register(tape);
 
-            let lhs_deriv_ref = tape.store_derivative(Array1::<f32>::ones((N,)).into_dyn());
-            let rhs_deriv_ref = tape.store_derivative(Array1::<f32>::ones((N,)).into_dyn());
+            let lhs_deriv_ref = tape.store_derivative(Array1::<f32>::ones((N,)));
+            let rhs_deriv_ref = tape.store_derivative(Array1::<f32>::ones((N,)));
             let result_grad_ref = tape.store_gradient(&[N]);
 
             tape.add_operation(Operation::Binary(BinaryOp {
@@ -113,9 +119,8 @@ impl<const N: usize> Sub for &mut Tensor1D<N> {
             self.register(tape);
             rhs.register(tape);
 
-            let lhs_deriv_ref = tape.store_derivative(Array1::<f32>::ones((N,)).into_dyn());
-            let rhs_deriv_ref =
-                tape.store_derivative((-1.0 * Array1::<f32>::ones((N,))).into_dyn());
+            let lhs_deriv_ref = tape.store_derivative(Array1::<f32>::ones((N,)));
+            let rhs_deriv_ref = tape.store_derivative(-1.0 * Array1::<f32>::ones((N,)));
             let result_grad_ref = tape.store_gradient(&[N]);
 
             tape.add_operation(Operation::Binary(BinaryOp {
@@ -144,7 +149,7 @@ impl<const N: usize> Tensor1D<N> {
         opt_tape.as_mut().map(|tape| {
             self.register(tape);
 
-            let deriv_ref = tape.store_derivative((2.0 * &self.data).into_dyn());
+            let deriv_ref = tape.store_derivative(2.0 * &self.data);
             let result_grad_ref = tape.store_gradient(&[N]);
 
             tape.add_operation(Operation::Unary(UnaryOp {
@@ -172,7 +177,7 @@ impl<const N: usize> Tensor1D<N> {
             self.register(tape);
 
             let scalar = 1.0 / N as f32;
-            let deriv_ref = tape.store_derivative((scalar * &Array1::<f32>::ones((N,))).into_dyn());
+            let deriv_ref = tape.store_derivative(scalar * &Array1::<f32>::ones((N,)));
             let result_grad_ref = tape.store_gradient(&[]);
 
             tape.add_operation(Operation::Unary(UnaryOp {
@@ -240,8 +245,8 @@ impl<const M: usize, const N: usize> Mul<&mut Tensor1D<N>> for &mut Tensor2D<M, 
             rhs.register(tape);
 
             let lhs_deriv_ref =
-                tape.store_derivative(rhs.data.clone().into_shape((N, 1)).expect("").into_dyn());
-            let rhs_deriv_ref = tape.store_derivative(self.data.clone().reversed_axes().into_dyn());
+                tape.store_derivative(rhs.data.clone().into_shape((N, 1)).expect(""));
+            let rhs_deriv_ref = tape.store_derivative(self.data.clone().reversed_axes());
             let result_grad_ref = tape.store_gradient(&[M]);
 
             tape.add_operation(Operation::Binary(BinaryOp {

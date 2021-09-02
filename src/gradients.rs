@@ -66,9 +66,9 @@ impl GradientTape {
         }
     }
 
-    pub fn store_derivative(&mut self, deriv: ArrayD<f32>) -> DerivativeRef {
+    pub fn store_derivative<D: Dimension>(&mut self, deriv: Array<f32, D>) -> DerivativeRef {
         let index = self.derivatives.len();
-        self.derivatives.push(deriv);
+        self.derivatives.push(deriv.into_dyn());
         DerivativeRef { index }
     }
 
