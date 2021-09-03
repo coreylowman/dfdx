@@ -47,7 +47,7 @@ pub struct Tensor1D<const N: usize> {
 impl<const N: usize> Default for Tensor1D<N> {
     fn default() -> Self {
         Self {
-            data: Array1::<f32>::zeros((N,)),
+            data: Array1::zeros((N,)),
             grad: Default::default(),
         }
     }
@@ -87,18 +87,18 @@ impl<const N: usize> Add for &mut Tensor1D<N> {
             self.register(tape);
             rhs.register(tape);
 
-            let lhs_deriv_ref = tape.store_derivative(Array1::<f32>::ones((N,)));
-            let rhs_deriv_ref = tape.store_derivative(Array1::<f32>::ones((N,)));
-            let result_grad_ref = tape.store_gradient(&[N]);
+            let lhs_deriv = tape.store_derivative(Array1::from_elem((N,), 1.0));
+            let rhs_deriv = tape.store_derivative(Array1::from_elem((N,), 1.0));
+            let result_grad = tape.store_gradient(&[N]);
 
             tape.add_operation(Operation::Binary(BinaryOp {
                 op_type: OpType::Add,
-                parents: [self.gradient_ref(), rhs.gradient_ref()],
-                derivs: [lhs_deriv_ref, rhs_deriv_ref],
-                result: result_grad_ref,
+                parent_grads: [self.gradient_ref(), rhs.gradient_ref()],
+                parent_derivs: [lhs_deriv, rhs_deriv],
+                result_grad,
             }));
 
-            result.mut_grad().set_gradient_ref(result_grad_ref);
+            result.mut_grad().set_gradient_ref(result_grad);
         });
         result.keep_tape(opt_tape);
 
@@ -119,18 +119,18 @@ impl<const N: usize> Sub for &mut Tensor1D<N> {
             self.register(tape);
             rhs.register(tape);
 
-            let lhs_deriv_ref = tape.store_derivative(Array1::<f32>::ones((N,)));
-            let rhs_deriv_ref = tape.store_derivative(-1.0 * Array1::<f32>::ones((N,)));
-            let result_grad_ref = tape.store_gradient(&[N]);
+            let lhs_deriv = tape.store_derivative(Array1::from_elem((N,), 1.0));
+            let rhs_deriv = tape.store_derivative(Array1::from_elem((N,), -1.0));
+            let result_grad = tape.store_gradient(&[N]);
 
             tape.add_operation(Operation::Binary(BinaryOp {
                 op_type: OpType::Sub,
-                parents: [self.gradient_ref(), rhs.gradient_ref()],
-                derivs: [lhs_deriv_ref, rhs_deriv_ref],
-                result: result_grad_ref,
+                parent_grads: [self.gradient_ref(), rhs.gradient_ref()],
+                parent_derivs: [lhs_deriv, rhs_deriv],
+                result_grad,
             }));
 
-            result.mut_grad().set_gradient_ref(result_grad_ref);
+            result.mut_grad().set_gradient_ref(result_grad);
         });
         result.keep_tape(opt_tape);
 
@@ -149,17 +149,17 @@ impl<const N: usize> Tensor1D<N> {
         opt_tape.as_mut().map(|tape| {
             self.register(tape);
 
-            let deriv_ref = tape.store_derivative(2.0 * &self.data);
-            let result_grad_ref = tape.store_gradient(&[N]);
+            let parent_deriv = tape.store_derivative(2.0 * &self.data);
+            let result_grad = tape.store_gradient(&[N]);
 
             tape.add_operation(Operation::Unary(UnaryOp {
                 op_type: OpType::Square,
-                parent: self.gradient_ref(),
-                deriv: deriv_ref,
-                result: result_grad_ref,
+                parent_grad: self.gradient_ref(),
+                parent_deriv,
+                result_grad,
             }));
 
-            result.mut_grad().set_gradient_ref(result_grad_ref);
+            result.mut_grad().set_gradient_ref(result_grad);
         });
         result.keep_tape(opt_tape);
 
@@ -176,18 +176,17 @@ impl<const N: usize> Tensor1D<N> {
         opt_tape.as_mut().map(|tape| {
             self.register(tape);
 
-            let scalar = 1.0 / N as f32;
-            let deriv_ref = tape.store_derivative(scalar * &Array1::<f32>::ones((N,)));
-            let result_grad_ref = tape.store_gradient(&[]);
+            let parent_deriv = tape.store_derivative(Array1::from_elem((N,), 1.0 / N as f32));
+            let result_grad = tape.store_gradient(&[]);
 
             tape.add_operation(Operation::Unary(UnaryOp {
                 op_type: OpType::Mean,
-                parent: self.gradient_ref(),
-                deriv: deriv_ref,
-                result: result_grad_ref,
+                parent_grad: self.gradient_ref(),
+                parent_deriv,
+                result_grad,
             }));
 
-            result.mut_grad().set_gradient_ref(result_grad_ref);
+            result.mut_grad().set_gradient_ref(result_grad);
         });
         result.keep_tape(opt_tape);
 
@@ -204,7 +203,7 @@ pub struct Tensor2D<const M: usize, const N: usize> {
 impl<const M: usize, const N: usize> Default for Tensor2D<M, N> {
     fn default() -> Self {
         Self {
-            data: Array2::<f32>::zeros((M, N)),
+            data: Array2::zeros((M, N)),
             grad: Default::default(),
         }
     }
@@ -244,19 +243,18 @@ impl<const M: usize, const N: usize> Mul<&mut Tensor1D<N>> for &mut Tensor2D<M, 
             self.register(tape);
             rhs.register(tape);
 
-            let lhs_deriv_ref =
-                tape.store_derivative(rhs.data.clone().into_shape((N, 1)).expect(""));
-            let rhs_deriv_ref = tape.store_derivative(self.data.clone().reversed_axes());
-            let result_grad_ref = tape.store_gradient(&[M]);
+            let lhs_deriv = tape.store_derivative(rhs.data.clone().into_shape((N, 1)).expect(""));
+            let rhs_deriv = tape.store_derivative(self.data.clone().reversed_axes());
+            let result_grad = tape.store_gradient(&[M]);
 
             tape.add_operation(Operation::Binary(BinaryOp {
                 op_type: OpType::MatVec { m: M, n: N },
-                parents: [self.gradient_ref(), rhs.gradient_ref()],
-                derivs: [lhs_deriv_ref, rhs_deriv_ref],
-                result: result_grad_ref,
+                parent_grads: [self.gradient_ref(), rhs.gradient_ref()],
+                parent_derivs: [lhs_deriv, rhs_deriv],
+                result_grad,
             }));
 
-            result.mut_grad().set_gradient_ref(result_grad_ref);
+            result.mut_grad().set_gradient_ref(result_grad);
         });
         result.keep_tape(opt_tape);
 

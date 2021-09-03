@@ -25,17 +25,17 @@ pub enum OpType {
 #[derive(Debug)]
 pub struct UnaryOp {
     pub op_type: OpType,
-    pub parent: GradientRef,
-    pub deriv: DerivativeRef,
-    pub result: GradientRef,
+    pub parent_grad: GradientRef,
+    pub parent_deriv: DerivativeRef,
+    pub result_grad: GradientRef,
 }
 
 #[derive(Debug)]
 pub struct BinaryOp {
     pub op_type: OpType,
-    pub parents: [GradientRef; 2],
-    pub derivs: [DerivativeRef; 2],
-    pub result: GradientRef,
+    pub parent_grads: [GradientRef; 2],
+    pub parent_derivs: [DerivativeRef; 2],
+    pub result_grad: GradientRef,
 }
 
 #[derive(Debug)]
@@ -87,33 +87,33 @@ impl GradientTape {
         for operation in self.operations.iter().rev() {
             match operation {
                 Operation::Unary(op) => {
-                    let d_grad =
-                        &self.derivatives[op.deriv.index] * &self.gradients[op.result.index];
-                    self.gradients[op.parent.index] += &d_grad;
+                    let d_grad = &self.derivatives[op.parent_deriv.index]
+                        * &self.gradients[op.result_grad.index];
+                    self.gradients[op.parent_grad.index] += &d_grad;
                 }
                 Operation::Binary(op) => match op.op_type {
                     OpType::MatVec { m, n } => {
-                        let d_grad = (&self.gradients[op.result.index]
-                            * &self.derivatives[op.derivs[0].index])
+                        let d_grad = (&self.gradients[op.result_grad.index]
+                            * &self.derivatives[op.parent_derivs[0].index])
                             .reversed_axes();
-                        self.gradients[op.parents[0].index] += &d_grad;
+                        self.gradients[op.parent_grads[0].index] += &d_grad;
 
-                        let wt = (&self.derivatives[op.derivs[1].index])
+                        let wt = (&self.derivatives[op.parent_derivs[1].index])
                             .clone()
                             .into_shape((n, m))
                             .expect("");
-                        let x = (&self.gradients[op.result.index])
+                        let x = (&self.gradients[op.result_grad.index])
                             .clone()
                             .into_shape((m, 1))
                             .expect("");
                         let d_grad = wt.dot(&x).into_shape((n,)).expect("");
-                        self.gradients[op.parents[1].index] += &d_grad;
+                        self.gradients[op.parent_grads[1].index] += &d_grad;
                     }
                     _ => {
                         for i in 0..2 {
-                            let d_grad = &self.derivatives[op.derivs[i].index]
-                                * &self.gradients[op.result.index];
-                            self.gradients[op.parents[i].index] += &d_grad;
+                            let d_grad = &self.derivatives[op.parent_derivs[i].index]
+                                * &self.gradients[op.result_grad.index];
+                            self.gradients[op.parent_grads[i].index] += &d_grad;
                         }
                     }
                 },
