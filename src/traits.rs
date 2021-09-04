@@ -55,17 +55,14 @@ where
 
     fn register(&mut self, tape: &mut GradientTape) {
         if self.grad().is_none() {
-            let gradient_ref = tape.store_gradient(Self::SHAPE);
-            *self.mut_grad() = Some(Grad::new(gradient_ref));
+            *self.mut_grad() = Some(Grad::new(tape.store_gradient(Self::SHAPE)));
         }
     }
 
     fn update(&mut self, tape: &GradientTape) {
         assert!(self.grad().is_some());
-        let grad = self.mut_grad().as_mut().unwrap();
-        let gradient = &tape[grad.gradient_ref];
-        *self.mut_data() -= gradient;
-        *self.mut_grad() = None;
+        let grad = self.mut_grad().take().unwrap();
+        *self.mut_data() -= &tape[grad.gradient_ref];
     }
 }
 
@@ -80,15 +77,14 @@ pub trait Optimizer<M: Module>: DerefMut<Target = M> {
     fn step<T: Tensor>(&mut self, loss: &mut T);
 
     fn forward_with_derivatives(&mut self, input: &mut M::Input) -> M::Output {
-        let mut tape = GradientTape::new();
+        let mut tape = Box::new(GradientTape::new());
 
         // register module's params
         self.register(&mut tape);
 
         // put tape in input
         *input.mut_grad() = None;
-        input.register(&mut tape);
-        input.keep_tape(Box::new(tape));
+        input.keep_tape(tape);
 
         // go!
         self.forward(input)

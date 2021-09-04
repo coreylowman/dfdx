@@ -68,10 +68,8 @@ fn main() {
     println!("y={:#}", y.data());
 
     for _ in 0..15 {
-        *x.mut_grad() = None;
         let mut output = opt.forward_with_derivatives(&mut x);
 
-        *y.mut_grad() = None;
         let mut loss = (&mut output - &mut y).square().mean();
         println!(
             "y={:#} output={:#} loss={:#}",
