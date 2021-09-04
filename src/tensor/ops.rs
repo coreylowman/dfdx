@@ -1,7 +1,7 @@
 use super::base::*;
 use crate::{
     gradients::*,
-    traits::{Params, Tensor},
+    traits::{Params, ShapedArray, Tensor},
 };
 use ndarray::prelude::*;
 use std::ops::{Add, Mul, Sub};

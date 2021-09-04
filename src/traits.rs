@@ -9,15 +9,18 @@ pub trait Params {
     fn update(&mut self, tape: &GradientTape);
 }
 
-pub trait Tensor: Params + Default {
+pub trait ShapedArray {
     type Dimension: Dimension;
     type Shape: ShapeBuilder<Dim = Self::Dimension>;
     const SHAPE: Self::Shape;
 
-    fn grad(&self) -> &Option<Grad>;
-    fn mut_grad(&mut self) -> &mut Option<Grad>;
     fn data(&self) -> &Array<f32, Self::Dimension>;
     fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension>;
+}
+
+pub trait Tensor: Params + Default + ShapedArray {
+    fn grad(&self) -> &Option<Grad>;
+    fn mut_grad(&mut self) -> &mut Option<Grad>;
 
     fn gradient_ref(&self) -> GradientRef {
         self.grad().as_ref().unwrap().gradient_ref
