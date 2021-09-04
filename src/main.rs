@@ -11,7 +11,7 @@ use crate::{
     nn::Linear,
     optim::sgd::Sgd,
     tensor::Tensor1D,
-    traits::{Module, Optimizer, Params, ShapedArray, Tensor},
+    traits::{Module, Optimizer, Params, ShapedArray},
 };
 
 #[derive(Default, Debug)]

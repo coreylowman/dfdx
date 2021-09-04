@@ -17,7 +17,7 @@ pub enum OpType {
     Add,
     Sub,
     MatVec { m: usize, n: usize },
-    MatMul { m: usize, n: usize, o: usize },
+    // MatMul { m: usize, n: usize, o: usize },
     Square,
     Mean,
 }

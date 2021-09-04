@@ -49,26 +49,6 @@ pub trait Tensor: Params + Default + ShapedArray {
     }
 }
 
-impl<T> Params for T
-where
-    T: Tensor,
-{
-    fn randomize<R: Rng>(&mut self, rng: &mut R) {
-        self.mut_data().map_inplace(|f| *f = rng.gen())
-    }
-
-    fn register(&mut self, tape: &mut GradientTape) {
-        if self.grad().is_none() {
-            *self.mut_grad() = Some(Grad::new(tape.store_gradient(Self::SHAPE)));
-        }
-    }
-
-    fn update(&mut self, tape: &GradientTape) {
-        let grad = self.mut_grad().take().unwrap();
-        *self.mut_data() -= &tape[grad.gradient_ref];
-    }
-}
-
 pub trait Module: Params + Default {
     type Input: Tensor;
     type Output: Tensor;
