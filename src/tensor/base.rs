@@ -17,8 +17,9 @@ impl Default for Tensor0D {
 }
 
 impl Tensor for Tensor0D {
-    const SHAPE: &'static [usize] = &[];
     type Dimension = Ix0;
+    type Shape = ();
+    const SHAPE: Self::Shape = ();
 
     fn grad(&self) -> &Option<Grad> {
         &self.grad
@@ -54,7 +55,8 @@ impl<const N: usize> Default for Tensor1D<N> {
 
 impl<const N: usize> Tensor for Tensor1D<N> {
     type Dimension = Ix1;
-    const SHAPE: &'static [usize] = &[N];
+    type Shape = (usize,);
+    const SHAPE: Self::Shape = (N,);
 
     fn grad(&self) -> &Option<Grad> {
         &self.grad
@@ -90,7 +92,8 @@ impl<const M: usize, const N: usize> Default for Tensor2D<M, N> {
 
 impl<const M: usize, const N: usize> Tensor for Tensor2D<M, N> {
     type Dimension = Ix2;
-    const SHAPE: &'static [usize] = &[M, N];
+    type Shape = (usize, usize);
+    const SHAPE: Self::Shape = (M, N);
 
     fn grad(&self) -> &Option<Grad> {
         &self.grad

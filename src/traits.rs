@@ -1,5 +1,5 @@
 use crate::gradients::{Grad, GradientRef, GradientTape};
-use ndarray::{Array, Dimension};
+use ndarray::{Array, Dimension, ShapeBuilder};
 use ndarray_rand::rand::prelude::*;
 use std::ops::DerefMut;
 
@@ -11,7 +11,8 @@ pub trait Params {
 
 pub trait Tensor: Params + Default {
     type Dimension: Dimension;
-    const SHAPE: &'static [usize];
+    type Shape: ShapeBuilder<Dim = Self::Dimension>;
+    const SHAPE: Self::Shape;
 
     fn grad(&self) -> &Option<Grad>;
     fn mut_grad(&mut self) -> &mut Option<Grad>;
@@ -60,7 +61,6 @@ where
     }
 
     fn update(&mut self, tape: &GradientTape) {
-        assert!(self.grad().is_some());
         let grad = self.mut_grad().take().unwrap();
         *self.mut_data() -= &tape[grad.gradient_ref];
     }

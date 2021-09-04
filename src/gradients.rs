@@ -72,9 +72,12 @@ impl GradientTape {
         DerivativeRef { index }
     }
 
-    pub fn store_gradient(&mut self, shape: &[usize]) -> GradientRef {
+    pub fn store_gradient<D: Dimension, Sh: ShapeBuilder<Dim = D>>(
+        &mut self,
+        shape: Sh,
+    ) -> GradientRef {
         let index = self.gradients.len();
-        self.gradients.push(ArrayD::zeros(shape));
+        self.gradients.push(Array::zeros(shape).into_dyn());
         GradientRef { index }
     }
 

@@ -13,9 +13,9 @@ impl<const N: usize> Add for &mut Tensor1D<N> {
             self.register(&mut tape);
             rhs.register(&mut tape);
 
-            let lhs_deriv = tape.store_derivative(Array1::from_elem((N,), 1.0));
-            let rhs_deriv = tape.store_derivative(Array1::from_elem((N,), 1.0));
-            let result_grad = tape.store_gradient(&[N]);
+            let lhs_deriv = tape.store_derivative(Array1::from_elem(Self::Output::SHAPE, 1.0));
+            let rhs_deriv = tape.store_derivative(Array1::from_elem(Self::Output::SHAPE, 1.0));
+            let result_grad = tape.store_gradient(Self::Output::SHAPE);
 
             tape.add_operation(Operation::Binary(BinaryOp {
                 op_type: OpType::Add,
@@ -41,9 +41,9 @@ impl<const N: usize> Sub for &mut Tensor1D<N> {
             self.register(&mut tape);
             rhs.register(&mut tape);
 
-            let lhs_deriv = tape.store_derivative(Array1::from_elem((N,), 1.0));
-            let rhs_deriv = tape.store_derivative(Array1::from_elem((N,), -1.0));
-            let result_grad = tape.store_gradient(&[N]);
+            let lhs_deriv = tape.store_derivative(Array1::from_elem(Self::Output::SHAPE, 1.0));
+            let rhs_deriv = tape.store_derivative(Array1::from_elem(Self::Output::SHAPE, -1.0));
+            let result_grad = tape.store_gradient(Self::Output::SHAPE);
 
             tape.add_operation(Operation::Binary(BinaryOp {
                 op_type: OpType::Sub,
@@ -68,7 +68,7 @@ impl<const N: usize> Tensor1D<N> {
             self.register(&mut tape);
 
             let parent_deriv = tape.store_derivative(2.0 * &self.data);
-            let result_grad = tape.store_gradient(&[N]);
+            let result_grad = tape.store_gradient(Self::SHAPE);
 
             tape.add_operation(Operation::Unary(UnaryOp {
                 op_type: OpType::Square,
@@ -90,8 +90,9 @@ impl<const N: usize> Tensor1D<N> {
         let grad = self.take_tape().map(|mut tape| {
             self.register(&mut tape);
 
-            let parent_deriv = tape.store_derivative(Array1::from_elem((N,), 1.0 / N as f32));
-            let result_grad = tape.store_gradient(&[]);
+            let parent_deriv =
+                tape.store_derivative(Array1::from_elem(Self::SHAPE, 1.0 / N as f32));
+            let result_grad = tape.store_gradient(());
 
             tape.add_operation(Operation::Unary(UnaryOp {
                 op_type: OpType::Mean,
@@ -119,7 +120,7 @@ impl<const M: usize, const N: usize> Mul<&mut Tensor1D<N>> for &mut Tensor2D<M, 
 
             let lhs_deriv = tape.store_derivative(rhs.data.clone().into_shape((N, 1)).expect(""));
             let rhs_deriv = tape.store_derivative(self.data.clone().reversed_axes());
-            let result_grad = tape.store_gradient(&[M]);
+            let result_grad = tape.store_gradient(Self::Output::SHAPE);
 
             tape.add_operation(Operation::Binary(BinaryOp {
                 op_type: OpType::MatVec { m: M, n: N },
