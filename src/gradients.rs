@@ -12,7 +12,7 @@ pub struct GradientRef {
     index: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum OpType {
     Add,
     Sub,
@@ -22,7 +22,7 @@ pub enum OpType {
     Mean,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct UnaryOp {
     pub op_type: OpType,
     pub parent_grad: GradientRef,
@@ -30,7 +30,7 @@ pub struct UnaryOp {
     pub result_grad: GradientRef,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct BinaryOp {
     pub op_type: OpType,
     pub parent_grads: [GradientRef; 2],
@@ -38,7 +38,7 @@ pub struct BinaryOp {
     pub result_grad: GradientRef,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Operation {
     Unary(UnaryOp),
     Binary(BinaryOp),
@@ -85,38 +85,47 @@ impl GradientTape {
         self.operations.push(operation);
     }
 
+    fn grad(&self, gradient_ref: GradientRef) -> &ArrayD<f32> {
+        &self.gradients[gradient_ref.index]
+    }
+
+    fn deriv(&self, derivative_ref: DerivativeRef) -> &ArrayD<f32> {
+        &self.derivatives[derivative_ref.index]
+    }
+
     pub fn backward(&mut self, gradient_ref: GradientRef) {
         self.gradients[gradient_ref.index].fill(1.0);
         for operation in self.operations.iter().rev() {
             match operation {
                 Operation::Unary(op) => {
-                    let d_grad = &self.derivatives[op.parent_deriv.index]
-                        * &self.gradients[op.result_grad.index];
+                    let d_grad = self.deriv(op.parent_deriv) * self.grad(op.result_grad);
                     self.gradients[op.parent_grad.index] += &d_grad;
                 }
                 Operation::Binary(op) => match op.op_type {
                     OpType::MatVec { m, n } => {
-                        let d_grad = (&self.gradients[op.result_grad.index]
-                            * &self.derivatives[op.parent_derivs[0].index])
-                            .reversed_axes();
-                        self.gradients[op.parent_grads[0].index] += &d_grad;
-
-                        let wt = (&self.derivatives[op.parent_derivs[1].index])
-                            .clone()
-                            .into_shape((n, m))
-                            .expect("");
-                        let x = (&self.gradients[op.result_grad.index])
+                        let result = self
+                            .grad(op.result_grad)
                             .clone()
                             .into_shape((m, 1))
-                            .expect("");
-                        let d_grad = wt.dot(&x).into_shape((n,)).expect("");
-                        self.gradients[op.parent_grads[1].index] += &d_grad;
+                            .unwrap();
+
+                        let wt = self
+                            .deriv(op.parent_derivs[1])
+                            .clone()
+                            .into_shape((m, n))
+                            .unwrap()
+                            .reversed_axes();
+
+                        let d_grad0 = &result * self.deriv(op.parent_derivs[0]);
+                        let d_grad1 = wt.dot(&result).into_shape((n,)).unwrap();
+
+                        self.gradients[op.parent_grads[0].index] += &d_grad0;
+                        self.gradients[op.parent_grads[1].index] += &d_grad1;
                     }
                     _ => {
-                        for i in 0..2 {
-                            let d_grad = &self.derivatives[op.parent_derivs[i].index]
-                                * &self.gradients[op.result_grad.index];
-                            self.gradients[op.parent_grads[i].index] += &d_grad;
+                        for (&deriv, grad) in op.parent_derivs.iter().zip(op.parent_grads.iter()) {
+                            let d_grad = self.deriv(deriv) * self.grad(op.result_grad);
+                            self.gradients[grad.index] += &d_grad;
                         }
                     }
                 },

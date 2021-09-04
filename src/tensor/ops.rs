@@ -118,8 +118,8 @@ impl<const M: usize, const N: usize> Mul<&mut Tensor1D<N>> for &mut Tensor2D<M, 
             self.register(&mut tape);
             rhs.register(&mut tape);
 
-            let lhs_deriv = tape.store_derivative(rhs.data.clone().into_shape((N, 1)).expect(""));
-            let rhs_deriv = tape.store_derivative(self.data.clone().reversed_axes());
+            let lhs_deriv = tape.store_derivative(rhs.data.clone());
+            let rhs_deriv = tape.store_derivative(self.data.clone());
             let result_grad = tape.store_gradient(Self::Output::SHAPE);
 
             tape.add_operation(Operation::Binary(BinaryOp {
