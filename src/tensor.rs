@@ -80,12 +80,7 @@ impl<const N: usize> Tensor for Tensor1D<N> {
 impl<const N: usize> Add for &mut Tensor1D<N> {
     type Output = Tensor1D<N>;
     fn add(self, rhs: &mut Tensor1D<N>) -> Self::Output {
-        let mut result = Tensor1D {
-            data: &self.data + &rhs.data,
-            grad: None,
-        };
-
-        self.take_tape().or(rhs.take_tape()).map(|mut tape| {
+        let grad = self.take_tape().or(rhs.take_tape()).map(|mut tape| {
             self.register(&mut tape);
             rhs.register(&mut tape);
 
@@ -100,22 +95,20 @@ impl<const N: usize> Add for &mut Tensor1D<N> {
                 result_grad,
             }));
 
-            *result.mut_grad() = Some(Grad::with_tape(result_grad, tape));
+            Grad::with_tape(result_grad, tape)
         });
 
-        result
+        Self::Output {
+            data: &self.data + &rhs.data,
+            grad,
+        }
     }
 }
 
 impl<const N: usize> Sub for &mut Tensor1D<N> {
     type Output = Tensor1D<N>;
     fn sub(self, rhs: &mut Tensor1D<N>) -> Self::Output {
-        let mut result = Tensor1D {
-            data: &self.data - &rhs.data,
-            grad: Default::default(),
-        };
-
-        self.take_tape().or(rhs.take_tape()).map(|mut tape| {
+        let grad = self.take_tape().or(rhs.take_tape()).map(|mut tape| {
             self.register(&mut tape);
             rhs.register(&mut tape);
 
@@ -130,21 +123,19 @@ impl<const N: usize> Sub for &mut Tensor1D<N> {
                 result_grad,
             }));
 
-            *result.mut_grad() = Some(Grad::with_tape(result_grad, tape));
+            Grad::with_tape(result_grad, tape)
         });
 
-        result
+        Self::Output {
+            data: &self.data - &rhs.data,
+            grad,
+        }
     }
 }
 
 impl<const N: usize> Tensor1D<N> {
     pub fn square(&mut self) -> Tensor1D<N> {
-        let mut result = Tensor1D {
-            data: self.data.map(|f| f.powi(2)),
-            grad: Default::default(),
-        };
-
-        self.take_tape().map(|mut tape| {
+        let grad = self.take_tape().map(|mut tape| {
             self.register(&mut tape);
 
             let parent_deriv = tape.store_derivative(2.0 * &self.data);
@@ -157,19 +148,17 @@ impl<const N: usize> Tensor1D<N> {
                 result_grad,
             }));
 
-            *result.mut_grad() = Some(Grad::with_tape(result_grad, tape));
+            Grad::with_tape(result_grad, tape)
         });
 
-        result
+        Tensor1D {
+            data: self.data.map(|f| f.powi(2)),
+            grad,
+        }
     }
 
     pub fn mean(&mut self) -> Tensor0D {
-        let mut result = Tensor0D {
-            data: arr0(self.data.mean().unwrap()),
-            grad: Default::default(),
-        };
-
-        self.take_tape().map(|mut tape| {
+        let grad = self.take_tape().map(|mut tape| {
             self.register(&mut tape);
 
             let parent_deriv = tape.store_derivative(Array1::from_elem((N,), 1.0 / N as f32));
@@ -182,10 +171,13 @@ impl<const N: usize> Tensor1D<N> {
                 result_grad,
             }));
 
-            *result.mut_grad() = Some(Grad::with_tape(result_grad, tape));
+            Grad::with_tape(result_grad, tape)
         });
 
-        result
+        Tensor0D {
+            data: arr0(self.data.mean().unwrap()),
+            grad,
+        }
     }
 }
 
@@ -228,12 +220,7 @@ impl<const M: usize, const N: usize> Tensor for Tensor2D<M, N> {
 impl<const M: usize, const N: usize> Mul<&mut Tensor1D<N>> for &mut Tensor2D<M, N> {
     type Output = Tensor1D<M>;
     fn mul(self, rhs: &mut Tensor1D<N>) -> Self::Output {
-        let mut result = Tensor1D {
-            data: self.data.dot(&rhs.data),
-            grad: Default::default(),
-        };
-
-        self.take_tape().or(rhs.take_tape()).map(|mut tape| {
+        let grad = self.take_tape().or(rhs.take_tape()).map(|mut tape| {
             self.register(&mut tape);
             rhs.register(&mut tape);
 
@@ -248,9 +235,12 @@ impl<const M: usize, const N: usize> Mul<&mut Tensor1D<N>> for &mut Tensor2D<M, 
                 result_grad,
             }));
 
-            *result.mut_grad() = Some(Grad::with_tape(result_grad, tape));
+            Grad::with_tape(result_grad, tape)
         });
 
-        result
+        Self::Output {
+            data: self.data.dot(&rhs.data),
+            grad,
+        }
     }
 }
