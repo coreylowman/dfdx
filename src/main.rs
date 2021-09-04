@@ -61,15 +61,17 @@ fn main() {
 
     let mut x: Tensor1D<5> = Default::default();
     x.randomize(&mut rng);
-    println!("x={:?}", x);
+    println!("x={:#}", x.data());
 
     let mut y: Tensor1D<2> = Default::default();
     y.randomize(&mut rng);
-    println!("y={:?}", y);
+    println!("y={:#}", y.data());
 
     for _ in 0..15 {
+        *x.mut_grad() = None;
         let mut output = opt.forward_with_derivatives(&mut x);
 
+        *y.mut_grad() = None;
         let mut loss = (&mut output - &mut y).square().mean();
         println!(
             "y={:#} output={:#} loss={:#}",
@@ -81,7 +83,7 @@ fn main() {
         opt.step(&mut loss);
     }
 
-    println!("{:#?}", opt.l1);
-    println!("{:#?}", opt.l2);
-    println!("{:#?}", opt.l3);
+    // println!("{:#?}", opt.l1);
+    // println!("{:#?}", opt.l2);
+    // println!("{:#?}", opt.l3);
 }

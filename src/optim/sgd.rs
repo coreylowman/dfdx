@@ -34,7 +34,7 @@ impl<M: Module> DerefMut for Sgd<M> {
 
 impl<M: Module> Optimizer<M> for Sgd<M> {
     fn step<T: Tensor>(&mut self, loss: &mut T) {
-        let mut tape = *loss.backward();
+        let mut tape = loss.backward().unwrap();
         tape.scale(self.cfg.lr);
         self.update(&tape);
     }

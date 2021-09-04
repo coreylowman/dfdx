@@ -131,51 +131,30 @@ impl Index<GradientRef> for GradientTape {
 
 #[derive(Debug)]
 pub struct Grad {
-    gradient_ref: Option<GradientRef>,
+    pub gradient_ref: GradientRef,
     tape: Option<Box<GradientTape>>,
 }
 
 impl Grad {
-    pub fn set_gradient_ref(&mut self, gradient_ref: GradientRef) {
-        self.gradient_ref = Some(gradient_ref);
+    pub fn new(gradient_ref: GradientRef) -> Self {
+        Self {
+            gradient_ref,
+            tape: None,
+        }
     }
 
-    pub fn is_registered(&self) -> bool {
-        self.gradient_ref.is_some()
+    pub fn with_tape(gradient_ref: GradientRef, tape: Box<GradientTape>) -> Self {
+        Self {
+            gradient_ref,
+            tape: Some(tape),
+        }
     }
 
-    pub fn gradient_ref(&self) -> GradientRef {
-        self.gradient_ref.unwrap()
-    }
-
-    pub fn take_gradient_ref(&mut self) -> GradientRef {
-        self.gradient_ref.take().unwrap()
-    }
-
-    pub fn clear_gradient_ref(&mut self) {
-        self.gradient_ref = None;
-    }
-
-    pub fn keep_tape(&mut self, tape: Option<Box<GradientTape>>) {
-        self.tape = tape;
+    pub fn keep_tape(&mut self, tape: Box<GradientTape>) {
+        self.tape = Some(tape);
     }
 
     pub fn take_tape(&mut self) -> Option<Box<GradientTape>> {
         self.tape.take()
-    }
-
-    pub fn backward(&mut self) -> Box<GradientTape> {
-        let mut tape = self.tape.take().unwrap();
-        tape.backward(self.gradient_ref.unwrap());
-        tape
-    }
-}
-
-impl Default for Grad {
-    fn default() -> Self {
-        Self {
-            gradient_ref: None,
-            tape: None,
-        }
     }
 }

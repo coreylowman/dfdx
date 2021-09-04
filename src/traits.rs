@@ -13,25 +13,35 @@ pub trait Tensor: Params + Default {
     type Dimension: Dimension;
     const SHAPE: &'static [usize];
 
-    fn grad(&self) -> &Grad;
-    fn mut_grad(&mut self) -> &mut Grad;
+    fn grad(&self) -> &Option<Grad>;
+    fn mut_grad(&mut self) -> &mut Option<Grad>;
     fn data(&self) -> &Array<f32, Self::Dimension>;
     fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension>;
 
     fn gradient_ref(&self) -> GradientRef {
-        self.grad().gradient_ref()
-    }
-
-    fn backward(&mut self) -> Box<GradientTape> {
-        self.mut_grad().backward()
+        self.grad().as_ref().unwrap().gradient_ref
     }
 
     fn take_tape(&mut self) -> Option<Box<GradientTape>> {
-        self.mut_grad().take_tape()
+        self.mut_grad()
+            .as_mut()
+            .map(|grad| grad.take_tape())
+            .flatten()
     }
 
-    fn keep_tape(&mut self, tape: Option<Box<GradientTape>>) {
-        self.mut_grad().keep_tape(tape);
+    fn backward(&mut self) -> Option<Box<GradientTape>> {
+        self.mut_grad().as_mut().map(|grad| {
+            let mut tape = grad.take_tape().unwrap();
+            tape.backward(grad.gradient_ref);
+            tape
+        })
+    }
+
+    fn keep_tape(&mut self, mut tape: Box<GradientTape>) {
+        let grad = self
+            .mut_grad()
+            .get_or_insert_with(|| Grad::new(tape.store_gradient(Self::SHAPE)));
+        grad.keep_tape(tape);
     }
 }
 
@@ -44,15 +54,18 @@ where
     }
 
     fn register(&mut self, tape: &mut GradientTape) {
-        if !self.grad().is_registered() {
-            self.mut_grad()
-                .set_gradient_ref(tape.store_gradient(Self::SHAPE));
+        if self.grad().is_none() {
+            let gradient_ref = tape.store_gradient(Self::SHAPE);
+            *self.mut_grad() = Some(Grad::new(gradient_ref));
         }
     }
 
     fn update(&mut self, tape: &GradientTape) {
-        let gradient = &tape[self.mut_grad().take_gradient_ref()];
+        assert!(self.grad().is_some());
+        let grad = self.mut_grad().as_mut().unwrap();
+        let gradient = &tape[grad.gradient_ref];
         *self.mut_data() -= gradient;
+        *self.mut_grad() = None;
     }
 }
 
@@ -72,12 +85,10 @@ pub trait Optimizer<M: Module>: DerefMut<Target = M> {
         // register module's params
         self.register(&mut tape);
 
-        // register input params
-        input.mut_grad().clear_gradient_ref();
-        input.register(&mut tape);
-
         // put tape in input
-        input.keep_tape(Some(Box::new(tape)));
+        *input.mut_grad() = None;
+        input.register(&mut tape);
+        input.keep_tape(Box::new(tape));
 
         // go!
         self.forward(input)
