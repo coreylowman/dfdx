@@ -15,9 +15,11 @@ pub struct GradientRef {
 #[derive(Debug, Clone, Copy)]
 pub enum OpType {
     Add,
+    BroadcastAdd,
     Sub,
+    BroadcastSub,
     MatVec { m: usize, n: usize },
-    // MatMul { m: usize, n: usize, o: usize },
+    MatMul { m: usize, n: usize, o: usize },
     Square,
     Mean,
 }
@@ -121,6 +123,39 @@ impl GradientTape {
 
                         self.gradients[op.parent_grads[0].index] += &d_grad0;
                         self.gradients[op.parent_grads[1].index] += &d_grad1;
+                    }
+                    OpType::MatMul { m, n, o } => {
+                        let result = self
+                            .grad(op.result_grad)
+                            .clone()
+                            .into_shape((m, o))
+                            .unwrap();
+                        let d0 = self
+                            .deriv(op.parent_derivs[0])
+                            .clone()
+                            .into_shape((n, o))
+                            .unwrap()
+                            .reversed_axes();
+                        let d1 = self
+                            .deriv(op.parent_derivs[1])
+                            .clone()
+                            .into_shape((m, n))
+                            .unwrap()
+                            .reversed_axes();
+
+                        let d_grad0 = result.dot(&d0);
+                        let d_grad1 = d1.dot(&result);
+
+                        self.gradients[op.parent_grads[0].index] += &d_grad0;
+                        self.gradients[op.parent_grads[1].index] += &d_grad1;
+                    }
+                    OpType::BroadcastAdd | OpType::BroadcastSub => {
+                        let d_grad = self.deriv(op.parent_derivs[0]) * self.grad(op.result_grad);
+                        self.gradients[op.parent_grads[0].index] += &d_grad;
+
+                        let d_grad = self.deriv(op.parent_derivs[1])
+                            * &self.grad(op.result_grad).sum_axis(Axis(0));
+                        self.gradients[op.parent_grads[1].index] += &d_grad;
                     }
                     _ => {
                         for (&deriv, grad) in op.parent_derivs.iter().zip(op.parent_grads.iter()) {

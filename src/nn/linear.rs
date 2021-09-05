@@ -5,7 +5,7 @@ use ndarray_rand::rand::Rng;
 
 #[derive(Default, Debug)]
 pub struct Linear<const I: usize, const O: usize> {
-    weight: Tensor2D<O, I>,
+    weight: Tensor2D<I, O>,
     bias: Tensor1D<O>,
 }
 
@@ -27,11 +27,11 @@ impl<const I: usize, const O: usize> Params for Linear<I, O> {
 }
 
 impl<const I: usize, const O: usize> Module for Linear<I, O> {
-    type Input = Tensor1D<I>;
-    type Output = Tensor1D<O>;
+    type Input<const B: usize> = Tensor2D<B, I>;
+    type Output<const B: usize> = Tensor2D<B, O>;
 
-    fn forward(&mut self, input: &mut Self::Input) -> Self::Output {
-        let mut ax = &mut self.weight * input;
+    fn forward<const B: usize>(&mut self, input: &mut Self::Input<B>) -> Self::Output<B> {
+        let mut ax = input * &mut self.weight;
         let ax_plus_b = &mut ax + &mut self.bias;
         ax_plus_b
     }

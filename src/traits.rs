@@ -50,16 +50,19 @@ pub trait Tensor: Params + Default + ShapedArray {
 }
 
 pub trait Module: Params + Default {
-    type Input: Tensor;
-    type Output: Tensor;
+    type Input<const B: usize>: Tensor;
+    type Output<const B: usize>: Tensor;
 
-    fn forward(&mut self, input: &mut Self::Input) -> Self::Output;
+    fn forward<const B: usize>(&mut self, input: &mut Self::Input<B>) -> Self::Output<B>;
 }
 
 pub trait Optimizer<M: Module>: DerefMut<Target = M> {
     fn step<T: Tensor>(&mut self, loss: &mut T);
 
-    fn forward_with_derivatives(&mut self, input: &mut M::Input) -> M::Output {
+    fn forward_with_derivatives<const B: usize>(
+        &mut self,
+        input: &mut M::Input<B>,
+    ) -> M::Output<B> {
         let mut tape = Box::new(GradientTape::new());
 
         // register module's params

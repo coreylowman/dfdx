@@ -1,10 +1,12 @@
+#![feature(generic_associated_types)]
+
 use ndarray_rand::rand::{rngs::StdRng, Rng, SeedableRng};
 
 use rad::{
     gradients::GradientTape,
     nn::Linear,
     optim::sgd::Sgd,
-    tensor::Tensor1D,
+    tensor::Tensor2D,
     traits::{Module, Optimizer, Params, ShapedArray},
 };
 
@@ -36,10 +38,10 @@ impl Params for MyCoolNN {
 }
 
 impl Module for MyCoolNN {
-    type Input = Tensor1D<5>;
-    type Output = Tensor1D<2>;
+    type Input<const B: usize> = Tensor2D<B, 5>;
+    type Output<const B: usize> = Tensor2D<B, 2>;
 
-    fn forward(&mut self, x0: &mut Self::Input) -> Self::Output {
+    fn forward<const B: usize>(&mut self, x0: &mut Self::Input<B>) -> Self::Output<B> {
         let mut x1 = self.l1.forward(x0);
         let mut x2 = self.l2.forward(&mut x1);
         let x3 = self.l3.forward(&mut x2);
@@ -53,11 +55,11 @@ fn main() {
     let mut opt: Sgd<MyCoolNN> = Default::default();
     opt.randomize(&mut rng);
 
-    let mut x: Tensor1D<5> = Default::default();
+    let mut x: Tensor2D<10, 5> = Default::default();
     x.randomize(&mut rng);
     println!("x={:#}", x.data());
 
-    let mut y: Tensor1D<2> = Default::default();
+    let mut y: Tensor2D<10, 2> = Default::default();
     y.randomize(&mut rng);
     println!("y={:#}", y.data());
 
@@ -66,9 +68,9 @@ fn main() {
 
         let mut loss = (&mut output - &mut y).square().mean();
         println!(
-            "y={:#} output={:#} loss={:#}",
-            y.data(),
-            output.data(),
+            "loss={:#}",
+            // y.data(),
+            // output.data(),
             loss.data()
         );
 
