@@ -1,12 +1,6 @@
-mod gradients;
-mod nn;
-mod optim;
-mod tensor;
-mod traits;
-
 use ndarray_rand::rand::{rngs::StdRng, Rng, SeedableRng};
 
-use crate::{
+use rad::{
     gradients::GradientTape,
     nn::Linear,
     optim::sgd::Sgd,
