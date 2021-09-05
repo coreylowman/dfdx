@@ -1,6 +1,6 @@
 use crate::{
     gradients::*,
-    traits::{Params, ShapedArray, Tensor},
+    traits::{Params, RandomInit, ShapedArray, Tensor},
 };
 use ndarray::prelude::*;
 use ndarray_rand::rand::Rng;
@@ -14,7 +14,7 @@ pub struct Tensor0D {
 impl Default for Tensor0D {
     fn default() -> Self {
         Self {
-            data: Array0::zeros(()),
+            data: Array::zeros(Self::SHAPE),
             grad: None,
         }
     }
@@ -53,7 +53,7 @@ pub struct Tensor1D<const N: usize> {
 impl<const N: usize> Default for Tensor1D<N> {
     fn default() -> Self {
         Self {
-            data: Array1::zeros((N,)),
+            data: Array::zeros(Self::SHAPE),
             grad: None,
         }
     }
@@ -92,7 +92,7 @@ pub struct Tensor2D<const M: usize, const N: usize> {
 impl<const M: usize, const N: usize> Default for Tensor2D<M, N> {
     fn default() -> Self {
         Self {
-            data: Array2::zeros((M, N)),
+            data: Array::zeros(Self::SHAPE),
             grad: Default::default(),
         }
     }
@@ -121,14 +121,13 @@ impl<const M: usize, const N: usize> Tensor for Tensor2D<M, N> {
     }
 }
 
-impl<T> Params for T
-where
-    T: Tensor,
-{
+impl<T: Tensor> RandomInit for T {
     fn randomize<R: Rng>(&mut self, rng: &mut R) {
         self.mut_data().map_inplace(|f| *f = rng.gen())
     }
+}
 
+impl<T: Tensor> Params for T {
     fn register(&mut self, tape: &mut GradientTape) {
         if self.grad().is_none() {
             *self.mut_grad() = Some(Grad::new(tape.store_gradient(Self::SHAPE)));

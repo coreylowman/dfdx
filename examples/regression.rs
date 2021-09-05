@@ -7,7 +7,7 @@ use rad::{
     nn::Linear,
     optim::sgd::Sgd,
     tensor::Tensor2D,
-    traits::{Module, Optimizer, Params, ShapedArray},
+    traits::{Module, Optimizer, Params, RandomInit, ShapedArray},
 };
 
 #[derive(Default, Debug)]
@@ -17,13 +17,15 @@ struct MyCoolNN {
     l3: Linear<3, 2>,
 }
 
-impl Params for MyCoolNN {
+impl RandomInit for MyCoolNN {
     fn randomize<R: Rng>(&mut self, rng: &mut R) {
         self.l1.randomize(rng);
         self.l2.randomize(rng);
         self.l3.randomize(rng);
     }
+}
 
+impl Params for MyCoolNN {
     fn register(&mut self, tape: &mut GradientTape) {
         self.l1.register(tape);
         self.l2.register(tape);

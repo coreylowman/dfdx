@@ -1,6 +1,6 @@
 use crate::gradients::GradientTape;
 use crate::tensor::{Tensor1D, Tensor2D};
-use crate::traits::{Module, Params};
+use crate::traits::{Module, Params, RandomInit};
 use ndarray_rand::rand::Rng;
 
 #[derive(Default, Debug)]
@@ -9,12 +9,14 @@ pub struct Linear<const I: usize, const O: usize> {
     bias: Tensor1D<O>,
 }
 
-impl<const I: usize, const O: usize> Params for Linear<I, O> {
+impl<const I: usize, const O: usize> RandomInit for Linear<I, O> {
     fn randomize<R: Rng>(&mut self, rng: &mut R) {
         self.weight.randomize(rng);
         self.bias.randomize(rng);
     }
+}
 
+impl<const I: usize, const O: usize> Params for Linear<I, O> {
     fn register(&mut self, tape: &mut GradientTape) {
         self.weight.register(tape);
         self.bias.register(tape);

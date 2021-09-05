@@ -3,8 +3,11 @@ use ndarray::{Array, Dimension, ShapeBuilder};
 use ndarray_rand::rand::prelude::*;
 use std::ops::DerefMut;
 
-pub trait Params {
+pub trait RandomInit {
     fn randomize<R: Rng>(&mut self, rng: &mut R);
+}
+
+pub trait Params {
     fn register(&mut self, tape: &mut GradientTape);
     fn update(&mut self, tape: &GradientTape);
 }
@@ -18,7 +21,7 @@ pub trait ShapedArray {
     fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension>;
 }
 
-pub trait Tensor: Params + Default + ShapedArray {
+pub trait Tensor: RandomInit + Params + Default + ShapedArray {
     fn grad(&self) -> &Option<Grad>;
     fn mut_grad(&mut self) -> &mut Option<Grad>;
 
@@ -49,7 +52,7 @@ pub trait Tensor: Params + Default + ShapedArray {
     }
 }
 
-pub trait Module: Params + Default {
+pub trait Module: RandomInit + Params + Default {
     type Input<const B: usize>: Tensor;
     type Output<const B: usize>: Tensor;
 
