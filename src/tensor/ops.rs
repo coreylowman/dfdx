@@ -192,7 +192,7 @@ impl<const M: usize, const N: usize> Add<&mut Tensor1D<N>> for &mut Tensor2D<M, 
             rhs.register(&mut tape);
 
             let lhs_deriv = tape.store_derivative(Array::from_elem((M, N), 1.0));
-            let rhs_deriv = tape.store_derivative(Array::from_elem((N,), M as f32));
+            let rhs_deriv = tape.store_derivative(Array::from_elem((N,), 1.0 / M as f32));
             let result_grad = tape.store_gradient(Self::Output::SHAPE);
 
             tape.add_operation(Operation::Binary(BinaryOp {
