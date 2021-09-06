@@ -4,7 +4,7 @@ use ndarray_rand::rand::prelude::*;
 use std::ops::DerefMut;
 
 pub trait RandomInit {
-    fn randomize<R: Rng>(&mut self, rng: &mut R);
+    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D);
 }
 
 pub trait Params {

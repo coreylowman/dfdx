@@ -1,15 +1,8 @@
 #![feature(generic_associated_types)]
 
-use ndarray_rand::rand::{rngs::StdRng, Rng, SeedableRng};
+use ndarray_rand::{rand::{rngs::StdRng, Rng, SeedableRng}, rand_distr::{Standard, Uniform}};
 
-use rad::{
-    gradients::GradientTape,
-    module_collection,
-    nn::Linear,
-    optim::sgd::Sgd,
-    tensor::Tensor2D,
-    traits::{Module, Optimizer, Params, RandomInit, ShapedArray},
-};
+use rad::{module_collection, nn::Linear, optim::sgd::Sgd, tensor::Tensor2D, traits::*};
 
 #[derive(Default, Debug)]
 struct MyCoolNN {
@@ -25,8 +18,8 @@ impl Module for MyCoolNN {
     type Output<const B: usize> = Tensor2D<B, 2>;
 
     fn forward<const B: usize>(&mut self, x0: &mut Self::Input<B>) -> Self::Output<B> {
-        let mut x1 = self.l1.forward(x0);
-        let mut x2 = self.l2.forward(&mut x1);
+        let mut x1 = self.l1.forward(x0).relu();
+        let mut x2 = self.l2.forward(&mut x1).relu();
         let x3 = self.l3.forward(&mut x2);
         x3
     }
@@ -36,14 +29,14 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     let mut opt: Sgd<MyCoolNN> = Default::default();
-    opt.randomize(&mut rng);
+    opt.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
     let mut x: Tensor2D<10, 5> = Default::default();
-    x.randomize(&mut rng);
+    x.randomize(&mut rng, &Standard);
     println!("x={:#}", x.data());
 
     let mut y: Tensor2D<10, 2> = Default::default();
-    y.randomize(&mut rng);
+    y.randomize(&mut rng, &Standard);
     println!("y={:#}", y.data());
 
     for _ in 0..15 {

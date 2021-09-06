@@ -22,6 +22,7 @@ pub enum OpType {
     MatMul { m: usize, n: usize, o: usize },
     Square,
     Mean,
+    ReLU,
 }
 
 #[derive(Debug, Clone, Copy)]

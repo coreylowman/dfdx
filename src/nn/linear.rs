@@ -1,8 +1,6 @@
-use crate::gradients::GradientTape;
 use crate::module_collection;
 use crate::tensor::{Tensor1D, Tensor2D};
-use crate::traits::{Module, Params, RandomInit};
-use ndarray_rand::rand::Rng;
+use crate::traits::Module;
 
 #[derive(Default, Debug)]
 pub struct Linear<const I: usize, const O: usize> {

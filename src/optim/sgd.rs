@@ -18,6 +18,12 @@ pub struct Sgd<M: Module> {
     module: M,
 }
 
+impl<M: Module> Sgd<M> {
+    pub fn new(cfg: SgdConfig, module: M) -> Self {
+        Self { cfg, module }
+    }
+}
+
 impl<M: Module> Deref for Sgd<M> {
     type Target = M;
 

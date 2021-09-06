@@ -3,7 +3,7 @@ use crate::{
     traits::{Params, RandomInit, ShapedArray, Tensor},
 };
 use ndarray::prelude::*;
-use ndarray_rand::rand::Rng;
+use ndarray_rand::rand::prelude::*;
 
 #[derive(Debug)]
 pub struct Tensor0D {
@@ -59,8 +59,8 @@ macro_rules! tensor_impl {
         }
 
         impl<$($const_defs)*> RandomInit for $typename<$($consts)*> {
-            fn randomize<R: Rng>(&mut self, rng: &mut R) {
-                self.mut_data().map_inplace(|f| *f = rng.gen())
+            fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
+                self.mut_data().map_inplace(|f| *f = dist.sample(rng))
             }
         }
 

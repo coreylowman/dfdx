@@ -69,6 +69,30 @@ macro_rules! binary_ops {
 macro_rules! unary_ops {
     ([$($const_defs:tt)*] $typename:ident [$($consts:tt)*], $num_elems:expr) => {
         impl<$($const_defs)*> $typename<$($consts)*> {
+            pub fn relu(&mut self) -> Self {
+                let grad = self.take_tape().map(|mut tape| {
+                    self.register(&mut tape);
+
+                    let parent_deriv =
+                        tape.store_derivative(self.data.mapv(|f| if f >= 0.0 { 1.0 } else { 0.0 }));
+                    let result_grad = tape.store_gradient(Self::SHAPE);
+
+                    tape.add_operation(Operation::Unary(UnaryOp {
+                        op_type: OpType::ReLU,
+                        parent_grad: self.gradient_ref(),
+                        parent_deriv,
+                        result_grad,
+                    }));
+
+                    Grad::with_tape(result_grad, tape)
+                });
+
+                Self {
+                    data: self.data.map(|&f| 0.0f32.max(f)),
+                    grad,
+                }
+            }
+
             pub fn square(&mut self) -> Self {
                 let grad = self.take_tape().map(|mut tape| {
                     self.register(&mut tape);
