@@ -2,7 +2,7 @@
 
 use ndarray_rand::{
     rand::{rngs::StdRng, Rng, SeedableRng},
-    rand_distr::{Standard, Uniform},
+    rand_distr::Standard,
 };
 
 use rad::{module_collection, nn::Linear, optim::sgd::Sgd, tensor::Tensor2D, traits::*};
