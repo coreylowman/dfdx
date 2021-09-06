@@ -42,3 +42,14 @@ macro_rules! module_collection {
         }
     };
 }
+
+#[macro_export]
+macro_rules! chain_modules {
+    ($first:ty, $last:ty, ) => {
+        ModuleChain<$first, $last>
+    };
+
+    ($first:ty, $($rest:ty, )*) => {
+        ModuleChain<$first, chain_modules!($($rest, )*)>
+    };
+}

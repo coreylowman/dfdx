@@ -1,28 +1,22 @@
 use crate::{
     module_collection,
-    traits::{Batch, Module, Tensor},
+    traits::{Batch, Module},
 };
 
 #[derive(Default, Debug)]
-pub struct ModuleChain<M1: Module, M2: Module> {
+pub struct ModuleChain<M1: Module, M2: Module<Input = M1::Output>> {
     first: M1,
     second: M2,
 }
 
 module_collection!(
-    [
-        T: Tensor + Batch,
-        M1: Module<Output = T>,
-        M2: Module<Input = T>
-    ],
+    [M1: Module, M2: Module<Input = M1::Output>],
     [M1, M2],
     ModuleChain,
     [first, second,]
 );
 
-impl<T: Tensor + Batch, M1: Module<Output = T>, M2: Module<Input = T>> Module
-    for ModuleChain<M1, M2>
-{
+impl<M1: Module, M2: Module<Input = M1::Output>> Module for ModuleChain<M1, M2> {
     type Input = M1::Input;
     type Output = M2::Output;
 

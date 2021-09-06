@@ -4,7 +4,7 @@ use ndarray_rand::{
 };
 
 use rad::{
-    module_collection,
+    chain_modules, module_collection,
     nn::{Linear, ModuleChain, ReLU},
     optim::sgd::Sgd,
     tensor::{Tensor1D, Tensor2D},
@@ -39,10 +39,14 @@ type LinearWithReLU<const I: usize, const O: usize> = ModuleChain<Linear<I, O>, 
 type MyCoolChain =
     ModuleChain<LinearWithReLU<5, 4>, ModuleChain<LinearWithReLU<4, 3>, Linear<3, 2>>>;
 
+type MyNiceChain = chain_modules!(LinearWithReLU<5, 4>, LinearWithReLU<4, 3>, Linear<3, 2>, );
+
+// type InvalidChain = ModuleChain<Linear<5, 4>, Linear<3, 2>>;
+
 fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
-    let mut opt: Sgd<MyCoolChain> = Default::default();
+    let mut opt: Sgd<MyNiceChain> = Default::default();
     opt.randomize(&mut rng, &Standard);
 
     let mut x: Tensor2D<10, 5> = Default::default();
