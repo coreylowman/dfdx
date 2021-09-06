@@ -18,7 +18,6 @@ pub enum OpType {
     BroadcastAdd,
     Sub,
     BroadcastSub,
-    MatVec { m: usize, n: usize },
     MatMul { m: usize, n: usize, o: usize },
     Square,
     Mean,
@@ -105,26 +104,6 @@ impl GradientTape {
                     self.gradients[op.parent_grad.index] += &d_grad;
                 }
                 Operation::Binary(op) => match op.op_type {
-                    OpType::MatVec { m, n } => {
-                        let result = self
-                            .grad(op.result_grad)
-                            .clone()
-                            .into_shape((m, 1))
-                            .unwrap();
-
-                        let wt = self
-                            .deriv(op.parent_derivs[1])
-                            .clone()
-                            .into_shape((m, n))
-                            .unwrap()
-                            .reversed_axes();
-
-                        let d_grad0 = &result * self.deriv(op.parent_derivs[0]);
-                        let d_grad1 = wt.dot(&result).into_shape((n,)).unwrap();
-
-                        self.gradients[op.parent_grads[0].index] += &d_grad0;
-                        self.gradients[op.parent_grads[1].index] += &d_grad1;
-                    }
                     OpType::MatMul { m, n, o } => {
                         let result = self
                             .grad(op.result_grad)

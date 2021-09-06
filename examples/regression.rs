@@ -29,7 +29,7 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     let mut opt: Sgd<MyCoolNN> = Default::default();
-    opt.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
+    opt.randomize(&mut rng, &Standard);
 
     let mut x: Tensor2D<10, 5> = Default::default();
     x.randomize(&mut rng, &Standard);

@@ -162,7 +162,7 @@ impl<const M: usize, const N: usize> Mul<&mut Tensor1D<N>> for &mut Tensor2D<M, 
             let result_grad = tape.store_gradient(Self::Output::SHAPE);
 
             tape.add_operation(Operation::Binary(BinaryOp {
-                op_type: OpType::MatVec { m: M, n: N },
+                op_type: OpType::MatMul { m: M, n: N, o: 1 },
                 parent_grads: [self.gradient_ref(), rhs.gradient_ref()],
                 parent_derivs: [lhs_deriv, rhs_deriv],
                 result_grad,
