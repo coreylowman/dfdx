@@ -48,7 +48,7 @@ impl<const M: usize, const N: usize> Add<&mut Tensor1D<N>> for &mut Tensor2D<M, 
             let result_grad = tape.store_gradient(Self::Output::SHAPE);
 
             tape.add_operation(Operation::Binary(BinaryOp {
-                op_type: OpType::BroadcastAdd,
+                op_type: OpType::Broadcast,
                 parent_grads: [self.gradient_ref(), rhs.gradient_ref()],
                 parent_derivs: [lhs_deriv, rhs_deriv],
                 result_grad,

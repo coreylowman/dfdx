@@ -15,7 +15,7 @@ trait MapOp {
             let result_grad = tape.store_gradient(T::SHAPE);
 
             tape.add_operation(Operation::Unary(UnaryOp {
-                op_type: OpType::Map,
+                op_type: OpType::Normal,
                 parent_grad: tensor.gradient_ref(),
                 parent_deriv,
                 result_grad,
@@ -98,32 +98,23 @@ impl MapOp for Cos {
     }
 }
 
+macro_rules! map_op_method {
+    ($fn_name:ident, $op_name:ident) => {
+        pub fn $fn_name(&mut self) -> Self {
+            $op_name::call(self)
+        }
+    };
+}
+
 macro_rules! unary_ops {
     ([$($const_defs:tt)*] $typename:ident [$($consts:tt)*], $num_elems:expr) => {
         impl<$($const_defs)*> $typename<$($consts)*> {
-            pub fn relu(&mut self) -> Self {
-                ReLU::call(self)
-            }
-
-            pub fn square(&mut self) -> Self {
-                Square::call(self)
-            }
-
-            pub fn tanh(&mut self) -> Self {
-                Tanh::call(self)
-            }
-
-            pub fn sigmoid(&mut self) -> Self {
-                Sigmoid::call(self)
-            }
-
-            pub fn sin(&mut self) -> Self {
-                Sin::call(self)
-            }
-
-            pub fn cos(&mut self) -> Self {
-                Cos::call(self)
-            }
+            map_op_method!(relu, ReLU);
+            map_op_method!(square, Square);
+            map_op_method!(tanh, Tanh);
+            map_op_method!(sigmoid, Sigmoid);
+            map_op_method!(sin, Sin);
+            map_op_method!(cos, Cos);
 
             pub fn mean(&mut self) -> Tensor0D {
                 let grad = self.take_tape().map(|mut tape| {
@@ -131,7 +122,7 @@ macro_rules! unary_ops {
                     let result_grad = tape.store_gradient(());
 
                     tape.add_operation(Operation::Unary(UnaryOp {
-                        op_type: OpType::Mean,
+                        op_type: OpType::Normal,
                         parent_grad: self.gradient_ref(),
                         parent_deriv,
                         result_grad,

@@ -14,13 +14,9 @@ pub struct GradientRef {
 
 #[derive(Debug, Clone, Copy)]
 pub enum OpType {
-    Add,
-    BroadcastAdd,
-    Sub,
-    BroadcastSub,
+    Normal,
+    Broadcast,
     MatMul { m: usize, n: usize, o: usize },
-    Mean,
-    Map,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -128,7 +124,7 @@ impl GradientTape {
                         self.gradients[op.parent_grads[0].index] += &d_grad0;
                         self.gradients[op.parent_grads[1].index] += &d_grad1;
                     }
-                    OpType::BroadcastAdd | OpType::BroadcastSub => {
+                    OpType::Broadcast => {
                         let d_grad = self.deriv(op.parent_derivs[0]) * self.grad(op.result_grad);
                         self.gradients[op.parent_grads[0].index] += &d_grad;
 

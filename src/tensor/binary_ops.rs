@@ -20,7 +20,7 @@ macro_rules! binary_ops {
                     let result_grad = tape.store_gradient(Self::Output::SHAPE);
 
                     tape.add_operation(Operation::Binary(BinaryOp {
-                        op_type: OpType::Add,
+                        op_type: OpType::Normal,
                         parent_grads: [self.gradient_ref(), rhs.gradient_ref()],
                         parent_derivs: [lhs_deriv, rhs_deriv],
                         result_grad,
@@ -48,7 +48,7 @@ macro_rules! binary_ops {
                     let result_grad = tape.store_gradient(Self::Output::SHAPE);
 
                     tape.add_operation(Operation::Binary(BinaryOp {
-                        op_type: OpType::Sub,
+                        op_type: OpType::Normal,
                         parent_grads: [self.gradient_ref(), rhs.gradient_ref()],
                         parent_derivs: [lhs_deriv, rhs_deriv],
                         result_grad,
