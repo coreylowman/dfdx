@@ -5,3 +5,6 @@ pub mod nn;
 pub mod optim;
 pub mod tensor;
 pub mod traits;
+
+mod macros;
+pub use crate::macros::*;

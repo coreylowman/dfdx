@@ -1,4 +1,5 @@
 use crate::gradients::GradientTape;
+use crate::module_collection;
 use crate::tensor::{Tensor1D, Tensor2D};
 use crate::traits::{Module, Params, RandomInit};
 use ndarray_rand::rand::Rng;
@@ -9,24 +10,7 @@ pub struct Linear<const I: usize, const O: usize> {
     bias: Tensor1D<O>,
 }
 
-impl<const I: usize, const O: usize> RandomInit for Linear<I, O> {
-    fn randomize<R: Rng>(&mut self, rng: &mut R) {
-        self.weight.randomize(rng);
-        self.bias.randomize(rng);
-    }
-}
-
-impl<const I: usize, const O: usize> Params for Linear<I, O> {
-    fn register(&mut self, tape: &mut GradientTape) {
-        self.weight.register(tape);
-        self.bias.register(tape);
-    }
-
-    fn update(&mut self, tape: &GradientTape) {
-        self.weight.update(tape);
-        self.bias.update(tape);
-    }
-}
+module_collection!([const I: usize, const O: usize] [I, O] Linear[weight bias]);
 
 impl<const I: usize, const O: usize> Module for Linear<I, O> {
     type Input<const B: usize> = Tensor2D<B, I>;

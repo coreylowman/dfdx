@@ -4,6 +4,7 @@ use ndarray_rand::rand::{rngs::StdRng, Rng, SeedableRng};
 
 use rad::{
     gradients::GradientTape,
+    module_collection,
     nn::Linear,
     optim::sgd::Sgd,
     tensor::Tensor2D,
@@ -17,27 +18,7 @@ struct MyCoolNN {
     l3: Linear<3, 2>,
 }
 
-impl RandomInit for MyCoolNN {
-    fn randomize<R: Rng>(&mut self, rng: &mut R) {
-        self.l1.randomize(rng);
-        self.l2.randomize(rng);
-        self.l3.randomize(rng);
-    }
-}
-
-impl Params for MyCoolNN {
-    fn register(&mut self, tape: &mut GradientTape) {
-        self.l1.register(tape);
-        self.l2.register(tape);
-        self.l3.register(tape);
-    }
-
-    fn update(&mut self, tape: &GradientTape) {
-        self.l1.update(tape);
-        self.l2.update(tape);
-        self.l3.update(tape);
-    }
-}
+module_collection!(MyCoolNN[l1 l2 l3]);
 
 impl Module for MyCoolNN {
     type Input<const B: usize> = Tensor2D<B, 5>;

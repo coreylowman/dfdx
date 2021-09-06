@@ -24,8 +24,8 @@ pub struct Tensor2D<const M: usize, const N: usize> {
 }
 
 macro_rules! tensor_impl {
-    ([$($parmbounds:tt)*] $typename:ident [$($parm:tt)*], $dim:ty, $shape_val:expr, $shape_type:ty) => {
-        impl<$($parmbounds)*> ShapedArray for $typename<$($parm)*> {
+    ([$($const_defs:tt)*] $typename:ident [$($consts:tt)*], $dim:ty, $shape_val:expr, $shape_type:ty) => {
+        impl<$($const_defs)*> ShapedArray for $typename<$($consts)*> {
             type Dimension = $dim;
             type Shape = $shape_type;
             const SHAPE: Self::Shape = $shape_val;
@@ -39,7 +39,7 @@ macro_rules! tensor_impl {
             }
         }
 
-        impl<$($parmbounds)*> Default for $typename<$($parm)*> {
+        impl<$($const_defs)*> Default for $typename<$($consts)*> {
             fn default() -> Self {
                 Self {
                     data: Array::zeros(Self::SHAPE),
@@ -48,7 +48,7 @@ macro_rules! tensor_impl {
             }
         }
 
-        impl<$($parmbounds)*> Tensor for $typename<$($parm)*> {
+        impl<$($const_defs)*> Tensor for $typename<$($consts)*> {
             fn grad(&self) -> &Option<Grad> {
                 &self.grad
             }
@@ -58,14 +58,14 @@ macro_rules! tensor_impl {
             }
         }
 
-        impl<$($parmbounds)*> RandomInit for $typename<$($parm)*> {
+        impl<$($const_defs)*> RandomInit for $typename<$($consts)*> {
             fn randomize<R: Rng>(&mut self, rng: &mut R) {
                 self.mut_data().map_inplace(|f| *f = rng.gen())
             }
         }
 
 
-        impl<$($parmbounds)*> Params for $typename<$($parm)*> {
+        impl<$($const_defs)*> Params for $typename<$($consts)*> {
             fn register(&mut self, tape: &mut GradientTape) {
                 if self.grad().is_none() {
                     *self.mut_grad() = Some(Grad::new(tape.store_gradient(Self::SHAPE)));

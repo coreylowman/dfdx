@@ -7,9 +7,9 @@ use ndarray::prelude::*;
 use std::ops::{Add, Mul, Sub};
 
 macro_rules! binary_ops {
-    ([$($parmbounds:tt)*] $typename:ident [$($parm:tt)*]) => {
-        impl<$($parmbounds)*> Add for &mut $typename<$($parm)*> {
-            type Output = $typename<$($parm)*>;
+    ([$($const_defs:tt)*] $typename:ident [$($consts:tt)*]) => {
+        impl<$($const_defs)*> Add for &mut $typename<$($consts)*> {
+            type Output = $typename<$($consts)*>;
             fn add(self, rhs: Self) -> Self::Output {
                 let grad = self.take_tape().or(rhs.take_tape()).map(|mut tape| {
                     self.register(&mut tape);
@@ -36,8 +36,8 @@ macro_rules! binary_ops {
             }
         }
 
-        impl<$($parmbounds)*> Sub for &mut $typename<$($parm)*> {
-            type Output = $typename<$($parm)*>;
+        impl<$($const_defs)*> Sub for &mut $typename<$($consts)*> {
+            type Output = $typename<$($consts)*>;
             fn sub(self, rhs: Self) -> Self::Output {
                 let grad = self.take_tape().or(rhs.take_tape()).map(|mut tape| {
                     self.register(&mut tape);
@@ -67,8 +67,8 @@ macro_rules! binary_ops {
 }
 
 macro_rules! unary_ops {
-    ([$($parmbounds:tt)*] $typename:ident [$($parm:tt)*], $num_elems:expr) => {
-        impl<$($parmbounds)*> $typename<$($parm)*> {
+    ([$($const_defs:tt)*] $typename:ident [$($consts:tt)*], $num_elems:expr) => {
+        impl<$($const_defs)*> $typename<$($consts)*> {
             pub fn square(&mut self) -> Self {
                 let grad = self.take_tape().map(|mut tape| {
                     self.register(&mut tape);
