@@ -1,6 +1,6 @@
 use crate::{
     gradients::*,
-    traits::{Params, RandomInit, ShapedArray, Tensor},
+    traits::{Batch, Params, RandomInit, ShapedArray, Tensor},
 };
 use ndarray::prelude::*;
 use ndarray_rand::rand::prelude::*;
@@ -88,3 +88,11 @@ macro_rules! tensor_impl {
 tensor_impl!([] Tensor0D [], Ix0, (), (), 1);
 tensor_impl!([const N: usize] Tensor1D [N], Ix1, (N,), (usize,), N);
 tensor_impl!([const M: usize, const N: usize] Tensor2D [M, N], Ix2, (M, N), (usize, usize), M * N);
+
+impl Batch for Tensor0D {
+    type Batched<const B: usize> = Tensor1D<B>;
+}
+
+impl<const N: usize> Batch for Tensor1D<N> {
+    type Batched<const B: usize> = Tensor2D<B, N>;
+}

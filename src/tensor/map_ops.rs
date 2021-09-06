@@ -1,7 +1,7 @@
 use super::base::*;
 use crate::{
     gradients::*,
-    traits::{ShapedArray, Tensor},
+    traits::{Activations, ShapedArray, Tensor},
 };
 use ndarray::prelude::*;
 
@@ -100,7 +100,7 @@ impl MapOp for Cos {
 
 macro_rules! map_op_method {
     ($fn_name:ident, $op_name:ident) => {
-        pub fn $fn_name(&mut self) -> Self {
+        fn $fn_name(&mut self) -> Self {
             $op_name::call(self)
         }
     };
@@ -108,14 +108,16 @@ macro_rules! map_op_method {
 
 macro_rules! unary_ops {
     ([$($const_defs:tt)*] $typename:ident [$($consts:tt)*], $num_elems:expr) => {
-        impl<$($const_defs)*> $typename<$($consts)*> {
+        impl<$($const_defs)*> Activations for $typename<$($consts)*> {
             map_op_method!(relu, ReLU);
-            map_op_method!(square, Square);
             map_op_method!(tanh, Tanh);
-            map_op_method!(sigmoid, Sigmoid);
-            map_op_method!(sin, Sin);
-            map_op_method!(cos, Cos);
+            map_op_method!(square, Square);
+            // map_op_method!(sigmoid, Sigmoid);
+            // map_op_method!(sin, Sin);
+            // map_op_method!(cos, Cos);
+        }
 
+        impl<$($const_defs)*> $typename<$($consts)*> {
             pub fn mean(&mut self) -> Tensor0D {
                 let grad = self.take_tape().map(|mut tape| {
                     let parent_deriv = tape.store_derivative(self.data.mapv(|_f| 1.0 / Self::NUM_ELEMENTS as f32));

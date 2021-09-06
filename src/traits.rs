@@ -22,7 +22,13 @@ pub trait ShapedArray {
     fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension>;
 }
 
-pub trait Tensor: RandomInit + Params + Default + ShapedArray {
+pub trait Activations {
+    fn relu(&mut self) -> Self;
+    fn tanh(&mut self) -> Self;
+    fn square(&mut self) -> Self;
+}
+
+pub trait Tensor: RandomInit + Params + Default + ShapedArray + Activations {
     fn with_grad(data: Array<f32, Self::Dimension>, grad: Option<Grad>) -> Self;
 
     fn grad(&self) -> &Option<Grad>;
@@ -55,11 +61,18 @@ pub trait Tensor: RandomInit + Params + Default + ShapedArray {
     }
 }
 
-pub trait Module: RandomInit + Params + Default {
-    type Input<const B: usize>: Tensor;
-    type Output<const B: usize>: Tensor;
+pub trait Batch {
+    type Batched<const B: usize>: Tensor;
+}
 
-    fn forward<const B: usize>(&mut self, input: &mut Self::Input<B>) -> Self::Output<B>;
+pub trait Module: RandomInit + Params + Default {
+    type Input: Tensor + Batch;
+    type Output: Tensor + Batch;
+
+    fn forward<const B: usize>(
+        &mut self,
+        input: &mut <Self::Input as Batch>::Batched<B>,
+    ) -> <Self::Output as Batch>::Batched<B>;
 }
 
 pub trait Optimizer<M: Module>: DerefMut<Target = M> {
@@ -67,8 +80,8 @@ pub trait Optimizer<M: Module>: DerefMut<Target = M> {
 
     fn forward_with_derivatives<const B: usize>(
         &mut self,
-        input: &mut M::Input<B>,
-    ) -> M::Output<B> {
+        input: &mut <M::Input as Batch>::Batched<B>,
+    ) -> <M::Output as Batch>::Batched<B> {
         let mut tape = Box::new(GradientTape::new());
 
         // register module's params

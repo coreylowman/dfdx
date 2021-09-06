@@ -1,11 +1,15 @@
-#![feature(generic_associated_types)]
-
 use ndarray_rand::{
     rand::{rngs::StdRng, Rng, SeedableRng},
     rand_distr::Standard,
 };
 
-use rad::{module_collection, nn::Linear, optim::sgd::Sgd, tensor::Tensor2D, traits::*};
+use rad::{
+    module_collection,
+    nn::{Linear, ModuleChain, ReLU},
+    optim::sgd::Sgd,
+    tensor::{Tensor1D, Tensor2D},
+    traits::*,
+};
 
 #[derive(Default, Debug)]
 struct MyCoolNN {
@@ -14,13 +18,16 @@ struct MyCoolNN {
     l3: Linear<3, 2>,
 }
 
-module_collection!(MyCoolNN[l1 l2 l3]);
+module_collection!(MyCoolNN, [l1, l2, l3,]);
 
 impl Module for MyCoolNN {
-    type Input<const B: usize> = Tensor2D<B, 5>;
-    type Output<const B: usize> = Tensor2D<B, 2>;
+    type Input = Tensor1D<5>;
+    type Output = Tensor1D<2>;
 
-    fn forward<const B: usize>(&mut self, x0: &mut Self::Input<B>) -> Self::Output<B> {
+    fn forward<const B: usize>(
+        &mut self,
+        x0: &mut <Self::Input as Batch>::Batched<B>,
+    ) -> <Self::Output as Batch>::Batched<B> {
         let mut x1 = self.l1.forward(x0).relu();
         let mut x2 = self.l2.forward(&mut x1).relu();
         let x3 = self.l3.forward(&mut x2);
@@ -28,10 +35,14 @@ impl Module for MyCoolNN {
     }
 }
 
+type LinearWithReLU<const I: usize, const O: usize> = ModuleChain<Linear<I, O>, ReLU<Tensor1D<O>>>;
+type MyCoolChain =
+    ModuleChain<LinearWithReLU<5, 4>, ModuleChain<LinearWithReLU<4, 3>, Linear<3, 2>>>;
+
 fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
-    let mut opt: Sgd<MyCoolNN> = Default::default();
+    let mut opt: Sgd<MyCoolChain> = Default::default();
     opt.randomize(&mut rng, &Standard);
 
     let mut x: Tensor2D<10, 5> = Default::default();
