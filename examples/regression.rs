@@ -1,6 +1,9 @@
 #![feature(generic_associated_types)]
 
-use ndarray_rand::{rand::{rngs::StdRng, Rng, SeedableRng}, rand_distr::{Standard, Uniform}};
+use ndarray_rand::{
+    rand::{rngs::StdRng, Rng, SeedableRng},
+    rand_distr::{Standard, Uniform},
+};
 
 use rad::{module_collection, nn::Linear, optim::sgd::Sgd, tensor::Tensor2D, traits::*};
 

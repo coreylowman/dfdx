@@ -24,11 +24,12 @@ pub struct Tensor2D<const M: usize, const N: usize> {
 }
 
 macro_rules! tensor_impl {
-    ([$($const_defs:tt)*] $typename:ident [$($consts:tt)*], $dim:ty, $shape_val:expr, $shape_type:ty) => {
+    ([$($const_defs:tt)*] $typename:ident [$($consts:tt)*], $dim:ty, $shape_val:expr, $shape_type:ty, $num_elems:expr) => {
         impl<$($const_defs)*> ShapedArray for $typename<$($consts)*> {
             type Dimension = $dim;
             type Shape = $shape_type;
             const SHAPE: Self::Shape = $shape_val;
+            const NUM_ELEMENTS: usize = $num_elems;
 
             fn data(&self) -> &Array<f32, Self::Dimension> {
                 &self.data
@@ -49,6 +50,10 @@ macro_rules! tensor_impl {
         }
 
         impl<$($const_defs)*> Tensor for $typename<$($consts)*> {
+            fn with_grad(data: Array<f32, Self::Dimension>, grad: Option<Grad>) -> Self {
+                Self { data, grad }
+            }
+
             fn grad(&self) -> &Option<Grad> {
                 &self.grad
             }
@@ -80,6 +85,6 @@ macro_rules! tensor_impl {
     }
 }
 
-tensor_impl!([] Tensor0D [], Ix0, (), ());
-tensor_impl!([const N: usize] Tensor1D [N], Ix1, (N,), (usize,));
-tensor_impl!([const M: usize, const N: usize] Tensor2D [M, N], Ix2, (M, N), (usize, usize));
+tensor_impl!([] Tensor0D [], Ix0, (), (), 1);
+tensor_impl!([const N: usize] Tensor1D [N], Ix1, (N,), (usize,), N);
+tensor_impl!([const M: usize, const N: usize] Tensor2D [M, N], Ix2, (M, N), (usize, usize), M * N);

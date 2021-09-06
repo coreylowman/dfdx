@@ -66,61 +66,73 @@ macro_rules! binary_ops {
     };
 }
 
+trait MapOp {
+    fn forward(f: f32) -> f32;
+    fn derivative(f: f32) -> f32;
+
+    fn call<T: Tensor>(tensor: &mut T) -> T {
+        let grad = tensor.take_tape().map(|mut tape| {
+            tensor.register(&mut tape);
+
+            let parent_deriv = tape.store_derivative(tensor.data().mapv(|f| Self::derivative(f)));
+            let result_grad = tape.store_gradient(T::SHAPE);
+
+            tape.add_operation(Operation::Unary(UnaryOp {
+                op_type: OpType::Map,
+                parent_grad: tensor.gradient_ref(),
+                parent_deriv,
+                result_grad,
+            }));
+
+            Grad::with_tape(result_grad, tape)
+        });
+
+        T::with_grad(tensor.data().mapv(|f| Self::forward(f)), grad)
+    }
+}
+
+struct ReLU;
+impl MapOp for ReLU {
+    fn forward(f: f32) -> f32 {
+        0.0f32.max(f)
+    }
+
+    fn derivative(f: f32) -> f32 {
+        if f >= 0.0 {
+            1.0
+        } else {
+            0.0
+        }
+    }
+}
+
+struct Square;
+impl MapOp for Square {
+    fn forward(f: f32) -> f32 {
+        f.powi(2)
+    }
+
+    fn derivative(f: f32) -> f32 {
+        2.0 * f
+    }
+}
+
 macro_rules! unary_ops {
     ([$($const_defs:tt)*] $typename:ident [$($consts:tt)*], $num_elems:expr) => {
         impl<$($const_defs)*> $typename<$($consts)*> {
             pub fn relu(&mut self) -> Self {
-                let grad = self.take_tape().map(|mut tape| {
-                    self.register(&mut tape);
-
-                    let parent_deriv =
-                        tape.store_derivative(self.data.mapv(|f| if f >= 0.0 { 1.0 } else { 0.0 }));
-                    let result_grad = tape.store_gradient(Self::SHAPE);
-
-                    tape.add_operation(Operation::Unary(UnaryOp {
-                        op_type: OpType::ReLU,
-                        parent_grad: self.gradient_ref(),
-                        parent_deriv,
-                        result_grad,
-                    }));
-
-                    Grad::with_tape(result_grad, tape)
-                });
-
-                Self {
-                    data: self.data.map(|&f| 0.0f32.max(f)),
-                    grad,
-                }
+                ReLU::call(self)
             }
 
             pub fn square(&mut self) -> Self {
-                let grad = self.take_tape().map(|mut tape| {
-                    self.register(&mut tape);
-
-                    let parent_deriv = tape.store_derivative(2.0 * &self.data);
-                    let result_grad = tape.store_gradient(Self::SHAPE);
-
-                    tape.add_operation(Operation::Unary(UnaryOp {
-                        op_type: OpType::Square,
-                        parent_grad: self.gradient_ref(),
-                        parent_deriv,
-                        result_grad,
-                    }));
-
-                    Grad::with_tape(result_grad, tape)
-                });
-
-                Self {
-                    data: self.data.map(|f| f.powi(2)),
-                    grad,
-                }
+                Square::call(self)
             }
 
             pub fn mean(&mut self) -> Tensor0D {
                 let grad = self.take_tape().map(|mut tape| {
                     self.register(&mut tape);
 
-                    let parent_deriv = tape.store_derivative(Array::from_elem(Self::SHAPE, 1.0 / $num_elems as f32));
+                    let parent_deriv = tape.store_derivative(self.data.mapv(|_f| 1.0 / Self::NUM_ELEMENTS as f32));
                     let result_grad = tape.store_gradient(());
 
                     tape.add_operation(Operation::Unary(UnaryOp {

@@ -16,12 +16,15 @@ pub trait ShapedArray {
     type Dimension: Dimension;
     type Shape: ShapeBuilder<Dim = Self::Dimension>;
     const SHAPE: Self::Shape;
+    const NUM_ELEMENTS: usize;
 
     fn data(&self) -> &Array<f32, Self::Dimension>;
     fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension>;
 }
 
 pub trait Tensor: RandomInit + Params + Default + ShapedArray {
+    fn with_grad(data: Array<f32, Self::Dimension>, grad: Option<Grad>) -> Self;
+
     fn grad(&self) -> &Option<Grad>;
     fn mut_grad(&mut self) -> &mut Option<Grad>;
 

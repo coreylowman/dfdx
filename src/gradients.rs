@@ -19,9 +19,8 @@ pub enum OpType {
     Sub,
     BroadcastSub,
     MatMul { m: usize, n: usize, o: usize },
-    Square,
     Mean,
-    ReLU,
+    Map,
 }
 
 #[derive(Debug, Clone, Copy)]
