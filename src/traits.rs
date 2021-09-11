@@ -25,6 +25,10 @@ pub trait ShapedArray {
 pub trait Activations {
     fn relu(&mut self) -> Self;
     fn sin(&mut self) -> Self;
+    fn cos(&mut self) -> Self;
+    fn ln(&mut self) -> Self;
+    fn exp(&mut self) -> Self;
+    fn sigmoid(&mut self) -> Self;
     fn tanh(&mut self) -> Self;
     fn square(&mut self) -> Self;
 }
@@ -42,13 +46,13 @@ pub trait Tensor: RandomInit + Params + Default + ShapedArray + Activations {
     fn take_tape(&mut self) -> Option<Box<GradientTape>> {
         self.mut_grad()
             .as_mut()
-            .map(|grad| grad.take_tape())
+            .map(|grad| grad.tape.take())
             .flatten()
     }
 
     fn backward(&mut self) -> Option<Box<GradientTape>> {
         self.mut_grad().as_mut().map(|grad| {
-            let mut tape = grad.take_tape().unwrap();
+            let mut tape = grad.tape.take().unwrap();
             tape.backward(grad.gradient_ref);
             tape
         })
@@ -58,7 +62,7 @@ pub trait Tensor: RandomInit + Params + Default + ShapedArray + Activations {
         let grad = self
             .mut_grad()
             .get_or_insert_with(|| Grad::new(tape.store_gradient(Self::SHAPE)));
-        grad.keep_tape(tape);
+        grad.tape = Some(tape);
     }
 }
 
@@ -83,14 +87,9 @@ pub trait Optimizer<M: Module>: DerefMut<Target = M> {
         &mut self,
         input: &mut <M::Input as Batch>::Batched<B>,
     ) -> <M::Output as Batch>::Batched<B> {
-        let mut tape = Box::new(GradientTape::new());
-
-        // register module's params
-        // self.register(&mut tape);
-
         // put tape in input
         *input.mut_grad() = None;
-        input.keep_tape(tape);
+        input.keep_tape(Box::new(GradientTape::new()));
 
         // go!
         self.forward(input)

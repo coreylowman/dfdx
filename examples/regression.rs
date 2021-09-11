@@ -4,7 +4,13 @@ use ndarray_rand::{
     rand::{rngs::StdRng, Rng, SeedableRng},
     rand_distr::Uniform,
 };
-use stag::{chain_modules, module_collection, nn::{Linear, ModuleChain, ReLU, Sin}, optim::sgd::{Sgd, SgdConfig}, tensor::{Tensor1D, Tensor2D}, traits::*};
+use stag::{
+    chain_modules, module_collection,
+    nn::{Linear, ModuleChain, ReLU, Sin},
+    optim::sgd::{Sgd, SgdConfig},
+    tensor::{Tensor1D, Tensor2D},
+    traits::*,
+};
 
 #[derive(Default, Debug)]
 struct MyCoolNN {

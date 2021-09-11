@@ -26,7 +26,6 @@ impl<T: Tensor + Batch> Module for ReLU<T> {
     }
 }
 
-
 #[derive(Debug, Default)]
 pub struct Sin<T: Tensor + Batch> {
     marker: PhantomData<T>,

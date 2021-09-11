@@ -3,7 +3,7 @@ use std::ops::Index;
 use ndarray::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
-pub struct DerivativeRef {
+pub(crate) struct DerivativeRef {
     index: usize,
 }
 
@@ -13,30 +13,30 @@ pub struct GradientRef {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum OpType {
+pub(crate) enum OpType {
     Normal,
     Broadcast,
     MatMul { m: usize, n: usize, o: usize },
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct UnaryOp {
-    pub op_type: OpType,
-    pub parent_grad: GradientRef,
-    pub parent_deriv: DerivativeRef,
-    pub result_grad: GradientRef,
+pub(crate) struct UnaryOp {
+    pub(crate) op_type: OpType,
+    pub(crate) parent_grad: GradientRef,
+    pub(crate) parent_deriv: DerivativeRef,
+    pub(crate) result_grad: GradientRef,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct BinaryOp {
-    pub op_type: OpType,
-    pub parent_grads: [GradientRef; 2],
-    pub parent_derivs: [DerivativeRef; 2],
-    pub result_grad: GradientRef,
+pub(crate) struct BinaryOp {
+    pub(crate) op_type: OpType,
+    pub(crate) parent_grads: [GradientRef; 2],
+    pub(crate) parent_derivs: [DerivativeRef; 2],
+    pub(crate) result_grad: GradientRef,
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Operation {
+pub(crate) enum Operation {
     Unary(UnaryOp),
     Binary(BinaryOp),
 }
@@ -63,13 +63,13 @@ impl GradientTape {
         }
     }
 
-    pub fn store_derivative<D: Dimension>(&mut self, deriv: Array<f32, D>) -> DerivativeRef {
+    pub(crate) fn store_derivative<D: Dimension>(&mut self, deriv: Array<f32, D>) -> DerivativeRef {
         let index = self.derivatives.len();
         self.derivatives.push(deriv.into_dyn());
         DerivativeRef { index }
     }
 
-    pub fn store_gradient<D: Dimension, Sh: ShapeBuilder<Dim = D>>(
+    pub(crate) fn store_gradient<D: Dimension, Sh: ShapeBuilder<Dim = D>>(
         &mut self,
         shape: Sh,
     ) -> GradientRef {
@@ -78,7 +78,7 @@ impl GradientTape {
         GradientRef { index }
     }
 
-    pub fn add_operation(&mut self, operation: Operation) {
+    pub(crate) fn add_operation(&mut self, operation: Operation) {
         self.operations.push(operation);
     }
 
@@ -153,30 +153,22 @@ impl Index<GradientRef> for GradientTape {
 
 #[derive(Debug)]
 pub struct Grad {
-    pub gradient_ref: GradientRef,
-    tape: Option<Box<GradientTape>>,
+    pub(crate) gradient_ref: GradientRef,
+    pub(crate) tape: Option<Box<GradientTape>>,
 }
 
 impl Grad {
-    pub fn new(gradient_ref: GradientRef) -> Self {
+    pub(crate) fn new(gradient_ref: GradientRef) -> Self {
         Self {
             gradient_ref,
             tape: None,
         }
     }
 
-    pub fn with_tape(gradient_ref: GradientRef, tape: Box<GradientTape>) -> Self {
+    pub(crate) fn with_tape(gradient_ref: GradientRef, tape: Box<GradientTape>) -> Self {
         Self {
             gradient_ref,
             tape: Some(tape),
         }
-    }
-
-    pub fn keep_tape(&mut self, tape: Box<GradientTape>) {
-        self.tape = Some(tape);
-    }
-
-    pub fn take_tape(&mut self) -> Option<Box<GradientTape>> {
-        self.tape.take()
     }
 }
