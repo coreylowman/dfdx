@@ -1,15 +1,10 @@
+use std::time::Instant;
+
 use ndarray_rand::{
     rand::{rngs::StdRng, Rng, SeedableRng},
-    rand_distr::Standard,
+    rand_distr::Uniform,
 };
-
-use rad::{
-    chain_modules, module_collection,
-    nn::{Linear, ModuleChain, ReLU},
-    optim::sgd::Sgd,
-    tensor::{Tensor1D, Tensor2D},
-    traits::*,
-};
+use stag::{chain_modules, module_collection, nn::{Linear, ModuleChain, ReLU, Sin}, optim::sgd::{Sgd, SgdConfig}, tensor::{Tensor1D, Tensor2D}, traits::*};
 
 #[derive(Default, Debug)]
 struct MyCoolNN {
@@ -35,43 +30,31 @@ impl Module for MyCoolNN {
     }
 }
 
-type LinearWithReLU<const I: usize, const O: usize> = ModuleChain<Linear<I, O>, ReLU<Tensor1D<O>>>;
-type MyCoolChain =
-    ModuleChain<LinearWithReLU<5, 4>, ModuleChain<LinearWithReLU<4, 3>, Linear<3, 2>>>;
-
-type MyNiceChain = chain_modules!(LinearWithReLU<5, 4>, LinearWithReLU<4, 3>, Linear<3, 2>, );
-
-// type InvalidChain = ModuleChain<Linear<5, 4>, Linear<3, 2>>;
+type MyNiceChain = chain_modules!(Linear<10, 32>, Linear<32, 32>, Linear<32, 2>, Sin<Tensor1D<2>>);
 
 fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
-    let mut opt: Sgd<MyNiceChain> = Default::default();
-    opt.randomize(&mut rng, &Standard);
+    let mut opt: Sgd<MyNiceChain> = Sgd {
+        cfg: SgdConfig { lr: 1e-3 },
+        module: Default::default(),
+    };
+    let mut x: Tensor2D<64, 10> = Default::default();
+    let mut y: Tensor2D<64, 2> = Default::default();
 
-    let mut x: Tensor2D<10, 5> = Default::default();
-    x.randomize(&mut rng, &Standard);
-    println!("x={:#}", x.data());
+    opt.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
+    x.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
+    y.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
-    let mut y: Tensor2D<10, 2> = Default::default();
-    y.randomize(&mut rng, &Standard);
-    println!("y={:#}", y.data());
+    for _i_epoch in 0..15 {
+        let start = Instant::now();
 
-    for _ in 0..15 {
         let mut output = opt.forward_with_derivatives(&mut x);
 
         let mut loss = (&mut output - &mut y).square().mean();
-        println!(
-            "loss={:#}",
-            // y.data(),
-            // output.data(),
-            loss.data()
-        );
 
         opt.step(&mut loss);
-    }
 
-    // println!("{:#?}", opt.l1);
-    // println!("{:#?}", opt.l2);
-    // println!("{:#?}", opt.l3);
+        println!("loss={:#.3} in {:?}", loss.data(), start.elapsed());
+    }
 }

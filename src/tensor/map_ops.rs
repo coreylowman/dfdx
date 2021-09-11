@@ -112,8 +112,8 @@ macro_rules! unary_ops {
             map_op_method!(relu, ReLU);
             map_op_method!(tanh, Tanh);
             map_op_method!(square, Square);
+            map_op_method!(sin, Sin);
             // map_op_method!(sigmoid, Sigmoid);
-            // map_op_method!(sin, Sin);
             // map_op_method!(cos, Cos);
         }
 

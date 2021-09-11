@@ -24,6 +24,7 @@ pub trait ShapedArray {
 
 pub trait Activations {
     fn relu(&mut self) -> Self;
+    fn sin(&mut self) -> Self;
     fn tanh(&mut self) -> Self;
     fn square(&mut self) -> Self;
 }
@@ -85,7 +86,7 @@ pub trait Optimizer<M: Module>: DerefMut<Target = M> {
         let mut tape = Box::new(GradientTape::new());
 
         // register module's params
-        self.register(&mut tape);
+        // self.register(&mut tape);
 
         // put tape in input
         *input.mut_grad() = None;

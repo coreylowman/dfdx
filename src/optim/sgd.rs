@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 
 #[derive(Debug)]
 pub struct SgdConfig {
-    lr: f32,
+    pub lr: f32,
 }
 
 impl Default for SgdConfig {
@@ -14,14 +14,8 @@ impl Default for SgdConfig {
 
 #[derive(Default, Debug)]
 pub struct Sgd<M: Module> {
-    cfg: SgdConfig,
-    module: M,
-}
-
-impl<M: Module> Sgd<M> {
-    pub fn new(cfg: SgdConfig, module: M) -> Self {
-        Self { cfg, module }
-    }
+    pub cfg: SgdConfig,
+    pub module: M,
 }
 
 impl<M: Module> Deref for Sgd<M> {
