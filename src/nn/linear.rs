@@ -1,9 +1,10 @@
-use super::traits::Module;
+use super::traits::{Init, Module};
 use crate::gradients::{traits::Params, GradientTape};
-use crate::tensor::traits::{Batch, Randomize};
+use crate::prelude::Randomize;
+use crate::tensor::traits::Batch;
 use crate::tensor::{Tensor1D, Tensor2D};
 use ndarray_rand::rand::Rng;
-use ndarray_rand::rand_distr::Distribution;
+use ndarray_rand::rand_distr::Uniform;
 
 #[derive(Default, Debug)]
 pub struct Linear<const I: usize, const O: usize> {
@@ -18,10 +19,10 @@ impl<const I: usize, const O: usize> Params for Linear<I, O> {
     }
 }
 
-impl<const I: usize, const O: usize> Randomize for Linear<I, O> {
-    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
-        self.weight.randomize(rng, dist);
-        self.bias.randomize(rng, dist);
+impl<const I: usize, const O: usize> Init for Linear<I, O> {
+    fn init<R: Rng>(&mut self, rng: &mut R) {
+        self.weight.randomize(rng, &Uniform::new(-1.0, 1.0));
+        self.bias.randomize(rng, &Uniform::new(-1.0, 1.0));
     }
 }
 

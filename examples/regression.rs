@@ -16,10 +16,10 @@ fn main() {
         cfg: SgdConfig { lr: 1e-3 },
         module: Default::default(),
     };
+    opt.init(&mut rng);
+
     let mut x: Tensor2D<64, 10> = Default::default();
     let mut y: Tensor2D<64, 2> = Default::default();
-
-    opt.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
     x.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
     y.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 

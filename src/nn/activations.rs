@@ -1,9 +1,9 @@
-use super::traits::Module;
+use super::traits::{Init, Module};
 use crate::{
     gradients::{traits::Params, GradientTape},
-    tensor::traits::{Activations, Batch, Randomize, Tensor},
+    tensor::traits::{Activations, Batch, Tensor},
 };
-use ndarray_rand::{rand::Rng, rand_distr::Distribution};
+use ndarray_rand::rand::Rng;
 use std::marker::PhantomData;
 
 #[derive(Debug, Default)]
@@ -11,8 +11,8 @@ pub struct ReLU<T: Tensor + Batch> {
     marker: PhantomData<T>,
 }
 
-impl<T: Tensor + Batch> Randomize for ReLU<T> {
-    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, _rng: &mut R, _dist: &D) {}
+impl<T: Tensor + Batch> Init for ReLU<T> {
+    fn init<R: Rng>(&mut self, _rng: &mut R) {}
 }
 
 impl<T: Tensor + Batch> Params for ReLU<T> {
@@ -33,8 +33,8 @@ pub struct Sin<T: Tensor + Batch> {
     marker: PhantomData<T>,
 }
 
-impl<T: Tensor + Batch> Randomize for Sin<T> {
-    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, _rng: &mut R, _dist: &D) {}
+impl<T: Tensor + Batch> Init for Sin<T> {
+    fn init<R: Rng>(&mut self, _rng: &mut R) {}
 }
 
 impl<T: Tensor + Batch> Params for Sin<T> {

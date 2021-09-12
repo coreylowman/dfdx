@@ -1,8 +1,7 @@
-use super::traits::Module;
+use super::traits::{Init, Module};
 use crate::gradients::{traits::Params, GradientTape};
-use crate::tensor::traits::{Batch, Randomize};
+use crate::tensor::traits::Batch;
 use ndarray_rand::rand::Rng;
-use ndarray_rand::rand_distr::Distribution;
 
 #[derive(Default, Debug)]
 pub struct ModuleChain<M1: Module, M2: Module<Input = M1::Output>> {
@@ -17,10 +16,10 @@ impl<M1: Module, M2: Module<Input = M1::Output>> Params for ModuleChain<M1, M2> 
     }
 }
 
-impl<M1: Module, M2: Module<Input = M1::Output>> Randomize for ModuleChain<M1, M2> {
-    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
-        self.first.randomize(rng, dist);
-        self.second.randomize(rng, dist);
+impl<M1: Module, M2: Module<Input = M1::Output>> Init for ModuleChain<M1, M2> {
+    fn init<R: Rng>(&mut self, rng: &mut R) {
+        self.first.init(rng);
+        self.second.init(rng);
     }
 }
 
