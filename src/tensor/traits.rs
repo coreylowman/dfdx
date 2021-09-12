@@ -25,6 +25,7 @@ pub trait Activations {
     fn sigmoid(&mut self) -> Self;
     fn tanh(&mut self) -> Self;
     fn square(&mut self) -> Self;
+    fn abs(&mut self) -> Self;
 }
 
 pub trait Tensor: Randomize + Taped + Default + ShapedArray + Activations {

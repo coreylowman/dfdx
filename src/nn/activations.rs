@@ -1,15 +1,12 @@
 use super::traits::{Init, Module};
-use crate::{
-    gradients::{traits::Taped, GradientTape},
-    tensor::traits::{Activations, Batch, Tensor},
-};
+use crate::gradients::{traits::Taped, GradientTape};
+use crate::tensor::traits::{Activations, Batch, Tensor};
 use ndarray_rand::rand::Rng;
-use std::marker::PhantomData;
 
 macro_rules! nn_activation {
     ($module_name:ident, $act_fn:ident) => {
         #[derive(Debug, Default)]
-        pub struct $module_name<T: Tensor + Batch>(PhantomData<T>);
+        pub struct $module_name<T: Tensor + Batch>(std::marker::PhantomData<T>);
 
         impl<T: Tensor + Batch> Init for $module_name<T> {
             fn init<R: Rng>(&mut self, _rng: &mut R) {}

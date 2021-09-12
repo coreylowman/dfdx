@@ -1,6 +1,6 @@
 use super::traits::Optimizer;
 use crate::nn::traits::Module;
-use crate::tensor::traits::*;
+use crate::tensor::traits::Tensor;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug)]

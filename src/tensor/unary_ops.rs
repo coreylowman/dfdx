@@ -88,6 +88,20 @@ mod exp {
     }
 }
 
+mod abs {
+    pub(super) fn forward(f: f32) -> f32 {
+        f.abs()
+    }
+
+    pub(super) fn derivative(f: f32) -> f32 {
+        if f <= 0.0 {
+            -1.0
+        } else {
+            1.0
+        }
+    }
+}
+
 macro_rules! map_op_method {
     ($fn_name:ident) => {
         fn $fn_name(&mut self) -> Self {
@@ -121,6 +135,7 @@ macro_rules! unary_ops {
             map_op_method!(square);
             map_op_method!(sin);
             map_op_method!(cos);
+            map_op_method!(abs);
         }
 
         impl<$($const_defs)*> $typename<$($consts)*> {
