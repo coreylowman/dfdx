@@ -7,5 +7,5 @@ pub mod randomize;
 pub mod tensor;
 
 mod macros;
-mod prelude;
+pub mod prelude;
 pub use crate::macros::*;
