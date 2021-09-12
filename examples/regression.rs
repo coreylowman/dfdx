@@ -3,19 +3,16 @@ use ndarray_rand::{
     rand_distr::Uniform,
 };
 use stag::nn::{Linear, ModuleChain, ReLU, Sin};
-use stag::optim::sgd::{Sgd, SgdConfig};
+use stag::optim::sgd::Sgd;
 use stag::prelude::*;
 use std::time::Instant;
 
-type MyNiceChain = chain_modules!(Linear<10, 32>, ReLU<Tensor1D<32>>, Linear<32, 32>, ReLU<Tensor1D<32>>, Linear<32, 2>, Sin<Tensor1D<2>>);
+type MyMLP = chain_modules!(Linear<10, 32>, ReLU<Tensor1D<32>>, Linear<32, 32>, ReLU<Tensor1D<32>>, Linear<32, 2>, Sin<Tensor1D<2>>);
 
 fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
-    let mut opt: Sgd<MyNiceChain> = Sgd {
-        cfg: SgdConfig { lr: 1e-3 },
-        module: Default::default(),
-    };
+    let mut opt: Sgd<MyMLP> = Default::default();
     opt.init(&mut rng);
 
     let mut x: Tensor2D<64, 10> = Default::default();
@@ -27,9 +24,7 @@ fn main() {
         let start = Instant::now();
 
         let mut output = opt.forward_with_derivatives(&mut x);
-
         let mut loss = (&mut output - &mut y).square().mean();
-
         opt.step(&mut loss);
 
         println!("loss={:#.3} in {:?}", loss.data(), start.elapsed());
