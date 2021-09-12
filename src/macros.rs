@@ -22,10 +22,10 @@ macro_rules! module_collection {
 
     ([$($const_defs:tt)*], [$($consts:tt)*], $typename:ident, [$($modules:tt, )*], [$($where_clauses:tt)*]) => {
         use $crate::call_with_all;
-        use $crate::gradients::GradientTape;
-        use $crate::traits::{RandomInit, Params};
+        use $crate::gradients::{GradientTape, traits::Params};
+        use $crate::randomize::Randomize;
         use ndarray_rand::rand::prelude::*;
-        impl<$($const_defs)*> RandomInit for $typename<$($consts)*> where $($where_clauses)* {
+        impl<$($const_defs)*> Randomize for $typename<$($consts)*> where $($where_clauses)* {
             fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
                 call_with_all!(self [$($modules, )*], randomize(rng, dist,));
             }

@@ -1,16 +1,6 @@
-use crate::gradients::{Grad, GradientRef, GradientTape};
+use crate::gradients::{ops::GradientRef, traits::Params, Grad, GradientTape};
+use crate::randomize::Randomize;
 use ndarray::{Array, Dimension, ShapeBuilder};
-use ndarray_rand::rand::prelude::*;
-use std::ops::DerefMut;
-
-pub trait RandomInit {
-    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D);
-}
-
-pub trait Params {
-    fn register(&mut self, tape: &mut GradientTape);
-    fn update(&mut self, tape: &GradientTape);
-}
 
 pub trait ShapedArray {
     type Dimension: Dimension;
@@ -33,7 +23,7 @@ pub trait Activations {
     fn square(&mut self) -> Self;
 }
 
-pub trait Tensor: RandomInit + Params + Default + ShapedArray + Activations {
+pub trait Tensor: Randomize + Params + Default + ShapedArray + Activations {
     fn with_grad(data: Array<f32, Self::Dimension>, grad: Option<Grad>) -> Self;
 
     fn grad(&self) -> &Option<Grad>;
@@ -68,30 +58,4 @@ pub trait Tensor: RandomInit + Params + Default + ShapedArray + Activations {
 
 pub trait Batch {
     type Batched<const B: usize>: Tensor;
-}
-
-pub trait Module: RandomInit + Params + Default {
-    type Input: Tensor + Batch;
-    type Output: Tensor + Batch;
-
-    fn forward<const B: usize>(
-        &mut self,
-        input: &mut <Self::Input as Batch>::Batched<B>,
-    ) -> <Self::Output as Batch>::Batched<B>;
-}
-
-pub trait Optimizer<M: Module>: DerefMut<Target = M> {
-    fn step<T: Tensor>(&mut self, loss: &mut T);
-
-    fn forward_with_derivatives<const B: usize>(
-        &mut self,
-        input: &mut <M::Input as Batch>::Batched<B>,
-    ) -> <M::Output as Batch>::Batched<B> {
-        // put tape in input
-        *input.mut_grad() = None;
-        input.keep_tape(Box::new(GradientTape::new()));
-
-        // go!
-        self.forward(input)
-    }
 }

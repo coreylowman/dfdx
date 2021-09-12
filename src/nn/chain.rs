@@ -1,7 +1,6 @@
-use crate::{
-    module_collection,
-    traits::{Batch, Module},
-};
+use super::traits::Module;
+use crate::module_collection;
+use crate::tensor::traits::Batch;
 
 #[derive(Default, Debug)]
 pub struct ModuleChain<M1: Module, M2: Module<Input = M1::Output>> {

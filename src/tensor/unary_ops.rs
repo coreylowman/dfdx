@@ -1,8 +1,6 @@
-use super::base::*;
-use crate::{
-    gradients::*,
-    traits::{Activations, ShapedArray, Tensor},
-};
+use super::base::{Tensor0D, Tensor1D, Tensor2D};
+use crate::gradients::{ops::*, Grad};
+use crate::tensor::traits::{Activations, ShapedArray, Tensor};
 use ndarray::prelude::*;
 
 mod relu {

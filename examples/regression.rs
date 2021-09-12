@@ -1,15 +1,13 @@
 use std::time::Instant;
-
 use ndarray_rand::{
     rand::{rngs::StdRng, Rng, SeedableRng},
     rand_distr::Uniform,
 };
 use stag::{
     chain_modules, module_collection,
-    nn::{Linear, ModuleChain, ReLU, Sin},
-    optim::sgd::{Sgd, SgdConfig},
-    tensor::{Tensor1D, Tensor2D},
-    traits::*,
+    nn::{traits::Module, Linear, ModuleChain, ReLU, Sin},
+    optim::{traits::Optimizer, sgd::{Sgd, SgdConfig}},
+    tensor::{traits::*, Tensor1D, Tensor2D},
 };
 
 #[derive(Default, Debug)]

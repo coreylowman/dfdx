@@ -1,9 +1,10 @@
+use super::traits::{Batch, ShapedArray, Tensor};
 use crate::{
-    gradients::*,
-    traits::{Batch, Params, RandomInit, ShapedArray, Tensor},
+    gradients::{traits::Params, Grad, GradientTape},
+    randomize::Randomize,
 };
-use ndarray::prelude::*;
-use ndarray_rand::rand::prelude::*;
+use ndarray::prelude::{Array, Ix0, Ix1, Ix2};
+use ndarray_rand::rand::{distributions::Distribution, Rng};
 
 #[derive(Debug)]
 pub struct Tensor0D {
@@ -63,7 +64,7 @@ macro_rules! tensor_impl {
             }
         }
 
-        impl<$($const_defs)*> RandomInit for $typename<$($consts)*> {
+        impl<$($const_defs)*> Randomize for $typename<$($consts)*> {
             fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
                 self.mut_data().map_inplace(|f| *f = dist.sample(rng))
             }

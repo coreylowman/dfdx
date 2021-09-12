@@ -1,8 +1,6 @@
-use super::base::*;
-use crate::{
-    gradients::*,
-    traits::{Params, ShapedArray, Tensor},
-};
+use super::base::{Tensor0D, Tensor1D, Tensor2D};
+use super::traits::{ShapedArray, Tensor};
+use crate::gradients::{ops::*, traits::Params, Grad};
 use ndarray::prelude::*;
 use std::ops::{Add, Mul, Sub};
 

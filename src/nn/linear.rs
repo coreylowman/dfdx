@@ -1,6 +1,7 @@
+use super::traits::Module;
 use crate::module_collection;
+use crate::tensor::traits::Batch;
 use crate::tensor::{Tensor1D, Tensor2D};
-use crate::traits::{Batch, Module};
 
 #[derive(Default, Debug)]
 pub struct Linear<const I: usize, const O: usize> {

@@ -1,7 +1,8 @@
 mod activations;
 mod chain;
 mod linear;
+pub mod traits;
 
-pub use activations::{ReLU, Sin};
-pub use chain::ModuleChain;
-pub use linear::Linear;
+pub use activations::*;
+pub use chain::*;
+pub use linear::*;
