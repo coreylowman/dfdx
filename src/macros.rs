@@ -32,10 +32,6 @@ macro_rules! module_collection {
         }
 
         impl<$($const_defs)*> Params for $typename<$($consts)*> where $($where_clauses)* {
-            fn register(&mut self, tape: &mut GradientTape) {
-                call_with_all!(self [$($modules, )*], register(tape,));
-            }
-
             fn update(&mut self, tape: &GradientTape) {
                 call_with_all!(self [$($modules, )*], update(tape,));
             }

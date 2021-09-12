@@ -1,4 +1,4 @@
-use super::traits::{Batch, ShapedArray, Tensor};
+use super::traits::{Batch, Record, ShapedArray, Tensor};
 use crate::{
     gradients::{traits::Params, Grad, GradientTape},
     randomize::Randomize,
@@ -70,14 +70,15 @@ macro_rules! tensor_impl {
             }
         }
 
-
-        impl<$($const_defs)*> Params for $typename<$($consts)*> {
-            fn register(&mut self, tape: &mut GradientTape) {
+        impl<$($const_defs)*> Record for $typename<$($consts)*> {
+            fn record(&mut self, tape: &mut GradientTape) {
                 if self.grad().is_none() {
                     *self.mut_grad() = Some(Grad::new(tape.store_gradient(Self::SHAPE)));
                 }
             }
+        }
 
+        impl<$($const_defs)*> Params for $typename<$($consts)*> {
             fn update(&mut self, tape: &GradientTape) {
                 let grad = self.mut_grad().take().unwrap();
                 *self.mut_data() -= &tape[grad.gradient_ref];

@@ -17,7 +17,6 @@ impl<T: Tensor + Batch> Randomize for ReLU<T> {
 }
 
 impl<T: Tensor + Batch> Params for ReLU<T> {
-    fn register(&mut self, _tape: &mut GradientTape) {}
     fn update(&mut self, _tape: &GradientTape) {}
 }
 
@@ -40,7 +39,6 @@ impl<T: Tensor + Batch> Randomize for Sin<T> {
 }
 
 impl<T: Tensor + Batch> Params for Sin<T> {
-    fn register(&mut self, _tape: &mut GradientTape) {}
     fn update(&mut self, _tape: &GradientTape) {}
 }
 

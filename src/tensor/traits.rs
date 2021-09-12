@@ -59,3 +59,7 @@ pub trait Tensor: Randomize + Params + Default + ShapedArray + Activations {
 pub trait Batch {
     type Batched<const B: usize>: Tensor;
 }
+
+pub(super) trait Record {
+    fn record(&mut self, tape: &mut GradientTape);
+}

@@ -1,4 +1,3 @@
-use std::time::Instant;
 use ndarray_rand::{
     rand::{rngs::StdRng, Rng, SeedableRng},
     rand_distr::Uniform,
@@ -6,9 +5,13 @@ use ndarray_rand::{
 use stag::{
     chain_modules, module_collection,
     nn::{traits::Module, Linear, ModuleChain, ReLU, Sin},
-    optim::{traits::Optimizer, sgd::{Sgd, SgdConfig}},
+    optim::{
+        sgd::{Sgd, SgdConfig},
+        traits::Optimizer,
+    },
     tensor::{traits::*, Tensor1D, Tensor2D},
 };
+use std::time::Instant;
 
 #[derive(Default, Debug)]
 struct MyCoolNN {
