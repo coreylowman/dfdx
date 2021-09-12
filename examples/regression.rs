@@ -7,7 +7,7 @@ use stag::optim::sgd::{Sgd, SgdConfig};
 use stag::prelude::*;
 use std::time::Instant;
 
-type MyNiceChain = chain_modules!(Linear<10, 32>, Linear<32, 32>, Linear<32, 2>, Sin<Tensor1D<2>>);
+type MyNiceChain = chain_modules!(Linear<10, 32>, ReLU<Tensor1D<32>>, Linear<32, 32>, ReLU<Tensor1D<32>>, Linear<32, 2>, Sin<Tensor1D<2>>);
 
 fn main() {
     let mut rng = StdRng::seed_from_u64(0);
