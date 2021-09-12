@@ -1,5 +1,5 @@
 use super::traits::{Init, Module};
-use crate::gradients::{traits::Params, GradientTape};
+use crate::gradients::{traits::Taped, GradientTape};
 use crate::prelude::Randomize;
 use crate::tensor::traits::Batch;
 use crate::tensor::{Tensor1D, Tensor2D};
@@ -12,7 +12,7 @@ pub struct Linear<const I: usize, const O: usize> {
     bias: Tensor1D<O>,
 }
 
-impl<const I: usize, const O: usize> Params for Linear<I, O> {
+impl<const I: usize, const O: usize> Taped for Linear<I, O> {
     fn update(&mut self, tape: &GradientTape) {
         self.weight.update(tape);
         self.bias.update(tape);

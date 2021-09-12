@@ -1,5 +1,5 @@
 use super::tape::GradientTape;
 
-pub trait Params {
+pub trait Taped {
     fn update(&mut self, tape: &GradientTape);
 }

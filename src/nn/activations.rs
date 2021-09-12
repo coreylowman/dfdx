@@ -1,6 +1,6 @@
 use super::traits::{Init, Module};
 use crate::{
-    gradients::{traits::Params, GradientTape},
+    gradients::{traits::Taped, GradientTape},
     tensor::traits::{Activations, Batch, Tensor},
 };
 use ndarray_rand::rand::Rng;
@@ -15,7 +15,7 @@ macro_rules! nn_activation {
             fn init<R: Rng>(&mut self, _rng: &mut R) {}
         }
 
-        impl<T: Tensor + Batch> Params for $module_name<T> {
+        impl<T: Tensor + Batch> Taped for $module_name<T> {
             fn update(&mut self, _tape: &GradientTape) {}
         }
 

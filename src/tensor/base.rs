@@ -1,5 +1,5 @@
 use super::traits::{Batch, Randomize, Record, ShapedArray, Tensor};
-use crate::gradients::{traits::Params, Grad, GradientTape};
+use crate::gradients::{traits::Taped, Grad, GradientTape};
 use ndarray::prelude::{Array, Ix0, Ix1, Ix2};
 use ndarray_rand::rand::{distributions::Distribution, Rng};
 
@@ -75,7 +75,7 @@ macro_rules! tensor_impl {
             }
         }
 
-        impl<$($const_defs)*> Params for $typename<$($consts)*> {
+        impl<$($const_defs)*> Taped for $typename<$($consts)*> {
             fn update(&mut self, tape: &GradientTape) {
                 let grad = self.mut_grad().take().unwrap();
                 *self.mut_data() -= &tape[grad.gradient_ref];

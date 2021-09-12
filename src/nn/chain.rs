@@ -1,5 +1,5 @@
 use super::traits::{Init, Module};
-use crate::gradients::{traits::Params, GradientTape};
+use crate::gradients::{traits::Taped, GradientTape};
 use crate::tensor::traits::Batch;
 use ndarray_rand::rand::Rng;
 
@@ -9,7 +9,7 @@ pub struct ModuleChain<M1: Module, M2: Module<Input = M1::Output>> {
     second: M2,
 }
 
-impl<M1: Module, M2: Module<Input = M1::Output>> Params for ModuleChain<M1, M2> {
+impl<M1: Module, M2: Module<Input = M1::Output>> Taped for ModuleChain<M1, M2> {
     fn update(&mut self, tape: &GradientTape) {
         self.first.update(tape);
         self.second.update(tape);

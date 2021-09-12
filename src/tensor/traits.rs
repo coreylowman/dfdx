@@ -1,4 +1,4 @@
-use crate::gradients::{ops::GradientRef, traits::Params, Grad, GradientTape};
+use crate::gradients::{ops::GradientRef, traits::Taped, Grad, GradientTape};
 use ndarray::{Array, Dimension, ShapeBuilder};
 use ndarray_rand::rand::{distributions::Distribution, Rng};
 
@@ -27,7 +27,7 @@ pub trait Activations {
     fn square(&mut self) -> Self;
 }
 
-pub trait Tensor: Randomize + Params + Default + ShapedArray + Activations {
+pub trait Tensor: Randomize + Taped + Default + ShapedArray + Activations {
     fn with_grad(data: Array<f32, Self::Dimension>, grad: Option<Grad>) -> Self;
 
     fn grad(&self) -> &Option<Grad>;
