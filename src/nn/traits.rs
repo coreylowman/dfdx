@@ -1,6 +1,5 @@
 use crate::gradients::traits::Params;
-use crate::randomize::Randomize;
-use crate::tensor::traits::{Batch, Tensor};
+use crate::tensor::traits::{Batch, Randomize, Tensor};
 
 pub trait Module: Randomize + Params + Default {
     type Input: Tensor + Batch;

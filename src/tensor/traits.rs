@@ -1,6 +1,10 @@
 use crate::gradients::{ops::GradientRef, traits::Params, Grad, GradientTape};
-use crate::randomize::Randomize;
 use ndarray::{Array, Dimension, ShapeBuilder};
+use ndarray_rand::rand::{distributions::Distribution, Rng};
+
+pub trait Randomize {
+    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D);
+}
 
 pub trait ShapedArray {
     type Dimension: Dimension;

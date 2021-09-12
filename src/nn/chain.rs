@@ -1,6 +1,8 @@
 use super::traits::Module;
-use crate::module_collection;
-use crate::tensor::traits::Batch;
+use crate::gradients::{traits::Params, GradientTape};
+use crate::tensor::traits::{Batch, Randomize};
+use ndarray_rand::rand::Rng;
+use ndarray_rand::rand_distr::Distribution;
 
 #[derive(Default, Debug)]
 pub struct ModuleChain<M1: Module, M2: Module<Input = M1::Output>> {
@@ -8,12 +10,19 @@ pub struct ModuleChain<M1: Module, M2: Module<Input = M1::Output>> {
     second: M2,
 }
 
-module_collection!(
-    [M1: Module, M2: Module<Input = M1::Output>],
-    [M1, M2],
-    ModuleChain,
-    [first, second,]
-);
+impl<M1: Module, M2: Module<Input = M1::Output>> Params for ModuleChain<M1, M2> {
+    fn update(&mut self, tape: &GradientTape) {
+        self.first.update(tape);
+        self.second.update(tape);
+    }
+}
+
+impl<M1: Module, M2: Module<Input = M1::Output>> Randomize for ModuleChain<M1, M2> {
+    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
+        self.first.randomize(rng, dist);
+        self.second.randomize(rng, dist);
+    }
+}
 
 impl<M1: Module, M2: Module<Input = M1::Output>> Module for ModuleChain<M1, M2> {
     type Input = M1::Input;
@@ -23,7 +32,6 @@ impl<M1: Module, M2: Module<Input = M1::Output>> Module for ModuleChain<M1, M2> 
         &mut self,
         input: &mut <Self::Input as Batch>::Batched<B>,
     ) -> <Self::Output as Batch>::Batched<B> {
-        let mut middle = self.first.forward(input);
-        self.second.forward(&mut middle)
+        self.second.forward(&mut self.first.forward(input))
     }
 }

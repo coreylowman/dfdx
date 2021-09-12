@@ -1,8 +1,5 @@
-use super::traits::{Batch, Record, ShapedArray, Tensor};
-use crate::{
-    gradients::{traits::Params, Grad, GradientTape},
-    randomize::Randomize,
-};
+use super::traits::{Batch, Randomize, Record, ShapedArray, Tensor};
+use crate::gradients::{traits::Params, Grad, GradientTape};
 use ndarray::prelude::{Array, Ix0, Ix1, Ix2};
 use ndarray_rand::rand::{distributions::Distribution, Rng};
 

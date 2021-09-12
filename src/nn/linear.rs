@@ -1,7 +1,9 @@
 use super::traits::Module;
-use crate::module_collection;
-use crate::tensor::traits::Batch;
+use crate::gradients::{traits::Params, GradientTape};
+use crate::tensor::traits::{Batch, Randomize};
 use crate::tensor::{Tensor1D, Tensor2D};
+use ndarray_rand::rand::Rng;
+use ndarray_rand::rand_distr::Distribution;
 
 #[derive(Default, Debug)]
 pub struct Linear<const I: usize, const O: usize> {
@@ -9,7 +11,19 @@ pub struct Linear<const I: usize, const O: usize> {
     bias: Tensor1D<O>,
 }
 
-module_collection!([const I: usize, const O: usize], [I, O], Linear, [weight, bias, ]);
+impl<const I: usize, const O: usize> Params for Linear<I, O> {
+    fn update(&mut self, tape: &GradientTape) {
+        self.weight.update(tape);
+        self.bias.update(tape);
+    }
+}
+
+impl<const I: usize, const O: usize> Randomize for Linear<I, O> {
+    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
+        self.weight.randomize(rng, dist);
+        self.bias.randomize(rng, dist);
+    }
+}
 
 impl<const I: usize, const O: usize> Module for Linear<I, O> {
     type Input = Tensor1D<I>;
@@ -19,8 +33,6 @@ impl<const I: usize, const O: usize> Module for Linear<I, O> {
         &mut self,
         input: &mut <Self::Input as Batch>::Batched<B>,
     ) -> <Self::Output as Batch>::Batched<B> {
-        let mut ax = input * &mut self.weight;
-        let ax_plus_b = &mut ax + &mut self.bias;
-        ax_plus_b
+        &mut (input * &mut self.weight) + &mut self.bias
     }
 }

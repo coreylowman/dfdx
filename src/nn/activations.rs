@@ -1,8 +1,7 @@
 use super::traits::Module;
 use crate::{
     gradients::{traits::Params, GradientTape},
-    randomize::Randomize,
-    tensor::traits::{Activations, Batch, Tensor},
+    tensor::traits::{Activations, Batch, Randomize, Tensor},
 };
 use ndarray_rand::{rand::Rng, rand_distr::Distribution};
 use std::marker::PhantomData;
