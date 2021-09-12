@@ -38,12 +38,13 @@ mod tanh {
 }
 
 mod sigmoid {
-    pub(super) fn forward(_f: f32) -> f32 {
-        todo!()
+    pub(super) fn forward(f: f32) -> f32 {
+        1.0 / (1.0 + (-f).exp())
     }
 
-    pub(super) fn derivative(_f: f32) -> f32 {
-        todo!()
+    pub(super) fn derivative(f: f32) -> f32 {
+        let s = forward(f);
+        s * (1.0 - s)
     }
 }
 
