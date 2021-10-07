@@ -1,6 +1,9 @@
 use crate::gradients::{ops::GradientRef, traits::Taped, Grad, GradientTape};
 use ndarray::{Array, Dimension, ShapeBuilder};
-use ndarray_rand::rand::{distributions::Distribution, Rng};
+use ndarray_rand::{
+    rand::{distributions::Distribution, Rng},
+    rand_distr::{Standard, StandardNormal},
+};
 
 pub trait Randomize {
     fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D);
@@ -16,6 +19,33 @@ pub trait ShapedArray {
     fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension>;
 }
 
+pub trait InitSugar: Default + ShapedArray {
+    fn zeros() -> Self {
+        let mut a = Self::default();
+        a.mut_data().fill(0.0);
+        a
+    }
+
+    fn ones() -> Self {
+        let mut a = Self::default();
+        a.mut_data().fill(1.0);
+        a
+    }
+
+    fn rand<R: Rng>(rng: &mut R) -> Self {
+        let mut a = Self::default();
+        a.mut_data().map_inplace(|f| *f = Standard.sample(rng));
+        a
+    }
+
+    fn randn<R: Rng>(rng: &mut R) -> Self {
+        let mut a = Self::default();
+        a.mut_data()
+            .map_inplace(|f| *f = StandardNormal.sample(rng));
+        a
+    }
+}
+
 pub trait Activations {
     fn relu(&mut self) -> Self;
     fn sin(&mut self) -> Self;
@@ -28,7 +58,7 @@ pub trait Activations {
     fn abs(&mut self) -> Self;
 }
 
-pub trait Tensor: Randomize + Taped + Default + ShapedArray + Activations {
+pub trait Tensor: Randomize + Taped + Default + ShapedArray + Activations + InitSugar {
     fn with_grad(data: Array<f32, Self::Dimension>, grad: Option<Grad>) -> Self;
 
     fn grad(&self) -> &Option<Grad>;
