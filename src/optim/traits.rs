@@ -1,5 +1,5 @@
 use crate::gradients::GradientTape;
-use crate::nn::traits::Module;
+use crate::nn::module::Module;
 use crate::tensor::traits::*;
 use std::ops::DerefMut;
 

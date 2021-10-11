@@ -1,7 +1,7 @@
 mod activations;
 mod chain;
 mod linear;
-pub mod traits;
+pub mod module;
 
 pub use activations::*;
 pub use chain::*;

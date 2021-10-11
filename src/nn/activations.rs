@@ -1,4 +1,4 @@
-use super::traits::{Init, Module};
+use super::module::{Init, Module};
 use crate::gradients::{traits::Taped, GradientTape};
 use crate::tensor::traits::{Activations, Batch, Tensor};
 use ndarray_rand::rand::Rng;
