@@ -1,4 +1,4 @@
-use super::traits::Optimizer;
+use super::optimizer::Optimizer;
 use crate::nn::module::Module;
 use crate::tensor::traits::Tensor;
 use std::ops::{Deref, DerefMut};
