@@ -97,8 +97,18 @@ This means we know exactly which tensor owns the gradient tape!
 Batching is currently implemented with this trait:
 
 ```rust
+// src/tensor/tensor.rs
 pub trait Batch {
     type Batched<const B: usize>: Tensor;
+}
+
+// src/tensor/tensor_impl.rs
+impl Batch for Tensor0D {
+    type Batched<const B: usize> = Tensor1D<B>;
+}
+
+impl<const N: usize> Batch for Tensor1D<N> {
+    type Batched<const B: usize> = Tensor2D<B, N>;
 }
 ```
 
