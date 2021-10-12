@@ -28,7 +28,17 @@ where
     }
 }
 
-pub trait InitSugar: Default + ShapedArray {
+pub trait InitSugar {
+    fn zeros() -> Self;
+    fn ones() -> Self;
+    fn rand<R: Rng>(rng: &mut R) -> Self;
+    fn randn<R: Rng>(rng: &mut R) -> Self;
+}
+
+impl<T> InitSugar for T
+where
+    T: Default + ShapedArray,
+{
     fn zeros() -> Self {
         let mut a = Self::default();
         a.mut_data().fill(0.0);

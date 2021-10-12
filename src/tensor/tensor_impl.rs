@@ -1,4 +1,4 @@
-use super::tensor::{Batch, InitSugar, Record, ShapedArray, Tensor};
+use super::tensor::{Batch, Record, ShapedArray, Tensor};
 use crate::gradients::{Gradient, GradientTape, HasGradient, Taped};
 use ndarray::prelude::{Array, Ix0, Ix1, Ix2};
 
@@ -45,8 +45,6 @@ macro_rules! tensor_impl {
                 }
             }
         }
-
-        impl<$($const_defs)*> InitSugar for $typename<$($consts)*> { }
 
         impl<$($const_defs)*> HasGradient for $typename<$($consts)*> {
             fn grad(&self) -> &Option<Gradient> {
