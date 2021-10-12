@@ -1,4 +1,4 @@
-use crate::gradients::{traits::Taped, Gradient, GradientRef, GradientTape};
+use crate::gradients::{Gradient, GradientRef, GradientTape, Taped};
 use ndarray::{Array, Dimension, ShapeBuilder};
 use ndarray_rand::{
     rand::{distributions::Distribution, Rng},

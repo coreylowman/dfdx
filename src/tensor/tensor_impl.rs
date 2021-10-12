@@ -1,5 +1,5 @@
 use super::tensor::{Batch, InitSugar, Randomize, Record, ShapedArray, Tensor};
-use crate::gradients::{traits::Taped, Gradient, GradientTape};
+use crate::gradients::{Gradient, GradientTape, Taped};
 use ndarray::prelude::{Array, Ix0, Ix1, Ix2};
 use ndarray_rand::rand::{distributions::Distribution, Rng};
 

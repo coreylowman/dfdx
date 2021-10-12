@@ -1,4 +1,4 @@
-use crate::gradients::traits::Taped;
+use crate::gradients::Taped;
 use crate::tensor::{Batch, Tensor};
 use ndarray_rand::rand::Rng;
 

@@ -1,5 +1,5 @@
 use super::module::{Init, Module};
-use crate::gradients::{traits::Taped, GradientTape};
+use crate::gradients::{GradientTape, Taped};
 use crate::tensor::{Activations, Batch, Tensor};
 use ndarray_rand::rand::Rng;
 

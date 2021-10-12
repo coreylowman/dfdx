@@ -3,6 +3,10 @@ use super::refs::*;
 use ndarray::prelude::*;
 use std::ops::Index;
 
+pub trait Taped {
+    fn update(&mut self, tape: &GradientTape);
+}
+
 #[derive(Debug)]
 pub struct GradientTape {
     operations: Vec<Operation>,
