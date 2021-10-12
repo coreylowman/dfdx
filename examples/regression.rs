@@ -25,19 +25,27 @@ type MyMLP = chain_modules!(Linear<10, 32>, ReLU<Tensor1D<32>>, Linear<32, 32>, 
 fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
+    // initialize target data
     let mut x: Tensor2D<64, 10> = Default::default();
     let mut y: Tensor2D<64, 2> = Default::default();
     x.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
     y.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
+    // initialize optimizer & model
     let mut opt: Sgd<MyMLP> = Default::default();
     opt.init(&mut rng);
 
+    // run through training data
     for _i_epoch in 0..15 {
         let start = Instant::now();
 
+        // call forward & track derivaties
         let mut output = opt.forward_with_derivatives(&mut x);
+
+        // compute loss
         let mut loss = (&mut output - &mut y).square().mean();
+
+        // run backprop
         opt.step(&mut loss);
 
         println!("loss={:#.3} in {:?}", loss.data(), start.elapsed());
