@@ -83,3 +83,62 @@ fn main() {
     opt.step(&mut loss);
 }
 ```
+
+## Interesting implementation details
+
+### No Arc/RefCell!
+
+Since all operations in a computation graph have exactly 1 child, we can always move the gradient tape to the child of the last operation.
+
+This means we know exactly which tensor owns the gradient tape!
+
+### Batching
+
+Batching is currently implemented with this trait:
+
+```rust
+pub trait Batch {
+    type Batched<const B: usize>: Tensor;
+}
+```
+
+This is where the nightly dependency comes in!
+
+The Module API requires inputs & outputs to implement the Batch trait, which is why all the examples have a batch dimension.
+
+### Module & ModuleChain
+
+I like the definition for the Module trait a lot:
+
+```rust
+pub trait Module: Init + Taped + Default {
+    type Input: Tensor + Batch;
+    type Output: Tensor + Batch;
+
+    fn forward<const B: usize>(
+        &mut self,
+        input: &mut <Self::Input as Batch>::Batched<B>,
+    ) -> <Self::Output as Batch>::Batched<B>;
+}
+```
+
+It just takes its input and produces an output!
+
+What's cool is how we can use this to implement a ModuleChain (chaining two modules together):
+
+```rust
+#[derive(Default, Debug)]
+pub struct ModuleChain<M1: Module, M2: Module<Input = M1::Output>> {
+    first: M1,
+    second: M2,
+}
+```
+
+We can require the second module's input to be the same as the first module's output! SO COOL!
+
+(Of course ModuleChain also implements Module!)
+
+### Optimizer has all methods of underlying module for free!
+
+Yay [DerefMut](https://doc.rust-lang.org/std/ops/trait.DerefMut.html)!
+
