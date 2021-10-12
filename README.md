@@ -54,3 +54,32 @@ fn main() {
 }
 ```
 
+## Easy to use Optimizer API
+
+See [examples/sgd.rs](examples/sgd.rs) and [examples/regression.rs](examples/regression.rs) for more examples.
+
+```rust
+
+fn main() {
+    let mut rng = StdRng::seed_from_u64(0);
+
+    // input & target data
+    let mut x = Tensor2D::<64, 5>::rand(&mut rng);
+    let mut y = Tensor2D::<64, 2>::rand(&mut rng);
+
+    // construct optimizer
+    let mut opt: Sgd<Linear<5, 2>> = Default::default();
+
+    // initialize weights of underlying module
+    opt.init(&mut rng);
+
+    // forward input through network while tracking derivatives
+    let mut output = opt.forward_with_derivatives(&mut x);
+
+    // compute loss
+    let mut loss = (&mut output - &mut y).square().mean();
+
+    // run backprop & apply gradients
+    opt.step(&mut loss);
+}
+```
