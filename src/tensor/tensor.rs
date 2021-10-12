@@ -15,6 +15,15 @@ pub trait ShapedArray {
     fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension>;
 }
 
+impl<T> Taped for T
+where
+    T: HasGradient + ShapedArray,
+{
+    fn update(&mut self, tape: &GradientTape) {
+        let grad = self.mut_grad().take().unwrap();
+        *self.mut_data() -= &tape[grad.gradient_ref];
+    }
+}
 pub trait Randomize {
     fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D);
 }
@@ -77,7 +86,7 @@ pub trait Activations {
     fn abs(&mut self) -> Self;
 }
 
-pub trait Tensor: Taped + Default + ShapedArray + Activations + HasGradient {}
+pub trait Tensor: Default + ShapedArray + Activations + HasGradient {}
 
 pub trait Batch {
     type Batched<const B: usize>: Tensor;

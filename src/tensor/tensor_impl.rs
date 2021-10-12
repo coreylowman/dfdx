@@ -1,5 +1,5 @@
 use super::tensor::{Batch, ShapedArray, Tensor};
-use crate::gradients::{Gradient, GradientTape, HasGradient, Taped};
+use crate::gradients::{Gradient, HasGradient};
 use ndarray::prelude::{Array, Ix0, Ix1, Ix2};
 
 #[derive(Debug)]
@@ -57,13 +57,6 @@ macro_rules! tensor_impl {
         }
 
         impl<$($const_defs)*> Tensor for $typename<$($consts)*> { }
-
-        impl<$($const_defs)*> Taped for $typename<$($consts)*> {
-            fn update(&mut self, tape: &GradientTape) {
-                let grad = self.mut_grad().take().unwrap();
-                *self.mut_data() -= &tape[grad.gradient_ref];
-            }
-        }
     }
 }
 
