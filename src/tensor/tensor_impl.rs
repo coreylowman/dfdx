@@ -1,7 +1,6 @@
-use super::tensor::{Batch, InitSugar, Randomize, Record, ShapedArray, Tensor};
+use super::tensor::{Batch, InitSugar, Record, ShapedArray, Tensor};
 use crate::gradients::{Gradient, GradientTape, HasGradient, Taped};
 use ndarray::prelude::{Array, Ix0, Ix1, Ix2};
-use ndarray_rand::rand::{distributions::Distribution, Rng};
 
 #[derive(Debug)]
 pub struct Tensor0D {
@@ -60,12 +59,6 @@ macro_rules! tensor_impl {
         }
 
         impl<$($const_defs)*> Tensor for $typename<$($consts)*> { }
-
-        impl<$($const_defs)*> Randomize for $typename<$($consts)*> {
-            fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
-                self.mut_data().map_inplace(|f| *f = dist.sample(rng))
-            }
-        }
 
         impl<$($const_defs)*> Record for $typename<$($consts)*> {
             fn record(&mut self, tape: &mut GradientTape) {

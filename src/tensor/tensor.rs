@@ -1,13 +1,9 @@
-use crate::gradients::{Gradient, GradientTape, HasGradient, Taped};
+use crate::gradients::{GradientTape, HasGradient, Taped};
 use ndarray::{Array, Dimension, ShapeBuilder};
 use ndarray_rand::{
     rand::{distributions::Distribution, Rng},
     rand_distr::{Standard, StandardNormal},
 };
-
-pub trait Randomize {
-    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D);
-}
 
 pub trait ShapedArray {
     type Dimension: Dimension;
@@ -17,6 +13,19 @@ pub trait ShapedArray {
 
     fn data(&self) -> &Array<f32, Self::Dimension>;
     fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension>;
+}
+
+pub trait Randomize {
+    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D);
+}
+
+impl<T> Randomize for T
+where
+    T: ShapedArray,
+{
+    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
+        self.mut_data().map_inplace(|f| *f = dist.sample(rng))
+    }
 }
 
 pub trait InitSugar: Default + ShapedArray {
@@ -61,12 +70,6 @@ pub trait Activations {
 pub trait Tensor:
     Randomize + Taped + Default + ShapedArray + Activations + InitSugar + HasGradient
 {
-    fn keep_tape(&mut self, mut tape: Box<GradientTape>) {
-        let grad = self
-            .mut_grad()
-            .get_or_insert_with(|| Gradient::new(tape.register_gradient(Self::SHAPE)));
-        grad.tape = Some(tape);
-    }
 }
 
 pub trait Batch {

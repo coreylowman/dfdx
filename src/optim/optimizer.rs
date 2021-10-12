@@ -1,4 +1,4 @@
-use crate::gradients::{GradientTape, HasGradient};
+use crate::gradients::{Gradient, GradientTape, HasGradient};
 use crate::nn::module::Module;
 use crate::tensor::*;
 use std::ops::DerefMut;
@@ -10,9 +10,15 @@ pub trait Optimizer<M: Module>: DerefMut<Target = M> {
         &mut self,
         input: &mut <M::Input as Batch>::Batched<B>,
     ) -> <M::Output as Batch>::Batched<B> {
-        // put tape in input
-        *input.mut_grad() = None;
-        input.keep_tape(Box::new(GradientTape::new()));
+        // make a new gradient tape
+        let mut tape = Box::new(GradientTape::new());
+
+        // register the input on the tape
+        let gradient_ref =
+            tape.register_gradient(<<M::Input as Batch>::Batched<B> as ShapedArray>::SHAPE);
+
+        // stick the tape in the input
+        *input.mut_grad() = Some(Gradient::with_tape(gradient_ref, tape));
 
         // go!
         self.forward(input)
