@@ -8,6 +8,7 @@ fn main() {
     // initialize the MLP
     let mut model: ModuleChain<Linear<4, 2>, ReLU<Tensor1D<2>>> = Default::default();
     model.init(&mut rng);
+    println!("{:?}", model);
 
     // create a 1x10 tensor with zeros
     let mut x: Tensor2D<1, 4> = Default::default();
