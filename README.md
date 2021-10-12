@@ -8,7 +8,7 @@ NOTE: Depends on nightly rust for const generic associated types.
 
 ## Tensor sizes & operations checked at compile time
 
-See [[examples/tensor.rs]] for more tensor operation examples.
+See [examples/tensor.rs](examples/tensor.rs) for more tensor operation examples.
 
 ```rust
 use stag::prelude::*;
@@ -30,7 +30,7 @@ fn main() {
 
 ## Neural networks checked at compile time.
 
-See [[examples/linear.rs]], [[examples/chain.rs]], and [[examples/regression.rs]] for more examples.
+See [examples/linear.rs](examples/linear.rs), [examples/chain.rs](examples/chain.rs), and [examples/regression.rs](examples/regression.rs) for more examples.
 
 ```rust
 use stag::nn::{Linear, ModuleChain, ReLU, Tanh};
