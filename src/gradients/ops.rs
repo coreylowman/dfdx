@@ -1,12 +1,4 @@
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct DerivativeRef {
-    pub(super) index: usize,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct GradientRef {
-    pub(super) index: usize,
-}
+use super::refs::{DerivativeRef, GradientRef};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum OpType {
