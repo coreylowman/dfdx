@@ -1,6 +1,6 @@
 use super::tensor::{Record, ShapedArray, Tensor};
 use super::tensor_impl::{Tensor0D, Tensor1D, Tensor2D};
-use crate::gradients::{ops::*, Grad};
+use crate::gradients::{ops::*, Gradient};
 use ndarray::prelude::Array;
 use std::ops::{Add, Mul, Sub};
 
@@ -24,7 +24,7 @@ macro_rules! binary_ops {
                         result_grad,
                     }));
 
-                    Grad::with_tape(result_grad, tape)
+                    Gradient::with_tape(result_grad, tape)
                 });
 
                 Self::Output {
@@ -52,7 +52,7 @@ macro_rules! binary_ops {
                         result_grad,
                     }));
 
-                    Grad::with_tape(result_grad, tape)
+                    Gradient::with_tape(result_grad, tape)
                 });
 
                 Self::Output {
@@ -88,7 +88,7 @@ impl<const M: usize, const N: usize, const O: usize> Mul<&mut Tensor2D<N, O>>
                 result_grad,
             }));
 
-            Grad::with_tape(result_grad, tape)
+            Gradient::with_tape(result_grad, tape)
         });
 
         Self::Output {
@@ -116,7 +116,7 @@ impl<const M: usize, const N: usize> Add<&mut Tensor1D<N>> for &mut Tensor2D<M, 
                 result_grad,
             }));
 
-            Grad::with_tape(result_grad, tape)
+            Gradient::with_tape(result_grad, tape)
         });
 
         Self::Output {

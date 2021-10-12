@@ -1,5 +1,5 @@
 use super::tensor_impl::{Tensor0D, Tensor1D, Tensor2D};
-use crate::gradients::{ops::*, Grad};
+use crate::gradients::{ops::*, Gradient};
 use crate::tensor::{Activations, ShapedArray, Tensor};
 use ndarray::prelude::*;
 
@@ -116,7 +116,7 @@ macro_rules! map_op_method {
                     result_grad,
                 }));
 
-                Grad::with_tape(result_grad, tape)
+                Gradient::with_tape(result_grad, tape)
             });
 
             Self {
@@ -154,7 +154,7 @@ macro_rules! unary_ops {
                         result_grad,
                     }));
 
-                    Grad::with_tape(result_grad, tape)
+                    Gradient::with_tape(result_grad, tape)
                 });
 
                 Tensor0D {

@@ -113,12 +113,12 @@ impl Index<GradientRef> for GradientTape {
 }
 
 #[derive(Debug)]
-pub struct Grad {
+pub struct Gradient {
     pub(crate) gradient_ref: GradientRef,
     pub(crate) tape: Option<Box<GradientTape>>,
 }
 
-impl Grad {
+impl Gradient {
     pub(crate) fn new(gradient_ref: GradientRef) -> Self {
         Self {
             gradient_ref,

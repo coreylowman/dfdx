@@ -1,4 +1,4 @@
-use crate::gradients::{ops::GradientRef, traits::Taped, Grad, GradientTape};
+use crate::gradients::{ops::GradientRef, traits::Taped, Gradient, GradientTape};
 use ndarray::{Array, Dimension, ShapeBuilder};
 use ndarray_rand::{
     rand::{distributions::Distribution, Rng},
@@ -59,8 +59,8 @@ pub trait Activations {
 }
 
 pub trait Tensor: Randomize + Taped + Default + ShapedArray + Activations + InitSugar {
-    fn grad(&self) -> &Option<Grad>;
-    fn mut_grad(&mut self) -> &mut Option<Grad>;
+    fn grad(&self) -> &Option<Gradient>;
+    fn mut_grad(&mut self) -> &mut Option<Gradient>;
 
     fn gradient_ref(&self) -> GradientRef {
         self.grad().as_ref().unwrap().gradient_ref
@@ -84,7 +84,7 @@ pub trait Tensor: Randomize + Taped + Default + ShapedArray + Activations + Init
     fn keep_tape(&mut self, mut tape: Box<GradientTape>) {
         let grad = self
             .mut_grad()
-            .get_or_insert_with(|| Grad::new(tape.store_gradient(Self::SHAPE)));
+            .get_or_insert_with(|| Gradient::new(tape.store_gradient(Self::SHAPE)));
         grad.tape = Some(tape);
     }
 }

@@ -1,24 +1,24 @@
 use super::tensor::{Batch, InitSugar, Randomize, Record, ShapedArray, Tensor};
-use crate::gradients::{traits::Taped, Grad, GradientTape};
+use crate::gradients::{traits::Taped, Gradient, GradientTape};
 use ndarray::prelude::{Array, Ix0, Ix1, Ix2};
 use ndarray_rand::rand::{distributions::Distribution, Rng};
 
 #[derive(Debug)]
 pub struct Tensor0D {
     pub(super) data: Array<f32, Ix0>,
-    pub(super) grad: Option<Grad>,
+    pub(super) grad: Option<Gradient>,
 }
 
 #[derive(Debug)]
 pub struct Tensor1D<const N: usize> {
     pub(super) data: Array<f32, Ix1>,
-    pub(super) grad: Option<Grad>,
+    pub(super) grad: Option<Gradient>,
 }
 
 #[derive(Debug)]
 pub struct Tensor2D<const M: usize, const N: usize> {
     pub(super) data: Array<f32, Ix2>,
-    pub(super) grad: Option<Grad>,
+    pub(super) grad: Option<Gradient>,
 }
 
 macro_rules! tensor_impl {
@@ -50,11 +50,11 @@ macro_rules! tensor_impl {
         impl<$($const_defs)*> InitSugar for $typename<$($consts)*> { }
 
         impl<$($const_defs)*> Tensor for $typename<$($consts)*> {
-            fn grad(&self) -> &Option<Grad> {
+            fn grad(&self) -> &Option<Gradient> {
                 &self.grad
             }
 
-            fn mut_grad(&mut self) -> &mut Option<Grad> {
+            fn mut_grad(&mut self) -> &mut Option<Gradient> {
                 &mut self.grad
             }
         }
@@ -68,7 +68,7 @@ macro_rules! tensor_impl {
         impl<$($const_defs)*> Record for $typename<$($consts)*> {
             fn record(&mut self, tape: &mut GradientTape) {
                 if self.grad().is_none() {
-                    *self.mut_grad() = Some(Grad::new(tape.store_gradient(Self::SHAPE)));
+                    *self.mut_grad() = Some(Gradient::new(tape.store_gradient(Self::SHAPE)));
                 }
             }
         }
