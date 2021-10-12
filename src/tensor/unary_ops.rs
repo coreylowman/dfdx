@@ -1,7 +1,38 @@
 use super::tensor_impl::{Tensor0D, Tensor1D, Tensor2D};
 use crate::gradients::{ops::*, Gradient, HasGradient};
-use crate::tensor::{Activations, IsShapedArray};
+use crate::tensor::{Activations, IsShapedArray, Tensor};
 use ndarray::prelude::*;
+
+pub trait Mean {
+    fn mean(&mut self) -> Tensor0D;
+}
+
+impl<T> Mean for T
+where
+    T: Tensor,
+{
+    fn mean(&mut self) -> Tensor0D {
+        let grad = self.take_tape().map(|mut tape| {
+            let parent_deriv =
+                tape.store_derivative(self.data().mapv(|_f| 1.0 / Self::NUM_ELEMENTS as f32));
+            let result_grad = tape.register_gradient(());
+
+            tape.add_operation(Operation::Unary(UnaryOp {
+                op_type: OpType::Normal,
+                parent_grad: self.gradient_ref(),
+                parent_deriv,
+                result_grad,
+            }));
+
+            Gradient::with_tape(result_grad, tape)
+        });
+
+        Tensor0D {
+            data: arr0(self.data().mean().unwrap()),
+            grad,
+        }
+    }
+}
 
 mod relu {
     pub(super) fn forward(f: f32) -> f32 {
@@ -139,29 +170,6 @@ macro_rules! unary_ops {
             map_op_method!(sin);
             map_op_method!(cos);
             map_op_method!(abs);
-        }
-
-        impl<$($const_defs)*> $typename<$($consts)*> {
-            pub fn mean(&mut self) -> Tensor0D {
-                let grad = self.take_tape().map(|mut tape| {
-                    let parent_deriv = tape.store_derivative(self.data.mapv(|_f| 1.0 / Self::NUM_ELEMENTS as f32));
-                    let result_grad = tape.register_gradient(());
-
-                    tape.add_operation(Operation::Unary(UnaryOp {
-                        op_type: OpType::Normal,
-                        parent_grad: self.gradient_ref(),
-                        parent_deriv,
-                        result_grad,
-                    }));
-
-                    Gradient::with_tape(result_grad, tape)
-                });
-
-                Tensor0D {
-                    data: arr0(self.data.mean().unwrap()),
-                    grad,
-                }
-            }
         }
     };
 }
