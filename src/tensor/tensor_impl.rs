@@ -50,10 +50,6 @@ macro_rules! tensor_impl {
         impl<$($const_defs)*> InitSugar for $typename<$($consts)*> { }
 
         impl<$($const_defs)*> Tensor for $typename<$($consts)*> {
-            fn with_grad(data: Array<f32, Self::Dimension>, grad: Option<Grad>) -> Self {
-                Self { data, grad }
-            }
-
             fn grad(&self) -> &Option<Grad> {
                 &self.grad
             }

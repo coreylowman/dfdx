@@ -59,8 +59,6 @@ pub trait Activations {
 }
 
 pub trait Tensor: Randomize + Taped + Default + ShapedArray + Activations + InitSugar {
-    fn with_grad(data: Array<f32, Self::Dimension>, grad: Option<Grad>) -> Self;
-
     fn grad(&self) -> &Option<Grad>;
     fn mut_grad(&mut self) -> &mut Option<Grad>;
 

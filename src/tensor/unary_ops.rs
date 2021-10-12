@@ -119,7 +119,10 @@ macro_rules! map_op_method {
                 Grad::with_tape(result_grad, tape)
             });
 
-            Self::with_grad(self.data().mapv($fn_name::forward), grad)
+            Self {
+                data: self.data().mapv($fn_name::forward),
+                grad,
+            }
         }
     };
 }
