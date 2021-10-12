@@ -6,6 +6,12 @@ pub trait Init {
     fn init<R: Rng>(&mut self, rng: &mut R);
 }
 
+/*
+TODO add variant of Module that accepts generic input/output parameter
+
+this can be used for activation functions that don't care about the size of the data
+they act on
+*/
 pub trait Module: Init + Taped + Default {
     type Input: Tensor + Batch;
     type Output: Tensor + Batch;
