@@ -7,6 +7,19 @@ use stag::optim::sgd::Sgd;
 use stag::prelude::*;
 use std::time::Instant;
 
+/*
+Syntactic Sugar for
+type MyMLP = ModuleChain<
+    Linear<10, 32>,
+    ModuleChain<
+        ReLU<Tensor1D<32>>,
+        ModuleChain<
+            Linear<32, 32>,
+            ModuleChain<ReLU<Tensor1D<32>>, ModuleChain<Linear<32, 2>, Tanh<Tensor1D<2>>>>,
+        >,
+    >,
+>;
+*/
 type MyMLP = chain_modules!(Linear<10, 32>, ReLU<Tensor1D<32>>, Linear<32, 32>, ReLU<Tensor1D<32>>, Linear<32, 2>, Tanh<Tensor1D<2>>);
 
 fn main() {

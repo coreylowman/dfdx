@@ -133,7 +133,6 @@ mod abs {
     }
 }
 
-
 /*
 TODO implement map ops as traits to simplify nn code
 
