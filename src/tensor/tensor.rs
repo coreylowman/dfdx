@@ -1,4 +1,4 @@
-use crate::gradients::{GradientTape, HasGradient, Taped};
+use crate::gradients::{Gradient, GradientTape, HasGradient, Taped};
 use ndarray::{Array, Dimension, ShapeBuilder};
 use ndarray_rand::{
     rand::{distributions::Distribution, Rng},
@@ -77,10 +77,7 @@ pub trait Activations {
     fn abs(&mut self) -> Self;
 }
 
-pub trait Tensor:
-    Randomize + Taped + Default + ShapedArray + Activations + InitSugar + HasGradient
-{
-}
+pub trait Tensor: Taped + Default + ShapedArray + Activations + HasGradient {}
 
 pub trait Batch {
     type Batched<const B: usize>: Tensor;
@@ -88,4 +85,15 @@ pub trait Batch {
 
 pub(super) trait Record {
     fn record(&mut self, tape: &mut GradientTape);
+}
+
+impl<T> Record for T
+where
+    T: ShapedArray + HasGradient,
+{
+    fn record(&mut self, tape: &mut GradientTape) {
+        if self.grad().is_none() {
+            *self.mut_grad() = Some(Gradient::new(tape.register_gradient(Self::SHAPE)));
+        }
+    }
 }

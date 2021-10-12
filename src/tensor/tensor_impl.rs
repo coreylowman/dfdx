@@ -1,4 +1,4 @@
-use super::tensor::{Batch, Record, ShapedArray, Tensor};
+use super::tensor::{Batch, ShapedArray, Tensor};
 use crate::gradients::{Gradient, GradientTape, HasGradient, Taped};
 use ndarray::prelude::{Array, Ix0, Ix1, Ix2};
 
@@ -57,14 +57,6 @@ macro_rules! tensor_impl {
         }
 
         impl<$($const_defs)*> Tensor for $typename<$($consts)*> { }
-
-        impl<$($const_defs)*> Record for $typename<$($consts)*> {
-            fn record(&mut self, tape: &mut GradientTape) {
-                if self.grad().is_none() {
-                    *self.mut_grad() = Some(Gradient::new(tape.register_gradient(Self::SHAPE)));
-                }
-            }
-        }
 
         impl<$($const_defs)*> Taped for $typename<$($consts)*> {
             fn update(&mut self, tape: &GradientTape) {
