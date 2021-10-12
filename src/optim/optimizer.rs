@@ -1,4 +1,4 @@
-use crate::gradients::GradientTape;
+use crate::gradients::{GradientTape, HasGradient};
 use crate::nn::module::Module;
 use crate::tensor::*;
 use std::ops::DerefMut;

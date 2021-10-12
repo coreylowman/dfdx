@@ -1,5 +1,5 @@
 use super::tensor::{Batch, InitSugar, Randomize, Record, ShapedArray, Tensor};
-use crate::gradients::{Gradient, GradientTape, Taped};
+use crate::gradients::{Gradient, GradientTape, HasGradient, Taped};
 use ndarray::prelude::{Array, Ix0, Ix1, Ix2};
 use ndarray_rand::rand::{distributions::Distribution, Rng};
 
@@ -49,7 +49,7 @@ macro_rules! tensor_impl {
 
         impl<$($const_defs)*> InitSugar for $typename<$($consts)*> { }
 
-        impl<$($const_defs)*> Tensor for $typename<$($consts)*> {
+        impl<$($const_defs)*> HasGradient for $typename<$($consts)*> {
             fn grad(&self) -> &Option<Gradient> {
                 &self.grad
             }
@@ -58,6 +58,8 @@ macro_rules! tensor_impl {
                 &mut self.grad
             }
         }
+
+        impl<$($const_defs)*> Tensor for $typename<$($consts)*> { }
 
         impl<$($const_defs)*> Randomize for $typename<$($consts)*> {
             fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {

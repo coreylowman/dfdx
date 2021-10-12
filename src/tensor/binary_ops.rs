@@ -1,6 +1,6 @@
-use super::tensor::{Record, ShapedArray, Tensor};
+use super::tensor::{Record, ShapedArray};
 use super::tensor_impl::{Tensor0D, Tensor1D, Tensor2D};
-use crate::gradients::{ops::*, Gradient};
+use crate::gradients::{ops::*, Gradient, HasGradient};
 use ndarray::prelude::Array;
 use std::ops::{Add, Mul, Sub};
 
