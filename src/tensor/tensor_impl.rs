@@ -1,4 +1,4 @@
-use super::traits::{Batch, InitSugar, Randomize, Record, ShapedArray, Tensor};
+use super::tensor::{Batch, InitSugar, Randomize, Record, ShapedArray, Tensor};
 use crate::gradients::{traits::Taped, Grad, GradientTape};
 use ndarray::prelude::{Array, Ix0, Ix1, Ix2};
 use ndarray_rand::rand::{distributions::Distribution, Rng};

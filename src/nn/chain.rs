@@ -1,6 +1,6 @@
 use super::module::{Init, Module};
 use crate::gradients::{traits::Taped, GradientTape};
-use crate::tensor::traits::Batch;
+use crate::tensor::Batch;
 use ndarray_rand::rand::Rng;
 
 #[derive(Default, Debug)]

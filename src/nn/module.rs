@@ -1,5 +1,5 @@
 use crate::gradients::traits::Taped;
-use crate::tensor::traits::{Batch, Tensor};
+use crate::tensor::{Batch, Tensor};
 use ndarray_rand::rand::Rng;
 
 pub trait Init {

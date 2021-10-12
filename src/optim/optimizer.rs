@@ -1,6 +1,6 @@
 use crate::gradients::GradientTape;
 use crate::nn::module::Module;
-use crate::tensor::traits::*;
+use crate::tensor::*;
 use std::ops::DerefMut;
 
 pub trait Optimizer<M: Module>: DerefMut<Target = M> {

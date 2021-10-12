@@ -1,9 +1,6 @@
 use super::module::{Init, Module};
 use crate::gradients::{traits::Taped, GradientTape};
-use crate::tensor::{
-    traits::{Batch, Randomize},
-    Tensor1D, Tensor2D,
-};
+use crate::tensor::{Batch, Randomize, Tensor1D, Tensor2D};
 use ndarray_rand::rand::Rng;
 use ndarray_rand::rand_distr::Uniform;
 

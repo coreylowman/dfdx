@@ -1,5 +1,5 @@
-use super::base::{Tensor0D, Tensor1D, Tensor2D};
-use super::traits::{Record, ShapedArray, Tensor};
+use super::tensor::{Record, ShapedArray, Tensor};
+use super::tensor_impl::{Tensor0D, Tensor1D, Tensor2D};
 use crate::gradients::{ops::*, Grad};
 use ndarray::prelude::Array;
 use std::ops::{Add, Mul, Sub};

@@ -1,6 +1,6 @@
 use super::module::{Init, Module};
 use crate::gradients::{traits::Taped, GradientTape};
-use crate::tensor::traits::{Activations, Batch, Tensor};
+use crate::tensor::{Activations, Batch, Tensor};
 use ndarray_rand::rand::Rng;
 
 macro_rules! nn_activation {
