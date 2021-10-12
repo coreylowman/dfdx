@@ -1,4 +1,4 @@
-use super::tensor::{Batch, ShapedArray, Tensor};
+use super::tensor::{Batch, IsShapedArray, Tensor};
 use crate::gradients::{Gradient, HasGradient};
 use ndarray::prelude::{Array, Ix0, Ix1, Ix2};
 
@@ -22,7 +22,7 @@ pub struct Tensor2D<const M: usize, const N: usize> {
 
 macro_rules! tensor_impl {
     ([$($const_defs:tt)*] $typename:ident [$($consts:tt)*], $dim:ty, $shape_val:expr, $shape_type:ty, $num_elems:expr) => {
-        impl<$($const_defs)*> ShapedArray for $typename<$($consts)*> {
+        impl<$($const_defs)*> IsShapedArray for $typename<$($consts)*> {
             type Dimension = $dim;
             type Shape = $shape_type;
             const SHAPE: Self::Shape = $shape_val;

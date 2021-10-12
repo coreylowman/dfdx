@@ -1,4 +1,4 @@
-use super::tensor::{Record, ShapedArray};
+use super::tensor::{IsShapedArray, Record};
 use super::tensor_impl::{Tensor0D, Tensor1D, Tensor2D};
 use crate::gradients::{ops::*, Gradient, HasGradient};
 use ndarray::prelude::Array;

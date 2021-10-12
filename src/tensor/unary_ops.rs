@@ -1,6 +1,6 @@
 use super::tensor_impl::{Tensor0D, Tensor1D, Tensor2D};
 use crate::gradients::{ops::*, Gradient, HasGradient};
-use crate::tensor::{Activations, ShapedArray};
+use crate::tensor::{Activations, IsShapedArray};
 use ndarray::prelude::*;
 
 mod relu {

@@ -5,7 +5,7 @@ use ndarray_rand::{
     rand_distr::{Standard, StandardNormal},
 };
 
-pub trait ShapedArray {
+pub trait IsShapedArray {
     type Dimension: Dimension;
     type Shape: ShapeBuilder<Dim = Self::Dimension>;
     const SHAPE: Self::Shape;
@@ -17,7 +17,7 @@ pub trait ShapedArray {
 
 impl<T> Taped for T
 where
-    T: HasGradient + ShapedArray,
+    T: HasGradient + IsShapedArray,
 {
     fn update(&mut self, tape: &GradientTape) {
         let grad = self.mut_grad().take().unwrap();
@@ -30,7 +30,7 @@ pub trait Randomize {
 
 impl<T> Randomize for T
 where
-    T: ShapedArray,
+    T: IsShapedArray,
 {
     fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
         self.mut_data().map_inplace(|f| *f = dist.sample(rng))
@@ -46,7 +46,7 @@ pub trait InitSugar {
 
 impl<T> InitSugar for T
 where
-    T: Default + ShapedArray,
+    T: Default + IsShapedArray,
 {
     fn zeros() -> Self {
         let mut a = Self::default();
@@ -86,7 +86,7 @@ pub trait Activations {
     fn abs(&mut self) -> Self;
 }
 
-pub trait Tensor: Default + ShapedArray + Activations + HasGradient {}
+pub trait Tensor: Default + IsShapedArray + Activations + HasGradient {}
 
 pub trait Batch {
     type Batched<const B: usize>: Tensor;
@@ -98,7 +98,7 @@ pub(super) trait Record {
 
 impl<T> Record for T
 where
-    T: ShapedArray + HasGradient,
+    T: IsShapedArray + HasGradient,
 {
     fn record(&mut self, tape: &mut GradientTape) {
         if self.grad().is_none() {

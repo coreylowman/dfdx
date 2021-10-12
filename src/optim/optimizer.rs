@@ -15,7 +15,7 @@ pub trait Optimizer<M: Module>: DerefMut<Target = M> {
 
         // register the input on the tape
         let gradient_ref =
-            tape.register_gradient(<<M::Input as Batch>::Batched<B> as ShapedArray>::SHAPE);
+            tape.register_gradient(<<M::Input as Batch>::Batched<B> as IsShapedArray>::SHAPE);
 
         // stick the tape in the input
         *input.mut_grad() = Some(Gradient::with_tape(gradient_ref, tape));
