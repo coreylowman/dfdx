@@ -107,7 +107,7 @@ macro_rules! map_op_method {
         fn $fn_name(&mut self) -> Self {
             let grad = self.take_tape().map(|mut tape| {
                 let parent_deriv = tape.store_derivative(self.data().mapv($fn_name::derivative));
-                let result_grad = tape.store_gradient(Self::SHAPE);
+                let result_grad = tape.register_gradient(Self::SHAPE);
 
                 tape.add_operation(Operation::Unary(UnaryOp {
                     op_type: OpType::Normal,
@@ -145,7 +145,7 @@ macro_rules! unary_ops {
             pub fn mean(&mut self) -> Tensor0D {
                 let grad = self.take_tape().map(|mut tape| {
                     let parent_deriv = tape.store_derivative(self.data.mapv(|_f| 1.0 / Self::NUM_ELEMENTS as f32));
-                    let result_grad = tape.store_gradient(());
+                    let result_grad = tape.register_gradient(());
 
                     tape.add_operation(Operation::Unary(UnaryOp {
                         op_type: OpType::Normal,

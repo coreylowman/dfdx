@@ -15,7 +15,7 @@ macro_rules! binary_ops {
 
                     let lhs_deriv = tape.store_derivative(Array::from_elem(Self::Output::SHAPE, 1.0));
                     let rhs_deriv = tape.store_derivative(Array::from_elem(Self::Output::SHAPE, 1.0));
-                    let result_grad = tape.store_gradient(Self::Output::SHAPE);
+                    let result_grad = tape.register_gradient(Self::Output::SHAPE);
 
                     tape.add_operation(Operation::Binary(BinaryOp {
                         op_type: OpType::Normal,
@@ -43,7 +43,7 @@ macro_rules! binary_ops {
 
                     let lhs_deriv = tape.store_derivative(Array::from_elem(Self::Output::SHAPE, 1.0));
                     let rhs_deriv = tape.store_derivative(Array::from_elem(Self::Output::SHAPE, -1.0));
-                    let result_grad = tape.store_gradient(Self::Output::SHAPE);
+                    let result_grad = tape.register_gradient(Self::Output::SHAPE);
 
                     tape.add_operation(Operation::Binary(BinaryOp {
                         op_type: OpType::Normal,
@@ -79,7 +79,7 @@ impl<const M: usize, const N: usize, const O: usize> Mul<&mut Tensor2D<N, O>>
 
             let lhs_deriv = tape.store_derivative(rhs.data.clone());
             let rhs_deriv = tape.store_derivative(self.data.clone());
-            let result_grad = tape.store_gradient(Self::Output::SHAPE);
+            let result_grad = tape.register_gradient(Self::Output::SHAPE);
 
             tape.add_operation(Operation::Binary(BinaryOp {
                 op_type: OpType::MatMul { m: M, n: N, o: O },
@@ -107,7 +107,7 @@ impl<const M: usize, const N: usize> Add<&mut Tensor1D<N>> for &mut Tensor2D<M, 
 
             let lhs_deriv = tape.store_derivative(Array::from_elem((M, N), 1.0));
             let rhs_deriv = tape.store_derivative(Array::from_elem((N,), 1.0 / M as f32));
-            let result_grad = tape.store_gradient(Self::Output::SHAPE);
+            let result_grad = tape.register_gradient(Self::Output::SHAPE);
 
             tape.add_operation(Operation::Binary(BinaryOp {
                 op_type: OpType::Broadcast,

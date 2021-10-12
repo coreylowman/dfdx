@@ -68,7 +68,7 @@ macro_rules! tensor_impl {
         impl<$($const_defs)*> Record for $typename<$($consts)*> {
             fn record(&mut self, tape: &mut GradientTape) {
                 if self.grad().is_none() {
-                    *self.mut_grad() = Some(Gradient::new(tape.store_gradient(Self::SHAPE)));
+                    *self.mut_grad() = Some(Gradient::new(tape.register_gradient(Self::SHAPE)));
                 }
             }
         }

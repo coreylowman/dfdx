@@ -84,7 +84,7 @@ pub trait Tensor: Randomize + Taped + Default + ShapedArray + Activations + Init
     fn keep_tape(&mut self, mut tape: Box<GradientTape>) {
         let grad = self
             .mut_grad()
-            .get_or_insert_with(|| Gradient::new(tape.store_gradient(Self::SHAPE)));
+            .get_or_insert_with(|| Gradient::new(tape.register_gradient(Self::SHAPE)));
         grad.tape = Some(tape);
     }
 }

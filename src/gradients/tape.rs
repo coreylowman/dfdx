@@ -30,7 +30,7 @@ impl GradientTape {
         DerivativeRef { index }
     }
 
-    pub(crate) fn store_gradient<D: Dimension, Sh: ShapeBuilder<Dim = D>>(
+    pub(crate) fn register_gradient<D: Dimension, Sh: ShapeBuilder<Dim = D>>(
         &mut self,
         shape: Sh,
     ) -> GradientRef {
