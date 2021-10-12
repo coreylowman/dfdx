@@ -133,6 +133,27 @@ mod abs {
     }
 }
 
+
+/*
+TODO implement map ops as traits to simplify nn code
+
+pub trait DifferentiableFunction {
+    fn f(x: f32) -> f32;
+    fn df(x: f32) -> f32;
+}
+
+pub trait Map<F: DifferentiableFunction> {
+    fn map(&mut self) -> Self;
+}
+
+impl<T, F> Map<F> for T
+where
+    T: Tensor,
+    F: DifferentiableFunction,
+{
+    ...
+}
+*/
 macro_rules! map_op_method {
     ($fn_name:ident) => {
         fn $fn_name(&mut self) -> Self {
