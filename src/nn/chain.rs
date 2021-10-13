@@ -8,6 +8,10 @@ use std::marker::PhantomData;
 pub struct ModuleChain<A, B, INNER> {
     a: A,
     b: B,
+
+    // NOTE: this INNER type is the type that is output from A and input to B.
+    // due to Module definition (only generic over 2 types), we need to include the INNER
+    // type here or we run into unconstrained type parameter errors.
     marker: PhantomData<INNER>,
 }
 

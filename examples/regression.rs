@@ -2,9 +2,12 @@ use ndarray_rand::{
     rand::{rngs::StdRng, SeedableRng},
     rand_distr::Uniform,
 };
-use stag::{nn::{Chain, Linear, ReLU, Tanh}, optim::sgd::SgdConfig};
 use stag::optim::sgd::Sgd;
 use stag::prelude::*;
+use stag::{
+    nn::{Chain, Linear, ReLU, Tanh},
+    optim::sgd::SgdConfig,
+};
 use std::time::Instant;
 
 fn main() {

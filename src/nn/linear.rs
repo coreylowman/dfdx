@@ -24,12 +24,14 @@ impl<const I: usize, const O: usize> Init for Linear<I, O> {
     }
 }
 
+// 1d forward
 impl<const I: usize, const O: usize> Module<Tensor1D<I>, Tensor1D<O>> for Linear<I, O> {
     fn forward(&mut self, input: &mut Tensor1D<I>) -> Tensor1D<O> {
         &mut (input * &mut self.weight) + &mut self.bias
     }
 }
 
+// Batched 2d forward
 impl<const B: usize, const I: usize, const O: usize> Module<Tensor2D<B, I>, Tensor2D<B, O>>
     for Linear<I, O>
 {

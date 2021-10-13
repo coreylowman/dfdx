@@ -2,11 +2,9 @@
 
 Reverse Mode Auto Differentiation[1] in Rust.
 
-NOTE: Depends on nightly rust for const generic associated types.
-
 [1] https://en.wikipedia.org/wiki/Automatic_differentiation#Reverse_accumulation
 
-## Tensor sizes & operations checked at compile time
+## 💡 Tensor sizes & operations type checked at compile time
 
 See [examples/tensor.rs](examples/tensor.rs) for more tensor operation examples.
 
@@ -17,7 +15,7 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     // 3x3 matrix filled with 0s
-    let mut x: Tensor2D<3, 3> = Default::default();
+    let mut x: Tensor2D<3, 3> = Tensor2D::default();
 
     // fill matrix with random data drawn from Standard distribution
     x.randomize(&mut rng, &Standard);
@@ -28,33 +26,60 @@ fn main() {
 }
 ```
 
-## Neural networks checked at compile time.
+## 👌 Simple Neural Networks API, completely type checked at compile time.
 
 See [examples/linear.rs](examples/linear.rs), [examples/chain.rs](examples/chain.rs), and [examples/regression.rs](examples/regression.rs) for more examples.
 
 ```rust
-use stag::nn::{Linear, ModuleChain, ReLU, Tanh};
+use stag::nn::{Linear, Chain, ReLU, Tanh};
 use stag::prelude::*;
-
-// NOTE: this is just syntactic sugar for combining multiple ModuleChain structs together.
-type MyMLP = chain_modules!(Linear<10, 32>, ReLU<Tensor1D<32>>, Linear<32, 32>, ReLU<Tensor1D<32>>, Linear<32, 2>, Tanh<Tensor1D<2>>);
 
 fn main() {
     // construct the MLP as defined above with all parameters filled with 0s
-    let mut model: MyMLP = Default::default();
+    let mut model = chain!(Linear<10, 32>, ReLU, Linear<32, 32>, ReLU, Linear<32, 2>, Tanh);
 
     // create a 1x10 tensor filled with 0s
-    let mut x: Tensor2D<1, 10> = Default::default();
+    let mut x: Tensor1D<10> = Tensor1D::default();
 
     // pass through the MLP
     let y = model.forward(&mut x);
 
     println!("{:#}", y.data());
-    // [[0, 0]]
+    // [0, 0]
 }
 ```
 
-## Easy to use Optimizer API
+## 📄 Batching completely supported by type system
+
+Since the `Module` trait is generic, we can implement module's for multiple inputs/outputs.
+To support batching all we have to do is impl Module a second time with a batch dimension
+added to inputs/outputs!
+
+See [src/nn/linear.rs](src/nn/linear.rs) for an example implementation.
+
+NOTE: Unfortunately because of the ModuleChain currently works, a model constructed
+using ModuleChain can't call forward with two different data types.
+
+```rust
+use stag::nn::Linear;
+use stag::prelude::*;
+
+fn main() {
+    let mut model = Linear::<10, 5>::default();
+
+    // create a 1x10 tensor filled with 0s
+    let mut a: Tensor1D<10> = Tensor1D::default();
+
+    // create a 64x10 tensor filled with 0s
+    let mut b: Tensor2D<64, 10> = Tensor2D::default();
+
+    // yay both of these work!
+    let y = model.forward(&mut a);
+    let z = model.forward(&mut b);
+}
+```
+
+## 📈 Easy to use Optimizer API
 
 See [examples/sgd.rs](examples/sgd.rs) and [examples/regression.rs](examples/regression.rs) for more examples.
 
@@ -68,7 +93,7 @@ fn main() {
     let mut y = Tensor2D::<64, 2>::rand(&mut rng);
 
     // construct optimizer
-    let mut opt: Sgd<Linear<5, 2>> = Default::default();
+    let mut opt = Sgd::new(SgdConfig::default(), Linear::<5, 2>::default());
 
     // initialize weights of underlying module
     opt.init(&mut rng);
@@ -92,51 +117,37 @@ Since all operations in a computation graph have exactly 1 child, we can always 
 
 This means we know exactly which tensor owns the gradient tape!
 
-### Batching
-
-Batching is currently implemented with this trait:
-
-```rust
-pub trait Batch {
-    type Batched<const B: usize>: Tensor;
-}
-```
-
-This is where the nightly dependency comes in!
-
-The Module API requires inputs & outputs to implement the Batch trait, which is why all the examples have a batch dimension.
-
 ### Module & ModuleChain
 
-I like the definition for the Module trait a lot:
+I'm partial to the Module trait:
 
 ```rust
-pub trait Module: Init + Taped + Default {
-    type Input: Tensor + Batch;
-    type Output: Tensor + Batch;
-
-    fn forward<const B: usize>(
-        &mut self,
-        input: &mut <Self::Input as Batch>::Batched<B>,
-    ) -> <Self::Output as Batch>::Batched<B>;
+pub trait Module<I, O>: Init + Taped + Default
+where
+    I: Tensor,
+    O: Tensor,
+{
+    fn forward(&mut self, input: &mut I) -> O;
 }
 ```
+This is nice because we can impl Module for different input/output sizes for the same struct, which is how batching is implemented!
 
-It just takes its input and produces an output!
-
-What's cool is how we can use this to implement a ModuleChain (chaining two modules together):
+We can then create a `ModuleChain` struct to make it easy to chain multiple things together:
 
 ```rust
-#[derive(Default, Debug)]
-pub struct ModuleChain<M1: Module, M2: Module<Input = M1::Output>> {
-    first: M1,
-    second: M2,
+impl<A, B, I, INNER, O> Module<I, O> for ModuleChain<A, B, INNER>
+where
+    I: Tensor,
+    INNER: Tensor,
+    O: Tensor,
+    A: Module<I, INNER>,
+    B: Module<INNER, O>,
+{
+    fn forward(&mut self, input: &mut I) -> O {
+        self.b.forward(&mut self.a.forward(input))
+    }
 }
 ```
-
-We can require the second module's input to be the same as the first module's output! SO COOL!
-
-(Of course ModuleChain also implements Module!)
 
 ### Optimizer has all methods of underlying module for free!
 
