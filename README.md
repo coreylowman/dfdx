@@ -38,9 +38,9 @@ struct MLP {
     l3: Linear<4, 2>,
 }
 
-impl Init for MLP { // snipped }
+impl Init for MLP { /* snipped, just calling .init() on l1, l2, l3 */ }
 
-impl Taped for MLP { // snipped }
+impl Taped for MLP { /* snipped, just calling .update() on l1, l2, l3*/ }
 
 impl Module<Tensor1D<16>, Tensor1D<2>> for MLP {
     fn forward(&mut self, x: &mut Tensor1D<16>) -> Tensor1D<2> {
@@ -54,7 +54,7 @@ impl Module<Tensor1D<16>, Tensor1D<2>> for MLP {
 
 // support batching!
 impl<const B: usize> Module<Tensor2D<B, 16>, Tensor2D<B, 2>> for MLP {
-    // snipped
+    // snipped - looks exactly the same as unbatched forward
 }
 
 fn main() {
