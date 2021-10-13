@@ -11,10 +11,7 @@ fn main() {
     let mut y = Tensor2D::<64, 2>::rand(&mut rng);
 
     // initialize optimizer & model
-    let mut opt: Sgd<Linear<5, 2>> = Sgd {
-        cfg: SgdConfig { lr: 0.5 },
-        module: Default::default(),
-    };
+    let mut opt = Sgd::new(SgdConfig { lr: 0.5 }, Linear::<5, 2>::default());
     opt.init(&mut rng);
     println!("{:?}", opt.module);
 
@@ -28,9 +25,13 @@ fn main() {
 
     // run backprop
     opt.step(&mut loss);
+    // opt.step(&mut loss);
     println!("{:?}", opt.module);
 
     let mut output = opt.forward(&mut x);
-    println!("loss after 1 sgd step={:#}", (&mut output - &mut y).square().mean().data());
+    println!(
+        "loss after 1 sgd step={:#}",
+        (&mut output - &mut y).square().mean().data()
+    );
     // loss after 1 sgd step=0.41276962
 }

@@ -1,7 +1,10 @@
 use super::optimizer::Optimizer;
 use crate::nn::module::Module;
 use crate::tensor::Tensor;
-use std::ops::{Deref, DerefMut};
+use std::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
 #[derive(Debug)]
 pub struct SgdConfig {
@@ -15,12 +18,23 @@ impl Default for SgdConfig {
 }
 
 #[derive(Default, Debug)]
-pub struct Sgd<M: Module> {
+pub struct Sgd<M, I, O> {
     pub cfg: SgdConfig,
     pub module: M,
+    marker: PhantomData<(I, O)>,
 }
 
-impl<M: Module> Deref for Sgd<M> {
+impl<M, I, O> Sgd<M, I, O> {
+    pub fn new(cfg: SgdConfig, module: M) -> Self {
+        Self {
+            cfg,
+            module,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<M, I, O> Deref for Sgd<M, I, O> {
     type Target = M;
 
     fn deref(&self) -> &Self::Target {
@@ -28,13 +42,18 @@ impl<M: Module> Deref for Sgd<M> {
     }
 }
 
-impl<M: Module> DerefMut for Sgd<M> {
+impl<M, I, O> DerefMut for Sgd<M, I, O> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.module
     }
 }
 
-impl<M: Module> Optimizer<M> for Sgd<M> {
+impl<M, I, O> Optimizer<M, I, O> for Sgd<M, I, O>
+where
+    M: Module<I, O>,
+    I: Tensor,
+    O: Tensor,
+{
     fn step<T: Tensor>(&mut self, loss: &mut T) {
         let mut tape = loss.backward().unwrap();
         tape.scale(self.cfg.lr);

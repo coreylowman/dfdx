@@ -1,26 +1,23 @@
 use super::module::{Init, Module};
 use crate::gradients::{GradientTape, Taped};
-use crate::tensor::{Activations, Batch, Tensor};
+use crate::tensor::Tensor;
 use ndarray_rand::rand::Rng;
 
 macro_rules! nn_activation {
     ($module_name:ident, $act_fn:ident) => {
         #[derive(Debug, Default)]
-        pub struct $module_name<T: Tensor + Batch>(std::marker::PhantomData<T>);
+        pub struct $module_name;
 
-        impl<T: Tensor + Batch> Init for $module_name<T> {
+        impl Init for $module_name {
             fn init<R: Rng>(&mut self, _rng: &mut R) {}
         }
 
-        impl<T: Tensor + Batch> Taped for $module_name<T> {
+        impl Taped for $module_name {
             fn update(&mut self, _tape: &GradientTape) {}
         }
 
-        impl<T: Tensor + Batch> Module for $module_name<T> {
-            type Input = T;
-            type Output = T;
-
-            fn forward<const B: usize>(&mut self, input: &mut T::Batched<B>) -> T::Batched<B> {
+        impl<T: Tensor> Module<T, T> for $module_name {
+            fn forward(&mut self, input: &mut T) -> T {
                 input.$act_fn()
             }
         }

@@ -2,37 +2,32 @@ use ndarray_rand::{
     rand::{rngs::StdRng, SeedableRng},
     rand_distr::Uniform,
 };
-use stag::nn::{Linear, ModuleChain, ReLU, Tanh};
+use stag::{nn::{Chain, Linear, ReLU, Tanh}, optim::sgd::SgdConfig};
 use stag::optim::sgd::Sgd;
 use stag::prelude::*;
 use std::time::Instant;
-
-/*
-Syntactic Sugar for
-type MyMLP = ModuleChain<
-    Linear<10, 32>,
-    ModuleChain<
-        ReLU<Tensor1D<32>>,
-        ModuleChain<
-            Linear<32, 32>,
-            ModuleChain<ReLU<Tensor1D<32>>, ModuleChain<Linear<32, 2>, Tanh<Tensor1D<2>>>>,
-        >,
-    >,
->;
-*/
-type MyMLP = chain_modules!(Linear<10, 32>, ReLU<Tensor1D<32>>, Linear<32, 32>, ReLU<Tensor1D<32>>, Linear<32, 2>, Tanh<Tensor1D<2>>);
 
 fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     // initialize target data
-    let mut x: Tensor2D<64, 10> = Default::default();
-    let mut y: Tensor2D<64, 2> = Default::default();
+    let mut x: Tensor2D<64, 10> = Tensor2D::default();
+    let mut y: Tensor2D<64, 2> = Tensor2D::default();
     x.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
     y.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
     // initialize optimizer & model
-    let mut opt: Sgd<MyMLP> = Default::default();
+    // chain! expands to:
+    // let module = <Linear<10, 32> as Default>::default()
+    //     .chain::<ReLU>()
+    //     .chain::<Linear<32, 32>>()
+    //     .chain::<ReLU>()
+    //     .chain::<Linear<32, 2>>()
+    //     .chain::<Tanh>();
+    let mut opt = Sgd::new(
+        SgdConfig::default(),
+        chain!(Linear<10, 32>, ReLU, Linear<32, 32>, ReLU, Linear<32, 2>, Tanh),
+    );
     opt.init(&mut rng);
 
     // run through training data

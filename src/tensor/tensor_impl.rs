@@ -1,4 +1,4 @@
-use super::tensor::{Batch, IsShapedArray, Tensor};
+use super::tensor::{IsShapedArray, Tensor};
 use crate::gradients::{Gradient, HasGradient};
 use ndarray::prelude::{Array, Ix0, Ix1, Ix2};
 
@@ -63,11 +63,3 @@ macro_rules! tensor_impl {
 tensor_impl!([] Tensor0D [], Ix0, (), (), 1);
 tensor_impl!([const N: usize] Tensor1D [N], Ix1, (N,), (usize,), N);
 tensor_impl!([const M: usize, const N: usize] Tensor2D [M, N], Ix2, (M, N), (usize, usize), M * N);
-
-impl Batch for Tensor0D {
-    type Batched<const B: usize> = Tensor1D<B>;
-}
-
-impl<const N: usize> Batch for Tensor1D<N> {
-    type Batched<const B: usize> = Tensor2D<B, N>;
-}

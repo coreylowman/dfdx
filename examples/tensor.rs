@@ -8,7 +8,7 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     // empty 3x3 matrix
-    let mut x: Tensor2D<3, 3> = Default::default();
+    let mut x: Tensor2D<3, 3> = Tensor2D::default();
     println!("x={:#}", x.data());
 
     // fill matrix with random data drawn from Standard distribution

@@ -88,10 +88,6 @@ pub trait Activations {
 
 pub trait Tensor: Default + IsShapedArray + Activations + HasGradient {}
 
-pub trait Batch {
-    type Batched<const B: usize>: Tensor;
-}
-
 pub(super) trait Record {
     fn record(&mut self, tape: &mut GradientTape);
 }

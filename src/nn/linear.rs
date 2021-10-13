@@ -1,6 +1,6 @@
 use super::module::{Init, Module};
 use crate::gradients::{GradientTape, Taped};
-use crate::tensor::{Batch, Randomize, Tensor1D, Tensor2D};
+use crate::tensor::{Randomize, Tensor1D, Tensor2D};
 use ndarray_rand::rand::Rng;
 use ndarray_rand::rand_distr::Uniform;
 
@@ -24,14 +24,16 @@ impl<const I: usize, const O: usize> Init for Linear<I, O> {
     }
 }
 
-impl<const I: usize, const O: usize> Module for Linear<I, O> {
-    type Input = Tensor1D<I>;
-    type Output = Tensor1D<O>;
+impl<const I: usize, const O: usize> Module<Tensor1D<I>, Tensor1D<O>> for Linear<I, O> {
+    fn forward(&mut self, input: &mut Tensor1D<I>) -> Tensor1D<O> {
+        &mut (input * &mut self.weight) + &mut self.bias
+    }
+}
 
-    fn forward<const B: usize>(
-        &mut self,
-        input: &mut <Self::Input as Batch>::Batched<B>,
-    ) -> <Self::Output as Batch>::Batched<B> {
+impl<const B: usize, const I: usize, const O: usize> Module<Tensor2D<B, I>, Tensor2D<B, O>>
+    for Linear<I, O>
+{
+    fn forward(&mut self, input: &mut Tensor2D<B, I>) -> Tensor2D<B, O> {
         &mut (input * &mut self.weight) + &mut self.bias
     }
 }

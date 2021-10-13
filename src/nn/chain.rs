@@ -1,36 +1,89 @@
 use super::module::{Init, Module};
 use crate::gradients::{GradientTape, Taped};
-use crate::tensor::Batch;
+use crate::prelude::Tensor;
 use ndarray_rand::rand::Rng;
+use std::marker::PhantomData;
 
-#[derive(Default, Debug)]
-pub struct ModuleChain<M1: Module, M2: Module<Input = M1::Output>> {
-    first: M1,
-    second: M2,
+#[derive(Debug)]
+pub struct ModuleChain<A, B, INNER> {
+    a: A,
+    b: B,
+    marker: PhantomData<INNER>,
 }
 
-impl<M1: Module, M2: Module<Input = M1::Output>> Taped for ModuleChain<M1, M2> {
-    fn update(&mut self, tape: &GradientTape) {
-        self.first.update(tape);
-        self.second.update(tape);
+impl<A, B, INNER> Default for ModuleChain<A, B, INNER>
+where
+    A: Default,
+    B: Default,
+{
+    fn default() -> Self {
+        Self {
+            a: Default::default(),
+            b: Default::default(),
+            marker: PhantomData,
+        }
     }
 }
 
-impl<M1: Module, M2: Module<Input = M1::Output>> Init for ModuleChain<M1, M2> {
+impl<A, B, INNER> Init for ModuleChain<A, B, INNER>
+where
+    A: Init,
+    B: Init,
+{
     fn init<R: Rng>(&mut self, rng: &mut R) {
-        self.first.init(rng);
-        self.second.init(rng);
+        self.a.init(rng);
+        self.b.init(rng);
     }
 }
 
-impl<M1: Module, M2: Module<Input = M1::Output>> Module for ModuleChain<M1, M2> {
-    type Input = M1::Input;
-    type Output = M2::Output;
+impl<A, B, INNER> Taped for ModuleChain<A, B, INNER>
+where
+    A: Taped,
+    B: Taped,
+{
+    fn update(&mut self, tape: &GradientTape) {
+        self.a.update(tape);
+        self.b.update(tape);
+    }
+}
 
-    fn forward<const B: usize>(
-        &mut self,
-        input: &mut <Self::Input as Batch>::Batched<B>,
-    ) -> <Self::Output as Batch>::Batched<B> {
-        self.second.forward(&mut self.first.forward(input))
+impl<A, B, I, INNER, O> Module<I, O> for ModuleChain<A, B, INNER>
+where
+    I: Tensor,
+    INNER: Tensor,
+    O: Tensor,
+    A: Module<I, INNER>,
+    B: Module<INNER, O>,
+{
+    fn forward(&mut self, input: &mut I) -> O {
+        self.b.forward(&mut self.a.forward(input))
+    }
+}
+
+pub trait Chain<I, INNER, O>: Sized {
+    fn chain<B>(self) -> ModuleChain<Self, B, INNER>
+    where
+        INNER: Tensor,
+        O: Tensor,
+        B: Module<INNER, O>;
+}
+
+impl<T, I, INNER, O> Chain<I, INNER, O> for T
+where
+    I: Tensor,
+    INNER: Tensor,
+    T: Module<I, INNER>,
+{
+    fn chain<B>(self) -> ModuleChain<Self, B, INNER>
+    where
+        INNER: Tensor,
+        O: Tensor,
+        B: Module<INNER, O>,
+    {
+        ModuleChain {
+            a: self,
+            b: Default::default(),
+            marker: PhantomData,
+        }
     }
 }
