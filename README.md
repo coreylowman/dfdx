@@ -4,6 +4,74 @@ Reverse Mode Auto Differentiation[1] in Rust.
 
 [1] https://en.wikipedia.org/wiki/Automatic_differentiation#Reverse_accumulation
 
+
+## 👌 Simple Neural Networks API, completely type checked at compile time.
+
+See [examples/linear.rs](examples/linear.rs), [examples/chain.rs](examples/chain.rs), and [examples/regression.rs](examples/regression.rs) for more examples.
+
+```rust
+use stag::nn::{Linear, Chain, ReLU, Tanh};
+use stag::prelude::*;
+
+fn main() {
+    // construct a 2 layer MLP with ReLU activations and all weights/biases filled with 0s
+    let mut model = chain!(Linear<16, 8>, ReLU, Linear<8, 4>, ReLU, Linear<4, 2>, Tanh);
+
+    // create a 1x10 tensor filled with 0s
+    let mut x: Tensor1D<16> = Tensor1D::default();
+
+    // pass through the MLP
+    let y = model.forward(&mut x);
+
+    println!("{:#}", y.data());
+    // [0, 0]
+}
+```
+
+Or you can roll your own instead of using chaining (see [examples/raw_mlp.rs](examples/raw_mlp.rs))
+
+```rust
+#[derive(Default, Debug)]
+struct MLP {
+    l1: Linear<16, 8>,
+    l2: Linear<8, 4>,
+    l3: Linear<4, 2>,
+}
+
+impl Init for MLP { // snipped }
+
+impl Taped for MLP { // snipped }
+
+impl Module<Tensor1D<16>, Tensor1D<2>> for MLP {
+    fn forward(&mut self, x: &mut Tensor1D<16>) -> Tensor1D<2> {
+        let mut x = self.l1.forward(x);
+        let mut x = x.relu();
+        let mut x = self.l2.forward(&mut x);
+        let mut x = x.relu();
+        self.l3.forward(&mut x).tanh()
+    }
+}
+
+// support batching!
+impl<const B: usize> Module<Tensor2D<B, 16>, Tensor2D<B, 2>> for MLP {
+    // snipped
+}
+
+fn main() {
+    let mut rng = StdRng::seed_from_u64(0);
+
+    let mut mlp = MLP::default();
+    mlp.init(&mut rng);
+
+    let mut x: Tensor1D<16> = Tensor1D::rand(&mut rng);
+    println!("{:#}", mlp.forward(&mut x).data());
+
+    // yay we can batch so easily!
+    let mut x: Tensor2D<4, 16> = Tensor2D::rand(&mut rng);
+    println!("{:#}", mlp.forward(&mut x).data());
+}
+```
+
 ## 💡 Tensor sizes & operations type checked at compile time
 
 See [examples/tensor.rs](examples/tensor.rs) for more tensor operation examples.
@@ -23,29 +91,6 @@ fn main() {
     // x=[[0.80145925, 0.7311134, 0.55528885],
     // [0.77346015, 0.809342, 0.025844634],
     // [0.6714777, 0.58415926, 0.87062806]]
-}
-```
-
-## 👌 Simple Neural Networks API, completely type checked at compile time.
-
-See [examples/linear.rs](examples/linear.rs), [examples/chain.rs](examples/chain.rs), and [examples/regression.rs](examples/regression.rs) for more examples.
-
-```rust
-use stag::nn::{Linear, Chain, ReLU, Tanh};
-use stag::prelude::*;
-
-fn main() {
-    // construct a 2 layer MLP with ReLU activations and all weights/biases filled with 0s
-    let mut model = chain!(Linear<10, 32>, ReLU, Linear<32, 32>, ReLU, Linear<32, 2>, Tanh);
-
-    // create a 1x10 tensor filled with 0s
-    let mut x: Tensor1D<10> = Tensor1D::default();
-
-    // pass through the MLP
-    let y = model.forward(&mut x);
-
-    println!("{:#}", y.data());
-    // [0, 0]
 }
 ```
 
