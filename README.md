@@ -35,7 +35,7 @@ use stag::nn::{Linear, Chain, ReLU, Tanh};
 use stag::prelude::*;
 
 fn main() {
-    // construct the MLP as defined above with all parameters filled with 0s
+    // construct a 2 layer MLP with ReLU activations and all weights/biases filled with 0s
     let mut model = chain!(Linear<10, 32>, ReLU, Linear<32, 32>, ReLU, Linear<32, 2>, Tanh);
 
     // create a 1x10 tensor filled with 0s
