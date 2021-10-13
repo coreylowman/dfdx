@@ -111,11 +111,11 @@ fn main() {
 
 ## Interesting implementation details
 
-### No Arc/RefCell!
+### No Arc/RefCell (& why tensors require mutability)
 
-Since all operations in a computation graph have exactly 1 child, we can always move the gradient tape to the child of the last operation.
+Since all operations in a computation graph have exactly 1 child, we can always move the gradient tape to the child of the last operation. This means we know exactly which tensor owns the gradient tape!
 
-This means we know exactly which tensor owns the gradient tape!
+This is also why we have to mark all the tensors as mut and pass them around with &mut to the operations. Every operation could potentially pull the gradient tape out of the tensor!.
 
 ### Module & ModuleChain
 
