@@ -1,1 +1,4 @@
 /target
+Cargo.lock
+*.py
+.vscode

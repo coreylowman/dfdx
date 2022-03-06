@@ -1,8 +1,10 @@
+pub mod diff_fns;
 pub mod gradients;
 pub mod nn;
-pub mod optim;
 pub mod tensor;
-
-mod macros;
-pub mod prelude;
-pub use crate::macros::*;
+pub mod prelude {
+    pub use crate::diff_fns::*;
+    pub use crate::gradients::OnGradientTape;
+    pub use crate::nn::*;
+    pub use crate::tensor::*;
+}

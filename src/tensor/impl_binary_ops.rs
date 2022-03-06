@@ -1,6 +1,6 @@
-use super::tensor::{IsShapedArray, Record};
-use super::tensor_impl::{Tensor0D, Tensor1D, Tensor2D};
-use crate::gradients::{ops::*, Gradient, HasGradient};
+use super::structs::{Tensor0D, Tensor1D, Tensor2D};
+use super::traits::IsShapedArray;
+use crate::gradients::{BinaryOp, Gradient, HasGradient, OpType, Operation};
 use ndarray::prelude::Array;
 use std::ops::{Add, Mul, Sub};
 
@@ -10,8 +10,8 @@ macro_rules! binary_ops {
             type Output = $typename<$($consts)*>;
             fn add(self, rhs: Self) -> Self::Output {
                 let grad = self.take_tape().or(rhs.take_tape()).map(|mut tape| {
-                    self.record(&mut tape);
-                    rhs.record(&mut tape);
+                    self.record_on(&mut tape);
+                    rhs.record_on(&mut tape);
 
                     let lhs_deriv = tape.store_derivative(Array::from_elem(Self::Output::SHAPE, 1.0));
                     let rhs_deriv = tape.store_derivative(Array::from_elem(Self::Output::SHAPE, 1.0));
@@ -24,7 +24,7 @@ macro_rules! binary_ops {
                         result_grad,
                     }));
 
-                    Gradient::with_tape(result_grad, tape)
+                    Gradient::on_tape(result_grad, tape)
                 });
 
                 Self::Output {
@@ -38,8 +38,8 @@ macro_rules! binary_ops {
             type Output = $typename<$($consts)*>;
             fn sub(self, rhs: Self) -> Self::Output {
                 let grad = self.take_tape().or(rhs.take_tape()).map(|mut tape| {
-                    self.record(&mut tape);
-                    rhs.record(&mut tape);
+                    self.record_on(&mut tape);
+                    rhs.record_on(&mut tape);
 
                     let lhs_deriv = tape.store_derivative(Array::from_elem(Self::Output::SHAPE, 1.0));
                     let rhs_deriv = tape.store_derivative(Array::from_elem(Self::Output::SHAPE, -1.0));
@@ -52,7 +52,7 @@ macro_rules! binary_ops {
                         result_grad,
                     }));
 
-                    Gradient::with_tape(result_grad, tape)
+                    Gradient::on_tape(result_grad, tape)
                 });
 
                 Self::Output {
@@ -68,14 +68,15 @@ binary_ops!([] Tensor0D []);
 binary_ops!([const N: usize] Tensor1D [N]);
 binary_ops!([const M: usize, const N: usize] Tensor2D [M, N]);
 
+// <M, N> * <N, O> = <M, O>
 impl<const M: usize, const N: usize, const O: usize> Mul<&mut Tensor2D<N, O>>
     for &mut Tensor2D<M, N>
 {
     type Output = Tensor2D<M, O>;
     fn mul(self, rhs: &mut Tensor2D<N, O>) -> Self::Output {
         let grad = self.take_tape().or(rhs.take_tape()).map(|mut tape| {
-            self.record(&mut tape);
-            rhs.record(&mut tape);
+            self.record_on(&mut tape);
+            rhs.record_on(&mut tape);
 
             let lhs_deriv = tape.store_derivative(rhs.data.clone());
             let rhs_deriv = tape.store_derivative(self.data.clone());
@@ -88,7 +89,7 @@ impl<const M: usize, const N: usize, const O: usize> Mul<&mut Tensor2D<N, O>>
                 result_grad,
             }));
 
-            Gradient::with_tape(result_grad, tape)
+            Gradient::on_tape(result_grad, tape)
         });
 
         Self::Output {
@@ -98,12 +99,13 @@ impl<const M: usize, const N: usize, const O: usize> Mul<&mut Tensor2D<N, O>>
     }
 }
 
+// <N> * <N, O> = <O>
 impl<const N: usize, const O: usize> Mul<&mut Tensor2D<N, O>> for &mut Tensor1D<N> {
     type Output = Tensor1D<O>;
     fn mul(self, rhs: &mut Tensor2D<N, O>) -> Self::Output {
         let grad = self.take_tape().or(rhs.take_tape()).map(|mut tape| {
-            self.record(&mut tape);
-            rhs.record(&mut tape);
+            self.record_on(&mut tape);
+            rhs.record_on(&mut tape);
 
             let lhs_deriv = tape.store_derivative(rhs.data.clone());
             let rhs_deriv = tape.store_derivative(self.data.clone());
@@ -116,7 +118,7 @@ impl<const N: usize, const O: usize> Mul<&mut Tensor2D<N, O>> for &mut Tensor1D<
                 result_grad,
             }));
 
-            Gradient::with_tape(result_grad, tape)
+            Gradient::on_tape(result_grad, tape)
         });
 
         Self::Output {
@@ -126,12 +128,13 @@ impl<const N: usize, const O: usize> Mul<&mut Tensor2D<N, O>> for &mut Tensor1D<
     }
 }
 
+// <M, N> + <N> = <M, N>
 impl<const M: usize, const N: usize> Add<&mut Tensor1D<N>> for &mut Tensor2D<M, N> {
     type Output = Tensor2D<M, N>;
     fn add(self, rhs: &mut Tensor1D<N>) -> Self::Output {
         let grad = self.take_tape().or(rhs.take_tape()).map(|mut tape| {
-            self.record(&mut tape);
-            rhs.record(&mut tape);
+            self.record_on(&mut tape);
+            rhs.record_on(&mut tape);
 
             let lhs_deriv = tape.store_derivative(Array::from_elem((M, N), 1.0));
             let rhs_deriv = tape.store_derivative(Array::from_elem((N,), 1.0 / M as f32));
@@ -144,7 +147,7 @@ impl<const M: usize, const N: usize> Add<&mut Tensor1D<N>> for &mut Tensor2D<M, 
                 result_grad,
             }));
 
-            Gradient::with_tape(result_grad, tape)
+            Gradient::on_tape(result_grad, tape)
         });
 
         Self::Output {

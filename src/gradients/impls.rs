@@ -1,17 +1,28 @@
-use super::ops::*;
-use super::refs::*;
+use super::structs::*;
 use ndarray::prelude::*;
 use std::ops::Index;
 
-pub trait Taped {
-    fn update(&mut self, tape: &GradientTape);
+impl Gradient {
+    pub(crate) fn new(gradient_ref: GradientRef) -> Self {
+        Self {
+            gradient_ref,
+            tape: None,
+        }
+    }
+
+    pub(crate) fn on_tape(gradient_ref: GradientRef, tape: Box<GradientTape>) -> Self {
+        Self {
+            gradient_ref,
+            tape: Some(tape),
+        }
+    }
 }
 
-#[derive(Debug)]
-pub struct GradientTape {
-    operations: Vec<Operation>,
-    derivatives: Vec<ArrayD<f32>>,
-    gradients: Vec<ArrayD<f32>>,
+impl Index<GradientRef> for GradientTape {
+    type Output = ArrayD<f32>;
+    fn index(&self, gradient_ref: GradientRef) -> &Self::Output {
+        &self.gradients[gradient_ref.index]
+    }
 }
 
 impl GradientTape {
@@ -107,12 +118,5 @@ impl GradientTape {
                 },
             }
         }
-    }
-}
-
-impl Index<GradientRef> for GradientTape {
-    type Output = ArrayD<f32>;
-    fn index(&self, gradient_ref: GradientRef) -> &Self::Output {
-        &self.gradients[gradient_ref.index]
     }
 }

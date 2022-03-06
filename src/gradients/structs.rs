@@ -1,4 +1,25 @@
-use super::refs::{DerivativeRef, GradientRef};
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct DerivativeRef {
+    pub(super) index: usize,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct GradientRef {
+    pub(super) index: usize,
+}
+
+#[derive(Debug)]
+pub struct GradientTape {
+    pub(super) operations: Vec<Operation>,
+    pub(super) derivatives: Vec<ndarray::ArrayD<f32>>,
+    pub(super) gradients: Vec<ndarray::ArrayD<f32>>,
+}
+
+#[derive(Debug)]
+pub struct Gradient {
+    pub(crate) gradient_ref: GradientRef,
+    pub(crate) tape: Option<Box<GradientTape>>,
+}
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum OpType {
@@ -9,7 +30,6 @@ pub(crate) enum OpType {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct UnaryOp {
-    pub(crate) op_type: OpType,
     pub(crate) parent_grad: GradientRef,
     pub(crate) parent_deriv: DerivativeRef,
     pub(crate) result_grad: GradientRef,

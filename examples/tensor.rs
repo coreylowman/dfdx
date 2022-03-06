@@ -1,14 +1,12 @@
-use ndarray_rand::{
-    rand::prelude::*,
-    rand_distr::{Standard, StandardNormal},
-};
+use rand::prelude::*;
+use rand_distr::{Standard, StandardNormal};
 use stag::prelude::*;
 
 fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     // empty 3x3 matrix
-    let mut x: Tensor2D<3, 3> = Tensor2D::default();
+    let mut x: Tensor2D<3, 3> = Default::default();
     println!("x={:#}", x.data());
 
     // fill matrix with random data drawn from Standard distribution
@@ -25,11 +23,11 @@ fn main() {
     println!("x.tanh()={:#}", x.tanh().data());
 
     // add two tensors of same size together
-    let mut y = Tensor2D::<3, 3>::randn(&mut rng);
+    let mut y: Tensor2D<3, 3> = Tensor2D::randn(&mut rng);
     println!("y={:#}", y.data());
     println!("x+y={:#}", (&mut x + &mut y).data());
 
     // multiply two tensors with same inner dimension
-    let mut z = Tensor2D::<3, 2>::ones();
+    let mut z: Tensor2D<3, 2> = Tensor2D::ones();
     println!("x@z={:#}", (&mut x * &mut z).data());
 }

@@ -1,8 +1,11 @@
 mod activations;
-mod chain;
 mod linear;
-pub mod module;
+mod sgd;
+mod traits;
+mod tuple_chains;
 
 pub use activations::*;
-pub use chain::*;
 pub use linear::*;
+pub use sgd::{Sgd, SgdConfig};
+pub use traits::*;
+pub use tuple_chains::*;

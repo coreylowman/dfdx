@@ -1,31 +1,34 @@
-use super::module::{Init, Module};
-use crate::gradients::{GradientTape, Taped};
-use crate::tensor::Tensor;
-use ndarray_rand::rand::Rng;
+use super::traits::Module;
+use crate::{
+    diff_fns::{ApplyDifferentiableFunction, DifferentiableFunction},
+    gradients::{GradientTape, OnGradientTape},
+    prelude::Randomize,
+    tensor::Tensor,
+};
+use rand::{distributions::Distribution, Rng};
 
-macro_rules! nn_activation {
-    ($module_name:ident, $act_fn:ident) => {
-        #[derive(Debug, Default)]
-        pub struct $module_name;
-
-        impl Init for $module_name {
-            fn init<R: Rng>(&mut self, _rng: &mut R) {}
-        }
-
-        impl Taped for $module_name {
-            fn update(&mut self, _tape: &GradientTape) {}
-        }
-
-        impl<T: Tensor> Module<T, T> for $module_name {
-            fn forward(&mut self, input: &mut T) -> T {
-                input.$act_fn()
-            }
-        }
-    };
+impl<F> OnGradientTape for F
+where
+    F: DifferentiableFunction,
+{
+    fn update(&mut self, _: &GradientTape) {}
 }
 
-nn_activation!(ReLU, relu);
-nn_activation!(Sin, sin);
-nn_activation!(Cos, cos);
-nn_activation!(Sigmoid, sigmoid);
-nn_activation!(Tanh, tanh);
+impl<F> Randomize for F
+where
+    F: DifferentiableFunction,
+{
+    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, _: &mut R, _: &D) {}
+}
+
+impl<F, I> Module<I> for F
+where
+    I: Tensor,
+    F: DifferentiableFunction + Default,
+{
+    type Output = I;
+
+    fn forward(&mut self, input: &mut I) -> Self::Output {
+        input.apply::<F>()
+    }
+}

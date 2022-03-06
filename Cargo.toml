@@ -8,6 +8,5 @@ edition = "2018"
 [dependencies]
 ndarray = "0.15.3"
 ndarray-rand = "0.14.0"
-
-[[example]]
-name="regression"
+rand = "0.8.5"
+rand_distr = "0.4.3"

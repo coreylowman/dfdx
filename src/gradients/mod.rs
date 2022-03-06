@@ -1,8 +1,7 @@
-mod gradient;
-pub(crate) mod ops;
-mod refs;
-mod tape;
+mod impls;
+mod structs;
+mod traits;
 
-pub use gradient::*;
-pub use refs::GradientRef;
-pub use tape::*;
+pub use impls::*;
+pub use structs::*;
+pub use traits::*;

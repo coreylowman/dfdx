@@ -1,5 +1,8 @@
-use super::refs::GradientRef;
-use super::tape::GradientTape;
+use super::structs::*;
+
+pub trait OnGradientTape {
+    fn update(&mut self, tape: &GradientTape);
+}
 
 pub trait HasGradient {
     fn grad(&self) -> &Option<Gradient>;
@@ -22,27 +25,5 @@ pub trait HasGradient {
             tape.backward(grad.gradient_ref);
             tape
         })
-    }
-}
-
-#[derive(Debug)]
-pub struct Gradient {
-    pub(crate) gradient_ref: GradientRef,
-    pub(crate) tape: Option<Box<GradientTape>>,
-}
-
-impl Gradient {
-    pub(crate) fn new(gradient_ref: GradientRef) -> Self {
-        Self {
-            gradient_ref,
-            tape: None,
-        }
-    }
-
-    pub(crate) fn with_tape(gradient_ref: GradientRef, tape: Box<GradientTape>) -> Self {
-        Self {
-            gradient_ref,
-            tape: Some(tape),
-        }
     }
 }

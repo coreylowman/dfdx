@@ -1,9 +1,11 @@
-mod binary_ops;
-mod tensor;
-mod tensor_impl;
-mod unary_ops;
+mod impl_binary_ops;
+mod impl_tensor;
+mod impl_unary_ops;
+mod structs;
+mod traits;
 
-pub use binary_ops::*;
-pub use tensor::*;
-pub use tensor_impl::*;
-pub use unary_ops::*;
+pub use impl_binary_ops::*;
+pub use impl_tensor::*;
+pub use impl_unary_ops::*;
+pub use structs::*;
+pub use traits::*;

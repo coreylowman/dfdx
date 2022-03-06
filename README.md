@@ -10,65 +10,28 @@ Reverse Mode Auto Differentiation[1] in Rust.
 See [examples/linear.rs](examples/linear.rs), [examples/chain.rs](examples/chain.rs), and [examples/regression.rs](examples/regression.rs) for more examples.
 
 ```rust
-use stag::nn::{Linear, Chain, ReLU, Tanh};
+use stag::nn::{Linear, ReLU, Tanh};
 use stag::prelude::*;
 
+// tuple's represent sequential or chained modules
+type MLP = (
+    (Linear<16, 8>, ReLU),
+    (Linear<8, 4>, ReLU),
+    (Linear<4, 2>, Tanh),
+);
+
 fn main() {
-    // construct a 2 layer MLP with ReLU activations and all weights/biases filled with 0s
-    let mut model = chain!(Linear<16, 8>, ReLU, Linear<8, 4>, ReLU, Linear<4, 2>, Tanh);
+    // construct a multi layer MLP with ReLU activations and all weights/biases filled with 0s
+    let mut model: MLP = Default::default();
 
     // create a 1x10 tensor filled with 0s
-    let mut x: Tensor1D<16> = Tensor1D::default();
+    let mut x: Tensor1D<16> = Default::default();
 
     // pass through the MLP
     let y = model.forward(&mut x);
 
     println!("{:#}", y.data());
     // [0, 0]
-}
-```
-
-Or you can roll your own instead of using chaining (see [examples/raw_mlp.rs](examples/raw_mlp.rs))
-
-```rust
-#[derive(Default, Debug)]
-struct MLP {
-    l1: Linear<16, 8>,
-    l2: Linear<8, 4>,
-    l3: Linear<4, 2>,
-}
-
-impl Init for MLP { /* snipped, just calling .init() on l1, l2, l3 */ }
-
-impl Taped for MLP { /* snipped, just calling .update() on l1, l2, l3*/ }
-
-impl Module<Tensor1D<16>, Tensor1D<2>> for MLP {
-    fn forward(&mut self, x: &mut Tensor1D<16>) -> Tensor1D<2> {
-        let mut x = self.l1.forward(x);
-        let mut x = x.relu();
-        let mut x = self.l2.forward(&mut x);
-        let mut x = x.relu();
-        self.l3.forward(&mut x).tanh()
-    }
-}
-
-// support batching!
-impl<const B: usize> Module<Tensor2D<B, 16>, Tensor2D<B, 2>> for MLP {
-    // snipped - looks exactly the same as unbatched forward
-}
-
-fn main() {
-    let mut rng = StdRng::seed_from_u64(0);
-
-    let mut mlp = MLP::default();
-    mlp.init(&mut rng);
-
-    let mut x: Tensor1D<16> = Tensor1D::rand(&mut rng);
-    println!("{:#}", mlp.forward(&mut x).data());
-
-    // yay we can batch so easily!
-    let mut x: Tensor2D<4, 16> = Tensor2D::rand(&mut rng);
-    println!("{:#}", mlp.forward(&mut x).data());
 }
 ```
 
@@ -167,29 +130,25 @@ This is also why we have to mark all the tensors as mut and pass them around wit
 I'm partial to the Module trait:
 
 ```rust
-pub trait Module<I, O>: Init + Taped + Default
-where
-    I: Tensor,
-    O: Tensor,
-{
-    fn forward(&mut self, input: &mut I) -> O;
+pub trait Module<I>: Default {
+    type Output;
+    fn forward(&mut self, input: &mut I) -> Self::Output;
 }
 ```
-This is nice because we can impl Module for different input/output sizes for the same struct, which is how batching is implemented!
+This is nice because we can impl Module for different inputs for the same struct, which is how batching is implemented!
 
-We can then create a `ModuleChain` struct to make it easy to chain multiple things together:
+This also enables an easy sequential/chaining functionality with tuples, by implementing Module for a tuple of modules:
 
 ```rust
-impl<A, B, I, INNER, O> Module<I, O> for ModuleChain<A, B, INNER>
+impl<Input, A, B> Module<Input> for (A, B)
 where
-    I: Tensor,
-    INNER: Tensor,
-    O: Tensor,
-    A: Module<I, INNER>,
-    B: Module<INNER, O>,
+    Input: Tensor,
+    A: Module<Input>,
+    B: Module<A::Output>,
 {
-    fn forward(&mut self, input: &mut I) -> O {
-        self.b.forward(&mut self.a.forward(input))
+    type Output = B::Output;
+    fn forward(&mut self, x: &mut INPUT) -> Self::Output {
+        self.1.forward(&mut self.0.forward(x))
     }
 }
 ```

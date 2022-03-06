@@ -1,14 +1,13 @@
-use ndarray_rand::{
-    rand::{rngs::StdRng, SeedableRng},
-    rand_distr::Uniform,
-};
-use stag::optim::sgd::Sgd;
+use rand::{rngs::StdRng, SeedableRng};
+use rand_distr::Uniform;
 use stag::prelude::*;
-use stag::{
-    nn::{Chain, Linear, ReLU, Tanh},
-    optim::sgd::SgdConfig,
-};
 use std::time::Instant;
+
+type MLP = (
+    (Linear<10, 32>, ReLU),
+    (Linear<32, 32>, ReLU),
+    (Linear<32, 2>, Tanh),
+);
 
 fn main() {
     let mut rng = StdRng::seed_from_u64(0);
@@ -20,18 +19,8 @@ fn main() {
     y.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
     // initialize optimizer & model
-    // chain! expands to:
-    // let module = <Linear<10, 32> as Default>::default()
-    //     .chain::<ReLU>()
-    //     .chain::<Linear<32, 32>>()
-    //     .chain::<ReLU>()
-    //     .chain::<Linear<32, 2>>()
-    //     .chain::<Tanh>();
-    let mut opt = Sgd::new(
-        SgdConfig::default(),
-        chain!(Linear<10, 32>, ReLU, Linear<32, 32>, ReLU, Linear<32, 2>, Tanh),
-    );
-    opt.init(&mut rng);
+    let mut opt: Sgd<MLP> = Default::default();
+    opt.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
     // run through training data
     for _i_epoch in 0..15 {
