@@ -10,7 +10,7 @@ where
 {
     fn mean(&mut self) -> Tensor0D {
         let grad = self.take_tape().map(|mut tape| {
-            self.ensure_gradient_allocated(&mut tape);
+            self.put_on(&mut tape);
 
             let parent_deriv =
                 tape.store_derivative(self.data().mapv(|_f| 1.0 / Self::NUM_ELEMENTS as f32));
@@ -36,7 +36,7 @@ where
 {
     fn apply<F: DifferentiableFunction>(&mut self) -> Self {
         let grad = self.take_tape().map(|mut tape| {
-            self.ensure_gradient_allocated(&mut tape);
+            self.put_on(&mut tape);
 
             let parent_deriv = tape.store_derivative(self.data().mapv(F::df));
             let mut gradient = tape.allocate_gradient(Self::SHAPE);

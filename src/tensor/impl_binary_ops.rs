@@ -1,6 +1,6 @@
 use super::structs::{Tensor1D, Tensor2D};
 use super::traits::{IsShapedArray, Tensor};
-use crate::gradients::{BinaryOp, HasGradient, OpType, Operation};
+use crate::gradients::{BinaryOp, HasGradient, OnGradientTape, OpType, Operation};
 use ndarray::prelude::Array;
 
 pub fn add<T>(lhs: &mut T, rhs: &mut T) -> T
@@ -8,8 +8,8 @@ where
     T: Tensor,
 {
     let grad = lhs.take_tape().or(rhs.take_tape()).map(|mut tape| {
-        lhs.ensure_gradient_allocated(&mut tape);
-        rhs.ensure_gradient_allocated(&mut tape);
+        lhs.put_on(&mut tape);
+        rhs.put_on(&mut tape);
 
         let lhs_deriv = tape.store_derivative(Array::from_elem(T::SHAPE, 1.0));
         let rhs_deriv = tape.store_derivative(Array::from_elem(T::SHAPE, 1.0));
@@ -34,8 +34,8 @@ where
     T: Tensor,
 {
     let grad = lhs.take_tape().or(rhs.take_tape()).map(|mut tape| {
-        lhs.ensure_gradient_allocated(&mut tape);
-        rhs.ensure_gradient_allocated(&mut tape);
+        lhs.put_on(&mut tape);
+        rhs.put_on(&mut tape);
 
         let lhs_deriv = tape.store_derivative(Array::from_elem(T::SHAPE, 1.0));
         let rhs_deriv = tape.store_derivative(Array::from_elem(T::SHAPE, -1.0));
@@ -60,8 +60,8 @@ pub fn matmat_mul<const M: usize, const N: usize, const O: usize>(
     rhs: &mut Tensor2D<N, O>,
 ) -> Tensor2D<M, O> {
     let grad = lhs.take_tape().or(rhs.take_tape()).map(|mut tape| {
-        lhs.ensure_gradient_allocated(&mut tape);
-        rhs.ensure_gradient_allocated(&mut tape);
+        lhs.put_on(&mut tape);
+        rhs.put_on(&mut tape);
 
         let lhs_deriv = tape.store_derivative(rhs.data.clone());
         let rhs_deriv = tape.store_derivative(lhs.data.clone());
@@ -86,8 +86,8 @@ pub fn vecmat_mul<const N: usize, const O: usize>(
     rhs: &mut Tensor2D<N, O>,
 ) -> Tensor1D<O> {
     let grad = lhs.take_tape().or(rhs.take_tape()).map(|mut tape| {
-        lhs.ensure_gradient_allocated(&mut tape);
-        rhs.ensure_gradient_allocated(&mut tape);
+        lhs.put_on(&mut tape);
+        rhs.put_on(&mut tape);
 
         let lhs_deriv = tape.store_derivative(rhs.data.clone());
         let rhs_deriv = tape.store_derivative(lhs.data.clone());
@@ -112,8 +112,8 @@ pub fn broadcast_add<const M: usize, const N: usize>(
     rhs: &mut Tensor1D<N>,
 ) -> Tensor2D<M, N> {
     let grad = lhs.take_tape().or(rhs.take_tape()).map(|mut tape| {
-        lhs.ensure_gradient_allocated(&mut tape);
-        rhs.ensure_gradient_allocated(&mut tape);
+        lhs.put_on(&mut tape);
+        rhs.put_on(&mut tape);
 
         let lhs_deriv = tape.store_derivative(Array::from_elem((M, N), 1.0));
         let rhs_deriv = tape.store_derivative(Array::from_elem((N,), 1.0 / M as f32));

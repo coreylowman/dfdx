@@ -92,8 +92,11 @@ macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+]) => {
         impl<$($name: OnGradientTape),+> OnGradientTape for ($($name,)+)
         {
-            fn update(&mut self, tape: &GradientTape) {
-                $(self.$idx.update(tape));+
+            fn put_on(&mut self, tape: &mut GradientTape) {
+                $(self.$idx.put_on(tape));+
+            }
+            fn update_with(&mut self, tape: &GradientTape) {
+                $(self.$idx.update_with(tape));+
             }
         }
 

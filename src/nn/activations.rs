@@ -11,7 +11,8 @@ impl<F> OnGradientTape for F
 where
     F: DifferentiableFunction,
 {
-    fn update(&mut self, _: &GradientTape) {}
+    fn put_on(&mut self, _: &mut GradientTape) {}
+    fn update_with(&mut self, _: &GradientTape) {}
 }
 
 impl<F> Randomize for F

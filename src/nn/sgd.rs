@@ -50,6 +50,6 @@ where
 {
     fn step(&mut self, mut tape: GradientTape) {
         tape.scale(self.cfg.lr);
-        self.module.update(&tape);
+        self.module.update_with(&tape);
     }
 }

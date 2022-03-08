@@ -61,7 +61,13 @@ macro_rules! tensor_impl {
         }
 
         impl<$(const $const_names: usize),*> OnGradientTape for $typename<$($const_names),*> {
-            fn update(&mut self, tape: &GradientTape) {
+            fn put_on(&mut self, tape: &mut GradientTape) {
+                if self.grad().is_none() {
+                    self.set_grad(tape.allocate_gradient(Self::SHAPE));
+                }
+            }
+
+            fn update_with(&mut self, tape: &GradientTape) {
                 let grad = self.mut_grad().take().unwrap();
                 self.mut_data().sub_assign(&tape[grad.gradient_ref]);
             }

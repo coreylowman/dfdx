@@ -1,13 +1,17 @@
 use super::structs::*;
 
 pub trait OnGradientTape {
-    fn update(&mut self, tape: &GradientTape);
+    fn put_on(&mut self, tape: &mut GradientTape);
+    fn update_with(&mut self, tape: &GradientTape);
 }
 
 pub trait HasGradient {
     fn grad(&self) -> &Option<Gradient>;
     fn mut_grad(&mut self) -> &mut Option<Gradient>;
-    fn set_grad(&mut self, gradient: Gradient);
+
+    fn set_grad(&mut self, gradient: Gradient) {
+        *self.mut_grad() = Some(gradient);
+    }
 
     fn gradient_ref(&self) -> GradientRef {
         self.grad().as_ref().unwrap().gradient_ref
