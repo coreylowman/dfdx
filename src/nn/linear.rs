@@ -1,6 +1,8 @@
 use super::traits::Module;
-use crate::gradients::{GradientTape, OnGradientTape};
-use crate::tensor::{add, broadcast_add, matmat_mul, vecmat_mul, Randomize, Tensor1D, Tensor2D};
+use crate::gradients::GradientTape;
+use crate::tensor::{
+    add, broadcast_add, matmat_mul, vecmat_mul, OnGradientTape, Randomize, Tensor1D, Tensor2D,
+};
 use rand::{distributions::Distribution, Rng};
 
 #[derive(Default, Debug)]

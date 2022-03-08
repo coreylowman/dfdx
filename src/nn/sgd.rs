@@ -1,5 +1,6 @@
 use super::traits::Optimizer;
-use crate::gradients::{GradientTape, OnGradientTape};
+use crate::gradients::GradientTape;
+use crate::tensor::OnGradientTape;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug)]

@@ -1,9 +1,8 @@
 use super::traits::Module;
 use crate::{
     diff_fns::{ApplyDifferentiableFunction, DifferentiableFunction},
-    gradients::{GradientTape, OnGradientTape},
-    prelude::Randomize,
-    tensor::Tensor,
+    gradients::GradientTape,
+    tensor::{OnGradientTape, Randomize, Tensor},
 };
 use rand::{distributions::Distribution, Rng};
 

@@ -1,8 +1,6 @@
 use super::structs::{Tensor1D, Tensor2D};
-use super::traits::{IsShapedArray, Tensor};
-use crate::gradients::{
-    BinaryOp, HasGradientRef, HasGradientTape, OnGradientTape, OpType, Operation,
-};
+use super::traits::{HasGradientRef, HasGradientTape, IsShapedArray, OnGradientTape, Tensor};
+use crate::gradients::{BinaryOp, OpType, Operation};
 use ndarray::prelude::Array;
 
 pub fn add<T>(lhs: &mut T, rhs: &mut T) -> T

@@ -1,9 +1,7 @@
 use super::structs::*;
 use super::traits::*;
 use crate::diff_fns::*;
-use crate::gradients::{
-    GradientRef, GradientTape, HasGradientRef, HasGradientTape, OnGradientTape,
-};
+use crate::gradients::{GradientRef, GradientTape};
 use ndarray::{Array, Ix0, Ix1, Ix2, Ix3, Ix4};
 use rand::prelude::{Distribution, Rng};
 use rand_distr::{Standard, StandardNormal};
