@@ -5,20 +5,45 @@ use crate::gradients::{Gradient, GradientTape, HasGradient, OnGradientTape};
 use ndarray::{Array, Ix0, Ix1, Ix2, Ix3, Ix4};
 use rand::prelude::{Distribution, Rng};
 use rand_distr::{Standard, StandardNormal};
+use std::ops::SubAssign;
+
+macro_rules! prod {
+    () => {
+        1
+    };
+    ($head:ident) => {
+        $head
+    };
+    ($head:ident, $($tail:ident),+) => {
+        $head * prod!($($tail),+)
+    };
+}
+
+macro_rules! tupleify {
+    () => {
+        ()
+    };
+    ($elem:tt) => {
+        ($elem,)
+    };
+    ($($elems:tt),+) => {
+        ($($elems),*)
+    };
+}
 
 macro_rules! tensor_impl {
-    ([$($const_defs:tt)*] $typename:ident [$($consts:tt)*], $dim:ty, $shape_val:expr, $shape_type:ty, $num_elems:expr) => {
-        impl<$($const_defs)*> IsShapedArray for $typename<$($consts)*> {
+    ($typename:ident, [$($const_names:tt),*], $dim:ty, $shape:ty) => {
+        impl<$(const $const_names: usize),*> IsShapedArray for $typename<$($const_names),*> {
             type Dimension = $dim;
-            type Shape = $shape_type;
-            const SHAPE: Self::Shape = $shape_val;
-            const NUM_ELEMENTS: usize = $num_elems;
+            type Shape = $shape;
+            const SHAPE: Self::Shape = tupleify!($($const_names),*);
+            const NUM_ELEMENTS: usize = prod!($($const_names),*);
 
             fn data(&self) -> &Array<f32, Self::Dimension> { &self.data }
             fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension> { &mut self.data }
         }
 
-        impl<$($const_defs)*> Default for $typename<$($consts)*> {
+        impl<$(const $const_names: usize),*> Default for $typename<$($const_names),*> {
             fn default() -> Self {
                 Self {
                     data: Array::zeros(Self::SHAPE),
@@ -27,43 +52,41 @@ macro_rules! tensor_impl {
             }
         }
 
-        impl<$($const_defs)*> HasGradient for $typename<$($consts)*> {
+        impl<$(const $const_names: usize),*> HasGradient for $typename<$($const_names),*> {
             fn grad(&self) -> &Option<Gradient> { &self.grad }
             fn mut_grad(&mut self) -> &mut Option<Gradient> { &mut self.grad }
-        }
-
-        impl<$($const_defs)*> OnGradientTape for $typename<$($consts)*> {
-            fn update(&mut self, tape: &GradientTape) {
-                let grad = self.mut_grad().take().unwrap();
-                *self.mut_data() -= &tape[grad.gradient_ref];
+            fn set_grad(&mut self, gradient: Gradient) {
+                self.grad = Some(gradient);
             }
         }
 
-        impl<$($const_defs)*> Randomize for $typename<$($consts)*>
+        impl<$(const $const_names: usize),*> OnGradientTape for $typename<$($const_names),*> {
+            fn update(&mut self, tape: &GradientTape) {
+                let grad = self.mut_grad().take().unwrap();
+                self.mut_data().sub_assign(&tape[grad.gradient_ref]);
+            }
+        }
+
+        impl<$(const $const_names: usize),*> Randomize for $typename<$($const_names),*>
         {
             fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
                 self.mut_data().map_inplace(|f| *f = dist.sample(rng))
             }
         }
 
-        impl<$($const_defs)*> $typename<$($consts)*>
-        {
-            pub(super) fn record_on(&mut self, tape: &mut GradientTape) {
-                if self.grad().is_none() {
-                    *self.mut_grad() = Some(Gradient::new(tape.register_gradient(Self::SHAPE)));
-                }
+        impl<$(const $const_names: usize),*> Tensor for $typename<$($const_names),*> {
+            fn new(data: Array<f32, Self::Dimension>, grad: Option<Gradient>) -> Self {
+                Self { data, grad }
             }
         }
-
-        impl<$($const_defs)*> Tensor for $typename<$($consts)*> { }
     }
 }
 
-tensor_impl!([] Tensor0D [], Ix0, (), (), 1);
-tensor_impl!([const N: usize] Tensor1D [N], Ix1, (N,), (usize,), N);
-tensor_impl!([const M: usize, const N: usize] Tensor2D [M, N], Ix2, (M, N), (usize, usize), M * N);
-tensor_impl!([const M: usize, const N: usize, const O: usize] Tensor3D [M, N, O], Ix3, (M, N, O), (usize, usize, usize), M * N * O);
-tensor_impl!([const M: usize, const N: usize, const O: usize, const P: usize] Tensor4D [M, N, O, P], Ix4, (M, N, O, P), (usize, usize, usize, usize), M * N * O * P);
+tensor_impl!(Tensor0D, [], Ix0, ());
+tensor_impl!(Tensor1D, [M], Ix1, (usize,));
+tensor_impl!(Tensor2D, [M, N], Ix2, (usize, usize));
+tensor_impl!(Tensor3D, [M, N, O], Ix3, (usize, usize, usize));
+tensor_impl!(Tensor4D, [M, N, O, P], Ix4, (usize, usize, usize, usize));
 
 impl<T> TensorSugar for T
 where

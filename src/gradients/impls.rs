@@ -3,17 +3,10 @@ use ndarray::prelude::*;
 use std::ops::Index;
 
 impl Gradient {
-    pub(crate) fn new(gradient_ref: GradientRef) -> Self {
+    pub(crate) fn without_tape(gradient_ref: GradientRef) -> Self {
         Self {
             gradient_ref,
             tape: None,
-        }
-    }
-
-    pub(crate) fn on_tape(gradient_ref: GradientRef, tape: Box<GradientTape>) -> Self {
-        Self {
-            gradient_ref,
-            tape: Some(tape),
         }
     }
 }
@@ -46,13 +39,15 @@ impl GradientTape {
         DerivativeRef { index }
     }
 
-    pub(crate) fn register_gradient<D: Dimension, Sh: ShapeBuilder<Dim = D>>(
-        &mut self,
-        shape: Sh,
-    ) -> GradientRef {
+    fn allocate_gradient_ref<Sh: ShapeBuilder>(&mut self, shape: Sh) -> GradientRef {
         let index = self.gradients.len();
         self.gradients.push(Array::zeros(shape).into_dyn());
         GradientRef { index }
+    }
+
+    pub(crate) fn allocate_gradient<Sh: ShapeBuilder>(&mut self, shape: Sh) -> Gradient {
+        let gradient_ref = self.allocate_gradient_ref(shape);
+        Gradient::without_tape(gradient_ref)
     }
 
     pub(crate) fn add_operation(&mut self, operation: Operation) {

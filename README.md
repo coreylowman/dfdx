@@ -7,32 +7,10 @@ Reverse Mode Auto Differentiation[1] in Rust.
 
 ## 👌 Simple Neural Networks API, completely type checked at compile time.
 
-See [examples/linear.rs](examples/linear.rs), [examples/chain.rs](examples/chain.rs), and [examples/regression.rs](examples/regression.rs) for more examples.
+See [examples/linear.rs](examples/linear.rs) and [examples/regression.rs](examples/regression.rs) for more examples.
 
 ```rust
-use stag::nn::{Linear, ReLU, Tanh};
-use stag::prelude::*;
-
-// tuple's represent sequential or chained modules
-type MLP = (
-    (Linear<16, 8>, ReLU),
-    (Linear<8, 4>, ReLU),
-    (Linear<4, 2>, Tanh),
-);
-
-fn main() {
-    // construct a multi layer MLP with ReLU activations and all weights/biases filled with 0s
-    let mut model: MLP = Default::default();
-
-    // create a 1x10 tensor filled with 0s
-    let mut x: Tensor1D<16> = Default::default();
-
-    // pass through the MLP
-    let y = model.forward(&mut x);
-
-    println!("{:#}", y.data());
-    // [0, 0]
-}
+TODO
 ```
 
 ## 💡 Tensor sizes & operations type checked at compile time
@@ -40,21 +18,7 @@ fn main() {
 See [examples/tensor.rs](examples/tensor.rs) for more tensor operation examples.
 
 ```rust
-use stag::prelude::*;
-
-fn main() {
-    let mut rng = StdRng::seed_from_u64(0);
-
-    // 3x3 matrix filled with 0s
-    let mut x: Tensor2D<3, 3> = Tensor2D::default();
-
-    // fill matrix with random data drawn from Standard distribution
-    x.randomize(&mut rng, &Standard);
-    println!("x={:#}", x.data());
-    // x=[[0.80145925, 0.7311134, 0.55528885],
-    // [0.77346015, 0.809342, 0.025844634],
-    // [0.6714777, 0.58415926, 0.87062806]]
-}
+TODO
 ```
 
 ## 📄 Batching completely supported by type system
@@ -65,56 +29,20 @@ added to inputs/outputs!
 
 See [src/nn/linear.rs](src/nn/linear.rs) for an example implementation.
 
+TODO is this still accurate?
 NOTE: Unfortunately because of the ModuleChain currently works, a model constructed
 using ModuleChain can't call forward with two different data types.
 
 ```rust
-use stag::nn::Linear;
-use stag::prelude::*;
-
-fn main() {
-    let mut model = Linear::<10, 5>::default();
-
-    // create a 1x10 tensor filled with 0s
-    let mut a: Tensor1D<10> = Tensor1D::default();
-
-    // create a 64x10 tensor filled with 0s
-    let mut b: Tensor2D<64, 10> = Tensor2D::default();
-
-    // yay both of these work!
-    let y = model.forward(&mut a);
-    let z = model.forward(&mut b);
-}
+TODO
 ```
 
 ## 📈 Easy to use Optimizer API
 
-See [examples/sgd.rs](examples/sgd.rs) and [examples/regression.rs](examples/regression.rs) for more examples.
+See [examples/regression.rs](examples/regression.rs) for more examples.
 
 ```rust
-
-fn main() {
-    let mut rng = StdRng::seed_from_u64(0);
-
-    // input & target data
-    let mut x = Tensor2D::<64, 5>::rand(&mut rng);
-    let mut y = Tensor2D::<64, 2>::rand(&mut rng);
-
-    // construct optimizer
-    let mut opt = Sgd::new(SgdConfig::default(), Linear::<5, 2>::default());
-
-    // initialize weights of underlying module
-    opt.init(&mut rng);
-
-    // forward input through network while tracking derivatives
-    let mut output = opt.forward_with_derivatives(&mut x);
-
-    // compute loss
-    let mut loss = (&mut output - &mut y).square().mean();
-
-    // run backprop & apply gradients
-    opt.step(&mut loss);
-}
+TODO
 ```
 
 ## Interesting implementation details
@@ -130,27 +58,14 @@ This is also why we have to mark all the tensors as mut and pass them around wit
 I'm partial to the Module trait:
 
 ```rust
-pub trait Module<I>: Default {
-    type Output;
-    fn forward(&mut self, input: &mut I) -> Self::Output;
-}
+TODO
 ```
 This is nice because we can impl Module for different inputs for the same struct, which is how batching is implemented!
 
 This also enables an easy sequential/chaining functionality with tuples, by implementing Module for a tuple of modules:
 
 ```rust
-impl<Input, A, B> Module<Input> for (A, B)
-where
-    Input: Tensor,
-    A: Module<Input>,
-    B: Module<A::Output>,
-{
-    type Output = B::Output;
-    fn forward(&mut self, x: &mut INPUT) -> Self::Output {
-        self.1.forward(&mut self.0.forward(x))
-    }
-}
+TODO
 ```
 
 ### Optimizer has all methods of underlying module for free!

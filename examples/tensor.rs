@@ -25,9 +25,9 @@ fn main() {
     // add two tensors of same size together
     let mut y: Tensor2D<3, 3> = Tensor2D::randn(&mut rng);
     println!("y={:#}", y.data());
-    println!("x+y={:#}", (&mut x + &mut y).data());
+    println!("x+y={:#}", add(&mut x, &mut y).data());
 
     // multiply two tensors with same inner dimension
     let mut z: Tensor2D<3, 2> = Tensor2D::ones();
-    println!("x@z={:#}", (&mut x * &mut z).data());
+    println!("x@z={:#}", matmat_mul(&mut x, &mut z).data());
 }

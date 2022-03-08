@@ -7,6 +7,7 @@ pub trait OnGradientTape {
 pub trait HasGradient {
     fn grad(&self) -> &Option<Gradient>;
     fn mut_grad(&mut self) -> &mut Option<Gradient>;
+    fn set_grad(&mut self, gradient: Gradient);
 
     fn gradient_ref(&self) -> GradientRef {
         self.grad().as_ref().unwrap().gradient_ref
@@ -19,11 +20,11 @@ pub trait HasGradient {
             .flatten()
     }
 
-    fn backward(&mut self) -> Option<Box<GradientTape>> {
+    fn backward(&mut self) -> Option<GradientTape> {
         self.mut_grad().as_mut().map(|grad| {
             let mut tape = grad.tape.take().unwrap();
             tape.backward(grad.gradient_ref);
-            tape
+            *tape
         })
     }
 }

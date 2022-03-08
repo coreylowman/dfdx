@@ -30,10 +30,12 @@ fn main() {
         let mut output = opt.forward_with_derivatives(&mut x);
 
         // compute loss
-        let mut loss = (&mut output - &mut y).square().mean();
+        let mut loss = sub(&mut output, &mut y).square().mean();
 
         // run backprop
-        opt.step(&mut loss);
+        // TODO track has gradient at compile time?
+        let tape = loss.backward().unwrap();
+        opt.step(tape);
 
         println!("loss={:#.3} in {:?}", loss.data(), start.elapsed());
     }

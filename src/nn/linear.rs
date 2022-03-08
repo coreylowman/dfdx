@@ -1,6 +1,6 @@
 use super::traits::Module;
 use crate::gradients::{GradientTape, OnGradientTape};
-use crate::tensor::{Randomize, Tensor1D, Tensor2D};
+use crate::tensor::{add, broadcast_add, matmat_mul, vecmat_mul, Randomize, Tensor1D, Tensor2D};
 use rand::{distributions::Distribution, Rng};
 
 #[derive(Default, Debug)]
@@ -27,15 +27,15 @@ impl<const I: usize, const O: usize> Randomize for Linear<I, O> {
 impl<const I: usize, const O: usize> Module<Tensor1D<I>> for Linear<I, O> {
     type Output = Tensor1D<O>;
 
-    fn forward(&mut self, input: &mut Tensor1D<I>) -> Self::Output {
-        &mut (input * &mut self.weight) + &mut self.bias
+    fn forward(&mut self, x: &mut Tensor1D<I>) -> Self::Output {
+        add(&mut vecmat_mul(x, &mut self.weight), &mut self.bias)
     }
 }
 
 // Batched 2d forward
 impl<const B: usize, const I: usize, const O: usize> Module<Tensor2D<B, I>> for Linear<I, O> {
     type Output = Tensor2D<B, O>;
-    fn forward(&mut self, input: &mut Tensor2D<B, I>) -> Self::Output {
-        &mut (input * &mut self.weight) + &mut self.bias
+    fn forward(&mut self, x: &mut Tensor2D<B, I>) -> Self::Output {
+        broadcast_add(&mut matmat_mul(x, &mut self.weight), &mut self.bias)
     }
 }

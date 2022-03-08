@@ -1,5 +1,5 @@
 use super::structs::Tensor0D;
-use crate::gradients::HasGradient;
+use crate::gradients::{Gradient, GradientTape, HasGradient};
 use ndarray::{Array, Dimension, ShapeBuilder};
 use rand::{distributions::Distribution, Rng};
 
@@ -13,7 +13,14 @@ pub trait IsShapedArray {
     fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension>;
 }
 
-pub trait Tensor: Default + IsShapedArray + HasGradient {}
+pub trait Tensor: Default + IsShapedArray + HasGradient {
+    fn new(data: Array<f32, Self::Dimension>, grad: Option<Gradient>) -> Self;
+    fn ensure_gradient_allocated(&mut self, tape: &mut GradientTape) {
+        if self.grad().is_none() {
+            self.set_grad(tape.allocate_gradient(Self::SHAPE));
+        }
+    }
+}
 
 pub trait Randomize {
     fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D);

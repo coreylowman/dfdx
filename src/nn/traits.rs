@@ -1,4 +1,4 @@
-use crate::gradients::{Gradient, GradientTape, HasGradient};
+use crate::gradients::GradientTape;
 use crate::tensor::*;
 use std::ops::DerefMut;
 
@@ -9,16 +9,19 @@ pub trait Module<I>: Default {
 
     fn forward_with_derivatives(&mut self, input: &mut I) -> Self::Output
     where
-        I: IsShapedArray + HasGradient,
+        I: Tensor,
     {
         // make a new gradient tape
-        let mut tape = Box::new(GradientTape::new());
+        let mut tape = GradientTape::new();
 
         // register the input on the tape
-        let gradient_ref = tape.register_gradient(I::SHAPE);
+        let mut gradient = tape.allocate_gradient(I::SHAPE);
 
-        // stick the tape in the input
-        *input.mut_grad() = Some(Gradient::on_tape(gradient_ref, tape));
+        // move ownership of tape into this gradient
+        gradient.tape = Some(Box::new(tape));
+
+        // register gradient on tape, and put tape into resulting gradient
+        *input.mut_grad() = Some(gradient);
 
         // go!
         self.forward(input)
@@ -26,5 +29,5 @@ pub trait Module<I>: Default {
 }
 
 pub trait Optimizer<M>: DerefMut<Target = M> {
-    fn step<T: Tensor>(&mut self, loss: &mut T);
+    fn step(&mut self, tape: GradientTape);
 }
