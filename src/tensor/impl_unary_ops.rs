@@ -9,24 +9,24 @@ where
     T: Tensor,
 {
     fn mean(&mut self) -> Tensor0D {
-        let grad = self.take_tape().map(|mut tape| {
+        let mut opt_tape = self.mut_tape().take();
+        let opt_grad = opt_tape.as_mut().map(|mut tape| {
             self.put_on(&mut tape);
 
             let parent_deriv =
-                tape.store_derivative(self.data().mapv(|_f| 1.0 / Self::NUM_ELEMENTS as f32));
-            let mut gradient = tape.allocate_gradient(());
+                tape.store_derivative(self.data().mapv(|_| 1.0 / Self::NUM_ELEMENTS as f32));
 
+            let result_grad = tape.allocate_gradient(());
             tape.add_operation(Operation::Unary(UnaryOp {
-                parent_grad: self.gradient_ref(),
+                parent_grad: self.grad_ref().unwrap(),
                 parent_deriv,
-                result_grad: gradient.gradient_ref,
+                result_grad,
             }));
 
-            gradient.tape = Some(tape);
-            gradient
+            result_grad
         });
 
-        Tensor0D::new(arr0(self.data().mean().unwrap()), grad)
+        Tensor0D::new(arr0(self.data().mean().unwrap()), opt_grad, opt_tape)
     }
 }
 
@@ -35,21 +35,22 @@ where
     T: Tensor,
 {
     fn apply<F: DifferentiableFunction>(&mut self) -> Self {
-        let grad = self.take_tape().map(|mut tape| {
+        let mut opt_tape = self.mut_tape().take();
+        let opt_grad = opt_tape.as_mut().map(|mut tape| {
             self.put_on(&mut tape);
 
             let parent_deriv = tape.store_derivative(self.data().mapv(F::df));
-            let mut gradient = tape.allocate_gradient(Self::SHAPE);
+            let result_grad = tape.allocate_gradient(Self::SHAPE);
 
             tape.add_operation(Operation::Unary(UnaryOp {
-                parent_grad: self.gradient_ref(),
+                parent_grad: self.grad_ref().unwrap(),
                 parent_deriv,
-                result_grad: gradient.gradient_ref,
+                result_grad,
             }));
 
-            gradient.tape = Some(tape);
-            gradient
+            result_grad
         });
-        Self::new(self.data().mapv(F::f), grad)
+
+        Self::new(self.data().mapv(F::f), opt_grad, opt_tape)
     }
 }

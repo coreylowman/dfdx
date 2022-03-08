@@ -2,15 +2,6 @@ use super::structs::*;
 use ndarray::prelude::*;
 use std::ops::Index;
 
-impl Gradient {
-    pub(crate) fn without_tape(gradient_ref: GradientRef) -> Self {
-        Self {
-            gradient_ref,
-            tape: None,
-        }
-    }
-}
-
 impl Index<GradientRef> for GradientTape {
     type Output = ArrayD<f32>;
     fn index(&self, gradient_ref: GradientRef) -> &Self::Output {
@@ -39,15 +30,10 @@ impl GradientTape {
         DerivativeRef { index }
     }
 
-    fn allocate_gradient_ref<Sh: ShapeBuilder>(&mut self, shape: Sh) -> GradientRef {
+    pub(crate) fn allocate_gradient<Sh: ShapeBuilder>(&mut self, shape: Sh) -> GradientRef {
         let index = self.gradients.len();
         self.gradients.push(Array::zeros(shape).into_dyn());
         GradientRef { index }
-    }
-
-    pub(crate) fn allocate_gradient<Sh: ShapeBuilder>(&mut self, shape: Sh) -> Gradient {
-        let gradient_ref = self.allocate_gradient_ref(shape);
-        Gradient::without_tape(gradient_ref)
     }
 
     pub(crate) fn add_operation(&mut self, operation: Operation) {

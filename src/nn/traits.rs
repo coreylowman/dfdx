@@ -1,8 +1,9 @@
 use crate::gradients::GradientTape;
+use crate::prelude::OnGradientTape;
 use crate::tensor::*;
 use std::ops::DerefMut;
 
-pub trait Module<I>: Default {
+pub trait Module<I>: Default + OnGradientTape {
     type Output;
 
     fn forward(&mut self, input: &mut I) -> Self::Output;
@@ -14,14 +15,9 @@ pub trait Module<I>: Default {
         // make a new gradient tape
         let mut tape = GradientTape::new();
 
-        // register the input on the tape
-        let mut gradient = tape.allocate_gradient(I::SHAPE);
-
-        // move ownership of tape into this gradient
-        gradient.tape = Some(Box::new(tape));
-
         // register gradient on tape, and put tape into resulting gradient
-        *input.mut_grad() = Some(gradient);
+        *input.mut_grad_ref() = Some(tape.allocate_gradient(I::SHAPE));
+        *input.mut_tape() = Some(Box::new(tape));
 
         // go!
         self.forward(input)

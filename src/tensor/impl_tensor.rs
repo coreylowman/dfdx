@@ -1,7 +1,9 @@
 use super::structs::*;
 use super::traits::*;
 use crate::diff_fns::*;
-use crate::gradients::{Gradient, GradientTape, HasGradient, OnGradientTape};
+use crate::gradients::{
+    GradientRef, GradientTape, HasGradientRef, HasGradientTape, OnGradientTape,
+};
 use ndarray::{Array, Ix0, Ix1, Ix2, Ix3, Ix4};
 use rand::prelude::{Distribution, Rng};
 use rand_distr::{Standard, StandardNormal};
@@ -48,28 +50,31 @@ macro_rules! tensor_impl {
                 Self {
                     data: Array::zeros(Self::SHAPE),
                     grad: None,
+                    tape: None,
                 }
             }
         }
 
-        impl<$(const $const_names: usize),*> HasGradient for $typename<$($const_names),*> {
-            fn grad(&self) -> &Option<Gradient> { &self.grad }
-            fn mut_grad(&mut self) -> &mut Option<Gradient> { &mut self.grad }
-            fn set_grad(&mut self, gradient: Gradient) {
-                self.grad = Some(gradient);
-            }
+        impl<$(const $const_names: usize),*> HasGradientTape for $typename<$($const_names),*> {
+            fn tape(&self) -> &Option<Box<GradientTape>> { &self.tape }
+            fn mut_tape(&mut self) -> &mut Option<Box<GradientTape>> { &mut self.tape }
+        }
+
+        impl<$(const $const_names: usize),*> HasGradientRef for $typename<$($const_names),*> {
+            fn grad_ref(&self) -> &Option<GradientRef> { &self.grad }
+            fn mut_grad_ref(&mut self) -> &mut Option<GradientRef> { &mut self.grad }
         }
 
         impl<$(const $const_names: usize),*> OnGradientTape for $typename<$($const_names),*> {
             fn put_on(&mut self, tape: &mut GradientTape) {
-                if self.grad().is_none() {
-                    self.set_grad(tape.allocate_gradient(Self::SHAPE));
+                if self.grad_ref().is_none() {
+                    *self.mut_grad_ref() = Some(tape.allocate_gradient(Self::SHAPE));
                 }
             }
 
             fn update_with(&mut self, tape: &GradientTape) {
-                let grad = self.mut_grad().take().unwrap();
-                self.mut_data().sub_assign(&tape[grad.gradient_ref]);
+                let grad = self.mut_grad_ref().take().unwrap();
+                self.mut_data().sub_assign(&tape[grad]);
             }
         }
 
@@ -81,8 +86,8 @@ macro_rules! tensor_impl {
         }
 
         impl<$(const $const_names: usize),*> Tensor for $typename<$($const_names),*> {
-            fn new(data: Array<f32, Self::Dimension>, grad: Option<Gradient>) -> Self {
-                Self { data, grad }
+            fn new(data: Array<f32, Self::Dimension>, grad: Option<GradientRef>, tape: Option<Box<GradientTape>>) -> Self {
+                Self { data, grad, tape }
             }
         }
     }

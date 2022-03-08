@@ -15,12 +15,6 @@ pub struct GradientTape {
     pub(super) gradients: Vec<ndarray::ArrayD<f32>>,
 }
 
-#[derive(Debug)]
-pub struct Gradient {
-    pub(crate) gradient_ref: GradientRef,
-    pub(crate) tape: Option<Box<GradientTape>>,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum OpType {
     Normal,

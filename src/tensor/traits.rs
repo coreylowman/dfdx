@@ -1,6 +1,6 @@
 use super::structs::Tensor0D;
 use crate::{
-    gradients::{Gradient, HasGradient},
+    gradients::{GradientRef, GradientTape, HasGradientRef, HasGradientTape},
     prelude::OnGradientTape,
 };
 use ndarray::{Array, Dimension, ShapeBuilder};
@@ -16,8 +16,23 @@ pub trait IsShapedArray {
     fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension>;
 }
 
-pub trait Tensor: Default + IsShapedArray + HasGradient + OnGradientTape {
-    fn new(data: Array<f32, Self::Dimension>, grad: Option<Gradient>) -> Self;
+pub trait Tensor:
+    Default + IsShapedArray + HasGradientRef + OnGradientTape + HasGradientTape
+{
+    fn new(
+        data: Array<f32, Self::Dimension>,
+        grad_ref: Option<GradientRef>,
+        tape: Option<Box<GradientTape>>,
+    ) -> Self;
+
+    fn backward(&mut self) -> Option<GradientTape> {
+        let opt_tape = self.mut_tape().take();
+        let opt_tape = opt_tape.map(|mut tape| {
+            tape.backward(self.grad_ref().unwrap());
+            *tape
+        });
+        opt_tape
+    }
 }
 
 pub trait Randomize {
