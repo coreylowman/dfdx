@@ -4,7 +4,7 @@ pub trait DifferentiableFunction {
 }
 
 pub trait ApplyDifferentiableFunction {
-    fn apply<F: DifferentiableFunction>(&mut self) -> Self;
+    fn apply<F: DifferentiableFunction>(&self) -> Self;
 }
 
 #[derive(Default, Debug)]

@@ -1,22 +1,22 @@
-use super::structs::Tensor0D;
+use super::structs::{GradientData, Tensor0D};
 use crate::gradients::{GradientRef, GradientTape};
 use ndarray::{Array, Dimension, ShapeBuilder};
 use rand::{distributions::Distribution, Rng};
+use std::cell::RefCell;
 
 pub trait OnGradientTape {
     fn put_on(&mut self, tape: &mut GradientTape);
     fn update_with(&mut self, tape: &GradientTape);
 }
 
-pub trait HasGradientTape {
-    fn tape(&self) -> &Option<Box<GradientTape>>;
-    fn mut_tape(&mut self) -> &mut Option<Box<GradientTape>>;
+pub trait HasGradientData {
+    fn grad_data(&self) -> &RefCell<GradientData>;
+    fn take_tape(&self) -> Option<Box<GradientTape>> {
+        let mut grad_data = self.grad_data().borrow_mut();
+        grad_data.tape.take()
+    }
 }
 
-pub trait HasGradientRef {
-    fn grad_ref(&self) -> &Option<GradientRef>;
-    fn mut_grad_ref(&mut self) -> &mut Option<GradientRef>;
-}
 pub trait IsShapedArray {
     type Dimension: Dimension;
     type Shape: ShapeBuilder<Dim = Self::Dimension>;
@@ -27,22 +27,33 @@ pub trait IsShapedArray {
     fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension>;
 }
 
-pub trait Tensor:
-    Default + IsShapedArray + HasGradientRef + OnGradientTape + HasGradientTape
-{
-    fn new(
-        data: Array<f32, Self::Dimension>,
-        grad_ref: Option<GradientRef>,
-        tape: Option<Box<GradientTape>>,
-    ) -> Self;
+pub trait Tensor: Default + IsShapedArray + HasGradientData + OnGradientTape {
+    fn new(data: Array<f32, Self::Dimension>, grad_data: GradientData) -> Self;
 
-    fn backward(&mut self) -> Option<GradientTape> {
-        let opt_tape = self.mut_tape().take();
-        let opt_tape = opt_tape.map(|mut tape| {
-            tape.backward(self.grad_ref().unwrap());
-            *tape
-        });
-        opt_tape
+    fn trace_gradients(&self) {
+        let mut grad_data = self.grad_data().borrow_mut();
+        grad_data.tape = Some(Box::new(GradientTape::new()));
+        grad_data.grad_ref = None;
+    }
+
+    fn grad_ref(&self, tape: &mut GradientTape) -> GradientRef {
+        let mut grad_data = self.grad_data().borrow_mut();
+        let grad_ref = grad_data
+            .grad_ref
+            .get_or_insert_with(|| tape.allocate_gradient(Self::SHAPE));
+        *grad_ref
+    }
+
+    fn backward(&self) -> Option<GradientTape> {
+        let ref_grad_data = self.grad_data();
+        let mut grad_data = ref_grad_data.borrow_mut();
+        match (grad_data.grad_ref.take(), grad_data.tape.take()) {
+            (Some(grad_ref), Some(mut tape)) => {
+                tape.backward(grad_ref);
+                Some(*tape)
+            }
+            _ => None,
+        }
     }
 }
 
@@ -51,7 +62,7 @@ pub trait Randomize {
 }
 
 pub trait Mean {
-    fn mean(&mut self) -> Tensor0D;
+    fn mean(&self) -> Tensor0D;
 }
 
 pub trait TensorSugar {
@@ -60,13 +71,13 @@ pub trait TensorSugar {
     fn rand<R: Rng>(rng: &mut R) -> Self;
     fn randn<R: Rng>(rng: &mut R) -> Self;
 
-    fn relu(&mut self) -> Self;
-    fn sin(&mut self) -> Self;
-    fn cos(&mut self) -> Self;
-    fn ln(&mut self) -> Self;
-    fn exp(&mut self) -> Self;
-    fn sigmoid(&mut self) -> Self;
-    fn tanh(&mut self) -> Self;
-    fn square(&mut self) -> Self;
-    fn abs(&mut self) -> Self;
+    fn relu(&self) -> Self;
+    fn sin(&self) -> Self;
+    fn cos(&self) -> Self;
+    fn ln(&self) -> Self;
+    fn exp(&self) -> Self;
+    fn sigmoid(&self) -> Self;
+    fn tanh(&self) -> Self;
+    fn square(&self) -> Self;
+    fn abs(&self) -> Self;
 }

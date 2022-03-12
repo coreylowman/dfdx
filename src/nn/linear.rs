@@ -34,15 +34,15 @@ impl<const I: usize, const O: usize> Randomize for Linear<I, O> {
 impl<const I: usize, const O: usize> Module<Tensor1D<I>> for Linear<I, O> {
     type Output = Tensor1D<O>;
 
-    fn forward(&mut self, x: &mut Tensor1D<I>) -> Self::Output {
-        add(&mut vecmat_mul(x, &mut self.weight), &mut self.bias)
+    fn forward(&self, x: &Tensor1D<I>) -> Self::Output {
+        add(&vecmat_mul(x, &self.weight), &self.bias)
     }
 }
 
 // Batched 2d forward
 impl<const B: usize, const I: usize, const O: usize> Module<Tensor2D<B, I>> for Linear<I, O> {
     type Output = Tensor2D<B, O>;
-    fn forward(&mut self, x: &mut Tensor2D<B, I>) -> Self::Output {
-        broadcast_add(&mut matmat_mul(x, &mut self.weight), &mut self.bias)
+    fn forward(&self, x: &Tensor2D<B, I>) -> Self::Output {
+        broadcast_add(&matmat_mul(x, &self.weight), &self.bias)
     }
 }

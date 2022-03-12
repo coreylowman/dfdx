@@ -28,7 +28,7 @@ where
 {
     type Output = I;
 
-    fn forward(&mut self, input: &mut I) -> Self::Output {
+    fn forward(&self, input: &I) -> Self::Output {
         input.apply::<F>()
     }
 }

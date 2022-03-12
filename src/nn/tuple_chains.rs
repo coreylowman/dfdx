@@ -10,9 +10,9 @@ where
     B: Module<A::Output>,
 {
     type Output = B::Output;
-    fn forward(&mut self, x: &mut Input) -> Self::Output {
-        let mut x = self.0.forward(x);
-        self.1.forward(&mut x)
+    fn forward(&self, x: &Input) -> Self::Output {
+        let x = self.0.forward(x);
+        self.1.forward(&x)
     }
 }
 
@@ -24,10 +24,10 @@ where
     C: Module<B::Output>,
 {
     type Output = C::Output;
-    fn forward(&mut self, x: &mut Input) -> Self::Output {
-        let mut x = self.0.forward(x);
-        let mut x = self.1.forward(&mut x);
-        self.2.forward(&mut x)
+    fn forward(&self, x: &Input) -> Self::Output {
+        let x = self.0.forward(x);
+        let x = self.1.forward(&x);
+        self.2.forward(&x)
     }
 }
 
@@ -40,11 +40,11 @@ where
     D: Module<C::Output>,
 {
     type Output = D::Output;
-    fn forward(&mut self, x: &mut Input) -> Self::Output {
-        let mut x = self.0.forward(x);
-        let mut x = self.1.forward(&mut x);
-        let mut x = self.2.forward(&mut x);
-        self.3.forward(&mut x)
+    fn forward(&self, x: &Input) -> Self::Output {
+        let x = self.0.forward(x);
+        let x = self.1.forward(&x);
+        let x = self.2.forward(&x);
+        self.3.forward(&x)
     }
 }
 
@@ -58,12 +58,12 @@ where
     E: Module<D::Output>,
 {
     type Output = E::Output;
-    fn forward(&mut self, x: &mut Input) -> Self::Output {
-        let mut x = self.0.forward(x);
-        let mut x = self.1.forward(&mut x);
-        let mut x = self.2.forward(&mut x);
-        let mut x = self.3.forward(&mut x);
-        self.4.forward(&mut x)
+    fn forward(&self, x: &Input) -> Self::Output {
+        let x = self.0.forward(x);
+        let x = self.1.forward(&x);
+        let x = self.2.forward(&x);
+        let x = self.3.forward(&x);
+        self.4.forward(&x)
     }
 }
 
@@ -78,13 +78,13 @@ where
     F: Module<E::Output>,
 {
     type Output = F::Output;
-    fn forward(&mut self, x: &mut Input) -> Self::Output {
-        let mut x = self.0.forward(x);
-        let mut x = self.1.forward(&mut x);
-        let mut x = self.2.forward(&mut x);
-        let mut x = self.3.forward(&mut x);
-        let mut x = self.4.forward(&mut x);
-        self.5.forward(&mut x)
+    fn forward(&self, x: &Input) -> Self::Output {
+        let x = self.0.forward(x);
+        let x = self.1.forward(&x);
+        let x = self.2.forward(&x);
+        let x = self.3.forward(&x);
+        let x = self.4.forward(&x);
+        self.5.forward(&x)
     }
 }
 

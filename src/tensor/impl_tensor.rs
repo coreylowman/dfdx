@@ -1,11 +1,21 @@
 use super::structs::*;
 use super::traits::*;
 use crate::diff_fns::*;
-use crate::gradients::{GradientRef, GradientTape};
+use crate::gradients::GradientTape;
 use ndarray::{Array, Ix0, Ix1, Ix2, Ix3, Ix4};
 use rand::prelude::{Distribution, Rng};
 use rand_distr::{Standard, StandardNormal};
+use std::cell::RefCell;
 use std::ops::SubAssign;
+
+impl Default for GradientData {
+    fn default() -> Self {
+        Self {
+            grad_ref: None,
+            tape: None,
+        }
+    }
+}
 
 macro_rules! prod {
     () => {
@@ -47,32 +57,29 @@ macro_rules! tensor_impl {
             fn default() -> Self {
                 Self {
                     data: Array::zeros(Self::SHAPE),
-                    grad: None,
-                    tape: None,
+                    grad: RefCell::new(GradientData {
+                        grad_ref: None,
+                        tape: None,
+                    }),
                 }
             }
         }
 
-        impl<$(const $const_names: usize),*> HasGradientTape for $typename<$($const_names),*> {
-            fn tape(&self) -> &Option<Box<GradientTape>> { &self.tape }
-            fn mut_tape(&mut self) -> &mut Option<Box<GradientTape>> { &mut self.tape }
-        }
-
-        impl<$(const $const_names: usize),*> HasGradientRef for $typename<$($const_names),*> {
-            fn grad_ref(&self) -> &Option<GradientRef> { &self.grad }
-            fn mut_grad_ref(&mut self) -> &mut Option<GradientRef> { &mut self.grad }
+        impl<$(const $const_names: usize),*> HasGradientData for $typename<$($const_names),*> {
+            fn grad_data(&self) -> &RefCell<GradientData> { &self.grad }
         }
 
         impl<$(const $const_names: usize),*> OnGradientTape for $typename<$($const_names),*> {
             fn put_on(&mut self, tape: &mut GradientTape) {
-                if self.grad_ref().is_none() {
-                    *self.mut_grad_ref() = Some(tape.allocate_gradient(Self::SHAPE));
-                }
+                self.grad.borrow_mut().grad_ref.get_or_insert_with(|| tape.allocate_gradient(Self::SHAPE));
             }
 
             fn update_with(&mut self, tape: &GradientTape) {
-                let grad = self.mut_grad_ref().take().unwrap();
-                self.mut_data().sub_assign(&tape[grad]);
+                let grad_ref = {
+                    let mut grad_data = self.grad.borrow_mut();
+                    grad_data.grad_ref.take().unwrap()
+                };
+                self.mut_data().sub_assign(&tape[grad_ref]);
             }
         }
 
@@ -84,8 +91,8 @@ macro_rules! tensor_impl {
         }
 
         impl<$(const $const_names: usize),*> Tensor for $typename<$($const_names),*> {
-            fn new(data: Array<f32, Self::Dimension>, grad: Option<GradientRef>, tape: Option<Box<GradientTape>>) -> Self {
-                Self { data, grad, tape }
+            fn new(data: Array<f32, Self::Dimension>, grad_data: GradientData) -> Self {
+                Self { data, grad: RefCell::new(grad_data) }
             }
         }
     }
@@ -126,39 +133,39 @@ where
         a
     }
 
-    fn relu(&mut self) -> Self {
+    fn relu(&self) -> Self {
         self.apply::<ReLU>()
     }
 
-    fn sin(&mut self) -> Self {
+    fn sin(&self) -> Self {
         self.apply::<Sin>()
     }
 
-    fn cos(&mut self) -> Self {
+    fn cos(&self) -> Self {
         self.apply::<Cos>()
     }
 
-    fn ln(&mut self) -> Self {
+    fn ln(&self) -> Self {
         self.apply::<Ln>()
     }
 
-    fn exp(&mut self) -> Self {
+    fn exp(&self) -> Self {
         self.apply::<Exp>()
     }
 
-    fn sigmoid(&mut self) -> Self {
+    fn sigmoid(&self) -> Self {
         self.apply::<Sigmoid>()
     }
 
-    fn tanh(&mut self) -> Self {
+    fn tanh(&self) -> Self {
         self.apply::<Tanh>()
     }
 
-    fn square(&mut self) -> Self {
+    fn square(&self) -> Self {
         self.apply::<Square>()
     }
 
-    fn abs(&mut self) -> Self {
+    fn abs(&self) -> Self {
         self.apply::<Abs>()
     }
 }
