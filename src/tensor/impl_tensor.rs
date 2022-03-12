@@ -70,10 +70,6 @@ macro_rules! tensor_impl {
         }
 
         impl<$(const $const_names: usize),*> OnGradientTape for $typename<$($const_names),*> {
-            fn put_on(&mut self, tape: &mut GradientTape) {
-                self.grad.borrow_mut().grad_ref.get_or_insert_with(|| tape.allocate_gradient(Self::SHAPE));
-            }
-
             fn update_with(&mut self, tape: &GradientTape) {
                 let grad_ref = {
                     let mut grad_data = self.grad.borrow_mut();

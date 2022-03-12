@@ -12,11 +12,6 @@ pub struct Linear<const I: usize, const O: usize> {
 }
 
 impl<const I: usize, const O: usize> OnGradientTape for Linear<I, O> {
-    fn put_on(&mut self, tape: &mut GradientTape) {
-        self.weight.put_on(tape);
-        self.bias.put_on(tape);
-    }
-
     fn update_with(&mut self, tape: &GradientTape) {
         self.weight.update_with(tape);
         self.bias.update_with(tape);

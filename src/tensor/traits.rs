@@ -5,7 +5,6 @@ use rand::{distributions::Distribution, Rng};
 use std::cell::RefCell;
 
 pub trait OnGradientTape {
-    fn put_on(&mut self, tape: &mut GradientTape);
     fn update_with(&mut self, tape: &GradientTape);
 }
 
@@ -38,6 +37,8 @@ pub trait Tensor: Default + IsShapedArray + HasGradientData + OnGradientTape {
 
     fn grad_ref(&self, tape: &mut GradientTape) -> GradientRef {
         let mut grad_data = self.grad_data().borrow_mut();
+        // assert!(grad_data.grad_ref.is_none());
+        // todo!("lazy allocation of grad ref, so we can overwrite here instead of reusing");
         let grad_ref = grad_data
             .grad_ref
             .get_or_insert_with(|| tape.allocate_gradient(Self::SHAPE));

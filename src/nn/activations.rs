@@ -10,7 +10,6 @@ impl<F> OnGradientTape for F
 where
     F: DifferentiableFunction,
 {
-    fn put_on(&mut self, _: &mut GradientTape) {}
     fn update_with(&mut self, _: &GradientTape) {}
 }
 
