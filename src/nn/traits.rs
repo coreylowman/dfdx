@@ -1,11 +1,13 @@
-use crate::prelude::{OnGradientTape, Tensor0D};
-use std::ops::DerefMut;
+use crate::{
+    gradients::GradientTape,
+    prelude::{OnGradientTape, Tensor0D},
+};
 
 pub trait Module<I>: Default + OnGradientTape {
     type Output;
     fn forward(&self, input: &I) -> Self::Output;
 }
 
-pub trait Optimizer<M>: DerefMut<Target = M> {
-    fn step(&mut self, loss: &Tensor0D);
+pub trait Optimizer {
+    fn compute_gradients(&mut self, loss: &Tensor0D) -> GradientTape;
 }

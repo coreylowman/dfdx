@@ -1,58 +1,23 @@
 use super::traits::Optimizer;
+use crate::gradients::GradientTape;
 use crate::prelude::Tensor;
 use crate::prelude::Tensor0D;
-use crate::tensor::OnGradientTape;
-use std::ops::{Deref, DerefMut};
 
 #[derive(Debug)]
-pub struct SgdConfig {
+pub struct Sgd {
     pub lr: f32,
 }
 
-impl Default for SgdConfig {
+impl Default for Sgd {
     fn default() -> Self {
         Self { lr: 1e-2 }
     }
 }
 
-#[derive(Default, Debug)]
-pub struct Sgd<M> {
-    pub cfg: SgdConfig,
-    pub module: M,
-}
-
-impl<M> Sgd<M>
-where
-    M: Default,
-{
-    pub fn with_config(cfg: SgdConfig) -> Self {
-        Self {
-            cfg,
-            module: Default::default(),
-        }
-    }
-}
-
-impl<M> Deref for Sgd<M> {
-    type Target = M;
-    fn deref(&self) -> &Self::Target {
-        &self.module
-    }
-}
-
-impl<M> DerefMut for Sgd<M> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.module
-    }
-}
-
-impl<M> Optimizer<M> for Sgd<M>
-where
-    M: OnGradientTape,
-{
-    fn step(&mut self, loss: &Tensor0D) {
+impl Optimizer for Sgd {
+    fn compute_gradients(&mut self, loss: &Tensor0D) -> GradientTape {
         let mut gradients = loss.backward().unwrap();
-        gradients.scale(self.cfg.lr);
-        self.module.update_with(&gradients);
+        gradients.scale(self.lr);
+        gradients
     }
 }
