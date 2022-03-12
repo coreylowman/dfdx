@@ -1,5 +1,6 @@
 use super::traits::Optimizer;
-use crate::gradients::GradientTape;
+use crate::prelude::Tensor;
+use crate::prelude::Tensor0D;
 use crate::tensor::OnGradientTape;
 use std::ops::{Deref, DerefMut};
 
@@ -49,8 +50,9 @@ impl<M> Optimizer<M> for Sgd<M>
 where
     M: OnGradientTape,
 {
-    fn step(&mut self, mut tape: GradientTape) {
-        tape.scale(self.cfg.lr);
-        self.module.update_with(&tape);
+    fn step(&mut self, loss: &Tensor0D) {
+        let mut gradients = loss.backward().unwrap();
+        gradients.scale(self.cfg.lr);
+        self.module.update_with(&gradients);
     }
 }

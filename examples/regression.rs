@@ -20,18 +20,19 @@ fn main() {
     let mut module: MLP = Default::default();
     module.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
-    let lr = 1e-2;
+    let mut sgd = Sgd {
+        cfg: SgdConfig { lr: 1e-2 },
+        module,
+    };
 
     // run through training data
     for _i_epoch in 0..15 {
         let start = Instant::now();
 
         x.trace_gradients();
-        let pred = module.forward(&x);
+        let pred = sgd.forward(&x);
         let loss = sub(&pred, &y).square().mean();
-        let mut gradients = loss.backward().unwrap();
-        gradients.scale(lr);
-        module.update_with(&gradients);
+        sgd.step(&loss);
         println!("loss={:#.3} in {:?}", loss.data(), start.elapsed());
     }
 }
