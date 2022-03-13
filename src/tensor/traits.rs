@@ -42,7 +42,7 @@ pub trait Tensor:
 {
     fn new(data: Array<f32, Self::Dimension>) -> Self;
 
-    fn trace_gradients(&self) {
+    fn with_grad(&self) {
         *self.tape().borrow_mut() = Some(Box::new(GradientTape::new()));
     }
 
