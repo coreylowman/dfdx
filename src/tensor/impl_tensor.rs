@@ -7,13 +7,16 @@ use rand::prelude::{Distribution, Rng};
 use rand_distr::{Standard, StandardNormal};
 use std::cell::RefCell;
 use std::ops::SubAssign;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+fn unique_id() -> usize {
+    static COUNTER: AtomicUsize = AtomicUsize::new(0);
+    COUNTER.fetch_add(1, Ordering::Relaxed)
+}
 
 impl Default for GradientData {
     fn default() -> Self {
-        Self {
-            grad_ref: None,
-            tape: None,
-        }
+        Self { tape: None }
     }
 }
 
@@ -56,11 +59,9 @@ macro_rules! tensor_impl {
         impl<$(const $const_names: usize),*> Default for $typename<$($const_names),*> {
             fn default() -> Self {
                 Self {
+                    id: unique_id(),
                     data: Array::zeros(Self::SHAPE),
-                    grad: RefCell::new(GradientData {
-                        grad_ref: None,
-                        tape: None,
-                    }),
+                    grad: RefCell::new(Default::default()),
                 }
             }
         }
@@ -71,24 +72,30 @@ macro_rules! tensor_impl {
 
         impl<$(const $const_names: usize),*> OnGradientTape for $typename<$($const_names),*> {
             fn update_with(&mut self, tape: &GradientTape) {
-                let grad_ref = {
-                    let mut grad_data = self.grad.borrow_mut();
-                    grad_data.grad_ref.take().unwrap()
-                };
-                self.mut_data().sub_assign(&tape[grad_ref]);
+                let gradient = tape.gradient_for(self.id);
+                self.mut_data().sub_assign(gradient);
             }
         }
 
-        impl<$(const $const_names: usize),*> Randomize for $typename<$($const_names),*>
-        {
+        impl<$(const $const_names: usize),*> Randomize for $typename<$($const_names),*> {
             fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
                 self.mut_data().map_inplace(|f| *f = dist.sample(rng))
             }
         }
 
+        impl<$(const $const_names: usize),*> HasUniqueId for $typename<$($const_names),*> {
+            fn id(&self) -> usize {
+                self.id
+            }
+        }
+
         impl<$(const $const_names: usize),*> Tensor for $typename<$($const_names),*> {
-            fn new(data: Array<f32, Self::Dimension>, grad_data: GradientData) -> Self {
-                Self { data, grad: RefCell::new(grad_data) }
+            fn new(data: Array<f32, Self::Dimension>) -> Self {
+                Self {
+                    id: unique_id(),
+                    data,
+                    grad: RefCell::new(Default::default())
+                }
             }
         }
     }

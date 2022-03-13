@@ -1,5 +1,6 @@
-use super::structs::{GradientData, Tensor0D};
-use super::traits::{Mean, Tensor};
+use super::structs::Tensor0D;
+use super::traits::{HasUniqueId, Mean, Tensor};
+use super::HasGradientData;
 use crate::diff_fns::*;
 use crate::gradients::{Operation, UnaryOp};
 use ndarray::prelude::*;
@@ -9,27 +10,22 @@ where
     T: Tensor,
 {
     fn mean(&self) -> Tensor0D {
-        let mut tape = self.take_tape();
-        let grad_ref = tape.as_mut().map(|mut tape| {
-            let parent_grad = self.grad_ref(&mut tape);
+        let result = Tensor0D::new(arr0(self.data().mean().unwrap()));
+        result.put_tape(self.take_tape().map(|mut tape| {
+            let parent_grad = tape.gradient_ref_for(self.id(), Self::SHAPE);
 
             let parent_deriv =
                 tape.store_derivative(self.data().mapv(|_| 1.0 / Self::NUM_ELEMENTS as f32));
 
-            let result_grad = tape.allocate_gradient(());
+            let result_grad = tape.gradient_ref_for(result.id(), ());
             tape.add_operation(Operation::Unary(UnaryOp {
                 parent_grad,
                 parent_deriv,
                 result_grad,
             }));
-
-            result_grad
-        });
-
-        Tensor0D::new(
-            arr0(self.data().mean().unwrap()),
-            GradientData { grad_ref, tape },
-        )
+            tape
+        }));
+        result
     }
 }
 
@@ -38,12 +34,12 @@ where
     T: Tensor,
 {
     fn apply<F: DifferentiableFunction>(&self) -> Self {
-        let mut tape = self.take_tape();
-        let grad_ref = tape.as_mut().map(|mut tape| {
-            let parent_grad = self.grad_ref(&mut tape);
+        let result = Self::new(self.data().mapv(F::f));
+        result.put_tape(self.take_tape().map(|mut tape| {
+            let parent_grad = tape.gradient_ref_for(self.id(), Self::SHAPE);
 
             let parent_deriv = tape.store_derivative(self.data().mapv(F::df));
-            let result_grad = tape.allocate_gradient(Self::SHAPE);
+            let result_grad = tape.gradient_ref_for(result.id(), Self::SHAPE);
 
             tape.add_operation(Operation::Unary(UnaryOp {
                 parent_grad,
@@ -51,9 +47,8 @@ where
                 result_grad,
             }));
 
-            result_grad
-        });
-
-        Self::new(self.data().mapv(F::f), GradientData { grad_ref, tape })
+            tape
+        }));
+        result
     }
 }

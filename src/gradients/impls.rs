@@ -1,17 +1,11 @@
 use super::structs::*;
 use ndarray::prelude::*;
-use std::ops::Index;
-
-impl Index<GradientRef> for GradientTape {
-    type Output = ArrayD<f32>;
-    fn index(&self, gradient_ref: GradientRef) -> &Self::Output {
-        &self.gradients[gradient_ref.index]
-    }
-}
+use std::collections::HashMap;
 
 impl GradientTape {
     pub fn new() -> Self {
         Self {
+            grad_ref_by_id: HashMap::new(),
             derivatives: Vec::new(),
             gradients: Vec::new(),
             operations: Vec::new(),
@@ -24,16 +18,32 @@ impl GradientTape {
         }
     }
 
+    pub fn gradient_for(&self, id: usize) -> &ArrayD<f32> {
+        let gradient_ref = self.grad_ref_by_id.get(&id).unwrap();
+        &self.gradients[gradient_ref.index]
+    }
+
     pub(crate) fn store_derivative<D: Dimension>(&mut self, deriv: Array<f32, D>) -> DerivativeRef {
         let index = self.derivatives.len();
         self.derivatives.push(deriv.into_dyn());
         DerivativeRef { index }
     }
 
-    pub(crate) fn allocate_gradient<Sh: ShapeBuilder>(&mut self, shape: Sh) -> GradientRef {
-        let index = self.gradients.len();
-        self.gradients.push(Array::zeros(shape).into_dyn());
-        GradientRef { index }
+    pub(crate) fn gradient_ref_for<Sh: ShapeBuilder>(
+        &mut self,
+        id: usize,
+        shape: Sh,
+    ) -> GradientRef {
+        match self.grad_ref_by_id.get(&id) {
+            Some(grad_ref) => *grad_ref,
+            None => {
+                let index = self.gradients.len();
+                self.gradients.push(Array::zeros(shape).into_dyn());
+                let grad_ref = GradientRef { index };
+                self.grad_ref_by_id.insert(id, grad_ref);
+                grad_ref
+            }
+        }
     }
 
     pub(crate) fn add_operation(&mut self, operation: Operation) {
@@ -48,7 +58,8 @@ impl GradientTape {
         &self.derivatives[derivative_ref.index]
     }
 
-    pub fn backward(&mut self, gradient_ref: GradientRef) {
+    pub fn backward(&mut self, id: usize) {
+        let gradient_ref = self.grad_ref_by_id.get(&id).unwrap();
         self.gradients[gradient_ref.index].fill(1.0);
         for operation in self.operations.iter().rev() {
             match operation {
