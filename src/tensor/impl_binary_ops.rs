@@ -8,25 +8,28 @@ where
     T: Tensor,
 {
     let result = T::new(lhs.data() + rhs.data());
-    result.put_tape(lhs.take_tape().or(rhs.take_tape()).map(|mut tape| {
+    let taken_tape = lhs.take_tape().or(rhs.take_tape());
+    let modified_tape = taken_tape.map(|mut tape| {
         let parent_grads = [
             tape.gradient_ref_for(lhs.id(), lhs.shape()),
             tape.gradient_ref_for(rhs.id(), rhs.shape()),
         ];
-
-        let lhs_deriv = tape.store_derivative(Array::from_elem(lhs.shape(), 1.0));
-        let rhs_deriv = tape.store_derivative(Array::from_elem(rhs.shape(), 1.0));
+        let parent_derivs = [
+            tape.store_derivative(Array::from_elem(lhs.shape(), 1.0)),
+            tape.store_derivative(Array::from_elem(rhs.shape(), 1.0)),
+        ];
         let result_grad = tape.gradient_ref_for(result.id(), result.shape());
 
         tape.add_operation(Operation::Binary(BinaryOp {
             op_type: OpType::Normal,
             parent_grads,
-            parent_derivs: [lhs_deriv, rhs_deriv],
+            parent_derivs,
             result_grad,
         }));
 
         tape
-    }));
+    });
+    result.put_tape(modified_tape);
     result
 }
 
@@ -35,25 +38,28 @@ where
     T: Tensor,
 {
     let result = T::new(lhs.data() - rhs.data());
-    result.put_tape(lhs.take_tape().or(rhs.take_tape()).map(|mut tape| {
+    let taken_tape = lhs.take_tape().or(rhs.take_tape());
+    let modified_tape = taken_tape.map(|mut tape| {
         let parent_grads = [
             tape.gradient_ref_for(lhs.id(), lhs.shape()),
             tape.gradient_ref_for(rhs.id(), rhs.shape()),
         ];
-
-        let lhs_deriv = tape.store_derivative(Array::from_elem(lhs.shape(), 1.0));
-        let rhs_deriv = tape.store_derivative(Array::from_elem(rhs.shape(), -1.0));
+        let parent_derivs = [
+            tape.store_derivative(Array::from_elem(lhs.shape(), 1.0)),
+            tape.store_derivative(Array::from_elem(rhs.shape(), -1.0)),
+        ];
         let result_grad = tape.gradient_ref_for(result.id(), result.shape());
 
         tape.add_operation(Operation::Binary(BinaryOp {
             op_type: OpType::Normal,
             parent_grads,
-            parent_derivs: [lhs_deriv, rhs_deriv],
+            parent_derivs,
             result_grad,
         }));
 
         tape
-    }));
+    });
+    result.put_tape(modified_tape);
     result
 }
 
@@ -62,25 +68,28 @@ pub fn matmat_mul<const M: usize, const N: usize, const O: usize>(
     rhs: &Tensor2D<N, O>,
 ) -> Tensor2D<M, O> {
     let result = Tensor2D::new(lhs.data().dot(rhs.data()));
-    result.put_tape(lhs.take_tape().or(rhs.take_tape()).map(|mut tape| {
+    let taken_tape = lhs.take_tape().or(rhs.take_tape());
+    let modified_tape = taken_tape.map(|mut tape| {
         let parent_grads = [
             tape.gradient_ref_for(lhs.id(), lhs.shape()),
             tape.gradient_ref_for(rhs.id(), rhs.shape()),
         ];
-
-        let lhs_deriv = tape.store_derivative(rhs.data.clone());
-        let rhs_deriv = tape.store_derivative(lhs.data.clone());
+        let parent_derivs = [
+            tape.store_derivative(rhs.data.clone()),
+            tape.store_derivative(lhs.data.clone()),
+        ];
         let result_grad = tape.gradient_ref_for(result.id(), result.shape());
 
         tape.add_operation(Operation::Binary(BinaryOp {
             op_type: OpType::MatMul { m: M, n: N, o: O },
             parent_grads,
-            parent_derivs: [lhs_deriv, rhs_deriv],
+            parent_derivs,
             result_grad,
         }));
 
         tape
-    }));
+    });
+    result.put_tape(modified_tape);
     result
 }
 
@@ -89,25 +98,28 @@ pub fn vecmat_mul<const N: usize, const O: usize>(
     rhs: &Tensor2D<N, O>,
 ) -> Tensor1D<O> {
     let result = Tensor1D::new(lhs.data().dot(rhs.data()));
-    result.put_tape(lhs.take_tape().or(rhs.take_tape()).map(|mut tape| {
+    let taken_tape = lhs.take_tape().or(rhs.take_tape());
+    let modified_tape = taken_tape.map(|mut tape| {
         let parent_grads = [
             tape.gradient_ref_for(lhs.id(), lhs.shape()),
             tape.gradient_ref_for(rhs.id(), rhs.shape()),
         ];
-
-        let lhs_deriv = tape.store_derivative(rhs.data.clone());
-        let rhs_deriv = tape.store_derivative(lhs.data.clone());
+        let parent_derivs = [
+            tape.store_derivative(rhs.data.clone()),
+            tape.store_derivative(lhs.data.clone()),
+        ];
         let result_grad = tape.gradient_ref_for(result.id(), result.shape());
 
         tape.add_operation(Operation::Binary(BinaryOp {
             op_type: OpType::MatMul { m: 1, n: N, o: O },
             parent_grads,
-            parent_derivs: [lhs_deriv, rhs_deriv],
+            parent_derivs,
             result_grad,
         }));
 
         tape
-    }));
+    });
+    result.put_tape(modified_tape);
     result
 }
 
@@ -116,24 +128,27 @@ pub fn broadcast_add<const M: usize, const N: usize>(
     rhs: &Tensor1D<N>,
 ) -> Tensor2D<M, N> {
     let result = Tensor2D::new(lhs.data() + rhs.data());
-    result.put_tape(lhs.take_tape().or(rhs.take_tape()).map(|mut tape| {
+    let taken_tape = lhs.take_tape().or(rhs.take_tape());
+    let modified_tape = taken_tape.map(|mut tape| {
         let parent_grads = [
             tape.gradient_ref_for(lhs.id(), lhs.shape()),
             tape.gradient_ref_for(rhs.id(), rhs.shape()),
         ];
-
-        let lhs_deriv = tape.store_derivative(Array::from_elem((M, N), 1.0));
-        let rhs_deriv = tape.store_derivative(Array::from_elem((N,), 1.0 / M as f32));
+        let parent_derivs = [
+            tape.store_derivative(Array::from_elem(lhs.shape(), 1.0)),
+            tape.store_derivative(Array::from_elem(rhs.shape(), 1.0 / M as f32)),
+        ];
         let result_grad = tape.gradient_ref_for(result.id(), result.shape());
 
         tape.add_operation(Operation::Binary(BinaryOp {
             op_type: OpType::Broadcast,
             parent_grads,
-            parent_derivs: [lhs_deriv, rhs_deriv],
+            parent_derivs,
             result_grad,
         }));
 
         tape
-    }));
+    });
+    result.put_tape(modified_tape);
     result
 }

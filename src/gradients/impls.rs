@@ -38,8 +38,8 @@ impl GradientTape {
             Some(grad_ref) => *grad_ref,
             None => {
                 let index = self.gradients.len();
-                self.gradients.push(Array::zeros(shape).into_dyn());
                 let grad_ref = GradientRef { index };
+                self.gradients.push(Array::zeros(shape).into_dyn());
                 self.grad_ref_by_id.insert(id, grad_ref);
                 grad_ref
             }

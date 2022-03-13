@@ -77,28 +77,23 @@ tensor_impl!(Tensor4D, [M, N, O, P], Ix4, (usize, usize, usize, usize));
 
 impl<T: Tensor> TensorSugar for T {
     fn zeros() -> Self {
-        let mut a = Self::default();
-        a.mut_data().fill(0.0);
-        a
+        Self::new(Array::zeros(Self::SHAPE))
     }
 
     fn ones() -> Self {
-        let mut a = Self::default();
-        a.mut_data().fill(1.0);
-        a
+        Self::new(Array::ones(Self::SHAPE))
     }
 
     fn rand<R: Rng>(rng: &mut R) -> Self {
-        let mut a = Self::default();
-        a.mut_data().map_inplace(|f| *f = Standard.sample(rng));
-        a
+        let mut data = Array::zeros(Self::SHAPE);
+        data.map_inplace(|f| *f = Standard.sample(rng));
+        Self::new(data)
     }
 
     fn randn<R: Rng>(rng: &mut R) -> Self {
-        let mut a = Self::default();
-        a.mut_data()
-            .map_inplace(|f| *f = StandardNormal.sample(rng));
-        a
+        let mut data = Array::zeros(Self::SHAPE);
+        data.map_inplace(|f| *f = StandardNormal.sample(rng));
+        Self::new(data)
     }
 
     fn relu(&self) -> Self {

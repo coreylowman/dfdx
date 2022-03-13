@@ -61,31 +61,27 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize> Tensor
     }
 }
 
-fn tensor_default<T: Tensor>() -> T {
-    T::new(Array::zeros(T::SHAPE))
-}
-
 impl Default for Tensor0D {
     fn default() -> Self {
-        tensor_default()
+        Self::zeros()
     }
 }
 
 impl<const N: usize> Default for Tensor1D<N> {
     fn default() -> Self {
-        tensor_default()
+        Self::zeros()
     }
 }
 
 impl<const M: usize, const N: usize> Default for Tensor2D<M, N> {
     fn default() -> Self {
-        tensor_default()
+        Self::zeros()
     }
 }
 
 impl<const M: usize, const N: usize, const O: usize> Default for Tensor3D<M, N, O> {
     fn default() -> Self {
-        tensor_default()
+        Self::zeros()
     }
 }
 
@@ -93,6 +89,6 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize> Default
     for Tensor4D<M, N, O, P>
 {
     fn default() -> Self {
-        tensor_default()
+        Self::zeros()
     }
 }
