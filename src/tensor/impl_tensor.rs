@@ -14,12 +14,6 @@ fn unique_id() -> usize {
     COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
-impl Default for GradientData {
-    fn default() -> Self {
-        Self { tape: None }
-    }
-}
-
 macro_rules! prod {
     () => {
         1
@@ -61,13 +55,13 @@ macro_rules! tensor_impl {
                 Self {
                     id: unique_id(),
                     data: Array::zeros(Self::SHAPE),
-                    grad: RefCell::new(Default::default()),
+                    tape: RefCell::new(None),
                 }
             }
         }
 
-        impl<$(const $const_names: usize),*> HasGradientData for $typename<$($const_names),*> {
-            fn grad_data(&self) -> &RefCell<GradientData> { &self.grad }
+        impl<$(const $const_names: usize),*> CanStoreGradientTape for $typename<$($const_names),*> {
+            fn tape(&self) -> &RefCell<Option<Box<GradientTape>>> { &self.tape }
         }
 
         impl<$(const $const_names: usize),*> OnGradientTape for $typename<$($const_names),*> {
@@ -94,7 +88,7 @@ macro_rules! tensor_impl {
                 Self {
                     id: unique_id(),
                     data,
-                    grad: RefCell::new(Default::default())
+                    tape: RefCell::new(None)
                 }
             }
         }

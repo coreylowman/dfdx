@@ -1,4 +1,4 @@
-use super::structs::{GradientData, Tensor0D};
+use super::structs::Tensor0D;
 use crate::gradients::GradientTape;
 use ndarray::{Array, Dimension, ShapeBuilder};
 use rand::{distributions::Distribution, Rng};
@@ -12,15 +12,14 @@ pub trait HasUniqueId {
     fn id(&self) -> usize;
 }
 
-pub trait HasGradientData {
-    fn grad_data(&self) -> &RefCell<GradientData>;
+pub trait CanStoreGradientTape {
+    fn tape(&self) -> &RefCell<Option<Box<GradientTape>>>;
     fn take_tape(&self) -> Option<Box<GradientTape>> {
-        let mut grad_data = self.grad_data().borrow_mut();
-        grad_data.tape.take()
+        self.tape().borrow_mut().take()
     }
     fn put_tape(&self, tape: Option<Box<GradientTape>>) {
-        let mut grad_data = self.grad_data().borrow_mut();
-        grad_data.tape = tape;
+        let mut ref_tape = self.tape().borrow_mut();
+        *ref_tape = tape;
     }
 }
 
@@ -38,18 +37,17 @@ pub trait IsShapedArray {
     }
 }
 
-pub trait Tensor: Default + IsShapedArray + HasGradientData + OnGradientTape + HasUniqueId {
+pub trait Tensor:
+    Default + IsShapedArray + CanStoreGradientTape + OnGradientTape + HasUniqueId
+{
     fn new(data: Array<f32, Self::Dimension>) -> Self;
 
     fn trace_gradients(&self) {
-        let mut grad_data = self.grad_data().borrow_mut();
-        grad_data.tape = Some(Box::new(GradientTape::new()));
+        *self.tape().borrow_mut() = Some(Box::new(GradientTape::new()));
     }
 
     fn backward(&self) -> Option<GradientTape> {
-        let ref_grad_data = self.grad_data();
-        let mut grad_data = ref_grad_data.borrow_mut();
-        grad_data.tape.take().map(|mut tape| {
+        self.take_tape().map(|mut tape| {
             tape.backward(self.id());
             *tape
         })

@@ -1,5 +1,5 @@
 use super::structs::{Tensor1D, Tensor2D};
-use super::traits::{HasGradientData, HasUniqueId, IsShapedArray, Tensor};
+use super::traits::{CanStoreGradientTape, HasUniqueId, IsShapedArray, Tensor};
 use crate::gradients::{BinaryOp, OpType, Operation};
 use ndarray::prelude::Array;
 

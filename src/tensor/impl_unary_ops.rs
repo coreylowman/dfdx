@@ -1,6 +1,6 @@
 use super::structs::Tensor0D;
 use super::traits::{HasUniqueId, Mean, Tensor};
-use super::HasGradientData;
+use super::CanStoreGradientTape;
 use crate::diff_fns::*;
 use crate::gradients::{Operation, UnaryOp};
 use ndarray::prelude::*;
