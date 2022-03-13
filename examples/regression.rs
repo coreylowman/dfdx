@@ -30,7 +30,7 @@ fn main() {
         let pred = module.forward(&x);
         let loss = sub(&pred, &y).square().mean();
         let gradients = sgd.compute_gradients(&loss);
-        module.update_with(&gradients);
+        module.update_with_gradients(&gradients);
 
         println!("mse={:#.3} in {:?}", loss.data(), start.elapsed());
     }

@@ -2,15 +2,15 @@ use super::traits::Module;
 use crate::{
     diff_fns::{ApplyDifferentiableFunction, DifferentiableFunction},
     gradients::GradientTape,
-    tensor::{OnGradientTape, Randomize, Tensor},
+    tensor::{HasGradients, Randomize, Tensor},
 };
 use rand::{distributions::Distribution, Rng};
 
-impl<F> OnGradientTape for F
+impl<F> HasGradients for F
 where
     F: DifferentiableFunction,
 {
-    fn update_with(&mut self, _: &GradientTape) {}
+    fn update_with_gradients(&mut self, _: &GradientTape) {}
 }
 
 impl<F> Randomize for F

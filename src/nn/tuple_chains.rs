@@ -1,6 +1,6 @@
 use super::traits::Module;
 use crate::gradients::GradientTape;
-use crate::tensor::{OnGradientTape, Randomize, Tensor};
+use crate::tensor::{HasGradients, Randomize, Tensor};
 use rand::prelude::{Distribution, Rng};
 
 impl<Input, A, B> Module<Input> for (A, B)
@@ -90,9 +90,9 @@ where
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+]) => {
-        impl<$($name: OnGradientTape),+> OnGradientTape for ($($name,)+) {
-            fn update_with(&mut self, tape: &GradientTape) {
-                $(self.$idx.update_with(tape));+
+        impl<$($name: HasGradients),+> HasGradients for ($($name,)+) {
+            fn update_with_gradients(&mut self, tape: &GradientTape) {
+                $(self.$idx.update_with_gradients(tape));+
             }
         }
 

@@ -1,9 +1,9 @@
 use crate::{
     gradients::GradientTape,
-    prelude::{OnGradientTape, Tensor0D},
+    prelude::{HasGradients, Tensor0D},
 };
 
-pub trait Module<I>: Default + OnGradientTape {
+pub trait Module<I>: Default + HasGradients {
     type Output;
     fn forward(&self, input: &I) -> Self::Output;
 }

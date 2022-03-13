@@ -4,8 +4,8 @@ use ndarray::{Array, Dimension, ShapeBuilder};
 use rand::{distributions::Distribution, Rng};
 use std::cell::RefCell;
 
-pub trait OnGradientTape {
-    fn update_with(&mut self, tape: &GradientTape);
+pub trait HasGradients {
+    fn update_with_gradients(&mut self, tape: &GradientTape);
 }
 
 pub trait HasUniqueId {
@@ -38,7 +38,7 @@ pub trait IsShapedArray {
 }
 
 pub trait Tensor:
-    Default + IsShapedArray + CanStoreGradientTape + OnGradientTape + HasUniqueId
+    Default + IsShapedArray + CanStoreGradientTape + HasGradients + HasUniqueId
 {
     fn new(data: Array<f32, Self::Dimension>) -> Self;
 

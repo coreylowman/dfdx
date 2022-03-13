@@ -7,12 +7,6 @@ use rand::prelude::{Distribution, Rng};
 use rand_distr::{Standard, StandardNormal};
 use std::cell::RefCell;
 use std::ops::SubAssign;
-use std::sync::atomic::{AtomicUsize, Ordering};
-
-fn unique_id() -> usize {
-    static COUNTER: AtomicUsize = AtomicUsize::new(0);
-    COUNTER.fetch_add(1, Ordering::Relaxed)
-}
 
 macro_rules! prod {
     () => {
@@ -50,22 +44,12 @@ macro_rules! tensor_impl {
             fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension> { &mut self.data }
         }
 
-        impl<$(const $const_names: usize),*> Default for $typename<$($const_names),*> {
-            fn default() -> Self {
-                Self {
-                    id: unique_id(),
-                    data: Array::zeros(Self::SHAPE),
-                    tape: RefCell::new(None),
-                }
-            }
-        }
-
         impl<$(const $const_names: usize),*> CanStoreGradientTape for $typename<$($const_names),*> {
             fn tape(&self) -> &RefCell<Option<Box<GradientTape>>> { &self.tape }
         }
 
-        impl<$(const $const_names: usize),*> OnGradientTape for $typename<$($const_names),*> {
-            fn update_with(&mut self, tape: &GradientTape) {
+        impl<$(const $const_names: usize),*> HasGradients for $typename<$($const_names),*> {
+            fn update_with_gradients(&mut self, tape: &GradientTape) {
                 let gradient = tape.gradient_for(self.id);
                 self.mut_data().sub_assign(gradient);
             }
@@ -80,16 +64,6 @@ macro_rules! tensor_impl {
         impl<$(const $const_names: usize),*> HasUniqueId for $typename<$($const_names),*> {
             fn id(&self) -> usize {
                 self.id
-            }
-        }
-
-        impl<$(const $const_names: usize),*> Tensor for $typename<$($const_names),*> {
-            fn new(data: Array<f32, Self::Dimension>) -> Self {
-                Self {
-                    id: unique_id(),
-                    data,
-                    tape: RefCell::new(None)
-                }
             }
         }
     }

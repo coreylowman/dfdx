@@ -1,7 +1,7 @@
 use super::traits::Module;
 use crate::gradients::GradientTape;
 use crate::tensor::{
-    add, broadcast_add, matmat_mul, vecmat_mul, OnGradientTape, Randomize, Tensor1D, Tensor2D,
+    add, broadcast_add, matmat_mul, vecmat_mul, HasGradients, Randomize, Tensor1D, Tensor2D,
 };
 use rand::{distributions::Distribution, Rng};
 
@@ -11,10 +11,10 @@ pub struct Linear<const I: usize, const O: usize> {
     bias: Tensor1D<O>,
 }
 
-impl<const I: usize, const O: usize> OnGradientTape for Linear<I, O> {
-    fn update_with(&mut self, tape: &GradientTape) {
-        self.weight.update_with(tape);
-        self.bias.update_with(tape);
+impl<const I: usize, const O: usize> HasGradients for Linear<I, O> {
+    fn update_with_gradients(&mut self, tape: &GradientTape) {
+        self.weight.update_with_gradients(tape);
+        self.bias.update_with_gradients(tape);
     }
 }
 
