@@ -4,13 +4,12 @@ use ndarray::prelude::*;
 
 fn unary_op<T: Tensor, O: Tensor, D: Dimension>(
     mut tape: Box<GradientTape>,
-    parent: &T,
-    result: &O,
+    operands: (&T, &O),
     deriv: Array<f32, D>,
 ) -> Box<GradientTape> {
-    let parent_grad = tape.gradient_ref_for(parent.id(), parent.shape());
+    let parent_grad = tape.gradient_ref_for(operands.0.id(), operands.0.shape());
     let parent_deriv = tape.store_derivative(deriv);
-    let result_grad = tape.gradient_ref_for(result.id(), result.shape());
+    let result_grad = tape.gradient_ref_for(operands.1.id(), operands.1.shape());
     tape.add_operation(Operation::Unary(UnaryOp {
         parent_grad,
         parent_deriv,
@@ -25,8 +24,7 @@ impl<T: Tensor> Mean for T {
         result.put_tape(self.take_tape().map(|tape| {
             unary_op(
                 tape,
-                self,
-                &result,
+                (self, &result),
                 self.data().mapv(|_| 1.0 / Self::NUM_ELEMENTS as f32),
             )
         }));
@@ -39,7 +37,7 @@ impl<T: Tensor> ApplyDifferentiableFunction for T {
         let result = Self::new(self.data().mapv(F::f));
         result.put_tape(
             self.take_tape()
-                .map(|tape| unary_op(tape, self, &result, self.data().mapv(F::df))),
+                .map(|tape| unary_op(tape, (self, &result), self.data().mapv(F::df))),
         );
         result
     }

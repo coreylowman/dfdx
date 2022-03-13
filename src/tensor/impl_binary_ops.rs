@@ -8,21 +8,19 @@ use ndarray::Dimension;
 fn binary_op<LHS: Tensor, RHS: Tensor, O: Tensor, D1: Dimension, D2: Dimension>(
     mut tape: Box<GradientTape>,
     op_type: OpType,
-    lhs: &LHS,
-    rhs: &RHS,
-    result: &O,
+    operands: (&LHS, &RHS, &O),
     lhs_deriv: Array<f32, D1>,
     rhs_deriv: Array<f32, D2>,
 ) -> Box<GradientTape> {
     let parent_grads = [
-        tape.gradient_ref_for(lhs.id(), lhs.shape()),
-        tape.gradient_ref_for(rhs.id(), rhs.shape()),
+        tape.gradient_ref_for(operands.0.id(), operands.0.shape()),
+        tape.gradient_ref_for(operands.1.id(), operands.1.shape()),
     ];
     let parent_derivs = [
         tape.store_derivative(lhs_deriv),
         tape.store_derivative(rhs_deriv),
     ];
-    let result_grad = tape.gradient_ref_for(result.id(), result.shape());
+    let result_grad = tape.gradient_ref_for(operands.2.id(), operands.2.shape());
     tape.add_operation(Operation::Binary(BinaryOp {
         op_type,
         parent_grads,
@@ -41,9 +39,7 @@ where
         binary_op(
             tape,
             OpType::Normal,
-            lhs,
-            rhs,
-            &result,
+            (lhs, rhs, &result),
             Array::from_elem(lhs.shape(), 1.0),
             Array::from_elem(rhs.shape(), 1.0),
         )
@@ -60,9 +56,7 @@ where
         binary_op(
             tape,
             OpType::Normal,
-            lhs,
-            rhs,
-            &result,
+            (lhs, rhs, &result),
             Array::from_elem(lhs.shape(), 1.0),
             Array::from_elem(rhs.shape(), -1.0),
         )
@@ -79,9 +73,7 @@ pub fn matmat_mul<const M: usize, const N: usize, const O: usize>(
         binary_op(
             tape,
             OpType::MatMul { m: M, n: N, o: O },
-            lhs,
-            rhs,
-            &result,
+            (lhs, rhs, &result),
             // NOTE: the derivatives here are reversed for matrix multiplication
             rhs.data.clone(),
             lhs.data.clone(),
@@ -99,9 +91,7 @@ pub fn vecmat_mul<const N: usize, const O: usize>(
         binary_op(
             tape,
             OpType::MatMul { m: 1, n: N, o: O },
-            lhs,
-            rhs,
-            &result,
+            (lhs, rhs, &result),
             // NOTE: the derivatives here are reversed for matrix multiplication
             rhs.data.clone(),
             lhs.data.clone(),
@@ -119,9 +109,7 @@ pub fn broadcast_add<const M: usize, const N: usize>(
         binary_op(
             tape,
             OpType::Broadcast,
-            lhs,
-            rhs,
-            &result,
+            (lhs, rhs, &result),
             Array::from_elem(lhs.shape(), 1.0),
             Array::from_elem(rhs.shape(), 1.0 / M as f32),
         )
