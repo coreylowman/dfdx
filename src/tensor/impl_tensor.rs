@@ -8,30 +8,6 @@ use rand_distr::{Standard, StandardNormal};
 use std::cell::RefCell;
 use std::ops::SubAssign;
 
-macro_rules! prod {
-    () => {
-        1
-    };
-    ($head:ident) => {
-        $head
-    };
-    ($head:ident, $($tail:ident),+) => {
-        $head * prod!($($tail),+)
-    };
-}
-
-macro_rules! tupleify {
-    () => {
-        ()
-    };
-    ($elem:tt) => {
-        ($elem,)
-    };
-    ($($elems:tt),+) => {
-        ($($elems),*)
-    };
-}
-
 macro_rules! tensor_impl {
     ($typename:ident, [$($const_names:tt),*], $dim:ty, $shape:ty) => {
         impl<$(const $const_names: usize),*> IsShapedArray for $typename<$($const_names),*> {
@@ -69,16 +45,37 @@ macro_rules! tensor_impl {
     }
 }
 
+macro_rules! prod {
+    () => {
+        1
+    };
+    ($head:ident) => {
+        $head
+    };
+    ($head:ident, $($tail:ident),+) => {
+        $head * prod!($($tail),+)
+    };
+}
+
+macro_rules! tupleify {
+    () => {
+        ()
+    };
+    ($elem:tt) => {
+        ($elem,)
+    };
+    ($($elems:tt),+) => {
+        ($($elems),*)
+    };
+}
+
 tensor_impl!(Tensor0D, [], Ix0, ());
 tensor_impl!(Tensor1D, [M], Ix1, (usize,));
 tensor_impl!(Tensor2D, [M, N], Ix2, (usize, usize));
 tensor_impl!(Tensor3D, [M, N, O], Ix3, (usize, usize, usize));
 tensor_impl!(Tensor4D, [M, N, O, P], Ix4, (usize, usize, usize, usize));
 
-impl<T> TensorSugar for T
-where
-    T: Tensor,
-{
+impl<T: Tensor> TensorSugar for T {
     fn zeros() -> Self {
         let mut a = Self::default();
         a.mut_data().fill(0.0);

@@ -96,8 +96,7 @@ macro_rules! tuple_impls {
             }
         }
 
-        impl<$($name: Randomize),+> Randomize for ($($name,)+)
-        {
+        impl<$($name: Randomize),+> Randomize for ($($name,)+) {
             fn randomize<R: Rng, DIST: Distribution<f32>>(&mut self, rng: &mut R, dist: &DIST) {
                 $(self.$idx.randomize(rng, dist));+
             }
