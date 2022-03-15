@@ -3,10 +3,7 @@
 Reverse Mode Auto Differentiation[1] in Rust.
 
 ```rust
-use rand::{rngs::StdRng, SeedableRng};
-use rand_distr::Uniform;
-use stag::prelude::*;
-
+// Declare the structure of our feedforward model - each module is executed sequentially
 type MLP = (
     (Linear<10, 32>, ReLU),
     (Linear<32, 32>, ReLU),
@@ -15,9 +12,26 @@ type MLP = (
 
 fn main() {
     let mut rng = StdRng::seed_from_u64(0);
-    let module: MLP = Default::default();
-    let x: Tensor2D<64, 10> = Tensor2D::randn(&mut rng);
-    let y = module.forward(&x);
+
+    // initialize input & output data
+    let x = Tensor2D::<64, 10>::randn(&mut rng);
+    let y = Tensor2D::<64, 2>::randn(&mut rng);
+
+    // initialize our MLP with uniform random weights
+    let mut module: MLP = Default::default();
+    module.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
+
+    // trace x through the module
+    x.with_grad();
+    let pred = module.forward(&x);
+    let loss = sub(&pred, &y).square().mean();
+
+    // compute gradients
+    let mut sgd = Sgd { lr: 1e-2 };
+    let gradients = sgd.compute_gradients(&loss);
+
+    // update the MLP
+    module.update_with_gradients(&gradients);
 }
 ```
 
@@ -29,22 +43,20 @@ fn main() {
 1. 👌 Simple Neural Networks API, completely type checked at compile time. See [examples/regression.rs](examples/regression.rs)
 2. 📈 Easy to use Optimizer API
 3. 💡 Tensor sizes & operations type checked at compile time
-4. ✔ Unsafe free rust code
+4. ✔ No unsafe rust code
 
 ## Fun/notable implementation details
 
 ### Module
 
-The Module trait is simple and powerful!
-
 ```rust
-pub trait Module<I>: Default + HasGradients {
+pub trait Module<Input>: Default + HasGradients {
     type Output;
-    fn forward(&self, input: &I) -> Self::Output;
+    fn forward(&self, input: &Input) -> Self::Output;
 }
 ```
 
-The generic type variable for the input allows a single struct to implement module for multiple inputs. *This is how batching is implented!*
+The Module trait is simple yet powerful! The generic type variable for the input allows a single struct to implement module for multiple inputs. *This is how batching is implented!* The associated type variable for output enables a number of other nice features, but also allows the implementation to control what the output is.
 
 ### Feedforward (a.k.a Sequential) modules & Tuples
 
@@ -54,10 +66,10 @@ The associated Output type makes combining multiple modules to be executed seque
 impl<Input, A, B> Module<Input> for (A, B)
 where
     Input: Tensor,
-    A: Module<Input>,
-    B: Module<A::Output>,
+    A: Module<Input>,        // A is a module that takes Input
+    B: Module<A::Output>,    // B is a module that takes A's Output
 {
-    type Output = B::Output;
+    type Output = B::Output; // the output of this is B's Output
     fn forward(&self, x: &Input) -> Self::Output {
         let x = self.0.forward(x);
         self.1.forward(&x)

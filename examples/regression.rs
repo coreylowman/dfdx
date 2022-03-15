@@ -13,8 +13,8 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     // initialize target data
-    let x: Tensor2D<64, 10> = Tensor2D::randn(&mut rng);
-    let y: Tensor2D<64, 2> = Tensor2D::randn(&mut rng);
+    let x = Tensor2D::<64, 10>::randn(&mut rng);
+    let y = Tensor2D::<64, 2>::randn(&mut rng);
 
     // initialize optimizer & model
     let mut module: MLP = Default::default();
