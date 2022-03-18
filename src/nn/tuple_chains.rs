@@ -1,6 +1,6 @@
 use super::traits::Module;
 use crate::gradients::GradientTape;
-use crate::tensor::{HasGradients, Randomize, Tensor};
+use crate::tensor::{CanUpdateWithTape, Randomize, Tensor};
 use rand::prelude::{Distribution, Rng};
 
 impl<Input, A, B> Module<Input> for (A, B)
@@ -10,9 +10,9 @@ where
     B: Module<A::Output>,
 {
     type Output = B::Output;
-    fn forward(&self, x: &Input) -> Self::Output {
+    fn forward(&self, x: Input) -> Self::Output {
         let x = self.0.forward(x);
-        self.1.forward(&x)
+        self.1.forward(x)
     }
 }
 
@@ -24,10 +24,10 @@ where
     C: Module<B::Output>,
 {
     type Output = C::Output;
-    fn forward(&self, x: &Input) -> Self::Output {
+    fn forward(&self, x: Input) -> Self::Output {
         let x = self.0.forward(x);
-        let x = self.1.forward(&x);
-        self.2.forward(&x)
+        let x = self.1.forward(x);
+        self.2.forward(x)
     }
 }
 
@@ -40,11 +40,11 @@ where
     D: Module<C::Output>,
 {
     type Output = D::Output;
-    fn forward(&self, x: &Input) -> Self::Output {
+    fn forward(&self, x: Input) -> Self::Output {
         let x = self.0.forward(x);
-        let x = self.1.forward(&x);
-        let x = self.2.forward(&x);
-        self.3.forward(&x)
+        let x = self.1.forward(x);
+        let x = self.2.forward(x);
+        self.3.forward(x)
     }
 }
 
@@ -58,12 +58,12 @@ where
     E: Module<D::Output>,
 {
     type Output = E::Output;
-    fn forward(&self, x: &Input) -> Self::Output {
+    fn forward(&self, x: Input) -> Self::Output {
         let x = self.0.forward(x);
-        let x = self.1.forward(&x);
-        let x = self.2.forward(&x);
-        let x = self.3.forward(&x);
-        self.4.forward(&x)
+        let x = self.1.forward(x);
+        let x = self.2.forward(x);
+        let x = self.3.forward(x);
+        self.4.forward(x)
     }
 }
 
@@ -78,21 +78,21 @@ where
     F: Module<E::Output>,
 {
     type Output = F::Output;
-    fn forward(&self, x: &Input) -> Self::Output {
+    fn forward(&self, x: Input) -> Self::Output {
         let x = self.0.forward(x);
-        let x = self.1.forward(&x);
-        let x = self.2.forward(&x);
-        let x = self.3.forward(&x);
-        let x = self.4.forward(&x);
-        self.5.forward(&x)
+        let x = self.1.forward(x);
+        let x = self.2.forward(x);
+        let x = self.3.forward(x);
+        let x = self.4.forward(x);
+        self.5.forward(x)
     }
 }
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+]) => {
-        impl<$($name: HasGradients),+> HasGradients for ($($name,)+) {
-            fn update_with_gradients(&mut self, tape: &GradientTape) {
-                $(self.$idx.update_with_gradients(tape));+
+        impl<$($name: CanUpdateWithTape),+> CanUpdateWithTape for ($($name,)+) {
+            fn update_with_tape(&mut self, tape: &GradientTape) {
+                $(self.$idx.update_with_tape(tape));+
             }
         }
 

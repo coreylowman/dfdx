@@ -13,8 +13,8 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     // initialize target data
-    let x = Tensor2D::<64, 10>::randn(&mut rng);
-    let y = Tensor2D::<64, 2>::randn(&mut rng);
+    let x: Tensor2D<64, 10> = Tensor2D::randn(&mut rng);
+    let y: Tensor2D<64, 2> = Tensor2D::randn(&mut rng);
 
     // initialize optimizer & model
     let mut module: MLP = Default::default();
@@ -26,12 +26,15 @@ fn main() {
     for _i_epoch in 0..15 {
         let start = Instant::now();
 
-        x.with_grad();
-        let pred = module.forward(&x);
-        let loss = sub(&pred, &y).square().mean();
-        let gradients = sgd.compute_gradients(&loss);
-        module.update_with_gradients(&gradients);
+        let x = x.clone_as_with_tape(Default::default()); // TODO can we auto do this?
+        let pred = module.forward(x);
+        let loss = (&y - pred).square().mean();
 
-        println!("mse={:#.3} in {:?}", loss.data(), start.elapsed());
+        let loss_f = loss.data()[()];
+        // compute_gradients needs a tensor WITH a gradient tape
+        let gradients = sgd.compute_gradients(loss);
+        module.update_with_tape(&gradients);
+
+        println!("mse={:#.3} in {:?}", loss_f, start.elapsed());
     }
 }

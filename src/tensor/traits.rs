@@ -1,26 +1,13 @@
-use super::structs::Tensor0D;
 use crate::gradients::GradientTape;
 use ndarray::{Array, Dimension, ShapeBuilder};
 use rand::{distributions::Distribution, Rng};
-use std::cell::RefCell;
-
-pub trait HasGradients {
-    fn update_with_gradients(&mut self, tape: &GradientTape);
-}
 
 pub trait HasUniqueId {
     fn id(&self) -> usize;
 }
 
-pub trait CanStoreGradientTape {
-    fn tape(&self) -> &RefCell<Option<Box<GradientTape>>>;
-    fn take_tape(&self) -> Option<Box<GradientTape>> {
-        self.tape().borrow_mut().take()
-    }
-    fn put_tape(&self, tape: Option<Box<GradientTape>>) {
-        let mut ref_tape = self.tape().borrow_mut();
-        *ref_tape = tape;
-    }
+pub trait CanUpdateWithTape {
+    fn update_with_tape(&mut self, tape: &GradientTape);
 }
 
 pub trait IsShapedArray {
@@ -37,44 +24,39 @@ pub trait IsShapedArray {
     }
 }
 
-pub trait Tensor:
-    Default + IsShapedArray + CanStoreGradientTape + HasGradients + HasUniqueId
-{
-    fn new(data: Array<f32, Self::Dimension>) -> Self;
+pub trait Tensor: IsShapedArray + CanUpdateWithTape + HasUniqueId {}
 
-    fn with_grad(&self) {
-        *self.tape().borrow_mut() = Some(Box::new(GradientTape::new()));
-    }
+pub trait TensorNoTape: Default + Tensor {
+    type WithTape: Tensor
+        + TensorWithTape<NoTape = Self>
+        + IsShapedArray<Dimension = Self::Dimension>;
 
-    fn backward(&self) -> Option<GradientTape> {
-        self.take_tape().map(|mut tape| {
-            tape.backward(self.id());
-            *tape
-        })
-    }
-}
-
-pub trait Randomize {
-    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D);
-}
-
-pub trait Mean {
-    fn mean(&self) -> Tensor0D;
-}
-
-pub trait TensorSugar {
+    fn new_no_tape(data: Array<f32, Self::Dimension>) -> Self;
     fn zeros() -> Self;
     fn ones() -> Self;
     fn rand<R: Rng>(rng: &mut R) -> Self;
     fn randn<R: Rng>(rng: &mut R) -> Self;
 
-    fn relu(&self) -> Self;
-    fn sin(&self) -> Self;
-    fn cos(&self) -> Self;
-    fn ln(&self) -> Self;
-    fn exp(&self) -> Self;
-    fn sigmoid(&self) -> Self;
-    fn tanh(&self) -> Self;
-    fn square(&self) -> Self;
-    fn abs(&self) -> Self;
+    fn clone_as_with_tape(&self, tape: Box<GradientTape>) -> Self::WithTape;
+    fn into_with_tape(self, tape: Box<GradientTape>) -> Self::WithTape;
+}
+
+pub trait TensorWithTape: Tensor {
+    type NoTape: Tensor + TensorNoTape<WithTape = Self> + IsShapedArray<Dimension = Self::Dimension>;
+
+    fn new_with_tape(data: Array<f32, Self::Dimension>, tape: Box<GradientTape>) -> Self;
+    fn without_tape(self) -> (Self::NoTape, Box<GradientTape>);
+    fn backward(self) -> Box<GradientTape>
+    where
+        Self: Sized,
+    {
+        let id = self.id();
+        let (_, mut tape) = self.without_tape();
+        tape.backward(id);
+        tape
+    }
+}
+
+pub trait Randomize {
+    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D);
 }

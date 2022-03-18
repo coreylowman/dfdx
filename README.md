@@ -50,7 +50,7 @@ fn main() {
 ### Module
 
 ```rust
-pub trait Module<Input>: Default + HasGradients {
+pub trait Module<Input>: Default + UpdateWithTape {
     type Output;
     fn forward(&self, input: &Input) -> Self::Output;
 }

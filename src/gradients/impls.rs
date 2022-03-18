@@ -2,8 +2,8 @@ use super::structs::*;
 use ndarray::prelude::*;
 use std::collections::HashMap;
 
-impl GradientTape {
-    pub fn new() -> Self {
+impl Default for GradientTape {
+    fn default() -> Self {
         Self {
             grad_ref_by_id: HashMap::new(),
             derivatives: Vec::new(),
@@ -11,7 +11,9 @@ impl GradientTape {
             operations: Vec::new(),
         }
     }
+}
 
+impl GradientTape {
     pub fn scale(&mut self, scalar: f32) {
         for g in self.gradients.iter_mut() {
             *g *= scalar;
