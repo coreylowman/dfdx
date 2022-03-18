@@ -30,7 +30,7 @@ fn mean_with_tape<T: TensorWithTape>(t: T) -> Tensor0D<WithTape> {
         (&no_tape, &result),
         no_tape.data().mapv(|_| 1.0 / T::NUM_ELEMENTS as f32),
     );
-    result.into_with_tape(tape)
+    result.put_tape(tape)
 }
 
 pub(crate) fn apply_no_tape<T: TensorNoTape, F: DifferentiableFunction>(t: T) -> T {
@@ -41,7 +41,7 @@ pub(crate) fn apply_with_tape<T: TensorWithTape, F: DifferentiableFunction>(t: T
     let (no_tape, tape) = t.without_tape();
     let result = T::NoTape::new_no_tape(no_tape.data().mapv(F::f));
     let tape = unary_op(tape, (&no_tape, &result), no_tape.data().mapv(F::df));
-    result.into_with_tape(tape)
+    result.put_tape(tape)
 }
 
 macro_rules! unary_impl {

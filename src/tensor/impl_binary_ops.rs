@@ -51,7 +51,7 @@ pub fn add_with_tape<T: TensorNoTape>(lhs: &T, rhs: T::WithTape) -> T::WithTape 
         Array::from_elem(lhs.shape(), 1.0),
         Array::from_elem(rhs.shape(), 1.0),
     );
-    result.into_with_tape(tape)
+    result.put_tape(tape)
 }
 
 pub fn sub_no_tape<T: TensorNoTape>(lhs: &T, rhs: T) -> T {
@@ -68,7 +68,7 @@ pub fn sub_with_tape<T: TensorNoTape>(lhs: &T, rhs: T::WithTape) -> T::WithTape 
         Array::from_elem(lhs.shape(), 1.0),
         Array::from_elem(rhs.shape(), -1.0),
     );
-    result.into_with_tape(tape)
+    result.put_tape(tape)
 }
 
 pub fn matmat_mul_no_tape<const M: usize, const N: usize, const O: usize>(
@@ -101,7 +101,7 @@ pub fn matmat_mul_with_tape<const M: usize, const N: usize, const O: usize>(
         rhs.data.clone(),
         lhs.data.clone(),
     );
-    result.into_with_tape(tape)
+    result.put_tape(tape)
 }
 
 impl<const M: usize, const N: usize, const O: usize> std::ops::Mul<&Tensor2D<N, O, NoTape>>
@@ -143,7 +143,7 @@ pub fn vecmat_mul_with_tape<const N: usize, const O: usize>(
         rhs.data.clone(),
         lhs.data.clone(),
     );
-    result.into_with_tape(tape)
+    result.put_tape(tape)
 }
 
 impl<const N: usize, const O: usize> std::ops::Mul<&Tensor2D<N, O, NoTape>>
@@ -183,7 +183,7 @@ pub fn broadcast_add_with_tape<const M: usize, const N: usize>(
         Array::from_elem(lhs.shape(), 1.0),
         Array::from_elem(rhs.shape(), 1.0 / M as f32),
     );
-    result.into_with_tape(tape)
+    result.put_tape(tape)
 }
 
 impl<const M: usize, const N: usize> std::ops::Add<&Tensor1D<N, NoTape>>

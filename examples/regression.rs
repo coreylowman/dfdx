@@ -26,7 +26,7 @@ fn main() {
     for _i_epoch in 0..15 {
         let start = Instant::now();
 
-        let x = x.clone_as_with_tape(Default::default()); // TODO can we auto do this?
+        let x = x.with_tape();
         let pred = module.forward(x);
         let loss = (&y - pred).square().mean();
 

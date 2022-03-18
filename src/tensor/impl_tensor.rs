@@ -23,11 +23,11 @@ macro_rules! tensor_impl {
                 Self { id: unique_id(), data, tape: NoTape::default() }
             }
 
-            fn clone_as_with_tape(&self, tape: Box<GradientTape>) -> Self::WithTape {
-                Self::WithTape { id: self.id, data: self.data.clone(), tape: WithTape(tape) }
+            fn with_tape(&self) -> Self::WithTape {
+                Self::WithTape { id: self.id, data: self.data.clone(), tape: Default::default() }
             }
 
-            fn into_with_tape(self, tape: Box<GradientTape>) -> Self::WithTape {
+            fn put_tape(self, tape: Box<GradientTape>) -> Self::WithTape {
                 Self::WithTape { id: self.id, data: self.data, tape: WithTape(tape) }
             }
 

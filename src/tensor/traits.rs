@@ -37,8 +37,8 @@ pub trait TensorNoTape: Default + Tensor {
     fn rand<R: Rng>(rng: &mut R) -> Self;
     fn randn<R: Rng>(rng: &mut R) -> Self;
 
-    fn clone_as_with_tape(&self, tape: Box<GradientTape>) -> Self::WithTape;
-    fn into_with_tape(self, tape: Box<GradientTape>) -> Self::WithTape;
+    fn with_tape(&self) -> Self::WithTape;
+    fn put_tape(self, tape: Box<GradientTape>) -> Self::WithTape;
 }
 
 pub trait TensorWithTape: Tensor {
