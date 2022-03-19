@@ -9,5 +9,5 @@ pub trait Module<Input>: Default + CanUpdateWithTape {
 }
 
 pub trait Optimizer {
-    fn compute_gradients(&mut self, loss: Tensor0D<WithTape>) -> Box<GradientTape>;
+    fn compute_gradients(&mut self, loss: Tensor0D<WithTape>) -> (f32, Box<GradientTape>);
 }

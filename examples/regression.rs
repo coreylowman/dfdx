@@ -29,12 +29,9 @@ fn main() {
         let x = x.with_tape();
         let pred = module.forward(x);
         let loss = (&y - pred).square().mean();
-
-        let loss_f = loss.data()[()];
-        // compute_gradients needs a tensor WITH a gradient tape
-        let gradients = sgd.compute_gradients(loss);
+        let (loss_v, gradients) = sgd.compute_gradients(loss);
         module.update_with_tape(&gradients);
 
-        println!("mse={:#.3} in {:?}", loss_f, start.elapsed());
+        println!("mse={:#.3} in {:?}", loss_v, start.elapsed());
     }
 }
