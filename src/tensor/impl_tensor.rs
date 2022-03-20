@@ -2,7 +2,6 @@ use super::structs::*;
 use super::traits::*;
 use crate::prelude::GradientTape;
 use ndarray::Array;
-use rand::distributions::Distribution;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 fn unique_id() -> usize {
@@ -10,23 +9,23 @@ fn unique_id() -> usize {
     COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
-impl TapeManager for WithTape {
+impl TapeHolder for WithTape {
     fn update_with<F: FnMut(&mut Box<GradientTape>)>(&mut self, mut update_fn: F) {
         update_fn(&mut self.0)
     }
 }
 
-impl TapeManager for NoTape {
+impl TapeHolder for NoTape {
     fn update_with<F: FnMut(&mut Box<GradientTape>)>(&mut self, _update_fn: F) {}
 }
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($const_names:tt),*]) => {
-        impl<$(const $const_names: usize, )* Mgr1: TapeManager, Mgr2: TapeManager> CanAddTape<Mgr2> for $typename<$($const_names, )* Mgr1> {
-            type Output = $typename<$($const_names, )* Mgr2>;
+        impl<$(const $const_names: usize, )* HIn: TapeHolder, HOut: TapeHolder> CanReplaceTapeHolder<HOut> for $typename<$($const_names, )* HIn> {
+            type Output = $typename<$($const_names, )* HOut>;
 
-            fn with_tape_manager(self, mgr: Mgr2) -> Self::Output {
-                Self::Output { id: self.id, data: self.data, tape: mgr }
+            fn replace_tape_holder(self, tape: HOut) -> Self::Output {
+                Self::Output { id: self.id, data: self.data, tape }
             }
         }
 
@@ -42,12 +41,12 @@ macro_rules! tensor_impl {
             }
         }
 
-        impl<$(const $const_names: usize, )* Mgr: TapeManager> Tensor for $typename<$($const_names, )* Mgr> {
-            type TapeManager = Mgr;
+        impl<$(const $const_names: usize, )* H: TapeHolder> Tensor for $typename<$($const_names, )* H> {
+            type TapeHolder = H;
             type NoTape = $typename<$($const_names, )* NoTape>;
             type WithTape = $typename<$($const_names, )* WithTape>;
 
-            fn split_tape_manager(self) -> (Self::NoTape, Self::TapeManager) {
+            fn split_tape_holder(self) -> (Self::NoTape, Self::TapeHolder) {
                 (
                     Self::NoTape { id: self.id, data: self.data, tape: NoTape::default() },
                     self.tape,
@@ -63,37 +62,10 @@ tensor_impl!(Tensor2D, [M, N]);
 tensor_impl!(Tensor3D, [M, N, O]);
 tensor_impl!(Tensor4D, [M, N, O, P]);
 
-pub trait TensorSugar {
-    fn zeros() -> Self;
-    fn ones() -> Self;
-    fn rand<R: rand::Rng>(rng: &mut R) -> Self;
-    fn randn<R: rand::Rng>(rng: &mut R) -> Self;
-}
-
-impl<T: Tensor + TensorCreator> TensorSugar for T {
-    fn zeros() -> Self {
-        Self::new(Array::zeros(Self::SHAPE))
-    }
-    fn ones() -> Self {
-        Self::new(Array::ones(Self::SHAPE))
-    }
-
-    fn rand<R: rand::Rng>(rng: &mut R) -> Self {
-        Self::new(Array::from_shape_simple_fn(Self::SHAPE, || {
-            rand_distr::Standard.sample(rng)
-        }))
-    }
-
-    fn randn<R: rand::Rng>(rng: &mut R) -> Self {
-        Self::new(Array::from_shape_simple_fn(Self::SHAPE, || {
-            rand_distr::StandardNormal.sample(rng)
-        }))
-    }
-}
-
-pub fn backward<T: Tensor<TapeManager = WithTape>>(t: T) -> Box<GradientTape> {
+// TODO move this somewhere else
+pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Box<GradientTape> {
     let id = t.id();
-    let (_, mut tape_manager) = t.split_tape_manager();
-    tape_manager.0.backward(id);
-    tape_manager.0
+    let (_, mut tape_holder) = t.split_tape_holder();
+    tape_holder.0.backward(id);
+    tape_holder.0
 }

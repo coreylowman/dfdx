@@ -12,10 +12,10 @@ impl<F: DifferentiableFunction> Randomize for F {
 
 macro_rules! activation_impl {
     ($typename:ident, [$($const_names:tt),*]) => {
-        impl<F: DifferentiableFunction + Default, Mgr: TapeManager $(, const $const_names: usize)*> Module<$typename<$($const_names, )* Mgr>> for F {
-            type Output = $typename<$($const_names, )* Mgr>;
-            fn forward(&self, input: $typename<$($const_names, )* Mgr>) -> Self::Output {
-                apply::<$typename<$($const_names, )* Mgr>, Self>(input)
+        impl<F: DifferentiableFunction + Default, H: TapeHolder $(, const $const_names: usize)*> Module<$typename<$($const_names, )* H>> for F {
+            type Output = $typename<$($const_names, )* H>;
+            fn forward(&self, input: $typename<$($const_names, )* H>) -> Self::Output {
+                apply::<$typename<$($const_names, )* H>, Self>(input)
             }
         }
     };

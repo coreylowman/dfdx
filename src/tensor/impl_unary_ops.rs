@@ -17,23 +17,23 @@ fn unary_op<T: HasUniqueId + IsShapedArray, O: HasUniqueId + IsShapedArray, D: D
     }));
 }
 
-fn mean<T: Tensor>(t: T) -> Tensor0D<T::TapeManager> {
+fn mean<T: Tensor>(t: T) -> Tensor0D<T::TapeHolder> {
     let result = Tensor0D::<NoTape>::new(arr0(t.data().mean().unwrap()));
-    let (t, mut tape_manager) = t.split_tape_manager();
-    tape_manager.update_with(|tape| {
+    let (t, mut tape_holder) = t.split_tape_holder();
+    tape_holder.update_with(|tape| {
         unary_op(
             tape,
             (&t, &result),
             t.data().mapv(|_| 1.0 / T::NUM_ELEMENTS as f32),
         )
     });
-    result.with_tape_manager(tape_manager)
+    result.replace_tape_holder(tape_holder)
 }
 
 macro_rules! reduction_impl {
     ($typename:ident, [$($const_names:tt),*]) => {
-impl<$(const $const_names: usize, )* Mgr: TapeManager> $typename<$($const_names, )* Mgr> {
-    pub fn mean(self) -> Tensor0D<Mgr> {
+impl<$(const $const_names: usize, )* H: TapeHolder> $typename<$($const_names, )* H> {
+    pub fn mean(self) -> Tensor0D<H> {
         mean(self)
     }
 }
@@ -48,17 +48,17 @@ reduction_impl!(Tensor4D, [M, N, O, P]);
 
 pub(crate) fn apply<T: Tensor, F: DifferentiableFunction>(t: T) -> T
 where
-    T::NoTape: TensorCreator + CanAddTape<T::TapeManager, Output = T>,
+    T::NoTape: TensorCreator + CanReplaceTapeHolder<T::TapeHolder, Output = T>,
 {
     let result = T::NoTape::new(t.data().mapv(F::f));
-    let (t, mut tape_manager) = t.split_tape_manager();
-    tape_manager.update_with(|tape| unary_op(tape, (&t, &result), t.data().mapv(F::df)));
-    result.with_tape_manager(tape_manager)
+    let (t, mut tape_holder) = t.split_tape_holder();
+    tape_holder.update_with(|tape| unary_op(tape, (&t, &result), t.data().mapv(F::df)));
+    result.replace_tape_holder(tape_holder)
 }
 
 macro_rules! apply_impl {
     ($typename:ident, $method_name:tt, $activation_struct:ty, [$($const_names:tt),*]) => {
-impl<$(const $const_names: usize, )* Mgr: TapeManager> $typename<$($const_names, )* Mgr> {
+impl<$(const $const_names: usize, )* H: TapeHolder> $typename<$($const_names, )* H> {
     pub fn $method_name(self) -> Self {
         apply::<Self, $activation_struct>(self)
     }

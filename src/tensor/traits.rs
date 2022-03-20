@@ -25,40 +25,45 @@ pub trait IsShapedArray {
     }
 }
 
-pub trait TapeManager {
+pub trait TapeHolder {
     fn update_with<F: FnMut(&mut Box<GradientTape>)>(&mut self, update_fn: F);
 }
 
-pub trait CanAddTape<Mgr: TapeManager> {
+pub trait CanReplaceTapeHolder<T: TapeHolder> {
     type Output;
-    fn with_tape_manager(self, mgr: Mgr) -> Self::Output;
+    fn replace_tape_holder(self, tape_holder: T) -> Self::Output;
 }
 
-pub trait Tensor:
-    IsShapedArray + CanUpdateWithTape + HasUniqueId + CanAddTape<WithTape> + CanAddTape<NoTape>
+pub trait Tensor: IsShapedArray + CanUpdateWithTape + HasUniqueId
 where
     Self: Sized,
 {
-    type TapeManager: TapeManager;
-
-    type NoTape: Tensor<
-        TapeManager = NoTape,
-        NoTape = Self::NoTape,
-        WithTape = Self::WithTape,
-        Dimension = Self::Dimension,
-    >;
-    type WithTape: Tensor<
-        TapeManager = WithTape,
-        NoTape = Self::NoTape,
-        WithTape = Self::WithTape,
-        Dimension = Self::Dimension,
-    >;
-
-    fn split_tape_manager(self) -> (Self::NoTape, Self::TapeManager);
+    type TapeHolder: TapeHolder;
+    type NoTape: Tensor<TapeHolder = NoTape, Dimension = Self::Dimension>;
+    type WithTape: Tensor<TapeHolder = WithTape, Dimension = Self::Dimension>;
+    fn split_tape_holder(self) -> (Self::NoTape, Self::TapeHolder);
 }
 
 pub trait TensorCreator: Tensor {
     fn new(data: Array<f32, Self::Dimension>) -> Self;
+
+    fn zeros() -> Self {
+        Self::new(Array::zeros(Self::SHAPE))
+    }
+    fn ones() -> Self {
+        Self::new(Array::ones(Self::SHAPE))
+    }
+    fn rand<R: rand::Rng>(rng: &mut R) -> Self {
+        Self::new(Array::from_shape_simple_fn(Self::SHAPE, || {
+            rand_distr::Standard.sample(rng)
+        }))
+    }
+
+    fn randn<R: rand::Rng>(rng: &mut R) -> Self {
+        Self::new(Array::from_shape_simple_fn(Self::SHAPE, || {
+            rand_distr::StandardNormal.sample(rng)
+        }))
+    }
 }
 
 pub trait TapeCreator: Tensor {
