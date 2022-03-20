@@ -1,12 +1,9 @@
-use super::structs::*;
-use super::traits::*;
+use super::{structs::*, traits::*};
 use crate::prelude::GradientTape;
-use ndarray::Array;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 fn unique_id() -> usize {
-    static COUNTER: AtomicUsize = AtomicUsize::new(0);
-    COUNTER.fetch_add(1, Ordering::Relaxed)
+    static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
 }
 
 impl TapeHolder for WithTape {
@@ -30,7 +27,7 @@ macro_rules! tensor_impl {
         }
 
         impl<$(const $const_names: usize),*> TensorCreator for $typename<$($const_names, )* NoTape> {
-            fn new(data: Array<f32, Self::Dimension>) -> Self {
+            fn new(data: ndarray::Array<f32, Self::Dimension>) -> Self {
                 Self { id: unique_id(), data, tape: NoTape::default() }
             }
         }

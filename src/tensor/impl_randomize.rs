@@ -1,5 +1,4 @@
-use super::traits::Randomize;
-use super::{structs::*, IsShapedArray};
+use super::{structs::*, traits::*};
 use rand::{distributions::Distribution, Rng};
 
 fn randomize<T: IsShapedArray, R: Rng, D: Distribution<f32>>(t: &mut T, rng: &mut R, dist: &D) {

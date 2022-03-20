@@ -1,5 +1,4 @@
-use super::structs::*;
-use super::traits::IsShapedArray;
+use super::{structs::*, traits::IsShapedArray};
 use ndarray::{Array, Ix0, Ix1, Ix2, Ix3, Ix4};
 
 impl<Tape> IsShapedArray for Tensor0D<Tape> {

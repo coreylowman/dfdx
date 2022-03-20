@@ -1,10 +1,6 @@
-use super::traits::{CanReplaceTapeHolder, IsShapedArray, Tensor, TensorCreator};
-use super::{structs::*, TapeHolder};
-use super::{HasUniqueId, NoTape};
-use crate::gradients::{BinaryOp, OpType, Operation};
-use crate::prelude::GradientTape;
-use ndarray::prelude::Array;
-use ndarray::Dimension;
+use super::{structs::*, traits::*};
+use crate::gradients::{BinaryOp, GradientTape, OpType, Operation};
+use ndarray::prelude::{Array, Dimension};
 
 fn binary_op<
     Lhs: HasUniqueId + IsShapedArray,

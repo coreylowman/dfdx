@@ -1,5 +1,4 @@
-use super::traits::CanUpdateWithTape;
-use super::{structs::*, HasUniqueId, IsShapedArray};
+use super::{structs::*, traits::*};
 use crate::prelude::GradientTape;
 use std::ops::SubAssign;
 

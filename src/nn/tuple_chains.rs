@@ -1,6 +1,4 @@
-use super::traits::Module;
-use crate::gradients::GradientTape;
-use crate::tensor::{CanUpdateWithTape, Randomize, Tensor};
+use crate::prelude::*;
 use rand::prelude::{Distribution, Rng};
 
 impl<Input, A, B> Module<Input> for (A, B)

@@ -1,6 +1,4 @@
-use super::traits::Optimizer;
-use crate::gradients::GradientTape;
-use crate::prelude::{backward, IsShapedArray, Tensor0D, WithTape};
+use crate::prelude::*;
 
 #[derive(Debug)]
 pub struct Sgd {

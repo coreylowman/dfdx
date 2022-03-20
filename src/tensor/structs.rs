@@ -8,31 +8,31 @@ pub struct WithTape(pub(crate) Box<GradientTape>);
 pub struct NoTape;
 
 #[derive(Debug)]
-pub struct Tensor0D<TapeManager = NoTape> {
+pub struct Tensor0D<TapeHolder = NoTape> {
     pub(super) id: usize,
     pub(super) data: Array<f32, Ix0>,
-    pub(super) tape: TapeManager,
+    pub(super) tape: TapeHolder,
 }
 
 #[derive(Debug)]
-pub struct Tensor1D<const N: usize, TapeManager = NoTape> {
+pub struct Tensor1D<const N: usize, TapeHolder = NoTape> {
     pub(super) id: usize,
     pub(super) data: Array<f32, Ix1>,
-    pub(super) tape: TapeManager,
+    pub(super) tape: TapeHolder,
 }
 
 #[derive(Debug)]
-pub struct Tensor2D<const M: usize, const N: usize, TapeManager = NoTape> {
+pub struct Tensor2D<const M: usize, const N: usize, TapeHolder = NoTape> {
     pub(super) id: usize,
     pub(super) data: Array<f32, Ix2>,
-    pub(super) tape: TapeManager,
+    pub(super) tape: TapeHolder,
 }
 
 #[derive(Debug)]
-pub struct Tensor3D<const M: usize, const N: usize, const O: usize, TapeManager = NoTape> {
+pub struct Tensor3D<const M: usize, const N: usize, const O: usize, TapeHolder = NoTape> {
     pub(super) id: usize,
     pub(super) data: Array<f32, Ix3>,
-    pub(super) tape: TapeManager,
+    pub(super) tape: TapeHolder,
 }
 
 #[derive(Debug)]
@@ -41,9 +41,9 @@ pub struct Tensor4D<
     const N: usize,
     const O: usize,
     const P: usize,
-    TapeManager = NoTape,
+    TapeHolder = NoTape,
 > {
     pub(super) id: usize,
     pub(super) data: Array<f32, Ix4>,
-    pub(super) tape: TapeManager,
+    pub(super) tape: TapeHolder,
 }

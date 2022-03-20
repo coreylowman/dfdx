@@ -1,7 +1,4 @@
-use super::traits::Module;
-use crate::gradients::GradientTape;
-use crate::prelude::{add, broadcast_add, matmat_mul, vecmat_mul, NoTape, TapeHolder};
-use crate::tensor::{CanUpdateWithTape, Randomize, Tensor1D, Tensor2D};
+use crate::prelude::*;
 use rand::{distributions::Distribution, Rng};
 
 #[derive(Default, Debug)]
@@ -27,7 +24,6 @@ impl<const I: usize, const O: usize> Randomize for Linear<I, O> {
 // 1d forward
 impl<const I: usize, const O: usize, H: TapeHolder> Module<Tensor1D<I, H>> for Linear<I, O> {
     type Output = Tensor1D<O, H>;
-
     fn forward(&self, x: Tensor1D<I, H>) -> Self::Output {
         add(&self.bias, vecmat_mul(x, &self.weight))
     }
