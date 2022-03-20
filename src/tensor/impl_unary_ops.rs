@@ -3,10 +3,10 @@ use crate::prelude::*;
 use ndarray::prelude::*;
 
 fn unary_op<T: HasUniqueId + IsShapedArray, O: HasUniqueId + IsShapedArray, D: Dimension>(
-    mut tape: Box<GradientTape>,
+    tape: &mut Box<GradientTape>,
     operands: (&T, &O),
     deriv: Array<f32, D>,
-) -> Box<GradientTape> {
+) {
     let parent_grad = tape.gradient_ref_for(operands.0.id(), operands.0.shape());
     let parent_deriv = tape.store_derivative(deriv);
     let result_grad = tape.gradient_ref_for(operands.1.id(), operands.1.shape());
@@ -15,37 +15,28 @@ fn unary_op<T: HasUniqueId + IsShapedArray, O: HasUniqueId + IsShapedArray, D: D
         parent_deriv,
         result_grad,
     }));
-    tape
 }
 
-fn mean_no_tape<T: TensorNoTape>(t: T) -> Tensor0D<NoTape> {
-    Tensor0D::new_no_tape(arr0(t.data().mean().unwrap()))
-}
-
-fn mean_with_tape<T: TensorWithTape>(t: T) -> Tensor0D<WithTape> {
-    let (t, tape) = t.without_tape();
-    let result = Tensor0D::new_no_tape(arr0(t.data().mean().unwrap()));
-    let tape = unary_op(
-        tape,
-        (&t, &result),
-        t.data().mapv(|_| 1.0 / T::NUM_ELEMENTS as f32),
-    );
-    result.put_tape(tape)
+fn mean<T: Tensor>(t: T) -> Tensor0D<T::TapeManager> {
+    let result = Tensor0D::<NoTape>::new(arr0(t.data().mean().unwrap()));
+    let (t, mut tape_manager) = t.split_tape_manager();
+    tape_manager.update_with(|tape| {
+        unary_op(
+            tape,
+            (&t, &result),
+            t.data().mapv(|_| 1.0 / T::NUM_ELEMENTS as f32),
+        )
+    });
+    result.with_tape_manager(tape_manager)
 }
 
 macro_rules! reduction_impl {
     ($typename:ident, [$($const_names:tt),*]) => {
-        impl<$(const $const_names: usize),*> $typename<$($const_names, )* NoTape> {
-            pub fn mean(self) -> Tensor0D<NoTape> {
-                mean_no_tape(self)
-            }
-        }
-
-        impl<$(const $const_names: usize),*> $typename<$($const_names, )* WithTape> {
-            pub fn mean(self) -> Tensor0D<WithTape> {
-                mean_with_tape(self)
-            }
-        }
+impl<$(const $const_names: usize, )* Mgr: TapeManager> $typename<$($const_names, )* Mgr> {
+    pub fn mean(self) -> Tensor0D<Mgr> {
+        mean(self)
+    }
+}
     };
 }
 
@@ -55,29 +46,23 @@ reduction_impl!(Tensor2D, [M, N]);
 reduction_impl!(Tensor3D, [M, N, O]);
 reduction_impl!(Tensor4D, [M, N, O, P]);
 
-pub(crate) fn apply_no_tape<T: TensorNoTape, F: DifferentiableFunction>(t: T) -> T {
-    T::new_no_tape(t.data().mapv(F::f))
-}
-
-pub(crate) fn apply_with_tape<T: TensorWithTape, F: DifferentiableFunction>(t: T) -> T {
-    let (t, tape) = t.without_tape();
-    let result = T::NoTape::new_no_tape(t.data().mapv(F::f));
-    let tape = unary_op(tape, (&t, &result), t.data().mapv(F::df));
-    result.put_tape(tape)
+pub(crate) fn apply<T: Tensor, F: DifferentiableFunction>(t: T) -> T
+where
+    T::NoTape: TensorCreator + CanAddTape<T::TapeManager, Output = T>,
+{
+    let result = T::NoTape::new(t.data().mapv(F::f));
+    let (t, mut tape_manager) = t.split_tape_manager();
+    tape_manager.update_with(|tape| unary_op(tape, (&t, &result), t.data().mapv(F::df)));
+    result.with_tape_manager(tape_manager)
 }
 
 macro_rules! apply_impl {
     ($typename:ident, $method_name:tt, $activation_struct:ty, [$($const_names:tt),*]) => {
-        impl<$(const $const_names: usize),*> $typename<$($const_names, )* NoTape> {
-            pub fn $method_name(self) -> Self {
-                apply_no_tape::<Self, $activation_struct>(self)
-            }
-        }
-        impl<$(const $const_names: usize),*> $typename<$($const_names, )* WithTape> {
-            pub fn $method_name(self) -> Self {
-                apply_with_tape::<Self, $activation_struct>(self)
-            }
-        }
+impl<$(const $const_names: usize, )* Mgr: TapeManager> $typename<$($const_names, )* Mgr> {
+    pub fn $method_name(self) -> Self {
+        apply::<Self, $activation_struct>(self)
+    }
+}
     };
 }
 
@@ -134,3 +119,30 @@ apply_impl!(Tensor1D, abs, Abs, [N]);
 apply_impl!(Tensor2D, abs, Abs, [M, N]);
 apply_impl!(Tensor3D, abs, Abs, [M, N, O]);
 apply_impl!(Tensor4D, abs, Abs, [M, N, O, P]);
+
+// macro_rules! neg_impl {
+//     ($typename:ident, [$($const_names:tt),*]) => {
+// impl<$(const $const_names: usize),*> std::ops::Neg for $typename<$($const_names, )* NoTape> {
+//     type Output = Self;
+//     fn neg(self) -> Self::Output {
+//         Self::new(self.data().mapv(|v| -v))
+//     }
+// }
+
+// impl<$(const $const_names: usize),*> std::ops::Neg for $typename<$($const_names, )* WithTape> {
+//     type Output = Self;
+//     fn neg(self) -> Self::Output {
+//         let (t, tape) = self.without_tape();
+//         let result = <Self as TensorWithTape>::NoTape::new_no_tape(t.data().mapv(|v| -v));
+//         let tape = unary_op(tape, (&t, &result), t.data().mapv(|_| -1.0));
+//         result.put_tape(tape)
+//     }
+// }
+//     };
+// }
+
+// neg_impl!(Tensor0D, []);
+// neg_impl!(Tensor1D, [N]);
+// neg_impl!(Tensor2D, [M, N]);
+// neg_impl!(Tensor3D, [M, N, O]);
+// neg_impl!(Tensor4D, [M, N, O, P]);

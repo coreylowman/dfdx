@@ -1,6 +1,6 @@
 use super::traits::Optimizer;
 use crate::gradients::GradientTape;
-use crate::prelude::{IsShapedArray, Tensor0D, TensorWithTape, WithTape};
+use crate::prelude::{backward, IsShapedArray, Tensor0D, WithTape};
 
 #[derive(Debug)]
 pub struct Sgd {
@@ -16,7 +16,7 @@ impl Default for Sgd {
 impl Optimizer for Sgd {
     fn compute_gradients(&mut self, loss: Tensor0D<WithTape>) -> (f32, Box<GradientTape>) {
         let loss_value = loss.data()[()];
-        let mut gradients = loss.backward();
+        let mut gradients = backward(loss);
         gradients.scale(self.lr);
         (loss_value, gradients)
     }

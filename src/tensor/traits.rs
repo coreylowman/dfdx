@@ -1,3 +1,4 @@
+use super::{NoTape, WithTape};
 use crate::gradients::GradientTape;
 use ndarray::{Array, Dimension, ShapeBuilder};
 use rand::{distributions::Distribution, Rng};
@@ -24,37 +25,44 @@ pub trait IsShapedArray {
     }
 }
 
-pub trait Tensor: IsShapedArray + CanUpdateWithTape + HasUniqueId {}
-
-pub trait TensorNoTape: Default + Tensor {
-    type WithTape: Tensor
-        + TensorWithTape<NoTape = Self>
-        + IsShapedArray<Dimension = Self::Dimension>;
-
-    fn new_no_tape(data: Array<f32, Self::Dimension>) -> Self;
-    fn zeros() -> Self;
-    fn ones() -> Self;
-    fn rand<R: Rng>(rng: &mut R) -> Self;
-    fn randn<R: Rng>(rng: &mut R) -> Self;
-
-    fn with_tape(&self) -> Self::WithTape;
-    fn put_tape(self, tape: Box<GradientTape>) -> Self::WithTape;
+pub trait TapeManager {
+    fn update_with<F: FnMut(&mut Box<GradientTape>)>(&mut self, update_fn: F);
 }
 
-pub trait TensorWithTape: Tensor {
-    type NoTape: Tensor + TensorNoTape<WithTape = Self> + IsShapedArray<Dimension = Self::Dimension>;
+pub trait CanAddTape<Mgr: TapeManager> {
+    type Output;
+    fn with_tape_manager(self, mgr: Mgr) -> Self::Output;
+}
 
-    fn new_with_tape(data: Array<f32, Self::Dimension>, tape: Box<GradientTape>) -> Self;
-    fn without_tape(self) -> (Self::NoTape, Box<GradientTape>);
-    fn backward(self) -> Box<GradientTape>
-    where
-        Self: Sized,
-    {
-        let id = self.id();
-        let (_, mut tape) = self.without_tape();
-        tape.backward(id);
-        tape
-    }
+pub trait Tensor:
+    IsShapedArray + CanUpdateWithTape + HasUniqueId + CanAddTape<WithTape> + CanAddTape<NoTape>
+where
+    Self: Sized,
+{
+    type TapeManager: TapeManager;
+
+    type NoTape: Tensor<
+        TapeManager = NoTape,
+        NoTape = Self::NoTape,
+        WithTape = Self::WithTape,
+        Dimension = Self::Dimension,
+    >;
+    type WithTape: Tensor<
+        TapeManager = WithTape,
+        NoTape = Self::NoTape,
+        WithTape = Self::WithTape,
+        Dimension = Self::Dimension,
+    >;
+
+    fn split_tape_manager(self) -> (Self::NoTape, Self::TapeManager);
+}
+
+pub trait TensorCreator: Tensor {
+    fn new(data: Array<f32, Self::Dimension>) -> Self;
+}
+
+pub trait TapeCreator: Tensor {
+    fn with_tape(&self) -> Self::WithTape;
 }
 
 pub trait Randomize {

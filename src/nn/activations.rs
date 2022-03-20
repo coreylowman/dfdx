@@ -12,17 +12,10 @@ impl<F: DifferentiableFunction> Randomize for F {
 
 macro_rules! activation_impl {
     ($typename:ident, [$($const_names:tt),*]) => {
-        impl<F: DifferentiableFunction + Default $(, const $const_names: usize)*> Module<$typename<$($const_names, )* NoTape>> for F {
-            type Output = $typename<$($const_names, )* NoTape>;
-            fn forward(&self, input: $typename<$($const_names, )* NoTape>) -> Self::Output {
-                apply_no_tape::<$typename<$($const_names, )* NoTape>, Self>(input)
-            }
-        }
-
-        impl<F: DifferentiableFunction + Default $(, const $const_names: usize)*> Module<$typename<$($const_names, )* WithTape>> for F {
-            type Output = $typename<$($const_names, )* WithTape>;
-            fn forward(&self, input: $typename<$($const_names, )* WithTape>) -> Self::Output {
-                apply_with_tape::<$typename<$($const_names, )* WithTape>, Self>(input)
+        impl<F: DifferentiableFunction + Default, Mgr: TapeManager $(, const $const_names: usize)*> Module<$typename<$($const_names, )* Mgr>> for F {
+            type Output = $typename<$($const_names, )* Mgr>;
+            fn forward(&self, input: $typename<$($const_names, )* Mgr>) -> Self::Output {
+                apply::<$typename<$($const_names, )* Mgr>, Self>(input)
             }
         }
     };
