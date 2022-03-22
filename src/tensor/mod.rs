@@ -1,6 +1,7 @@
 mod impl_binary_ops;
 mod impl_can_update_with_tape;
 mod impl_default;
+mod impl_has_tape_holder;
 mod impl_has_unique_id;
 mod impl_randomize;
 mod impl_shaped_array;
@@ -14,6 +15,7 @@ mod tape_holders;
 pub use impl_binary_ops::*;
 pub use impl_can_update_with_tape::*;
 pub use impl_default::*;
+pub use impl_has_tape_holder::*;
 pub use impl_has_unique_id::*;
 pub use impl_randomize::*;
 pub use impl_shaped_array::*;

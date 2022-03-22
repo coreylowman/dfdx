@@ -6,38 +6,19 @@ pub trait CanUpdateWithTape {
     fn update_with_tape(&mut self, tape: &GradientTape);
 }
 
-fn update_with_tape<T: HasUniqueId + IsShapedArray>(t: &mut T, tape: &GradientTape) {
-    let gradient = tape.gradient_for(t.id());
-    t.mut_data().sub_assign(gradient);
+macro_rules! tensor_impl {
+    ($typename:ident, [$($Vs:tt),*]) => {
+impl<$(const $Vs: usize, )* H> CanUpdateWithTape for $typename<$($Vs, )* H> {
+    fn update_with_tape(&mut self, tape: &GradientTape) {
+        let gradient = tape.gradient_for(self.id());
+        self.mut_data().sub_assign(gradient);
+    }
+}
+    };
 }
 
-impl<H> CanUpdateWithTape for Tensor0D<H> {
-    fn update_with_tape(&mut self, tape: &GradientTape) {
-        update_with_tape(self, tape);
-    }
-}
-
-impl<const N: usize, H> CanUpdateWithTape for Tensor1D<N, H> {
-    fn update_with_tape(&mut self, tape: &GradientTape) {
-        update_with_tape(self, tape);
-    }
-}
-
-impl<const M: usize, const N: usize, H> CanUpdateWithTape for Tensor2D<M, N, H> {
-    fn update_with_tape(&mut self, tape: &GradientTape) {
-        update_with_tape(self, tape);
-    }
-}
-
-impl<const M: usize, const N: usize, const O: usize, H> CanUpdateWithTape for Tensor3D<M, N, O, H> {
-    fn update_with_tape(&mut self, tape: &GradientTape) {
-        update_with_tape(self, tape);
-    }
-}
-impl<const M: usize, const N: usize, const O: usize, const P: usize, H> CanUpdateWithTape
-    for Tensor4D<M, N, O, P, H>
-{
-    fn update_with_tape(&mut self, tape: &GradientTape) {
-        update_with_tape(self, tape);
-    }
-}
+tensor_impl!(Tensor0D, []);
+tensor_impl!(Tensor1D, [M]);
+tensor_impl!(Tensor2D, [M, N]);
+tensor_impl!(Tensor3D, [M, N, O]);
+tensor_impl!(Tensor4D, [M, N, O, P]);

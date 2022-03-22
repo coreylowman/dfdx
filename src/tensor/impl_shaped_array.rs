@@ -5,6 +5,7 @@ pub trait IsShapedArray {
     type Dimension: Dimension;
     type Shape: ShapeBuilder<Dim = Self::Dimension>;
     const SHAPE: Self::Shape;
+    const SHAPE_SLICE: &'static [usize];
     const NUM_ELEMENTS: usize;
 
     fn data(&self) -> &Array<f32, Self::Dimension>;
@@ -19,6 +20,7 @@ impl<Tape> IsShapedArray for Tensor0D<Tape> {
     type Dimension = Ix0;
     type Shape = ();
     const SHAPE: Self::Shape = ();
+    const SHAPE_SLICE: &'static [usize] = &[];
     const NUM_ELEMENTS: usize = 1;
 
     fn data(&self) -> &Array<f32, Self::Dimension> {
@@ -33,6 +35,7 @@ impl<const N: usize, Tape> IsShapedArray for Tensor1D<N, Tape> {
     type Dimension = Ix1;
     type Shape = (usize,);
     const SHAPE: Self::Shape = (N,);
+    const SHAPE_SLICE: &'static [usize] = &[N];
     const NUM_ELEMENTS: usize = N;
 
     fn data(&self) -> &Array<f32, Self::Dimension> {
@@ -47,6 +50,7 @@ impl<const M: usize, const N: usize, Tape> IsShapedArray for Tensor2D<M, N, Tape
     type Dimension = Ix2;
     type Shape = (usize, usize);
     const SHAPE: Self::Shape = (M, N);
+    const SHAPE_SLICE: &'static [usize] = &[M, N];
     const NUM_ELEMENTS: usize = M * N;
 
     fn data(&self) -> &Array<f32, Self::Dimension> {
@@ -63,6 +67,7 @@ impl<const M: usize, const N: usize, const O: usize, Tape> IsShapedArray
     type Dimension = Ix3;
     type Shape = (usize, usize, usize);
     const SHAPE: Self::Shape = (M, N, O);
+    const SHAPE_SLICE: &'static [usize] = &[M, N, O];
     const NUM_ELEMENTS: usize = M * N * O;
 
     fn data(&self) -> &Array<f32, Self::Dimension> {
@@ -78,6 +83,7 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize, Tape> IsSha
     type Dimension = Ix4;
     type Shape = (usize, usize, usize, usize);
     const SHAPE: Self::Shape = (M, N, O, P);
+    const SHAPE_SLICE: &'static [usize] = &[M, N, O, P];
     const NUM_ELEMENTS: usize = M * N * O * P;
 
     fn data(&self) -> &Array<f32, Self::Dimension> {
