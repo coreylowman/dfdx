@@ -14,24 +14,24 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     // initialize input & output data
-    let x = Tensor2D::<64, 10>::randn(&mut rng);
-    let y = Tensor2D::<64, 2>::randn(&mut rng);
+    let x: Tensor2D<64, 10> = Tensor2D::randn(&mut rng);
+    let y: Tensor2D<64, 2> = Tensor2D::randn(&mut rng);
 
     // initialize our MLP with uniform random weights
     let mut module: MLP = Default::default();
     module.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
     // trace x through the module
-    x.with_grad();
+    let x = x.with_tape();
     let pred = module.forward(&x);
-    let loss = sub(&pred, &y).square().mean();
-
+    let loss = (&y - pred).square().mean();
+    
     // compute gradients
     let mut sgd = Sgd { lr: 1e-2 };
-    let gradients = sgd.compute_gradients(&loss);
+    let (_, gradients) = sgd.compute_gradients(loss);
 
     // update the MLP
-    module.update_with_gradients(&gradients);
+    module.update_with_tape(&gradients);
 }
 ```
 
@@ -78,6 +78,39 @@ where
 ```
 
 What's also nice is that we can use tuple's as the container instead of introducing a whole new struct. *This is not possible in other languages!*
+
+### Type checked backward
+
+tl;dr: If you forget to include a call to `with_tape()`, the program won't compile!
+
+```diff
++let x = x.with_tape();
+let pred = module.forward(x);
+let loss = (&y - pred).square().mean();
+let (loss_v, gradients) = sgd.compute_gradients(loss);
+```
+
+In order to compute the gradients from a computation graph, the actual gradient tape is needed.
+In STAG, the gradient tape is transferred to the output of operations. This means the loss tensor
+should have a tape with it, since it is the final output of the whole computation graph.
+
+STAG requires this via various function definitions:
+
+1. The `Optimizer` trait requires a 0D tensor with a `WithTape` type parameter. The `WithTape` struct is a `TapeHolder` and has the actual `GradientTape`.
+
+```rust
+pub trait Optimizer {
+    fn compute_gradients(&mut self, loss: Tensor0D<WithTape>) -> (f32, Box<GradientTape>);
+}
+```
+
+2. The `backward` function accepts a generic tensor, also with the `TapeHolder` generic set to `WithTape`!
+
+```rust
+fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Box<crate::gradients::GradientTape> {
+    ...
+}
+```
 
 ### Gradient tape is not reference counted!
 
