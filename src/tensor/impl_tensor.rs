@@ -2,7 +2,12 @@ use super::*;
 
 pub trait Tensor: IsShapedArray + CanUpdateWithTape + HasUniqueId {
     type TapeHolder: TapeHolder;
-    type NoTape: Tensor<TapeHolder = NoTape, Dimension = Self::Dimension>;
+
+    type NoTape: Tensor<TapeHolder = NoTape, Dimension = Self::Dimension>
+        + TensorCreator
+        // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
+        + HasTapeHolder<Self::TapeHolder, Output = Self>;
+
     type WithTape: Tensor<TapeHolder = WithTape, Dimension = Self::Dimension>;
 
     fn split_tape_holder(self) -> (Self::NoTape, Self::TapeHolder);

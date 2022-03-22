@@ -116,10 +116,7 @@ impl<const M: usize, const N: usize, H: TapeHolder> Add<&Tensor1D<N, NoTape>>
     }
 }
 
-pub fn add<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
-where
-    T::NoTape: TensorCreator + HasTapeHolder<T::TapeHolder, Output = T>,
-{
+pub fn add<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
     let result = T::NoTape::new(lhs.data() + rhs.data());
     let (rhs, mut tape_holder) = rhs.split_tape_holder();
     tape_holder.update_with(|tape| {
@@ -134,10 +131,7 @@ where
     result.with_tape_holder(tape_holder)
 }
 
-pub fn sub<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
-where
-    T::NoTape: TensorCreator + HasTapeHolder<T::TapeHolder, Output = T>,
-{
+pub fn sub<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
     let result = T::NoTape::new(lhs.data() - rhs.data());
     let (rhs, mut tape_holder) = rhs.split_tape_holder();
     tape_holder.update_with(|tape| {
@@ -152,10 +146,7 @@ where
     result.with_tape_holder(tape_holder)
 }
 
-pub fn mul<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
-where
-    T::NoTape: TensorCreator + HasTapeHolder<T::TapeHolder, Output = T>,
-{
+pub fn mul<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
     let result = T::NoTape::new(lhs.data() * rhs.data());
     let (rhs, mut tape_holder) = rhs.split_tape_holder();
     tape_holder.update_with(|tape| {

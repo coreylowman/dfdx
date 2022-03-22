@@ -22,7 +22,7 @@ pub use impl_shaped_array::*;
 pub use impl_tape_creator::*;
 pub use impl_tensor::*;
 pub use impl_tensor_creator::*;
-pub(crate) use impl_unary_ops::*;
+pub use impl_unary_ops::*;
 pub use structs::*;
 pub use tape_holders::*;
 
