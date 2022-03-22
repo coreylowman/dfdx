@@ -21,17 +21,12 @@ fn add_unary_op<Inp, Out, D>(
     }));
 }
 
-pub trait Mean {
-    type Output;
-    fn mean(self) -> Self::Output;
+pub trait HasMeanMethod: Tensor {
+    fn mean(self) -> Tensor0D<Self::TapeHolder>;
 }
 
-impl<T> Mean for T
-where
-    T: Tensor,
-{
-    type Output = Tensor0D<T::TapeHolder>;
-    fn mean(self) -> Self::Output {
+impl<T: Tensor> HasMeanMethod for T {
+    fn mean(self) -> Tensor0D<Self::TapeHolder> {
         let result = Tensor0D::<NoTape>::new(arr0(self.data().mean().unwrap()));
         let (t, mut tape_holder) = self.split_tape_holder();
         tape_holder.update_with(|tape| {
