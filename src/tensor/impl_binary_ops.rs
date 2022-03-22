@@ -1,6 +1,7 @@
 use super::*;
 use crate::gradients::{BinaryOp, GradientTape, OpType, Operation};
 use ndarray::prelude::{Array, Dimension};
+use std::ops::{Add, Mul, Sub};
 
 fn add_binary_op<Lhs, Rhs, Out, D1, D2>(
     tape: &mut Box<GradientTape>,
@@ -51,8 +52,8 @@ pub fn matmat_mul<const M: usize, const N: usize, const O: usize, H: TapeHolder>
     result.with_tape_holder(tape_holder)
 }
 
-impl<const M: usize, const N: usize, const O: usize, H: TapeHolder>
-    std::ops::Mul<&Tensor2D<N, O, NoTape>> for Tensor2D<M, N, H>
+impl<const M: usize, const N: usize, const O: usize, H: TapeHolder> Mul<&Tensor2D<N, O, NoTape>>
+    for Tensor2D<M, N, H>
 {
     type Output = Tensor2D<M, O, H>;
     fn mul(self, rhs: &Tensor2D<N, O, NoTape>) -> Self::Output {
@@ -79,7 +80,7 @@ pub fn vecmat_mul<const N: usize, const O: usize, H: TapeHolder>(
     result.with_tape_holder(tape_holder)
 }
 
-impl<const N: usize, const O: usize, H: TapeHolder> std::ops::Mul<&Tensor2D<N, O, NoTape>>
+impl<const N: usize, const O: usize, H: TapeHolder> Mul<&Tensor2D<N, O, NoTape>>
     for Tensor1D<N, H>
 {
     type Output = Tensor1D<O, H>;
@@ -106,7 +107,7 @@ pub fn broadcast_add<const M: usize, const N: usize, H: TapeHolder>(
     result.with_tape_holder(tape_holder)
 }
 
-impl<const M: usize, const N: usize, H: TapeHolder> std::ops::Add<&Tensor1D<N, NoTape>>
+impl<const M: usize, const N: usize, H: TapeHolder> Add<&Tensor1D<N, NoTape>>
     for Tensor2D<M, N, H>
 {
     type Output = Tensor2D<M, N, H>;
@@ -170,28 +171,37 @@ where
 }
 
 macro_rules! binary_ops_impl {
-    ($typename:ident, [$($const_names:tt),*]) => {
+    ($typename:ident, [$($Vs:tt),*]) => {
 
 // &T<NoTape> + T<H>
-impl<$(const $const_names: usize, )* H: TapeHolder> std::ops::Add<$typename<$($const_names, )* H>> for &$typename<$($const_names, )* NoTape> {
-    type Output = $typename<$($const_names, )* H>;
-    fn add(self, rhs: $typename<$($const_names, )* H>) -> Self::Output {
+impl<$(const $Vs: usize, )* H> Add<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape>
+where
+    H: TapeHolder
+{
+    type Output = $typename<$($Vs, )* H>;
+    fn add(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
         add(self, rhs)
     }
 }
 
 // &T<NoTape> - T<H>
-impl<$(const $const_names: usize, )* H: TapeHolder> std::ops::Sub<$typename<$($const_names, )* H>> for &$typename<$($const_names, )* NoTape> {
-    type Output = $typename<$($const_names, )* H>;
-    fn sub(self, rhs: $typename<$($const_names, )* H>) -> Self::Output {
+impl<$(const $Vs: usize, )* H> Sub<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape>
+where
+    H: TapeHolder
+{
+    type Output = $typename<$($Vs, )* H>;
+    fn sub(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
         sub(self, rhs)
     }
 }
 
 // &T<NoTape> * T<H>
-impl<$(const $const_names: usize, )* H: TapeHolder> std::ops::Mul<$typename<$($const_names, )* H>> for &$typename<$($const_names, )* NoTape> {
-    type Output = $typename<$($const_names, )* H>;
-    fn mul(self, rhs: $typename<$($const_names, )* H>) -> Self::Output {
+impl<$(const $Vs: usize, )* H> Mul<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape>
+where
+    H: TapeHolder
+{
+    type Output = $typename<$($Vs, )* H>;
+    fn mul(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
         mul(self, rhs)
     }
 }
