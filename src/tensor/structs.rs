@@ -1,11 +1,5 @@
-use crate::gradients::GradientTape;
+use super::tape_holders::NoTape;
 use ndarray::{Array, Ix0, Ix1, Ix2, Ix3, Ix4};
-
-#[derive(Default, Debug)]
-pub struct WithTape(pub(crate) Box<GradientTape>);
-
-#[derive(Default, Debug)]
-pub struct NoTape;
 
 #[derive(Debug)]
 pub struct Tensor0D<TapeHolder = NoTape> {

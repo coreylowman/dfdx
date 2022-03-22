@@ -1,20 +1,20 @@
-use super::{structs::*, traits::*};
+use super::*;
 use crate::gradients::{BinaryOp, GradientTape, OpType, Operation};
 use ndarray::prelude::{Array, Dimension};
 
-fn binary_op<
-    Lhs: HasUniqueId + IsShapedArray,
-    Rhs: HasUniqueId + IsShapedArray,
-    Out: HasUniqueId + IsShapedArray,
-    D1: Dimension,
-    D2: Dimension,
->(
+fn add_binary_op<Lhs, Rhs, Out, D1, D2>(
     tape: &mut Box<GradientTape>,
     op_type: OpType,
     operands: (&Lhs, &Rhs, &Out),
     lhs_deriv: Array<f32, D1>,
     rhs_deriv: Array<f32, D2>,
-) {
+) where
+    Lhs: HasUniqueId + IsShapedArray,
+    Rhs: HasUniqueId + IsShapedArray,
+    Out: HasUniqueId + IsShapedArray,
+    D1: Dimension,
+    D2: Dimension,
+{
     let parent_grads = [
         tape.gradient_ref_for(operands.0.id(), operands.0.shape()),
         tape.gradient_ref_for(operands.1.id(), operands.1.shape()),
@@ -39,7 +39,7 @@ pub fn matmat_mul<const M: usize, const N: usize, const O: usize, H: TapeHolder>
     let result = Tensor2D::new(lhs.data().dot(rhs.data()));
     let (lhs, mut tape_holder) = lhs.split_tape_holder();
     tape_holder.update_with(|tape| {
-        binary_op(
+        add_binary_op(
             tape,
             OpType::MatMul { m: M, n: N, o: O },
             (&lhs, rhs, &result),
@@ -48,7 +48,7 @@ pub fn matmat_mul<const M: usize, const N: usize, const O: usize, H: TapeHolder>
             lhs.data.clone(),
         )
     });
-    result.replace_tape_holder(tape_holder)
+    result.with_tape_holder(tape_holder)
 }
 
 impl<const M: usize, const N: usize, const O: usize, H: TapeHolder>
@@ -67,7 +67,7 @@ pub fn vecmat_mul<const N: usize, const O: usize, H: TapeHolder>(
     let result = Tensor1D::new(lhs.data().dot(rhs.data()));
     let (lhs, mut tape_holder) = lhs.split_tape_holder();
     tape_holder.update_with(|tape| {
-        binary_op(
+        add_binary_op(
             tape,
             OpType::MatMul { m: 1, n: N, o: O },
             (&lhs, rhs, &result),
@@ -76,7 +76,7 @@ pub fn vecmat_mul<const N: usize, const O: usize, H: TapeHolder>(
             lhs.data.clone(),
         )
     });
-    result.replace_tape_holder(tape_holder)
+    result.with_tape_holder(tape_holder)
 }
 
 impl<const N: usize, const O: usize, H: TapeHolder> std::ops::Mul<&Tensor2D<N, O, NoTape>>
@@ -95,7 +95,7 @@ pub fn broadcast_add<const M: usize, const N: usize, H: TapeHolder>(
     let result = Tensor2D::new(lhs.data() + rhs.data());
     let (lhs, mut tape_holder) = lhs.split_tape_holder();
     tape_holder.update_with(|tape| {
-        binary_op(
+        add_binary_op(
             tape,
             OpType::Broadcast,
             (&lhs, rhs, &result),
@@ -103,7 +103,7 @@ pub fn broadcast_add<const M: usize, const N: usize, H: TapeHolder>(
             Array::from_elem(rhs.shape(), 1.0 / M as f32),
         )
     });
-    result.replace_tape_holder(tape_holder)
+    result.with_tape_holder(tape_holder)
 }
 
 impl<const M: usize, const N: usize, H: TapeHolder> std::ops::Add<&Tensor1D<N, NoTape>>
@@ -117,12 +117,12 @@ impl<const M: usize, const N: usize, H: TapeHolder> std::ops::Add<&Tensor1D<N, N
 
 pub fn add<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
 where
-    T::NoTape: TensorCreator + CanReplaceTapeHolder<T::TapeHolder, Output = T>,
+    T::NoTape: TensorCreator + HasTapeHolder<T::TapeHolder, Output = T>,
 {
     let result = T::NoTape::new(lhs.data() + rhs.data());
     let (rhs, mut tape_holder) = rhs.split_tape_holder();
     tape_holder.update_with(|tape| {
-        binary_op(
+        add_binary_op(
             tape,
             OpType::Normal,
             (lhs, &rhs, &result),
@@ -130,17 +130,17 @@ where
             Array::from_elem(rhs.shape(), 1.0),
         );
     });
-    result.replace_tape_holder(tape_holder)
+    result.with_tape_holder(tape_holder)
 }
 
 pub fn sub<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
 where
-    T::NoTape: TensorCreator + CanReplaceTapeHolder<T::TapeHolder, Output = T>,
+    T::NoTape: TensorCreator + HasTapeHolder<T::TapeHolder, Output = T>,
 {
     let result = T::NoTape::new(lhs.data() - rhs.data());
     let (rhs, mut tape_holder) = rhs.split_tape_holder();
     tape_holder.update_with(|tape| {
-        binary_op(
+        add_binary_op(
             tape,
             OpType::Normal,
             (lhs, &rhs, &result),
@@ -148,17 +148,17 @@ where
             Array::from_elem(rhs.shape(), -1.0),
         );
     });
-    result.replace_tape_holder(tape_holder)
+    result.with_tape_holder(tape_holder)
 }
 
 pub fn mul<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
 where
-    T::NoTape: TensorCreator + CanReplaceTapeHolder<T::TapeHolder, Output = T>,
+    T::NoTape: TensorCreator + HasTapeHolder<T::TapeHolder, Output = T>,
 {
     let result = T::NoTape::new(lhs.data() * rhs.data());
     let (rhs, mut tape_holder) = rhs.split_tape_holder();
     tape_holder.update_with(|tape| {
-        binary_op(
+        add_binary_op(
             tape,
             OpType::Normal,
             (lhs, &rhs, &result),
@@ -166,7 +166,7 @@ where
             lhs.data().clone(),
         );
     });
-    result.replace_tape_holder(tape_holder)
+    result.with_tape_holder(tape_holder)
 }
 
 macro_rules! binary_ops_impl {

@@ -1,5 +1,19 @@
-use super::{structs::*, traits::IsShapedArray};
-use ndarray::{Array, Ix0, Ix1, Ix2, Ix3, Ix4};
+use super::*;
+use ndarray::{Array, Dimension, Ix0, Ix1, Ix2, Ix3, Ix4, ShapeBuilder};
+
+pub trait IsShapedArray {
+    type Dimension: Dimension;
+    type Shape: ShapeBuilder<Dim = Self::Dimension>;
+    const SHAPE: Self::Shape;
+    const NUM_ELEMENTS: usize;
+
+    fn data(&self) -> &Array<f32, Self::Dimension>;
+    fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension>;
+
+    fn shape(&self) -> Self::Shape {
+        Self::SHAPE
+    }
+}
 
 impl<Tape> IsShapedArray for Tensor0D<Tape> {
     type Dimension = Ix0;
