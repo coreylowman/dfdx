@@ -16,80 +16,22 @@ pub trait IsShapedArray {
     }
 }
 
-impl<Tape> IsShapedArray for Tensor0D<Tape> {
-    type Dimension = Ix0;
-    type Shape = ();
-    const SHAPE: Self::Shape = ();
-    const SHAPE_SLICE: &'static [usize] = &[];
-    const NUM_ELEMENTS: usize = 1;
-
-    fn data(&self) -> &Array<f32, Self::Dimension> {
-        &self.data
-    }
-    fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension> {
-        &mut self.data
-    }
+macro_rules! tensor_impl {
+    ($typename:ident, $dim: ty, [$($Vs:tt),*], $shape:ty) => {
+impl<$(const $Vs: usize, )* H> IsShapedArray for $typename<$($Vs, )* H> {
+    type Dimension = $dim;
+    type Shape = $shape;
+    const SHAPE: Self::Shape = ($($Vs, )*);
+    const SHAPE_SLICE: &'static [usize] = &[$($Vs, )*];
+    const NUM_ELEMENTS: usize = $($Vs * )* 1;
+    fn data(&self) -> &Array<f32, Self::Dimension> { &self.data }
+    fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension> { &mut self.data }
+}
+    };
 }
 
-impl<const N: usize, Tape> IsShapedArray for Tensor1D<N, Tape> {
-    type Dimension = Ix1;
-    type Shape = (usize,);
-    const SHAPE: Self::Shape = (N,);
-    const SHAPE_SLICE: &'static [usize] = &[N];
-    const NUM_ELEMENTS: usize = N;
-
-    fn data(&self) -> &Array<f32, Self::Dimension> {
-        &self.data
-    }
-    fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension> {
-        &mut self.data
-    }
-}
-
-impl<const M: usize, const N: usize, Tape> IsShapedArray for Tensor2D<M, N, Tape> {
-    type Dimension = Ix2;
-    type Shape = (usize, usize);
-    const SHAPE: Self::Shape = (M, N);
-    const SHAPE_SLICE: &'static [usize] = &[M, N];
-    const NUM_ELEMENTS: usize = M * N;
-
-    fn data(&self) -> &Array<f32, Self::Dimension> {
-        &self.data
-    }
-    fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension> {
-        &mut self.data
-    }
-}
-
-impl<const M: usize, const N: usize, const O: usize, Tape> IsShapedArray
-    for Tensor3D<M, N, O, Tape>
-{
-    type Dimension = Ix3;
-    type Shape = (usize, usize, usize);
-    const SHAPE: Self::Shape = (M, N, O);
-    const SHAPE_SLICE: &'static [usize] = &[M, N, O];
-    const NUM_ELEMENTS: usize = M * N * O;
-
-    fn data(&self) -> &Array<f32, Self::Dimension> {
-        &self.data
-    }
-    fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension> {
-        &mut self.data
-    }
-}
-impl<const M: usize, const N: usize, const O: usize, const P: usize, Tape> IsShapedArray
-    for Tensor4D<M, N, O, P, Tape>
-{
-    type Dimension = Ix4;
-    type Shape = (usize, usize, usize, usize);
-    const SHAPE: Self::Shape = (M, N, O, P);
-    const SHAPE_SLICE: &'static [usize] = &[M, N, O, P];
-    const NUM_ELEMENTS: usize = M * N * O * P;
-
-    fn data(&self) -> &Array<f32, Self::Dimension> {
-        &self.data
-    }
-    fn mut_data(&mut self) -> &mut Array<f32, Self::Dimension> {
-        &mut self.data
-    }
-}
+tensor_impl!(Tensor0D, Ix0, [], ());
+tensor_impl!(Tensor1D, Ix1, [M], (usize,));
+tensor_impl!(Tensor2D, Ix2, [M, N], (usize, usize));
+tensor_impl!(Tensor3D, Ix3, [M, N, O], (usize, usize, usize));
+tensor_impl!(Tensor4D, Ix4, [M, N, O, P], (usize, usize, usize, usize));
