@@ -2,7 +2,7 @@ use crate::gradients::{Operation, UnaryOp};
 use crate::prelude::*;
 use ndarray::prelude::*;
 
-fn add_unary_op<Inp, Out, D>(
+pub(super) fn add_unary_op<Inp, Out, D>(
     tape: &mut Box<GradientTape>,
     operands: (&Inp, &Out),
     deriv: Array<f32, D>,

@@ -1,5 +1,5 @@
-use super::*;
 use crate::gradients::{BinaryOp, GradientTape, OpType, Operation};
+use crate::prelude::*;
 use ndarray::prelude::{Array, Dimension};
 use std::ops::{Add, Mul, Sub};
 
@@ -45,8 +45,8 @@ pub fn matmat_mul<const M: usize, const N: usize, const O: usize, H: TapeHolder>
             OpType::MatMul { m: M, n: N, o: O },
             (&lhs, rhs, &result),
             // NOTE: the derivatives here are reversed for matrix multiplication
-            rhs.data.clone(),
-            lhs.data.clone(),
+            rhs.data().clone(),
+            lhs.data().clone(),
         )
     });
     result.with_tape_holder(tape_holder)
@@ -73,8 +73,8 @@ pub fn vecmat_mul<const N: usize, const O: usize, H: TapeHolder>(
             OpType::MatMul { m: 1, n: N, o: O },
             (&lhs, rhs, &result),
             // NOTE: the derivatives here are reversed for matrix multiplication
-            rhs.data.clone(),
-            lhs.data.clone(),
+            rhs.data().clone(),
+            lhs.data().clone(),
         )
     });
     result.with_tape_holder(tape_holder)
