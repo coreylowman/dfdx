@@ -10,18 +10,19 @@ pub trait HasSoftmaxMethod: Tensor + HasSumLastMethod + Sized {
 }
 
 macro_rules! tensor_impl {
-    ($typename:ident, [$($Vs:tt),*]) => {
+    ($typename:ident, [$($Vs:tt),*], $ax:expr) => {
 impl<$(const $Vs: usize, )* H: TapeHolder> HasSoftmaxMethod for $typename<$($Vs, )* H> {
-    fn logsumexp(self) -> <Self as HasSumLastMethod>::Output {
-        let (t, t_) = self.duplicate();
-        let max = t_.max_last();
-        let (mut t, t_) = t.duplicate();
-        *t.mut_data() = (t_ - &max).data().clone(); // NOTE: to keep same tensor id
-        let mut t = t.exp().sum_last().ln();
-        *t.mut_data() = t.data() + max.data(); // NOTE: to keep same tensor id
-        t
-
+    fn logsumexp(mut self) -> <Self as HasSumLastMethod>::Output {
+        let max = self.data().map_axis($ax, |arr| arr.iter().cloned().reduce(f32::max).unwrap()).insert_axis($ax);
+        for mut sub_ax in self.mut_data().lanes_mut($ax) {
+            let sub_ax_max = sub_ax.iter().cloned().reduce(f32::max).unwrap();
+            sub_ax.map_inplace(|v| *v -= sub_ax_max);
+        }
+        let mut result = self.exp().sum_last().ln();
+        *result.mut_data() = result.data() + max;
+        result
     }
+
     fn log_softmax(self) -> Self {
         let (x, x_) = self.duplicate();
         let (lse, tape_holder) = x.logsumexp().split_tape_holder();
@@ -31,8 +32,8 @@ impl<$(const $Vs: usize, )* H: TapeHolder> HasSoftmaxMethod for $typename<$($Vs,
     };
 }
 
-tensor_impl!(Tensor1D, [M]);
-tensor_impl!(Tensor2D, [M, N]);
+tensor_impl!(Tensor1D, [M], ndarray::Axis(0));
+tensor_impl!(Tensor2D, [M, N], ndarray::Axis(1));
 // tensor_impl!(Tensor3D, [M, N, O]);
 // tensor_impl!(Tensor4D, [M, N, O, P]);
 
