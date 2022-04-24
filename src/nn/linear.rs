@@ -35,6 +35,6 @@ impl<const B: usize, const I: usize, const O: usize, H: TapeHolder> Module<Tenso
 {
     type Output = Tensor2D<B, O, H>;
     fn forward(&self, x: Tensor2D<B, I, H>) -> Self::Output {
-        broadcast_add(matmat_mul(x, &self.weight), &self.bias)
+        broadcast_left_add(matmat_mul(x, &self.weight), &self.bias)
     }
 }

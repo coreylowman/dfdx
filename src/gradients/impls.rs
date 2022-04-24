@@ -95,12 +95,17 @@ impl GradientTape {
                         self.gradients[op.parent_grads[0].index] += &d_grad0;
                         self.gradients[op.parent_grads[1].index] += &d_grad1;
                     }
-                    OpType::Broadcast => {
+                    OpType::Broadcast(axis, keep_axis) => {
                         let d_grad = self.deriv(op.parent_derivs[0]) * self.grad(op.result_grad);
                         self.gradients[op.parent_grads[0].index] += &d_grad;
 
-                        let d_grad = self.deriv(op.parent_derivs[1])
-                            * &self.grad(op.result_grad).sum_axis(Axis(0));
+                        let broadcasted_grad = self.grad(op.result_grad).sum_axis(axis);
+                        let broadcasted_grad = if keep_axis {
+                            broadcasted_grad.insert_axis(axis)
+                        } else {
+                            broadcasted_grad
+                        };
+                        let d_grad = self.deriv(op.parent_derivs[1]) * &broadcasted_grad;
                         self.gradients[op.parent_grads[1].index] += &d_grad;
                     }
                     _ => {

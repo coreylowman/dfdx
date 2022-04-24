@@ -1,9 +1,13 @@
 use super::*;
 
+pub trait Duplicate: Tensor + Sized {
+    fn duplicate(self) -> (Self, Self::NoTape);
+}
+
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: TapeHolder> $typename<$($Vs, )* H> {
-    pub fn duplicate(self) -> ($typename<$($Vs, )* H>, $typename<$($Vs, )* NoTape>) {
+impl<$(const $Vs: usize, )* H: TapeHolder> Duplicate for $typename<$($Vs, )* H> {
+    fn duplicate(self) -> ($typename<$($Vs, )* H>, $typename<$($Vs, )* NoTape>) {
         let no_tape = $typename {
             id: self.id,
             data: self.data.clone(),

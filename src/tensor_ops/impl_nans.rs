@@ -1,4 +1,4 @@
-use super::add_unary_op;
+use super::ops::add_unary_op;
 use crate::prelude::*;
 
 fn nans_to<T: Tensor>(t: T, value: f32) -> T {
@@ -30,3 +30,16 @@ tensor_impl!(Tensor1D, [M]);
 tensor_impl!(Tensor2D, [M, N]);
 tensor_impl!(Tensor3D, [M, N, O]);
 tensor_impl!(Tensor4D, [M, N, O, P]);
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_nans_1d() {
+        todo!();
+    }
+
+    #[test]
+    fn test_nans_2d() {
+        todo!()
+    }
+}

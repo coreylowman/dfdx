@@ -1,37 +1,8 @@
-use crate::gradients::{BinaryOp, GradientTape, OpType, Operation};
+use super::ops::add_binary_op;
+use crate::gradients::OpType;
 use crate::prelude::*;
-use ndarray::prelude::{Array, Dimension};
+use ndarray::prelude::*;
 use std::ops::{Add, Mul, Sub};
-
-fn add_binary_op<Lhs, Rhs, Out, D1, D2>(
-    tape: &mut Box<GradientTape>,
-    op_type: OpType,
-    operands: (&Lhs, &Rhs, &Out),
-    lhs_deriv: Array<f32, D1>,
-    rhs_deriv: Array<f32, D2>,
-) where
-    Lhs: HasUniqueId + IsShapedArray,
-    Rhs: HasUniqueId + IsShapedArray,
-    Out: HasUniqueId + IsShapedArray,
-    D1: Dimension,
-    D2: Dimension,
-{
-    let parent_grads = [
-        tape.gradient_ref_for(operands.0.id(), operands.0.shape()),
-        tape.gradient_ref_for(operands.1.id(), operands.1.shape()),
-    ];
-    let parent_derivs = [
-        tape.store_derivative(lhs_deriv),
-        tape.store_derivative(rhs_deriv),
-    ];
-    let result_grad = tape.gradient_ref_for(operands.2.id(), operands.2.shape());
-    tape.add_operation(Operation::Binary(BinaryOp {
-        op_type,
-        parent_grads,
-        parent_derivs,
-        result_grad,
-    }));
-}
 
 pub fn matmat_mul<const M: usize, const N: usize, const O: usize, H: TapeHolder>(
     lhs: Tensor2D<M, N, H>,
@@ -89,7 +60,7 @@ impl<const N: usize, const O: usize, H: TapeHolder> Mul<&Tensor2D<N, O, NoTape>>
     }
 }
 
-pub fn broadcast_add<const M: usize, const N: usize, H: TapeHolder>(
+pub fn broadcast_left_add<const M: usize, const N: usize, H: TapeHolder>(
     lhs: Tensor2D<M, N, H>,
     rhs: &Tensor1D<N, NoTape>,
 ) -> Tensor2D<M, N, H> {
@@ -98,7 +69,7 @@ pub fn broadcast_add<const M: usize, const N: usize, H: TapeHolder>(
     tape_holder.update_with(|tape| {
         add_binary_op(
             tape,
-            OpType::Broadcast,
+            OpType::Broadcast(ndarray::Axis(0), false),
             (&lhs, rhs, &result),
             Array::from_elem(lhs.shape(), 1.0),
             Array::from_elem(rhs.shape(), 1.0 / M as f32),
@@ -112,7 +83,7 @@ impl<const M: usize, const N: usize, H: TapeHolder> Add<&Tensor1D<N, NoTape>>
 {
     type Output = Tensor2D<M, N, H>;
     fn add(self, rhs: &Tensor1D<N, NoTape>) -> Self::Output {
-        broadcast_add(self, rhs)
+        broadcast_left_add(self, rhs)
     }
 }
 
@@ -204,3 +175,86 @@ binary_ops_impl!(Tensor1D, [N]);
 binary_ops_impl!(Tensor2D, [M, N]);
 binary_ops_impl!(Tensor3D, [M, N, O]);
 binary_ops_impl!(Tensor4D, [M, N, O, P]);
+
+macro_rules! broadcast_sub_impl {
+    ($typename:ident, [$($Vs:tt),*], [$($Zs:tt),*], $ax:expr) => {
+impl<$(const $Vs: usize, )* H: TapeHolder> std::ops::Sub<&$typename<$($Zs, )* NoTape>> for $typename<$($Vs, )* H> {
+    type Output = Self;
+    fn sub(self, rhs: &$typename<$($Zs, )* NoTape>) -> Self::Output {
+        let result = <Self::Output as Tensor>::NoTape::new(self.data() - rhs.data());
+        let (lhs, mut tape_holder) = self.split_tape_holder();
+        tape_holder.update_with(|tape| {
+            add_binary_op(
+                tape,
+                crate::gradients::OpType::Broadcast($ax, true),
+                (&lhs, rhs, &result),
+                Array::from_elem(lhs.shape(), 1.0),
+                Array::from_elem(rhs.shape(), -1.0),
+            )
+        });
+        result.with_tape_holder(tape_holder)
+    }
+}
+    };
+}
+
+broadcast_sub_impl!(Tensor1D, [M], [1], Axis(0));
+broadcast_sub_impl!(Tensor2D, [M, N], [M, 1], Axis(1));
+broadcast_sub_impl!(Tensor3D, [M, N, O], [M, N, 1], Axis(2));
+broadcast_sub_impl!(Tensor4D, [M, N, O, P], [M, N, O, 1], Axis(3));
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_broadcast_sub_1d() {
+        let a: Tensor1D<3> = Tensor1D::new(arr1(&[1.0, 2.0, 3.0]));
+        let b: Tensor1D<1> = Tensor1D::new(arr1(&[1.0]));
+        let r = a.with_tape() - &b;
+        assert_eq!(r.data(), arr1(&[0.0, 1.0, 2.0]));
+        let gradients = backward(r.mean());
+        assert_eq!(
+            gradients
+                .gradient_for(a.id())
+                .clone()
+                .to_shape((3,))
+                .unwrap(),
+            arr1(&[1.0 / 3.0; 3])
+        );
+        assert_eq!(
+            gradients
+                .gradient_for(b.id())
+                .clone()
+                .to_shape((1,))
+                .unwrap(),
+            arr1(&[-1.0; 1])
+        );
+    }
+
+    #[test]
+    fn test_broadcast_sub_2d() {
+        let a: Tensor2D<2, 3> = Tensor2D::new(arr2(&[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]));
+        let b: Tensor2D<2, 1> = Tensor2D::new(arr2(&[[1.0], [2.0]]));
+        // let r = broadcast_sub_2d(a.with_tape(), &b);
+        let r = a.with_tape() - &b;
+        assert_eq!(r.data(), arr2(&[[0.0, 1.0, 2.0], [2.0, 3.0, 4.0]]));
+        let gradients = backward(r.mean());
+        assert_eq!(
+            gradients
+                .gradient_for(a.id())
+                .clone()
+                .to_shape((2, 3))
+                .unwrap(),
+            arr2(&[[1.0 / 6.0; 3]; 2])
+        );
+        assert_eq!(
+            gradients
+                .gradient_for(b.id())
+                .clone()
+                .to_shape((2, 1))
+                .unwrap(),
+            arr2(&[[-0.5; 1]; 2])
+        );
+    }
+}

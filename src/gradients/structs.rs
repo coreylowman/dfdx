@@ -32,7 +32,7 @@ pub(crate) struct BinaryOp {
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum OpType {
     Normal,
-    Broadcast,
+    Broadcast(ndarray::Axis, bool),
     MatMul { m: usize, n: usize, o: usize },
 }
 
