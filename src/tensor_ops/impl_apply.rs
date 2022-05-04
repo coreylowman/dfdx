@@ -2,13 +2,12 @@ use crate::prelude::*;
 
 pub fn apply<T: Tensor, F: DifferentiableFunction>(t: T) -> T {
     let result = T::NoTape::new(t.data().mapv_elems(F::f));
+    let deriv = t.data().mapv_elems(F::df);
     let (t, mut tape_holder) = t.split_tape_holder();
-    let deriv: T::ArrayType = t.data().mapv_elems(F::df);
-    let _t = t.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
         let d_grad = deriv.mul(tape.gradient(&_result));
-        tape.mut_gradient(&_t).add_assign(&d_grad);
+        tape.mut_gradient(&t).add_assign(&d_grad);
     });
     result.with_tape_holder(tape_holder)
 }

@@ -2,25 +2,16 @@ use crate::prelude::*;
 
 pub fn value_mask<T: Tensor>(t: T, other: &T::NoTape, value: f32) -> T {
     let result =
-        T::NoTape::new(t.data().zip_map(
-            other.data(),
-            |&a, b| {
-                if b.eq(&value) {
-                    value
-                } else {
-                    a
-                }
-            },
-        ));
+        T::NoTape::new(
+            t.data()
+                .zip_map(other.data(), |x, y| if y == &value { value } else { *x }),
+        );
+    let deriv = other.data().map_elems(|x| (x != &value) as i32 as f32);
     let (t, mut tape_holder) = t.split_tape_holder();
-    let deriv = other
-        .data()
-        .map_elems(|v| if v.eq(&value) { 0.0 } else { 1.0 });
-    let _t = t.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
         let d_grad = deriv.mul(tape.gradient(&_result));
-        tape.mut_gradient(&_t).add_assign(&d_grad);
+        tape.mut_gradient(&t).add_assign(&d_grad);
     });
     result.with_tape_holder(tape_holder)
 }
@@ -76,10 +67,5 @@ mod tests {
             gradients.gradient(&t),
             &[[0.0, 1.0 / 6.0, 0.0], [1.0 / 6.0, 0.0, 1.0 / 6.0]]
         );
-    }
-
-    #[test]
-    fn test_mask_3d() {
-        todo!();
     }
 }

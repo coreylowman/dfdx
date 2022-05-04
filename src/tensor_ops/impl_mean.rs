@@ -7,16 +7,15 @@ pub trait HasMeanMethod: Tensor {
 impl<T: Tensor> HasMeanMethod for T {
     fn mean(self) -> Tensor0D<Self::TapeHolder> {
         let result = Tensor0D::<NoTape>::new(self.data().mean());
-        let (t, mut tape_holder) = self.split_tape_holder();
-        let deriv: T::ArrayType = t
+        let deriv = self
             .data()
             .map_elems(|_| 1.0 / T::ArrayType::NUM_ELEMENTS as f32);
-        let _t = t.phantom();
+        let (t, mut tape_holder) = self.split_tape_holder();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
             let g: &f32 = tape.gradient(&_result);
             let d_grad = deriv.map_elems(|v| v * g);
-            tape.mut_gradient(&_t).add_assign(&d_grad);
+            tape.mut_gradient(&t).add_assign(&d_grad);
         });
         result.with_tape_holder(tape_holder)
     }
@@ -55,6 +54,10 @@ mod tests {
 
     #[test]
     fn test_mean_3d() {
-        todo!();
+        let t: Tensor3D<4, 2, 3> = Tensor3D::ones();
+        let r: Tensor0D<WithTape> = t.with_tape().mean();
+        assert_eq!(r.data(), &1.0);
+        let gradients = backward(r);
+        assert_eq!(gradients.gradient(&t), &[[[1.0 / 24.0; 3]; 2]; 4]);
     }
 }

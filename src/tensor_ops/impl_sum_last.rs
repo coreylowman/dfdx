@@ -11,14 +11,12 @@ impl<$(const $Vs: usize, )* H: TapeHolder> HasSumLastMethod for $typename<$($Vs,
     type Output = $res<$($Zs, )* H>;
     fn sum_last(self) -> Self::Output {
         let result = <$res<$($Zs, )* H> as Tensor>::NoTape::new(self.data().reduce_inner(|a, b| a + b));
+        let deriv = self.data().map_elems(|_| 1.0);
         let (t, mut tape_holder) = self.split_tape_holder();
-        let deriv: Self::ArrayType = t.data().map_elems(|_| 1.0);
-        let _t = t.phantom();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
-            let g: &<Self::ArrayType as ReduceInnerElements>::Output = tape.gradient(&_result);
-            let d_grad: Self::ArrayType = deriv.mul(g);
-            tape.mut_gradient(&_t).add_assign(&d_grad);
+            let d_grad = deriv.mul(tape.gradient(&_result));
+            tape.mut_gradient(&t).add_assign(&d_grad);
         });
         result.with_tape_holder(tape_holder)
     }
@@ -40,7 +38,7 @@ mod tests {
         let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
         let r: Tensor0D<WithTape> = t.with_tape().sum_last();
         assert_eq!(r.data(), &6.0);
-        let gradients = backward(r.mean());
+        let gradients = r.mean().backward();
         assert_eq!(gradients.gradient(&t), &[1.0; 3]);
     }
 
@@ -49,12 +47,24 @@ mod tests {
         let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
         let r: Tensor1D<2, WithTape> = t.with_tape().sum_last();
         assert_eq!(r.data(), &[6.0, 15.0]);
-        let gradients = backward(r.mean());
+        let gradients = r.mean().backward();
         assert_eq!(gradients.gradient(&t), &[[0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]);
     }
 
     #[test]
     fn test_sum_last_3d() {
-        todo!();
+        let t: Tensor3D<4, 2, 3> = Tensor3D::new([
+            [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+            [[-1.0, -2.0, -3.0], [-4.0, -5.0, -6.0]],
+            [[-3.0, 2.0, -1.0], [-6.0, 5.0, -4.0]],
+            [[1.0, -2.0, 3.0], [4.0, -5.0, 6.0]],
+        ]);
+        let r: Tensor2D<4, 2, WithTape> = t.with_tape().sum_last();
+        assert_eq!(
+            r.data(),
+            &[[6.0, 15.0], [-6.0, -15.0], [-2.0, -5.0], [2.0, 5.0],]
+        );
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.gradient(&t), &[[[1.0 / 8.0; 3]; 2]; 4]);
     }
 }

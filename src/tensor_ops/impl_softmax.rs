@@ -3,7 +3,6 @@ use crate::prelude::*;
 pub trait HasSoftmaxMethod: Tensor + HasSumLastMethod + Sized {
     fn logsumexp(self) -> <Self as HasSumLastMethod>::Output;
     fn log_softmax(self) -> Self;
-
     fn softmax(self) -> Self {
         self.log_softmax().exp()
     }

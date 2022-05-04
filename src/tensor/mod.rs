@@ -1,3 +1,4 @@
+mod impl_backward;
 mod impl_can_update_with_tape;
 mod impl_default;
 mod impl_duplicate;
@@ -12,6 +13,7 @@ mod impl_tensor_creator;
 mod structs;
 mod tape_holders;
 
+pub use impl_backward::*;
 pub use impl_can_update_with_tape::*;
 pub use impl_default::*;
 pub use impl_duplicate::*;
@@ -25,8 +27,3 @@ pub use impl_tensor::*;
 pub use impl_tensor_creator::*;
 pub use structs::*;
 pub use tape_holders::*;
-
-pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> crate::gradients::Gradients {
-    let (t, tape_holder) = t.split_tape_holder();
-    tape_holder.0.backward(&t)
-}

@@ -1,14 +1,13 @@
 use crate::prelude::*;
 
-fn nans_to<T: Tensor>(t: T, value: f32) -> T {
+pub fn nans_to<T: Tensor>(t: T, value: f32) -> T {
     let result = T::NoTape::new(t.data().map_elems(|v| if v.is_nan() { value } else { *v }));
+    let deriv = t.data().map_elems(|v| if v.is_nan() { 0.0 } else { 1.0 });
     let (t, mut tape_holder) = t.split_tape_holder();
-    let deriv: T::ArrayType = t.data().map_elems(|v| if v.is_nan() { 0.0 } else { 1.0 });
-    let _t = t.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
         let d_grad = deriv.mul(tape.gradient(&_result));
-        tape.mut_gradient(&_t).add_assign(&d_grad);
+        tape.mut_gradient(&t).add_assign(&d_grad);
     });
     result.with_tape_holder(tape_holder)
 }
@@ -61,10 +60,5 @@ mod tests {
             gradients.gradient(&t),
             &[[1.0 / 6.0, 0.0, 1.0 / 6.0], [0.0, 1.0 / 6.0, 0.0]]
         );
-    }
-
-    #[test]
-    fn test_nans_3d() {
-        todo!();
     }
 }
