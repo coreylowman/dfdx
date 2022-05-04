@@ -1,5 +1,5 @@
 use super::*;
-use crate::array_ops::{FillElements, MapElements, ZeroElements};
+use crate::array_ops::{FillElements, ZeroElements};
 use rand::prelude::Distribution;
 
 pub trait TensorCreator: Tensor + Sized {

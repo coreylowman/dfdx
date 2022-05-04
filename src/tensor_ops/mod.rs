@@ -6,7 +6,6 @@ mod impl_nans;
 mod impl_neg;
 mod impl_softmax;
 mod impl_sum_last;
-mod ops;
 
 pub use impl_apply::*;
 pub use impl_binary_ops::*;

@@ -1,14 +1,10 @@
 use super::*;
 
-pub trait TapeCreator: Tensor {
-    fn with_tape(&self) -> Self::WithTape;
-}
-
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )*> TapeCreator for $typename<$($Vs, )* NoTape> {
-    fn with_tape(&self) -> Self::WithTape {
-        Self::WithTape {
+impl<$(const $Vs: usize, )*> $typename<$($Vs, )* NoTape> {
+    pub fn with_tape(&self) -> $typename<$($Vs, )* WithTape> {
+        $typename {
             id: self.id,
             data: self.data.clone(),
             tape: WithTape::default(),

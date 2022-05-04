@@ -41,7 +41,7 @@ pub fn apply_ref<T, F: DifferentiableFunction>(t: &T) -> T
 where
     T: Tensor<TapeHolder = NoTape> + TensorCreator,
 {
-    T::new(t.data().mapv_elems(&F::f))
+    T::new(t.data().mapv_elems(F::f))
 }
 
 macro_rules! apply_ref_impl {

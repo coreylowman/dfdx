@@ -22,48 +22,39 @@ impl<T: Tensor> HasMeanMethod for T {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn test_mean_0d() {
-//         let t: Tensor0D = Tensor0D::new(3.0);
-//         let r = t.with_tape().mean();
-//         assert_eq!(r.data(), &3.0);
-//         let gradients = backward(r);
-//         assert_eq!(gradients.gradient(&t), &1.0);
-//     }
+    #[test]
+    fn test_mean_0d() {
+        let t: Tensor0D = Tensor0D::new(3.0);
+        let r = t.with_tape().mean();
+        assert_eq!(r.data(), &3.0);
+        let gradients = backward(r);
+        assert_eq!(gradients.gradient(&t), &1.0);
+    }
 
-//     #[test]
-//     fn test_mean_1d() {
-//         let t: Tensor1D<3> = Tensor1D::new(arr1(&[1.0, 2.0, 3.0]));
-//         let r: Tensor0D<WithTape> = t.with_tape().mean();
-//         assert_eq!(r.data(), arr0(2.0));
-//         let gradients = backward(r);
-//         assert_eq!(
-//             gradients
-//                 .gradient_for(t.id())
-//                 .clone()
-//                 .into_shape(t.shape())
-//                 .unwrap(),
-//             arr1(&[1.0 / 3.0; 3])
-//         );
-//     }
+    #[test]
+    fn test_mean_1d() {
+        let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
+        let r: Tensor0D<WithTape> = t.with_tape().mean();
+        assert_eq!(r.data(), &2.0);
+        let gradients = backward(r);
+        assert_eq!(gradients.gradient(&t), &[1.0 / 3.0; 3]);
+    }
 
-//     #[test]
-//     fn test_mean_2d() {
-//         let t: Tensor2D<2, 3> = Tensor2D::new(arr2(&[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]));
-//         let r: Tensor0D<WithTape> = t.with_tape().mean();
-//         assert_eq!(r.data(), arr0(3.5));
-//         let gradients = backward(r);
-//         assert_eq!(
-//             gradients
-//                 .gradient_for(t.id())
-//                 .clone()
-//                 .into_shape(t.shape())
-//                 .unwrap(),
-//             arr2(&[[1.0 / 6.0; 3]; 2])
-//         );
-//     }
-// }
+    #[test]
+    fn test_mean_2d() {
+        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        let r: Tensor0D<WithTape> = t.with_tape().mean();
+        assert_eq!(r.data(), &3.5);
+        let gradients = backward(r);
+        assert_eq!(gradients.gradient(&t), &[[1.0 / 6.0; 3]; 2]);
+    }
+
+    #[test]
+    fn test_mean_3d() {
+        todo!();
+    }
+}
