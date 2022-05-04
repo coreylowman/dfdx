@@ -1,26 +1,26 @@
 use super::*;
-use ndarray::Array;
+use crate::array_ops::{FillElements, MapElements, ZeroElements};
 use rand::prelude::Distribution;
 
 pub trait TensorCreator: Tensor + Sized {
-    fn new(data: Array<f32, Self::Dimension>) -> Self;
+    fn new(data: Self::ArrayType) -> Self;
 
     fn zeros() -> Self {
-        Self::new(Array::zeros(Self::SHAPE))
+        Self::new(Self::ArrayType::ZEROS)
     }
 
     fn ones() -> Self {
-        Self::new(Array::ones(Self::SHAPE))
+        Self::new(Self::ArrayType::filled_with(&mut || 1.0))
     }
 
     fn rand<R: rand::Rng>(rng: &mut R) -> Self {
-        Self::new(Array::from_shape_simple_fn(Self::SHAPE, || {
+        Self::new(Self::ArrayType::filled_with(&mut || {
             rand_distr::Standard.sample(rng)
         }))
     }
 
     fn randn<R: rand::Rng>(rng: &mut R) -> Self {
-        Self::new(Array::from_shape_simple_fn(Self::SHAPE, || {
+        Self::new(Self::ArrayType::filled_with(&mut || {
             rand_distr::StandardNormal.sample(rng)
         }))
     }
@@ -29,8 +29,7 @@ pub trait TensorCreator: Tensor + Sized {
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )*> TensorCreator for $typename<$($Vs, )* NoTape> {
-    fn new(data: Array<f32, Self::Dimension>) -> Self {
-        assert!(data.shape() == Self::SHAPE_SLICE);
+    fn new(data: Self::ArrayType) -> Self {
         Self {
             id: unique_id(),
             data,

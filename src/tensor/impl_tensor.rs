@@ -1,14 +1,19 @@
 use super::*;
+use crate::gradients::{HasNdArray, HasUniqueId};
 
-pub trait Tensor: IsShapedArray + CanUpdateWithTape + HasUniqueId {
+pub trait Tensor: HasNdArray + CanUpdateWithTape + HasUniqueId + IntoPhantom {
     type TapeHolder: TapeHolder;
 
-    type NoTape: Tensor<TapeHolder = NoTape, Dimension = Self::Dimension>
+    type NoTape: 'static
+        + Tensor<TapeHolder = NoTape, ArrayType = Self::ArrayType>
         + TensorCreator
         // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
-        + HasTapeHolder<Self::TapeHolder, Output = Self>;
+        + HasTapeHolder<Self::TapeHolder, Output = Self>
+        + IntoPhantom;
 
-    type WithTape: Tensor<TapeHolder = WithTape, Dimension = Self::Dimension>;
+    type WithTape: 'static
+        + Tensor<TapeHolder = WithTape, ArrayType = Self::ArrayType>
+        + IntoPhantom;
 
     fn split_tape_holder(self) -> (Self::NoTape, Self::TapeHolder);
 }

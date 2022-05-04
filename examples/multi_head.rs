@@ -74,7 +74,7 @@ fn main() {
         let (pred1, pred2) = module.forward(x);
         let (loss1, tape_holder) = mse_loss(pred1, &y1).split_tape_holder();
         let loss2 = mse_loss(pred2.with_tape_holder(tape_holder), &y2);
-        let losses = [loss1.data()[()], loss2.data()[()]];
+        let losses = [*loss1.data(), *loss2.data()];
         let loss = &loss1 + loss2;
         let (loss_v, gradients) = sgd.compute_gradients(loss);
         module.update_with_tape(&gradients);

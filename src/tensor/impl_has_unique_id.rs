@@ -1,8 +1,5 @@
 use super::structs::*;
-
-pub trait HasUniqueId {
-    fn id(&self) -> usize;
-}
+use crate::gradients::HasUniqueId;
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {

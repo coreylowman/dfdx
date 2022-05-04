@@ -1,6 +1,7 @@
 use super::*;
+use crate::array_ops::SubElements;
+use crate::gradients::HasNdArray;
 use crate::prelude::GradientTape;
-use std::ops::SubAssign;
 
 pub trait CanUpdateWithTape {
     fn update_with_tape(&mut self, tape: &GradientTape);
@@ -10,7 +11,7 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H> CanUpdateWithTape for $typename<$($Vs, )* H> {
     fn update_with_tape(&mut self, tape: &GradientTape) {
-        let gradient = tape.gradient_for(self.id());
+        let gradient = tape.gradient(self);
         self.mut_data().sub_assign(gradient);
     }
 }

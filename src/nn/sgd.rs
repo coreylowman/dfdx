@@ -13,9 +13,10 @@ impl Default for Sgd {
 
 impl Optimizer for Sgd {
     fn compute_gradients(&mut self, loss: Tensor0D<WithTape>) -> (f32, Box<GradientTape>) {
-        let loss_value = loss.data()[()];
+        let loss_value = *loss.data();
         let mut gradients = backward(loss);
-        gradients.scale(self.lr);
+        // gradients.scale(self.lr);
+        // TODO
         (loss_value, gradients)
     }
 }

@@ -3,10 +3,6 @@ pub trait DifferentiableFunction {
     fn df(x: f32) -> f32;
 }
 
-pub trait ApplyDifferentiableFunction {
-    fn apply<F: DifferentiableFunction>(self) -> Self;
-}
-
 #[derive(Default, Debug)]
 pub struct ReLU;
 impl DifferentiableFunction for ReLU {

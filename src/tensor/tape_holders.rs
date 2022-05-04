@@ -8,15 +8,15 @@ pub struct WithTape(pub(crate) Box<GradientTape>);
 pub struct NoTape;
 
 pub trait TapeHolder {
-    fn update_with<F: FnMut(&mut Box<GradientTape>)>(&mut self, update_fn: F);
+    fn add_operation<F: 'static + FnOnce(&mut GradientTape)>(&mut self, operation: F);
 }
 
 impl TapeHolder for WithTape {
-    fn update_with<F: FnMut(&mut Box<GradientTape>)>(&mut self, mut update_fn: F) {
-        update_fn(&mut self.0)
+    fn add_operation<F: 'static + FnOnce(&mut GradientTape)>(&mut self, operation: F) {
+        self.0.add_operation(operation)
     }
 }
 
 impl TapeHolder for NoTape {
-    fn update_with<F: FnMut(&mut Box<GradientTape>)>(&mut self, _update_fn: F) {}
+    fn add_operation<F: 'static + FnOnce(&mut GradientTape)>(&mut self, _operation: F) {}
 }
