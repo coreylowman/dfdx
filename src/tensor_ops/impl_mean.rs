@@ -14,7 +14,8 @@ impl<T: Tensor> HasMeanMethod for T {
         let _t = t.phantom();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
-            let d_grad = deriv.scale(tape.gradient(&_result));
+            let g: &f32 = tape.gradient(&_result);
+            let d_grad = deriv.map_elems(|v| v * g);
             tape.mut_gradient(&_t).add_assign(&d_grad);
         });
         result.with_tape_holder(tape_holder)

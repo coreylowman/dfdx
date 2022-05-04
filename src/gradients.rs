@@ -1,7 +1,6 @@
 use super::array_ops::{AddElements, CountElements, MapElements, SubElements, ZeroElements};
 use crate::prelude::{
-    DivElements, FillElements, MulElements, ReduceElements, ReduceInnerElements, ScaleElements,
-    ZipMapElements,
+    DivElements, FillElements, MulElements, ReduceElements, ReduceInnerElements, ZipMapElements,
 };
 use std::collections::HashMap;
 
@@ -22,7 +21,6 @@ pub trait HasNdArray {
         + ZeroElements
         + CountElements
         + ReduceElements
-        + ScaleElements
         + FillElements;
 
     fn data(&self) -> &Self::ArrayType;
