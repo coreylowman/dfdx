@@ -13,14 +13,8 @@ impl<T> HasUniqueId for PhantomTensor<T> {
     }
 }
 
-impl<T: HasNdArray> HasNdArray for PhantomTensor<T> {
+impl<T: IsNdArray> IsNdArray for PhantomTensor<T> {
     type ArrayType = T::ArrayType;
-    fn data(&self) -> &Self::ArrayType {
-        todo!("remove this from HasNdArray")
-    }
-    fn mut_data(&mut self) -> &mut Self::ArrayType {
-        todo!("remove this from HasNdArray")
-    }
 }
 
 pub trait IntoPhantom: HasNdArray + Sized {

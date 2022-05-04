@@ -1,6 +1,5 @@
 use super::*;
 use crate::array_ops::FillElements;
-use crate::gradients::HasNdArray;
 use rand::{distributions::Distribution, Rng};
 
 pub trait Randomize {

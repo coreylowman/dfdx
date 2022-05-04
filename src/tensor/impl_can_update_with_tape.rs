@@ -1,6 +1,5 @@
 use super::*;
 use crate::array_ops::SubElements;
-use crate::gradients::HasNdArray;
 use crate::prelude::GradientTape;
 
 pub trait CanUpdateWithTape {
