@@ -28,7 +28,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_reduce_inner() {
-        todo!("");
+    fn test_reduce_inner_1d() {
+        let t = [1.0, 2.0, 3.0];
+        assert_eq!(t.reduce_inner(f32::max), 3.0);
+    }
+
+    #[test]
+    fn test_reduce_inner_2d() {
+        let t = [[1.0, 2.0, 3.0], [6.0, 5.0, 4.0]];
+        assert_eq!(t.reduce_inner(f32::max), [3.0, 6.0]);
+    }
+
+    #[test]
+    fn test_reduce_inner_3d() {
+        let t = [
+            [[1.0, 2.0, 3.0], [6.0, 5.0, 4.0]],
+            [[-1.0, -2.0, -3.0], [-6.0, -5.0, -4.0]],
+        ];
+        assert_eq!(t.reduce_inner(f32::max), [[3.0, 6.0], [-1.0, -4.0]]);
     }
 }
