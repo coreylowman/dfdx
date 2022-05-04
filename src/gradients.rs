@@ -1,8 +1,8 @@
-use crate::prelude::{
-    FillElements, MulElements, ReduceElements, ReduceInnerElements, ScaleElements, ZipMapElements,
-};
-
 use super::array_ops::{AddElements, CountElements, MapElements, SubElements, ZeroElements};
+use crate::prelude::{
+    DivElements, FillElements, MulElements, ReduceElements, ReduceInnerElements, ScaleElements,
+    ZipMapElements,
+};
 use std::collections::HashMap;
 
 pub trait HasUniqueId {
@@ -11,16 +11,18 @@ pub trait HasUniqueId {
 
 pub trait HasNdArray {
     type ArrayType: 'static
+        + Sized
         + Clone
-        + ZipMapElements
+        + ZipMapElements<Self::ArrayType>
         + MapElements
-        + AddElements
+        + AddElements<Self::ArrayType>
         + SubElements<Self::ArrayType>
+        + MulElements<Self::ArrayType>
+        + DivElements<Self::ArrayType>
         + ZeroElements
         + CountElements
         + ReduceElements
         + ScaleElements
-        + MulElements<Self::ArrayType>
         + FillElements;
 
     fn data(&self) -> &Self::ArrayType;
