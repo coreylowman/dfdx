@@ -26,8 +26,7 @@ pub use impl_tensor_creator::*;
 pub use structs::*;
 pub use tape_holders::*;
 
-pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Box<crate::gradients::GradientTape> {
-    let (t, mut tape_holder) = t.split_tape_holder();
-    tape_holder.0.backward(&t);
-    tape_holder.0
+pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> crate::gradients::Gradients {
+    let (t, tape_holder) = t.split_tape_holder();
+    tape_holder.0.backward(&t)
 }

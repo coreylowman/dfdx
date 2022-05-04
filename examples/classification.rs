@@ -29,7 +29,7 @@ fn main() {
         let pred = module.forward(x.with_tape());
         let loss = cross_entropy_with_logits_loss(pred, &y);
         let (loss_v, gradients) = sgd.compute_gradients(loss);
-        module.update_with_tape(&gradients);
+        module.update_with_grads(&gradients);
 
         println!("mse={:#.3} in {:?}", loss_v, start.elapsed());
     }

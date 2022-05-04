@@ -18,11 +18,11 @@ impl Randomize for MultiHeadedMLP {
     }
 }
 
-impl CanUpdateWithTape for MultiHeadedMLP {
-    fn update_with_tape(&mut self, tape: &GradientTape) {
-        self.trunk.update_with_tape(tape);
-        self.head1.update_with_tape(tape);
-        self.head2.update_with_tape(tape);
+impl CanUpdateWithGradients for MultiHeadedMLP {
+    fn update_with_grads(&mut self, grads: &Gradients) {
+        self.trunk.update_with_grads(grads);
+        self.head1.update_with_grads(grads);
+        self.head2.update_with_grads(grads);
     }
 }
 
@@ -77,7 +77,7 @@ fn main() {
         let losses = [*loss1.data(), *loss2.data()];
         let loss = &loss1 + loss2;
         let (loss_v, gradients) = sgd.compute_gradients(loss);
-        module.update_with_tape(&gradients);
+        module.update_with_grads(&gradients);
 
         println!(
             "mse={:#.3} (losses={:.3?}) in {:?}",

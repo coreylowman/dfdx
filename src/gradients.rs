@@ -11,10 +11,6 @@ pub trait IsNdArray {
         + Clone
         + ZipMapElements<Self::ArrayType>
         + MapElements
-        + AddElements<Self::ArrayType>
-        + SubElements<Self::ArrayType>
-        + MulElements<Self::ArrayType>
-        + DivElements<Self::ArrayType>
         + ZeroElements
         + CountElements
         + ReduceElements
@@ -22,72 +18,70 @@ pub trait IsNdArray {
 }
 
 pub struct GradientTape {
-    grad_ref_by_id: HashMap<usize, GradientRef>,
-    operations: Vec<Box<dyn FnOnce(&mut GradientTape) -> ()>>,
-    gradients: Vec<Box<dyn std::any::Any>>,
+    operations: Vec<Box<dyn FnOnce(&mut Gradients) -> ()>>,
 }
 
 impl std::fmt::Debug for GradientTape {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GradientTape")
-            .field("grad_ref_by_id", &self.grad_ref_by_id)
-            .field("gradients", &self.gradients)
+            .field("num_operations", &self.operations.len())
             .finish()
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct GradientRef {
-    index: usize,
 }
 
 impl Default for GradientTape {
     fn default() -> Self {
         Self {
-            grad_ref_by_id: HashMap::new(),
-            gradients: Vec::new(),
             operations: Vec::new(),
         }
     }
 }
 
 impl GradientTape {
-    fn make_or_get_grad_ref<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> GradientRef {
-        match self.grad_ref_by_id.get(&t.id()) {
-            Some(grad_ref) => *grad_ref,
-            None => {
-                let index = self.gradients.len();
-                let grad_ref = GradientRef { index };
-                self.gradients.push(Box::new(T::ArrayType::ZEROS));
-                self.grad_ref_by_id.insert(t.id(), grad_ref);
-                grad_ref
-            }
-        }
-    }
-
-    pub fn gradient<T: HasUniqueId + IsNdArray>(&self, t: &T) -> &T::ArrayType {
-        let grad_ref = self.grad_ref_by_id.get(&t.id()).unwrap();
-        self.gradients[grad_ref.index].downcast_ref().unwrap()
-    }
-
-    pub fn mut_gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> &mut T::ArrayType {
-        let grad_ref = self.make_or_get_grad_ref(t);
-        self.gradients[grad_ref.index].downcast_mut().unwrap()
-    }
-
-    pub(crate) fn add_operation<F: 'static + FnOnce(&mut GradientTape) -> ()>(
+    pub(crate) fn add_operation<F: 'static + FnOnce(&mut Gradients) -> ()>(
         &mut self,
         operation: F,
     ) {
         self.operations.insert(0, Box::new(operation));
     }
 
-    pub fn backward<T: HasUniqueId + IsNdArray>(&mut self, t: &T) {
-        self.mut_gradient(t).map_assign_elems(|v| *v = 1.0);
-        let ops: Vec<Box<dyn FnOnce(&mut GradientTape)>> = self.operations.drain(..).collect();
-        for operation in ops {
-            (operation)(self);
+    pub fn backward<T: HasUniqueId + IsNdArray>(mut self, t: &T) -> Gradients {
+        let mut gradients: Gradients = Default::default();
+        gradients.mut_gradient(t).map_assign_elems(|v| *v = 1.0);
+        for operation in self.operations.drain(..) {
+            (operation)(&mut gradients);
         }
+        gradients
+    }
+}
+
+pub struct Gradients {
+    gradient_by_id: HashMap<usize, Box<dyn std::any::Any>>,
+}
+
+impl Default for Gradients {
+    fn default() -> Self {
+        Self {
+            gradient_by_id: HashMap::new(),
+        }
+    }
+}
+
+impl Gradients {
+    pub fn gradient<T: HasUniqueId + IsNdArray>(&self, t: &T) -> &T::ArrayType {
+        self.gradient_by_id
+            .get(&t.id())
+            .unwrap()
+            .downcast_ref()
+            .unwrap()
+    }
+
+    pub fn mut_gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> &mut T::ArrayType {
+        self.gradient_by_id
+            .entry(t.id())
+            .or_insert_with(|| Box::new(T::ArrayType::ZEROS))
+            .downcast_mut()
+            .unwrap()
     }
 }
 
@@ -118,11 +112,11 @@ mod tests {
         let _t1: Tensor = Default::default();
 
         let mut tape = GradientTape::default();
-        tape.add_operation(move |tape| {
-            tape.mut_gradient(&_t1).add(&[1.0; 5]);
+        tape.add_operation(move |g| {
+            g.mut_gradient(&_t1).add(&[1.0; 5]);
         });
-        tape.backward(&t1);
-        assert_eq!(tape.gradient(&t1), &[1.0; 5]);
+        let g = tape.backward(&t1);
+        assert_eq!(g.gradient(&t1), &[1.0; 5]);
     }
 }
 /*

@@ -7,7 +7,7 @@ pub mod tensor_ops;
 pub mod prelude {
     pub use crate::array_ops::*;
     pub use crate::diff_fns::*;
-    pub use crate::gradients::{GradientTape, HasUniqueId, IsNdArray};
+    pub use crate::gradients::{GradientTape, Gradients, HasUniqueId, IsNdArray};
     pub use crate::losses::*;
     pub use crate::nn::*;
     pub use crate::tensor::*;

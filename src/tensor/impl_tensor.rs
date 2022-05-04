@@ -1,7 +1,7 @@
 use super::*;
 use crate::gradients::HasUniqueId;
 
-pub trait Tensor: HasNdArray + CanUpdateWithTape + HasUniqueId + IntoPhantom {
+pub trait Tensor: HasNdArray + CanUpdateWithGradients + HasUniqueId + IntoPhantom {
     type TapeHolder: TapeHolder;
 
     type NoTape: 'static

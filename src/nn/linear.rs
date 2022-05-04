@@ -7,10 +7,10 @@ pub struct Linear<const I: usize, const O: usize> {
     bias: Tensor1D<O, NoTape>,
 }
 
-impl<const I: usize, const O: usize> CanUpdateWithTape for Linear<I, O> {
-    fn update_with_tape(&mut self, tape: &GradientTape) {
-        self.weight.update_with_tape(tape);
-        self.bias.update_with_tape(tape);
+impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
+    fn update_with_grads(&mut self, grads: &Gradients) {
+        self.weight.update_with_grads(grads);
+        self.bias.update_with_grads(grads);
     }
 }
 

@@ -4,8 +4,8 @@ use rand::{distributions::Distribution, Rng};
 
 macro_rules! activation_impls {
     ($typename:ty) => {
-        impl CanUpdateWithTape for $typename {
-            fn update_with_tape(&mut self, _: &GradientTape) {}
+        impl CanUpdateWithGradients for $typename {
+            fn update_with_grads(&mut self, _: &Gradients) {}
         }
 
         impl Randomize for $typename {
