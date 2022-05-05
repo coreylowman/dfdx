@@ -3,6 +3,12 @@ pub trait DifferentiableFunction {
     fn df(x: f32) -> f32;
 }
 
+pub trait DiffBinaryFunction {
+    fn f(x: &f32, y: &f32) -> f32;
+    fn dfdx(x: &f32, y: &f32) -> f32;
+    fn dfdy(x: &f32, y: &f32) -> f32;
+}
+
 #[derive(Default, Debug)]
 pub struct ReLU;
 impl DifferentiableFunction for ReLU {
@@ -30,6 +36,7 @@ impl DifferentiableFunction for Square {
         2.0 * x
     }
 }
+
 #[derive(Default, Debug)]
 pub struct Tanh;
 impl DifferentiableFunction for Tanh {
@@ -110,5 +117,73 @@ impl DifferentiableFunction for Abs {
         } else {
             1.0
         }
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct BinaryAdd;
+
+impl DiffBinaryFunction for BinaryAdd {
+    fn f(x: &f32, y: &f32) -> f32 {
+        x + y
+    }
+
+    fn dfdx(_: &f32, _: &f32) -> f32 {
+        1.0
+    }
+
+    fn dfdy(_: &f32, _: &f32) -> f32 {
+        1.0
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct BinarySub;
+
+impl DiffBinaryFunction for BinarySub {
+    fn f(x: &f32, y: &f32) -> f32 {
+        x - y
+    }
+
+    fn dfdx(_: &f32, _: &f32) -> f32 {
+        1.0
+    }
+
+    fn dfdy(_: &f32, _: &f32) -> f32 {
+        -1.0
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct BinaryMul;
+
+impl DiffBinaryFunction for BinaryMul {
+    fn f(x: &f32, y: &f32) -> f32 {
+        x * y
+    }
+
+    fn dfdx(_: &f32, y: &f32) -> f32 {
+        *y
+    }
+
+    fn dfdy(x: &f32, _: &f32) -> f32 {
+        *x
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct BinaryDiv;
+
+impl DiffBinaryFunction for BinaryDiv {
+    fn f(x: &f32, y: &f32) -> f32 {
+        x / y
+    }
+
+    fn dfdx(_x: &f32, y: &f32) -> f32 {
+        1.0 / y
+    }
+
+    fn dfdy(x: &f32, y: &f32) -> f32 {
+        -x / y.powi(2)
     }
 }

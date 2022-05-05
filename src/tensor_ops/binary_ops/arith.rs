@@ -49,6 +49,7 @@ pub fn apply_binary<T: Tensor, F: DiffBinaryFunction>(lhs: &T::NoTape, rhs: T) -
     result.with_tape_holder(tape_holder)
 }
 
+// TODO how to combine this with above?
 pub fn apply_binary_lhs<T: Tensor, F: DiffBinaryFunction>(lhs: T, rhs: &T::NoTape) -> T {
     let result = T::NoTape::new(lhs.data().zip_map(rhs.data(), F::f));
     let lhs_deriv = lhs.data().zip_map(rhs.data(), F::dfdx);
@@ -63,76 +64,6 @@ pub fn apply_binary_lhs<T: Tensor, F: DiffBinaryFunction>(lhs: T, rhs: &T::NoTap
         tape.mut_gradient(&_rhs).add_assign(&d_grad_rhs);
     });
     result.with_tape_holder(tape_holder)
-}
-
-pub trait DiffBinaryFunction {
-    fn f(x: &f32, y: &f32) -> f32;
-    fn dfdx(x: &f32, y: &f32) -> f32;
-    fn dfdy(x: &f32, y: &f32) -> f32;
-}
-
-struct BinaryAdd;
-
-impl DiffBinaryFunction for BinaryAdd {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x + y
-    }
-
-    fn dfdx(_: &f32, _: &f32) -> f32 {
-        1.0
-    }
-
-    fn dfdy(_: &f32, _: &f32) -> f32 {
-        1.0
-    }
-}
-
-struct BinarySub;
-
-impl DiffBinaryFunction for BinarySub {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x - y
-    }
-
-    fn dfdx(_: &f32, _: &f32) -> f32 {
-        1.0
-    }
-
-    fn dfdy(_: &f32, _: &f32) -> f32 {
-        -1.0
-    }
-}
-
-struct BinaryMul;
-
-impl DiffBinaryFunction for BinaryMul {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x * y
-    }
-
-    fn dfdx(_: &f32, y: &f32) -> f32 {
-        *y
-    }
-
-    fn dfdy(x: &f32, _: &f32) -> f32 {
-        *x
-    }
-}
-
-struct BinaryDiv;
-
-impl DiffBinaryFunction for BinaryDiv {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x / y
-    }
-
-    fn dfdx(_x: &f32, y: &f32) -> f32 {
-        1.0 / y
-    }
-
-    fn dfdy(x: &f32, y: &f32) -> f32 {
-        -x / y.powi(2)
-    }
 }
 
 macro_rules! binary_ops_impl {
