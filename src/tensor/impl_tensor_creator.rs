@@ -50,3 +50,48 @@ fn unique_id() -> usize {
     static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
     COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::thread_rng;
+
+    #[test]
+    fn test_id() {
+        assert_eq!(Tensor0D::new(0.0).id, 0);
+        assert_eq!(Tensor0D::new(0.0).id, 1);
+        assert_eq!(Tensor1D::<5>::zeros().id, 2);
+        assert_eq!(Tensor2D::<3, 2>::ones().id, 3);
+        assert_eq!(Tensor3D::<4, 2, 3>::zeros().id, 4);
+    }
+
+    #[test]
+    fn test_zeros() {
+        assert_eq!(Tensor2D::<3, 2>::zeros().data(), &[[0.0; 2]; 3]);
+    }
+
+    #[test]
+    fn test_ones() {
+        assert_eq!(Tensor2D::<3, 2>::ones().data(), &[[1.0; 2]; 3]);
+    }
+
+    #[test]
+    fn test_new() {
+        let t = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
+        assert_eq!(Tensor2D::new(t.clone()).data(), &t);
+    }
+
+    #[test]
+    fn fuzz_test_rand() {
+        let mut rng = thread_rng();
+        for &v in Tensor1D::<1000>::rand(&mut rng).data() {
+            assert!(0.0 <= v && v < 1.0);
+        }
+    }
+
+    #[test]
+    fn test_randn() {
+        let mut rng = thread_rng();
+        let _t = Tensor1D::<1000>::randn(&mut rng);
+    }
+}
