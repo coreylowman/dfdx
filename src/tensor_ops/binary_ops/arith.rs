@@ -279,41 +279,241 @@ mod tests {
 
     #[test]
     fn test_add_1d() {
-        todo!();
+        let a = Tensor1D::new([1.0, 2.0, 3.0]);
+        let b = Tensor1D::new([1.0, -1.0, 0.0]);
+
+        let r = a.trace() + &b;
+        assert_eq!(r.data(), &[2.0, 1.0, 3.0]);
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.gradient(&a), &[1.0 / 3.0; 3]);
+        assert_eq!(gradients.gradient(&b), &[1.0 / 3.0; 3]);
+
+        let r = &b + a.trace();
+        assert_eq!(r.data(), &[2.0, 1.0, 3.0]);
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.gradient(&a), &[1.0 / 3.0; 3]);
+        assert_eq!(gradients.gradient(&b), &[1.0 / 3.0; 3]);
     }
 
     #[test]
     fn test_sub_1d() {
-        todo!();
+        let a = Tensor1D::new([1.0, 2.0, 3.0]);
+        let b = Tensor1D::new([1.0, -1.0, 0.0]);
+
+        let r = a.trace() - &b;
+        assert_eq!(r.data(), &[0.0, 3.0, 3.0]);
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.gradient(&a), &[1.0 / 3.0; 3]);
+        assert_eq!(gradients.gradient(&b), &[-1.0 / 3.0; 3]);
+
+        let r = &b - a.trace();
+        assert_eq!(r.data(), &[0.0, -3.0, -3.0]);
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.gradient(&a), &[-1.0 / 3.0; 3]);
+        assert_eq!(gradients.gradient(&b), &[1.0 / 3.0; 3]);
     }
 
     #[test]
     fn test_mul_1d() {
-        todo!();
+        let a = Tensor1D::new([1.0, 2.0, 3.0]);
+        let b = Tensor1D::new([1.0, -1.0, 0.0]);
+
+        let r = mul_lhs(a.trace(), &b);
+        assert_eq!(r.data(), &[1.0, -2.0, 0.0]);
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.gradient(&a), &[1.0 / 3.0, -1.0 / 3.0, 0.0]);
+        assert_eq!(gradients.gradient(&b), &[1.0 / 3.0, 2.0 / 3.0, 1.0]);
+
+        let r = &b * a.trace();
+        assert_eq!(r.data(), &[1.0, -2.0, 0.0]);
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.gradient(&a), &[1.0 / 3.0, -1.0 / 3.0, 0.0]);
+        assert_eq!(gradients.gradient(&b), &[1.0 / 3.0, 2.0 / 3.0, 1.0]);
     }
 
     #[test]
     fn test_div_1d() {
-        todo!();
+        let a = Tensor1D::new([1.0, 2.0, 3.0]);
+        let b = Tensor1D::new([1.0, -1.0, 0.0]);
+
+        let r = a.trace() / &b;
+        assert_eq!(r.data(), &[1.0, -2.0, f32::INFINITY]);
+        let gradients = r.mean().backward();
+        assert_eq!(
+            gradients.gradient(&a),
+            &[1.0 / 3.0, -1.0 / 3.0, f32::INFINITY]
+        );
+        assert_eq!(
+            gradients.gradient(&b),
+            &[-1.0 / 3.0, -2.0 / 3.0, f32::NEG_INFINITY]
+        );
+
+        let r = &b / a.trace();
+        assert_eq!(r.data(), &[1.0, -0.5, 0.0]);
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.gradient(&a), &[-1.0 / 3.0, 1.0 / 12.0, 0.0]);
+        assert_eq!(gradients.gradient(&b), &[1.0 / 3.0, 1.0 / 6.0, 0.11111112]);
     }
 
     #[test]
     fn test_add_2d() {
-        todo!();
+        let a = Tensor2D::new([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b = Tensor2D::new([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+
+        let r = a.trace() + &b;
+        assert_eq!(
+            r.data(),
+            &[[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]
+        );
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.gradient(&a), &[[1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.gradient(&b), &[[1.0 / 6.0; 3]; 2]);
+
+        let r = &b + a.trace();
+        assert_eq!(
+            r.data(),
+            &[[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]
+        );
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.gradient(&a), &[[1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.gradient(&b), &[[1.0 / 6.0; 3]; 2]);
     }
 
     #[test]
     fn test_sub_2d() {
-        todo!();
+        let a = Tensor2D::new([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b = Tensor2D::new([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+
+        let r = a.trace() - &b;
+        assert_eq!(
+            r.data(),
+            &[
+                [0.13709998, -0.21360001, -0.2259],
+                [-0.2601, 0.33279997, 0.7954]
+            ]
+        );
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.gradient(&a), &[[1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.gradient(&b), &[[-1.0 / 6.0; 3]; 2]);
+
+        let r = &b - a.trace();
+        assert_eq!(
+            r.data(),
+            &[
+                [-0.13709998, 0.21360001, 0.2259],
+                [0.2601, -0.33279997, -0.7954]
+            ]
+        );
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.gradient(&a), &[[-1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.gradient(&b), &[[1.0 / 6.0; 3]; 2]);
     }
 
     #[test]
     fn test_mul_2d() {
-        todo!();
+        let a = Tensor2D::new([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b = Tensor2D::new([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+
+        let r = mul_lhs(a.trace(), &b);
+        assert_eq!(
+            r.data(),
+            &[
+                [0.3415743, 0.06565552, 0.056385003],
+                [0.46729425, 0.2581082, 0.03236696]
+            ]
+        );
+        let gradients = r.mean().backward();
+        assert_eq!(
+            gradients.gradient(&a),
+            &[
+                [0.08665001, 0.06406667, 0.06265],
+                [0.13765001, 0.06136667, 0.006466667]
+            ]
+        );
+        assert_eq!(
+            gradients.gradient(&b),
+            &[
+                [0.109500006, 0.028466668, 0.025000002],
+                [0.0943, 0.11683333, 0.13903335]
+            ]
+        );
+
+        let r = &b * a.trace();
+        assert_eq!(
+            r.data(),
+            &[
+                [0.3415743, 0.06565552, 0.056385003],
+                [0.46729425, 0.2581082, 0.03236696]
+            ]
+        );
+        let gradients = r.mean().backward();
+        assert_eq!(
+            gradients.gradient(&a),
+            &[
+                [0.08665001, 0.06406667, 0.06265],
+                [0.13765001, 0.06136667, 0.006466667]
+            ]
+        );
+        assert_eq!(
+            gradients.gradient(&b),
+            &[
+                [0.109500006, 0.028466668, 0.025000002],
+                [0.0943, 0.11683333, 0.13903335]
+            ]
+        );
     }
 
     #[test]
     fn test_div_2d() {
-        todo!();
+        let a = Tensor2D::new([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b = Tensor2D::new([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+
+        let r = a.trace() / &b;
+        assert_eq!(
+            r.data(),
+            &[
+                [1.2637045, 0.4443288, 0.3990423],
+                [0.6850708, 1.9038565, 21.5]
+            ]
+        );
+        let gradients = r.mean().backward();
+        assert_eq!(
+            gradients.gradient(&a),
+            &[
+                [0.32057446, 0.4335761, 0.44338033],
+                [0.20180005, 0.45265254, 4.2955327]
+            ]
+        );
+        assert_eq!(
+            gradients.gradient(&b),
+            &[
+                [-0.4051114, -0.19265036, -0.1769275],
+                [-0.13824734, -0.86178553, -92.35396]
+            ]
+        );
+
+        let r = &b / a.trace();
+        assert_eq!(
+            r.data(),
+            &[
+                [0.79132426, 2.2505856, 2.5059998],
+                [1.4597031, 0.52524966, 0.046511628]
+            ]
+        );
+        let gradients = r.mean().backward();
+        assert_eq!(
+            gradients.gradient(&a),
+            &[
+                [-0.20074181, -2.1961217, -2.7844446],
+                [-0.42998204, -0.12488105, -0.009292662]
+            ]
+        );
+        assert_eq!(
+            gradients.gradient(&b),
+            &[
+                [0.25367835, 0.97580016, 1.1111112],
+                [0.29456818, 0.2377556, 0.1997922]
+            ]
+        );
     }
 }
