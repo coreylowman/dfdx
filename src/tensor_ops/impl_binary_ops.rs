@@ -1,100 +1,6 @@
 use crate::prelude::*;
 use std::ops::{Add, Mul, Sub};
 
-fn matmul<const M: usize, const N: usize, const O: usize>(
-    x: &[[f32; N]; M],
-    y: &[[f32; O]; N],
-) -> [[f32; O]; M] {
-    let mut result = [[0.0; O]; M];
-    for m in 0..M {
-        for n in 0..N {
-            let x_mn = &x[m][n];
-            for o in 0..O {
-                result[m][o] += x_mn * &y[n][o];
-            }
-        }
-    }
-    result
-}
-
-fn transpose<const M: usize, const N: usize>(x: &[[f32; N]; M]) -> [[f32; M]; N] {
-    let mut result = [[0.0; M]; N];
-    for n in 0..N {
-        for m in 0..M {
-            result[n][m] = x[m][n];
-        }
-    }
-    result
-}
-
-pub fn matmat_mul<const M: usize, const N: usize, const O: usize, H: TapeHolder>(
-    lhs: Tensor2D<M, N, H>,
-    rhs: &Tensor2D<N, O, NoTape>,
-) -> Tensor2D<M, O, H> {
-    let result = Tensor2D::new(matmul(lhs.data(), rhs.data()));
-    let (lhs, mut tape_holder) = lhs.split_tape_holder();
-
-    let lderiv = transpose(rhs.data());
-    let rderiv = transpose(lhs.data());
-    let _rhs = rhs.phantom();
-    let _lhs = lhs.phantom();
-    let _result = result.phantom();
-    tape_holder.add_operation(move |tape| {
-        let result_grad = tape.gradient(&_result);
-        let d_grad_lhs = matmul(result_grad, &lderiv);
-        let d_grad_rhs = matmul(&rderiv, result_grad);
-
-        tape.mut_gradient(&_lhs).add_assign(&d_grad_lhs);
-        tape.mut_gradient(&_rhs).add_assign(&d_grad_rhs);
-    });
-
-    result.with_tape_holder(tape_holder)
-}
-
-impl<const M: usize, const N: usize, const O: usize, H: TapeHolder> Mul<&Tensor2D<N, O, NoTape>>
-    for Tensor2D<M, N, H>
-{
-    type Output = Tensor2D<M, O, H>;
-    fn mul(self, rhs: &Tensor2D<N, O, NoTape>) -> Self::Output {
-        matmat_mul(self, rhs)
-    }
-}
-
-pub fn vecmat_mul<const N: usize, const O: usize, H: TapeHolder>(
-    lhs: Tensor1D<N, H>,
-    rhs: &Tensor2D<N, O, NoTape>,
-) -> Tensor1D<O, H> {
-    let lhs_2d = [*lhs.data(); 1];
-    let result = Tensor1D::new(matmul(&lhs_2d, rhs.data())[0]);
-    let (lhs, mut tape_holder) = lhs.split_tape_holder();
-    todo!("update tape");
-    // tape_holder.add_operation(|tape| {
-    //     let lderiv = transpose(rhs.data());
-    //     let rderiv = transpose(&lhs_2d);
-    //     let lhs = lhs.phantom();
-    //     let rhs = rhs.phantom();
-    //     let result = result.phantom();
-    //     tape.add_operation(|tape| {
-    //         let result_grad = tape.gradient(&result);
-    //         let d_grad_lhs = matmul(result_grad, &lderiv);
-    //         let d_grad_rhs = matmul(&rderiv, result_grad);
-
-    //         tape.mut_gradient(&lhs).add_assign(&d_grad_lhs);
-    //         tape.mut_gradient(&rhs).add_assign(&d_grad_rhs);
-    //     });
-    // });
-    result.with_tape_holder(tape_holder)
-}
-
-impl<const N: usize, const O: usize, H: TapeHolder> Mul<&Tensor2D<N, O, NoTape>>
-    for Tensor1D<N, H>
-{
-    type Output = Tensor1D<O, H>;
-    fn mul(self, rhs: &Tensor2D<N, O, NoTape>) -> Self::Output {
-        vecmat_mul(self, rhs)
-    }
-}
-
 // MxN + 1xN
 pub fn broadcast_outer_add<const M: usize, const N: usize, H: TapeHolder>(
     lhs: Tensor2D<M, N, H>,
@@ -136,9 +42,9 @@ impl<const M: usize, const N: usize, H: TapeHolder> Add<&Tensor1D<N, NoTape>>
 
 pub fn add<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
     let result = T::NoTape::new(lhs.data().add(rhs.data()));
-    let (rhs, mut tape_holder) = rhs.split_tape_holder();
     let lhs_deriv = lhs.data().map_elems(|_| 1.0);
     let rhs_deriv = rhs.data().map_elems(|_| 1.0);
+    let (rhs, mut tape_holder) = rhs.split_tape_holder();
     let _lhs = lhs.phantom();
     let _rhs = rhs.phantom();
     let _result = result.phantom();
@@ -153,9 +59,9 @@ pub fn add<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
 
 pub fn sub<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
     let result = T::NoTape::new(lhs.data().sub(rhs.data()));
-    let (rhs, mut tape_holder) = rhs.split_tape_holder();
     let lhs_deriv = lhs.data().map_elems(|_| 1.0);
     let rhs_deriv = rhs.data().map_elems(|_| -1.0);
+    let (rhs, mut tape_holder) = rhs.split_tape_holder();
     let _lhs = lhs.phantom();
     let _rhs = rhs.phantom();
     let _result = result.phantom();
@@ -171,10 +77,10 @@ pub fn sub<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
 
 pub fn mul<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
     let data = lhs.data().mul(rhs.data());
+    let lhs_deriv = rhs.data().clone();
+    let rhs_deriv = lhs.data().clone();
     let result = T::NoTape::new(data);
     let (rhs, mut tape_holder) = rhs.split_tape_holder();
-    let lhs_deriv: T::ArrayType = rhs.data().clone();
-    let rhs_deriv: T::ArrayType = lhs.data().clone();
     let _lhs = lhs.phantom();
     let _rhs = rhs.phantom();
     let _result = result.phantom();
@@ -249,7 +155,7 @@ impl<$(const $Vs: usize, )* H: TapeHolder> std::ops::Sub<&$rhsty<$($Zs, )* NoTap
             tape.mut_gradient(&_lhs).add_assign(&d_grad_lhs);
 
             // TODO test this
-            let d_grad_rhs = tape.gradient(&_result).mul(&rhs_deriv).reduce_inner(&|x, y| x + y);
+            let d_grad_rhs = tape.gradient(&_result).mul(&rhs_deriv).reduce_inner(|x, y| x + y);
             tape.mut_gradient(&_rhs).add_assign(&d_grad_rhs);
         });
         result.with_tape_holder(tape_holder)
