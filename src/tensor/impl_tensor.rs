@@ -8,7 +8,7 @@ pub trait Tensor: HasNdArray + CanUpdateWithGradients + HasUniqueId + IntoPhanto
         + Tensor<TapeHolder = NoTape, ArrayType = Self::ArrayType>
         + TensorCreator
         // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
-        + HasTapeHolder<Self::TapeHolder, Output = Self>
+        + CanPutTapeHolder<Self::TapeHolder, Output = Self>
         + IntoPhantom;
 
     type WithTape: 'static

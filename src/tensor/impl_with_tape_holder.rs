@@ -1,13 +1,13 @@
 use super::*;
 
-pub trait HasTapeHolder<H: TapeHolder> {
+pub trait CanPutTapeHolder<H: TapeHolder> {
     type Output;
     fn with_tape_holder(self, tape_holder: H) -> Self::Output;
 }
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* HIn, HOut> HasTapeHolder<HOut> for $typename<$($Vs, )* HIn>
+impl<$(const $Vs: usize, )* HIn, HOut> CanPutTapeHolder<HOut> for $typename<$($Vs, )* HIn>
 where
     HIn: TapeHolder,
     HOut: TapeHolder,
