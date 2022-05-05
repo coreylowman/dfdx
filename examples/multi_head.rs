@@ -30,7 +30,7 @@ impl<H: TapeHolder> Module<Tensor1D<10, H>> for MultiHeadedMLP {
     type Output = (Tensor1D<2, H>, Tensor1D<1, NoTape>);
     fn forward(&self, x: Tensor1D<10, H>) -> Self::Output {
         let x = self.trunk.forward(x);
-        let (x, _x) = x.duplicate();
+        let _x = x.duplicate();
         let out2 = self.head2.forward(x);
         let (out2, tape_holder) = out2.split_tape_holder();
         let x = _x.with_tape_holder(tape_holder);
@@ -43,7 +43,7 @@ impl<H: TapeHolder, const B: usize> Module<Tensor2D<B, 10, H>> for MultiHeadedML
     type Output = (Tensor2D<B, 2, H>, Tensor2D<B, 1, NoTape>);
     fn forward(&self, x: Tensor2D<B, 10, H>) -> Self::Output {
         let x = self.trunk.forward(x);
-        let (x, _x) = x.duplicate();
+        let _x = x.duplicate();
         let out2 = self.head2.forward(x);
         let (out2, tape_holder) = out2.split_tape_holder();
         let x = _x.with_tape_holder(tape_holder);
