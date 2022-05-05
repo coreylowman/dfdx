@@ -70,7 +70,7 @@ fn main() {
     for _i_epoch in 0..15 {
         let start = Instant::now();
 
-        let x = x.with_tape();
+        let x = x.trace();
         let (pred1, pred2) = module.forward(x);
         let (loss1, tape_holder) = mse_loss(pred1, &y1).split_tape_holder();
         let loss2 = mse_loss(pred2.with_tape_holder(tape_holder), &y2);

@@ -32,7 +32,7 @@ mod tests {
     #[test]
     fn test_0d_neg() {
         let a = Tensor0D::new(10.0);
-        let r = -(a.with_tape());
+        let r = -(a.trace());
         assert_eq!(r.data(), &-10.0);
         let gradients = r.backward();
         assert_eq!(gradients.gradient(&a), &-1.0);
@@ -41,7 +41,7 @@ mod tests {
     #[test]
     fn test_1d_neg() {
         let a: Tensor1D<3> = Tensor1D::new([-2.0, 0.0, 5.0]);
-        let r = -(a.with_tape());
+        let r = -(a.trace());
         assert_eq!(r.data(), &[2.0, 0.0, -5.0]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.gradient(&a), &[-1.0 / 3.0; 3]);
@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn test_2d_neg() {
         let a: Tensor2D<2, 3> = Tensor2D::new([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
-        let r = -(a.with_tape());
+        let r = -(a.trace());
         assert_eq!(r.data(), &[[2.0, 0.0, -5.0], [-1.0, -2.0, -3.0]]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.gradient(&a), &[[-1.0 / 6.0; 3]; 2]);
@@ -59,7 +59,7 @@ mod tests {
     #[test]
     fn test_3d_neg() {
         let a: Tensor3D<4, 2, 3> = Tensor3D::ones();
-        let r = -(a.with_tape());
+        let r = -(a.trace());
         assert_eq!(r.data(), &[[[-1.0; 3]; 2]; 4]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.gradient(&a), &[[[-1.0 / 24.0; 3]; 2]; 4]);

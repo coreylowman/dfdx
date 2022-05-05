@@ -26,7 +26,7 @@ fn main() {
     for _i_epoch in 0..15 {
         let start = Instant::now();
 
-        let pred = module.forward(x.with_tape());
+        let pred = module.forward(x.trace());
         let loss = cross_entropy_with_logits_loss(pred, &y);
         let (loss_v, gradients) = sgd.compute_gradients(loss);
         module.update_with_grads(&gradients);

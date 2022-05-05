@@ -36,7 +36,7 @@ mod tests {
     #[test]
     fn test_sum_last_1d() {
         let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
-        let r: Tensor0D<WithTape> = t.with_tape().sum_last();
+        let r: Tensor0D<WithTape> = t.trace().sum_last();
         assert_eq!(r.data(), &6.0);
         let gradients = r.mean().backward();
         assert_eq!(gradients.gradient(&t), &[1.0; 3]);
@@ -45,7 +45,7 @@ mod tests {
     #[test]
     fn test_sum_last_2d() {
         let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-        let r: Tensor1D<2, WithTape> = t.with_tape().sum_last();
+        let r: Tensor1D<2, WithTape> = t.trace().sum_last();
         assert_eq!(r.data(), &[6.0, 15.0]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.gradient(&t), &[[0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]);
@@ -59,7 +59,7 @@ mod tests {
             [[-3.0, 2.0, -1.0], [-6.0, 5.0, -4.0]],
             [[1.0, -2.0, 3.0], [4.0, -5.0, 6.0]],
         ]);
-        let r: Tensor2D<4, 2, WithTape> = t.with_tape().sum_last();
+        let r: Tensor2D<4, 2, WithTape> = t.trace().sum_last();
         assert_eq!(
             r.data(),
             &[[6.0, 15.0], [-6.0, -15.0], [-2.0, -5.0], [2.0, 5.0],]

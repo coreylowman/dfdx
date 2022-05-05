@@ -26,7 +26,7 @@ fn main() {
     for _i_epoch in 0..15 {
         let start = Instant::now();
 
-        let x = x.with_tape();
+        let x = x.trace();
         let pred = module.forward(x);
         let loss = mse_loss(pred, &y);
         let (loss_v, gradients) = sgd.compute_gradients(loss);

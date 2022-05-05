@@ -22,7 +22,7 @@ fn main() {
     module.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
     // trace x through the module
-    let x = x.with_tape();
+    let x = x.trace();
     let pred = module.forward(&x);
     let loss = (&y - pred).square().mean();
     
@@ -81,10 +81,10 @@ What's also nice is that we can use tuple's as the container instead of introduc
 
 ### Type checked backward
 
-tl;dr: If you forget to include a call to `with_tape()`, the program won't compile!
+tl;dr: If you forget to include a call to `trace()`, the program won't compile!
 
 ```diff
-+let x = x.with_tape();
++let x = x.trace();
 let pred = module.forward(x);
 let loss = (&y - pred).square().mean();
 let (loss_v, gradients) = sgd.compute_gradients(loss);

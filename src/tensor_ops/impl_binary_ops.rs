@@ -271,7 +271,7 @@ broadcast_sub_impl!(Tensor4D, [M, N, O, P], Tensor3D, [M, N, O]);
 //     fn test_broadcast_sub_1d() {
 //         let a: Tensor1D<3> = Tensor1D::new(arr1(&[1.0, 2.0, 3.0]));
 //         let b: Tensor1D<1> = Tensor1D::new(arr1(&[1.0]));
-//         let r = a.with_tape() - &b;
+//         let r = a.trace() - &b;
 //         assert_eq!(r.data(), arr1(&[0.0, 1.0, 2.0]));
 //         let gradients = backward(r.mean());
 //         assert_eq!(
@@ -296,8 +296,8 @@ broadcast_sub_impl!(Tensor4D, [M, N, O, P], Tensor3D, [M, N, O]);
 //     fn test_broadcast_sub_2d() {
 //         let a: Tensor2D<2, 3> = Tensor2D::new(arr2(&[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]));
 //         let b: Tensor2D<2, 1> = Tensor2D::new(arr2(&[[1.0], [2.0]]));
-//         // let r = broadcast_sub_2d(a.with_tape(), &b);
-//         let r = a.with_tape() - &b;
+//         // let r = broadcast_sub_2d(a.trace(), &b);
+//         let r = a.trace() - &b;
 //         assert_eq!(r.data(), arr2(&[[0.0, 1.0, 2.0], [2.0, 3.0, 4.0]]));
 //         let gradients = backward(r.mean());
 //         assert_eq!(

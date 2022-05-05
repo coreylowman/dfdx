@@ -2,7 +2,7 @@ use super::*;
 use crate::array_ops::{FillElements, ZeroElements};
 use rand::prelude::Distribution;
 
-pub trait TensorCreator: Tensor + Sized {
+pub trait TensorCreator: HasNdArray + Sized {
     fn new(data: Self::ArrayType) -> Self;
 
     fn zeros() -> Self {

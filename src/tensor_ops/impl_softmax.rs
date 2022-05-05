@@ -43,7 +43,7 @@ mod tests {
     #[test]
     fn test_logsumexp_1d() {
         let a: Tensor1D<5> = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = a.with_tape().logsumexp();
+        let r = a.trace().logsumexp();
         assert_eq!(r.data(), &2.4519143);
         let gradients = backward(r.mean());
         assert_eq!(
@@ -55,7 +55,7 @@ mod tests {
     #[test]
     fn test_log_softmax_1d() {
         let a: Tensor1D<5> = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = a.with_tape().log_softmax();
+        let r = a.trace().log_softmax();
         assert_eq!(
             r.data(),
             &[-4.4519143, -3.4519143, -2.4519143, -1.4519143, -0.4519143]
@@ -76,7 +76,7 @@ mod tests {
     #[test]
     fn test_softmax_1d() {
         let a: Tensor1D<5> = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = a.with_tape().softmax();
+        let r = a.trace().softmax();
         assert_eq!(
             r.data(),
             &[0.011656232, 0.031684924, 0.086128555, 0.23412168, 0.6364087]
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn test_logsumexp_2d() {
         let a: Tensor2D<2, 3> = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r: Tensor1D<2, WithTape> = a.with_tape().logsumexp();
+        let r: Tensor1D<2, WithTape> = a.trace().logsumexp();
         assert_eq!(r.data(), &[0.40760595, 7.0509458]);
         let gradients = backward(r.mean());
         assert_eq!(
@@ -114,7 +114,7 @@ mod tests {
     #[test]
     fn test_log_softmax_2d() {
         let a: Tensor2D<2, 3> = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r = a.with_tape().log_softmax();
+        let r = a.trace().log_softmax();
         assert_eq!(
             r.data(),
             &[
@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn test_softmax_2d() {
         let a: Tensor2D<2, 3> = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r = a.with_tape().softmax();
+        let r = a.trace().softmax();
         assert_eq!(
             r.data(),
             &[

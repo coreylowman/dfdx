@@ -6,14 +6,12 @@ pub trait Tensor: HasNdArray + CanUpdateWithGradients + HasUniqueId + IntoPhanto
 
     type NoTape: 'static
         + Tensor<TapeHolder = NoTape, ArrayType = Self::ArrayType>
+        // NOTE: we only want to be able to create NoTape tensors
         + TensorCreator
         // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
-        + CanPutTapeHolder<Self::TapeHolder, Output = Self>
-        + IntoPhantom;
+        + CanPutTapeHolder<Self::TapeHolder, Output = Self>;
 
-    type WithTape: 'static
-        + Tensor<TapeHolder = WithTape, ArrayType = Self::ArrayType>
-        + IntoPhantom;
+    type WithTape: 'static + Tensor<TapeHolder = WithTape, ArrayType = Self::ArrayType>;
 
     fn split_tape_holder(self) -> (Self::NoTape, Self::TapeHolder);
 }
