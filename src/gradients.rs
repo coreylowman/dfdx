@@ -1,18 +1,6 @@
 use crate::prelude::*;
 use std::collections::HashMap;
 
-pub trait IsNdArray {
-    type ArrayType: 'static
-        + Sized
-        + Clone
-        + ZipMapElements<Self::ArrayType>
-        + MapElements
-        + ZeroElements
-        + CountElements
-        + ReduceElements
-        + FillElements;
-}
-
 pub struct GradientTape {
     operations: Vec<Box<dyn FnOnce(&mut Gradients) -> ()>>,
 }

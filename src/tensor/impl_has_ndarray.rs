@@ -1,5 +1,5 @@
 use super::*;
-use crate::gradients::IsNdArray;
+use crate::array_ops::IsNdArray;
 
 pub trait HasNdArray: IsNdArray {
     fn data(&self) -> &Self::ArrayType;
