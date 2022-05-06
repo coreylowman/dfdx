@@ -1,8 +1,5 @@
 use super::*;
-use crate::{
-    array_ops::{FillElements, ZeroElements},
-    gradients::unique_id,
-};
+use crate::prelude::*;
 use rand::prelude::Distribution;
 
 pub trait TensorCreator: HasNdArray + Sized {
@@ -52,7 +49,7 @@ tensor_impl!(Tensor4D, [M, N, O, P]);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gradients::{unique_id, UniqueId};
+    use crate::unique_id::{unique_id, UniqueId};
     use rand::thread_rng;
 
     #[test]

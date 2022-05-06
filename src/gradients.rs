@@ -1,25 +1,6 @@
 use crate::prelude::*;
 use std::collections::HashMap;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub struct UniqueId(pub(crate) usize);
-
-pub(crate) fn unique_id() -> UniqueId {
-    static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    UniqueId(COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
-}
-
-impl std::ops::Deref for UniqueId {
-    type Target = usize;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-pub trait HasUniqueId {
-    fn id(&self) -> &UniqueId;
-}
-
 pub trait IsNdArray {
     type ArrayType: 'static
         + Sized
@@ -154,58 +135,3 @@ mod tests {
         assert_eq!(g.ref_gradient(&t1), &[1.0; 5]);
     }
 }
-/*
-
-match operation {
-                Operation::Unary(op) => {
-                    let d_grad = self.deriv(op.parent_deriv) * self.grad(op.result_grad);
-                    self.gradients[op.parent_grad.index] += &d_grad;
-                }
-                Operation::Binary(op) => match op.op_type {
-                    OpType::MatMul { m, n, o } => {
-                        let result = self
-                            .grad(op.result_grad)
-                            .clone()
-                            .into_shape((m, o))
-                            .unwrap();
-                        let d0 = self
-                            .deriv(op.parent_derivs[0])
-                            .clone()
-                            .into_shape((n, o))
-                            .unwrap()
-                            .reversed_axes();
-                        let d1 = self
-                            .deriv(op.parent_derivs[1])
-                            .clone()
-                            .into_shape((m, n))
-                            .unwrap()
-                            .reversed_axes();
-
-                        let d_grad0 = result.dot(&d0);
-                        let d_grad1 = d1.dot(&result);
-
-                        self.gradients[op.parent_grads[0].index] += &d_grad0;
-                        self.gradients[op.parent_grads[1].index] += &d_grad1;
-                    }
-                    OpType::Broadcast(axis, keep_axis) => {
-                        let d_grad = self.deriv(op.parent_derivs[0]) * self.grad(op.result_grad);
-                        self.gradients[op.parent_grads[0].index] += &d_grad;
-
-                        let broadcasted_grad = self.grad(op.result_grad).sum_axis(axis);
-                        let broadcasted_grad = if keep_axis {
-                            broadcasted_grad.insert_axis(axis)
-                        } else {
-                            broadcasted_grad
-                        };
-                        let d_grad = self.deriv(op.parent_derivs[1]) * &broadcasted_grad;
-                        self.gradients[op.parent_grads[1].index] += &d_grad;
-                    }
-                    _ => {
-                        for (&deriv, grad) in op.parent_derivs.iter().zip(op.parent_grads.iter()) {
-                            let d_grad = self.deriv(deriv) * self.grad(op.result_grad);
-                            self.gradients[grad.index] += &d_grad;
-                        }
-                    }
-                },
-            }
-*/

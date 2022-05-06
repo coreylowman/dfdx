@@ -1,5 +1,5 @@
 use super::structs::*;
-use crate::gradients::{HasUniqueId, UniqueId};
+use crate::unique_id::{HasUniqueId, UniqueId};
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
