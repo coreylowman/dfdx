@@ -1,4 +1,4 @@
-# STAG: Strongly Typed Auto Grad
+# stag: Strongly Typed Auto Grad
 
 Reverse Mode Auto Differentiation[1] in Rust.
 
@@ -17,21 +17,22 @@ fn main() {
     let x: Tensor2D<64, 10> = Tensor2D::randn(&mut rng);
     let y: Tensor2D<64, 2> = Tensor2D::randn(&mut rng);
 
-    // initialize our MLP with uniform random weights
-    let mut module: MLP = Default::default();
-    module.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
+    // initialize our MLP with all zero weights
+    let mut mlp: MLP = Default::default();
 
-    // trace x through the module
-    let x = x.trace();
-    let pred = module.forward(&x);
+    // randomize the weights according to a uniform random distribution
+    mlp.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
+
+    // execute the MLP - x.trace() tells stag to collect gradient information
+    let pred = mlp.forward(x.trace());
     let loss = (&y - pred).square().mean();
-    
-    // compute gradients
-    let mut sgd = Sgd { lr: 1e-2 };
-    let (_, gradients) = sgd.compute_gradients(loss);
 
-    // update the MLP
-    module.update_with_tape(&gradients);
+    // run backprop to get the gradients
+    let gradients = loss.backward();
+    
+    // update the MLP with SGD!
+    let mut sgd = Sgd::new(1e-2);
+    sgd.update(&mut mlp, gradients);
 }
 ```
 
@@ -50,7 +51,7 @@ fn main() {
 ### Module
 
 ```rust
-pub trait Module<Input>: Default + UpdateWithTape {
+pub trait Module<Input>: Default + CanUpdateWithGrads {
     type Output;
     fn forward(&self, input: &Input) -> Self::Output;
 }
@@ -58,9 +59,10 @@ pub trait Module<Input>: Default + UpdateWithTape {
 
 The Module trait is simple yet powerful! The generic type variable for the input allows a single struct to implement module for multiple inputs. *This is how batching is implented!* The associated type variable for output enables a number of other nice features, but also allows the implementation to control what the output is.
 
-### Feedforward (a.k.a Sequential) modules & Tuples
+### Tuples represent feedforward (a.k.a sequential) modules
 
-The associated Output type makes combining multiple modules to be executed sequentially very easy:
+Since we can implement traits for tuples, which is *not possible in other languages* AFAIK, they provide a very nice frontend
+for sequentially executing modules.
 
 ```rust
 impl<Input, A, B> Module<Input> for (A, B)
@@ -77,37 +79,28 @@ where
 }
 ```
 
-What's also nice is that we can use tuple's as the container instead of introducing a whole new struct. *This is not possible in other languages!*
+We've implemented Module for Tuples up to 6 elements, but *you can arbitrarily nest them*!
 
 ### Type checked backward
 
 tl;dr: If you forget to include a call to `trace()`, the program won't compile!
 
 ```diff
-+let x = x.trace();
-let pred = module.forward(x);
+-let pred = module.forward(x);
++let pred = module.forward(x.trace());
 let loss = (&y - pred).square().mean();
-let (loss_v, gradients) = sgd.compute_gradients(loss);
+let gradients = loss.backward();
 ```
 
 In order to compute the gradients from a computation graph, the actual gradient tape is needed.
-In STAG, the gradient tape is transferred to the output of operations. This means the loss tensor
+In `stag`, the gradient tape is transferred to the output of operations. This means the loss tensor
 should have a tape with it, since it is the final output of the whole computation graph.
 
-STAG requires this via various function definitions:
-
-1. The `Optimizer` trait requires a 0D tensor with a `WithTape` type parameter. The `WithTape` struct is a `TapeHolder` and has the actual `GradientTape`.
-
-```rust
-pub trait Optimizer {
-    fn compute_gradients(&mut self, loss: Tensor0D<WithTape>) -> (f32, Box<GradientTape>);
-}
-```
-
-2. The `backward` function accepts a generic tensor, also with the `TapeHolder` generic set to `WithTape`!
+`stag` requires this at compile time via the `backward` function.
+It accepts a generic tensor, but with the `TapeHolder` generic set to `WithTape`!
 
 ```rust
-fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Box<crate::gradients::GradientTape> {
+pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Box<crate::gradients::GradientTape> {
     ...
 }
 ```
@@ -115,3 +108,52 @@ fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Box<crate::gradients::Gra
 ### Gradient tape is not reference counted!
 
 Since all operations result in exactly 1 child, we can always move the gradient tape to the child of the last operation. This means we know exactly which tensor owns the gradient tape!
+
+One advanced use case requires that tensors be re-used multiple times in a computation graph.
+This can be handled by duplicating the tensor, and manually moving the gradient tape around.
+See [examples/multi_head.rs](examples/multi_head.rs) for an example.
+
+### Array Backend
+
+Our [src/array_ops](src/array_ops/) backend for computing results operations
+is built using __recursive trait definitions__.
+
+The main idea behind this is similar to recursion or induction proofs. First we specify
+the base trait, and then we specify the recursive trait.
+
+A simple example is counting the number of elements in an arbitrarily nested array
+at compile time.
+
+First we specify the trait we want to do this:
+
+```rust
+pub trait CountElements {
+    const NUM_ELEMENTS: usize;
+}
+```
+
+Now for the base case (assuming these will be arrays of floats), is just a single floating point number:
+
+```rust
+impl CountElements for f32 {
+    const NUM_ELEMENTS: usize = 1;
+}
+```
+
+And finally the recursive trait:
+
+```rust
+impl<T: CountElements, const M: usize> CountElements for [T; M] {
+    const NUM_ELEMENTS: usize = M * T::NUM_ELEMENTS;
+}
+```
+
+Notice the restriction on T also implementing `CountElements`. This allows us to use `T::NUM_ELEMENTS` in the trait body.
+
+Another few powerful things recursive traits can do:
+1. Map all elements of arbitarily nested arrays using a function
+2. Add two arrays together
+3. Reduce an array to one number
+4. Even more!
+
+Encourage you to check out all the code in [src/array_ops](src/array_ops/)!
