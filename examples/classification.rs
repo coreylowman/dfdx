@@ -17,8 +17,8 @@ fn main() {
     let y: Tensor2D<64, 2> = Tensor2D::randn(&mut rng).softmax();
 
     // initialize optimizer & model
-    let mut module: MLP = Default::default();
-    module.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
+    let mut mlp: MLP = Default::default();
+    mlp.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
     let mut sgd = Sgd::new(1e-2);
 
@@ -26,11 +26,11 @@ fn main() {
     for _i_epoch in 0..15 {
         let start = Instant::now();
 
-        let pred = module.forward(x.trace());
+        let pred = mlp.forward(x.trace());
         let loss = cross_entropy_with_logits_loss(pred, &y);
         let loss_v = *loss.data();
         let gradients = loss.backward();
-        sgd.update(&mut module, gradients);
+        sgd.update(&mut mlp, gradients);
 
         println!("mse={:#.3} in {:?}", loss_v, start.elapsed());
     }

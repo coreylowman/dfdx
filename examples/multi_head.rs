@@ -26,28 +26,27 @@ impl CanUpdateWithGradients for MultiHeadedMLP {
     }
 }
 
-impl<H: TapeHolder> Module<Tensor1D<10, H>> for MultiHeadedMLP {
-    type Output = (Tensor1D<2, H>, Tensor1D<1, NoTape>);
-    fn forward(&self, x: Tensor1D<10, H>) -> Self::Output {
-        let x = self.trunk.forward(x);
-        let _x = x.duplicate();
-        let out2 = self.head2.forward(x);
-        let (out2, tape_holder) = out2.split_tape_holder();
-        let x = _x.with_tape_holder(tape_holder);
-        let out1 = self.head1.forward(x);
-        (out1, out2)
-    }
-}
-
 impl<H: TapeHolder, const B: usize> Module<Tensor2D<B, 10, H>> for MultiHeadedMLP {
     type Output = (Tensor2D<B, 2, H>, Tensor2D<B, 1, NoTape>);
     fn forward(&self, x: Tensor2D<B, 10, H>) -> Self::Output {
+        // execute trunk
         let x = self.trunk.forward(x);
+
+        // duplicate x to use later for the other head
         let _x = x.duplicate();
+
+        // pass x through the 2nd head
         let out2 = self.head2.forward(x);
+
+        // grab the tape out of out2, so we can put it back into our duplicate of x
         let (out2, tape_holder) = out2.split_tape_holder();
+
+        // put the tape holder back into the duplicate of x
         let x = _x.with_tape_holder(tape_holder);
+
+        // now pass the tape through the other head
         let out1 = self.head1.forward(x);
+
         (out1, out2)
     }
 }
@@ -61,8 +60,8 @@ fn main() {
     let y2: Tensor2D<64, 1> = Tensor2D::randn(&mut rng);
 
     // initialize optimizer & model
-    let mut module: MultiHeadedMLP = Default::default();
-    module.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
+    let mut mlp: MultiHeadedMLP = Default::default();
+    mlp.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
     let mut sgd = Sgd::new(1e-2);
 
@@ -71,14 +70,17 @@ fn main() {
         let start = Instant::now();
 
         let x = x.trace();
-        let (pred1, pred2) = module.forward(x);
+        let (pred1, pred2) = mlp.forward(x);
+
+        // NOTE: we also have to move the tape around when computing losses
         let (loss1, tape_holder) = mse_loss(pred1, &y1).split_tape_holder();
         let loss2 = mse_loss(pred2.with_tape_holder(tape_holder), &y2);
+
         let losses = [*loss1.data(), *loss2.data()];
         let loss = &loss1 + loss2;
         let gradients = loss.backward();
-        sgd.update(&mut module, gradients);
+        sgd.update(&mut mlp, gradients);
 
-        println!("(losses={:.3?}) in {:?}", losses, start.elapsed());
+        println!("losses={:.3?} in {:?}", losses, start.elapsed());
     }
 }
