@@ -6,7 +6,7 @@ pub fn apply<T: Tensor, F: DifferentiableFunction>(t: T) -> T {
     let (t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let d_grad = deriv.mul(tape.gradient(&_result));
+        let d_grad = deriv.mul(tape.ref_gradient(&_result));
         tape.mut_gradient(&t).add_assign(&d_grad);
     });
     result.with_tape_holder(tape_holder)

@@ -1,11 +1,11 @@
 use super::structs::*;
-use crate::gradients::HasUniqueId;
+use crate::gradients::{HasUniqueId, UniqueId};
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H> HasUniqueId for $typename<$($Vs, )* H> {
-    fn id(&self) -> usize {
-        self.id
+    fn id(&self) -> &UniqueId {
+        &self.id
     }
 }
     };

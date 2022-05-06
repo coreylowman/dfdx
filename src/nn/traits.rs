@@ -1,4 +1,4 @@
-use crate::prelude::{CanUpdateWithGradients, Gradients, Tensor0D, WithTape};
+use crate::prelude::{CanUpdateWithGradients, Gradients};
 
 pub trait Module<Input>: Default + CanUpdateWithGradients {
     type Output;
@@ -6,5 +6,5 @@ pub trait Module<Input>: Default + CanUpdateWithGradients {
 }
 
 pub trait Optimizer {
-    fn compute_gradients(&mut self, loss: Tensor0D<WithTape>) -> (f32, Gradients);
+    fn update<M: CanUpdateWithGradients>(&mut self, module: &mut M, gradients: Gradients);
 }

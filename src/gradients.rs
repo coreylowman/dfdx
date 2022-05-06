@@ -1,8 +1,23 @@
 use crate::prelude::*;
 use std::collections::HashMap;
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub struct UniqueId(pub(crate) usize);
+
+pub(crate) fn unique_id() -> UniqueId {
+    static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    UniqueId(COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
+}
+
+impl std::ops::Deref for UniqueId {
+    type Target = usize;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 pub trait HasUniqueId {
-    fn id(&self) -> usize;
+    fn id(&self) -> &UniqueId;
 }
 
 pub trait IsNdArray {
@@ -47,7 +62,7 @@ impl GradientTape {
 
     pub fn backward<T: HasUniqueId + IsNdArray>(mut self, t: &T) -> Gradients {
         let mut gradients: Gradients = Default::default();
-        gradients.mut_gradient(t).map_assign_elems(|v| *v = 1.0);
+        gradients.mut_gradient(t).fill_with(&mut || 1.0);
         for operation in self.operations.drain(..) {
             (operation)(&mut gradients);
         }
@@ -55,8 +70,9 @@ impl GradientTape {
     }
 }
 
+#[derive(Debug)]
 pub struct Gradients {
-    gradient_by_id: HashMap<usize, Box<dyn std::any::Any>>,
+    gradient_by_id: HashMap<UniqueId, Box<dyn std::any::Any>>,
 }
 
 impl Default for Gradients {
@@ -68,20 +84,40 @@ impl Default for Gradients {
 }
 
 impl Gradients {
-    pub fn gradient<T: HasUniqueId + IsNdArray>(&self, t: &T) -> &T::ArrayType {
+    pub fn mut_gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> &mut T::ArrayType {
         self.gradient_by_id
-            .get(&t.id())
+            .entry(*t.id())
+            .or_insert_with(|| Box::new(T::ArrayType::ZEROS))
+            .downcast_mut()
+            .unwrap()
+    }
+
+    pub fn ref_gradient<T: HasUniqueId + IsNdArray>(&self, t: &T) -> &T::ArrayType {
+        self.gradient_by_id
+            .get(t.id())
             .unwrap()
             .downcast_ref()
             .unwrap()
     }
 
-    pub fn mut_gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> &mut T::ArrayType {
+    pub fn remove_gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<T::ArrayType> {
         self.gradient_by_id
-            .entry(t.id())
-            .or_insert_with(|| Box::new(T::ArrayType::ZEROS))
-            .downcast_mut()
-            .unwrap()
+            .remove_entry(t.id())
+            .map(|(_, v)| *v.downcast().expect("Unable to cast properly"))
+    }
+}
+
+pub trait GradientProvider {
+    fn gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<T::ArrayType>;
+}
+
+pub trait CanUpdateWithGradients {
+    fn update<G: GradientProvider>(&mut self, grads: &mut G);
+}
+
+impl GradientProvider for Gradients {
+    fn gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<T::ArrayType> {
+        self.remove_gradient(t)
     }
 }
 
@@ -91,14 +127,13 @@ mod tests {
 
     use super::*;
 
-    #[derive(Default)]
     struct Tensor {
-        id: usize,
+        id: UniqueId,
     }
 
     impl HasUniqueId for Tensor {
-        fn id(&self) -> usize {
-            self.id
+        fn id(&self) -> &UniqueId {
+            &self.id
         }
     }
 
@@ -108,15 +143,15 @@ mod tests {
 
     #[test]
     fn test_backward() {
-        let t1: Tensor = Default::default();
-        let _t1: Tensor = Default::default();
+        let t1: Tensor = Tensor { id: UniqueId(0) };
+        let _t1: Tensor = Tensor { id: UniqueId(0) };
 
         let mut tape = GradientTape::default();
         tape.add_operation(move |g| {
             g.mut_gradient(&_t1).add(&[1.0; 5]);
         });
         let g = tape.backward(&t1);
-        assert_eq!(g.gradient(&t1), &[1.0; 5]);
+        assert_eq!(g.ref_gradient(&t1), &[1.0; 5]);
     }
 }
 /*

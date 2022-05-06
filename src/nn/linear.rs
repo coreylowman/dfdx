@@ -8,9 +8,9 @@ pub struct Linear<const I: usize, const O: usize> {
 }
 
 impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
-    fn update_with_grads(&mut self, grads: &Gradients) {
-        self.weight.update_with_grads(grads);
-        self.bias.update_with_grads(grads);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) {
+        self.weight.update(grads);
+        self.bias.update(grads);
     }
 }
 

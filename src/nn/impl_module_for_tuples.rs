@@ -89,8 +89,8 @@ where
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+]) => {
         impl<$($name: CanUpdateWithGradients),+> CanUpdateWithGradients for ($($name,)+) {
-            fn update_with_grads(&mut self, grads: &Gradients) {
-                $(self.$idx.update_with_grads(grads));+
+            fn update<G: GradientProvider>(&mut self, grads: &mut G) {
+                $(self.$idx.update(grads));+
             }
         }
 

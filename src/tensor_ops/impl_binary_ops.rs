@@ -18,13 +18,13 @@ pub fn broadcast_outer_add<const M: usize, const N: usize, H: TapeHolder>(
     let _lhs = lhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let d_grad_lhs = lhs_deriv.mul(tape.gradient(&_result));
+        let d_grad_lhs = lhs_deriv.mul(tape.ref_gradient(&_result));
         tape.mut_gradient(&_lhs).add_assign(&d_grad_lhs);
 
         // TODO test this
         let mut d_grad_rhs = [0.0; N];
         for i in 0..M {
-            d_grad_rhs.add_assign(&rhs_deriv.mul(&tape.gradient(&_result)[i]));
+            d_grad_rhs.add_assign(&rhs_deriv.mul(&tape.ref_gradient(&_result)[i]));
         }
         tape.mut_gradient(&_rhs).add_assign(&d_grad_rhs);
     });
@@ -53,11 +53,11 @@ impl<$(const $Vs: usize, )* H: TapeHolder> std::ops::Sub<&$rhsty<$($Zs, )* NoTap
         let _rhs = rhs.phantom();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
-            let d_grad_lhs = lhs_deriv.mul(tape.gradient(&_result));
+            let d_grad_lhs = lhs_deriv.mul(tape.ref_gradient(&_result));
             tape.mut_gradient(&_lhs).add_assign(&d_grad_lhs);
 
             // TODO test this
-            let d_grad_rhs = tape.gradient(&_result).mul(&rhs_deriv).reduce_inner(|x, y| x + y);
+            let d_grad_rhs = tape.ref_gradient(&_result).mul(&rhs_deriv).reduce_inner(|x, y| x + y);
             tape.mut_gradient(&_rhs).add_assign(&d_grad_rhs);
         });
         result.with_tape_holder(tape_holder)

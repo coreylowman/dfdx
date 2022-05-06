@@ -6,7 +6,7 @@ pub fn nans_to<T: Tensor>(t: T, value: f32) -> T {
     let (t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let d_grad = deriv.mul(tape.gradient(&_result));
+        let d_grad = deriv.mul(tape.ref_gradient(&_result));
         tape.mut_gradient(&t).add_assign(&d_grad);
     });
     result.with_tape_holder(tape_holder)
@@ -38,7 +38,7 @@ mod tests {
         let r = t.trace().nans_to(0.0);
         assert_eq!(r.data(), &0.0);
         let gradients = backward(r.mean());
-        assert_eq!(gradients.gradient(&t), &0.0);
+        assert_eq!(gradients.ref_gradient(&t), &0.0);
     }
 
     #[test]
@@ -47,7 +47,7 @@ mod tests {
         let r = t.trace().nans_to(0.0);
         assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
         let gradients = backward(r.mean());
-        assert_eq!(gradients.gradient(&t), &[0.25, 0.0, 0.0, 0.25]);
+        assert_eq!(gradients.ref_gradient(&t), &[0.25, 0.0, 0.0, 0.25]);
     }
 
     #[test]
@@ -57,7 +57,7 @@ mod tests {
         assert_eq!(r.data(), &[[1.0, 0.0, 3.0], [0.0, 4.0, 0.0]]);
         let gradients = backward(r.mean());
         assert_eq!(
-            gradients.gradient(&t),
+            gradients.ref_gradient(&t),
             &[[1.0 / 6.0, 0.0, 1.0 / 6.0], [0.0, 1.0 / 6.0, 0.0]]
         );
     }

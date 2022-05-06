@@ -13,7 +13,7 @@ pub fn matmat_mul<const M: usize, const N: usize, const O: usize, H: TapeHolder>
     let _rhs = rhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let result_grad = tape.gradient(&_result);
+        let result_grad = tape.ref_gradient(&_result);
         let d_grad_lhs = matmul_arrays(result_grad, &lhs_deriv);
         let d_grad_rhs = matmul_arrays(&rhs_deriv, result_grad);
 
@@ -36,7 +36,7 @@ pub fn vecmat_mul<const N: usize, const O: usize, H: TapeHolder>(
     let _rhs = rhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let result_grad = tape.gradient(&_result);
+        let result_grad = tape.ref_gradient(&_result);
         let d_grad_lhs = vecmul_arrays(result_grad, &lhs_deriv);
         let d_grad_rhs = matmul_arrays(&rhs_deriv, &[*result_grad]);
 
@@ -150,7 +150,7 @@ mod tests {
         );
         let gradients = r.mean().backward();
         assert_eq!(
-            gradients.gradient(&a),
+            gradients.ref_gradient(&a),
             &[[0.1719625, 0.111175, 0.1489875]; 4]
         );
     }
@@ -162,6 +162,6 @@ mod tests {
         let r: Tensor1D<2, WithTape> = a.trace() * &b;
         assert_eq!(r.data(), &[1.2614361, 1.5543157]);
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[0.66719997, 0.68895, 0.6823]);
+        assert_eq!(gradients.ref_gradient(&a), &[0.66719997, 0.68895, 0.6823]);
     }
 }

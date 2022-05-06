@@ -1,6 +1,7 @@
 use super::*;
+use crate::gradients::Gradients;
 
-pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> crate::gradients::Gradients {
+pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Gradients {
     let (t, tape_holder) = t.split_tape_holder();
     tape_holder.0.backward(&t)
 }
@@ -8,7 +9,7 @@ pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> crate::gradients::Gra
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )*> $typename<$($Vs, )* WithTape> {
-    pub fn backward(self) -> crate::gradients::Gradients {
+    pub fn backward(self) -> Gradients {
         backward(self)
     }
 }

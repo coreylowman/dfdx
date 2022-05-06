@@ -1,5 +1,5 @@
 use super::*;
-use crate::gradients::HasUniqueId;
+use crate::gradients::{CanUpdateWithGradients, HasUniqueId};
 
 pub trait Tensor: HasNdArray + CanUpdateWithGradients + HasUniqueId + IntoPhantom {
     type TapeHolder: TapeHolder;

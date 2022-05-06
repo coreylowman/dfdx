@@ -10,7 +10,7 @@ impl<$(const $Vs: usize, )* H: TapeHolder> std::ops::Neg for $typename<$($Vs, )*
         let (t, mut tape_holder) = self.split_tape_holder();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
-            let d_grad = deriv.mul(tape.gradient(&_result));
+            let d_grad = deriv.mul(tape.ref_gradient(&_result));
             tape.mut_gradient(&t).add_assign(&d_grad);
         });
         result.with_tape_holder(tape_holder)
@@ -35,7 +35,7 @@ mod tests {
         let r = -(a.trace());
         assert_eq!(r.data(), &-10.0);
         let gradients = r.backward();
-        assert_eq!(gradients.gradient(&a), &-1.0);
+        assert_eq!(gradients.ref_gradient(&a), &-1.0);
     }
 
     #[test]
@@ -44,7 +44,7 @@ mod tests {
         let r = -(a.trace());
         assert_eq!(r.data(), &[2.0, 0.0, -5.0]);
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[-1.0 / 3.0; 3]);
+        assert_eq!(gradients.ref_gradient(&a), &[-1.0 / 3.0; 3]);
     }
 
     #[test]
@@ -53,7 +53,7 @@ mod tests {
         let r = -(a.trace());
         assert_eq!(r.data(), &[[2.0, 0.0, -5.0], [-1.0, -2.0, -3.0]]);
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[[-1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.ref_gradient(&a), &[[-1.0 / 6.0; 3]; 2]);
     }
 
     #[test]
@@ -62,6 +62,6 @@ mod tests {
         let r = -(a.trace());
         assert_eq!(r.data(), &[[[-1.0; 3]; 2]; 4]);
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[[[-1.0 / 24.0; 3]; 2]; 4]);
+        assert_eq!(gradients.ref_gradient(&a), &[[[-1.0 / 24.0; 3]; 2]; 4]);
     }
 }

@@ -1,15 +1,15 @@
-use crate::prelude::*;
+use crate::{gradients::UniqueId, prelude::*};
 use std::marker::PhantomData;
 
 #[derive(Clone, Copy)]
 pub struct PhantomTensor<T> {
-    id: usize,
+    id: UniqueId,
     marker: PhantomData<*const T>,
 }
 
 impl<T> HasUniqueId for PhantomTensor<T> {
-    fn id(&self) -> usize {
-        self.id
+    fn id(&self) -> &UniqueId {
+        &self.id
     }
 }
 

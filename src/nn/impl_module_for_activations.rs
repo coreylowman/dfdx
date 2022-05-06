@@ -5,7 +5,7 @@ use rand::{distributions::Distribution, Rng};
 macro_rules! activation_impls {
     ($typename:ty) => {
         impl CanUpdateWithGradients for $typename {
-            fn update_with_grads(&mut self, _: &Gradients) {}
+            fn update<G: GradientProvider>(&mut self, _: &mut G) {}
         }
 
         impl Randomize for $typename {

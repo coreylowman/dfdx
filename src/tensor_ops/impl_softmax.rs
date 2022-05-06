@@ -47,7 +47,7 @@ mod tests {
         assert_eq!(r.data(), &2.4519143);
         let gradients = backward(r.mean());
         assert_eq!(
-            gradients.gradient(&a),
+            gradients.ref_gradient(&a),
             &[0.011656231, 0.03168492, 0.08612854, 0.23412165, 0.6364086]
         );
     }
@@ -62,7 +62,7 @@ mod tests {
         );
         let gradients = backward(r.mean());
         assert_eq!(
-            gradients.gradient(&a),
+            gradients.ref_gradient(&a),
             &[
                 0.18834378,
                 0.16831508,
@@ -85,7 +85,7 @@ mod tests {
         assert_eq!(l.data(), &[0.0, 0.0, 0.086128555, 0.0, 0.0]);
         let gradients = backward(l.mean());
         assert_eq!(
-            gradients.gradient(&a),
+            gradients.ref_gradient(&a),
             &[
                 -0.00020078686,
                 -0.00054579525,
@@ -103,7 +103,7 @@ mod tests {
         assert_eq!(r.data(), &[0.40760595, 7.0509458]);
         let gradients = backward(r.mean());
         assert_eq!(
-            gradients.gradient(&a),
+            gradients.ref_gradient(&a),
             &[
                 [0.045015287, 0.12236424, 0.33262047],
                 [0.0011778167, 0.023657078, 0.47516513]
@@ -124,7 +124,7 @@ mod tests {
         );
         let gradients = backward(r.mean());
         assert_eq!(
-            gradients.gradient(&a),
+            gradients.ref_gradient(&a),
             &[
                 [0.12165138, 0.044302434, -0.1659538],
                 [0.16548885, 0.14300959, -0.30849844]
@@ -147,7 +147,7 @@ mod tests {
         assert_eq!(l.data(), &[[0.09003058, 0.0, 0.0], [0.0, 0.047314156, 0.0]]);
         let gradients = backward(l.mean());
         assert_eq!(
-            gradients.gradient(&a),
+            gradients.ref_gradient(&a),
             &[
                 [0.01365418, -0.0036721744, -0.009982005],
                 [-1.85758e-5, 0.0075125876, -0.0074940124]

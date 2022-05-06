@@ -20,7 +20,7 @@ fn main() {
     let mut module: MLP = Default::default();
     module.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
-    let mut sgd = Sgd { lr: 1e-2 };
+    let mut sgd = Sgd::new(1e-2);
 
     // run through training data
     for _i_epoch in 0..15 {
@@ -28,8 +28,9 @@ fn main() {
 
         let pred = module.forward(x.trace());
         let loss = cross_entropy_with_logits_loss(pred, &y);
-        let (loss_v, gradients) = sgd.compute_gradients(loss);
-        module.update_with_grads(&gradients);
+        let loss_v = *loss.data();
+        let gradients = loss.backward();
+        sgd.update(&mut module, gradients);
 
         println!("mse={:#.3} in {:?}", loss_v, start.elapsed());
     }

@@ -10,7 +10,7 @@ pub fn value_mask<T: Tensor>(t: T, other: &T::NoTape, value: f32) -> T {
     let (t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let d_grad = deriv.mul(tape.gradient(&_result));
+        let d_grad = deriv.mul(tape.ref_gradient(&_result));
         tape.mut_gradient(&t).add_assign(&d_grad);
     });
     result.with_tape_holder(tape_holder)
@@ -43,7 +43,7 @@ mod tests {
         let r = t.trace().value_mask(&m, -1e10);
         assert_eq!(r.data(), &-1e10);
         let gradients = backward(r.mean());
-        assert_eq!(gradients.gradient(&t), &0.0);
+        assert_eq!(gradients.ref_gradient(&t), &0.0);
     }
 
     #[test]
@@ -53,7 +53,7 @@ mod tests {
         let r = t.trace().value_mask(&m, -1e10);
         assert_eq!(r.data(), &[-1e10, 2.0, -1e10]);
         let gradients = backward(r.mean());
-        assert_eq!(gradients.gradient(&t), &[0.0, 1.0 / 3.0, 0.0]);
+        assert_eq!(gradients.ref_gradient(&t), &[0.0, 1.0 / 3.0, 0.0]);
     }
 
     #[test]
@@ -64,7 +64,7 @@ mod tests {
         assert_eq!(r.data(), &[[-1e10, 2.0, -1e10], [4.0, -1e10, 6.0]]);
         let gradients = backward(r.mean());
         assert_eq!(
-            gradients.gradient(&t),
+            gradients.ref_gradient(&t),
             &[[0.0, 1.0 / 6.0, 0.0], [1.0 / 6.0, 0.0, 1.0 / 6.0]]
         );
     }

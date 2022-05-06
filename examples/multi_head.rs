@@ -19,10 +19,10 @@ impl Randomize for MultiHeadedMLP {
 }
 
 impl CanUpdateWithGradients for MultiHeadedMLP {
-    fn update_with_grads(&mut self, grads: &Gradients) {
-        self.trunk.update_with_grads(grads);
-        self.head1.update_with_grads(grads);
-        self.head2.update_with_grads(grads);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) {
+        self.trunk.update(grads);
+        self.head1.update(grads);
+        self.head2.update(grads);
     }
 }
 
@@ -64,7 +64,7 @@ fn main() {
     let mut module: MultiHeadedMLP = Default::default();
     module.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
-    let mut sgd = Sgd { lr: 1e-2 };
+    let mut sgd = Sgd::new(1e-2);
 
     // run through training data
     for _i_epoch in 0..15 {
@@ -76,14 +76,9 @@ fn main() {
         let loss2 = mse_loss(pred2.with_tape_holder(tape_holder), &y2);
         let losses = [*loss1.data(), *loss2.data()];
         let loss = &loss1 + loss2;
-        let (loss_v, gradients) = sgd.compute_gradients(loss);
-        module.update_with_grads(&gradients);
+        let gradients = loss.backward();
+        sgd.update(&mut module, gradients);
 
-        println!(
-            "mse={:#.3} (losses={:.3?}) in {:?}",
-            loss_v,
-            losses,
-            start.elapsed()
-        );
+        println!("(losses={:.3?}) in {:?}", losses, start.elapsed());
     }
 }

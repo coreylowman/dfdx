@@ -13,7 +13,7 @@ impl<T: Tensor> HasMeanMethod for T {
         let (t, mut tape_holder) = self.split_tape_holder();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
-            let g: &f32 = tape.gradient(&_result);
+            let g: &f32 = tape.ref_gradient(&_result);
             let d_grad = deriv.map_elems(|v| v * g);
             tape.mut_gradient(&t).add_assign(&d_grad);
         });
@@ -31,7 +31,7 @@ mod tests {
         let r = t.trace().mean();
         assert_eq!(r.data(), &3.0);
         let gradients = backward(r);
-        assert_eq!(gradients.gradient(&t), &1.0);
+        assert_eq!(gradients.ref_gradient(&t), &1.0);
     }
 
     #[test]
@@ -40,7 +40,7 @@ mod tests {
         let r: Tensor0D<WithTape> = t.trace().mean();
         assert_eq!(r.data(), &2.0);
         let gradients = backward(r);
-        assert_eq!(gradients.gradient(&t), &[1.0 / 3.0; 3]);
+        assert_eq!(gradients.ref_gradient(&t), &[1.0 / 3.0; 3]);
     }
 
     #[test]
@@ -49,7 +49,7 @@ mod tests {
         let r: Tensor0D<WithTape> = t.trace().mean();
         assert_eq!(r.data(), &3.5);
         let gradients = backward(r);
-        assert_eq!(gradients.gradient(&t), &[[1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.ref_gradient(&t), &[[1.0 / 6.0; 3]; 2]);
     }
 
     #[test]
@@ -58,6 +58,6 @@ mod tests {
         let r: Tensor0D<WithTape> = t.trace().mean();
         assert_eq!(r.data(), &1.0);
         let gradients = backward(r);
-        assert_eq!(gradients.gradient(&t), &[[[1.0 / 24.0; 3]; 2]; 4]);
+        assert_eq!(gradients.ref_gradient(&t), &[[[1.0 / 24.0; 3]; 2]; 4]);
     }
 }

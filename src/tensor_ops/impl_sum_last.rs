@@ -15,7 +15,7 @@ impl<$(const $Vs: usize, )* H: TapeHolder> HasSumLastMethod for $typename<$($Vs,
         let (t, mut tape_holder) = self.split_tape_holder();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
-            let d_grad = deriv.mul(tape.gradient(&_result));
+            let d_grad = deriv.mul(tape.ref_gradient(&_result));
             tape.mut_gradient(&t).add_assign(&d_grad);
         });
         result.with_tape_holder(tape_holder)
@@ -39,7 +39,7 @@ mod tests {
         let r: Tensor0D<WithTape> = t.trace().sum_last();
         assert_eq!(r.data(), &6.0);
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&t), &[1.0; 3]);
+        assert_eq!(gradients.ref_gradient(&t), &[1.0; 3]);
     }
 
     #[test]
@@ -48,7 +48,10 @@ mod tests {
         let r: Tensor1D<2, WithTape> = t.trace().sum_last();
         assert_eq!(r.data(), &[6.0, 15.0]);
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&t), &[[0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]);
+        assert_eq!(
+            gradients.ref_gradient(&t),
+            &[[0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]
+        );
     }
 
     #[test]
@@ -65,6 +68,6 @@ mod tests {
             &[[6.0, 15.0], [-6.0, -15.0], [-2.0, -5.0], [2.0, 5.0],]
         );
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&t), &[[[1.0 / 8.0; 3]; 2]; 4]);
+        assert_eq!(gradients.ref_gradient(&t), &[[[1.0 / 8.0; 3]; 2]; 4]);
     }
 }

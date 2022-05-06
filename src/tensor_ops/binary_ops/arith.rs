@@ -41,9 +41,9 @@ pub fn apply_binary<T: Tensor, F: DiffBinaryFunction>(lhs: &T::NoTape, rhs: T) -
     let _lhs = lhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let d_grad_lhs = lhs_deriv.mul(tape.gradient(&_result));
+        let d_grad_lhs = lhs_deriv.mul(tape.ref_gradient(&_result));
         tape.mut_gradient(&_lhs).add_assign(&d_grad_lhs);
-        let d_grad_rhs = rhs_deriv.mul(tape.gradient(&_result));
+        let d_grad_rhs = rhs_deriv.mul(tape.ref_gradient(&_result));
         tape.mut_gradient(&rhs).add_assign(&d_grad_rhs);
     });
     result.with_tape_holder(tape_holder)
@@ -58,9 +58,9 @@ pub fn apply_binary_lhs<T: Tensor, F: DiffBinaryFunction>(lhs: T, rhs: &T::NoTap
     let _rhs = rhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let d_grad_lhs = lhs_deriv.mul(tape.gradient(&_result));
+        let d_grad_lhs = lhs_deriv.mul(tape.ref_gradient(&_result));
         tape.mut_gradient(&lhs).add_assign(&d_grad_lhs);
-        let d_grad_rhs = rhs_deriv.mul(tape.gradient(&_result));
+        let d_grad_rhs = rhs_deriv.mul(tape.ref_gradient(&_result));
         tape.mut_gradient(&_rhs).add_assign(&d_grad_rhs);
     });
     result.with_tape_holder(tape_holder)
@@ -144,14 +144,14 @@ mod tests {
         let r = a.trace() + &b;
         assert_eq!(r.data(), &2.0);
         let gradients = r.backward();
-        assert_eq!(gradients.gradient(&a), &1.0);
-        assert_eq!(gradients.gradient(&b), &1.0);
+        assert_eq!(gradients.ref_gradient(&a), &1.0);
+        assert_eq!(gradients.ref_gradient(&b), &1.0);
 
         let r = &b + a.trace();
         assert_eq!(r.data(), &2.0);
         let gradients = r.backward();
-        assert_eq!(gradients.gradient(&a), &1.0);
-        assert_eq!(gradients.gradient(&b), &1.0);
+        assert_eq!(gradients.ref_gradient(&a), &1.0);
+        assert_eq!(gradients.ref_gradient(&b), &1.0);
     }
 
     #[test]
@@ -162,14 +162,14 @@ mod tests {
         let r = a.trace() - &b;
         assert_eq!(r.data(), &0.0);
         let gradients = r.backward();
-        assert_eq!(gradients.gradient(&a), &1.0);
-        assert_eq!(gradients.gradient(&b), &-1.0);
+        assert_eq!(gradients.ref_gradient(&a), &1.0);
+        assert_eq!(gradients.ref_gradient(&b), &-1.0);
 
         let r = &b - a.trace();
         assert_eq!(r.data(), &0.0);
         let gradients = r.backward();
-        assert_eq!(gradients.gradient(&a), &-1.0);
-        assert_eq!(gradients.gradient(&b), &1.0);
+        assert_eq!(gradients.ref_gradient(&a), &-1.0);
+        assert_eq!(gradients.ref_gradient(&b), &1.0);
     }
 
     #[test]
@@ -180,14 +180,14 @@ mod tests {
         let r = &b * a.trace();
         assert_eq!(r.data(), &6.0);
         let gradients = r.backward();
-        assert_eq!(gradients.gradient(&a), &3.0);
-        assert_eq!(gradients.gradient(&b), &2.0);
+        assert_eq!(gradients.ref_gradient(&a), &3.0);
+        assert_eq!(gradients.ref_gradient(&b), &2.0);
 
         let r = mul_lhs(a.trace(), &b);
         assert_eq!(r.data(), &6.0);
         let gradients = r.backward();
-        assert_eq!(gradients.gradient(&a), &3.0);
-        assert_eq!(gradients.gradient(&b), &2.0);
+        assert_eq!(gradients.ref_gradient(&a), &3.0);
+        assert_eq!(gradients.ref_gradient(&b), &2.0);
     }
 
     #[test]
@@ -198,14 +198,14 @@ mod tests {
         let r = a.trace() / &b;
         assert_eq!(r.data(), &0.5);
         let gradients = r.backward();
-        assert_eq!(gradients.gradient(&a), &0.25);
-        assert_eq!(gradients.gradient(&b), &-0.125);
+        assert_eq!(gradients.ref_gradient(&a), &0.25);
+        assert_eq!(gradients.ref_gradient(&b), &-0.125);
 
         let r = &b / a.trace();
         assert_eq!(r.data(), &2.0);
         let gradients = r.backward();
-        assert_eq!(gradients.gradient(&a), &-1.0);
-        assert_eq!(gradients.gradient(&b), &0.5);
+        assert_eq!(gradients.ref_gradient(&a), &-1.0);
+        assert_eq!(gradients.ref_gradient(&b), &0.5);
     }
 
     #[test]
@@ -216,14 +216,14 @@ mod tests {
         let r = a.trace() + &b;
         assert_eq!(r.data(), &[2.0, 1.0, 3.0]);
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[1.0 / 3.0; 3]);
-        assert_eq!(gradients.gradient(&b), &[1.0 / 3.0; 3]);
+        assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0; 3]);
+        assert_eq!(gradients.ref_gradient(&b), &[1.0 / 3.0; 3]);
 
         let r = &b + a.trace();
         assert_eq!(r.data(), &[2.0, 1.0, 3.0]);
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[1.0 / 3.0; 3]);
-        assert_eq!(gradients.gradient(&b), &[1.0 / 3.0; 3]);
+        assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0; 3]);
+        assert_eq!(gradients.ref_gradient(&b), &[1.0 / 3.0; 3]);
     }
 
     #[test]
@@ -234,14 +234,14 @@ mod tests {
         let r = a.trace() - &b;
         assert_eq!(r.data(), &[0.0, 3.0, 3.0]);
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[1.0 / 3.0; 3]);
-        assert_eq!(gradients.gradient(&b), &[-1.0 / 3.0; 3]);
+        assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0; 3]);
+        assert_eq!(gradients.ref_gradient(&b), &[-1.0 / 3.0; 3]);
 
         let r = &b - a.trace();
         assert_eq!(r.data(), &[0.0, -3.0, -3.0]);
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[-1.0 / 3.0; 3]);
-        assert_eq!(gradients.gradient(&b), &[1.0 / 3.0; 3]);
+        assert_eq!(gradients.ref_gradient(&a), &[-1.0 / 3.0; 3]);
+        assert_eq!(gradients.ref_gradient(&b), &[1.0 / 3.0; 3]);
     }
 
     #[test]
@@ -252,14 +252,14 @@ mod tests {
         let r = mul_lhs(a.trace(), &b);
         assert_eq!(r.data(), &[1.0, -2.0, 0.0]);
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[1.0 / 3.0, -1.0 / 3.0, 0.0]);
-        assert_eq!(gradients.gradient(&b), &[1.0 / 3.0, 2.0 / 3.0, 1.0]);
+        assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0, -1.0 / 3.0, 0.0]);
+        assert_eq!(gradients.ref_gradient(&b), &[1.0 / 3.0, 2.0 / 3.0, 1.0]);
 
         let r = &b * a.trace();
         assert_eq!(r.data(), &[1.0, -2.0, 0.0]);
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[1.0 / 3.0, -1.0 / 3.0, 0.0]);
-        assert_eq!(gradients.gradient(&b), &[1.0 / 3.0, 2.0 / 3.0, 1.0]);
+        assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0, -1.0 / 3.0, 0.0]);
+        assert_eq!(gradients.ref_gradient(&b), &[1.0 / 3.0, 2.0 / 3.0, 1.0]);
     }
 
     #[test]
@@ -271,19 +271,22 @@ mod tests {
         assert_eq!(r.data(), &[1.0, -2.0, f32::INFINITY]);
         let gradients = r.mean().backward();
         assert_eq!(
-            gradients.gradient(&a),
+            gradients.ref_gradient(&a),
             &[1.0 / 3.0, -1.0 / 3.0, f32::INFINITY]
         );
         assert_eq!(
-            gradients.gradient(&b),
+            gradients.ref_gradient(&b),
             &[-1.0 / 3.0, -2.0 / 3.0, f32::NEG_INFINITY]
         );
 
         let r = &b / a.trace();
         assert_eq!(r.data(), &[1.0, -0.5, 0.0]);
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[-1.0 / 3.0, 1.0 / 12.0, 0.0]);
-        assert_eq!(gradients.gradient(&b), &[1.0 / 3.0, 1.0 / 6.0, 0.11111112]);
+        assert_eq!(gradients.ref_gradient(&a), &[-1.0 / 3.0, 1.0 / 12.0, 0.0]);
+        assert_eq!(
+            gradients.ref_gradient(&b),
+            &[1.0 / 3.0, 1.0 / 6.0, 0.11111112]
+        );
     }
 
     #[test]
@@ -297,8 +300,8 @@ mod tests {
             &[[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]
         );
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[[1.0 / 6.0; 3]; 2]);
-        assert_eq!(gradients.gradient(&b), &[[1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.ref_gradient(&a), &[[1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.ref_gradient(&b), &[[1.0 / 6.0; 3]; 2]);
 
         let r = &b + a.trace();
         assert_eq!(
@@ -306,8 +309,8 @@ mod tests {
             &[[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]
         );
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[[1.0 / 6.0; 3]; 2]);
-        assert_eq!(gradients.gradient(&b), &[[1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.ref_gradient(&a), &[[1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.ref_gradient(&b), &[[1.0 / 6.0; 3]; 2]);
     }
 
     #[test]
@@ -324,8 +327,8 @@ mod tests {
             ]
         );
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[[1.0 / 6.0; 3]; 2]);
-        assert_eq!(gradients.gradient(&b), &[[-1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.ref_gradient(&a), &[[1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.ref_gradient(&b), &[[-1.0 / 6.0; 3]; 2]);
 
         let r = &b - a.trace();
         assert_eq!(
@@ -336,8 +339,8 @@ mod tests {
             ]
         );
         let gradients = r.mean().backward();
-        assert_eq!(gradients.gradient(&a), &[[-1.0 / 6.0; 3]; 2]);
-        assert_eq!(gradients.gradient(&b), &[[1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.ref_gradient(&a), &[[-1.0 / 6.0; 3]; 2]);
+        assert_eq!(gradients.ref_gradient(&b), &[[1.0 / 6.0; 3]; 2]);
     }
 
     #[test]
@@ -355,14 +358,14 @@ mod tests {
         );
         let gradients = r.mean().backward();
         assert_eq!(
-            gradients.gradient(&a),
+            gradients.ref_gradient(&a),
             &[
                 [0.08665001, 0.06406667, 0.06265],
                 [0.13765001, 0.06136667, 0.006466667]
             ]
         );
         assert_eq!(
-            gradients.gradient(&b),
+            gradients.ref_gradient(&b),
             &[
                 [0.109500006, 0.028466668, 0.025000002],
                 [0.0943, 0.11683333, 0.13903335]
@@ -379,14 +382,14 @@ mod tests {
         );
         let gradients = r.mean().backward();
         assert_eq!(
-            gradients.gradient(&a),
+            gradients.ref_gradient(&a),
             &[
                 [0.08665001, 0.06406667, 0.06265],
                 [0.13765001, 0.06136667, 0.006466667]
             ]
         );
         assert_eq!(
-            gradients.gradient(&b),
+            gradients.ref_gradient(&b),
             &[
                 [0.109500006, 0.028466668, 0.025000002],
                 [0.0943, 0.11683333, 0.13903335]
@@ -409,14 +412,14 @@ mod tests {
         );
         let gradients = r.mean().backward();
         assert_eq!(
-            gradients.gradient(&a),
+            gradients.ref_gradient(&a),
             &[
                 [0.32057446, 0.4335761, 0.44338033],
                 [0.20180005, 0.45265254, 4.2955327]
             ]
         );
         assert_eq!(
-            gradients.gradient(&b),
+            gradients.ref_gradient(&b),
             &[
                 [-0.4051114, -0.19265036, -0.1769275],
                 [-0.13824734, -0.86178553, -92.35396]
@@ -433,14 +436,14 @@ mod tests {
         );
         let gradients = r.mean().backward();
         assert_eq!(
-            gradients.gradient(&a),
+            gradients.ref_gradient(&a),
             &[
                 [-0.20074181, -2.1961217, -2.7844446],
                 [-0.42998204, -0.12488105, -0.009292662]
             ]
         );
         assert_eq!(
-            gradients.gradient(&b),
+            gradients.ref_gradient(&b),
             &[
                 [0.25367835, 0.97580016, 1.1111112],
                 [0.29456818, 0.2377556, 0.1997922]

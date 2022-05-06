@@ -1,5 +1,8 @@
 use super::*;
-use crate::array_ops::{FillElements, ZeroElements};
+use crate::{
+    array_ops::{FillElements, ZeroElements},
+    gradients::unique_id,
+};
 use rand::prelude::Distribution;
 
 pub trait TensorCreator: HasNdArray + Sized {
@@ -46,23 +49,20 @@ tensor_impl!(Tensor2D, [M, N]);
 tensor_impl!(Tensor3D, [M, N, O]);
 tensor_impl!(Tensor4D, [M, N, O, P]);
 
-fn unique_id() -> usize {
-    static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-    COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gradients::{unique_id, UniqueId};
     use rand::thread_rng;
 
     #[test]
     fn test_id() {
-        assert_eq!(Tensor0D::new(0.0).id, 0);
-        assert_eq!(Tensor0D::new(0.0).id, 1);
-        assert_eq!(Tensor1D::<5>::zeros().id, 2);
-        assert_eq!(Tensor2D::<3, 2>::ones().id, 3);
-        assert_eq!(Tensor3D::<4, 2, 3>::zeros().id, 4);
+        let base = unique_id().0;
+        assert_eq!(Tensor0D::new(0.0).id, UniqueId(base + 1));
+        assert_eq!(Tensor0D::new(0.0).id, UniqueId(base + 2));
+        assert_eq!(Tensor1D::<5>::zeros().id, UniqueId(base + 3));
+        assert_eq!(Tensor2D::<3, 2>::ones().id, UniqueId(base + 4));
+        assert_eq!(Tensor3D::<4, 2, 3>::zeros().id, UniqueId(base + 5));
     }
 
     #[test]
