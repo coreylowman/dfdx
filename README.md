@@ -1,9 +1,14 @@
 # stag: Strongly Typed Auto Grad
 
-Reverse Mode Auto Differentiation[1] in Rust.
+Ergonomics & safety focused reverse mode auto differentiation[1] in Rust. 
+
+[1] https://en.wikipedia.org/wiki/Automatic_differentiation#Reverse_accumulation
+
+## Features
+
+1. 👌 Simple Neural Networks API, completely type checked at compile time. See [examples/regression.rs](examples/regression.rs)
 
 ```rust
-// Declare the structure of our feedforward model - each module is executed sequentially
 type MLP = (
     (Linear<10, 32>, ReLU),
     (Linear<32, 32>, ReLU),
@@ -11,40 +16,28 @@ type MLP = (
 );
 
 fn main() {
-    let mut rng = StdRng::seed_from_u64(0);
-
-    // initialize input & output data
-    let x: Tensor2D<64, 10> = Tensor2D::randn(&mut rng);
-    let y: Tensor2D<64, 2> = Tensor2D::randn(&mut rng);
-
-    // initialize our MLP with all zero weights
-    let mut mlp: MLP = Default::default();
-
-    // randomize the weights according to a uniform random distribution
-    mlp.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
-
-    // execute the MLP - x.trace() tells stag to collect gradient information
-    let pred = mlp.forward(x.trace());
-    let loss = (&y - pred).square().mean();
-
-    // run backprop to get the gradients
-    let gradients = loss.backward();
-    
-    // update the MLP with SGD!
-    let mut sgd = Sgd::new(1e-2);
-    sgd.update(&mut mlp, gradients);
+    let mlp: MLP = Default::default();
+    let x: Tensor1D<10> = Tensor1D::zeros();
+    let y /*: Tensor1D<2>*/ = mlp.forward(x);
+    println!("{:?}", y);
 }
 ```
 
-[1] https://en.wikipedia.org/wiki/Automatic_differentiation#Reverse_accumulation
-
-
-## Features
-
-1. 👌 Simple Neural Networks API, completely type checked at compile time. See [examples/regression.rs](examples/regression.rs)
 2. 📈 Easy to use Optimizer API
-3. 💡 Tensor sizes & operations type checked at compile time
-4. ✔ No unsafe rust code
+
+```rust
+let mut model = ...
+let mut sgd = Sgd::new(1e-2);
+
+let loss: Tensor0D<WithTape> = ...
+
+// run backprop to get the gradients
+let gradients = loss.backward();
+sgd.update(&mut model, gradients);
+```
+
+4. 💡 Tensor sizes, operations, gradient computations all type checked at compile time
+5. ✔ No unsafe rust code
 
 ## Fun/notable implementation details
 
