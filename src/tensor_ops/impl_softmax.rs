@@ -25,7 +25,7 @@ impl<$(const $Vs: usize, )* H: TapeHolder> HasSoftmaxMethod for $typename<$($Vs,
     fn log_softmax(self) -> Self {
         let x_ = self.duplicate();
         let (lse, tape_holder) = self.logsumexp().split_tape_holder();
-        x_.with_tape_holder(tape_holder) - &lse
+        broadcast_inner_sub(x_.with_tape_holder(tape_holder), &lse)
     }
 }
     };
