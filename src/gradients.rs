@@ -84,12 +84,6 @@ pub trait CanUpdateWithGradients {
     fn update<G: GradientProvider>(&mut self, grads: &mut G);
 }
 
-impl GradientProvider for Gradients {
-    fn gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<T::ArrayType> {
-        self.remove_gradient(t)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::array_ops::AddElements;
