@@ -4,9 +4,8 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H> CanUpdateWithGradients for $typename<$($Vs, )* H> {
     fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-        if let Some(gradient) = grads.gradient(self) {
-            self.mut_data().sub_assign(&gradient);
-        }
+        let gradient = grads.gradient(self).unwrap();
+        self.mut_data().sub_assign(&gradient);
     }
 }
     };

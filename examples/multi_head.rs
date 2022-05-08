@@ -63,7 +63,7 @@ fn main() {
     let mut mlp: MultiHeadedMLP = Default::default();
     mlp.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
 
-    let mut sgd = Sgd::new(1e-2);
+    let mut sgd = Sgd::new(1e-2, None);
 
     // run through training data
     for _i_epoch in 0..15 {

@@ -1,9 +1,13 @@
 use super::ZeroElements;
 
-pub trait MapElements {
+pub trait MapElements: Sized {
     fn map_elems<F: FnMut(&f32) -> f32 + Copy>(&self, f: F) -> Self;
     fn mapv_elems<F: FnMut(f32) -> f32 + Copy>(&self, f: F) -> Self;
     fn map_assign_elems<F: FnMut(&mut f32) + Copy>(&mut self, f: F);
+
+    fn scale(&self, s: f32) -> Self {
+        self.map_elems(|v| v * s)
+    }
 }
 
 impl MapElements for f32 {
