@@ -38,7 +38,8 @@ sgd.update(&mut model, gradients);
 
 4. 💡 Tensor sizes, operations, gradient computations all type checked at compile time
 5. 💪 Full power of rust compiler & llvm optimizations (because all shapes of arrays are known at compile time!)
-6. 100% safe rust code
+6. Minimal runtime costs - there are no Rc/Refcells used in this implementation!
+7. 100% safe rust code
 
 ## Fun/notable implementation details
 
