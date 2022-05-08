@@ -1,4 +1,3 @@
-use super::traits::Module;
 use crate::prelude::*;
 use rand::{distributions::Distribution, Rng};
 
