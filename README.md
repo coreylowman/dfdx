@@ -80,6 +80,20 @@ where
 
 We've implemented Module for Tuples up to 6 elements, but *you can arbitrarily nest them*!
 
+### No Rc/RefCells used - Gradient tape is not reference counted!
+
+Other implementations may store a reference to the gradient tape directly on tensors, which requires mutating tensors or using Rc/Refcells all other the place.
+
+We've figured out an elegant way to avoid this, reducing references and dynamic reference count checks to 0!
+
+Since all operations result in exactly 1 child, we can always move the gradient tape to the child of the last operation. Additionally, no model parameters (all tensors) will ever own the gradient tape because they will never be the result of any operation. This means we know exactly which tensor owns the gradient tape, and the tensors that have it will always be intermediate results that don't need to be maintained across gradient computation.
+
+*All of this together gives users unprecedented control/precision over what tensors are recorded on the gradient tape!*
+
+One advanced use case requires that tensors be re-used multiple times in a computation graph.
+This can be handled by duplicating the tensor, and manually moving the gradient tape around.
+See [examples/multi_head.rs](examples/multi_head.rs) for an example.
+
 ### Type checked backward
 
 tl;dr: If you forget to include a call to `trace()`, the program won't compile!
@@ -91,28 +105,17 @@ let loss = (&y - pred).square().mean();
 let gradients = loss.backward();
 ```
 
-In order to compute the gradients from a computation graph, the actual gradient tape is needed.
-In `stag`, the gradient tape is transferred to the output of operations. This means the loss tensor
-should have a tape with it, since it is the final output of the whole computation graph.
+Since we know exactly what tensors own the gradient tape, we can require the tensor passed into `.backward()` to own the gradient tape!
+And further, we can require it be moved into `.backward()`, so it can destruct the tape and construct the gradients!
 
-`stag` requires this at compile time via the `backward` function.
-It accepts a generic tensor, but with the `TapeHolder` generic set to `WithTape`!
+__All of this can be checked at compile time 🎉___
 
 ```rust
-pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Box<crate::gradients::GradientTape> {
-    ...
+pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Gradients {
+    let (t, tape_holder): (T::NoTape, WithTape) = t.split_tape_holder();
+    tape_holder.0.backward(&t)
 }
 ```
-
-### Gradient tape is not reference counted!
-
-Since all operations result in exactly 1 child, we can always move the gradient tape to the child of the last operation. This means we know exactly which tensor owns the gradient tape!
-
-*This gives users unprecedented control/precision over what tensors are recorded on the gradient tape!*
-
-One advanced use case requires that tensors be re-used multiple times in a computation graph.
-This can be handled by duplicating the tensor, and manually moving the gradient tape around.
-See [examples/multi_head.rs](examples/multi_head.rs) for an example.
 
 ### Array Backend
 
