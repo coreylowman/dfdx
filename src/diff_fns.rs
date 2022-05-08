@@ -9,7 +9,7 @@ pub trait DiffBinaryFunction {
     fn dfdy(x: &f32, y: &f32) -> f32;
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct ReLU;
 impl DifferentiableFunction for ReLU {
     fn f(x: f32) -> f32 {
@@ -25,7 +25,7 @@ impl DifferentiableFunction for ReLU {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Square;
 impl DifferentiableFunction for Square {
     fn f(x: f32) -> f32 {
@@ -37,7 +37,7 @@ impl DifferentiableFunction for Square {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Tanh;
 impl DifferentiableFunction for Tanh {
     fn f(x: f32) -> f32 {
@@ -48,7 +48,7 @@ impl DifferentiableFunction for Tanh {
         1.0 - x.tanh().powi(2)
     }
 }
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Sigmoid;
 impl DifferentiableFunction for Sigmoid {
     fn f(x: f32) -> f32 {
@@ -60,7 +60,7 @@ impl DifferentiableFunction for Sigmoid {
         s * (1.0 - s)
     }
 }
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Sin;
 impl DifferentiableFunction for Sin {
     fn f(x: f32) -> f32 {
@@ -71,7 +71,7 @@ impl DifferentiableFunction for Sin {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Cos;
 impl DifferentiableFunction for Cos {
     fn f(x: f32) -> f32 {
@@ -82,7 +82,7 @@ impl DifferentiableFunction for Cos {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Ln;
 impl DifferentiableFunction for Ln {
     fn f(x: f32) -> f32 {
@@ -93,7 +93,7 @@ impl DifferentiableFunction for Ln {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Exp;
 impl DifferentiableFunction for Exp {
     fn f(x: f32) -> f32 {
@@ -104,7 +104,7 @@ impl DifferentiableFunction for Exp {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Abs;
 impl DifferentiableFunction for Abs {
     fn f(x: f32) -> f32 {
@@ -120,7 +120,7 @@ impl DifferentiableFunction for Abs {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct BinaryAdd;
 
 impl DiffBinaryFunction for BinaryAdd {
@@ -137,7 +137,7 @@ impl DiffBinaryFunction for BinaryAdd {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct BinarySub;
 
 impl DiffBinaryFunction for BinarySub {
@@ -154,7 +154,7 @@ impl DiffBinaryFunction for BinarySub {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct BinaryMul;
 
 impl DiffBinaryFunction for BinaryMul {
@@ -171,7 +171,7 @@ impl DiffBinaryFunction for BinaryMul {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct BinaryDiv;
 
 impl DiffBinaryFunction for BinaryDiv {

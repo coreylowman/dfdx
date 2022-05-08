@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use rand::{distributions::Distribution, Rng};
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Linear<const I: usize, const O: usize> {
     weight: Tensor2D<I, O, NoTape>,
     bias: Tensor1D<O, NoTape>,
