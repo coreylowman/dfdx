@@ -36,6 +36,18 @@ let gradients = loss.backward();
 sgd.update(&mut model, gradients);
 ```
 
+3. Tensors are backed by normal rust arrays, making it easy to access the underlying data!
+```rust
+let t0: Tensor0D = Tensor0D::new(0.0);
+assert_eq!(t0.data(), &0.0);
+
+let t1 /*: Tensor1D<3>*/ = Tensor1D::new([1.0, 2.0, 3.0]);
+assert_eq!(t1.data(), &[1.0, 2.0, 3.0]);
+
+let t2: Tensor2D<2, 3> = Tensor2D::ones();
+assert_eq!(t2.data(), &[[1.0; 3]; 2]);
+```
+
 4. 💡 Tensor sizes, operations, gradient computations all type checked at compile time
 5. 💪 Full power of rust compiler & llvm optimizations (because all shapes of arrays are known at compile time!)
 6. Minimal runtime costs - there are no Rc/Refcells used in this implementation!
