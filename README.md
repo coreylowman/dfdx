@@ -23,7 +23,7 @@ fn main() {
 }
 ```
 
-2. 📈 Easy to use Optimizer API
+2. 📈 Ergnomic & safe Optimizer API
 
 ```rust
 let mut model = ...
@@ -37,7 +37,8 @@ sgd.update(&mut model, gradients);
 ```
 
 4. 💡 Tensor sizes, operations, gradient computations all type checked at compile time
-5. ✔ No unsafe rust code
+5. 💪 Full power of rust compiler & llvm optimizations (because all shapes of arrays are known at compile time!)
+6. 100% safe rust code
 
 ## Fun/notable implementation details
 
