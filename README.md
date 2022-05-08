@@ -27,7 +27,7 @@ fn main() {
 
 ```rust
 let mut model = ...
-let mut sgd = Sgd::new(1e-2);
+let mut sgd = Sgd::new(1e-2, Some(Momentum::Nesterov(0.9)));
 
 let loss: Tensor0D<WithTape> = ...
 
@@ -46,11 +46,14 @@ sgd.update(&mut model, gradients);
 ```rust
 pub trait Module<Input>: Default + CanUpdateWithGrads {
     type Output;
-    fn forward(&self, input: &Input) -> Self::Output;
+    fn forward(&self, input: Input) -> Self::Output;
 }
 ```
 
-The Module trait is simple yet powerful! The generic type variable for the input allows a single struct to implement module for multiple inputs. *This is how batching is implented!* The associated type variable for output enables a number of other nice features, but also allows the implementation to control what the output is.
+From this flexible trait we get:
+1. Single & batched inputs (just have multiple impls!)
+2. Update with gradients
+3. Multiple inputs/outputs (multi-headed modules, or rnns)
 
 ### Tuples represent feedforward (a.k.a sequential) modules
 
@@ -65,9 +68,10 @@ where
     B: Module<A::Output>,    // B is a module that takes A's Output
 {
     type Output = B::Output; // the output of this is B's Output
-    fn forward(&self, x: &Input) -> Self::Output {
+    fn forward(&self, x: Input) -> Self::Output {
         let x = self.0.forward(x);
-        self.1.forward(&x)
+        let x = self.1.forward(x);
+        x
     }
 }
 ```
@@ -101,6 +105,8 @@ pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Box<crate::gradients:
 ### Gradient tape is not reference counted!
 
 Since all operations result in exactly 1 child, we can always move the gradient tape to the child of the last operation. This means we know exactly which tensor owns the gradient tape!
+
+*This gives users unprecedented control/precision over what tensors are recorded on the gradient tape!*
 
 One advanced use case requires that tensors be re-used multiple times in a computation graph.
 This can be handled by duplicating the tensor, and manually moving the gradient tape around.
