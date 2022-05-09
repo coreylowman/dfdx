@@ -1,6 +1,6 @@
+use dfdx::prelude::*;
 use rand::{rngs::StdRng, SeedableRng};
 use rand_distr::Uniform;
-use stag::prelude::*;
 use std::time::Instant;
 
 type MLP = (
@@ -28,7 +28,7 @@ fn main() {
 
         let pred = mlp.forward(x.trace());
         let loss = cross_entropy_with_logits_loss(pred, &y);
-        let loss_v = *loss.data();
+        let loss_v /*: f32 */ = *loss.data();
         let gradients = loss.backward();
         sgd.update(&mut mlp, gradients);
 

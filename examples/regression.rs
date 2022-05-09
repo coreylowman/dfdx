@@ -1,6 +1,6 @@
+use dfdx::prelude::*;
 use rand::{rngs::StdRng, SeedableRng};
 use rand_distr::Uniform;
-use stag::prelude::*;
 use std::time::Instant;
 
 type MLP = (

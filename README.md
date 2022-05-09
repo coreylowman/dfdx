@@ -1,4 +1,4 @@
-# stag: Strongly Typed Auto Grad
+# dfdx: Strongly Typed Auto Diff in Rust
 
 Ergonomics & safety focused reverse mode auto differentiation[1] in Rust. 
 

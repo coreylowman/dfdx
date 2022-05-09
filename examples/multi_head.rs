@@ -1,6 +1,6 @@
+use dfdx::prelude::*;
 use rand::{distributions::Distribution, rngs::StdRng, Rng, SeedableRng};
 use rand_distr::Uniform;
-use stag::prelude::*;
 use std::time::Instant;
 
 #[derive(Default)]
