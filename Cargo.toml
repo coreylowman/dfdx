@@ -13,12 +13,9 @@ readme = "README.md"
 keywords = [
     "machine-learning",
     "neural-network",
-    "tensor",
-    "backpropagation", 
     "backprop",
     "autograd",
     "autodiff",
-    "autodifferentiation",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
