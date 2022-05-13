@@ -2,6 +2,7 @@ pub mod diff_fns;
 pub mod gradients;
 pub mod losses;
 pub mod nn;
+pub mod numpy;
 pub mod optim;
 pub mod tensor;
 pub mod tensor_ops;
