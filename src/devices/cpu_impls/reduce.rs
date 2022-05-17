@@ -1,18 +1,10 @@
 use super::{CountElements, Cpu};
 
 pub trait ReduceElements<T: CountElements> {
-    fn reduce_into<F: FnMut(f32, f32) -> f32 + Copy>(inp: &T, out: &mut f32, f: F);
-
-    fn reduce<F: FnMut(f32, f32) -> f32 + Copy>(inp: &T, f: F) -> f32 {
-        let mut out = 0.0;
-        Self::reduce_into(inp, &mut out, f);
-        out
-    }
+    fn reduce<F: FnMut(f32, f32) -> f32 + Copy>(inp: &T, f: F) -> f32;
 
     fn sum(inp: &T) -> f32 {
-        let mut out = 0.0;
-        Self::reduce_into(inp, &mut out, |a, b| a + b);
-        out
+        Self::reduce(inp, |a, b| a + b)
     }
 
     fn mean(inp: &T) -> f32 {
@@ -20,21 +12,17 @@ pub trait ReduceElements<T: CountElements> {
     }
 
     fn max(inp: &T) -> f32 {
-        let mut out = 0.0;
-        Self::reduce_into(inp, &mut out, f32::max);
-        out
+        Self::reduce(inp, f32::max)
     }
 
     fn min(inp: &T) -> f32 {
-        let mut out = 0.0;
-        Self::reduce_into(inp, &mut out, f32::min);
-        out
+        Self::reduce(inp, f32::min)
     }
 }
 
 impl ReduceElements<f32> for Cpu {
-    fn reduce_into<F: FnMut(f32, f32) -> f32 + Copy>(inp: &f32, out: &mut f32, _f: F) {
-        *out = *inp;
+    fn reduce<F: FnMut(f32, f32) -> f32 + Copy>(inp: &f32, _f: F) -> f32 {
+        *inp
     }
 }
 
@@ -42,10 +30,8 @@ impl<T: CountElements, const M: usize> ReduceElements<[T; M]> for Cpu
 where
     Cpu: ReduceElements<T>,
 {
-    fn reduce_into<F: FnMut(f32, f32) -> f32 + Copy>(inp: &[T; M], out: &mut f32, f: F) {
-        for i in 0..M {
-            Self::reduce_into(&inp[i], out, f);
-        }
+    fn reduce<F: FnMut(f32, f32) -> f32 + Copy>(inp: &[T; M], f: F) -> f32 {
+        (0..M).map(|i| Self::reduce(&inp[i], f)).reduce(f).unwrap()
     }
 }
 

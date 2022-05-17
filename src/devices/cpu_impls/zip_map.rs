@@ -141,7 +141,7 @@ mod tests {
 
     #[test]
     fn test_1d_zip_map() {
-        let mut a = [1.0; 3];
+        let a = [1.0; 3];
         let b = [2.0; 3];
         let mut c = ZeroElements::ZEROS;
         Cpu::zip_map_into(&a, &b, &mut c, |x, y| x + y);
@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn test_1d_zip_map_broadcast_inner() {
-        let mut a = [1.0; 3];
+        let a = [1.0; 3];
         let b = 2.0;
         let mut c = ZeroElements::ZEROS;
         Cpu::zip_map_into(&a, &b, &mut c, |x, y| x + y);
@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn test_2d_zip_map() {
-        let mut a = [[2.0; 2]; 3];
+        let a = [[2.0; 2]; 3];
         let b = [[3.0; 2]; 3];
         let mut c = ZeroElements::ZEROS;
         Cpu::zip_map_into(&a, &b, &mut c, |x, y| x * y);
@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn test_2d_zip_map_broadcast_inner() {
-        let mut a = [[2.0; 2]; 3];
+        let a = [[2.0; 2]; 3];
         let b = [3.0; 3];
         let mut c = ZeroElements::ZEROS;
         Cpu::zip_map_into(&a, &b, &mut c, |x, y| x * y);
@@ -177,7 +177,7 @@ mod tests {
 
     #[test]
     fn test_3d_zip_map() {
-        let mut a = [[[2.0; 5]; 2]; 3];
+        let a = [[[2.0; 5]; 2]; 3];
         let b = [[[3.0; 5]; 2]; 3];
         let mut c = ZeroElements::ZEROS;
         Cpu::zip_map_into(&a, &b, &mut c, |x, y| x * y);
@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     fn test_3d_zip_map_broadcast_inner() {
-        let mut a = [[[2.0; 5]; 2]; 3];
+        let a = [[[2.0; 5]; 2]; 3];
         let b = [[3.0; 2]; 3];
         let mut c = ZeroElements::ZEROS;
         Cpu::zip_map_into(&a, &b, &mut c, |x, y| x * y);

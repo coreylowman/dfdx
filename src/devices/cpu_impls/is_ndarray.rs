@@ -1,6 +1,4 @@
-use super::Cpu;
 use super::*;
-use crate::prelude::Device;
 
 pub trait IsNdArray {
     type Array: 'static + Sized + Clone + CountElements;

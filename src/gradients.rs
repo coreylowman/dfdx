@@ -75,7 +75,7 @@ impl Gradients {
     pub fn remove_gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<Box<T::Array>> {
         self.gradient_by_id
             .remove_entry(t.id())
-            .map(|(_, v)| *v.downcast().expect("Unable to cast properly"))
+            .map(|(_, v)| v.downcast().expect("Unable to cast properly"))
     }
 }
 
@@ -117,6 +117,6 @@ mod tests {
             Cpu::zip_map_assign(g.mut_gradient(&_t1), &[1.0; 5], |l, r| *l += r);
         });
         let g = tape.backward(&t1);
-        assert_eq!(g.ref_gradient(&t1), &[1.0; 5]);
+        assert_eq!(g.ref_gradient(&t1), &[2.0; 5]);
     }
 }

@@ -15,7 +15,7 @@ where
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
             let g: &f32 = tape.ref_gradient(&_result);
-            let d_grad = Cpu::map(&deriv, |v| v * g);
+            let d_grad = Cpu::scale(deriv.as_ref(), *g);
             Cpu::add_assign(tape.mut_gradient(&t), &d_grad);
         });
         result.with_tape_holder(tape_holder)

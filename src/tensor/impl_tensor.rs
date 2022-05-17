@@ -1,6 +1,5 @@
 use super::*;
 use crate::gradients::CanUpdateWithGradients;
-use crate::prelude::{Cpu, Device};
 use crate::unique_id::HasUniqueId;
 
 pub trait Tensor: HasNdArray + CanUpdateWithGradients + HasUniqueId + IntoPhantom {
