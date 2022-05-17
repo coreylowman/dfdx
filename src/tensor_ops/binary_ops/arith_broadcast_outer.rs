@@ -2,6 +2,21 @@ use crate::prelude::*;
 
 // TODO abstract these all together somehow
 
+pub trait Array: std::ops::IndexMut<usize, Output = Self::Element> {
+    const SIZE: usize;
+    type Element;
+}
+
+impl<const M: usize> Array for [f32; M] {
+    const SIZE: usize = M;
+    type Element = f32;
+}
+
+impl<T: Array, const M: usize> Array for [T; M] {
+    const SIZE: usize = M;
+    type Element = T;
+}
+
 pub fn broadcast_outer_add<Lhs, Rhs>(lhs: Lhs, rhs: &Rhs) -> Lhs
 where
     Lhs: Tensor,
