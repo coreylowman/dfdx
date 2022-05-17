@@ -1,13 +1,17 @@
 pub trait CountElements {
     const NUM_ELEMENTS: usize;
+    type Element: Clone + Default;
+    const NUM_BYTES: usize = Self::NUM_ELEMENTS * std::mem::size_of::<Self::Element>();
 }
 
 impl CountElements for f32 {
     const NUM_ELEMENTS: usize = 1;
+    type Element = Self;
 }
 
 impl<T: CountElements, const M: usize> CountElements for [T; M] {
     const NUM_ELEMENTS: usize = M * T::NUM_ELEMENTS;
+    type Element = T::Element;
 }
 
 #[cfg(test)]

@@ -53,25 +53,31 @@ impl Adam {
 }
 
 impl GradientProvider for Adam {
-    fn gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<T::ArrayType> {
+    fn gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<Box<T::Array>>
+    where
+        Cpu: Device<T::Array>,
+    {
         self.gradients.remove_gradient(t).map(|g_t| {
             let m_tm1 = self.moments[0]
                 .remove_gradient(t)
-                .unwrap_or(T::ArrayType::ZEROS);
+                .unwrap_or_else(Cpu::zeros);
             let v_tm1 = self.moments[1]
                 .remove_gradient(t)
-                .unwrap_or(T::ArrayType::ZEROS);
-            let m_t = m_tm1
-                .scale(self.betas[0])
-                .add(&g_t.scale(1.0 - self.betas[0]));
-            let v_t = v_tm1
-                .scale(self.betas[1])
-                .add(&g_t.map_elems(|v| (1.0 - self.betas[1]) * v.powi(2)));
-            let m_t_hat = m_t.scale((1.0 - self.betas[0].powi(self.t)).recip());
-            let v_t_hat = v_t.scale((1.0 - self.betas[1].powi(self.t)).recip());
-            *self.next_moments[0].mut_gradient(t) = m_t;
-            *self.next_moments[1].mut_gradient(t) = v_t;
-            m_t_hat.zip_map(&v_t_hat, |m, v| self.lr * m / (v.sqrt() + self.eps))
+                .unwrap_or_else(Cpu::zeros);
+            let m_t = Cpu::zip_map(m_tm1.as_ref(), g_t.as_ref(), |m, g| {
+                m * self.betas[0] + g * (1.0 - self.betas[0])
+            });
+            let v_t = Cpu::zip_map(v_tm1.as_ref(), g_t.as_ref(), |v, g| {
+                v * self.betas[1] + g.powi(2) * (1.0 - self.betas[1])
+            });
+            let r = Cpu::zip_map(m_t.as_ref(), v_t.as_ref(), |m, v| {
+                let m = m * (1.0 - self.betas[0].powi(self.t)).recip();
+                let v = v * (1.0 - self.betas[1].powi(self.t)).recip();
+                self.lr * m / (v.sqrt() + self.eps)
+            });
+            *self.next_moments[0].mut_gradient(t) = *m_t;
+            *self.next_moments[1].mut_gradient(t) = *v_t;
+            r
         })
     }
 }

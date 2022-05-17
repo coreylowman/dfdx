@@ -14,7 +14,7 @@ impl<T> HasUniqueId for PhantomTensor<T> {
 }
 
 impl<T: IsNdArray> IsNdArray for PhantomTensor<T> {
-    type ArrayType = T::ArrayType;
+    type Array = T::Array;
 }
 
 pub trait IntoPhantom: HasNdArray + Sized {

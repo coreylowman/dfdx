@@ -58,28 +58,34 @@ impl Sgd {
 }
 
 impl GradientProvider for Sgd {
-    fn gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<T::ArrayType> {
+    fn gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<Box<T::Array>>
+    where
+        Cpu: Device<T::Array>,
+    {
         self.gradients
             .remove_gradient(t)
             .map(|g| match self.momentum {
                 Some(m) => {
-                    let v = self
-                        .velocity
-                        .remove_gradient(t)
-                        .unwrap_or(T::ArrayType::ZEROS);
+                    let v = self.velocity.remove_gradient(t).unwrap_or_else(Cpu::zeros);
 
-                    let new_v = match m {
-                        Momentum::Classic(μ) => v.scale(μ).add(&g),
-                        Momentum::Nesterov(μ) => v.scale(μ).add(&g),
+                    let u = match m {
+                        Momentum::Classic(u) => u,
+                        Momentum::Nesterov(u) => u,
                     };
-                    *self.next_velocity.mut_gradient(t) = new_v.clone();
+                    let new_v = Cpu::zip_map(g.as_ref(), v.as_ref(), |x, y| x + u * y);
 
-                    match m {
-                        Momentum::Classic(_) => new_v.scale(self.lr),
-                        Momentum::Nesterov(μ) => g.add(&new_v.scale(μ)).scale(self.lr),
-                    }
+                    let r = match m {
+                        Momentum::Classic(_) => Cpu::scale(new_v.as_ref(), self.lr),
+                        Momentum::Nesterov(u) => {
+                            Cpu::zip_map(g.as_ref(), new_v.as_ref(), |x, y| (x + u * y) * self.lr)
+                        }
+                    };
+
+                    *self.next_velocity.mut_gradient(t) = *new_v;
+
+                    r
                 }
-                None => g.scale(self.lr),
+                None => Cpu::scale(g.as_ref(), self.lr),
             })
     }
 }

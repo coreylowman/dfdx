@@ -29,9 +29,12 @@ impl GradientTape {
         self.operations.insert(0, Box::new(operation));
     }
 
-    pub fn backward<T: HasUniqueId + IsNdArray>(mut self, t: &T) -> Gradients {
+    pub fn backward<T: HasUniqueId + IsNdArray>(mut self, t: &T) -> Gradients
+    where
+        Cpu: FillElements<T::Array>,
+    {
         let mut gradients: Gradients = Default::default();
-        gradients.mut_gradient(t).fill_with(&mut || 1.0);
+        Cpu::fill(gradients.mut_gradient(t), &mut |f| *f = 1.0);
         for operation in self.operations.drain(..) {
             (operation)(&mut gradients);
         }
@@ -53,15 +56,15 @@ impl Default for Gradients {
 }
 
 impl Gradients {
-    pub fn mut_gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> &mut T::ArrayType {
+    pub fn mut_gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> &mut T::Array {
         self.gradient_by_id
             .entry(*t.id())
-            .or_insert_with(|| Box::new(T::ArrayType::ZEROS))
+            .or_insert_with(|| <Cpu as AllocateZeros<T::Array>>::zeros())
             .downcast_mut()
             .unwrap()
     }
 
-    pub fn ref_gradient<T: HasUniqueId + IsNdArray>(&self, t: &T) -> &T::ArrayType {
+    pub fn ref_gradient<T: HasUniqueId + IsNdArray>(&self, t: &T) -> &T::Array {
         self.gradient_by_id
             .get(t.id())
             .unwrap()
@@ -69,7 +72,7 @@ impl Gradients {
             .unwrap()
     }
 
-    pub fn remove_gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<T::ArrayType> {
+    pub fn remove_gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<Box<T::Array>> {
         self.gradient_by_id
             .remove_entry(t.id())
             .map(|(_, v)| *v.downcast().expect("Unable to cast properly"))
@@ -77,7 +80,9 @@ impl Gradients {
 }
 
 pub trait GradientProvider {
-    fn gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<T::ArrayType>;
+    fn gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<Box<T::Array>>
+    where
+        Cpu: Device<T::Array>;
 }
 
 pub trait CanUpdateWithGradients {
@@ -86,8 +91,6 @@ pub trait CanUpdateWithGradients {
 
 #[cfg(test)]
 mod tests {
-    use crate::array_ops::AddElements;
-
     use super::*;
 
     struct Tensor {
@@ -101,7 +104,7 @@ mod tests {
     }
 
     impl IsNdArray for Tensor {
-        type ArrayType = [f32; 5];
+        type Array = [f32; 5];
     }
 
     #[test]
@@ -111,7 +114,7 @@ mod tests {
 
         let mut tape = GradientTape::default();
         tape.add_operation(move |g| {
-            g.mut_gradient(&_t1).add(&[1.0; 5]);
+            Cpu::zip_map_assign(g.mut_gradient(&_t1), &[1.0; 5], |l, r| *l += r);
         });
         let g = tape.backward(&t1);
         assert_eq!(g.ref_gradient(&t1), &[1.0; 5]);

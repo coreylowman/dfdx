@@ -1,6 +1,9 @@
 use crate::prelude::*;
 
-pub trait HasSoftmaxMethod: Tensor + HasSumLastMethod + Sized {
+pub trait HasSoftmaxMethod: Tensor + HasSumLastMethod + Sized
+where
+    Cpu: Device<Self::Array>,
+{
     fn logsumexp(self) -> <Self as HasSumLastMethod>::Output;
     fn log_softmax(self) -> Self;
     fn softmax(self) -> Self {
@@ -12,13 +15,13 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: TapeHolder> HasSoftmaxMethod for $typename<$($Vs, )* H> {
     fn logsumexp(mut self) -> <Self as HasSumLastMethod>::Output {
-        let max = self.data().reduce_inner(f32::max);
-        self.mut_data().map_assign_inner(|inner| {
-            let max = inner.reduce(f32::max);
-            inner.map_assign_elems(|v| *v -= max);
+        let max = Cpu::reduce_inner(self.data(), f32::max);
+        Cpu::map_assign_inner(self.mut_data(), |inner| {
+            let max = Cpu::max(inner);
+            Cpu::map_assign(inner, |v| *v -= max);
         });
         let mut result = self.exp().sum_last().ln();
-        result.mut_data().add_assign(&max);
+        Cpu::add_assign(result.mut_data(), max.as_ref());
         result
     }
 

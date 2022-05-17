@@ -4,18 +4,19 @@ pub trait HasMeanMethod: Tensor {
     fn mean(self) -> Tensor0D<Self::TapeHolder>;
 }
 
-impl<T: Tensor> HasMeanMethod for T {
+impl<T: Tensor> HasMeanMethod for T
+where
+    Cpu: Device<T::Array>,
+{
     fn mean(self) -> Tensor0D<Self::TapeHolder> {
-        let result = Tensor0D::<NoTape>::new(self.data().mean());
-        let deriv = self
-            .data()
-            .map_elems(|_| 1.0 / T::ArrayType::NUM_ELEMENTS as f32);
+        let result = Tensor0D::<NoTape>::new(Cpu::mean(self.data()));
+        let deriv = Cpu::map(self.data(), |_| 1.0 / T::Array::NUM_ELEMENTS as f32);
         let (t, mut tape_holder) = self.split_tape_holder();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
             let g: &f32 = tape.ref_gradient(&_result);
-            let d_grad = deriv.map_elems(|v| v * g);
-            tape.mut_gradient(&t).add_assign(&d_grad);
+            let d_grad = Cpu::map(&deriv, |v| v * g);
+            Cpu::add_assign(tape.mut_gradient(&t), &d_grad);
         });
         result.with_tape_holder(tape_holder)
     }

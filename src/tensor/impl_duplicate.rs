@@ -14,7 +14,7 @@ impl<$(const $Vs: usize, )* H: TapeHolder> $typename<$($Vs, )* H> {
 
 impl<$(const $Vs: usize, )*> Clone for $typename<$($Vs, )* NoTape> {
     fn clone(&self) -> Self {
-        $typename::new(self.data.clone())
+        $typename::new_boxed(self.data.clone())
     }
 }
 

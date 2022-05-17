@@ -1,7 +1,13 @@
 use super::*;
-use crate::gradients::Gradients;
+use crate::{
+    gradients::Gradients,
+    prelude::{Cpu, FillElements},
+};
 
-pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Gradients {
+pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Gradients
+where
+    Cpu: FillElements<T::Array>,
+{
     let (t, tape_holder) = t.split_tape_holder();
     tape_holder.0.backward(&t)
 }

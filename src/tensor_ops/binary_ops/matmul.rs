@@ -17,8 +17,8 @@ pub fn matmat_mul<const M: usize, const N: usize, const O: usize, H: TapeHolder>
         let d_grad_lhs = matmul_arrays(result_grad, &lhs_deriv);
         let d_grad_rhs = matmul_arrays(&rhs_deriv, result_grad);
 
-        tape.mut_gradient(&lhs).add_assign(&d_grad_lhs);
-        tape.mut_gradient(&_rhs).add_assign(&d_grad_rhs);
+        Cpu::add_assign(tape.mut_gradient(&lhs), &d_grad_lhs);
+        Cpu::add_assign(tape.mut_gradient(&_rhs), &d_grad_rhs);
     });
 
     result.with_tape_holder(tape_holder)
@@ -40,8 +40,8 @@ pub fn vecmat_mul<const N: usize, const O: usize, H: TapeHolder>(
         let d_grad_lhs = vecmul_arrays(result_grad, &lhs_deriv);
         let d_grad_rhs = matmul_arrays(&rhs_deriv, &[*result_grad]);
 
-        tape.mut_gradient(&lhs).add_assign(&d_grad_lhs);
-        tape.mut_gradient(&_rhs).add_assign(&d_grad_rhs);
+        Cpu::add_assign(tape.mut_gradient(&lhs), &d_grad_lhs);
+        Cpu::add_assign(tape.mut_gradient(&_rhs), &d_grad_rhs);
     });
 
     result.with_tape_holder(tape_holder)

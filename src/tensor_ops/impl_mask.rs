@@ -1,17 +1,22 @@
 use crate::prelude::*;
 
-pub fn value_mask<T: Tensor>(t: T, other: &T::NoTape, value: f32) -> T {
-    let result =
-        T::NoTape::new(
-            t.data()
-                .zip_map(other.data(), |x, y| if y == &value { value } else { *x }),
-        );
-    let deriv = other.data().map_elems(|x| (x != &value) as i32 as f32);
+pub fn value_mask<T: Tensor>(t: T, other: &T::NoTape, value: f32) -> T
+where
+    Cpu: Device<T::Array>,
+{
+    let result = T::NoTape::new_boxed(Cpu::zip_map(t.data(), other.data(), |x, y| {
+        if y == &value {
+            value
+        } else {
+            *x
+        }
+    }));
+    let deriv = Cpu::map(other.data(), |x| (x != value) as i32 as f32);
     let (t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let d_grad = deriv.mul(tape.ref_gradient(&_result));
-        tape.mut_gradient(&t).add_assign(&d_grad);
+        let d_grad = Cpu::mul(&deriv, tape.ref_gradient(&_result));
+        Cpu::add_assign(tape.mut_gradient(&t), &d_grad);
     });
     result.with_tape_holder(tape_holder)
 }

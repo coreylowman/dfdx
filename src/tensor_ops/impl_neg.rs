@@ -2,16 +2,19 @@ use crate::prelude::*;
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: TapeHolder> std::ops::Neg for $typename<$($Vs, )* H> {
+impl<$(const $Vs: usize, )* H: TapeHolder> std::ops::Neg for $typename<$($Vs, )* H>
+where
+    Cpu: Device<<Self as IsNdArray>::Array>
+{
     type Output = Self;
     fn neg(self) -> Self::Output {
-        let result = <Self::Output as Tensor>::NoTape::new(self.data().map_elems(|v| -v));
-        let deriv = self.data().map_elems(|_| -1.0);
+        let result = <Self::Output as Tensor>::NoTape::new_boxed(Cpu::map(self.data(), |v| -v));
+        let deriv = Cpu::map(self.data(), |_| -1.0);
         let (t, mut tape_holder) = self.split_tape_holder();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
-            let d_grad = deriv.mul(tape.ref_gradient(&_result));
-            tape.mut_gradient(&t).add_assign(&d_grad);
+            let d_grad = Cpu::mul(deriv.as_ref(), tape.ref_gradient(&_result));
+            Cpu::add_assign(tape.mut_gradient(&t), &d_grad);
         });
         result.with_tape_holder(tape_holder)
     }

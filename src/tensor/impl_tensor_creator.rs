@@ -3,25 +3,36 @@ use crate::prelude::*;
 use rand::prelude::Distribution;
 
 pub trait TensorCreator: HasNdArray + Sized {
-    fn new(data: Self::ArrayType) -> Self;
+    fn new_boxed(data: Box<Self::Array>) -> Self;
+
+    fn new(data: Self::Array) -> Self {
+        Self::new_boxed(Box::new(data))
+    }
 
     fn zeros() -> Self {
-        Self::new(Self::ArrayType::ZEROS)
+        Self::new_boxed(Cpu::zeros())
     }
 
-    fn ones() -> Self {
-        Self::new(Self::ArrayType::filled_with(&mut || 1.0))
+    fn ones() -> Self
+    where
+        Cpu: FillElements<Self::Array>,
+    {
+        Self::new_boxed(Cpu::filled(&mut |f| *f = 1.0))
     }
 
-    fn rand<R: rand::Rng>(rng: &mut R) -> Self {
-        Self::new(Self::ArrayType::filled_with(&mut || {
-            rand_distr::Standard.sample(rng)
-        }))
+    fn rand<R: rand::Rng>(rng: &mut R) -> Self
+    where
+        Cpu: FillElements<Self::Array>,
+    {
+        Self::new_boxed(Cpu::filled(&mut |f| *f = rand_distr::Standard.sample(rng)))
     }
 
-    fn randn<R: rand::Rng>(rng: &mut R) -> Self {
-        Self::new(Self::ArrayType::filled_with(&mut || {
-            rand_distr::StandardNormal.sample(rng)
+    fn randn<R: rand::Rng>(rng: &mut R) -> Self
+    where
+        Cpu: FillElements<Self::Array>,
+    {
+        Self::new_boxed(Cpu::filled(&mut |f| {
+            *f = rand_distr::StandardNormal.sample(rng)
         }))
     }
 }
@@ -29,7 +40,7 @@ pub trait TensorCreator: HasNdArray + Sized {
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )*> TensorCreator for $typename<$($Vs, )* NoTape> {
-    fn new(data: Self::ArrayType) -> Self {
+    fn new_boxed(data: Box<Self::Array>) -> Self {
         Self {
             id: unique_id(),
             data,

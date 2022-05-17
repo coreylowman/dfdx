@@ -4,25 +4,26 @@ pub fn broadcast_inner_sub<Lhs, Rhs>(lhs: Lhs, rhs: &Rhs) -> Lhs
 where
     Lhs: Tensor,
     Rhs: 'static + Tensor<TapeHolder = NoTape>,
-    Lhs::ArrayType: ReduceInnerElements<Output = Rhs::ArrayType>
-        + ZipMapElements<Rhs::ArrayType>
-        + ZipMapElements<Lhs::ArrayType>,
+    Cpu: Device<Lhs::Array>
+        + Device<Rhs::Array>
+        + ReduceInnerElements<Lhs::Array, Output = Rhs::Array>
+        + ZipMapElements<Lhs::Array, Rhs::Array, Output = Lhs::Array>,
 {
-    let result = Lhs::NoTape::new(lhs.data().sub(rhs.data()));
+    let result = Lhs::NoTape::new_boxed(Cpu::sub(lhs.data(), rhs.data()));
     let (lhs, mut tape_holder) = lhs.split_tape_holder();
-    let lhs_deriv = lhs.data().map_elems(|_| 1.0);
-    let rhs_deriv = rhs.data().map_elems(|_| -1.0);
+    let lhs_deriv = Cpu::map(lhs.data(), |_| 1.0);
+    let rhs_deriv = Cpu::map(rhs.data(), |_| -1.0);
     let _rhs = rhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let d_grad_lhs = lhs_deriv.mul(tape.ref_gradient(&_result));
-        tape.mut_gradient(&lhs).add_assign(&d_grad_lhs);
+        let d_grad_lhs = Cpu::mul(lhs_deriv.as_ref(), tape.ref_gradient(&_result));
+        Cpu::add_assign(tape.mut_gradient(&lhs), d_grad_lhs.as_ref());
 
-        let d_grad_rhs = tape
-            .ref_gradient(&_result)
-            .mul(&rhs_deriv)
-            .reduce_inner(|x, y| x + y);
-        tape.mut_gradient(&_rhs).add_assign(&d_grad_rhs);
+        let d_grad_rhs = Cpu::reduce_inner(
+            &Cpu::mul(tape.ref_gradient(&_result), rhs_deriv.as_ref()),
+            |x, y| x + y,
+        );
+        Cpu::add_assign(tape.mut_gradient(&_rhs), &d_grad_rhs);
     });
     result.with_tape_holder(tape_holder)
 }

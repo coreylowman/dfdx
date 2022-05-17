@@ -1,13 +1,16 @@
 use crate::prelude::*;
 
-pub fn nans_to<T: Tensor>(t: T, value: f32) -> T {
-    let result = T::NoTape::new(t.data().map_elems(|v| if v.is_nan() { value } else { *v }));
-    let deriv = t.data().map_elems(|v| if v.is_nan() { 0.0 } else { 1.0 });
+pub fn nans_to<T: Tensor>(t: T, value: f32) -> T
+where
+    Cpu: MapElements<T::Array> + ZipMapElements<T::Array, T::Array, Output = T::Array>,
+{
+    let result = T::NoTape::new_boxed(Cpu::map(t.data(), |v| if v.is_nan() { value } else { v }));
+    let deriv = Cpu::map(t.data(), |v| if v.is_nan() { 0.0 } else { 1.0 });
     let (t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let d_grad = deriv.mul(tape.ref_gradient(&_result));
-        tape.mut_gradient(&t).add_assign(&d_grad);
+        let d_grad = Cpu::mul(&deriv, tape.ref_gradient(&_result));
+        Cpu::add_assign(tape.mut_gradient(&t), &d_grad);
     });
     result.with_tape_holder(tape_holder)
 }

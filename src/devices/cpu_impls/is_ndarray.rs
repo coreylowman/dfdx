@@ -1,15 +1,9 @@
+use super::Cpu;
 use super::*;
+use crate::prelude::Device;
 
 pub trait IsNdArray {
-    type ArrayType: 'static
-        + Sized
-        + Clone
-        + ZipMapElements<Self::ArrayType>
-        + MapElements
-        + ZeroElements
-        + CountElements
-        + ReduceElements
-        + FillElements;
+    type Array: 'static + Sized + Clone + CountElements;
 }
 
 pub trait Array: std::ops::IndexMut<usize, Output = Self::Element> {
