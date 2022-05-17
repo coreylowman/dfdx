@@ -1,4 +1,5 @@
-use super::{Cpu, HasInner};
+use super::Cpu;
+use crate::arrays::HasInner;
 
 pub trait MapInnerElements<T: HasInner> {
     fn map_assign_inner<F: FnMut(&mut T::Inner) + Copy>(out: &mut T, f: F);

@@ -1,4 +1,5 @@
-use super::{AllocateZeros, CountElements, Cpu};
+use super::{AllocateZeros, Cpu};
+use crate::arrays::CountElements;
 
 pub trait MapElements<T>: Sized {
     fn map_into<F: FnMut(f32) -> f32 + Copy>(inp: &T, out: &mut T, f: F);

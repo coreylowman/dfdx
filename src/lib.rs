@@ -1,3 +1,4 @@
+pub mod arrays;
 pub mod devices;
 pub mod diff_fns;
 pub mod gradients;
@@ -9,6 +10,7 @@ pub mod tensor;
 pub mod tensor_ops;
 pub mod unique_id;
 pub mod prelude {
+    pub use crate::arrays::*;
     pub use crate::devices::*;
     pub use crate::diff_fns::*;
     pub use crate::gradients::*;

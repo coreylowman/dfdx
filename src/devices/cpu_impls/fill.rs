@@ -1,4 +1,5 @@
-use super::{AllocateZeros, CountElements, Cpu};
+use super::{AllocateZeros, Cpu};
+use crate::arrays::CountElements;
 
 pub trait FillElements<T>: Sized {
     fn fill<F: FnMut(&mut f32)>(out: &mut T, f: &mut F);

@@ -1,4 +1,5 @@
-use super::{AllocateZeros, CountElements, Cpu};
+use super::{AllocateZeros, Cpu};
+use crate::arrays::CountElements;
 
 pub trait ZipMapElements<Lhs, Rhs> {
     type Output: CountElements;

@@ -1,17 +1,6 @@
-use super::{CountElements, Cpu};
+use super::Cpu;
+use crate::arrays::CountElements;
 use std::alloc::{alloc_zeroed, Layout};
-
-pub trait ZeroElements {
-    const ZEROS: Self;
-}
-
-impl ZeroElements for f32 {
-    const ZEROS: Self = 0.0;
-}
-
-impl<T: ZeroElements, const M: usize> ZeroElements for [T; M] {
-    const ZEROS: Self = [T::ZEROS; M];
-}
 
 pub trait AllocateZeros<T: CountElements> {
     fn zeros() -> Box<T>;
