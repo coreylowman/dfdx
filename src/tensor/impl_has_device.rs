@@ -1,9 +1,5 @@
 use super::*;
-use crate::devices::Cpu;
-
-pub trait HasDevice {
-    type Device;
-}
+use crate::devices::{Cpu, HasDevice};
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {

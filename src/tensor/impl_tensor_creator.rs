@@ -10,7 +10,7 @@ pub trait TensorCreator: HasArrayData + Sized + HasDevice {
     }
 
     fn zeros() -> Self {
-        Self::new_boxed(Cpu::zeros())
+        Self::new_boxed(Self::Device::zeros())
     }
 
     fn ones() -> Self

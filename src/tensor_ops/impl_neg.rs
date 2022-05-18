@@ -1,9 +1,6 @@
 use crate::prelude::*;
 
-pub fn negate<T: Tensor>(t: T) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn negate<T: Tensor>(t: T) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |v| -v));
     let mut deriv = T::Device::map(t.data(), |_| -1.0);
     let (t, mut tape_holder) = t.split_tape_holder();

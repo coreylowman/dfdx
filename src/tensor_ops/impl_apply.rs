@@ -1,9 +1,6 @@
 use crate::prelude::*;
 
-pub fn apply<T: Tensor, F: DifferentiableFunction>(t: T) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn apply<T: Tensor, F: DifferentiableFunction>(t: T) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), F::f));
     let mut deriv = T::Device::map(t.data(), F::df);
     let (t, mut tape_holder) = t.split_tape_holder();
@@ -44,10 +41,9 @@ apply_impl!(HasAbsMethod, abs, Abs);
 
 pub fn apply_ref<T, F: DifferentiableFunction>(t: &T) -> T
 where
-    Cpu: Device<T::Array>,
     T: Tensor<TapeHolder = NoTape> + TensorCreator,
 {
-    T::new_boxed(Cpu::map(t.data(), F::f))
+    T::new_boxed(T::Device::map(t.data(), F::f))
 }
 
 macro_rules! apply_ref_impl {
@@ -56,10 +52,7 @@ macro_rules! apply_ref_impl {
             fn $method_name(&self) -> Self;
         }
 
-        impl<T: Tensor<TapeHolder = NoTape> + TensorCreator> $trait_name for T
-        where
-            Cpu: Device<T::Array>,
-        {
+        impl<T: Tensor<TapeHolder = NoTape> + TensorCreator> $trait_name for T {
             fn $method_name(&self) -> Self {
                 apply_ref::<Self, $activation_struct>(self)
             }

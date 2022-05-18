@@ -1,9 +1,6 @@
 use crate::prelude::*;
 
-pub trait HasSumLastMethod: Tensor
-where
-    Self::Device: Device<Self::Array>,
-{
+pub trait HasSumLastMethod: Tensor {
     type Output: Tensor;
     fn sum_last(self) -> Self::Output;
 }
@@ -13,13 +10,13 @@ macro_rules! sum_last_impl {
 impl<$(const $Vs: usize, )* H: TapeHolder> HasSumLastMethod for $typename<$($Vs, )* H> {
     type Output = $res<$($Zs, )* H>;
     fn sum_last(self) -> Self::Output {
-        let result = <$res<$($Zs, )* H> as Tensor>::NoTape::new_boxed(Cpu::reduce_inner(self.data(), |a, b| a + b));
-        let mut deriv = Cpu::map(self.data(), |_| 1.0);
+        let result = <$res<$($Zs, )* H> as Tensor>::NoTape::new_boxed(Self::Device::reduce_inner(self.data(), |a, b| a + b));
+        let mut deriv = Self::Device::map(self.data(), |_| 1.0);
         let (t, mut tape_holder) = self.split_tape_holder();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
-            Cpu::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
-            Cpu::add_assign(tape.mut_gradient(&t), deriv.as_ref());
+            Self::Device::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
+            Self::Device::add_assign(tape.mut_gradient(&t), deriv.as_ref());
         });
         result.with_tape_holder(tape_holder)
     }

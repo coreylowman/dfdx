@@ -17,6 +17,10 @@ impl<T: HasArrayType> HasArrayType for PhantomTensor<T> {
     type Array = T::Array;
 }
 
+impl<T: HasDevice> HasDevice for PhantomTensor<T> {
+    type Device = T::Device;
+}
+
 pub trait IntoPhantom: HasArrayData + Sized {
     fn phantom(&self) -> PhantomTensor<Self>;
 }

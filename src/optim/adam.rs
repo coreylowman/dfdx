@@ -53,24 +53,24 @@ impl Adam {
 }
 
 impl GradientProvider for Adam {
-    fn gradient<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Option<Box<T::Array>>
-    where
-        Cpu: Device<T::Array>,
-    {
+    fn gradient<T: HasUniqueId + HasArrayType + HasDevice>(
+        &mut self,
+        t: &T,
+    ) -> Option<Box<T::Array>> {
         self.gradients.remove_gradient(t).map(|mut g_t| {
             let mut m_t = self.moments[0]
                 .remove_gradient(t)
-                .unwrap_or_else(Cpu::zeros);
+                .unwrap_or_else(T::Device::zeros);
             let mut v_t = self.moments[1]
                 .remove_gradient(t)
-                .unwrap_or_else(Cpu::zeros);
-            Cpu::zip_map_assign(m_t.as_mut(), g_t.as_ref(), |m, g| {
+                .unwrap_or_else(T::Device::zeros);
+            T::Device::zip_map_assign(m_t.as_mut(), g_t.as_ref(), |m, g| {
                 *m = *m * self.betas[0] + g * (1.0 - self.betas[0]);
             });
-            Cpu::zip_map_assign(v_t.as_mut(), g_t.as_ref(), |v, g| {
+            T::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), |v, g| {
                 *v = *v * self.betas[1] + g.powi(2) * (1.0 - self.betas[1]);
             });
-            Cpu::zip_map_into(m_t.as_ref(), v_t.as_ref(), g_t.as_mut(), |m, v| {
+            T::Device::zip_map_into(m_t.as_ref(), v_t.as_ref(), g_t.as_mut(), |m, v| {
                 let m = m * (1.0 - self.betas[0].powi(self.t)).recip();
                 let v = v * (1.0 - self.betas[1].powi(self.t)).recip();
                 self.lr * m / (v.sqrt() + self.eps)

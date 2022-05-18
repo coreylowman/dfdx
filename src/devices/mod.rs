@@ -21,5 +21,9 @@ pub trait Device<T: crate::arrays::CountElements>:
 {
 }
 
+pub trait HasDevice: crate::arrays::HasArrayType {
+    type Device: Device<Self::Array>;
+}
+
 impl Device<f32> for Cpu {}
 impl<T: crate::arrays::CountElements, const M: usize> Device<[T; M]> for Cpu where Cpu: Device<T> {}

@@ -1,9 +1,6 @@
 use crate::prelude::*;
 
-pub fn nans_to<T: Tensor>(t: T, value: f32) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn nans_to<T: Tensor>(t: T, value: f32) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(
         t.data(),
         |v| if v.is_nan() { value } else { v },

@@ -1,6 +1,4 @@
-use super::*;
-use crate::gradients::CanUpdateWithGradients;
-use crate::unique_id::HasUniqueId;
+use crate::prelude::*;
 
 pub trait Tensor:
     HasArrayData + CanUpdateWithGradients + HasUniqueId + IntoPhantom + HasDevice

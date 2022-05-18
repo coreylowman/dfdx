@@ -56,10 +56,13 @@ impl Gradients {
         self.gradient_by_id.insert(*t.id(), data);
     }
 
-    pub fn mut_gradient<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> &mut T::Array {
+    pub fn mut_gradient<T: HasUniqueId + HasArrayType + HasDevice>(
+        &mut self,
+        t: &T,
+    ) -> &mut T::Array {
         self.gradient_by_id
             .entry(*t.id())
-            .or_insert_with(|| Cpu::zeros::<T::Array>())
+            .or_insert_with(|| T::Device::zeros::<T::Array>())
             .as_mut()
             .downcast_mut()
             .unwrap()
@@ -85,9 +88,10 @@ impl Gradients {
 }
 
 pub trait GradientProvider {
-    fn gradient<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Option<Box<T::Array>>
-    where
-        Cpu: Device<T::Array>;
+    fn gradient<T: HasUniqueId + HasArrayType + HasDevice>(
+        &mut self,
+        t: &T,
+    ) -> Option<Box<T::Array>>;
 }
 
 pub trait CanUpdateWithGradients {
@@ -110,6 +114,10 @@ mod tests {
 
     impl HasArrayType for Tensor {
         type Array = [f32; 5];
+    }
+
+    impl HasDevice for Tensor {
+        type Device = Cpu;
     }
 
     #[test]

@@ -4,10 +4,7 @@ pub trait HasMeanMethod: Tensor {
     fn mean(self) -> Tensor0D<Self::TapeHolder>;
 }
 
-impl<T: Tensor> HasMeanMethod for T
-where
-    T::Device: Device<T::Array>,
-{
+impl<T: Tensor> HasMeanMethod for T {
     fn mean(self) -> Tensor0D<Self::TapeHolder> {
         let result = Tensor0D::<NoTape>::new(T::Device::mean(self.data()));
         let mut deriv = T::Device::map(self.data(), |_| 1.0 / T::Array::NUM_ELEMENTS as f32);

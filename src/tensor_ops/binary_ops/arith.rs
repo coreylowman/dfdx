@@ -57,10 +57,7 @@ where
     apply_binary_lhs::<T, BinaryDiv>(lhs, rhs)
 }
 
-pub fn apply_binary<T: Tensor, F: DiffBinaryFunction>(lhs: &T::NoTape, rhs: T) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn apply_binary<T: Tensor, F: DiffBinaryFunction>(lhs: &T::NoTape, rhs: T) -> T {
     let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), F::f));
     let mut lhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdx);
     let mut rhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdy);
@@ -77,10 +74,7 @@ where
 }
 
 // TODO how to combine this with above?
-pub fn apply_binary_lhs<T: Tensor, F: DiffBinaryFunction>(lhs: T, rhs: &T::NoTape) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn apply_binary_lhs<T: Tensor, F: DiffBinaryFunction>(lhs: T, rhs: &T::NoTape) -> T {
     let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), F::f));
     let mut lhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdx);
     let mut rhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdy);

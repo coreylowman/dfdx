@@ -1,9 +1,6 @@
 use crate::prelude::*;
 
-pub fn value_mask<T: Tensor>(t: T, other: &T::NoTape, value: f32) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn value_mask<T: Tensor>(t: T, other: &T::NoTape, value: f32) -> T {
     let result = T::NoTape::new_boxed(T::Device::zip_map(t.data(), other.data(), |x, y| {
         if y == &value {
             value
