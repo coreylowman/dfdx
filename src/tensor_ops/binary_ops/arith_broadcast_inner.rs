@@ -10,20 +10,20 @@ where
         + ZipMapElements<Lhs::Array, Rhs::Array>,
 {
     let result = Lhs::NoTape::new_boxed(Cpu::sub(lhs.data(), rhs.data()));
-    let (lhs, mut tape_holder) = lhs.split_tape_holder();
-    let lhs_deriv = Cpu::map(lhs.data(), |_| 1.0);
+    let mut lhs_deriv = Cpu::map(lhs.data(), |_| 1.0);
     let rhs_deriv = Cpu::map(rhs.data(), |_| -1.0);
     let _rhs = rhs.phantom();
     let _result = result.phantom();
+    let (lhs, mut tape_holder) = lhs.split_tape_holder();
     tape_holder.add_operation(move |tape| {
-        let d_grad_lhs = Cpu::mul(lhs_deriv.as_ref(), tape.ref_gradient(&_result));
-        Cpu::add_assign(tape.mut_gradient(&lhs), d_grad_lhs.as_ref());
+        Cpu::mul_assign(lhs_deriv.as_mut(), tape.ref_gradient(&_result));
+        Cpu::add_assign(tape.mut_gradient(&lhs), lhs_deriv.as_ref());
 
         let d_grad_rhs = Cpu::reduce_inner(
             &Cpu::mul(tape.ref_gradient(&_result), rhs_deriv.as_ref()),
             |x, y| x + y,
         );
-        Cpu::add_assign(tape.mut_gradient(&_rhs), &d_grad_rhs);
+        Cpu::add_assign(tape.mut_gradient(&_rhs), d_grad_rhs.as_ref());
     });
     result.with_tape_holder(tape_holder)
 }

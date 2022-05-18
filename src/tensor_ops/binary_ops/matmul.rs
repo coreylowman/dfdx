@@ -1,24 +1,35 @@
 use crate::prelude::*;
 use std::ops::Mul;
 
-pub fn matmat_mul<const M: usize, const N: usize, const O: usize, H: TapeHolder>(
+pub fn matmul<const M: usize, const N: usize, const O: usize, H: TapeHolder>(
     lhs: Tensor2D<M, N, H>,
     rhs: &Tensor2D<N, O, NoTape>,
 ) -> Tensor2D<M, O, H> {
-    let result = Tensor2D::new(matmul_arrays(lhs.data(), rhs.data()));
-    let (lhs, mut tape_holder) = lhs.split_tape_holder();
+    let result = Tensor2D::new_boxed({
+        let mut out: Box<[[f32; O]; M]> = Cpu::zeros();
+        matmat_mul_into(lhs.data(), rhs.data(), &mut out);
+        out
+    });
 
-    let lhs_deriv = transpose_arrays(rhs.data());
-    let rhs_deriv = transpose_arrays(lhs.data());
+    let mut lhs_deriv: Box<[[f32; N]; O]> = Cpu::zeros();
+    let mut rhs_deriv: Box<[[f32; M]; N]> = Cpu::zeros();
+    transpose_into(rhs.data(), lhs_deriv.as_mut());
+    transpose_into(lhs.data(), rhs_deriv.as_mut());
+
     let _rhs = rhs.phantom();
     let _result = result.phantom();
+    let (lhs, mut tape_holder) = lhs.split_tape_holder();
     tape_holder.add_operation(move |tape| {
         let result_grad = tape.ref_gradient(&_result);
-        let d_grad_lhs = matmul_arrays(result_grad, &lhs_deriv);
-        let d_grad_rhs = matmul_arrays(&rhs_deriv, result_grad);
 
-        Cpu::add_assign(tape.mut_gradient(&lhs), &d_grad_lhs);
-        Cpu::add_assign(tape.mut_gradient(&_rhs), &d_grad_rhs);
+        let mut d_grad_lhs: Box<[[f32; N]; M]> = Cpu::zeros();
+        matmat_mul_into(result_grad, lhs_deriv.as_ref(), d_grad_lhs.as_mut());
+
+        let mut d_grad_rhs: Box<[[f32; O]; N]> = Cpu::zeros();
+        matmat_mul_into(rhs_deriv.as_ref(), result_grad, d_grad_rhs.as_mut());
+
+        Cpu::add_assign(tape.mut_gradient(&lhs), d_grad_lhs.as_ref());
+        Cpu::add_assign(tape.mut_gradient(&_rhs), d_grad_rhs.as_ref());
     });
 
     result.with_tape_holder(tape_holder)
@@ -28,20 +39,29 @@ pub fn vecmat_mul<const N: usize, const O: usize, H: TapeHolder>(
     lhs: Tensor1D<N, H>,
     rhs: &Tensor2D<N, O, NoTape>,
 ) -> Tensor1D<O, H> {
-    let result = Tensor1D::new(vecmul_arrays(lhs.data(), rhs.data()));
+    let result = Tensor1D::new_boxed({
+        let mut out: Box<[f32; O]> = Cpu::zeros();
+        vecmat_mul_into(lhs.data(), rhs.data(), out.as_mut());
+        out
+    });
 
-    let (lhs, mut tape_holder) = lhs.split_tape_holder();
-    let lhs_deriv = transpose_arrays(rhs.data());
-    let rhs_deriv = transpose_arrays(&[*lhs.data()]);
+    let mut lhs_deriv: Box<[[f32; N]; O]> = Cpu::zeros();
+    transpose_into(rhs.data(), lhs_deriv.as_mut());
+
     let _rhs = rhs.phantom();
     let _result = result.phantom();
+    let (lhs, mut tape_holder) = lhs.split_tape_holder();
     tape_holder.add_operation(move |tape| {
-        let result_grad = tape.ref_gradient(&_result);
-        let d_grad_lhs = vecmul_arrays(result_grad, &lhs_deriv);
-        let d_grad_rhs = matmul_arrays(&rhs_deriv, &[*result_grad]);
+        let result_grad: &[f32; O] = tape.ref_gradient(&_result);
 
-        Cpu::add_assign(tape.mut_gradient(&lhs), &d_grad_lhs);
-        Cpu::add_assign(tape.mut_gradient(&_rhs), &d_grad_rhs);
+        let mut d_grad_lhs: Box<[f32; N]> = Cpu::zeros();
+        vecmat_mul_into(result_grad, &lhs_deriv, d_grad_lhs.as_mut());
+
+        let mut d_grad_rhs: Box<[[f32; O]; N]> = Cpu::zeros();
+        vecvec_mul_into(lhs.data(), result_grad, d_grad_rhs.as_mut());
+
+        Cpu::add_assign(tape.mut_gradient(&lhs), d_grad_lhs.as_ref());
+        Cpu::add_assign(tape.mut_gradient(&_rhs), d_grad_rhs.as_ref());
     });
 
     result.with_tape_holder(tape_holder)
@@ -52,7 +72,7 @@ impl<const M: usize, const N: usize, const O: usize, H: TapeHolder> Mul<&Tensor2
 {
     type Output = Tensor2D<M, O, H>;
     fn mul(self, rhs: &Tensor2D<N, O, NoTape>) -> Self::Output {
-        matmat_mul(self, rhs)
+        matmul(self, rhs)
     }
 }
 
@@ -65,36 +85,48 @@ impl<const N: usize, const O: usize, H: TapeHolder> Mul<&Tensor2D<N, O, NoTape>>
     }
 }
 
-fn matmul_arrays<const M: usize, const N: usize, const O: usize>(
+fn matmat_mul_into<const M: usize, const N: usize, const O: usize>(
     x: &[[f32; N]; M],
     y: &[[f32; O]; N],
-) -> [[f32; O]; M] {
-    let mut result = [[0.0; O]; M];
+    out: &mut [[f32; O]; M],
+) {
     for m in 0..M {
-        result[m] = vecmul_arrays(&x[m], y);
+        vecmat_mul_into(&x[m], y, &mut out[m]);
     }
-    result
 }
 
-fn vecmul_arrays<const N: usize, const O: usize>(x: &[f32; N], y: &[[f32; O]; N]) -> [f32; O] {
-    let mut result = [0.0; O];
+fn vecmat_mul_into<const N: usize, const O: usize>(
+    x: &[f32; N],
+    y: &[[f32; O]; N],
+    out: &mut [f32; O],
+) {
     for n in 0..N {
         let x_n = &x[n];
+        let y_n = &y[n];
         for o in 0..O {
-            result[o] += x_n * &y[n][o];
+            out[o] += x_n * y_n[o];
         }
     }
-    result
 }
-
-fn transpose_arrays<const M: usize, const N: usize>(x: &[[f32; N]; M]) -> [[f32; M]; N] {
-    let mut result = [[0.0; M]; N];
+fn vecvec_mul_into<const M: usize, const N: usize>(
+    x: &[f32; M],
+    y: &[f32; N],
+    out: &mut [[f32; N]; M],
+) {
     for n in 0..N {
         for m in 0..M {
-            result[n][m] = x[m][n];
+            out[m][n] = x[m] * y[n];
         }
     }
-    result
+}
+
+fn transpose_into<const M: usize, const N: usize>(x: &[[f32; N]; M], out: &mut [[f32; M]; N]) {
+    for n in 0..N {
+        let out_n = &mut out[n];
+        for m in 0..M {
+            out_n[m] = x[m][n];
+        }
+    }
 }
 
 #[cfg(test)]
@@ -104,14 +136,18 @@ mod tests {
     #[test]
     fn test_transpose() {
         let t = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
-        assert_eq!(transpose_arrays(&t), [[1.0, 4.0], [2.0, 5.0], [3.0, 6.0],]);
+        let mut out = [[0.0; 2]; 3];
+        transpose_into(&t, &mut out);
+        assert_eq!(out, [[1.0, 4.0], [2.0, 5.0], [3.0, 6.0],]);
     }
 
     #[test]
     fn test_vecmul() {
         let x = [1.0, 2.0, 3.0];
         let y = [[1.0, 2.0], [0.5, 1.0], [1.0 / 3.0, 1.0]];
-        assert_eq!(vecmul_arrays(&x, &y), [3.0, 7.0]);
+        let mut out = [0.0; 2];
+        vecmat_mul_into(&x, &y, &mut out);
+        assert_eq!(out, [3.0, 7.0]);
     }
 
     #[test]
@@ -123,8 +159,10 @@ mod tests {
             [10.0, 11.0, 12.0],
         ];
         let y = [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]];
+        let mut out = [[0.0; 2]; 4];
+        matmat_mul_into(&x, &y, &mut out);
         assert_eq!(
-            matmul_arrays(&x, &y),
+            out,
             [[22.0, 28.0], [49.0, 64.0], [76.0, 100.0], [103.0, 136.0],]
         );
     }

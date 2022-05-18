@@ -62,16 +62,16 @@ where
     Cpu: Device<T::Array>,
 {
     let result = T::NoTape::new_boxed(Cpu::zip_map(lhs.data(), rhs.data(), F::f));
-    let lhs_deriv = Cpu::zip_map(lhs.data(), rhs.data(), F::dfdx);
-    let rhs_deriv = Cpu::zip_map(lhs.data(), rhs.data(), F::dfdy);
+    let mut lhs_deriv = Cpu::zip_map(lhs.data(), rhs.data(), F::dfdx);
+    let mut rhs_deriv = Cpu::zip_map(lhs.data(), rhs.data(), F::dfdy);
     let (rhs, mut tape_holder) = rhs.split_tape_holder();
     let _lhs = lhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let d_grad_lhs = Cpu::mul(lhs_deriv.as_ref(), tape.ref_gradient(&_result));
-        let d_grad_rhs = Cpu::mul(rhs_deriv.as_ref(), tape.ref_gradient(&_result));
-        Cpu::add_assign(tape.mut_gradient(&_lhs), &d_grad_lhs);
-        Cpu::add_assign(tape.mut_gradient(&rhs), &d_grad_rhs);
+        Cpu::mul_assign(lhs_deriv.as_mut(), tape.ref_gradient(&_result));
+        Cpu::mul_assign(rhs_deriv.as_mut(), tape.ref_gradient(&_result));
+        Cpu::add_assign(tape.mut_gradient(&_lhs), lhs_deriv.as_ref());
+        Cpu::add_assign(tape.mut_gradient(&rhs), rhs_deriv.as_ref());
     });
     result.with_tape_holder(tape_holder)
 }
@@ -82,16 +82,16 @@ where
     Cpu: Device<T::Array>,
 {
     let result = T::NoTape::new_boxed(Cpu::zip_map(lhs.data(), rhs.data(), F::f));
-    let lhs_deriv = Cpu::zip_map(lhs.data(), rhs.data(), F::dfdx);
-    let rhs_deriv = Cpu::zip_map(lhs.data(), rhs.data(), F::dfdy);
+    let mut lhs_deriv = Cpu::zip_map(lhs.data(), rhs.data(), F::dfdx);
+    let mut rhs_deriv = Cpu::zip_map(lhs.data(), rhs.data(), F::dfdy);
     let (lhs, mut tape_holder) = lhs.split_tape_holder();
     let _rhs = rhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let d_grad_lhs = Cpu::mul(lhs_deriv.as_ref(), tape.ref_gradient(&_result));
-        let d_grad_rhs = Cpu::mul(rhs_deriv.as_ref(), tape.ref_gradient(&_result));
-        Cpu::add_assign(tape.mut_gradient(&lhs), &d_grad_lhs);
-        Cpu::add_assign(tape.mut_gradient(&_rhs), &d_grad_rhs);
+        Cpu::mul_assign(lhs_deriv.as_mut(), tape.ref_gradient(&_result));
+        Cpu::mul_assign(rhs_deriv.as_mut(), tape.ref_gradient(&_result));
+        Cpu::add_assign(tape.mut_gradient(&lhs), lhs_deriv.as_ref());
+        Cpu::add_assign(tape.mut_gradient(&_rhs), rhs_deriv.as_ref());
     });
     result.with_tape_holder(tape_holder)
 }

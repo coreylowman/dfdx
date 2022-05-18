@@ -30,7 +30,7 @@ where
         Cpu::zip_map_into(&lhs.data()[i], rhs.data(), &mut result[i], |x, y| x + y);
     }
 
-    let lhs_deriv = Cpu::map(lhs.data(), |_| 1.0);
+    let mut lhs_deriv = Cpu::map(lhs.data(), |_| 1.0);
     let rhs_deriv = Cpu::map(rhs.data(), |_| 1.0);
 
     let result = Lhs::NoTape::new_boxed(result);
@@ -38,8 +38,8 @@ where
     let _rhs = rhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let d_grad_lhs = Cpu::mul(lhs_deriv.as_ref(), tape.ref_gradient(&_result));
-        Cpu::add_assign(tape.mut_gradient(&lhs), &d_grad_lhs);
+        Cpu::mul_assign(lhs_deriv.as_mut(), tape.ref_gradient(&_result));
+        Cpu::add_assign(tape.mut_gradient(&lhs), lhs_deriv.as_ref());
 
         for i in 0..Lhs::Array::SIZE {
             let d_grad_rhs = Cpu::mul(rhs_deriv.as_ref(), &tape.ref_gradient(&_result)[i]);
