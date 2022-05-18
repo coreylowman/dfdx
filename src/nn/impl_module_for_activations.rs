@@ -11,10 +11,7 @@ macro_rules! activation_impls {
             fn randomize<R: Rng, D: Distribution<f32>>(&mut self, _: &mut R, _: &D) {}
         }
 
-        impl<T: Tensor> Module<T> for $typename
-        where
-            T::Device: Device<T::Array>,
-        {
+        impl<T: Tensor> Module<T> for $typename {
             type Output = T;
             fn forward(&self, input: T) -> Self::Output {
                 apply::<T, Self>(input)

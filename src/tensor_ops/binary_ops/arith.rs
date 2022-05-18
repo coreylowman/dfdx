@@ -1,59 +1,35 @@
 use crate::prelude::*;
 use std::ops::{Add, Div, Mul, Sub};
 
-pub fn add<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn add<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
     apply_binary::<T, BinaryAdd>(lhs, rhs)
 }
 
-pub fn add_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn add_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T {
     apply_binary_lhs::<T, BinaryAdd>(lhs, rhs)
 }
 
-pub fn sub<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn sub<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
     apply_binary::<T, BinarySub>(lhs, rhs)
 }
 
-pub fn sub_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn sub_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T {
     apply_binary_lhs::<T, BinarySub>(lhs, rhs)
 }
 
-pub fn mul<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn mul<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
     apply_binary::<T, BinaryMul>(lhs, rhs)
 }
 
-pub fn mul_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn mul_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T {
     apply_binary_lhs::<T, BinaryMul>(lhs, rhs)
 }
 
-pub fn div<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn div<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
     apply_binary::<T, BinaryDiv>(lhs, rhs)
 }
 
-pub fn div_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T
-where
-    T::Device: Device<T::Array>,
-{
+pub fn div_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T {
     apply_binary_lhs::<T, BinaryDiv>(lhs, rhs)
 }
 
