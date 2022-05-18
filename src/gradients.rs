@@ -29,12 +29,8 @@ impl GradientTape {
         self.operations.insert(0, Box::new(operation));
     }
 
-    pub fn backward<T: HasUniqueId + HasArrayType>(mut self, t: &T) -> Gradients
-    where
-        Cpu: FillElements<T::Array>,
-    {
+    pub fn execute(mut self) -> Gradients {
         let mut gradients: Gradients = Default::default();
-        Cpu::fill(gradients.mut_gradient(t), &mut |f| *f = 1.0);
         for operation in self.operations.drain(..) {
             (operation)(&mut gradients);
         }
@@ -125,7 +121,7 @@ mod tests {
         tape.add_operation(move |g| {
             Cpu::zip_map_assign(g.mut_gradient(&_t1), &[1.0; 5], |l, r| *l += r);
         });
-        let g = tape.backward(&t1);
-        assert_eq!(g.ref_gradient(&t1), &[2.0; 5]);
+        let g = tape.execute();
+        assert_eq!(g.ref_gradient(&t1), &[1.0; 5]);
     }
 }

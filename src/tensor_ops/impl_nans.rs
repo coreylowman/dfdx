@@ -2,15 +2,18 @@ use crate::prelude::*;
 
 pub fn nans_to<T: Tensor>(t: T, value: f32) -> T
 where
-    Cpu: Device<T::Array>,
+    T::Device: Device<T::Array>,
 {
-    let result = T::NoTape::new_boxed(Cpu::map(t.data(), |v| if v.is_nan() { value } else { v }));
-    let mut deriv = Cpu::map(t.data(), |v| if v.is_nan() { 0.0 } else { 1.0 });
+    let result = T::NoTape::new_boxed(T::Device::map(
+        t.data(),
+        |v| if v.is_nan() { value } else { v },
+    ));
+    let mut deriv = T::Device::map(t.data(), |v| if v.is_nan() { 0.0 } else { 1.0 });
     let (t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        Cpu::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
-        Cpu::add_assign(tape.mut_gradient(&t), deriv.as_ref());
+        T::Device::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
+        T::Device::add_assign(tape.mut_gradient(&t), deriv.as_ref());
     });
     result.with_tape_holder(tape_holder)
 }

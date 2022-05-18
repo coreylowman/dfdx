@@ -6,17 +6,17 @@ pub trait HasMeanMethod: Tensor {
 
 impl<T: Tensor> HasMeanMethod for T
 where
-    Cpu: Device<T::Array>,
+    T::Device: Device<T::Array>,
 {
     fn mean(self) -> Tensor0D<Self::TapeHolder> {
-        let result = Tensor0D::<NoTape>::new(Cpu::mean(self.data()));
-        let mut deriv = Cpu::map(self.data(), |_| 1.0 / T::Array::NUM_ELEMENTS as f32);
+        let result = Tensor0D::<NoTape>::new(T::Device::mean(self.data()));
+        let mut deriv = T::Device::map(self.data(), |_| 1.0 / T::Array::NUM_ELEMENTS as f32);
         let (t, mut tape_holder) = self.split_tape_holder();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
             let g: f32 = *tape.ref_gradient(&_result);
-            Cpu::map_assign(deriv.as_mut(), |v| *v *= g);
-            Cpu::add_assign(tape.mut_gradient(&t), deriv.as_ref());
+            T::Device::map_assign(deriv.as_mut(), |v| *v *= g);
+            T::Device::add_assign(tape.mut_gradient(&t), deriv.as_ref());
         });
         result.with_tape_holder(tape_holder)
     }

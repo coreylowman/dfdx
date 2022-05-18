@@ -2,7 +2,7 @@ use super::*;
 use crate::prelude::*;
 use rand::prelude::Distribution;
 
-pub trait TensorCreator: HasArrayData + Sized {
+pub trait TensorCreator: HasArrayData + Sized + HasDevice {
     fn new_boxed(data: Box<Self::Array>) -> Self;
 
     fn new(data: Self::Array) -> Self {
@@ -15,23 +15,25 @@ pub trait TensorCreator: HasArrayData + Sized {
 
     fn ones() -> Self
     where
-        Cpu: FillElements<Self::Array>,
+        Self::Device: FillElements<Self::Array>,
     {
-        Self::new_boxed(Cpu::filled(&mut |f| *f = 1.0))
+        Self::new_boxed(Self::Device::filled(&mut |f| *f = 1.0))
     }
 
     fn rand<R: rand::Rng>(rng: &mut R) -> Self
     where
-        Cpu: FillElements<Self::Array>,
+        Self::Device: FillElements<Self::Array>,
     {
-        Self::new_boxed(Cpu::filled(&mut |f| *f = rand_distr::Standard.sample(rng)))
+        Self::new_boxed(Self::Device::filled(&mut |f| {
+            *f = rand_distr::Standard.sample(rng)
+        }))
     }
 
     fn randn<R: rand::Rng>(rng: &mut R) -> Self
     where
-        Cpu: FillElements<Self::Array>,
+        Self::Device: FillElements<Self::Array>,
     {
-        Self::new_boxed(Cpu::filled(&mut |f| {
+        Self::new_boxed(Self::Device::filled(&mut |f| {
             *f = rand_distr::StandardNormal.sample(rng)
         }))
     }

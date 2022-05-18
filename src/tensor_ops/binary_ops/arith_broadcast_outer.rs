@@ -23,27 +23,27 @@ where
     Rhs: 'static + Tensor<TapeHolder = NoTape>,
     Rhs::Array: Array,
     Lhs::Array: Array<Element = Rhs::Array>,
-    Cpu: Device<Lhs::Array> + Device<Rhs::Array>,
+    Lhs::Device: Device<Lhs::Array> + Device<Rhs::Array>,
 {
-    let mut result: Box<Lhs::Array> = Cpu::zeros();
+    let mut result: Box<Lhs::Array> = Lhs::Device::zeros();
     for i in 0..Lhs::Array::SIZE {
-        Cpu::zip_map_into(&lhs.data()[i], rhs.data(), &mut result[i], |x, y| x + y);
+        Lhs::Device::zip_map_into(&lhs.data()[i], rhs.data(), &mut result[i], |x, y| x + y);
     }
 
-    let mut lhs_deriv = Cpu::map(lhs.data(), |_| 1.0);
-    let rhs_deriv = Cpu::map(rhs.data(), |_| 1.0);
+    let mut lhs_deriv = Lhs::Device::map(lhs.data(), |_| 1.0);
+    let rhs_deriv = Lhs::Device::map(rhs.data(), |_| 1.0);
 
     let result = Lhs::NoTape::new_boxed(result);
     let (lhs, mut tape_holder) = lhs.split_tape_holder();
     let _rhs = rhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        Cpu::mul_assign(lhs_deriv.as_mut(), tape.ref_gradient(&_result));
-        Cpu::add_assign(tape.mut_gradient(&lhs), lhs_deriv.as_ref());
+        Lhs::Device::mul_assign(lhs_deriv.as_mut(), tape.ref_gradient(&_result));
+        Lhs::Device::add_assign(tape.mut_gradient(&lhs), lhs_deriv.as_ref());
 
         for i in 0..Lhs::Array::SIZE {
-            let d_grad_rhs = Cpu::mul(rhs_deriv.as_ref(), &tape.ref_gradient(&_result)[i]);
-            Cpu::add_assign(tape.mut_gradient(&_rhs), d_grad_rhs.as_ref());
+            let d_grad_rhs = Lhs::Device::mul(rhs_deriv.as_ref(), &tape.ref_gradient(&_result)[i]);
+            Lhs::Device::add_assign(tape.mut_gradient(&_rhs), d_grad_rhs.as_ref());
         }
     });
     result.with_tape_holder(tape_holder)

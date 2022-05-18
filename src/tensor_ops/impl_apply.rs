@@ -2,15 +2,15 @@ use crate::prelude::*;
 
 pub fn apply<T: Tensor, F: DifferentiableFunction>(t: T) -> T
 where
-    Cpu: Device<T::Array>,
+    T::Device: Device<T::Array>,
 {
-    let result = T::NoTape::new_boxed(Cpu::map(t.data(), F::f));
-    let mut deriv = Cpu::map(t.data(), F::df);
+    let result = T::NoTape::new_boxed(T::Device::map(t.data(), F::f));
+    let mut deriv = T::Device::map(t.data(), F::df);
     let (t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        Cpu::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
-        Cpu::add_assign(tape.mut_gradient(&t), deriv.as_ref());
+        T::Device::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
+        T::Device::add_assign(tape.mut_gradient(&t), deriv.as_ref());
     });
     result.with_tape_holder(tape_holder)
 }
@@ -23,7 +23,7 @@ macro_rules! apply_impl {
 
         impl<T: Tensor> $trait_name for T
         where
-            Cpu: Device<T::Array>,
+            T::Device: Device<T::Array>,
         {
             fn $method_name(self) -> Self {
                 apply::<Self, $activation_struct>(self)

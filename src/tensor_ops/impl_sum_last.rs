@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 pub trait HasSumLastMethod: Tensor
 where
-    Cpu: Device<Self::Array>,
+    Self::Device: Device<Self::Array>,
 {
     type Output: Tensor;
     fn sum_last(self) -> Self::Output;

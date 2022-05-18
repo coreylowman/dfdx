@@ -13,7 +13,7 @@ macro_rules! activation_impls {
 
         impl<T: Tensor> Module<T> for $typename
         where
-            Cpu: Device<T::Array>,
+            T::Device: Device<T::Array>,
         {
             type Output = T;
             fn forward(&self, input: T) -> Self::Output {

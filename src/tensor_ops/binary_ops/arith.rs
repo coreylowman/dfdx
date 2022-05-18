@@ -3,75 +3,75 @@ use std::ops::{Add, Div, Mul, Sub};
 
 pub fn add<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
 where
-    Cpu: Device<T::Array>,
+    T::Device: Device<T::Array>,
 {
     apply_binary::<T, BinaryAdd>(lhs, rhs)
 }
 
 pub fn add_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T
 where
-    Cpu: Device<T::Array>,
+    T::Device: Device<T::Array>,
 {
     apply_binary_lhs::<T, BinaryAdd>(lhs, rhs)
 }
 
 pub fn sub<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
 where
-    Cpu: Device<T::Array>,
+    T::Device: Device<T::Array>,
 {
     apply_binary::<T, BinarySub>(lhs, rhs)
 }
 
 pub fn sub_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T
 where
-    Cpu: Device<T::Array>,
+    T::Device: Device<T::Array>,
 {
     apply_binary_lhs::<T, BinarySub>(lhs, rhs)
 }
 
 pub fn mul<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
 where
-    Cpu: Device<T::Array>,
+    T::Device: Device<T::Array>,
 {
     apply_binary::<T, BinaryMul>(lhs, rhs)
 }
 
 pub fn mul_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T
 where
-    Cpu: Device<T::Array>,
+    T::Device: Device<T::Array>,
 {
     apply_binary_lhs::<T, BinaryMul>(lhs, rhs)
 }
 
 pub fn div<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T
 where
-    Cpu: Device<T::Array>,
+    T::Device: Device<T::Array>,
 {
     apply_binary::<T, BinaryDiv>(lhs, rhs)
 }
 
 pub fn div_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T
 where
-    Cpu: Device<T::Array>,
+    T::Device: Device<T::Array>,
 {
     apply_binary_lhs::<T, BinaryDiv>(lhs, rhs)
 }
 
 pub fn apply_binary<T: Tensor, F: DiffBinaryFunction>(lhs: &T::NoTape, rhs: T) -> T
 where
-    Cpu: Device<T::Array>,
+    T::Device: Device<T::Array>,
 {
-    let result = T::NoTape::new_boxed(Cpu::zip_map(lhs.data(), rhs.data(), F::f));
-    let mut lhs_deriv = Cpu::zip_map(lhs.data(), rhs.data(), F::dfdx);
-    let mut rhs_deriv = Cpu::zip_map(lhs.data(), rhs.data(), F::dfdy);
+    let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), F::f));
+    let mut lhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdx);
+    let mut rhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdy);
     let (rhs, mut tape_holder) = rhs.split_tape_holder();
     let _lhs = lhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        Cpu::mul_assign(lhs_deriv.as_mut(), tape.ref_gradient(&_result));
-        Cpu::mul_assign(rhs_deriv.as_mut(), tape.ref_gradient(&_result));
-        Cpu::add_assign(tape.mut_gradient(&_lhs), lhs_deriv.as_ref());
-        Cpu::add_assign(tape.mut_gradient(&rhs), rhs_deriv.as_ref());
+        T::Device::mul_assign(lhs_deriv.as_mut(), tape.ref_gradient(&_result));
+        T::Device::mul_assign(rhs_deriv.as_mut(), tape.ref_gradient(&_result));
+        T::Device::add_assign(tape.mut_gradient(&_lhs), lhs_deriv.as_ref());
+        T::Device::add_assign(tape.mut_gradient(&rhs), rhs_deriv.as_ref());
     });
     result.with_tape_holder(tape_holder)
 }
@@ -79,19 +79,19 @@ where
 // TODO how to combine this with above?
 pub fn apply_binary_lhs<T: Tensor, F: DiffBinaryFunction>(lhs: T, rhs: &T::NoTape) -> T
 where
-    Cpu: Device<T::Array>,
+    T::Device: Device<T::Array>,
 {
-    let result = T::NoTape::new_boxed(Cpu::zip_map(lhs.data(), rhs.data(), F::f));
-    let mut lhs_deriv = Cpu::zip_map(lhs.data(), rhs.data(), F::dfdx);
-    let mut rhs_deriv = Cpu::zip_map(lhs.data(), rhs.data(), F::dfdy);
+    let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), F::f));
+    let mut lhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdx);
+    let mut rhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdy);
     let (lhs, mut tape_holder) = lhs.split_tape_holder();
     let _rhs = rhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        Cpu::mul_assign(lhs_deriv.as_mut(), tape.ref_gradient(&_result));
-        Cpu::mul_assign(rhs_deriv.as_mut(), tape.ref_gradient(&_result));
-        Cpu::add_assign(tape.mut_gradient(&lhs), lhs_deriv.as_ref());
-        Cpu::add_assign(tape.mut_gradient(&_rhs), rhs_deriv.as_ref());
+        T::Device::mul_assign(lhs_deriv.as_mut(), tape.ref_gradient(&_result));
+        T::Device::mul_assign(rhs_deriv.as_mut(), tape.ref_gradient(&_result));
+        T::Device::add_assign(tape.mut_gradient(&lhs), lhs_deriv.as_ref());
+        T::Device::add_assign(tape.mut_gradient(&_rhs), rhs_deriv.as_ref());
     });
     result.with_tape_holder(tape_holder)
 }

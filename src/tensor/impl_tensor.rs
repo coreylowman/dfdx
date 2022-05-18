@@ -2,17 +2,20 @@ use super::*;
 use crate::gradients::CanUpdateWithGradients;
 use crate::unique_id::HasUniqueId;
 
-pub trait Tensor: HasArrayData + CanUpdateWithGradients + HasUniqueId + IntoPhantom {
+pub trait Tensor:
+    HasArrayData + CanUpdateWithGradients + HasUniqueId + IntoPhantom + HasDevice
+{
     type TapeHolder: TapeHolder;
 
     type NoTape: 'static
-        + Tensor<TapeHolder = NoTape, Array = Self::Array>
+        + Tensor<TapeHolder = NoTape, Array = Self::Array, Device = Self::Device>
         // NOTE: we only want to be able to create NoTape tensors
         + TensorCreator
         // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
         + CanPutTapeHolder<Self::TapeHolder, Output = Self>;
 
-    type WithTape: 'static + Tensor<TapeHolder = WithTape, Array = Self::Array>;
+    type WithTape: 'static
+        + Tensor<TapeHolder = WithTape, Array = Self::Array, Device = Self::Device>;
 
     fn split_tape_holder(self) -> (Self::NoTape, Self::TapeHolder);
 }

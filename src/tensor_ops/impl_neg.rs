@@ -1,22 +1,27 @@
 use crate::prelude::*;
 
+pub fn negate<T: Tensor>(t: T) -> T
+where
+    T::Device: Device<T::Array>,
+{
+    let result = T::NoTape::new_boxed(T::Device::map(t.data(), |v| -v));
+    let mut deriv = T::Device::map(t.data(), |_| -1.0);
+    let (t, mut tape_holder) = t.split_tape_holder();
+    let _result = result.phantom();
+    tape_holder.add_operation(move |tape| {
+        T::Device::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
+        T::Device::add_assign(tape.mut_gradient(&t), deriv.as_ref());
+    });
+    result.with_tape_holder(tape_holder)
+}
+
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: TapeHolder> std::ops::Neg for $typename<$($Vs, )* H>
-where
-    Cpu: Device<<Self as HasArrayType>::Array>
 {
     type Output = Self;
     fn neg(self) -> Self::Output {
-        let result = <Self::Output as Tensor>::NoTape::new_boxed(Cpu::map(self.data(), |v| -v));
-        let mut deriv = Cpu::map(self.data(), |_| -1.0);
-        let (t, mut tape_holder) = self.split_tape_holder();
-        let _result = result.phantom();
-        tape_holder.add_operation(move |tape| {
-            Cpu::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
-            Cpu::add_assign(tape.mut_gradient(&t), deriv.as_ref());
-        });
-        result.with_tape_holder(tape_holder)
+        negate(self)
     }
 }
     };
