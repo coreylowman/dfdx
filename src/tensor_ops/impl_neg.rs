@@ -4,7 +4,7 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: TapeHolder> std::ops::Neg for $typename<$($Vs, )* H>
 where
-    Cpu: Device<<Self as IsNdArray>::Array>
+    Cpu: Device<<Self as HasArrayType>::Array>
 {
     type Output = Self;
     fn neg(self) -> Self::Output {

@@ -13,11 +13,11 @@ impl<T> HasUniqueId for PhantomTensor<T> {
     }
 }
 
-impl<T: IsNdArray> IsNdArray for PhantomTensor<T> {
+impl<T: HasArrayType> HasArrayType for PhantomTensor<T> {
     type Array = T::Array;
 }
 
-pub trait IntoPhantom: HasNdArray + Sized {
+pub trait IntoPhantom: HasArrayData + Sized {
     fn phantom(&self) -> PhantomTensor<Self>;
 }
 

@@ -38,7 +38,7 @@ impl<T: ZeroElements, const M: usize> ZeroElements for [T; M] {
     const ZEROS: Self = [T::ZEROS; M];
 }
 
-pub trait IsNdArray {
+pub trait HasArrayType {
     type Array: 'static + Sized + Clone + CountElements + ZeroElements;
 }
 

@@ -53,7 +53,7 @@ impl Adam {
 }
 
 impl GradientProvider for Adam {
-    fn gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<Box<T::Array>>
+    fn gradient<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Option<Box<T::Array>>
     where
         Cpu: Device<T::Array>,
     {

@@ -2,7 +2,7 @@ use super::*;
 use crate::prelude::*;
 use rand::prelude::Distribution;
 
-pub trait TensorCreator: HasNdArray + Sized {
+pub trait TensorCreator: HasArrayData + Sized {
     fn new_boxed(data: Box<Self::Array>) -> Self;
 
     fn new(data: Self::Array) -> Self {

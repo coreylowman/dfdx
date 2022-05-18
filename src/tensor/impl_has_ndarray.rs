@@ -1,18 +1,18 @@
 use super::*;
 use crate::prelude::*;
 
-pub trait HasNdArray: IsNdArray {
+pub trait HasArrayData: HasArrayType {
     fn data(&self) -> &Self::Array;
     fn mut_data(&mut self) -> &mut Self::Array;
 }
 
 macro_rules! ndarray_impl {
     ($typename:ident, [$($Vs:tt),*], $arr:ty) => {
-impl<$(const $Vs: usize, )* H> IsNdArray for $typename<$($Vs, )* H>  {
+impl<$(const $Vs: usize, )* H> HasArrayType for $typename<$($Vs, )* H>  {
     type Array = $arr;
 }
 
-impl<$(const $Vs: usize, )* H> HasNdArray for $typename<$($Vs, )* H> {
+impl<$(const $Vs: usize, )* H> HasArrayData for $typename<$($Vs, )* H> {
     fn data(&self) -> &Self::Array { &self.data }
     fn mut_data(&mut self) -> &mut Self::Array { &mut self.data }
 }

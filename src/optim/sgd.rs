@@ -58,7 +58,7 @@ impl Sgd {
 }
 
 impl GradientProvider for Sgd {
-    fn gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<Box<T::Array>>
+    fn gradient<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Option<Box<T::Array>>
     where
         Cpu: Device<T::Array>,
     {

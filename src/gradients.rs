@@ -29,7 +29,7 @@ impl GradientTape {
         self.operations.insert(0, Box::new(operation));
     }
 
-    pub fn backward<T: HasUniqueId + IsNdArray>(mut self, t: &T) -> Gradients
+    pub fn backward<T: HasUniqueId + HasArrayType>(mut self, t: &T) -> Gradients
     where
         Cpu: FillElements<T::Array>,
     {
@@ -56,7 +56,7 @@ impl Default for Gradients {
 }
 
 impl Gradients {
-    pub fn mut_gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> &mut T::Array {
+    pub fn mut_gradient<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> &mut T::Array {
         self.gradient_by_id
             .entry(*t.id())
             .or_insert_with(|| <Cpu as AllocateZeros<T::Array>>::zeros())
@@ -64,7 +64,7 @@ impl Gradients {
             .unwrap()
     }
 
-    pub fn ref_gradient<T: HasUniqueId + IsNdArray>(&self, t: &T) -> &T::Array {
+    pub fn ref_gradient<T: HasUniqueId + HasArrayType>(&self, t: &T) -> &T::Array {
         self.gradient_by_id
             .get(t.id())
             .unwrap()
@@ -72,7 +72,10 @@ impl Gradients {
             .unwrap()
     }
 
-    pub fn remove_gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<Box<T::Array>> {
+    pub fn remove_gradient<T: HasUniqueId + HasArrayType>(
+        &mut self,
+        t: &T,
+    ) -> Option<Box<T::Array>> {
         self.gradient_by_id
             .remove_entry(t.id())
             .map(|(_, v)| v.downcast().expect("Unable to cast properly"))
@@ -80,7 +83,7 @@ impl Gradients {
 }
 
 pub trait GradientProvider {
-    fn gradient<T: HasUniqueId + IsNdArray>(&mut self, t: &T) -> Option<Box<T::Array>>
+    fn gradient<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Option<Box<T::Array>>
     where
         Cpu: Device<T::Array>;
 }
@@ -103,7 +106,7 @@ mod tests {
         }
     }
 
-    impl IsNdArray for Tensor {
+    impl HasArrayType for Tensor {
         type Array = [f32; 5];
     }
 
