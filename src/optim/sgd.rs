@@ -62,31 +62,34 @@ impl GradientProvider for Sgd {
     where
         Cpu: Device<T::Array>,
     {
-        self.gradients
-            .remove_gradient(t)
-            .map(|g_t| match self.momentum {
+        self.gradients.remove_gradient(t).map(|mut g_t| {
+            match self.momentum {
                 Some(m) => {
-                    let v_tm1 = self.velocity.remove_gradient(t).unwrap_or_else(Cpu::zeros);
+                    let mut v_t = self.velocity.remove_gradient(t).unwrap_or_else(Cpu::zeros);
 
                     let u = match m {
                         Momentum::Classic(u) => u,
                         Momentum::Nesterov(u) => u,
                     };
-                    let v_t = Cpu::zip_map(g_t.as_ref(), v_tm1.as_ref(), |g, v| g + u * v);
+                    Cpu::zip_map_assign(v_t.as_mut(), g_t.as_ref(), |v, g| *v = g + u * *v);
 
-                    let r = match m {
-                        Momentum::Classic(_) => Cpu::scale(v_t.as_ref(), self.lr),
-                        Momentum::Nesterov(u) => {
-                            Cpu::zip_map(g_t.as_ref(), v_t.as_ref(), |g, v| (g + u * v) * self.lr)
+                    match m {
+                        Momentum::Classic(_) => {
+                            Cpu::zip_map_assign(g_t.as_mut(), v_t.as_ref(), |g, v| *g = v * self.lr)
                         }
-                    };
+                        Momentum::Nesterov(u) => {
+                            Cpu::zip_map_assign(g_t.as_mut(), v_t.as_ref(), |g, v| {
+                                *g = (*g + u * v) * self.lr
+                            })
+                        }
+                    }
 
-                    self.next_velocity.insert(t, v_t);
-
-                    r
+                    self.next_velocity.insert(t, v_t)
                 }
-                None => Cpu::scale(g_t.as_ref(), self.lr),
-            })
+                None => Cpu::map_assign(g_t.as_mut(), |v| *v *= self.lr),
+            }
+            g_t
+        })
     }
 }
 

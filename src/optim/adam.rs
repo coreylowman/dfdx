@@ -57,27 +57,27 @@ impl GradientProvider for Adam {
     where
         Cpu: Device<T::Array>,
     {
-        self.gradients.remove_gradient(t).map(|g_t| {
-            let m_tm1 = self.moments[0]
+        self.gradients.remove_gradient(t).map(|mut g_t| {
+            let mut m_t = self.moments[0]
                 .remove_gradient(t)
                 .unwrap_or_else(Cpu::zeros);
-            let v_tm1 = self.moments[1]
+            let mut v_t = self.moments[1]
                 .remove_gradient(t)
                 .unwrap_or_else(Cpu::zeros);
-            let m_t = Cpu::zip_map(m_tm1.as_ref(), g_t.as_ref(), |m, g| {
-                m * self.betas[0] + g * (1.0 - self.betas[0])
+            Cpu::zip_map_assign(m_t.as_mut(), g_t.as_ref(), |m, g| {
+                *m = *m * self.betas[0] + g * (1.0 - self.betas[0]);
             });
-            let v_t = Cpu::zip_map(v_tm1.as_ref(), g_t.as_ref(), |v, g| {
-                v * self.betas[1] + g.powi(2) * (1.0 - self.betas[1])
+            Cpu::zip_map_assign(v_t.as_mut(), g_t.as_ref(), |v, g| {
+                *v = *v * self.betas[1] + g.powi(2) * (1.0 - self.betas[1]);
             });
-            let r = Cpu::zip_map(m_t.as_ref(), v_t.as_ref(), |m, v| {
+            Cpu::zip_map_into(m_t.as_ref(), v_t.as_ref(), g_t.as_mut(), |m, v| {
                 let m = m * (1.0 - self.betas[0].powi(self.t)).recip();
                 let v = v * (1.0 - self.betas[1].powi(self.t)).recip();
                 self.lr * m / (v.sqrt() + self.eps)
             });
             self.next_moments[0].insert(t, m_t);
             self.next_moments[1].insert(t, v_t);
-            r
+            g_t
         })
     }
 }
