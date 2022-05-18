@@ -17,8 +17,6 @@ impl<$(const $Vs: usize, )*> Clone for $typename<$($Vs, )* NoTape> {
         $typename::new_boxed(self.data.clone())
     }
 }
-
-
     };
 }
 

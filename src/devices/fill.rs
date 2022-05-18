@@ -1,14 +1,10 @@
 use super::{AllocateZeros, Cpu};
 use crate::arrays::CountElements;
 
-pub trait FillElements<T>: Sized {
+pub trait FillElements<T: CountElements>: Sized + AllocateZeros {
     fn fill<F: FnMut(&mut f32)>(out: &mut T, f: &mut F);
 
-    fn filled<F: FnMut(&mut f32)>(f: &mut F) -> Box<T>
-    where
-        T: CountElements,
-        Self: AllocateZeros<T>,
-    {
+    fn filled<F: FnMut(&mut f32)>(f: &mut F) -> Box<T> {
         let mut out = Self::zeros();
         Self::fill(&mut out, f);
         out
@@ -21,9 +17,9 @@ impl FillElements<f32> for Cpu {
     }
 }
 
-impl<T, const M: usize> FillElements<[T; M]> for Cpu
+impl<T: CountElements, const M: usize> FillElements<[T; M]> for Cpu
 where
-    Cpu: FillElements<T>,
+    Self: FillElements<T>,
 {
     fn fill<F: FnMut(&mut f32)>(out: &mut [T; M], f: &mut F) {
         for i in 0..M {

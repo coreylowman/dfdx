@@ -1,30 +1,17 @@
 use super::{AllocateZeros, Cpu};
 use crate::arrays::CountElements;
 
-pub trait ZipMapElements<Lhs, Rhs> {
-    type Output: CountElements;
-
-    fn zip_map_into<F: FnMut(&f32, &f32) -> f32 + Copy>(
-        l: &Lhs,
-        r: &Rhs,
-        out: &mut Self::Output,
-        f: F,
-    );
+pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros {
+    fn zip_map_into<F: FnMut(&f32, &f32) -> f32 + Copy>(l: &Lhs, r: &Rhs, out: &mut Lhs, f: F);
     fn zip_map_assign<F: FnMut(&mut f32, &f32) + Copy>(l: &mut Lhs, r: &Rhs, f: F);
 
-    fn zip_map<F: FnMut(&f32, &f32) -> f32 + Copy>(l: &Lhs, r: &Rhs, f: F) -> Box<Self::Output>
-    where
-        Self: AllocateZeros<Self::Output>,
-    {
+    fn zip_map<F: FnMut(&f32, &f32) -> f32 + Copy>(l: &Lhs, r: &Rhs, f: F) -> Box<Lhs> {
         let mut out = Self::zeros();
         Self::zip_map_into(l, r, &mut out, f);
         out
     }
 
-    fn add(l: &Lhs, r: &Rhs) -> Box<Self::Output>
-    where
-        Self: AllocateZeros<Self::Output>,
-    {
+    fn add(l: &Lhs, r: &Rhs) -> Box<Lhs> {
         Self::zip_map(l, r, |x, y| x + y)
     }
 
@@ -32,10 +19,7 @@ pub trait ZipMapElements<Lhs, Rhs> {
         Self::zip_map_assign(l, r, |x, y| *x += y);
     }
 
-    fn sub(l: &Lhs, r: &Rhs) -> Box<Self::Output>
-    where
-        Self: AllocateZeros<Self::Output>,
-    {
+    fn sub(l: &Lhs, r: &Rhs) -> Box<Lhs> {
         Self::zip_map(l, r, |x, y| x - y)
     }
 
@@ -43,10 +27,7 @@ pub trait ZipMapElements<Lhs, Rhs> {
         Self::zip_map_assign(l, r, |x, y| *x -= y);
     }
 
-    fn mul(l: &Lhs, r: &Rhs) -> Box<Self::Output>
-    where
-        Self: AllocateZeros<Self::Output>,
-    {
+    fn mul(l: &Lhs, r: &Rhs) -> Box<Lhs> {
         Self::zip_map(l, r, |x, y| x * y)
     }
 
@@ -54,10 +35,7 @@ pub trait ZipMapElements<Lhs, Rhs> {
         Self::zip_map_assign(l, r, |x, y| *x *= y);
     }
 
-    fn div(l: &Lhs, r: &Rhs) -> Box<Self::Output>
-    where
-        Self: AllocateZeros<Self::Output>,
-    {
+    fn div(l: &Lhs, r: &Rhs) -> Box<Lhs> {
         Self::zip_map(l, r, |x, y| x / y)
     }
 
@@ -67,13 +45,7 @@ pub trait ZipMapElements<Lhs, Rhs> {
 }
 
 impl ZipMapElements<f32, f32> for Cpu {
-    type Output = f32;
-    fn zip_map_into<F: FnMut(&f32, &f32) -> f32 + Copy>(
-        l: &f32,
-        r: &f32,
-        out: &mut Self::Output,
-        mut f: F,
-    ) {
+    fn zip_map_into<F: FnMut(&f32, &f32) -> f32 + Copy>(l: &f32, r: &f32, out: &mut f32, mut f: F) {
         *out = f(l, r);
     }
 
@@ -83,11 +55,10 @@ impl ZipMapElements<f32, f32> for Cpu {
 }
 
 impl<const M: usize> ZipMapElements<[f32; M], f32> for Cpu {
-    type Output = [f32; M];
     fn zip_map_into<F: FnMut(&f32, &f32) -> f32 + Copy>(
         l: &[f32; M],
         r: &f32,
-        out: &mut Self::Output,
+        out: &mut [f32; M],
         f: F,
     ) {
         for i in 0..M {
@@ -102,15 +73,15 @@ impl<const M: usize> ZipMapElements<[f32; M], f32> for Cpu {
     }
 }
 
-impl<Rhs, Lhs, const M: usize> ZipMapElements<[Lhs; M], [Rhs; M]> for Cpu
+impl<Rhs: CountElements, Lhs: CountElements, const M: usize> ZipMapElements<[Lhs; M], [Rhs; M]>
+    for Cpu
 where
-    Cpu: ZipMapElements<Lhs, Rhs>,
+    Self: ZipMapElements<Lhs, Rhs>,
 {
-    type Output = [<Self as ZipMapElements<Lhs, Rhs>>::Output; M];
     fn zip_map_into<F: FnMut(&f32, &f32) -> f32 + Copy>(
         l: &[Lhs; M],
         r: &[Rhs; M],
-        out: &mut Self::Output,
+        out: &mut [Lhs; M],
         f: F,
     ) {
         for i in 0..M {

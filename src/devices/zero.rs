@@ -2,12 +2,12 @@ use super::Cpu;
 use crate::arrays::CountElements;
 use std::alloc::{alloc_zeroed, Layout};
 
-pub trait AllocateZeros<T: CountElements> {
-    fn zeros() -> Box<T>;
+pub trait AllocateZeros {
+    fn zeros<T: CountElements>() -> Box<T>;
 }
 
-impl<T: CountElements> AllocateZeros<T> for Cpu {
-    fn zeros() -> Box<T> {
+impl AllocateZeros for Cpu {
+    fn zeros<T: CountElements>() -> Box<T> {
         // TODO is this function safe for any T?
         // TODO move to using safe code once we can allocate an array directly on the heap.
         let layout = Layout::new::<T>();

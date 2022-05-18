@@ -17,11 +17,7 @@ pub use zero::*;
 pub use zip_map::*;
 
 pub trait Device<T: crate::arrays::CountElements>:
-    FillElements<T>
-    + ZipMapElements<T, T, Output = T>
-    + MapElements<T>
-    + ReduceElements<T>
-    + AllocateZeros<T>
+    FillElements<T> + ZipMapElements<T, T> + MapElements<T> + ReduceElements<T> + AllocateZeros
 {
 }
 

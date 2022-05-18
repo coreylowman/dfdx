@@ -9,12 +9,12 @@ where
     type Output = Self;
     fn neg(self) -> Self::Output {
         let result = <Self::Output as Tensor>::NoTape::new_boxed(Cpu::map(self.data(), |v| -v));
-        let deriv = Cpu::map(self.data(), |_| -1.0);
+        let mut deriv = Cpu::map(self.data(), |_| -1.0);
         let (t, mut tape_holder) = self.split_tape_holder();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
-            let d_grad = Cpu::mul(deriv.as_ref(), tape.ref_gradient(&_result));
-            Cpu::add_assign(tape.mut_gradient(&t), &d_grad);
+            Cpu::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
+            Cpu::add_assign(tape.mut_gradient(&t), deriv.as_ref());
         });
         result.with_tape_holder(tape_holder)
     }

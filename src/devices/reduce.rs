@@ -29,7 +29,7 @@ impl ReduceElements<f32> for Cpu {
 
 impl<T: CountElements, const M: usize> ReduceElements<[T; M]> for Cpu
 where
-    Cpu: ReduceElements<T>,
+    Self: ReduceElements<T>,
 {
     fn reduce<F: FnMut(f32, f32) -> f32 + Copy>(inp: &[T; M], f: F) -> f32 {
         (0..M).map(|i| Self::reduce(&inp[i], f)).reduce(f).unwrap()

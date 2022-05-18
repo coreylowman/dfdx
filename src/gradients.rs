@@ -59,7 +59,8 @@ impl Gradients {
     pub fn mut_gradient<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> &mut T::Array {
         self.gradient_by_id
             .entry(*t.id())
-            .or_insert_with(|| <Cpu as AllocateZeros<T::Array>>::zeros())
+            .or_insert_with(|| Cpu::zeros::<T::Array>())
+            .as_mut()
             .downcast_mut()
             .unwrap()
     }
@@ -68,6 +69,7 @@ impl Gradients {
         self.gradient_by_id
             .get(t.id())
             .unwrap()
+            .as_ref()
             .downcast_ref()
             .unwrap()
     }

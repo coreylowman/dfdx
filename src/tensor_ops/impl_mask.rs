@@ -11,12 +11,12 @@ where
             *x
         }
     }));
-    let deriv = Cpu::map(other.data(), |x| (x != value) as i32 as f32);
+    let mut deriv = Cpu::map(other.data(), |x| (x != value) as i32 as f32);
     let (t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        let d_grad = Cpu::mul(&deriv, tape.ref_gradient(&_result));
-        Cpu::add_assign(tape.mut_gradient(&t), &d_grad);
+        Cpu::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
+        Cpu::add_assign(tape.mut_gradient(&t), deriv.as_ref());
     });
     result.with_tape_holder(tape_holder)
 }

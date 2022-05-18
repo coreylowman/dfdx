@@ -16,7 +16,7 @@ impl<const M: usize> MapInnerElements<[f32; M]> for Cpu {
 
 impl<T: HasInner, const M: usize> MapInnerElements<[T; M]> for Cpu
 where
-    Cpu: MapInnerElements<T>,
+    Self: MapInnerElements<T>,
 {
     fn map_assign_inner<F: FnMut(&mut <[T; M] as HasInner>::Inner) + Copy>(out: &mut [T; M], f: F) {
         for i in 0..M {

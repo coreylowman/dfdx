@@ -1,14 +1,12 @@
 use super::{AllocateZeros, Cpu};
 use crate::arrays::CountElements;
 
-pub trait ReduceInnerElements<T>: Sized {
+pub trait ReduceInnerElements<T>: Sized + AllocateZeros {
     type Output: Sized + CountElements;
+
     fn reduce_inner_into<F: FnMut(f32, f32) -> f32 + Copy>(inp: &T, out: &mut Self::Output, f: F);
 
-    fn reduce_inner<F: FnMut(f32, f32) -> f32 + Copy>(inp: &T, f: F) -> Box<Self::Output>
-    where
-        Self: AllocateZeros<Self::Output>,
-    {
+    fn reduce_inner<F: FnMut(f32, f32) -> f32 + Copy>(inp: &T, f: F) -> Box<Self::Output> {
         let mut out = Self::zeros();
         Self::reduce_inner_into(inp, &mut out, f);
         out

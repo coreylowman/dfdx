@@ -64,28 +64,28 @@ impl GradientProvider for Sgd {
     {
         self.gradients
             .remove_gradient(t)
-            .map(|g| match self.momentum {
+            .map(|g_t| match self.momentum {
                 Some(m) => {
-                    let v = self.velocity.remove_gradient(t).unwrap_or_else(Cpu::zeros);
+                    let v_tm1 = self.velocity.remove_gradient(t).unwrap_or_else(Cpu::zeros);
 
                     let u = match m {
                         Momentum::Classic(u) => u,
                         Momentum::Nesterov(u) => u,
                     };
-                    let new_v = Cpu::zip_map(g.as_ref(), v.as_ref(), |x, y| x + u * y);
+                    let v_t = Cpu::zip_map(g_t.as_ref(), v_tm1.as_ref(), |g, v| g + u * v);
 
                     let r = match m {
-                        Momentum::Classic(_) => Cpu::scale(new_v.as_ref(), self.lr),
+                        Momentum::Classic(_) => Cpu::scale(v_t.as_ref(), self.lr),
                         Momentum::Nesterov(u) => {
-                            Cpu::zip_map(g.as_ref(), new_v.as_ref(), |x, y| (x + u * y) * self.lr)
+                            Cpu::zip_map(g_t.as_ref(), v_t.as_ref(), |g, v| (g + u * v) * self.lr)
                         }
                     };
 
-                    *self.next_velocity.mut_gradient(t) = *new_v;
+                    *self.next_velocity.mut_gradient(t) = *v_t;
 
                     r
                 }
-                None => Cpu::scale(g.as_ref(), self.lr),
+                None => Cpu::scale(g_t.as_ref(), self.lr),
             })
     }
 }
@@ -97,6 +97,7 @@ impl Optimizer for Sgd {
         self.velocity = std::mem::take(&mut self.next_velocity);
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

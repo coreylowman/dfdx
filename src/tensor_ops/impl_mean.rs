@@ -10,13 +10,13 @@ where
 {
     fn mean(self) -> Tensor0D<Self::TapeHolder> {
         let result = Tensor0D::<NoTape>::new(Cpu::mean(self.data()));
-        let deriv = Cpu::map(self.data(), |_| 1.0 / T::Array::NUM_ELEMENTS as f32);
+        let mut deriv = Cpu::map(self.data(), |_| 1.0 / T::Array::NUM_ELEMENTS as f32);
         let (t, mut tape_holder) = self.split_tape_holder();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
-            let g: &f32 = tape.ref_gradient(&_result);
-            let d_grad = Cpu::scale(deriv.as_ref(), *g);
-            Cpu::add_assign(tape.mut_gradient(&t), &d_grad);
+            let g: f32 = *tape.ref_gradient(&_result);
+            Cpu::map_assign(deriv.as_mut(), |v| *v *= g);
+            Cpu::add_assign(tape.mut_gradient(&t), deriv.as_ref());
         });
         result.with_tape_holder(tape_holder)
     }

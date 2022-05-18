@@ -14,12 +14,12 @@ impl<$(const $Vs: usize, )* H: TapeHolder> HasSumLastMethod for $typename<$($Vs,
     type Output = $res<$($Zs, )* H>;
     fn sum_last(self) -> Self::Output {
         let result = <$res<$($Zs, )* H> as Tensor>::NoTape::new_boxed(Cpu::reduce_inner(self.data(), |a, b| a + b));
-        let deriv = Cpu::map(self.data(), |_| 1.0);
+        let mut deriv = Cpu::map(self.data(), |_| 1.0);
         let (t, mut tape_holder) = self.split_tape_holder();
         let _result = result.phantom();
         tape_holder.add_operation(move |tape| {
-            let d_grad = Cpu::mul(deriv.as_ref(), tape.ref_gradient(&_result));
-            Cpu::add_assign(tape.mut_gradient(&t), d_grad.as_ref());
+            Cpu::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
+            Cpu::add_assign(tape.mut_gradient(&t), deriv.as_ref());
         });
         result.with_tape_holder(tape_holder)
     }

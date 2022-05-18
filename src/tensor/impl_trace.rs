@@ -10,6 +10,14 @@ impl<$(const $Vs: usize, )*> $typename<$($Vs, )* NoTape> {
             tape: WithTape::default(),
         }
     }
+
+    pub fn traced(self) -> $typename<$($Vs, )* WithTape> {
+        $typename {
+            id: self.id,
+            data: self.data,
+            tape: WithTape::default(),
+        }
+    }
 }
     };
 }

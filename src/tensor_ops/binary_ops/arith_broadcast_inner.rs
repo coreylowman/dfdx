@@ -7,7 +7,7 @@ where
     Cpu: Device<Lhs::Array>
         + Device<Rhs::Array>
         + ReduceInnerElements<Lhs::Array, Output = Rhs::Array>
-        + ZipMapElements<Lhs::Array, Rhs::Array, Output = Lhs::Array>,
+        + ZipMapElements<Lhs::Array, Rhs::Array>,
 {
     let result = Lhs::NoTape::new_boxed(Cpu::sub(lhs.data(), rhs.data()));
     let (lhs, mut tape_holder) = lhs.split_tape_holder();

@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
+    devices::{Cpu, FillElements},
     gradients::Gradients,
-    prelude::{Cpu, FillElements},
 };
 
 pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Gradients

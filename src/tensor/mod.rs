@@ -1,7 +1,7 @@
 mod impl_backward;
 mod impl_default;
 mod impl_duplicate;
-mod impl_has_ndarray;
+mod impl_has_array;
 mod impl_has_unique_id;
 mod impl_phantom;
 mod impl_randomize;
@@ -16,7 +16,7 @@ mod tape_holders;
 pub use impl_backward::*;
 pub use impl_default::*;
 pub use impl_duplicate::*;
-pub use impl_has_ndarray::*;
+pub use impl_has_array::*;
 pub use impl_has_unique_id::*;
 pub use impl_phantom::*;
 pub use impl_randomize::*;
