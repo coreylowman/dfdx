@@ -56,6 +56,12 @@ impl Gradients {
         self.gradient_by_id.insert(*t.id(), data);
     }
 
+    pub fn remove<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Option<Box<T::Array>> {
+        self.gradient_by_id
+            .remove_entry(t.id())
+            .map(|(_, v)| v.downcast().expect("Unable to cast properly"))
+    }
+
     pub fn mut_gradient<T: HasUniqueId + HasArrayType + HasDevice>(
         &mut self,
         t: &T,
@@ -75,15 +81,6 @@ impl Gradients {
             .as_ref()
             .downcast_ref()
             .unwrap()
-    }
-
-    pub fn remove_gradient<T: HasUniqueId + HasArrayType>(
-        &mut self,
-        t: &T,
-    ) -> Option<Box<T::Array>> {
-        self.gradient_by_id
-            .remove_entry(t.id())
-            .map(|(_, v)| v.downcast().expect("Unable to cast properly"))
     }
 }
 

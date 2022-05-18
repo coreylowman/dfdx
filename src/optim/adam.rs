@@ -57,13 +57,9 @@ impl GradientProvider for Adam {
         &mut self,
         t: &T,
     ) -> Option<Box<T::Array>> {
-        self.gradients.remove_gradient(t).map(|mut g_t| {
-            let mut m_t = self.moments[0]
-                .remove_gradient(t)
-                .unwrap_or_else(T::Device::zeros);
-            let mut v_t = self.moments[1]
-                .remove_gradient(t)
-                .unwrap_or_else(T::Device::zeros);
+        self.gradients.remove(t).map(|mut g_t| {
+            let mut m_t = self.moments[0].remove(t).unwrap_or_else(T::Device::zeros);
+            let mut v_t = self.moments[1].remove(t).unwrap_or_else(T::Device::zeros);
             T::Device::zip_map_assign(m_t.as_mut(), g_t.as_ref(), |m, g| {
                 *m = *m * self.betas[0] + g * (1.0 - self.betas[0]);
             });
