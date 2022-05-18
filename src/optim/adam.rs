@@ -75,8 +75,8 @@ impl GradientProvider for Adam {
                 let v = v * (1.0 - self.betas[1].powi(self.t)).recip();
                 self.lr * m / (v.sqrt() + self.eps)
             });
-            *self.next_moments[0].mut_gradient(t) = *m_t;
-            *self.next_moments[1].mut_gradient(t) = *v_t;
+            self.next_moments[0].insert(t, m_t);
+            self.next_moments[1].insert(t, v_t);
             r
         })
     }

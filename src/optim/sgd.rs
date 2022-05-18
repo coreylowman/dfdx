@@ -81,7 +81,7 @@ impl GradientProvider for Sgd {
                         }
                     };
 
-                    *self.next_velocity.mut_gradient(t) = *v_t;
+                    self.next_velocity.insert(t, v_t);
 
                     r
                 }

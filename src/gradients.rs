@@ -56,6 +56,10 @@ impl Default for Gradients {
 }
 
 impl Gradients {
+    pub fn insert<T: HasUniqueId + HasArrayType>(&mut self, t: &T, data: Box<T::Array>) {
+        self.gradient_by_id.insert(*t.id(), data);
+    }
+
     pub fn mut_gradient<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> &mut T::Array {
         self.gradient_by_id
             .entry(*t.id())
