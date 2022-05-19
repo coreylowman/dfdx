@@ -1,16 +1,26 @@
 use crate::prelude::*;
 
+/// Replaces any nans in `t` with `value`.
+///
+/// # Examples
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let t: Tensor1D<4> = Tensor1D::new([1.0, f32::NAN, f32::NAN, 4.0]);
+/// let r = t.nans_to(0.0);
+/// assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
+/// ```
 pub fn nans_to<T: Tensor>(t: T, value: f32) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(
         t.data(),
         |v| if v.is_nan() { value } else { v },
     ));
-    let mut deriv = T::Device::map(t.data(), |v| if v.is_nan() { 0.0 } else { 1.0 });
-    let (t, mut tape_holder) = t.split_tape_holder();
+    let (mut t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        T::Device::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
-        T::Device::add_assign(tape.mut_gradient(&t), deriv.as_ref());
+        T::Device::zip_map_assign(t.mut_data(), tape.ref_gradient(&_result), |l, r| {
+            *l = if l.is_nan() { 0.0 } else { *r }
+        });
+        T::Device::add_assign(tape.mut_gradient(&t), t.data());
     });
     result.with_tape_holder(tape_holder)
 }
@@ -18,6 +28,7 @@ pub fn nans_to<T: Tensor>(t: T, value: f32) -> T {
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: TapeHolder> $typename<$($Vs, )* H> {
+    /// Calls [nans_to] on `self`.
     pub fn nans_to(self, value: f32) -> Self {
         nans_to(self, value)
     }

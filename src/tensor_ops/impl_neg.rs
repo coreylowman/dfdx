@@ -1,13 +1,22 @@
 use crate::prelude::*;
 
+/// Negates all values in `t`.
+///
+/// # Examples
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a: Tensor1D<3> = Tensor1D::new([-2.0, 0.0, 5.0]);
+/// let r = -a; // or negate(a);
+/// assert_eq!(r.data(), &[2.0, 0.0, -5.0]);
+/// ```
 pub fn negate<T: Tensor>(t: T) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |v| -v));
-    let mut deriv = T::Device::map(t.data(), |_| -1.0);
-    let (t, mut tape_holder) = t.split_tape_holder();
+    let (mut t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        T::Device::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
-        T::Device::add_assign(tape.mut_gradient(&t), deriv.as_ref());
+        T::Device::zip_map_assign(t.mut_data(), tape.ref_gradient(&_result), |l, r| *l = -r);
+        T::Device::add_assign(tape.mut_gradient(&t), t.data());
     });
     result.with_tape_holder(tape_holder)
 }

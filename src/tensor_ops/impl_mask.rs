@@ -1,5 +1,15 @@
 use crate::prelude::*;
 
+/// Sets `t` to `value` anywhere `mask` equals value
+///
+/// # Examples
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
+/// let m: Tensor1D<3> = Tensor1D::new([-1e10, 0.0, -1e10]);
+/// let r = t.trace().value_mask(&m, -1e10);
+/// assert_eq!(r.data(), &[-1e10, 2.0, -1e10]);
+/// ```
 pub fn value_mask<T: Tensor>(t: T, other: &T::NoTape, value: f32) -> T {
     let result = T::NoTape::new_boxed(T::Device::zip_map(t.data(), other.data(), |x, y| {
         if y == &value {
@@ -8,12 +18,12 @@ pub fn value_mask<T: Tensor>(t: T, other: &T::NoTape, value: f32) -> T {
             *x
         }
     }));
-    let mut deriv = T::Device::map(other.data(), |x| (x != value) as i32 as f32);
-    let (t, mut tape_holder) = t.split_tape_holder();
+    let (mut t, mut tape_holder) = t.split_tape_holder();
+    T::Device::map_into(other.data(), t.mut_data(), |x| (x != value) as i32 as f32);
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        T::Device::mul_assign(deriv.as_mut(), tape.ref_gradient(&_result));
-        T::Device::add_assign(tape.mut_gradient(&t), deriv.as_ref());
+        T::Device::mul_assign(t.mut_data(), tape.ref_gradient(&_result));
+        T::Device::add_assign(tape.mut_gradient(&t), t.data());
     });
     result.with_tape_holder(tape_holder)
 }
@@ -21,6 +31,7 @@ pub fn value_mask<T: Tensor>(t: T, other: &T::NoTape, value: f32) -> T {
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: TapeHolder> $typename<$($Vs, )* H> {
+    /// Calls [value_mask] on self
     pub fn value_mask(self, mask: &$typename<$($Vs, )* NoTape>, value: f32) -> Self {
         value_mask(self, mask, value)
     }

@@ -7,6 +7,7 @@ use crate::prelude::*;
 /// # use dfdx::prelude::*;
 /// let t = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
 /// let r = apply::<Tensor1D<5>, ReLU>(t);
+/// assert_eq!(r.data(), &[0.0, 0.0, 0.0, 1.0, 2.0]);
 /// ```
 ///
 /// All the differentiable functions are also provided as methods on all tensors:
@@ -14,6 +15,7 @@ use crate::prelude::*;
 /// # use dfdx::prelude::*;
 /// let t = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
 /// let r = t.relu();
+/// assert_eq!(r.data(), &[0.0, 0.0, 0.0, 1.0, 2.0]);
 /// ```
 pub fn apply<T: Tensor, F: DifferentiableFunction>(t: T) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), F::f));
