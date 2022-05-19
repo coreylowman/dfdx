@@ -58,27 +58,27 @@ impl Sgd {
 }
 
 impl GradientProvider for Sgd {
-    fn gradient<T: HasUniqueId + HasArrayType + HasDevice>(
-        &mut self,
-        t: &T,
-    ) -> Option<Box<T::Array>> {
-        self.gradients.remove(t).map(|mut g_t| {
+    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
+    where
+        P: HasUniqueId + HasArrayType + HasDevice,
+    {
+        self.gradients.remove(p).map(|mut g_t| {
             match self.momentum {
                 Some(Momentum::Classic(u)) => {
-                    let mut v_t = self.velocity.remove(t).unwrap_or_else(T::Device::zeros);
-                    T::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), |v, g| *v = g + u * *v);
-                    T::Device::zip_map_assign(g_t.as_mut(), v_t.as_ref(), |g, v| *g = v * self.lr);
-                    self.next_velocity.insert(t, v_t);
+                    let mut v_t = self.velocity.remove(p).unwrap_or_else(P::Device::zeros);
+                    P::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), |v, g| *v = g + u * *v);
+                    P::Device::zip_map_assign(g_t.as_mut(), v_t.as_ref(), |g, v| *g = v * self.lr);
+                    self.next_velocity.insert(p, v_t);
                 }
                 Some(Momentum::Nesterov(u)) => {
-                    let mut v_t = self.velocity.remove(t).unwrap_or_else(T::Device::zeros);
-                    T::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), |v, g| *v = g + u * *v);
-                    T::Device::zip_map_assign(g_t.as_mut(), v_t.as_ref(), |g, v| {
+                    let mut v_t = self.velocity.remove(p).unwrap_or_else(P::Device::zeros);
+                    P::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), |v, g| *v = g + u * *v);
+                    P::Device::zip_map_assign(g_t.as_mut(), v_t.as_ref(), |g, v| {
                         *g = (*g + u * v) * self.lr
                     });
-                    self.next_velocity.insert(t, v_t);
+                    self.next_velocity.insert(p, v_t);
                 }
-                None => T::Device::map_assign(g_t.as_mut(), |g| *g *= self.lr),
+                None => P::Device::map_assign(g_t.as_mut(), |g| *g *= self.lr),
             }
             g_t
         })
