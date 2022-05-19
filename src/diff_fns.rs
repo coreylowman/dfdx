@@ -17,7 +17,7 @@ impl DifferentiableFunction for ReLU {
     }
 
     fn df(x: f32) -> f32 {
-        if x >= 0.0 {
+        if x > 0.0 {
             1.0
         } else {
             0.0
@@ -78,7 +78,7 @@ impl DifferentiableFunction for Cos {
         x.cos()
     }
     fn df(x: f32) -> f32 {
-        x.sin()
+        -x.sin()
     }
 }
 
@@ -112,8 +112,10 @@ impl DifferentiableFunction for Abs {
     }
 
     fn df(x: f32) -> f32 {
-        if x <= 0.0 {
+        if x < 0.0 {
             -1.0
+        } else if x == 0.0 {
+            0.0
         } else {
             1.0
         }
