@@ -1,6 +1,6 @@
-# dfdx: Strongly Typed Auto Diff in Rust
+# dfdx: strongly typed deep learning in Rust
 
-Ergonomics & safety focused reverse mode auto differentiation[1] in Rust. 
+Ergonomics & safety focused reverse mode auto differentiation[1] in Rust. Also includes neural network & optimizer apis.
 
 [1] https://en.wikipedia.org/wiki/Automatic_differentiation#Reverse_accumulation
 
