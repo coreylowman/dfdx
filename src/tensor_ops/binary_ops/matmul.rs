@@ -20,7 +20,7 @@ pub fn matmul<const M: usize, const N: usize, const O: usize, H: TapeHolder>(
     let _result = result.phantom();
     let (lhs, mut tape_holder) = lhs.split_tape_holder();
     tape_holder.add_operation(move |tape| {
-        let result_grad = tape.ref_gradient(&_result);
+        let result_grad: &[[f32; O]; M] = tape.ref_gradient(&_result);
 
         let mut d_grad_lhs: Box<[[f32; N]; M]> = Cpu::zeros();
         matmat_mul_into(result_grad, lhs_deriv.as_ref(), d_grad_lhs.as_mut());
@@ -55,7 +55,7 @@ pub fn vecmat_mul<const N: usize, const O: usize, H: TapeHolder>(
         let result_grad: &[f32; O] = tape.ref_gradient(&_result);
 
         let mut d_grad_lhs: Box<[f32; N]> = Cpu::zeros();
-        vecmat_mul_into(result_grad, &lhs_deriv, d_grad_lhs.as_mut());
+        vecmat_mul_into(result_grad, lhs_deriv.as_ref(), d_grad_lhs.as_mut());
 
         let mut d_grad_rhs: Box<[[f32; O]; N]> = Cpu::zeros();
         vecvec_mul_into(lhs.data(), result_grad, d_grad_rhs.as_mut());

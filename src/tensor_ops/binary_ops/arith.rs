@@ -41,8 +41,9 @@ pub fn apply_binary<T: Tensor, F: DiffBinaryFunction>(lhs: &T::NoTape, rhs: T) -
     let _lhs = lhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        T::Device::mul_assign(lhs_deriv.as_mut(), tape.ref_gradient(&_result));
-        T::Device::mul_assign(rhs_deriv.as_mut(), tape.ref_gradient(&_result));
+        let result_grad = tape.ref_gradient(&_result);
+        T::Device::mul_assign(lhs_deriv.as_mut(), result_grad);
+        T::Device::mul_assign(rhs_deriv.as_mut(), result_grad);
         T::Device::add_assign(tape.mut_gradient(&_lhs), lhs_deriv.as_ref());
         T::Device::add_assign(tape.mut_gradient(&rhs), rhs_deriv.as_ref());
     });
@@ -58,8 +59,9 @@ pub fn apply_binary_lhs<T: Tensor, F: DiffBinaryFunction>(lhs: T, rhs: &T::NoTap
     let _rhs = rhs.phantom();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        T::Device::mul_assign(lhs_deriv.as_mut(), tape.ref_gradient(&_result));
-        T::Device::mul_assign(rhs_deriv.as_mut(), tape.ref_gradient(&_result));
+        let result_grad = tape.ref_gradient(&_result);
+        T::Device::mul_assign(lhs_deriv.as_mut(), result_grad);
+        T::Device::mul_assign(rhs_deriv.as_mut(), result_grad);
         T::Device::add_assign(tape.mut_gradient(&lhs), lhs_deriv.as_ref());
         T::Device::add_assign(tape.mut_gradient(&_rhs), rhs_deriv.as_ref());
     });
