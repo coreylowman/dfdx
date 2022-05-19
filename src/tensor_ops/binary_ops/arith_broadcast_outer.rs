@@ -2,35 +2,25 @@ use crate::prelude::*;
 
 // TODO abstract these all together somehow
 
-pub trait Array: std::ops::IndexMut<usize, Output = Self::Element> {
-    const SIZE: usize;
-    type Element;
-}
-
-impl<const M: usize> Array for [f32; M] {
-    const SIZE: usize = M;
-    type Element = f32;
-}
-
-impl<T: Array, const M: usize> Array for [T; M] {
-    const SIZE: usize = M;
-    type Element = T;
-}
-
-pub fn broadcast_outer_add<Lhs, Rhs>(lhs: Lhs, rhs: &Rhs) -> Lhs
+fn bouter_add<T: CountElements, const M: usize>(lhs: &[T; M], rhs: &T, out: &mut [T; M])
 where
-    Lhs: Tensor,
+    Cpu: ZipMapElements<T, T>,
+{
+    for i in 0..M {
+        Cpu::zip_map_into(&lhs[i], rhs, &mut out[i], |x, y| x + y);
+    }
+}
+
+pub fn broadcast_outer_add<Lhs, Rhs, const M: usize>(lhs: Lhs, rhs: &Rhs) -> Lhs
+where
+    Lhs: Tensor<Array = [Rhs::Array; M]>,
     Rhs: 'static + Tensor<TapeHolder = NoTape>,
-    Rhs::Array: Array,
-    Lhs::Array: Array<Element = Rhs::Array>,
     Lhs::Device: Device<Lhs::Array> + Device<Rhs::Array>,
+    Cpu: ZipMapElements<Rhs::Array, Rhs::Array>,
 {
     let result = Lhs::NoTape::new_boxed({
         let mut out: Box<Lhs::Array> = Lhs::Device::zeros();
-        let l: &Lhs::Array = lhs.data();
-        for i in 0..Lhs::Array::SIZE {
-            Lhs::Device::zip_map_into(&l[i], rhs.data(), &mut out[i], |x, y| x + y);
-        }
+        bouter_add(lhs.data(), rhs.data(), out.as_mut());
         out
     });
 
@@ -46,7 +36,7 @@ where
         Lhs::Device::mul_assign(lhs_deriv.as_mut(), result_grad);
 
         let mut d_grad_rhs: Box<Rhs::Array> = Lhs::Device::zeros();
-        for i in 0..Lhs::Array::SIZE {
+        for i in 0..M {
             Lhs::Device::add_assign(d_grad_rhs.as_mut(), &result_grad[i]);
         }
 
