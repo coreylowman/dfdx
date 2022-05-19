@@ -78,8 +78,25 @@ mod tests {
         };
 
         let x = Tensor1D::new([-0.88080013, 2.41853333, 2.24783349, 0.05652110, 2.03129911]);
-        let y = model.forward(x);
+        let y = model.forward(x.trace());
         assert_eq!(y.data(), &[-0.93430865, 0.08624211]);
+
+        let loss = y.square().mean();
+        let gradients = loss.backward();
+        assert_eq!(
+            gradients.ref_gradient(&model.weight),
+            &[
+                [0.82293916, -0.07596206],
+                [-2.25965667, 0.20857942],
+                [-2.10017037, 0.19385791],
+                [-0.05280815, 0.004874499],
+                [-1.89786029, 0.17518352]
+            ]
+        );
+        assert_eq!(
+            gradients.ref_gradient(&model.bias),
+            &[-0.93430865, 0.08624211]
+        );
     }
 
     #[test]
@@ -106,7 +123,7 @@ mod tests {
                 -1.87904549,
             ],
         ]);
-        let y = model.forward(x);
+        let y = model.forward(x.trace());
         assert_eq!(
             y.data(),
             &[
@@ -114,6 +131,23 @@ mod tests {
                 [-0.005462587, -0.14800104],
                 [0.9177769, -0.7897872]
             ]
+        );
+
+        let loss = y.square().mean();
+        let gradients = loss.backward();
+        assert_eq!(
+            gradients.ref_gradient(&model.weight),
+            &[
+                [-1.15419686, 0.29272807],
+                [0.69568729, -0.17702839],
+                [-0.85538071, 0.08586791],
+                [0.92892551, -0.24057935],
+                [0.04931633, 0.52865762]
+            ]
+        );
+        assert_eq!(
+            gradients.ref_gradient(&model.bias),
+            &[0.76791739, -0.31687993]
         );
     }
 }

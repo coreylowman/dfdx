@@ -107,3 +107,52 @@ tuple_impls!([A, B, C] [0, 1, 2]);
 tuple_impls!([A, B, C, D] [0, 1, 2, 3]);
 tuple_impls!([A, B, C, D, E] [0, 1, 2, 3, 4]);
 tuple_impls!([A, B, C, D, E, F] [0, 1, 2, 3, 4, 5]);
+
+#[cfg(test)]
+mod tests {
+    use rand::{prelude::StdRng, SeedableRng};
+    use rand_distr::StandardNormal;
+
+    use super::*;
+
+    #[test]
+    fn test_2_tuple() {
+        let model: (ReLU, Tanh) = Default::default();
+
+        let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let y = model.forward(x);
+        assert_eq!(y.data(), &[0.0, 0.0, 0.0, 1.0f32.tanh(), 2.0f32.tanh()]);
+    }
+
+    #[test]
+    fn test_2_tuple_update() {
+        let mut rng = StdRng::seed_from_u64(0);
+        let mut model: (Linear<2, 3>, Linear<3, 4>) = Default::default();
+        model.randomize(&mut rng, &StandardNormal);
+        assert!(model.0.weight.data() != &[[0.0; 3]; 2]);
+        assert!(model.0.bias.data() != &[0.0; 3]);
+        assert!(model.1.weight.data() != &[[0.0; 4]; 3]);
+        assert!(model.1.bias.data() != &[0.0; 4]);
+
+        let m0 = model.clone();
+
+        let loss = model
+            .forward(Tensor1D::randn(&mut rng).traced())
+            .square()
+            .mean();
+        let gradients = loss.backward();
+
+        assert!(gradients.ref_gradient(&model.0.weight) != &[[0.0; 3]; 2]);
+        assert!(gradients.ref_gradient(&model.0.bias) != &[0.0; 3]);
+        assert!(gradients.ref_gradient(&model.1.weight) != &[[0.0; 4]; 3]);
+        assert!(gradients.ref_gradient(&model.1.bias) != &[0.0; 4]);
+
+        let mut sgd = Sgd::new(1.0, None);
+        sgd.update(&mut model, gradients);
+
+        assert!(model.0.weight.data() != m0.0.weight.data());
+        assert!(model.0.bias.data() != m0.0.bias.data());
+        assert!(model.1.weight.data() != m0.1.weight.data());
+        assert!(model.1.bias.data() != m0.1.bias.data());
+    }
+}
