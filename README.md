@@ -51,7 +51,6 @@ assert_eq!(t2.data(), &[[1.0; 3]; 2]);
 4. 💡 Tensor sizes, operations, gradient computations all type checked at compile time
 5. 💪 Full power of rust compiler & llvm optimizations (because all shapes of arrays are known at compile time!)
 6. Minimal runtime costs - there are no Rc/Refcells used in this implementation!
-7. 100% safe rust code
 
 ## Fun/notable implementation details
 
@@ -74,6 +73,16 @@ From this flexible trait we get:
 Since we can implement traits for tuples, which is *not possible in other languages* AFAIK, they provide a very nice frontend
 for sequentially executing modules.
 
+```rust
+// no idea why you would do this, but you could!
+let model: (ReLU, Sigmoid, Tanh) = Default::default();
+```
+
+```rust
+let model: (Linear<10, 5>, Tanh) = Default::default();
+```
+
+How implementing Module for a 2-tuple looks:
 ```rust
 impl<Input, A, B> Module<Input> for (A, B)
 where
@@ -108,11 +117,11 @@ See [examples/multi_head.rs](examples/multi_head.rs) for an example.
 
 ### Type checked backward
 
-tl;dr: If you forget to include a call to `trace()`, the program won't compile!
+tl;dr: If you forget to include a call to `trace()` or `traced()`, the program won't compile!
 
 ```diff
 -let pred = module.forward(x);
-+let pred = module.forward(x.trace());
++let pred = module.forward(x.traced());
 let loss = (&y - pred).square().mean();
 let gradients = loss.backward();
 ```
@@ -120,7 +129,7 @@ let gradients = loss.backward();
 Since we know exactly what tensors own the gradient tape, we can require the tensor passed into `.backward()` to own the gradient tape!
 And further, we can require it be moved into `.backward()`, so it can destruct the tape and construct the gradients!
 
-__All of this can be checked at compile time 🎉___
+__All of this can be checked at compile time 🎉__
 
 ```rust
 pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Gradients {
@@ -129,9 +138,9 @@ pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Gradients {
 }
 ```
 
-### Array Backend
+### Recursive trait definitions for CPU Device
 
-Our [src/array_ops](src/array_ops/) backend for computing results operations
+Our [src/devices](src/devices/) backend for computing operations on the CPU
 is built using __recursive trait definitions__.
 
 The main idea behind this is similar to recursion or induction proofs. First we specify
@@ -172,7 +181,7 @@ Another few powerful things recursive traits can do:
 3. Reduce an array to one number
 4. Even more!
 
-Encourage you to check out all the code in [src/array_ops](src/array_ops/)!
+Encourage you to check out all the code in [src/devices](src/devices/)!
 
 # License
 
