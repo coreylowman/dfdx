@@ -2,10 +2,10 @@ use super::{AllocateZeros, Cpu};
 use crate::arrays::CountElements;
 
 pub trait MapElements<T: CountElements>: Sized + AllocateZeros {
-    fn map_into<F: FnMut(f32) -> f32 + Copy>(inp: &T, out: &mut T, f: F);
+    fn map_into<F: FnMut(&f32) -> f32 + Copy>(inp: &T, out: &mut T, f: F);
     fn map_assign<F: FnMut(&mut f32) + Copy>(inp: &mut T, f: F);
 
-    fn map<F: FnMut(f32) -> f32 + Copy>(inp: &T, f: F) -> Box<T> {
+    fn map<F: FnMut(&f32) -> f32 + Copy>(inp: &T, f: F) -> Box<T> {
         let mut out = Self::zeros();
         Self::map_into(inp, &mut out, f);
         out
@@ -17,8 +17,8 @@ pub trait MapElements<T: CountElements>: Sized + AllocateZeros {
 }
 
 impl MapElements<f32> for Cpu {
-    fn map_into<F: FnMut(f32) -> f32 + Copy>(inp: &f32, out: &mut f32, mut f: F) {
-        *out = f(*inp);
+    fn map_into<F: FnMut(&f32) -> f32 + Copy>(inp: &f32, out: &mut f32, mut f: F) {
+        *out = f(inp);
     }
 
     fn map_assign<F: FnMut(&mut f32) + Copy>(inp: &mut f32, mut f: F) {
@@ -30,7 +30,7 @@ impl<T: CountElements, const M: usize> MapElements<[T; M]> for Cpu
 where
     Self: MapElements<T>,
 {
-    fn map_into<F: FnMut(f32) -> f32 + Copy>(inp: &[T; M], out: &mut [T; M], f: F) {
+    fn map_into<F: FnMut(&f32) -> f32 + Copy>(inp: &[T; M], out: &mut [T; M], f: F) {
         for i in 0..M {
             Self::map_into(&inp[i], &mut out[i], f);
         }

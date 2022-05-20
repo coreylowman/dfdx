@@ -10,10 +10,13 @@ use crate::prelude::*;
 /// assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
 /// ```
 pub fn nans_to<T: Tensor>(t: T, value: f32) -> T {
-    let result = T::NoTape::new_boxed(T::Device::map(
-        t.data(),
-        |v| if v.is_nan() { value } else { v },
-    ));
+    let result = T::NoTape::new_boxed(T::Device::map(t.data(), |v| {
+        if v.is_nan() {
+            value
+        } else {
+            *v
+        }
+    }));
     let (mut t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {

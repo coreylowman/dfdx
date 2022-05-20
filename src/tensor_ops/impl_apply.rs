@@ -24,7 +24,7 @@ pub fn apply<T: Tensor, F: DifferentiableFunction>(t: T) -> T {
     tape_holder.add_operation(move |tape| {
         // t = F::df(t) * result_grad
         T::Device::zip_map_assign(t.mut_data(), tape.ref_gradient(&_result), |l, r| {
-            *l = F::df(*l) * r
+            *l = F::df(l) * r
         });
         T::Device::add_assign(tape.mut_gradient(&t), t.data());
     });
