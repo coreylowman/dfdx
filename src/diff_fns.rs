@@ -1,3 +1,5 @@
+use num_traits::Float;
+
 /// A set of differtiable functions specified by structs
 /// implementing [DifferentiableFunction] or [DiffBinaryFunction].
 ///
@@ -5,24 +7,24 @@
 /// use them in neural networks.
 
 /// A function that acts on 1 value that is differentiable.
-pub trait DifferentiableFunction {
+pub trait DifferentiableFunction<T> {
     /// The actual function
-    fn f(x: &f32) -> f32;
+    fn f(x: &T) -> T;
 
     /// The derivative of the function at `x`. dfdx!
-    fn df(x: &f32) -> f32;
+    fn df(x: &T) -> T;
 }
 
 /// A function that acts on 2 values that is differentiable
-pub trait DiffBinaryFunction {
+pub trait DiffBinaryFunction<T> {
     // The actual function
-    fn f(x: &f32, y: &f32) -> f32;
+    fn f(x: &T, y: &T) -> T;
 
     // The partial derivative of f wrt x (the first parameter)
-    fn dfdx(x: &f32, y: &f32) -> f32;
+    fn dfdx(x: &T, y: &T) -> T;
 
     // The partial derivative of f wrt y (the second parameter)
-    fn dfdy(x: &f32, y: &f32) -> f32;
+    fn dfdy(x: &T, y: &T) -> T;
 }
 
 /// [Rectified Linear Unit (ReLU)](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)) computes `max(0, x)`.
@@ -39,16 +41,16 @@ pub trait DiffBinaryFunction {
 /// ```
 #[derive(Default, Debug, Clone, Copy)]
 pub struct ReLU;
-impl DifferentiableFunction for ReLU {
-    fn f(x: &f32) -> f32 {
-        x.max(0.0)
+impl<T: Float> DifferentiableFunction<T> for ReLU {
+    fn f(x: &T) -> T {
+        x.max(T::zero())
     }
 
-    fn df(x: &f32) -> f32 {
-        if x > &0.0 {
-            1.0
+    fn df(x: &T) -> T {
+        if x > &T::zero() {
+            T::one()
         } else {
-            0.0
+            T::zero()
         }
     }
 }
@@ -67,13 +69,13 @@ impl DifferentiableFunction for ReLU {
 /// ```
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Square;
-impl DifferentiableFunction for Square {
-    fn f(x: &f32) -> f32 {
+impl<T: Float> DifferentiableFunction<T> for Square {
+    fn f(x: &T) -> T {
         x.powi(2)
     }
 
-    fn df(x: &f32) -> f32 {
-        x + x
+    fn df(x: &T) -> T {
+        *x + *x
     }
 }
 
@@ -85,19 +87,19 @@ impl DifferentiableFunction for Square {
 /// ```rust
 /// # use dfdx::prelude::*;
 /// assert_eq!(Tanh::f(&0.0), 0.0);
-/// assert_eq!(Tanh::f(&1.0), 0.76159415595);
+/// assert_eq!(Tanh::f(&1.0f32), 0.76159415595);
 /// assert_eq!(Tanh::df(&0.0), 1.0);
-/// assert_eq!(Tanh::df(&1.0), 0.41997433);
+/// assert_eq!(Tanh::df(&1.0f32), 0.41997433);
 /// ```
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Tanh;
-impl DifferentiableFunction for Tanh {
-    fn f(x: &f32) -> f32 {
+impl<T: Float> DifferentiableFunction<T> for Tanh {
+    fn f(x: &T) -> T {
         x.tanh()
     }
 
-    fn df(x: &f32) -> f32 {
-        1.0 - x.tanh().powi(2)
+    fn df(x: &T) -> T {
+        T::one() - x.tanh().powi(2)
     }
 }
 
@@ -106,14 +108,14 @@ impl DifferentiableFunction for Tanh {
 /// The derivative is `sigmoid(x) * (1.0 - sigmoid(x))`
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Sigmoid;
-impl DifferentiableFunction for Sigmoid {
-    fn f(x: &f32) -> f32 {
-        1.0 / (1.0 + (-x).exp())
+impl<T: Float> DifferentiableFunction<T> for Sigmoid {
+    fn f(x: &T) -> T {
+        (T::one() + x.neg().exp()).recip()
     }
 
-    fn df(x: &f32) -> f32 {
-        let s = Self::f(&x);
-        s * (1.0 - s)
+    fn df(x: &T) -> T {
+        let s = Self::f(x);
+        s * (T::one() - s)
     }
 }
 
@@ -122,11 +124,11 @@ impl DifferentiableFunction for Sigmoid {
 /// It's derivative is `cos(x)`
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Sin;
-impl DifferentiableFunction for Sin {
-    fn f(x: &f32) -> f32 {
+impl<T: Float> DifferentiableFunction<T> for Sin {
+    fn f(x: &T) -> T {
         x.sin()
     }
-    fn df(x: &f32) -> f32 {
+    fn df(x: &T) -> T {
         x.cos()
     }
 }
@@ -136,12 +138,12 @@ impl DifferentiableFunction for Sin {
 /// It's derivative is `-sin(x)`
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Cos;
-impl DifferentiableFunction for Cos {
-    fn f(x: &f32) -> f32 {
+impl<T: Float> DifferentiableFunction<T> for Cos {
+    fn f(x: &T) -> T {
         x.cos()
     }
-    fn df(x: &f32) -> f32 {
-        -x.sin()
+    fn df(x: &T) -> T {
+        x.sin().neg()
     }
 }
 
@@ -150,12 +152,12 @@ impl DifferentiableFunction for Cos {
 /// It's derivative is `1 / x`
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Ln;
-impl DifferentiableFunction for Ln {
-    fn f(x: &f32) -> f32 {
+impl<T: Float> DifferentiableFunction<T> for Ln {
+    fn f(x: &T) -> T {
         x.ln()
     }
-    fn df(x: &f32) -> f32 {
-        1.0 / x
+    fn df(x: &T) -> T {
+        x.recip()
     }
 }
 
@@ -164,11 +166,11 @@ impl DifferentiableFunction for Ln {
 /// It's derivative is itself! `e ^ x`
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Exp;
-impl DifferentiableFunction for Exp {
-    fn f(x: &f32) -> f32 {
+impl<T: Float> DifferentiableFunction<T> for Exp {
+    fn f(x: &T) -> T {
         x.exp()
     }
-    fn df(x: &f32) -> f32 {
+    fn df(x: &T) -> T {
         x.exp()
     }
 }
@@ -188,14 +190,14 @@ impl DifferentiableFunction for Exp {
 /// ```
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Abs;
-impl DifferentiableFunction for Abs {
-    fn f(x: &f32) -> f32 {
+impl<T: Float> DifferentiableFunction<T> for Abs {
+    fn f(x: &T) -> T {
         x.abs()
     }
 
-    fn df(x: &f32) -> f32 {
-        if x == &0.0 {
-            0.0
+    fn df(x: &T) -> T {
+        if x == &T::zero() {
+            T::zero()
         } else {
             x.signum()
         }
@@ -205,17 +207,17 @@ impl DifferentiableFunction for Abs {
 /// Binary add represents adding two numbers together.
 #[derive(Default, Debug, Clone, Copy)]
 pub struct BinaryAdd;
-impl DiffBinaryFunction for BinaryAdd {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x + y
+impl<T: Float> DiffBinaryFunction<T> for BinaryAdd {
+    fn f(x: &T, y: &T) -> T {
+        *x + *y
     }
 
-    fn dfdx(_: &f32, _: &f32) -> f32 {
-        1.0
+    fn dfdx(_: &T, _: &T) -> T {
+        T::one()
     }
 
-    fn dfdy(_: &f32, _: &f32) -> f32 {
-        1.0
+    fn dfdy(_: &T, _: &T) -> T {
+        T::one()
     }
 }
 
@@ -223,17 +225,17 @@ impl DiffBinaryFunction for BinaryAdd {
 #[derive(Default, Debug, Clone, Copy)]
 pub struct BinarySub;
 
-impl DiffBinaryFunction for BinarySub {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x - y
+impl<T: Float> DiffBinaryFunction<T> for BinarySub {
+    fn f(x: &T, y: &T) -> T {
+        *x - *y
     }
 
-    fn dfdx(_: &f32, _: &f32) -> f32 {
-        1.0
+    fn dfdx(_: &T, _: &T) -> T {
+        T::one()
     }
 
-    fn dfdy(_: &f32, _: &f32) -> f32 {
-        -1.0
+    fn dfdy(_: &T, _: &T) -> T {
+        T::one().neg()
     }
 }
 
@@ -241,16 +243,16 @@ impl DiffBinaryFunction for BinarySub {
 #[derive(Default, Debug, Clone, Copy)]
 pub struct BinaryMul;
 
-impl DiffBinaryFunction for BinaryMul {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x * y
+impl<T: Float> DiffBinaryFunction<T> for BinaryMul {
+    fn f(x: &T, y: &T) -> T {
+        *x * *y
     }
 
-    fn dfdx(_: &f32, y: &f32) -> f32 {
+    fn dfdx(_: &T, y: &T) -> T {
         *y
     }
 
-    fn dfdy(x: &f32, _: &f32) -> f32 {
+    fn dfdy(x: &T, _: &T) -> T {
         *x
     }
 }
@@ -259,16 +261,16 @@ impl DiffBinaryFunction for BinaryMul {
 #[derive(Default, Debug, Clone, Copy)]
 pub struct BinaryDiv;
 
-impl DiffBinaryFunction for BinaryDiv {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x / y
+impl<T: Float> DiffBinaryFunction<T> for BinaryDiv {
+    fn f(x: &T, y: &T) -> T {
+        *x * y.recip()
     }
 
-    fn dfdx(_x: &f32, y: &f32) -> f32 {
-        1.0 / y
+    fn dfdx(_x: &T, y: &T) -> T {
+        y.recip()
     }
 
-    fn dfdy(x: &f32, y: &f32) -> f32 {
-        -x / y.powi(2)
+    fn dfdy(x: &T, y: &T) -> T {
+        x.neg() * y.powi(2).recip()
     }
 }

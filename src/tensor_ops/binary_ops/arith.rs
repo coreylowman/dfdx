@@ -33,7 +33,7 @@ pub fn div_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T {
     apply_binary_lhs::<T, BinaryDiv>(lhs, rhs)
 }
 
-pub fn apply_binary<T: Tensor, F: DiffBinaryFunction>(lhs: &T::NoTape, rhs: T) -> T {
+pub fn apply_binary<T: Tensor, F: DiffBinaryFunction<f32>>(lhs: &T::NoTape, rhs: T) -> T {
     let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), F::f));
     let mut lhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdx);
     let mut rhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdy);
@@ -51,7 +51,7 @@ pub fn apply_binary<T: Tensor, F: DiffBinaryFunction>(lhs: &T::NoTape, rhs: T) -
 }
 
 // TODO how to combine this with above?
-pub fn apply_binary_lhs<T: Tensor, F: DiffBinaryFunction>(lhs: T, rhs: &T::NoTape) -> T {
+pub fn apply_binary_lhs<T: Tensor, F: DiffBinaryFunction<f32>>(lhs: T, rhs: &T::NoTape) -> T {
     let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), F::f));
     let mut lhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdx);
     let mut rhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdy);
@@ -408,7 +408,7 @@ mod tests {
         assert_eq!(
             r.data(),
             &[
-                [1.2637045, 0.4443288, 0.3990423],
+                [1.2637045, 0.44432878, 0.3990423],
                 [0.6850708, 1.9038565, 21.5]
             ]
         );
@@ -423,8 +423,8 @@ mod tests {
         assert_eq!(
             gradients.ref_gradient(&b),
             &[
-                [-0.4051114, -0.19265036, -0.1769275],
-                [-0.13824734, -0.86178553, -92.35396]
+                [-0.40511137, -0.19265036, -0.1769275],
+                [-0.13824734, -0.86178553, -92.35394]
             ]
         );
 
@@ -432,7 +432,7 @@ mod tests {
         assert_eq!(
             r.data(),
             &[
-                [0.79132426, 2.2505856, 2.5059998],
+                [0.79132426, 2.2505856, 2.506],
                 [1.4597031, 0.52524966, 0.046511628]
             ]
         );
@@ -441,7 +441,7 @@ mod tests {
             gradients.ref_gradient(&a),
             &[
                 [-0.20074181, -2.1961217, -2.7844446],
-                [-0.42998204, -0.12488105, -0.009292662]
+                [-0.42998204, -0.12488106, -0.009292662]
             ]
         );
         assert_eq!(

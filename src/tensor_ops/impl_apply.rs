@@ -17,7 +17,7 @@ use crate::prelude::*;
 /// let r = t.relu();
 /// assert_eq!(r.data(), &[0.0, 0.0, 0.0, 1.0, 2.0]);
 /// ```
-pub fn apply<T: Tensor, F: DifferentiableFunction>(t: T) -> T {
+pub fn apply<T: Tensor, F: DifferentiableFunction<f32>>(t: T) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), F::f));
     let (mut t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
@@ -29,6 +29,13 @@ pub fn apply<T: Tensor, F: DifferentiableFunction>(t: T) -> T {
         T::Device::add_assign(tape.mut_gradient(&t), t.data());
     });
     result.with_tape_holder(tape_holder)
+}
+
+pub fn apply_ref<T, F: DifferentiableFunction<f32>>(t: &T) -> T
+where
+    T: Tensor<TapeHolder = NoTape> + TensorCreator,
+{
+    T::new_boxed(T::Device::map(t.data(), F::f))
 }
 
 macro_rules! apply_impl {
@@ -54,13 +61,6 @@ apply_impl!(HasSigmoidMethod, sigmoid, Sigmoid);
 apply_impl!(HasTanhMethod, tanh, Tanh);
 apply_impl!(HasSquareMethod, square, Square);
 apply_impl!(HasAbsMethod, abs, Abs);
-
-pub fn apply_ref<T, F: DifferentiableFunction>(t: &T) -> T
-where
-    T: Tensor<TapeHolder = NoTape> + TensorCreator,
-{
-    T::new_boxed(T::Device::map(t.data(), F::f))
-}
 
 macro_rules! apply_ref_impl {
     ($trait_name:ident, $method_name:ident, $activation_struct:ident) => {
