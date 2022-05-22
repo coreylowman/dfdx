@@ -1,11 +1,12 @@
 use crate::prelude::*;
 
 pub trait Tensor:
-    HasArrayData
+    HasArrayType
+    + HasArrayData
+    + HasDevice
     + CanUpdateWithGradients
     + HasUniqueId
     + IntoPhantom
-    + HasDevice
     + CountElements<Dtype = <Self::Array as CountElements>::Dtype>
 {
     type TapeHolder: TapeHolder;

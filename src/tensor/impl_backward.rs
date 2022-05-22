@@ -5,7 +5,6 @@ use crate::{devices::FillElements, gradients::Gradients};
 
 pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Gradients
 where
-    T::Device: FillElements<T::Array>,
     T::Dtype: One,
 {
     let (t, mut tape_holder) = t.split_tape_holder();

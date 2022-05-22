@@ -17,7 +17,6 @@ pub trait TensorCreator: Tensor {
 
     fn ones() -> Self
     where
-        Self::Device: FillElements<Self::Array>,
         Self::Dtype: One,
     {
         Self::new_boxed(Self::Device::filled(&mut || One::one()))
@@ -25,7 +24,6 @@ pub trait TensorCreator: Tensor {
 
     fn rand<R: rand::Rng>(rng: &mut R) -> Self
     where
-        Self::Device: FillElements<Self::Array>,
         Standard: Distribution<Self::Dtype>,
     {
         Self::new_boxed(Self::Device::filled(&mut || Standard.sample(rng)))
@@ -33,7 +31,6 @@ pub trait TensorCreator: Tensor {
 
     fn randn<R: rand::Rng>(rng: &mut R) -> Self
     where
-        Self::Device: FillElements<Self::Array>,
         StandardNormal: Distribution<Self::Dtype>,
     {
         Self::new_boxed(Self::Device::filled(&mut || StandardNormal.sample(rng)))
