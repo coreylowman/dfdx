@@ -1,3 +1,5 @@
+//! Provides some generic functions to save Nd arrays in the .npy format.
+
 use std::{
     fs::File,
     io::{Result, Write},

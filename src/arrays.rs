@@ -1,3 +1,4 @@
+/// Represents something with a compile time known number of elements
 pub trait CountElements {
     const NUM_ELEMENTS: usize;
     type Element: Clone + Default;
@@ -26,6 +27,7 @@ impl<T: HasInner, const M: usize> HasInner for [T; M] {
     type Inner = T::Inner;
 }
 
+/// Something that has compile time known zero values.
 pub trait ZeroElements {
     const ZEROS: Self;
 }
@@ -38,6 +40,7 @@ impl<T: ZeroElements, const M: usize> ZeroElements for [T; M] {
     const ZEROS: Self = [T::ZEROS; M];
 }
 
+/// Has an associated type that implemented [CountElements] and [ZeroElements].
 pub trait HasArrayType {
     type Array: 'static + Sized + Clone + CountElements + ZeroElements;
 }

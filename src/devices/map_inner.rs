@@ -1,6 +1,7 @@
 use super::Cpu;
 use crate::arrays::HasInner;
 
+/// Enables modifying inner 1d array of Nd arrays.
 pub trait MapInnerElements<T: HasInner> {
     fn map_assign_inner<F: FnMut(&mut T::Inner) + Copy>(out: &mut T, f: F);
 }

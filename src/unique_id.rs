@@ -1,3 +1,4 @@
+/// An id used in [Gradients] and Tensors to associate gradients with Tensors.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct UniqueId(pub(crate) usize);
 
@@ -13,6 +14,7 @@ impl std::ops::Deref for UniqueId {
     }
 }
 
+/// Something that has a [UniqueId]
 pub trait HasUniqueId {
     fn id(&self) -> &UniqueId;
 }

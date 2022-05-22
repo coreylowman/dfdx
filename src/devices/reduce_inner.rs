@@ -1,6 +1,7 @@
 use super::{AllocateZeros, Cpu};
 use crate::arrays::CountElements;
 
+/// Reduce's the inner 1d array to 1 float. e.g. a `[[f32; 3]; 5]` becomes `[f32; 5]`.
 pub trait ReduceInnerElements<T>: Sized + AllocateZeros {
     type Output: Sized + CountElements;
 

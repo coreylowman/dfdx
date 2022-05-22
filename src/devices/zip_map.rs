@@ -1,6 +1,7 @@
 use super::{AllocateZeros, Cpu};
 use crate::arrays::CountElements;
 
+/// Zip two Nd arrays together, and apply a generic function to them.
 pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros {
     fn zip_map_into<F: FnMut(&f32, &f32) -> f32 + Copy>(l: &Lhs, r: &Rhs, out: &mut Lhs, f: F);
     fn zip_map_assign<F: FnMut(&mut f32, &f32) + Copy>(l: &mut Lhs, r: &Rhs, f: F);

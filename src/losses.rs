@@ -1,3 +1,5 @@
+//! Standard loss functions such as mse, mae, cross entropy, and more.
+
 use crate::prelude::*;
 
 /// Mean Squared Error. This is the same as doing `(pred - &targ).abs().mean()`

@@ -1,3 +1,5 @@
+//! The struct definitions for all TensorXD, [Tensor] trait, and more.
+
 mod impl_backward;
 mod impl_default;
 mod impl_duplicate;

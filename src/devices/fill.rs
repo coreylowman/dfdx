@@ -1,6 +1,7 @@
 use super::{AllocateZeros, Cpu};
 use crate::arrays::CountElements;
 
+/// Fills all elements with the specified function
 pub trait FillElements<T: CountElements>: Sized + AllocateZeros {
     fn fill<F: FnMut(&mut f32)>(out: &mut T, f: &mut F);
 

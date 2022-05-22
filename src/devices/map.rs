@@ -1,6 +1,7 @@
 use super::{AllocateZeros, Cpu};
 use crate::arrays::CountElements;
 
+/// Apply a generic function to all elements of Nd arrays.
 pub trait MapElements<T: CountElements>: Sized + AllocateZeros {
     fn map_into<F: FnMut(&f32) -> f32 + Copy>(inp: &T, out: &mut T, f: F);
     fn map_assign<F: FnMut(&mut f32) + Copy>(inp: &mut T, f: F);

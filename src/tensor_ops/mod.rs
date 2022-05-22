@@ -1,3 +1,5 @@
+//! Implementations of all operations for tensors, including activations, binary operations, and other methods.
+
 mod binary_ops;
 mod impl_apply;
 mod impl_mask;

@@ -1,3 +1,5 @@
+//! Implementations of Gradient tapes and generic gradient containers.
+
 use crate::prelude::*;
 use std::collections::HashMap;
 

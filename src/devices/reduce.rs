@@ -1,6 +1,7 @@
 use super::Cpu;
 use crate::arrays::CountElements;
 
+/// Reduce an entire Nd array to 1 value
 pub trait ReduceElements<T: CountElements> {
     fn reduce<F: FnMut(f32, f32) -> f32 + Copy>(inp: &T, f: F) -> f32;
 

@@ -2,6 +2,7 @@ use super::Cpu;
 use crate::arrays::CountElements;
 use std::alloc::{alloc_zeroed, Layout};
 
+/// Allocate an Nd array on the heap.
 pub trait AllocateZeros {
     fn zeros<T: CountElements>() -> Box<T>;
 }

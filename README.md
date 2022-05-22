@@ -1,6 +1,11 @@
 # dfdx: strongly typed deep learning in Rust
 
-Ergonomics & safety focused reverse mode auto differentiation[1] in Rust. Also includes neural network & optimizer apis.
+Ergonomics & safety focused deep learning in Rust. Main features include:
+
+1. Tensor library, complete with const generic shapes, activation functions, and more.
+2. Safe & Easy to use neural network building blocks.
+3. Standard deep learning optimizers such as Sgd and Adam.
+4. Reverse mode auto differentiation[1] implementation.
 
 [1] https://en.wikipedia.org/wiki/Automatic_differentiation#Reverse_accumulation
 
