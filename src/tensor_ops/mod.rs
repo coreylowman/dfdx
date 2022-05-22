@@ -2,6 +2,7 @@
 
 mod binary_ops;
 mod impl_apply;
+mod impl_clamp;
 mod impl_mask;
 mod impl_mean;
 mod impl_nans;
@@ -11,6 +12,7 @@ mod impl_sum_last;
 
 pub use binary_ops::*;
 pub use impl_apply::*;
+pub use impl_clamp::*;
 pub use impl_mask::*;
 pub use impl_mean::*;
 pub use impl_nans::*;
