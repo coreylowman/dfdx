@@ -1,8 +1,10 @@
 use super::*;
 use crate::prelude::*;
+use num_traits::One;
 use rand::prelude::Distribution;
+use rand_distr::{Standard, StandardNormal};
 
-pub trait TensorCreator: HasArrayData + Sized + HasDevice {
+pub trait TensorCreator: Tensor {
     fn new_boxed(data: Box<Self::Array>) -> Self;
 
     fn new(data: Self::Array) -> Self {
@@ -16,26 +18,25 @@ pub trait TensorCreator: HasArrayData + Sized + HasDevice {
     fn ones() -> Self
     where
         Self::Device: FillElements<Self::Array>,
+        Self::Dtype: One,
     {
-        Self::new_boxed(Self::Device::filled(&mut |f| *f = 1.0))
+        Self::new_boxed(Self::Device::filled(&mut || One::one()))
     }
 
     fn rand<R: rand::Rng>(rng: &mut R) -> Self
     where
         Self::Device: FillElements<Self::Array>,
+        Standard: Distribution<Self::Dtype>,
     {
-        Self::new_boxed(Self::Device::filled(&mut |f| {
-            *f = rand_distr::Standard.sample(rng)
-        }))
+        Self::new_boxed(Self::Device::filled(&mut || Standard.sample(rng)))
     }
 
     fn randn<R: rand::Rng>(rng: &mut R) -> Self
     where
         Self::Device: FillElements<Self::Array>,
+        StandardNormal: Distribution<Self::Dtype>,
     {
-        Self::new_boxed(Self::Device::filled(&mut |f| {
-            *f = rand_distr::StandardNormal.sample(rng)
-        }))
+        Self::new_boxed(Self::Device::filled(&mut || StandardNormal.sample(rng)))
     }
 }
 

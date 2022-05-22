@@ -1,18 +1,18 @@
 /// Represents something with a compile time known number of elements
 pub trait CountElements {
     const NUM_ELEMENTS: usize;
-    type Element: Clone + Default;
-    const NUM_BYTES: usize = Self::NUM_ELEMENTS * std::mem::size_of::<Self::Element>();
+    type Dtype: Clone + Default;
+    const NUM_BYTES: usize = Self::NUM_ELEMENTS * std::mem::size_of::<Self::Dtype>();
 }
 
 impl CountElements for f32 {
     const NUM_ELEMENTS: usize = 1;
-    type Element = Self;
+    type Dtype = Self;
 }
 
 impl<T: CountElements, const M: usize> CountElements for [T; M] {
     const NUM_ELEMENTS: usize = M * T::NUM_ELEMENTS;
-    type Element = T::Element;
+    type Dtype = T::Dtype;
 }
 
 pub trait HasInner {

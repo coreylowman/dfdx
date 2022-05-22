@@ -1,13 +1,16 @@
+use num_traits::One;
+
 use super::*;
 use crate::{devices::FillElements, gradients::Gradients};
 
 pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Gradients
 where
     T::Device: FillElements<T::Array>,
+    T::Dtype: One,
 {
     let (t, mut tape_holder) = t.split_tape_holder();
     tape_holder.add_operation(move |tape| {
-        T::Device::fill(tape.mut_gradient(&t), &mut |v| *v = 1.0);
+        T::Device::fill(tape.mut_gradient(&t), &mut || One::one());
     });
     tape_holder.0.execute()
 }

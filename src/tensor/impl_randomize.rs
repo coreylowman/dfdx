@@ -9,7 +9,7 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H> Randomize for $typename<$($Vs, )* H> {
     fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
-        <Self as HasDevice>::Device::fill(self.mut_data(), &mut |f| *f = dist.sample(rng));
+        <Self as HasDevice>::Device::fill(self.mut_data(), &mut || dist.sample(rng));
     }
 }
     };
