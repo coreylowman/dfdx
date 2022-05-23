@@ -1,5 +1,6 @@
 use super::{AllocateZeros, Cpu};
 use crate::arrays::CountElements;
+use std::ops::*;
 
 /// Zip two Nd arrays together, and apply a generic function to them.
 pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros {
@@ -23,56 +24,56 @@ pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros 
 
     fn add(l: &Lhs, r: &Rhs) -> Box<Lhs>
     where
-        for<'r> &'r Lhs::Dtype: std::ops::Add<&'r Rhs::Dtype, Output = Lhs::Dtype>,
+        for<'r> &'r Lhs::Dtype: Add<&'r Rhs::Dtype, Output = Lhs::Dtype>,
     {
         Self::zip_map(l, r, |x, y| x + y)
     }
 
     fn sub(l: &Lhs, r: &Rhs) -> Box<Lhs>
     where
-        for<'r> &'r Lhs::Dtype: std::ops::Sub<&'r Rhs::Dtype, Output = Lhs::Dtype>,
+        for<'r> &'r Lhs::Dtype: Sub<&'r Rhs::Dtype, Output = Lhs::Dtype>,
     {
         Self::zip_map(l, r, |x, y| x - y)
     }
 
     fn mul(l: &Lhs, r: &Rhs) -> Box<Lhs>
     where
-        for<'r> &'r Lhs::Dtype: std::ops::Mul<&'r Rhs::Dtype, Output = Lhs::Dtype>,
+        for<'r> &'r Lhs::Dtype: Mul<&'r Rhs::Dtype, Output = Lhs::Dtype>,
     {
         Self::zip_map(l, r, |x, y| x * y)
     }
 
     fn div(l: &Lhs, r: &Rhs) -> Box<Lhs>
     where
-        for<'r> &'r Lhs::Dtype: std::ops::Div<&'r Rhs::Dtype, Output = Lhs::Dtype>,
+        for<'r> &'r Lhs::Dtype: Div<&'r Rhs::Dtype, Output = Lhs::Dtype>,
     {
         Self::zip_map(l, r, |x, y| x / y)
     }
 
     fn add_assign(l: &mut Lhs, r: &Rhs)
     where
-        Lhs::Dtype: for<'r> std::ops::AddAssign<&'r Rhs::Dtype>,
+        for<'r> Lhs::Dtype: AddAssign<&'r Rhs::Dtype>,
     {
         Self::zip_map_assign(l, r, |x, y| *x += y);
     }
 
     fn sub_assign(l: &mut Lhs, r: &Rhs)
     where
-        Lhs::Dtype: for<'r> std::ops::SubAssign<&'r Rhs::Dtype>,
+        for<'r> Lhs::Dtype: SubAssign<&'r Rhs::Dtype>,
     {
         Self::zip_map_assign(l, r, |x, y| *x -= y);
     }
 
     fn mul_assign(l: &mut Lhs, r: &Rhs)
     where
-        Lhs::Dtype: for<'r> std::ops::MulAssign<&'r Rhs::Dtype>,
+        for<'r> Lhs::Dtype: MulAssign<&'r Rhs::Dtype>,
     {
         Self::zip_map_assign(l, r, |x, y| *x *= y);
     }
 
     fn div_assign(l: &mut Lhs, r: &Rhs)
     where
-        Lhs::Dtype: for<'r> std::ops::DivAssign<&'r Rhs::Dtype>,
+        for<'r> Lhs::Dtype: DivAssign<&'r Rhs::Dtype>,
     {
         Self::zip_map_assign(l, r, |x, y| *x /= y);
     }
@@ -107,9 +108,10 @@ impl<const M: usize> ZipMapElements<[f32; M], f32> for Cpu {
     }
 }
 
-impl<Rhs: CountElements, Lhs: CountElements, const M: usize> ZipMapElements<[Lhs; M], [Rhs; M]>
-    for Cpu
+impl<Rhs, Lhs, const M: usize> ZipMapElements<[Lhs; M], [Rhs; M]> for Cpu
 where
+    Lhs: CountElements,
+    Rhs: CountElements,
     Self: ZipMapElements<Lhs, Rhs>,
 {
     fn zip_map_into<F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype + Copy>(
