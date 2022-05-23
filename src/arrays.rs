@@ -42,7 +42,8 @@ impl<T: ZeroElements, const M: usize> ZeroElements for [T; M] {
 
 /// Has an associated type that implemented [CountElements] and [ZeroElements].
 pub trait HasArrayType {
-    type Array: 'static + Sized + Clone + CountElements + ZeroElements;
+    type Dtype;
+    type Array: 'static + Sized + Clone + CountElements<Dtype = Self::Dtype> + ZeroElements;
 }
 
 #[cfg(test)]

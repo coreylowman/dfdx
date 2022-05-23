@@ -9,17 +9,13 @@ pub trait HasArrayData: HasArrayType {
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*], $arr:ty) => {
 impl<$(const $Vs: usize, )* H> HasArrayType for $typename<$($Vs, )* H>  {
+    type Dtype = f32;
     type Array = $arr;
 }
 
 impl<$(const $Vs: usize, )* H> HasArrayData for $typename<$($Vs, )* H> {
     fn data(&self) -> &Self::Array { &self.data }
     fn mut_data(&mut self) -> &mut Self::Array { &mut self.data }
-}
-
-impl<$(const $Vs: usize, )* H> CountElements for $typename<$($Vs, )* H> {
-    const NUM_ELEMENTS: usize = <Self as HasArrayType>::Array::NUM_ELEMENTS;
-    type Dtype = <<Self as HasArrayType>::Array as CountElements>::Dtype;
 }
     };
 }

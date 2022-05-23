@@ -14,6 +14,7 @@ impl<T> HasUniqueId for PhantomTensor<T> {
 }
 
 impl<T: HasArrayType> HasArrayType for PhantomTensor<T> {
+    type Dtype = T::Dtype;
     type Array = T::Array;
 }
 
