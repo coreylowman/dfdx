@@ -1,6 +1,9 @@
 use crate::prelude::*;
 use std::marker::PhantomData;
 
+/// A fake tensor that holds a [UniqueId] and a type `T` that is [HasArrayType].
+/// This is created and stored in [GradientTape] operations to access gradient data
+/// for a tensor that the [GradientTape] doesn't have ownership of.
 #[derive(Clone, Copy)]
 pub struct PhantomTensor<T> {
     id: UniqueId,
@@ -22,22 +25,16 @@ impl<T: HasDevice> HasDevice for PhantomTensor<T> {
     type Device = T::Device;
 }
 
+/// Something that can be turned into a [PhantomTensor]
 pub trait IntoPhantom: HasArrayData + Sized {
     fn phantom(&self) -> PhantomTensor<Self>;
 }
 
-macro_rules! tensor_impl {
-    ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H> IntoPhantom for $typename<$($Vs, )* H> {
+impl<T: Tensor> IntoPhantom for T {
     fn phantom(&self) -> PhantomTensor<Self> {
-        PhantomTensor { id: self.id, marker: PhantomData }
+        PhantomTensor {
+            id: *self.id(),
+            marker: PhantomData,
+        }
     }
 }
-    };
-}
-
-tensor_impl!(Tensor0D, []);
-tensor_impl!(Tensor1D, [M]);
-tensor_impl!(Tensor2D, [M, N]);
-tensor_impl!(Tensor3D, [M, N, O]);
-tensor_impl!(Tensor4D, [M, N, O, P]);

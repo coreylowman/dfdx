@@ -1,22 +1,23 @@
-use num_traits::One;
-
 use super::*;
 use crate::{devices::FillElements, gradients::Gradients};
 
-pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Gradients
-where
-    T::Dtype: One,
-{
-    let (t, mut tape_holder) = t.split_tape_holder();
-    tape_holder.add_operation(move |tape| {
-        T::Device::fill(tape.mut_gradient(&t), &mut || One::one());
+/// Runs backprop algorithm with all operations contained in the tape that `t` has.
+///
+/// This function takes ownership of `t` and returns [Gradients].
+///
+/// Note that `t` is required to have [WithTape], which means it currently owns the [GradientTape].
+pub fn backward<T: Tensor<Dtype = f32, TapeHolder = WithTape>>(t: T) -> Gradients {
+    let (t, mut with_tape) = t.split_tape_holder();
+    with_tape.add_operation(move |tape| {
+        T::Device::fill(tape.mut_gradient(&t), &mut || num_traits::One::one());
     });
-    tape_holder.0.execute()
+    with_tape.0.execute()
 }
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )*> $typename<$($Vs, )* WithTape> {
+    /// Calls [backward] on `self`
     pub fn backward(self) -> Gradients {
         backward(self)
     }

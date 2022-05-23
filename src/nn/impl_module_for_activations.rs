@@ -7,7 +7,7 @@ macro_rules! activation_impls {
             fn update<G: GradientProvider>(&mut self, _: &mut G) {}
         }
 
-        impl Randomize for $typename {
+        impl Randomize<f32> for $typename {
             fn randomize<R: Rng, D: Distribution<f32>>(&mut self, _: &mut R, _: &D) {}
         }
 

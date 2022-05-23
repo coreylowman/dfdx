@@ -30,7 +30,7 @@ impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
     }
 }
 
-impl<const I: usize, const O: usize> Randomize for Linear<I, O> {
+impl<const I: usize, const O: usize> Randomize<f32> for Linear<I, O> {
     fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
         self.weight.randomize(rng, dist);
         self.bias.randomize(rng, dist);

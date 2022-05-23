@@ -1,13 +1,14 @@
 use crate::prelude::*;
 use rand::{distributions::Distribution, Rng};
 
-pub trait Randomize {
-    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D);
+/// Something that has parameters that can be randomized from a generic distribution.
+pub trait Randomize<T> {
+    fn randomize<R: Rng, D: Distribution<T>>(&mut self, rng: &mut R, dist: &D);
 }
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H> Randomize for $typename<$($Vs, )* H> {
+impl<$(const $Vs: usize, )* H> Randomize<f32> for $typename<$($Vs, )* H> {
     fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
         <Self as HasDevice>::Device::fill(self.mut_data(), &mut || dist.sample(rng));
     }

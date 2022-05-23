@@ -1,25 +1,24 @@
 use crate::prelude::*;
 
+/// The main tensor trait. A tensor consists of mainly 1. an array, 2. a device, 3. a unique id.
 pub trait Tensor:
     HasArrayType + HasArrayData + HasDevice + CanUpdateWithGradients + HasUniqueId + IntoPhantom
 {
     type TapeHolder: TapeHolder;
 
     type NoTape: 'static
-        + Tensor<TapeHolder = NoTape, Array = Self::Array, Device = Self::Device, Dtype = Self::Dtype>
+        + HasArrayType<Array = Self::Array, Dtype = Self::Dtype>
+        + HasArrayData
+        + HasUniqueId
+        + IntoPhantom
         // NOTE: we only want to be able to create NoTape tensors
         + TensorCreator
         // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
         + CanPutTapeHolder<Self::TapeHolder, Output = Self>;
 
-    type WithTape: 'static
-        + Tensor<
-            TapeHolder = WithTape,
-            Array = Self::Array,
-            Device = Self::Device,
-            Dtype = Self::Dtype,
-        >;
+    type WithTape: 'static + HasArrayType<Array = Self::Array, Dtype = Self::Dtype>;
 
+    /// Removes whatever TapeHolder this tensor has and returns itself without a tape.
     fn split_tape_holder(self) -> (Self::NoTape, Self::TapeHolder);
 }
 

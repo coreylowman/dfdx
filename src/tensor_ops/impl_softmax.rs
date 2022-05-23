@@ -1,8 +1,17 @@
 use crate::prelude::*;
 
+/// Something that you can call softmax on. logsumexp() and log_softmax()
+/// are also provided.
+///
+/// This calls softmax on the innermost dimension (i.e. dimension -1 in python arrays).
 pub trait HasSoftmaxMethod: Tensor<Dtype = f32> + HasSumLastMethod + Sized {
+    /// Equivalent to `Log(sum(exp(data)))` or `data.exp().sum(-1).log()`
     fn logsumexp(self) -> <Self as HasSumLastMethod>::Output;
+
+    /// Equivalent to `data - data.logsumexp()`.
     fn log_softmax(self) -> Self;
+
+    /// Equivalent to `data.log_softmax().exp()`
     fn softmax(self) -> Self {
         self.log_softmax().exp()
     }

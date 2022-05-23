@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+/// Sums the innermost dimension of the tensor (i.e. dimension -1 for python arrays).
 pub trait HasSumLastMethod: Tensor {
     type Output: Tensor;
     fn sum_last(self) -> Self::Output;

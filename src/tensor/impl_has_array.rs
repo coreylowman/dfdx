@@ -1,6 +1,7 @@
 use super::*;
 use crate::prelude::*;
 
+/// Something that has [HasArrayType], and also can return a reference to or mutate `Self::Array`.
 pub trait HasArrayData: HasArrayType {
     fn data(&self) -> &Self::Array;
     fn mut_data(&mut self) -> &mut Self::Array;
@@ -14,8 +15,8 @@ impl<$(const $Vs: usize, )* H> HasArrayType for $typename<$($Vs, )* H>  {
 }
 
 impl<$(const $Vs: usize, )* H> HasArrayData for $typename<$($Vs, )* H> {
-    fn data(&self) -> &Self::Array { &self.data }
-    fn mut_data(&mut self) -> &mut Self::Array { &mut self.data }
+    fn data(&self) -> &Self::Array { self.data.as_ref() }
+    fn mut_data(&mut self) -> &mut Self::Array { self.data.as_mut() }
 }
     };
 }

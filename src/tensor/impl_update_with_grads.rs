@@ -1,18 +1,9 @@
 use crate::prelude::*;
 
-macro_rules! tensor_impl {
-    ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H> CanUpdateWithGradients for $typename<$($Vs, )* H> {
+/// Subtracts the gradient for the tensor from [HasArrayData::mut_data].
+impl<T: Tensor<Dtype = f32>> CanUpdateWithGradients for T {
     fn update<G: GradientProvider>(&mut self, grads: &mut G) {
         let gradient = grads.gradient(self).unwrap();
         <Self as HasDevice>::Device::sub_assign(self.mut_data(), gradient.as_ref());
     }
 }
-    };
-}
-
-tensor_impl!(Tensor0D, []);
-tensor_impl!(Tensor1D, [M]);
-tensor_impl!(Tensor2D, [M, N]);
-tensor_impl!(Tensor3D, [M, N, O]);
-tensor_impl!(Tensor4D, [M, N, O, P]);

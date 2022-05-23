@@ -4,17 +4,22 @@ use num_traits::One;
 use rand::prelude::Distribution;
 use rand_distr::{Standard, StandardNormal};
 
-pub trait TensorCreator: Tensor {
+/// Something that can be created - currently only implemented for tensors with no tapes.
+pub trait TensorCreator: Sized + HasDevice {
+    /// Create a new tensor with a `Box<Self::Array>`.
     fn new_boxed(data: Box<Self::Array>) -> Self;
 
+    /// Create a new tensor with `Self::Array` on the stack. This just boxes `Self::Array` and calls [TensorCreator::new_boxed].
     fn new(data: Self::Array) -> Self {
         Self::new_boxed(Box::new(data))
     }
 
+    /// Creates a tensor filled with all 0s.
     fn zeros() -> Self {
         Self::new_boxed(Self::Device::zeros())
     }
 
+    /// Creates a tensor filled with all 1s.
     fn ones() -> Self
     where
         Self::Dtype: One,
@@ -22,6 +27,7 @@ pub trait TensorCreator: Tensor {
         Self::new_boxed(Self::Device::filled(&mut || One::one()))
     }
 
+    /// Creates a tensor filled with values sampled from [Standard] distribution.
     fn rand<R: rand::Rng>(rng: &mut R) -> Self
     where
         Standard: Distribution<Self::Dtype>,
@@ -29,6 +35,7 @@ pub trait TensorCreator: Tensor {
         Self::new_boxed(Self::Device::filled(&mut || Standard.sample(rng)))
     }
 
+    /// Creates a tensor filled with values sampled from [StandardNormal] distribution.
     fn randn<R: rand::Rng>(rng: &mut R) -> Self
     where
         StandardNormal: Distribution<Self::Dtype>,

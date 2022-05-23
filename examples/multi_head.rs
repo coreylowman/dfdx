@@ -10,7 +10,7 @@ struct MultiHeadedMLP {
     head2: (Linear<32, 1>, Tanh),
 }
 
-impl Randomize for MultiHeadedMLP {
+impl Randomize<f32> for MultiHeadedMLP {
     fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
         self.trunk.randomize(rng, dist);
         self.head1.randomize(rng, dist);
