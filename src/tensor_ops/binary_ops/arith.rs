@@ -1,39 +1,42 @@
 use crate::prelude::*;
 use std::ops::{Add, Div, Mul, Sub};
 
-pub fn add<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
+pub fn add<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
     apply_binary::<T, BinaryAdd>(lhs, rhs)
 }
 
-pub fn add_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T {
+pub fn add_lhs<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     apply_binary_lhs::<T, BinaryAdd>(lhs, rhs)
 }
 
-pub fn sub<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
+pub fn sub<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
     apply_binary::<T, BinarySub>(lhs, rhs)
 }
 
-pub fn sub_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T {
+pub fn sub_lhs<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     apply_binary_lhs::<T, BinarySub>(lhs, rhs)
 }
 
-pub fn mul<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
+pub fn mul<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
     apply_binary::<T, BinaryMul>(lhs, rhs)
 }
 
-pub fn mul_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T {
+pub fn mul_lhs<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     apply_binary_lhs::<T, BinaryMul>(lhs, rhs)
 }
 
-pub fn div<T: Tensor>(lhs: &T::NoTape, rhs: T) -> T {
+pub fn div<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
     apply_binary::<T, BinaryDiv>(lhs, rhs)
 }
 
-pub fn div_lhs<T: Tensor>(lhs: T, rhs: &T::NoTape) -> T {
+pub fn div_lhs<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     apply_binary_lhs::<T, BinaryDiv>(lhs, rhs)
 }
 
-pub fn apply_binary<T: Tensor, F: DiffBinaryFunction<f32>>(lhs: &T::NoTape, rhs: T) -> T {
+pub fn apply_binary<T: Tensor<Dtype = f32>, F: DiffBinaryFunction<f32>>(
+    lhs: &T::NoTape,
+    rhs: T,
+) -> T {
     let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), F::f));
     let mut lhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdx);
     let mut rhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdy);
@@ -51,7 +54,10 @@ pub fn apply_binary<T: Tensor, F: DiffBinaryFunction<f32>>(lhs: &T::NoTape, rhs:
 }
 
 // TODO how to combine this with above?
-pub fn apply_binary_lhs<T: Tensor, F: DiffBinaryFunction<f32>>(lhs: T, rhs: &T::NoTape) -> T {
+pub fn apply_binary_lhs<T: Tensor<Dtype = f32>, F: DiffBinaryFunction<f32>>(
+    lhs: T,
+    rhs: &T::NoTape,
+) -> T {
     let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), F::f));
     let mut lhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdx);
     let mut rhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), F::dfdy);

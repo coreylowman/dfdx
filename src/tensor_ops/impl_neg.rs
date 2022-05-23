@@ -10,7 +10,7 @@ use crate::prelude::*;
 /// let r = -a; // or negate(a);
 /// assert_eq!(r.data(), &[2.0, 0.0, -5.0]);
 /// ```
-pub fn negate<T: Tensor>(t: T) -> T {
+pub fn negate<T: Tensor<Dtype = f32>>(t: T) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |v| -v));
     let (mut t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();

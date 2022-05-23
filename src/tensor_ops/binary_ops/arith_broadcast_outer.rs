@@ -2,8 +2,11 @@ use crate::prelude::*;
 
 // TODO abstract these all together somehow
 
-fn bouter_add<T: CountElements, const M: usize>(lhs: &[T; M], rhs: &T, out: &mut [T; M])
-where
+fn bouter_add<T: CountElements<Dtype = f32>, const M: usize>(
+    lhs: &[T; M],
+    rhs: &T,
+    out: &mut [T; M],
+) where
     Cpu: ZipMapElements<T, T>,
 {
     for i in 0..M {
@@ -13,8 +16,8 @@ where
 
 pub fn broadcast_outer_add<Lhs, Rhs, const M: usize>(lhs: Lhs, rhs: &Rhs) -> Lhs
 where
-    Lhs: Tensor<Array = [Rhs::Array; M]>,
-    Rhs: 'static + Tensor<TapeHolder = NoTape>,
+    Lhs: Tensor<Array = [Rhs::Array; M], Dtype = f32>,
+    Rhs: 'static + Tensor<Dtype = f32, TapeHolder = NoTape>,
     Lhs::Device: Device<Lhs::Array> + Device<Rhs::Array>,
     Cpu: ZipMapElements<Rhs::Array, Rhs::Array>,
 {

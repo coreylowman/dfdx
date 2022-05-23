@@ -9,7 +9,7 @@ use crate::prelude::*;
 /// let r = t.clamp(-0.5, 0.5);
 /// assert_eq!(r.data(), &[-0.5, -0.5, 0.0, 0.5, 0.5]);
 /// ```
-pub fn clamp<T: Tensor>(t: T, min: f32, max: f32) -> T {
+pub fn clamp<T: Tensor<Dtype = f32>>(t: T, min: T::Dtype, max: T::Dtype) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x.clamp(min, max)));
     let (mut t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();

@@ -9,7 +9,7 @@ use crate::prelude::*;
 /// let r = t.nans_to(0.0);
 /// assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
 /// ```
-pub fn nans_to<T: Tensor>(t: T, value: f32) -> T {
+pub fn nans_to<T: Tensor<Dtype = f32>>(t: T, value: T::Dtype) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |v| {
         if v.is_nan() {
             value

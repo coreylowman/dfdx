@@ -10,7 +10,7 @@ use crate::prelude::*;
 /// let r = t.trace().value_mask(&m, -1e10);
 /// assert_eq!(r.data(), &[-1e10, 2.0, -1e10]);
 /// ```
-pub fn value_mask<T: Tensor>(t: T, other: &T::NoTape, value: f32) -> T {
+pub fn value_mask<T: Tensor<Dtype = f32>>(t: T, other: &T::NoTape, value: T::Dtype) -> T {
     let result = T::NoTape::new_boxed(T::Device::zip_map(t.data(), other.data(), |x, y| {
         if y == &value {
             value

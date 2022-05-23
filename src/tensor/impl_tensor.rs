@@ -6,14 +6,19 @@ pub trait Tensor:
     type TapeHolder: TapeHolder;
 
     type NoTape: 'static
-        + Tensor<TapeHolder = NoTape, Array = Self::Array, Device = Self::Device>
+        + Tensor<TapeHolder = NoTape, Array = Self::Array, Device = Self::Device, Dtype = Self::Dtype>
         // NOTE: we only want to be able to create NoTape tensors
         + TensorCreator
         // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
         + CanPutTapeHolder<Self::TapeHolder, Output = Self>;
 
     type WithTape: 'static
-        + Tensor<TapeHolder = WithTape, Array = Self::Array, Device = Self::Device>;
+        + Tensor<
+            TapeHolder = WithTape,
+            Array = Self::Array,
+            Device = Self::Device,
+            Dtype = Self::Dtype,
+        >;
 
     fn split_tape_holder(self) -> (Self::NoTape, Self::TapeHolder);
 }

@@ -17,7 +17,7 @@ use crate::prelude::*;
 /// let r = t.relu();
 /// assert_eq!(r.data(), &[0.0, 0.0, 0.0, 1.0, 2.0]);
 /// ```
-pub fn apply<T: Tensor, F: DifferentiableFunction<f32>>(t: T) -> T {
+pub fn apply<T: Tensor<Dtype = f32>, F: DifferentiableFunction<f32>>(t: T) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), F::f));
     let (mut t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
@@ -33,7 +33,7 @@ pub fn apply<T: Tensor, F: DifferentiableFunction<f32>>(t: T) -> T {
 
 pub fn apply_ref<T, F: DifferentiableFunction<f32>>(t: &T) -> T
 where
-    T: Tensor<TapeHolder = NoTape> + TensorCreator,
+    T: Tensor<Dtype = f32, TapeHolder = NoTape> + TensorCreator,
 {
     T::new_boxed(T::Device::map(t.data(), F::f))
 }
@@ -44,7 +44,7 @@ macro_rules! apply_impl {
             fn $method_name(self) -> Self;
         }
 
-        impl<T: Tensor> $trait_name for T {
+        impl<T: Tensor<Dtype = f32>> $trait_name for T {
             fn $method_name(self) -> Self {
                 apply::<Self, $activation_struct>(self)
             }
@@ -68,7 +68,7 @@ macro_rules! apply_ref_impl {
             fn $method_name(&self) -> Self;
         }
 
-        impl<T: Tensor<TapeHolder = NoTape> + TensorCreator> $trait_name for T {
+        impl<T: Tensor<Dtype = f32, TapeHolder = NoTape> + TensorCreator> $trait_name for T {
             fn $method_name(&self) -> Self {
                 apply_ref::<Self, $activation_struct>(self)
             }

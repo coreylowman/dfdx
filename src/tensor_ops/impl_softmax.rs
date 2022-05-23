@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-pub trait HasSoftmaxMethod: Tensor + HasSumLastMethod + Sized {
+pub trait HasSoftmaxMethod: Tensor<Dtype = f32> + HasSumLastMethod + Sized {
     fn logsumexp(self) -> <Self as HasSumLastMethod>::Output;
     fn log_softmax(self) -> Self;
     fn softmax(self) -> Self {

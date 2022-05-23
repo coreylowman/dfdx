@@ -55,7 +55,7 @@ impl Adam {
 impl GradientProvider for Adam {
     fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
-        P: HasUniqueId + HasArrayType + HasDevice,
+        P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
         self.gradients.remove(p).map(|mut g_t| {
             let mut m_t = self.moments[0].remove(p).unwrap_or_else(P::Device::zeros);

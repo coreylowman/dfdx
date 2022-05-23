@@ -2,12 +2,19 @@ use super::{AllocateZeros, Cpu};
 use crate::arrays::CountElements;
 
 /// Reduce's the inner 1d array to 1 float. e.g. a `[[f32; 3]; 5]` becomes `[f32; 5]`.
-pub trait ReduceInnerElements<T>: Sized + AllocateZeros {
-    type Output: Sized + CountElements;
+pub trait ReduceInnerElements<T: CountElements>: Sized + AllocateZeros {
+    type Output: Sized + CountElements<Dtype = T::Dtype>;
 
-    fn reduce_inner_into<F: FnMut(f32, f32) -> f32 + Copy>(inp: &T, out: &mut Self::Output, f: F);
+    fn reduce_inner_into<F: FnMut(T::Dtype, T::Dtype) -> T::Dtype + Copy>(
+        inp: &T,
+        out: &mut Self::Output,
+        f: F,
+    );
 
-    fn reduce_inner<F: FnMut(f32, f32) -> f32 + Copy>(inp: &T, f: F) -> Box<Self::Output> {
+    fn reduce_inner<F: FnMut(T::Dtype, T::Dtype) -> T::Dtype + Copy>(
+        inp: &T,
+        f: F,
+    ) -> Box<Self::Output> {
         let mut out = Self::zeros();
         Self::reduce_inner_into(inp, &mut out, f);
         out
@@ -25,12 +32,12 @@ impl<const M: usize> ReduceInnerElements<[f32; M]> for Cpu {
     }
 }
 
-impl<T, const M: usize> ReduceInnerElements<[T; M]> for Cpu
+impl<T: CountElements, const M: usize> ReduceInnerElements<[T; M]> for Cpu
 where
     Cpu: ReduceInnerElements<T>,
 {
     type Output = [<Self as ReduceInnerElements<T>>::Output; M];
-    fn reduce_inner_into<F: FnMut(f32, f32) -> f32 + Copy>(
+    fn reduce_inner_into<F: FnMut(T::Dtype, T::Dtype) -> T::Dtype + Copy>(
         inp: &[T; M],
         out: &mut Self::Output,
         f: F,

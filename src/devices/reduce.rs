@@ -1,24 +1,38 @@
+use num_traits::{Float, FromPrimitive, Num};
+
 use super::Cpu;
 use crate::arrays::CountElements;
 
 /// Reduce an entire Nd array to 1 value
 pub trait ReduceElements<T: CountElements> {
-    fn reduce<F: FnMut(f32, f32) -> f32 + Copy>(inp: &T, f: F) -> f32;
+    fn reduce<F: FnMut(T::Dtype, T::Dtype) -> T::Dtype + Copy>(inp: &T, f: F) -> T::Dtype;
 
-    fn sum(inp: &T) -> f32 {
+    fn sum(inp: &T) -> T::Dtype
+    where
+        T::Dtype: Num,
+    {
         Self::reduce(inp, |a, b| a + b)
     }
 
-    fn mean(inp: &T) -> f32 {
-        Self::sum(inp) / T::NUM_ELEMENTS as f32
+    fn mean(inp: &T) -> T::Dtype
+    where
+        T::Dtype: Float + FromPrimitive,
+    {
+        Self::sum(inp) / T::Dtype::from_usize(T::NUM_ELEMENTS).unwrap()
     }
 
-    fn max(inp: &T) -> f32 {
-        Self::reduce(inp, f32::max)
+    fn max(inp: &T) -> T::Dtype
+    where
+        T::Dtype: Float,
+    {
+        Self::reduce(inp, T::Dtype::max)
     }
 
-    fn min(inp: &T) -> f32 {
-        Self::reduce(inp, f32::min)
+    fn min(inp: &T) -> T::Dtype
+    where
+        T::Dtype: Float,
+    {
+        Self::reduce(inp, T::Dtype::min)
     }
 }
 
@@ -32,7 +46,7 @@ impl<T: CountElements, const M: usize> ReduceElements<[T; M]> for Cpu
 where
     Self: ReduceElements<T>,
 {
-    fn reduce<F: FnMut(f32, f32) -> f32 + Copy>(inp: &[T; M], f: F) -> f32 {
+    fn reduce<F: FnMut(T::Dtype, T::Dtype) -> T::Dtype + Copy>(inp: &[T; M], f: F) -> T::Dtype {
         (0..M).map(|i| Self::reduce(&inp[i], f)).reduce(f).unwrap()
     }
 }

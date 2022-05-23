@@ -208,7 +208,7 @@ pub trait GradientProvider {
     /// based on the associated data!
     fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
-        P: HasUniqueId + HasArrayType + HasDevice;
+        P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice;
 }
 
 /// Represents something that can be updated with [GradientProvider].
@@ -245,6 +245,7 @@ mod tests {
 
     impl HasArrayType for Tensor {
         type Array = [f32; 5];
+        type Dtype = f32;
     }
 
     impl HasDevice for Tensor {

@@ -4,7 +4,7 @@ pub trait HasMeanMethod: Tensor {
     fn mean(self) -> Tensor0D<Self::TapeHolder>;
 }
 
-impl<T: Tensor> HasMeanMethod for T {
+impl<T: Tensor<Dtype = f32>> HasMeanMethod for T {
     /// Sums all the values in `self` and divides by number of values.
     ///
     /// Returns a [Tensor0D] (i.e. one number).

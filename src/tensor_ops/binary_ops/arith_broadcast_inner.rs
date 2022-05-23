@@ -2,8 +2,8 @@ use crate::prelude::*;
 
 pub fn broadcast_inner_sub<Lhs, Rhs>(lhs: Lhs, rhs: &Rhs) -> Lhs
 where
-    Lhs: Tensor,
-    Rhs: 'static + Tensor<TapeHolder = NoTape>,
+    Lhs: Tensor<Dtype = f32>,
+    Rhs: 'static + Tensor<Dtype = f32, TapeHolder = NoTape>,
     Lhs::Device: Device<Lhs::Array>
         + Device<Rhs::Array>
         + ReduceInnerElements<Lhs::Array, Output = Rhs::Array>

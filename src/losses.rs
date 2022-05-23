@@ -3,12 +3,12 @@
 use crate::prelude::*;
 
 /// Mean Squared Error. This is the same as doing `(pred - &targ).abs().mean()`
-pub fn mse_loss<T: Tensor>(pred: T, targ: &T::NoTape) -> Tensor0D<T::TapeHolder> {
+pub fn mse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::TapeHolder> {
     sub(targ, pred).square().mean()
 }
 
 /// Mean absolute error. This is the same as doing `(pred - &targ).abs().mean()`
-pub fn mae_loss<T: Tensor>(pred: T, targ: &T::NoTape) -> Tensor0D<T::TapeHolder> {
+pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::TapeHolder> {
     sub(targ, pred).abs().mean()
 }
 
@@ -26,7 +26,7 @@ pub fn mae_loss<T: Tensor>(pred: T, targ: &T::NoTape) -> Tensor0D<T::TapeHolder>
 ///
 /// If you're looking to use a hard target (i.e. an index),
 /// use this implementaiton with .sum() instead of .mean() at the end.
-pub fn cross_entropy_with_logits_loss<T: Tensor + HasSoftmaxMethod>(
+pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32> + HasSoftmaxMethod>(
     logits: T,
     targ: &T::NoTape,
 ) -> Tensor0D<T::TapeHolder> {

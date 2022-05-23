@@ -60,7 +60,7 @@ impl Sgd {
 impl GradientProvider for Sgd {
     fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
-        P: HasUniqueId + HasArrayType + HasDevice,
+        P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
         self.gradients.remove(p).map(|mut g_t| {
             match self.momentum {
