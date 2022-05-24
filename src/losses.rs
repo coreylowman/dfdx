@@ -12,8 +12,8 @@ pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T
     sub(targ, pred).abs().mean()
 }
 
-/// Cross entropy loss. This will call `logits.log_softmax()`, so make sure logits is not the
-/// output from softmax() or log_softmax() already.
+/// Cross entropy loss. This will call `log_softmax(logits)`, so make sure logits is **not** the
+/// output from [softmax()] or [log_softmax()] already.
 ///
 /// ```rust
 /// # use dfdx::prelude::*;
@@ -26,11 +26,11 @@ pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T
 ///
 /// If you're looking to use a hard target (i.e. an index),
 /// use this implementaiton with .sum() instead of .mean() at the end.
-pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32> + HasSoftmaxMethod>(
+pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     logits: T,
     targ: &T::NoTape,
 ) -> Tensor0D<T::TapeHolder> {
-    -mul(targ, logits.log_softmax()).mean()
+    -mul(targ, log_softmax(logits)).mean()
 }
 
 #[cfg(test)]

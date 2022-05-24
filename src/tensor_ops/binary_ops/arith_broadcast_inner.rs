@@ -1,14 +1,9 @@
 use crate::prelude::*;
 
-pub fn broadcast_inner_sub<Lhs, Rhs>(lhs: Lhs, rhs: &Rhs) -> Lhs
-where
-    Lhs: Tensor<Dtype = f32>,
-    Rhs: 'static + Tensor<Dtype = f32, TapeHolder = NoTape>,
-    Lhs::Device: Device<Lhs::Array>
-        + Device<Rhs::Array>
-        + ReduceInnerElements<Lhs::Array, Output = Rhs::Array>
-        + ZipMapElements<Lhs::Array, Rhs::Array>,
-{
+pub fn broadcast_inner_sub<Lhs: Tensor<Dtype = f32>>(
+    lhs: Lhs,
+    rhs: &<Lhs::LastDimReduced as Tensor>::NoTape,
+) -> Lhs {
     let result = Lhs::NoTape::new_boxed(Lhs::Device::sub(lhs.data(), rhs.data()));
 
     let _rhs = rhs.phantom();
@@ -20,12 +15,15 @@ where
         Lhs::Device::zip_map_assign(lhs.mut_data(), result_grad, |l, r| *l = *r);
 
         // this is reduce_inner(result_grad * rhs_deriv, x + y), where rhs_deriv = -1.
-        let d_grad_rhs = Lhs::Device::reduce_inner(result_grad, |x, y| x + y);
+        let d_grad_rhs = Lhs::Device::reduce_last_dim(result_grad, |x, y| x + y);
 
         Lhs::Device::add_assign(tape.mut_gradient(&lhs), lhs.data());
 
         //NOTE: sub_assign here to account for negative sign from rhs_deriv
-        Lhs::Device::sub_assign(tape.mut_gradient(&_rhs), d_grad_rhs.as_ref());
+        <Lhs::LastDimReduced as HasDevice>::Device::sub_assign(
+            tape.mut_gradient(&_rhs),
+            d_grad_rhs.as_ref(),
+        );
     });
     result.with_tape_holder(tape_holder)
 }

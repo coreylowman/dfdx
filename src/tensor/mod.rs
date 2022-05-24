@@ -2,7 +2,6 @@
 
 mod impl_backward;
 mod impl_default;
-mod impl_duplicate;
 mod impl_has_array;
 mod impl_has_device;
 mod impl_has_unique_id;
@@ -18,7 +17,6 @@ mod tape_holders;
 
 pub use impl_backward::*;
 pub use impl_default::*;
-pub use impl_duplicate::*;
 pub use impl_has_array::*;
 pub use impl_has_device::*;
 pub use impl_has_unique_id::*;

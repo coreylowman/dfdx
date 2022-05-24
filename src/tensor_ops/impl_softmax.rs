@@ -1,53 +1,108 @@
 use crate::prelude::*;
 
-/// Something that you can call softmax on. logsumexp() and log_softmax()
-/// are also provided.
+/// Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function.
+/// Equivalent to `Log(sum(exp(data)))` or `data.exp().sum(-1).log()`.
 ///
-/// This calls softmax on the innermost dimension (i.e. dimension -1 in python arrays).
-pub trait HasSoftmaxMethod: Tensor<Dtype = f32> + HasSumLastMethod + Sized {
-    /// Equivalent to `Log(sum(exp(data)))` or `data.exp().sum(-1).log()`
-    fn logsumexp(self) -> <Self as HasSumLastMethod>::Output;
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a = Tensor0D::new(0.0);
+/// let r = logsumexp(a);
+/// assert_eq!(r.data(), &1.0);
+/// ```
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+/// let r = a.logsumexp();
+/// assert_eq!(r.data(), &2.4519143);
+/// ```
+///
+/// See [log_softmax()] and [softmax()] for related functions.
+pub fn logsumexp<T: Tensor<Dtype = f32>>(mut t: T) -> T::LastDimReduced {
+    let max = T::Device::reduce_last_dim(t.data(), f32::max);
+    T::Device::sub_assign(t.mut_data(), max.as_ref());
+    let mut result = sum_last_dim(t.exp()).ln();
+    <T::LastDimReduced as HasDevice>::Device::add_assign(result.mut_data(), max.as_ref());
+    result
+}
 
-    /// Equivalent to `data - data.logsumexp()`.
-    fn log_softmax(self) -> Self;
+/// Numerically stable computation of `log(softmax(t))`. Does `t - logsumexp(t)` under the hood.
+///
+/// See [logsumexp()] and [softmax()] for related functions
+pub fn log_softmax<T: Tensor<Dtype = f32>>(t: T) -> T {
+    let t_ = t.duplicate();
+    let lse = logsumexp(t);
+    let (lse, tape_holder) = lse.split_tape_holder();
+    let t = t_.with_tape_holder(tape_holder);
+    broadcast_inner_sub(t, &lse)
+}
 
-    /// Equivalent to `data.log_softmax().exp()`
-    fn softmax(self) -> Self {
-        self.log_softmax().exp()
-    }
+/// Computes the [softmax](https://en.wikipedia.org/wiki/Softmax_function) function.
+/// Equivalent to `t.log_softmax().exp()` or `exp(log_softmax(t))` or `exp(t) / sum(exp(t))`
+///
+/// See [logsumexp()] and [log_softmax()] for related functions.
+pub fn softmax<T: Tensor<Dtype = f32>>(t: T) -> T {
+    log_softmax(t).exp()
 }
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: TapeHolder> HasSoftmaxMethod for $typename<$($Vs, )* H> {
-    fn logsumexp(mut self) -> <Self as HasSumLastMethod>::Output {
-        let max = Self::Device::reduce_inner(self.data(), f32::max);
-        Self::Device::map_assign_inner(self.mut_data(), |inner| {
-            let max = Self::Device::max(inner);
-            Self::Device::map_assign(inner, |v| *v -= max);
-        });
-        let mut result = self.exp().sum_last().ln();
-        Self::Device::add_assign(result.mut_data(), max.as_ref());
-        result
+impl<$(const $Vs: usize, )* H: TapeHolder> $typename<$($Vs, )* H> {
+    /// Calls [logsumexp] on `self`.
+    pub fn logsumexp(self) -> <Self as Tensor>::LastDimReduced {
+        logsumexp(self)
     }
 
-    fn log_softmax(self) -> Self {
-        let x_ = self.duplicate();
-        let (lse, tape_holder) = self.logsumexp().split_tape_holder();
-        broadcast_inner_sub(x_.with_tape_holder(tape_holder), &lse)
+    /// Calls [log_softmax] on `self`
+    pub fn log_softmax(self) -> Self {
+        log_softmax(self)
+    }
+
+    /// Calls [softmax] on `self`
+    pub fn softmax(self) -> Self {
+        softmax(self)
     }
 }
     };
 }
 
+tensor_impl!(Tensor0D, []);
 tensor_impl!(Tensor1D, [M]);
 tensor_impl!(Tensor2D, [M, N]);
-// tensor_impl!(Tensor3D, [M, N, O]);
-// tensor_impl!(Tensor4D, [M, N, O, P]);
+tensor_impl!(Tensor3D, [M, N, O]);
+tensor_impl!(Tensor4D, [M, N, O, P]);
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_logsumexp_0d() {
+        let a = Tensor0D::new(0.0);
+        let r = a.trace().logsumexp();
+        assert_eq!(r.data(), &0.0);
+        let gradients = backward(r);
+        assert_eq!(gradients.ref_gradient(&a), &1.0);
+    }
+
+    #[test]
+    fn test_log_softmax_0d() {
+        let a = Tensor0D::new(0.0);
+        let r = a.trace().log_softmax();
+        assert_eq!(r.data(), &0.0);
+        let gradients = backward(r);
+        assert_eq!(gradients.ref_gradient(&a), &0.0);
+    }
+
+    #[test]
+    fn test_softmax_0d() {
+        let a = Tensor0D::new(0.0);
+        let r = a.trace().softmax();
+        assert_eq!(r.data(), &1.0);
+        let gradients = backward(r);
+        assert_eq!(gradients.ref_gradient(&a), &0.0);
+    }
 
     #[test]
     fn test_logsumexp_1d() {
