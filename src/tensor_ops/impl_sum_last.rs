@@ -1,5 +1,15 @@
 use crate::prelude::*;
 
+/// Calls [Device::sum_last_dim()] on the underlying array.
+/// Result [Tensor] has smaller number of dimensions.
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let t = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+/// let r: Tensor1D<2> = sum_last_dim(t);
+/// assert_eq!(r.data(), &[6.0, 15.0]);
+/// ```
 pub fn sum_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
     let result = <T::LastDimReduced as Tensor>::NoTape::new_boxed(T::Device::reduce_last_dim(
         t.data(),
@@ -17,6 +27,7 @@ pub fn sum_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
 macro_rules! sum_last_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: TapeHolder> $typename<$($Vs, )* H> {
+    /// Calls [sum_last_dim()] on `self`.
     pub fn sum_last_dim(self) -> <Self as Tensor>::LastDimReduced {
         sum_last_dim(self)
     }
