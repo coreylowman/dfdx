@@ -1,25 +1,36 @@
 use crate::prelude::*;
 
-pub trait HasMeanMethod: Tensor {
-    fn mean(self) -> Tensor0D<Self::TapeHolder>;
+/// Sums all the values in `self` and divides by number of values.
+///
+/// Returns a [Tensor0D] (i.e. one number).
+pub fn mean<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::TapeHolder> {
+    let result = Tensor0D::<NoTape>::new(T::Device::mean(t.data()));
+    let (mut t, mut tape_holder) = t.split_tape_holder();
+    let _result = result.phantom();
+    tape_holder.add_operation(move |tape| {
+        let g: f32 = *tape.ref_gradient(&_result);
+        T::Device::map_assign(t.mut_data(), |v| *v = g / T::Array::NUM_ELEMENTS as f32);
+        T::Device::add_assign(tape.mut_gradient(&t), t.data());
+    });
+    result.with_tape_holder(tape_holder)
 }
 
-impl<T: Tensor<Dtype = f32>> HasMeanMethod for T {
-    /// Sums all the values in `self` and divides by number of values.
-    ///
-    /// Returns a [Tensor0D] (i.e. one number).
-    fn mean(self) -> Tensor0D<Self::TapeHolder> {
-        let result = Tensor0D::<NoTape>::new(T::Device::mean(self.data()));
-        let (mut t, mut tape_holder) = self.split_tape_holder();
-        let _result = result.phantom();
-        tape_holder.add_operation(move |tape| {
-            let g: f32 = *tape.ref_gradient(&_result);
-            T::Device::map_assign(t.mut_data(), |v| *v = g / T::Array::NUM_ELEMENTS as f32);
-            T::Device::add_assign(tape.mut_gradient(&t), t.data());
-        });
-        result.with_tape_holder(tape_holder)
+macro_rules! tensor_impl {
+    ($typename:ident, [$($Vs:tt),*]) => {
+impl<$(const $Vs: usize, )* H: TapeHolder> $typename<$($Vs, )* H> {
+    /// Calls [mean()] on `self`.
+    pub fn mean(self) -> Tensor0D<<Self as Tensor>::TapeHolder> {
+        mean(self)
     }
 }
+    };
+}
+
+tensor_impl!(Tensor0D, []);
+tensor_impl!(Tensor1D, [M]);
+tensor_impl!(Tensor2D, [M, N]);
+tensor_impl!(Tensor3D, [M, N, O]);
+tensor_impl!(Tensor4D, [M, N, O, P]);
 
 #[cfg(test)]
 mod tests {

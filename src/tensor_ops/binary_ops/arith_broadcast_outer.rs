@@ -14,6 +14,18 @@ fn bouter_add<T: CountElements<Dtype = f32>, const M: usize>(
     }
 }
 
+/// Broadcast the first dimension of Rhs M times, so its the same size as Lhs.
+///
+/// E.g If Lhs has dimension `(2, 3)`, then Rhs could be dimension `(3, )`.
+///
+/// Examples
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+/// let b = Tensor1D::new([-1.0, 0.0, 1.0]);
+/// let r = broadcast_outer_add(a, &b);
+/// assert_eq!(r.data(), &[[0.0, 2.0, 4.0], [3.0, 5.0, 7.0]]);
+/// ```
 pub fn broadcast_outer_add<Lhs, Rhs, const M: usize>(lhs: Lhs, rhs: &Rhs) -> Lhs
 where
     Lhs: Tensor<Array = [Rhs::Array; M], Dtype = f32>,

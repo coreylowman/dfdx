@@ -4,12 +4,12 @@ use crate::prelude::*;
 
 /// Mean Squared Error. This is the same as doing `(pred - &targ).abs().mean()`
 pub fn mse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::TapeHolder> {
-    sub(targ, pred).square().mean()
+    mean(sub(targ, pred).square())
 }
 
 /// Mean absolute error. This is the same as doing `(pred - &targ).abs().mean()`
 pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::TapeHolder> {
-    sub(targ, pred).abs().mean()
+    mean(sub(targ, pred).abs())
 }
 
 /// Cross entropy loss. This will call `log_softmax(logits)`, so make sure logits is **not** the
@@ -30,7 +30,7 @@ pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     logits: T,
     targ: &T::NoTape,
 ) -> Tensor0D<T::TapeHolder> {
-    -mul(targ, log_softmax(logits)).mean()
+    -mean(mul(targ, log_softmax(logits)))
 }
 
 #[cfg(test)]

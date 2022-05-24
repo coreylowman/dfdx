@@ -1,10 +1,10 @@
-use num_traits::Float;
+//! A set of differtiable functions specified by structs
+//! implementing [DifferentiableFunction] or [DiffBinaryFunction].
+//!
+//! All of the [DifferentiableFunction] also implement [Module] to make it easy to
+//! use them in neural networks.
 
-/// A set of differtiable functions specified by structs
-/// implementing [DifferentiableFunction] or [DiffBinaryFunction].
-///
-/// All of the [DifferentiableFunction] also implement [Module] to make it easy to
-/// use them in neural networks.
+use num_traits::Float;
 
 /// A function that acts on 1 value that is differentiable.
 pub trait DifferentiableFunction<T> {

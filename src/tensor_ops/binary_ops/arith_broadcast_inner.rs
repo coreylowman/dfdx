@@ -1,5 +1,18 @@
 use crate::prelude::*;
 
+/// Broadcasts the last dimension of `rhs` to make it the same size of `lhs`.
+///
+/// The last dim ([Device::sum_last_dim()], and [Tensor::LastDimeReduced]) reduced version of a tensor from another tensor.
+/// So the size of Rhs is smaller than Lhs.
+///
+/// Examples:
+/// ```rust
+/// use dfdx::prelude::*;
+/// let a = Tensor2D::new([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]);
+/// let b = Tensor1D::new([3.0, 4.0]);
+/// let r = broadcast_inner_sub(a, &b);
+/// assert_eq!(r.data(), &[[-3.0, -2.0, -1.0], [-1.0, 0.0, 1.0]]);
+/// ```
 pub fn broadcast_inner_sub<Lhs: Tensor<Dtype = f32>>(
     lhs: Lhs,
     rhs: &<Lhs::LastDimReduced as Tensor>::NoTape,

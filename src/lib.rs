@@ -4,17 +4,19 @@
 //! 3. Standard deep learning optimizers such as Sgd and Adam.
 //! 4. Reverse mode auto differentiation[1] implementation.
 
-mod arrays;
+pub mod arrays;
 pub mod devices;
 pub mod diff_fns;
-mod gradients;
+pub mod gradients;
 pub mod losses;
 pub mod nn;
 pub mod numpy;
 pub mod optim;
-mod tensor;
+pub mod tensor;
 pub mod tensor_ops;
-mod unique_id;
+pub mod unique_id;
+
+/// Contains all public exports.
 pub mod prelude {
     pub use crate::arrays::*;
     pub use crate::devices::*;

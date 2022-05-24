@@ -1,3 +1,5 @@
+//! Collection of traits to describe Nd arrays.
+
 /// Represents something with a compile time known number of elements
 pub trait CountElements {
     const NUM_ELEMENTS: usize;
@@ -13,18 +15,6 @@ impl CountElements for f32 {
 impl<T: CountElements, const M: usize> CountElements for [T; M] {
     const NUM_ELEMENTS: usize = M * T::NUM_ELEMENTS;
     type Dtype = T::Dtype;
-}
-
-pub trait HasInner {
-    type Inner;
-}
-
-impl<const M: usize> HasInner for [f32; M] {
-    type Inner = Self;
-}
-
-impl<T: HasInner, const M: usize> HasInner for [T; M] {
-    type Inner = T::Inner;
 }
 
 /// Something that has compile time known zero values.
