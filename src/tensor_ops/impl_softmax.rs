@@ -8,7 +8,7 @@ use crate::prelude::*;
 /// # use dfdx::prelude::*;
 /// let a = Tensor0D::new(0.0);
 /// let r = logsumexp(a);
-/// assert_eq!(r.data(), &1.0);
+/// assert_eq!(r.data(), &0.0);
 /// ```
 ///
 /// ```rust
