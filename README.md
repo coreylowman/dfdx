@@ -72,6 +72,7 @@ From this flexible trait we get:
 1. Single & batched inputs (just have multiple impls!)
 2. Update with gradients
 3. Multiple inputs/outputs (multi-headed modules, or rnns)
+4. Behavior different when tape is present or not (**not** the .train()/.eval() behavior present in other libraries!).
 
 ### Tuples represent feedforward (a.k.a sequential) modules
 
@@ -187,6 +188,10 @@ Another few powerful things recursive traits can do:
 4. Even more!
 
 Encourage you to check out all the code in [src/devices](src/devices/)!
+
+### 📄 Validated against pytorch
+
+All functions & operations are tested against behavior shown by similar code in pytorch.
 
 # License
 
