@@ -60,10 +60,10 @@ impl GradientProvider for Adam {
         self.gradients.remove(p).map(|mut g_t| {
             let mut m_t = self.moments[0].remove(p).unwrap_or_else(P::Device::zeros);
             let mut v_t = self.moments[1].remove(p).unwrap_or_else(P::Device::zeros);
-            P::Device::zip_map_assign(m_t.as_mut(), g_t.as_ref(), |m, g| {
+            P::Device::zip_map_assign(m_t.as_mut(), g_t.as_ref(), &mut |m, g| {
                 *m = *m * self.betas[0] + g * (1.0 - self.betas[0]);
             });
-            P::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), |v, g| {
+            P::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), &mut |v, g| {
                 *v = *v * self.betas[1] + g.powi(2) * (1.0 - self.betas[1]);
             });
             P::Device::zip_map_into(m_t.as_ref(), v_t.as_ref(), g_t.as_mut(), |m, v| {
@@ -156,7 +156,7 @@ mod tests {
         let mut opt: Adam = Adam::new(1e-3, [0.9, 0.999], 1e-8);
 
         let py = model.forward(x.trace());
-        let loss = (py - &y).square().mean();
+        let loss = (&y - py).square().mean();
         let gradients = loss.backward();
         opt.update(&mut model, gradients);
 

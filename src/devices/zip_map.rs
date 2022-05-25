@@ -10,7 +10,7 @@ pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros 
         out: &mut Lhs,
         f: F,
     );
-    fn zip_map_assign<F: FnMut(&mut Lhs::Dtype, &Rhs::Dtype) + Copy>(l: &mut Lhs, r: &Rhs, f: F);
+    fn zip_map_assign<F: FnMut(&mut Lhs::Dtype, &Rhs::Dtype)>(l: &mut Lhs, r: &Rhs, f: &mut F);
 
     fn zip_map<F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype + Copy>(
         l: &Lhs,
@@ -54,28 +54,28 @@ pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros 
     where
         for<'r> Lhs::Dtype: AddAssign<&'r Rhs::Dtype>,
     {
-        Self::zip_map_assign(l, r, |x, y| *x += y);
+        Self::zip_map_assign(l, r, &mut |x, y| *x += y);
     }
 
     fn sub_assign(l: &mut Lhs, r: &Rhs)
     where
         for<'r> Lhs::Dtype: SubAssign<&'r Rhs::Dtype>,
     {
-        Self::zip_map_assign(l, r, |x, y| *x -= y);
+        Self::zip_map_assign(l, r, &mut |x, y| *x -= y);
     }
 
     fn mul_assign(l: &mut Lhs, r: &Rhs)
     where
         for<'r> Lhs::Dtype: MulAssign<&'r Rhs::Dtype>,
     {
-        Self::zip_map_assign(l, r, |x, y| *x *= y);
+        Self::zip_map_assign(l, r, &mut |x, y| *x *= y);
     }
 
     fn div_assign(l: &mut Lhs, r: &Rhs)
     where
         for<'r> Lhs::Dtype: DivAssign<&'r Rhs::Dtype>,
     {
-        Self::zip_map_assign(l, r, |x, y| *x /= y);
+        Self::zip_map_assign(l, r, &mut |x, y| *x /= y);
     }
 }
 
@@ -84,7 +84,7 @@ impl ZipMapElements<f32, f32> for Cpu {
         *out = f(l, r);
     }
 
-    fn zip_map_assign<F: FnMut(&mut f32, &f32) + Copy>(l: &mut f32, r: &f32, mut f: F) {
+    fn zip_map_assign<F: FnMut(&mut f32, &f32)>(l: &mut f32, r: &f32, f: &mut F) {
         f(l, r)
     }
 }
@@ -101,7 +101,7 @@ impl<const M: usize> ZipMapElements<[f32; M], f32> for Cpu {
         }
     }
 
-    fn zip_map_assign<F: FnMut(&mut f32, &f32) + Copy>(l: &mut [f32; M], r: &f32, f: F) {
+    fn zip_map_assign<F: FnMut(&mut f32, &f32)>(l: &mut [f32; M], r: &f32, f: &mut F) {
         for i in 0..M {
             Self::zip_map_assign(&mut l[i], r, f);
         }
@@ -125,10 +125,10 @@ where
         }
     }
 
-    fn zip_map_assign<F: FnMut(&mut Lhs::Dtype, &Rhs::Dtype) + Copy>(
+    fn zip_map_assign<F: FnMut(&mut Lhs::Dtype, &Rhs::Dtype)>(
         l: &mut [Lhs; M],
         r: &[Rhs; M],
-        f: F,
+        f: &mut F,
     ) {
         for i in 0..M {
             Self::zip_map_assign(&mut l[i], &r[i], f);

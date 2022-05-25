@@ -6,7 +6,6 @@
 
 pub mod arrays;
 pub mod devices;
-pub mod diff_fns;
 pub mod gradients;
 pub mod losses;
 pub mod nn;
@@ -20,7 +19,6 @@ pub mod unique_id;
 pub mod prelude {
     pub use crate::arrays::*;
     pub use crate::devices::*;
-    pub use crate::diff_fns::*;
     pub use crate::gradients::*;
     pub use crate::losses::*;
     pub use crate::nn::*;

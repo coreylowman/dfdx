@@ -66,14 +66,20 @@ impl GradientProvider for Sgd {
             match self.momentum {
                 Some(Momentum::Classic(u)) => {
                     let mut v_t = self.velocity.remove(p).unwrap_or_else(P::Device::zeros);
-                    P::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), |v, g| *v = g + u * *v);
-                    P::Device::zip_map_assign(g_t.as_mut(), v_t.as_ref(), |g, v| *g = v * self.lr);
+                    P::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), &mut |v, g| {
+                        *v = g + u * *v
+                    });
+                    P::Device::zip_map_assign(g_t.as_mut(), v_t.as_ref(), &mut |g, v| {
+                        *g = v * self.lr
+                    });
                     self.next_velocity.insert(p, v_t);
                 }
                 Some(Momentum::Nesterov(u)) => {
                     let mut v_t = self.velocity.remove(p).unwrap_or_else(P::Device::zeros);
-                    P::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), |v, g| *v = g + u * *v);
-                    P::Device::zip_map_assign(g_t.as_mut(), v_t.as_ref(), |g, v| {
+                    P::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), &mut |v, g| {
+                        *v = g + u * *v
+                    });
+                    P::Device::zip_map_assign(g_t.as_mut(), v_t.as_ref(), &mut |g, v| {
                         *g = (*g + u * v) * self.lr
                     });
                     self.next_velocity.insert(p, v_t);
@@ -106,7 +112,7 @@ mod tests {
         let mut pred: Tensor1D<5> = Tensor1D::zeros();
         let targ: Tensor1D<5> = Tensor1D::ones();
         for _ in 0..5 {
-            let loss = (pred.trace() - &targ).abs().mean();
+            let loss = (&targ - pred.trace()).abs().mean();
             let gradients = loss.backward();
             sgd.update(&mut pred, gradients);
         }
@@ -190,7 +196,7 @@ mod tests {
         let mut opt: Sgd = Default::default();
 
         let py = model.forward(x.trace());
-        let loss = (py - &y).square().mean();
+        let loss = (&y - py).square().mean();
         let gradients = loss.backward();
         opt.update(&mut model, gradients);
 

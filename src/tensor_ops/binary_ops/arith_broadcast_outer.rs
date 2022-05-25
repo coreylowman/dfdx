@@ -45,7 +45,7 @@ where
     tape_holder.add_operation(move |tape| {
         let result_grad = tape.ref_gradient(&_result);
 
-        Lhs::Device::zip_map_assign(lhs.mut_data(), result_grad, |l, r| *l = *r);
+        Lhs::Device::zip_map_assign(lhs.mut_data(), result_grad, &mut |l, r| *l = *r);
 
         let mut d_grad_rhs: Box<Rhs::Array> = Lhs::Device::zeros();
         for i in 0..M {

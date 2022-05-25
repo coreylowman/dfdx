@@ -15,7 +15,9 @@ pub fn negate<T: Tensor<Dtype = f32>>(t: T) -> T {
     let (mut t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
     tape_holder.add_operation(move |tape| {
-        T::Device::zip_map_assign(t.mut_data(), tape.ref_gradient(&_result), |l, r| *l = -r);
+        T::Device::zip_map_assign(t.mut_data(), tape.ref_gradient(&_result), &mut |l, r| {
+            *l = -r
+        });
         T::Device::add_assign(tape.mut_gradient(&t), t.data());
     });
     result.with_tape_holder(tape_holder)

@@ -1,7 +1,9 @@
 use crate::prelude::*;
 
 /// Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function.
-/// Equivalent to `Log(sum(exp(data)))` or `data.exp().sum(-1).log()`.
+/// Equivalent to `log(sum(exp(data)))` or `data.exp().sum(-1).log()`.
+///
+/// Calls [ln()], [sum_last_dim()], and [exp()]
 ///
 /// Examples:
 /// ```rust
@@ -22,7 +24,7 @@ use crate::prelude::*;
 pub fn logsumexp<T: Tensor<Dtype = f32>>(mut t: T) -> T::LastDimReduced {
     let max = T::Device::reduce_last_dim(t.data(), f32::max);
     T::Device::sub_assign(t.mut_data(), max.as_ref());
-    let mut result = sum_last_dim(t.exp()).ln();
+    let mut result = ln(sum_last_dim(exp(t)));
     <T::LastDimReduced as HasDevice>::Device::add_assign(result.mut_data(), max.as_ref());
     result
 }
@@ -43,7 +45,7 @@ pub fn log_softmax<T: Tensor<Dtype = f32>>(t: T) -> T {
 ///
 /// See [logsumexp()] and [log_softmax()] for related functions.
 pub fn softmax<T: Tensor<Dtype = f32>>(t: T) -> T {
-    log_softmax(t).exp()
+    exp(log_softmax(t))
 }
 
 macro_rules! tensor_impl {

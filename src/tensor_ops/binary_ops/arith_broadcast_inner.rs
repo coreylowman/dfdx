@@ -8,7 +8,7 @@ use crate::prelude::*;
 /// Examples:
 /// ```rust
 /// use dfdx::prelude::*;
-/// let a = Tensor2D::new([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]);
+/// let a = Tensor2D::new([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]);
 /// let b = Tensor1D::new([3.0, 4.0]);
 /// let r = broadcast_inner_sub(a, &b);
 /// assert_eq!(r.data(), &[[-3.0, -2.0, -1.0], [-1.0, 0.0, 1.0]]);
@@ -25,7 +25,7 @@ pub fn broadcast_inner_sub<Lhs: Tensor<Dtype = f32>>(
     tape_holder.add_operation(move |tape| {
         let result_grad = tape.ref_gradient(&_result);
 
-        Lhs::Device::zip_map_assign(lhs.mut_data(), result_grad, |l, r| *l = *r);
+        Lhs::Device::zip_map_assign(lhs.mut_data(), result_grad, &mut |l, r| *l = *r);
 
         // this is reduce_inner(result_grad * rhs_deriv, x + y), where rhs_deriv = -1.
         let d_grad_rhs = Lhs::Device::reduce_last_dim(result_grad, |x, y| x + y);

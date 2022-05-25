@@ -1,7 +1,7 @@
 //! Implementations of all operations for tensors, including activations, binary operations, and other methods.
 
 mod binary_ops;
-mod impl_apply;
+mod impl_activations;
 mod impl_clamp;
 mod impl_mask;
 mod impl_mean;
@@ -11,7 +11,7 @@ mod impl_softmax;
 mod impl_sum_last;
 
 pub use binary_ops::*;
-pub use impl_apply::*;
+pub use impl_activations::*;
 pub use impl_clamp::*;
 pub use impl_mask::*;
 pub use impl_mean::*;
