@@ -31,6 +31,7 @@ pub trait IntoPhantom: HasArrayData + Sized {
 }
 
 impl<T: Tensor> IntoPhantom for T {
+    /// Copies the [UniqueId] of the [Tensor], and stores the [Tensor]s array type.
     fn phantom(&self) -> PhantomTensor<Self> {
         PhantomTensor {
             id: *self.id(),

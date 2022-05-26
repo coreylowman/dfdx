@@ -9,6 +9,7 @@ pub trait Randomize<T> {
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H> Randomize<f32> for $typename<$($Vs, )* H> {
+    #[doc="Fills `self.mut_data()` with data from the distribution `D`."]
     fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
         <Self as HasDevice>::Device::fill(self.mut_data(), &mut || dist.sample(rng));
     }

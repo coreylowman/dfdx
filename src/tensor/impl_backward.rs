@@ -17,7 +17,7 @@ pub fn backward<T: Tensor<Dtype = f32, TapeHolder = WithTape>>(t: T) -> Gradient
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )*> $typename<$($Vs, )* WithTape> {
-    /// Calls [backward] on `self`
+    #[doc="Calls [backward()] on `self`"]
     pub fn backward(self) -> Gradients {
         backward(self)
     }

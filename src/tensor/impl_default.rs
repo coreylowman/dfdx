@@ -3,6 +3,7 @@ use super::*;
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )*> Default for $typename<$($Vs, )* NoTape> {
+    #[doc="Returns a tensor with all elements equal to 0"]
     fn default() -> Self {
         Self::zeros()
     }
