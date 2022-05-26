@@ -21,24 +21,24 @@ pub fn broadcast_inner_sub<Lhs: Tensor<Dtype = f32>>(
 
     let _rhs = rhs.phantom();
     let _result = result.phantom();
-    let (mut lhs, mut tape_holder) = lhs.split_tape_holder();
-    tape_holder.add_backward_op(move |tape| {
-        let result_grad = tape.ref_gradient(&_result);
+    let (mut lhs, mut tape) = lhs.split_tape();
+    tape.add_backward_op(move |grads| {
+        let result_grad = grads.ref_gradient(&_result);
 
         Lhs::Device::zip_map_assign(lhs.mut_data(), result_grad, &mut |l, r| *l = *r);
 
         // this is reduce_inner(result_grad * rhs_deriv, x + y), where rhs_deriv = -1.
         let d_grad_rhs = Lhs::Device::reduce_last_dim(result_grad, |x, y| x + y);
 
-        Lhs::Device::add_assign(tape.mut_gradient(&lhs), lhs.data());
+        Lhs::Device::add_assign(grads.mut_gradient(&lhs), lhs.data());
 
         //NOTE: sub_assign here to account for negative sign from rhs_deriv
         <Lhs::LastDimReduced as HasDevice>::Device::sub_assign(
-            tape.mut_gradient(&_rhs),
+            grads.mut_gradient(&_rhs),
             d_grad_rhs.as_ref(),
         );
     });
-    result.with_tape_holder(tape_holder)
+    result.put_tape(tape)
 }
 
 #[cfg(test)]

@@ -26,7 +26,7 @@ impl CanUpdateWithGradients for MultiHeadedMLP {
     }
 }
 
-impl<H: TapeHolder, const B: usize> Module<Tensor2D<B, 10, H>> for MultiHeadedMLP {
+impl<H: Tape, const B: usize> Module<Tensor2D<B, 10, H>> for MultiHeadedMLP {
     type Output = (Tensor2D<B, 2, H>, Tensor2D<B, 1, NoTape>);
     fn forward(&self, x: Tensor2D<B, 10, H>) -> Self::Output {
         // execute trunk
@@ -39,10 +39,10 @@ impl<H: TapeHolder, const B: usize> Module<Tensor2D<B, 10, H>> for MultiHeadedML
         let out2 = self.head2.forward(x);
 
         // grab the tape out of out2, so we can put it back into our duplicate of x
-        let (out2, tape_holder) = out2.split_tape_holder();
+        let (out2, tape) = out2.split_tape();
 
         // put the tape holder back into the duplicate of x
-        let x = _x.with_tape_holder(tape_holder);
+        let x = _x.put_tape(tape);
 
         // now pass the tape through the other head
         let out1 = self.head1.forward(x);
@@ -72,8 +72,8 @@ fn main() {
         let (pred1, pred2) = mlp.forward(x);
 
         // NOTE: we also have to move the tape around when computing losses
-        let (loss1, tape_holder) = mse_loss(pred1, &y1).split_tape_holder();
-        let loss2 = mse_loss(pred2.with_tape_holder(tape_holder), &y2);
+        let (loss1, tape) = mse_loss(pred1, &y1).split_tape();
+        let loss2 = mse_loss(pred2.put_tape(tape), &y2);
 
         let losses = [*loss1.data(), *loss2.data()];
         let loss = &loss1 + loss2;

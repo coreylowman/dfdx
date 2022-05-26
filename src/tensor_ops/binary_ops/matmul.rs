@@ -18,7 +18,7 @@ use std::ops::Mul;
 /// let y: Tensor2D<2, 4> = Tensor2D::zeros();
 /// let result: Tensor2D<3, 4> = matmul(x, &y);
 /// ```
-pub fn matmul<const M: usize, const N: usize, const O: usize, H: TapeHolder>(
+pub fn matmul<const M: usize, const N: usize, const O: usize, H: Tape>(
     lhs: Tensor2D<M, N, H>,
     rhs: &Tensor2D<N, O, NoTape>,
 ) -> Tensor2D<M, O, H> {
@@ -33,9 +33,9 @@ pub fn matmul<const M: usize, const N: usize, const O: usize, H: TapeHolder>(
 
     let _rhs = rhs.phantom();
     let _result = result.phantom();
-    let (mut lhs, mut tape_holder) = lhs.split_tape_holder();
-    tape_holder.add_backward_op(move |tape| {
-        let result_grad: &[[f32; O]; M] = tape.ref_gradient(&_result);
+    let (mut lhs, mut tape) = lhs.split_tape();
+    tape.add_backward_op(move |grads| {
+        let result_grad: &[[f32; O]; M] = grads.ref_gradient(&_result);
 
         let mut d_grad_rhs: Box<[[f32; O]; N]> = Cpu::zeros();
         matmat_mul_into_xt(lhs.data(), result_grad, d_grad_rhs.as_mut());
@@ -45,11 +45,11 @@ pub fn matmul<const M: usize, const N: usize, const O: usize, H: TapeHolder>(
         // d_grad_rhs is computed above
         matmat_mul_into_yt(result_grad, rhs_data.as_ref(), lhs.mut_data());
 
-        Cpu::add_assign(tape.mut_gradient(&lhs), lhs.data());
-        Cpu::add_assign(tape.mut_gradient(&_rhs), d_grad_rhs.as_ref());
+        Cpu::add_assign(grads.mut_gradient(&lhs), lhs.data());
+        Cpu::add_assign(grads.mut_gradient(&_rhs), d_grad_rhs.as_ref());
     });
 
-    result.with_tape_holder(tape_holder)
+    result.put_tape(tape)
 }
 
 /// vector * matrix multiplication.
@@ -68,7 +68,7 @@ pub fn matmul<const M: usize, const N: usize, const O: usize, H: TapeHolder>(
 /// let y: Tensor2D<2, 4> = Tensor2D::zeros();
 /// let result: Tensor1D<4> = vecmat_mul(x, &y);
 /// ```
-pub fn vecmat_mul<const N: usize, const O: usize, H: TapeHolder>(
+pub fn vecmat_mul<const N: usize, const O: usize, H: Tape>(
     lhs: Tensor1D<N, H>,
     rhs: &Tensor2D<N, O, NoTape>,
 ) -> Tensor1D<O, H> {
@@ -82,9 +82,9 @@ pub fn vecmat_mul<const N: usize, const O: usize, H: TapeHolder>(
 
     let _rhs = rhs.phantom();
     let _result = result.phantom();
-    let (mut lhs, mut tape_holder) = lhs.split_tape_holder();
-    tape_holder.add_backward_op(move |tape| {
-        let result_grad: &[f32; O] = tape.ref_gradient(&_result);
+    let (mut lhs, mut tape) = lhs.split_tape();
+    tape.add_backward_op(move |grads| {
+        let result_grad: &[f32; O] = grads.ref_gradient(&_result);
 
         let mut d_grad_rhs: Box<[[f32; O]; N]> = Cpu::zeros();
         vecvec_mul_into(lhs.data(), result_grad, d_grad_rhs.as_mut());
@@ -94,14 +94,14 @@ pub fn vecmat_mul<const N: usize, const O: usize, H: TapeHolder>(
         // d_grad_rhs is computed above
         vecmat_mul_into_yt(result_grad, rhs_data.as_ref(), lhs.mut_data());
 
-        Cpu::add_assign(tape.mut_gradient(&lhs), lhs.data());
-        Cpu::add_assign(tape.mut_gradient(&_rhs), d_grad_rhs.as_ref());
+        Cpu::add_assign(grads.mut_gradient(&lhs), lhs.data());
+        Cpu::add_assign(grads.mut_gradient(&_rhs), d_grad_rhs.as_ref());
     });
 
-    result.with_tape_holder(tape_holder)
+    result.put_tape(tape)
 }
 
-impl<const M: usize, const N: usize, const O: usize, H: TapeHolder> Mul<&Tensor2D<N, O, NoTape>>
+impl<const M: usize, const N: usize, const O: usize, H: Tape> Mul<&Tensor2D<N, O, NoTape>>
     for Tensor2D<M, N, H>
 {
     type Output = Tensor2D<M, O, H>;
@@ -110,9 +110,7 @@ impl<const M: usize, const N: usize, const O: usize, H: TapeHolder> Mul<&Tensor2
     }
 }
 
-impl<const N: usize, const O: usize, H: TapeHolder> Mul<&Tensor2D<N, O, NoTape>>
-    for Tensor1D<N, H>
-{
+impl<const N: usize, const O: usize, H: Tape> Mul<&Tensor2D<N, O, NoTape>> for Tensor1D<N, H> {
     type Output = Tensor1D<O, H>;
     fn mul(self, rhs: &Tensor2D<N, O, NoTape>) -> Self::Output {
         vecmat_mul(self, rhs)

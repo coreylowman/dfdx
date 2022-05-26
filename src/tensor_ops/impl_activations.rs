@@ -298,22 +298,22 @@ where
     DF: 'static + FnMut(&f32) -> f32 + Copy,
 {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), f));
-    let (mut t, mut tape_holder) = t.split_tape_holder();
+    let (mut t, mut tape) = t.split_tape();
     let _result = result.phantom();
-    tape_holder.add_backward_op(move |tape| {
+    tape.add_backward_op(move |grads| {
         // t = df(t) * result_grad
-        T::Device::zip_map_assign(t.mut_data(), tape.ref_gradient(&_result), &mut |l, r| {
+        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
             *l = df(l) * *r
         });
-        T::Device::add_assign(tape.mut_gradient(&t), t.data());
+        T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
-    result.with_tape_holder(tape_holder)
+    result.put_tape(tape)
 }
 
 /// Similar to [map()], but doesn't take ownership of the [Tensor] `t`.
 pub fn cloned_map<T, F: FnMut(&f32) -> f32 + Copy>(t: &T, f: F) -> T
 where
-    T: Tensor<Dtype = f32, TapeHolder = NoTape> + TensorCreator,
+    T: Tensor<Dtype = f32, Tape = NoTape> + TensorCreator,
 {
     T::new_boxed(T::Device::map(t.data(), f))
 }
@@ -329,7 +329,7 @@ macro_rules! activation_impl {
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: TapeHolder> $typename<$($Vs, )* H> {
+impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     activation_impl!(relu);
     activation_impl!(sin);
     activation_impl!(cos);

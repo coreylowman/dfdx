@@ -76,22 +76,22 @@ where
     let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), f));
     let mut lhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), dfdx);
     let mut rhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), dfdy);
-    let (rhs, mut tape_holder) = rhs.split_tape_holder();
+    let (rhs, mut tape) = rhs.split_tape();
     let _lhs = lhs.phantom();
     let _result = result.phantom();
-    tape_holder.add_backward_op(move |tape| {
-        let result_grad = tape.ref_gradient(&_result);
+    tape.add_backward_op(move |grads| {
+        let result_grad = grads.ref_gradient(&_result);
         T::Device::mul_assign(lhs_deriv.as_mut(), result_grad);
         T::Device::mul_assign(rhs_deriv.as_mut(), result_grad);
-        T::Device::add_assign(tape.mut_gradient(&_lhs), lhs_deriv.as_ref());
-        T::Device::add_assign(tape.mut_gradient(&rhs), rhs_deriv.as_ref());
+        T::Device::add_assign(grads.mut_gradient(&_lhs), lhs_deriv.as_ref());
+        T::Device::add_assign(grads.mut_gradient(&rhs), rhs_deriv.as_ref());
     });
-    result.with_tape_holder(tape_holder)
+    result.put_tape(tape)
 }
 
 macro_rules! binary_ops_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: TapeHolder> Add<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape> {
+impl<$(const $Vs: usize, )* H: Tape> Add<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape> {
     type Output = $typename<$($Vs, )* H>;
     /// Calls [add()] - implements `&T<NoTape> + T<H>`
     fn add(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
@@ -99,7 +99,7 @@ impl<$(const $Vs: usize, )* H: TapeHolder> Add<$typename<$($Vs, )* H>> for &$typ
     }
 }
 
-impl<$(const $Vs: usize, )* H: TapeHolder> Sub<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape> {
+impl<$(const $Vs: usize, )* H: Tape> Sub<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape> {
     type Output = $typename<$($Vs, )* H>;
     /// Calls [sub()] - implements `&T<NoTape> - T<H>`
     fn sub(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
@@ -107,7 +107,7 @@ impl<$(const $Vs: usize, )* H: TapeHolder> Sub<$typename<$($Vs, )* H>> for &$typ
     }
 }
 
-impl<$(const $Vs: usize, )* H: TapeHolder> Mul<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape> {
+impl<$(const $Vs: usize, )* H: Tape> Mul<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape> {
     type Output = $typename<$($Vs, )* H>;
     /// Calls [mul()] - implements `&T<NoTape> * T<H>`
     fn mul(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
@@ -115,7 +115,7 @@ impl<$(const $Vs: usize, )* H: TapeHolder> Mul<$typename<$($Vs, )* H>> for &$typ
     }
 }
 
-impl<$(const $Vs: usize, )* H: TapeHolder> Div<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape> {
+impl<$(const $Vs: usize, )* H: Tape> Div<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape> {
     type Output = $typename<$($Vs, )* H>;
     /// Calls [div()] - implements `&T<NoTape> / T<H>`
     fn div(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {

@@ -3,23 +3,23 @@ use crate::prelude::*;
 /// Sums all the values in `self` and divides by number of values.
 ///
 /// Returns a [Tensor0D] (i.e. one number).
-pub fn mean<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::TapeHolder> {
+pub fn mean<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::Tape> {
     let result = Tensor0D::<NoTape>::new(T::Device::mean(t.data()));
-    let (mut t, mut tape_holder) = t.split_tape_holder();
+    let (mut t, mut tape) = t.split_tape();
     let _result = result.phantom();
-    tape_holder.add_backward_op(move |tape| {
-        let g: f32 = *tape.ref_gradient(&_result);
+    tape.add_backward_op(move |grads| {
+        let g: f32 = *grads.ref_gradient(&_result);
         T::Device::map_assign(t.mut_data(), |v| *v = g / T::Array::NUM_ELEMENTS as f32);
-        T::Device::add_assign(tape.mut_gradient(&t), t.data());
+        T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
-    result.with_tape_holder(tape_holder)
+    result.put_tape(tape)
 }
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: TapeHolder> $typename<$($Vs, )* H> {
+impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [mean()] on `self`.
-    pub fn mean(self) -> Tensor0D<<Self as Tensor>::TapeHolder> {
+    pub fn mean(self) -> Tensor0D<<Self as Tensor>::Tape> {
         mean(self)
     }
 }

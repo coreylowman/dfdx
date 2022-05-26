@@ -18,19 +18,19 @@ pub fn value_mask<T: Tensor<Dtype = f32>>(t: T, other: &T::NoTape, value: T::Dty
             *x
         }
     }));
-    let (mut t, mut tape_holder) = t.split_tape_holder();
+    let (mut t, mut tape) = t.split_tape();
     T::Device::map_into(other.data(), t.mut_data(), |x| (x != &value) as i32 as f32);
     let _result = result.phantom();
-    tape_holder.add_backward_op(move |tape| {
-        T::Device::mul_assign(t.mut_data(), tape.ref_gradient(&_result));
-        T::Device::add_assign(tape.mut_gradient(&t), t.data());
+    tape.add_backward_op(move |grads| {
+        T::Device::mul_assign(t.mut_data(), grads.ref_gradient(&_result));
+        T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
-    result.with_tape_holder(tape_holder)
+    result.put_tape(tape)
 }
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: TapeHolder> $typename<$($Vs, )* H> {
+impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [value_mask] on self
     pub fn value_mask(self, mask: &$typename<$($Vs, )* NoTape>, value: f32) -> Self {
         value_mask(self, mask, value)

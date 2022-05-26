@@ -146,9 +146,9 @@ And further, we can require it be moved into `.backward()`, so it can destruct t
 __All of this can be checked at compile time 🎉__
 
 ```rust
-pub fn backward<T: Tensor<TapeHolder = OwnsTape>>(t: T) -> Gradients {
-    let (t, tape_holder): (T::NoTape, OwnsTape) = t.split_tape_holder();
-    tape_holder.0.backward(&t)
+pub fn backward<T: Tensor<Tape = OwnsTape>>(t: T) -> Gradients {
+    let (t, tape): (T::NoTape, OwnsTape) = t.split_tape();
+    tape.0.backward(&t)
 }
 ```
 

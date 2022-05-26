@@ -37,7 +37,7 @@ impl<const I: usize, const O: usize> Randomize<f32> for Linear<I, O> {
     }
 }
 
-impl<const I: usize, const O: usize, H: TapeHolder> Module<Tensor1D<I, H>> for Linear<I, O> {
+impl<const I: usize, const O: usize, H: Tape> Module<Tensor1D<I, H>> for Linear<I, O> {
     type Output = Tensor1D<O, H>;
 
     /// 1d forward
@@ -46,7 +46,7 @@ impl<const I: usize, const O: usize, H: TapeHolder> Module<Tensor1D<I, H>> for L
     }
 }
 
-impl<const B: usize, const I: usize, const O: usize, H: TapeHolder> Module<Tensor2D<B, I, H>>
+impl<const B: usize, const I: usize, const O: usize, H: Tape> Module<Tensor2D<B, I, H>>
     for Linear<I, O>
 {
     type Output = Tensor2D<B, O, H>;

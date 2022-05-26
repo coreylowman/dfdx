@@ -4,25 +4,25 @@ use crate::prelude::*;
 pub trait Tensor:
     HasArrayType + HasArrayData + HasDevice + CanUpdateWithGradients + HasUniqueId + IntoPhantom
 {
-    type TapeHolder: TapeHolder;
+    type Tape: Tape;
 
     type NoTape: 'static
-        + Tensor<Array = Self::Array, Dtype = Self::Dtype>
+        + Tensor<Array = Self::Array, Dtype = Self::Dtype, Tape = NoTape>
         // NOTE: we only want to be able to create NoTape tensors
         + TensorCreator
         // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
-        + CanPutTapeHolder<Self::TapeHolder, Output = Self>;
+        + PutTape<Self::Tape, Output = Self>;
 
-    type OwnsTape: 'static + Tensor<Array = Self::Array, Dtype = Self::Dtype, TapeHolder = OwnsTape>;
+    type OwnsTape: 'static + Tensor<Array = Self::Array, Dtype = Self::Dtype, Tape = OwnsTape>;
 
     type LastDimReduced: Tensor<
-        TapeHolder = Self::TapeHolder,
+        Tape = Self::Tape,
         Array = <Self::Device as ReduceLastDim<Self::Array>>::Reduced,
         Dtype = Self::Dtype,
     >;
 
-    /// Removes whatever TapeHolder this tensor has and returns itself without a tape.
-    fn split_tape_holder(self) -> (Self::NoTape, Self::TapeHolder);
+    /// Removes whatever Tape this tensor has and returns itself without a tape.
+    fn split_tape(self) -> (Self::NoTape, Self::Tape);
 
     /// Clones the data & [UniqueId] of this tensor and returns something with [NoTape].
     fn duplicate(&self) -> Self::NoTape;
@@ -30,14 +30,14 @@ pub trait Tensor:
 
 macro_rules! tensor_impl {
     ($struct:ident, [$($Vs:tt),*], $reduced:ident, [$($Rs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: TapeHolder> Tensor for $struct<$($Vs, )* H> {
-    type TapeHolder = H;
+impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
+    type Tape = H;
     type NoTape = $struct<$($Vs, )* NoTape>;
     type OwnsTape = $struct<$($Vs, )* OwnsTape>;
 
     type LastDimReduced = $reduced<$($Rs, )* H>;
 
-    fn split_tape_holder(self) -> (Self::NoTape, Self::TapeHolder) {
+    fn split_tape(self) -> (Self::NoTape, Self::Tape) {
         (
             Self::NoTape { id: self.id, data: self.data, tape: NoTape::default() },
             self.tape,

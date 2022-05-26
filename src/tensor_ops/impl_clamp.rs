@@ -11,20 +11,20 @@ use crate::prelude::*;
 /// ```
 pub fn clamp<T: Tensor<Dtype = f32>>(t: T, min: T::Dtype, max: T::Dtype) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x.clamp(min, max)));
-    let (mut t, mut tape_holder) = t.split_tape_holder();
+    let (mut t, mut tape) = t.split_tape();
     let _result = result.phantom();
-    tape_holder.add_backward_op(move |tape| {
-        T::Device::zip_map_assign(t.mut_data(), tape.ref_gradient(&_result), &mut |l, r| {
+    tape.add_backward_op(move |grads| {
+        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
             *l = if min <= *l && *l <= max { *r } else { 0.0 }
         });
-        T::Device::add_assign(tape.mut_gradient(&t), t.data());
+        T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
-    result.with_tape_holder(tape_holder)
+    result.put_tape(tape)
 }
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: TapeHolder> $typename<$($Vs, )* H> {
+impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [clamp] on self
     pub fn clamp(self, min: f32, max: f32) -> Self {
         clamp(self, min, max)

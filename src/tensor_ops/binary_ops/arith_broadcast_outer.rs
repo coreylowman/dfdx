@@ -29,7 +29,7 @@ fn bouter_add<T: CountElements<Dtype = f32>, const M: usize>(
 pub fn broadcast_outer_add<Lhs, Rhs, const M: usize>(lhs: Lhs, rhs: &Rhs) -> Lhs
 where
     Lhs: Tensor<Array = [Rhs::Array; M], Dtype = f32>,
-    Rhs: 'static + Tensor<Dtype = f32, TapeHolder = NoTape>,
+    Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
     Lhs::Device: Device<Lhs::Array> + Device<Rhs::Array>,
     Cpu: ZipMapElements<Rhs::Array, Rhs::Array>,
 {
@@ -39,11 +39,11 @@ where
         out
     });
 
-    let (mut lhs, mut tape_holder) = lhs.split_tape_holder();
+    let (mut lhs, mut tape) = lhs.split_tape();
     let _rhs = rhs.phantom();
     let _result = result.phantom();
-    tape_holder.add_backward_op(move |tape| {
-        let result_grad = tape.ref_gradient(&_result);
+    tape.add_backward_op(move |grads| {
+        let result_grad = grads.ref_gradient(&_result);
 
         Lhs::Device::zip_map_assign(lhs.mut_data(), result_grad, &mut |l, r| *l = *r);
 
@@ -52,10 +52,10 @@ where
             Lhs::Device::add_assign(d_grad_rhs.as_mut(), &result_grad[i]);
         }
 
-        Lhs::Device::add_assign(tape.mut_gradient(&lhs), lhs.data());
-        Lhs::Device::add_assign(tape.mut_gradient(&_rhs), d_grad_rhs.as_ref());
+        Lhs::Device::add_assign(grads.mut_gradient(&lhs), lhs.data());
+        Lhs::Device::add_assign(grads.mut_gradient(&_rhs), d_grad_rhs.as_ref());
     });
-    result.with_tape_holder(tape_holder)
+    result.put_tape(tape)
 }
 
 #[cfg(test)]

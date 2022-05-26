@@ -19,9 +19,9 @@ use std::collections::HashMap;
 /// An example for how these two are used is the following from the negate operation (ie. multiply all values by -1).
 ///
 /// ```ignore
-/// tape_holder.add_backward_op(move |tape| {
-///     T::Device::zip_map_assign(t.mut_data(), tape.ref_gradient(&_result), |l, r| *l = -r);
-///     T::Device::add_assign(tape.mut_gradient(&t), t.data());
+/// tape.add_backward_op(move |grads| {
+///     T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), |l, r| *l = -r);
+///     T::Device::add_assign(grads.mut_gradient(&t), t.data());
 /// });
 /// ```
 ///
@@ -80,6 +80,30 @@ impl GradientTape {
         }
         gradients
     }
+}
+
+/// Contains a boxed [GradientTape]. When [Tape::add_backward_op] is called,
+/// this function passes the operation directly to [GradientTape::add_backward_op].
+#[derive(Default, Debug)]
+pub struct OwnsTape(pub(crate) Box<GradientTape>);
+
+/// Contains nothing. When [Tape::add_backward_op] is called, this struct does nothing.
+#[derive(Default, Debug, Clone, Copy)]
+pub struct NoTape;
+
+/// Something that can add a gradient operation to [GradientTape].
+pub trait Tape {
+    fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, operation: F);
+}
+
+impl Tape for OwnsTape {
+    fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, operation: F) {
+        self.0.add_backward_op(operation)
+    }
+}
+
+impl Tape for NoTape {
+    fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, _operation: F) {}
 }
 
 /// A generic container for keeping variable sized arrays associated with a [UniqueId].

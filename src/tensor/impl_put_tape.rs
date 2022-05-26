@@ -1,19 +1,20 @@
 use super::*;
+use crate::gradients::Tape;
 
-pub trait CanPutTapeHolder<H: TapeHolder> {
+pub trait PutTape<H: Tape> {
     type Output;
-    fn with_tape_holder(self, tape_holder: H) -> Self::Output;
+    fn put_tape(self, tape: H) -> Self::Output;
 }
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* HIn, HOut> CanPutTapeHolder<HOut> for $typename<$($Vs, )* HIn>
+impl<$(const $Vs: usize, )* HIn, HOut> PutTape<HOut> for $typename<$($Vs, )* HIn>
 where
-    HIn: TapeHolder,
-    HOut: TapeHolder,
+    HIn: Tape,
+    HOut: Tape,
 {
     type Output = $typename<$($Vs, )* HOut>;
-    fn with_tape_holder(self, tape: HOut) -> Self::Output {
+    fn put_tape(self, tape: HOut) -> Self::Output {
         Self::Output { id: self.id, data: self.data, tape }
     }
 }

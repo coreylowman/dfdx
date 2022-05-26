@@ -3,17 +3,17 @@
 use crate::prelude::*;
 
 /// Mean Squared Error. This is the same as doing `(pred - &targ).square().mean()`
-pub fn mse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::TapeHolder> {
+pub fn mse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
     mean(square(sub(targ, pred)))
 }
 
 /// Root Mean square error. This is the same as doing `(pred - &targ).square().mean().sqrt()`
-pub fn rmse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::TapeHolder> {
+pub fn rmse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
     sqrt(mse_loss(pred, targ))
 }
 
 /// Mean absolute error. This is the same as doing `(pred - &targ).abs().mean()`
-pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::TapeHolder> {
+pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
     mean(abs(sub(targ, pred)))
 }
 
@@ -34,7 +34,7 @@ pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T
 pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     logits: T,
     targ: &T::NoTape,
-) -> Tensor0D<T::TapeHolder> {
+) -> Tensor0D<T::Tape> {
     -mean(mul(targ, log_softmax(logits)))
 }
 

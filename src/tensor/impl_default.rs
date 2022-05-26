@@ -1,4 +1,5 @@
 use super::*;
+use crate::gradients::NoTape;
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
