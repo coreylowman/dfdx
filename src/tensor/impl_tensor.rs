@@ -13,7 +13,7 @@ pub trait Tensor:
         // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
         + CanPutTapeHolder<Self::TapeHolder, Output = Self>;
 
-    type WithTape: 'static + Tensor<Array = Self::Array, Dtype = Self::Dtype, TapeHolder = WithTape>;
+    type OwnsTape: 'static + Tensor<Array = Self::Array, Dtype = Self::Dtype, TapeHolder = OwnsTape>;
 
     type LastDimReduced: Tensor<
         TapeHolder = Self::TapeHolder,
@@ -33,7 +33,7 @@ macro_rules! tensor_impl {
 impl<$(const $Vs: usize, )* H: TapeHolder> Tensor for $struct<$($Vs, )* H> {
     type TapeHolder = H;
     type NoTape = $struct<$($Vs, )* NoTape>;
-    type WithTape = $struct<$($Vs, )* WithTape>;
+    type OwnsTape = $struct<$($Vs, )* OwnsTape>;
 
     type LastDimReduced = $reduced<$($Rs, )* H>;
 

@@ -42,7 +42,7 @@ fn main() {
 let mut model = ...
 let mut sgd = Sgd::new(1e-2, Some(Momentum::Nesterov(0.9)));
 
-let loss: Tensor0D<WithTape> = ...
+let loss: Tensor0D<OwnsTape> = ...
 
 // run backprop to get the gradients
 let gradients = loss.backward();
@@ -146,8 +146,8 @@ And further, we can require it be moved into `.backward()`, so it can destruct t
 __All of this can be checked at compile time 🎉__
 
 ```rust
-pub fn backward<T: Tensor<TapeHolder = WithTape>>(t: T) -> Gradients {
-    let (t, tape_holder): (T::NoTape, WithTape) = t.split_tape_holder();
+pub fn backward<T: Tensor<TapeHolder = OwnsTape>>(t: T) -> Gradients {
+    let (t, tape_holder): (T::NoTape, OwnsTape) = t.split_tape_holder();
     tape_holder.0.backward(&t)
 }
 ```

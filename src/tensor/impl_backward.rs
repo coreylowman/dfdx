@@ -5,18 +5,18 @@ use crate::{devices::FillElements, gradients::Gradients};
 ///
 /// This function takes ownership of `t` and returns [Gradients].
 ///
-/// Note that `t` is required to have [WithTape], which means it currently owns the [GradientTape].
-pub fn backward<T: Tensor<Dtype = f32, TapeHolder = WithTape>>(t: T) -> Gradients {
-    let (t, mut with_tape) = t.split_tape_holder();
-    with_tape.add_backward_op(move |tape| {
+/// Note that `t` is required to have [OwnsTape], which means it currently owns the [GradientTape].
+pub fn backward<T: Tensor<Dtype = f32, TapeHolder = OwnsTape>>(t: T) -> Gradients {
+    let (t, mut owns_tape) = t.split_tape_holder();
+    owns_tape.add_backward_op(move |tape| {
         T::Device::fill(tape.mut_gradient(&t), &mut || num_traits::One::one());
     });
-    with_tape.0.execute()
+    owns_tape.0.execute()
 }
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )*> $typename<$($Vs, )* WithTape> {
+impl<$(const $Vs: usize, )*> $typename<$($Vs, )* OwnsTape> {
     #[doc="Calls [backward()] on `self`"]
     pub fn backward(self) -> Gradients {
         backward(self)
