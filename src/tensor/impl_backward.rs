@@ -8,7 +8,7 @@ use crate::{devices::FillElements, gradients::Gradients};
 /// Note that `t` is required to have [WithTape], which means it currently owns the [GradientTape].
 pub fn backward<T: Tensor<Dtype = f32, TapeHolder = WithTape>>(t: T) -> Gradients {
     let (t, mut with_tape) = t.split_tape_holder();
-    with_tape.add_operation(move |tape| {
+    with_tape.add_backward_op(move |tape| {
         T::Device::fill(tape.mut_gradient(&t), &mut || num_traits::One::one());
     });
     with_tape.0.execute()

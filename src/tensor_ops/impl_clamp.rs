@@ -13,7 +13,7 @@ pub fn clamp<T: Tensor<Dtype = f32>>(t: T, min: T::Dtype, max: T::Dtype) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x.clamp(min, max)));
     let (mut t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
-    tape_holder.add_operation(move |tape| {
+    tape_holder.add_backward_op(move |tape| {
         T::Device::zip_map_assign(t.mut_data(), tape.ref_gradient(&_result), &mut |l, r| {
             *l = if min <= *l && *l <= max { *r } else { 0.0 }
         });

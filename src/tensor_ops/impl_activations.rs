@@ -300,7 +300,7 @@ where
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), f));
     let (mut t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
-    tape_holder.add_operation(move |tape| {
+    tape_holder.add_backward_op(move |tape| {
         // t = df(t) * result_grad
         T::Device::zip_map_assign(t.mut_data(), tape.ref_gradient(&_result), &mut |l, r| {
             *l = df(l) * *r

@@ -19,7 +19,7 @@ use std::collections::HashMap;
 /// An example for how these two are used is the following from the negate operation (ie. multiply all values by -1).
 ///
 /// ```ignore
-/// tape_holder.add_operation(move |tape| {
+/// tape_holder.add_backward_op(move |tape| {
 ///     T::Device::zip_map_assign(t.mut_data(), tape.ref_gradient(&_result), |l, r| *l = -r);
 ///     T::Device::add_assign(tape.mut_gradient(&t), t.data());
 /// });
@@ -63,7 +63,7 @@ impl GradientTape {
     /// * `operation` - A FnOnce that acts on [Gradients].
     ///
     /// See src/tensor_ops for implementation examples.
-    pub(crate) fn add_operation<F: 'static + FnOnce(&mut Gradients) -> ()>(
+    pub(crate) fn add_backward_op<F: 'static + FnOnce(&mut Gradients) -> ()>(
         &mut self,
         operation: F,
     ) {
@@ -258,7 +258,7 @@ mod tests {
         let _t1: Tensor = Tensor { id: UniqueId(0) };
 
         let mut tape = GradientTape::default();
-        tape.add_operation(move |g| {
+        tape.add_backward_op(move |g| {
             Cpu::zip_map_assign(g.mut_gradient(&_t1), &[1.0; 5], &mut |l, r| *l += r);
         });
         let g = tape.execute();

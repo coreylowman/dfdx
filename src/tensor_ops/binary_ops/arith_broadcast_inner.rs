@@ -22,7 +22,7 @@ pub fn broadcast_inner_sub<Lhs: Tensor<Dtype = f32>>(
     let _rhs = rhs.phantom();
     let _result = result.phantom();
     let (mut lhs, mut tape_holder) = lhs.split_tape_holder();
-    tape_holder.add_operation(move |tape| {
+    tape_holder.add_backward_op(move |tape| {
         let result_grad = tape.ref_gradient(&_result);
 
         Lhs::Device::zip_map_assign(lhs.mut_data(), result_grad, &mut |l, r| *l = *r);

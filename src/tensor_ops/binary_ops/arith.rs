@@ -79,7 +79,7 @@ where
     let (rhs, mut tape_holder) = rhs.split_tape_holder();
     let _lhs = lhs.phantom();
     let _result = result.phantom();
-    tape_holder.add_operation(move |tape| {
+    tape_holder.add_backward_op(move |tape| {
         let result_grad = tape.ref_gradient(&_result);
         T::Device::mul_assign(lhs_deriv.as_mut(), result_grad);
         T::Device::mul_assign(rhs_deriv.as_mut(), result_grad);

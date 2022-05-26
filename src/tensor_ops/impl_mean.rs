@@ -7,7 +7,7 @@ pub fn mean<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::TapeHolder> {
     let result = Tensor0D::<NoTape>::new(T::Device::mean(t.data()));
     let (mut t, mut tape_holder) = t.split_tape_holder();
     let _result = result.phantom();
-    tape_holder.add_operation(move |tape| {
+    tape_holder.add_backward_op(move |tape| {
         let g: f32 = *tape.ref_gradient(&_result);
         T::Device::map_assign(t.mut_data(), |v| *v = g / T::Array::NUM_ELEMENTS as f32);
         T::Device::add_assign(tape.mut_gradient(&t), t.data());
