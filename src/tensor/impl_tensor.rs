@@ -7,24 +7,19 @@ pub trait Tensor:
     type TapeHolder: TapeHolder;
 
     type NoTape: 'static
-        + HasArrayType<Array = Self::Array, Dtype = Self::Dtype>
-        + HasArrayData
-        + HasUniqueId
-        + IntoPhantom
+        + Tensor<Array = Self::Array, Dtype = Self::Dtype>
         // NOTE: we only want to be able to create NoTape tensors
         + TensorCreator
         // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
         + CanPutTapeHolder<Self::TapeHolder, Output = Self>;
 
-    type WithTape: 'static + HasArrayType<Array = Self::Array, Dtype = Self::Dtype>;
+    type WithTape: 'static + Tensor<Array = Self::Array, Dtype = Self::Dtype, TapeHolder = WithTape>;
 
-    type LastDimReduced: Tensor<TapeHolder = Self::TapeHolder>
-        + HasArrayType<
-            Array = <Self::Device as ReduceLastDim<Self::Array>>::Reduced,
-            Dtype = Self::Dtype,
-        > + HasArrayData
-        + HasUniqueId
-        + IntoPhantom;
+    type LastDimReduced: Tensor<
+        TapeHolder = Self::TapeHolder,
+        Array = <Self::Device as ReduceLastDim<Self::Array>>::Reduced,
+        Dtype = Self::Dtype,
+    >;
 
     /// Removes whatever TapeHolder this tensor has and returns itself without a tape.
     fn split_tape_holder(self) -> (Self::NoTape, Self::TapeHolder);
