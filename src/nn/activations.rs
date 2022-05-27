@@ -24,16 +24,16 @@ macro_rules! activation_impls {
     };
 }
 
-activation_impls!(ReLU, relu, #[doc="Struct that impls [Module] as calling [relu()] on `self`."]);
-activation_impls!(Sin, sin, #[doc="Struct that impls [Module] as calling [sin()] on `self`."]);
-activation_impls!(Cos, cos, #[doc="Struct that impls [Module] as calling [cos()] on `self`."]);
-activation_impls!(Ln, ln, #[doc="Struct that impls [Module] as calling [ln()] on `self`."]);
-activation_impls!(Exp, exp, #[doc="Struct that impls [Module] as calling [exp()] on `self`."]);
-activation_impls!(Sigmoid, sigmoid, #[doc="Struct that impls [Module] as calling [sigmoid()] on `self`."]);
-activation_impls!(Tanh, tanh, #[doc="Struct that impls [Module] as calling [tanh()] on `self`."]);
-activation_impls!(Square, square, #[doc="Struct that impls [Module] as calling [square()] on `self`."]);
-activation_impls!(Sqrt, sqrt, #[doc="Struct that impls [Module] as calling [sqrt()] on `self`."]);
-activation_impls!(Abs, abs, #[doc="Struct that impls [Module] as calling [abs()] on `self`."]);
+activation_impls!(ReLU, relu, #[doc="Unit struct that impls [Module] as calling [relu()] on `input`."]);
+activation_impls!(Sin, sin, #[doc="Unit struct that impls [Module] as calling [sin()] on `input`."]);
+activation_impls!(Cos, cos, #[doc="Unit struct that impls [Module] as calling [cos()] on `input`."]);
+activation_impls!(Ln, ln, #[doc="Unit struct that impls [Module] as calling [ln()] on `input`."]);
+activation_impls!(Exp, exp, #[doc="Unit struct that impls [Module] as calling [exp()] on `input`."]);
+activation_impls!(Sigmoid, sigmoid, #[doc="Unit struct that impls [Module] as calling [sigmoid()] on `input`."]);
+activation_impls!(Tanh, tanh, #[doc="Unit struct that impls [Module] as calling [tanh()] on `input`."]);
+activation_impls!(Square, square, #[doc="Unit struct that impls [Module] as calling [square()] on `input`."]);
+activation_impls!(Sqrt, sqrt, #[doc="Unit struct that impls [Module] as calling [sqrt()] on `input`."]);
+activation_impls!(Abs, abs, #[doc="Unit struct that impls [Module] as calling [abs()] on `input`."]);
 
 #[cfg(test)]
 mod tests {

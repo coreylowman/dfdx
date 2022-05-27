@@ -19,7 +19,10 @@ use rand::{distributions::Distribution, Rng};
 /// ```
 #[derive(Default, Debug, Clone)]
 pub struct Linear<const I: usize, const O: usize> {
+    /// Weight matrix, shape (I, O)
     pub weight: Tensor2D<I, O, NoTape>,
+
+    /// Bias vector, shape (O, )
     pub bias: Tensor1D<O, NoTape>,
 }
 
