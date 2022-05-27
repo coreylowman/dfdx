@@ -17,8 +17,8 @@ pub trait Tensor:
 
     type LastDimReduced: Tensor<
         Tape = Self::Tape,
-        Array = <Self::Device as ReduceLastDim<Self::Array>>::Reduced,
         Dtype = Self::Dtype,
+        Array = <Self::Device as ReduceLastDim<Self::Array>>::Reduced,
     >;
 
     /// Removes whatever Tape this tensor has and returns itself without a tape.
