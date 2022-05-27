@@ -4,13 +4,21 @@ use std::ops::*;
 
 /// Zip two Nd arrays together, and apply a generic function to them.
 pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros {
-    /// Zip `l` and `r` together, call `f` on their elements, and store the output of `f` into `out.
-    fn zip_map_into<F>(l: &Lhs, r: &Rhs, out: &mut Lhs, f: &mut F)
-    where
-        F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype;
-
     /// Zip `l` and `r` together, call `f` on their elements, which will mutate `l`.
     fn zip_map_assign<F: FnMut(&mut Lhs::Dtype, &Rhs::Dtype)>(l: &mut Lhs, r: &Rhs, f: &mut F);
+
+    /// Copies `lhs` into `out` using [AllocateZeros::copy()], and then calls [ZipMapElements::zip_map_assign()].
+    ///
+    /// Note: This can also be implemented without copying, but would require each impl to implement
+    /// zip_map_into in addition to map_assign. We use the copy implementation for the sake of
+    /// reducing code.
+    fn zip_map_into<F>(lhs: &Lhs, rhs: &Rhs, out: &mut Lhs, f: &mut F)
+    where
+        F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype,
+    {
+        Self::copy(lhs, out);
+        Self::zip_map_assign(out, rhs, &mut |l, r| *l = f(l, r));
+    }
 
     /// Allocates using [AllocateZeros] and then calls [ZipMapElements::zip_map_into()].
     fn zip_map<F>(l: &Lhs, r: &Rhs, mut f: F) -> Box<Lhs>
@@ -80,35 +88,13 @@ pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros 
 }
 
 impl ZipMapElements<f32, f32> for Cpu {
-    fn zip_map_into<F>(l: &f32, r: &f32, out: &mut f32, f: &mut F)
-    where
-        F: FnMut(&f32, &f32) -> f32,
-    {
-        *out = f(l, r);
-    }
-
-    fn zip_map_assign<F>(l: &mut f32, r: &f32, f: &mut F)
-    where
-        F: FnMut(&mut f32, &f32),
-    {
+    fn zip_map_assign<F: FnMut(&mut f32, &f32)>(l: &mut f32, r: &f32, f: &mut F) {
         f(l, r)
     }
 }
 
 impl<const M: usize> ZipMapElements<[f32; M], f32> for Cpu {
-    fn zip_map_into<F>(l: &[f32; M], r: &f32, out: &mut [f32; M], f: &mut F)
-    where
-        F: FnMut(&f32, &f32) -> f32,
-    {
-        for i in 0..M {
-            Self::zip_map_into(&l[i], r, &mut out[i], f);
-        }
-    }
-
-    fn zip_map_assign<F>(l: &mut [f32; M], r: &f32, f: &mut F)
-    where
-        F: FnMut(&mut f32, &f32),
-    {
+    fn zip_map_assign<F: FnMut(&mut f32, &f32)>(l: &mut [f32; M], r: &f32, f: &mut F) {
         for i in 0..M {
             Self::zip_map_assign(&mut l[i], r, f);
         }
@@ -121,15 +107,6 @@ where
     Rhs: CountElements,
     Self: ZipMapElements<Lhs, Rhs>,
 {
-    fn zip_map_into<F>(l: &[Lhs; M], r: &[Rhs; M], out: &mut [Lhs; M], f: &mut F)
-    where
-        F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype,
-    {
-        for i in 0..M {
-            Self::zip_map_into(&l[i], &r[i], &mut out[i], f);
-        }
-    }
-
     fn zip_map_assign<F>(l: &mut [Lhs; M], r: &[Rhs; M], f: &mut F)
     where
         F: FnMut(&mut Lhs::Dtype, &Rhs::Dtype),

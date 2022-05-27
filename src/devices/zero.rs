@@ -4,10 +4,15 @@ use std::alloc::{alloc_zeroed, Layout};
 
 /// Allocate an Nd array on the heap.
 pub trait AllocateZeros {
+    /// Allocate T directly on the heap.
     fn zeros<T: CountElements>() -> Box<T>;
+
+    /// Copy `inp` into `out`.
+    fn copy<T: CountElements>(inp: &T, out: &mut T);
 }
 
 impl AllocateZeros for Cpu {
+    /// Allocates using [alloc_zeroed].
     fn zeros<T: CountElements>() -> Box<T> {
         // TODO is this function safe for any T?
         // TODO move to using safe code once we can allocate an array directly on the heap.
@@ -17,6 +22,11 @@ impl AllocateZeros for Cpu {
             let ptr = alloc_zeroed(layout) as *mut T;
             Box::from_raw(ptr)
         }
+    }
+
+    /// Copies use [std::ptr::copy_nonoverlapping()].
+    fn copy<T: CountElements>(inp: &T, out: &mut T) {
+        unsafe { std::ptr::copy_nonoverlapping(inp as *const T, out as *mut T, 1) }
     }
 }
 
@@ -32,9 +42,25 @@ mod tests {
     }
 
     #[test]
+    fn test_0d_copy() {
+        let a = 3.14;
+        let mut b = 0.0;
+        Cpu::copy(&a, &mut b);
+        assert_eq!(a, b);
+    }
+
+    #[test]
     fn test_1d_zeros() {
         let t: Box<[f32; 5]> = Cpu::zeros();
         assert_eq!(t.as_ref(), &[0.0; 5]);
+    }
+
+    #[test]
+    fn test_1d_copy() {
+        let a = [1.0, 2.0, 3.0];
+        let mut b = [0.0; 3];
+        Cpu::copy(&a, &mut b);
+        assert_eq!(a, b);
     }
 
     #[test]
@@ -44,9 +70,28 @@ mod tests {
     }
 
     #[test]
+    fn test_2d_copy() {
+        let a = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
+        let mut b = [[0.0; 3]; 2];
+        Cpu::copy(&a, &mut b);
+        assert_eq!(a, b);
+    }
+
+    #[test]
     fn test_3d_zeros() {
         let t: Box<[[[f32; 2]; 3]; 5]> = Cpu::zeros();
         assert_eq!(t.as_ref(), &[[[0.0; 2]; 3]; 5]);
+    }
+
+    #[test]
+    fn test_3d_copy() {
+        let a = [
+            [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+            [[-1.0, -2.0, -3.0], [-4.0, -5.0, -6.0]],
+        ];
+        let mut b = [[[0.0; 3]; 2]; 2];
+        Cpu::copy(&a, &mut b);
+        assert_eq!(a, b);
     }
 
     #[test]

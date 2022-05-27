@@ -3,11 +3,18 @@ use crate::arrays::CountElements;
 
 /// Apply a generic function to all elements of Nd arrays.
 pub trait MapElements<T: CountElements>: Sized + AllocateZeros {
-    /// Calls `f` on every element of `inp`, and stores the result in `out`.
-    fn map_into<F: FnMut(&T::Dtype) -> T::Dtype>(inp: &T, out: &mut T, f: &mut F);
-
     /// Calls `f` on every element of `inp`, which mutates `inp`.
     fn map_assign<F: FnMut(&mut T::Dtype)>(inp: &mut T, f: &mut F);
+
+    /// Copies `inp` into `out` using [AllocateZeros::copy()], and then calls [MapElements::map_assign()].
+    ///
+    /// Note: This can also be implemented without copying, but would require each impl to implement
+    /// map_into in additiona to map_assign. We use the copy implementation for the sake of
+    /// reducing code.
+    fn map_into<F: FnMut(&T::Dtype) -> T::Dtype>(inp: &T, out: &mut T, f: &mut F) {
+        Self::copy(inp, out);
+        Self::map_assign(out, &mut |v: &mut T::Dtype| *v = f(v));
+    }
 
     /// Allocates using [AllocateZeros] and then calls [MapElements::map_into()]
     fn map<F: FnMut(&T::Dtype) -> T::Dtype>(inp: &T, mut f: F) -> Box<T> {
@@ -18,10 +25,6 @@ pub trait MapElements<T: CountElements>: Sized + AllocateZeros {
 }
 
 impl MapElements<f32> for Cpu {
-    fn map_into<F: FnMut(&f32) -> f32>(inp: &f32, out: &mut f32, f: &mut F) {
-        *out = f(inp);
-    }
-
     fn map_assign<F: FnMut(&mut f32)>(inp: &mut f32, f: &mut F) {
         f(inp);
     }
@@ -31,11 +34,6 @@ impl<T: CountElements, const M: usize> MapElements<[T; M]> for Cpu
 where
     Self: MapElements<T>,
 {
-    fn map_into<F: FnMut(&T::Dtype) -> T::Dtype>(inp: &[T; M], out: &mut [T; M], f: &mut F) {
-        for i in 0..M {
-            Self::map_into(&inp[i], &mut out[i], f);
-        }
-    }
     fn map_assign<F: FnMut(&mut T::Dtype)>(inp: &mut [T; M], f: &mut F) {
         for i in 0..M {
             Self::map_assign(&mut inp[i], f);
