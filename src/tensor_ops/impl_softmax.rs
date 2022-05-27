@@ -50,17 +50,17 @@ pub fn softmax<T: Tensor<Dtype = f32>>(t: T) -> T {
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [logsumexp] on `self`.
+    /// Calls [logsumexp()] on `self`.
     pub fn logsumexp(self) -> <Self as Tensor>::LastDimReduced {
         logsumexp(self)
     }
 
-    /// Calls [log_softmax] on `self`
+    /// Calls [log_softmax()] on `self`
     pub fn log_softmax(self) -> Self {
         log_softmax(self)
     }
 
-    /// Calls [softmax] on `self`
+    /// Calls [softmax()] on `self`
     pub fn softmax(self) -> Self {
         softmax(self)
     }

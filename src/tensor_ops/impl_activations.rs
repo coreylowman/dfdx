@@ -319,8 +319,8 @@ where
 }
 
 macro_rules! activation_impl {
-    ($func_name:ident) => {
-        /// Calls [$func_name] on `self`
+    ($func_name:ident, #[$docstring:meta]) => {
+        #[$docstring]
         pub fn $func_name(self) -> Self {
             $func_name(self)
         }
@@ -330,16 +330,16 @@ macro_rules! activation_impl {
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    activation_impl!(relu);
-    activation_impl!(sin);
-    activation_impl!(cos);
-    activation_impl!(ln);
-    activation_impl!(exp);
-    activation_impl!(sigmoid);
-    activation_impl!(tanh);
-    activation_impl!(square);
-    activation_impl!(sqrt);
-    activation_impl!(abs);
+    activation_impl!(relu, #[doc="Calls [relu()] on `self`."]);
+    activation_impl!(sin, #[doc="Calls [sin()] on `self`."]);
+    activation_impl!(cos, #[doc="Calls [cos()] on `self`."]);
+    activation_impl!(ln, #[doc="Calls [ln()] on `self`."]);
+    activation_impl!(exp, #[doc="Calls [exp()] on `self`."]);
+    activation_impl!(sigmoid, #[doc="Calls [sigmoid()] on `self`."]);
+    activation_impl!(tanh, #[doc="Calls [tanh()] on `self`."]);
+    activation_impl!(square, #[doc="Calls [square()] on `self`."]);
+    activation_impl!(sqrt, #[doc="Calls [sqrt()] on `self`."]);
+    activation_impl!(abs, #[doc="Calls [abs()] on `self`."]);
 }
     };
 }

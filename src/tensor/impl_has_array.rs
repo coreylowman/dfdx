@@ -15,10 +15,10 @@ impl<$(const $Vs: usize, )* H> HasArrayType for $typename<$($Vs, )* H>  {
 }
 
 impl<$(const $Vs: usize, )* H> HasArrayData for $typename<$($Vs, )* H> {
-    #[doc="Returns a reference to the underlying array."]
+    /// Returns a reference to the underlying array.
     fn data(&self) -> &Self::Array { self.data.as_ref() }
 
-    #[doc="Returns a mutable reference to the underlying array."]
+    /// Returns a mutable reference to the underlying array.
     fn mut_data(&mut self) -> &mut Self::Array { self.data.as_mut() }
 }
     };

@@ -33,7 +33,7 @@ pub fn value_mask<T: Tensor<Dtype = f32>>(t: T, other: &T::NoTape, value: T::Dty
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [value_mask] on self
+    /// Calls [value_mask()] on self
     pub fn value_mask(self, mask: &$typename<$($Vs, )* NoTape>, value: f32) -> Self {
         value_mask(self, mask, value)
     }

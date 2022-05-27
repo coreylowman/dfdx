@@ -12,9 +12,9 @@ readme = "README.md"
 
 keywords = [
     "machine-learning",
+    "deep-learning",
     "neural-network",
     "backprop",
-    "autograd",
     "autodiff",
 ]
 

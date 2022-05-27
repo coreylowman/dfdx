@@ -47,6 +47,7 @@ pub trait TensorCreator: Sized + HasDevice {
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )*> TensorCreator for $typename<$($Vs, )* NoTape> {
+    /// Returns a new object with `data` and a new [UniqueId] from [unique_id()].
     fn new_boxed(data: Box<Self::Array>) -> Self {
         Self {
             id: unique_id(),

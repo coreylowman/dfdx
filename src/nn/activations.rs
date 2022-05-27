@@ -2,8 +2,8 @@ use crate::prelude::*;
 use rand::{distributions::Distribution, Rng};
 
 macro_rules! activation_impls {
-    ($struct_name:ident, $func_name:ident) => {
-        /// Struct that impls [Module] as calling [$func_name] on `self`.
+    ($struct_name:ident, $func_name:ident, #[$docstring:meta]) => {
+        #[$docstring]
         #[derive(Default, Debug, Clone, Copy)]
         pub struct $struct_name;
 
@@ -24,16 +24,16 @@ macro_rules! activation_impls {
     };
 }
 
-activation_impls!(ReLU, relu);
-activation_impls!(Sin, sin);
-activation_impls!(Cos, cos);
-activation_impls!(Ln, ln);
-activation_impls!(Exp, exp);
-activation_impls!(Sigmoid, sigmoid);
-activation_impls!(Tanh, tanh);
-activation_impls!(Square, square);
-activation_impls!(Sqrt, sqrt);
-activation_impls!(Abs, abs);
+activation_impls!(ReLU, relu, #[doc="Struct that impls [Module] as calling [relu()] on `self`."]);
+activation_impls!(Sin, sin, #[doc="Struct that impls [Module] as calling [sin()] on `self`."]);
+activation_impls!(Cos, cos, #[doc="Struct that impls [Module] as calling [cos()] on `self`."]);
+activation_impls!(Ln, ln, #[doc="Struct that impls [Module] as calling [ln()] on `self`."]);
+activation_impls!(Exp, exp, #[doc="Struct that impls [Module] as calling [exp()] on `self`."]);
+activation_impls!(Sigmoid, sigmoid, #[doc="Struct that impls [Module] as calling [sigmoid()] on `self`."]);
+activation_impls!(Tanh, tanh, #[doc="Struct that impls [Module] as calling [tanh()] on `self`."]);
+activation_impls!(Square, square, #[doc="Struct that impls [Module] as calling [square()] on `self`."]);
+activation_impls!(Sqrt, sqrt, #[doc="Struct that impls [Module] as calling [sqrt()] on `self`."]);
+activation_impls!(Abs, abs, #[doc="Struct that impls [Module] as calling [abs()] on `self`."]);
 
 #[cfg(test)]
 mod tests {

@@ -31,7 +31,7 @@ pub fn nans_to<T: Tensor<Dtype = f32>>(t: T, value: T::Dtype) -> T {
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [nans_to] on `self`.
+    /// Calls [nans_to()] on `self`.
     pub fn nans_to(self, value: f32) -> Self {
         nans_to(self, value)
     }

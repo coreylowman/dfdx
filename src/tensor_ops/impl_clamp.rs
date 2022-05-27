@@ -25,7 +25,7 @@ pub fn clamp<T: Tensor<Dtype = f32>>(t: T, min: T::Dtype, max: T::Dtype) -> T {
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [clamp] on self
+    /// Calls [clamp()] on self
     pub fn clamp(self, min: f32, max: f32) -> Self {
         clamp(self, min, max)
     }

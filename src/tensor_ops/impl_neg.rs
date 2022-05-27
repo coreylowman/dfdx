@@ -28,8 +28,7 @@ macro_rules! tensor_impl {
 impl<$(const $Vs: usize, )* H: Tape> std::ops::Neg for $typename<$($Vs, )* H>
 {
     type Output = Self;
-
-    /// Calls [negate] on `self`.
+    /// Calls [negate()] on `self`.
     fn neg(self) -> Self::Output {
         negate(self)
     }
