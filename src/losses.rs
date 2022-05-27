@@ -2,43 +2,49 @@
 
 use crate::prelude::*;
 
-/// Mean Squared Error. This is the same as doing `(pred - &targ).square().mean()`
+/// Mean Squared Error. This computes `(&targ - pred).square().mean()`.
+///
+/// See [mean()], [square()], and [sub()].
 pub fn mse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
     mean(square(sub(targ, pred)))
 }
 
-/// Root Mean square error. This is the same as doing `(pred - &targ).square().mean().sqrt()`
+/// Root Mean square error. This computes `(&targ - pred).square().mean().sqrt()`
+///
+/// See [mse_loss()] and [sqrt()]
 pub fn rmse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
     sqrt(mse_loss(pred, targ))
 }
 
-/// Mean absolute error. This is the same as doing `(pred - &targ).abs().mean()`
+/// Mean absolute error. This computes `(&targ - pred).abs().mean()`
+///
+/// See [mean()], [abs()], and [sub()]
 pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
     mean(abs(sub(targ, pred)))
 }
 
-/// Cross entropy loss. This will call `log_softmax(logits)`, so make sure logits is **not** the
-/// output from [softmax()] or [log_softmax()] already.
+/// Cross entropy loss. This computes: `-(logits.log_softmax() * target_probs).sum(-1).mean()`
 ///
-/// This computes: `-(logits.log_softmax() * targ).sum(-1).mean()`
+/// This will call `log_softmax(logits)`, so make sure logits is **not** the
+/// output from [softmax()] or [log_softmax()] already.
 ///
 /// Arguments:
 ///
 /// - `logits`: The un-normalized output from a model. [log_softmax()] is called in this function
-/// - `targ`: Target containing probability vectors **NOT** class indices.
+/// - `target_probs`: Target containing probability vectors **NOT** class indices.
 ///
 /// Example Usage:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let x = Tensor1D::new([-1.0, -0.5]);
-/// let targ = Tensor1D::new([0.5, 0.5]);
-/// let loss = cross_entropy_with_logits_loss(x.traced(), &targ);
+/// let target_probs = Tensor1D::new([0.5, 0.5]);
+/// let loss = cross_entropy_with_logits_loss(x.traced(), &target_probs);
 /// ```
 pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     logits: T,
-    targ: &T::NoTape,
+    target_probs: &T::NoTape,
 ) -> Tensor0D<T::Tape> {
-    -mean(sum_last_dim(mul(targ, log_softmax(logits))))
+    -mean(sum_last_dim(mul(target_probs, log_softmax(logits))))
 }
 
 /// One hot encodes an array of class labels into a [Tensor2D] of probability
