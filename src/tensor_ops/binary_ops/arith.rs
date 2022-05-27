@@ -69,9 +69,9 @@ pub fn binary_map<T: Tensor<Dtype = f32>, F, Dfdx, Dfdy>(
     dfdy: Dfdy,
 ) -> T
 where
-    F: FnMut(&f32, &f32) -> f32 + Copy,
-    Dfdx: FnMut(&f32, &f32) -> f32 + Copy,
-    Dfdy: FnMut(&f32, &f32) -> f32 + Copy,
+    F: FnMut(&f32, &f32) -> f32,
+    Dfdx: FnMut(&f32, &f32) -> f32,
+    Dfdy: FnMut(&f32, &f32) -> f32,
 {
     let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), f));
     let mut lhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), dfdx);

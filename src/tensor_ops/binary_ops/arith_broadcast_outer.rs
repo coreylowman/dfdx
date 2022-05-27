@@ -10,7 +10,7 @@ fn bouter_add<T: CountElements<Dtype = f32>, const M: usize>(
     Cpu: ZipMapElements<T, T>,
 {
     for i in 0..M {
-        Cpu::zip_map_into(&lhs[i], rhs, &mut out[i], |x, y| x + y);
+        Cpu::zip_map_into(&lhs[i], rhs, &mut out[i], &mut |x, y| x + y);
     }
 }
 

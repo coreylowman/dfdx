@@ -84,7 +84,7 @@ impl GradientProvider for Sgd {
                     });
                     self.next_velocity.insert(p, v_t);
                 }
-                None => P::Device::map_assign(g_t.as_mut(), |g| *g *= self.lr),
+                None => P::Device::map_assign(g_t.as_mut(), &mut |g| *g *= self.lr),
             }
             g_t
         })

@@ -66,7 +66,7 @@ impl GradientProvider for Adam {
             P::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), &mut |v, g| {
                 *v = *v * self.betas[1] + g.powi(2) * (1.0 - self.betas[1]);
             });
-            P::Device::zip_map_into(m_t.as_ref(), v_t.as_ref(), g_t.as_mut(), |m, v| {
+            P::Device::zip_map_into(m_t.as_ref(), v_t.as_ref(), g_t.as_mut(), &mut |m, v| {
                 let m = m * (1.0 - self.betas[0].powi(self.t)).recip();
                 let v = v * (1.0 - self.betas[1].powi(self.t)).recip();
                 self.lr * m / (v.sqrt() + self.eps)

@@ -3,22 +3,26 @@ use crate::arrays::CountElements;
 
 /// Apply a generic function to all elements of Nd arrays.
 pub trait MapElements<T: CountElements>: Sized + AllocateZeros {
-    fn map_into<F: FnMut(&T::Dtype) -> T::Dtype + Copy>(inp: &T, out: &mut T, f: F);
-    fn map_assign<F: FnMut(&mut T::Dtype) + Copy>(inp: &mut T, f: F);
+    /// Calls `f` on every element of `inp`, and stores the result in `out`.
+    fn map_into<F: FnMut(&T::Dtype) -> T::Dtype>(inp: &T, out: &mut T, f: &mut F);
 
-    fn map<F: FnMut(&T::Dtype) -> T::Dtype + Copy>(inp: &T, f: F) -> Box<T> {
+    /// Calls `f` on every element of `inp`, which mutates `inp`.
+    fn map_assign<F: FnMut(&mut T::Dtype)>(inp: &mut T, f: &mut F);
+
+    /// Allocates using [AllocateZeros] and then calls [MapElements::map_into()]
+    fn map<F: FnMut(&T::Dtype) -> T::Dtype>(inp: &T, mut f: F) -> Box<T> {
         let mut out = Self::zeros();
-        Self::map_into(inp, &mut out, f);
+        Self::map_into(inp, &mut out, &mut f);
         out
     }
 }
 
 impl MapElements<f32> for Cpu {
-    fn map_into<F: FnMut(&f32) -> f32 + Copy>(inp: &f32, out: &mut f32, mut f: F) {
+    fn map_into<F: FnMut(&f32) -> f32>(inp: &f32, out: &mut f32, f: &mut F) {
         *out = f(inp);
     }
 
-    fn map_assign<F: FnMut(&mut f32) + Copy>(inp: &mut f32, mut f: F) {
+    fn map_assign<F: FnMut(&mut f32)>(inp: &mut f32, f: &mut F) {
         f(inp);
     }
 }
@@ -27,12 +31,12 @@ impl<T: CountElements, const M: usize> MapElements<[T; M]> for Cpu
 where
     Self: MapElements<T>,
 {
-    fn map_into<F: FnMut(&T::Dtype) -> T::Dtype + Copy>(inp: &[T; M], out: &mut [T; M], f: F) {
+    fn map_into<F: FnMut(&T::Dtype) -> T::Dtype>(inp: &[T; M], out: &mut [T; M], f: &mut F) {
         for i in 0..M {
             Self::map_into(&inp[i], &mut out[i], f);
         }
     }
-    fn map_assign<F: FnMut(&mut T::Dtype) + Copy>(inp: &mut [T; M], f: F) {
+    fn map_assign<F: FnMut(&mut T::Dtype)>(inp: &mut [T; M], f: &mut F) {
         for i in 0..M {
             Self::map_assign(&mut inp[i], f);
         }
@@ -50,7 +54,7 @@ mod tests {
         let t = 1.0;
         let mut out = 0.0;
         let expected = 2.0;
-        Cpu::map_into(&t, &mut out, |v| v * 2.0);
+        Cpu::map_into(&t, &mut out, &mut |v| v * 2.0);
         assert_eq!(out, expected);
     }
 
@@ -59,7 +63,7 @@ mod tests {
         let t = [0.0, 1.0, 2.0];
         let expected = [0.0, 2.0, 4.0];
         let mut out = ZeroElements::ZEROS;
-        Cpu::map_into(&t, &mut out, |v| v * 2.0);
+        Cpu::map_into(&t, &mut out, &mut |v| v * 2.0);
         assert_eq!(out, expected);
     }
 
@@ -68,7 +72,7 @@ mod tests {
         let t = [[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]];
         let expected = [[0.0, 2.0, 4.0], [6.0, 8.0, 10.0]];
         let mut out = ZeroElements::ZEROS;
-        Cpu::map_into(&t, &mut out, |v| v * 2.0);
+        Cpu::map_into(&t, &mut out, &mut |v| v * 2.0);
         assert_eq!(out, expected);
     }
 
@@ -83,7 +87,7 @@ mod tests {
             [[12.0, 14.0, 16.0], [18.0, 20.0, 22.0]],
         ];
         let mut out = ZeroElements::ZEROS;
-        Cpu::map_into(&t, &mut out, |v| v * 2.0);
+        Cpu::map_into(&t, &mut out, &mut |v| v * 2.0);
         assert_eq!(out, expected);
     }
 }

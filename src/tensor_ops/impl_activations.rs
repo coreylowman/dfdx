@@ -294,8 +294,8 @@ pub fn abs<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// ```
 pub fn map<T: Tensor<Dtype = f32>, F, DF>(t: T, f: F, mut df: DF) -> T
 where
-    F: 'static + FnMut(&f32) -> f32 + Copy,
-    DF: 'static + FnMut(&f32) -> f32 + Copy,
+    F: 'static + FnMut(&f32) -> f32,
+    DF: 'static + FnMut(&f32) -> f32,
 {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), f));
     let (mut t, mut tape) = t.split_tape();
@@ -311,7 +311,7 @@ where
 }
 
 /// Similar to [map()], but doesn't take ownership of the [Tensor] `t`.
-pub fn cloned_map<T, F: FnMut(&f32) -> f32 + Copy>(t: &T, f: F) -> T
+pub fn cloned_map<T, F: FnMut(&f32) -> f32>(t: &T, f: F) -> T
 where
     T: Tensor<Dtype = f32, Tape = NoTape> + TensorCreator,
 {

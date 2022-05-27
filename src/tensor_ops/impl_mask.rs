@@ -19,7 +19,9 @@ pub fn value_mask<T: Tensor<Dtype = f32>>(t: T, other: &T::NoTape, value: T::Dty
         }
     }));
     let (mut t, mut tape) = t.split_tape();
-    T::Device::map_into(other.data(), t.mut_data(), |x| (x != &value) as i32 as f32);
+    T::Device::map_into(other.data(), t.mut_data(), &mut |x| {
+        (x != &value) as i32 as f32
+    });
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
         T::Device::mul_assign(t.mut_data(), grads.ref_gradient(&_result));

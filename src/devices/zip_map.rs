@@ -4,21 +4,21 @@ use std::ops::*;
 
 /// Zip two Nd arrays together, and apply a generic function to them.
 pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros {
-    fn zip_map_into<F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype + Copy>(
-        l: &Lhs,
-        r: &Rhs,
-        out: &mut Lhs,
-        f: F,
-    );
+    /// Zip `l` and `r` together, call `f` on their elements, and store the output of `f` into `out.
+    fn zip_map_into<F>(l: &Lhs, r: &Rhs, out: &mut Lhs, f: &mut F)
+    where
+        F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype;
+
+    /// Zip `l` and `r` together, call `f` on their elements, which will mutate `l`.
     fn zip_map_assign<F: FnMut(&mut Lhs::Dtype, &Rhs::Dtype)>(l: &mut Lhs, r: &Rhs, f: &mut F);
 
-    fn zip_map<F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype + Copy>(
-        l: &Lhs,
-        r: &Rhs,
-        f: F,
-    ) -> Box<Lhs> {
+    /// Allocates using [AllocateZeros] and then calls [ZipMapElements::zip_map_into()].
+    fn zip_map<F>(l: &Lhs, r: &Rhs, mut f: F) -> Box<Lhs>
+    where
+        F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype,
+    {
         let mut out = Self::zeros();
-        Self::zip_map_into(l, r, &mut out, f);
+        Self::zip_map_into(l, r, &mut out, &mut f);
         out
     }
 
@@ -80,28 +80,35 @@ pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros 
 }
 
 impl ZipMapElements<f32, f32> for Cpu {
-    fn zip_map_into<F: FnMut(&f32, &f32) -> f32 + Copy>(l: &f32, r: &f32, out: &mut f32, mut f: F) {
+    fn zip_map_into<F>(l: &f32, r: &f32, out: &mut f32, f: &mut F)
+    where
+        F: FnMut(&f32, &f32) -> f32,
+    {
         *out = f(l, r);
     }
 
-    fn zip_map_assign<F: FnMut(&mut f32, &f32)>(l: &mut f32, r: &f32, f: &mut F) {
+    fn zip_map_assign<F>(l: &mut f32, r: &f32, f: &mut F)
+    where
+        F: FnMut(&mut f32, &f32),
+    {
         f(l, r)
     }
 }
 
 impl<const M: usize> ZipMapElements<[f32; M], f32> for Cpu {
-    fn zip_map_into<F: FnMut(&f32, &f32) -> f32 + Copy>(
-        l: &[f32; M],
-        r: &f32,
-        out: &mut [f32; M],
-        f: F,
-    ) {
+    fn zip_map_into<F>(l: &[f32; M], r: &f32, out: &mut [f32; M], f: &mut F)
+    where
+        F: FnMut(&f32, &f32) -> f32,
+    {
         for i in 0..M {
             Self::zip_map_into(&l[i], r, &mut out[i], f);
         }
     }
 
-    fn zip_map_assign<F: FnMut(&mut f32, &f32)>(l: &mut [f32; M], r: &f32, f: &mut F) {
+    fn zip_map_assign<F>(l: &mut [f32; M], r: &f32, f: &mut F)
+    where
+        F: FnMut(&mut f32, &f32),
+    {
         for i in 0..M {
             Self::zip_map_assign(&mut l[i], r, f);
         }
@@ -114,22 +121,19 @@ where
     Rhs: CountElements,
     Self: ZipMapElements<Lhs, Rhs>,
 {
-    fn zip_map_into<F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype + Copy>(
-        l: &[Lhs; M],
-        r: &[Rhs; M],
-        out: &mut [Lhs; M],
-        f: F,
-    ) {
+    fn zip_map_into<F>(l: &[Lhs; M], r: &[Rhs; M], out: &mut [Lhs; M], f: &mut F)
+    where
+        F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype,
+    {
         for i in 0..M {
             Self::zip_map_into(&l[i], &r[i], &mut out[i], f);
         }
     }
 
-    fn zip_map_assign<F: FnMut(&mut Lhs::Dtype, &Rhs::Dtype)>(
-        l: &mut [Lhs; M],
-        r: &[Rhs; M],
-        f: &mut F,
-    ) {
+    fn zip_map_assign<F>(l: &mut [Lhs; M], r: &[Rhs; M], f: &mut F)
+    where
+        F: FnMut(&mut Lhs::Dtype, &Rhs::Dtype),
+    {
         for i in 0..M {
             Self::zip_map_assign(&mut l[i], &r[i], f);
         }
@@ -147,7 +151,7 @@ mod tests {
         let a = 1.0;
         let b = 2.0;
         let mut c = ZeroElements::ZEROS;
-        Cpu::zip_map_into(&a, &b, &mut c, |x, y| x + y);
+        Cpu::zip_map_into(&a, &b, &mut c, &mut |x, y| x + y);
         assert_eq!(c, 3.0);
     }
 
@@ -156,7 +160,7 @@ mod tests {
         let a = [1.0; 3];
         let b = [2.0; 3];
         let mut c = ZeroElements::ZEROS;
-        Cpu::zip_map_into(&a, &b, &mut c, |x, y| x + y);
+        Cpu::zip_map_into(&a, &b, &mut c, &mut |x, y| x + y);
         assert_eq!(c, [3.0; 3]);
     }
 
@@ -165,7 +169,7 @@ mod tests {
         let a = [1.0; 3];
         let b = 2.0;
         let mut c = ZeroElements::ZEROS;
-        Cpu::zip_map_into(&a, &b, &mut c, |x, y| x + y);
+        Cpu::zip_map_into(&a, &b, &mut c, &mut |x, y| x + y);
         assert_eq!(c, [3.0; 3]);
     }
 
@@ -174,7 +178,7 @@ mod tests {
         let a = [[2.0; 2]; 3];
         let b = [[3.0; 2]; 3];
         let mut c = ZeroElements::ZEROS;
-        Cpu::zip_map_into(&a, &b, &mut c, |x, y| x * y);
+        Cpu::zip_map_into(&a, &b, &mut c, &mut |x, y| x * y);
         assert_eq!(c, [[6.0; 2]; 3]);
     }
 
@@ -183,7 +187,7 @@ mod tests {
         let a = [[2.0; 2]; 3];
         let b = [3.0; 3];
         let mut c = ZeroElements::ZEROS;
-        Cpu::zip_map_into(&a, &b, &mut c, |x, y| x * y);
+        Cpu::zip_map_into(&a, &b, &mut c, &mut |x, y| x * y);
         assert_eq!(c, [[6.0; 2]; 3]);
     }
 
@@ -192,7 +196,7 @@ mod tests {
         let a = [[[2.0; 5]; 2]; 3];
         let b = [[[3.0; 5]; 2]; 3];
         let mut c = ZeroElements::ZEROS;
-        Cpu::zip_map_into(&a, &b, &mut c, |x, y| x * y);
+        Cpu::zip_map_into(&a, &b, &mut c, &mut |x, y| x * y);
         assert_eq!(c, [[[6.0; 5]; 2]; 3]);
     }
 
@@ -201,7 +205,7 @@ mod tests {
         let a = [[[2.0; 5]; 2]; 3];
         let b = [[3.0; 2]; 3];
         let mut c = ZeroElements::ZEROS;
-        Cpu::zip_map_into(&a, &b, &mut c, |x, y| x * y);
+        Cpu::zip_map_into(&a, &b, &mut c, &mut |x, y| x * y);
         assert_eq!(c, [[[6.0; 5]; 2]; 3]);
     }
 }

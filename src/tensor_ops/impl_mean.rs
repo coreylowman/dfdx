@@ -9,7 +9,9 @@ pub fn mean<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::Tape> {
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
         let g: f32 = *grads.ref_gradient(&_result);
-        T::Device::map_assign(t.mut_data(), |v| *v = g / T::Array::NUM_ELEMENTS as f32);
+        T::Device::map_assign(t.mut_data(), &mut |v| {
+            *v = g / T::Array::NUM_ELEMENTS as f32
+        });
         T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
     result.put_tape(tape)
