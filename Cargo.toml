@@ -15,6 +15,7 @@ keywords = [
     "deep-learning",
     "neural-network",
     "backprop",
+    "tensor",
     "autodiff",
 ]
 
