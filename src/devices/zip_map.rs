@@ -7,16 +7,16 @@ pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros 
     /// Zip `l` and `r` together, call `f` on their elements, which will mutate `l`.
     fn zip_map_assign<F: FnMut(&mut Lhs::Dtype, &Rhs::Dtype)>(l: &mut Lhs, r: &Rhs, f: &mut F);
 
-    /// Copies `lhs` into `out` using [AllocateZeros::copy()], and then calls [ZipMapElements::zip_map_assign()].
+    /// Clones `lhs` into `out` using [Clone::clone_from()], and then calls [ZipMapElements::zip_map_assign()].
     ///
-    /// Note: This can also be implemented without copying, but would require each impl to implement
-    /// zip_map_into in addition to map_assign. We use the copy implementation for the sake of
+    /// Note: This can also be implemented without cloning, but would require each impl to implement
+    /// zip_map_into in addition to map_assign. We use the clone implementation for the sake of
     /// reducing code.
     fn zip_map_into<F>(lhs: &Lhs, rhs: &Rhs, out: &mut Lhs, f: &mut F)
     where
         F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype,
     {
-        Self::copy(lhs, out);
+        out.clone_from(lhs);
         Self::zip_map_assign(out, rhs, &mut |l, r| *l = f(l, r));
     }
 

@@ -6,14 +6,14 @@ pub trait MapElements<T: CountElements>: Sized + AllocateZeros {
     /// Calls `f` on every element of `inp`, which mutates `inp`.
     fn map_assign<F: FnMut(&mut T::Dtype)>(inp: &mut T, f: &mut F);
 
-    /// Copies `inp` into `out` using [AllocateZeros::copy()], and then calls [MapElements::map_assign()].
+    /// Clones `inp` into `out` using [Clone::clone_from()], and then calls [MapElements::map_assign()].
     ///
     /// Note: This can also be implemented without copying, but would require each impl to implement
     /// map_into in additiona to map_assign. We use the copy implementation for the sake of
     /// reducing code.
     fn map_into<F: FnMut(&T::Dtype) -> T::Dtype>(inp: &T, out: &mut T, f: &mut F) {
-        Self::copy(inp, out);
-        Self::map_assign(out, &mut |v: &mut T::Dtype| *v = f(v));
+        out.clone_from(inp);
+        Self::map_assign(out, &mut |v| *v = f(v));
     }
 
     /// Allocates using [AllocateZeros] and then calls [MapElements::map_into()]

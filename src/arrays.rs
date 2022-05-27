@@ -1,7 +1,7 @@
 //! Collection of traits to describe Nd arrays.
 
 /// Represents something with a compile time known number of elements
-pub trait CountElements {
+pub trait CountElements: Clone {
     const NUM_ELEMENTS: usize;
     type Dtype: Clone + Default;
     const NUM_BYTES: usize = Self::NUM_ELEMENTS * std::mem::size_of::<Self::Dtype>();
