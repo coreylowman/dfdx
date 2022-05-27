@@ -5,6 +5,7 @@
 //! 4. Reverse mode auto differentiation[1] implementation.
 
 pub mod arrays;
+pub mod data;
 pub mod devices;
 pub mod gradients;
 pub mod losses;
@@ -18,6 +19,7 @@ pub mod unique_id;
 /// Contains all public exports.
 pub mod prelude {
     pub use crate::arrays::*;
+    pub use crate::data::*;
     pub use crate::devices::*;
     pub use crate::gradients::*;
     pub use crate::losses::*;
