@@ -27,3 +27,7 @@ rand_distr = "0.4.3"
 tempfile = "3.3.0"
 matrixmultiply = "0.3.2"
 num-traits = "0.2.15"
+
+[dev-dependencies]
+mnist = "0.5.0"
+indicatif = "0.16.2"
