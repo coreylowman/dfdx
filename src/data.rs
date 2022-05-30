@@ -1,3 +1,5 @@
+//! A collection of data utility classes such as [one_hot_encode()] and [SubsetIterator].
+
 use crate::prelude::*;
 use rand::prelude::SliceRandom;
 
