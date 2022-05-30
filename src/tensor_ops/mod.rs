@@ -10,6 +10,7 @@ mod impl_mean;
 mod impl_nans;
 mod impl_neg;
 mod impl_softmax;
+mod impl_sum;
 mod impl_sum_last;
 mod matmul;
 
@@ -23,5 +24,6 @@ pub use impl_mean::*;
 pub use impl_nans::*;
 pub use impl_neg::*;
 pub use impl_softmax::*;
+pub use impl_sum::*;
 pub use impl_sum_last::*;
 pub use matmul::*;
