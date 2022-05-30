@@ -48,7 +48,7 @@ mod tests {
         let t = Tensor0D::new(1.0);
         let r = t.trace().clamp(0.0, 1.0);
         assert_eq!(r.data(), &1.0);
-        let gradients = backward(r.mean());
+        let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&t), &1.0);
     }
 
@@ -57,9 +57,12 @@ mod tests {
         let t = Tensor1D::new([-1.0, -0.5, -0.25, 0.0, 0.25, 0.5, 1.0]);
         let r = t.trace().clamp(-0.5, 0.25);
         assert_eq!(r.data(), &[-0.5, -0.5, -0.25, 0.0, 0.25, 0.25, 0.25]);
-        let gradients = backward(r.mean());
-        const V: f32 = 1.0 / 7.0;
-        assert_eq!(gradients.ref_gradient(&t), &[0.0, V, V, V, V, 0.0, 0.0]);
+        // NOTE: .exp() so we cover case where .clamp() needs to use result's grad
+        let gradients = r.exp().mean().backward();
+        assert_eq!(
+            gradients.ref_gradient(&t),
+            &[0.0, 0.08664724, 0.11125726, 0.14285715, 0.1834322, 0.0, 0.0]
+        );
     }
 
     #[test]
@@ -67,7 +70,7 @@ mod tests {
         let t: Tensor2D<2, 3> = Tensor2D::new([[-1.0, 0.0, 1.0], [-2.0, 2.0, 1.1]]);
         let r = t.trace().clamp(-1.0, 1.0);
         assert_eq!(r.data(), &[[-1.0, 0.0, 1.0], [-1.0, 1.0, 1.0]]);
-        let gradients = backward(r.mean());
+        let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&t), &[[1.0 / 6.0; 3], [0.0; 3]]);
     }
 }

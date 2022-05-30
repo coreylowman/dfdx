@@ -38,7 +38,7 @@ mod tests {
         let t: Tensor0D = Tensor0D::new(3.0);
         let r = t.trace().sum();
         assert_eq!(r.data(), &3.0);
-        let gradients = backward(r);
+        let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&t), &1.0);
     }
 
@@ -47,8 +47,9 @@ mod tests {
         let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
         let r: Tensor0D<OwnsTape> = t.trace().sum();
         assert_eq!(r.data(), &6.0);
-        let gradients = backward(r);
-        assert_eq!(gradients.ref_gradient(&t), &[1.0; 3]);
+        // NOTE: .exp() to make sure its using result grad properly
+        let gradients = r.exp().backward();
+        assert_eq!(gradients.ref_gradient(&t), &[403.4288; 3]);
     }
 
     #[test]
@@ -56,7 +57,7 @@ mod tests {
         let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
         let r: Tensor0D<OwnsTape> = t.trace().sum();
         assert_eq!(r.data(), &21.0);
-        let gradients = backward(r);
+        let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&t), &[[1.0; 3]; 2]);
     }
 
@@ -65,7 +66,7 @@ mod tests {
         let t: Tensor3D<4, 2, 3> = Tensor3D::ones();
         let r: Tensor0D<OwnsTape> = t.trace().sum();
         assert_eq!(r.data(), &(4.0 * 2.0 * 3.0));
-        let gradients = backward(r);
+        let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&t), &[[[1.0; 3]; 2]; 4]);
     }
 }

@@ -60,8 +60,12 @@ mod tests {
         let a: Tensor1D<3> = Tensor1D::new([-2.0, 0.0, 5.0]);
         let r = -(a.trace());
         assert_eq!(r.data(), &[2.0, 0.0, -5.0]);
-        let gradients = r.mean().backward();
-        assert_eq!(gradients.ref_gradient(&a), &[-1.0 / 3.0; 3]);
+        // NOTE: .exp() so we can make sure neg is using result grad properly
+        let gradients = r.exp().mean().backward();
+        assert_eq!(
+            gradients.ref_gradient(&a),
+            &[-2.463019, -0.33333334, -0.0022459824]
+        );
     }
 
     #[test]

@@ -61,8 +61,9 @@ mod tests {
         let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
         let r: Tensor0D<OwnsTape> = t.trace().sum_last_dim();
         assert_eq!(r.data(), &6.0);
-        let gradients = r.mean().backward();
-        assert_eq!(gradients.ref_gradient(&t), &[1.0; 3]);
+        // NOTE: .exp() so we make sure its using result grad properly
+        let gradients = r.exp().mean().backward();
+        assert_eq!(gradients.ref_gradient(&t), &[403.4288; 3]);
     }
 
     #[test]

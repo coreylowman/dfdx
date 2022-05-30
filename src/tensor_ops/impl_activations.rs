@@ -359,8 +359,12 @@ mod tests {
         let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().relu();
         assert_eq!(r.data(), &[0.0, 0.0, 0.0, 1.0, 2.0]);
-        let gradients = r.mean().backward();
-        assert_eq!(gradients.ref_gradient(&x), &[0.0, 0.0, 0.0, 0.2, 0.2]);
+        // NOTE: call .exp() to make sure we cover cases where .relu() uses the result's gradient
+        let gradients = r.exp().mean().backward();
+        assert_eq!(
+            gradients.ref_gradient(&x),
+            &[0.0, 0.0, 0.0, 0.54365635, 1.4778112]
+        );
     }
 
     #[test]

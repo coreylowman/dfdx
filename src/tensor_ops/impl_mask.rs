@@ -57,7 +57,7 @@ mod tests {
         let m = Tensor0D::new(-1e10);
         let r = t.trace().value_mask(&m, -1e10);
         assert_eq!(r.data(), &-1e10);
-        let gradients = backward(r.mean());
+        let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&t), &0.0);
     }
 
@@ -67,8 +67,9 @@ mod tests {
         let m: Tensor1D<3> = Tensor1D::new([-1e10, 0.0, -1e10]);
         let r = t.trace().value_mask(&m, -1e10);
         assert_eq!(r.data(), &[-1e10, 2.0, -1e10]);
-        let gradients = backward(r.mean());
-        assert_eq!(gradients.ref_gradient(&t), &[0.0, 1.0 / 3.0, 0.0]);
+        // NOTE: .exp() so we cover the case where .mask() has to use result grad
+        let gradients = r.exp().mean().backward();
+        assert_eq!(gradients.ref_gradient(&t), &[0.0, 2.463019, 0.0]);
     }
 
     #[test]
@@ -77,7 +78,7 @@ mod tests {
         let m: Tensor2D<2, 3> = Tensor2D::new([[-1e10, 0.0, -1e10], [1.0, -1e10, -1e9]]);
         let r = t.trace().value_mask(&m, -1e10);
         assert_eq!(r.data(), &[[-1e10, 2.0, -1e10], [4.0, -1e10, 6.0]]);
-        let gradients = backward(r.mean());
+        let gradients = r.mean().backward();
         assert_eq!(
             gradients.ref_gradient(&t),
             &[[0.0, 1.0 / 6.0, 0.0], [1.0 / 6.0, 0.0, 1.0 / 6.0]]
