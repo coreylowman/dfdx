@@ -30,7 +30,7 @@ pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T
 ///
 /// Arguments:
 ///
-/// - `logits`: The un-normalized output from a model. [log_softmax()] is called in this function
+/// - `logits`: The un-normalized output from a model. [log_softmax()] is called **in** this function
 /// - `target_probs`: Target containing probability vectors **NOT** class indices.
 ///
 /// Example Usage:
@@ -45,6 +45,33 @@ pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     target_probs: &T::NoTape,
 ) -> Tensor0D<T::Tape> {
     -mean(sum_last_dim(mul(target_probs, log_softmax(logits))))
+}
+
+/// KL Divergence loss. This computes `(target_probs * (target_probs.log() - logits.log_softmax())).sum(-1).mean()`
+///
+/// This will call `log_softmax(logits)`, so make sure logits is **not** the
+/// output from [softmax()] or [log_softmax()] already.
+///
+/// Arguments:
+///
+/// - `logits`: The un-normalized output from a model. [log_softmax()] is called **in** this function
+/// - `target_probs`: Target containing probability vectors **NOT** class indices.
+///
+/// Example Usage:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let x = Tensor1D::new([-1.0, -0.5]);
+/// let target_probs = Tensor1D::new([0.5, 0.5]);
+/// let loss = kl_div_with_logits_loss(x.traced(), &target_probs);
+/// ```
+pub fn kl_div_with_logits_loss<T: Tensor<Dtype = f32>>(
+    logits: T,
+    target_probs: &T::NoTape,
+) -> Tensor0D<T::Tape> {
+    mean(sum_last_dim(mul(
+        target_probs,
+        sub(&ln(target_probs.clone()), log_softmax(logits)),
+    )))
 }
 
 #[cfg(test)]
@@ -116,5 +143,36 @@ mod tests {
             let loss = cross_entropy_with_logits_loss(x.trace(), &y);
             assert_eq!(*loss.data(), losses[i]);
         }
+    }
+
+    #[test]
+    fn test_kl_div() {
+        let logits = Tensor2D::new([
+            [-0.2354, 0.4408, 0.9688],
+            [-0.2187, -0.3451, -1.5473],
+            [0.7420, 0.7186, 1.0785],
+            [-1.2231, 0.2536, 0.3489],
+            [-0.9163, -0.2289, 0.2576],
+        ]);
+        let targ = Tensor2D::new([
+            [0.3178, 0.5344, 0.1479],
+            [0.1915, 0.6178, 0.1907],
+            [0.4834, 0.1789, 0.3377],
+            [0.5809, 0.3623, 0.0568],
+            [0.0166, 0.8512, 0.1322],
+        ]);
+        let loss = kl_div_with_logits_loss(logits.trace(), &targ);
+        assert_eq!(loss.data(), &0.40656146);
+        let gradients = loss.backward();
+        assert_eq!(
+            gradients.ref_gradient(&logits),
+            &[
+                [-0.031813223, -0.044453412, 0.07626665],
+                [0.05489187, -0.04143352, -0.013458336],
+                [-0.037454266, 0.02207594, 0.015378334],
+                [-0.09656205, 0.013436668, 0.083125375],
+                [0.02881821, -0.10633193, 0.0775137]
+            ]
+        );
     }
 }

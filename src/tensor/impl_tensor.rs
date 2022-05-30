@@ -11,7 +11,8 @@ pub trait Tensor:
         // NOTE: we only want to be able to create NoTape tensors
         + TensorCreator
         // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
-        + PutTape<Self::Tape, Output = Self>;
+        + PutTape<Self::Tape, Output = Self>
+        + Clone;
 
     type OwnsTape: 'static + Tensor<Array = Self::Array, Dtype = Self::Dtype, Tape = OwnsTape>;
 
