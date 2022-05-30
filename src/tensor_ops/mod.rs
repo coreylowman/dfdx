@@ -3,6 +3,7 @@
 mod arith;
 mod arith_broadcast_inner;
 mod arith_broadcast_outer;
+mod arith_scalar;
 mod impl_activations;
 mod impl_clamp;
 mod impl_mask;
@@ -17,6 +18,7 @@ mod matmul;
 pub use arith::*;
 pub use arith_broadcast_inner::*;
 pub use arith_broadcast_outer::*;
+pub use arith_scalar::*;
 pub use impl_activations::*;
 pub use impl_clamp::*;
 pub use impl_mask::*;
