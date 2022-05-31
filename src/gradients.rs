@@ -93,16 +93,20 @@ pub struct NoTape;
 
 /// Something that can add a gradient operation to [GradientTape].
 pub trait Tape {
+    /// Whether this object currently owns the [GradientTape]. This is known at compile time.
+    const OWNS_TAPE: bool;
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, operation: F);
 }
 
 impl Tape for OwnsTape {
+    const OWNS_TAPE: bool = true;
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, operation: F) {
         self.0.add_backward_op(operation)
     }
 }
 
 impl Tape for NoTape {
+    const OWNS_TAPE: bool = false;
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, _operation: F) {}
 }
 

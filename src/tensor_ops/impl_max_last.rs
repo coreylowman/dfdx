@@ -23,9 +23,7 @@ pub fn max_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
     });
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
-            *l *= *r
-        });
+        T::Device::mul_assign(t.mut_data(), grads.ref_gradient(&_result));
         T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
     result.put_tape(tape)
