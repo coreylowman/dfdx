@@ -42,6 +42,6 @@ fn main() {
         // update weights with optimizer
         sgd.update(&mut mlp, gradients);
 
-        println!("mse={:#.3} in {:?}", loss_v, start.elapsed());
+        println!("cross entropy={:#.3} in {:?}", loss_v, start.elapsed());
     }
 }
