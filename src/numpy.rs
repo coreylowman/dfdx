@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-/// Saves the data to a .npy file.
+/// Saves the data to a .npy file. This calls [write()].
 ///
 /// This is implemented for an arbitrarily shaped array.
 /// See [WriteNumbers] for how this is done (recursive array traits!).
@@ -28,11 +28,21 @@ where
     P: AsRef<Path>,
 {
     let mut f = File::create(path)?;
+    write(&mut f, t)
+}
+
+/// Writes the data to a [Write].
+///
+/// This is implemented for an arbitrarily shaped array.
+/// See [WriteNumbers] for how this is done (recursive array traits!).
+pub fn write<T, W>(w: &mut W, t: &T) -> Result<usize>
+where
+    T: NumpyDtype + NumpyShape + WriteNumbers,
+    W: Write,
+{
     let mut num_bytes = 0;
-
-    num_bytes += write_header::<T, File>(&mut f, Endian::Little)?;
-    num_bytes += t.write_numbers(&mut f, Endian::Little)?;
-
+    num_bytes += write_header::<T, W>(w, Endian::Little)?;
+    num_bytes += t.write_numbers(w, Endian::Little)?;
     Ok(num_bytes)
 }
 
