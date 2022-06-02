@@ -2,7 +2,7 @@
 
 use std::{
     fs::File,
-    io::{Result, Write},
+    io::{BufWriter, Result, Write},
     path::Path,
 };
 
@@ -27,7 +27,7 @@ where
     T: NumpyDtype + NumpyShape + WriteNumbers,
     P: AsRef<Path>,
 {
-    let mut f = File::create(path)?;
+    let mut f = BufWriter::new(File::create(path)?);
     write(&mut f, t)
 }
 
