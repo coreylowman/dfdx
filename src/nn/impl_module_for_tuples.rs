@@ -99,6 +99,17 @@ macro_rules! tuple_impls {
                 $(self.$idx.randomize(rng, dist));+
             }
         }
+
+        impl<$($name: SaveToZip),+> SaveToZip for ($($name,)+) {
+            /// Calls `SaveToZip::write(self.<idx>, ...)` on each part of the tuple.
+            fn write<W>(&self, base: &String, w: &mut zip::ZipWriter<W>) -> zip::result::ZipResult<()>
+            where
+                W: std::io::Write + std::io::Seek
+            {
+                $(self.$idx.write(&format!("{}{}.", base, $idx), w)?;)+
+                Ok(())
+            }
+        }
     };
 }
 
@@ -112,6 +123,9 @@ tuple_impls!([A, B, C, D, E, F] [0, 1, 2, 3, 4, 5]);
 mod tests {
     use rand::{prelude::StdRng, SeedableRng};
     use rand_distr::StandardNormal;
+    use std::fs::File;
+    use tempfile::NamedTempFile;
+    use zip::ZipArchive;
 
     use super::*;
 
@@ -154,5 +168,36 @@ mod tests {
         assert!(model.0.bias.data() != m0.0.bias.data());
         assert!(model.1.weight.data() != m0.1.weight.data());
         assert!(model.1.bias.data() != m0.1.bias.data());
+    }
+
+    #[test]
+    fn test_save() {
+        let model: (
+            Linear<1, 2>,
+            ReLU,
+            Linear<2, 3>,
+            (Dropout, Linear<1, 2>, Linear<3, 4>),
+        ) = Default::default();
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+        model
+            .save(file.path().to_str().unwrap().to_string())
+            .expect("failed to save model");
+        let f = File::open(file.path()).expect("failed to open resulting file");
+        let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
+        let mut names = zip.file_names().collect::<Vec<&str>>();
+        names.sort();
+        assert_eq!(
+            &names,
+            &[
+                "0.bias.npy",
+                "0.weight.npy",
+                "2.bias.npy",
+                "2.weight.npy",
+                "3.1.bias.npy",
+                "3.1.weight.npy",
+                "3.2.bias.npy",
+                "3.2.weight.npy",
+            ]
+        );
     }
 }

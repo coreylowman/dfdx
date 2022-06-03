@@ -8,11 +8,23 @@ macro_rules! activation_impls {
         pub struct $struct_name;
 
         impl CanUpdateWithGradients for $struct_name {
+            /// Does nothing.
             fn update<G: GradientProvider>(&mut self, _: &mut G) {}
         }
 
         impl Randomize<f32> for $struct_name {
+            /// Does nothing.
             fn randomize<R: Rng, D: Distribution<f32>>(&mut self, _: &mut R, _: &D) {}
+        }
+
+        impl SaveToZip for $struct_name {
+            /// Does nothing.
+            fn write<W>(&self, _: &String, _: &mut zip::ZipWriter<W>) -> zip::result::ZipResult<()>
+            where
+                W: std::io::Write + std::io::Seek,
+            {
+                Ok(())
+            }
         }
 
         impl<T: Tensor<Dtype = f32>> Module<T> for $struct_name {

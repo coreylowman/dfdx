@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{numpy, prelude::*};
 use rand::{distributions::Distribution, Rng};
 
 /// A linear transformation of the form `xW + b`, where `W` is a matrix, `x` is a vector or matrix,
@@ -40,10 +40,29 @@ impl<const I: usize, const O: usize> Randomize<f32> for Linear<I, O> {
     }
 }
 
+impl<const I: usize, const O: usize> SaveToZip for Linear<I, O> {
+    /// Saves `self.weight` to `{filename_prefix}weight.npy` and `self.bias` to `{filename_prefix}bias.npy`
+    /// using [numpy::write()].
+    fn write<W>(
+        &self,
+        filename_prefix: &String,
+        w: &mut zip::ZipWriter<W>,
+    ) -> zip::result::ZipResult<()>
+    where
+        W: std::io::Write + std::io::Seek,
+    {
+        w.start_file(format!("{filename_prefix}weight.npy"), Default::default())?;
+        numpy::write(w, self.weight.data())?;
+        w.start_file(format!("{filename_prefix}bias.npy"), Default::default())?;
+        numpy::write(w, self.bias.data())?;
+        Ok(())
+    }
+}
+
 impl<const I: usize, const O: usize, H: Tape> Module<Tensor1D<I, H>> for Linear<I, O> {
     type Output = Tensor1D<O, H>;
 
-    /// 1d forward
+    /// 1d forward using [vecmat_mul()] and [add()].
     fn forward(&self, x: Tensor1D<I, H>) -> Self::Output {
         add(&self.bias, vecmat_mul(x, &self.weight))
     }
@@ -54,7 +73,7 @@ impl<const B: usize, const I: usize, const O: usize, H: Tape> Module<Tensor2D<B,
 {
     type Output = Tensor2D<B, O, H>;
 
-    /// Batched 2d forward
+    /// Batched 2d forward using [matmul()] and [broadcast_outer_add()]
     fn forward(&self, x: Tensor2D<B, I, H>) -> Self::Output {
         broadcast_outer_add(matmul(x, &self.weight), &self.bias)
     }
@@ -63,6 +82,10 @@ impl<const B: usize, const I: usize, const O: usize, H: Tape> Module<Tensor2D<B,
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::fs::File;
+    use tempfile::NamedTempFile;
+    use zip::ZipArchive;
 
     const W: [[f32; 2]; 5] = [
         [-0.34588930, 0.11733949],
@@ -152,5 +175,31 @@ mod tests {
             gradients.ref_gradient(&model.bias),
             &[0.76791739, -0.31687993]
         );
+    }
+
+    #[test]
+    fn test_save() {
+        let model = Linear {
+            weight: Tensor2D::new(W),
+            bias: Tensor1D::new(B),
+        };
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+        model
+            .save(file.path().to_str().unwrap().to_string())
+            .expect("failed to save model");
+        let f = File::open(file.path()).expect("failed to open resulting file");
+        let mut zip = ZipArchive::new(f).expect("failed to create zip archive from file");
+        {
+            let weight_file = zip
+                .by_name("weight.npy")
+                .expect("failed to find weight.npy file");
+            assert_eq!(weight_file.size(), 114);
+        }
+        {
+            let bias_file = zip
+                .by_name("bias.npy")
+                .expect("failed to find bias.npy file");
+            assert_eq!(bias_file.size(), 82);
+        }
     }
 }

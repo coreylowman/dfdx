@@ -64,11 +64,23 @@ impl Default for Dropout {
     }
 }
 
+impl SaveToZip for Dropout {
+    /// Does nothing.
+    fn write<W>(&self, _: &String, _: &mut zip::ZipWriter<W>) -> zip::result::ZipResult<()>
+    where
+        W: std::io::Write + std::io::Seek,
+    {
+        Ok(())
+    }
+}
+
 impl CanUpdateWithGradients for Dropout {
+    /// Does nothing.
     fn update<G: GradientProvider>(&mut self, _: &mut G) {}
 }
 
 impl Randomize<f32> for Dropout {
+    /// Does nothing.
     fn randomize<R: Rng, D: Distribution<f32>>(&mut self, _: &mut R, _: &D) {}
 }
 
