@@ -33,7 +33,7 @@ fn main() {
     let x: Tensor1D<10> = Tensor1D::zeros();
     let y /*: Tensor1D<2>*/ = mlp.forward(x);
     println!("{:?}", y);
-    mlp.save("mlp.npz")?;
+    mlp.save("checkpoint.npz")?;
 }
 ```
 
@@ -52,7 +52,7 @@ sgd.update(&mut model, gradients);
 
 3. Tensors are backed by normal rust arrays, making it easy to access the underlying data!
 ```rust
-let t0: Tensor0D = Tensor0D::new(0.0);
+let t0: Tensor0D = Tensor0D::zeros();
 assert_eq!(t0.data(), &0.0);
 
 let t1 /*: Tensor1D<3>*/ = Tensor1D::new([1.0, 2.0, 3.0]);
