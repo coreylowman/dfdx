@@ -44,4 +44,7 @@ fn main() {
 
         println!("cross entropy={:#.3} in {:?}", loss_v, start.elapsed());
     }
+
+    mlp.save("classification.npz")
+        .expect("failed to save model");
 }

@@ -33,6 +33,7 @@ fn main() {
     let x: Tensor1D<10> = Tensor1D::zeros();
     let y /*: Tensor1D<2>*/ = mlp.forward(x);
     println!("{:?}", y);
+    mlp.save("mlp.npz")?;
 }
 ```
 

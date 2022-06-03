@@ -44,4 +44,6 @@ fn main() {
 
         println!("mse={:#.3} in {:?}", loss_v, start.elapsed());
     }
+
+    mlp.save("regression.npz").expect("failed to save mlp");
 }

@@ -94,4 +94,8 @@ fn main() {
             BATCH_SIZE as f32 * total_epoch_loss / num_batches as f32,
         );
     }
+
+    model
+        .save("mnist-classifier.npz")
+        .expect("failed to save model");
 }
