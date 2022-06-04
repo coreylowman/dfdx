@@ -1,5 +1,6 @@
 //! Provides some generic functions to save Nd arrays in the .npy format.
 
+use super::*;
 use std::{
     fs::File,
     io::{BufWriter, Result, Write},
@@ -17,7 +18,7 @@ use std::{
 /// Example Usage:
 /// ```no_run
 /// use dfdx::numpy;
-/// let arr = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
+/// let arr = [[1.0f32, 2.0, 3.0], [4.0, 5.0, 6.0]];
 /// numpy::save("test.npy", &arr);
 /// ```
 ///
@@ -44,23 +45,6 @@ where
     num_bytes += write_header::<T, W>(w, Endian::Little)?;
     num_bytes += t.write_numbers(w, Endian::Little)?;
     Ok(num_bytes)
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Endian {
-    Big,
-    Little,
-    Native,
-}
-
-impl Into<char> for Endian {
-    fn into(self) -> char {
-        match self {
-            Endian::Big => '>',
-            Endian::Little => '<',
-            Endian::Native => '=',
-        }
-    }
 }
 
 fn write_header<T, W>(w: &mut W, endian: Endian) -> Result<usize>
@@ -97,60 +81,12 @@ where
     assert!(header.len() < u16::MAX as usize);
     assert!(header.len() % 64 == 0);
 
-    const MAGIC_NUMBER: &[u8] = b"\x93NUMPY";
-    const VERSION: &[u8] = &[1, 0];
-
     let mut num_bytes = 0;
     num_bytes += w.write(MAGIC_NUMBER)?; // magic number
     num_bytes += w.write(VERSION)?; // version major & minor
     num_bytes += w.write(&(header.len() as u16).to_le_bytes())?;
     num_bytes += w.write(&header)?;
     Ok(num_bytes)
-}
-
-/// Represents the NumpyDtype as a const str value.
-///
-/// Values should match up to the (numpy documentation)[https://numpy.org/doc/stable/reference/arrays.dtypes.html]
-/// for dtypes.
-///
-/// For example an f32's dtype is "f4".
-pub trait NumpyDtype {
-    const DTYPE: &'static str;
-}
-
-impl NumpyDtype for f32 {
-    const DTYPE: &'static str = "f4";
-}
-
-impl NumpyDtype for f64 {
-    const DTYPE: &'static str = "f8";
-}
-
-impl<T: NumpyDtype, const M: usize> NumpyDtype for [T; M] {
-    const DTYPE: &'static str = T::DTYPE;
-}
-
-/// A type that implements this returns a vec of usize
-/// that can represent a tuple of ints in a .npy file.
-///
-/// By default this function returns an empty vec, because
-/// a single number is represented by the empty tuple in
-/// a .npy file.
-pub trait NumpyShape {
-    fn shape() -> Vec<usize> {
-        Vec::new()
-    }
-}
-
-impl NumpyShape for f32 {}
-impl NumpyShape for f64 {}
-
-impl<T: NumpyShape, const M: usize> NumpyShape for [T; M] {
-    fn shape() -> Vec<usize> {
-        let mut s = T::shape();
-        s.insert(0, M);
-        s
-    }
 }
 
 /// Write all the numbers in &self with the bytes layed out in [Endian] order.
