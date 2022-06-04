@@ -99,6 +99,14 @@ impl<$(const $Vs: usize, )* H: Tape> Add<f32> for $typename<$($Vs, )* H> {
     }
 }
 
+impl<$(const $Vs: usize, )* H: Tape> Add<$typename<$($Vs, )* H>> for f32 {
+    type Output = $typename<$($Vs, )* H>;
+    /// Calls [scalar_add()] - implements `f32 + T<H>`
+    fn add(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
+        scalar_add(rhs, self)
+    }
+}
+
 impl<$(const $Vs: usize, )* H: Tape> Sub<f32> for $typename<$($Vs, )* H> {
     type Output = Self;
     /// Calls [scalar_sub()] - implements `T<H> - f32`
@@ -107,11 +115,27 @@ impl<$(const $Vs: usize, )* H: Tape> Sub<f32> for $typename<$($Vs, )* H> {
     }
 }
 
+impl<$(const $Vs: usize, )* H: Tape> Sub<$typename<$($Vs, )* H>> for f32 {
+    type Output = $typename<$($Vs, )* H>;
+    /// Calls [scalar_add()] with neg(rhs) - implements `-T<H> + f32`
+    fn sub(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
+        scalar_add(-rhs, self)
+    }
+}
+
 impl<$(const $Vs: usize, )* H: Tape> Mul<f32> for $typename<$($Vs, )* H> {
     type Output = Self;
     /// Calls [scalar_mul()] - implements `T<H> * f32`
     fn mul(self, rhs: f32) -> Self::Output {
         scalar_mul(self, rhs)
+    }
+}
+
+impl<$(const $Vs: usize, )* H: Tape> Mul<$typename<$($Vs, )* H>> for f32 {
+    type Output = $typename<$($Vs, )* H>;
+    /// Calls [scalar_mul()] - implements `f32 * T<H>`
+    fn mul(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
+        scalar_mul(rhs, self)
     }
 }
 

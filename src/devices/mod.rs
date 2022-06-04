@@ -1,6 +1,7 @@
 //! Provides implementations for modifying Nd arrays on the CPU.
 
 mod fill;
+mod gather;
 mod map;
 mod reduce;
 mod reduce_last_dim;
@@ -11,6 +12,7 @@ mod zip_map;
 pub struct Cpu;
 
 pub use fill::*;
+pub use gather::*;
 pub use map::*;
 pub use reduce::*;
 pub use reduce_last_dim::*;
@@ -26,6 +28,7 @@ pub trait Device<T: crate::arrays::CountElements>:
     + AllocateZeros
     + ReduceLastDim<T>
     + ZipMapElements<T, <Self as ReduceLastDim<T>>::Reduced>
+    + GatherElements<T>
 {
 }
 
@@ -34,6 +37,7 @@ impl<T: crate::arrays::CountElements, const M: usize> Device<[T; M]> for Cpu whe
     Cpu: Device<T>
         + ReduceLastDim<[T; M]>
         + ZipMapElements<[T; M], <Self as ReduceLastDim<[T; M]>>::Reduced>
+        + GatherElements<[T; M]>
 {
 }
 

@@ -12,6 +12,11 @@ impl CountElements for f32 {
     type Dtype = Self;
 }
 
+impl CountElements for usize {
+    const NUM_ELEMENTS: usize = 1;
+    type Dtype = Self;
+}
+
 impl<T: CountElements, const M: usize> CountElements for [T; M] {
     const NUM_ELEMENTS: usize = M * T::NUM_ELEMENTS;
     type Dtype = T::Dtype;
