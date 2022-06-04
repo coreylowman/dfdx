@@ -32,11 +32,11 @@ fn main() {
 
     // initiliaze model - all weights are 0s
     let mut q_net: QNetwork = Default::default();
-    q_net.randomize(&mut rng, &Normal::new(-0.1, 0.1).unwrap());
+    q_net.randomize(&mut rng, &Normal::new(0.0, 0.1).unwrap());
 
     let target_q_net: QNetwork = q_net.clone();
 
-    let mut sgd = Sgd::new(0.5, Some(Momentum::Nesterov(0.9)));
+    let mut sgd = Sgd::new(1e-1, Some(Momentum::Nesterov(0.9)));
 
     // run through training data
     for _i_epoch in 0..15 {
