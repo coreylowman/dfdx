@@ -3,6 +3,28 @@
 use crate::prelude::*;
 use rand::prelude::SliceRandom;
 
+/// Generates a tensor with ordered data from 0 to `N`.
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let t = arange::<5>();
+/// assert_eq!(t.data(), &[0.0, 1.0, 2.0, 3.0, 4.0]);
+/// ```
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let t: Tensor1D<10> = arange();
+/// assert_eq!(t.data(), &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
+/// ```
+pub fn arange<const N: usize>() -> Tensor1D<N> {
+    let mut output = Tensor1D::zeros();
+    for i in 0..N {
+        output.mut_data()[i] = i as f32;
+    }
+    output
+}
+
 /// One hot encodes an array of class labels into a [Tensor2D] of probability
 /// vectors. This can be used in tandem with [cross_entropy_with_logits_loss()].
 ///
