@@ -57,6 +57,32 @@ pub fn div<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
     binary_map(lhs, rhs, f, dfdx, dfdy)
 }
 
+/// Takes the element wise minimum of two [Tensor]s of the same shape: `min(&lhs, rhs)`.
+pub fn minimum<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
+    fn f(x: &f32, y: &f32) -> f32 {
+        x.min(*y)
+    }
+    fn dfdx(x: &f32, y: &f32) -> f32 {
+        if x < y {
+            1.0
+        } else if x > y {
+            0.0
+        } else {
+            0.5
+        }
+    }
+    fn dfdy(x: &f32, y: &f32) -> f32 {
+        if y < x {
+            1.0
+        } else if y > x {
+            0.0
+        } else {
+            0.5
+        }
+    }
+    binary_map(lhs, rhs, f, dfdx, dfdy)
+}
+
 /// Applies a binary function `f`, it's partial wrt. x `dfdx`, and its partial wrt. y `dfdy`
 /// to a pair of [Tensor]s `lhs` and `rhs.
 ///
@@ -104,6 +130,15 @@ impl<$(const $Vs: usize, )* H: Tape> Sub<$typename<$($Vs, )* H>> for &$typename<
     /// Calls [sub()] - implements `&T<NoTape> - T<H>`
     fn sub(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
         sub(self, rhs)
+    }
+}
+
+impl<$(const $Vs: usize, )* H: Tape> Sub<$typename<$($Vs, )* NoTape>> for $typename<$($Vs, )* H> {
+    type Output = $typename<$($Vs, )* H>;
+    /// Moves the tape around and then calls [sub()]  - implements `T<H> - &T<NoTape>`
+    fn sub(self, rhs: $typename<$($Vs, )* NoTape>) -> Self::Output {
+        let (lhs, tape) = self.split_tape();
+        sub(&lhs, rhs.put_tape(tape))
     }
 }
 
@@ -325,6 +360,85 @@ mod tests {
                 [0.25367835, 0.97580016, 1.1111112],
                 [0.29456818, 0.2377556, 0.1997922]
             ]
+        );
+    }
+
+    #[test]
+    fn test_minimum_0d_rhs() {
+        let a = Tensor0D::new(0.0);
+        let b = Tensor0D::new(1.0);
+
+        let result = minimum(&a, b.trace());
+        assert_eq!(result.data(), &0.0);
+
+        let gradients = result.backward();
+        assert_eq!(gradients.ref_gradient(&a), &1.0);
+        assert_eq!(gradients.ref_gradient(&b), &0.0);
+    }
+
+    #[test]
+    fn test_minimum_0d_lhs() {
+        let a = Tensor0D::new(1.0);
+        let b = Tensor0D::new(-1.0);
+
+        let result = minimum(&a, b.trace());
+        assert_eq!(result.data(), &-1.0);
+
+        let gradients = result.backward();
+        assert_eq!(gradients.ref_gradient(&a), &0.0);
+        assert_eq!(gradients.ref_gradient(&b), &1.0);
+    }
+
+    #[test]
+    fn test_minimum_1d() {
+        let a = Tensor1D::new([-1.0, 0.0, 1.0, 2.0]);
+        let b = Tensor1D::new([0.0, -1.0, 2.0, 0.0]);
+
+        let result = minimum(&a, b.trace());
+        assert_eq!(result.data(), &[-1.0, -1.0, 1.0, 0.0]);
+
+        // NOTE: call .exp() to make sure we cover cases where it uses the result's gradient
+        let gradients = result.exp().sum().backward();
+        assert_eq!(
+            gradients.ref_gradient(&a),
+            &[0.36787945, 0.0, 2.7182817, 0.0]
+        );
+        assert_eq!(gradients.ref_gradient(&b), &[0.0, 0.36787945, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn test_minimum_1d_eq() {
+        let a = Tensor1D::new([-1.0, 0.0, 1.0]);
+        let b = Tensor1D::new([-1.0, 0.0, 1.0]);
+
+        let result = minimum(&a, b.trace());
+        assert_eq!(result.data(), a.data());
+
+        // NOTE: call .exp() to make sure we cover cases where it uses the result's gradient
+        let gradients = result.mean().backward();
+        assert_eq!(gradients.ref_gradient(&a), &[1.0 / 6.0; 3]);
+        assert_eq!(gradients.ref_gradient(&b), &[1.0 / 6.0; 3]);
+    }
+
+    #[test]
+    fn test_minimum_2d() {
+        let a = Tensor2D::new([[-1.1488, 0.2021, 1.1265], [0.1355, -1.7390, -0.4191]]);
+        let b = Tensor2D::new([[-0.2851, -0.0965, -0.2529], [0.4759, -0.5239, -0.4651]]);
+
+        let result = minimum(&a, b.trace());
+        assert_eq!(
+            result.data(),
+            &[[-1.1488, -0.0965, -0.2529], [0.1355, -1.7390, -0.4651]]
+        );
+
+        let gradients = result.sum().backward();
+        assert_eq!(
+            gradients.ref_gradient(&a),
+            &[[1.0, 0.0, 0.0], [1.0, 1.0, 0.0]]
+        );
+        assert_eq!(
+            gradients.ref_gradient(&b),
+            &[[0.0, 1.0, 1.0], [0.0, 0.0, 1.0]]
         );
     }
 }
