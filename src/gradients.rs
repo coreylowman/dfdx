@@ -1,4 +1,4 @@
-//! Implementations of Gradient tapes and generic gradient containers.
+//! Implementations of [GradientTape] and generic Nd array containers via [Gradients].
 
 use crate::prelude::*;
 use std::collections::HashMap;

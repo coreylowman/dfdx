@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Calls [Device::sum_last_dim()] on the underlying array.
+/// Reduces the last dimension of the tensor by summing all the values in that dimension.
 /// Result [Tensor] has smaller number of dimensions.
 ///
 /// Examples:

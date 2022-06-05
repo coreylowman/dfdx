@@ -1,4 +1,4 @@
-//! Standard loss functions such as mse, mae, cross entropy, and more.
+//! Standard loss functions such as [mse_loss()], [cross_entropy_with_logits_loss()], and more.
 
 use crate::prelude::*;
 

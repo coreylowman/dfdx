@@ -1,4 +1,4 @@
-//! Provides implementations for modifying Nd arrays on the CPU.
+//! Provides implementations for modifying Nd arrays on the [Cpu].
 
 mod fill;
 mod gather;

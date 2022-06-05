@@ -1,4 +1,5 @@
-//! Provides some generic functions to load & save Nd arrays in the .npy format. See [load()] and [save()]
+//! Provides some generic functions to load & save Nd arrays in the [.npy](https://numpy.org/devdocs/reference/generated/numpy.lib.format.html)
+//! format. See [load()] and [save()]
 
 mod load;
 mod save;

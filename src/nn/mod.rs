@@ -1,4 +1,5 @@
-//! High level neural network building blocks such as [Linear], activations, and tuples as feedforward networks.
+//! High level neural network building blocks such as [Linear], activations, and tuples as [Module]s.
+//! Also includes `.save()` & `.load()` for all [Module]s.
 //!
 //! Saving and loading model parameters is done using [SaveToNpz] and [LoadFromNpz]. All modules provided here implement it,
 //! including tuples. So you can call [SaveToNpz::save()] to save the module to a `.npz` zip file

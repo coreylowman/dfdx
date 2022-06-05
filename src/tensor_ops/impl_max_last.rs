@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Calls [Device::reduce_last_dim(..., f32::max)] on the underlying array.
+/// Reduces the last dimension of the tensor by gathering the maximum value from that dimension.
 /// Resulting [Tensor] has the last dimension removed (e.g. a 2d tensor will become 1d).
 ///
 /// Examples:

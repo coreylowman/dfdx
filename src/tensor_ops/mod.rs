@@ -1,4 +1,4 @@
-//! Implementations of all operations for tensors, including activations, binary operations, and other methods.
+//! Implementations of all ops for tensors including activations like [relu()], binary operations like [matmul()], and more.
 
 mod arith;
 mod arith_broadcast_inner;

@@ -20,7 +20,7 @@ impl<const M: usize> ZipMapElements<[f32; M], usize> for Cpu {
     }
 }
 
-/// Calls [Device::gather()] on the underlying array.
+/// Reduces the last dimension of the tensor by gathering the value specified by `indices`.
 /// Resulting [Tensor] has the last dimension removed (e.g. a 2d tensor will become 1d).
 ///
 /// Examples:
@@ -31,7 +31,7 @@ impl<const M: usize> ZipMapElements<[f32; M], usize> for Cpu {
 /// assert_eq!(r.data(), &[3.0, -2.0]);
 /// ```
 ///
-/// This is equivalent to calling `t.max(-1)[0]` in pytorch.
+/// This is equivalent to calling `t.gather(-1, indices)` in pytorch.
 pub fn gather_last_dim<T: Tensor<Dtype = f32>, I>(t: T, indices: &I) -> T::LastDimReduced
 where
     I: CountElements<Dtype = usize>,
