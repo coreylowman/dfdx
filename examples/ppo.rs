@@ -2,7 +2,7 @@
 
 use dfdx::prelude::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use rand_distr::{Normal, Uniform};
+use rand_distr::Uniform;
 use std::time::Instant;
 
 const STATE_SIZE: usize = 4;
