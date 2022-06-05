@@ -4,7 +4,7 @@ use super::*;
 use num_bigint::{BigInt, BigUint};
 use std::{
     fs::File,
-    io::{BufReader, Read, Result},
+    io::{BufReader, Read},
     path::Path,
     str::Utf8Error,
 };
@@ -18,17 +18,17 @@ use std::{
 /// base type, you can implement [NumpyShape]
 ///
 /// Example Usage:
-/// ```no_run
+/// ```ignore
 /// use dfdx::numpy;
 /// let mut arr = [[0.0f32; 3]; 2];
 /// numpy::load("test.npy", &mut arr);
 /// ```
-pub fn load<T, P>(path: P, t: &mut T) -> std::result::Result<(), ReadError>
+pub fn load<T, P>(path: P, t: &mut T) -> Result<(), NpyError>
 where
     T: NumpyDtype + NumpyShape + ReadNumbers,
     P: AsRef<Path>,
 {
-    let mut f = BufReader::new(File::open(path).map_err(ReadError::IoError)?);
+    let mut f = BufReader::new(File::open(path).map_err(NpyError::IoError)?);
     read(&mut f, t)
 }
 
@@ -45,7 +45,7 @@ where
 /// 5. Read the data using [ReadNumbers].
 ///
 /// Multiple errors can happen from each of the above parts!
-pub fn read<T, R>(r: &mut R, t: &mut T) -> std::result::Result<(), ReadError>
+pub fn read<T, R>(r: &mut R, t: &mut T) -> Result<(), NpyError>
 where
     T: NumpyDtype + NumpyShape + ReadNumbers,
     R: Read,
@@ -53,31 +53,31 @@ where
     let header = read_header(r)?;
     let expected_shape = T::shape();
     if expected_shape.len() != header.shape.len() {
-        return Err(ReadError::WrongShape);
+        return Err(NpyError::WrongShape);
     }
     for (&e, f) in T::shape().iter().zip(header.shape.iter()) {
         if &BigInt::from(BigUint::from(e)) != f {
-            return Err(ReadError::WrongShape);
+            return Err(NpyError::WrongShape);
         }
     }
     let endian = match &header.descr.chars().nth(0) {
         Some('>') => Endian::Big,
         Some('<') => Endian::Little,
         Some('=') => Endian::Native,
-        _ => return Err(ReadError::InvalidAlignment),
+        _ => return Err(NpyError::InvalidAlignment),
     };
 
     if T::DTYPE != &header.descr[1..] {
-        return Err(ReadError::WrongDtype);
+        return Err(NpyError::WrongDtype);
     }
 
-    t.read_numbers(r, endian).map_err(ReadError::IoError)?;
+    t.read_numbers(r, endian).map_err(NpyError::IoError)?;
 
     Ok(())
 }
 
 #[derive(Debug)]
-pub enum ReadError {
+pub enum NpyError {
     /// Magic number did not match the expected value.
     InvalidMagicNumber([u8; 6]),
 
@@ -129,37 +129,36 @@ struct ParsedHeader {
     shape: Vec<BigInt>,
 }
 
-fn read_header<R>(r: &mut R) -> std::result::Result<ParsedHeader, ReadError>
+fn read_header<R>(r: &mut R) -> Result<ParsedHeader, NpyError>
 where
     R: Read,
 {
     let mut magic = [0; 6];
-    r.read_exact(&mut magic).map_err(ReadError::IoError)?;
+    r.read_exact(&mut magic).map_err(NpyError::IoError)?;
     if magic != MAGIC_NUMBER {
-        return Err(ReadError::InvalidMagicNumber(magic));
+        return Err(NpyError::InvalidMagicNumber(magic));
     }
 
     let mut version = [0; 2];
-    r.read_exact(&mut version).map_err(ReadError::IoError)?;
+    r.read_exact(&mut version).map_err(NpyError::IoError)?;
     if version != VERSION {
-        return Err(ReadError::InvalidVersion(version));
+        return Err(NpyError::InvalidVersion(version));
     }
 
     let mut header_len_bytes = [0; 2];
     r.read_exact(&mut header_len_bytes)
-        .map_err(ReadError::IoError)?;
+        .map_err(NpyError::IoError)?;
     let header_len = u16::from_le_bytes(header_len_bytes);
 
     let mut header_bytes: Vec<u8> = vec![0; header_len as usize];
-    r.read_exact(&mut header_bytes)
-        .map_err(ReadError::IoError)?;
+    r.read_exact(&mut header_bytes).map_err(NpyError::IoError)?;
 
     let header = std::str::from_utf8(&header_bytes)
-        .map_err(ReadError::Utf8Error)?
+        .map_err(NpyError::Utf8Error)?
         .to_string();
 
-    let py_header: py_literal::Value = header.trim().parse().map_err(ReadError::PyLiteral)?;
-    let items = py_header.as_dict().ok_or(ReadError::HeaderNotADict)?;
+    let py_header: py_literal::Value = header.trim().parse().map_err(NpyError::PyLiteral)?;
+    let items = py_header.as_dict().ok_or(NpyError::HeaderNotADict)?;
 
     let mut descr = None;
     let mut shape = None;
@@ -176,26 +175,26 @@ where
         }
     }
 
-    let descr = descr.ok_or(ReadError::HeaderMissingDescr)?;
-    let fortran_order = fortran_order.ok_or(ReadError::HeaderMissingFortranOrder)?;
-    let shape = shape.ok_or(ReadError::HeaderInvalidShape)?;
+    let descr = descr.ok_or(NpyError::HeaderMissingDescr)?;
+    let fortran_order = fortran_order.ok_or(NpyError::HeaderMissingFortranOrder)?;
+    let shape = shape.ok_or(NpyError::HeaderInvalidShape)?;
 
     if fortran_order != &py_literal::Value::Boolean(false) {
-        return Err(ReadError::HeaderInvalidFortranOrder);
+        return Err(NpyError::HeaderInvalidFortranOrder);
     }
 
     let descr = descr
         .as_string()
-        .ok_or(ReadError::HeaderInvalidDescr)?
+        .ok_or(NpyError::HeaderInvalidDescr)?
         .clone();
 
-    let shape_values = shape.as_tuple().ok_or(ReadError::HeaderInvalidShape)?;
+    let shape_values = shape.as_tuple().ok_or(NpyError::HeaderInvalidShape)?;
 
     let mut shape: Vec<BigInt> = Vec::new();
     for item in shape_values.iter() {
         let v = match item {
             py_literal::Value::Integer(value) => value.clone(),
-            _ => return Err(ReadError::HeaderInvalidShape),
+            _ => return Err(NpyError::HeaderInvalidShape),
         };
         shape.push(v);
     }
@@ -207,11 +206,11 @@ where
 /// Most types that this should be implemented for have `Self::from_be_bytes()`, `Self::from_le_bytes()`,
 /// and `Self::from_ne_bytes()`.
 pub trait ReadNumbers {
-    fn read_numbers<R: Read>(&mut self, r: &mut R, endian: Endian) -> Result<()>;
+    fn read_numbers<R: Read>(&mut self, r: &mut R, endian: Endian) -> std::io::Result<()>;
 }
 
 impl ReadNumbers for f32 {
-    fn read_numbers<R: Read>(&mut self, r: &mut R, endian: Endian) -> Result<()> {
+    fn read_numbers<R: Read>(&mut self, r: &mut R, endian: Endian) -> std::io::Result<()> {
         let mut bytes = [0; 4];
         r.read_exact(&mut bytes)?;
         *self = match endian {
@@ -224,7 +223,7 @@ impl ReadNumbers for f32 {
 }
 
 impl ReadNumbers for f64 {
-    fn read_numbers<R: Read>(&mut self, r: &mut R, endian: Endian) -> Result<()> {
+    fn read_numbers<R: Read>(&mut self, r: &mut R, endian: Endian) -> std::io::Result<()> {
         let mut bytes = [0; 8];
         r.read_exact(&mut bytes)?;
         *self = match endian {
@@ -237,7 +236,7 @@ impl ReadNumbers for f64 {
 }
 
 impl<T: ReadNumbers, const M: usize> ReadNumbers for [T; M] {
-    fn read_numbers<R: Read>(&mut self, r: &mut R, endian: Endian) -> Result<()> {
+    fn read_numbers<R: Read>(&mut self, r: &mut R, endian: Endian) -> std::io::Result<()> {
         for i in 0..M {
             self[i].read_numbers(r, endian)?;
         }

@@ -17,16 +17,6 @@ macro_rules! activation_impls {
             fn randomize<R: Rng, D: Distribution<f32>>(&mut self, _: &mut R, _: &D) {}
         }
 
-        impl SaveToZip for $struct_name {
-            /// Does nothing.
-            fn write<W>(&self, _: &String, _: &mut zip::ZipWriter<W>) -> zip::result::ZipResult<()>
-            where
-                W: std::io::Write + std::io::Seek,
-            {
-                Ok(())
-            }
-        }
-
         impl<T: Tensor<Dtype = f32>> Module<T> for $struct_name {
             type Output = T;
             fn forward(&self, input: T) -> Self::Output {

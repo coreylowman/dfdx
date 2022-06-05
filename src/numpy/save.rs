@@ -16,7 +16,7 @@ use std::{
 /// base type, you can implement [NumpyShape]
 ///
 /// Example Usage:
-/// ```no_run
+/// ```ignore
 /// use dfdx::numpy;
 /// let arr = [[1.0f32, 2.0, 3.0], [4.0, 5.0, 6.0]];
 /// numpy::save("test.npy", &arr);
