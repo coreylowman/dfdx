@@ -70,7 +70,7 @@ pub fn kl_div_with_logits_loss<T: Tensor<Dtype = f32>>(
 ) -> Tensor0D<T::Tape> {
     mean(sum_last_dim(mul(
         target_probs,
-        sub(&ln(target_probs.clone()), log_softmax(logits)),
+        sub(&ln(target_probs.duplicate()), log_softmax(logits)),
     )))
 }
 

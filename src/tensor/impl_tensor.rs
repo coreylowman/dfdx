@@ -7,14 +7,15 @@ pub trait Tensor:
     type Tape: Tape;
 
     type NoTape: 'static
-        + Tensor<Array = Self::Array, Dtype = Self::Dtype, Tape = NoTape>
+        + Tensor<Array = Self::Array, Dtype = Self::Dtype, Tape = NoTape, NoTape = Self::NoTape>
         // NOTE: we only want to be able to create NoTape tensors
         + TensorCreator
         // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
         + PutTape<Self::Tape, Output = Self>
         + Clone;
 
-    type OwnsTape: 'static + Tensor<Array = Self::Array, Dtype = Self::Dtype, Tape = OwnsTape>;
+    type OwnsTape: 'static
+        + Tensor<Array = Self::Array, Dtype = Self::Dtype, Tape = OwnsTape, OwnsTape = Self::OwnsTape>;
 
     type LastDimReduced: Tensor<
         Tape = Self::Tape,
@@ -50,6 +51,17 @@ impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
             id: self.id,
             data: self.data.clone(),
             tape: NoTape::default(),
+        }
+    }
+}
+
+impl<$(const $Vs: usize, )* H: Clone> Clone for $struct<$($Vs, )* H> {
+    /// Clones the underlying data and tape. **Creates a new [UniqueId].**
+    fn clone(&self) -> Self {
+        Self {
+            id: unique_id(),
+            data: self.data.clone(),
+            tape: self.tape.clone(),
         }
     }
 }
