@@ -74,6 +74,53 @@ pub fn kl_div_with_logits_loss<T: Tensor<Dtype = f32>>(
     )))
 }
 
+/// Binary Cross Entropy With Logits in numerically stable way.
+///
+/// Computes `(1 - target_probs) * logits + log(1 + exp(-logits))`.
+///
+/// Inputs:
+/// - `logits` - unnormalized inputs. **NOT** output of sigmoid
+/// - `target_probs` - target values between 0 and 1.
+///
+/// Implementation Details:
+///
+/// The numerical stable version involves subtracting the maximum value
+/// of logits in a way that doesn't change the output (i.e. adding zero):
+/// 1. Start with `log(1 + exp(-logits))`
+/// 2. Add zero (variable Q can be anything) `Q - Q + log(1 + exp(-logits))`
+/// 3. log(exp(Q)) == Q: `Q - log(exp(Q)) + log(1 + exp(-logits))`
+/// 4. log(x) - log(y) = log(x / y): `Q + log((1 + exp(-logits)) / exp(Q))`
+/// 5. 1 / exp(Q) = exp(-Q): `Q + log(exp(-Q) + exp(-logits) / exp(Q))`
+/// 6. exp(A) / exp(B) = exp(A-B): `Q + log(exp(-Q) + exp(-logits - Q))`
+/// 7. Now set `Q = max(logits)`!
+pub fn binary_cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
+    logits: T,
+    target_probs: &T::NoTape,
+) -> Tensor0D<T::Tape> {
+    let (logits, tape) = logits.split_tape();
+
+    // max_value = (-logits).clamp(min=0)
+    let max_value = clamp(negate(logits.duplicate()), 0.0, f32::INFINITY);
+
+    // a = exp(-(max_value + logits))
+    let a = exp(negate(add(&max_value, logits.duplicate().put_tape(tape))));
+
+    // b = ln(exp(-max_value) + a)
+    let b = ln(add(&exp(negate(max_value.duplicate())), a));
+
+    // c = max_value + b
+    let c = add(&max_value, b);
+    let (c, tape) = c.split_tape();
+
+    // d = (1 - T)
+    let d = negate(scalar_sub(target_probs.duplicate(), 1.0));
+
+    // e = logits * d
+    let e = mul(&d, logits.put_tape(tape));
+
+    mean(add(&c, e))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,6 +219,26 @@ mod tests {
                 [-0.037454266, 0.02207594, 0.015378334],
                 [-0.09656205, 0.013436668, 0.083125375],
                 [0.02881821, -0.10633193, 0.0775137]
+            ]
+        );
+    }
+
+    #[test]
+    fn test_bce() {
+        let p = Tensor2D::new([[100.0; 3], [-100.0; 3], [-1.0, 0.0, 1.0]]);
+        let t = Tensor2D::new([[0.0, 0.5, 1.0]; 3]);
+
+        let loss = binary_cross_entropy_with_logits_loss(p.trace(), &t);
+        assert_eq!(loss.data(), &33.479965);
+
+        let gradients = loss.backward();
+
+        assert_eq!(
+            gradients.ref_gradient(&p),
+            &[
+                [0.11111111, 0.055555556, -4e-45],
+                [0.0, -0.055555556, -0.11111111],
+                [0.029882379, 0.0, -0.02988238]
             ]
         );
     }
