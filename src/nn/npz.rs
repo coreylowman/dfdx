@@ -139,6 +139,26 @@ empty_npz_impl!(Abs);
 // Other misc layers.
 empty_npz_impl!(Dropout);
 
+impl<const N: usize> SaveToNpz for DropoutOneIn<N> {
+    /// Does nothing.
+    fn write<W>(&self, _: &String, _: &mut ZipWriter<W>) -> ZipResult<()>
+    where
+        W: Write + Seek,
+    {
+        Ok(())
+    }
+}
+
+impl<const N: usize> LoadFromNpz for DropoutOneIn<N> {
+    /// Does nothing.
+    fn read<R>(&mut self, _: &String, _: &mut ZipArchive<R>) -> Result<(), NpzError>
+    where
+        R: Read + Seek,
+    {
+        Ok(())
+    }
+}
+
 impl<const I: usize, const O: usize> SaveToNpz for Linear<I, O> {
     /// Saves `self.weight` to `{filename_prefix}weight.npy` and `self.bias` to `{filename_prefix}bias.npy`
     /// using [numpy::write()].

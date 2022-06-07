@@ -3,6 +3,54 @@ use rand::{prelude::StdRng, Rng, SeedableRng};
 use rand_distr::Distribution;
 use std::{cell::RefCell, ops::DerefMut};
 
+/// A [Module<Tensor>] that calls [dropout()] in [Module::forward()] with probability `1.0 / N`.
+/// Note that [dropout()] does not do anything for tensors with [NoTape].
+///
+/// Generic Arguments:
+/// - `N`: p is set as `1.0 / N`
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let dropout: DropoutOneIn<2> = Default::default();
+/// let t: Tensor2D<2, 5> = Tensor2D::ones();
+/// let r = dropout.forward(t.trace());
+/// assert_eq!(r.data(), &[[2.0, 2.0, 2.0, 2.0, 2.0], [0.0, 2.0, 2.0, 2.0, 0.0]]);
+/// ```
+#[derive(Clone, Debug)]
+pub struct DropoutOneIn<const N: usize> {
+    rng: RefCell<StdRng>,
+}
+
+impl<const N: usize> Default for DropoutOneIn<N> {
+    /// Seeds [StdRng] with 0.
+    fn default() -> Self {
+        Self {
+            rng: RefCell::new(StdRng::seed_from_u64(0)),
+        }
+    }
+}
+
+impl<const N: usize> CanUpdateWithGradients for DropoutOneIn<N> {
+    /// Does nothing.
+    fn update<G: GradientProvider>(&mut self, _: &mut G) {}
+}
+
+impl<const N: usize> Randomize<f32> for DropoutOneIn<N> {
+    /// Does nothing.
+    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, _: &mut R, _: &D) {}
+}
+
+impl<const N: usize, T: Tensor<Dtype = f32>> Module<T> for DropoutOneIn<N> {
+    type Output = T;
+
+    /// Calls [dropout()] with `p=1/N` using `self.rng`.
+    fn forward(&self, input: T) -> Self::Output {
+        let mut rng = self.rng.borrow_mut();
+        dropout(input, 1.0 / N as f32, rng.deref_mut())
+    }
+}
+
 /// A [Module<Tensor>] that calls [dropout()] in [Module::forward()] with probability `self.p`.
 ///
 /// This also implements [Module<(Tensor, Rng)>] if you want to pass in an [Rng] externally, though
