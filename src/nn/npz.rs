@@ -233,6 +233,38 @@ tuple_impls!([A, B, C, D] [0, 1, 2, 3]);
 tuple_impls!([A, B, C, D, E] [0, 1, 2, 3, 4]);
 tuple_impls!([A, B, C, D, E, F] [0, 1, 2, 3, 4, 5]);
 
+impl<T: SaveToNpz, const N: usize> SaveToNpz for Repeated<T, N> {
+    /// Calls `SaveToNpz::write(self.modules[i], ...)` on each sub module. See [SaveToNpz].
+    ///
+    /// E.g. for a two items with `base == ""`, this will call:
+    /// 1. `self.modules[0].write("0.", w)`
+    /// 2. `self.modules[1].write("1.", w)`
+    fn write<W: Write + Seek>(&self, base: &String, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        for i in 0..N {
+            self.modules[i].write(&format!("{}{}.", base, i), w)?;
+        }
+        Ok(())
+    }
+}
+
+impl<T: LoadFromNpz, const N: usize> LoadFromNpz for Repeated<T, N> {
+    /// Calls `LoadFromNpz::read(self.modules[i], ...)` on each sub module. See [LoadFromNpz].
+    ///
+    /// E.g. for a two items with `base == ""`, this will call:
+    /// 1. `self.modules[0].read("0.", r)`
+    /// 2. `self.modules[1].read("1.", r)`
+    fn read<R: Read + Seek>(
+        &mut self,
+        base: &String,
+        r: &mut ZipArchive<R>,
+    ) -> Result<(), NpzError> {
+        for i in 0..N {
+            self.modules[i].read(&format!("{}{}.", base, i), r)?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -354,5 +386,60 @@ mod tests {
             saved_model.3 .2.weight.data()
         );
         assert_eq!(loaded_model.3 .2.bias.data(), saved_model.3 .2.bias.data());
+    }
+
+    #[test]
+    fn test_save_repeated() {
+        let model: Repeated<Linear<3, 3>, 4> = Default::default();
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+        model
+            .save(file.path().to_str().unwrap().to_string())
+            .expect("failed to save model");
+        let f = File::open(file.path()).expect("failed to open resulting file");
+        let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
+        let mut names = zip.file_names().collect::<Vec<&str>>();
+        names.sort();
+        assert_eq!(
+            &names,
+            &[
+                "0.bias.npy",
+                "0.weight.npy",
+                "1.bias.npy",
+                "1.weight.npy",
+                "2.bias.npy",
+                "2.weight.npy",
+                "3.bias.npy",
+                "3.weight.npy",
+            ]
+        );
+    }
+
+    #[test]
+    fn test_load_repeated() {
+        type Model = Repeated<Linear<3, 3>, 4>;
+
+        let mut rng = StdRng::seed_from_u64(0);
+        let mut saved_model: Model = Default::default();
+        saved_model.randomize(&mut rng, &Standard);
+
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+        assert!(saved_model
+            .save(file.path().to_str().unwrap().to_string())
+            .is_ok());
+
+        let mut loaded_model: Model = Default::default();
+        assert!(loaded_model
+            .load(file.path().to_str().unwrap().to_string())
+            .is_ok());
+        for i in 0..4 {
+            assert_eq!(
+                loaded_model.modules[i].weight.data(),
+                saved_model.modules[i].weight.data()
+            );
+            assert_eq!(
+                loaded_model.modules[i].bias.data(),
+                saved_model.modules[i].bias.data()
+            );
+        }
     }
 }
