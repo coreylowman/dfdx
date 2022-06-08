@@ -1,5 +1,6 @@
 use crate::prelude::*;
-use rand::{distributions::Distribution, Rng};
+use rand::Rng;
+use rand_distr::Uniform;
 
 /// A linear transformation of the form `xW + b`, where `W` is a matrix, `x` is a vector or matrix,
 /// and `b` is a vector. If `x` is a matrix this does matrix multiplication.
@@ -33,10 +34,16 @@ impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
     }
 }
 
-impl<const I: usize, const O: usize> Randomize<f32> for Linear<I, O> {
-    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
-        self.weight.randomize(rng, dist);
-        self.bias.randomize(rng, dist);
+impl<const I: usize, const O: usize> ResetParams for Linear<I, O> {
+    /// Initializes `self.weight` and `self.bias` from a [Uniform] distribution
+    /// between [-1 / sqrt(I), 1 / sqrt(I)].
+    ///
+    /// This uses [Randomize::randomize()] to set the values of the tensor.
+    fn reset_params<R: Rng>(&mut self, rng: &mut R) {
+        let bound: f32 = 1.0 / (I as f32).sqrt();
+        let dist = Uniform::new(-bound, bound);
+        self.weight.randomize(rng, &dist);
+        self.bias.randomize(rng, &dist);
     }
 }
 

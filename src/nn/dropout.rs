@@ -1,6 +1,5 @@
 use crate::prelude::*;
 use rand::{prelude::StdRng, Rng, SeedableRng};
-use rand_distr::Distribution;
 use std::{cell::RefCell, ops::DerefMut};
 
 /// A [Module<Tensor>] that calls [dropout()] in [Module::forward()] with probability `1.0 / N`.
@@ -36,9 +35,9 @@ impl<const N: usize> CanUpdateWithGradients for DropoutOneIn<N> {
     fn update<G: GradientProvider>(&mut self, _: &mut G) {}
 }
 
-impl<const N: usize> Randomize<f32> for DropoutOneIn<N> {
+impl<const N: usize> ResetParams for DropoutOneIn<N> {
     /// Does nothing.
-    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, _: &mut R, _: &D) {}
+    fn reset_params<R: Rng>(&mut self, _: &mut R) {}
 }
 
 impl<const N: usize, T: Tensor<Dtype = f32>> Module<T> for DropoutOneIn<N> {
@@ -117,9 +116,9 @@ impl CanUpdateWithGradients for Dropout {
     fn update<G: GradientProvider>(&mut self, _: &mut G) {}
 }
 
-impl Randomize<f32> for Dropout {
+impl ResetParams for Dropout {
     /// Does nothing.
-    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, _: &mut R, _: &D) {}
+    fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {}
 }
 
 impl<T: Tensor<Dtype = f32>> Module<T> for Dropout {

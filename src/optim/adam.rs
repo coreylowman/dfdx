@@ -91,7 +91,6 @@ impl Optimizer for Adam {
 mod tests {
     use super::*;
     use rand::{prelude::*, SeedableRng};
-    use rand_distr::Normal;
 
     #[test]
     fn test_default_adam_params() {
@@ -148,7 +147,7 @@ mod tests {
         let mut rng = StdRng::seed_from_u64(0);
         let mut model: (Linear<5, 16>, ReLU, Linear<16, 16>, ReLU, Linear<16, 10>) =
             Default::default();
-        model.randomize(&mut rng, &Normal::new(0.0, 0.1).unwrap());
+        model.reset_params(&mut rng);
         let model_0 = model.clone();
 
         let x: Tensor2D<16, 5> = Tensor2D::rand(&mut rng);

@@ -1,5 +1,5 @@
 use super::*;
-use crate::prelude::{CanUpdateWithGradients, Randomize};
+use crate::prelude::CanUpdateWithGradients;
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///
@@ -26,10 +26,10 @@ where
     }
 }
 
-impl<T: Randomize<f32>, const N: usize> Randomize<f32> for Repeated<T, N> {
-    fn randomize<R: rand::Rng, D: rand_distr::Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
+impl<T: ResetParams, const N: usize> ResetParams for Repeated<T, N> {
+    fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
         for i in 0..N {
-            self.modules[i].randomize(rng, dist);
+            self.modules[i].reset_params(rng);
         }
     }
 }
@@ -42,10 +42,7 @@ impl<T: CanUpdateWithGradients, const N: usize> CanUpdateWithGradients for Repea
     }
 }
 
-impl<Input, T: Module<Input, Output = Input>, const N: usize> Module<Input> for Repeated<T, N>
-where
-    [T; N]: Default,
-{
+impl<Input, T: Module<Input, Output = Input>, const N: usize> Module<Input> for Repeated<T, N> {
     type Output = T::Output;
     fn forward(&self, mut x: Input) -> Self::Output {
         for i in 0..N {
@@ -60,7 +57,6 @@ mod tests {
     use super::*;
     use crate::prelude::*;
     use rand::{prelude::StdRng, SeedableRng};
-    use rand_distr::Standard;
 
     #[test]
     fn test_default() {
@@ -84,7 +80,7 @@ mod tests {
 
         let mut rng = StdRng::seed_from_u64(0);
         let mut m: Model = Default::default();
-        m.randomize(&mut rng, &Standard);
+        m.reset_params(&mut rng);
 
         for i in 0..5 {
             assert_ne!(m.modules[i].0.weight.data(), &[[0.0; 3]; 3]);
@@ -98,7 +94,7 @@ mod tests {
 
         let mut rng = StdRng::seed_from_u64(0);
         let mut m: Model = Default::default();
-        m.randomize(&mut rng, &Standard);
+        m.reset_params(&mut rng);
 
         let x = Tensor1D::zeros();
         let x = m.modules[0].forward(x);

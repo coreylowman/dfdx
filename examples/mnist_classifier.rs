@@ -2,7 +2,6 @@ use dfdx::prelude::*;
 use indicatif::ProgressBar;
 use mnist::*;
 use rand::prelude::{SeedableRng, StdRng};
-use rand_distr::Normal;
 use std::time::Instant;
 
 struct MnistDataset {
@@ -61,7 +60,7 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     let mut model: MLP = Default::default();
-    model.randomize(&mut rng, &Normal::new(0.0, 0.1).unwrap());
+    model.reset_params(&mut rng);
     let mut opt: Adam = Default::default();
 
     let dataset = MnistDataset::train(&mnist_path);

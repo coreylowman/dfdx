@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use rand::{distributions::Distribution, Rng};
+use rand::Rng;
 
 macro_rules! activation_impls {
     ($struct_name:ident, $func_name:ident, #[$docstring:meta]) => {
@@ -12,9 +12,9 @@ macro_rules! activation_impls {
             fn update<G: GradientProvider>(&mut self, _: &mut G) {}
         }
 
-        impl Randomize<f32> for $struct_name {
+        impl ResetParams for $struct_name {
             /// Does nothing.
-            fn randomize<R: Rng, D: Distribution<f32>>(&mut self, _: &mut R, _: &D) {}
+            fn reset_params<R: Rng>(&mut self, _: &mut R) {}
         }
 
         impl<T: Tensor<Dtype = f32>> Module<T> for $struct_name {

@@ -2,7 +2,6 @@
 
 use dfdx::prelude::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use rand_distr::Normal;
 use std::time::Instant;
 
 const STATE_SIZE: usize = 4;
@@ -32,7 +31,7 @@ fn main() {
 
     // initiliaze model - all weights are 0s
     let mut q_net: QNetwork = Default::default();
-    q_net.randomize(&mut rng, &Normal::new(0.0, 0.1).unwrap());
+    q_net.reset_params(&mut rng);
 
     let target_q_net: QNetwork = q_net.clone();
 

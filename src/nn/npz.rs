@@ -268,9 +268,7 @@ impl<T: LoadFromNpz, const N: usize> LoadFromNpz for Repeated<T, N> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prelude::Randomize;
     use rand::{prelude::StdRng, SeedableRng};
-    use rand_distr::Standard;
     use tempfile::NamedTempFile;
 
     #[test]
@@ -331,7 +329,7 @@ mod tests {
     fn test_load_linear() {
         let mut rng = StdRng::seed_from_u64(0);
         let mut saved_model: Linear<5, 3> = Default::default();
-        saved_model.randomize(&mut rng, &Standard);
+        saved_model.reset_params(&mut rng);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         assert!(saved_model
@@ -360,7 +358,7 @@ mod tests {
 
         let mut rng = StdRng::seed_from_u64(0);
         let mut saved_model: Model = Default::default();
-        saved_model.randomize(&mut rng, &Standard);
+        saved_model.reset_params(&mut rng);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         assert!(saved_model
@@ -420,7 +418,7 @@ mod tests {
 
         let mut rng = StdRng::seed_from_u64(0);
         let mut saved_model: Model = Default::default();
-        saved_model.randomize(&mut rng, &Standard);
+        saved_model.reset_params(&mut rng);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         assert!(saved_model

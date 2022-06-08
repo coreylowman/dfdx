@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use rand::prelude::{Distribution, Rng};
+use rand::prelude::Rng;
 
 impl<Input, A, B> Module<Input> for (A, B)
 where
@@ -94,9 +94,9 @@ macro_rules! tuple_impls {
             }
         }
 
-        impl<$($name: Randomize<f32>),+> Randomize<f32> for ($($name,)+) {
-            fn randomize<R: Rng, DIST: Distribution<f32>>(&mut self, rng: &mut R, dist: &DIST) {
-                $(self.$idx.randomize(rng, dist));+
+        impl<$($name: ResetParams),+> ResetParams for ($($name,)+) {
+            fn reset_params<R: Rng>(&mut self, rng: &mut R) {
+                $(self.$idx.reset_params(rng));+
             }
         }
     };
@@ -110,10 +110,8 @@ tuple_impls!([A, B, C, D, E, F] [0, 1, 2, 3, 4, 5]);
 
 #[cfg(test)]
 mod tests {
-    use rand::{prelude::StdRng, SeedableRng};
-    use rand_distr::StandardNormal;
-
     use super::*;
+    use rand::{prelude::StdRng, SeedableRng};
 
     #[test]
     fn test_2_tuple() {
@@ -128,7 +126,7 @@ mod tests {
     fn test_2_tuple_update() {
         let mut rng = StdRng::seed_from_u64(0);
         let mut model: (Linear<2, 3>, Linear<3, 4>) = Default::default();
-        model.randomize(&mut rng, &StandardNormal);
+        model.reset_params(&mut rng);
         assert!(model.0.weight.data() != &[[0.0; 3]; 2]);
         assert!(model.0.bias.data() != &[0.0; 3]);
         assert!(model.1.weight.data() != &[[0.0; 4]; 3]);

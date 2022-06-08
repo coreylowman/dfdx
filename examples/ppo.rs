@@ -2,7 +2,6 @@
 
 use dfdx::prelude::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use rand_distr::Uniform;
 use std::time::Instant;
 
 const STATE_SIZE: usize = 4;
@@ -29,7 +28,7 @@ fn main() {
 
     // initiliaze model - all weights are 0s
     let mut pi_net: PolicyNetwork = Default::default();
-    pi_net.randomize(&mut rng, &Uniform::new(-0.1, 0.1));
+    pi_net.reset_params(&mut rng);
 
     let target_pi_net: PolicyNetwork = pi_net.clone();
 

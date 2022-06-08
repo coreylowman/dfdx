@@ -1,6 +1,5 @@
 use dfdx::prelude::*;
-use rand::{distributions::Distribution, rngs::StdRng, Rng, SeedableRng};
-use rand_distr::Uniform;
+use rand::{rngs::StdRng, SeedableRng};
 use std::time::Instant;
 
 #[derive(Default)]
@@ -10,11 +9,11 @@ struct MultiHeadedMLP {
     head2: (Linear<32, 1>, Tanh),
 }
 
-impl Randomize<f32> for MultiHeadedMLP {
-    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
-        self.trunk.randomize(rng, dist);
-        self.head1.randomize(rng, dist);
-        self.head2.randomize(rng, dist);
+impl ResetParams for MultiHeadedMLP {
+    fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
+        self.trunk.reset_params(rng);
+        self.head1.reset_params(rng);
+        self.head2.reset_params(rng);
     }
 }
 
@@ -61,7 +60,7 @@ fn main() {
 
     // initialize optimizer & model
     let mut mlp: MultiHeadedMLP = Default::default();
-    mlp.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
+    mlp.reset_params(&mut rng);
     let mut sgd = Sgd::new(1e-2, None);
 
     // run through training data

@@ -1,6 +1,5 @@
 use dfdx::prelude::*;
 use rand::{rngs::StdRng, SeedableRng};
-use rand_distr::Uniform;
 use std::time::Instant;
 
 type MLP = (
@@ -20,10 +19,10 @@ fn main() {
     let mut mlp: MLP = Default::default();
 
     // randomize model weights
-    mlp.randomize(&mut rng, &Uniform::new(-1.0, 1.0));
+    mlp.reset_params(&mut rng);
 
     // initialize our optimizer
-    let mut sgd = Sgd::new(1e-2, None);
+    let mut sgd = Sgd::new(1e-2, Some(Momentum::Nesterov(0.9)));
 
     // run through training data
     for _i_epoch in 0..15 {
