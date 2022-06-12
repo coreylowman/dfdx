@@ -127,9 +127,9 @@ mod tests {
         let mut rng = StdRng::seed_from_u64(0);
         let mut model: (Linear<2, 3>, Linear<3, 4>) = Default::default();
         model.reset_params(&mut rng);
-        assert!(model.0.weight.data() != &[[0.0; 3]; 2]);
+        assert!(model.0.weight.data() != &[[0.0; 2]; 3]);
         assert!(model.0.bias.data() != &[0.0; 3]);
-        assert!(model.1.weight.data() != &[[0.0; 4]; 3]);
+        assert!(model.1.weight.data() != &[[0.0; 3]; 4]);
         assert!(model.1.bias.data() != &[0.0; 4]);
 
         let m0 = model.clone();
@@ -140,9 +140,9 @@ mod tests {
             .mean();
         let gradients = loss.backward();
 
-        assert!(gradients.ref_gradient(&model.0.weight) != &[[0.0; 3]; 2]);
+        assert!(gradients.ref_gradient(&model.0.weight) != &[[0.0; 2]; 3]);
         assert!(gradients.ref_gradient(&model.0.bias) != &[0.0; 3]);
-        assert!(gradients.ref_gradient(&model.1.weight) != &[[0.0; 4]; 3]);
+        assert!(gradients.ref_gradient(&model.1.weight) != &[[0.0; 3]; 4]);
         assert!(gradients.ref_gradient(&model.1.bias) != &[0.0; 4]);
 
         let mut sgd = Sgd::new(1.0, None);

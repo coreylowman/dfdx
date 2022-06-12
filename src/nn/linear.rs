@@ -2,26 +2,34 @@ use crate::prelude::*;
 use rand::Rng;
 use rand_distr::Uniform;
 
-/// A linear transformation of the form `xW + b`, where `W` is a matrix, `x` is a vector or matrix,
+/// A linear transformation of the form `x * transpose(W) + b`, where `W` is a matrix, `x` is a vector or matrix,
 /// and `b` is a vector. If `x` is a matrix this does matrix multiplication.
 ///
-/// Implements [Module] for both vectors of size `[I]` and batches of vectors of size `[B, I]`.
-/// Implements [Randomize] to set weight & bias to random numbers drawn from a distribution.
+/// Implements:
+/// - [Module] for vectors like [Tensor1D<I>]
+/// - [Module] for matrices like [Tensor2D<B, I>], where `B` is batch size
+/// - [ResetParams] to set weight & bias to uniform random numbers from a distribution based on `I`.
+/// - [CanUpdateWithGradients]
+///
+/// Generics:
+/// - `I` The input size of vectors & matrices.
+/// - `O` The output size of vectors & matrices.
 ///
 /// Example usage:
 /// `Linear<5, 2>` can act on vectors with 5 elements, and results in vectors with 2 elements.
 /// ```
 /// # use dfdx::prelude::*;
 /// let model: Linear<5, 2> = Default::default();
-/// assert_eq!(model.weight.data(), &[[0.0; 2]; 5]);
+/// assert_eq!(model.weight.data(), &[[0.0; 5]; 2]);
 /// assert_eq!(model.bias.data(), &[0.0; 2]);
 /// let x: Tensor1D<5> = Default::default();
 /// let y: Tensor1D<2> = model.forward(x);
+/// assert_eq!(y.data(), &[0.0; 2]);
 /// ```
 #[derive(Default, Debug, Clone)]
 pub struct Linear<const I: usize, const O: usize> {
-    /// Weight matrix, shape (I, O)
-    pub weight: Tensor2D<I, O, NoTape>,
+    /// Transposed weight matrix, shape (O, I)
+    pub weight: Tensor2D<O, I, NoTape>,
 
     /// Bias vector, shape (O, )
     pub bias: Tensor1D<O, NoTape>,
@@ -52,7 +60,7 @@ impl<const I: usize, const O: usize, H: Tape> Module<Tensor1D<I, H>> for Linear<
 
     /// 1d forward using [vecmat_mul()] and [add()].
     fn forward(&self, x: Tensor1D<I, H>) -> Self::Output {
-        add(&self.bias, vecmat_mul(x, &self.weight))
+        add(&self.bias, vecmat_mul_transpose(x, &self.weight))
     }
 }
 
@@ -63,7 +71,7 @@ impl<const B: usize, const I: usize, const O: usize, H: Tape> Module<Tensor2D<B,
 
     /// Batched 2d forward using [matmul()] and [broadcast_outer_add()]
     fn forward(&self, x: Tensor2D<B, I, H>) -> Self::Output {
-        broadcast_outer_add(matmul(x, &self.weight), &self.bias)
+        broadcast_outer_add(matmul_transpose(x, &self.weight), &self.bias)
     }
 }
 
@@ -71,12 +79,15 @@ impl<const B: usize, const I: usize, const O: usize, H: Tape> Module<Tensor2D<B,
 mod tests {
     use super::*;
 
-    const W: [[f32; 2]; 5] = [
-        [-0.34588930, 0.11733949],
-        [-0.30371523, 0.14059687],
-        [-0.37120569, -0.10670426],
-        [0.14303583, -0.09373143],
-        [-0.02689660, 0.18974298],
+    const W: [[f32; 5]; 2] = [
+        [
+            -0.34588930,
+            -0.30371523,
+            -0.37120569,
+            0.14303583,
+            -0.02689660,
+        ],
+        [0.11733949, 0.14059687, -0.10670426, -0.09373143, 0.18974298],
     ];
     const B: [f32; 2] = [0.37653649, -0.29071701];
 
@@ -96,11 +107,14 @@ mod tests {
         assert_eq!(
             gradients.ref_gradient(&model.weight),
             &[
-                [0.82293916, -0.07596206],
-                [-2.25965667, 0.20857942],
-                [-2.10017037, 0.19385791],
-                [-0.05280815, 0.004874499],
-                [-1.89786029, 0.17518352]
+                [
+                    0.82293916,
+                    -2.25965667,
+                    -2.10017037,
+                    -0.05280815,
+                    -1.89786029,
+                ],
+                [-0.07596206, 0.20857942, 0.19385791, 0.004874499, 0.17518352],
             ]
         );
         assert_eq!(
@@ -148,11 +162,8 @@ mod tests {
         assert_eq!(
             gradients.ref_gradient(&model.weight),
             &[
-                [-1.15419686, 0.29272807],
-                [0.69568729, -0.17702839],
-                [-0.85538071, 0.08586791],
-                [0.92892551, -0.24057935],
-                [0.04931633, 0.52865762]
+                [-1.15419686, 0.69568729, -0.85538071, 0.92892551, 0.04931633],
+                [0.29272807, -0.17702839, 0.08586791, -0.24057935, 0.52865762],
             ]
         );
         assert_eq!(
