@@ -10,6 +10,8 @@ use rand_distr::Uniform;
 /// - [Module] for matrices like [Tensor2D<B, I>], where `B` is batch size
 /// - [ResetParams] to set weight & bias to uniform random numbers from a distribution based on `I`.
 /// - [CanUpdateWithGradients]
+/// - [SaveToNpz]
+/// - [LoadFromNpz]
 ///
 /// Generics:
 /// - `I` The input size of vectors & matrices.
