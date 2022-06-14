@@ -2,6 +2,15 @@ use crate::prelude::*;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 /// Add two [Tensor]s of the same shape together: `lhs + &rhs`
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let b = Tensor2D::ones();
+/// let r = add(a, &b); // or `a + &b`
+/// assert_eq!(r.data(), &[[2.0, 3.0, 4.0], [0.0, -1.0, -2.0]]);
+/// ```
 pub fn add<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     fn f(x: &f32, y: &f32) -> f32 {
         x + y
@@ -16,6 +25,14 @@ pub fn add<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 }
 
 /// Subtracts two [Tensor]s of the same shape from each other: `lhs - &rhs`
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let b = Tensor2D::ones();
+/// let r = sub(a, &b); // or `a - &b`
+/// assert_eq!(r.data(), &[[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
 pub fn sub<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     fn f(x: &f32, y: &f32) -> f32 {
         x - y
@@ -30,6 +47,14 @@ pub fn sub<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 }
 
 /// Multiplies two [Tensor]s of the same shape together: `lhs * &rhs`.
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let b = Tensor2D::ones();
+/// let r = mul(a, &b); // or `a * &b`
+/// assert_eq!(r.data(), &[[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 pub fn mul<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     fn f(x: &f32, y: &f32) -> f32 {
         x * y
@@ -44,6 +69,14 @@ pub fn mul<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 }
 
 /// Divides two [Tensor]s of the same shape: `lhs / &rhs`.
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let b = Tensor2D::new([[1.0, 0.5, 1.0], [0.5, 1.0, 3.0]]);
+/// let r = div(a, &b); // or `a / &b`
+/// assert_eq!(r.data(), &[[1.0, 4.0, 3.0], [-2.0, -2.0, -1.0]]);
 pub fn div<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     fn f(x: &f32, y: &f32) -> f32 {
         x * y.recip()
@@ -58,6 +91,14 @@ pub fn div<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 }
 
 /// Takes the element wise minimum of two [Tensor]s of the same shape: `min(lhs, &rhs)`.
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let b = Tensor2D::new([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
+/// let r = minimum(a, &b);
+/// assert_eq!(r.data(), &[[1.0, 0.5, 1.0], [-2.0, -2.0, -3.5]]);
 pub fn minimum<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     fn f(x: &f32, y: &f32) -> f32 {
         x.min(*y)
@@ -101,12 +142,12 @@ where
 {
     let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), f));
     let (mut lhs, mut tape) = lhs.split_tape();
-    let mut rhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), dfdy);
+    let mut rhs_deriv: Box<T::Array> = T::Device::zip_map(lhs.data(), rhs.data(), dfdy);
     T::Device::zip_map_assign(lhs.mut_data(), rhs.data(), &mut |l, r| *l = dfdx(l, r));
     let _rhs = rhs.phantom();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        let result_grad = grads.ref_gradient(&_result);
+        let result_grad: &T::Array = grads.ref_gradient(&_result);
         T::Device::mul_assign(lhs.mut_data(), result_grad);
         T::Device::mul_assign(rhs_deriv.as_mut(), result_grad);
         T::Device::add_assign(grads.mut_gradient(&lhs), lhs.data());
