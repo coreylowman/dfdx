@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    numpy::{self, NpyError},
+    numpy::{self, NpyError, NumpyDtype, NumpyShape, ReadNumbers, WriteNumbers},
     prelude::HasArrayData,
 };
 use std::{
@@ -100,6 +100,42 @@ pub enum NpzError {
     Npy(NpyError),
 }
 
+/// Writes `data` to a new file in a zip archive named `filename`.
+///
+/// Example:
+/// ```ignore
+/// let mut zip = ZipWriter::new(...);
+/// let linear: Linear<5, 2> = Default::default();
+/// npz_fwrite(&mut zip, "weight.npy".into(), linear.data());
+/// ```
+pub fn npz_fwrite<W: Write + Seek, T: NumpyDtype + NumpyShape + WriteNumbers>(
+    w: &mut zip::ZipWriter<W>,
+    filename: String,
+    data: &T,
+) -> ZipResult<()> {
+    w.start_file(filename, Default::default())?;
+    numpy::write(w, data)?;
+    Ok(())
+}
+
+/// Reads `data` from a file already in a zip archive named `filename`.
+///
+/// Example:
+/// ```ignore
+/// let mut zip = ZipArchive::new(...);
+/// let mut linear: Linear<5, 2> = Default::default();
+/// npz_fread(&mut zip, "weight.npy".into(), linear.weight.mut_data());
+/// ```
+pub fn npz_fread<R: Read + Seek, T: NumpyDtype + NumpyShape + ReadNumbers>(
+    r: &mut zip::ZipArchive<R>,
+    filename: String,
+    data: &mut T,
+) -> Result<(), NpzError> {
+    let mut f = r.by_name(&filename).map_err(NpzError::Zip)?;
+    numpy::read(&mut f, data).map_err(NpzError::Npy)?;
+    Ok(())
+}
+
 macro_rules! empty_npz_impl {
     ($struct_name:ident) => {
         impl SaveToNpz for $struct_name {
@@ -160,41 +196,27 @@ impl<const N: usize> LoadFromNpz for DropoutOneIn<N> {
 }
 
 impl<const I: usize, const O: usize> SaveToNpz for Linear<I, O> {
-    /// Saves `self.weight` to `{filename_prefix}weight.npy` and `self.bias` to `{filename_prefix}bias.npy`
+    /// Saves `self.weight` to `{pre}weight.npy` and `self.bias` to `{pre}bias.npy`
     /// using [numpy::write()].
-    fn write<W>(&self, filename_prefix: &String, w: &mut zip::ZipWriter<W>) -> ZipResult<()>
+    fn write<W>(&self, pre: &String, w: &mut zip::ZipWriter<W>) -> ZipResult<()>
     where
         W: Write + Seek,
     {
-        w.start_file(format!("{filename_prefix}weight.npy"), Default::default())?;
-        numpy::write(w, self.weight.data())?;
-        w.start_file(format!("{filename_prefix}bias.npy"), Default::default())?;
-        numpy::write(w, self.bias.data())?;
+        npz_fwrite(w, format!("{pre}weight.npy"), self.weight.data())?;
+        npz_fwrite(w, format!("{pre}bias.npy"), self.bias.data())?;
         Ok(())
     }
 }
 
 impl<const I: usize, const O: usize> LoadFromNpz for Linear<I, O> {
-    /// Reads `self.weight` from `{filename_prefix}weight.npy` and `self.bias` from `{filename_prefix}bias.npy`
+    /// Reads `self.weight` from `{pre}weight.npy` and `self.bias` from `{pre}bias.npy`
     /// using [numpy::read()].
-    fn read<R>(&mut self, filename_prefix: &String, r: &mut ZipArchive<R>) -> Result<(), NpzError>
+    fn read<R>(&mut self, pre: &String, r: &mut ZipArchive<R>) -> Result<(), NpzError>
     where
         R: Read + Seek,
     {
-        {
-            let mut f = r
-                .by_name(&format!("{filename_prefix}weight.npy"))
-                .map_err(NpzError::Zip)?;
-            numpy::read(&mut f, self.weight.mut_data()).map_err(NpzError::Npy)?;
-        }
-
-        {
-            let mut f = r
-                .by_name(&format!("{filename_prefix}bias.npy"))
-                .map_err(NpzError::Zip)?;
-            numpy::read(&mut f, self.bias.mut_data()).map_err(NpzError::Npy)?;
-        }
-
+        npz_fread(r, format!("{pre}weight.npy"), self.weight.mut_data())?;
+        npz_fread(r, format!("{pre}bias.npy"), self.bias.mut_data())?;
         Ok(())
     }
 }
