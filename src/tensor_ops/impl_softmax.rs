@@ -22,7 +22,7 @@ use crate::prelude::*;
 ///
 /// See [log_softmax()] and [softmax()] for related functions.
 pub fn logsumexp<T: Tensor<Dtype = f32>>(mut t: T) -> T::LastDimReduced {
-    let max = T::Device::reduce_last_dim(t.data(), f32::max);
+    let max = T::Device::reduce_last_dim(t.data(), &mut f32::max);
     T::Device::sub_assign(t.mut_data(), max.as_ref());
     let mut result = ln(sum_last_dim(exp(t)));
     <T::LastDimReduced as HasDevice>::Device::add_assign(result.mut_data(), max.as_ref());
@@ -36,7 +36,7 @@ pub fn log_softmax<T: Tensor<Dtype = f32>>(t: T) -> T {
     let t_ = t.duplicate();
     let lse = logsumexp(t);
     let (lse, tape) = lse.split_tape();
-    broadcast_inner_sub(t_.put_tape(tape), &lse)
+    broadcast_inner_sub(t_.put_tape(tape), lse)
 }
 
 /// Computes the [softmax](https://en.wikipedia.org/wiki/Softmax_function) function.
@@ -146,7 +146,7 @@ mod tests {
             r.data(),
             &[0.011656232, 0.031684924, 0.086128555, 0.23412168, 0.6364087]
         );
-        let l = &Tensor1D::new([0.0, 0.0, 1.0, 0.0, 0.0]) * r;
+        let l = mul(r, &Tensor1D::new([0.0, 0.0, 1.0, 0.0, 0.0]));
         assert_eq!(l.data(), &[0.0, 0.0, 0.086128555, 0.0, 0.0]);
         let gradients = backward(l.mean());
         assert_eq!(
@@ -208,7 +208,7 @@ mod tests {
                 [0.002355633, 0.047314156, 0.9503302]
             ]
         );
-        let l = &Tensor2D::new([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]) * r;
+        let l = mul(r, &Tensor2D::new([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]));
         assert_eq!(l.data(), &[[0.09003058, 0.0, 0.0], [0.0, 0.047314156, 0.0]]);
         let gradients = backward(l.mean());
         assert_eq!(

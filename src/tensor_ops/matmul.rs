@@ -1,6 +1,5 @@
 use crate::prelude::*;
 use matrixmultiply::sgemm;
-use std::ops::Mul;
 
 /// Matrix multiplication.
 ///
@@ -200,24 +199,6 @@ pub fn vecmat_mul_transpose<const N: usize, const O: usize, H: Tape>(
     result.put_tape(tape)
 }
 
-impl<const M: usize, const N: usize, const O: usize, H: Tape> Mul<&Tensor2D<N, O, NoTape>>
-    for Tensor2D<M, N, H>
-{
-    type Output = Tensor2D<M, O, H>;
-    /// Calls [matmul()].
-    fn mul(self, rhs: &Tensor2D<N, O, NoTape>) -> Self::Output {
-        matmul(self, rhs)
-    }
-}
-
-impl<const N: usize, const O: usize, H: Tape> Mul<&Tensor2D<N, O, NoTape>> for Tensor1D<N, H> {
-    type Output = Tensor1D<O, H>;
-    /// Calls [vecmat_mul()]
-    fn mul(self, rhs: &Tensor2D<N, O, NoTape>) -> Self::Output {
-        vecmat_mul(self, rhs)
-    }
-}
-
 /// matrix multiply `x * y`
 fn matmat_mul_into<const M: usize, const N: usize, const O: usize>(
     x: &[[f32; N]; M],
@@ -415,7 +396,7 @@ mod tests {
             [0.8119, 0.2693, 0.7249],
         ]);
         let b = Tensor2D::new([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
-        let r: Tensor2D<4, 2, OwnsTape> = a.trace() * &b;
+        let r: Tensor2D<4, 2, OwnsTape> = matmul(a.trace(), &b);
         assert_eq!(
             r.data(),
             &[
@@ -462,7 +443,7 @@ mod tests {
     fn test_vecmat_mul() {
         let a = Tensor1D::new([0.7296, 0.3974, 0.9487]);
         let b = Tensor2D::new([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
-        let r: Tensor1D<2, OwnsTape> = a.trace() * &b;
+        let r: Tensor1D<2, OwnsTape> = vecmat_mul(a.trace(), &b);
         assert_eq!(r.data(), &[1.261436, 1.5543157]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[0.66719997, 0.68895, 0.6823]);

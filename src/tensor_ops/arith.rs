@@ -1,8 +1,8 @@
 use crate::prelude::*;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
-/// Add two [Tensor]s of the same shape together: `&lhs + rhs`
-pub fn add<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
+/// Add two [Tensor]s of the same shape together: `lhs + &rhs`
+pub fn add<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     fn f(x: &f32, y: &f32) -> f32 {
         x + y
     }
@@ -15,8 +15,8 @@ pub fn add<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
     binary_map(lhs, rhs, f, dfdx, dfdy)
 }
 
-/// Subtracts two [Tensor]s of the same shape from each other: `&lhs - rhs`
-pub fn sub<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
+/// Subtracts two [Tensor]s of the same shape from each other: `lhs - &rhs`
+pub fn sub<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     fn f(x: &f32, y: &f32) -> f32 {
         x - y
     }
@@ -29,8 +29,8 @@ pub fn sub<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
     binary_map(lhs, rhs, f, dfdx, dfdy)
 }
 
-/// Multiplies two [Tensor]s of the same shape together: `&lhs * rhs`.
-pub fn mul<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
+/// Multiplies two [Tensor]s of the same shape together: `lhs * &rhs`.
+pub fn mul<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     fn f(x: &f32, y: &f32) -> f32 {
         x * y
     }
@@ -43,8 +43,8 @@ pub fn mul<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
     binary_map(lhs, rhs, f, dfdx, dfdy)
 }
 
-/// Divides two [Tensor]s of the same shape: `&lhs / rhs`.
-pub fn div<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
+/// Divides two [Tensor]s of the same shape: `lhs / &rhs`.
+pub fn div<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     fn f(x: &f32, y: &f32) -> f32 {
         x * y.recip()
     }
@@ -57,8 +57,8 @@ pub fn div<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
     binary_map(lhs, rhs, f, dfdx, dfdy)
 }
 
-/// Takes the element wise minimum of two [Tensor]s of the same shape: `min(&lhs, rhs)`.
-pub fn minimum<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
+/// Takes the element wise minimum of two [Tensor]s of the same shape: `min(lhs, &rhs)`.
+pub fn minimum<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     fn f(x: &f32, y: &f32) -> f32 {
         x.min(*y)
     }
@@ -88,10 +88,10 @@ pub fn minimum<T: Tensor<Dtype = f32>>(lhs: &T::NoTape, rhs: T) -> T {
 ///
 /// This is primarily used to implement [add()], [sub()], [mul()], and [div()].
 pub fn binary_map<T: Tensor<Dtype = f32>, F, Dfdx, Dfdy>(
-    lhs: &T::NoTape,
-    rhs: T,
+    lhs: T,
+    rhs: &T::NoTape,
     f: F,
-    dfdx: Dfdx,
+    mut dfdx: Dfdx,
     dfdy: Dfdy,
 ) -> T
 where
@@ -100,60 +100,51 @@ where
     Dfdy: FnMut(&f32, &f32) -> f32,
 {
     let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), f));
-    let mut lhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), dfdx);
+    let (mut lhs, mut tape) = lhs.split_tape();
     let mut rhs_deriv = T::Device::zip_map(lhs.data(), rhs.data(), dfdy);
-    let (rhs, mut tape) = rhs.split_tape();
-    let _lhs = lhs.phantom();
+    T::Device::zip_map_assign(lhs.mut_data(), rhs.data(), &mut |l, r| *l = dfdx(l, r));
+    let _rhs = rhs.phantom();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
         let result_grad = grads.ref_gradient(&_result);
-        T::Device::mul_assign(lhs_deriv.as_mut(), result_grad);
+        T::Device::mul_assign(lhs.mut_data(), result_grad);
         T::Device::mul_assign(rhs_deriv.as_mut(), result_grad);
-        T::Device::add_assign(grads.mut_gradient(&_lhs), lhs_deriv.as_ref());
-        T::Device::add_assign(grads.mut_gradient(&rhs), rhs_deriv.as_ref());
+        T::Device::add_assign(grads.mut_gradient(&lhs), lhs.data());
+        T::Device::add_assign(grads.mut_gradient(&_rhs), rhs_deriv.as_ref());
     });
     result.put_tape(tape)
 }
 
 macro_rules! binary_ops_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: Tape> Add<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape> {
+impl<$(const $Vs: usize, )* H: Tape> Add<&$typename<$($Vs, )* NoTape>> for $typename<$($Vs, )* H> {
     type Output = $typename<$($Vs, )* H>;
-    /// Calls [add()] - implements `&T<NoTape> + T<H>`
-    fn add(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
+    /// Calls [add()] - implements `T<H> + &T<NoTape>`
+    fn add(self, rhs: &$typename<$($Vs, )* NoTape>) -> Self::Output {
         add(self, rhs)
     }
 }
 
-impl<$(const $Vs: usize, )* H: Tape> Sub<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape> {
+impl<$(const $Vs: usize, )* H: Tape> Sub<&$typename<$($Vs, )* NoTape>> for $typename<$($Vs, )* H> {
     type Output = $typename<$($Vs, )* H>;
-    /// Calls [sub()] - implements `&T<NoTape> - T<H>`
-    fn sub(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
+    /// Calls [sub()] - implements `T<H> - &T<NoTape>`
+    fn sub(self, rhs: &$typename<$($Vs, )* NoTape>) -> Self::Output {
         sub(self, rhs)
     }
 }
 
-impl<$(const $Vs: usize, )* H: Tape> Sub<$typename<$($Vs, )* NoTape>> for $typename<$($Vs, )* H> {
+impl<$(const $Vs: usize, )* H: Tape> Mul<&$typename<$($Vs, )* NoTape>> for $typename<$($Vs, )* H> {
     type Output = $typename<$($Vs, )* H>;
-    /// Moves the tape around and then calls [sub()]  - implements `T<H> - &T<NoTape>`
-    fn sub(self, rhs: $typename<$($Vs, )* NoTape>) -> Self::Output {
-        let (lhs, tape) = self.split_tape();
-        sub(&lhs, rhs.put_tape(tape))
-    }
-}
-
-impl<$(const $Vs: usize, )* H: Tape> Mul<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape> {
-    type Output = $typename<$($Vs, )* H>;
-    /// Calls [mul()] - implements `&T<NoTape> * T<H>`
-    fn mul(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
+    /// Calls [mul()] - implements `T<H> * &T<NoTape>`
+    fn mul(self, rhs: &$typename<$($Vs, )* NoTape>) -> Self::Output {
         mul(self, rhs)
     }
 }
 
-impl<$(const $Vs: usize, )* H: Tape> Div<$typename<$($Vs, )* H>> for &$typename<$($Vs, )* NoTape> {
+impl<$(const $Vs: usize, )* H: Tape> Div<&$typename<$($Vs, )* NoTape>> for $typename<$($Vs, )* H> {
     type Output = $typename<$($Vs, )* H>;
-    /// Calls [div()] - implements `&T<NoTape> / T<H>`
-    fn div(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
+    /// Calls [div()] - implements `T<H> / &T<NoTape>`
+    fn div(self, rhs: &$typename<$($Vs, )* NoTape>) -> Self::Output {
         div(self, rhs)
     }
 }
@@ -176,7 +167,7 @@ mod tests {
         let a = Tensor0D::new(1.0);
         let b = Tensor0D::new(1.0);
 
-        let r = &b + a.trace();
+        let r = a.trace() + &b;
         assert_eq!(r.data(), &2.0);
         let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&a), &1.0);
@@ -188,7 +179,7 @@ mod tests {
         let a = Tensor0D::new(1.0);
         let b = Tensor0D::new(1.0);
 
-        let r = &b - a.trace();
+        let r = b.trace() - &a;
         assert_eq!(r.data(), &0.0);
         let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&a), &-1.0);
@@ -200,7 +191,7 @@ mod tests {
         let a = Tensor0D::new(2.0);
         let b = Tensor0D::new(3.0);
 
-        let r = &b * a.trace();
+        let r = a.trace() * &b;
         assert_eq!(r.data(), &6.0);
         let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&a), &3.0);
@@ -212,7 +203,7 @@ mod tests {
         let a = Tensor0D::new(2.0);
         let b = Tensor0D::new(4.0);
 
-        let r = &b / a.trace();
+        let r = b.trace() / &a;
         assert_eq!(r.data(), &2.0);
         let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&a), &-1.0);
@@ -224,7 +215,7 @@ mod tests {
         let a = Tensor1D::new([1.0, 2.0, 3.0]);
         let b = Tensor1D::new([1.0, -1.0, 0.0]);
 
-        let r = &b + a.trace();
+        let r = a.trace() + &b;
         assert_eq!(r.data(), &[2.0, 1.0, 3.0]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0; 3]);
@@ -236,7 +227,7 @@ mod tests {
         let a = Tensor1D::new([1.0, 2.0, 3.0]);
         let b = Tensor1D::new([1.0, -1.0, 0.0]);
 
-        let r = &b - a.trace();
+        let r = b.trace() - &a;
         assert_eq!(r.data(), &[0.0, -3.0, -3.0]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[-1.0 / 3.0; 3]);
@@ -248,7 +239,7 @@ mod tests {
         let a = Tensor1D::new([1.0, 2.0, 3.0]);
         let b = Tensor1D::new([1.0, -1.0, 0.0]);
 
-        let r = &b * a.trace();
+        let r = a.trace() * &b;
         assert_eq!(r.data(), &[1.0, -2.0, 0.0]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0, -1.0 / 3.0, 0.0]);
@@ -260,7 +251,7 @@ mod tests {
         let a = Tensor1D::new([1.0, 2.0, 3.0]);
         let b = Tensor1D::new([1.0, -1.0, 0.0]);
 
-        let r = &b / a.trace();
+        let r = b.trace() / &a;
         assert_eq!(r.data(), &[1.0, -0.5, 0.0]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[-1.0 / 3.0, 1.0 / 12.0, 0.0]);
@@ -275,7 +266,7 @@ mod tests {
         let a = Tensor2D::new([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
         let b = Tensor2D::new([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
-        let r = &b + a.trace();
+        let r = a.trace() + &b;
         assert_eq!(
             r.data(),
             &[[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]
@@ -290,7 +281,7 @@ mod tests {
         let a = Tensor2D::new([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
         let b = Tensor2D::new([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
-        let r = &b - a.trace();
+        let r = b.trace() - &a;
         assert_eq!(
             r.data(),
             &[
@@ -308,7 +299,7 @@ mod tests {
         let a = Tensor2D::new([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
         let b = Tensor2D::new([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
-        let r = &b * a.trace();
+        let r = a.trace() * &b;
         assert_eq!(
             r.data(),
             &[
@@ -338,7 +329,7 @@ mod tests {
         let a = Tensor2D::new([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
         let b = Tensor2D::new([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
-        let r = &b / a.trace();
+        let r = b.trace() / &a;
         assert_eq!(
             r.data(),
             &[
@@ -368,7 +359,7 @@ mod tests {
         let a = Tensor0D::new(0.0);
         let b = Tensor0D::new(1.0);
 
-        let result = minimum(&a, b.trace());
+        let result = minimum(a.trace(), &b);
         assert_eq!(result.data(), &0.0);
 
         let gradients = result.backward();
@@ -381,7 +372,7 @@ mod tests {
         let a = Tensor0D::new(1.0);
         let b = Tensor0D::new(-1.0);
 
-        let result = minimum(&a, b.trace());
+        let result = minimum(a.trace(), &b);
         assert_eq!(result.data(), &-1.0);
 
         let gradients = result.backward();
@@ -394,7 +385,7 @@ mod tests {
         let a = Tensor1D::new([-1.0, 0.0, 1.0, 2.0]);
         let b = Tensor1D::new([0.0, -1.0, 2.0, 0.0]);
 
-        let result = minimum(&a, b.trace());
+        let result = minimum(a.trace(), &b);
         assert_eq!(result.data(), &[-1.0, -1.0, 1.0, 0.0]);
 
         // NOTE: call .exp() to make sure we cover cases where it uses the result's gradient
@@ -411,7 +402,7 @@ mod tests {
         let a = Tensor1D::new([-1.0, 0.0, 1.0]);
         let b = Tensor1D::new([-1.0, 0.0, 1.0]);
 
-        let result = minimum(&a, b.trace());
+        let result = minimum(a.trace(), &b);
         assert_eq!(result.data(), a.data());
 
         // NOTE: call .exp() to make sure we cover cases where it uses the result's gradient
@@ -425,7 +416,7 @@ mod tests {
         let a = Tensor2D::new([[-1.1488, 0.2021, 1.1265], [0.1355, -1.7390, -0.4191]]);
         let b = Tensor2D::new([[-0.2851, -0.0965, -0.2529], [0.4759, -0.5239, -0.4651]]);
 
-        let result = minimum(&a, b.trace());
+        let result = minimum(a.trace(), &b);
         assert_eq!(
             result.data(),
             &[[-1.1488, -0.0965, -0.2529], [0.1355, -1.7390, -0.4651]]

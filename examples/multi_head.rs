@@ -75,7 +75,7 @@ fn main() {
         let loss2 = mse_loss(pred2.put_tape(tape), &y2);
 
         let losses = [*loss1.data(), *loss2.data()];
-        let loss = &loss1 + loss2;
+        let loss = loss2 + &loss1;
         let gradients = loss.backward();
         sgd.update(&mut mlp, gradients);
 

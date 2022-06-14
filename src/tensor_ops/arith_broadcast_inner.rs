@@ -10,16 +10,15 @@ use crate::prelude::*;
 /// use dfdx::prelude::*;
 /// let a = Tensor2D::new([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]);
 /// let b = Tensor1D::new([3.0, 4.0]);
-/// let r = broadcast_inner_sub(a, &b);
+/// let r = broadcast_inner_sub(a, b);
 /// assert_eq!(r.data(), &[[-3.0, -2.0, -1.0], [-1.0, 0.0, 1.0]]);
 /// ```
 pub fn broadcast_inner_sub<Lhs: Tensor<Dtype = f32>>(
     lhs: Lhs,
-    rhs: &<Lhs::LastDimReduced as Tensor>::NoTape,
+    mut rhs: <Lhs::LastDimReduced as Tensor>::NoTape,
 ) -> Lhs {
     let result = Lhs::NoTape::new_boxed(Lhs::Device::sub(lhs.data(), rhs.data()));
 
-    let _rhs = rhs.phantom();
     let _result = result.phantom();
     let (mut lhs, mut tape) = lhs.split_tape();
     tape.add_backward_op(move |grads| {
@@ -28,14 +27,14 @@ pub fn broadcast_inner_sub<Lhs: Tensor<Dtype = f32>>(
         Lhs::Device::zip_map_assign(lhs.mut_data(), result_grad, &mut |l, r| *l = *r);
 
         // this is reduce_inner(result_grad * rhs_deriv, x + y), where rhs_deriv = -1.
-        let d_grad_rhs = Lhs::Device::reduce_last_dim(result_grad, |x, y| x + y);
+        Lhs::Device::reduce_last_dim_into(result_grad, rhs.mut_data(), &mut |x, y| x + y);
 
         Lhs::Device::add_assign(grads.mut_gradient(&lhs), lhs.data());
 
         //NOTE: sub_assign here to account for negative sign from rhs_deriv
         <Lhs::LastDimReduced as HasDevice>::Device::sub_assign(
-            grads.mut_gradient(&_rhs),
-            d_grad_rhs.as_ref(),
+            grads.mut_gradient(&rhs),
+            rhs.data(),
         );
     });
     result.put_tape(tape)
@@ -49,7 +48,7 @@ mod tests {
     fn test_broadcast_sub_1d() {
         let a: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
         let b = Tensor0D::new(1.0);
-        let r = broadcast_inner_sub(a.trace(), &b);
+        let r = broadcast_inner_sub(a.trace(), b.duplicate());
         assert_eq!(r.data(), &[0.0, 1.0, 2.0]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0; 3]);
@@ -60,7 +59,7 @@ mod tests {
     fn test_broadcast_sub_2d() {
         let a: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
         let b: Tensor1D<2> = Tensor1D::new([1.0, 2.0]);
-        let r = broadcast_inner_sub(a.trace(), &b);
+        let r = broadcast_inner_sub(a.trace(), b.duplicate());
         assert_eq!(r.data(), &[[0.0, 1.0, 2.0], [2.0, 3.0, 4.0]]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[[1.0 / 6.0; 3]; 2]);

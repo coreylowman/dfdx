@@ -111,7 +111,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = (&rate * t.trace()).square().mean().backward();
+            let gradients = (t.trace() * &rate).square().mean().backward();
             opt.update(&mut t, gradients);
             assert_eq!(t.data(), e);
         }
@@ -136,7 +136,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = (&rate * t.trace()).square().mean().backward();
+            let gradients = (t.trace() * &rate).square().mean().backward();
             opt.update(&mut t, gradients);
             assert_eq!(t.data(), e);
         }
@@ -155,7 +155,7 @@ mod tests {
         let mut opt: Adam = Adam::new(1e-3, [0.9, 0.999], 1e-8);
 
         let py = model.forward(x.trace());
-        let loss = (&y - py).square().mean();
+        let loss = (py - &y).square().mean();
         let gradients = loss.backward();
         opt.update(&mut model, gradients);
 

@@ -37,7 +37,7 @@ pub fn var_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
     let _t: T::NoTape = t.duplicate();
     let (mean, tape) = mean_last_dim(t).split_tape();
     scalar_div(
-        sum_last_dim(square(broadcast_inner_sub(_t.put_tape(tape), &mean))),
+        sum_last_dim(square(broadcast_inner_sub(_t.put_tape(tape), mean))),
         num_elements - 1.0,
     )
 }

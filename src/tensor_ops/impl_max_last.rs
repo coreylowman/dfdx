@@ -15,7 +15,7 @@ use crate::prelude::*;
 pub fn max_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
     let result = <T::LastDimReduced as Tensor>::NoTape::new_boxed(T::Device::reduce_last_dim(
         t.data(),
-        f32::max,
+        &mut f32::max,
     ));
     let (mut t, mut tape) = t.split_tape();
     T::Device::zip_map_assign(t.mut_data(), result.data(), &mut |l, r| {

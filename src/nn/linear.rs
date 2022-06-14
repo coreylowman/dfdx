@@ -62,7 +62,7 @@ impl<const I: usize, const O: usize, H: Tape> Module<Tensor1D<I, H>> for Linear<
 
     /// 1d forward using [vecmat_mul()] and [add()].
     fn forward(&self, x: Tensor1D<I, H>) -> Self::Output {
-        add(&self.bias, vecmat_mul_transpose(x, &self.weight))
+        add(vecmat_mul_transpose(x, &self.weight), &self.bias)
     }
 }
 

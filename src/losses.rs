@@ -6,7 +6,7 @@ use crate::prelude::*;
 ///
 /// See [mean()], [square()], and [sub()].
 pub fn mse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
-    mean(square(sub(targ, pred)))
+    mean(square(sub(pred, targ)))
 }
 
 /// Root Mean square error. This computes `(&targ - pred).square().mean().sqrt()`
@@ -20,7 +20,7 @@ pub fn rmse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<
 ///
 /// See [mean()], [abs()], and [sub()]
 pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
-    mean(abs(sub(targ, pred)))
+    mean(abs(sub(pred, targ)))
 }
 
 /// Cross entropy loss. This computes: `-(logits.log_softmax() * target_probs).sum(-1).mean()`
@@ -44,7 +44,7 @@ pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     logits: T,
     target_probs: &T::NoTape,
 ) -> Tensor0D<T::Tape> {
-    -mean(sum_last_dim(mul(target_probs, log_softmax(logits))))
+    -mean(sum_last_dim(mul(log_softmax(logits), target_probs)))
 }
 
 /// KL Divergence loss. This computes `(target_probs * (target_probs.log() - logits.log_softmax())).sum(-1).mean()`
@@ -68,9 +68,9 @@ pub fn kl_div_with_logits_loss<T: Tensor<Dtype = f32>>(
     logits: T,
     target_probs: &T::NoTape,
 ) -> Tensor0D<T::Tape> {
-    mean(sum_last_dim(mul(
+    -mean(sum_last_dim(mul(
+        sub(log_softmax(logits), &ln(target_probs.duplicate())),
         target_probs,
-        sub(&ln(target_probs.duplicate()), log_softmax(logits)),
     )))
 }
 
@@ -103,22 +103,22 @@ pub fn binary_cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     let max_value = clamp(negate(logits.duplicate()), 0.0, f32::INFINITY);
 
     // a = exp(-(max_value + logits))
-    let a = exp(negate(add(&max_value, logits.duplicate().put_tape(tape))));
+    let a = exp(negate(add(logits.duplicate().put_tape(tape), &max_value)));
 
     // b = ln(exp(-max_value) + a)
-    let b = ln(add(&exp(negate(max_value.duplicate())), a));
+    let b = ln(add(a, &exp(negate(max_value.duplicate()))));
 
     // c = max_value + b
-    let c = add(&max_value, b);
+    let c = add(b, &max_value);
     let (c, tape) = c.split_tape();
 
     // d = (1 - T)
     let d = negate(scalar_sub(target_probs.duplicate(), 1.0));
 
     // e = logits * d
-    let e = mul(&d, logits.put_tape(tape));
+    let e = mul(logits.put_tape(tape), &d);
 
-    mean(add(&c, e))
+    mean(add(e, &c))
 }
 
 #[cfg(test)]

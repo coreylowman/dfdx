@@ -13,7 +13,7 @@ use crate::prelude::*;
 pub fn sum_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
     let result = <T::LastDimReduced as Tensor>::NoTape::new_boxed(T::Device::reduce_last_dim(
         t.data(),
-        |a, b| a + b,
+        &mut |a, b| a + b,
     ));
     let (mut t, mut tape) = t.split_tape();
     let _result = result.phantom();
