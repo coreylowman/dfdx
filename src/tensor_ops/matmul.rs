@@ -406,10 +406,23 @@ mod tests {
                 [1.0546886, 1.165766]
             ]
         );
-        let gradients = r.mean().backward();
+        let gradients = r.exp().mean().backward();
         assert_eq!(
             gradients.ref_gradient(&a),
-            &[[0.1719625, 0.111175, 0.1489875]; 4]
+            &[
+                [0.37689444, 0.24156547, 0.30238447],
+                [0.80570966, 0.5184905, 0.6703743],
+                [0.4199963, 0.2735345, 0.38693744],
+                [0.5321113, 0.34252504, 0.4438907]
+            ]
+        );
+        assert_eq!(
+            gradients.ref_gradient(&b),
+            &[
+                [0.8737376, 0.9888564],
+                [0.9339924, 0.991189],
+                [1.1659734, 1.2298465]
+            ]
         );
     }
 
@@ -445,8 +458,19 @@ mod tests {
         let b = Tensor2D::new([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
         let r: Tensor1D<2, OwnsTape> = vecmat_mul(a.trace(), &b);
         assert_eq!(r.data(), &[1.261436, 1.5543157]);
-        let gradients = r.mean().backward();
-        assert_eq!(gradients.ref_gradient(&a), &[0.66719997, 0.68895, 0.6823]);
+        let gradients = r.exp().mean().backward();
+        assert_eq!(
+            gradients.ref_gradient(&a),
+            &[2.6883178, 2.9369607, 2.9256766]
+        );
+        assert_eq!(
+            gradients.ref_gradient(&b),
+            &[
+                [1.2879219, 1.7261779],
+                [0.70150787, 0.94021803],
+                [1.6746868, 2.244552]
+            ]
+        );
     }
 
     #[test]
