@@ -11,20 +11,10 @@ use crate::prelude::*;
 /// assert_eq!(r.data(), &[2.0, 5.0]);
 /// ```
 pub fn mean_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
-    let num_elements: f32 = <T::Device as ReduceLastDim<T::Array>>::LAST_DIM as f32;
-    let result = <T::LastDimReduced as Tensor>::NoTape::new_boxed(T::Device::reduce_last_dim_full(
-        t.data(),
-        &mut |last| last.iter().sum::<f32>() / num_elements,
-    ));
-    let (mut t, mut tape) = t.split_tape();
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
-            *l = *r / num_elements
-        });
-        T::Device::add_assign(grads.mut_gradient(&t), t.data());
-    });
-    result.put_tape(tape)
+    scalar_div(
+        sum_last_dim(t),
+        <T::Device as ReduceLastDim<T::Array>>::LAST_DIM as f32,
+    )
 }
 
 macro_rules! mean_last_impl {
