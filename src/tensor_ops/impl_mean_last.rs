@@ -12,11 +12,10 @@ use crate::prelude::*;
 /// ```
 pub fn mean_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
     let num_elements: f32 = <T::Device as ReduceLastDim<T::Array>>::LAST_DIM as f32;
-    let mut summed = T::Device::reduce_last_dim(t.data(), |a, b| a + b);
-    <T::LastDimReduced as HasDevice>::Device::map_assign(summed.as_mut(), &mut |v| {
-        *v /= num_elements
-    });
-    let result = <T::LastDimReduced as Tensor>::NoTape::new_boxed(summed);
+    let result = <T::LastDimReduced as Tensor>::NoTape::new_boxed(T::Device::reduce_last_dim_full(
+        t.data(),
+        &mut |last| last.iter().sum::<f32>() / num_elements,
+    ));
     let (mut t, mut tape) = t.split_tape();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
