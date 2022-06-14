@@ -3,9 +3,9 @@ use crate::prelude::*;
 /// Reduces the last dimension of the tensor by computing std deviation of all values in the last dimension.
 /// Result [Tensor] has smaller number of dimensions.
 ///
-/// Computes: `((t - t.mean_last_dim()).square().sum_last_dim() / (NUM_ELEMENTS - 1.0)).sqrt()`
+/// Computes: `t.var_last_dim().sqrt()`
 ///
-/// See [mean_last_dim()]
+/// See [var_last_dim()] and [mean_last_dim()].
 ///
 /// Examples:
 /// ```rust
@@ -14,19 +14,32 @@ use crate::prelude::*;
 /// let r: Tensor1D<2> = std_last_dim(t);
 /// assert_eq!(r.data(), &[1.0, 2.5166113]);
 /// ```
-pub fn std_last_dim<T>(t: T) -> T::LastDimReduced
-where
-    T: Tensor<Dtype = f32>,
-    T::NoTape: PutTape<<T::LastDimReduced as Tensor>::Tape, Output = T>,
-{
+pub fn std_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
+    sqrt(var_last_dim(t))
+}
+
+/// Reduces the last dimension of the tensor by computing variance of all values in the last dimension.
+/// Result [Tensor] has smaller number of dimensions.
+///
+/// Computes: `(t - t.mean_last_dim()).square().sum_last_dim() / (NUM_ELEMENTS - 1.0)`
+///
+/// See [std_last_dim()] and [mean_last_dim()].
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let t = Tensor2D::new([[1.0, 2.0, 3.0], [3.0, 5.0, 8.0]]);
+/// let r: Tensor1D<2> = var_last_dim(t);
+/// assert_eq!(r.data(), &[1.0, 6.333333]);
+/// ```
+pub fn var_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
     let num_elements: f32 = <T::Device as ReduceLastDim<T::Array>>::LAST_DIM as f32;
     let _t: T::NoTape = t.duplicate();
     let (mean, tape) = mean_last_dim(t).split_tape();
-    let variance = scalar_div(
+    scalar_div(
         sum_last_dim(square(broadcast_inner_sub(_t.put_tape(tape), &mean))),
         num_elements - 1.0,
-    );
-    sqrt(variance)
+    )
 }
 
 macro_rules! std_last_impl {
@@ -35,6 +48,11 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [std_last_dim()] on `self`.
     pub fn std_last_dim(self) -> <Self as Tensor>::LastDimReduced {
         std_last_dim(self)
+    }
+
+    /// Calls [var_last_dim()] on `self`.
+    pub fn var_last_dim(self) -> <Self as Tensor>::LastDimReduced {
+        var_last_dim(self)
     }
 }
     };
