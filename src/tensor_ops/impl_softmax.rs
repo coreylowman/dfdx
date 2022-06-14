@@ -36,7 +36,7 @@ pub fn log_softmax<T: Tensor<Dtype = f32>>(t: T) -> T {
     let t_ = t.duplicate();
     let lse = logsumexp(t);
     let (lse, tape) = lse.split_tape();
-    broadcast_inner_sub(t_.put_tape(tape), lse)
+    sub_broadcast_rhs_last(t_.put_tape(tape), lse)
 }
 
 /// Computes the [softmax](https://en.wikipedia.org/wiki/Softmax_function) function.

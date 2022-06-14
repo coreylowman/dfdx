@@ -23,10 +23,10 @@ fn bouter_add<T: CountElements<Dtype = f32>, const M: usize>(
 /// # use dfdx::prelude::*;
 /// let a = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
 /// let b = Tensor1D::new([-1.0, 0.0, 1.0]);
-/// let r = broadcast_outer_add(a, &b);
+/// let r = add_broadcast_rhs_first(a, &b);
 /// assert_eq!(r.data(), &[[0.0, 2.0, 4.0], [3.0, 5.0, 7.0]]);
 /// ```
-pub fn broadcast_outer_add<Lhs, Rhs, const M: usize>(lhs: Lhs, rhs: &Rhs) -> Lhs
+pub fn add_broadcast_rhs_first<Lhs, Rhs, const M: usize>(lhs: Lhs, rhs: &Rhs) -> Lhs
 where
     Lhs: Tensor<Array = [Rhs::Array; M], Dtype = f32>,
     Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
@@ -66,7 +66,7 @@ mod tests {
     fn test_broadcast_outer_add() {
         let a: Tensor2D<3, 5> = Tensor2D::ones();
         let b: Tensor1D<5> = Tensor1D::ones();
-        let r = broadcast_outer_add(a.trace(), &b);
+        let r = add_broadcast_rhs_first(a.trace(), &b);
         assert_eq!(r.data(), &[[2.0; 5]; 3]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[[1.0 / 15.0; 5]; 3]);

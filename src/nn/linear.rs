@@ -71,9 +71,9 @@ impl<const B: usize, const I: usize, const O: usize, H: Tape> Module<Tensor2D<B,
 {
     type Output = Tensor2D<B, O, H>;
 
-    /// Batched 2d forward using [matmul()] and [broadcast_outer_add()]
+    /// Batched 2d forward using [matmul()] and [add_broadcast_rhs_first()]
     fn forward(&self, x: Tensor2D<B, I, H>) -> Self::Output {
-        broadcast_outer_add(matmul_transpose(x, &self.weight), &self.bias)
+        add_broadcast_rhs_first(matmul_transpose(x, &self.weight), &self.bias)
     }
 }
 
