@@ -12,6 +12,7 @@
 mod activations;
 mod dropout;
 mod impl_module_for_tuples;
+mod layer_norm;
 mod linear;
 mod module;
 mod npz;
@@ -20,6 +21,7 @@ mod repeated;
 pub use activations::*;
 pub use dropout::*;
 pub use impl_module_for_tuples::*;
+pub use layer_norm::*;
 pub use linear::*;
 pub use module::*;
 pub use npz::*;
