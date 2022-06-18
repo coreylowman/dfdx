@@ -17,6 +17,7 @@ mod linear;
 mod module;
 mod npz;
 mod repeated;
+mod residual;
 
 pub use activations::*;
 pub use dropout::*;
@@ -26,3 +27,4 @@ pub use linear::*;
 pub use module::*;
 pub use npz::*;
 pub use repeated::*;
+pub use residual::*;
