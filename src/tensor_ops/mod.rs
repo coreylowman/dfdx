@@ -1,4 +1,34 @@
 //! Implementations of all ops for tensors including activations like [relu()], binary operations like [matmul()], and more.
+//!
+//! Generic function and struct methods:
+//!
+//! All functionality is provided in two ways.
+//! 1. The generic standalone function that takes a generic parameter. e.g. [mean()].
+//! 2. The struct method for tensor structs. e.g. [Tensor1D::mean()].
+//!
+//! The struct methods are all just pass throughs to the generic function.
+//!
+//! Reductions:
+//!
+//! There are a number of functions that reduce a dimension (e.g. [mean_last_dim()]).
+//! These functions are all labeled with `*_last_dim()` at the end.
+//!
+//! Reducing a dimension means removing that dimension from the tensor by reducing it to 1 number.
+//! For example calling [sum_last_dim()] on a `Tensor2D<2, 5>` would result in a `Tensor1D<2>`.
+//!
+//! See relevant functions for more examples.
+//!
+//! Broadcasts:
+//!
+//! Some binary functions need to broadcast one argument to be the same size as the other (e.g. [add_broadcast_rhs_last()]).
+//! These methods are named as `<operation>_broadcast_<argument>_<dimension>()`. Currently all of the functions
+//! broadcast the second argument (`rhs`). And there are version where the first dimension is broadcast and the last dimension
+//! is broadcast
+//!
+//! 1. [add_broadcast_rhs_last()] (and others) broadcasts the last dimension
+//! 2. [add_broadcast_rhs_first()] (and others) broadcast the entire array according to the first dimension in `lhs`.
+//!
+//! See relevant functions for more examples.
 
 mod arith;
 mod arith_broadcast_inner;
