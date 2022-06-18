@@ -1,5 +1,7 @@
 use crate::prelude::*;
 use rand::prelude::Rng;
+use std::io::{Read, Seek, Write};
+use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 impl<Input, A, B> Module<Input> for (A, B)
 where
@@ -99,6 +101,30 @@ macro_rules! tuple_impls {
                 $(self.$idx.reset_params(rng));+
             }
         }
+
+        impl<$($name: SaveToNpz),+> SaveToNpz for ($($name,)+) {
+            /// Calls `SaveToNpz::write(self.<idx>, ...)` on each part of the tuple. See [SaveToNpz].
+            ///
+            /// E.g. for a two tuple (A, B) with `base == ""`, this will call:
+            /// 1. `self.0.write("0.", w)`
+            /// 2. `self.1.write("1.", w)`
+            fn write<W: Write + Seek>(&self, base: &String, w: &mut ZipWriter<W>) -> ZipResult<()> {
+                $(self.$idx.write(&format!("{}{}.", base, $idx), w)?;)+
+                Ok(())
+            }
+        }
+
+        impl<$($name: LoadFromNpz),+> LoadFromNpz for ($($name,)+) {
+            /// Calls `LoadFromNpz::read(self.<idx>, ...)` on each part of the tuple. See [LoadFromNpz].
+            ///
+            /// E.g. for a two tuple (A, B) with `base == ""`, this will call:
+            /// 1. `self.0.read("0.", r)`
+            /// 2. `self.1.read("1.", r)`
+            fn read<R: Read + Seek>(&mut self, base: &String, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+                $(self.$idx.read(&format!("{}{}.", base, $idx), r)?;)+
+                Ok(())
+            }
+        }
     };
 }
 
@@ -112,6 +138,8 @@ tuple_impls!([A, B, C, D, E, F] [0, 1, 2, 3, 4, 5]);
 mod tests {
     use super::*;
     use rand::{prelude::StdRng, SeedableRng};
+    use std::fs::File;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_2_tuple() {
@@ -152,5 +180,75 @@ mod tests {
         assert!(model.0.bias.data() != m0.0.bias.data());
         assert!(model.1.weight.data() != m0.1.weight.data());
         assert!(model.1.bias.data() != m0.1.bias.data());
+    }
+
+    #[test]
+    fn test_save_tuple() {
+        let model: (
+            Linear<1, 2>,
+            ReLU,
+            Linear<2, 3>,
+            (Dropout, Linear<1, 2>, Linear<3, 4>),
+        ) = Default::default();
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+        model
+            .save(file.path().to_str().unwrap().to_string())
+            .expect("failed to save model");
+        let f = File::open(file.path()).expect("failed to open resulting file");
+        let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
+        let mut names = zip.file_names().collect::<Vec<&str>>();
+        names.sort();
+        assert_eq!(
+            &names,
+            &[
+                "0.bias.npy",
+                "0.weight.npy",
+                "2.bias.npy",
+                "2.weight.npy",
+                "3.1.bias.npy",
+                "3.1.weight.npy",
+                "3.2.bias.npy",
+                "3.2.weight.npy",
+            ]
+        );
+    }
+
+    #[test]
+    fn test_load_tuple() {
+        type Model = (
+            Linear<1, 2>,
+            ReLU,
+            Linear<2, 3>,
+            (Dropout, Linear<1, 2>, Linear<3, 4>),
+        );
+
+        let mut rng = StdRng::seed_from_u64(0);
+        let mut saved_model: Model = Default::default();
+        saved_model.reset_params(&mut rng);
+
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+        assert!(saved_model
+            .save(file.path().to_str().unwrap().to_string())
+            .is_ok());
+
+        let mut loaded_model: Model = Default::default();
+        assert!(loaded_model
+            .load(file.path().to_str().unwrap().to_string())
+            .is_ok());
+        assert_eq!(loaded_model.0.weight.data(), saved_model.0.weight.data());
+        assert_eq!(loaded_model.0.bias.data(), saved_model.0.bias.data());
+        assert_eq!(loaded_model.2.weight.data(), saved_model.2.weight.data());
+        assert_eq!(loaded_model.2.bias.data(), saved_model.2.bias.data());
+        assert_eq!(
+            loaded_model.3 .1.weight.data(),
+            saved_model.3 .1.weight.data()
+        );
+        assert_eq!(loaded_model.3 .1.bias.data(), saved_model.3 .1.bias.data());
+
+        assert_eq!(
+            loaded_model.3 .2.weight.data(),
+            saved_model.3 .2.weight.data()
+        );
+        assert_eq!(loaded_model.3 .2.bias.data(), saved_model.3 .2.bias.data());
     }
 }

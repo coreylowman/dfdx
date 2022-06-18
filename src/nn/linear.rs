@@ -1,6 +1,8 @@
 use crate::prelude::*;
 use rand::Rng;
 use rand_distr::Uniform;
+use std::io::{Read, Seek, Write};
+use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// A linear transformation of the form `x * transpose(W) + b`, where `W` is a matrix, `x` is a vector or matrix,
 /// and `b` is a vector. If `x` is a matrix this does matrix multiplication.
@@ -57,6 +59,32 @@ impl<const I: usize, const O: usize> ResetParams for Linear<I, O> {
     }
 }
 
+impl<const I: usize, const O: usize> SaveToNpz for Linear<I, O> {
+    /// Saves `self.weight` to `{pre}weight.npy` and `self.bias` to `{pre}bias.npy`
+    /// using [numpy::write()].
+    fn write<W>(&self, pre: &String, w: &mut ZipWriter<W>) -> ZipResult<()>
+    where
+        W: Write + Seek,
+    {
+        npz_fwrite(w, format!("{pre}weight.npy"), self.weight.data())?;
+        npz_fwrite(w, format!("{pre}bias.npy"), self.bias.data())?;
+        Ok(())
+    }
+}
+
+impl<const I: usize, const O: usize> LoadFromNpz for Linear<I, O> {
+    /// Reads `self.weight` from `{pre}weight.npy` and `self.bias` from `{pre}bias.npy`
+    /// using [numpy::read()].
+    fn read<R>(&mut self, pre: &String, r: &mut ZipArchive<R>) -> Result<(), NpzError>
+    where
+        R: Read + Seek,
+    {
+        npz_fread(r, format!("{pre}weight.npy"), self.weight.mut_data())?;
+        npz_fread(r, format!("{pre}bias.npy"), self.bias.mut_data())?;
+        Ok(())
+    }
+}
+
 impl<const I: usize, const O: usize, H: Tape> Module<Tensor1D<I, H>> for Linear<I, O> {
     type Output = Tensor1D<O, H>;
 
@@ -79,6 +107,10 @@ impl<const B: usize, const I: usize, const O: usize, H: Tape> Module<Tensor2D<B,
 
 #[cfg(test)]
 mod tests {
+    use rand::{prelude::StdRng, SeedableRng};
+    use std::fs::File;
+    use tempfile::NamedTempFile;
+
     use super::*;
 
     const W: [[f32; 5]; 2] = [
@@ -172,5 +204,50 @@ mod tests {
             gradients.ref_gradient(&model.bias),
             &[0.76791739, -0.31687993]
         );
+    }
+
+    #[test]
+    fn test_save_linear() {
+        let model: Linear<5, 3> = Default::default();
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+        model
+            .save(file.path().to_str().unwrap().to_string())
+            .expect("failed to save model");
+        let f = File::open(file.path()).expect("failed to open resulting file");
+        let mut zip = ZipArchive::new(f).expect("failed to create zip archive from file");
+        {
+            let weight_file = zip
+                .by_name("weight.npy")
+                .expect("failed to find weight.npy file");
+            assert!(weight_file.size() > 0);
+        }
+        {
+            let bias_file = zip
+                .by_name("bias.npy")
+                .expect("failed to find bias.npy file");
+            assert!(bias_file.size() > 0);
+        }
+    }
+
+    #[test]
+    fn test_load_linear() {
+        let mut rng = StdRng::seed_from_u64(0);
+        let mut saved_model: Linear<5, 3> = Default::default();
+        saved_model.reset_params(&mut rng);
+
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+        assert!(saved_model
+            .save(file.path().to_str().unwrap().to_string())
+            .is_ok());
+
+        let mut loaded_model: Linear<5, 3> = Default::default();
+        assert!(loaded_model.weight.data() != saved_model.weight.data());
+        assert!(loaded_model.bias.data() != saved_model.bias.data());
+
+        assert!(loaded_model
+            .load(file.path().to_str().unwrap().to_string())
+            .is_ok());
+        assert_eq!(loaded_model.weight.data(), saved_model.weight.data());
+        assert_eq!(loaded_model.bias.data(), saved_model.bias.data());
     }
 }

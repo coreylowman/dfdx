@@ -17,6 +17,9 @@ macro_rules! activation_impls {
             fn reset_params<R: Rng>(&mut self, _: &mut R) {}
         }
 
+        impl SaveToNpz for $struct_name {}
+        impl LoadFromNpz for $struct_name {}
+
         impl<T: Tensor<Dtype = f32>> Module<T> for $struct_name {
             type Output = T;
             fn forward(&self, input: T) -> Self::Output {
