@@ -8,8 +8,8 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 /// and `b` is a vector. If `x` is a matrix this does matrix multiplication.
 ///
 /// Implements:
-/// - [Module] for vectors like [Tensor1D<I>]
-/// - [Module] for matrices like [Tensor2D<B, I>], where `B` is batch size
+/// - [Module] for vectors like [Tensor1D<Inp>]
+/// - [Module] for matrices like [Tensor2D<Batch, Inp>], where `Batch` is batch size
 /// - [ResetParams] to set weight & bias to uniform random numbers from a distribution based on `I`.
 /// - [CanUpdateWithGradients]
 /// - [SaveToNpz]
