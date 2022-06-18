@@ -1,5 +1,5 @@
+use super::binary_map::{add, binary_map_broadcast_rhs_first, div, mul, sub};
 use crate::prelude::*;
-use std::ops::Neg;
 
 /// Add together two [Tensor]s by broadcasting `rhs` `M` times, where `M` is the first dimension of `lhs`.
 ///
@@ -19,16 +19,7 @@ where
     Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
     Lhs::Device: Device<Lhs::Array> + Device<Rhs::Array>,
 {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x + y
-    }
-    fn dfdx(_x: &f32, _y: &f32) -> f32 {
-        1.0
-    }
-    fn dfdy(_x: &f32, _y: &f32) -> f32 {
-        1.0
-    }
-    binary_map_broadcast_rhs_first(lhs, rhs, f, dfdx, dfdy)
+    binary_map_broadcast_rhs_first(lhs, rhs, add::f, add::dfdx, add::dfdy)
 }
 
 /// Subtract two [Tensor]s by broadcasting `rhs` `M` times, where `M` is the first dimension of `lhs`.
@@ -49,16 +40,7 @@ where
     Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
     Lhs::Device: Device<Lhs::Array> + Device<Rhs::Array>,
 {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x - y
-    }
-    fn dfdx(_x: &f32, _y: &f32) -> f32 {
-        1.0
-    }
-    fn dfdy(_x: &f32, _y: &f32) -> f32 {
-        -1.0
-    }
-    binary_map_broadcast_rhs_first(lhs, rhs, f, dfdx, dfdy)
+    binary_map_broadcast_rhs_first(lhs, rhs, sub::f, sub::dfdx, sub::dfdy)
 }
 
 /// Multiplies two [Tensor]s by broadcasting `rhs` `M` times, where `M` is the first dimension of `lhs`.
@@ -79,16 +61,7 @@ where
     Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
     Lhs::Device: Device<Lhs::Array> + Device<Rhs::Array>,
 {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x * y
-    }
-    fn dfdx(_x: &f32, y: &f32) -> f32 {
-        *y
-    }
-    fn dfdy(x: &f32, _y: &f32) -> f32 {
-        *x
-    }
-    binary_map_broadcast_rhs_first(lhs, rhs, f, dfdx, dfdy)
+    binary_map_broadcast_rhs_first(lhs, rhs, mul::f, mul::dfdx, mul::dfdy)
 }
 
 /// Divides two [Tensor]s by broadcasting `rhs` `M` times, where `M` is the first dimension of `lhs`.
@@ -109,74 +82,7 @@ where
     Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
     Lhs::Device: Device<Lhs::Array> + Device<Rhs::Array>,
 {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x * y.recip()
-    }
-    fn dfdx(_x: &f32, y: &f32) -> f32 {
-        y.recip()
-    }
-    fn dfdy(x: &f32, y: &f32) -> f32 {
-        x.neg() * y.powi(2).recip()
-    }
-    binary_map_broadcast_rhs_first(lhs, rhs, f, dfdx, dfdy)
-}
-
-/// Apply binary function `f` to `lhs` and `rhs`, where `rhs` is broadcasted `M` times to be the same shape as `lhs`.
-/// `dfdx` and `dfdy` are the partial derivatives of f wrt. x and y respectively.
-///
-/// `f`, `dfdx`, and `dfdy` are all the same type.
-///
-/// Generics:
-/// - `M`: The first dimension of `lhs`.
-fn binary_map_broadcast_rhs_first<const M: usize, Lhs, Rhs, F, Dfdx, Dfdy>(
-    lhs: Lhs,
-    rhs: &Rhs,
-    mut f: F,
-    mut dfdx: Dfdx,
-    mut dfdy: Dfdy,
-) -> Lhs
-where
-    Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
-    Lhs: Tensor<Dtype = f32, Array = [Rhs::Array; M]>,
-    F: FnMut(&f32, &f32) -> f32,
-    Dfdx: FnMut(&f32, &f32) -> f32,
-    Dfdy: FnMut(&f32, &f32) -> f32,
-    Lhs::Device: Device<Lhs::Array> + Device<Rhs::Array>,
-{
-    let result = Lhs::NoTape::new_boxed(Lhs::Device::broadcast_rhs_first(
-        lhs.data(),
-        rhs.data(),
-        &mut f,
-    ));
-
-    let (mut lhs, mut tape) = lhs.split_tape();
-    let _rhs = rhs.phantom();
-    let _result = result.phantom();
-
-    // calculate derivatives
-    let mut rhs_deriv: Box<Lhs::Array> =
-        Lhs::Device::broadcast_rhs_first(lhs.data(), rhs.data(), &mut dfdy);
-    Lhs::Device::broadcast_rhs_first_assign(lhs.mut_data(), rhs.data(), &mut |l, r| {
-        *l = dfdx(l, r)
-    });
-
-    tape.add_backward_op(move |grads| {
-        let result_grad: &Lhs::Array = grads.ref_gradient(&_result);
-        // chain rule
-        Lhs::Device::mul_assign(lhs.mut_data(), result_grad);
-        Lhs::Device::mul_assign(rhs_deriv.as_mut(), result_grad);
-
-        // sum first dimension
-        let mut d_grad_rhs: Box<Rhs::Array> = Lhs::Device::zeros();
-        for i in 0..M {
-            Rhs::Device::add_assign(d_grad_rhs.as_mut(), &rhs_deriv[i]);
-        }
-
-        // gather gradients
-        Lhs::Device::add_assign(grads.mut_gradient(&lhs), lhs.data());
-        Rhs::Device::add_assign(grads.mut_gradient(&_rhs), d_grad_rhs.as_ref());
-    });
-    result.put_tape(tape)
+    binary_map_broadcast_rhs_first(lhs, rhs, div::f, div::dfdx, div::dfdy)
 }
 
 #[cfg(test)]

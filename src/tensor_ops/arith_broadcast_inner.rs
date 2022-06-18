@@ -1,5 +1,5 @@
+use super::binary_map::{add, binary_map_broadcast_rhs_last, div, mul, sub};
 use crate::prelude::*;
-use std::ops::Neg;
 
 /// Add two [Tensor]s together: `lhs + rhs`. `rhs`'s last dimension is broadcasted to be the same size as `lhs`.
 ///
@@ -15,16 +15,7 @@ pub fn add_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     lhs: T,
     rhs: <T::LastDimReduced as Tensor>::NoTape,
 ) -> T {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x + y
-    }
-    fn dfdx(_x: &f32, _y: &f32) -> f32 {
-        1.0
-    }
-    fn dfdy(_x: &f32, _y: &f32) -> f32 {
-        1.0
-    }
-    binary_map_broadcast_rhs_last(lhs, rhs, f, dfdx, dfdy)
+    binary_map_broadcast_rhs_last(lhs, rhs, add::f, add::dfdx, add::dfdy)
 }
 
 /// Subtracts two [Tensor]s: `lhs - rhs`. `rhs`'s last dimension is broadcasted to be the same size as `lhs`.
@@ -41,16 +32,7 @@ pub fn sub_broadcast_rhs_last<Lhs: Tensor<Dtype = f32>>(
     lhs: Lhs,
     rhs: <Lhs::LastDimReduced as Tensor>::NoTape,
 ) -> Lhs {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x - y
-    }
-    fn dfdx(_x: &f32, _y: &f32) -> f32 {
-        1.0
-    }
-    fn dfdy(_x: &f32, _y: &f32) -> f32 {
-        -1.0
-    }
-    binary_map_broadcast_rhs_last(lhs, rhs, f, dfdx, dfdy)
+    binary_map_broadcast_rhs_last(lhs, rhs, sub::f, sub::dfdx, sub::dfdy)
 }
 
 /// Multiplies two [Tensor]s: `lhs * rhs`. `rhs`'s last dimension is broadcasted to be the same size as `lhs`.
@@ -67,16 +49,7 @@ pub fn mul_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     lhs: T,
     rhs: <T::LastDimReduced as Tensor>::NoTape,
 ) -> T {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x * y
-    }
-    fn dfdx(_x: &f32, y: &f32) -> f32 {
-        *y
-    }
-    fn dfdy(x: &f32, _y: &f32) -> f32 {
-        *x
-    }
-    binary_map_broadcast_rhs_last(lhs, rhs, f, dfdx, dfdy)
+    binary_map_broadcast_rhs_last(lhs, rhs, mul::f, mul::dfdx, mul::dfdy)
 }
 
 /// Divides two [Tensor]s: `lhs / rhs`. `rhs`'s last dimension is broadcasted to be the same size as `lhs`.
@@ -93,50 +66,7 @@ pub fn div_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     lhs: T,
     rhs: <T::LastDimReduced as Tensor>::NoTape,
 ) -> T {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x * y.recip()
-    }
-    fn dfdx(_x: &f32, y: &f32) -> f32 {
-        y.recip()
-    }
-    fn dfdy(x: &f32, y: &f32) -> f32 {
-        x.neg() * y.powi(2).recip()
-    }
-    binary_map_broadcast_rhs_last(lhs, rhs, f, dfdx, dfdy)
-}
-
-/// Applies a binary function `f`, it's partial wrt. x `dfdx`, and its partial wrt. y `dfdy`
-/// to a pair of [Tensor]s `lhs` and `rhs. Note that `rhs` has it's last dimension reduced,
-/// so therefore it's last dimension is broadcasted to `lhs`'s last dimension.
-///
-/// This is primarily used to implement [add_broadcast_rhs_last()],
-/// [sub_broadcast_rhs_last()], [mul_broadcast_rhs_last()], and [div_broadcast_rhs_last()].
-pub fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>, F, Dfdx, Dfdy>(
-    lhs: T,
-    mut rhs: <T::LastDimReduced as Tensor>::NoTape,
-    f: F,
-    mut dfdx: Dfdx,
-    dfdy: Dfdy,
-) -> T
-where
-    F: FnMut(&f32, &f32) -> f32,
-    Dfdx: FnMut(&f32, &f32) -> f32,
-    Dfdy: FnMut(&f32, &f32) -> f32,
-{
-    let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), f));
-    let (mut lhs, mut tape) = lhs.split_tape();
-    let mut rhs_deriv: Box<T::Array> = T::Device::zip_map(lhs.data(), rhs.data(), dfdy);
-    T::Device::zip_map_assign(lhs.mut_data(), rhs.data(), &mut |l, r| *l = dfdx(l, r));
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let result_grad: &T::Array = grads.ref_gradient(&_result);
-        T::Device::mul_assign(lhs.mut_data(), result_grad);
-        T::Device::mul_assign(rhs_deriv.as_mut(), result_grad);
-        T::Device::add_assign(grads.mut_gradient(&lhs), lhs.data());
-        T::Device::reduce_last_dim_into(rhs_deriv.as_ref(), rhs.mut_data(), &mut |x, y| x + y);
-        <T::LastDimReduced as HasDevice>::Device::add_assign(grads.mut_gradient(&rhs), rhs.data());
-    });
-    result.put_tape(tape)
+    binary_map_broadcast_rhs_last(lhs, rhs, div::f, div::dfdx, div::dfdy)
 }
 
 #[cfg(test)]

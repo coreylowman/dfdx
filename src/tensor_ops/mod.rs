@@ -4,6 +4,7 @@ mod arith;
 mod arith_broadcast_inner;
 mod arith_broadcast_outer;
 mod arith_scalar;
+pub(super) mod binary_map;
 mod impl_activations;
 mod impl_clamp;
 mod impl_dropout;

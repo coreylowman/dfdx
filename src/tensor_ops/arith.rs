@@ -1,5 +1,6 @@
+use super::binary_map::{add, binary_map, div, minimum, mul, sub};
 use crate::prelude::*;
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, Div, Mul, Sub};
 
 /// Add two [Tensor]s of the same shape together: `lhs + &rhs`
 ///
@@ -12,16 +13,7 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 /// assert_eq!(r.data(), &[[2.0, 3.0, 4.0], [0.0, -1.0, -2.0]]);
 /// ```
 pub fn add<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x + y
-    }
-    fn dfdx(_x: &f32, _y: &f32) -> f32 {
-        1.0
-    }
-    fn dfdy(_x: &f32, _y: &f32) -> f32 {
-        1.0
-    }
-    binary_map(lhs, rhs, f, dfdx, dfdy)
+    binary_map(lhs, rhs, add::f, add::dfdx, add::dfdy)
 }
 
 /// Subtracts two [Tensor]s of the same shape from each other: `lhs - &rhs`
@@ -34,16 +26,7 @@ pub fn add<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 /// let r = sub(a, &b); // or `a - &b`
 /// assert_eq!(r.data(), &[[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
 pub fn sub<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x - y
-    }
-    fn dfdx(_x: &f32, _y: &f32) -> f32 {
-        1.0
-    }
-    fn dfdy(_x: &f32, _y: &f32) -> f32 {
-        -1.0
-    }
-    binary_map(lhs, rhs, f, dfdx, dfdy)
+    binary_map(lhs, rhs, sub::f, sub::dfdx, sub::dfdy)
 }
 
 /// Multiplies two [Tensor]s of the same shape together: `lhs * &rhs`.
@@ -56,16 +39,7 @@ pub fn sub<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 /// let r = mul(a, &b); // or `a * &b`
 /// assert_eq!(r.data(), &[[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 pub fn mul<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x * y
-    }
-    fn dfdx(_x: &f32, y: &f32) -> f32 {
-        *y
-    }
-    fn dfdy(x: &f32, _y: &f32) -> f32 {
-        *x
-    }
-    binary_map(lhs, rhs, f, dfdx, dfdy)
+    binary_map(lhs, rhs, mul::f, mul::dfdx, mul::dfdy)
 }
 
 /// Divides two [Tensor]s of the same shape: `lhs / &rhs`.
@@ -78,16 +52,7 @@ pub fn mul<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 /// let r = div(a, &b); // or `a / &b`
 /// assert_eq!(r.data(), &[[1.0, 4.0, 3.0], [-2.0, -2.0, -1.0]]);
 pub fn div<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x * y.recip()
-    }
-    fn dfdx(_x: &f32, y: &f32) -> f32 {
-        y.recip()
-    }
-    fn dfdy(x: &f32, y: &f32) -> f32 {
-        x.neg() * y.powi(2).recip()
-    }
-    binary_map(lhs, rhs, f, dfdx, dfdy)
+    binary_map(lhs, rhs, div::f, div::dfdx, div::dfdy)
 }
 
 /// Takes the element wise minimum of two [Tensor]s of the same shape: `min(lhs, &rhs)`.
@@ -100,60 +65,7 @@ pub fn div<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 /// let r = minimum(a, &b);
 /// assert_eq!(r.data(), &[[1.0, 0.5, 1.0], [-2.0, -2.0, -3.5]]);
 pub fn minimum<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
-    fn f(x: &f32, y: &f32) -> f32 {
-        x.min(*y)
-    }
-    fn dfdx(x: &f32, y: &f32) -> f32 {
-        if x < y {
-            1.0
-        } else if x > y {
-            0.0
-        } else {
-            0.5
-        }
-    }
-    fn dfdy(x: &f32, y: &f32) -> f32 {
-        if y < x {
-            1.0
-        } else if y > x {
-            0.0
-        } else {
-            0.5
-        }
-    }
-    binary_map(lhs, rhs, f, dfdx, dfdy)
-}
-
-/// Applies a binary function `f`, it's partial wrt. x `dfdx`, and its partial wrt. y `dfdy`
-/// to a pair of [Tensor]s `lhs` and `rhs.
-///
-/// This is primarily used to implement [add()], [sub()], [mul()], and [div()].
-pub fn binary_map<T: Tensor<Dtype = f32>, F, Dfdx, Dfdy>(
-    lhs: T,
-    rhs: &T::NoTape,
-    f: F,
-    mut dfdx: Dfdx,
-    dfdy: Dfdy,
-) -> T
-where
-    F: FnMut(&f32, &f32) -> f32,
-    Dfdx: FnMut(&f32, &f32) -> f32,
-    Dfdy: FnMut(&f32, &f32) -> f32,
-{
-    let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), f));
-    let (mut lhs, mut tape) = lhs.split_tape();
-    let mut rhs_deriv: Box<T::Array> = T::Device::zip_map(lhs.data(), rhs.data(), dfdy);
-    T::Device::zip_map_assign(lhs.mut_data(), rhs.data(), &mut |l, r| *l = dfdx(l, r));
-    let _rhs = rhs.phantom();
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let result_grad: &T::Array = grads.ref_gradient(&_result);
-        T::Device::mul_assign(lhs.mut_data(), result_grad);
-        T::Device::mul_assign(rhs_deriv.as_mut(), result_grad);
-        T::Device::add_assign(grads.mut_gradient(&lhs), lhs.data());
-        T::Device::add_assign(grads.mut_gradient(&_rhs), rhs_deriv.as_ref());
-    });
-    result.put_tape(tape)
+    binary_map(lhs, rhs, minimum::f, minimum::dfdx, minimum::dfdy)
 }
 
 macro_rules! binary_ops_impl {
