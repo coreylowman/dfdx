@@ -32,8 +32,9 @@ use std::collections::HashMap;
 /// 2. We can combine computing the derivative and multiplying by the `gradient(result)` by just setting `t` to `-gradient(result)`
 ///
 /// This would not be possible if these chain rule operations were inside of GradientTape!
+#[derive(Default)]
 pub struct GradientTape {
-    operations: Vec<Box<dyn FnOnce(&mut Gradients) -> ()>>,
+    operations: Vec<Box<dyn FnOnce(&mut Gradients)>>,
 }
 
 impl std::fmt::Debug for GradientTape {
@@ -41,14 +42,6 @@ impl std::fmt::Debug for GradientTape {
         f.debug_struct("GradientTape")
             .field("num_operations", &self.operations.len())
             .finish()
-    }
-}
-
-impl Default for GradientTape {
-    fn default() -> Self {
-        Self {
-            operations: Vec::new(),
-        }
     }
 }
 
@@ -63,10 +56,7 @@ impl GradientTape {
     /// * `operation` - A FnOnce that acts on [Gradients].
     ///
     /// See src/tensor_ops for implementation examples.
-    pub(crate) fn add_backward_op<F: 'static + FnOnce(&mut Gradients) -> ()>(
-        &mut self,
-        operation: F,
-    ) {
+    pub(crate) fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, operation: F) {
         self.operations.insert(0, Box::new(operation));
     }
 
@@ -124,17 +114,9 @@ impl Tape for NoTape {
 /// Under the hood, it actually is a HashMap, and stores values as Box<dyn Any>. The
 /// important part of key's implementing [HasArrayType] is that the associated type
 /// of that trait is used to downcast the box to the expected value.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Gradients {
     gradient_by_id: HashMap<UniqueId, Box<dyn std::any::Any>>,
-}
-
-impl Default for Gradients {
-    fn default() -> Self {
-        Self {
-            gradient_by_id: HashMap::new(),
-        }
-    }
 }
 
 impl Gradients {
