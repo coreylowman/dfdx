@@ -1,4 +1,4 @@
-use super::binary_map::{add, binary_map, div, minimum, mul, sub};
+use super::binary_map::{add, binary_map, binary_map_owned, div, minimum, mul, sub};
 use crate::prelude::*;
 use std::ops::{Add, Div, Mul, Sub};
 
@@ -16,6 +16,11 @@ pub fn add<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, add::f, add::dfdx, add::dfdy)
 }
 
+/// Same as [add], but takes ownership of `rhs`.
+pub fn add_owned<T: Tensor<Dtype = f32>>(lhs: T, rhs: T::NoTape) -> T {
+    binary_map_owned(lhs, rhs, add::f, add::dfdx, add::dfdy)
+}
+
 /// Subtracts two [Tensor]s of the same shape from each other: `lhs - &rhs`
 ///
 /// Example:
@@ -27,6 +32,11 @@ pub fn add<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 /// assert_eq!(r.data(), &[[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
 pub fn sub<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, sub::f, sub::dfdx, sub::dfdy)
+}
+
+/// Same as [sub], but takes ownership of `rhs`.
+pub fn sub_owned<T: Tensor<Dtype = f32>>(lhs: T, rhs: T::NoTape) -> T {
+    binary_map_owned(lhs, rhs, sub::f, sub::dfdx, sub::dfdy)
 }
 
 /// Multiplies two [Tensor]s of the same shape together: `lhs * &rhs`.
@@ -42,6 +52,11 @@ pub fn mul<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, mul::f, mul::dfdx, mul::dfdy)
 }
 
+/// Same as [mul], but takes ownership of `rhs`.
+pub fn mul_owned<T: Tensor<Dtype = f32>>(lhs: T, rhs: T::NoTape) -> T {
+    binary_map_owned(lhs, rhs, mul::f, mul::dfdx, mul::dfdy)
+}
+
 /// Divides two [Tensor]s of the same shape: `lhs / &rhs`.
 ///
 /// Example:
@@ -53,6 +68,11 @@ pub fn mul<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 /// assert_eq!(r.data(), &[[1.0, 4.0, 3.0], [-2.0, -2.0, -1.0]]);
 pub fn div<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, div::f, div::dfdx, div::dfdy)
+}
+
+/// Same as [div], but takes ownership of `rhs`.
+pub fn div_owned<T: Tensor<Dtype = f32>>(lhs: T, rhs: T::NoTape) -> T {
+    binary_map_owned(lhs, rhs, div::f, div::dfdx, div::dfdy)
 }
 
 /// Takes the element wise minimum of two [Tensor]s of the same shape: `min(lhs, &rhs)`.

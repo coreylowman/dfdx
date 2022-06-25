@@ -82,7 +82,7 @@ pub(super) fn binary_map<T: Tensor<Dtype = f32>, F, Dfdx, Dfdy>(
     lhs: T,
     rhs: &T::NoTape,
     f: F,
-    mut dfdx: Dfdx,
+    dfdx: Dfdx,
     dfdy: Dfdy,
 ) -> T
 where
@@ -90,18 +90,33 @@ where
     Dfdx: FnMut(&f32, &f32) -> f32,
     Dfdy: FnMut(&f32, &f32) -> f32,
 {
-    let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), f));
+    // Note: the duplicated `rhs` is used to store derivative of `rhs`.
+    binary_map_owned(lhs, rhs.duplicate(), f, dfdx, dfdy)
+}
+
+/// Same as [binary_map] but takes ownership of `rhs`.
+pub(super) fn binary_map_owned<T: Tensor<Dtype = f32>, F, Dfdx, Dfdy>(
+    lhs: T,
+    mut rhs: T::NoTape,
+    f: F,
+    mut dfdx: Dfdx,
+    mut dfdy: Dfdy,
+) -> T
+where
+    F: FnMut(&f32, &f32) -> f32,
+    Dfdx: FnMut(&f32, &f32) -> f32,
+    Dfdy: FnMut(&f32, &f32) -> f32,
+{
     let (mut lhs, mut tape) = lhs.split_tape();
-    let mut rhs_deriv: Box<T::Array> = T::Device::zip_map(lhs.data(), rhs.data(), dfdy);
-    T::Device::zip_map_assign(lhs.mut_data(), rhs.data(), &mut |l, r| *l = dfdx(l, r));
-    let _rhs = rhs.phantom();
+    let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), f));
+    T::Device::dual_zip(lhs.mut_data(), rhs.mut_data(), &mut dfdx, &mut dfdy);
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
         let result_grad: &T::Array = grads.ref_gradient(&_result);
         T::Device::mul_assign(lhs.mut_data(), result_grad);
-        T::Device::mul_assign(rhs_deriv.as_mut(), result_grad);
+        T::Device::mul_assign(rhs.mut_data(), result_grad);
         T::Device::add_assign(grads.mut_gradient(&lhs), lhs.data());
-        T::Device::add_assign(grads.mut_gradient(&_rhs), rhs_deriv.as_ref());
+        T::Device::add_assign(grads.mut_gradient(&rhs), rhs.data());
     });
     result.put_tape(tape)
 }

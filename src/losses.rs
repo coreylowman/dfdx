@@ -69,7 +69,7 @@ pub fn kl_div_with_logits_loss<T: Tensor<Dtype = f32>>(
     target_probs: &T::NoTape,
 ) -> Tensor0D<T::Tape> {
     -mean(sum_last_dim(mul(
-        sub(log_softmax(logits), &ln(target_probs.duplicate())),
+        sub_owned(log_softmax(logits), ln(target_probs.duplicate())),
         target_probs,
     )))
 }
@@ -106,10 +106,10 @@ pub fn binary_cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     let a = exp(negate(add(logits.duplicate().put_tape(tape), &max_value)));
 
     // b = ln(exp(-max_value) + a)
-    let b = ln(add(a, &exp(negate(max_value.duplicate()))));
+    let b = ln(add_owned(a, exp(negate(max_value.duplicate()))));
 
     // c = max_value + b
-    let c = add(b, &max_value);
+    let c = add_owned(b, max_value);
     let (c, tape) = c.split_tape();
 
     // d = (1 - T)

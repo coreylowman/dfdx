@@ -50,7 +50,7 @@ where
     /// Calls forward on `F` and then adds `x` to the result: `F(x) + x`
     fn forward(&self, x: T) -> Self::Output {
         let (x, tape) = x.split_tape();
-        add(self.0.forward(x.duplicate().put_tape(tape)), &x)
+        add_owned(self.0.forward(x.duplicate().put_tape(tape)), x)
     }
 }
 
