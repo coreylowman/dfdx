@@ -23,7 +23,7 @@ use std::{
 /// ```
 ///
 /// Returns the number of bytes written to the file.
-pub fn save<T, P>(path: P, t: &T) -> Result<usize>
+pub fn save<T, P>(path: P, t: &T) -> Result<()>
 where
     T: NumpyDtype + NumpyShape + WriteNumbers,
     P: AsRef<Path>,
@@ -36,18 +36,17 @@ where
 ///
 /// This is implemented for an arbitrarily shaped array.
 /// See [WriteNumbers] for how this is done (recursive array traits!).
-pub fn write<T, W>(w: &mut W, t: &T) -> Result<usize>
+pub fn write<T, W>(w: &mut W, t: &T) -> Result<()>
 where
     T: NumpyDtype + NumpyShape + WriteNumbers,
     W: Write,
 {
-    let mut num_bytes = 0;
-    num_bytes += write_header::<T, W>(w, Endian::Little)?;
-    num_bytes += t.write_numbers(w, Endian::Little)?;
-    Ok(num_bytes)
+    write_header::<T, W>(w, Endian::Little)?;
+    t.write_numbers(w, Endian::Little)?;
+    Ok(())
 }
 
-fn write_header<T, W>(w: &mut W, endian: Endian) -> Result<usize>
+fn write_header<T, W>(w: &mut W, endian: Endian) -> Result<()>
 where
     T: NumpyDtype + NumpyShape,
     W: Write,
@@ -71,58 +70,56 @@ where
 
     // padding
     while (header.len() + 1) % 64 != 0 {
-        header.write(b"\x20")?;
+        header.write_all(b"\x20")?;
     }
 
     // new line termination
-    header.write(b"\n")?;
+    header.write_all(b"\n")?;
 
     // header length
     assert!(header.len() < u16::MAX as usize);
     assert!(header.len() % 64 == 0);
 
-    let mut num_bytes = 0;
-    num_bytes += w.write(MAGIC_NUMBER)?; // magic number
-    num_bytes += w.write(VERSION)?; // version major & minor
-    num_bytes += w.write(&(header.len() as u16).to_le_bytes())?;
-    num_bytes += w.write(&header)?;
-    Ok(num_bytes)
+    w.write_all(MAGIC_NUMBER)?; // magic number
+    w.write_all(VERSION)?; // version major & minor
+    w.write_all(&(header.len() as u16).to_le_bytes())?;
+    w.write_all(&header)?;
+    Ok(())
 }
 
 /// Write all the numbers in &self with the bytes layed out in [Endian] order.
 /// Most types that this should be implemented for have `.to_be_bytes()`, `.to_le_bytes()`,
 /// and `.to_ne_bytes()`.
 pub trait WriteNumbers {
-    fn write_numbers<W: Write>(&self, w: &mut W, endian: Endian) -> Result<usize>;
+    fn write_numbers<W: Write>(&self, w: &mut W, endian: Endian) -> Result<()>;
 }
 
 impl WriteNumbers for f32 {
-    fn write_numbers<W: Write>(&self, w: &mut W, endian: Endian) -> Result<usize> {
+    fn write_numbers<W: Write>(&self, w: &mut W, endian: Endian) -> Result<()> {
         match endian {
-            Endian::Big => w.write(&self.to_be_bytes()),
-            Endian::Little => w.write(&self.to_le_bytes()),
-            Endian::Native => w.write(&self.to_ne_bytes()),
+            Endian::Big => w.write_all(&self.to_be_bytes()),
+            Endian::Little => w.write_all(&self.to_le_bytes()),
+            Endian::Native => w.write_all(&self.to_ne_bytes()),
         }
     }
 }
 
 impl WriteNumbers for f64 {
-    fn write_numbers<W: Write>(&self, w: &mut W, endian: Endian) -> Result<usize> {
+    fn write_numbers<W: Write>(&self, w: &mut W, endian: Endian) -> Result<()> {
         match endian {
-            Endian::Big => w.write(&self.to_be_bytes()),
-            Endian::Little => w.write(&self.to_le_bytes()),
-            Endian::Native => w.write(&self.to_ne_bytes()),
+            Endian::Big => w.write_all(&self.to_be_bytes()),
+            Endian::Little => w.write_all(&self.to_le_bytes()),
+            Endian::Native => w.write_all(&self.to_ne_bytes()),
         }
     }
 }
 
 impl<T: WriteNumbers, const M: usize> WriteNumbers for [T; M] {
-    fn write_numbers<W: Write>(&self, w: &mut W, endian: Endian) -> Result<usize> {
-        let mut num_bytes = 0;
+    fn write_numbers<W: Write>(&self, w: &mut W, endian: Endian) -> Result<()> {
         for i in 0..M {
-            num_bytes += self[i].write_numbers(w, endian)?;
+            self[i].write_numbers(w, endian)?;
         }
-        Ok(num_bytes)
+        Ok(())
     }
 }
 
@@ -156,8 +153,7 @@ mod tests {
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let num_bytes = save(file.path(), &data).expect("Saving failed");
-        assert!(num_bytes > 0);
+        save(file.path(), &data).expect("Saving failed");
         assert_eq!(
             describe(file.path()).replace("\r\n", "\n"),
             "float32 ()\n0.0\n"
@@ -170,8 +166,7 @@ mod tests {
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let num_bytes = save(file.path(), &data).expect("Saving failed");
-        assert!(num_bytes > 0);
+        save(file.path(), &data).expect("Saving failed");
         assert_eq!(
             describe(file.path()).replace("\r\n", "\n"),
             "float32 (5,)\n[ 0.  1.  2.  3. -4.]\n"
@@ -184,8 +179,7 @@ mod tests {
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let num_bytes = save(file.path(), &data).expect("Saving failed");
-        assert!(num_bytes > 0);
+        save(file.path(), &data).expect("Saving failed");
         assert_eq!(
             describe(file.path()).replace("\r\n", "\n"),
             "float32 (2, 3)\n[[0. 1. 2.]\n [3. 4. 5.]]\n"

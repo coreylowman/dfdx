@@ -60,7 +60,7 @@ where
             return Err(NpyError::WrongShape);
         }
     }
-    let endian = match &header.descr.chars().nth(0) {
+    let endian = match &header.descr.chars().next() {
         Some('>') => Endian::Big,
         Some('<') => Endian::Little,
         Some('=') => Endian::Native,
