@@ -40,7 +40,7 @@ fn main() {
         // loss = mse(curr_q, targ_q)
         let next_q_values = target_q_net.forward(next_state.clone());
         let max_next_q = next_q_values.max_last_dim();
-        let target_q = 0.99 * mul(max_next_q, &(1.0 - done.clone())) + &reward;
+        let target_q = 0.99 * mul_owned(max_next_q, 1.0 - done.clone()) + &reward;
 
         // forward through model, computing gradients
         let q_values = q_net.forward(state.trace());

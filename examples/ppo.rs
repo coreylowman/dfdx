@@ -42,14 +42,14 @@ fn main() {
 
         // ratio = P(action | state, pi_net) / P(action | state, target_pi_net)
         // but compute in log space and then do .exp() to bring it back out of log space
-        let ratio = (log_prob_a - &old_log_prob_a).exp();
+        let ratio = sub_owned(log_prob_a, old_log_prob_a).exp();
 
         // because we need to re-use `ratio` a 2nd time, we need to do some tape manipulation here.
         let r_ = ratio.duplicate();
         let (surr1, tape) = (ratio * &advantage).split_tape();
         let surr2 = (r_.put_tape(tape)).clamp(0.8, 1.2) * &advantage;
 
-        let ppo_loss = -(minimum(surr2, &surr1).mean());
+        let ppo_loss = -(minimum_owned(surr2, surr1).mean());
 
         let loss_v = *ppo_loss.data();
 

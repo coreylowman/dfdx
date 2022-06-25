@@ -88,6 +88,11 @@ pub fn minimum<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, minimum::f, minimum::dfdx, minimum::dfdy)
 }
 
+/// Same as [minimum], but takes ownership of `rhs`.
+pub fn minimum_owned<T: Tensor<Dtype = f32>>(lhs: T, rhs: T::NoTape) -> T {
+    binary_map_owned(lhs, rhs, minimum::f, minimum::dfdx, minimum::dfdy)
+}
+
 macro_rules! binary_ops_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> Add<&$typename<$($Vs, )* NoTape>> for $typename<$($Vs, )* H> {
