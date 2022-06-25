@@ -33,10 +33,9 @@ pub fn logsumexp<T: Tensor<Dtype = f32>>(mut t: T) -> T::LastDimReduced {
 ///
 /// See [logsumexp()] and [softmax()] for related functions
 pub fn log_softmax<T: Tensor<Dtype = f32>>(t: T) -> T {
-    let t_ = t.duplicate();
-    let lse = logsumexp(t);
-    let (lse, tape) = lse.split_tape();
-    sub_broadcast_rhs_last(t_.put_tape(tape), lse)
+    let (t, tape) = t.split_tape();
+    let (lse, tape) = logsumexp(t.duplicate().put_tape(tape)).split_tape();
+    sub_broadcast_rhs_last(t.put_tape(tape), lse)
 }
 
 /// Computes the [softmax](https://en.wikipedia.org/wiki/Softmax_function) function.

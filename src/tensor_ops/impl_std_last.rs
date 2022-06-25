@@ -36,10 +36,10 @@ pub fn std_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
 /// Note: equivalent to pytorch: `t.var(-1, unbiased=False)`.
 pub fn var_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
     let num_elements: f32 = <T::Device as ReduceLastDim<T::Array>>::LAST_DIM as f32;
-    let _t: T::NoTape = t.duplicate();
-    let (mean, tape) = mean_last_dim(t).split_tape();
+    let (t, tape) = t.split_tape();
+    let (mean, tape) = mean_last_dim(t.duplicate().put_tape(tape)).split_tape();
     scalar_div(
-        sum_last_dim(square(sub_broadcast_rhs_last(_t.put_tape(tape), mean))),
+        sum_last_dim(square(sub_broadcast_rhs_last(t.put_tape(tape), mean))),
         num_elements,
     )
 }

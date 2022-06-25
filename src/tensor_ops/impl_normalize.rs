@@ -13,14 +13,12 @@ use crate::prelude::*;
 /// assert!((std_last_dim(r).data() - 1.0).abs() < 1e-6);
 /// ```
 pub fn normalize<T: Tensor<Dtype = f32>>(t: T, epsilon: T::Dtype) -> T {
-    let t_ = t.duplicate();
-    let t__ = t.duplicate();
-
-    let (std, tape) = sqrt(scalar_add(var_last_dim(t), epsilon)).split_tape();
-    let (mean, tape) = mean_last_dim(t_.put_tape(tape)).split_tape();
-    let centered = sub_broadcast_rhs_last(t__.put_tape(tape), mean);
-    let scaled = div_broadcast_rhs_last(centered, std);
-    scaled
+    let (t, tape) = t.split_tape();
+    let var = var_last_dim(t.duplicate().put_tape(tape));
+    let (std, tape) = sqrt(scalar_add(var, epsilon)).split_tape();
+    let (mean, tape) = mean_last_dim(t.duplicate().put_tape(tape)).split_tape();
+    let centered = sub_broadcast_rhs_last(t.put_tape(tape), mean);
+    div_broadcast_rhs_last(centered, std)
 }
 
 macro_rules! tensor_impl {

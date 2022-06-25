@@ -24,7 +24,7 @@ pub trait TensorCreator: Sized + HasDevice {
     where
         Self::Dtype: One,
     {
-        Self::new_boxed(Self::Device::filled(&mut || One::one()))
+        Self::new_boxed(Self::Device::filled(&mut One::one))
     }
 
     /// Creates a tensor filled with values sampled from [Standard] distribution.
