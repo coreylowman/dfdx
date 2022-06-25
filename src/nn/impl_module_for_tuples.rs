@@ -108,7 +108,7 @@ macro_rules! tuple_impls {
             /// E.g. for a two tuple (A, B) with `base == ""`, this will call:
             /// 1. `self.0.write("0.", w)`
             /// 2. `self.1.write("1.", w)`
-            fn write<W: Write + Seek>(&self, base: &String, w: &mut ZipWriter<W>) -> ZipResult<()> {
+            fn write<W: Write + Seek>(&self, base: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
                 $(self.$idx.write(&format!("{}{}.", base, $idx), w)?;)+
                 Ok(())
             }
@@ -120,7 +120,7 @@ macro_rules! tuple_impls {
             /// E.g. for a two tuple (A, B) with `base == ""`, this will call:
             /// 1. `self.0.read("0.", r)`
             /// 2. `self.1.read("1.", r)`
-            fn read<R: Read + Seek>(&mut self, base: &String, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+            fn read<R: Read + Seek>(&mut self, base: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
                 $(self.$idx.read(&format!("{}{}.", base, $idx), r)?;)+
                 Ok(())
             }

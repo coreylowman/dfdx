@@ -49,8 +49,8 @@ where
 
     /// Calls forward on `F` and then adds `x` to the result: `F(x) + x`
     fn forward(&self, x: T) -> Self::Output {
-        let x_ = x.duplicate();
-        add(self.0.forward(x), &x_)
+        let (x, tape) = x.split_tape();
+        add(self.0.forward(x.duplicate().put_tape(tape)), &x)
     }
 }
 
@@ -58,7 +58,7 @@ impl<F: SaveToNpz> SaveToNpz for Residual<F> {
     /// Pass through to `F`'s [SaveToNpz].
     fn write<W>(
         &self,
-        filename_prefix: &String,
+        filename_prefix: &str,
         w: &mut zip::ZipWriter<W>,
     ) -> zip::result::ZipResult<()>
     where
@@ -71,11 +71,7 @@ impl<F: SaveToNpz> SaveToNpz for Residual<F> {
 
 impl<F: LoadFromNpz> LoadFromNpz for Residual<F> {
     /// Pass through to `F`'s [LoadFromNpz].
-    fn read<R>(
-        &mut self,
-        filename_prefix: &String,
-        r: &mut zip::ZipArchive<R>,
-    ) -> Result<(), NpzError>
+    fn read<R>(&mut self, filename_prefix: &str, r: &mut zip::ZipArchive<R>) -> Result<(), NpzError>
     where
         R: std::io::Read + std::io::Seek,
     {

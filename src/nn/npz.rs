@@ -25,7 +25,7 @@ pub trait SaveToNpz {
         let f = File::create(path)?;
         let f = BufWriter::new(f);
         let mut zip = ZipWriter::new(f);
-        self.write(&"".into(), &mut zip)?;
+        self.write("", &mut zip)?;
         zip.finish()?;
         Ok(())
     }
@@ -45,7 +45,7 @@ pub trait SaveToNpz {
     /// - `0.bias.npy`
     /// - `1.weight.npy`
     /// - `1.bias.npy`
-    fn write<W>(&self, _filename_prefix: &String, _w: &mut ZipWriter<W>) -> ZipResult<()>
+    fn write<W>(&self, _filename_prefix: &str, _w: &mut ZipWriter<W>) -> ZipResult<()>
     where
         W: Write + Seek,
     {
@@ -69,7 +69,7 @@ pub trait LoadFromNpz {
         let f = File::open(path).map_err(|e| NpzError::Npy(NpyError::IoError(e)))?;
         let f = BufReader::new(f);
         let mut zip = ZipArchive::new(f).map_err(NpzError::Zip)?;
-        self.read(&"".into(), &mut zip)?;
+        self.read("", &mut zip)?;
         Ok(())
     }
 
@@ -85,7 +85,7 @@ pub trait LoadFromNpz {
     /// Will try to read data from the following files:
     /// - `0.weight.npy`
     /// - `0.bias.npy`
-    fn read<R>(&mut self, _filename_prefix: &String, _r: &mut ZipArchive<R>) -> Result<(), NpzError>
+    fn read<R>(&mut self, _filename_prefix: &str, _r: &mut ZipArchive<R>) -> Result<(), NpzError>
     where
         R: Read + Seek,
     {

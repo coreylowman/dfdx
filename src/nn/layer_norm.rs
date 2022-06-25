@@ -63,8 +63,7 @@ impl<H: Tape, const M: usize> Module<Tensor1D<M, H>> for LayerNorm1D<M> {
     fn forward(&self, x: Tensor1D<M, H>) -> Self::Output {
         let x = x.normalize(self.epsilon);
         let x = mul(x, &self.gamma);
-        let x = add(x, &self.beta);
-        x
+        add(x, &self.beta)
     }
 }
 
@@ -78,15 +77,14 @@ impl<H: Tape, const B: usize, const M: usize> Module<Tensor2D<B, M, H>> for Laye
     fn forward(&self, x: Tensor2D<B, M, H>) -> Self::Output {
         let x = x.normalize(self.epsilon);
         let x = mul_broadcast_rhs_first(x, &self.gamma);
-        let x = add_broadcast_rhs_first(x, &self.beta);
-        x
+        add_broadcast_rhs_first(x, &self.beta)
     }
 }
 
 impl<const M: usize> SaveToNpz for LayerNorm1D<M> {
     /// Saves `self.gamma` to `{pre}gamma.npy` and `self.beta` to `{pre}beta.npy`
     /// using [npz_fwrite()].
-    fn write<W: Write + Seek>(&self, pre: &String, w: &mut zip::ZipWriter<W>) -> ZipResult<()> {
+    fn write<W: Write + Seek>(&self, pre: &str, w: &mut zip::ZipWriter<W>) -> ZipResult<()> {
         npz_fwrite(w, format!("{pre}gamma.npy"), self.gamma.data())?;
         npz_fwrite(w, format!("{pre}beta.npy"), self.beta.data())?;
         Ok(())
@@ -96,7 +94,7 @@ impl<const M: usize> SaveToNpz for LayerNorm1D<M> {
 impl<const M: usize> LoadFromNpz for LayerNorm1D<M> {
     /// Reads `self.gamma` from `{p}gamma.npy` and `self.beta` from `{p}beta.npy`
     /// using [npz_fread()].
-    fn read<R: Read + Seek>(&mut self, p: &String, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+    fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         npz_fread(r, format!("{p}gamma.npy"), self.gamma.mut_data())?;
         npz_fread(r, format!("{p}beta.npy"), self.beta.mut_data())?;
         Ok(())

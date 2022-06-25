@@ -50,7 +50,7 @@ impl<T: SaveToNpz, const N: usize> SaveToNpz for Repeated<T, N> {
     /// E.g. for a two items with `base == ""`, this will call:
     /// 1. `self.modules[0].write("0.", w)`
     /// 2. `self.modules[1].write("1.", w)`
-    fn write<W: Write + Seek>(&self, base: &String, w: &mut ZipWriter<W>) -> ZipResult<()> {
+    fn write<W: Write + Seek>(&self, base: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         for i in 0..N {
             self.modules[i].write(&format!("{}{}.", base, i), w)?;
         }
@@ -64,7 +64,7 @@ impl<T: LoadFromNpz, const N: usize> LoadFromNpz for Repeated<T, N> {
     /// E.g. for a two items with `base == ""`, this will call:
     /// 1. `self.modules[0].read("0.", r)`
     /// 2. `self.modules[1].read("1.", r)`
-    fn read<R>(&mut self, base: &String, r: &mut ZipArchive<R>) -> Result<(), NpzError>
+    fn read<R>(&mut self, base: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError>
     where
         R: Read + Seek,
     {
