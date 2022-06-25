@@ -14,8 +14,8 @@ impl<const M: usize> ZipMapElements<[f32; M], usize> for Cpu {
     /// NOTE: this is extremely specific to [gather_last_dim()]. This is used for setting
     /// the derivative in that function.
     fn zip_map_assign<F: FnMut(&mut f32, &usize)>(l: &mut [f32; M], r: &usize, _: &mut F) {
-        for i in 0..M {
-            l[i] = if i == *r { 1.0 } else { 0.0 };
+        for (i, l_i) in l.iter_mut().enumerate() {
+            *l_i = if i == *r { 1.0 } else { 0.0 };
         }
     }
 }
@@ -74,9 +74,9 @@ mod tests {
 
     #[test]
     fn test_gather_last_0d() {
-        let t = Tensor0D::new(3.14);
+        let t = Tensor0D::new(2.0);
         let r: Tensor0D<OwnsTape> = gather_last_dim(t.trace(), &0);
-        assert_eq!(r.data(), &3.14);
+        assert_eq!(r.data(), &2.0);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&t), &1.0);
     }

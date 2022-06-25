@@ -7,7 +7,7 @@ use crate::prelude::*;
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor1D::new([-2.0, -1.0, 0.0, 5.0, 3.14]);
+/// let a = Tensor1D::new([-2.0, -1.0, 0.0, 5.0, 2.0]);
 /// let r = normalize(a, 1e-5); // or a.normalize(1e-5);
 /// assert!(mean_last_dim(r.duplicate()).data().abs() < 1e-6);
 /// assert!((std_last_dim(r).data() - 1.0).abs() < 1e-6);

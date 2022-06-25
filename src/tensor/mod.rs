@@ -37,8 +37,8 @@
 //! # use dfdx::prelude::*;
 //! let mut t = Tensor1D::<3>::zeros();
 //! assert_eq!(t.data(), &[0.0, 0.0, 0.0]);
-//! t.mut_data()[1] = 3.14;
-//! assert_eq!(t.data(), &[0.0, 3.14, 0.0]);
+//! t.mut_data()[1] = 2.0;
+//! assert_eq!(t.data(), &[0.0, 2.0, 0.0]);
 //! ```
 //!
 //! Initiating gradient tracing:

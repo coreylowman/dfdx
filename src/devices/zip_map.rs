@@ -101,8 +101,8 @@ pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros 
     where
         F: FnMut(&mut Lhs::Dtype, &Rhs::Dtype),
     {
-        for i in 0..M {
-            Self::zip_map_assign(&mut lhs[i], rhs, f);
+        for lhs_i in lhs.iter_mut() {
+            Self::zip_map_assign(lhs_i, rhs, f);
         }
     }
 }
@@ -115,8 +115,8 @@ impl ZipMapElements<f32, f32> for Cpu {
 
 impl<const M: usize> ZipMapElements<[f32; M], f32> for Cpu {
     fn zip_map_assign<F: FnMut(&mut f32, &f32)>(l: &mut [f32; M], r: &f32, f: &mut F) {
-        for i in 0..M {
-            Self::zip_map_assign(&mut l[i], r, f);
+        for lhs_i in l.iter_mut() {
+            Self::zip_map_assign(lhs_i, r, f);
         }
     }
 }

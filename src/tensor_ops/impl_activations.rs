@@ -373,12 +373,12 @@ mod tests {
         let r = x.trace().sin();
         assert_eq!(
             r.data(),
-            &[-0.90929741, -0.84147096, 0.00000000, 0.84147096, 0.90929741]
+            &[-0.9092974, -0.84147096, 0.0, 0.84147096, 0.9092974]
         );
         let gradients = r.mean().backward();
         assert_eq!(
             gradients.ref_gradient(&x),
-            &[-0.08322937, 0.10806046, 0.20000000, 0.10806046, -0.08322937]
+            &[-0.08322937, 0.10806046, 0.2, 0.10806046, -0.08322937]
         );
     }
 
@@ -403,7 +403,7 @@ mod tests {
         let r = x.trace().ln();
         assert!(r.data()[0].is_nan());
         assert!(r.data()[1].is_nan());
-        assert!(&r.data()[2..] == &[f32::NEG_INFINITY, 0.0, 0.69314718]);
+        assert!(r.data()[2..] == [f32::NEG_INFINITY, 0.0, std::f32::consts::LN_2]);
         let gradients = r.mean().backward();
         assert_eq!(
             gradients.ref_gradient(&x),
@@ -417,12 +417,12 @@ mod tests {
         let r = x.trace().exp();
         assert_eq!(
             r.data(),
-            &[0.13533528, 0.36787945, 1.0, 2.71828175, 7.38905621]
+            &[0.13533528, 0.36787945, 1.0, std::f32::consts::E, 7.389056]
         );
         let gradients = r.mean().backward();
         assert_eq!(
             gradients.ref_gradient(&x),
-            &[0.027067056, 0.07357589, 0.2, 0.54365635, 1.47781122]
+            &[0.027067056, 0.07357589, 0.2, 0.54365635, 1.4778112]
         );
     }
 
@@ -432,7 +432,7 @@ mod tests {
         let r = x.trace().sigmoid();
         assert_eq!(
             r.data(),
-            &[0.11920292, 0.26894143, 0.50000000, 0.73105860, 0.88079703]
+            &[0.11920292, 0.26894143, 0.5, 0.7310586, 0.880797]
         );
         let gradients = r.mean().backward();
         assert_eq!(
@@ -447,7 +447,7 @@ mod tests {
         let r = x.trace().tanh();
         assert_eq!(
             r.data(),
-            &[-0.96402758, -0.76159418, 0.00000000, 0.76159418, 0.96402758]
+            &[-0.9640276, -0.7615942, 0., 0.7615942, 0.9640276]
         );
         let gradients = r.mean().backward();
         assert_eq!(

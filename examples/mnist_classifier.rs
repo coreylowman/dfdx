@@ -10,7 +10,7 @@ struct MnistDataset {
 }
 
 impl MnistDataset {
-    fn train<'a>(path: &'a str) -> Self {
+    fn train(path: &str) -> Self {
         let mnist: Mnist = MnistBuilder::new().base_path(path).finalize();
         Self {
             img: mnist.trn_img.iter().map(|&v| v as f32 / 255.0).collect(),
@@ -39,7 +39,7 @@ impl MnistDataset {
     }
 }
 
-type MLP = (
+type Mlp = (
     (Linear<784, 512>, ReLU),
     (Linear<512, 128>, ReLU),
     (Linear<128, 32>, ReLU),
@@ -50,16 +50,15 @@ const BATCH_SIZE: usize = 32;
 
 fn main() {
     let mnist_path = std::env::args()
-        .skip(1)
-        .next()
-        .unwrap_or("./datasets/MNIST/raw".to_string());
+        .nth(1)
+        .unwrap_or_else(|| "./datasets/MNIST/raw".to_string());
 
     println!("Loading mnist from args[1] = {mnist_path}");
     println!("Override mnist path with `cargo run --example mnist_classifier -- <path to mnist>`");
 
     let mut rng = StdRng::seed_from_u64(0);
 
-    let mut model: MLP = Default::default();
+    let mut model: Mlp = Default::default();
     model.reset_params(&mut rng);
     let mut opt: Adam = Default::default();
 

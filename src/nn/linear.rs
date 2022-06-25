@@ -114,16 +114,10 @@ mod tests {
     use super::*;
 
     const W: [[f32; 5]; 2] = [
-        [
-            -0.34588930,
-            -0.30371523,
-            -0.37120569,
-            0.14303583,
-            -0.02689660,
-        ],
+        [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
         [0.11733949, 0.14059687, -0.10670426, -0.09373143, 0.18974298],
     ];
-    const B: [f32; 2] = [0.37653649, -0.29071701];
+    const B: [f32; 2] = [0.3765365, -0.290717];
 
     #[test]
     fn test_forward_1d() {
@@ -132,7 +126,7 @@ mod tests {
             bias: Tensor1D::new(B),
         };
 
-        let x = Tensor1D::new([-0.88080013, 2.41853333, 2.24783349, 0.05652110, 2.03129911]);
+        let x = Tensor1D::new([-0.8808001, 2.4185333, 2.2478335, 0.0565211, 2.031299]);
         let y = model.forward(x.trace());
         assert_eq!(y.data(), &[-0.93430865, 0.08624211]);
 
@@ -141,13 +135,7 @@ mod tests {
         assert_eq!(
             gradients.ref_gradient(&model.weight),
             &[
-                [
-                    0.82293916,
-                    -2.25965667,
-                    -2.10017037,
-                    -0.05280815,
-                    -1.89786029,
-                ],
+                [0.82293916, -2.2596567, -2.1001704, -0.05280815, -1.8978603,],
                 [-0.07596206, 0.20857942, 0.19385791, 0.004874499, 0.17518352],
             ]
         );
@@ -165,27 +153,15 @@ mod tests {
         };
 
         let x = Tensor2D::new([
-            [-1.94686651, 1.46117854, -1.66989815, 1.40886295, 1.34256434],
-            [
-                -1.33998311,
-                3.05106783,
-                -0.17936817,
-                -0.04943254,
-                -0.80527049,
-            ],
-            [
-                -0.82914120,
-                0.07691376,
-                -0.26538327,
-                0.90017676,
-                -1.87904549,
-            ],
+            [-1.9468665, 1.4611785, -1.6698982, 1.408863, 1.3425643],
+            [-1.3399831, 3.0510678, -0.17936817, -0.04943254, -0.8052705],
+            [-0.8291412, 0.07691376, -0.26538327, 0.90017676, -1.8790455],
         ]);
         let y = model.forward(x.trace());
         assert_eq!(
             y.data(),
             &[
-                [1.39143777, -0.012851536],
+                [1.3914378, -0.012851536],
                 [-0.005462587, -0.14800104],
                 [0.9177769, -0.7897872]
             ]
@@ -196,13 +172,13 @@ mod tests {
         assert_eq!(
             gradients.ref_gradient(&model.weight),
             &[
-                [-1.15419686, 0.69568729, -0.85538071, 0.92892551, 0.04931633],
-                [0.29272807, -0.17702839, 0.08586791, -0.24057935, 0.52865762],
+                [-1.1541969, 0.6956873, -0.8553807, 0.9289255, 0.04931633],
+                [0.29272807, -0.17702839, 0.08586791, -0.24057935, 0.5286576],
             ]
         );
         assert_eq!(
             gradients.ref_gradient(&model.bias),
-            &[0.76791739, -0.31687993]
+            &[0.7679174, -0.31687993]
         );
     }
 
@@ -211,7 +187,7 @@ mod tests {
         let model: Linear<5, 3> = Default::default();
         let file = NamedTempFile::new().expect("failed to create tempfile");
         model
-            .save(file.path().to_str().unwrap().to_string())
+            .save(file.path().to_str().unwrap())
             .expect("failed to save model");
         let f = File::open(file.path()).expect("failed to open resulting file");
         let mut zip = ZipArchive::new(f).expect("failed to create zip archive from file");
@@ -236,17 +212,13 @@ mod tests {
         saved_model.reset_params(&mut rng);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model
-            .save(file.path().to_str().unwrap().to_string())
-            .is_ok());
+        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
 
         let mut loaded_model: Linear<5, 3> = Default::default();
         assert!(loaded_model.weight.data() != saved_model.weight.data());
         assert!(loaded_model.bias.data() != saved_model.bias.data());
 
-        assert!(loaded_model
-            .load(file.path().to_str().unwrap().to_string())
-            .is_ok());
+        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
         assert_eq!(loaded_model.weight.data(), saved_model.weight.data());
         assert_eq!(loaded_model.bias.data(), saved_model.bias.data());
     }

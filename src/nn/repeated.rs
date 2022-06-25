@@ -146,12 +146,12 @@ mod tests {
         let model: Repeated<Linear<3, 3>, 4> = Default::default();
         let file = NamedTempFile::new().expect("failed to create tempfile");
         model
-            .save(file.path().to_str().unwrap().to_string())
+            .save(file.path().to_str().unwrap())
             .expect("failed to save model");
         let f = File::open(file.path()).expect("failed to open resulting file");
         let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
         let mut names = zip.file_names().collect::<Vec<&str>>();
-        names.sort();
+        names.sort_unstable();
         assert_eq!(
             &names,
             &[
@@ -176,14 +176,10 @@ mod tests {
         saved_model.reset_params(&mut rng);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model
-            .save(file.path().to_str().unwrap().to_string())
-            .is_ok());
+        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
 
         let mut loaded_model: Model = Default::default();
-        assert!(loaded_model
-            .load(file.path().to_str().unwrap().to_string())
-            .is_ok());
+        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
         for i in 0..4 {
             assert_eq!(
                 loaded_model.modules[i].weight.data(),

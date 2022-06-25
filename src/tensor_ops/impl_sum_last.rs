@@ -49,9 +49,9 @@ mod tests {
 
     #[test]
     fn test_sum_last_0d() {
-        let t = Tensor0D::new(3.14);
+        let t = Tensor0D::new(2.0);
         let r: Tensor0D<OwnsTape> = t.trace().sum_last_dim();
-        assert_eq!(r.data(), &3.14);
+        assert_eq!(r.data(), &2.0);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&t), &1.0);
     }

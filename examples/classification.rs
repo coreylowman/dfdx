@@ -2,7 +2,7 @@ use dfdx::prelude::*;
 use rand::{rngs::StdRng, SeedableRng};
 use std::time::Instant;
 
-type MLP = (
+type Mlp = (
     (Linear<10, 32>, ReLU),
     (Linear<32, 32>, ReLU),
     Linear<32, 2>,
@@ -16,7 +16,7 @@ fn main() {
     let y: Tensor2D<64, 2> = Tensor2D::randn(&mut rng).softmax();
 
     // initialize model - all weights are 0s
-    let mut mlp: MLP = Default::default();
+    let mut mlp: Mlp = Default::default();
 
     // randomize model weights
     mlp.reset_params(&mut rng);

@@ -116,8 +116,8 @@ impl WriteNumbers for f64 {
 
 impl<T: WriteNumbers, const M: usize> WriteNumbers for [T; M] {
     fn write_numbers<W: Write>(&self, w: &mut W, endian: Endian) -> Result<()> {
-        for i in 0..M {
-            self[i].write_numbers(w, endian)?;
+        for self_i in self.iter() {
+            self_i.write_numbers(w, endian)?;
         }
         Ok(())
     }
@@ -139,11 +139,7 @@ mod tests {
             ))
             .output()
             .expect("Creating sub process failed");
-        assert!(
-            output.stderr.len() == 0,
-            "{:?}",
-            String::from_utf8(output.stderr)
-        );
+        assert!(output.stderr.is_empty());
         String::from_utf8(output.stdout).expect("")
     }
 

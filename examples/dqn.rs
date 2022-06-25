@@ -18,13 +18,7 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     let state: Tensor2D<64, STATE_SIZE> = Tensor2D::randn(&mut rng);
-    let action: [usize; 64] = {
-        let mut values = [0; 64];
-        for i in 0..64 {
-            values[i] = rng.gen_range(0..ACTION_SIZE);
-        }
-        values
-    };
+    let action: [usize; 64] = [(); 64].map(|_| rng.gen_range(0..ACTION_SIZE));
     let reward: Tensor1D<64> = Tensor1D::randn(&mut rng);
     let done: Tensor1D<64> = Tensor1D::zeros();
     let next_state: Tensor2D<64, STATE_SIZE> = Tensor2D::randn(&mut rng);

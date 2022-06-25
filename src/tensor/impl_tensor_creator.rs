@@ -94,14 +94,14 @@ mod tests {
     #[test]
     fn test_new() {
         let t = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
-        assert_eq!(Tensor2D::new(t.clone()).data(), &t);
+        assert_eq!(Tensor2D::new(t).data(), &t);
     }
 
     #[test]
     fn fuzz_test_rand() {
         let mut rng = thread_rng();
         for &v in Tensor1D::<1000>::rand(&mut rng).data() {
-            assert!(0.0 <= v && v < 1.0);
+            assert!((0.0..1.0).contains(&v));
         }
     }
 

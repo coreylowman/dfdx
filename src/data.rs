@@ -54,8 +54,8 @@ pub fn arange<const N: usize>() -> Tensor1D<N> {
 /// ```
 pub fn one_hot_encode<const B: usize, const N: usize>(class_labels: &[usize; B]) -> Tensor2D<B, N> {
     let mut result = Tensor2D::zeros();
-    for i in 0..B {
-        result.mut_data()[i][class_labels[i]] = 1.0;
+    for (i, row) in result.mut_data().iter_mut().enumerate() {
+        row[class_labels[i]] = 1.0;
     }
     result
 }

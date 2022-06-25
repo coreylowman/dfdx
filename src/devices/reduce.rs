@@ -48,8 +48,8 @@ where
 {
     fn reduce<F: FnMut(T::Dtype, T::Dtype) -> T::Dtype>(inp: &[T; M], f: &mut F) -> T::Dtype {
         let mut result = None;
-        for i in 0..M {
-            let partial = Self::reduce(&inp[i], f);
+        for inp_i in inp.iter() {
+            let partial = Self::reduce(inp_i, f);
             result = match result {
                 Some(r) => Some(f(r, partial)),
                 None => Some(partial),
@@ -85,10 +85,10 @@ mod tests {
 
     #[test]
     fn test_reduce_2d() {
-        let t = [[1.0, 2.0, 3.0, 4.0], [5.0, -1.0, 3.14, 0.0]];
+        let t = [[1.0, 2.0, 3.0, 4.0], [5.0, -1.0, 2.0, 0.0]];
         assert_eq!(Cpu::reduce(&t, &mut |a, b| a * b), 0.0);
-        assert_eq!(Cpu::sum(&t), 17.14);
-        assert_eq!(Cpu::mean(&t), 2.1425);
+        assert_eq!(Cpu::sum(&t), 16.0);
+        assert_eq!(Cpu::mean(&t), 2.0);
         assert_eq!(Cpu::max(&t), 5.0);
         assert_eq!(Cpu::min(&t), -1.0);
     }

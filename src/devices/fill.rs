@@ -23,8 +23,8 @@ where
     Self: FillElements<T>,
 {
     fn fill<F: FnMut() -> T::Dtype>(out: &mut [T; M], f: &mut F) {
-        for i in 0..M {
-            Self::fill(&mut out[i], f);
+        for out_i in out.iter_mut() {
+            Self::fill(out_i, f);
         }
     }
 }
@@ -40,8 +40,8 @@ mod tests {
         let mut rng = thread_rng();
         let mut t: [f32; 5] = ZeroElements::ZEROS;
         Cpu::fill(&mut t, &mut || rng.gen_range(0.0..1.0));
-        for i in 0..5 {
-            assert!(t[i] < 1.0 && 0.0 <= t[i]);
+        for &item in t.iter() {
+            assert!((0.0..1.0).contains(&item));
         }
     }
 

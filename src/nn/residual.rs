@@ -101,36 +101,30 @@ mod tests {
     }
 
     const W0: [[f32; 2]; 5] = [
-        [0.63315326, 0.33615261],
+        [0.63315326, 0.3361526],
         [0.60201937, 0.30927354],
         [0.39831632, 0.29526848],
-        [-0.47307849, -0.10664469],
-        [0.50748843, -0.08458644],
+        [-0.4730785, -0.10664469],
+        [0.5074884, -0.08458644],
     ];
-    const B0: [f32; 5] = [-0.70145929, 0.01725882, 0.67181975, -0.61593556, 0.27809095];
+    const B0: [f32; 5] = [-0.7014593, 0.01725882, 0.67181975, -0.61593556, 0.27809095];
 
     const W2: [[f32; 5]; 2] = [
-        [
-            0.37967658,
-            -0.30938417,
-            -0.40464091,
-            0.34131002,
-            -0.36532000,
-        ],
-        [0.01010674, 0.29224169, -0.28791183, 0.09316397, 0.00722069],
+        [0.37967658, -0.30938417, -0.4046409, 0.34131002, -0.36532],
+        [0.01010674, 0.2922417, -0.28791183, 0.09316397, 0.00722069],
     ];
     const B2: [f32; 2] = [-0.01353309, 0.19437504];
     const X: [[f32; 2]; 10] = [
-        [0.97066492, -0.50246257],
+        [0.9706649, -0.50246257],
         [0.36609784, 0.22519696],
-        [-0.26957038, -2.43954468],
-        [0.72960699, 0.06136635],
-        [1.07585716, -0.61580741],
-        [1.84452796, -0.77695072],
+        [-0.26957038, -2.4395447],
+        [0.729607, 0.06136635],
+        [1.0758572, -0.6158074],
+        [1.844528, -0.7769507],
         [-0.83232504, 0.26263165],
-        [-0.18690403, 0.53969848],
-        [-1.08915758, 0.09805013],
-        [-0.63034505, 2.41735840],
+        [-0.18690403, 0.5396985],
+        [-1.0891576, 0.09805013],
+        [-0.63034505, 2.4173584],
     ];
     const Y: [[f32; 2]; 10] = [
         [0.15374291, -0.43383744],
@@ -184,7 +178,7 @@ mod tests {
         let model: Residual<Linear<5, 3>> = Default::default();
         let file = NamedTempFile::new().expect("failed to create tempfile");
         model
-            .save(file.path().to_str().unwrap().to_string())
+            .save(file.path().to_str().unwrap())
             .expect("failed to save model");
         let f = File::open(file.path()).expect("failed to open resulting file");
         let mut zip = ZipArchive::new(f).expect("failed to create zip archive from file");
@@ -209,17 +203,13 @@ mod tests {
         saved_model.reset_params(&mut rng);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model
-            .save(file.path().to_str().unwrap().to_string())
-            .is_ok());
+        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
 
         let mut loaded_model: Residual<Linear<5, 3>> = Default::default();
         assert!(loaded_model.0.weight.data() != saved_model.0.weight.data());
         assert!(loaded_model.0.bias.data() != saved_model.0.bias.data());
 
-        assert!(loaded_model
-            .load(file.path().to_str().unwrap().to_string())
-            .is_ok());
+        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
         assert_eq!(loaded_model.0.weight.data(), saved_model.0.weight.data());
         assert_eq!(loaded_model.0.bias.data(), saved_model.0.bias.data());
     }

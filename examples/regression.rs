@@ -3,7 +3,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use std::time::Instant;
 
 // our simple 2 layer feedforward network with ReLU activations
-type MLP = (
+type Mlp = (
     (Linear<10, 32>, ReLU),
     (Linear<32, 32>, ReLU),
     (Linear<32, 2>, Tanh),
@@ -17,7 +17,7 @@ fn main() {
     let y: Tensor2D<64, 2> = Tensor2D::randn(&mut rng);
 
     // initiliaze model - all weights are 0s
-    let mut mlp: MLP = Default::default();
+    let mut mlp: Mlp = Default::default();
 
     // randomize model weights
     mlp.reset_params(&mut rng);

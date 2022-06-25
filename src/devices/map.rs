@@ -35,8 +35,8 @@ where
     Self: MapElements<T>,
 {
     fn map_assign<F: FnMut(&mut T::Dtype)>(inp: &mut [T; M], f: &mut F) {
-        for i in 0..M {
-            Self::map_assign(&mut inp[i], f);
+        for inp_i in inp.iter_mut() {
+            Self::map_assign(inp_i, f);
         }
     }
 }

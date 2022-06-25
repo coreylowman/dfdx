@@ -237,8 +237,8 @@ impl ReadNumbers for f64 {
 
 impl<T: ReadNumbers, const M: usize> ReadNumbers for [T; M] {
     fn read_numbers<R: Read>(&mut self, r: &mut R, endian: Endian) -> std::io::Result<()> {
-        for i in 0..M {
-            self[i].read_numbers(r, endian)?;
+        for self_i in self.iter_mut() {
+            self_i.read_numbers(r, endian)?;
         }
         Ok(())
     }
@@ -251,7 +251,7 @@ mod tests {
 
     #[test]
     fn test_0d_f32_load() {
-        let data: f32 = 3.14;
+        let data: f32 = 2.0;
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
 

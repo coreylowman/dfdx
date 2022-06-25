@@ -95,10 +95,10 @@ mod tests {
 
     #[test]
     fn test_reduce_inner_0d() {
-        let t = 3.14;
+        let t = 2.0;
         let mut out = ZeroElements::ZEROS;
         Cpu::reduce_last_dim_into(&t, &mut out, &mut f32::max);
-        assert_eq!(out, 3.14);
+        assert_eq!(out, 2.0);
     }
 
     #[test]

@@ -131,16 +131,16 @@ mod tests {
     #[test]
     fn test_layer_norm_1d_forward() {
         let x = Tensor1D::new([
-            -1.61233151,
+            -1.6123315,
             0.48965484,
-            -1.57223654,
-            -2.14012408,
+            -1.5722365,
+            -2.140124,
             0.75928855,
             0.07052641,
             0.08577599,
             -0.94882685,
             -0.89430344,
-            1.34884310,
+            1.3488431,
         ]);
         let m: LayerNorm1D<10> = Default::default();
         let r = m.forward(x.trace());
@@ -208,12 +208,12 @@ mod tests {
         let model: LayerNorm1D<13> = Default::default();
         let file = NamedTempFile::new().expect("failed to create tempfile");
         model
-            .save(file.path().to_str().unwrap().to_string())
+            .save(file.path().to_str().unwrap())
             .expect("failed to save model");
         let f = File::open(file.path()).expect("failed to open resulting file");
         let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
         let mut names = zip.file_names().collect::<Vec<&str>>();
-        names.sort();
+        names.sort_unstable();
         assert_eq!(&names, &["beta.npy", "gamma.npy",]);
     }
 
@@ -222,12 +222,12 @@ mod tests {
         let model: (LayerNorm1D<5>, LayerNorm1D<13>) = Default::default();
         let file = NamedTempFile::new().expect("failed to create tempfile");
         model
-            .save(file.path().to_str().unwrap().to_string())
+            .save(file.path().to_str().unwrap())
             .expect("failed to save model");
         let f = File::open(file.path()).expect("failed to open resulting file");
         let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
         let mut names = zip.file_names().collect::<Vec<&str>>();
-        names.sort();
+        names.sort_unstable();
         assert_eq!(
             &names,
             &["0.beta.npy", "0.gamma.npy", "1.beta.npy", "1.gamma.npy"]
@@ -242,17 +242,13 @@ mod tests {
         saved_model.beta.randomize(&mut rng, &Standard);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model
-            .save(file.path().to_str().unwrap().to_string())
-            .is_ok());
+        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
 
         let mut loaded_model: LayerNorm1D<13> = Default::default();
         assert!(loaded_model.gamma.data() != saved_model.gamma.data());
         assert!(loaded_model.beta.data() != saved_model.beta.data());
 
-        assert!(loaded_model
-            .load(file.path().to_str().unwrap().to_string())
-            .is_ok());
+        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
         assert_eq!(loaded_model.gamma.data(), saved_model.gamma.data());
         assert_eq!(loaded_model.beta.data(), saved_model.beta.data());
     }
@@ -260,60 +256,52 @@ mod tests {
     const X_2: [[f32; 10]; 5] = [
         [
             0.29491714,
-            -0.23289900,
-            -0.28846350,
-            -0.77137190,
+            -0.232899,
+            -0.2884635,
+            -0.7713719,
             -0.46175328,
-            -0.64002252,
+            -0.6400225,
             -0.35834178,
-            -1.54459560,
-            -1.48547590,
-            0.94435787,
+            -1.5445956,
+            -1.4854759,
+            0.9443579,
         ],
         [
-            -1.99742687,
-            1.75386345,
+            -1.9974269,
+            1.7538635,
             -0.00747265,
-            0.70845670,
+            0.7084567,
             0.37745902,
-            1.24608839,
+            1.2460884,
             -0.55608803,
-            -1.75963795,
+            -1.759638,
             -0.37871835,
             -0.95974267,
         ],
         [
-            0.80032063,
-            -1.23041463,
-            1.16585624,
-            1.27445364,
-            0.57286376,
-            0.57976252,
-            0.67744941,
-            0.05471262,
-            0.12386650,
-            -0.73329753,
+            0.8003206, -1.2304146, 1.1658562, 1.2744536, 0.57286376, 0.5797625, 0.6774494,
+            0.05471262, 0.1238665, -0.7332975,
         ],
         [
-            -1.65339887,
+            -1.6533989,
             0.24153176,
             0.41823727,
-            2.09267616,
-            -2.05458617,
-            0.44928759,
+            2.0926762,
+            -2.0545862,
+            0.4492876,
             -0.04141246,
-            -1.74209344,
-            2.40003014,
-            1.89292789,
+            -1.7420934,
+            2.4000301,
+            1.8929279,
         ],
         [
             0.03640575,
             0.39946404,
             -0.41127914,
-            0.82208872,
-            -1.91227925,
+            0.8220887,
+            -1.9122793,
             -0.16858509,
-            -0.26039550,
+            -0.2603955,
             0.75304174,
             0.42073044,
             0.08859433,
