@@ -28,7 +28,6 @@ pub struct Adam {
     t: i32,
     gradients: Gradients,
     moments: [Gradients; 2],
-    next_moments: [Gradients; 2],
 }
 
 /// Use the default parameters suggested in the paper of lr=1e-3, beta1=0.9, beta2=0.999, and epsilon=1e-8
@@ -47,7 +46,6 @@ impl Adam {
             t: 0,
             gradients: Default::default(),
             moments: Default::default(),
-            next_moments: Default::default(),
         }
     }
 }
@@ -71,8 +69,8 @@ impl GradientProvider for Adam {
                 let v = v * (1.0 - self.betas[1].powi(self.t)).recip();
                 self.lr * m / (v.sqrt() + self.eps)
             });
-            self.next_moments[0].insert(p, m_t);
-            self.next_moments[1].insert(p, v_t);
+            self.moments[0].insert(p, m_t);
+            self.moments[1].insert(p, v_t);
             g_t
         })
     }
@@ -80,10 +78,9 @@ impl GradientProvider for Adam {
 
 impl Optimizer for Adam {
     fn update<M: CanUpdateWithGradients>(&mut self, module: &mut M, gradients: Gradients) {
-        self.t += 1;
+        self.t = self.t.checked_add(1).unwrap();
         self.gradients = gradients;
         module.update(self);
-        self.moments = std::mem::take(&mut self.next_moments);
     }
 }
 

@@ -30,7 +30,6 @@ pub struct Sgd {
     pub momentum: Option<Momentum>,
     velocity: Gradients,
     gradients: Gradients,
-    next_velocity: Gradients,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -52,7 +51,6 @@ impl Sgd {
             momentum,
             velocity: Default::default(),
             gradients: Default::default(),
-            next_velocity: Default::default(),
         }
     }
 }
@@ -65,24 +63,16 @@ impl GradientProvider for Sgd {
         self.gradients.remove(p).map(|mut g_t| {
             match self.momentum {
                 Some(Momentum::Classic(u)) => {
-                    let mut v_t = self.velocity.remove(p).unwrap_or_else(P::Device::zeros);
-                    P::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), &mut |v, g| {
-                        *v = g + u * *v
-                    });
-                    P::Device::zip_map_assign(g_t.as_mut(), v_t.as_ref(), &mut |g, v| {
-                        *g = v * self.lr
-                    });
-                    self.next_velocity.insert(p, v_t);
+                    let v_t = self.velocity.mut_gradient(p);
+                    P::Device::zip_map_assign(v_t, g_t.as_ref(), &mut |v, g| *v = g + u * *v);
+                    P::Device::zip_map_assign(g_t.as_mut(), v_t, &mut |g, v| *g = v * self.lr);
                 }
                 Some(Momentum::Nesterov(u)) => {
-                    let mut v_t = self.velocity.remove(p).unwrap_or_else(P::Device::zeros);
-                    P::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), &mut |v, g| {
-                        *v = g + u * *v
-                    });
-                    P::Device::zip_map_assign(g_t.as_mut(), v_t.as_ref(), &mut |g, v| {
+                    let v_t = self.velocity.mut_gradient(p);
+                    P::Device::zip_map_assign(v_t, g_t.as_ref(), &mut |v, g| *v = g + u * *v);
+                    P::Device::zip_map_assign(g_t.as_mut(), v_t, &mut |g, v| {
                         *g = (*g + u * v) * self.lr
                     });
-                    self.next_velocity.insert(p, v_t);
                 }
                 None => P::Device::map_assign(g_t.as_mut(), &mut |g| *g *= self.lr),
             }
@@ -95,7 +85,6 @@ impl Optimizer for Sgd {
     fn update<M: CanUpdateWithGradients>(&mut self, module: &mut M, gradients: Gradients) {
         self.gradients = gradients;
         module.update(self);
-        self.velocity = std::mem::take(&mut self.next_velocity);
     }
 }
 
