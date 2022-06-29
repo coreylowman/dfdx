@@ -17,6 +17,13 @@ See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
 
 [1] https://en.wikipedia.org/wiki/Automatic_differentiation#Reverse_accumulation
 
+## Design Goals
+
+1. Easy to use frontend interface.
+2. Easy to understand/maintain internals. Keep levels of indirection to a minimum.
+3. As much at compile time as possible.
+4. Keep internals as flexible as possible
+
 ## Features
 
 1. 👌 Simple Neural Networks API, completely type checked at compile time. See [examples/regression.rs](examples/regression.rs)
