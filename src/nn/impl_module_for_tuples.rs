@@ -3,93 +3,8 @@ use rand::prelude::Rng;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
-impl<Input, A, B> Module<Input> for (A, B)
-where
-    Input: Tensor,
-    A: Module<Input>,
-    B: Module<A::Output>,
-{
-    type Output = B::Output;
-    fn forward(&self, x: Input) -> Self::Output {
-        let x = self.0.forward(x);
-        self.1.forward(x)
-    }
-}
-
-impl<Input, A, B, C> Module<Input> for (A, B, C)
-where
-    Input: Tensor,
-    A: Module<Input>,
-    B: Module<A::Output>,
-    C: Module<B::Output>,
-{
-    type Output = C::Output;
-    fn forward(&self, x: Input) -> Self::Output {
-        let x = self.0.forward(x);
-        let x = self.1.forward(x);
-        self.2.forward(x)
-    }
-}
-
-impl<Input, A, B, C, D> Module<Input> for (A, B, C, D)
-where
-    Input: Tensor,
-    A: Module<Input>,
-    B: Module<A::Output>,
-    C: Module<B::Output>,
-    D: Module<C::Output>,
-{
-    type Output = D::Output;
-    fn forward(&self, x: Input) -> Self::Output {
-        let x = self.0.forward(x);
-        let x = self.1.forward(x);
-        let x = self.2.forward(x);
-        self.3.forward(x)
-    }
-}
-
-impl<Input, A, B, C, D, E> Module<Input> for (A, B, C, D, E)
-where
-    Input: Tensor,
-    A: Module<Input>,
-    B: Module<A::Output>,
-    C: Module<B::Output>,
-    D: Module<C::Output>,
-    E: Module<D::Output>,
-{
-    type Output = E::Output;
-    fn forward(&self, x: Input) -> Self::Output {
-        let x = self.0.forward(x);
-        let x = self.1.forward(x);
-        let x = self.2.forward(x);
-        let x = self.3.forward(x);
-        self.4.forward(x)
-    }
-}
-
-impl<Input, A, B, C, D, E, F> Module<Input> for (A, B, C, D, E, F)
-where
-    Input: Tensor,
-    A: Module<Input>,
-    B: Module<A::Output>,
-    C: Module<B::Output>,
-    D: Module<C::Output>,
-    E: Module<D::Output>,
-    F: Module<E::Output>,
-{
-    type Output = F::Output;
-    fn forward(&self, x: Input) -> Self::Output {
-        let x = self.0.forward(x);
-        let x = self.1.forward(x);
-        let x = self.2.forward(x);
-        let x = self.3.forward(x);
-        let x = self.4.forward(x);
-        self.5.forward(x)
-    }
-}
-
 macro_rules! tuple_impls {
-    ([$($name:ident),+] [$($idx:tt),+]) => {
+    ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
         impl<$($name: CanUpdateWithGradients),+> CanUpdateWithGradients for ($($name,)+) {
             fn update<G: GradientProvider>(&mut self, grads: &mut G) {
                 $(self.$idx.update(grads));+
@@ -125,14 +40,54 @@ macro_rules! tuple_impls {
                 Ok(())
             }
         }
+
+        /*This macro expands like this for a 4-tuple:
+
+        impl<
+            Input: Tensor,
+
+            // `$last:`
+            D:
+
+            // `$(Module::<$rev_tail ::Output>, $rev_tail: )+`
+            Module<C ::Output>, C:
+            Module<B ::Output>, B:
+            Module<A ::Output>, A:
+
+            Module<Input>
+        > Module<Input> for (A, B, C, D) {
+            type Output = D::Output;
+            fn forward(&self, x: Input) -> Self::Output {
+                let x = self.0.forward(x);
+                let x = self.1.forward(x);
+                let x = self.2.forward(x);
+                let x = self.3.forward(x);
+                x
+            }
+        }
+        */
+        impl<
+            Input: Tensor,
+            $last:
+            $(Module::<$rev_tail ::Output>, $rev_tail: )+
+            Module<Input>
+        > Module<Input> for ($($name,)+) {
+            type Output = $last ::Output;
+
+            /// Calls forward sequentially on each module in the tuple.
+            fn forward(&self, x: Input) -> Self::Output {
+                $(let x = self.$idx.forward(x);)+
+                x
+            }
+        }
     };
 }
 
-tuple_impls!([A, B] [0, 1]);
-tuple_impls!([A, B, C] [0, 1, 2]);
-tuple_impls!([A, B, C, D] [0, 1, 2, 3]);
-tuple_impls!([A, B, C, D, E] [0, 1, 2, 3, 4]);
-tuple_impls!([A, B, C, D, E, F] [0, 1, 2, 3, 4, 5]);
+tuple_impls!([A, B] [0, 1], B, [A]);
+tuple_impls!([A, B, C] [0, 1, 2], C, [B, A]);
+tuple_impls!([A, B, C, D] [0, 1, 2, 3], D, [C, B, A]);
+tuple_impls!([A, B, C, D, E] [0, 1, 2, 3, 4], E, [D, C, B, A]);
+tuple_impls!([A, B, C, D, E, F] [0, 1, 2, 3, 4, 5], F, [E, D, C, B, A]);
 
 #[cfg(test)]
 mod tests {
@@ -246,5 +201,99 @@ mod tests {
             saved_model.3 .2.weight.data()
         );
         assert_eq!(loaded_model.3 .2.bias.data(), saved_model.3 .2.bias.data());
+    }
+
+    /// A struct to test the forward method of tuples. This sets the `I`th valuein a 1d tensors of size `N` to 1.0.
+    #[derive(Debug, Default, Clone)]
+    struct SetTo1<const I: usize, const N: usize>;
+
+    impl<const I: usize, const N: usize> CanUpdateWithGradients for SetTo1<I, N> {
+        fn update<G: GradientProvider>(&mut self, _: &mut G) {}
+    }
+    impl<const I: usize, const N: usize> ResetParams for SetTo1<I, N> {
+        fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {}
+    }
+    impl<const I: usize, const N: usize> Module<Tensor1D<N>> for SetTo1<I, N> {
+        type Output = Tensor1D<N>;
+        fn forward(&self, mut input: Tensor1D<N>) -> Self::Output {
+            input.mut_data()[I] = 1.0;
+            input
+        }
+    }
+
+    #[test]
+    fn test_set_to_1() {
+        assert_eq!(
+            SetTo1::<0, 5>::default().forward(Tensor1D::zeros()).data(),
+            &[1.0, 0.0, 0.0, 0.0, 0.0]
+        );
+
+        assert_eq!(
+            SetTo1::<1, 5>::default().forward(Tensor1D::zeros()).data(),
+            &[0.0, 1.0, 0.0, 0.0, 0.0]
+        );
+
+        assert_eq!(
+            SetTo1::<2, 5>::default().forward(Tensor1D::zeros()).data(),
+            &[0.0, 0.0, 1.0, 0.0, 0.0]
+        );
+
+        assert_eq!(
+            SetTo1::<3, 5>::default().forward(Tensor1D::zeros()).data(),
+            &[0.0, 0.0, 0.0, 1.0, 0.0]
+        );
+
+        assert_eq!(
+            SetTo1::<4, 5>::default().forward(Tensor1D::zeros()).data(),
+            &[0.0, 0.0, 0.0, 0.0, 1.0]
+        );
+    }
+
+    #[test]
+    fn test_2_tuple_forward() {
+        let model: (SetTo1<0, 2>, SetTo1<1, 2>) = Default::default();
+        let y = model.forward(Tensor1D::zeros());
+        assert_eq!(y.data(), &[1.0, 1.0]);
+    }
+
+    #[test]
+    fn test_3_tuple_forward() {
+        let model: (SetTo1<0, 3>, SetTo1<1, 3>, SetTo1<2, 3>) = Default::default();
+        let y = model.forward(Tensor1D::zeros());
+        assert_eq!(y.data(), &[1.0, 1.0, 1.0]);
+    }
+
+    #[test]
+    fn test_4_tuple_forward() {
+        let model: (SetTo1<0, 4>, SetTo1<1, 4>, SetTo1<2, 4>, SetTo1<3, 4>) = Default::default();
+        let y = model.forward(Tensor1D::zeros());
+        assert_eq!(y.data(), &[1.0, 1.0, 1.0, 1.0]);
+    }
+
+    #[test]
+    fn test_5_tuple_forward() {
+        let model: (
+            SetTo1<0, 5>,
+            SetTo1<1, 5>,
+            SetTo1<2, 5>,
+            SetTo1<3, 5>,
+            SetTo1<4, 5>,
+        ) = Default::default();
+        let y = model.forward(Tensor1D::zeros());
+        assert_eq!(y.data(), &[1.0, 1.0, 1.0, 1.0, 1.0]);
+    }
+
+    #[test]
+    fn test_6_tuple_forward() {
+        let model: (
+            SetTo1<0, 6>,
+            SetTo1<1, 6>,
+            SetTo1<2, 6>,
+            SetTo1<3, 6>,
+            SetTo1<4, 6>,
+            SetTo1<5, 6>,
+        ) = Default::default();
+        let y = model.forward(Tensor1D::zeros());
+        assert_eq!(y.data(), &[1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
     }
 }
