@@ -4,16 +4,7 @@ use crate::prelude::*;
 ///
 /// Returns a [Tensor0D] (i.e. one number).
 pub fn mean<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::Tape> {
-    let result = Tensor0D::<NoTape>::new(T::Device::mean(t.data()));
-    let (t, mut tape) = t.split_tape();
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let g = *grads.ref_gradient(&_result);
-        T::Device::map_assign(grads.mut_gradient(&t), &mut |v| {
-            *v += g / T::Array::NUM_ELEMENTS as f32
-        });
-    });
-    result.put_tape(tape)
+    scalar_div(sum(t), T::Array::NUM_ELEMENTS as f32)
 }
 
 macro_rules! tensor_impl {
