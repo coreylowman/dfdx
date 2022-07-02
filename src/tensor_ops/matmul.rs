@@ -21,31 +21,21 @@ pub fn matmul<const M: usize, const N: usize, const O: usize, H: Tape>(
     lhs: Tensor2D<M, N, H>,
     rhs: &Tensor2D<N, O, NoTape>,
 ) -> Tensor2D<M, O, H> {
-    let result = Tensor2D::new_boxed({
-        let mut out: Box<[[f32; O]; M]> = Cpu::zeros();
-        matmat_mul_into(lhs.data(), rhs.data(), &mut out);
-        out
-    });
+    let mut result = Tensor2D::zeros();
+    matmat_mul_into(lhs.data(), rhs.data(), result.mut_data());
 
     // copy rhs data for use later when computing gradients
     let rhs_data = rhs.data.clone();
 
     let _rhs = rhs.phantom();
     let _result = result.phantom();
-    let (mut lhs, mut tape) = lhs.split_tape();
+    let (lhs, mut tape) = lhs.split_tape();
     tape.add_backward_op(move |grads| {
-        let result_grad: &[[f32; O]; M] = grads.ref_gradient(&_result);
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
+        matmat_mul_into_yt(result_grad, rhs_data.as_ref(), lhs_grad);
 
-        let mut d_grad_rhs: Box<[[f32; O]; N]> = Cpu::zeros();
-        matmat_mul_into_xt(lhs.data(), result_grad, d_grad_rhs.as_mut());
-
-        // write into lhs.mut_data() instead of allocating a new array.
-        // NOTE: computation of d_grad_rhs requires lhs.data(), so this needs to come after
-        // d_grad_rhs is computed above
-        matmat_mul_into_yt(result_grad, rhs_data.as_ref(), lhs.mut_data());
-
-        Cpu::add_assign(grads.mut_gradient(&lhs), lhs.data());
-        Cpu::add_assign(grads.mut_gradient(&_rhs), d_grad_rhs.as_ref());
+        let (rhs_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
+        matmat_mul_into_xt(lhs.data(), result_grad, rhs_grad);
     });
 
     result.put_tape(tape)
@@ -71,31 +61,21 @@ pub fn matmul_transpose<const M: usize, const N: usize, const O: usize, H: Tape>
     lhs: Tensor2D<M, N, H>,
     rhs_t: &Tensor2D<O, N, NoTape>,
 ) -> Tensor2D<M, O, H> {
-    let result = Tensor2D::new_boxed({
-        let mut out: Box<[[f32; O]; M]> = Cpu::zeros();
-        matmat_mul_into_yt(lhs.data(), rhs_t.data(), &mut out);
-        out
-    });
+    let mut result = Tensor2D::zeros();
+    matmat_mul_into_yt(lhs.data(), rhs_t.data(), result.mut_data());
 
     // copy rhs data for use later when computing gradients
     let rhs_data = rhs_t.data.clone();
 
     let _rhs = rhs_t.phantom();
     let _result = result.phantom();
-    let (mut lhs, mut tape) = lhs.split_tape();
+    let (lhs, mut tape) = lhs.split_tape();
     tape.add_backward_op(move |grads| {
-        let result_grad: &[[f32; O]; M] = grads.ref_gradient(&_result);
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
+        matmat_mul_into(result_grad, rhs_data.as_ref(), lhs_grad);
 
-        let mut d_grad_rhs: Box<[[f32; N]; O]> = Cpu::zeros();
-        matmat_mul_into_xtzt(lhs.data(), result_grad, d_grad_rhs.as_mut());
-
-        // write into lhs.mut_data() instead of allocating a new array.
-        // NOTE: computation of d_grad_rhs requires lhs.data(), so this needs to come after
-        // d_grad_rhs is computed above
-        matmat_mul_into(result_grad, rhs_data.as_ref(), lhs.mut_data());
-
-        Cpu::add_assign(grads.mut_gradient(&lhs), lhs.data());
-        Cpu::add_assign(grads.mut_gradient(&_rhs), d_grad_rhs.as_ref());
+        let (rhs_t_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
+        matmat_mul_into_xtzt(lhs.data(), result_grad, rhs_t_grad);
     });
 
     result.put_tape(tape)
@@ -121,30 +101,20 @@ pub fn vecmat_mul<const N: usize, const O: usize, H: Tape>(
     lhs: Tensor1D<N, H>,
     rhs: &Tensor2D<N, O, NoTape>,
 ) -> Tensor1D<O, H> {
-    let result = Tensor1D::new_boxed({
-        let mut out: Box<[f32; O]> = Cpu::zeros();
-        vecmat_mul_into(lhs.data(), rhs.data(), out.as_mut());
-        out
-    });
+    let mut result = Tensor1D::zeros();
+    vecmat_mul_into(lhs.data(), rhs.data(), result.mut_data());
 
     let rhs_data = rhs.data.clone();
 
     let _rhs = rhs.phantom();
     let _result = result.phantom();
-    let (mut lhs, mut tape) = lhs.split_tape();
+    let (lhs, mut tape) = lhs.split_tape();
     tape.add_backward_op(move |grads| {
-        let result_grad: &[f32; O] = grads.ref_gradient(&_result);
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
+        vecmat_mul_into_yt(result_grad, rhs_data.as_ref(), lhs_grad);
 
-        let mut d_grad_rhs: Box<[[f32; O]; N]> = Cpu::zeros();
-        vecvec_mul_into(lhs.data(), result_grad, d_grad_rhs.as_mut());
-
-        // write into lhs.mut_data() instead of allocating a new array.
-        // NOTE: computation of d_grad_rhs requires lhs.data(), so this needs to come after
-        // d_grad_rhs is computed above
-        vecmat_mul_into_yt(result_grad, rhs_data.as_ref(), lhs.mut_data());
-
-        Cpu::add_assign(grads.mut_gradient(&lhs), lhs.data());
-        Cpu::add_assign(grads.mut_gradient(&_rhs), d_grad_rhs.as_ref());
+        let (rhs_t_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
+        vecvec_mul_into(lhs.data(), result_grad, rhs_t_grad);
     });
 
     result.put_tape(tape)
@@ -170,30 +140,20 @@ pub fn vecmat_mul_transpose<const N: usize, const O: usize, H: Tape>(
     lhs: Tensor1D<N, H>,
     rhs: &Tensor2D<O, N, NoTape>,
 ) -> Tensor1D<O, H> {
-    let result = Tensor1D::new_boxed({
-        let mut out: Box<[f32; O]> = Cpu::zeros();
-        vecmat_mul_into_yt(lhs.data(), rhs.data(), out.as_mut());
-        out
-    });
+    let mut result = Tensor1D::zeros();
+    vecmat_mul_into_yt(lhs.data(), rhs.data(), result.mut_data());
 
     let rhs_data = rhs.data.clone();
 
     let _rhs = rhs.phantom();
     let _result = result.phantom();
-    let (mut lhs, mut tape) = lhs.split_tape();
+    let (lhs, mut tape) = lhs.split_tape();
     tape.add_backward_op(move |grads| {
-        let result_grad: &[f32; O] = grads.ref_gradient(&_result);
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
+        vecmat_mul_into(result_grad, rhs_data.as_ref(), lhs_grad);
 
-        let mut d_grad_rhs: Box<[[f32; N]; O]> = Cpu::zeros();
-        vecvec_mul_into(result_grad, lhs.data(), d_grad_rhs.as_mut());
-
-        // write into lhs.mut_data() instead of allocating a new array.
-        // NOTE: computation of d_grad_rhs requires lhs.data(), so this needs to come after
-        // d_grad_rhs is computed above
-        vecmat_mul_into(result_grad, rhs_data.as_ref(), lhs.mut_data());
-
-        Cpu::add_assign(grads.mut_gradient(&lhs), lhs.data());
-        Cpu::add_assign(grads.mut_gradient(&_rhs), d_grad_rhs.as_ref());
+        let (rhs_t_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
+        vecvec_mul_into(result_grad, lhs.data(), rhs_t_grad);
     });
 
     result.put_tape(tape)
@@ -210,12 +170,12 @@ fn matmat_mul_into<const M: usize, const N: usize, const O: usize>(
         let b = y.as_ptr() as *const f32;
         let c = out.as_mut_ptr() as *mut f32;
         sgemm(
-            M, N, O, 1.0, a, N as isize, 1, b, O as isize, 1, 0.0, c, O as isize, 1,
+            M, N, O, 1.0, a, N as isize, 1, b, O as isize, 1, 1.0, c, O as isize, 1,
         )
     };
 }
 
-/// matrix multiply `transpose(x) * y`
+/// matrix multiply `out = transpose(x) * y + beta * out`
 fn matmat_mul_into_xt<const M: usize, const N: usize, const O: usize>(
     x_t: &[[f32; M]; N],
     y: &[[f32; O]; N],
@@ -226,7 +186,7 @@ fn matmat_mul_into_xt<const M: usize, const N: usize, const O: usize>(
         let b = y.as_ptr() as *const f32;
         let c = out.as_mut_ptr() as *mut f32;
         sgemm(
-            M, N, O, 1.0, a, 1, M as isize, b, O as isize, 1, 0.0, c, O as isize, 1,
+            M, N, O, 1.0, a, 1, M as isize, b, O as isize, 1, 1.0, c, O as isize, 1,
         )
     };
 }
@@ -242,12 +202,12 @@ fn matmat_mul_into_yt<const M: usize, const N: usize, const O: usize>(
         let b = y_t.as_ptr() as *const f32;
         let c = out.as_mut_ptr() as *mut f32;
         sgemm(
-            M, N, O, 1.0, a, N as isize, 1, b, 1, N as isize, 0.0, c, O as isize, 1,
+            M, N, O, 1.0, a, N as isize, 1, b, 1, N as isize, 1.0, c, O as isize, 1,
         )
     };
 }
 
-/// matrix multiply `transpose(x) * y`
+/// matrix multiply `transpose(out) = transpose(x) * y + beta * transpose(out)`
 fn matmat_mul_into_xtzt<const M: usize, const N: usize, const O: usize>(
     x_t: &[[f32; M]; N],
     y: &[[f32; O]; N],
@@ -258,7 +218,7 @@ fn matmat_mul_into_xtzt<const M: usize, const N: usize, const O: usize>(
         let b = y.as_ptr() as *const f32;
         let c = out_t.as_mut_ptr() as *mut f32;
         sgemm(
-            M, N, O, 1.0, a, 1, M as isize, b, O as isize, 1, 0.0, c, 1, M as isize,
+            M, N, O, 1.0, a, 1, M as isize, b, O as isize, 1, 1.0, c, 1, M as isize,
         )
     };
 }
@@ -273,7 +233,7 @@ fn vecmat_mul_into<const N: usize, const O: usize>(
         let b = y.as_ptr() as *const f32;
         let c = out.as_mut_ptr() as *mut f32;
         sgemm(
-            1, N, O, 1.0, a, N as isize, 1, b, O as isize, 1, 0.0, c, O as isize, 1,
+            1, N, O, 1.0, a, N as isize, 1, b, O as isize, 1, 1.0, c, O as isize, 1,
         )
     };
 }
@@ -288,7 +248,7 @@ fn vecmat_mul_into_yt<const N: usize, const O: usize>(
         let b = y_t.as_ptr() as *const f32;
         let c = out.as_mut_ptr() as *mut f32;
         sgemm(
-            1, N, O, 1.0, a, N as isize, 1, b, 1, N as isize, 0.0, c, O as isize, 1,
+            1, N, O, 1.0, a, N as isize, 1, b, 1, N as isize, 1.0, c, O as isize, 1,
         )
     };
 }
@@ -303,7 +263,7 @@ fn vecvec_mul_into<const M: usize, const O: usize>(
         let b = y.as_ptr() as *const f32;
         let c = out.as_mut_ptr() as *mut f32;
         sgemm(
-            M, 1, O, 1.0, a, 1, 1, b, O as isize, 1, 0.0, c, O as isize, 1,
+            M, 1, O, 1.0, a, 1, 1, b, O as isize, 1, 1.0, c, O as isize, 1,
         )
     };
 }
