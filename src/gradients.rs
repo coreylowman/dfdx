@@ -120,6 +120,23 @@ pub struct Gradients {
 }
 
 impl Gradients {
+    /// Borrows a pair of a gradients `(&mut L, &R)`.
+    /// `l` is the gradient to update, and `r` is the gradient to backprop.
+    ///
+    /// **Panics** if `l` and `r` have the same id.
+    pub fn mut_and_ref<L, R>(&mut self, l: &L, r: &R) -> (&mut L::Array, &R::Array)
+    where
+        L: HasUniqueId + HasArrayType + HasDevice,
+        R: HasUniqueId + HasArrayType,
+    {
+        assert_ne!(l.id(), r.id());
+        let l_ptr = self.mut_gradient(l) as *mut L::Array;
+        let r_ptr = self.ref_gradient(r) as *const R::Array;
+        let l_ref = unsafe { &mut *l_ptr };
+        let r_ref = unsafe { &*r_ptr };
+        (l_ref, r_ref)
+    }
+
     /// Insert's `data` associated with `t.id()`.
     ///
     /// Example usage:
