@@ -79,13 +79,6 @@ pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros 
         Self::zip_map_assign(l, r, &mut |x, y| *x *= y);
     }
 
-    fn div_assign(l: &mut Lhs, r: &Rhs)
-    where
-        for<'r> Lhs::Dtype: DivAssign<&'r Rhs::Dtype>,
-    {
-        Self::zip_map_assign(l, r, &mut |x, y| *x /= y);
-    }
-
     fn broadcast_rhs_first<F, const M: usize>(lhs: &[Lhs; M], rhs: &Rhs, f: &mut F) -> Box<[Lhs; M]>
     where
         F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype,
