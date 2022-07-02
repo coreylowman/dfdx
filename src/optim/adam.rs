@@ -27,7 +27,8 @@ pub struct Adam {
     pub eps: f32,
     t: i32,
     gradients: Gradients,
-    moments: [Gradients; 2],
+    moment1: Gradients,
+    moment2: Gradients,
 }
 
 /// Use the default parameters suggested in the paper of lr=1e-3, beta1=0.9, beta2=0.999, and epsilon=1e-8
@@ -45,7 +46,8 @@ impl Adam {
             eps: epsilon,
             t: 0,
             gradients: Default::default(),
-            moments: Default::default(),
+            moment1: Default::default(),
+            moment2: Default::default(),
         }
     }
 }
@@ -56,21 +58,15 @@ impl GradientProvider for Adam {
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
         self.gradients.remove(p).map(|mut g_t| {
-            let mut m_t = self.moments[0].remove(p).unwrap_or_else(P::Device::zeros);
-            let mut v_t = self.moments[1].remove(p).unwrap_or_else(P::Device::zeros);
-            P::Device::zip_map_assign(m_t.as_mut(), g_t.as_ref(), &mut |m, g| {
-                *m = *m * self.betas[0] + g * (1.0 - self.betas[0]);
-            });
-            P::Device::zip_map_assign(v_t.as_mut(), g_t.as_ref(), &mut |v, g| {
+            let m_t = self.moment1.mut_gradient(p);
+            let v_t = self.moment2.mut_gradient(p);
+            P::Device::foreach_mmm(g_t.as_mut(), m_t, v_t, &mut |g, m, v| {
+                *m = *m * self.betas[0] + *g * (1.0 - self.betas[0]);
                 *v = *v * self.betas[1] + g.powi(2) * (1.0 - self.betas[1]);
+                let m_hat = *m * (1.0 - self.betas[0].powi(self.t)).recip();
+                let v_hat = *v * (1.0 - self.betas[1].powi(self.t)).recip();
+                *g = self.lr * m_hat / (v_hat.sqrt() + self.eps)
             });
-            P::Device::zip_map_into(m_t.as_ref(), v_t.as_ref(), g_t.as_mut(), &mut |m, v| {
-                let m = m * (1.0 - self.betas[0].powi(self.t)).recip();
-                let v = v * (1.0 - self.betas[1].powi(self.t)).recip();
-                self.lr * m / (v.sqrt() + self.eps)
-            });
-            self.moments[0].insert(p, m_t);
-            self.moments[1].insert(p, v_t);
             g_t
         })
     }
