@@ -17,13 +17,13 @@ pub fn nans_to<T: Tensor<Dtype = f32>>(t: T, value: T::Dtype) -> T {
             *v
         }
     }));
-    let (mut t, mut tape) = t.split_tape();
+    let (t, mut tape) = t.split_tape();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
-            *l = if l.is_nan() { 0.0 } else { *r }
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+        T::Device::foreach_mrr(t_grad, t.data(), result_grad, &mut |g, t, r| {
+            *g += if t.is_nan() { 0.0 } else { *r }
         });
-        T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
     result.put_tape(tape)
 }

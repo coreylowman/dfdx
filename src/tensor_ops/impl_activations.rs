@@ -17,19 +17,7 @@ use std::ops::Neg;
 /// let r2 = t.relu();
 /// ```
 pub fn relu<T: Tensor<Dtype = f32>>(t: T) -> T {
-    fn f(x: &f32) -> f32 {
-        x.max(0.0)
-    }
-
-    fn df(x: &f32) -> f32 {
-        if x > &0.0 {
-            1.0
-        } else {
-            0.0
-        }
-    }
-
-    map(t, f, df)
+    map(t, |x| x.max(0.0), |x| if x > &0.0 { 1.0 } else { 0.0 })
 }
 
 /// Square computes `x * x`.
@@ -48,15 +36,7 @@ pub fn relu<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// let r2 = t.square();
 /// ```
 pub fn square<T: Tensor<Dtype = f32>>(t: T) -> T {
-    fn f(x: &f32) -> f32 {
-        x.powi(2)
-    }
-
-    fn df(x: &f32) -> f32 {
-        2.0 * x
-    }
-
-    map(t, f, df)
+    map(t, |x| x.powi(2), |x| 2.0 * x)
 }
 
 /// Square root computes `x ^ 0.5` or `√x`.
@@ -75,15 +55,7 @@ pub fn square<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// let r2 = t.sqrt();
 /// ```
 pub fn sqrt<T: Tensor<Dtype = f32>>(t: T) -> T {
-    fn f(x: &f32) -> f32 {
-        x.sqrt()
-    }
-
-    fn df(x: &f32) -> f32 {
-        0.5 * x.sqrt().recip()
-    }
-
-    map(t, f, df)
+    map(t, |x| x.sqrt(), |x| 0.5 * x.sqrt().recip())
 }
 
 /// [Hyperbolic Tangent (Tanh)](https://en.wikipedia.org/wiki/Hyperbolic_functions) computes `tanh(x)`.
@@ -102,15 +74,7 @@ pub fn sqrt<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// let r2 = t.tanh();
 /// ```
 pub fn tanh<T: Tensor<Dtype = f32>>(t: T) -> T {
-    fn f(x: &f32) -> f32 {
-        x.tanh()
-    }
-
-    fn df(x: &f32) -> f32 {
-        1.0 - x.tanh().powi(2)
-    }
-
-    map(t, f, df)
+    map(t, |x| x.tanh(), |x| 1.0 - x.tanh().powi(2))
 }
 
 /// [Sigmoid](https://en.wikipedia.org/wiki/Sigmoid_function) computes `1 / (1 + exp(-x))`.
@@ -157,14 +121,7 @@ pub fn sigmoid<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// let r2 = t.sin();
 /// ```
 pub fn sin<T: Tensor<Dtype = f32>>(t: T) -> T {
-    fn f(x: &f32) -> f32 {
-        x.sin()
-    }
-    fn df(x: &f32) -> f32 {
-        x.cos()
-    }
-
-    map(t, f, df)
+    map(t, |x| x.sin(), |x| x.cos())
 }
 
 /// The [cos function](https://en.wikipedia.org/wiki/Sine_and_cosine) computes `cos(x)`
@@ -183,15 +140,7 @@ pub fn sin<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// let r2 = t.cos();
 /// ```
 pub fn cos<T: Tensor<Dtype = f32>>(t: T) -> T {
-    fn f(x: &f32) -> f32 {
-        x.cos()
-    }
-
-    fn df(x: &f32) -> f32 {
-        x.sin().neg()
-    }
-
-    map(t, f, df)
+    map(t, |x| x.cos(), |x| x.sin().neg())
 }
 
 /// The [Natural Logarithm (ln)](https://en.wikipedia.org/wiki/Natural_logarithm) computes `ln(x)`
@@ -210,15 +159,7 @@ pub fn cos<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// let r2 = t.ln();
 /// ```
 pub fn ln<T: Tensor<Dtype = f32>>(t: T) -> T {
-    fn f(x: &f32) -> f32 {
-        x.ln()
-    }
-
-    fn df(x: &f32) -> f32 {
-        x.recip()
-    }
-
-    map(t, f, df)
+    map(t, |x| x.ln(), |x| x.recip())
 }
 
 /// The [exponential function (exp)](https://en.wikipedia.org/wiki/Natural_logarithm) computes `e ^ x`
@@ -237,15 +178,7 @@ pub fn ln<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// let r2 = t.exp();
 /// ```
 pub fn exp<T: Tensor<Dtype = f32>>(t: T) -> T {
-    fn f(x: &f32) -> f32 {
-        x.exp()
-    }
-
-    fn df(x: &f32) -> f32 {
-        x.exp()
-    }
-
-    map(t, f, df)
+    map(t, |x| x.exp(), |x| x.exp())
 }
 
 /// The [absolute value (abs)](https://en.wikipedia.org/wiki/Absolute_value) computes `|x|`
@@ -264,19 +197,7 @@ pub fn exp<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// let r2 = t.abs();
 /// ```
 pub fn abs<T: Tensor<Dtype = f32>>(t: T) -> T {
-    fn f(x: &f32) -> f32 {
-        x.abs()
-    }
-
-    fn df(x: &f32) -> f32 {
-        if x == &0.0 {
-            0.0
-        } else {
-            x.signum()
-        }
-    }
-
-    map(t, f, df)
+    map(t, |x| x.abs(), |x| if x == &0.0 { 0.0 } else { x.signum() })
 }
 
 /// Applies a function `f` to every element of the [Tensor]. The derivative
@@ -292,30 +213,17 @@ pub fn abs<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// let r = map(t, |x| 2.0 * x, |x| 2.0);
 /// assert_eq!(r.data(), &[-4.0, -2.0, 0.0, 2.0, 4.0]);
 /// ```
-pub fn map<T: Tensor<Dtype = f32>, F, DF>(t: T, f: F, mut df: DF) -> T
-where
-    F: 'static + FnMut(&f32) -> f32,
-    DF: 'static + FnMut(&f32) -> f32,
-{
+pub fn map<T: Tensor<Dtype = f32>>(t: T, f: fn(&f32) -> f32, df: fn(&f32) -> f32) -> T {
+    let (t, mut tape) = t.split_tape();
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), f));
-    let (mut t, mut tape) = t.split_tape();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        // t = df(t) * result_grad
-        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
-            *l = df(l) * *r
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+        T::Device::foreach_mrr(t_grad, t.data(), result_grad, &mut |g, t, r| {
+            *g += df(t) * r;
         });
-        T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
     result.put_tape(tape)
-}
-
-/// Similar to [map()], but doesn't take ownership of the [Tensor] `t`.
-pub fn cloned_map<T, F: FnMut(&f32) -> f32>(t: &T, f: F) -> T
-where
-    T: Tensor<Dtype = f32, Tape = NoTape> + TensorCreator,
-{
-    T::new_boxed(T::Device::map(t.data(), f))
 }
 
 macro_rules! activation_impl {

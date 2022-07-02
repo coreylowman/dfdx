@@ -12,13 +12,13 @@ use crate::prelude::*;
 /// ```
 pub fn negate<T: Tensor<Dtype = f32>>(t: T) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |v| -v));
-    let (mut t, mut tape) = t.split_tape();
+    let (t, mut tape) = t.split_tape();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
-            *l = -r
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+        T::Device::foreach_mr(t_grad, result_grad, &mut |l, r| {
+            *l -= r;
         });
-        T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
     result.put_tape(tape)
 }

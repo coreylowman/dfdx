@@ -24,8 +24,10 @@ pub fn value_mask<T: Tensor<Dtype = f32>>(t: T, other: &T::NoTape, value: T::Dty
     });
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        T::Device::mul_assign(t.mut_data(), grads.ref_gradient(&_result));
-        T::Device::add_assign(grads.mut_gradient(&t), t.data());
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+        T::Device::foreach_mrr(t_grad, t.data(), result_grad, &mut |g, d, r| {
+            *g += d * r;
+        });
     });
     result.put_tape(tape)
 }

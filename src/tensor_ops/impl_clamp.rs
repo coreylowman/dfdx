@@ -14,7 +14,7 @@ pub fn clamp<T: Tensor<Dtype = f32>>(t: T, min: T::Dtype, max: T::Dtype) -> T {
     let (mut t, mut tape) = t.split_tape();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
+        T::Device::foreach_mr(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
             *l = if min <= *l && *l <= max { *r } else { 0.0 }
         });
         T::Device::add_assign(grads.mut_gradient(&t), t.data());

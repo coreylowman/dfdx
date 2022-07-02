@@ -11,14 +11,14 @@ use std::ops::{Add, Div, Mul, Sub};
 /// assert_eq!(r.data(), &[1.5, 2.5, -2.5]);
 /// ```
 pub fn scalar_add<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
+    let (t, mut tape) = t.split_tape();
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x + val));
-    let (mut t, mut tape) = t.split_tape();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
-            *l = *r;
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+        T::Device::foreach_mr(t_grad, result_grad, &mut |t, r| {
+            *t += r;
         });
-        T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
     result.put_tape(tape)
 }
@@ -33,14 +33,14 @@ pub fn scalar_add<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
 /// assert_eq!(r.data(), &[0.5, 1.5, -3.5]);
 /// ```
 pub fn scalar_sub<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
+    let (t, mut tape) = t.split_tape();
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x - val));
-    let (mut t, mut tape) = t.split_tape();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
-            *l = *r;
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+        T::Device::foreach_mr(t_grad, result_grad, &mut |t, r| {
+            *t += r;
         });
-        T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
     result.put_tape(tape)
 }
@@ -55,14 +55,14 @@ pub fn scalar_sub<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
 /// assert_eq!(r.data(), &[0.5, 1.0, -1.5]);
 /// ```
 pub fn scalar_mul<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
+    let (t, mut tape) = t.split_tape();
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x * val));
-    let (mut t, mut tape) = t.split_tape();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
-            *l = val * r;
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+        T::Device::foreach_mr(t_grad, result_grad, &mut |t, r| {
+            *t += r * val;
         });
-        T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
     result.put_tape(tape)
 }
@@ -77,14 +77,14 @@ pub fn scalar_mul<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
 /// assert_eq!(r.data(), &[0.5, 1.0, -1.5]);
 /// ```
 pub fn scalar_div<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
+    let (t, mut tape) = t.split_tape();
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x / val));
-    let (mut t, mut tape) = t.split_tape();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
-            *l = r / val;
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+        T::Device::foreach_mr(t_grad, result_grad, &mut |t, r| {
+            *t += r / val;
         });
-        T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
     result.put_tape(tape)
 }

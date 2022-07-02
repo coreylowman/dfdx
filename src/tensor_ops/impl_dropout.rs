@@ -14,7 +14,7 @@ pub fn dropout<T: Tensor<Dtype = f32>, R: Rng>(t: T, p: f32, rng: &mut R) -> T {
     } else {
         // `t` owns the tape in this branch, so apply dropout randomly.
         let rinvp = (1.0 - p).recip();
-        let mut deriv = T::Device::filled(&mut || {
+        let deriv = T::Device::filled(&mut || {
             if rng.sample::<f32, Standard>(Standard) < p {
                 0.0
             } else {
@@ -25,8 +25,10 @@ pub fn dropout<T: Tensor<Dtype = f32>, R: Rng>(t: T, p: f32, rng: &mut R) -> T {
         let (t, mut tape) = t.split_tape();
         let _result = result.phantom();
         tape.add_backward_op(move |grads| {
-            T::Device::mul_assign(deriv.as_mut(), grads.ref_gradient(&_result));
-            T::Device::add_assign(grads.mut_gradient(&t), deriv.as_ref());
+            let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+            T::Device::foreach_mrr(t_grad, deriv.as_ref(), result_grad, &mut |g, d, r| {
+                *g += d * r;
+            });
         });
         result.put_tape(tape)
     }

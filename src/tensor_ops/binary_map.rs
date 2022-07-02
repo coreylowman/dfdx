@@ -37,8 +37,6 @@ pub(super) mod mul {
 }
 
 pub(super) mod div {
-    use std::ops::Neg;
-
     pub fn f(x: &f32, y: &f32) -> f32 {
         x * y.recip()
     }
@@ -46,7 +44,7 @@ pub(super) mod div {
         y.recip()
     }
     pub fn dfdy(x: &f32, y: &f32) -> f32 {
-        x.neg() * y.powi(2).recip()
+        (-x) * y.powi(2).recip()
     }
 }
 
@@ -63,6 +61,7 @@ pub(super) mod minimum {
             0.5
         }
     }
+
     pub fn dfdy(x: &f32, y: &f32) -> f32 {
         if y < x {
             1.0
@@ -78,30 +77,35 @@ pub(super) mod minimum {
 /// to a pair of [Tensor]s `lhs` and `rhs.
 ///
 /// This is primarily used to implement [add()], [sub()], [mul()], and [div()].
-pub(super) fn binary_map<T: Tensor<Dtype = f32>, F, Dfdx, Dfdy>(
+pub(super) fn binary_map<T: Tensor<Dtype = f32>>(
     lhs: T,
     rhs: &T::NoTape,
-    f: F,
-    mut dfdx: Dfdx,
-    dfdy: Dfdy,
-) -> T
-where
-    F: FnMut(&f32, &f32) -> f32,
-    Dfdx: FnMut(&f32, &f32) -> f32,
-    Dfdy: FnMut(&f32, &f32) -> f32,
-{
+    f: fn(&f32, &f32) -> f32,
+    dfdx: fn(&f32, &f32) -> f32,
+    dfdy: fn(&f32, &f32) -> f32,
+) -> T {
+    let (lhs, mut tape) = lhs.split_tape();
+
     let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), f));
-    let (mut lhs, mut tape) = lhs.split_tape();
-    let mut rhs_deriv: Box<T::Array> = T::Device::zip_map(lhs.data(), rhs.data(), dfdy);
-    T::Device::zip_map_assign(lhs.mut_data(), rhs.data(), &mut |l, r| *l = dfdx(l, r));
+
+    // calculate derivatives
+    let rhs_deriv: Box<T::Array> = T::Device::zip_map(lhs.data(), rhs.data(), dfdy);
+    let mut lhs_deriv = lhs;
+    T::Device::zip_map_assign(lhs_deriv.mut_data(), rhs.data(), &mut |l, r| {
+        *l = dfdx(l, r)
+    });
+
     let _rhs = rhs.phantom();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        let result_grad: &T::Array = grads.ref_gradient(&_result);
-        T::Device::mul_assign(lhs.mut_data(), result_grad);
-        T::Device::mul_assign(rhs_deriv.as_mut(), result_grad);
-        T::Device::add_assign(grads.mut_gradient(&lhs), lhs.data());
-        T::Device::add_assign(grads.mut_gradient(&_rhs), rhs_deriv.as_ref());
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs_deriv, &_result);
+        T::Device::foreach_mrr(lhs_grad, lhs_deriv.data(), result_grad, &mut |g, d, r| {
+            *g += d * r;
+        });
+        let (rhs_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
+        T::Device::foreach_mrr(rhs_grad, rhs_deriv.as_ref(), result_grad, &mut |g, d, r| {
+            *g += d * r;
+        });
     });
     result.put_tape(tape)
 }
@@ -113,53 +117,49 @@ where
 ///
 /// Generics:
 /// - `M`: The first dimension of `lhs`.
-pub(super) fn binary_map_broadcast_rhs_first<const M: usize, Lhs, Rhs, F, Dfdx, Dfdy>(
+pub(super) fn binary_map_broadcast_rhs_first<const M: usize, Lhs, Rhs>(
     lhs: Lhs,
     rhs: &Rhs,
-    mut f: F,
-    mut dfdx: Dfdx,
-    mut dfdy: Dfdy,
+    mut f: fn(&f32, &f32) -> f32,
+    dfdx: fn(&f32, &f32) -> f32,
+    mut dfdy: fn(&f32, &f32) -> f32,
 ) -> Lhs
 where
     Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
     Lhs: Tensor<Dtype = f32, Array = [Rhs::Array; M]>,
-    F: FnMut(&f32, &f32) -> f32,
-    Dfdx: FnMut(&f32, &f32) -> f32,
-    Dfdy: FnMut(&f32, &f32) -> f32,
     Lhs::Device: Device<Lhs::Array> + Device<Rhs::Array>,
 {
+    let (lhs, mut tape) = lhs.split_tape();
+
     let result = Lhs::NoTape::new_boxed(Lhs::Device::broadcast_rhs_first(
         lhs.data(),
         rhs.data(),
         &mut f,
     ));
 
-    let (mut lhs, mut tape) = lhs.split_tape();
-    let _rhs = rhs.phantom();
-    let _result = result.phantom();
-
     // calculate derivatives
     let mut rhs_deriv: Box<Lhs::Array> =
         Lhs::Device::broadcast_rhs_first(lhs.data(), rhs.data(), &mut dfdy);
-    Lhs::Device::broadcast_rhs_first_assign(lhs.mut_data(), rhs.data(), &mut |l, r| {
+    let mut lhs_deriv = lhs;
+    Lhs::Device::broadcast_rhs_first_assign(lhs_deriv.mut_data(), rhs.data(), &mut |l, r| {
         *l = dfdx(l, r)
     });
 
+    let _rhs = rhs.phantom();
+    let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        let result_grad: &Lhs::Array = grads.ref_gradient(&_result);
-        // chain rule
-        Lhs::Device::mul_assign(lhs.mut_data(), result_grad);
-        Lhs::Device::mul_assign(rhs_deriv.as_mut(), result_grad);
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs_deriv, &_result);
+        Lhs::Device::foreach_mrr(lhs_grad, lhs_deriv.data(), result_grad, &mut |g, d, r| {
+            *g += d * r;
+        });
 
-        // sum first dimension
-        let mut d_grad_rhs: Box<Rhs::Array> = Lhs::Device::zeros();
+        let (rhs_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
+        Lhs::Device::foreach_mr(rhs_deriv.as_mut(), result_grad, &mut |d, r| {
+            *d *= r;
+        });
         for i in 0..M {
-            Rhs::Device::add_assign(d_grad_rhs.as_mut(), &rhs_deriv[i]);
+            Rhs::Device::add_assign(rhs_grad, &rhs_deriv[i]);
         }
-
-        // gather gradients
-        Lhs::Device::add_assign(grads.mut_gradient(&lhs), lhs.data());
-        Rhs::Device::add_assign(grads.mut_gradient(&_rhs), d_grad_rhs.as_ref());
     });
     result.put_tape(tape)
 }
@@ -170,30 +170,37 @@ where
 ///
 /// This is primarily used to implement [add_broadcast_rhs_last()],
 /// [sub_broadcast_rhs_last()], [mul_broadcast_rhs_last()], and [div_broadcast_rhs_last()].
-pub(super) fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>, F, Dfdx, Dfdy>(
+pub(super) fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     lhs: T,
     mut rhs: <T::LastDimReduced as Tensor>::NoTape,
-    f: F,
-    mut dfdx: Dfdx,
-    dfdy: Dfdy,
-) -> T
-where
-    F: FnMut(&f32, &f32) -> f32,
-    Dfdx: FnMut(&f32, &f32) -> f32,
-    Dfdy: FnMut(&f32, &f32) -> f32,
-{
+    f: fn(&f32, &f32) -> f32,
+    dfdx: fn(&f32, &f32) -> f32,
+    dfdy: fn(&f32, &f32) -> f32,
+) -> T {
+    let (lhs, mut tape) = lhs.split_tape();
+
     let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), f));
-    let (mut lhs, mut tape) = lhs.split_tape();
+
+    // calculate derivatives
     let mut rhs_deriv: Box<T::Array> = T::Device::zip_map(lhs.data(), rhs.data(), dfdy);
-    T::Device::zip_map_assign(lhs.mut_data(), rhs.data(), &mut |l, r| *l = dfdx(l, r));
+    let mut lhs_deriv = lhs;
+    T::Device::zip_map_assign(lhs_deriv.mut_data(), rhs.data(), &mut |l, r| {
+        *l = dfdx(l, r)
+    });
+
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        let result_grad: &T::Array = grads.ref_gradient(&_result);
-        T::Device::mul_assign(lhs.mut_data(), result_grad);
-        T::Device::mul_assign(rhs_deriv.as_mut(), result_grad);
-        T::Device::add_assign(grads.mut_gradient(&lhs), lhs.data());
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs_deriv, &_result);
+        T::Device::foreach_mrr(lhs_grad, lhs_deriv.data(), result_grad, &mut |g, d, r| {
+            *g += d * r;
+        });
+
+        let (rhs_grad, result_grad) = grads.mut_and_ref(&rhs, &_result);
+        T::Device::foreach_mr(rhs_deriv.as_mut(), result_grad, &mut |d, r| {
+            *d *= r;
+        });
         T::Device::reduce_last_dim_into(rhs_deriv.as_ref(), rhs.mut_data(), &mut |x, y| x + y);
-        <T::LastDimReduced as HasDevice>::Device::add_assign(grads.mut_gradient(&rhs), rhs.data());
+        <T::LastDimReduced as HasDevice>::Device::add_assign(rhs_grad, rhs.data());
     });
     result.put_tape(tape)
 }
