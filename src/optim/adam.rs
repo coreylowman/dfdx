@@ -53,22 +53,21 @@ impl Adam {
 }
 
 impl GradientProvider for Adam {
-    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
+    fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
-        self.gradients.remove(p).map(|mut g_t| {
-            let m_t = self.moment1.mut_gradient(p);
-            let v_t = self.moment2.mut_gradient(p);
-            P::Device::foreach_mmm(g_t.as_mut(), m_t, v_t, &mut |g, m, v| {
-                *m = *m * self.betas[0] + *g * (1.0 - self.betas[0]);
-                *v = *v * self.betas[1] + g.powi(2) * (1.0 - self.betas[1]);
-                let m_hat = *m * (1.0 - self.betas[0].powi(self.t)).recip();
-                let v_hat = *v * (1.0 - self.betas[1].powi(self.t)).recip();
-                *g = self.lr * m_hat / (v_hat.sqrt() + self.eps)
-            });
-            g_t
-        })
+        let mut g_t = self.gradients.remove(p);
+        let m_t = self.moment1.mut_gradient(p);
+        let v_t = self.moment2.mut_gradient(p);
+        P::Device::foreach_mmm(g_t.as_mut(), m_t, v_t, &mut |g, m, v| {
+            *m = *m * self.betas[0] + *g * (1.0 - self.betas[0]);
+            *v = *v * self.betas[1] + g.powi(2) * (1.0 - self.betas[1]);
+            let m_hat = *m * (1.0 - self.betas[0].powi(self.t)).recip();
+            let v_hat = *v * (1.0 - self.betas[1].powi(self.t)).recip();
+            *g = self.lr * m_hat / (v_hat.sqrt() + self.eps)
+        });
+        g_t
     }
 }
 

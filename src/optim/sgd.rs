@@ -56,30 +56,29 @@ impl Sgd {
 }
 
 impl GradientProvider for Sgd {
-    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
+    fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
-        self.gradients.remove(p).map(|mut g_t| {
-            match self.momentum {
-                Some(Momentum::Classic(u)) => {
-                    let v_t = self.velocity.mut_gradient(p);
-                    P::Device::foreach_mm(g_t.as_mut(), v_t, &mut |g, v| {
-                        *v = *g + u * *v;
-                        *g = *v * self.lr;
-                    });
-                }
-                Some(Momentum::Nesterov(u)) => {
-                    let v_t = self.velocity.mut_gradient(p);
-                    P::Device::foreach_mm(g_t.as_mut(), v_t, &mut |g, v| {
-                        *v = *g + u * *v;
-                        *g = (*g + u * *v) * self.lr;
-                    });
-                }
-                None => P::Device::map_assign(g_t.as_mut(), &mut |g| *g *= self.lr),
+        let mut g_t = self.gradients.remove(p);
+        match self.momentum {
+            Some(Momentum::Classic(u)) => {
+                let v_t = self.velocity.mut_gradient(p);
+                P::Device::foreach_mm(g_t.as_mut(), v_t, &mut |g, v| {
+                    *v = *g + u * *v;
+                    *g = *v * self.lr;
+                });
             }
-            g_t
-        })
+            Some(Momentum::Nesterov(u)) => {
+                let v_t = self.velocity.mut_gradient(p);
+                P::Device::foreach_mm(g_t.as_mut(), v_t, &mut |g, v| {
+                    *v = *g + u * *v;
+                    *g = (*g + u * *v) * self.lr;
+                });
+            }
+            None => P::Device::map_assign(g_t.as_mut(), &mut |g| *g *= self.lr),
+        }
+        g_t
     }
 }
 

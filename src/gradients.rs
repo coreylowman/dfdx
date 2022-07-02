@@ -124,6 +124,19 @@ impl Gradients {
     /// `l` is the gradient to update, and `r` is the gradient to backprop.
     ///
     /// **Panics** if `l` and `r` have the same id.
+    ///
+    /// Examples:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// let a = Tensor1D::new([1.0, 2.0, 3.0]);
+    /// let b: Tensor1D<5> = Tensor1D::zeros();
+    /// let mut gradients: Gradients = Default::default();
+    /// *gradients.mut_gradient(&a) = [-4.0, 5.0, -6.0];
+    /// *gradients.mut_gradient(&b) = [1.0, 2.0, 3.0, 4.0, 5.0];
+    /// let (g_a, g_b) = gradients.mut_and_ref(&a, &b);
+    /// assert_eq!(g_a, &mut [-4.0, 5.0, -6.0]);
+    /// assert_eq!(g_b, &[1.0, 2.0, 3.0, 4.0, 5.0]);
+    /// ```
     pub fn mut_and_ref<L, R>(&mut self, l: &L, r: &R) -> (&mut L::Array, &R::Array)
     where
         L: HasUniqueId + HasArrayType + HasDevice,
@@ -137,34 +150,25 @@ impl Gradients {
         (l_ref, r_ref)
     }
 
-    /// Insert's `data` associated with `t.id()`.
-    ///
-    /// Example usage:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
-    /// let mut gradients: Gradients = Default::default();
-    /// gradients.insert(&t, Box::new([-4.0, 5.0, -6.0]));
-    /// assert_eq!(gradients.ref_gradient(&t), &[-4.0, 5.0, -6.0]);
-    /// ```
-    pub fn insert<T: HasUniqueId + HasArrayType>(&mut self, t: &T, data: Box<T::Array>) {
-        self.gradient_by_id.insert(*t.id(), data);
-    }
-
     /// Removes and returns the data associated with `t.id()`.
     ///
+    /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
+    ///
     /// Example usage:
     /// ```
     /// # use dfdx::prelude::*;
     /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
     /// let mut gradients: Gradients = Default::default();
-    /// gradients.insert(&t, Box::new([-4.0, 5.0, -6.0]));
-    /// assert_eq!(gradients.remove(&t).unwrap().as_ref(), &[-4.0, 5.0, -6.0]);
+    /// *gradients.mut_gradient(&t) = [-4.0, 5.0, -6.0];
+    /// assert_eq!(gradients.remove(&t).as_ref(), &[-4.0, 5.0, -6.0]);
     /// ```
-    pub fn remove<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Option<Box<T::Array>> {
+    pub fn remove<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Box<T::Array> {
         self.gradient_by_id
             .remove_entry(t.id())
-            .map(|(_, v)| v.downcast().expect("Unable to cast properly"))
+            .unwrap()
+            .1
+            .downcast()
+            .unwrap()
     }
 
     /// Returns a mutable reference to the data associated with `t`.
@@ -233,7 +237,7 @@ pub trait GradientProvider {
     /// Retrieves the data associated with `p` if there is any.
     /// This can modify `self`, for instance if velocities are calculated
     /// based on the associated data!
-    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
+    fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice;
 }
