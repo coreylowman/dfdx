@@ -64,14 +64,16 @@ impl GradientProvider for Sgd {
             match self.momentum {
                 Some(Momentum::Classic(u)) => {
                     let v_t = self.velocity.mut_gradient(p);
-                    P::Device::zip_map_assign(v_t, g_t.as_ref(), &mut |v, g| *v = g + u * *v);
-                    P::Device::zip_map_assign(g_t.as_mut(), v_t, &mut |g, v| *g = v * self.lr);
+                    P::Device::foreach_mm(g_t.as_mut(), v_t, &mut |g, v| {
+                        *v = *g + u * *v;
+                        *g = *v * self.lr;
+                    });
                 }
                 Some(Momentum::Nesterov(u)) => {
                     let v_t = self.velocity.mut_gradient(p);
-                    P::Device::zip_map_assign(v_t, g_t.as_ref(), &mut |v, g| *v = g + u * *v);
-                    P::Device::zip_map_assign(g_t.as_mut(), v_t, &mut |g, v| {
-                        *g = (*g + u * v) * self.lr
+                    P::Device::foreach_mm(g_t.as_mut(), v_t, &mut |g, v| {
+                        *v = *g + u * *v;
+                        *g = (*g + u * *v) * self.lr;
                     });
                 }
                 None => P::Device::map_assign(g_t.as_mut(), &mut |g| *g *= self.lr),
