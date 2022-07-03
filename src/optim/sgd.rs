@@ -39,12 +39,15 @@ pub enum Momentum {
 }
 
 impl Default for Sgd {
+    /// - `self.lr = 1e-2`
+    /// - `self.momentum = None`
     fn default() -> Self {
         Self::new(1e-2, None)
     }
 }
 
 impl Sgd {
+    /// Constructs [Sgd] with specified learning rate and momentum.
     pub fn new(lr: f32, momentum: Option<Momentum>) -> Self {
         Self {
             lr,

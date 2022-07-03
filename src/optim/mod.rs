@@ -2,8 +2,10 @@
 
 mod adam;
 mod optimizer;
+mod rmsprop;
 mod sgd;
 
 pub use adam::*;
 pub use optimizer::*;
+pub use rmsprop::*;
 pub use sgd::*;

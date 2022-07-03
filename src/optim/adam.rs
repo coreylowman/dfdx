@@ -5,19 +5,16 @@ use crate::prelude::*;
 ///
 /// Example Usage:
 /// ```rust
-/// use dfdx::prelude::*;
-///
+/// # use dfdx::prelude::*;
 /// let mut t = Tensor0D::ones();
 /// let mut opt: Adam = Default::default();
-///
 /// let gradients = t.trace().backward();
 /// opt.update(&mut t, gradients);
 /// ```
 ///
 /// Changing default parmeters:
 /// ```rust
-/// use dfdx::optim::Adam;
-///
+/// # use dfdx::optim::Adam;
 /// let adam = Adam::new(1e-2, [0.5, 0.25], 1e-6);
 /// ```
 #[derive(Debug)]
