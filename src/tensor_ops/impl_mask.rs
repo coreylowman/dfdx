@@ -11,16 +11,13 @@ use crate::prelude::*;
 /// assert_eq!(r.data(), &[-1e10, 2.0, -1e10]);
 /// ```
 pub fn value_mask<T: Tensor<Dtype = f32>>(t: T, other: &T::NoTape, value: T::Dtype) -> T {
-    let result = T::NoTape::new_boxed(T::Device::zip_map(t.data(), other.data(), |x, y| {
-        if y == &value {
-            value
-        } else {
-            *x
-        }
-    }));
+    let mut result = T::NoTape::zeros();
+    T::Device::foreach_mrr(result.mut_data(), t.data(), other.data(), &mut |r, t, o| {
+        *r = if o == &value { value } else { *t }
+    });
     let (mut t, mut tape) = t.split_tape();
-    T::Device::map_into(other.data(), t.mut_data(), &mut |x| {
-        (x != &value) as i32 as f32
+    T::Device::foreach_mr(t.mut_data(), other.data(), &mut |t, o| {
+        *t = if o == &value { 0.0 } else { 1.0 }
     });
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {

@@ -11,13 +11,13 @@ use crate::prelude::*;
 /// ```
 pub fn clamp<T: Tensor<Dtype = f32>>(t: T, min: T::Dtype, max: T::Dtype) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x.clamp(min, max)));
-    let (mut t, mut tape) = t.split_tape();
+    let (t, mut tape) = t.split_tape();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        T::Device::foreach_mr(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
-            *l = if min <= *l && *l <= max { *r } else { 0.0 }
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+        T::Device::foreach_mrr(t_grad, t.data(), result_grad, &mut |g, t, r| {
+            *g += if min <= *t && *t <= max { *r } else { 0.0 }
         });
-        T::Device::add_assign(grads.mut_gradient(&t), t.data());
     });
     result.put_tape(tape)
 }
