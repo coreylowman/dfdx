@@ -27,6 +27,15 @@ impl Into<char> for Endian {
     }
 }
 
+fn to_shape_str(shape: Vec<usize>) -> String {
+    shape
+        .iter()
+        .map(|v| v.to_string())
+        .collect::<Vec<String>>()
+        .join(", ")
+        + if shape.len() == 1 { "," } else { "" }
+}
+
 /// Represents the NumpyDtype as a const str value.
 ///
 /// Values should match up to the (numpy documentation)[https://numpy.org/doc/stable/reference/arrays.dtypes.html]

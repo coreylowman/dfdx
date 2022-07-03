@@ -26,8 +26,6 @@ rand_distr = "0.4.3"
 matrixmultiply = "0.3.2"
 num-traits = "0.2.15"
 zip = "0.6.2"
-py_literal = "0.4.0"
-num-bigint = "0.4.3"
 
 [dev-dependencies]
 tempfile = "3.3.0"

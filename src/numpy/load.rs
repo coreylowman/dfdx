@@ -1,12 +1,11 @@
 //! Provides some generic functions to save Nd arrays in the .npy format.
 
 use super::*;
-use num_bigint::{BigInt, BigUint};
 use std::{
     fs::File,
     io::{BufReader, Read},
     path::Path,
-    str::Utf8Error,
+    string::FromUtf8Error,
 };
 
 /// Loads data from a .npy file. This calls [read()].
@@ -50,29 +49,8 @@ where
     T: NumpyDtype + NumpyShape + ReadNumbers,
     R: Read,
 {
-    let header = read_header(r)?;
-    let expected_shape = T::shape();
-    if expected_shape.len() != header.shape.len() {
-        return Err(NpyError::WrongShape);
-    }
-    for (&e, f) in T::shape().iter().zip(header.shape.iter()) {
-        if &BigInt::from(BigUint::from(e)) != f {
-            return Err(NpyError::WrongShape);
-        }
-    }
-    let endian = match &header.descr.chars().next() {
-        Some('>') => Endian::Big,
-        Some('<') => Endian::Little,
-        Some('=') => Endian::Native,
-        _ => return Err(NpyError::InvalidAlignment),
-    };
-
-    if T::DTYPE != &header.descr[1..] {
-        return Err(NpyError::WrongDtype);
-    }
-
+    let endian = read_header::<T, R>(r)?;
     t.read_numbers(r, endian).map_err(NpyError::IoError)?;
-
     Ok(())
 }
 
@@ -88,49 +66,22 @@ pub enum NpyError {
     IoError(std::io::Error),
 
     /// Error from converting header bytes to a [String].
-    Utf8Error(Utf8Error),
+    Utf8Error(FromUtf8Error),
 
-    /// Error from convert header [String] into a [py_literal::Value].
-    PyLiteral(py_literal::ParseError),
-
-    /// The header is not a python dictionary.
-    HeaderNotADict,
-
-    /// The header dictionary is missing the "descr" key.
-    HeaderMissingDescr,
-
-    /// The header dictionary is missing the "fortran_order" key.
-    HeaderMissingFortranOrder,
-
-    /// The header dictionary is missing the "shape" key.
-    HeaderMissingShape,
-
-    /// The header dictionary value for "descr" is invalid in some way.
-    HeaderInvalidDescr,
-
-    /// The header dictionary value for "fortran_order" is invalid in some way.
-    HeaderInvalidFortranOrder,
-
-    /// The header dictionary value for "shape" is invalid in some way.
-    HeaderInvalidShape,
-
-    /// The shape from the header is not what was expected.
-    WrongShape,
+    ParsingMismatch {
+        expected: Vec<u8>,
+        found: Vec<u8>,
+        expected_str: String,
+        found_str: String,
+    },
 
     /// Unexpected alignment for [Endian].
     InvalidAlignment,
-
-    /// The dtype from the header is not what was expected.
-    WrongDtype,
 }
 
-struct ParsedHeader {
-    descr: String,
-    shape: Vec<BigInt>,
-}
-
-fn read_header<R>(r: &mut R) -> Result<ParsedHeader, NpyError>
+fn read_header<T, R>(r: &mut R) -> Result<Endian, NpyError>
 where
+    T: NumpyDtype + NumpyShape,
     R: Read,
 {
     let mut magic = [0; 6];
@@ -150,56 +101,51 @@ where
         .map_err(NpyError::IoError)?;
     let header_len = u16::from_le_bytes(header_len_bytes);
 
-    let mut header_bytes: Vec<u8> = vec![0; header_len as usize];
-    r.read_exact(&mut header_bytes).map_err(NpyError::IoError)?;
+    let mut header: Vec<u8> = vec![0; header_len as usize];
+    r.read_exact(&mut header).map_err(NpyError::IoError)?;
 
-    let header = std::str::from_utf8(&header_bytes)
-        .map_err(NpyError::Utf8Error)?
-        .to_string();
+    let mut i = 0;
+    i = expect(&header, i, b"{'descr': '")?;
 
-    let py_header: py_literal::Value = header.trim().parse().map_err(NpyError::PyLiteral)?;
-    let items = py_header.as_dict().ok_or(NpyError::HeaderNotADict)?;
+    let endian = match header[i] {
+        b'>' => Endian::Big,
+        b'<' => Endian::Little,
+        b'=' => Endian::Native,
+        _ => return Err(NpyError::InvalidAlignment),
+    };
+    i += 1;
 
-    let mut descr = None;
-    let mut shape = None;
-    let mut fortran_order = None;
-    for (key, value) in items.iter() {
-        if key == &py_literal::Value::String("descr".into()) {
-            descr = Some(value);
-        }
-        if key == &py_literal::Value::String("shape".into()) {
-            shape = Some(value);
-        }
-        if key == &py_literal::Value::String("fortran_order".into()) {
-            fortran_order = Some(value);
+    i = expect(&header, i, T::DTYPE.as_bytes())?;
+    i = expect(&header, i, b"', ")?;
+
+    // fortran order
+    i = expect(&header, i, b"'fortran_order': False, ")?;
+
+    // shape
+    i = expect(&header, i, b"'shape': (")?;
+    let shape_str = to_shape_str(T::shape());
+    i = expect(&header, i, shape_str.as_bytes())?;
+    expect(&header, i, b"), }")?;
+
+    Ok(endian)
+}
+
+fn expect(buf: &[u8], i: usize, chars: &[u8]) -> Result<usize, NpyError> {
+    for (offset, &c) in chars.iter().enumerate() {
+        if buf[i + offset] != c {
+            let expected = chars.to_vec();
+            let found = buf[i..i + offset + 1].to_vec();
+            let expected_str = String::from_utf8(expected.clone()).map_err(NpyError::Utf8Error)?;
+            let found_str = String::from_utf8(found.clone()).map_err(NpyError::Utf8Error)?;
+            return Err(NpyError::ParsingMismatch {
+                expected,
+                found,
+                expected_str,
+                found_str,
+            });
         }
     }
-
-    let descr = descr.ok_or(NpyError::HeaderMissingDescr)?;
-    let fortran_order = fortran_order.ok_or(NpyError::HeaderMissingFortranOrder)?;
-    let shape = shape.ok_or(NpyError::HeaderInvalidShape)?;
-
-    if fortran_order != &py_literal::Value::Boolean(false) {
-        return Err(NpyError::HeaderInvalidFortranOrder);
-    }
-
-    let descr = descr
-        .as_string()
-        .ok_or(NpyError::HeaderInvalidDescr)?
-        .clone();
-
-    let shape_values = shape.as_tuple().ok_or(NpyError::HeaderInvalidShape)?;
-
-    let mut shape: Vec<BigInt> = Vec::new();
-    for item in shape_values.iter() {
-        let v = match item {
-            py_literal::Value::Integer(value) => value.clone(),
-            _ => return Err(NpyError::HeaderInvalidShape),
-        };
-        shape.push(v);
-    }
-
-    Ok(ParsedHeader { descr, shape })
+    Ok(i + chars.len())
 }
 
 /// Reads all the numbers from `r` into `&mut self` assuming the bytes are layed out in [Endian] order.
@@ -258,14 +204,14 @@ mod tests {
         save(file.path(), &data).expect("Saving failed");
 
         let mut v = 0.0f32;
-        assert!(load(file.path(), &mut v).is_ok());
+        load(file.path(), &mut v).expect("");
         assert_eq!(v, data);
 
         let mut v = 0.0f64;
-        assert!(load(file.path(), &mut v).is_err());
+        load(file.path(), &mut v).expect_err("");
 
         let mut v = [0.0f32; 1];
-        assert!(load(file.path(), &mut v).is_err());
+        load(file.path(), &mut v).expect_err("");
     }
 
     #[test]
@@ -277,17 +223,17 @@ mod tests {
         save(file.path(), &data).expect("Saving failed");
 
         let mut value = [0.0f32; 5];
-        assert!(load(file.path(), &mut value).is_ok());
+        load(file.path(), &mut value).expect("");
         assert_eq!(value, data);
 
         let mut value = [0.0f64; 5];
-        assert!(load(file.path(), &mut value).is_err());
+        load(file.path(), &mut value).expect_err("");
 
         let mut value = 0.0f32;
-        assert!(load(file.path(), &mut value).is_err());
+        load(file.path(), &mut value).expect_err("");
 
         let mut value = [[0.0f32; 2]; 3];
-        assert!(load(file.path(), &mut value).is_err());
+        load(file.path(), &mut value).expect_err("");
     }
 
     #[test]

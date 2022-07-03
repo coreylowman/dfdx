@@ -51,18 +51,12 @@ where
     T: NumpyDtype + NumpyShape,
     W: Write,
 {
-    let shape = T::shape();
-    let shape_str = shape
-        .iter()
-        .map(|v| v.to_string())
-        .collect::<Vec<String>>()
-        .join(", ")
-        + if shape.len() == 1 { ", " } else { "" };
+    let shape_str = to_shape_str(T::shape());
 
     let mut header: Vec<u8> = Vec::new();
     write!(
         &mut header,
-        "{{'descr': '{}{}', 'fortran_order': False, 'shape': ({})}}",
+        "{{'descr': '{}{}', 'fortran_order': False, 'shape': ({}), }}",
         Into::<char>::into(endian),
         T::DTYPE,
         shape_str,
