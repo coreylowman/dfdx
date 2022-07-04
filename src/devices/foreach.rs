@@ -112,6 +112,8 @@ where
 
 pub struct Broadcast<'a, T>(pub &'a T);
 
+pub struct BroadcastMut<'a, T>(pub &'a mut T);
+
 pub trait BroadcastForEach<L: CountElements, R: CountElements>: AllocateZeros {
     fn foreach_mb<F>(l: &mut L, r: Broadcast<R>, f: &mut F)
     where

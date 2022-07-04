@@ -49,6 +49,20 @@ impl<T: CountElements, const M: usize> CountElements for [T; M] {
     }
 }
 
+pub trait MultiDimensional: CountElements {
+    type LastDim: CountElements<Dtype = Self::Dtype>
+        + std::ops::Index<usize, Output = Self::Dtype>
+        + std::ops::IndexMut<usize, Output = Self::Dtype>;
+}
+
+impl<const M: usize> MultiDimensional for [f32; M] {
+    type LastDim = Self;
+}
+
+impl<T: MultiDimensional, const M: usize> MultiDimensional for [T; M] {
+    type LastDim = T::LastDim;
+}
+
 /// Something that has compile time known zero values.
 pub trait ZeroElements {
     const ZEROS: Self;

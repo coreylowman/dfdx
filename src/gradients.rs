@@ -291,7 +291,10 @@ mod tests {
 
         let mut tape = GradientTape::default();
         tape.add_backward_op(move |g| {
-            Cpu::zip_map_assign(g.mut_gradient(&_t1), &[1.0; 5], &mut |l, r| *l += r);
+            let t_grad = g.mut_gradient(&_t1);
+            for i in 0..5 {
+                t_grad[i] += 1.0;
+            }
         });
         let g = tape.execute();
         assert_eq!(g.ref_gradient(&t1), &[1.0; 5]);

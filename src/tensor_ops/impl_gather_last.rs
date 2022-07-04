@@ -1,25 +1,5 @@
 use crate::prelude::*;
 
-impl ZipMapElements<f32, usize> for Cpu {
-    /// TODO make this private to this module somehow
-    /// NOTE: This is extremely specific to [gather_last_dim()]. This is used for setting the
-    /// derivative in that function.
-    fn zip_map_assign<F: FnMut(&mut f32, &usize)>(l: &mut f32, _: &usize, _: &mut F) {
-        *l = 1.0;
-    }
-}
-
-impl<const M: usize> ZipMapElements<[f32; M], usize> for Cpu {
-    /// TODO make this private to this module somehow
-    /// NOTE: this is extremely specific to [gather_last_dim()]. This is used for setting
-    /// the derivative in that function.
-    fn zip_map_assign<F: FnMut(&mut f32, &usize)>(l: &mut [f32; M], r: &usize, _: &mut F) {
-        for (i, l_i) in l.iter_mut().enumerate() {
-            *l_i = if i == *r { 1.0 } else { 0.0 };
-        }
-    }
-}
-
 /// Reduces the last dimension of the tensor by gathering the value specified by `indices`.
 /// Resulting [Tensor] has the last dimension removed (e.g. a 2d tensor will become 1d).
 ///
@@ -32,17 +12,29 @@ impl<const M: usize> ZipMapElements<[f32; M], usize> for Cpu {
 /// ```
 ///
 /// This is equivalent to calling `t.gather(-1, indices)` in pytorch.
-pub fn gather_last_dim<T: Tensor<Dtype = f32>, I>(t: T, indices: &I) -> T::LastDimReduced
+pub fn gather_last_dim<T: Tensor<Dtype = f32>>(
+    t: T,
+    indices: &T::ReducingIndices,
+) -> T::LastDimReduced
 where
-    I: CountElements<Dtype = usize>,
-    T::Device: GatherElements<T::Array, Indices = I, Gathered = <T::LastDimReduced as HasArrayType>::Array>
-        + Device<T::Array>
-        + ZipMapElements<T::Array, I>,
+    T::Array: MultiDimensional,
+    T::Device: ForEachLast<<T::LastDimReduced as HasArrayType>::Array, T::Array, T::ReducingIndices>
+        + FillElements<<T::Array as MultiDimensional>::LastDim>,
 {
-    let result =
-        <T::LastDimReduced as Tensor>::NoTape::new_boxed(T::Device::gather(t.data(), indices));
+    let mut result = <T::LastDimReduced as Tensor>::NoTape::zeros();
+    T::Device::foreachlast_mrb(
+        BroadcastMut(result.mut_data()),
+        t.data(),
+        Broadcast(indices),
+        &mut |r, t, i| {
+            *r = t[*i];
+        },
+    );
     let (mut t, mut tape) = t.split_tape();
-    T::Device::zip_map_assign(t.mut_data(), indices, &mut |_, _| {});
+    T::Device::foreachlast_mb(t.mut_data(), Broadcast(indices), &mut |t, i| {
+        T::Device::fill(t, &mut || 0.0);
+        t[*i] = 1.0;
+    });
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
@@ -64,7 +56,6 @@ impl<$(const $Ts: usize, )* H: Tape> $T<$($Ts, )* H> {
     };
 }
 
-gather_last_impl!(Tensor0D, [], usize);
 gather_last_impl!(Tensor1D, [M], usize);
 gather_last_impl!(Tensor2D, [M, N], [usize; M]);
 gather_last_impl!(Tensor3D, [M, N, O], [[usize; N]; M]);
@@ -73,15 +64,6 @@ gather_last_impl!(Tensor4D, [M, N, O, P], [[[usize; O]; N]; M]);
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_gather_last_0d() {
-        let t = Tensor0D::new(2.0);
-        let r: Tensor0D<OwnsTape> = gather_last_dim(t.trace(), &0);
-        assert_eq!(r.data(), &2.0);
-        let gradients = r.mean().backward();
-        assert_eq!(gradients.ref_gradient(&t), &1.0);
-    }
 
     #[test]
     fn test_gather_last_1d() {

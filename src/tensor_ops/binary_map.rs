@@ -131,9 +131,9 @@ pub(super) fn binary_map<T: Tensor<Dtype = f32>>(
 pub(super) fn binary_map_broadcast_rhs_first<const M: usize, Lhs, Rhs>(
     lhs: Lhs,
     rhs: &Rhs,
-    mut f: fn(&f32, &f32) -> f32,
+    f: fn(&f32, &f32) -> f32,
     dfdx: fn(&f32, &f32) -> f32,
-    mut dfdy: fn(&f32, &f32) -> f32,
+    dfdy: fn(&f32, &f32) -> f32,
 ) -> Lhs
 where
     Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
@@ -142,19 +142,34 @@ where
 {
     let (lhs, mut tape) = lhs.split_tape();
 
-    let result = Lhs::NoTape::new_boxed(Lhs::Device::broadcast_rhs_first(
-        lhs.data(),
-        rhs.data(),
-        &mut f,
-    ));
+    let mut result = Lhs::NoTape::zeros();
+    for i in 0..M {
+        Lhs::Device::foreach_mrr(
+            &mut result.mut_data()[i],
+            &lhs.data()[i],
+            rhs.data(),
+            &mut |o, l, r| {
+                *o = f(l, r);
+            },
+        )
+    }
 
     // calculate derivatives
-    let mut rhs_deriv: Box<Lhs::Array> =
-        Lhs::Device::broadcast_rhs_first(lhs.data(), rhs.data(), &mut dfdy);
+    let mut rhs_deriv: Box<Lhs::Array> = Lhs::Device::zeros();
     let mut lhs_deriv = lhs;
-    Lhs::Device::broadcast_rhs_first_assign(lhs_deriv.mut_data(), rhs.data(), &mut |l, r| {
-        *l = dfdx(l, r)
-    });
+    for i in 0..M {
+        Lhs::Device::foreach_mrr(
+            &mut rhs_deriv[i],
+            &lhs_deriv.data()[i],
+            rhs.data(),
+            &mut |o, l, r| {
+                *o = dfdy(l, r);
+            },
+        );
+        Lhs::Device::foreach_mr(&mut lhs_deriv.mut_data()[i], rhs.data(), &mut |l, r| {
+            *l = dfdx(l, r)
+        });
+    }
 
     let _rhs = rhs.phantom();
     let _result = result.phantom();
@@ -192,10 +207,27 @@ pub(super) fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
 ) -> T {
     let (lhs, mut tape) = lhs.split_tape();
 
-    let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), f));
+    let mut result = T::NoTape::zeros();
+    T::Device::foreach_mrb(
+        result.mut_data(),
+        lhs.data(),
+        Broadcast(rhs.data()),
+        &mut |o, l, r| {
+            *o = f(l, r);
+        },
+    );
 
     // calculate derivatives
-    let mut rhs_deriv: Box<T::Array> = T::Device::zip_map(lhs.data(), rhs.data(), dfdy);
+    let mut rhs_deriv: Box<T::Array> = T::Device::zeros();
+    T::Device::foreach_mrb(
+        rhs_deriv.as_mut(),
+        lhs.data(),
+        Broadcast(rhs.data()),
+        &mut |d, l, r| {
+            *d = dfdy(l, r);
+        },
+    );
+
     let mut lhs_deriv = lhs;
     T::Device::foreach_mb(lhs_deriv.mut_data(), Broadcast(rhs.data()), &mut |l, r| {
         *l = dfdx(l, r)
