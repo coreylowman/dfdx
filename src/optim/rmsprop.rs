@@ -5,7 +5,7 @@ use crate::prelude::*;
 /// This implementation is based off of RMSprop from
 /// [pytorch-image-models](https://github.com/rwightman/pytorch-image-models/blob/master/timm/optim/rmsprop_tf.py).
 ///
-/// The pytorch implementation has some issues: https://github.com/pytorch/pytorch/issues/23796.
+/// The pytorch implementation has some issues: <https://github.com/pytorch/pytorch/issues/23796>.
 ///
 /// Note: we don't provide lr_in_momentum option because it didn't seem to make a difference in testing.
 ///

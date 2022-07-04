@@ -4,7 +4,7 @@
 //!
 //! All functionality is provided in two ways.
 //! 1. The generic standalone function that takes a generic parameter. e.g. [mean()].
-//! 2. The struct method for tensor structs. e.g. [Tensor1D::mean()].
+//! 2. The struct method for tensor structs. e.g. [crate::prelude::Tensor1D::mean()].
 //!
 //! The struct methods are all just pass throughs to the generic function.
 //!

@@ -4,7 +4,7 @@ use crate::prelude::CanUpdateWithGradients;
 /// and produces `Module::Output`.
 ///
 /// Generic `Input` means you can implement module for multiple
-/// input types on the same struct. For example [Linear] implements
+/// input types on the same struct. For example [super::Linear] implements
 /// [Module] for 1d inputs and 2d inputs.
 pub trait Module<Input>: ResetParams + CanUpdateWithGradients {
     type Output;

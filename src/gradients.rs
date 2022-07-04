@@ -74,7 +74,7 @@ impl GradientTape {
 }
 
 /// Contains a boxed [GradientTape]. When [Tape::add_backward_op] is called,
-/// this function passes the operation directly to [GradientTape::add_backward_op].
+/// this function passes the operation directly to [GradientTape].
 #[derive(Default, Debug)]
 pub struct OwnsTape(pub(crate) Box<GradientTape>);
 

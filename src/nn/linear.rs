@@ -61,7 +61,7 @@ impl<const I: usize, const O: usize> ResetParams for Linear<I, O> {
 
 impl<const I: usize, const O: usize> SaveToNpz for Linear<I, O> {
     /// Saves `self.weight` to `{pre}weight.npy` and `self.bias` to `{pre}bias.npy`
-    /// using [numpy::write()].
+    /// using [npz_fwrite()].
     fn write<W>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()>
     where
         W: Write + Seek,
@@ -74,7 +74,7 @@ impl<const I: usize, const O: usize> SaveToNpz for Linear<I, O> {
 
 impl<const I: usize, const O: usize> LoadFromNpz for Linear<I, O> {
     /// Reads `self.weight` from `{pre}weight.npy` and `self.bias` from `{pre}bias.npy`
-    /// using [numpy::read()].
+    /// using [npz_fread()].
     fn read<R>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError>
     where
         R: Read + Seek,

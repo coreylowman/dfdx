@@ -2,7 +2,7 @@
 //! 1. Tensor library, complete with const generic shapes, activation functions, and more.
 //! 2. Safe & Easy to use neural network building blocks.
 //! 3. Standard deep learning optimizers such as Sgd and Adam.
-//! 4. Reverse mode auto differentiation[1] implementation.
+//! 4. Reverse mode auto differentiation implementation.
 
 pub mod arrays;
 pub mod data;
@@ -33,7 +33,7 @@ pub mod prelude {
 /// Sets a CPU `sse` flag to flush denormal floating point numbers to zero. The opposite of this is [keep_denormals()].
 ///
 /// Some resources:
-/// 1. [Effects of Flush-To-Zero mode]https://developer.arm.com/documentation/dui0473/c/neon-and-vfp-programming/the-effects-of-using-flush-to-zero-mode?lang=en
+/// 1. [Effects of Flush-To-Zero mode](https://developer.arm.com/documentation/dui0473/c/neon-and-vfp-programming/the-effects-of-using-flush-to-zero-mode?lang=en)
 /// 2. [When to use Flush-To-Zero mode](https://developer.arm.com/documentation/dui0473/c/neon-and-vfp-programming/when-to-use-flush-to-zero-mode?lang=en)
 pub fn flush_denormals_to_zero() {
     #[cfg(all(target_arch = "x86", target_feature = "sse"))]
@@ -52,7 +52,7 @@ pub fn flush_denormals_to_zero() {
 /// Sets a CPU flag to keep denormal floating point numbers. The opposite of this is [flush_denormals_to_zero()].
 ///
 /// Some resources:
-/// 1. [Effects of Flush-To-Zero mode]https://developer.arm.com/documentation/dui0473/c/neon-and-vfp-programming/the-effects-of-using-flush-to-zero-mode?lang=en
+/// 1. [Effects of Flush-To-Zero mode](https://developer.arm.com/documentation/dui0473/c/neon-and-vfp-programming/the-effects-of-using-flush-to-zero-mode?lang=en)
 /// 2. [When to use Flush-To-Zero mode](https://developer.arm.com/documentation/dui0473/c/neon-and-vfp-programming/when-to-use-flush-to-zero-mode?lang=en)
 pub fn keep_denormals() {
     #[cfg(all(target_arch = "x86", target_feature = "sse"))]

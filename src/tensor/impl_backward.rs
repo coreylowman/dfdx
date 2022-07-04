@@ -8,7 +8,7 @@ use crate::{
 ///
 /// This function takes ownership of `t` and returns [Gradients].
 ///
-/// Note that `t` is required to have [OwnsTape], which means it currently owns the [GradientTape].
+/// Note that `t` is required to have [OwnsTape], which means it currently owns the [crate::gradients::GradientTape].
 pub fn backward<T: Tensor<Dtype = f32, Tape = OwnsTape>>(t: T) -> Gradients {
     let (t, mut tape) = t.split_tape();
     tape.add_backward_op(move |grads| {

@@ -1,9 +1,9 @@
 //! The struct definitions for all TensorXD, [Tensor] trait, and more.
 //!
 //! At a high level a tensor consists of only three parts
-//! 1. A [UniqueId] to track which gradients are associated with what tensors
+//! 1. A [crate::unique_id::UniqueId] to track which gradients are associated with what tensors
 //! 2. An Nd rust array stored in a [Box].
-//! 3. A tape, which can either actually be a tape ([OwnsTape]) or be empty ([NoTape]).
+//! 3. A tape, which can either actually be a tape ([crate::gradients::OwnsTape]) or be empty ([crate::gradients::NoTape]).
 //!
 //! Creating tensors:
 //!
@@ -43,9 +43,9 @@
 //!
 //! Initiating gradient tracing:
 //!
-//! Use the `.trace()` or `.traced()` methods to add [OwnsTape] to the [Tensor].
-//! `.trace()` will clone the [UniqueId] & data, while `.traced()` will take ownership of
-//! the tensor and return a version with an [OwnsTape].
+//! Use the `.trace()` or `.traced()` methods to add [crate::gradients::OwnsTape] to the [Tensor].
+//! `.trace()` will clone the [crate::unique_id::UniqueId] & data, while `.traced()` will take ownership of
+//! the tensor and return a version with an [crate::gradients::OwnsTape].
 //!
 //! Note that these two methods are only present for tensors without a tape already.
 //!
@@ -60,7 +60,7 @@
 //!
 //! There are two primary methods for copying a tensor
 //! 1. [Clone] is implemented for tensors without a tape. **NOTE** that the unique id is modified when a tensor is cloned
-//! 2. [Tensor::duplicate()] is implemented for all tensors, it copies the [UniqueId], and returns a tensor with no tape.
+//! 2. [Tensor::duplicate()] is implemented for all tensors, it copies the [crate::unique_id::UniqueId], and returns a tensor with no tape.
 
 mod impl_backward;
 mod impl_default;

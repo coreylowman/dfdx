@@ -83,7 +83,7 @@ impl<T: crate::arrays::CountElements, const M: usize> Device<[T; M]> for Cpu whe
 {
 }
 
-/// A [HasArrayType] that has a [Device] for its [HasArrayType::Array]
+/// A [crate::arrays::HasArrayType] that has a [Device] for its [crate::arrays::HasArrayType::Array]
 pub trait HasDevice: crate::arrays::HasArrayType {
     type Device: Device<Self::Array>;
 }

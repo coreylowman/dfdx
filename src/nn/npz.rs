@@ -11,7 +11,7 @@ use zip::{
 
 /// Something that can be saved to a `.npz` (which is a `.zip`).
 ///
-/// All [Module]s in nn implement SaveToNpz, and the zips are formatted in a `.npz` fashion.
+/// All [super::Module]s in nn implement SaveToNpz, and the zips are formatted in a `.npz` fashion.
 pub trait SaveToNpz {
     /// Save this object into the `.npz` file determined located at `path`.
     ///
@@ -55,7 +55,7 @@ pub trait SaveToNpz {
 
 /// Something that can be loaded from a `.npz` file (which is a `zip` file).
 ///
-/// All [Module]s in nn implement LoadFromNpz, and the zips are formatted in a `.npz` fashion.
+/// All [super::Module]s in nn implement LoadFromNpz, and the zips are formatted in a `.npz` fashion.
 pub trait LoadFromNpz {
     /// Loads data from a `.npz` zip archive at the specified `path`.
     ///
@@ -64,7 +64,7 @@ pub trait LoadFromNpz {
     /// # use dfdx::prelude::*;
     /// let mut model: (Linear<5, 10>, Linear<10, 5>) = Default::default();
     /// model.load("tst.npz")?;
-    /// ``
+    /// ```
     fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<(), NpzError> {
         let f = File::open(path).map_err(|e| NpzError::Npy(NpyError::IoError(e)))?;
         let f = BufReader::new(f);

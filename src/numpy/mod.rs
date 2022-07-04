@@ -38,7 +38,7 @@ fn to_shape_str(shape: Vec<usize>) -> String {
 
 /// Represents the NumpyDtype as a const str value.
 ///
-/// Values should match up to the (numpy documentation)[https://numpy.org/doc/stable/reference/arrays.dtypes.html]
+/// Values should match up to the [numpy documentation](https://numpy.org/doc/stable/reference/arrays.dtypes.html)
 /// for dtypes.
 ///
 /// For example an f32's dtype is "f4".

@@ -1,6 +1,6 @@
 ///! A simple implementation of a UID.
 
-/// An id used in [Gradients] and Tensors to associate gradients with Tensors.
+/// An id used in to associate gradients with Tensors.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, PartialOrd, Ord)]
 pub struct UniqueId(pub(crate) usize);
 

@@ -33,12 +33,12 @@ where
 
 /// Reads data from a [Read].
 ///
-/// There are a lot of errors that can happen during this process. See [ReadError]
+/// There are a lot of errors that can happen during this process. See [NpyError]
 /// for more info.
 ///
 /// The overall process is:
 /// 1. Read the .npy header.
-/// 2. Make sure T's [NumpyDtype::Dtype] matches the header's dtype
+/// 2. Make sure T's [NumpyDtype] matches the header's dtype
 /// 3. Make sure T's [NumpyShape::shape()] matches the header's shape
 /// 4. Parse an [Endian] from header's "descr" field.
 /// 5. Read the data using [ReadNumbers].
