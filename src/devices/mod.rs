@@ -15,6 +15,8 @@ pub use foreach::*;
 pub use reduce::*;
 pub use reduce_last_dim::*;
 
+use std::ops::*;
+
 /// Represents something that can act on `T`.
 pub trait Device<T: crate::arrays::CountElements>:
     FillElements<T>
@@ -32,47 +34,38 @@ pub trait Device<T: crate::arrays::CountElements>:
 
     fn add(lhs: &mut T, rhs: &T)
     where
-        T::Dtype: std::ops::AddAssign + Copy,
+        T::Dtype: for<'r> AddAssign<&'r T::Dtype> + Copy,
     {
-        Self::foreach_mr(lhs, rhs, &mut |l, r| {
-            *l += *r;
-        })
+        Self::foreach_mr(lhs, rhs, &mut |l, r| l.add_assign(r))
     }
 
     fn badd(lhs: &mut T, rhs: Broadcast<<Self as ReduceLastDim<T>>::Reduced>)
     where
-        T::Dtype: std::ops::AddAssign + Copy,
+        T::Dtype: for<'r> AddAssign<&'r T::Dtype> + Copy,
     {
-        Self::foreach_mb(lhs, rhs, &mut |l, r| {
-            *l += *r;
-        })
+        Self::foreach_mb(lhs, rhs, &mut |l, r| l.add_assign(r))
     }
 
     fn sub(lhs: &mut T, rhs: &T)
     where
-        T::Dtype: std::ops::SubAssign + Copy,
+        T::Dtype: for<'r> SubAssign<&'r T::Dtype> + Copy,
     {
-        Self::foreach_mr(lhs, rhs, &mut |l, r| {
-            *l -= *r;
-        })
+        Self::foreach_mr(lhs, rhs, &mut |l, r| l.sub_assign(r))
     }
 
     fn bsub(lhs: &mut T, rhs: Broadcast<<Self as ReduceLastDim<T>>::Reduced>)
     where
-        T::Dtype: std::ops::SubAssign + Copy,
+        T::Dtype: for<'r> SubAssign<&'r T::Dtype> + Copy,
     {
-        Self::foreach_mb(lhs, rhs, &mut |l, r| {
-            *l -= *r;
-        })
+        Self::foreach_mb(lhs, rhs, &mut |l, r| l.sub_assign(r))
     }
 
     fn addmul(out: &mut T, lhs: &T, rhs: &T)
     where
-        T::Dtype: std::ops::Mul<Output = T::Dtype> + std::ops::AddAssign + Copy,
+        T::Dtype: AddAssign,
+        for<'r> &'r T::Dtype: Mul<Output = T::Dtype>,
     {
-        Self::foreach_mrr(out, lhs, rhs, &mut |o, l, r| {
-            *o += *l * *r;
-        })
+        Self::foreach_mrr(out, lhs, rhs, &mut |o, l, r| o.add_assign(l * r))
     }
 }
 
