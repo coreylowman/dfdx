@@ -11,7 +11,7 @@ macro_rules! tensor_impl {
 impl<$(const $Vs: usize, )* H> Randomize<f32> for $typename<$($Vs, )* H> {
     /// Fills `self.mut_data()` with data from the distribution `D`
     fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
-        <Self as HasDevice>::Device::fill(self.mut_data(), &mut || dist.sample(rng));
+        <Self as HasDevice>::Device::fill(self.mut_data(), &mut |v| *v = dist.sample(rng));
     }
 }
     };

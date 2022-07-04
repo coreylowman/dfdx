@@ -40,8 +40,8 @@ impl<const M: usize> Default for LayerNorm1D<M> {
 impl<const M: usize> ResetParams for LayerNorm1D<M> {
     /// Fills `self.gamma` with 1s and `self.beta` with 0s.
     fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {
-        Cpu::fill(self.gamma.mut_data(), &mut || 1.0);
-        Cpu::fill(self.beta.mut_data(), &mut || 0.0);
+        Cpu::fill(self.gamma.mut_data(), &mut |v| *v = 1.0);
+        Cpu::fill(self.beta.mut_data(), &mut |v| *v = 0.0);
     }
 }
 

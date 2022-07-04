@@ -24,7 +24,7 @@ pub trait TensorCreator: Sized + HasDevice {
     where
         Self::Dtype: One,
     {
-        Self::new_boxed(Self::Device::filled(&mut One::one))
+        Self::new_boxed(Self::Device::filled(&mut |v| *v = One::one()))
     }
 
     /// Creates a tensor filled with values sampled from [Standard] distribution.
@@ -32,7 +32,7 @@ pub trait TensorCreator: Sized + HasDevice {
     where
         Standard: Distribution<Self::Dtype>,
     {
-        Self::new_boxed(Self::Device::filled(&mut || Standard.sample(rng)))
+        Self::new_boxed(Self::Device::filled(&mut |v| *v = Standard.sample(rng)))
     }
 
     /// Creates a tensor filled with values sampled from [StandardNormal] distribution.
@@ -40,7 +40,9 @@ pub trait TensorCreator: Sized + HasDevice {
     where
         StandardNormal: Distribution<Self::Dtype>,
     {
-        Self::new_boxed(Self::Device::filled(&mut || StandardNormal.sample(rng)))
+        Self::new_boxed(Self::Device::filled(&mut |v| {
+            *v = StandardNormal.sample(rng)
+        }))
     }
 }
 

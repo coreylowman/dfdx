@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use rand::Rng;
-use rand_distr::Standard;
+use rand_distr::{Distribution, Standard};
 
 /// Randomly drops out elements from `t` with probability `p`, and multiplies all elements by `1 / (1 - p)`.
 ///
@@ -14,12 +14,9 @@ pub fn dropout<T: Tensor<Dtype = f32>, R: Rng>(t: T, p: f32, rng: &mut R) -> T {
     } else {
         // `t` owns the tape in this branch, so apply dropout randomly.
         let rinvp = (1.0 - p).recip();
-        let deriv = T::Device::filled(&mut || {
-            if rng.sample::<f32, Standard>(Standard) < p {
-                0.0
-            } else {
-                rinvp
-            }
+        let deriv = T::Device::filled(&mut |d| {
+            let val: f32 = Standard.sample(rng);
+            *d = if val < p { 0.0 } else { rinvp };
         });
         let mut result = T::NoTape::zeros();
         T::Device::foreach_mrr(

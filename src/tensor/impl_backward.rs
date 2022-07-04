@@ -12,7 +12,7 @@ use crate::{
 pub fn backward<T: Tensor<Dtype = f32, Tape = OwnsTape>>(t: T) -> Gradients {
     let (t, mut tape) = t.split_tape();
     tape.add_backward_op(move |grads| {
-        T::Device::fill(grads.mut_gradient(&t), &mut num_traits::One::one);
+        T::Device::fill(grads.mut_gradient(&t), &mut |v| *v = 1.0);
     });
     tape.0.execute()
 }

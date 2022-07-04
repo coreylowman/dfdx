@@ -32,7 +32,7 @@ where
     );
     let (mut t, mut tape) = t.split_tape();
     T::Device::foreachlast_mb(t.mut_data(), Broadcast(indices), &mut |t, i| {
-        T::Device::fill(t, &mut || 0.0);
+        T::Device::fill(t, &mut |v| *v = 0.0);
         t[*i] = 1.0;
     });
     let _result = result.phantom();

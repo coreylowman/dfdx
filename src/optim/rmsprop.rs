@@ -94,7 +94,7 @@ impl GradientProvider for RMSprop {
 
         let square_avg = self.square_avg.mut_gradient(p);
         if self.step == 0 {
-            P::Device::fill(square_avg, &mut || 1.0);
+            P::Device::fill(square_avg, &mut |v| *v = 1.0);
         }
 
         P::Device::foreach_mr(square_avg, g_t.as_ref(), &mut |sa, g| {
