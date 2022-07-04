@@ -3,7 +3,6 @@
 mod allocate;
 mod fill;
 mod foreach;
-mod map;
 mod reduce;
 mod reduce_last_dim;
 
@@ -13,20 +12,23 @@ pub struct Cpu;
 pub use allocate::*;
 pub use fill::*;
 pub use foreach::*;
-pub use map::*;
 pub use reduce::*;
 pub use reduce_last_dim::*;
 
 /// Represents something that can act on `T`.
 pub trait Device<T: crate::arrays::CountElements>:
     FillElements<T>
-    + MapElements<T>
     + ReduceElements<T>
     + AllocateZeros
     + ReduceLastDim<T>
     + ForEachElement<T>
     + BroadcastForEach<T, <Self as ReduceLastDim<T>>::Reduced>
 {
+    fn map<F: FnMut(&T::Dtype) -> T::Dtype>(t: &T, mut f: F) -> Box<T> {
+        let mut out: Box<T> = Self::zeros();
+        Self::foreach_mr(out.as_mut(), t, &mut |o, t| *o = f(t));
+        out
+    }
 }
 
 impl Device<f32> for Cpu {}

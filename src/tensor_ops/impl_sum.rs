@@ -7,7 +7,7 @@ pub fn sum<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::Tape> {
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
         let g: f32 = *grads.ref_gradient(&_result);
-        T::Device::map_assign(grads.mut_gradient(&t), &mut |v| *v += g);
+        T::Device::foreach_m(grads.mut_gradient(&t), &mut |v| *v += g);
     });
     result.put_tape(tape)
 }

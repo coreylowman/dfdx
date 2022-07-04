@@ -79,7 +79,7 @@ impl GradientProvider for Sgd {
                     *g = (*g + u * *v) * self.lr;
                 });
             }
-            None => P::Device::map_assign(g_t.as_mut(), &mut |g| *g *= self.lr),
+            None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.lr),
         }
         g_t
     }

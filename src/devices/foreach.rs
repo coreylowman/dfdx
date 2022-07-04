@@ -20,6 +20,9 @@ use crate::arrays::{CountElements, MultiDimensional};
 /// - `foreach_mmm`, which takes 3 mutable arrays
 /// - `foreach_mrr`, which takes 1 mutable and 2 non-mutable arrays
 pub trait ForEachElement<T: CountElements>: AllocateZeros {
+    /// Mutate elements of `a` by applying `f` to all elements of a.
+    fn foreach_m<F: FnMut(&mut T::Dtype)>(a: &mut T, f: &mut F);
+
     /// Mutate elements of `a` by applying `f` to all elements of (a, b).
     /// `mr` stands for mut ref
     fn foreach_mr<F>(a: &mut T, b: &T, f: &mut F)
@@ -46,6 +49,10 @@ pub trait ForEachElement<T: CountElements>: AllocateZeros {
 }
 
 impl ForEachElement<f32> for Cpu {
+    fn foreach_m<F: FnMut(&mut <f32 as CountElements>::Dtype)>(a: &mut f32, f: &mut F) {
+        f(a)
+    }
+
     fn foreach_mm<F: FnMut(&mut f32, &mut f32)>(a: &mut f32, b: &mut f32, f: &mut F) {
         f(a, b)
     }
@@ -73,6 +80,12 @@ impl<T: CountElements, const M: usize> ForEachElement<[T; M]> for Cpu
 where
     Self: ForEachElement<T>,
 {
+    fn foreach_m<F: FnMut(&mut <[T; M] as CountElements>::Dtype)>(a: &mut [T; M], f: &mut F) {
+        for a_i in a.iter_mut() {
+            Self::foreach_m(a_i, f);
+        }
+    }
+
     fn foreach_mm<F>(a: &mut [T; M], b: &mut [T; M], f: &mut F)
     where
         F: FnMut(&mut T::Dtype, &mut T::Dtype),

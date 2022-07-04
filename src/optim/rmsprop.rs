@@ -130,7 +130,7 @@ impl GradientProvider for RMSprop {
                     *g = *m * self.cfg.lr;
                 });
             }
-            None => P::Device::map_assign(g_t.as_mut(), &mut |g| *g *= self.cfg.lr),
+            None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.cfg.lr),
         }
         g_t
     }
