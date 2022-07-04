@@ -1,7 +1,14 @@
 use super::{AllocateZeros, Cpu};
 use crate::arrays::{CountElements, MultiDimensional};
 
-/// Iterate over various versions of two or three Nd arrays at the same time, and apply a generic function to them.
+/// Apply generic function to various forms/numbers of ndarrays.
+///
+/// The various versions that exist are:
+/// - [ForEachElement::foreach_m()], which takes 1 mut array.
+/// - [ForEachElement::foreach_mr()], which takes 1 mut array and 1 ref array
+/// - [ForEachElement::foreach_mm()], which takes 2 mut arrays
+/// - [ForEachElement::foreach_mrr()], which takes 1 mut array and 2 ref arrays
+/// - [ForEachElement::foreach_mmm()], which takes 3 mut arrays
 ///
 /// Examples:
 /// ```rust
@@ -13,12 +20,6 @@ use crate::arrays::{CountElements, MultiDimensional};
 /// });
 /// assert_eq!(a, [[2.0, 4.0, 6.0], [8.0, 10.0, 12.0]]);
 /// ```
-///
-/// The various versions that exist are:
-/// - `foreach_mm`, which takes 2 mutable arrays
-/// - `foreach_mr`, which takes 1 mutable and 1 non-mutable array
-/// - `foreach_mmm`, which takes 3 mutable arrays
-/// - `foreach_mrr`, which takes 1 mutable and 2 non-mutable arrays
 pub trait ForEachElement<T: CountElements>: AllocateZeros {
     /// Mutate elements of `a` by applying `f` to all elements of a.
     fn foreach_m<F: FnMut(&mut T::Dtype)>(a: &mut T, f: &mut F);
@@ -123,20 +124,33 @@ where
     }
 }
 
+/// Singifies that the underlying type should be broadcasted in some capacity.
+/// Used with [BroadcastForEach]
 pub struct Broadcast<'a, T>(pub &'a T);
 
+/// Signifies that the underyling type should be broadcasted in some capacity.
+/// Used with [BroadcastForEach]
 pub struct BroadcastMut<'a, T>(pub &'a mut T);
 
+/// Apply generic function to various forms of broadcasted ndarrays.
+///
+/// The methods are:
+/// - [BroadcastForEach::foreach_mb], which takes 1 mut array and 1 broadcasted ref array
+/// - [BroadcastForEach::foreach_mrb], which takes 1 mut array, 1 ref array, and 1 broadcasted ref array.
+/// - [BroadcastForEach::foreach_brr], which takes 1 broadcasted mut array, and 2 ref arrays.
 pub trait BroadcastForEach<L: CountElements, R: CountElements>: AllocateZeros {
+    /// Applies `f` to each element of `l` and `r`, where `r` is broadcasted to be the same size as `l`.
     fn foreach_mb<F>(l: &mut L, r: Broadcast<R>, f: &mut F)
     where
         F: FnMut(&mut L::Dtype, &R::Dtype);
 
+    /// Applies `f` to each element of `out`, `l`, and `r`, where `r` is broadcasted to be the same size as `out` and `l`.
     fn foreach_mrb<F>(out: &mut L, l: &L, r: Broadcast<R>, f: &mut F)
     where
         F: FnMut(&mut L::Dtype, &L::Dtype, &R::Dtype);
 
-    fn foreach_brr<F>(out: BroadcastMut<R>, l1: &L, l2: &L, f: &mut F)
+    /// Applies `f` to each element of `out`, `l`, and `r`, where `out` is broadcasted to be the same size as `l` and `r`.
+    fn foreach_brr<F>(out: BroadcastMut<R>, l: &L, r: &L, f: &mut F)
     where
         F: FnMut(&mut R::Dtype, &L::Dtype, &L::Dtype);
 }
@@ -156,11 +170,11 @@ impl BroadcastForEach<f32, f32> for Cpu {
         f(out, l, r.0);
     }
 
-    fn foreach_brr<F>(out: BroadcastMut<f32>, l1: &f32, l2: &f32, f: &mut F)
+    fn foreach_brr<F>(out: BroadcastMut<f32>, l: &f32, r: &f32, f: &mut F)
     where
         F: FnMut(&mut f32, &f32, &f32),
     {
-        f(out.0, l1, l2);
+        f(out.0, l, r);
     }
 }
 
@@ -183,12 +197,12 @@ impl<const M: usize> BroadcastForEach<[f32; M], f32> for Cpu {
         }
     }
 
-    fn foreach_brr<F>(out: BroadcastMut<f32>, l1: &[f32; M], l2: &[f32; M], f: &mut F)
+    fn foreach_brr<F>(out: BroadcastMut<f32>, l: &[f32; M], r: &[f32; M], f: &mut F)
     where
         F: FnMut(&mut f32, &f32, &f32),
     {
-        for (l1_i, l2_i) in l1.iter().zip(l2.iter()) {
-            f(out.0, l1_i, l2_i);
+        for (l_i, r_i) in l.iter().zip(r.iter()) {
+            f(out.0, l_i, r_i);
         }
     }
 }
@@ -215,22 +229,29 @@ where
         }
     }
 
-    fn foreach_brr<F>(out: BroadcastMut<[R; M]>, l1: &[L; M], l2: &[L; M], f: &mut F)
+    fn foreach_brr<F>(out: BroadcastMut<[R; M]>, l: &[L; M], r: &[L; M], f: &mut F)
     where
         F: FnMut(&mut R::Dtype, &L::Dtype, &L::Dtype),
     {
-        for (o_i, (l1_i, l2_i)) in out.0.iter_mut().zip(l1.iter().zip(l2.iter())) {
-            Self::foreach_brr(BroadcastMut(o_i), l1_i, l2_i, f);
+        for (o_i, (l_i, r_i)) in out.0.iter_mut().zip(l.iter().zip(r.iter())) {
+            Self::foreach_brr(BroadcastMut(o_i), l_i, r_i, f);
         }
     }
 }
 
+/// Apply generic function to the whole last dimension of ndarrays.
+///
+/// Versions include:
+/// - [ForEachLast::foreachlast_mb], which operates on 1 mut array, and 1 broadcasted ref array.
+/// - [ForEachLast::foreachlast_brb], which operates on 1 broadcasted mut array, 1 ref array, and 1 broadcasted ref array.
 pub trait ForEachLast<O: CountElements, L: CountElements + MultiDimensional, R: CountElements> {
+    /// Applies `f` to the last dimension of `l`, where `r` is broadcasted to be the same size as `l`.
     fn foreachlast_mb<F>(l: &mut L, r: Broadcast<R>, f: &mut F)
     where
         F: FnMut(&mut L::LastDim, &R::Dtype);
 
-    fn foreachlast_mrb<F>(o: BroadcastMut<O>, l: &L, r: Broadcast<R>, f: &mut F)
+    /// Applies `f` to the last dimension of `l`, where `out` and `r` are broadcasted to be the same size as `l`.
+    fn foreachlast_brb<F>(out: BroadcastMut<O>, l: &L, r: Broadcast<R>, f: &mut F)
     where
         F: FnMut(&mut O::Dtype, &L::LastDim, &R::Dtype);
 }
@@ -243,7 +264,7 @@ impl<const M: usize> ForEachLast<f32, [f32; M], usize> for Cpu {
         f(l, r.0);
     }
 
-    fn foreachlast_mrb<F>(o: BroadcastMut<f32>, l: &[f32; M], r: Broadcast<usize>, f: &mut F)
+    fn foreachlast_brb<F>(o: BroadcastMut<f32>, l: &[f32; M], r: Broadcast<usize>, f: &mut F)
     where
         F: FnMut(&mut f32, &[f32; M], &usize),
     {
@@ -265,12 +286,12 @@ where
         }
     }
 
-    fn foreachlast_mrb<F>(o: BroadcastMut<[O; M]>, l: &[L; M], r: Broadcast<[R; M]>, f: &mut F)
+    fn foreachlast_brb<F>(o: BroadcastMut<[O; M]>, l: &[L; M], r: Broadcast<[R; M]>, f: &mut F)
     where
         F: FnMut(&mut O::Dtype, &L::LastDim, &R::Dtype),
     {
         for (o_i, (l_i, r_i)) in o.0.iter_mut().zip(l.iter().zip(r.0.iter())) {
-            Self::foreachlast_mrb(BroadcastMut(o_i), l_i, Broadcast(r_i), f)
+            Self::foreachlast_brb(BroadcastMut(o_i), l_i, Broadcast(r_i), f)
         }
     }
 }
@@ -278,6 +299,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_foreach_m() {
+        let mut a = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
+        Cpu::foreach_m(&mut a, &mut |v| {
+            *v += 1.0;
+        });
+        assert_eq!(a, [[2.0, 3.0, 4.0], [5.0, 6.0, 7.0]]);
+    }
 
     #[test]
     fn test_foreach_mr() {
@@ -328,11 +358,73 @@ mod tests {
     }
 
     #[test]
-    fn test_1d_foreachlast() {
+    fn test_foreach_mb_1d() {
+        let mut a = [1.0, 2.0, 3.0];
+        let b = 2.0;
+        Cpu::foreach_mb(&mut a, Broadcast(&b), &mut |x, y| {
+            *x *= y;
+        });
+        assert_eq!(a, [2.0, 4.0, 6.0]);
+    }
+
+    #[test]
+    fn test_foreach_mb_2d() {
+        let mut a = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
+        let b = [2.0, 0.5];
+        Cpu::foreach_mb(&mut a, Broadcast(&b), &mut |x, y| {
+            *x *= y;
+        });
+        assert_eq!(a, [[2.0, 4.0, 6.0], [2.0, 2.5, 3.0]]);
+    }
+
+    #[test]
+    fn test_foreach_mrb() {
+        let mut a = [1.0, 2.0, 3.0];
+        let b = [-0.5, 1.0, 2.0];
+        let c = 4.0;
+        Cpu::foreach_mrb(&mut a, &b, Broadcast(&c), &mut |x, y, z| {
+            *x += y * z;
+        });
+        assert_eq!(a, [-1.0, 6.0, 11.0]);
+    }
+
+    #[test]
+    fn test_foreach_brr() {
+        let mut a = 0.0;
+        let b = [-0.5, 1.0, 2.0];
+        let c = [0.5, -0.5, 1.0];
+        Cpu::foreach_brr(BroadcastMut(&mut a), &b, &c, &mut |x, y, z| {
+            *x += y * z;
+        });
+        assert_eq!(a, -0.25 + -0.5 + 2.0);
+    }
+
+    #[test]
+    fn test_1d_foreachlast_bm() {
+        for i in 0..3 {
+            let mut l = [0.0, 0.0, 0.0];
+            Cpu::foreachlast_mb(&mut l, Broadcast(&i), &mut |a, b| {
+                a[*b] = 1.0;
+            });
+            assert_eq!(l[i], 1.0);
+        }
+    }
+
+    #[test]
+    fn test_2d_foreachlast_bm() {
+        let mut l = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]];
+        Cpu::foreachlast_mb(&mut l, Broadcast(&[1, 2]), &mut |a, b| {
+            a[*b] = 1.0;
+        });
+        assert_eq!(l, [[0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]);
+    }
+
+    #[test]
+    fn test_1d_foreachlast_brb() {
         let l = [1.0, 2.0, 3.0];
         for i in 0..3 {
             let mut o = 0.0;
-            Cpu::foreachlast_mrb(BroadcastMut(&mut o), &l, Broadcast(&i), &mut |a, b, c| {
+            Cpu::foreachlast_brb(BroadcastMut(&mut o), &l, Broadcast(&i), &mut |a, b, c| {
                 *a = b[*c];
             });
             assert_eq!(o, l[i]);
@@ -340,11 +432,11 @@ mod tests {
     }
 
     #[test]
-    fn test_2d_foreachlast() {
+    fn test_2d_foreachlast_brb() {
         let l = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]];
         let r = [2, 0, 1];
         let mut o = [0.0; 3];
-        Cpu::foreachlast_mrb(BroadcastMut(&mut o), &l, Broadcast(&r), &mut |a, b, c| {
+        Cpu::foreachlast_brb(BroadcastMut(&mut o), &l, Broadcast(&r), &mut |a, b, c| {
             *a = b[*c];
         });
         assert_eq!(o, [3.0, 4.0, 8.0]);

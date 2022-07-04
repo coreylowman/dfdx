@@ -23,7 +23,7 @@ where
 {
     // gather indices
     let mut result = <T::LastDimReduced as Tensor>::NoTape::zeros();
-    T::Device::foreachlast_mrb(
+    T::Device::foreachlast_brb(
         BroadcastMut(result.mut_data()),
         t.data(),
         Broadcast(indices),

@@ -21,8 +21,8 @@ use std::collections::HashMap;
 /// ```ignore
 /// tape.add_backward_op(move |grads| {
 ///     let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
-///     // addmul_assign would be equivalent to: t_grad += t.data() * result_grad;
-///     T::Device::addmul_assign(t_grad, t.data(), result_grad);
+///     // addmul_assign is equivalent to: t_grad += t.data() * result_grad;
+///     T::Device::addmul(t_grad, t.data(), result_grad);
 /// });
 /// ```
 ///

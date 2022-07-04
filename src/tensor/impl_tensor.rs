@@ -4,8 +4,10 @@ use crate::prelude::*;
 pub trait Tensor:
     HasArrayType + HasArrayData + HasDevice + CanUpdateWithGradients + HasUniqueId + IntoPhantom
 {
+    /// The [Tape] this tensor owns.
     type Tape: Tape;
 
+    /// This tensor but with [NoTape].
     type NoTape: 'static
         + Tensor<Array = Self::Array, Dtype = Self::Dtype, Tape = NoTape, NoTape = Self::NoTape>
         // NOTE: we only want to be able to create NoTape tensors
@@ -14,15 +16,18 @@ pub trait Tensor:
         + PutTape<Self::Tape, Output = Self>
         + Clone;
 
+    /// This tensor but with [OwnsTape]
     type OwnsTape: 'static
         + Tensor<Array = Self::Array, Dtype = Self::Dtype, Tape = OwnsTape, OwnsTape = Self::OwnsTape>;
 
+    /// This tensor but with it's last dimension reduced to 1. See [ReduceLastDim].
     type LastDimReduced: Tensor<
         Tape = Self::Tape,
         Dtype = Self::Dtype,
         Array = <Self::Device as ReduceLastDim<Self::Array>>::Reduced,
     >;
 
+    /// Indices used for [gather_last_dim()] that can reduce this tensor to it's [Tensor::LastDimReduced].
     type ReducingIndices: CountElements<Dtype = usize>;
 
     /// Removes whatever Tape this tensor has and returns itself without a tape.
