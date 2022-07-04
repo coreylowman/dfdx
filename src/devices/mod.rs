@@ -1,21 +1,21 @@
 //! Provides implementations for modifying Nd arrays on the [Cpu].
 
+mod allocate;
 mod fill;
 mod foreach;
 mod map;
 mod reduce;
 mod reduce_last_dim;
-mod zero;
 
 /// The CPU device
 pub struct Cpu;
 
+pub use allocate::*;
 pub use fill::*;
 pub use foreach::*;
 pub use map::*;
 pub use reduce::*;
 pub use reduce_last_dim::*;
-pub use zero::*;
 
 /// Represents something that can act on `T`.
 pub trait Device<T: crate::arrays::CountElements>:
