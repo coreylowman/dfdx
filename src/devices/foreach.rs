@@ -1,5 +1,5 @@
 use super::{AllocateZeros, Cpu};
-use crate::arrays::CountElements;
+use crate::arrays::{CountElements, MultiDimensional};
 
 /// Iterate over various versions of two or three Nd arrays at the same time, and apply a generic function to them.
 ///
@@ -212,6 +212,55 @@ where
     }
 }
 
+pub trait ForEachLast<O: CountElements, L: CountElements + MultiDimensional, R: CountElements> {
+    fn foreachlast_mb<F>(l: &mut L, r: Broadcast<R>, f: &mut F)
+    where
+        F: FnMut(&mut L::LastDim, &R::Dtype);
+    fn foreachlast_mrb<F>(o: BroadcastMut<O>, l: &L, r: Broadcast<R>, f: &mut F)
+    where
+        F: FnMut(&mut O::Dtype, &L::LastDim, &R::Dtype);
+}
+
+impl<const M: usize> ForEachLast<f32, [f32; M], usize> for Cpu {
+    fn foreachlast_mb<F>(l: &mut [f32; M], r: Broadcast<usize>, f: &mut F)
+    where
+        F: FnMut(&mut [f32; M], &usize),
+    {
+        f(l, r.0);
+    }
+
+    fn foreachlast_mrb<F>(o: BroadcastMut<f32>, l: &[f32; M], r: Broadcast<usize>, f: &mut F)
+    where
+        F: FnMut(&mut f32, &[f32; M], &usize),
+    {
+        f(o.0, l, r.0);
+    }
+}
+
+impl<O: CountElements, L: CountElements + MultiDimensional, R: CountElements, const M: usize>
+    ForEachLast<[O; M], [L; M], [R; M]> for Cpu
+where
+    Cpu: ForEachLast<O, L, R>,
+{
+    fn foreachlast_mb<F>(l: &mut [L; M], r: Broadcast<[R; M]>, f: &mut F)
+    where
+        F: FnMut(&mut L::LastDim, &<[R; M] as CountElements>::Dtype),
+    {
+        for (l_i, r_i) in l.iter_mut().zip(r.0.iter()) {
+            Self::foreachlast_mb(l_i, Broadcast(r_i), f);
+        }
+    }
+
+    fn foreachlast_mrb<F>(o: BroadcastMut<[O; M]>, l: &[L; M], r: Broadcast<[R; M]>, f: &mut F)
+    where
+        F: FnMut(&mut O::Dtype, &L::LastDim, &R::Dtype),
+    {
+        for i in 0..M {
+            Self::foreachlast_mrb(BroadcastMut(&mut o.0[i]), &l[i], Broadcast(&r.0[i]), f)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -262,5 +311,28 @@ mod tests {
         assert_eq!(a, [[0.0; 3]; 2]);
         assert_eq!(b, [[1.0; 3]; 2]);
         assert_eq!(c, [[2.0; 3]; 2]);
+    }
+
+    #[test]
+    fn test_1d_foreachlast() {
+        let l = [1.0, 2.0, 3.0];
+        for i in 0..3 {
+            let mut o = 0.0;
+            Cpu::foreachlast_mrb(BroadcastMut(&mut o), &l, Broadcast(&i), &mut |a, b, c| {
+                *a = b[*c];
+            });
+            assert_eq!(o, l[i]);
+        }
+    }
+
+    #[test]
+    fn test_2d_foreachlast() {
+        let l = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]];
+        let r = [2, 0, 1];
+        let mut o = [0.0; 3];
+        Cpu::foreachlast_mrb(BroadcastMut(&mut o), &l, Broadcast(&r), &mut |a, b, c| {
+            *a = b[*c];
+        });
+        assert_eq!(o, [3.0, 4.0, 8.0]);
     }
 }

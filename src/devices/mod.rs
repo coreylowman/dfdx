@@ -2,7 +2,6 @@
 
 mod fill;
 mod foreach;
-mod gather;
 mod map;
 mod reduce;
 mod reduce_last_dim;
@@ -13,7 +12,6 @@ pub struct Cpu;
 
 pub use fill::*;
 pub use foreach::*;
-pub use gather::*;
 pub use map::*;
 pub use reduce::*;
 pub use reduce_last_dim::*;
@@ -26,7 +24,6 @@ pub trait Device<T: crate::arrays::CountElements>:
     + ReduceElements<T>
     + AllocateZeros
     + ReduceLastDim<T>
-    + GatherElements<T>
     + ForEachElement<T>
     + BroadcastForEach<T, <Self as ReduceLastDim<T>>::Reduced>
 {
@@ -37,7 +34,6 @@ impl<T: crate::arrays::CountElements, const M: usize> Device<[T; M]> for Cpu whe
     Cpu: Device<T>
         + ReduceLastDim<[T; M]>
         + BroadcastForEach<[T; M], <Self as ReduceLastDim<[T; M]>>::Reduced>
-        + GatherElements<[T; M]>
 {
 }
 
