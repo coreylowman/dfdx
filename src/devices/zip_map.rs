@@ -30,55 +30,6 @@ pub trait ZipMapElements<Lhs: CountElements, Rhs: CountElements>: AllocateZeros 
         out
     }
 
-    fn add(l: &Lhs, r: &Rhs) -> Box<Lhs>
-    where
-        for<'r> &'r Lhs::Dtype: Add<&'r Rhs::Dtype, Output = Lhs::Dtype>,
-    {
-        Self::zip_map(l, r, |x, y| x + y)
-    }
-
-    fn sub(l: &Lhs, r: &Rhs) -> Box<Lhs>
-    where
-        for<'r> &'r Lhs::Dtype: Sub<&'r Rhs::Dtype, Output = Lhs::Dtype>,
-    {
-        Self::zip_map(l, r, |x, y| x - y)
-    }
-
-    fn mul(l: &Lhs, r: &Rhs) -> Box<Lhs>
-    where
-        for<'r> &'r Lhs::Dtype: Mul<&'r Rhs::Dtype, Output = Lhs::Dtype>,
-    {
-        Self::zip_map(l, r, |x, y| x * y)
-    }
-
-    fn div(l: &Lhs, r: &Rhs) -> Box<Lhs>
-    where
-        for<'r> &'r Lhs::Dtype: Div<&'r Rhs::Dtype, Output = Lhs::Dtype>,
-    {
-        Self::zip_map(l, r, |x, y| x / y)
-    }
-
-    fn add_assign(l: &mut Lhs, r: &Rhs)
-    where
-        for<'r> Lhs::Dtype: AddAssign<&'r Rhs::Dtype>,
-    {
-        Self::zip_map_assign(l, r, &mut |x, y| *x += y);
-    }
-
-    fn sub_assign(l: &mut Lhs, r: &Rhs)
-    where
-        for<'r> Lhs::Dtype: SubAssign<&'r Rhs::Dtype>,
-    {
-        Self::zip_map_assign(l, r, &mut |x, y| *x -= y);
-    }
-
-    fn mul_assign(l: &mut Lhs, r: &Rhs)
-    where
-        for<'r> Lhs::Dtype: MulAssign<&'r Rhs::Dtype>,
-    {
-        Self::zip_map_assign(l, r, &mut |x, y| *x *= y);
-    }
-
     fn broadcast_rhs_first<F, const M: usize>(lhs: &[Lhs; M], rhs: &Rhs, f: &mut F) -> Box<[Lhs; M]>
     where
         F: FnMut(&Lhs::Dtype, &Rhs::Dtype) -> Lhs::Dtype,

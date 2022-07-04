@@ -45,8 +45,12 @@ where
     T::Device::zip_map_assign(t.mut_data(), indices, &mut |_, _| {});
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        T::Device::mul_assign(t.mut_data(), grads.ref_gradient(&_result));
-        T::Device::add_assign(grads.mut_gradient(&t), t.data());
+        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |t, g| {
+            *t *= g;
+        });
+        T::Device::foreach_mr(grads.mut_gradient(&t), t.data(), &mut |g, d| {
+            *g += d;
+        });
     });
     result.put_tape(tape)
 }

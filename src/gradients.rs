@@ -20,8 +20,9 @@ use std::collections::HashMap;
 ///
 /// ```ignore
 /// tape.add_backward_op(move |grads| {
-///     T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), |l, r| *l = -r);
-///     T::Device::add_assign(grads.mut_gradient(&t), t.data());
+///     let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+///     // addmul_assign would be equivalent to: t_grad += t.data() * result_grad;
+///     T::Device::addmul_assign(t_grad, t.data(), result_grad);
 /// });
 /// ```
 ///

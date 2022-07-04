@@ -4,6 +4,8 @@ use crate::prelude::*;
 impl<T: Tensor<Dtype = f32>> CanUpdateWithGradients for T {
     fn update<G: GradientProvider>(&mut self, grads: &mut G) {
         let gradient = grads.gradient(self);
-        <Self as HasDevice>::Device::sub_assign(self.mut_data(), gradient.as_ref());
+        <Self as HasDevice>::Device::foreach_mr(self.mut_data(), gradient.as_ref(), &mut |t, g| {
+            *t -= g;
+        });
     }
 }

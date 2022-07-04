@@ -86,12 +86,23 @@ pub(super) fn binary_map<T: Tensor<Dtype = f32>>(
 ) -> T {
     let (lhs, mut tape) = lhs.split_tape();
 
-    let result = T::NoTape::new_boxed(T::Device::zip_map(lhs.data(), rhs.data(), f));
+    let mut result = T::NoTape::zeros();
+    T::Device::foreach_mrr(result.mut_data(), lhs.data(), rhs.data(), &mut |o, l, r| {
+        *o = f(l, r)
+    });
 
     // calculate derivatives
-    let rhs_deriv: Box<T::Array> = T::Device::zip_map(lhs.data(), rhs.data(), dfdy);
+    let mut rhs_deriv: Box<T::Array> = T::Device::zeros();
+    T::Device::foreach_mrr(
+        rhs_deriv.as_mut(),
+        lhs.data(),
+        rhs.data(),
+        &mut |o, l, r| {
+            *o = dfdy(l, r);
+        },
+    );
     let mut lhs_deriv = lhs;
-    T::Device::zip_map_assign(lhs_deriv.mut_data(), rhs.data(), &mut |l, r| {
+    T::Device::foreach_mr(lhs_deriv.mut_data(), rhs.data(), &mut |l, r| {
         *l = dfdx(l, r)
     });
 
@@ -158,7 +169,9 @@ where
             *d *= r;
         });
         for i in 0..M {
-            Rhs::Device::add_assign(rhs_grad, &rhs_deriv[i]);
+            Rhs::Device::foreach_mr(rhs_grad, &rhs_deriv[i], &mut |g, d| {
+                *g += d;
+            });
         }
     });
     result.put_tape(tape)
@@ -200,7 +213,9 @@ pub(super) fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
             *d *= r;
         });
         T::Device::reduce_last_dim_into(rhs_deriv.as_ref(), rhs.mut_data(), &mut |x, y| x + y);
-        <T::LastDimReduced as HasDevice>::Device::add_assign(rhs_grad, rhs.data());
+        <T::LastDimReduced as HasDevice>::Device::foreach_mr(rhs_grad, rhs.data(), &mut |g, d| {
+            *g += d;
+        });
     });
     result.put_tape(tape)
 }

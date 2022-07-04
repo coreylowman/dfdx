@@ -21,7 +21,15 @@ pub fn dropout<T: Tensor<Dtype = f32>, R: Rng>(t: T, p: f32, rng: &mut R) -> T {
                 rinvp
             }
         });
-        let result = T::NoTape::new_boxed(T::Device::mul(t.data(), deriv.as_ref()));
+        let mut result = T::NoTape::zeros();
+        T::Device::foreach_mrr(
+            result.mut_data(),
+            t.data(),
+            deriv.as_ref(),
+            &mut |r, t, d| {
+                *r = t * d;
+            },
+        );
         let (t, mut tape) = t.split_tape();
         let _result = result.phantom();
         tape.add_backward_op(move |grads| {

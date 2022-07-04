@@ -21,7 +21,9 @@ pub fn sum_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
         T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
             *l = *r
         });
-        T::Device::add_assign(grads.mut_gradient(&t), t.data());
+        T::Device::foreach_mr(grads.mut_gradient(&t), t.data(), &mut |g, d| {
+            *g += d;
+        });
     });
     result.put_tape(tape)
 }
