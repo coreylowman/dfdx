@@ -17,10 +17,13 @@ pub fn max_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
         t.data(),
         &mut f32::max,
     ));
+
+    // store derivative in t
     let (mut t, mut tape) = t.split_tape();
     T::Device::foreach_mb(t.mut_data(), Broadcast(result.data()), &mut |l, r| {
-        *l = if *l == *r { 1.0 } else { 0.0 }
+        *l = if l == r { 1.0 } else { 0.0 }
     });
+
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);

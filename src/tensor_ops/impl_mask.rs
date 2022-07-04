@@ -15,16 +15,17 @@ pub fn value_mask<T: Tensor<Dtype = f32>>(t: T, other: &T::NoTape, value: T::Dty
     T::Device::foreach_mrr(result.mut_data(), t.data(), other.data(), &mut |r, t, o| {
         *r = if o == &value { value } else { *t }
     });
+
+    // store derivative in t
     let (mut t, mut tape) = t.split_tape();
     T::Device::foreach_mr(t.mut_data(), other.data(), &mut |t, o| {
         *t = if o == &value { 0.0 } else { 1.0 }
     });
+
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
-        T::Device::foreach_mrr(t_grad, t.data(), result_grad, &mut |g, d, r| {
-            *g += d * r;
-        });
+        T::Device::addmul(t_grad, t.data(), result_grad);
     });
     result.put_tape(tape)
 }

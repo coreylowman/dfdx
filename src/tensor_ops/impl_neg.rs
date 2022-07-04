@@ -16,9 +16,7 @@ pub fn negate<T: Tensor<Dtype = f32>>(t: T) -> T {
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
-        T::Device::foreach_mr(t_grad, result_grad, &mut |l, r| {
-            *l -= r;
-        });
+        T::Device::sub(t_grad, result_grad);
     });
     result.put_tape(tape)
 }

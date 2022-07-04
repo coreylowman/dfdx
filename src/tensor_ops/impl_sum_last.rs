@@ -19,9 +19,7 @@ pub fn sum_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
-        T::Device::foreach_mb(t_grad, Broadcast(result_grad), &mut |g, r| {
-            *g += r;
-        });
+        T::Device::badd(t_grad, Broadcast(result_grad));
     });
     result.put_tape(tape)
 }

@@ -16,7 +16,7 @@ pub fn clamp<T: Tensor<Dtype = f32>>(t: T, min: T::Dtype, max: T::Dtype) -> T {
     tape.add_backward_op(move |grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
         T::Device::foreach_mrr(t_grad, t.data(), result_grad, &mut |g, t, r| {
-            *g += if min <= *t && *t <= max { *r } else { 0.0 }
+            *g += if (min..=max).contains(t) { *r } else { 0.0 }
         });
     });
     result.put_tape(tape)

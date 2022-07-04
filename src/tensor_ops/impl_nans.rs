@@ -10,12 +10,8 @@ use crate::prelude::*;
 /// assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
 /// ```
 pub fn nans_to<T: Tensor<Dtype = f32>>(t: T, value: T::Dtype) -> T {
-    let result = T::NoTape::new_boxed(T::Device::map(t.data(), |v| {
-        if v.is_nan() {
-            value
-        } else {
-            *v
-        }
+    let result = T::NoTape::new_boxed(T::Device::map(t.data(), |v: &f32| {
+        v.is_nan().then_some(value).unwrap_or(*v)
     }));
     let (t, mut tape) = t.split_tape();
     let _result = result.phantom();

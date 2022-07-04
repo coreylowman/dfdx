@@ -99,13 +99,10 @@ pub(super) fn binary_map<T: Tensor<Dtype = f32>>(
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
-        T::Device::foreach_mrr(lhs_grad, lhs.data(), result_grad, &mut |g, d, r| {
-            *g += d * r;
-        });
+        T::Device::addmul(lhs_grad, lhs.data(), result_grad);
+
         let (rhs_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
-        T::Device::foreach_mrr(rhs_grad, rhs_deriv.as_ref(), result_grad, &mut |g, d, r| {
-            *g += d * r;
-        });
+        T::Device::addmul(rhs_grad, rhs_deriv.as_ref(), result_grad);
     });
     result.put_tape(tape)
 }
@@ -146,15 +143,11 @@ where
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
-        Lhs::Device::foreach_mrr(lhs_grad, lhs.data(), result_grad, &mut |g, d, r| {
-            *g += d * r;
-        });
+        Lhs::Device::addmul(lhs_grad, lhs.data(), result_grad);
 
         let (rhs_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
         for i in 0..M {
-            Rhs::Device::foreach_mrr(rhs_grad, &rhs_deriv[i], &result_grad[i], &mut |g, d, r| {
-                *g += d * r;
-            })
+            Rhs::Device::addmul(rhs_grad, &rhs_deriv[i], &result_grad[i]);
         }
     });
     result.put_tape(tape)
@@ -189,9 +182,8 @@ pub(super) fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
-        T::Device::foreach_mrr(lhs_grad, lhs.data(), result_grad, &mut |g, d, r| {
-            *g += d * r;
-        });
+        T::Device::addmul(lhs_grad, lhs.data(), result_grad);
+
         let (rhs_grad, result_grad) = grads.mut_and_ref(&rhs, &_result);
         let rhs_grad = BroadcastMut(rhs_grad);
         T::Device::foreach_brr(rhs_grad, rhs_deriv.as_ref(), result_grad, &mut |g, d, r| {
