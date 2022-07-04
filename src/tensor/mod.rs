@@ -62,7 +62,6 @@
 //! 1. [Clone] is implemented for tensors without a tape. **NOTE** that the unique id is modified when a tensor is cloned
 //! 2. [Tensor::duplicate()] is implemented for all tensors, it copies the [crate::unique_id::UniqueId], and returns a tensor with no tape.
 
-mod impl_backward;
 mod impl_default;
 mod impl_has_array;
 mod impl_has_device;
@@ -76,7 +75,6 @@ mod impl_trace;
 mod impl_update_with_grads;
 mod structs;
 
-pub use impl_backward::*;
 pub use impl_default::*;
 pub use impl_has_array::*;
 pub use impl_has_device::*;
