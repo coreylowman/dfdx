@@ -122,6 +122,10 @@ pub trait BroadcastForEach<L: CountElements, R: CountElements>: AllocateZeros {
     fn foreach_mrb<F>(out: &mut L, l: &L, r: Broadcast<R>, f: &mut F)
     where
         F: FnMut(&mut L::Dtype, &L::Dtype, &R::Dtype);
+
+    fn foreach_brr<F>(out: BroadcastMut<R>, l1: &L, l2: &L, f: &mut F)
+    where
+        F: FnMut(&mut R::Dtype, &L::Dtype, &L::Dtype);
 }
 
 impl BroadcastForEach<f32, f32> for Cpu {
@@ -137,6 +141,13 @@ impl BroadcastForEach<f32, f32> for Cpu {
         F: FnMut(&mut f32, &f32, &f32),
     {
         f(out, l, r.0);
+    }
+
+    fn foreach_brr<F>(out: BroadcastMut<f32>, l1: &f32, l2: &f32, f: &mut F)
+    where
+        F: FnMut(&mut f32, &f32, &f32),
+    {
+        f(out.0, l1, l2);
     }
 }
 
@@ -156,6 +167,15 @@ impl<const M: usize> BroadcastForEach<[f32; M], f32> for Cpu {
     {
         for (out_i, l_i) in out.iter_mut().zip(l.iter()) {
             f(out_i, l_i, r.0);
+        }
+    }
+
+    fn foreach_brr<F>(out: BroadcastMut<f32>, l1: &[f32; M], l2: &[f32; M], f: &mut F)
+    where
+        F: FnMut(&mut f32, &f32, &f32),
+    {
+        for (l1_i, l2_i) in l1.iter().zip(l2.iter()) {
+            f(out.0, l1_i, l2_i);
         }
     }
 }
@@ -179,6 +199,15 @@ where
     {
         for i in 0..M {
             Self::foreach_mrb(&mut out[i], &l[i], Broadcast(&r.0[i]), f);
+        }
+    }
+
+    fn foreach_brr<F>(out: BroadcastMut<[R; M]>, l1: &[L; M], l2: &[L; M], f: &mut F)
+    where
+        F: FnMut(&mut R::Dtype, &L::Dtype, &L::Dtype),
+    {
+        for i in 0..M {
+            Self::foreach_brr(BroadcastMut(&mut out.0[i]), &l1[i], &l2[i], f);
         }
     }
 }
