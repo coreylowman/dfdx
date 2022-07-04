@@ -49,7 +49,17 @@ impl<T: CountElements, const M: usize> CountElements for [T; M] {
     }
 }
 
+/// An NdArray that is more than 0 dimensions (i.e. >= 1 dimension). This exposes the type
+/// of the last dimension (inner most) of the array as a type through [MultiDimensional::LastDim].
+///
+/// Example:
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let _: [f32; 5] = <[[f32; 5]; 3] as MultiDimensional>::LastDim::default();
+/// ```
 pub trait MultiDimensional: CountElements {
+    /// The inner most dimension of a type.
     type LastDim: CountElements<Dtype = Self::Dtype>
         + std::ops::Index<usize, Output = Self::Dtype>
         + std::ops::IndexMut<usize, Output = Self::Dtype>;
