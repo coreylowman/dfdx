@@ -143,33 +143,14 @@ where
     let (lhs, mut tape) = lhs.split_tape();
 
     let mut result = Lhs::NoTape::zeros();
-    for i in 0..M {
-        Lhs::Device::foreach_mrr(
-            &mut result.mut_data()[i],
-            &lhs.data()[i],
-            rhs.data(),
-            &mut |o, l, r| {
-                *o = f(l, r);
-            },
-        )
-    }
+    broadcast_mrr::<Rhs::Array, M, Lhs::Device>(result.mut_data(), lhs.data(), rhs.data(), f);
 
     // calculate derivatives
     let mut rhs_deriv: Box<Lhs::Array> = Lhs::Device::zeros();
+    broadcast_mrr::<Rhs::Array, M, Lhs::Device>(rhs_deriv.as_mut(), lhs.data(), rhs.data(), dfdy);
+
     let mut lhs_deriv = lhs;
-    for i in 0..M {
-        Lhs::Device::foreach_mrr(
-            &mut rhs_deriv[i],
-            &lhs_deriv.data()[i],
-            rhs.data(),
-            &mut |o, l, r| {
-                *o = dfdy(l, r);
-            },
-        );
-        Lhs::Device::foreach_mr(&mut lhs_deriv.mut_data()[i], rhs.data(), &mut |l, r| {
-            *l = dfdx(l, r)
-        });
-    }
+    broadcast_mr::<Rhs::Array, M, Lhs::Device>(lhs_deriv.mut_data(), rhs.data(), dfdx);
 
     let _rhs = rhs.phantom();
     let _result = result.phantom();
@@ -190,6 +171,27 @@ where
         }
     });
     result.put_tape(tape)
+}
+
+fn broadcast_mrr<T: CountElements, const M: usize, Device: ForEachElement<T>>(
+    out: &mut [T; M],
+    l: &[T; M],
+    r: &T,
+    f: fn(&T::Dtype, &T::Dtype) -> T::Dtype,
+) {
+    for (out_i, l_i) in out.iter_mut().zip(l.iter()) {
+        Device::foreach_mrr(out_i, l_i, r, &mut |o, l, r| *o = f(l, r));
+    }
+}
+
+fn broadcast_mr<T: CountElements, const M: usize, Device: ForEachElement<T>>(
+    out: &mut [T; M],
+    r: &T,
+    f: fn(&T::Dtype, &T::Dtype) -> T::Dtype,
+) {
+    for out_i in out.iter_mut() {
+        Device::foreach_mr(out_i, r, &mut |l, r| *l = f(l, r));
+    }
 }
 
 /// Applies a binary function `f`, it's partial wrt. x `dfdx`, and its partial wrt. y `dfdy`
