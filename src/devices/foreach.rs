@@ -90,8 +90,8 @@ where
     where
         F: FnMut(&mut T::Dtype, &mut T::Dtype),
     {
-        for i in 0..M {
-            Self::foreach_mm(&mut a[i], &mut b[i], f);
+        for (a_i, b_i) in a.iter_mut().zip(b.iter_mut()) {
+            Self::foreach_mm(a_i, b_i, f);
         }
     }
 
@@ -99,8 +99,8 @@ where
     where
         F: FnMut(&mut T::Dtype, &T::Dtype),
     {
-        for i in 0..M {
-            Self::foreach_mr(&mut a[i], &b[i], f);
+        for (a_i, b_i) in a.iter_mut().zip(b.iter()) {
+            Self::foreach_mr(a_i, b_i, f);
         }
     }
 
@@ -108,8 +108,8 @@ where
     where
         F: FnMut(&mut T::Dtype, &mut T::Dtype, &mut T::Dtype),
     {
-        for i in 0..M {
-            Self::foreach_mmm(&mut a[i], &mut b[i], &mut c[i], f);
+        for (a_i, (b_i, c_i)) in a.iter_mut().zip(b.iter_mut().zip(c.iter_mut())) {
+            Self::foreach_mmm(a_i, b_i, c_i, f);
         }
     }
 
@@ -117,8 +117,8 @@ where
     where
         F: FnMut(&mut T::Dtype, &T::Dtype, &T::Dtype),
     {
-        for i in 0..M {
-            Self::foreach_mrr(&mut a[i], &b[i], &c[i], f);
+        for (a_i, (b_i, c_i)) in a.iter_mut().zip(b.iter().zip(c.iter())) {
+            Self::foreach_mrr(a_i, b_i, c_i, f);
         }
     }
 }
@@ -210,8 +210,8 @@ where
     where
         F: FnMut(&mut L::Dtype, &L::Dtype, &R::Dtype),
     {
-        for i in 0..M {
-            Self::foreach_mrb(&mut out[i], &l[i], Broadcast(&r.0[i]), f);
+        for (o_i, (l_i, r_i)) in out.iter_mut().zip(l.iter().zip(r.0.iter())) {
+            Self::foreach_mrb(o_i, l_i, Broadcast(r_i), f);
         }
     }
 
@@ -219,8 +219,8 @@ where
     where
         F: FnMut(&mut R::Dtype, &L::Dtype, &L::Dtype),
     {
-        for i in 0..M {
-            Self::foreach_brr(BroadcastMut(&mut out.0[i]), &l1[i], &l2[i], f);
+        for (o_i, (l1_i, l2_i)) in out.0.iter_mut().zip(l1.iter().zip(l2.iter())) {
+            Self::foreach_brr(BroadcastMut(o_i), l1_i, l2_i, f);
         }
     }
 }
@@ -229,6 +229,7 @@ pub trait ForEachLast<O: CountElements, L: CountElements + MultiDimensional, R: 
     fn foreachlast_mb<F>(l: &mut L, r: Broadcast<R>, f: &mut F)
     where
         F: FnMut(&mut L::LastDim, &R::Dtype);
+
     fn foreachlast_mrb<F>(o: BroadcastMut<O>, l: &L, r: Broadcast<R>, f: &mut F)
     where
         F: FnMut(&mut O::Dtype, &L::LastDim, &R::Dtype);
@@ -268,8 +269,8 @@ where
     where
         F: FnMut(&mut O::Dtype, &L::LastDim, &R::Dtype),
     {
-        for i in 0..M {
-            Self::foreachlast_mrb(BroadcastMut(&mut o.0[i]), &l[i], Broadcast(&r.0[i]), f)
+        for (o_i, (l_i, r_i)) in o.0.iter_mut().zip(l.iter().zip(r.0.iter())) {
+            Self::foreachlast_mrb(BroadcastMut(o_i), l_i, Broadcast(r_i), f)
         }
     }
 }
