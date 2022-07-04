@@ -18,16 +18,14 @@ pub fn max_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
         &mut f32::max,
     ));
     let (mut t, mut tape) = t.split_tape();
-    T::Device::zip_map_assign(t.mut_data(), result.data(), &mut |l, r| {
+    T::Device::foreach_mb(t.mut_data(), Broadcast(result.data()), &mut |l, r| {
         *l = if *l == *r { 1.0 } else { 0.0 }
     });
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |t, g| {
-            *t *= g;
-        });
-        T::Device::foreach_mr(grads.mut_gradient(&t), t.data(), &mut |g, d| {
-            *g += d;
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+        T::Device::foreach_mrb(t_grad, t.data(), Broadcast(result_grad), &mut |g, t, r| {
+            *g += t * r;
         });
     });
     result.put_tape(tape)

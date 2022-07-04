@@ -110,6 +110,77 @@ where
     }
 }
 
+pub struct Broadcast<'a, T>(pub &'a T);
+
+pub trait BroadcastForEach<L: CountElements, R: CountElements>: AllocateZeros {
+    fn foreach_mb<F>(l: &mut L, r: Broadcast<R>, f: &mut F)
+    where
+        F: FnMut(&mut L::Dtype, &R::Dtype);
+
+    fn foreach_mrb<F>(out: &mut L, l: &L, r: Broadcast<R>, f: &mut F)
+    where
+        F: FnMut(&mut L::Dtype, &L::Dtype, &R::Dtype);
+}
+
+impl BroadcastForEach<f32, f32> for Cpu {
+    fn foreach_mb<F>(l: &mut f32, r: Broadcast<f32>, f: &mut F)
+    where
+        F: FnMut(&mut f32, &f32),
+    {
+        f(l, r.0);
+    }
+
+    fn foreach_mrb<F>(out: &mut f32, l: &f32, r: Broadcast<f32>, f: &mut F)
+    where
+        F: FnMut(&mut f32, &f32, &f32),
+    {
+        f(out, l, r.0);
+    }
+}
+
+impl<const M: usize> BroadcastForEach<[f32; M], f32> for Cpu {
+    fn foreach_mb<F>(l: &mut [f32; M], r: Broadcast<f32>, f: &mut F)
+    where
+        F: FnMut(&mut f32, &f32),
+    {
+        for l_i in l.iter_mut() {
+            f(l_i, r.0);
+        }
+    }
+
+    fn foreach_mrb<F>(out: &mut [f32; M], l: &[f32; M], r: Broadcast<f32>, f: &mut F)
+    where
+        F: FnMut(&mut f32, &f32, &f32),
+    {
+        for (out_i, l_i) in out.iter_mut().zip(l.iter()) {
+            f(out_i, l_i, r.0);
+        }
+    }
+}
+
+impl<L: CountElements, R: CountElements, const M: usize> BroadcastForEach<[L; M], [R; M]> for Cpu
+where
+    Self: BroadcastForEach<L, R>,
+{
+    fn foreach_mb<F>(l: &mut [L; M], r: Broadcast<[R; M]>, f: &mut F)
+    where
+        F: FnMut(&mut L::Dtype, &R::Dtype),
+    {
+        for (l_i, r_i) in l.iter_mut().zip(r.0.iter()) {
+            Self::foreach_mb(l_i, Broadcast(r_i), f);
+        }
+    }
+
+    fn foreach_mrb<F>(out: &mut [L; M], l: &[L; M], r: Broadcast<[R; M]>, f: &mut F)
+    where
+        F: FnMut(&mut L::Dtype, &L::Dtype, &R::Dtype),
+    {
+        for i in 0..M {
+            Self::foreach_mrb(&mut out[i], &l[i], Broadcast(&r.0[i]), f);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

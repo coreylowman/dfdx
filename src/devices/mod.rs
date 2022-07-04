@@ -32,6 +32,7 @@ pub trait Device<T: crate::arrays::CountElements>:
     + ZipMapElements<T, <Self as ReduceLastDim<T>>::Reduced>
     + GatherElements<T>
     + ForEachElement<T>
+    + BroadcastForEach<T, <Self as ReduceLastDim<T>>::Reduced>
 {
 }
 
@@ -40,6 +41,7 @@ impl<T: crate::arrays::CountElements, const M: usize> Device<[T; M]> for Cpu whe
     Cpu: Device<T>
         + ReduceLastDim<[T; M]>
         + ZipMapElements<[T; M], <Self as ReduceLastDim<[T; M]>>::Reduced>
+        + BroadcastForEach<[T; M], <Self as ReduceLastDim<[T; M]>>::Reduced>
         + GatherElements<[T; M]>
 {
 }

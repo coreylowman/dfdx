@@ -15,14 +15,12 @@ pub fn sum_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
         t.data(),
         &mut |a, b| a + b,
     ));
-    let (mut t, mut tape) = t.split_tape();
+    let (t, mut tape) = t.split_tape();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
-        T::Device::zip_map_assign(t.mut_data(), grads.ref_gradient(&_result), &mut |l, r| {
-            *l = *r
-        });
-        T::Device::foreach_mr(grads.mut_gradient(&t), t.data(), &mut |g, d| {
-            *g += d;
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+        T::Device::foreach_mb(t_grad, Broadcast(result_grad), &mut |g, r| {
+            *g += r;
         });
     });
     result.put_tape(tape)

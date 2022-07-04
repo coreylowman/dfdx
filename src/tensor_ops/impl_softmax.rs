@@ -23,7 +23,7 @@ use crate::prelude::*;
 /// See [log_softmax()] and [softmax()] for related functions.
 pub fn logsumexp<T: Tensor<Dtype = f32>>(mut t: T) -> T::LastDimReduced {
     let max = T::Device::reduce_last_dim(t.data(), &mut f32::max);
-    T::Device::zip_map_assign(t.mut_data(), max.as_ref(), &mut |a, b| {
+    T::Device::foreach_mb(t.mut_data(), Broadcast(max.as_ref()), &mut |a, b| {
         *a -= b;
     });
     let mut result = ln(sum_last_dim(exp(t)));

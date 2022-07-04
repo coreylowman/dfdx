@@ -197,7 +197,7 @@ pub(super) fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     // calculate derivatives
     let mut rhs_deriv: Box<T::Array> = T::Device::zip_map(lhs.data(), rhs.data(), dfdy);
     let mut lhs_deriv = lhs;
-    T::Device::zip_map_assign(lhs_deriv.mut_data(), rhs.data(), &mut |l, r| {
+    T::Device::foreach_mb(lhs_deriv.mut_data(), Broadcast(rhs.data()), &mut |l, r| {
         *l = dfdx(l, r)
     });
 
