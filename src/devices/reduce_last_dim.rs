@@ -1,11 +1,17 @@
 use super::{AllocateZeros, Cpu};
-use crate::arrays::CountElements;
+use crate::arrays::{CountElements, MultiDimensional};
 
 /// Something that can have its last dimension (inner most dimension) reduced to 1 number.
 ///
-/// Note: This currently cannot be implemented with recursive traits because we need
-/// to support reduce `[f32; M]` to `f32` AND `f32` -> `f32`. This means it is also valid
-/// to reduce `[f32; M]` to `[f32; M]` if recursive traits were used, which doesn't make sense.
+/// # Implementation Details
+/// We need to support ReduceLastDim for both `f32`, `[f32; M]`, and `[T; M]`.
+/// However, naive recursive trait implementation can't do that.
+///
+/// We achieve recursive trait definition by using a 2nd intermediate trait
+/// [MultiDimensional] that stores `[f32; M]` and `[T; M]` reduced versions,
+/// and then make sure the recursive step uses [MultiDimensional], instead
+/// of just saying Self: ReduceLastDim<T>. This works because `f32`
+/// does NOT implement [MultiDimensional].
 pub trait ReduceLastDim<T: CountElements>: AllocateZeros {
     const LAST_DIM: usize;
     type Reduced: CountElements<Dtype = T::Dtype>;
@@ -45,44 +51,18 @@ impl<const M: usize> ReduceLastDim<[f32; M]> for Cpu {
         *out = inp.iter().cloned().reduce(f).unwrap();
     }
 }
-
-impl<const M: usize, const N: usize> ReduceLastDim<[[f32; N]; M]> for Cpu {
-    const LAST_DIM: usize = N;
-    type Reduced = [f32; M];
-    fn reduce_last_dim_into<F>(inp: &[[f32; N]; M], out: &mut Self::Reduced, f: &mut F)
-    where
-        F: FnMut(f32, f32) -> f32,
-    {
-        for i in 0..M {
-            Self::reduce_last_dim_into(&inp[i], &mut out[i], f);
-        }
-    }
-}
-
-impl<const M: usize, const N: usize, const O: usize> ReduceLastDim<[[[f32; O]; N]; M]> for Cpu {
-    const LAST_DIM: usize = O;
-    type Reduced = [[f32; N]; M];
-    fn reduce_last_dim_into<F>(inp: &[[[f32; O]; N]; M], out: &mut Self::Reduced, f: &mut F)
-    where
-        F: FnMut(f32, f32) -> f32,
-    {
-        for i in 0..M {
-            Self::reduce_last_dim_into(&inp[i], &mut out[i], f);
-        }
-    }
-}
-
-impl<const M: usize, const N: usize, const O: usize, const P: usize>
-    ReduceLastDim<[[[[f32; P]; O]; N]; M]> for Cpu
+impl<T: MultiDimensional, const M: usize> ReduceLastDim<[T; M]> for Cpu
+where
+    Self: ReduceLastDim<T, Reduced = T::Reduced>,
 {
-    const LAST_DIM: usize = P;
-    type Reduced = [[[f32; O]; N]; M];
-    fn reduce_last_dim_into<F>(inp: &[[[[f32; P]; O]; N]; M], out: &mut Self::Reduced, f: &mut F)
+    const LAST_DIM: usize = T::LAST_DIM_SIZE;
+    type Reduced = [T::Reduced; M];
+    fn reduce_last_dim_into<F>(inp: &[T; M], out: &mut Self::Reduced, f: &mut F)
     where
-        F: FnMut(f32, f32) -> f32,
+        F: FnMut(T::Dtype, T::Dtype) -> T::Dtype,
     {
-        for i in 0..M {
-            Self::reduce_last_dim_into(&inp[i], &mut out[i], f);
+        for (inp_i, out_i) in inp.iter().zip(out.iter_mut()) {
+            Self::reduce_last_dim_into(inp_i, out_i, f);
         }
     }
 }

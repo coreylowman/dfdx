@@ -124,7 +124,6 @@ pub(super) fn binary_map_broadcast_rhs_first<const M: usize, Lhs, Rhs>(
 where
     Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
     Lhs: Tensor<Dtype = f32, Array = [Rhs::Array; M]>,
-    Lhs::Device: Device<Lhs::Array> + Device<Rhs::Array>,
 {
     let (mut lhs, mut tape) = lhs.split_tape();
     let mut result = Lhs::NoTape::zeros();

@@ -59,18 +59,42 @@ impl<T: CountElements, const M: usize> CountElements for [T; M] {
 /// let _: [f32; 5] = <[[f32; 5]; 3] as MultiDimensional>::LastDim::default();
 /// ```
 pub trait MultiDimensional: CountElements {
+    /// The size of the last dimension of this type.
+    ///
+    /// Example:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// assert_eq!(<[f32; 5] as MultiDimensional>::LAST_DIM_SIZE, 5);
+    /// assert_eq!(<[[f32; 5]; 3] as MultiDimensional>::LAST_DIM_SIZE, 5);
+    /// assert_eq!(<[[[f32; 5]; 3]; 2] as MultiDimensional>::LAST_DIM_SIZE, 5);
+    /// ```
+    const LAST_DIM_SIZE: usize;
+
     /// The inner most dimension of a type.
     type LastDim: CountElements<Dtype = Self::Dtype>
         + std::ops::Index<usize, Output = Self::Dtype>
         + std::ops::IndexMut<usize, Output = Self::Dtype>;
+
+    /// The concrete type of this with it's last dimension reduced.
+    ///
+    /// Examples:
+    /// - `[f32; M]` -> `f32`
+    /// - `[[f32; N]; M]` -> `[f32; M]`
+    /// - `[[[f32; O]; N]; M]` -> `[[f32; N]; M]`
+    /// - etc.
+    type Reduced: CountElements<Dtype = Self::Dtype>;
 }
 
 impl<const M: usize> MultiDimensional for [f32; M] {
+    const LAST_DIM_SIZE: usize = M;
     type LastDim = Self;
+    type Reduced = f32;
 }
 
 impl<T: MultiDimensional, const M: usize> MultiDimensional for [T; M] {
+    const LAST_DIM_SIZE: usize = T::LAST_DIM_SIZE;
     type LastDim = T::LastDim;
+    type Reduced = [T::Reduced; M];
 }
 
 /// Something that has compile time known zero values.
