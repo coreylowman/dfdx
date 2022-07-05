@@ -12,14 +12,13 @@ use zip::{result::ZipResult, ZipArchive};
 /// # Generics
 /// - `M` The size of the affine transform tensors.
 ///
-/// # Implements
-/// - [Default] by setting [Self::gamma] to all `1.0`s, and [Self::beta] to all `0.0`s.
-/// - [ResetParams] by setting [Self::gamma] to all `1.0`s, and [Self::beta] to all `0.0`s.
-/// - [CanUpdateWithGradients]
-/// - [Module<Tensor1D<M>>], which calls [normalize()], [mul()], and [add()].
-/// - [Module<Tensor2D<B, M>>], which calls [normalize()], [mul_broadcast_rhs_first()], and [add_broadcast_rhs_first()].
-/// - [SaveToNpz]
-/// - [LoadFromNpz]
+/// # Examples
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let model: LayerNorm1D<5> = Default::default();
+/// let x: Tensor1D<5> = Default::default();
+/// let _: Tensor1D<5> = model.forward(x);
+/// ```
 pub struct LayerNorm1D<const M: usize> {
     pub gamma: Tensor1D<M, NoTape>,
     pub beta: Tensor1D<M, NoTape>,

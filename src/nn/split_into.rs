@@ -6,18 +6,10 @@ use crate::prelude::*;
 /// This provides a utility for multi headed structures where
 /// the tape needs to be moved around a number of times.
 ///
-/// Implements:
-/// - [Debug], [Default], [Clone]
-/// - [Module<(A, B, ...)>]
-/// - [ResetParams]
-/// - [CanUpdateWithGradients]
-/// - [SaveToNpz]
-/// - [LoadFromNpz]
-///
-/// Generics:
+/// # Generics
 /// - `T` the module to split the input into.
 ///
-/// # Example:
+/// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
 /// type Model = SplitInto<(Linear<5, 3>, Linear<5, 7>)>;

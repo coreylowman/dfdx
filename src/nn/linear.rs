@@ -4,24 +4,16 @@ use rand_distr::Uniform;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
-/// A linear transformation of the form `x * transpose(W) + b`, where `W` is a matrix, `x` is a vector or matrix,
-/// and `b` is a vector. If `x` is a matrix this does [matmul()].
+/// A linear transformation of the form `weight * x + bias`, where `weight` is a matrix, `x` is a vector or matrix,
+/// and `bias` is a vector.
 ///
-/// # Implements:
-/// - [Module] for vectors like [Tensor1D<Inp>]
-/// - [Module] for matrices like [Tensor2D<Batch, Inp>], where `Batch` is batch size
-/// - [ResetParams] to set weight & bias to uniform random numbers from a distribution based on `I`.
-/// - [CanUpdateWithGradients]
-/// - [SaveToNpz]
-/// - [LoadFromNpz]
+/// # Generics
+/// - `I` The "input" size of vectors & matrices.
+/// - `O` The "output" size of vectors & matrices.
 ///
-/// # Generics:
-/// - `I` The input size of vectors & matrices.
-/// - `O` The output size of vectors & matrices.
-///
-/// # Example usage:
+/// # Examples
 /// `Linear<5, 2>` can act on vectors with 5 elements, and results in vectors with 2 elements.
-/// ```
+/// ```rust
 /// # use dfdx::prelude::*;
 /// let model: Linear<5, 2> = Default::default();
 /// assert_eq!(model.weight.data(), &[[0.0; 5]; 2]);

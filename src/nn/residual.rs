@@ -1,19 +1,10 @@
 use crate::prelude::*;
 
-/// Represents a residual connection around `F`: `F(x) + x`,
+/// A residual connection around `F`: `F(x) + x`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
 ///
 /// # Generics
 /// - `F`: The underlying module to do a skip connection around.
-///
-/// # Implements
-/// - [Module] where `F` also is a [Module].
-/// - [ResetParams]
-/// - [CanUpdateWithGradients]
-/// - [SaveToNpz]
-/// - [LoadFromNpz]
-/// - [Clone]
-/// - [Default]
 ///
 /// # Examples
 /// ```rust
