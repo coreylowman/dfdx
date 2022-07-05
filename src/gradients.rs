@@ -292,8 +292,8 @@ mod tests {
         let mut tape = GradientTape::default();
         tape.add_backward_op(move |g| {
             let t_grad = g.mut_gradient(&_t1);
-            for i in 0..5 {
-                t_grad[i] += 1.0;
+            for x in t_grad.iter_mut() {
+                *x += 1.0;
             }
         });
         let g = tape.execute();
