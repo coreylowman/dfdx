@@ -21,8 +21,14 @@ See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
 
 1. Easy to use frontend interface.
 2. Easy to understand/maintain internals. Keep levels of indirection to a minimum.
-3. As much at compile time as possible.
-4. Keep internals as flexible as possible
+3. As much at compile time as possible (i.e. don't compile if something is not correct).
+4. Maximize performance.
+5. Keep internals as flexible as possible.
+6. No unsafe code[1]
+7. No Rc/RefCells[2]
+
+[1] Currently the only unsafe calls are for matrix multiplication, and instantiating large arrays directly on the heap.
+[2] There is only 1 usage of RefCell in the `nn::Dropout` layer to make it's underlying rng easy to use.
 
 ## Features
 
