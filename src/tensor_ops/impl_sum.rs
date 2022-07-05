@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 /// Sums all the values in `self`. Returns a [Tensor0D] (i.e. one number).
 pub fn sum<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::Tape> {
-    let result = Tensor0D::<NoTape>::new(T::Device::sum(t.data()));
+    let result = Tensor0D::<NoTape>::new(T::Device::reduce(t.data(), &mut |a, b| a + b));
     let (t, mut tape) = t.split_tape();
     let _result = result.phantom();
     tape.add_backward_op(move |grads| {
