@@ -29,7 +29,9 @@ use crate::prelude::*;
 /// ```
 #[derive(Debug)]
 pub struct RMSprop {
+    /// Configuration like learning rate and momentum.
     pub cfg: RMSpropConfig,
+
     step: usize,
     momentums: Gradients,
     square_avg: Gradients,
@@ -40,19 +42,28 @@ pub struct RMSprop {
 /// Configuration options for [RMSprop].
 #[derive(Debug, Clone, Copy)]
 pub struct RMSpropConfig {
+    /// Learning rate
     pub lr: f32,
+
+    /// Value for exponential moving average
     pub alpha: f32,
+
+    /// Epsilon for stability. Note: this implementation adds eps in the sqrt.
     pub eps: f32,
+
+    /// Optional momentum
     pub momentum: Option<f32>,
+
+    /// Whether the avg should be centered by the grad's avg value.
     pub centered: bool,
 }
 
 impl Default for RMSpropConfig {
-    /// - `self.lr = 1e-2`
-    /// - `self.alpha = 0.9`
-    /// - `self.eps = 1e-8`
-    /// - `self.momentum = None`
-    /// - `self.centered = false`
+    /// - [Self::lr] `1e-2`
+    /// - [Self::alpha] `0.9`
+    /// - [Self::eps] `1e-8`
+    /// - [Self::momentum] `None`
+    /// - [Self::centered] `false`
     fn default() -> Self {
         Self {
             lr: 1e-2,

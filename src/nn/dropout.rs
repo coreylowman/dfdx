@@ -5,10 +5,10 @@ use std::{cell::RefCell, ops::DerefMut};
 /// A [Module<Tensor>] that calls [dropout()] in [Module::forward()] with probability `1.0 / N`.
 /// Note that [dropout()] does not do anything for tensors with [NoTape].
 ///
-/// Generic Arguments:
+/// # Generic Arguments
 /// - `N`: p is set as `1.0 / N`
 ///
-/// Example:
+/// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let dropout: DropoutOneIn<2> = Default::default();

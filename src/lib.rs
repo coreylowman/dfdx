@@ -3,6 +3,87 @@
 //! 2. Safe & Easy to use neural network building blocks.
 //! 3. Standard deep learning optimizers such as Sgd and Adam.
 //! 4. Reverse mode auto differentiation implementation.
+//!
+//! # A quick tutorial
+//!
+//! 1. [crate::tensor::Tensor]s can be created with normal rust arrays. See [crate::tensor].
+//! ```rust
+//! # use dfdx::prelude::*;
+//! let x = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+//! let y: Tensor2D<2, 3> = Tensor2D::ones();
+//! ```
+//!
+//! 2. Neural networks are built with types. Tuples are sequential models. See [crate::nn].
+//! ```rust
+//! # use dfdx::prelude::*;
+//! type Mlp = (
+//!     Linear<5, 3>,
+//!     ReLU,
+//!     Linear<3, 2>,
+//! );
+//! ```
+//!
+//! 3. Instantiate models with [Default], and randomize with [crate::nn::ResetParams]
+//! ```rust
+//! # use dfdx::prelude::*;
+//! # let mut rng = rand::thread_rng();
+//! let mut mlp: Linear<5, 2> = Default::default();
+//! mlp.reset_params(&mut rng);
+//! ```
+//!
+//! 4. Pass data through networks with [crate::nn::Module]
+//! ```rust
+//! # use dfdx::prelude::*;
+//! let mut mlp: Linear<5, 2> = Default::default();
+//! let x: Tensor1D<5> = Tensor1D::zeros();
+//! let y = mlp.forward(x); // rust will auto figure out that `y` is `Tensor1D<2>`!
+//! ```
+//!
+//! 5. Trace gradients using [crate::tensor::trace()]
+//! ```rust
+//! # use dfdx::prelude::*;
+//! # let mut rng = rand::thread_rng();
+//! # let model: Linear<10, 5> = Default::default();
+//! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
+//! // tensors default to not having a tape
+//! let x: Tensor1D<10, NoTape> = Tensor1D::zeros();
+//!
+//! // `.trace()` clones `x` and inserts a gradient tape.
+//! let x_t: Tensor1D<10, OwnsTape> = x.trace();
+//!
+//! // The tape is moved through the model during `.forward()`, and ends up in `y`.
+//! let y: Tensor1D<5, OwnsTape> = model.forward(x_t);
+//! ```
+//!
+//! 6. Compute gradients with [crate::tensor_ops::backward()]
+//! ```rust
+//! # use dfdx::prelude::*;
+//! # let mut rng = rand::thread_rng();
+//! # let model: Linear<10, 5> = Default::default();
+//! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
+//! # let y: Tensor1D<5, OwnsTape> = model.forward(Tensor1D::zeros().trace());
+//! // compute cross entropy loss
+//! let loss: Tensor0D<OwnsTape> = cross_entropy_with_logits_loss(y, &y_true);
+//!
+//! // call `backward()` to compute gradients. The tensor *must* have `OwnsTape`!
+//! let gradients: Gradients = loss.backward();
+//! ```
+//! 7. Use an optimizer from [crate::optim] to optimize your network!
+//! ```rust
+//! # use dfdx::prelude::*;
+//! # let mut rng = rand::thread_rng();
+//! # let mut model: Linear<10, 5> = Default::default();
+//! # let x: Tensor1D<10> = Tensor1D::zeros();
+//! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
+//! # let y: Tensor1D<5, OwnsTape> = model.forward(x.trace());
+//! # let loss = cross_entropy_with_logits_loss(y, &y_true);
+//! # let gradients: Gradients = loss.backward();
+//! // Use stochastic gradient descent (Sgd), with a learning rate of 1e-2, and 0.9 momentum.
+//! let mut opt = Sgd::new(1e-2, Some(Momentum::Classic(0.9)));
+//!
+//! // pass the gradients & the model into the optimizer's update method
+//! opt.update(&mut model, gradients);
+//! ```
 
 pub mod arrays;
 pub mod data;

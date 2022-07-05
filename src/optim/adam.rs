@@ -19,9 +19,15 @@ use crate::prelude::*;
 /// ```
 #[derive(Debug)]
 pub struct Adam {
+    /// Learning rate
     pub lr: f32,
+
+    /// Betas from Adam paper
     pub betas: [f32; 2],
+
+    /// Epsilon for numerical stability
     pub eps: f32,
+
     t: i32,
     gradients: Gradients,
     moment1: Gradients,
@@ -30,12 +36,16 @@ pub struct Adam {
 
 /// Use the default parameters suggested in the paper of lr=1e-3, beta1=0.9, beta2=0.999, and epsilon=1e-8
 impl Default for Adam {
+    /// - [Self::lr] `1e-3`
+    /// - [Self::betas] `[0.9, 0.999]`
+    /// - [Self::eps] `1e-8`
     fn default() -> Self {
         Self::new(1e-3, [0.9, 0.999], 1e-8)
     }
 }
 
 impl Adam {
+    /// Construct with control over all fields.
     pub fn new(lr: f32, betas: [f32; 2], epsilon: f32) -> Self {
         Self {
             lr,

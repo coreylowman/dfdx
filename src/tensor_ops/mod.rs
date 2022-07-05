@@ -1,6 +1,6 @@
 //! Implementations of all ops for tensors including activations like [relu()], binary operations like [matmul()], and more.
 //!
-//! Generic function and struct methods:
+//! # Generic function and struct methods
 //!
 //! All functionality is provided in two ways.
 //! 1. The generic standalone function that takes a generic parameter. e.g. [mean()].
@@ -8,7 +8,7 @@
 //!
 //! The struct methods are all just pass throughs to the generic function.
 //!
-//! Reductions:
+//! # Reductions
 //!
 //! There are a number of functions that reduce a dimension (e.g. [mean_last_dim()]).
 //! These functions are all labeled with `*_last_dim()` at the end.
@@ -18,7 +18,7 @@
 //!
 //! See relevant functions for more examples.
 //!
-//! Broadcasts:
+//! # Broadcasts
 //!
 //! Some binary functions need to broadcast one argument to be the same size as the other (e.g. [add_broadcast_rhs_last()]).
 //! These methods are named as `<operation>_broadcast_<argument>_<dimension>()`. Currently all of the functions

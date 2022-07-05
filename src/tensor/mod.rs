@@ -5,7 +5,7 @@
 //! 2. An Nd rust array stored in a [Box].
 //! 3. A tape, which can either actually be a tape ([crate::gradients::OwnsTape]) or be empty ([crate::gradients::NoTape]).
 //!
-//! Creating tensors:
+//! # Creating tensors
 //!
 //! 1. With raw rust arrays use the [TensorCreator::new()] method.
 //! ```rust
@@ -29,7 +29,7 @@
 //! let b = Tensor2D::<4, 3>::randn(&mut rng); // gaussian random data
 //! ```
 //!
-//! Accessing or modifying underlying data:
+//! # Accessing or modifying underlying data
 //!
 //! Use [HasArrayData::data()] and [HasArrayData::mut_data()] to view or modify the underlying arrays.
 //!
@@ -41,9 +41,9 @@
 //! assert_eq!(t.data(), &[0.0, 2.0, 0.0]);
 //! ```
 //!
-//! Initiating gradient tracing:
+//! # Tracking gradients
 //!
-//! Use the `.trace()` or `.traced()` methods to add [crate::gradients::OwnsTape] to the [Tensor].
+//! Use the [trace()] or [traced()] methods to add [crate::gradients::OwnsTape] to the [Tensor].
 //! `.trace()` will clone the [crate::unique_id::UniqueId] & data, while `.traced()` will take ownership of
 //! the tensor and return a version with an [crate::gradients::OwnsTape].
 //!
@@ -56,7 +56,7 @@
 //! let t: Tensor1D<5, OwnsTape> = t.traced(); // takes ownership of t
 //! ```
 //!
-//! Cloning/copying:
+//! # Cloning/copying
 //!
 //! There are two primary methods for copying a tensor
 //! 1. [Clone] is implemented for tensors without a tape. **NOTE** that the unique id is modified when a tensor is cloned

@@ -5,7 +5,7 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///
-/// Example:
+/// # Example:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// type Model = Repeated<(Linear<10, 10>, ReLU), 5>;

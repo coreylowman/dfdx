@@ -5,9 +5,9 @@ use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// A linear transformation of the form `x * transpose(W) + b`, where `W` is a matrix, `x` is a vector or matrix,
-/// and `b` is a vector. If `x` is a matrix this does matrix multiplication.
+/// and `b` is a vector. If `x` is a matrix this does [matmul()].
 ///
-/// Implements:
+/// # Implements:
 /// - [Module] for vectors like [Tensor1D<Inp>]
 /// - [Module] for matrices like [Tensor2D<Batch, Inp>], where `Batch` is batch size
 /// - [ResetParams] to set weight & bias to uniform random numbers from a distribution based on `I`.
@@ -15,11 +15,11 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 /// - [SaveToNpz]
 /// - [LoadFromNpz]
 ///
-/// Generics:
+/// # Generics:
 /// - `I` The input size of vectors & matrices.
 /// - `O` The output size of vectors & matrices.
 ///
-/// Example usage:
+/// # Example usage:
 /// `Linear<5, 2>` can act on vectors with 5 elements, and results in vectors with 2 elements.
 /// ```
 /// # use dfdx::prelude::*;
@@ -47,7 +47,7 @@ impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
 }
 
 impl<const I: usize, const O: usize> ResetParams for Linear<I, O> {
-    /// Initializes `self.weight` and `self.bias` from a [Uniform] distribution
+    /// Initializes [Self::weight] and [Self::bias] from a [Uniform] distribution
     /// between [-1 / sqrt(I), 1 / sqrt(I)].
     ///
     /// This uses [Randomize::randomize()] to set the values of the tensor.
@@ -60,7 +60,7 @@ impl<const I: usize, const O: usize> ResetParams for Linear<I, O> {
 }
 
 impl<const I: usize, const O: usize> SaveToNpz for Linear<I, O> {
-    /// Saves `self.weight` to `{pre}weight.npy` and `self.bias` to `{pre}bias.npy`
+    /// Saves [Self::weight] to `{pre}weight.npy` and [Self::bias] to `{pre}bias.npy`
     /// using [npz_fwrite()].
     fn write<W>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()>
     where
@@ -73,7 +73,7 @@ impl<const I: usize, const O: usize> SaveToNpz for Linear<I, O> {
 }
 
 impl<const I: usize, const O: usize> LoadFromNpz for Linear<I, O> {
-    /// Reads `self.weight` from `{pre}weight.npy` and `self.bias` from `{pre}bias.npy`
+    /// Reads [Self::weight] from `{pre}weight.npy` and [Self::bias] from `{pre}bias.npy`
     /// using [npz_fread()].
     fn read<R>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError>
     where

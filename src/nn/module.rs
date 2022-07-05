@@ -7,10 +7,52 @@ use crate::prelude::CanUpdateWithGradients;
 /// input types on the same struct. For example [super::Linear] implements
 /// [Module] for 1d inputs and 2d inputs.
 pub trait Module<Input>: ResetParams + CanUpdateWithGradients {
+    /// The type that this unit produces given `Input`.
     type Output;
+
+    /// Pass an `Input` through the unit and produce [Self::Output].
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// struct MyMulLayer {
+    ///     scale: Tensor1D<5, NoTape>,
+    /// }
+    /// # impl Default for MyMulLayer { fn default() -> Self { Self { scale: Tensor1D::zeros() }}}
+    /// # impl CanUpdateWithGradients for MyMulLayer { fn update<G: GradientProvider>(&mut self, grads: &mut G) {}}
+    /// # impl ResetParams for MyMulLayer { fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {}}
+    ///
+    /// impl Module<Tensor1D<5>> for MyMulLayer {
+    ///     type Output = Tensor1D<5>;
+    ///     fn forward(&self, input: Tensor1D<5>) -> Self::Output {
+    ///         mul(input, &self.scale)
+    ///     }
+    /// }
+    /// ```
     fn forward(&self, input: Input) -> Self::Output;
 }
 
+/// Something that can reset it's parameters.
 pub trait ResetParams {
+    /// Mutate the unit's parameters using [rand::Rng]. Each implementor
+    /// of this trait decides how the parameters are initialized. In
+    /// fact, some impls may not even use the `rng`.
+    ///
+    /// # Example:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// struct MyMulLayer {
+    ///     scale: Tensor1D<5, NoTape>,
+    /// }
+    ///
+    /// impl ResetParams for MyMulLayer {
+    ///     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
+    ///         for i in 0..5 {
+    ///             self.scale.mut_data()[i] = rng.gen_range(0.0..1.0);
+    ///         }
+    ///     }
+    /// }
+    /// ```
     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R);
 }

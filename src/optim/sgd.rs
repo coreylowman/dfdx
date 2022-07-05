@@ -26,21 +26,29 @@ use crate::prelude::*;
 /// ```
 #[derive(Debug)]
 pub struct Sgd {
+    /// Learning rate
     pub lr: f32,
+
+    /// Optional momentum
     pub momentum: Option<Momentum>,
+
     velocity: Gradients,
     gradients: Gradients,
 }
 
+/// Momentum used for [Sgd]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Momentum {
+    /// Momentum that is applied to the velocity of a parameter directly.
     Classic(f32),
+
+    /// Momentum that is applied to both velocity and gradients. See [Sgd] nesterov paper for more.
     Nesterov(f32),
 }
 
 impl Default for Sgd {
-    /// - `self.lr = 1e-2`
-    /// - `self.momentum = None`
+    /// - [Self::lr] `1e-2`
+    /// - [Self::momentum] `None`
     fn default() -> Self {
         Self::new(1e-2, None)
     }
