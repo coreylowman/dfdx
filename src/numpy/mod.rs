@@ -17,16 +17,6 @@ pub enum Endian {
     Native,
 }
 
-impl Into<char> for Endian {
-    fn into(self) -> char {
-        match self {
-            Endian::Big => '>',
-            Endian::Little => '<',
-            Endian::Native => '=',
-        }
-    }
-}
-
 fn to_shape_str(shape: Vec<usize>) -> String {
     shape
         .iter()

@@ -57,7 +57,11 @@ where
     write!(
         &mut header,
         "{{'descr': '{}{}', 'fortran_order': False, 'shape': ({}), }}",
-        Into::<char>::into(endian),
+        match endian {
+            Endian::Big => '>',
+            Endian::Little => '<',
+            Endian::Native => '=',
+        },
         T::DTYPE,
         shape_str,
     )?;
