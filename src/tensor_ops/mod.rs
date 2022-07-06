@@ -52,6 +52,7 @@ mod impl_std_last;
 mod impl_sum;
 mod impl_sum_last;
 mod matmul;
+mod reshape;
 
 pub use arith::*;
 pub use arith_broadcast_inner::*;
