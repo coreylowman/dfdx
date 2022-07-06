@@ -28,6 +28,7 @@ See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
 7. No Rc/RefCells[2]
 
 [1] Currently the only unsafe calls are for matrix multiplication, and instantiating large arrays directly on the heap.
+
 [2] There is only 1 usage of RefCell in the `nn::Dropout` layer to make it's underlying rng easy to use.
 
 ## Features

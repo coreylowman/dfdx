@@ -1,7 +1,7 @@
 use super::*;
 use crate::gradients::{NoneTape, OwnedTape};
 
-/// Transforms a [NoTape] tensor to an [OwnedTape] tensor by cloning.
+/// Transforms a [NoneTape] tensor to an [OwnedTape] tensor by cloning.
 /// Clones `t` using [Tensor::duplicate()] (to preserve id), and then
 /// inserts [OwnedTape] as the tape.
 ///
@@ -10,7 +10,7 @@ pub fn trace<T: Tensor<Tape = OwnedTape>>(t: &T::NoTape) -> T {
     traced(t.duplicate())
 }
 
-/// Transforms a [NoTape] tensor to an [OwnedTape] by directly inserting a
+/// Transforms a [NoneTape] tensor to an [OwnedTape] by directly inserting a
 /// new [OwnedTape] into `t`.
 ///
 /// See [trace()] for version that copies `t`.

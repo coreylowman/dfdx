@@ -3,7 +3,7 @@ use rand::{prelude::StdRng, Rng, SeedableRng};
 use std::{cell::RefCell, ops::DerefMut};
 
 /// A [Module<Tensor>] that calls [dropout()] in [Module::forward()] with probability `1.0 / N`.
-/// Note that [dropout()] does not do anything for tensors with [NoTape].
+/// Note that [dropout()] does not do anything for tensors with [NoneTape].
 ///
 /// # Generics
 /// - `N`: p is set as `1.0 / N`

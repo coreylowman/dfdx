@@ -7,10 +7,10 @@ pub trait Tensor:
     /// The [Tape] this tensor owns.
     type Tape: Tape;
 
-    /// This tensor but with [NoTape].
+    /// This tensor but with [NoneTape].
     type NoTape: 'static
         + Tensor<Array = Self::Array, Dtype = Self::Dtype, Tape = NoneTape, NoTape = Self::NoTape>
-        // NOTE: we only want to be able to create NoTape tensors
+        // NOTE: we only want to be able to create NoneTape tensors
         + TensorCreator
         // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
         + PutTape<Self::Tape, Output = Self>
@@ -38,7 +38,7 @@ pub trait Tensor:
     /// Removes whatever Tape this tensor has and returns itself without a tape.
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
 
-    /// Clones the data & [UniqueId] of this tensor and returns something with [NoTape].
+    /// Clones the data & [UniqueId] of this tensor and returns something with [NoneTape].
     fn duplicate(&self) -> Self::NoTape;
 }
 
