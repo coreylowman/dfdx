@@ -17,7 +17,7 @@ pub trait Module<Input>: ResetParams + CanUpdateWithGradients {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// struct MyMulLayer {
-    ///     scale: Tensor1D<5, NoTape>,
+    ///     scale: Tensor1D<5, NoneTape>,
     /// }
     /// # impl Default for MyMulLayer { fn default() -> Self { Self { scale: Tensor1D::zeros() }}}
     /// # impl CanUpdateWithGradients for MyMulLayer { fn update<G: GradientProvider>(&mut self, grads: &mut G) {}}
@@ -43,7 +43,7 @@ pub trait ResetParams {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// struct MyMulLayer {
-    ///     scale: Tensor1D<5, NoTape>,
+    ///     scale: Tensor1D<5, NoneTape>,
     /// }
     ///
     /// impl ResetParams for MyMulLayer {

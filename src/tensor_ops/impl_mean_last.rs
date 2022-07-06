@@ -41,7 +41,7 @@ mod tests {
     #[test]
     fn test_mean_last_0d() {
         let t = Tensor0D::new(2.0);
-        let r: Tensor0D<OwnsTape> = t.trace().mean_last_dim();
+        let r: Tensor0D<OwnedTape> = t.trace().mean_last_dim();
         assert_eq!(r.data(), &2.0);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&t), &1.0);
@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn test_mean_last_1d() {
         let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
-        let r: Tensor0D<OwnsTape> = t.trace().mean_last_dim();
+        let r: Tensor0D<OwnedTape> = t.trace().mean_last_dim();
         assert_eq!(r.data(), &2.0);
         // NOTE: .exp() so we make sure its using result grad properly
         let gradients = r.exp().mean().backward();
@@ -60,7 +60,7 @@ mod tests {
     #[test]
     fn test_mean_last_2d() {
         let t: Tensor2D<2, 4> = Tensor2D::new([[1.0, 2.0, 3.0, 4.0], [4.0, 5.0, 6.0, 7.0]]);
-        let r: Tensor1D<2, OwnsTape> = t.trace().mean_last_dim();
+        let r: Tensor1D<2, OwnedTape> = t.trace().mean_last_dim();
         assert_eq!(r.data(), &[2.5, 5.5]);
         let gradients = r.sum().backward();
         assert_eq!(
@@ -77,7 +77,7 @@ mod tests {
             [[-3.0, 2.0, -1.0], [-6.0, 5.0, -4.0]],
             [[1.0, -2.0, 3.0], [4.0, -5.0, 6.0]],
         ]);
-        let r: Tensor2D<4, 2, OwnsTape> = t.trace().mean_last_dim();
+        let r: Tensor2D<4, 2, OwnedTape> = t.trace().mean_last_dim();
         assert_eq!(
             r.data(),
             &[

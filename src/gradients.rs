@@ -76,11 +76,11 @@ impl GradientTape {
 /// Contains a boxed [GradientTape]. When [Tape::add_backward_op] is called,
 /// this function passes the operation directly to [GradientTape].
 #[derive(Default, Debug)]
-pub struct OwnsTape(pub(crate) Box<GradientTape>);
+pub struct OwnedTape(pub(crate) Box<GradientTape>);
 
 /// Contains nothing. When [Tape::add_backward_op] is called, this struct does nothing.
 #[derive(Default, Debug, Clone, Copy)]
-pub struct NoTape;
+pub struct NoneTape;
 
 /// Something that can add a gradient operation to [GradientTape].
 pub trait Tape {
@@ -89,14 +89,14 @@ pub trait Tape {
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, operation: F);
 }
 
-impl Tape for OwnsTape {
+impl Tape for OwnedTape {
     const OWNS_TAPE: bool = true;
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, operation: F) {
         self.0.add_backward_op(operation)
     }
 }
 
-impl Tape for NoTape {
+impl Tape for NoneTape {
     const OWNS_TAPE: bool = false;
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, _operation: F) {}
 }

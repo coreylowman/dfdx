@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn test_logsumexp_2d() {
         let a: Tensor2D<2, 3> = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r: Tensor1D<2, OwnsTape> = a.trace().logsumexp();
+        let r: Tensor1D<2, OwnedTape> = a.trace().logsumexp();
         assert_eq!(r.data(), &[0.40760595, 7.0509458]);
         let gradients = backward(r.mean());
         assert_eq!(

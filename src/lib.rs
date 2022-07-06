@@ -46,13 +46,13 @@
 //! # let model: Linear<10, 5> = Default::default();
 //! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
 //! // tensors default to not having a tape
-//! let x: Tensor1D<10, NoTape> = Tensor1D::zeros();
+//! let x: Tensor1D<10, NoneTape> = Tensor1D::zeros();
 //!
 //! // `.trace()` clones `x` and inserts a gradient tape.
-//! let x_t: Tensor1D<10, OwnsTape> = x.trace();
+//! let x_t: Tensor1D<10, OwnedTape> = x.trace();
 //!
 //! // The tape is moved through the model during `.forward()`, and ends up in `y`.
-//! let y: Tensor1D<5, OwnsTape> = model.forward(x_t);
+//! let y: Tensor1D<5, OwnedTape> = model.forward(x_t);
 //! ```
 //!
 //! 6. Compute gradients with [crate::tensor_ops::backward()]
@@ -61,11 +61,11 @@
 //! # let mut rng = rand::thread_rng();
 //! # let model: Linear<10, 5> = Default::default();
 //! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
-//! # let y: Tensor1D<5, OwnsTape> = model.forward(Tensor1D::zeros().trace());
+//! # let y: Tensor1D<5, OwnedTape> = model.forward(Tensor1D::zeros().trace());
 //! // compute cross entropy loss
-//! let loss: Tensor0D<OwnsTape> = cross_entropy_with_logits_loss(y, &y_true);
+//! let loss: Tensor0D<OwnedTape> = cross_entropy_with_logits_loss(y, &y_true);
 //!
-//! // call `backward()` to compute gradients. The tensor *must* have `OwnsTape`!
+//! // call `backward()` to compute gradients. The tensor *must* have `OwnedTape`!
 //! let gradients: Gradients = loss.backward();
 //! ```
 //! 7. Use an optimizer from [crate::optim] to optimize your network!
@@ -75,7 +75,7 @@
 //! # let mut model: Linear<10, 5> = Default::default();
 //! # let x: Tensor1D<10> = Tensor1D::zeros();
 //! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
-//! # let y: Tensor1D<5, OwnsTape> = model.forward(x.trace());
+//! # let y: Tensor1D<5, OwnedTape> = model.forward(x.trace());
 //! # let loss = cross_entropy_with_logits_loss(y, &y_true);
 //! # let gradients: Gradients = loss.backward();
 //! // Use stochastic gradient descent (Sgd), with a learning rate of 1e-2, and 0.9 momentum.

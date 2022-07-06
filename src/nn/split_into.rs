@@ -93,8 +93,8 @@ mod tests {
     fn test_split_into_2() {
         type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>)>;
         let m: Model = Default::default();
-        let _: (Tensor1D<1>, Tensor1D<2, OwnsTape>) = m.forward(Tensor1D::zeros().traced());
-        let _: (Tensor2D<3, 1>, Tensor2D<3, 2, OwnsTape>) =
+        let _: (Tensor1D<1>, Tensor1D<2, OwnedTape>) = m.forward(Tensor1D::zeros().traced());
+        let _: (Tensor2D<3, 1>, Tensor2D<3, 2, OwnedTape>) =
             m.forward(Tensor2D::<3, 5>::zeros().traced());
     }
 
@@ -102,9 +102,9 @@ mod tests {
     fn test_split_into_3() {
         type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>, Linear<5, 3>)>;
         let m: Model = Default::default();
-        let _: (Tensor1D<1>, Tensor1D<2>, Tensor1D<3, OwnsTape>) =
+        let _: (Tensor1D<1>, Tensor1D<2>, Tensor1D<3, OwnedTape>) =
             m.forward(Tensor1D::zeros().traced());
-        let _: (Tensor2D<3, 1>, Tensor2D<3, 2>, Tensor2D<3, 3, OwnsTape>) =
+        let _: (Tensor2D<3, 1>, Tensor2D<3, 2>, Tensor2D<3, 3, OwnedTape>) =
             m.forward(Tensor2D::<3, 5>::zeros().traced());
     }
 
@@ -112,13 +112,17 @@ mod tests {
     fn test_split_into_4() {
         type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>, Linear<5, 3>, Linear<5, 4>)>;
         let m: Model = Default::default();
-        let _: (Tensor1D<1>, Tensor1D<2>, Tensor1D<3>, Tensor1D<4, OwnsTape>) =
-            m.forward(Tensor1D::zeros().traced());
+        let _: (
+            Tensor1D<1>,
+            Tensor1D<2>,
+            Tensor1D<3>,
+            Tensor1D<4, OwnedTape>,
+        ) = m.forward(Tensor1D::zeros().traced());
         let _: (
             Tensor2D<3, 1>,
             Tensor2D<3, 2>,
             Tensor2D<3, 3>,
-            Tensor2D<3, 4, OwnsTape>,
+            Tensor2D<3, 4, OwnedTape>,
         ) = m.forward(Tensor2D::<3, 5>::zeros().traced());
     }
 
@@ -137,14 +141,14 @@ mod tests {
             Tensor1D<2>,
             Tensor1D<3>,
             Tensor1D<4>,
-            Tensor1D<5, OwnsTape>,
+            Tensor1D<5, OwnedTape>,
         ) = m.forward(Tensor1D::zeros().traced());
         let _: (
             Tensor2D<3, 1>,
             Tensor2D<3, 2>,
             Tensor2D<3, 3>,
             Tensor2D<3, 4>,
-            Tensor2D<3, 5, OwnsTape>,
+            Tensor2D<3, 5, OwnedTape>,
         ) = m.forward(Tensor2D::<3, 5>::zeros().traced());
     }
 
@@ -165,7 +169,7 @@ mod tests {
             Tensor1D<3>,
             Tensor1D<4>,
             Tensor1D<5>,
-            Tensor1D<6, OwnsTape>,
+            Tensor1D<6, OwnedTape>,
         ) = m.forward(Tensor1D::zeros().traced());
         let _: (
             Tensor2D<3, 1>,
@@ -173,7 +177,7 @@ mod tests {
             Tensor2D<3, 3>,
             Tensor2D<3, 4>,
             Tensor2D<3, 5>,
-            Tensor2D<3, 6, OwnsTape>,
+            Tensor2D<3, 6, OwnedTape>,
         ) = m.forward(Tensor2D::<3, 5>::zeros().traced());
     }
 }

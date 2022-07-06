@@ -70,34 +70,34 @@ pub fn minimum<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 
 macro_rules! binary_ops_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: Tape> Add<&$typename<$($Vs, )* NoTape>> for $typename<$($Vs, )* H> {
+impl<$(const $Vs: usize, )* H: Tape> Add<&$typename<$($Vs, )* NoneTape>> for $typename<$($Vs, )* H> {
     type Output = $typename<$($Vs, )* H>;
-    /// Calls [add()] - implements `T<H> + &T<NoTape>`
-    fn add(self, rhs: &$typename<$($Vs, )* NoTape>) -> Self::Output {
+    /// Calls [add()] - implements `T<H> + &T<NoneTape>`
+    fn add(self, rhs: &$typename<$($Vs, )* NoneTape>) -> Self::Output {
         add(self, rhs)
     }
 }
 
-impl<$(const $Vs: usize, )* H: Tape> Sub<&$typename<$($Vs, )* NoTape>> for $typename<$($Vs, )* H> {
+impl<$(const $Vs: usize, )* H: Tape> Sub<&$typename<$($Vs, )* NoneTape>> for $typename<$($Vs, )* H> {
     type Output = $typename<$($Vs, )* H>;
-    /// Calls [sub()] - implements `T<H> - &T<NoTape>`
-    fn sub(self, rhs: &$typename<$($Vs, )* NoTape>) -> Self::Output {
+    /// Calls [sub()] - implements `T<H> - &T<NoneTape>`
+    fn sub(self, rhs: &$typename<$($Vs, )* NoneTape>) -> Self::Output {
         sub(self, rhs)
     }
 }
 
-impl<$(const $Vs: usize, )* H: Tape> Mul<&$typename<$($Vs, )* NoTape>> for $typename<$($Vs, )* H> {
+impl<$(const $Vs: usize, )* H: Tape> Mul<&$typename<$($Vs, )* NoneTape>> for $typename<$($Vs, )* H> {
     type Output = $typename<$($Vs, )* H>;
-    /// Calls [mul()] - implements `T<H> * &T<NoTape>`
-    fn mul(self, rhs: &$typename<$($Vs, )* NoTape>) -> Self::Output {
+    /// Calls [mul()] - implements `T<H> * &T<NoneTape>`
+    fn mul(self, rhs: &$typename<$($Vs, )* NoneTape>) -> Self::Output {
         mul(self, rhs)
     }
 }
 
-impl<$(const $Vs: usize, )* H: Tape> Div<&$typename<$($Vs, )* NoTape>> for $typename<$($Vs, )* H> {
+impl<$(const $Vs: usize, )* H: Tape> Div<&$typename<$($Vs, )* NoneTape>> for $typename<$($Vs, )* H> {
     type Output = $typename<$($Vs, )* H>;
-    /// Calls [div()] - implements `T<H> / &T<NoTape>`
-    fn div(self, rhs: &$typename<$($Vs, )* NoTape>) -> Self::Output {
+    /// Calls [div()] - implements `T<H> / &T<NoneTape>`
+    fn div(self, rhs: &$typename<$($Vs, )* NoneTape>) -> Self::Output {
         div(self, rhs)
     }
 }

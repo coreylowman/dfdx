@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn test_mean_1d() {
         let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
-        let r: Tensor0D<OwnsTape> = t.trace().mean();
+        let r: Tensor0D<OwnedTape> = t.trace().mean();
         assert_eq!(r.data(), &2.0);
         // NOTE: .exp() so we cover the case where .mean() has to use result grad.
         let gradients = r.exp().backward();
@@ -53,7 +53,7 @@ mod tests {
     #[test]
     fn test_mean_2d() {
         let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-        let r: Tensor0D<OwnsTape> = t.trace().mean();
+        let r: Tensor0D<OwnedTape> = t.trace().mean();
         assert_eq!(r.data(), &3.5);
         let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&t), &[[1.0 / 6.0; 3]; 2]);
@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn test_mean_3d() {
         let t: Tensor3D<4, 2, 3> = Tensor3D::ones();
-        let r: Tensor0D<OwnsTape> = t.trace().mean();
+        let r: Tensor0D<OwnedTape> = t.trace().mean();
         assert_eq!(r.data(), &1.0);
         let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&t), &[[[1.0 / 24.0; 3]; 2]; 4]);

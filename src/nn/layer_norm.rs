@@ -20,8 +20,8 @@ use zip::{result::ZipResult, ZipArchive};
 /// let _: Tensor1D<5> = model.forward(x);
 /// ```
 pub struct LayerNorm1D<const M: usize> {
-    pub gamma: Tensor1D<M, NoTape>,
-    pub beta: Tensor1D<M, NoTape>,
+    pub gamma: Tensor1D<M, NoneTape>,
+    pub beta: Tensor1D<M, NoneTape>,
     pub epsilon: f32,
 }
 

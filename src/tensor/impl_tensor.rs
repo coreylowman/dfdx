@@ -9,16 +9,21 @@ pub trait Tensor:
 
     /// This tensor but with [NoTape].
     type NoTape: 'static
-        + Tensor<Array = Self::Array, Dtype = Self::Dtype, Tape = NoTape, NoTape = Self::NoTape>
+        + Tensor<Array = Self::Array, Dtype = Self::Dtype, Tape = NoneTape, NoTape = Self::NoTape>
         // NOTE: we only want to be able to create NoTape tensors
         + TensorCreator
         // NOTE: Adding this restriction means we can put the tape from Self into the Self::NoTape
         + PutTape<Self::Tape, Output = Self>
         + Clone;
 
-    /// This tensor but with [OwnsTape]
-    type OwnsTape: 'static
-        + Tensor<Array = Self::Array, Dtype = Self::Dtype, Tape = OwnsTape, OwnsTape = Self::OwnsTape>;
+    /// This tensor but with [OwnedTape]
+    type OwnedTape: 'static
+        + Tensor<
+            Array = Self::Array,
+            Dtype = Self::Dtype,
+            Tape = OwnedTape,
+            OwnedTape = Self::OwnedTape,
+        >;
 
     /// This tensor but with it's last dimension reduced to 1. See [ReduceLastDim].
     type LastDimReduced: Tensor<
@@ -41,15 +46,15 @@ macro_rules! tensor_impl {
     ($struct:ident, [$($Vs:tt),*], $reduced:ident, [$($Rs:tt),*], $ix:ty) => {
 impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
     type Tape = H;
-    type NoTape = $struct<$($Vs, )* NoTape>;
-    type OwnsTape = $struct<$($Vs, )* OwnsTape>;
+    type NoTape = $struct<$($Vs, )* NoneTape>;
+    type OwnedTape = $struct<$($Vs, )* OwnedTape>;
 
     type LastDimReduced = $reduced<$($Rs, )* H>;
     type ReducingIndices = $ix;
 
     fn split_tape(self) -> (Self::NoTape, Self::Tape) {
         (
-            Self::NoTape { id: self.id, data: self.data, tape: NoTape::default() },
+            Self::NoTape { id: self.id, data: self.data, tape: Default::default() },
             self.tape,
         )
     }
@@ -58,7 +63,7 @@ impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
         Self::NoTape {
             id: self.id,
             data: self.data.clone(),
-            tape: NoTape::default(),
+            tape: Default::default(),
         }
     }
 }

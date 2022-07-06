@@ -19,7 +19,7 @@ use matrixmultiply::sgemm;
 /// ```
 pub fn matmul<const M: usize, const N: usize, const O: usize, H: Tape>(
     lhs: Tensor2D<M, N, H>,
-    rhs: &Tensor2D<N, O, NoTape>,
+    rhs: &Tensor2D<N, O, NoneTape>,
 ) -> Tensor2D<M, O, H> {
     let mut result = Tensor2D::zeros();
     matmat_mul_into(lhs.data(), rhs.data(), result.mut_data());
@@ -59,7 +59,7 @@ pub fn matmul<const M: usize, const N: usize, const O: usize, H: Tape>(
 /// ```
 pub fn matmul_transpose<const M: usize, const N: usize, const O: usize, H: Tape>(
     lhs: Tensor2D<M, N, H>,
-    rhs_t: &Tensor2D<O, N, NoTape>,
+    rhs_t: &Tensor2D<O, N, NoneTape>,
 ) -> Tensor2D<M, O, H> {
     let mut result = Tensor2D::zeros();
     matmat_mul_into_yt(lhs.data(), rhs_t.data(), result.mut_data());
@@ -99,7 +99,7 @@ pub fn matmul_transpose<const M: usize, const N: usize, const O: usize, H: Tape>
 /// ```
 pub fn vecmat_mul<const N: usize, const O: usize, H: Tape>(
     lhs: Tensor1D<N, H>,
-    rhs: &Tensor2D<N, O, NoTape>,
+    rhs: &Tensor2D<N, O, NoneTape>,
 ) -> Tensor1D<O, H> {
     let mut result = Tensor1D::zeros();
     vecmat_mul_into(lhs.data(), rhs.data(), result.mut_data());
@@ -138,7 +138,7 @@ pub fn vecmat_mul<const N: usize, const O: usize, H: Tape>(
 /// ```
 pub fn vecmat_mul_transpose<const N: usize, const O: usize, H: Tape>(
     lhs: Tensor1D<N, H>,
-    rhs: &Tensor2D<O, N, NoTape>,
+    rhs: &Tensor2D<O, N, NoneTape>,
 ) -> Tensor1D<O, H> {
     let mut result = Tensor1D::zeros();
     vecmat_mul_into_yt(lhs.data(), rhs.data(), result.mut_data());
@@ -356,7 +356,7 @@ mod tests {
             [0.8119, 0.2693, 0.7249],
         ]);
         let b = Tensor2D::new([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
-        let r: Tensor2D<4, 2, OwnsTape> = matmul(a.trace(), &b);
+        let r: Tensor2D<4, 2, OwnedTape> = matmul(a.trace(), &b);
         assert_eq!(
             r.data(),
             &[
@@ -395,7 +395,7 @@ mod tests {
             [0.8119, 0.2693, 0.7249],
         ]);
         let b = Tensor2D::new([[0.4651, 0.3360, 0.8092], [0.9106, 0.5534, 0.3827]]);
-        let r: Tensor2D<4, 2, OwnsTape> = matmul_transpose(a.trace(), &b);
+        let r: Tensor2D<4, 2, OwnedTape> = matmul_transpose(a.trace(), &b);
         assert_eq!(
             r.data(),
             &[
@@ -416,7 +416,7 @@ mod tests {
     fn test_vecmat_mul() {
         let a = Tensor1D::new([0.7296, 0.3974, 0.9487]);
         let b = Tensor2D::new([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
-        let r: Tensor1D<2, OwnsTape> = vecmat_mul(a.trace(), &b);
+        let r: Tensor1D<2, OwnedTape> = vecmat_mul(a.trace(), &b);
         assert_eq!(r.data(), &[1.261436, 1.5543157]);
         let gradients = r.exp().mean().backward();
         assert_eq!(
@@ -437,7 +437,7 @@ mod tests {
     fn test_vecmat_mul_transpose() {
         let a = Tensor1D::new([0.7296, 0.3974, 0.9487]);
         let b = Tensor2D::new([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
-        let r: Tensor1D<2, OwnsTape> = vecmat_mul_transpose(a.trace(), &b);
+        let r: Tensor1D<2, OwnedTape> = vecmat_mul_transpose(a.trace(), &b);
         assert_eq!(r.data(), &[1.261436, 1.5543157]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[0.66719997, 0.68895, 0.6823]);

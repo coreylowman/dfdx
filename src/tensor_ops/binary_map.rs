@@ -122,7 +122,7 @@ pub(super) fn binary_map_broadcast_rhs_first<const M: usize, Lhs, Rhs>(
     dfdy: fn(&f32, &f32) -> f32,
 ) -> Lhs
 where
-    Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
+    Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
     Lhs: Tensor<Dtype = f32, Array = [Rhs::Array; M]>,
 {
     let (mut lhs, mut tape) = lhs.split_tape();

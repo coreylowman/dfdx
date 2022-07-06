@@ -25,10 +25,10 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 #[derive(Default, Debug, Clone)]
 pub struct Linear<const I: usize, const O: usize> {
     /// Transposed weight matrix, shape (O, I)
-    pub weight: Tensor2D<O, I, NoTape>,
+    pub weight: Tensor2D<O, I, NoneTape>,
 
     /// Bias vector, shape (O, )
-    pub bias: Tensor1D<O, NoTape>,
+    pub bias: Tensor1D<O, NoneTape>,
 }
 
 impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {

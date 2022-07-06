@@ -1,35 +1,35 @@
 use super::*;
-use crate::gradients::{NoTape, OwnsTape};
+use crate::gradients::{NoneTape, OwnedTape};
 
-/// Transforms a [NoTape] tensor to an [OwnsTape] tensor by cloning.
+/// Transforms a [NoTape] tensor to an [OwnedTape] tensor by cloning.
 /// Clones `t` using [Tensor::duplicate()] (to preserve id), and then
-/// inserts [OwnsTape] as the tape.
+/// inserts [OwnedTape] as the tape.
 ///
 /// See [traced()] for version that takes ownership of `t`.
-pub fn trace<T: Tensor<Tape = OwnsTape>>(t: &T::NoTape) -> T {
+pub fn trace<T: Tensor<Tape = OwnedTape>>(t: &T::NoTape) -> T {
     traced(t.duplicate())
 }
 
-/// Transforms a [NoTape] tensor to an [OwnsTape] by directly inserting a
-/// new [OwnsTape] into `t`.
+/// Transforms a [NoTape] tensor to an [OwnedTape] by directly inserting a
+/// new [OwnedTape] into `t`.
 ///
 /// See [trace()] for version that copies `t`.
-pub fn traced<T: Tensor<Tape = OwnsTape>>(t: T::NoTape) -> T {
-    t.put_tape(OwnsTape::default())
+pub fn traced<T: Tensor<Tape = OwnedTape>>(t: T::NoTape) -> T {
+    t.put_tape(OwnedTape::default())
 }
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )*> $typename<$($Vs, )* NoTape> {
-    /// Clones `self` and returns a copy with [OwnsTape] as the [crate::gradients::Tape].
+impl<$(const $Vs: usize, )*> $typename<$($Vs, )* NoneTape> {
+    /// Clones `self` and returns a copy with [OwnedTape] as the [crate::gradients::Tape].
     ///
     /// See `traced` for a version that takes ownership of the tensor.
-    pub fn trace(&self) -> $typename<$($Vs, )* OwnsTape> {
+    pub fn trace(&self) -> $typename<$($Vs, )* OwnedTape> {
         trace(self)
     }
 
-    /// Takes ownership of `self` and inserts [OwnsTape] as the [crate::gradients::Tape].
-    pub fn traced(self) -> $typename<$($Vs, )* OwnsTape> {
+    /// Takes ownership of `self` and inserts [OwnedTape] as the [crate::gradients::Tape].
+    pub fn traced(self) -> $typename<$($Vs, )* OwnedTape> {
         traced(self)
     }
 }

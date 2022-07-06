@@ -16,7 +16,7 @@ use crate::prelude::*;
 pub fn add_broadcast_rhs_first<Lhs, Rhs, const M: usize>(lhs: Lhs, rhs: &Rhs) -> Lhs
 where
     Lhs: Tensor<Array = [Rhs::Array; M], Dtype = f32>,
-    Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
+    Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
 {
     binary_map_broadcast_rhs_first(lhs, rhs, add::f, add::dfdx, add::dfdy)
 }
@@ -36,7 +36,7 @@ where
 pub fn sub_broadcast_rhs_first<Lhs, Rhs, const M: usize>(lhs: Lhs, rhs: &Rhs) -> Lhs
 where
     Lhs: Tensor<Array = [Rhs::Array; M], Dtype = f32>,
-    Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
+    Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
 {
     binary_map_broadcast_rhs_first(lhs, rhs, sub::f, sub::dfdx, sub::dfdy)
 }
@@ -56,7 +56,7 @@ where
 pub fn mul_broadcast_rhs_first<Lhs, Rhs, const M: usize>(lhs: Lhs, rhs: &Rhs) -> Lhs
 where
     Lhs: Tensor<Array = [Rhs::Array; M], Dtype = f32>,
-    Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
+    Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
 {
     binary_map_broadcast_rhs_first(lhs, rhs, mul::f, mul::dfdx, mul::dfdy)
 }
@@ -76,7 +76,7 @@ where
 pub fn div_broadcast_rhs_first<Lhs, Rhs, const M: usize>(lhs: Lhs, rhs: &Rhs) -> Lhs
 where
     Lhs: Tensor<Array = [Rhs::Array; M], Dtype = f32>,
-    Rhs: 'static + Tensor<Dtype = f32, Tape = NoTape>,
+    Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
 {
     binary_map_broadcast_rhs_first(lhs, rhs, div::f, div::dfdx, div::dfdy)
 }

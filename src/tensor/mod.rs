@@ -3,7 +3,7 @@
 //! At a high level a tensor consists of only three parts
 //! 1. A [crate::unique_id::UniqueId] to track which gradients are associated with what tensors
 //! 2. An Nd rust array stored in a [Box].
-//! 3. A tape, which can either actually be a tape ([crate::gradients::OwnsTape]) or be empty ([crate::gradients::NoTape]).
+//! 3. A tape, which can either actually be a tape ([crate::gradients::OwnedTape]) or be empty ([crate::gradients::NoTape]).
 //!
 //! # Creating tensors
 //!
@@ -43,17 +43,17 @@
 //!
 //! # Tracking gradients
 //!
-//! Use the [trace()] or [traced()] methods to add [crate::gradients::OwnsTape] to the [Tensor].
+//! Use the [trace()] or [traced()] methods to add [crate::gradients::OwnedTape] to the [Tensor].
 //! `.trace()` will clone the [crate::unique_id::UniqueId] & data, while `.traced()` will take ownership of
-//! the tensor and return a version with an [crate::gradients::OwnsTape].
+//! the tensor and return a version with an [crate::gradients::OwnedTape].
 //!
 //! Note that these two methods are only present for tensors without a tape already.
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t: Tensor1D<5, NoTape> = Tensor1D::<5>::zeros();
-//! let t_clone: Tensor1D<5, OwnsTape> = t.trace(); // copies t
-//! let t: Tensor1D<5, OwnsTape> = t.traced(); // takes ownership of t
+//! let t: Tensor1D<5, NoneTape> = Tensor1D::<5>::zeros();
+//! let t_clone: Tensor1D<5, OwnedTape> = t.trace(); // copies t
+//! let t: Tensor1D<5, OwnedTape> = t.traced(); // takes ownership of t
 //! ```
 //!
 //! # Cloning/copying

@@ -1,9 +1,9 @@
 use super::*;
-use crate::gradients::NoTape;
+use crate::gradients::NoneTape;
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )*> Default for $typename<$($Vs, )* NoTape> {
+impl<$(const $Vs: usize, )*> Default for $typename<$($Vs, )* NoneTape> {
     /// Returns a tensor with all elements equal to 0
     fn default() -> Self {
         Self::zeros()
