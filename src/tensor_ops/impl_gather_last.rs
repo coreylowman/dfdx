@@ -1,3 +1,4 @@
+use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
 /// Reduces the last dimension of the tensor by gathering the value specified by `indices`.
@@ -13,7 +14,7 @@ use crate::prelude::*;
 ///
 /// This is equivalent to calling `t.gather(-1, indices)` in pytorch.
 pub fn gather_last_dim<T: Tensor<Dtype = f32>>(
-    t: T,
+    mut t: T,
     indices: &T::ReducingIndices,
 ) -> T::LastDimReduced
 where
@@ -33,20 +34,17 @@ where
     );
 
     // store derivative in t
-    let (mut t, mut tape) = t.split_tape();
     T::Device::foreachlast_mb(t.mut_data(), Broadcast(indices), &mut |t, i| {
         T::Device::fill(t, &mut |v| *v = 0.0);
         t[*i] = 1.0;
     });
 
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+    move_tape_and_add_backward_op(t, result, move |t, result, grads| {
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
         T::Device::foreach_mrb(t_grad, t.data(), Broadcast(result_grad), &mut |g, t, r| {
             *g += t * r;
         })
-    });
-    result.put_tape(tape)
+    })
 }
 
 macro_rules! gather_last_impl {

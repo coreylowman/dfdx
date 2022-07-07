@@ -1,15 +1,13 @@
+use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
 /// Sums all the values in `self`. Returns a [Tensor0D] (i.e. one number).
 pub fn sum<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::Tape> {
     let result = Tensor0D::<NoneTape>::new(T::Device::reduce(t.data(), &mut |a, b| a + b));
-    let (t, mut tape) = t.split_tape();
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let g: f32 = *grads.ref_gradient(&_result);
-        T::Device::foreach_m(grads.mut_gradient(&t), &mut |v| *v += g);
-    });
-    result.put_tape(tape)
+    move_tape_and_add_backward_op(t, result, move |t, result, grads| {
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
+        T::Device::foreach_m(t_grad, &mut |v| *v += result_grad);
+    })
 }
 
 macro_rules! tensor_impl {

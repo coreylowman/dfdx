@@ -1,3 +1,4 @@
+use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 use std::ops::{Add, Div, Mul, Sub};
 
@@ -11,16 +12,13 @@ use std::ops::{Add, Div, Mul, Sub};
 /// assert_eq!(r.data(), &[1.5, 2.5, -2.5]);
 /// ```
 pub fn scalar_add<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
-    let (t, mut tape) = t.split_tape();
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x + val));
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+    move_tape_and_add_backward_op(t, result, move |t, result, grads| {
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
         T::Device::foreach_mr(t_grad, result_grad, &mut |t, r| {
             *t += r;
         });
-    });
-    result.put_tape(tape)
+    })
 }
 
 /// Subtracts `val` from all elements of `t`.
@@ -33,16 +31,13 @@ pub fn scalar_add<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
 /// assert_eq!(r.data(), &[0.5, 1.5, -3.5]);
 /// ```
 pub fn scalar_sub<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
-    let (t, mut tape) = t.split_tape();
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x - val));
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+    move_tape_and_add_backward_op(t, result, move |t, result, grads| {
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
         T::Device::foreach_mr(t_grad, result_grad, &mut |t, r| {
             *t += r;
         });
-    });
-    result.put_tape(tape)
+    })
 }
 
 /// Multiplies all elements of `t` by `val`.
@@ -55,16 +50,13 @@ pub fn scalar_sub<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
 /// assert_eq!(r.data(), &[0.5, 1.0, -1.5]);
 /// ```
 pub fn scalar_mul<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
-    let (t, mut tape) = t.split_tape();
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x * val));
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+    move_tape_and_add_backward_op(t, result, move |t, result, grads| {
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
         T::Device::foreach_mr(t_grad, result_grad, &mut |t, r| {
             *t += r * val;
         });
-    });
-    result.put_tape(tape)
+    })
 }
 
 /// Divides all elements of `t` by `val`.
@@ -77,16 +69,13 @@ pub fn scalar_mul<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
 /// assert_eq!(r.data(), &[0.5, 1.0, -1.5]);
 /// ```
 pub fn scalar_div<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
-    let (t, mut tape) = t.split_tape();
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x / val));
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+    move_tape_and_add_backward_op(t, result, move |t, result, grads| {
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
         T::Device::foreach_mr(t_grad, result_grad, &mut |t, r| {
             *t += r / val;
         });
-    });
-    result.put_tape(tape)
+    })
 }
 
 macro_rules! scalar_ops_impl {

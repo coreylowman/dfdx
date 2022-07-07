@@ -1,3 +1,4 @@
+use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
 /// Reduces the last dimension of the tensor by summing all the values in that dimension.
@@ -15,13 +16,10 @@ pub fn sum_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
         t.data(),
         &mut |a, b| a + b,
     ));
-    let (t, mut tape) = t.split_tape();
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+    move_tape_and_add_backward_op(t, result, move |t, result, grads| {
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
         T::Device::badd(t_grad, Broadcast(result_grad));
-    });
-    result.put_tape(tape)
+    })
 }
 
 macro_rules! sum_last_impl {

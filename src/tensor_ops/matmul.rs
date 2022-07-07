@@ -1,3 +1,4 @@
+use super::utils::move_tape_and_add_backward_binop;
 use crate::prelude::*;
 use matrixmultiply::sgemm;
 
@@ -27,18 +28,13 @@ pub fn matmul<const M: usize, const N: usize, const O: usize, H: Tape>(
     // copy rhs data for use later when computing gradients
     let rhs_data = rhs.data.clone();
 
-    let _rhs = rhs.phantom();
-    let _result = result.phantom();
-    let (lhs, mut tape) = lhs.split_tape();
-    tape.add_backward_op(move |grads| {
-        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
+    move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
         matmat_mul_into_yt(result_grad, rhs_data.as_ref(), lhs_grad);
 
-        let (rhs_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
+        let (rhs_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
         matmat_mul_into_xt(lhs.data(), result_grad, rhs_grad);
-    });
-
-    result.put_tape(tape)
+    })
 }
 
 /// Matrix multiplication with the transpose of `rhs`. Equivalent to `matmul(lhs, transpose(rhs))`.
@@ -67,18 +63,13 @@ pub fn matmul_transpose<const M: usize, const N: usize, const O: usize, H: Tape>
     // copy rhs data for use later when computing gradients
     let rhs_data = rhs_t.data.clone();
 
-    let _rhs = rhs_t.phantom();
-    let _result = result.phantom();
-    let (lhs, mut tape) = lhs.split_tape();
-    tape.add_backward_op(move |grads| {
-        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
+    move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs, result, grads| {
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
         matmat_mul_into(result_grad, rhs_data.as_ref(), lhs_grad);
 
-        let (rhs_t_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
+        let (rhs_t_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
         matmat_mul_into_xtzt(lhs.data(), result_grad, rhs_t_grad);
-    });
-
-    result.put_tape(tape)
+    })
 }
 
 /// vector * matrix multiplication.
@@ -106,18 +97,13 @@ pub fn vecmat_mul<const N: usize, const O: usize, H: Tape>(
 
     let rhs_data = rhs.data.clone();
 
-    let _rhs = rhs.phantom();
-    let _result = result.phantom();
-    let (lhs, mut tape) = lhs.split_tape();
-    tape.add_backward_op(move |grads| {
-        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
+    move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
         vecmat_mul_into_yt(result_grad, rhs_data.as_ref(), lhs_grad);
 
-        let (rhs_t_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
+        let (rhs_t_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
         vecvec_mul_into(lhs.data(), result_grad, rhs_t_grad);
-    });
-
-    result.put_tape(tape)
+    })
 }
 
 /// vector * matrix multiplication where `rhs` is transposed. `y * transpose(rhs)`
@@ -145,18 +131,13 @@ pub fn vecmat_mul_transpose<const N: usize, const O: usize, H: Tape>(
 
     let rhs_data = rhs.data.clone();
 
-    let _rhs = rhs.phantom();
-    let _result = result.phantom();
-    let (lhs, mut tape) = lhs.split_tape();
-    tape.add_backward_op(move |grads| {
-        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
+    move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
         vecmat_mul_into(result_grad, rhs_data.as_ref(), lhs_grad);
 
-        let (rhs_t_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
+        let (rhs_t_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
         vecvec_mul_into(result_grad, lhs.data(), rhs_t_grad);
-    });
-
-    result.put_tape(tape)
+    })
 }
 
 /// matrix multiply `x * y`

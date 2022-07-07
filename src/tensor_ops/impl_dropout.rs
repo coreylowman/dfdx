@@ -1,3 +1,4 @@
+use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 use rand::Rng;
 use rand_distr::{Distribution, Standard};
@@ -20,13 +21,11 @@ pub fn dropout<T: Tensor<Dtype = f32>, R: Rng>(t: T, p: f32, rng: &mut R) -> T {
         });
         let mut result = T::NoTape::zeros();
         T::Device::addmul(result.mut_data(), t.data(), deriv.as_ref());
-        let (t, mut tape) = t.split_tape();
-        let _result = result.phantom();
-        tape.add_backward_op(move |grads| {
-            let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+
+        move_tape_and_add_backward_op(t, result, move |t, result, grads| {
+            let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
             T::Device::addmul(t_grad, deriv.as_ref(), result_grad);
-        });
-        result.put_tape(tape)
+        })
     }
 }
 

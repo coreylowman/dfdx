@@ -1,3 +1,4 @@
+use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
 /// Sets `t` to `value` anywhere `mask` equals value
@@ -10,24 +11,21 @@ use crate::prelude::*;
 /// let r = t.trace().value_mask(&m, -1e10);
 /// assert_eq!(r.data(), &[-1e10, 2.0, -1e10]);
 /// ```
-pub fn value_mask<T: Tensor<Dtype = f32>>(t: T, other: &T::NoTape, value: T::Dtype) -> T {
+pub fn value_mask<T: Tensor<Dtype = f32>>(mut t: T, other: &T::NoTape, value: T::Dtype) -> T {
     let mut result = T::NoTape::zeros();
     T::Device::foreach_mrr(result.mut_data(), t.data(), other.data(), &mut |r, t, o| {
         *r = if o == &value { value } else { *t }
     });
 
     // store derivative in t
-    let (mut t, mut tape) = t.split_tape();
     T::Device::foreach_mr(t.mut_data(), other.data(), &mut |t, o| {
         *t = if o == &value { 0.0 } else { 1.0 }
     });
 
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+    move_tape_and_add_backward_op(t, result, move |t, result, grads| {
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
         T::Device::addmul(t_grad, t.data(), result_grad);
-    });
-    result.put_tape(tape)
+    })
 }
 
 macro_rules! tensor_impl {

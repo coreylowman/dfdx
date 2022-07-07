@@ -1,3 +1,4 @@
+use super::utils::move_tape_and_add_backward_binop;
 use crate::prelude::*;
 
 pub(super) mod add {
@@ -78,13 +79,12 @@ pub(super) mod minimum {
 ///
 /// This is primarily used to implement [add()], [sub()], [mul()], and [div()].
 pub(super) fn binary_map<T: Tensor<Dtype = f32>>(
-    lhs: T,
+    mut lhs: T,
     rhs: &T::NoTape,
     f: fn(&f32, &f32) -> f32,
     dfdx: fn(&f32, &f32) -> f32,
     dfdy: fn(&f32, &f32) -> f32,
 ) -> T {
-    let (mut lhs, mut tape) = lhs.split_tape();
     let mut result = T::NoTape::zeros();
     let mut rhs_deriv: Box<T::Array> = T::Device::zeros();
 
@@ -95,16 +95,13 @@ pub(super) fn binary_map<T: Tensor<Dtype = f32>>(
     let (o, l, r) = (result.mut_data(), lhs.mut_data(), rhs_deriv.as_mut());
     f_and_dfs::<T::Array, T::Device>(o, l, r, f, dfdx, dfdy);
 
-    let _rhs = rhs.phantom();
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
+    move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
         T::Device::addmul(lhs_grad, lhs.data(), result_grad);
 
-        let (rhs_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
+        let (rhs_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
         T::Device::addmul(rhs_grad, rhs_deriv.as_ref(), result_grad);
-    });
-    result.put_tape(tape)
+    })
 }
 
 /// Apply binary function `f` to `lhs` and `rhs`, where `rhs` is broadcasted `M` times to be the same shape as `lhs`.
@@ -115,7 +112,7 @@ pub(super) fn binary_map<T: Tensor<Dtype = f32>>(
 /// Generics:
 /// - `M`: The first dimension of `lhs`.
 pub(super) fn binary_map_broadcast_rhs_first<const M: usize, Lhs, Rhs>(
-    lhs: Lhs,
+    mut lhs: Lhs,
     rhs: &Rhs,
     f: fn(&f32, &f32) -> f32,
     dfdx: fn(&f32, &f32) -> f32,
@@ -125,7 +122,6 @@ where
     Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
     Lhs: Tensor<Dtype = f32, Array = [Rhs::Array; M]>,
 {
-    let (mut lhs, mut tape) = lhs.split_tape();
     let mut result = Lhs::NoTape::zeros();
     let mut rhs_deriv: Box<Lhs::Array> = Lhs::Device::zeros();
 
@@ -138,18 +134,16 @@ where
     let (o, l, r) = (result.mut_data(), lhs.mut_data(), rhs_deriv.as_mut());
     f_and_dfs::<Lhs::Array, Lhs::Device>(o, l, r, f, dfdx, dfdy);
 
-    let _rhs = rhs.phantom();
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
+    move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
         Lhs::Device::addmul(lhs_grad, lhs.data(), result_grad);
 
-        let (rhs_grad, result_grad) = grads.mut_and_ref(&_rhs, &_result);
+        let (rhs_grad, result_grad): (&mut Rhs::Array, &Lhs::Array) =
+            grads.mut_and_ref(&rhs, &result);
         for i in 0..M {
             Rhs::Device::addmul(rhs_grad, &rhs_deriv[i], &result_grad[i]);
         }
-    });
-    result.put_tape(tape)
+    })
 }
 
 /// Applies a binary function `f`, it's partial wrt. x `dfdx`, and its partial wrt. y `dfdy`
@@ -159,14 +153,13 @@ where
 /// This is primarily used to implement [add_broadcast_rhs_last()],
 /// [sub_broadcast_rhs_last()], [mul_broadcast_rhs_last()], and [div_broadcast_rhs_last()].
 pub(super) fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
-    lhs: T,
+    mut lhs: T,
     rhs: <T::LastDimReduced as Tensor>::NoTape,
     f: fn(&f32, &f32) -> f32,
     dfdx: fn(&f32, &f32) -> f32,
     dfdy: fn(&f32, &f32) -> f32,
 ) -> T {
     let mut result = T::NoTape::zeros();
-    let (mut lhs, mut tape) = lhs.split_tape();
     let mut rhs_deriv: Box<T::Array> = T::Device::zeros();
 
     // clone rhs.data() into rhs_deriv.
@@ -178,18 +171,16 @@ pub(super) fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     let (o, l, r) = (result.mut_data(), lhs.mut_data(), rhs_deriv.as_mut());
     f_and_dfs::<T::Array, T::Device>(o, l, r, f, dfdx, dfdy);
 
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &_result);
+    move_tape_and_add_backward_binop(lhs, &rhs, result, move |lhs, rhs, result, grads| {
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
         T::Device::addmul(lhs_grad, lhs.data(), result_grad);
 
-        let (rhs_grad, result_grad) = grads.mut_and_ref(&rhs, &_result);
+        let (rhs_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
         let rhs_grad = BroadcastMut(rhs_grad);
         T::Device::foreach_brr(rhs_grad, rhs_deriv.as_ref(), result_grad, &mut |g, d, r| {
             *g += d * r;
         });
-    });
-    result.put_tape(tape)
+    })
 }
 
 fn f_and_dfs<T: CountElements, Device: ForEachElement<T>>(

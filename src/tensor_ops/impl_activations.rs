@@ -1,3 +1,4 @@
+use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 use std::ops::Neg;
 
@@ -214,16 +215,13 @@ pub fn abs<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// assert_eq!(r.data(), &[-4.0, -2.0, 0.0, 2.0, 4.0]);
 /// ```
 pub fn map<T: Tensor<Dtype = f32>>(t: T, f: fn(&f32) -> f32, df: fn(&f32) -> f32) -> T {
-    let (t, mut tape) = t.split_tape();
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), f));
-    let _result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &_result);
+    move_tape_and_add_backward_op(t, result, move |t, result, grads| {
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
         T::Device::foreach_mrr(t_grad, t.data(), result_grad, &mut |g, t, r| {
             *g += df(t) * r;
         });
-    });
-    result.put_tape(tape)
+    })
 }
 
 macro_rules! activation_impl {
