@@ -14,8 +14,7 @@ use crate::prelude::*;
 /// ```
 pub fn normalize<T: Tensor<Dtype = f32>>(t: T, epsilon: T::Dtype) -> T {
     let (t, tape) = t.split_tape();
-    let var = var_last_dim(t.duplicate().put_tape(tape));
-    let (std, tape) = sqrt(scalar_add(var, epsilon)).split_tape();
+    let (std, tape) = std_last_dim(t.duplicate().put_tape(tape), epsilon).split_tape();
     let (mean, tape) = mean_last_dim(t.duplicate().put_tape(tape)).split_tape();
     let centered = sub_broadcast_rhs_last(t.put_tape(tape), &mean);
     div_broadcast_rhs_last(centered, &std)

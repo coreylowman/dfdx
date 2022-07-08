@@ -3,7 +3,7 @@ use crate::prelude::*;
 /// Reduces the last dimension of the tensor by computing std deviation of all values in the last dimension.
 /// Result [Tensor] has smaller number of dimensions.
 ///
-/// Computes: `t.var_last_dim().sqrt()`
+/// Computes: `(t + epsilon).var_last_dim().sqrt()`
 ///
 /// See [var_last_dim()] and [sqrt()].
 ///
@@ -14,8 +14,8 @@ use crate::prelude::*;
 /// let r: Tensor1D<2> = std_last_dim(t);
 /// assert_eq!(r.data(), &[0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
 /// ```
-pub fn std_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
-    sqrt(var_last_dim(t))
+pub fn std_last_dim<T: Tensor<Dtype = f32>>(t: T, epsilon: T::Dtype) -> T::LastDimReduced {
+    sqrt(scalar_add(var_last_dim(t), epsilon))
 }
 
 /// Reduces the last dimension of the tensor by computing variance of all values in the last dimension.
@@ -48,8 +48,8 @@ macro_rules! std_last_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [std_last_dim()] on `self`.
-    pub fn std_last_dim(self) -> <Self as Tensor>::LastDimReduced {
-        std_last_dim(self)
+    pub fn std_last_dim(self, epsilon: f32) -> <Self as Tensor>::LastDimReduced {
+        std_last_dim(self, epsilon)
     }
 
     /// Calls [var_last_dim()] on `self`.
@@ -82,7 +82,7 @@ mod tests {
     #[test]
     fn test_std_last_1d() {
         let t: Tensor1D<3> = Tensor1D::new([1.0, 4.0, 8.0]);
-        let r: Tensor0D<OwnedTape> = t.trace().std_last_dim();
+        let r: Tensor0D<OwnedTape> = t.trace().std_last_dim(0.0);
         assert_eq!(r.data(), &2.867442);
         // NOTE: .exp() so we make sure its using result grad properly
         let gradients = r.exp().sum().backward();
@@ -95,7 +95,7 @@ mod tests {
     #[test]
     fn test_std_last_2d() {
         let t: Tensor2D<2, 4> = Tensor2D::new([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
-        let r: Tensor1D<2, OwnedTape> = t.trace().std_last_dim();
+        let r: Tensor1D<2, OwnedTape> = t.trace().std_last_dim(0.0);
         assert_eq!(r.data(), &[1.118034, 3.7666297]);
         let gradients = r.mean().backward();
         assert_eq!(
@@ -115,7 +115,7 @@ mod tests {
             [[2.0, -1.0], [-6.0, 5.0]],
             [[-2.0, 3.0], [4.0, -5.0]],
         ]);
-        let r: Tensor2D<4, 2, OwnedTape> = t.trace().std_last_dim();
+        let r: Tensor2D<4, 2, OwnedTape> = t.trace().std_last_dim(0.0);
         assert_eq!(r.data(), &[[0.5, 0.5], [0.5, 1.0], [1.5, 5.5], [2.5, 4.5]]);
         let gradients = r.mean().backward();
         assert_eq!(
