@@ -1,3 +1,5 @@
+#![feature(generic_const_exprs)]
+
 //! Ergonomics & safety focused deep learning in Rust. Main features include:
 //! 1. Tensor library, complete with const generic shapes, activation functions, and more.
 //! 2. Safe & Easy to use neural network building blocks.

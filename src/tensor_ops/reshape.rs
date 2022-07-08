@@ -4,7 +4,8 @@ pub fn reshape<T, R>(t: T) -> R
 where
     T: Tensor<Dtype = f32>,
     R: Tensor<Tape = T::Tape, Dtype = f32>,
-    ConstEq<{ T::NUM_ELEMENTS }, { R::NUM_ELEMENTS }>: ConstAssert<Result = True>,
+    ConstEq<{ T::Array::NUM_ELEMENTS }, { R::Array::NUM_ELEMENTS }>: ConstAssert<Result = True>,
+    ConstEq<{ R::Array::NUM_ELEMENTS }, { T::Array::NUM_ELEMENTS }>: ConstAssert<Result = True>,
 {
     let (mut t, mut tape) = t.split_tape();
     let mut result: R::NoTape = R::NoTape::zeros();
@@ -29,12 +30,12 @@ where
     }
 }
 
-struct True;
-trait ConstAssert {
+pub struct True;
+pub trait ConstAssert {
     type Result;
 }
 
-struct ConstEq<const A: usize, const B: usize>;
+pub struct ConstEq<const A: usize, const B: usize>;
 impl<const N: usize> ConstAssert for ConstEq<N, N> {
     type Result = True;
 }
