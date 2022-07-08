@@ -154,7 +154,7 @@ where
 /// [sub_broadcast_rhs_last()], [mul_broadcast_rhs_last()], and [div_broadcast_rhs_last()].
 pub(super) fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     mut lhs: T,
-    rhs: <T::LastDimReduced as Tensor>::NoTape,
+    rhs: &<T::LastDimReduced as Tensor>::NoTape,
     f: fn(&f32, &f32) -> f32,
     dfdx: fn(&f32, &f32) -> f32,
     dfdy: fn(&f32, &f32) -> f32,
@@ -171,7 +171,7 @@ pub(super) fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     let (o, l, r) = (result.mut_data(), lhs.mut_data(), rhs_deriv.as_mut());
     f_and_dfs::<T::Array, T::Device>(o, l, r, f, dfdx, dfdy);
 
-    move_tape_and_add_backward_binop(lhs, &rhs, result, move |lhs, rhs, result, grads| {
+    move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
         T::Device::addmul(lhs_grad, lhs.data(), result_grad);
 

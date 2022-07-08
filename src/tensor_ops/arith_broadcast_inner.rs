@@ -13,7 +13,7 @@ use crate::prelude::*;
 /// ```
 pub fn add_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     lhs: T,
-    rhs: <T::LastDimReduced as Tensor>::NoTape,
+    rhs: &<T::LastDimReduced as Tensor>::NoTape,
 ) -> T {
     binary_map_broadcast_rhs_last(lhs, rhs, add::f, add::dfdx, add::dfdy)
 }
@@ -28,10 +28,10 @@ pub fn add_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
 /// let r = sub_broadcast_rhs_last(a, b);
 /// assert_eq!(r.data(), &[[-3.0, -2.0, -1.0], [-1.0, 0.0, 1.0]]);
 /// ```
-pub fn sub_broadcast_rhs_last<Lhs: Tensor<Dtype = f32>>(
-    lhs: Lhs,
-    rhs: <Lhs::LastDimReduced as Tensor>::NoTape,
-) -> Lhs {
+pub fn sub_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
+    lhs: T,
+    rhs: &<T::LastDimReduced as Tensor>::NoTape,
+) -> T {
     binary_map_broadcast_rhs_last(lhs, rhs, sub::f, sub::dfdx, sub::dfdy)
 }
 
@@ -47,7 +47,7 @@ pub fn sub_broadcast_rhs_last<Lhs: Tensor<Dtype = f32>>(
 /// ```
 pub fn mul_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     lhs: T,
-    rhs: <T::LastDimReduced as Tensor>::NoTape,
+    rhs: &<T::LastDimReduced as Tensor>::NoTape,
 ) -> T {
     binary_map_broadcast_rhs_last(lhs, rhs, mul::f, mul::dfdx, mul::dfdy)
 }
@@ -64,7 +64,7 @@ pub fn mul_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
 /// ```
 pub fn div_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     lhs: T,
-    rhs: <T::LastDimReduced as Tensor>::NoTape,
+    rhs: &<T::LastDimReduced as Tensor>::NoTape,
 ) -> T {
     binary_map_broadcast_rhs_last(lhs, rhs, div::f, div::dfdx, div::dfdy)
 }
@@ -77,7 +77,7 @@ mod tests {
     fn test_broadcast_add_1d() {
         let a: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
         let b = Tensor0D::new(1.0);
-        let r = add_broadcast_rhs_last(a.trace(), b.duplicate());
+        let r = add_broadcast_rhs_last(a.trace(), &b);
         assert_eq!(r.data(), &[2.0, 3.0, 4.0]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0; 3]);
@@ -88,7 +88,7 @@ mod tests {
     fn test_broadcast_sub_1d() {
         let a: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
         let b = Tensor0D::new(1.0);
-        let r = sub_broadcast_rhs_last(a.trace(), b.duplicate());
+        let r = sub_broadcast_rhs_last(a.trace(), &b);
         assert_eq!(r.data(), &[0.0, 1.0, 2.0]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0; 3]);
@@ -99,7 +99,7 @@ mod tests {
     fn test_broadcast_mul_1d() {
         let a: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
         let b = Tensor0D::new(1.0);
-        let r = mul_broadcast_rhs_last(a.trace(), b.duplicate());
+        let r = mul_broadcast_rhs_last(a.trace(), &b);
         assert_eq!(r.data(), &[1.0, 2.0, 3.0]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0; 3]);
@@ -110,7 +110,7 @@ mod tests {
     fn test_broadcast_div_1d() {
         let a: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
         let b = Tensor0D::new(1.0);
-        let r = div_broadcast_rhs_last(a.trace(), b.duplicate());
+        let r = div_broadcast_rhs_last(a.trace(), &b);
         assert_eq!(r.data(), &[1.0, 2.0, 3.0]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0; 3]);
@@ -121,7 +121,7 @@ mod tests {
     fn test_broadcast_add_2d() {
         let a: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, -3.0], [-4.0, 5.0, -6.0]]);
         let b: Tensor1D<2> = Tensor1D::new([-1.0, 0.5]);
-        let r = add_broadcast_rhs_last(a.trace(), b.duplicate());
+        let r = add_broadcast_rhs_last(a.trace(), &b);
         assert_eq!(r.data(), &[[0.0, 1.0, -4.0], [-3.5, 5.5, -5.5]]);
         let gradients = r.exp().mean().backward();
         assert_eq!(
@@ -138,7 +138,7 @@ mod tests {
     fn test_broadcast_sub_2d() {
         let a: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, -3.0], [-4.0, 5.0, -6.0]]);
         let b: Tensor1D<2> = Tensor1D::new([-1.0, 0.5]);
-        let r = sub_broadcast_rhs_last(a.trace(), b.duplicate());
+        let r = sub_broadcast_rhs_last(a.trace(), &b);
         assert_eq!(r.data(), &[[2.0, 3.0, -2.0], [-4.5, 4.5, -6.5]]);
         let gradients = r.exp().mean().backward();
         assert_eq!(
@@ -155,7 +155,7 @@ mod tests {
     fn test_broadcast_mul_2d() {
         let a: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, -3.0], [-4.0, 5.0, -6.0]]);
         let b: Tensor1D<2> = Tensor1D::new([-1.0, 0.5]);
-        let r = mul_broadcast_rhs_last(a.trace(), b.duplicate());
+        let r = mul_broadcast_rhs_last(a.trace(), &b);
         assert_eq!(r.data(), &[[-1.0, -2.0, 3.0], [-2.0, 2.5, -3.0]]);
         let gradients = r.exp().mean().backward();
         assert_eq!(
@@ -172,7 +172,7 @@ mod tests {
     fn test_broadcast_div_2d() {
         let a: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, -3.0], [-4.0, 5.0, -6.0]]);
         let b: Tensor1D<2> = Tensor1D::new([-1.0, 0.5]);
-        let r = div_broadcast_rhs_last(a.trace(), b.duplicate());
+        let r = div_broadcast_rhs_last(a.trace(), &b);
         assert_eq!(r.data(), &[[-1.0, -2.0, 3.0], [-8.0, 10.0, -12.0]]);
         let gradients = r.exp().mean().backward();
         assert_eq!(
