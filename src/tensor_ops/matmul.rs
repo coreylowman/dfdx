@@ -1,6 +1,5 @@
 use super::utils::move_tape_and_add_backward_binop;
 use crate::prelude::*;
-use matrixmultiply::sgemm;
 
 /// Matrix multiplication.
 ///
@@ -169,9 +168,31 @@ fn mm<const M: usize, const K: usize, const N: usize>(
     let a = a.as_ptr() as *const f32;
     let b = b.as_ptr() as *const f32;
     let c = c.as_mut_ptr() as *mut f32;
+
+    #[cfg(not(feature = "intel-mkl"))]
     unsafe {
-        sgemm(
+        matrixmultiply::sgemm(
             M, K, N, 1.0, a, K as isize, 1, b, N as isize, 1, 1.0, c, N as isize, 1,
+        )
+    }
+
+    #[cfg(feature = "intel-mkl")]
+    unsafe {
+        cblas_sys::cblas_sgemm(
+            cblas_sys::CblasRowMajor,
+            cblas_sys::CblasNoTrans,
+            cblas_sys::CblasNoTrans,
+            M as libc::c_int,
+            N as libc::c_int,
+            K as libc::c_int,
+            1.0,
+            a,
+            K as libc::c_int,
+            b,
+            N as libc::c_int,
+            1.0,
+            c,
+            N as libc::c_int,
         )
     }
 }
@@ -185,9 +206,31 @@ fn mm_at<const M: usize, const K: usize, const N: usize>(
     let a_t = a_t.as_ptr() as *const f32;
     let b = b.as_ptr() as *const f32;
     let c = c.as_mut_ptr() as *mut f32;
+
+    #[cfg(not(feature = "intel-mkl"))]
     unsafe {
-        sgemm(
+        matrixmultiply::sgemm(
             M, K, N, 1.0, a_t, 1, M as isize, b, N as isize, 1, 1.0, c, N as isize, 1,
+        )
+    }
+
+    #[cfg(feature = "intel-mkl")]
+    unsafe {
+        cblas_sys::cblas_sgemm(
+            cblas_sys::CblasRowMajor,
+            cblas_sys::CblasTrans,
+            cblas_sys::CblasNoTrans,
+            M as libc::c_int,
+            N as libc::c_int,
+            K as libc::c_int,
+            1.0,
+            a_t,
+            M as libc::c_int,
+            b,
+            N as libc::c_int,
+            1.0,
+            c,
+            N as libc::c_int,
         )
     }
 }
@@ -201,9 +244,31 @@ fn mm_bt<const M: usize, const K: usize, const N: usize>(
     let a = a.as_ptr() as *const f32;
     let b_t = b_t.as_ptr() as *const f32;
     let c = c.as_mut_ptr() as *mut f32;
+
+    #[cfg(not(feature = "intel-mkl"))]
     unsafe {
-        sgemm(
+        matrixmultiply::sgemm(
             M, K, N, 1.0, a, K as isize, 1, b_t, 1, K as isize, 1.0, c, N as isize, 1,
+        )
+    }
+
+    #[cfg(feature = "intel-mkl")]
+    unsafe {
+        cblas_sys::cblas_sgemm(
+            cblas_sys::CblasRowMajor,
+            cblas_sys::CblasNoTrans,
+            cblas_sys::CblasTrans,
+            M as libc::c_int,
+            N as libc::c_int,
+            K as libc::c_int,
+            1.0,
+            a,
+            K as libc::c_int,
+            b_t,
+            K as libc::c_int,
+            1.0,
+            c,
+            N as libc::c_int,
         )
     }
 }
@@ -217,9 +282,31 @@ fn mm_atct<const M: usize, const K: usize, const N: usize>(
     let a_t = a_t.as_ptr() as *const f32;
     let b = b.as_ptr() as *const f32;
     let c_t = c_t.as_mut_ptr() as *mut f32;
+
+    #[cfg(not(feature = "intel-mkl"))]
     unsafe {
-        sgemm(
+        matrixmultiply::sgemm(
             M, K, N, 1.0, a_t, 1, M as isize, b, N as isize, 1, 1.0, c_t, 1, M as isize,
+        )
+    }
+
+    #[cfg(feature = "intel-mkl")]
+    unsafe {
+        cblas_sys::cblas_sgemm(
+            cblas_sys::CblasColMajor,
+            cblas_sys::CblasNoTrans,
+            cblas_sys::CblasTrans,
+            M as libc::c_int,
+            N as libc::c_int,
+            K as libc::c_int,
+            1.0,
+            a_t,
+            M as libc::c_int,
+            b,
+            N as libc::c_int,
+            1.0,
+            c_t,
+            M as libc::c_int,
         )
     }
 }
@@ -230,9 +317,31 @@ fn vm<const K: usize, const N: usize>(a: &[f32; K], b: &[[f32; N]; K], c: &mut [
     let a = a.as_ptr();
     let b = b.as_ptr() as *const f32;
     let c = c.as_mut_ptr();
+
+    #[cfg(not(feature = "intel-mkl"))]
     unsafe {
-        sgemm(
+        matrixmultiply::sgemm(
             M, K, N, 1.0, a, K as isize, 1, b, N as isize, 1, 1.0, c, N as isize, 1,
+        )
+    }
+
+    #[cfg(feature = "intel-mkl")]
+    unsafe {
+        cblas_sys::cblas_sgemm(
+            cblas_sys::CblasRowMajor,
+            cblas_sys::CblasNoTrans,
+            cblas_sys::CblasNoTrans,
+            M as libc::c_int,
+            N as libc::c_int,
+            K as libc::c_int,
+            1.0,
+            a,
+            K as libc::c_int,
+            b,
+            N as libc::c_int,
+            1.0,
+            c,
+            N as libc::c_int,
         )
     }
 }
@@ -243,9 +352,31 @@ fn vm_bt<const K: usize, const N: usize>(a: &[f32; K], b_t: &[[f32; K]; N], c: &
     let a = a.as_ptr();
     let b_t = b_t.as_ptr() as *const f32;
     let c = c.as_mut_ptr();
+
+    #[cfg(not(feature = "intel-mkl"))]
     unsafe {
-        sgemm(
+        matrixmultiply::sgemm(
             M, K, N, 1.0, a, K as isize, 1, b_t, 1, K as isize, 1.0, c, N as isize, 1,
+        )
+    }
+
+    #[cfg(feature = "intel-mkl")]
+    unsafe {
+        cblas_sys::cblas_sgemm(
+            cblas_sys::CblasRowMajor,
+            cblas_sys::CblasNoTrans,
+            cblas_sys::CblasTrans,
+            M as libc::c_int,
+            N as libc::c_int,
+            K as libc::c_int,
+            1.0,
+            a,
+            K as libc::c_int,
+            b_t,
+            K as libc::c_int,
+            1.0,
+            c,
+            N as libc::c_int,
         )
     }
 }
@@ -256,9 +387,31 @@ fn vv<const M: usize, const N: usize>(a: &[f32; M], b: &[f32; N], c: &mut [[f32;
     let a = a.as_ptr();
     let b = b.as_ptr();
     let c = c.as_mut_ptr() as *mut f32;
+
+    #[cfg(not(feature = "intel-mkl"))]
     unsafe {
-        sgemm(
+        matrixmultiply::sgemm(
             M, K, N, 1.0, a, K as isize, 1, b, N as isize, 1, 1.0, c, N as isize, 1,
+        )
+    }
+
+    #[cfg(feature = "intel-mkl")]
+    unsafe {
+        cblas_sys::cblas_sgemm(
+            cblas_sys::CblasRowMajor,
+            cblas_sys::CblasNoTrans,
+            cblas_sys::CblasNoTrans,
+            M as libc::c_int,
+            N as libc::c_int,
+            K as libc::c_int,
+            1.0,
+            a,
+            K as libc::c_int,
+            b,
+            N as libc::c_int,
+            1.0,
+            c,
+            N as libc::c_int,
         )
     }
 }
@@ -400,10 +553,22 @@ mod tests {
                 [1.0546886, 1.165766]
             ]
         );
-        let gradients = r.mean().backward();
+        let gradients = r.exp().mean().backward();
         assert_eq!(
             gradients.ref_gradient(&a),
-            &[[0.1719625, 0.111175, 0.1489875]; 4]
+            &[
+                [0.37689444, 0.24156547, 0.30238447],
+                [0.80570966, 0.5184905, 0.6703743],
+                [0.4199963, 0.2735345, 0.38693744],
+                [0.5321113, 0.34252504, 0.4438907]
+            ]
+        );
+        assert_eq!(
+            gradients.ref_gradient(&b),
+            &[
+                [0.8737376, 0.9339924, 1.1659734],
+                [0.9888564, 0.991189, 1.2298465]
+            ]
         );
     }
 
@@ -434,7 +599,17 @@ mod tests {
         let b = Tensor2D::new([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
         let r: Tensor1D<2, OwnedTape> = vecmat_mul_transpose(a.trace(), &b);
         assert_eq!(r.data(), &[1.261436, 1.5543157]);
-        let gradients = r.mean().backward();
-        assert_eq!(gradients.ref_gradient(&a), &[0.66719997, 0.68895, 0.6823]);
+        let gradients = r.exp().mean().backward();
+        assert_eq!(
+            gradients.ref_gradient(&a),
+            &[2.6883178, 2.9369607, 2.9256766]
+        );
+        assert_eq!(
+            gradients.ref_gradient(&b),
+            &[
+                [1.2879219, 0.70150787, 1.6746868],
+                [1.7261779, 0.94021803, 2.244552]
+            ]
+        );
     }
 }
