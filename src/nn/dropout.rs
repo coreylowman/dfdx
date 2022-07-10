@@ -22,10 +22,11 @@ pub struct DropoutOneIn<const N: usize> {
 }
 
 impl<const N: usize> Default for DropoutOneIn<N> {
-    /// Seeds [StdRng] with 0.
+    /// Seeds [StdRng] with a new seed every time this is called. The seed comes from the [UniqueId] constructor.
     fn default() -> Self {
+        let seed = unique_id().0 as u64;
         Self {
-            rng: RefCell::new(StdRng::seed_from_u64(0)),
+            rng: RefCell::new(StdRng::seed_from_u64(seed)),
         }
     }
 }
@@ -98,11 +99,12 @@ impl Dropout {
         }
     }
 
-    /// Constructs [Dropout] with `p` and `StdRng::seed_from_u64(0)`.
+    /// Constructs [Dropout] with `p` and a different seed every call.
     pub fn p(p: f32) -> Self {
+        let seed = unique_id().0 as u64;
         Self {
             p,
-            rng: RefCell::new(StdRng::seed_from_u64(0)),
+            rng: RefCell::new(StdRng::seed_from_u64(seed)),
         }
     }
 }
@@ -154,8 +156,8 @@ mod tests {
 
     #[test]
     fn test_dropout_internal_rng_reproduce() {
-        let d1 = Dropout::p(0.5);
-        let d2 = Dropout::p(0.5);
+        let d1 = Dropout::new(0.5, 0);
+        let d2 = Dropout::new(0.5, 0);
         let t: Tensor1D<100> = Tensor1D::ones();
         let r1 = d1.forward(t.trace());
         let r2 = d2.forward(t.trace());
