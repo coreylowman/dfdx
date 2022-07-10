@@ -39,6 +39,28 @@ mod link_info {
     pub const LINK_LIBS: &[&str] = &[];
 }
 
+#[cfg(all(feature = "cblas", target_os = "linux"))]
+mod link_info {
+    pub const LINUX_NEEDS_TESTING_ERROR: _ =
+        "Linux targets are not supported/tested yet. Please contact me so you can help me do this!";
+    use super::*;
+    pub const LINK_TYPE: &str = STATIC_LINK;
+    pub const REDIST_DIRS: &[&str] = &[];
+    pub const LINK_DIRS: &[&str] = &[];
+    pub const LINK_LIBS: &[&str] = &[];
+}
+
+#[cfg(all(feature = "cblas", target_os = "macos"))]
+mod link_info {
+    pub const MACOS_NEEDS_TESTING_ERROR: _ =
+        "MacOS targets are not supported/tested yet. Please contact me so you can help me do this!";
+    use super::*;
+    pub const LINK_TYPE: &str = STATIC_LINK;
+    pub const REDIST_DIRS: &[&str] = &[];
+    pub const LINK_DIRS: &[&str] = &[];
+    pub const LINK_LIBS: &[&str] = &[];
+}
+
 #[cfg(all(
     feature = "cblas",
     feature = "mkl-static-lp64-iomp",

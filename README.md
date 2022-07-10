@@ -51,7 +51,7 @@ Linking is currently tested & verified on the following platforms:
 
 - [x] Windows (all options fully supported)
 - [ ] Linux (need someone to help me test!)
-- [ ] Mac (need someone to help me test!)
+- [ ] MacOS (need someone to help me test!)
 
 Example:
 ```toml
