@@ -169,14 +169,14 @@ fn mm<const M: usize, const K: usize, const N: usize>(
     let b = b.as_ptr() as *const f32;
     let c = c.as_mut_ptr() as *mut f32;
 
-    #[cfg(not(feature = "intel-mkl"))]
+    #[cfg(not(feature = "cblas"))]
     unsafe {
         matrixmultiply::sgemm(
             M, K, N, 1.0, a, K as isize, 1, b, N as isize, 1, 1.0, c, N as isize, 1,
         )
     }
 
-    #[cfg(feature = "intel-mkl")]
+    #[cfg(feature = "cblas")]
     unsafe {
         cblas_sys::cblas_sgemm(
             cblas_sys::CblasRowMajor,
@@ -207,14 +207,14 @@ fn mm_at<const M: usize, const K: usize, const N: usize>(
     let b = b.as_ptr() as *const f32;
     let c = c.as_mut_ptr() as *mut f32;
 
-    #[cfg(not(feature = "intel-mkl"))]
+    #[cfg(not(feature = "cblas"))]
     unsafe {
         matrixmultiply::sgemm(
             M, K, N, 1.0, a_t, 1, M as isize, b, N as isize, 1, 1.0, c, N as isize, 1,
         )
     }
 
-    #[cfg(feature = "intel-mkl")]
+    #[cfg(feature = "cblas")]
     unsafe {
         cblas_sys::cblas_sgemm(
             cblas_sys::CblasRowMajor,
@@ -245,14 +245,14 @@ fn mm_bt<const M: usize, const K: usize, const N: usize>(
     let b_t = b_t.as_ptr() as *const f32;
     let c = c.as_mut_ptr() as *mut f32;
 
-    #[cfg(not(feature = "intel-mkl"))]
+    #[cfg(not(feature = "cblas"))]
     unsafe {
         matrixmultiply::sgemm(
             M, K, N, 1.0, a, K as isize, 1, b_t, 1, K as isize, 1.0, c, N as isize, 1,
         )
     }
 
-    #[cfg(feature = "intel-mkl")]
+    #[cfg(feature = "cblas")]
     unsafe {
         cblas_sys::cblas_sgemm(
             cblas_sys::CblasRowMajor,
@@ -283,14 +283,14 @@ fn mm_atct<const M: usize, const K: usize, const N: usize>(
     let b = b.as_ptr() as *const f32;
     let c_t = c_t.as_mut_ptr() as *mut f32;
 
-    #[cfg(not(feature = "intel-mkl"))]
+    #[cfg(not(feature = "cblas"))]
     unsafe {
         matrixmultiply::sgemm(
             M, K, N, 1.0, a_t, 1, M as isize, b, N as isize, 1, 1.0, c_t, 1, M as isize,
         )
     }
 
-    #[cfg(feature = "intel-mkl")]
+    #[cfg(feature = "cblas")]
     unsafe {
         cblas_sys::cblas_sgemm(
             cblas_sys::CblasColMajor,
@@ -317,7 +317,7 @@ fn vm<const K: usize, const N: usize>(a: &[f32; K], b: &[[f32; N]; K], c: &mut [
     let b = b.as_ptr() as *const f32;
     let c = c.as_mut_ptr();
 
-    #[cfg(not(feature = "intel-mkl"))]
+    #[cfg(not(feature = "cblas"))]
     unsafe {
         const M: usize = 1;
         matrixmultiply::sgemm(
@@ -325,7 +325,7 @@ fn vm<const K: usize, const N: usize>(a: &[f32; K], b: &[[f32; N]; K], c: &mut [
         )
     }
 
-    #[cfg(feature = "intel-mkl")]
+    #[cfg(feature = "cblas")]
     unsafe {
         cblas_sys::cblas_sgemv(
             cblas_sys::CblasColMajor,
@@ -350,7 +350,7 @@ fn vm_bt<const K: usize, const N: usize>(a: &[f32; K], b_t: &[[f32; K]; N], c: &
     let b_t = b_t.as_ptr() as *const f32;
     let c = c.as_mut_ptr();
 
-    #[cfg(not(feature = "intel-mkl"))]
+    #[cfg(not(feature = "cblas"))]
     unsafe {
         const M: usize = 1;
         matrixmultiply::sgemm(
@@ -358,7 +358,7 @@ fn vm_bt<const K: usize, const N: usize>(a: &[f32; K], b_t: &[[f32; K]; N], c: &
         )
     }
 
-    #[cfg(feature = "intel-mkl")]
+    #[cfg(feature = "cblas")]
     unsafe {
         cblas_sys::cblas_sgemv(
             cblas_sys::CblasRowMajor,
@@ -384,14 +384,14 @@ fn vv<const M: usize, const N: usize>(a: &[f32; M], b: &[f32; N], c: &mut [[f32;
     let b = b.as_ptr();
     let c = c.as_mut_ptr() as *mut f32;
 
-    #[cfg(not(feature = "intel-mkl"))]
+    #[cfg(not(feature = "cblas"))]
     unsafe {
         matrixmultiply::sgemm(
             M, K, N, 1.0, a, K as isize, 1, b, N as isize, 1, 1.0, c, N as isize, 1,
         )
     }
 
-    #[cfg(feature = "intel-mkl")]
+    #[cfg(feature = "cblas")]
     unsafe {
         cblas_sys::cblas_sgemm(
             cblas_sys::CblasRowMajor,

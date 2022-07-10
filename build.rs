@@ -1,10 +1,24 @@
-use std::path::PathBuf;
+//! This is only for the "cblas" feature.
+//!
+//! If you enable the cblas feature then you must choose one of the following
+//! link formats:
+//!
+//! 1. mkl-static-lp64-iomp
+//! 2. mkl-static-lp64-seq
+//! 3. mkl-static-ilp64-iomp
+//! 4. mkl-static-ilp64-seq
+//! 5. mkl-dynamic-lp64-iomp
+//! 6. mkl-dynamic-lp64-seq
+//! 7. mkl-dynamic-ilp64-iomp
+//! 8. mkl-dynamic-ilp64-seq
+//!
+//! As described [by Intel here](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-math-kernel-library-intel-mkl-and-pkg-config-tool.html).
 
 pub const STATIC_LINK: &str = "static";
 pub const DYNAMIC_LINK: &str = "dylib";
 
 #[cfg(all(
-    feature = "intel-mkl",
+    feature = "cblas",
     not(any(
         feature = "mkl-static-lp64-iomp",
         feature = "mkl-static-lp64-seq",
@@ -26,7 +40,7 @@ mod link_info {
 }
 
 #[cfg(all(
-    feature = "intel-mkl",
+    feature = "cblas",
     feature = "mkl-static-lp64-iomp",
     target_os = "windows"
 ))]
@@ -52,7 +66,7 @@ mod link_info {
 }
 
 #[cfg(all(
-    feature = "intel-mkl",
+    feature = "cblas",
     feature = "mkl-static-lp64-seq",
     target_os = "windows"
 ))]
@@ -71,7 +85,7 @@ mod link_info {
 }
 
 #[cfg(all(
-    feature = "intel-mkl",
+    feature = "cblas",
     feature = "mkl-static-ilp64-iomp",
     target_os = "windows"
 ))]
@@ -96,7 +110,7 @@ mod link_info {
 }
 
 #[cfg(all(
-    feature = "intel-mkl",
+    feature = "cblas",
     feature = "mkl-static-ilp64-seq",
     target_os = "windows"
 ))]
@@ -115,7 +129,7 @@ mod link_info {
 }
 
 #[cfg(all(
-    feature = "intel-mkl",
+    feature = "cblas",
     feature = "mkl-dynamic-lp64-iomp",
     target_os = "windows"
 ))]
@@ -139,7 +153,7 @@ mod link_info {
 }
 
 #[cfg(all(
-    feature = "intel-mkl",
+    feature = "cblas",
     feature = "mkl-dynamic-lp64-seq",
     target_os = "windows"
 ))]
@@ -158,7 +172,7 @@ mod link_info {
 }
 
 #[cfg(all(
-    feature = "intel-mkl",
+    feature = "cblas",
     feature = "mkl-dynamic-ilp64-iomp",
     target_os = "windows"
 ))]
@@ -182,7 +196,7 @@ mod link_info {
 }
 
 #[cfg(all(
-    feature = "intel-mkl",
+    feature = "cblas",
     feature = "mkl-dynamic-ilp64-seq",
     target_os = "windows"
 ))]
@@ -208,7 +222,7 @@ pub enum BuildError {
 }
 
 fn main() -> Result<(), BuildError> {
-    #[cfg(feature = "intel-mkl")]
+    #[cfg(feature = "cblas")]
     {
         let root = std::env::var("ONEAPI_ROOT").map_err(BuildError::OneAPINotFound)?;
         let path = std::env::var("PATH").map_err(BuildError::PathNotFound)?;
@@ -220,7 +234,7 @@ fn main() -> Result<(), BuildError> {
             }
         }
 
-        let root: PathBuf = root.into();
+        let root: std::path::PathBuf = root.into();
 
         for lib_dir in link_info::LINK_DIRS {
             println!("cargo:rustc-link-search={}", root.join(lib_dir).display());

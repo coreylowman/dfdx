@@ -30,16 +30,16 @@ cblas-sys = { version = "0.1.4", optional = true }
 libc = { version = "0.2.126", optional = true }
 
 [features]
-default = ["intel-mkl", "mkl-dynamic-lp64-iomp"]
-intel-mkl = ["dep:cblas-sys", "dep:libc"]
-mkl-static-lp64-iomp = []
-mkl-static-lp64-seq = []
-mkl-static-ilp64-iomp = []
-mkl-static-ilp64-seq = []
-mkl-dynamic-lp64-iomp = []
-mkl-dynamic-lp64-seq = []
-mkl-dynamic-ilp64-iomp = []
-mkl-dynamic-ilp64-seq = []
+default = ["mkl-dynamic-lp64-iomp"]
+cblas = ["dep:cblas-sys", "dep:libc"]
+mkl-static-lp64-iomp = ["cblas"]
+mkl-static-lp64-seq = ["cblas"]
+mkl-static-ilp64-iomp = ["cblas"]
+mkl-static-ilp64-seq = ["cblas"]
+mkl-dynamic-lp64-iomp = ["cblas"]
+mkl-dynamic-lp64-seq = ["cblas"]
+mkl-dynamic-ilp64-iomp = ["cblas"]
+mkl-dynamic-ilp64-seq = ["cblas"]
 
 [dev-dependencies]
 tempfile = "3.3.0"

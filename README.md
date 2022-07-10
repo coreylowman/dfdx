@@ -31,6 +31,38 @@ See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
 
 [2] There is only 1 usage of RefCell in the `nn::Dropout` layer to make it's underlying rng easy to use.
 
+## BLAS libraries
+
+The [matrixmultiply crate](https://crates.io/crates/matrixmultiply) is the default BLAS library. You don't need
+to do download/install anything for this to work!
+
+To use `cblas` enable the "cblas" feature. Currently [build.rs](build.rs) only supports linking the sgemm/sgemv symbols
+from [Intel MKL](https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit-download.html).
+
+#### Linking to Intel MKL
+
+You can enable **linking** to Intel MKL (which is what Pytorch uses) by enabling one of the "mkl-*-*-*" features on
+the following platforms:
+
+- [x] Windows (all options fully supported)
+- [ ] Linux (easy, but need someone to help me test!)
+- [ ] Mac (easy, need someone to help me test!)
+
+Example:
+```toml
+# dynamic link to lp64 version of mkl with OpenMP threading libraries
+# this will auto enable the "cblas" feature"
+dfdx = { version = "...", features = ["mkl-dynamic-lp64-iomp"] }
+```
+
+See [build.rs](build.rs) for more details.
+
+#### Installing Intel MKL libraries
+
+You will need to install Intel MKL on your own from [this page](https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit-download.html). It's pretty easy!
+
+[build.rs](build.rs) will usefully fail if you don't have the correct path/environment variables.
+
 ## Features
 
 1. 👌 Simple Neural Networks API, completely type checked at compile time. See [examples/regression.rs](examples/regression.rs)
