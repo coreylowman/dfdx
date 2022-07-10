@@ -313,13 +313,13 @@ fn mm_atct<const M: usize, const K: usize, const N: usize>(
 
 /// vector matrix multiply `c += a * b`
 fn vm<const K: usize, const N: usize>(a: &[f32; K], b: &[[f32; N]; K], c: &mut [f32; N]) {
-    const M: usize = 1;
     let a = a.as_ptr();
     let b = b.as_ptr() as *const f32;
     let c = c.as_mut_ptr();
 
     #[cfg(not(feature = "intel-mkl"))]
     unsafe {
+        const M: usize = 1;
         matrixmultiply::sgemm(
             M, K, N, 1.0, a, K as isize, 1, b, N as isize, 1, 1.0, c, N as isize, 1,
         )
@@ -327,34 +327,32 @@ fn vm<const K: usize, const N: usize>(a: &[f32; K], b: &[[f32; N]; K], c: &mut [
 
     #[cfg(feature = "intel-mkl")]
     unsafe {
-        cblas_sys::cblas_sgemm(
-            cblas_sys::CblasRowMajor,
+        cblas_sys::cblas_sgemv(
+            cblas_sys::CblasColMajor,
             cblas_sys::CblasNoTrans,
-            cblas_sys::CblasNoTrans,
-            M as libc::c_int,
             N as libc::c_int,
             K as libc::c_int,
             1.0,
-            a,
-            K as libc::c_int,
             b,
             N as libc::c_int,
+            a,
+            1,
             1.0,
             c,
-            N as libc::c_int,
+            1,
         )
     }
 }
 
 /// vector matrix multiply `c += a * trans(b)`
 fn vm_bt<const K: usize, const N: usize>(a: &[f32; K], b_t: &[[f32; K]; N], c: &mut [f32; N]) {
-    const M: usize = 1;
     let a = a.as_ptr();
     let b_t = b_t.as_ptr() as *const f32;
     let c = c.as_mut_ptr();
 
     #[cfg(not(feature = "intel-mkl"))]
     unsafe {
+        const M: usize = 1;
         matrixmultiply::sgemm(
             M, K, N, 1.0, a, K as isize, 1, b_t, 1, K as isize, 1.0, c, N as isize, 1,
         )
@@ -362,21 +360,19 @@ fn vm_bt<const K: usize, const N: usize>(a: &[f32; K], b_t: &[[f32; K]; N], c: &
 
     #[cfg(feature = "intel-mkl")]
     unsafe {
-        cblas_sys::cblas_sgemm(
+        cblas_sys::cblas_sgemv(
             cblas_sys::CblasRowMajor,
             cblas_sys::CblasNoTrans,
-            cblas_sys::CblasTrans,
-            M as libc::c_int,
             N as libc::c_int,
             K as libc::c_int,
             1.0,
-            a,
-            K as libc::c_int,
             b_t,
             K as libc::c_int,
+            a,
+            1,
             1.0,
             c,
-            N as libc::c_int,
+            1,
         )
     }
 }
