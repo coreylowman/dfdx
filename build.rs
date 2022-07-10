@@ -2,7 +2,7 @@
 //!
 //! 1. `mkl-static-iomp`: staticly link, use threaded libraries
 //! 2. `mkl-static-seq`: staticly link, use sequential libraries
-//! 3. `mkl-dynamic-iomp`: staticly link, use threaded libraries
+//! 3. `mkl-dynamic-iomp`: dynamic link, use threaded libraries
 //! 4. `mkl-dynamic-seq`: staticly link, use sequential libraries
 //!
 //! As described [by Intel here](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-math-kernel-library-intel-mkl-and-pkg-config-tool.html).
