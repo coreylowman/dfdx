@@ -148,3 +148,34 @@ pub fn keep_denormals() {
         unsafe { _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF) }
     }
 }
+
+#[cfg(test)]
+pub(crate) mod tests {
+    pub trait AssertClose {
+        fn assert_close(&self, rhs: &Self, tolerance: f32);
+    }
+
+    impl<const M: usize> AssertClose for [f32; M] {
+        fn assert_close(&self, rhs: &Self, tolerance: f32) {
+            if !self
+                .iter()
+                .zip(rhs.iter())
+                .all(|(a, b)| (a - b).abs() <= tolerance)
+            {
+                panic!("{:?} {:?}", self, rhs);
+            }
+        }
+    }
+
+    impl<T: AssertClose, const M: usize> AssertClose for [T; M] {
+        fn assert_close(&self, rhs: &Self, tolerance: f32) {
+            for (lhs_i, rhs_i) in self.iter().zip(rhs.iter()) {
+                lhs_i.assert_close(rhs_i, tolerance);
+            }
+        }
+    }
+
+    pub fn assert_close<T: AssertClose>(a: &T, b: &T) {
+        a.assert_close(b, 1e-7);
+    }
+}

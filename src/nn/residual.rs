@@ -74,6 +74,7 @@ impl<F: LoadFromNpz> LoadFromNpz for Residual<F> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::assert_close;
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;
     use tempfile::NamedTempFile;
@@ -154,14 +155,14 @@ mod tests {
 
         let x = Tensor2D::new(X);
         let y = model.forward(x.traced());
-        assert_eq!(y.data(), &Y);
+        assert_close(y.data(), &Y);
 
         let gradients = y.mean().backward();
 
-        assert_eq!(gradients.ref_gradient(&model.0 .0.weight), &W0G);
-        assert_eq!(gradients.ref_gradient(&model.0 .0.bias), &B0G);
-        assert_eq!(gradients.ref_gradient(&model.0 .2.weight), &W2G);
-        assert_eq!(gradients.ref_gradient(&model.0 .2.bias), &B2G);
+        assert_close(gradients.ref_gradient(&model.0 .0.weight), &W0G);
+        assert_close(gradients.ref_gradient(&model.0 .0.bias), &B0G);
+        assert_close(gradients.ref_gradient(&model.0 .2.weight), &W2G);
+        assert_close(gradients.ref_gradient(&model.0 .2.bias), &B2G);
     }
 
     #[test]

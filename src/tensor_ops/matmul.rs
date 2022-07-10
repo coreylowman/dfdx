@@ -419,6 +419,7 @@ fn vv<const M: usize, const N: usize>(a: &[f32; M], b: &[f32; N], c: &mut [[f32;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::assert_close;
 
     #[test]
     fn test_vecmul() {
@@ -429,11 +430,11 @@ mod tests {
 
         let mut out = [0.0; 2];
         vm(&x, &y, &mut out);
-        assert_eq!(out, expected);
+        assert_close(&out, &expected);
 
         let mut out = [0.0; 2];
         vm_bt(&x, &y_t, &mut out);
-        assert_eq!(out, expected);
+        assert_close(&out, &expected);
     }
 
     #[test]
@@ -455,15 +456,15 @@ mod tests {
 
         let mut out = [[0.0; 2]; 4];
         mm(&x, &y, &mut out);
-        assert_eq!(out, expected);
+        assert_close(&out, &expected);
 
         let mut out = [[0.0; 2]; 4];
         mm_at(&x_t, &y, &mut out);
-        assert_eq!(out, expected);
+        assert_close(&out, &expected);
 
         let mut out = [[0.0; 2]; 4];
         mm_bt(&x, &y_t, &mut out);
-        assert_eq!(out, expected);
+        assert_close(&out, &expected);
     }
 
     #[test]
@@ -473,25 +474,25 @@ mod tests {
 
         let mut out = [[0.0; 4]; 3];
         vv(&x, &y, &mut out);
-        assert_eq!(
-            out,
-            [
+        assert_close(
+            &out,
+            &[
                 [-1.0, 0.5, -1.0 / 3.0, 0.25],
                 [-2.0, 1.0, -2.0 / 3.0, 0.5],
                 [-3.0, 1.5, -1.0, 0.75],
-            ]
+            ],
         );
 
         let mut out = [[0.0; 3]; 4];
         vv(&y, &x, &mut out);
-        assert_eq!(
-            out,
-            [
+        assert_close(
+            &out,
+            &[
                 [-1.0, -2.0, -3.0],
                 [0.5, 1.0, 1.5],
                 [-1.0 / 3.0, -2.0 / 3.0, -1.0],
                 [0.25, 0.5, 0.75],
-            ]
+            ],
         );
     }
 
@@ -505,32 +506,32 @@ mod tests {
         ]);
         let b = Tensor2D::new([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
         let r: Tensor2D<4, 2, OwnedTape> = matmul(a.trace(), &b);
-        assert_eq!(
+        assert_close(
             r.data(),
             &[
                 [0.62960154, 0.8554974],
                 [1.4642863, 1.5830379],
                 [1.0090116, 0.82806206],
-                [1.0546886, 1.165766]
-            ]
+                [1.0546886, 1.165766],
+            ],
         );
         let gradients = r.exp().mean().backward();
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&a),
             &[
                 [0.37689444, 0.24156547, 0.30238447],
                 [0.80570966, 0.5184905, 0.6703743],
                 [0.4199963, 0.2735345, 0.38693744],
-                [0.5321113, 0.34252504, 0.4438907]
-            ]
+                [0.5321113, 0.34252504, 0.4438907],
+            ],
         );
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&b),
             &[
                 [0.8737376, 0.9888564],
                 [0.9339924, 0.991189],
-                [1.1659734, 1.2298465]
-            ]
+                [1.1659734, 1.2298465],
+            ],
         );
     }
 
@@ -544,31 +545,31 @@ mod tests {
         ]);
         let b = Tensor2D::new([[0.4651, 0.3360, 0.8092], [0.9106, 0.5534, 0.3827]]);
         let r: Tensor2D<4, 2, OwnedTape> = matmul_transpose(a.trace(), &b);
-        assert_eq!(
+        assert_close(
             r.data(),
             &[
                 [0.62960154, 0.8554974],
                 [1.4642863, 1.5830379],
                 [1.0090116, 0.82806206],
-                [1.0546886, 1.165766]
-            ]
+                [1.0546886, 1.165766],
+            ],
         );
         let gradients = r.exp().mean().backward();
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&a),
             &[
                 [0.37689444, 0.24156547, 0.30238447],
                 [0.80570966, 0.5184905, 0.6703743],
                 [0.4199963, 0.2735345, 0.38693744],
-                [0.5321113, 0.34252504, 0.4438907]
-            ]
+                [0.5321113, 0.34252504, 0.4438907],
+            ],
         );
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&b),
             &[
                 [0.8737376, 0.9339924, 1.1659734],
-                [0.9888564, 0.991189, 1.2298465]
-            ]
+                [0.9888564, 0.991189, 1.2298465],
+            ],
         );
     }
 
@@ -577,19 +578,19 @@ mod tests {
         let a = Tensor1D::new([0.7296, 0.3974, 0.9487]);
         let b = Tensor2D::new([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
         let r: Tensor1D<2, OwnedTape> = vecmat_mul(a.trace(), &b);
-        assert_eq!(r.data(), &[1.261436, 1.5543157]);
+        assert_close(r.data(), &[1.261436, 1.5543157]);
         let gradients = r.exp().mean().backward();
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&a),
-            &[2.6883178, 2.9369607, 2.9256766]
+            &[2.6883178, 2.9369607, 2.9256766],
         );
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&b),
             &[
                 [1.2879219, 1.7261779],
                 [0.70150787, 0.94021803],
-                [1.6746868, 2.244552]
-            ]
+                [1.6746868, 2.244552],
+            ],
         );
     }
 
@@ -598,18 +599,18 @@ mod tests {
         let a = Tensor1D::new([0.7296, 0.3974, 0.9487]);
         let b = Tensor2D::new([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
         let r: Tensor1D<2, OwnedTape> = vecmat_mul_transpose(a.trace(), &b);
-        assert_eq!(r.data(), &[1.261436, 1.5543157]);
+        assert_close(r.data(), &[1.261436, 1.5543157]);
         let gradients = r.exp().mean().backward();
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&a),
-            &[2.6883178, 2.9369607, 2.9256766]
+            &[2.6883178, 2.9369607, 2.9256766],
         );
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&b),
             &[
                 [1.2879219, 0.70150787, 1.6746868],
-                [1.7261779, 0.94021803, 2.244552]
-            ]
+                [1.7261779, 0.94021803, 2.244552],
+            ],
         );
     }
 }

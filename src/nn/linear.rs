@@ -104,6 +104,7 @@ mod tests {
     use tempfile::NamedTempFile;
 
     use super::*;
+    use crate::tests::assert_close;
 
     const W: [[f32; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
@@ -120,20 +121,20 @@ mod tests {
 
         let x = Tensor1D::new([-0.8808001, 2.4185333, 2.2478335, 0.0565211, 2.031299]);
         let y = model.forward(x.trace());
-        assert_eq!(y.data(), &[-0.93430865, 0.08624211]);
+        assert_close(y.data(), &[-0.93430865, 0.08624211]);
 
         let loss = y.square().mean();
         let gradients = loss.backward();
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&model.weight),
             &[
-                [0.82293916, -2.2596567, -2.1001704, -0.05280815, -1.8978603,],
+                [0.82293916, -2.2596567, -2.1001704, -0.05280815, -1.8978603],
                 [-0.07596206, 0.20857942, 0.19385791, 0.004874499, 0.17518352],
-            ]
+            ],
         );
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&model.bias),
-            &[-0.93430865, 0.08624211]
+            &[-0.93430865, 0.08624211],
         );
     }
 
@@ -150,27 +151,27 @@ mod tests {
             [-0.8291412, 0.07691376, -0.26538327, 0.90017676, -1.8790455],
         ]);
         let y = model.forward(x.trace());
-        assert_eq!(
+        assert_close(
             y.data(),
             &[
                 [1.3914378, -0.012851536],
                 [-0.005462587, -0.14800104],
-                [0.9177769, -0.7897872]
-            ]
+                [0.9177769, -0.7897872],
+            ],
         );
 
         let loss = y.square().mean();
         let gradients = loss.backward();
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&model.weight),
             &[
                 [-1.1541969, 0.6956873, -0.8553807, 0.9289255, 0.04931633],
                 [0.29272807, -0.17702839, 0.08586791, -0.24057935, 0.5286576],
-            ]
+            ],
         );
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&model.bias),
-            &[0.7679174, -0.31687993]
+            &[0.7679174, -0.31687993],
         );
     }
 
