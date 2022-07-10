@@ -33,20 +33,25 @@ See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
 
 ## BLAS libraries
 
-The [matrixmultiply crate](https://crates.io/crates/matrixmultiply) is the default BLAS library. You don't need
-to do download/install anything for this to work!
+The [matrixmultiply crate](https://crates.io/crates/matrixmultiply) is the default BLAS library. **You don't need
+to do download/install anything for this to work!**
 
-To use `cblas` enable the "cblas" feature. Currently [build.rs](build.rs) only supports linking the sgemm/sgemv symbols
-from [Intel MKL](https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit-download.html).
+To link to the `Intel MKL` libraries (assuming you installed it already) enable one of the provided "mkl-\*-\*-\*" features:
 
-#### Linking to Intel MKL
+1. `mkl-static-lp64-iomp`
+2. `mkl-static-lp64-seq`
+3. `mkl-static-ilp64-iomp`
+4. `mkl-static-ilp64-seq`
+5. `mkl-dynamic-lp64-iomp`
+6. `mkl-dynamic-lp64-seq`
+7. `mkl-dynamic-ilp64-iomp`
+8. `mkl-dynamic-ilp64-seq`
 
-You can enable **linking** to Intel MKL (which is what Pytorch uses) by enabling one of the "mkl-*-*-*" features on
-the following platforms:
+Linking is currently tested & verified on the following platforms:
 
 - [x] Windows (all options fully supported)
-- [ ] Linux (easy, but need someone to help me test!)
-- [ ] Mac (easy, need someone to help me test!)
+- [ ] Linux (need someone to help me test!)
+- [ ] Mac (need someone to help me test!)
 
 Example:
 ```toml
@@ -61,7 +66,7 @@ See [build.rs](build.rs) for more details.
 
 You will need to install Intel MKL on your own from [this page](https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit-download.html). It's pretty easy!
 
-[build.rs](build.rs) will usefully fail if you don't have the correct path/environment variables.
+[build.rs](build.rs) will fail helpfully if you don't have the correct path/environment variables.
 
 ## Features
 
