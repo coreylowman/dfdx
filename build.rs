@@ -95,7 +95,6 @@ mod link_info {
         "mkl_intel_lp64",
         "mkl_intel_thread",
         "libiomp5md",
-        "libiompstubs5md",
     ];
 }
 

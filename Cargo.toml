@@ -30,7 +30,7 @@ cblas-sys = { version = "0.1.4", optional = true }
 libc = { version = "0.2.126", optional = true }
 
 [features]
-default = ["mkl-dynamic-lp64-iomp"]
+default = []
 cblas = ["dep:cblas-sys", "dep:libc"]
 mkl-static-lp64-iomp = ["cblas"]
 mkl-static-lp64-seq = ["cblas"]

@@ -38,14 +38,16 @@ to do download/install anything for this to work!**
 
 To link to the `Intel MKL` libraries (assuming you installed it already) enable one of the provided "mkl-\*-\*-\*" features:
 
-1. `mkl-static-lp64-iomp`
-2. `mkl-static-lp64-seq`
-3. `mkl-static-ilp64-iomp`
-4. `mkl-static-ilp64-seq`
-5. `mkl-dynamic-lp64-iomp`
-6. `mkl-dynamic-lp64-seq`
-7. `mkl-dynamic-ilp64-iomp`
-8. `mkl-dynamic-ilp64-seq`
+1. `mkl-dynamic-lp64-iomp`
+2. `mkl-dynamic-lp64-seq`
+3. `mkl-dynamic-ilp64-iomp`
+4. `mkl-dynamic-ilp64-seq`
+5. `mkl-static-lp64-iomp`
+6. `mkl-static-lp64-seq`
+7. `mkl-static-ilp64-iomp`
+8. `mkl-static-ilp64-seq`
+
+*Recommend `dynamic` for build times & executable size, and `iomp` for more cpu utilization!*
 
 Linking is currently tested & verified on the following platforms:
 
