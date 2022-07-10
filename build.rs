@@ -3,14 +3,12 @@
 //! If you enable the cblas feature then you must choose one of the following
 //! link formats:
 //!
-//! 1. mkl-static-lp64-iomp
-//! 2. mkl-static-lp64-seq
-//! 3. mkl-static-ilp64-iomp
-//! 4. mkl-static-ilp64-seq
-//! 5. mkl-dynamic-lp64-iomp
-//! 6. mkl-dynamic-lp64-seq
-//! 7. mkl-dynamic-ilp64-iomp
-//! 8. mkl-dynamic-ilp64-seq
+//! 1. mkl-static-iomp
+//! 2. mkl-static-seq
+//! 3. mkl-dynamic-iomp
+//! 4. mkl-dynamic-seq
+//!
+//! **NOTE** lp64 vs ilp64 is chosen based on [target_pointer_width](https://doc.rust-lang.org/reference/conditional-compilation.html#target_pointer_width) cfg variable.
 //!
 //! As described [by Intel here](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-math-kernel-library-intel-mkl-and-pkg-config-tool.html).
 //!
@@ -32,14 +30,10 @@ pub const DYNAMIC_LINK: &str = "dylib";
 #[cfg(all(
     feature = "cblas",
     not(any(
-        feature = "mkl-static-lp64-iomp",
-        feature = "mkl-static-lp64-seq",
-        feature = "mkl-static-ilp64-iomp",
-        feature = "mkl-static-ilp64-seq",
-        feature = "mkl-dynamic-lp64-iomp",
-        feature = "mkl-dynamic-lp64-seq",
-        feature = "mkl-dynamic-ilp64-iomp",
-        feature = "mkl-dynamic-ilp64-seq",
+        feature = "mkl-static-iomp",
+        feature = "mkl-static-seq",
+        feature = "mkl-dynamic-iomp",
+        feature = "mkl-dynamic-seq",
     ))
 ))]
 mod link_info {
@@ -75,8 +69,9 @@ mod link_info {
 
 #[cfg(all(
     feature = "cblas",
-    feature = "mkl-static-lp64-iomp",
-    target_os = "windows"
+    feature = "mkl-static-iomp",
+    target_os = "windows",
+    target_pointer_width = "64"
 ))]
 mod link_info {
     use super::*;
@@ -100,8 +95,9 @@ mod link_info {
 
 #[cfg(all(
     feature = "cblas",
-    feature = "mkl-static-lp64-seq",
-    target_os = "windows"
+    feature = "mkl-static-seq",
+    target_os = "windows",
+    target_pointer_width = "64",
 ))]
 mod link_info {
     use super::*;
@@ -119,8 +115,9 @@ mod link_info {
 
 #[cfg(all(
     feature = "cblas",
-    feature = "mkl-static-ilp64-iomp",
-    target_os = "windows"
+    feature = "mkl-static-iomp",
+    target_os = "windows",
+    target_pointer_width = "32",
 ))]
 mod link_info {
     use super::*;
@@ -128,11 +125,11 @@ mod link_info {
     pub const LINK_TYPE: &str = STATIC_LINK;
     pub const REDIST_DIRS: &[&str] = &[
         "compiler/latest/windows/redist/ia32_win/compiler",
-        "mkl/latest/redist/intel64",
+        "mkl/latest/redist/ia32",
     ];
     pub const LINK_DIRS: &[&str] = &[
         "compiler/latest/windows/compiler/lib/ia32_win",
-        "mkl/latest/lib/intel64",
+        "mkl/latest/lib/ia32",
     ];
     pub const LINK_LIBS: &[&str] = &[
         "mkl_core",
@@ -144,27 +141,29 @@ mod link_info {
 
 #[cfg(all(
     feature = "cblas",
-    feature = "mkl-static-ilp64-seq",
-    target_os = "windows"
+    feature = "mkl-static-seq",
+    target_os = "windows",
+    target_pointer_width = "32",
 ))]
 mod link_info {
     use super::*;
     pub const LINK_TYPE: &str = STATIC_LINK;
     pub const REDIST_DIRS: &[&str] = &[
         "compiler/latest/windows/redist/ia32_win/compiler",
-        "mkl/latest/redist/intel64",
+        "mkl/latest/redist/ia32",
     ];
     pub const LINK_DIRS: &[&str] = &[
         "compiler/latest/windows/compiler/lib/ia32_win",
-        "mkl/latest/lib/intel64",
+        "mkl/latest/lib/ia32",
     ];
     pub const LINK_LIBS: &[&str] = &["mkl_core", "mkl_intel_ilp64", "mkl_sequential"];
 }
 
 #[cfg(all(
     feature = "cblas",
-    feature = "mkl-dynamic-lp64-iomp",
-    target_os = "windows"
+    feature = "mkl-dynamic-iomp",
+    target_os = "windows",
+    target_pointer_width = "64",
 ))]
 mod link_info {
     use super::*;
@@ -187,8 +186,9 @@ mod link_info {
 
 #[cfg(all(
     feature = "cblas",
-    feature = "mkl-dynamic-lp64-seq",
-    target_os = "windows"
+    feature = "mkl-dynamic-seq",
+    target_os = "windows",
+    target_pointer_width = "64",
 ))]
 mod link_info {
     use super::*;
@@ -206,19 +206,20 @@ mod link_info {
 
 #[cfg(all(
     feature = "cblas",
-    feature = "mkl-dynamic-ilp64-iomp",
-    target_os = "windows"
+    feature = "mkl-dynamic-iomp",
+    target_os = "windows",
+    target_pointer_width = "32",
 ))]
 mod link_info {
     use super::*;
     pub const LINK_TYPE: &str = DYNAMIC_LINK;
     pub const REDIST_DIRS: &[&str] = &[
         "compiler/latest/windows/redist/ia32_win/compiler",
-        "mkl/latest/redist/intel64",
+        "mkl/latest/redist/ia32",
     ];
     pub const LINK_DIRS: &[&str] = &[
         "compiler/latest/windows/compiler/lib/ia32_win",
-        "mkl/latest/lib/intel64",
+        "mkl/latest/lib/ia32",
     ];
     pub const LINK_LIBS: &[&str] = &[
         "mkl_core_dll",
@@ -230,19 +231,20 @@ mod link_info {
 
 #[cfg(all(
     feature = "cblas",
-    feature = "mkl-dynamic-ilp64-seq",
-    target_os = "windows"
+    feature = "mkl-dynamic-seq",
+    target_os = "windows",
+    target_pointer_width = "32",
 ))]
 mod link_info {
     use super::*;
     pub const LINK_TYPE: &str = DYNAMIC_LINK;
     pub const REDIST_DIRS: &[&str] = &[
         "compiler/latest/windows/redist/ia32_win/compiler",
-        "mkl/latest/redist/intel64",
+        "mkl/latest/redist/ia32",
     ];
     pub const LINK_DIRS: &[&str] = &[
         "compiler/latest/windows/compiler/lib/ia32_win",
-        "mkl/latest/lib/intel64",
+        "mkl/latest/lib/ia32",
     ];
     const LINK_LIBS: &[&str] = &["mkl_core_dll", "mkl_intel_ilp64_dll", "mkl_sequential_dll"];
 }

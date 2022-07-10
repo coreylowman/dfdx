@@ -32,14 +32,10 @@ libc = { version = "0.2.126", optional = true }
 [features]
 default = []
 cblas = ["dep:cblas-sys", "dep:libc"]
-mkl-static-lp64-iomp = ["cblas"]
-mkl-static-lp64-seq = ["cblas"]
-mkl-static-ilp64-iomp = ["cblas"]
-mkl-static-ilp64-seq = ["cblas"]
-mkl-dynamic-lp64-iomp = ["cblas"]
-mkl-dynamic-lp64-seq = ["cblas"]
-mkl-dynamic-ilp64-iomp = ["cblas"]
-mkl-dynamic-ilp64-seq = ["cblas"]
+mkl-static-iomp = ["cblas"]
+mkl-static-seq = ["cblas"]
+mkl-dynamic-iomp = ["cblas"]
+mkl-dynamic-seq = ["cblas"]
 
 [dev-dependencies]
 tempfile = "3.3.0"
