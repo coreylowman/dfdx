@@ -13,6 +13,18 @@
 //! 8. mkl-dynamic-ilp64-seq
 //!
 //! As described [by Intel here](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-math-kernel-library-intel-mkl-and-pkg-config-tool.html).
+//!
+//! To add a new target system, copy one of the link_info modules and wrap it with the corresponding cfg block.
+//!
+//! # `link_info` blocks
+//!
+//! Each of these contains various system dependent information on how to link to the MKL libraries:
+//!
+//! - `LINK_TYPE`: either `STATIC_LINK` or `DYNAMIC_LINK`. This is used for `cargo:rustc-link-lib` output in `main`.
+//! - `REDIST_DIRS`: This should contain directories relative to `ONEAPI_ROOT` environment variable that contain the
+//!     shared libraries. `main()` will crash if any of these directories are not on the `PATH` environment variable.
+//! - `LINK_DIRS`: The directory where `.lib` files are. `main()` will output a `cargo:rustc-link-search` for each of these.
+//! - `LINK_LIBS`: The names of the `.lib` files to link. `main()` will output a `cargo:rustc-link-lib` for each of these.
 
 pub const STATIC_LINK: &str = "static";
 pub const DYNAMIC_LINK: &str = "dylib";
