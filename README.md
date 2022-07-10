@@ -31,6 +31,44 @@ See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
 
 [2] There is only 1 usage of RefCell in the `nn::Dropout` layer to make it's underlying rng easy to use.
 
+## BLAS libraries
+
+The [matrixmultiply crate](https://crates.io/crates/matrixmultiply) is the default BLAS library. **You don't need
+to do download/install anything for this to work!**
+
+To link to the `Intel MKL` libraries (assuming you installed it already) enable one of the provided "mkl-\*-\*" features[1]:
+
+1. `mkl-dynamic-iomp`
+2. `mkl-dynamic-seq`
+3. `mkl-static-iomp`
+4. `mkl-static-seq`
+
+*Recommend `dynamic` for build times & executable size, and `iomp` for more cpu utilization!*
+
+Linking is currently tested & verified on the following platforms:
+
+- [x] Windows (all options fully supported)
+- [ ] Linux (need someone to help me test!)
+- [ ] MacOS (need someone to help me test!)
+
+Example:
+```toml
+# dynamic link to lp64 version of mkl with OpenMP threading libraries
+# this will auto enable the "cblas" feature"
+dfdx = { version = "...", features = ["mkl-dynamic-iomp"] }
+```
+
+See [build.rs](build.rs) for more details.
+
+[1] For those familiar with Intel MKL, you may notice lp64 and ilp64 are not listed. These are chosen based on the target_pointer_width
+    value as detailed in build.rs.
+
+#### Installing Intel MKL libraries
+
+You will need to install Intel MKL on your own from [this page](https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit-download.html). It's pretty easy!
+
+[build.rs](build.rs) will fail helpfully if you don't have the correct path/environment variables.
+
 ## Features
 
 1. 👌 Simple Neural Networks API, completely type checked at compile time. See [examples/regression.rs](examples/regression.rs)

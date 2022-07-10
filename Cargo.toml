@@ -26,6 +26,16 @@ rand_distr = "0.4.3"
 matrixmultiply = "0.3.2"
 num-traits = "0.2.15"
 zip = "0.6.2"
+cblas-sys = { version = "0.1.4", optional = true }
+libc = { version = "0.2.126", optional = true }
+
+[features]
+default = []
+cblas = ["dep:cblas-sys", "dep:libc"]
+mkl-static-iomp = ["cblas"]
+mkl-static-seq = ["cblas"]
+mkl-dynamic-iomp = ["cblas"]
+mkl-dynamic-seq = ["cblas"]
 
 [dev-dependencies]
 tempfile = "3.3.0"

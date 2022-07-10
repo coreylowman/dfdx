@@ -111,6 +111,31 @@ pub mod prelude {
     pub use crate::unique_id::*;
 }
 
+#[cfg(not(any(
+    feature = "mkl-static-seq",
+    feature = "mkl-static-iomp",
+    feature = "mkl-dynamic-seq",
+    feature = "mkl-dynamic-iomp"
+)))]
+/// The library used for BLAS. Configure with crate features.
+pub const BLAS_LIB: &str = "matrix-multiply";
+
+#[cfg(feature = "mkl-static-seq")]
+/// The library used for BLAS. Configure with crate features.
+pub const BLAS_LIB: &str = "mkl-static-seq";
+
+#[cfg(feature = "mkl-static-iomp")]
+/// The library used for BLAS. Configure with crate features.
+pub const BLAS_LIB: &str = "mkl-static-iomp";
+
+#[cfg(feature = "mkl-dynamic-seq")]
+/// The library used for BLAS. Configure with crate features.
+pub const BLAS_LIB: &str = "mkl-dynamic-seq";
+
+#[cfg(feature = "mkl-dynamic-iomp")]
+/// The library used for BLAS. Configure with crate features.
+pub const BLAS_LIB: &str = "mkl-dynamic-iomp";
+
 /// Sets a CPU `sse` flag to flush denormal floating point numbers to zero. The opposite of this is [keep_denormals()].
 ///
 /// Some resources:
@@ -146,5 +171,36 @@ pub fn keep_denormals() {
     {
         use std::arch::x86_64::{_MM_FLUSH_ZERO_OFF, _MM_SET_FLUSH_ZERO_MODE};
         unsafe { _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF) }
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    pub trait AssertClose {
+        fn assert_close(&self, rhs: &Self, tolerance: f32);
+    }
+
+    impl<const M: usize> AssertClose for [f32; M] {
+        fn assert_close(&self, rhs: &Self, tolerance: f32) {
+            if !self
+                .iter()
+                .zip(rhs.iter())
+                .all(|(a, b)| (a - b).abs() <= tolerance)
+            {
+                panic!("{:?} {:?}", self, rhs);
+            }
+        }
+    }
+
+    impl<T: AssertClose, const M: usize> AssertClose for [T; M] {
+        fn assert_close(&self, rhs: &Self, tolerance: f32) {
+            for (lhs_i, rhs_i) in self.iter().zip(rhs.iter()) {
+                lhs_i.assert_close(rhs_i, tolerance);
+            }
+        }
+    }
+
+    pub fn assert_close<T: AssertClose>(a: &T, b: &T) {
+        a.assert_close(b, 1e-7);
     }
 }
