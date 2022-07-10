@@ -111,6 +111,31 @@ pub mod prelude {
     pub use crate::unique_id::*;
 }
 
+#[cfg(not(any(
+    feature = "mkl-static-seq",
+    feature = "mkl-static-iomp",
+    feature = "mkl-dynamic-seq",
+    feature = "mkl-dynamic-iomp"
+)))]
+/// The library used for BLAS. Configure with crate features.
+pub const BLAS_LIB: &str = "matrix-multiply";
+
+#[cfg(feature = "mkl-static-seq")]
+/// The library used for BLAS. Configure with crate features.
+pub const BLAS_LIB: &str = "mkl-static-seq";
+
+#[cfg(feature = "mkl-static-iomp")]
+/// The library used for BLAS. Configure with crate features.
+pub const BLAS_LIB: &str = "mkl-static-iomp";
+
+#[cfg(feature = "mkl-dynamic-seq")]
+/// The library used for BLAS. Configure with crate features.
+pub const BLAS_LIB: &str = "mkl-dynamic-seq";
+
+#[cfg(feature = "mkl-dynamic-iomp")]
+/// The library used for BLAS. Configure with crate features.
+pub const BLAS_LIB: &str = "mkl-dynamic-iomp";
+
 /// Sets a CPU `sse` flag to flush denormal floating point numbers to zero. The opposite of this is [keep_denormals()].
 ///
 /// Some resources:
