@@ -25,7 +25,11 @@ mod link_info {
     pub const LINK_LIBS: &[&str] = &[];
 }
 
-#[cfg(all(feature = "mkl-static-lp64-iomp", target_os = "windows"))]
+#[cfg(all(
+    feature = "intel-mkl",
+    feature = "mkl-static-lp64-iomp",
+    target_os = "windows"
+))]
 mod link_info {
     use super::*;
 
@@ -47,7 +51,11 @@ mod link_info {
     ];
 }
 
-#[cfg(all(feature = "mkl-static-lp64-seq", target_os = "windows"))]
+#[cfg(all(
+    feature = "intel-mkl",
+    feature = "mkl-static-lp64-seq",
+    target_os = "windows"
+))]
 mod link_info {
     use super::*;
     pub const LINK_TYPE: &str = STATIC_LINK;
@@ -62,7 +70,11 @@ mod link_info {
     pub const LINK_LIBS: &[&str] = &["mkl_core", "mkl_intel_lp64", "mkl_sequential"];
 }
 
-#[cfg(all(feature = "mkl-static-ilp64-iomp", target_os = "windows"))]
+#[cfg(all(
+    feature = "intel-mkl",
+    feature = "mkl-static-ilp64-iomp",
+    target_os = "windows"
+))]
 mod link_info {
     use super::*;
 
@@ -83,7 +95,11 @@ mod link_info {
     ];
 }
 
-#[cfg(all(feature = "mkl-static-ilp64-seq", target_os = "windows"))]
+#[cfg(all(
+    feature = "intel-mkl",
+    feature = "mkl-static-ilp64-seq",
+    target_os = "windows"
+))]
 mod link_info {
     use super::*;
     pub const LINK_TYPE: &str = STATIC_LINK;
@@ -98,7 +114,11 @@ mod link_info {
     pub const LINK_LIBS: &[&str] = &["mkl_core", "mkl_intel_ilp64", "mkl_sequential"];
 }
 
-#[cfg(all(feature = "mkl-dynamic-lp64-iomp", target_os = "windows"))]
+#[cfg(all(
+    feature = "intel-mkl",
+    feature = "mkl-dynamic-lp64-iomp",
+    target_os = "windows"
+))]
 mod link_info {
     use super::*;
     pub const LINK_TYPE: &str = DYNAMIC_LINK;
@@ -118,7 +138,11 @@ mod link_info {
     ];
 }
 
-#[cfg(all(feature = "mkl-dynamic-lp64-seq", target_os = "windows"))]
+#[cfg(all(
+    feature = "intel-mkl",
+    feature = "mkl-dynamic-lp64-seq",
+    target_os = "windows"
+))]
 mod link_info {
     use super::*;
     pub const LINK_TYPE: &str = DYNAMIC_LINK;
@@ -133,7 +157,11 @@ mod link_info {
     pub const LINK_LIBS: &[&str] = &["mkl_core_dll", "mkl_intel_lp64_dll", "mkl_sequential_dll"];
 }
 
-#[cfg(all(feature = "mkl-dynamic-ilp64-iomp", target_os = "windows"))]
+#[cfg(all(
+    feature = "intel-mkl",
+    feature = "mkl-dynamic-ilp64-iomp",
+    target_os = "windows"
+))]
 mod link_info {
     use super::*;
     pub const LINK_TYPE: &str = DYNAMIC_LINK;
@@ -153,7 +181,11 @@ mod link_info {
     ];
 }
 
-#[cfg(all(feature = "mkl-dynamic-ilp64-seq", target_os = "windows"))]
+#[cfg(all(
+    feature = "intel-mkl",
+    feature = "mkl-dynamic-ilp64-seq",
+    target_os = "windows"
+))]
 mod link_info {
     use super::*;
     pub const LINK_TYPE: &str = DYNAMIC_LINK;
