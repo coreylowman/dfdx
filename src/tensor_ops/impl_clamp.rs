@@ -1,4 +1,3 @@
-use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
 /// Clamps all values in `t` to between `min` and `max`
@@ -11,13 +10,11 @@ use crate::prelude::*;
 /// assert_eq!(r.data(), &[-0.5, -0.5, 0.0, 0.5, 0.5]);
 /// ```
 pub fn clamp<T: Tensor<Dtype = f32>>(t: T, min: T::Dtype, max: T::Dtype) -> T {
-    let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x.clamp(min, max)));
-    move_tape_and_add_backward_op(t, result, move |t, result, grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-        T::Device::foreach_mrr(t_grad, t.data(), result_grad, &mut |g, t, r| {
-            *g += if (min..=max).contains(t) { *r } else { 0.0 }
-        });
-    })
+    map(
+        t,
+        move |x| x.clamp(min, max),
+        move |x| if (min..=max).contains(x) { 1.0 } else { 0.0 },
+    )
 }
 
 macro_rules! tensor_impl {

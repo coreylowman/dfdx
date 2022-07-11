@@ -1,4 +1,3 @@
-use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
 /// Replaces any nans in `t` with `value`.
@@ -11,15 +10,11 @@ use crate::prelude::*;
 /// assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
 /// ```
 pub fn nans_to<T: Tensor<Dtype = f32>>(t: T, value: T::Dtype) -> T {
-    let result = T::NoTape::new_boxed(T::Device::map(t.data(), |v: &f32| {
-        v.is_nan().then_some(value).unwrap_or(*v)
-    }));
-    move_tape_and_add_backward_op(t, result, move |t, result, grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-        T::Device::foreach_mrr(t_grad, t.data(), result_grad, &mut |g, t, r| {
-            *g += if t.is_nan() { 0.0 } else { *r }
-        });
-    })
+    map(
+        t,
+        move |x| x.is_nan().then_some(value).unwrap_or(*x),
+        move |x| x.is_nan().then_some(0.0).unwrap_or(1.0),
+    )
 }
 
 macro_rules! tensor_impl {

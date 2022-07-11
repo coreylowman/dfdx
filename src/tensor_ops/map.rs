@@ -228,7 +228,11 @@ pub fn abs<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// let r = map(t, |x| 2.0 * x, |x| 2.0);
 /// assert_eq!(r.data(), &[-4.0, -2.0, 0.0, 2.0, 4.0]);
 /// ```
-pub fn map<T: Tensor<Dtype = f32>>(t: T, f: fn(&f32) -> f32, df: fn(&f32) -> f32) -> T {
+pub fn map<T: Tensor<Dtype = f32>, F, Df>(t: T, f: F, mut df: Df) -> T
+where
+    F: 'static + FnMut(&f32) -> f32,
+    Df: 'static + FnMut(&f32) -> f32,
+{
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), f));
     move_tape_and_add_backward_op(t, result, move |t, result, grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
