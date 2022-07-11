@@ -8,7 +8,7 @@ use crate::prelude::*;
 /// use dfdx::prelude::*;
 /// let a = Tensor2D::new([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]);
 /// let b = Tensor1D::new([3.0, 4.0]);
-/// let r = add_broadcast_rhs_last(a, b);
+/// let r = add_broadcast_rhs_last(a, &b);
 /// assert_eq!(r.data(), &[[3.0, 4.0, 5.0], [7.0, 8.0, 9.0]]);
 /// ```
 pub fn add_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
@@ -25,7 +25,7 @@ pub fn add_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
 /// use dfdx::prelude::*;
 /// let a = Tensor2D::new([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]);
 /// let b = Tensor1D::new([3.0, 4.0]);
-/// let r = sub_broadcast_rhs_last(a, b);
+/// let r = sub_broadcast_rhs_last(a, &b);
 /// assert_eq!(r.data(), &[[-3.0, -2.0, -1.0], [-1.0, 0.0, 1.0]]);
 /// ```
 pub fn sub_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
@@ -42,7 +42,7 @@ pub fn sub_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
 /// use dfdx::prelude::*;
 /// let a = Tensor2D::new([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]);
 /// let b = Tensor1D::new([3.0, 4.0]);
-/// let r = mul_broadcast_rhs_last(a, b);
+/// let r = mul_broadcast_rhs_last(a, &b);
 /// assert_eq!(r.data(), &[[0.0, 3.0, 6.0], [12.0, 16.0, 20.0]]);
 /// ```
 pub fn mul_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
@@ -59,7 +59,7 @@ pub fn mul_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
 /// use dfdx::prelude::*;
 /// let a = Tensor2D::new([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]);
 /// let b = Tensor1D::new([3.0, 4.0]);
-/// let r = div_broadcast_rhs_last(a, b);
+/// let r = div_broadcast_rhs_last(a, &b);
 /// assert_eq!(r.data(), &[[0.0, 1.0 / 3.0, 2.0 / 3.0], [3.0 / 4.0, 1.0, 5.0 / 4.0]]);
 /// ```
 pub fn div_broadcast_rhs_last<T: Tensor<Dtype = f32>>(

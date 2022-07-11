@@ -11,7 +11,7 @@ use crate::prelude::*;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t = Tensor2D::new([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
-/// let r: Tensor1D<2> = std_last_dim(t);
+/// let r: Tensor1D<2> = std_last_dim(t, 0.0);
 /// assert_eq!(r.data(), &[0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
 /// ```
 pub fn std_last_dim<T: Tensor<Dtype = f32>>(t: T, epsilon: T::Dtype) -> T::LastDimReduced {
