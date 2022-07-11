@@ -2,6 +2,20 @@ use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 use std::ops::Neg;
 
+/// `-t`... negates all values in `t`.
+///
+/// # Examples
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a: Tensor1D<3> = Tensor1D::new([-2.0, 0.0, 5.0]);
+/// let r = -a; // or negate(a);
+/// assert_eq!(r.data(), &[2.0, 0.0, -5.0]);
+/// ```
+pub fn negate<T: Tensor<Dtype = f32>>(t: T) -> T {
+    map(t, |x| -x, |_| -1.0)
+}
+
 /// [Rectified Linear Unit (ReLU)](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)) computes `max(0, x)`.
 ///
 /// The derivative is the [Heaviside](https://en.wikipedia.org/wiki/Heaviside_step_function) function.
@@ -236,6 +250,7 @@ macro_rules! activation_impl {
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
+    activation_impl!(negate, #[doc="Calls [negate()] on `self`."]);
     activation_impl!(relu, #[doc="Calls [relu()] on `self`."]);
     activation_impl!(sin, #[doc="Calls [sin()] on `self`."]);
     activation_impl!(cos, #[doc="Calls [cos()] on `self`."]);
@@ -246,6 +261,15 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     activation_impl!(square, #[doc="Calls [square()] on `self`."]);
     activation_impl!(sqrt, #[doc="Calls [sqrt()] on `self`."]);
     activation_impl!(abs, #[doc="Calls [abs()] on `self`."]);
+}
+
+impl<$(const $Vs: usize, )* H: Tape> std::ops::Neg for $typename<$($Vs, )* H>
+{
+    type Output = Self;
+    /// Calls [negate()] on `self`.
+    fn neg(self) -> Self::Output {
+        negate(self)
+    }
 }
     };
 }
@@ -392,5 +416,45 @@ mod tests {
         assert_eq!(r.data(), &[2.0, 1.0, 0.0, 1.0, 2.0]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&x), &[-0.2, -0.2, 0.0, 0.2, 0.2]);
+    }
+
+    #[test]
+    fn test_0d_neg() {
+        let a = Tensor0D::new(10.0);
+        let r = -(a.trace());
+        assert_eq!(r.data(), &-10.0);
+        let gradients = r.backward();
+        assert_eq!(gradients.ref_gradient(&a), &-1.0);
+    }
+
+    #[test]
+    fn test_1d_neg() {
+        let a: Tensor1D<3> = Tensor1D::new([-2.0, 0.0, 5.0]);
+        let r = -(a.trace());
+        assert_eq!(r.data(), &[2.0, 0.0, -5.0]);
+        // NOTE: .exp() so we can make sure neg is using result grad properly
+        let gradients = r.exp().mean().backward();
+        assert_eq!(
+            gradients.ref_gradient(&a),
+            &[-2.463019, -0.33333334, -0.0022459824]
+        );
+    }
+
+    #[test]
+    fn test_2d_neg() {
+        let a: Tensor2D<2, 3> = Tensor2D::new([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
+        let r = -(a.trace());
+        assert_eq!(r.data(), &[[2.0, 0.0, -5.0], [-1.0, -2.0, -3.0]]);
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.ref_gradient(&a), &[[-1.0 / 6.0; 3]; 2]);
+    }
+
+    #[test]
+    fn test_3d_neg() {
+        let a: Tensor3D<4, 2, 3> = Tensor3D::ones();
+        let r = -(a.trace());
+        assert_eq!(r.data(), &[[[-1.0; 3]; 2]; 4]);
+        let gradients = r.mean().backward();
+        assert_eq!(gradients.ref_gradient(&a), &[[[-1.0 / 24.0; 3]; 2]; 4]);
     }
 }
