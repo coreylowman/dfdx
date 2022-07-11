@@ -25,11 +25,12 @@ See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
 4. Maximize performance.
 5. Keep internals as flexible as possible.
 6. No unsafe code[1]
-7. No Rc/RefCells[2]
+7. No RefCells used in internal code[2]
 
 [1] Currently the only unsafe calls are for matrix multiplication, and instantiating large arrays directly on the heap.
 
 [2] There is only 1 usage of RefCell in the `nn::Dropout` layer to make it's underlying rng easy to use.
+Tensors currently use `Rc<array>` to store data, to reduce allocations when they are cloned.
 
 ## BLAS libraries
 
@@ -168,11 +169,11 @@ where
 
 We've implemented Module for Tuples up to 6 elements, but *you can arbitrarily nest them*!
 
-### No Rc/RefCells used - Gradient tape is not reference counted!
+### No `Rc<RefCells<T>>` used - Gradient tape is not kept behind a cell!
 
 Other implementations may store a reference to the gradient tape directly on tensors, which requires mutating tensors or using Rc/Refcells all other the place.
 
-We've figured out an elegant way to avoid this, reducing references and dynamic reference count checks to 0!
+We've figured out an elegant way to avoid this, reducing references and dynamic borrow checks to 0!
 
 Since all operations result in exactly 1 child, we can always move the gradient tape to the child of the last operation. Additionally, no model parameters (all tensors) will ever own the gradient tape because they will never be the result of any operation. This means we know exactly which tensor owns the gradient tape, and the tensors that have it will always be intermediate results that don't need to be maintained across gradient computation.
 

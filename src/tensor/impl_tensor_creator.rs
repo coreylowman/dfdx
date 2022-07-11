@@ -53,7 +53,7 @@ impl<$(const $Vs: usize, )*> TensorCreator for $typename<$($Vs, )* NoneTape> {
     fn new_boxed(data: Box<Self::Array>) -> Self {
         Self {
             id: unique_id(),
-            data,
+            data: data.into(),
             tape: Default::default(),
         }
     }

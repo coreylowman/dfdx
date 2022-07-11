@@ -19,7 +19,7 @@ impl<$(const $Vs: usize, )* H> HasArrayData for $typename<$($Vs, )* H> {
     fn data(&self) -> &Self::Array { self.data.as_ref() }
 
     /// Returns a mutable reference to the underlying array.
-    fn mut_data(&mut self) -> &mut Self::Array { self.data.as_mut() }
+    fn mut_data(&mut self) -> &mut Self::Array { std::rc::Rc::make_mut(&mut self.data) }
 }
     };
 }
