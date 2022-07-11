@@ -13,50 +13,55 @@
 //!
 //! To add a new target system, the following blocks need to exist:
 //!
-//! - `REDIST_DIRS`: This should contain directories relative to `ONEAPI_ROOT` environment variable that contain the
+//! - `SHARED_LIB_DIRS`: This should contain directories relative to `ONEAPI_ROOT` environment variable that contain the
 //!     shared libraries. `main()` will check if any of these directories are not on the `PATH` environment variable and crash if not.
 //! - `LINK_DIRS`: The directory where `.lib` files are. `main()` will output a `cargo:rustc-link-search` for each of these.
-//! - `LINK_LIBS`: The names of the `.lib` files to link. `main()` will output a `cargo:rustc-link-lib` for each of these.
 //!
-
 //! # Supported systems
 //!
 //! - [x] Windows 32 bit
 //! - [x] Windows 64 bit
-//! - [ ] Linux 32 bit
-//! - [ ] Linux 64 bit
+//! - [x] Linux 32 bit
+//! - [x] Linux 64 bit
 //! - [ ] MacOS 32 bit
 //! - [ ] MacOS 64 bit
 
+pub const MKL_VERSION: &str = "2022.1.0";
+pub const STATIC: bool = cfg!(feature = "mkl-static-seq") || cfg!(feature = "mkl-static-iomp");
+pub const DYNAMIC: bool = cfg!(feature = "mkl-dynamic-seq") || cfg!(feature = "mkl-dynamic-iomp");
+pub const SEQUENTIAL: bool = cfg!(feature = "mkl-static-seq") || cfg!(feature = "mkl-dynamic-seq");
+pub const THREADED: bool = cfg!(feature = "mkl-static-iomp") || cfg!(feature = "mkl-dynamic-iomp");
+pub const MKL: bool = (STATIC || DYNAMIC) && (SEQUENTIAL || THREADED);
+
+pub const LINK_TYPE: &str = if STATIC { "static" } else { "dylib" };
+pub const LIB_POSTFIX: &str = if cfg!(windows) && DYNAMIC { "_dll" } else { "" };
+pub const LD_DIR: &str = if cfg!(windows) {
+    "PATH"
+} else {
+    "LD_LIBRARY_PATH"
+};
+
+pub const DEFAULT_ONEAPI_ROOT: &str = if cfg!(windows) {
+    "C:/Program Files (x86)/Intel/oneAPI/"
+} else {
+    "/opt/intel/oneapi/"
+};
+
+pub const MKL_CORE: &str = "mkl_core";
+pub const MKL_THREAD: &str = if SEQUENTIAL {
+    "mkl_sequential"
+} else {
+    "mkl_intel_thread"
+};
+pub const THREADING_LIB: &str = if cfg!(windows) { "libiomp5md" } else { "iomp5" };
+pub const MKL_INTERFACE: &str = if cfg!(target_pointer_width = "32") {
+    "mkl_intel_ilp64"
+} else {
+    "mkl_intel_lp64"
+};
+
 #[cfg(not(any(target_os = "linux", target_os = "windows", target_os = "macos")))]
-pub const UNSUPPORTED_OS_ERROR: _ =
-    "Target OS is not supported. Please contact me so you can help me do this!";
-
-#[cfg(target_os = "linux")]
-pub const LINUX_NEEDS_TESTING_ERROR: _ =
-    "Linux targets are not supported/tested yet. Please contact me so you can help me do this!";
-
-#[cfg(target_os = "macos")]
-pub const MACOS_NEEDS_TESTING_ERROR: _ =
-    "MacOS targets are not supported/tested yet. Please contact me so you can help me do this!";
-
-#[cfg(any(feature = "mkl-static-iomp", feature = "mkl-static-seq"))]
-pub const LINK_TYPE: &str = "static";
-
-#[cfg(any(feature = "mkl-dynamic-iomp", feature = "mkl-dynamic-seq"))]
-pub const LINK_TYPE: &str = "dylib";
-
-#[cfg(all(target_os = "windows", target_pointer_width = "32"))]
-pub const REDIST_DIRS: &[&str] = &[
-    "compiler/latest/windows/redist/ia32_win/compiler",
-    "mkl/latest/redist/ia32",
-];
-
-#[cfg(all(target_os = "windows", target_pointer_width = "64"))]
-pub const REDIST_DIRS: &[&str] = &[
-    "compiler/latest/windows/redist/intel64_win/compiler",
-    "mkl/latest/redist/intel64",
-];
+pub const UNSUPPORTED_OS_ERROR: _ = "Target OS is not supported. Please contact me";
 
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 pub const LINK_DIRS: &[&str] = &[
@@ -70,90 +75,44 @@ pub const LINK_DIRS: &[&str] = &[
     "mkl/latest/lib/intel64",
 ];
 
-#[cfg(all(
-    feature = "mkl-static-iomp",
-    target_os = "windows",
-    target_pointer_width = "64"
-))]
-pub const LINK_LIBS: &[&str] = &[
-    "mkl_core",
-    "mkl_intel_lp64",
-    "mkl_intel_thread",
-    "libiomp5md",
+#[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+pub const SHARED_LIB_DIRS: &[&str] = &[
+    "compiler/latest/windows/redist/ia32_win/compiler",
+    "mkl/latest/redist/ia32",
 ];
 
-#[cfg(all(
-    feature = "mkl-static-seq",
-    target_os = "windows",
-    target_pointer_width = "64",
-))]
-pub const LINK_LIBS: &[&str] = &["mkl_core", "mkl_intel_lp64", "mkl_sequential"];
-
-#[cfg(all(
-    feature = "mkl-static-iomp",
-    target_os = "windows",
-    target_pointer_width = "32",
-))]
-pub const LINK_LIBS: &[&str] = &[
-    "mkl_core",
-    "mkl_intel_ilp64",
-    "mkl_intel_thread",
-    "libiomp5md",
+#[cfg(all(target_os = "windows", target_pointer_width = "64"))]
+pub const SHARED_LIB_DIRS: &[&str] = &[
+    "compiler/latest/windows/redist/intel64_win/compiler",
+    "mkl/latest/redist/intel64",
 ];
 
-#[cfg(all(
-    feature = "mkl-static-seq",
-    target_os = "windows",
-    target_pointer_width = "32",
-))]
-pub const LINK_LIBS: &[&str] = &["mkl_core", "mkl_intel_ilp64", "mkl_sequential"];
-
-#[cfg(all(
-    feature = "mkl-dynamic-iomp",
-    target_os = "windows",
-    target_pointer_width = "64",
-))]
-pub const LINK_LIBS: &[&str] = &[
-    "mkl_core_dll",
-    "mkl_intel_lp64_dll",
-    "mkl_intel_thread_dll",
-    "libiomp5md",
+#[cfg(all(target_os = "linux", target_pointer_width = "32"))]
+pub const LINK_DIRS: &[&str] = &[
+    "compiler/latest/linux/compiler/lib/ia32_lin",
+    "mkl/latest/lib/ia32",
 ];
 
-#[cfg(all(
-    feature = "mkl-dynamic-seq",
-    target_os = "windows",
-    target_pointer_width = "64",
-))]
-pub const LINK_LIBS: &[&str] = &["mkl_core_dll", "mkl_intel_lp64_dll", "mkl_sequential_dll"];
-
-#[cfg(all(
-    feature = "mkl-dynamic-iomp",
-    target_os = "windows",
-    target_pointer_width = "32",
-))]
-pub const LINK_LIBS: &[&str] = &[
-    "mkl_core_dll",
-    "mkl_intel_ilp64_dll",
-    "mkl_intel_thread_dll",
-    "libiomp5md",
+#[cfg(all(target_os = "linux", target_pointer_width = "64"))]
+pub const LINK_DIRS: &[&str] = &[
+    "compiler/latest/linux/compiler/lib/intel64_lin",
+    "mkl/latest/lib/intel64",
 ];
 
-#[cfg(all(
-    feature = "mkl-dynamic-seq",
-    target_os = "windows",
-    target_pointer_width = "32",
-))]
-const LINK_LIBS: &[&str] = &["mkl_core_dll", "mkl_intel_ilp64_dll", "mkl_sequential_dll"];
+#[cfg(target_os = "linux")]
+pub const SHARED_LIB_DIRS: &[&str] = LINK_DIRS;
 
 #[derive(Debug)]
 pub enum BuildError {
-    OneAPINotFound(std::env::VarError),
+    OneAPINotFound(std::path::PathBuf),
+    OneAPINotADir(std::path::PathBuf),
     PathNotFound(std::env::VarError),
-    RedistDirNotFoundInPath(String),
+    AddSharedLibDirToPath(String),
 }
 
 fn main() -> Result<(), BuildError> {
+    println!("cargo:rerun-if-changed=build.rs");
+
     #[cfg(any(
         feature = "mkl-static-iomp",
         feature = "mkl-static-seq",
@@ -161,24 +120,57 @@ fn main() -> Result<(), BuildError> {
         feature = "mkl-dynamic-seq"
     ))]
     {
-        let root = std::env::var("ONEAPI_ROOT").map_err(BuildError::OneAPINotFound)?;
-        let path = std::env::var("PATH").map_err(BuildError::PathNotFound)?;
+        let root = std::env::var("ONEAPI_ROOT").unwrap_or_else(|_| DEFAULT_ONEAPI_ROOT.to_string());
+        println!("Using '{root}' as ONEAPI_ROOT");
 
-        let path = path.replace('\\', "/");
-        for redist_dir in REDIST_DIRS {
-            if !path.contains(redist_dir) {
-                return Err(BuildError::RedistDirNotFoundInPath(redist_dir.to_string()));
+        let path = std::env::var(LD_DIR).map_err(BuildError::PathNotFound)?;
+
+        if DYNAMIC {
+            // check to make sure that things in `SHARED_LIB_DIRS` are in `$LD_DIR`.
+            let path = path.replace('\\', "/");
+            for shared_lib_dir in SHARED_LIB_DIRS {
+                let versioned_dir = shared_lib_dir.replace("latest", MKL_VERSION);
+
+                println!("Checking that '{shared_lib_dir}' or '{versioned_dir}' is in {LD_DIR}");
+                if !path.contains(shared_lib_dir) && !path.contains(&versioned_dir) {
+                    let suggested_cmd = if cfg!(windows) {
+                        format!("{root}/setvars.bat")
+                    } else {
+                        format!("source {root}/setvars.sh")
+                    };
+                    println!("'{shared_lib_dir}' not found in library path. Run `{suggested_cmd}`");
+                    return Err(BuildError::AddSharedLibDirToPath(
+                        shared_lib_dir.to_string(),
+                    ));
+                }
             }
         }
 
         let root: std::path::PathBuf = root.into();
 
-        for lib_dir in LINK_DIRS {
-            println!("cargo:rustc-link-search={}", root.join(lib_dir).display());
+        if !root.exists() {
+            return Err(BuildError::OneAPINotFound(root));
+        }
+        if !root.is_dir() {
+            return Err(BuildError::OneAPINotADir(root));
         }
 
-        for lib_name in LINK_LIBS {
-            println!("cargo:rustc-link-lib={}={}", LINK_TYPE, lib_name);
+        for rel_lib_dir in LINK_DIRS {
+            let lib_dir = root.join(rel_lib_dir);
+            println!("cargo:rustc-link-search={}", lib_dir.display());
+        }
+
+        println!("cargo:rustc-link-lib={LINK_TYPE}={MKL_INTERFACE}{LIB_POSTFIX}");
+        println!("cargo:rustc-link-lib={LINK_TYPE}={MKL_THREAD}{LIB_POSTFIX}");
+        println!("cargo:rustc-link-lib={LINK_TYPE}={MKL_CORE}{LIB_POSTFIX}");
+        if THREADED {
+            println!("cargo:rustc-link-lib=dylib={THREADING_LIB}");
+        }
+
+        if !cfg!(windows) {
+            println!("cargo:rustc-link-lib=pthread");
+            println!("cargo:rustc-link-lib=m");
+            println!("cargo:rustc-link-lib=dl");
         }
     }
 

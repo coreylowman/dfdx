@@ -137,7 +137,7 @@ mod tests {
             ))
             .output()
             .expect("Creating sub process failed");
-        assert!(output.stderr.is_empty());
+        assert!(output.stderr.is_empty(), "{:?}", output.stderr);
         String::from_utf8(output.stdout).expect("")
     }
 

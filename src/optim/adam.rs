@@ -89,6 +89,7 @@ impl Optimizer for Adam {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::assert_close;
     use rand::{prelude::*, SeedableRng};
 
     #[test]
@@ -112,7 +113,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).square().mean().backward();
             opt.update(&mut t, gradients);
-            assert_eq!(t.data(), e);
+            assert_close(t.data(), e);
         }
     }
 

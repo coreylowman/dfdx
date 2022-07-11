@@ -47,8 +47,8 @@ To link to the `Intel MKL` libraries (assuming you installed it already) enable 
 
 Linking is currently tested & verified on the following platforms:
 
-- [x] Windows (all options fully supported)
-- [ ] Linux (need someone to help me test!)
+- [x] Windows
+- [x] Linux
 - [ ] MacOS (need someone to help me test!)
 
 Example:
