@@ -32,17 +32,17 @@ pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T
 /// This will call `log_softmax(logits)`, so make sure logits is **not** the
 /// output from [softmax()] or [log_softmax()] already.
 ///
-/// Arguments:
+/// # Arguments
 ///
 /// - `logits`: The un-normalized output from a model. [log_softmax()] is called **in** this function
 /// - `target_probs`: Target containing probability vectors **NOT** class indices.
 ///
-/// Example Usage:
+/// # Example
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x = Tensor1D::new([-1.0, -0.5]);
+/// let logits = Tensor1D::new([-1.0, -0.5]);
 /// let target_probs = Tensor1D::new([0.5, 0.5]);
-/// let loss = cross_entropy_with_logits_loss(x.traced(), &target_probs);
+/// let loss = cross_entropy_with_logits_loss(logits.traced(), &target_probs);
 /// ```
 pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     logits: T,
@@ -57,17 +57,17 @@ pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
 /// This will call `log_softmax(logits)`, so make sure logits is **not** the
 /// output from [softmax()] or [log_softmax()] already.
 ///
-/// Arguments:
+/// # Arguments
 ///
 /// - `logits`: The un-normalized output from a model. [log_softmax()] is called **in** this function
 /// - `target_probs`: Target containing probability vectors **NOT** class indices.
 ///
-/// Example Usage:
+/// # Example
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x = Tensor1D::new([-1.0, -0.5]);
+/// let logits = Tensor1D::new([-1.0, -0.5]);
 /// let target_probs = Tensor1D::new([0.5, 0.5]);
-/// let loss = kl_div_with_logits_loss(x.traced(), &target_probs);
+/// let loss = kl_div_with_logits_loss(logits.traced(), &target_probs);
 /// ```
 pub fn kl_div_with_logits_loss<T: Tensor<Dtype = f32>>(
     logits: T,
@@ -83,11 +83,19 @@ pub fn kl_div_with_logits_loss<T: Tensor<Dtype = f32>>(
 ///
 /// Computes `(1 - target_probs) * logits + log(1 + exp(-logits))`.
 ///
-/// Inputs:
+/// # Inputs
 /// - `logits` - unnormalized inputs. **NOT** output of sigmoid
 /// - `target_probs` - target values between 0 and 1.
 ///
-/// Implementation Details:
+/// # Example
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let logits = Tensor1D::new([-1.0, -0.5]);
+/// let target_probs = Tensor1D::new([1.0, 0.25]);
+/// let loss = binary_cross_entropy_with_logits_loss(logits.traced(), &target_probs);
+/// ```
+///
+/// # Numerically Stable Derivation
 ///
 /// The numerical stable version involves subtracting the maximum value
 /// of logits in a way that doesn't change the output (i.e. adding zero):
