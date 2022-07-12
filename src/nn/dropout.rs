@@ -24,7 +24,7 @@ pub struct DropoutOneIn<const N: usize> {
 impl<const N: usize> Default for DropoutOneIn<N> {
     /// Seeds [StdRng] with a new seed every time this is called. The seed comes from the [UniqueId] constructor.
     fn default() -> Self {
-        let seed = unique_id().0 as u64;
+        let seed = unique_id().as_u64();
         Self {
             rng: RefCell::new(StdRng::seed_from_u64(seed)),
         }
@@ -101,7 +101,7 @@ impl Dropout {
 
     /// Constructs [Dropout] with `p` and a different seed every call.
     pub fn p(p: f32) -> Self {
-        let seed = unique_id().0 as u64;
+        let seed = unique_id().as_u64();
         Self {
             p,
             rng: RefCell::new(StdRng::seed_from_u64(seed)),

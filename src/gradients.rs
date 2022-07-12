@@ -286,8 +286,9 @@ mod tests {
 
     #[test]
     fn test_backward() {
-        let t1: Tensor = Tensor { id: UniqueId(0) };
-        let _t1: Tensor = Tensor { id: UniqueId(0) };
+        let id = unique_id();
+        let t1: Tensor = Tensor { id };
+        let _t1: Tensor = Tensor { id };
 
         let mut tape = GradientTape::default();
         tape.add_backward_op(move |g| {

@@ -69,18 +69,36 @@ tensor_impl!(Tensor4D, [M, N, O, P]);
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
-    use crate::unique_id::{unique_id, UniqueId};
+    use crate::unique_id::unique_id;
     use rand::thread_rng;
 
     #[test]
     fn test_id() {
-        let base = unique_id().0;
-        assert_eq!(Tensor0D::new(0.0).id, UniqueId(base + 1));
-        assert_eq!(Tensor0D::new(0.0).id, UniqueId(base + 2));
-        assert_eq!(Tensor1D::<5>::zeros().id, UniqueId(base + 3));
-        assert_eq!(Tensor2D::<3, 2>::ones().id, UniqueId(base + 4));
-        assert_eq!(Tensor3D::<4, 2, 3>::zeros().id, UniqueId(base + 5));
+        let mut ids: HashSet<UniqueId> = Default::default();
+        ids.insert(unique_id());
+
+        let x = Tensor0D::new(0.0);
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+
+        let x = Tensor0D::new(0.0);
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+
+        let x = Tensor1D::<5>::zeros();
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+
+        let x = Tensor2D::<3, 2>::ones();
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+
+        let x = Tensor3D::<4, 3, 2>::zeros();
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
     }
 
     #[test]

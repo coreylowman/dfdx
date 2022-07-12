@@ -2,7 +2,7 @@
 
 /// An id used in to associate gradients with Tensors.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, PartialOrd, Ord)]
-pub struct UniqueId(pub(crate) usize);
+pub struct UniqueId(usize);
 
 /// Generate a [UniqueId].
 pub(crate) fn unique_id() -> UniqueId {
@@ -14,6 +14,12 @@ impl std::ops::Deref for UniqueId {
     type Target = usize;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl UniqueId {
+    pub(crate) fn as_u64(&self) -> u64 {
+        self.0 as u64
     }
 }
 
