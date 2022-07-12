@@ -93,8 +93,8 @@ fn main() {
 2. 📈 Ergnomic & safe Optimizer API
 
 ```rust
-let mut model = ...
-let mut sgd = Sgd::new(1e-2, Some(Momentum::Nesterov(0.9)));
+let mut model: Model = ...
+let mut sgd: Sgd<Model> = Sgd::new(1e-2, Some(Momentum::Nesterov(0.9)));
 
 let loss: Tensor0D<OwnedTape> = ...
 
