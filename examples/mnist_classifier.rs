@@ -60,7 +60,7 @@ fn main() {
 
     let mut model: Mlp = Default::default();
     model.reset_params(&mut rng);
-    let mut opt: Adam = Default::default();
+    let mut opt: Adam<Mlp> = Default::default();
 
     let dataset = MnistDataset::train(&mnist_path);
     println!("Found {:?} training images", dataset.len());

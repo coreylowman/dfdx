@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use std::marker::PhantomData;
 
 /// Implementation of Stochastic Gradient Descent. Based on [pytorch's implementation](https://pytorch.org/docs/stable/generated/torch.optim.SGD.html)
 ///
@@ -7,10 +8,9 @@ use crate::prelude::*;
 ///
 /// Example Usage:
 /// ```rust
-/// use dfdx::prelude::*;
-///
+/// # use dfdx::prelude::*;
 /// let mut t = Tensor0D::ones();
-/// let mut opt: Sgd = Default::default();
+/// let mut opt: Sgd<Tensor0D> = Default::default();
 ///
 /// let gradients = t.trace().backward();
 /// opt.update(&mut t, gradients);
@@ -18,14 +18,14 @@ use crate::prelude::*;
 ///
 /// Changing default parmeters:
 /// ```rust
-/// use dfdx::optim::{Sgd, Momentum};
-///
-/// let sgd_no_momentum = Sgd::new(1e-1, None);
-/// let sgd_classic_momentum = Sgd::new(1e-2, Some(Momentum::Classic(0.5)));
-/// let sgd_nesterov_momentum = Sgd::new(1e-3, Some(Momentum::Nesterov(0.25)));
+/// # use dfdx::prelude::*;
+/// # type Model = Linear<5, 2>;
+/// let sgd_no_momentum: Sgd<Model> = Sgd::new(1e-1, None);
+/// let sgd_classic_momentum: Sgd<Model> = Sgd::new(1e-2, Some(Momentum::Classic(0.5)));
+/// let sgd_nesterov_momentum: Sgd<Model> = Sgd::new(1e-3, Some(Momentum::Nesterov(0.25)));
 /// ```
 #[derive(Debug)]
-pub struct Sgd {
+pub struct Sgd<M> {
     /// Learning rate
     pub lr: f32,
 
@@ -34,6 +34,8 @@ pub struct Sgd {
 
     velocity: Gradients,
     gradients: Gradients,
+
+    marker: PhantomData<*const M>,
 }
 
 /// Momentum used for [Sgd]
@@ -46,7 +48,7 @@ pub enum Momentum {
     Nesterov(f32),
 }
 
-impl Default for Sgd {
+impl<M> Default for Sgd<M> {
     /// - [Self::lr] `1e-2`
     /// - [Self::momentum] `None`
     fn default() -> Self {
@@ -54,7 +56,7 @@ impl Default for Sgd {
     }
 }
 
-impl Sgd {
+impl<M> Sgd<M> {
     /// Constructs [Sgd] with specified learning rate and momentum.
     pub fn new(lr: f32, momentum: Option<Momentum>) -> Self {
         Self {
@@ -62,11 +64,12 @@ impl Sgd {
             momentum,
             velocity: Default::default(),
             gradients: Default::default(),
+            marker: PhantomData,
         }
     }
 }
 
-impl GradientProvider for Sgd {
+impl<M> GradientProvider for Sgd<M> {
     fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
@@ -93,8 +96,8 @@ impl GradientProvider for Sgd {
     }
 }
 
-impl Optimizer for Sgd {
-    fn update<M: CanUpdateWithGradients>(&mut self, module: &mut M, gradients: Gradients) {
+impl<M: CanUpdateWithGradients> Optimizer<M> for Sgd<M> {
+    fn update(&mut self, module: &mut M, gradients: Gradients) {
         self.gradients = gradients;
         module.update(self);
     }
@@ -185,15 +188,15 @@ mod tests {
 
     #[test]
     fn test_sgd_changes_all_params() {
+        type Model = (Linear<5, 16>, ReLU, Linear<16, 16>, ReLU, Linear<16, 10>);
         let mut rng = StdRng::seed_from_u64(0);
-        let mut model: (Linear<5, 16>, ReLU, Linear<16, 16>, ReLU, Linear<16, 10>) =
-            Default::default();
+        let mut model: Model = Default::default();
         model.reset_params(&mut rng);
         let model_0 = model.clone();
 
         let x: Tensor2D<16, 5> = Tensor2D::rand(&mut rng);
         let y: Tensor2D<16, 10> = Tensor2D::rand(&mut rng);
-        let mut opt: Sgd = Default::default();
+        let mut opt: Sgd<Model> = Default::default();
 
         let py = model.forward(x.trace());
         let loss = (py - &y).square().mean();

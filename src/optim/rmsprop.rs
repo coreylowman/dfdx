@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use std::marker::PhantomData;
 
 /// RMSprop As described in [Hinton, 2012](http://www.cs.toronto.edu/%7Etijmen/csc321/slides/lecture_slides_lec6.pdf).
 ///
@@ -13,22 +14,23 @@ use crate::prelude::*;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let mut t = Tensor0D::ones();
-/// let mut opt: RMSprop = Default::default();
+/// let mut opt: RMSprop<Tensor0D> = Default::default();
 /// let gradients = t.trace().backward();
 /// opt.update(&mut t, gradients);
 /// ```
 ///
 /// Changing default parmeters:
 /// ```rust
-/// # use dfdx::optim::*;
-/// let rmsprop = RMSprop::new(RMSpropConfig {
+/// # use dfdx::prelude::*;
+/// # type Model = Linear<5, 2>;
+/// let rmsprop: RMSprop<Model> = RMSprop::new(RMSpropConfig {
 ///     lr: 1e-3,
 ///     alpha: 0.5,
 ///     ..Default::default()
 /// });
 /// ```
 #[derive(Debug)]
-pub struct RMSprop {
+pub struct RMSprop<M> {
     /// Configuration like learning rate and momentum.
     pub cfg: RMSpropConfig,
 
@@ -37,6 +39,8 @@ pub struct RMSprop {
     square_avg: Gradients,
     grad_avg: Gradients,
     gradients: Gradients,
+
+    marker: PhantomData<*const M>,
 }
 
 /// Configuration options for [RMSprop].
@@ -75,14 +79,14 @@ impl Default for RMSpropConfig {
     }
 }
 
-impl Default for RMSprop {
+impl<M> Default for RMSprop<M> {
     /// See [RMSpropConfig::default()]
     fn default() -> Self {
         Self::new(Default::default())
     }
 }
 
-impl RMSprop {
+impl<M> RMSprop<M> {
     /// Constructs a new [RMSprop] using `cfg` [RMSpropConfig].
     pub fn new(cfg: RMSpropConfig) -> Self {
         Self {
@@ -92,11 +96,12 @@ impl RMSprop {
             square_avg: Default::default(),
             grad_avg: Default::default(),
             gradients: Default::default(),
+            marker: PhantomData,
         }
     }
 }
 
-impl GradientProvider for RMSprop {
+impl<M> GradientProvider for RMSprop<M> {
     fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
@@ -147,8 +152,8 @@ impl GradientProvider for RMSprop {
     }
 }
 
-impl Optimizer for RMSprop {
-    fn update<M: CanUpdateWithGradients>(&mut self, module: &mut M, gradients: Gradients) {
+impl<M: CanUpdateWithGradients> Optimizer<M> for RMSprop<M> {
+    fn update(&mut self, module: &mut M, gradients: Gradients) {
         self.gradients = gradients;
         module.update(self);
         self.step += 1;

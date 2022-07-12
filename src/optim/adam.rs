@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use std::marker::PhantomData;
 
 /// An implementation of the Adam optimizer from
 /// [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980)
@@ -7,18 +8,19 @@ use crate::prelude::*;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let mut t = Tensor0D::ones();
-/// let mut opt: Adam = Default::default();
+/// let mut opt: Adam<Tensor0D> = Default::default();
 /// let gradients = t.trace().backward();
 /// opt.update(&mut t, gradients);
 /// ```
 ///
 /// Changing default parmeters:
 /// ```rust
-/// # use dfdx::optim::Adam;
-/// let adam = Adam::new(1e-2, [0.5, 0.25], 1e-6);
+/// # use dfdx::prelude::*;
+/// # type Model = Linear<5, 2>;
+/// let adam: Adam<Model> = Adam::new(1e-2, [0.5, 0.25], 1e-6);
 /// ```
 #[derive(Debug)]
-pub struct Adam {
+pub struct Adam<M> {
     /// Learning rate
     pub lr: f32,
 
@@ -32,10 +34,12 @@ pub struct Adam {
     gradients: Gradients,
     moment1: Gradients,
     moment2: Gradients,
+
+    marker: PhantomData<*const M>,
 }
 
 /// Use the default parameters suggested in the paper of lr=1e-3, beta1=0.9, beta2=0.999, and epsilon=1e-8
-impl Default for Adam {
+impl<M> Default for Adam<M> {
     /// - [Self::lr] `1e-3`
     /// - [Self::betas] `[0.9, 0.999]`
     /// - [Self::eps] `1e-8`
@@ -44,7 +48,7 @@ impl Default for Adam {
     }
 }
 
-impl Adam {
+impl<M> Adam<M> {
     /// Construct with control over all fields.
     pub fn new(lr: f32, betas: [f32; 2], epsilon: f32) -> Self {
         Self {
@@ -55,11 +59,12 @@ impl Adam {
             gradients: Default::default(),
             moment1: Default::default(),
             moment2: Default::default(),
+            marker: PhantomData,
         }
     }
 }
 
-impl GradientProvider for Adam {
+impl<M> GradientProvider for Adam<M> {
     fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
@@ -78,8 +83,8 @@ impl GradientProvider for Adam {
     }
 }
 
-impl Optimizer for Adam {
-    fn update<M: CanUpdateWithGradients>(&mut self, module: &mut M, gradients: Gradients) {
+impl<M: CanUpdateWithGradients> Optimizer<M> for Adam<M> {
+    fn update(&mut self, module: &mut M, gradients: Gradients) {
         self.t = self.t.checked_add(1).unwrap();
         self.gradients = gradients;
         module.update(self);
@@ -144,15 +149,15 @@ mod tests {
 
     #[test]
     fn test_adam_changes_all_params() {
+        type Model = (Linear<5, 16>, ReLU, Linear<16, 16>, ReLU, Linear<16, 10>);
         let mut rng = StdRng::seed_from_u64(0);
-        let mut model: (Linear<5, 16>, ReLU, Linear<16, 16>, ReLU, Linear<16, 10>) =
-            Default::default();
+        let mut model: Model = Default::default();
         model.reset_params(&mut rng);
         let model_0 = model.clone();
 
         let x: Tensor2D<16, 5> = Tensor2D::rand(&mut rng);
         let y: Tensor2D<16, 10> = Tensor2D::rand(&mut rng);
-        let mut opt: Adam = Adam::new(1e-3, [0.9, 0.999], 1e-8);
+        let mut opt: Adam<Model> = Adam::new(1e-3, [0.9, 0.999], 1e-8);
 
         let py = model.forward(x.trace());
         let loss = (py - &y).square().mean();
