@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Reduces the last dimension of the tensor by computing std deviation of all values in the last dimension.
+/// `t.std(-1)`.Reduces the last dimension of the tensor by computing std deviation of all values in the last dimension.
 /// Result [Tensor] has smaller number of dimensions.
 ///
 /// Computes: `(t + epsilon).var_last_dim().sqrt()`
@@ -15,10 +15,10 @@ use crate::prelude::*;
 /// assert_eq!(r.data(), &[0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
 /// ```
 pub fn std_last_dim<T: Tensor<Dtype = f32>>(t: T, epsilon: T::Dtype) -> T::LastDimReduced {
-    sqrt(scalar_add(var_last_dim(t), epsilon))
+    sqrt(add_scalar(var_last_dim(t), epsilon))
 }
 
-/// Reduces the last dimension of the tensor by computing variance of all values in the last dimension.
+/// `t.var(-1)`. Reduces the last dimension of the tensor by computing variance of all values in the last dimension.
 /// Result [Tensor] has smaller number of dimensions.
 ///
 /// Computes: `(t - t.mean_last_dim()).square().sum_last_dim() / NUM_ELEMENTS`
@@ -38,7 +38,7 @@ pub fn var_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
     let num_elements: f32 = <T::Device as ReduceLastDim<T::Array>>::LAST_DIM as f32;
     let (t, tape) = t.split_tape();
     let (mean, tape) = mean_last_dim(t.duplicate().put_tape(tape)).split_tape();
-    scalar_div(
+    div_scalar(
         sum_last_dim(square(sub_broadcast_rhs_last(t.put_tape(tape), &mean))),
         num_elements,
     )

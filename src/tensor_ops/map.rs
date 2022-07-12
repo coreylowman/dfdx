@@ -2,7 +2,7 @@ use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 use std::ops::Neg;
 
-/// `-t`... negates all values in `t`.
+/// `-t`. Computes the negation of `t`.
 ///
 /// # Examples
 ///
@@ -16,7 +16,7 @@ pub fn negate<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| -x, |_| -1.0)
 }
 
-/// [Rectified Linear Unit (ReLU)](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)) computes `max(0, x)`.
+/// `max(0, t)`. Computes [Rectified Linear Unit (ReLU)](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)).
 ///
 /// The derivative is the [Heaviside](https://en.wikipedia.org/wiki/Heaviside_step_function) function.
 ///
@@ -35,9 +35,9 @@ pub fn relu<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.max(0.0), |x| if x > &0.0 { 1.0 } else { 0.0 })
 }
 
-/// Square computes `x * x`.
+/// `t^2`
 ///
-/// The derivative is `2 * x`.
+/// The derivative is `2 * t`.
 ///
 /// Examples:
 /// ```rust
@@ -54,9 +54,9 @@ pub fn square<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.powi(2), |x| 2.0 * x)
 }
 
-/// Square root computes `x ^ 0.5` or `√x`.
+/// `√t` or `t^0.5`. Computes the square root.
 ///
-/// The derivative is `0.5 / (x ^ 0.5)`.
+/// The derivative is `0.5 / (t ^ 0.5)`.
 ///
 /// Examples:
 /// ```rust
@@ -73,9 +73,9 @@ pub fn sqrt<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.sqrt(), |x| 0.5 * x.sqrt().recip())
 }
 
-/// [Hyperbolic Tangent (Tanh)](https://en.wikipedia.org/wiki/Hyperbolic_functions) computes `tanh(x)`.
+/// `tanh(t)`. Computes the [Hyperbolic Tangent (Tanh)](https://en.wikipedia.org/wiki/Hyperbolic_functions).
 ///
-/// The derivative is `1.0 - square(tanh(x))`.
+/// The derivative is `1.0 - square(tanh(t))`.
 ///
 /// Examples:
 /// ```rust
@@ -92,9 +92,9 @@ pub fn tanh<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.tanh(), |x| 1.0 - x.tanh().powi(2))
 }
 
-/// [Sigmoid](https://en.wikipedia.org/wiki/Sigmoid_function) computes `1 / (1 + exp(-x))`.
+/// `1 / (1 + exp(-t))`. Computes [sigmoid](https://en.wikipedia.org/wiki/Sigmoid_function).
 ///
-/// The derivative is `sigmoid(x) * (1.0 - sigmoid(x))`.
+/// The derivative is `sigmoid(t) * (1.0 - sigmoid(t))`.
 ///
 /// Examples:
 /// ```rust
@@ -120,9 +120,9 @@ pub fn sigmoid<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, f, df)
 }
 
-/// The [sine function](https://en.wikipedia.org/wiki/Sine_and_cosine) computes `sin(x)`
+/// `sin(t)`. Computes the [sine function](https://en.wikipedia.org/wiki/Sine_and_cosine).
 ///
-/// It's derivative is `cos(x)`
+/// It's derivative is `cos(t)`
 ///
 /// Examples:
 /// ```rust
@@ -139,9 +139,9 @@ pub fn sin<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.sin(), |x| x.cos())
 }
 
-/// The [cos function](https://en.wikipedia.org/wiki/Sine_and_cosine) computes `cos(x)`
+/// `cos(t)`. Computes the [cosine function](https://en.wikipedia.org/wiki/Sine_and_cosine).
 ///
-/// It's derivative is `-sin(x)`
+/// It's derivative is `-sin(t)`
 ///
 /// Examples:
 /// ```rust
@@ -158,9 +158,9 @@ pub fn cos<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.cos(), |x| x.sin().neg())
 }
 
-/// The [Natural Logarithm (ln)](https://en.wikipedia.org/wiki/Natural_logarithm) computes `ln(x)`
+/// `ln(t)` or `log_e(t)`. Computes the [Natural Logarithm (ln)](https://en.wikipedia.org/wiki/Natural_logarithm).
 ///
-/// It's derivative is `1 / x`.
+/// It's derivative is `1 / t`.
 ///
 /// Examples:
 /// ```rust
@@ -177,9 +177,9 @@ pub fn ln<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.ln(), |x| x.recip())
 }
 
-/// The [exponential function (exp)](https://en.wikipedia.org/wiki/Natural_logarithm) computes `e ^ x`
+/// `e^t`. Computes the [exponential function (exp)](https://en.wikipedia.org/wiki/Natural_logarithm).
 ///
-/// It's derivative is itself! `e ^ x`.
+/// It's derivative is itself! `e^t`.
 ///
 /// Examples:
 /// ```rust
@@ -196,9 +196,9 @@ pub fn exp<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.exp(), |x| x.exp())
 }
 
-/// The [absolute value (abs)](https://en.wikipedia.org/wiki/Absolute_value) computes `|x|`
+/// `|t|`. Computes the [absolute value (abs)](https://en.wikipedia.org/wiki/Absolute_value).
 ///
-/// The derivative is -1.0 for x < 0, 0 for x == 0, and 1.0 for x > 0.
+/// The derivative is -1.0 for t < 0, 0 for t == 0, and 1.0 for t > 0.
 ///
 /// Examples:
 /// ```rust
@@ -215,7 +215,7 @@ pub fn abs<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.abs(), |x| if x == &0.0 { 0.0 } else { x.signum() })
 }
 
-/// Applies a function `f` to every element of the [Tensor]. The derivative
+/// `f(t)`. Applies a function `f` to every element of the [Tensor]. The derivative
 /// `df` must also be provided.
 ///
 /// This is primarily used to implement standard functions such as [relu()], [exp()], etc.

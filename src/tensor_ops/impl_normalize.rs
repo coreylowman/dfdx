@@ -1,6 +1,8 @@
 use crate::prelude::*;
 
-/// Normalizes `t` to have mean `0.0` and stddev `1.0`: `(t - t.mean_last_dim()) / (t.var_last_dim() + epsilon).sqrt()`.
+/// `(t - t.mean(-1)) / t.std(-1, epsilon)`. Normalizes `t` to have mean `0.0` and stddev `1.0`.
+///
+/// `epsilon` is passed to [std_last_dim()].
 ///
 /// See [mean_last_dim()], [std_last_dim()], [var_last_dim()]
 ///

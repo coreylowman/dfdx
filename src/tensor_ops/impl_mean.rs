@@ -1,10 +1,10 @@
 use crate::prelude::*;
 
-/// Sums all the values in `self` and divides by number of values.
+/// `sum(t) / numel(t)`, where `numel(t)` is the number of elements in `t`.
 ///
 /// Returns a [Tensor0D] (i.e. one number).
 pub fn mean<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::Tape> {
-    scalar_div(sum(t), T::Array::NUM_ELEMENTS as f32)
+    div_scalar(sum(t), T::Array::NUM_ELEMENTS as f32)
 }
 
 macro_rules! tensor_impl {

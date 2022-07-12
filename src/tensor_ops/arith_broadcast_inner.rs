@@ -1,7 +1,7 @@
 use super::binary_map::{add, binary_map_broadcast_rhs_last, div, mul, sub};
 use crate::prelude::*;
 
-/// Add two [Tensor]s together: `lhs + rhs`. `rhs`'s last dimension is broadcasted to be the same size as `lhs`.
+/// `lhs + &rhs`. `rhs`'s last dimension is broadcasted to be the same size as `lhs`.
 ///
 /// Examples:
 /// ```rust
@@ -18,7 +18,7 @@ pub fn add_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     binary_map_broadcast_rhs_last(lhs, rhs, add::f, add::dfdx, add::dfdy)
 }
 
-/// Subtracts two [Tensor]s: `lhs - rhs`. `rhs`'s last dimension is broadcasted to be the same size as `lhs`.
+/// `lhs - &rhs`. `rhs`'s last dimension is broadcasted to be the same size as `lhs`.
 ///
 /// Examples:
 /// ```rust
@@ -35,7 +35,7 @@ pub fn sub_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     binary_map_broadcast_rhs_last(lhs, rhs, sub::f, sub::dfdx, sub::dfdy)
 }
 
-/// Multiplies two [Tensor]s: `lhs * rhs`. `rhs`'s last dimension is broadcasted to be the same size as `lhs`.
+/// `lhs * &rhs`. `rhs`'s last dimension is broadcasted to be the same size as `lhs`.
 ///
 /// Examples:
 /// ```rust
@@ -52,7 +52,7 @@ pub fn mul_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     binary_map_broadcast_rhs_last(lhs, rhs, mul::f, mul::dfdx, mul::dfdy)
 }
 
-/// Divides two [Tensor]s: `lhs / rhs`. `rhs`'s last dimension is broadcasted to be the same size as `lhs`.
+/// `lhs / &rhs`. `rhs`'s last dimension is broadcasted to be the same size as `lhs`.
 ///
 /// Examples:
 /// ```rust

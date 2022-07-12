@@ -1,7 +1,7 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-/// Sets `t` to `value` anywhere `mask` equals value
+/// `t[t == mask] = value`. Sets `t` to `value` anywhere `mask` equals value
 ///
 /// # Examples
 /// ```rust
@@ -11,14 +11,14 @@ use crate::prelude::*;
 /// let r = t.trace().value_mask(&m, -1e10);
 /// assert_eq!(r.data(), &[-1e10, 2.0, -1e10]);
 /// ```
-pub fn value_mask<T: Tensor<Dtype = f32>>(mut t: T, other: &T::NoTape, value: T::Dtype) -> T {
+pub fn value_mask<T: Tensor<Dtype = f32>>(mut t: T, mask: &T::NoTape, value: T::Dtype) -> T {
     let mut result = T::NoTape::zeros();
-    T::Device::foreach_mrr(result.mut_data(), t.data(), other.data(), &mut |r, t, o| {
+    T::Device::foreach_mrr(result.mut_data(), t.data(), mask.data(), &mut |r, t, o| {
         *r = if o == &value { value } else { *t }
     });
 
     // store derivative in t
-    T::Device::foreach_mr(t.mut_data(), other.data(), &mut |t, o| {
+    T::Device::foreach_mr(t.mut_data(), mask.data(), &mut |t, o| {
         *t = if o == &value { 0.0 } else { 1.0 }
     });
 

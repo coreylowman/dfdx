@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Reduces the last dimension of the tensor by taking mean of all values in the last dimension.
+/// `t.mean(-1)`. Reduces the last dimension of the tensor by taking mean of all values in the last dimension.
 /// Result [Tensor] has smaller number of dimensions.
 ///
 /// Examples:
@@ -11,7 +11,7 @@ use crate::prelude::*;
 /// assert_eq!(r.data(), &[2.0, 5.0]);
 /// ```
 pub fn mean_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
-    scalar_div(
+    div_scalar(
         sum_last_dim(t),
         <T::Device as ReduceLastDim<T::Array>>::LAST_DIM as f32,
     )

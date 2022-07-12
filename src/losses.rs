@@ -2,28 +2,32 @@
 
 use crate::prelude::*;
 
-/// Mean Squared Error. This computes `(&targ - pred).square().mean()`.
+/// [Mean Squared Error](https://en.wikipedia.org/wiki/Mean_squared_error).
+/// This computes `(&targ - pred).square().mean()`.
 ///
 /// See [mean()], [square()], and [sub()].
 pub fn mse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
     mean(square(sub(pred, targ)))
 }
 
-/// Root Mean square error. This computes `(&targ - pred).square().mean().sqrt()`
+/// [Root Mean square error](https://en.wikipedia.org/wiki/Root-mean-square_deviation).
+/// This computes `(&targ - pred).square().mean().sqrt()`
 ///
 /// See [mse_loss()] and [sqrt()]
 pub fn rmse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
     sqrt(mse_loss(pred, targ))
 }
 
-/// Mean absolute error. This computes `(&targ - pred).abs().mean()`
+/// [Mean absolute error](https://en.wikipedia.org/wiki/Mean_absolute_error).
+/// This computes `(&targ - pred).abs().mean()`
 ///
 /// See [mean()], [abs()], and [sub()]
 pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
     mean(abs(sub(pred, targ)))
 }
 
-/// Cross entropy loss. This computes: `-(logits.log_softmax() * target_probs).sum(-1).mean()`
+/// [Cross entropy loss](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression).
+/// This computes: `-(logits.log_softmax() * target_probs).sum(-1).mean()`
 ///
 /// This will call `log_softmax(logits)`, so make sure logits is **not** the
 /// output from [softmax()] or [log_softmax()] already.
@@ -47,7 +51,8 @@ pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     -mean(sum_last_dim(mul(log_softmax(logits), target_probs)))
 }
 
-/// KL Divergence loss. This computes `(target_probs * (target_probs.log() - logits.log_softmax())).sum(-1).mean()`
+/// [KL Divergence loss](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence).
+/// This computes `(target_probs * (target_probs.log() - logits.log_softmax())).sum(-1).mean()`
 ///
 /// This will call `log_softmax(logits)`, so make sure logits is **not** the
 /// output from [softmax()] or [log_softmax()] already.
@@ -74,7 +79,7 @@ pub fn kl_div_with_logits_loss<T: Tensor<Dtype = f32>>(
     )))
 }
 
-/// Binary Cross Entropy With Logits in numerically stable way.
+/// [Binary Cross Entropy](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression) With Logits in numerically stable way.
 ///
 /// Computes `(1 - target_probs) * logits + log(1 + exp(-logits))`.
 ///
@@ -113,7 +118,7 @@ pub fn binary_cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     let (c, tape) = c.split_tape();
 
     // d = (1 - T)
-    let d = negate(scalar_sub(target_probs.duplicate(), 1.0));
+    let d = negate(sub_scalar(target_probs.duplicate(), 1.0));
 
     // e = logits * d
     let e = mul(logits.put_tape(tape), &d);

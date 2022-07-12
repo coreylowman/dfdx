@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Replaces any nans in `t` with `value`.
+/// `t[t.is_nan()] = value`. Replaces any nans in `t` with `value`.
 ///
 /// # Examples
 /// ```rust

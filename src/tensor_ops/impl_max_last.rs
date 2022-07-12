@@ -1,7 +1,7 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-/// Reduces the last dimension of the tensor by gathering the maximum value from that dimension.
+/// `t.max(-1)`. Reduces the last dimension of the tensor by gathering the maximum value from that dimension.
 /// Resulting [Tensor] has the last dimension removed (e.g. a 2d tensor will become 1d).
 ///
 /// Examples:

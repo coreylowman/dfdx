@@ -1,7 +1,6 @@
 use crate::prelude::*;
 
-/// Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function.
-/// Equivalent to `log(sum(exp(data)))` or `data.exp().sum(-1).log()`.
+/// `t.exp().sum(-1).log()`. Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function.
 ///
 /// Calls [ln()], [sum_last_dim()], and [exp()]
 ///
@@ -29,7 +28,7 @@ pub fn logsumexp<T: Tensor<Dtype = f32>>(mut t: T) -> T::LastDimReduced {
     result
 }
 
-/// Numerically stable computation of `log(softmax(t))`. Does `t - logsumexp(t)` under the hood.
+/// `log(softmax(t))` in numerically stable way. Does `t - logsumexp(t)` under the hood.
 ///
 /// See [logsumexp()] and [softmax()] for related functions
 pub fn log_softmax<T: Tensor<Dtype = f32>>(t: T) -> T {
@@ -38,8 +37,8 @@ pub fn log_softmax<T: Tensor<Dtype = f32>>(t: T) -> T {
     sub_broadcast_rhs_last(t.put_tape(tape), &lse)
 }
 
-/// Computes the [softmax](https://en.wikipedia.org/wiki/Softmax_function) function.
-/// Equivalent to `t.log_softmax().exp()` or `exp(log_softmax(t))` or `exp(t) / sum(exp(t))`
+/// `exp(t) / sum(exp(t))`. Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function).
+/// Equivalent to `exp(log_softmax(t))`.
 ///
 /// See [logsumexp()] and [log_softmax()] for related functions.
 pub fn softmax<T: Tensor<Dtype = f32>>(t: T) -> T {

@@ -1,7 +1,7 @@
 use super::binary_map::{add, binary_map_broadcast_rhs_first, div, mul, sub};
 use crate::prelude::*;
 
-/// Add together two [Tensor]s by broadcasting `rhs` `M` times, where `M` is the first dimension of `lhs`.
+/// `lhs + &rhs`. `rhs` is broadcasted `M` times, where `M` is the first dimension of `lhs`.
 ///
 /// E.g If Lhs has dimension `(2, 3)`, then Rhs has to be dimension `(3,)`.
 ///
@@ -21,7 +21,7 @@ where
     binary_map_broadcast_rhs_first(lhs, rhs, add::f, add::dfdx, add::dfdy)
 }
 
-/// Subtract two [Tensor]s by broadcasting `rhs` `M` times, where `M` is the first dimension of `lhs`.
+/// `lhs - &rhs`. `rhs` is broadcasted `M` times, where `M` is the first dimension of `lhs`.
 ///
 /// E.g If Lhs has dimension `(2, 3)`, then Rhs has to be dimension `(3,)`.
 ///
@@ -41,7 +41,7 @@ where
     binary_map_broadcast_rhs_first(lhs, rhs, sub::f, sub::dfdx, sub::dfdy)
 }
 
-/// Multiplies two [Tensor]s by broadcasting `rhs` `M` times, where `M` is the first dimension of `lhs`.
+/// `lhs * &rhs`. `rhs` is broadcasted `M` times, where `M` is the first dimension of `lhs`.
 ///
 /// E.g If Lhs has dimension `(2, 3)`, then Rhs has to be dimension `(3,)`.
 ///
@@ -61,7 +61,7 @@ where
     binary_map_broadcast_rhs_first(lhs, rhs, mul::f, mul::dfdx, mul::dfdy)
 }
 
-/// Divides two [Tensor]s by broadcasting `rhs` `M` times, where `M` is the first dimension of `lhs`.
+/// `lhs / &rhs`. `rhs` is broadcasted `M` times, where `M` is the first dimension of `lhs`.
 ///
 /// E.g If Lhs has dimension `(2, 3)`, then Rhs has to be dimension `(3,)`.
 ///

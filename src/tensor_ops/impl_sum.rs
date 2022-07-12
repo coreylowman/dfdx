@@ -1,7 +1,7 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-/// Sums all the values in `self`. Returns a [Tensor0D] (i.e. one number).
+/// `sum(t)`. Sums all the values in `self`. Returns a [Tensor0D] (i.e. one number).
 pub fn sum<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::Tape> {
     let result = Tensor0D::<NoneTape>::new(T::Device::reduce(t.data(), &mut |a, b| a + b));
     move_tape_and_add_backward_op(t, result, move |t, result, grads| {

@@ -1,7 +1,7 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-/// Reduces the last dimension of the tensor by summing all the values in that dimension.
+/// `t.sum(-1)`. Reduces the last dimension of the tensor by summing all the values in that dimension.
 /// Result [Tensor] has smaller number of dimensions.
 ///
 /// Examples:

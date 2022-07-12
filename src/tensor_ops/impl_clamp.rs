@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Clamps all values in `t` to between `min` and `max`
+/// `x.clamp(min, max)` element wise.
 ///
 /// # Examples
 /// ```rust

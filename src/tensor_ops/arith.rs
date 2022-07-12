@@ -2,7 +2,7 @@ use super::binary_map::{add, binary_map, div, minimum, mul, sub};
 use crate::prelude::*;
 use std::ops::{Add, Div, Mul, Sub};
 
-/// Add two [Tensor]s of the same shape together: `lhs + &rhs`
+/// `lhs + &rhs` element wise.
 ///
 /// Example:
 /// ```rust
@@ -16,7 +16,7 @@ pub fn add<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, add::f, add::dfdx, add::dfdy)
 }
 
-/// Subtracts two [Tensor]s of the same shape from each other: `lhs - &rhs`
+/// `lhs - &rhs` element wise.
 ///
 /// Example:
 /// ```rust
@@ -29,7 +29,7 @@ pub fn sub<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, sub::f, sub::dfdx, sub::dfdy)
 }
 
-/// Multiplies two [Tensor]s of the same shape together: `lhs * &rhs`.
+/// `lhs * &rhs` element wise.
 ///
 /// Example:
 /// ```rust
@@ -42,7 +42,7 @@ pub fn mul<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, mul::f, mul::dfdx, mul::dfdy)
 }
 
-/// Divides two [Tensor]s of the same shape: `lhs / &rhs`.
+/// `lhs / &rhs` element wise.
 ///
 /// Example:
 /// ```rust
@@ -55,7 +55,7 @@ pub fn div<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, div::f, div::dfdx, div::dfdy)
 }
 
-/// Takes the element wise minimum of two [Tensor]s of the same shape: `min(lhs, &rhs)`.
+/// `min(lhs, &rhs)` element wise.
 ///
 /// Example:
 /// ```rust
