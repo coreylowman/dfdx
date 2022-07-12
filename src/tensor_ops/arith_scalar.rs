@@ -2,7 +2,7 @@ use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 use std::ops::{Add, Div, Mul, Sub};
 
-/// Adds `val` to all elements of `t`.
+/// `t + val`. `val` is used for all elements of `t`.
 ///
 /// Example:
 /// ```rust
@@ -11,7 +11,7 @@ use std::ops::{Add, Div, Mul, Sub};
 /// let r = t + 0.5;
 /// assert_eq!(r.data(), &[1.5, 2.5, -2.5]);
 /// ```
-pub fn scalar_add<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
+pub fn add_scalar<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x + val));
     move_tape_and_add_backward_op(t, result, move |t, result, grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
@@ -21,7 +21,7 @@ pub fn scalar_add<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
     })
 }
 
-/// Subtracts `val` from all elements of `t`.
+/// `t - val`. `val` is used for all elements of `t`.
 ///
 /// Example:
 /// ```rust
@@ -30,7 +30,7 @@ pub fn scalar_add<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
 /// let r = t - 0.5;
 /// assert_eq!(r.data(), &[0.5, 1.5, -3.5]);
 /// ```
-pub fn scalar_sub<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
+pub fn sub_scalar<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x - val));
     move_tape_and_add_backward_op(t, result, move |t, result, grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
@@ -40,7 +40,7 @@ pub fn scalar_sub<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
     })
 }
 
-/// Multiplies all elements of `t` by `val`.
+/// `t * val`. `val` is used for all elements of `t`.
 ///
 /// Example:
 /// ```rust
@@ -49,7 +49,7 @@ pub fn scalar_sub<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
 /// let r = t * 0.5;
 /// assert_eq!(r.data(), &[0.5, 1.0, -1.5]);
 /// ```
-pub fn scalar_mul<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
+pub fn mul_scalar<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x * val));
     move_tape_and_add_backward_op(t, result, move |t, result, grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
@@ -59,7 +59,7 @@ pub fn scalar_mul<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
     })
 }
 
-/// Divides all elements of `t` by `val`.
+/// `t / val`. `val` is used for all elements of `t`.
 ///
 /// Example:
 /// ```rust
@@ -68,7 +68,7 @@ pub fn scalar_mul<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
 /// let r = t / 2.0;
 /// assert_eq!(r.data(), &[0.5, 1.0, -1.5]);
 /// ```
-pub fn scalar_div<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
+pub fn div_scalar<T: Tensor<Dtype = f32>>(t: T, val: T::Dtype) -> T {
     let result = T::NoTape::new_boxed(T::Device::map(t.data(), |x| x / val));
     move_tape_and_add_backward_op(t, result, move |t, result, grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
@@ -82,57 +82,57 @@ macro_rules! scalar_ops_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> Add<f32> for $typename<$($Vs, )* H> {
     type Output = Self;
-    /// Calls [scalar_add()] - implements `T<H> + f32`
+    /// Calls [add_scalar()] - implements `T<H> + f32`
     fn add(self, rhs: f32) -> Self::Output {
-        scalar_add(self, rhs)
+        add_scalar(self, rhs)
     }
 }
 
 impl<$(const $Vs: usize, )* H: Tape> Add<$typename<$($Vs, )* H>> for f32 {
     type Output = $typename<$($Vs, )* H>;
-    /// Calls [scalar_add()] - implements `f32 + T<H>`
+    /// Calls [add_scalar()] - implements `f32 + T<H>`
     fn add(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
-        scalar_add(rhs, self)
+        add_scalar(rhs, self)
     }
 }
 
 impl<$(const $Vs: usize, )* H: Tape> Sub<f32> for $typename<$($Vs, )* H> {
     type Output = Self;
-    /// Calls [scalar_sub()] - implements `T<H> - f32`
+    /// Calls [sub_scalar()] - implements `T<H> - f32`
     fn sub(self, rhs: f32) -> Self::Output {
-        scalar_sub(self, rhs)
+        sub_scalar(self, rhs)
     }
 }
 
 impl<$(const $Vs: usize, )* H: Tape> Sub<$typename<$($Vs, )* H>> for f32 {
     type Output = $typename<$($Vs, )* H>;
-    /// Calls [scalar_add()] with neg(rhs) - implements `-T<H> + f32`
+    /// Calls [add_scalar()] with neg(rhs) - implements `-T<H> + f32`
     fn sub(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
-        scalar_add(-rhs, self)
+        add_scalar(-rhs, self)
     }
 }
 
 impl<$(const $Vs: usize, )* H: Tape> Mul<f32> for $typename<$($Vs, )* H> {
     type Output = Self;
-    /// Calls [scalar_mul()] - implements `T<H> * f32`
+    /// Calls [mul_scalar()] - implements `T<H> * f32`
     fn mul(self, rhs: f32) -> Self::Output {
-        scalar_mul(self, rhs)
+        mul_scalar(self, rhs)
     }
 }
 
 impl<$(const $Vs: usize, )* H: Tape> Mul<$typename<$($Vs, )* H>> for f32 {
     type Output = $typename<$($Vs, )* H>;
-    /// Calls [scalar_mul()] - implements `f32 * T<H>`
+    /// Calls [mul_scalar()] - implements `f32 * T<H>`
     fn mul(self, rhs: $typename<$($Vs, )* H>) -> Self::Output {
-        scalar_mul(rhs, self)
+        mul_scalar(rhs, self)
     }
 }
 
 impl<$(const $Vs: usize, )* H: Tape> Div<f32> for $typename<$($Vs, )* H> {
     type Output = Self;
-    /// Calls [scalar_div()] - implements `T<H> / f32`
+    /// Calls [div_scalar()] - implements `T<H> / f32`
     fn div(self, rhs: f32) -> Self::Output {
-        scalar_div(self, rhs)
+        div_scalar(self, rhs)
     }
 }
     };
