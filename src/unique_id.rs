@@ -1,4 +1,4 @@
-///! A simple implementation of a UID.
+//! A simple implementation of a UID used as a unique key for tensors.
 
 /// An id used in to associate gradients with Tensors.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash, PartialOrd, Ord)]
