@@ -3,10 +3,10 @@
 //! # Initializing
 //!
 //! All the optimizer's provide [Default] implementations, and also provide a way to specify
-//! all the relevant parameters:
-//! - [Sgd::new()]
-//! - [Adam::new()]
-//! - [RMSprop::new()]
+//! all the relevant parameters through the corresponding config object:
+//! - [Sgd::new()] with [SgdConfig]
+//! - [Adam::new()] with [AdamConfig]
+//! - [RMSprop::new()] with [RMSpropConfig]
 //!
 //! # Updating network parameters
 //!

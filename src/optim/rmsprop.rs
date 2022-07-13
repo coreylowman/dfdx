@@ -4,34 +4,40 @@ use std::marker::PhantomData;
 /// RMSprop As described in [Hinton, 2012](http://www.cs.toronto.edu/%7Etijmen/csc321/slides/lecture_slides_lec6.pdf).
 ///
 /// This implementation is based off of RMSprop from
-/// [pytorch-image-models](https://github.com/rwightman/pytorch-image-models/blob/master/timm/optim/rmsprop_tf.py).
+/// [pytorch-image-models](https://github.com/rwightman/pytorch-image-models/blob/master/timm/optim/rmsprop_tf.py)
+/// because the pytorch implementation has [some issues](https://github.com/pytorch/pytorch/issues/23796).
 ///
-/// The pytorch implementation has some issues: <https://github.com/pytorch/pytorch/issues/23796>.
+/// The main difference between the pytorch implementation is that [RMSpropConfig::eps] is added inside of the sqrt()
+/// operation.
 ///
-/// Note: we don't provide lr_in_momentum option because it didn't seem to make a difference in testing.
+/// The `lr_in_momentum` option is not provided because it didn't seem to make a difference in testing.
 ///
-/// Example Usage:
+/// # Example Usage
+///
+/// Constructing using default:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let mut t = Tensor0D::ones();
-/// let mut opt: RMSprop<Tensor0D> = Default::default();
-/// let gradients = t.trace().backward();
-/// opt.update(&mut t, gradients);
+/// # type Model = Tensor0D;
+/// let mut opt: RMSprop<Model> = Default::default();
 /// ```
 ///
-/// Changing default parmeters:
+/// Constructing using new:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # type Model = Linear<5, 2>;
+/// # type Model = Tensor0D;
 /// let rmsprop: RMSprop<Model> = RMSprop::new(RMSpropConfig {
 ///     lr: 1e-3,
 ///     alpha: 0.5,
-///     ..Default::default()
+///     eps: 1e-8,
+///     momentum: Some(0.5),
+///     centered: false,
 /// });
 /// ```
+///
+/// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
 pub struct RMSprop<M> {
-    /// Configuration like learning rate and momentum.
+    /// Hyperparameter configuration
     pub cfg: RMSpropConfig,
 
     step: usize,
@@ -43,31 +49,27 @@ pub struct RMSprop<M> {
     marker: PhantomData<*const M>,
 }
 
-/// Configuration options for [RMSprop].
+/// Configuration of hyperparameters for [RMSprop].
 #[derive(Debug, Clone, Copy)]
 pub struct RMSpropConfig {
-    /// Learning rate
+    /// Learning rate. Defaults to `1e-2`.
     pub lr: f32,
 
-    /// Value for exponential moving average
+    /// Value for exponential moving average. Defaults to `0.9`.
     pub alpha: f32,
 
-    /// Epsilon for stability. Note: this implementation adds eps in the sqrt.
+    /// Epsilon for stability. Defaults to `1e-8`.
     pub eps: f32,
 
-    /// Optional momentum
+    /// Optional momentum. Defaults to `None`.
     pub momentum: Option<f32>,
 
     /// Whether the avg should be centered by the grad's avg value.
+    /// Defaults to `false`.
     pub centered: bool,
 }
 
 impl Default for RMSpropConfig {
-    /// - [Self::lr] `1e-2`
-    /// - [Self::alpha] `0.9`
-    /// - [Self::eps] `1e-8`
-    /// - [Self::momentum] `None`
-    /// - [Self::centered] `false`
     fn default() -> Self {
         Self {
             lr: 1e-2,
@@ -80,14 +82,14 @@ impl Default for RMSpropConfig {
 }
 
 impl<M> Default for RMSprop<M> {
-    /// See [RMSpropConfig::default()]
+    /// See [RMSpropConfig]
     fn default() -> Self {
         Self::new(Default::default())
     }
 }
 
 impl<M> RMSprop<M> {
-    /// Constructs a new [RMSprop] using `cfg` [RMSpropConfig].
+    /// Constructs using hyperparameters from `cfg`.
     pub fn new(cfg: RMSpropConfig) -> Self {
         Self {
             cfg,

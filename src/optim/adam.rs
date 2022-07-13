@@ -4,31 +4,31 @@ use std::marker::PhantomData;
 /// An implementation of the Adam optimizer from
 /// [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980)
 ///
-/// Example Usage:
+/// # Example Usage
+///
+/// Constructing using default:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let mut t = Tensor0D::ones();
-/// let mut opt: Adam<Tensor0D> = Default::default();
-/// let gradients = t.trace().backward();
-/// opt.update(&mut t, gradients);
+/// # type Model = Tensor0D;
+/// let mut opt: Adam<Model> = Default::default();
 /// ```
 ///
-/// Changing default parmeters:
+/// Changing using new
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # type Model = Linear<5, 2>;
-/// let adam: Adam<Model> = Adam::new(1e-2, [0.5, 0.25], 1e-6);
+/// # type Model = Tensor0D;
+/// let mut opt: Adam<Model> = Adam::new(AdamConfig {
+///     lr: 1e-2,
+///     betas: [0.5, 0.25],
+///     eps: 1e-6,
+/// });
 /// ```
+///
+/// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
 pub struct Adam<M> {
-    /// Learning rate
-    pub lr: f32,
-
-    /// Betas from Adam paper
-    pub betas: [f32; 2],
-
-    /// Epsilon for numerical stability
-    pub eps: f32,
+    /// Hyperparameter configuration
+    pub cfg: AdamConfig,
 
     t: i32,
     gradients: Gradients,
@@ -38,23 +38,51 @@ pub struct Adam<M> {
     marker: PhantomData<*const M>,
 }
 
-/// Use the default parameters suggested in the paper of lr=1e-3, beta1=0.9, beta2=0.999, and epsilon=1e-8
-impl<M> Default for Adam<M> {
-    /// - [Self::lr] `1e-3`
-    /// - [Self::betas] `[0.9, 0.999]`
-    /// - [Self::eps] `1e-8`
+/// Configuration of hyperparameters for [Adam].
+///
+/// Changing all default parameters:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// AdamConfig {
+///     lr: 1e-2,
+///     betas: [0.1, 0.2],
+///     eps: 1e-6,
+/// };
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub struct AdamConfig {
+    /// Learning rate. Defaults to `1e-3`.
+    pub lr: f32,
+
+    /// Betas from Adam paper. Defaults to `[0.9, 0.999]`.
+    pub betas: [f32; 2],
+
+    /// Epsilon for numerical stability. Defaults to `1e-8`.
+    pub eps: f32,
+}
+
+impl Default for AdamConfig {
     fn default() -> Self {
-        Self::new(1e-3, [0.9, 0.999], 1e-8)
+        Self {
+            lr: 1e-3,
+            betas: [0.9, 0.999],
+            eps: 1e-8,
+        }
+    }
+}
+
+impl<M> Default for Adam<M> {
+    /// See [AdamConfig]
+    fn default() -> Self {
+        Self::new(Default::default())
     }
 }
 
 impl<M> Adam<M> {
-    /// Construct with control over all fields.
-    pub fn new(lr: f32, betas: [f32; 2], epsilon: f32) -> Self {
+    /// Constructs using hyperparameters from `cfg`.
+    pub fn new(cfg: AdamConfig) -> Self {
         Self {
-            lr,
-            betas,
-            eps: epsilon,
+            cfg,
             t: 0,
             gradients: Default::default(),
             moment1: Default::default(),
@@ -73,11 +101,11 @@ impl<M> GradientProvider for Adam<M> {
         let m_t = self.moment1.mut_gradient(p);
         let v_t = self.moment2.mut_gradient(p);
         P::Device::foreach_mmm(g_t.as_mut(), m_t, v_t, &mut |g, m, v| {
-            *m = *m * self.betas[0] + *g * (1.0 - self.betas[0]);
-            *v = *v * self.betas[1] + g.powi(2) * (1.0 - self.betas[1]);
-            let m_hat = *m * (1.0 - self.betas[0].powi(self.t)).recip();
-            let v_hat = *v * (1.0 - self.betas[1].powi(self.t)).recip();
-            *g = self.lr * m_hat / (v_hat.sqrt() + self.eps)
+            *m = *m * self.cfg.betas[0] + *g * (1.0 - self.cfg.betas[0]);
+            *v = *v * self.cfg.betas[1] + g.powi(2) * (1.0 - self.cfg.betas[1]);
+            let m_hat = *m * (1.0 - self.cfg.betas[0].powi(self.t)).recip();
+            let v_hat = *v * (1.0 - self.cfg.betas[1].powi(self.t)).recip();
+            *g = self.cfg.lr * m_hat / (v_hat.sqrt() + self.cfg.eps)
         });
         g_t
     }
@@ -124,7 +152,11 @@ mod tests {
 
     #[test]
     fn test_custom_adam_one_params() {
-        let mut opt = Adam::new(1e-3, [0.5, 0.25], 1e-8);
+        let mut opt: Adam<Tensor1D<5>> = Adam::new(AdamConfig {
+            lr: 1e-3,
+            betas: [0.5, 0.25],
+            eps: 1e-8,
+        });
         let mut t: Tensor1D<5> = Tensor1D::ones();
         let rate = Tensor1D::new([1e-4, 1e-3, 1e-2, 1e-1, 1e-0]);
         let expected = [
@@ -157,7 +189,11 @@ mod tests {
 
         let x: Tensor2D<16, 5> = Tensor2D::rand(&mut rng);
         let y: Tensor2D<16, 10> = Tensor2D::rand(&mut rng);
-        let mut opt: Adam<Model> = Adam::new(1e-3, [0.9, 0.999], 1e-8);
+        let mut opt: Adam<Model> = Adam::new(AdamConfig {
+            lr: 1e-3,
+            betas: [0.9, 0.999],
+            eps: 1e-8,
+        });
 
         let py = model.forward(x.trace());
         let loss = (py - &y).square().mean();

@@ -79,7 +79,10 @@
 //! # let loss = cross_entropy_with_logits_loss(y, &y_true);
 //! # let gradients: Gradients = loss.backward();
 //! // Use stochastic gradient descent (Sgd), with a learning rate of 1e-2, and 0.9 momentum.
-//! let mut opt = Sgd::new(1e-2, Some(Momentum::Classic(0.9)));
+//! let mut opt = Sgd::new(SgdConfig {
+//!     lr: 1e-2,
+//!     momentum: Some(Momentum::Classic(0.9))
+//! });
 //!
 //! // pass the gradients & the model into the optimizer's update method
 //! opt.update(&mut model, gradients);

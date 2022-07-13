@@ -6,36 +6,81 @@ use std::marker::PhantomData;
 /// Nesterov Momentum is implemented as described in
 /// [On the importance of initialization and momentum in deep learning](https://proceedings.mlr.press/v28/sutskever13.html).
 ///
-/// Example Usage:
+/// # Example Usage
+///
+/// Constructing using default:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let mut t = Tensor0D::ones();
-/// let mut opt: Sgd<Tensor0D> = Default::default();
-///
-/// let gradients = t.trace().backward();
-/// opt.update(&mut t, gradients);
+/// # type Model = Tensor0D;
+/// let mut opt: Sgd<Model> = Default::default();
 /// ```
 ///
-/// Changing default parmeters:
+/// Constructing using new:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # type Model = Linear<5, 2>;
-/// let sgd_no_momentum: Sgd<Model> = Sgd::new(1e-1, None);
-/// let sgd_classic_momentum: Sgd<Model> = Sgd::new(1e-2, Some(Momentum::Classic(0.5)));
-/// let sgd_nesterov_momentum: Sgd<Model> = Sgd::new(1e-3, Some(Momentum::Nesterov(0.25)));
+/// # type Model = Tensor0D;
+/// let mut opt: Sgd<Model> = Sgd::new(SgdConfig {
+///     lr: 1e-3,
+///     momentum: Some(Momentum::Classic(0.5)),
+/// });
 /// ```
+///
+/// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
 pub struct Sgd<M> {
-    /// Learning rate
-    pub lr: f32,
-
-    /// Optional momentum
-    pub momentum: Option<Momentum>,
+    /// Hyperparameter configuration
+    pub cfg: SgdConfig,
 
     velocity: Gradients,
     gradients: Gradients,
 
     marker: PhantomData<*const M>,
+}
+
+/// Configuration of hyperparameters for [Sgd].
+///
+/// Using different learning rate:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// SgdConfig {
+///     lr: 1e-1,
+///     momentum: None
+/// };
+/// ```
+///
+/// Using classic momentum:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// SgdConfig {
+///     lr: 1e-2,
+///     momentum: Some(Momentum::Classic(0.5))
+/// };
+/// ```
+///
+/// Using nesterov momentum:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// SgdConfig {
+///     lr: 1e-3,
+///     momentum: Some(Momentum::Nesterov(0.25))
+/// };
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub struct SgdConfig {
+    /// Learning rate. Defaults to `1e-2`
+    pub lr: f32,
+
+    /// Optional momentum. Defaults to `None`.
+    pub momentum: Option<Momentum>,
+}
+
+impl Default for SgdConfig {
+    fn default() -> Self {
+        Self {
+            lr: 1e-2,
+            momentum: None,
+        }
+    }
 }
 
 /// Momentum used for [Sgd]
@@ -49,19 +94,17 @@ pub enum Momentum {
 }
 
 impl<M> Default for Sgd<M> {
-    /// - [Self::lr] `1e-2`
-    /// - [Self::momentum] `None`
+    /// See [SgdConfig]
     fn default() -> Self {
-        Self::new(1e-2, None)
+        Self::new(Default::default())
     }
 }
 
 impl<M> Sgd<M> {
-    /// Constructs [Sgd] with specified learning rate and momentum.
-    pub fn new(lr: f32, momentum: Option<Momentum>) -> Self {
+    /// Constructs using hyperparameters from `cfg`
+    pub fn new(cfg: SgdConfig) -> Self {
         Self {
-            lr,
-            momentum,
+            cfg,
             velocity: Default::default(),
             gradients: Default::default(),
             marker: PhantomData,
@@ -75,22 +118,22 @@ impl<M> GradientProvider for Sgd<M> {
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
         let mut g_t = self.gradients.remove(p);
-        match self.momentum {
+        match self.cfg.momentum {
             Some(Momentum::Classic(u)) => {
                 let v_t = self.velocity.mut_gradient(p);
                 P::Device::foreach_mm(g_t.as_mut(), v_t, &mut |g, v| {
                     *v = *g + u * *v;
-                    *g = *v * self.lr;
+                    *g = *v * self.cfg.lr;
                 });
             }
             Some(Momentum::Nesterov(u)) => {
                 let v_t = self.velocity.mut_gradient(p);
                 P::Device::foreach_mm(g_t.as_mut(), v_t, &mut |g, v| {
                     *v = *g + u * *v;
-                    *g = (*g + u * *v) * self.lr;
+                    *g = (*g + u * *v) * self.cfg.lr;
                 });
             }
-            None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.lr),
+            None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.cfg.lr),
         }
         g_t
     }
@@ -110,7 +153,10 @@ mod tests {
 
     #[test]
     fn test_perfect_sgd() {
-        let mut sgd = Sgd::new(1.0, None);
+        let mut sgd = Sgd::new(SgdConfig {
+            lr: 1.0,
+            momentum: None,
+        });
 
         let mut pred: Tensor1D<5> = Tensor1D::zeros();
         let targ: Tensor1D<5> = Tensor1D::ones();
@@ -125,7 +171,7 @@ mod tests {
 
     #[test]
     fn test_sgd_no_momentum() {
-        let mut sgd = Sgd::new(1e-2, None);
+        let mut sgd = Sgd::new(Default::default());
 
         let mut t: Tensor1D<5> = Tensor1D::ones();
         let rate = Tensor1D::new([0.1, 1.0, 2.0, 10.0, 100.0]);
@@ -146,7 +192,10 @@ mod tests {
 
     #[test]
     fn test_sgd_classic_momentum() {
-        let mut sgd = Sgd::new(1e-2, Some(Momentum::Classic(0.5)));
+        let mut sgd = Sgd::new(SgdConfig {
+            lr: 1e-2,
+            momentum: Some(Momentum::Classic(0.5)),
+        });
 
         let mut t: Tensor1D<5> = Tensor1D::ones();
         let rate = Tensor1D::new([0.1, 1.0, 2.0, 10.0, 100.0]);
@@ -167,7 +216,10 @@ mod tests {
 
     #[test]
     fn test_sgd_nesterov_momentum() {
-        let mut sgd = Sgd::new(1e-2, Some(Momentum::Nesterov(0.5)));
+        let mut sgd = Sgd::new(SgdConfig {
+            lr: 1e-2,
+            momentum: Some(Momentum::Nesterov(0.5)),
+        });
 
         let mut t: Tensor1D<5> = Tensor1D::ones();
         let rate = Tensor1D::new([0.1, 1.0, 2.0, 10.0, 100.0]);

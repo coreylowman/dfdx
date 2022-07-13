@@ -128,7 +128,10 @@ mod tests {
         assert!(gradients.ref_gradient(&model.1.weight) != &[[0.0; 3]; 4]);
         assert!(gradients.ref_gradient(&model.1.bias) != &[0.0; 4]);
 
-        let mut sgd = Sgd::new(1.0, None);
+        let mut sgd = Sgd::new(SgdConfig {
+            lr: 1.0,
+            momentum: None,
+        });
         sgd.update(&mut model, gradients);
 
         assert!(model.0.weight.data() != m0.0.weight.data());

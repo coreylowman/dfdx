@@ -19,7 +19,7 @@ fn main() {
     // initialize optimizer & model
     let mut mlp: MultiHeadedMLP = Default::default();
     mlp.reset_params(&mut rng);
-    let mut sgd = Sgd::new(1e-2, None);
+    let mut sgd: Sgd<MultiHeadedMLP> = Default::default();
 
     // run through training data
     for _i_epoch in 0..15 {

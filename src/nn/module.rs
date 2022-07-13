@@ -11,8 +11,18 @@ pub trait Module<Input>: ResetParams + CanUpdateWithGradients {
     type Output;
 
     /// Pass an `Input` through the unit and produce [Self::Output].
+    /// Can be implemented for multiple `Input` types.
     ///
-    /// # Example
+    /// # Example Usage
+    ///
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// let model: Linear<7, 2> = Default::default();
+    /// let y1: Tensor1D<2> = model.forward(Tensor1D::zeros());
+    /// let y2: Tensor2D<10, 2> = model.forward(Tensor2D::zeros());
+    /// ```
+    ///
+    /// # Example Implementation
     ///
     /// ```rust
     /// # use dfdx::prelude::*;

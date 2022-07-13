@@ -22,7 +22,10 @@ fn main() {
     mlp.reset_params(&mut rng);
 
     // initialize our optimizer
-    let mut sgd = Sgd::new(1e-2, Some(Momentum::Nesterov(0.9)));
+    let mut sgd = Sgd::new(SgdConfig {
+        lr: 1e-1,
+        momentum: Some(Momentum::Nesterov(0.9)),
+    });
 
     // run through training data
     for _i_epoch in 0..15 {
