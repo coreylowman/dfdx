@@ -1,8 +1,10 @@
 //! Ergonomics & safety focused deep learning in Rust. Main features include:
-//! 1. Tensor library, complete with const generic shapes, activation functions, and more.
-//! 2. Safe & Easy to use neural network building blocks.
-//! 3. Standard deep learning optimizers such as Sgd and Adam.
-//! 4. Reverse mode auto differentiation implementation.
+//! 1. Const generic tensor library with tensors up to 4d!
+//! 2. A large library of tensor operations (matrix multiplication, arithmetic, activation functions, etc).
+//! 3. Safe & easy to use neural network building blocks.
+//! 4. Standard deep learning optimizers such as Sgd and Adam.
+//! 5. Reverse mode auto differentiation[1] implementation.
+//! 6. Serialization to/from `.npy` and `.npz` for transferring models to/from python.
 //!
 //! # A quick tutorial
 //!

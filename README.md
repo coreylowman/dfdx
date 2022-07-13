@@ -2,10 +2,12 @@
 
 Ergonomics & safety focused deep learning in Rust. Main features include:
 
-1. Tensor library, complete with const generic shapes, activation functions, and more.
-2. Safe & Easy to use neural network building blocks.
-3. Standard deep learning optimizers such as Sgd and Adam.
-4. Reverse mode auto differentiation[1] implementation.
+1. Const generic tensor library with tensors up to 4d!
+2. A large library of tensor operations (matrix multiplication, arithmetic, activation functions, etc).
+3. Safe & easy to use neural network building blocks.
+4. Standard deep learning optimizers such as Sgd and Adam.
+5. Reverse mode auto differentiation[1] implementation.
+6. Serialization to/from `.npy` and `.npz` for transferring models to/from python.
 
 `dfdx` is on [crates.io](https://crates.io/crates/dfdx)! Use by adding this to your `Cargo.toml`:
 
@@ -21,16 +23,17 @@ See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
 
 1. Easy to use frontend interface.
 2. Easy to understand/maintain internals. Keep levels of indirection to a minimum.
-3. As much at compile time as possible (i.e. don't compile if something is not correct).
+3. Check as much at compile time as possible (i.e. don't compile if something is not correct).
 4. Maximize performance.
-5. Keep internals as flexible as possible.
-6. No unsafe code[1]
-7. No RefCells used in internal code[2]
+5. Keep internals as flexible (easy to change) as possible.
+6. Minimize unsafe code[1]
+7. Minimize Rc and RefCells used in internal code[2]
 
 [1] Currently the only unsafe calls are for matrix multiplication, and instantiating large arrays directly on the heap.
 
 [2] There is only 1 usage of RefCell in the `nn::Dropout` layer to make it's underlying rng easy to use.
-Tensors currently use `Rc<array>` to store data, to reduce allocations when they are cloned.
+The only things that use `Rc` are tensors to store their data. `Rc` is used instead of `Box` to reduce
+allocations when tensors are cloned.
 
 ## BLAS libraries
 
