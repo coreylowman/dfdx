@@ -12,7 +12,7 @@ Ergonomics & safety focused deep learning in Rust. Main features include:
 `dfdx` is on [crates.io](https://crates.io/crates/dfdx)! Use by adding this to your `Cargo.toml`:
 
 ```toml
-dfdx = "0.7.0"
+dfdx = "0.8.0"
 ```
 
 See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
