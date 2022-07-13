@@ -94,7 +94,10 @@ fn main() {
 
 ```rust
 let mut model: Model = ...
-let mut sgd: Sgd<Model> = Sgd::new(1e-2, Some(Momentum::Nesterov(0.9)));
+let mut sgd = Sgd::new(SgdConfig {
+    lr: 1e-2,
+    momentum: Some(Momentum::Nesterov(0.9))
+});
 
 let loss: Tensor0D<OwnedTape> = ...
 
