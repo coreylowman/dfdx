@@ -98,7 +98,7 @@ pub fn kl_div_with_logits_loss<T: Tensor<Dtype = f32>>(
 ///
 /// # Numerically Stable Derivation
 ///
-/// See https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits
+/// See <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>
 /// for more information on this.
 pub fn binary_cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     logits: T,
