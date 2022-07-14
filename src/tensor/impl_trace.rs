@@ -41,3 +41,31 @@ tensor_impl!(Tensor1D, [M]);
 tensor_impl!(Tensor2D, [M, N]);
 tensor_impl!(Tensor3D, [M, N, O]);
 tensor_impl!(Tensor4D, [M, N, O, P]);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_trace() {
+        let t1: Tensor1D<32> = TensorCreator::zeros();
+        let t2: Tensor1D<32, OwnedTape> = trace(&t1);
+        assert_eq!(t1.id, t2.id);
+    }
+
+    #[test]
+    fn test_traced() {
+        let t1: Tensor1D<32> = TensorCreator::zeros();
+        let t1_id = t1.id;
+        let t2: Tensor1D<32, OwnedTape> = traced(t1);
+        assert_eq!(t1_id, t2.id);
+    }
+
+    #[test]
+    fn test_trace_split() {
+        let t1: Tensor1D<32> = TensorCreator::zeros();
+        let t2: Tensor1D<32, OwnedTape> = t1.trace();
+        let (t3, tape): (Tensor1D<32, NoneTape>, OwnedTape) = t2.split_tape();
+        let _: Tensor1D<32, OwnedTape> = t3.put_tape(tape);
+    }
+}
