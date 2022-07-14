@@ -23,7 +23,6 @@
 //! - [x] Windows 64 bit
 //! - [x] Linux 32 bit
 //! - [x] Linux 64 bit
-//! - [ ] MacOS 32 bit
 //! - [x] MacOS 64 bit
 
 pub const MKL_VERSION: &str = "2022.1.0";
