@@ -81,7 +81,8 @@ pub fn kl_div_with_logits_loss<T: Tensor<Dtype = f32>>(
 
 /// [Binary Cross Entropy](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression) With Logits in numerically stable way.
 ///
-/// Computes `(1 - target_probs) * logits + log(1 + exp(-logits))`.
+/// Computes `target_probs * log(sigmoid(logits)) + (1 - target_probs) * log(1 - sigmoid(logits))`
+/// as `(1 - target_probs) * logits + log(1 + exp(-logits))`.
 ///
 /// # Inputs
 /// - `logits` - unnormalized inputs. **NOT** output of sigmoid
@@ -97,41 +98,19 @@ pub fn kl_div_with_logits_loss<T: Tensor<Dtype = f32>>(
 ///
 /// # Numerically Stable Derivation
 ///
-/// The numerical stable version involves subtracting the maximum value
-/// of logits in a way that doesn't change the output (i.e. adding zero):
-/// 1. Start with `log(1 + exp(-logits))`
-/// 2. Add zero (variable Q can be anything) `Q - Q + log(1 + exp(-logits))`
-/// 3. log(exp(Q)) == Q: `Q - log(exp(Q)) + log(1 + exp(-logits))`
-/// 4. log(x) - log(y) = log(x / y): `Q + log((1 + exp(-logits)) / exp(Q))`
-/// 5. 1 / exp(Q) = exp(-Q): `Q + log(exp(-Q) + exp(-logits) / exp(Q))`
-/// 6. exp(A) / exp(B) = exp(A-B): `Q + log(exp(-Q) + exp(-logits - Q))`
-/// 7. Now set `Q = max(logits)`!
+/// See https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits
+/// for more information on this.
 pub fn binary_cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     logits: T,
     target_probs: &T::NoTape,
 ) -> Tensor0D<T::Tape> {
-    let (logits, tape) = logits.split_tape();
-
-    // max_value = (-logits).clamp(min=0)
-    let max_value = clamp(negate(logits.duplicate()), 0.0, f32::INFINITY);
-
-    // a = exp(-(max_value + logits))
-    let a = exp(negate(add(logits.duplicate().put_tape(tape), &max_value)));
-
-    // b = ln(exp(-max_value) + a)
-    let b = ln(add(a, &exp(negate(max_value.duplicate()))));
-
-    // c = max_value + b
-    let c = add(b, &max_value);
-    let (c, tape) = c.split_tape();
-
-    // d = (1 - T)
-    let d = negate(sub_scalar(target_probs.duplicate(), 1.0));
-
-    // e = logits * d
-    let e = mul(logits.put_tape(tape), &d);
-
-    mean(add(e, &c))
+    mean(binary_map::binary_map(
+        logits,
+        target_probs,
+        |logit, prob| logit.max(0.0) - logit * prob + (1.0 + (-logit.abs()).exp()).ln(),
+        |logit, prob| 1.0 - prob - (1.0 + logit.exp()).recip(),
+        |logit, _| -logit,
+    ))
 }
 
 #[cfg(test)]
@@ -226,20 +205,65 @@ mod tests {
 
     #[test]
     fn test_bce() {
-        let p = Tensor2D::new([[100.0; 3], [-100.0; 3], [-1.0, 0.0, 1.0]]);
-        let t = Tensor2D::new([[0.0, 0.5, 1.0]; 3]);
+        let logit = Tensor2D::new([
+            [-0.4092005, -0.6706018, 0.9201696],
+            [-1.6583557, 1.6978683, -1.4827578],
+            [-0.9571696, -1.0971526, 0.8801755],
+        ]);
+        let prob = Tensor2D::new([
+            [0.365251, 0.8322099, 0.482717],
+            [0.168392, 0.7987092, 0.1177533],
+            [0.7026833, 0.5563793, 0.6429267],
+        ]);
+        let loss = binary_cross_entropy_with_logits_loss(logit.trace(), &prob);
+        assert_eq!(loss.data(), &0.70457286);
 
-        let loss = binary_cross_entropy_with_logits_loss(p.trace(), &t);
+        let gradients = loss.backward();
+
+        assert_eq!(
+            gradients.ref_gradient(&logit),
+            &[
+                [0.003761424, -0.054871976, 0.025817735],
+                [-0.0009343492, 0.0051718787, 0.0074731046],
+                [-0.047248676, -0.03401173, 0.0071035423]
+            ]
+        );
+
+        assert_eq!(
+            gradients.ref_gradient(&prob),
+            &[
+                [0.04546672, 0.07451131, -0.10224107],
+                [0.18426175, -0.18865204, 0.16475087],
+                [0.10635218, 0.12190584, -0.097797275]
+            ]
+        );
+    }
+
+    #[test]
+    fn test_bce_wide_range() {
+        let logit = Tensor2D::new([[100.0; 3], [-100.0; 3], [-1.0, 0.0, 1.0]]);
+        let targ = Tensor2D::new([[0.0, 0.5, 1.0]; 3]);
+
+        let loss = binary_cross_entropy_with_logits_loss(logit.trace(), &targ);
         assert_eq!(loss.data(), &33.479965);
 
         let gradients = loss.backward();
 
         assert_eq!(
-            gradients.ref_gradient(&p),
+            gradients.ref_gradient(&logit),
             &[
-                [0.11111111, 0.055555556, -4e-45],
+                [0.11111111, 0.055555556, 0.0],
                 [0.0, -0.055555556, -0.11111111],
                 [0.029882379, 0.0, -0.02988238]
+            ]
+        );
+
+        assert_eq!(
+            gradients.ref_gradient(&targ),
+            &[
+                [-11.111112, -11.111112, -11.111112],
+                [11.111112, 11.111112, 11.111112],
+                [0.11111111, 0.0, -0.11111111]
             ]
         );
     }

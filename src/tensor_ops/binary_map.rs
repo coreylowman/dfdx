@@ -78,7 +78,7 @@ pub(super) mod minimum {
 /// to a pair of [Tensor]s `lhs` and `rhs.
 ///
 /// This is primarily used to implement [add()], [sub()], [mul()], and [div()].
-pub(super) fn binary_map<T: Tensor<Dtype = f32>>(
+pub(crate) fn binary_map<T: Tensor<Dtype = f32>>(
     mut lhs: T,
     rhs: &T::NoTape,
     f: fn(&f32, &f32) -> f32,
