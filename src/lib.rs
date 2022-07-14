@@ -37,7 +37,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let mut mlp: Linear<5, 2> = Default::default();
-//! let x: Tensor1D<5> = Tensor1D::zeros();
+//! let x = Tensor1D::zeros(); // rust figures out that x must be a `Tensor1D<5>` bc its given to mlp.forward()!
 //! let y = mlp.forward(x); // rust will auto figure out that `y` is `Tensor1D<2>`!
 //! ```
 //!
@@ -53,8 +53,9 @@
 //! // `.trace()` clones `x` and inserts a gradient tape.
 //! let x_t: Tensor1D<10, OwnedTape> = x.trace();
 //!
-//! // The tape is moved through the model during `.forward()`, and ends up in `y`.
-//! let y: Tensor1D<5, OwnedTape> = model.forward(x_t);
+//! // The tape from the input is moved through the network during .forward().
+//! let y: Tensor1D<5, NoneTape> = model.forward(x);
+//! let y_t: Tensor1D<5, OwnedTape> = model.forward(x_t);
 //! ```
 //!
 //! 6. Compute gradients with [crate::tensor_ops::backward()]
