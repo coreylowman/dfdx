@@ -53,7 +53,7 @@ Linking is currently tested & verified on the following platforms:
 
 - [x] Windows
 - [x] Linux
-- [ ] MacOS (need someone to help me test!)
+- [x] macOS
 
 Example:
 ```toml
