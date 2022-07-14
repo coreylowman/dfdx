@@ -3,7 +3,7 @@
 //! 2. A large library of tensor operations (matrix multiplication, arithmetic, activation functions, etc).
 //! 3. Safe & easy to use neural network building blocks.
 //! 4. Standard deep learning optimizers such as Sgd and Adam.
-//! 5. Reverse mode auto differentiation[1] implementation.
+//! 5. Reverse mode auto differentiation implementation.
 //! 6. Serialization to/from `.npy` and `.npz` for transferring models to/from python.
 //!
 //! # A quick tutorial
@@ -181,6 +181,8 @@ pub fn keep_denormals() {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    const TOLERANCE: f32 = 1e-6;
+
     pub trait AssertClose {
         fn assert_close(&self, rhs: &Self, tolerance: f32);
     }
@@ -192,7 +194,7 @@ pub(crate) mod tests {
                 .zip(rhs.iter())
                 .all(|(a, b)| (a - b).abs() <= tolerance)
             {
-                panic!("{:?} {:?}", self, rhs);
+                panic!("lhs: {:?} != rhs: {:?}", self, rhs);
             }
         }
     }
@@ -206,6 +208,6 @@ pub(crate) mod tests {
     }
 
     pub fn assert_close<T: AssertClose>(a: &T, b: &T) {
-        a.assert_close(b, 1e-7);
+        a.assert_close(b, TOLERANCE);
     }
 }
