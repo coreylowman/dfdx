@@ -3,7 +3,7 @@
 //! 2. A large library of tensor operations (matrix multiplication, arithmetic, activation functions, etc).
 //! 3. Safe & easy to use neural network building blocks.
 //! 4. Standard deep learning optimizers such as Sgd and Adam.
-//! 5. Reverse mode auto differentiation[1] implementation.
+//! 5. Reverse mode auto differentiation implementation.
 //! 6. Serialization to/from `.npy` and `.npz` for transferring models to/from python.
 //!
 //! # A quick tutorial
