@@ -24,7 +24,7 @@
 //! - [x] Linux 32 bit
 //! - [x] Linux 64 bit
 //! - [ ] MacOS 32 bit
-//! - [ ] MacOS 64 bit
+//! - [x] MacOS 64 bit
 
 pub const MKL_VERSION: &str = "2022.1.0";
 pub const STATIC: bool = cfg!(feature = "mkl-static-seq") || cfg!(feature = "mkl-static-iomp");
@@ -37,8 +37,12 @@ pub const LINK_TYPE: &str = if STATIC { "static" } else { "dylib" };
 pub const LIB_POSTFIX: &str = if cfg!(windows) && DYNAMIC { "_dll" } else { "" };
 pub const LD_DIR: &str = if cfg!(windows) {
     "PATH"
-} else {
+} else if cfg!(target_os = "linux") {
     "LD_LIBRARY_PATH"
+} else if cfg!(target_os = "macos") {
+    "DYLD_LIBRARY_PATH"
+} else {
+    ""
 };
 
 pub const DEFAULT_ONEAPI_ROOT: &str = if cfg!(windows) {
@@ -102,6 +106,15 @@ pub const LINK_DIRS: &[&str] = &[
 #[cfg(target_os = "linux")]
 pub const SHARED_LIB_DIRS: &[&str] = LINK_DIRS;
 
+#[cfg(target_os = "macos")]
+const MACOS_COMPILER_PATH: &str = "compiler/latest/mac/compiler/lib";
+
+#[cfg(target_os = "macos")]
+pub const LINK_DIRS: &[&str] = &[MACOS_COMPILER_PATH, "mkl/latest/lib"];
+
+#[cfg(target_os = "macos")]
+pub const SHARED_LIB_DIRS: &[&str] = LINK_DIRS;
+
 #[derive(Debug)]
 pub enum BuildError {
     OneAPINotFound(std::path::PathBuf),
@@ -123,22 +136,37 @@ fn main() -> Result<(), BuildError> {
         let root = std::env::var("ONEAPI_ROOT").unwrap_or_else(|_| DEFAULT_ONEAPI_ROOT.to_string());
         println!("Using '{root}' as ONEAPI_ROOT");
 
-        let path = std::env::var(LD_DIR).map_err(BuildError::PathNotFound)?;
+        let path = match std::env::var(LD_DIR) {
+            Ok(path) => path,
+            Err(e) => {
+                // On macOS it's unusual to set $DYLD_LIBRARY_PATH, so we want to provide a helpful message
+                println!(
+                    "Library path env variable '{LD_DIR}' was not found. Run `{}`",
+                    suggest_setvars_cmd(&root)
+                );
+                return Err(BuildError::PathNotFound(e));
+            }
+        };
 
         if DYNAMIC {
             // check to make sure that things in `SHARED_LIB_DIRS` are in `$LD_DIR`.
             let path = path.replace('\\', "/");
             for shared_lib_dir in SHARED_LIB_DIRS {
+                #[cfg(target_os = "macos")]
+                if *shared_lib_dir == MACOS_COMPILER_PATH {
+                    // on macOS that directory is not set in $DYLD_LIBRARY_PATH, but
+                    // rather we set it with rustflags in .cargo/config
+                    continue;
+                }
+
                 let versioned_dir = shared_lib_dir.replace("latest", MKL_VERSION);
 
                 println!("Checking that '{shared_lib_dir}' or '{versioned_dir}' is in {LD_DIR}");
                 if !path.contains(shared_lib_dir) && !path.contains(&versioned_dir) {
-                    let suggested_cmd = if cfg!(windows) {
-                        format!("{root}/setvars.bat")
-                    } else {
-                        format!("source {root}/setvars.sh")
-                    };
-                    println!("'{shared_lib_dir}' not found in library path. Run `{suggested_cmd}`");
+                    println!(
+                        "'{shared_lib_dir}' not found in library path. Run `{}`",
+                        suggest_setvars_cmd(&root)
+                    );
                     return Err(BuildError::AddSharedLibDirToPath(
                         shared_lib_dir.to_string(),
                     ));
@@ -175,4 +203,18 @@ fn main() -> Result<(), BuildError> {
     }
 
     Ok(())
+}
+
+#[cfg(any(
+    feature = "mkl-static-iomp",
+    feature = "mkl-static-seq",
+    feature = "mkl-dynamic-iomp",
+    feature = "mkl-dynamic-seq"
+))]
+fn suggest_setvars_cmd(root: &str) -> String {
+    if cfg!(windows) {
+        format!("{root}/setvars.bat")
+    } else {
+        format!("source {root}/setvars.sh")
+    }
 }
