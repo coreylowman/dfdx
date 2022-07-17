@@ -2,7 +2,7 @@ use dfdx::prelude::*;
 use rand::prelude::{SeedableRng, StdRng};
 
 /// Custom model struct
-/// This case is trivial and should be done with a tuple of linears and relus, 
+/// This case is trivial and should be done with a tuple of linears and relus,
 /// but it demonstrates how to build models with custom behavior
 #[derive(Default)]
 struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
@@ -11,7 +11,7 @@ struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
     relu: ReLU,
 }
 
-impl<const IN: usize, const INNER: usize, const OUT: usize>ResetParams for Mlp<IN, INNER, OUT> {
+impl<const IN: usize, const INNER: usize, const OUT: usize> ResetParams for Mlp<IN, INNER, OUT> {
     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
         self.l1.reset_params(rng);
         self.l2.reset_params(rng);
@@ -19,7 +19,9 @@ impl<const IN: usize, const INNER: usize, const OUT: usize>ResetParams for Mlp<I
     }
 }
 
-impl<const IN: usize, const INNER: usize, const OUT: usize>CanUpdateWithGradients for Mlp<IN, INNER, OUT> {
+impl<const IN: usize, const INNER: usize, const OUT: usize> CanUpdateWithGradients
+    for Mlp<IN, INNER, OUT>
+{
     fn update<G: GradientProvider>(&mut self, grads: &mut G) {
         self.l1.update(grads);
         self.l2.update(grads);
@@ -28,28 +30,24 @@ impl<const IN: usize, const INNER: usize, const OUT: usize>CanUpdateWithGradient
 }
 
 // Impl module for single forward pass
-impl<const IN: usize, const INNER: usize, const OUT: usize> Module<Tensor1D<IN>> for Mlp<IN, INNER, OUT> {
+impl<const IN: usize, const INNER: usize, const OUT: usize> Module<Tensor1D<IN>>
+    for Mlp<IN, INNER, OUT>
+{
     type Output = Tensor1D<OUT>;
 
     fn forward(&self, input: Tensor1D<IN>) -> Self::Output {
-        self.l2.forward(
-            self.relu.forward(
-                self.l1.forward(input)
-            )
-        )
+        self.l2.forward(self.relu.forward(self.l1.forward(input)))
     }
 }
 
 // Impl module for batch forward pass
-impl<const BATCH: usize, const IN: usize, const INNER: usize, const OUT: usize, T: Tape> Module<Tensor2D<BATCH, IN, T>> for Mlp<IN, INNER, OUT> {
+impl<const BATCH: usize, const IN: usize, const INNER: usize, const OUT: usize, T: Tape>
+    Module<Tensor2D<BATCH, IN, T>> for Mlp<IN, INNER, OUT>
+{
     type Output = Tensor2D<BATCH, OUT, T>;
 
     fn forward(&self, input: Tensor2D<BATCH, IN, T>) -> Self::Output {
-        self.l2.forward(
-            self.relu.forward(
-                self.l1.forward(input)
-            )
-        )
+        self.l2.forward(self.relu.forward(self.l1.forward(input)))
     }
 }
 
