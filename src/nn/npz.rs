@@ -1,5 +1,7 @@
 use crate::numpy::{self, NpyError, NumpyDtype, NumpyShape, ReadNumbers, WriteNumbers};
+use std::error::Error;
 use std::{
+    fmt,
     fs::File,
     io::{BufReader, BufWriter, Read, Seek, Write},
     path::Path,
@@ -94,12 +96,31 @@ pub trait LoadFromNpz {
 }
 
 /// Error that can happen while loading data from a `.npz` zip archive.
+#[derive(Debug)]
 pub enum NpzError {
     /// Something went wrong with reading from the `.zip` archive.
     Zip(ZipError),
 
     /// Something went wrong with loading data from a `.npy` file
     Npy(NpyError),
+}
+
+impl fmt::Display for NpzError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            NpzError::Zip(err) => write!(fmt, "{}", err),
+            NpzError::Npy(err) => write!(fmt, "{}", err),
+        }
+    }
+}
+
+impl Error for NpzError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            NpzError::Zip(err) => Some(err),
+            NpzError::Npy(err) => Some(err),
+        }
+    }
 }
 
 /// Writes `data` to a new file in a zip archive named `filename`.
