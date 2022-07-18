@@ -76,3 +76,6 @@ pub use matmul::*;
 
 #[cfg(feature = "nightly")]
 mod reshape;
+
+#[cfg(feature = "nightly")]
+pub use reshape::*;
