@@ -115,7 +115,7 @@ const MACOS_COMPILER_PATH: &str = "compiler/latest/mac/compiler/lib";
 pub const LINK_DIRS: &[&str] = &[MACOS_COMPILER_PATH, "mkl/latest/lib"];
 
 #[cfg(target_os = "macos")]
-pub const SHARED_LIB_DIRS: &[&str] = LINK_DIRS;
+pub const SHARED_LIB_DIRS: &[&str] = &["mkl/latest/lib"];
 
 #[derive(Debug)]
 pub enum BuildError {
@@ -154,13 +154,6 @@ fn main() -> Result<(), BuildError> {
             // check to make sure that things in `SHARED_LIB_DIRS` are in `$LD_DIR`.
             let path = path.replace('\\', "/");
             for shared_lib_dir in SHARED_LIB_DIRS {
-                #[cfg(target_os = "macos")]
-                if *shared_lib_dir == MACOS_COMPILER_PATH {
-                    // on macOS that directory is not set in $DYLD_LIBRARY_PATH, but
-                    // rather we set it with rustflags in .cargo/config
-                    continue;
-                }
-
                 let versioned_dir = shared_lib_dir.replace("latest", MKL_VERSION);
 
                 println!("Checking that '{shared_lib_dir}' or '{versioned_dir}' is in {LD_DIR}");
@@ -202,6 +195,10 @@ fn main() -> Result<(), BuildError> {
             println!("cargo:rustc-link-lib=m");
             println!("cargo:rustc-link-lib=dl");
         }
+
+        if config!(target_os = "macos") {
+            println!("cargo:rustc-link-arg=-Wl,-rpath,{root}/{MACOS_COMPILER_PATH}");
+        }
     }
 
     // If on nightly, enable "nightly" feature
@@ -227,4 +224,3 @@ fn suggest_setvars_cmd(root: &str) -> String {
         format!("source {root}/setvars.sh")
     }
 }
-
