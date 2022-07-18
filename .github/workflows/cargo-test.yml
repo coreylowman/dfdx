@@ -22,4 +22,4 @@ jobs:
           components: rustfmt, clippy
       - uses: actions-rs/cargo@v1
         with:
-          command: +nightly test
+          command: test
