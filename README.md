@@ -1,5 +1,7 @@
 # dfdx: strongly typed deep learning in Rust
 
+[![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/AtUhGqBDP5)
+
 Ergonomics & safety focused deep learning in Rust. Main features include:
 
 1. Const generic tensor library with tensors up to 4d!
