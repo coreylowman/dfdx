@@ -25,7 +25,7 @@
 //! - [x] Linux 64 bit
 //! - [ ] MacOS 32 bit
 //! - [ ] MacOS 64 bit
-//! 
+//!
 //! This script also creates a "nightly" feature if the crate is compiled on a nightly branch
 use rustc_version::{version_meta, Channel};
 
@@ -180,10 +180,9 @@ fn main() -> Result<(), BuildError> {
     // If on nightly, enable "nightly" feature
     if version_meta().unwrap().channel == Channel::Nightly {
         println!("cargo:rustc-cfg=nightly");
-    }        
+    }
 
     Ok(())
 }
-
 
 // This section creates a feature "nightly" enabled if built on a nightly branch
