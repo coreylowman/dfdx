@@ -3,7 +3,7 @@
 //! 2. A large library of tensor operations (matrix multiplication, arithmetic, activation functions, etc).
 //! 3. Safe & easy to use neural network building blocks.
 //! 4. Standard deep learning optimizers such as Sgd and Adam.
-//! 5. Reverse mode auto differentiation[1] implementation.
+//! 5. Reverse mode auto differentiation implementation.
 //! 6. Serialization to/from `.npy` and `.npz` for transferring models to/from python.
 //!
 //! # A quick tutorial
@@ -37,7 +37,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let mut mlp: Linear<5, 2> = Default::default();
-//! let x: Tensor1D<5> = Tensor1D::zeros();
+//! let x = Tensor1D::zeros(); // rust figures out that x must be a `Tensor1D<5>` bc its given to mlp.forward()!
 //! let y = mlp.forward(x); // rust will auto figure out that `y` is `Tensor1D<2>`!
 //! ```
 //!
@@ -53,8 +53,9 @@
 //! // `.trace()` clones `x` and inserts a gradient tape.
 //! let x_t: Tensor1D<10, OwnedTape> = x.trace();
 //!
-//! // The tape is moved through the model during `.forward()`, and ends up in `y`.
-//! let y: Tensor1D<5, OwnedTape> = model.forward(x_t);
+//! // The tape from the input is moved through the network during .forward().
+//! let y: Tensor1D<5, NoneTape> = model.forward(x);
+//! let y_t: Tensor1D<5, OwnedTape> = model.forward(x_t);
 //! ```
 //!
 //! 6. Compute gradients with [crate::tensor_ops::backward()]
@@ -181,6 +182,8 @@ pub fn keep_denormals() {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    const TOLERANCE: f32 = 1e-6;
+
     pub trait AssertClose {
         fn assert_close(&self, rhs: &Self, tolerance: f32);
     }
@@ -192,7 +195,7 @@ pub(crate) mod tests {
                 .zip(rhs.iter())
                 .all(|(a, b)| (a - b).abs() <= tolerance)
             {
-                panic!("{:?} {:?}", self, rhs);
+                panic!("lhs: {:?} != rhs: {:?}", self, rhs);
             }
         }
     }
@@ -206,6 +209,6 @@ pub(crate) mod tests {
     }
 
     pub fn assert_close<T: AssertClose>(a: &T, b: &T) {
-        a.assert_close(b, 1e-7);
+        a.assert_close(b, TOLERANCE);
     }
 }

@@ -92,3 +92,32 @@ tensor_impl!(
     [M, N, O],
     [[[usize; O]; N]; M]
 );
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ids_with_duplicate() {
+        let t1: Tensor1D<32> = TensorCreator::zeros();
+        let t2: Tensor1D<32, NoneTape> = t1.duplicate();
+        assert_eq!(t1.id, t2.id);
+    }
+
+    #[test]
+    fn test_ids_with_clone() {
+        let t1: Tensor1D<32> = TensorCreator::zeros();
+        let t2: Tensor1D<32, NoneTape> = t1.clone();
+        assert_ne!(t1.id, t2.id);
+    }
+
+    #[test]
+    fn test_ids_with_split_and_put() {
+        let t1: Tensor1D<32> = TensorCreator::zeros();
+        let t1_id = t1.id;
+        let (t2, tape) = t1.split_tape();
+        assert_eq!(t2.id, t1_id);
+        let t3 = t2.put_tape(tape);
+        assert_eq!(t3.id, t1_id);
+    }
+}

@@ -24,6 +24,9 @@
 //! - [x] Linux 32 bit
 //! - [x] Linux 64 bit
 //! - [x] MacOS 64 bit
+//!
+//! This script also creates a "nightly" feature if the crate is compiled on a nightly branch
+use rustc_version::{version_meta, Channel};
 
 pub const MKL_VERSION: &str = "2022.1.0";
 pub const STATIC: bool = cfg!(feature = "mkl-static-seq") || cfg!(feature = "mkl-static-iomp");
@@ -201,8 +204,15 @@ fn main() -> Result<(), BuildError> {
         }
     }
 
+    // If on nightly, enable "nightly" feature
+    if version_meta().unwrap().channel == Channel::Nightly {
+        println!("cargo:rustc-cfg=nightly");
+    }
+
     Ok(())
 }
+
+// This section creates a feature "nightly" enabled if built on a nightly branch
 
 #[cfg(any(
     feature = "mkl-static-iomp",
@@ -217,3 +227,4 @@ fn suggest_setvars_cmd(root: &str) -> String {
         format!("source {root}/setvars.sh")
     }
 }
+

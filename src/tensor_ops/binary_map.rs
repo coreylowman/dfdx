@@ -78,12 +78,17 @@ pub(super) mod minimum {
 /// to a pair of [Tensor]s `lhs` and `rhs.
 ///
 /// This is primarily used to implement [add()], [sub()], [mul()], and [div()].
-pub(super) fn binary_map<T: Tensor<Dtype = f32>>(
+pub(crate) fn binary_map<
+    T: Tensor<Dtype = f32>,
+    F: FnMut(&f32, &f32) -> f32,
+    Dfdx: FnMut(&f32, &f32) -> f32,
+    Dfdy: FnMut(&f32, &f32) -> f32,
+>(
     mut lhs: T,
     rhs: &T::NoTape,
-    f: fn(&f32, &f32) -> f32,
-    dfdx: fn(&f32, &f32) -> f32,
-    dfdy: fn(&f32, &f32) -> f32,
+    f: F,
+    dfdx: Dfdx,
+    dfdy: Dfdy,
 ) -> T {
     let mut result = T::NoTape::zeros();
     let mut rhs_deriv: Box<T::Array> = T::Device::zeros();
@@ -93,7 +98,7 @@ pub(super) fn binary_map<T: Tensor<Dtype = f32>>(
 
     // compute result & derivatives
     let (o, l, r) = (result.mut_data(), lhs.mut_data(), rhs_deriv.as_mut());
-    f_and_dfs::<T::Array, T::Device>(o, l, r, f, dfdx, dfdy);
+    f_and_dfs::<T::Array, T::Device, F, Dfdx, Dfdy>(o, l, r, f, dfdx, dfdy);
 
     move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
@@ -111,12 +116,19 @@ pub(super) fn binary_map<T: Tensor<Dtype = f32>>(
 ///
 /// Generics:
 /// - `M`: The first dimension of `lhs`.
-pub(super) fn binary_map_broadcast_rhs_first<const M: usize, Lhs, Rhs>(
+pub(super) fn binary_map_broadcast_rhs_first<
+    const M: usize,
+    Lhs,
+    Rhs,
+    F: FnMut(&f32, &f32) -> f32,
+    Dfdx: FnMut(&f32, &f32) -> f32,
+    Dfdy: FnMut(&f32, &f32) -> f32,
+>(
     mut lhs: Lhs,
     rhs: &Rhs,
-    f: fn(&f32, &f32) -> f32,
-    dfdx: fn(&f32, &f32) -> f32,
-    dfdy: fn(&f32, &f32) -> f32,
+    f: F,
+    dfdx: Dfdx,
+    dfdy: Dfdy,
 ) -> Lhs
 where
     Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
@@ -132,7 +144,7 @@ where
 
     // compute result & derivatives
     let (o, l, r) = (result.mut_data(), lhs.mut_data(), rhs_deriv.as_mut());
-    f_and_dfs::<Lhs::Array, Lhs::Device>(o, l, r, f, dfdx, dfdy);
+    f_and_dfs::<Lhs::Array, Lhs::Device, F, Dfdx, Dfdy>(o, l, r, f, dfdx, dfdy);
 
     move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
@@ -152,12 +164,17 @@ where
 ///
 /// This is primarily used to implement [add_broadcast_rhs_last()],
 /// [sub_broadcast_rhs_last()], [mul_broadcast_rhs_last()], and [div_broadcast_rhs_last()].
-pub(super) fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
+pub(super) fn binary_map_broadcast_rhs_last<
+    T: Tensor<Dtype = f32>,
+    F: FnMut(&f32, &f32) -> f32,
+    Dfdx: FnMut(&f32, &f32) -> f32,
+    Dfdy: FnMut(&f32, &f32) -> f32,
+>(
     mut lhs: T,
     rhs: &<T::LastDimReduced as Tensor>::NoTape,
-    f: fn(&f32, &f32) -> f32,
-    dfdx: fn(&f32, &f32) -> f32,
-    dfdy: fn(&f32, &f32) -> f32,
+    f: F,
+    dfdx: Dfdx,
+    dfdy: Dfdy,
 ) -> T {
     let mut result = T::NoTape::zeros();
     let mut rhs_deriv: Box<T::Array> = T::Device::zeros();
@@ -169,7 +186,7 @@ pub(super) fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
 
     // compute result & derivatives at the same time
     let (o, l, r) = (result.mut_data(), lhs.mut_data(), rhs_deriv.as_mut());
-    f_and_dfs::<T::Array, T::Device>(o, l, r, f, dfdx, dfdy);
+    f_and_dfs::<T::Array, T::Device, F, Dfdx, Dfdy>(o, l, r, f, dfdx, dfdy);
 
     move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
@@ -183,13 +200,19 @@ pub(super) fn binary_map_broadcast_rhs_last<T: Tensor<Dtype = f32>>(
     })
 }
 
-fn f_and_dfs<T: CountElements, Device: ForEachElement<T>>(
+fn f_and_dfs<
+    T: CountElements,
+    Device: ForEachElement<T>,
+    F: FnMut(&T::Dtype, &T::Dtype) -> T::Dtype,
+    Dfdx: FnMut(&T::Dtype, &T::Dtype) -> T::Dtype,
+    Dfdy: FnMut(&T::Dtype, &T::Dtype) -> T::Dtype,
+>(
     out: &mut T,
     lhs: &mut T,
     rhs: &mut T,
-    f: fn(&T::Dtype, &T::Dtype) -> T::Dtype,
-    dfdx: fn(&T::Dtype, &T::Dtype) -> T::Dtype,
-    dfdy: fn(&T::Dtype, &T::Dtype) -> T::Dtype,
+    mut f: F,
+    mut dfdx: Dfdx,
+    mut dfdy: Dfdy,
 ) {
     Device::foreach_mmm(out, lhs, rhs, &mut |o, l, r| {
         *o = f(l, r);

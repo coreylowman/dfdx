@@ -123,23 +123,9 @@ impl<T: WriteNumbers, const M: usize> WriteNumbers for [T; M] {
 
 #[cfg(test)]
 mod tests {
-    use tempfile::NamedTempFile;
-
     use super::*;
-    use std::process::Command;
-
-    fn describe(p: &Path) -> String {
-        let output = Command::new("python")
-            .arg("-c")
-            .arg(format!(
-                "import numpy;a=numpy.load({:?});print(a.dtype, a.shape);print(a)",
-                p.as_os_str(),
-            ))
-            .output()
-            .expect("Creating sub process failed");
-        assert!(output.stderr.is_empty(), "{:?}", output.stderr);
-        String::from_utf8(output.stdout).expect("")
-    }
+    use std::io::Read;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_0d_f32_save() {
@@ -148,9 +134,21 @@ mod tests {
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
         save(file.path(), &data).expect("Saving failed");
+
+        let mut f = File::open(file.path()).expect("No file found");
+
+        let mut found = Vec::new();
+        f.read_to_end(&mut found).expect("Reading failed");
+
         assert_eq!(
-            describe(file.path()).replace("\r\n", "\n"),
-            "float32 ()\n0.0\n"
+            &found,
+            &[
+                147, 78, 85, 77, 80, 89, 1, 0, 64, 0, 123, 39, 100, 101, 115, 99, 114, 39, 58, 32,
+                39, 60, 102, 52, 39, 44, 32, 39, 102, 111, 114, 116, 114, 97, 110, 95, 111, 114,
+                100, 101, 114, 39, 58, 32, 70, 97, 108, 115, 101, 44, 32, 39, 115, 104, 97, 112,
+                101, 39, 58, 32, 40, 41, 44, 32, 125, 32, 32, 32, 32, 32, 32, 32, 32, 10, 0, 0, 0,
+                0,
+            ]
         );
     }
 
@@ -161,9 +159,21 @@ mod tests {
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
         save(file.path(), &data).expect("Saving failed");
+
+        let mut f = File::open(file.path()).expect("No file found");
+
+        let mut found = Vec::new();
+        f.read_to_end(&mut found).expect("Reading failed");
+
         assert_eq!(
-            describe(file.path()).replace("\r\n", "\n"),
-            "float32 (5,)\n[ 0.  1.  2.  3. -4.]\n"
+            &found,
+            &[
+                147, 78, 85, 77, 80, 89, 1, 0, 64, 0, 123, 39, 100, 101, 115, 99, 114, 39, 58, 32,
+                39, 60, 102, 52, 39, 44, 32, 39, 102, 111, 114, 116, 114, 97, 110, 95, 111, 114,
+                100, 101, 114, 39, 58, 32, 70, 97, 108, 115, 101, 44, 32, 39, 115, 104, 97, 112,
+                101, 39, 58, 32, 40, 53, 44, 41, 44, 32, 125, 32, 32, 32, 32, 32, 32, 10, 0, 0, 0,
+                0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 192
+            ]
         );
     }
 
@@ -174,9 +184,21 @@ mod tests {
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
         save(file.path(), &data).expect("Saving failed");
+
+        let mut f = File::open(file.path()).expect("No file found");
+
+        let mut found = Vec::new();
+        f.read_to_end(&mut found).expect("Reading failed");
+
         assert_eq!(
-            describe(file.path()).replace("\r\n", "\n"),
-            "float32 (2, 3)\n[[0. 1. 2.]\n [3. 4. 5.]]\n"
+            &found,
+            &[
+                147, 78, 85, 77, 80, 89, 1, 0, 64, 0, 123, 39, 100, 101, 115, 99, 114, 39, 58, 32,
+                39, 60, 102, 52, 39, 44, 32, 39, 102, 111, 114, 116, 114, 97, 110, 95, 111, 114,
+                100, 101, 114, 39, 58, 32, 70, 97, 108, 115, 101, 44, 32, 39, 115, 104, 97, 112,
+                101, 39, 58, 32, 40, 50, 44, 32, 51, 41, 44, 32, 125, 32, 32, 32, 32, 10, 0, 0, 0,
+                0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64
+            ]
         );
     }
 }

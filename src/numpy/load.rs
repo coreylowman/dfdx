@@ -1,7 +1,9 @@
 //! Provides some generic functions to save Nd arrays in the .npy format.
 
 use super::*;
+use std::error::Error;
 use std::{
+    fmt,
     fs::File,
     io::{BufReader, Read},
     path::Path,
@@ -77,6 +79,37 @@ pub enum NpyError {
 
     /// Unexpected alignment for [Endian].
     InvalidAlignment,
+}
+
+impl fmt::Display for NpyError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            NpyError::InvalidMagicNumber(num) => write!(fmt, "invalid magic number: {:?}", num),
+            NpyError::InvalidVersion(ver) => write!(fmt, "invalid version: {:?}", ver),
+            NpyError::IoError(err) => write!(fmt, "{}", err),
+            NpyError::Utf8Error(err) => write!(fmt, "{}", err),
+            NpyError::ParsingMismatch {
+                expected_str,
+                found_str,
+                ..
+            } => write!(
+                fmt,
+                "error while parsing: expected {} found {}",
+                expected_str, found_str
+            ),
+            NpyError::InvalidAlignment => write!(fmt, "invalid alignment"),
+        }
+    }
+}
+
+impl Error for NpyError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            NpyError::IoError(err) => Some(err),
+            NpyError::Utf8Error(err) => Some(err),
+            _ => None,
+        }
+    }
 }
 
 fn read_header<T, R>(r: &mut R) -> Result<Endian, NpyError>
