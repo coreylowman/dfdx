@@ -73,3 +73,6 @@ pub use impl_sum::*;
 pub use impl_sum_last::*;
 pub use map::*;
 pub use matmul::*;
+
+#[cfg(feature = "nightly")]
+mod reshape;

@@ -179,7 +179,7 @@ fn main() -> Result<(), BuildError> {
 
     // If on nightly, enable "nightly" feature
     if version_meta().unwrap().channel == Channel::Nightly {
-        println!("cargo:rustc-cfg=nightly");
+        println!("cargo:rustc-cfg=feature=\"nightly\"");
     }
 
     Ok(())
