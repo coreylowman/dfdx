@@ -1,2 +1,0 @@
-[target.x86_64-apple-darwin]
-rustflags = ["-C", "link-arg=-Wl,-rpath,/opt/intel/oneapi/compiler/latest/mac/compiler/lib"]
