@@ -108,7 +108,6 @@ pub const LINK_DIRS: &[&str] = &[
 #[cfg(target_os = "linux")]
 pub const SHARED_LIB_DIRS: &[&str] = LINK_DIRS;
 
-#[cfg(target_os = "macos")]
 const MACOS_COMPILER_PATH: &str = "compiler/latest/mac/compiler/lib";
 
 #[cfg(target_os = "macos")]
@@ -196,8 +195,11 @@ fn main() -> Result<(), BuildError> {
             println!("cargo:rustc-link-lib=dl");
         }
 
-        if config!(target_os = "macos") {
-            println!("cargo:rustc-link-arg=-Wl,-rpath,{root}/{MACOS_COMPILER_PATH}");
+        if cfg!(macos) {
+            println!(
+                "cargo:rustc-link-arg=-Wl,-rpath,{}/{MACOS_COMPILER_PATH}",
+                root.display(),
+            );
         }
     }
 
