@@ -1,4 +1,6 @@
-use super::binary_map::{add, binary_map_broadcast_rhs_first, div, mul, sub};
+use super::binary_map::{
+    add, binary_map_broadcast_rhs_first, binary_map_broadcast_rhs_first_2d, div, mul, sub,
+};
 use crate::prelude::*;
 
 /// `lhs + &rhs`. `rhs` is broadcasted `M` times, where `M` is the first dimension of `lhs`.
@@ -79,6 +81,98 @@ where
     Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
 {
     binary_map_broadcast_rhs_first(lhs, rhs, div::f, div::dfdx, div::dfdy)
+}
+
+/// `lhs + &rhs`. `rhs` is broadcasted `N * M` times, where `N` is the first dimension and `N` is the second dimension of `lhs`.
+///
+/// E.g If Lhs has dimension `(5, 2, 3)`, then Rhs has to be dimension `(3,)`.
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a = Tensor3D::new([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]]);
+/// let b = Tensor1D::new([-1.0, 0.0, 1.0]);
+/// let r = add_broadcast_rhs_first_2d(a, &b);
+/// assert_eq!(r.data(), &[[[0.0, 2.0, 4.0], [3.0, 5.0, 7.0]]]);
+/// ```
+pub fn add_broadcast_rhs_first_2d<Lhs, Rhs, const M: usize, const N: usize>(
+    lhs: Lhs,
+    rhs: &Rhs,
+) -> Lhs
+where
+    Lhs: Tensor<Array = [[Rhs::Array; M]; N], Dtype = f32>,
+    Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
+{
+    binary_map_broadcast_rhs_first_2d(lhs, rhs, add::f, add::dfdx, add::dfdy)
+}
+
+/// `lhs - &rhs`. `rhs` is broadcasted `N * M` times, where `N` is the first dimension and `N` is the second dimension of `lhs`.
+///
+/// E.g If Lhs has dimension `(5, 2, 3)`, then Rhs has to be dimension `(3,)`.
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a = Tensor3D::new([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]]);
+/// let b = Tensor1D::new([-1.0, 0.0, 1.0]);
+/// let r = sub_broadcast_rhs_first_2d(a, &b);
+/// assert_eq!(r.data(), &[[[2.0, 2.0, 2.0], [5.0, 5.0, 5.0]]]);
+/// ```
+pub fn sub_broadcast_rhs_first_2d<Lhs, Rhs, const M: usize, const N: usize>(
+    lhs: Lhs,
+    rhs: &Rhs,
+) -> Lhs
+where
+    Lhs: Tensor<Array = [[Rhs::Array; M]; N], Dtype = f32>,
+    Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
+{
+    binary_map_broadcast_rhs_first_2d(lhs, rhs, sub::f, sub::dfdx, sub::dfdy)
+}
+
+/// `lhs * &rhs`. `rhs` is broadcasted `N * M` times, where `N` is the first dimension and `N` is the second dimension of `lhs`.
+///
+/// E.g If Lhs has dimension `(5, 2, 3)`, then Rhs has to be dimension `(3,)`.
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a = Tensor3D::new([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]]);
+/// let b = Tensor1D::new([-1.0, 0.0, 1.0]);
+/// let r = mul_broadcast_rhs_first_2d(a, &b);
+/// assert_eq!(r.data(), &[[[-1.0, 0.0, 3.0], [-4.0, 0.0, 6.0]]]);
+/// ```
+pub fn mul_broadcast_rhs_first_2d<Lhs, Rhs, const M: usize, const N: usize>(
+    lhs: Lhs,
+    rhs: &Rhs,
+) -> Lhs
+where
+    Lhs: Tensor<Array = [[Rhs::Array; M]; N], Dtype = f32>,
+    Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
+{
+    binary_map_broadcast_rhs_first_2d(lhs, rhs, mul::f, mul::dfdx, mul::dfdy)
+}
+
+/// `lhs / &rhs`. `rhs` is broadcasted `N * M` times, where `N` is the first dimension and `N` is the second dimension of `lhs`.
+///
+/// E.g If Lhs has dimension `(5, 2, 3)`, then Rhs has to be dimension `(3,)`.
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a = Tensor3D::new([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]]);
+/// let b = Tensor1D::new([-1.0, 0.0, 1.0]);
+/// let r = div_broadcast_rhs_first_2d(a, &b);
+/// assert_eq!(r.data(), &[[[-1.0, f32::INFINITY, 3.0], [-4.0, f32::INFINITY, 6.0]]]);
+/// ```
+pub fn div_broadcast_rhs_first_2d<Lhs, Rhs, const M: usize, const N: usize>(
+    lhs: Lhs,
+    rhs: &Rhs,
+) -> Lhs
+where
+    Lhs: Tensor<Array = [[Rhs::Array; M]; N], Dtype = f32>,
+    Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
+{
+    binary_map_broadcast_rhs_first_2d(lhs, rhs, div::f, div::dfdx, div::dfdy)
 }
 
 #[cfg(test)]

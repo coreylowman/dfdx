@@ -97,6 +97,17 @@ impl<const B: usize, const I: usize, const O: usize, H: Tape> Module<Tensor2D<B,
     }
 }
 
+impl<const B: usize, const S: usize, const I: usize, const O: usize, H: Tape>
+    Module<Tensor3D<B, S, I, H>> for Linear<I, O>
+{
+    type Output = Tensor3D<B, S, O, H>;
+
+    /// Batched 3d forward using [batch_matmul()] and [add_broadcast_rhs_first()]
+    fn forward(&self, x: Tensor3D<B, S, I, H>) -> Self::Output {
+        add_broadcast_rhs_first_2d(batch_matmul_transpose(x, &self.weight), &self.bias)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::{prelude::StdRng, SeedableRng};
