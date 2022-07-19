@@ -158,6 +158,61 @@ where
     })
 }
 
+/// Apply binary function `f` to `lhs` and `rhs`, where `rhs` is broadcasted `M` times to be the same shape as `lhs`.
+/// `dfdx` and `dfdy` are the partial derivatives of f wrt. x and y respectively.
+///
+/// `f`, `dfdx`, and `dfdy` are all the same type.
+///
+/// Generics:
+/// - `N`: The first dimension of `lhs`.
+/// - `M`: The second dimension of `lhs`.
+pub(super) fn binary_map_broadcast_rhs_first_2d<
+    const M: usize,
+    const N: usize,
+    Lhs,
+    Rhs,
+    F: FnMut(&f32, &f32) -> f32,
+    Dfdx: FnMut(&f32, &f32) -> f32,
+    Dfdy: FnMut(&f32, &f32) -> f32,
+>(
+    mut lhs: Lhs,
+    rhs: &Rhs,
+    f: F,
+    dfdx: Dfdx,
+    dfdy: Dfdy,
+) -> Lhs
+where
+    Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
+    Lhs: Tensor<Dtype = f32, Array = [[Rhs::Array; M]; N]>,
+{
+    let mut result = Lhs::NoTape::zeros();
+    let mut rhs_deriv: Box<Lhs::Array> = Lhs::Device::zeros();
+
+    // clone rhs.data() into rhs_deriv
+    for i in 0..N {
+        for j in 0..M {
+            rhs_deriv[i][j].clone_from(rhs.data());
+        }
+    }
+
+    // compute result & derivatives
+    let (o, l, r) = (result.mut_data(), lhs.mut_data(), rhs_deriv.as_mut());
+    f_and_dfs::<Lhs::Array, Lhs::Device, F, Dfdx, Dfdy>(o, l, r, f, dfdx, dfdy);
+
+    move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
+        Lhs::Device::addmul(lhs_grad, lhs.data(), result_grad);
+
+        let (rhs_grad, result_grad): (&mut Rhs::Array, &Lhs::Array) =
+            grads.mut_and_ref(&rhs, &result);
+        for i in 0..N {
+            for j in 0..M {
+                Rhs::Device::addmul(rhs_grad, &rhs_deriv[i][j], &result_grad[i][j]);
+            }
+        }
+    })
+}
+
 /// Applies a binary function `f`, it's partial wrt. x `dfdx`, and its partial wrt. y `dfdy`
 /// to a pair of [Tensor]s `lhs` and `rhs. Note that `rhs` has it's last dimension reduced,
 /// so therefore it's last dimension is broadcasted to `lhs`'s last dimension.
