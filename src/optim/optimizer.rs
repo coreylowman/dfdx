@@ -1,4 +1,4 @@
-use crate::prelude::{CanUpdateWithGradients, Gradients};
+use crate::prelude::{CanUpdateWithGradients, Gradients, UnusedParamsError};
 
 /// All optimizers must implement the update function, which takes an object
 /// that implements [CanUpdateWithGradients], and calls [CanUpdateWithGradients::update].
@@ -20,5 +20,5 @@ pub trait Optimizer<M: CanUpdateWithGradients> {
     ///
     /// Requires a `&mut self` because the optimizer may change some internally
     /// tracked values.
-    fn update(&mut self, module: &mut M, gradients: Gradients);
+    fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError>;
 }

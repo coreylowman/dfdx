@@ -1,5 +1,4 @@
-use super::*;
-use crate::prelude::{CanUpdateWithGradients, GradientNotFoundError};
+use crate::prelude::*;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
@@ -44,13 +43,16 @@ impl<T: CanUpdateWithGradients, const N: usize> CanUpdateWithGradients for Repea
     fn update<G: crate::prelude::GradientProvider>(
         &mut self,
         grads: &mut G,
-    ) -> Result<(), GradientNotFoundError> {
+    ) -> Result<(), UnusedParamsError> {
+        let mut unused = Ok(());
         for i in 0..N {
-            self.modules[i]
-                .update(grads)
-                .map_err(|l| l.prepend(&format!("{i}.")))?;
+            unused.union(
+                self.modules[i]
+                    .update(grads)
+                    .map_err(|l| l.prepend(&format!("{i}."))),
+            );
         }
-        Ok(())
+        unused
     }
 }
 
@@ -98,7 +100,6 @@ impl<Input, T: Module<Input, Output = Input>, const N: usize> Module<Input> for 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prelude::*;
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;
     use tempfile::NamedTempFile;

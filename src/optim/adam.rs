@@ -93,7 +93,7 @@ impl<M> Adam<M> {
 }
 
 impl<M> GradientProvider for Adam<M> {
-    fn gradient<P>(&mut self, p: &P) -> Result<Box<P::Array>, GradientNotFoundError>
+    fn gradient<P>(&mut self, p: &P) -> Result<Box<P::Array>, UnusedParamsError>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
@@ -112,12 +112,10 @@ impl<M> GradientProvider for Adam<M> {
 }
 
 impl<M: CanUpdateWithGradients> Optimizer<M> for Adam<M> {
-    fn update(&mut self, module: &mut M, gradients: Gradients) {
+    fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError> {
         self.t = self.t.checked_add(1).unwrap();
         self.gradients = gradients;
-        module
-            .update(self)
-            .expect("Parameter wasn't used for gradient computation");
+        module.update(self)
     }
 }
 
@@ -147,7 +145,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).square().mean().backward();
-            opt.update(&mut t, gradients);
+            opt.update(&mut t, gradients).expect("");
             assert_close(t.data(), e);
         }
     }
@@ -176,7 +174,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).square().mean().backward();
-            opt.update(&mut t, gradients);
+            opt.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
     }
@@ -200,7 +198,7 @@ mod tests {
         let py = model.forward(x.trace());
         let loss = (py - &y).square().mean();
         let gradients = loss.backward();
-        opt.update(&mut model, gradients);
+        opt.update(&mut model, gradients).expect("");
 
         let model_1 = model.clone();
 

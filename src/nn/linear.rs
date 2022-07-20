@@ -32,10 +32,11 @@ pub struct Linear<const I: usize, const O: usize> {
 }
 
 impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), GradientNotFoundError> {
-        self.weight.update(grads).map_err(|l| l.prepend("weight"))?;
-        self.bias.update(grads).map_err(|l| l.prepend("bias"))?;
-        Ok(())
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError> {
+        let mut unused = Ok(());
+        unused.union(self.weight.update(grads).map_err(|l| l.prepend("weight")));
+        unused.union(self.bias.update(grads).map_err(|l| l.prepend("bias")));
+        unused
     }
 }
 

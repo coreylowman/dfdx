@@ -9,10 +9,7 @@ macro_rules! activation_impls {
 
         impl CanUpdateWithGradients for $struct_name {
             /// Does nothing.
-            fn update<G: GradientProvider>(
-                &mut self,
-                _: &mut G,
-            ) -> Result<(), GradientNotFoundError> {
+            fn update<G: GradientProvider>(&mut self, _: &mut G) -> Result<(), UnusedParamsError> {
                 Ok(())
             }
         }

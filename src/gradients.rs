@@ -101,29 +101,54 @@ impl Tape for NoneTape {
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, _operation: F) {}
 }
 
-/// An error that indicates the gradient for the requested parameter at
-/// [GradientNotFoundError::param_location] was not used during gradient computation.
-#[derive(Debug, Default)]
-pub struct GradientNotFoundError {
-    pub param_location: String,
+/// An error that indicates the parameters at
+/// [UnusedParamsError::param_locations] were not used during gradient computation,
+/// and therefore don't have gradients associated with them.
+#[derive(Debug)]
+pub struct UnusedParamsError {
+    pub param_locations: Vec<String>,
 }
 
-impl GradientNotFoundError {
-    pub(crate) fn prepend(mut self, location: &str) -> Self {
-        self.param_location.insert_str(0, location);
+impl UnusedParamsError {
+    pub fn one() -> Self {
+        Self {
+            param_locations: vec!["".into()],
+        }
+    }
+
+    pub fn prepend(mut self, location: &str) -> Self {
+        for p in self.param_locations.iter_mut() {
+            p.insert_str(0, location);
+        }
         self
     }
 }
 
-impl std::fmt::Display for GradientNotFoundError {
+pub trait Union<T> {
+    fn union(&mut self, b: Self);
+}
+
+impl Union<Self> for Result<(), UnusedParamsError> {
+    fn union(&mut self, b: Self) {
+        if let Err(mut unused) = b {
+            if let Err(a_unused) = self {
+                a_unused.param_locations.append(&mut unused.param_locations);
+            } else {
+                *self = Err(unused);
+            }
+        }
+    }
+}
+
+impl std::fmt::Display for UnusedParamsError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GradientNotFoundError")
-            .field("param_location", &self.param_location)
+            .field("param_locations", &self.param_locations)
             .finish()
     }
 }
 
-impl std::error::Error for GradientNotFoundError {}
+impl std::error::Error for UnusedParamsError {}
 
 /// A generic container for keeping variable sized arrays associated with a [UniqueId].
 ///
@@ -185,16 +210,16 @@ impl Gradients {
     /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
     /// let mut gradients: Gradients = Default::default();
     /// *gradients.mut_gradient(&t) = [-4.0, 5.0, -6.0];
-    /// assert_eq!(gradients.remove(&t).as_ref(), &[-4.0, 5.0, -6.0]);
+    /// assert_eq!(gradients.remove(&t).expect("").as_ref(), &[-4.0, 5.0, -6.0]);
     /// ```
     pub fn remove<T: HasUniqueId + HasArrayType>(
         &mut self,
         t: &T,
-    ) -> Result<Box<T::Array>, GradientNotFoundError> {
+    ) -> Result<Box<T::Array>, UnusedParamsError> {
         let entry = self
             .gradient_by_id
             .remove_entry(t.id())
-            .ok_or_else(Default::default)?;
+            .ok_or_else(UnusedParamsError::one)?;
         Ok(entry.1.downcast().unwrap())
     }
 
@@ -264,7 +289,7 @@ pub trait GradientProvider {
     /// Retrieves the data associated with `p` if there is any.
     /// This can modify `self`, for instance if velocities are calculated
     /// based on the associated data!
-    fn gradient<P>(&mut self, p: &P) -> Result<Box<P::Array>, GradientNotFoundError>
+    fn gradient<P>(&mut self, p: &P) -> Result<Box<P::Array>, UnusedParamsError>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice;
 }
@@ -284,7 +309,7 @@ pub trait GradientProvider {
 /// }
 /// ```
 pub trait CanUpdateWithGradients {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), GradientNotFoundError>;
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError>;
 }
 
 #[cfg(test)]

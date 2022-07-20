@@ -6,9 +6,10 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
         impl<$($name: CanUpdateWithGradients),+> CanUpdateWithGradients for ($($name,)+) {
-            fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), GradientNotFoundError>{
-                $(self.$idx.update(grads).map_err(|loc| loc.prepend(&format!("{}.", $idx)))?;)+
-                Ok(())
+            fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError> {
+                let mut res = Ok(());
+                $(res.union(self.$idx.update(grads).map_err(|loc| loc.prepend(&format!("{}.", $idx))));)+
+                res
             }
         }
 
@@ -133,7 +134,7 @@ mod tests {
             lr: 1.0,
             momentum: None,
         });
-        sgd.update(&mut model, gradients);
+        sgd.update(&mut model, gradients).expect("");
 
         assert!(model.0.weight.data() != m0.0.weight.data());
         assert!(model.0.bias.data() != m0.0.bias.data());
@@ -212,7 +213,7 @@ mod tests {
     struct SetTo1<const I: usize, const N: usize>;
 
     impl<const I: usize, const N: usize> CanUpdateWithGradients for SetTo1<I, N> {
-        fn update<G: GradientProvider>(&mut self, _: &mut G) -> Result<(), GradientNotFoundError> {
+        fn update<G: GradientProvider>(&mut self, _: &mut G) -> Result<(), UnusedParamsError> {
             Ok(())
         }
     }

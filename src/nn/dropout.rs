@@ -33,7 +33,7 @@ impl<const N: usize> Default for DropoutOneIn<N> {
 
 impl<const N: usize> CanUpdateWithGradients for DropoutOneIn<N> {
     /// Does nothing.
-    fn update<G: GradientProvider>(&mut self, _: &mut G) -> Result<(), GradientNotFoundError> {
+    fn update<G: GradientProvider>(&mut self, _: &mut G) -> Result<(), UnusedParamsError> {
         Ok(())
     }
 }
@@ -120,7 +120,7 @@ impl Default for Dropout {
 
 impl CanUpdateWithGradients for Dropout {
     /// Does nothing.
-    fn update<G: GradientProvider>(&mut self, _: &mut G) -> Result<(), GradientNotFoundError> {
+    fn update<G: GradientProvider>(&mut self, _: &mut G) -> Result<(), UnusedParamsError> {
         Ok(())
     }
 }

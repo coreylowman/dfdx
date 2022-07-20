@@ -104,7 +104,7 @@ impl<M> RMSprop<M> {
 }
 
 impl<M> GradientProvider for RMSprop<M> {
-    fn gradient<P>(&mut self, p: &P) -> Result<Box<P::Array>, GradientNotFoundError>
+    fn gradient<P>(&mut self, p: &P) -> Result<Box<P::Array>, UnusedParamsError>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
@@ -155,12 +155,11 @@ impl<M> GradientProvider for RMSprop<M> {
 }
 
 impl<M: CanUpdateWithGradients> Optimizer<M> for RMSprop<M> {
-    fn update(&mut self, module: &mut M, gradients: Gradients) {
+    fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError> {
         self.gradients = gradients;
-        module
-            .update(self)
-            .expect("Parameter wasn't used for gradient computation");
+        let r = module.update(self);
         self.step += 1;
+        r
     }
 }
 
@@ -174,7 +173,7 @@ mod tests {
         let mut opt = RMSprop::new(cfg);
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).square().sum().backward();
-            opt.update(&mut t, gradients);
+            opt.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
     }

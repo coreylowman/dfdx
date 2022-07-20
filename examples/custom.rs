@@ -22,10 +22,12 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> ResetParams for Mlp<
 impl<const IN: usize, const INNER: usize, const OUT: usize> CanUpdateWithGradients
     for Mlp<IN, INNER, OUT>
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-        self.l1.update(grads);
-        self.l2.update(grads);
-        self.relu.update(grads);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError> {
+        let mut unused = Ok(());
+        unused.union(self.l1.update(grads).map_err(|loc| loc.prepend("l1.")));
+        unused.union(self.l2.update(grads).map_err(|loc| loc.prepend("l2.")));
+        unused.union(self.relu.update(grads).map_err(|loc| loc.prepend("relu.")));
+        unused
     }
 }
 

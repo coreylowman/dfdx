@@ -60,7 +60,7 @@ fn main() {
         let gradients = ppo_loss.backward();
 
         // update weights with optimizer
-        sgd.update(&mut pi_net, gradients);
+        sgd.update(&mut pi_net, gradients).expect("Unused params");
 
         println!("loss={:#} in {:?}", loss_v, start.elapsed());
     }
