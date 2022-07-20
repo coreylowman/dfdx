@@ -1,3 +1,4 @@
+#![allow(clippy::needless_range_loop)]
 use dfdx::prelude::*;
 
 fn main() {
