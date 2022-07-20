@@ -1,11 +1,11 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-/// Reshapes `t` into a differently shaped tensor. [T] and [R] must have the same
+/// Reshapes `t` into a differently shaped tensor. `T` and `R` must have the same
 /// number of elements.
 ///
 /// # Example
-/// ```rust
+/// ```ignore
 /// # use dfdx::prelude::*;
 /// let t = Tensor1D::new([1.0, 2.0, 3.0, 4.0]);
 /// let r: Tensor2D<2, 2> = reshape(t);
@@ -55,6 +55,14 @@ mod tests {
 
         let c: Tensor2D<1, 1> = reshape(a.duplicate());
         assert_eq!(c.data(), &[[3.14]]);
+    }
+
+    #[test]
+    fn test_valid_reshapes() {
+        let _: Tensor1D<8> = reshape(Tensor2D::<2, 4>::zeros());
+        let _: Tensor2D<2, 4> = reshape(Tensor3D::<2, 2, 2>::zeros());
+        let _: Tensor3D<2, 2, 2> = reshape(Tensor2D::<2, 4>::zeros());
+        let _: Tensor2D<3, 3> = reshape(Tensor1D::<9>::zeros());
     }
 
     #[test]
