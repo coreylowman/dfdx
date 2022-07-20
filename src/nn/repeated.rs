@@ -1,5 +1,5 @@
 use super::*;
-use crate::prelude::CanUpdateWithGradients;
+use crate::prelude::{CanUpdateWithGradients, GradientNotFoundError};
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
@@ -41,10 +41,16 @@ impl<T: ResetParams, const N: usize> ResetParams for Repeated<T, N> {
 }
 
 impl<T: CanUpdateWithGradients, const N: usize> CanUpdateWithGradients for Repeated<T, N> {
-    fn update<G: crate::prelude::GradientProvider>(&mut self, grads: &mut G) {
+    fn update<G: crate::prelude::GradientProvider>(
+        &mut self,
+        grads: &mut G,
+    ) -> Result<(), GradientNotFoundError> {
         for i in 0..N {
-            self.modules[i].update(grads);
+            self.modules[i]
+                .update(grads)
+                .map_err(|l| l.prepend(&format!("{i}.")))?;
         }
+        Ok(())
     }
 }
 

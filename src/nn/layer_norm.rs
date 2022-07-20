@@ -46,9 +46,10 @@ impl<const M: usize> ResetParams for LayerNorm1D<M> {
 
 impl<const M: usize> CanUpdateWithGradients for LayerNorm1D<M> {
     /// Updates [Self::gamma] and [Self::beta].
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-        self.gamma.update(grads);
-        self.beta.update(grads);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), GradientNotFoundError> {
+        self.gamma.update(grads).map_err(|l| l.prepend("gamma"))?;
+        self.beta.update(grads).map_err(|l| l.prepend("beta"))?;
+        Ok(())
     }
 }
 

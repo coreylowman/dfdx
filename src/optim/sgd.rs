@@ -113,11 +113,11 @@ impl<M> Sgd<M> {
 }
 
 impl<M> GradientProvider for Sgd<M> {
-    fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
+    fn gradient<P>(&mut self, p: &P) -> Result<Box<P::Array>, GradientNotFoundError>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
-        let mut g_t = self.gradients.remove(p);
+        let mut g_t = self.gradients.remove(p)?;
         match self.cfg.momentum {
             Some(Momentum::Classic(u)) => {
                 let v_t = self.velocity.mut_gradient(p);
@@ -135,14 +135,16 @@ impl<M> GradientProvider for Sgd<M> {
             }
             None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.cfg.lr),
         }
-        g_t
+        Ok(g_t)
     }
 }
 
 impl<M: CanUpdateWithGradients> Optimizer<M> for Sgd<M> {
     fn update(&mut self, module: &mut M, gradients: Gradients) {
         self.gradients = gradients;
-        module.update(self);
+        module
+            .update(self)
+            .expect("Parameter wasn't used for gradient computation");
     }
 }
 

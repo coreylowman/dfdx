@@ -6,8 +6,9 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
         impl<$($name: CanUpdateWithGradients),+> CanUpdateWithGradients for ($($name,)+) {
-            fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-                $(self.$idx.update(grads));+
+            fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), GradientNotFoundError>{
+                $(self.$idx.update(grads).map_err(|loc| loc.prepend(&format!("{}.", $idx)))?;)+
+                Ok(())
             }
         }
 
@@ -211,7 +212,9 @@ mod tests {
     struct SetTo1<const I: usize, const N: usize>;
 
     impl<const I: usize, const N: usize> CanUpdateWithGradients for SetTo1<I, N> {
-        fn update<G: GradientProvider>(&mut self, _: &mut G) {}
+        fn update<G: GradientProvider>(&mut self, _: &mut G) -> Result<(), GradientNotFoundError> {
+            Ok(())
+        }
     }
     impl<const I: usize, const N: usize> ResetParams for SetTo1<I, N> {
         fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {}

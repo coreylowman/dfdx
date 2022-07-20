@@ -101,6 +101,30 @@ impl Tape for NoneTape {
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, _operation: F) {}
 }
 
+/// An error that indicates the gradient for the requested parameter at
+/// [GradientNotFoundError::param_location] was not used during gradient computation.
+#[derive(Debug, Default)]
+pub struct GradientNotFoundError {
+    pub param_location: String,
+}
+
+impl GradientNotFoundError {
+    pub(crate) fn prepend(mut self, location: &str) -> Self {
+        self.param_location.insert_str(0, location);
+        self
+    }
+}
+
+impl std::fmt::Display for GradientNotFoundError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GradientNotFoundError")
+            .field("param_location", &self.param_location)
+            .finish()
+    }
+}
+
+impl std::error::Error for GradientNotFoundError {}
+
 /// A generic container for keeping variable sized arrays associated with a [UniqueId].
 ///
 /// You can:
@@ -163,13 +187,15 @@ impl Gradients {
     /// *gradients.mut_gradient(&t) = [-4.0, 5.0, -6.0];
     /// assert_eq!(gradients.remove(&t).as_ref(), &[-4.0, 5.0, -6.0]);
     /// ```
-    pub fn remove<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Box<T::Array> {
-        self.gradient_by_id
+    pub fn remove<T: HasUniqueId + HasArrayType>(
+        &mut self,
+        t: &T,
+    ) -> Result<Box<T::Array>, GradientNotFoundError> {
+        let entry = self
+            .gradient_by_id
             .remove_entry(t.id())
-            .unwrap()
-            .1
-            .downcast()
-            .unwrap()
+            .ok_or_else(Default::default)?;
+        Ok(entry.1.downcast().unwrap())
     }
 
     /// Returns a mutable reference to the data associated with `t`.
@@ -238,7 +264,7 @@ pub trait GradientProvider {
     /// Retrieves the data associated with `p` if there is any.
     /// This can modify `self`, for instance if velocities are calculated
     /// based on the associated data!
-    fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
+    fn gradient<P>(&mut self, p: &P) -> Result<Box<P::Array>, GradientNotFoundError>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice;
 }
@@ -258,7 +284,7 @@ pub trait GradientProvider {
 /// }
 /// ```
 pub trait CanUpdateWithGradients {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), GradientNotFoundError>;
 }
 
 #[cfg(test)]
