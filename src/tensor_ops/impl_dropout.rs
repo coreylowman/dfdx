@@ -1,4 +1,3 @@
-use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 use rand::Rng;
 use rand_distr::{Distribution, Standard};
@@ -8,24 +7,30 @@ use rand_distr::{Distribution, Standard};
 /// If the `t: T` passed in does **not** have a tape, then no dropout is applied. See [Tape::OWNS_TAPE].
 ///
 /// Described in paper: [Improving neural networks by preventing co-adaptation of feature detectors](https://arxiv.org/abs/1207.0580)
-pub fn dropout<T: Tensor<Dtype = f32>, R: Rng>(t: T, p: f32, rng: &mut R) -> T {
+pub fn dropout<T: Tensor<Dtype = f32>, R: Rng>(mut t: T, p: f32, rng: &mut R) -> T {
     if !T::Tape::OWNS_TAPE {
         // This is the branch where `t` doesn't own the tape, so we don't have to drop out anything.
         t
     } else {
         // `t` owns the tape in this branch, so apply dropout randomly.
+        // result stored in `t`, derivative will be extracted from `t` later.
         let rinvp = (1.0 - p).recip();
-        let deriv = T::Device::filled(&mut |d| {
+        T::Device::foreach_m(t.mut_data(), &mut |x| {
             let val: f32 = Standard.sample(rng);
-            *d = if val < p { 0.0 } else { rinvp };
+            *x *= if val < p { 0.0 } else { rinvp };
         });
-        let mut result = T::NoTape::zeros();
-        T::Device::addmul(result.mut_data(), t.data(), deriv.as_ref());
 
-        move_tape_and_add_backward_op(t, result, move |t, result, grads| {
-            let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-            T::Device::addmul(t_grad, deriv.as_ref(), result_grad);
-        })
+        let (t, mut tape) = t.split_tape();
+        let result = t.clone();
+        let phantom_result = result.phantom();
+        tape.add_backward_op(move |grads| {
+            let (t_grad, result_grad) = grads.mut_and_ref(&t, &phantom_result);
+            T::Device::foreach_mrr(t_grad, t.data(), result_grad, &mut |g, x, r| {
+                let d = if x > &0.0 { rinvp } else { 0.0 };
+                *g += d * r;
+            });
+        });
+        result.put_tape(tape)
     }
 }
 
