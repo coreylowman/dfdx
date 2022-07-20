@@ -58,7 +58,7 @@ impl GradientTape {
     ///
     /// See src/tensor_ops for implementation examples.
     pub(crate) fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, operation: F) {
-        self.operations.insert(0, Box::new(operation));
+        self.operations.push(Box::new(operation));
     }
 
     /// Compute the [Gradients]! This just runs all the operations on a new [Gradients] struct.
@@ -66,7 +66,7 @@ impl GradientTape {
     /// Note that this method takes ownership of self, so it can't be called twice!
     pub fn execute(mut self) -> Gradients {
         let mut gradients: Gradients = Default::default();
-        for operation in self.operations.drain(..) {
+        for operation in self.operations.drain(..).rev() {
             (operation)(&mut gradients);
         }
         gradients
