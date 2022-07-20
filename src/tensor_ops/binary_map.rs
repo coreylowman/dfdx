@@ -164,8 +164,8 @@ where
 /// `f`, `dfdx`, and `dfdy` are all the same type.
 ///
 /// Generics:
-/// - `N`: The first dimension of `lhs`.
-/// - `M`: The second dimension of `lhs`.
+/// - `M`: The first dimension of `lhs`.
+/// - `N`: The second dimension of `lhs`.
 pub(super) fn binary_map_broadcast_rhs_first_2d<
     const M: usize,
     const N: usize,
@@ -183,14 +183,14 @@ pub(super) fn binary_map_broadcast_rhs_first_2d<
 ) -> Lhs
 where
     Rhs: 'static + Tensor<Dtype = f32, Tape = NoneTape>,
-    Lhs: Tensor<Dtype = f32, Array = [[Rhs::Array; M]; N]>,
+    Lhs: Tensor<Dtype = f32, Array = [[Rhs::Array; N]; M]>,
 {
     let mut result = Lhs::NoTape::zeros();
     let mut rhs_deriv: Box<Lhs::Array> = Lhs::Device::zeros();
 
     // clone rhs.data() into rhs_deriv
-    for i in 0..N {
-        for j in 0..M {
+    for i in 0..M {
+        for j in 0..N {
             rhs_deriv[i][j].clone_from(rhs.data());
         }
     }
@@ -205,8 +205,8 @@ where
 
         let (rhs_grad, result_grad): (&mut Rhs::Array, &Lhs::Array) =
             grads.mut_and_ref(&rhs, &result);
-        for i in 0..N {
-            for j in 0..M {
+        for i in 0..M {
+            for j in 0..N {
                 Rhs::Device::addmul(rhs_grad, &rhs_deriv[i][j], &result_grad[i][j]);
             }
         }

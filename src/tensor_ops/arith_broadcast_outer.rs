@@ -90,10 +90,16 @@ where
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor3D::new([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]]);
+/// let a = Tensor3D::new([
+///     [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+///     [[-1.0, -2.0, -3.0], [-4.0, -5.0, -6.0]],
+/// ]);
 /// let b = Tensor1D::new([-1.0, 0.0, 1.0]);
 /// let r = add_broadcast_rhs_first_2d(a, &b);
-/// assert_eq!(r.data(), &[[[0.0, 2.0, 4.0], [3.0, 5.0, 7.0]]]);
+/// assert_eq!(r.data(), &[
+///     [[0.0, 2.0, 4.0], [3.0, 5.0, 7.0]],
+///     [[-2.0, -2.0, -2.0], [-5.0, -5.0, -5.0]]
+/// ]);
 /// ```
 pub fn add_broadcast_rhs_first_2d<Lhs, Rhs, const M: usize, const N: usize>(
     lhs: Lhs,
@@ -113,10 +119,16 @@ where
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor3D::new([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]]);
+/// let a = Tensor3D::new([
+///     [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+///     [[-1.0, -2.0, -3.0], [-4.0, -5.0, -6.0]],
+/// ]);
 /// let b = Tensor1D::new([-1.0, 0.0, 1.0]);
 /// let r = sub_broadcast_rhs_first_2d(a, &b);
-/// assert_eq!(r.data(), &[[[2.0, 2.0, 2.0], [5.0, 5.0, 5.0]]]);
+/// assert_eq!(r.data(), &[
+///     [[2.0, 2.0, 2.0], [5.0, 5.0, 5.0]],
+///     [[-0.0, -2.0, -4.0], [-3.0, -5.0, -7.0]]
+/// ]);
 /// ```
 pub fn sub_broadcast_rhs_first_2d<Lhs, Rhs, const M: usize, const N: usize>(
     lhs: Lhs,
@@ -136,10 +148,16 @@ where
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor3D::new([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]]);
+/// let a = Tensor3D::new([
+///     [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+///     [[-1.0, -2.0, -3.0], [-4.0, -5.0, -6.0]],
+/// ]);
 /// let b = Tensor1D::new([-1.0, 0.0, 1.0]);
 /// let r = mul_broadcast_rhs_first_2d(a, &b);
-/// assert_eq!(r.data(), &[[[-1.0, 0.0, 3.0], [-4.0, 0.0, 6.0]]]);
+/// assert_eq!(r.data(), &[
+///     [[-1.0, 0.0, 3.0], [-4.0, 0.0, 6.0]],
+///     [[1.0, 0.0, -3.0], [4.0, 0.0, -6.0]]
+/// ]);
 /// ```
 pub fn mul_broadcast_rhs_first_2d<Lhs, Rhs, const M: usize, const N: usize>(
     lhs: Lhs,
@@ -159,10 +177,16 @@ where
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor3D::new([[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]]);
+/// let a = Tensor3D::new([
+///     [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+///     [[-1.0, -2.0, -3.0], [-4.0, -5.0, -6.0]],
+/// ]);
 /// let b = Tensor1D::new([-1.0, 0.0, 1.0]);
 /// let r = div_broadcast_rhs_first_2d(a, &b);
-/// assert_eq!(r.data(), &[[[-1.0, f32::INFINITY, 3.0], [-4.0, f32::INFINITY, 6.0]]]);
+/// assert_eq!(r.data(), &[
+///     [[-1.0, f32::INFINITY, 3.0], [-4.0, f32::INFINITY, 6.0]],
+///     [[1.0, -f32::INFINITY, -3.0], [4.0, -f32::INFINITY, -6.0]]
+/// ]);
 /// ```
 pub fn div_broadcast_rhs_first_2d<Lhs, Rhs, const M: usize, const N: usize>(
     lhs: Lhs,
