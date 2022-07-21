@@ -7,9 +7,9 @@ macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
         impl<$($name: CanUpdateWithGradients),+> CanUpdateWithGradients for ($($name,)+) {
             fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError> {
-                let mut res = Ok(());
-                $(res.union(self.$idx.update(grads).map_err(|loc| loc.prepend(&format!("{}.", $idx))));)+
-                res
+                let mut r = Ok(());
+                $(r.maybe_add_unused(&format!("{}.", $idx), self.$idx.update(grads));)+
+                r
             }
         }
 

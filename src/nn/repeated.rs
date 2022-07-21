@@ -44,15 +44,11 @@ impl<T: CanUpdateWithGradients, const N: usize> CanUpdateWithGradients for Repea
         &mut self,
         grads: &mut G,
     ) -> Result<(), UnusedParamsError> {
-        let mut unused = Ok(());
+        let mut r = Ok(());
         for i in 0..N {
-            unused.union(
-                self.modules[i]
-                    .update(grads)
-                    .map_err(|l| l.prepend(&format!("{i}."))),
-            );
+            r.maybe_add_unused(&format!("{i}."), self.modules[i].update(grads));
         }
-        unused
+        r
     }
 }
 

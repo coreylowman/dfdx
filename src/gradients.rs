@@ -124,13 +124,20 @@ impl UnusedParamsError {
     }
 }
 
-pub trait Union<T> {
-    fn union(&mut self, b: Self);
+pub trait CollectUnused<T> {
+    /// A method solely for adding two `Result<(), UnusedParamsError>` together.
+    ///
+    /// Cases:
+    /// 1. `self` and `b` are `Ok(())`; does nothing
+    /// 2. `self` is `Ok(())`, `b` is `Err(_)`; `*self = b`
+    /// 3. `self` is `Err(_)`, `b` is `Ok(())`; does nothing
+    /// 4. `self` and `b` are `Err(_)`; adds the unused params from `b` into `self`.
+    fn maybe_add_unused(&mut self, tag: &str, b: Self);
 }
 
-impl Union<Self> for Result<(), UnusedParamsError> {
-    fn union(&mut self, b: Self) {
-        if let Err(mut unused) = b {
+impl CollectUnused<Self> for Result<(), UnusedParamsError> {
+    fn maybe_add_unused(&mut self, tag: &str, b: Self) {
+        if let Err(mut unused) = b.map_err(|l| l.prepend(tag)) {
             if let Err(a_unused) = self {
                 a_unused.param_locations.append(&mut unused.param_locations);
             } else {
@@ -298,17 +305,19 @@ pub trait GradientProvider {
 ///
 /// Most implementations of this trait will have sub structs that also
 /// implement [CanUpdateWithGradients].
-///
-/// For example the [Linear] model just calls update on its weight & bias:
-/// ```ignore
-/// impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
-///     fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-///         self.weight.update(grads);
-///         self.bias.update(grads);
-///     }
-/// }
-/// ```
 pub trait CanUpdateWithGradients {
+    /// Updates self given the [GradientProvider]. When any amount of parameters that
+    /// should be updated are NOT present in `G`, then this function should return
+    /// the [Result::Err] branch with [UnusedParamsError].
+    /// When all parameters are successfully updated, the
+    /// [Result::Ok] branch is returned.
+    ///
+    /// **DO NOT use the `?` shortcut in implementations of this!**
+    /// This will cause updating to return early, and thus not update all
+    /// the parameters that were used
+    ///
+    /// Implementations should use the [UnusedParamsError::collect()] method to gather
+    /// unused parameters from each sub update() call.
     fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError>;
 }
 

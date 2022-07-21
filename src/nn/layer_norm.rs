@@ -47,10 +47,10 @@ impl<const M: usize> ResetParams for LayerNorm1D<M> {
 impl<const M: usize> CanUpdateWithGradients for LayerNorm1D<M> {
     /// Updates [Self::gamma] and [Self::beta].
     fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError> {
-        let mut unused = Ok(());
-        unused.union(self.gamma.update(grads).map_err(|l| l.prepend("gamma")));
-        unused.union(self.beta.update(grads).map_err(|l| l.prepend("beta")));
-        unused
+        let mut r = Ok(());
+        r.maybe_add_unused("gamma", self.gamma.update(grads));
+        r.maybe_add_unused("beta", self.beta.update(grads));
+        r
     }
 }
 

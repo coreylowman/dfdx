@@ -24,9 +24,9 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> CanUpdateWithGradien
 {
     fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError> {
         let mut unused = Ok(());
-        unused.union(self.l1.update(grads).map_err(|loc| loc.prepend("l1.")));
-        unused.union(self.l2.update(grads).map_err(|loc| loc.prepend("l2.")));
-        unused.union(self.relu.update(grads).map_err(|loc| loc.prepend("relu.")));
+        unused.maybe_add_unused("l1.", self.l1.update(grads));
+        unused.maybe_add_unused("l2.", self.l2.update(grads));
+        unused.maybe_add_unused("relu.", self.relu.update(grads));
         unused
     }
 }

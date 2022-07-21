@@ -20,7 +20,9 @@ pub struct Residual<F>(F);
 impl<F: CanUpdateWithGradients> CanUpdateWithGradients for Residual<F> {
     /// Pass through to `F`'s [CanUpdateWithGradients].
     fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError> {
-        self.0.update(grads).map_err(|l| l.prepend("0."))
+        let mut r = Ok(());
+        r.maybe_add_unused("0.", self.0.update(grads));
+        r
     }
 }
 
