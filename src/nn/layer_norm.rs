@@ -19,6 +19,7 @@ use zip::{result::ZipResult, ZipArchive};
 /// let x: Tensor1D<5> = Default::default();
 /// let _: Tensor1D<5> = model.forward(x);
 /// ```
+#[derive(Debug, Clone)]
 pub struct LayerNorm1D<const M: usize> {
     pub gamma: Tensor1D<M, NoneTape>,
     pub beta: Tensor1D<M, NoneTape>,
@@ -77,6 +78,20 @@ impl<H: Tape, const B: usize, const M: usize> Module<Tensor2D<B, M, H>> for Laye
         let x = x.normalize(self.epsilon);
         let x = mul_broadcast_rhs_first(x, &self.gamma);
         add_broadcast_rhs_first(x, &self.beta)
+    }
+}
+
+impl<H: Tape, const B: usize, const S: usize, const M: usize> Module<Tensor3D<B, S, M, H>> for LayerNorm1D<M> {
+    type Output = Tensor3D<B, S, M, H>;
+
+    /// Calls:
+    /// 1. [normalize()] with [Self::epsilon].
+    /// 2. [mul_broadcast_rhs_first()] with [Self::gamma]
+    /// 3. [add_broadcast_rhs_first()] with [Self::beta]
+    fn forward(&self, x: Tensor3D<B, S, M, H>) -> Self::Output {
+        let x = x.normalize(self.epsilon);
+        let x = mul_broadcast_rhs_first_2d(x, &self.gamma);
+        add_broadcast_rhs_first_2d(x, &self.beta)
     }
 }
 

@@ -159,7 +159,103 @@ pub fn vecmat_mul_transpose<const K: usize, const N: usize, TAPE: Tape>(
     })
 }
 
-/// Batch matrix multiplication.
+/// Broadcast matrix multiplication.
+///
+/// # Generics
+/// - `B`: Batch size in `lhs`.
+/// - `M`: number of rows of `lhs`.
+/// - `K`: number of columns of `lhs` and number of rows of `rhs`.
+/// - `N`: Number of columns of `rhs`.
+///
+/// # Arguments
+/// * `lhs` - a 3d tensor representing a BxMxK matrix
+/// * `rhs` - a 3d tensor representing a BxKxN matrix
+///
+/// Returns a 3d tensor representing a BxMxN matrix.
+///
+/// # Examples
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let x: Tensor3D<5, 3, 2> = Tensor3D::zeros();
+/// let y: Tensor3D<5, 2, 4> = Tensor3D::zeros();
+/// let result: Tensor3D<5, 3, 4> = batch_matmul(x, &y);
+/// ```
+pub fn batch_matmul<const M: usize, const K: usize, const N: usize, const B: usize, TAPE: Tape>(
+    lhs: Tensor3D<B, M, K, TAPE>,
+    rhs: &Tensor3D<B, K, N, NoneTape>,
+) -> Tensor3D<B, M, N, TAPE> {
+    let mut result = Tensor3D::zeros();
+    bmm(lhs.data(), rhs.data(), result.mut_data());
+
+    // copy rhs data for use later when computing gradients
+    let rhs_data = rhs.data.clone();
+
+    move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
+        bmm_bt(result_grad, rhs_data.as_ref(), lhs_grad);
+
+        let (rhs_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
+
+        // Accumulate gradients in loop TODO: LIKELY A BETTER WAY TO DO THIS
+        bmm_at(lhs.data(), result_grad, rhs_grad);
+    })
+}
+
+/// Batch matrix multiplication with the transpose of `rhs`. Equivalent to `batch_matmul(lhs, transpose(rhs))`.
+///
+/// # Arguments
+/// * `lhs` - a 3d tensor representing a BxMxK matrix
+/// * `rhs_t` - a 3d tensor representing a BxNxK matrix.
+///
+/// # Generics
+/// - `B`: Batch size in `lhs`.
+/// - `M`: number of rows of `lhs`.
+/// - `K`: number of columns of `lhs` and number of rows of `rhs`.
+/// - `N`: Number of columns of `rhs`.
+///
+/// Returns a 3d tensor representing an BxMxN matrix.
+///
+/// # Examples
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let x: Tensor3D<5, 3, 2> = Tensor3D::zeros();
+/// let y: Tensor3D<5, 4, 2> = Tensor3D::zeros();
+/// let result: Tensor3D<5, 3, 4> = batch_matmul_transpose(x, &y);
+/// ```
+pub fn batch_matmul_transpose<
+    const M: usize,
+    const K: usize,
+    const N: usize,
+    const B: usize,
+    TAPE: Tape,
+>(
+    lhs: Tensor3D<B, M, K, TAPE>,
+    rhs_t: &Tensor3D<B, N, K, NoneTape>,
+) -> Tensor3D<B, M, N, TAPE> {
+    let mut result = Tensor3D::zeros();
+    bmm_bt(lhs.data(), rhs_t.data(), result.mut_data());
+
+    // copy rhs data for use later when computing gradients
+    let rhs_data = rhs_t.data.clone();
+
+    move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs, result, grads| {
+        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
+        bmm(result_grad, rhs_data.as_ref(), lhs_grad);
+
+        #[allow(clippy::type_complexity)]
+        let (rhs_t_grad, result_grad): (&mut [[[f32; K]; N]; B], &[[[f32; N]; M]; B]) =
+            grads.mut_and_ref(&rhs, &result);
+
+        // Accumulate gradients in loop TODO: LIKELY A BETTER WAY TO DO THIS
+        for i in 0..B {
+            mm_atct(&lhs.data()[i], &result_grad[i], &mut rhs_t_grad[i]);
+        }
+    })
+}
+
+/// Broadcast matrix multiplication.
 ///
 /// # Generics
 /// - `B`: Batch size in `lhs`.
@@ -179,21 +275,21 @@ pub fn vecmat_mul_transpose<const K: usize, const N: usize, TAPE: Tape>(
 /// # use dfdx::prelude::*;
 /// let x: Tensor3D<5, 3, 2> = Tensor3D::zeros();
 /// let y: Tensor2D<2, 4> = Tensor2D::zeros();
-/// let result: Tensor3D<5, 3, 4> = batch_matmul(x, &y);
+/// let result: Tensor3D<5, 3, 4> = broadcast_matmul(x, &y);
 /// ```
-pub fn batch_matmul<const M: usize, const K: usize, const N: usize, const B: usize, TAPE: Tape>(
+pub fn broadcast_matmul<const M: usize, const K: usize, const N: usize, const B: usize, TAPE: Tape>(
     lhs: Tensor3D<B, M, K, TAPE>,
     rhs: &Tensor2D<K, N, NoneTape>,
 ) -> Tensor3D<B, M, N, TAPE> {
     let mut result = Tensor3D::zeros();
-    bmm(lhs.data(), rhs.data(), result.mut_data());
+    brmm(lhs.data(), rhs.data(), result.mut_data());
 
     // copy rhs data for use later when computing gradients
     let rhs_data = rhs.data.clone();
 
     move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
-        bmm_bt(result_grad, rhs_data.as_ref(), lhs_grad);
+        brmm_bt(result_grad, rhs_data.as_ref(), lhs_grad);
 
         let (rhs_grad, result_grad): (&mut [[f32; N]; K], &[[[f32; N]; M]; B]) =
             grads.mut_and_ref(&rhs, &result);
@@ -206,7 +302,7 @@ pub fn batch_matmul<const M: usize, const K: usize, const N: usize, const B: usi
     })
 }
 
-/// Batch matrix multiplication with the transpose of `rhs`. Equivalent to `batch_matmul(lhs, transpose(rhs))`.
+/// Broadcast matrix multiplication with the transpose of `rhs`. Equivalent to `broadcast_matmul(lhs, transpose(rhs))`.
 ///
 /// # Arguments
 /// * `lhs` - a 3d tensor representing a BxMxK matrix
@@ -226,9 +322,9 @@ pub fn batch_matmul<const M: usize, const K: usize, const N: usize, const B: usi
 /// # use dfdx::prelude::*;
 /// let x: Tensor3D<5, 3, 2> = Tensor3D::zeros();
 /// let y: Tensor2D<4, 2> = Tensor2D::zeros();
-/// let result: Tensor3D<5, 3, 4> = batch_matmul_transpose(x, &y);
+/// let result: Tensor3D<5, 3, 4> = broadcast_matmul_transpose(x, &y);
 /// ```
-pub fn batch_matmul_transpose<
+pub fn broadcast_matmul_transpose<
     const M: usize,
     const K: usize,
     const N: usize,
@@ -239,14 +335,14 @@ pub fn batch_matmul_transpose<
     rhs_t: &Tensor2D<N, K, NoneTape>,
 ) -> Tensor3D<B, M, N, TAPE> {
     let mut result = Tensor3D::zeros();
-    bmm_bt(lhs.data(), rhs_t.data(), result.mut_data());
+    brmm_bt(lhs.data(), rhs_t.data(), result.mut_data());
 
     // copy rhs data for use later when computing gradients
     let rhs_data = rhs_t.data.clone();
 
     move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs, result, grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
-        bmm(result_grad, rhs_data.as_ref(), lhs_grad);
+        brmm(result_grad, rhs_data.as_ref(), lhs_grad);
 
         let (rhs_t_grad, result_grad): (&mut [[f32; K]; N], &[[[f32; N]; M]; B]) =
             grads.mut_and_ref(&rhs, &result);
@@ -414,19 +510,37 @@ fn mm_atct<const M: usize, const K: usize, const N: usize>(
 /// batch matrix multiply `c += a * b`
 fn bmm<const M: usize, const K: usize, const N: usize, const B: usize>(
     a: &[[[f32; K]; M]; B],
-    b: &[[f32; N]; K],
+    b: &[[[f32; N]; K]; B],
     c: &mut [[[f32; N]; M]; B],
 ) {
-    let b = b.as_ptr() as *const f32;
-
     // Purely sequential for now, should parallelize using rayon or some other BLAS solution
     for i in 0..B {
-        let a = a[i].as_ptr() as *const f32;
-        let c = c[i].as_mut_ptr() as *mut f32;
+        let a_ptr = a[i].as_ptr() as *const f32;
+        let b_ptr = b[i].as_ptr() as *const f32;
+        let c_ptr = c[i].as_mut_ptr() as *mut f32;
 
         unsafe {
             matrixmultiply::sgemm(
-                M, K, N, 1.0, a, K as isize, 1, b, N as isize, 1, 1.0, c, N as isize, 1,
+                M, K, N, 1.0, a_ptr, K as isize, 1, b_ptr, N as isize, 1, 1.0, c_ptr, N as isize, 1,
+            )
+        }
+    }
+}
+
+/// matrix multiply `c += trans(a) * b`
+fn bmm_at<const M: usize, const K: usize, const N: usize, const B: usize>(
+    a_t: &[[[f32; M]; K]; B],
+    b: &[[[f32; N]; K]; B],
+    c: &mut [[[f32; N]; M]; B],
+) {
+    for i in 0..B {
+        let a_t_ptr = a_t[i].as_ptr() as *const f32;
+        let b_ptr = b[i].as_ptr() as *const f32;
+        let c_ptr = c[i].as_mut_ptr() as *mut f32;
+
+        unsafe {
+            matrixmultiply::sgemm(
+                M, K, N, 1.0, a_t_ptr, 1, M as isize, b_ptr, N as isize, 1, 1.0, c_ptr, N as isize, 1,
             )
         }
     }
@@ -435,18 +549,59 @@ fn bmm<const M: usize, const K: usize, const N: usize, const B: usize>(
 /// batch matrix multiply `c += a * trans(b)`
 fn bmm_bt<const M: usize, const K: usize, const N: usize, const B: usize>(
     a: &[[[f32; K]; M]; B],
-    b_t: &[[f32; K]; N],
+    b_t: &[[[f32; K]; N]; B],
     c: &mut [[[f32; N]; M]; B],
 ) {
-    let b_t = b_t.as_ptr() as *const f32;
 
     for i in 0..B {
-        let a = a[i].as_ptr() as *const f32;
-        let c = c[i].as_mut_ptr() as *mut f32;
+        let a_ptr = a[i].as_ptr() as *const f32;
+        let b_t_ptr = b_t[i].as_ptr() as *const f32;
+        let c_ptr = c[i].as_mut_ptr() as *mut f32;
 
         unsafe {
             matrixmultiply::sgemm(
-                M, K, N, 1.0, a, K as isize, 1, b_t, 1, K as isize, 1.0, c, N as isize, 1,
+                M, K, N, 1.0, a_ptr, K as isize, 1, b_t_ptr, 1, K as isize, 1.0, c_ptr, N as isize, 1,
+            )
+        }
+    }
+}
+
+/// broadcast matrix multiply `c += a * b`
+fn brmm<const M: usize, const K: usize, const N: usize, const B: usize>(
+    a: &[[[f32; K]; M]; B],
+    b: &[[f32; N]; K],
+    c: &mut [[[f32; N]; M]; B],
+) {
+    let b_ptr = b.as_ptr() as *const f32;
+
+    // Purely sequential for now, should parallelize using rayon or some other BLAS solution
+    for i in 0..B {
+        let a_ptr = a[i].as_ptr() as *const f32;
+        let c_ptr = c[i].as_mut_ptr() as *mut f32;
+
+        unsafe {
+            matrixmultiply::sgemm(
+                M, K, N, 1.0, a_ptr, K as isize, 1, b_ptr, N as isize, 1, 1.0, c_ptr, N as isize, 1,
+            )
+        }
+    }
+}
+
+/// broadcast matrix multiply `c += a * trans(b)`
+fn brmm_bt<const M: usize, const K: usize, const N: usize, const B: usize>(
+    a: &[[[f32; K]; M]; B],
+    b_t: &[[f32; K]; N],
+    c: &mut [[[f32; N]; M]; B],
+) {
+    let b_t_ptr = b_t.as_ptr() as *const f32;
+
+    for i in 0..B {
+        let a_ptr = a[i].as_ptr() as *const f32;
+        let c_ptr = c[i].as_mut_ptr() as *mut f32;
+
+        unsafe {
+            matrixmultiply::sgemm(
+                M, K, N, 1.0, a_ptr, K as isize, 1, b_t_ptr, 1, K as isize, 1.0, c_ptr, N as isize, 1,
             )
         }
     }
@@ -727,7 +882,7 @@ mod tests {
             ],
         ]);
         let b = Tensor2D::new([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
-        let r: Tensor3D<2, 4, 2, OwnedTape> = batch_matmul(a.trace(), &b);
+        let r: Tensor3D<2, 4, 2, OwnedTape> = broadcast_matmul(a.trace(), &b);
         assert_close(
             r.data(),
             &[
@@ -791,7 +946,7 @@ mod tests {
             ],
         ]);
         let b = Tensor2D::new([[0.4651, 0.3360, 0.8092], [0.9106, 0.5534, 0.3827]]);
-        let r: Tensor3D<2, 4, 2, OwnedTape> = batch_matmul_transpose(a.trace(), &b);
+        let r: Tensor3D<2, 4, 2, OwnedTape> = broadcast_matmul_transpose(a.trace(), &b);
         assert_close(
             r.data(),
             &[
