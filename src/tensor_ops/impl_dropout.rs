@@ -1,6 +1,7 @@
+use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 use rand::Rng;
-use rand_distr::Standard;
+use rand_distr::{Distribution, Standard};
 
 /// Randomly drops out elements from `t` with probability `p`, and multiplies all elements by `1 / (1 - p)`.
 ///
@@ -14,17 +15,17 @@ pub fn dropout<T: Tensor<Dtype = f32>, R: Rng>(t: T, p: f32, rng: &mut R) -> T {
     } else {
         // `t` owns the tape in this branch, so apply dropout randomly.
         let rinvp = (1.0 - p).recip();
-        map_df_uses_fx(
-            t,
-            move |x| {
-                if rng.sample::<f32, Standard>(Standard) < p {
-                    0.0
-                } else {
-                    x * rinvp
-                }
-            },
-            move |fx| if fx > &0.0 { rinvp } else { 0.0 },
-        )
+        let deriv = T::Device::filled(&mut |d| {
+            let val: f32 = Standard.sample(rng);
+            *d = if val < p { 0.0 } else { rinvp };
+        });
+        let mut result = T::NoTape::zeros();
+        T::Device::addmul(result.mut_data(), t.data(), deriv.as_ref());
+
+        move_tape_and_add_backward_op(t, result, move |t, result, grads| {
+            let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
+            T::Device::addmul(t_grad, deriv.as_ref(), result_grad);
+        })
     }
 }
 
