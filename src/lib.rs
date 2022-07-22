@@ -1,4 +1,3 @@
-#![allow(incomplete_features)]
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
 //! Ergonomics & safety focused deep learning in Rust. Main features include:
