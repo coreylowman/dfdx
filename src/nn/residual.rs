@@ -15,38 +15,35 @@ use crate::prelude::*;
 /// assert_eq!(y.data(), &[-2.0, -1.0, 0.0, 2.0, 4.0]);
 /// ```
 #[derive(Debug, Clone, Default)]
-pub struct Residual<F>(F);
+pub struct Residual<F, R>(F, R);
 
-impl<F: CanUpdateWithGradients> CanUpdateWithGradients for Residual<F> {
-    /// Pass through to `F`'s [CanUpdateWithGradients].
+#[derive(Debug, Clone, Default)]
+pub struct NoneModel<F>(F);
+impl<F: CanUpdateWithGradients> CanUpdateWithGradients for NoneModel<F> {
     fn update<G: GradientProvider>(&mut self, grads: &mut G) {
         self.0.update(grads);
     }
 }
-
-impl<F: ResetParams> ResetParams for Residual<F> {
-    /// Pass through to `F`'s [ResetParams].
-    fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
-        self.0.reset_params(rng);
-    }
+impl<F: ResetParams> ResetParams for NoneModel<F> {
+    fn reset_params<R: rand::Rng>(&mut self, _rng: &mut R) {}
 }
 
-impl<T, F> Module<T> for Residual<F>
+impl<T, F> Module<T> for NoneModel<F>
 where
     T: Tensor<Dtype = f32>,
     F: Module<T, Output = T>,
 {
-    type Output = F::Output;
-
-    /// Calls forward on `F` and then adds `x` to the result: `F(x) + x`
+    type Output = T;
+    
     fn forward(&self, x: T) -> Self::Output {
         let (x, tape) = x.split_tape();
-        add(self.0.forward(x.duplicate().put_tape(tape)), &x)
+        tape.add_backward_op(|grads| {
+            let (y, result) = grads.mut_and_ref()
+        })
     }
 }
 
-impl<F: SaveToNpz> SaveToNpz for Residual<F> {
-    /// Pass through to `F`'s [SaveToNpz].
+impl<F: SaveToNpz> SaveToNpz for NoneModel<F> {
     fn write<W>(
         &self,
         filename_prefix: &str,
@@ -60,13 +57,87 @@ impl<F: SaveToNpz> SaveToNpz for Residual<F> {
     }
 }
 
-impl<F: LoadFromNpz> LoadFromNpz for Residual<F> {
+impl<F: LoadFromNpz> LoadFromNpz for NoneModel<F> {
     /// Pass through to `F`'s [LoadFromNpz].
     fn read<R>(&mut self, filename_prefix: &str, r: &mut zip::ZipArchive<R>) -> Result<(), NpzError>
     where
         R: std::io::Read + std::io::Seek,
     {
         self.0.read(filename_prefix, r)?;
+        Ok(())
+    }
+}
+pub type ResidualAdd<F> = Residual<F, NoneModel<F>>;
+
+impl<F: CanUpdateWithGradients, R: CanUpdateWithGradients> CanUpdateWithGradients for Residual<F, R> {
+    /// Pass through to `F`'s [CanUpdateWithGradients].
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) {
+        self.0.update(grads);
+        self.1.update(grads);
+    }
+}
+
+impl<F: ResetParams, R: ResetParams> ResetParams for Residual<F, R> {
+    /// Pass through to `F`'s [ResetParams].
+    fn reset_params<RNG: rand::Rng>(&mut self, rng: &mut RNG) {
+        self.0.reset_params(rng);
+        self.1.reset_params(rng);
+    }
+}
+
+impl<T, F, R> Module<T> for Residual<F, R>
+where
+    T: Tensor<Dtype = f32>,
+    F: Module<T, Output = T>,
+    R: Module<T, Output = T>,
+{
+    type Output = T;
+
+    /// Calls forward on `F` and then adds `x` to the result: `F(x) + x`
+    fn forward(&self, x: T) -> Self::Output {
+        let (x, tape) = x.split_tape();
+        let (main, tape) = self.0.forward(x.duplicate().put_tape(tape)).split_tape();
+        let mut residual: Box<T::Array> = T::Device::zeros();
+        residual.as_mut().clone_from(x.data());
+        let residual: T::NoTape = TensorCreator::new_boxed(residual);
+        let (residual, mut tape) = self.1.forward(residual.put_tape(tape)).split_tape();
+        let mut x = main.duplicate();
+        T::Device::add(x.mut_data(), residual.data());
+        tape.add_backward_op(move |grads| {
+            let result: Box<T::Array> = T::Device::zeros();
+            let result: T::NoTape = TensorCreator::new_boxed(result);
+            let (result_grads, main_grad, res_grad) = grads.mut_and_ref_ref(&result, &main, &residual);
+            T::Device::addmul(result_grads, main.data(), main_grad);
+            T::Device::addmul(result_grads, residual.data(), res_grad);
+        });
+        x.put_tape(tape)
+    }
+}
+
+impl<F: SaveToNpz, R: SaveToNpz> SaveToNpz for Residual<F, R> {
+    /// Pass through to `F`'s [SaveToNpz].
+    fn write<W>(
+        &self,
+        filename_prefix: &str,
+        w: &mut zip::ZipWriter<W>,
+    ) -> zip::result::ZipResult<()>
+    where
+        W: std::io::Write + std::io::Seek,
+    {
+        self.0.write(filename_prefix, w)?;
+        self.1.write(filename_prefix, w)?;
+        Ok(())
+    }
+}
+
+impl<F: LoadFromNpz, R: LoadFromNpz> LoadFromNpz for Residual<F, R> {
+    /// Pass through to `F`'s [LoadFromNpz].
+    fn read<READ>(&mut self, filename_prefix: &str, r: &mut zip::ZipArchive<READ>) -> Result<(), NpzError>
+    where
+        READ: std::io::Read + std::io::Seek,
+    {
+        self.0.read(filename_prefix, r)?;
+        self.1.read(filename_prefix, r)?;
         Ok(())
     }
 }
@@ -83,7 +154,7 @@ mod tests {
     #[test]
     fn test_reset() {
         let mut rng = StdRng::seed_from_u64(0);
-        let mut model: Residual<Linear<2, 5>> = Default::default();
+        let mut model: ResidualAdd<Linear<2, 5>> = Default::default();
         assert_eq!(model.0.weight.data(), &[[0.0; 2]; 5]);
         assert_eq!(model.0.bias.data(), &[0.0; 5]);
 
@@ -145,7 +216,7 @@ mod tests {
     #[test]
     fn test_residual_forward_and_backward() {
         type SubModel = (Linear<2, 5>, ReLU, Linear<5, 2>);
-        type Model = Residual<SubModel>;
+        type Model = ResidualAdd<SubModel>;
 
         let mut model: Model = Default::default();
         *model.0 .0.weight.mut_data() = W0;
@@ -167,7 +238,7 @@ mod tests {
 
     #[test]
     fn test_save_residual() {
-        let model: Residual<Linear<5, 3>> = Default::default();
+        let model: ResidualAdd<Linear<5, 3>> = Default::default();
         let file = NamedTempFile::new().expect("failed to create tempfile");
         model
             .save(file.path().to_str().unwrap())
@@ -191,13 +262,13 @@ mod tests {
     #[test]
     fn test_load_residual() {
         let mut rng = StdRng::seed_from_u64(0);
-        let mut saved_model: Residual<Linear<5, 3>> = Default::default();
+        let mut saved_model: ResidualAdd<Linear<5, 3>> = Default::default();
         saved_model.reset_params(&mut rng);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
 
-        let mut loaded_model: Residual<Linear<5, 3>> = Default::default();
+        let mut loaded_model: ResidualAdd<Linear<5, 3>> = Default::default();
         assert!(loaded_model.0.weight.data() != saved_model.0.weight.data());
         assert!(loaded_model.0.bias.data() != saved_model.0.bias.data());
 
