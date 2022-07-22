@@ -150,40 +150,6 @@ impl Gradients {
         let r_ref = unsafe { &*r_ptr };
         (l_ref, r_ref)
     }
-    
-    /// Borrows a pair of a gradients `(&mut L, &R)`.
-    /// `l` is the gradient to update, and `r` is the gradient to backprop.
-    ///
-    /// **Panics** if `l` and `r` have the same id.
-    ///
-    /// Examples:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// let a = Tensor1D::new([1.0, 2.0, 3.0]);
-    /// let b: Tensor1D<5> = Tensor1D::zeros();
-    /// let mut gradients: Gradients = Default::default();
-    /// *gradients.mut_gradient(&a) = [-4.0, 5.0, -6.0];
-    /// *gradients.mut_gradient(&b) = [1.0, 2.0, 3.0, 4.0, 5.0];
-    /// let (g_a, g_b) = gradients.mut_and_ref(&a, &b);
-    /// assert_eq!(g_a, &mut [-4.0, 5.0, -6.0]);
-    /// assert_eq!(g_b, &[1.0, 2.0, 3.0, 4.0, 5.0]);
-    /// ```
-    pub fn mut_and_ref_ref<L, R, S>(&mut self, l: &L, r: &R, s: &S) -> (&mut L::Array, &R::Array, &S::Array)
-    where
-        L: HasUniqueId + HasArrayType + HasDevice,
-        R: HasUniqueId + HasArrayType,
-        S: HasUniqueId + HasArrayType,
-    {
-        assert_ne!(l.id(), r.id());
-        assert_ne!(l.id(), s.id());
-        let l_ptr = self.mut_gradient(l) as *mut L::Array;
-        let r_ptr = self.ref_gradient(r) as *const R::Array;
-        let s_ptr = self.ref_gradient(s) as *const S::Array;
-        let l_ref = unsafe { &mut *l_ptr };
-        let r_ref = unsafe { &*r_ptr };
-        let s_ref = unsafe { &*s_ptr };
-        (l_ref, r_ref, s_ref)
-    }
 
     /// Removes and returns the data associated with `t.id()`.
     ///

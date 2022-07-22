@@ -271,8 +271,7 @@ fn f_and_dfs<
 ) {
     Device::foreach_mmm(out, lhs, rhs, &mut |o, l, r| {
         *o = f(l, r);
-        let dx = dfdx(l, r);
+        *l = dfdx(l, r);
         *r = dfdy(l, r);
-        *l = dx;
     });
 }
