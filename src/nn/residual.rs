@@ -1,70 +1,22 @@
 use crate::prelude::*;
 
-/// A residual connection around `F`: `F(x) + x`,
+/// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
 ///
 /// # Generics
 /// - `F`: The underlying module to do a skip connection around.
+/// - `R`: The underlying residual module
 ///
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let module: Residual<ReLU> = Default::default();
+/// let module: Residual<ReLU, Square> = Default::default();
 /// let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
 /// let y = module.forward(x);
-/// assert_eq!(y.data(), &[-2.0, -1.0, 0.0, 2.0, 4.0]);
+/// assert_eq!(y.data(), &[4.0, 1.0, 0.0, 2.0, 6.0]);
 /// ```
 #[derive(Debug, Clone, Default)]
 pub struct Residual<F, R>(F, R);
-
-#[derive(Debug, Clone, Default)]
-pub struct NoneModel<F>(F);
-impl<F: CanUpdateWithGradients> CanUpdateWithGradients for NoneModel<F> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-        self.0.update(grads);
-    }
-}
-impl<F: ResetParams> ResetParams for NoneModel<F> {
-    fn reset_params<R: rand::Rng>(&mut self, _rng: &mut R) {}
-}
-
-impl<T, F> Module<T> for NoneModel<F>
-where
-    T: Tensor<Dtype = f32>,
-    F: Module<T, Output = T>,
-{
-    type Output = T;
-    
-    fn forward(&self, x: T) -> Self::Output {
-        x
-    }
-}
-
-impl<F: SaveToNpz> SaveToNpz for NoneModel<F> {
-    fn write<W>(
-        &self,
-        filename_prefix: &str,
-        w: &mut zip::ZipWriter<W>,
-    ) -> zip::result::ZipResult<()>
-    where
-        W: std::io::Write + std::io::Seek,
-    {
-        self.0.write(filename_prefix, w)?;
-        Ok(())
-    }
-}
-
-impl<F: LoadFromNpz> LoadFromNpz for NoneModel<F> {
-    /// Pass through to `F`'s [LoadFromNpz].
-    fn read<R>(&mut self, filename_prefix: &str, r: &mut zip::ZipArchive<R>) -> Result<(), NpzError>
-    where
-        R: std::io::Read + std::io::Seek,
-    {
-        self.0.read(filename_prefix, r)?;
-        Ok(())
-    }
-}
-pub type ResidualAdd<F> = Residual<F, NoneModel<F>>;
 
 impl<F: CanUpdateWithGradients, R: CanUpdateWithGradients> CanUpdateWithGradients for Residual<F, R> {
     /// Pass through to `F`'s [CanUpdateWithGradients].
@@ -82,18 +34,18 @@ impl<F: ResetParams, R: ResetParams> ResetParams for Residual<F, R> {
     }
 }
 
-impl<T, F, R> Module<T> for Residual<F, R>
+impl<O, T, F, R> Module<T> for Residual<F, R>
 where
-    T: Tensor<Dtype = f32>,
-    F: Module<T, Output = T>,
-    R: Module<T, Output = T>,
-    T::Array: std::fmt::Debug,
+    O: Tensor<Dtype = f32>,
+    T: Tensor<Dtype = f32, Tape = O::Tape>,
+    F: Module<T, Output = O>,
+    R: Module<T, Output = O>,
 {
-    type Output = T;
+    type Output = O;
 
     /// Calls forward on `F` and `R` and then sums their result: `F(x) + R(x)`
     fn forward(&self, x: T) -> Self::Output {
-        let (mut x, mut tape) = x.split_tape();
+        let (x, mut tape) = x.split_tape();
         // creating 2 new tensors with different ids but same data (of x) and then sum their f(x) and f'(x)
         let mut main_input: Box<T::Array> = T::Device::zeros();
         main_input.as_mut().clone_from(x.data());
@@ -122,25 +74,24 @@ where
         // R(x)
         let (residual, mut tape) = self.1.forward(residual_input.put_tape(tape)).split_tape();
         let residual_output = residual.phantom();
-        // copy data from F(x) back to x and then sum it with R(x)
-        x.mut_data().clone_from(main.data());
-        T::Device::add(x.mut_data(), residual.data());
+        // copy data from F(x) back to a new x (since there might be a new shape) and then sum it with R(x)
+        let mut new_x: Box<O::Array> = O::Device::zeros();
+        new_x.as_mut().clone_from(main.data());
+        let mut new_x: O::NoTape = TensorCreator::new_boxed(new_x);
+        O::Device::add(new_x.mut_data(), residual.data());
 
         // both F'(x) and R'(x) have the same 'starting gradient'
         // => copy the 'starting gradient' into F'(x)/R'(x)'s output tensor's gradient
-        let result = x.phantom();
+        let result = new_x.phantom();
         tape.add_backward_op(move |grads| {
-            // if main_output.id() == result.id(), then do nothing (e.g. with [ `NoneModule` ])
-            if main_output.id() == result.id() {
+            {
                 let (main_grad, result_grad) = grads.mut_and_ref(&main_output, &result);
                 main_grad.clone_from(result_grad);
             }
-            if residual_output.id() != result.id() {
-                let (res_grad, result_grad) = grads.mut_and_ref(&residual_output, &result);
-                res_grad.clone_from(result_grad);
-            }
+            let (res_grad, result_grad) = grads.mut_and_ref(&residual_output, &result);
+            res_grad.clone_from(result_grad);
         });
-        x.put_tape(tape)
+        new_x.put_tape(tape)
     }
 }
 
@@ -154,6 +105,7 @@ impl<F: SaveToNpz, R: SaveToNpz> SaveToNpz for Residual<F, R> {
     where
         W: std::io::Write + std::io::Seek,
     {
+        // I have no idea what to put here
         self.0.write(filename_prefix, w)?;
         self.1.write(filename_prefix, w)?;
         Ok(())
@@ -166,8 +118,9 @@ impl<F: LoadFromNpz, R: LoadFromNpz> LoadFromNpz for Residual<F, R> {
     where
         READ: std::io::Read + std::io::Seek,
     {
-        self.0.read(filename_prefix, r)?;
+        // I have no idea what to put here, reverse order since it's like a stack?
         self.1.read(filename_prefix, r)?;
+        self.0.read(filename_prefix, r)?;
         Ok(())
     }
 }
@@ -184,13 +137,17 @@ mod tests {
     #[test]
     fn test_reset() {
         let mut rng = StdRng::seed_from_u64(0);
-        let mut model: ResidualAdd<Linear<2, 5>> = Default::default();
+        let mut model: Residual<Linear<2, 5>, Linear<2, 5>> = Default::default();
         assert_eq!(model.0.weight.data(), &[[0.0; 2]; 5]);
         assert_eq!(model.0.bias.data(), &[0.0; 5]);
+        assert_eq!(model.1.weight.data(), &[[0.0; 2]; 5]);
+        assert_eq!(model.1.bias.data(), &[0.0; 5]);
 
         model.reset_params(&mut rng);
         assert_ne!(model.0.weight.data(), &[[0.0; 2]; 5]);
         assert_ne!(model.0.bias.data(), &[0.0; 5]);
+        assert_ne!(model.1.weight.data(), &[[0.0; 2]; 5]);
+        assert_ne!(model.1.bias.data(), &[0.0; 5]);
     }
 
     const W0: [[f32; 2]; 5] = [
@@ -242,29 +199,6 @@ mod tests {
     const B0G: [f32; 5] = [0.019489167, -0.005999865, -0.3116488, 0.0, -0.12533475];
     const W2G: [[f32; 5]; 2] = [[0.010261777, 0.15239798, 0.37232202, 0.0, 0.22712366]; 2];
     const B2G: [f32; 2] = [0.50000006; 2];
-
-    #[test]
-    fn test_residual_forward_and_backward_simple_residual_add() {
-        type SubModel = (Linear<2, 5>, ReLU, Linear<5, 2>);
-        type Model = ResidualAdd<SubModel>;
-
-        let mut model: Model = Default::default();
-        *model.0 .0.weight.mut_data() = W0;
-        *model.0 .0.bias.mut_data() = B0;
-        *model.0 .2.weight.mut_data() = W2;
-        *model.0 .2.bias.mut_data() = B2;
-
-        let x = Tensor2D::new(X);
-        let y = model.forward(x.traced());
-        assert_close(y.data(), &Y);
-
-        let gradients = y.mean().backward();
-
-        assert_close(gradients.ref_gradient(&model.0 .0.weight), &W0G);
-        assert_close(gradients.ref_gradient(&model.0 .0.bias), &B0G);
-        assert_close(gradients.ref_gradient(&model.0 .2.weight), &W2G);
-        assert_close(gradients.ref_gradient(&model.0 .2.bias), &B2G);
-    }
 
     #[test]
     fn test_residual_forward_backward_resadd_as_main() {
@@ -378,9 +312,17 @@ mod tests {
 
         let grads = y.mean().backward();
 
+        // m(x) = r(x) + r(x) = 2r(x); m'(x) = 2r'(x)
+        // y_mean(x_1, x_2) = (m(x_1) + m(x_2)) / 2 = (2r(x_1) + 2r(x_2)) / 2 = r(x_1) + r(x_2)
+        // x_1 = -1; x_2 = 1 => r(-1) + r(1) = 0 + 1 = 1
+        // y_mean'(x_1, x_2) = r'(x_1) + r'(x_2) = r'(-1) + r'(1) = 0 + 1 = 1
+        // x_1 and x_2 are from the Linear layer, so x_1 = ax + b with a = 1 and b = 0
+        // => derivates for a and b are the same
         assert_close(grads.ref_gradient(&model.0.weight), &[[1.0]]);
         assert_close(grads.ref_gradient(&model.0.bias), &[1.0]);
     }
+
+    // test for different input and output shapes?
 
     #[test]
     fn test_save_residual() {
@@ -405,21 +347,28 @@ mod tests {
         }
     }
 
+    /// TODO test is red
     #[test]
     fn test_load_residual() {
         let mut rng = StdRng::seed_from_u64(0);
-        let mut saved_model: ResidualAdd<Linear<5, 3>> = Default::default();
+        let mut saved_model: Residual<Linear<5, 3>, Linear<5, 3>> = Default::default();
         saved_model.reset_params(&mut rng);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
 
-        let mut loaded_model: ResidualAdd<Linear<5, 3>> = Default::default();
-        assert!(loaded_model.0.weight.data() != saved_model.0.weight.data());
-        assert!(loaded_model.0.bias.data() != saved_model.0.bias.data());
+        let mut loaded_model: Residual<Linear<5, 3>, Linear<5, 3>> = Default::default();
+        assert_ne!(loaded_model.0.weight.data(), saved_model.0.weight.data());
+        assert_ne!(loaded_model.0.bias.data(), saved_model.0.bias.data());
+        
+        assert_ne!(loaded_model.1.weight.data(), saved_model.1.weight.data());
+        assert_ne!(loaded_model.1.bias.data(), saved_model.1.bias.data());
 
         assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
         assert_eq!(loaded_model.0.weight.data(), saved_model.0.weight.data());
         assert_eq!(loaded_model.0.bias.data(), saved_model.0.bias.data());
+
+        assert_eq!(loaded_model.1.weight.data(), saved_model.1.weight.data());
+        assert_eq!(loaded_model.1.bias.data(), saved_model.1.bias.data());
     }
 }

@@ -63,6 +63,7 @@ mod module;
 mod npz;
 mod repeated;
 mod residual;
+mod residual_add;
 mod split_into;
 
 pub use activations::*;
@@ -74,4 +75,5 @@ pub use module::*;
 pub use npz::*;
 pub use repeated::*;
 pub use residual::*;
+pub use residual_add::*;
 pub use split_into::*;
