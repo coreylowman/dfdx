@@ -52,6 +52,7 @@ mod impl_sum_last;
 mod map;
 mod matmul;
 mod utils;
+mod impl_reshape;
 
 pub use arith::*;
 pub use arith_broadcast_inner::*;
@@ -73,6 +74,8 @@ pub use impl_sum::*;
 pub use impl_sum_last::*;
 pub use map::*;
 pub use matmul::*;
+pub use reshape::*;
+pub use impl_reshape::*;
 
 #[cfg(feature = "nightly")]
 mod reshape;

@@ -34,6 +34,7 @@ use std::collections::HashMap;
 ///
 /// This would not be possible if these chain rule operations were inside of GradientTape!
 #[derive(Default)]
+#[allow(clippy::type_complexity)]
 pub struct GradientTape {
     operations: Vec<Box<dyn FnOnce(&mut Gradients)>>,
 }
