@@ -68,7 +68,7 @@ where
                 total_grad.clone_from(main_grad);
             }
             let (total_grad, res_grad) = grads.mut_and_ref(&input_phantom, &residual_input_phantom);
-            T::Device::add(total_grad, &res_grad);
+            T::Device::add(total_grad, res_grad);
         });
 
         // F(x)
