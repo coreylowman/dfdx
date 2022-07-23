@@ -49,12 +49,12 @@ mod tests {
 
     #[test]
     fn test_0d_reshape() {
-        let a = Tensor0D::new(3.14);
+        let a = Tensor0D::new(std::f32::consts::PI);
         let b: Tensor1D<1> = reshape(a.duplicate());
-        assert_eq!(b.data(), &[3.14]);
+        assert_eq!(b.data(), &[std::f32::consts::PI]);
 
         let c: Tensor2D<1, 1> = reshape(a.duplicate());
-        assert_eq!(c.data(), &[[3.14]]);
+        assert_eq!(c.data(), &[[std::f32::consts::PI]]);
     }
 
     #[test]

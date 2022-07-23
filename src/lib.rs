@@ -1,3 +1,4 @@
+#![allow(incomplete_features)]
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
 //! Ergonomics & safety focused deep learning in Rust. Main features include:
@@ -117,6 +118,10 @@ pub mod prelude {
     pub use crate::tensor::*;
     pub use crate::tensor_ops::*;
     pub use crate::unique_id::*;
+
+    pub struct Assert<const C: bool>;
+
+    impl ConstTrue for Assert<true> {}
 }
 
 #[cfg(not(any(
