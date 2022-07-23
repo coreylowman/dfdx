@@ -18,7 +18,9 @@ use crate::prelude::*;
 #[derive(Debug, Clone, Default)]
 pub struct Residual<F, R>(F, R);
 
-impl<F: CanUpdateWithGradients, R: CanUpdateWithGradients> CanUpdateWithGradients for Residual<F, R> {
+impl<F: CanUpdateWithGradients, R: CanUpdateWithGradients> CanUpdateWithGradients
+    for Residual<F, R>
+{
     /// Pass through to `F`'s [CanUpdateWithGradients].
     fn update<G: GradientProvider>(&mut self, grads: &mut G) {
         self.0.update(grads);
@@ -61,7 +63,8 @@ where
         // sum their derivatives
         tape.add_backward_op(move |grads| {
             {
-                let (total_grad, main_grad) = grads.mut_and_ref(&input_phantom, &main_input_phantom);
+                let (total_grad, main_grad) =
+                    grads.mut_and_ref(&input_phantom, &main_input_phantom);
                 total_grad.clone_from(main_grad);
             }
             let (total_grad, res_grad) = grads.mut_and_ref(&input_phantom, &residual_input_phantom);
@@ -114,7 +117,11 @@ impl<F: SaveToNpz, R: SaveToNpz> SaveToNpz for Residual<F, R> {
 
 impl<F: LoadFromNpz, R: LoadFromNpz> LoadFromNpz for Residual<F, R> {
     /// Pass through to `F`/`R`'s [LoadFromNpz].
-    fn read<READ>(&mut self, filename_prefix: &str, r: &mut zip::ZipArchive<READ>) -> Result<(), NpzError>
+    fn read<READ>(
+        &mut self,
+        filename_prefix: &str,
+        r: &mut zip::ZipArchive<READ>,
+    ) -> Result<(), NpzError>
     where
         READ: std::io::Read + std::io::Seek,
     {
@@ -221,7 +228,10 @@ mod tests {
         // x - r(x) = {x, if x < 0, because r(x) = 0 => x - 0 = x
         // this is r(-x), since this returns x if x < 0 and 0 elsewhere
         // => Y2 = Y - r(-x)
-        assert_close(y.data(), add(Tensor2D::new(Y), &(-Tensor2D::new(X)).relu()).data());
+        assert_close(
+            y.data(),
+            add(Tensor2D::new(Y), &(-Tensor2D::new(X)).relu()).data(),
+        );
 
         let gradients = y.mean().backward();
 
@@ -274,27 +284,60 @@ mod tests {
         assert_close(gradients.ref_gradient(&model.1 .0.bias), &B0G);
         assert_close(gradients.ref_gradient(&model.1 .2.weight), &W2G);
         assert_close(gradients.ref_gradient(&model.1 .2.bias), &B2G);
-        assert_close(gradients2.ref_gradient(&model2 .0.weight), (Tensor2D::new(W0G) * 2.0).data());
-        assert_close(gradients2.ref_gradient(&model2 .0.bias), (Tensor1D::new(B0G) * 2.0).data());
+        assert_close(
+            gradients2.ref_gradient(&model2.0.weight),
+            (Tensor2D::new(W0G) * 2.0).data(),
+        );
+        assert_close(
+            gradients2.ref_gradient(&model2.0.bias),
+            (Tensor1D::new(B0G) * 2.0).data(),
+        );
         // no multiplication with 2 here since f'(x) = h'(x) * g'(h(j(x))) with f(x) = g(h(j(x)))
         // In this case, it's f(x) = g(h(j(2x))) => f'(x) = h'(j(2x)) * g'(h(j(x))),
         // while g(x) = h(j(2x)) => g'(x) = 2 * j'(x) * h'(j(x))
-        assert_close(gradients2.ref_gradient(&model2 .2.weight), &W2G);
-        assert_close(gradients2.ref_gradient(&model2 .2.bias), &B2G);
+        assert_close(gradients2.ref_gradient(&model2.2.weight), &W2G);
+        assert_close(gradients2.ref_gradient(&model2.2.bias), &B2G);
 
         // with lr = 1, w* = w - w'
-        let sgd_config = SgdConfig {lr: 1.0, momentum: None};
+        let sgd_config = SgdConfig {
+            lr: 1.0,
+            momentum: None,
+        };
         Sgd::new(sgd_config).update(&mut model, gradients);
         Sgd::new(sgd_config).update(&mut model2, gradients2);
 
-        assert_close(model.0 .0.weight.data(), sub(Tensor2D::new(W0), &Tensor2D::new(W0G)).data());
-        assert_close(model.0 .0.bias.data(), sub(Tensor1D::new(B0), &Tensor1D::new(B0G)).data());
-        assert_close(model.0 .2.weight.data(), sub(Tensor2D::new(W2), &Tensor2D::new(W2G)).data());
-        assert_close(model.0 .2.bias.data(), sub(Tensor1D::new(B2), &Tensor1D::new(B2G)).data());
-        assert_close(model.1 .0.weight.data(), sub(Tensor2D::new(W0), &Tensor2D::new(W0G)).data());
-        assert_close(model.1 .0.bias.data(), sub(Tensor1D::new(B0), &Tensor1D::new(B0G)).data());
-        assert_close(model.1 .2.weight.data(), sub(Tensor2D::new(W2), &Tensor2D::new(W2G)).data());
-        assert_close(model.1 .2.bias.data(), sub(Tensor1D::new(B2), &Tensor1D::new(B2G)).data());
+        assert_close(
+            model.0 .0.weight.data(),
+            sub(Tensor2D::new(W0), &Tensor2D::new(W0G)).data(),
+        );
+        assert_close(
+            model.0 .0.bias.data(),
+            sub(Tensor1D::new(B0), &Tensor1D::new(B0G)).data(),
+        );
+        assert_close(
+            model.0 .2.weight.data(),
+            sub(Tensor2D::new(W2), &Tensor2D::new(W2G)).data(),
+        );
+        assert_close(
+            model.0 .2.bias.data(),
+            sub(Tensor1D::new(B2), &Tensor1D::new(B2G)).data(),
+        );
+        assert_close(
+            model.1 .0.weight.data(),
+            sub(Tensor2D::new(W0), &Tensor2D::new(W0G)).data(),
+        );
+        assert_close(
+            model.1 .0.bias.data(),
+            sub(Tensor1D::new(B0), &Tensor1D::new(B0G)).data(),
+        );
+        assert_close(
+            model.1 .2.weight.data(),
+            sub(Tensor2D::new(W2), &Tensor2D::new(W2G)).data(),
+        );
+        assert_close(
+            model.1 .2.bias.data(),
+            sub(Tensor1D::new(B2), &Tensor1D::new(B2G)).data(),
+        );
     }
 
     // gradients have to be summed, r(x) = g(x) + h(x) => r'(x) = g'(x) + h'(x)
@@ -360,7 +403,7 @@ mod tests {
         let mut loaded_model: Residual<Linear<5, 3>, Linear<5, 3>> = Default::default();
         assert_ne!(loaded_model.0.weight.data(), saved_model.0.weight.data());
         assert_ne!(loaded_model.0.bias.data(), saved_model.0.bias.data());
-        
+
         assert_ne!(loaded_model.1.weight.data(), saved_model.1.weight.data());
         assert_ne!(loaded_model.1.bias.data(), saved_model.1.bias.data());
 
