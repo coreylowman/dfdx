@@ -347,7 +347,7 @@ mod tests {
         }
     }
 
-    /// TODO test is red
+    /// TODO test fails
     #[test]
     fn test_load_residual() {
         let mut rng = StdRng::seed_from_u64(0);
@@ -365,6 +365,7 @@ mod tests {
         assert_ne!(loaded_model.1.bias.data(), saved_model.1.bias.data());
 
         assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
+        // only the next 2 lines are 'failing
         assert_eq!(loaded_model.0.weight.data(), saved_model.0.weight.data());
         assert_eq!(loaded_model.0.bias.data(), saved_model.0.bias.data());
 
