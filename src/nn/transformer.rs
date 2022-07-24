@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use rand::Rng;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct SingleHeadAttention<const M: usize, const N: usize, const K: usize, const V: usize> {
     w_q: Linear<N, K>,
     w_k: Linear<M, K>,
@@ -114,7 +114,19 @@ impl<const M: usize, const N: usize, const K: usize, const V: usize, const B: us
     }
 }
 
-#[derive(Debug, Clone)]
+/// A multi-head attention layer.
+///
+/// # Generics
+/// - `M` The embedding size of token vectors from decoder.
+/// - `N` The embedding size of token vectors from encoder.
+/// - `K` The size of the keys in self attention.
+/// - `V` The size of the values.
+/// - `H` The number of attention heads.
+///
+/// # Examples
+/// `MultiHeadAttention<8, 10, 10, 10, 2>` is an attention layer with 2 heads and 10 token, key and value dims.
+/// TODO: Doctests
+#[derive(Debug, Clone, Default)]
 pub struct MultiHeadAttention<const M: usize, const N: usize, const K: usize, const V: usize, const H: usize> {
     w_q: Linear<N, K>,
     w_kv: SplitInto<(Linear<M, K>, Linear<M, V>)>,
@@ -142,7 +154,7 @@ impl<const M: usize, const K: usize, const V: usize, const S: usize, const H: us
     where 
     Assert<{S * K == H * S * (K / H)}>: ConstTrue,
     Assert<{S * V == H * S * (V / H)}>: ConstTrue,
-    Assert<{H * S * {V / H} == S * V}>: ConstTrue,
+    Assert<{H * S * (V / H) == S * V}>: ConstTrue,
 {
     type Output = Tensor2D<S, V>;
 
@@ -197,18 +209,16 @@ impl<const M: usize, const N: usize, const K: usize, const V: usize, const S1: u
     }
 }
 
-/// Currently only uses single head attention. Reshape and concat are required for multi head attention.
-/// Also multi head attention will likely require nightly for N_HEADS * HEAD_DIM
-#[derive(Debug, Clone)]
-pub struct TransformerBlock<const M: usize, const I: usize, const K: usize> {
-    attn: SingleHeadAttention<M, M, K, M>,
+#[derive(Debug, Clone, Default)]
+pub struct TransformerBlock<const M: usize, const I: usize, const K: usize, const H: usize> {
+    attn: MultiHeadAttention<M, M, K, M, H>,
     norm1: LayerNorm1D<M>,
     norm2: LayerNorm1D<M>,
     ff: (Linear<M, I>, ReLU, Linear<I, M>),
 }
 
-impl<const M: usize, const I: usize, const K: usize> ResetParams
-    for TransformerBlock<M, I, K>
+impl<const M: usize, const I: usize, const K: usize, const H: usize> ResetParams
+    for TransformerBlock<M, I, K, H>
 {
     fn reset_params<R: Rng>(&mut self, rng: &mut R) {
         self.attn.reset_params(rng);
@@ -218,8 +228,8 @@ impl<const M: usize, const I: usize, const K: usize> ResetParams
     }
 }
 
-impl<const M: usize, const I: usize, const K: usize> CanUpdateWithGradients
-    for TransformerBlock<M, I, K>
+impl<const M: usize, const I: usize, const K: usize, const H: usize> CanUpdateWithGradients
+    for TransformerBlock<M, I, K, H>
 {
     fn update<G: GradientProvider>(&mut self, grads: &mut G) {
         self.attn.update(grads);
@@ -230,7 +240,11 @@ impl<const M: usize, const I: usize, const K: usize> CanUpdateWithGradients
 }
 
 /// Single sequence impl
-impl<const M: usize, const I: usize, const K: usize, const S: usize> Module<Tensor2D<S, M>> for TransformerBlock<M, I, K> {
+impl<const M: usize, const I: usize, const K: usize, const S: usize, const H: usize> Module<Tensor2D<S, M>> for TransformerBlock<M, I, K, H> 
+where Assert<{S * K == H * S * (K / H)}>: ConstTrue,
+Assert<{S * M == H * S * (M / H)}>: ConstTrue,
+Assert<{H * S * (M / H) == S * M}>: ConstTrue,
+ {
     type Output = Tensor2D<S, M>;
 
     fn forward(&self, input: Tensor2D<S, M>) -> Self::Output {
@@ -239,44 +253,65 @@ impl<const M: usize, const I: usize, const K: usize, const S: usize> Module<Tens
     }
 }
 
-/// Batch sequence impl
-impl<const M: usize, const I: usize, const K: usize, const S: usize, const B: usize> Module<Tensor3D<B, S, M>> for TransformerBlock<M, I, K> {
-    type Output = Tensor3D<B, S, M>;
+// /// Batch sequence impl
+// impl<const M: usize, const I: usize, const K: usize, const S: usize, const B: usize, const H: usize> Module<Tensor3D<B, S, M>> for TransformerBlock<M, I, K, H> {
+//     type Output = Tensor3D<B, S, M>;
 
-    fn forward(&self, input: Tensor3D<B, S, M>) -> Self::Output {
-        let x = self.norm1.forward(input.duplicate() + &self.attn.forward(input));
-        self.norm2.forward(x.duplicate() + &self.ff.forward(x))
-    }
-}
+//     fn forward(&self, input: Tensor3D<B, S, M>) -> Self::Output {
+//         let x = self.norm1.forward(input.duplicate() + &self.attn.forward(input));
+//         self.norm2.forward(x.duplicate() + &self.ff.forward(x))
+//     }
+// }
 
-/// Currently only uses single head attention. Reshape and concat are required for multi head attention.
-/// Also multi head attention will likely require nightly for N_HEADS * HEAD_DIM
+/// A transformer encoder.
+///
+/// # Generics
+/// - `M` The embedding size of token vectors.
+/// - `I` The inner size of the feedforward layers.
+/// - `L` The number of layers.
+/// - `H` The number of heads for self attention.
+/// TODO: Doctests
 #[derive(Debug, Clone)]
-pub struct TransformerEncoder<const M: usize, const I: usize, const K: usize, const L: usize> {
+pub struct TransformerEncoder<const M: usize, const I: usize, const L: usize, const H: usize>
+where Assert<{M % H == 0}>: ConstTrue {
     blocks: Repeated<
-        TransformerBlock<M, I, K>,
+        TransformerBlock<M, I, M, H>,
         L,
     >,
 }
 
-impl<const M: usize, const I: usize, const K: usize, const L: usize> ResetParams
-    for TransformerEncoder<M, I, K, L>
+impl <const M: usize, const I: usize, const L: usize, const H: usize>Default for TransformerEncoder<M, I, L, H>
+where Assert<{M % H == 0}>: ConstTrue, 
+[TransformerBlock<M, I, M, H>; L]: Default {
+    fn default() -> Self {
+        Self { blocks: Default::default() }
+    }
+}
+
+impl<const M: usize, const I: usize, const L: usize, const H: usize> ResetParams
+    for TransformerEncoder<M, I, L, H>
+    where Assert<{M % H == 0}>: ConstTrue
 {
     fn reset_params<R: Rng>(&mut self, rng: &mut R) {
         self.blocks.reset_params(rng);
     }
 }
 
-impl<const M: usize, const I: usize, const K: usize, const L: usize> CanUpdateWithGradients
-    for TransformerEncoder<M, I, K, L>
+impl<const M: usize, const I: usize, const L: usize, const H: usize> CanUpdateWithGradients
+    for TransformerEncoder<M, I, L, H>
+    where Assert<{M % H == 0}>: ConstTrue
 {
     fn update<G: GradientProvider>(&mut self, grads: &mut G) {
         self.blocks.update(grads);
     }
 }
 
-impl<const S: usize, const M: usize, const I: usize, const K: usize, const L: usize>
-    Module<Tensor2D<S, M>> for TransformerEncoder<M, I, K, L>
+impl<const S: usize, const M: usize, const I: usize, const L: usize, const H: usize>
+    Module<Tensor2D<S, M>> for TransformerEncoder<M, I, L, H>
+where
+Assert<{M % H == 0}>: ConstTrue,
+Assert<{S * M == H * S * (M / H)}>: ConstTrue,
+Assert<{H * S * (M / H) == S * M}>: ConstTrue,
 {
     type Output = Tensor2D<S, M>;
 
@@ -285,12 +320,35 @@ impl<const S: usize, const M: usize, const I: usize, const K: usize, const L: us
     }
 }
 
-impl<const B: usize, const S: usize, const M: usize, const I: usize, const K: usize, const L: usize>
-    Module<Tensor3D<B, S, M>> for TransformerEncoder<M, I, K, L>
-{
-    type Output = Tensor3D<B, S, M>;
+// impl<const B: usize, const S: usize, const M: usize, const I: usize, const K: usize, const L: usize>
+//     Module<Tensor3D<B, S, M>> for TransformerEncoder<M, I, K, L>
+// {
+//     type Output = Tensor3D<B, S, M>;
 
-    fn forward(&self, input: Tensor3D<B, S, M>) -> Self::Output {
-        self.blocks.forward(input)
+//     fn forward(&self, input: Tensor3D<B, S, M>) -> Self::Output {
+//         self.blocks.forward(input)
+//     }
+// }
+
+
+#[cfg(test)]
+mod tests {
+    use rand::thread_rng;
+
+    use super::*;
+    
+    #[test]
+    fn test_self_attention() {
+        let model: MultiHeadAttention<8, 8, 8, 8, 1> = Default::default();
+        let x: Tensor2D<5, 8> = Default::default(); // Sequence of 5 token vectors with 10 dims each
+        let _y: Tensor2D<5, 8> = model.forward(x);
+    }
+
+    #[test]
+    fn test_transformer_encoder() {
+        let mut rng = thread_rng();
+        let model: TransformerEncoder<8, 10, 1, 2> = Default::default();
+        let x: Tensor2D<10, 8> = Tensor2D::rand(&mut rng);
+        let _y: Tensor2D<10, 8> = model.forward(x);
     }
 }
