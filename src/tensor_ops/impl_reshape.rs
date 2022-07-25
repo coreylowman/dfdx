@@ -1,5 +1,5 @@
-use crate::prelude::*;
 use super::utils::move_tape_and_add_backward_op;
+use crate::prelude::*;
 
 pub trait Reshape<T> {
     fn reshape(self) -> T;
@@ -30,20 +30,65 @@ tensor_impl!(Tensor1D, [A], Tensor4D, [B, C, D, E], (A), (B * C * D * E));
 tensor_impl!(Tensor2D, [A, B], Tensor1D, [C], (A * B), (C));
 tensor_impl!(Tensor2D, [A, B], Tensor2D, [C, D], (A * B), (C * D));
 tensor_impl!(Tensor2D, [A, B], Tensor3D, [C, D, E], (A * B), (C * D * E));
-tensor_impl!(Tensor2D, [A, B], Tensor4D, [C, D, E, F], (A * B), (C * D * E * F));
+tensor_impl!(
+    Tensor2D,
+    [A, B],
+    Tensor4D,
+    [C, D, E, F],
+    (A * B),
+    (C * D * E * F)
+);
 // 3D
 tensor_impl!(Tensor3D, [A, B, C], Tensor1D, [D], (A * B * C), (D));
 tensor_impl!(Tensor3D, [A, B, C], Tensor2D, [D, E], (A * B * C), (D * E));
-tensor_impl!(Tensor3D, [A, B, C], Tensor3D, [D, E, F], (A * B * C), (D * E * F));
-tensor_impl!(Tensor3D, [A, B, C], Tensor4D, [D, E, F, G], (A * B * C), (D * E * F * G));
+tensor_impl!(
+    Tensor3D,
+    [A, B, C],
+    Tensor3D,
+    [D, E, F],
+    (A * B * C),
+    (D * E * F)
+);
+tensor_impl!(
+    Tensor3D,
+    [A, B, C],
+    Tensor4D,
+    [D, E, F, G],
+    (A * B * C),
+    (D * E * F * G)
+);
 // 4D
 tensor_impl!(Tensor4D, [A, B, C, D], Tensor1D, [E], (A * B * C * D), (E));
-tensor_impl!(Tensor4D, [A, B, C, D], Tensor2D, [E, F], (A * B * C * D), (E * F));
-tensor_impl!(Tensor4D, [A, B, C, D], Tensor3D, [E, F, G], (A * B * C * D), (E * F * G));
-tensor_impl!(Tensor4D, [A, B, C, D], Tensor4D, [E, F, G, H], (A * B * C * D), (E * F * G * H));
+tensor_impl!(
+    Tensor4D,
+    [A, B, C, D],
+    Tensor2D,
+    [E, F],
+    (A * B * C * D),
+    (E * F)
+);
+tensor_impl!(
+    Tensor4D,
+    [A, B, C, D],
+    Tensor3D,
+    [E, F, G],
+    (A * B * C * D),
+    (E * F * G)
+);
+tensor_impl!(
+    Tensor4D,
+    [A, B, C, D],
+    Tensor4D,
+    [E, F, G, H],
+    (A * B * C * D),
+    (E * F * G * H)
+);
 
 /// THIS FUNCTION DOES NOT CHECK IF ARRAY LENGTHS ARE EQUAL
-fn copy_unsafe<Lhs: CountElements, Rhs: CountElements<Dtype = Lhs::Dtype>>(lhs: &Lhs, rhs: &mut Rhs) {
+fn copy_unsafe<Lhs: CountElements, Rhs: CountElements<Dtype = Lhs::Dtype>>(
+    lhs: &Lhs,
+    rhs: &mut Rhs,
+) {
     let l = lhs.ref_first_elem() as *const Lhs::Dtype;
     let r = rhs.mut_first_elem() as *mut Lhs::Dtype;
     unsafe {
