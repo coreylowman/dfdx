@@ -12,7 +12,7 @@ use rand::Rng;
 ///
 /// # Examples
 /// `MultiHeadAttention<8, 10, 10, 10, 2>` is an attention layer with 2 heads and 10 token, key and value dims.
-/// TODO: Doctests fail for some rason
+/// TODO: Doctests fail for some reason
 #[derive(Debug, Clone, Default)]
 pub struct MultiHeadAttention<
     const M: usize,
@@ -69,13 +69,13 @@ where
         let values: Tensor3D<H, S, { V / H }> = values.reshape();
 
         // Get weights
-        let token_weights = batch_matmul_transpose(queries, &keys) / (M as f32);
+        let token_weights = batch_3d_matmul_transpose(queries, &keys) / (M as f32);
 
         // Softmax on last dimension
         let token_weights = softmax(token_weights);
 
         // Get new tokens
-        let tokens: Tensor3D<H, S, { V / H }> = batch_matmul(token_weights, &values);
+        let tokens: Tensor3D<H, S, { V / H }> = batch_3d_matmul(token_weights, &values);
         let tokens: Tensor2D<S, V> = tokens.reshape();
         self.w_o.forward(tokens)
     }
@@ -110,17 +110,91 @@ where
         let values: Tensor3D<H, S1, { V / H }> = values.reshape();
 
         // Get weights
-        let token_weights = batch_matmul_transpose(queries, &keys) / (M as f32);
+        let token_weights = batch_3d_matmul_transpose(queries, &keys) / (M as f32);
 
         // Softmax on last dimension
         let token_weights = softmax(token_weights);
 
         // Get new tokens
-        let tokens: Tensor2D<S2, V> = batch_matmul(token_weights, &values).reshape();
+        let tokens: Tensor2D<S2, V> = batch_3d_matmul(token_weights, &values).reshape();
         self.w_o.forward(tokens)
     }
 }
 
+/// Batched normal self attention (where same tensors are used for keys, queries and values)
+impl<const B: usize, const M: usize, const K: usize, const V: usize, const S: usize, const H: usize>
+    Module<Tensor3D<B, S, M>> for MultiHeadAttention<M, M, K, V, H>
+where
+    Assert<{ B * S * K == B * H * S * (K / H) }>: ConstTrue,
+    Assert<{ B * S * V == B * H * S * (V / H) }>: ConstTrue,
+    Assert<{ B * H * S * (V / H) == B * S * V }>: ConstTrue,
+{
+    type Output = Tensor3D<B, S, M>;
+
+    fn forward(&self, input: Tensor3D<B, S, M>) -> Self::Output {
+        let queries = self.w_q.forward(input.duplicate());
+        let keys = self.w_k.forward(input.duplicate());
+        let values = self.w_v.forward(input);
+
+        let keys: Tensor4D<B, H, S, { K / H }> = keys.reshape();
+        let queries: Tensor4D<B, H, S, { K / H }> = queries.reshape();
+        let values: Tensor4D<B, H, S, { V / H }> = values.reshape();
+
+        // Get weights
+        let token_weights = batch_4d_matmul_transpose(queries, &keys) / (M as f32);
+
+        // Softmax on last dimension
+        let token_weights = softmax(token_weights);
+
+        // Get new tokens
+        let tokens: Tensor4D<B, H, S, { V / H }> = batch_4d_matmul(token_weights, &values);
+        let tokens: Tensor3D<B, S, V> = tokens.reshape();
+        self.w_o.forward(tokens)
+    }
+}
+
+/// Batched Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
+impl<
+        const B: usize,
+        const M: usize,
+        const N: usize,
+        const K: usize,
+        const V: usize,
+        const S1: usize,
+        const S2: usize,
+        const H: usize,
+    > Module<(Tensor3D<B, S1, M>, Tensor3D<B, S2, N>)> for MultiHeadAttention<M, N, K, V, H>
+where
+    Assert<{ B * S2 * K == B * H * S2 * (K / H) }>: ConstTrue,
+    Assert<{ B * S1 * K == B * H * S1 * (K / H) }>: ConstTrue,
+    Assert<{ B * S1 * V == B * H * S1 * (V / H) }>: ConstTrue,
+    Assert<{ B * S2 * H * { V / H } == B * S2 * V }>: ConstTrue,
+    Assert<{ B * H * S2 * (V / H) == B * S2 * V }>: ConstTrue,
+{
+    type Output = Tensor3D<B, S2, M>;
+
+    fn forward(&self, (from_enc, input): (Tensor3D<B, S1, M>, Tensor3D<B, S2, N>)) -> Self::Output {
+        let queries = self.w_q.forward(input);
+        let keys = self.w_k.forward(from_enc.duplicate());
+        let values = self.w_v.forward(from_enc);
+
+        let keys: Tensor4D<B, H, S1, { K / H }> = keys.reshape();
+        let queries: Tensor4D<B, H, S2, { K / H }> = queries.reshape();
+        let values: Tensor4D<B, H, S1, { V / H }> = values.reshape();
+
+        // Get weights
+        let token_weights = batch_4d_matmul_transpose(queries, &keys) / (M as f32);
+
+        // Softmax on last dimension
+        let token_weights = softmax(token_weights);
+
+        // Get new tokens
+        let tokens: Tensor3D<B, S2, V> = batch_4d_matmul(token_weights, &values).reshape();
+        self.w_o.forward(tokens)
+    }
+}
+
+/// A single transformer block containing self attention, feed forward and layer norms
 #[derive(Debug, Clone, Default)]
 pub struct TransformerBlock<const M: usize, const I: usize, const K: usize, const H: usize> {
     attn: MultiHeadAttention<M, M, K, M, H>,
@@ -169,15 +243,18 @@ where
     }
 }
 
-// /// Batch sequence impl
-// impl<const M: usize, const I: usize, const K: usize, const S: usize, const B: usize, const H: usize> Module<Tensor3D<B, S, M>> for TransformerBlock<M, I, K, H> {
-//     type Output = Tensor3D<B, S, M>;
+/// Batch sequence impl
+impl<const M: usize, const I: usize, const K: usize, const S: usize, const B: usize, const H: usize> Module<Tensor3D<B, S, M>> for TransformerBlock<M, I, K, H> 
+where Assert<{B * H * S * (M / H) == B * S * M }>: ConstTrue,
+    Assert<{B * S * K == B * H * S * (K / H) }>: ConstTrue,
+    Assert<{B * S * M == B * H * S * (M / H) }>: ConstTrue {
+    type Output = Tensor3D<B, S, M>;
 
-//     fn forward(&self, input: Tensor3D<B, S, M>) -> Self::Output {
-//         let x = self.norm1.forward(input.duplicate() + &self.attn.forward(input));
-//         self.norm2.forward(x.duplicate() + &self.ff.forward(x))
-//     }
-// }
+    fn forward(&self, input: Tensor3D<B, S, M>) -> Self::Output {
+        let x = self.norm1.forward(input.duplicate() + &self.attn.forward(input));
+        self.norm2.forward(x.duplicate() + &self.ff.forward(x))
+    }
+}
 
 /// A transformer encoder.
 ///
@@ -243,15 +320,19 @@ where
     }
 }
 
-// impl<const B: usize, const S: usize, const M: usize, const I: usize, const K: usize, const L: usize>
-//     Module<Tensor3D<B, S, M>> for TransformerEncoder<M, I, K, L>
-// {
-//     type Output = Tensor3D<B, S, M>;
+impl<const B: usize, const S: usize, const M: usize, const I: usize, const H: usize, const L: usize>
+    Module<Tensor3D<B, S, M>> for TransformerEncoder<M, I, L, H>
+where Assert<{ M % H == 0 }>: ConstTrue,
+    Assert<{ B * S * M == B * S * H * (M / H) }>: ConstTrue,
+    Assert<{ B * H * S * (M / H) == B * S * M }>: ConstTrue,
+    Assert<{ B * S * M == B * H * S * (M / H) }>: ConstTrue,
+{
+    type Output = Tensor3D<B, S, M>;
 
-//     fn forward(&self, input: Tensor3D<B, S, M>) -> Self::Output {
-//         self.blocks.forward(input)
-//     }
-// }
+    fn forward(&self, input: Tensor3D<B, S, M>) -> Self::Output {
+        self.blocks.forward(input)
+    }
+}
 
 #[cfg(test)]
 mod tests {
