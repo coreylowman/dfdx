@@ -20,10 +20,10 @@ use crate::prelude::*;
 pub struct SplitInto<T>(T);
 
 impl<T: CanUpdateWithGradients> CanUpdateWithGradients for SplitInto<T> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError> {
-        let mut r = Ok(());
-        r.maybe_add_unused("0.", self.0.update(grads));
-        r
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
+        let mut missing = Default::default();
+        missing += self.0.update(grads).name("0.");
+        missing
     }
 }
 

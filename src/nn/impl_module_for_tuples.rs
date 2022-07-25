@@ -6,10 +6,10 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
         impl<$($name: CanUpdateWithGradients),+> CanUpdateWithGradients for ($($name,)+) {
-            fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError> {
-                let mut r = Ok(());
-                $(r.maybe_add_unused(&format!("{}.", $idx), self.$idx.update(grads));)+
-                r
+            fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
+                let mut missing: MissingGradients = Default::default();
+                $(missing += self.$idx.update(grads).name(&format!("{}.", $idx));)+
+                missing
             }
         }
 
@@ -213,8 +213,8 @@ mod tests {
     struct SetTo1<const I: usize, const N: usize>;
 
     impl<const I: usize, const N: usize> CanUpdateWithGradients for SetTo1<I, N> {
-        fn update<G: GradientProvider>(&mut self, _: &mut G) -> Result<(), UnusedParamsError> {
-            Ok(())
+        fn update<G: GradientProvider>(&mut self, _: &mut G) -> MissingGradients {
+            Default::default()
         }
     }
     impl<const I: usize, const N: usize> ResetParams for SetTo1<I, N> {

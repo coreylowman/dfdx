@@ -22,12 +22,12 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> ResetParams for Mlp<
 impl<const IN: usize, const INNER: usize, const OUT: usize> CanUpdateWithGradients
     for Mlp<IN, INNER, OUT>
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError> {
-        let mut unused = Ok(());
-        unused.maybe_add_unused("l1.", self.l1.update(grads));
-        unused.maybe_add_unused("l2.", self.l2.update(grads));
-        unused.maybe_add_unused("relu.", self.relu.update(grads));
-        unused
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
+        let mut missing = Default::default();
+        missing += self.l1.update(grads).name("l1.");
+        missing += self.l2.update(grads).name("l2.");
+        missing += self.relu.update(grads).name("relu.");
+        missing
     }
 }
 

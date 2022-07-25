@@ -46,11 +46,11 @@ impl<const M: usize> ResetParams for LayerNorm1D<M> {
 
 impl<const M: usize> CanUpdateWithGradients for LayerNorm1D<M> {
     /// Updates [Self::gamma] and [Self::beta].
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError> {
-        let mut r = Ok(());
-        r.maybe_add_unused("gamma", self.gamma.update(grads));
-        r.maybe_add_unused("beta", self.beta.update(grads));
-        r
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
+        let mut missing = Default::default();
+        missing += self.gamma.update(grads).name("gamma");
+        missing += self.beta.update(grads).name("beta");
+        missing
     }
 }
 

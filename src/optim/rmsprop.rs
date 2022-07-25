@@ -104,7 +104,7 @@ impl<M> RMSprop<M> {
 }
 
 impl<M> GradientProvider for RMSprop<M> {
-    fn gradient<P>(&mut self, p: &P) -> Result<Box<P::Array>, UnusedParamsError>
+    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
@@ -150,16 +150,16 @@ impl<M> GradientProvider for RMSprop<M> {
             }
             None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.cfg.lr),
         }
-        Ok(g_t)
+        Some(g_t)
     }
 }
 
 impl<M: CanUpdateWithGradients> Optimizer<M> for RMSprop<M> {
     fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError> {
         self.gradients = gradients;
-        let r = module.update(self);
+        let missing_grads = module.update(self);
         self.step += 1;
-        r
+        missing_grads.into()
     }
 }
 

@@ -40,15 +40,12 @@ impl<T: ResetParams, const N: usize> ResetParams for Repeated<T, N> {
 }
 
 impl<T: CanUpdateWithGradients, const N: usize> CanUpdateWithGradients for Repeated<T, N> {
-    fn update<G: crate::prelude::GradientProvider>(
-        &mut self,
-        grads: &mut G,
-    ) -> Result<(), UnusedParamsError> {
-        let mut r = Ok(());
+    fn update<G: crate::prelude::GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
+        let mut missing = Default::default();
         for i in 0..N {
-            r.maybe_add_unused(&format!("{i}."), self.modules[i].update(grads));
+            missing += self.modules[i].update(grads).name(&format!("{i}."));
         }
-        r
+        missing
     }
 }
 

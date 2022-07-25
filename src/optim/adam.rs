@@ -93,7 +93,7 @@ impl<M> Adam<M> {
 }
 
 impl<M> GradientProvider for Adam<M> {
-    fn gradient<P>(&mut self, p: &P) -> Result<Box<P::Array>, UnusedParamsError>
+    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
@@ -107,7 +107,7 @@ impl<M> GradientProvider for Adam<M> {
             let v_hat = *v * (1.0 - self.cfg.betas[1].powi(self.t)).recip();
             *g = self.cfg.lr * m_hat / (v_hat.sqrt() + self.cfg.eps)
         });
-        Ok(g_t)
+        Some(g_t)
     }
 }
 
@@ -115,7 +115,7 @@ impl<M: CanUpdateWithGradients> Optimizer<M> for Adam<M> {
     fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError> {
         self.t = self.t.checked_add(1).unwrap();
         self.gradients = gradients;
-        module.update(self)
+        module.update(self).into()
     }
 }
 

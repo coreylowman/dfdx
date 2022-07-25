@@ -32,11 +32,11 @@ pub struct Linear<const I: usize, const O: usize> {
 }
 
 impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError> {
-        let mut r = Ok(());
-        r.maybe_add_unused("weight", self.weight.update(grads));
-        r.maybe_add_unused("bias", self.bias.update(grads));
-        r
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
+        let mut missing = Default::default();
+        missing += self.weight.update(grads).name("weight");
+        missing += self.bias.update(grads).name("bias");
+        missing
     }
 }
 

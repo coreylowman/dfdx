@@ -101,62 +101,6 @@ impl Tape for NoneTape {
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, _operation: F) {}
 }
 
-/// An error that indicates the parameters at
-/// [UnusedParamsError::param_locations] were not used during gradient computation,
-/// and therefore don't have gradients associated with them.
-#[derive(Debug)]
-pub struct UnusedParamsError {
-    pub param_locations: Vec<String>,
-}
-
-impl UnusedParamsError {
-    pub fn one() -> Self {
-        Self {
-            param_locations: vec!["".into()],
-        }
-    }
-
-    pub fn prepend(mut self, location: &str) -> Self {
-        for p in self.param_locations.iter_mut() {
-            p.insert_str(0, location);
-        }
-        self
-    }
-}
-
-pub trait CollectUnused<T> {
-    /// A method solely for adding two `Result<(), UnusedParamsError>` together.
-    ///
-    /// Cases:
-    /// 1. `self` and `b` are `Ok(())`; does nothing
-    /// 2. `self` is `Ok(())`, `b` is `Err(_)`; `*self = b`
-    /// 3. `self` is `Err(_)`, `b` is `Ok(())`; does nothing
-    /// 4. `self` and `b` are `Err(_)`; adds the unused params from `b` into `self`.
-    fn maybe_add_unused(&mut self, tag: &str, b: Self);
-}
-
-impl CollectUnused<Self> for Result<(), UnusedParamsError> {
-    fn maybe_add_unused(&mut self, tag: &str, b: Self) {
-        if let Err(mut unused) = b.map_err(|l| l.prepend(tag)) {
-            if let Err(a_unused) = self {
-                a_unused.param_locations.append(&mut unused.param_locations);
-            } else {
-                *self = Err(unused);
-            }
-        }
-    }
-}
-
-impl std::fmt::Display for UnusedParamsError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GradientNotFoundError")
-            .field("param_locations", &self.param_locations)
-            .finish()
-    }
-}
-
-impl std::error::Error for UnusedParamsError {}
-
 /// A generic container for keeping variable sized arrays associated with a [UniqueId].
 ///
 /// You can:
@@ -219,15 +163,10 @@ impl Gradients {
     /// *gradients.mut_gradient(&t) = [-4.0, 5.0, -6.0];
     /// assert_eq!(gradients.remove(&t).expect("").as_ref(), &[-4.0, 5.0, -6.0]);
     /// ```
-    pub fn remove<T: HasUniqueId + HasArrayType>(
-        &mut self,
-        t: &T,
-    ) -> Result<Box<T::Array>, UnusedParamsError> {
-        let entry = self
-            .gradient_by_id
+    pub fn remove<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Option<Box<T::Array>> {
+        self.gradient_by_id
             .remove_entry(t.id())
-            .ok_or_else(UnusedParamsError::one)?;
-        Ok(entry.1.downcast().unwrap())
+            .map(|e| e.1.downcast().unwrap())
     }
 
     /// Returns a mutable reference to the data associated with `t`.
@@ -296,7 +235,7 @@ pub trait GradientProvider {
     /// Retrieves the data associated with `p` if there is any.
     /// This can modify `self`, for instance if velocities are calculated
     /// based on the associated data!
-    fn gradient<P>(&mut self, p: &P) -> Result<Box<P::Array>, UnusedParamsError>
+    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice;
 }
@@ -307,18 +246,41 @@ pub trait GradientProvider {
 /// implement [CanUpdateWithGradients].
 pub trait CanUpdateWithGradients {
     /// Updates self given the [GradientProvider]. When any amount of parameters that
-    /// should be updated are NOT present in `G`, then this function should return
-    /// the [Result::Err] branch with [UnusedParamsError].
-    /// When all parameters are successfully updated, the
-    /// [Result::Ok] branch is returned.
-    ///
-    /// **DO NOT use the `?` shortcut in implementations of this!**
-    /// This will cause updating to return early, and thus not update all
-    /// the parameters that were used
-    ///
-    /// Implementations should use the [UnusedParamsError::collect()] method to gather
-    /// unused parameters from each sub update() call.
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> Result<(), UnusedParamsError>;
+    /// should be updated are NOT present in `G`, then this function should
+    /// populate the resulting [MissingGradients] struct with the names.
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients;
+}
+
+/// An struct that holds names of parameters that were missing associated gradients.
+#[derive(Debug, Default)]
+pub struct MissingGradients {
+    pub param_locations: Vec<String>,
+}
+
+impl MissingGradients {
+    /// Adds a single unnammed parameter
+    pub fn add_unnamed(&mut self) {
+        self.param_locations.push("".into());
+    }
+
+    /// Prepends `location` to all param locations.
+    pub fn name(mut self, location: &str) -> Self {
+        for p in self.param_locations.iter_mut() {
+            p.insert_str(0, location);
+        }
+        self
+    }
+
+    /// Returns `true` if there are no missing gradients present
+    pub fn empty(&self) -> bool {
+        self.param_locations.is_empty()
+    }
+}
+
+impl std::ops::AddAssign for MissingGradients {
+    fn add_assign(&mut self, mut rhs: Self) {
+        self.param_locations.append(&mut rhs.param_locations);
+    }
 }
 
 #[cfg(test)]
