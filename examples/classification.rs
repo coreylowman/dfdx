@@ -42,7 +42,7 @@ fn main() {
         let gradients = loss.backward();
 
         // update weights with optimizer
-        sgd.update(&mut mlp, gradients);
+        sgd.update(&mut mlp, gradients).expect("Unused params");
 
         println!("cross entropy={:#.3} in {:?}", loss_v, start.elapsed());
     }

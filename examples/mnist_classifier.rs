@@ -80,7 +80,8 @@ fn main() {
             num_batches += 1;
             bar.inc(BATCH_SIZE as u64);
 
-            opt.update(&mut model, loss.backward());
+            opt.update(&mut model, loss.backward())
+                .expect("Unused params");
         }
         let dur = Instant::now() - start;
         bar.finish_and_clear();

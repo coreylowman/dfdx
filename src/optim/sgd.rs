@@ -113,11 +113,11 @@ impl<M> Sgd<M> {
 }
 
 impl<M> GradientProvider for Sgd<M> {
-    fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
+    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
-        let mut g_t = self.gradients.remove(p);
+        let mut g_t = self.gradients.remove(p)?;
         match self.cfg.momentum {
             Some(Momentum::Classic(u)) => {
                 let v_t = self.velocity.mut_gradient(p);
@@ -135,14 +135,14 @@ impl<M> GradientProvider for Sgd<M> {
             }
             None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.cfg.lr),
         }
-        g_t
+        Some(g_t)
     }
 }
 
 impl<M: CanUpdateWithGradients> Optimizer<M> for Sgd<M> {
-    fn update(&mut self, module: &mut M, gradients: Gradients) {
+    fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError> {
         self.gradients = gradients;
-        module.update(self);
+        module.update(self).into()
     }
 }
 
@@ -163,7 +163,7 @@ mod tests {
         for _ in 0..5 {
             let loss = (pred.trace() - &targ).abs().mean();
             let gradients = loss.backward();
-            sgd.update(&mut pred, gradients);
+            sgd.update(&mut pred, gradients).expect("");
         }
         assert_eq!(pred.data(), &[1.0; 5]);
         assert_eq!(targ.data(), &[1.0; 5]);
@@ -185,7 +185,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).mean().backward();
-            sgd.update(&mut t, gradients);
+            sgd.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
     }
@@ -209,7 +209,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).mean().backward();
-            sgd.update(&mut t, gradients);
+            sgd.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
     }
@@ -233,7 +233,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).mean().backward();
-            sgd.update(&mut t, gradients);
+            sgd.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
     }
@@ -253,7 +253,7 @@ mod tests {
         let py = model.forward(x.trace());
         let loss = (py - &y).square().mean();
         let gradients = loss.backward();
-        opt.update(&mut model, gradients);
+        opt.update(&mut model, gradients).expect("");
 
         let model_1 = model.clone();
 

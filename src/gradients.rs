@@ -161,15 +161,12 @@ impl Gradients {
     /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
     /// let mut gradients: Gradients = Default::default();
     /// *gradients.mut_gradient(&t) = [-4.0, 5.0, -6.0];
-    /// assert_eq!(gradients.remove(&t).as_ref(), &[-4.0, 5.0, -6.0]);
+    /// assert_eq!(gradients.remove(&t).expect("").as_ref(), &[-4.0, 5.0, -6.0]);
     /// ```
-    pub fn remove<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Box<T::Array> {
+    pub fn remove<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Option<Box<T::Array>> {
         self.gradient_by_id
             .remove_entry(t.id())
-            .unwrap()
-            .1
-            .downcast()
-            .unwrap()
+            .map(|e| e.1.downcast().unwrap())
     }
 
     /// Returns a mutable reference to the data associated with `t`.
@@ -238,7 +235,7 @@ pub trait GradientProvider {
     /// Retrieves the data associated with `p` if there is any.
     /// This can modify `self`, for instance if velocities are calculated
     /// based on the associated data!
-    fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
+    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice;
 }
@@ -247,18 +244,51 @@ pub trait GradientProvider {
 ///
 /// Most implementations of this trait will have sub structs that also
 /// implement [CanUpdateWithGradients].
-///
-/// For example the [Linear] model just calls update on its weight & bias:
-/// ```ignore
-/// impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
-///     fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-///         self.weight.update(grads);
-///         self.bias.update(grads);
-///     }
-/// }
-/// ```
 pub trait CanUpdateWithGradients {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G);
+    /// Updates self given the [GradientProvider]. When any amount of parameters that
+    /// should be updated are NOT present in `G`, then this function should
+    /// populate the resulting [MissingGradients] struct with the names.
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients;
+}
+
+/// An struct that holds names of parameters that were missing associated gradients.
+#[derive(Debug, Default)]
+pub struct MissingGradients {
+    pub params: Vec<String>,
+}
+
+impl MissingGradients {
+    /// Adds a single unnammed parameter
+    pub fn add_unnamed(&mut self) {
+        self.params.push("".into());
+    }
+
+    /// Prepends `location` to all param locations.
+    pub fn name(mut self, location: &str) -> Self {
+        for p in self.params.iter_mut() {
+            p.insert_str(0, location);
+        }
+        self
+    }
+
+    /// Returns `true` if there are no missing gradients present
+    pub fn is_empty(&self) -> bool {
+        self.params.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.params.len()
+    }
+
+    pub fn contains(&self, name: &str) -> bool {
+        self.params.iter().any(|s| s == name)
+    }
+}
+
+impl std::ops::AddAssign for MissingGradients {
+    fn add_assign(&mut self, mut rhs: Self) {
+        self.params.append(&mut rhs.params);
+    }
 }
 
 #[cfg(test)]

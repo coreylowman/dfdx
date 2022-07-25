@@ -9,7 +9,9 @@ macro_rules! activation_impls {
 
         impl CanUpdateWithGradients for $struct_name {
             /// Does nothing.
-            fn update<G: GradientProvider>(&mut self, _: &mut G) {}
+            fn update<G: GradientProvider>(&mut self, _: &mut G) -> MissingGradients {
+                Default::default()
+            }
         }
 
         impl ResetParams for $struct_name {

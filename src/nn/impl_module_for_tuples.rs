@@ -6,8 +6,10 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
         impl<$($name: CanUpdateWithGradients),+> CanUpdateWithGradients for ($($name,)+) {
-            fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-                $(self.$idx.update(grads));+
+            fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
+                let mut missing: MissingGradients = Default::default();
+                $(missing += self.$idx.update(grads).name(&format!("{}.", $idx));)+
+                missing
             }
         }
 
@@ -92,6 +94,7 @@ tuple_impls!([A, B, C, D, E, F] [0, 1, 2, 3, 4, 5], F, [E, D, C, B, A]);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nn::tests::SimpleGradients;
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;
     use tempfile::NamedTempFile;
@@ -132,7 +135,7 @@ mod tests {
             lr: 1.0,
             momentum: None,
         });
-        sgd.update(&mut model, gradients);
+        sgd.update(&mut model, gradients).expect("");
 
         assert!(model.0.weight.data() != m0.0.weight.data());
         assert!(model.0.bias.data() != m0.0.bias.data());
@@ -211,7 +214,9 @@ mod tests {
     struct SetTo1<const I: usize, const N: usize>;
 
     impl<const I: usize, const N: usize> CanUpdateWithGradients for SetTo1<I, N> {
-        fn update<G: GradientProvider>(&mut self, _: &mut G) {}
+        fn update<G: GradientProvider>(&mut self, _: &mut G) -> MissingGradients {
+            Default::default()
+        }
     }
     impl<const I: usize, const N: usize> ResetParams for SetTo1<I, N> {
         fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {}
@@ -298,5 +303,37 @@ mod tests {
         ) = Default::default();
         let y = model.forward(Tensor1D::zeros());
         assert_eq!(y.data(), &[1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
+    }
+
+    #[test]
+    fn test_missing_gradients() {
+        let mut model: (Linear<5, 3>, Linear<5, 3>, Linear<5, 3>) = Default::default();
+        let mut g: SimpleGradients = Default::default();
+
+        // no gradients present
+        let missing = model.update(&mut g);
+        assert_eq!(
+            &missing.params,
+            &["0.weight", "0.bias", "1.weight", "1.bias", "2.weight", "2.bias"]
+        );
+
+        // weight gradient is present
+        g.0.mut_gradient(&model.0.weight);
+        g.0.mut_gradient(&model.1.weight);
+        g.0.mut_gradient(&model.2.weight);
+
+        let missing = model.update(&mut g);
+        assert_eq!(&missing.params, &["0.bias", "1.bias", "2.bias"]);
+
+        // both gradients present
+        g.0.mut_gradient(&model.0.weight);
+        g.0.mut_gradient(&model.0.bias);
+        g.0.mut_gradient(&model.1.weight);
+        g.0.mut_gradient(&model.1.bias);
+        g.0.mut_gradient(&model.2.weight);
+        g.0.mut_gradient(&model.2.bias);
+
+        let missing = model.update(&mut g);
+        assert_eq!(missing.len(), 0);
     }
 }

@@ -35,7 +35,7 @@ fn main() {
         let losses = [*loss1.data(), *loss2.data()];
         let loss = loss1 + &loss2;
         let gradients = loss.backward();
-        sgd.update(&mut mlp, gradients);
+        sgd.update(&mut mlp, gradients).expect("Unused params");
 
         println!("losses={:.3?} in {:?}", losses, start.elapsed());
     }

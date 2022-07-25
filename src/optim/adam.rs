@@ -93,11 +93,11 @@ impl<M> Adam<M> {
 }
 
 impl<M> GradientProvider for Adam<M> {
-    fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
+    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
-        let mut g_t = self.gradients.remove(p);
+        let mut g_t = self.gradients.remove(p)?;
         let m_t = self.moment1.mut_gradient(p);
         let v_t = self.moment2.mut_gradient(p);
         P::Device::foreach_mmm(g_t.as_mut(), m_t, v_t, &mut |g, m, v| {
@@ -107,15 +107,15 @@ impl<M> GradientProvider for Adam<M> {
             let v_hat = *v * (1.0 - self.cfg.betas[1].powi(self.t)).recip();
             *g = self.cfg.lr * m_hat / (v_hat.sqrt() + self.cfg.eps)
         });
-        g_t
+        Some(g_t)
     }
 }
 
 impl<M: CanUpdateWithGradients> Optimizer<M> for Adam<M> {
-    fn update(&mut self, module: &mut M, gradients: Gradients) {
+    fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError> {
         self.t = self.t.checked_add(1).unwrap();
         self.gradients = gradients;
-        module.update(self);
+        module.update(self).into()
     }
 }
 
@@ -145,7 +145,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).square().mean().backward();
-            opt.update(&mut t, gradients);
+            opt.update(&mut t, gradients).expect("");
             assert_close(t.data(), e);
         }
     }
@@ -174,7 +174,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).square().mean().backward();
-            opt.update(&mut t, gradients);
+            opt.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
     }
@@ -198,7 +198,7 @@ mod tests {
         let py = model.forward(x.trace());
         let loss = (py - &y).square().mean();
         let gradients = loss.backward();
-        opt.update(&mut model, gradients);
+        opt.update(&mut model, gradients).expect("");
 
         let model_1 = model.clone();
 

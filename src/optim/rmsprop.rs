@@ -104,11 +104,11 @@ impl<M> RMSprop<M> {
 }
 
 impl<M> GradientProvider for RMSprop<M> {
-    fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
+    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
-        let mut g_t = self.gradients.remove(p);
+        let mut g_t = self.gradients.remove(p)?;
 
         let square_avg = self.square_avg.mut_gradient(p);
         if self.step == 0 {
@@ -150,15 +150,16 @@ impl<M> GradientProvider for RMSprop<M> {
             }
             None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.cfg.lr),
         }
-        g_t
+        Some(g_t)
     }
 }
 
 impl<M: CanUpdateWithGradients> Optimizer<M> for RMSprop<M> {
-    fn update(&mut self, module: &mut M, gradients: Gradients) {
+    fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError> {
         self.gradients = gradients;
-        module.update(self);
+        let missing_grads = module.update(self);
         self.step += 1;
+        missing_grads.into()
     }
 }
 
@@ -172,7 +173,7 @@ mod tests {
         let mut opt = RMSprop::new(cfg);
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).square().sum().backward();
-            opt.update(&mut t, gradients);
+            opt.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
     }
