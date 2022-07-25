@@ -181,12 +181,18 @@ pub fn vecmat_mul_transpose<const K: usize, const N: usize, TAPE: Tape>(
 /// let y: Tensor3D<5, 2, 4> = Tensor3D::zeros();
 /// let result: Tensor3D<5, 3, 4> = batch_3d_matmul(x, &y);
 /// ```
-pub fn batch_3d_matmul<const M: usize, const K: usize, const N: usize, const B: usize, TAPE: Tape>(
+pub fn batch_3d_matmul<
+    const M: usize,
+    const K: usize,
+    const N: usize,
+    const B: usize,
+    TAPE: Tape,
+>(
     lhs: Tensor3D<B, M, K, TAPE>,
     rhs: &Tensor3D<B, K, N, NoneTape>,
 ) -> Tensor3D<B, M, N, TAPE> {
     let mut result = Tensor3D::zeros();
-    
+
     for i in 0..B {
         mm(&lhs.data()[i], &rhs.data()[i], &mut result.mut_data()[i]);
     }
@@ -196,13 +202,15 @@ pub fn batch_3d_matmul<const M: usize, const K: usize, const N: usize, const B: 
 
     move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
         #[allow(clippy::type_complexity)]
-        let (lhs_grad, result_grad): (&mut [[[f32; K]; M]; B], &[[[f32; N]; M]; B]) = grads.mut_and_ref(&lhs, &result);
+        let (lhs_grad, result_grad): (&mut [[[f32; K]; M]; B], &[[[f32; N]; M]; B]) =
+            grads.mut_and_ref(&lhs, &result);
         for i in 0..B {
             mm_bt(&result_grad[i], &rhs_data.as_ref()[i], &mut lhs_grad[i]);
         }
 
         #[allow(clippy::type_complexity)]
-        let (rhs_grad, result_grad): (&mut [[[f32; N]; K]; B], &[[[f32; N]; M]; B]) = grads.mut_and_ref(&rhs, &result);
+        let (rhs_grad, result_grad): (&mut [[[f32; N]; K]; B], &[[[f32; N]; M]; B]) =
+            grads.mut_and_ref(&rhs, &result);
 
         // Accumulate gradients in loop TODO: LIKELY A BETTER WAY TO DO THIS
         for i in 0..B {
@@ -253,7 +261,8 @@ pub fn batch_3d_matmul_transpose<
 
     move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs, result, grads| {
         #[allow(clippy::type_complexity)]
-        let (lhs_grad, result_grad): (&mut [[[f32; K]; M]; B], &[[[f32; N]; M]; B]) = grads.mut_and_ref(&lhs, &result);
+        let (lhs_grad, result_grad): (&mut [[[f32; K]; M]; B], &[[[f32; N]; M]; B]) =
+            grads.mut_and_ref(&lhs, &result);
         for i in 0..B {
             mm(&result_grad[i], &rhs_data.as_ref()[i], &mut lhs_grad[i]);
         }
@@ -292,14 +301,25 @@ pub fn batch_3d_matmul_transpose<
 /// let y: Tensor4D<6, 5, 2, 4> = Tensor4D::zeros();
 /// let result: Tensor4D<6, 5, 3, 4> = batch_4d_matmul(x, &y);
 /// ```
-pub fn batch_4d_matmul<const M: usize, const K: usize, const N: usize, const B1: usize, const B2: usize, TAPE: Tape>(
+pub fn batch_4d_matmul<
+    const M: usize,
+    const K: usize,
+    const N: usize,
+    const B1: usize,
+    const B2: usize,
+    TAPE: Tape,
+>(
     lhs: Tensor4D<B1, B2, M, K, TAPE>,
     rhs: &Tensor4D<B1, B2, K, N, NoneTape>,
 ) -> Tensor4D<B1, B2, M, N, TAPE> {
     let mut result = Tensor4D::zeros();
     for i in 0..B1 {
         for j in 0..B2 {
-            mm(&lhs.data()[i][j], &rhs.data()[i][j], &mut result.mut_data()[i][j]);
+            mm(
+                &lhs.data()[i][j],
+                &rhs.data()[i][j],
+                &mut result.mut_data()[i][j],
+            );
         }
     }
 
@@ -308,15 +328,25 @@ pub fn batch_4d_matmul<const M: usize, const K: usize, const N: usize, const B1:
 
     move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
         #[allow(clippy::type_complexity)]
-        let (lhs_grad, result_grad): (&mut [[[[f32; K]; M]; B2]; B1], &[[[[f32; N]; M]; B2]; B1]) = grads.mut_and_ref(&lhs, &result);
+        let (lhs_grad, result_grad): (
+            &mut [[[[f32; K]; M]; B2]; B1],
+            &[[[[f32; N]; M]; B2]; B1],
+        ) = grads.mut_and_ref(&lhs, &result);
         for i in 0..B1 {
             for j in 0..B2 {
-                mm_bt(&result_grad[i][j], &rhs_data.as_ref()[i][j], &mut lhs_grad[i][j]);
+                mm_bt(
+                    &result_grad[i][j],
+                    &rhs_data.as_ref()[i][j],
+                    &mut lhs_grad[i][j],
+                );
             }
         }
 
         #[allow(clippy::type_complexity)]
-        let (rhs_grad, result_grad): (&mut [[[[f32; N]; K]; B2]; B1], &[[[[f32; N]; M]; B2]; B1])= grads.mut_and_ref(&rhs, &result);
+        let (rhs_grad, result_grad): (
+            &mut [[[[f32; N]; K]; B2]; B1],
+            &[[[[f32; N]; M]; B2]; B1],
+        ) = grads.mut_and_ref(&rhs, &result);
 
         // Accumulate gradients in loop TODO: LIKELY A BETTER WAY TO DO THIS
         for i in 0..B1 {
@@ -364,7 +394,11 @@ pub fn batch_4d_matmul_transpose<
     let mut result = Tensor4D::zeros();
     for i in 0..B1 {
         for j in 0..B2 {
-            mm_bt(&lhs.data()[i][j], &rhs_t.data()[i][j], &mut result.mut_data()[i][j]);
+            mm_bt(
+                &lhs.data()[i][j],
+                &rhs_t.data()[i][j],
+                &mut result.mut_data()[i][j],
+            );
         }
     }
 
@@ -373,16 +407,25 @@ pub fn batch_4d_matmul_transpose<
 
     move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs, result, grads| {
         #[allow(clippy::type_complexity)]
-        let (lhs_grad, result_grad): (&mut [[[[f32; K]; M]; B2]; B1], &[[[[f32; N]; M]; B2]; B1]) = grads.mut_and_ref(&lhs, &result);
+        let (lhs_grad, result_grad): (
+            &mut [[[[f32; K]; M]; B2]; B1],
+            &[[[[f32; N]; M]; B2]; B1],
+        ) = grads.mut_and_ref(&lhs, &result);
         for i in 0..B1 {
             for j in 0..B2 {
-                mm(&result_grad[i][j], &rhs_data.as_ref()[i][j], &mut lhs_grad[i][j]);
+                mm(
+                    &result_grad[i][j],
+                    &rhs_data.as_ref()[i][j],
+                    &mut lhs_grad[i][j],
+                );
             }
         }
 
         #[allow(clippy::type_complexity)]
-        let (rhs_t_grad, result_grad): (&mut [[[[f32; K]; N]; B2]; B1], &[[[[f32; N]; M]; B2]; B1]) =
-            grads.mut_and_ref(&rhs, &result);
+        let (rhs_t_grad, result_grad): (
+            &mut [[[[f32; K]; N]; B2]; B1],
+            &[[[[f32; N]; M]; B2]; B1],
+        ) = grads.mut_and_ref(&rhs, &result);
 
         // Accumulate gradients in loop TODO: LIKELY A BETTER WAY TO DO THIS
         for i in 0..B1 {
@@ -435,7 +478,8 @@ pub fn broadcast_matmul<
 
     move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
         #[allow(clippy::type_complexity)]
-        let (lhs_grad, result_grad): (&mut [[[f32; K]; M]; B], &[[[f32; N]; M]; B]) = grads.mut_and_ref(&lhs, &result);
+        let (lhs_grad, result_grad): (&mut [[[f32; K]; M]; B], &[[[f32; N]; M]; B]) =
+            grads.mut_and_ref(&lhs, &result);
         for i in 0..B {
             mm_bt(&result_grad[i], rhs_data.as_ref(), &mut lhs_grad[i]);
         }
@@ -493,7 +537,8 @@ pub fn broadcast_matmul_transpose<
 
     move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs, result, grads| {
         #[allow(clippy::type_complexity)]
-        let (lhs_grad, result_grad): (&mut [[[f32; K]; M]; B], &[[[f32; N]; M]; B]) = grads.mut_and_ref(&lhs, &result);
+        let (lhs_grad, result_grad): (&mut [[[f32; K]; M]; B], &[[[f32; N]; M]; B]) =
+            grads.mut_and_ref(&lhs, &result);
         for i in 0..B {
             mm(&result_grad[i], rhs_data.as_ref(), &mut lhs_grad[i]);
         }
