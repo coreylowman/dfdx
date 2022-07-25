@@ -122,8 +122,14 @@ where
 }
 
 /// Batched normal self attention (where same tensors are used for keys, queries and values)
-impl<const B: usize, const M: usize, const K: usize, const V: usize, const S: usize, const H: usize>
-    Module<Tensor3D<B, S, M>> for MultiHeadAttention<M, M, K, V, H>
+impl<
+        const B: usize,
+        const M: usize,
+        const K: usize,
+        const V: usize,
+        const S: usize,
+        const H: usize,
+    > Module<Tensor3D<B, S, M>> for MultiHeadAttention<M, M, K, V, H>
 where
     Assert<{ B * S * K == B * H * S * (K / H) }>: ConstTrue,
     Assert<{ B * S * V == B * H * S * (V / H) }>: ConstTrue,
@@ -244,14 +250,25 @@ where
 }
 
 /// Batch sequence impl
-impl<const M: usize, const I: usize, const K: usize, const S: usize, const B: usize, const H: usize> Module<Tensor3D<B, S, M>> for TransformerBlock<M, I, K, H> 
-where Assert<{B * H * S * (M / H) == B * S * M }>: ConstTrue,
-    Assert<{B * S * K == B * H * S * (K / H) }>: ConstTrue,
-    Assert<{B * S * M == B * H * S * (M / H) }>: ConstTrue {
+impl<
+        const M: usize,
+        const I: usize,
+        const K: usize,
+        const S: usize,
+        const B: usize,
+        const H: usize,
+    > Module<Tensor3D<B, S, M>> for TransformerBlock<M, I, K, H>
+where
+    Assert<{ B * H * S * (M / H) == B * S * M }>: ConstTrue,
+    Assert<{ B * S * K == B * H * S * (K / H) }>: ConstTrue,
+    Assert<{ B * S * M == B * H * S * (M / H) }>: ConstTrue,
+{
     type Output = Tensor3D<B, S, M>;
 
     fn forward(&self, input: Tensor3D<B, S, M>) -> Self::Output {
-        let x = self.norm1.forward(input.duplicate() + &self.attn.forward(input));
+        let x = self
+            .norm1
+            .forward(input.duplicate() + &self.attn.forward(input));
         self.norm2.forward(x.duplicate() + &self.ff.forward(x))
     }
 }
@@ -320,9 +337,16 @@ where
     }
 }
 
-impl<const B: usize, const S: usize, const M: usize, const I: usize, const H: usize, const L: usize>
-    Module<Tensor3D<B, S, M>> for TransformerEncoder<M, I, L, H>
-where Assert<{ M % H == 0 }>: ConstTrue,
+impl<
+        const B: usize,
+        const S: usize,
+        const M: usize,
+        const I: usize,
+        const H: usize,
+        const L: usize,
+    > Module<Tensor3D<B, S, M>> for TransformerEncoder<M, I, L, H>
+where
+    Assert<{ M % H == 0 }>: ConstTrue,
     Assert<{ B * S * M == B * S * H * (M / H) }>: ConstTrue,
     Assert<{ B * H * S * (M / H) == B * S * M }>: ConstTrue,
     Assert<{ B * S * M == B * H * S * (M / H) }>: ConstTrue,
