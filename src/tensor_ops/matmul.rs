@@ -277,7 +277,13 @@ pub fn batch_matmul_transpose<
 /// let y: Tensor2D<2, 4> = Tensor2D::zeros();
 /// let result: Tensor3D<5, 3, 4> = broadcast_matmul(x, &y);
 /// ```
-pub fn broadcast_matmul<const M: usize, const K: usize, const N: usize, const B: usize, TAPE: Tape>(
+pub fn broadcast_matmul<
+    const M: usize,
+    const K: usize,
+    const N: usize,
+    const B: usize,
+    TAPE: Tape,
+>(
     lhs: Tensor3D<B, M, K, TAPE>,
     rhs: &Tensor2D<K, N, NoneTape>,
 ) -> Tensor3D<B, M, N, TAPE> {
@@ -540,7 +546,8 @@ fn bmm_at<const M: usize, const K: usize, const N: usize, const B: usize>(
 
         unsafe {
             matrixmultiply::sgemm(
-                M, K, N, 1.0, a_t_ptr, 1, M as isize, b_ptr, N as isize, 1, 1.0, c_ptr, N as isize, 1,
+                M, K, N, 1.0, a_t_ptr, 1, M as isize, b_ptr, N as isize, 1, 1.0, c_ptr, N as isize,
+                1,
             )
         }
     }
@@ -552,7 +559,6 @@ fn bmm_bt<const M: usize, const K: usize, const N: usize, const B: usize>(
     b_t: &[[[f32; K]; N]; B],
     c: &mut [[[f32; N]; M]; B],
 ) {
-
     for i in 0..B {
         let a_ptr = a[i].as_ptr() as *const f32;
         let b_t_ptr = b_t[i].as_ptr() as *const f32;
@@ -560,7 +566,8 @@ fn bmm_bt<const M: usize, const K: usize, const N: usize, const B: usize>(
 
         unsafe {
             matrixmultiply::sgemm(
-                M, K, N, 1.0, a_ptr, K as isize, 1, b_t_ptr, 1, K as isize, 1.0, c_ptr, N as isize, 1,
+                M, K, N, 1.0, a_ptr, K as isize, 1, b_t_ptr, 1, K as isize, 1.0, c_ptr, N as isize,
+                1,
             )
         }
     }
@@ -601,7 +608,8 @@ fn brmm_bt<const M: usize, const K: usize, const N: usize, const B: usize>(
 
         unsafe {
             matrixmultiply::sgemm(
-                M, K, N, 1.0, a_ptr, K as isize, 1, b_t_ptr, 1, K as isize, 1.0, c_ptr, N as isize, 1,
+                M, K, N, 1.0, a_ptr, K as isize, 1, b_t_ptr, 1, K as isize, 1.0, c_ptr, N as isize,
+                1,
             )
         }
     }

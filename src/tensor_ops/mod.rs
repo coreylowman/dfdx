@@ -45,14 +45,15 @@ mod impl_mean;
 mod impl_mean_last;
 mod impl_nans;
 mod impl_normalize;
+mod impl_reshape;
 mod impl_softmax;
 mod impl_std_last;
 mod impl_sum;
 mod impl_sum_last;
+mod impl_transpose;
 mod map;
 mod matmul;
 mod utils;
-mod impl_reshape;
 
 pub use arith::*;
 pub use arith_broadcast_inner::*;
@@ -68,14 +69,15 @@ pub use impl_mean::*;
 pub use impl_mean_last::*;
 pub use impl_nans::*;
 pub use impl_normalize::*;
+pub use impl_reshape::*;
 pub use impl_softmax::*;
 pub use impl_std_last::*;
 pub use impl_sum::*;
 pub use impl_sum_last::*;
+pub use impl_transpose::*;
 pub use map::*;
 pub use matmul::*;
 pub use reshape::*;
-pub use impl_reshape::*;
 
 #[cfg(feature = "nightly")]
 mod reshape;

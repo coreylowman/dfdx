@@ -81,7 +81,9 @@ impl<H: Tape, const B: usize, const M: usize> Module<Tensor2D<B, M, H>> for Laye
     }
 }
 
-impl<H: Tape, const B: usize, const S: usize, const M: usize> Module<Tensor3D<B, S, M, H>> for LayerNorm1D<M> {
+impl<H: Tape, const B: usize, const S: usize, const M: usize> Module<Tensor3D<B, S, M, H>>
+    for LayerNorm1D<M>
+{
     type Output = Tensor3D<B, S, M, H>;
 
     /// Calls:
