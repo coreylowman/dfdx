@@ -38,8 +38,6 @@ where
     }
 }
 
-pub trait ConstTrue {}
-
 pub struct ConstEq<const A: usize, const B: usize>;
 impl<const N: usize> ConstTrue for ConstEq<N, N> {}
 

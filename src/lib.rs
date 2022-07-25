@@ -119,9 +119,7 @@ pub mod prelude {
     pub use crate::tensor_ops::*;
     pub use crate::unique_id::*;
 
-    pub struct Assert<const C: bool>;
-
-    impl ConstTrue for Assert<true> {}
+    pub use crate::{Assert, ConstTrue};
 }
 
 #[cfg(not(any(
@@ -219,3 +217,8 @@ pub(crate) mod tests {
         a.assert_close(b, TOLERANCE);
     }
 }
+
+/// Used to assert things about const generics
+pub struct Assert<const C: bool>;
+pub trait ConstTrue {}
+impl ConstTrue for Assert<true> {}
