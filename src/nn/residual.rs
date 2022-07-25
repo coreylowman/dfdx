@@ -76,7 +76,7 @@ impl<F: LoadFromNpz> LoadFromNpz for Residual<F> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::assert_close;
+    use crate::{nn::tests::SimpleGradients, tests::assert_close};
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;
     use tempfile::NamedTempFile;
@@ -206,5 +206,28 @@ mod tests {
         assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
         assert_eq!(loaded_model.0.weight.data(), saved_model.0.weight.data());
         assert_eq!(loaded_model.0.bias.data(), saved_model.0.bias.data());
+    }
+
+    #[test]
+    fn test_missing_gradients() {
+        let mut model: Residual<(Linear<5, 3>, ReLU)> = Default::default();
+        let mut g: SimpleGradients = Default::default();
+
+        // no gradients present
+        let missing = model.update(&mut g);
+        assert_eq!(&missing.params, &["0.0.weight", "0.0.bias"]);
+
+        // weight gradient is present
+        g.0.mut_gradient(&model.0 .0.weight);
+
+        let missing = model.update(&mut g);
+        assert_eq!(&missing.params, &["0.0.bias"]);
+
+        // both gradients present
+        g.0.mut_gradient(&model.0 .0.weight);
+        g.0.mut_gradient(&model.0 .0.bias);
+
+        let missing = model.update(&mut g);
+        assert_eq!(missing.len(), 0);
     }
 }

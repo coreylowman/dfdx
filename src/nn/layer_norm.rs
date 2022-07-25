@@ -104,11 +104,11 @@ impl<const M: usize> LoadFromNpz for LayerNorm1D<M> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::File;
-
     use super::*;
+    use crate::nn::tests::SimpleGradients;
     use rand::{prelude::StdRng, SeedableRng};
     use rand_distr::Standard;
+    use std::fs::File;
     use tempfile::NamedTempFile;
 
     #[test]
@@ -252,6 +252,29 @@ mod tests {
         assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
         assert_eq!(loaded_model.gamma.data(), saved_model.gamma.data());
         assert_eq!(loaded_model.beta.data(), saved_model.beta.data());
+    }
+
+    #[test]
+    fn test_missing_gradients() {
+        let mut model: LayerNorm1D<5> = Default::default();
+        let mut g: SimpleGradients = Default::default();
+
+        // no gradients present
+        let missing = model.update(&mut g);
+        assert_eq!(&missing.params, &["gamma", "beta"]);
+
+        // weight gradient is present
+        g.0.mut_gradient(&model.gamma);
+
+        let missing = model.update(&mut g);
+        assert_eq!(&missing.params, &["beta"]);
+
+        // both gradients present
+        g.0.mut_gradient(&model.gamma);
+        g.0.mut_gradient(&model.beta);
+
+        let missing = model.update(&mut g);
+        assert!(missing.is_empty());
     }
 
     const X_2: [[f32; 10]; 5] = [

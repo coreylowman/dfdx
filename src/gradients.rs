@@ -254,32 +254,40 @@ pub trait CanUpdateWithGradients {
 /// An struct that holds names of parameters that were missing associated gradients.
 #[derive(Debug, Default)]
 pub struct MissingGradients {
-    pub param_locations: Vec<String>,
+    pub params: Vec<String>,
 }
 
 impl MissingGradients {
     /// Adds a single unnammed parameter
     pub fn add_unnamed(&mut self) {
-        self.param_locations.push("".into());
+        self.params.push("".into());
     }
 
     /// Prepends `location` to all param locations.
     pub fn name(mut self, location: &str) -> Self {
-        for p in self.param_locations.iter_mut() {
+        for p in self.params.iter_mut() {
             p.insert_str(0, location);
         }
         self
     }
 
     /// Returns `true` if there are no missing gradients present
-    pub fn empty(&self) -> bool {
-        self.param_locations.is_empty()
+    pub fn is_empty(&self) -> bool {
+        self.params.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.params.len()
+    }
+
+    pub fn contains(&self, name: &str) -> bool {
+        self.params.iter().any(|s| s == name)
     }
 }
 
 impl std::ops::AddAssign for MissingGradients {
     fn add_assign(&mut self, mut rhs: Self) {
-        self.param_locations.append(&mut rhs.param_locations);
+        self.params.append(&mut rhs.params);
     }
 }
 

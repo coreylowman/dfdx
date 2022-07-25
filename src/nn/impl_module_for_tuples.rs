@@ -94,6 +94,7 @@ tuple_impls!([A, B, C, D, E, F] [0, 1, 2, 3, 4, 5], F, [E, D, C, B, A]);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nn::tests::SimpleGradients;
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;
     use tempfile::NamedTempFile;
@@ -302,5 +303,37 @@ mod tests {
         ) = Default::default();
         let y = model.forward(Tensor1D::zeros());
         assert_eq!(y.data(), &[1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
+    }
+
+    #[test]
+    fn test_missing_gradients() {
+        let mut model: (Linear<5, 3>, Linear<5, 3>, Linear<5, 3>) = Default::default();
+        let mut g: SimpleGradients = Default::default();
+
+        // no gradients present
+        let missing = model.update(&mut g);
+        assert_eq!(
+            &missing.params,
+            &["0.weight", "0.bias", "1.weight", "1.bias", "2.weight", "2.bias"]
+        );
+
+        // weight gradient is present
+        g.0.mut_gradient(&model.0.weight);
+        g.0.mut_gradient(&model.1.weight);
+        g.0.mut_gradient(&model.2.weight);
+
+        let missing = model.update(&mut g);
+        assert_eq!(&missing.params, &["0.bias", "1.bias", "2.bias"]);
+
+        // both gradients present
+        g.0.mut_gradient(&model.0.weight);
+        g.0.mut_gradient(&model.0.bias);
+        g.0.mut_gradient(&model.1.weight);
+        g.0.mut_gradient(&model.1.bias);
+        g.0.mut_gradient(&model.2.weight);
+        g.0.mut_gradient(&model.2.bias);
+
+        let missing = model.update(&mut g);
+        assert_eq!(missing.len(), 0);
     }
 }

@@ -42,7 +42,7 @@ impl std::error::Error for UnusedParamsError {}
 #[allow(clippy::from_over_into)]
 impl Into<Result<(), UnusedParamsError>> for MissingGradients {
     fn into(self) -> Result<(), UnusedParamsError> {
-        if self.empty() {
+        if self.is_empty() {
             Ok(())
         } else {
             Err(UnusedParamsError(self))

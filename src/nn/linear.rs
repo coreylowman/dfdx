@@ -112,12 +112,11 @@ impl<const B: usize, const S: usize, const I: usize, const O: usize, H: Tape>
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::{nn::tests::SimpleGradients, tests::assert_close};
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;
     use tempfile::NamedTempFile;
-
-    use super::*;
-    use crate::tests::assert_close;
 
     const W: [[f32; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
@@ -285,5 +284,28 @@ mod tests {
         assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
         assert_eq!(loaded_model.weight.data(), saved_model.weight.data());
         assert_eq!(loaded_model.bias.data(), saved_model.bias.data());
+    }
+
+    #[test]
+    fn test_missing_gradients() {
+        let mut model: Linear<5, 3> = Default::default();
+        let mut g: SimpleGradients = Default::default();
+
+        // no gradients present
+        let missing = model.update(&mut g);
+        assert_eq!(&missing.params, &["weight", "bias"]);
+
+        // weight gradient is present
+        g.0.mut_gradient(&model.weight);
+
+        let missing = model.update(&mut g);
+        assert_eq!(&missing.params, &["bias"]);
+
+        // both gradients present
+        g.0.mut_gradient(&model.weight);
+        g.0.mut_gradient(&model.bias);
+
+        let missing = model.update(&mut g);
+        assert!(missing.is_empty());
     }
 }

@@ -90,6 +90,7 @@ tuple_impls!([A, B, C, D, E] F);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nn::tests::SimpleGradients;
 
     #[test]
     fn test_split_into_2() {
@@ -181,5 +182,27 @@ mod tests {
             Tensor2D<3, 5>,
             Tensor2D<3, 6, OwnedTape>,
         ) = m.forward(Tensor2D::<3, 5>::zeros().traced());
+    }
+
+    #[test]
+    fn test_missing_gradients() {
+        let mut model: SplitInto<(Linear<5, 3>, Linear<5, 3>)> = Default::default();
+        let mut g: SimpleGradients = Default::default();
+
+        // no gradients present
+        let missing = model.update(&mut g);
+        assert_eq!(
+            &missing.params,
+            &["0.0.weight", "0.0.bias", "0.1.weight", "0.1.bias"]
+        );
+
+        // weight gradient is present
+        g.0.mut_gradient(&model.0 .0.weight);
+        g.0.mut_gradient(&model.0 .0.bias);
+        g.0.mut_gradient(&model.0 .1.weight);
+        g.0.mut_gradient(&model.0 .1.bias);
+
+        let missing = model.update(&mut g);
+        assert_eq!(missing.len(), 0);
     }
 }

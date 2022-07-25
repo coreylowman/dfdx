@@ -31,6 +31,13 @@ where
     }
 }
 
+impl<T, const N: usize> std::ops::Index<usize> for Repeated<T, N> {
+    type Output = T;
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.modules[index]
+    }
+}
+
 impl<T: ResetParams, const N: usize> ResetParams for Repeated<T, N> {
     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
         for i in 0..N {
@@ -93,6 +100,7 @@ impl<Input, T: Module<Input, Output = Input>, const N: usize> Module<Input> for 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nn::tests::SimpleGradients;
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;
     use tempfile::NamedTempFile;
@@ -194,5 +202,37 @@ mod tests {
                 saved_model.modules[i].bias.data()
             );
         }
+    }
+
+    #[test]
+    fn test_missing_gradients() {
+        let mut model: Repeated<Linear<5, 5>, 3> = Default::default();
+        let mut g: SimpleGradients = Default::default();
+
+        // no gradients present
+        let missing = model.update(&mut g);
+        assert_eq!(
+            &missing.params,
+            &["0.weight", "0.bias", "1.weight", "1.bias", "2.weight", "2.bias"]
+        );
+
+        // weight gradient is present
+        g.0.mut_gradient(&model[0].weight);
+        g.0.mut_gradient(&model[1].weight);
+        g.0.mut_gradient(&model[2].weight);
+
+        let missing = model.update(&mut g);
+        assert_eq!(&missing.params, &["0.bias", "1.bias", "2.bias"]);
+
+        // both gradients present
+        g.0.mut_gradient(&model[0].weight);
+        g.0.mut_gradient(&model[0].bias);
+        g.0.mut_gradient(&model[1].weight);
+        g.0.mut_gradient(&model[1].bias);
+        g.0.mut_gradient(&model[2].weight);
+        g.0.mut_gradient(&model[2].bias);
+
+        let missing = model.update(&mut g);
+        assert_eq!(missing.len(), 0);
     }
 }
