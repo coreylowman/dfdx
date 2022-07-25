@@ -50,33 +50,40 @@ impl<const M: usize, const N: usize, const K: usize, const V: usize, const H: us
 }
 
 /// Normal self attention (where same tensors are used for keys, queries and values)
-impl<const M: usize, const K: usize, const V: usize, const S: usize, const H: usize>
-    Module<Tensor2D<S, M>> for MultiHeadAttention<M, M, K, V, H>
+impl<const M: usize, const K: usize, const V: usize, const S: usize, const H: usize, T: Tape>
+    Module<Tensor2D<S, M, T>> for MultiHeadAttention<M, M, K, V, H>
 where
     Assert<{ S * K == H * S * (K / H) }>: ConstTrue,
     Assert<{ S * V == H * S * (V / H) }>: ConstTrue,
     Assert<{ H * S * (V / H) == S * V }>: ConstTrue,
 {
-    type Output = Tensor2D<S, M>;
+    type Output = Tensor2D<S, M, T>;
 
-    fn forward(&self, input: Tensor2D<S, M>) -> Self::Output {
-        let queries = self.w_q.forward(input.duplicate());
-        let keys = self.w_k.forward(input.duplicate());
-        let values = self.w_v.forward(input);
-
-        let keys: Tensor3D<H, S, { K / H }> = keys.reshape();
-        let queries: Tensor3D<H, S, { K / H }> = queries.reshape();
-        let values: Tensor3D<H, S, { V / H }> = values.reshape();
+    fn forward(&self, input: Tensor2D<S, M, T>) -> Self::Output {
+        let (input, tape) = input.split_tape();
+        let (queries, tape) = Reshape::<Tensor3D<H, S, { K / H }, T>>::reshape(
+            self.w_q.forward(input.duplicate().put_tape(tape)),
+        )
+        .split_tape();
+        let (keys, tape) = Reshape::<Tensor3D<H, S, { K / H }, T>>::reshape(
+            self.w_k.forward(input.duplicate().put_tape(tape)),
+        )
+        .split_tape();
+        let (values, tape) = Reshape::<Tensor3D<H, S, { V / H }, T>>::reshape(
+            self.w_v.forward(input.put_tape(tape)),
+        )
+        .split_tape();
 
         // Get weights
-        let token_weights = batch_3d_matmul_transpose(queries, &keys) / (M as f32);
+        let token_weights =
+            batch_3d_matmul_transpose(queries.put_tape(tape), &keys.split_tape().0) / (M as f32);
 
         // Softmax on last dimension
         let token_weights = softmax(token_weights);
 
         // Get new tokens
-        let tokens: Tensor3D<H, S, { V / H }> = batch_3d_matmul(token_weights, &values);
-        let tokens: Tensor2D<S, V> = tokens.reshape();
+        let tokens: Tensor2D<S, V, T> =
+            batch_3d_matmul(token_weights, &values.split_tape().0).reshape();
         self.w_o.forward(tokens)
     }
 }
@@ -90,7 +97,8 @@ impl<
         const S1: usize,
         const S2: usize,
         const H: usize,
-    > Module<(Tensor2D<S1, M>, Tensor2D<S2, N>)> for MultiHeadAttention<M, N, K, V, H>
+        T: Tape,
+    > Module<(Tensor2D<S1, M, T>, Tensor2D<S2, N, T>)> for MultiHeadAttention<M, N, K, V, H>
 where
     Assert<{ S2 * K == H * S2 * (K / H) }>: ConstTrue,
     Assert<{ S1 * K == H * S1 * (K / H) }>: ConstTrue,
@@ -98,25 +106,27 @@ where
     Assert<{ S2 * H * { V / H } == S2 * V }>: ConstTrue,
     Assert<{ H * S2 * (V / H) == S2 * V }>: ConstTrue,
 {
-    type Output = Tensor2D<S2, M>;
+    type Output = Tensor2D<S2, M, T>;
 
-    fn forward(&self, (from_enc, input): (Tensor2D<S1, M>, Tensor2D<S2, N>)) -> Self::Output {
-        let queries = self.w_q.forward(input);
-        let keys = self.w_k.forward(from_enc.duplicate());
-        let values = self.w_v.forward(from_enc);
-
-        let keys: Tensor3D<H, S1, { K / H }> = keys.reshape();
-        let queries: Tensor3D<H, S2, { K / H }> = queries.reshape();
-        let values: Tensor3D<H, S1, { V / H }> = values.reshape();
+    fn forward(&self, (from_enc, input): (Tensor2D<S1, M, T>, Tensor2D<S2, N, T>)) -> Self::Output {
+        let (from_enc, enc_tape) = from_enc.split_tape();
+        let queries: Tensor3D<H, S2, { K / H }, T> = self.w_q.forward(input).reshape();
+        let (keys, enc_tape) = Reshape::<Tensor3D<H, S1, { K / H }, T>>::reshape(
+            self.w_k.forward(from_enc.duplicate().put_tape(enc_tape)),
+        )
+        .split_tape();
+        let values: Tensor3D<H, S1, { V / H }, T> =
+            self.w_v.forward(from_enc.put_tape(enc_tape)).reshape();
 
         // Get weights
-        let token_weights = batch_3d_matmul_transpose(queries, &keys) / (M as f32);
+        let token_weights = batch_3d_matmul_transpose(queries, &keys.split_tape().0) / (M as f32);
 
         // Softmax on last dimension
         let token_weights = softmax(token_weights);
 
         // Get new tokens
-        let tokens: Tensor2D<S2, V> = batch_3d_matmul(token_weights, &values).reshape();
+        let tokens: Tensor2D<S2, V, T> =
+            batch_3d_matmul(token_weights, &values.split_tape().0).reshape();
         self.w_o.forward(tokens)
     }
 }
@@ -129,32 +139,40 @@ impl<
         const V: usize,
         const S: usize,
         const H: usize,
-    > Module<Tensor3D<B, S, M>> for MultiHeadAttention<M, M, K, V, H>
+        T: Tape,
+    > Module<Tensor3D<B, S, M, T>> for MultiHeadAttention<M, M, K, V, H>
 where
     Assert<{ B * S * K == B * H * S * (K / H) }>: ConstTrue,
     Assert<{ B * S * V == B * H * S * (V / H) }>: ConstTrue,
     Assert<{ B * H * S * (V / H) == B * S * V }>: ConstTrue,
 {
-    type Output = Tensor3D<B, S, M>;
+    type Output = Tensor3D<B, S, M, T>;
 
-    fn forward(&self, input: Tensor3D<B, S, M>) -> Self::Output {
-        let queries = self.w_q.forward(input.duplicate());
-        let keys = self.w_k.forward(input.duplicate());
-        let values = self.w_v.forward(input);
-
-        let keys: Tensor4D<B, H, S, { K / H }> = keys.reshape();
-        let queries: Tensor4D<B, H, S, { K / H }> = queries.reshape();
-        let values: Tensor4D<B, H, S, { V / H }> = values.reshape();
+    fn forward(&self, input: Tensor3D<B, S, M, T>) -> Self::Output {
+        let (input, tape) = input.split_tape();
+        let (queries, tape) = Reshape::<Tensor4D<B, H, S, { K / H }, T>>::reshape(
+            self.w_q.forward(input.duplicate().put_tape(tape)),
+        )
+        .split_tape();
+        let (keys, tape) = Reshape::<Tensor4D<B, H, S, { K / H }, T>>::reshape(
+            self.w_k.forward(input.duplicate().put_tape(tape)),
+        )
+        .split_tape();
+        let (values, tape) = Reshape::<Tensor4D<B, H, S, { V / H }, T>>::reshape(
+            self.w_v.forward(input.put_tape(tape)),
+        )
+        .split_tape();
 
         // Get weights
-        let token_weights = batch_4d_matmul_transpose(queries, &keys) / (M as f32);
+        let token_weights =
+            batch_4d_matmul_transpose(queries.put_tape(tape), &keys.split_tape().0) / (M as f32);
 
         // Softmax on last dimension
         let token_weights = softmax(token_weights);
 
         // Get new tokens
-        let tokens: Tensor4D<B, H, S, { V / H }> = batch_4d_matmul(token_weights, &values);
-        let tokens: Tensor3D<B, S, V> = tokens.reshape();
+        let tokens: Tensor3D<B, S, V, T> =
+            batch_4d_matmul(token_weights, &values.split_tape().0).reshape();
         self.w_o.forward(tokens)
     }
 }
@@ -169,7 +187,8 @@ impl<
         const S1: usize,
         const S2: usize,
         const H: usize,
-    > Module<(Tensor3D<B, S1, M>, Tensor3D<B, S2, N>)> for MultiHeadAttention<M, N, K, V, H>
+        T: Tape,
+    > Module<(Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N, T>)> for MultiHeadAttention<M, N, K, V, H>
 where
     Assert<{ B * S2 * K == B * H * S2 * (K / H) }>: ConstTrue,
     Assert<{ B * S1 * K == B * H * S1 * (K / H) }>: ConstTrue,
@@ -177,101 +196,40 @@ where
     Assert<{ B * S2 * H * { V / H } == B * S2 * V }>: ConstTrue,
     Assert<{ B * H * S2 * (V / H) == B * S2 * V }>: ConstTrue,
 {
-    type Output = Tensor3D<B, S2, M>;
+    type Output = Tensor3D<B, S2, M, T>;
 
-    fn forward(&self, (from_enc, input): (Tensor3D<B, S1, M>, Tensor3D<B, S2, N>)) -> Self::Output {
-        let queries = self.w_q.forward(input);
-        let keys = self.w_k.forward(from_enc.duplicate());
-        let values = self.w_v.forward(from_enc);
-
-        let keys: Tensor4D<B, H, S1, { K / H }> = keys.reshape();
-        let queries: Tensor4D<B, H, S2, { K / H }> = queries.reshape();
-        let values: Tensor4D<B, H, S1, { V / H }> = values.reshape();
+    fn forward(
+        &self,
+        (from_enc, input): (Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N, T>),
+    ) -> Self::Output {
+        let (from_enc, enc_tape) = from_enc.split_tape();
+        let queries: Tensor4D<B, H, S2, { K / H }, T> = self.w_q.forward(input).reshape();
+        let (keys, enc_tape) = Reshape::<Tensor4D<B, H, S1, { K / H }, T>>::reshape(
+            self.w_k.forward(from_enc.duplicate().put_tape(enc_tape)),
+        )
+        .split_tape();
+        let values: Tensor4D<B, H, S1, { V / H }, T> =
+            self.w_v.forward(from_enc.put_tape(enc_tape)).reshape();
 
         // Get weights
-        let token_weights = batch_4d_matmul_transpose(queries, &keys) / (M as f32);
+        let token_weights = batch_4d_matmul_transpose(queries, &keys.split_tape().0) / (M as f32);
 
         // Softmax on last dimension
         let token_weights = softmax(token_weights);
 
         // Get new tokens
-        let tokens: Tensor3D<B, S2, V> = batch_4d_matmul(token_weights, &values).reshape();
+        let tokens: Tensor3D<B, S2, V, T> =
+            batch_4d_matmul(token_weights, &values.split_tape().0).reshape();
         self.w_o.forward(tokens)
     }
 }
 
-/// A single transformer block containing self attention, feed forward and layer norms
-#[derive(Debug, Clone, Default)]
-pub struct TransformerBlock<const M: usize, const I: usize, const K: usize, const H: usize> {
-    attn: MultiHeadAttention<M, M, K, M, H>,
-    norm1: LayerNorm1D<M>,
-    norm2: LayerNorm1D<M>,
-    ff: (Linear<M, I>, ReLU, Linear<I, M>),
-}
-
-impl<const M: usize, const I: usize, const K: usize, const H: usize> ResetParams
-    for TransformerBlock<M, I, K, H>
-{
-    fn reset_params<R: Rng>(&mut self, rng: &mut R) {
-        self.attn.reset_params(rng);
-        self.norm1.reset_params(rng);
-        self.norm2.reset_params(rng);
-        self.ff.reset_params(rng);
-    }
-}
-
-impl<const M: usize, const I: usize, const K: usize, const H: usize> CanUpdateWithGradients
-    for TransformerBlock<M, I, K, H>
-{
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-        self.attn.update(grads);
-        self.norm1.update(grads);
-        self.norm2.update(grads);
-        self.ff.update(grads);
-    }
-}
-
-/// Single sequence impl
-impl<const M: usize, const I: usize, const K: usize, const S: usize, const H: usize>
-    Module<Tensor2D<S, M>> for TransformerBlock<M, I, K, H>
-where
-    Assert<{ H * S * (M / H) == S * M }>: ConstTrue,
-    Assert<{ S * K == H * S * (K / H) }>: ConstTrue,
-    Assert<{ S * M == H * S * (M / H) }>: ConstTrue,
-{
-    type Output = Tensor2D<S, M>;
-
-    fn forward(&self, input: Tensor2D<S, M>) -> Self::Output {
-        let x = self
-            .norm1
-            .forward(input.duplicate() + &self.attn.forward(input));
-        self.norm2.forward(x.duplicate() + &self.ff.forward(x))
-    }
-}
-
-/// Batch sequence impl
-impl<
-        const M: usize,
-        const I: usize,
-        const K: usize,
-        const S: usize,
-        const B: usize,
-        const H: usize,
-    > Module<Tensor3D<B, S, M>> for TransformerBlock<M, I, K, H>
-where
-    Assert<{ B * H * S * (M / H) == B * S * M }>: ConstTrue,
-    Assert<{ B * S * K == B * H * S * (K / H) }>: ConstTrue,
-    Assert<{ B * S * M == B * H * S * (M / H) }>: ConstTrue,
-{
-    type Output = Tensor3D<B, S, M>;
-
-    fn forward(&self, input: Tensor3D<B, S, M>) -> Self::Output {
-        let x = self
-            .norm1
-            .forward(input.duplicate() + &self.attn.forward(input));
-        self.norm2.forward(x.duplicate() + &self.ff.forward(x))
-    }
-}
+pub type TransformerBlock<const M: usize, const I: usize, const K: usize, const H: usize> = (
+    Residual<MultiHeadAttention<M, M, K, M, H>>,
+    LayerNorm1D<M>,
+    Residual<(Linear<M, I>, ReLU, Linear<I, M>)>,
+    LayerNorm1D<M>,
+);
 
 /// A transformer encoder.
 ///
@@ -544,8 +502,8 @@ mod tests {
     fn test_transformer_encoder() {
         let model: TransformerEncoder<8, 16, 1, 2> = TransformerEncoder {
             blocks: Repeated {
-                modules: [TransformerBlock {
-                    attn: MultiHeadAttention {
+                modules: [(
+                    Residual(MultiHeadAttention {
                         w_q: Linear {
                             weight: Tensor2D::new([
                                 [
@@ -702,18 +660,13 @@ mod tests {
                                 0.0800, 0.0567, 0.2609, -0.1651, -0.0820, -0.1058, -0.3133, -0.1181,
                             ]),
                         },
-                    },
-                    norm1: LayerNorm1D {
+                    }),
+                    LayerNorm1D {
                         gamma: Tensor1D::new([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
                         beta: Tensor1D::new([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
                         epsilon: 1e-5,
                     },
-                    norm2: LayerNorm1D {
-                        gamma: Tensor1D::new([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-                        beta: Tensor1D::new([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-                        epsilon: 1e-5,
-                    },
-                    ff: (
+                    Residual((
                         Linear {
                             weight: Tensor2D::new([
                                 [
@@ -1055,8 +1008,13 @@ mod tests {
                                 0.23260891,
                             ]),
                         },
-                    ),
-                }],
+                    )),
+                    LayerNorm1D {
+                        gamma: Tensor1D::new([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
+                        beta: Tensor1D::new([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+                        epsilon: 1e-5,
+                    },
+                )],
             },
         };
         let x: Tensor2D<2, 8> = Tensor2D::new([
