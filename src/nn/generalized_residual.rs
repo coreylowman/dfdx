@@ -46,7 +46,7 @@ where
     type Output = O;
 
     /// Calls forward on `F` and `R` and then sums their result: `F(x) + R(x)`
-    fn forward(&self, x: T) -> Self:: Output {
+    fn forward(&self, x: T) -> Self::Output {
         let (x, tape) = x.split_tape();
 
         // do R(x) on the tape
