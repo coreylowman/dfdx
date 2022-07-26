@@ -56,6 +56,7 @@
 
 mod activations;
 mod dropout;
+mod generalized_residual;
 mod impl_module_for_tuples;
 mod layer_norm;
 mod linear;
@@ -63,11 +64,11 @@ mod module;
 mod npz;
 mod repeated;
 mod residual;
-mod residual_add;
 mod split_into;
 
 pub use activations::*;
 pub use dropout::*;
+pub use generalized_residual::*;
 pub use impl_module_for_tuples::*;
 pub use layer_norm::*;
 pub use linear::*;
@@ -75,5 +76,4 @@ pub use module::*;
 pub use npz::*;
 pub use repeated::*;
 pub use residual::*;
-pub use residual_add::*;
 pub use split_into::*;
