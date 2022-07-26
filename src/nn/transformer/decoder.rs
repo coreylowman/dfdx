@@ -62,7 +62,7 @@ impl<
         const S1: usize,
         const S2: usize,
         T: Tape,
-    > Module<(Tensor2D<S1, M, T>, Tensor2D<S2, N, T>)> for TransformerDecoderBlock<M, N, I, K, H>
+    > Module<(Tensor2D<S1, M, T>, Tensor2D<S2, N>)> for TransformerDecoderBlock<M, N, I, K, H>
 where
     Assert<{ M % H == 0 }>: ConstTrue,
     Assert<{ K % H == 0 }>: ConstTrue,
@@ -71,14 +71,15 @@ where
     Assert<{ S2 * M == H * S2 * (M / H) }>: ConstTrue,
     Assert<{ H * S1 * (M / H) == S1 * M }>: ConstTrue,
 {
-    type Output = (Tensor2D<S1, M, T>, T);
+    type Output = Tensor2D<S1, M, T>;
 
-    fn forward(&self, (input, from_enc): (Tensor2D<S1, M, T>, Tensor2D<S2, N, T>)) -> Self::Output {
+    fn forward(&self, (input, from_enc): (Tensor2D<S1, M, T>, Tensor2D<S2, N>)) -> Self::Output {
         let (input, input_tape) = input.split_tape();
-        let (x, enc_tape) = self
-            .attn
-            .forward((input.duplicate().put_tape(input_tape), from_enc));
-        (self.ff.forward(add(x, &input)), enc_tape)
+        self.ff.forward(add(
+            self.attn
+                .forward((input.duplicate().put_tape(input_tape), from_enc)),
+            &input,
+        ))
     }
 }
 
@@ -92,8 +93,7 @@ impl<
         const S2: usize,
         const B: usize,
         T: Tape,
-    > Module<(Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N, T>)>
-    for TransformerDecoderBlock<M, N, I, K, H>
+    > Module<(Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>)> for TransformerDecoderBlock<M, N, I, K, H>
 where
     Assert<{ M % H == 0 }>: ConstTrue,
     Assert<{ K % H == 0 }>: ConstTrue,
@@ -102,17 +102,17 @@ where
     Assert<{ B * S2 * M == B * H * S2 * (M / H) }>: ConstTrue,
     Assert<{ B * H * S1 * (M / H) == B * S1 * M }>: ConstTrue,
 {
-    type Output = (Tensor3D<B, S1, M, T>, T);
+    type Output = Tensor3D<B, S1, M, T>;
 
     fn forward(
         &self,
-        (input, from_enc): (Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N, T>),
+        (input, from_enc): (Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>),
     ) -> Self::Output {
         let (input, input_tape) = input.split_tape();
-        let (x, enc_tape) = self
+        let x = self
             .attn
             .forward((input.duplicate().put_tape(input_tape), from_enc));
-        (self.ff.forward(add(x, &input)), enc_tape)
+        self.ff.forward(add(x, &input))
     }
 }
 
@@ -195,9 +195,8 @@ where
 
     fn forward(&self, input: (Tensor2D<S1, M, T>, Tensor2D<S2, N, T>)) -> Self::Output {
         let (mut x, from_enc) = input;
-        let (from_enc, mut enc_tape) = from_enc.split_tape();
         for block in &self.blocks {
-            (x, enc_tape) = block.forward((x, from_enc.duplicate().put_tape(enc_tape)));
+            x = block.forward((x, from_enc.duplicate()));
         }
         x
     }
@@ -213,7 +212,7 @@ impl<
         const S2: usize,
         const B: usize,
         T: Tape,
-    > Module<(Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N, T>)> for TransformerDecoder<M, N, I, L, H>
+    > Module<(Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>)> for TransformerDecoder<M, N, I, L, H>
 where
     Assert<{ M % H == 0 }>: ConstTrue,
     Assert<{ B * S1 * M == B * H * S1 * (M / H) }>: ConstTrue,
@@ -222,11 +221,10 @@ where
 {
     type Output = Tensor3D<B, S1, M, T>;
 
-    fn forward(&self, input: (Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N, T>)) -> Self::Output {
+    fn forward(&self, input: (Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>)) -> Self::Output {
         let (mut x, from_enc) = input;
-        let (from_enc, mut enc_tape) = from_enc.split_tape();
         for block in &self.blocks {
-            (x, enc_tape) = block.forward((x, from_enc.duplicate().put_tape(enc_tape)));
+            x = block.forward((x, from_enc.duplicate()));
         }
         x
     }
