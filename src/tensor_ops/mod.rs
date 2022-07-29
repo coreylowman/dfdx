@@ -139,3 +139,8 @@ pub use select::*;
 mod impl_reshape;
 #[cfg(feature = "nightly")]
 pub use impl_reshape::*;
+
+#[cfg(feature = "nightly")]
+mod conv;
+#[cfg(feature = "nightly")]
+pub use conv::*;
