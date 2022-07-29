@@ -89,3 +89,8 @@ mod flatten;
 
 #[cfg(feature = "nightly")]
 pub use flatten::*;
+
+#[cfg(feature = "nightly")]
+mod conv;
+#[cfg(feature = "nightly")]
+pub use conv::*;
