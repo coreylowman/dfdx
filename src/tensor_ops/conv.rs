@@ -71,6 +71,92 @@ pub fn conv2d<
     result.put_tape(tape)
 }
 
+pub fn batch_conv2d<
+    TAPE: 'static + Tape,
+    const BATCH_SIZE: usize,
+    const IN_CHAN: usize,
+    const OUT_CHAN: usize,
+    const KERNEL: usize,
+    const STRIDE: usize,
+    const PADDING: usize,
+    const IN_HEIGHT: usize,
+    const IN_WIDTH: usize,
+>(
+    x: Tensor4D<BATCH_SIZE, IN_CHAN, IN_HEIGHT, IN_WIDTH, TAPE>,
+    filters: &Tensor4D<OUT_CHAN, IN_CHAN, KERNEL, KERNEL>,
+    bias: &Tensor1D<OUT_CHAN>,
+) -> Tensor4D<
+    BATCH_SIZE,
+    OUT_CHAN,
+    { (IN_HEIGHT + 2 * PADDING - KERNEL) / STRIDE + 1 },
+    { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
+    TAPE,
+> {
+    let mut result = Tensor4D::zeros();
+    for i in 0..BATCH_SIZE {
+        conv_forward::<
+            IN_CHAN,
+            OUT_CHAN,
+            KERNEL,
+            STRIDE,
+            PADDING,
+            IN_HEIGHT,
+            IN_WIDTH,
+            { (IN_HEIGHT + 2 * PADDING - KERNEL) / STRIDE + 1 },
+            { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
+        >(
+            &x.data()[i],
+            filters.data(),
+            bias.data(),
+            &mut result.mut_data()[i],
+        );
+    }
+
+    let filters_data = filters.data.clone();
+
+    let (x, mut tape) = x.split_tape();
+    let phantom_filters = filters.phantom();
+    let phantom_bias = bias.phantom();
+    let phantom_result = result.phantom();
+    tape.add_backward_op(move |grads| {
+        let (filters_grad, result_grad) = grads.mut_and_ref(&phantom_filters, &phantom_result);
+        for i in 0..BATCH_SIZE {
+            conv_backward_dw::<
+                IN_CHAN,
+                OUT_CHAN,
+                KERNEL,
+                STRIDE,
+                PADDING,
+                IN_HEIGHT,
+                IN_WIDTH,
+                { (IN_HEIGHT + 2 * PADDING - KERNEL) / STRIDE + 1 },
+                { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
+            >(&x.data()[i], filters_grad, &result_grad[i]);
+        }
+
+        let (bias_grad, result_grad) = grads.mut_and_ref(&phantom_bias, &phantom_result);
+        for i in 0..BATCH_SIZE {
+            conv_backward_db(bias_grad, &result_grad[i]);
+        }
+
+        let (inp_grad, result_grad) = grads.mut_and_ref(&x, &phantom_result);
+        for i in 0..BATCH_SIZE {
+            conv_backward_dx::<
+                IN_CHAN,
+                OUT_CHAN,
+                KERNEL,
+                STRIDE,
+                PADDING,
+                IN_HEIGHT,
+                IN_WIDTH,
+                { (IN_HEIGHT + 2 * PADDING - KERNEL) / STRIDE + 1 },
+                { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
+            >(&mut inp_grad[i], filters_data.as_ref(), &result_grad[i]);
+        }
+    });
+    result.put_tape(tape)
+}
+
 fn conv_forward<
     const C: usize,
     const OC: usize,
