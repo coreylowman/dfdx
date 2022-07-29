@@ -79,3 +79,8 @@ mod reshape;
 
 #[cfg(feature = "nightly")]
 pub use reshape::*;
+
+#[cfg(feature = "nightly")]
+mod conv;
+#[cfg(feature = "nightly")]
+pub use conv::*;
