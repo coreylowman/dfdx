@@ -118,6 +118,45 @@ where
     }
 }
 
+impl<
+        TAPE: 'static + Tape,
+        const BATCH_SIZE: usize,
+        const IN_CHAN: usize,
+        const OUT_CHAN: usize,
+        const KERNEL_SIZE: usize,
+        const STRIDE: usize,
+        const PADDING: usize,
+        const IN_HEIGHT: usize,
+        const IN_WIDTH: usize,
+    > Module<Tensor4D<BATCH_SIZE, IN_CHAN, IN_HEIGHT, IN_WIDTH, TAPE>>
+    for Conv2D<IN_CHAN, OUT_CHAN, KERNEL_SIZE, STRIDE, PADDING>
+where
+    [(); (IN_WIDTH + 2 * PADDING - KERNEL_SIZE) / STRIDE + 1]:,
+    [(); (IN_HEIGHT + 2 * PADDING - KERNEL_SIZE) / STRIDE + 1]:,
+{
+    type Output = Tensor4D<
+        BATCH_SIZE,
+        OUT_CHAN,
+        { (IN_HEIGHT + 2 * PADDING - KERNEL_SIZE) / STRIDE + 1 },
+        { (IN_WIDTH + 2 * PADDING - KERNEL_SIZE) / STRIDE + 1 },
+        TAPE,
+    >;
+
+    fn forward(&self, x: Tensor4D<BATCH_SIZE, IN_CHAN, IN_HEIGHT, IN_WIDTH, TAPE>) -> Self::Output {
+        batch_conv2d::<
+            TAPE,
+            BATCH_SIZE,
+            IN_CHAN,
+            OUT_CHAN,
+            KERNEL_SIZE,
+            STRIDE,
+            PADDING,
+            IN_HEIGHT,
+            IN_WIDTH,
+        >(x, &self.weight, &self.bias)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
