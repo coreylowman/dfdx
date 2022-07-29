@@ -75,3 +75,8 @@ pub use npz::*;
 pub use repeated::*;
 pub use residual::*;
 pub use split_into::*;
+
+#[cfg(feature = "nightly")]
+mod conv;
+#[cfg(feature = "nightly")]
+pub use conv::*;
