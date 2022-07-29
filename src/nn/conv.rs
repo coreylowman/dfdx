@@ -1,6 +1,8 @@
 use crate::prelude::*;
 use rand::Rng;
 use rand_distr::Uniform;
+use std::io::{Read, Seek, Write};
+use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 #[derive(Default, Debug, Clone)]
 pub struct Conv2D<
@@ -42,6 +44,46 @@ impl<
         let dist = Uniform::new(-bound, bound);
         self.weight.randomize(rng, &dist);
         self.bias.randomize(rng, &dist);
+    }
+}
+
+impl<
+        const IN_CHAN: usize,
+        const OUT_CHAN: usize,
+        const KERNEL_SIZE: usize,
+        const STRIDE: usize,
+        const PADDING: usize,
+    > SaveToNpz for Conv2D<IN_CHAN, OUT_CHAN, KERNEL_SIZE, STRIDE, PADDING>
+{
+    /// Saves [Self::weight] to `{pre}weight.npy` and [Self::bias] to `{pre}bias.npy`
+    /// using [npz_fwrite()].
+    fn write<W>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()>
+    where
+        W: Write + Seek,
+    {
+        npz_fwrite(w, format!("{pre}weight.npy"), self.weight.data())?;
+        npz_fwrite(w, format!("{pre}bias.npy"), self.bias.data())?;
+        Ok(())
+    }
+}
+
+impl<
+        const IN_CHAN: usize,
+        const OUT_CHAN: usize,
+        const KERNEL_SIZE: usize,
+        const STRIDE: usize,
+        const PADDING: usize,
+    > LoadFromNpz for Conv2D<IN_CHAN, OUT_CHAN, KERNEL_SIZE, STRIDE, PADDING>
+{
+    /// Reads [Self::weight] from `{pre}weight.npy` and [Self::bias] from `{pre}bias.npy`
+    /// using [npz_fread()].
+    fn read<R>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError>
+    where
+        R: Read + Seek,
+    {
+        npz_fread(r, format!("{pre}weight.npy"), self.weight.mut_data())?;
+        npz_fread(r, format!("{pre}bias.npy"), self.bias.mut_data())?;
+        Ok(())
     }
 }
 
