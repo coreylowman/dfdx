@@ -10,7 +10,7 @@ use crate::prelude::*;
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let module: Residual<ReLU, Square> = Default::default();
+/// let module: GeneralizedResidual<ReLU, Square> = Default::default();
 /// let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
 /// let y = module.forward(x);
 /// assert_eq!(y.data(), &[4.0, 1.0, 0.0, 2.0, 6.0]);
