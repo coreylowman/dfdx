@@ -180,12 +180,12 @@ fn conv_forward<
                 for c in 0..C {
                     for k1 in 0..K {
                         for k2 in 0..K {
-                            let y = oh * S + k1;
-                            let x = ow * S + k2;
-                            if P <= y && y < H + P && P <= x && x < W + P {
-                                let y = y - P;
-                                let x = x - P;
-                                out[oc][oh][ow] += weight[oc][c][k1][k2] * img[c][y][x];
+                            let y = (oh * S + k1).checked_sub(P);
+                            let x = (ow * S + k2).checked_sub(P);
+                            if let Some((y, x)) = y.zip(x) {
+                                if y < H && x < W {
+                                    out[oc][oh][ow] += weight[oc][c][k1][k2] * img[c][y][x];
+                                }
                             }
                         }
                     }
@@ -216,12 +216,12 @@ fn conv_backward_dw<
                 for c in 0..C {
                     for k1 in 0..K {
                         for k2 in 0..K {
-                            let y = oh * S + k1;
-                            let x = ow * S + k2;
-                            if P <= y && y < H + P && P <= x && x < W + P {
-                                let y = y - P;
-                                let x = x - P;
-                                weight[oc][c][k1][k2] += img[c][y][x] * out[oc][oh][ow];
+                            let y = (oh * S + k1).checked_sub(P);
+                            let x = (ow * S + k2).checked_sub(P);
+                            if let Some((y, x)) = y.zip(x) {
+                                if y < H && x < W {
+                                    weight[oc][c][k1][k2] += img[c][y][x] * out[oc][oh][ow];
+                                }
                             }
                         }
                     }
@@ -265,12 +265,12 @@ fn conv_backward_dx<
                 for c in 0..C {
                     for k1 in 0..K {
                         for k2 in 0..K {
-                            let y = oh * S + k1;
-                            let x = ow * S + k2;
-                            if P <= y && y < H + P && P <= x && x < W + P {
-                                let y = y - P;
-                                let x = x - P;
-                                img[c][y][x] += weight[oc][c][k1][k2] * out[oc][oh][ow];
+                            let y = (oh * S + k1).checked_sub(P);
+                            let x = (ow * S + k2).checked_sub(P);
+                            if let Some((y, x)) = y.zip(x) {
+                                if y < H && x < W {
+                                    img[c][y][x] += weight[oc][c][k1][k2] * out[oc][oh][ow];
+                                }
                             }
                         }
                     }
