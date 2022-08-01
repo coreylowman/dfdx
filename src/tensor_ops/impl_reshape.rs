@@ -6,191 +6,112 @@ pub trait Reshape<T> {
 }
 
 macro_rules! tensor_impl {
-    ($type1:ident, [$Vs1f:tt $(,$Vs1:tt)*], $type2:ident, [$Vs2f:tt $(,$Vs2:tt)*], $LEqStatement:tt, $REqStatement:tt) => {
-impl<const $Vs1f: usize, $(const $Vs1: usize, )* const $Vs2f: usize, $(const $Vs2: usize, )* T: Tape> Reshape<$type2<$Vs2f, $($Vs2, )* T>> for $type1<$Vs1f, $($Vs1, )* T>
-where Assert<{$LEqStatement == $REqStatement}>: ConstTrue {
-    fn reshape(self) -> $type2<$Vs2f, $($Vs2, )* T> {
-        let mut result: $type2<$Vs2f, $($Vs2, )* NoneTape> = $type2::zeros();
-        copy_unsafe(self.data(), result.mut_data());
-        move_tape_and_add_backward_op(self, result, move |mut t, result, grads| {
-            let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-            copy_unsafe(result_grad, t.mut_data());
-            Cpu::add(t_grad, t.data());
-        })
+    ($src_ty:ident, [$($SrcVs:tt),*], $dst_ty:ident, [$($DstVs:tt),*], $assert_lhs:tt, $assert_rhs:tt) => {
+impl<$(const $SrcVs: usize, )* $(const $DstVs: usize, )* H: Tape> Reshape<$dst_ty<$($DstVs, )* H>> for $src_ty<$($SrcVs, )* H>
+where
+    Assert<{ $assert_lhs == $assert_rhs }>: ConstTrue,
+{
+    fn reshape(self) -> $dst_ty<$($DstVs, )* H> {
+        unsafe { reshape(self) }
     }
 }
     };
 }
 
-// 0D
-impl<T: Tape> Reshape<Tensor1D<1, T>> for Tensor0D<T> {
-    fn reshape(self) -> Tensor1D<1, T> {
-        let mut result: Tensor1D<1, NoneTape> = Tensor1D::zeros();
-        copy_unsafe(self.data(), result.mut_data());
-        move_tape_and_add_backward_op(self, result, move |mut t, result, grads| {
-            let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-            copy_unsafe(result_grad, t.mut_data());
-            Cpu::add(t_grad, t.data());
-        })
-    }
-}
+tensor_impl!(Tensor0D, [], Tensor0D, [], (1), (1));
+tensor_impl!(Tensor0D, [], Tensor1D, [M], (1), (M));
+tensor_impl!(Tensor0D, [], Tensor2D, [M, N], (1), (M * N));
+tensor_impl!(Tensor0D, [], Tensor3D, [M, N, O], (1), (M * N * O));
+tensor_impl!(Tensor0D, [], Tensor4D, [M, N, O, P], (1), (M * N * O * P));
 
-impl<T: Tape> Reshape<Tensor2D<1, 1, T>> for Tensor0D<T> {
-    fn reshape(self) -> Tensor2D<1, 1, T> {
-        let mut result: Tensor2D<1, 1, NoneTape> = Tensor2D::zeros();
-        copy_unsafe(self.data(), result.mut_data());
-        move_tape_and_add_backward_op(self, result, move |mut t, result, grads| {
-            let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-            copy_unsafe(result_grad, t.mut_data());
-            Cpu::add(t_grad, t.data());
-        })
-    }
-}
+tensor_impl!(Tensor1D, [A], Tensor0D, [], (A), (1));
+tensor_impl!(Tensor1D, [A], Tensor1D, [M], (A), (M));
+tensor_impl!(Tensor1D, [A], Tensor2D, [M, N], (A), (M * N));
+tensor_impl!(Tensor1D, [A], Tensor3D, [M, N, O], (A), (M * N * O));
+tensor_impl!(Tensor1D, [A], Tensor4D, [M, N, O, P], (A), (M * N * O * P));
 
-impl<T: Tape> Reshape<Tensor3D<1, 1, 1, T>> for Tensor0D<T> {
-    fn reshape(self) -> Tensor3D<1, 1, 1, T> {
-        let mut result: Tensor3D<1, 1, 1, NoneTape> = Tensor3D::zeros();
-        copy_unsafe(self.data(), result.mut_data());
-        move_tape_and_add_backward_op(self, result, move |mut t, result, grads| {
-            let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-            copy_unsafe(result_grad, t.mut_data());
-            Cpu::add(t_grad, t.data());
-        })
-    }
-}
-
-impl<T: Tape> Reshape<Tensor4D<1, 1, 1, 1, T>> for Tensor0D<T> {
-    fn reshape(self) -> Tensor4D<1, 1, 1, 1, T> {
-        let mut result: Tensor4D<1, 1, 1, 1, NoneTape> = Tensor4D::zeros();
-        copy_unsafe(self.data(), result.mut_data());
-        move_tape_and_add_backward_op(self, result, move |mut t, result, grads| {
-            let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-            copy_unsafe(result_grad, t.mut_data());
-            Cpu::add(t_grad, t.data());
-        })
-    }
-}
-
-impl<T: Tape> Reshape<Tensor0D<T>> for Tensor1D<1, T> {
-    fn reshape(self) -> Tensor0D<T> {
-        let mut result: Tensor0D = Tensor0D::zeros();
-        copy_unsafe(self.data(), result.mut_data());
-        move_tape_and_add_backward_op(self, result, move |mut t, result, grads| {
-            let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-            copy_unsafe(result_grad, t.mut_data());
-            Cpu::add(t_grad, t.data());
-        })
-    }
-}
-
-impl<T: Tape> Reshape<Tensor0D<T>> for Tensor2D<1, 1, T> {
-    fn reshape(self) -> Tensor0D<T> {
-        let mut result: Tensor0D = Tensor0D::zeros();
-        copy_unsafe(self.data(), result.mut_data());
-        move_tape_and_add_backward_op(self, result, move |mut t, result, grads| {
-            let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-            copy_unsafe(result_grad, t.mut_data());
-            Cpu::add(t_grad, t.data());
-        })
-    }
-}
-
-impl<T: Tape> Reshape<Tensor0D<T>> for Tensor3D<1, 1, 1, T> {
-    fn reshape(self) -> Tensor0D<T> {
-        let mut result: Tensor0D = Tensor0D::zeros();
-        copy_unsafe(self.data(), result.mut_data());
-        move_tape_and_add_backward_op(self, result, move |mut t, result, grads| {
-            let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-            copy_unsafe(result_grad, t.mut_data());
-            Cpu::add(t_grad, t.data());
-        })
-    }
-}
-
-impl<T: Tape> Reshape<Tensor0D<T>> for Tensor4D<1, 1, 1, 1, T> {
-    fn reshape(self) -> Tensor0D<T> {
-        let mut result: Tensor0D = Tensor0D::zeros();
-        copy_unsafe(self.data(), result.mut_data());
-        move_tape_and_add_backward_op(self, result, move |mut t, result, grads| {
-            let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-            copy_unsafe(result_grad, t.mut_data());
-            Cpu::add(t_grad, t.data());
-        })
-    }
-}
-
-// 1D
-tensor_impl!(Tensor1D, [A], Tensor2D, [B, C], (A), (B * C));
-tensor_impl!(Tensor1D, [A], Tensor3D, [B, C, D], (A), (B * C * D));
-tensor_impl!(Tensor1D, [A], Tensor4D, [B, C, D, E], (A), (B * C * D * E));
-// 2D
-tensor_impl!(Tensor2D, [A, B], Tensor1D, [C], (A * B), (C));
-tensor_impl!(Tensor2D, [A, B], Tensor2D, [C, D], (A * B), (C * D));
-tensor_impl!(Tensor2D, [A, B], Tensor3D, [C, D, E], (A * B), (C * D * E));
+tensor_impl!(Tensor2D, [A, B], Tensor0D, [], (A * B), (1));
+tensor_impl!(Tensor2D, [A, B], Tensor1D, [M], (A * B), (M));
+tensor_impl!(Tensor2D, [A, B], Tensor2D, [M, N], (A * B), (M * N));
+tensor_impl!(Tensor2D, [A, B], Tensor3D, [M, N, O], (A * B), (M * N * O));
 tensor_impl!(
     Tensor2D,
     [A, B],
     Tensor4D,
-    [C, D, E, F],
+    [M, N, O, P],
     (A * B),
-    (C * D * E * F)
+    (M * N * O * P)
 );
-// 3D
-tensor_impl!(Tensor3D, [A, B, C], Tensor1D, [D], (A * B * C), (D));
-tensor_impl!(Tensor3D, [A, B, C], Tensor2D, [D, E], (A * B * C), (D * E));
+
+tensor_impl!(Tensor3D, [A, B, C], Tensor0D, [], (A * B * C), (1));
+tensor_impl!(Tensor3D, [A, B, C], Tensor1D, [M], (A * B * C), (M));
+tensor_impl!(Tensor3D, [A, B, C], Tensor2D, [M, N], (A * B * C), (M * N));
 tensor_impl!(
     Tensor3D,
     [A, B, C],
     Tensor3D,
-    [D, E, F],
+    [M, N, O],
     (A * B * C),
-    (D * E * F)
+    (M * N * O)
 );
 tensor_impl!(
     Tensor3D,
     [A, B, C],
     Tensor4D,
-    [D, E, F, G],
+    [M, N, O, P],
     (A * B * C),
-    (D * E * F * G)
+    (M * N * O * P)
 );
-// 4D
-tensor_impl!(Tensor4D, [A, B, C, D], Tensor1D, [E], (A * B * C * D), (E));
+
+tensor_impl!(Tensor4D, [A, B, C, D], Tensor0D, [], (A * B * C * D), (1));
+tensor_impl!(Tensor4D, [A, B, C, D], Tensor1D, [M], (A * B * C * D), (M));
 tensor_impl!(
     Tensor4D,
     [A, B, C, D],
     Tensor2D,
-    [E, F],
+    [M, N],
     (A * B * C * D),
-    (E * F)
+    (M * N)
 );
 tensor_impl!(
     Tensor4D,
     [A, B, C, D],
     Tensor3D,
-    [E, F, G],
+    [M, N, O],
     (A * B * C * D),
-    (E * F * G)
+    (M * N * O)
 );
 tensor_impl!(
     Tensor4D,
     [A, B, C, D],
     Tensor4D,
-    [E, F, G, H],
+    [M, N, O, P],
     (A * B * C * D),
-    (E * F * G * H)
+    (M * N * O * P)
 );
 
+unsafe fn reshape<T, R>(t: T) -> R
+where
+    T: Tensor<Dtype = f32>,
+    R: Tensor<Dtype = f32, Tape = T::Tape>,
+{
+    let mut result = R::NoTape::zeros();
+    copy_unsafe(t.data(), result.mut_data());
+    move_tape_and_add_backward_op(t, result, move |mut t, result, grads| {
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
+        copy_unsafe(result_grad, t.mut_data());
+        T::Device::add(t_grad, t.data());
+    })
+}
+
 /// THIS FUNCTION DOES NOT CHECK IF ARRAY LENGTHS ARE EQUAL
-fn copy_unsafe<Lhs: CountElements, Rhs: CountElements<Dtype = Lhs::Dtype>>(
+unsafe fn copy_unsafe<Lhs: CountElements, Rhs: CountElements<Dtype = Lhs::Dtype>>(
     lhs: &Lhs,
     rhs: &mut Rhs,
 ) {
     let l = lhs.ref_first_elem() as *const Lhs::Dtype;
     let r = rhs.mut_first_elem() as *mut Lhs::Dtype;
-    unsafe {
-        std::ptr::copy_nonoverlapping(l, r, Lhs::NUM_ELEMENTS);
-    }
+    std::ptr::copy_nonoverlapping(l, r, Lhs::NUM_ELEMENTS);
 }
 
 #[cfg(test)]
@@ -198,21 +119,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_0d_reshape() {
-        let a = Tensor0D::new(std::f32::consts::PI);
-        let b: Tensor1D<1> = a.duplicate().reshape();
-        assert_eq!(b.data(), &[std::f32::consts::PI]);
-
-        let c: Tensor2D<1, 1> = a.duplicate().reshape();
-        assert_eq!(c.data(), &[[std::f32::consts::PI]]);
-    }
-
-    #[test]
     fn test_valid_reshapes() {
-        let _: Tensor1D<8> = Tensor2D::<2, 4>::zeros().reshape();
-        let _: Tensor2D<2, 4> = Tensor3D::<2, 2, 2>::zeros().reshape();
-        let _: Tensor3D<2, 2, 2> = Tensor2D::<2, 4>::zeros().reshape();
-        let _: Tensor2D<3, 3> = Tensor1D::<9>::zeros().reshape();
+        let _: Tensor1D<1> = Tensor0D::zeros().reshape();
+        let _: Tensor1D<16> = Tensor1D::<16>::zeros().reshape();
+        let _: Tensor1D<16> = Tensor2D::<2, 8>::zeros().reshape();
+        let _: Tensor1D<16> = Tensor3D::<2, 2, 4>::zeros().reshape();
+        let _: Tensor1D<16> = Tensor4D::<2, 2, 2, 2>::zeros().reshape();
+
+        let _: Tensor2D<1, 1> = Tensor0D::zeros().reshape();
+        let _: Tensor2D<2, 8> = Tensor1D::<16>::zeros().reshape();
+        let _: Tensor2D<2, 8> = Tensor2D::<8, 2>::zeros().reshape();
+        let _: Tensor2D<2, 8> = Tensor3D::<2, 2, 4>::zeros().reshape();
+        let _: Tensor2D<2, 8> = Tensor4D::<2, 2, 2, 2>::zeros().reshape();
+
+        let _: Tensor3D<1, 1, 1> = Tensor0D::zeros().reshape();
+        let _: Tensor3D<2, 2, 4> = Tensor1D::<16>::zeros().reshape();
+        let _: Tensor3D<2, 2, 4> = Tensor2D::<2, 8>::zeros().reshape();
+        let _: Tensor3D<2, 2, 4> = Tensor3D::<4, 2, 2>::zeros().reshape();
+        let _: Tensor3D<2, 2, 4> = Tensor4D::<2, 2, 2, 2>::zeros().reshape();
+
+        let _: Tensor4D<1, 1, 1, 1> = Tensor0D::zeros().reshape();
+        let _: Tensor4D<2, 2, 2, 2> = Tensor1D::<16>::zeros().reshape();
+        let _: Tensor4D<2, 2, 2, 2> = Tensor2D::<2, 8>::zeros().reshape();
+        let _: Tensor4D<2, 2, 2, 2> = Tensor3D::<4, 2, 2>::zeros().reshape();
+        let _: Tensor4D<2, 2, 2, 2> = Tensor4D::<4, 1, 2, 2>::zeros().reshape();
     }
 
     #[test]
