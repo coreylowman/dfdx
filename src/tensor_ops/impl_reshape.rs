@@ -18,77 +18,21 @@ where
     };
 }
 
-tensor_impl!(Tensor0D, [], Tensor0D, [], (1), (1));
-tensor_impl!(Tensor0D, [], Tensor1D, [M], (1), (M));
-tensor_impl!(Tensor0D, [], Tensor2D, [M, N], (1), (M * N));
-tensor_impl!(Tensor0D, [], Tensor3D, [M, N, O], (1), (M * N * O));
-tensor_impl!(Tensor0D, [], Tensor4D, [M, N, O, P], (1), (M * N * O * P));
+macro_rules! impl_all_reshapes {
+    ($src_ty:ident, [$($SrcVs:tt),*], $assert_lhs:tt) => {
+        tensor_impl!($src_ty, [$($SrcVs),*], Tensor0D, [], $assert_lhs, (1));
+        tensor_impl!($src_ty, [$($SrcVs),*], Tensor1D, [M], $assert_lhs, (M));
+        tensor_impl!($src_ty, [$($SrcVs),*], Tensor2D, [M, N], $assert_lhs, (M * N));
+        tensor_impl!($src_ty, [$($SrcVs),*], Tensor3D, [M, N, O], $assert_lhs, (M * N * O));
+        tensor_impl!($src_ty, [$($SrcVs),*], Tensor4D, [M, N, O, P], $assert_lhs, (M * N * O * P));
+    };
+}
 
-tensor_impl!(Tensor1D, [A], Tensor0D, [], (A), (1));
-tensor_impl!(Tensor1D, [A], Tensor1D, [M], (A), (M));
-tensor_impl!(Tensor1D, [A], Tensor2D, [M, N], (A), (M * N));
-tensor_impl!(Tensor1D, [A], Tensor3D, [M, N, O], (A), (M * N * O));
-tensor_impl!(Tensor1D, [A], Tensor4D, [M, N, O, P], (A), (M * N * O * P));
-
-tensor_impl!(Tensor2D, [A, B], Tensor0D, [], (A * B), (1));
-tensor_impl!(Tensor2D, [A, B], Tensor1D, [M], (A * B), (M));
-tensor_impl!(Tensor2D, [A, B], Tensor2D, [M, N], (A * B), (M * N));
-tensor_impl!(Tensor2D, [A, B], Tensor3D, [M, N, O], (A * B), (M * N * O));
-tensor_impl!(
-    Tensor2D,
-    [A, B],
-    Tensor4D,
-    [M, N, O, P],
-    (A * B),
-    (M * N * O * P)
-);
-
-tensor_impl!(Tensor3D, [A, B, C], Tensor0D, [], (A * B * C), (1));
-tensor_impl!(Tensor3D, [A, B, C], Tensor1D, [M], (A * B * C), (M));
-tensor_impl!(Tensor3D, [A, B, C], Tensor2D, [M, N], (A * B * C), (M * N));
-tensor_impl!(
-    Tensor3D,
-    [A, B, C],
-    Tensor3D,
-    [M, N, O],
-    (A * B * C),
-    (M * N * O)
-);
-tensor_impl!(
-    Tensor3D,
-    [A, B, C],
-    Tensor4D,
-    [M, N, O, P],
-    (A * B * C),
-    (M * N * O * P)
-);
-
-tensor_impl!(Tensor4D, [A, B, C, D], Tensor0D, [], (A * B * C * D), (1));
-tensor_impl!(Tensor4D, [A, B, C, D], Tensor1D, [M], (A * B * C * D), (M));
-tensor_impl!(
-    Tensor4D,
-    [A, B, C, D],
-    Tensor2D,
-    [M, N],
-    (A * B * C * D),
-    (M * N)
-);
-tensor_impl!(
-    Tensor4D,
-    [A, B, C, D],
-    Tensor3D,
-    [M, N, O],
-    (A * B * C * D),
-    (M * N * O)
-);
-tensor_impl!(
-    Tensor4D,
-    [A, B, C, D],
-    Tensor4D,
-    [M, N, O, P],
-    (A * B * C * D),
-    (M * N * O * P)
-);
+impl_all_reshapes!(Tensor0D, [], (1));
+impl_all_reshapes!(Tensor1D, [A], (A));
+impl_all_reshapes!(Tensor2D, [A, B], (A * B));
+impl_all_reshapes!(Tensor3D, [A, B, C], (A * B * C));
+impl_all_reshapes!(Tensor4D, [A, B, C, D], (A * B * C * D));
 
 unsafe fn reshape<T, R>(t: T) -> R
 where
