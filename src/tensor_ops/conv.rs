@@ -180,9 +180,11 @@ fn conv_forward<
                 for c in 0..C {
                     for k1 in 0..K {
                         for k2 in 0..K {
-                            let y = (oh * S + k1).checked_sub(2 * P);
-                            let x = (ow * S + k2).checked_sub(2 * P);
-                            if let Some((y, x)) = y.zip(x) {
+                            let y = oh * S + k1;
+                            let x = ow * S + k2;
+                            if P <= y && y < H + P && P <= x && x < W + P {
+                                let y = y - P;
+                                let x = x - P;
                                 out[oc][oh][ow] += weight[oc][c][k1][k2] * img[c][y][x];
                             }
                         }
@@ -214,9 +216,11 @@ fn conv_backward_dw<
                 for c in 0..C {
                     for k1 in 0..K {
                         for k2 in 0..K {
-                            let y = (oh * S + k1).checked_sub(2 * P);
-                            let x = (ow * S + k2).checked_sub(2 * P);
-                            if let Some((y, x)) = y.zip(x) {
+                            let y = oh * S + k1;
+                            let x = ow * S + k2;
+                            if P <= y && y < H + P && P <= x && x < W + P {
+                                let y = y - P;
+                                let x = x - P;
                                 weight[oc][c][k1][k2] += img[c][y][x] * out[oc][oh][ow];
                             }
                         }
@@ -261,9 +265,11 @@ fn conv_backward_dx<
                 for c in 0..C {
                     for k1 in 0..K {
                         for k2 in 0..K {
-                            let y = (oh * S + k1).checked_sub(2 * P);
-                            let x = (ow * S + k2).checked_sub(2 * P);
-                            if let Some((y, x)) = y.zip(x) {
+                            let y = oh * S + k1;
+                            let x = ow * S + k2;
+                            if P <= y && y < H + P && P <= x && x < W + P {
+                                let y = y - P;
+                                let x = x - P;
                                 img[c][y][x] += weight[oc][c][k1][k2] * out[oc][oh][ow];
                             }
                         }
@@ -439,7 +445,68 @@ mod tests {
 
     #[test]
     fn test_conv2d_padding_1() {
-        todo!();
+        let weight = Tensor4D::new([
+            [
+                [[0.10215953, 0.06263646], [-0.04124039, -0.09729567]],
+                [[-0.32656857, 0.24254093], [-0.27209827, 0.15361503]],
+            ],
+            [
+                [[0.03449896, 0.22931078], [-0.17652659, 0.08222872]],
+                [[-0.06016779, 0.29082409], [-0.19154115, 0.13483226]],
+            ],
+            [
+                [[-0.14262493, 0.19654515], [0.15921101, 0.01759464]],
+                [[0.16749159, 0.33096817], [0.28376505, -0.05524009]],
+            ],
+        ]);
+        let bias = Tensor1D::new([-0.22854491, 0.28763595, 0.20709404]);
+        let x = Tensor3D::new([[[-0.32224107, -0.32800716]], [[-1.13570976, 0.93713200]]]);
+        let result = conv2d::<OwnedTape, 2, 3, 2, 1, 1, 1, 2>(x.trace(), &weight, &bias);
+        assert_eq!(
+            result.data(),
+            &[
+                [
+                    [-0.37165433, 0.26964033, -0.47000977],
+                    [-0.52418506, 0.3161699, -0.56809187]
+                ],
+                [
+                    [0.10800815, 0.66143924, 0.16603859],
+                    [-0.11654915, 0.5421771, 0.21993488]
+                ],
+                [
+                    [0.26416105, -0.22402346, 0.420797],
+                    [-0.23212466, 0.3085245, 0.41083777]
+                ]
+            ]
+        );
+        let gradients = result.exp().mean().backward();
+        assert_eq!(
+            gradients.ref_gradient(&x),
+            &[[[0.010052743, 0.038219165]], [[0.0013861917, 0.096129306]]]
+        );
+
+        assert_eq!(
+            gradients.ref_gradient(&weight),
+            &[
+                [
+                    [[-0.03488452, -0.035597768], [-0.03483199, -0.036207683]],
+                    [[-0.05705857, 0.03406856], [-0.05008337, 0.024666183]]
+                ],
+                [
+                    [[-0.053492695, -0.04727108], [-0.05620105, -0.055251926]],
+                    [[-0.04363727, 0.033381317], [-0.0607851, 0.030584559]]
+                ],
+                [
+                    [[-0.051853612, -0.03900232], [-0.04206547, -0.037880093]],
+                    [[-0.0073834136, 0.0208545], [0.02886929, -0.040557314]]
+                ]
+            ]
+        );
+
+        assert_eq!(
+            gradients.ref_gradient(&bias),
+            &[0.28636602, 0.44933242, 0.40484178]
+        );
     }
 
     #[test]
