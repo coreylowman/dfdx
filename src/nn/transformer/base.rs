@@ -49,7 +49,6 @@ impl<const M: usize, const N: usize, const K: usize, const V: usize, const H: us
     }
 }
 
-/// Normal self attention (where same tensors are used for keys, queries and values)
 impl<const M: usize, const K: usize, const V: usize, const S: usize, const H: usize, T: Tape>
     Module<Tensor2D<S, M, T>> for MultiHeadAttention<M, M, K, V, H>
 where
@@ -59,34 +58,35 @@ where
 {
     type Output = Tensor2D<S, M, T>;
 
+    /// Normal self attention (where same tensors are used for keys, queries and values)
     fn forward(&self, input: Tensor2D<S, M, T>) -> Self::Output {
         let (input, tape) = input.split_tape();
-        let (queries, tape) = Reshape::<Tensor3D<H, S, { K / H }, T>>::reshape(
-            self.w_q.forward(input.duplicate().put_tape(tape)),
-        )
-        .split_tape();
-        let (keys, tape) = Reshape::<Tensor3D<H, S, { K / H }, T>>::reshape(
-            self.w_k.forward(input.duplicate().put_tape(tape)),
-        )
-        .split_tape();
-        let (values, tape) = Reshape::<Tensor3D<H, S, { V / H }, T>>::reshape(
-            self.w_v.forward(input.put_tape(tape)),
-        )
-        .split_tape();
+
+        let values = self.w_v.forward(input.duplicate().put_tape(tape));
+        let values = Reshape::<Tensor3D<H, S, { V / H }, T>>::reshape(values);
+        let (values, tape) = values.split_tape();
+
+        let keys = self.w_k.forward(input.duplicate().put_tape(tape));
+        let keys = Reshape::<Tensor3D<H, S, { K / H }, T>>::reshape(keys);
+        let (keys, tape) = keys.split_tape();
+
+        let queries = self.w_q.forward(input.put_tape(tape));
+        let queries = Reshape::<Tensor3D<H, S, { K / H }, T>>::reshape(queries);
 
         // Get weights
-        let token_weights = batch_3d_matmul_transpose(queries.put_tape(tape), &keys) / (M as f32);
+        let token_weights = batch_3d_matmul_transpose(queries, &keys) / (M as f32);
 
         // Softmax on last dimension
-        let token_weights = softmax(token_weights);
+        let token_weights: Tensor3D<H, S, S, T> = softmax(token_weights);
 
         // Get new tokens
-        let tokens: Tensor2D<S, V, T> = batch_3d_matmul(token_weights, &values).reshape();
+        let tokens: Tensor3D<H, S, { V / H }, T> = batch_3d_matmul(token_weights, &values);
+        let tokens: Tensor2D<S, V, T> = tokens.reshape();
+
         self.w_o.forward(tokens)
     }
 }
 
-/// Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
 impl<
         const M: usize,
         const N: usize,
@@ -105,31 +105,35 @@ where
 {
     type Output = Tensor2D<S1, M, T>;
 
+    /// Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
     fn forward(&self, (input, from_enc): (Tensor2D<S1, M, T>, Tensor2D<S2, N>)) -> Self::Output {
-        let queries: Tensor3D<H, S1, { K / H }, T> = self.w_q.forward(input).reshape();
-        let (queries, tape) = queries.split_tape();
-        let (keys, tape) = Reshape::<Tensor3D<H, S2, { K / H }, T>>::reshape(
-            self.w_k.forward(from_enc.duplicate().put_tape(tape)),
-        )
-        .split_tape();
-        let (values, tape) = Reshape::<Tensor3D<H, S2, { V / H }, T>>::reshape(
-            self.w_v.forward(from_enc.put_tape(tape)),
-        )
-        .split_tape();
+        let (input, tape) = input.split_tape();
+
+        let values = self.w_v.forward(from_enc.duplicate().put_tape(tape));
+        let values = Reshape::<Tensor3D<H, S2, { V / H }, T>>::reshape(values);
+        let (values, tape) = values.split_tape();
+
+        let keys = self.w_k.forward(from_enc.put_tape(tape));
+        let keys = Reshape::<Tensor3D<H, S2, { K / H }, T>>::reshape(keys);
+        let (keys, tape) = keys.split_tape();
+
+        let queries = self.w_q.forward(input.put_tape(tape));
+        let queries = Reshape::<Tensor3D<H, S1, { K / H }, T>>::reshape(queries);
 
         // Get weights
-        let token_weights = batch_3d_matmul_transpose(queries.put_tape(tape), &keys) / (M as f32);
+        let token_weights = batch_3d_matmul_transpose(queries, &keys) / (M as f32);
 
         // Softmax on last dimension
-        let token_weights = softmax(token_weights);
+        let token_weights: Tensor3D<H, S1, S2, T> = softmax(token_weights);
 
         // Get new tokens
-        let tokens: Tensor2D<S1, V, T> = batch_3d_matmul(token_weights, &values).reshape();
+        let tokens: Tensor3D<H, S1, { V / H }, T> = batch_3d_matmul(token_weights, &values);
+        let tokens: Tensor2D<S1, V, T> = tokens.reshape();
+
         self.w_o.forward(tokens)
     }
 }
 
-/// Batched normal self attention (where same tensors are used for keys, queries and values)
 impl<
         const B: usize,
         const M: usize,
@@ -146,34 +150,35 @@ where
 {
     type Output = Tensor3D<B, S, M, T>;
 
+    /// Batched normal self attention (where same tensors are used for keys, queries and values)
     fn forward(&self, input: Tensor3D<B, S, M, T>) -> Self::Output {
         let (input, tape) = input.split_tape();
-        let (queries, tape) = Reshape::<Tensor4D<B, H, S, { K / H }, T>>::reshape(
-            self.w_q.forward(input.duplicate().put_tape(tape)),
-        )
-        .split_tape();
-        let (keys, tape) = Reshape::<Tensor4D<B, H, S, { K / H }, T>>::reshape(
-            self.w_k.forward(input.duplicate().put_tape(tape)),
-        )
-        .split_tape();
-        let (values, tape) = Reshape::<Tensor4D<B, H, S, { V / H }, T>>::reshape(
-            self.w_v.forward(input.put_tape(tape)),
-        )
-        .split_tape();
+
+        let values = self.w_v.forward(input.duplicate().put_tape(tape));
+        let values = Reshape::<Tensor4D<B, H, S, { V / H }, T>>::reshape(values);
+        let (values, tape) = values.split_tape();
+
+        let keys = self.w_k.forward(input.duplicate().put_tape(tape));
+        let keys = Reshape::<Tensor4D<B, H, S, { K / H }, T>>::reshape(keys);
+        let (keys, tape) = keys.split_tape();
+
+        let queries = self.w_q.forward(input.put_tape(tape));
+        let queries = Reshape::<Tensor4D<B, H, S, { K / H }, T>>::reshape(queries);
 
         // Get weights
-        let token_weights = batch_4d_matmul_transpose(queries.put_tape(tape), &keys) / (M as f32);
+        let token_weights = batch_4d_matmul_transpose(queries, &keys) / (M as f32);
 
         // Softmax on last dimension
-        let token_weights = softmax(token_weights);
+        let token_weights: Tensor4D<B, H, S, S, T> = softmax(token_weights);
 
         // Get new tokens
-        let tokens: Tensor3D<B, S, V, T> = batch_4d_matmul(token_weights, &values).reshape();
+        let tokens: Tensor4D<B, H, S, { V / H }, T> = batch_4d_matmul(token_weights, &values);
+        let tokens: Tensor3D<B, S, V, T> = tokens.reshape();
+
         self.w_o.forward(tokens)
     }
 }
 
-/// Batched Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
 impl<
         const B: usize,
         const M: usize,
@@ -193,29 +198,34 @@ where
 {
     type Output = Tensor3D<B, S1, M, T>;
 
+    /// Batched Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
     fn forward(
         &self,
         (input, from_enc): (Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>),
     ) -> Self::Output {
-        let queries: Tensor4D<B, H, S1, { K / H }, T> = self.w_q.forward(input).reshape();
-        let (queries, tape) = queries.split_tape();
-        let (keys, tape) = Reshape::<Tensor4D<B, H, S2, { K / H }, T>>::reshape(
-            self.w_k.forward(from_enc.duplicate().put_tape(tape)),
-        )
-        .split_tape();
-        let (values, tape) = Reshape::<Tensor4D<B, H, S2, { V / H }, T>>::reshape(
-            self.w_v.forward(from_enc.put_tape(tape)),
-        )
-        .split_tape();
+        let (input, tape) = input.split_tape();
+
+        let values = self.w_v.forward(from_enc.duplicate().put_tape(tape));
+        let values = Reshape::<Tensor4D<B, H, S2, { V / H }, T>>::reshape(values);
+        let (values, tape) = values.split_tape();
+
+        let keys = self.w_k.forward(from_enc.put_tape(tape));
+        let keys = Reshape::<Tensor4D<B, H, S2, { K / H }, T>>::reshape(keys);
+        let (keys, tape) = keys.split_tape();
+
+        let queries = self.w_q.forward(input.put_tape(tape));
+        let queries = Reshape::<Tensor4D<B, H, S1, { K / H }, T>>::reshape(queries);
 
         // Get weights
-        let token_weights = batch_4d_matmul_transpose(queries.put_tape(tape), &keys) / (M as f32);
+        let token_weights = batch_4d_matmul_transpose(queries, &keys) / (M as f32);
 
         // Softmax on last dimension
-        let token_weights = softmax(token_weights);
+        let token_weights: Tensor4D<B, H, S1, S2, T> = softmax(token_weights);
 
         // Get new tokens
-        let tokens: Tensor3D<B, S1, V, T> = batch_4d_matmul(token_weights, &values).reshape();
+        let tokens: Tensor4D<B, H, S1, { V / H }, T> = batch_4d_matmul(token_weights, &values);
+        let tokens: Tensor3D<B, S1, V, T> = tokens.reshape();
+
         self.w_o.forward(tokens)
     }
 }

@@ -74,12 +74,10 @@ where
     type Output = Tensor2D<S1, M, T>;
 
     fn forward(&self, (input, from_enc): (Tensor2D<S1, M, T>, Tensor2D<S2, N>)) -> Self::Output {
-        let (input, input_tape) = input.split_tape();
-        self.ff.forward(add(
-            self.attn
-                .forward((input.duplicate().put_tape(input_tape), from_enc)),
-            &input,
-        ))
+        let input_ = input.duplicate();
+        let tokens = self.attn.forward((input, from_enc));
+        let tokens = add(tokens, &input_);
+        self.ff.forward(tokens)
     }
 }
 
@@ -108,11 +106,10 @@ where
         &self,
         (input, from_enc): (Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>),
     ) -> Self::Output {
-        let (input, input_tape) = input.split_tape();
-        let x = self
-            .attn
-            .forward((input.duplicate().put_tape(input_tape), from_enc));
-        self.ff.forward(add(x, &input))
+        let input_ = input.duplicate();
+        let x = self.attn.forward((input, from_enc));
+        let x = add(x, &input_);
+        self.ff.forward(x)
     }
 }
 
@@ -157,7 +154,7 @@ where
     Assert<{ M % H == 0 }>: ConstTrue,
 {
     fn reset_params<R: Rng>(&mut self, rng: &mut R) {
-        for block in &mut self.blocks {
+        for block in self.blocks.iter_mut() {
             block.reset_params(rng);
         }
     }
@@ -169,7 +166,7 @@ where
     Assert<{ M % H == 0 }>: ConstTrue,
 {
     fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-        for block in &mut self.blocks {
+        for block in self.blocks.iter_mut() {
             block.update(grads);
         }
     }
@@ -195,7 +192,7 @@ where
 
     fn forward(&self, input: (Tensor2D<S1, M, T>, Tensor2D<S2, N, T>)) -> Self::Output {
         let (mut x, from_enc) = input;
-        for block in &self.blocks {
+        for block in self.blocks.iter() {
             x = block.forward((x, from_enc.duplicate()));
         }
         x
@@ -223,7 +220,7 @@ where
 
     fn forward(&self, input: (Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>)) -> Self::Output {
         let (mut x, from_enc) = input;
-        for block in &self.blocks {
+        for block in self.blocks.iter() {
             x = block.forward((x, from_enc.duplicate()));
         }
         x
