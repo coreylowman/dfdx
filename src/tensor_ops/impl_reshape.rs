@@ -1,7 +1,9 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
+/// Can be reshaped into `T`.
 pub trait Reshape<T> {
+    /// Reshape `self` into `T`.
     fn reshape(self) -> T;
 }
 
@@ -34,6 +36,8 @@ impl_all_reshapes!(Tensor2D, [A, B], (A * B));
 impl_all_reshapes!(Tensor3D, [A, B, C], (A * B * C));
 impl_all_reshapes!(Tensor4D, [A, B, C, D], (A * B * C * D));
 
+/// Reshapes `T` into `R`'s shape. This is unsafe because there are no compile
+/// time guaruntees that `T` and `R` have the same number of elements.
 unsafe fn reshape<T, R>(t: T) -> R
 where
     T: Tensor<Dtype = f32>,
@@ -48,14 +52,14 @@ where
     })
 }
 
-/// THIS FUNCTION DOES NOT CHECK IF ARRAY LENGTHS ARE EQUAL
+/// Unsafely copies `min(Lhs::NUM_ELEMENTS, Rhs::NUM_ELEMENTS` from `lhs` into `rhs`.
 unsafe fn copy_unsafe<Lhs: CountElements, Rhs: CountElements<Dtype = Lhs::Dtype>>(
     lhs: &Lhs,
     rhs: &mut Rhs,
 ) {
     let l = lhs.ref_first_elem() as *const Lhs::Dtype;
     let r = rhs.mut_first_elem() as *mut Lhs::Dtype;
-    std::ptr::copy_nonoverlapping(l, r, Lhs::NUM_ELEMENTS);
+    std::ptr::copy_nonoverlapping(l, r, Lhs::NUM_ELEMENTS.min(Rhs::NUM_ELEMENTS));
 }
 
 #[cfg(test)]
