@@ -169,6 +169,283 @@ pub fn vecmat_mul_transpose<const K: usize, const N: usize, TAPE: Tape>(
 ///
 /// # Arguments
 /// * `lhs` - a 3d tensor representing a BxMxK matrix
+/// * `rhs` - a 3d tensor representing a BxKxN matrix
+///
+/// Returns a 3d tensor representing a BxMxN matrix.
+///
+/// # Examples
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let x: Tensor3D<5, 3, 2> = Tensor3D::zeros();
+/// let y: Tensor3D<5, 2, 4> = Tensor3D::zeros();
+/// let result: Tensor3D<5, 3, 4> = batch_3d_matmul(x, &y);
+/// ```
+pub fn batch_3d_matmul<
+    const M: usize,
+    const K: usize,
+    const N: usize,
+    const B: usize,
+    TAPE: Tape,
+>(
+    lhs: Tensor3D<B, M, K, TAPE>,
+    rhs: &Tensor3D<B, K, N, NoneTape>,
+) -> Tensor3D<B, M, N, TAPE> {
+    let mut result = Tensor3D::zeros();
+
+    for i in 0..B {
+        mm(&lhs.data()[i], &rhs.data()[i], &mut result.mut_data()[i]);
+    }
+
+    // copy rhs data for use later when computing gradients
+    let rhs_data = rhs.data.clone();
+
+    move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
+        #[allow(clippy::type_complexity)]
+        let (lhs_grad, result_grad): (&mut [[[f32; K]; M]; B], &[[[f32; N]; M]; B]) =
+            grads.mut_and_ref(&lhs, &result);
+        for i in 0..B {
+            mm_bt(&result_grad[i], &rhs_data.as_ref()[i], &mut lhs_grad[i]);
+        }
+
+        #[allow(clippy::type_complexity)]
+        let (rhs_grad, result_grad): (&mut [[[f32; N]; K]; B], &[[[f32; N]; M]; B]) =
+            grads.mut_and_ref(&rhs, &result);
+
+        // Accumulate gradients in loop TODO: LIKELY A BETTER WAY TO DO THIS
+        for i in 0..B {
+            mm_at(&lhs.data()[i], &result_grad[i], &mut rhs_grad[i]);
+        }
+    })
+}
+
+/// Batch matrix multiplication with the transpose of `rhs`. Equivalent to `batch_matmul(lhs, transpose(rhs))`.
+///
+/// # Arguments
+/// * `lhs` - a 3d tensor representing a BxMxK matrix
+/// * `rhs_t` - a 3d tensor representing a BxNxK matrix.
+///
+/// # Generics
+/// - `B`: Batch size in `lhs`.
+/// - `M`: number of rows of `lhs`.
+/// - `K`: number of columns of `lhs` and number of rows of `rhs`.
+/// - `N`: Number of columns of `rhs`.
+///
+/// Returns a 3d tensor representing an BxMxN matrix.
+///
+/// # Examples
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let x: Tensor3D<5, 3, 2> = Tensor3D::zeros();
+/// let y: Tensor3D<5, 4, 2> = Tensor3D::zeros();
+/// let result: Tensor3D<5, 3, 4> = batch_3d_matmul_transpose(x, &y);
+/// ```
+pub fn batch_3d_matmul_transpose<
+    const M: usize,
+    const K: usize,
+    const N: usize,
+    const B: usize,
+    TAPE: Tape,
+>(
+    lhs: Tensor3D<B, M, K, TAPE>,
+    rhs_t: &Tensor3D<B, N, K, NoneTape>,
+) -> Tensor3D<B, M, N, TAPE> {
+    let mut result = Tensor3D::zeros();
+    for i in 0..B {
+        mm_bt(&lhs.data()[i], &rhs_t.data()[i], &mut result.mut_data()[i]);
+    }
+
+    // copy rhs data for use later when computing gradients
+    let rhs_data = rhs_t.data.clone();
+
+    move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs, result, grads| {
+        #[allow(clippy::type_complexity)]
+        let (lhs_grad, result_grad): (&mut [[[f32; K]; M]; B], &[[[f32; N]; M]; B]) =
+            grads.mut_and_ref(&lhs, &result);
+        for i in 0..B {
+            mm(&result_grad[i], &rhs_data.as_ref()[i], &mut lhs_grad[i]);
+        }
+
+        #[allow(clippy::type_complexity)]
+        let (rhs_t_grad, result_grad): (&mut [[[f32; K]; N]; B], &[[[f32; N]; M]; B]) =
+            grads.mut_and_ref(&rhs, &result);
+
+        // Accumulate gradients in loop TODO: LIKELY A BETTER WAY TO DO THIS
+        for i in 0..B {
+            mm_atct(&lhs.data()[i], &result_grad[i], &mut rhs_t_grad[i]);
+        }
+    })
+}
+
+/// Batch matrix multiplication.
+///
+/// # Generics
+/// - `B1`: First batch size in `lhs`.
+/// - `B2`: Second batch size in `lhs`.
+/// - `M`: number of rows of `lhs`.
+/// - `K`: number of columns of `lhs` and number of rows of `rhs`.
+/// - `N`: Number of columns of `rhs`.
+///
+/// # Arguments
+/// * `lhs` - a 4d tensor representing a B1xB2xMxK matrix
+/// * `rhs` - a 4d tensor representing a B1xB2xKxN matrix
+///
+/// Returns a 4d tensor representing a B1xB2xMxN matrix.
+///
+/// # Examples
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let x: Tensor4D<6, 5, 3, 2> = Tensor4D::zeros();
+/// let y: Tensor4D<6, 5, 2, 4> = Tensor4D::zeros();
+/// let result: Tensor4D<6, 5, 3, 4> = batch_4d_matmul(x, &y);
+/// ```
+pub fn batch_4d_matmul<
+    const M: usize,
+    const K: usize,
+    const N: usize,
+    const B1: usize,
+    const B2: usize,
+    TAPE: Tape,
+>(
+    lhs: Tensor4D<B1, B2, M, K, TAPE>,
+    rhs: &Tensor4D<B1, B2, K, N, NoneTape>,
+) -> Tensor4D<B1, B2, M, N, TAPE> {
+    let mut result = Tensor4D::zeros();
+    for i in 0..B1 {
+        for j in 0..B2 {
+            mm(
+                &lhs.data()[i][j],
+                &rhs.data()[i][j],
+                &mut result.mut_data()[i][j],
+            );
+        }
+    }
+
+    // copy rhs data for use later when computing gradients
+    let rhs_data = rhs.data.clone();
+
+    move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
+        #[allow(clippy::type_complexity)]
+        let (lhs_grad, result_grad): (
+            &mut [[[[f32; K]; M]; B2]; B1],
+            &[[[[f32; N]; M]; B2]; B1],
+        ) = grads.mut_and_ref(&lhs, &result);
+        for i in 0..B1 {
+            for j in 0..B2 {
+                mm_bt(
+                    &result_grad[i][j],
+                    &rhs_data.as_ref()[i][j],
+                    &mut lhs_grad[i][j],
+                );
+            }
+        }
+
+        #[allow(clippy::type_complexity)]
+        let (rhs_grad, result_grad): (
+            &mut [[[[f32; N]; K]; B2]; B1],
+            &[[[[f32; N]; M]; B2]; B1],
+        ) = grads.mut_and_ref(&rhs, &result);
+
+        // Accumulate gradients in loop TODO: LIKELY A BETTER WAY TO DO THIS
+        for i in 0..B1 {
+            for j in 0..B2 {
+                mm_at(&lhs.data()[i][j], &result_grad[i][j], &mut rhs_grad[i][j]);
+            }
+        }
+    })
+}
+
+/// Batch matrix multiplication with the transpose of `rhs`. Equivalent to `batch_matmul(lhs, transpose(rhs))`.
+///
+/// # Arguments
+/// * `lhs` - a 4d tensor representing a B1xB2xMxK matrix
+/// * `rhs_t` - a 4d tensor representing a B1xB2xNxK matrix.
+///
+/// # Generics
+/// - `B1`: First batch size in `lhs`.
+/// - `B`: Second batch size in `lhs`.
+/// - `M`: number of rows of `lhs`.
+/// - `K`: number of columns of `lhs` and number of rows of `rhs`.
+/// - `N`: Number of columns of `rhs`.
+///
+/// Returns a 4d tensor representing an B1xB2xMxN matrix.
+///
+/// # Examples
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let x: Tensor4D<6, 5, 3, 2> = Tensor4D::zeros();
+/// let y: Tensor4D<6, 5, 4, 2> = Tensor4D::zeros();
+/// let result: Tensor4D<6, 5, 3, 4> = batch_4d_matmul_transpose(x, &y);
+/// ```
+pub fn batch_4d_matmul_transpose<
+    const M: usize,
+    const K: usize,
+    const N: usize,
+    const B1: usize,
+    const B2: usize,
+    TAPE: Tape,
+>(
+    lhs: Tensor4D<B1, B2, M, K, TAPE>,
+    rhs_t: &Tensor4D<B1, B2, N, K, NoneTape>,
+) -> Tensor4D<B1, B2, M, N, TAPE> {
+    let mut result = Tensor4D::zeros();
+    for i in 0..B1 {
+        for j in 0..B2 {
+            mm_bt(
+                &lhs.data()[i][j],
+                &rhs_t.data()[i][j],
+                &mut result.mut_data()[i][j],
+            );
+        }
+    }
+
+    // copy rhs data for use later when computing gradients
+    let rhs_data = rhs_t.data.clone();
+
+    move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs, result, grads| {
+        #[allow(clippy::type_complexity)]
+        let (lhs_grad, result_grad): (
+            &mut [[[[f32; K]; M]; B2]; B1],
+            &[[[[f32; N]; M]; B2]; B1],
+        ) = grads.mut_and_ref(&lhs, &result);
+        for i in 0..B1 {
+            for j in 0..B2 {
+                mm(
+                    &result_grad[i][j],
+                    &rhs_data.as_ref()[i][j],
+                    &mut lhs_grad[i][j],
+                );
+            }
+        }
+
+        #[allow(clippy::type_complexity)]
+        let (rhs_t_grad, result_grad): (
+            &mut [[[[f32; K]; N]; B2]; B1],
+            &[[[[f32; N]; M]; B2]; B1],
+        ) = grads.mut_and_ref(&rhs, &result);
+
+        // Accumulate gradients in loop TODO: LIKELY A BETTER WAY TO DO THIS
+        for i in 0..B1 {
+            for j in 0..B2 {
+                mm_atct(&lhs.data()[i][j], &result_grad[i][j], &mut rhs_t_grad[i][j]);
+            }
+        }
+    })
+}
+
+/// Broadcast matrix multiplication.
+///
+/// # Generics
+/// - `B`: Batch size in `lhs`.
+/// - `M`: number of rows of `lhs`.
+/// - `K`: number of columns of `lhs` and number of rows of `rhs`.
+/// - `N`: Number of columns of `rhs`.
+///
+/// # Arguments
+/// * `lhs` - a 3d tensor representing a BxMxK matrix
 /// * `rhs` - a 2d tensor representing a KxN matrix
 ///
 /// Returns a 3d tensor representing a BxMxN matrix.
@@ -179,21 +456,33 @@ pub fn vecmat_mul_transpose<const K: usize, const N: usize, TAPE: Tape>(
 /// # use dfdx::prelude::*;
 /// let x: Tensor3D<5, 3, 2> = Tensor3D::zeros();
 /// let y: Tensor2D<2, 4> = Tensor2D::zeros();
-/// let result: Tensor3D<5, 3, 4> = batch_matmul(x, &y);
+/// let result: Tensor3D<5, 3, 4> = broadcast_matmul(x, &y);
 /// ```
-pub fn batch_matmul<const M: usize, const K: usize, const N: usize, const B: usize, TAPE: Tape>(
+pub fn broadcast_matmul<
+    const M: usize,
+    const K: usize,
+    const N: usize,
+    const B: usize,
+    TAPE: Tape,
+>(
     lhs: Tensor3D<B, M, K, TAPE>,
     rhs: &Tensor2D<K, N, NoneTape>,
 ) -> Tensor3D<B, M, N, TAPE> {
     let mut result = Tensor3D::zeros();
-    bmm(lhs.data(), rhs.data(), result.mut_data());
+    for i in 0..B {
+        mm(&lhs.data()[i], rhs.data(), &mut result.mut_data()[i]);
+    }
 
     // copy rhs data for use later when computing gradients
     let rhs_data = rhs.data.clone();
 
     move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
-        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
-        bmm_bt(result_grad, rhs_data.as_ref(), lhs_grad);
+        #[allow(clippy::type_complexity)]
+        let (lhs_grad, result_grad): (&mut [[[f32; K]; M]; B], &[[[f32; N]; M]; B]) =
+            grads.mut_and_ref(&lhs, &result);
+        for i in 0..B {
+            mm_bt(&result_grad[i], rhs_data.as_ref(), &mut lhs_grad[i]);
+        }
 
         let (rhs_grad, result_grad): (&mut [[f32; N]; K], &[[[f32; N]; M]; B]) =
             grads.mut_and_ref(&rhs, &result);
@@ -206,7 +495,7 @@ pub fn batch_matmul<const M: usize, const K: usize, const N: usize, const B: usi
     })
 }
 
-/// Batch matrix multiplication with the transpose of `rhs`. Equivalent to `batch_matmul(lhs, transpose(rhs))`.
+/// Broadcast matrix multiplication with the transpose of `rhs`. Equivalent to `broadcast_matmul(lhs, transpose(rhs))`.
 ///
 /// # Arguments
 /// * `lhs` - a 3d tensor representing a BxMxK matrix
@@ -226,9 +515,9 @@ pub fn batch_matmul<const M: usize, const K: usize, const N: usize, const B: usi
 /// # use dfdx::prelude::*;
 /// let x: Tensor3D<5, 3, 2> = Tensor3D::zeros();
 /// let y: Tensor2D<4, 2> = Tensor2D::zeros();
-/// let result: Tensor3D<5, 3, 4> = batch_matmul_transpose(x, &y);
+/// let result: Tensor3D<5, 3, 4> = broadcast_matmul_transpose(x, &y);
 /// ```
-pub fn batch_matmul_transpose<
+pub fn broadcast_matmul_transpose<
     const M: usize,
     const K: usize,
     const N: usize,
@@ -239,14 +528,20 @@ pub fn batch_matmul_transpose<
     rhs_t: &Tensor2D<N, K, NoneTape>,
 ) -> Tensor3D<B, M, N, TAPE> {
     let mut result = Tensor3D::zeros();
-    bmm_bt(lhs.data(), rhs_t.data(), result.mut_data());
+    for i in 0..B {
+        mm_bt(&lhs.data()[i], rhs_t.data(), &mut result.mut_data()[i]);
+    }
 
     // copy rhs data for use later when computing gradients
     let rhs_data = rhs_t.data.clone();
 
     move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs, result, grads| {
-        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
-        bmm(result_grad, rhs_data.as_ref(), lhs_grad);
+        #[allow(clippy::type_complexity)]
+        let (lhs_grad, result_grad): (&mut [[[f32; K]; M]; B], &[[[f32; N]; M]; B]) =
+            grads.mut_and_ref(&lhs, &result);
+        for i in 0..B {
+            mm(&result_grad[i], rhs_data.as_ref(), &mut lhs_grad[i]);
+        }
 
         let (rhs_t_grad, result_grad): (&mut [[f32; K]; N], &[[[f32; N]; M]; B]) =
             grads.mut_and_ref(&rhs, &result);
@@ -408,47 +703,6 @@ fn mm_atct<const M: usize, const K: usize, const N: usize>(
             c_t,
             M as libc::c_int,
         )
-    }
-}
-
-/// batch matrix multiply `c += a * b`
-fn bmm<const M: usize, const K: usize, const N: usize, const B: usize>(
-    a: &[[[f32; K]; M]; B],
-    b: &[[f32; N]; K],
-    c: &mut [[[f32; N]; M]; B],
-) {
-    let b = b.as_ptr() as *const f32;
-
-    // Purely sequential for now, should parallelize using rayon or some other BLAS solution
-    for i in 0..B {
-        let a = a[i].as_ptr() as *const f32;
-        let c = c[i].as_mut_ptr() as *mut f32;
-
-        unsafe {
-            matrixmultiply::sgemm(
-                M, K, N, 1.0, a, K as isize, 1, b, N as isize, 1, 1.0, c, N as isize, 1,
-            )
-        }
-    }
-}
-
-/// batch matrix multiply `c += a * trans(b)`
-fn bmm_bt<const M: usize, const K: usize, const N: usize, const B: usize>(
-    a: &[[[f32; K]; M]; B],
-    b_t: &[[f32; K]; N],
-    c: &mut [[[f32; N]; M]; B],
-) {
-    let b_t = b_t.as_ptr() as *const f32;
-
-    for i in 0..B {
-        let a = a[i].as_ptr() as *const f32;
-        let c = c[i].as_mut_ptr() as *mut f32;
-
-        unsafe {
-            matrixmultiply::sgemm(
-                M, K, N, 1.0, a, K as isize, 1, b_t, 1, K as isize, 1.0, c, N as isize, 1,
-            )
-        }
     }
 }
 
@@ -727,7 +981,7 @@ mod tests {
             ],
         ]);
         let b = Tensor2D::new([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
-        let r: Tensor3D<2, 4, 2, OwnedTape> = batch_matmul(a.trace(), &b);
+        let r: Tensor3D<2, 4, 2, OwnedTape> = broadcast_matmul(a.trace(), &b);
         assert_close(
             r.data(),
             &[
@@ -791,7 +1045,7 @@ mod tests {
             ],
         ]);
         let b = Tensor2D::new([[0.4651, 0.3360, 0.8092], [0.9106, 0.5534, 0.3827]]);
-        let r: Tensor3D<2, 4, 2, OwnedTape> = batch_matmul_transpose(a.trace(), &b);
+        let r: Tensor3D<2, 4, 2, OwnedTape> = broadcast_matmul_transpose(a.trace(), &b);
         assert_close(
             r.data(),
             &[

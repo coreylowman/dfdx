@@ -80,11 +80,11 @@ mod tests {
     }
 
     #[test]
-    fn test_dropout_1d() {
+    fn test_dropout_1d_with_non_positive_values() {
         let mut rng = StdRng::seed_from_u64(3);
-        let t = Tensor1D::new([1.0, 2.0, 3.0, 4.0, 5.0]);
+        let t = Tensor1D::new([0.0, 2.0, -3.0, -4.0, 0.0]);
         let r = t.trace().dropout(0.5, &mut rng);
-        assert_eq!(r.data(), &[2.0, 0.0, 6.0, 0.0, 0.0]);
+        assert_eq!(r.data(), &[0.0, 0.0, -6.0, 0.0, 0.0]);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&t), &[0.4, 0.0, 0.4, 0.0, 0.0]);
     }

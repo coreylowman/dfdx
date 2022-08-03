@@ -300,6 +300,8 @@ tensor_impl!(Tensor4D, [M, N, O, P]);
 
 #[cfg(test)]
 mod tests {
+    use crate::tests::assert_close;
+
     use super::*;
 
     #[test]
@@ -319,14 +321,14 @@ mod tests {
     fn test_sin() {
         let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().sin();
-        assert_eq!(
+        assert_close(
             r.data(),
-            &[-0.9092974, -0.84147096, 0.0, 0.84147096, 0.9092974]
+            &[-0.9092974, -0.84147096, 0.0, 0.84147096, 0.9092974],
         );
         let gradients = r.mean().backward();
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&x),
-            &[-0.08322937, 0.10806046, 0.2, 0.10806046, -0.08322937]
+            &[-0.08322937, 0.10806046, 0.2, 0.10806046, -0.08322937],
         );
     }
 
@@ -334,14 +336,14 @@ mod tests {
     fn test_cos() {
         let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().cos();
-        assert_eq!(
+        assert_close(
             r.data(),
-            &[-0.41614684, 0.5403023, 1.0, 0.5403023, -0.41614684]
+            &[-0.41614684, 0.5403023, 1.0, 0.5403023, -0.41614684],
         );
         let gradients = r.mean().backward();
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&x),
-            &[0.18185948, 0.16829419, -0.0, -0.16829419, -0.18185948]
+            &[0.18185948, 0.16829419, -0.0, -0.16829419, -0.18185948],
         );
     }
 

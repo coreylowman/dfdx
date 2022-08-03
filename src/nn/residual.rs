@@ -15,7 +15,7 @@ use crate::prelude::*;
 /// assert_eq!(y.data(), &[-2.0, -1.0, 0.0, 2.0, 4.0]);
 /// ```
 #[derive(Debug, Clone, Default)]
-pub struct Residual<F>(F);
+pub struct Residual<F>(pub F);
 
 impl<F: CanUpdateWithGradients> CanUpdateWithGradients for Residual<F> {
     /// Pass through to `F`'s [CanUpdateWithGradients].

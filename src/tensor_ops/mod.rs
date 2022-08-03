@@ -75,7 +75,6 @@ pub use map::*;
 pub use matmul::*;
 
 #[cfg(feature = "nightly")]
-mod reshape;
-
+mod impl_reshape;
 #[cfg(feature = "nightly")]
-pub use reshape::*;
+pub use impl_reshape::*;
