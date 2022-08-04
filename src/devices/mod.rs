@@ -3,6 +3,7 @@
 mod allocate;
 mod fill;
 mod foreach;
+mod matmul;
 mod reduce;
 mod reduce_last_dim;
 
@@ -12,6 +13,7 @@ pub struct Cpu;
 pub use allocate::*;
 pub use fill::*;
 pub use foreach::*;
+pub use matmul::*;
 pub use reduce::*;
 pub use reduce_last_dim::*;
 

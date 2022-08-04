@@ -61,7 +61,7 @@ impl<
         const H: usize,
         const S1: usize,
         const S2: usize,
-        T: Tape,
+        T: 'static + Tape,
     > Module<(Tensor2D<S1, M, T>, Tensor2D<S2, N>)> for TransformerDecoderBlock<M, N, I, K, H>
 where
     Assert<{ M % H == 0 }>: ConstTrue,
@@ -90,7 +90,7 @@ impl<
         const S1: usize,
         const S2: usize,
         const B: usize,
-        T: Tape,
+        T: 'static + Tape,
     > Module<(Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>)> for TransformerDecoderBlock<M, N, I, K, H>
 where
     Assert<{ M % H == 0 }>: ConstTrue,
@@ -180,7 +180,7 @@ impl<
         const H: usize,
         const S1: usize,
         const S2: usize,
-        T: Tape,
+        T: 'static + Tape,
     > Module<(Tensor2D<S1, M, T>, Tensor2D<S2, N, T>)> for TransformerDecoder<M, N, I, L, H>
 where
     Assert<{ M % H == 0 }>: ConstTrue,
@@ -208,7 +208,7 @@ impl<
         const S1: usize,
         const S2: usize,
         const B: usize,
-        T: Tape,
+        T: 'static + Tape,
     > Module<(Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>)> for TransformerDecoder<M, N, I, L, H>
 where
     Assert<{ M % H == 0 }>: ConstTrue,
