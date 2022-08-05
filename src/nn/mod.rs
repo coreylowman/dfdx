@@ -83,3 +83,9 @@ mod transformer;
 
 #[cfg(feature = "nightly")]
 pub use transformer::*;
+
+#[cfg(feature = "nightly")]
+mod flatten;
+
+#[cfg(feature = "nightly")]
+pub use flatten::*;
