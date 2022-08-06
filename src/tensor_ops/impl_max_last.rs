@@ -1,8 +1,13 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-/// `t.max(-1)`. Reduces the last dimension of the tensor by gathering the maximum value from that dimension.
+/// Reduces the last dimension of the tensor by gathering the maximum value from that dimension.
 /// Resulting [Tensor] has the last dimension removed (e.g. a 2d tensor will become 1d).
+///
+/// **Pytorch equivalent**: `t.amax(-1)`
+///
+/// **NOTE** This evenly distributes gradients between all equal maximum values, instead
+/// of only exactly 1 value.
 ///
 /// Examples:
 /// ```rust
@@ -11,8 +16,6 @@ use crate::prelude::*;
 /// let r: Tensor1D<2> = max_last_dim(t);
 /// assert_eq!(r.data(), &[3.0, -1.0]);
 /// ```
-///
-/// This is equivalent to calling `t.max(-1)[0]` in pytorch.
 pub fn max_last_dim<T: Tensor<Dtype = f32>>(mut t: T) -> T::LastDimReduced {
     let result = <T::LastDimReduced as Tensor>::NoTape::new_boxed(T::Device::reduce_last_dim(
         t.data(),
