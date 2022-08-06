@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use rand::Rng;
 
-/// A multi-head attention layer.
+/// **Requires Nightly** A multi-head attention layer.
 ///
 /// # Generics
 /// - `M` The embedding size of token vectors from decoder.

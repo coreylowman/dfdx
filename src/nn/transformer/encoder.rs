@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// A single transformer encoder block
+/// **Requires Nightly** A single transformer encoder block
 ///
 /// # Generics
 /// - `M` The embedding size of token vectors.
@@ -15,7 +15,7 @@ pub type TransformerEncoderBlock<const M: usize, const I: usize, const K: usize,
     LayerNorm1D<M>,
 );
 
-/// A transformer encoder.
+/// **Requires Nightly** A transformer encoder.
 ///
 /// # Generics
 /// - `M` The embedding size of token vectors.

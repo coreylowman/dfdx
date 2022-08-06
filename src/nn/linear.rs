@@ -102,7 +102,7 @@ impl<const B: usize, const S: usize, const I: usize, const O: usize, H: Tape>
 {
     type Output = Tensor3D<B, S, O, H>;
 
-    /// Batched 3d forward using [batch_matmul()] and [add_broadcast_rhs_first()]
+    /// Batched 3d forward using [matmul()] and [add_broadcast_rhs_first()]
     fn forward(&self, x: Tensor3D<B, S, I, H>) -> Self::Output {
         add_broadcast_rhs_first_2d(matmul_transpose(x, &self.weight), &self.bias)
     }
