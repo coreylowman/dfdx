@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// Flattens anything above 2 dimensions to 2d. For example a 3d tensor
+/// **Requires Nightly** Flattens anything above 2 dimensions to 2d. For example a 3d tensor
 /// of shape (M, N, O) will be flattened to a 2d tensor of shape (M, N * O)
 #[derive(Default, Clone, Copy)]
 pub struct Flatten;

@@ -2,7 +2,8 @@ use rand::Rng;
 
 use crate::prelude::*;
 
-/// A transformer decoder block. Different than the normal transformer block as this self attention accepts an additional sequence from the encoder.
+/// **Requires Nightly** A transformer decoder block. Different than the normal transformer block
+/// as this self attention accepts an additional sequence from the encoder.
 ///
 /// # Generics
 /// - `M` The embedding size of token vectors from decoder.
@@ -113,7 +114,7 @@ where
     }
 }
 
-/// A transformer decoder.
+/// **Requires Nightly** A transformer decoder.
 ///
 /// # Generics
 /// - `M` The embedding size of token vectors.

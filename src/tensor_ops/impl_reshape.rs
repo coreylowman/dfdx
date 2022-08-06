@@ -1,7 +1,7 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-/// Can be reshaped into `T`.
+/// **Requires Nightly** Reshape `Self` into `T`.
 pub trait Reshape<T> {
     /// Reshape `self` into `T`.
     fn reshape(self) -> T;
