@@ -93,7 +93,8 @@ impl<const B: usize, const I: usize, const O: usize, H: Tape> Module<Tensor2D<B,
 
     /// Batched 2d forward using [matmul()] and [add_broadcast_rhs_first()]
     fn forward(&self, x: Tensor2D<B, I, H>) -> Self::Output {
-        add_broadcast_rhs_first(matmul_transpose(x, &self.weight), &self.bias)
+        let (x, tape) = matmul_transpose(x, &self.weight).split_tape();
+        add(self.bias.duplicate().put_tape(tape).broadcast1::<0>(), &x)
     }
 }
 
@@ -104,7 +105,11 @@ impl<const B: usize, const S: usize, const I: usize, const O: usize, H: Tape>
 
     /// Batched 3d forward using [matmul()] and [add_broadcast_rhs_first()]
     fn forward(&self, x: Tensor3D<B, S, I, H>) -> Self::Output {
-        add_broadcast_rhs_first_2d(matmul_transpose(x, &self.weight), &self.bias)
+        let (x, tape) = matmul_transpose(x, &self.weight).split_tape();
+        add(
+            self.bias.duplicate().put_tape(tape).broadcast2::<0, 1>(),
+            &x,
+        )
     }
 }
 

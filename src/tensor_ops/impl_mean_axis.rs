@@ -7,32 +7,43 @@ use crate::prelude::*;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-/// let r: Tensor1D<2> = mean_last_dim(t);
+/// let r: Tensor1D<2> = t.mean_axis::<1>();
 /// assert_eq!(r.data(), &[2.0, 5.0]);
 /// ```
-pub fn mean_last_dim<T: Tensor<Dtype = f32>>(t: T) -> T::LastDimReduced {
-    div_scalar(
-        sum_last_dim(t),
-        <T::Device as ReduceLastDim<T::Array>>::LAST_DIM as f32,
-    )
+pub fn mean_axis<T: Tensor<Dtype = f32>, const I: isize>(t: T) -> T::Reduced
+where
+    T: Reduce1<I>,
+    T::Array: HasAxis<I>,
+    T::Device: ReduceAxis<T::Array, I, Reduced = <T::Reduced as HasArrayType>::Array>,
+{
+    div_scalar(sum_axis::<T, I>(t), <T::Array as HasAxis<I>>::SIZE as f32)
 }
 
-macro_rules! mean_last_impl {
+macro_rules! mean_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [mean_last_dim()] on `self`.
-    pub fn mean_last_dim(self) -> <Self as Tensor>::LastDimReduced {
-        mean_last_dim(self)
+    /// Calls [mean_axis()] on `self`.
+    pub fn mean_axis<const I: isize>(self) -> <Self as Reduce1<I>>::Reduced
+    where
+        Self: Reduce1<I>,
+        <Self as HasArrayType>::Array: HasAxis<I>,
+        <Self as HasDevice>::Device: ReduceAxis<
+            <Self as HasArrayType>::Array,
+            I,
+            Reduced = <<Self as Reduce1<I>>::Reduced as HasArrayType>::Array,
+        >,
+    {
+        mean_axis::<Self, I>(self)
     }
 }
     };
 }
 
-mean_last_impl!(Tensor0D, []);
-mean_last_impl!(Tensor1D, [M]);
-mean_last_impl!(Tensor2D, [M, N]);
-mean_last_impl!(Tensor3D, [M, N, O]);
-mean_last_impl!(Tensor4D, [M, N, O, P]);
+mean_axis_impl!(Tensor0D, []);
+mean_axis_impl!(Tensor1D, [M]);
+mean_axis_impl!(Tensor2D, [M, N]);
+mean_axis_impl!(Tensor3D, [M, N, O]);
+mean_axis_impl!(Tensor4D, [M, N, O, P]);
 
 #[cfg(test)]
 mod tests {
@@ -41,7 +52,7 @@ mod tests {
     #[test]
     fn test_mean_last_0d() {
         let t = Tensor0D::new(2.0);
-        let r: Tensor0D<OwnedTape> = t.trace().mean_last_dim();
+        let r: Tensor0D<OwnedTape> = t.trace().mean_axis::<-1>();
         assert_eq!(r.data(), &2.0);
         let gradients = r.mean().backward();
         assert_eq!(gradients.ref_gradient(&t), &1.0);
@@ -50,7 +61,7 @@ mod tests {
     #[test]
     fn test_mean_last_1d() {
         let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
-        let r: Tensor0D<OwnedTape> = t.trace().mean_last_dim();
+        let r: Tensor0D<OwnedTape> = t.trace().mean_axis::<-1>();
         assert_eq!(r.data(), &2.0);
         // NOTE: .exp() so we make sure its using result grad properly
         let gradients = r.exp().mean().backward();
@@ -60,7 +71,7 @@ mod tests {
     #[test]
     fn test_mean_last_2d() {
         let t: Tensor2D<2, 4> = Tensor2D::new([[1.0, 2.0, 3.0, 4.0], [4.0, 5.0, 6.0, 7.0]]);
-        let r: Tensor1D<2, OwnedTape> = t.trace().mean_last_dim();
+        let r: Tensor1D<2, OwnedTape> = t.trace().mean_axis::<-1>();
         assert_eq!(r.data(), &[2.5, 5.5]);
         let gradients = r.sum().backward();
         assert_eq!(
@@ -77,7 +88,7 @@ mod tests {
             [[-3.0, 2.0, -1.0], [-6.0, 5.0, -4.0]],
             [[1.0, -2.0, 3.0], [4.0, -5.0, 6.0]],
         ]);
-        let r: Tensor2D<4, 2, OwnedTape> = t.trace().mean_last_dim();
+        let r: Tensor2D<4, 2, OwnedTape> = t.trace().mean_axis::<-1>();
         assert_eq!(
             r.data(),
             &[

@@ -342,7 +342,7 @@ mod tests {
             let sub_a = Tensor2D::new(a.data()[i]);
             let sub_gs = matmul(sub_a.trace(), &b).sum().backward();
             assert_close(&gs.ref_gradient(&a)[i], sub_gs.ref_gradient(&sub_a));
-            Cpu::add(&mut sub_bs_summed, sub_gs.ref_gradient(&b));
+            <Cpu as Device<_>>::add(&mut sub_bs_summed, sub_gs.ref_gradient(&b));
         }
         assert_close(gs.ref_gradient(&b), &sub_bs_summed);
     }

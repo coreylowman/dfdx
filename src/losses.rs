@@ -118,8 +118,12 @@ pub fn smooth_l1_loss<T: Tensor<Dtype = f32>>(
 pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     logits: T,
     target_probs: &T::NoTape,
-) -> Tensor0D<T::Tape> {
-    -mean(sum_last_dim(mul(log_softmax(logits), target_probs)))
+) -> Tensor0D<T::Tape>
+where
+    T: Reduce1<-1>,
+    T::Device: ReduceAxis<T::Array, -1, Reduced = <T::Reduced as HasArrayType>::Array>,
+{
+    -mean(sum_axis::<T, -1>(mul(log_softmax(logits), target_probs)))
 }
 
 /// [KL Divergence loss](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence).
@@ -143,8 +147,12 @@ pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
 pub fn kl_div_with_logits_loss<T: Tensor<Dtype = f32>>(
     logits: T,
     target_probs: &T::NoTape,
-) -> Tensor0D<T::Tape> {
-    -mean(sum_last_dim(mul(
+) -> Tensor0D<T::Tape>
+where
+    T: Reduce1<-1>,
+    T::Device: ReduceAxis<T::Array, -1, Reduced = <T::Reduced as HasArrayType>::Array>,
+{
+    -mean(sum_axis::<T, -1>(mul(
         sub(log_softmax(logits), &ln(target_probs.duplicate())),
         target_probs,
     )))

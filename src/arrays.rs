@@ -49,6 +49,35 @@ impl<T: CountElements, const M: usize> CountElements for [T; M] {
     }
 }
 
+pub trait HasAxis<const I: isize> {
+    const SIZE: usize;
+}
+
+macro_rules! impl_has_axis {
+    ($SrcTy:tt, $Axis:expr, $Size:expr, {$($Vars:tt),*}) => {
+impl<$(const $Vars: usize, )*> HasAxis<$Axis> for $SrcTy {
+    const SIZE: usize = $Size;
+}
+    };
+}
+
+impl_has_axis!(f32, 0, 1, {});
+impl_has_axis!(f32, -1, 1, {});
+impl_has_axis!([f32; M], 0, M, { M });
+impl_has_axis!([f32; M], -1, M, { M });
+impl_has_axis!([[f32; N]; M], 0, M, {M, N});
+impl_has_axis!([[f32; N]; M], 1, N, {M, N});
+impl_has_axis!([[f32; N]; M], -1, N, {M, N});
+impl_has_axis!([[[f32; O]; N]; M], 0, M, {M, N, O});
+impl_has_axis!([[[f32; O]; N]; M], 1, N, {M, N, O});
+impl_has_axis!([[[f32; O]; N]; M], 2, O, {M, N, O});
+impl_has_axis!([[[f32; O]; N]; M], -1, O, {M, N, O});
+impl_has_axis!([[[[f32; P]; O]; N]; M], 0, M, {M, N, O, P});
+impl_has_axis!([[[[f32; P]; O]; N]; M], 1, N, {M, N, O, P});
+impl_has_axis!([[[[f32; P]; O]; N]; M], 2, O, {M, N, O, P});
+impl_has_axis!([[[[f32; P]; O]; N]; M], 3, P, {M, N, O, P});
+impl_has_axis!([[[[f32; P]; O]; N]; M], -1, P, {M, N, O, P});
+
 /// An NdArray that is more than 0 dimensions (i.e. >= 1 dimension). This exposes the type
 /// of the last dimension (inner most) of the array as a type through [MultiDimensional::LastDim].
 ///
@@ -113,7 +142,13 @@ impl<T: ZeroElements, const M: usize> ZeroElements for [T; M] {
 /// Has an associated type that implemented [CountElements] and [ZeroElements].
 pub trait HasArrayType {
     type Dtype;
-    type Array: 'static + Sized + Clone + CountElements<Dtype = Self::Dtype> + ZeroElements;
+    type Array: 'static
+        + Sized
+        + Clone
+        + CountElements<Dtype = Self::Dtype>
+        + ZeroElements
+        + HasAxis<0>
+        + HasAxis<-1>;
 }
 
 #[cfg(test)]
