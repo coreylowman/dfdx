@@ -1,3 +1,5 @@
+//! TODO describe implementation details of why there are 3 versions of the traits and how they differ.
+
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
