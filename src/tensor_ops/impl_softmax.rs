@@ -20,12 +20,9 @@ use crate::prelude::*;
 /// ```
 ///
 /// See [log_softmax()] and [softmax()] for related functions.
-pub fn logsumexp<T: Tensor<Dtype = f32> + Reduce1<-1>>(mut t: T) -> T::Reduced
-where
-    T::Device: ReduceAxis<T::Array, -1, Reduced = <T::Reduced as HasArrayType>::Array>,
-{
-    let max = <T::Device as ReduceAxis<T::Array, -1>>::reduce(t.data(), f32::max);
-    T::Device::foreach_br(t.mut_data(), max.as_ref(), &mut |a, b| *a -= b);
+pub fn logsumexp<T: Tensor<Dtype = f32> + Reduce1<-1>>(mut t: T) -> T::Reduced {
+    let max = T::DeviceR::reduce(t.data(), f32::max);
+    T::DeviceR::foreach_br(t.mut_data(), max.as_ref(), &mut |a, b| *a -= b);
     let mut result = ln(sum_axis::<T, -1>(exp(t)));
     <T::Reduced as HasDevice>::Device::foreach_mr(result.mut_data(), max.as_ref(), &mut |a, b| {
         *a += b
@@ -36,10 +33,7 @@ where
 /// `log(softmax(t))` in numerically stable way. Does `t - logsumexp(t)` under the hood.
 ///
 /// See [logsumexp()] and [softmax()] for related functions
-pub fn log_softmax<T: Tensor<Dtype = f32> + Reduce1<-1>>(t: T) -> T
-where
-    T::Device: ReduceAxis<T::Array, -1, Reduced = <T::Reduced as HasArrayType>::Array>,
-{
+pub fn log_softmax<T: Tensor<Dtype = f32> + Reduce1<-1>>(t: T) -> T {
     let (t, tape) = t.split_tape();
     let (lse, tape) = logsumexp(t.duplicate().put_tape(tape))
         .broadcast_to()
@@ -51,10 +45,7 @@ where
 /// Equivalent to `exp(log_softmax(t))`.
 ///
 /// See [logsumexp()] and [log_softmax()] for related functions.
-pub fn softmax<T: Tensor<Dtype = f32> + Reduce1<-1>>(t: T) -> T
-where
-    T::Device: ReduceAxis<T::Array, -1, Reduced = <T::Reduced as HasArrayType>::Array>,
-{
+pub fn softmax<T: Tensor<Dtype = f32> + Reduce1<-1>>(t: T) -> T {
     exp(log_softmax(t))
 }
 

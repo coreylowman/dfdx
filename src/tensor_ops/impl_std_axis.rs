@@ -18,7 +18,6 @@ pub fn std_axis<T, const I: isize>(t: T, epsilon: T::Dtype) -> T::Reduced
 where
     T: Tensor<Dtype = f32> + Reduce1<I>,
     T::Array: HasAxis<I>,
-    T::Device: ReduceAxis<T::Array, I, Reduced = <T::Reduced as HasArrayType>::Array>,
 {
     sqrt(add_scalar(var_axis::<T, I>(t), epsilon))
 }
@@ -43,7 +42,6 @@ pub fn var_axis<T, const I: isize>(t: T) -> T::Reduced
 where
     T: Tensor<Dtype = f32> + Reduce1<I>,
     T::Array: HasAxis<I>,
-    T::Device: ReduceAxis<T::Array, I, Reduced = <T::Reduced as HasArrayType>::Array>,
 {
     let num_elements: f32 = <T::Array as HasAxis<I>>::SIZE as f32;
     let (t, tape) = t.split_tape();
@@ -62,11 +60,6 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     where
         Self: Reduce1<I>,
         <Self as HasArrayType>::Array: HasAxis<I>,
-        <Self as HasDevice>::Device: ReduceAxis<
-            <Self as HasArrayType>::Array,
-            I,
-            Reduced = <<Self as Reduce1<I>>::Reduced as HasArrayType>::Array,
-        >,
     {
         std_axis::<Self, I>(self, epsilon)
     }
@@ -76,11 +69,6 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     where
         Self: Reduce1<I>,
         <Self as HasArrayType>::Array: HasAxis<I>,
-        <Self as HasDevice>::Device: ReduceAxis<
-            <Self as HasArrayType>::Array,
-            I,
-            Reduced = <<Self as Reduce1<I>>::Reduced as HasArrayType>::Array,
-        >,
     {
         var_axis::<Self, I>(self)
     }

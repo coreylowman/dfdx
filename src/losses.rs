@@ -121,7 +121,6 @@ pub fn cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
 ) -> Tensor0D<T::Tape>
 where
     T: Reduce1<-1>,
-    T::Device: ReduceAxis<T::Array, -1, Reduced = <T::Reduced as HasArrayType>::Array>,
 {
     -mean(sum_axis::<T, -1>(mul(log_softmax(logits), target_probs)))
 }
@@ -150,7 +149,6 @@ pub fn kl_div_with_logits_loss<T: Tensor<Dtype = f32>>(
 ) -> Tensor0D<T::Tape>
 where
     T: Reduce1<-1>,
-    T::Device: ReduceAxis<T::Array, -1, Reduced = <T::Reduced as HasArrayType>::Array>,
 {
     -mean(sum_axis::<T, -1>(mul(
         sub(log_softmax(logits), &ln(target_probs.duplicate())),
