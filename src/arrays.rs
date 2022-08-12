@@ -49,7 +49,9 @@ impl<T: CountElements, const M: usize> CountElements for [T; M] {
     }
 }
 
+/// TODO
 pub trait HasAxis<const I: isize> {
+    /// TODO
     const SIZE: usize;
 }
 

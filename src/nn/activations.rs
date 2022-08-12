@@ -39,7 +39,30 @@ activation_impls!(Tanh, tanh, #[doc="Unit struct that impls [Module] as calling 
 activation_impls!(Square, square, #[doc="Unit struct that impls [Module] as calling [square()] on `input`."]);
 activation_impls!(Sqrt, sqrt, #[doc="Unit struct that impls [Module] as calling [sqrt()] on `input`."]);
 activation_impls!(Abs, abs, #[doc="Unit struct that impls [Module] as calling [abs()] on `input`."]);
-// activation_impls!(Softmax, softmax, #[doc="Unit struct that impls [Module] as calling [softmax()] on `input`."]);
+
+/// Unit struct that impls [Module] as calling [softmax()] on `input`."
+#[derive(Default, Debug, Clone, Copy)]
+pub struct Softmax;
+
+impl CanUpdateWithGradients for Softmax {
+    /// Does nothing.
+    fn update<G: GradientProvider>(&mut self, _: &mut G) {}
+}
+
+impl ResetParams for Softmax {
+    /// Does nothing.
+    fn reset_params<R: Rng>(&mut self, _: &mut R) {}
+}
+
+impl SaveToNpz for Softmax {}
+impl LoadFromNpz for Softmax {}
+
+impl<T: Reduce1<-1>> Module<T> for Softmax {
+    type Output = T;
+    fn forward(&self, input: T) -> Self::Output {
+        softmax(input)
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -121,21 +144,21 @@ mod tests {
         assert_eq!(r1.data(), r2.data());
     }
 
-    // #[test]
-    // fn test_softmax() {
-    //     let t = Tensor0D::new(0.0);
-    //     let r1 = Softmax.forward(t.clone());
-    //     let r2 = softmax(t);
-    //     assert_eq!(r1.data(), r2.data());
+    #[test]
+    fn test_softmax() {
+        let t = Tensor0D::new(0.0);
+        let r1 = Softmax.forward(t.clone());
+        let r2 = softmax(t);
+        assert_eq!(r1.data(), r2.data());
 
-    //     let t = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
-    //     let r1 = Softmax.forward(t.clone());
-    //     let r2 = softmax(t);
-    //     assert_eq!(r1.data(), r2.data());
+        let t = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let r1 = Softmax.forward(t.clone());
+        let r2 = softmax(t);
+        assert_eq!(r1.data(), r2.data());
 
-    //     let t = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
-    //     let r1 = Softmax.forward(t.clone());
-    //     let r2 = softmax(t);
-    //     assert_eq!(r1.data(), r2.data());
-    // }
+        let t = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
+        let r1 = Softmax.forward(t.clone());
+        let r2 = softmax(t);
+        assert_eq!(r1.data(), r2.data());
+    }
 }

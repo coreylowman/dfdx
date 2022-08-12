@@ -1,3 +1,5 @@
+//! TODO add details about implementation details for this for future developers
+
 #![allow(clippy::needless_range_loop)]
 
 use super::{Cpu, ForEachElement};

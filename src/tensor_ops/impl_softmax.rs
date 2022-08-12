@@ -24,9 +24,7 @@ pub fn logsumexp<T: Reduce1<-1>>(mut t: T) -> T::Reduced {
     let max = T::DeviceR::reduce(t.data(), f32::max);
     T::DeviceR::foreach_br(t.mut_data(), max.as_ref(), &mut |a, b| *a -= b);
     let mut result = ln(sum_axis::<T, -1>(exp(t)));
-    <T::Reduced as HasDevice>::Device::foreach_mr(result.mut_data(), max.as_ref(), &mut |a, b| {
-        *a += b
-    });
+    <T::Reduced as HasDevice>::Device::add(result.mut_data(), max.as_ref());
     result
 }
 

@@ -49,8 +49,6 @@ type Mlp = (
 const BATCH_SIZE: usize = 32;
 
 fn main() {
-    dfdx::flush_denormals_to_zero();
-
     let mnist_path = std::env::args()
         .nth(1)
         .unwrap_or_else(|| "./datasets/MNIST/raw".to_string());
