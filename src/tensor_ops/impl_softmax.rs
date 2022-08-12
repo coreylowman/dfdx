@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 /// `t.exp().sum(-1).log()`. Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function.
 ///
-/// Calls [ln()], [sum_last_dim()], and [exp()]
+/// Calls [ln()], [sum_axis()], and [exp()]
 ///
 /// Examples:
 /// ```rust
@@ -20,7 +20,7 @@ use crate::prelude::*;
 /// ```
 ///
 /// See [log_softmax()] and [softmax()] for related functions.
-pub fn logsumexp<T: Tensor<Dtype = f32> + Reduce1<-1>>(mut t: T) -> T::Reduced {
+pub fn logsumexp<T: Reduce1<-1>>(mut t: T) -> T::Reduced {
     let max = T::DeviceR::reduce(t.data(), f32::max);
     T::DeviceR::foreach_br(t.mut_data(), max.as_ref(), &mut |a, b| *a -= b);
     let mut result = ln(sum_axis::<T, -1>(exp(t)));
@@ -33,7 +33,7 @@ pub fn logsumexp<T: Tensor<Dtype = f32> + Reduce1<-1>>(mut t: T) -> T::Reduced {
 /// `log(softmax(t))` in numerically stable way. Does `t - logsumexp(t)` under the hood.
 ///
 /// See [logsumexp()] and [softmax()] for related functions
-pub fn log_softmax<T: Tensor<Dtype = f32> + Reduce1<-1>>(t: T) -> T {
+pub fn log_softmax<T: Reduce1<-1>>(t: T) -> T {
     let (t, tape) = t.split_tape();
     let (lse, tape) = logsumexp(t.duplicate().put_tape(tape))
         .broadcast_to()
@@ -45,7 +45,7 @@ pub fn log_softmax<T: Tensor<Dtype = f32> + Reduce1<-1>>(t: T) -> T {
 /// Equivalent to `exp(log_softmax(t))`.
 ///
 /// See [logsumexp()] and [log_softmax()] for related functions.
-pub fn softmax<T: Tensor<Dtype = f32> + Reduce1<-1>>(t: T) -> T {
+pub fn softmax<T: Reduce1<-1>>(t: T) -> T {
     exp(log_softmax(t))
 }
 

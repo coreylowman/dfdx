@@ -1,10 +1,9 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-/// Reduces the last dimension of the tensor by gathering the maximum value from that dimension.
-/// Resulting [Tensor] has the last dimension removed (e.g. a 2d tensor will become 1d).
+/// Reduces dimension `I` of the tensor by gathering the maximum value from that dimension.
 ///
-/// **Pytorch equivalent**: `t.amax(-1)`
+/// **Pytorch equivalent**: `t.amax(I)`
 ///
 /// **NOTE** This evenly distributes gradients between all equal maximum values, instead
 /// of only exactly 1 value.
@@ -62,58 +61,50 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_max_last_0d() {
-        let t = Tensor0D::new(2.0);
-        let r: Tensor0D<OwnedTape> = t.trace().max_axis::<-1>();
-        assert_eq!(r.data(), &2.0);
-        let gradients = r.mean().backward();
-        assert_eq!(gradients.ref_gradient(&t), &1.0);
+    fn test_valids_max_axis() {
+        let _: Tensor0D = Tensor1D::<5>::zeros().max_axis::<0>();
+        let _: Tensor0D = Tensor1D::<5>::zeros().max_axis::<-1>();
+
+        let _: Tensor1D<3> = Tensor2D::<5, 3>::zeros().max_axis::<0>();
+        let _: Tensor1D<5> = Tensor2D::<5, 3>::zeros().max_axis::<1>();
+        let _: Tensor1D<5> = Tensor2D::<5, 3>::zeros().max_axis::<-1>();
+
+        let _: Tensor2D<5, 3> = Tensor3D::<7, 5, 3>::zeros().max_axis::<0>();
+        let _: Tensor2D<7, 3> = Tensor3D::<7, 5, 3>::zeros().max_axis::<1>();
+        let _: Tensor2D<7, 5> = Tensor3D::<7, 5, 3>::zeros().max_axis::<2>();
+        let _: Tensor2D<7, 5> = Tensor3D::<7, 5, 3>::zeros().max_axis::<-1>();
+
+        let _: Tensor3D<7, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().max_axis::<0>();
+        let _: Tensor3D<9, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().max_axis::<1>();
+        let _: Tensor3D<9, 7, 3> = Tensor4D::<9, 7, 5, 3>::zeros().max_axis::<2>();
+        let _: Tensor3D<9, 7, 5> = Tensor4D::<9, 7, 5, 3>::zeros().max_axis::<3>();
+        let _: Tensor3D<9, 7, 5> = Tensor4D::<9, 7, 5, 3>::zeros().max_axis::<-1>();
     }
 
     #[test]
-    fn test_max_last_1d() {
-        let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
-        let r: Tensor0D<OwnedTape> = t.trace().max_axis::<-1>();
-        assert_eq!(r.data(), &3.0);
-        // NOTE: .exp() so we make sure its using result grad properly
-        let gradients = r.exp().backward();
-        assert_eq!(gradients.ref_gradient(&t), &[0.0, 0.0, 20.085537]);
-    }
-
-    #[test]
-    fn test_max_last_2d() {
-        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-        let r: Tensor1D<2, OwnedTape> = t.trace().max_axis::<-1>();
-        assert_eq!(r.data(), &[3.0, -1.0]);
-        let gradients = r.mean().backward();
-        assert_eq!(
-            gradients.ref_gradient(&t),
-            &[[0.0, 0.0, 0.5], [0.5, 0.0, 0.0]]
-        );
-    }
-
-    #[test]
-    fn test_max_last_3d() {
-        let t: Tensor3D<4, 2, 3> = Tensor3D::new([
-            [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
-            [[-1.0, -2.0, -3.0], [-4.0, -5.0, -6.0]],
-            [[-3.0, 2.0, -1.0], [-6.0, 5.0, -4.0]],
-            [[1.0, -2.0, 3.0], [4.0, -5.0, 6.0]],
-        ]);
-        let r: Tensor2D<4, 2, OwnedTape> = t.trace().max_axis::<-1>();
-        assert_eq!(
-            r.data(),
-            &[[3.0, 6.0], [-1.0, -4.0], [2.0, 5.0], [3.0, 6.0]]
-        );
-        let gradients = r.mean().backward();
+    fn test_max_axis_0_2d() {
+        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
+        let r = t.trace().max_axis::<0>();
+        assert_eq!(r.data(), &[3.0, 2.0, 2.0]);
+        let gradients = r.exp().mean().backward();
         assert_eq!(
             gradients.ref_gradient(&t),
             &[
-                [[0.0, 0.0, 0.125], [0.0, 0.0, 0.125]],
-                [[0.125, 0.0, 0.0], [0.125, 0.0, 0.0]],
-                [[0.0, 0.125, 0.0], [0.0, 0.125, 0.0]],
-                [[0.0, 0.0, 0.125], [0.0, 0.0, 0.125]]
+                [0.00000000, 2.463019, 2.463019],
+                [6.695179, 0.00000000, 2.463019]
             ]
+        );
+    }
+
+    #[test]
+    fn test_max_axis_1_2d() {
+        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
+        let r = t.trace().max_axis::<1>();
+        assert_eq!(r.data(), &[2.0, 3.0]);
+        let gradients = r.exp().mean().backward();
+        assert_eq!(
+            gradients.ref_gradient(&t),
+            &[[0.0, 3.694528, 3.694528], [10.0427685, 0.0, 0.0]]
         );
     }
 }

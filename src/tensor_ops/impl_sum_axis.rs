@@ -1,6 +1,18 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
+/// Sum the values along dimension `I` of `T`.
+///
+/// **Pytorch equivalent**: `t.sum(I)`
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let t: Tensor2D<2, 3> = TensorCreator::zeros();
+/// let a: Tensor1D<3> = t.clone().sum_axis::<0>();
+/// let b: Tensor1D<2> = t.clone().sum_axis::<1>();
+/// let c: Tensor1D<2> = t.sum_axis::<-1>();
+/// ```
 pub fn sum_axis<T: Reduce1<I>, const I: isize>(t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
     T::DeviceR::reduce_into(t.data(), result.mut_data(), |a, b| a + b);
@@ -58,12 +70,26 @@ mod tests {
     }
 
     #[test]
-    fn test_sum_axis_last() {
-        let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
-        let r: Tensor0D<OwnedTape> = t.trace().sum_axis::<-1>();
-        assert_eq!(r.data(), &6.0);
-        // NOTE: .exp() so we make sure its using result grad properly
+    fn test_sum_axis_0_2d() {
+        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
+        let r = t.trace().sum_axis::<0>();
+        assert_eq!(r.data(), &[-1.0, 6.0, -3.0]);
         let gradients = r.exp().mean().backward();
-        assert_eq!(gradients.ref_gradient(&t), &[403.4288; 3]);
+        assert_eq!(
+            gradients.ref_gradient(&t),
+            &[[0.12262648, 134.47627, 0.01659569]; 2]
+        );
+    }
+
+    #[test]
+    fn test_sum_axis_1_2d() {
+        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
+        let r = t.trace().sum_axis::<1>();
+        assert_eq!(r.data(), &[6.0, -4.0]);
+        let gradients = r.exp().mean().backward();
+        assert_eq!(
+            gradients.ref_gradient(&t),
+            &[[201.7144; 3], [0.00915782; 3]]
+        );
     }
 }

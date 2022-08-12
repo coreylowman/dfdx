@@ -1,18 +1,17 @@
 use crate::prelude::*;
 
-/// `(t - t.mean(-1)) / t.std(-1, epsilon)`. Normalizes `t` to have mean `0.0` and stddev `1.0`.
+/// Normalizes `t` to have mean `0.0` and stddev `1.0` along the last dimension. `epsilon` is passed to [std_axis()].
+/// Computes `(t - t.mean(-1)) / t.std(-1, epsilon)`.
 ///
-/// `epsilon` is passed to [std_last_dim()].
-///
-/// See [mean_last_dim()], [std_last_dim()], [var_last_dim()]
+/// **Related functions:** [mean_axis()], [std_axis()], [var_axis()]
 ///
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let a = Tensor1D::new([-2.0, -1.0, 0.0, 5.0, 2.0]);
 /// let r = normalize(a, 1e-5); // or a.normalize(1e-5);
-/// assert!(mean_last_dim(r.duplicate()).data().abs() < 1e-6);
-/// assert!((std_last_dim(r.duplicate(), 0.0).data() - 1.0).abs() < 1e-6);
+/// assert!(r.clone().mean_axis::<-1>().data().abs() < 1e-6);
+/// assert!((r.clone().std_axis::<-1>(0.0).data() - 1.0).abs() < 1e-6);
 /// ```
 pub fn normalize<T: Reduce1<-1>>(t: T, epsilon: T::Dtype) -> T {
     let (t, tape) = t.split_tape();

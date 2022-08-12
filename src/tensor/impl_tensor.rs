@@ -25,14 +25,7 @@ pub trait Tensor:
             OwnedTape = Self::OwnedTape,
         >;
 
-    /// This tensor but with it's last dimension reduced to 1. See [ReduceLastDim].
-    // type LastDimReduced: Tensor<
-    //     Tape = Self::Tape,
-    //     Dtype = Self::Dtype,
-    //     Array = <Self::Device as ReduceLastDim<Self::Array>>::Reduced,
-    // >;
-
-    /// Indices used for [gather_last_dim()] that can reduce this tensor to it's [Tensor::LastDimReduced].
+    /// Indices used for [gather_last_dim()] that can reduce this tensor's last dimension.
     type ReducingIndices: CountElements<Dtype = usize>;
 
     /// Removes whatever Tape this tensor has and returns itself without a tape.
