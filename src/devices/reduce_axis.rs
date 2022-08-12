@@ -17,18 +17,18 @@ use crate::arrays::CountElements;
 /// 1. the 0th axis (M) to give a shape of (N, O)
 /// 2. the 1st axis (N) to give a shape of (M, O)
 /// 3. the 2nd axis (O) to give a shape of (M, N)
-pub trait ReduceAxis<T: CountElements, Reduced: CountElements, const I: isize>:
-    AllocateZeros + ForEachBroadcast1<Reduced, T, I>
+pub trait ReduceAxis<T: CountElements, R: CountElements, const I: isize>:
+    AllocateZeros + ForEachBroadcast1<R, T, I>
 {
-    fn reduce_into<F>(inp: &T, out: &mut Reduced, f: F)
+    fn reduce_into<F>(inp: &T, out: &mut R, f: F)
     where
         F: Copy + FnMut(T::Dtype, T::Dtype) -> T::Dtype;
 
-    fn reduce<F>(inp: &T, f: F) -> Box<Reduced>
+    fn reduce<F>(inp: &T, f: F) -> Box<R>
     where
         F: Copy + FnMut(T::Dtype, T::Dtype) -> T::Dtype,
     {
-        let mut out: Box<Reduced> = Self::zeros();
+        let mut out: Box<R> = Self::zeros();
         Self::reduce_into(inp, out.as_mut(), f);
         out
     }
