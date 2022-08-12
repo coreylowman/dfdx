@@ -13,17 +13,17 @@ use crate::prelude::*;
 /// ```
 ///
 /// This is equivalent to calling `t.gather(-1, indices)` in pytorch.
-pub fn gather_last_dim<T: Tensor<Dtype = f32>>(
+pub fn gather_last_dim<T: Tensor<Dtype = f32> + Reduce1<-1>>(
     mut t: T,
     indices: &T::ReducingIndices,
-) -> T::LastDimReduced
+) -> T::Reduced
 where
     T::Array: MultiDimensional,
-    T::Device: ForEachLast<<T::LastDimReduced as HasArrayType>::Array, T::Array, T::ReducingIndices>
+    T::Device: ForEachLast<<T::Reduced as HasArrayType>::Array, T::Array, T::ReducingIndices>
         + FillElements<<T::Array as MultiDimensional>::LastDim>,
 {
     // gather indices
-    let mut result = <T::LastDimReduced as Tensor>::NoTape::zeros();
+    let mut result = <T::Reduced as Tensor>::NoTape::zeros();
     T::Device::foreachlast_brb(
         BroadcastMut(result.mut_data()),
         t.data(),
@@ -39,10 +39,13 @@ where
         t[*i] = 1.0;
     });
 
-    move_tape_and_add_backward_op(t, result, move |t, result, grads| {
+    move_tape_and_add_backward_op(t, result, move |mut t, result, grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-        T::Device::foreach_mrb(t_grad, t.data(), Broadcast(result_grad), &mut |g, t, r| {
-            *g += t * r;
+        T::DeviceR::foreach_br(t.mut_data(), result_grad, &mut |d, r| {
+            *d *= r;
+        });
+        T::Device::foreach_mr(t_grad, t.data(), &mut |g, dr| {
+            *g += dr;
         })
     })
 }
@@ -51,7 +54,7 @@ macro_rules! gather_last_impl {
     ($T:ident, [$($Ts:tt),*], $I:ty) => {
 impl<$(const $Ts: usize, )* H: Tape> $T<$($Ts, )* H> {
     /// Calls [gather_last_dim()] on `self`.
-    pub fn gather_last_dim(self, indices: &$I) -> <Self as Tensor>::LastDimReduced {
+    pub fn gather_last_dim(self, indices: &$I) -> <Self as Reduce1<-1>>::Reduced {
         gather_last_dim(self, indices)
     }
 }
