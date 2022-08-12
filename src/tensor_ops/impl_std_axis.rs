@@ -16,7 +16,7 @@ use crate::prelude::*;
 /// ```
 pub fn std_axis<T, const I: isize>(t: T, epsilon: T::Dtype) -> T::Reduced
 where
-    T: Tensor<Dtype = f32> + Reduce1<I>,
+    T: Reduce1<I>,
     T::Array: HasAxis<I>,
 {
     sqrt(add_scalar(var_axis::<T, I>(t), epsilon))
@@ -40,7 +40,7 @@ where
 /// Note: equivalent to pytorch: `t.var(-1, unbiased=False)`.
 pub fn var_axis<T, const I: isize>(t: T) -> T::Reduced
 where
-    T: Tensor<Dtype = f32> + Reduce1<I>,
+    T: Reduce1<I>,
     T::Array: HasAxis<I>,
 {
     let num_elements: f32 = <T::Array as HasAxis<I>>::SIZE as f32;

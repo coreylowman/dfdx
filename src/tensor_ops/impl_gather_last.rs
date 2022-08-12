@@ -13,10 +13,7 @@ use crate::prelude::*;
 /// ```
 ///
 /// This is equivalent to calling `t.gather(-1, indices)` in pytorch.
-pub fn gather_last_dim<T: Tensor<Dtype = f32> + Reduce1<-1>>(
-    mut t: T,
-    indices: &T::ReducingIndices,
-) -> T::Reduced
+pub fn gather_last_dim<T: Reduce1<-1>>(mut t: T, indices: &T::ReducingIndices) -> T::Reduced
 where
     T::Array: MultiDimensional,
     T::Device: ForEachLast<<T::Reduced as HasArrayType>::Array, T::Array, T::ReducingIndices>

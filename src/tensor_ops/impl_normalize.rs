@@ -14,7 +14,7 @@ use crate::prelude::*;
 /// assert!(mean_last_dim(r.duplicate()).data().abs() < 1e-6);
 /// assert!((std_last_dim(r.duplicate(), 0.0).data() - 1.0).abs() < 1e-6);
 /// ```
-pub fn normalize<T: Tensor<Dtype = f32> + Reduce1<-1>>(t: T, epsilon: T::Dtype) -> T {
+pub fn normalize<T: Reduce1<-1>>(t: T, epsilon: T::Dtype) -> T {
     let (t, tape) = t.split_tape();
     let (std, tape) = std_axis::<T, -1>(t.duplicate().put_tape(tape), epsilon)
         .broadcast_to()

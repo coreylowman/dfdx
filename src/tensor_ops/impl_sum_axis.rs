@@ -1,7 +1,7 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-pub fn sum_axis<T: Tensor<Dtype = f32> + Reduce1<I>, const I: isize>(t: T) -> T::Reduced {
+pub fn sum_axis<T: Reduce1<I>, const I: isize>(t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
     T::DeviceR::reduce_into(t.data(), result.mut_data(), |a, b| a + b);
     move_tape_and_add_backward_op(t, result, move |t, result, grads| {
