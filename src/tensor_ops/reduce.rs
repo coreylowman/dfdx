@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+/// TODO
 pub trait Reduce1<const I: isize>: Tensor<Dtype = f32> {
     type Reduced: Tensor<Dtype = Self::Dtype, Tape = Self::Tape> + Broadcast1To<Self, I>;
     type DeviceR: Reduce1Axis<Self::Array, <Self::Reduced as HasArrayType>::Array, I>;

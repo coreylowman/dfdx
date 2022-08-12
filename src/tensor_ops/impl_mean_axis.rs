@@ -1,7 +1,8 @@
 use crate::prelude::*;
 
-/// `t.mean(-1)`. Reduces the last dimension of the tensor by taking mean of all values in the last dimension.
-/// Result [Tensor] has smaller number of dimensions.
+/// Average the values along dimension `I` of `T`.
+///
+/// **Pytorch equivalent**: `t.mean(I)`
 ///
 /// Examples:
 /// ```rust
@@ -43,55 +44,47 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_mean_last_0d() {
-        let t = Tensor0D::new(2.0);
-        let r: Tensor0D<OwnedTape> = t.trace().mean_axis::<-1>();
-        assert_eq!(r.data(), &2.0);
-        let gradients = r.mean().backward();
-        assert_eq!(gradients.ref_gradient(&t), &1.0);
+    fn test_valids_mean_axis() {
+        let _: Tensor0D = Tensor1D::<5>::zeros().mean_axis::<0>();
+        let _: Tensor0D = Tensor1D::<5>::zeros().mean_axis::<-1>();
+
+        let _: Tensor1D<3> = Tensor2D::<5, 3>::zeros().mean_axis::<0>();
+        let _: Tensor1D<5> = Tensor2D::<5, 3>::zeros().mean_axis::<1>();
+        let _: Tensor1D<5> = Tensor2D::<5, 3>::zeros().mean_axis::<-1>();
+
+        let _: Tensor2D<5, 3> = Tensor3D::<7, 5, 3>::zeros().mean_axis::<0>();
+        let _: Tensor2D<7, 3> = Tensor3D::<7, 5, 3>::zeros().mean_axis::<1>();
+        let _: Tensor2D<7, 5> = Tensor3D::<7, 5, 3>::zeros().mean_axis::<2>();
+        let _: Tensor2D<7, 5> = Tensor3D::<7, 5, 3>::zeros().mean_axis::<-1>();
+
+        let _: Tensor3D<7, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<0>();
+        let _: Tensor3D<9, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<1>();
+        let _: Tensor3D<9, 7, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<2>();
+        let _: Tensor3D<9, 7, 5> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<3>();
+        let _: Tensor3D<9, 7, 5> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<-1>();
     }
 
     #[test]
-    fn test_mean_last_1d() {
-        let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
-        let r: Tensor0D<OwnedTape> = t.trace().mean_axis::<-1>();
-        assert_eq!(r.data(), &2.0);
-        // NOTE: .exp() so we make sure its using result grad properly
+    fn test_mean_axis_0_2d() {
+        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
+        let r = t.trace().mean_axis::<0>();
+        assert_eq!(r.data(), &[-0.5, 3.0, -1.5]);
         let gradients = r.exp().mean().backward();
-        assert_eq!(gradients.ref_gradient(&t), &[2.4630187; 3]);
-    }
-
-    #[test]
-    fn test_mean_last_2d() {
-        let t: Tensor2D<2, 4> = Tensor2D::new([[1.0, 2.0, 3.0, 4.0], [4.0, 5.0, 6.0, 7.0]]);
-        let r: Tensor1D<2, OwnedTape> = t.trace().mean_axis::<-1>();
-        assert_eq!(r.data(), &[2.5, 5.5]);
-        let gradients = r.sum().backward();
         assert_eq!(
             gradients.ref_gradient(&t),
-            &[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]]
+            &[[0.10108845, 3.3475895, 0.037188362]; 2]
         );
     }
 
     #[test]
-    fn test_mean_last_3d() {
-        let t: Tensor3D<4, 2, 3> = Tensor3D::new([
-            [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
-            [[-1.0, -2.0, -3.0], [-4.0, -5.0, -6.0]],
-            [[-3.0, 2.0, -1.0], [-6.0, 5.0, -4.0]],
-            [[1.0, -2.0, 3.0], [4.0, -5.0, 6.0]],
-        ]);
-        let r: Tensor2D<4, 2, OwnedTape> = t.trace().mean_axis::<-1>();
+    fn test_mean_axis_1_2d() {
+        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
+        let r = t.trace().mean_axis::<1>();
+        assert_eq!(r.data(), &[2.0, -4.0 / 3.0]);
+        let gradients = r.exp().mean().backward();
         assert_eq!(
-            r.data(),
-            &[
-                [2.0, 5.0],
-                [-2.0, -5.0],
-                [-2.0 / 3.0, -5.0 / 3.0],
-                [2.0 / 3.0, 5.0 / 3.0]
-            ]
+            gradients.ref_gradient(&t),
+            &[[1.2315093; 3], [0.043932855; 3]]
         );
-        let gradients = r.sum().backward();
-        assert_eq!(gradients.ref_gradient(&t), &[[[1.0 / 3.0; 3]; 2]; 4]);
     }
 }

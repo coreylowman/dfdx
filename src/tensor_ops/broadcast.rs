@@ -95,6 +95,7 @@ impl_broadcast!(Tensor3D, [M, N, P], Tensor4D, [M, N, O, P], ConstBroadcast1, [2
 impl_broadcast!(Tensor3D, [M, O, P], Tensor4D, [M, N, O, P], ConstBroadcast1, [1], [N], ForEachBroadcast1, {M, N, O, P});
 impl_broadcast!(Tensor3D, [N, O, P], Tensor4D, [M, N, O, P], ConstBroadcast1, [0], [M], ForEachBroadcast1, {M, N, O, P});
 
+/// TODO
 pub trait Broadcast1<const M: usize>: Sized {
     fn broadcast1<const I: isize>(self) -> Self::Broadcasted
     where
@@ -104,6 +105,7 @@ pub trait Broadcast1<const M: usize>: Sized {
     }
 }
 
+/// TODO
 pub trait Broadcast2<const M: usize, const N: usize>: Sized {
     fn broadcast2<const I1: isize, const I2: isize>(self) -> Self::Broadcasted
     where
@@ -113,7 +115,8 @@ pub trait Broadcast2<const M: usize, const N: usize>: Sized {
     }
 }
 
-pub trait Broadast3<const M: usize, const N: usize, const O: usize>: Sized {
+/// TODO
+pub trait Broadcast3<const M: usize, const N: usize, const O: usize>: Sized {
     fn broadcast3<const I1: isize, const I2: isize, const I3: isize>(self) -> Self::Broadcasted
     where
         Self: ConstBroadcast3<I1, I2, I3, M, N, O>,
@@ -122,6 +125,7 @@ pub trait Broadast3<const M: usize, const N: usize, const O: usize>: Sized {
     }
 }
 
+/// TODO
 pub trait Broadcast4<const M: usize, const N: usize, const O: usize, const P: usize>:
     Sized
 {
@@ -150,8 +154,8 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize, H: Tape> Br
 {
 }
 
-impl<const M: usize, const N: usize, const O: usize, H: Tape> Broadast3<M, N, O> for Tensor0D<H> {}
-impl<const M: usize, const N: usize, const O: usize, const P: usize, H: Tape> Broadast3<M, N, O>
+impl<const M: usize, const N: usize, const O: usize, H: Tape> Broadcast3<M, N, O> for Tensor0D<H> {}
+impl<const M: usize, const N: usize, const O: usize, const P: usize, H: Tape> Broadcast3<M, N, O>
     for Tensor1D<P, H>
 {
 }
@@ -161,6 +165,7 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize, H: Tape> Br
 {
 }
 
+/// TODO
 pub trait Broadcast1To<T, const I: isize> {
     fn broadcast_to(self) -> T;
 }
@@ -249,5 +254,10 @@ mod tests {
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<5>::zeros().broadcast3::<0, 2, 3>();
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<7>::zeros().broadcast3::<0, 1, 3>();
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<9>::zeros().broadcast3::<0, 1, 2>();
+    }
+
+    #[test]
+    fn test_broadcast_backwards() {
+        todo!();
     }
 }
