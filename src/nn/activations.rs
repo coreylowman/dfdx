@@ -39,7 +39,7 @@ activation_impls!(Tanh, tanh, #[doc="Unit struct that impls [Module] as calling 
 activation_impls!(Square, square, #[doc="Unit struct that impls [Module] as calling [square()] on `input`."]);
 activation_impls!(Sqrt, sqrt, #[doc="Unit struct that impls [Module] as calling [sqrt()] on `input`."]);
 activation_impls!(Abs, abs, #[doc="Unit struct that impls [Module] as calling [abs()] on `input`."]);
-activation_impls!(Softmax, softmax, #[doc="Unit struct that impls [Module] as calling [softmax()] on `input`."]);
+// activation_impls!(Softmax, softmax, #[doc="Unit struct that impls [Module] as calling [softmax()] on `input`."]);
 
 #[cfg(test)]
 mod tests {
@@ -121,21 +121,21 @@ mod tests {
         assert_eq!(r1.data(), r2.data());
     }
 
-    #[test]
-    fn test_softmax() {
-        let t = Tensor0D::new(0.0);
-        let r1 = Softmax.forward(t.clone());
-        let r2 = softmax(t);
-        assert_eq!(r1.data(), r2.data());
+    // #[test]
+    // fn test_softmax() {
+    //     let t = Tensor0D::new(0.0);
+    //     let r1 = Softmax.forward(t.clone());
+    //     let r2 = softmax(t);
+    //     assert_eq!(r1.data(), r2.data());
 
-        let t = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = Softmax.forward(t.clone());
-        let r2 = softmax(t);
-        assert_eq!(r1.data(), r2.data());
+    //     let t = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+    //     let r1 = Softmax.forward(t.clone());
+    //     let r2 = softmax(t);
+    //     assert_eq!(r1.data(), r2.data());
 
-        let t = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
-        let r1 = Softmax.forward(t.clone());
-        let r2 = softmax(t);
-        assert_eq!(r1.data(), r2.data());
-    }
+    //     let t = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
+    //     let r1 = Softmax.forward(t.clone());
+    //     let r2 = softmax(t);
+    //     assert_eq!(r1.data(), r2.data());
+    // }
 }

@@ -1,20 +1,24 @@
 //! Provides implementations for modifying Nd arrays on the [Cpu].
 
 mod allocate;
+mod broadcast;
 mod fill;
 mod foreach;
 mod matmul;
-mod reduce;
+mod reduce_all;
+mod reduce_axis;
 mod reduce_last_dim;
 
 /// The CPU device
 pub struct Cpu;
 
 pub use allocate::*;
+pub use broadcast::*;
 pub use fill::*;
 pub use foreach::*;
 pub use matmul::*;
-pub use reduce::*;
+pub use reduce_all::*;
+pub use reduce_axis::*;
 pub use reduce_last_dim::*;
 
 use std::ops::*;
@@ -22,11 +26,14 @@ use std::ops::*;
 /// Represents something that can act on `T`.
 pub trait Device<T: crate::arrays::CountElements>:
     FillElements<T>
-    + ReduceElements<T>
+    + ReduceAllElements<T>
     + AllocateZeros
-    + ReduceLastDim<T>
+    // + ReduceLastDim<T>
     + ForEachElement<T>
-    + BroadcastForEach<T, <Self as ReduceLastDim<T>>::Reduced>
+    // + BroadcastForEach<T, <Self as ReduceLastDim<T>>::Reduced>
+// TODO add Reduced = ??
+// + ReduceAxis<T, 0>
+// + ReduceAxis<T, -1>
 {
     /// Allocate a new `T` and then store `f` applied to `t` in the new `T`. Uses [ForEachElement::foreach_mr].
     fn map<F: FnMut(&T::Dtype) -> T::Dtype>(t: &T, mut f: F) -> Box<T> {
@@ -44,12 +51,12 @@ pub trait Device<T: crate::arrays::CountElements>:
     }
 
     /// Computes `lhs += rhs`, where `rhs`'s last dimension is broadcasted. Uses [BroadcastForEach::foreach_mb]
-    fn badd(lhs: &mut T, rhs: Broadcast<<Self as ReduceLastDim<T>>::Reduced>)
-    where
-        T::Dtype: for<'r> AddAssign<&'r T::Dtype> + Copy,
-    {
-        Self::foreach_mb(lhs, rhs, &mut |l, r| l.add_assign(r))
-    }
+    // fn badd(lhs: &mut T, rhs: Broadcast<<Self as ReduceLastDim<T>>::Reduced>)
+    // where
+    //     T::Dtype: for<'r> AddAssign<&'r T::Dtype> + Copy,
+    // {
+    //     <Self as BroadcastForEach<_, _>>::foreach_mb(lhs, rhs, &mut |l, r| l.add_assign(r))
+    // }
 
     /// Computes `lhs -= rhs` using [ForEachElement::foreach_mr]
     fn sub(lhs: &mut T, rhs: &T)
@@ -59,13 +66,13 @@ pub trait Device<T: crate::arrays::CountElements>:
         Self::foreach_mr(lhs, rhs, &mut |l, r| l.sub_assign(r))
     }
 
-    /// Computes `lhs -= rhs`, where `rhs`'s last dimension is broadcasted. Uses [BroadcastForEach::foreach_mb]
-    fn bsub(lhs: &mut T, rhs: Broadcast<<Self as ReduceLastDim<T>>::Reduced>)
-    where
-        T::Dtype: for<'r> SubAssign<&'r T::Dtype> + Copy,
-    {
-        Self::foreach_mb(lhs, rhs, &mut |l, r| l.sub_assign(r))
-    }
+    // /// Computes `lhs -= rhs`, where `rhs`'s last dimension is broadcasted. Uses [BroadcastForEach::foreach_mb]
+    // fn bsub(lhs: &mut T, rhs: Broadcast<<Self as ReduceLastDim<T>>::Reduced>)
+    // where
+    //     T::Dtype: for<'r> SubAssign<&'r T::Dtype> + Copy,
+    // {
+    //     <Self as BroadcastForEach<_, _>>::foreach_mb(lhs, rhs, &mut |l, r| l.sub_assign(r))
+    // }
 
     /// Computes `out += lhs * rhs` using [ForEachElement::foreach_mrr].
     fn addmul(out: &mut T, lhs: &T, rhs: &T)
@@ -78,10 +85,11 @@ pub trait Device<T: crate::arrays::CountElements>:
 }
 
 impl Device<f32> for Cpu {}
-impl<T: crate::arrays::CountElements, const M: usize> Device<[T; M]> for Cpu where
-    Cpu: Device<T>
-        + ReduceLastDim<[T; M]>
-        + BroadcastForEach<[T; M], <Self as ReduceLastDim<[T; M]>>::Reduced>
+impl<const M: usize> Device<[f32; M]> for Cpu {}
+impl<const M: usize, const N: usize> Device<[[f32; N]; M]> for Cpu {}
+impl<const M: usize, const N: usize, const O: usize> Device<[[[f32; O]; N]; M]> for Cpu {}
+impl<const M: usize, const N: usize, const O: usize, const P: usize> Device<[[[[f32; P]; O]; N]; M]>
+    for Cpu
 {
 }
 

@@ -3,7 +3,7 @@ use crate::prelude::*;
 
 /// `sum(t)`. Sums all the values in `self`. Returns a [Tensor0D] (i.e. one number).
 pub fn sum<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::Tape> {
-    let result = Tensor0D::<NoneTape>::new(T::Device::reduce(t.data(), &mut |a, b| a + b));
+    let result = Tensor0D::<NoneTape>::new(T::Device::reduce_all(t.data(), &mut |a, b| a + b));
     move_tape_and_add_backward_op(t, result, move |t, result, grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
         T::Device::foreach_m(t_grad, &mut |v| *v += result_grad);

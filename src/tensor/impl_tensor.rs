@@ -26,11 +26,11 @@ pub trait Tensor:
         >;
 
     /// This tensor but with it's last dimension reduced to 1. See [ReduceLastDim].
-    type LastDimReduced: Tensor<
-        Tape = Self::Tape,
-        Dtype = Self::Dtype,
-        Array = <Self::Device as ReduceLastDim<Self::Array>>::Reduced,
-    >;
+    // type LastDimReduced: Tensor<
+    //     Tape = Self::Tape,
+    //     Dtype = Self::Dtype,
+    //     Array = <Self::Device as ReduceLastDim<Self::Array>>::Reduced,
+    // >;
 
     /// Indices used for [gather_last_dim()] that can reduce this tensor to it's [Tensor::LastDimReduced].
     type ReducingIndices: CountElements<Dtype = usize>;
@@ -49,7 +49,7 @@ impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
     type NoTape = $struct<$($Vs, )* NoneTape>;
     type OwnedTape = $struct<$($Vs, )* OwnedTape>;
 
-    type LastDimReduced = $reduced<$($Rs, )* H>;
+    // type LastDimReduced = $reduced<$($Rs, )* H>;
     type ReducingIndices = $ix;
 
     fn split_tape(self) -> (Self::NoTape, Self::Tape) {

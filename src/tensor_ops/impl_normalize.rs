@@ -14,12 +14,20 @@ use crate::prelude::*;
 /// assert!(mean_last_dim(r.duplicate()).data().abs() < 1e-6);
 /// assert!((std_last_dim(r.duplicate(), 0.0).data() - 1.0).abs() < 1e-6);
 /// ```
-pub fn normalize<T: Tensor<Dtype = f32>>(t: T, epsilon: T::Dtype) -> T {
+pub fn normalize<T: Tensor<Dtype = f32>>(t: T, epsilon: T::Dtype) -> T
+where
+    T: Reduce1<-1>,
+    T::Device: ReduceAxis<T::Array, -1, Reduced = <T::Reduced as HasArrayType>::Array>,
+{
     let (t, tape) = t.split_tape();
-    let (std, tape) = std_last_dim(t.duplicate().put_tape(tape), epsilon).split_tape();
-    let (mean, tape) = mean_last_dim(t.duplicate().put_tape(tape)).split_tape();
-    let centered = sub_broadcast_rhs_last(t.put_tape(tape), &mean);
-    div_broadcast_rhs_last(centered, &std)
+    let (std, tape) = std_axis::<T, -1>(t.duplicate().put_tape(tape), epsilon)
+        .broadcast_to()
+        .split_tape();
+    let (mean, tape) = mean_axis::<T, -1>(t.duplicate().put_tape(tape))
+        .broadcast_to()
+        .split_tape();
+    let centered = sub(t.put_tape(tape), &mean);
+    div(centered, &std)
 }
 
 macro_rules! tensor_impl {
