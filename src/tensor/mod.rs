@@ -74,7 +74,6 @@ mod impl_tensor_creator;
 mod impl_trace;
 mod impl_update_with_grads;
 mod structs;
-mod typings;
 
 pub use impl_default::*;
 pub use impl_has_array::*;
@@ -88,4 +87,3 @@ pub use impl_tensor_creator::*;
 pub use impl_trace::*;
 pub use impl_update_with_grads::*;
 pub use structs::*;
-pub use typings::*;

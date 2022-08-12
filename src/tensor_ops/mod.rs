@@ -50,6 +50,7 @@ mod impl_sum;
 mod impl_sum_axis;
 mod map;
 mod matmul;
+mod reduce;
 mod utils;
 
 pub use arith::*;
@@ -58,6 +59,7 @@ pub use broadcast::*;
 pub use impl_backward::*;
 pub use impl_clamp::*;
 pub use impl_dropout::*;
+pub use reduce::*;
 // pub use impl_gather_last::*;
 pub use impl_mask::*;
 pub use impl_max_axis::*;
