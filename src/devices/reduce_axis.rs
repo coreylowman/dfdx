@@ -132,6 +132,7 @@ reduce1_nonzero_axis!(1, 0, [[[f32; P]; O]; M], [[[f32; P]; O]; N], {M, N, O, P}
 reduce1_nonzero_axis!(2, 1, [[[f32; P]; N]; M], [[[f32; P]; O]; N], {M, N, O, P});
 reduce1_nonzero_axis!(3, 2, [[[f32; O]; N]; M], [[[f32; P]; O]; N], {M, N, O, P});
 reduce1_nonzero_axis!(-1, 2, [[[f32; O]; N]; M], [[[f32; P]; O]; N], {M, N, O, P});
+
 #[cfg(test)]
 mod tests {
     use super::*;

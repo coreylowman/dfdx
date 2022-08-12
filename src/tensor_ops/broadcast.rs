@@ -250,9 +250,4 @@ mod tests {
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<7>::zeros().broadcast3::<0, 1, 3>();
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<9>::zeros().broadcast3::<0, 1, 2>();
     }
-
-    #[test]
-    fn test_valid_4d_broadcasts() {
-        let _: Tensor4D<3, 5, 7, 9> = Tensor0D::zeros().broadcast4();
-    }
 }
