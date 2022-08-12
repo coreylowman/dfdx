@@ -10,7 +10,7 @@ use crate::prelude::*;
 /// let r: Tensor1D<2> = t.mean_axis::<1>();
 /// assert_eq!(r.data(), &[2.0, 5.0]);
 /// ```
-pub fn mean_axis<T: Tensor<Dtype = f32> + Reduce1<I>, const I: isize>(t: T) -> T::Reduced
+pub fn mean_axis<T: Reduce1<I>, const I: isize>(t: T) -> T::Reduced
 where
     T::Array: HasAxis<I>,
 {

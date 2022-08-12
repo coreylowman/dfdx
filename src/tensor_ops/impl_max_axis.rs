@@ -16,7 +16,7 @@ use crate::prelude::*;
 /// let r: Tensor1D<2> = t.max_axis::<-1>();
 /// assert_eq!(r.data(), &[3.0, -1.0]);
 /// ```
-pub fn max_axis<T: Tensor<Dtype = f32> + Reduce1<I>, const I: isize>(mut t: T) -> T::Reduced {
+pub fn max_axis<T: Reduce1<I>, const I: isize>(mut t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
     T::DeviceR::reduce_into(t.data(), result.mut_data(), f32::max);
 
