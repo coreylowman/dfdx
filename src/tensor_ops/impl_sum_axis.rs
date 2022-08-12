@@ -1,16 +1,12 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-pub fn sum_axis<T: Tensor<Dtype = f32>, const I: isize>(t: T) -> T::Reduced
-where
-    T: Reduce1<I>,
-    T::Device: ReduceAxis<T::Array, I, Reduced = <T::Reduced as HasArrayType>::Array>,
-{
+pub fn sum_axis<T: Tensor<Dtype = f32> + Reduce1<I>, const I: isize>(t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
-    <T::Device as ReduceAxis<T::Array, I>>::reduce_into(t.data(), result.mut_data(), |a, b| a + b);
+    T::DeviceR::reduce_into(t.data(), result.mut_data(), |a, b| a + b);
     move_tape_and_add_backward_op(t, result, move |t, result, grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-        <T::Device as ForEachBroadcast1<_, _, I>>::foreach_br(t_grad, result_grad, &mut |l, r| {
+        T::DeviceR::foreach_br(t_grad, result_grad, &mut |l, r| {
             *l += r;
         })
     })
@@ -22,12 +18,7 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [sum_axis()] on `self`.
     pub fn sum_axis<const I: isize>(self) -> <Self as Reduce1<I>>::Reduced
     where
-        Self: Reduce1<I>,
-        <Self as HasDevice>::Device: ReduceAxis<
-            <Self as HasArrayType>::Array,
-            I,
-            Reduced = <<Self as Reduce1<I>>::Reduced as HasArrayType>::Array,
-        >,
+        Self: Reduce1<I>
     {
         sum_axis::<Self, I>(self)
     }

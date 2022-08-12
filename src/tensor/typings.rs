@@ -2,12 +2,14 @@ use crate::prelude::*;
 
 pub trait Reduce1<const I: isize>: Tensor<Dtype = f32> {
     type Reduced: Tensor<Dtype = Self::Dtype, Tape = Self::Tape> + Broadcast1To<Self, I>;
+    type DeviceR: ReduceAxis<Self::Array, <Self::Reduced as HasArrayType>::Array, I>;
 }
 
 macro_rules! reduction {
     ($SrcTy:tt, [$($SrcDims:tt),*], $DstTy:tt, [$($DstDims:tt),*], $Axis:expr) => {
 impl<$(const $SrcDims: usize, )* H: Tape> Reduce1<$Axis> for $SrcTy<$($SrcDims, )* H> {
     type Reduced = $DstTy<$($DstDims, )* H>;
+    type DeviceR = <Self as HasDevice>::Device;
 }
     };
 }
@@ -15,9 +17,11 @@ impl<$(const $SrcDims: usize, )* H: Tape> Reduce1<$Axis> for $SrcTy<$($SrcDims, 
 // 0d
 impl<H: Tape> Reduce1<0> for Tensor0D<H> {
     type Reduced = Self;
+    type DeviceR = <Self as HasDevice>::Device;
 }
 impl<H: Tape> Reduce1<-1> for Tensor0D<H> {
     type Reduced = Self;
+    type DeviceR = <Self as HasDevice>::Device;
 }
 
 // 1d

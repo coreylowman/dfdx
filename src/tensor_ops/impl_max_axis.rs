@@ -16,23 +16,19 @@ use crate::prelude::*;
 /// let r: Tensor1D<2> = t.max_axis::<-1>();
 /// assert_eq!(r.data(), &[3.0, -1.0]);
 /// ```
-pub fn max_axis<T: Tensor<Dtype = f32>, const I: isize>(mut t: T) -> T::Reduced
-where
-    T: Reduce1<I>,
-    T::Device: ReduceAxis<T::Array, I, Reduced = <T::Reduced as HasArrayType>::Array>,
-{
+pub fn max_axis<T: Tensor<Dtype = f32> + Reduce1<I>, const I: isize>(mut t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
-    <T::Device as ReduceAxis<T::Array, I>>::reduce_into(t.data(), result.mut_data(), f32::max);
+    T::DeviceR::reduce_into(t.data(), result.mut_data(), f32::max);
 
     // store derivative in t
-    T::Device::foreach_br(t.mut_data(), result.data(), &mut |l, r| {
+    T::DeviceR::foreach_br(t.mut_data(), result.data(), &mut |l, r| {
         *l = if l == r { 1.0 } else { 0.0 }
     });
 
     move_tape_and_add_backward_op(t, result, move |mut t, result, grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
 
-        T::Device::foreach_br(t.mut_data(), result_grad, &mut |d, r| {
+        T::DeviceR::foreach_br(t.mut_data(), result_grad, &mut |d, r| {
             *d *= r;
         });
         T::Device::foreach_mr(t_grad, t.data(), &mut |g, dr| {
@@ -48,11 +44,6 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     pub fn max_axis<const I: isize>(self) -> <Self as Reduce1<I>>::Reduced
     where
         Self: Reduce1<I>,
-        <Self as HasDevice>::Device: ReduceAxis<
-            <Self as HasArrayType>::Array,
-            I,
-            Reduced = <<Self as Reduce1<I>>::Reduced as HasArrayType>::Array,
-        >,
     {
         max_axis::<Self, I>(self)
     }
