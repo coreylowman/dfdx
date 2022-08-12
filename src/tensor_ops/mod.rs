@@ -37,7 +37,7 @@ mod broadcast;
 mod impl_backward;
 mod impl_clamp;
 mod impl_dropout;
-// mod impl_gather_last;
+mod impl_gather_last;
 mod impl_mask;
 mod impl_max_axis;
 mod impl_mean;
@@ -59,8 +59,7 @@ pub use broadcast::*;
 pub use impl_backward::*;
 pub use impl_clamp::*;
 pub use impl_dropout::*;
-pub use reduce::*;
-// pub use impl_gather_last::*;
+pub use impl_gather_last::*;
 pub use impl_mask::*;
 pub use impl_max_axis::*;
 pub use impl_mean::*;
@@ -73,6 +72,7 @@ pub use impl_sum::*;
 pub use impl_sum_axis::*;
 pub use map::*;
 pub use matmul::*;
+pub use reduce::*;
 
 #[cfg(feature = "nightly")]
 mod impl_reshape;
