@@ -3,12 +3,12 @@ use crate::prelude::*;
 
 pub trait ConstBroadcast1<const I: isize, const M: usize> {
     type Broadcasted;
-    fn broadcast(self) -> Self::Broadcasted;
+    fn const_broadcast(self) -> Self::Broadcasted;
 }
 
 pub trait ConstBroadcast2<const I1: isize, const I2: isize, const M: usize, const N: usize> {
     type Broadcasted;
-    fn broadcast(self) -> Self::Broadcasted;
+    fn const_broadcast(self) -> Self::Broadcasted;
 }
 
 pub trait ConstBroadcast3<
@@ -21,7 +21,7 @@ pub trait ConstBroadcast3<
 >
 {
     type Broadcasted;
-    fn broadcast(self) -> Self::Broadcasted;
+    fn const_broadcast(self) -> Self::Broadcasted;
 }
 
 pub trait ConstBroadcast4<
@@ -36,7 +36,7 @@ pub trait ConstBroadcast4<
 >
 {
     type Broadcasted;
-    fn broadcast(self) -> Self::Broadcasted;
+    fn const_broadcast(self) -> Self::Broadcasted;
 }
 
 macro_rules! impl_broadcast {
@@ -46,7 +46,7 @@ macro_rules! impl_broadcast {
     ) => {
 impl<$(const $Dims: usize, )* H: Tape> $TensorTrait<$($Axes, )* $($BDims),*> for $SrcTy<$($SrcDims, )* H> {
     type Broadcasted = $DstTy<$($DstDims, )* H>;
-    fn broadcast(self) -> Self::Broadcasted {
+    fn const_broadcast(self) -> Self::Broadcasted {
         let mut result = $DstTy::zeros();
         <Cpu as $DeviceTrait<_, _, $($Axes),*>>::broadcast_copy(result.mut_data(), self.data());
         move_tape_and_add_backward_op(self, result, move |t, result, grads| {
@@ -100,7 +100,7 @@ pub trait Broadcast1<const M: usize>: Sized {
     where
         Self: ConstBroadcast1<I, M>,
     {
-        self.broadcast()
+        self.const_broadcast()
     }
 }
 
@@ -109,7 +109,7 @@ pub trait Broadcast2<const M: usize, const N: usize>: Sized {
     where
         Self: ConstBroadcast2<I1, I2, M, N>,
     {
-        self.broadcast()
+        self.const_broadcast()
     }
 }
 
@@ -118,7 +118,7 @@ pub trait Broadast3<const M: usize, const N: usize, const O: usize>: Sized {
     where
         Self: ConstBroadcast3<I1, I2, I3, M, N, O>,
     {
-        self.broadcast()
+        self.const_broadcast()
     }
 }
 
@@ -131,7 +131,7 @@ pub trait Broadcast4<const M: usize, const N: usize, const O: usize, const P: us
     where
         Self: ConstBroadcast4<I1, I2, I3, I4, M, N, O, P>,
     {
-        self.broadcast()
+        self.const_broadcast()
     }
 }
 
