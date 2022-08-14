@@ -9,7 +9,7 @@
 //!
 //! ## Selecting Z elements from the 0th axis
 //!
-//! Just index into input for each index and assing to output[z]
+//! Just index into input for each index and assing to `output[z]`
 //!
 //! ## Selecting either 1 or Z elements from a non-zero axis
 //!

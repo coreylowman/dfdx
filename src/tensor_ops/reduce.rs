@@ -1,48 +1,44 @@
 use crate::prelude::*;
 
-/// TODO
+/// Reduce the `I`th dimension of a Tensor. Enables functions like [sum_axis()] that
+/// reduce values along a single dimension.
 pub trait Reduce1<const I: isize>: Tensor<Dtype = f32> {
-    type Reduced: Tensor<Dtype = Self::Dtype, Tape = Self::Tape> + Broadcast1<Self, I>;
+    /// The resulting tensor type.
+    /// The `I`th dimension of this can be broadcast into Self via [Broadcast1].
+    type Reduced: Broadcast1<Self, I> + Tensor<Dtype = Self::Dtype, Tape = Self::Tape>;
+
     type DeviceR: Reduce1Axis<Self::Array, <Self::Reduced as HasArrayType>::Array, I>;
 }
 
 macro_rules! reduction {
-    ($SrcTy:tt, [$($SrcDims:tt),*], $DstTy:tt, [$($DstDims:tt),*], $Axis:expr) => {
+    ($Axis:expr, $SrcTy:tt, [$($SrcDims:tt),*], $DstTy:ty) => {
 impl<$(const $SrcDims: usize, )* H: Tape> Reduce1<$Axis> for $SrcTy<$($SrcDims, )* H> {
-    type Reduced = $DstTy<$($DstDims, )* H>;
+    type Reduced = $DstTy;
     type DeviceR = <Self as HasDevice>::Device;
 }
     };
 }
 
 // 0d
-// impl<H: Tape> Reduce1<0> for Tensor0D<H> {
-//     type Reduced = Self;
-//     type DeviceR = <Self as HasDevice>::Device;
-// }
 impl<H: Tape> Reduce1<-1> for Tensor0D<H> {
     type Reduced = Self;
     type DeviceR = <Self as HasDevice>::Device;
 }
 
 // 1d
-// reduction!(Tensor1D, [M], Tensor0D, [], 0);
-reduction!(Tensor1D, [M], Tensor0D, [], -1);
+reduction!(-1, Tensor1D, [M], Tensor0D<H>);
 
 // 2d
-reduction!(Tensor2D, [M, N], Tensor1D, [N], 0);
-// reduction!(Tensor2D, [M, N], Tensor1D, [M], 1);
-reduction!(Tensor2D, [M, N], Tensor1D, [M], -1);
+reduction!(0, Tensor2D, [M, N], Tensor1D<N, H>);
+reduction!(-1,Tensor2D, [M, N], Tensor1D<M, H>);
 
 // 3d
-reduction!(Tensor3D, [M, N, O], Tensor2D, [N, O], 0);
-reduction!(Tensor3D, [M, N, O], Tensor2D, [M, O], 1);
-// reduction!(Tensor3D, [M, N, O], Tensor2D, [M, N], 2);
-reduction!(Tensor3D, [M, N, O], Tensor2D, [M, N], -1);
+reduction!(0, Tensor3D, [M, N, O], Tensor2D<N, O, H>);
+reduction!(1, Tensor3D, [M, N, O], Tensor2D<M, O, H>);
+reduction!(-1,Tensor3D, [M, N, O], Tensor2D<M, N, H>);
 
 // 4d
-reduction!(Tensor4D, [M, N, O, P], Tensor3D, [N, O, P], 0);
-reduction!(Tensor4D, [M, N, O, P], Tensor3D, [M, O, P], 1);
-reduction!(Tensor4D, [M, N, O, P], Tensor3D, [M, N, P], 2);
-// reduction!(Tensor4D, [M, N, O, P], Tensor3D, [M, N, O], 3);
-reduction!(Tensor4D, [M, N, O, P], Tensor3D, [M, N, O], -1);
+reduction!(0, Tensor4D, [M, N, O, P], Tensor3D<N, O, P, H>);
+reduction!(1, Tensor4D, [M, N, O, P], Tensor3D<M, O, P, H>);
+reduction!(2, Tensor4D, [M, N, O, P], Tensor3D<M, N, P, H>);
+reduction!(-1,Tensor4D, [M, N, O, P], Tensor3D<M, N, O, H>);
