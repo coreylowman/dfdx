@@ -92,9 +92,8 @@
 //! assert_eq!(b.data(), &[[1.0, 3.0], [5.0, 5.0]]);
 //! ```
 
-mod arith;
 mod arith_scalar;
-pub(super) mod binary_map;
+pub mod binary_map;
 mod broadcast;
 mod impl_backward;
 mod impl_clamp;
@@ -115,8 +114,8 @@ mod reduce;
 mod select;
 mod utils;
 
-pub use arith::*;
 pub use arith_scalar::*;
+pub use binary_map::*;
 pub use broadcast::*;
 pub use impl_backward::*;
 pub use impl_clamp::*;
