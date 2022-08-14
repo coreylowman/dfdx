@@ -1,5 +1,5 @@
 use super::{AllocateZeros, Cpu};
-use crate::arrays::{CountElements, MultiDimensional};
+use crate::arrays::CountElements;
 
 /// Apply generic function to various forms/numbers of ndarrays.
 ///
@@ -124,71 +124,6 @@ where
     }
 }
 
-/// Singifies that the underlying type should be broadcasted in some capacity.
-/// Used with [BroadcastForEach]
-pub struct Broadcast<'a, T>(pub &'a T);
-
-/// Signifies that the underyling type should be broadcasted in some capacity.
-/// Used with [BroadcastForEach]
-pub struct BroadcastMut<'a, T>(pub &'a mut T);
-
-/// Apply generic function to the whole last dimension of ndarrays.
-///
-/// Versions include:
-/// - [ForEachLast::foreachlast_mb], which operates on 1 mut array, and 1 broadcasted ref array.
-/// - [ForEachLast::foreachlast_brb], which operates on 1 broadcasted mut array, 1 ref array, and 1 broadcasted ref array.
-pub trait ForEachLast<O: CountElements, L: CountElements + MultiDimensional, R: CountElements> {
-    /// Applies `f` to the last dimension of `l`, where `r` is broadcasted to be the same size as `l`.
-    fn foreachlast_mb<F>(l: &mut L, r: Broadcast<R>, f: &mut F)
-    where
-        F: FnMut(&mut L::LastDim, &R::Dtype);
-
-    /// Applies `f` to the last dimension of `l`, where `out` and `r` are broadcasted to be the same size as `l`.
-    fn foreachlast_brb<F>(out: BroadcastMut<O>, l: &L, r: Broadcast<R>, f: &mut F)
-    where
-        F: FnMut(&mut O::Dtype, &L::LastDim, &R::Dtype);
-}
-
-impl<const M: usize> ForEachLast<f32, [f32; M], usize> for Cpu {
-    fn foreachlast_mb<F>(l: &mut [f32; M], r: Broadcast<usize>, f: &mut F)
-    where
-        F: FnMut(&mut [f32; M], &usize),
-    {
-        f(l, r.0);
-    }
-
-    fn foreachlast_brb<F>(o: BroadcastMut<f32>, l: &[f32; M], r: Broadcast<usize>, f: &mut F)
-    where
-        F: FnMut(&mut f32, &[f32; M], &usize),
-    {
-        f(o.0, l, r.0);
-    }
-}
-
-impl<O: CountElements, L: CountElements + MultiDimensional, R: CountElements, const M: usize>
-    ForEachLast<[O; M], [L; M], [R; M]> for Cpu
-where
-    Cpu: ForEachLast<O, L, R>,
-{
-    fn foreachlast_mb<F>(l: &mut [L; M], r: Broadcast<[R; M]>, f: &mut F)
-    where
-        F: FnMut(&mut L::LastDim, &<[R; M] as CountElements>::Dtype),
-    {
-        for (l_i, r_i) in l.iter_mut().zip(r.0.iter()) {
-            Self::foreachlast_mb(l_i, Broadcast(r_i), f);
-        }
-    }
-
-    fn foreachlast_brb<F>(o: BroadcastMut<[O; M]>, l: &[L; M], r: Broadcast<[R; M]>, f: &mut F)
-    where
-        F: FnMut(&mut O::Dtype, &L::LastDim, &R::Dtype),
-    {
-        for (o_i, (l_i, r_i)) in o.0.iter_mut().zip(l.iter().zip(r.0.iter())) {
-            Self::foreachlast_brb(BroadcastMut(o_i), l_i, Broadcast(r_i), f)
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -248,48 +183,5 @@ mod tests {
         assert_eq!(a, [[0.0; 3]; 2]);
         assert_eq!(b, [[1.0; 3]; 2]);
         assert_eq!(c, [[2.0; 3]; 2]);
-    }
-
-    #[test]
-    fn test_1d_foreachlast_bm() {
-        for i in 0..3 {
-            let mut l = [0.0, 0.0, 0.0];
-            Cpu::foreachlast_mb(&mut l, Broadcast(&i), &mut |a, b| {
-                a[*b] = 1.0;
-            });
-            assert_eq!(l[i], 1.0);
-        }
-    }
-
-    #[test]
-    fn test_2d_foreachlast_bm() {
-        let mut l = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]];
-        Cpu::foreachlast_mb(&mut l, Broadcast(&[1, 2]), &mut |a, b| {
-            a[*b] = 1.0;
-        });
-        assert_eq!(l, [[0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]);
-    }
-
-    #[test]
-    fn test_1d_foreachlast_brb() {
-        let l = [1.0, 2.0, 3.0];
-        for i in 0..3 {
-            let mut o = 0.0;
-            Cpu::foreachlast_brb(BroadcastMut(&mut o), &l, Broadcast(&i), &mut |a, b, c| {
-                *a = b[*c];
-            });
-            assert_eq!(o, l[i]);
-        }
-    }
-
-    #[test]
-    fn test_2d_foreachlast_brb() {
-        let l = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]];
-        let r = [2, 0, 1];
-        let mut o = [0.0; 3];
-        Cpu::foreachlast_brb(BroadcastMut(&mut o), &l, Broadcast(&r), &mut |a, b, c| {
-            *a = b[*c];
-        });
-        assert_eq!(o, [3.0, 4.0, 8.0]);
     }
 }
