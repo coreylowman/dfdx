@@ -1,11 +1,12 @@
 //! Reduction of any single axis.
 //!
-//! # Implementation details
-//!
 //! To reduce anything past the first dimension, you can recurse
 //! one level lower and reduce the axis you are reducing by 1.
 //! For example when reducing a 2d axis 1, you can index all
 //! the arrays into 1d axis, and then call reduce on axis 0.
+//!
+//! Therefore, implementations for reducing 0th axis are provided,
+//! and all other axes are provided as macros.
 
 #![allow(clippy::needless_range_loop)]
 
@@ -107,9 +108,9 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize>
 }
 
 macro_rules! reduce1_nonzero_axis {
-    ($Idx:expr, $SubIdx:expr, $Reduced:ty, $SubArrTy:ty, {$($Vs:tt),*}) => {
-impl<$(const $Vs: usize, )*> Reduce1Axis<[$SubArrTy; M], $Reduced, $Idx> for Cpu {
-    fn reduce_into<F>(inp: &[$SubArrTy; M], out: &mut $Reduced, f: F)
+    ($Idx:expr, $SubIdx:expr, $Reduced:ty, $ArrTy:ty, {$($Vs:tt),*}) => {
+impl<$(const $Vs: usize, )*> Reduce1Axis<$ArrTy, $Reduced, $Idx> for Cpu {
+    fn reduce_into<F>(inp: &$ArrTy, out: &mut $Reduced, f: F)
     where
         F: Copy + FnMut(f32, f32) -> f32,
     {
@@ -121,17 +122,17 @@ impl<$(const $Vs: usize, )*> Reduce1Axis<[$SubArrTy; M], $Reduced, $Idx> for Cpu
     };
 }
 
-reduce1_nonzero_axis!(1, 0, [f32; M], [f32; N], {M, N});
-reduce1_nonzero_axis!(-1, 0, [f32; M], [f32; N], {M, N});
+reduce1_nonzero_axis!(1, 0, [f32; M], [[f32; N]; M], {M, N});
+reduce1_nonzero_axis!(-1,0, [f32; M], [[f32; N]; M], {M, N});
 
-reduce1_nonzero_axis!(1, 0, [[f32; O]; M], [[f32; O]; N], {M, N, O});
-reduce1_nonzero_axis!(2, 1, [[f32; N]; M], [[f32; O]; N], {M, N, O});
-reduce1_nonzero_axis!(-1, 1, [[f32; N]; M], [[f32; O]; N], {M, N, O});
+reduce1_nonzero_axis!(1, 0, [[f32; O]; M], [[[f32; O]; N]; M], {M, N, O});
+reduce1_nonzero_axis!(2, 1, [[f32; N]; M], [[[f32; O]; N]; M], {M, N, O});
+reduce1_nonzero_axis!(-1,1, [[f32; N]; M], [[[f32; O]; N]; M], {M, N, O});
 
-reduce1_nonzero_axis!(1, 0, [[[f32; P]; O]; M], [[[f32; P]; O]; N], {M, N, O, P});
-reduce1_nonzero_axis!(2, 1, [[[f32; P]; N]; M], [[[f32; P]; O]; N], {M, N, O, P});
-reduce1_nonzero_axis!(3, 2, [[[f32; O]; N]; M], [[[f32; P]; O]; N], {M, N, O, P});
-reduce1_nonzero_axis!(-1, 2, [[[f32; O]; N]; M], [[[f32; P]; O]; N], {M, N, O, P});
+reduce1_nonzero_axis!(1, 0, [[[f32; P]; O]; M], [[[[f32; P]; O]; N]; M], {M, N, O, P});
+reduce1_nonzero_axis!(2, 1, [[[f32; P]; N]; M], [[[[f32; P]; O]; N]; M], {M, N, O, P});
+reduce1_nonzero_axis!(3, 2, [[[f32; O]; N]; M], [[[[f32; P]; O]; N]; M], {M, N, O, P});
+reduce1_nonzero_axis!(-1,2, [[[f32; O]; N]; M], [[[[f32; P]; O]; N]; M], {M, N, O, P});
 
 #[cfg(test)]
 mod tests {
