@@ -1,40 +1,40 @@
-//! TODO describe implementation details
-
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-/// TODO
+/// Broadcasts the `I`th dimension. Increases number dimensions by 1. Results in `T`. Opposite of [Reduce1].
 pub trait Broadcast1<T, const I: isize> {
-    /// TODO
+    /// Broadcast `self` into `T`, increasing number dimensions by 1.
     fn broadcast1(self) -> T;
 }
 
-/// TODO
+/// Broadcasts dimensions `I1` and `I2`. Increases number dimensions by 2. Results in `T`.
 pub trait Broadcast2<T, const I1: isize, const I2: isize> {
-    /// TODO
+    /// Broadcast `self` into `T`, increasing number dimensions by 2.
     fn broadcast2(self) -> T;
 }
 
-/// TODO
+/// Broadcasts dimensions `I1`, `I2`, and `I3`. Increases number dimensions by 3. Results in `T`.
 pub trait Broadcast3<T, const I1: isize, const I2: isize, const I3: isize> {
-    /// TODO
+    /// Broadcast `self` into `T`, increasing number dimensions by 3.
     fn broadcast3(self) -> T;
 }
 
-/// TODO
+/// Broadcasts dimensions `I1`, `I2`, `I3`, and `I4`. Increases number dimensions by 4. Results in `T`.
 pub trait Broadcast4<T, const I1: isize, const I2: isize, const I3: isize, const I4: isize> {
-    /// TODO
+    /// Broadcast `self` into `T`, increasing number dimensions by 4.
     fn broadcast4(self) -> T;
 }
 
 macro_rules! impl_broadcast {
     (
-        $SrcTy:tt, [$($SrcDims:tt),*], $DstTy:tt, [$($DstDims:tt),*],
-        $TensorTrait:tt, $fn_name:tt, [$($Axes:expr),*], [$($BDims:tt),*], $DeviceTrait:tt, {$($Dims:tt),*}
+        [$($Axes:expr),*],
+        $SrcTy:ty, $DstTy:ty,
+        $TensorTrait:tt, $fn_name:tt,
+        $DeviceTrait:tt, {$($Dims:tt),*}
     ) => {
-impl<$(const $Dims: usize, )* H: Tape> $TensorTrait<$DstTy<$($DstDims, )* H>, $($Axes, )*> for $SrcTy<$($SrcDims, )* H> {
-    fn $fn_name(self) -> $DstTy<$($DstDims, )* H> {
-        let mut result = $DstTy::zeros();
+impl<$(const $Dims: usize, )* H: Tape> $TensorTrait<$DstTy, $($Axes, )*> for $SrcTy {
+    fn $fn_name(self) -> $DstTy {
+        let mut result = <$DstTy as Tensor>::NoTape::zeros();
         <Cpu as $DeviceTrait<_, _, $($Axes),*>>::broadcast_copy(result.mut_data(), self.data());
         move_tape_and_add_backward_op(self, result, move |t, result, grads| {
             let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
@@ -51,42 +51,40 @@ impl<H: Tape> Broadcast1<Tensor0D<H>, -1> for Tensor0D<H> {
     }
 }
 
-// #[rustfmt::skip]
-// impl_broadcast!(Tensor0D, [], Tensor1D, [M], ConstBroadcast1, broadcast1, [0], [M], ForEachBroadcast1, {M});
+// 0d -> Nd
 #[rustfmt::skip]
-impl_broadcast!(Tensor0D, [], Tensor1D, [M], Broadcast1, broadcast1, [-1], [M], ForEachBroadcast1, {M});
+impl_broadcast!([-1], Tensor0D<H>, Tensor1D<M, H>, Broadcast1, broadcast1, ForEachBroadcast1, {M});
+impl_broadcast!([0, 1], Tensor0D<H>, Tensor2D<M, N, H>, Broadcast2, broadcast2, ForEachBroadcast2, {M, N});
+impl_broadcast!([0, 1, 2], Tensor0D<H>, Tensor3D<M, N, O, H>, Broadcast3, broadcast3, ForEachBroadcast3, {M, N, O});
+impl_broadcast!([0, 1, 2, 3], Tensor0D<H>, Tensor4D<M, N, O, P, H>, Broadcast4, broadcast4, ForEachBroadcast4, {M, N, O, P});
 
-impl_broadcast!(Tensor0D, [], Tensor2D, [M, N], Broadcast2, broadcast2, [0, 1], [M, N], ForEachBroadcast2, {M, N});
-impl_broadcast!(Tensor0D, [], Tensor3D, [M, N, O], Broadcast3, broadcast3, [0, 1, 2], [M, N, O], ForEachBroadcast3, {M, N, O});
-impl_broadcast!(Tensor0D, [], Tensor4D, [M, N, O, P], Broadcast4, broadcast4, [0, 1, 2, 3], [M, N, O, P], ForEachBroadcast4, {M, N, O, P});
+// 1d -> Nd
+impl_broadcast!([-1], Tensor1D<M, H>, Tensor2D<M, N, H>, Broadcast1, broadcast1, ForEachBroadcast1, {M, N});
+impl_broadcast!([0], Tensor1D<N, H>, Tensor2D<M, N, H>, Broadcast1, broadcast1, ForEachBroadcast1, {M, N});
+impl_broadcast!([1, 2], Tensor1D<M, H>, Tensor3D<M, N, O, H>, Broadcast2, broadcast2, ForEachBroadcast2, {M, N, O});
+impl_broadcast!([0, 2], Tensor1D<N, H>, Tensor3D<M, N, O, H>, Broadcast2, broadcast2, ForEachBroadcast2, {M, N, O});
+impl_broadcast!([0, 1], Tensor1D<O, H>, Tensor3D<M, N, O, H>, Broadcast2, broadcast2, ForEachBroadcast2, {M, N, O});
+impl_broadcast!([1, 2, 3], Tensor1D<M, H>, Tensor4D<M, N, O, P, H>, Broadcast3, broadcast3, ForEachBroadcast3, {M, N, O, P});
+impl_broadcast!([0, 2, 3], Tensor1D<N, H>, Tensor4D<M, N, O, P, H>, Broadcast3, broadcast3, ForEachBroadcast3, {M, N, O, P});
+impl_broadcast!([0, 1, 3], Tensor1D<O, H>, Tensor4D<M, N, O, P, H>, Broadcast3, broadcast3, ForEachBroadcast3, {M, N, O, P});
+impl_broadcast!([0, 1, 2], Tensor1D<P, H>, Tensor4D<M, N, O, P, H>, Broadcast3, broadcast3, ForEachBroadcast3, {M, N, O, P});
 
-// impl_broadcast!(Tensor1D, [M], Tensor2D, [M, N], ConstBroadcast1, broadcast1, [1], [N], ForEachBroadcast1, {M, N});
-impl_broadcast!(Tensor1D, [M], Tensor2D, [M, N], Broadcast1, broadcast1, [-1], [N], ForEachBroadcast1, {M, N});
-impl_broadcast!(Tensor1D, [N], Tensor2D, [M, N], Broadcast1, broadcast1, [0], [M], ForEachBroadcast1, {M, N});
-impl_broadcast!(Tensor1D, [M], Tensor3D, [M, N, O], Broadcast2, broadcast2, [1, 2], [N, O], ForEachBroadcast2, {M, N, O});
-impl_broadcast!(Tensor1D, [N], Tensor3D, [M, N, O], Broadcast2, broadcast2, [0, 2], [M, O], ForEachBroadcast2, {M, N, O});
-impl_broadcast!(Tensor1D, [O], Tensor3D, [M, N, O], Broadcast2, broadcast2, [0, 1], [M, N], ForEachBroadcast2, {M, N, O});
-impl_broadcast!(Tensor1D, [M], Tensor4D, [M, N, O, P], Broadcast3, broadcast3, [1, 2, 3], [N, O, P], ForEachBroadcast3, {M, N, O, P});
-impl_broadcast!(Tensor1D, [N], Tensor4D, [M, N, O, P], Broadcast3, broadcast3, [0, 2, 3], [M, O, P], ForEachBroadcast3, {M, N, O, P});
-impl_broadcast!(Tensor1D, [O], Tensor4D, [M, N, O, P], Broadcast3, broadcast3, [0, 1, 3], [M, N, P], ForEachBroadcast3, {M, N, O, P});
-impl_broadcast!(Tensor1D, [P], Tensor4D, [M, N, O, P], Broadcast3, broadcast3, [0, 1, 2], [M, N, O], ForEachBroadcast3, {M, N, O, P});
+// 2d -> Nd
+impl_broadcast!([-1], Tensor2D<M, N, H>, Tensor3D<M, N, O, H>, Broadcast1, broadcast1, ForEachBroadcast1, {M, N, O});
+impl_broadcast!([1], Tensor2D<M, O, H>, Tensor3D<M, N, O, H>, Broadcast1, broadcast1, ForEachBroadcast1, {M, N, O});
+impl_broadcast!([0], Tensor2D<N, O, H>, Tensor3D<M, N, O, H>, Broadcast1, broadcast1, ForEachBroadcast1, {M, N, O});
+impl_broadcast!([2, 3], Tensor2D<M, N, H>, Tensor4D<M, N, O, P, H>, Broadcast2, broadcast2, ForEachBroadcast2, {M, N, O, P});
+impl_broadcast!([1, 3], Tensor2D<M, O, H>, Tensor4D<M, N, O, P, H>, Broadcast2, broadcast2, ForEachBroadcast2, {M, N, O, P});
+impl_broadcast!([1, 2], Tensor2D<M, P, H>, Tensor4D<M, N, O, P, H>, Broadcast2, broadcast2, ForEachBroadcast2, {M, N, O, P});
+impl_broadcast!([0, 3], Tensor2D<N, O, H>, Tensor4D<M, N, O, P, H>, Broadcast2, broadcast2, ForEachBroadcast2, {M, N, O, P});
+impl_broadcast!([0, 2], Tensor2D<N, P, H>, Tensor4D<M, N, O, P, H>, Broadcast2, broadcast2, ForEachBroadcast2, {M, N, O, P});
+impl_broadcast!([0, 1], Tensor2D<O, P, H>, Tensor4D<M, N, O, P, H>, Broadcast2, broadcast2, ForEachBroadcast2, {M, N, O, P});
 
-// impl_broadcast!(Tensor2D, [M, N], Tensor3D, [M, N, O], ConstBroadcast1, broadcast1, [2], [O], ForEachBroadcast1, {M, N, O});
-impl_broadcast!(Tensor2D, [M, N], Tensor3D, [M, N, O], Broadcast1, broadcast1, [-1], [O], ForEachBroadcast1, {M, N, O});
-impl_broadcast!(Tensor2D, [M, O], Tensor3D, [M, N, O], Broadcast1, broadcast1, [1], [N], ForEachBroadcast1, {M, N, O});
-impl_broadcast!(Tensor2D, [N, O], Tensor3D, [M, N, O], Broadcast1, broadcast1, [0], [M], ForEachBroadcast1, {M, N, O});
-impl_broadcast!(Tensor2D, [M, N], Tensor4D, [M, N, O, P], Broadcast2, broadcast2, [2, 3], [O, P], ForEachBroadcast2, {M, N, O, P});
-impl_broadcast!(Tensor2D, [M, O], Tensor4D, [M, N, O, P], Broadcast2, broadcast2, [1, 3], [N, P], ForEachBroadcast2, {M, N, O, P});
-impl_broadcast!(Tensor2D, [M, P], Tensor4D, [M, N, O, P], Broadcast2, broadcast2, [1, 2], [N, O], ForEachBroadcast2, {M, N, O, P});
-impl_broadcast!(Tensor2D, [N, O], Tensor4D, [M, N, O, P], Broadcast2, broadcast2, [0, 3], [M, P], ForEachBroadcast2, {M, N, O, P});
-impl_broadcast!(Tensor2D, [N, P], Tensor4D, [M, N, O, P], Broadcast2, broadcast2, [0, 2], [M, O], ForEachBroadcast2, {M, N, O, P});
-impl_broadcast!(Tensor2D, [O, P], Tensor4D, [M, N, O, P], Broadcast2, broadcast2, [0, 1], [M, N], ForEachBroadcast2, {M, N, O, P});
-
-// impl_broadcast!(Tensor3D, [M, N, O], Tensor4D, [M, N, O, P], ConstBroadcast1, broadcast1, [3], [P], ForEachBroadcast1, {M, N, O, P});
-impl_broadcast!(Tensor3D, [M, N, O], Tensor4D, [M, N, O, P], Broadcast1, broadcast1, [-1], [P], ForEachBroadcast1, {M, N, O, P});
-impl_broadcast!(Tensor3D, [M, N, P], Tensor4D, [M, N, O, P], Broadcast1, broadcast1, [2], [O], ForEachBroadcast1, {M, N, O, P});
-impl_broadcast!(Tensor3D, [M, O, P], Tensor4D, [M, N, O, P], Broadcast1, broadcast1, [1], [N], ForEachBroadcast1, {M, N, O, P});
-impl_broadcast!(Tensor3D, [N, O, P], Tensor4D, [M, N, O, P], Broadcast1, broadcast1, [0], [M], ForEachBroadcast1, {M, N, O, P});
+// 3d -> 4d
+impl_broadcast!([-1], Tensor3D<M, N, O, H>, Tensor4D<M, N, O, P, H>, Broadcast1, broadcast1, ForEachBroadcast1, {M, N, O, P});
+impl_broadcast!([2], Tensor3D<M, N, P, H>, Tensor4D<M, N, O, P, H>, Broadcast1, broadcast1, ForEachBroadcast1, {M, N, O, P});
+impl_broadcast!([1], Tensor3D<M, O, P, H>, Tensor4D<M, N, O, P, H>, Broadcast1, broadcast1, ForEachBroadcast1, {M, N, O, P});
+impl_broadcast!([0], Tensor3D<N, O, P, H>, Tensor4D<M, N, O, P, H>, Broadcast1, broadcast1, ForEachBroadcast1, {M, N, O, P});
 
 #[cfg(test)]
 mod tests {

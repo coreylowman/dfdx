@@ -1,7 +1,8 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-/// Select values along a single axis `I` resulting in `T`.
+/// Select values along a single axis `I` resulting in `T`. Equivalent
+/// to `torch.select` and `torch.gather` from pytorch.
 pub trait Select1<T, const I: isize> {
     type Indices: Clone;
 
