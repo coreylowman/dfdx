@@ -7,8 +7,8 @@ use crate::prelude::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-/// let r: Tensor1D<2> = t.mean_axis::<1>();
+/// let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+/// let r: Tensor1D<2> = t.mean_axis::<-1>();
 /// assert_eq!(r.data(), &[2.0, 5.0]);
 /// ```
 pub fn mean_axis<T: Reduce1<I>, const I: isize>(t: T) -> T::Reduced

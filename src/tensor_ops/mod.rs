@@ -32,7 +32,8 @@
 //! # use dfdx::prelude::*;
 //! let a: Tensor2D<2, 5> = TensorCreator::zeros();
 //! let b: Tensor1D<2> = TensorCreator::zeros();
-//! let c = b.broadcast1::<1>();
+//! // broadcast the 2nd axis
+//! let c: Tensor2D<2, 5> = b.broadcast1();
 //! add(a, &c);
 //! ```
 //! or
@@ -40,7 +41,8 @@
 //! # use dfdx::prelude::*;
 //! let a: Tensor2D<2, 5> = TensorCreator::zeros();
 //! let b: Tensor1D<5> = TensorCreator::zeros();
-//! let c = b.broadcast1::<0>();
+//! // broadcast the 1st axis
+//! let c: Tensor2D<2, 5> = b.broadcast1();
 //! add(a, &c);
 //! ```
 

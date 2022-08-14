@@ -10,8 +10,8 @@ use crate::prelude::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor2D::new([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
-/// let r: Tensor1D<2> = t.std_axis::<1>(0.0);
+/// let t: Tensor2D<2, 3> = Tensor2D::new([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
+/// let r: Tensor1D<2> = t.std_axis::<-1>(0.0);
 /// assert_eq!(r.data(), &[0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
 /// ```
 pub fn std_axis<T, const I: isize>(t: T, epsilon: T::Dtype) -> T::Reduced
@@ -32,8 +32,8 @@ where
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor2D::new([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
-/// let r: Tensor1D<2> = t.var_axis::<1>();
+/// let t: Tensor2D<2, 3> = Tensor2D::new([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
+/// let r: Tensor1D<2> = t.var_axis::<-1>();
 /// assert_eq!(r.data(), &[0.6666667, 6.0]);
 /// ```
 pub fn var_axis<T, const I: isize>(t: T) -> T::Reduced

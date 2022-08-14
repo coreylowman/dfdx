@@ -1,21 +1,29 @@
-//! TODO describe implementation details of why there are 3 versions of the traits and how they differ.
+//! TODO describe implementation details
 
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
+/// TODO
 pub trait Broadcast1<T, const I: isize> {
+    /// TODO
     fn broadcast1(self) -> T;
 }
 
+/// TODO
 pub trait Broadcast2<T, const I1: isize, const I2: isize> {
+    /// TODO
     fn broadcast2(self) -> T;
 }
 
+/// TODO
 pub trait Broadcast3<T, const I1: isize, const I2: isize, const I3: isize> {
+    /// TODO
     fn broadcast3(self) -> T;
 }
 
+/// TODO
 pub trait Broadcast4<T, const I1: isize, const I2: isize, const I3: isize, const I4: isize> {
+    /// TODO
     fn broadcast4(self) -> T;
 }
 
@@ -83,6 +91,8 @@ impl_broadcast!(Tensor3D, [N, O, P], Tensor4D, [M, N, O, P], Broadcast1, broadca
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::assert_close;
+    use rand::thread_rng;
 
     #[test]
     fn test_valid_1d_broadcasts() {
@@ -132,6 +142,19 @@ mod tests {
 
     #[test]
     fn test_broadcast_backwards() {
-        todo!();
+        let mut rng = thread_rng();
+        let a: Tensor1D<3> = TensorCreator::randn(&mut rng);
+        let b: Tensor2D<5, 3> = TensorCreator::randn(&mut rng);
+        let a_up: Tensor2D<5, 3, OwnedTape> = a.trace().broadcast1();
+        assert_eq!(a_up.data(), &[*a.data(); 5]);
+        let r = mul(a_up, &b);
+        let g = r.exp().mean().backward();
+        // a's gradient: (b * (b * a).exp()).sum(0) / 15
+        // b's gradient: (a * (b * a).exp()) / 15
+        let a_up: Tensor2D<5, 3> = a.clone().broadcast1();
+        let a_grad = mul(mul(b.clone(), &a_up).exp(), &b).sum_axis::<0>() / 15.0;
+        let b_grad = mul(mul(b.clone(), &a_up).exp(), &a_up) / 15.0;
+        assert_close(g.ref_gradient(&a), a_grad.data());
+        assert_close(g.ref_gradient(&b), b_grad.data());
     }
 }
