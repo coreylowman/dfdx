@@ -34,7 +34,7 @@ pub fn logsumexp<T: Reduce1<-1>>(mut t: T) -> T::Reduced {
 pub fn log_softmax<T: Reduce1<-1>>(t: T) -> T {
     let (t, tape) = t.split_tape();
     let (lse, tape) = logsumexp(t.duplicate().put_tape(tape))
-        .broadcast_to()
+        .broadcast1()
         .split_tape();
     sub(t.put_tape(tape), &lse)
 }
