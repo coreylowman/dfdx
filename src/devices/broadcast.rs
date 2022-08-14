@@ -1,4 +1,30 @@
-//! TODO add details about implementation details for this for future developers
+//! Broadcasting implementations
+//!
+//! There are two cases to handle in the implementation.
+//!
+//! ## Broadcasting the 0th axis
+//!
+//! In this case, the bigger value needs to be iterated and then recurse into a
+//! smaller trait implementation
+//!
+//! Roughly:
+//! ```ignore
+//! for m in 0..M {
+//!     SubTrait::foreach(&mut a[m], b, f);
+//! }
+//! ```
+//!
+//! ## Broadcasting a non-zero axis
+//!
+//! In this case, both arrays have the same size 0th axis. You can iterate both
+//! at the same time, and recurse into a smaller trait implementation
+//!
+//! Roughly:
+//! ```ignore
+//! for m in 0..M {
+//!     SubTrait::foreach(&mut a[m], &b[m], f);
+//! }
+//! ```
 
 #![allow(clippy::needless_range_loop)]
 
