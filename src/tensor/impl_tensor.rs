@@ -25,9 +25,6 @@ pub trait Tensor:
             OwnedTape = Self::OwnedTape,
         >;
 
-    /// Indices used for [gather_last_dim()] that can reduce this tensor's last dimension.
-    type ReducingIndices: CountElements<Dtype = usize>;
-
     /// Removes whatever Tape this tensor has and returns itself without a tape.
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
 
@@ -36,14 +33,11 @@ pub trait Tensor:
 }
 
 macro_rules! tensor_impl {
-    ($struct:ident, [$($Vs:tt),*], $reduced:ident, [$($Rs:tt),*], $ix:ty) => {
+    ($struct:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
     type Tape = H;
     type NoTape = $struct<$($Vs, )* NoneTape>;
     type OwnedTape = $struct<$($Vs, )* OwnedTape>;
-
-    // type LastDimReduced = $reduced<$($Rs, )* H>;
-    type ReducingIndices = $ix;
 
     fn split_tape(self) -> (Self::NoTape, Self::Tape) {
         (
@@ -74,17 +68,11 @@ impl<$(const $Vs: usize, )* H: Clone> Clone for $struct<$($Vs, )* H> {
     };
 }
 
-tensor_impl!(Tensor0D, [], Tensor0D, [], usize);
-tensor_impl!(Tensor1D, [M], Tensor0D, [], usize);
-tensor_impl!(Tensor2D, [M, N], Tensor1D, [M], [usize; M]);
-tensor_impl!(Tensor3D, [M, N, O], Tensor2D, [M, N], [[usize; N]; M]);
-tensor_impl!(
-    Tensor4D,
-    [M, N, O, P],
-    Tensor3D,
-    [M, N, O],
-    [[[usize; O]; N]; M]
-);
+tensor_impl!(Tensor0D, []);
+tensor_impl!(Tensor1D, [M]);
+tensor_impl!(Tensor2D, [M, N]);
+tensor_impl!(Tensor3D, [M, N, O]);
+tensor_impl!(Tensor4D, [M, N, O, P]);
 
 #[cfg(test)]
 mod tests {

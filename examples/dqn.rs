@@ -47,8 +47,9 @@ fn main() {
 
         // forward through model, computing gradients
         let q_values = q_net.forward(state.trace());
+        let action_qs: Tensor1D<64, OwnedTape> = q_values.select(&action);
 
-        let loss = mse_loss(q_values.gather_last_dim(&action), &target_q);
+        let loss = mse_loss(action_qs, &target_q);
         let loss_v = *loss.data();
 
         // run backprop

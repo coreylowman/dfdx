@@ -7,9 +7,7 @@ mod foreach;
 mod matmul;
 mod reduce_all;
 mod reduce_axis;
-
-/// The CPU device
-pub struct Cpu;
+mod select;
 
 pub use allocate::*;
 pub use broadcast::*;
@@ -18,8 +16,12 @@ pub use foreach::*;
 pub use matmul::*;
 pub use reduce_all::*;
 pub use reduce_axis::*;
+pub use select::*;
 
 use std::ops::*;
+
+/// The CPU device
+pub struct Cpu;
 
 /// Represents something that can act on `T`.
 pub trait Device<T: crate::arrays::CountElements>:
