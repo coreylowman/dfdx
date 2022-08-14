@@ -16,10 +16,10 @@ use crate::prelude::*;
 pub fn normalize<T: Reduce1<-1>>(t: T, epsilon: T::Dtype) -> T {
     let (t, tape) = t.split_tape();
     let (std, tape) = std_axis::<T, -1>(t.duplicate().put_tape(tape), epsilon)
-        .broadcast_to()
+        .broadcast1()
         .split_tape();
     let (mean, tape) = mean_axis::<T, -1>(t.duplicate().put_tape(tape))
-        .broadcast_to()
+        .broadcast1()
         .split_tape();
     let centered = sub(t.put_tape(tape), &mean);
     div(centered, &std)

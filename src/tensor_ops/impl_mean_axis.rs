@@ -45,22 +45,22 @@ mod tests {
 
     #[test]
     fn test_valids_mean_axis() {
-        let _: Tensor0D = Tensor1D::<5>::zeros().mean_axis::<0>();
+        // let _: Tensor0D = Tensor1D::<5>::zeros().mean_axis::<0>();
         let _: Tensor0D = Tensor1D::<5>::zeros().mean_axis::<-1>();
 
         let _: Tensor1D<3> = Tensor2D::<5, 3>::zeros().mean_axis::<0>();
-        let _: Tensor1D<5> = Tensor2D::<5, 3>::zeros().mean_axis::<1>();
+        // let _: Tensor1D<5> = Tensor2D::<5, 3>::zeros().mean_axis::<1>();
         let _: Tensor1D<5> = Tensor2D::<5, 3>::zeros().mean_axis::<-1>();
 
         let _: Tensor2D<5, 3> = Tensor3D::<7, 5, 3>::zeros().mean_axis::<0>();
         let _: Tensor2D<7, 3> = Tensor3D::<7, 5, 3>::zeros().mean_axis::<1>();
-        let _: Tensor2D<7, 5> = Tensor3D::<7, 5, 3>::zeros().mean_axis::<2>();
+        // let _: Tensor2D<7, 5> = Tensor3D::<7, 5, 3>::zeros().mean_axis::<2>();
         let _: Tensor2D<7, 5> = Tensor3D::<7, 5, 3>::zeros().mean_axis::<-1>();
 
         let _: Tensor3D<7, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<0>();
         let _: Tensor3D<9, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<1>();
         let _: Tensor3D<9, 7, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<2>();
-        let _: Tensor3D<9, 7, 5> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<3>();
+        // let _: Tensor3D<9, 7, 5> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<3>();
         let _: Tensor3D<9, 7, 5> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<-1>();
     }
 
@@ -79,7 +79,7 @@ mod tests {
     #[test]
     fn test_mean_axis_1_2d() {
         let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
-        let r = t.trace().mean_axis::<1>();
+        let r = t.trace().mean_axis::<-1>();
         assert_eq!(r.data(), &[2.0, -4.0 / 3.0]);
         let gradients = r.exp().mean().backward();
         assert_eq!(
