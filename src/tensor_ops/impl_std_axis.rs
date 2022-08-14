@@ -82,22 +82,18 @@ mod tests {
 
     #[test]
     fn test_valids_var_axis() {
-        // let _: Tensor0D = Tensor1D::<5>::zeros().var_axis::<0>();
         let _: Tensor0D = Tensor1D::<5>::zeros().var_axis::<-1>();
 
         let _: Tensor1D<3> = Tensor2D::<5, 3>::zeros().var_axis::<0>();
-        // let _: Tensor1D<5> = Tensor2D::<5, 3>::zeros().var_axis::<1>();
         let _: Tensor1D<5> = Tensor2D::<5, 3>::zeros().var_axis::<-1>();
 
         let _: Tensor2D<5, 3> = Tensor3D::<7, 5, 3>::zeros().var_axis::<0>();
         let _: Tensor2D<7, 3> = Tensor3D::<7, 5, 3>::zeros().var_axis::<1>();
-        // let _: Tensor2D<7, 5> = Tensor3D::<7, 5, 3>::zeros().var_axis::<2>();
         let _: Tensor2D<7, 5> = Tensor3D::<7, 5, 3>::zeros().var_axis::<-1>();
 
         let _: Tensor3D<7, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().var_axis::<0>();
         let _: Tensor3D<9, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().var_axis::<1>();
         let _: Tensor3D<9, 7, 3> = Tensor4D::<9, 7, 5, 3>::zeros().var_axis::<2>();
-        // let _: Tensor3D<9, 7, 5> = Tensor4D::<9, 7, 5, 3>::zeros().var_axis::<3>();
         let _: Tensor3D<9, 7, 5> = Tensor4D::<9, 7, 5, 3>::zeros().var_axis::<-1>();
     }
 

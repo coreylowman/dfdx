@@ -49,9 +49,12 @@ impl<T: CountElements, const M: usize> CountElements for [T; M] {
     }
 }
 
-/// TODO
+/// An NdArray that has an `I`th axis
 pub trait HasAxis<const I: isize> {
-    /// TODO
+    /// The size of the axis. E.g. an nd array of shape (M, N, O):
+    /// 1. The `0`th axis has `SIZE` = M
+    /// 2. The `1`th axis has `SIZE` = N
+    /// 3. The `2`th axis has `SIZE` = O
     const SIZE: usize;
 }
 
