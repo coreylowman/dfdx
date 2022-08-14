@@ -7,7 +7,7 @@ use crate::prelude::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let r: Tensor1D<2> = gather_last_dim(t, &[2, 1]);
 /// assert_eq!(r.data(), &[3.0, -2.0]);
 /// ```
