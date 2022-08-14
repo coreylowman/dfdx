@@ -10,8 +10,7 @@ use crate::prelude::*;
 /// # use dfdx::prelude::*;
 /// let t: Tensor2D<2, 3> = TensorCreator::zeros();
 /// let a: Tensor1D<3> = t.clone().sum_axis::<0>();
-/// let b: Tensor1D<2> = t.clone().sum_axis::<1>();
-/// let c: Tensor1D<2> = t.sum_axis::<-1>();
+/// let b: Tensor1D<2> = t.sum_axis::<-1>();
 /// ```
 pub fn sum_axis<T: Reduce1<I>, const I: isize>(t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
