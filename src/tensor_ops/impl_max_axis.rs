@@ -30,9 +30,7 @@ pub fn max_axis<T: Reduce1<I>, const I: isize>(mut t: T) -> T::Reduced {
         T::DeviceR::foreach_br(t.mut_data(), result_grad, &mut |d, r| {
             *d *= r;
         });
-        T::Device::foreach_mr(t_grad, t.data(), &mut |g, dr| {
-            *g += dr;
-        });
+        T::Device::add(t_grad, t.data());
     })
 }
 
