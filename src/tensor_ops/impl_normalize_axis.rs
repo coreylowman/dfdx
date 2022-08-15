@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
-/// Normalizes `t` to have mean `0.0` and stddev `1.0` along the last dimension. `epsilon` is passed to [std_axis()].
-/// Computes `(t - t.mean(-1)) / t.std(-1, epsilon)`.
+/// Normalizes `t` to have mean `0.0` and stddev `1.0` along the `I` dimension of `T`. `epsilon` is passed to [std_axis()].
+/// Computes `(t - t.mean(I)) / t.std(I, epsilon)`.
 ///
 /// **Related functions:** [mean_axis()], [std_axis()], [var_axis()]
 ///
@@ -9,16 +9,20 @@ use crate::prelude::*;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let a = Tensor1D::new([-2.0, -1.0, 0.0, 5.0, 2.0]);
-/// let r = normalize(a, 1e-5); // or a.normalize(1e-5);
+/// let r = a.normalize_axis::<-1>(1e-5);
 /// assert!(r.clone().mean_axis::<-1>().data().abs() < 1e-6);
 /// assert!((r.clone().std_axis::<-1>(0.0).data() - 1.0).abs() < 1e-6);
 /// ```
-pub fn normalize<T: Reduce1<-1>>(t: T, epsilon: T::Dtype) -> T {
+pub fn normalize_axis<T, const I: isize>(t: T, epsilon: T::Dtype) -> T
+where
+    T: Reduce1<I>,
+    T::Array: HasAxis<I>,
+{
     let (t, tape) = t.split_tape();
-    let (std, tape) = std_axis::<T, -1>(t.duplicate().put_tape(tape), epsilon)
+    let (std, tape) = std_axis::<T, I>(t.duplicate().put_tape(tape), epsilon)
         .broadcast1()
         .split_tape();
-    let (mean, tape) = mean_axis::<T, -1>(t.duplicate().put_tape(tape))
+    let (mean, tape) = mean_axis::<T, I>(t.duplicate().put_tape(tape))
         .broadcast1()
         .split_tape();
     let centered = sub(t.put_tape(tape), &mean);
@@ -30,8 +34,12 @@ macro_rules! tensor_impl {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H>
 {
     /// Calls [normalize()] on `self`.
-    pub fn normalize(self, epsilon: f32) -> Self {
-        normalize(self, epsilon)
+    pub fn normalize_axis<const I: isize>(self, epsilon: f32) -> Self
+    where
+        Self: Reduce1<I>,
+        <Self as HasArrayType>::Array: HasAxis<I>,
+    {
+        normalize_axis::<Self, I>(self, epsilon)
     }
 }
     };
@@ -48,18 +56,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_0d_normalize() {
+    fn test_0d_normalize_axis_last() {
         let a = Tensor0D::new(10.0);
-        let r = a.trace().normalize(1e-5);
+        let r = a.trace().normalize_axis::<-1>(1e-5);
         assert_eq!(r.data(), &0.0);
         let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&a), &0.0);
     }
 
     #[test]
-    fn test_1d_normalize() {
+    fn test_1d_normalize_axis_last() {
         let a = Tensor1D::new([-2.0, 0.0, 5.0]);
-        let r = a.trace().normalize(1e-5);
+        let r = a.trace().normalize_axis::<-1>(1e-5);
         assert_eq!(r.data(), &[-1.0190487, -0.3396829, 1.3587316]);
         // NOTE: .exp() so we can make sure normalize is using result grad properly
         let gradients = r.exp().mean().backward();
@@ -70,9 +78,9 @@ mod tests {
     }
 
     #[test]
-    fn test_2d_normalize() {
+    fn test_2d_normalize_axis_last() {
         let a: Tensor2D<2, 3> = Tensor2D::new([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
-        let r = a.trace().normalize(1e-5);
+        let r = a.trace().normalize_axis::<-1>(1e-5);
         assert_eq!(
             r.data(),
             &[
@@ -91,9 +99,32 @@ mod tests {
     }
 
     #[test]
-    fn test_3d_normalize() {
+    fn test_2d_normalize_axis_first() {
+        let a: Tensor2D<3, 2> = Tensor2D::new([[-2.0, 0.0], [1.0, 2.0], [4.0, 5.0]]);
+        let r = a.trace().normalize_axis::<0>(1e-5);
+        assert_eq!(
+            r.data(),
+            &[
+                [-1.2247438, -1.1355485],
+                [0.0, -0.16222118],
+                [1.2247438, 1.2977698],
+            ]
+        );
+        let gradients = r.exp().mean().backward();
+        assert_eq!(
+            gradients.ref_gradient(&a),
+            &[
+                [0.019245632, 0.025835907],
+                [-0.038491584, -0.043060362],
+                [0.019245982, 0.017224466],
+            ]
+        );
+    }
+
+    #[test]
+    fn test_3d_normalize_axis_last() {
         let a: Tensor3D<4, 2, 3> = Tensor3D::ones();
-        let r = a.trace().normalize(1e-5);
+        let r = a.trace().normalize_axis::<-1>(1e-5);
         assert_eq!(r.data(), &[[[0.0; 3]; 2]; 4]);
         let gradients = r.exp().mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[[[0.0; 3]; 2]; 4]);
