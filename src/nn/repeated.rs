@@ -50,7 +50,7 @@ impl<T: CanUpdateWithGradients, const N: usize> CanUpdateWithGradients for Repea
     fn update<G: crate::prelude::GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
         let mut missing = Default::default();
         for i in 0..N {
-            missing += self.modules[i].update(grads).name(&format!("{i}."));
+            missing += self.modules[i].update(grads).name(|| format!("{i}."));
         }
         missing
     }

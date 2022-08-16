@@ -24,8 +24,8 @@ impl<F: CanUpdateWithGradients, R: CanUpdateWithGradients> CanUpdateWithGradient
     /// Pass through to `F`'s [CanUpdateWithGradients].
     fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
         let mut missing = Default::default();
-        missing += self.0.update(grads).name("0.");
-        missing += self.1.update(grads).name("1.");
+        missing += self.0.update(grads).name(|| "0.");
+        missing += self.1.update(grads).name(|| "1.");
         missing
     }
 }

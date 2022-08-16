@@ -22,7 +22,7 @@ pub struct SplitInto<T>(pub T);
 impl<T: CanUpdateWithGradients> CanUpdateWithGradients for SplitInto<T> {
     fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
         let mut missing = Default::default();
-        missing += self.0.update(grads).name("0.");
+        missing += self.0.update(grads).name(|| "0.");
         missing
     }
 }

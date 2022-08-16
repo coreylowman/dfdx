@@ -8,7 +8,7 @@ macro_rules! tuple_impls {
         impl<$($name: CanUpdateWithGradients),+> CanUpdateWithGradients for ($($name,)+) {
             fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
                 let mut missing: MissingGradients = Default::default();
-                $(missing += self.$idx.update(grads).name(&format!("{}.", $idx));)+
+                $(missing += self.$idx.update(grads).name(|| format!("{}.", $idx));)+
                 missing
             }
         }

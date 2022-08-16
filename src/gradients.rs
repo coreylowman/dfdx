@@ -265,9 +265,13 @@ impl MissingGradients {
     }
 
     /// Prepends `location` to all param locations.
-    pub fn name(mut self, location: &str) -> Self {
-        for p in self.params.iter_mut() {
-            p.insert_str(0, location);
+    pub fn name<S: AsRef<str>, F: FnOnce() -> S>(mut self, build_location: F) -> Self {
+        if !self.params.is_empty() {
+            let location = build_location();
+            let location = location.as_ref();
+            for p in self.params.iter_mut() {
+                p.insert_str(0, location);
+            }
         }
         self
     }

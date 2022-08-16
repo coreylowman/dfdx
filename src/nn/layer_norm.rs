@@ -49,8 +49,8 @@ impl<const M: usize> CanUpdateWithGradients for LayerNorm1D<M> {
     /// Updates [Self::gamma] and [Self::beta].
     fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
         let mut missing = Default::default();
-        missing += self.gamma.update(grads).name("gamma");
-        missing += self.beta.update(grads).name("beta");
+        missing += self.gamma.update(grads).name(|| "gamma");
+        missing += self.beta.update(grads).name(|| "beta");
         missing
     }
 }
