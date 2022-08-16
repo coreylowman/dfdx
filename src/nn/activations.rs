@@ -48,7 +48,9 @@ pub struct Softmax;
 
 impl CanUpdateWithGradients for Softmax {
     /// Does nothing.
-    fn update<G: GradientProvider>(&mut self, _: &mut G) {}
+    fn update<G: GradientProvider>(&mut self, _: &mut G) -> MissingGradients {
+        Default::default()
+    }
 }
 
 impl ResetParams for Softmax {

@@ -22,9 +22,11 @@ impl<F: CanUpdateWithGradients, R: CanUpdateWithGradients> CanUpdateWithGradient
     for GeneralizedResidual<F, R>
 {
     /// Pass through to `F`'s [CanUpdateWithGradients].
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-        self.0.update(grads);
-        self.1.update(grads);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
+        let mut missing = Default::default();
+        missing += self.0.update(grads).name("0.");
+        missing += self.1.update(grads).name("1.");
+        missing
     }
 }
 
@@ -262,8 +264,12 @@ mod tests {
             lr: 1.0,
             momentum: None,
         };
-        Sgd::new(sgd_config).update(&mut model, gradients);
-        Sgd::new(sgd_config).update(&mut model2, gradients2);
+        Sgd::new(sgd_config)
+            .update(&mut model, gradients)
+            .expect("unused params");
+        Sgd::new(sgd_config)
+            .update(&mut model2, gradients2)
+            .expect("unused params");
 
         assert_close(
             model.0 .0.weight.data(),
