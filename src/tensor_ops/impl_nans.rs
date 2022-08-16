@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/// `t[t.is_nan()] = value`. Replaces any nans in `t` with `value`.
+/// `t.nans_to(value)`. Replaces any nans in `t` with `value`.
 ///
 /// # Examples
 /// ```rust
@@ -12,8 +12,8 @@ use crate::prelude::*;
 pub fn nans_to<T: Tensor<Dtype = f32>>(t: T, value: T::Dtype) -> T {
     map(
         t,
-        move |x| x.is_nan().then_some(value).unwrap_or(*x),
-        move |x| x.is_nan().then_some(0.0).unwrap_or(1.0),
+        move |x| if x.is_nan() { value } else { *x },
+        move |x| if x.is_nan() { 0.0 } else { 1.0 },
     )
 }
 

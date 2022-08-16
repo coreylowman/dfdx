@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 /// `t.exp().sum(-1).log()`. Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function.
 ///
-/// Calls [ln()], [sum_last_dim()], and [exp()]
+/// Calls [ln()], [sum_axis()], and [exp()]
 ///
 /// Examples:
 /// ```rust
@@ -20,28 +20,30 @@ use crate::prelude::*;
 /// ```
 ///
 /// See [log_softmax()] and [softmax()] for related functions.
-pub fn logsumexp<T: Tensor<Dtype = f32>>(mut t: T) -> T::LastDimReduced {
-    let max = T::Device::reduce_last_dim(t.data(), &mut f32::max);
-    T::Device::bsub(t.mut_data(), Broadcast(max.as_ref()));
-    let mut result = ln(sum_last_dim(exp(t)));
-    <T::LastDimReduced as HasDevice>::Device::add(result.mut_data(), max.as_ref());
+pub fn logsumexp<T: Reduce1<-1>>(mut t: T) -> T::Reduced {
+    let max = T::DeviceR::reduce(t.data(), f32::max);
+    T::DeviceR::foreach_br(t.mut_data(), max.as_ref(), &mut |a, b| *a -= b);
+    let mut result = ln(sum_axis::<T, -1>(exp(t)));
+    <T::Reduced as HasDevice>::Device::add(result.mut_data(), max.as_ref());
     result
 }
 
 /// `log(softmax(t))` in numerically stable way. Does `t - logsumexp(t)` under the hood.
 ///
 /// See [logsumexp()] and [softmax()] for related functions
-pub fn log_softmax<T: Tensor<Dtype = f32>>(t: T) -> T {
+pub fn log_softmax<T: Reduce1<-1>>(t: T) -> T {
     let (t, tape) = t.split_tape();
-    let (lse, tape) = logsumexp(t.duplicate().put_tape(tape)).split_tape();
-    sub_broadcast_rhs_last(t.put_tape(tape), &lse)
+    let (lse, tape) = logsumexp(t.duplicate().put_tape(tape))
+        .broadcast1()
+        .split_tape();
+    sub(t.put_tape(tape), &lse)
 }
 
 /// `exp(t) / sum(exp(t))`. Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function).
 /// Equivalent to `exp(log_softmax(t))`.
 ///
 /// See [logsumexp()] and [log_softmax()] for related functions.
-pub fn softmax<T: Tensor<Dtype = f32>>(t: T) -> T {
+pub fn softmax<T: Reduce1<-1>>(t: T) -> T {
     exp(log_softmax(t))
 }
 
@@ -49,7 +51,7 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [logsumexp()] on `self`.
-    pub fn logsumexp(self) -> <Self as Tensor>::LastDimReduced {
+    pub fn logsumexp(self) -> <Self as Reduce1<-1>>::Reduced {
         logsumexp(self)
     }
 

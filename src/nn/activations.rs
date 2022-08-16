@@ -41,7 +41,30 @@ activation_impls!(Tanh, tanh, #[doc="Unit struct that impls [Module] as calling 
 activation_impls!(Square, square, #[doc="Unit struct that impls [Module] as calling [square()] on `input`."]);
 activation_impls!(Sqrt, sqrt, #[doc="Unit struct that impls [Module] as calling [sqrt()] on `input`."]);
 activation_impls!(Abs, abs, #[doc="Unit struct that impls [Module] as calling [abs()] on `input`."]);
-activation_impls!(Softmax, softmax, #[doc="Unit struct that impls [Module] as calling [softmax()] on `input`."]);
+
+/// Unit struct that impls [Module] as calling [softmax()] on `input`."
+#[derive(Default, Debug, Clone, Copy)]
+pub struct Softmax;
+
+impl CanUpdateWithGradients for Softmax {
+    /// Does nothing.
+    fn update<G: GradientProvider>(&mut self, _: &mut G) {}
+}
+
+impl ResetParams for Softmax {
+    /// Does nothing.
+    fn reset_params<R: Rng>(&mut self, _: &mut R) {}
+}
+
+impl SaveToNpz for Softmax {}
+impl LoadFromNpz for Softmax {}
+
+impl<T: Reduce1<-1>> Module<T> for Softmax {
+    type Output = T;
+    fn forward(&self, input: T) -> Self::Output {
+        softmax(input)
+    }
+}
 
 #[cfg(test)]
 mod tests {

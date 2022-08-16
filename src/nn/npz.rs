@@ -1,8 +1,6 @@
 use crate::numpy::{self, NpyError, NumpyDtype, NumpyShape, ReadNumbers, WriteNumbers};
 use std::error::Error;
 use std::{
-    fmt,
-    fs::File,
     io::{BufReader, BufWriter, Read, Seek, Write},
     path::Path,
 };
@@ -24,7 +22,7 @@ pub trait SaveToNpz {
     /// model.save("tst.npz")?;
     /// ```
     fn save<P: AsRef<Path>>(&self, path: P) -> ZipResult<()> {
-        let f = File::create(path)?;
+        let f = std::fs::File::create(path)?;
         let f = BufWriter::new(f);
         let mut zip = ZipWriter::new(f);
         self.write("", &mut zip)?;
@@ -68,9 +66,9 @@ pub trait LoadFromNpz {
     /// model.load("tst.npz")?;
     /// ```
     fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<(), NpzError> {
-        let f = File::open(path).map_err(|e| NpzError::Npy(NpyError::IoError(e)))?;
+        let f = std::fs::File::open(path)?;
         let f = BufReader::new(f);
-        let mut zip = ZipArchive::new(f).map_err(NpzError::Zip)?;
+        let mut zip = ZipArchive::new(f)?;
         self.read("", &mut zip)?;
         Ok(())
     }
@@ -105,8 +103,8 @@ pub enum NpzError {
     Npy(NpyError),
 }
 
-impl fmt::Display for NpzError {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+impl std::fmt::Display for NpzError {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             NpzError::Zip(err) => write!(fmt, "{}", err),
             NpzError::Npy(err) => write!(fmt, "{}", err),
@@ -120,6 +118,24 @@ impl Error for NpzError {
             NpzError::Zip(err) => Some(err),
             NpzError::Npy(err) => Some(err),
         }
+    }
+}
+
+impl From<NpyError> for NpzError {
+    fn from(e: NpyError) -> Self {
+        Self::Npy(e)
+    }
+}
+
+impl From<ZipError> for NpzError {
+    fn from(e: ZipError) -> Self {
+        Self::Zip(e)
+    }
+}
+
+impl From<std::io::Error> for NpzError {
+    fn from(e: std::io::Error) -> Self {
+        Self::Npy(e.into())
     }
 }
 
@@ -154,7 +170,7 @@ pub fn npz_fread<R: Read + Seek, T: NumpyDtype + NumpyShape + ReadNumbers>(
     filename: String,
     data: &mut T,
 ) -> Result<(), NpzError> {
-    let mut f = r.by_name(&filename).map_err(NpzError::Zip)?;
-    numpy::read(&mut f, data).map_err(NpzError::Npy)?;
+    let mut f = r.by_name(&filename)?;
+    numpy::read(&mut f, data)?;
     Ok(())
 }

@@ -49,53 +49,39 @@ impl<T: CountElements, const M: usize> CountElements for [T; M] {
     }
 }
 
-/// An NdArray that is more than 0 dimensions (i.e. >= 1 dimension). This exposes the type
-/// of the last dimension (inner most) of the array as a type through [MultiDimensional::LastDim].
-///
-/// Example:
-///
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let _: [f32; 5] = <[[f32; 5]; 3] as MultiDimensional>::LastDim::default();
-/// ```
-pub trait MultiDimensional: CountElements {
-    /// The size of the last dimension of this type.
-    ///
-    /// Example:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// assert_eq!(<[f32; 5] as MultiDimensional>::LAST_DIM_SIZE, 5);
-    /// assert_eq!(<[[f32; 5]; 3] as MultiDimensional>::LAST_DIM_SIZE, 5);
-    /// assert_eq!(<[[[f32; 5]; 3]; 2] as MultiDimensional>::LAST_DIM_SIZE, 5);
-    /// ```
-    const LAST_DIM_SIZE: usize;
-
-    /// The inner most dimension of a type.
-    type LastDim: CountElements<Dtype = Self::Dtype>
-        + std::ops::Index<usize, Output = Self::Dtype>
-        + std::ops::IndexMut<usize, Output = Self::Dtype>;
-
-    /// The concrete type of this with it's last dimension reduced.
-    ///
-    /// Examples:
-    /// - `[f32; M]` -> `f32`
-    /// - `[[f32; N]; M]` -> `[f32; M]`
-    /// - `[[[f32; O]; N]; M]` -> `[[f32; N]; M]`
-    /// - etc.
-    type Reduced: CountElements<Dtype = Self::Dtype>;
+/// An NdArray that has an `I`th axis
+pub trait HasAxis<const I: isize> {
+    /// The size of the axis. E.g. an nd array of shape (M, N, O):
+    /// 1. The `0`th axis has `SIZE` = M
+    /// 2. The `1`th axis has `SIZE` = N
+    /// 3. The `2`th axis has `SIZE` = O
+    const SIZE: usize;
 }
 
-impl<const M: usize> MultiDimensional for [f32; M] {
-    const LAST_DIM_SIZE: usize = M;
-    type LastDim = Self;
-    type Reduced = f32;
+macro_rules! impl_has_axis {
+    ($SrcTy:tt, $Axis:expr, $Size:expr, {$($Vars:tt),*}) => {
+impl<$(const $Vars: usize, )*> HasAxis<$Axis> for $SrcTy {
+    const SIZE: usize = $Size;
+}
+    };
 }
 
-impl<T: MultiDimensional, const M: usize> MultiDimensional for [T; M] {
-    const LAST_DIM_SIZE: usize = T::LAST_DIM_SIZE;
-    type LastDim = T::LastDim;
-    type Reduced = [T::Reduced; M];
-}
+impl_has_axis!(f32, 0, 1, {});
+impl_has_axis!(f32, -1, 1, {});
+impl_has_axis!([f32; M], 0, M, { M });
+impl_has_axis!([f32; M], -1, M, { M });
+impl_has_axis!([[f32; N]; M], 0, M, {M, N});
+impl_has_axis!([[f32; N]; M], 1, N, {M, N});
+impl_has_axis!([[f32; N]; M], -1, N, {M, N});
+impl_has_axis!([[[f32; O]; N]; M], 0, M, {M, N, O});
+impl_has_axis!([[[f32; O]; N]; M], 1, N, {M, N, O});
+impl_has_axis!([[[f32; O]; N]; M], 2, O, {M, N, O});
+impl_has_axis!([[[f32; O]; N]; M], -1, O, {M, N, O});
+impl_has_axis!([[[[f32; P]; O]; N]; M], 0, M, {M, N, O, P});
+impl_has_axis!([[[[f32; P]; O]; N]; M], 1, N, {M, N, O, P});
+impl_has_axis!([[[[f32; P]; O]; N]; M], 2, O, {M, N, O, P});
+impl_has_axis!([[[[f32; P]; O]; N]; M], 3, P, {M, N, O, P});
+impl_has_axis!([[[[f32; P]; O]; N]; M], -1, P, {M, N, O, P});
 
 /// Something that has compile time known zero values.
 pub trait ZeroElements {
@@ -113,7 +99,13 @@ impl<T: ZeroElements, const M: usize> ZeroElements for [T; M] {
 /// Has an associated type that implemented [CountElements] and [ZeroElements].
 pub trait HasArrayType {
     type Dtype;
-    type Array: 'static + Sized + Clone + CountElements<Dtype = Self::Dtype> + ZeroElements;
+    type Array: 'static
+        + Sized
+        + Clone
+        + CountElements<Dtype = Self::Dtype>
+        + ZeroElements
+        + HasAxis<0>
+        + HasAxis<-1>;
 }
 
 #[cfg(test)]

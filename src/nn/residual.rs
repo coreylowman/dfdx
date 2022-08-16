@@ -15,7 +15,7 @@ use crate::prelude::*;
 /// assert_eq!(y.data(), &[-2.0, -1.0, 0.0, 2.0, 4.0]);
 /// ```
 #[derive(Debug, Clone, Default)]
-pub struct Residual<F>(F);
+pub struct Residual<F>(pub F);
 
 impl<F: CanUpdateWithGradients> CanUpdateWithGradients for Residual<F> {
     /// Pass through to `F`'s [CanUpdateWithGradients].
@@ -200,8 +200,8 @@ mod tests {
         assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
 
         let mut loaded_model: Residual<Linear<5, 3>> = Default::default();
-        assert!(loaded_model.0.weight.data() != saved_model.0.weight.data());
-        assert!(loaded_model.0.bias.data() != saved_model.0.bias.data());
+        assert_ne!(loaded_model.0.weight.data(), saved_model.0.weight.data());
+        assert_ne!(loaded_model.0.bias.data(), saved_model.0.bias.data());
 
         assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
         assert_eq!(loaded_model.0.weight.data(), saved_model.0.weight.data());

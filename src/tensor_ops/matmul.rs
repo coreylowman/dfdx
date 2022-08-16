@@ -1,84 +1,170 @@
 use super::utils::move_tape_and_add_backward_binop;
 use crate::prelude::*;
 
-/// Matrix multiplication.
-///
-/// # Generics
-/// - `M`: number of rows of `lhs`.
-/// - `K`: number of columns of `lhs` and number of rows of `rhs`.
-/// - `N`: Number of columns of `rhs`.
-///
-/// # Arguments
-/// * `lhs` - a 2d tensor representing a MxK matrix
-/// * `rhs` - a 2d tensor representing a KxN matrix
-///
-/// Returns a 2d tensor representing an MxN matrix.
+/// Matrix multiplication. This also supports batched matrix multiplication,
+/// and broadcasted matrix multiplication.
 ///
 /// # Examples
-///
+/// 1. Normal matmul
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let x: Tensor2D<3, 2> = Tensor2D::zeros();
 /// let y: Tensor2D<2, 4> = Tensor2D::zeros();
 /// let result: Tensor2D<3, 4> = matmul(x, &y);
 /// ```
-pub fn matmul<const M: usize, const K: usize, const N: usize, TAPE: Tape>(
-    lhs: Tensor2D<M, K, TAPE>,
-    rhs: &Tensor2D<K, N, NoneTape>,
-) -> Tensor2D<M, N, TAPE> {
-    let mut result = Tensor2D::zeros();
-    mm(lhs.data(), rhs.data(), result.mut_data());
+///
+/// 2. Batched matmul
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let x: Tensor3D<10, 3, 2> = Tensor3D::zeros();
+/// let y: Tensor3D<10, 2, 4> = Tensor3D::zeros();
+/// let result: Tensor3D<10, 3, 4> = matmul(x, &y);
+/// ```
+///
+/// 3. Broadcasted matmul
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let x: Tensor3D<10, 3, 2> = Tensor3D::zeros();
+/// let y: Tensor2D<2, 4> = Tensor2D::zeros();
+/// let result: Tensor3D<10, 3, 4> = matmul(x, &y);
+/// ```
+pub fn matmul<A, B, C>(a: A, b: &B) -> <A as MatMulTyping<B>>::C
+where
+    A: Tensor<Dtype = f32> + MatMulTyping<B, C = C>,
+    B: 'static + Tensor<Dtype = f32> + Clone,
+    C: Tensor<Dtype = f32, Tape = A::Tape>,
+    A::Array: Transpose,
+    B::Array: Transpose,
+    C::Array: Transpose,
+    A::Device: MatMulOp<A::Array, B::Array, C::Array>,
+{
+    let mut c = C::NoTape::zeros();
+    A::Device::mm(a.data(), b.data(), c.mut_data());
 
-    // copy rhs data for use later when computing gradients
-    let rhs_data = rhs.data.clone();
+    let b_ = b.clone();
 
-    move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
-        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
-        mm_bt(result_grad, rhs_data.as_ref(), lhs_grad);
+    move_tape_and_add_backward_binop(a, b, c, move |a, b, c, grads| {
+        let (a_grad, c_grad) = grads.mut_and_ref(&a, &c);
+        A::Device::mm_bt(c_grad, b_.data(), a_grad);
 
-        let (rhs_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
-        mm_at(lhs.data(), result_grad, rhs_grad);
+        let (b_grad, c_grad) = grads.mut_and_ref(&b, &c);
+        A::Device::mm_at(a.data(), c_grad, b_grad);
     })
 }
 
+/// Enables concrete output types for generic matmul functions. Without this
+/// you'd have to specify type of output.
+pub trait MatMulTyping<B> {
+    type C;
+}
+
+// Normal matmul
+impl<const M: usize, const N: usize, const K: usize, H> MatMulTyping<Tensor2D<K, N>>
+    for Tensor2D<M, K, H>
+{
+    type C = Tensor2D<M, N, H>;
+}
+
+// Batched matmul
+impl<const B: usize, const M: usize, const N: usize, const K: usize, H>
+    MatMulTyping<Tensor3D<B, K, N>> for Tensor3D<B, M, K, H>
+{
+    type C = Tensor3D<B, M, N, H>;
+}
+
+// Double batched matmul
+impl<const B1: usize, const B2: usize, const M: usize, const N: usize, const K: usize, H>
+    MatMulTyping<Tensor4D<B1, B2, K, N>> for Tensor4D<B1, B2, M, K, H>
+{
+    type C = Tensor4D<B1, B2, M, N, H>;
+}
+
+// Broadcasted matmul
+impl<const B: usize, const M: usize, const N: usize, const K: usize, H> MatMulTyping<Tensor2D<K, N>>
+    for Tensor3D<B, M, K, H>
+{
+    type C = Tensor3D<B, M, N, H>;
+}
+
 /// Matrix multiplication with the transpose of `rhs`. Equivalent to `matmul(lhs, transpose(rhs))`.
-///
-/// # Arguments
-/// * `lhs` - a 2d tensor representing a MxK matrix
-/// * `rhs_t` - a 2d tensor representing a NxK matrix.
-///
-/// # Generics
-/// - `M`: number of rows of `lhs`.
-/// - `K`: number of columns of `lhs` and number of rows of `rhs`.
-/// - `N`: Number of columns of `rhs`.
-///
-/// Returns a 2d tensor representing an MxN matrix.
+/// This supports the same variants as [matmul] (broadcasted, batched, etc).
 ///
 /// # Examples
-///
+/// 1. Normal matmul
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let x: Tensor2D<3, 2> = Tensor2D::zeros();
 /// let y: Tensor2D<4, 2> = Tensor2D::zeros();
 /// let result: Tensor2D<3, 4> = matmul_transpose(x, &y);
 /// ```
-pub fn matmul_transpose<const M: usize, const K: usize, const N: usize, TAPE: Tape>(
-    lhs: Tensor2D<M, K, TAPE>,
-    rhs_t: &Tensor2D<N, K, NoneTape>,
-) -> Tensor2D<M, N, TAPE> {
-    let mut result = Tensor2D::zeros();
-    mm_bt(lhs.data(), rhs_t.data(), result.mut_data());
+///
+/// 2. Batched matmul
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let x: Tensor3D<10, 3, 2> = Tensor3D::zeros();
+/// let y: Tensor3D<10, 4, 2> = Tensor3D::zeros();
+/// let result: Tensor3D<10, 3, 4> = matmul_transpose(x, &y);
+/// ```
+///
+/// 3. Broadcasted matmul
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let x: Tensor3D<10, 3, 2> = Tensor3D::zeros();
+/// let y: Tensor2D<4, 2> = Tensor2D::zeros();
+/// let result: Tensor3D<10, 3, 4> = matmul_transpose(x, &y);
+/// ```
+pub fn matmul_transpose<A, B, C>(a: A, b: &B) -> <A as MatMulTrTyping<B>>::C
+where
+    A: Tensor<Dtype = f32> + MatMulTrTyping<B, C = C>,
+    B: 'static + Tensor<Dtype = f32> + Clone,
+    C: Tensor<Dtype = f32, Tape = A::Tape>,
+    A::Array: Transpose,
+    B::Array: Transpose,
+    C::Array: Transpose,
+    A::Device: MatMulOp<A::Array, <B::Array as Transpose>::T, C::Array>,
+{
+    let mut c = C::NoTape::zeros();
+    A::Device::mm_bt(a.data(), b.data(), c.mut_data());
 
-    // copy rhs data for use later when computing gradients
-    let rhs_data = rhs_t.data.clone();
+    let b_ = b.clone();
 
-    move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs, result, grads| {
-        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
-        mm(result_grad, rhs_data.as_ref(), lhs_grad);
+    move_tape_and_add_backward_binop(a, b, c, move |a, b, c, grads| {
+        let (a_grad, c_grad) = grads.mut_and_ref(&a, &c);
+        A::Device::mm(c_grad, b_.data(), a_grad);
 
-        let (rhs_t_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
-        mm_atct(lhs.data(), result_grad, rhs_t_grad);
+        let (b_grad, c_grad) = grads.mut_and_ref(&b, &c);
+        A::Device::mm_atct(a.data(), c_grad, b_grad);
     })
+}
+
+/// Enables concrete output types for generic matmul functions. Without this
+/// you'd have to specify type of output.
+pub trait MatMulTrTyping<B> {
+    type C;
+}
+
+impl<const M: usize, const N: usize, const K: usize, H> MatMulTrTyping<Tensor2D<N, K>>
+    for Tensor2D<M, K, H>
+{
+    type C = Tensor2D<M, N, H>;
+}
+
+impl<const B: usize, const M: usize, const N: usize, const K: usize, H>
+    MatMulTrTyping<Tensor3D<B, N, K>> for Tensor3D<B, M, K, H>
+{
+    type C = Tensor3D<B, M, N, H>;
+}
+
+impl<const B1: usize, const B2: usize, const M: usize, const N: usize, const K: usize, H>
+    MatMulTrTyping<Tensor4D<B1, B2, N, K>> for Tensor4D<B1, B2, M, K, H>
+{
+    type C = Tensor4D<B1, B2, M, N, H>;
+}
+
+impl<const B: usize, const M: usize, const N: usize, const K: usize, H>
+    MatMulTrTyping<Tensor2D<N, K>> for Tensor3D<B, M, K, H>
+{
+    type C = Tensor3D<B, M, N, H>;
 }
 
 /// vector * matrix multiplication.
@@ -108,16 +194,16 @@ pub fn vecmat_mul<const K: usize, const N: usize, TAPE: Tape>(
     rhs: &Tensor2D<K, N, NoneTape>,
 ) -> Tensor1D<N, TAPE> {
     let mut result = Tensor1D::zeros();
-    vm(lhs.data(), rhs.data(), result.mut_data());
+    Cpu::vm(lhs.data(), rhs.data(), result.mut_data());
 
     let rhs_data = rhs.data.clone();
 
     move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
-        vm_bt(result_grad, rhs_data.as_ref(), lhs_grad);
+        Cpu::vm_bt(result_grad, rhs_data.as_ref(), lhs_grad);
 
         let (rhs_t_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
-        vv(lhs.data(), result_grad, rhs_t_grad);
+        Cpu::vv(lhs.data(), result_grad, rhs_t_grad);
     })
 }
 
@@ -146,495 +232,45 @@ pub fn vecmat_mul_transpose<const K: usize, const N: usize, TAPE: Tape>(
     rhs_t: &Tensor2D<N, K, NoneTape>,
 ) -> Tensor1D<N, TAPE> {
     let mut result = Tensor1D::zeros();
-    vm_bt(lhs.data(), rhs_t.data(), result.mut_data());
+    Cpu::vm_bt(lhs.data(), rhs_t.data(), result.mut_data());
 
     let rhs_t_data = rhs_t.data.clone();
 
     move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs, result, grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
-        vm(result_grad, rhs_t_data.as_ref(), lhs_grad);
+        Cpu::vm(result_grad, rhs_t_data.as_ref(), lhs_grad);
 
         let (rhs_t_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
-        vv(result_grad, lhs.data(), rhs_t_grad);
+        Cpu::vv(result_grad, lhs.data(), rhs_t_grad);
     })
-}
-
-/// Batch matrix multiplication.
-///
-/// # Generics
-/// - `B`: Batch size in `lhs`.
-/// - `M`: number of rows of `lhs`.
-/// - `K`: number of columns of `lhs` and number of rows of `rhs`.
-/// - `N`: Number of columns of `rhs`.
-///
-/// # Arguments
-/// * `lhs` - a 3d tensor representing a BxMxK matrix
-/// * `rhs` - a 2d tensor representing a KxN matrix
-///
-/// Returns a 3d tensor representing a BxMxN matrix.
-///
-/// # Examples
-///
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let x: Tensor3D<5, 3, 2> = Tensor3D::zeros();
-/// let y: Tensor2D<2, 4> = Tensor2D::zeros();
-/// let result: Tensor3D<5, 3, 4> = batch_matmul(x, &y);
-/// ```
-pub fn batch_matmul<const M: usize, const K: usize, const N: usize, const B: usize, TAPE: Tape>(
-    lhs: Tensor3D<B, M, K, TAPE>,
-    rhs: &Tensor2D<K, N, NoneTape>,
-) -> Tensor3D<B, M, N, TAPE> {
-    let mut result = Tensor3D::zeros();
-    bmm(lhs.data(), rhs.data(), result.mut_data());
-
-    // copy rhs data for use later when computing gradients
-    let rhs_data = rhs.data.clone();
-
-    move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
-        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
-        bmm_bt(result_grad, rhs_data.as_ref(), lhs_grad);
-
-        let (rhs_grad, result_grad): (&mut [[f32; N]; K], &[[[f32; N]; M]; B]) =
-            grads.mut_and_ref(&rhs, &result);
-
-        // Accumulate gradients in loop TODO: LIKELY A BETTER WAY TO DO THIS
-        #[allow(clippy::needless_range_loop)]
-        for i in 0..B {
-            mm_at(&lhs.data()[i], &result_grad[i], rhs_grad);
-        }
-    })
-}
-
-/// Batch matrix multiplication with the transpose of `rhs`. Equivalent to `batch_matmul(lhs, transpose(rhs))`.
-///
-/// # Arguments
-/// * `lhs` - a 3d tensor representing a BxMxK matrix
-/// * `rhs_t` - a 2d tensor representing a NxK matrix.
-///
-/// # Generics
-/// - `B`: Batch size in `lhs`.
-/// - `M`: number of rows of `lhs`.
-/// - `K`: number of columns of `lhs` and number of rows of `rhs`.
-/// - `N`: Number of columns of `rhs`.
-///
-/// Returns a 3d tensor representing an BxMxN matrix.
-///
-/// # Examples
-///
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let x: Tensor3D<5, 3, 2> = Tensor3D::zeros();
-/// let y: Tensor2D<4, 2> = Tensor2D::zeros();
-/// let result: Tensor3D<5, 3, 4> = batch_matmul_transpose(x, &y);
-/// ```
-pub fn batch_matmul_transpose<
-    const M: usize,
-    const K: usize,
-    const N: usize,
-    const B: usize,
-    TAPE: Tape,
->(
-    lhs: Tensor3D<B, M, K, TAPE>,
-    rhs_t: &Tensor2D<N, K, NoneTape>,
-) -> Tensor3D<B, M, N, TAPE> {
-    let mut result = Tensor3D::zeros();
-    bmm_bt(lhs.data(), rhs_t.data(), result.mut_data());
-
-    // copy rhs data for use later when computing gradients
-    let rhs_data = rhs_t.data.clone();
-
-    move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs, result, grads| {
-        let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
-        bmm(result_grad, rhs_data.as_ref(), lhs_grad);
-
-        let (rhs_t_grad, result_grad): (&mut [[f32; K]; N], &[[[f32; N]; M]; B]) =
-            grads.mut_and_ref(&rhs, &result);
-
-        // Accumulate gradients in loop TODO: LIKELY A BETTER WAY TO DO THIS
-        #[allow(clippy::needless_range_loop)]
-        for i in 0..B {
-            mm_atct(&lhs.data()[i], &result_grad[i], rhs_t_grad);
-        }
-    })
-}
-
-/// matrix multiply `c += a * b`
-fn mm<const M: usize, const K: usize, const N: usize>(
-    a: &[[f32; K]; M],
-    b: &[[f32; N]; K],
-    c: &mut [[f32; N]; M],
-) {
-    let a = a.as_ptr() as *const f32;
-    let b = b.as_ptr() as *const f32;
-    let c = c.as_mut_ptr() as *mut f32;
-
-    #[cfg(not(feature = "cblas"))]
-    unsafe {
-        matrixmultiply::sgemm(
-            M, K, N, 1.0, a, K as isize, 1, b, N as isize, 1, 1.0, c, N as isize, 1,
-        )
-    }
-
-    #[cfg(feature = "cblas")]
-    unsafe {
-        cblas_sys::cblas_sgemm(
-            cblas_sys::CblasRowMajor,
-            cblas_sys::CblasNoTrans,
-            cblas_sys::CblasNoTrans,
-            M as libc::c_int,
-            N as libc::c_int,
-            K as libc::c_int,
-            1.0,
-            a,
-            K as libc::c_int,
-            b,
-            N as libc::c_int,
-            1.0,
-            c,
-            N as libc::c_int,
-        )
-    }
-}
-
-/// matrix multiply `c += trans(a) * b`
-fn mm_at<const M: usize, const K: usize, const N: usize>(
-    a_t: &[[f32; M]; K],
-    b: &[[f32; N]; K],
-    c: &mut [[f32; N]; M],
-) {
-    let a_t = a_t.as_ptr() as *const f32;
-    let b = b.as_ptr() as *const f32;
-    let c = c.as_mut_ptr() as *mut f32;
-
-    #[cfg(not(feature = "cblas"))]
-    unsafe {
-        matrixmultiply::sgemm(
-            M, K, N, 1.0, a_t, 1, M as isize, b, N as isize, 1, 1.0, c, N as isize, 1,
-        )
-    }
-
-    #[cfg(feature = "cblas")]
-    unsafe {
-        cblas_sys::cblas_sgemm(
-            cblas_sys::CblasRowMajor,
-            cblas_sys::CblasTrans,
-            cblas_sys::CblasNoTrans,
-            M as libc::c_int,
-            N as libc::c_int,
-            K as libc::c_int,
-            1.0,
-            a_t,
-            M as libc::c_int,
-            b,
-            N as libc::c_int,
-            1.0,
-            c,
-            N as libc::c_int,
-        )
-    }
-}
-
-/// matrix multiply `c += a * trans(b)`
-fn mm_bt<const M: usize, const K: usize, const N: usize>(
-    a: &[[f32; K]; M],
-    b_t: &[[f32; K]; N],
-    c: &mut [[f32; N]; M],
-) {
-    let a = a.as_ptr() as *const f32;
-    let b_t = b_t.as_ptr() as *const f32;
-    let c = c.as_mut_ptr() as *mut f32;
-
-    #[cfg(not(feature = "cblas"))]
-    unsafe {
-        matrixmultiply::sgemm(
-            M, K, N, 1.0, a, K as isize, 1, b_t, 1, K as isize, 1.0, c, N as isize, 1,
-        )
-    }
-
-    #[cfg(feature = "cblas")]
-    unsafe {
-        cblas_sys::cblas_sgemm(
-            cblas_sys::CblasRowMajor,
-            cblas_sys::CblasNoTrans,
-            cblas_sys::CblasTrans,
-            M as libc::c_int,
-            N as libc::c_int,
-            K as libc::c_int,
-            1.0,
-            a,
-            K as libc::c_int,
-            b_t,
-            K as libc::c_int,
-            1.0,
-            c,
-            N as libc::c_int,
-        )
-    }
-}
-
-/// matrix multiply `trans(c) += trans(a) * b`
-fn mm_atct<const M: usize, const K: usize, const N: usize>(
-    a_t: &[[f32; M]; K],
-    b: &[[f32; N]; K],
-    c_t: &mut [[f32; M]; N],
-) {
-    let a_t = a_t.as_ptr() as *const f32;
-    let b = b.as_ptr() as *const f32;
-    let c_t = c_t.as_mut_ptr() as *mut f32;
-
-    #[cfg(not(feature = "cblas"))]
-    unsafe {
-        matrixmultiply::sgemm(
-            M, K, N, 1.0, a_t, 1, M as isize, b, N as isize, 1, 1.0, c_t, 1, M as isize,
-        )
-    }
-
-    #[cfg(feature = "cblas")]
-    unsafe {
-        cblas_sys::cblas_sgemm(
-            cblas_sys::CblasColMajor,
-            cblas_sys::CblasNoTrans,
-            cblas_sys::CblasTrans,
-            M as libc::c_int,
-            N as libc::c_int,
-            K as libc::c_int,
-            1.0,
-            a_t,
-            M as libc::c_int,
-            b,
-            N as libc::c_int,
-            1.0,
-            c_t,
-            M as libc::c_int,
-        )
-    }
-}
-
-/// batch matrix multiply `c += a * b`
-fn bmm<const M: usize, const K: usize, const N: usize, const B: usize>(
-    a: &[[[f32; K]; M]; B],
-    b: &[[f32; N]; K],
-    c: &mut [[[f32; N]; M]; B],
-) {
-    let b = b.as_ptr() as *const f32;
-
-    // Purely sequential for now, should parallelize using rayon or some other BLAS solution
-    for i in 0..B {
-        let a = a[i].as_ptr() as *const f32;
-        let c = c[i].as_mut_ptr() as *mut f32;
-
-        unsafe {
-            matrixmultiply::sgemm(
-                M, K, N, 1.0, a, K as isize, 1, b, N as isize, 1, 1.0, c, N as isize, 1,
-            )
-        }
-    }
-}
-
-/// batch matrix multiply `c += a * trans(b)`
-fn bmm_bt<const M: usize, const K: usize, const N: usize, const B: usize>(
-    a: &[[[f32; K]; M]; B],
-    b_t: &[[f32; K]; N],
-    c: &mut [[[f32; N]; M]; B],
-) {
-    let b_t = b_t.as_ptr() as *const f32;
-
-    for i in 0..B {
-        let a = a[i].as_ptr() as *const f32;
-        let c = c[i].as_mut_ptr() as *mut f32;
-
-        unsafe {
-            matrixmultiply::sgemm(
-                M, K, N, 1.0, a, K as isize, 1, b_t, 1, K as isize, 1.0, c, N as isize, 1,
-            )
-        }
-    }
-}
-
-/// vector matrix multiply `c += a * b`
-fn vm<const K: usize, const N: usize>(a: &[f32; K], b: &[[f32; N]; K], c: &mut [f32; N]) {
-    let a = a.as_ptr();
-    let b = b.as_ptr() as *const f32;
-    let c = c.as_mut_ptr();
-
-    #[cfg(not(feature = "cblas"))]
-    unsafe {
-        const M: usize = 1;
-        matrixmultiply::sgemm(
-            M, K, N, 1.0, a, K as isize, 1, b, N as isize, 1, 1.0, c, N as isize, 1,
-        )
-    }
-
-    #[cfg(feature = "cblas")]
-    unsafe {
-        cblas_sys::cblas_sgemv(
-            cblas_sys::CblasColMajor,
-            cblas_sys::CblasNoTrans,
-            N as libc::c_int,
-            K as libc::c_int,
-            1.0,
-            b,
-            N as libc::c_int,
-            a,
-            1,
-            1.0,
-            c,
-            1,
-        )
-    }
-}
-
-/// vector matrix multiply `c += a * trans(b)`
-fn vm_bt<const K: usize, const N: usize>(a: &[f32; K], b_t: &[[f32; K]; N], c: &mut [f32; N]) {
-    let a = a.as_ptr();
-    let b_t = b_t.as_ptr() as *const f32;
-    let c = c.as_mut_ptr();
-
-    #[cfg(not(feature = "cblas"))]
-    unsafe {
-        const M: usize = 1;
-        matrixmultiply::sgemm(
-            M, K, N, 1.0, a, K as isize, 1, b_t, 1, K as isize, 1.0, c, N as isize, 1,
-        )
-    }
-
-    #[cfg(feature = "cblas")]
-    unsafe {
-        cblas_sys::cblas_sgemv(
-            cblas_sys::CblasRowMajor,
-            cblas_sys::CblasNoTrans,
-            N as libc::c_int,
-            K as libc::c_int,
-            1.0,
-            b_t,
-            K as libc::c_int,
-            a,
-            1,
-            1.0,
-            c,
-            1,
-        )
-    }
-}
-
-/// vector vector
-fn vv<const M: usize, const N: usize>(a: &[f32; M], b: &[f32; N], c: &mut [[f32; N]; M]) {
-    const K: usize = 1;
-    let a = a.as_ptr();
-    let b = b.as_ptr();
-    let c = c.as_mut_ptr() as *mut f32;
-
-    #[cfg(not(feature = "cblas"))]
-    unsafe {
-        matrixmultiply::sgemm(
-            M, K, N, 1.0, a, K as isize, 1, b, N as isize, 1, 1.0, c, N as isize, 1,
-        )
-    }
-
-    #[cfg(feature = "cblas")]
-    unsafe {
-        cblas_sys::cblas_sgemm(
-            cblas_sys::CblasRowMajor,
-            cblas_sys::CblasNoTrans,
-            cblas_sys::CblasNoTrans,
-            M as libc::c_int,
-            N as libc::c_int,
-            K as libc::c_int,
-            1.0,
-            a,
-            K as libc::c_int,
-            b,
-            N as libc::c_int,
-            1.0,
-            c,
-            N as libc::c_int,
-        )
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::tests::assert_close;
+    use rand::thread_rng;
 
     #[test]
-    fn test_vecmul() {
-        let x = [1.0, 2.0, 3.0];
-        let y = [[1.0, 2.0], [0.5, 1.0], [1.0 / 3.0, 1.0]];
-        let y_t = [[1.0, 0.5, 1.0 / 3.0], [2.0, 1.0, 1.0]];
-        let expected = [3.0, 7.0];
+    fn test_valid_matmuls() {
+        let _: Tensor2D<5, 2> = matmul(Tensor2D::<5, 3>::zeros(), &Tensor2D::<3, 2>::zeros());
 
-        let mut out = [0.0; 2];
-        vm(&x, &y, &mut out);
-        assert_close(&out, &expected);
+        let _: Tensor3D<10, 5, 2> =
+            matmul(Tensor3D::<10, 5, 3>::zeros(), &Tensor2D::<3, 2>::zeros());
 
-        let mut out = [0.0; 2];
-        vm_bt(&x, &y_t, &mut out);
-        assert_close(&out, &expected);
+        let _: Tensor3D<10, 5, 2> = matmul(
+            Tensor3D::<10, 5, 3>::zeros(),
+            &Tensor3D::<10, 3, 2>::zeros(),
+        );
+
+        let _: Tensor4D<20, 10, 5, 2> = matmul(
+            Tensor4D::<20, 10, 5, 3>::zeros(),
+            &Tensor4D::<20, 10, 3, 2>::zeros(),
+        );
     }
 
     #[test]
     fn test_matmul() {
-        let x = [
-            [1.0, 2.0, 3.0],
-            [4.0, 5.0, 6.0],
-            [7.0, 8.0, 9.0],
-            [10.0, 11.0, 12.0],
-        ];
-        let x_t = [
-            [1.0, 4.0, 7.0, 10.0],
-            [2.0, 5.0, 8.0, 11.0],
-            [3.0, 6.0, 9.0, 12.0],
-        ];
-        let y = [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]];
-        let y_t = [[1.0, 3.0, 5.0], [2.0, 4.0, 6.0]];
-        let expected = [[22.0, 28.0], [49.0, 64.0], [76.0, 100.0], [103.0, 136.0]];
-
-        let mut out = [[0.0; 2]; 4];
-        mm(&x, &y, &mut out);
-        assert_close(&out, &expected);
-
-        let mut out = [[0.0; 2]; 4];
-        mm_at(&x_t, &y, &mut out);
-        assert_close(&out, &expected);
-
-        let mut out = [[0.0; 2]; 4];
-        mm_bt(&x, &y_t, &mut out);
-        assert_close(&out, &expected);
-    }
-
-    #[test]
-    fn test_vecvec() {
-        let x = [1.0, 2.0, 3.0];
-        let y = [-1.0, 0.5, -1.0 / 3.0, 0.25];
-
-        let mut out = [[0.0; 4]; 3];
-        vv(&x, &y, &mut out);
-        assert_close(
-            &out,
-            &[
-                [-1.0, 0.5, -1.0 / 3.0, 0.25],
-                [-2.0, 1.0, -2.0 / 3.0, 0.5],
-                [-3.0, 1.5, -1.0, 0.75],
-            ],
-        );
-
-        let mut out = [[0.0; 3]; 4];
-        vv(&y, &x, &mut out);
-        assert_close(
-            &out,
-            &[
-                [-1.0, -2.0, -3.0],
-                [0.5, 1.0, 1.5],
-                [-1.0 / 3.0, -2.0 / 3.0, -1.0],
-                [0.25, 0.5, 0.75],
-            ],
-        );
-    }
-
-    #[test]
-    fn test_matmat_mul() {
         let a = Tensor2D::new([
             [0.5086, 0.5234, 0.2684],
             [0.8075, 0.8437, 0.9951],
@@ -642,7 +278,7 @@ mod tests {
             [0.8119, 0.2693, 0.7249],
         ]);
         let b = Tensor2D::new([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
-        let r: Tensor2D<4, 2, OwnedTape> = matmul(a.trace(), &b);
+        let r = matmul(a.trace(), &b);
         assert_close(
             r.data(),
             &[
@@ -674,166 +310,58 @@ mod tests {
 
     #[test]
     fn test_matmul_transpose() {
-        let a = Tensor2D::new([
-            [0.5086, 0.5234, 0.2684],
-            [0.8075, 0.8437, 0.9951],
-            [0.0774, 0.7539, 0.8894],
-            [0.8119, 0.2693, 0.7249],
-        ]);
-        let b = Tensor2D::new([[0.4651, 0.3360, 0.8092], [0.9106, 0.5534, 0.3827]]);
-        let r: Tensor2D<4, 2, OwnedTape> = matmul_transpose(a.trace(), &b);
-        assert_close(
-            r.data(),
-            &[
-                [0.62960154, 0.8554974],
-                [1.4642863, 1.5830379],
-                [1.0090116, 0.82806206],
-                [1.0546886, 1.165766],
-            ],
-        );
-        let gradients = r.exp().mean().backward();
-        assert_close(
-            gradients.ref_gradient(&a),
-            &[
-                [0.37689444, 0.24156547, 0.30238447],
-                [0.80570966, 0.5184905, 0.6703743],
-                [0.4199963, 0.2735345, 0.38693744],
-                [0.5321113, 0.34252504, 0.4438907],
-            ],
-        );
-        assert_close(
-            gradients.ref_gradient(&b),
-            &[
-                [0.8737376, 0.9339924, 1.1659734],
-                [0.9888564, 0.991189, 1.2298465],
-            ],
-        );
+        let mut rng = thread_rng();
+        let a: Tensor2D<4, 3> = TensorCreator::randn(&mut rng);
+        let b: Tensor2D<3, 2> = TensorCreator::randn(&mut rng);
+        let c = matmul(a.trace(), &b);
+
+        let b_t = Tensor2D::new(transpose(b.data()));
+        let c_tr = matmul_transpose(a.trace(), &b_t);
+        assert_close(c_tr.data(), c.data());
+
+        let gs = c.exp().mean().backward();
+        let gs_tr = c_tr.exp().mean().backward();
+        assert_close(gs_tr.ref_gradient(&a), gs.ref_gradient(&a));
+        assert_close(gs_tr.ref_gradient(&b_t), &transpose(gs.ref_gradient(&b)));
     }
 
     #[test]
-    fn test_batch_matmul() {
-        let a = Tensor3D::new([
-            [
-                [0.5086, 0.5234, 0.2684],
-                [0.8075, 0.8437, 0.9951],
-                [0.0774, 0.7539, 0.8894],
-                [0.8119, 0.2693, 0.7249],
-            ],
-            [
-                [0.4546, 0.5384, 0.2684],
-                [0.8075, 0.8437, 0.2383],
-                [0.0765, 0.3534, 0.9002],
-                [0.8119, 0.2993, 0.5432],
-            ],
-        ]);
-        let b = Tensor2D::new([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
-        let r: Tensor3D<2, 4, 2, OwnedTape> = batch_matmul(a.trace(), &b);
-        assert_close(
-            r.data(),
-            &[
-                [
-                    [0.62960154, 0.8554974],
-                    [1.4642863, 1.5830379],
-                    [1.0090116, 0.82806206],
-                    [1.0546886, 1.165766],
-                ],
-                [
-                    [0.60952616, 0.814626],
-                    [0.85188377, 1.2934104],
-                    [0.8827644, 0.609739],
-                    [0.91773695, 1.1128315],
-                ],
-            ],
-        );
-        let gradients = r.exp().mean().backward();
-        assert_close(
-            gradients.ref_gradient(&a),
-            &[
-                [
-                    [0.18844722, 0.12078273, 0.15119223],
-                    [0.40285483, 0.25924525, 0.33518714],
-                    [0.20999815, 0.13676725, 0.19346872],
-                    [0.26605564, 0.17126252, 0.22194535],
-                ],
-                [
-                    [0.18200095, 0.11674076, 0.14705217],
-                    [0.27559614, 0.17530347, 0.2057393],
-                    [0.17499207, 0.11440835, 0.16627812],
-                    [0.24595964, 0.15782444, 0.19940434],
-                ],
-            ],
-        );
-        println!("{:?}", gradients.ref_gradient(&b));
-        assert_close(
-            gradients.ref_gradient(&b),
-            &[
-                [0.746039, 0.9057702],
-                [0.75273395, 0.86136544],
-                [0.86977375, 0.91392624],
-            ],
-        );
+    fn test_broadcasted_matmul() {
+        const N: usize = 5;
+        let mut rng = thread_rng();
+        let a: Tensor3D<N, 4, 3> = TensorCreator::randn(&mut rng);
+        let b: Tensor2D<3, 2> = TensorCreator::randn(&mut rng);
+        let r = matmul(a.trace(), &b);
+        for i in 0..N {
+            let sub_a = Tensor2D::new(a.data()[i]);
+            assert_close(&r.data()[i], matmul(sub_a, &b).data());
+        }
+        let gs = r.sum().backward();
+        let mut sub_bs_summed = [[0.0; 2]; 3];
+        for i in 0..N {
+            let sub_a = Tensor2D::new(a.data()[i]);
+            let sub_gs = matmul(sub_a.trace(), &b).sum().backward();
+            assert_close(&gs.ref_gradient(&a)[i], sub_gs.ref_gradient(&sub_a));
+            <Cpu as Device<_>>::add(&mut sub_bs_summed, sub_gs.ref_gradient(&b));
+        }
+        assert_close(gs.ref_gradient(&b), &sub_bs_summed);
     }
 
     #[test]
-    fn test_batch_matmul_transpose() {
-        let a = Tensor3D::new([
-            [
-                [0.5086, 0.5234, 0.2684],
-                [0.8075, 0.8437, 0.9951],
-                [0.0774, 0.7539, 0.8894],
-                [0.8119, 0.2693, 0.7249],
-            ],
-            [
-                [0.4546, 0.5384, 0.2684],
-                [0.8075, 0.8437, 0.2383],
-                [0.0765, 0.3534, 0.9002],
-                [0.8119, 0.2993, 0.5432],
-            ],
-        ]);
-        let b = Tensor2D::new([[0.4651, 0.3360, 0.8092], [0.9106, 0.5534, 0.3827]]);
-        let r: Tensor3D<2, 4, 2, OwnedTape> = batch_matmul_transpose(a.trace(), &b);
-        assert_close(
-            r.data(),
-            &[
-                [
-                    [0.62960154, 0.8554974],
-                    [1.4642863, 1.5830379],
-                    [1.0090116, 0.82806206],
-                    [1.0546886, 1.165766],
-                ],
-                [
-                    [0.60952616, 0.814626],
-                    [0.85188377, 1.2934104],
-                    [0.8827644, 0.609739],
-                    [0.91773695, 1.1128315],
-                ],
-            ],
-        );
-        let gradients = r.exp().mean().backward();
-        assert_close(
-            gradients.ref_gradient(&a),
-            &[
-                [
-                    [0.18844722, 0.12078273, 0.15119223],
-                    [0.40285483, 0.25924525, 0.33518714],
-                    [0.20999815, 0.13676725, 0.19346872],
-                    [0.26605564, 0.17126252, 0.22194535],
-                ],
-                [
-                    [0.18200095, 0.11674076, 0.14705217],
-                    [0.27559614, 0.17530347, 0.2057393],
-                    [0.17499207, 0.11440835, 0.16627812],
-                    [0.24595964, 0.15782444, 0.19940434],
-                ],
-            ],
-        );
-        assert_close(
-            gradients.ref_gradient(&b),
-            &[
-                [0.746039, 0.75273395, 0.86977375],
-                [0.9057702, 0.86136544, 0.91392624],
-            ],
-        );
+    fn test_broadcasted_matmul_transpose() {
+        let mut rng = thread_rng();
+        let a: Tensor3D<2, 4, 3> = TensorCreator::randn(&mut rng);
+        let b: Tensor2D<3, 2> = TensorCreator::randn(&mut rng);
+        let c = matmul(a.trace(), &b);
+
+        let b_t = Tensor2D::new(transpose(b.data()));
+        let c_tr = matmul_transpose(a.trace(), &b_t);
+        assert_close(c_tr.data(), c.data());
+
+        let gs = c.exp().mean().backward();
+        let gs_tr = c_tr.exp().mean().backward();
+        assert_close(gs_tr.ref_gradient(&a), gs.ref_gradient(&a));
+        assert_close(gs_tr.ref_gradient(&b_t), &transpose(gs.ref_gradient(&b)));
     }
 
     #[test]
@@ -842,13 +370,10 @@ mod tests {
         let b = Tensor2D::new([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
         let r: Tensor1D<2, OwnedTape> = vecmat_mul(a.trace(), &b);
         assert_close(r.data(), &[1.261436, 1.5543157]);
-        let gradients = r.exp().mean().backward();
+        let g = r.exp().mean().backward();
+        assert_close(g.ref_gradient(&a), &[2.6883178, 2.9369607, 2.9256766]);
         assert_close(
-            gradients.ref_gradient(&a),
-            &[2.6883178, 2.9369607, 2.9256766],
-        );
-        assert_close(
-            gradients.ref_gradient(&b),
+            g.ref_gradient(&b),
             &[
                 [1.2879219, 1.7261779],
                 [0.70150787, 0.94021803],
@@ -863,17 +388,24 @@ mod tests {
         let b = Tensor2D::new([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
         let r: Tensor1D<2, OwnedTape> = vecmat_mul_transpose(a.trace(), &b);
         assert_close(r.data(), &[1.261436, 1.5543157]);
-        let gradients = r.exp().mean().backward();
+        let g = r.exp().mean().backward();
+        assert_close(g.ref_gradient(&a), &[2.6883178, 2.9369607, 2.9256766]);
         assert_close(
-            gradients.ref_gradient(&a),
-            &[2.6883178, 2.9369607, 2.9256766],
-        );
-        assert_close(
-            gradients.ref_gradient(&b),
+            g.ref_gradient(&b),
             &[
                 [1.2879219, 0.70150787, 1.6746868],
                 [1.7261779, 0.94021803, 2.244552],
             ],
         );
+    }
+
+    fn transpose<const M: usize, const N: usize>(a: &[[f32; N]; M]) -> [[f32; M]; N] {
+        let mut t: [[f32; M]; N] = ZeroElements::ZEROS;
+        for (m, a_m) in a.iter().enumerate() {
+            for (n, a_mn) in a_m.iter().enumerate() {
+                t[n][m] = *a_mn;
+            }
+        }
+        t
     }
 }

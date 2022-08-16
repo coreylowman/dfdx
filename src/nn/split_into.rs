@@ -17,7 +17,7 @@ use crate::prelude::*;
 /// let _: (Tensor1D<3>, Tensor1D<7>) = model.forward(Tensor1D::<5>::zeros());
 /// ```
 #[derive(Debug, Default, Clone)]
-pub struct SplitInto<T>(T);
+pub struct SplitInto<T>(pub T);
 
 impl<T: CanUpdateWithGradients> CanUpdateWithGradients for SplitInto<T> {
     fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {

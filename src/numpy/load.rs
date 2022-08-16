@@ -1,13 +1,10 @@
 //! Provides some generic functions to save Nd arrays in the .npy format.
 
 use super::*;
-use std::error::Error;
 use std::{
-    fmt,
     fs::File,
     io::{BufReader, Read},
     path::Path,
-    string::FromUtf8Error,
 };
 
 /// Loads data from a .npy file. This calls [read()].
@@ -29,7 +26,7 @@ where
     T: NumpyDtype + NumpyShape + ReadNumbers,
     P: AsRef<Path>,
 {
-    let mut f = BufReader::new(File::open(path).map_err(NpyError::IoError)?);
+    let mut f = BufReader::new(File::open(path)?);
     read(&mut f, t)
 }
 
@@ -52,7 +49,7 @@ where
     R: Read,
 {
     let endian = read_header::<T, R>(r)?;
-    t.read_numbers(r, endian).map_err(NpyError::IoError)?;
+    t.read_numbers(r, endian)?;
     Ok(())
 }
 
@@ -68,7 +65,7 @@ pub enum NpyError {
     IoError(std::io::Error),
 
     /// Error from converting header bytes to a [String].
-    Utf8Error(FromUtf8Error),
+    Utf8Error(std::string::FromUtf8Error),
 
     ParsingMismatch {
         expected: Vec<u8>,
@@ -81,8 +78,8 @@ pub enum NpyError {
     InvalidAlignment,
 }
 
-impl fmt::Display for NpyError {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+impl std::fmt::Display for NpyError {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             NpyError::InvalidMagicNumber(num) => write!(fmt, "invalid magic number: {:?}", num),
             NpyError::InvalidVersion(ver) => write!(fmt, "invalid version: {:?}", ver),
@@ -102,13 +99,25 @@ impl fmt::Display for NpyError {
     }
 }
 
-impl Error for NpyError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
+impl std::error::Error for NpyError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             NpyError::IoError(err) => Some(err),
             NpyError::Utf8Error(err) => Some(err),
             _ => None,
         }
+    }
+}
+
+impl From<std::io::Error> for NpyError {
+    fn from(e: std::io::Error) -> Self {
+        Self::IoError(e)
+    }
+}
+
+impl From<std::string::FromUtf8Error> for NpyError {
+    fn from(e: std::string::FromUtf8Error) -> Self {
+        Self::Utf8Error(e)
     }
 }
 
@@ -118,24 +127,23 @@ where
     R: Read,
 {
     let mut magic = [0; 6];
-    r.read_exact(&mut magic).map_err(NpyError::IoError)?;
+    r.read_exact(&mut magic)?;
     if magic != MAGIC_NUMBER {
         return Err(NpyError::InvalidMagicNumber(magic));
     }
 
     let mut version = [0; 2];
-    r.read_exact(&mut version).map_err(NpyError::IoError)?;
+    r.read_exact(&mut version)?;
     if version != VERSION {
         return Err(NpyError::InvalidVersion(version));
     }
 
     let mut header_len_bytes = [0; 2];
-    r.read_exact(&mut header_len_bytes)
-        .map_err(NpyError::IoError)?;
+    r.read_exact(&mut header_len_bytes)?;
     let header_len = u16::from_le_bytes(header_len_bytes);
 
     let mut header: Vec<u8> = vec![0; header_len as usize];
-    r.read_exact(&mut header).map_err(NpyError::IoError)?;
+    r.read_exact(&mut header)?;
 
     let mut i = 0;
     i = expect(&header, i, b"{'descr': '")?;
@@ -168,8 +176,8 @@ fn expect(buf: &[u8], i: usize, chars: &[u8]) -> Result<usize, NpyError> {
         if buf[i + offset] != c {
             let expected = chars.to_vec();
             let found = buf[i..i + offset + 1].to_vec();
-            let expected_str = String::from_utf8(expected.clone()).map_err(NpyError::Utf8Error)?;
-            let found_str = String::from_utf8(found.clone()).map_err(NpyError::Utf8Error)?;
+            let expected_str = String::from_utf8(expected.clone())?;
+            let found_str = String::from_utf8(found.clone())?;
             return Err(NpyError::ParsingMismatch {
                 expected,
                 found,
