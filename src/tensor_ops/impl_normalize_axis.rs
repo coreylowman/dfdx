@@ -33,7 +33,7 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H>
 {
-    /// Calls [normalize()] on `self`.
+    /// Calls [normalize_axis()] on `self`.
     pub fn normalize_axis<const I: isize>(self, epsilon: f32) -> Self
     where
         Self: Reduce1<I>,
