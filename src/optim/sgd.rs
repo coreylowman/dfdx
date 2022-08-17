@@ -141,10 +141,10 @@ impl<M> GradientProvider for Sgd<M> {
 
 impl<M: CanUpdateWithGradients> Optimizer<M> for Sgd<M> {
     fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnchangedParamsError> {
-        let mut missing = Default::default();
         self.gradients = gradients;
-        module.update(self, &mut missing);
-        missing.into()
+        let mut unchanged_tensors = Default::default();
+        module.update(self, &mut unchanged_tensors);
+        unchanged_tensors.into()
     }
 }
 

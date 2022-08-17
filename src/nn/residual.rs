@@ -207,28 +207,31 @@ mod tests {
     }
 
     #[test]
-    fn test_missing_gradients() {
+    fn test_residual_missing_gradients() {
         let mut model: Residual<(Linear<5, 3>, ReLU)> = Default::default();
         let mut g: SimpleGradients = Default::default();
 
         // no gradients present
-        let mut m = Default::default();
-        model.update(&mut g, &mut m);
-        assert_eq!(&m.ids, &[*model.0 .0.weight.id(), *model.0 .0.bias.id()]);
+        let mut unchanged = Default::default();
+        model.update(&mut g, &mut unchanged);
+        assert_eq!(
+            &unchanged.ids,
+            &[*model.0 .0.weight.id(), *model.0 .0.bias.id()]
+        );
 
         // weight gradient is present
         g.0.mut_gradient(&model.0 .0.weight);
 
-        let mut m = Default::default();
-        model.update(&mut g, &mut m);
-        assert_eq!(&m.ids, &[*model.0 .0.bias.id()]);
+        let mut unchanged = Default::default();
+        model.update(&mut g, &mut unchanged);
+        assert_eq!(&unchanged.ids, &[*model.0 .0.bias.id()]);
 
         // both gradients present
         g.0.mut_gradient(&model.0 .0.weight);
         g.0.mut_gradient(&model.0 .0.bias);
 
-        let mut m = Default::default();
-        model.update(&mut g, &mut m);
-        assert_eq!(m.len(), 0);
+        let mut unchanged = Default::default();
+        model.update(&mut g, &mut unchanged);
+        assert_eq!(unchanged.len(), 0);
     }
 }

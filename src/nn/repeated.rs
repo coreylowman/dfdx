@@ -208,10 +208,10 @@ mod tests {
         let mut g: SimpleGradients = Default::default();
 
         // no gradients present
-        let mut m = Default::default();
-        model.update(&mut g, &mut m);
+        let mut unchanged = Default::default();
+        model.update(&mut g, &mut unchanged);
         assert_eq!(
-            &m.ids,
+            &unchanged.ids,
             &[
                 *model[0].weight.id(),
                 *model[0].bias.id(),
@@ -227,10 +227,10 @@ mod tests {
             g.0.mut_gradient(&model[i].weight);
         }
 
-        let mut m = Default::default();
-        model.update(&mut g, &mut m);
+        let mut unchanged = Default::default();
+        model.update(&mut g, &mut unchanged);
         assert_eq!(
-            &m.ids,
+            &unchanged.ids,
             &[
                 *model[0].bias.id(),
                 *model[1].bias.id(),
@@ -244,8 +244,8 @@ mod tests {
             g.0.mut_gradient(&model[i].bias);
         }
 
-        let mut m = Default::default();
-        model.update(&mut g, &mut m);
-        assert_eq!(m.len(), 0);
+        let mut unchanged = Default::default();
+        model.update(&mut g, &mut unchanged);
+        assert_eq!(unchanged.len(), 0);
     }
 }

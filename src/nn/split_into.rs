@@ -187,11 +187,11 @@ mod tests {
         let mut model: SplitInto<(Linear<5, 3>, Linear<5, 3>)> = Default::default();
         let mut g: SimpleGradients = Default::default();
 
-        // // no gradients present
-        let mut missing = Default::default();
-        model.update(&mut g, &mut missing);
+        // no gradients present
+        let mut unchanged = Default::default();
+        model.update(&mut g, &mut unchanged);
         assert_eq!(
-            &missing.ids,
+            &unchanged.ids,
             &[
                 *model.0 .0.weight.id(),
                 *model.0 .0.bias.id(),
@@ -206,8 +206,8 @@ mod tests {
         g.0.mut_gradient(&model.0 .1.weight);
         g.0.mut_gradient(&model.0 .1.bias);
 
-        let mut missing = Default::default();
-        model.update(&mut g, &mut missing);
-        assert_eq!(missing.len(), 0);
+        let mut unchanged = Default::default();
+        model.update(&mut g, &mut unchanged);
+        assert!(unchanged.is_empty());
     }
 }
