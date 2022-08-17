@@ -1,4 +1,4 @@
-use crate::prelude::{CanUpdateWithGradients, Gradients, MissingGradients};
+use crate::prelude::{CanUpdateWithGradients, Gradients, UnchangedTensors};
 
 /// All optimizers must implement the update function, which takes an object
 /// that implements [CanUpdateWithGradients], and calls [CanUpdateWithGradients::update].
@@ -20,32 +20,32 @@ pub trait Optimizer<M: CanUpdateWithGradients> {
     ///
     /// Requires a `&mut self` because the optimizer may change some internally
     /// tracked values.
-    fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError>;
+    fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnchangedParamsError>;
 }
 
 /// An error indicating that a parameter was not used in gradient
 /// computation, and was therefore not present in [Gradients]
 /// while a [CanUpdateWithGradients] was trying to update it.
 #[derive(Debug)]
-pub struct UnusedParamsError(MissingGradients);
+pub struct UnchangedParamsError(UnchangedTensors);
 
-impl std::fmt::Display for UnusedParamsError {
+impl std::fmt::Display for UnchangedParamsError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("UnusedParamsError")
-            .field("missing_gradients", &self.0)
+            .field("tensors", &self.0)
             .finish()
     }
 }
 
-impl std::error::Error for UnusedParamsError {}
+impl std::error::Error for UnchangedParamsError {}
 
 #[allow(clippy::from_over_into)]
-impl Into<Result<(), UnusedParamsError>> for MissingGradients {
-    fn into(self) -> Result<(), UnusedParamsError> {
+impl Into<Result<(), UnchangedParamsError>> for UnchangedTensors {
+    fn into(self) -> Result<(), UnchangedParamsError> {
         if self.is_empty() {
             Ok(())
         } else {
-            Err(UnusedParamsError(self))
+            Err(UnchangedParamsError(self))
         }
     }
 }

@@ -47,13 +47,9 @@ impl<T: ResetParams, const N: usize> ResetParams for Repeated<T, N> {
 }
 
 impl<T: CanUpdateWithGradients, const N: usize> CanUpdateWithGradients for Repeated<T, N> {
-    fn update<G: crate::prelude::GradientProvider>(
-        &mut self,
-        grads: &mut G,
-        missing: &mut MissingGradients,
-    ) {
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unchanged: &mut UnchangedTensors) {
         for i in 0..N {
-            self.modules[i].update(grads, missing);
+            self.modules[i].update(grads, unchanged);
         }
     }
 }
@@ -207,7 +203,7 @@ mod tests {
     }
 
     #[test]
-    fn test_missing_gradients() {
+    fn test_repeated_missing_gradients() {
         let mut model: Repeated<Linear<5, 5>, 3> = Default::default();
         let mut g: SimpleGradients = Default::default();
 
@@ -215,40 +211,38 @@ mod tests {
         let mut m = Default::default();
         model.update(&mut g, &mut m);
         assert_eq!(
-            &m.params,
+            &m.ids,
             &[
-                *model.modules[0].weight.id(),
-                *model.modules[0].bias.id(),
-                *model.modules[1].weight.id(),
-                *model.modules[1].bias.id(),
-                *model.modules[2].weight.id(),
-                *model.modules[2].bias.id(),
+                *model[0].weight.id(),
+                *model[0].bias.id(),
+                *model[1].weight.id(),
+                *model[1].bias.id(),
+                *model[2].weight.id(),
+                *model[2].bias.id(),
             ]
         );
 
         // weight gradient is present
-        g.0.mut_gradient(&model[0].weight);
-        g.0.mut_gradient(&model[1].weight);
-        g.0.mut_gradient(&model[2].weight);
+        for i in 0..3 {
+            g.0.mut_gradient(&model[i].weight);
+        }
 
         let mut m = Default::default();
         model.update(&mut g, &mut m);
         assert_eq!(
-            &m.params,
+            &m.ids,
             &[
-                *model.modules[0].bias.id(),
-                *model.modules[1].bias.id(),
-                *model.modules[2].bias.id()
+                *model[0].bias.id(),
+                *model[1].bias.id(),
+                *model[2].bias.id()
             ]
         );
 
-        // both gradients present
-        g.0.mut_gradient(&model[0].weight);
-        g.0.mut_gradient(&model[0].bias);
-        g.0.mut_gradient(&model[1].weight);
-        g.0.mut_gradient(&model[1].bias);
-        g.0.mut_gradient(&model[2].weight);
-        g.0.mut_gradient(&model[2].bias);
+        // all gradients present
+        for i in 0..3 {
+            g.0.mut_gradient(&model[i].weight);
+            g.0.mut_gradient(&model[i].bias);
+        }
 
         let mut m = Default::default();
         model.update(&mut g, &mut m);

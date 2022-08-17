@@ -22,7 +22,7 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> ResetParams for Mlp<
 impl<const IN: usize, const INNER: usize, const OUT: usize> CanUpdateWithGradients
     for Mlp<IN, INNER, OUT>
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, missing: &mut MissingGradients) {
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, missing: &mut UnchangedTensors) {
         self.l1.update(grads, missing);
         self.l2.update(grads, missing);
         self.relu.update(grads, missing);

@@ -20,8 +20,8 @@ use crate::prelude::*;
 pub struct SplitInto<T>(pub T);
 
 impl<T: CanUpdateWithGradients> CanUpdateWithGradients for SplitInto<T> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, missing: &mut MissingGradients) {
-        self.0.update(grads, missing);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unchanged: &mut UnchangedTensors) {
+        self.0.update(grads, unchanged);
     }
 }
 
@@ -191,7 +191,7 @@ mod tests {
         let mut missing = Default::default();
         model.update(&mut g, &mut missing);
         assert_eq!(
-            &missing.params,
+            &missing.ids,
             &[
                 *model.0 .0.weight.id(),
                 *model.0 .0.bias.id(),

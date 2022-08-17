@@ -246,41 +246,32 @@ pub trait GradientProvider {
 /// Most implementations of this trait will have sub structs that also
 /// implement [CanUpdateWithGradients].
 pub trait CanUpdateWithGradients {
-    /// Updates self given the [GradientProvider]. When any amount of parameters that
-    /// should be updated are NOT present in `G`, then this function should
-    /// populate the resulting [MissingGradients] struct with the names.
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, missing: &mut MissingGradients);
+    /// Updates self given the [GradientProvider]. When any parameters that
+    /// are NOT present in `G`, then this function should
+    /// add the tensor's [UniqueId] to [UnchangedTensors].
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unchanged: &mut UnchangedTensors);
 }
 
-/// An struct that holds names of parameters that were missing associated gradients.
+/// Holds [UniqueId] of tensors that were missing gradients during
+/// [CanUpdateWithGradients::update()], and therefore are unchanged
 #[derive(Debug, Default)]
-pub struct MissingGradients {
-    pub params: Vec<UniqueId>,
+pub struct UnchangedTensors {
+    pub ids: Vec<UniqueId>,
 }
 
-impl MissingGradients {
+impl UnchangedTensors {
     /// Adds a single unnammed parameter
-    pub fn add_id(&mut self, id: UniqueId) {
-        self.params.push(id);
+    pub fn add<T: HasUniqueId>(&mut self, t: &T) {
+        self.ids.push(*t.id());
     }
 
     /// Returns `true` if there are no missing gradients present
     pub fn is_empty(&self) -> bool {
-        self.params.is_empty()
+        self.ids.is_empty()
     }
 
     pub fn len(&self) -> usize {
-        self.params.len()
-    }
-
-    pub fn contains(&self, id: &UniqueId) -> bool {
-        self.params.iter().any(|s| s == id)
-    }
-}
-
-impl std::ops::AddAssign for MissingGradients {
-    fn add_assign(&mut self, mut rhs: Self) {
-        self.params.append(&mut rhs.params);
+        self.ids.len()
     }
 }
 
