@@ -9,9 +9,7 @@ macro_rules! activation_impls {
 
         impl CanUpdateWithGradients for $struct_name {
             /// Does nothing.
-            fn update<G: GradientProvider>(&mut self, _: &mut G) -> MissingGradients {
-                Default::default()
-            }
+            fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut MissingGradients) {}
         }
 
         impl ResetParams for $struct_name {
@@ -48,9 +46,7 @@ pub struct Softmax;
 
 impl CanUpdateWithGradients for Softmax {
     /// Does nothing.
-    fn update<G: GradientProvider>(&mut self, _: &mut G) -> MissingGradients {
-        Default::default()
-    }
+    fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut MissingGradients) {}
 }
 
 impl ResetParams for Softmax {

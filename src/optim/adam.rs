@@ -115,7 +115,9 @@ impl<M: CanUpdateWithGradients> Optimizer<M> for Adam<M> {
     fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError> {
         self.t = self.t.checked_add(1).unwrap();
         self.gradients = gradients;
-        module.update(self).into()
+        let mut missing = Default::default();
+        module.update(self, &mut missing);
+        missing.into()
     }
 }
 

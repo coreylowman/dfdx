@@ -157,9 +157,10 @@ impl<M> GradientProvider for RMSprop<M> {
 impl<M: CanUpdateWithGradients> Optimizer<M> for RMSprop<M> {
     fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError> {
         self.gradients = gradients;
-        let missing_grads = module.update(self);
+        let mut missing = Default::default();
+        module.update(self, &mut missing);
         self.step += 1;
-        missing_grads.into()
+        missing.into()
     }
 }
 

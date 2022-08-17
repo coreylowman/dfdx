@@ -32,11 +32,9 @@ pub struct Linear<const I: usize, const O: usize> {
 }
 
 impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
-        let mut missing = Default::default();
-        missing += self.weight.update(grads).name(|| "weight");
-        missing += self.bias.update(grads).name(|| "bias");
-        missing
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, missing: &mut MissingGradients) {
+        self.weight.update(grads, missing);
+        self.bias.update(grads, missing);
     }
 }
 
@@ -294,20 +292,23 @@ mod tests {
         let mut g: SimpleGradients = Default::default();
 
         // no gradients present
-        let missing = model.update(&mut g);
-        assert_eq!(&missing.params, &["weight", "bias"]);
+        let mut m = Default::default();
+        model.update(&mut g, &mut m);
+        assert_eq!(&m.params, &[*model.weight.id(), *model.bias.id()]);
 
         // weight gradient is present
         g.0.mut_gradient(&model.weight);
 
-        let missing = model.update(&mut g);
-        assert_eq!(&missing.params, &["bias"]);
+        let mut m = Default::default();
+        model.update(&mut g, &mut m);
+        assert_eq!(&m.params, &[*model.bias.id()]);
 
         // both gradients present
         g.0.mut_gradient(&model.weight);
         g.0.mut_gradient(&model.bias);
 
-        let missing = model.update(&mut g);
-        assert!(missing.is_empty());
+        let mut m = Default::default();
+        model.update(&mut g, &mut m);
+        assert!(m.is_empty());
     }
 }

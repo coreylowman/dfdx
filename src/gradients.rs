@@ -249,31 +249,19 @@ pub trait CanUpdateWithGradients {
     /// Updates self given the [GradientProvider]. When any amount of parameters that
     /// should be updated are NOT present in `G`, then this function should
     /// populate the resulting [MissingGradients] struct with the names.
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients;
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, missing: &mut MissingGradients);
 }
 
 /// An struct that holds names of parameters that were missing associated gradients.
 #[derive(Debug, Default)]
 pub struct MissingGradients {
-    pub params: Vec<String>,
+    pub params: Vec<UniqueId>,
 }
 
 impl MissingGradients {
     /// Adds a single unnammed parameter
-    pub fn add_unnamed(&mut self) {
-        self.params.push("".into());
-    }
-
-    /// Prepends `location` to all param locations.
-    pub fn name<S: AsRef<str>, F: FnOnce() -> S>(mut self, build_location: F) -> Self {
-        if !self.params.is_empty() {
-            let location = build_location();
-            let location = location.as_ref();
-            for p in self.params.iter_mut() {
-                p.insert_str(0, location);
-            }
-        }
-        self
+    pub fn add_id(&mut self, id: UniqueId) {
+        self.params.push(id);
     }
 
     /// Returns `true` if there are no missing gradients present
@@ -285,8 +273,8 @@ impl MissingGradients {
         self.params.len()
     }
 
-    pub fn contains(&self, name: &str) -> bool {
-        self.params.iter().any(|s| s == name)
+    pub fn contains(&self, id: &UniqueId) -> bool {
+        self.params.iter().any(|s| s == id)
     }
 }
 

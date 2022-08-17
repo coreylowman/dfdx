@@ -19,10 +19,8 @@ pub struct Residual<F>(pub F);
 
 impl<F: CanUpdateWithGradients> CanUpdateWithGradients for Residual<F> {
     /// Pass through to `F`'s [CanUpdateWithGradients].
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
-        let mut missing = Default::default();
-        missing += self.0.update(grads).name(|| "0.");
-        missing
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, missing: &mut MissingGradients) {
+        self.0.update(grads, missing);
     }
 }
 
@@ -214,20 +212,23 @@ mod tests {
         let mut g: SimpleGradients = Default::default();
 
         // no gradients present
-        let missing = model.update(&mut g);
-        assert_eq!(&missing.params, &["0.0.weight", "0.0.bias"]);
+        let mut m = Default::default();
+        model.update(&mut g, &mut m);
+        assert_eq!(&m.params, &[*model.0 .0.weight.id(), *model.0 .0.bias.id()]);
 
         // weight gradient is present
         g.0.mut_gradient(&model.0 .0.weight);
 
-        let missing = model.update(&mut g);
-        assert_eq!(&missing.params, &["0.0.bias"]);
+        let mut m = Default::default();
+        model.update(&mut g, &mut m);
+        assert_eq!(&m.params, &[*model.0 .0.bias.id()]);
 
         // both gradients present
         g.0.mut_gradient(&model.0 .0.weight);
         g.0.mut_gradient(&model.0 .0.bias);
 
-        let missing = model.update(&mut g);
-        assert_eq!(missing.len(), 0);
+        let mut m = Default::default();
+        model.update(&mut g, &mut m);
+        assert_eq!(m.len(), 0);
     }
 }

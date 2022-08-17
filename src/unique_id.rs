@@ -10,13 +10,6 @@ pub(crate) fn unique_id() -> UniqueId {
     UniqueId(COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
 }
 
-impl std::ops::Deref for UniqueId {
-    type Target = usize;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 impl UniqueId {
     pub(crate) fn as_u64(&self) -> u64 {
         self.0 as u64

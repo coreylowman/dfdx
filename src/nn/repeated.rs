@@ -47,12 +47,14 @@ impl<T: ResetParams, const N: usize> ResetParams for Repeated<T, N> {
 }
 
 impl<T: CanUpdateWithGradients, const N: usize> CanUpdateWithGradients for Repeated<T, N> {
-    fn update<G: crate::prelude::GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
-        let mut missing = Default::default();
+    fn update<G: crate::prelude::GradientProvider>(
+        &mut self,
+        grads: &mut G,
+        missing: &mut MissingGradients,
+    ) {
         for i in 0..N {
-            missing += self.modules[i].update(grads).name(|| format!("{i}."));
+            self.modules[i].update(grads, missing);
         }
-        missing
     }
 }
 
@@ -210,10 +212,18 @@ mod tests {
         let mut g: SimpleGradients = Default::default();
 
         // no gradients present
-        let missing = model.update(&mut g);
+        let mut m = Default::default();
+        model.update(&mut g, &mut m);
         assert_eq!(
-            &missing.params,
-            &["0.weight", "0.bias", "1.weight", "1.bias", "2.weight", "2.bias"]
+            &m.params,
+            &[
+                *model.modules[0].weight.id(),
+                *model.modules[0].bias.id(),
+                *model.modules[1].weight.id(),
+                *model.modules[1].bias.id(),
+                *model.modules[2].weight.id(),
+                *model.modules[2].bias.id(),
+            ]
         );
 
         // weight gradient is present
@@ -221,8 +231,16 @@ mod tests {
         g.0.mut_gradient(&model[1].weight);
         g.0.mut_gradient(&model[2].weight);
 
-        let missing = model.update(&mut g);
-        assert_eq!(&missing.params, &["0.bias", "1.bias", "2.bias"]);
+        let mut m = Default::default();
+        model.update(&mut g, &mut m);
+        assert_eq!(
+            &m.params,
+            &[
+                *model.modules[0].bias.id(),
+                *model.modules[1].bias.id(),
+                *model.modules[2].bias.id()
+            ]
+        );
 
         // both gradients present
         g.0.mut_gradient(&model[0].weight);
@@ -232,7 +250,8 @@ mod tests {
         g.0.mut_gradient(&model[2].weight);
         g.0.mut_gradient(&model[2].bias);
 
-        let missing = model.update(&mut g);
-        assert_eq!(missing.len(), 0);
+        let mut m = Default::default();
+        model.update(&mut g, &mut m);
+        assert_eq!(m.len(), 0);
     }
 }

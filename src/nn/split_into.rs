@@ -20,10 +20,8 @@ use crate::prelude::*;
 pub struct SplitInto<T>(pub T);
 
 impl<T: CanUpdateWithGradients> CanUpdateWithGradients for SplitInto<T> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) -> MissingGradients {
-        let mut missing = Default::default();
-        missing += self.0.update(grads).name(|| "0.");
-        missing
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, missing: &mut MissingGradients) {
+        self.0.update(grads, missing);
     }
 }
 
@@ -189,11 +187,17 @@ mod tests {
         let mut model: SplitInto<(Linear<5, 3>, Linear<5, 3>)> = Default::default();
         let mut g: SimpleGradients = Default::default();
 
-        // no gradients present
-        let missing = model.update(&mut g);
+        // // no gradients present
+        let mut missing = Default::default();
+        model.update(&mut g, &mut missing);
         assert_eq!(
             &missing.params,
-            &["0.0.weight", "0.0.bias", "0.1.weight", "0.1.bias"]
+            &[
+                *model.0 .0.weight.id(),
+                *model.0 .0.bias.id(),
+                *model.0 .1.weight.id(),
+                *model.0 .1.bias.id()
+            ]
         );
 
         // weight gradient is present
@@ -202,7 +206,8 @@ mod tests {
         g.0.mut_gradient(&model.0 .1.weight);
         g.0.mut_gradient(&model.0 .1.bias);
 
-        let missing = model.update(&mut g);
+        let mut missing = Default::default();
+        model.update(&mut g, &mut missing);
         assert_eq!(missing.len(), 0);
     }
 }

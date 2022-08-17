@@ -32,7 +32,7 @@ pub struct UnusedParamsError(MissingGradients);
 impl std::fmt::Display for UnusedParamsError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("UnusedParamsError")
-            .field("param_locations", &self.0)
+            .field("missing_gradients", &self.0)
             .finish()
     }
 }
