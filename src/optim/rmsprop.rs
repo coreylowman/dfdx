@@ -273,4 +273,14 @@ mod tests {
         ];
         test_matches_expected(CFG, EXPECTED);
     }
+
+    #[test]
+    fn test_rmsprop_unused_params() {
+        type Model = (Linear<5, 16>, Linear<16, 10>);
+        let mut model: Model = Default::default();
+        let mut opt: RMSprop<Model> = Default::default();
+        let y = model.1.forward(Tensor2D::<8, 16>::zeros().trace());
+        let g = y.mean().backward();
+        opt.update(&mut model, g).expect_err("");
+    }
 }

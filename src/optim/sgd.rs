@@ -266,4 +266,14 @@ mod tests {
         assert!(model_0.4.weight.data() != model_1.4.weight.data());
         assert!(model_0.4.bias.data() != model_1.4.bias.data());
     }
+
+    #[test]
+    fn test_sgd_unused_params() {
+        type Model = (Linear<5, 16>, Linear<16, 10>);
+        let mut model: Model = Default::default();
+        let mut opt: Sgd<Model> = Default::default();
+        let y = model.1.forward(Tensor2D::<8, 16>::zeros().trace());
+        let g = y.mean().backward();
+        opt.update(&mut model, g).expect_err("");
+    }
 }
