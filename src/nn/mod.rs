@@ -78,7 +78,6 @@ pub use repeated::*;
 pub use residual::*;
 pub use split_into::*;
 
-
 #[cfg(feature = "nightly")]
 mod transformer;
 
