@@ -94,3 +94,22 @@ pub use flatten::*;
 mod conv;
 #[cfg(feature = "nightly")]
 pub use conv::*;
+
+#[cfg(test)]
+mod tests {
+    use crate::prelude::{GradientProvider, Gradients};
+
+    #[derive(Default)]
+    pub struct SimpleGradients(pub Gradients);
+
+    impl GradientProvider for SimpleGradients {
+        fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
+        where
+            P: crate::prelude::HasUniqueId
+                + crate::prelude::HasArrayType<Dtype = f32>
+                + crate::prelude::HasDevice,
+        {
+            self.0.remove(p)
+        }
+    }
+}

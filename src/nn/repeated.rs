@@ -1,5 +1,4 @@
-use super::*;
-use crate::prelude::CanUpdateWithGradients;
+use crate::prelude::*;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
@@ -32,6 +31,13 @@ where
     }
 }
 
+impl<T, const N: usize> std::ops::Index<usize> for Repeated<T, N> {
+    type Output = T;
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.modules[index]
+    }
+}
+
 impl<T: ResetParams, const N: usize> ResetParams for Repeated<T, N> {
     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
         for i in 0..N {
@@ -41,9 +47,9 @@ impl<T: ResetParams, const N: usize> ResetParams for Repeated<T, N> {
 }
 
 impl<T: CanUpdateWithGradients, const N: usize> CanUpdateWithGradients for Repeated<T, N> {
-    fn update<G: crate::prelude::GradientProvider>(&mut self, grads: &mut G) {
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
         for i in 0..N {
-            self.modules[i].update(grads);
+            self.modules[i].update(grads, unused);
         }
     }
 }
@@ -92,7 +98,7 @@ impl<Input, T: Module<Input, Output = Input>, const N: usize> Module<Input> for 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prelude::*;
+    use crate::nn::tests::SimpleGradients;
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;
     use tempfile::NamedTempFile;
@@ -194,5 +200,52 @@ mod tests {
                 saved_model.modules[i].bias.data()
             );
         }
+    }
+
+    #[test]
+    fn test_repeated_missing_gradients() {
+        let mut model: Repeated<Linear<5, 5>, 3> = Default::default();
+        let mut g: SimpleGradients = Default::default();
+
+        // no gradients present
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert_eq!(
+            &unused.ids,
+            &[
+                *model[0].weight.id(),
+                *model[0].bias.id(),
+                *model[1].weight.id(),
+                *model[1].bias.id(),
+                *model[2].weight.id(),
+                *model[2].bias.id(),
+            ]
+        );
+
+        // weight gradient is present
+        for i in 0..3 {
+            g.0.mut_gradient(&model[i].weight);
+        }
+
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert_eq!(
+            &unused.ids,
+            &[
+                *model[0].bias.id(),
+                *model[1].bias.id(),
+                *model[2].bias.id()
+            ]
+        );
+
+        // all gradients present
+        for i in 0..3 {
+            g.0.mut_gradient(&model[i].weight);
+            g.0.mut_gradient(&model[i].bias);
+        }
+
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert!(unused.is_empty());
     }
 }

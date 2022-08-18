@@ -162,15 +162,12 @@ impl Gradients {
     /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
     /// let mut gradients: Gradients = Default::default();
     /// *gradients.mut_gradient(&t) = [-4.0, 5.0, -6.0];
-    /// assert_eq!(gradients.remove(&t).as_ref(), &[-4.0, 5.0, -6.0]);
+    /// assert_eq!(gradients.remove(&t).expect("").as_ref(), &[-4.0, 5.0, -6.0]);
     /// ```
-    pub fn remove<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Box<T::Array> {
+    pub fn remove<T: HasUniqueId + HasArrayType>(&mut self, t: &T) -> Option<Box<T::Array>> {
         self.gradient_by_id
             .remove_entry(t.id())
-            .unwrap()
-            .1
-            .downcast()
-            .unwrap()
+            .map(|e| e.1.downcast().unwrap())
     }
 
     /// Returns a mutable reference to the data associated with `t`.
@@ -239,7 +236,7 @@ pub trait GradientProvider {
     /// Retrieves the data associated with `p` if there is any.
     /// This can modify `self`, for instance if velocities are calculated
     /// based on the associated data!
-    fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
+    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice;
 }
@@ -248,18 +245,34 @@ pub trait GradientProvider {
 ///
 /// Most implementations of this trait will have sub structs that also
 /// implement [CanUpdateWithGradients].
-///
-/// For example the [Linear] model just calls update on its weight & bias:
-/// ```ignore
-/// impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
-///     fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-///         self.weight.update(grads);
-///         self.bias.update(grads);
-///     }
-/// }
-/// ```
 pub trait CanUpdateWithGradients {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G);
+    /// Updates self given the [GradientProvider]. When any parameters that
+    /// are NOT present in `G`, then this function should
+    /// add the tensor's [UniqueId] to [UnusedTensors].
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors);
+}
+
+/// Holds [UniqueId] of tensors that were missing gradients during
+/// [CanUpdateWithGradients::update()], and therefore are unused
+#[derive(Debug, Default)]
+pub struct UnusedTensors {
+    pub ids: Vec<UniqueId>,
+}
+
+impl UnusedTensors {
+    /// Adds a single unnammed parameter
+    pub fn add<T: HasUniqueId>(&mut self, t: &T) {
+        self.ids.push(*t.id());
+    }
+
+    /// Returns `true` if there are no missing gradients present
+    pub fn is_empty(&self) -> bool {
+        self.ids.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.ids.len()
+    }
 }
 
 #[cfg(test)]

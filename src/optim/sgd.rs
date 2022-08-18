@@ -113,11 +113,11 @@ impl<M> Sgd<M> {
 }
 
 impl<M> GradientProvider for Sgd<M> {
-    fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
+    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
-        let mut g_t = self.gradients.remove(p);
+        let mut g_t = self.gradients.remove(p)?;
         match self.cfg.momentum {
             Some(Momentum::Classic(u)) => {
                 let v_t = self.velocity.mut_gradient(p);
@@ -135,14 +135,16 @@ impl<M> GradientProvider for Sgd<M> {
             }
             None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.cfg.lr),
         }
-        g_t
+        Some(g_t)
     }
 }
 
 impl<M: CanUpdateWithGradients> Optimizer<M> for Sgd<M> {
-    fn update(&mut self, module: &mut M, gradients: Gradients) {
+    fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError> {
         self.gradients = gradients;
-        module.update(self);
+        let mut unused_tensors = Default::default();
+        module.update(self, &mut unused_tensors);
+        unused_tensors.into()
     }
 }
 
@@ -163,7 +165,7 @@ mod tests {
         for _ in 0..5 {
             let loss = (pred.trace() - &targ).abs().mean();
             let gradients = loss.backward();
-            sgd.update(&mut pred, gradients);
+            sgd.update(&mut pred, gradients).expect("");
         }
         assert_eq!(pred.data(), &[1.0; 5]);
         assert_eq!(targ.data(), &[1.0; 5]);
@@ -185,7 +187,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).mean().backward();
-            sgd.update(&mut t, gradients);
+            sgd.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
     }
@@ -209,7 +211,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).mean().backward();
-            sgd.update(&mut t, gradients);
+            sgd.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
     }
@@ -233,7 +235,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).mean().backward();
-            sgd.update(&mut t, gradients);
+            sgd.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
     }
@@ -253,7 +255,7 @@ mod tests {
         let py = model.forward(x.trace());
         let loss = (py - &y).square().mean();
         let gradients = loss.backward();
-        opt.update(&mut model, gradients);
+        opt.update(&mut model, gradients).expect("");
 
         let model_1 = model.clone();
 
@@ -263,5 +265,15 @@ mod tests {
         assert!(model_0.2.bias.data() != model_1.2.bias.data());
         assert!(model_0.4.weight.data() != model_1.4.weight.data());
         assert!(model_0.4.bias.data() != model_1.4.bias.data());
+    }
+
+    #[test]
+    fn test_sgd_unused_params() {
+        type Model = (Linear<5, 16>, Linear<16, 10>);
+        let mut model: Model = Default::default();
+        let mut opt: Sgd<Model> = Default::default();
+        let y = model.1.forward(Tensor2D::<8, 16>::zeros().trace());
+        let g = y.mean().backward();
+        opt.update(&mut model, g).expect_err("");
     }
 }

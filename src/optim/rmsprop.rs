@@ -104,11 +104,11 @@ impl<M> RMSprop<M> {
 }
 
 impl<M> GradientProvider for RMSprop<M> {
-    fn gradient<P>(&mut self, p: &P) -> Box<P::Array>
+    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
         P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
     {
-        let mut g_t = self.gradients.remove(p);
+        let mut g_t = self.gradients.remove(p)?;
 
         let square_avg = self.square_avg.mut_gradient(p);
         if self.step == 0 {
@@ -150,15 +150,17 @@ impl<M> GradientProvider for RMSprop<M> {
             }
             None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.cfg.lr),
         }
-        g_t
+        Some(g_t)
     }
 }
 
 impl<M: CanUpdateWithGradients> Optimizer<M> for RMSprop<M> {
-    fn update(&mut self, module: &mut M, gradients: Gradients) {
+    fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError> {
         self.gradients = gradients;
-        module.update(self);
+        let mut unused_tensors = Default::default();
+        module.update(self, &mut unused_tensors);
         self.step += 1;
+        unused_tensors.into()
     }
 }
 
@@ -172,7 +174,7 @@ mod tests {
         let mut opt = RMSprop::new(cfg);
         for e in expected.iter() {
             let gradients = (t.trace() * &rate).square().sum().backward();
-            opt.update(&mut t, gradients);
+            opt.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
     }
@@ -270,5 +272,15 @@ mod tests {
             [0.9988262, 0.9190646, 0.8847198, 0.87998855, 0.8799804],
         ];
         test_matches_expected(CFG, EXPECTED);
+    }
+
+    #[test]
+    fn test_rmsprop_unused_params() {
+        type Model = (Linear<5, 16>, Linear<16, 10>);
+        let mut model: Model = Default::default();
+        let mut opt: RMSprop<Model> = Default::default();
+        let y = model.1.forward(Tensor2D::<8, 16>::zeros().trace());
+        let g = y.mean().backward();
+        opt.update(&mut model, g).expect_err("");
     }
 }

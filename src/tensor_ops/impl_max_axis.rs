@@ -80,13 +80,10 @@ mod tests {
         let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
         let r = t.trace().max_axis::<0>();
         assert_eq!(r.data(), &[3.0, 2.0, 2.0]);
-        let gradients = r.exp().mean().backward();
+        let g = r.exp().mean().backward();
         assert_eq!(
-            gradients.ref_gradient(&t),
-            &[
-                [0.00000000, 2.463019, 2.463019],
-                [6.695179, 0.00000000, 2.463019]
-            ]
+            g.ref_gradient(&t),
+            &[[0.0, 2.463019, 2.463019], [6.695179, 0.0, 2.463019]]
         );
     }
 
@@ -95,10 +92,7 @@ mod tests {
         let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
         let r = t.trace().max_axis::<-1>();
         assert_eq!(r.data(), &[2.0, 3.0]);
-        let gradients = r.exp().mean().backward();
-        assert_eq!(
-            gradients.ref_gradient(&t),
-            &[[0.0, 3.694528, 3.694528], [10.0427685, 0.0, 0.0]]
-        );
+        let g = r.sum().backward();
+        assert_eq!(g.ref_gradient(&t), &[[0.0, 1.0, 1.0], [1.0, 0.0, 0.0]]);
     }
 }
