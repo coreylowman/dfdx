@@ -48,9 +48,9 @@ where
     Assert<{ M % H == 0 }>: ConstTrue,
     Assert<{ K % H == 0 }>: ConstTrue,
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unchanged: &mut UnchangedTensors) {
-        self.attn.update(grads, unchanged);
-        self.ff.update(grads, unchanged);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+        self.attn.update(grads, unused);
+        self.ff.update(grads, unused);
     }
 }
 
@@ -166,9 +166,9 @@ impl<const M: usize, const N: usize, const I: usize, const L: usize, const H: us
 where
     Assert<{ M % H == 0 }>: ConstTrue,
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unchanged: &mut UnchangedTensors) {
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
         for block in self.blocks.iter_mut() {
-            block.update(grads, unchanged);
+            block.update(grads, unused);
         }
     }
 }

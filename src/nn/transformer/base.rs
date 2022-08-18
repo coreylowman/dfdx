@@ -41,11 +41,11 @@ impl<const M: usize, const N: usize, const K: usize, const V: usize, const H: us
 impl<const M: usize, const N: usize, const K: usize, const V: usize, const H: usize>
     CanUpdateWithGradients for MultiHeadAttention<M, N, K, V, H>
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unchanged: &mut UnchangedTensors) {
-        self.w_q.update(grads, unchanged);
-        self.w_k.update(grads, unchanged);
-        self.w_v.update(grads, unchanged);
-        self.w_o.update(grads, unchanged);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+        self.w_q.update(grads, unused);
+        self.w_k.update(grads, unused);
+        self.w_v.update(grads, unused);
+        self.w_o.update(grads, unused);
     }
 }
 

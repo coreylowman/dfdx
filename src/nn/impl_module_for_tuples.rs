@@ -6,8 +6,8 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
         impl<$($name: CanUpdateWithGradients),+> CanUpdateWithGradients for ($($name,)+) {
-            fn update<G: GradientProvider>(&mut self, grads: &mut G, unchanged: &mut UnchangedTensors) {
-                $(self.$idx.update(grads, unchanged);)+
+            fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+                $(self.$idx.update(grads, unused);)+
             }
         }
 
@@ -212,7 +212,7 @@ mod tests {
     struct SetTo1<const I: usize, const N: usize>;
 
     impl<const I: usize, const N: usize> CanUpdateWithGradients for SetTo1<I, N> {
-        fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnchangedTensors) {}
+        fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
     }
     impl<const I: usize, const N: usize> ResetParams for SetTo1<I, N> {
         fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {}
@@ -307,10 +307,10 @@ mod tests {
         let mut g: SimpleGradients = Default::default();
 
         // no gradients present
-        let mut unchanged: UnchangedTensors = Default::default();
-        model.update(&mut g, &mut unchanged);
+        let mut unused: UnusedTensors = Default::default();
+        model.update(&mut g, &mut unused);
         assert_eq!(
-            &unchanged.ids,
+            &unused.ids,
             &[
                 *model.0.weight.id(),
                 *model.0.bias.id(),
@@ -326,10 +326,10 @@ mod tests {
         g.0.mut_gradient(&model.1.weight);
         g.0.mut_gradient(&model.2.weight);
 
-        let mut unchanged: UnchangedTensors = Default::default();
-        model.update(&mut g, &mut unchanged);
+        let mut unused: UnusedTensors = Default::default();
+        model.update(&mut g, &mut unused);
         assert_eq!(
-            &unchanged.ids,
+            &unused.ids,
             &[*model.0.bias.id(), *model.1.bias.id(), *model.2.bias.id(),]
         );
 
@@ -340,8 +340,8 @@ mod tests {
         g.0.mut_gradient(&model.2.weight);
         g.0.mut_gradient(&model.2.bias);
 
-        let mut unchanged: UnchangedTensors = Default::default();
-        model.update(&mut g, &mut unchanged);
-        assert!(unchanged.is_empty());
+        let mut unused: UnusedTensors = Default::default();
+        model.update(&mut g, &mut unused);
+        assert!(unused.is_empty());
     }
 }

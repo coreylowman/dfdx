@@ -47,9 +47,9 @@ impl<const M: usize> ResetParams for LayerNorm1D<M> {
 
 impl<const M: usize> CanUpdateWithGradients for LayerNorm1D<M> {
     /// Updates [Self::gamma] and [Self::beta].
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unchanged: &mut UnchangedTensors) {
-        self.gamma.update(grads, unchanged);
-        self.beta.update(grads, unchanged);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+        self.gamma.update(grads, unused);
+        self.beta.update(grads, unused);
     }
 }
 
@@ -279,24 +279,24 @@ mod tests {
         let mut g: SimpleGradients = Default::default();
 
         // no gradients present
-        let mut unchanged = Default::default();
-        model.update(&mut g, &mut unchanged);
-        assert_eq!(&unchanged.ids, &[*model.gamma.id(), *model.beta.id()]);
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert_eq!(&unused.ids, &[*model.gamma.id(), *model.beta.id()]);
 
         g.0.mut_gradient(&model.gamma);
 
         // weight gradient is present
-        let mut unchanged = Default::default();
-        model.update(&mut g, &mut unchanged);
-        assert_eq!(&unchanged.ids, &[*model.beta.id()]);
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert_eq!(&unused.ids, &[*model.beta.id()]);
 
         g.0.mut_gradient(&model.gamma);
         g.0.mut_gradient(&model.beta);
 
         // all gradients present
-        let mut unchanged = Default::default();
-        model.update(&mut g, &mut unchanged);
-        assert!(unchanged.is_empty());
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert!(unused.is_empty());
     }
 
     const X_2: [[f32; 10]; 5] = [

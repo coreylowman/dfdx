@@ -112,12 +112,12 @@ impl<M> GradientProvider for Adam<M> {
 }
 
 impl<M: CanUpdateWithGradients> Optimizer<M> for Adam<M> {
-    fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnchangedParamsError> {
+    fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError> {
         self.t = self.t.checked_add(1).unwrap();
         self.gradients = gradients;
-        let mut unchanged_tensors = Default::default();
-        module.update(self, &mut unchanged_tensors);
-        unchanged_tensors.into()
+        let mut unused_tensors = Default::default();
+        module.update(self, &mut unused_tensors);
+        unused_tensors.into()
     }
 }
 

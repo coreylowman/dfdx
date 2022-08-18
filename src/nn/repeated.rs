@@ -47,9 +47,9 @@ impl<T: ResetParams, const N: usize> ResetParams for Repeated<T, N> {
 }
 
 impl<T: CanUpdateWithGradients, const N: usize> CanUpdateWithGradients for Repeated<T, N> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unchanged: &mut UnchangedTensors) {
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
         for i in 0..N {
-            self.modules[i].update(grads, unchanged);
+            self.modules[i].update(grads, unused);
         }
     }
 }
@@ -208,10 +208,10 @@ mod tests {
         let mut g: SimpleGradients = Default::default();
 
         // no gradients present
-        let mut unchanged = Default::default();
-        model.update(&mut g, &mut unchanged);
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
         assert_eq!(
-            &unchanged.ids,
+            &unused.ids,
             &[
                 *model[0].weight.id(),
                 *model[0].bias.id(),
@@ -227,10 +227,10 @@ mod tests {
             g.0.mut_gradient(&model[i].weight);
         }
 
-        let mut unchanged = Default::default();
-        model.update(&mut g, &mut unchanged);
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
         assert_eq!(
-            &unchanged.ids,
+            &unused.ids,
             &[
                 *model[0].bias.id(),
                 *model[1].bias.id(),
@@ -244,8 +244,8 @@ mod tests {
             g.0.mut_gradient(&model[i].bias);
         }
 
-        let mut unchanged = Default::default();
-        model.update(&mut g, &mut unchanged);
-        assert_eq!(unchanged.len(), 0);
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert!(unused.is_empty());
     }
 }

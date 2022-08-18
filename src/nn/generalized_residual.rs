@@ -22,9 +22,9 @@ impl<F: CanUpdateWithGradients, R: CanUpdateWithGradients> CanUpdateWithGradient
     for GeneralizedResidual<F, R>
 {
     /// Pass through to `F`'s [CanUpdateWithGradients].
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unchanged: &mut UnchangedTensors) {
-        self.0.update(grads, unchanged);
-        self.1.update(grads, unchanged);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+        self.0.update(grads, unused);
+        self.1.update(grads, unused);
     }
 }
 

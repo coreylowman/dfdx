@@ -248,18 +248,18 @@ pub trait GradientProvider {
 pub trait CanUpdateWithGradients {
     /// Updates self given the [GradientProvider]. When any parameters that
     /// are NOT present in `G`, then this function should
-    /// add the tensor's [UniqueId] to [UnchangedTensors].
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unchanged: &mut UnchangedTensors);
+    /// add the tensor's [UniqueId] to [UnusedTensors].
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors);
 }
 
 /// Holds [UniqueId] of tensors that were missing gradients during
-/// [CanUpdateWithGradients::update()], and therefore are unchanged
+/// [CanUpdateWithGradients::update()], and therefore are unused
 #[derive(Debug, Default)]
-pub struct UnchangedTensors {
+pub struct UnusedTensors {
     pub ids: Vec<UniqueId>,
 }
 
-impl UnchangedTensors {
+impl UnusedTensors {
     /// Adds a single unnammed parameter
     pub fn add<T: HasUniqueId>(&mut self, t: &T) {
         self.ids.push(*t.id());

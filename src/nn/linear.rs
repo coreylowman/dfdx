@@ -32,9 +32,9 @@ pub struct Linear<const I: usize, const O: usize> {
 }
 
 impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unchanged: &mut UnchangedTensors) {
-        self.weight.update(grads, unchanged);
-        self.bias.update(grads, unchanged);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+        self.weight.update(grads, unused);
+        self.bias.update(grads, unused);
     }
 }
 
@@ -292,23 +292,23 @@ mod tests {
         let mut g: SimpleGradients = Default::default();
 
         // no gradients present
-        let mut unchanged = Default::default();
-        model.update(&mut g, &mut unchanged);
-        assert_eq!(&unchanged.ids, &[*model.weight.id(), *model.bias.id()]);
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert_eq!(&unused.ids, &[*model.weight.id(), *model.bias.id()]);
 
         g.0.mut_gradient(&model.weight);
 
         // weight gradient is present
-        let mut unchanged = Default::default();
-        model.update(&mut g, &mut unchanged);
-        assert_eq!(&unchanged.ids, &[*model.bias.id()]);
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert_eq!(&unused.ids, &[*model.bias.id()]);
 
         g.0.mut_gradient(&model.weight);
         g.0.mut_gradient(&model.bias);
 
         // both gradients present
-        let mut unchanged = Default::default();
-        model.update(&mut g, &mut unchanged);
-        assert!(unchanged.is_empty());
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert!(unused.is_empty());
     }
 }
