@@ -58,7 +58,9 @@ pub fn div<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, |x, y| x * y.recip(), |_, y| y.recip(), dfdy)
 }
 
-/// `min(lhs, &rhs)` element wise.
+/// Element wise minimum.
+///
+/// **Pytorch equivalent**: `torch.minimum(a, b)`
 ///
 /// Example:
 /// ```rust
@@ -85,6 +87,43 @@ pub fn minimum<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
         if y < x {
             1.0
         } else if y > x {
+            0.0
+        } else {
+            0.5
+        }
+    }
+    binary_map(lhs, rhs, f, dfdx, dfdy)
+}
+
+/// Element wise maximum.
+///
+/// **Pytorch equivalent**: `torch.maximum(a, b)`
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let a = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let b = Tensor2D::new([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
+/// let r = maximum(a, &b);
+/// assert_eq!(r.data(), &[[1.0, 2.0, 3.0], [-1.0, 2.0, -3.0]]);
+pub fn maximum<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
+    fn f(x: &f32, y: &f32) -> f32 {
+        x.max(*y)
+    }
+    fn dfdx(x: &f32, y: &f32) -> f32 {
+        if x > y {
+            1.0
+        } else if x < y {
+            0.0
+        } else {
+            0.5
+        }
+    }
+
+    fn dfdy(x: &f32, y: &f32) -> f32 {
+        if y > x {
+            1.0
+        } else if y < x {
             0.0
         } else {
             0.5
@@ -377,81 +416,28 @@ mod tests {
     }
 
     #[test]
-    fn test_minimum_0d_rhs() {
-        let a = Tensor0D::new(0.0);
-        let b = Tensor0D::new(1.0);
+    fn test_minimum() {
+        let a = Tensor2D::new([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]]);
+        let b = Tensor2D::new([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
 
         let result = minimum(a.trace(), &b);
-        assert_eq!(result.data(), &0.0);
+        assert_eq!(result.data(), &[[-1., 0., -1.], [3., -4., -5.]]);
 
-        let gradients = result.backward();
-        assert_eq!(gradients.ref_gradient(&a), &1.0);
-        assert_eq!(gradients.ref_gradient(&b), &0.0);
+        let g = result.sum().backward();
+        assert_eq!(g.ref_gradient(&a), &[[1.0, 0.5, 0.0], [0.5, 0.0, 1.0]]);
+        assert_eq!(g.ref_gradient(&b), &[[0.0, 0.5, 1.0], [0.5, 1.0, 0.0]]);
     }
 
     #[test]
-    fn test_minimum_0d_lhs() {
-        let a = Tensor0D::new(1.0);
-        let b = Tensor0D::new(-1.0);
+    fn test_maximum() {
+        let a = Tensor2D::new([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]]);
+        let b = Tensor2D::new([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
 
-        let result = minimum(a.trace(), &b);
-        assert_eq!(result.data(), &-1.0);
+        let result = maximum(a.trace(), &b);
+        assert_eq!(result.data(), &[[0.0, 0.0, 1.0], [3.0, 4.0, 5.0]]);
 
-        let gradients = result.backward();
-        assert_eq!(gradients.ref_gradient(&a), &0.0);
-        assert_eq!(gradients.ref_gradient(&b), &1.0);
-    }
-
-    #[test]
-    fn test_minimum_1d() {
-        let a = Tensor1D::new([-1.0, 0.0, 1.0, 2.0]);
-        let b = Tensor1D::new([0.0, -1.0, 2.0, 0.0]);
-
-        let result = minimum(a.trace(), &b);
-        assert_eq!(result.data(), &[-1.0, -1.0, 1.0, 0.0]);
-
-        // NOTE: call .exp() to make sure we cover cases where it uses the result's gradient
-        let gradients = result.exp().sum().backward();
-        assert_eq!(
-            gradients.ref_gradient(&a),
-            &[0.36787945, 0.0, 2.7182817, 0.0]
-        );
-        assert_eq!(gradients.ref_gradient(&b), &[0.0, 0.36787945, 0.0, 1.0]);
-    }
-
-    #[test]
-    fn test_minimum_1d_eq() {
-        let a = Tensor1D::new([-1.0, 0.0, 1.0]);
-        let b = Tensor1D::new([-1.0, 0.0, 1.0]);
-
-        let result = minimum(a.trace(), &b);
-        assert_eq!(result.data(), a.data());
-
-        // NOTE: call .exp() to make sure we cover cases where it uses the result's gradient
-        let gradients = result.mean().backward();
-        assert_eq!(gradients.ref_gradient(&a), &[1.0 / 6.0; 3]);
-        assert_eq!(gradients.ref_gradient(&b), &[1.0 / 6.0; 3]);
-    }
-
-    #[test]
-    fn test_minimum_2d() {
-        let a = Tensor2D::new([[-1.1488, 0.2021, 1.1265], [0.1355, -1.7390, -0.4191]]);
-        let b = Tensor2D::new([[-0.2851, -0.0965, -0.2529], [0.4759, -0.5239, -0.4651]]);
-
-        let result = minimum(a.trace(), &b);
-        assert_eq!(
-            result.data(),
-            &[[-1.1488, -0.0965, -0.2529], [0.1355, -1.7390, -0.4651]]
-        );
-
-        let gradients = result.sum().backward();
-        assert_eq!(
-            gradients.ref_gradient(&a),
-            &[[1.0, 0.0, 0.0], [1.0, 1.0, 0.0]]
-        );
-        assert_eq!(
-            gradients.ref_gradient(&b),
-            &[[0.0, 1.0, 1.0], [0.0, 0.0, 1.0]]
-        );
+        let g = result.sum().backward();
+        assert_eq!(g.ref_gradient(&a), &[[0.0, 0.5, 1.0], [0.5, 1.0, 0.0]]);
+        assert_eq!(g.ref_gradient(&b), &[[1.0, 0.5, 0.0], [0.5, 0.0, 1.0]]);
     }
 }
