@@ -20,8 +20,8 @@ use crate::prelude::*;
 pub struct SplitInto<T>(pub T);
 
 impl<T: CanUpdateWithGradients> CanUpdateWithGradients for SplitInto<T> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-        self.0.update(grads);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+        self.0.update(grads, unused);
     }
 }
 
@@ -88,6 +88,7 @@ tuple_impls!([A, B, C, D, E] F);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nn::tests::SimpleGradients;
 
     #[test]
     fn test_split_into_2() {
@@ -179,5 +180,34 @@ mod tests {
             Tensor2D<3, 5>,
             Tensor2D<3, 6, OwnedTape>,
         ) = m.forward(Tensor2D::<3, 5>::zeros().traced());
+    }
+
+    #[test]
+    fn test_missing_gradients() {
+        let mut model: SplitInto<(Linear<5, 3>, Linear<5, 3>)> = Default::default();
+        let mut g: SimpleGradients = Default::default();
+
+        // no gradients present
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert_eq!(
+            &unused.ids,
+            &[
+                *model.0 .0.weight.id(),
+                *model.0 .0.bias.id(),
+                *model.0 .1.weight.id(),
+                *model.0 .1.bias.id()
+            ]
+        );
+
+        // weight gradient is present
+        g.0.mut_gradient(&model.0 .0.weight);
+        g.0.mut_gradient(&model.0 .0.bias);
+        g.0.mut_gradient(&model.0 .1.weight);
+        g.0.mut_gradient(&model.0 .1.bias);
+
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert!(unused.is_empty());
     }
 }

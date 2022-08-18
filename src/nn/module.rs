@@ -30,7 +30,7 @@ pub trait Module<Input>: ResetParams + CanUpdateWithGradients {
     ///     scale: Tensor1D<5, NoneTape>,
     /// }
     /// # impl Default for MyMulLayer { fn default() -> Self { Self { scale: Tensor1D::zeros() }}}
-    /// # impl CanUpdateWithGradients for MyMulLayer { fn update<G: GradientProvider>(&mut self, grads: &mut G) {}}
+    /// # impl CanUpdateWithGradients for MyMulLayer { fn update<G: GradientProvider>(&mut self, grads: &mut G, _: &mut UnusedTensors) { } }
     /// # impl ResetParams for MyMulLayer { fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {}}
     ///
     /// impl Module<Tensor1D<5>> for MyMulLayer {

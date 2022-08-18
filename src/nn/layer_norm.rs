@@ -47,9 +47,9 @@ impl<const M: usize> ResetParams for LayerNorm1D<M> {
 
 impl<const M: usize> CanUpdateWithGradients for LayerNorm1D<M> {
     /// Updates [Self::gamma] and [Self::beta].
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-        self.gamma.update(grads);
-        self.beta.update(grads);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+        self.gamma.update(grads, unused);
+        self.beta.update(grads, unused);
     }
 }
 
@@ -123,11 +123,11 @@ impl<const M: usize> LoadFromNpz for LayerNorm1D<M> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::File;
-
     use super::*;
+    use crate::nn::tests::SimpleGradients;
     use rand::{prelude::StdRng, SeedableRng};
     use rand_distr::Standard;
+    use std::fs::File;
     use tempfile::NamedTempFile;
 
     #[test]
@@ -271,6 +271,32 @@ mod tests {
         assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
         assert_eq!(loaded_model.gamma.data(), saved_model.gamma.data());
         assert_eq!(loaded_model.beta.data(), saved_model.beta.data());
+    }
+
+    #[test]
+    fn test_layer_norm_missing_gradients() {
+        let mut model: LayerNorm1D<5> = Default::default();
+        let mut g: SimpleGradients = Default::default();
+
+        // no gradients present
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert_eq!(&unused.ids, &[*model.gamma.id(), *model.beta.id()]);
+
+        g.0.mut_gradient(&model.gamma);
+
+        // weight gradient is present
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert_eq!(&unused.ids, &[*model.beta.id()]);
+
+        g.0.mut_gradient(&model.gamma);
+        g.0.mut_gradient(&model.beta);
+
+        // all gradients present
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert!(unused.is_empty());
     }
 
     const X_2: [[f32; 10]; 5] = [

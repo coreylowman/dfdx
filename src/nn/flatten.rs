@@ -12,7 +12,7 @@ impl ResetParams for Flatten {
 
 impl CanUpdateWithGradients for Flatten {
     /// Does nothing.
-    fn update<G: GradientProvider>(&mut self, _: &mut G) {}
+    fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
 }
 
 impl SaveToNpz for Flatten {}

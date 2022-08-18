@@ -32,9 +32,9 @@ pub struct Linear<const I: usize, const O: usize> {
 }
 
 impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-        self.weight.update(grads);
-        self.bias.update(grads);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+        self.weight.update(grads, unused);
+        self.bias.update(grads, unused);
     }
 }
 
@@ -112,12 +112,11 @@ impl<const B: usize, const S: usize, const I: usize, const O: usize, H: Tape>
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::{nn::tests::SimpleGradients, tests::assert_close};
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;
     use tempfile::NamedTempFile;
-
-    use super::*;
-    use crate::tests::assert_close;
 
     const W: [[f32; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
@@ -285,5 +284,31 @@ mod tests {
         assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
         assert_eq!(loaded_model.weight.data(), saved_model.weight.data());
         assert_eq!(loaded_model.bias.data(), saved_model.bias.data());
+    }
+
+    #[test]
+    fn test_linear_missing_gradients() {
+        let mut model: Linear<5, 3> = Default::default();
+        let mut g: SimpleGradients = Default::default();
+
+        // no gradients present
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert_eq!(&unused.ids, &[*model.weight.id(), *model.bias.id()]);
+
+        g.0.mut_gradient(&model.weight);
+
+        // weight gradient is present
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert_eq!(&unused.ids, &[*model.bias.id()]);
+
+        g.0.mut_gradient(&model.weight);
+        g.0.mut_gradient(&model.bias);
+
+        // both gradients present
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused);
+        assert!(unused.is_empty());
     }
 }

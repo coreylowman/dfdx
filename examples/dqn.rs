@@ -56,7 +56,7 @@ fn main() {
         let gradients = loss.backward();
 
         // update weights with optimizer
-        sgd.update(&mut q_net, gradients);
+        sgd.update(&mut q_net, gradients).expect("Unused params");
 
         println!("q loss={:#.3} in {:?}", loss_v, start.elapsed());
     }
