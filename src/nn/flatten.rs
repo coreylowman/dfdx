@@ -3,11 +3,10 @@ use crate::prelude::*;
 /// **Requires Nightly** Flattens 3d tensors to 1d, and 4d tensors to 2d.
 ///
 /// Specifically:
-/// ```rust
+/// ```ignore
 /// # use dfdx::prelude::*;
-/// let m: FlattenImage = Default::default();
-/// let _: Tensor1D<3 * 5 * 7> = m.forward(Tensor3D::<3, 5, 7>::zeros());
-/// let _: Tensor2D<8, 3 * 5 * 7> = m.forward(Tensor4D::<8, 3, 5, 7>::zeros());
+/// let _: Tensor1D<{3 * 5 * 7}> = FlattenImage.forward(Tensor3D::<3, 5, 7>::zeros());
+/// let _: Tensor2D<8, {3 * 5 * 7}> = FlattenImage.forward(Tensor4D::<8, 3, 5, 7>::zeros());
 /// ```
 #[derive(Default, Clone, Copy)]
 pub struct FlattenImage;
