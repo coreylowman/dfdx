@@ -4,6 +4,25 @@ use rand_distr::Uniform;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
+/// **Requires Nightly** Performs 2d convolutions on 3d and 4d images.
+///
+/// **Pytorch Equivalent**: `torch.nn.Conv2d`
+///
+/// Generics:
+/// - `IN_CHAN`: The number of input channels in an image.
+/// - `OUT_CHAN`: The number of channels in the output of the layer.
+/// - `KERNEL_SIZE`: The size of the kernel applied to both width and height of the images.
+/// - `STRIDE`: How far to move the kernel each step. Defaults to `1`
+/// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
+///
+/// Examples:
+/// ```rust
+/// #![feature(generic_const_exprs)]
+/// # use dfdx::prelude::*;
+/// let m: Conv2D<16, 33, 3> = Default::default();
+/// let _: Tensor3D<33, 30, 62> = m.forward(Tensor3D::<16, 32, 64>::zeros());
+/// let _: Tensor4D<2, 33, 13, 12> = m.forward(Tensor4D::<2, 16, 15, 14>::zeros());
+/// ```
 #[derive(Default, Debug, Clone)]
 pub struct Conv2D<
     const IN_CHAN: usize,
@@ -24,9 +43,9 @@ impl<
         const PADDING: usize,
     > CanUpdateWithGradients for Conv2D<IN_CHAN, OUT_CHAN, KERNEL_SIZE, STRIDE, PADDING>
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G) {
-        self.weight.update(grads);
-        self.bias.update(grads);
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+        self.weight.update(grads, unused);
+        self.bias.update(grads, unused);
     }
 }
 
@@ -143,7 +162,7 @@ where
     >;
 
     fn forward(&self, x: Tensor4D<BATCH_SIZE, IN_CHAN, IN_HEIGHT, IN_WIDTH, TAPE>) -> Self::Output {
-        batch_conv2d::<
+        conv2d_batched::<
             TAPE,
             BATCH_SIZE,
             IN_CHAN,
@@ -196,7 +215,6 @@ mod tests {
     fn test_2_conv_sizes() {
         type A = Conv2D<1, 2, 3>;
         type B = Conv2D<2, 4, 3>;
-        let _: Tensor3D<4, 6, 6> = B::default().forward(Tensor3D::<2, 8, 8>::zeros());
         let _: Tensor3D<4, 6, 6> = <(A, B)>::default().forward(Tensor3D::<1, 10, 10>::zeros());
     }
 
@@ -207,9 +225,6 @@ mod tests {
         type C = Conv2D<4, 1, 1, 1, 1>;
 
         type Img = Tensor3D<1, 10, 10>;
-        let _: Tensor3D<2, 8, 8> = A::default().forward(Img::zeros());
-        let _: Tensor3D<4, 6, 6> = <(A, B)>::default().forward(Img::zeros());
-        let _: Tensor3D<1, 8, 8> = C::default().forward(Tensor3D::<4, 6, 6>::zeros());
         let _: Tensor3D<1, 8, 8> = <(A, B, C)>::default().forward(Img::zeros());
     }
 

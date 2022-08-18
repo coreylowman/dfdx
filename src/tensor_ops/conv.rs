@@ -1,5 +1,8 @@
 use crate::prelude::*;
 
+/// **Requires Nightly** Perform a 2d convolution.
+///
+/// TODO docstring
 pub fn conv2d<
     TAPE: 'static + Tape,
     const IN_CHAN: usize,
@@ -32,7 +35,7 @@ pub fn conv2d<
         { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
     >(x.data(), filters.data(), bias.data(), result.mut_data());
 
-    let filters_data = filters.data.clone();
+    let f = filters.duplicate();
 
     let (x, mut tape) = x.split_tape();
     let phantom_filters = filters.phantom();
@@ -66,12 +69,15 @@ pub fn conv2d<
             IN_WIDTH,
             { (IN_HEIGHT + 2 * PADDING - KERNEL) / STRIDE + 1 },
             { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
-        >(inp_grad, filters_data.as_ref(), result_grad);
+        >(inp_grad, f.data(), result_grad);
     });
     result.put_tape(tape)
 }
 
-pub fn batch_conv2d<
+/// **Requires Nightly** Perform a batched 2d convolution
+///
+/// TODO docstring
+pub fn conv2d_batched<
     TAPE: 'static + Tape,
     const BATCH_SIZE: usize,
     const IN_CHAN: usize,
@@ -112,7 +118,7 @@ pub fn batch_conv2d<
         );
     }
 
-    let filters_data = filters.data.clone();
+    let f = filters.duplicate();
 
     let (x, mut tape) = x.split_tape();
     let phantom_filters = filters.phantom();
@@ -151,7 +157,7 @@ pub fn batch_conv2d<
                 IN_WIDTH,
                 { (IN_HEIGHT + 2 * PADDING - KERNEL) / STRIDE + 1 },
                 { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
-            >(&mut inp_grad[i], filters_data.as_ref(), &result_grad[i]);
+            >(&mut inp_grad[i], f.data(), &result_grad[i]);
         }
     });
     result.put_tape(tape)
@@ -176,7 +182,7 @@ fn conv_forward<
     for oc in 0..OC {
         for oh in 0..OH {
             for ow in 0..OW {
-                out[oc][oh][ow] += bias[oc];
+                out[oc][oh][ow] += bias[oc]; // NOTE: this difference between backward ops
                 for c in 0..C {
                     for k1 in 0..K {
                         for k2 in 0..K {
@@ -286,162 +292,77 @@ mod tests {
     use crate::tests::assert_close;
 
     #[test]
+    /// Produced by
+    /// ```python
+    /// q = torch.nn.Conv2d(1, 2, 2)
+    /// x = torch.randn(1, 2, 3, requires_grad=True)
+    /// q(x).exp().mean().backward()
+    /// ```
     fn test_conv2d_default_stride_and_padding() {
         let weight = Tensor4D::new([
-            [[
-                [-0.26322937, 0.01512846, 0.09962472],
-                [0.10413083, -0.22805870, 0.09276673],
-                [-0.21896772, -0.03946638, -0.06927481],
-            ]],
-            [[
-                [0.11536542, -0.18772237, -0.12918231],
-                [-0.14172284, 0.01666686, 0.07898781],
-                [0.09430301, 0.21543005, 0.11455652],
-            ]],
+            [[[-0.04958433, -0.43007267], [0.01935136, 0.09778714]]],
+            [[[0.44083858, -0.20507240], [-0.30017477, -0.10937047]]],
         ]);
-        let bias = Tensor1D::new([-0.14851105, -0.16408388]);
+        let bias = Tensor1D::new([0.36406237, -0.30981010]);
         let x = Tensor3D::new([[
-            [
-                -0.51514906,
-                -0.19863479,
-                -0.54003549,
-                1.28277719,
-                -0.01594487,
-            ],
-            [
-                -1.19097006,
-                -0.80577898,
-                1.43026400,
-                -1.21097565,
-                1.09168971,
-            ],
-            [0.46793947, 0.31626424, -0.98594153, -0.57979399, 0.68837667],
+            [-0.86713916, 0.52773184, -0.95238322],
+            [-0.64531374, 0.77809018, -0.49099201],
         ]]);
-        let result = conv2d::<OwnedTape, 1, 2, 3, 1, 0, 3, 5>(x.trace(), &weight, &bias);
+        let result = conv2d::<_, 1, 2, 2, 1, 0, 2, 3>(x.trace(), &weight, &bias);
         assert_close(
             result.data(),
-            &[
-                [[0.076069996, -0.48920196, 0.7289252]],
-                [[0.15118313, -0.4579478, -0.74080986]],
-            ],
+            &[[[0.24369538, 0.71453357]], [[-0.69169492, -0.06172103]]],
         );
-        let gradients = result.exp().mean().backward();
+        let g = result.exp().mean().backward();
         assert_close(
-            gradients.ref_gradient(&x),
+            g.ref_gradient(&x),
             &[[
-                [
-                    -0.024973392,
-                    -0.04840806,
-                    -0.10714647,
-                    -0.013128357,
-                    0.024153749,
-                ],
-                [
-                    -0.008748706,
-                    -0.042083982,
-                    0.03516327,
-                    -0.05965724,
-                    0.038324557,
-                ],
-                [
-                    -0.021096727,
-                    0.022234388,
-                    -0.039724708,
-                    0.008481046,
-                    -0.014830692,
-                ],
+                [0.03936806, -0.08457474, -0.26788417],
+                [-0.03140351, -0.04316529, 0.02424446],
             ]],
         );
-
         assert_close(
-            gradients.ref_gradient(&weight),
+            g.ref_gradient(&weight),
             &[
-                [[
-                    [-0.29951084, 0.35226136, 0.028453378],
-                    [0.19759789, -0.4171204, 0.51062536],
-                    [-0.22414659, -0.24417697, 0.0012589097],
-                ]],
-                [[
-                    [-0.16372146, 0.0064775944, 0.029280666],
-                    [-0.20220357, -0.10163972, 0.23634934],
-                    [0.045724787, -0.088701606, -0.19757581],
-                ]],
+                [[[-0.00703794, -0.31814471], [0.19160703, -0.00260070]]],
+                [[[0.01548620, -0.15778227], [0.10209797, -0.01799832]]],
             ],
         );
-
-        assert_close(gradients.ref_gradient(&bias), &[0.62750089, 0.37875301]);
+        assert_close(g.ref_gradient(&bias), &[0.82979727, 0.36021793]);
     }
 
     #[test]
+    /// Produced by
+    /// ```python
+    /// q = torch.nn.Conv2d(1, 2, 2, stride=2)
+    /// x = torch.randn(1, 2, 3, requires_grad=True)
+    /// q(x).exp().mean().backward()
+    /// ```
     fn test_conv2d_stride_2() {
         let weight = Tensor4D::new([
-            [[
-                [0.17012766, -0.13491425, -0.15978174],
-                [-0.32486033, -0.04559305, -0.23446295],
-                [-0.19051278, 0.26051202, -0.25324664],
-            ]],
-            [[
-                [0.01786593, -0.29400513, -0.05565581],
-                [0.19891194, -0.22905394, 0.06598040],
-                [0.20475981, -0.27209029, -0.05456376],
-            ]],
+            [[[0.44704646, -0.29563826], [0.29228759, -0.16575140]]],
+            [[[-0.30488998, 0.25222939], [0.13279295, 0.38153177]]],
         ]);
-        let bias = Tensor1D::new([0.13324055, -0.25587624]);
+        let bias = Tensor1D::new([-0.44699109, 0.38371694]);
         let x = Tensor3D::new([[
-            [1.38410544, -0.09391765, 0.86929655, 0.51864260, -0.13863549],
-            [
-                -0.97774553,
-                -0.86014092,
-                -0.87199527,
-                -0.99487656,
-                -0.15869008,
-            ],
-            [-0.72478843, 0.00621646, 0.34301779, 1.59643257, 0.42176643],
+            [0.37100124, -0.59504986, -1.19781005],
+            [-0.31547278, 0.58071911, 0.86612970],
         ]]);
-        let result = conv2d::<OwnedTape, 1, 2, 3, 2, 0, 3, 5>(x.trace(), &weight, &bias);
+        let result = conv2d::<OwnedTape, 1, 2, 2, 2, 0, 2, 3>(x.trace(), &weight, &bias);
+        assert_close(result.data(), &[[[-0.29368058]], [[0.30018353]]]);
+        let g = result.exp().mean().backward();
         assert_close(
-            result.data(),
-            &[[[0.8566188, 0.84288383]], [[-0.47573355, -0.7283041]]],
+            g.ref_gradient(&x),
+            &[[[-0.03917716, 0.06006697, 0.], [0.19859464, 0.19576924, 0.]]],
         );
-        let gradients = result.exp().mean().backward();
         assert_close(
-            gradients.ref_gradient(&x),
-            &[[
-                [
-                    0.10294608,
-                    -0.1251128,
-                    -0.0017652321,
-                    -0.11383441,
-                    -0.099512145,
-                ],
-                [
-                    -0.16037403,
-                    -0.062430196,
-                    -0.29246253,
-                    -0.05412144,
-                    -0.12820505,
-                ],
-                [-0.08036223, 0.11111723, -0.2435197, 0.11845972, -0.15366143],
-            ]],
-        );
-
-        assert_close(
-            gradients.ref_gradient(&weight),
+            g.ref_gradient(&weight),
             &[
-                [[
-                    [1.319812, 0.2459107, 0.4313238],
-                    [-1.0821161, -1.0842361, -0.60558885],
-                    [-0.22754006, 0.93081105, 0.44691432],
-                ]],
-                [[
-                    [0.31993905, 0.0479999, 0.11832076],
-                    [-0.25713378, -0.25369257, -0.15462178],
-                    [-0.071205154, 0.19362603, 0.10418981],
-                ]],
+                [[[0.13829342, -0.22180916], [-0.11759478, 0.21646728]]],
+                [[[0.25044560, -0.40169036], [-0.21296094, 0.39201635]]],
             ],
         );
-
-        assert_close(gradients.ref_gradient(&bias), &[1.16956019, 0.27603900]);
+        assert_close(g.ref_gradient(&bias), &[0.37275729, 0.67505330]);
     }
 
     #[test]
@@ -601,7 +522,7 @@ mod tests {
                 [[1.00477660, -0.16381662], [0.40009478, -0.57880658]],
             ],
         ]);
-        let result = batch_conv2d::<OwnedTape, 3, 2, 3, 1, 1, 0, 2, 2>(x.trace(), &weight, &bias);
+        let result = conv2d_batched::<OwnedTape, 3, 2, 3, 1, 1, 0, 2, 2>(x.trace(), &weight, &bias);
         assert_close(
             result.data(),
             &[
