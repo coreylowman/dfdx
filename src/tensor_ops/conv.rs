@@ -35,7 +35,7 @@ pub fn conv2d<
         { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
     >(x.data(), filters.data(), bias.data(), result.mut_data());
 
-    let f = filters.duplicate();
+    let f = filters.clone();
 
     let (x, mut tape) = x.split_tape();
     let phantom_filters = filters.phantom();
@@ -118,7 +118,7 @@ pub fn conv2d_batched<
         );
     }
 
-    let f = filters.duplicate();
+    let f = filters.clone();
 
     let (x, mut tape) = x.split_tape();
     let phantom_filters = filters.phantom();

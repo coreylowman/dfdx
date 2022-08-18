@@ -179,7 +179,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{prelude::StdRng, SeedableRng};
+    use rand::thread_rng;
     use std::fs::File;
     use tempfile::NamedTempFile;
 
@@ -253,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_load_conv() {
-        let mut rng = StdRng::seed_from_u64(0);
+        let mut rng = thread_rng();
         let mut saved_model: Conv2D<2, 4, 3> = Default::default();
         saved_model.reset_params(&mut rng);
 
@@ -267,5 +267,28 @@ mod tests {
         assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
         assert_eq!(loaded_model.weight.data(), saved_model.weight.data());
         assert_eq!(loaded_model.bias.data(), saved_model.bias.data());
+    }
+
+    #[test]
+    fn test_conv_with_optimizer() {
+        let mut rng = thread_rng();
+
+        let mut m: Conv2D<2, 4, 3> = Default::default();
+        m.reset_params(&mut rng);
+
+        let weight_init = m.weight.clone();
+        let bias_init = m.bias.clone();
+
+        let mut opt: Sgd<_> = Default::default();
+        let out = m.forward(Tensor4D::<8, 2, 28, 28>::randn(&mut rng).trace());
+        let gradients = out.square().mean().backward();
+
+        assert_ne!(gradients.ref_gradient(&m.weight), &[[[[0.0; 3]; 3]; 2]; 4]);
+        assert_ne!(gradients.ref_gradient(&m.bias), &[0.0; 4]);
+
+        opt.update(&mut m, gradients).expect("unused params");
+
+        assert_ne!(weight_init.data(), m.weight.data());
+        assert_ne!(bias_init.data(), m.bias.data());
     }
 }
