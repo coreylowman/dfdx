@@ -1,9 +1,15 @@
-#![feature(generic_const_exprs)]
+#![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
-use dfdx::prelude::*;
-use rand::thread_rng;
-
+#[cfg(not(feature = "nightly"))]
 fn main() {
+    panic!("`+nightly` required to run this example.")
+}
+
+#[cfg(feature = "nightly")]
+fn main() {
+    use dfdx::prelude::*;
+    use rand::thread_rng;
+
     type Model = (
         (Conv2D<3, 4, 3>, ReLU),
         (Conv2D<4, 8, 3>, ReLU),
