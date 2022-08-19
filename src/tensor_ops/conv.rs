@@ -42,8 +42,9 @@ pub fn conv2d<
     let phantom_bias = bias.phantom();
     let phantom_result = result.phantom();
     tape.add_backward_op(move |grads| {
-        let (filters_grad, result_grad) = grads.mut_and_ref(&phantom_filters, &phantom_result);
-        conv_backward_dw::<
+        let (filters_grad, bias_grad, inp_grad, result_grad) =
+            grads.muts_and_ref(&phantom_filters, &phantom_bias, &x, &phantom_result);
+        conv_backward::<
             IN_CHAN,
             OUT_CHAN,
             KERNEL,
@@ -53,23 +54,14 @@ pub fn conv2d<
             IN_WIDTH,
             { (IN_HEIGHT + 2 * PADDING - KERNEL) / STRIDE + 1 },
             { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
-        >(x.data(), filters_grad, result_grad);
-
-        let (bias_grad, result_grad) = grads.mut_and_ref(&phantom_bias, &phantom_result);
-        conv_backward_db(bias_grad, result_grad);
-
-        let (inp_grad, result_grad) = grads.mut_and_ref(&x, &phantom_result);
-        conv_backward_dx::<
-            IN_CHAN,
-            OUT_CHAN,
-            KERNEL,
-            STRIDE,
-            PADDING,
-            IN_HEIGHT,
-            IN_WIDTH,
-            { (IN_HEIGHT + 2 * PADDING - KERNEL) / STRIDE + 1 },
-            { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
-        >(inp_grad, f.data(), result_grad);
+        >(
+            x.data(),
+            f.data(),
+            result_grad,
+            inp_grad,
+            filters_grad,
+            bias_grad,
+        );
     });
     result.put_tape(tape)
 }
@@ -125,9 +117,12 @@ pub fn conv2d_batched<
     let phantom_bias = bias.phantom();
     let phantom_result = result.phantom();
     tape.add_backward_op(move |grads| {
-        let (filters_grad, result_grad) = grads.mut_and_ref(&phantom_filters, &phantom_result);
+        // let (filters_grad, result_grad) = grads.mut_and_ref(&phantom_filters, &phantom_result);
+        let (filters_grad, bias_grad, inp_grad, result_grad) =
+            grads.muts_and_ref(&phantom_filters, &phantom_bias, &x, &phantom_result);
+
         for i in 0..BATCH_SIZE {
-            conv_backward_dw::<
+            conv_backward::<
                 IN_CHAN,
                 OUT_CHAN,
                 KERNEL,
@@ -137,27 +132,14 @@ pub fn conv2d_batched<
                 IN_WIDTH,
                 { (IN_HEIGHT + 2 * PADDING - KERNEL) / STRIDE + 1 },
                 { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
-            >(&x.data()[i], filters_grad, &result_grad[i]);
-        }
-
-        let (bias_grad, result_grad) = grads.mut_and_ref(&phantom_bias, &phantom_result);
-        for i in 0..BATCH_SIZE {
-            conv_backward_db(bias_grad, &result_grad[i]);
-        }
-
-        let (inp_grad, result_grad) = grads.mut_and_ref(&x, &phantom_result);
-        for i in 0..BATCH_SIZE {
-            conv_backward_dx::<
-                IN_CHAN,
-                OUT_CHAN,
-                KERNEL,
-                STRIDE,
-                PADDING,
-                IN_HEIGHT,
-                IN_WIDTH,
-                { (IN_HEIGHT + 2 * PADDING - KERNEL) / STRIDE + 1 },
-                { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
-            >(&mut inp_grad[i], f.data(), &result_grad[i]);
+            >(
+                &x.data()[i],
+                f.data(),
+                &result_grad[i],
+                &mut inp_grad[i],
+                filters_grad,
+                bias_grad,
+            );
         }
     });
     result.put_tape(tape)
@@ -179,18 +161,18 @@ fn conv_forward<
     bias: &[f32; OC],
     out: &mut [[[f32; OW]; OH]; OC],
 ) {
-    for oc in 0..OC {
-        for oh in 0..OH {
-            for ow in 0..OW {
-                out[oc][oh][ow] += bias[oc]; // NOTE: this difference between backward ops
-                for c in 0..C {
+    for c in 0..C {
+        for oc in 0..OC {
+            for oh in 0..OH {
+                for ow in 0..OW {
+                    let o = &mut out[oc][oh][ow];
                     for k1 in 0..K {
                         for k2 in 0..K {
                             let y = (oh * S + k1).checked_sub(P);
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
                                 if y < H && x < W {
-                                    out[oc][oh][ow] += weight[oc][c][k1][k2] * img[c][y][x];
+                                    *o += weight[oc][c][k1][k2] * img[c][y][x];
                                 }
                             }
                         }
@@ -199,9 +181,16 @@ fn conv_forward<
             }
         }
     }
+    for oc in 0..OC {
+        for oh in 0..OH {
+            for ow in 0..OW {
+                out[oc][oh][ow] += bias[oc];
+            }
+        }
+    }
 }
 
-fn conv_backward_dw<
+fn conv_backward<
     const C: usize,
     const OC: usize,
     const K: usize,
@@ -213,61 +202,17 @@ fn conv_backward_dw<
     const OW: usize,
 >(
     img: &[[[f32; W]; H]; C],
-    weight_g: &mut [[[[f32; K]; K]; C]; OC],
-    out_g: &[[[f32; OW]; OH]; OC],
-) {
-    for oc in 0..OC {
-        for oh in 0..OH {
-            for ow in 0..OW {
-                for c in 0..C {
-                    for k1 in 0..K {
-                        for k2 in 0..K {
-                            let y = (oh * S + k1).checked_sub(P);
-                            let x = (ow * S + k2).checked_sub(P);
-                            if let Some((y, x)) = y.zip(x) {
-                                if y < H && x < W {
-                                    weight_g[oc][c][k1][k2] += img[c][y][x] * out_g[oc][oh][ow];
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-fn conv_backward_db<const OC: usize, const OH: usize, const OW: usize>(
-    bias_g: &mut [f32; OC],
-    out_g: &[[[f32; OW]; OH]; OC],
-) {
-    for oc in 0..OC {
-        for oh in 0..OH {
-            for ow in 0..OW {
-                bias_g[oc] += out_g[oc][oh][ow];
-            }
-        }
-    }
-}
-
-fn conv_backward_dx<
-    const C: usize,
-    const OC: usize,
-    const K: usize,
-    const S: usize,
-    const P: usize,
-    const H: usize,
-    const W: usize,
-    const OH: usize,
-    const OW: usize,
->(
-    img_g: &mut [[[f32; W]; H]; C],
     weight: &[[[[f32; K]; K]; C]; OC],
     out_g: &[[[f32; OW]; OH]; OC],
+    img_g: &mut [[[f32; W]; H]; C],
+    weight_g: &mut [[[[f32; K]; K]; C]; OC],
+    bias_g: &mut [f32; OC],
 ) {
     for oc in 0..OC {
         for oh in 0..OH {
             for ow in 0..OW {
+                let o_g = &out_g[oc][oh][ow];
+                bias_g[oc] += o_g;
                 for c in 0..C {
                     for k1 in 0..K {
                         for k2 in 0..K {
@@ -275,7 +220,8 @@ fn conv_backward_dx<
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
                                 if y < H && x < W {
-                                    img_g[c][y][x] += weight[oc][c][k1][k2] * out_g[oc][oh][ow];
+                                    weight_g[oc][c][k1][k2] += img[c][y][x] * o_g;
+                                    img_g[c][y][x] += weight[oc][c][k1][k2] * o_g;
                                 }
                             }
                         }
