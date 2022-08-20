@@ -211,9 +211,16 @@ fn conv_backward<
     for oc in 0..OC {
         for oh in 0..OH {
             for ow in 0..OW {
-                let o_g = &out_g[oc][oh][ow];
-                bias_g[oc] += o_g;
-                for c in 0..C {
+                bias_g[oc] += out_g[oc][oh][ow];
+            }
+        }
+    }
+
+    for c in 0..C {
+        for oh in 0..OH {
+            for ow in 0..OW {
+                for oc in 0..OC {
+                    let o_g = &out_g[oc][oh][ow];
                     for k1 in 0..K {
                         for k2 in 0..K {
                             let y = (oh * S + k1).checked_sub(P);
