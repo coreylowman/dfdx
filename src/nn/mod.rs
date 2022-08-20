@@ -1,6 +1,27 @@
 //! High level neural network building blocks such as [Linear], activations, and tuples as [Module]s.
 //! Also includes `.save()` & `.load()` for all [Module]s.
 //!
+//! # Mutable vs Immutable forwards
+//!
+//! [Module] provides two versions of forwards:
+//!
+//! 1. [Module::forward_mut()] which receives `&mut self`.
+//! 2. [Module::forward()] which receives `&self`.
+//!
+//! **This has nothing to do with whether gradients are being tracked or not**.
+//! It only controls whether the module itself can be modified. Both OwnedTape
+//! and NoneTape can still be passed to both, and all modules should conform
+//! to this expected behavior.
+//!
+//! In general, [Module::forward_mut()] should be used during training,
+//! and [Module::forward()] during evaluation/testing/inference/validation.
+//!
+//! Here is a list of existing modules that have different behavior in these
+//! two functions:
+//!
+//! - [DropoutOneIn] (soon)
+//! - [Dropout] (soon)
+//!
 //! # Initializing
 //!
 //! All modules implement [Default], and this initializes all parameters to `0.0`. The intention is then
