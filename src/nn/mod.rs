@@ -90,6 +90,11 @@ mod flatten;
 #[cfg(feature = "nightly")]
 pub use flatten::*;
 
+#[cfg(feature = "nightly")]
+mod conv;
+#[cfg(feature = "nightly")]
+pub use conv::*;
+
 #[cfg(test)]
 mod tests {
     use crate::prelude::{GradientProvider, Gradients};

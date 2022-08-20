@@ -152,6 +152,31 @@ impl Gradients {
         (l_ref, r_ref)
     }
 
+    pub fn muts_and_ref<L1, L2, L3, R>(
+        &mut self,
+        l1: &L1,
+        l2: &L2,
+        l3: &L3,
+        r: &R,
+    ) -> (&mut L1::Array, &mut L2::Array, &mut L3::Array, &R::Array)
+    where
+        L1: HasUniqueId + HasArrayType + HasDevice,
+        L2: HasUniqueId + HasArrayType + HasDevice,
+        L3: HasUniqueId + HasArrayType + HasDevice,
+        R: HasUniqueId + HasArrayType,
+    {
+        // assert_ne!(l1.id(), r.id());
+        let l1_ptr = self.mut_gradient(l1) as *mut L1::Array;
+        let l2_ptr = self.mut_gradient(l2) as *mut L2::Array;
+        let l3_ptr = self.mut_gradient(l3) as *mut L3::Array;
+        let r_ptr = self.ref_gradient(r) as *const R::Array;
+        let l1_ref = unsafe { &mut *l1_ptr };
+        let l2_ref = unsafe { &mut *l2_ptr };
+        let l3_ref = unsafe { &mut *l3_ptr };
+        let r_ref = unsafe { &*r_ptr };
+        (l1_ref, l2_ref, l3_ref, r_ref)
+    }
+
     /// Removes and returns the data associated with `t.id()`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
