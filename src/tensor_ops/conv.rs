@@ -159,8 +159,8 @@ fn conv_forward<
                 for ow in 0..OW {
                     let o = &mut out[oc][oh][ow];
                     for k1 in 0..K {
+                        let y = (oh * S + k1).checked_sub(P);
                         for k2 in 0..K {
-                            let y = (oh * S + k1).checked_sub(P);
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
                                 if y < H && x < W {
@@ -214,11 +214,11 @@ fn conv_backward<
                 for oc in 0..OC {
                     let o_g = &out_g[oc][oh][ow];
                     for k1 in 0..K {
-                        for k2 in 0..K {
-                            let y = (oh * S + k1).checked_sub(P);
-                            let x = (ow * S + k2).checked_sub(P);
-                            if let Some((y, x)) = y.zip(x) {
-                                if y < H && x < W {
+                        let y = (oh * S + k1).wrapping_sub(P);
+                        if y < H {
+                            for k2 in 0..K {
+                                let x = (ow * S + k2).wrapping_sub(P);
+                                if x < W {
                                     weight_g[oc][c][k1][k2] += img[c][y][x] * o_g;
                                     img_g[c][y][x] += weight[oc][c][k1][k2] * o_g;
                                 }
