@@ -2,7 +2,7 @@ use super::utils::move_tape_and_add_backward_binop;
 use crate::prelude::*;
 use std::ops::{Add, Div, Mul, Sub};
 
-/// `lhs + &rhs` element wise.
+/// Element wise addition.
 ///
 /// Example:
 /// ```rust
@@ -16,7 +16,7 @@ pub fn add<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, |x, y| x + y, |_, _| 1.0, |_, _| 1.0)
 }
 
-/// `lhs - &rhs` element wise.
+/// Element wise subtraction.
 ///
 /// Example:
 /// ```rust
@@ -29,7 +29,7 @@ pub fn sub<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, |x, y| x - y, |_, _| 1.0, |_, _| -1.0)
 }
 
-/// `lhs * &rhs` element wise.
+/// Element wise multiplication.
 ///
 /// Example:
 /// ```rust
@@ -42,7 +42,7 @@ pub fn mul<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, |x, y| x * y, |_, y| *y, |x, _| *x)
 }
 
-/// `lhs / &rhs` element wise.
+/// Element wise division.
 ///
 /// Example:
 /// ```rust

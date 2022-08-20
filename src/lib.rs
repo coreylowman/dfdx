@@ -61,7 +61,7 @@
 //! let y_t: Tensor1D<5, OwnedTape> = model.forward(x_t);
 //! ```
 //!
-//! 6. Compute gradients with [crate::tensor_ops::backward()]
+//! 6. Compute gradients with [crate::tensor_ops::backward()]. See [crate::tensor_ops].
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let mut rng = rand::thread_rng();

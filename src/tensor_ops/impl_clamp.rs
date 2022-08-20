@@ -1,8 +1,8 @@
 use crate::prelude::*;
 
-/// `x.clamp(min, max)` element wise.
+/// Clamp all elements between the provided min and max values.
 ///
-/// # Examples
+/// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t = Tensor1D::new([-1.0, -0.5, 0.0, 0.5, 1.0]);

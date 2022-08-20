@@ -1,8 +1,10 @@
 use crate::prelude::*;
 
-/// `t.nans_to(value)`. Replaces any nans in `t` with `value`.
+/// Replaces any [std::f32::NAN] with `value`.
 ///
-/// # Examples
+/// **Pytorch equivalent**: `t.nan_to_num(value)`
+///
+/// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t: Tensor1D<4> = Tensor1D::new([1.0, f32::NAN, f32::NAN, 4.0]);
