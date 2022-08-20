@@ -42,7 +42,7 @@ pub fn conv2d<
     let phantom_bias = bias.phantom();
     let phantom_result = result.phantom();
     tape.add_backward_op(move |grads| {
-        let (filters_grad, bias_grad, inp_grad, result_grad) =
+        let (f_grad, b_grad, i_grad, r_grad) =
             grads.muts_and_ref(&phantom_filters, &phantom_bias, &x, &phantom_result);
         conv_backward::<
             IN_CHAN,
@@ -54,14 +54,7 @@ pub fn conv2d<
             IN_WIDTH,
             { (IN_HEIGHT + 2 * PADDING - KERNEL) / STRIDE + 1 },
             { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
-        >(
-            x.data(),
-            f.data(),
-            result_grad,
-            inp_grad,
-            filters_grad,
-            bias_grad,
-        );
+        >(x.data(), f.data(), r_grad, i_grad, f_grad, b_grad);
     });
     result.put_tape(tape)
 }
@@ -117,8 +110,7 @@ pub fn conv2d_batched<
     let phantom_bias = bias.phantom();
     let phantom_result = result.phantom();
     tape.add_backward_op(move |grads| {
-        // let (filters_grad, result_grad) = grads.mut_and_ref(&phantom_filters, &phantom_result);
-        let (filters_grad, bias_grad, inp_grad, result_grad) =
+        let (f_grad, b_grad, i_grad, r_grad) =
             grads.muts_and_ref(&phantom_filters, &phantom_bias, &x, &phantom_result);
 
         for i in 0..BATCH_SIZE {
@@ -135,10 +127,10 @@ pub fn conv2d_batched<
             >(
                 &x.data()[i],
                 f.data(),
-                &result_grad[i],
-                &mut inp_grad[i],
-                filters_grad,
-                bias_grad,
+                &r_grad[i],
+                &mut i_grad[i],
+                f_grad,
+                b_grad,
             );
         }
     });
