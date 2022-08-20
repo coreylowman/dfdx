@@ -1,7 +1,15 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-/// `sum(t)`. Sums all the values in `self`. Returns a [Tensor0D] (i.e. one number).
+/// Sums all the values of the tensor. Returns a [Tensor0D] (i.e. one number).
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let t = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+/// let r: Tensor0D = t.sum();
+/// assert_eq!(r.data(), &21.0);
+/// ```
 pub fn sum<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::Tape> {
     let result = Tensor0D::<NoneTape>::new(T::Device::reduce_all(t.data(), &mut |a, b| a + b));
     move_tape_and_add_backward_op(t, result, move |t, result, grads| {

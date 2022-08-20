@@ -1,9 +1,11 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-/// `t[t == mask] = value`. Sets `t` to `value` anywhere `mask` equals value
+/// Sets `t` to `value` anywhere `mask` equals value
 ///
-/// # Examples
+/// **Pytorch equivalent**: `t[mask == value] = value` or `torch.where(mask == value, value, t)`
+///
+/// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);

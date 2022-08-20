@@ -8,7 +8,7 @@ use crate::prelude::*;
 /// **NOTE** This evenly distributes gradients between all equal minimum values, instead
 /// of only exactly 1 value.
 ///
-/// Examples:
+/// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);

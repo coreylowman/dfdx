@@ -1,8 +1,14 @@
 use crate::prelude::*;
 
-/// `sum(t) / numel(t)`, where `numel(t)` is the number of elements in `t`.
+/// Average of all elements in the tensor. Returns a [Tensor0D] (i.e. one number).
 ///
-/// Returns a [Tensor0D] (i.e. one number).
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let t = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let r: Tensor0D = t.mean();
+/// assert_eq!(r.data(), &0.0);
+/// ```
 pub fn mean<T: Tensor<Dtype = f32>>(t: T) -> Tensor0D<T::Tape> {
     div_scalar(sum(t), T::Array::NUM_ELEMENTS as f32)
 }

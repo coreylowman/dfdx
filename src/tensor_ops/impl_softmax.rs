@@ -1,8 +1,10 @@
 use crate::prelude::*;
 
-/// `t.exp().sum(-1).log()`. Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function.
+/// Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function.
 ///
-/// Calls [ln()], [sum_axis()], and [exp()]
+/// **Pytorch equivalent**: `t.exp().sum(-1).log()`
+///
+/// **Related functions**: [ln()], [sum_axis()], [exp()], [log_softmax()], [softmax()]
 ///
 /// Examples:
 /// ```rust
@@ -18,8 +20,6 @@ use crate::prelude::*;
 /// let r = a.logsumexp();
 /// assert_eq!(r.data(), &2.4519143);
 /// ```
-///
-/// See [log_softmax()] and [softmax()] for related functions.
 pub fn logsumexp<T: Reduce1<-1>>(mut t: T) -> T::Reduced {
     let max = T::DeviceR::reduce(t.data(), f32::max);
     T::DeviceR::foreach_br(t.mut_data(), max.as_ref(), &mut |a, b| *a -= b);
@@ -30,7 +30,9 @@ pub fn logsumexp<T: Reduce1<-1>>(mut t: T) -> T::Reduced {
 
 /// `log(softmax(t))` in numerically stable way. Does `t - logsumexp(t)` under the hood.
 ///
-/// See [logsumexp()] and [softmax()] for related functions
+/// **Pytorch equivalent**: `t.log_softmax(-1)`
+///
+/// **Related functions**: [logsumexp()], [softmax()]
 pub fn log_softmax<T: Reduce1<-1>>(t: T) -> T {
     let (t, tape) = t.split_tape();
     let (lse, tape) = logsumexp(t.duplicate().put_tape(tape))
@@ -39,10 +41,12 @@ pub fn log_softmax<T: Reduce1<-1>>(t: T) -> T {
     sub(t.put_tape(tape), &lse)
 }
 
-/// `exp(t) / sum(exp(t))`. Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function).
+/// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function).
 /// Equivalent to `exp(log_softmax(t))`.
 ///
-/// See [logsumexp()] and [log_softmax()] for related functions.
+/// **Pytorch equivalent**: `t.softmax(-1)`
+///
+/// **Related functions**: [logsumexp()], [log_softmax()]
 pub fn softmax<T: Reduce1<-1>>(t: T) -> T {
     exp(log_softmax(t))
 }

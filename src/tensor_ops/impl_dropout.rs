@@ -3,11 +3,26 @@ use crate::prelude::*;
 use rand::Rng;
 use rand_distr::{Distribution, Standard};
 
-/// Randomly drops out elements from `t` with probability `p`, and multiplies all elements by `1 / (1 - p)`.
-///
-/// If the `t: T` passed in does **not** have a tape, then no dropout is applied. See [Tape::OWNS_TAPE].
+/// Does nothing if no tape is in `t`. Zeros elements with probability `p` and scales all elements by `1 / (1 - p)`.
+/// See [Tape::OWNS_TAPE].
 ///
 /// Described in paper: [Improving neural networks by preventing co-adaptation of feature detectors](https://arxiv.org/abs/1207.0580)
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # use rand::prelude::*;
+/// let mut rng = StdRng::seed_from_u64(4);
+/// let t = Tensor1D::new([1.0, 2.0, 3.0, 4.0]);
+///
+/// // no tape in t, this won't do anything
+/// let a = dropout(t.clone(), 0.5, &mut rng);
+/// assert_eq!(a.data(), t.data());
+///
+/// // now t has the tape, dropout!
+/// let a = dropout(t.trace(), 0.5, &mut rng);
+/// assert_eq!(a.data(), &[2.0, 4.0, 0.0, 8.0]);
+/// ```
 pub fn dropout<T: Tensor<Dtype = f32>, R: Rng>(t: T, p: f32, rng: &mut R) -> T {
     if !T::Tape::OWNS_TAPE {
         // This is the branch where `t` doesn't own the tape, so we don't have to drop out anything.

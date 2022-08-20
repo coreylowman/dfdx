@@ -2,10 +2,9 @@ use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 use std::ops::Neg;
 
-/// `-t`. Computes the negation of `t`.
+/// Negates all elements.
 ///
-/// # Examples
-///
+/// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let a: Tensor1D<3> = Tensor1D::new([-2.0, 0.0, 5.0]);
@@ -16,7 +15,7 @@ pub fn negate<T: Tensor<Dtype = f32>>(t: T) -> T {
     map_df_uses_fx(t, |x| -x, |_| -1.0)
 }
 
-/// `max(0, t)`. Computes [Rectified Linear Unit (ReLU)](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)).
+/// [Rectified Linear Unit (ReLU)](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)). `max(0, t)`
 ///
 /// The derivative is the [Heaviside](https://en.wikipedia.org/wiki/Heaviside_step_function) function.
 ///
@@ -54,7 +53,7 @@ pub fn square<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.powi(2), |x| 2.0 * x)
 }
 
-/// `√t` or `t^0.5`. Computes the square root.
+/// `√t` or `t^0.5`
 ///
 /// The derivative is `0.5 / (t ^ 0.5)`.
 ///
@@ -73,7 +72,7 @@ pub fn sqrt<T: Tensor<Dtype = f32>>(t: T) -> T {
     map_df_uses_fx(t, |x| x.sqrt(), |fx| 0.5 * fx.recip())
 }
 
-/// `tanh(t)`. Computes the [Hyperbolic Tangent (Tanh)](https://en.wikipedia.org/wiki/Hyperbolic_functions).
+/// [Hyperbolic Tangent (Tanh)](https://en.wikipedia.org/wiki/Hyperbolic_functions).
 ///
 /// The derivative is `1.0 - square(tanh(t))`.
 ///
@@ -92,7 +91,9 @@ pub fn tanh<T: Tensor<Dtype = f32>>(t: T) -> T {
     map_df_uses_fx(t, |x| x.tanh(), |fx| 1.0 - fx.powi(2))
 }
 
-/// `1 / (1 + exp(-t))`. Computes [sigmoid](https://en.wikipedia.org/wiki/Sigmoid_function).
+/// [Sigmoid](https://en.wikipedia.org/wiki/Sigmoid_function).
+///
+/// Equivalent to `1 / (1 + exp(-t))`.
 ///
 /// The derivative is `sigmoid(t) * (1.0 - sigmoid(t))`.
 ///
@@ -115,7 +116,7 @@ pub fn sigmoid<T: Tensor<Dtype = f32>>(t: T) -> T {
     map_df_uses_fx(t, f, |fx| fx * (1.0 - fx))
 }
 
-/// `sin(t)`. Computes the [sine function](https://en.wikipedia.org/wiki/Sine_and_cosine).
+/// [Sine function](https://en.wikipedia.org/wiki/Sine_and_cosine).
 ///
 /// It's derivative is `cos(t)`
 ///
@@ -134,7 +135,7 @@ pub fn sin<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.sin(), |x| x.cos())
 }
 
-/// `cos(t)`. Computes the [cosine function](https://en.wikipedia.org/wiki/Sine_and_cosine).
+/// [Cosine function](https://en.wikipedia.org/wiki/Sine_and_cosine).
 ///
 /// It's derivative is `-sin(t)`
 ///
@@ -153,7 +154,7 @@ pub fn cos<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.cos(), |x| x.sin().neg())
 }
 
-/// `ln(t)` or `log_e(t)`. Computes the [Natural Logarithm (ln)](https://en.wikipedia.org/wiki/Natural_logarithm).
+/// [Natural Logarithm (ln)](https://en.wikipedia.org/wiki/Natural_logarithm). `log_e(t)`.
 ///
 /// It's derivative is `1 / t`.
 ///
@@ -172,7 +173,7 @@ pub fn ln<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.ln(), |x| x.recip())
 }
 
-/// `e^t`. Computes the [exponential function (exp)](https://en.wikipedia.org/wiki/Natural_logarithm).
+/// [Exponential function (exp)](https://en.wikipedia.org/wiki/Natural_logarithm). `e^t`
 ///
 /// It's derivative is itself! `e^t`.
 ///
@@ -191,7 +192,7 @@ pub fn exp<T: Tensor<Dtype = f32>>(t: T) -> T {
     map_df_uses_fx(t, |x| x.exp(), |fx| *fx)
 }
 
-/// `|t|`. Computes the [absolute value (abs)](https://en.wikipedia.org/wiki/Absolute_value).
+/// [Absolute value (abs)](https://en.wikipedia.org/wiki/Absolute_value). `|t|`
 ///
 /// The derivative is -1.0 for t < 0, 0 for t == 0, and 1.0 for t > 0.
 ///
