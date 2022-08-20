@@ -1,5 +1,6 @@
 # dfdx: strongly typed deep learning in Rust
 
+[![codecov](https://codecov.io/gh/coreylowman/dfdx/branch/main/graph/badge.svg?token=X9OWP9Q840)](https://codecov.io/gh/coreylowman/dfdx)
 [![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/AtUhGqBDP5)
 
 Ergonomics & safety focused deep learning in Rust. Main features include:
