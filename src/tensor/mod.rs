@@ -2,22 +2,35 @@
 //!
 //! At a high level a tensor consists of only three parts
 //! 1. A [crate::unique_id::UniqueId] to track which gradients are associated with what tensors
-//! 2. An Nd rust array stored in a [Box].
+//! 2. An Nd rust array stored in a [std::rc::Rc].
 //! 3. A tape, which can either actually be a tape ([crate::gradients::OwnedTape]) or be empty ([crate::gradients::NoneTape]).
 //!
 //! # Creating tensors
 //!
+//! ### Use the tensor function
+//!
+//! See [tensor()].
+//!
+//! ```rust
+//! # use dfdx::prelude::*;
+//! let t = tensor([1.0, 2.0, 3.0]);
+//! ```
+//!
+//! ### Use the TensorCreator trait
+//!
+//! See [TensorCreator].
+//!
 //! 1. With raw rust arrays use the [TensorCreator::new()] method.
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t = Tensor1D::new([1.0, 2.0, 3.0]);
+//! let t: Tensor1D<3> = TensorCreator::new([1.0, 2.0, 3.0]);
 //! ```
 //!
 //! 2. Filled with 0s or 1s use [TensorCreator::zeros()] and [TensorCreator::ones()].
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t: Tensor1D<5> = Tensor1D::zeros();
-//! let q: Tensor2D<3, 2> = Tensor2D::ones();
+//! let t: Tensor1D<5> = TensorCreator::zeros();
+//! let q: Tensor2D<3, 2> = TensorCreator::ones();
 //! ```
 //!
 //! 3. Filled with random data use [TensorCreator::rand()] and [TensorCreator::randn()].
@@ -73,6 +86,7 @@ mod impl_tensor;
 mod impl_tensor_creator;
 mod impl_trace;
 mod impl_update_with_grads;
+mod into_tensor;
 mod structs;
 
 pub use impl_default::*;
@@ -86,4 +100,5 @@ pub use impl_tensor::*;
 pub use impl_tensor_creator::*;
 pub use impl_trace::*;
 pub use impl_update_with_grads::*;
+pub use into_tensor::*;
 pub use structs::*;
