@@ -7,7 +7,7 @@ use std::ops::{Add, Div, Mul, Sub};
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let b = Tensor2D::ones();
 /// let r = add(a, &b); // or `a + &b`
 /// assert_eq!(r.data(), &[[2.0, 3.0, 4.0], [0.0, -1.0, -2.0]]);
@@ -21,7 +21,7 @@ pub fn add<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let b = Tensor2D::ones();
 /// let r = sub(a, &b); // or `a - &b`
 /// assert_eq!(r.data(), &[[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
@@ -34,7 +34,7 @@ pub fn sub<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let b = Tensor2D::ones();
 /// let r = mul(a, &b); // or `a * &b`
 /// assert_eq!(r.data(), &[[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
@@ -47,8 +47,8 @@ pub fn mul<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let b = Tensor2D::new([[1.0, 0.5, 1.0], [0.5, 1.0, 3.0]]);
+/// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let b = tensor([[1.0, 0.5, 1.0], [0.5, 1.0, 3.0]]);
 /// let r = div(a, &b); // or `a / &b`
 /// assert_eq!(r.data(), &[[1.0, 4.0, 3.0], [-2.0, -2.0, -1.0]]);
 pub fn div<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
@@ -65,8 +65,8 @@ pub fn div<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let b = Tensor2D::new([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
+/// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let b = tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
 /// let r = minimum(a, &b);
 /// assert_eq!(r.data(), &[[1.0, 0.5, 1.0], [-2.0, -2.0, -3.5]]);
 pub fn minimum<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
@@ -102,8 +102,8 @@ pub fn minimum<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let b = Tensor2D::new([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
+/// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let b = tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
 /// let r = maximum(a, &b);
 /// assert_eq!(r.data(), &[[1.0, 2.0, 3.0], [-1.0, 2.0, -3.0]]);
 pub fn maximum<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
@@ -225,8 +225,8 @@ mod tests {
 
     #[test]
     fn test_add_0d() {
-        let a = Tensor0D::new(1.0);
-        let b = Tensor0D::new(1.0);
+        let a = tensor(1.0);
+        let b = tensor(1.0);
 
         let r = a.trace() + &b;
         assert_eq!(r.data(), &2.0);
@@ -237,8 +237,8 @@ mod tests {
 
     #[test]
     fn test_sub_0d() {
-        let a = Tensor0D::new(1.0);
-        let b = Tensor0D::new(1.0);
+        let a = tensor(1.0);
+        let b = tensor(1.0);
 
         let r = b.trace() - &a;
         assert_eq!(r.data(), &0.0);
@@ -249,8 +249,8 @@ mod tests {
 
     #[test]
     fn test_mul_0d() {
-        let a = Tensor0D::new(2.0);
-        let b = Tensor0D::new(3.0);
+        let a = tensor(2.0);
+        let b = tensor(3.0);
 
         let r = a.trace() * &b;
         assert_eq!(r.data(), &6.0);
@@ -261,8 +261,8 @@ mod tests {
 
     #[test]
     fn test_div_0d() {
-        let a = Tensor0D::new(2.0);
-        let b = Tensor0D::new(4.0);
+        let a = tensor(2.0);
+        let b = tensor(4.0);
 
         let r = b.trace() / &a;
         assert_eq!(r.data(), &2.0);
@@ -273,8 +273,8 @@ mod tests {
 
     #[test]
     fn test_add_1d() {
-        let a = Tensor1D::new([1.0, 2.0, 3.0]);
-        let b = Tensor1D::new([1.0, -1.0, 0.0]);
+        let a = tensor([1.0, 2.0, 3.0]);
+        let b = tensor([1.0, -1.0, 0.0]);
 
         let r = a.trace() + &b;
         assert_eq!(r.data(), &[2.0, 1.0, 3.0]);
@@ -285,8 +285,8 @@ mod tests {
 
     #[test]
     fn test_sub_1d() {
-        let a = Tensor1D::new([1.0, 2.0, 3.0]);
-        let b = Tensor1D::new([1.0, -1.0, 0.0]);
+        let a = tensor([1.0, 2.0, 3.0]);
+        let b = tensor([1.0, -1.0, 0.0]);
 
         let r = b.trace() - &a;
         assert_eq!(r.data(), &[0.0, -3.0, -3.0]);
@@ -297,8 +297,8 @@ mod tests {
 
     #[test]
     fn test_mul_1d() {
-        let a = Tensor1D::new([1.0, 2.0, 3.0]);
-        let b = Tensor1D::new([1.0, -1.0, 0.0]);
+        let a = tensor([1.0, 2.0, 3.0]);
+        let b = tensor([1.0, -1.0, 0.0]);
 
         let r = a.trace() * &b;
         assert_eq!(r.data(), &[1.0, -2.0, 0.0]);
@@ -309,8 +309,8 @@ mod tests {
 
     #[test]
     fn test_div_1d() {
-        let a = Tensor1D::new([1.0, 2.0, 3.0]);
-        let b = Tensor1D::new([1.0, -1.0, 0.0]);
+        let a = tensor([1.0, 2.0, 3.0]);
+        let b = tensor([1.0, -1.0, 0.0]);
 
         let r = b.trace() / &a;
         assert_eq!(r.data(), &[1.0, -0.5, 0.0]);
@@ -324,8 +324,8 @@ mod tests {
 
     #[test]
     fn test_add_2d() {
-        let a = Tensor2D::new([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b = Tensor2D::new([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+        let a = tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b = tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
         let r = a.trace() + &b;
         assert_eq!(
@@ -339,8 +339,8 @@ mod tests {
 
     #[test]
     fn test_sub_2d() {
-        let a = Tensor2D::new([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b = Tensor2D::new([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+        let a = tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b = tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
         let r = b.trace() - &a;
         assert_eq!(
@@ -357,8 +357,8 @@ mod tests {
 
     #[test]
     fn test_mul_2d() {
-        let a = Tensor2D::new([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b = Tensor2D::new([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+        let a = tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b = tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
         let r = a.trace() * &b;
         assert_eq!(
@@ -387,8 +387,8 @@ mod tests {
 
     #[test]
     fn test_div_2d() {
-        let a = Tensor2D::new([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b = Tensor2D::new([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+        let a = tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b = tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
         let r = b.trace() / &a;
         assert_eq!(
@@ -417,8 +417,8 @@ mod tests {
 
     #[test]
     fn test_minimum() {
-        let a = Tensor2D::new([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]]);
-        let b = Tensor2D::new([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
+        let a = tensor([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]]);
+        let b = tensor([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
 
         let result = minimum(a.trace(), &b);
         assert_eq!(result.data(), &[[-1., 0., -1.], [3., -4., -5.]]);
@@ -430,8 +430,8 @@ mod tests {
 
     #[test]
     fn test_maximum() {
-        let a = Tensor2D::new([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]]);
-        let b = Tensor2D::new([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
+        let a = tensor([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]]);
+        let b = tensor([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
 
         let result = maximum(a.trace(), &b);
         assert_eq!(result.data(), &[[0.0, 0.0, 1.0], [3.0, 4.0, 5.0]]);

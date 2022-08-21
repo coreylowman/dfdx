@@ -9,14 +9,14 @@ use crate::prelude::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor0D::new(0.0);
+/// let a = tensor(0.0);
 /// let r = logsumexp(a);
 /// assert_eq!(r.data(), &0.0);
 /// ```
 ///
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+/// let a = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
 /// let r = a.logsumexp();
 /// assert_eq!(r.data(), &2.4519143);
 /// ```
@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_logsumexp_0d() {
-        let a = Tensor0D::new(0.0);
+        let a = tensor(0.0);
         let r = a.trace().logsumexp();
         assert_eq!(r.data(), &0.0);
         let gradients = backward(r);
@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_log_softmax_0d() {
-        let a = Tensor0D::new(0.0);
+        let a = tensor(0.0);
         let r = a.trace().log_softmax();
         assert_eq!(r.data(), &0.0);
         let gradients = backward(r);
@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn test_softmax_0d() {
-        let a = Tensor0D::new(0.0);
+        let a = tensor(0.0);
         let r = a.trace().softmax();
         assert_eq!(r.data(), &1.0);
         let gradients = backward(r);
@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn test_logsumexp_1d() {
-        let a: Tensor1D<5> = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let a: Tensor1D<5> = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = a.trace().logsumexp();
         assert_eq!(r.data(), &2.4519143);
         let gradients = backward(r.mean());
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_log_softmax_1d() {
-        let a: Tensor1D<5> = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let a: Tensor1D<5> = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = a.trace().log_softmax();
         assert_eq!(
             r.data(),
@@ -144,13 +144,13 @@ mod tests {
 
     #[test]
     fn test_softmax_1d() {
-        let a: Tensor1D<5> = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let a: Tensor1D<5> = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = a.trace().softmax();
         assert_eq!(
             r.data(),
             &[0.011656232, 0.031684924, 0.086128555, 0.23412168, 0.6364087]
         );
-        let l = mul(r, &Tensor1D::new([0.0, 0.0, 1.0, 0.0, 0.0]));
+        let l = mul(r, &tensor([0.0, 0.0, 1.0, 0.0, 0.0]));
         assert_eq!(l.data(), &[0.0, 0.0, 0.086128555, 0.0, 0.0]);
         let gradients = backward(l.mean());
         assert_eq!(
@@ -167,7 +167,7 @@ mod tests {
 
     #[test]
     fn test_logsumexp_2d() {
-        let a: Tensor2D<2, 3> = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
+        let a: Tensor2D<2, 3> = tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
         let r: Tensor1D<2, OwnedTape> = a.trace().logsumexp();
         assert_eq!(r.data(), &[0.40760595, 7.0509458]);
         let gradients = backward(r.mean());
@@ -182,7 +182,7 @@ mod tests {
 
     #[test]
     fn test_log_softmax_2d() {
-        let a: Tensor2D<2, 3> = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
+        let a: Tensor2D<2, 3> = tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
         let r = a.trace().log_softmax();
         assert_eq!(
             r.data(),
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn test_softmax_2d() {
-        let a: Tensor2D<2, 3> = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
+        let a: Tensor2D<2, 3> = tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
         let r = a.trace().softmax();
         assert_eq!(
             r.data(),
@@ -212,7 +212,7 @@ mod tests {
                 [0.002355633, 0.047314156, 0.9503302]
             ]
         );
-        let l = mul(r, &Tensor2D::new([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]));
+        let l = mul(r, &tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]));
         assert_eq!(l.data(), &[[0.09003058, 0.0, 0.0], [0.0, 0.047314156, 0.0]]);
         let gradients = backward(l.mean());
         assert_eq!(

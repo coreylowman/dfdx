@@ -7,7 +7,7 @@ use crate::prelude::*;
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t: Tensor1D<4> = Tensor1D::new([1.0, f32::NAN, f32::NAN, 4.0]);
+/// let t: Tensor1D<4> = tensor([1.0, f32::NAN, f32::NAN, 4.0]);
 /// let r = t.nans_to(0.0);
 /// assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
 /// ```
@@ -42,7 +42,7 @@ mod tests {
 
     #[test]
     fn test_nans_0d() {
-        let t = Tensor0D::new(f32::NAN);
+        let t = tensor(f32::NAN);
         let r = t.trace().nans_to(0.0);
         assert_eq!(r.data(), &0.0);
         let gradients = r.mean().backward();
@@ -51,7 +51,7 @@ mod tests {
 
     #[test]
     fn test_nans_1d() {
-        let t: Tensor1D<4> = Tensor1D::new([1.0, f32::NAN, f32::NAN, 4.0]);
+        let t: Tensor1D<4> = tensor([1.0, f32::NAN, f32::NAN, 4.0]);
         let r = t.trace().nans_to(0.0);
         assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
         // NOTE: .exp() so we cover case where nans_to() needs to use result grad
@@ -64,7 +64,7 @@ mod tests {
 
     #[test]
     fn test_nans_2d() {
-        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, f32::NAN, 3.0], [f32::NAN, 4.0, f32::NAN]]);
+        let t: Tensor2D<2, 3> = tensor([[1.0, f32::NAN, 3.0], [f32::NAN, 4.0, f32::NAN]]);
         let r = t.trace().nans_to(0.0);
         assert_eq!(r.data(), &[[1.0, 0.0, 3.0], [0.0, 4.0, 0.0]]);
         let gradients = r.mean().backward();

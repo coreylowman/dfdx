@@ -11,7 +11,7 @@ use crate::prelude::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let t = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let r: Tensor1D<2> = t.max_axis::<-1>();
 /// assert_eq!(r.data(), &[3.0, -1.0]);
 /// ```
@@ -77,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_max_axis_0_2d() {
-        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
+        let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
         let r = t.trace().max_axis::<0>();
         assert_eq!(r.data(), &[3.0, 2.0, 2.0]);
         let g = r.exp().mean().backward();
@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn test_max_axis_1_2d() {
-        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
+        let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
         let r = t.trace().max_axis::<-1>();
         assert_eq!(r.data(), &[2.0, 3.0]);
         let g = r.sum().backward();

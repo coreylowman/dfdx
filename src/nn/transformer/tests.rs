@@ -5,7 +5,7 @@ use crate::tests::assert_close;
 fn test_self_attention() {
     let model: MultiHeadAttention<8, 8, 8, 8, 1> = MultiHeadAttention {
         w_q: Linear {
-            weight: Tensor2D::new([
+            weight: tensor([
                 [
                     0.1574, -0.2003, 0.0850, 0.2589, -0.0813, 0.0932, -0.0137, 0.2020,
                 ],
@@ -31,12 +31,12 @@ fn test_self_attention() {
                     -0.0626, -0.3986, -0.0338, 0.0366, -0.3096, 0.1367, -0.0734, -0.3320,
                 ],
             ]),
-            bias: Tensor1D::new([
+            bias: tensor([
                 0.0773, -0.2218, 0.0269, 0.2612, 0.2109, -0.2013, 0.0431, -0.0836,
             ]),
         },
         w_k: Linear {
-            weight: Tensor2D::new([
+            weight: tensor([
                 [
                     0.2069, 0.0154, -0.2676, -0.3061, -0.2987, -0.3143, -0.3604, 0.1183,
                 ],
@@ -62,12 +62,12 @@ fn test_self_attention() {
                     -0.2067, 0.1342, 0.4172, -0.1923, 0.3606, 0.1490, -0.1655, -0.2564,
                 ],
             ]),
-            bias: Tensor1D::new([
+            bias: tensor([
                 0.3314, 0.1901, -0.2715, 0.1083, 0.0523, 0.2471, 0.3526, -0.3369,
             ]),
         },
         w_v: Linear {
-            weight: Tensor2D::new([
+            weight: tensor([
                 [
                     0.2284, -0.1289, 0.0660, 0.3557, 0.0571, -0.1956, 0.3716, -0.3293,
                 ],
@@ -93,12 +93,12 @@ fn test_self_attention() {
                     -0.3581, -0.1497, -0.2204, -0.1340, -0.0511, 0.2451, -0.1244, 0.1805,
                 ],
             ]),
-            bias: Tensor1D::new([
+            bias: tensor([
                 -0.0994, -0.1629, -0.2694, -0.0869, 0.1631, -0.1892, -0.0901, 0.3148,
             ]),
         },
         w_o: Linear {
-            weight: Tensor2D::new([
+            weight: tensor([
                 [
                     0.1190, -0.2099, 0.1869, -0.3508, 0.0826, -0.3263, 0.2366, -0.2100,
                 ],
@@ -124,12 +124,12 @@ fn test_self_attention() {
                     -0.2241, 0.0426, 0.2326, -0.3048, -0.2760, -0.0868, -0.2429, 0.1446,
                 ],
             ]),
-            bias: Tensor1D::new([
+            bias: tensor([
                 0.0800, 0.0567, 0.2609, -0.1651, -0.0820, -0.1058, -0.3133, -0.1181,
             ]),
         },
     };
-    let x: Tensor2D<2, 8> = Tensor2D::new([
+    let x: Tensor2D<2, 8> = tensor([
         [
             0.7207, 0.3572, 0.2341, 0.4865, 0.2949, 0.5450, 0.8236, 0.4674,
         ],
@@ -171,7 +171,7 @@ fn test_transformer_encoder() {
         modules: [(
             Residual(MultiHeadAttention {
                 w_q: Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.1574, -0.2003, 0.0850, 0.2589, -0.0813, 0.0932, -0.0137, 0.2020,
                         ],
@@ -197,12 +197,12 @@ fn test_transformer_encoder() {
                             -0.0626, -0.3986, -0.0338, 0.0366, -0.3096, 0.1367, -0.0734, -0.3320,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         0.0773, -0.2218, 0.0269, 0.2612, 0.2109, -0.2013, 0.0431, -0.0836,
                     ]),
                 },
                 w_k: Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.2069, 0.0154, -0.2676, -0.3061, -0.2987, -0.3143, -0.3604, 0.1183,
                         ],
@@ -228,12 +228,12 @@ fn test_transformer_encoder() {
                             -0.2067, 0.1342, 0.4172, -0.1923, 0.3606, 0.1490, -0.1655, -0.2564,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         0.3314, 0.1901, -0.2715, 0.1083, 0.0523, 0.2471, 0.3526, -0.3369,
                     ]),
                 },
                 w_v: Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.2284, -0.1289, 0.0660, 0.3557, 0.0571, -0.1956, 0.3716, -0.3293,
                         ],
@@ -259,12 +259,12 @@ fn test_transformer_encoder() {
                             -0.3581, -0.1497, -0.2204, -0.1340, -0.0511, 0.2451, -0.1244, 0.1805,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         -0.0994, -0.1629, -0.2694, -0.0869, 0.1631, -0.1892, -0.0901, 0.3148,
                     ]),
                 },
                 w_o: Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.1190, -0.2099, 0.1869, -0.3508, 0.0826, -0.3263, 0.2366, -0.2100,
                         ],
@@ -290,19 +290,15 @@ fn test_transformer_encoder() {
                             -0.2241, 0.0426, 0.2326, -0.3048, -0.2760, -0.0868, -0.2429, 0.1446,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         0.0800, 0.0567, 0.2609, -0.1651, -0.0820, -0.1058, -0.3133, -0.1181,
                     ]),
                 },
             }),
-            LayerNorm1D {
-                gamma: Tensor1D::new([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-                beta: Tensor1D::new([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-                epsilon: 1e-5,
-            },
+            LayerNorm1D::default(),
             Residual((
                 Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.32741955,
                             -0.27696532,
@@ -464,7 +460,7 @@ fn test_transformer_encoder() {
                             0.024704278,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         0.3001593,
                         -0.12242858,
                         0.09446433,
@@ -485,7 +481,7 @@ fn test_transformer_encoder() {
                 },
                 ReLU::default(),
                 Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.001419425,
                             0.18141323,
@@ -631,7 +627,7 @@ fn test_transformer_encoder() {
                             0.24982959,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         -0.18349189,
                         -0.22159654,
                         0.053060174,
@@ -643,14 +639,10 @@ fn test_transformer_encoder() {
                     ]),
                 },
             )),
-            LayerNorm1D {
-                gamma: Tensor1D::new([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-                beta: Tensor1D::new([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-                epsilon: 1e-5,
-            },
+            LayerNorm1D::default(),
         )],
     };
-    let x: Tensor2D<2, 8> = Tensor2D::new([
+    let x: Tensor2D<2, 8> = tensor([
         [
             0.2965, 0.7154, 0.9717, 0.5441, 0.7356, 0.2681, 0.4032, 0.4670,
         ],
@@ -692,7 +684,7 @@ fn test_transformer_decoder() {
         modules: [(
             Residual(MultiHeadAttention {
                 w_q: Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.1574, -0.2003, 0.0850, 0.2589, -0.0813, 0.0932, -0.0137, 0.2020,
                         ],
@@ -718,12 +710,12 @@ fn test_transformer_decoder() {
                             -0.0626, -0.3986, -0.0338, 0.0366, -0.3096, 0.1367, -0.0734, -0.3320,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         0.0773, -0.2218, 0.0269, 0.2612, 0.2109, -0.2013, 0.0431, -0.0836,
                     ]),
                 },
                 w_k: Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.2069, 0.0154, -0.2676, -0.3061, -0.2987, -0.3143, -0.3604, 0.1183,
                         ],
@@ -749,12 +741,12 @@ fn test_transformer_decoder() {
                             -0.2067, 0.1342, 0.4172, -0.1923, 0.3606, 0.1490, -0.1655, -0.2564,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         0.3314, 0.1901, -0.2715, 0.1083, 0.0523, 0.2471, 0.3526, -0.3369,
                     ]),
                 },
                 w_v: Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.2284, -0.1289, 0.0660, 0.3557, 0.0571, -0.1956, 0.3716, -0.3293,
                         ],
@@ -780,12 +772,12 @@ fn test_transformer_decoder() {
                             -0.3581, -0.1497, -0.2204, -0.1340, -0.0511, 0.2451, -0.1244, 0.1805,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         -0.0994, -0.1629, -0.2694, -0.0869, 0.1631, -0.1892, -0.0901, 0.3148,
                     ]),
                 },
                 w_o: Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.1190, -0.2099, 0.1869, -0.3508, 0.0826, -0.3263, 0.2366, -0.2100,
                         ],
@@ -811,19 +803,15 @@ fn test_transformer_decoder() {
                             -0.2241, 0.0426, 0.2326, -0.3048, -0.2760, -0.0868, -0.2429, 0.1446,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         0.0800, 0.0567, 0.2609, -0.1651, -0.0820, -0.1058, -0.3133, -0.1181,
                     ]),
                 },
             }),
-            LayerNorm1D {
-                gamma: Tensor1D::new([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-                beta: Tensor1D::new([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-                epsilon: 1e-5,
-            },
+            LayerNorm1D::default(),
             Residual((
                 Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.32741955,
                             -0.27696532,
@@ -985,7 +973,7 @@ fn test_transformer_decoder() {
                             0.024704278,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         0.3001593,
                         -0.12242858,
                         0.09446433,
@@ -1006,7 +994,7 @@ fn test_transformer_decoder() {
                 },
                 ReLU::default(),
                 Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.001419425,
                             0.18141323,
@@ -1152,7 +1140,7 @@ fn test_transformer_decoder() {
                             0.24982959,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         -0.18349189,
                         -0.22159654,
                         0.053060174,
@@ -1164,18 +1152,14 @@ fn test_transformer_decoder() {
                     ]),
                 },
             )),
-            LayerNorm1D {
-                gamma: Tensor1D::new([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-                beta: Tensor1D::new([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-                epsilon: 1e-5,
-            },
+            LayerNorm1D::default(),
         )],
     };
     let decoder: TransformerDecoder<8, 8, 16, 1, 2> = TransformerDecoder {
         blocks: [TransformerDecoderBlock {
             attn: MultiHeadAttention {
                 w_q: Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.1574, -0.2003, 0.0850, 0.2589, -0.0813, 0.0932, -0.0137, 0.2020,
                         ],
@@ -1201,12 +1185,12 @@ fn test_transformer_decoder() {
                             -0.0626, -0.3986, -0.0338, 0.0366, -0.3096, 0.1367, -0.0734, -0.3320,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         0.0773, -0.2218, 0.0269, 0.2612, 0.2109, -0.2013, 0.0431, -0.0836,
                     ]),
                 },
                 w_k: Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.2069, 0.0154, -0.2676, -0.3061, -0.2987, -0.3143, -0.3604, 0.1183,
                         ],
@@ -1232,12 +1216,12 @@ fn test_transformer_decoder() {
                             -0.2067, 0.1342, 0.4172, -0.1923, 0.3606, 0.1490, -0.1655, -0.2564,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         0.3314, 0.1901, -0.2715, 0.1083, 0.0523, 0.2471, 0.3526, -0.3369,
                     ]),
                 },
                 w_v: Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.2284, -0.1289, 0.0660, 0.3557, 0.0571, -0.1956, 0.3716, -0.3293,
                         ],
@@ -1263,12 +1247,12 @@ fn test_transformer_decoder() {
                             -0.3581, -0.1497, -0.2204, -0.1340, -0.0511, 0.2451, -0.1244, 0.1805,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         -0.0994, -0.1629, -0.2694, -0.0869, 0.1631, -0.1892, -0.0901, 0.3148,
                     ]),
                 },
                 w_o: Linear {
-                    weight: Tensor2D::new([
+                    weight: tensor([
                         [
                             0.1190, -0.2099, 0.1869, -0.3508, 0.0826, -0.3263, 0.2366, -0.2100,
                         ],
@@ -1294,20 +1278,16 @@ fn test_transformer_decoder() {
                             -0.2241, 0.0426, 0.2326, -0.3048, -0.2760, -0.0868, -0.2429, 0.1446,
                         ],
                     ]),
-                    bias: Tensor1D::new([
+                    bias: tensor([
                         0.0800, 0.0567, 0.2609, -0.1651, -0.0820, -0.1058, -0.3133, -0.1181,
                     ]),
                 },
             },
             ff: (
-                LayerNorm1D {
-                    gamma: Tensor1D::new([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-                    beta: Tensor1D::new([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-                    epsilon: 1e-5,
-                },
+                LayerNorm1D::default(),
                 Residual((
                     Linear {
-                        weight: Tensor2D::new([
+                        weight: tensor([
                             [
                                 0.32741955,
                                 -0.27696532,
@@ -1469,7 +1449,7 @@ fn test_transformer_decoder() {
                                 0.024704278,
                             ],
                         ]),
-                        bias: Tensor1D::new([
+                        bias: tensor([
                             0.3001593,
                             -0.12242858,
                             0.09446433,
@@ -1490,7 +1470,7 @@ fn test_transformer_decoder() {
                     },
                     ReLU::default(),
                     Linear {
-                        weight: Tensor2D::new([
+                        weight: tensor([
                             [
                                 0.001419425,
                                 0.18141323,
@@ -1636,7 +1616,7 @@ fn test_transformer_decoder() {
                                 0.24982959,
                             ],
                         ]),
-                        bias: Tensor1D::new([
+                        bias: tensor([
                             -0.18349189,
                             -0.22159654,
                             0.053060174,
@@ -1648,15 +1628,11 @@ fn test_transformer_decoder() {
                         ]),
                     },
                 )),
-                LayerNorm1D {
-                    gamma: Tensor1D::new([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
-                    beta: Tensor1D::new([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-                    epsilon: 1e-5,
-                },
+                LayerNorm1D::default(),
             ),
         }],
     };
-    let x = Tensor2D::new([
+    let x = tensor([
         [
             0.2965, 0.7154, 0.9717, 0.5441, 0.7356, 0.2681, 0.4032, 0.4670,
         ],
@@ -1665,7 +1641,7 @@ fn test_transformer_decoder() {
         ],
     ]);
     let encoded = encoder.forward(x);
-    let x = Tensor2D::new([
+    let x = tensor([
         [
             0.2965, 0.7154, 0.9717, 0.5441, 0.7356, 0.2681, 0.4032, 0.4670,
         ],

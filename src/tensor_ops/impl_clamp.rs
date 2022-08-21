@@ -5,7 +5,7 @@ use crate::prelude::*;
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor1D::new([-1.0, -0.5, 0.0, 0.5, 1.0]);
+/// let t = tensor([-1.0, -0.5, 0.0, 0.5, 1.0]);
 /// let r = t.clamp(-0.5, 0.5);
 /// assert_eq!(r.data(), &[-0.5, -0.5, 0.0, 0.5, 0.5]);
 /// ```
@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn test_clamp_0d() {
-        let t = Tensor0D::new(1.0);
+        let t = tensor(1.0);
         let r = t.trace().clamp(0.0, 1.0);
         assert_eq!(r.data(), &1.0);
         let gradients = r.mean().backward();
@@ -49,7 +49,7 @@ mod tests {
 
     #[test]
     fn test_clamp_1d() {
-        let t = Tensor1D::new([-1.0, -0.5, -0.25, 0.0, 0.25, 0.5, 1.0]);
+        let t = tensor([-1.0, -0.5, -0.25, 0.0, 0.25, 0.5, 1.0]);
         let r = t.trace().clamp(-0.5, 0.25);
         assert_eq!(r.data(), &[-0.5, -0.5, -0.25, 0.0, 0.25, 0.25, 0.25]);
         // NOTE: .exp() so we cover case where .clamp() needs to use result's grad
@@ -62,7 +62,7 @@ mod tests {
 
     #[test]
     fn test_clamp_2d() {
-        let t: Tensor2D<2, 3> = Tensor2D::new([[-1.0, 0.0, 1.0], [-2.0, 2.0, 1.1]]);
+        let t: Tensor2D<2, 3> = tensor([[-1.0, 0.0, 1.0], [-2.0, 2.0, 1.1]]);
         let r = t.trace().clamp(-1.0, 1.0);
         assert_eq!(r.data(), &[[-1.0, 0.0, 1.0], [-1.0, 1.0, 1.0]]);
         let gradients = r.mean().backward();

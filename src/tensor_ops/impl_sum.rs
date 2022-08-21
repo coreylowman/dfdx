@@ -6,7 +6,7 @@ use crate::prelude::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+/// let t = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
 /// let r: Tensor0D = t.sum();
 /// assert_eq!(r.data(), &21.0);
 /// ```
@@ -41,7 +41,7 @@ mod tests {
 
     #[test]
     fn test_sum_0d() {
-        let t: Tensor0D = Tensor0D::new(3.0);
+        let t: Tensor0D = tensor(3.0);
         let r = t.trace().sum();
         assert_eq!(r.data(), &3.0);
         let gradients = r.backward();
@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn test_sum_1d() {
-        let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
+        let t: Tensor1D<3> = tensor([1.0, 2.0, 3.0]);
         let r: Tensor0D<OwnedTape> = t.trace().sum();
         assert_eq!(r.data(), &6.0);
         // NOTE: .exp() to make sure its using result grad properly
@@ -60,7 +60,7 @@ mod tests {
 
     #[test]
     fn test_sum_2d() {
-        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
         let r: Tensor0D<OwnedTape> = t.trace().sum();
         assert_eq!(r.data(), &21.0);
         let gradients = r.backward();

@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn test_scalar_add_0d() {
-        let x = Tensor0D::new(0.0);
+        let x = tensor(0.0);
         let r = x.trace() + 1.0;
         assert_eq!(r.data(), &1.0);
         let gradients = r.exp().backward();
@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn test_scalar_add_1d() {
-        let x = Tensor1D::new([0.0, 1.0, 2.0]);
+        let x = tensor([0.0, 1.0, 2.0]);
         let r = x.trace() + 0.5;
         assert_eq!(r.data(), &[0.5, 1.5, 2.5]);
         let gradients = r.exp().sum().backward();
@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_scalar_sub_0d() {
-        let x = Tensor0D::new(0.0);
+        let x = tensor(0.0);
         let r = x.trace() - 1.0;
         assert_eq!(r.data(), &-1.0);
         let gradients = r.exp().sum().backward();
@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn test_scalar_sub_1d() {
-        let x = Tensor1D::new([0.0, 1.0, 2.0]);
+        let x = tensor([0.0, 1.0, 2.0]);
         let r = x.trace() - 1.0;
         assert_eq!(r.data(), &[-1.0, 0.0, 1.0]);
         let gradients = r.exp().sum().backward();
@@ -207,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_scalar_mul_0d() {
-        let x = Tensor0D::new(1.0);
+        let x = tensor(1.0);
         let r = x.trace() * 0.5;
         assert_eq!(r.data(), &0.5);
         let gradients = r.exp().sum().backward();
@@ -216,7 +216,7 @@ mod tests {
 
     #[test]
     fn test_scalar_mul_1d() {
-        let x = Tensor1D::new([0.0, 1.0, 2.0]);
+        let x = tensor([0.0, 1.0, 2.0]);
         let r = x.trace() * 0.5;
         assert_eq!(r.data(), &[0.0, 0.5, 1.0]);
         let gradients = r.exp().sum().backward();
@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn test_scalar_div_0d() {
-        let x = Tensor0D::new(1.0);
+        let x = tensor(1.0);
         let r = x.trace() / 2.0;
         assert_eq!(r.data(), &0.5);
         let gradients = r.exp().sum().backward();
@@ -243,7 +243,7 @@ mod tests {
 
     #[test]
     fn test_scalar_div_1d() {
-        let x = Tensor1D::new([0.0, 1.0, 2.0]);
+        let x = tensor([0.0, 1.0, 2.0]);
         let r = x.trace() / 2.0;
         assert_eq!(r.data(), &[0.0, 0.5, 1.0]);
         let gradients = r.exp().sum().backward();

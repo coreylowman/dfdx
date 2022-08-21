@@ -83,7 +83,7 @@
 //! Here is the same example but selecting from the last axis of a 2d tensor:
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+//! let t = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
 //!
 //! let a: Tensor1D<2> = t.clone().select(&[0, 2]); // select one element from the last axis
 //! assert_eq!(a.data(), &[1.0, 6.0]);
