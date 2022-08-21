@@ -76,6 +76,7 @@
 //! ```
 
 mod activations;
+mod batch_norm;
 mod dropout;
 mod generalized_residual;
 mod impl_module_for_tuples;
@@ -88,6 +89,7 @@ mod residual;
 mod split_into;
 
 pub use activations::*;
+pub use batch_norm::*;
 pub use dropout::*;
 pub use generalized_residual::*;
 pub use impl_module_for_tuples::*;
