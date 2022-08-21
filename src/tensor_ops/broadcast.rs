@@ -32,13 +32,13 @@ pub trait Broadcast2<T, const I1: isize, const I2: isize> {
     /// let _: Tensor2D<3, 5> = Tensor0D::zeros().broadcast2();
     ///
     /// // broadcast the 1st & 2nd axis
-    /// let _: Tensor2D<3, 5, 7> = Tensor1D::<3>::zeros().broadcast2();
+    /// let _: Tensor3D<3, 5, 7> = Tensor1D::<3>::zeros().broadcast2();
     ///
     /// // broadcast the 0th & 2nd axis
-    /// let _: Tensor2D<5, 3, 7> = Tensor1D::<3>::zeros().broadcast2();
+    /// let _: Tensor3D<5, 3, 7> = Tensor1D::<3>::zeros().broadcast2();
     ///
     /// // broadcast the 0th & 1st axis
-    /// let _: Tensor2D<7, 5, 3> = Tensor1D::<3>::zeros().broadcast2();
+    /// let _: Tensor3D<7, 5, 3> = Tensor1D::<3>::zeros().broadcast2();
     /// ```
     fn broadcast2(self) -> T;
 }
@@ -52,16 +52,16 @@ pub trait Broadcast3<T, const I1: isize, const I2: isize, const I3: isize> {
     /// # use dfdx::prelude::*;
     ///
     /// // broadcast axes 1, 2, 3
-    /// let _: Tensor3D<3, 5, 7, 9> = Tensor1D::<3>::zeros().broadcast3();
+    /// let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<3>::zeros().broadcast3();
     ///
     /// // broadcast axes 0, 2, 3
-    /// let _: Tensor3D<9, 3, 5, 7> = Tensor1D::<3>::zeros().broadcast3();
+    /// let _: Tensor4D<9, 3, 5, 7> = Tensor1D::<3>::zeros().broadcast3();
     ///
     /// // broadcast axes 0, 1, 3
-    /// let _: Tensor3D<9, 7, 3, 5> = Tensor1D::<3>::zeros().broadcast3();
+    /// let _: Tensor4D<9, 7, 3, 5> = Tensor1D::<3>::zeros().broadcast3();
     ///
     /// // braodcast axes 0, 1, 2
-    /// let _: Tensor3D<9, 7, 5, 3> = Tensor1D::<3>::zeros().broadcast3();
+    /// let _: Tensor4D<9, 7, 5, 3> = Tensor1D::<3>::zeros().broadcast3();
     /// ```
     fn broadcast3(self) -> T;
 }
