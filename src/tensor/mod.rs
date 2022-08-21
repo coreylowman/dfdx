@@ -12,7 +12,7 @@
 //! See [tensor()].
 //!
 //! ```rust
-//! # use dfdx::prelude::
+//! # use dfdx::prelude::*;
 //! let t = tensor([1.0, 2.0, 3.0]);
 //! ```
 //!
