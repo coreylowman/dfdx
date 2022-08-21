@@ -2,6 +2,10 @@ use crate::prelude::*;
 
 /// Reduce the `I`th dimension of a Tensor. Enables functions like [sum_axis()] that
 /// reduce values along a single dimension.
+///
+/// This trait can't be used directly as it doesn't contain any methods. Instead
+/// it is used by methods to specify the input type must be able to have it's `I`th
+/// axis reduced.
 pub trait Reduce1<const I: isize>: Tensor<Dtype = f32> {
     /// The resulting tensor type.
     /// The `I`th dimension of this can be broadcast into Self via [Broadcast1].

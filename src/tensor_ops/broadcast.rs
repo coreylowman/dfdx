@@ -4,24 +4,77 @@ use crate::prelude::*;
 /// Broadcasts the `I`th dimension. Increases number dimensions by 1. Results in `T`. Opposite of [Reduce1].
 pub trait Broadcast1<T, const I: isize> {
     /// Broadcast `self` into `T`, increasing number dimensions by 1.
+    ///
+    /// Examples:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// let _: Tensor1D<5> = Tensor0D::zeros().broadcast1();
+    ///
+    /// // broadcast the 0th axis
+    /// let _: Tensor2D<5, 3> = Tensor1D::<3>::zeros().broadcast1();
+    ///
+    /// // broadcast the 1st axis into a 3d tensor
+    /// let _: Tensor3D<3, 5, 7> = Tensor2D::<3, 7>::zeros().broadcast1();
+    ///
+    /// // broadcast the last axis into 4d tensor
+    /// let _: Tensor4D<3, 5, 7, 9> = Tensor3D::<3, 5, 7>::zeros().broadcast1();
+    /// ```
     fn broadcast1(self) -> T;
 }
 
 /// Broadcasts dimensions `I1` and `I2`. Increases number dimensions by 2. Results in `T`.
 pub trait Broadcast2<T, const I1: isize, const I2: isize> {
     /// Broadcast `self` into `T`, increasing number dimensions by 2.
+    ///
+    /// Examples:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// let _: Tensor2D<3, 5> = Tensor0D::zeros().broadcast2();
+    ///
+    /// // broadcast the 1st & 2nd axis
+    /// let _: Tensor3D<3, 5, 7> = Tensor1D::<3>::zeros().broadcast2();
+    ///
+    /// // broadcast the 0th & 2nd axis
+    /// let _: Tensor3D<5, 3, 7> = Tensor1D::<3>::zeros().broadcast2();
+    ///
+    /// // broadcast the 0th & 1st axis
+    /// let _: Tensor3D<7, 5, 3> = Tensor1D::<3>::zeros().broadcast2();
+    /// ```
     fn broadcast2(self) -> T;
 }
 
 /// Broadcasts dimensions `I1`, `I2`, and `I3`. Increases number dimensions by 3. Results in `T`.
 pub trait Broadcast3<T, const I1: isize, const I2: isize, const I3: isize> {
     /// Broadcast `self` into `T`, increasing number dimensions by 3.
+    ///
+    /// Examples:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    ///
+    /// // broadcast axes 1, 2, 3
+    /// let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<3>::zeros().broadcast3();
+    ///
+    /// // broadcast axes 0, 2, 3
+    /// let _: Tensor4D<9, 3, 5, 7> = Tensor1D::<3>::zeros().broadcast3();
+    ///
+    /// // broadcast axes 0, 1, 3
+    /// let _: Tensor4D<9, 7, 3, 5> = Tensor1D::<3>::zeros().broadcast3();
+    ///
+    /// // braodcast axes 0, 1, 2
+    /// let _: Tensor4D<9, 7, 5, 3> = Tensor1D::<3>::zeros().broadcast3();
+    /// ```
     fn broadcast3(self) -> T;
 }
 
 /// Broadcasts dimensions `I1`, `I2`, `I3`, and `I4`. Increases number dimensions by 4. Results in `T`.
 pub trait Broadcast4<T, const I1: isize, const I2: isize, const I3: isize, const I4: isize> {
     /// Broadcast `self` into `T`, increasing number dimensions by 4.
+    ///
+    /// Examples:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// let _: Tensor4D<1, 2, 3, 4> = Tensor0D::zeros().broadcast4();
+    /// ```
     fn broadcast4(self) -> T;
 }
 
