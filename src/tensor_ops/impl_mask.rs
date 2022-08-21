@@ -8,8 +8,8 @@ use crate::prelude::*;
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
-/// let m: Tensor1D<3> = Tensor1D::new([-1e10, 0.0, -1e10]);
+/// let t: Tensor1D<3> = tensor([1.0, 2.0, 3.0]);
+/// let m: Tensor1D<3> = tensor([-1e10, 0.0, -1e10]);
 /// let r = t.trace().value_mask(&m, -1e10);
 /// assert_eq!(r.data(), &[-1e10, 2.0, -1e10]);
 /// ```
@@ -53,8 +53,8 @@ mod tests {
 
     #[test]
     fn test_mask_0d() {
-        let t = Tensor0D::new(1.0);
-        let m = Tensor0D::new(-1e10);
+        let t = tensor(1.0);
+        let m = tensor(-1e10);
         let r = t.trace().value_mask(&m, -1e10);
         assert_eq!(r.data(), &-1e10);
         let gradients = r.mean().backward();
@@ -63,8 +63,8 @@ mod tests {
 
     #[test]
     fn test_mask_1d() {
-        let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
-        let m: Tensor1D<3> = Tensor1D::new([-1e10, 0.0, -1e10]);
+        let t: Tensor1D<3> = tensor([1.0, 2.0, 3.0]);
+        let m: Tensor1D<3> = tensor([-1e10, 0.0, -1e10]);
         let r = t.trace().value_mask(&m, -1e10);
         assert_eq!(r.data(), &[-1e10, 2.0, -1e10]);
         // NOTE: .exp() so we cover the case where .mask() has to use result grad
@@ -74,8 +74,8 @@ mod tests {
 
     #[test]
     fn test_mask_2d() {
-        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-        let m: Tensor2D<2, 3> = Tensor2D::new([[-1e10, 0.0, -1e10], [1.0, -1e10, -1e9]]);
+        let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        let m: Tensor2D<2, 3> = tensor([[-1e10, 0.0, -1e10], [1.0, -1e10, -1e9]]);
         let r = t.trace().value_mask(&m, -1e10);
         assert_eq!(r.data(), &[[-1e10, 2.0, -1e10], [4.0, -1e10, 6.0]]);
         let gradients = r.mean().backward();

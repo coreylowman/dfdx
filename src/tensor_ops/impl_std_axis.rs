@@ -10,7 +10,7 @@ use crate::prelude::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t: Tensor2D<2, 3> = Tensor2D::new([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
+/// let t: Tensor2D<2, 3> = tensor([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
 /// let r: Tensor1D<2> = t.std_axis::<-1>(0.0);
 /// assert_eq!(r.data(), &[0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
 /// ```
@@ -32,7 +32,7 @@ where
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t: Tensor2D<2, 3> = Tensor2D::new([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
+/// let t: Tensor2D<2, 3> = tensor([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
 /// let r: Tensor1D<2> = t.var_axis::<-1>();
 /// assert_eq!(r.data(), &[0.6666667, 6.0]);
 /// ```
@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn test_var_axis_0_2d() {
-        let t: Tensor2D<2, 4> = Tensor2D::new([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
+        let t: Tensor2D<2, 4> = tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r = t.trace().var_axis::<0>();
         assert_eq!(r.data(), &[0.25, 0.0, 1.0, 9.0]);
         let gradients = r.mean().backward();
@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn test_var_axis_1_2d() {
-        let t: Tensor2D<2, 4> = Tensor2D::new([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
+        let t: Tensor2D<2, 4> = tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r: Tensor1D<2, OwnedTape> = t.trace().var_axis::<-1>();
         assert_eq!(r.data(), &[1.25, 14.1875]);
         let gradients = r.mean().backward();
@@ -126,7 +126,7 @@ mod tests {
 
     #[test]
     fn test_std_axis_0_2d() {
-        let t: Tensor2D<2, 4> = Tensor2D::new([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
+        let t: Tensor2D<2, 4> = tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r = t.trace().std_axis::<0>(1e-8);
         assert_eq!(r.data(), &[0.5, 0.0001, 1.0, 3.0]);
         let gradients = r.mean().backward();
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_std_axis_1_2d() {
-        let t: Tensor2D<2, 4> = Tensor2D::new([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
+        let t: Tensor2D<2, 4> = tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r: Tensor1D<2, OwnedTape> = t.trace().std_axis::<-1>(0.0);
         assert_eq!(r.data(), &[1.118034, 3.7666297]);
         let gradients = r.mean().backward();

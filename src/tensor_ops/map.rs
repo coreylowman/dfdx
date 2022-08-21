@@ -7,7 +7,7 @@ use std::ops::Neg;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a: Tensor1D<3> = Tensor1D::new([-2.0, 0.0, 5.0]);
+/// let a: Tensor1D<3> = tensor([-2.0, 0.0, 5.0]);
 /// let r = -a; // or negate(a);
 /// assert_eq!(r.data(), &[2.0, 0.0, -5.0]);
 /// ```
@@ -22,7 +22,7 @@ pub fn negate<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor1D::new([-1.0, 0.0, 1.0, 2.0]);
+/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 ///
 /// // use function version
 /// let r = relu(t.clone());
@@ -41,7 +41,7 @@ pub fn relu<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor1D::new([-1.0, 0.0, 1.0, 2.0]);
+/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 ///
 /// // use function version
 /// let r = square(t.clone());
@@ -60,7 +60,7 @@ pub fn square<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor1D::new([-1.0, 0.0, 1.0, 2.0]);
+/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 ///
 /// // use function version
 /// let r = sqrt(t.clone());
@@ -79,7 +79,7 @@ pub fn sqrt<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor1D::new([-1.0, 0.0, 1.0, 2.0]);
+/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 ///
 /// // use function version
 /// let r = tanh(t.clone());
@@ -100,7 +100,7 @@ pub fn tanh<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor1D::new([-1.0, 0.0, 1.0, 2.0]);
+/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 ///
 /// // use function version
 /// let r = sigmoid(t.clone());
@@ -123,7 +123,7 @@ pub fn sigmoid<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor1D::new([-1.0, 0.0, 1.0, 2.0]);
+/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 ///
 /// // use function version
 /// let r = sin(t.clone());
@@ -142,7 +142,7 @@ pub fn sin<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor1D::new([-1.0, 0.0, 1.0, 2.0]);
+/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 ///
 /// // use function version
 /// let r = cos(t.clone());
@@ -161,7 +161,7 @@ pub fn cos<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor1D::new([-1.0, 0.0, 1.0, 2.0]);
+/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 ///
 /// // use function version
 /// let r = ln(t.clone());
@@ -180,7 +180,7 @@ pub fn ln<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor1D::new([-1.0, 0.0, 1.0, 2.0]);
+/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 ///
 /// // use function version
 /// let r = exp(t.clone());
@@ -199,7 +199,7 @@ pub fn exp<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor1D::new([-1.0, 0.0, 1.0, 2.0]);
+/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 ///
 /// // use function version
 /// let r = abs(t.clone());
@@ -220,7 +220,7 @@ pub fn abs<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+/// let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
 /// let r = map(t, |x| 2.0 * x, |x| 2.0);
 /// assert_eq!(r.data(), &[-4.0, -2.0, 0.0, 2.0, 4.0]);
 /// ```
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn test_relu() {
-        let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().relu();
         assert_eq!(r.data(), &[0.0, 0.0, 0.0, 1.0, 2.0]);
         // NOTE: call .exp() to make sure we cover cases where .relu() uses the result's gradient
@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_sin() {
-        let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().sin();
         assert_close(
             r.data(),
@@ -335,7 +335,7 @@ mod tests {
 
     #[test]
     fn test_cos() {
-        let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().cos();
         assert_close(
             r.data(),
@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn test_ln() {
-        let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().ln();
         assert!(r.data()[0].is_nan());
         assert!(r.data()[1].is_nan());
@@ -364,7 +364,7 @@ mod tests {
 
     #[test]
     fn test_exp() {
-        let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().exp();
         assert_eq!(
             r.data(),
@@ -379,7 +379,7 @@ mod tests {
 
     #[test]
     fn test_sigmoid() {
-        let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().sigmoid();
         assert_eq!(
             r.data(),
@@ -394,7 +394,7 @@ mod tests {
 
     #[test]
     fn test_tanh() {
-        let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().tanh();
         assert_eq!(
             r.data(),
@@ -409,7 +409,7 @@ mod tests {
 
     #[test]
     fn test_square() {
-        let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().square();
         assert_eq!(r.data(), &[4.0, 1.0, 0.0, 1.0, 4.0]);
         let gradients = r.mean().backward();
@@ -418,7 +418,7 @@ mod tests {
 
     #[test]
     fn test_sqrt() {
-        let x = Tensor1D::new([-1.0, 0.0, 1.0, 4.0]);
+        let x = tensor([-1.0, 0.0, 1.0, 4.0]);
         let r = x.trace().sqrt();
         assert!(r.data()[0].is_nan());
         assert_eq!(r.data()[1..], [0.0, 1.0, 2.0]);
@@ -432,7 +432,7 @@ mod tests {
 
     #[test]
     fn test_abs() {
-        let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().abs();
         assert_eq!(r.data(), &[2.0, 1.0, 0.0, 1.0, 2.0]);
         let gradients = r.mean().backward();
@@ -441,7 +441,7 @@ mod tests {
 
     #[test]
     fn test_0d_neg() {
-        let a = Tensor0D::new(10.0);
+        let a = tensor(10.0);
         let r = -(a.trace());
         assert_eq!(r.data(), &-10.0);
         let gradients = r.backward();
@@ -450,7 +450,7 @@ mod tests {
 
     #[test]
     fn test_1d_neg() {
-        let a: Tensor1D<3> = Tensor1D::new([-2.0, 0.0, 5.0]);
+        let a: Tensor1D<3> = tensor([-2.0, 0.0, 5.0]);
         let r = -(a.trace());
         assert_eq!(r.data(), &[2.0, 0.0, -5.0]);
         // NOTE: .exp() so we can make sure neg is using result grad properly
@@ -463,7 +463,7 @@ mod tests {
 
     #[test]
     fn test_2d_neg() {
-        let a: Tensor2D<2, 3> = Tensor2D::new([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
+        let a: Tensor2D<2, 3> = tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
         let r = -(a.trace());
         assert_eq!(r.data(), &[[2.0, 0.0, -5.0], [-1.0, -2.0, -3.0]]);
         let gradients = r.mean().backward();

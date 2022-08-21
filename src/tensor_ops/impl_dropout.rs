@@ -13,7 +13,7 @@ use rand_distr::{Distribution, Standard};
 /// # use dfdx::prelude::*;
 /// # use rand::prelude::*;
 /// let mut rng = StdRng::seed_from_u64(4);
-/// let t = Tensor1D::new([1.0, 2.0, 3.0, 4.0]);
+/// let t = tensor([1.0, 2.0, 3.0, 4.0]);
 ///
 /// // no tape in t, this won't do anything
 /// let a = dropout(t.clone(), 0.5, &mut rng);

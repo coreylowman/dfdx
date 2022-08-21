@@ -5,7 +5,7 @@ use crate::prelude::*;
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let t = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let r: Tensor0D = t.mean();
 /// assert_eq!(r.data(), &0.0);
 /// ```
@@ -36,7 +36,7 @@ mod tests {
 
     #[test]
     fn test_mean_0d() {
-        let t: Tensor0D = Tensor0D::new(3.0);
+        let t: Tensor0D = tensor(3.0);
         let r = t.trace().mean();
         assert_eq!(r.data(), &3.0);
         let gradients = r.backward();
@@ -45,7 +45,7 @@ mod tests {
 
     #[test]
     fn test_mean_1d() {
-        let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
+        let t: Tensor1D<3> = tensor([1.0, 2.0, 3.0]);
         let r: Tensor0D<OwnedTape> = t.trace().mean();
         assert_eq!(r.data(), &2.0);
         // NOTE: .exp() so we cover the case where .mean() has to use result grad.
@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn test_mean_2d() {
-        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
         let r: Tensor0D<OwnedTape> = t.trace().mean();
         assert_eq!(r.data(), &3.5);
         let gradients = r.backward();

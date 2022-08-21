@@ -8,7 +8,7 @@ use crate::prelude::*;
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = Tensor1D::new([-2.0, -1.0, 0.0, 5.0, 2.0]);
+/// let a = tensor([-2.0, -1.0, 0.0, 5.0, 2.0]);
 /// let r = a.normalize_axis::<-1>(1e-5);
 /// assert!(r.clone().mean_axis::<-1>().data().abs() < 1e-6);
 /// assert!((r.clone().std_axis::<-1>(0.0).data() - 1.0).abs() < 1e-6);
@@ -57,7 +57,7 @@ mod tests {
 
     #[test]
     fn test_0d_normalize_axis_last() {
-        let a = Tensor0D::new(10.0);
+        let a = tensor(10.0);
         let r = a.trace().normalize_axis::<-1>(1e-5);
         assert_eq!(r.data(), &0.0);
         let gradients = r.backward();
@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn test_1d_normalize_axis_last() {
-        let a = Tensor1D::new([-2.0, 0.0, 5.0]);
+        let a = tensor([-2.0, 0.0, 5.0]);
         let r = a.trace().normalize_axis::<-1>(1e-5);
         assert_eq!(r.data(), &[-1.0190487, -0.3396829, 1.3587316]);
         // NOTE: .exp() so we can make sure normalize is using result grad properly
@@ -79,7 +79,7 @@ mod tests {
 
     #[test]
     fn test_2d_normalize_axis_last() {
-        let a: Tensor2D<2, 3> = Tensor2D::new([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
+        let a: Tensor2D<2, 3> = tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
         let r = a.trace().normalize_axis::<-1>(1e-5);
         assert_eq!(
             r.data(),
@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn test_2d_normalize_axis_first() {
-        let a: Tensor2D<3, 2> = Tensor2D::new([[-2.0, 0.0], [1.0, 2.0], [4.0, 5.0]]);
+        let a: Tensor2D<3, 2> = tensor([[-2.0, 0.0], [1.0, 2.0], [4.0, 5.0]]);
         let r = a.trace().normalize_axis::<0>(1e-5);
         assert_eq!(
             r.data(),
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_3d_normalize_axis_last() {
-        let a: Tensor3D<4, 2, 3> = Tensor3D::ones();
+        let a: Tensor3D<4, 2, 3> = TensorCreator::ones();
         let r = a.trace().normalize_axis::<-1>(1e-5);
         assert_eq!(r.data(), &[[[0.0; 3]; 2]; 4]);
         let gradients = r.exp().mean().backward();

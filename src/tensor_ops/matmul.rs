@@ -8,24 +8,24 @@ use crate::prelude::*;
 /// 1. Normal matmul
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x: Tensor2D<3, 2> = Tensor2D::zeros();
-/// let y: Tensor2D<2, 4> = Tensor2D::zeros();
+/// let x: Tensor2D<3, 2> = TensorCreator::zeros();
+/// let y: Tensor2D<2, 4> = TensorCreator::zeros();
 /// let result: Tensor2D<3, 4> = matmul(x, &y);
 /// ```
 ///
 /// 2. Batched matmul
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x: Tensor3D<10, 3, 2> = Tensor3D::zeros();
-/// let y: Tensor3D<10, 2, 4> = Tensor3D::zeros();
+/// let x: Tensor3D<10, 3, 2> = TensorCreator::zeros();
+/// let y: Tensor3D<10, 2, 4> = TensorCreator::zeros();
 /// let result: Tensor3D<10, 3, 4> = matmul(x, &y);
 /// ```
 ///
 /// 3. Broadcasted matmul
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x: Tensor3D<10, 3, 2> = Tensor3D::zeros();
-/// let y: Tensor2D<2, 4> = Tensor2D::zeros();
+/// let x: Tensor3D<10, 3, 2> = TensorCreator::zeros();
+/// let y: Tensor2D<2, 4> = TensorCreator::zeros();
 /// let result: Tensor3D<10, 3, 4> = matmul(x, &y);
 /// ```
 pub fn matmul<A, B, C>(a: A, b: &B) -> <A as MatMulTyping<B>>::C
@@ -93,24 +93,24 @@ impl<const B: usize, const M: usize, const N: usize, const K: usize, H> MatMulTy
 /// 1. Normal matmul
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x: Tensor2D<3, 2> = Tensor2D::zeros();
-/// let y: Tensor2D<4, 2> = Tensor2D::zeros();
+/// let x: Tensor2D<3, 2> = TensorCreator::zeros();
+/// let y: Tensor2D<4, 2> = TensorCreator::zeros();
 /// let result: Tensor2D<3, 4> = matmul_transpose(x, &y);
 /// ```
 ///
 /// 2. Batched matmul
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x: Tensor3D<10, 3, 2> = Tensor3D::zeros();
-/// let y: Tensor3D<10, 4, 2> = Tensor3D::zeros();
+/// let x: Tensor3D<10, 3, 2> = TensorCreator::zeros();
+/// let y: Tensor3D<10, 4, 2> = TensorCreator::zeros();
 /// let result: Tensor3D<10, 3, 4> = matmul_transpose(x, &y);
 /// ```
 ///
 /// 3. Broadcasted matmul
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x: Tensor3D<10, 3, 2> = Tensor3D::zeros();
-/// let y: Tensor2D<4, 2> = Tensor2D::zeros();
+/// let x: Tensor3D<10, 3, 2> = TensorCreator::zeros();
+/// let y: Tensor2D<4, 2> = TensorCreator::zeros();
 /// let result: Tensor3D<10, 3, 4> = matmul_transpose(x, &y);
 /// ```
 pub fn matmul_transpose<A, B, C>(a: A, b: &B) -> <A as MatMulTrTyping<B>>::C
@@ -185,8 +185,8 @@ impl<const B: usize, const M: usize, const N: usize, const K: usize, H>
 ///
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x: Tensor1D<2> = Tensor1D::zeros();
-/// let y: Tensor2D<2, 4> = Tensor2D::zeros();
+/// let x: Tensor1D<2> = TensorCreator::zeros();
+/// let y: Tensor2D<2, 4> = TensorCreator::zeros();
 /// let result: Tensor1D<4> = vecmat_mul(x, &y);
 /// ```
 pub fn vecmat_mul<const K: usize, const N: usize, TAPE: Tape>(
@@ -223,8 +223,8 @@ pub fn vecmat_mul<const K: usize, const N: usize, TAPE: Tape>(
 ///
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x: Tensor1D<2> = Tensor1D::zeros();
-/// let y: Tensor2D<4, 2> = Tensor2D::zeros();
+/// let x: Tensor1D<2> = TensorCreator::zeros();
+/// let y: Tensor2D<4, 2> = TensorCreator::zeros();
 /// let result: Tensor1D<4> = vecmat_mul_transpose(x, &y);
 /// ```
 pub fn vecmat_mul_transpose<const K: usize, const N: usize, TAPE: Tape>(
@@ -271,13 +271,13 @@ mod tests {
 
     #[test]
     fn test_matmul() {
-        let a = Tensor2D::new([
+        let a = tensor([
             [0.5086, 0.5234, 0.2684],
             [0.8075, 0.8437, 0.9951],
             [0.0774, 0.7539, 0.8894],
             [0.8119, 0.2693, 0.7249],
         ]);
-        let b = Tensor2D::new([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
+        let b = tensor([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
         let r = matmul(a.trace(), &b);
         assert_close(
             r.data(),
@@ -366,8 +366,8 @@ mod tests {
 
     #[test]
     fn test_vecmat_mul() {
-        let a = Tensor1D::new([0.7296, 0.3974, 0.9487]);
-        let b = Tensor2D::new([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
+        let a = tensor([0.7296, 0.3974, 0.9487]);
+        let b = tensor([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
         let r: Tensor1D<2, OwnedTape> = vecmat_mul(a.trace(), &b);
         assert_close(r.data(), &[1.261436, 1.5543157]);
         let g = r.exp().mean().backward();
@@ -384,8 +384,8 @@ mod tests {
 
     #[test]
     fn test_vecmat_mul_transpose() {
-        let a = Tensor1D::new([0.7296, 0.3974, 0.9487]);
-        let b = Tensor2D::new([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
+        let a = tensor([0.7296, 0.3974, 0.9487]);
+        let b = tensor([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
         let r: Tensor1D<2, OwnedTape> = vecmat_mul_transpose(a.trace(), &b);
         assert_close(r.data(), &[1.261436, 1.5543157]);
         let g = r.exp().mean().backward();

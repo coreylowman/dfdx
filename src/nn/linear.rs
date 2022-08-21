@@ -127,11 +127,11 @@ mod tests {
     #[test]
     fn test_forward_1d() {
         let model: Linear<5, 2> = Linear {
-            weight: Tensor2D::new(W),
-            bias: Tensor1D::new(B),
+            weight: tensor(W),
+            bias: tensor(B),
         };
 
-        let x = Tensor1D::new([-0.8808001, 2.4185333, 2.2478335, 0.0565211, 2.031299]);
+        let x = tensor([-0.8808001, 2.4185333, 2.2478335, 0.0565211, 2.031299]);
         let y = model.forward(x.trace());
         assert_close(y.data(), &[-0.93430865, 0.08624211]);
 
@@ -153,11 +153,11 @@ mod tests {
     #[test]
     fn test_forward_2d() {
         let model: Linear<5, 2> = Linear {
-            weight: Tensor2D::new(W),
-            bias: Tensor1D::new(B),
+            weight: tensor(W),
+            bias: tensor(B),
         };
 
-        let x = Tensor2D::new([
+        let x = tensor([
             [-1.9468665, 1.4611785, -1.6698982, 1.408863, 1.3425643],
             [-1.3399831, 3.0510678, -0.17936817, -0.04943254, -0.8052705],
             [-0.8291412, 0.07691376, -0.26538327, 0.90017676, -1.8790455],
@@ -190,11 +190,11 @@ mod tests {
     #[test]
     fn test_forward_3d() {
         let model: Linear<5, 2> = Linear {
-            weight: Tensor2D::new(W),
-            bias: Tensor1D::new(B),
+            weight: tensor(W),
+            bias: tensor(B),
         };
 
-        let x = Tensor3D::new([
+        let x = tensor([
             [
                 [-1.9468665, 1.4611785, -1.6698982, 1.408863, 1.3425643],
                 [-1.3399831, 3.0510678, -0.17936817, -0.04943254, -0.8052705],

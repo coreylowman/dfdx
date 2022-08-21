@@ -14,8 +14,8 @@
 //! 1. [crate::tensor::Tensor]s can be created with normal rust arrays. See [crate::tensor].
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let x = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-//! let y: Tensor2D<2, 3> = Tensor2D::ones();
+//! let x = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+//! let y: Tensor2D<2, 3> = TensorCreator::ones();
 //! ```
 //!
 //! 2. Neural networks are built with types. Tuples are sequential models. See [crate::nn].
@@ -40,8 +40,8 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let mut mlp: Linear<5, 2> = Default::default();
-//! let x = Tensor1D::zeros(); // rust figures out that x must be a `Tensor1D<5>` bc its given to mlp.forward()!
-//! let y = mlp.forward(x); // rust will auto figure out that `y` is `Tensor1D<2>`!
+//! let x = Tensor1D::zeros(); // compiler knows that x is a `Tensor1D<5>`
+//! let y = mlp.forward(x); // compiler knows that `y` must be `Tensor1D<2>`
 //! ```
 //!
 //! 5. Trace gradients using [crate::tensor::trace()]
@@ -51,7 +51,7 @@
 //! # let model: Linear<10, 5> = Default::default();
 //! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
 //! // tensors default to not having a tape
-//! let x: Tensor1D<10, NoneTape> = Tensor1D::zeros();
+//! let x: Tensor1D<10, NoneTape> = TensorCreator::zeros();
 //!
 //! // `.trace()` clones `x` and inserts a gradient tape.
 //! let x_t: Tensor1D<10, OwnedTape> = x.trace();

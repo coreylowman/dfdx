@@ -30,8 +30,8 @@ impl<const M: usize> Default for LayerNorm1D<M> {
     /// Fills [Self::gamma] with 1s and [Self::beta] with 0s and sets [Self::epsilon] to `1e-5`.
     fn default() -> Self {
         Self {
-            gamma: Tensor1D::ones(),
-            beta: Tensor1D::zeros(),
+            gamma: TensorCreator::ones(),
+            beta: TensorCreator::zeros(),
             epsilon: 1e-5,
         }
     }

@@ -131,7 +131,7 @@ mod tests {
     fn test_default_adam_params() {
         let mut opt = Adam::default();
         let mut t: Tensor1D<5> = Tensor1D::ones();
-        let rate = Tensor1D::new([1e-6, 1e-5, 1e-4, 1e-3, 1e-2]);
+        let rate = tensor([1e-6, 1e-5, 1e-4, 1e-3, 1e-2]);
         let expected = [
             [0.99999994, 0.999996, 0.9997143, 0.9990244, 0.99900025],
             [0.9999999, 0.999992, 0.99942863, 0.99804884, 0.9980005],
