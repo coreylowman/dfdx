@@ -14,7 +14,7 @@ use std::{cell::RefCell, ops::DerefMut};
 /// let dropout: DropoutOneIn<2> = Default::default();
 /// let t: Tensor2D<2, 5> = Tensor2D::ones();
 /// let r = dropout.forward(t.trace());
-/// assert_eq!(r.data(), &[[2.0, 2.0, 2.0, 2.0, 2.0], [0.0, 2.0, 2.0, 2.0, 0.0]]);
+/// assert_eq!(r.data(), &[[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug)]
 pub struct DropoutOneIn<const N: usize> {
