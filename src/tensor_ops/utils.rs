@@ -14,14 +14,6 @@ use crate::prelude::*;
 ///
 /// This is primarily used to implement standard functions such as [relu()], [exp()], etc.
 /// But users can also implement their own activations with this.
-///
-/// Examples:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-/// let r = map(t, |x| 2.0 * x, |x| 2.0);
-/// assert_eq!(r.data(), &[-4.0, -2.0, 0.0, 2.0, 4.0]);
-/// ```
 pub(crate) fn map<T: Tensor<Dtype = f32>, F, Df>(t: T, f: F, mut df: Df) -> T
 where
     F: 'static + FnMut(&f32) -> f32,
