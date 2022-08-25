@@ -71,7 +71,9 @@ pub fn huber_loss<T: Tensor<Dtype = f32>>(
             (y - x).signum() * delta
         }
     };
-    mean(binary_map::binary_map(pred, targ, f, dfdx, dfdy))
+    mean(crate::tensor_ops::utils::binary_map(
+        pred, targ, f, dfdx, dfdy,
+    ))
 }
 
 /// Smooth l1 loss (closely related to [Huber Loss](https://en.wikipedia.org/wiki/Huber_loss))
@@ -175,7 +177,7 @@ pub fn binary_cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
     logits: T,
     target_probs: &T::NoTape,
 ) -> Tensor0D<T::Tape> {
-    mean(binary_map::binary_map(
+    mean(crate::tensor_ops::utils::binary_map(
         logits,
         target_probs,
         |logit, prob| logit.max(0.0) - logit * prob + (1.0 + (-logit.abs()).exp()).ln(),

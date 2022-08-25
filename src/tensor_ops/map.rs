@@ -1,4 +1,4 @@
-use super::utils::move_tape_and_add_backward_op;
+use super::utils::{map, map_df_uses_fx};
 use crate::prelude::*;
 use std::ops::Neg;
 
@@ -211,52 +211,6 @@ pub fn abs<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.abs(), |x| if x == &0.0 { 0.0 } else { x.signum() })
 }
 
-/// `f(t)`. Applies a function `f` to every element of the [Tensor]. The derivative
-/// `df` must also be provided.
-///
-/// This is primarily used to implement standard functions such as [relu()], [exp()], etc.
-/// But users can also implement their own activations with this.
-///
-/// Examples:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-/// let r = map(t, |x| 2.0 * x, |x| 2.0);
-/// assert_eq!(r.data(), &[-4.0, -2.0, 0.0, 2.0, 4.0]);
-/// ```
-pub fn map<T: Tensor<Dtype = f32>, F, Df>(t: T, f: F, mut df: Df) -> T
-where
-    F: 'static + FnMut(&f32) -> f32,
-    Df: 'static + FnMut(&f32) -> f32,
-{
-    let result = T::NoTape::new_boxed(T::Device::map(t.data(), f));
-    move_tape_and_add_backward_op(t, result, move |t, result, grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-        T::Device::foreach_mrr(t_grad, t.data(), result_grad, &mut |g, t, r| {
-            *g += df(t) * r;
-        });
-    })
-}
-
-/// Same as [map()], but calls `df` with the result of `f(x)`. This can potentially remove an allocation.
-pub fn map_df_uses_fx<T: Tensor<Dtype = f32>, F, Df>(mut t: T, mut f: F, mut df: Df) -> T
-where
-    F: FnMut(&f32) -> f32,
-    Df: 'static + FnMut(&f32) -> f32,
-{
-    T::Device::foreach_m(t.mut_data(), &mut |x| *x = f(x)); // clones if there is more than 1 reference to t
-    let (t, mut tape) = t.split_tape();
-    let result = t.clone(); // will always a new reference to t, not start a new one
-    let phantom_result = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &phantom_result);
-        T::Device::foreach_mrr(t_grad, t.data(), result_grad, &mut |g, fx, r| {
-            *g += df(fx) * r;
-        });
-    });
-    result.put_tape(tape)
-}
-
 macro_rules! activation_impl {
     ($func_name:ident, #[$docstring:meta]) => {
         #[$docstring]
@@ -301,9 +255,8 @@ tensor_impl!(Tensor4D, [M, N, O, P]);
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::assert_close;
-
     use super::*;
+    use crate::tests::assert_close;
 
     #[test]
     fn test_relu() {

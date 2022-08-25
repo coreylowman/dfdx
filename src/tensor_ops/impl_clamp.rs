@@ -10,7 +10,7 @@ use crate::prelude::*;
 /// assert_eq!(r.data(), &[-0.5, -0.5, 0.0, 0.5, 0.5]);
 /// ```
 pub fn clamp<T: Tensor<Dtype = f32>>(t: T, min: T::Dtype, max: T::Dtype) -> T {
-    map(
+    crate::tensor_ops::utils::map(
         t,
         move |x| x.clamp(min, max),
         move |x| if (min..=max).contains(x) { 1.0 } else { 0.0 },

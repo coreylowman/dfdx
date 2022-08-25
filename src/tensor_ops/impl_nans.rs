@@ -12,7 +12,7 @@ use crate::prelude::*;
 /// assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
 /// ```
 pub fn nans_to<T: Tensor<Dtype = f32>>(t: T, value: T::Dtype) -> T {
-    map(
+    crate::tensor_ops::utils::map(
         t,
         move |x| if x.is_nan() { value } else { *x },
         move |x| if x.is_nan() { 0.0 } else { 1.0 },

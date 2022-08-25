@@ -38,7 +38,7 @@ pub fn dropout<T: Tensor<Dtype = f32>, R: Rng>(t: T, p: f32, rng: &mut R) -> T {
         let seed: u64 = rng.gen();
         let mut fwd_rng = StdRng::seed_from_u64(seed);
         let mut bwd_rng = StdRng::seed_from_u64(seed);
-        map(
+        crate::tensor_ops::utils::map(
             t,
             move |x| {
                 let val: f32 = fwd_rng.sample(Standard);
