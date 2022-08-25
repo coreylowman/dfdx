@@ -1,16 +1,19 @@
-# dfdx: strongly typed deep learning in Rust
+# dfdx: shape checked deep learning in rust
 
+[![crates.io](https://img.shields.io/crates/v/dfdx.svg)](https://crates.io/crates/dfdx)
+[![docs.rs](https://img.shields.io/docsrs/dfdx)](https://docs.rs/dfdx)
 [![codecov](https://codecov.io/gh/coreylowman/dfdx/branch/main/graph/badge.svg?token=X9OWP9Q840)](https://codecov.io/gh/coreylowman/dfdx)
 [![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/AtUhGqBDP5)
 
 Ergonomics & safety focused deep learning in Rust. Main features include:
 
 1. Const generic tensor library with tensors up to 4d!
-2. A large library of tensor operations (matrix multiplication, arithmetic, activation functions, etc).
-3. Safe & easy to use neural network building blocks.
-4. Standard deep learning optimizers such as Sgd and Adam.
-5. Reverse mode auto differentiation[1] implementation.
-6. Serialization to/from `.npy` and `.npz` for transferring models to/from python.
+2. Shape and type checked at compile time.
+3. A large library of tensor operations.
+4. Safe & easy to use neural network building blocks.
+5. Standard deep learning optimizers such as Sgd and Adam.
+6. Reverse mode auto differentiation[1] implementation.
+7. Serialization to/from `.npy` and `.npz` for transferring models to/from python.
 
 `dfdx` is on [crates.io](https://crates.io/crates/dfdx)! Use by adding this to your `Cargo.toml`:
 
