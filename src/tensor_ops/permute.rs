@@ -150,12 +150,117 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize, H> Permute4
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::thread_rng;
 
     #[test]
     fn test_permute_2d() {
-        let t = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-        let q = ConstPermute2::<1, 0>::const_permute(t);
-        // let q = t.trace().permute_axes::<1, 0>();
-        assert_eq!(q.data(), &[[1.0, 4.0], [2.0, 5.0], [3.0, 6.0]]);
+        let mut rng = thread_rng();
+        let t: Tensor2D<2, 3> = TensorCreator::randn(&mut rng);
+        let r = t.clone().permute_axes::<1, 0>();
+        for i in 0..2 {
+            for j in 0..3 {
+                assert_eq!(r.data()[j][i], t.data()[i][j]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_permute_3d() {
+        let mut rng = thread_rng();
+        let t: Tensor3D<3, 5, 7> = TensorCreator::randn(&mut rng);
+        let r = t.clone().permute_axes::<1, 2, 0>();
+        for i in 0..3 {
+            for j in 0..5 {
+                for k in 0..7 {
+                    assert_eq!(r.data()[j][k][i], t.data()[i][j][k]);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_permute_4d() {
+        let mut rng = thread_rng();
+        let t: Tensor4D<3, 5, 7, 9> = TensorCreator::randn(&mut rng);
+        let r = t.clone().permute_axes::<1, 3, 0, 2>();
+        for i in 0..3 {
+            for j in 0..5 {
+                for k in 0..7 {
+                    for l in 0..9 {
+                        assert_eq!(r.data()[j][l][i][k], t.data()[i][j][k][l]);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_permute_2d_backwards() {
+        let mut rng = thread_rng();
+        let t: Tensor2D<3, 6> = TensorCreator::randn(&mut rng);
+        let g1 = t.trace().permute_axes::<1, 0>().exp().sum().backward();
+        let g2 = t.trace().exp().sum().backward();
+        assert_eq!(g1.ref_gradient(&t), g2.ref_gradient(&t));
+    }
+
+    #[test]
+    fn test_permute_3d_backwards() {
+        let mut rng = thread_rng();
+        let t: Tensor3D<3, 6, 9> = TensorCreator::randn(&mut rng);
+        let g1 = t.trace().permute_axes::<1, 2, 0>().exp().sum().backward();
+        let g2 = t.trace().exp().sum().backward();
+        assert_eq!(g1.ref_gradient(&t), g2.ref_gradient(&t));
+    }
+
+    #[test]
+    fn test_permute_4d_backwards() {
+        let mut rng = thread_rng();
+        let t: Tensor4D<3, 6, 9, 11> = TensorCreator::randn(&mut rng);
+        let g1 = t
+            .trace()
+            .permute_axes::<3, 1, 0, 2>()
+            .exp()
+            .sum()
+            .backward();
+        let g2 = t.trace().exp().sum().backward();
+        assert_eq!(g1.ref_gradient(&t), g2.ref_gradient(&t));
+    }
+
+    #[test]
+    fn test_valid_permutations() {
+        let _ = <Tensor2D<3, 5> as ConstPermute2<0, 1>>::const_permute;
+        let _ = <Tensor2D<3, 5> as ConstPermute2<1, 0>>::const_permute;
+
+        let _ = <Tensor3D<3, 5, 7> as ConstPermute3<0, 1, 2>>::const_permute;
+        let _ = <Tensor3D<3, 5, 7> as ConstPermute3<0, 2, 1>>::const_permute;
+        let _ = <Tensor3D<3, 5, 7> as ConstPermute3<1, 0, 2>>::const_permute;
+        let _ = <Tensor3D<3, 5, 7> as ConstPermute3<1, 2, 0>>::const_permute;
+        let _ = <Tensor3D<3, 5, 7> as ConstPermute3<2, 0, 1>>::const_permute;
+        let _ = <Tensor3D<3, 5, 7> as ConstPermute3<2, 1, 0>>::const_permute;
+
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<0, 1, 2, 3>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<0, 1, 3, 2>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<0, 2, 1, 3>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<0, 2, 3, 1>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<0, 3, 2, 1>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<0, 3, 1, 2>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<1, 0, 2, 3>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<1, 0, 3, 2>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<1, 2, 0, 3>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<1, 2, 3, 0>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<1, 3, 0, 2>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<1, 3, 2, 0>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<2, 0, 1, 3>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<2, 0, 3, 1>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<2, 1, 0, 3>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<2, 1, 3, 0>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<2, 3, 0, 1>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<2, 3, 1, 0>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<3, 0, 1, 2>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<3, 0, 2, 1>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<3, 1, 0, 2>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<3, 1, 2, 0>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<3, 2, 0, 1>>::const_permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<3, 2, 1, 0>>::const_permute;
     }
 }
