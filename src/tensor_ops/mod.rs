@@ -117,6 +117,7 @@ mod impl_sum;
 mod impl_sum_axis;
 mod map;
 mod matmul;
+mod permute;
 mod reduce;
 mod select;
 pub(crate) mod utils;
@@ -146,6 +147,7 @@ pub use impl_sum::*;
 pub use impl_sum_axis::*;
 pub use map::*;
 pub use matmul::*;
+pub use permute::{Permute2Sugar, Permute3Sugar, Permute4Sugar};
 pub use reduce::*;
 pub use select::*;
 
