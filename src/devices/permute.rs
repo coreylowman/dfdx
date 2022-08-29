@@ -6,8 +6,8 @@
 //! this to use const generics, however the attempt at this on
 //! initial implementation was too verbose and hard to understand.
 //!
-//! - [permutations!] expands all the possible permutations of axes
-//! - [impl_permute!] does the actual implementation.
+//! - `permutations!` expands all the possible permutations of axes
+//! - `impl_permute!` does the actual implementation.
 //! - [permuted_loop2], [permuted_loop3], [permuted_loop4], and [const_idx]
 //!   are used to do the permutations.
 //!

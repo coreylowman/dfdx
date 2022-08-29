@@ -1,14 +1,14 @@
 //! Implementation of permute operation
 //!
 //! There are two traits used here:
-//! 1. Permute[2,3,4]
-//! 2. Permute[2,3,4]Sugar
+//! 1. Permute`2,3,4`d
+//! 2. Permute`2,3,4`dSugar
 //!
 //! The Permute versions have the axes specified on the
-//! trait itself (i.e. `Permute::<1, 0>::permute()`).
+//! trait itself (i.e. `Permute2d::<1, 0>::permute()`).
 //!
 //! The PermuteSugar versions have the axes specified on the
-//! function inside the trait (i.e. `Permute2Sugar::permute_axis::<1, 0>()`)
+//! function inside the trait (i.e. `Permute2dSugar::permute_axis::<1, 0>()`)
 
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
