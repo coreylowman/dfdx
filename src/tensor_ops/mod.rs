@@ -147,7 +147,7 @@ pub use impl_sum::*;
 pub use impl_sum_axis::*;
 pub use map::*;
 pub use matmul::*;
-pub use permute::{Permute2Sugar, Permute3Sugar, Permute4Sugar};
+pub use permute::{Permute2dSugar, Permute3dSugar, Permute4dSugar};
 pub use reduce::*;
 pub use select::*;
 

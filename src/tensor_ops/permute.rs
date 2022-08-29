@@ -1,24 +1,122 @@
+//! Implementation of permute operation
+//!
+//! There are two traits used here:
+//! 1. Permute[2,3,4]
+//! 2. Permute[2,3,4]Sugar
+//!
+//! The Permute versions have the axes specified on the
+//! trait itself (i.e. `Permute::<1, 0>::permute()`).
+//!
+//! The PermuteSugar versions have the axes specified on the
+//! function inside the trait (i.e. `Permute2Sugar::permute_axis::<1, 0>()`)
+
 use super::utils::move_tape_and_add_backward_op;
 use crate::prelude::*;
 
-pub trait ConstPermute2<const I: isize, const J: isize> {
+/// Permute 2d tensor that are specified at the trait level. See
+/// [Permute2dSugar] for a more ergonomic version.
+pub trait Permute2d<const I: isize, const J: isize> {
+    /// The resulting type after being permuted
     type Permuted;
     fn permute(self) -> Self::Permuted;
 }
 
-pub trait ConstPermute3<const I: isize, const J: isize, const K: isize> {
+/// Permute 3d tensor that are specified at the trait level. See
+/// [Permute3dSugar] for a more ergonomic version.
+pub trait Permute3d<const I: isize, const J: isize, const K: isize> {
+    /// The resulting type after being permuted
     type Permuted;
     fn permute(self) -> Self::Permuted;
 }
 
-pub trait ConstPermute4<const I: isize, const J: isize, const K: isize, const L: isize> {
+/// Permute 4d tensor that are specified at the trait level. See
+/// [Permute4dSugar] for a more ergonomic version.
+pub trait Permute4d<const I: isize, const J: isize, const K: isize, const L: isize> {
+    /// The resulting type after being permuted
     type Permuted;
     fn permute(self) -> Self::Permuted;
 }
 
+/// Permute 2d tensor with new axes order specified at the function call level.
+pub trait Permute2dSugar: Sized {
+    /// Generics:
+    /// - `I` the index of the new 1st dimension, can be 0 or 1
+    /// - `J` the index of the new 2nd dimension, can be 0 or 1
+    ///
+    /// Examples
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// let t: Tensor2D<2, 3> = TensorCreator::zeros();
+    /// let r: Tensor2D<3, 2> = t.permute_axes::<1, 0>();
+    /// ```
+    fn permute_axes<const I: isize, const J: isize>(self) -> Self::Permuted
+    where
+        Self: Permute2d<I, J>,
+    {
+        Permute2d::<I, J>::permute(self)
+    }
+}
+impl<const M: usize, const N: usize, H> Permute2dSugar for Tensor2D<M, N, H> {}
+
+/// Permute 3d tensor with new axes order specified at the function call level.
+pub trait Permute3dSugar: Sized {
+    /// Generics:
+    /// - `I` the index of the new 1st dimension, can be 0, 1, or 2
+    /// - `J` the index of the new 2nd dimension, can be 0, 1, or 2
+    /// - `K` the index of the new 3rd dimension, can be 0, 1, or 2
+    ///
+    /// Examples
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// let t: Tensor3D<3, 5, 7> = TensorCreator::zeros();
+    /// let _: Tensor3D<5, 7, 3> = t.clone().permute_axes::<1, 2, 0>();
+    /// let _: Tensor3D<7, 3, 5> = t.clone().permute_axes::<2, 0, 1>();
+    /// ```
+    fn permute_axes<const I: isize, const J: isize, const K: isize>(self) -> Self::Permuted
+    where
+        Self: Permute3d<I, J, K>,
+    {
+        Permute3d::<I, J, K>::permute(self)
+    }
+}
+impl<const M: usize, const N: usize, const O: usize, H> Permute3dSugar for Tensor3D<M, N, O, H> {}
+
+/// Permute 4d tensor with new axes order specified at the function call level.
+pub trait Permute4dSugar: Sized {
+    /// Generics:
+    /// - `I` the index of the new 1st dimension, can be 0, 1, 2, or 3
+    /// - `J` the index of the new 2nd dimension, can be 0, 1, 2, or 3
+    /// - `K` the index of the new 3rd dimension, can be 0, 1, 2, or 3
+    /// - `L` the index of the new 4th dimension, can be 0, 1, 2, or 3
+    ///
+    /// Examples
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// let t: Tensor4D<3, 5, 7, 9> = TensorCreator::zeros();
+    /// let _: Tensor4D<9, 5, 7, 3> = t.clone().permute_axes::<3, 1, 2, 0>();
+    /// let _: Tensor4D<7, 3, 9, 5> = t.clone().permute_axes::<2, 0, 3, 1>();
+    /// let _: Tensor4D<5, 9, 3, 7> = t.clone().permute_axes::<1, 3, 0, 2>();
+    /// ```
+    fn permute_axes<const I: isize, const J: isize, const K: isize, const L: isize>(
+        self,
+    ) -> Self::Permuted
+    where
+        Self: Permute4d<I, J, K, L>,
+    {
+        Permute4d::<I, J, K, L>::permute(self)
+    }
+}
+impl<const M: usize, const N: usize, const O: usize, const P: usize, H> Permute4dSugar
+    for Tensor4D<M, N, O, P, H>
+{
+}
+
+/// Returns const generic for a specific axis.
 #[rustfmt::skip]
 macro_rules! axis { (0) => { M }; (1) => { N }; (2) => { O }; (3) => { P }; }
 
+/// Helper macro that creates a tensor based on axes passed in.
+/// E.g. `tensor!(2, 0, 1)` returns `Tensor3D<O, M, N, H>`
 #[rustfmt::skip]
 macro_rules! tensor {
     ($Ax0:tt) => { Tensor1D<axis!($Ax0), H> };
@@ -27,10 +125,12 @@ macro_rules! tensor {
     ($Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt) => { Tensor4D<axis!($Ax0), axis!($Ax1), axis!($Ax2), axis!($Ax3), H> };
 }
 
+/// Concrete implementations of permute for 2-4d tensors. These just call device level permute & inverse permute
+/// functions.
 #[rustfmt::skip]
 macro_rules! impl_permute {
     ($Ax0:tt, $Ax1:tt) => {
-impl<const M: usize, const N: usize, H: Tape> ConstPermute2<$Ax0, $Ax1> for tensor!(0, 1) {
+impl<const M: usize, const N: usize, H: Tape> Permute2d<$Ax0, $Ax1> for tensor!(0, 1) {
     type Permuted = tensor!($Ax0, $Ax1);
     fn permute(self) -> Self::Permuted {
         let mut result: <Self::Permuted as Tensor>::NoTape = TensorCreator::zeros();
@@ -44,7 +144,7 @@ impl<const M: usize, const N: usize, H: Tape> ConstPermute2<$Ax0, $Ax1> for tens
 }
     };
     ($Ax0:tt, $Ax1:tt, $Ax2:tt) => {
-impl<const M: usize, const N: usize, const O: usize, H: Tape> ConstPermute3<$Ax0, $Ax1, $Ax2> for tensor!(0, 1, 2) {
+impl<const M: usize, const N: usize, const O: usize, H: Tape> Permute3d<$Ax0, $Ax1, $Ax2> for tensor!(0, 1, 2) {
     type Permuted = tensor!($Ax0, $Ax1, $Ax2);
     fn permute(self) -> Self::Permuted {
         let mut result: <Self::Permuted as Tensor>::NoTape = TensorCreator::zeros();
@@ -59,7 +159,7 @@ impl<const M: usize, const N: usize, const O: usize, H: Tape> ConstPermute3<$Ax0
     };
     ($Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt) => {
 impl<const M: usize, const N: usize, const O: usize, const P: usize, H: Tape>
-    ConstPermute4<$Ax0, $Ax1, $Ax2, $Ax3> for tensor!(0, 1, 2, 3)
+    Permute4d<$Ax0, $Ax1, $Ax2, $Ax3> for tensor!(0, 1, 2, 3)
 {
     type Permuted = tensor!($Ax0, $Ax1, $Ax2, $Ax3);
     fn permute(self) -> Self::Permuted {
@@ -75,6 +175,8 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize, H: Tape>
     };
 }
 
+/// Expands all the possible permutations of 2-4 elements.
+/// Expands [impl_permute!] at the base level.
 macro_rules! permutations {
     ([$Ax0:tt, $Ax1:tt]) => {
         impl_permute!($Ax0, $Ax1);
@@ -111,41 +213,6 @@ macro_rules! permutations {
 permutations!([0, 1]);
 permutations!([0, 1, 2]);
 permutations!([0, 1, 2, 3]);
-
-pub trait Permute2Sugar: Sized {
-    fn permute_axes<const I: isize, const J: isize>(self) -> Self::Permuted
-    where
-        Self: ConstPermute2<I, J>,
-    {
-        ConstPermute2::<I, J>::permute(self)
-    }
-}
-impl<const M: usize, const N: usize, H> Permute2Sugar for Tensor2D<M, N, H> {}
-
-pub trait Permute3Sugar: Sized {
-    fn permute_axes<const I: isize, const J: isize, const K: isize>(self) -> Self::Permuted
-    where
-        Self: ConstPermute3<I, J, K>,
-    {
-        ConstPermute3::<I, J, K>::permute(self)
-    }
-}
-impl<const M: usize, const N: usize, const O: usize, H> Permute3Sugar for Tensor3D<M, N, O, H> {}
-
-pub trait Permute4Sugar: Sized {
-    fn permute_axes<const I: isize, const J: isize, const K: isize, const L: isize>(
-        self,
-    ) -> Self::Permuted
-    where
-        Self: ConstPermute4<I, J, K, L>,
-    {
-        ConstPermute4::<I, J, K, L>::permute(self)
-    }
-}
-impl<const M: usize, const N: usize, const O: usize, const P: usize, H> Permute4Sugar
-    for Tensor4D<M, N, O, P, H>
-{
-}
 
 #[cfg(test)]
 mod tests {
@@ -228,39 +295,39 @@ mod tests {
 
     #[test]
     fn test_valid_permutations() {
-        let _ = <Tensor2D<3, 5> as ConstPermute2<0, 1>>::permute;
-        let _ = <Tensor2D<3, 5> as ConstPermute2<1, 0>>::permute;
+        let _ = <Tensor2D<3, 5> as Permute2d<0, 1>>::permute;
+        let _ = <Tensor2D<3, 5> as Permute2d<1, 0>>::permute;
 
-        let _ = <Tensor3D<3, 5, 7> as ConstPermute3<0, 1, 2>>::permute;
-        let _ = <Tensor3D<3, 5, 7> as ConstPermute3<0, 2, 1>>::permute;
-        let _ = <Tensor3D<3, 5, 7> as ConstPermute3<1, 0, 2>>::permute;
-        let _ = <Tensor3D<3, 5, 7> as ConstPermute3<1, 2, 0>>::permute;
-        let _ = <Tensor3D<3, 5, 7> as ConstPermute3<2, 0, 1>>::permute;
-        let _ = <Tensor3D<3, 5, 7> as ConstPermute3<2, 1, 0>>::permute;
+        let _ = <Tensor3D<3, 5, 7> as Permute3d<0, 1, 2>>::permute;
+        let _ = <Tensor3D<3, 5, 7> as Permute3d<0, 2, 1>>::permute;
+        let _ = <Tensor3D<3, 5, 7> as Permute3d<1, 0, 2>>::permute;
+        let _ = <Tensor3D<3, 5, 7> as Permute3d<1, 2, 0>>::permute;
+        let _ = <Tensor3D<3, 5, 7> as Permute3d<2, 0, 1>>::permute;
+        let _ = <Tensor3D<3, 5, 7> as Permute3d<2, 1, 0>>::permute;
 
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<0, 1, 2, 3>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<0, 1, 3, 2>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<0, 2, 1, 3>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<0, 2, 3, 1>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<0, 3, 2, 1>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<0, 3, 1, 2>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<1, 0, 2, 3>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<1, 0, 3, 2>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<1, 2, 0, 3>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<1, 2, 3, 0>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<1, 3, 0, 2>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<1, 3, 2, 0>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<2, 0, 1, 3>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<2, 0, 3, 1>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<2, 1, 0, 3>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<2, 1, 3, 0>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<2, 3, 0, 1>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<2, 3, 1, 0>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<3, 0, 1, 2>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<3, 0, 2, 1>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<3, 1, 0, 2>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<3, 1, 2, 0>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<3, 2, 0, 1>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9> as ConstPermute4<3, 2, 1, 0>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<0, 1, 2, 3>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<0, 1, 3, 2>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<0, 2, 1, 3>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<0, 2, 3, 1>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<0, 3, 2, 1>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<0, 3, 1, 2>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<1, 0, 2, 3>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<1, 0, 3, 2>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<1, 2, 0, 3>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<1, 2, 3, 0>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<1, 3, 0, 2>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<1, 3, 2, 0>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<2, 0, 1, 3>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<2, 0, 3, 1>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<2, 1, 0, 3>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<2, 1, 3, 0>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<2, 3, 0, 1>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<2, 3, 1, 0>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<3, 0, 1, 2>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<3, 0, 2, 1>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<3, 1, 0, 2>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<3, 1, 2, 0>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<3, 2, 0, 1>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9> as Permute4d<3, 2, 1, 0>>::permute;
     }
 }
