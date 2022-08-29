@@ -197,6 +197,8 @@ permutations!([0, 1, 2, 3]);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::prelude::FillElements;
+    use rand::{thread_rng, Rng};
 
     #[test]
     fn test_2d_permute() {
@@ -204,15 +206,37 @@ mod tests {
         let mut b = [[0.0; 2]; 3];
         <Cpu as DevicePermute2<_, _, 1, 0>>::permute(&a, &mut b);
         assert_eq!(b, [[1.0, 4.0], [2.0, 5.0], [3.0, 6.0]]);
+
+        let mut c = [[0.0; 3]; 2];
+        <Cpu as DevicePermute2<_, _, 1, 0>>::inverse_permute(&mut c, &b);
+        assert_eq!(a, c);
     }
 
     #[test]
     fn test_3d_permute() {
-        todo!();
+        let a = [[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]];
+        let mut b = [[[0.0; 1]; 2]; 3];
+        <Cpu as DevicePermute3<_, _, 2, 1, 0>>::permute(&a, &mut b);
+        assert_eq!(b, [[[1.0], [4.0]], [[2.0], [5.0]], [[3.0], [6.0]]]);
+
+        let mut c = [[[0.0; 3]; 2]; 1];
+        <Cpu as DevicePermute3<_, _, 2, 1, 0>>::inverse_permute(&mut c, &b);
+        assert_eq!(a, c);
     }
 
     #[test]
     fn test_4d_permute() {
-        todo!();
+        let mut rng = thread_rng();
+        let mut a = [[[[0.0; 9]; 7]; 5]; 3];
+        Cpu::fill(&mut a, &mut |v| *v = rng.gen());
+
+        let mut b = [[[[0.0; 3]; 5]; 9]; 7];
+        <Cpu as DevicePermute4<_, _, 2, 3, 1, 0>>::permute(&a, &mut b);
+        assert_ne!(b, [[[[0.0; 3]; 5]; 9]; 7]);
+
+        let mut c = [[[[0.0; 9]; 7]; 5]; 3];
+        <Cpu as DevicePermute4<_, _, 2, 3, 1, 0>>::inverse_permute(&mut c, &b);
+
+        assert_eq!(a, c);
     }
 }
