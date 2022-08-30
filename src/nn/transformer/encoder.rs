@@ -2,11 +2,10 @@ use crate::prelude::*;
 
 /// **Requires Nightly** A single transformer encoder block
 ///
-/// # Generics
-/// - `M` The embedding size of token vectors.
-/// - `I` The inner size of the feedforward layers.
-/// - `K` The size of the keys and queries in the self attention layer.
-/// - `H` The number of heads for self attention.
+/// Generics
+/// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
+/// - `NUM_HEADS`: The number of heads in [MultiHeadAttention].
+/// - `FF_DIM`: The size of the hidden layer in the feedforward network.
 /// TODO: Doctests
 pub type TransformerEncoderBlock<
     const MODEL_DIM: usize,
@@ -21,11 +20,12 @@ pub type TransformerEncoderBlock<
 
 /// **Requires Nightly** A transformer encoder.
 ///
-/// # Generics
-/// - `M` The embedding size of token vectors.
-/// - `I` The inner size of the feedforward layers.
-/// - `L` The number of layers.
-/// - `H` The number of heads for self attention.
+/// Generics
+/// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
+/// - `NUM_HEADS`: The number of heads in [MultiHeadAttention].
+/// - `FF_DIM`: The size of the hidden layer in
+///   the feedforward network in [TransformerEncoderBlock].
+/// - `NUM_LAYERS`: The number of [TransformerEncoderBlock] to use.
 /// TODO: Doctests
 pub type TransformerEncoder<
     const MODEL_DIM: usize,
@@ -33,3 +33,14 @@ pub type TransformerEncoder<
     const FF_DIM: usize,
     const NUM_LAYERS: usize,
 > = Repeated<TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>, NUM_LAYERS>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_encoder_block_forward() {}
+
+    #[test]
+    fn test_encoder_forward() {}
+}

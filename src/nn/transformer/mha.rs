@@ -3,15 +3,18 @@ use rand::Rng;
 
 /// **Requires Nightly** A multi-head attention layer.
 ///
-/// # Generics
-/// - `M` The embedding size of token vectors from decoder.
-/// - `N` The embedding size of token vectors from encoder.
-/// - `K` The size of the keys in self attention.
-/// - `V` The size of the values.
-/// - `H` The number of attention heads.
+/// Generics:
+/// - `EMBED_DIM`: The size of query vectors.
+/// - `NUM_HEADS` The number of heads to split query/key/value into.
+/// - *Optional* `K_DIM`: The size of key vectors. Defaults to `EMBED_DIM`
+/// - *Optional* `V_DIM` The size of value vectors. Defaults to `EMBED_DIM`
 ///
-/// # Examples
-/// `MultiHeadAttention<8, 10, 10, 10, 2>` is an attention layer with 2 heads and 10 token, key and value dims.
+/// Generics
+/// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
+/// - `NUM_HEADS`: The number of heads in [MultiHeadAttention].
+/// - `FF_DIM`: The size of the hidden layer in
+///   the feedforward network in [TransformerEncoderBlock].
+/// - `NUM_LAYERS`: The number of [TransformerEncoderBlock] to use.
 /// TODO: Doctests fail for some reason
 #[derive(Debug, Clone, Default)]
 pub struct MultiHeadAttention<

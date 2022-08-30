@@ -1,15 +1,13 @@
-use rand::Rng;
-
 use crate::prelude::*;
+use rand::Rng;
 
 /// **Requires Nightly** A transformer decoder block. Different than the normal transformer block
 /// as this self attention accepts an additional sequence from the encoder.
 ///
-/// # Generics
-/// - `M` The embedding size of token vectors from decoder.
-/// - `N` The embedding size of token vectors from encoder.
-/// - `K` The size of the keys in self attention.
-/// - `H` The number of attention heads.
+/// Generics
+/// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
+/// - `NUM_HEADS`: The number of heads in [MultiHeadAttention].
+/// - `FF_DIM`: The size of the hidden layer in the feedforward network.
 /// TODO: Doctests
 #[derive(Default, Debug)]
 pub struct TransformerDecoderBlock<
@@ -82,12 +80,12 @@ where
 
 /// **Requires Nightly** A transformer decoder.
 ///
-/// # Generics
-/// - `M` The embedding size of token vectors.
-/// - `N` The size of encoder vectors.
-/// - `I` The inner size of the feedforward layers.
-/// - `L` The number of layers.
-/// - `H` The number of heads for self attention.
+/// Generics
+/// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
+/// - `NUM_HEADS`: The number of heads in [MultiHeadAttention].
+/// - `FF_DIM`: The size of the hidden layer in
+///   the feedforward network in [TransformerDecoderBlock].
+/// - `NUM_LAYERS`: The number of [TransformerDecoderBlock] to use.
 /// TODO: Doctests
 #[derive(Debug, Default)]
 pub struct TransformerDecoder<
