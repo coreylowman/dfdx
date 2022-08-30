@@ -8,6 +8,13 @@ use rand::Rng;
 /// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
 /// - `NUM_HEADS`: The number of heads in [MultiHeadAttention].
 /// - `FF_DIM`: The size of the hidden layer in the feedforward network.
+///
+/// **Pytorch equivalent**:
+/// ```python
+/// decoder = torch.nn.TransformerDecoderLayer(
+///    EMBED_DIM, NUM_HEADS, dim_feedforward=FF_DIM, batch_first=True, dropout=0.0
+/// )
+/// ```
 /// TODO: Doctests
 #[derive(Default, Debug)]
 pub struct TransformerDecoderBlock<
@@ -17,7 +24,7 @@ pub struct TransformerDecoderBlock<
 > {
     pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS>,
     pub norm1: LayerNorm1D<MODEL_DIM>,
-    pub mha_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS>,
+    pub mh_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS>,
     pub norm2: LayerNorm1D<MODEL_DIM>,
     pub ff: FF<MODEL_DIM, FF_DIM>,
     pub norm3: LayerNorm1D<MODEL_DIM>,
@@ -31,7 +38,7 @@ impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> ResetP
     fn reset_params<R: Rng>(&mut self, rng: &mut R) {
         self.self_attn.reset_params(rng);
         self.norm1.reset_params(rng);
-        self.mha_attn.reset_params(rng);
+        self.mh_attn.reset_params(rng);
         self.norm2.reset_params(rng);
         self.ff.reset_params(rng);
         self.norm3.reset_params(rng);
@@ -44,7 +51,7 @@ impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> CanUpd
     fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
         self.self_attn.update(grads, unused);
         self.norm1.update(grads, unused);
-        self.mha_attn.update(grads, unused);
+        self.mh_attn.update(grads, unused);
         self.norm2.update(grads, unused);
         self.ff.update(grads, unused);
         self.norm3.update(grads, unused);
@@ -74,7 +81,7 @@ where
         let x = self.norm1.forward(x);
 
         let x_ = x.duplicate();
-        let x = self.mha_attn.forward((x, mem.duplicate(), mem));
+        let x = self.mh_attn.forward((x, mem.duplicate(), mem));
         let x = add(x, &x_);
         let x = self.norm2.forward(x);
         let x = self.ff.forward(x);
