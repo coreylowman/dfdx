@@ -17,17 +17,16 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 /// ```
 #[derive(Debug, Clone)]
 pub struct Repeated<T, const N: usize> {
-    pub modules: [T; N],
+    pub modules: Vec<T>,
 }
 
-impl<T: Default, const N: usize> Default for Repeated<T, N>
-where
-    [T; N]: Default,
-{
+impl<T: Default, const N: usize> Default for Repeated<T, N> {
     fn default() -> Self {
-        Self {
-            modules: Default::default(),
+        let mut modules = Vec::with_capacity(N);
+        for _ in 0..N {
+            modules.push(Default::default());
         }
+        Self { modules }
     }
 }
 

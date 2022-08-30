@@ -8,11 +8,15 @@ use crate::prelude::*;
 /// - `K` The size of the keys and queries in the self attention layer.
 /// - `H` The number of heads for self attention.
 /// TODO: Doctests
-pub type TransformerEncoderBlock<const M: usize, const I: usize, const K: usize, const H: usize> = (
-    Residual<MultiHeadAttention<M, M, K, M, H>>,
-    LayerNorm1D<M>,
-    Residual<(Linear<M, I>, ReLU, Linear<I, M>)>,
-    LayerNorm1D<M>,
+pub type TransformerEncoderBlock<
+    const MODEL_DIM: usize,
+    const NUM_HEADS: usize,
+    const FF_DIM: usize,
+> = (
+    Residual<MultiHeadAttention<MODEL_DIM, NUM_HEADS>>,
+    LayerNorm1D<MODEL_DIM>,
+    Residual<(Linear<MODEL_DIM, FF_DIM>, ReLU, Linear<FF_DIM, MODEL_DIM>)>,
+    LayerNorm1D<MODEL_DIM>,
 );
 
 /// **Requires Nightly** A transformer encoder.
@@ -23,5 +27,9 @@ pub type TransformerEncoderBlock<const M: usize, const I: usize, const K: usize,
 /// - `L` The number of layers.
 /// - `H` The number of heads for self attention.
 /// TODO: Doctests
-pub type TransformerEncoder<const M: usize, const I: usize, const L: usize, const H: usize> =
-    Repeated<TransformerEncoderBlock<M, I, M, H>, L>;
+pub type TransformerEncoder<
+    const MODEL_DIM: usize,
+    const NUM_HEADS: usize,
+    const FF_DIM: usize,
+    const NUM_LAYERS: usize,
+> = Repeated<TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>, NUM_LAYERS>;

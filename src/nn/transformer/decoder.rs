@@ -13,103 +13,69 @@ use crate::prelude::*;
 /// TODO: Doctests
 #[derive(Default, Debug)]
 pub struct TransformerDecoderBlock<
-    const M: usize,
-    const N: usize,
-    const I: usize,
-    const K: usize,
-    const H: usize,
-> where
-    Assert<{ M % H == 0 }>: ConstTrue,
-    Assert<{ K % H == 0 }>: ConstTrue,
-{
-    pub attn: MultiHeadAttention<M, N, K, M, H>,
-    pub ff: (
-        LayerNorm1D<M>,
-        Residual<(Linear<M, I>, ReLU, Linear<I, M>)>,
-        LayerNorm1D<M>,
-    ),
+    const MODEL_DIM: usize,
+    const NUM_HEADS: usize,
+    const FF_DIM: usize,
+> {
+    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS>,
+    pub l1: LayerNorm1D<MODEL_DIM>,
+    pub mha_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS>,
+    pub ff: FF<MODEL_DIM, FF_DIM>,
 }
 
-impl<const M: usize, const N: usize, const I: usize, const K: usize, const H: usize> ResetParams
-    for TransformerDecoderBlock<M, N, I, K, H>
-where
-    Assert<{ M % H == 0 }>: ConstTrue,
-    Assert<{ K % H == 0 }>: ConstTrue,
+type FF<const M: usize, const F: usize> = (
+    LayerNorm1D<M>,
+    Residual<(Linear<M, F>, ReLU, Linear<F, M>)>,
+    LayerNorm1D<M>,
+);
+
+impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> ResetParams
+    for TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>
 {
     fn reset_params<R: Rng>(&mut self, rng: &mut R) {
-        self.attn.reset_params(rng);
+        self.self_attn.reset_params(rng);
+        self.l1.reset_params(rng);
+        self.mha_attn.reset_params(rng);
         self.ff.reset_params(rng);
     }
 }
 
-impl<const M: usize, const N: usize, const I: usize, const K: usize, const H: usize>
-    CanUpdateWithGradients for TransformerDecoderBlock<M, N, I, K, H>
-where
-    Assert<{ M % H == 0 }>: ConstTrue,
-    Assert<{ K % H == 0 }>: ConstTrue,
+impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> CanUpdateWithGradients
+    for TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>
 {
     fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.attn.update(grads, unused);
+        self.self_attn.update(grads, unused);
+        self.l1.update(grads, unused);
+        self.mha_attn.update(grads, unused);
         self.ff.update(grads, unused);
     }
 }
 
-impl<
-        const M: usize,
-        const N: usize,
-        const I: usize,
-        const K: usize,
-        const H: usize,
-        const S1: usize,
-        const S2: usize,
-        T: 'static + Tape,
-    > Module<(Tensor2D<S1, M, T>, Tensor2D<S2, N>)> for TransformerDecoderBlock<M, N, I, K, H>
+impl<const M: usize, const H: usize, const F: usize, Tgt, Mem> Module<(Tgt, Mem)>
+    for TransformerDecoderBlock<M, H, F>
 where
-    Assert<{ M % H == 0 }>: ConstTrue,
-    Assert<{ K % H == 0 }>: ConstTrue,
-    Assert<{ S1 * K == S1 * H * (K / H) }>: ConstTrue,
-    Assert<{ S2 * K == S2 * H * (K / H) }>: ConstTrue,
-    Assert<{ S2 * M == S2 * H * (M / H) }>: ConstTrue,
-    Assert<{ S1 * H * (M / H) == S1 * M }>: ConstTrue,
+    Tgt: Tensor<Dtype = f32>,
+    Mem: Tensor<Dtype = f32, NoTape = Mem>,
+    MultiHeadAttention<M, H>: Module<(Tgt, Tgt::NoTape, Tgt::NoTape), Output = Tgt>
+        + Module<(Tgt, Mem, Mem), Output = Tgt>,
+    LayerNorm1D<M>: Module<Tgt, Output = Tgt>,
+    FF<M, F>: Module<Tgt, Output = Tgt>,
 {
-    type Output = Tensor2D<S1, M, T>;
+    type Output = Tgt;
 
-    fn forward(&self, (input, from_enc): (Tensor2D<S1, M, T>, Tensor2D<S2, N>)) -> Self::Output {
-        let input_ = input.duplicate();
-        let tokens = self.attn.forward((input, from_enc));
-        let tokens = add(tokens, &input_);
-        self.ff.forward(tokens)
-    }
-}
+    fn forward(&self, (tgt, mem): (Tgt, Mem)) -> Self::Output {
+        let (tgt, tape) = tgt.split_tape();
+        let x = self.self_attn.forward((
+            tgt.duplicate().put_tape(tape),
+            tgt.duplicate(),
+            tgt.duplicate(),
+        ));
+        let x = add(x, &tgt);
+        let x = self.l1.forward(x);
 
-impl<
-        const M: usize,
-        const N: usize,
-        const I: usize,
-        const K: usize,
-        const H: usize,
-        const S1: usize,
-        const S2: usize,
-        const B: usize,
-        T: 'static + Tape,
-    > Module<(Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>)> for TransformerDecoderBlock<M, N, I, K, H>
-where
-    Assert<{ M % H == 0 }>: ConstTrue,
-    Assert<{ K % H == 0 }>: ConstTrue,
-    Assert<{ B * S1 * K == B * S1 * H * (K / H) }>: ConstTrue,
-    Assert<{ B * S2 * K == B * S2 * H * (K / H) }>: ConstTrue,
-    Assert<{ B * S2 * M == B * S2 * H * (M / H) }>: ConstTrue,
-    Assert<{ B * S1 * H * (M / H) == B * S1 * M }>: ConstTrue,
-{
-    type Output = Tensor3D<B, S1, M, T>;
-
-    fn forward(
-        &self,
-        (input, from_enc): (Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>),
-    ) -> Self::Output {
-        let input_ = input.duplicate();
-        let x = self.attn.forward((input, from_enc));
-        let x = add(x, &input_);
+        let x_ = x.duplicate();
+        let x = self.mha_attn.forward((x, mem.duplicate(), mem));
+        let x = add(x, &x_);
         self.ff.forward(x)
     }
 }
@@ -123,106 +89,41 @@ where
 /// - `L` The number of layers.
 /// - `H` The number of heads for self attention.
 /// TODO: Doctests
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct TransformerDecoder<
-    const M: usize,
-    const N: usize,
-    const I: usize,
-    const L: usize,
-    const H: usize,
-> where
-    Assert<{ M % H == 0 }>: ConstTrue,
-{
-    pub blocks: [TransformerDecoderBlock<M, N, I, M, H>; L],
-}
+    const MODEL_DIM: usize,
+    const NUM_HEADS: usize,
+    const FF_DIM: usize,
+    const NUM_LAYERS: usize,
+>(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>, NUM_LAYERS>);
 
-impl<const M: usize, const N: usize, const I: usize, const L: usize, const H: usize> Default
-    for TransformerDecoder<M, N, I, L, H>
-where
-    Assert<{ M % H == 0 }>: ConstTrue,
-    [TransformerDecoderBlock<M, N, I, M, H>; L]: Default,
-{
-    fn default() -> Self {
-        Self {
-            blocks: Default::default(),
-        }
-    }
-}
-
-impl<const M: usize, const N: usize, const I: usize, const L: usize, const H: usize> ResetParams
-    for TransformerDecoder<M, N, I, L, H>
-where
-    Assert<{ M % H == 0 }>: ConstTrue,
+impl<const M: usize, const H: usize, const F: usize, const L: usize> ResetParams
+    for TransformerDecoder<M, H, F, L>
 {
     fn reset_params<R: Rng>(&mut self, rng: &mut R) {
-        for block in self.blocks.iter_mut() {
-            block.reset_params(rng);
-        }
+        self.0.reset_params(rng);
     }
 }
 
-impl<const M: usize, const N: usize, const I: usize, const L: usize, const H: usize>
-    CanUpdateWithGradients for TransformerDecoder<M, N, I, L, H>
-where
-    Assert<{ M % H == 0 }>: ConstTrue,
+impl<const M: usize, const H: usize, const F: usize, const L: usize> CanUpdateWithGradients
+    for TransformerDecoder<M, H, F, L>
 {
     fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        for block in self.blocks.iter_mut() {
-            block.update(grads, unused);
-        }
+        self.0.update(grads, unused);
     }
 }
 
-impl<
-        const M: usize,
-        const N: usize,
-        const I: usize,
-        const L: usize,
-        const H: usize,
-        const S1: usize,
-        const S2: usize,
-        T: 'static + Tape,
-    > Module<(Tensor2D<S1, M, T>, Tensor2D<S2, N, T>)> for TransformerDecoder<M, N, I, L, H>
+impl<const M: usize, const H: usize, const F: usize, const L: usize, Tgt, Mem> Module<(Tgt, Mem)>
+    for TransformerDecoder<M, H, F, L>
 where
-    Assert<{ M % H == 0 }>: ConstTrue,
-    Assert<{ S1 * M == S1 * H * (M / H) }>: ConstTrue,
-    Assert<{ S2 * M == S2 * H * (M / H) }>: ConstTrue,
-    Assert<{ S1 * H * (M / H) == S1 * M }>: ConstTrue,
+    Mem: Tensor<NoTape = Mem>,
+    TransformerDecoderBlock<M, H, F>: Module<(Tgt, Mem), Output = Tgt>,
 {
-    type Output = Tensor2D<S1, M, T>;
+    type Output = Tgt;
 
-    fn forward(&self, input: (Tensor2D<S1, M, T>, Tensor2D<S2, N, T>)) -> Self::Output {
-        let (mut x, from_enc) = input;
-        for block in self.blocks.iter() {
-            x = block.forward((x, from_enc.duplicate()));
-        }
-        x
-    }
-}
-
-impl<
-        const M: usize,
-        const N: usize,
-        const I: usize,
-        const L: usize,
-        const H: usize,
-        const S1: usize,
-        const S2: usize,
-        const B: usize,
-        T: 'static + Tape,
-    > Module<(Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>)> for TransformerDecoder<M, N, I, L, H>
-where
-    Assert<{ M % H == 0 }>: ConstTrue,
-    Assert<{ B * S1 * M == B * S1 * H * (M / H) }>: ConstTrue,
-    Assert<{ B * S2 * M == B * S2 * H * (M / H) }>: ConstTrue,
-    Assert<{ B * S1 * H * (M / H) == B * S1 * M }>: ConstTrue,
-{
-    type Output = Tensor3D<B, S1, M, T>;
-
-    fn forward(&self, input: (Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>)) -> Self::Output {
-        let (mut x, from_enc) = input;
-        for block in self.blocks.iter() {
-            x = block.forward((x, from_enc.duplicate()));
+    fn forward(&self, (mut x, mem): (Tgt, Mem)) -> Self::Output {
+        for block in self.0.modules.iter() {
+            x = block.forward((x, mem.duplicate()));
         }
         x
     }
