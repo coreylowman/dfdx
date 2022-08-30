@@ -9,6 +9,8 @@ use rand::Rng;
 /// - *Optional* `K_DIM`: The size of key vectors. Defaults to `EMBED_DIM`
 /// - *Optional* `V_DIM` The size of value vectors. Defaults to `EMBED_DIM`
 ///
+/// **Pytorch equivalent**: `torch.nn.MultiheadAttention(EMBED_DIM, NUM_HEADS, batch_first=True)`
+///
 /// Examples
 /// - `MultiHeadAttention<8, 2>` is an attention layer with 2 heads and 8 token, key and value dims.
 /// - `MultiHeadAttention<8, 2, 6, 4>` is an attention layer with the key and value dimension different
