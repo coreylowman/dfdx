@@ -9,12 +9,10 @@ use rand::Rng;
 /// - *Optional* `K_DIM`: The size of key vectors. Defaults to `EMBED_DIM`
 /// - *Optional* `V_DIM` The size of value vectors. Defaults to `EMBED_DIM`
 ///
-/// Generics
-/// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
-/// - `NUM_HEADS`: The number of heads in [MultiHeadAttention].
-/// - `FF_DIM`: The size of the hidden layer in
-///   the feedforward network in [TransformerEncoderBlock].
-/// - `NUM_LAYERS`: The number of [TransformerEncoderBlock] to use.
+/// Examples
+/// - `MultiHeadAttention<8, 2>` is an attention layer with 2 heads and 8 token, key and value dims.
+/// - `MultiHeadAttention<8, 2, 6, 4>` is an attention layer with the key and value dimension different
+///   than the embed dimension
 /// TODO: Doctests fail for some reason
 #[derive(Debug, Clone, Default)]
 pub struct MultiHeadAttention<
@@ -48,6 +46,36 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> CanUpdateWi
         self.w_k.update(grads, unused);
         self.w_v.update(grads, unused);
         self.w_o.update(grads, unused);
+    }
+}
+
+impl<const M: usize, const H: usize, const K: usize, const V: usize> SaveToNpz
+    for MultiHeadAttention<M, H, K, V>
+{
+    fn write<W>(&self, pre: &str, w: &mut zip::ZipWriter<W>) -> zip::result::ZipResult<()>
+    where
+        W: std::io::Write + std::io::Seek,
+    {
+        self.w_q.write(&format!("{pre}w_q."), w)?;
+        self.w_k.write(&format!("{pre}w_k."), w)?;
+        self.w_v.write(&format!("{pre}w_v."), w)?;
+        self.w_o.write(&format!("{pre}w_o."), w)?;
+        Ok(())
+    }
+}
+
+impl<const M: usize, const H: usize, const K: usize, const V: usize> LoadFromNpz
+    for MultiHeadAttention<M, H, K, V>
+{
+    fn read<R>(&mut self, pre: &str, r: &mut zip::ZipArchive<R>) -> Result<(), NpzError>
+    where
+        R: std::io::Read + std::io::Seek,
+    {
+        self.w_q.read(&format!("{pre}w_q."), r)?;
+        self.w_k.read(&format!("{pre}w_k."), r)?;
+        self.w_v.read(&format!("{pre}w_v."), r)?;
+        self.w_o.read(&format!("{pre}w_o."), r)?;
+        Ok(())
     }
 }
 
