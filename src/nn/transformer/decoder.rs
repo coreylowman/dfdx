@@ -18,14 +18,12 @@ pub struct TransformerDecoderBlock<
     pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS>,
     pub l1: LayerNorm1D<MODEL_DIM>,
     pub mha_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS>,
+    pub l2: LayerNorm1D<MODEL_DIM>,
     pub ff: FF<MODEL_DIM, FF_DIM>,
+    pub l3: LayerNorm1D<MODEL_DIM>,
 }
 
-type FF<const M: usize, const F: usize> = (
-    LayerNorm1D<M>,
-    Residual<(Linear<M, F>, ReLU, Linear<F, M>)>,
-    LayerNorm1D<M>,
-);
+type FF<const M: usize, const F: usize> = Residual<(Linear<M, F>, ReLU, Linear<F, M>)>;
 
 impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> ResetParams
     for TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>
@@ -34,7 +32,9 @@ impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> ResetP
         self.self_attn.reset_params(rng);
         self.l1.reset_params(rng);
         self.mha_attn.reset_params(rng);
+        self.l2.reset_params(rng);
         self.ff.reset_params(rng);
+        self.l3.reset_params(rng);
     }
 }
 
@@ -45,7 +45,9 @@ impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> CanUpd
         self.self_attn.update(grads, unused);
         self.l1.update(grads, unused);
         self.mha_attn.update(grads, unused);
+        self.l2.update(grads, unused);
         self.ff.update(grads, unused);
+        self.l3.update(grads, unused);
     }
 }
 
@@ -74,7 +76,9 @@ where
         let x_ = x.duplicate();
         let x = self.mha_attn.forward((x, mem.duplicate(), mem));
         let x = add(x, &x_);
-        self.ff.forward(x)
+        let x = self.l2.forward(x);
+        let x = self.ff.forward(x);
+        self.l3.forward(x)
     }
 }
 

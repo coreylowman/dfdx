@@ -21,21 +21,21 @@ pub struct TransformerEncoderBlock<
     const FF_DIM: usize,
 > {
     self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS>,
+    l1: LayerNorm1D<MODEL_DIM>,
     ff: FF<MODEL_DIM, FF_DIM>,
+    l2: LayerNorm1D<MODEL_DIM>,
 }
 
-type FF<const M: usize, const F: usize> = (
-    LayerNorm1D<M>,
-    Residual<(Linear<M, F>, ReLU, Linear<F, M>)>,
-    LayerNorm1D<M>,
-);
+type FF<const M: usize, const F: usize> = Residual<(Linear<M, F>, ReLU, Linear<F, M>)>;
 
 impl<const M: usize, const H: usize, const F: usize> ResetParams
     for TransformerEncoderBlock<M, H, F>
 {
     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
         self.self_attn.reset_params(rng);
+        self.l1.reset_params(rng);
         self.ff.reset_params(rng);
+        self.l2.reset_params(rng);
     }
 }
 
@@ -44,7 +44,9 @@ impl<const M: usize, const H: usize, const F: usize> CanUpdateWithGradients
 {
     fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
         self.self_attn.update(grads, unused);
+        self.l1.update(grads, unused);
         self.ff.update(grads, unused);
+        self.l2.update(grads, unused);
     }
 }
 
@@ -66,7 +68,9 @@ where
             src.duplicate(),
         ));
         let x = add(x, &src);
-        self.ff.forward(x)
+        let x = self.l1.forward(x);
+        let x = self.ff.forward(x);
+        self.l2.forward(x)
     }
 }
 
