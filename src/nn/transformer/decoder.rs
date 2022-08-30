@@ -67,10 +67,10 @@ impl<
 where
     Assert<{ M % H == 0 }>: ConstTrue,
     Assert<{ K % H == 0 }>: ConstTrue,
-    Assert<{ S1 * K == H * S1 * (K / H) }>: ConstTrue,
-    Assert<{ S2 * K == H * S2 * (K / H) }>: ConstTrue,
-    Assert<{ S2 * M == H * S2 * (M / H) }>: ConstTrue,
-    Assert<{ H * S1 * (M / H) == S1 * M }>: ConstTrue,
+    Assert<{ S1 * K == S1 * H * (K / H) }>: ConstTrue,
+    Assert<{ S2 * K == S2 * H * (K / H) }>: ConstTrue,
+    Assert<{ S2 * M == S2 * H * (M / H) }>: ConstTrue,
+    Assert<{ S1 * H * (M / H) == S1 * M }>: ConstTrue,
 {
     type Output = Tensor2D<S1, M, T>;
 
@@ -96,10 +96,10 @@ impl<
 where
     Assert<{ M % H == 0 }>: ConstTrue,
     Assert<{ K % H == 0 }>: ConstTrue,
-    Assert<{ B * S1 * K == B * H * S1 * (K / H) }>: ConstTrue,
-    Assert<{ B * S2 * K == B * H * S2 * (K / H) }>: ConstTrue,
-    Assert<{ B * S2 * M == B * H * S2 * (M / H) }>: ConstTrue,
-    Assert<{ B * H * S1 * (M / H) == B * S1 * M }>: ConstTrue,
+    Assert<{ B * S1 * K == B * S1 * H * (K / H) }>: ConstTrue,
+    Assert<{ B * S2 * K == B * S2 * H * (K / H) }>: ConstTrue,
+    Assert<{ B * S2 * M == B * S2 * H * (M / H) }>: ConstTrue,
+    Assert<{ B * S1 * H * (M / H) == B * S1 * M }>: ConstTrue,
 {
     type Output = Tensor3D<B, S1, M, T>;
 
@@ -185,9 +185,9 @@ impl<
     > Module<(Tensor2D<S1, M, T>, Tensor2D<S2, N, T>)> for TransformerDecoder<M, N, I, L, H>
 where
     Assert<{ M % H == 0 }>: ConstTrue,
-    Assert<{ S1 * M == H * S1 * (M / H) }>: ConstTrue,
-    Assert<{ S2 * M == H * S2 * (M / H) }>: ConstTrue,
-    Assert<{ H * S1 * (M / H) == S1 * M }>: ConstTrue,
+    Assert<{ S1 * M == S1 * H * (M / H) }>: ConstTrue,
+    Assert<{ S2 * M == S2 * H * (M / H) }>: ConstTrue,
+    Assert<{ S1 * H * (M / H) == S1 * M }>: ConstTrue,
 {
     type Output = Tensor2D<S1, M, T>;
 
@@ -213,9 +213,9 @@ impl<
     > Module<(Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>)> for TransformerDecoder<M, N, I, L, H>
 where
     Assert<{ M % H == 0 }>: ConstTrue,
-    Assert<{ B * S1 * M == B * H * S1 * (M / H) }>: ConstTrue,
-    Assert<{ B * S2 * M == B * H * S2 * (M / H) }>: ConstTrue,
-    Assert<{ B * H * S1 * (M / H) == B * S1 * M }>: ConstTrue,
+    Assert<{ B * S1 * M == B * S1 * H * (M / H) }>: ConstTrue,
+    Assert<{ B * S2 * M == B * S2 * H * (M / H) }>: ConstTrue,
+    Assert<{ B * S1 * H * (M / H) == B * S1 * M }>: ConstTrue,
 {
     type Output = Tensor3D<B, S1, M, T>;
 

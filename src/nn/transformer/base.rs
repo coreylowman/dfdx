@@ -58,9 +58,9 @@ impl<
         T: 'static + Tape,
     > Module<Tensor2D<S, M, T>> for MultiHeadAttention<M, M, K, V, H>
 where
-    Assert<{ S * K == H * S * (K / H) }>: ConstTrue,
-    Assert<{ S * V == H * S * (V / H) }>: ConstTrue,
-    Assert<{ H * S * (V / H) == S * V }>: ConstTrue,
+    Assert<{ S * K == S * H * (K / H) }>: ConstTrue,
+    Assert<{ S * V == S * H * (V / H) }>: ConstTrue,
+    Assert<{ S * H * (V / H) == S * V }>: ConstTrue,
 {
     type Output = Tensor2D<S, M, T>;
 
@@ -68,25 +68,29 @@ where
     fn forward(&self, input: Tensor2D<S, M, T>) -> Self::Output {
         let (input, tape) = input.split_tape();
 
-        let values = self.w_v.forward(input.duplicate().put_tape(tape));
-        let values = Reshape::<Tensor3D<H, S, { V / H }, T>>::reshape(values);
+        let values: Tensor2D<S, V, T> = self.w_v.forward(input.duplicate().put_tape(tape));
+        let values: Tensor3D<S, H, { V / H }, T> = values.reshape();
+        let values: Tensor3D<H, S, { V / H }, T> = values.permute_axes::<1, 0, 2>();
         let (values, tape) = values.split_tape();
 
-        let keys = self.w_k.forward(input.duplicate().put_tape(tape));
-        let keys = Reshape::<Tensor3D<H, S, { K / H }, T>>::reshape(keys);
+        let keys: Tensor2D<S, K, T> = self.w_k.forward(input.duplicate().put_tape(tape));
+        let keys: Tensor3D<S, H, { K / H }, T> = keys.reshape();
+        let keys: Tensor3D<H, S, { K / H }, T> = keys.permute_axes::<1, 0, 2>();
         let (keys, tape) = keys.split_tape();
 
-        let queries = self.w_q.forward(input.put_tape(tape));
-        let queries = Reshape::<Tensor3D<H, S, { K / H }, T>>::reshape(queries);
+        let queries: Tensor2D<S, K, T> = self.w_q.forward(input.put_tape(tape));
+        let queries: Tensor3D<S, H, { K / H }, T> = queries.reshape();
+        let queries: Tensor3D<H, S, { K / H }, T> = queries.permute_axes::<1, 0, 2>();
 
         // Get weights
-        let token_weights = matmul_transpose(queries, &keys) / (M as f32);
+        let token_weights: Tensor3D<H, S, S, T> = matmul_transpose(queries, &keys) / (M as f32);
 
         // Softmax on last dimension
         let token_weights: Tensor3D<H, S, S, T> = softmax(token_weights);
 
         // Get new tokens
         let tokens: Tensor3D<H, S, { V / H }, T> = matmul(token_weights, &values);
+        let tokens: Tensor3D<S, H, { V / H }, T> = tokens.permute_axes::<1, 0, 2>();
         let tokens: Tensor2D<S, V, T> = tokens.reshape();
 
         self.w_o.forward(tokens)
@@ -104,10 +108,10 @@ impl<
         T: 'static + Tape,
     > Module<(Tensor2D<S1, M, T>, Tensor2D<S2, N>)> for MultiHeadAttention<M, N, K, V, H>
 where
-    Assert<{ S1 * K == H * S1 * (K / H) }>: ConstTrue,
-    Assert<{ S2 * K == H * S2 * (K / H) }>: ConstTrue,
-    Assert<{ S2 * V == H * S2 * (V / H) }>: ConstTrue,
-    Assert<{ H * S1 * (V / H) == S1 * V }>: ConstTrue,
+    Assert<{ S1 * K == S1 * H * (K / H) }>: ConstTrue,
+    Assert<{ S2 * K == S2 * H * (K / H) }>: ConstTrue,
+    Assert<{ S2 * V == S2 * H * (V / H) }>: ConstTrue,
+    Assert<{ S1 * H * (V / H) == S1 * V }>: ConstTrue,
 {
     type Output = Tensor2D<S1, M, T>;
 
@@ -115,25 +119,29 @@ where
     fn forward(&self, (input, from_enc): (Tensor2D<S1, M, T>, Tensor2D<S2, N>)) -> Self::Output {
         let (input, tape) = input.split_tape();
 
-        let values = self.w_v.forward(from_enc.duplicate().put_tape(tape));
-        let values = Reshape::<Tensor3D<H, S2, { V / H }, T>>::reshape(values);
+        let values: Tensor2D<S2, V, T> = self.w_v.forward(from_enc.duplicate().put_tape(tape));
+        let values: Tensor3D<S2, H, { V / H }, T> = values.reshape();
+        let values: Tensor3D<H, S2, { V / H }, T> = values.permute_axes::<1, 0, 2>();
         let (values, tape) = values.split_tape();
 
-        let keys = self.w_k.forward(from_enc.put_tape(tape));
-        let keys = Reshape::<Tensor3D<H, S2, { K / H }, T>>::reshape(keys);
+        let keys: Tensor2D<S2, K, T> = self.w_k.forward(from_enc.put_tape(tape));
+        let keys: Tensor3D<S2, H, { K / H }, T> = keys.reshape();
+        let keys: Tensor3D<H, S2, { K / H }, T> = keys.permute_axes::<1, 0, 2>();
         let (keys, tape) = keys.split_tape();
 
-        let queries = self.w_q.forward(input.put_tape(tape));
-        let queries = Reshape::<Tensor3D<H, S1, { K / H }, T>>::reshape(queries);
+        let queries: Tensor2D<S1, K, T> = self.w_q.forward(input.put_tape(tape));
+        let queries: Tensor3D<S1, H, { K / H }, T> = queries.reshape();
+        let queries: Tensor3D<H, S1, { K / H }, T> = queries.permute_axes::<1, 0, 2>();
 
         // Get weights
-        let token_weights = matmul_transpose(queries, &keys) / (M as f32);
+        let token_weights: Tensor3D<H, S1, S2, T> = matmul_transpose(queries, &keys) / (M as f32);
 
         // Softmax on last dimension
         let token_weights: Tensor3D<H, S1, S2, T> = softmax(token_weights);
 
         // Get new tokens
         let tokens: Tensor3D<H, S1, { V / H }, T> = matmul(token_weights, &values);
+        let tokens: Tensor3D<S1, H, { V / H }, T> = tokens.permute_axes::<1, 0, 2>();
         let tokens: Tensor2D<S1, V, T> = tokens.reshape();
 
         self.w_o.forward(tokens)
@@ -150,9 +158,9 @@ impl<
         T: 'static + Tape,
     > Module<Tensor3D<B, S, M, T>> for MultiHeadAttention<M, M, K, V, H>
 where
-    Assert<{ B * S * K == B * H * S * (K / H) }>: ConstTrue,
-    Assert<{ B * S * V == B * H * S * (V / H) }>: ConstTrue,
-    Assert<{ B * H * S * (V / H) == B * S * V }>: ConstTrue,
+    Assert<{ B * S * K == B * S * H * (K / H) }>: ConstTrue,
+    Assert<{ B * S * V == B * S * H * (V / H) }>: ConstTrue,
+    Assert<{ B * S * H * (V / H) == B * S * V }>: ConstTrue,
 {
     type Output = Tensor3D<B, S, M, T>;
 
@@ -160,25 +168,29 @@ where
     fn forward(&self, input: Tensor3D<B, S, M, T>) -> Self::Output {
         let (input, tape) = input.split_tape();
 
-        let values = self.w_v.forward(input.duplicate().put_tape(tape));
-        let values = Reshape::<Tensor4D<B, H, S, { V / H }, T>>::reshape(values);
+        let values: Tensor3D<B, S, V, T> = self.w_v.forward(input.duplicate().put_tape(tape));
+        let values: Tensor4D<B, S, H, { V / H }, T> = values.reshape();
+        let values: Tensor4D<B, H, S, { V / H }, T> = values.permute_axes::<0, 2, 1, 3>();
         let (values, tape) = values.split_tape();
 
-        let keys = self.w_k.forward(input.duplicate().put_tape(tape));
-        let keys = Reshape::<Tensor4D<B, H, S, { K / H }, T>>::reshape(keys);
+        let keys: Tensor3D<B, S, K, T> = self.w_k.forward(input.duplicate().put_tape(tape));
+        let keys: Tensor4D<B, S, H, { K / H }, T> = keys.reshape();
+        let keys: Tensor4D<B, H, S, { K / H }, T> = keys.permute_axes::<0, 2, 1, 3>();
         let (keys, tape) = keys.split_tape();
 
-        let queries = self.w_q.forward(input.put_tape(tape));
-        let queries = Reshape::<Tensor4D<B, H, S, { K / H }, T>>::reshape(queries);
+        let queries: Tensor3D<B, S, K, T> = self.w_q.forward(input.put_tape(tape));
+        let queries: Tensor4D<B, S, H, { K / H }, T> = queries.reshape();
+        let queries: Tensor4D<B, H, S, { K / H }, T> = queries.permute_axes::<0, 2, 1, 3>();
 
         // Get weights
-        let token_weights = matmul_transpose(queries, &keys) / (M as f32);
+        let token_weights: Tensor4D<B, H, S, S, T> = matmul_transpose(queries, &keys) / (M as f32);
 
         // Softmax on last dimension
         let token_weights: Tensor4D<B, H, S, S, T> = softmax(token_weights);
 
         // Get new tokens
         let tokens: Tensor4D<B, H, S, { V / H }, T> = matmul(token_weights, &values);
+        let tokens: Tensor4D<B, S, H, { V / H }, T> = tokens.permute_axes::<0, 2, 1, 3>();
         let tokens: Tensor3D<B, S, V, T> = tokens.reshape();
 
         self.w_o.forward(tokens)
@@ -197,10 +209,10 @@ impl<
         T: 'static + Tape,
     > Module<(Tensor3D<B, S1, M, T>, Tensor3D<B, S2, N>)> for MultiHeadAttention<M, N, K, V, H>
 where
-    Assert<{ B * S1 * K == B * H * S1 * (K / H) }>: ConstTrue,
-    Assert<{ B * S2 * K == B * H * S2 * (K / H) }>: ConstTrue,
-    Assert<{ B * S2 * V == B * H * S2 * (V / H) }>: ConstTrue,
-    Assert<{ B * H * S1 * (V / H) == B * S1 * V }>: ConstTrue,
+    Assert<{ B * S1 * K == B * S1 * H * (K / H) }>: ConstTrue,
+    Assert<{ B * S2 * K == B * S2 * H * (K / H) }>: ConstTrue,
+    Assert<{ B * S2 * V == B * S2 * H * (V / H) }>: ConstTrue,
+    Assert<{ B * S1 * H * (V / H) == B * S1 * V }>: ConstTrue,
 {
     type Output = Tensor3D<B, S1, M, T>;
 
@@ -211,25 +223,30 @@ where
     ) -> Self::Output {
         let (input, tape) = input.split_tape();
 
-        let values = self.w_v.forward(from_enc.duplicate().put_tape(tape));
-        let values = Reshape::<Tensor4D<B, H, S2, { V / H }, T>>::reshape(values);
+        let values: Tensor3D<B, S2, V, T> = self.w_v.forward(from_enc.duplicate().put_tape(tape));
+        let values: Tensor4D<B, S2, H, { V / H }, T> = values.reshape();
+        let values: Tensor4D<B, H, S2, { V / H }, T> = values.permute_axes::<0, 2, 1, 3>();
         let (values, tape) = values.split_tape();
 
-        let keys = self.w_k.forward(from_enc.put_tape(tape));
-        let keys = Reshape::<Tensor4D<B, H, S2, { K / H }, T>>::reshape(keys);
+        let keys: Tensor3D<B, S2, K, T> = self.w_k.forward(from_enc.put_tape(tape));
+        let keys: Tensor4D<B, S2, H, { K / H }, T> = keys.reshape();
+        let keys: Tensor4D<B, H, S2, { K / H }, T> = keys.permute_axes::<0, 2, 1, 3>();
         let (keys, tape) = keys.split_tape();
 
-        let queries = self.w_q.forward(input.put_tape(tape));
-        let queries = Reshape::<Tensor4D<B, H, S1, { K / H }, T>>::reshape(queries);
+        let queries: Tensor3D<B, S1, K, T> = self.w_q.forward(input.put_tape(tape));
+        let queries: Tensor4D<B, S1, H, { K / H }, T> = queries.reshape();
+        let queries: Tensor4D<B, H, S1, { K / H }, T> = queries.permute_axes::<0, 2, 1, 3>();
 
         // Get weights
-        let token_weights = matmul_transpose(queries, &keys) / (M as f32);
+        let token_weights: Tensor4D<B, H, S1, S2, T> =
+            matmul_transpose(queries, &keys) / (M as f32);
 
         // Softmax on last dimension
         let token_weights: Tensor4D<B, H, S1, S2, T> = softmax(token_weights);
 
         // Get new tokens
         let tokens: Tensor4D<B, H, S1, { V / H }, T> = matmul(token_weights, &values);
+        let tokens: Tensor4D<B, S1, H, { V / H }, T> = tokens.permute_axes::<0, 2, 1, 3>();
         let tokens: Tensor3D<B, S1, V, T> = tokens.reshape();
 
         self.w_o.forward(tokens)
