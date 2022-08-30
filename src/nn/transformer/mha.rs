@@ -196,11 +196,7 @@ where
         let tokens: Tensor4D<B, S1, H, { V / H }, _> = tokens.permute_axes::<0, 2, 1, 3>();
         let tokens: Tensor3D<B, S1, V, _> = tokens.reshape();
 
-        let o = self.w_o.forward(tokens);
-        println!("{:?}", self.w_o.weight.data());
-        println!("{:?}", self.w_o.bias.data());
-        // println!("{:?}", o.data());
-        o
+        self.w_o.forward(tokens)
     }
 }
 
