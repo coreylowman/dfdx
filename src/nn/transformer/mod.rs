@@ -1,10 +1,7 @@
-mod base;
 mod decoder;
 mod encoder;
+mod mha;
 
-pub use base::*;
 pub use decoder::*;
 pub use encoder::*;
-
-#[cfg(test)]
-mod tests;
+pub use mha::*;
