@@ -1,4 +1,22 @@
 use crate::prelude::*;
+use std::io::{Read, Seek, Write};
+use zip::{result::ZipResult, ZipArchive, ZipWriter};
+
+/// **Requires Nightly** A transformer encoder.
+///
+/// Generics
+/// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
+/// - `NUM_HEADS`: The number of heads in [MultiHeadAttention].
+/// - `FF_DIM`: The size of the hidden layer in
+///   the feedforward network in [TransformerEncoderBlock].
+/// - `NUM_LAYERS`: The number of [TransformerEncoderBlock] to use.
+/// TODO: Doctests
+pub type TransformerEncoder<
+    const MODEL_DIM: usize,
+    const NUM_HEADS: usize,
+    const FF_DIM: usize,
+    const NUM_LAYERS: usize,
+> = Repeated<TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>, NUM_LAYERS>;
 
 /// **Requires Nightly** A single transformer encoder block
 ///
@@ -14,7 +32,7 @@ use crate::prelude::*;
 /// )
 /// ```
 /// TODO: Doctests
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct TransformerEncoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
@@ -74,21 +92,31 @@ where
     }
 }
 
-/// **Requires Nightly** A transformer encoder.
-///
-/// Generics
-/// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
-/// - `NUM_HEADS`: The number of heads in [MultiHeadAttention].
-/// - `FF_DIM`: The size of the hidden layer in
-///   the feedforward network in [TransformerEncoderBlock].
-/// - `NUM_LAYERS`: The number of [TransformerEncoderBlock] to use.
-/// TODO: Doctests
-pub type TransformerEncoder<
-    const MODEL_DIM: usize,
-    const NUM_HEADS: usize,
-    const FF_DIM: usize,
-    const NUM_LAYERS: usize,
-> = Repeated<TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>, NUM_LAYERS>;
+impl<const M: usize, const H: usize, const F: usize> SaveToNpz
+    for TransformerEncoderBlock<M, H, F>
+{
+    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        self.self_attn.write(&format!("{pre}self_attn."), w)?;
+        self.norm1.write(&format!("{pre}norm1."), w)?;
+        self.norm2.write(&format!("{pre}norm2."), w)?;
+        self.ff.0 .0.write(&format!("{pre}linear1."), w)?;
+        self.ff.0 .2.write(&format!("{pre}linear2."), w)?;
+        Ok(())
+    }
+}
+
+impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
+    for TransformerEncoderBlock<M, H, F>
+{
+    fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        self.self_attn.read(&format!("{pre}self_attn."), r)?;
+        self.norm1.read(&format!("{pre}norm1."), r)?;
+        self.norm2.read(&format!("{pre}norm2."), r)?;
+        self.ff.0 .0.read(&format!("{pre}linear1."), r)?;
+        self.ff.0 .2.read(&format!("{pre}linear2."), r)?;
+        Ok(())
+    }
+}
 
 #[cfg(test)]
 mod tests {

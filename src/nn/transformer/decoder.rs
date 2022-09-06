@@ -1,5 +1,72 @@
 use crate::prelude::*;
 use rand::Rng;
+use std::io::{Read, Seek, Write};
+use zip::{result::ZipResult, ZipArchive, ZipWriter};
+
+/// **Requires Nightly** A transformer decoder.
+///
+/// Generics
+/// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
+/// - `NUM_HEADS`: The number of heads in [MultiHeadAttention].
+/// - `FF_DIM`: The size of the hidden layer in
+///   the feedforward network in [TransformerDecoderBlock].
+/// - `NUM_LAYERS`: The number of [TransformerDecoderBlock] to use.
+/// TODO: Doctests
+#[derive(Clone, Debug, Default)]
+pub struct TransformerDecoder<
+    const MODEL_DIM: usize,
+    const NUM_HEADS: usize,
+    const FF_DIM: usize,
+    const NUM_LAYERS: usize,
+>(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>, NUM_LAYERS>);
+
+impl<const M: usize, const H: usize, const F: usize, const L: usize> ResetParams
+    for TransformerDecoder<M, H, F, L>
+{
+    fn reset_params<R: Rng>(&mut self, rng: &mut R) {
+        self.0.reset_params(rng);
+    }
+}
+
+impl<const M: usize, const H: usize, const F: usize, const L: usize> CanUpdateWithGradients
+    for TransformerDecoder<M, H, F, L>
+{
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+        self.0.update(grads, unused);
+    }
+}
+
+impl<const M: usize, const H: usize, const F: usize, const L: usize, Tgt, Mem> Module<(Tgt, Mem)>
+    for TransformerDecoder<M, H, F, L>
+where
+    Mem: Tensor<NoTape = Mem>,
+    TransformerDecoderBlock<M, H, F>: Module<(Tgt, Mem), Output = Tgt>,
+{
+    type Output = Tgt;
+
+    fn forward(&self, (mut x, mem): (Tgt, Mem)) -> Self::Output {
+        for block in self.0.modules.iter() {
+            x = block.forward((x, mem.duplicate()));
+        }
+        x
+    }
+}
+
+impl<const M: usize, const H: usize, const F: usize, const L: usize> SaveToNpz
+    for TransformerDecoder<M, H, F, L>
+{
+    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        self.0.write(pre, w)
+    }
+}
+
+impl<const M: usize, const H: usize, const F: usize, const L: usize> LoadFromNpz
+    for TransformerDecoder<M, H, F, L>
+{
+    fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        self.0.read(pre, r)
+    }
+}
 
 /// **Requires Nightly** A transformer decoder block. Different than the normal transformer block
 /// as this self attention accepts an additional sequence from the encoder.
@@ -16,7 +83,7 @@ use rand::Rng;
 /// )
 /// ```
 /// TODO: Doctests
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct TransformerDecoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
@@ -89,52 +156,33 @@ where
     }
 }
 
-/// **Requires Nightly** A transformer decoder.
-///
-/// Generics
-/// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
-/// - `NUM_HEADS`: The number of heads in [MultiHeadAttention].
-/// - `FF_DIM`: The size of the hidden layer in
-///   the feedforward network in [TransformerDecoderBlock].
-/// - `NUM_LAYERS`: The number of [TransformerDecoderBlock] to use.
-/// TODO: Doctests
-#[derive(Debug, Default)]
-pub struct TransformerDecoder<
-    const MODEL_DIM: usize,
-    const NUM_HEADS: usize,
-    const FF_DIM: usize,
-    const NUM_LAYERS: usize,
->(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>, NUM_LAYERS>);
-
-impl<const M: usize, const H: usize, const F: usize, const L: usize> ResetParams
-    for TransformerDecoder<M, H, F, L>
+impl<const M: usize, const H: usize, const F: usize> SaveToNpz
+    for TransformerDecoderBlock<M, H, F>
 {
-    fn reset_params<R: Rng>(&mut self, rng: &mut R) {
-        self.0.reset_params(rng);
+    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        self.self_attn.write(&format!("{pre}self_attn."), w)?;
+        self.norm1.write(&format!("{pre}norm1."), w)?;
+        self.mh_attn.write(&format!("{pre}mh_attn."), w)?;
+        self.norm2.write(&format!("{pre}norm2."), w)?;
+        self.ff.0 .0.write(&format!("{pre}linear1."), w)?;
+        self.ff.0 .2.write(&format!("{pre}linear2."), w)?;
+        self.norm3.write(&format!("{pre}norm3."), w)?;
+        Ok(())
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize> CanUpdateWithGradients
-    for TransformerDecoder<M, H, F, L>
+impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
+    for TransformerDecoderBlock<M, H, F>
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.0.update(grads, unused);
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, const L: usize, Tgt, Mem> Module<(Tgt, Mem)>
-    for TransformerDecoder<M, H, F, L>
-where
-    Mem: Tensor<NoTape = Mem>,
-    TransformerDecoderBlock<M, H, F>: Module<(Tgt, Mem), Output = Tgt>,
-{
-    type Output = Tgt;
-
-    fn forward(&self, (mut x, mem): (Tgt, Mem)) -> Self::Output {
-        for block in self.0.modules.iter() {
-            x = block.forward((x, mem.duplicate()));
-        }
-        x
+    fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        self.self_attn.read(&format!("{pre}self_attn."), r)?;
+        self.norm1.read(&format!("{pre}norm1."), r)?;
+        self.mh_attn.read(&format!("{pre}mh_attn."), r)?;
+        self.norm2.read(&format!("{pre}norm2."), r)?;
+        self.ff.0 .0.read(&format!("{pre}linear1."), r)?;
+        self.ff.0 .2.read(&format!("{pre}linear2."), r)?;
+        self.norm3.read(&format!("{pre}norm3."), r)?;
+        Ok(())
     }
 }
 
