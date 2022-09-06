@@ -32,7 +32,7 @@ pub type TransformerEncoder<
 /// )
 /// ```
 /// TODO: Doctests
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct TransformerEncoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,

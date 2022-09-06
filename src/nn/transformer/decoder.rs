@@ -12,7 +12,7 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 ///   the feedforward network in [TransformerDecoderBlock].
 /// - `NUM_LAYERS`: The number of [TransformerDecoderBlock] to use.
 /// TODO: Doctests
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct TransformerDecoder<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
@@ -83,7 +83,7 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize> LoadFromNpz
 /// )
 /// ```
 /// TODO: Doctests
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct TransformerDecoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,

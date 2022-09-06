@@ -25,7 +25,7 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 ///     batch_first=True,
 /// )
 /// ```
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Transformer<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
@@ -98,7 +98,8 @@ impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: us
 mod tests {
     use super::*;
     use crate::nn::tests::SimpleGradients;
-    use rand::{rngs::StdRng, SeedableRng};
+    use rand::{rngs::StdRng, thread_rng, SeedableRng};
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_forward() {
@@ -133,5 +134,27 @@ mod tests {
         t.update(&mut gs, &mut unused);
 
         assert!(unused.is_empty());
+    }
+
+    #[test]
+    fn test_save_load() {
+        let mut rng = thread_rng();
+
+        let mut saved: Transformer<16, 4, 3, 4, 8> = Default::default();
+        saved.reset_params(&mut rng);
+
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+        saved.save(file.path()).expect("");
+
+        let mut loaded: Transformer<16, 4, 3, 4, 8> = Default::default();
+        loaded.load(file.path()).expect("");
+
+        let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
+        let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
+
+        let y1 = saved.forward((src.clone(), tgt.clone()));
+        let y2 = loaded.forward((src.clone(), tgt.clone()));
+
+        assert_eq!(y1.data(), y2.data());
     }
 }
