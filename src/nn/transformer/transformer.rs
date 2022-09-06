@@ -1,4 +1,6 @@
 use crate::prelude::*;
+use std::io::{Read, Seek, Write};
+use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// **Requires Nightly** Transformer architecture as described in
 /// [Attention is all you need](https://arxiv.org/abs/1706.03762).
@@ -69,6 +71,26 @@ where
     fn forward(&self, (src, tgt): (Src, Tgt)) -> Self::Output {
         let (mem, tape) = self.encoder.forward(src).split_tape();
         self.decoder.forward((tgt.put_tape(tape), mem))
+    }
+}
+
+impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> SaveToNpz
+    for Transformer<M, H, E, D, F>
+{
+    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        self.encoder.write(&format!("{pre}encoder."), w)?;
+        self.decoder.write(&format!("{pre}decoder."), w)?;
+        Ok(())
+    }
+}
+
+impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> LoadFromNpz
+    for Transformer<M, H, E, D, F>
+{
+    fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        self.encoder.read(&format!("{pre}encoder."), r)?;
+        self.decoder.read(&format!("{pre}decoder."), r)?;
+        Ok(())
     }
 }
 

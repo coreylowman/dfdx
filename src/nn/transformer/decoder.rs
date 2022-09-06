@@ -52,6 +52,22 @@ where
     }
 }
 
+impl<const M: usize, const H: usize, const F: usize, const L: usize> SaveToNpz
+    for TransformerDecoder<M, H, F, L>
+{
+    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        self.0.write(pre, w)
+    }
+}
+
+impl<const M: usize, const H: usize, const F: usize, const L: usize> LoadFromNpz
+    for TransformerDecoder<M, H, F, L>
+{
+    fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        self.0.read(pre, r)
+    }
+}
+
 /// **Requires Nightly** A transformer decoder block. Different than the normal transformer block
 /// as this self attention accepts an additional sequence from the encoder.
 ///
