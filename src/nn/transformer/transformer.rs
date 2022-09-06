@@ -75,6 +75,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nn::tests::SimpleGradients;
     use rand::{rngs::StdRng, SeedableRng};
 
     #[test]
@@ -92,5 +93,23 @@ mod tests {
         let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
         let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
         let _: Tensor3D<4, 6, 16> = t.forward((src, tgt));
+    }
+
+    #[test]
+    fn test_backward() {
+        let mut rng = StdRng::seed_from_u64(0);
+        let mut t: Transformer<16, 4, 3, 3, 8> = Default::default();
+        t.reset_params(&mut rng);
+
+        let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
+        let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
+        let out: Tensor3D<4, 6, 16, _> = t.forward((src.trace(), tgt));
+        let g = out.mean().backward();
+
+        let mut gs = SimpleGradients(g);
+        let mut unused: UnusedTensors = Default::default();
+        t.update(&mut gs, &mut unused);
+
+        assert!(unused.is_empty());
     }
 }
