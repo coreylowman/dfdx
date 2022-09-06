@@ -203,8 +203,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::assert_close;
-    use rand::{rngs::StdRng, SeedableRng};
+    use crate::{nn::tests::SimpleGradients, tests::assert_close};
+    use rand::{rngs::StdRng, thread_rng, SeedableRng};
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_mha_unbatched() {
@@ -295,5 +296,45 @@ mod tests {
                 ],
             ],
         );
+    }
+
+    #[test]
+    fn test_backward_updates_all() {
+        let mut rng = thread_rng();
+
+        let mut mha: MultiHeadAttention<12, 4> = Default::default();
+        mha.reset_params(&mut rng);
+
+        let q: Tensor3D<2, 3, 12> = TensorCreator::randn(&mut rng);
+        let k: Tensor3D<2, 4, 12> = TensorCreator::randn(&mut rng);
+        let v: Tensor3D<2, 4, 12> = TensorCreator::randn(&mut rng);
+        let y: Tensor3D<2, 3, 12, _> = mha.forward((q.trace(), k, v));
+
+        let mut g = SimpleGradients(y.mean().backward());
+        let mut unused = Default::default();
+        mha.update(&mut g, &mut unused);
+        assert!(unused.is_empty());
+    }
+
+    #[test]
+    fn test_save_and_load() {
+        let mut rng = thread_rng();
+
+        let mut saved: MultiHeadAttention<12, 4> = Default::default();
+        saved.reset_params(&mut rng);
+
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+        saved.save(file.path()).expect("");
+
+        let mut loaded: MultiHeadAttention<12, 4> = Default::default();
+        loaded.load(file.path()).expect("");
+
+        let q: Tensor3D<2, 3, 12> = TensorCreator::randn(&mut rng);
+        let k: Tensor3D<2, 4, 12> = TensorCreator::randn(&mut rng);
+        let v: Tensor3D<2, 4, 12> = TensorCreator::randn(&mut rng);
+        let y1: Tensor3D<2, 3, 12, _> = saved.forward((q.clone(), k.clone(), v.clone()));
+        let y2: Tensor3D<2, 3, 12, _> = loaded.forward((q.clone(), k.clone(), v.clone()));
+
+        assert_eq!(y1.data(), y2.data());
     }
 }
