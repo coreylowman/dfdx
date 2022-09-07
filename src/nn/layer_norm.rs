@@ -101,6 +101,16 @@ impl<H: Tape, const B: usize, const S: usize, const M: usize> Module<Tensor3D<B,
     }
 }
 
+impl<T, const M: usize> ModuleMut<T> for LayerNorm1D<M>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 impl<const M: usize> SaveToNpz for LayerNorm1D<M> {
     /// Saves [Self::gamma] to `{pre}gamma.npy` and [Self::beta] to `{pre}beta.npy`
     /// using [npz_fwrite()].

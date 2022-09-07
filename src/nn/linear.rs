@@ -110,6 +110,16 @@ impl<const B: usize, const S: usize, const I: usize, const O: usize, H: Tape>
     }
 }
 
+impl<T, const I: usize, const O: usize> ModuleMut<T> for Linear<I, O>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

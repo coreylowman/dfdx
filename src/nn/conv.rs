@@ -176,6 +176,24 @@ where
     }
 }
 
+impl<
+        T,
+        const IN_CHAN: usize,
+        const OUT_CHAN: usize,
+        const KERNEL_SIZE: usize,
+        const STRIDE: usize,
+        const PADDING: usize,
+    > ModuleMut<T> for Conv2D<IN_CHAN, OUT_CHAN, KERNEL_SIZE, STRIDE, PADDING>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

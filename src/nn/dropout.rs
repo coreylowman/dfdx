@@ -1,6 +1,5 @@
 use crate::prelude::*;
 use rand::{prelude::StdRng, Rng, SeedableRng};
-use std::{cell::RefCell, ops::DerefMut};
 
 /// A [Module<Tensor>] that calls [dropout()] in [Module::forward()] with probability `1.0 / N`.
 /// Note that [dropout()] does not do anything for tensors with [NoneTape].
@@ -18,7 +17,7 @@ use std::{cell::RefCell, ops::DerefMut};
 /// ```
 #[derive(Clone, Debug)]
 pub struct DropoutOneIn<const N: usize> {
-    rng: RefCell<StdRng>,
+    rng: StdRng,
 }
 
 impl<const N: usize> Default for DropoutOneIn<N> {
@@ -26,7 +25,7 @@ impl<const N: usize> Default for DropoutOneIn<N> {
     fn default() -> Self {
         let seed = unique_id().as_u64();
         Self {
-            rng: RefCell::new(StdRng::seed_from_u64(seed)),
+            rng: StdRng::seed_from_u64(seed),
         }
     }
 }
@@ -44,13 +43,21 @@ impl<const N: usize> ResetParams for DropoutOneIn<N> {
 impl<const N: usize> SaveToNpz for DropoutOneIn<N> {}
 impl<const N: usize> LoadFromNpz for DropoutOneIn<N> {}
 
-impl<const N: usize, T: Tensor<Dtype = f32>> Module<T> for DropoutOneIn<N> {
+impl<const N: usize, T: Tensor<Dtype = f32, Tape = NoneTape>> Module<T> for DropoutOneIn<N> {
+    type Output = T;
+
+    /// Identity function
+    fn forward(&self, input: T) -> Self::Output {
+        input
+    }
+}
+
+impl<const N: usize, T: Tensor<Dtype = f32, Tape = OwnedTape>> ModuleMut<T> for DropoutOneIn<N> {
     type Output = T;
 
     /// Calls [dropout()] with `p=1/N` using `self.rng`.
-    fn forward(&self, input: T) -> Self::Output {
-        let mut rng = self.rng.borrow_mut();
-        dropout(input, 1.0 / N as f32, rng.deref_mut())
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        dropout(input, 1.0 / N as f32, &mut self.rng)
     }
 }
 
@@ -87,7 +94,7 @@ impl<const N: usize, T: Tensor<Dtype = f32>> Module<T> for DropoutOneIn<N> {
 #[derive(Clone, Debug)]
 pub struct Dropout {
     pub p: f32,
-    rng: RefCell<StdRng>,
+    rng: StdRng,
 }
 
 impl Dropout {
@@ -95,7 +102,7 @@ impl Dropout {
     pub fn new(p: f32, rng_seed: u64) -> Self {
         Self {
             p,
-            rng: RefCell::new(StdRng::seed_from_u64(rng_seed)),
+            rng: StdRng::seed_from_u64(rng_seed),
         }
     }
 
@@ -104,7 +111,7 @@ impl Dropout {
         let seed = unique_id().as_u64();
         Self {
             p,
-            rng: RefCell::new(StdRng::seed_from_u64(seed)),
+            rng: StdRng::seed_from_u64(seed),
         }
     }
 }
@@ -129,22 +136,37 @@ impl ResetParams for Dropout {
 impl SaveToNpz for Dropout {}
 impl LoadFromNpz for Dropout {}
 
-impl<T: Tensor<Dtype = f32>> Module<T> for Dropout {
+impl<T: Tensor<Dtype = f32, Tape = NoneTape>> Module<T> for Dropout {
     type Output = T;
 
-    /// Calls [dropout()] using `self.rng`.
+    /// Identity function
     fn forward(&self, input: T) -> Self::Output {
-        let mut rng = self.rng.borrow_mut();
-        dropout(input, self.p, rng.deref_mut())
+        input
+    }
+}
+impl<T: Tensor<Dtype = f32, Tape = OwnedTape>> ModuleMut<T> for Dropout {
+    type Output = T;
+
+    /// Identity function
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        dropout(input, self.p, &mut self.rng)
     }
 }
 
-impl<R: Rng + SeedableRng, T: Tensor<Dtype = f32>> Module<(T, R)> for Dropout {
+impl<R: Rng, T: Tensor<Dtype = f32, Tape = NoneTape>> Module<(T, R)> for Dropout {
+    type Output = (T, R);
+
+    /// Identity function
+    fn forward(&self, input: (T, R)) -> Self::Output {
+        input
+    }
+}
+
+impl<R: Rng, T: Tensor<Dtype = f32, Tape = OwnedTape>> ModuleMut<(T, R)> for Dropout {
     type Output = (T, R);
 
     /// Calls [dropout()] using `input.1`.
-    fn forward(&self, input: (T, R)) -> Self::Output {
-        let (t, mut rng) = input;
+    fn forward_mut(&mut self, (t, mut rng): (T, R)) -> Self::Output {
         let t = dropout(t, self.p, &mut rng);
         (t, rng)
     }
@@ -156,23 +178,28 @@ mod tests {
 
     #[test]
     fn test_dropout_internal_rng_reproduce() {
-        let d1 = Dropout::new(0.5, 0);
-        let d2 = Dropout::new(0.5, 0);
+        let mut d1 = Dropout::new(0.5, 0);
+        let mut d2 = Dropout::new(0.5, 0);
         let t: Tensor1D<100> = Tensor1D::ones();
-        let r1 = d1.forward(t.trace());
-        let r2 = d2.forward(t.trace());
-        let r1_2 = d1.forward(t.trace());
+        let r1 = d1.forward_mut(t.trace());
+        let r2 = d2.forward_mut(t.trace());
+        let r1_2 = d1.forward_mut(t.trace());
         assert_eq!(r1.data(), r2.data());
-        assert!(r1.data() != r1_2.data());
+        assert_ne!(r1.data(), t.data());
+        assert_ne!(r1.data(), r1_2.data());
+        assert_ne!(r1_2.data(), t.data());
     }
 
     #[test]
     fn test_dropout_external_rng() {
         let rng = StdRng::seed_from_u64(0);
-        let d = Dropout::p(0.5);
+        let mut d = Dropout::p(0.5);
         let t: Tensor1D<100> = Tensor1D::ones();
-        let (r, _rng) = d.forward((t.trace(), rng));
-        assert!(t.data() != r.data());
+        let (r, rng) = d.forward((t.clone(), rng));
+        assert_eq!(t.data(), r.data());
+
+        let (r, _rng) = d.forward_mut((t.trace(), rng));
+        assert_ne!(t.data(), r.data());
     }
 
     #[test]
@@ -185,9 +212,9 @@ mod tests {
 
     #[test]
     fn test_dropout_tape() {
-        let dropout = Dropout::p(0.5);
+        let mut dropout = Dropout::p(0.5);
         let t: Tensor1D<100> = Tensor1D::ones();
-        let r = dropout.forward(t.trace());
+        let r = dropout.forward_mut(t.trace());
         assert!(t.data() != r.data());
     }
 }

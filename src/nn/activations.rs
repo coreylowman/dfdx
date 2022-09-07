@@ -26,6 +26,16 @@ macro_rules! activation_impls {
                 $func_name(input)
             }
         }
+
+        impl<T> ModuleMut<T> for $struct_name
+        where
+            Self: Module<T>,
+        {
+            type Output = <Self as Module<T>>::Output;
+            fn forward_mut(&mut self, input: T) -> Self::Output {
+                self.forward(input)
+            }
+        }
     };
 }
 
@@ -61,6 +71,16 @@ impl<T: Reduce1<-1>> Module<T> for Softmax {
     type Output = T;
     fn forward(&self, input: T) -> Self::Output {
         softmax(input)
+    }
+}
+
+impl<T> ModuleMut<T> for Softmax
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
     }
 }
 

@@ -94,6 +94,16 @@ impl<Input, T: Module<Input, Output = Input>, const N: usize> Module<Input> for 
     }
 }
 
+impl<T, Input, const N: usize> ModuleMut<Input> for Repeated<T, N>
+where
+    Self: Module<Input>,
+{
+    type Output = <Self as Module<Input>>::Output;
+    fn forward_mut(&mut self, input: Input) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

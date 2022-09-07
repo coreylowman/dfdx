@@ -45,6 +45,16 @@ where
     }
 }
 
+impl<T, F> ModuleMut<T> for Residual<F>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 impl<F: SaveToNpz> SaveToNpz for Residual<F> {
     /// Pass through to `F`'s [SaveToNpz].
     fn write<W>(

@@ -46,6 +46,17 @@ where
     }
 }
 
+impl<T> ModuleMut<T> for FlattenImage
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+
+    fn forward_mut(&mut self, t: T) -> Self::Output {
+        self.forward(t)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

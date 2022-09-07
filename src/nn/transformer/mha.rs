@@ -200,6 +200,18 @@ where
     }
 }
 
+impl<T, const M: usize, const H: usize, const K: usize, const V: usize> ModuleMut<T>
+    for MultiHeadAttention<M, H, K, V>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

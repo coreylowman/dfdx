@@ -5,81 +5,96 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
-        impl<$($name: CanUpdateWithGradients),+> CanUpdateWithGradients for ($($name,)+) {
-            fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-                $(self.$idx.update(grads, unused);)+
-            }
-        }
+impl<$($name: CanUpdateWithGradients),+> CanUpdateWithGradients for ($($name,)+) {
+    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+        $(self.$idx.update(grads, unused);)+
+    }
+}
 
-        impl<$($name: ResetParams),+> ResetParams for ($($name,)+) {
-            fn reset_params<R: Rng>(&mut self, rng: &mut R) {
-                $(self.$idx.reset_params(rng));+
-            }
-        }
+impl<$($name: ResetParams),+> ResetParams for ($($name,)+) {
+    fn reset_params<R: Rng>(&mut self, rng: &mut R) {
+        $(self.$idx.reset_params(rng));+
+    }
+}
 
-        impl<$($name: SaveToNpz),+> SaveToNpz for ($($name,)+) {
-            /// Calls `SaveToNpz::write(self.<idx>, ...)` on each part of the tuple. See [SaveToNpz].
-            ///
-            /// E.g. for a two tuple (A, B) with `base == ""`, this will call:
-            /// 1. `self.0.write("0.", w)`
-            /// 2. `self.1.write("1.", w)`
-            fn write<W: Write + Seek>(&self, base: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-                $(self.$idx.write(&format!("{}{}.", base, $idx), w)?;)+
-                Ok(())
-            }
-        }
+impl<$($name: SaveToNpz),+> SaveToNpz for ($($name,)+) {
+    /// Calls `SaveToNpz::write(self.<idx>, ...)` on each part of the tuple. See [SaveToNpz].
+    ///
+    /// E.g. for a two tuple (A, B) with `base == ""`, this will call:
+    /// 1. `self.0.write("0.", w)`
+    /// 2. `self.1.write("1.", w)`
+    fn write<W: Write + Seek>(&self, base: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        $(self.$idx.write(&format!("{}{}.", base, $idx), w)?;)+
+        Ok(())
+    }
+}
 
-        impl<$($name: LoadFromNpz),+> LoadFromNpz for ($($name,)+) {
-            /// Calls `LoadFromNpz::read(self.<idx>, ...)` on each part of the tuple. See [LoadFromNpz].
-            ///
-            /// E.g. for a two tuple (A, B) with `base == ""`, this will call:
-            /// 1. `self.0.read("0.", r)`
-            /// 2. `self.1.read("1.", r)`
-            fn read<R: Read + Seek>(&mut self, base: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-                $(self.$idx.read(&format!("{}{}.", base, $idx), r)?;)+
-                Ok(())
-            }
-        }
+impl<$($name: LoadFromNpz),+> LoadFromNpz for ($($name,)+) {
+    /// Calls `LoadFromNpz::read(self.<idx>, ...)` on each part of the tuple. See [LoadFromNpz].
+    ///
+    /// E.g. for a two tuple (A, B) with `base == ""`, this will call:
+    /// 1. `self.0.read("0.", r)`
+    /// 2. `self.1.read("1.", r)`
+    fn read<R: Read + Seek>(&mut self, base: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        $(self.$idx.read(&format!("{}{}.", base, $idx), r)?;)+
+        Ok(())
+    }
+}
 
-        /*This macro expands like this for a 4-tuple:
+/*This macro expands like this for a 4-tuple:
 
-        impl<
-            Input: Tensor,
+impl<
+    Input: Tensor,
 
-            // `$last:`
-            D:
+    // `$last:`
+    D:
 
-            // `$(Module::<$rev_tail ::Output>, $rev_tail: )+`
-            Module<C ::Output>, C:
-            Module<B ::Output>, B:
-            Module<A ::Output>, A:
+    // `$(Module::<$rev_tail ::Output>, $rev_tail: )+`
+    Module<C ::Output>, C:
+    Module<B ::Output>, B:
+    Module<A ::Output>, A:
 
-            Module<Input>
-        > Module<Input> for (A, B, C, D) {
-            type Output = D::Output;
-            fn forward(&self, x: Input) -> Self::Output {
-                let x = self.0.forward(x);
-                let x = self.1.forward(x);
-                let x = self.2.forward(x);
-                let x = self.3.forward(x);
-                x
-            }
-        }
-        */
-        impl<
-            Input: Tensor,
-            $last:
-            $(Module::<$rev_tail ::Output>, $rev_tail: )+
-            Module<Input>
-        > Module<Input> for ($($name,)+) {
-            type Output = $last ::Output;
+    Module<Input>
+> Module<Input> for (A, B, C, D) {
+    type Output = D::Output;
+    fn forward(&self, x: Input) -> Self::Output {
+        let x = self.0.forward(x);
+        let x = self.1.forward(x);
+        let x = self.2.forward(x);
+        let x = self.3.forward(x);
+        x
+    }
+}
+*/
+impl<
+    Input: Tensor,
+    $last:
+    $(Module::<$rev_tail ::Output>, $rev_tail: )+
+    Module<Input>
+> Module<Input> for ($($name,)+) {
+    type Output = $last ::Output;
 
-            /// Calls forward sequentially on each module in the tuple.
-            fn forward(&self, x: Input) -> Self::Output {
-                $(let x = self.$idx.forward(x);)+
-                x
-            }
-        }
+    /// Calls forward sequentially on each module in the tuple.
+    fn forward(&self, x: Input) -> Self::Output {
+        $(let x = self.$idx.forward(x);)+
+        x
+    }
+}
+
+impl<
+    Input: Tensor,
+    $last:
+    $(ModuleMut::<$rev_tail ::Output>, $rev_tail: )+
+    ModuleMut<Input>
+> ModuleMut<Input> for ($($name,)+) {
+    type Output = $last ::Output;
+
+    /// Calls forward sequentially on each module in the tuple.
+    fn forward_mut(&mut self, x: Input) -> Self::Output {
+        $(let x = self.$idx.forward_mut(x);)+
+        x
+    }
+}
     };
 }
 

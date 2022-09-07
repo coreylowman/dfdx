@@ -59,34 +59,36 @@ where
     }
 }
 
+impl<T, F, R> ModuleMut<T> for GeneralizedResidual<F, R>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, t: T) -> Self::Output {
+        self.forward(t)
+    }
+}
+
 impl<F: SaveToNpz, R: SaveToNpz> SaveToNpz for GeneralizedResidual<F, R> {
     /// Pass through to `F`/`R`'s [SaveToNpz].
-    fn write<W>(
-        &self,
-        filename_prefix: &str,
-        w: &mut zip::ZipWriter<W>,
-    ) -> zip::result::ZipResult<()>
+    fn write<W>(&self, pre: &str, w: &mut zip::ZipWriter<W>) -> zip::result::ZipResult<()>
     where
         W: std::io::Write + std::io::Seek,
     {
-        self.0.write(&format!("{}_main", filename_prefix), w)?;
-        self.1.write(&format!("{}_residual", filename_prefix), w)?;
+        self.0.write(&format!("{}_main", pre), w)?;
+        self.1.write(&format!("{}_residual", pre), w)?;
         Ok(())
     }
 }
 
 impl<F: LoadFromNpz, R: LoadFromNpz> LoadFromNpz for GeneralizedResidual<F, R> {
     /// Pass through to `F`/`R`'s [LoadFromNpz].
-    fn read<READ>(
-        &mut self,
-        filename_prefix: &str,
-        r: &mut zip::ZipArchive<READ>,
-    ) -> Result<(), NpzError>
+    fn read<READ>(&mut self, pre: &str, r: &mut zip::ZipArchive<READ>) -> Result<(), NpzError>
     where
         READ: std::io::Read + std::io::Seek,
     {
-        self.0.read(&format!("{}_main", filename_prefix), r)?;
-        self.1.read(&format!("{}_residual", filename_prefix), r)?;
+        self.0.read(&format!("{}_main", pre), r)?;
+        self.1.read(&format!("{}_residual", pre), r)?;
         Ok(())
     }
 }

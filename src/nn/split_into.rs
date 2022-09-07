@@ -76,6 +76,32 @@ where
         )
     }
 }
+
+impl<
+    Input: Tensor,
+    $($heads : ModuleMut<Input>,)+
+    $tail: ModuleMut<Input>
+> ModuleMut<Input> for SplitInto<($($heads,)+ $tail)>
+where
+    $($heads::Output: Tensor<Tape = Input::Tape>,)+
+{
+    type Output = (
+        $(<$heads::Output as Tensor>::NoTape, )+
+        $tail::Output
+    );
+
+    #[allow(non_snake_case)]
+    fn forward_mut(&mut self, x: Input) -> Self::Output {
+        let (x, tape) = x.split_tape();
+        let ($($heads, )+ $tail) = &mut self.0;
+        $(let ($heads, tape) = $heads.forward_mut(x.duplicate().put_tape(tape)).split_tape();)+
+        let $tail = $tail.forward_mut(x.put_tape(tape));
+        (
+            $($heads,)+
+            $tail
+        )
+    }
+}
 }
 }
 

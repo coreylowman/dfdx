@@ -52,6 +52,17 @@ where
     }
 }
 
+impl<const M: usize, const H: usize, const F: usize, const L: usize, T> ModuleMut<T>
+    for TransformerDecoder<M, H, F, L>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 impl<const M: usize, const H: usize, const F: usize, const L: usize> SaveToNpz
     for TransformerDecoder<M, H, F, L>
 {
@@ -153,6 +164,17 @@ where
         let x = self.norm2.forward(x);
         let x = self.ff.forward(x);
         self.norm3.forward(x)
+    }
+}
+
+impl<const M: usize, const H: usize, const F: usize, T> ModuleMut<T>
+    for TransformerDecoderBlock<M, H, F>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
     }
 }
 
