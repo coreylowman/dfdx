@@ -3,9 +3,9 @@
 //!
 //! # Mutable vs Immutable forwards
 //!
-//! [Module] provides two versions of forwards:
+//! There are two versions of forwards:
 //!
-//! 1. [Module::forward_mut()] which receives `&mut self`.
+//! 1. [ModuleMut::forward_mut()] which receives `&mut self`.
 //! 2. [Module::forward()] which receives `&self`.
 //!
 //! **This has nothing to do with whether gradients are being tracked or not**.
@@ -13,14 +13,14 @@
 //! and NoneTape can still be passed to both, and all modules should conform
 //! to this expected behavior.
 //!
-//! In general, [Module::forward_mut()] should be used during training,
+//! In general, [ModuleMut::forward_mut()] should be used during training,
 //! and [Module::forward()] during evaluation/testing/inference/validation.
 //!
 //! Here is a list of existing modules that have different behavior in these
 //! two functions:
 //!
-//! - [DropoutOneIn] (soon)
-//! - [Dropout] (soon)
+//! - [DropoutOneIn]
+//! - [Dropout]
 //!
 //! # Initializing
 //!
