@@ -43,7 +43,7 @@ impl<const N: usize> ResetParams for DropoutOneIn<N> {
 impl<const N: usize> SaveToNpz for DropoutOneIn<N> {}
 impl<const N: usize> LoadFromNpz for DropoutOneIn<N> {}
 
-impl<const N: usize, T: Tensor<Dtype = f32, Tape = NoneTape>> Module<T> for DropoutOneIn<N> {
+impl<const N: usize, T: Tensor<Dtype = f32, NoTape = T>> Module<T> for DropoutOneIn<N> {
     type Output = T;
 
     /// Identity function
@@ -52,7 +52,7 @@ impl<const N: usize, T: Tensor<Dtype = f32, Tape = NoneTape>> Module<T> for Drop
     }
 }
 
-impl<const N: usize, T: Tensor<Dtype = f32, Tape = OwnedTape>> ModuleMut<T> for DropoutOneIn<N> {
+impl<const N: usize, T: Tensor<Dtype = f32, OwnedTape = T>> ModuleMut<T> for DropoutOneIn<N> {
     type Output = T;
 
     /// Calls [dropout()] with `p=1/N` using `self.rng`.
@@ -136,7 +136,7 @@ impl ResetParams for Dropout {
 impl SaveToNpz for Dropout {}
 impl LoadFromNpz for Dropout {}
 
-impl<T: Tensor<Dtype = f32, Tape = NoneTape>> Module<T> for Dropout {
+impl<T: Tensor<Dtype = f32, NoTape = T>> Module<T> for Dropout {
     type Output = T;
 
     /// Identity function
@@ -144,7 +144,7 @@ impl<T: Tensor<Dtype = f32, Tape = NoneTape>> Module<T> for Dropout {
         input
     }
 }
-impl<T: Tensor<Dtype = f32, Tape = OwnedTape>> ModuleMut<T> for Dropout {
+impl<T: Tensor<Dtype = f32, OwnedTape = T>> ModuleMut<T> for Dropout {
     type Output = T;
 
     /// Identity function
@@ -153,7 +153,7 @@ impl<T: Tensor<Dtype = f32, Tape = OwnedTape>> ModuleMut<T> for Dropout {
     }
 }
 
-impl<R: Rng, T: Tensor<Dtype = f32, Tape = NoneTape>> Module<(T, R)> for Dropout {
+impl<R: Rng, T: Tensor<Dtype = f32, NoTape = T>> Module<(T, R)> for Dropout {
     type Output = (T, R);
 
     /// Identity function
@@ -162,7 +162,7 @@ impl<R: Rng, T: Tensor<Dtype = f32, Tape = NoneTape>> Module<(T, R)> for Dropout
     }
 }
 
-impl<R: Rng, T: Tensor<Dtype = f32, Tape = OwnedTape>> ModuleMut<(T, R)> for Dropout {
+impl<R: Rng, T: Tensor<Dtype = f32, OwnedTape = T>> ModuleMut<(T, R)> for Dropout {
     type Output = (T, R);
 
     /// Calls [dropout()] using `input.1`.
