@@ -1,18 +1,19 @@
 use crate::prelude::*;
 use rand::{prelude::StdRng, Rng, SeedableRng};
 
-/// A [Module<Tensor>] that calls [dropout()] in [Module::forward()] with probability `1.0 / N`.
-/// Note that [dropout()] does not do anything for tensors with [NoneTape].
+/// A [Module<Tensor>] that calls [dropout()] in [ModuleMut::forward_mut()] with probability `1.0 / N`.
+/// It is the identity function in [Module::forward()]. Note that [dropout()] does not do anything
+/// for tensors with [NoneTape], even in [ModuleMut].
 ///
-/// # Generics
+/// Generics
 /// - `N`: p is set as `1.0 / N`
 ///
-/// # Examples
+/// Examples
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let dropout: DropoutOneIn<2> = Default::default();
+/// let mut dropout: DropoutOneIn<2> = Default::default();
 /// let t: Tensor2D<2, 5> = Tensor2D::ones();
-/// let r = dropout.forward(t.trace());
+/// let r = dropout.forward_mut(t.trace());
 /// assert_eq!(r.data(), &[[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug)]
@@ -61,16 +62,13 @@ impl<const N: usize, T: Tensor<Dtype = f32, OwnedTape = T>> ModuleMut<T> for Dro
     }
 }
 
-/// A [Module<Tensor>] that calls [dropout()] in [Module::forward()] with probability `self.p`.
+/// A [Module<Tensor>] that calls [dropout()] in [ModuleMut::forward_mut()] with probability `self.p`.
+/// It is the identity function in [Module::forward()].
 ///
 /// This also implements [Module<(Tensor, Rng)>] if you want to pass in an [Rng] externally, though
 /// this may be harder to use and infect other modules.
 ///
 /// [Default] is implemented as `p=0.5` and seeds.
-///
-/// Implementation details:
-/// This stores the [Rng] in a [RefCell] to maintain compatibility with forward taking
-/// a non-mutable reference to self.
 ///
 /// Example:
 ///
