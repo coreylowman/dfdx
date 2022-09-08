@@ -27,46 +27,46 @@ pub mod modes {
 
 use modes::*;
 
-pub trait DeviceSelect<T, I, Mode> {
-    type Result;
+pub trait DeviceSelect<T, R, Mode> {
+    type Indices;
 
     /// Equivalent to psuedocode `out = inp[indices]`
-    fn select_axis(inp: &T, indices: &I, out: &mut Self::Result);
+    fn select_axis(inp: &T, indices: &Self::Indices, out: &mut R);
 
     /// `inp[indices] += out`
-    fn select_add(inp: &mut T, indices: &I, out: &Self::Result);
+    fn select_add(inp: &mut T, indices: &Self::Indices, out: &R);
 }
 
-impl<T, const M: usize> DeviceSelect<[T; M], usize, Index> for Cpu
+impl<T, const M: usize> DeviceSelect<[T; M], T, Index> for Cpu
 where
     Self: ForEachElement<T>,
     T: Copy + CountElements,
     T::Dtype: for<'a> std::ops::AddAssign<&'a T::Dtype>,
 {
-    type Result = T;
+    type Indices = usize;
 
-    fn select_axis(inp: &[T; M], indices: &usize, out: &mut Self::Result) {
+    fn select_axis(inp: &[T; M], indices: &Self::Indices, out: &mut T) {
         *out = inp[*indices];
     }
-    fn select_add(inp: &mut [T; M], indices: &usize, out: &Self::Result) {
+    fn select_add(inp: &mut [T; M], indices: &Self::Indices, out: &T) {
         Self::foreach_mr(&mut inp[*indices], out, &mut |a, b| *a += b);
     }
 }
 
-impl<T, const M: usize, const Z: usize> DeviceSelect<[T; M], [usize; Z], Index> for Cpu
+impl<T, const M: usize, const Z: usize> DeviceSelect<[T; M], [T; Z], Index> for Cpu
 where
     Self: ForEachElement<T>,
     T: Copy + CountElements,
     T::Dtype: for<'a> std::ops::AddAssign<&'a T::Dtype>,
 {
-    type Result = [T; Z];
-    fn select_axis(inp: &[T; M], indices: &[usize; Z], out: &mut Self::Result) {
+    type Indices = [usize; Z];
+    fn select_axis(inp: &[T; M], indices: &Self::Indices, out: &mut [T; Z]) {
         for z in 0..Z {
             out[z] = inp[indices[z]];
         }
     }
 
-    fn select_add(inp: &mut [T; M], indices: &[usize; Z], out: &Self::Result) {
+    fn select_add(inp: &mut [T; M], indices: &Self::Indices, out: &[T; Z]) {
         for z in 0..Z {
             Self::foreach_mr(&mut inp[indices[z]], &out[z], &mut |a, b| *a += b);
         }
@@ -75,18 +75,18 @@ where
 
 macro_rules! nd_recurse {
     ($Mode:ty, $SubMode:ty) => {
-        impl<T, I, const M: usize> DeviceSelect<[T; M], [I; M], $Mode> for Cpu
+        impl<T, R, const M: usize> DeviceSelect<[T; M], [R; M], $Mode> for Cpu
         where
-            Self: DeviceSelect<T, I, $SubMode>,
+            Self: DeviceSelect<T, R, $SubMode>,
         {
-            type Result = [<Self as DeviceSelect<T, I, $SubMode>>::Result; M];
+            type Indices = [<Self as DeviceSelect<T, R, $SubMode>>::Indices; M];
 
-            fn select_axis(inp: &[T; M], indices: &[I; M], out: &mut Self::Result) {
+            fn select_axis(inp: &[T; M], indices: &Self::Indices, out: &mut [R; M]) {
                 for m in 0..M {
                     Self::select_axis(&inp[m], &indices[m], &mut out[m]);
                 }
             }
-            fn select_add(inp: &mut [T; M], indices: &[I; M], out: &Self::Result) {
+            fn select_add(inp: &mut [T; M], indices: &Self::Indices, out: &[R; M]) {
                 for m in 0..M {
                     Self::select_add(&mut inp[m], &indices[m], &out[m]);
                 }
@@ -100,18 +100,18 @@ nd_recurse!(Recurse<1>, Recurse<0>);
 nd_recurse!(Recurse<2>, Recurse<1>);
 nd_recurse!(Recurse<3>, Recurse<2>);
 
-impl<T, I, const M: usize> DeviceSelect<T, [I; M], Broadcast<0>> for Cpu
+impl<T, R, const M: usize> DeviceSelect<T, [R; M], Broadcast<0>> for Cpu
 where
-    Self: DeviceSelect<T, I, Index>,
+    Self: DeviceSelect<T, R, Index>,
 {
-    type Result = [<Self as DeviceSelect<T, I, Index>>::Result; M];
+    type Indices = [<Self as DeviceSelect<T, R, Index>>::Indices; M];
 
-    fn select_axis(inp: &T, indices: &[I; M], out: &mut Self::Result) {
+    fn select_axis(inp: &T, indices: &Self::Indices, out: &mut [R; M]) {
         for m in 0..M {
             Self::select_axis(inp, &indices[m], &mut out[m]);
         }
     }
-    fn select_add(inp: &mut T, indices: &[I; M], out: &Self::Result) {
+    fn select_add(inp: &mut T, indices: &Self::Indices, out: &[R; M]) {
         for m in 0..M {
             Self::select_add(inp, &indices[m], &out[m]);
         }
@@ -125,16 +125,16 @@ mod tests {
 
     #[test]
     fn test_select_1d_0() {
-        let a = [1.0, 2.0, 3.0];
-        let mut b = ZeroElements::ZEROS;
-        Cpu::select_axis(&a, &1usize, &mut b);
+        let a: [f32; 3] = [1.0, 2.0, 3.0];
+        let mut b: f32 = ZeroElements::ZEROS;
+        Cpu::select_axis(&a, &1, &mut b);
         assert_eq!(b, 2.0);
     }
 
     #[test]
     fn test_select_1d_0z() {
-        let a = [1.0f32, 2.0, 3.0];
-        let mut b = ZeroElements::ZEROS;
+        let a: [f32; 3] = [1.0f32, 2.0, 3.0];
+        let mut b: [f32; 6] = ZeroElements::ZEROS;
         <Cpu as DeviceSelect<_, _, Index>>::select_axis(&a, &[0, 1, 2, 2, 1, 0], &mut b);
         assert_eq!(b, [1.0, 2.0, 3.0, 3.0, 2.0, 1.0]);
     }
@@ -144,7 +144,7 @@ mod tests {
     #[test]
     fn test_select_2d_0() {
         let a = A_2D;
-        let mut b = ZeroElements::ZEROS;
+        let mut b: [f32; 3] = ZeroElements::ZEROS;
         Cpu::select_axis(&a, &0, &mut b);
         assert_eq!(b, [1.0, 2.0, 3.0]);
     }
@@ -152,7 +152,7 @@ mod tests {
     #[test]
     fn test_select_2d_0z() {
         let a = A_2D;
-        let mut b = ZeroElements::ZEROS;
+        let mut b: [[f32; 3]; 3] = ZeroElements::ZEROS;
         <Cpu as DeviceSelect<_, _, Index>>::select_axis(&a, &[0, 0, 1], &mut b);
         assert_eq!(b, [a[0], a[0], a[1]]);
     }
@@ -160,7 +160,7 @@ mod tests {
     #[test]
     fn test_select_2d_1() {
         let a = A_2D;
-        let mut b = ZeroElements::ZEROS;
+        let mut b: [f32; 2] = ZeroElements::ZEROS;
         <Cpu as DeviceSelect<_, _, Recurse<0>>>::select_axis(&a, &[0, 1], &mut b);
         assert_eq!(b, [1.0, 5.0]);
     }
@@ -168,7 +168,7 @@ mod tests {
     #[test]
     fn test_select_2d_1z() {
         let a = A_2D;
-        let mut b = ZeroElements::ZEROS;
+        let mut b: [[f32; 2]; 2] = ZeroElements::ZEROS;
         <Cpu as DeviceSelect<_, _, Recurse<0>>>::select_axis(&a, &[[0, 2], [1, 1]], &mut b);
         assert_eq!(b, [[1.0, 3.0], [5.0, 5.0]]);
     }
@@ -176,8 +176,8 @@ mod tests {
     #[test]
     fn test_select_broadcast_2d() {
         let a = [[1.0], [2.0]];
-        let i = [[0, 1, 0], [1, 1, 1], [0, 0, 0], [1, 0, 1]];
-        let mut b = ZeroElements::ZEROS;
+        let i: [[usize; 3]; 4] = [[0, 1, 0], [1, 1, 1], [0, 0, 0], [1, 0, 1]];
+        let mut b: [[[f32; 1]; 3]; 4] = ZeroElements::ZEROS;
         <Cpu as DeviceSelect<_, _, Broadcast<0>>>::select_axis(&a, &i, &mut b);
         #[rustfmt::skip]
         assert_eq!(b, [[[1.], [2.], [1.]], [[2.], [2.], [2.]], [[1.], [1.], [1.]], [[2.], [1.], [2.]]]);
@@ -202,7 +202,7 @@ mod tests {
     #[test]
     fn test_select_3d_0() {
         let a = A_3D;
-        let mut b = ZeroElements::ZEROS;
+        let mut b: [[f32; 3]; 2] = ZeroElements::ZEROS;
         Cpu::select_axis(&a, &0, &mut b);
         assert_eq!(b, A_3D[0]);
     }
@@ -210,7 +210,7 @@ mod tests {
     #[test]
     fn test_select_3d_0z() {
         let a = A_3D;
-        let mut b = ZeroElements::ZEROS;
+        let mut b: [[[f32; 3]; 2]; 6] = ZeroElements::ZEROS;
         <Cpu as DeviceSelect<_, _, Index>>::select_axis(&a, &[0, 0, 1, 2, 3, 3], &mut b);
         assert_eq!(b, [A_3D[0], A_3D[0], A_3D[1], A_3D[2], A_3D[3], A_3D[3]]);
     }
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn test_select_3d_1() {
         let a = A_3D;
-        let mut b = ZeroElements::ZEROS;
+        let mut b: [[f32; 3]; 4] = ZeroElements::ZEROS;
         <Cpu as DeviceSelect<_, _, Recurse<0>>>::select_axis(&a, &[0, 0, 1, 1], &mut b);
         assert_eq!(b, [A_3D[0][0], A_3D[1][0], A_3D[2][1], A_3D[3][1]]);
     }
@@ -226,7 +226,7 @@ mod tests {
     #[test]
     fn test_select_3d_1z() {
         let a = A_3D;
-        let mut b = ZeroElements::ZEROS;
+        let mut b: [[[f32; 3]; 1]; 4] = ZeroElements::ZEROS;
         <Cpu as DeviceSelect<_, _, Recurse<0>>>::select_axis(&a, &[[0], [0], [1], [1]], &mut b);
         assert_eq!(b, [[A_3D[0][0]], [A_3D[1][0]], [A_3D[2][1]], [A_3D[3][1]]]);
     }
@@ -234,7 +234,7 @@ mod tests {
     #[test]
     fn test_select_3d_2() {
         let a = A_3D;
-        let mut b = ZeroElements::ZEROS;
+        let mut b: [[f32; 2]; 4] = ZeroElements::ZEROS;
         <Cpu as DeviceSelect<_, _, Recurse<1>>>::select_axis(
             &a,
             &[[1, 0], [0, 1], [0, 0], [1, 1]],
