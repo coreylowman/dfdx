@@ -20,5 +20,5 @@ jobs:
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2
         with:
-          threshold: 10%
+          threshold: 100%
           fail_ci_if_error: true
