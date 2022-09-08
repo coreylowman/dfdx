@@ -19,16 +19,16 @@
 use super::{Cpu, ForEachElement};
 use crate::arrays::CountElements;
 
-pub mod modes {
+pub mod select_modes {
     pub struct Index;
     pub struct Recurse<const N: usize>;
     pub struct Broadcast<const N: usize>;
 }
 
-use modes::*;
+use select_modes::*;
 
 pub trait DeviceSelect<T, R, Mode> {
-    type Indices;
+    type Indices: Clone;
 
     /// Equivalent to psuedocode `out = inp[indices]`
     fn select_axis(inp: &T, indices: &Self::Indices, out: &mut R);
