@@ -28,80 +28,63 @@ pub trait SelectAlongAxis<T: CountElements, Indices, R: CountElements, const AXI
     fn select_add(inp: &mut T, indices: &Indices, out: &R);
 }
 
-macro_rules! select_01 {
-    ($Axis:expr, $SrcTy:tt, $DstTy:tt, {$($Dims:tt),*}) => {
-impl<$(const $Dims: usize),*> SelectAlongAxis<$SrcTy, usize, $DstTy, $Axis> for Cpu {
-    fn select_axis(inp: &$SrcTy, indices: &usize, out: &mut $DstTy) {
+impl<T, const M: usize> SelectAlongAxis<[T; M], usize, T, 0> for Cpu
+where
+    Self: ForEachElement<T>,
+    T: Copy + CountElements,
+    T::Dtype: for<'a> std::ops::AddAssign<&'a T::Dtype>,
+{
+    fn select_axis(inp: &[T; M], indices: &usize, out: &mut T) {
         *out = inp[*indices];
     }
-    fn select_add(inp: &mut $SrcTy, indices: &usize, out: &$DstTy) {
+    fn select_add(inp: &mut [T; M], indices: &usize, out: &T) {
         Self::foreach_mr(&mut inp[*indices], out, &mut |a, b| *a += b);
     }
 }
-    };
-}
 
-macro_rules! select_0z {
-    ($Axis:expr, $SrcTy:tt, $DstTy:tt, {$($Dims:tt),*}) => {
-impl<$(const $Dims: usize),*> SelectAlongAxis<$SrcTy, [usize; Z], $DstTy, $Axis> for Cpu {
-    fn select_axis(inp: &$SrcTy, indices: &[usize; Z], out: &mut $DstTy) {
+impl<T, const M: usize, const Z: usize> SelectAlongAxis<[T; M], [usize; Z], [T; Z], 0> for Cpu
+where
+    Self: ForEachElement<T>,
+    T: Copy + CountElements,
+    T::Dtype: for<'a> std::ops::AddAssign<&'a T::Dtype>,
+{
+    fn select_axis(inp: &[T; M], indices: &[usize; Z], out: &mut [T; Z]) {
         for z in 0..Z {
             out[z] = inp[indices[z]];
         }
     }
-    fn select_add(inp: &mut $SrcTy, indices: &[usize; Z], out: &$DstTy) {
+    fn select_add(inp: &mut [T; M], indices: &[usize; Z], out: &[T; Z]) {
         for z in 0..Z {
             Self::foreach_mr(&mut inp[indices[z]], &out[z], &mut |a, b| *a += b);
         }
     }
 }
-    };
-}
 
 macro_rules! select_nz {
-    ($Axis:expr, $SrcTy:tt, $IndTy:tt, $DstTy:tt, {$($Dims:tt),*}) => {
-impl<$(const $Dims: usize),*> SelectAlongAxis<$SrcTy, $IndTy, $DstTy, $Axis> for Cpu {
-    fn select_axis(inp: &$SrcTy, indices: &$IndTy, out: &mut $DstTy) {
-        for m in 0..M {
-            Self::select_axis(&inp[m], &indices[m], &mut out[m]);
+    ($Axis:expr, $SubAxis:expr) => {
+        impl<T, I, R, const M: usize> SelectAlongAxis<[T; M], [I; M], [R; M], $Axis> for Cpu
+        where
+            Self: SelectAlongAxis<T, I, R, $SubAxis>,
+            T: CountElements,
+            R: CountElements,
+        {
+            fn select_axis(inp: &[T; M], indices: &[I; M], out: &mut [R; M]) {
+                for m in 0..M {
+                    Self::select_axis(&inp[m], &indices[m], &mut out[m]);
+                }
+            }
+            fn select_add(inp: &mut [T; M], indices: &[I; M], out: &[R; M]) {
+                for m in 0..M {
+                    Self::select_add(&mut inp[m], &indices[m], &out[m]);
+                }
+            }
         }
-    }
-    fn select_add(inp: &mut $SrcTy, indices: &$IndTy, out: &$DstTy) {
-        for m in 0..M {
-            Self::select_add(&mut inp[m], &indices[m], &out[m]);
-        }
-    }
-}
     };
 }
 
-// 1d
-select_01!(-1, [f32; M], f32, { M });
-select_0z!(-1, [f32; M], [f32; Z], {M, Z});
-
-// 2d
-select_01!(0, [[f32; N]; M], [f32; N], {M, N});
-select_0z!(0, [[f32; N]; M], [[f32; N]; Z], {M, N, Z});
-select_nz!(-1, [[f32; N]; M], [usize; M], [f32; M], {M, N});
-select_nz!(-1, [[f32; N]; M], [[usize; Z]; M], [[f32; Z]; M], {M, N, Z});
-
-// 3d
-select_01!(0, [[[f32; O]; N]; M], [[f32; O]; N], {M, N, O});
-select_0z!(0, [[[f32; O]; N]; M], [[[f32; O]; N]; Z], {M, N, O, Z});
-select_nz!(1, [[[f32; O]; N]; M], [usize; M], [[f32; O]; M], {M, N, O});
-select_nz!(1, [[[f32; O]; N]; M], [[usize; Z]; M], [[[f32; O]; Z]; M], {M, N, O, Z});
-select_nz!(-1, [[[f32; O]; N]; M], [[usize; N]; M], [[f32; N]; M], {M, N, O});
-select_nz!(-1, [[[f32; O]; N]; M], [[[usize; Z]; N]; M], [[[f32; Z]; N]; M], {M, N, O, Z});
-
-// 4d
-select_01!(0, [[[[f32; P]; O]; N]; M], [[[f32; P]; O]; N], {M, N, O, P});
-select_0z!(0, [[[[f32; P]; O]; N]; M], [[[[f32; P]; O]; N]; Z], {M, N, O, P, Z});
-select_nz!(1, [[[[f32; P]; O]; N]; M], [usize; M], [[[f32; P]; O]; M], {M, N, O, P});
-select_nz!(1, [[[[f32; P]; O]; N]; M], [[usize; Z]; M], [[[[f32; P]; O]; Z]; M], {M, N, O, P, Z});
-select_nz!(2, [[[[f32; P]; O]; N]; M], [[usize; N]; M], [[[f32; P]; N]; M], {M, N, O, P});
-select_nz!(2, [[[[f32; P]; O]; N]; M], [[[usize; Z]; N]; M], [[[[f32; P]; Z]; N]; M], {M, N, O, P, Z});
-select_nz!(-1, [[[[f32; P]; O]; N]; M], [[[usize; O]; N]; M], [[[f32; O]; N]; M], {M, N, O, P});
-select_nz!(-1, [[[[f32; P]; O]; N]; M], [[[[usize; Z]; O]; N]; M], [[[[f32; Z]; O]; N]; M], {M, N, O, P, Z});
+select_nz!(1, 0);
+select_nz!(2, 1);
+select_nz!(3, 2);
 
 #[cfg(test)]
 mod tests {
@@ -112,7 +95,7 @@ mod tests {
     fn test_select_1d_0() {
         let a = [1.0, 2.0, 3.0];
         let mut b = ZeroElements::ZEROS;
-        Cpu::select_axis(&a, &1, &mut b);
+        Cpu::select_axis(&a, &1usize, &mut b);
         assert_eq!(b, 2.0);
     }
 
@@ -146,7 +129,7 @@ mod tests {
     fn test_select_2d_1() {
         let a = A_2D;
         let mut b = ZeroElements::ZEROS;
-        <Cpu as SelectAlongAxis<_, _, _, -1>>::select_axis(&a, &[0, 1], &mut b);
+        <Cpu as SelectAlongAxis<_, _, _, 1>>::select_axis(&a, &[0, 1], &mut b);
         assert_eq!(b, [1.0, 5.0]);
     }
 
@@ -210,7 +193,7 @@ mod tests {
     fn test_select_3d_2() {
         let a = A_3D;
         let mut b = ZeroElements::ZEROS;
-        <Cpu as SelectAlongAxis<_, _, _, -1>>::select_axis(
+        <Cpu as SelectAlongAxis<_, _, _, 2>>::select_axis(
             &a,
             &[[1, 0], [0, 1], [0, 0], [1, 1]],
             &mut b,
@@ -230,7 +213,7 @@ mod tests {
     fn test_select_3d_2z() {
         let a = A_3D;
         let mut b: [[[f32; 1]; 2]; 4] = ZeroElements::ZEROS;
-        <Cpu as SelectAlongAxis<_, _, _, -1>>::select_axis(
+        <Cpu as SelectAlongAxis<_, _, _, 2>>::select_axis(
             &a,
             &[[[1], [0]], [[0], [1]], [[0], [0]], [[1], [1]]],
             &mut b,
