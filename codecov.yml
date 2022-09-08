@@ -1,0 +1,14 @@
+comment: false
+
+codecov:
+  notify:
+    wait_for_ci: false
+
+coverage:    
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
