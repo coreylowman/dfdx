@@ -24,83 +24,89 @@ pub(crate) struct Index;
 pub(crate) struct Recurse<M>(PhantomData<*const M>);
 pub(crate) struct Broadcast<M>(PhantomData<*const M>);
 
-pub trait DeviceSelect<T, R, Mode> {
+pub trait DeviceSelect<T, Mode> {
     type Indices: Clone;
+    type Result;
 
     /// Equivalent to psuedocode `out = inp[indices]`
-    fn select_axis(inp: &T, indices: &Self::Indices, out: &mut R);
+    fn select_axis(inp: &T, indices: &Self::Indices, out: &mut Self::Result);
 
     /// `inp[indices] += out`
-    fn select_add(inp: &mut T, indices: &Self::Indices, out: &R);
+    fn select_add(inp: &mut T, indices: &Self::Indices, out: &Self::Result);
 }
 
-impl<T, const M: usize> DeviceSelect<[T; M], T, Index> for Cpu
+impl<T, const M: usize> DeviceSelect<[T; M], Index> for Cpu
 where
     Self: ForEachElement<T>,
     T: Copy + CountElements,
     T::Dtype: for<'a> std::ops::AddAssign<&'a T::Dtype>,
 {
     type Indices = usize;
+    type Result = T;
 
-    fn select_axis(inp: &[T; M], indices: &Self::Indices, out: &mut T) {
+    fn select_axis(inp: &[T; M], indices: &Self::Indices, out: &mut Self::Result) {
         *out = inp[*indices];
     }
 
-    fn select_add(inp: &mut [T; M], indices: &Self::Indices, out: &T) {
+    fn select_add(inp: &mut [T; M], indices: &Self::Indices, out: &Self::Result) {
         Self::foreach_mr(&mut inp[*indices], out, &mut |a, b| *a += b);
     }
 }
 
-impl<T, const M: usize, const Z: usize> DeviceSelect<[T; M], [T; Z], Index> for Cpu
+impl<T, const M: usize, const Z: usize> DeviceSelect<[T; M], Index> for Cpu
 where
     Self: ForEachElement<T>,
     T: Copy + CountElements,
     T::Dtype: for<'a> std::ops::AddAssign<&'a T::Dtype>,
 {
     type Indices = [usize; Z];
-    fn select_axis(inp: &[T; M], indices: &Self::Indices, out: &mut [T; Z]) {
+    type Result = [T; Z];
+
+    fn select_axis(inp: &[T; M], indices: &Self::Indices, out: &mut Self::Result) {
         for z in 0..Z {
             out[z] = inp[indices[z]];
         }
     }
-    fn select_add(inp: &mut [T; M], indices: &Self::Indices, out: &[T; Z]) {
+    fn select_add(inp: &mut [T; M], indices: &Self::Indices, out: &Self::Result) {
         for z in 0..Z {
             Self::foreach_mr(&mut inp[indices[z]], &out[z], &mut |a, b| *a += b);
         }
     }
 }
 
-impl<T, R, const M: usize, SubMode> DeviceSelect<[T; M], [R; M], Recurse<SubMode>> for Cpu
+impl<T, const M: usize, SubMode> DeviceSelect<[T; M], Recurse<SubMode>> for Cpu
 where
-    Self: DeviceSelect<T, R, SubMode>,
+    Self: DeviceSelect<T, SubMode>,
 {
-    type Indices = [<Self as DeviceSelect<T, R, SubMode>>::Indices; M];
+    type Indices = [<Self as DeviceSelect<T, SubMode>>::Indices; M];
+    type Result = [<Self as DeviceSelect<T, SubMode>>::Result; M];
 
-    fn select_axis(inp: &[T; M], indices: &Self::Indices, out: &mut [R; M]) {
+    fn select_axis(inp: &[T; M], indices: &Self::Indices, out: &mut Self::Result) {
         for m in 0..M {
             Self::select_axis(&inp[m], &indices[m], &mut out[m]);
         }
     }
 
-    fn select_add(inp: &mut [T; M], indices: &Self::Indices, out: &[R; M]) {
+    fn select_add(inp: &mut [T; M], indices: &Self::Indices, out: &Self::Result) {
         for m in 0..M {
             Self::select_add(&mut inp[m], &indices[m], &out[m]);
         }
     }
 }
 
-impl<T, R, const M: usize, SubMode> DeviceSelect<T, [R; M], Broadcast<SubMode>> for Cpu
+impl<T, const M: usize, SubMode> DeviceSelect<T, Broadcast<SubMode>> for Cpu
 where
-    Self: DeviceSelect<T, R, SubMode>,
+    Self: DeviceSelect<T, SubMode>,
 {
-    type Indices = [<Self as DeviceSelect<T, R, SubMode>>::Indices; M];
+    type Indices = [<Self as DeviceSelect<T, SubMode>>::Indices; M];
+    type Result = [<Self as DeviceSelect<T, SubMode>>::Result; M];
 
-    fn select_axis(inp: &T, indices: &Self::Indices, out: &mut [R; M]) {
+    fn select_axis(inp: &T, indices: &Self::Indices, out: &mut Self::Result) {
         for m in 0..M {
             Self::select_axis(inp, &indices[m], &mut out[m]);
         }
     }
-    fn select_add(inp: &mut T, indices: &Self::Indices, out: &[R; M]) {
+    fn select_add(inp: &mut T, indices: &Self::Indices, out: &Self::Result) {
         for m in 0..M {
             Self::select_add(inp, &indices[m], &out[m]);
         }
