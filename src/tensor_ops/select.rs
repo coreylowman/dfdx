@@ -38,15 +38,12 @@ use crate::prelude::*;
 /// // is the new size of the 1st axis.
 /// let _: Tensor2D<3, 2> = Tensor2D::<3, 5>::zeros().select(&[[0, 4], [1, 3], [2, 2]]);
 /// ```
-pub fn select<T, R, Mode>(
-    t: T,
-    indices: &<<T as HasDevice>::Device as DeviceSelect<T::Array, R::Array, Mode>>::Indices,
-) -> R
+pub fn select<T, I, R, Mode>(t: T, indices: &I) -> R
 where
     T: Tensor<Dtype = f32>,
+    I: 'static + Clone,
     R: Tensor<Dtype = f32, Tape = T::Tape>,
-    <T as HasDevice>::Device: DeviceSelect<T::Array, R::Array, Mode>,
-    <<T as HasDevice>::Device as DeviceSelect<T::Array, R::Array, Mode>>::Indices: 'static,
+    <T as HasDevice>::Device: DeviceSelect<T::Array, I, Mode, Result = R::Array>,
 {
     let mut result: <R as Tensor>::NoTape = TensorCreator::zeros();
     <T as HasDevice>::Device::select_axis(t.data(), indices, result.mut_data());
@@ -66,15 +63,12 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [select()] on `self`.
-    pub fn select<R, Mode>(
-        self,
-        indices: &<<Self as HasDevice>::Device as DeviceSelect<<Self as HasArrayType>::Array, R::Array, Mode>>::Indices
-    ) -> R
+    pub fn select<I, R, Mode>(self, indices: &I) -> R
     where
         Self: Tensor<Dtype = f32>,
+        I: 'static + Clone,
         R: Tensor<Dtype = f32, Tape = <Self as Tensor>::Tape>,
-        <Self as HasDevice>::Device: DeviceSelect<<Self as HasArrayType>::Array, R::Array, Mode>,
-        <<Self as HasDevice>::Device as DeviceSelect<<Self as HasArrayType>::Array, R::Array, Mode>>::Indices: 'static,
+        <Self as HasDevice>::Device: DeviceSelect<<Self as HasArrayType>::Array, I, Mode, Result = R::Array>,
     {
         select(self, indices)
     }
@@ -96,8 +90,9 @@ mod tests {
     #[test]
     fn test_valid_selects_1d() {
         let _: Tensor0D = Tensor1D::<5>::zeros().select(&0);
-        let _: Tensor1D<3> = Tensor1D::<5>::zeros().select(&[1, 2, 3]);
-        let _: Tensor1D<10> = Tensor1D::<5>::zeros().select(&[0, 1, 2, 3, 4, 0, 1, 2, 3, 4]);
+        let _: Tensor1D<3> = Tensor1D::<5>::zeros().select::<_, _, Index>(&[1, 2, 3]);
+        let _: Tensor1D<10> =
+            Tensor1D::<5>::zeros().select::<_, _, Index>(&[0, 1, 2, 3, 4, 0, 1, 2, 3, 4]);
     }
 
     #[test]
@@ -114,7 +109,7 @@ mod tests {
     fn test_select_1d_less_backward() {
         let mut rng = thread_rng();
         let t: Tensor1D<5> = TensorCreator::randn(&mut rng);
-        let r: Tensor1D<2, OwnedTape> = t.trace().select::<_, select_modes::Index>(&[0, 3]);
+        let r: Tensor1D<2, OwnedTape> = t.trace().select::<_, _, Index>(&[0, 3]);
         assert_eq!(r.data(), &[t.data()[0], t.data()[3]]);
         let g = r.mean().backward();
         assert_eq!(g.ref_gradient(&t), &[0.5, 0.0, 0.0, 0.5, 0.0]);
@@ -125,7 +120,7 @@ mod tests {
         let mut rng = thread_rng();
         let t: Tensor1D<5> = TensorCreator::randn(&mut rng);
         let _t = *t.data();
-        let r: Tensor1D<8, OwnedTape> = t.trace().select(&[0, 1, 2, 3, 4, 2, 4, 4]);
+        let r: Tensor1D<8, OwnedTape> = t.trace().select::<_, _, Index>(&[0, 1, 2, 3, 4, 2, 4, 4]);
         assert_eq!(
             r.data(),
             &[_t[0], _t[1], _t[2], _t[3], _t[4], _t[2], _t[4], _t[4]]
@@ -150,7 +145,7 @@ mod tests {
     #[test]
     fn test_select_last_2d() {
         let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-        let r: Tensor1D<2, OwnedTape> = t.trace().select(&[1, 2]);
+        let r: Tensor1D<2, OwnedTape> = t.trace().select::<_, _, Recurse<Index>>(&[1, 2]);
         assert_eq!(r.data(), &[2.0, -3.0]);
         let gradients = r.mean().backward();
         assert_eq!(
@@ -167,7 +162,9 @@ mod tests {
             [[-3.0, 2.0, -1.0], [-6.0, 5.0, -4.0]],
             [[1.0, -2.0, 3.0], [4.0, -5.0, 6.0]],
         ]);
-        let r: Tensor2D<4, 2, OwnedTape> = t.trace().select(&[[0, 1], [2, 2], [1, 1], [0, 0]]);
+        let r: Tensor2D<4, 2, OwnedTape> =
+            t.trace()
+                .select::<_, _, Recurse<Recurse<Index>>>(&[[0, 1], [2, 2], [1, 1], [0, 0]]);
         assert_eq!(
             r.data(),
             &[[1.0, 5.0], [-3.0, -6.0], [2.0, 5.0], [1.0, 4.0]]

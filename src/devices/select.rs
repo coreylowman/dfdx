@@ -16,97 +16,87 @@
 //! Then all three arrays with have the same dimension as the 0th axis.
 //! Do a for loop over the 0th axis and recurse!
 
-use super::{Cpu, ForEachElement};
+use super::{Broadcast, Cpu, ForEachElement, Index, Recurse};
 use crate::arrays::CountElements;
-use std::marker::PhantomData;
 
-pub(crate) struct Index;
-pub(crate) struct Recurse<M>(PhantomData<*const M>);
-pub(crate) struct Broadcast<M>(PhantomData<*const M>);
-
-pub trait DeviceSelect<T, Mode> {
-    type Indices: Clone;
+pub trait DeviceSelect<T, I, Mode> {
     type Result;
 
     /// Equivalent to psuedocode `out = inp[indices]`
-    fn select_axis(inp: &T, indices: &Self::Indices, out: &mut Self::Result);
+    fn select_axis(inp: &T, indices: &I, out: &mut Self::Result);
 
     /// `inp[indices] += out`
-    fn select_add(inp: &mut T, indices: &Self::Indices, out: &Self::Result);
+    fn select_add(inp: &mut T, indices: &I, out: &Self::Result);
 }
 
-impl<T, const M: usize> DeviceSelect<[T; M], Index> for Cpu
+impl<T, const M: usize> DeviceSelect<[T; M], usize, Index> for Cpu
 where
     Self: ForEachElement<T>,
     T: Copy + CountElements,
     T::Dtype: for<'a> std::ops::AddAssign<&'a T::Dtype>,
 {
-    type Indices = usize;
     type Result = T;
 
-    fn select_axis(inp: &[T; M], indices: &Self::Indices, out: &mut Self::Result) {
+    fn select_axis(inp: &[T; M], indices: &usize, out: &mut Self::Result) {
         *out = inp[*indices];
     }
 
-    fn select_add(inp: &mut [T; M], indices: &Self::Indices, out: &Self::Result) {
+    fn select_add(inp: &mut [T; M], indices: &usize, out: &Self::Result) {
         Self::foreach_mr(&mut inp[*indices], out, &mut |a, b| *a += b);
     }
 }
 
-impl<T, const M: usize, const Z: usize> DeviceSelect<[T; M], Index> for Cpu
+impl<T, const M: usize, const Z: usize> DeviceSelect<[T; M], [usize; Z], Index> for Cpu
 where
     Self: ForEachElement<T>,
     T: Copy + CountElements,
     T::Dtype: for<'a> std::ops::AddAssign<&'a T::Dtype>,
 {
-    type Indices = [usize; Z];
     type Result = [T; Z];
 
-    fn select_axis(inp: &[T; M], indices: &Self::Indices, out: &mut Self::Result) {
+    fn select_axis(inp: &[T; M], indices: &[usize; Z], out: &mut Self::Result) {
         for z in 0..Z {
             out[z] = inp[indices[z]];
         }
     }
-    fn select_add(inp: &mut [T; M], indices: &Self::Indices, out: &Self::Result) {
+    fn select_add(inp: &mut [T; M], indices: &[usize; Z], out: &Self::Result) {
         for z in 0..Z {
             Self::foreach_mr(&mut inp[indices[z]], &out[z], &mut |a, b| *a += b);
         }
     }
 }
 
-impl<T, const M: usize, SubMode> DeviceSelect<[T; M], Recurse<SubMode>> for Cpu
+impl<T, I, const M: usize, SubMode> DeviceSelect<[T; M], [I; M], Recurse<SubMode>> for Cpu
 where
-    Self: DeviceSelect<T, SubMode>,
+    Self: DeviceSelect<T, I, SubMode>,
 {
-    type Indices = [<Self as DeviceSelect<T, SubMode>>::Indices; M];
-    type Result = [<Self as DeviceSelect<T, SubMode>>::Result; M];
+    type Result = [<Self as DeviceSelect<T, I, SubMode>>::Result; M];
 
-    fn select_axis(inp: &[T; M], indices: &Self::Indices, out: &mut Self::Result) {
+    fn select_axis(inp: &[T; M], indices: &[I; M], out: &mut Self::Result) {
         for m in 0..M {
             Self::select_axis(&inp[m], &indices[m], &mut out[m]);
         }
     }
 
-    fn select_add(inp: &mut [T; M], indices: &Self::Indices, out: &Self::Result) {
+    fn select_add(inp: &mut [T; M], indices: &[I; M], out: &Self::Result) {
         for m in 0..M {
             Self::select_add(&mut inp[m], &indices[m], &out[m]);
         }
     }
 }
 
-impl<T, const M: usize, SubMode> DeviceSelect<T, Broadcast<SubMode>> for Cpu
+impl<T, I, const M: usize, SubMode> DeviceSelect<T, [I; M], Broadcast<SubMode>> for Cpu
 where
-    Self: DeviceSelect<T, SubMode>,
+    Self: DeviceSelect<T, I, SubMode>,
 {
-    type Indices = [<Self as DeviceSelect<T, SubMode>>::Indices; M];
-    type Result = [<Self as DeviceSelect<T, SubMode>>::Result; M];
+    type Result = [<Self as DeviceSelect<T, I, SubMode>>::Result; M];
 
-    fn select_axis(inp: &T, indices: &Self::Indices, out: &mut Self::Result) {
+    fn select_axis(inp: &T, indices: &[I; M], out: &mut Self::Result) {
         for m in 0..M {
             Self::select_axis(inp, &indices[m], &mut out[m]);
         }
     }
-    fn select_add(inp: &mut T, indices: &Self::Indices, out: &Self::Result) {
+    fn select_add(inp: &mut T, indices: &[I; M], out: &Self::Result) {
         for m in 0..M {
             Self::select_add(inp, &indices[m], &out[m]);
         }
