@@ -20,12 +20,7 @@ pub use reduce_all::*;
 pub use reduce_axis::*;
 pub use select::*;
 
-use std::marker::PhantomData;
 use std::ops::*;
-
-pub struct Index;
-pub struct Recurse<M>(PhantomData<*const M>);
-pub struct Broadcast<M>(PhantomData<*const M>);
 
 /// The CPU device
 pub struct Cpu;
