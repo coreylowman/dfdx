@@ -43,27 +43,6 @@ pub trait Select1<T, const I: isize> {
     fn select(self, indices: &Self::Indices) -> T;
 }
 
-pub(crate) fn select<T, I, R, Mode>(t: T, indices: &I) -> R
-where
-    T: Tensor<Dtype = f32>,
-    I: 'static + Clone,
-    R: Tensor<Dtype = f32, Tape = T::Tape>,
-    <T as HasDevice>::Device: DeviceSelect<T::Array, I, Mode, Result = R::Array>,
-{
-    let mut result: <R as Tensor>::NoTape = TensorCreator::zeros();
-    <T as HasDevice>::Device::select_axis(t.data(), indices, result.mut_data());
-
-    #[allow(clippy::clone_on_copy)]
-    let i = indices.clone();
-
-    move_tape_and_add_backward_op(t, result, move |mut t, result, grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-        <T as HasDevice>::Device::fill(t.mut_data(), &mut |v| *v = 0.0);
-        <T as HasDevice>::Device::select_add(t.mut_data(), &i, result_grad);
-        <T as HasDevice>::Device::add(t_grad, t.data());
-    })
-}
-
 macro_rules! impl_select {
     ($Axis:expr, $Mode:ty, $SrcTy:ty, $IndTy:tt, $DstTy:ty, {$($Dims:tt),*}) => {
 impl<$(const $Dims: usize, )* H: Tape> Select1<$DstTy, $Axis> for $SrcTy {
@@ -143,9 +122,31 @@ impl_select_batch!(Tensor1D<M, H>, [[usize; Z]; B], Tensor2D<B, Z, H>, {M, B, Z}
 impl_select_batch!(Tensor2D<M, N, H>, [[usize; Z]; B], Tensor3D<B, Z, N, H>, {M, N, B, Z});
 impl_select_batch!(Tensor3D<M, N, O, H>, [[usize; Z]; B], Tensor4D<B, Z, N, O, H>, {M, N, O, B, Z});
 
+pub(crate) fn select<T, I, R, Mode>(t: T, indices: &I) -> R
+where
+    T: Tensor<Dtype = f32>,
+    I: 'static + Clone,
+    R: Tensor<Dtype = f32, Tape = T::Tape>,
+    <T as HasDevice>::Device: DeviceSelect<T::Array, I, Mode, Result = R::Array>,
+{
+    let mut result: <R as Tensor>::NoTape = TensorCreator::zeros();
+    <T as HasDevice>::Device::select_axis(t.data(), indices, result.mut_data());
+
+    #[allow(clippy::clone_on_copy)]
+    let i = indices.clone();
+
+    move_tape_and_add_backward_op(t, result, move |mut t, result, grads| {
+        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
+        <T as HasDevice>::Device::fill(t.mut_data(), &mut |v| *v = 0.0);
+        <T as HasDevice>::Device::select_add(t.mut_data(), &i, result_grad);
+        <T as HasDevice>::Device::add(t_grad, t.data());
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::assert_close;
     use rand::thread_rng;
 
     #[test]
@@ -244,5 +245,19 @@ mod tests {
                 [[0.125, 0.0, 0.0], [0.125, 0.0, 0.0]]
             ]
         );
+    }
+
+    #[test]
+    fn test_select_batch_backwards() {
+        let mut rng = thread_rng();
+        let t: Tensor2D<4, 5> = TensorCreator::randn(&mut rng);
+        let r: Tensor3D<2, 3, 5, _> = t.trace().select_batch(&[[2, 0, 3], [0, 0, 3]]);
+        let r0: Tensor2D<3, 5> = t.clone().select(&[2, 0, 3]);
+        let r1: Tensor2D<3, 5> = t.clone().select(&[0, 0, 3]);
+        assert_close(&r.data()[0], r0.data());
+        assert_close(&r.data()[1], r1.data());
+
+        let g = r.sum().backward();
+        assert_eq!(g.ref_gradient(&t), &[[3.; 5], [0.; 5], [1.; 5], [2.; 5]]);
     }
 }
