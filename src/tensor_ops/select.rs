@@ -43,7 +43,7 @@ pub trait Select1<T, const I: isize> {
     fn select(self, indices: &Self::Indices) -> T;
 }
 
-fn select<T, I, R, Mode>(t: T, indices: &I) -> R
+pub(crate) fn select<T, I, R, Mode>(t: T, indices: &I) -> R
 where
     T: Tensor<Dtype = f32>,
     I: 'static + Clone,
@@ -103,6 +103,46 @@ impl_select!(2, SelectAx2, Tensor4D<M, N, O, P, H>, [[[usize; Z]; N]; M], Tensor
 impl_select!(-1, SelectAx3, Tensor4D<M, N, O, P, H>, [[[usize; O]; N]; M], Tensor3D<M, N, O, H>, {M, N, O, P});
 impl_select!(-1, SelectAx3, Tensor4D<M, N, O, P, H>, [[[[usize; Z]; O]; N]; M], Tensor4D<M, N, O, Z, H>, {M, N, O, P, Z});
 
+/// Select batched values from axis 0, resulting in `T`. Equivalent
+/// to `torch.select` and `torch.gather` from pytorch.
+pub trait SelectBatchAx0<T> {
+    type Indices;
+
+    /// Select sub elements using [Self::Indices].
+    /// The same element can be selected multiple times depending
+    /// on [Self::Indices].
+    ///
+    /// This results in a tensor 1 dimension larger than self.
+    ///
+    /// Selecting batch of values from a 1d tensor:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// let _: Tensor2D<2, 1> = Tensor1D::<5>::zeros().select_batch(&[[0], [1]]);
+    ///```
+    ///
+    /// Selecting batch of values from a 2d tensor:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// let _: Tensor3D<2, 1, 5> = Tensor2D::<3, 5>::zeros().select_batch(&[[[0], [1]], [[2], [3]]]);
+    ///```
+    fn select_batch(self, indices: &Self::Indices) -> T;
+}
+
+macro_rules! impl_select_batch {
+    ($SrcTy:ty, $IndTy:tt, $DstTy:ty, {$($Dims:tt),*}) => {
+impl<$(const $Dims: usize, )* H: Tape> SelectBatchAx0<$DstTy> for $SrcTy {
+    type Indices = $IndTy;
+    fn select_batch(self, indices: &Self::Indices) -> $DstTy {
+        select::<_, _, _, BSelectAx0>(self, indices)
+    }
+}
+    };
+}
+
+impl_select_batch!(Tensor1D<M, H>, [[usize; Z]; B], Tensor2D<B, Z, H>, {M, B, Z});
+impl_select_batch!(Tensor2D<M, N, H>, [[usize; Z]; B], Tensor3D<B, Z, N, H>, {M, N, B, Z});
+impl_select_batch!(Tensor3D<M, N, O, H>, [[usize; Z]; B], Tensor4D<B, Z, N, O, H>, {M, N, O, B, Z});
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -113,6 +153,13 @@ mod tests {
         let _: Tensor0D = Tensor1D::<5>::zeros().select(&0);
         let _: Tensor1D<3> = Tensor1D::<5>::zeros().select(&[1, 2, 3]);
         let _: Tensor1D<10> = Tensor1D::<5>::zeros().select(&[0, 1, 2, 3, 4, 0, 1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn test_valid_select_batches() {
+        let _: Tensor2D<2, 1> = Tensor1D::<5>::zeros().select_batch(&[[0], [1]]);
+        let _: Tensor3D<2, 1, 5> = Tensor2D::<3, 5>::zeros().select_batch(&[[0], [1]]);
+        let _: Tensor4D<2, 1, 3, 5> = Tensor3D::<1, 3, 5>::zeros().select_batch(&[[0], [1]]);
     }
 
     #[test]
