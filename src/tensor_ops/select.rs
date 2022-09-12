@@ -102,7 +102,7 @@ pub trait SelectBatchAx0<T> {
     /// Selecting batch of values from a 2d tensor:
     /// ```rust
     /// # use dfdx::prelude::*;
-    /// let _: Tensor3D<2, 1, 5> = Tensor2D::<3, 5>::zeros().select_batch(&[[[0], [1]], [[2], [3]]]);
+    /// let _: Tensor3D<2, 1, 5> = Tensor2D::<3, 5>::zeros().select_batch(&[[0], [1]]);
     ///```
     fn select_batch(self, indices: &Self::Indices) -> T;
 }
