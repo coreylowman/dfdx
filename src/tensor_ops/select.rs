@@ -112,7 +112,7 @@ macro_rules! impl_select_batch {
 impl<$(const $Dims: usize, )* H: Tape> SelectBatchAx0<$DstTy> for $SrcTy {
     type Indices = $IndTy;
     fn select_batch(self, indices: &Self::Indices) -> $DstTy {
-        select::<_, _, _, BSelectAx0>(self, indices)
+        select::<_, _, _, BSelectAx1>(self, indices)
     }
 }
     };
