@@ -47,6 +47,7 @@ pub(crate) type SelectAx2 = select_modes::Recurse<SelectAx1>;
 pub(crate) type SelectAx3 = select_modes::Recurse<SelectAx2>;
 pub(crate) type BSelectAx1 = select_modes::Broadcast<SelectAx0>;
 
+/// Select values from `T` using indices `I`. `Mode` is used to disambiguate the impl.
 pub trait DeviceSelect<T, I, Mode> {
     type Result;
 
@@ -57,6 +58,7 @@ pub trait DeviceSelect<T, I, Mode> {
     fn select_add(inp: &mut T, indices: &I, out: &Self::Result);
 }
 
+// Select 1 element from 0th axis.
 impl<T, const M: usize> DeviceSelect<[T; M], usize, Index> for Cpu
 where
     Self: ForEachElement<T>,
@@ -74,6 +76,7 @@ where
     }
 }
 
+// Select Z elements from 0th axis.
 impl<T, const M: usize, const Z: usize> DeviceSelect<[T; M], [usize; Z], Index> for Cpu
 where
     Self: ForEachElement<T>,
@@ -94,6 +97,7 @@ where
     }
 }
 
+// Select elements from non-zero axis
 impl<T, I, const M: usize, SubMode> DeviceSelect<[T; M], [I; M], Recurse<SubMode>> for Cpu
 where
     Self: DeviceSelect<T, I, SubMode>,
@@ -113,6 +117,7 @@ where
     }
 }
 
+// Broadcast select elements from non-zero axis.
 impl<T, I, const M: usize, SubMode> DeviceSelect<T, [I; M], Broadcast<SubMode>> for Cpu
 where
     Self: DeviceSelect<T, I, SubMode>,
