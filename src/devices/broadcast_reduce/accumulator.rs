@@ -5,40 +5,48 @@ pub(crate) trait Accumulator<T> {
     fn accum(accum: &mut T, item: &T);
 }
 
-pub(crate) struct Max;
-impl Accumulator<f32> for Max {
+pub(crate) struct MaxAccum;
+impl Accumulator<f32> for MaxAccum {
     const INIT: f32 = f32::NEG_INFINITY;
     fn accum(accum: &mut f32, item: &f32) {
         *accum = accum.max(*item);
     }
 }
 
-pub(crate) struct Min;
-impl Accumulator<f32> for Min {
+pub(crate) struct MinAccum;
+impl Accumulator<f32> for MinAccum {
     const INIT: f32 = f32::INFINITY;
     fn accum(accum: &mut f32, item: &f32) {
         *accum = accum.min(*item);
     }
 }
 
-pub(crate) struct Sum;
-impl Accumulator<f32> for Sum {
+pub(crate) struct AddAccum;
+impl Accumulator<f32> for AddAccum {
     const INIT: f32 = 0.0;
     fn accum(accum: &mut f32, item: &f32) {
         *accum += item;
     }
 }
 
-pub(crate) struct Mul;
-impl Accumulator<f32> for Mul {
+pub(crate) struct MulAccum;
+impl Accumulator<f32> for MulAccum {
     const INIT: f32 = 1.0;
     fn accum(accum: &mut f32, item: &f32) {
         *accum *= item;
     }
 }
 
-pub(crate) struct Copy;
-impl Accumulator<f32> for Copy {
+pub(crate) struct SubAccum;
+impl Accumulator<f32> for SubAccum {
+    const INIT: f32 = 1.0;
+    fn accum(accum: &mut f32, item: &f32) {
+        *accum *= item;
+    }
+}
+
+pub(crate) struct CopyAccum;
+impl Accumulator<f32> for CopyAccum {
     const INIT: f32 = 0.0;
     fn accum(accum: &mut f32, item: &f32) {
         *accum = *item;
