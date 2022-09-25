@@ -123,7 +123,7 @@ mod tests {
     fn test_reduce_all_1d() {
         let t = [1.0, 2.0, 3.0, 4.0];
         let mut r = 0.0;
-        <Cpu as DeviceReduce1<_, 0>>::reduce_into::<Mul>(&mut r, &t);
+        <Cpu as DeviceReduce1<_, 0>>::reduce_into::<MulAccum>(&mut r, &t);
         assert_eq!(r, 24.0);
     }
 
@@ -131,7 +131,7 @@ mod tests {
     fn test_reduce_all_2d() {
         let t = [[1.0, 2.0, 3.0, 4.0], [5.0, -1.0, 2.0, 0.0]];
         let mut r = 0.0;
-        <Cpu as DeviceReduce2<_, 0, 1>>::reduce_into::<Sum>(&mut r, &t);
+        <Cpu as DeviceReduce2<_, 0, 1>>::reduce_into::<AddAccum>(&mut r, &t);
         assert_eq!(r, 16.0);
     }
 
@@ -139,7 +139,7 @@ mod tests {
     fn test_reduce_all_3d() {
         let t = [[[1.0, 2.0], [2.0, 3.0]], [[1.0, 0.5], [0.5, 1.0 / 3.0]]];
         let mut r = 0.0;
-        <Cpu as DeviceReduce3<_, 0, 1, 2>>::reduce_into::<Mul>(&mut r, &t);
+        <Cpu as DeviceReduce3<_, 0, 1, 2>>::reduce_into::<MulAccum>(&mut r, &t);
         assert_eq!(r, 1.0);
     }
 
@@ -147,7 +147,7 @@ mod tests {
     fn test_1d_reductions() {
         let inp = [2., -1., 0., 1., -2.];
         let mut out = ZeroElements::ZEROS;
-        <Cpu as DeviceReduce1<_, 0>>::reduce_into::<Max>(&mut out, &inp);
+        <Cpu as DeviceReduce1<_, 0>>::reduce_into::<MaxAccum>(&mut out, &inp);
         assert_eq!(out, 2.);
     }
 
@@ -157,11 +157,11 @@ mod tests {
         let inp: T = [[-1., 2., -3.], [1., -2., 3.]];
 
         let mut out0 = ZeroElements::ZEROS;
-        <Cpu as DeviceReduce1<_, 0>>::reduce_into::<Max>(&mut out0, &inp);
+        <Cpu as DeviceReduce1<_, 0>>::reduce_into::<MaxAccum>(&mut out0, &inp);
         assert_eq!(out0, [1., 2., 3.]);
 
         let mut out0 = ZeroElements::ZEROS;
-        <Cpu as DeviceReduce1<_, 1>>::reduce_into::<Max>(&mut out0, &inp);
+        <Cpu as DeviceReduce1<_, 1>>::reduce_into::<MaxAccum>(&mut out0, &inp);
         assert_eq!(out0, [2., 3.]);
     }
 
@@ -174,15 +174,15 @@ mod tests {
         ];
 
         let mut out0 = ZeroElements::ZEROS;
-        <Cpu as DeviceReduce1<_, 0>>::reduce_into::<Max>(&mut out0, &inp);
+        <Cpu as DeviceReduce1<_, 0>>::reduce_into::<MaxAccum>(&mut out0, &inp);
         assert_eq!(out0, [[4., 2., -3.], [1., 6., 3.]]);
 
         let mut out0 = ZeroElements::ZEROS;
-        <Cpu as DeviceReduce1<_, 1>>::reduce_into::<Max>(&mut out0, &inp);
+        <Cpu as DeviceReduce1<_, 1>>::reduce_into::<MaxAccum>(&mut out0, &inp);
         assert_eq!(out0, [[1., 2., 3.], [4., 6., -3.]]);
 
         let mut out0 = ZeroElements::ZEROS;
-        <Cpu as DeviceReduce1<_, 2>>::reduce_into::<Max>(&mut out0, &inp);
+        <Cpu as DeviceReduce1<_, 2>>::reduce_into::<MaxAccum>(&mut out0, &inp);
         assert_eq!(out0, [[2., 3.], [4., 6.]]);
     }
 
@@ -203,7 +203,7 @@ mod tests {
         ];
 
         let mut out0 = ZeroElements::ZEROS;
-        <Cpu as DeviceReduce1<_, 0>>::reduce_into::<Max>(&mut out0, &inp);
+        <Cpu as DeviceReduce1<_, 0>>::reduce_into::<MaxAccum>(&mut out0, &inp);
         assert_eq!(
             out0,
             [
@@ -214,14 +214,14 @@ mod tests {
         );
 
         let mut out0 = ZeroElements::ZEROS;
-        <Cpu as DeviceReduce1<_, 1>>::reduce_into::<Max>(&mut out0, &inp);
+        <Cpu as DeviceReduce1<_, 1>>::reduce_into::<MaxAccum>(&mut out0, &inp);
         assert_eq!(
             out0,
             [[[4., 3., 4.], [1., 6., 3.]], [[2., 5., 3.], [-1., 7., -3.]]]
         );
 
         let mut out0 = ZeroElements::ZEROS;
-        <Cpu as DeviceReduce1<_, 2>>::reduce_into::<Max>(&mut out0, &inp);
+        <Cpu as DeviceReduce1<_, 2>>::reduce_into::<MaxAccum>(&mut out0, &inp);
         assert_eq!(
             out0,
             [
@@ -231,7 +231,7 @@ mod tests {
         );
 
         let mut out0 = ZeroElements::ZEROS;
-        <Cpu as DeviceReduce1<_, 3>>::reduce_into::<Max>(&mut out0, &inp);
+        <Cpu as DeviceReduce1<_, 3>>::reduce_into::<MaxAccum>(&mut out0, &inp);
         assert_eq!(
             out0,
             [
@@ -244,60 +244,63 @@ mod tests {
     #[test]
     fn test_broadcast_0d_to_1d() {
         let mut a = [-1.0; 3];
-        <Cpu as DeviceReduce1<_, 0>>::broadcast_into::<Copy>(&mut a, &1.0);
+        <Cpu as DeviceReduce1<_, 0>>::broadcast_into::<CopyAccum>(&mut a, &1.0);
         assert_eq!(a, [1.0; 3]);
 
         let mut a = -1.0;
-        <Cpu as DeviceReduce1<_, 0>>::reduce_into::<Sum>(&mut a, &[1.0, -2.0, 3.0]);
+        <Cpu as DeviceReduce1<_, 0>>::reduce_into::<AddAccum>(&mut a, &[1.0, -2.0, 3.0]);
         assert_eq!(a, 2.0);
     }
 
     #[test]
     fn test_broadcast_1d_to_2d() {
         let mut a = [[0.0; 3]; 2];
-        <Cpu as DeviceReduce1<_, 0>>::broadcast_into::<Copy>(&mut a, &[1.0, 2.0, 3.0]);
+        <Cpu as DeviceReduce1<_, 0>>::broadcast_into::<CopyAccum>(&mut a, &[1.0, 2.0, 3.0]);
         assert_eq!(a, [[1.0, 2.0, 3.0]; 2]);
 
         let mut a = [[0.0; 3]; 2];
-        <Cpu as DeviceReduce1<_, 1>>::broadcast_into::<Copy>(&mut a, &[1.0, 2.0]);
+        <Cpu as DeviceReduce1<_, 1>>::broadcast_into::<CopyAccum>(&mut a, &[1.0, 2.0]);
         assert_eq!(a, [[1.0; 3], [2.0; 3]]);
 
         let mut b = [-1.0, 2.0];
-        <Cpu as DeviceReduce1<_, 1>>::reduce_into::<Sum>(&mut b, &a);
+        <Cpu as DeviceReduce1<_, 1>>::reduce_into::<AddAccum>(&mut b, &a);
         assert_eq!(b, [3.0, 6.0]);
     }
 
     #[test]
     fn test_broadcast_1d_to_3d() {
         let mut a = [[[0.0; 3]; 2]; 1];
-        <Cpu as DeviceReduce2<_, 0, 1>>::broadcast_into::<Copy>(&mut a, &[1.0, 2.0, 3.0]);
+        <Cpu as DeviceReduce2<_, 0, 1>>::broadcast_into::<CopyAccum>(&mut a, &[1.0, 2.0, 3.0]);
         assert_eq!(a, [[[1.0, 2.0, 3.0]; 2]]);
 
         let mut a = [[[0.0; 3]; 2]; 1];
-        <Cpu as DeviceReduce2<_, 0, 2>>::broadcast_into::<Copy>(&mut a, &[1.0, 2.0]);
+        <Cpu as DeviceReduce2<_, 0, 2>>::broadcast_into::<CopyAccum>(&mut a, &[1.0, 2.0]);
         assert_eq!(a, [[[1.0; 3], [2.0; 3]]]);
 
         let mut a = [[[0.0; 3]; 2]; 3];
-        <Cpu as DeviceReduce2<_, 1, 2>>::broadcast_into::<Copy>(&mut a, &[1.0, 2.0, 3.0]);
+        <Cpu as DeviceReduce2<_, 1, 2>>::broadcast_into::<CopyAccum>(&mut a, &[1.0, 2.0, 3.0]);
         assert_eq!(a, [[[1.0; 3]; 2], [[2.0; 3]; 2], [[3.0; 3]; 2]]);
     }
 
     #[test]
     fn test_broadcast_1d_to_4d() {
         let mut a = [[[[0.0; 3]; 2]; 1]; 4];
-        <Cpu as DeviceReduce3<_, 0, 1, 2>>::broadcast_into::<Copy>(&mut a, &[1.0, 2.0, 3.0]);
+        <Cpu as DeviceReduce3<_, 0, 1, 2>>::broadcast_into::<CopyAccum>(&mut a, &[1.0, 2.0, 3.0]);
         assert_eq!(a, [[[[1.0, 2.0, 3.0]; 2]; 1]; 4]);
 
         let mut a = [[[[0.0; 3]; 2]; 1]; 4];
-        <Cpu as DeviceReduce3<_, 0, 1, 3>>::broadcast_into::<Copy>(&mut a, &[1.0, 2.0]);
+        <Cpu as DeviceReduce3<_, 0, 1, 3>>::broadcast_into::<CopyAccum>(&mut a, &[1.0, 2.0]);
         assert_eq!(a, [[[[1.0; 3], [2.0; 3]]; 1]; 4]);
 
         let mut a = [[[[0.0; 3]; 2]; 1]; 4];
-        <Cpu as DeviceReduce3<_, 0, 2, 3>>::broadcast_into::<Copy>(&mut a, &[1.0]);
+        <Cpu as DeviceReduce3<_, 0, 2, 3>>::broadcast_into::<CopyAccum>(&mut a, &[1.0]);
         assert_eq!(a, [[[[1.0; 3]; 2]; 1]; 4]);
 
         let mut a = [[[[0.0; 3]; 2]; 1]; 4];
-        <Cpu as DeviceReduce3<_, 1, 2, 3>>::broadcast_into::<Copy>(&mut a, &[1.0, 2.0, 3.0, 4.0]);
+        <Cpu as DeviceReduce3<_, 1, 2, 3>>::broadcast_into::<CopyAccum>(
+            &mut a,
+            &[1.0, 2.0, 3.0, 4.0],
+        );
         assert_eq!(
             a,
             [
@@ -312,15 +315,18 @@ mod tests {
     #[test]
     fn test_broadcast_2d_to_3d() {
         let mut a = [[[0.0; 2]; 2]; 1];
-        <Cpu as DeviceReduce1<_, 0>>::broadcast_into::<Copy>(&mut a, &[[1.0, 2.0], [-1.0, -2.0]]);
+        <Cpu as DeviceReduce1<_, 0>>::broadcast_into::<CopyAccum>(
+            &mut a,
+            &[[1.0, 2.0], [-1.0, -2.0]],
+        );
         assert_eq!(a, [[[1.0, 2.0], [-1.0, -2.0]]]);
 
         let mut a = [[[0.0; 2]; 2]; 1];
-        <Cpu as DeviceReduce1<_, 1>>::broadcast_into::<Copy>(&mut a, &[[1.0, 2.0]]);
+        <Cpu as DeviceReduce1<_, 1>>::broadcast_into::<CopyAccum>(&mut a, &[[1.0, 2.0]]);
         assert_eq!(a, [[[1.0, 2.0], [1.0, 2.0]]]);
 
         let mut a = [[[0.0; 2]; 2]; 1];
-        <Cpu as DeviceReduce1<_, 2>>::broadcast_into::<Copy>(&mut a, &[[1.0, 2.0]]);
+        <Cpu as DeviceReduce1<_, 2>>::broadcast_into::<CopyAccum>(&mut a, &[[1.0, 2.0]]);
         assert_eq!(a, [[[1.0, 1.0], [2.0, 2.0]]]);
     }
 }
