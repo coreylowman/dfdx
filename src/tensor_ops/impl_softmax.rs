@@ -10,20 +10,20 @@ use crate::prelude::*;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let a = tensor(0.0);
-/// let r = logsumexp(a);
+/// let r = logsumexp::<_, -1>(a);
 /// assert_eq!(r.data(), &0.0);
 /// ```
 ///
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let a = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-/// let r = a.logsumexp();
+/// let r = a.logsumexp::<-1>();
 /// assert_eq!(r.data(), &2.4519143);
 /// ```
-pub fn logsumexp<T: Reduce1<-1>>(mut t: T) -> T::Reduced {
+pub fn logsumexp<T: Reduce1<I>, const I: isize>(mut t: T) -> T::Reduced {
     let max = T::DeviceR::reduce(t.data(), f32::max);
     T::DeviceR::foreach_br(t.mut_data(), max.as_ref(), &mut |a, b| *a -= b);
-    let mut result = ln(sum_axis::<T, -1>(exp(t)));
+    let mut result = ln(sum_axis::<T, I>(exp(t)));
     <T::Reduced as HasDevice>::Device::add(result.mut_data(), max.as_ref());
     result
 }
@@ -33,7 +33,7 @@ pub fn logsumexp<T: Reduce1<-1>>(mut t: T) -> T::Reduced {
 /// **Pytorch equivalent**: `t.log_softmax(-1)`
 ///
 /// **Related functions**: [logsumexp()], [softmax()]
-pub fn log_softmax<T: Reduce1<-1>>(t: T) -> T {
+pub fn log_softmax<T: Reduce1<I>, const I: isize>(t: T) -> T {
     let (t, tape) = t.split_tape();
     let (lse, tape) = logsumexp(t.duplicate().put_tape(tape))
         .broadcast1()
@@ -47,7 +47,7 @@ pub fn log_softmax<T: Reduce1<-1>>(t: T) -> T {
 /// **Pytorch equivalent**: `t.softmax(-1)`
 ///
 /// **Related functions**: [logsumexp()], [log_softmax()]
-pub fn softmax<T: Reduce1<-1>>(t: T) -> T {
+pub fn softmax<T: Reduce1<I>, const I: isize>(t: T) -> T {
     exp(log_softmax(t))
 }
 
@@ -55,18 +55,27 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [logsumexp()] on `self`.
-    pub fn logsumexp(self) -> <Self as Reduce1<-1>>::Reduced {
-        logsumexp(self)
+    pub fn logsumexp<const I: isize>(self) -> <Self as Reduce1<I>>::Reduced
+    where
+        Self: Reduce1<I>
+    {
+        logsumexp::<_, I>(self)
     }
 
     /// Calls [log_softmax()] on `self`
-    pub fn log_softmax(self) -> Self {
-        log_softmax(self)
+    pub fn log_softmax<const I: isize>(self) -> Self
+    where
+        Self: Reduce1<I>
+    {
+        log_softmax::<_, I>(self)
     }
 
     /// Calls [softmax()] on `self`
-    pub fn softmax(self) -> Self {
-        softmax(self)
+    pub fn softmax<const I: isize>(self) -> Self
+    where
+        Self: Reduce1<I>
+    {
+        softmax::<_, I>(self)
     }
 }
     };
@@ -168,7 +177,7 @@ mod tests {
     #[test]
     fn test_logsumexp_2d() {
         let a: Tensor2D<2, 3> = tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r: Tensor1D<2, OwnedTape> = a.trace().logsumexp();
+        let r: Tensor1D<2, OwnedTape> = a.trace().logsumexp::<-1>();
         assert_eq!(r.data(), &[0.40760595, 7.0509458]);
         let gradients = backward(r.mean());
         assert_eq!(
@@ -183,7 +192,7 @@ mod tests {
     #[test]
     fn test_log_softmax_2d() {
         let a: Tensor2D<2, 3> = tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r = a.trace().log_softmax();
+        let r = a.trace().log_softmax::<-1>();
         assert_eq!(
             r.data(),
             &[
@@ -204,7 +213,7 @@ mod tests {
     #[test]
     fn test_softmax_2d() {
         let a: Tensor2D<2, 3> = tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r = a.trace().softmax();
+        let r = a.trace().softmax::<-1>();
         assert_eq!(
             r.data(),
             &[

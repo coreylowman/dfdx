@@ -121,7 +121,7 @@ pub fn cross_entropy_with_logits_loss<T: Reduce1<-1>>(
     logits: T,
     target_probs: &T::NoTape,
 ) -> Tensor0D<T::Tape> {
-    -mean(sum_axis::<T, -1>(mul(log_softmax(logits), target_probs)))
+    -mean(sum_axis(mul(log_softmax(logits), target_probs)))
 }
 
 /// [KL Divergence loss](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence).
@@ -146,7 +146,7 @@ pub fn kl_div_with_logits_loss<T: Reduce1<-1>>(
     logits: T,
     target_probs: &T::NoTape,
 ) -> Tensor0D<T::Tape> {
-    -mean(sum_axis::<T, -1>(mul(
+    -mean(sum_axis(mul(
         sub(log_softmax(logits), &ln(target_probs.duplicate())),
         target_probs,
     )))

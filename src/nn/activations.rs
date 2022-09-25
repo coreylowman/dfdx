@@ -148,17 +148,17 @@ mod tests {
     fn test_softmax() {
         let t = Tensor0D::new(0.0);
         let r1 = Softmax.forward(t.clone());
-        let r2 = softmax(t);
+        let r2 = t.softmax::<-1>();
         assert_eq!(r1.data(), r2.data());
 
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Softmax.forward(t.clone());
-        let r2 = softmax(t);
+        let r2 = t.softmax::<-1>();
         assert_eq!(r1.data(), r2.data());
 
         let t = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
         let r1 = Softmax.forward(t.clone());
-        let r2 = softmax(t);
+        let r2 = t.softmax::<-1>();
         assert_eq!(r1.data(), r2.data());
     }
 }
