@@ -93,21 +93,6 @@ impl_broadcast!(Tensor3D<M, N, P, H>, Axis<2>, Tensor4D<M, N, O, P, H>, {M, N, O
 impl_broadcast!(Tensor3D<M, O, P, H>, Axis<1>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 impl_broadcast!(Tensor3D<N, O, P, H>, Axis<0>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 
-// macro_rules! impl_reduce {
-//     ($SrcTy:ty, $AxesTy:ty, $DstTy:ty, {$($Dims:tt),*}) => {
-// impl<$(const $Dims: usize, )* H: Tape> Reduce<Axis<-1>> for $SrcTy {
-//     type Reduced = $DstTy;
-//     type DeviceR = <Self as HasDevice>::Device;
-// }
-//     };
-// }
-
-// impl_reduce!(Tensor0D<H>, Axis<-1>, Tensor0D<H>, {});
-// impl_reduce!(Tensor1D<M, H>, Axis<-1>, Tensor0D<H>, {M});
-// impl_reduce!(Tensor2D<M, N, H>, Axis<-1>, Tensor1D<M, H>, {M, N});
-// impl_reduce!(Tensor3D<M, N, O, H>, Axis<-1>, Tensor2D<M, N, H>, {M, N, O});
-// impl_reduce!(Tensor4D<M, N, O, P, H>, Axis<-1>, Tensor3D<M, N, O, H>, {M, N, O, P});
-
 #[cfg(test)]
 mod tests {
     use super::*;
