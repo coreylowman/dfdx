@@ -1,4 +1,4 @@
-use crate::devices::axes::*;
+use crate::arrays::{Axes2, Axes3, Axes4, Axis};
 use std::marker::PhantomData;
 
 pub(super) struct BroadcastRef<'a, T, Axes>(pub &'a T, PhantomData<*const Axes>);

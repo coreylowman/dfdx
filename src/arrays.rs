@@ -49,6 +49,12 @@ impl<T: CountElements, const M: usize> CountElements for [T; M] {
     }
 }
 
+pub struct Axis<const I: isize>;
+pub type Axes2<const I: isize, const J: isize> = (Axis<I>, Axis<J>);
+pub type Axes3<const I: isize, const J: isize, const K: isize> = (Axis<I>, Axis<J>, Axis<K>);
+pub type Axes4<const I: isize, const J: isize, const K: isize, const L: isize> =
+    (Axis<I>, Axis<J>, Axis<K>, Axis<L>);
+
 /// An NdArray that has an `I`th axis
 pub trait HasAxis<const I: isize> {
     /// The size of the axis. E.g. an nd array of shape (M, N, O):

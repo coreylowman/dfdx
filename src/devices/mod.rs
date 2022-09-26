@@ -1,7 +1,6 @@
 //! Provides implementations for modifying Nd arrays on the [Cpu].
 
 mod allocate;
-pub(crate) mod axes;
 mod broadcast;
 mod broadcast_reduce;
 mod fill;

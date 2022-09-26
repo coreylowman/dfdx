@@ -1,10 +1,9 @@
 mod accumulator;
 mod indexing;
 
-use super::axes::*;
 use super::fill::FillElements;
 use super::Cpu;
-use crate::arrays::CountElements;
+use crate::arrays::{Axes2, Axes3, Axes4, Axis, CountElements};
 pub(crate) use accumulator::*;
 use indexing::*;
 
