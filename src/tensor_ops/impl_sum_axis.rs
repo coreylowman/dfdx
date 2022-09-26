@@ -15,10 +15,10 @@ use crate::prelude::*;
 /// ```
 pub fn sum_axis<T: Reduce<Axis<I>>, const I: isize>(t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
-    T::DeviceR::reduce_into::<AddAccum>(result.mut_data(), t.data());
+    T::DeviceR::reduce_into_no_reset::<AddAccum>(result.mut_data(), t.data());
     move_tape_and_add_backward_op(t, result, move |t, result, grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-        T::DeviceR::broadcast_into::<AddAccum>(t_grad, result_grad);
+        T::DeviceR::broadcast_into_no_reset::<AddAccum>(t_grad, result_grad);
     })
 }
 

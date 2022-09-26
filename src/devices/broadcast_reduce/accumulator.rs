@@ -29,16 +29,16 @@ impl Accumulator<f32> for AddAccum {
     }
 }
 
-pub(crate) struct MulAccum;
-impl Accumulator<f32> for MulAccum {
-    const INIT: f32 = 1.0;
+pub(crate) struct SubAccum;
+impl Accumulator<f32> for SubAccum {
+    const INIT: f32 = 0.0;
     fn accum(accum: &mut f32, item: &f32) {
-        *accum *= item;
+        *accum -= item;
     }
 }
 
-pub(crate) struct SubAccum;
-impl Accumulator<f32> for SubAccum {
+pub(crate) struct MulAccum;
+impl Accumulator<f32> for MulAccum {
     const INIT: f32 = 1.0;
     fn accum(accum: &mut f32, item: &f32) {
         *accum *= item;

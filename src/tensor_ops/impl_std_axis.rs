@@ -19,7 +19,7 @@ where
     T: Reduce<Axis<I>>,
     T::Array: HasAxis<I>,
 {
-    sqrt(add_scalar(var_axis::<T, I>(t), epsilon))
+    sqrt(add_scalar(var_axis(t), epsilon))
 }
 
 /// Reduces dimension `I` of the tensor by computing variance of all values in the dimension.
@@ -43,8 +43,8 @@ where
 {
     let num_elements: f32 = <T::Array as HasAxis<I>>::SIZE as f32;
     let (t, tape) = t.split_tape();
-    let mean = mean_axis::<T, I>(t.duplicate().put_tape(tape)).broadcast();
-    div_scalar(sum_axis::<T, I>(square(sub(mean, &t))), num_elements)
+    let mean = mean_axis(t.duplicate().put_tape(tape)).broadcast();
+    div_scalar(sum_axis(square(sub(mean, &t))), num_elements)
 }
 
 macro_rules! impl_std_and_var {

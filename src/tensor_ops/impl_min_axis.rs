@@ -22,11 +22,11 @@ pub fn min_axis<T: Reduce<Axis<I>>, const I: isize>(mut t: T) -> T::Reduced {
     T::DeviceR::reduce_into::<MinAccum>(result.mut_data(), t.data());
 
     // store derivative in t
-    T::DeviceR::broadcast_into::<EqAccum>(t.mut_data(), result.data());
+    T::DeviceR::broadcast_into_no_reset::<EqAccum>(t.mut_data(), result.data());
 
     move_tape_and_add_backward_op(t, result, move |mut t, result, grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-        T::DeviceR::broadcast_into::<MulAccum>(t.mut_data(), result_grad);
+        T::DeviceR::broadcast_into_no_reset::<MulAccum>(t.mut_data(), result_grad);
         T::Device::add(t_grad, t.data());
     })
 }

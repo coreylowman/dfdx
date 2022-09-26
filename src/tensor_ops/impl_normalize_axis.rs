@@ -19,10 +19,10 @@ where
     T::Array: HasAxis<I>,
 {
     let (t, tape) = t.split_tape();
-    let (std, tape) = std_axis::<T, I>(t.duplicate().put_tape(tape), epsilon)
+    let (std, tape) = std_axis(t.duplicate().put_tape(tape), epsilon)
         .broadcast()
         .split_tape();
-    let (mean, tape) = mean_axis::<T, I>(t.duplicate().put_tape(tape))
+    let (mean, tape) = mean_axis(t.duplicate().put_tape(tape))
         .broadcast()
         .split_tape();
     let centered = sub(t.put_tape(tape), &mean);
