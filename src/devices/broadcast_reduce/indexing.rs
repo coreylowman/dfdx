@@ -1,34 +1,21 @@
-pub(super) struct Broadcast1Ref<'a, T, const I: isize>(pub &'a T);
+use crate::devices::axes::*;
+use std::marker::PhantomData;
 
-pub(super) struct Broadcast1Mut<'a, T, const I: isize>(pub &'a mut T);
+pub(super) struct BroadcastRef<'a, T, Axes>(pub &'a T, PhantomData<*const Axes>);
 
-pub(super) struct Broadcast2Ref<'a, T, const I: isize, const J: isize>(pub &'a T);
+impl<'a, T, Axes> BroadcastRef<'a, T, Axes> {
+    pub fn new(t: &'a T) -> Self {
+        Self(t, PhantomData)
+    }
+}
 
-pub(super) struct Broadcast2Mut<'a, T, const I: isize, const J: isize>(pub &'a mut T);
+pub(super) struct BroadcastMut<'a, T, Axes>(pub &'a mut T, PhantomData<*const Axes>);
 
-pub(super) struct Broadcast3Ref<'a, T, const I: isize, const J: isize, const K: isize>(pub &'a T);
-
-pub(super) struct Broadcast3Mut<'a, T, const I: isize, const J: isize, const K: isize>(
-    pub &'a mut T,
-);
-
-pub(super) struct Broadcast4Ref<
-    'a,
-    T,
-    const I: isize,
-    const J: isize,
-    const K: isize,
-    const L: isize,
->(pub &'a T);
-
-pub(super) struct Broadcast4Mut<
-    'a,
-    T,
-    const I: isize,
-    const J: isize,
-    const K: isize,
-    const L: isize,
->(pub &'a mut T);
+impl<'a, T, Axes> BroadcastMut<'a, T, Axes> {
+    pub fn new(t: &'a mut T) -> Self {
+        Self(t, PhantomData)
+    }
+}
 
 pub(super) trait ElementRef {
     type Index;
@@ -112,37 +99,37 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize> ElementMut
 
 macro_rules! impl_bcast {
     ($ArrTy:ty, [], [$I0:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [], [$I0], usize, Broadcast1Ref, Broadcast1Mut, {$($CVars),*});
+        impl_bcast!($ArrTy, [], Axis<$I0>, usize, {$($CVars),*});
     };
     ($ArrTy:ty, [], [$I0:expr, $I1:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [], [$I0, $I1], [usize; 2], Broadcast2Ref, Broadcast2Mut, {$($CVars),*});
+        impl_bcast!($ArrTy, [], Axes2<$I0, $I1>, [usize; 2], {$($CVars),*});
     };
     ($ArrTy:ty, [], [$I0:expr, $I1:expr, $I2:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [], [$I0, $I1, $I2], [usize; 3], Broadcast3Ref, Broadcast3Mut, {$($CVars),*});
+        impl_bcast!($ArrTy, [], Axes3<$I0, $I1, $I2>, [usize; 3], {$($CVars),*});
     };
     ($ArrTy:ty, [], [$I0:expr, $I1:expr, $I2:expr, $I3:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [], [$I0, $I1, $I2, $I3], [usize; 4], Broadcast4Ref, Broadcast4Mut, {$($CVars),*});
+        impl_bcast!($ArrTy, [], Axes4<$I0, $I1, $I2, $I3>, [usize; 4], {$($CVars),*});
     };
     ($ArrTy:ty, [$I0:expr], [$I1:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [$I0], [$I1], [usize; 2], Broadcast1Ref, Broadcast1Mut, {$($CVars),*});
+        impl_bcast!($ArrTy, [$I0], Axis<$I1>, [usize; 2], {$($CVars),*});
     };
     ($ArrTy:ty, [$I0:expr], [$I1:expr, $I2:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [$I0], [$I1, $I2], [usize; 3], Broadcast2Ref, Broadcast2Mut, {$($CVars),*});
+        impl_bcast!($ArrTy, [$I0], Axes2<$I1, $I2>, [usize; 3], {$($CVars),*});
     };
     ($ArrTy:ty, [$I0:expr], [$I1:expr, $I2:expr, $I3:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [$I0], [$I1, $I2, $I3], [usize; 4], Broadcast3Ref, Broadcast3Mut, {$($CVars),*});
+        impl_bcast!($ArrTy, [$I0], Axes3<$I1, $I2, $I3>, [usize; 4], {$($CVars),*});
     };
     ($ArrTy:ty, [$I0:expr, $I1:expr], [$I2:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [$I0, $I1], [$I2], [usize; 3], Broadcast1Ref, Broadcast1Mut, {$($CVars),*});
+        impl_bcast!($ArrTy, [$I0, $I1], Axis<$I2>, [usize; 3], {$($CVars),*});
     };
     ($ArrTy:ty, [$I0:expr, $I1:expr], [$I2:expr, $I3:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [$I0, $I1], [$I2, $I3], [usize; 4], Broadcast2Ref, Broadcast2Mut, {$($CVars),*});
+        impl_bcast!($ArrTy, [$I0, $I1], Axes2<$I2, $I3>, [usize; 4], {$($CVars),*});
     };
     ($ArrTy:ty, [$I0:expr, $I1:expr, $I2:expr], [$I3:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [$I0, $I1, $I2], [$I3], [usize; 4], Broadcast1Ref, Broadcast1Mut, {$($CVars),*});
+        impl_bcast!($ArrTy, [$I0, $I1, $I2], Axis<$I3>, [usize; 4], {$($CVars),*});
     };
-    ($ArrTy:ty, [$($Idx:expr),*], [$($BcstInds:expr),*], $IdxTy:ty, $RefTy:tt, $MutTy:tt, {$($CVars:tt),*}) => {
-        impl<'a, $(const $CVars: usize, )*> ElementRef for $RefTy<'a, $ArrTy, $($BcstInds, )*> {
+    ($ArrTy:ty, [$($Idx:expr),*], $AxisTy:ty, $IdxTy:ty, {$($CVars:tt),*}) => {
+        impl<'a, $(const $CVars: usize, )*> ElementRef for BroadcastRef<'a, $ArrTy, $AxisTy> {
             type Index = $IdxTy;
             type Element = f32;
             #[allow(unused_variables)]
@@ -150,7 +137,7 @@ macro_rules! impl_bcast {
                 &self.0 $([i[$Idx]])*
             }
         }
-        impl<'a, $(const $CVars: usize, )*> ElementMut for $MutTy<'a, $ArrTy, $($BcstInds, )*> {
+        impl<'a, $(const $CVars: usize, )*> ElementMut for BroadcastMut<'a, $ArrTy, $AxisTy> {
             type Index = $IdxTy;
             type Element = f32;
             #[allow(unused_variables)]
