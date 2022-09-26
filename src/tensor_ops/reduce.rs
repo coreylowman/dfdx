@@ -9,7 +9,7 @@ use crate::prelude::*;
 pub trait Reduce1<const I: isize>: Tensor<Dtype = f32> {
     /// The resulting tensor type.
     /// The `I`th dimension of this can be broadcast into Self via [Broadcast1].
-    type Reduced: Broadcast1<Self, I> + Tensor<Dtype = Self::Dtype, Tape = Self::Tape>;
+    type Reduced: Broadcast<Self, Axis<I>> + Tensor<Dtype = Self::Dtype, Tape = Self::Tape>;
 
     type DeviceR: Reduce1Axis<Self::Array, <Self::Reduced as HasArrayType>::Array, I>;
 }

@@ -2,7 +2,7 @@
 
 mod allocate;
 mod broadcast;
-mod broadcast_reduce;
+pub(crate) mod broadcast_reduce;
 mod fill;
 mod foreach;
 mod matmul;

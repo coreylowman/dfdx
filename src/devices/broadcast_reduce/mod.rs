@@ -9,21 +9,30 @@ use indexing::*;
 
 pub(crate) trait DeviceReduce<T: CountElements, Axes> {
     type Reduced;
-    fn reduce_into<A: Accumulator<T::Dtype>>(r: &mut Self::Reduced, t: &T);
-    fn broadcast_into<A: Accumulator<T::Dtype>>(t: &mut T, r: &Self::Reduced);
+
+    fn reduce_into_no_reset<A: Accumulator<T::Dtype>>(r: &mut Self::Reduced, t: &T);
+    fn broadcast_into_no_reset<A: Accumulator<T::Dtype>>(t: &mut T, r: &Self::Reduced);
+
+    fn reduce_into<A: Accumulator<T::Dtype>>(r: &mut Self::Reduced, t: &T) {
+        Self::fill(r, &mut |x| *x = A::INIT);
+        Self::reduce_into_no_reset(r, t);
+    }
+
+    fn broadcast_into<A: Accumulator<T::Dtype>>(t: &mut T, r: &Self::Reduced) {
+        Self::fill(t, &mut |x| *x = A::INIT);
+        Self::broadcast_into_no_reset(t, r);
+    }
 }
 
 macro_rules! impl_reduce {
     ($ArrTy:ty, $AxesTy:ty, $RedTy:ty, $Accum:tt, {$($Const:tt),*}) => {
         impl<$(const $Const: usize, )*> DeviceReduce<$ArrTy, $AxesTy> for Cpu {
             type Reduced = $RedTy;
-            fn reduce_into<A: Accumulator<f32>>(r: &mut Self::Reduced, t: &$ArrTy) {
-                Self::fill(r, &mut |x| *x = A::INIT);
+            fn reduce_into_no_reset<A: Accumulator<f32>>(r: &mut Self::Reduced, t: &$ArrTy) {
                 let mut b = BroadcastMut::<_, $AxesTy>::new(r);
                 $Accum::<A, _, _, $($Const, )*>(&mut b, t);
             }
-            fn broadcast_into<A: Accumulator<f32>>(t: &mut $ArrTy, r: &Self::Reduced) {
-                Self::fill(t, &mut |x| *x = A::INIT);
+            fn broadcast_into_no_reset<A: Accumulator<f32>>(t: &mut $ArrTy, r: &Self::Reduced) {
                 let b = BroadcastRef::<_, $AxesTy>::new(r);
                 $Accum::<A, _, _, $($Const, )*>(t, &b);
             }
