@@ -1,24 +1,20 @@
 //! Provides implementations for modifying Nd arrays on the [Cpu].
 
 mod allocate;
-mod broadcast;
 pub(crate) mod broadcast_reduce;
 mod fill;
 mod foreach;
 mod matmul;
 mod permute;
 mod reduce_all;
-mod reduce_axis;
 mod select;
 
 pub use allocate::*;
-pub use broadcast::*;
 pub use fill::*;
 pub use foreach::*;
 pub use matmul::*;
 pub use permute::*;
 pub use reduce_all::*;
-pub use reduce_axis::*;
 pub use select::*;
 
 use std::ops::*;
