@@ -149,12 +149,14 @@ macro_rules! impl_bcast {
 }
 
 // 0d -> nd
+impl_bcast!(f32, [], [-1], {});
 impl_bcast!(f32, [], [0], {});
 impl_bcast!(f32, [], [0, 1], {});
 impl_bcast!(f32, [], [0, 1, 2], {});
 impl_bcast!(f32, [], [0, 1, 2, 3], {});
 
 // 1d -> 2d
+impl_bcast!([f32; M], [0], [-1], { M });
 impl_bcast!([f32; M], [0], [1], { M });
 impl_bcast!([f32; M], [1], [0], { M });
 
@@ -170,9 +172,10 @@ impl_bcast!([f32; M], [1], [0, 2, 3], { M });
 impl_bcast!([f32; M], [0], [1, 2, 3], { M });
 
 // 2d -> 3d
-impl_bcast!([[f32; N]; M], [1, 2], [0], {M, N});
-impl_bcast!([[f32; N]; M], [0, 2], [1], {M, N});
+impl_bcast!([[f32; N]; M], [0, 1], [-1], {M, N});
 impl_bcast!([[f32; N]; M], [0, 1], [2], {M, N});
+impl_bcast!([[f32; N]; M], [0, 2], [1], {M, N});
+impl_bcast!([[f32; N]; M], [1, 2], [0], {M, N});
 
 // 2d -> 4d
 impl_bcast!([[f32; N]; M], [2, 3], [0, 1], {M, N});
@@ -183,6 +186,7 @@ impl_bcast!([[f32; N]; M], [0, 2], [1, 3], {M, N});
 impl_bcast!([[f32; N]; M], [0, 1], [2, 3], {M, N});
 
 // 3d -> 4d
+impl_bcast!([[[f32; O]; N]; M], [0, 1, 2], [-1], {M, N, O});
 impl_bcast!([[[f32; O]; N]; M], [0, 1, 2], [3], {M, N, O});
 impl_bcast!([[[f32; O]; N]; M], [0, 1, 3], [2], {M, N, O});
 impl_bcast!([[[f32; O]; N]; M], [0, 2, 3], [1], {M, N, O});

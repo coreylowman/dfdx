@@ -34,10 +34,12 @@ macro_rules! impl_reduce {
 
 // 1d -> 0d
 impl_reduce!([f32; M], Axis<0>, f32, accum1d, { M });
+impl_reduce!([f32; M], Axis<-1>, f32, accum1d, { M });
 
 // 2d -> 1d
 impl_reduce!([[f32; N]; M], Axis<0>, [f32; N], accum2d, {M, N});
 impl_reduce!([[f32; N]; M], Axis<1>, [f32; M], accum2d, {M, N});
+impl_reduce!([[f32; N]; M], Axis<-1>, [f32; M], accum2d, {M, N});
 
 // 2d -> 0d
 impl_reduce!([[f32; N]; M], Axes2<0, 1>, f32, accum2d, {M, N});
@@ -46,6 +48,7 @@ impl_reduce!([[f32; N]; M], Axes2<0, 1>, f32, accum2d, {M, N});
 impl_reduce!([[[f32; O]; N]; M], Axis<0>, [[f32; O]; N], accum3d, {M, N, O});
 impl_reduce!([[[f32; O]; N]; M], Axis<1>, [[f32; O]; M], accum3d, {M, N, O});
 impl_reduce!([[[f32; O]; N]; M], Axis<2>, [[f32; N]; M], accum3d, {M, N, O});
+impl_reduce!([[[f32; O]; N]; M], Axis<-1>, [[f32; N]; M], accum3d, {M, N, O});
 
 // 3d -> 1d
 impl_reduce!([[[f32; O]; N]; M], Axes2<0, 1>, [f32; O], accum3d, {M, N, O});
@@ -60,6 +63,7 @@ impl_reduce!([[[[f32; P]; O]; N]; M], Axis<0>, [[[f32; P]; O]; N], accum4d, {M, 
 impl_reduce!([[[[f32; P]; O]; N]; M], Axis<1>, [[[f32; P]; O]; M], accum4d, {M, N, O, P});
 impl_reduce!([[[[f32; P]; O]; N]; M], Axis<2>, [[[f32; P]; N]; M], accum4d, {M, N, O, P});
 impl_reduce!([[[[f32; P]; O]; N]; M], Axis<3>, [[[f32; O]; N]; M], accum4d, {M, N, O, P});
+impl_reduce!([[[[f32; P]; O]; N]; M], Axis<-1>, [[[f32; O]; N]; M], accum4d, {M, N, O, P});
 
 // 4d -> 2d
 impl_reduce!([[[[f32; P]; O]; N]; M], Axes2<0, 1>, [[f32; P]; O], accum4d, {M, N, O, P});
