@@ -118,7 +118,6 @@ mod impl_sum_axis;
 mod map;
 mod matmul;
 mod permute;
-mod reduce;
 mod select;
 pub(crate) mod utils;
 
@@ -148,7 +147,6 @@ pub use impl_sum_axis::*;
 pub use map::*;
 pub use matmul::*;
 pub use permute::{Permute2DSugar, Permute3DSugar, Permute4DSugar};
-pub use reduce::*;
 pub use select::*;
 
 #[cfg(feature = "nightly")]

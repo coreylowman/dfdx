@@ -15,15 +15,15 @@ use crate::prelude::*;
 /// ```
 pub fn normalize_axis<T, const I: isize>(t: T, epsilon: T::Dtype) -> T
 where
-    T: Reduce1<I>,
+    T: Reduce<Axis<I>>,
     T::Array: HasAxis<I>,
 {
     let (t, tape) = t.split_tape();
     let (std, tape) = std_axis::<T, I>(t.duplicate().put_tape(tape), epsilon)
-        .broadcast1()
+        .broadcast()
         .split_tape();
     let (mean, tape) = mean_axis::<T, I>(t.duplicate().put_tape(tape))
-        .broadcast1()
+        .broadcast()
         .split_tape();
     let centered = sub(t.put_tape(tape), &mean);
     div(centered, &std)
@@ -36,7 +36,7 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H>
     /// Calls [normalize_axis()] on `self`.
     pub fn normalize_axis<const I: isize>(self, epsilon: f32) -> Self
     where
-        Self: Reduce1<I>,
+        Self: Reduce<Axis<I>>,
         <Self as HasArrayType>::Array: HasAxis<I>,
     {
         normalize_axis::<Self, I>(self, epsilon)

@@ -1,6 +1,6 @@
 use super::indexing::{ElementMut, ElementRef};
 
-pub(crate) trait Accumulator<T> {
+pub trait Accumulator<T> {
     const INIT: T;
     fn accum(accum: &mut T, item: &T);
 }
@@ -50,6 +50,14 @@ impl Accumulator<f32> for CopyAccum {
     const INIT: f32 = 0.0;
     fn accum(accum: &mut f32, item: &f32) {
         *accum = *item;
+    }
+}
+
+pub(crate) struct EqAccum;
+impl Accumulator<f32> for EqAccum {
+    const INIT: f32 = 0.0;
+    fn accum(accum: &mut f32, item: &f32) {
+        *accum = if accum == item { 1.0 } else { 0.0 }
     }
 }
 

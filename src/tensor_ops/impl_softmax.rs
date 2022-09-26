@@ -1,3 +1,4 @@
+use crate::devices::broadcast_reduce::{DeviceReduce, MaxAccum, SubAccum};
 use crate::prelude::*;
 
 /// Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function.
@@ -20,10 +21,10 @@ use crate::prelude::*;
 /// let r = a.logsumexp::<-1>();
 /// assert_eq!(r.data(), &2.4519143);
 /// ```
-pub fn logsumexp<T: Reduce1<I>, const I: isize>(mut t: T) -> T::Reduced {
-    let max = T::DeviceR::reduce(t.data(), f32::max);
-    T::DeviceR::foreach_br(t.mut_data(), max.as_ref(), &mut |a, b| *a -= b);
-    let mut result = ln(sum_axis::<T, I>(exp(t)));
+pub fn logsumexp<T: Reduce<Axis<I>>, const I: isize>(mut t: T) -> T::Reduced {
+    let max = T::DeviceR::reduce::<MaxAccum>(t.data());
+    T::DeviceR::broadcast_into::<SubAccum>(t.mut_data(), max.as_ref());
+    let mut result = ln(sum_axis(exp(t)));
     <T::Reduced as HasDevice>::Device::add(result.mut_data(), max.as_ref());
     result
 }
@@ -33,10 +34,10 @@ pub fn logsumexp<T: Reduce1<I>, const I: isize>(mut t: T) -> T::Reduced {
 /// **Pytorch equivalent**: `t.log_softmax(-1)`
 ///
 /// **Related functions**: [logsumexp()], [softmax()]
-pub fn log_softmax<T: Reduce1<I>, const I: isize>(t: T) -> T {
+pub fn log_softmax<T: Reduce<Axis<I>>, const I: isize>(t: T) -> T {
     let (t, tape) = t.split_tape();
     let (lse, tape) = logsumexp(t.duplicate().put_tape(tape))
-        .broadcast1()
+        .broadcast()
         .split_tape();
     sub(t.put_tape(tape), &lse)
 }
@@ -47,7 +48,7 @@ pub fn log_softmax<T: Reduce1<I>, const I: isize>(t: T) -> T {
 /// **Pytorch equivalent**: `t.softmax(-1)`
 ///
 /// **Related functions**: [logsumexp()], [log_softmax()]
-pub fn softmax<T: Reduce1<I>, const I: isize>(t: T) -> T {
+pub fn softmax<T: Reduce<Axis<I>>, const I: isize>(t: T) -> T {
     exp(log_softmax(t))
 }
 
@@ -55,25 +56,25 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [logsumexp()] on `self`.
-    pub fn logsumexp<const I: isize>(self) -> <Self as Reduce1<I>>::Reduced
+    pub fn logsumexp<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
     where
-        Self: Reduce1<I>
+        Self: Reduce<Axis<I>>
     {
-        logsumexp::<_, I>(self)
+        logsumexp(self)
     }
 
     /// Calls [log_softmax()] on `self`
     pub fn log_softmax<const I: isize>(self) -> Self
     where
-        Self: Reduce1<I>
+        Self: Reduce<Axis<I>>
     {
-        log_softmax::<_, I>(self)
+        log_softmax(self)
     }
 
     /// Calls [softmax()] on `self`
     pub fn softmax<const I: isize>(self) -> Self
     where
-        Self: Reduce1<I>
+        Self: Reduce<Axis<I>>
     {
         softmax::<_, I>(self)
     }

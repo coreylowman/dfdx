@@ -16,7 +16,7 @@ use crate::prelude::*;
 /// ```
 pub fn std_axis<T, const I: isize>(t: T, epsilon: T::Dtype) -> T::Reduced
 where
-    T: Reduce1<I>,
+    T: Reduce<Axis<I>>,
     T::Array: HasAxis<I>,
 {
     sqrt(add_scalar(var_axis::<T, I>(t), epsilon))
@@ -38,12 +38,12 @@ where
 /// ```
 pub fn var_axis<T, const I: isize>(t: T) -> T::Reduced
 where
-    T: Reduce1<I>,
+    T: Reduce<Axis<I>>,
     T::Array: HasAxis<I>,
 {
     let num_elements: f32 = <T::Array as HasAxis<I>>::SIZE as f32;
     let (t, tape) = t.split_tape();
-    let mean = mean_axis::<T, I>(t.duplicate().put_tape(tape)).broadcast1();
+    let mean = mean_axis::<T, I>(t.duplicate().put_tape(tape)).broadcast();
     div_scalar(sum_axis::<T, I>(square(sub(mean, &t))), num_elements)
 }
 
@@ -51,18 +51,18 @@ macro_rules! impl_std_and_var {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [std_axis()] on `self`.
-    pub fn std_axis<const I: isize>(self, epsilon: f32) -> <Self as Reduce1<I>>::Reduced
+    pub fn std_axis<const I: isize>(self, epsilon: f32) -> <Self as Reduce<Axis<I>>>::Reduced
     where
-        Self: Reduce1<I>,
+        Self: Reduce<Axis<I>>,
         <Self as HasArrayType>::Array: HasAxis<I>,
     {
         std_axis::<Self, I>(self, epsilon)
     }
 
     /// Calls [var_axis()] on `self`.
-    pub fn var_axis<const I: isize>(self) -> <Self as Reduce1<I>>::Reduced
+    pub fn var_axis<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
     where
-        Self: Reduce1<I>,
+        Self: Reduce<Axis<I>>,
         <Self as HasArrayType>::Array: HasAxis<I>,
     {
         var_axis::<Self, I>(self)

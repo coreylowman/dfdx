@@ -1,26 +1,35 @@
 mod accumulator;
 mod indexing;
 
+use super::allocate::AllocateZeros;
 use super::fill::FillElements;
 use super::Cpu;
 use crate::arrays::{Axes2, Axes3, Axes4, Axis, CountElements};
-pub(crate) use accumulator::*;
+pub use accumulator::*;
 use indexing::*;
 
-pub(crate) trait DeviceReduce<T: CountElements, Axes> {
-    type Reduced;
+pub trait DeviceReduce<T: CountElements, Axes>:
+    FillElements<T> + FillElements<Self::Reduced> + AllocateZeros
+{
+    type Reduced: CountElements<Dtype = T::Dtype>;
 
     fn reduce_into_no_reset<A: Accumulator<T::Dtype>>(r: &mut Self::Reduced, t: &T);
     fn broadcast_into_no_reset<A: Accumulator<T::Dtype>>(t: &mut T, r: &Self::Reduced);
 
     fn reduce_into<A: Accumulator<T::Dtype>>(r: &mut Self::Reduced, t: &T) {
         Self::fill(r, &mut |x| *x = A::INIT);
-        Self::reduce_into_no_reset(r, t);
+        Self::reduce_into_no_reset::<A>(r, t);
     }
 
     fn broadcast_into<A: Accumulator<T::Dtype>>(t: &mut T, r: &Self::Reduced) {
         Self::fill(t, &mut |x| *x = A::INIT);
-        Self::broadcast_into_no_reset(t, r);
+        Self::broadcast_into_no_reset::<A>(t, r);
+    }
+
+    fn reduce<A: Accumulator<T::Dtype>>(t: &T) -> Box<Self::Reduced> {
+        let mut r: Box<Self::Reduced> = Self::zeros();
+        Self::reduce_into::<A>(r.as_mut(), t);
+        r
     }
 }
 
@@ -38,6 +47,16 @@ macro_rules! impl_reduce {
             }
         }
     };
+}
+
+impl DeviceReduce<f32, Axis<-1>> for Cpu {
+    type Reduced = f32;
+    fn reduce_into_no_reset<A: Accumulator<f32>>(r: &mut Self::Reduced, t: &f32) {
+        *r = *t;
+    }
+    fn broadcast_into_no_reset<A: Accumulator<f32>>(t: &mut f32, r: &Self::Reduced) {
+        *t = *r;
+    }
 }
 
 // 1d -> 0d

@@ -57,7 +57,7 @@ impl ResetParams for Softmax {
 impl SaveToNpz for Softmax {}
 impl LoadFromNpz for Softmax {}
 
-impl<T: Reduce1<-1>> Module<T> for Softmax {
+impl<T: Reduce<Axis<-1>>> Module<T> for Softmax {
     type Output = T;
     fn forward(&self, input: T) -> Self::Output {
         softmax(input)
