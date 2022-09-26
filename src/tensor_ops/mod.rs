@@ -32,19 +32,13 @@
 //! For example calling `sum_axis::<-1>()` on a `Tensor2D<2, 5>` would result in a `Tensor1D<2>`.
 //! Calling [sum_axis::<0>()] on a `Tensor2D<5>` would result in a `Tensor1D<5>`.
 //!
-//! See [Reduce1] implementations for a complete list of reductions.
+//! See [Reduce] implementations for a complete list of reductions.
 //!
 //! See relevant functions for more examples.
 //!
 //! # Broadcasts
 //!
-//! Broadcasting tensors is provided through the following traits:
-//! 1. [Broadcast1::broadcast1()], which broadcasts a single axis
-//! 2. [Broadcast2::broadcast2()], which broadcasts 2 axes
-//! 3. [Broadcast3::broadcast3()], which broadcasts 3 axes
-//! 4. [Broadcast4::broadcast4()], which broadcasts 4 axes
-//!
-//! See the implementations of each trait for a complete list of possible broadcasts.
+//! Broadcasting tensors is provided through the [Broadcast] trait.
 //!
 //! To broadcast a tensor to be the same size as another tensor you can use like so:
 //! ```rust
@@ -52,11 +46,11 @@
 //! let big: Tensor2D<2, 5> = TensorCreator::zeros();
 //!
 //! // broadcast the 1nd axis
-//! let a: Tensor2D<2, 5> = Tensor1D::<5>::zeros().broadcast1();
+//! let a: Tensor2D<2, 5> = Tensor1D::<5>::zeros().broadcast();
 //! add(a, &big);
 //!
 //!// broadcast the 2nd axis
-//! let a: Tensor2D<2, 5> = Tensor1D::<2>::zeros().broadcast1();
+//! let a: Tensor2D<2, 5> = Tensor1D::<2>::zeros().broadcast();
 //! add(a, &big);
 //! ```
 //!
