@@ -1,3 +1,19 @@
+//! Implementations of both braodcast and reduce with a single trait.
+//!
+//! This is done via three pieces:
+//! 1. [Accumulator], which accumulate a sequence of values into a single value.
+//! 2. [BroadcastRef] [BroadcastMut], which broadcast a value along specific axes
+//! 3. [indexing::ElementRef] and [indexing::ElementMut], which enable indexing into
+//!     values
+//!
+//! How these work together:
+//! 1. The indexing traits are implemented for normal arrays, and also [BroadcastRef]
+//! and [BroadcastMut]. This means you can broadcast a value and then index it in the
+//! same way as a normal array
+//! 2. [accum1d], and the 2-4d versions apply an [Accumulator] to two types that impl
+//! [indexing::ElementRef] and [indexing::ElementMut]
+//! 3. The macros in this file tie the previous two pieces together.
+
 mod accumulator;
 mod indexing;
 
@@ -6,26 +22,35 @@ use super::fill::FillElements;
 use super::Cpu;
 use crate::arrays::{Axes2, Axes3, Axes4, Axis, CountElements};
 pub use accumulator::*;
-use indexing::*;
+use indexing::{BroadcastMut, BroadcastRef};
 
+/// Device level broadcasts & reduces of type `T` along axes `Axes`.
 pub trait DeviceReduce<T: CountElements, Axes>:
     FillElements<T> + FillElements<Self::Reduced> + AllocateZeros
 {
+    /// The smaller type.
     type Reduced: CountElements<Dtype = T::Dtype>;
 
+    /// Reduces `T` into `Self::Reduced` with accumulator `A` without resetting the values in `r`.
     fn reduce_into_no_reset<A: Accumulator<T::Dtype>>(r: &mut Self::Reduced, t: &T);
+
+    /// Broadcasts `Self::Reduced` into `T` with accumulator `A` without resetting the values
+    /// in `t`.
     fn broadcast_into_no_reset<A: Accumulator<T::Dtype>>(t: &mut T, r: &Self::Reduced);
 
+    /// Fills `r` with [Accumulator::INIT] before reducing.
     fn reduce_into<A: Accumulator<T::Dtype>>(r: &mut Self::Reduced, t: &T) {
         Self::fill(r, &mut |x| *x = A::INIT);
         Self::reduce_into_no_reset::<A>(r, t);
     }
 
+    /// Fills `t` with [Accumulator::INIT] before broadcasting.
     fn broadcast_into<A: Accumulator<T::Dtype>>(t: &mut T, r: &Self::Reduced) {
         Self::fill(t, &mut |x| *x = A::INIT);
         Self::broadcast_into_no_reset::<A>(t, r);
     }
 
+    /// Allocates `Self::Reduced` then calls [DeviceReduce::reduce_into()]
     fn reduce<A: Accumulator<T::Dtype>>(t: &T) -> Box<Self::Reduced> {
         let mut r: Box<Self::Reduced> = Self::zeros();
         Self::reduce_into::<A>(r.as_mut(), t);

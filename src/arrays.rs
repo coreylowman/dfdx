@@ -49,9 +49,16 @@ impl<T: CountElements, const M: usize> CountElements for [T; M] {
     }
 }
 
+/// A single axis known at compile time
 pub struct Axis<const I: isize>;
+
+/// Two axes known at compile time.
 pub type Axes2<const I: isize, const J: isize> = (Axis<I>, Axis<J>);
+
+/// Three axes known at compile time.
 pub type Axes3<const I: isize, const J: isize, const K: isize> = (Axis<I>, Axis<J>, Axis<K>);
+
+/// Four axes known at compile time.
 pub type Axes4<const I: isize, const J: isize, const K: isize, const L: isize> =
     (Axis<I>, Axis<J>, Axis<K>, Axis<L>);
 
