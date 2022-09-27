@@ -54,6 +54,31 @@
 //! add(a, &big);
 //! ```
 //!
+//! # Permutating axes
+//!
+//! Permutating axes is done via [Permute2D], [Permute3D], and [Permute4D]:
+//!
+//! 2D version:
+//! ```rust
+//! # use dfdx::prelude::*;
+//! let t: Tensor2D<2, 3> = TensorCreator::zeros();
+//! let _: Tensor2D<3, 2> = t.permute_axes::<1, 0>();
+//! ```
+//!
+//! 3D version:
+//! ```rust
+//! # use dfdx::prelude::*;
+//! let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
+//! let _: Tensor3D<3, 4, 2> = t.permute_axes::<1, 2, 0>();
+//! ```
+//!
+//! 4D version:
+//! ```rust
+//! # use dfdx::prelude::*;
+//! let t: Tensor4D<2, 3, 4, 5> = TensorCreator::zeros();
+//! let _: Tensor4D<3, 5, 2, 4> = t.permute_axes::<1, 3, 0, 2>();
+//! ```
+//!
 //! # Selects/Indexing
 //!
 //! Selecting or indexing into a tensor is done via [Select1::select()]. This traits enables
@@ -140,7 +165,7 @@ pub use impl_sum::*;
 pub use impl_sum_axis::*;
 pub use map::*;
 pub use matmul::*;
-pub use permute::{Permute2DSugar, Permute3DSugar, Permute4DSugar};
+pub use permute::{Permute2D, Permute3D, Permute4D};
 pub use select::*;
 
 #[cfg(feature = "nightly")]
