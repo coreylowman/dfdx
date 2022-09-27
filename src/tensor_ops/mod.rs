@@ -87,9 +87,9 @@
 //! ```
 
 mod arith_scalar;
-mod broadcast;
 mod impl_add;
 mod impl_backward;
+mod impl_broadcast_reduce;
 mod impl_clamp;
 mod impl_div;
 mod impl_dropout;
@@ -116,9 +116,9 @@ mod select;
 pub(crate) mod utils;
 
 pub use arith_scalar::*;
-pub use broadcast::*;
 pub use impl_add::*;
 pub use impl_backward::*;
+pub use impl_broadcast_reduce::*;
 pub use impl_clamp::*;
 pub use impl_div::*;
 pub use impl_dropout::*;
