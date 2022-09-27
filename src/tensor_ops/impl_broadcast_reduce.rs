@@ -3,28 +3,35 @@ use crate::arrays::{Axes2, Axes3, Axes4, Axis};
 use crate::devices::{AddAccum, CopyAccum, DeviceReduce};
 use crate::prelude::*;
 
-/// Broadcasts the `I`th dimension. Increases number dimensions by 1. Results in `T`. Opposite of [Reduce].
+/// Broadcast self into `T` along `Axes`. Opposite of [Reduce].
 pub trait Broadcast<T, Axes> {
-    /// Broadcast `self` into `T`, increasing number dimensions by 1.
+    /// Broadcast `self` into `T`. This can be used to broadcast 1, 2, 3, and 4 axes.
     ///
     /// Examples:
     /// ```rust
     /// # use dfdx::prelude::*;
-    /// let _: Tensor1D<5> = Tensor0D::zeros().broadcast();
-    ///
-    /// // broadcast the 0th axis
-    /// let _: Tensor2D<5, 3> = Tensor1D::<3>::zeros().broadcast();
-    ///
-    /// // broadcast the 1st axis into a 3d tensor
+    /// // broadcast axis 1
     /// let _: Tensor3D<3, 5, 7> = Tensor2D::<3, 7>::zeros().broadcast();
     ///
-    /// // broadcast the last axis into 4d tensor
-    /// let _: Tensor4D<3, 5, 7, 9> = Tensor3D::<3, 5, 7>::zeros().broadcast();
+    /// // broadcast axes 0, 1
+    /// let _: Tensor3D<7, 5, 3> = Tensor1D::<3>::zeros().broadcast();
+    ///
+    /// // broadcast axes 1, 2, 3
+    /// let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<3>::zeros().broadcast();
     /// ```
     fn broadcast(self) -> T;
 }
 
+/// Remove `Axes` of tensor by reducing them. Opposite of [Broadcast].
+///
+/// Enables functions like [sum_axis()] that reduce values along a single dimension.
+///
+/// This trait can't be used directly as it doesn't contain any methods. Instead
+/// it is used by methods to specify the input type must be able to have it's axes
+/// reduced.
 pub trait Reduce<Axes>: Sized + Tensor<Dtype = f32> {
+    /// The resulting tensor type.
+    /// This can be broadcast into Self via [Broadcast].
     type Reduced: Tensor<Tape = Self::Tape, Dtype = Self::Dtype> + Broadcast<Self, Axes>;
     type DeviceR: DeviceReduce<Self::Array, Axes, Reduced = <Self::Reduced as HasArrayType>::Array>;
 }
