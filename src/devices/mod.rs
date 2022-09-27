@@ -1,7 +1,7 @@
 //! Provides implementations for modifying Nd arrays on the [Cpu].
 
 mod allocate;
-pub(crate) mod broadcast_reduce;
+mod broadcast_reduce;
 mod fill;
 mod foreach;
 mod matmul;
@@ -10,6 +10,7 @@ mod reduce_all;
 mod select;
 
 pub use allocate::*;
+pub use broadcast_reduce::*;
 pub use fill::*;
 pub use foreach::*;
 pub use matmul::*;

@@ -1,6 +1,5 @@
 use super::utils::move_tape_and_add_backward_op;
-use crate::devices::broadcast_reduce::{DeviceReduce, EqAccum, MinAccum};
-use crate::prelude::broadcast_reduce::MulAccum;
+use crate::devices::{DeviceReduce, EqAccum, MinAccum, MulAccum};
 use crate::prelude::*;
 
 /// Reduces dimension `I` of the tensor by gathering the minimum value from that dimension.

@@ -1,5 +1,5 @@
 use super::utils::move_tape_and_add_backward_op;
-use crate::devices::broadcast_reduce::{AddAccum, DeviceReduce};
+use crate::devices::{AddAccum, DeviceReduce};
 use crate::prelude::*;
 
 /// Sum the values along dimension `I` of `T`.

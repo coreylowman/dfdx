@@ -1,6 +1,6 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::arrays::{Axes2, Axes3, Axes4, Axis};
-use crate::devices::broadcast_reduce::{AddAccum, CopyAccum, DeviceReduce};
+use crate::devices::{AddAccum, CopyAccum, DeviceReduce};
 use crate::prelude::*;
 
 /// Broadcasts the `I`th dimension. Increases number dimensions by 1. Results in `T`. Opposite of [Reduce].

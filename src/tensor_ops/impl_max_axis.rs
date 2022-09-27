@@ -1,6 +1,5 @@
 use super::utils::move_tape_and_add_backward_op;
-use crate::devices::broadcast_reduce::{DeviceReduce, MaxAccum};
-use crate::prelude::broadcast_reduce::{EqAccum, MulAccum};
+use crate::devices::{DeviceReduce, EqAccum, MaxAccum, MulAccum};
 use crate::prelude::*;
 
 /// Reduces dimension `I` of the tensor by gathering the maximum value from that dimension.
