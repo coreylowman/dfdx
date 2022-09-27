@@ -37,11 +37,11 @@ fn main() {
 
         // old_log_prob_a = log(P(action | state, target_pi_net))
         let old_logits = target_pi_net.forward(state.clone());
-        let old_log_prob_a: Tensor1D<64> = old_logits.log_softmax().select(&action);
+        let old_log_prob_a: Tensor1D<64> = old_logits.log_softmax::<-1>().select(&action);
 
         // log_prob_a = log(P(action | state, pi_net))
         let logits = pi_net.forward(state.trace());
-        let log_prob_a: Tensor1D<64, OwnedTape> = logits.log_softmax().select(&action);
+        let log_prob_a: Tensor1D<64, OwnedTape> = logits.log_softmax::<-1>().select(&action);
 
         // ratio = P(action | state, pi_net) / P(action | state, target_pi_net)
         // but compute in log space and then do .exp() to bring it back out of log space
