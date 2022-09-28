@@ -41,14 +41,6 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H>
     {
         normalize_axes(self, epsilon)
     }
-    /// Calls [normalize_axes()] on `self`.
-    pub fn normalize_axes<Axes>(self, epsilon: f32) -> Self
-    where
-        Self: Reduce<Axes>,
-        <Self as HasArrayType>::Array: HasAxes<Axes>,
-    {
-        normalize_axes(self, epsilon)
-    }
 }
     };
 }

@@ -66,22 +66,6 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     {
         var_axes(self)
     }
-    /// Calls [std_axes()] on `self`.
-    pub fn std_axes<Axes>(self, epsilon: f32) -> <Self as Reduce<Axes>>::Reduced
-    where
-        Self: Reduce<Axes>,
-        <Self as HasArrayType>::Array: HasAxes<Axes>,
-    {
-        std_axes(self, epsilon)
-    }
-    /// Calls [var_axes()] on `self`.
-    pub fn var_axes<Axes>(self) -> <Self as Reduce<Axes>>::Reduced
-    where
-        Self: Reduce<Axes>,
-        <Self as HasArrayType>::Array: HasAxes<Axes>,
-    {
-        var_axes(self)
-    }
 }
     };
 }
@@ -169,6 +153,6 @@ mod tests {
     #[test]
     fn test_std_axes_3d_to_1d() {
         let t: Tensor2D<2, 3> = TensorCreator::zeros();
-        let _: Tensor0D<_> = t.trace().std_axes::<Axes2<0, 1>>(1e-3);
+        let _: Tensor0D<_> = std_axes::<_, Axes2<0, 1>>(t, 1e-3);
     }
 }
