@@ -156,7 +156,7 @@ mod tests {
         let a: Tensor1D<3> = TensorCreator::randn(&mut rng);
         let b: Tensor2D<5, 3> = TensorCreator::randn(&mut rng);
         let a_up: Tensor2D<5, 3, OwnedTape> = a.trace().broadcast();
-        assert_eq!(a_up.data(), &[*a.data(); 5]);
+        assert_close(a_up.data(), &[*a.data(); 5]);
         let r = mul(a_up, &b);
         let g = r.exp().mean().backward();
         // a's gradient: (b * (b * a).exp()).sum(0) / 15
