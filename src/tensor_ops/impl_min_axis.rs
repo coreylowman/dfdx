@@ -16,7 +16,7 @@ use crate::prelude::*;
 /// let r: Tensor1D<2> = t.min_axis::<-1>();
 /// assert_eq!(r.data(), &[1.0, -3.0]);
 /// ```
-pub fn min_axis<T: Reduce<Axis<I>>, const I: isize>(mut t: T) -> T::Reduced {
+pub fn min_axes<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
     T::DeviceR::reduce_into::<MinAccum>(result.mut_data(), t.data());
 
@@ -38,7 +38,7 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     where
         Self: Reduce<Axis<I>>,
     {
-        min_axis::<Self, I>(self)
+        min_axes(self)
     }
 }
     };

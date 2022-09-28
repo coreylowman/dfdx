@@ -16,7 +16,7 @@ use crate::prelude::*;
 /// let r: Tensor1D<2> = t.max_axis::<-1>();
 /// assert_eq!(r.data(), &[3.0, -1.0]);
 /// ```
-pub fn max_axis<T: Reduce<Axis<I>>, const I: isize>(mut t: T) -> T::Reduced {
+pub fn max_axes<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
     T::DeviceR::reduce_into::<MaxAccum>(result.mut_data(), t.data());
 
@@ -38,7 +38,7 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     where
         Self: Reduce<Axis<I>>,
     {
-        max_axis::<Self, I>(self)
+        max_axes(self)
     }
 }
     };
