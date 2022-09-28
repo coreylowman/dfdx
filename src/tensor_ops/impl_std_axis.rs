@@ -50,7 +50,7 @@ where
 macro_rules! impl_std_and_var {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [std_axis()] on `self`.
+    /// Calls [std_axes()] on `self` with `Axis<I>`
     pub fn std_axis<const I: isize>(self, epsilon: f32) -> <Self as Reduce<Axis<I>>>::Reduced
     where
         Self: Reduce<Axis<I>>,
@@ -58,12 +58,27 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     {
         std_axes(self, epsilon)
     }
-
-    /// Calls [var_axis()] on `self`.
+    /// Calls [var_axes()] on `self` with `Axis<I>`
     pub fn var_axis<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
     where
         Self: Reduce<Axis<I>>,
         <Self as HasArrayType>::Array: HasAxes<Axis<I>>,
+    {
+        var_axes(self)
+    }
+    /// Calls [std_axes()] on `self`.
+    pub fn std_axes<Axes>(self, epsilon: f32) -> <Self as Reduce<Axes>>::Reduced
+    where
+        Self: Reduce<Axes>,
+        <Self as HasArrayType>::Array: HasAxes<Axes>,
+    {
+        std_axes(self, epsilon)
+    }
+    /// Calls [var_axes()] on `self`.
+    pub fn var_axes<Axes>(self) -> <Self as Reduce<Axes>>::Reduced
+    where
+        Self: Reduce<Axes>,
+        <Self as HasArrayType>::Array: HasAxes<Axes>,
     {
         var_axes(self)
     }

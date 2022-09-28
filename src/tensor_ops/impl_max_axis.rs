@@ -33,10 +33,17 @@ pub fn max_axes<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
 macro_rules! max_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [max_axis()] on `self`.
+    /// Calls [max_axes()] on `self` with `Axis<I>`.
     pub fn max_axis<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
     where
         Self: Reduce<Axis<I>>,
+    {
+        max_axes(self)
+    }
+    /// Calls [max_axes()] on `self`.
+    pub fn max_axes<Axes>(self) -> <Self as Reduce<Axes>>::Reduced
+    where
+        Self: Reduce<Axes>,
     {
         max_axes(self)
     }

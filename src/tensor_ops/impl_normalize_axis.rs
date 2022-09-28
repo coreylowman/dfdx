@@ -33,11 +33,19 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H>
 {
-    /// Calls [normalize_axis()] on `self`.
+    /// Calls [normalize_axes()] on `self` with `Axis<I>`
     pub fn normalize_axis<const I: isize>(self, epsilon: f32) -> Self
     where
         Self: Reduce<Axis<I>>,
         <Self as HasArrayType>::Array: HasAxes<Axis<I>>,
+    {
+        normalize_axes(self, epsilon)
+    }
+    /// Calls [normalize_axes()] on `self`.
+    pub fn normalize_axes<Axes>(self, epsilon: f32) -> Self
+    where
+        Self: Reduce<Axes>,
+        <Self as HasArrayType>::Array: HasAxes<Axes>,
     {
         normalize_axes(self, epsilon)
     }

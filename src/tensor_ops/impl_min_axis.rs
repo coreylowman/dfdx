@@ -33,10 +33,17 @@ pub fn min_axes<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
 macro_rules! min_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [min_axis()] on `self`.
+    /// Calls [min_axes()] on `self` with `Axis<I>`.
     pub fn min_axis<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
     where
         Self: Reduce<Axis<I>>,
+    {
+        min_axes(self)
+    }
+    /// Calls [min_axes()] on `self`.
+    pub fn min_axes<Axes>(self) -> <Self as Reduce<Axes>>::Reduced
+    where
+        Self: Reduce<Axes>,
     {
         min_axes(self)
     }
