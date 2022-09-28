@@ -102,36 +102,6 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize> IndexMut
 }
 
 macro_rules! impl_bcast {
-    ($ArrTy:ty, [], [$I0:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [], Axis<$I0>, usize, {$($CVars),*});
-    };
-    ($ArrTy:ty, [], [$I0:expr, $I1:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [], Axes2<$I0, $I1>, [usize; 2], {$($CVars),*});
-    };
-    ($ArrTy:ty, [], [$I0:expr, $I1:expr, $I2:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [], Axes3<$I0, $I1, $I2>, [usize; 3], {$($CVars),*});
-    };
-    ($ArrTy:ty, [], [$I0:expr, $I1:expr, $I2:expr, $I3:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [], Axes4<$I0, $I1, $I2, $I3>, [usize; 4], {$($CVars),*});
-    };
-    ($ArrTy:ty, [$I0:expr], [$I1:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [$I0], Axis<$I1>, [usize; 2], {$($CVars),*});
-    };
-    ($ArrTy:ty, [$I0:expr], [$I1:expr, $I2:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [$I0], Axes2<$I1, $I2>, [usize; 3], {$($CVars),*});
-    };
-    ($ArrTy:ty, [$I0:expr], [$I1:expr, $I2:expr, $I3:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [$I0], Axes3<$I1, $I2, $I3>, [usize; 4], {$($CVars),*});
-    };
-    ($ArrTy:ty, [$I0:expr, $I1:expr], [$I2:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [$I0, $I1], Axis<$I2>, [usize; 3], {$($CVars),*});
-    };
-    ($ArrTy:ty, [$I0:expr, $I1:expr], [$I2:expr, $I3:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [$I0, $I1], Axes2<$I2, $I3>, [usize; 4], {$($CVars),*});
-    };
-    ($ArrTy:ty, [$I0:expr, $I1:expr, $I2:expr], [$I3:expr], {$($CVars:tt),*}) => {
-        impl_bcast!($ArrTy, [$I0, $I1, $I2], Axis<$I3>, [usize; 4], {$($CVars),*});
-    };
     ($ArrTy:ty, [$($Idx:expr),*], $AxisTy:ty, $IdxTy:ty, {$($CVars:tt),*}) => {
         impl<'a, $(const $CVars: usize, )*> IndexRef for BroadcastRef<'a, $ArrTy, $AxisTy> {
             type Index = $IdxTy;
@@ -153,45 +123,45 @@ macro_rules! impl_bcast {
 }
 
 // 0d -> nd
-impl_bcast!(f32, [], [-1], {});
-impl_bcast!(f32, [], [0], {});
-impl_bcast!(f32, [], [0, 1], {});
-impl_bcast!(f32, [], [0, 1, 2], {});
-impl_bcast!(f32, [], [0, 1, 2, 3], {});
+impl_bcast!(f32, [], Axis<-1>, usize, {});
+impl_bcast!(f32, [], Axis<0>, usize, {});
+impl_bcast!(f32, [], Axes2<0, 1>, [usize; 2], {});
+impl_bcast!(f32, [], Axes3<0, 1, 2>, [usize; 3], {});
+impl_bcast!(f32, [], Axes4<0, 1, 2, 3>, [usize; 4], {});
 
 // 1d -> 2d
-impl_bcast!([f32; M], [0], [-1], { M });
-impl_bcast!([f32; M], [0], [1], { M });
-impl_bcast!([f32; M], [1], [0], { M });
+impl_bcast!([f32; M], [0], Axis<-1>, [usize; 2], { M });
+impl_bcast!([f32; M], [0], Axis<1>, [usize; 2], { M });
+impl_bcast!([f32; M], [1], Axis<0>, [usize; 2], { M });
 
 // 1d -> 3d
-impl_bcast!([f32; M], [2], [0, 1], { M });
-impl_bcast!([f32; M], [1], [0, 2], { M });
-impl_bcast!([f32; M], [0], [1, 2], { M });
+impl_bcast!([f32; M], [2], Axes2<0, 1>, [usize; 3], { M });
+impl_bcast!([f32; M], [1], Axes2<0, 2>, [usize; 3], { M });
+impl_bcast!([f32; M], [0], Axes2<1, 2>, [usize; 3], { M });
 
 // 1d -> 4d
-impl_bcast!([f32; M], [3], [0, 1, 2], { M });
-impl_bcast!([f32; M], [2], [0, 1, 3], { M });
-impl_bcast!([f32; M], [1], [0, 2, 3], { M });
-impl_bcast!([f32; M], [0], [1, 2, 3], { M });
+impl_bcast!([f32; M], [3], Axes3<0, 1, 2>, [usize; 4], { M });
+impl_bcast!([f32; M], [2], Axes3<0, 1, 3>, [usize; 4], { M });
+impl_bcast!([f32; M], [1], Axes3<0, 2, 3>, [usize; 4], { M });
+impl_bcast!([f32; M], [0], Axes3<1, 2, 3>, [usize; 4], { M });
 
 // 2d -> 3d
-impl_bcast!([[f32; N]; M], [0, 1], [-1], {M, N});
-impl_bcast!([[f32; N]; M], [0, 1], [2], {M, N});
-impl_bcast!([[f32; N]; M], [0, 2], [1], {M, N});
-impl_bcast!([[f32; N]; M], [1, 2], [0], {M, N});
+impl_bcast!([[f32; N]; M], [0, 1], Axis<-1>, [usize; 3], {M, N});
+impl_bcast!([[f32; N]; M], [0, 1], Axis<2>, [usize; 3], {M, N});
+impl_bcast!([[f32; N]; M], [0, 2], Axis<1>, [usize; 3], {M, N});
+impl_bcast!([[f32; N]; M], [1, 2], Axis<0>, [usize; 3], {M, N});
 
 // 2d -> 4d
-impl_bcast!([[f32; N]; M], [2, 3], [0, 1], {M, N});
-impl_bcast!([[f32; N]; M], [1, 3], [0, 2], {M, N});
-impl_bcast!([[f32; N]; M], [1, 2], [0, 3], {M, N});
-impl_bcast!([[f32; N]; M], [0, 3], [1, 2], {M, N});
-impl_bcast!([[f32; N]; M], [0, 2], [1, 3], {M, N});
-impl_bcast!([[f32; N]; M], [0, 1], [2, 3], {M, N});
+impl_bcast!([[f32; N]; M], [2, 3], Axes2<0, 1>, [usize; 4], {M, N});
+impl_bcast!([[f32; N]; M], [1, 3], Axes2<0, 2>, [usize; 4], {M, N});
+impl_bcast!([[f32; N]; M], [1, 2], Axes2<0, 3>, [usize; 4], {M, N});
+impl_bcast!([[f32; N]; M], [0, 3], Axes2<1, 2>, [usize; 4], {M, N});
+impl_bcast!([[f32; N]; M], [0, 2], Axes2<1, 3>, [usize; 4], {M, N});
+impl_bcast!([[f32; N]; M], [0, 1], Axes2<2, 3>, [usize; 4], {M, N});
 
 // 3d -> 4d
-impl_bcast!([[[f32; O]; N]; M], [0, 1, 2], [-1], {M, N, O});
-impl_bcast!([[[f32; O]; N]; M], [0, 1, 2], [3], {M, N, O});
-impl_bcast!([[[f32; O]; N]; M], [0, 1, 3], [2], {M, N, O});
-impl_bcast!([[[f32; O]; N]; M], [0, 2, 3], [1], {M, N, O});
-impl_bcast!([[[f32; O]; N]; M], [1, 2, 3], [0], {M, N, O});
+impl_bcast!([[[f32; O]; N]; M], [0, 1, 2], Axis<-1>, [usize; 4], {M, N, O});
+impl_bcast!([[[f32; O]; N]; M], [0, 1, 2], Axis<3>, [usize; 4], {M, N, O});
+impl_bcast!([[[f32; O]; N]; M], [0, 1, 3], Axis<2>, [usize; 4], {M, N, O});
+impl_bcast!([[[f32; O]; N]; M], [0, 2, 3], Axis<1>, [usize; 4], {M, N, O});
+impl_bcast!([[[f32; O]; N]; M], [1, 2, 3], Axis<0>, [usize; 4], {M, N, O});
