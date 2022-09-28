@@ -15,7 +15,7 @@ pub fn mean_axis<T: Reduce<Axis<I>>, const I: isize>(t: T) -> T::Reduced
 where
     T::Array: HasAxis<I>,
 {
-    div_scalar(sum_axis(t), <T::Array as HasAxis<I>>::SIZE as f32)
+    div_scalar(sum_axes(t), <T::Array as HasAxis<I>>::SIZE as f32)
 }
 
 macro_rules! mean_axis_impl {

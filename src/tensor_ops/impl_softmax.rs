@@ -24,7 +24,7 @@ use crate::prelude::*;
 pub fn logsumexp<T: Reduce<Axis<I>>, const I: isize>(mut t: T) -> T::Reduced {
     let max = T::DeviceR::reduce::<MaxAccum>(t.data());
     T::DeviceR::broadcast_into_no_reset::<SubAccum>(t.mut_data(), max.as_ref());
-    let mut result = ln(sum_axis(exp(t)));
+    let mut result = ln(sum_axes(exp(t)));
     <T::Reduced as HasDevice>::Device::add(result.mut_data(), max.as_ref());
     result
 }

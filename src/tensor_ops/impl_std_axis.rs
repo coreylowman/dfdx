@@ -44,7 +44,7 @@ where
     let num_elements: f32 = <T::Array as HasAxis<I>>::SIZE as f32;
     let (t, tape) = t.split_tape();
     let mean = mean_axis(t.duplicate().put_tape(tape)).broadcast();
-    div_scalar(sum_axis(square(sub(mean, &t))), num_elements)
+    div_scalar(sum_axes(square(sub(mean, &t))), num_elements)
 }
 
 macro_rules! impl_std_and_var {

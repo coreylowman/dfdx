@@ -2,18 +2,19 @@ use super::utils::move_tape_and_add_backward_op;
 use crate::devices::{AddAccum, DeviceReduce};
 use crate::prelude::*;
 
-/// Sum the values along dimension `I` of `T`.
+/// Sum values along axes `Axes` of `T`.
 ///
-/// **Pytorch equivalent**: `t.sum(I)`
+/// **Pytorch equivalent**: `t.sum(Axes)`
 ///
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t: Tensor2D<2, 3> = TensorCreator::zeros();
-/// let a: Tensor1D<3> = t.clone().sum_axis::<0>();
-/// let b: Tensor1D<2> = t.sum_axis::<-1>();
+/// let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
+/// let a: Tensor2D<3, 4> = t.clone().sum_axis::<0>();
+/// let b: Tensor2D<2, 3> = t.sum_axis::<-1>();
+/// let c: Tensor1D<4> = t.sum_axes::<Axes2<0, 1>>();
 /// ```
-pub fn sum_axis<T: Reduce<Axis<I>>, const I: isize>(t: T) -> T::Reduced {
+pub fn sum_axes<T: Reduce<Axes>, Axes>(t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
     T::DeviceR::reduce_into_no_reset::<AddAccum>(result.mut_data(), t.data());
     move_tape_and_add_backward_op(t, result, move |t, result, grads| {
@@ -25,12 +26,19 @@ pub fn sum_axis<T: Reduce<Axis<I>>, const I: isize>(t: T) -> T::Reduced {
 macro_rules! sum_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [sum_axis()] on `self`.
+    /// Calls [sum_axes()] on `self` with `Axis<I>`.
     pub fn sum_axis<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
     where
         Self: Reduce<Axis<I>>
     {
-        sum_axis::<Self, I>(self)
+        sum_axes(self)
+    }
+    /// Calls [sum_axes()] on `self`.
+    pub fn sum_axes<Axes>(self) -> <Self as Reduce<Axes>>::Reduced
+    where
+        Self: Reduce<Axes>
+    {
+        sum_axes(self)
     }
 }
     };
