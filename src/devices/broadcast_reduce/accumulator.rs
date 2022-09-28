@@ -57,7 +57,7 @@ pub(crate) struct EqAccum;
 impl Accumulator<f32> for EqAccum {
     const INIT: f32 = 0.0;
     fn accum(accum: &mut f32, item: &f32) {
-        *accum = if accum == item { 1.0 } else { 0.0 }
+        *accum = if accum == item { 1.0 } else { 0.0 };
     }
 }
 

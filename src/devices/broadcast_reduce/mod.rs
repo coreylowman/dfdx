@@ -164,7 +164,7 @@ mod tests {
     }
 
     #[test]
-    fn test_1d_reductions() {
+    fn test_1d_1axis_reductions() {
         let inp = [2., -1., 0., 1., -2.];
         let mut out = ZeroElements::ZEROS;
         <Cpu as DeviceReduce<_, Axis<0>>>::reduce_into::<MaxAccum>(&mut out, &inp);
@@ -172,7 +172,7 @@ mod tests {
     }
 
     #[test]
-    fn test_2d_reductions() {
+    fn test_2d_1axis_reductions() {
         type T = [[f32; 3]; 2];
         let inp: T = [[-1., 2., -3.], [1., -2., 3.]];
 
@@ -186,7 +186,7 @@ mod tests {
     }
 
     #[test]
-    fn test_3d_reductions() {
+    fn test_3d_1axis_reductions() {
         type T = [[[f32; 3]; 2]; 2];
         let inp: T = [
             [[-1., 2., -3.], [1., -2., 3.]],
@@ -207,7 +207,7 @@ mod tests {
     }
 
     #[test]
-    fn test_4d_reductions() {
+    fn test_4d_1axis_reductions() {
         type T = [[[[f32; 3]; 2]; 3]; 2];
         let inp: T = [
             [
@@ -259,6 +259,34 @@ mod tests {
                 [[3., -1.], [5., -1.], [2., 7.]]
             ]
         );
+    }
+
+    #[test]
+    fn test_reduce_3d_to_1d() {
+        let inp = [
+            [[-1., 2., -3.], [1., -2., 3.]],
+            [[4., -5., -3.], [-1., 6., -3.]],
+            [[7., -3., -2.], [0., 3., 5.]],
+            [[-7., 3., 2.], [5., -3., -2.]],
+        ];
+
+        {
+            let mut out: [f32; 3] = ZeroElements::ZEROS;
+            <Cpu as DeviceReduce<_, Axes2<0, 1>>>::reduce_into::<MaxAccum>(&mut out, &inp);
+            assert_eq!(out, [7., 6., 5.]);
+        }
+
+        {
+            let mut out: [f32; 2] = ZeroElements::ZEROS;
+            <Cpu as DeviceReduce<_, Axes2<0, 2>>>::reduce_into::<MinAccum>(&mut out, &inp);
+            assert_eq!(out, [-7., -3.]);
+        }
+
+        {
+            let mut out: [f32; 4] = ZeroElements::ZEROS;
+            <Cpu as DeviceReduce<_, Axes2<1, 2>>>::reduce_into::<AddAccum>(&mut out, &inp);
+            assert_eq!(out, [0., -2., 10., -2.]);
+        }
     }
 
     #[test]
