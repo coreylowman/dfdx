@@ -1,7 +1,11 @@
 use super::indexing::{ElementMut, ElementRef};
 
+/// Accumulates sequence of values into a single value. Used
+/// for reductions & broadcasts.
 pub trait Accumulator<T> {
+    /// The initial value to set the accumulator to.
     const INIT: T;
+
     fn accum(accum: &mut T, item: &T);
 }
 
