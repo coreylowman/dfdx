@@ -13,16 +13,16 @@ use crate::prelude::*;
 /// assert!(r.clone().mean_axis::<-1>().data().abs() < 1e-6);
 /// assert!((r.clone().std_axis::<-1>(0.0).data() - 1.0).abs() < 1e-6);
 /// ```
-pub fn normalize_axis<T, const I: isize>(t: T, epsilon: T::Dtype) -> T
+pub fn normalize_axes<T, Axes>(t: T, epsilon: T::Dtype) -> T
 where
-    T: Reduce<Axis<I>>,
-    T::Array: HasAxis<I>,
+    T: Reduce<Axes>,
+    T::Array: HasAxes<Axes>,
 {
     let (t, tape) = t.split_tape();
-    let (std, tape) = std_axis(t.duplicate().put_tape(tape), epsilon)
+    let (std, tape) = std_axes(t.duplicate().put_tape(tape), epsilon)
         .broadcast()
         .split_tape();
-    let (mean, tape) = mean_axis(t.duplicate().put_tape(tape))
+    let (mean, tape) = mean_axes(t.duplicate().put_tape(tape))
         .broadcast()
         .split_tape();
     let centered = sub(t.put_tape(tape), &mean);
@@ -37,9 +37,9 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H>
     pub fn normalize_axis<const I: isize>(self, epsilon: f32) -> Self
     where
         Self: Reduce<Axis<I>>,
-        <Self as HasArrayType>::Array: HasAxis<I>,
+        <Self as HasArrayType>::Array: HasAxes<Axis<I>>,
     {
-        normalize_axis::<Self, I>(self, epsilon)
+        normalize_axes(self, epsilon)
     }
 }
     };

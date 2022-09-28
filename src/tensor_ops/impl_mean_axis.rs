@@ -11,23 +11,31 @@ use crate::prelude::*;
 /// let r: Tensor1D<2> = t.mean_axis::<-1>();
 /// assert_eq!(r.data(), &[2.0, 5.0]);
 /// ```
-pub fn mean_axis<T: Reduce<Axis<I>>, const I: isize>(t: T) -> T::Reduced
+pub fn mean_axes<T: Reduce<Axes>, Axes>(t: T) -> T::Reduced
 where
-    T::Array: HasAxis<I>,
+    T::Array: HasAxes<Axes>,
 {
-    div_scalar(sum_axes(t), <T::Array as HasAxis<I>>::SIZE as f32)
+    div_scalar(sum_axes(t), <T::Array as HasAxes<Axes>>::SIZE as f32)
 }
 
 macro_rules! mean_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [mean_axis()] on `self`.
+    /// Calls [mean_axes()] on `self` with `Axis<I>`
     pub fn mean_axis<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
     where
         Self: Reduce<Axis<I>>,
-        <Self as HasArrayType>::Array: HasAxis<I>,
+        <Self as HasArrayType>::Array: HasAxes<Axis<I>>,
     {
-        mean_axis::<Self, I>(self)
+        mean_axes(self)
+    }
+    /// Calls [mean_axes()] on `self` with `Axis<I>`
+    pub fn mean_axes<Axes>(self) -> <Self as Reduce<Axes>>::Reduced
+    where
+        Self: Reduce<Axes>,
+        <Self as HasArrayType>::Array: HasAxes<Axes>,
+    {
+        mean_axes(self)
     }
 }
     };

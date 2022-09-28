@@ -14,12 +14,12 @@ use crate::prelude::*;
 /// let r: Tensor1D<2> = t.std_axis::<-1>(0.0);
 /// assert_eq!(r.data(), &[0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
 /// ```
-pub fn std_axis<T, const I: isize>(t: T, epsilon: T::Dtype) -> T::Reduced
+pub fn std_axes<T, Axes>(t: T, epsilon: T::Dtype) -> T::Reduced
 where
-    T: Reduce<Axis<I>>,
-    T::Array: HasAxis<I>,
+    T: Reduce<Axes>,
+    T::Array: HasAxes<Axes>,
 {
-    sqrt(add_scalar(var_axis(t), epsilon))
+    sqrt(add_scalar(var_axes(t), epsilon))
 }
 
 /// Reduces dimension `I` of the tensor by computing variance of all values in the dimension.
@@ -36,14 +36,14 @@ where
 /// let r: Tensor1D<2> = t.var_axis::<-1>();
 /// assert_eq!(r.data(), &[0.6666667, 6.0]);
 /// ```
-pub fn var_axis<T, const I: isize>(t: T) -> T::Reduced
+pub fn var_axes<T, Axes>(t: T) -> T::Reduced
 where
-    T: Reduce<Axis<I>>,
-    T::Array: HasAxis<I>,
+    T: Reduce<Axes>,
+    T::Array: HasAxes<Axes>,
 {
-    let num_elements: f32 = <T::Array as HasAxis<I>>::SIZE as f32;
+    let num_elements: f32 = <T::Array as HasAxes<Axes>>::SIZE as f32;
     let (t, tape) = t.split_tape();
-    let mean = mean_axis(t.duplicate().put_tape(tape)).broadcast();
+    let mean = mean_axes(t.duplicate().put_tape(tape)).broadcast();
     div_scalar(sum_axes(square(sub(mean, &t))), num_elements)
 }
 
@@ -54,18 +54,18 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     pub fn std_axis<const I: isize>(self, epsilon: f32) -> <Self as Reduce<Axis<I>>>::Reduced
     where
         Self: Reduce<Axis<I>>,
-        <Self as HasArrayType>::Array: HasAxis<I>,
+        <Self as HasArrayType>::Array: HasAxes<Axis<I>>,
     {
-        std_axis::<Self, I>(self, epsilon)
+        std_axes(self, epsilon)
     }
 
     /// Calls [var_axis()] on `self`.
     pub fn var_axis<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
     where
         Self: Reduce<Axis<I>>,
-        <Self as HasArrayType>::Array: HasAxis<I>,
+        <Self as HasArrayType>::Array: HasAxes<Axis<I>>,
     {
-        var_axis::<Self, I>(self)
+        var_axes(self)
     }
 }
     };
