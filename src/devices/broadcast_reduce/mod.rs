@@ -3,7 +3,7 @@
 //! This is done via three pieces:
 //! 1. [Accumulator], which accumulate a sequence of values into a single value.
 //! 2. [BroadcastRef] [BroadcastMut], which broadcast a value along specific axes
-//! 3. [indexing::ElementRef] and [indexing::ElementMut], which enable indexing into
+//! 3. [indexing::IndexRef] and [indexing::IndexMut], which enable indexing into
 //!     values
 //!
 //! How these work together:
@@ -11,7 +11,7 @@
 //! and [BroadcastMut]. This means you can broadcast a value and then index it in the
 //! same way as a normal array
 //! 2. [accum1d], and the 2-4d versions apply an [Accumulator] to two types that impl
-//! [indexing::ElementRef] and [indexing::ElementMut]
+//! [indexing::IndexRef] and [indexing::IndexMut]
 //! 3. The macros in this file tie the previous two pieces together.
 
 mod accumulator;

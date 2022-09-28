@@ -1,4 +1,4 @@
-use super::indexing::{ElementMut, ElementRef};
+use super::indexing::{IndexMut, IndexRef};
 
 /// Accumulates sequence of values into a single value. Used
 /// for reductions & broadcasts.
@@ -67,8 +67,8 @@ impl Accumulator<f32> for EqAccum {
 
 pub(super) fn accum1d<A, L, R, const M: usize>(l: &mut L, r: &R)
 where
-    L: ElementMut<Index = usize>,
-    R: ElementRef<Index = usize, Element = L::Element>,
+    L: IndexMut<Index = usize>,
+    R: IndexRef<Index = usize, Element = L::Element>,
     A: Accumulator<L::Element>,
 {
     for m in 0..M {
@@ -78,8 +78,8 @@ where
 
 pub(super) fn accum2d<A, L, R, const M: usize, const N: usize>(l: &mut L, r: &R)
 where
-    L: ElementMut<Index = [usize; 2]>,
-    R: ElementRef<Index = [usize; 2], Element = L::Element>,
+    L: IndexMut<Index = [usize; 2]>,
+    R: IndexRef<Index = [usize; 2], Element = L::Element>,
     A: Accumulator<L::Element>,
 {
     for m in 0..M {
@@ -91,8 +91,8 @@ where
 
 pub(super) fn accum3d<A, L, R, const M: usize, const N: usize, const O: usize>(l: &mut L, r: &R)
 where
-    L: ElementMut<Index = [usize; 3]>,
-    R: ElementRef<Index = [usize; 3], Element = L::Element>,
+    L: IndexMut<Index = [usize; 3]>,
+    R: IndexRef<Index = [usize; 3], Element = L::Element>,
     A: Accumulator<L::Element>,
 {
     for m in 0..M {
@@ -108,8 +108,8 @@ pub(super) fn accum4d<A, L, R, const M: usize, const N: usize, const O: usize, c
     l: &mut L,
     r: &R,
 ) where
-    L: ElementMut<Index = [usize; 4]>,
-    R: ElementRef<Index = [usize; 4], Element = L::Element>,
+    L: IndexMut<Index = [usize; 4]>,
+    R: IndexRef<Index = [usize; 4], Element = L::Element>,
     A: Accumulator<L::Element>,
 {
     for m in 0..M {

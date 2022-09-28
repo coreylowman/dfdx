@@ -1,6 +1,7 @@
 use crate::arrays::{Axes2, Axes3, Axes4, Axis};
 use std::marker::PhantomData;
 
+/// Broadcasts `&'a T` along `Axes` to enable indexing as a higher dimensional array.
 pub(super) struct BroadcastRef<'a, T, Axes>(pub &'a T, PhantomData<*const Axes>);
 
 impl<'a, T, Axes> BroadcastRef<'a, T, Axes> {
@@ -9,6 +10,7 @@ impl<'a, T, Axes> BroadcastRef<'a, T, Axes> {
     }
 }
 
+/// Broadcasts `&'a mut T` along `Axes` to enable indexing as a higher dimensional array.
 pub(super) struct BroadcastMut<'a, T, Axes>(pub &'a mut T, PhantomData<*const Axes>);
 
 impl<'a, T, Axes> BroadcastMut<'a, T, Axes> {
@@ -17,19 +19,21 @@ impl<'a, T, Axes> BroadcastMut<'a, T, Axes> {
     }
 }
 
-pub(super) trait ElementRef {
+/// Index to get a `&Self::Element`.
+pub(super) trait IndexRef {
     type Index;
     type Element;
     fn index_ref(&self, i: Self::Index) -> &Self::Element;
 }
 
-pub(super) trait ElementMut {
+/// Index to get a `&mut Self::Element`.
+pub(super) trait IndexMut {
     type Index;
     type Element;
     fn index_mut(&mut self, i: Self::Index) -> &mut Self::Element;
 }
 
-impl<const M: usize> ElementRef for [f32; M] {
+impl<const M: usize> IndexRef for [f32; M] {
     type Index = usize;
     type Element = f32;
     fn index_ref(&self, i: Self::Index) -> &Self::Element {
@@ -37,7 +41,7 @@ impl<const M: usize> ElementRef for [f32; M] {
     }
 }
 
-impl<const M: usize> ElementMut for [f32; M] {
+impl<const M: usize> IndexMut for [f32; M] {
     type Index = usize;
     type Element = f32;
     fn index_mut(&mut self, i: Self::Index) -> &mut Self::Element {
@@ -45,7 +49,7 @@ impl<const M: usize> ElementMut for [f32; M] {
     }
 }
 
-impl<const M: usize, const N: usize> ElementRef for [[f32; N]; M] {
+impl<const M: usize, const N: usize> IndexRef for [[f32; N]; M] {
     type Index = [usize; 2];
     type Element = f32;
     fn index_ref(&self, i: Self::Index) -> &Self::Element {
@@ -53,7 +57,7 @@ impl<const M: usize, const N: usize> ElementRef for [[f32; N]; M] {
     }
 }
 
-impl<const M: usize, const N: usize> ElementMut for [[f32; N]; M] {
+impl<const M: usize, const N: usize> IndexMut for [[f32; N]; M] {
     type Index = [usize; 2];
     type Element = f32;
     fn index_mut(&mut self, i: Self::Index) -> &mut Self::Element {
@@ -61,7 +65,7 @@ impl<const M: usize, const N: usize> ElementMut for [[f32; N]; M] {
     }
 }
 
-impl<const M: usize, const N: usize, const O: usize> ElementRef for [[[f32; O]; N]; M] {
+impl<const M: usize, const N: usize, const O: usize> IndexRef for [[[f32; O]; N]; M] {
     type Index = [usize; 3];
     type Element = f32;
     fn index_ref(&self, i: Self::Index) -> &Self::Element {
@@ -69,7 +73,7 @@ impl<const M: usize, const N: usize, const O: usize> ElementRef for [[[f32; O]; 
     }
 }
 
-impl<const M: usize, const N: usize, const O: usize> ElementMut for [[[f32; O]; N]; M] {
+impl<const M: usize, const N: usize, const O: usize> IndexMut for [[[f32; O]; N]; M] {
     type Index = [usize; 3];
     type Element = f32;
     fn index_mut(&mut self, i: Self::Index) -> &mut Self::Element {
@@ -77,7 +81,7 @@ impl<const M: usize, const N: usize, const O: usize> ElementMut for [[[f32; O]; 
     }
 }
 
-impl<const M: usize, const N: usize, const O: usize, const P: usize> ElementRef
+impl<const M: usize, const N: usize, const O: usize, const P: usize> IndexRef
     for [[[[f32; P]; O]; N]; M]
 {
     type Index = [usize; 4];
@@ -87,7 +91,7 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize> ElementRef
     }
 }
 
-impl<const M: usize, const N: usize, const O: usize, const P: usize> ElementMut
+impl<const M: usize, const N: usize, const O: usize, const P: usize> IndexMut
     for [[[[f32; P]; O]; N]; M]
 {
     type Index = [usize; 4];
@@ -129,7 +133,7 @@ macro_rules! impl_bcast {
         impl_bcast!($ArrTy, [$I0, $I1, $I2], Axis<$I3>, [usize; 4], {$($CVars),*});
     };
     ($ArrTy:ty, [$($Idx:expr),*], $AxisTy:ty, $IdxTy:ty, {$($CVars:tt),*}) => {
-        impl<'a, $(const $CVars: usize, )*> ElementRef for BroadcastRef<'a, $ArrTy, $AxisTy> {
+        impl<'a, $(const $CVars: usize, )*> IndexRef for BroadcastRef<'a, $ArrTy, $AxisTy> {
             type Index = $IdxTy;
             type Element = f32;
             #[allow(unused_variables)]
@@ -137,7 +141,7 @@ macro_rules! impl_bcast {
                 &self.0 $([i[$Idx]])*
             }
         }
-        impl<'a, $(const $CVars: usize, )*> ElementMut for BroadcastMut<'a, $ArrTy, $AxisTy> {
+        impl<'a, $(const $CVars: usize, )*> IndexMut for BroadcastMut<'a, $ArrTy, $AxisTy> {
             type Index = $IdxTy;
             type Element = f32;
             #[allow(unused_variables)]
