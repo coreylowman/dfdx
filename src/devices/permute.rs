@@ -14,25 +14,14 @@
 //! [permuted_loop2] takes in a function that receives the unpermuted set of
 //! indices, and the permuted set of indices. This type of function enables
 //! only specifying the looping & indexing logic once. Both
-//! [DevicePermute2D::permute] and [DevicePermute2D::inverse_permute] share
+//! [DevicePermute::permute] and [DevicePermute::inverse_permute] share
 //! this looping logic, but only differ in what they do with the indices.
 
 use super::Cpu;
+use crate::arrays::{Axes2, Axes3, Axes4};
 
 /// Permutes axes of `A` resulting in `B`.
-pub trait DevicePermute2D<A, B, const I: isize, const J: isize> {
-    fn permute(a: &A, b: &mut B);
-    fn inverse_permute(a: &mut A, b: &B);
-}
-
-/// Permutes axes of `A` resulting in `B`.
-pub trait DevicePermute3D<A, B, const I: isize, const J: isize, const K: isize> {
-    fn permute(a: &A, b: &mut B);
-    fn inverse_permute(a: &mut A, b: &B);
-}
-
-/// Permutes axes of `A` resulting in `B`.
-pub trait DevicePermute4D<A, B, const I: isize, const J: isize, const K: isize, const L: isize> {
+pub trait DevicePermute<A, B, Axes> {
     fn permute(a: &A, b: &mut B);
     fn inverse_permute(a: &mut A, b: &B);
 }
@@ -56,7 +45,7 @@ macro_rules! array {
 macro_rules! impl_permute {
     ($Ax0:tt, $Ax1:tt) => {
 impl<const M: usize, const N: usize>
-    DevicePermute2D<array!(0, 1), array!($Ax0, $Ax1), $Ax0, $Ax1> for Cpu
+    DevicePermute<array!(0, 1), array!($Ax0, $Ax1), Axes2<$Ax0, $Ax1>> for Cpu
 {
     fn permute(a: &array!(0, 1), b: &mut array!($Ax0, $Ax1)) {
         permuted_loop2::<M, N, $Ax0, $Ax1, _>(&mut |[m, n], [i, j]| {
@@ -72,7 +61,7 @@ impl<const M: usize, const N: usize>
     };
     ($Ax0:tt, $Ax1:tt, $Ax2:tt) => {
 impl<const M: usize, const N: usize, const O: usize>
-    DevicePermute3D<array!(0, 1, 2), array!($Ax0, $Ax1, $Ax2), $Ax0, $Ax1, $Ax2> for Cpu
+    DevicePermute<array!(0, 1, 2), array!($Ax0, $Ax1, $Ax2), Axes3<$Ax0, $Ax1, $Ax2>> for Cpu
 {
     fn permute(a: &array!(0, 1, 2), b: &mut array!($Ax0, $Ax1, $Ax2)) {
         permuted_loop3::<M, N, O, $Ax0, $Ax1, $Ax2, _>(&mut |[m, n, o], [i, j, k]| {
@@ -88,7 +77,7 @@ impl<const M: usize, const N: usize, const O: usize>
     };
     ($Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt) => {
 impl<const M: usize, const N: usize, const O: usize, const P: usize>
-    DevicePermute4D<array!(0,1,2,3), array!($Ax0,$Ax1,$Ax2,$Ax3), $Ax0,$Ax1,$Ax2,$Ax3> for Cpu
+    DevicePermute<array!(0,1,2,3), array!($Ax0,$Ax1,$Ax2,$Ax3), Axes4<$Ax0,$Ax1,$Ax2,$Ax3>> for Cpu
 {
     fn permute(a: &array!(0, 1, 2, 3), b: &mut array!($Ax0, $Ax1, $Ax2, $Ax3)) {
         permuted_loop4::<M, N, O, P, $Ax0, $Ax1, $Ax2, $Ax3, _>(
@@ -235,11 +224,11 @@ mod tests {
     fn test_2d_permute() {
         let a = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
         let mut b = [[0.0; 2]; 3];
-        <Cpu as DevicePermute2D<_, _, 1, 0>>::permute(&a, &mut b);
+        <Cpu as DevicePermute<_, _, Axes2<1, 0>>>::permute(&a, &mut b);
         assert_eq!(b, [[1.0, 4.0], [2.0, 5.0], [3.0, 6.0]]);
 
         let mut c = [[0.0; 3]; 2];
-        <Cpu as DevicePermute2D<_, _, 1, 0>>::inverse_permute(&mut c, &b);
+        <Cpu as DevicePermute<_, _, Axes2<1, 0>>>::inverse_permute(&mut c, &b);
         assert_eq!(a, c);
     }
 
@@ -247,11 +236,11 @@ mod tests {
     fn test_3d_permute() {
         let a = [[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]];
         let mut b = [[[0.0; 1]; 2]; 3];
-        <Cpu as DevicePermute3D<_, _, 2, 1, 0>>::permute(&a, &mut b);
+        <Cpu as DevicePermute<_, _, Axes3<2, 1, 0>>>::permute(&a, &mut b);
         assert_eq!(b, [[[1.0], [4.0]], [[2.0], [5.0]], [[3.0], [6.0]]]);
 
         let mut c = [[[0.0; 3]; 2]; 1];
-        <Cpu as DevicePermute3D<_, _, 2, 1, 0>>::inverse_permute(&mut c, &b);
+        <Cpu as DevicePermute<_, _, Axes3<2, 1, 0>>>::inverse_permute(&mut c, &b);
         assert_eq!(a, c);
     }
 
@@ -262,11 +251,11 @@ mod tests {
         Cpu::fill(&mut a, &mut |v| *v = rng.gen());
 
         let mut b = [[[[0.0; 3]; 5]; 9]; 7];
-        <Cpu as DevicePermute4D<_, _, 2, 3, 1, 0>>::permute(&a, &mut b);
+        <Cpu as DevicePermute<_, _, Axes4<2, 3, 1, 0>>>::permute(&a, &mut b);
         assert_ne!(b, [[[[0.0; 3]; 5]; 9]; 7]);
 
         let mut c = [[[[0.0; 9]; 7]; 5]; 3];
-        <Cpu as DevicePermute4D<_, _, 2, 3, 1, 0>>::inverse_permute(&mut c, &b);
+        <Cpu as DevicePermute<_, _, Axes4<2, 3, 1, 0>>>::inverse_permute(&mut c, &b);
 
         assert_eq!(a, c);
     }
