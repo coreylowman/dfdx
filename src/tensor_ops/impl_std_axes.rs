@@ -5,7 +5,7 @@ use crate::prelude::*;
 ///
 /// **Pytorch equivalent**: `t.std(I, unbiased=False)`
 ///
-/// **Related functions**: [var_axis()], [sqrt()].
+/// **Related functions**: [var_axes()], [sqrt()].
 ///
 /// Examples:
 /// ```rust
@@ -27,7 +27,7 @@ where
 ///
 /// **Pytorch equivalent**: `t.var(I, unbiased=False)`
 ///
-/// **Related functions**: [std_axis()], [mean_axis()].
+/// **Related functions**: [std_axes()], [mean_axes()].
 ///
 /// Examples:
 /// ```rust
@@ -164,5 +164,11 @@ mod tests {
                 [-0.14104122, -0.07466887, 0.024889633, 0.19082046]
             ]
         );
+    }
+
+    #[test]
+    fn test_std_axes_3d_to_1d() {
+        let t: Tensor2D<2, 3> = TensorCreator::zeros();
+        let _: Tensor0D<_> = t.trace().std_axes::<Axes2<0, 1>>(1e-3);
     }
 }

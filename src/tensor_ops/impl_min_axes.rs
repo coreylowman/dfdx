@@ -2,9 +2,9 @@ use super::utils::move_tape_and_add_backward_op;
 use crate::devices::{DeviceReduce, EqAccum, MinAccum, MulAccum};
 use crate::prelude::*;
 
-/// Reduces dimension `I` of the tensor by gathering the minimum value from that dimension.
+/// Reduces `Axes` of the tensor by gathering the minimum value from the axes.
 ///
-/// **Pytorch equivalent**: `t.amin(I)`
+/// **Pytorch equivalent**: `t.amin(Axes)`
 ///
 /// **NOTE** This evenly distributes gradients between all equal minimum values, instead
 /// of only exactly 1 value.
@@ -15,6 +15,14 @@ use crate::prelude::*;
 /// let t = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let r: Tensor1D<2> = t.min_axis::<-1>();
 /// assert_eq!(r.data(), &[1.0, -3.0]);
+/// ```
+///
+/// Reducing 2 axes:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let t = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let r: Tensor0D = t.min_axes::<Axes2<0, 1>>();
+/// assert_eq!(r.data(), &-3.0);
 /// ```
 pub fn min_axes<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
@@ -60,6 +68,8 @@ min_axis_impl!(Tensor4D, [M, N, O, P]);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::assert_close;
+    use rand::thread_rng;
 
     #[test]
     fn test_valids_min_axis() {
@@ -97,5 +107,17 @@ mod tests {
         assert_eq!(r.data(), &[1.0, -2.0]);
         let g = r.sum().backward();
         assert_eq!(g.ref_gradient(&t), &[[1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]);
+    }
+
+    #[test]
+    fn test_min_axes_3d_to_1d() {
+        let mut rng = thread_rng();
+        let t: Tensor3D<2, 3, 4> = TensorCreator::randn(&mut rng);
+        let r: Tensor1D<4, _> = t.trace().min_axes::<Axes2<0, 1>>();
+        let r2: Tensor1D<4, _> = t.trace().min_axis::<0>().min_axis::<0>();
+        assert_close(r.data(), r2.data());
+        let g = r.mean().backward();
+        let g2 = r2.mean().backward();
+        assert_close(g.ref_gradient(&t), g2.ref_gradient(&t));
     }
 }

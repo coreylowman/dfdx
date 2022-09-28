@@ -6,13 +6,18 @@ use crate::prelude::*;
 ///
 /// **Pytorch equivalent**: `t.sum(Axes)`
 ///
-/// Examples:
+/// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
-/// let a: Tensor2D<3, 4> = t.clone().sum_axis::<0>();
-/// let b: Tensor2D<2, 3> = t.sum_axis::<-1>();
-/// let c: Tensor1D<4> = t.sum_axes::<Axes2<0, 1>>();
+/// let _: Tensor2D<3, 4> = t.clone().sum_axis::<0>();
+/// ```
+///
+/// Reducing multiple axes:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
+/// let _: Tensor1D<4> = t.sum_axes::<Axes2<0, 1>>();
 /// ```
 pub fn sum_axes<T: Reduce<Axes>, Axes>(t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
@@ -53,6 +58,8 @@ sum_axis_impl!(Tensor4D, [M, N, O, P]);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::assert_close;
+    use rand::thread_rng;
 
     #[test]
     fn test_valids_sum_axis() {
@@ -93,5 +100,17 @@ mod tests {
             gradients.ref_gradient(&t),
             &[[201.7144; 3], [0.00915782; 3]]
         );
+    }
+
+    #[test]
+    fn test_sum_axes_3d_to_1d() {
+        let mut rng = thread_rng();
+        let t: Tensor3D<2, 3, 4> = TensorCreator::randn(&mut rng);
+        let r: Tensor1D<3, _> = t.trace().sum_axes::<Axes2<0, 2>>();
+        let r2: Tensor1D<3, _> = t.trace().sum_axis::<0>().sum_axis::<-1>();
+        assert_close(r.data(), r2.data());
+        let g = r.mean().backward();
+        let g2 = r2.mean().backward();
+        assert_close(g.ref_gradient(&t), g2.ref_gradient(&t));
     }
 }

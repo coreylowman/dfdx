@@ -1,15 +1,23 @@
 use crate::prelude::*;
 
-/// Average the values along dimension `I` of `T`.
+/// Average the values along `Axes` of `T`.
 ///
-/// **Pytorch equivalent**: `t.mean(I)`
+/// **Pytorch equivalent**: `t.mean(Axes)`
 ///
-/// Examples:
+/// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
 /// let r: Tensor1D<2> = t.mean_axis::<-1>();
 /// assert_eq!(r.data(), &[2.0, 5.0]);
+/// ```
+///
+/// Reducing 2 axes:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+/// let r: Tensor0D = t.mean_axes::<Axes2<0, 1>>();
+/// assert_eq!(r.data(), &3.5);
 /// ```
 pub fn mean_axes<T: Reduce<Axes>, Axes>(t: T) -> T::Reduced
 where
@@ -50,6 +58,8 @@ mean_axis_impl!(Tensor4D, [M, N, O, P]);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::assert_close;
+    use rand::thread_rng;
 
     #[test]
     fn test_valids_mean_axis() {
@@ -90,5 +100,45 @@ mod tests {
             gradients.ref_gradient(&t),
             &[[1.2315093; 3], [0.043932855; 3]]
         );
+    }
+
+    #[test]
+    fn test_mean_axes_3d_to_1d_02() {
+        let mut rng = thread_rng();
+        let t: Tensor3D<2, 3, 4> = TensorCreator::randn(&mut rng);
+        let r: Tensor1D<3, _> = t.trace().mean_axes::<Axes2<0, 2>>();
+        let r2 = t.trace().sum_axis::<0>().sum_axis::<-1>() / 8.0;
+        assert_close(r.data(), r2.data());
+        let g = r.mean().backward();
+        let g2 = r2.mean().backward();
+        assert_close(g.ref_gradient(&t), &[[[1. / 24.; 4]; 3]; 2]);
+        assert_close(g.ref_gradient(&t), g2.ref_gradient(&t));
+    }
+
+    #[test]
+    fn test_mean_axes_3d_to_1d_01() {
+        let mut rng = thread_rng();
+        let t: Tensor3D<2, 3, 4> = TensorCreator::randn(&mut rng);
+        let r: Tensor1D<4, _> = t.trace().mean_axes::<Axes2<0, 1>>();
+        let r2 = t.sum_axis::<0>().sum_axis::<0>() / 6.0;
+        assert_close(r.data(), r2.data());
+    }
+
+    #[test]
+    fn test_mean_axes_3d_to_1d_12() {
+        let mut rng = thread_rng();
+        let t: Tensor3D<2, 3, 4> = TensorCreator::randn(&mut rng);
+        let r: Tensor1D<2, _> = t.trace().mean_axes::<Axes2<1, 2>>();
+        let r2 = t.sum_axis::<1>().sum_axis::<-1>() / 12.0;
+        assert_close(r.data(), r2.data());
+    }
+
+    #[test]
+    fn test_mean_axes_4d_to_1d() {
+        let mut rng = thread_rng();
+        let t: Tensor4D<2, 3, 4, 5> = TensorCreator::randn(&mut rng);
+        let r: Tensor1D<3, _> = t.trace().mean_axes::<Axes3<0, 2, 3>>();
+        let r2 = t.sum_axis::<0>().sum_axis::<1>().sum_axis::<-1>() / 40.0;
+        assert_close(r.data(), r2.data());
     }
 }

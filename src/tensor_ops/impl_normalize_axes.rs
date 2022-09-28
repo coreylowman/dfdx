@@ -1,11 +1,11 @@
 use crate::prelude::*;
 
-/// Normalizes `t` to have mean `0.0` and stddev `1.0` along the `I` dimension of `T`. `epsilon` is passed to [std_axis()].
-/// Computes `(t - t.mean(I)) / t.std(I, epsilon)`.
+/// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Axes` of `T`. `epsilon` is passed to [std_axes()].
+/// Computes `(t - t.mean(Axes)) / t.std(Axes, epsilon)`.
 ///
-/// **Related functions:** [mean_axis()], [std_axis()], [var_axis()]
+/// **Related functions:** [mean_axes()], [std_axes()], [var_axes()]
 ///
-/// # Examples
+/// Normalizing a single axis:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let a = tensor([-2.0, -1.0, 0.0, 5.0, 2.0]);
@@ -62,6 +62,7 @@ tensor_impl!(Tensor4D, [M, N, O, P]);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::assert_close;
 
     #[test]
     fn test_0d_normalize_axis_last() {
@@ -136,5 +137,53 @@ mod tests {
         assert_eq!(r.data(), &[[[0.0; 3]; 2]; 4]);
         let gradients = r.exp().mean().backward();
         assert_eq!(gradients.ref_gradient(&a), &[[[0.0; 3]; 2]; 4]);
+    }
+
+    #[test]
+    fn test_normalize_axes_3d_to_1d() {
+        let t = tensor([
+            [
+                [0.00590846, 2.0021265, -1.8343164, 1.8991678],
+                [1.5907278, 2.7033613, -2.3023937, 0.04476346],
+                [-1.994531, -0.42200476, 1.946085, -0.07927357],
+            ],
+            [
+                [0.876994, -0.15917207, 1.5000577, 2.4590983],
+                [0.13156284, -1.6969906, 0.98267025, -0.68137807],
+                [-2.1179097, 0.29831272, 0.63086104, 0.927469],
+            ],
+        ]);
+        let r = t.trace().normalize_axes::<Axes2<0, 2>>(1e-5);
+        assert_close(
+            r.data(),
+            &[
+                [
+                    [-0.6249793, 0.8641092, -1.9977042, 0.78730667],
+                    [0.9596546, 1.6742531, -1.5407361, -0.03325422],
+                    [-1.4466574, -0.24501033, 1.5645673, 0.01688794],
+                ],
+                [
+                    [0.02481116, -0.7481219, 0.48958856, 1.2049895],
+                    [0.02249343, -1.1519107, 0.5691245, -0.49962488],
+                    [-1.5409371, 0.3054207, 0.5595378, 0.7861912],
+                ],
+            ],
+        );
+        let g = r.exp().mean().backward();
+        assert_close(
+            g.ref_gradient(&t),
+            &[
+                [
+                    [-0.01023664, 0.00252886, 0.01822704, -0.00063605],
+                    [-0.00979434, 0.03576495, 0.02172576, -0.0157913],
+                    [0.01457185, -0.01464859, 0.04239608, -0.01735426],
+                ],
+                [
+                    [-0.0143645, -0.00849663, -0.00935561, 0.02233355],
+                    [-0.01643993, 0.00957545, -0.01744244, -0.00759815],
+                    [0.01755754, -0.01772431, -0.01508666, -0.00971166],
+                ],
+            ],
+        );
     }
 }

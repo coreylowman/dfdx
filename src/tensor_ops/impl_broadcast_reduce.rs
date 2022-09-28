@@ -24,7 +24,7 @@ pub trait Broadcast<T, Axes> {
 
 /// Remove `Axes` of tensor by reducing them. Opposite of [Broadcast].
 ///
-/// Enables functions like [sum_axis()] that reduce values along a single dimension.
+/// Enables functions like [sum_axes()] that reduce values along a single dimension.
 ///
 /// This trait can't be used directly as it doesn't contain any methods. Instead
 /// it is used by methods to specify the input type must be able to have it's axes
