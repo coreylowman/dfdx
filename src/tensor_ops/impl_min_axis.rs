@@ -1,4 +1,5 @@
 use super::utils::move_tape_and_add_backward_op;
+use crate::devices::{DeviceReduce, EqAccum, MinAccum, MulAccum};
 use crate::prelude::*;
 
 /// Reduces dimension `I` of the tensor by gathering the minimum value from that dimension.
@@ -15,21 +16,16 @@ use crate::prelude::*;
 /// let r: Tensor1D<2> = t.min_axis::<-1>();
 /// assert_eq!(r.data(), &[1.0, -3.0]);
 /// ```
-pub fn min_axis<T: Reduce1<I>, const I: isize>(mut t: T) -> T::Reduced {
+pub fn min_axis<T: Reduce<Axis<I>>, const I: isize>(mut t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
-    T::DeviceR::reduce_into(t.data(), result.mut_data(), f32::min);
+    T::DeviceR::reduce_into::<MinAccum>(result.mut_data(), t.data());
 
     // store derivative in t
-    T::DeviceR::foreach_br(t.mut_data(), result.data(), &mut |l, r| {
-        *l = if l == r { 1.0 } else { 0.0 }
-    });
+    T::DeviceR::broadcast_into_no_reset::<EqAccum>(t.mut_data(), result.data());
 
     move_tape_and_add_backward_op(t, result, move |mut t, result, grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-
-        T::DeviceR::foreach_br(t.mut_data(), result_grad, &mut |d, r| {
-            *d *= r;
-        });
+        T::DeviceR::broadcast_into_no_reset::<MulAccum>(t.mut_data(), result_grad);
         T::Device::add(t_grad, t.data());
     })
 }
@@ -38,9 +34,9 @@ macro_rules! min_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [min_axis()] on `self`.
-    pub fn min_axis<const I: isize>(self) -> <Self as Reduce1<I>>::Reduced
+    pub fn min_axis<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
     where
-        Self: Reduce1<I>,
+        Self: Reduce<Axis<I>>,
     {
         min_axis::<Self, I>(self)
     }

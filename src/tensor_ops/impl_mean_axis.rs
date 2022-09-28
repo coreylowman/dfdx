@@ -11,20 +11,20 @@ use crate::prelude::*;
 /// let r: Tensor1D<2> = t.mean_axis::<-1>();
 /// assert_eq!(r.data(), &[2.0, 5.0]);
 /// ```
-pub fn mean_axis<T: Reduce1<I>, const I: isize>(t: T) -> T::Reduced
+pub fn mean_axis<T: Reduce<Axis<I>>, const I: isize>(t: T) -> T::Reduced
 where
     T::Array: HasAxis<I>,
 {
-    div_scalar(sum_axis::<T, I>(t), <T::Array as HasAxis<I>>::SIZE as f32)
+    div_scalar(sum_axis(t), <T::Array as HasAxis<I>>::SIZE as f32)
 }
 
 macro_rules! mean_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [mean_axis()] on `self`.
-    pub fn mean_axis<const I: isize>(self) -> <Self as Reduce1<I>>::Reduced
+    pub fn mean_axis<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
     where
-        Self: Reduce1<I>,
+        Self: Reduce<Axis<I>>,
         <Self as HasArrayType>::Array: HasAxis<I>,
     {
         mean_axis::<Self, I>(self)

@@ -1,4 +1,5 @@
 use super::utils::move_tape_and_add_backward_op;
+use crate::devices::{AddAccum, DeviceReduce};
 use crate::prelude::*;
 
 /// Sum the values along dimension `I` of `T`.
@@ -12,14 +13,12 @@ use crate::prelude::*;
 /// let a: Tensor1D<3> = t.clone().sum_axis::<0>();
 /// let b: Tensor1D<2> = t.sum_axis::<-1>();
 /// ```
-pub fn sum_axis<T: Reduce1<I>, const I: isize>(t: T) -> T::Reduced {
+pub fn sum_axis<T: Reduce<Axis<I>>, const I: isize>(t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
-    T::DeviceR::reduce_into(t.data(), result.mut_data(), |a, b| a + b);
+    T::DeviceR::reduce_into_no_reset::<AddAccum>(result.mut_data(), t.data());
     move_tape_and_add_backward_op(t, result, move |t, result, grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-        T::DeviceR::foreach_br(t_grad, result_grad, &mut |l, r| {
-            *l += r;
-        })
+        T::DeviceR::broadcast_into_no_reset::<AddAccum>(t_grad, result_grad);
     })
 }
 
@@ -27,9 +26,9 @@ macro_rules! sum_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [sum_axis()] on `self`.
-    pub fn sum_axis<const I: isize>(self) -> <Self as Reduce1<I>>::Reduced
+    pub fn sum_axis<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
     where
-        Self: Reduce1<I>
+        Self: Reduce<Axis<I>>
     {
         sum_axis::<Self, I>(self)
     }
