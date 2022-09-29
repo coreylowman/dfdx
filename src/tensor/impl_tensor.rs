@@ -16,15 +16,6 @@ pub trait Tensor:
         + PutTape<Self::Tape, Output = Self>
         + Clone;
 
-    /// This tensor but with [OwnedTape]
-    type OwnedTape: 'static
-        + Tensor<
-            Array = Self::Array,
-            Dtype = Self::Dtype,
-            Tape = OwnedTape,
-            OwnedTape = Self::OwnedTape,
-        >;
-
     /// Removes whatever Tape this tensor has and returns itself without a tape.
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
 
@@ -37,7 +28,6 @@ macro_rules! tensor_impl {
 impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
     type Tape = H;
     type NoTape = $struct<$($Vs, )* NoneTape>;
-    type OwnedTape = $struct<$($Vs, )* OwnedTape>;
 
     fn split_tape(self) -> (Self::NoTape, Self::Tape) {
         (
