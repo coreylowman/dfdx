@@ -1,8 +1,7 @@
 use super::*;
 use crate::prelude::*;
-use num_traits::One;
 use rand::prelude::Distribution;
-use rand_distr::{Standard, StandardNormal};
+use rand_distr::{num_traits::One, Standard, StandardNormal};
 
 /// Something that can be created - currently only implemented for tensors with no tapes.
 pub trait TensorCreator: Sized + HasDevice {

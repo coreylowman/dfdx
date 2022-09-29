@@ -25,10 +25,9 @@ features = ["nightly"]
 
 [dependencies]
 rand = "0.8.5"
-rand_distr = "0.4.3"
+rand_distr = { version = "0.4.3", features = [] }
 matrixmultiply = "0.3.2"
-num-traits = "0.2.15"
-zip = "0.6.2"
+zip = { version = "0.6.2", features = [] }
 cblas-sys = { version = "0.1.4", optional = true }
 libc = { version = "0.2", optional = true }
 
