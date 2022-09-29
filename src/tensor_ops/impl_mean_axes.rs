@@ -37,7 +37,7 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     {
         mean_axes(self)
     }
-    /// Calls [mean_axes()] on `self` with `Axis<I>`
+    /// Calls [mean_axes()] on `self`
     pub fn mean_axes<Axes>(self) -> <Self as Reduce<Axes>>::Reduced
     where
         Self: Reduce<Axes>,
