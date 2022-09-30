@@ -3,8 +3,8 @@
 //! # Generic function and struct methods
 //!
 //! All functionality is provided in two ways.
-//! 1. The generic standalone function that takes a generic parameter. e.g. [mean()].
-//! 2. The struct method for tensor structs. e.g. [crate::tensor::Tensor1D::mean()].
+//! 1. The generic standalone function that takes a generic parameter. e.g. [relu()].
+//! 2. The struct method for tensor structs. e.g. [crate::tensor::Tensor1D::relu()].
 //!
 //! The struct methods are all just pass throughs to the generic function.
 //!
@@ -29,10 +29,11 @@
 //! can be seen by viewing the [Reduce] trait. Anything that can be [Reduce]'d can also
 //! be [Broadcast]ed back to the same tensor.
 //!
-//! There are 3 versions of each axis reducing function:
+//! There are 4 versions of each axis reducing function:
 //! 1. The generic version that takes any number of axes (e.g. [sum_axes])
-//! 2. The method version that takes any number of axes (e.g. [crate::tensor::Tensor1D::sum_axes()])
+//! 2. The method version that reduces all axes (e.g. [crate::tensor::Tensor1D::sum()])
 //! 3. The method version that takes a single axis (e.g. [crate::tensor::Tensor1D::sum_axis()]).
+//! 4. The method version that takes any number of axes (e.g. [crate::tensor::Tensor1D::sum_axes()])
 //!
 //! The single axis version is provided for syntactic sugar. Under the hood it just calls
 //! the generic version.
@@ -51,6 +52,7 @@
 //! let t: Tensor3D<2, 4, 6> = TensorCreator::zeros();
 //! let _: Tensor2D<4, 6> = t.clone().sum_axis::<0>();
 //! let _: Tensor1D<6> = t.clone().sum_axes::<Axes2<0, 1>>();
+//! let _: Tensor0D = t.sum();
 //! ```
 //! # Broadcasts
 //!

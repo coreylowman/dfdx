@@ -5,7 +5,7 @@ use crate::prelude::*;
 /// [Mean Squared Error](https://en.wikipedia.org/wiki/Mean_squared_error).
 /// This computes `(&targ - pred).square().mean()`.
 ///
-/// See [mean()], [square()], and [sub()].
+/// See [mean_axes()], [square()], and [sub()].
 pub fn mse_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape) -> T::Reduced {
     mean_axes(square(sub(pred, targ)))
 }
@@ -21,7 +21,7 @@ pub fn rmse_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape) -> T::Reduced {
 /// [Mean absolute error](https://en.wikipedia.org/wiki/Mean_absolute_error).
 /// This computes `(&targ - pred).abs().mean()`
 ///
-/// See [mean()], [abs()], and [sub()]
+/// See [mean_axes()], [abs()], and [sub()]
 pub fn mae_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape) -> T::Reduced {
     mean_axes(abs(sub(pred, targ)))
 }
