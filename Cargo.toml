@@ -26,7 +26,7 @@ features = ["nightly"]
 [dependencies]
 rand = { version = "0.8.5", default-features = false, features = ["std_rng"] }
 rand_distr = { version = "0.4.3", default-features = false, features = [] }
-matrixmultiply = { version = "0.3.2", default-features = false, featuers = [] }
+matrixmultiply = { version = "0.3.2", default-features = false, features = [] }
 zip = { version = "0.6.2", default-features = false, features = [] }
 cblas-sys = { version = "0.1.4", optional = true }
 libc = { version = "0.2", optional = true }
