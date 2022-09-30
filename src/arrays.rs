@@ -62,6 +62,9 @@ pub type Axes3<const I: isize, const J: isize, const K: isize> = (Axis<I>, Axis<
 pub type Axes4<const I: isize, const J: isize, const K: isize, const L: isize> =
     (Axis<I>, Axis<J>, Axis<K>, Axis<L>);
 
+/// Represents all available axes on a tensor.
+pub struct AllAxes;
+
 /// An NdArray that has an `I`th axis
 pub trait HasAxes<Axes> {
     /// The size of the axis. E.g. an nd array of shape (M, N, O):
@@ -95,6 +98,10 @@ impl_has_axis!([[[[f32; P]; O]; N]; M], 1, N, {M, N, O, P});
 impl_has_axis!([[[[f32; P]; O]; N]; M], 2, O, {M, N, O, P});
 impl_has_axis!([[[[f32; P]; O]; N]; M], 3, P, {M, N, O, P});
 impl_has_axis!([[[[f32; P]; O]; N]; M], -1, P, {M, N, O, P});
+
+impl<T: CountElements> HasAxes<AllAxes> for T {
+    const SIZE: usize = T::NUM_ELEMENTS;
+}
 
 impl<T, const I: isize, const J: isize> HasAxes<Axes2<I, J>> for T
 where
@@ -145,7 +152,8 @@ pub trait HasArrayType {
         + CountElements<Dtype = Self::Dtype>
         + ZeroElements
         + HasAxes<Axis<0>>
-        + HasAxes<Axis<-1>>;
+        + HasAxes<Axis<-1>>
+        + HasAxes<AllAxes>;
 }
 
 #[cfg(test)]

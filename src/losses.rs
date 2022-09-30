@@ -6,15 +6,15 @@ use crate::prelude::*;
 /// This computes `(&targ - pred).square().mean()`.
 ///
 /// See [mean()], [square()], and [sub()].
-pub fn mse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
-    mean(square(sub(pred, targ)))
+pub fn mse_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape) -> T::Reduced {
+    mean_axes(square(sub(pred, targ)))
 }
 
 /// [Root Mean square error](https://en.wikipedia.org/wiki/Root-mean-square_deviation).
 /// This computes `(&targ - pred).square().mean().sqrt()`
 ///
 /// See [mse_loss()] and [sqrt()]
-pub fn rmse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
+pub fn rmse_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape) -> T::Reduced {
     sqrt(mse_loss(pred, targ))
 }
 
@@ -22,8 +22,8 @@ pub fn rmse_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<
 /// This computes `(&targ - pred).abs().mean()`
 ///
 /// See [mean()], [abs()], and [sub()]
-pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T::Tape> {
-    mean(abs(sub(pred, targ)))
+pub fn mae_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape) -> T::Reduced {
+    mean_axes(abs(sub(pred, targ)))
 }
 
 /// [Huber Loss](https://en.wikipedia.org/wiki/Huber_loss)
@@ -41,11 +41,7 @@ pub fn mae_loss<T: Tensor<Dtype = f32>>(pred: T, targ: &T::NoTape) -> Tensor0D<T
 /// let y = Tensor1D::new([0.5, 0.5]);
 /// let loss = huber_loss(x.traced(), &y, 1.0);
 /// ```
-pub fn huber_loss<T: Tensor<Dtype = f32>>(
-    pred: T,
-    targ: &T::NoTape,
-    delta: T::Dtype,
-) -> Tensor0D<T::Tape> {
+pub fn huber_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape, delta: T::Dtype) -> T::Reduced {
     let f = move |x: &f32, y: &f32| {
         if (x - y).abs() < delta {
             (x - y).powi(2) * 0.5
@@ -71,7 +67,7 @@ pub fn huber_loss<T: Tensor<Dtype = f32>>(
             (y - x).signum() * delta
         }
     };
-    mean(crate::tensor_ops::utils::binary_map(
+    mean_axes(crate::tensor_ops::utils::binary_map(
         pred, targ, f, dfdx, dfdy,
     ))
 }
@@ -91,12 +87,8 @@ pub fn huber_loss<T: Tensor<Dtype = f32>>(
 /// let y = Tensor1D::new([0.5, 0.5]);
 /// let loss = smooth_l1_loss(x.traced(), &y, 1.0);
 /// ```
-pub fn smooth_l1_loss<T: Tensor<Dtype = f32>>(
-    pred: T,
-    targ: &T::NoTape,
-    beta: T::Dtype,
-) -> Tensor0D<T::Tape> {
-    huber_loss(pred, targ, beta) / beta
+pub fn smooth_l1_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape, beta: T::Dtype) -> T::Reduced {
+    div_scalar(huber_loss(pred, targ, beta), beta)
 }
 
 /// [Cross entropy loss](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression).
@@ -120,8 +112,14 @@ pub fn smooth_l1_loss<T: Tensor<Dtype = f32>>(
 pub fn cross_entropy_with_logits_loss<T: Reduce<Axis<-1>>>(
     logits: T,
     target_probs: &T::NoTape,
-) -> Tensor0D<T::Tape> {
-    -mean(sum_axes(mul(log_softmax(logits), target_probs)))
+) -> <T::Reduced as Reduce<AllAxes>>::Reduced
+where
+    T::Reduced: Reduce<AllAxes>,
+{
+    negate(mean_axes::<_, AllAxes>(sum_axes::<_, Axis<-1>>(mul(
+        log_softmax(logits),
+        target_probs,
+    ))))
 }
 
 /// [KL Divergence loss](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence).
@@ -145,11 +143,14 @@ pub fn cross_entropy_with_logits_loss<T: Reduce<Axis<-1>>>(
 pub fn kl_div_with_logits_loss<T: Reduce<Axis<-1>>>(
     logits: T,
     target_probs: &T::NoTape,
-) -> Tensor0D<T::Tape> {
-    -mean(sum_axes(mul(
+) -> <T::Reduced as Reduce<AllAxes>>::Reduced
+where
+    T::Reduced: Reduce<AllAxes>,
+{
+    negate(mean_axes::<_, AllAxes>(sum_axes::<_, Axis<-1>>(mul(
         sub(log_softmax(logits), &ln(target_probs.duplicate())),
         target_probs,
-    )))
+    ))))
 }
 
 /// [Binary Cross Entropy](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression) With Logits in numerically stable way.
@@ -173,11 +174,11 @@ pub fn kl_div_with_logits_loss<T: Reduce<Axis<-1>>>(
 ///
 /// See <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>
 /// for more information on this.
-pub fn binary_cross_entropy_with_logits_loss<T: Tensor<Dtype = f32>>(
+pub fn binary_cross_entropy_with_logits_loss<T: Reduce<AllAxes>>(
     logits: T,
     target_probs: &T::NoTape,
-) -> Tensor0D<T::Tape> {
-    mean(crate::tensor_ops::utils::binary_map(
+) -> T::Reduced {
+    mean_axes(crate::tensor_ops::utils::binary_map(
         logits,
         target_probs,
         |logit, prob| logit.max(0.0) - logit * prob + (1.0 + (-logit.abs()).exp()).ln(),
@@ -289,7 +290,7 @@ mod tests {
             [0.7026833, 0.5563793, 0.6429267],
         ]);
         let loss = binary_cross_entropy_with_logits_loss(logit.trace(), &prob);
-        assert_eq!(loss.data(), &0.70457286);
+        assert_eq!(loss.data(), &0.7045728);
 
         let gradients = loss.backward();
 
