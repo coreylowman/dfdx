@@ -31,14 +31,18 @@ pub fn sum_axes<T: Reduce<Axes>, Axes>(t: T) -> T::Reduced {
 macro_rules! sum_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [sum_axes()] on `self` with `Axis<I>`.
+    /// Calls [sum_axes()] with `AllAxes`
+    pub fn sum(self) -> <Self as Reduce<AllAxes>>::Reduced where Self: Reduce<AllAxes> {
+        sum_axes(self)
+    }
+    /// Calls [sum_axes()] with `Axis<I>`
     pub fn sum_axis<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
     where
         Self: Reduce<Axis<I>>
     {
         sum_axes(self)
     }
-    /// Calls [sum_axes()] on `self`.
+    /// Calls [sum_axes()]
     pub fn sum_axes<Axes>(self) -> <Self as Reduce<Axes>>::Reduced
     where
         Self: Reduce<Axes>
@@ -62,6 +66,16 @@ mod tests {
     use rand::thread_rng;
 
     #[test]
+    fn test_sum_1d() {
+        let t: Tensor1D<3> = tensor([1.0, 2.0, 3.0]);
+        let r: Tensor0D<OwnedTape> = t.trace().sum();
+        assert_eq!(r.data(), &6.0);
+        // NOTE: .exp() to make sure its using result grad properly
+        let gradients = r.exp().backward();
+        assert_eq!(gradients.ref_gradient(&t), &[403.4288; 3]);
+    }
+
+    #[test]
     fn test_valids_sum_axis() {
         let _: Tensor0D = Tensor1D::<5>::zeros().sum_axis::<-1>();
 
@@ -76,6 +90,8 @@ mod tests {
         let _: Tensor3D<9, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().sum_axis::<1>();
         let _: Tensor3D<9, 7, 3> = Tensor4D::<9, 7, 5, 3>::zeros().sum_axis::<2>();
         let _: Tensor3D<9, 7, 5> = Tensor4D::<9, 7, 5, 3>::zeros().sum_axis::<-1>();
+
+        let _: Tensor0D = Tensor4D::<9, 7, 5, 3>::zeros().sum();
     }
 
     #[test]

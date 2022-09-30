@@ -20,7 +20,7 @@ mod indexing;
 use super::allocate::AllocateZeros;
 use super::fill::FillElements;
 use super::Cpu;
-use crate::arrays::{Axes2, Axes3, Axes4, Axis, CountElements};
+use crate::arrays::{AllAxes, Axes2, Axes3, Axes4, Axis, CountElements};
 pub use accumulator::*;
 use indexing::{BroadcastMut, BroadcastRef};
 
@@ -77,10 +77,10 @@ macro_rules! impl_reduce {
 impl DeviceReduce<f32, Axis<-1>> for Cpu {
     type Reduced = f32;
     fn reduce_into_no_reset<A: Accumulator<f32>>(r: &mut Self::Reduced, t: &f32) {
-        *r = *t;
+        A::accum(r, t);
     }
     fn broadcast_into_no_reset<A: Accumulator<f32>>(t: &mut f32, r: &Self::Reduced) {
-        *t = *r;
+        A::accum(t, r);
     }
 }
 
@@ -134,6 +134,34 @@ impl_reduce!([[[[f32; P]; O]; N]; M], Axes3<1, 2, 3>, [f32; M], accum4d, {M, N, 
 // 4d -> 0d
 impl_reduce!([[[[f32; P]; O]; N]; M], Axes4<0, 1, 2, 3>, f32, accum4d, {M, N, O, P});
 
+impl DeviceReduce<f32, AllAxes> for Cpu {
+    type Reduced = f32;
+    fn reduce_into_no_reset<A: Accumulator<f32>>(r: &mut Self::Reduced, t: &f32) {
+        A::accum(r, t);
+    }
+    fn broadcast_into_no_reset<A: Accumulator<f32>>(t: &mut f32, r: &Self::Reduced) {
+        A::accum(t, r);
+    }
+}
+
+impl<T: CountElements, const M: usize> DeviceReduce<[T; M], AllAxes> for Cpu
+where
+    T::Dtype: CountElements<Dtype = T::Dtype>,
+    Self: DeviceReduce<T, AllAxes> + FillElements<[T; M]> + FillElements<T::Dtype>,
+{
+    type Reduced = <Self as DeviceReduce<T, AllAxes>>::Reduced;
+    fn reduce_into_no_reset<A: Accumulator<T::Dtype>>(r: &mut Self::Reduced, t: &[T; M]) {
+        for t_i in t.iter() {
+            Self::reduce_into_no_reset::<A>(r, t_i);
+        }
+    }
+    fn broadcast_into_no_reset<A: Accumulator<T::Dtype>>(t: &mut [T; M], r: &Self::Reduced) {
+        for t_i in t.iter_mut() {
+            Self::broadcast_into_no_reset::<A>(t_i, r);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,16 +170,16 @@ mod tests {
     #[test]
     fn test_reduce_all_1d() {
         let t = [1.0, 2.0, 3.0, 4.0];
-        let mut r = 0.0;
-        <Cpu as DeviceReduce<_, Axis<0>>>::reduce_into::<MulAccum>(&mut r, &t);
-        assert_eq!(r, 24.0);
+        let mut r = 2.0;
+        <Cpu as DeviceReduce<_, AllAxes>>::reduce_into::<SubAccum>(&mut r, &t);
+        assert_eq!(r, -10.0);
     }
 
     #[test]
     fn test_reduce_all_2d() {
         let t = [[1.0, 2.0, 3.0, 4.0], [5.0, -1.0, 2.0, 0.0]];
         let mut r = 0.0;
-        <Cpu as DeviceReduce<_, Axes2<0, 1>>>::reduce_into::<AddAccum>(&mut r, &t);
+        <Cpu as DeviceReduce<_, AllAxes>>::reduce_into::<AddAccum>(&mut r, &t);
         assert_eq!(r, 16.0);
     }
 
@@ -159,7 +187,7 @@ mod tests {
     fn test_reduce_all_3d() {
         let t = [[[1.0, 2.0], [2.0, 3.0]], [[1.0, 0.5], [0.5, 1.0 / 3.0]]];
         let mut r = 0.0;
-        <Cpu as DeviceReduce<_, Axes3<0, 1, 2>>>::reduce_into::<MulAccum>(&mut r, &t);
+        <Cpu as DeviceReduce<_, AllAxes>>::reduce_into::<MulAccum>(&mut r, &t);
         assert_eq!(r, 1.0);
     }
 

@@ -29,7 +29,14 @@ where
 macro_rules! mean_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [mean_axes()] on `self` with `Axis<I>`
+    /// Calls [mean_axes()] with `AllAxes`
+    pub fn mean(self) -> <Self as Reduce<AllAxes>>::Reduced
+    where
+        Self: Reduce<AllAxes>
+    {
+        mean_axes(self)
+    }
+    /// Calls [mean_axes()] with `Axis<I>`
     pub fn mean_axis<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
     where
         Self: Reduce<Axis<I>>,
@@ -37,7 +44,7 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     {
         mean_axes(self)
     }
-    /// Calls [mean_axes()] on `self`
+    /// Calls [mean_axes()]
     pub fn mean_axes<Axes>(self) -> <Self as Reduce<Axes>>::Reduced
     where
         Self: Reduce<Axes>,
@@ -76,6 +83,37 @@ mod tests {
         let _: Tensor3D<9, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<1>();
         let _: Tensor3D<9, 7, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<2>();
         let _: Tensor3D<9, 7, 5> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<-1>();
+    }
+
+    #[test]
+    fn test_mean_1d() {
+        let t: Tensor1D<3> = tensor([1.0, 2.0, 3.0]);
+        let r: Tensor0D<OwnedTape> = t.trace().mean();
+        assert_eq!(r.data(), &2.0);
+        // NOTE: .exp() so we cover the case where .mean() has to use result grad.
+        let gradients = r.exp().backward();
+        assert_eq!(
+            gradients.ref_gradient(&t),
+            &[2.4630187, 2.4630187, 2.4630187]
+        );
+    }
+
+    #[test]
+    fn test_mean_2d() {
+        let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        let r: Tensor0D<OwnedTape> = t.trace().mean();
+        assert_eq!(r.data(), &3.5);
+        let gradients = r.backward();
+        assert_eq!(gradients.ref_gradient(&t), &[[1.0 / 6.0; 3]; 2]);
+    }
+
+    #[test]
+    fn test_mean_3d() {
+        let t: Tensor3D<4, 2, 3> = Tensor3D::ones();
+        let r: Tensor0D<OwnedTape> = t.trace().mean();
+        assert_eq!(r.data(), &1.0);
+        let gradients = r.backward();
+        assert_eq!(gradients.ref_gradient(&t), &[[[1.0 / 24.0; 3]; 2]; 4]);
     }
 
     #[test]

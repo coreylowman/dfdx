@@ -153,6 +153,6 @@ mod tests {
     #[test]
     fn test_std_axes_3d_to_1d() {
         let t: Tensor2D<2, 3> = TensorCreator::zeros();
-        let _: Tensor0D<_> = std_axes::<_, Axes2<0, 1>>(t, 1e-3);
+        let _: Tensor0D<_> = std_axes::<_, AllAxes>(t, 1e-3);
     }
 }
