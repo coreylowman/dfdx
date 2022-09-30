@@ -1,3 +1,5 @@
+//! Demonstrates how to use dfdx::numpy to save and load arrays
+
 use dfdx::numpy as np;
 
 fn main() {
