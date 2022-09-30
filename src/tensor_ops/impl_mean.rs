@@ -8,6 +8,14 @@ use crate::prelude::*;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+/// let r: Tensor0D = t.mean();
+/// assert_eq!(r.data(), &3.5);
+/// ```
+///
+/// Reducing 1 axis:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
 /// let r: Tensor1D<2> = t.mean_axis::<-1>();
 /// assert_eq!(r.data(), &[2.0, 5.0]);
 /// ```

@@ -77,6 +77,9 @@ impl<H: Tape> Broadcast<Tensor0D<H>, AllAxes> for Tensor0D<H> {
 
 // 0d -> Nd
 impl_broadcast_reduce!(Tensor0D<H>, Axis<-1>, Tensor1D<M, H>, {M});
+impl_broadcast_reduce!(Tensor0D<H>, Axes2<0, 1>, Tensor2D<M, N, H>, {M, N});
+impl_broadcast_reduce!(Tensor0D<H>, Axes3<0, 1, 2>, Tensor3D<M, N, O, H>, {M, N, O});
+impl_broadcast_reduce!(Tensor0D<H>, Axes4<0, 1, 2, 3>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 impl_broadcast_reduce!(Tensor0D<H>, AllAxes, Tensor1D<M, H>, {M});
 impl_broadcast_reduce!(Tensor0D<H>, AllAxes, Tensor2D<M, N, H>, {M, N});
 impl_broadcast_reduce!(Tensor0D<H>, AllAxes, Tensor3D<M, N, O, H>, {M, N, O});
@@ -137,7 +140,7 @@ mod tests {
 
     #[test]
     fn test_valid_2d_broadcasts() {
-        let _: Tensor2D<5, 3> = Tensor0D::zeros().broadcast();
+        let _: Tensor2D<5, 3> = Broadcast::<_, AllAxes>::broadcast(Tensor0D::zeros());
 
         let _: Tensor3D<3, 5, 7> = Tensor1D::<3>::zeros().broadcast();
         let _: Tensor3D<3, 5, 7> = Tensor1D::<5>::zeros().broadcast();
@@ -153,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_valid_3d_broadcasts() {
-        let _: Tensor3D<3, 5, 7> = Tensor0D::zeros().broadcast();
+        let _: Tensor3D<3, 5, 7> = Broadcast::<_, AllAxes>::broadcast(Tensor0D::zeros());
 
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<3>::zeros().broadcast();
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<5>::zeros().broadcast();

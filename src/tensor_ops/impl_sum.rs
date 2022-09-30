@@ -10,7 +10,14 @@ use crate::prelude::*;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
-/// let _: Tensor2D<3, 4> = t.clone().sum_axis::<0>();
+/// let _: Tensor0D = t.sum();
+/// ```
+///
+/// Reducing 1 axis:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
+/// let _: Tensor2D<3, 4> = t.sum_axis::<0>();
 /// ```
 ///
 /// Reducing multiple axes:
