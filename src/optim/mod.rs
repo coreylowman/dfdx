@@ -22,7 +22,7 @@
 //! # let loss = mse_loss(y, &Tensor1D::zeros());
 //! // -- snip loss computation --
 //!
-//! let gradients: Gradients = loss.backward();
+//! let gradients: Gradients = backward(loss);
 //! opt.update(&mut model, gradients);
 //! ```
 

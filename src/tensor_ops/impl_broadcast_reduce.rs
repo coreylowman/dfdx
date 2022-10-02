@@ -1,10 +1,10 @@
 use super::utils::move_tape_and_add_backward_op;
-use crate::arrays::{Axes2, Axes3, Axes4, Axis};
+use crate::arrays::{AllAxes, Axes2, Axes3, Axis};
 use crate::devices::{AddAccum, CopyAccum, DeviceReduce};
 use crate::prelude::*;
 
 /// Broadcast self into `T` along `Axes`. Opposite of [Reduce].
-pub trait Broadcast<T, Axes> {
+pub trait BroadcastTo<T, Axes> {
     /// Broadcast `self` into `T`. This can be used to broadcast 1, 2, 3, and 4 axes.
     ///
     /// Examples:
@@ -22,19 +22,22 @@ pub trait Broadcast<T, Axes> {
     fn broadcast(self) -> T;
 }
 
-/// Remove `Axes` of tensor by reducing them. Opposite of [Broadcast].
+/// Remove `Axes` of tensor by reducing them. Opposite of [BroadcastTo].
 ///
-/// Enables functions like [sum_axis()] that reduce values along a single dimension.
+/// Enables functions like [sum()] that reduce values along a single dimension.
 ///
 /// This trait can't be used directly as it doesn't contain any methods. Instead
 /// it is used by methods to specify the input type must be able to have it's axes
 /// reduced.
 pub trait Reduce<Axes>: Sized + Tensor<Dtype = f32> {
     /// The resulting tensor type.
-    /// This can be broadcast into Self via [Broadcast].
-    type Reduced: Tensor<Tape = Self::Tape, Dtype = Self::Dtype> + Broadcast<Self, Axes>;
+    /// This can be broadcast into Self via [BroadcastTo].
+    type Reduced: BroadcastTo<Self, Axes> + Tensor<Tape = Self::Tape, Dtype = Self::Dtype>;
     type DeviceR: DeviceReduce<Self::Array, Axes, Reduced = <Self::Reduced as HasArrayType>::Array>;
 }
+
+/// Reduce `Axes` of `Self` to produce a `T`
+pub trait ReduceTo<T, Axes>: Reduce<Axes, Reduced = T> {}
 
 macro_rules! impl_broadcast_reduce {
     ($SrcTy:ty, $AxesTy:ty, $DstTy:ty, {$($Dims:tt),*}) => {
@@ -43,7 +46,9 @@ impl<$(const $Dims: usize, )* H: Tape> Reduce<$AxesTy> for $DstTy {
     type DeviceR = <Self as HasDevice>::Device;
 }
 
-impl<$(const $Dims: usize, )* H: Tape> Broadcast<$DstTy, $AxesTy> for $SrcTy {
+impl<$(const $Dims: usize, )* H: Tape> ReduceTo<$SrcTy, $AxesTy> for $DstTy {}
+
+impl<$(const $Dims: usize, )* H: Tape> BroadcastTo<$DstTy, $AxesTy> for $SrcTy {
     fn broadcast(self) -> $DstTy {
         let mut result = <$DstTy as Tensor>::NoTape::zeros();
         <Cpu as DeviceReduce<_, $AxesTy>>::broadcast_into::<CopyAccum>(result.mut_data(), self.data());
@@ -56,24 +61,25 @@ impl<$(const $Dims: usize, )* H: Tape> Broadcast<$DstTy, $AxesTy> for $SrcTy {
     };
 }
 
-impl<H: Tape> Reduce<Axis<-1>> for Tensor0D<H> {
+impl<H: Tape> Reduce<AllAxes> for Tensor0D<H> {
     type Reduced = Self;
     type DeviceR = <Self as HasDevice>::Device;
 }
-impl<H: Tape> Broadcast<Tensor0D<H>, Axis<-1>> for Tensor0D<H> {
+impl<H: Tape> ReduceTo<Self, AllAxes> for Tensor0D<H> {}
+impl<H: Tape> BroadcastTo<Tensor0D<H>, AllAxes> for Tensor0D<H> {
     fn broadcast(self) -> Tensor0D<H> {
         self
     }
 }
 
 // 0d -> Nd
-impl_broadcast_reduce!(Tensor0D<H>, Axis<-1>, Tensor1D<M, H>, {M});
-impl_broadcast_reduce!(Tensor0D<H>, Axes2<0, 1>, Tensor2D<M, N, H>, {M, N});
-impl_broadcast_reduce!(Tensor0D<H>, Axes3<0, 1, 2>, Tensor3D<M, N, O, H>, {M, N, O});
-impl_broadcast_reduce!(Tensor0D<H>, Axes4<0, 1, 2, 3>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
+impl_broadcast_reduce!(Tensor0D<H>, AllAxes, Tensor1D<M, H>, {M});
+impl_broadcast_reduce!(Tensor0D<H>, AllAxes, Tensor2D<M, N, H>, {M, N});
+impl_broadcast_reduce!(Tensor0D<H>, AllAxes, Tensor3D<M, N, O, H>, {M, N, O});
+impl_broadcast_reduce!(Tensor0D<H>, AllAxes, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 
 // 1d -> Nd
-impl_broadcast_reduce!(Tensor1D<M, H>, Axis<-1>, Tensor2D<M, N, H>, {M, N});
+impl_broadcast_reduce!(Tensor1D<M, H>, Axis<1>, Tensor2D<M, N, H>, {M, N});
 impl_broadcast_reduce!(Tensor1D<N, H>, Axis<0>, Tensor2D<M, N, H>, {M, N});
 impl_broadcast_reduce!(Tensor1D<M, H>, Axes2<1, 2>, Tensor3D<M, N, O, H>, {M, N, O});
 impl_broadcast_reduce!(Tensor1D<N, H>, Axes2<0, 2>, Tensor3D<M, N, O, H>, {M, N, O});
@@ -84,7 +90,7 @@ impl_broadcast_reduce!(Tensor1D<O, H>, Axes3<0, 1, 3>, Tensor4D<M, N, O, P, H>, 
 impl_broadcast_reduce!(Tensor1D<P, H>, Axes3<0, 1, 2>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 
 // 2d -> Nd
-impl_broadcast_reduce!(Tensor2D<M, N, H>, Axis<-1>, Tensor3D<M, N, O, H>, {M, N, O});
+impl_broadcast_reduce!(Tensor2D<M, N, H>, Axis<2>, Tensor3D<M, N, O, H>, {M, N, O});
 impl_broadcast_reduce!(Tensor2D<M, O, H>, Axis<1>, Tensor3D<M, N, O, H>, {M, N, O});
 impl_broadcast_reduce!(Tensor2D<N, O, H>, Axis<0>, Tensor3D<M, N, O, H>, {M, N, O});
 impl_broadcast_reduce!(Tensor2D<M, N, H>, Axes2<2, 3>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
@@ -95,7 +101,7 @@ impl_broadcast_reduce!(Tensor2D<N, P, H>, Axes2<0, 2>, Tensor4D<M, N, O, P, H>, 
 impl_broadcast_reduce!(Tensor2D<O, P, H>, Axes2<0, 1>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 
 // 3d -> 4d
-impl_broadcast_reduce!(Tensor3D<M, N, O, H>, Axis<-1>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
+impl_broadcast_reduce!(Tensor3D<M, N, O, H>, Axis<3>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 impl_broadcast_reduce!(Tensor3D<M, N, P, H>, Axis<2>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 impl_broadcast_reduce!(Tensor3D<M, O, P, H>, Axis<1>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 impl_broadcast_reduce!(Tensor3D<N, O, P, H>, Axis<0>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
@@ -108,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_valid_1d_broadcasts() {
-        let _: Tensor1D<5> = Tensor0D::zeros().broadcast();
+        let _: Tensor1D<5> = BroadcastTo::<_, AllAxes>::broadcast(Tensor0D::zeros());
 
         let _: Tensor2D<5, 3> = Tensor1D::<3>::zeros().broadcast();
         let _: Tensor2D<5, 3> = Tensor1D::<5>::zeros().broadcast();
@@ -126,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_valid_2d_broadcasts() {
-        let _: Tensor2D<5, 3> = Tensor0D::zeros().broadcast();
+        let _: Tensor2D<5, 3> = BroadcastTo::<_, AllAxes>::broadcast(Tensor0D::zeros());
 
         let _: Tensor3D<3, 5, 7> = Tensor1D::<3>::zeros().broadcast();
         let _: Tensor3D<3, 5, 7> = Tensor1D::<5>::zeros().broadcast();
@@ -142,7 +148,7 @@ mod tests {
 
     #[test]
     fn test_valid_3d_broadcasts() {
-        let _: Tensor3D<3, 5, 7> = Tensor0D::zeros().broadcast();
+        let _: Tensor3D<3, 5, 7> = BroadcastTo::<_, AllAxes>::broadcast(Tensor0D::zeros());
 
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<3>::zeros().broadcast();
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<5>::zeros().broadcast();
@@ -158,11 +164,11 @@ mod tests {
         let a_up: Tensor2D<5, 3, OwnedTape> = a.trace().broadcast();
         assert_close(a_up.data(), &[*a.data(); 5]);
         let r = mul(a_up, &b);
-        let g = r.exp().mean().backward();
+        let g = backward(r.exp().mean());
         // a's gradient: (b * (b * a).exp()).sum(0) / 15
         // b's gradient: (a * (b * a).exp()) / 15
         let a_up: Tensor2D<5, 3> = a.clone().broadcast();
-        let a_grad = mul(mul(b.clone(), &a_up).exp(), &b).sum_axis::<0>() / 15.0;
+        let a_grad = mul(mul(b.clone(), &a_up).exp(), &b).sum::<_, Axis<0>>() / 15.0;
         let b_grad = mul(mul(b.clone(), &a_up).exp(), &a_up) / 15.0;
         assert_close(g.ref_gradient(&a), a_grad.data());
         assert_close(g.ref_gradient(&b), b_grad.data());

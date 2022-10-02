@@ -67,7 +67,7 @@ mod tests {
         let result = maximum(a.trace(), &b);
         assert_eq!(result.data(), &[[0.0, 0.0, 1.0], [3.0, 4.0, 5.0]]);
 
-        let g = result.sum().backward();
+        let g = backward(result.sum());
         assert_eq!(g.ref_gradient(&a), &[[0.0, 0.5, 1.0], [0.5, 1.0, 0.0]]);
         assert_eq!(g.ref_gradient(&b), &[[1.0, 0.5, 0.0], [0.5, 0.0, 1.0]]);
     }

@@ -288,7 +288,7 @@ mod tests {
                 [1.0546886, 1.165766],
             ],
         );
-        let gradients = r.exp().mean().backward();
+        let gradients = backward(r.exp().mean());
         assert_close(
             gradients.ref_gradient(&a),
             &[
@@ -319,8 +319,8 @@ mod tests {
         let c_tr = matmul_transpose(a.trace(), &b_t);
         assert_close(c_tr.data(), c.data());
 
-        let gs = c.exp().mean().backward();
-        let gs_tr = c_tr.exp().mean().backward();
+        let gs = backward(c.exp().mean());
+        let gs_tr = backward(c_tr.exp().mean());
         assert_close(gs_tr.ref_gradient(&a), gs.ref_gradient(&a));
         assert_close(gs_tr.ref_gradient(&b_t), &transpose(gs.ref_gradient(&b)));
     }
@@ -336,11 +336,11 @@ mod tests {
             let sub_a = Tensor2D::new(a.data()[i]);
             assert_close(&r.data()[i], matmul(sub_a, &b).data());
         }
-        let gs = r.sum().backward();
+        let gs = backward(r.sum());
         let mut sub_bs_summed = [[0.0; 2]; 3];
         for i in 0..N {
             let sub_a = Tensor2D::new(a.data()[i]);
-            let sub_gs = matmul(sub_a.trace(), &b).sum().backward();
+            let sub_gs = backward(matmul(sub_a.trace(), &b).sum());
             assert_close(&gs.ref_gradient(&a)[i], sub_gs.ref_gradient(&sub_a));
             <Cpu as Device<_>>::add(&mut sub_bs_summed, sub_gs.ref_gradient(&b));
         }
@@ -358,8 +358,8 @@ mod tests {
         let c_tr = matmul_transpose(a.trace(), &b_t);
         assert_close(c_tr.data(), c.data());
 
-        let gs = c.exp().mean().backward();
-        let gs_tr = c_tr.exp().mean().backward();
+        let gs = backward(c.exp().mean());
+        let gs_tr = backward(c_tr.exp().mean());
         assert_close(gs_tr.ref_gradient(&a), gs.ref_gradient(&a));
         assert_close(gs_tr.ref_gradient(&b_t), &transpose(gs.ref_gradient(&b)));
     }
@@ -370,7 +370,7 @@ mod tests {
         let b = tensor([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
         let r: Tensor1D<2, OwnedTape> = vecmat_mul(a.trace(), &b);
         assert_close(r.data(), &[1.261436, 1.5543157]);
-        let g = r.exp().mean().backward();
+        let g = backward(r.exp().mean());
         assert_close(g.ref_gradient(&a), &[2.6883178, 2.9369607, 2.9256766]);
         assert_close(
             g.ref_gradient(&b),
@@ -388,7 +388,7 @@ mod tests {
         let b = tensor([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
         let r: Tensor1D<2, OwnedTape> = vecmat_mul_transpose(a.trace(), &b);
         assert_close(r.data(), &[1.261436, 1.5543157]);
-        let g = r.exp().mean().backward();
+        let g = backward(r.exp().mean());
         assert_close(g.ref_gradient(&a), &[2.6883178, 2.9369607, 2.9256766]);
         assert_close(
             g.ref_gradient(&b),

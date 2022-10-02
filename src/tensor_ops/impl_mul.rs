@@ -55,7 +55,7 @@ mod tests {
 
         let r = a.trace() * &b;
         assert_eq!(r.data(), &[1.0, -2.0, 0.0]);
-        let gradients = r.mean().backward();
+        let gradients = backward(r.mean());
         assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0, -1.0 / 3.0, 0.0]);
         assert_eq!(gradients.ref_gradient(&b), &[1.0 / 3.0, 2.0 / 3.0, 1.0]);
     }
@@ -73,7 +73,7 @@ mod tests {
                 [0.46729425, 0.2581082, 0.03236696]
             ]
         );
-        let gradients = r.mean().backward();
+        let gradients = backward(r.mean());
         assert_eq!(
             gradients.ref_gradient(&a),
             &[

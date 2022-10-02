@@ -123,14 +123,12 @@ macro_rules! impl_bcast {
 }
 
 // 0d -> nd
-impl_bcast!(f32, [], Axis<-1>, usize, {});
 impl_bcast!(f32, [], Axis<0>, usize, {});
 impl_bcast!(f32, [], Axes2<0, 1>, [usize; 2], {});
 impl_bcast!(f32, [], Axes3<0, 1, 2>, [usize; 3], {});
 impl_bcast!(f32, [], Axes4<0, 1, 2, 3>, [usize; 4], {});
 
 // 1d -> 2d
-impl_bcast!([f32; M], [0], Axis<-1>, [usize; 2], { M });
 impl_bcast!([f32; M], [0], Axis<1>, [usize; 2], { M });
 impl_bcast!([f32; M], [1], Axis<0>, [usize; 2], { M });
 
@@ -146,7 +144,6 @@ impl_bcast!([f32; M], [1], Axes3<0, 2, 3>, [usize; 4], { M });
 impl_bcast!([f32; M], [0], Axes3<1, 2, 3>, [usize; 4], { M });
 
 // 2d -> 3d
-impl_bcast!([[f32; N]; M], [0, 1], Axis<-1>, [usize; 3], {M, N});
 impl_bcast!([[f32; N]; M], [0, 1], Axis<2>, [usize; 3], {M, N});
 impl_bcast!([[f32; N]; M], [0, 2], Axis<1>, [usize; 3], {M, N});
 impl_bcast!([[f32; N]; M], [1, 2], Axis<0>, [usize; 3], {M, N});
@@ -160,7 +157,6 @@ impl_bcast!([[f32; N]; M], [0, 2], Axes2<1, 3>, [usize; 4], {M, N});
 impl_bcast!([[f32; N]; M], [0, 1], Axes2<2, 3>, [usize; 4], {M, N});
 
 // 3d -> 4d
-impl_bcast!([[[f32; O]; N]; M], [0, 1, 2], Axis<-1>, [usize; 4], {M, N, O});
 impl_bcast!([[[f32; O]; N]; M], [0, 1, 2], Axis<3>, [usize; 4], {M, N, O});
 impl_bcast!([[[f32; O]; N]; M], [0, 1, 3], Axis<2>, [usize; 4], {M, N, O});
 impl_bcast!([[[f32; O]; N]; M], [0, 2, 3], Axis<1>, [usize; 4], {M, N, O});

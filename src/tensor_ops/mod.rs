@@ -1,10 +1,10 @@
-//! Implementations of all ops for tensors including activations like [relu()], binary operations like [matmul()], and more.
+//! Operations on tensors like [relu()], [matmul()], [softmax()], and more.
 //!
 //! # Generic function and struct methods
 //!
 //! All functionality is provided in two ways.
-//! 1. The generic standalone function that takes a generic parameter. e.g. [mean()].
-//! 2. The struct method for tensor structs. e.g. [crate::prelude::Tensor1D::mean()].
+//! 1. The generic standalone function that takes a generic parameter. e.g. [relu()].
+//! 2. The struct method for tensor structs. e.g. [crate::tensor::Tensor1D::relu()].
 //!
 //! The struct methods are all just pass throughs to the generic function.
 //!
@@ -14,31 +14,51 @@
 //! the axis to apply the transformation to.
 //!
 //! Here are the valid axes for each tensor:
-//! 1. `Tensor0D`: `-1`
-//! 2. `Tensor1D`: `0`, `-1`
-//! 3. `Tensor2D`: `0`, `1`, `-1`
-//! 4. `Tensor3D`: `0`, `1`, `2`, `-1`
-//! 5. `Tensor4D`: `0`, `1`, `2`, `3`, `-1`
+//! 1. `Tensor0D`: `Axis<0>`
+//! 2. `Tensor1D`: `Axis<0>`
+//! 3. `Tensor2D`: `Axis<0>`, `Axis<1>`
+//! 4. `Tensor3D`: `Axis<0>`, `Axis<1>`, `Axis<2>`,
+//! 5. `Tensor4D`: `Axis<0>`, `Axis<1>`, `Axis<2>`, `Axis<3>`
 //!
-//! Note that `-1` must be used for the last axis instead of the positive number. This is to prevent
-//! ambiguous operations.
+//! Additionally `AllAxes` is valid for all tensors.
+//! To specify multiple axes you can use `Axes2`, `Axes3`, and `Axes4`
 //!
 //! # Reductions
 //!
-//! There are a number of functions that reduce a dimension (e.g. [mean_axis()]).
-//! These functions are all labeled with `*_axis()` at the end.
+//! There are a number of functions that reduce 1 or more axes. Valid axes and reductions
+//! can be seen by viewing the [Reduce] or [ReduceTo] traits. Anything that can be [Reduce]'d can also
+//! be [BroadcastTo] the same tensor.
 //!
-//! Reducing a dimension means removing that dimension from the tensor by reducing it to 1 number.
-//! For example calling `sum_axis::<-1>()` on a `Tensor2D<2, 5>` would result in a `Tensor1D<2>`.
-//! Calling [sum_axis::<0>()] on a `Tensor2D<5>` would result in a `Tensor1D<5>`.
+//! There are 2 ways to call each axis reducing function:
+//! 1. The tensor method (e.g. [crate::tensor::Tensor1D::sum()]), where the axes are inferred based
+//!    on the output type.
+//! ```rust
+//! # use dfdx::prelude::*;
+//! let t: Tensor3D<2, 4, 6> = TensorCreator::zeros();
+//! let _: Tensor1D<4> = t.sum();
+//! ```
+//! 2. The generic function (e.g. [sum]), where you need to specify the axes as generic parameters
+//! ```rust
+//! # use dfdx::prelude::*;
+//! let t: Tensor3D<2, 4, 6> = TensorCreator::zeros();
+//! let _: Tensor1D<4> = sum::<_, Axes2<0, 2>>(t);
+//! ```
 //!
-//! See [Reduce] implementations for a complete list of reductions.
+//! Complete list of reductions:
 //!
-//! See relevant functions for more examples.
+//! - [max()]
+//! - [mean()]
+//! - [min()]
+//! - [sum()]
+//! - [var()]
+//! - [stddev()]
+//! - [logsumexp()]
 //!
 //! # Broadcasts
 //!
-//! Broadcasting tensors is provided through the [Broadcast] trait.
+//! Broadcasting tensors is provided through the [BroadcastTo] trait. Generally the axes
+//! can be inferred by the type of the output, so you don't have to explicitly
+//! specify them.
 //!
 //! To broadcast a tensor to be the same size as another tensor you can use like so:
 //! ```rust
@@ -119,21 +139,19 @@ mod impl_clamp;
 mod impl_div;
 mod impl_dropout;
 mod impl_mask;
-mod impl_max_axis;
+mod impl_max;
 mod impl_maximum;
 mod impl_mean;
-mod impl_mean_axis;
-mod impl_min_axis;
+mod impl_min;
 mod impl_minimum;
 mod impl_mul;
 mod impl_nans;
-mod impl_normalize_axis;
+mod impl_normalize;
 mod impl_pow;
 mod impl_softmax;
-mod impl_std_axis;
+mod impl_stddev;
 mod impl_sub;
 mod impl_sum;
-mod impl_sum_axis;
 mod map;
 mod matmul;
 mod permute;
@@ -148,21 +166,19 @@ pub use impl_clamp::*;
 pub use impl_div::*;
 pub use impl_dropout::*;
 pub use impl_mask::*;
-pub use impl_max_axis::*;
+pub use impl_max::*;
 pub use impl_maximum::*;
 pub use impl_mean::*;
-pub use impl_mean_axis::*;
-pub use impl_min_axis::*;
+pub use impl_min::*;
 pub use impl_minimum::*;
 pub use impl_mul::*;
 pub use impl_nans::*;
-pub use impl_normalize_axis::*;
+pub use impl_normalize::*;
 pub use impl_pow::*;
 pub use impl_softmax::*;
-pub use impl_std_axis::*;
+pub use impl_stddev::*;
 pub use impl_sub::*;
 pub use impl_sum::*;
-pub use impl_sum_axis::*;
 pub use map::*;
 pub use matmul::*;
 pub use permute::{Permute2D, Permute3D, Permute4D};

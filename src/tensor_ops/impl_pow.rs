@@ -67,7 +67,7 @@ mod tests {
         assert!(r.data()[1].is_nan());
         assert_eq!(&r.data()[2..], &[0.0, 1.0, 11.313708]);
 
-        let g = r.sum().backward();
+        let g = backward(r.sum());
         let grad = g.ref_gradient(&t);
         assert!(grad[0].is_nan());
         assert!(grad[1].is_nan());
@@ -82,7 +82,7 @@ mod tests {
         assert!(r.data()[1].is_nan());
         assert_eq!(&r.data()[2..], &[f32::INFINITY, 1.0, 0.43527526]);
 
-        let g = r.sum().backward();
+        let g = backward(r.sum());
         let grad = g.ref_gradient(&t);
         assert!(grad[0].is_nan());
         assert!(grad[1].is_nan());
@@ -94,7 +94,7 @@ mod tests {
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powi(3);
         assert_eq!(r.data(), &[-8., -1., 0., 1., 8.]);
-        let g = r.sum().backward();
+        let g = backward(r.sum());
         assert_eq!(g.ref_gradient(&t), &[12., 3., 0., 3., 12.]);
     }
 
@@ -103,7 +103,7 @@ mod tests {
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powi(-3);
         assert_eq!(r.data(), &[-0.125, -1.0, f32::INFINITY, 1.0, 0.125]);
-        let g = r.sum().backward();
+        let g = backward(r.sum());
         assert_eq!(
             g.ref_gradient(&t),
             &[-0.1875, -3., f32::NEG_INFINITY, -3., -0.1875]

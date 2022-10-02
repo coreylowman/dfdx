@@ -123,7 +123,7 @@ where
         // Get weights
         let scalar: f32 = 1.0 / ((K / H) as f32).sqrt();
         let weights: Tensor3D<H, S1, S2, _> = matmul_transpose(q, &k) * scalar;
-        let weights: Tensor3D<H, S1, S2, _> = weights.softmax::<-1>();
+        let weights: Tensor3D<H, S1, S2, _> = weights.softmax::<Axis<2>>();
 
         // Get new tokens
         let tokens: Tensor3D<H, S1, { V / H }, _> = matmul(weights, &v);
@@ -185,7 +185,7 @@ where
         // Get weights
         let scalar: f32 = 1.0 / ((K / H) as f32).sqrt();
         let weights: Tensor4D<B, H, S1, S2, _> = matmul_transpose(q, &k) * scalar;
-        let weights: Tensor4D<B, H, S1, S2, _> = weights.softmax::<-1>();
+        let weights: Tensor4D<B, H, S1, S2, _> = weights.softmax::<Axis<3>>();
 
         // Get new tokens
         let tokens: Tensor4D<B, H, S1, { V / H }, _> = matmul(weights, &v);
@@ -306,7 +306,7 @@ mod tests {
         let v: Tensor3D<2, 4, 12> = TensorCreator::randn(&mut rng);
         let y: Tensor3D<2, 3, 12, _> = mha.forward((q.trace(), k, v));
 
-        let mut g = SimpleGradients(y.mean().backward());
+        let mut g = SimpleGradients(backward(y.mean()));
         let mut unused = Default::default();
         mha.update(&mut g, &mut unused);
         assert!(unused.is_empty());

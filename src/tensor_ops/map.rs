@@ -264,7 +264,7 @@ mod tests {
         let r = x.trace().relu();
         assert_eq!(r.data(), &[0.0, 0.0, 0.0, 1.0, 2.0]);
         // NOTE: call .exp() to make sure we cover cases where .relu() uses the result's gradient
-        let gradients = r.exp().mean().backward();
+        let gradients = backward(r.exp().mean());
         assert_eq!(
             gradients.ref_gradient(&x),
             &[0.0, 0.0, 0.0, 0.54365635, 1.4778112]
@@ -279,7 +279,7 @@ mod tests {
             r.data(),
             &[-0.9092974, -0.84147096, 0.0, 0.84147096, 0.9092974],
         );
-        let gradients = r.mean().backward();
+        let gradients = backward(r.mean());
         assert_close(
             gradients.ref_gradient(&x),
             &[-0.08322937, 0.10806046, 0.2, 0.10806046, -0.08322937],
@@ -294,7 +294,7 @@ mod tests {
             r.data(),
             &[-0.41614684, 0.5403023, 1.0, 0.5403023, -0.41614684],
         );
-        let gradients = r.mean().backward();
+        let gradients = backward(r.mean());
         assert_close(
             gradients.ref_gradient(&x),
             &[0.18185948, 0.16829419, -0.0, -0.16829419, -0.18185948],
@@ -308,7 +308,7 @@ mod tests {
         assert!(r.data()[0].is_nan());
         assert!(r.data()[1].is_nan());
         assert!(r.data()[2..] == [f32::NEG_INFINITY, 0.0, std::f32::consts::LN_2]);
-        let gradients = r.mean().backward();
+        let gradients = backward(r.mean());
         assert_eq!(
             gradients.ref_gradient(&x),
             &[-0.1, -0.2, f32::INFINITY, 0.2, 0.1]
@@ -323,7 +323,7 @@ mod tests {
             r.data(),
             &[0.13533528, 0.36787945, 1.0, std::f32::consts::E, 7.389056]
         );
-        let gradients = r.mean().backward();
+        let gradients = backward(r.mean());
         assert_eq!(
             gradients.ref_gradient(&x),
             &[0.027067056, 0.07357589, 0.2, 0.54365635, 1.4778112]
@@ -338,7 +338,7 @@ mod tests {
             r.data(),
             &[0.11920292, 0.26894143, 0.5, 0.7310586, 0.880797]
         );
-        let gradients = r.mean().backward();
+        let gradients = backward(r.mean());
         assert_eq!(
             gradients.ref_gradient(&x),
             &[0.020998716, 0.039322387, 0.05, 0.039322387, 0.020998726]
@@ -353,7 +353,7 @@ mod tests {
             r.data(),
             &[-0.9640276, -0.7615942, 0., 0.7615942, 0.9640276]
         );
-        let gradients = r.mean().backward();
+        let gradients = backward(r.mean());
         assert_eq!(
             gradients.ref_gradient(&x),
             &[0.014130163, 0.083994865, 0.2, 0.083994865, 0.014130163]
@@ -365,7 +365,7 @@ mod tests {
         let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().square();
         assert_eq!(r.data(), &[4.0, 1.0, 0.0, 1.0, 4.0]);
-        let gradients = r.mean().backward();
+        let gradients = backward(r.mean());
         assert_eq!(gradients.ref_gradient(&x), &[-0.8, -0.4, 0.0, 0.4, 0.8]);
     }
 
@@ -375,7 +375,7 @@ mod tests {
         let r = x.trace().sqrt();
         assert!(r.data()[0].is_nan());
         assert_eq!(r.data()[1..], [0.0, 1.0, 2.0]);
-        let gradients = r.mean().backward();
+        let gradients = backward(r.mean());
         assert!(gradients.ref_gradient(&x)[0].is_nan());
         assert_eq!(
             gradients.ref_gradient(&x)[1..],
@@ -388,17 +388,8 @@ mod tests {
         let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().abs();
         assert_eq!(r.data(), &[2.0, 1.0, 0.0, 1.0, 2.0]);
-        let gradients = r.mean().backward();
+        let gradients = backward(r.mean());
         assert_eq!(gradients.ref_gradient(&x), &[-0.2, -0.2, 0.0, 0.2, 0.2]);
-    }
-
-    #[test]
-    fn test_0d_neg() {
-        let a = tensor(10.0);
-        let r = -(a.trace());
-        assert_eq!(r.data(), &-10.0);
-        let gradients = r.backward();
-        assert_eq!(gradients.ref_gradient(&a), &-1.0);
     }
 
     #[test]
@@ -407,28 +398,10 @@ mod tests {
         let r = -(a.trace());
         assert_eq!(r.data(), &[2.0, 0.0, -5.0]);
         // NOTE: .exp() so we can make sure neg is using result grad properly
-        let gradients = r.exp().mean().backward();
+        let gradients = backward(r.exp().mean());
         assert_eq!(
             gradients.ref_gradient(&a),
             &[-2.463019, -0.33333334, -0.0022459824]
         );
-    }
-
-    #[test]
-    fn test_2d_neg() {
-        let a: Tensor2D<2, 3> = tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
-        let r = -(a.trace());
-        assert_eq!(r.data(), &[[2.0, 0.0, -5.0], [-1.0, -2.0, -3.0]]);
-        let gradients = r.mean().backward();
-        assert_eq!(gradients.ref_gradient(&a), &[[-1.0 / 6.0; 3]; 2]);
-    }
-
-    #[test]
-    fn test_3d_neg() {
-        let a: Tensor3D<4, 2, 3> = Tensor3D::ones();
-        let r = -(a.trace());
-        assert_eq!(r.data(), &[[[-1.0; 3]; 2]; 4]);
-        let gradients = r.mean().backward();
-        assert_eq!(gradients.ref_gradient(&a), &[[[-1.0 / 24.0; 3]; 2]; 4]);
     }
 }
