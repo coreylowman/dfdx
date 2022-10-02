@@ -235,7 +235,7 @@ mod tests {
             r.data(),
             &[[1.0, 5.0], [-3.0, -6.0], [2.0, 5.0], [1.0, 4.0]]
         );
-        let gradients = r.mean().backward();
+        let gradients = r.mean::<_, AllAxes>().backward();
         assert_eq!(
             gradients.ref_gradient(&t),
             &[
@@ -257,7 +257,7 @@ mod tests {
         assert_close(&r.data()[0], r0.data());
         assert_close(&r.data()[1], r1.data());
 
-        let g = r.sum().backward();
+        let g = r.sum::<_, AllAxes>().backward();
         assert_eq!(g.ref_gradient(&t), &[[3.; 5], [0.; 5], [1.; 5], [2.; 5]]);
     }
 }

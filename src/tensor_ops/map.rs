@@ -419,7 +419,7 @@ mod tests {
         let a: Tensor2D<2, 3> = tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
         let r = -(a.trace());
         assert_eq!(r.data(), &[[2.0, 0.0, -5.0], [-1.0, -2.0, -3.0]]);
-        let gradients = r.mean().backward();
+        let gradients = r.mean::<_, AllAxes>().backward();
         assert_eq!(gradients.ref_gradient(&a), &[[-1.0 / 6.0; 3]; 2]);
     }
 
@@ -428,7 +428,7 @@ mod tests {
         let a: Tensor3D<4, 2, 3> = Tensor3D::ones();
         let r = -(a.trace());
         assert_eq!(r.data(), &[[[-1.0; 3]; 2]; 4]);
-        let gradients = r.mean().backward();
+        let gradients = r.mean::<_, AllAxes>().backward();
         assert_eq!(gradients.ref_gradient(&a), &[[[-1.0 / 24.0; 3]; 2]; 4]);
     }
 }

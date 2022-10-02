@@ -172,7 +172,7 @@ mod tests {
             ],
         );
 
-        let loss = y.square().mean();
+        let loss = y.square().mean::<_, AllAxes>();
         let gradients = loss.backward();
         assert_close(
             gradients.ref_gradient(&model.weight),
@@ -223,7 +223,7 @@ mod tests {
             ],
         );
 
-        let loss = y.square().mean();
+        let loss = y.square().mean::<_, AllAxes>();
         let gradients = loss.backward();
         assert_close(
             gradients.ref_gradient(&model.weight),

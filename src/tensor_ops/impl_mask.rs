@@ -78,7 +78,7 @@ mod tests {
         let m: Tensor2D<2, 3> = tensor([[-1e10, 0.0, -1e10], [1.0, -1e10, -1e9]]);
         let r = t.trace().value_mask(&m, -1e10);
         assert_eq!(r.data(), &[[-1e10, 2.0, -1e10], [4.0, -1e10, 6.0]]);
-        let gradients = r.mean().backward();
+        let gradients = r.mean::<_, AllAxes>().backward();
         assert_eq!(
             gradients.ref_gradient(&t),
             &[[0.0, 1.0 / 6.0, 0.0], [1.0 / 6.0, 0.0, 1.0 / 6.0]]

@@ -288,7 +288,7 @@ mod tests {
                 [1.0546886, 1.165766],
             ],
         );
-        let gradients = r.exp().mean().backward();
+        let gradients = r.exp().mean::<_, AllAxes>().backward();
         assert_close(
             gradients.ref_gradient(&a),
             &[
@@ -319,8 +319,8 @@ mod tests {
         let c_tr = matmul_transpose(a.trace(), &b_t);
         assert_close(c_tr.data(), c.data());
 
-        let gs = c.exp().mean().backward();
-        let gs_tr = c_tr.exp().mean().backward();
+        let gs = c.exp().mean::<_, AllAxes>().backward();
+        let gs_tr = c_tr.exp().mean::<_, AllAxes>().backward();
         assert_close(gs_tr.ref_gradient(&a), gs.ref_gradient(&a));
         assert_close(gs_tr.ref_gradient(&b_t), &transpose(gs.ref_gradient(&b)));
     }
@@ -336,11 +336,11 @@ mod tests {
             let sub_a = Tensor2D::new(a.data()[i]);
             assert_close(&r.data()[i], matmul(sub_a, &b).data());
         }
-        let gs = r.sum().backward();
+        let gs = r.sum::<_, AllAxes>().backward();
         let mut sub_bs_summed = [[0.0; 2]; 3];
         for i in 0..N {
             let sub_a = Tensor2D::new(a.data()[i]);
-            let sub_gs = matmul(sub_a.trace(), &b).sum().backward();
+            let sub_gs = matmul(sub_a.trace(), &b).sum::<_, AllAxes>().backward();
             assert_close(&gs.ref_gradient(&a)[i], sub_gs.ref_gradient(&sub_a));
             <Cpu as Device<_>>::add(&mut sub_bs_summed, sub_gs.ref_gradient(&b));
         }
@@ -358,8 +358,8 @@ mod tests {
         let c_tr = matmul_transpose(a.trace(), &b_t);
         assert_close(c_tr.data(), c.data());
 
-        let gs = c.exp().mean().backward();
-        let gs_tr = c_tr.exp().mean().backward();
+        let gs = c.exp().mean::<_, AllAxes>().backward();
+        let gs_tr = c_tr.exp().mean::<_, AllAxes>().backward();
         assert_close(gs_tr.ref_gradient(&a), gs.ref_gradient(&a));
         assert_close(gs_tr.ref_gradient(&b_t), &transpose(gs.ref_gradient(&b)));
     }

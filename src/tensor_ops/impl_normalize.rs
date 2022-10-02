@@ -13,18 +13,16 @@ use crate::prelude::*;
 /// assert!(r.clone().mean_axis::<-1>().data().abs() < 1e-6);
 /// assert!((r.clone().std_axis::<-1>(0.0).data() - 1.0).abs() < 1e-6);
 /// ```
-pub fn normalize_axes<T, Axes>(t: T, epsilon: T::Dtype) -> T
+pub fn normalize<T, Axes>(t: T, epsilon: T::Dtype) -> T
 where
     T: Reduce<Axes>,
     T::Array: HasAxes<Axes>,
 {
     let (t, tape) = t.split_tape();
-    let (std, tape) = std_axes(t.duplicate().put_tape(tape), epsilon)
+    let (std, tape) = stddev(t.duplicate().put_tape(tape), epsilon)
         .broadcast()
         .split_tape();
-    let (mean, tape) = mean_axes(t.duplicate().put_tape(tape))
-        .broadcast()
-        .split_tape();
+    let (mean, tape) = mean(t.duplicate().put_tape(tape)).broadcast().split_tape();
     let centered = sub(t.put_tape(tape), &mean);
     div(centered, &std)
 }
@@ -34,12 +32,12 @@ macro_rules! tensor_impl {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H>
 {
     /// Calls [normalize_axes()] on `self` with `Axis<I>`
-    pub fn normalize_axis<const I: isize>(self, epsilon: f32) -> Self
+    pub fn normalize<Axes>(self, epsilon: f32) -> Self
     where
-        Self: Reduce<Axis<I>>,
-        <Self as HasArrayType>::Array: HasAxes<Axis<I>>,
+        Self: Reduce<Axes>,
+        <Self as HasArrayType>::Array: HasAxes<Axes>,
     {
-        normalize_axes(self, epsilon)
+        normalize(self, epsilon)
     }
 }
     };
@@ -58,7 +56,7 @@ mod tests {
     #[test]
     fn test_0d_normalize_axis_last() {
         let a = tensor(10.0);
-        let r = a.trace().normalize_axis::<-1>(1e-5);
+        let r = a.trace().normalize(1e-5);
         assert_eq!(r.data(), &0.0);
         let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&a), &0.0);
@@ -67,7 +65,7 @@ mod tests {
     #[test]
     fn test_1d_normalize_axis_last() {
         let a = tensor([-2.0, 0.0, 5.0]);
-        let r = a.trace().normalize_axis::<-1>(1e-5);
+        let r = a.trace().normalize(1e-5);
         assert_eq!(r.data(), &[-1.0190487, -0.3396829, 1.3587316]);
         // NOTE: .exp() so we can make sure normalize is using result grad properly
         let gradients = r.exp().mean().backward();
@@ -80,7 +78,7 @@ mod tests {
     #[test]
     fn test_2d_normalize_axis_last() {
         let a: Tensor2D<2, 3> = tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
-        let r = a.trace().normalize_axis::<-1>(1e-5);
+        let r = a.trace().normalize::<Axis<1>>(1e-5);
         assert_eq!(
             r.data(),
             &[
@@ -88,7 +86,7 @@ mod tests {
                 [-1.2247356, 0.0, 1.2247356]
             ]
         );
-        let gradients = r.exp().mean().backward();
+        let gradients = r.exp().mean::<_, AllAxes>().backward();
         assert_eq!(
             gradients.ref_gradient(&a),
             &[
@@ -101,7 +99,7 @@ mod tests {
     #[test]
     fn test_2d_normalize_axis_first() {
         let a: Tensor2D<3, 2> = tensor([[-2.0, 0.0], [1.0, 2.0], [4.0, 5.0]]);
-        let r = a.trace().normalize_axis::<0>(1e-5);
+        let r = a.trace().normalize::<Axis<0>>(1e-5);
         assert_eq!(
             r.data(),
             &[
@@ -110,7 +108,7 @@ mod tests {
                 [1.2247438, 1.2977698],
             ]
         );
-        let gradients = r.exp().mean().backward();
+        let gradients = r.exp().mean::<_, AllAxes>().backward();
         assert_eq!(
             gradients.ref_gradient(&a),
             &[
@@ -124,9 +122,9 @@ mod tests {
     #[test]
     fn test_3d_normalize_axis_last() {
         let a: Tensor3D<4, 2, 3> = TensorCreator::ones();
-        let r = a.trace().normalize_axis::<-1>(1e-5);
+        let r = a.trace().normalize::<Axis<2>>(1e-5);
         assert_eq!(r.data(), &[[[0.0; 3]; 2]; 4]);
-        let gradients = r.exp().mean().backward();
+        let gradients = r.exp().mean::<_, AllAxes>().backward();
         assert_eq!(gradients.ref_gradient(&a), &[[[0.0; 3]; 2]; 4]);
     }
 }

@@ -67,7 +67,7 @@ mod tests {
         let result = minimum(a.trace(), &b);
         assert_eq!(result.data(), &[[-1., 0., -1.], [3., -4., -5.]]);
 
-        let g = result.sum().backward();
+        let g = result.sum::<_, AllAxes>().backward();
         assert_eq!(g.ref_gradient(&a), &[[1.0, 0.5, 0.0], [0.5, 0.0, 1.0]]);
         assert_eq!(g.ref_gradient(&b), &[[0.0, 0.5, 1.0], [0.5, 1.0, 0.0]]);
     }

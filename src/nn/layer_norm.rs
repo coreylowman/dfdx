@@ -61,7 +61,7 @@ impl<H: Tape, const M: usize> Module<Tensor1D<M, H>> for LayerNorm1D<M> {
     /// 2. [mul()] with [Self::gamma]
     /// 3. [add()] with [Self::beta]
     fn forward(&self, x: Tensor1D<M, H>) -> Self::Output {
-        let x = x.normalize_axis::<-1>(self.epsilon);
+        let x = x.normalize(self.epsilon);
         let x = mul(x, &self.gamma);
         add(x, &self.beta)
     }
@@ -75,7 +75,7 @@ impl<H: Tape, const B: usize, const M: usize> Module<Tensor2D<B, M, H>> for Laye
     /// 2. [mul()] with [Self::gamma]
     /// 3. [add()] with [Self::beta]
     fn forward(&self, x: Tensor2D<B, M, H>) -> Self::Output {
-        let (x, tape) = x.normalize_axis::<-1>(self.epsilon).split_tape();
+        let (x, tape) = x.normalize::<Axis<1>>(self.epsilon).split_tape();
         let g: Tensor2D<B, M, H> = self.gamma.duplicate().put_tape(tape).broadcast();
         let (x, tape) = mul(g, &x).split_tape();
         let b = self.beta.duplicate().put_tape(tape).broadcast();
@@ -93,7 +93,7 @@ impl<H: Tape, const B: usize, const S: usize, const M: usize> Module<Tensor3D<B,
     /// 2. [add()] with [Self::gamma]
     /// 3. [add()] with [Self::beta]
     fn forward(&self, x: Tensor3D<B, S, M, H>) -> Self::Output {
-        let (x, tape) = x.normalize_axis::<-1>(self.epsilon).split_tape();
+        let (x, tape) = x.normalize::<Axis<2>>(self.epsilon).split_tape();
         let g: Tensor3D<B, S, M, H> = self.gamma.duplicate().put_tape(tape).broadcast();
         let (x, tape) = mul(g, &x).split_tape();
         let b = self.beta.duplicate().put_tape(tape).broadcast();
@@ -204,7 +204,7 @@ mod tests {
         let m: LayerNorm1D<10> = Default::default();
         let r = m.forward(x.trace());
         assert_eq!(r.data(), &Y_2);
-        let gradients = r.mean().backward();
+        let gradients = r.mean::<_, AllAxes>().backward();
         assert_eq!(
             gradients.ref_gradient(&m.gamma),
             &[

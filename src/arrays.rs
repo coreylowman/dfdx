@@ -130,6 +130,34 @@ where
         * <T as HasAxes<Axis<L>>>::SIZE;
 }
 
+pub trait HasLastAxis {
+    type LastAxis;
+    const SIZE: usize;
+}
+
+impl HasLastAxis for f32 {
+    type LastAxis = AllAxes;
+    const SIZE: usize = 1;
+}
+impl<const M: usize> HasLastAxis for [f32; M] {
+    type LastAxis = AllAxes;
+    const SIZE: usize = M;
+}
+impl<const M: usize, const N: usize> HasLastAxis for [[f32; N]; M] {
+    type LastAxis = Axis<1>;
+    const SIZE: usize = N;
+}
+impl<const M: usize, const N: usize, const O: usize> HasLastAxis for [[[f32; O]; N]; M] {
+    type LastAxis = Axis<2>;
+    const SIZE: usize = O;
+}
+impl<const M: usize, const N: usize, const O: usize, const P: usize> HasLastAxis
+    for [[[[f32; P]; O]; N]; M]
+{
+    type LastAxis = Axis<3>;
+    const SIZE: usize = P;
+}
+
 /// Something that has compile time known zero values.
 pub trait ZeroElements {
     const ZEROS: Self;

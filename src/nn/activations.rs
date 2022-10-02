@@ -57,7 +57,11 @@ impl ResetParams for Softmax {
 impl SaveToNpz for Softmax {}
 impl LoadFromNpz for Softmax {}
 
-impl<T: Reduce<Axis<-1>>> Module<T> for Softmax {
+impl<T> Module<T> for Softmax
+where
+    T: Reduce<<<T as HasArrayType>::Array as HasLastAxis>::LastAxis>,
+    T::Array: HasLastAxis,
+{
     type Output = T;
     fn forward(&self, input: T) -> Self::Output {
         softmax(input)
@@ -148,17 +152,17 @@ mod tests {
     fn test_softmax() {
         let t = Tensor0D::new(0.0);
         let r1 = Softmax.forward(t.clone());
-        let r2 = t.softmax::<-1>();
+        let r2 = softmax(t);
         assert_eq!(r1.data(), r2.data());
 
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Softmax.forward(t.clone());
-        let r2 = t.softmax::<-1>();
+        let r2 = softmax(t);
         assert_eq!(r1.data(), r2.data());
 
         let t = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
         let r1 = Softmax.forward(t.clone());
-        let r2 = t.softmax::<-1>();
+        let r2 = t.softmax::<1>();
         assert_eq!(r1.data(), r2.data());
     }
 }

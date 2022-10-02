@@ -27,38 +27,23 @@ use crate::prelude::*;
 /// let r: Tensor0D = t.mean_axes::<Axes2<0, 1>>();
 /// assert_eq!(r.data(), &3.5);
 /// ```
-pub fn mean_axes<T: Reduce<Axes>, Axes>(t: T) -> T::Reduced
+pub fn mean<T: Reduce<Axes>, Axes>(t: T) -> T::Reduced
 where
     T::Array: HasAxes<Axes>,
 {
-    div_scalar(sum_axes(t), <T::Array as HasAxes<Axes>>::SIZE as f32)
+    div_scalar(sum(t), <T::Array as HasAxes<Axes>>::SIZE as f32)
 }
 
 macro_rules! mean_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [mean_axes()] with `AllAxes`
-    pub fn mean(self) -> <Self as Reduce<AllAxes>>::Reduced
+    pub fn mean<T, Axes>(self) -> T
     where
-        Self: Reduce<AllAxes>
+        Self: ReduceTo<T, Axes>,
+        <Self as HasArrayType>::Array: HasAxes<Axes>
     {
-        mean_axes(self)
-    }
-    /// Calls [mean_axes()] with `Axis<I>`
-    pub fn mean_axis<const I: isize>(self) -> <Self as Reduce<Axis<I>>>::Reduced
-    where
-        Self: Reduce<Axis<I>>,
-        <Self as HasArrayType>::Array: HasAxes<Axis<I>>,
-    {
-        mean_axes(self)
-    }
-    /// Calls [mean_axes()]
-    pub fn mean_axes<Axes>(self) -> <Self as Reduce<Axes>>::Reduced
-    where
-        Self: Reduce<Axes>,
-        <Self as HasArrayType>::Array: HasAxes<Axes>,
-    {
-        mean_axes(self)
+        mean(self)
     }
 }
     };
@@ -78,19 +63,19 @@ mod tests {
 
     #[test]
     fn test_valids_mean_axis() {
-        let _: Tensor0D = Tensor1D::<5>::zeros().mean_axis::<-1>();
+        let _: Tensor0D = Tensor1D::<5>::zeros().mean();
 
-        let _: Tensor1D<3> = Tensor2D::<5, 3>::zeros().mean_axis::<0>();
-        let _: Tensor1D<5> = Tensor2D::<5, 3>::zeros().mean_axis::<-1>();
+        let _: Tensor1D<3> = Tensor2D::<5, 3>::zeros().mean();
+        let _: Tensor1D<5> = Tensor2D::<5, 3>::zeros().mean();
 
-        let _: Tensor2D<5, 3> = Tensor3D::<7, 5, 3>::zeros().mean_axis::<0>();
-        let _: Tensor2D<7, 3> = Tensor3D::<7, 5, 3>::zeros().mean_axis::<1>();
-        let _: Tensor2D<7, 5> = Tensor3D::<7, 5, 3>::zeros().mean_axis::<-1>();
+        let _: Tensor2D<5, 3> = Tensor3D::<7, 5, 3>::zeros().mean();
+        let _: Tensor2D<7, 3> = Tensor3D::<7, 5, 3>::zeros().mean();
+        let _: Tensor2D<7, 5> = Tensor3D::<7, 5, 3>::zeros().mean();
 
-        let _: Tensor3D<7, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<0>();
-        let _: Tensor3D<9, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<1>();
-        let _: Tensor3D<9, 7, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<2>();
-        let _: Tensor3D<9, 7, 5> = Tensor4D::<9, 7, 5, 3>::zeros().mean_axis::<-1>();
+        let _: Tensor3D<7, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean();
+        let _: Tensor3D<9, 5, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean();
+        let _: Tensor3D<9, 7, 3> = Tensor4D::<9, 7, 5, 3>::zeros().mean();
+        let _: Tensor3D<9, 7, 5> = Tensor4D::<9, 7, 5, 3>::zeros().mean();
     }
 
     #[test]
@@ -127,7 +112,7 @@ mod tests {
     #[test]
     fn test_mean_axis_0_2d() {
         let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
-        let r = t.trace().mean_axis::<0>();
+        let r = t.trace().mean::<_, Axis<0>>();
         assert_eq!(r.data(), &[-0.5, 3.0, -1.5]);
         let gradients = r.exp().mean().backward();
         assert_eq!(
@@ -139,7 +124,7 @@ mod tests {
     #[test]
     fn test_mean_axis_1_2d() {
         let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
-        let r = t.trace().mean_axis::<-1>();
+        let r = t.trace().mean::<_, Axis<1>>();
         assert_eq!(r.data(), &[2.0, -4.0 / 3.0]);
         let gradients = r.exp().mean().backward();
         assert_eq!(
@@ -152,8 +137,8 @@ mod tests {
     fn test_mean_axes_3d_to_1d_02() {
         let mut rng = thread_rng();
         let t: Tensor3D<2, 3, 4> = TensorCreator::randn(&mut rng);
-        let r: Tensor1D<3, _> = t.trace().mean_axes::<Axes2<0, 2>>();
-        let r2 = t.trace().sum_axis::<0>().sum_axis::<-1>() / 8.0;
+        let r: Tensor1D<3, _> = t.trace().mean::<_, Axes2<0, 2>>();
+        let r2 = t.trace().sum::<_, Axis<0>>().sum::<_, Axis<1>>() / 8.0;
         assert_close(r.data(), r2.data());
         let g = r.mean().backward();
         let g2 = r2.mean().backward();
@@ -165,8 +150,8 @@ mod tests {
     fn test_mean_axes_3d_to_1d_01() {
         let mut rng = thread_rng();
         let t: Tensor3D<2, 3, 4> = TensorCreator::randn(&mut rng);
-        let r: Tensor1D<4, _> = t.trace().mean_axes::<Axes2<0, 1>>();
-        let r2 = t.sum_axis::<0>().sum_axis::<0>() / 6.0;
+        let r: Tensor1D<4, _> = t.trace().mean::<_, Axes2<0, 1>>();
+        let r2 = t.sum::<_, Axis<0>>().sum::<_, Axis<0>>() / 6.0;
         assert_close(r.data(), r2.data());
     }
 
@@ -174,8 +159,8 @@ mod tests {
     fn test_mean_axes_3d_to_1d_12() {
         let mut rng = thread_rng();
         let t: Tensor3D<2, 3, 4> = TensorCreator::randn(&mut rng);
-        let r: Tensor1D<2, _> = t.trace().mean_axes::<Axes2<1, 2>>();
-        let r2 = t.sum_axis::<1>().sum_axis::<-1>() / 12.0;
+        let r: Tensor1D<2, _> = t.trace().mean::<_, Axes2<1, 2>>();
+        let r2 = t.sum::<_, Axis<1>>().sum::<_, Axis<1>>() / 12.0;
         assert_close(r.data(), r2.data());
     }
 
@@ -183,8 +168,12 @@ mod tests {
     fn test_mean_axes_4d_to_1d() {
         let mut rng = thread_rng();
         let t: Tensor4D<2, 3, 4, 5> = TensorCreator::randn(&mut rng);
-        let r: Tensor1D<3, _> = t.trace().mean_axes::<Axes3<0, 2, 3>>();
-        let r2 = t.sum_axis::<0>().sum_axis::<1>().sum_axis::<-1>() / 40.0;
+        let r: Tensor1D<3, _> = t.trace().mean::<_, Axes3<0, 2, 3>>();
+        let r2 = t
+            .sum::<_, Axis<0>>()
+            .sum::<_, Axis<1>>()
+            .sum::<_, Axis<1>>()
+            / 40.0;
         assert_close(r.data(), r2.data());
     }
 }
