@@ -49,7 +49,7 @@
 //! # use dfdx::prelude::*;
 //! # let mut rng = rand::thread_rng();
 //! # let model: Linear<10, 5> = Default::default();
-//! # let y_true: Tensor1D<5> = softmax(Tensor1D::randn(&mut rng));
+//! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
 //! // tensors default to not having a tape
 //! let x: Tensor1D<10, NoneTape> = TensorCreator::zeros();
 //!
@@ -66,7 +66,7 @@
 //! # use dfdx::prelude::*;
 //! # let mut rng = rand::thread_rng();
 //! # let model: Linear<10, 5> = Default::default();
-//! # let y_true: Tensor1D<5> = softmax(Tensor1D::randn(&mut rng));
+//! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
 //! # let y: Tensor1D<5, OwnedTape> = model.forward(Tensor1D::zeros().trace());
 //! // compute cross entropy loss
 //! let loss: Tensor0D<OwnedTape> = cross_entropy_with_logits_loss(y, &y_true);
@@ -80,7 +80,7 @@
 //! # let mut rng = rand::thread_rng();
 //! # let mut model: Linear<10, 5> = Default::default();
 //! # let x: Tensor1D<10> = Tensor1D::zeros();
-//! # let y_true: Tensor1D<5> = softmax(Tensor1D::randn(&mut rng));
+//! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
 //! # let y: Tensor1D<5, OwnedTape> = model.forward(x.trace());
 //! # let loss = cross_entropy_with_logits_loss(y, &y_true);
 //! # let gradients: Gradients = loss.backward();

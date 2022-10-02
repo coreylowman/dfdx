@@ -82,33 +82,45 @@ pub fn softmax<T: Reduce<Axes>, Axes>(t: T) -> T {
     exp(log_softmax(t))
 }
 
-macro_rules! tensor_impl {
+macro_rules! passthrough_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [logsumexp()] on `self` with `Axis<I>`.
-    pub fn logsumexp<T, Axes>(self) -> T
-    where
-        Self: ReduceTo<T, Axes>
-    {
+    /// Calls [logsumexp()] on `self` with `Axes`.
+    pub fn logsumexp<T, Axes>(self) -> T where Self: ReduceTo<T, Axes> {
         logsumexp(self)
     }
-    /// Calls [log_softmax()] on `self` with `Axis<I>`
-    pub fn log_softmax<const I: isize>(self) -> Self where Self: Reduce<Axis<I>>
-    {
+    pub fn log_softmax(self) -> Self {
         log_softmax(self)
     }
-
-    /// Calls [softmax()] on `self` with `Axis<I>`
-    pub fn softmax<const I: isize>(self) -> Self where Self: Reduce<Axis<I>>
-    {
+    pub fn softmax(self) -> Self {
         softmax(self)
     }
 }
     };
 }
 
-tensor_impl!(Tensor0D, []);
-tensor_impl!(Tensor1D, [M]);
+passthrough_impl!(Tensor0D, []);
+passthrough_impl!(Tensor1D, [M]);
+
+macro_rules! tensor_impl {
+    ($typename:ident, [$($Vs:tt),*]) => {
+impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
+    /// Calls [logsumexp()] on `self` with `Axes`.
+    pub fn logsumexp<T, Axes>(self) -> T where Self: ReduceTo<T, Axes> {
+        logsumexp(self)
+    }
+    /// Calls [log_softmax()] on `self` with `Axis<I>`
+    pub fn log_softmax<const I: isize>(self) -> Self where Self: Reduce<Axis<I>> {
+        log_softmax(self)
+    }
+    /// Calls [softmax()] on `self` with `Axis<I>`
+    pub fn softmax<const I: isize>(self) -> Self where Self: Reduce<Axis<I>> {
+        softmax(self)
+    }
+}
+    };
+}
+
 tensor_impl!(Tensor2D, [M, N]);
 tensor_impl!(Tensor3D, [M, N, O]);
 tensor_impl!(Tensor4D, [M, N, O, P]);
@@ -122,7 +134,7 @@ mod tests {
     #[test]
     fn test_logsumexp_0d() {
         let a = tensor(0.0);
-        let r: Tensor0D<_> = logsumexp(a.trace());
+        let r = a.trace().logsumexp();
         assert_eq!(r.data(), &0.0);
         let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&a), &1.0);
@@ -131,7 +143,7 @@ mod tests {
     #[test]
     fn test_log_softmax_0d() {
         let a = tensor(0.0);
-        let r = log_softmax(a.trace());
+        let r = a.trace().log_softmax();
         assert_eq!(r.data(), &0.0);
         let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&a), &0.0);
@@ -140,7 +152,7 @@ mod tests {
     #[test]
     fn test_softmax_0d() {
         let a = tensor(0.0);
-        let r = softmax(a.trace());
+        let r = a.trace().softmax();
         assert_eq!(r.data(), &1.0);
         let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&a), &0.0);
@@ -161,7 +173,7 @@ mod tests {
     #[test]
     fn test_log_softmax_1d() {
         let a: Tensor1D<5> = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = log_softmax(a.trace());
+        let r = a.trace().log_softmax();
         assert_eq!(
             r.data(),
             &[-4.4519143, -3.4519143, -2.4519143, -1.4519143, -0.4519143]
@@ -182,7 +194,7 @@ mod tests {
     #[test]
     fn test_softmax_1d() {
         let a: Tensor1D<5> = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = softmax(a.trace());
+        let r = a.trace().softmax();
         assert_eq!(
             r.data(),
             &[0.011656232, 0.031684924, 0.086128555, 0.23412168, 0.6364087]
