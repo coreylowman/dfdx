@@ -76,7 +76,7 @@
 //!
 //! # Permutating axes
 //!
-//! Permutating axes is done via [Permute2D], [Permute3D], and [Permute4D]:
+//! Permutating axes is done via [PermuteTo]:
 //!
 //! 2D version:
 //! ```rust
@@ -181,7 +181,7 @@ pub use impl_sub::*;
 pub use impl_sum::*;
 pub use map::*;
 pub use matmul::*;
-pub use permute::{Permute2D, Permute3D, Permute4D};
+pub use permute::*;
 pub use select::*;
 
 #[cfg(feature = "nightly")]
