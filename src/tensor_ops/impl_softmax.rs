@@ -82,26 +82,6 @@ pub fn softmax<T: Reduce<Axes>, Axes>(t: T) -> T {
     exp(log_softmax(t))
 }
 
-macro_rules! passthrough_impl {
-    ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [logsumexp()] on `self` with `Axes`.
-    pub fn logsumexp<T, Axes>(self) -> T where Self: ReduceTo<T, Axes> {
-        logsumexp(self)
-    }
-    pub fn log_softmax(self) -> Self {
-        log_softmax(self)
-    }
-    pub fn softmax(self) -> Self {
-        softmax(self)
-    }
-}
-    };
-}
-
-passthrough_impl!(Tensor0D, []);
-passthrough_impl!(Tensor1D, [M]);
-
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
@@ -121,6 +101,8 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     };
 }
 
+tensor_impl!(Tensor0D, []);
+tensor_impl!(Tensor1D, [M]);
 tensor_impl!(Tensor2D, [M, N]);
 tensor_impl!(Tensor3D, [M, N, O]);
 tensor_impl!(Tensor4D, [M, N, O, P]);
