@@ -39,14 +39,14 @@ pub fn logsumexp<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
-/// let _ = t.log_softmax::<2>();
+/// let _ = t.log_softmax::<Axis<2>>();
 /// ```
 ///
 /// Using multi axis log_softmax:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
-/// let _ = log_softmax::<_, Axes2<0, 2>>(t);
+/// let _ = t.log_softmax::<Axes2<0, 2>>();
 /// ```
 pub fn log_softmax<T: Reduce<Axes>, Axes>(t: T) -> T {
     let (t, tape) = t.split_tape();
@@ -69,14 +69,14 @@ pub fn log_softmax<T: Reduce<Axes>, Axes>(t: T) -> T {
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
-/// let _ = t.softmax::<2>();
+/// let _ = t.softmax::<Axis<2>>();
 /// ```
 ///
 /// Using multi axis softmax:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
-/// let _ = softmax::<_, Axes2<1, 2>>(t);
+/// let _ = t.softmax::<Axes2<1, 2>>();
 /// ```
 pub fn softmax<T: Reduce<Axes>, Axes>(t: T) -> T {
     exp(log_softmax(t))
@@ -109,12 +109,12 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     pub fn logsumexp<T, Axes>(self) -> T where Self: ReduceTo<T, Axes> {
         logsumexp(self)
     }
-    /// Calls [log_softmax()] on `self` with `Axis<I>`
-    pub fn log_softmax<const I: isize>(self) -> Self where Self: Reduce<Axis<I>> {
+    /// Calls [log_softmax()] on `self` with `Axes`
+    pub fn log_softmax<Axes>(self) -> Self where Self: Reduce<Axes> {
         log_softmax(self)
     }
-    /// Calls [softmax()] on `self` with `Axis<I>`
-    pub fn softmax<const I: isize>(self) -> Self where Self: Reduce<Axis<I>> {
+    /// Calls [softmax()] on `self` with `Axes`
+    pub fn softmax<Axes>(self) -> Self where Self: Reduce<Axes> {
         softmax(self)
     }
 }
@@ -232,7 +232,7 @@ mod tests {
     #[test]
     fn test_log_softmax_2d() {
         let a: Tensor2D<2, 3> = tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r = a.trace().log_softmax::<1>();
+        let r = a.trace().log_softmax::<Axis<1>>();
         assert_eq!(
             r.data(),
             &[
@@ -253,7 +253,7 @@ mod tests {
     #[test]
     fn test_softmax_2d() {
         let a: Tensor2D<2, 3> = tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r = a.trace().softmax::<1>();
+        let r = a.trace().softmax::<Axis<1>>();
         assert_eq!(
             r.data(),
             &[
@@ -276,7 +276,7 @@ mod tests {
     #[test]
     fn test_softmax_2d_0th_axis() {
         let a: Tensor2D<2, 3> = tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r = a.trace().softmax::<0>();
+        let r = a.trace().softmax::<Axis<0>>();
         assert_eq!(
             r.data(),
             &[

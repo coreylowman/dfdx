@@ -1,9 +1,9 @@
 use crate::prelude::*;
 
-/// Reduces dimension `I` of `T` by computing std deviation of all values in that dimension.
+/// Reduces `Axes` of `T` by computing std deviation of all values in those axes.
 /// Result [Tensor] has smaller number of dimensions.
 ///
-/// **Pytorch equivalent**: `t.std(I, unbiased=False)`
+/// **Pytorch equivalent**: `t.std(Axes, unbiased=False)`
 ///
 /// **Related functions**: [var()], [sqrt()].
 ///
@@ -22,10 +22,10 @@ where
     sqrt(add_scalar(var(t), epsilon))
 }
 
-/// Reduces dimension `I` of the tensor by computing variance of all values in the dimension.
+/// Reduces `Axes` of `T` by computing variance of all values in those axes.
 /// Result [Tensor] has smaller number of dimensions.
 ///
-/// **Pytorch equivalent**: `t.var(I, unbiased=False)`
+/// **Pytorch equivalent**: `t.var(Axes, unbiased=False)`
 ///
 /// **Related functions**: [stddev()], [mean()].
 ///
