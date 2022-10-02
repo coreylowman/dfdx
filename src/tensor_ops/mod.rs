@@ -27,7 +27,7 @@
 //!
 //! There are a number of functions that reduce 1 or more axes. Valid axes and reductions
 //! can be seen by viewing the [Reduce] or [ReduceTo] traits. Anything that can be [Reduce]'d can also
-//! be [Broadcast]ed back to the same tensor.
+//! be [BroadcastTo] the same tensor.
 //!
 //! There are 2 ways to call each axis reducing function:
 //! 1. The tensor method (e.g. [crate::tensor::Tensor1D::sum()]), where the axes are inferred based
@@ -56,7 +56,7 @@
 //!
 //! # Broadcasts
 //!
-//! Broadcasting tensors is provided through the [Broadcast] trait. Generally the axes
+//! Broadcasting tensors is provided through the [BroadcastTo] trait. Generally the axes
 //! can be inferred by the type of the output, so you don't have to explicitly
 //! specify them.
 //!

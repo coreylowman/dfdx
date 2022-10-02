@@ -4,7 +4,7 @@ use crate::devices::{AddAccum, CopyAccum, DeviceReduce};
 use crate::prelude::*;
 
 /// Broadcast self into `T` along `Axes`. Opposite of [Reduce].
-pub trait Broadcast<T, Axes> {
+pub trait BroadcastTo<T, Axes> {
     /// Broadcast `self` into `T`. This can be used to broadcast 1, 2, 3, and 4 axes.
     ///
     /// Examples:
@@ -22,7 +22,7 @@ pub trait Broadcast<T, Axes> {
     fn broadcast(self) -> T;
 }
 
-/// Remove `Axes` of tensor by reducing them. Opposite of [Broadcast].
+/// Remove `Axes` of tensor by reducing them. Opposite of [BroadcastTo].
 ///
 /// Enables functions like [sum()] that reduce values along a single dimension.
 ///
@@ -31,8 +31,8 @@ pub trait Broadcast<T, Axes> {
 /// reduced.
 pub trait Reduce<Axes>: Sized + Tensor<Dtype = f32> {
     /// The resulting tensor type.
-    /// This can be broadcast into Self via [Broadcast].
-    type Reduced: Broadcast<Self, Axes> + Tensor<Tape = Self::Tape, Dtype = Self::Dtype>;
+    /// This can be broadcast into Self via [BroadcastTo].
+    type Reduced: BroadcastTo<Self, Axes> + Tensor<Tape = Self::Tape, Dtype = Self::Dtype>;
     type DeviceR: DeviceReduce<Self::Array, Axes, Reduced = <Self::Reduced as HasArrayType>::Array>;
 }
 
@@ -48,7 +48,7 @@ impl<$(const $Dims: usize, )* H: Tape> Reduce<$AxesTy> for $DstTy {
 
 impl<$(const $Dims: usize, )* H: Tape> ReduceTo<$SrcTy, $AxesTy> for $DstTy {}
 
-impl<$(const $Dims: usize, )* H: Tape> Broadcast<$DstTy, $AxesTy> for $SrcTy {
+impl<$(const $Dims: usize, )* H: Tape> BroadcastTo<$DstTy, $AxesTy> for $SrcTy {
     fn broadcast(self) -> $DstTy {
         let mut result = <$DstTy as Tensor>::NoTape::zeros();
         <Cpu as DeviceReduce<_, $AxesTy>>::broadcast_into::<CopyAccum>(result.mut_data(), self.data());
@@ -66,7 +66,7 @@ impl<H: Tape> Reduce<AllAxes> for Tensor0D<H> {
     type DeviceR = <Self as HasDevice>::Device;
 }
 impl<H: Tape> ReduceTo<Self, AllAxes> for Tensor0D<H> {}
-impl<H: Tape> Broadcast<Tensor0D<H>, AllAxes> for Tensor0D<H> {
+impl<H: Tape> BroadcastTo<Tensor0D<H>, AllAxes> for Tensor0D<H> {
     fn broadcast(self) -> Tensor0D<H> {
         self
     }
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_valid_1d_broadcasts() {
-        let _: Tensor1D<5> = Broadcast::<_, AllAxes>::broadcast(Tensor0D::zeros());
+        let _: Tensor1D<5> = BroadcastTo::<_, AllAxes>::broadcast(Tensor0D::zeros());
 
         let _: Tensor2D<5, 3> = Tensor1D::<3>::zeros().broadcast();
         let _: Tensor2D<5, 3> = Tensor1D::<5>::zeros().broadcast();
@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn test_valid_2d_broadcasts() {
-        let _: Tensor2D<5, 3> = Broadcast::<_, AllAxes>::broadcast(Tensor0D::zeros());
+        let _: Tensor2D<5, 3> = BroadcastTo::<_, AllAxes>::broadcast(Tensor0D::zeros());
 
         let _: Tensor3D<3, 5, 7> = Tensor1D::<3>::zeros().broadcast();
         let _: Tensor3D<3, 5, 7> = Tensor1D::<5>::zeros().broadcast();
@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn test_valid_3d_broadcasts() {
-        let _: Tensor3D<3, 5, 7> = Broadcast::<_, AllAxes>::broadcast(Tensor0D::zeros());
+        let _: Tensor3D<3, 5, 7> = BroadcastTo::<_, AllAxes>::broadcast(Tensor0D::zeros());
 
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<3>::zeros().broadcast();
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<5>::zeros().broadcast();
