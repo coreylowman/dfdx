@@ -117,7 +117,7 @@ where
     T::Reduced: Reduce<AllAxes>,
 {
     negate(mean_axes::<_, AllAxes>(sum_axes::<_, Axis<-1>>(mul(
-        log_softmax(logits),
+        log_softmax::<_, Axis<-1>>(logits),
         target_probs,
     ))))
 }
@@ -148,7 +148,10 @@ where
     T::Reduced: Reduce<AllAxes>,
 {
     negate(mean_axes::<_, AllAxes>(sum_axes::<_, Axis<-1>>(mul(
-        sub(log_softmax(logits), &ln(target_probs.duplicate())),
+        sub(
+            log_softmax::<_, Axis<-1>>(logits),
+            &ln(target_probs.duplicate()),
+        ),
         target_probs,
     ))))
 }
