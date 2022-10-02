@@ -42,10 +42,7 @@ macro_rules! max_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [max()]
-    pub fn max<T, Axes>(self) -> T
-    where
-        Self: ReduceTo<T, Axes>,
-    {
+    pub fn max<T, Axes>(self) -> T where Self: ReduceTo<T, Axes> {
         max(self)
     }
 }

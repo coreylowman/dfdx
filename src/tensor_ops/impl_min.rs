@@ -42,8 +42,7 @@ macro_rules! min_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [min()]
-    pub fn min<T, Axes>(self) -> T where Self: ReduceTo<T, Axes>
-    {
+    pub fn min<T, Axes>(self) -> T where Self: ReduceTo<T, Axes> {
         min(self)
     }
 }

@@ -14,9 +14,8 @@ use crate::prelude::*;
 /// let r: Tensor1D<2> = t.stddev(0.0);
 /// assert_eq!(r.data(), &[0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
 /// ```
-pub fn stddev<T, Axes>(t: T, epsilon: T::Dtype) -> T::Reduced
+pub fn stddev<T: Reduce<Axes>, Axes>(t: T, epsilon: T::Dtype) -> T::Reduced
 where
-    T: Reduce<Axes>,
     T::Array: HasAxes<Axes>,
 {
     sqrt(add_scalar(var(t), epsilon))
@@ -36,9 +35,8 @@ where
 /// let r: Tensor1D<2> = t.var();
 /// assert_eq!(r.data(), &[0.6666667, 6.0]);
 /// ```
-pub fn var<T, Axes>(t: T) -> T::Reduced
+pub fn var<T: Reduce<Axes>, Axes>(t: T) -> T::Reduced
 where
-    T: Reduce<Axes>,
     T::Array: HasAxes<Axes>,
 {
     let num_elements: f32 = <T::Array as HasAxes<Axes>>::SIZE as f32;
