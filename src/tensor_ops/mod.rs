@@ -76,27 +76,28 @@
 //!
 //! # Permutating axes
 //!
-//! Permutating axes is done via [PermuteTo]:
+//! Permutating axes is done via [PermuteTo], and similar to braodcasting/reducing,
+//! you can just specify the output type and the axes will be inferred.
 //!
 //! 2D version:
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let t: Tensor2D<2, 3> = TensorCreator::zeros();
-//! let _: Tensor2D<3, 2> = t.permute_axes::<1, 0>();
+//! let _: Tensor2D<3, 2> = t.permute();
 //! ```
 //!
 //! 3D version:
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
-//! let _: Tensor3D<3, 4, 2> = t.permute_axes::<1, 2, 0>();
+//! let _: Tensor3D<3, 4, 2> = t.permute();
 //! ```
 //!
 //! 4D version:
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let t: Tensor4D<2, 3, 4, 5> = TensorCreator::zeros();
-//! let _: Tensor4D<3, 5, 2, 4> = t.permute_axes::<1, 3, 0, 2>();
+//! let _: Tensor4D<3, 5, 2, 4> = t.permute();
 //! ```
 //!
 //! # Selects/Indexing
