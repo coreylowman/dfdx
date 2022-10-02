@@ -4,10 +4,10 @@ use zip::{result::ZipResult, ZipArchive};
 
 /// Implements layer normalization as described in [Layer Normalization](https://arxiv.org/abs/1607.06450).
 ///
-/// This calls [normalize_axis::<-1>()] on the input to normalize to 0 mean and unit std dev, and then does an element-wise
+/// This calls [normalize()] on the last axis of the input to normalize to 0 mean and unit std dev, and then does an element-wise
 /// affine transform using learnable parameters [Self::gamma] and [Self::beta].
 ///
-/// [Self::epsilon] is passed to [normalize_axis::<-1>()] and added to the variance to ensure big enough numbers. It defaults to `1e-5`.
+/// [Self::epsilon] is passed to [normalize()] and added to the variance to ensure big enough numbers. It defaults to `1e-5`.
 ///
 /// # Generics
 /// - `M` The size of the affine transform tensors.
@@ -57,11 +57,11 @@ impl<H: Tape, const M: usize> Module<Tensor1D<M, H>> for LayerNorm1D<M> {
     type Output = Tensor1D<M, H>;
 
     /// Calls:
-    /// 1. [normalize_axis::<-1>()] with [Self::epsilon]
+    /// 1. [normalize()] with [Self::epsilon]
     /// 2. [mul()] with [Self::gamma]
     /// 3. [add()] with [Self::beta]
     fn forward(&self, x: Tensor1D<M, H>) -> Self::Output {
-        let x = x.normalize_axis::<-1>(self.epsilon);
+        let x = x.normalize(self.epsilon);
         let x = mul(x, &self.gamma);
         add(x, &self.beta)
     }
@@ -71,11 +71,11 @@ impl<H: Tape, const B: usize, const M: usize> Module<Tensor2D<B, M, H>> for Laye
     type Output = Tensor2D<B, M, H>;
 
     /// Calls:
-    /// 1. [normalize_axis::<-1>()] with [Self::epsilon].
+    /// 1. [normalize()] with [Self::epsilon].
     /// 2. [mul()] with [Self::gamma]
     /// 3. [add()] with [Self::beta]
     fn forward(&self, x: Tensor2D<B, M, H>) -> Self::Output {
-        let (x, tape) = x.normalize_axis::<-1>(self.epsilon).split_tape();
+        let (x, tape) = x.normalize::<Axis<1>>(self.epsilon).split_tape();
         let g: Tensor2D<B, M, H> = self.gamma.duplicate().put_tape(tape).broadcast();
         let (x, tape) = mul(g, &x).split_tape();
         let b = self.beta.duplicate().put_tape(tape).broadcast();
@@ -89,11 +89,11 @@ impl<H: Tape, const B: usize, const S: usize, const M: usize> Module<Tensor3D<B,
     type Output = Tensor3D<B, S, M, H>;
 
     /// Calls:
-    /// 1. [normalize_axis::<-1>()] with [Self::epsilon].
+    /// 1. [normalize()] with [Self::epsilon].
     /// 2. [add()] with [Self::gamma]
     /// 3. [add()] with [Self::beta]
     fn forward(&self, x: Tensor3D<B, S, M, H>) -> Self::Output {
-        let (x, tape) = x.normalize_axis::<-1>(self.epsilon).split_tape();
+        let (x, tape) = x.normalize::<Axis<2>>(self.epsilon).split_tape();
         let g: Tensor3D<B, S, M, H> = self.gamma.duplicate().put_tape(tape).broadcast();
         let (x, tape) = mul(g, &x).split_tape();
         let b = self.beta.duplicate().put_tape(tape).broadcast();

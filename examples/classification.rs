@@ -13,7 +13,7 @@ fn main() {
 
     // initialize target data
     let x: Tensor2D<64, 10> = Tensor2D::randn(&mut rng);
-    let y: Tensor2D<64, 2> = Tensor2D::randn(&mut rng).softmax::<-1>();
+    let y: Tensor2D<64, 2> = Tensor2D::randn(&mut rng).softmax::<Axis<1>>();
 
     // initialize model - all weights are 0s
     let mut mlp: Mlp = Default::default();

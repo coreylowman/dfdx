@@ -6,7 +6,6 @@ mod fill;
 mod foreach;
 mod matmul;
 mod permute;
-mod reduce_all;
 mod select;
 
 pub use allocate::*;
@@ -15,7 +14,6 @@ pub use fill::*;
 pub use foreach::*;
 pub use matmul::*;
 pub use permute::*;
-pub use reduce_all::*;
 pub use select::*;
 
 use std::ops::*;
@@ -25,7 +23,7 @@ pub struct Cpu;
 
 /// Represents something that can act on `T`.
 pub trait Device<T: crate::arrays::CountElements>:
-    FillElements<T> + ReduceAllElements<T> + AllocateZeros + ForEachElement<T>
+    FillElements<T> + DeviceReduce<T, crate::arrays::AllAxes> + AllocateZeros + ForEachElement<T>
 {
     /// Allocate a new `T` and then store `f` applied to `t` in the new `T`. Uses [ForEachElement::foreach_mr].
     fn map<F: FnMut(&T::Dtype) -> T::Dtype>(t: &T, mut f: F) -> Box<T> {

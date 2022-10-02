@@ -62,8 +62,11 @@ pub type Axes3<const I: isize, const J: isize, const K: isize> = (Axis<I>, Axis<
 pub type Axes4<const I: isize, const J: isize, const K: isize, const L: isize> =
     (Axis<I>, Axis<J>, Axis<K>, Axis<L>);
 
+/// Represents all available axes on a tensor.
+pub struct AllAxes;
+
 /// An NdArray that has an `I`th axis
-pub trait HasAxis<const I: isize> {
+pub trait HasAxes<Axes> {
     /// The size of the axis. E.g. an nd array of shape (M, N, O):
     /// 1. The `0`th axis has `SIZE` = M
     /// 2. The `1`th axis has `SIZE` = N
@@ -73,28 +76,83 @@ pub trait HasAxis<const I: isize> {
 
 macro_rules! impl_has_axis {
     ($SrcTy:tt, $Axis:expr, $Size:expr, {$($Vars:tt),*}) => {
-impl<$(const $Vars: usize, )*> HasAxis<$Axis> for $SrcTy {
+impl<$(const $Vars: usize, )*> HasAxes<Axis<$Axis>> for $SrcTy {
     const SIZE: usize = $Size;
 }
     };
 }
 
 impl_has_axis!(f32, 0, 1, {});
-impl_has_axis!(f32, -1, 1, {});
 impl_has_axis!([f32; M], 0, M, { M });
-impl_has_axis!([f32; M], -1, M, { M });
 impl_has_axis!([[f32; N]; M], 0, M, {M, N});
 impl_has_axis!([[f32; N]; M], 1, N, {M, N});
-impl_has_axis!([[f32; N]; M], -1, N, {M, N});
 impl_has_axis!([[[f32; O]; N]; M], 0, M, {M, N, O});
 impl_has_axis!([[[f32; O]; N]; M], 1, N, {M, N, O});
 impl_has_axis!([[[f32; O]; N]; M], 2, O, {M, N, O});
-impl_has_axis!([[[f32; O]; N]; M], -1, O, {M, N, O});
 impl_has_axis!([[[[f32; P]; O]; N]; M], 0, M, {M, N, O, P});
 impl_has_axis!([[[[f32; P]; O]; N]; M], 1, N, {M, N, O, P});
 impl_has_axis!([[[[f32; P]; O]; N]; M], 2, O, {M, N, O, P});
 impl_has_axis!([[[[f32; P]; O]; N]; M], 3, P, {M, N, O, P});
-impl_has_axis!([[[[f32; P]; O]; N]; M], -1, P, {M, N, O, P});
+
+impl<T: CountElements> HasAxes<AllAxes> for T {
+    const SIZE: usize = T::NUM_ELEMENTS;
+}
+
+impl<T, const I: isize, const J: isize> HasAxes<Axes2<I, J>> for T
+where
+    T: HasAxes<Axis<I>> + HasAxes<Axis<J>>,
+{
+    const SIZE: usize = <T as HasAxes<Axis<I>>>::SIZE * <T as HasAxes<Axis<J>>>::SIZE;
+}
+
+impl<T, const I: isize, const J: isize, const K: isize> HasAxes<Axes3<I, J, K>> for T
+where
+    T: HasAxes<Axis<I>> + HasAxes<Axis<J>> + HasAxes<Axis<K>>,
+{
+    const SIZE: usize = <T as HasAxes<Axis<I>>>::SIZE
+        * <T as HasAxes<Axis<J>>>::SIZE
+        * <T as HasAxes<Axis<K>>>::SIZE;
+}
+
+impl<T, const I: isize, const J: isize, const K: isize, const L: isize> HasAxes<Axes4<I, J, K, L>>
+    for T
+where
+    T: HasAxes<Axis<I>> + HasAxes<Axis<J>> + HasAxes<Axis<K>> + HasAxes<Axis<L>>,
+{
+    const SIZE: usize = <T as HasAxes<Axis<I>>>::SIZE
+        * <T as HasAxes<Axis<J>>>::SIZE
+        * <T as HasAxes<Axis<K>>>::SIZE
+        * <T as HasAxes<Axis<L>>>::SIZE;
+}
+
+/// Holds an axis that represents the last (or right most) axis.
+pub trait HasLastAxis {
+    type LastAxis;
+    const SIZE: usize;
+}
+
+impl HasLastAxis for f32 {
+    type LastAxis = AllAxes;
+    const SIZE: usize = 1;
+}
+impl<const M: usize> HasLastAxis for [f32; M] {
+    type LastAxis = AllAxes;
+    const SIZE: usize = M;
+}
+impl<const M: usize, const N: usize> HasLastAxis for [[f32; N]; M] {
+    type LastAxis = Axis<1>;
+    const SIZE: usize = N;
+}
+impl<const M: usize, const N: usize, const O: usize> HasLastAxis for [[[f32; O]; N]; M] {
+    type LastAxis = Axis<2>;
+    const SIZE: usize = O;
+}
+impl<const M: usize, const N: usize, const O: usize, const P: usize> HasLastAxis
+    for [[[[f32; P]; O]; N]; M]
+{
+    type LastAxis = Axis<3>;
+    const SIZE: usize = P;
+}
 
 /// Something that has compile time known zero values.
 pub trait ZeroElements {
@@ -117,8 +175,9 @@ pub trait HasArrayType {
         + Clone
         + CountElements<Dtype = Self::Dtype>
         + ZeroElements
-        + HasAxis<0>
-        + HasAxis<-1>;
+        + HasAxes<Axis<0>>
+        + HasAxes<AllAxes>
+        + HasLastAxis;
 }
 
 #[cfg(test)]

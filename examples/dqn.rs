@@ -42,7 +42,7 @@ fn main() {
         // curr_q = Q(S)[A]
         // loss = mse(curr_q, targ_q)
         let next_q_values: Tensor2D<64, ACTION_SIZE> = target_q_net.forward(next_state.clone());
-        let max_next_q: Tensor1D<64> = next_q_values.max_axis::<-1>();
+        let max_next_q: Tensor1D<64> = next_q_values.max();
         let target_q = 0.99 * mul(max_next_q, &(1.0 - done.clone())) + &reward;
 
         // forward through model, computing gradients
