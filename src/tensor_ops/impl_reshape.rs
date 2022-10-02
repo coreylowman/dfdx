@@ -98,7 +98,7 @@ mod tests {
         let a = Tensor1D::new([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]);
         let b: Tensor2D<2, 3, OwnedTape> = a.trace().reshape();
         assert_eq!(b.data(), &[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
-        let gradients = b.exp().mean().backward();
+        let gradients = backward(b.exp().mean());
         assert_eq!(
             gradients.ref_gradient(&a),
             &[0.18419516, 0.20356713, 0.22497648, 0.24863747, 0.2747869, 0.3036865]

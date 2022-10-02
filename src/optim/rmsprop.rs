@@ -173,7 +173,7 @@ mod tests {
         let mut t: Tensor1D<5> = Tensor1D::ones();
         let mut opt = RMSprop::new(cfg);
         for e in expected.iter() {
-            let gradients = (t.trace() * &rate).square().sum().backward();
+            let gradients = backward((t.trace() * &rate).square().sum());
             opt.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
@@ -280,7 +280,7 @@ mod tests {
         let mut model: Model = Default::default();
         let mut opt: RMSprop<Model> = Default::default();
         let y = model.1.forward(Tensor2D::<8, 16>::zeros().trace());
-        let g = y.mean().backward();
+        let g = backward(y.mean());
         opt.update(&mut model, g).expect_err("");
     }
 }
