@@ -83,21 +83,16 @@ impl<$(const $Vars: usize, )*> HasAxes<Axis<$Axis>> for $SrcTy {
 }
 
 impl_has_axis!(f32, 0, 1, {});
-impl_has_axis!(f32, -1, 1, {});
 impl_has_axis!([f32; M], 0, M, { M });
-impl_has_axis!([f32; M], -1, M, { M });
 impl_has_axis!([[f32; N]; M], 0, M, {M, N});
 impl_has_axis!([[f32; N]; M], 1, N, {M, N});
-impl_has_axis!([[f32; N]; M], -1, N, {M, N});
 impl_has_axis!([[[f32; O]; N]; M], 0, M, {M, N, O});
 impl_has_axis!([[[f32; O]; N]; M], 1, N, {M, N, O});
 impl_has_axis!([[[f32; O]; N]; M], 2, O, {M, N, O});
-impl_has_axis!([[[f32; O]; N]; M], -1, O, {M, N, O});
 impl_has_axis!([[[[f32; P]; O]; N]; M], 0, M, {M, N, O, P});
 impl_has_axis!([[[[f32; P]; O]; N]; M], 1, N, {M, N, O, P});
 impl_has_axis!([[[[f32; P]; O]; N]; M], 2, O, {M, N, O, P});
 impl_has_axis!([[[[f32; P]; O]; N]; M], 3, P, {M, N, O, P});
-impl_has_axis!([[[[f32; P]; O]; N]; M], -1, P, {M, N, O, P});
 
 impl<T: CountElements> HasAxes<AllAxes> for T {
     const SIZE: usize = T::NUM_ELEMENTS;
@@ -181,7 +176,6 @@ pub trait HasArrayType {
         + CountElements<Dtype = Self::Dtype>
         + ZeroElements
         + HasAxes<Axis<0>>
-        + HasAxes<Axis<-1>>
         + HasAxes<AllAxes>
         + HasLastAxis;
 }
