@@ -281,7 +281,7 @@ mod tests {
 
         let mut opt: Sgd<_> = Default::default();
         let out = m.forward(Tensor4D::<8, 2, 28, 28>::randn(&mut rng).trace());
-        let gradients = out.square().mean().backward();
+        let gradients = backward(out.square().mean());
 
         assert_ne!(gradients.ref_gradient(&m.weight), &[[[[0.0; 3]; 3]; 2]; 4]);
         assert_ne!(gradients.ref_gradient(&m.bias), &[0.0; 4]);

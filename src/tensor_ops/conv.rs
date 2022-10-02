@@ -258,7 +258,7 @@ mod tests {
             result.data(),
             &[[[0.24369538, 0.71453357]], [[-0.69169492, -0.06172103]]],
         );
-        let g = result.exp().mean().backward();
+        let g = backward(result.exp().mean());
         assert_close(
             g.ref_gradient(&x),
             &[[
@@ -295,7 +295,7 @@ mod tests {
         ]]);
         let result = conv2d::<OwnedTape, 1, 2, 2, 2, 0, 2, 3>(x.trace(), &weight, &bias);
         assert_close(result.data(), &[[[-0.29368058]], [[0.30018353]]]);
-        let g = result.exp().mean().backward();
+        let g = backward(result.exp().mean());
         assert_close(
             g.ref_gradient(&x),
             &[[[-0.03917716, 0.06006697, 0.], [0.19859464, 0.19576924, 0.]]],
@@ -346,7 +346,7 @@ mod tests {
                 ],
             ],
         );
-        let gradients = result.exp().mean().backward();
+        let gradients = backward(result.exp().mean());
         assert_close(
             gradients.ref_gradient(&x),
             &[[[0.010052743, 0.038219165]], [[0.0013861917, 0.096129306]]],
@@ -415,7 +415,7 @@ mod tests {
                 ],
             ],
         );
-        let gradients = result.exp().mean().backward();
+        let gradients = backward(result.exp().mean());
         assert_close(
             gradients.ref_gradient(&x),
             &[[
@@ -488,7 +488,7 @@ mod tests {
                 ],
             ],
         );
-        let gradients = result.exp().mean().backward();
+        let gradients = backward(result.exp().mean());
         assert_close(
             gradients.ref_gradient(&x),
             &[

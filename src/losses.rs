@@ -196,7 +196,7 @@ mod tests {
         let y = Tensor1D::new([-0.90954804, -1.0193185, -0.39221755, 2.2524886, 1.3035554]);
         let loss = mse_loss(x.trace(), &y);
         assert_eq!(loss.data(), &1.0846305);
-        let g = loss.backward();
+        let g = backward(loss);
         assert_eq!(
             g.ref_gradient(&x),
             &[0.7128116, 0.31071725, -0.24555098, -0.43896183, 0.10037976]
@@ -209,7 +209,7 @@ mod tests {
         let y = Tensor1D::new([-0.90954804, -1.0193186, -0.39221755, 2.2524886, 1.3035554]);
         let loss = mae_loss(x.trace(), &y);
         assert_eq!(loss.data(), &0.9042107);
-        let g = loss.backward();
+        let g = backward(loss);
         assert_eq!(g.ref_gradient(&x), &[0.2, 0.2, -0.2, -0.2, 0.2]);
     }
 
@@ -219,7 +219,7 @@ mod tests {
         let y = Tensor1D::new([0.10473672, 0.24449949, 0.3266706, 0.22253996, 0.10155323]);
         let loss = cross_entropy_with_logits_loss(x.trace(), &y);
         assert_eq!(loss.data(), &1.8713832);
-        let g = loss.backward();
+        let g = backward(loss);
         assert_eq!(
             g.ref_gradient(&x),
             &[
@@ -263,7 +263,7 @@ mod tests {
         ]);
         let loss = kl_div_with_logits_loss(logits.trace(), &targ);
         assert_eq!(loss.data(), &0.40656146);
-        let gradients = loss.backward();
+        let gradients = backward(loss);
         assert_eq!(
             gradients.ref_gradient(&logits),
             &[
@@ -291,7 +291,7 @@ mod tests {
         let loss = binary_cross_entropy_with_logits_loss(logit.trace(), &prob);
         assert_eq!(loss.data(), &0.70457286);
 
-        let gradients = loss.backward();
+        let gradients = backward(loss);
 
         assert_eq!(
             gradients.ref_gradient(&logit),
@@ -320,7 +320,7 @@ mod tests {
         let loss = binary_cross_entropy_with_logits_loss(logit.trace(), &targ);
         assert_eq!(loss.data(), &33.479965);
 
-        let gradients = loss.backward();
+        let gradients = backward(loss);
 
         assert_eq!(
             gradients.ref_gradient(&logit),
@@ -357,7 +357,7 @@ mod tests {
         let loss = huber_loss(x.trace(), &y, 0.5);
         assert_eq!(loss.data(), &0.24506615);
 
-        let gradients = loss.backward();
+        let gradients = backward(loss);
         assert_eq!(
             gradients.ref_gradient(&x),
             &[
@@ -392,7 +392,7 @@ mod tests {
         let loss = smooth_l1_loss(x.trace(), &y, 0.5);
         assert_eq!(loss.data(), &0.4901323);
 
-        let gradients = loss.backward();
+        let gradients = backward(loss);
         assert_eq!(
             gradients.ref_gradient(&x),
             &[

@@ -306,7 +306,7 @@ mod tests {
         let v: Tensor3D<2, 4, 12> = TensorCreator::randn(&mut rng);
         let y: Tensor3D<2, 3, 12, _> = mha.forward((q.trace(), k, v));
 
-        let mut g = SimpleGradients(y.mean().backward());
+        let mut g = SimpleGradients(backward(y.mean()));
         let mut unused = Default::default();
         mha.update(&mut g, &mut unused);
         assert!(unused.is_empty());

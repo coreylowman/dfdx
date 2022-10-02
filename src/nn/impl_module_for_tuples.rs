@@ -122,7 +122,7 @@ mod tests {
             .forward(Tensor1D::randn(&mut rng).traced())
             .square()
             .mean();
-        let gradients = loss.backward();
+        let gradients = backward(loss);
 
         assert!(gradients.ref_gradient(&model.0.weight) != &[[0.0; 2]; 3]);
         assert!(gradients.ref_gradient(&model.0.bias) != &[0.0; 3]);

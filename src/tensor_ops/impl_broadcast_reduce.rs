@@ -158,7 +158,7 @@ mod tests {
         let a_up: Tensor2D<5, 3, OwnedTape> = a.trace().broadcast();
         assert_close(a_up.data(), &[*a.data(); 5]);
         let r = mul(a_up, &b);
-        let g = r.exp().mean().backward();
+        let g = backward(r.exp().mean());
         // a's gradient: (b * (b * a).exp()).sum(0) / 15
         // b's gradient: (a * (b * a).exp()) / 15
         let a_up: Tensor2D<5, 3> = a.clone().broadcast();

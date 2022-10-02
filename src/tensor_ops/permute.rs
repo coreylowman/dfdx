@@ -250,8 +250,8 @@ mod tests {
     fn test_permute_2d_backwards() {
         let mut rng = thread_rng();
         let t: Tensor2D<3, 6> = TensorCreator::randn(&mut rng);
-        let g1 = t.trace().permute_axes::<1, 0>().exp().sum().backward();
-        let g2 = t.trace().exp().sum().backward();
+        let g1 = backward(t.trace().permute_axes::<1, 0>().exp().sum());
+        let g2 = backward(t.trace().exp().sum());
         assert_eq!(g1.ref_gradient(&t), g2.ref_gradient(&t));
     }
 
@@ -259,8 +259,8 @@ mod tests {
     fn test_permute_3d_backwards() {
         let mut rng = thread_rng();
         let t: Tensor3D<3, 6, 9> = TensorCreator::randn(&mut rng);
-        let g1 = t.trace().permute_axes::<1, 2, 0>().exp().sum().backward();
-        let g2 = t.trace().exp().sum().backward();
+        let g1 = backward(t.trace().permute_axes::<1, 2, 0>().exp().sum());
+        let g2 = backward(t.trace().exp().sum());
         assert_eq!(g1.ref_gradient(&t), g2.ref_gradient(&t));
     }
 
@@ -268,13 +268,8 @@ mod tests {
     fn test_permute_4d_backwards() {
         let mut rng = thread_rng();
         let t: Tensor4D<3, 6, 9, 11> = TensorCreator::randn(&mut rng);
-        let g1 = t
-            .trace()
-            .permute_axes::<3, 1, 0, 2>()
-            .exp()
-            .sum()
-            .backward();
-        let g2 = t.trace().exp().sum().backward();
+        let g1 = backward(t.trace().permute_axes::<3, 1, 0, 2>().exp().sum());
+        let g2 = backward(t.trace().exp().sum());
         assert_eq!(g1.ref_gradient(&t), g2.ref_gradient(&t));
     }
 
