@@ -1,3 +1,7 @@
+//! This example ties all the previous ones together
+//! to build a neural network that learns to recognize
+//! the MNIST digits.
+
 use dfdx::prelude::*;
 use indicatif::ProgressBar;
 use mnist::*;
@@ -39,6 +43,7 @@ impl MnistDataset {
     }
 }
 
+// our network structure
 type Mlp = (
     (Linear<784, 512>, ReLU),
     (Linear<512, 128>, ReLU),
@@ -46,9 +51,13 @@ type Mlp = (
     Linear<32, 10>,
 );
 
+// training batch size
 const BATCH_SIZE: usize = 32;
 
 fn main() {
+    // ftz substantially improves performance
+    dfdx::flush_denormals_to_zero();
+
     let mnist_path = std::env::args()
         .nth(1)
         .unwrap_or_else(|| "./datasets/MNIST/raw".to_string());
@@ -58,10 +67,12 @@ fn main() {
 
     let mut rng = StdRng::seed_from_u64(0);
 
+    // initialize model and optimizer
     let mut model: Mlp = Default::default();
     model.reset_params(&mut rng);
     let mut opt: Adam<Mlp> = Default::default();
 
+    // initialize dataset
     let dataset = MnistDataset::train(&mnist_path);
     println!("Found {:?} training images", dataset.len());
 
@@ -94,6 +105,7 @@ fn main() {
         );
     }
 
+    // save our model to a .npz file
     model
         .save("mnist-classifier.npz")
         .expect("failed to save model");

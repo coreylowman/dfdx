@@ -1,5 +1,10 @@
-use dfdx::prelude::*;
-use rand::prelude::{SeedableRng, StdRng};
+//! Demonstrates how to build a custom [nn::Module] without using tuples
+
+use rand::prelude::*;
+
+use dfdx::gradients::{CanUpdateWithGradients, GradientProvider, OwnedTape, Tape, UnusedTensors};
+use dfdx::nn::{Linear, Module, ReLU, ResetParams};
+use dfdx::tensor::{Tensor1D, Tensor2D, TensorCreator};
 
 /// Custom model struct
 /// This case is trivial and should be done with a tuple of linears and relus,
@@ -11,6 +16,7 @@ struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
     relu: ReLU,
 }
 
+// ResetParams lets you randomize a model's parameters
 impl<const IN: usize, const INNER: usize, const OUT: usize> ResetParams for Mlp<IN, INNER, OUT> {
     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
         self.l1.reset_params(rng);
@@ -19,6 +25,7 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> ResetParams for Mlp<
     }
 }
 
+// CanUpdateWithGradients lets you update a model's parameters using gradients
 impl<const IN: usize, const INNER: usize, const OUT: usize> CanUpdateWithGradients
     for Mlp<IN, INNER, OUT>
 {
@@ -29,25 +36,29 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> CanUpdateWithGradien
     }
 }
 
-// Impl module for single forward pass
+// impl Module for single item
 impl<const IN: usize, const INNER: usize, const OUT: usize> Module<Tensor1D<IN>>
     for Mlp<IN, INNER, OUT>
 {
     type Output = Tensor1D<OUT>;
 
-    fn forward(&self, input: Tensor1D<IN>) -> Self::Output {
-        self.l2.forward(self.relu.forward(self.l1.forward(input)))
+    fn forward(&self, x: Tensor1D<IN>) -> Self::Output {
+        let x = self.l1.forward(x);
+        let x = self.relu.forward(x);
+        self.l2.forward(x)
     }
 }
 
-// Impl module for batch forward pass
-impl<const BATCH: usize, const IN: usize, const INNER: usize, const OUT: usize, T: Tape>
-    Module<Tensor2D<BATCH, IN, T>> for Mlp<IN, INNER, OUT>
+// impl Module for batch of items
+impl<const BATCH: usize, const IN: usize, const INNER: usize, const OUT: usize, TAPE: Tape>
+    Module<Tensor2D<BATCH, IN, TAPE>> for Mlp<IN, INNER, OUT>
 {
-    type Output = Tensor2D<BATCH, OUT, T>;
+    type Output = Tensor2D<BATCH, OUT, TAPE>;
 
-    fn forward(&self, input: Tensor2D<BATCH, IN, T>) -> Self::Output {
-        self.l2.forward(self.relu.forward(self.l1.forward(input)))
+    fn forward(&self, x: Tensor2D<BATCH, IN, TAPE>) -> Self::Output {
+        let x = self.l1.forward(x);
+        let x = self.relu.forward(x);
+        self.l2.forward(x)
     }
 }
 
@@ -63,9 +74,9 @@ fn main() {
 
     // Forward pass with a single sample
     let sample: Tensor1D<10> = Tensor1D::randn(&mut rng);
-    let _y = model.forward(sample);
+    let _: Tensor1D<10> = model.forward(sample);
 
     // Forward pass with a batch of samples
     let batch: Tensor2D<BATCH_SIZE, 10> = Tensor2D::randn(&mut rng);
-    let _y = model.forward(batch);
+    let _: Tensor2D<BATCH_SIZE, 10, OwnedTape> = model.forward(batch.trace());
 }

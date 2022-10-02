@@ -1,3 +1,6 @@
+//! Demonstrates how to build a neural network with convolution
+//! layers on nightly rust.
+
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
 #[cfg(not(feature = "nightly"))]
