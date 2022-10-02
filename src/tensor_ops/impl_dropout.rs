@@ -128,7 +128,7 @@ mod tests {
         let r = t.trace().dropout(0.6, &mut rng);
         assert_close(r.data(), &[[0.125, 0.25, -0.5], [0.0, 0.0, 1.25]]);
         // NOTE: .exp() so we ensure result grad is used properly
-        let gradients = r.exp().mean::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().mean());
         assert_eq!(
             gradients.ref_gradient(&t),
             &[[0.47214523, 0.5350107, 0.2527211], [0.0, 0.0, 1.4543099]]
@@ -149,7 +149,7 @@ mod tests {
                 [[1.25, 1.25, 1.25], [1.25, 1.25, 1.25]]
             ]
         );
-        let gradients = r.mean::<_, AllAxes>().backward();
+        let gradients = backward(r.mean());
         const V: f32 = 0.052083336;
         assert_eq!(
             gradients.ref_gradient(&t),

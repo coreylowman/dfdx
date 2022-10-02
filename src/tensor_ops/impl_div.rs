@@ -80,7 +80,7 @@ mod tests {
                 [1.4597031, 0.52524966, 0.046511628]
             ]
         );
-        let gradients = r.mean::<_, AllAxes>().backward();
+        let gradients = backward(r.mean());
         assert_eq!(
             gradients.ref_gradient(&a),
             &[

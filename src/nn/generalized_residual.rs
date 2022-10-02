@@ -192,7 +192,7 @@ mod tests {
             add(Tensor2D::new(Y), &(-Tensor2D::new(X)).relu()).data(),
         );
 
-        let gradients = y.mean::<_, AllAxes>().backward();
+        let gradients = backward(y.mean());
 
         assert_close(gradients.ref_gradient(&model.0 .0.weight), &W0G);
         assert_close(gradients.ref_gradient(&model.0 .0.bias), &B0G);
@@ -232,8 +232,8 @@ mod tests {
         let y2 = model2.forward(x2.traced());
         assert_close(y.data(), y2.data());
 
-        let gradients = y.mean::<_, AllAxes>().backward();
-        let gradients2 = y2.mean::<_, AllAxes>().backward();
+        let gradients = backward(y.mean());
+        let gradients2 = backward(y2.mean());
 
         assert_close(gradients.ref_gradient(&model.0 .0.weight), &W0G);
         assert_close(gradients.ref_gradient(&model.0 .0.bias), &B0G);
@@ -316,7 +316,7 @@ mod tests {
 
         assert_close(y.data(), &[[0.0], [2.0]]);
 
-        let grads = y.mean::<_, AllAxes>().backward();
+        let grads = backward(y.mean());
 
         // m(x) = r(x) + r(x) = 2r(x); m'(x) = 2r'(x)
         // y_mean(x_1, x_2) = (m(x_1) + m(x_2)) / 2 = (2r(x_1) + 2r(x_2)) / 2 = r(x_1) + r(x_2)

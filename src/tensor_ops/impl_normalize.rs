@@ -86,7 +86,7 @@ mod tests {
                 [-1.2247356, 0.0, 1.2247356]
             ]
         );
-        let gradients = r.exp().mean::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().mean());
         assert_eq!(
             gradients.ref_gradient(&a),
             &[
@@ -108,7 +108,7 @@ mod tests {
                 [1.2247438, 1.2977698],
             ]
         );
-        let gradients = r.exp().mean::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().mean());
         assert_eq!(
             gradients.ref_gradient(&a),
             &[
@@ -124,7 +124,7 @@ mod tests {
         let a: Tensor3D<4, 2, 3> = TensorCreator::ones();
         let r = a.trace().normalize::<Axis<2>>(1e-5);
         assert_eq!(r.data(), &[[[0.0; 3]; 2]; 4]);
-        let gradients = r.exp().mean::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().mean());
         assert_eq!(gradients.ref_gradient(&a), &[[[0.0; 3]; 2]; 4]);
     }
 }

@@ -67,7 +67,7 @@ mod tests {
         let t: Tensor2D<2, 3> = tensor([[1.0, f32::NAN, 3.0], [f32::NAN, 4.0, f32::NAN]]);
         let r = t.trace().nans_to(0.0);
         assert_eq!(r.data(), &[[1.0, 0.0, 3.0], [0.0, 4.0, 0.0]]);
-        let gradients = r.mean::<_, AllAxes>().backward();
+        let gradients = backward(r.mean());
         assert_eq!(
             gradients.ref_gradient(&t),
             &[[1.0 / 6.0, 0.0, 1.0 / 6.0], [0.0, 1.0 / 6.0, 0.0]]

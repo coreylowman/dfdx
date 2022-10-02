@@ -71,7 +71,7 @@ mod tests {
             r.data(),
             &[[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]
         );
-        let gradients = r.mean::<_, AllAxes>().backward();
+        let gradients = backward(r.mean());
         assert_eq!(gradients.ref_gradient(&a), &[[1.0 / 6.0; 3]; 2]);
         assert_eq!(gradients.ref_gradient(&b), &[[1.0 / 6.0; 3]; 2]);
     }

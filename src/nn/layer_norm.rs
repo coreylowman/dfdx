@@ -204,7 +204,7 @@ mod tests {
         let m: LayerNorm1D<10> = Default::default();
         let r = m.forward(x.trace());
         assert_eq!(r.data(), &Y_2);
-        let gradients = r.mean::<_, AllAxes>().backward();
+        let gradients = backward(r.mean());
         assert_eq!(
             gradients.ref_gradient(&m.gamma),
             &[

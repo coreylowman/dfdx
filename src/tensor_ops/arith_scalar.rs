@@ -162,7 +162,7 @@ mod tests {
         let x = tensor([0.0, 1.0, 2.0]);
         let r = x.trace() + 0.5;
         assert_eq!(r.data(), &[0.5, 1.5, 2.5]);
-        let gradients = r.exp().sum::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().sum());
         assert_eq!(
             gradients.ref_gradient(&x),
             &[1.6487212, 4.481689, 12.182494]
@@ -174,7 +174,7 @@ mod tests {
         let x = Tensor2D::zeros();
         let r = x.trace() + 0.5;
         assert_eq!(r.data(), &[[0.5; 2]; 3]);
-        let gradients = r.exp().sum::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().sum());
         assert_eq!(gradients.ref_gradient(&x), &[[1.6487212; 2]; 3]);
     }
 
@@ -183,7 +183,7 @@ mod tests {
         let x = tensor(0.0);
         let r = x.trace() - 1.0;
         assert_eq!(r.data(), &-1.0);
-        let gradients = r.exp().sum::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().sum());
         assert_eq!(gradients.ref_gradient(&x), &(-1.0f32).exp());
     }
 
@@ -192,7 +192,7 @@ mod tests {
         let x = tensor([0.0, 1.0, 2.0]);
         let r = x.trace() - 1.0;
         assert_eq!(r.data(), &[-1.0, 0.0, 1.0]);
-        let gradients = r.exp().sum::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().sum());
         assert_eq!(gradients.ref_gradient(&x), &[0.36787945, 1.0, 2.7182817]);
     }
 
@@ -201,7 +201,7 @@ mod tests {
         let x = Tensor2D::zeros();
         let r = x.trace() - 1.0;
         assert_eq!(r.data(), &[[-1.0; 2]; 3]);
-        let gradients = r.exp().sum::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().sum());
         assert_eq!(gradients.ref_gradient(&x), &[[0.36787945; 2]; 3]);
     }
 
@@ -210,7 +210,7 @@ mod tests {
         let x = tensor(1.0);
         let r = x.trace() * 0.5;
         assert_eq!(r.data(), &0.5);
-        let gradients = r.exp().sum::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().sum());
         assert_eq!(gradients.ref_gradient(&x), &0.8243606);
     }
 
@@ -219,7 +219,7 @@ mod tests {
         let x = tensor([0.0, 1.0, 2.0]);
         let r = x.trace() * 0.5;
         assert_eq!(r.data(), &[0.0, 0.5, 1.0]);
-        let gradients = r.exp().sum::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().sum());
         assert_eq!(gradients.ref_gradient(&x), &[0.5, 0.8243606, 1.3591409]);
     }
 
@@ -228,7 +228,7 @@ mod tests {
         let x = Tensor2D::ones();
         let r = x.trace() * 0.5;
         assert_eq!(r.data(), &[[0.5; 2]; 3]);
-        let gradients = r.exp().sum::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().sum());
         assert_eq!(gradients.ref_gradient(&x), &[[0.8243606; 2]; 3]);
     }
 
@@ -237,7 +237,7 @@ mod tests {
         let x = tensor(1.0);
         let r = x.trace() / 2.0;
         assert_eq!(r.data(), &0.5);
-        let gradients = r.exp().sum::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().sum());
         assert_eq!(gradients.ref_gradient(&x), &0.8243606);
     }
 
@@ -246,7 +246,7 @@ mod tests {
         let x = tensor([0.0, 1.0, 2.0]);
         let r = x.trace() / 2.0;
         assert_eq!(r.data(), &[0.0, 0.5, 1.0]);
-        let gradients = r.exp().sum::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().sum());
         assert_eq!(gradients.ref_gradient(&x), &[0.5, 0.8243606, 1.3591409]);
     }
 
@@ -255,7 +255,7 @@ mod tests {
         let x = Tensor2D::ones();
         let r = x.trace() / 2.0;
         assert_eq!(r.data(), &[[0.5; 2]; 3]);
-        let gradients = r.exp().sum::<_, AllAxes>().backward();
+        let gradients = backward(r.exp().sum());
         assert_eq!(gradients.ref_gradient(&x), &[[0.8243606; 2]; 3]);
     }
 }

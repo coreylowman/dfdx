@@ -157,7 +157,7 @@ mod tests {
         let y = model.forward(x.traced());
         assert_close(y.data(), &Y);
 
-        let gradients = y.mean::<_, AllAxes>().backward();
+        let gradients = backward(y.mean());
 
         assert_close(gradients.ref_gradient(&model.0 .0.weight), &W0G);
         assert_close(gradients.ref_gradient(&model.0 .0.bias), &B0G);

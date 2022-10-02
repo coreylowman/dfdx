@@ -253,8 +253,7 @@ mod tests {
         let mut opt: Sgd<Model> = Default::default();
 
         let py = model.forward(x.trace());
-        let loss = (py - &y).square().mean::<_, AllAxes>();
-        let gradients = loss.backward();
+        let gradients = backward((py - &y).square().mean());
         opt.update(&mut model, gradients).expect("");
 
         let model_1 = model.clone();
@@ -273,7 +272,7 @@ mod tests {
         let mut model: Model = Default::default();
         let mut opt: Sgd<Model> = Default::default();
         let y = model.1.forward(Tensor2D::<8, 16>::zeros().trace());
-        let g = y.mean::<_, AllAxes>().backward();
+        let g = backward(y.mean());
         opt.update(&mut model, g).expect_err("");
     }
 }

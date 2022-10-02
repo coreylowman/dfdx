@@ -13,15 +13,8 @@ pub fn backward(t: Tensor0D<OwnedTape>) -> Gradients {
     tape.0.execute()
 }
 
-macro_rules! tensor_impl {
-    ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )*> $typename<$($Vs, )* OwnedTape> {
-    /// Calls [backward()] on `self`
+impl Tensor0D<OwnedTape> {
     pub fn backward(self) -> Gradients {
         backward(self)
     }
 }
-    };
-}
-
-tensor_impl!(Tensor0D, []);

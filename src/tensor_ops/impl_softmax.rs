@@ -151,7 +151,7 @@ mod tests {
         let a: Tensor1D<5> = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = a.trace().logsumexp();
         assert_eq!(r.data(), &2.4519143);
-        let gradients = r.mean::<_, AllAxes>().backward();
+        let gradients = backward(r.mean());
         assert_eq!(
             gradients.ref_gradient(&a),
             &[0.011656231, 0.03168492, 0.08612854, 0.23412165, 0.6364086]
@@ -228,7 +228,7 @@ mod tests {
                 [-6.0509458, -3.0509458, -0.05094576]
             ]
         );
-        let gradients = r.mean::<_, AllAxes>().backward();
+        let gradients = backward(r.mean());
         assert_eq!(
             gradients.ref_gradient(&a),
             &[
@@ -251,7 +251,7 @@ mod tests {
         );
         let l = mul(r, &tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]));
         assert_eq!(l.data(), &[[0.09003058, 0.0, 0.0], [0.0, 0.047314156, 0.0]]);
-        let gradients = l.mean::<_, AllAxes>().backward();
+        let gradients = backward(l.mean());
         assert_eq!(
             gradients.ref_gradient(&a),
             &[
@@ -274,7 +274,7 @@ mod tests {
         );
         let l = mul(r, &tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]));
         assert_eq!(l.data(), &[[0.047425874, 0.0, 0.0], [0.0, 0.9933072, 0.0]]);
-        let gradients = l.mean::<_, AllAxes>().backward();
+        let gradients = backward(l.mean());
         assert_eq!(
             gradients.ref_gradient(&a),
             &[
