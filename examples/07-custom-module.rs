@@ -1,7 +1,10 @@
-//! Demonstrates how to build your own [nn::Module]
+//! Demonstrates how to build a custom [nn::Module] without using tuples
 
-use dfdx::prelude::*;
 use rand::prelude::*;
+
+use dfdx::gradients::{CanUpdateWithGradients, GradientProvider, OwnedTape, Tape, UnusedTensors};
+use dfdx::nn::{Linear, Module, ReLU, ResetParams};
+use dfdx::tensor::{Tensor1D, Tensor2D, TensorCreator};
 
 /// Custom model struct
 /// This case is trivial and should be done with a tuple of linears and relus,
@@ -13,7 +16,7 @@ struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
     relu: ReLU,
 }
 
-// ResetParams let's you randomize your models parameters
+// ResetParams lets you randomize a model's parameters
 impl<const IN: usize, const INNER: usize, const OUT: usize> ResetParams for Mlp<IN, INNER, OUT> {
     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
         self.l1.reset_params(rng);
@@ -22,7 +25,7 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> ResetParams for Mlp<
     }
 }
 
-// CanUpdateWithGradients let's you update your model's parameters with gradients
+// CanUpdateWithGradients lets you update a model's parameters using gradients
 impl<const IN: usize, const INNER: usize, const OUT: usize> CanUpdateWithGradients
     for Mlp<IN, INNER, OUT>
 {
