@@ -9,11 +9,11 @@ use crate::prelude::*;
 /// **NOTE** This evenly distributes gradients between all equal maximum values, instead
 /// of only exactly 1 value.
 ///
-/// Example:
+/// Example reducing 1 axis:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let r: Tensor1D<2> = t.max_axis::<-1>();
+/// let r: Tensor1D<2> = t.max();
 /// assert_eq!(r.data(), &[3.0, -1.0]);
 /// ```
 ///
@@ -21,7 +21,7 @@ use crate::prelude::*;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let t = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let r: Tensor0D = t.max_axes::<Axes2<0, 1>>();
+/// let r: Tensor0D = t.max();
 /// assert_eq!(r.data(), &3.0);
 /// ```
 pub fn max<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {

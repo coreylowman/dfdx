@@ -115,7 +115,6 @@ pub fn cross_entropy_with_logits_loss<T>(
 ) -> <T as Reduce<AllAxes>>::Reduced
 where
     T: Reduce<AllAxes> + Reduce<<<T as HasArrayType>::Array as HasLastAxis>::LastAxis>,
-    T::Array: HasLastAxis,
 {
     let probs = log_softmax::<_, <T::Array as HasLastAxis>::LastAxis>(logits);
     let r = negate(mean::<_, AllAxes>(mul(probs, target_probs)));
@@ -146,7 +145,6 @@ pub fn kl_div_with_logits_loss<T>(
 ) -> <T as Reduce<AllAxes>>::Reduced
 where
     T: Reduce<AllAxes> + Reduce<<<T as HasArrayType>::Array as HasLastAxis>::LastAxis>,
-    T::Array: HasLastAxis,
 {
     let probs = log_softmax::<_, <T::Array as HasLastAxis>::LastAxis>(logits);
     let r = negate(mean::<_, AllAxes>(mul(

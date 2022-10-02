@@ -1,17 +1,15 @@
 use crate::prelude::*;
 
-/// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Axes` of `T`. `epsilon` is passed to [std_axes()].
+/// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Axes` of `T`. `epsilon` is passed to [stddev()].
 /// Computes `(t - t.mean(Axes)) / t.std(Axes, epsilon)`.
 ///
-/// **Related functions:** [mean_axes()], [std_axes()], [var_axes()]
+/// **Related functions:** [mean()], [stddev()], [var()]
 ///
 /// Normalizing a single axis:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = tensor([-2.0, -1.0, 0.0, 5.0, 2.0]);
-/// let r = a.normalize_axis::<-1>(1e-5);
-/// assert!(r.clone().mean_axis::<-1>().data().abs() < 1e-6);
-/// assert!((r.clone().std_axis::<-1>(0.0).data() - 1.0).abs() < 1e-6);
+/// let t: Tensor2D<2, 3> = TensorCreator::zeros();
+/// let _ = t.normalize::<Axis<1>>(1e-5);
 /// ```
 pub fn normalize<T, Axes>(t: T, epsilon: T::Dtype) -> T
 where
@@ -31,7 +29,7 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H>
 {
-    /// Calls [normalize_axes()] on `self` with `Axis<I>`
+    /// Calls [normalize()]
     pub fn normalize<Axes>(self, epsilon: f32) -> Self
     where
         Self: Reduce<Axes>,

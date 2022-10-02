@@ -16,16 +16,8 @@ use crate::prelude::*;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-/// let r: Tensor1D<2> = t.mean_axis::<-1>();
+/// let r: Tensor1D<2> = t.mean();
 /// assert_eq!(r.data(), &[2.0, 5.0]);
-/// ```
-///
-/// Reducing 2 axes:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// # let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-/// let r: Tensor0D = t.mean_axes::<Axes2<0, 1>>();
-/// assert_eq!(r.data(), &3.5);
 /// ```
 pub fn mean<T: Reduce<Axes>, Axes>(t: T) -> T::Reduced
 where
@@ -37,7 +29,7 @@ where
 macro_rules! mean_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [mean_axes()] with `AllAxes`
+    /// Calls [mean()] with `AllAxes`
     pub fn mean<T, Axes>(self) -> T
     where
         Self: ReduceTo<T, Axes>,

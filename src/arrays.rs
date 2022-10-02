@@ -130,6 +130,7 @@ where
         * <T as HasAxes<Axis<L>>>::SIZE;
 }
 
+/// Holds an axis that represents the last (or right most) axis.
 pub trait HasLastAxis {
     type LastAxis;
     const SIZE: usize;
@@ -181,7 +182,8 @@ pub trait HasArrayType {
         + ZeroElements
         + HasAxes<Axis<0>>
         + HasAxes<Axis<-1>>
-        + HasAxes<AllAxes>;
+        + HasAxes<AllAxes>
+        + HasLastAxis;
 }
 
 #[cfg(test)]

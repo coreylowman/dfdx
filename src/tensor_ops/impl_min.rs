@@ -13,7 +13,7 @@ use crate::prelude::*;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let r: Tensor1D<2> = t.min_axis::<-1>();
+/// let r: Tensor1D<2> = t.min();
 /// assert_eq!(r.data(), &[1.0, -3.0]);
 /// ```
 ///
@@ -21,7 +21,7 @@ use crate::prelude::*;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let t = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let r: Tensor0D = t.min_axes::<Axes2<0, 1>>();
+/// let r: Tensor0D = t.min();
 /// assert_eq!(r.data(), &-3.0);
 /// ```
 pub fn min<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
@@ -41,7 +41,7 @@ pub fn min<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
 macro_rules! min_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [min_axes()] on `self` with `Axis<I>`.
+    /// Calls [min()]
     pub fn min<T, Axes>(self) -> T where Self: ReduceTo<T, Axes>
     {
         min(self)

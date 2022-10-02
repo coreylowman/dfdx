@@ -60,7 +60,6 @@ impl LoadFromNpz for Softmax {}
 impl<T> Module<T> for Softmax
 where
     T: Reduce<<<T as HasArrayType>::Array as HasLastAxis>::LastAxis>,
-    T::Array: HasLastAxis,
 {
     type Output = T;
     fn forward(&self, input: T) -> Self::Output {

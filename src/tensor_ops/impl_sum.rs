@@ -17,14 +17,14 @@ use crate::prelude::*;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
-/// let _: Tensor2D<3, 4> = t.sum_axis::<0>();
+/// let _: Tensor2D<3, 4> = t.sum();
 /// ```
 ///
 /// Reducing multiple axes:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
-/// let _: Tensor1D<4> = t.sum_axes::<Axes2<0, 1>>();
+/// let _: Tensor1D<4> = t.sum();
 /// ```
 pub fn sum<T: Reduce<Axes>, Axes>(t: T) -> T::Reduced {
     let mut result = <T::Reduced as Tensor>::NoTape::zeros();
@@ -38,7 +38,7 @@ pub fn sum<T: Reduce<Axes>, Axes>(t: T) -> T::Reduced {
 macro_rules! sum_axis_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [sum_axes()] with `AllAxes`
+    /// Calls [sum()].
     pub fn sum<T, Axes>(self) -> T where Self: ReduceTo<T, Axes> {
         sum(self)
     }

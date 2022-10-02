@@ -24,7 +24,7 @@ pub trait Broadcast<T, Axes> {
 
 /// Remove `Axes` of tensor by reducing them. Opposite of [Broadcast].
 ///
-/// Enables functions like [sum_axes()] that reduce values along a single dimension.
+/// Enables functions like [sum()] that reduce values along a single dimension.
 ///
 /// This trait can't be used directly as it doesn't contain any methods. Instead
 /// it is used by methods to specify the input type must be able to have it's axes
@@ -36,6 +36,7 @@ pub trait Reduce<Axes>: Sized + Tensor<Dtype = f32> {
     type DeviceR: DeviceReduce<Self::Array, Axes, Reduced = <Self::Reduced as HasArrayType>::Array>;
 }
 
+/// Reduce `Axes` of `Self` to produce a `T`
 pub trait ReduceTo<T, Axes>: Reduce<Axes, Reduced = T> {}
 
 macro_rules! impl_broadcast_reduce {

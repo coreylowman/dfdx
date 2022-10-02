@@ -6,20 +6,20 @@ use crate::prelude::*;
 ///
 /// **Pytorch equivalent**: `t.exp().sum(Axes).log()`
 ///
-/// **Related functions**: [ln()], [sum_axes()], [exp()], [log_softmax()], [softmax()]
+/// **Related functions**: [ln()], [sum()], [exp()], [log_softmax()], [softmax()]
 ///
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t: Tensor2D<2, 4> = TensorCreator::zeros();
-/// let _: Tensor1D<2> = t.logsumexp::<-1>();
+/// let t: Tensor3D<2, 4, 6> = TensorCreator::zeros();
+/// let _: Tensor2D<2, 4> = t.logsumexp();
 /// ```
 ///
 /// Multi axis logsumexp:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let t: Tensor3D<2, 4, 6> = TensorCreator::zeros();
-/// let _: Tensor1D<6> = logsumexp::<_, Axes2<0, 1>>(t);
+/// let _: Tensor1D<4> = t.logsumexp();
 /// ```
 pub fn logsumexp<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
     let max = T::DeviceR::reduce::<MaxAccum>(t.data());
@@ -39,7 +39,7 @@ pub fn logsumexp<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
-/// let _ = t.log_softmax::<-1>();
+/// let _ = t.log_softmax::<2>();
 /// ```
 ///
 /// Using multi axis log_softmax:
@@ -69,7 +69,7 @@ pub fn log_softmax<T: Reduce<Axes>, Axes>(t: T) -> T {
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
-/// let _ = t.softmax::<-1>();
+/// let _ = t.softmax::<2>();
 /// ```
 ///
 /// Using multi axis softmax:

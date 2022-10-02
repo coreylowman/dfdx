@@ -5,13 +5,13 @@ use crate::prelude::*;
 ///
 /// **Pytorch equivalent**: `t.std(I, unbiased=False)`
 ///
-/// **Related functions**: [var_axes()], [sqrt()].
+/// **Related functions**: [var()], [sqrt()].
 ///
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t: Tensor2D<2, 3> = tensor([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
-/// let r: Tensor1D<2> = t.std_axis::<-1>(0.0);
+/// let r: Tensor1D<2> = t.stddev(0.0);
 /// assert_eq!(r.data(), &[0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
 /// ```
 pub fn stddev<T, Axes>(t: T, epsilon: T::Dtype) -> T::Reduced
@@ -27,13 +27,13 @@ where
 ///
 /// **Pytorch equivalent**: `t.var(I, unbiased=False)`
 ///
-/// **Related functions**: [std_axes()], [mean_axes()].
+/// **Related functions**: [stddev()], [mean()].
 ///
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
 /// let t: Tensor2D<2, 3> = tensor([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
-/// let r: Tensor1D<2> = t.var_axis::<-1>();
+/// let r: Tensor1D<2> = t.var();
 /// assert_eq!(r.data(), &[0.6666667, 6.0]);
 /// ```
 pub fn var<T, Axes>(t: T) -> T::Reduced
@@ -50,7 +50,7 @@ where
 macro_rules! impl_std_and_var {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [std_axes()] on `self` with `Axis<I>`
+    /// Calls [stddev()]
     pub fn stddev<T, Axes>(self, epsilon: f32) -> T
     where
         Self: ReduceTo<T, Axes>,
@@ -58,7 +58,7 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     {
         stddev(self, epsilon)
     }
-    /// Calls [var_axes()] on `self` with `Axis<I>`
+    /// Calls [var()]
     pub fn var<T, Axes>(self) -> T
     where
         Self: ReduceTo<T, Axes>,
