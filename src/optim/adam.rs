@@ -146,7 +146,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = (t.trace() * &rate).square().mean().backward();
+            let gradients = backward((t.trace() * &rate).square().mean());
             opt.update(&mut t, gradients).expect("");
             assert_close(t.data(), e);
         }
@@ -175,7 +175,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = (t.trace() * &rate).square().mean().backward();
+            let gradients = backward((t.trace() * &rate).square().mean());
             opt.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
@@ -198,7 +198,8 @@ mod tests {
         });
 
         let py = model.forward(x.trace());
-        let gradients = backward((py - &y).square().mean());
+        let loss = (py - &y).square().mean();
+        let gradients = backward(loss);
         opt.update(&mut model, gradients).expect("");
 
         let model_1 = model.clone();

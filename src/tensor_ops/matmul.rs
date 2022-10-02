@@ -370,7 +370,7 @@ mod tests {
         let b = tensor([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
         let r: Tensor1D<2, OwnedTape> = vecmat_mul(a.trace(), &b);
         assert_close(r.data(), &[1.261436, 1.5543157]);
-        let g = r.exp().mean().backward();
+        let g = backward(r.exp().mean());
         assert_close(g.ref_gradient(&a), &[2.6883178, 2.9369607, 2.9256766]);
         assert_close(
             g.ref_gradient(&b),
@@ -388,7 +388,7 @@ mod tests {
         let b = tensor([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
         let r: Tensor1D<2, OwnedTape> = vecmat_mul_transpose(a.trace(), &b);
         assert_close(r.data(), &[1.261436, 1.5543157]);
-        let g = r.exp().mean().backward();
+        let g = backward(r.exp().mean());
         assert_close(g.ref_gradient(&a), &[2.6883178, 2.9369607, 2.9256766]);
         assert_close(
             g.ref_gradient(&b),

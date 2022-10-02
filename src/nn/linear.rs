@@ -136,7 +136,7 @@ mod tests {
         assert_close(y.data(), &[-0.93430865, 0.08624211]);
 
         let loss = y.square().mean();
-        let gradients = loss.backward();
+        let gradients = backward(loss);
         assert_close(
             gradients.ref_gradient(&model.weight),
             &[
@@ -172,7 +172,8 @@ mod tests {
             ],
         );
 
-        let gradients = backward(y.square().mean());
+        let loss = y.square().mean();
+        let gradients = backward(loss);
         assert_close(
             gradients.ref_gradient(&model.weight),
             &[
@@ -222,7 +223,8 @@ mod tests {
             ],
         );
 
-        let gradients = backward(y.square().mean());
+        let loss = y.square().mean();
+        let gradients = backward(loss);
         assert_close(
             gradients.ref_gradient(&model.weight),
             &[

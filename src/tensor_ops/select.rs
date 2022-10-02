@@ -169,7 +169,7 @@ mod tests {
         let t: Tensor1D<5> = TensorCreator::randn(&mut rng);
         let r: Tensor0D<OwnedTape> = t.trace().select(&0);
         assert_eq!(r.data(), &t.data()[0]);
-        let g = r.exp().mean().backward();
+        let g = backward(r.exp().mean());
         assert_eq!(g.ref_gradient(&t), &[t.data()[0].exp(), 0.0, 0.0, 0.0, 0.0]);
     }
 
@@ -179,7 +179,7 @@ mod tests {
         let t: Tensor1D<5> = TensorCreator::randn(&mut rng);
         let r: Tensor1D<2, OwnedTape> = t.trace().select(&[0, 3]);
         assert_eq!(r.data(), &[t.data()[0], t.data()[3]]);
-        let g = r.mean().backward();
+        let g = backward(r.mean());
         assert_eq!(g.ref_gradient(&t), &[0.5, 0.0, 0.0, 0.5, 0.0]);
     }
 
@@ -193,7 +193,7 @@ mod tests {
             r.data(),
             &[_t[0], _t[1], _t[2], _t[3], _t[4], _t[2], _t[4], _t[4]]
         );
-        let g = r.mean().backward();
+        let g = backward(r.mean());
         assert_eq!(
             g.ref_gradient(&t),
             &[1.0 / 8.0, 1.0 / 8.0, 2.0 / 8.0, 1.0 / 8.0, 3.0 / 8.0]
@@ -206,7 +206,7 @@ mod tests {
         let r: Tensor0D<OwnedTape> = t.trace().select(&2);
         assert_eq!(r.data(), &3.0);
         // NOTE: .exp() so we make sure its using result grad properly
-        let gradients = r.exp().backward();
+        let gradients = backward(r.exp());
         assert_eq!(gradients.ref_gradient(&t), &[0.0, 0.0, 20.085537]);
     }
 
@@ -215,7 +215,7 @@ mod tests {
         let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
         let r: Tensor1D<2, OwnedTape> = t.trace().select(&[1, 2]);
         assert_eq!(r.data(), &[2.0, -3.0]);
-        let gradients = r.mean().backward();
+        let gradients = backward(r.mean());
         assert_eq!(
             gradients.ref_gradient(&t),
             &[[0.0, 0.5, 0.0], [0.0, 0.0, 0.5]]

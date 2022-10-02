@@ -179,7 +179,7 @@ mod tests {
                 1.6307268
             ]
         );
-        let gradients = r.mean().backward();
+        let gradients = backward(r.mean());
         assert_eq!(
             gradients.ref_gradient(&m.gamma),
             &[

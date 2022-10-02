@@ -153,7 +153,7 @@ mod tests {
         let x = tensor(0.0);
         let r = x.trace() + 1.0;
         assert_eq!(r.data(), &1.0);
-        let gradients = r.exp().backward();
+        let gradients = backward(r.exp());
         assert_eq!(gradients.ref_gradient(&x), &1.0f32.exp());
     }
 
