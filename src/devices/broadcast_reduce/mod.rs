@@ -84,7 +84,6 @@ impl DeviceReduce<f32, Axis<0>> for Cpu {
     }
 }
 
-
 impl DeviceReduce<f32, Axis<-1>> for Cpu {
     type Reduced = f32;
     fn reduce_into_no_reset<A: Accumulator<f32>>(r: &mut Self::Reduced, t: &f32) {
