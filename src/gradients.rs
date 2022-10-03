@@ -1,7 +1,10 @@
 //! Implementations of [GradientTape] and generic Nd array containers via [Gradients].
 
-use crate::prelude::*;
 use std::collections::HashMap;
+
+use crate::arrays::HasArrayType;
+use crate::devices::{AllocateZeros, HasDevice};
+use crate::unique_id::{HasUniqueId, UniqueId};
 
 /// Records gradient computations to execute later.
 ///
@@ -129,7 +132,7 @@ impl Gradients {
     ///
     /// Examples:
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx::{prelude::*, gradients::*};
     /// let a = Tensor1D::new([1.0, 2.0, 3.0]);
     /// let b: Tensor1D<5> = Tensor1D::zeros();
     /// let mut gradients: Gradients = Default::default();
@@ -183,7 +186,7 @@ impl Gradients {
     ///
     /// Example usage:
     /// ```
-    /// # use dfdx::prelude::*;
+    /// # use dfdx::{prelude::*, gradients::*};
     /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
     /// let mut gradients: Gradients = Default::default();
     /// *gradients.mut_gradient(&t) = [-4.0, 5.0, -6.0];
@@ -202,7 +205,7 @@ impl Gradients {
     ///
     /// Example usage:
     /// ```
-    /// # use dfdx::prelude::*;
+    /// # use dfdx::{prelude::*, gradients::*};
     /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
     /// let mut gradients: Gradients = Default::default();
     /// let g: &mut [f32; 3] = gradients.mut_gradient(&t);
@@ -231,7 +234,7 @@ impl Gradients {
     ///
     /// # Example usage:
     /// ```
-    /// # use dfdx::prelude::*;
+    /// # use dfdx::{prelude::*, gradients::*};
     /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
     /// let mut gradients: Gradients = Default::default();
     /// gradients.mut_gradient(&t);
@@ -303,6 +306,8 @@ impl UnusedTensors {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::devices::Cpu;
+    use crate::unique_id::unique_id;
 
     struct Tensor {
         id: UniqueId,

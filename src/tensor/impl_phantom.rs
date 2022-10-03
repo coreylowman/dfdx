@@ -1,4 +1,6 @@
+use crate::arrays::HasArrayType;
 use crate::prelude::*;
+use crate::unique_id::{HasUniqueId, UniqueId};
 use std::marker::PhantomData;
 
 /// A fake tensor that holds a [UniqueId] and a type `T` that is [HasArrayType].

@@ -1,3 +1,4 @@
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 /// Clamp all elements between the provided min and max values.

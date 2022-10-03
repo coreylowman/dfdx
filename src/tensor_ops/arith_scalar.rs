@@ -1,5 +1,9 @@
 use super::utils::move_tape_and_add_backward_op;
-use crate::prelude::*;
+use crate::gradients::Tape;
+use crate::{
+    devices::{Device, ForEachElement},
+    prelude::*,
+};
 use std::ops::{Add, Div, Mul, Sub};
 
 /// `t + val`. `val` is used for all elements of `t`.

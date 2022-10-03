@@ -1,4 +1,6 @@
 use super::utils::move_tape_and_add_backward_binop;
+use crate::devices::{Cpu, MatMul, MatMulOp, Transpose};
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 /// Matrix multiplication. This also supports batched matrix multiplication,
@@ -248,7 +250,8 @@ pub fn vecmat_mul_transpose<const K: usize, const N: usize, TAPE: Tape>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::assert_close;
+    use crate::arrays::ZeroElements;
+    use crate::{devices::Device, tests::assert_close};
     use rand::thread_rng;
 
     #[test]

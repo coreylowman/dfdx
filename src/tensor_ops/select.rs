@@ -1,4 +1,8 @@
 use super::utils::move_tape_and_add_backward_op;
+use crate::devices::{
+    BSelectAx1, Device, DeviceSelect, FillElements, SelectAx0, SelectAx1, SelectAx2, SelectAx3,
+};
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 /// Select values along a single axis `I` resulting in `T`. Equivalent

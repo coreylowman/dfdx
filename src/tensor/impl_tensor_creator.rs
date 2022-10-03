@@ -1,5 +1,8 @@
 use super::*;
+use crate::devices::{AllocateZeros, FillElements};
+use crate::gradients::NoneTape;
 use crate::prelude::*;
+use crate::unique_id::unique_id;
 use rand::prelude::Distribution;
 use rand_distr::{num_traits::One, Standard, StandardNormal};
 
@@ -68,11 +71,10 @@ tensor_impl!(Tensor4D, [M, N, O, P]);
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use super::*;
-    use crate::unique_id::unique_id;
+    use crate::unique_id::UniqueId;
     use rand::thread_rng;
+    use std::collections::HashSet;
 
     #[test]
     fn test_id() {

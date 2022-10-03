@@ -1,4 +1,4 @@
-use crate::prelude::CanUpdateWithGradients;
+use crate::gradients::CanUpdateWithGradients;
 
 /// A unit of a neural network. Acts on the generic `Input`
 /// and produces `Module::Output`.
@@ -38,7 +38,7 @@ pub trait Module<Input>: ResetParams + CanUpdateWithGradients {
     /// # Example Implementation
     ///
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx::{prelude::*, gradients::*};
     /// struct MyMulLayer {
     ///     scale: Tensor1D<5, NoneTape>,
     /// }

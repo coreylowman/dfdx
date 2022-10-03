@@ -1,5 +1,9 @@
 use super::utils::move_tape_and_add_backward_op;
+use crate::arrays::CountElements;
+use crate::devices::Device;
+use crate::gradients::Tape;
 use crate::prelude::*;
+use crate::{Assert, ConstTrue};
 
 /// **Requires Nightly** Reshape `Self` into `T`.
 pub trait Reshape<T> {

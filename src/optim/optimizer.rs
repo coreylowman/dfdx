@@ -1,4 +1,4 @@
-use crate::prelude::{CanUpdateWithGradients, Gradients, UnusedTensors};
+use crate::gradients::{CanUpdateWithGradients, Gradients, UnusedTensors};
 
 /// All optimizers must implement the update function, which takes an object
 /// that implements [CanUpdateWithGradients], and calls [CanUpdateWithGradients::update].

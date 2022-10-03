@@ -2,7 +2,8 @@
 
 use rand::thread_rng;
 
-use dfdx::tensor::{tensor, HasArrayData, Tensor1D, Tensor2D, Tensor3D, TensorCreator};
+use dfdx::arrays::HasArrayData;
+use dfdx::tensor::{tensor, Tensor1D, Tensor2D, Tensor3D, TensorCreator};
 
 fn main() {
     // easily create tensors using the `tensor` function

@@ -1,4 +1,5 @@
 use super::utils::map;
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 /// Raises to a float power. `t^i`.

@@ -1,3 +1,4 @@
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
 use crate::prelude::*;
 use rand::Rng;
 use rand_distr::Uniform;

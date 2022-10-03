@@ -1,19 +1,21 @@
 //! A collection of data utility classes such as [one_hot_encode()] and [SubsetIterator].
 
-use crate::prelude::*;
 use rand::prelude::SliceRandom;
+
+use crate::arrays::HasArrayData;
+use crate::tensor::{Tensor1D, Tensor2D, TensorCreator};
 
 /// Generates a tensor with ordered data from 0 to `N`.
 ///
 /// Examples:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*, data::arange};
 /// let t = arange::<5>();
 /// assert_eq!(t.data(), &[0.0, 1.0, 2.0, 3.0, 4.0]);
 /// ```
 ///
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*, data::arange};
 /// let t: Tensor1D<10> = arange();
 /// assert_eq!(t.data(), &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
 /// ```
@@ -39,8 +41,7 @@ pub fn arange<const N: usize>() -> Tensor1D<N> {
 ///
 /// Examples:
 /// ```rust
-/// # use dfdx::prelude::*;
-///
+/// # use dfdx::{prelude::*, data::one_hot_encode};
 /// let class_labels = [0, 1, 2, 1, 1];
 /// // NOTE: 5 is the batch size, 3 is the number of classes
 /// let probs = one_hot_encode::<5, 3>(&class_labels);
@@ -68,14 +69,14 @@ pub fn one_hot_encode<const B: usize, const N: usize>(class_labels: &[usize; B])
 ///
 /// Iterating a dataset in order:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*, data::SubsetIterator};
 /// let mut subsets = SubsetIterator::<5>::in_order(100);
 /// assert_eq!(subsets.next(), Some([0, 1, 2, 3, 4]));
 /// ```
 ///
 /// Iterating a dataset in random order:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*, data::SubsetIterator};
 /// # use rand::prelude::*;
 /// let mut rng = StdRng::seed_from_u64(0);
 /// let mut subsets = SubsetIterator::<5>::shuffled(100, &mut rng);

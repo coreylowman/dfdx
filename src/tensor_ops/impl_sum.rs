@@ -1,5 +1,6 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::devices::{AddAccum, DeviceReduce};
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 /// Sum values along axes `Axes` of `T`.

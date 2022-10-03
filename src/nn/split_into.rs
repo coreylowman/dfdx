@@ -1,3 +1,4 @@
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 
 /// Splits input into multiple heads. `T` should be a tuple,
@@ -88,7 +89,7 @@ tuple_impls!([A, B, C, D, E] F);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::tests::SimpleGradients;
+    use crate::{nn::tests::SimpleGradients, unique_id::HasUniqueId};
 
     #[test]
     fn test_split_into_2() {

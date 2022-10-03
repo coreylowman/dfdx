@@ -1,3 +1,4 @@
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
@@ -98,6 +99,7 @@ impl<Input, T: Module<Input, Output = Input>, const N: usize> Module<Input> for 
 mod tests {
     use super::*;
     use crate::nn::tests::SimpleGradients;
+    use crate::unique_id::HasUniqueId;
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;
     use tempfile::NamedTempFile;

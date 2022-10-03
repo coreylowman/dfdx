@@ -1,3 +1,4 @@
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 /// Replaces any [std::f32::NAN] with `value`.

@@ -1,3 +1,6 @@
+use crate::arrays::Axis;
+use crate::devices::{Cpu, FillElements};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
 use crate::prelude::*;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive};
@@ -21,8 +24,8 @@ use zip::{result::ZipResult, ZipArchive};
 /// ```
 #[derive(Debug, Clone)]
 pub struct LayerNorm1D<const M: usize> {
-    pub gamma: Tensor1D<M, NoneTape>,
-    pub beta: Tensor1D<M, NoneTape>,
+    pub gamma: Tensor1D<M>,
+    pub beta: Tensor1D<M>,
     pub epsilon: f32,
 }
 
@@ -125,6 +128,7 @@ impl<const M: usize> LoadFromNpz for LayerNorm1D<M> {
 mod tests {
     use super::*;
     use crate::nn::tests::SimpleGradients;
+    use crate::unique_id::HasUniqueId;
     use rand::{prelude::StdRng, SeedableRng};
     use rand_distr::Standard;
     use std::fs::File;

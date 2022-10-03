@@ -1,3 +1,4 @@
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 use rand::Rng;
 use std::io::{Read, Seek, Write};

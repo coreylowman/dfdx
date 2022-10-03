@@ -1,4 +1,5 @@
-use crate::devices::{DeviceReduce, MaxAccum, SubAccum};
+use crate::devices::{Device, DeviceReduce, MaxAccum, SubAccum};
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 /// Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function across

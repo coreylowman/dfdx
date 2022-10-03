@@ -63,7 +63,7 @@
 //!
 //! 6. Compute gradients with [crate::tensor_ops::backward()]. See [crate::tensor_ops].
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx::{prelude::*, gradients::Gradients};
 //! # let mut rng = rand::thread_rng();
 //! # let model: Linear<10, 5> = Default::default();
 //! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
@@ -76,7 +76,7 @@
 //! ```
 //! 7. Use an optimizer from [crate::optim] to optimize your network!
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx::{prelude::*, gradients::Gradients};
 //! # let mut rng = rand::thread_rng();
 //! # let mut model: Linear<10, 5> = Default::default();
 //! # let x: Tensor1D<10> = Tensor1D::zeros();
@@ -108,18 +108,14 @@ pub mod unique_id;
 
 /// Contains all public exports.
 pub mod prelude {
-    pub use crate::arrays::*;
-    pub use crate::data::*;
-    pub use crate::devices::*;
-    pub use crate::gradients::*;
+    pub use crate::arrays::{AllAxes, Axes2, Axes3, Axes4, Axis, HasArrayData};
+    pub use crate::devices::HasDevice;
+    pub use crate::gradients::{NoneTape, OwnedTape};
     pub use crate::losses::*;
     pub use crate::nn::*;
     pub use crate::optim::*;
     pub use crate::tensor::*;
     pub use crate::tensor_ops::*;
-    pub use crate::unique_id::*;
-
-    pub use crate::{Assert, ConstTrue};
 }
 
 #[cfg(not(any(

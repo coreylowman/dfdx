@@ -1,3 +1,4 @@
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
 use crate::prelude::*;
 use rand::Rng;
 use rand_distr::Uniform;
@@ -25,10 +26,10 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 #[derive(Default, Debug, Clone)]
 pub struct Linear<const I: usize, const O: usize> {
     /// Transposed weight matrix, shape (O, I)
-    pub weight: Tensor2D<O, I, NoneTape>,
+    pub weight: Tensor2D<O, I>,
 
     /// Bias vector, shape (O, )
-    pub bias: Tensor1D<O, NoneTape>,
+    pub bias: Tensor1D<O>,
 }
 
 impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
@@ -113,6 +114,7 @@ impl<const B: usize, const S: usize, const I: usize, const O: usize, H: Tape>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::unique_id::HasUniqueId;
     use crate::{nn::tests::SimpleGradients, tests::assert_close};
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;

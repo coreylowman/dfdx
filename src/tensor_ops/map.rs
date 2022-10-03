@@ -1,4 +1,5 @@
 use super::utils::{map, map_df_uses_fx};
+use crate::gradients::Tape;
 use crate::prelude::*;
 use std::ops::Neg;
 

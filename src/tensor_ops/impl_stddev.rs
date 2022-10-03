@@ -1,3 +1,5 @@
+use crate::arrays::{HasArrayType, HasAxes};
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 /// Reduces `Axes` of `T` by computing std deviation of all values in those axes.
