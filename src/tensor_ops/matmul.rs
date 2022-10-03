@@ -1,5 +1,6 @@
 use super::utils::move_tape_and_add_backward_binop;
 use crate::devices::{Cpu, MatMul, MatMulOp, Transpose};
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 /// Matrix multiplication. This also supports batched matrix multiplication,

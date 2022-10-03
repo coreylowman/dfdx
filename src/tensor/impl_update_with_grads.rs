@@ -1,4 +1,5 @@
 use crate::devices::Device;
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 
 impl<T: Tensor<Dtype = f32>> CanUpdateWithGradients for T {

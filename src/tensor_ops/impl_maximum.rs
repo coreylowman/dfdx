@@ -1,4 +1,5 @@
 use super::utils::binary_map;
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 /// Element wise maximum.

@@ -1,5 +1,6 @@
 use crate::arrays::Axis;
 use crate::devices::{Cpu, FillElements};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
 use crate::prelude::*;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive};
@@ -23,8 +24,8 @@ use zip::{result::ZipResult, ZipArchive};
 /// ```
 #[derive(Debug, Clone)]
 pub struct LayerNorm1D<const M: usize> {
-    pub gamma: Tensor1D<M, NoneTape>,
-    pub beta: Tensor1D<M, NoneTape>,
+    pub gamma: Tensor1D<M>,
+    pub beta: Tensor1D<M>,
     pub epsilon: f32,
 }
 

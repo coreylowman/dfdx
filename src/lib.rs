@@ -110,7 +110,7 @@ pub mod unique_id;
 pub mod prelude {
     pub use crate::arrays::{AllAxes, Axes2, Axes3, Axes4, Axis, HasArrayData};
     pub use crate::devices::HasDevice;
-    pub use crate::gradients::*;
+    pub use crate::gradients::{NoneTape, OwnedTape};
     pub use crate::losses::*;
     pub use crate::nn::*;
     pub use crate::optim::*;

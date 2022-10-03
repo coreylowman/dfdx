@@ -1,5 +1,6 @@
 use crate::arrays::HasArrayType;
 use crate::devices::ForEachElement;
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Gradients};
 use crate::prelude::*;
 use crate::unique_id::HasUniqueId;
 use std::marker::PhantomData;

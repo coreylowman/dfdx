@@ -8,6 +8,7 @@
 //!    sense to have a single unit for doing it.
 
 use crate::devices::{AllocateZeros, Device, ForEachElement};
+use crate::gradients::{Gradients, Tape};
 use crate::prelude::*;
 
 /// `f(t)`. Applies a function `f` to every element of the [Tensor]. The derivative

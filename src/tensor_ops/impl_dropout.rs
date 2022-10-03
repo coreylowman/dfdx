@@ -1,3 +1,4 @@
+use crate::gradients::Tape;
 use crate::prelude::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::Standard;

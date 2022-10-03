@@ -1,7 +1,8 @@
+use crate::arrays::HasArrayType;
+use crate::devices::ForEachElement;
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Gradients};
 use crate::prelude::*;
 use crate::unique_id::HasUniqueId;
-use crate::devices::ForEachElement;
-use crate::arrays::HasArrayType;
 use std::marker::PhantomData;
 
 /// An implementation of the Adam optimizer from
