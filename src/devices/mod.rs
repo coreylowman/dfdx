@@ -16,6 +16,11 @@ pub use matmul::*;
 pub use permute::*;
 pub use select::*;
 
+#[cfg(feature = "nightly")]
+mod conv;
+#[cfg(feature = "nightly")]
+pub use conv::*;
+
 use std::ops::*;
 
 /// The CPU device
