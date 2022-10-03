@@ -1,4 +1,6 @@
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
 use crate::prelude::*;
+use crate::{Assert, ConstTrue};
 use rand::Rng;
 
 /// **Requires Nightly** A multi-head attention layer.

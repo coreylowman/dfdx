@@ -1,4 +1,6 @@
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
 use crate::prelude::*;
+use crate::{Assert, ConstTrue};
 
 /// **Requires Nightly** Flattens 3d tensors to 1d, and 4d tensors to 2d.
 ///

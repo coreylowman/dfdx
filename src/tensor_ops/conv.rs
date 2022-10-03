@@ -1,3 +1,4 @@
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 /// **Requires Nightly** Perform a 2d convolution.
