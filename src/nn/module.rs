@@ -38,7 +38,7 @@ pub trait Module<Input>: ResetParams + CanUpdateWithGradients {
     /// # Example Implementation
     ///
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx::{prelude::*, gradients::*};
     /// struct MyMulLayer {
     ///     scale: Tensor1D<5, NoneTape>,
     /// }

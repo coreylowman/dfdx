@@ -12,7 +12,7 @@ use crate::arrays::CountElements;
 ///
 /// Examples:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::devices::{Cpu, ForEachElement};
 /// let mut a = [[0.0; 3]; 2];
 /// let b = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
 /// Cpu::foreach_mr(&mut a, &b, &mut |x, y| {

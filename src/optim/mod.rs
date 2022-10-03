@@ -14,7 +14,7 @@
 //! the [crate::gradients::Gradients]:
 //!
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx::{prelude::*, gradients::*};
 //! # type MyModel = Linear<5, 2>;
 //! let mut model: MyModel = Default::default();
 //! let mut opt: Sgd<MyModel> = Default::default();

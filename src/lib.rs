@@ -63,7 +63,7 @@
 //!
 //! 6. Compute gradients with [crate::tensor_ops::backward()]. See [crate::tensor_ops].
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx::{prelude::*, gradients::Gradients};
 //! # let mut rng = rand::thread_rng();
 //! # let model: Linear<10, 5> = Default::default();
 //! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
@@ -76,7 +76,7 @@
 //! ```
 //! 7. Use an optimizer from [crate::optim] to optimize your network!
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx::{prelude::*, gradients::Gradients};
 //! # let mut rng = rand::thread_rng();
 //! # let mut model: Linear<10, 5> = Default::default();
 //! # let x: Tensor1D<10> = Tensor1D::zeros();

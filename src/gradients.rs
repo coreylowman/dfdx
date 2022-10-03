@@ -132,7 +132,7 @@ impl Gradients {
     ///
     /// Examples:
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx::{prelude::*, gradients::*};
     /// let a = Tensor1D::new([1.0, 2.0, 3.0]);
     /// let b: Tensor1D<5> = Tensor1D::zeros();
     /// let mut gradients: Gradients = Default::default();
@@ -186,7 +186,7 @@ impl Gradients {
     ///
     /// Example usage:
     /// ```
-    /// # use dfdx::prelude::*;
+    /// # use dfdx::{prelude::*, gradients::*};
     /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
     /// let mut gradients: Gradients = Default::default();
     /// *gradients.mut_gradient(&t) = [-4.0, 5.0, -6.0];
@@ -205,7 +205,7 @@ impl Gradients {
     ///
     /// Example usage:
     /// ```
-    /// # use dfdx::prelude::*;
+    /// # use dfdx::{prelude::*, gradients::*};
     /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
     /// let mut gradients: Gradients = Default::default();
     /// let g: &mut [f32; 3] = gradients.mut_gradient(&t);
@@ -234,7 +234,7 @@ impl Gradients {
     ///
     /// # Example usage:
     /// ```
-    /// # use dfdx::prelude::*;
+    /// # use dfdx::{prelude::*, gradients::*};
     /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
     /// let mut gradients: Gradients = Default::default();
     /// gradients.mut_gradient(&t);
