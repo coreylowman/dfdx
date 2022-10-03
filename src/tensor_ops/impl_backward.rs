@@ -1,3 +1,4 @@
+use crate::devices::{Cpu, FillElements};
 use crate::prelude::*;
 
 /// Runs backprop algorithm with all operations contained in the tape that `t` has.

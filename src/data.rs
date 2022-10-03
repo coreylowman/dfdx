@@ -1,7 +1,8 @@
 //! A collection of data utility classes such as [one_hot_encode()] and [SubsetIterator].
 
-use crate::prelude::*;
 use rand::prelude::SliceRandom;
+
+use crate::tensor::{HasArrayData, Tensor1D, Tensor2D, TensorCreator};
 
 /// Generates a tensor with ordered data from 0 to `N`.
 ///

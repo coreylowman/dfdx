@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use crate::unique_id::{unique_id, HasUniqueId};
 
 /// The main tensor trait. A tensor consists of mainly 1. an array, 2. a device, 3. a unique id.
 pub trait Tensor:

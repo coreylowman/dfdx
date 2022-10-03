@@ -1,4 +1,6 @@
+use crate::devices::{FillElements, ForEachElement};
 use crate::prelude::*;
+use crate::unique_id::HasUniqueId;
 use std::marker::PhantomData;
 
 /// RMSprop As described in [Hinton, 2012](http://www.cs.toronto.edu/%7Etijmen/csc321/slides/lecture_slides_lec6.pdf).

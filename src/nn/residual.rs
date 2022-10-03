@@ -74,7 +74,7 @@ impl<F: LoadFromNpz> LoadFromNpz for Residual<F> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::tests::SimpleGradients, tests::assert_close};
+    use crate::{nn::tests::SimpleGradients, tests::assert_close, unique_id::HasUniqueId};
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;
     use tempfile::NamedTempFile;

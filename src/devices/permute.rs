@@ -217,7 +217,7 @@ permutations!([0, 1, 2, 3]);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prelude::FillElements;
+    use crate::devices::FillElements;
     use rand::{thread_rng, Rng};
 
     #[test]

@@ -1,3 +1,4 @@
+use crate::devices::Device;
 use crate::prelude::*;
 
 impl<T: Tensor<Dtype = f32>> CanUpdateWithGradients for T {

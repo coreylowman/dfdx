@@ -1,6 +1,10 @@
 //! Standard loss functions such as [mse_loss()], [cross_entropy_with_logits_loss()], and more.
 
-use crate::prelude::*;
+use crate::arrays::{AllAxes, HasArrayType, HasLastAxis};
+use crate::tensor::Tensor;
+use crate::tensor_ops::{
+    abs, div_scalar, ln, log_softmax, mean, mul, mul_scalar, negate, sqrt, square, sub, Reduce,
+};
 
 /// [Mean Squared Error](https://en.wikipedia.org/wiki/Mean_squared_error).
 /// This computes `(&targ - pred).square().mean()`.
@@ -190,9 +194,9 @@ pub fn binary_cross_entropy_with_logits_loss<T: Reduce<AllAxes>>(
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::assert_close;
-
     use super::*;
+    use crate::prelude::*;
+    use crate::tests::assert_close;
 
     #[test]
     fn test_mse() {

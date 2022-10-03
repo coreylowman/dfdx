@@ -1,4 +1,6 @@
+use crate::devices::ForEachElement;
 use crate::prelude::*;
+use crate::unique_id::HasUniqueId;
 use std::marker::PhantomData;
 
 /// Implementation of Stochastic Gradient Descent. Based on [pytorch's implementation](https://pytorch.org/docs/stable/generated/torch.optim.SGD.html)

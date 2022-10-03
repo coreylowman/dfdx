@@ -1,4 +1,5 @@
 use super::utils::move_tape_and_add_backward_op;
+use crate::devices::{Cpu, Device, DevicePermute};
 use crate::prelude::*;
 
 /// Permutes self into `T` with the new order of axes specified via `Axes`.

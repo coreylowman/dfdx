@@ -1,3 +1,4 @@
+use crate::devices::{Cpu, FillElements};
 use crate::prelude::*;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive};
@@ -125,6 +126,7 @@ impl<const M: usize> LoadFromNpz for LayerNorm1D<M> {
 mod tests {
     use super::*;
     use crate::nn::tests::SimpleGradients;
+    use crate::unique_id::HasUniqueId;
     use rand::{prelude::StdRng, SeedableRng};
     use rand_distr::Standard;
     use std::fs::File;

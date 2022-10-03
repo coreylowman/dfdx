@@ -1,7 +1,10 @@
 //! Implementations of [GradientTape] and generic Nd array containers via [Gradients].
 
-use crate::prelude::*;
 use std::collections::HashMap;
+
+use crate::arrays::HasArrayType;
+use crate::devices::{AllocateZeros, HasDevice};
+use crate::unique_id::{HasUniqueId, UniqueId};
 
 /// Records gradient computations to execute later.
 ///
@@ -303,6 +306,8 @@ impl UnusedTensors {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::devices::Cpu;
+    use crate::unique_id::unique_id;
 
     struct Tensor {
         id: UniqueId,

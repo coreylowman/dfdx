@@ -1,5 +1,5 @@
 use super::utils::move_tape_and_add_backward_op;
-use crate::devices::{DeviceReduce, EqAccum, MinAccum, MulAccum};
+use crate::devices::{Device, DeviceReduce, EqAccum, MinAccum, MulAccum};
 use crate::prelude::*;
 
 /// Reduces `Axes` of the tensor by gathering the minimum value from the axes.

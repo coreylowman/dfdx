@@ -119,6 +119,7 @@ pub use conv::*;
 #[cfg(test)]
 mod tests {
     use crate::prelude::{GradientProvider, Gradients};
+    use crate::unique_id::HasUniqueId;
 
     #[derive(Default)]
     pub struct SimpleGradients(pub Gradients);
@@ -126,9 +127,7 @@ mod tests {
     impl GradientProvider for SimpleGradients {
         fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
         where
-            P: crate::prelude::HasUniqueId
-                + crate::prelude::HasArrayType<Dtype = f32>
-                + crate::prelude::HasDevice,
+            P: HasUniqueId + crate::prelude::HasArrayType<Dtype = f32> + crate::prelude::HasDevice,
         {
             self.0.remove(p)
         }

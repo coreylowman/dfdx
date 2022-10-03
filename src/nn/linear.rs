@@ -113,6 +113,7 @@ impl<const B: usize, const S: usize, const I: usize, const O: usize, H: Tape>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::unique_id::HasUniqueId;
     use crate::{nn::tests::SimpleGradients, tests::assert_close};
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;

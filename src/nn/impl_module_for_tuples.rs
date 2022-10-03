@@ -93,6 +93,7 @@ tuple_impls!([A, B, C, D, E, F] [0, 1, 2, 3, 4, 5], F, [E, D, C, B, A]);
 mod tests {
     use super::*;
     use crate::nn::tests::SimpleGradients;
+    use crate::unique_id::HasUniqueId;
     use rand::{prelude::StdRng, SeedableRng};
     use std::fs::File;
     use tempfile::NamedTempFile;

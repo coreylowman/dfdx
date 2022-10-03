@@ -109,17 +109,13 @@ pub mod unique_id;
 /// Contains all public exports.
 pub mod prelude {
     pub use crate::arrays::*;
-    pub use crate::data::*;
-    pub use crate::devices::*;
+    pub use crate::devices::HasDevice;
     pub use crate::gradients::*;
     pub use crate::losses::*;
     pub use crate::nn::*;
     pub use crate::optim::*;
     pub use crate::tensor::*;
     pub use crate::tensor_ops::*;
-    pub use crate::unique_id::*;
-
-    pub use crate::{Assert, ConstTrue};
 }
 
 #[cfg(not(any(
