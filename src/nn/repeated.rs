@@ -62,7 +62,7 @@ impl<T: SaveToNpz, const N: usize> SaveToNpz for Repeated<T, N> {
     /// 2. `self.modules[1].write("1.", w)`
     fn write<W: Write + Seek>(&self, base: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         for i in 0..N {
-            self.modules[i].write(&format!("{}{}.", base, i), w)?;
+            self.modules[i].write(&format!("{base}{i}."), w)?;
         }
         Ok(())
     }
@@ -79,7 +79,7 @@ impl<T: LoadFromNpz, const N: usize> LoadFromNpz for Repeated<T, N> {
         R: Read + Seek,
     {
         for i in 0..N {
-            self.modules[i].read(&format!("{}{}.", base, i), r)?;
+            self.modules[i].read(&format!("{base}{i}."), r)?;
         }
         Ok(())
     }
@@ -105,27 +105,17 @@ mod tests {
     use tempfile::NamedTempFile;
 
     #[test]
-    fn test_default() {
-        type Model = Repeated<(Linear<3, 3>, ReLU), 5>;
-        let m: Model = Default::default();
+    fn test_default_and_reset() {
+        let mut rng = StdRng::seed_from_u64(0);
 
-        assert!(m.modules[0].0.weight.id < m.modules[1].0.weight.id);
-        assert!(m.modules[1].0.weight.id < m.modules[2].0.weight.id);
-        assert!(m.modules[2].0.weight.id < m.modules[3].0.weight.id);
-        assert!(m.modules[3].0.weight.id < m.modules[4].0.weight.id);
+        type Model = Repeated<(Linear<3, 3>, ReLU), 5>;
+        let mut m: Model = Default::default();
 
         for i in 0..5 {
             assert_eq!(m.modules[i].0.weight.data(), &[[0.0; 3]; 3]);
             assert_eq!(m.modules[i].0.bias.data(), &[0.0; 3]);
         }
-    }
 
-    #[test]
-    fn test_randomize() {
-        type Model = Repeated<(Linear<3, 3>, ReLU), 5>;
-
-        let mut rng = StdRng::seed_from_u64(0);
-        let mut m: Model = Default::default();
         m.reset_params(&mut rng);
 
         for i in 0..5 {
