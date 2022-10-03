@@ -109,7 +109,7 @@ impl_broadcast_reduce!(Tensor3D<N, O, P, H>, Axis<0>, Tensor4D<M, N, O, P, H>, {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::assert_close;
+    use crate::tests::AssertClose;
     use rand::thread_rng;
 
     #[test]
@@ -162,7 +162,7 @@ mod tests {
         let a: Tensor1D<3> = TensorCreator::randn(&mut rng);
         let b: Tensor2D<5, 3> = TensorCreator::randn(&mut rng);
         let a_up: Tensor2D<5, 3, OwnedTape> = a.trace().broadcast();
-        assert_close(a_up.data(), &[*a.data(); 5]);
+        a_up.data().assert_close(&[*a.data(); 5], 1e-4);
         let r = mul(a_up, &b);
         let g = backward(r.exp().mean());
         // a's gradient: (b * (b * a).exp()).sum(0) / 15
@@ -170,7 +170,7 @@ mod tests {
         let a_up: Tensor2D<5, 3> = a.clone().broadcast();
         let a_grad = mul(mul(b.clone(), &a_up).exp(), &b).sum::<_, Axis<0>>() / 15.0;
         let b_grad = mul(mul(b.clone(), &a_up).exp(), &a_up) / 15.0;
-        assert_close(g.ref_gradient(&a), a_grad.data());
-        assert_close(g.ref_gradient(&b), b_grad.data());
+        g.ref_gradient(&a).assert_close(a_grad.data(), 1e-4);
+        g.ref_gradient(&b).assert_close(b_grad.data(), 1e-4);
     }
 }
