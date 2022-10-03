@@ -22,7 +22,7 @@ pub trait Tensor:
     /// Removes whatever Tape this tensor has and returns itself without a tape.
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
 
-    /// Clones the data & [UniqueId] of this tensor and returns something with [NoneTape].
+    /// Clones the data and id of this tensor and returns something with [NoneTape].
     fn duplicate(&self) -> Self::NoTape;
 }
 
@@ -49,7 +49,7 @@ impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
 }
 
 impl<$(const $Vs: usize, )* H: Clone> Clone for $struct<$($Vs, )* H> {
-    /// Clones the underlying data and tape. **Creates a new [UniqueId].**
+    /// Clones the underlying data and tape. **Creates a new `id`.**
     fn clone(&self) -> Self {
         Self {
             id: unique_id(),

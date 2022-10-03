@@ -4,8 +4,8 @@ use crate::unique_id::{HasUniqueId, UniqueId};
 use std::marker::PhantomData;
 
 /// A fake tensor that holds a [UniqueId] and a type `T` that is [HasArrayType].
-/// This is created and stored in [GradientTape] operations to access gradient data
-/// for a tensor that the [GradientTape] doesn't have ownership of.
+/// This is created and stored in gradient operations to access gradient data
+/// for a tensor that the operation doesn't have ownership of.
 #[derive(Clone, Copy)]
 pub struct PhantomTensor<T> {
     id: UniqueId,

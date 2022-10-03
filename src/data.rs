@@ -28,7 +28,7 @@ pub fn arange<const N: usize>() -> Tensor1D<N> {
 }
 
 /// One hot encodes an array of class labels into a [Tensor2D] of probability
-/// vectors. This can be used in tandem with [cross_entropy_with_logits_loss()].
+/// vectors. This can be used in tandem with [crate::losses::cross_entropy_with_logits_loss()].
 ///
 /// Const Generic Arguments:
 /// - `B` - the batch size

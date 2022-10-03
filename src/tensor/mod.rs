@@ -44,7 +44,8 @@
 //!
 //! # Accessing or modifying underlying data
 //!
-//! Use [HasArrayData::data()] and [HasArrayData::mut_data()] to view or modify the underlying arrays.
+//! Use [crate::arrays::HasArrayData::data()] and [crate::arrays::HasArrayData::mut_data()]
+//! to view or modify the underlying arrays.
 //!
 //! ```rust
 //! # use dfdx::prelude::*;

@@ -259,7 +259,7 @@ impl Gradients {
 /// an optimizer to update a [CanUpdateWithGradients]. Although it very easily
 /// could.
 ///
-/// See [Sgd] and [Adam] for examples on implementing this.
+/// See [crate::optim::Sgd] and [crate::optim::Adam] for examples on implementing this.
 pub trait GradientProvider {
     /// Retrieves the data associated with `p` if there is any.
     /// This can modify `self`, for instance if velocities are calculated

@@ -2,9 +2,7 @@
 
 use crate::arrays::{AllAxes, HasArrayType, HasLastAxis};
 use crate::tensor::Tensor;
-use crate::tensor_ops::{
-    abs, div_scalar, ln, log_softmax, mean, mul, mul_scalar, negate, sqrt, square, sub, Reduce,
-};
+use crate::tensor_ops::*;
 
 /// [Mean Squared Error](https://en.wikipedia.org/wiki/Mean_squared_error).
 /// This computes `(&targ - pred).square().mean()`.
@@ -98,8 +96,8 @@ pub fn smooth_l1_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape, beta: T::Dt
 /// [Cross entropy loss](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression).
 /// This computes: `-(logits.log_softmax() * target_probs).sum(-1).mean()`
 ///
-/// This will call `log_softmax(logits)`, so make sure logits is **not** the
-/// output from [softmax()] or [log_softmax()] already.
+/// This will call `log_softmax(logits)`, so make sure logits is **not the
+/// output from** [softmax()] or [log_softmax()] already.
 ///
 /// # Arguments
 ///
@@ -128,8 +126,8 @@ where
 /// [KL Divergence loss](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence).
 /// This computes `(target_probs * (target_probs.log() - logits.log_softmax())).sum(-1).mean()`
 ///
-/// This will call `log_softmax(logits)`, so make sure logits is **not** the
-/// output from [softmax()] or [log_softmax()] already.
+/// This will call `log_softmax(logits)`, so make sure logits is **not the
+/// output from** [softmax()] or [log_softmax()] already.
 ///
 /// # Arguments
 ///

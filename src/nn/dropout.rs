@@ -24,7 +24,8 @@ pub struct DropoutOneIn<const N: usize> {
 }
 
 impl<const N: usize> Default for DropoutOneIn<N> {
-    /// Seeds [StdRng] with a new seed every time this is called. The seed comes from the [UniqueId] constructor.
+    /// Seeds [StdRng] with a new seed every time this is called. The seed is initialized
+    /// with a deterministic value.
     fn default() -> Self {
         let seed = unique_id().as_u64();
         Self {
