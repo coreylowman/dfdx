@@ -249,6 +249,7 @@ pub fn vecmat_mul_transpose<const K: usize, const N: usize, TAPE: Tape>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::arrays::ZeroElements;
     use crate::{devices::Device, tests::assert_close};
     use rand::thread_rng;
 

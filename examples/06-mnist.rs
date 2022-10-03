@@ -2,6 +2,7 @@
 //! to build a neural network that learns to recognize
 //! the MNIST digits.
 
+use dfdx::data::SubsetIterator;
 use dfdx::prelude::*;
 use indicatif::ProgressBar;
 use mnist::*;

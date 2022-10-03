@@ -1,3 +1,4 @@
+use crate::arrays::HasArrayType;
 use crate::devices::ForEachElement;
 use crate::prelude::*;
 use crate::unique_id::HasUniqueId;

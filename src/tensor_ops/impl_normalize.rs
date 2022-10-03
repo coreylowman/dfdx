@@ -1,3 +1,4 @@
+use crate::arrays::{HasArrayType, HasAxes};
 use crate::prelude::*;
 
 /// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Axes` of `T`. `epsilon` is passed to [stddev()].

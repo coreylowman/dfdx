@@ -1,3 +1,4 @@
+use crate::arrays::Axis;
 use crate::devices::{Cpu, FillElements};
 use crate::prelude::*;
 use std::io::{Read, Seek, Write};

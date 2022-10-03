@@ -1,6 +1,7 @@
 //! Demonstrates how to select sub tensors (index) from tensors
 
-use dfdx::tensor::{tensor, HasArrayData, Tensor2D, Tensor3D};
+use dfdx::arrays::HasArrayData;
+use dfdx::tensor::{tensor, Tensor2D, Tensor3D};
 use dfdx::tensor_ops::Select1;
 
 fn main() {

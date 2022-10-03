@@ -180,6 +180,12 @@ pub trait HasArrayType {
         + HasLastAxis;
 }
 
+/// Something that has [HasArrayType], and also can return a reference to or mutate `Self::Array`.
+pub trait HasArrayData: HasArrayType {
+    fn data(&self) -> &Self::Array;
+    fn mut_data(&mut self) -> &mut Self::Array;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

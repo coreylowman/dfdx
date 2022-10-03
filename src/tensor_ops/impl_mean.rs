@@ -1,3 +1,4 @@
+use crate::arrays::{HasArrayType, HasAxes};
 use crate::prelude::*;
 
 /// Average the values along `Axes` of `T`.

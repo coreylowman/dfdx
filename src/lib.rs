@@ -108,7 +108,7 @@ pub mod unique_id;
 
 /// Contains all public exports.
 pub mod prelude {
-    pub use crate::arrays::*;
+    pub use crate::arrays::{AllAxes, Axes2, Axes3, Axes4, Axis, HasArrayData};
     pub use crate::devices::HasDevice;
     pub use crate::gradients::*;
     pub use crate::losses::*;

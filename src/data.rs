@@ -2,7 +2,8 @@
 
 use rand::prelude::SliceRandom;
 
-use crate::tensor::{HasArrayData, Tensor1D, Tensor2D, TensorCreator};
+use crate::arrays::HasArrayData;
+use crate::tensor::{Tensor1D, Tensor2D, TensorCreator};
 
 /// Generates a tensor with ordered data from 0 to `N`.
 ///

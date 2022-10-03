@@ -1,8 +1,8 @@
 //! Demonstrates broadcasting tensors to different sizes, and axis reductions
 //! with BroadcastTo and ReduceTo
 
-use dfdx::arrays::Axis;
-use dfdx::tensor::{tensor, HasArrayData, Tensor1D, Tensor2D, Tensor4D};
+use dfdx::arrays::{Axis, HasArrayData};
+use dfdx::tensor::{tensor, Tensor1D, Tensor2D, Tensor4D};
 use dfdx::tensor_ops::BroadcastTo;
 
 fn main() {

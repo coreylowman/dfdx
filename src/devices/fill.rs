@@ -32,7 +32,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::prelude::ZeroElements;
+    use crate::arrays::ZeroElements;
     use rand::{thread_rng, Rng};
 
     #[test]

@@ -2,11 +2,12 @@
 
 use rand::prelude::*;
 
+use dfdx::arrays::HasArrayData;
 use dfdx::gradients::{Gradients, OwnedTape};
 use dfdx::losses::mse_loss;
 use dfdx::nn::{Linear, Module, ReLU, ResetParams, Tanh};
 use dfdx::optim::{Momentum, Optimizer, Sgd, SgdConfig};
-use dfdx::tensor::{HasArrayData, Tensor2D, TensorCreator};
+use dfdx::tensor::{Tensor2D, TensorCreator};
 
 // first let's declare our neural network to optimze
 type Mlp = (

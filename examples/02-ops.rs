@@ -2,7 +2,8 @@
 
 use rand::prelude::*;
 
-use dfdx::tensor::{HasArrayData, Tensor0D, Tensor2D, TensorCreator};
+use dfdx::arrays::HasArrayData;
+use dfdx::tensor::{Tensor0D, Tensor2D, TensorCreator};
 use dfdx::tensor_ops::add;
 
 fn main() {

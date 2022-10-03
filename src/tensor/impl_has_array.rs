@@ -1,11 +1,5 @@
 use super::*;
-use crate::prelude::*;
-
-/// Something that has [HasArrayType], and also can return a reference to or mutate `Self::Array`.
-pub trait HasArrayData: HasArrayType {
-    fn data(&self) -> &Self::Array;
-    fn mut_data(&mut self) -> &mut Self::Array;
-}
+use crate::arrays::{HasArrayData, HasArrayType};
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*], $arr:ty) => {

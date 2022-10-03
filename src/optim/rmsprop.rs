@@ -1,5 +1,6 @@
 use crate::devices::{FillElements, ForEachElement};
 use crate::prelude::*;
+use crate::arrays::HasArrayType;
 use crate::unique_id::HasUniqueId;
 use std::marker::PhantomData;
 

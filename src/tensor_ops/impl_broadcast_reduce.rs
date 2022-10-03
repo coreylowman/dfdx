@@ -1,5 +1,5 @@
 use super::utils::move_tape_and_add_backward_op;
-use crate::arrays::{AllAxes, Axes2, Axes3, Axis};
+use crate::arrays::{AllAxes, Axes2, Axes3, Axis, HasArrayType};
 use crate::devices::{AddAccum, CopyAccum, Cpu, DeviceReduce};
 use crate::prelude::*;
 

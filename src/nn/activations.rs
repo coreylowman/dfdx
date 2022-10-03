@@ -1,3 +1,4 @@
+use crate::arrays::{HasArrayType, HasLastAxis};
 use crate::prelude::*;
 use rand::Rng;
 
@@ -161,7 +162,7 @@ mod tests {
 
         let t = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
         let r1 = Softmax.forward(t.clone());
-        let r2 = t.softmax::<Axis<1>>();
+        let r2 = t.softmax::<crate::arrays::Axis<1>>();
         assert_eq!(r1.data(), r2.data());
     }
 }
