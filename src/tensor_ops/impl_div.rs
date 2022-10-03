@@ -11,6 +11,7 @@ use crate::prelude::*;
 /// let b = tensor([[1.0, 0.5, 1.0], [0.5, 1.0, 3.0]]);
 /// let r = div(a, &b); // or `a / &b`
 /// assert_eq!(r.data(), &[[1.0, 4.0, 3.0], [-2.0, -2.0, -1.0]]);
+/// ```
 pub fn div<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     fn dfdy(x: &f32, y: &f32) -> f32 {
         (-x) * y.powi(2).recip()

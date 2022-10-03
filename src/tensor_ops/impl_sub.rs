@@ -11,6 +11,7 @@ use crate::prelude::*;
 /// let b = Tensor2D::ones();
 /// let r = sub(a, &b); // or `a - &b`
 /// assert_eq!(r.data(), &[[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
+/// ```
 pub fn sub<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
     binary_map(lhs, rhs, |x, y| x - y, |_, _| 1.0, |_, _| -1.0)
 }
