@@ -20,6 +20,10 @@ pub use select::*;
 mod conv;
 #[cfg(feature = "nightly")]
 pub use conv::*;
+#[cfg(feature = "nightly")]
+mod pool;
+#[cfg(feature = "nightly")]
+pub use pool::*;
 
 use std::ops::*;
 

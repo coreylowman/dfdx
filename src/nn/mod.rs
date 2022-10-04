@@ -116,6 +116,21 @@ mod conv;
 #[cfg(feature = "nightly")]
 pub use conv::*;
 
+#[cfg(feature = "nightly")]
+mod pool_max;
+#[cfg(feature = "nightly")]
+pub use pool_max::*;
+
+#[cfg(feature = "nightly")]
+mod pool_min;
+#[cfg(feature = "nightly")]
+pub use pool_min::*;
+
+#[cfg(feature = "nightly")]
+mod pool_avg;
+#[cfg(feature = "nightly")]
+pub use pool_avg::*;
+
 #[cfg(test)]
 mod tests {
     use crate::gradients::{GradientProvider, Gradients};
