@@ -183,7 +183,6 @@ pub use impl_sum::*;
 pub use map::*;
 pub use matmul::*;
 pub use permute::*;
-pub(crate) use select::Select;
 pub use select::SelectTo;
 
 #[cfg(feature = "nightly")]
