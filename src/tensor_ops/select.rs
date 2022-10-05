@@ -3,6 +3,14 @@ use crate::devices::*;
 use crate::gradients::Tape;
 use crate::prelude::*;
 
+/// Reverse trait of [SelectTo], it maps `Indices` and `Axes` to an output type,
+/// whereas [SelectTo] maps output type and axes to `Indices`.
+///
+/// **Not intended to be used outside of the crate.**
+pub trait Select<Indices, Axes>: SelectTo<Self::Output, Axes, Indices = Indices> {
+    type Output;
+}
+
 /// Select values along `Axes` resulting in `T`. Equivalent
 /// to `torch.select` and `torch.gather` from pytorch.
 ///
@@ -61,6 +69,9 @@ pub trait SelectTo<T, Axes> {
 
 macro_rules! impl_select {
     ($Axes:ty, $Mode:ty, $SrcTy:ty, $IndTy:tt, $DstTy:ty, {$($Dims:tt),*}) => {
+impl<$(const $Dims: usize, )* H: Tape> Select<$IndTy, $Axes> for $SrcTy {
+    type Output = $DstTy;
+}
 impl<$(const $Dims: usize, )* H: Tape> SelectTo<$DstTy, $Axes> for $SrcTy {
     type Indices = $IndTy;
     fn select(self, indices: &Self::Indices) -> $DstTy {
