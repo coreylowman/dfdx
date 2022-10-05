@@ -183,7 +183,7 @@ pub use impl_sum::*;
 pub use map::*;
 pub use matmul::*;
 pub use permute::*;
-pub use select::*;
+pub use select::SelectTo;
 
 #[cfg(feature = "nightly")]
 mod impl_reshape;
