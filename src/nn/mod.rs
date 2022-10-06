@@ -123,19 +123,19 @@ mod conv;
 pub use conv::*;
 
 #[cfg(feature = "nightly")]
-mod pool_max;
+mod pool2d_max;
 #[cfg(feature = "nightly")]
-pub use pool_max::*;
+pub use pool2d_max::*;
 
 #[cfg(feature = "nightly")]
-mod pool_min;
+mod pool2d_min;
 #[cfg(feature = "nightly")]
-pub use pool_min::*;
+pub use pool2d_min::*;
 
 #[cfg(feature = "nightly")]
-mod pool_avg;
+mod pool2d_avg;
 #[cfg(feature = "nightly")]
-pub use pool_avg::*;
+pub use pool2d_avg::*;
 
 #[cfg(test)]
 mod tests {

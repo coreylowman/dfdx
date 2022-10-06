@@ -21,9 +21,9 @@ mod conv;
 #[cfg(feature = "nightly")]
 pub use conv::*;
 #[cfg(feature = "nightly")]
-mod pool;
+mod pool2d;
 #[cfg(feature = "nightly")]
-pub use pool::*;
+pub use pool2d::*;
 
 use std::ops::*;
 
