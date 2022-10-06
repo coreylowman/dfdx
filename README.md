@@ -81,7 +81,7 @@ You will need to install Intel MKL on your own from [this page](https://www.inte
 
 ## Features
 
-1. 👌 Simple Neural Networks API, completely type checked at compile time. See [examples/regression.rs](examples/regression.rs)
+1. 👌 Simple Neural Networks API, completely type checked at compile time. See [examples/05-optim.rs](examples/05-optim.rs)
 
 ```rust
 type MLP = (
@@ -117,7 +117,7 @@ sgd.update(&mut model, gradients);
 
 3. Tensors are backed by normal rust arrays, making it easy to access the underlying data!
 ```rust
-let t0: Tensor0D = Tensor0D::zeros();
+let t0: Tensor0D = tensor(0.0);
 assert_eq!(t0.data(), &0.0);
 
 let t1 /*: Tensor1D<3>*/ = Tensor1D::new([1.0, 2.0, 3.0]);
@@ -193,7 +193,7 @@ Since all operations result in exactly 1 child, we can always move the gradient 
 
 One advanced use case requires that tensors be re-used multiple times in a computation graph.
 This can be handled by duplicating the tensor, and manually moving the gradient tape around.
-See [examples/multi_head.rs](examples/multi_head.rs) for an example.
+See [examples/12-multi-headed.rs](examples/12-multi-headed.rs) for an example.
 
 ### Type checked backward
 
