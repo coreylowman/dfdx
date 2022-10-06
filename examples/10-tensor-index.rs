@@ -2,7 +2,7 @@
 
 use dfdx::arrays::HasArrayData;
 use dfdx::tensor::{tensor, Tensor2D, Tensor3D};
-use dfdx::tensor_ops::Select1;
+use dfdx::tensor_ops::SelectTo;
 
 fn main() {
     let a: Tensor3D<3, 2, 3> = tensor([

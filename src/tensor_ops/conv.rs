@@ -6,7 +6,7 @@ use crate::prelude::*;
 ///
 /// TODO docstring
 pub fn conv2d<
-    TAPE: 'static + Tape,
+    TAPE: Tape,
     const IN_CHAN: usize,
     const OUT_CHAN: usize,
     const KERNEL: usize,
@@ -48,7 +48,7 @@ pub fn conv2d<
 ///
 /// TODO docstring
 pub fn conv2d_batched<
-    TAPE: 'static + Tape,
+    TAPE: Tape,
     const BATCH_SIZE: usize,
     const IN_CHAN: usize,
     const OUT_CHAN: usize,

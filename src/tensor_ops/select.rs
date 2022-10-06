@@ -1,11 +1,17 @@
 use super::utils::move_tape_and_add_backward_op;
-use crate::devices::{
-    BSelectAx1, Device, DeviceSelect, FillElements, SelectAx0, SelectAx1, SelectAx2, SelectAx3,
-};
+use crate::devices::*;
 use crate::gradients::Tape;
 use crate::prelude::*;
 
-/// Select values along a single axis `I` resulting in `T`. Equivalent
+/// Reverse trait of [SelectTo], it maps `Indices` and `Axes` to an output type,
+/// whereas [SelectTo] maps output type and axes to `Indices`.
+///
+/// **Not intended to be used outside of the crate.**
+pub trait Select<Indices, Axes>: SelectTo<Self::Output, Axes, Indices = Indices> {
+    type Output;
+}
+
+/// Select values along `Axes` resulting in `T`. Equivalent
 /// to `torch.select` and `torch.gather` from pytorch.
 ///
 /// There are two ways to select:
@@ -14,7 +20,9 @@ use crate::prelude::*;
 /// 2. Select multiple values from an axis, which keeps the number
 /// of dimensions the same. You can select the same element multiple
 /// number of times.
-pub trait Select1<T, const I: isize> {
+///
+/// You can also select batches of data with this trait.
+pub trait SelectTo<T, Axes> {
     type Indices: Clone;
 
     /// Select sub elements using [Self::Indices].
@@ -44,12 +52,27 @@ pub trait Select1<T, const I: isize> {
     /// // is the new size of the 1st axis.
     /// let _: Tensor2D<3, 2> = Tensor2D::<3, 5>::zeros().select(&[[0, 4], [1, 3], [2, 2]]);
     /// ```
+    ///
+    /// Selecting batch of values from a 1d tensor:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// let _: Tensor2D<2, 1> = Tensor1D::<5>::zeros().select(&[[0], [1]]);
+    ///```
+    ///
+    /// Selecting batch of values from a 2d tensor:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// let _: Tensor3D<2, 1, 5> = Tensor2D::<3, 5>::zeros().select(&[[0], [1]]);
+    ///```
     fn select(self, indices: &Self::Indices) -> T;
 }
 
 macro_rules! impl_select {
-    ($Axis:expr, $Mode:ty, $SrcTy:ty, $IndTy:tt, $DstTy:ty, {$($Dims:tt),*}) => {
-impl<$(const $Dims: usize, )* H: Tape> Select1<$DstTy, $Axis> for $SrcTy {
+    ($Axes:ty, $Mode:ty, $SrcTy:ty, $IndTy:tt, $DstTy:ty, {$($Dims:tt),*}) => {
+impl<$(const $Dims: usize, )* H: Tape> Select<$IndTy, $Axes> for $SrcTy {
+    type Output = $DstTy;
+}
+impl<$(const $Dims: usize, )* H: Tape> SelectTo<$DstTy, $Axes> for $SrcTy {
     type Indices = $IndTy;
     fn select(self, indices: &Self::Indices) -> $DstTy {
         select::<_, _, _, $Mode>(self, indices)
@@ -59,72 +82,37 @@ impl<$(const $Dims: usize, )* H: Tape> Select1<$DstTy, $Axis> for $SrcTy {
 }
 
 // 1d
-impl_select!(-1, SelectAx0, Tensor1D<M, H>, usize, Tensor0D<H>, {M});
-impl_select!(-1, SelectAx0, Tensor1D<M, H>, [usize; Z], Tensor1D<Z, H>, {M, Z});
+impl_select!(Axis<0>, SelectAx0, Tensor1D<M, H>, usize, Tensor0D<H>, {M});
+impl_select!(Axis<0>, SelectAx0, Tensor1D<M, H>, [usize; Z], Tensor1D<Z, H>, {M, Z});
 
 // 2d
-impl_select!(0, SelectAx0, Tensor2D<M, N, H>, usize, Tensor1D<N, H>, {M, N});
-impl_select!(0, SelectAx0, Tensor2D<M, N, H>, [usize; Z], Tensor2D<Z, N, H>, {M, N, Z});
-impl_select!(-1, SelectAx1, Tensor2D<M, N, H>, [usize; M], Tensor1D<M, H>, {M, N});
-impl_select!(-1, SelectAx1, Tensor2D<M, N, H>, [[usize; Z]; M], Tensor2D<M, Z, H>, {M, N, Z});
+impl_select!(Axis<0>, SelectAx0, Tensor2D<M, N, H>, usize, Tensor1D<N, H>, {M, N});
+impl_select!(Axis<0>, SelectAx0, Tensor2D<M, N, H>, [usize; Z], Tensor2D<Z, N, H>, {M, N, Z});
+impl_select!(Axis<1>, SelectAx1, Tensor2D<M, N, H>, [usize; M], Tensor1D<M, H>, {M, N});
+impl_select!(Axis<1>, SelectAx1, Tensor2D<M, N, H>, [[usize; Z]; M], Tensor2D<M, Z, H>, {M, N, Z});
 
 // 3d
-impl_select!(0, SelectAx0, Tensor3D<M, N, O, H>, usize, Tensor2D<N, O, H>, {M, N, O});
-impl_select!(0, SelectAx0, Tensor3D<M, N, O, H>, [usize; Z], Tensor3D<Z, N, O, H>, {M, N, O, Z});
-impl_select!(1, SelectAx1, Tensor3D<M, N, O, H>, [usize; M], Tensor2D<M, O, H>, {M, N, O});
-impl_select!(1, SelectAx1, Tensor3D<M, N, O, H>, [[usize; Z]; M], Tensor3D<M, Z, O, H>, {M, N, O, Z});
-impl_select!(-1, SelectAx2, Tensor3D<M, N, O, H>, [[usize; N]; M], Tensor2D<M, N, H>, {M, N, O});
-impl_select!(-1, SelectAx2, Tensor3D<M, N, O, H>, [[[usize; Z]; N]; M], Tensor3D<M, N, Z, H>, {M, N, O, Z});
+impl_select!(Axis<0>, SelectAx0, Tensor3D<M, N, O, H>, usize, Tensor2D<N, O, H>, {M, N, O});
+impl_select!(Axis<0>, SelectAx0, Tensor3D<M, N, O, H>, [usize; Z], Tensor3D<Z, N, O, H>, {M, N, O, Z});
+impl_select!(Axis<1>, SelectAx1, Tensor3D<M, N, O, H>, [usize; M], Tensor2D<M, O, H>, {M, N, O});
+impl_select!(Axis<1>, SelectAx1, Tensor3D<M, N, O, H>, [[usize; Z]; M], Tensor3D<M, Z, O, H>, {M, N, O, Z});
+impl_select!(Axis<2>, SelectAx2, Tensor3D<M, N, O, H>, [[usize; N]; M], Tensor2D<M, N, H>, {M, N, O});
+impl_select!(Axis<2>, SelectAx2, Tensor3D<M, N, O, H>, [[[usize; Z]; N]; M], Tensor3D<M, N, Z, H>, {M, N, O, Z});
 
 // 4d
-impl_select!(0, SelectAx0, Tensor4D<M, N, O, P, H>, usize, Tensor3D<N, O, P, H>, {M, N, O, P});
-impl_select!(0, SelectAx0, Tensor4D<M, N, O, P, H>, [usize; Z], Tensor4D<Z, N, O, P, H>, {M, N, O, P, Z});
-impl_select!(1, SelectAx1, Tensor4D<M, N, O, P, H>, [usize; M], Tensor3D<M, O, P, H>, {M, N, O, P});
-impl_select!(1, SelectAx1, Tensor4D<M, N, O, P, H>, [[usize; Z]; M], Tensor4D<M, Z, O, P, H>, {M, N, O, P, Z});
-impl_select!(2, SelectAx2, Tensor4D<M, N, O, P, H>, [[usize; N]; M], Tensor3D<M, N, P, H>, {M, N, O, P});
-impl_select!(2, SelectAx2, Tensor4D<M, N, O, P, H>, [[[usize; Z]; N]; M], Tensor4D<M, N, Z, P, H>, {M, N, O, P, Z});
-impl_select!(-1, SelectAx3, Tensor4D<M, N, O, P, H>, [[[usize; O]; N]; M], Tensor3D<M, N, O, H>, {M, N, O, P});
-impl_select!(-1, SelectAx3, Tensor4D<M, N, O, P, H>, [[[[usize; Z]; O]; N]; M], Tensor4D<M, N, O, Z, H>, {M, N, O, P, Z});
+impl_select!(Axis<0>, SelectAx0, Tensor4D<M, N, O, P, H>, usize, Tensor3D<N, O, P, H>, {M, N, O, P});
+impl_select!(Axis<0>, SelectAx0, Tensor4D<M, N, O, P, H>, [usize; Z], Tensor4D<Z, N, O, P, H>, {M, N, O, P, Z});
+impl_select!(Axis<1>, SelectAx1, Tensor4D<M, N, O, P, H>, [usize; M], Tensor3D<M, O, P, H>, {M, N, O, P});
+impl_select!(Axis<1>, SelectAx1, Tensor4D<M, N, O, P, H>, [[usize; Z]; M], Tensor4D<M, Z, O, P, H>, {M, N, O, P, Z});
+impl_select!(Axis<2>, SelectAx2, Tensor4D<M, N, O, P, H>, [[usize; N]; M], Tensor3D<M, N, P, H>, {M, N, O, P});
+impl_select!(Axis<2>, SelectAx2, Tensor4D<M, N, O, P, H>, [[[usize; Z]; N]; M], Tensor4D<M, N, Z, P, H>, {M, N, O, P, Z});
+impl_select!(Axis<3>, SelectAx3, Tensor4D<M, N, O, P, H>, [[[usize; O]; N]; M], Tensor3D<M, N, O, H>, {M, N, O, P});
+impl_select!(Axis<3>, SelectAx3, Tensor4D<M, N, O, P, H>, [[[[usize; Z]; O]; N]; M], Tensor4D<M, N, O, Z, H>, {M, N, O, P, Z});
 
-/// Select batched values from axis 0, resulting in `T`. Equivalent
-/// to `torch.select` and `torch.gather` from pytorch.
-pub trait SelectBatchAx0<T> {
-    type Indices;
-
-    /// Select sub elements using [Self::Indices].
-    /// The same element can be selected multiple times depending
-    /// on [Self::Indices].
-    ///
-    /// This results in a tensor 1 dimension larger than self.
-    ///
-    /// Selecting batch of values from a 1d tensor:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// let _: Tensor2D<2, 1> = Tensor1D::<5>::zeros().select_batch(&[[0], [1]]);
-    ///```
-    ///
-    /// Selecting batch of values from a 2d tensor:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// let _: Tensor3D<2, 1, 5> = Tensor2D::<3, 5>::zeros().select_batch(&[[0], [1]]);
-    ///```
-    fn select_batch(self, indices: &Self::Indices) -> T;
-}
-
-macro_rules! impl_select_batch {
-    ($SrcTy:ty, $IndTy:tt, $DstTy:ty, {$($Dims:tt),*}) => {
-impl<$(const $Dims: usize, )* H: Tape> SelectBatchAx0<$DstTy> for $SrcTy {
-    type Indices = $IndTy;
-    fn select_batch(self, indices: &Self::Indices) -> $DstTy {
-        select::<_, _, _, BSelectAx1>(self, indices)
-    }
-}
-    };
-}
-
-impl_select_batch!(Tensor1D<M, H>, [[usize; Z]; B], Tensor2D<B, Z, H>, {M, B, Z});
-impl_select_batch!(Tensor2D<M, N, H>, [[usize; Z]; B], Tensor3D<B, Z, N, H>, {M, N, B, Z});
-impl_select_batch!(Tensor3D<M, N, O, H>, [[usize; Z]; B], Tensor4D<B, Z, N, O, H>, {M, N, O, B, Z});
+// batched select
+impl_select!(Axis<0>, BSelectAx1, Tensor1D<M, H>, [[usize; Z]; B], Tensor2D<B, Z, H>, {M, B, Z});
+impl_select!(Axis<0>, BSelectAx1, Tensor2D<M, N, H>, [[usize; Z]; B], Tensor3D<B, Z, N, H>, {M, N, B, Z});
+impl_select!(Axis<0>, BSelectAx1, Tensor3D<M, N, O, H>, [[usize; Z]; B], Tensor4D<B, Z, N, O, H>, {M, N, O, B, Z});
 
 pub(crate) fn select<T, I, R, Mode>(t: T, indices: &I) -> R
 where
@@ -162,9 +150,9 @@ mod tests {
 
     #[test]
     fn test_valid_select_batches() {
-        let _: Tensor2D<2, 1> = Tensor1D::<5>::zeros().select_batch(&[[0], [1]]);
-        let _: Tensor3D<2, 1, 5> = Tensor2D::<3, 5>::zeros().select_batch(&[[0], [1]]);
-        let _: Tensor4D<2, 1, 3, 5> = Tensor3D::<1, 3, 5>::zeros().select_batch(&[[0], [0]]);
+        let _: Tensor2D<2, 1> = Tensor1D::<5>::zeros().select(&[[0], [1]]);
+        let _: Tensor3D<2, 1, 5> = Tensor2D::<3, 5>::zeros().select(&[[0], [1]]);
+        let _: Tensor4D<2, 1, 3, 5> = Tensor3D::<1, 3, 5>::zeros().select(&[[0], [0]]);
     }
 
     #[test]
@@ -255,7 +243,7 @@ mod tests {
     fn test_select_batch_backwards() {
         let mut rng = thread_rng();
         let t: Tensor2D<4, 5> = TensorCreator::randn(&mut rng);
-        let r: Tensor3D<2, 3, 5, _> = t.trace().select_batch(&[[2, 0, 3], [0, 0, 3]]);
+        let r: Tensor3D<2, 3, 5, _> = t.trace().select(&[[2, 0, 3], [0, 0, 3]]);
         let r0: Tensor2D<3, 5> = t.clone().select(&[2, 0, 3]);
         let r1: Tensor2D<3, 5> = t.clone().select(&[0, 0, 3]);
         assert_close(&r.data()[0], r0.data());

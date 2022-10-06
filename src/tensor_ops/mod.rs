@@ -102,7 +102,7 @@
 //!
 //! # Selects/Indexing
 //!
-//! Selecting or indexing into a tensor is done via [Select1::select()]. This traits enables
+//! Selecting or indexing into a tensor is done via [SelectTo::select()]. This traits enables
 //! 2 behaviors for each axis of a given tensor:
 //!
 //! 1. Select exactly 1 element from that axis.
@@ -183,7 +183,7 @@ pub use impl_sum::*;
 pub use map::*;
 pub use matmul::*;
 pub use permute::*;
-pub use select::*;
+pub use select::SelectTo;
 
 #[cfg(feature = "nightly")]
 mod impl_reshape;
