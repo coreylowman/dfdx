@@ -86,6 +86,24 @@ mod tests {
     use rand::{rngs::StdRng, SeedableRng};
 
     #[test]
+    fn test_3d_max2d_eq_grads() {
+        let x = tensor([[[1., 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]]);
+        let r = x.trace().max2d::<2, 1, 0>();
+        assert_eq!(r.data(), &[[[1., 1., 1.2]]]);
+        let g = backward(r.sum());
+        assert_eq!(g.ref_gradient(&x), &[[[1., 2., 0., 0.], [0., 0., 0., 1.]]]);
+    }
+
+    #[test]
+    fn test_3d_min2d_eq_grads() {
+        let x = tensor([[[1., 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]]);
+        let r = x.trace().min2d::<2, 1, 0>();
+        assert_eq!(r.data(), &[[[0.2, 0.2, 0.2]]]);
+        let g = backward(r.sum());
+        assert_eq!(g.ref_gradient(&x), &[[[0., 0., 0., 1.], [1., 2., 0., 0.]]]);
+    }
+
+    #[test]
     fn test_3d_max2d() {
         let mut rng = StdRng::seed_from_u64(234);
         let x: Tensor3D<2, 3, 4> = TensorCreator::randn(&mut rng);
