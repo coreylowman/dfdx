@@ -2,7 +2,6 @@ use super::{LoadFromNpz, SaveToNpz};
 use super::{Module, ResetParams};
 use crate::gradients::*;
 use crate::tensor::*;
-use crate::tensor_ops::{max2d, max2d_batched};
 use rand::Rng;
 
 pub struct MaxPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PADDING: usize = 0>;
@@ -19,13 +18,13 @@ impl<const K: usize, const S: usize, const P: usize> SaveToNpz for MaxPool2D<K, 
 impl<const K: usize, const S: usize, const P: usize> LoadFromNpz for MaxPool2D<K, S, P> {}
 
 impl<
-        T: Tape,
-        const C: usize,
         const K: usize,
         const S: usize,
         const P: usize,
+        const C: usize,
         const H: usize,
         const W: usize,
+        T: Tape,
     > Module<Tensor3D<C, H, W, T>> for MaxPool2D<K, S, P>
 where
     [(); (W + 2 * P - K) / S + 1]:,
@@ -34,19 +33,19 @@ where
     type Output = Tensor3D<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T>;
 
     fn forward(&self, x: Tensor3D<C, H, W, T>) -> Self::Output {
-        max2d::<T, C, K, S, P, H, W>(x)
+        x.max2d::<K, S, P>()
     }
 }
 
 impl<
-        T: Tape,
-        const B: usize,
-        const C: usize,
         const K: usize,
         const S: usize,
         const P: usize,
+        const B: usize,
+        const C: usize,
         const H: usize,
         const W: usize,
+        T: Tape,
     > Module<Tensor4D<B, C, H, W, T>> for MaxPool2D<K, S, P>
 where
     [(); (W + 2 * P - K) / S + 1]:,
@@ -55,7 +54,7 @@ where
     type Output = Tensor4D<B, C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T>;
 
     fn forward(&self, x: Tensor4D<B, C, H, W, T>) -> Self::Output {
-        max2d_batched::<T, B, C, K, S, P, H, W>(x)
+        x.max2d::<K, S, P>()
     }
 }
 
