@@ -11,6 +11,7 @@ use rand::Rng;
 /// - `KERNEL_SIZE`: The size of the kernel applied to both width and height of the images.
 /// - `STRIDE`: How far to move the kernel each step. Defaults to `1`
 /// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
+#[derive(Debug, Default, Clone)]
 pub struct AvgPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PADDING: usize = 0>;
 
 impl<const K: usize, const S: usize, const P: usize> CanUpdateWithGradients for AvgPool2D<K, S, P> {
@@ -71,11 +72,37 @@ mod tests {
 
     #[test]
     fn test_forward_3d_sizes() {
-        todo!();
+        type Img = Tensor3D<3, 10, 10>;
+        let _: Tensor3D<3, 8, 8> = AvgPool2D::<3>::default().forward(Img::zeros());
+        let _: Tensor3D<3, 9, 9> = AvgPool2D::<2>::default().forward(Img::zeros());
+        let _: Tensor3D<3, 7, 7> = AvgPool2D::<4>::default().forward(Img::zeros());
+        let _: Tensor3D<3, 4, 4> = AvgPool2D::<3, 2>::default().forward(Img::zeros());
+        let _: Tensor3D<3, 3, 3> = AvgPool2D::<3, 3>::default().forward(Img::zeros());
+        let _: Tensor3D<3, 10, 10> = AvgPool2D::<3, 1, 1>::default().forward(Img::zeros());
+        let _: Tensor3D<3, 12, 12> = AvgPool2D::<3, 1, 2>::default().forward(Img::zeros());
+        let _: Tensor3D<3, 6, 6> = AvgPool2D::<3, 2, 2>::default().forward(Img::zeros());
     }
 
     #[test]
     fn test_forward_4d_sizes() {
-        todo!();
+        type Img = Tensor4D<5, 3, 10, 10>;
+        let _: Tensor4D<5, 3, 7, 7> = AvgPool2D::<4>::default().forward(Img::zeros());
+        let _: Tensor4D<5, 3, 8, 8> = AvgPool2D::<3>::default().forward(Img::zeros());
+        let _: Tensor4D<5, 3, 9, 9> = AvgPool2D::<2>::default().forward(Img::zeros());
+        let _: Tensor4D<5, 3, 4, 4> = AvgPool2D::<3, 2>::default().forward(Img::zeros());
+        let _: Tensor4D<5, 3, 3, 3> = AvgPool2D::<3, 3>::default().forward(Img::zeros());
+        let _: Tensor4D<5, 3, 10, 10> = AvgPool2D::<3, 1, 1>::default().forward(Img::zeros());
+        let _: Tensor4D<5, 3, 12, 12> = AvgPool2D::<3, 1, 2>::default().forward(Img::zeros());
+        let _: Tensor4D<5, 3, 6, 6> = AvgPool2D::<3, 2, 2>::default().forward(Img::zeros());
+    }
+
+    #[test]
+    fn test_tuple_pool_sizes() {
+        type A = AvgPool2D<3>;
+        type B = AvgPool2D<1, 1, 1>;
+        type Img = Tensor3D<1, 10, 10>;
+
+        let _: Tensor3D<1, 6, 6> = <(A, A)>::default().forward(Tensor3D::<1, 10, 10>::zeros());
+        let _: Tensor3D<1, 8, 8> = <(A, A, B)>::default().forward(Img::zeros());
     }
 }
