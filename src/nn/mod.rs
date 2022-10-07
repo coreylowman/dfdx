@@ -83,9 +83,7 @@ mod layer_norm;
 mod linear;
 mod module;
 mod npz;
-mod pool_global_avg;
-mod pool_global_max;
-mod pool_global_min;
+mod pool_global;
 mod repeated;
 mod residual;
 mod split_into;
@@ -98,9 +96,7 @@ pub use layer_norm::*;
 pub use linear::*;
 pub use module::*;
 pub use npz::*;
-pub use pool_global_avg::*;
-pub use pool_global_max::*;
-pub use pool_global_min::*;
+pub use pool_global::*;
 pub use repeated::*;
 pub use residual::*;
 pub use split_into::*;
@@ -123,19 +119,9 @@ mod conv;
 pub use conv::*;
 
 #[cfg(feature = "nightly")]
-mod pool2d_max;
+mod pool2d;
 #[cfg(feature = "nightly")]
-pub use pool2d_max::*;
-
-#[cfg(feature = "nightly")]
-mod pool2d_min;
-#[cfg(feature = "nightly")]
-pub use pool2d_min::*;
-
-#[cfg(feature = "nightly")]
-mod pool2d_avg;
-#[cfg(feature = "nightly")]
-pub use pool2d_avg::*;
+pub use pool2d::*;
 
 #[cfg(test)]
 mod tests {
