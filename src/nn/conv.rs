@@ -98,7 +98,7 @@ where
     type Output = Tensor3D<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T>;
 
     fn forward(&self, x: Tensor3D<I, H, W, T>) -> Self::Output {
-        conv2d::<T, I, O, K, S, P, H, W>(x, &self.weight, &self.bias)
+        x.conv2d::<O, K, S, P>(&self.weight, &self.bias)
     }
 }
 
@@ -120,7 +120,7 @@ where
     type Output = Tensor4D<B, O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T>;
 
     fn forward(&self, x: Tensor4D<B, I, H, W, T>) -> Self::Output {
-        conv2d_batched::<T, B, I, O, K, S, P, H, W>(x, &self.weight, &self.bias)
+        x.conv2d::<O, K, S, P>(&self.weight, &self.bias)
     }
 }
 
