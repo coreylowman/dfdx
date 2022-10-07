@@ -2,91 +2,67 @@ use crate::devices::{Cpu, DeviceConv2D};
 use crate::gradients::Tape;
 use crate::prelude::*;
 
-/// **Requires Nightly** Perform a 2d convolution.
-///
-/// TODO docstring
-pub fn conv2d<
-    TAPE: Tape,
-    const IN_CHAN: usize,
-    const OUT_CHAN: usize,
-    const KERNEL: usize,
-    const STRIDE: usize,
-    const PADDING: usize,
-    const IN_HEIGHT: usize,
-    const IN_WIDTH: usize,
->(
-    x: Tensor3D<IN_CHAN, IN_HEIGHT, IN_WIDTH, TAPE>,
-    filters: &Tensor4D<OUT_CHAN, IN_CHAN, KERNEL, KERNEL>,
-    bias: &Tensor1D<OUT_CHAN>,
-) -> Tensor3D<
-    OUT_CHAN,
-    { (IN_HEIGHT + 2 * PADDING - KERNEL) / STRIDE + 1 },
-    { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
-    TAPE,
-> {
-    let mut result = Tensor3D::zeros();
-    <Cpu as DeviceConv2D<STRIDE, PADDING>>::conv_forward(
-        x.data(),
-        filters.data(),
-        bias.data(),
-        result.mut_data(),
-    );
+impl<const C: usize, const H: usize, const W: usize, T: Tape> Tensor3D<C, H, W, T> {
+    /// **Requires Nightly** Perform a 2d convolution
+    ///
+    /// TODO docstring
+    pub fn conv2d<const O: usize, const K: usize, const S: usize, const P: usize>(
+        self,
+        filters: &Tensor4D<O, C, K, K>,
+        bias: &Tensor1D<O>,
+    ) -> Tensor3D<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T> {
+        let mut result = Tensor3D::zeros();
+        <Cpu as DeviceConv2D<S, P>>::conv_forward(
+            self.data(),
+            filters.data(),
+            bias.data(),
+            result.mut_data(),
+        );
 
-    let f = filters.clone();
-    let (x, mut tape) = x.split_tape();
-    let phf = filters.phantom();
-    let phb = bias.phantom();
-    let phr = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (fg, bg, ig, rg) = grads.muts_and_ref(&phf, &phb, &x, &phr);
-        <Cpu as DeviceConv2D<STRIDE, PADDING>>::conv_backward(x.data(), f.data(), rg, ig, fg, bg);
-    });
-    result.put_tape(tape)
+        let f = filters.clone();
+        let (x, mut tape) = self.split_tape();
+        let phf = filters.phantom();
+        let phb = bias.phantom();
+        let phr = result.phantom();
+        tape.add_backward_op(move |grads| {
+            let (fg, bg, ig, rg) = grads.muts_and_ref(&phf, &phb, &x, &phr);
+            <Cpu as DeviceConv2D<S, P>>::conv_backward(x.data(), f.data(), rg, ig, fg, bg);
+        });
+        result.put_tape(tape)
+    }
 }
 
-/// **Requires Nightly** Perform a batched 2d convolution
-///
-/// TODO docstring
-pub fn conv2d_batched<
-    TAPE: Tape,
-    const BATCH_SIZE: usize,
-    const IN_CHAN: usize,
-    const OUT_CHAN: usize,
-    const KERNEL: usize,
-    const STRIDE: usize,
-    const PADDING: usize,
-    const IN_HEIGHT: usize,
-    const IN_WIDTH: usize,
->(
-    x: Tensor4D<BATCH_SIZE, IN_CHAN, IN_HEIGHT, IN_WIDTH, TAPE>,
-    filters: &Tensor4D<OUT_CHAN, IN_CHAN, KERNEL, KERNEL>,
-    bias: &Tensor1D<OUT_CHAN>,
-) -> Tensor4D<
-    BATCH_SIZE,
-    OUT_CHAN,
-    { (IN_HEIGHT + 2 * PADDING - KERNEL) / STRIDE + 1 },
-    { (IN_WIDTH + 2 * PADDING - KERNEL) / STRIDE + 1 },
-    TAPE,
-> {
-    let mut result = Tensor4D::zeros();
-    for (x_i, r_i) in x.data().iter().zip(result.mut_data().iter_mut()) {
-        <Cpu as DeviceConv2D<STRIDE, PADDING>>::conv_forward(x_i, filters.data(), bias.data(), r_i);
-    }
-
-    let f = filters.clone();
-
-    let (x, mut tape) = x.split_tape();
-    let phf = filters.phantom();
-    let phb = bias.phantom();
-    let phr = result.phantom();
-    tape.add_backward_op(move |grads| {
-        let (fg, bg, ig, r_grad) = grads.muts_and_ref(&phf, &phb, &x, &phr);
-        let f = f.data();
-        for ((x_i, rg_i), ig_i) in x.data().iter().zip(r_grad.iter()).zip(ig.iter_mut()) {
-            <Cpu as DeviceConv2D<STRIDE, PADDING>>::conv_backward(x_i, f, rg_i, ig_i, fg, bg);
+impl<const B: usize, const C: usize, const H: usize, const W: usize, T: Tape>
+    Tensor4D<B, C, H, W, T>
+{
+    /// **Requires Nightly** Perform a batched 2d convolution
+    ///
+    /// TODO docstring
+    pub fn conv2d<const O: usize, const K: usize, const S: usize, const P: usize>(
+        self,
+        filters: &Tensor4D<O, C, K, K>,
+        bias: &Tensor1D<O>,
+    ) -> Tensor4D<B, O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T> {
+        let mut result = Tensor4D::zeros();
+        for (x_i, r_i) in self.data().iter().zip(result.mut_data().iter_mut()) {
+            <Cpu as DeviceConv2D<S, P>>::conv_forward(x_i, filters.data(), bias.data(), r_i);
         }
-    });
-    result.put_tape(tape)
+
+        let f = filters.clone();
+
+        let (x, mut tape) = self.split_tape();
+        let phf = filters.phantom();
+        let phb = bias.phantom();
+        let phr = result.phantom();
+        tape.add_backward_op(move |grads| {
+            let (fg, bg, ig, r_grad) = grads.muts_and_ref(&phf, &phb, &x, &phr);
+            let f = f.data();
+            for ((x_i, rg_i), ig_i) in x.data().iter().zip(r_grad.iter()).zip(ig.iter_mut()) {
+                <Cpu as DeviceConv2D<S, P>>::conv_backward(x_i, f, rg_i, ig_i, fg, bg);
+            }
+        });
+        result.put_tape(tape)
+    }
 }
 
 #[cfg(test)]
@@ -111,7 +87,7 @@ mod tests {
             [-0.86713916, 0.52773184, -0.95238322],
             [-0.64531374, 0.77809018, -0.49099201],
         ]]);
-        let result = conv2d::<_, 1, 2, 2, 1, 0, 2, 3>(x.trace(), &weight, &bias);
+        let result = x.trace().conv2d::<2, 2, 1, 0>(&weight, &bias);
         assert_close(
             result.data(),
             &[[[0.24369538, 0.71453357]], [[-0.69169492, -0.06172103]]],
@@ -154,7 +130,7 @@ mod tests {
             [-0.31547278, 0.58071911, 0.86612970],
         ]]);
 
-        let result = conv2d::<OwnedTape, 1, 2, 2, 2, 0, 2, 3>(x.trace(), &weight, &bias);
+        let result = x.trace().conv2d::<2, 2, 2, 0>(&weight, &bias);
         assert_close(result.data(), &[[[-0.29368058]], [[0.30018353]]]);
 
         let g = backward(result.exp().mean());
@@ -188,7 +164,7 @@ mod tests {
 
         let x = tensor([[[-0.32224107, -0.32800716]], [[-1.13570976, 0.93713200]]]);
 
-        let result = conv2d::<OwnedTape, 2, 3, 2, 1, 1, 1, 2>(x.trace(), &weight, &bias);
+        let result = x.trace().conv2d::<3, 2, 1, 1>(&weight, &bias);
 
         #[rustfmt::skip]
         assert_close(
@@ -236,7 +212,7 @@ mod tests {
         #[rustfmt::skip]
         let x = tensor([[[0.69103152, 0.25624934],[-0.38448590, 0.03110456],[0.83753252, 0.53786588],[1.15540242, -0.54148245]]]);
 
-        let result = conv2d::<OwnedTape, 1, 2, 3, 3, 4, 4, 2>(x.trace(), &weight, &bias);
+        let result = x.trace().conv2d::<2, 3, 3, 4>(&weight, &bias);
 
         #[rustfmt::skip]
         assert_close(
@@ -283,7 +259,7 @@ mod tests {
             [[[-0.22305037, 0.63030297], [0.65323567, -0.68972057]],[[-0.50617385, -0.87281805], [0.30253950, -1.75082350]]],
             [[[1.65487242, 0.44441956], [-0.45107457, 1.41857898]],[[1.00477660, -0.16381662], [0.40009478, -0.57880658]]],
         ]);
-        let result = conv2d_batched::<OwnedTape, 3, 2, 3, 1, 1, 0, 2, 2>(x.trace(), &weight, &bias);
+        let result = x.trace().conv2d::<3, 1, 1, 0>(&weight, &bias);
 
         #[rustfmt::skip]
         assert_close(
