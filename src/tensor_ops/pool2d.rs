@@ -5,18 +5,21 @@ use crate::gradients::Tape;
 use crate::tensor::*;
 
 impl<const C: usize, const H: usize, const W: usize, T: Tape> Tensor3D<C, H, W, T> {
+    /// Avg pool on a single image. `K` is kernel size, `S` is stride, `P` is padding.
     pub fn avg2d<const K: usize, const S: usize, const P: usize>(
         self,
     ) -> Tensor3D<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T> {
         self.pool2d::<PoolAvg, K, S, P>()
     }
 
+    /// Max pool on a single image. `K` is kernel size, `S` is stride, `P` is padding.
     pub fn max2d<const K: usize, const S: usize, const P: usize>(
         self,
     ) -> Tensor3D<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T> {
         self.pool2d::<PoolMax, K, S, P>()
     }
 
+    /// Min pool on a single image. `K` is kernel size, `S` is stride, `P` is padding.
     pub fn min2d<const K: usize, const S: usize, const P: usize>(
         self,
     ) -> Tensor3D<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T> {
@@ -41,16 +44,21 @@ impl<const C: usize, const H: usize, const W: usize, T: Tape> Tensor3D<C, H, W, 
 impl<const B: usize, const C: usize, const H: usize, const W: usize, T: Tape>
     Tensor4D<B, C, H, W, T>
 {
+    /// Avg pool on a batch of images. `K` is kernel size, `S` is stride, `P` is padding.
     pub fn avg2d<const K: usize, const S: usize, const P: usize>(
         self,
     ) -> Tensor4D<B, C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T> {
         self.pool2d::<PoolAvg, K, S, P>()
     }
+
+    /// Max pool on a batch of images. `K` is kernel size, `S` is stride, `P` is padding.
     pub fn max2d<const K: usize, const S: usize, const P: usize>(
         self,
     ) -> Tensor4D<B, C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T> {
         self.pool2d::<PoolMax, K, S, P>()
     }
+
+    /// Min pool on a batch of images. `K` is kernel size, `S` is stride, `P` is padding.
     pub fn min2d<const K: usize, const S: usize, const P: usize>(
         self,
     ) -> Tensor4D<B, C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T> {

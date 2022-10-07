@@ -4,6 +4,13 @@ use crate::gradients::*;
 use crate::tensor::*;
 use rand::Rng;
 
+/// Max pool with 2d kernel that operates on images (3d) and batches of images (4d).
+/// Each patch reduces to the maximum value in that patch.
+///
+/// Generics:
+/// - `KERNEL_SIZE`: The size of the kernel applied to both width and height of the images.
+/// - `STRIDE`: How far to move the kernel each step. Defaults to `1`
+/// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
 pub struct MaxPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PADDING: usize = 0>;
 
 impl<const K: usize, const S: usize, const P: usize> CanUpdateWithGradients for MaxPool2D<K, S, P> {
