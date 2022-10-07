@@ -16,7 +16,7 @@ use crate::gradients::CanUpdateWithGradients;
 /// a Dropout layer, which uses an rng under the hood, may
 /// not modify the input tensor in [Module::forward()], since
 /// it cannot modify it's underlying rng.
-pub trait Module<Input>: ResetParams + CanUpdateWithGradients {
+pub trait Module<Input> {
     /// The type that this unit produces given `Input`.
     type Output;
 
