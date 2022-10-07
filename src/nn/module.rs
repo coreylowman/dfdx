@@ -1,5 +1,3 @@
-use crate::gradients::CanUpdateWithGradients;
-
 /// A unit of a neural network. Acts on the generic `Input`
 /// and produces `Module::Output`.
 ///
