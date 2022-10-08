@@ -19,8 +19,8 @@
 //! Here is a list of existing modules that have different behavior in these
 //! two functions:
 //!
-//! - [DropoutOneIn] (soon)
-//! - [Dropout] (soon)
+//! - [DropoutOneIn]
+//! - [Dropout]
 //!
 //! # Initializing
 //!
