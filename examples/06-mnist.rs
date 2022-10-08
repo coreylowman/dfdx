@@ -85,7 +85,7 @@ fn main() {
         for (img, lbl) in SubsetIterator::<BATCH_SIZE>::shuffled(dataset.len(), &mut rng)
             .map(|i| dataset.get_batch(i))
         {
-            let logits = model.forward(img.traced());
+            let logits = model.forward_mut(img.traced());
             let loss = cross_entropy_with_logits_loss(logits, &lbl);
 
             total_epoch_loss += loss.data();
