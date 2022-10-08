@@ -28,6 +28,16 @@ macro_rules! activation_impls {
                 $func_name(input)
             }
         }
+
+        impl<T> ModuleMut<T> for $struct_name
+        where
+            Self: Module<T>,
+        {
+            type Output = <Self as Module<T>>::Output;
+            fn forward_mut(&mut self, input: T) -> Self::Output {
+                self.forward(input)
+            }
+        }
     };
 }
 
@@ -69,6 +79,16 @@ where
     }
 }
 
+impl<T> ModuleMut<T> for Softmax
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -76,7 +96,7 @@ mod tests {
     #[test]
     fn test_relu() {
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = ReLU.forward(t.clone());
+        let r1 = ReLU.forward_mut(t.clone());
         let r2 = relu(t);
         assert_eq!(r1.data(), r2.data());
     }
@@ -84,28 +104,28 @@ mod tests {
     #[test]
     fn test_sin() {
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = Sin.forward(t.clone());
+        let r1 = Sin.forward_mut(t.clone());
         let r2 = sin(t);
         assert_eq!(r1.data(), r2.data());
     }
     #[test]
     fn test_cos() {
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = Cos.forward(t.clone());
+        let r1 = Cos.forward_mut(t.clone());
         let r2 = cos(t);
         assert_eq!(r1.data(), r2.data());
     }
     #[test]
     fn test_ln() {
         let t = tensor([0.0, 1.0, 2.0, 3.0, 4.0]);
-        let r1 = Ln.forward(t.clone());
+        let r1 = Ln.forward_mut(t.clone());
         let r2 = ln(t);
         assert_eq!(r1.data(), r2.data());
     }
     #[test]
     fn test_exp() {
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = Exp.forward(t.clone());
+        let r1 = Exp.forward_mut(t.clone());
         let r2 = exp(t);
         assert_eq!(r1.data(), r2.data());
     }
@@ -113,14 +133,14 @@ mod tests {
     #[test]
     fn test_sigmoid() {
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = Sigmoid.forward(t.clone());
+        let r1 = Sigmoid.forward_mut(t.clone());
         let r2 = sigmoid(t);
         assert_eq!(r1.data(), r2.data());
     }
     #[test]
     fn test_tanh() {
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = Tanh.forward(t.clone());
+        let r1 = Tanh.forward_mut(t.clone());
         let r2 = tanh(t);
         assert_eq!(r1.data(), r2.data());
     }
@@ -128,7 +148,7 @@ mod tests {
     #[test]
     fn test_square() {
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = Square.forward(t.clone());
+        let r1 = Square.forward_mut(t.clone());
         let r2 = square(t);
         assert_eq!(r1.data(), r2.data());
     }
@@ -136,7 +156,7 @@ mod tests {
     #[test]
     fn test_sqrt() {
         let t = tensor([0.0, 1.0, 2.0, 3.0, 4.0]);
-        let r1 = Sqrt.forward(t.clone());
+        let r1 = Sqrt.forward_mut(t.clone());
         let r2 = sqrt(t);
         assert_eq!(r1.data(), r2.data());
     }
@@ -144,7 +164,7 @@ mod tests {
     #[test]
     fn test_abs() {
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = Abs.forward(t.clone());
+        let r1 = Abs.forward_mut(t.clone());
         let r2 = abs(t);
         assert_eq!(r1.data(), r2.data());
     }
@@ -152,17 +172,17 @@ mod tests {
     #[test]
     fn test_softmax() {
         let t = Tensor0D::new(0.0);
-        let r1 = Softmax.forward(t.clone());
+        let r1 = Softmax.forward_mut(t.clone());
         let r2 = t.softmax();
         assert_eq!(r1.data(), r2.data());
 
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = Softmax.forward(t.clone());
+        let r1 = Softmax.forward_mut(t.clone());
         let r2 = t.softmax();
         assert_eq!(r1.data(), r2.data());
 
         let t = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
-        let r1 = Softmax.forward(t.clone());
+        let r1 = Softmax.forward_mut(t.clone());
         let r2 = t.softmax::<crate::arrays::Axis<1>>();
         assert_eq!(r1.data(), r2.data());
     }

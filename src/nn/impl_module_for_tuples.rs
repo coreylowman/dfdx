@@ -81,6 +81,21 @@ macro_rules! tuple_impls {
                 x
             }
         }
+
+        impl<
+            Input: Tensor,
+            $last:
+            $(ModuleMut::<$rev_tail ::Output>, $rev_tail: )+
+            ModuleMut<Input>
+        > ModuleMut<Input> for ($($name,)+) {
+            type Output = $last ::Output;
+
+            /// Calls forward sequentially on each module in the tuple.
+            fn forward_mut(&mut self, x: Input) -> Self::Output {
+                $(let x = self.$idx.forward_mut(x);)+
+                x
+            }
+        }
     };
 }
 
@@ -121,7 +136,7 @@ mod tests {
         let m0 = model.clone();
 
         let loss = model
-            .forward(Tensor1D::randn(&mut rng).traced())
+            .forward_mut(Tensor1D::randn(&mut rng).traced())
             .square()
             .mean();
         let gradients = backward(loss);

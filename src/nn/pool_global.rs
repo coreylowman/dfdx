@@ -1,4 +1,4 @@
-use super::{LoadFromNpz, Module, ResetParams, SaveToNpz};
+use super::{LoadFromNpz, Module, ModuleMut, ResetParams, SaveToNpz};
 use crate::gradients::*;
 use crate::tensor::*;
 
@@ -89,6 +89,16 @@ macro_rules! impl_pools {
             type Output = Tensor2D<B, C, T>;
             fn forward(&self, input: Tensor4D<B, C, H, W, T>) -> Self::Output {
                 input.$Method()
+            }
+        }
+
+        impl<T> ModuleMut<T> for $PoolTy
+        where
+            Self: Module<T>,
+        {
+            type Output = <Self as Module<T>>::Output;
+            fn forward_mut(&mut self, input: T) -> Self::Output {
+                self.forward(input)
             }
         }
     };

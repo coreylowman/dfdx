@@ -124,6 +124,17 @@ where
     }
 }
 
+impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, T> ModuleMut<T>
+    for Conv2D<I, O, K, S, P>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,7 +184,7 @@ mod tests {
         type C = Conv2D<4, 1, 1, 1, 1>;
 
         type Img = Tensor3D<1, 10, 10>;
-        let _: Tensor3D<1, 8, 8> = <(A, B, C)>::default().forward(Img::zeros());
+        let _: Tensor3D<1, 8, 8> = <(A, B, C)>::default().forward_mut(Img::zeros());
     }
 
     #[test]

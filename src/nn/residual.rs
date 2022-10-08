@@ -43,6 +43,16 @@ impl<T: Tensor<Dtype = f32>, F: Module<T, Output = T>> Module<T> for Residual<F>
     }
 }
 
+impl<T, F> ModuleMut<T> for Residual<F>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 impl<F: SaveToNpz> SaveToNpz for Residual<F> {
     /// Pass through to `F`'s [SaveToNpz].
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
@@ -84,7 +94,7 @@ mod tests {
         model.reset_params(&mut rng);
 
         let x: Tensor2D<4, 2> = TensorCreator::randn(&mut rng);
-        let y = model.forward(x.trace());
+        let y = model.forward_mut(x.trace());
 
         #[rustfmt::skip]
         assert_close(y.data(), &[[0.25372928, -2.4258814],[1.7892148, -2.6242268],[1.5131638, 0.23407778],[3.4201493, 1.597525]]);

@@ -1,5 +1,4 @@
-use super::{LoadFromNpz, SaveToNpz};
-use super::{Module, ResetParams};
+use super::{LoadFromNpz, Module, ModuleMut, ResetParams, SaveToNpz};
 use crate::gradients::*;
 use crate::tensor::*;
 use rand::Rng;
@@ -88,6 +87,16 @@ macro_rules! impl_pools {
 
             fn forward(&self, x: Tensor4D<B, C, H, W, T>) -> Self::Output {
                 x.$Method::<K, S, P>()
+            }
+        }
+
+        impl<T, const K: usize, const S: usize, const P: usize> ModuleMut<T> for $PoolTy<K, S, P>
+        where
+            Self: Module<T>,
+        {
+            type Output = <Self as Module<T>>::Output;
+            fn forward_mut(&mut self, input: T) -> Self::Output {
+                self.forward(input)
             }
         }
     };

@@ -81,6 +81,16 @@ impl<F: LoadFromNpz, R: LoadFromNpz> LoadFromNpz for GeneralizedResidual<F, R> {
     }
 }
 
+impl<T, F, R> ModuleMut<T> for GeneralizedResidual<F, R>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,7 +122,7 @@ mod tests {
         model.reset_params(&mut rng);
 
         let x: Tensor2D<4, 2> = TensorCreator::randn(&mut rng);
-        let y = model.forward(x.trace());
+        let y = model.forward_mut(x.trace());
 
         #[rustfmt::skip]
         assert_close(y.data(), &[[-0.81360567, -1.1473482], [1.0925694, 0.17383915], [-0.32519114, 0.49806428], [0.08259219, -0.7277866]]);

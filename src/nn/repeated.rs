@@ -95,6 +95,16 @@ impl<Input, T: Module<Input, Output = Input>, const N: usize> Module<Input> for 
     }
 }
 
+impl<Input, T, const N: usize> ModuleMut<Input> for Repeated<T, N>
+where
+    Self: Module<Input>,
+{
+    type Output = <Self as Module<Input>>::Output;
+    fn forward_mut(&mut self, input: Input) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,7 +149,7 @@ mod tests {
         let x = m.modules[3].forward(x);
         let x = m.modules[4].forward(x);
 
-        assert_eq!(x.data(), m.forward(Tensor1D::zeros()).data());
+        assert_eq!(x.data(), m.forward_mut(Tensor1D::zeros()).data());
     }
 
     #[test]
