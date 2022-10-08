@@ -104,6 +104,16 @@ impl<H: Tape, const B: usize, const S: usize, const M: usize> Module<Tensor3D<B,
     }
 }
 
+impl<T, const M: usize> ModuleMut<T> for LayerNorm1D<M>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 impl<const M: usize> SaveToNpz for LayerNorm1D<M> {
     /// Saves [Self::gamma] to `{pre}gamma.npy` and [Self::beta] to `{pre}beta.npy`
     /// using [npz_fwrite()].
@@ -155,9 +165,9 @@ mod tests {
     #[test]
     fn test_layer_norm_1d_forward() {
         let mut rng = StdRng::seed_from_u64(0);
-        let m: LayerNorm1D<5> = Default::default();
+        let mut m: LayerNorm1D<5> = Default::default();
         let x: Tensor1D<5> = TensorCreator::randn(&mut rng);
-        let r = m.forward(x.trace());
+        let r = m.forward_mut(x.trace());
         assert_close(
             r.data(),
             &[0.873304, 0.9879816, -1.6083492, 0.44028836, -0.6932247],

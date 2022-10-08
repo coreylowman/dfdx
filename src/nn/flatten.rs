@@ -48,13 +48,23 @@ where
     }
 }
 
+impl<T> ModuleMut<T> for FlattenImage
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_flattens() {
-        let _: Tensor1D<{ 15 * 10 * 5 }> = FlattenImage.forward(Tensor3D::<15, 10, 5>::zeros());
-        let _: Tensor2D<5, 24> = FlattenImage.forward(Tensor4D::<5, 4, 3, 2>::zeros());
+        let _: Tensor1D<{ 15 * 10 * 5 }> = FlattenImage.forward_mut(Tensor3D::<15, 10, 5>::zeros());
+        let _: Tensor2D<5, 24> = FlattenImage.forward_mut(Tensor4D::<5, 4, 3, 2>::zeros());
     }
 }

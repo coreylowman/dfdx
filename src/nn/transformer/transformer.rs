@@ -75,6 +75,17 @@ where
     }
 }
 
+impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize, T> ModuleMut<T>
+    for Transformer<M, H, E, D, F>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, t: T) -> Self::Output {
+        self.forward(t)
+    }
+}
+
 impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> SaveToNpz
     for Transformer<M, H, E, D, F>
 {
@@ -111,12 +122,12 @@ mod tests {
         // unbatched
         let src: Tensor2D<7, 16> = TensorCreator::randn(&mut rng);
         let tgt: Tensor2D<9, 16> = TensorCreator::randn(&mut rng);
-        let _: Tensor2D<9, 16> = t.forward((src, tgt));
+        let _: Tensor2D<9, 16> = t.forward_mut((src, tgt));
 
         // batched
         let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
         let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
-        let _: Tensor3D<4, 6, 16> = t.forward((src, tgt));
+        let _: Tensor3D<4, 6, 16> = t.forward_mut((src, tgt));
     }
 
     #[test]
@@ -127,7 +138,7 @@ mod tests {
 
         let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
         let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
-        let out: Tensor3D<4, 6, 16, _> = t.forward((src.trace(), tgt));
+        let out: Tensor3D<4, 6, 16, _> = t.forward_mut((src.trace(), tgt));
         let g = backward(out.mean());
 
         let mut gs = SimpleGradients(g);
@@ -153,8 +164,8 @@ mod tests {
         let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
         let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
 
-        let y1 = saved.forward((src.clone(), tgt.clone()));
-        let y2 = loaded.forward((src.clone(), tgt.clone()));
+        let y1 = saved.forward_mut((src.clone(), tgt.clone()));
+        let y2 = loaded.forward_mut((src.clone(), tgt.clone()));
 
         assert_eq!(y1.data(), y2.data());
     }

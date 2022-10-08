@@ -57,6 +57,16 @@ impl<const N: usize, T: Tensor<Dtype = f32>> Module<T> for DropoutOneIn<N> {
     }
 }
 
+impl<T, const N: usize> ModuleMut<T> for DropoutOneIn<N>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
 /// A [Module<Tensor>] that calls [dropout()] in [Module::forward()] with probability `self.p`.
 ///
 /// This also implements [Module<(Tensor, Rng)>] if you want to pass in an [Rng] externally, though
@@ -150,6 +160,16 @@ impl<R: Rng + SeedableRng, T: Tensor<Dtype = f32>> Module<(T, R)> for Dropout {
         let (t, mut rng) = input;
         let t = dropout(t, self.p, &mut rng);
         (t, rng)
+    }
+}
+
+impl<T> ModuleMut<T> for Dropout
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
     }
 }
 

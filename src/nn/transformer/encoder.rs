@@ -93,6 +93,18 @@ where
     }
 }
 
+impl<const M: usize, const H: usize, const F: usize, T> ModuleMut<T>
+    for TransformerEncoderBlock<M, H, F>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+
+    fn forward_mut(&mut self, t: T) -> Self::Output {
+        self.forward(t)
+    }
+}
+
 impl<const M: usize, const H: usize, const F: usize> SaveToNpz
     for TransformerEncoderBlock<M, H, F>
 {
