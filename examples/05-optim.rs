@@ -5,7 +5,7 @@ use rand::prelude::*;
 use dfdx::arrays::HasArrayData;
 use dfdx::gradients::{Gradients, OwnedTape};
 use dfdx::losses::mse_loss;
-use dfdx::nn::{Linear, Module, ReLU, ResetParams, Tanh};
+use dfdx::nn::{Linear, ModuleMut, ReLU, ResetParams, Tanh};
 use dfdx::optim::{Momentum, Optimizer, Sgd, SgdConfig};
 use dfdx::tensor::{Tensor2D, TensorCreator};
 
@@ -33,8 +33,9 @@ fn main() {
     let x: Tensor2D<3, 5> = TensorCreator::randn(&mut rng);
     let y: Tensor2D<3, 2> = TensorCreator::randn(&mut rng);
 
-    // first we pass our gradient tracing input through the network
-    let prediction: Tensor2D<3, 2, OwnedTape> = mlp.forward(x.trace());
+    // first we pass our gradient tracing input through the network.
+    // since we are training, we use forward_mut() instead of forward
+    let prediction: Tensor2D<3, 2, OwnedTape> = mlp.forward_mut(x.trace());
 
     // next compute the loss against the target dummy data
     let loss = mse_loss(prediction, &y);
@@ -51,7 +52,7 @@ fn main() {
 
     // let's do this a couple times to make sure the loss decreases!
     for i in 0..5 {
-        let prediction = mlp.forward(x.trace());
+        let prediction = mlp.forward_mut(x.trace());
         let loss = mse_loss(prediction, &y);
         println!("Loss after update {i}: {:?}", loss.data());
         let gradients: Gradients = loss.backward();
