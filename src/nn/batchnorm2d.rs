@@ -2,9 +2,7 @@ use super::{npz_fread, npz_fwrite, LoadFromNpz, NpzError, SaveToNpz};
 use super::{Module, ModuleMut, ResetParams};
 use crate::arrays::{HasArrayData, HasAxes};
 use crate::devices::{Cpu, FillElements};
-use crate::gradients::*;
-use crate::tensor::*;
-use crate::tensor_ops::*;
+use crate::{gradients::*, tensor::*, tensor_ops::*};
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive};
 
@@ -195,7 +193,7 @@ impl<const C: usize> LoadFromNpz for BatchNorm2D<C> {
         npz_fread(r, format!("{p}beta.npy"), self.beta.mut_data())?;
         let mean = self.running_mean.mut_data();
         npz_fread(r, format!("{p}running_mean.npy"), mean)?;
-        let var = self.running_mean.mut_data();
+        let var = self.running_var.mut_data();
         npz_fread(r, format!("{p}running_var.npy"), var)?;
         Ok(())
     }
@@ -204,8 +202,9 @@ impl<const C: usize> LoadFromNpz for BatchNorm2D<C> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::assert_close;
+    use crate::{nn::tests::SimpleGradients, tests::assert_close};
     use rand::{rngs::StdRng, SeedableRng};
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_batchnorm2d_3d_forward_mut() {
@@ -228,75 +227,115 @@ mod tests {
         assert_close(bn.running_var.data(), &[1.1361228, 1.0889612, 1.3478994]);
         assert_close(g.ref_gradient(&bn.gamma), &[0.2506705, 0.4257624, 0.257648]);
         assert_close(g.ref_gradient(&bn.beta), &[0.4663894, 0.5239304, 0.4687197]);
-        assert_eq!(
+        assert_close(
             g.ref_gradient(&x1),
             &[
                 [[0.0030178577, 0.011973545], [0.0038383976, -0.018829815]],
                 [[-0.0016367957, 0.024275035], [0.0092941, -0.03193234]],
-                [[-0.015617318, 0.009291172], [0.0026013851, 0.0037247613]]
-            ]
+                [[-0.015617318, 0.009291172], [0.0026013851, 0.0037247613]],
+            ],
         );
     }
 
     #[test]
     fn test_batchnorm2d_4d_forward_mut() {
-        todo!();
+        let mut rng = StdRng::seed_from_u64(2);
+        let x1: Tensor4D<2, 2, 2, 3> = TensorCreator::randn(&mut rng);
+        let mut bn: BatchNorm2D<2> = Default::default();
+
+        let y1 = bn.forward_mut(x1.trace());
+        #[rustfmt::skip]
+        assert_close(
+            y1.data(),
+            &[
+                [[[-0.93348885, -2.1979978, 0.19754872],[0.29159376, -0.6282544, -1.0415624]], [[1.1156346, 0.89029306, -1.1608727],[-0.73874927, 0.13254784, -0.77676374]]],
+                [[[0.60655713, 0.62703574, 0.12648833],[1.5577206, 0.18830705, 1.2060523]],[[0.37415895, -0.9069047, -0.9519587],[-0.02608296, 2.3435123, -0.2948149]]],
+            ],
+        );
+
+        let g = backward(y1.exp().mean());
+        assert_close(bn.running_mean.data(), &[-0.02424082, 0.00407672]);
+        assert_close(bn.running_var.data(), &[0.9676103, 1.0458221]);
+        assert_close(g.ref_gradient(&bn.gamma), &[0.5582906, 1.1929206]);
+        assert_close(g.ref_gradient(&bn.beta), &[0.7535024, 0.92750454]);
+        #[rustfmt::skip]
+        assert_close(
+            g.ref_gradient(&x1),
+            &[
+                [[[-0.00378475, 0.05601016, -0.02694868],[-0.02614748, -0.01439525, 0.00047035]],[[-0.05280511, -0.05561727, 0.04425058],[0.01388359, -0.03710236, 0.01651]]],
+                [[[-0.01853323, -0.01773504, -0.02717264],[0.0794776, -0.02699574, 0.02575465]],[[-0.04663141, 0.02567738, 0.0289102],[-0.0294986, 0.10708933, -0.01466625]]],
+            ],
+        );
     }
 
     #[test]
     fn test_batchform2d_3d_repeated_forward_mut() {
         let mut rng = StdRng::seed_from_u64(12);
 
-        let x1: Tensor3D<3, 2, 2> = TensorCreator::randn(&mut rng);
+        let x1: Tensor3D<3, 4, 5> = TensorCreator::randn(&mut rng);
         let mut bn: BatchNorm2D<3> = Default::default();
 
         let _ = bn.forward_mut(x1.trace());
-        todo!();
+        assert_close(bn.running_mean.data(), &[0.0083191, -0.0370511, -0.0079481]);
+        assert_close(bn.running_var.data(), &[1.0344709, 0.9340682, 1.0266376]);
+
         let _ = bn.forward_mut(x1.trace());
-        todo!();
+        assert_close(bn.running_mean.data(), &[0.0158063, -0.0703971, -0.0151013]);
+        assert_close(bn.running_var.data(), &[1.0654946, 0.87472963, 1.0506116]);
+
         let _ = bn.forward_mut(x1.trace());
-        todo!();
+        assert_close(bn.running_mean.data(), &[0.0225448, -0.1004085, -0.0215393]);
+        assert_close(bn.running_var.data(), &[1.093416, 0.8213248, 1.0721881]);
+
         let _ = bn.forward_mut(x1.trace());
-        todo!();
+        assert_close(bn.running_mean.data(), &[0.0286095, -0.1274188, -0.0273335]);
+        assert_close(bn.running_var.data(), &[1.1185452, 0.7732605, 1.0916069]);
 
         let m = bn.running_mean.clone();
         let v = bn.running_var.clone();
 
         let x2: Tensor3D<3, 2, 2> = TensorCreator::randn(&mut rng);
-        let _ = bn.forward(x2);
-        todo!();
+        let y2 = bn.forward(x2);
+        // running stats shouldn't have been updated
         assert_eq!(bn.running_mean.data(), m.data());
         assert_eq!(bn.running_var.data(), v.data());
-    }
-
-    #[test]
-    fn test_batchform2d_4d_repeated_forward_mut() {
-        let mut rng = StdRng::seed_from_u64(13);
-
-        let x1: Tensor4D<2, 3, 2, 2> = TensorCreator::randn(&mut rng);
-        let mut bn: BatchNorm2D<3> = Default::default();
-
-        let _ = bn.forward_mut(x1.trace());
-        todo!();
-        let _ = bn.forward_mut(x1.trace());
-        todo!();
-        let _ = bn.forward_mut(x1.trace());
-        todo!();
-        let _ = bn.forward_mut(x1.trace());
-        todo!();
-
-        let m = bn.running_mean.clone();
-        let v = bn.running_var.clone();
-
-        let x2: Tensor4D<4, 3, 2, 2> = TensorCreator::randn(&mut rng);
-        let _ = bn.forward(x2);
-        todo!();
-        assert_eq!(bn.running_mean.data(), m.data());
-        assert_eq!(bn.running_var.data(), v.data());
+        assert_close(
+            y2.data(),
+            &[
+                [[0.0897828, -0.01880704], [-0.55082226, -0.50515544]],
+                [[0.13778551, 0.25317147], [-1.2689502, 0.61595416]],
+                [[0.73018146, 0.3243845], [-1.1041277, 0.38778353]],
+            ],
+        );
     }
 
     #[test]
     fn test_batchnorm2d_save_load() {
-        todo!();
+        let mut rng = StdRng::seed_from_u64(13);
+        let mut bn: BatchNorm2D<3> = Default::default();
+
+        assert_eq!(bn.running_mean.data(), &[0.0; 3]);
+        assert_eq!(bn.running_var.data(), &[1.0; 3]);
+        assert_eq!(bn.gamma.data(), &[1.0; 3]);
+        assert_eq!(bn.beta.data(), &[0.0; 3]);
+
+        let x1: Tensor3D<3, 4, 5> = TensorCreator::randn(&mut rng);
+        let g = backward(bn.forward_mut(x1.trace()).exp().mean());
+        bn.update(&mut SimpleGradients(g), &mut Default::default());
+
+        assert_ne!(bn.running_mean.data(), &[0.0; 3]);
+        assert_ne!(bn.running_var.data(), &[1.0; 3]);
+        assert_ne!(bn.gamma.data(), &[1.0; 3]);
+        assert_ne!(bn.beta.data(), &[0.0; 3]);
+
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+        assert!(bn.save(file.path().to_str().unwrap()).is_ok());
+
+        let mut loaded: BatchNorm2D<3> = Default::default();
+        assert!(loaded.load(file.path().to_str().unwrap()).is_ok());
+        assert_eq!(loaded.gamma.data(), bn.gamma.data());
+        assert_eq!(loaded.beta.data(), bn.beta.data());
+        assert_eq!(loaded.running_mean.data(), bn.running_mean.data());
+        assert_eq!(loaded.running_var.data(), bn.running_var.data());
     }
 }
