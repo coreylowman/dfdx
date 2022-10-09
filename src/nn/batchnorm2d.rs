@@ -8,6 +8,33 @@ use crate::tensor_ops::*;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive};
 
+/// Batch normalization for images as described in
+/// [Batch Normalization: Accelerating Deep Network Training
+/// by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167)
+///
+/// BatchNorm2D supports the following cases (see sections below for more details):
+/// 1. **Training**: [ModuleMut] and [OwnedTape] on the input tensor
+/// 2. **Inference**: [Module] and [NoneTape] on the input tensor.
+///
+/// NOTE: ModuleMut does not accept NoneTapes, and Module does not accept OwnedTapes.
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let bn: BatchNorm2D<3> = Default::default();
+/// let _ = bn.forward(Tensor3D::<3, 2, 2>::zeros());
+/// let _ = bn.forward(Tensor4D::<4, 3, 2, 2>::zeros());
+/// ```
+///
+/// ### Training
+///
+/// - Running statistics: updated with momentum
+/// - Normalization: calculated using batch stats
+///
+/// ### Inference
+///
+/// - Running statistics: **not** updated
+/// - Normalization: calculated using running stats
 #[derive(Clone, Debug)]
 pub struct BatchNorm2D<const C: usize> {
     pub gamma: Tensor1D<C>,
