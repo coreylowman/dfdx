@@ -14,7 +14,7 @@ use zip::{result::ZipResult, ZipArchive};
 /// 1. **Training**: [ModuleMut] and [OwnedTape] on the input tensor
 /// 2. **Inference**: [Module] and [NoneTape] on the input tensor.
 ///
-/// NOTE: ModuleMut does not accept NoneTapes, and Module does not accept OwnedTapes.
+/// *NOTE: ModuleMut/NoneTape, and Module/OwnedTape will fail to compile.*
 ///
 /// Examples:
 /// ```rust
@@ -25,21 +25,27 @@ use zip::{result::ZipResult, ZipArchive};
 /// ```
 ///
 /// ### Training
-///
 /// - Running statistics: updated with momentum
 /// - Normalization: calculated using batch stats
 ///
 /// ### Inference
-///
 /// - Running statistics: **not** updated
 /// - Normalization: calculated using running stats
 #[derive(Clone, Debug)]
 pub struct BatchNorm2D<const C: usize> {
-    pub gamma: Tensor1D<C>,
-    pub beta: Tensor1D<C>,
+    /// Scale for affine transform. Defaults to 1.0
+    pub scale: Tensor1D<C>,
+    /// Bias for affine transform. Defaults to 0.0
+    pub bias: Tensor1D<C>,
+    /// Spatial mean that is updated during training. Defaults to 0.0
     pub running_mean: Tensor1D<C>,
+    /// Spatial variance that is updated during training. Defaults to 1.0
     pub running_var: Tensor1D<C>,
+    /// Added to variance before taking sqrt for numerical stability. Defaults to 1e-5
     pub epsilon: f32,
+    /// Controls exponential moving average of running stats.Defaults to 0.1
+    ///
+    /// `running_stat * (1.0 - momentum) + stat * momentum`.
     pub momentum: f32,
 }
 
@@ -56,8 +62,8 @@ impl<const C: usize> BatchNorm2D<C> {
         // normalize & affine
         let x = sub(x, &mean.broadcast());
         let x = div(x, &std.broadcast());
-        let x = mul(x, &self.gamma.duplicate().broadcast());
-        add(x, &self.beta.duplicate().broadcast())
+        let x = mul(x, &self.scale.duplicate().broadcast());
+        add(x, &self.bias.duplicate().broadcast())
     }
 
     fn train_fwd<T, Axes>(&mut self, x: T) -> T
@@ -90,17 +96,17 @@ impl<const C: usize> BatchNorm2D<C> {
         let mean: T = mean_t.put_tape(tape).broadcast();
         let (mean, tape) = mean.split_tape();
 
-        // record broadcast of gamma & beta - on tape
-        let gamma: T = self.gamma.duplicate().put_tape(tape).broadcast();
-        let (gamma, tape) = gamma.split_tape();
-        let beta: T = self.beta.duplicate().put_tape(tape).broadcast();
-        let (beta, tape) = beta.split_tape();
+        // record broadcast of scale & bias - on tape
+        let scale: T = self.scale.duplicate().put_tape(tape).broadcast();
+        let (scale, tape) = scale.split_tape();
+        let bias: T = self.bias.duplicate().put_tape(tape).broadcast();
+        let (bias, tape) = bias.split_tape();
 
         // normalize & affine - on tape
         let x = sub(x.put_tape(tape), &mean);
         let x = div(x, &std);
-        let x = mul(x, &gamma);
-        add(x, &beta)
+        let x = mul(x, &scale);
+        add(x, &bias)
     }
 }
 
@@ -151,8 +157,8 @@ impl<const B: usize, const C: usize, const H: usize, const W: usize>
 impl<const C: usize> Default for BatchNorm2D<C> {
     fn default() -> Self {
         Self {
-            gamma: TensorCreator::ones(),
-            beta: TensorCreator::zeros(),
+            scale: TensorCreator::ones(),
+            bias: TensorCreator::zeros(),
             running_mean: TensorCreator::zeros(),
             running_var: TensorCreator::ones(),
             epsilon: 1e-5,
@@ -163,8 +169,8 @@ impl<const C: usize> Default for BatchNorm2D<C> {
 
 impl<const C: usize> ResetParams for BatchNorm2D<C> {
     fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {
-        Cpu::fill(self.gamma.mut_data(), &mut |v| *v = 1.0);
-        Cpu::fill(self.beta.mut_data(), &mut |v| *v = 0.0);
+        Cpu::fill(self.scale.mut_data(), &mut |v| *v = 1.0);
+        Cpu::fill(self.bias.mut_data(), &mut |v| *v = 0.0);
         Cpu::fill(self.running_mean.mut_data(), &mut |v| *v = 0.0);
         Cpu::fill(self.running_var.mut_data(), &mut |v| *v = 1.0);
     }
@@ -172,15 +178,15 @@ impl<const C: usize> ResetParams for BatchNorm2D<C> {
 
 impl<const C: usize> CanUpdateWithGradients for BatchNorm2D<C> {
     fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.gamma.update(grads, unused);
-        self.beta.update(grads, unused);
+        self.scale.update(grads, unused);
+        self.bias.update(grads, unused);
     }
 }
 
 impl<const C: usize> SaveToNpz for BatchNorm2D<C> {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut zip::ZipWriter<W>) -> ZipResult<()> {
-        npz_fwrite(w, format!("{p}gamma.npy"), self.gamma.data())?;
-        npz_fwrite(w, format!("{p}beta.npy"), self.beta.data())?;
+        npz_fwrite(w, format!("{p}scale.npy"), self.scale.data())?;
+        npz_fwrite(w, format!("{p}bias.npy"), self.bias.data())?;
         npz_fwrite(w, format!("{p}running_mean.npy"), self.running_mean.data())?;
         npz_fwrite(w, format!("{p}running_var.npy"), self.running_var.data())?;
         Ok(())
@@ -189,8 +195,8 @@ impl<const C: usize> SaveToNpz for BatchNorm2D<C> {
 
 impl<const C: usize> LoadFromNpz for BatchNorm2D<C> {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        npz_fread(r, format!("{p}gamma.npy"), self.gamma.mut_data())?;
-        npz_fread(r, format!("{p}beta.npy"), self.beta.mut_data())?;
+        npz_fread(r, format!("{p}scale.npy"), self.scale.mut_data())?;
+        npz_fread(r, format!("{p}bias.npy"), self.bias.mut_data())?;
         let mean = self.running_mean.mut_data();
         npz_fread(r, format!("{p}running_mean.npy"), mean)?;
         let var = self.running_var.mut_data();
@@ -225,8 +231,8 @@ mod tests {
         let g = backward(y1.exp().mean());
         assert_close(bn.running_mean.data(), &[-0.0175438, -0.0214163, 0.0268384]);
         assert_close(bn.running_var.data(), &[1.1361228, 1.0889612, 1.3478994]);
-        assert_close(g.ref_gradient(&bn.gamma), &[0.2506705, 0.4257624, 0.257648]);
-        assert_close(g.ref_gradient(&bn.beta), &[0.4663894, 0.5239304, 0.4687197]);
+        assert_close(g.ref_gradient(&bn.scale), &[0.2506705, 0.4257624, 0.257648]);
+        assert_close(g.ref_gradient(&bn.bias), &[0.4663894, 0.5239304, 0.4687197]);
         assert_close(
             g.ref_gradient(&x1),
             &[
@@ -256,8 +262,8 @@ mod tests {
         let g = backward(y1.exp().mean());
         assert_close(bn.running_mean.data(), &[-0.02424082, 0.00407672]);
         assert_close(bn.running_var.data(), &[0.9676103, 1.0458221]);
-        assert_close(g.ref_gradient(&bn.gamma), &[0.5582906, 1.1929206]);
-        assert_close(g.ref_gradient(&bn.beta), &[0.7535024, 0.92750454]);
+        assert_close(g.ref_gradient(&bn.scale), &[0.5582906, 1.1929206]);
+        assert_close(g.ref_gradient(&bn.bias), &[0.7535024, 0.92750454]);
         #[rustfmt::skip]
         assert_close(
             g.ref_gradient(&x1),
@@ -316,8 +322,8 @@ mod tests {
 
         assert_eq!(bn.running_mean.data(), &[0.0; 3]);
         assert_eq!(bn.running_var.data(), &[1.0; 3]);
-        assert_eq!(bn.gamma.data(), &[1.0; 3]);
-        assert_eq!(bn.beta.data(), &[0.0; 3]);
+        assert_eq!(bn.scale.data(), &[1.0; 3]);
+        assert_eq!(bn.bias.data(), &[0.0; 3]);
 
         let x1: Tensor3D<3, 4, 5> = TensorCreator::randn(&mut rng);
         let g = backward(bn.forward_mut(x1.trace()).exp().mean());
@@ -325,16 +331,16 @@ mod tests {
 
         assert_ne!(bn.running_mean.data(), &[0.0; 3]);
         assert_ne!(bn.running_var.data(), &[1.0; 3]);
-        assert_ne!(bn.gamma.data(), &[1.0; 3]);
-        assert_ne!(bn.beta.data(), &[0.0; 3]);
+        assert_ne!(bn.scale.data(), &[1.0; 3]);
+        assert_ne!(bn.bias.data(), &[0.0; 3]);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         assert!(bn.save(file.path().to_str().unwrap()).is_ok());
 
         let mut loaded: BatchNorm2D<3> = Default::default();
         assert!(loaded.load(file.path().to_str().unwrap()).is_ok());
-        assert_eq!(loaded.gamma.data(), bn.gamma.data());
-        assert_eq!(loaded.beta.data(), bn.beta.data());
+        assert_eq!(loaded.scale.data(), bn.scale.data());
+        assert_eq!(loaded.bias.data(), bn.bias.data());
         assert_eq!(loaded.running_mean.data(), bn.running_mean.data());
         assert_eq!(loaded.running_var.data(), bn.running_var.data());
     }
