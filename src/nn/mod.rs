@@ -76,6 +76,7 @@
 //! ```
 
 mod activations;
+mod batchnorm2d;
 mod dropout;
 mod generalized_residual;
 mod impl_module_for_tuples;
