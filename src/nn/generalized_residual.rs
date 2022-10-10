@@ -42,24 +42,48 @@ impl<F: ResetParams, R: ResetParams> ResetParams for GeneralizedResidual<F, R> {
     }
 }
 
-impl<F, R, T, O> Module<T> for GeneralizedResidual<F, R>
+impl<F, R, T> Module<T> for GeneralizedResidual<F, R>
 where
     T: Tensor<Dtype = f32>,
-    O: Tensor<Dtype = T::Dtype, Tape = T::Tape>,
-    F: Module<T, Output = O>,
-    R: Module<T, Output = O>,
+    F: Module<T>,
+    R: Module<T, Output = F::Output>,
+    F::Output: Tensor<Dtype = f32, Tape = T::Tape>,
 {
-    type Output = O;
+    type Output = F::Output;
 
     /// Calls forward on `F` and `R` and then sums their result: `F(x) + R(x)`
     fn forward(&self, x: T) -> Self::Output {
         let (x, tape) = x.split_tape();
 
         // do R(x) on the tape
-        let (r_x, tape) = self.r.forward(x.duplicate().put_tape(tape)).split_tape();
+        let r_x = self.r.forward(x.duplicate().put_tape(tape));
+        let (r_x, tape) = r_x.split_tape();
 
         // do F(x) on the tape
         let f_x = self.f.forward(x.put_tape(tape));
+
+        add(f_x, &r_x)
+    }
+}
+
+impl<F, R, T> ModuleMut<T> for GeneralizedResidual<F, R>
+where
+    T: Tensor<Dtype = f32>,
+    F: ModuleMut<T>,
+    R: ModuleMut<T, Output = F::Output>,
+    F::Output: Tensor<Dtype = f32, Tape = T::Tape>,
+{
+    type Output = F::Output;
+
+    fn forward_mut(&mut self, x: T) -> Self::Output {
+        let (x, tape) = x.split_tape();
+
+        // do R(x) on the tape
+        let r_x = self.r.forward_mut(x.duplicate().put_tape(tape));
+        let (r_x, tape) = r_x.split_tape();
+
+        // do F(x) on the tape
+        let f_x = self.f.forward_mut(x.put_tape(tape));
 
         add(f_x, &r_x)
     }
@@ -78,16 +102,6 @@ impl<F: LoadFromNpz, R: LoadFromNpz> LoadFromNpz for GeneralizedResidual<F, R> {
     fn read<Z: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<Z>) -> Result<(), NpzError> {
         self.f.read(&format!("{p}.f"), r)?;
         self.r.read(&format!("{p}.r"), r)
-    }
-}
-
-impl<T, F, R> ModuleMut<T> for GeneralizedResidual<F, R>
-where
-    Self: Module<T>,
-{
-    type Output = <Self as Module<T>>::Output;
-    fn forward_mut(&mut self, input: T) -> Self::Output {
-        self.forward(input)
     }
 }
 

@@ -36,20 +36,17 @@ impl<F: ResetParams> ResetParams for Residual<F> {
 
 impl<T: Tensor<Dtype = f32>, F: Module<T, Output = T>> Module<T> for Residual<F> {
     type Output = F::Output;
-    /// Calls forward on `F` and then adds `x` to the result: `F(x) + x`
     fn forward(&self, x: T) -> Self::Output {
         let (x, tape) = x.split_tape();
         add(self.0.forward(x.duplicate().put_tape(tape)), &x)
     }
 }
 
-impl<T, F> ModuleMut<T> for Residual<F>
-where
-    Self: Module<T>,
-{
-    type Output = <Self as Module<T>>::Output;
-    fn forward_mut(&mut self, input: T) -> Self::Output {
-        self.forward(input)
+impl<T: Tensor<Dtype = f32>, F: ModuleMut<T, Output = T>> ModuleMut<T> for Residual<F> {
+    type Output = F::Output;
+    fn forward_mut(&mut self, x: T) -> Self::Output {
+        let (x, tape) = x.split_tape();
+        add(self.0.forward_mut(x.duplicate().put_tape(tape)), &x)
     }
 }
 

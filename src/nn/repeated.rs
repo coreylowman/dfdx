@@ -95,13 +95,15 @@ impl<Input, T: Module<Input, Output = Input>, const N: usize> Module<Input> for 
     }
 }
 
-impl<Input, T, const N: usize> ModuleMut<Input> for Repeated<T, N>
-where
-    Self: Module<Input>,
+impl<Input, T: ModuleMut<Input, Output = Input>, const N: usize> ModuleMut<Input>
+    for Repeated<T, N>
 {
-    type Output = <Self as Module<Input>>::Output;
-    fn forward_mut(&mut self, input: Input) -> Self::Output {
-        self.forward(input)
+    type Output = T::Output;
+    fn forward_mut(&mut self, mut x: Input) -> Self::Output {
+        for i in 0..N {
+            x = self.modules[i].forward_mut(x);
+        }
+        x
     }
 }
 
