@@ -99,7 +99,7 @@ fn main() {
 }
 ```
 
-2. 📈 Ergnomic & safe Optimizer API
+2. 📈 Ergonomic & safe Optimizer API
 
 ```rust
 let mut model: Model = ...
@@ -183,7 +183,7 @@ We've implemented Module for Tuples up to 6 elements, but *you can arbitrarily n
 
 ### No `Rc<RefCells<T>>` used - Gradient tape is not kept behind a cell!
 
-Other implementations may store a reference to the gradient tape directly on tensors, which requires mutating tensors or using Rc/Refcells all other the place.
+Other implementations may store a reference to the gradient tape directly on tensors, which requires mutating tensors or using Rc/Refcells all over the place.
 
 We've figured out an elegant way to avoid this, reducing references and dynamic borrow checks to 0!
 

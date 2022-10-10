@@ -1,5 +1,6 @@
 //! Intro to dfdx::gradients and tapes
 
+use std::borrow::Borrow;
 use rand::prelude::*;
 
 use dfdx::gradients::{Gradients, NoneTape, OwnedTape};
@@ -32,4 +33,12 @@ fn main() {
 
     let a_grad: &[[f32; 4]; 3] = gradients.ref_gradient(&a);
     dbg!(a_grad);
+
+    let d_grad: &[[f32; 2]; 3] = gradients.ref_gradient(&d);
+    println!("{:?}", d_grad);
+
+    let e_grad: &f32 = gradients.ref_gradient(&e);
+    println!("{:?}", e_grad);
+
+
 }
