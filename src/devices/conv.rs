@@ -48,31 +48,31 @@ impl<const S: usize, const P: usize> DeviceConv2D<S, P> for Cpu {
         bias: &[f32; O],
         out: &mut [[[f32; (W + 2 * P - K) / S + 1]; (H + 2 * P - K) / S + 1]; O],
     ) {
-        let out_height = (H + 2 * P - K) / S + 1;
-        let out_width = (W + 2 * P - K) / S + 1;
         for c in 0..C {
             for oc in 0..O {
-                for oh in 0..out_height {
-                    for ow in 0..out_width {
+                for oh in 0..((H + 2 * P - K) / S + 1) {
+                    for ow in 0..((W + 2 * P - K) / S + 1) {
                         let o = &mut out[oc][oh][ow];
+                        let mut tmp = 0.0;
                         for k1 in 0..K {
                             let y = (oh * S + k1).checked_sub(P);
                             for k2 in 0..K {
                                 let x = (ow * S + k2).checked_sub(P);
                                 if let Some((y, x)) = y.zip(x) {
                                     if y < H && x < W {
-                                        *o += weight[oc][c][k1][k2] * img[c][y][x];
+                                        tmp += weight[oc][c][k1][k2] * img[c][y][x];
                                     }
                                 }
                             }
                         }
+                        *o += tmp;
                     }
                 }
             }
         }
         for oc in 0..O {
-            for oh in 0..out_height {
-                for ow in 0..out_width {
+            for oh in 0..((H + 2 * P - K) / S + 1) {
+                for ow in 0..((W + 2 * P - K) / S + 1) {
                     out[oc][oh][ow] += bias[oc];
                 }
             }
@@ -93,28 +93,25 @@ impl<const S: usize, const P: usize> DeviceConv2D<S, P> for Cpu {
         weight_g: &mut [[[[f32; K]; K]; C]; O],
         bias_g: &mut [f32; O],
     ) {
-        let out_height = (H + 2 * P - K) / S + 1;
-        let out_width = (W + 2 * P - K) / S + 1;
-
         for oc in 0..O {
-            for oh in 0..out_height {
-                for ow in 0..out_width {
+            for oh in 0..((H + 2 * P - K) / S + 1) {
+                for ow in 0..((W + 2 * P - K) / S + 1) {
                     bias_g[oc] += out_g[oc][oh][ow];
                 }
             }
         }
 
         for c in 0..C {
-            for oh in 0..out_height {
-                for ow in 0..out_width {
-                    for oc in 0..O {
+            for oc in 0..O {
+                for oh in 0..((H + 2 * P - K) / S + 1) {
+                    for ow in 0..((W + 2 * P - K) / S + 1) {
                         let o_g = &out_g[oc][oh][ow];
                         for k1 in 0..K {
-                            let y = (oh * S + k1).wrapping_sub(P);
-                            if y < H {
-                                for k2 in 0..K {
-                                    let x = (ow * S + k2).wrapping_sub(P);
-                                    if x < W {
+                            let y = (oh * S + k1).checked_sub(P);
+                            for k2 in 0..K {
+                                let x = (ow * S + k2).checked_sub(P);
+                                if let Some((y, x)) = y.zip(x) {
+                                    if y < H && x < W {
                                         weight_g[oc][c][k1][k2] += img[c][y][x] * o_g;
                                         img_g[c][y][x] += weight[oc][c][k1][k2] * o_g;
                                     }
