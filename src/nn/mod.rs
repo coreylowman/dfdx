@@ -19,6 +19,7 @@
 //! Here is a list of existing modules that have different behavior in these
 //! two functions:
 //!
+//! - [BatchNorm2D]
 //! - [DropoutOneIn]
 //! - [Dropout]
 //!
@@ -76,6 +77,7 @@
 //! ```
 
 mod activations;
+mod batchnorm2d;
 mod dropout;
 mod generalized_residual;
 mod impl_module_for_tuples;
@@ -89,6 +91,7 @@ mod residual;
 mod split_into;
 
 pub use activations::*;
+pub use batchnorm2d::*;
 pub use dropout::*;
 pub use generalized_residual::*;
 pub use impl_module_for_tuples::*;
