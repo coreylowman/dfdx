@@ -10,6 +10,13 @@ use zip::{result::ZipResult, ZipArchive};
 /// [Batch Normalization: Accelerating Deep Network Training
 /// by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167)
 ///
+/// Generics:
+///
+/// - `C` the size of the spatial dimension to reduce. For 3d tensors this is the 0th
+///   dimension. For 4d tensors, this is the 1st dimension.
+///
+/// # Training vs Inference
+///
 /// BatchNorm2D supports the following cases (see sections below for more details):
 /// 1. **Training**: [ModuleMut] and [OwnedTape] on the input tensor
 /// 2. **Inference**: [Module] and [NoneTape] on the input tensor.
@@ -51,8 +58,9 @@ pub struct BatchNorm2D<const C: usize> {
 
 impl<const C: usize> BatchNorm2D<C> {
     /// generic forward for inference
-    fn infer_fwd<T: Tensor<Dtype = f32, NoTape = T>, Axes>(&self, x: T) -> T
+    fn infer_fwd<T, Axes>(&self, x: T) -> T
     where
+        T: Tensor<Dtype = f32, NoTape = T>,
         Tensor1D<C>: BroadcastTo<T, Axes>,
     {
         // statistics for normalizing
