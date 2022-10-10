@@ -1,6 +1,7 @@
-use crate::devices::{Cpu, DeviceConv2D};
+use crate::devices::{AllocateZeros, Cpu, Device, DeviceConv2D};
 use crate::gradients::Tape;
 use crate::prelude::*;
+use rayon::prelude::*;
 
 impl<const C: usize, const H: usize, const W: usize, T: Tape> Tensor3D<C, H, W, T> {
     /// **Requires Nightly** Perform a 2d convolution
@@ -44,9 +45,15 @@ impl<const B: usize, const C: usize, const H: usize, const W: usize, T: Tape>
         bias: &Tensor1D<O>,
     ) -> Tensor4D<B, O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T> {
         let mut result = Tensor4D::zeros();
-        for (x_i, r_i) in self.data().iter().zip(result.mut_data().iter_mut()) {
-            <Cpu as DeviceConv2D<S, P>>::conv_forward(x_i, filters.data(), bias.data(), r_i);
-        }
+        let f_data = filters.data();
+        let b_data = bias.data();
+        result
+            .mut_data()
+            .par_iter_mut()
+            .zip(self.data().par_iter())
+            .for_each(|(r_i, x_i)| {
+                <Cpu as DeviceConv2D<S, P>>::conv_forward(x_i, f_data, b_data, r_i);
+            });
 
         let f = filters.clone();
 
@@ -55,10 +62,27 @@ impl<const B: usize, const C: usize, const H: usize, const W: usize, T: Tape>
         let phb = bias.phantom();
         let phr = result.phantom();
         tape.add_backward_op(move |grads| {
-            let (fg, bg, ig, r_grad) = grads.muts_and_ref(&phf, &phb, &x, &phr);
-            let f = f.data();
-            for ((x_i, rg_i), ig_i) in x.data().iter().zip(r_grad.iter()).zip(ig.iter_mut()) {
-                <Cpu as DeviceConv2D<S, P>>::conv_backward(x_i, f, rg_i, ig_i, fg, bg);
+            let (fg, bg, ig, rg) = grads.muts_and_ref(&phf, &phb, &x, &phr);
+
+            let f_data = f.data();
+            let mut fs: Box<[[[[[f32; K]; K]; C]; O]; B]> = Cpu::zeros();
+            let mut bs: Box<[[f32; O]; B]> = Cpu::zeros();
+            x.data()
+                .par_iter()
+                .zip(fs.par_iter_mut())
+                .zip(bs.par_iter_mut())
+                .zip(rg.par_iter())
+                .zip(ig.par_iter_mut())
+                .for_each(|item| {
+                    let ((((x_i, f_grad), b_grad), r_i), i_i) = item;
+                    <Cpu as DeviceConv2D<S, P>>::conv_backward(
+                        x_i, f_data, r_i, i_i, f_grad, b_grad,
+                    );
+                });
+
+            for i in 0..B {
+                Cpu::add(fg, &fs[i]);
+                Cpu::add(bg, &bs[i]);
             }
         });
         result.put_tape(tape)
