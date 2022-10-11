@@ -3,7 +3,7 @@
 use rand::prelude::*;
 
 use dfdx::gradients::{Gradients, NoneTape, OwnedTape};
-use dfdx::tensor::{PhantomTensor, Tensor0D, Tensor2D, TensorCreator};
+use dfdx::tensor::{Tensor0D, Tensor2D, TensorCreator};
 use dfdx::tensor_ops::matmul;
 
 fn main() {
@@ -32,6 +32,4 @@ fn main() {
 
     let a_grad: &[[f32; 4]; 3] = gradients.ref_gradient(&a);
     dbg!(a_grad);
-
-
 }
