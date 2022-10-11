@@ -1,4 +1,4 @@
-//! Implementations of both braodcast and reduce with a single trait.
+//! Implementations of both broadcast and reduce with a single trait.
 //!
 //! This is done via three pieces:
 //! 1. [Accumulator], which accumulate a sequence of values into a single value.
