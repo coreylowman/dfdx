@@ -2,7 +2,7 @@
 //!
 //! At a high level a tensor consists of only three parts
 //! 1. A [crate::unique_id::UniqueId] to track which gradients are associated with what tensors
-//! 2. An Nd rust array stored in a [std::rc::Rc].
+//! 2. An Nd rust array stored in a [std::sync::Arc].
 //! 3. A tape, which can either actually be a tape ([crate::gradients::OwnedTape]) or be empty ([crate::gradients::NoneTape]).
 //!
 //! # Creating tensors

@@ -1,6 +1,10 @@
-//! We use [std::rc::Rc] instead of [Box] here to reduce allocations when tensors are duplicated/cloned.
+//! We use [std::sync::Arc] instead of [Box] here to:
+//! 1. reduce allocations when tensors are duplicated/cloned.
+//! 2. make sharing tensors and things that contain tensors across threads easy
 //!
-//! See [#62](https://github.com/coreylowman/dfdx/issues/62) for more discussion.
+//! See the following for more discussion:
+//! 1. [issue #62](https://github.com/coreylowman/dfdx/issues/62)
+//! 2. [pull #236](https://github.com/coreylowman/dfdx/pull/236)
 
 use crate::{gradients::NoneTape, unique_id::UniqueId};
 
