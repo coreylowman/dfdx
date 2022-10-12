@@ -64,12 +64,10 @@ where
                 for k2 in 0..K {
                     for oh in 0..(H + 2 * P - K) / S + 1 {
                         for ow in 0..(W + 2 * P - K) / S + 1 {
-                            let y = (oh * S + k1).checked_sub(P);
-                            let x = (ow * S + k2).checked_sub(P);
-                            if let Some((y, x)) = y.zip(x) {
-                                if y < H && x < W {
-                                    patches[c][k1][k2][oh][ow] = img[c][y][x];
-                                }
+                            let y = (oh * S + k1).wrapping_sub(P);
+                            let x = (ow * S + k2).wrapping_sub(P);
+                            if y < H && x < W {
+                                patches[c][k1][k2][oh][ow] = img[c][y][x];
                             }
                         }
                     }
@@ -142,12 +140,10 @@ where
                     let g = out_g[o][oh][ow];
                     for k1 in 0..K {
                         for k2 in 0..K {
-                            let y = (oh * S + k1).checked_sub(P);
-                            let x = (ow * S + k2).checked_sub(P);
-                            if let Some((y, x)) = y.zip(x) {
-                                if y < H && x < W {
-                                    patches[o][k1][k2][y][x] = g;
-                                }
+                            let y = (oh * S + k1).wrapping_sub(P);
+                            let x = (ow * S + k2).wrapping_sub(P);
+                            if y < H && x < W {
+                                patches[o][k1][k2][y][x] = g;
                             }
                         }
                     }
@@ -183,8 +179,6 @@ where
             // weight_g^T += img * patches^T
             // (C, O * K * K) += (C, H * W) * (H * W, O * K * K)
 
-            Self::fill(w_tr.as_mut(), &mut |x| *x = 0.0);
-
             let m = C;
             let k = H * W;
             let n = O * K * K;
@@ -194,13 +188,13 @@ where
             #[cfg(not(feature = "cblas"))]
             unsafe {
                 matrixmultiply::sgemm(
-                    m, k, n, 1.0, a, k as isize, 1, b, 1, k as isize, 1.0, c, n as isize, 1,
+                    m, k, n, 1.0, a, k as isize, 1, b, 1, k as isize, 0.0, c, n as isize, 1,
                 )
             }
             #[cfg(feature = "cblas")]
             unsafe {
                 let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
-                sgemm(RowMajor, NoTr, Tr, m, n, k, 1.0, a, k, b, k, 1.0, c, n)
+                sgemm(RowMajor, NoTr, Tr, m, n, k, 1.0, a, k, b, k, 0.0, c, n)
             }
 
             for o in 0..O {
