@@ -14,7 +14,7 @@ fn main() {
     assert_eq!(b.data(), &[[1.0, 2.0, 3.0]; 5]);
 
     // we can really broadcast any axes on either side
-    // here a (5,3) tensor is broacast to (7,5,3,2).
+    // here a (5,3) tensor is broadcast to (7,5,3,2).
     // so 7 is added in front, and 2 is added last
     let c: Tensor4D<7, 5, 3, 2> = b.broadcast();
     assert_eq!(c.data(), &[[[[1.0; 2], [2.0; 2], [3.0; 2]]; 5]; 7]);

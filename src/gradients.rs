@@ -54,9 +54,6 @@ impl GradientTape {
     /// Add an operation to be executed later. Implementation is all left to the caller,
     /// but the operation should likely call [Gradients::ref_gradient] and [Gradients::mut_gradient].
     ///
-    /// NOTE: This adds the operation to the beginning of the list, so operations are executed
-    /// in reverse order that they are added.
-    ///
     /// # Arguments
     /// * `operation` - A FnOnce that acts on [Gradients].
     ///
