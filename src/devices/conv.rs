@@ -1,4 +1,4 @@
-use super::{AllocateZeros, Cpu, FillElements};
+use super::{AllocateZeros, Cpu};
 #[cfg(feature = "cblas")]
 use cblas_sys::{
     cblas_sgemm as sgemm, CblasNoTrans as NoTr, CblasRowMajor as RowMajor, CblasTrans as Tr,
