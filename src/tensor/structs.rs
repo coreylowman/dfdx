@@ -8,7 +8,7 @@ use crate::{gradients::NoneTape, unique_id::UniqueId};
 #[derive(Debug)]
 pub struct Tensor0D<Tape = NoneTape> {
     pub(crate) id: UniqueId,
-    pub(crate) data: std::rc::Rc<f32>,
+    pub(crate) data: std::sync::Arc<f32>,
     pub(crate) tape: Tape,
 }
 
@@ -16,7 +16,7 @@ pub struct Tensor0D<Tape = NoneTape> {
 #[derive(Debug)]
 pub struct Tensor1D<const N: usize, Tape = NoneTape> {
     pub(crate) id: UniqueId,
-    pub(crate) data: std::rc::Rc<[f32; N]>,
+    pub(crate) data: std::sync::Arc<[f32; N]>,
     pub(crate) tape: Tape,
 }
 
@@ -24,7 +24,7 @@ pub struct Tensor1D<const N: usize, Tape = NoneTape> {
 #[derive(Debug)]
 pub struct Tensor2D<const M: usize, const N: usize, Tape = NoneTape> {
     pub(crate) id: UniqueId,
-    pub(crate) data: std::rc::Rc<[[f32; N]; M]>,
+    pub(crate) data: std::sync::Arc<[[f32; N]; M]>,
     pub(crate) tape: Tape,
 }
 
@@ -32,7 +32,7 @@ pub struct Tensor2D<const M: usize, const N: usize, Tape = NoneTape> {
 #[derive(Debug)]
 pub struct Tensor3D<const M: usize, const N: usize, const O: usize, Tape = NoneTape> {
     pub(crate) id: UniqueId,
-    pub(crate) data: std::rc::Rc<[[[f32; O]; N]; M]>,
+    pub(crate) data: std::sync::Arc<[[[f32; O]; N]; M]>,
     pub(crate) tape: Tape,
 }
 
@@ -41,6 +41,6 @@ pub struct Tensor3D<const M: usize, const N: usize, const O: usize, Tape = NoneT
 pub struct Tensor4D<const M: usize, const N: usize, const O: usize, const P: usize, Tape = NoneTape>
 {
     pub(crate) id: UniqueId,
-    pub(crate) data: std::rc::Rc<[[[[f32; P]; O]; N]; M]>,
+    pub(crate) data: std::sync::Arc<[[[[f32; P]; O]; N]; M]>,
     pub(crate) tape: Tape,
 }
