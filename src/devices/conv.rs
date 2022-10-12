@@ -1,4 +1,8 @@
-use super::{AllocateZeros, Cpu, FillElements, MatMul};
+use super::{AllocateZeros, Cpu, FillElements};
+#[cfg(feature = "cblas")]
+use cblas_sys::{
+    cblas_sgemm as sgemm, CblasNoTrans as NoTr, CblasRowMajor as RowMajor, CblasTrans as Tr,
+};
 
 /// **Requires nightly** 2d convolution with stride and padding specified at trait level.
 ///
@@ -80,10 +84,17 @@ where
         let a = weight.as_ptr() as *const f32;
         let b = patches.as_ptr() as *const f32;
         let c = out.as_mut_ptr() as *mut f32;
+        #[cfg(not(feature = "cblas"))]
         unsafe {
             matrixmultiply::sgemm(
                 m, k, n, 1.0, a, k as isize, 1, b, n as isize, 1, 1.0, c, n as isize, 1,
             )
+        }
+
+        #[cfg(feature = "cblas")]
+        unsafe {
+            let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
+            sgemm(RowMajor, NoTr, NoTr, m, n, k, 1.0, a, k, b, n, 1.0, c, n)
         }
 
         for oc in 0..O {
@@ -154,10 +165,17 @@ where
             let a = w_tr.as_ptr() as *const f32;
             let b = patches.as_ptr() as *const f32;
             let c = img_g.as_mut_ptr() as *mut f32;
+            #[cfg(not(feature = "cblas"))]
             unsafe {
                 matrixmultiply::sgemm(
                     m, k, n, 1.0, a, k as isize, 1, b, n as isize, 1, 1.0, c, n as isize, 1,
                 )
+            }
+
+            #[cfg(feature = "cblas")]
+            unsafe {
+                let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
+                sgemm(RowMajor, NoTr, NoTr, m, n, k, 1.0, a, k, b, n, 1.0, c, n)
             }
         }
 
@@ -178,6 +196,11 @@ where
                 matrixmultiply::sgemm(
                     m, k, n, 1.0, a, k as isize, 1, b, 1, k as isize, 1.0, c, n as isize, 1,
                 )
+            }
+            #[cfg(feature = "cblas")]
+            unsafe {
+                let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
+                sgemm(RowMajor, NoTr, Tr, m, n, k, 1.0, a, k, b, k, 1.0, c, n)
             }
 
             for o in 0..O {
