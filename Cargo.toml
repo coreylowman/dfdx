@@ -24,10 +24,10 @@ keywords = [
 features = ["nightly"]
 
 [dependencies]
-rand = { version = "0.8.5", default-features = false, features = ["std_rng"] }
-rand_distr = { version = "0.4.3", default-features = false, features = [] }
-matrixmultiply = { version = "0.3.2", default-features = false, features = [] }
-zip = { version = "0.6.2", default-features = false, features = [] }
+rand = { version = "0.8.5", features = ["std_rng"] }
+rand_distr = { version = "0.4.3", features = [] }
+matrixmultiply = { version = "0.3.2", features = [] }
+zip = { version = "0.6.2", features = [] }
 cblas-sys = { version = "0.1.4", optional = true }
 libc = { version = "0.2", optional = true }
 
@@ -35,10 +35,7 @@ libc = { version = "0.2", optional = true }
 default = []
 nightly = []
 cblas = ["dep:cblas-sys", "dep:libc"]
-mkl-static-iomp = ["cblas"]
-mkl-static-seq = ["cblas"]
-mkl-dynamic-iomp = ["cblas"]
-mkl-dynamic-seq = ["cblas"]
+intel-mkl = ["cblas"]
 
 [dev-dependencies]
 rand = "0.8.5"

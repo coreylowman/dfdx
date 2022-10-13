@@ -1,9 +1,8 @@
-//! This script links to Intel MKL when one of the following features is selected:
-//!
-//! 1. `mkl-static-iomp`: staticly link, use threaded libraries
-//! 2. `mkl-static-seq`: staticly link, use sequential libraries
-//! 3. `mkl-dynamic-iomp`: dynamic link, use threaded libraries
-//! 4. `mkl-dynamic-seq`: dynamic link, use sequential libraries
+//! This script links to Intel MKL when the `intel-mkl` feature is enabled.
+//! The dynamically linked and threaded implementation is chosen as
+//! a good default, because:
+//! 1. Dynamic compiles faster and makes smaller binaries
+//! 2. Threaded implementation is faster for large workloads.
 //!
 //! As described [by Intel here](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-math-kernel-library-intel-mkl-and-pkg-config-tool.html).
 //!
@@ -29,10 +28,10 @@
 use rustc_version::{version_meta, Channel};
 
 pub const MKL_VERSION: &str = "2022.1.0";
-pub const STATIC: bool = cfg!(feature = "mkl-static-seq") || cfg!(feature = "mkl-static-iomp");
-pub const DYNAMIC: bool = cfg!(feature = "mkl-dynamic-seq") || cfg!(feature = "mkl-dynamic-iomp");
-pub const SEQUENTIAL: bool = cfg!(feature = "mkl-static-seq") || cfg!(feature = "mkl-dynamic-seq");
-pub const THREADED: bool = cfg!(feature = "mkl-static-iomp") || cfg!(feature = "mkl-dynamic-iomp");
+pub const STATIC: bool = false;
+pub const DYNAMIC: bool = true;
+pub const SEQUENTIAL: bool = false;
+pub const THREADED: bool = true;
 pub const MKL: bool = (STATIC || DYNAMIC) && (SEQUENTIAL || THREADED);
 
 pub const LINK_TYPE: &str = if STATIC { "static" } else { "dylib" };
@@ -128,12 +127,7 @@ pub enum BuildError {
 fn main() -> Result<(), BuildError> {
     println!("cargo:rerun-if-changed=build.rs");
 
-    #[cfg(any(
-        feature = "mkl-static-iomp",
-        feature = "mkl-static-seq",
-        feature = "mkl-dynamic-iomp",
-        feature = "mkl-dynamic-seq"
-    ))]
+    #[cfg(feature = "intel-mkl")]
     {
         let root = std::env::var("ONEAPI_ROOT").unwrap_or_else(|_| DEFAULT_ONEAPI_ROOT.to_string());
         println!("Using '{root}' as ONEAPI_ROOT");
@@ -215,12 +209,7 @@ fn main() -> Result<(), BuildError> {
 
 // This section creates a feature "nightly" enabled if built on a nightly branch
 
-#[cfg(any(
-    feature = "mkl-static-iomp",
-    feature = "mkl-static-seq",
-    feature = "mkl-dynamic-iomp",
-    feature = "mkl-dynamic-seq"
-))]
+#[cfg(feature = "intel-mkl")]
 fn suggest_setvars_cmd(root: &str) -> String {
     if cfg!(windows) {
         format!("{root}/setvars.bat")
