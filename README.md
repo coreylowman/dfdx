@@ -46,14 +46,7 @@ allocations when tensors are cloned.
 The [matrixmultiply crate](https://crates.io/crates/matrixmultiply) is the default BLAS library. **You don't need
 to do download/install anything for this to work!**
 
-To link to the `Intel MKL` libraries (assuming you installed it already) enable one of the provided "mkl-\*-\*" features[1]:
-
-1. `mkl-dynamic-iomp`
-2. `mkl-dynamic-seq`
-3. `mkl-static-iomp`
-4. `mkl-static-seq`
-
-*Recommend `dynamic` for build times & executable size, and `iomp` for more cpu utilization!*
+To link to the `Intel MKL` libraries (assuming you installed it already) use the `intel-mkl` feature.
 
 Linking is currently tested & verified on the following platforms:
 
@@ -65,7 +58,7 @@ Example:
 ```toml
 # dynamic link to lp64 version of mkl with OpenMP threading libraries
 # this will auto enable the "cblas" feature"
-dfdx = { version = "...", features = ["mkl-dynamic-iomp"] }
+dfdx = { version = "...", features = ["intel-mkl"] }
 ```
 
 See [build.rs](build.rs) for more details.
