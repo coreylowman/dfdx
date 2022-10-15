@@ -5,8 +5,11 @@
 [![codecov](https://codecov.io/gh/coreylowman/dfdx/branch/main/graph/badge.svg?token=X9OWP9Q840)](https://codecov.io/gh/coreylowman/dfdx)
 [![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/AtUhGqBDP5)
 
-Ergonomics & safety focused deep learning in Rust. Main features include:
+Ergonomics & safety focused deep learning in Rust.
 
+**Still in pre-alpha state. The next few releases are planned to be breaking releases.**
+
+Features at a glance:
 1. Const generic tensor library with tensors up to 4d!
 2. Shape and type checked at compile time.
 3. A large library of tensor operations (including matmuls, convolutions, and shape transformations)
@@ -27,18 +30,15 @@ See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
 
 ## Design Goals
 
-1. Easy to use frontend interface.
-2. Easy to understand/maintain internals. Keep levels of indirection to a minimum.
-3. Check as much at compile time as possible (i.e. don't compile if something is not correct).
-4. Maximize performance.
-5. Keep internals as flexible (easy to change) as possible.
-6. Minimize unsafe code[1]
-7. Minimize Rc and RefCells used in internal code[2]
+1. Ergonomics the whole way down (both frontend interface & internals).
+2. Check as much at compile time as possible (i.e. don't compile if something is not correct).
+3. Maximize performance.
+4. Minimize unsafe code[1]
+5. Minimize Arc/Rc and RefCells used in internal code[2]
 
 [1] Currently the only unsafe calls are for matrix multiplication, and instantiating large arrays directly on the heap.
 
-[2] There is only 1 usage of RefCell in the `nn::Dropout` layer to make it's underlying rng easy to use.
-The only things that use `Rc` are tensors to store their data. `Rc` is used instead of `Box` to reduce
+[2] The only things that use `Arc` are tensors to store their data. `Arc` is used instead of `Box` to reduce
 allocations when tensors are cloned.
 
 ## BLAS libraries
@@ -48,9 +48,11 @@ to do download/install anything for this to work!**
 
 To link to the `Intel MKL` libraries (assuming you installed it already) use the `intel-mkl` feature.
 
-## Features
+## API Preview
 
-1. 👌 Simple Neural Networks API, completely type checked at compile time. See [examples/05-optim.rs](examples/05-optim.rs)
+Check [examples/](examples/) for more details.
+
+1. 👌 Simple Neural Networks API, completely shape checked at compile time.
 
 ```rust
 type MLP = (
@@ -68,7 +70,7 @@ fn main() {
 }
 ```
 
-2. 📈 Ergonomic & safe Optimizer API
+2. 📈 Ergonomic Optimizer API
 
 ```rust
 let mut model: Model = ...
@@ -84,21 +86,17 @@ let gradients = loss.backward();
 sgd.update(&mut model, gradients);
 ```
 
-3. Tensors are backed by normal rust arrays, making it easy to access the underlying data!
+3. 💡 Tensors are backed by normal rust arrays, making it easy to access the underlying data!
 ```rust
 let t0: Tensor0D = tensor(0.0);
 assert_eq!(t0.data(), &0.0);
 
-let t1 /*: Tensor1D<3>*/ = Tensor1D::new([1.0, 2.0, 3.0]);
+let t1 /*: Tensor1D<3>*/ = tensor([1.0, 2.0, 3.0]);
 assert_eq!(t1.data(), &[1.0, 2.0, 3.0]);
 
-let t2: Tensor2D<2, 3> = Tensor2D::ones();
+let t2: Tensor2D<2, 3> = TensorCreator::ones();
 assert_eq!(t2.data(), &[[1.0; 3]; 2]);
 ```
-
-4. 💡 Tensor sizes, operations, gradient computations all type checked at compile time
-5. 💪 Full power of rust compiler & llvm optimizations (because all shapes of arrays are known at compile time!)
-6. Minimal runtime costs - there are no Rc/Refcells used in this implementation!
 
 ## Fun/notable implementation details
 
@@ -147,7 +145,7 @@ where
 }
 ```
 
-We've implemented Module for Tuples up to 6 elements, but *you can arbitrarily nest them*!
+Modules implemented for Tuples up to 6 elements, but *you can arbitrarily nest them*!
 
 ### No `Rc<RefCells<T>>` used - Gradient tape is not kept behind a cell!
 
@@ -180,9 +178,8 @@ And further, we can require it be moved into `.backward()`, so it can destruct t
 __All of this can be checked at compile time 🎉__
 
 ```rust
-pub fn backward<T: Tensor<Tape = OwnedTape>>(t: T) -> Gradients {
-    let (t, tape): (T::NoTape, OwnedTape) = t.split_tape();
-    tape.0.backward(&t)
+pub fn backward(t: Tensor0D<OwnedTape>) -> Gradients {
+    ...
 }
 ```
 
