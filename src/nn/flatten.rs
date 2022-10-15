@@ -1,5 +1,6 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
+use crate::gradients::*;
 use crate::prelude::*;
+#[cfg(feature = "nightly")]
 use crate::{Assert, ConstTrue};
 
 /// **Requires Nightly** Flattens 3d tensors to 1d, and 4d tensors to 2d.
@@ -23,6 +24,7 @@ impl CanUpdateWithGradients for FlattenImage {
     fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
 }
 
+#[cfg(feature = "nightly")]
 impl<const M: usize, const N: usize, const O: usize, H: Tape> Module<Tensor3D<M, N, O, H>>
     for FlattenImage
 where
@@ -34,6 +36,7 @@ where
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<const M: usize, const N: usize, const O: usize, const P: usize, H: Tape>
     Module<Tensor4D<M, N, O, P, H>> for FlattenImage
 where
@@ -55,6 +58,7 @@ where
     }
 }
 
+#[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
     use super::*;
