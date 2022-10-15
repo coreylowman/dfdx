@@ -108,6 +108,9 @@ mod npz;
 #[cfg(feature = "numpy")]
 pub use npz::*;
 
+#[cfg(feature = "numpy")]
+mod npz_impls;
+
 #[cfg(feature = "nightly")]
 mod transformer;
 

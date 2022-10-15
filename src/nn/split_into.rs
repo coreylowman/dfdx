@@ -32,26 +32,6 @@ impl<T: ResetParams> ResetParams for SplitInto<T> {
     }
 }
 
-#[cfg(feature = "numpy")]
-impl<T: SaveToNpz> SaveToNpz for SplitInto<T> {
-    fn write<W>(&self, p: &str, w: &mut zip::ZipWriter<W>) -> zip::result::ZipResult<()>
-    where
-        W: std::io::Write + std::io::Seek,
-    {
-        self.0.write(p, w)
-    }
-}
-
-#[cfg(feature = "numpy")]
-impl<T: LoadFromNpz> LoadFromNpz for SplitInto<T> {
-    fn read<R>(&mut self, p: &str, r: &mut zip::ZipArchive<R>) -> Result<(), NpzError>
-    where
-        R: std::io::Read + std::io::Seek,
-    {
-        self.0.read(p, r)
-    }
-}
-
 macro_rules! tuple_impls {
     ([$($heads:ident),+] $tail:ident) => {
 impl<

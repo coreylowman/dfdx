@@ -3,13 +3,6 @@ use crate::arrays::{HasArrayData, HasAxes};
 use crate::devices::{Cpu, FillElements};
 use crate::{gradients::*, tensor::*, tensor_ops::*};
 
-#[cfg(feature = "numpy")]
-use super::{npz_fread, npz_fwrite, LoadFromNpz, NpzError, SaveToNpz};
-#[cfg(feature = "numpy")]
-use std::io::{Read, Seek, Write};
-#[cfg(feature = "numpy")]
-use zip::{result::ZipResult, ZipArchive};
-
 /// Batch normalization for images as described in
 /// [Batch Normalization: Accelerating Deep Network Training
 /// by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167)
@@ -195,36 +188,11 @@ impl<const C: usize> CanUpdateWithGradients for BatchNorm2D<C> {
     }
 }
 
-#[cfg(feature = "numpy")]
-impl<const C: usize> SaveToNpz for BatchNorm2D<C> {
-    fn write<W: Write + Seek>(&self, p: &str, w: &mut zip::ZipWriter<W>) -> ZipResult<()> {
-        npz_fwrite(w, format!("{p}scale.npy"), self.scale.data())?;
-        npz_fwrite(w, format!("{p}bias.npy"), self.bias.data())?;
-        npz_fwrite(w, format!("{p}running_mean.npy"), self.running_mean.data())?;
-        npz_fwrite(w, format!("{p}running_var.npy"), self.running_var.data())?;
-        Ok(())
-    }
-}
-
-#[cfg(feature = "numpy")]
-impl<const C: usize> LoadFromNpz for BatchNorm2D<C> {
-    fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        npz_fread(r, format!("{p}scale.npy"), self.scale.mut_data())?;
-        npz_fread(r, format!("{p}bias.npy"), self.bias.mut_data())?;
-        let mean = self.running_mean.mut_data();
-        npz_fread(r, format!("{p}running_mean.npy"), mean)?;
-        let var = self.running_var.mut_data();
-        npz_fread(r, format!("{p}running_var.npy"), var)?;
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::tests::SimpleGradients, tests::assert_close};
+    use crate::tests::assert_close;
     use rand::{rngs::StdRng, SeedableRng};
-    use tempfile::NamedTempFile;
 
     #[test]
     fn test_batchnorm2d_3d_forward_mut() {
@@ -327,36 +295,5 @@ mod tests {
                 [[0.73018146, 0.3243845], [-1.1041277, 0.38778353]],
             ],
         );
-    }
-
-    #[cfg(feature = "numpy")]
-    #[test]
-    fn test_batchnorm2d_save_load() {
-        let mut rng = StdRng::seed_from_u64(13);
-        let mut bn: BatchNorm2D<3> = Default::default();
-
-        assert_eq!(bn.running_mean.data(), &[0.0; 3]);
-        assert_eq!(bn.running_var.data(), &[1.0; 3]);
-        assert_eq!(bn.scale.data(), &[1.0; 3]);
-        assert_eq!(bn.bias.data(), &[0.0; 3]);
-
-        let x1: Tensor3D<3, 4, 5> = TensorCreator::randn(&mut rng);
-        let g = backward(bn.forward_mut(x1.trace()).exp().mean());
-        bn.update(&mut SimpleGradients(g), &mut Default::default());
-
-        assert_ne!(bn.running_mean.data(), &[0.0; 3]);
-        assert_ne!(bn.running_var.data(), &[1.0; 3]);
-        assert_ne!(bn.scale.data(), &[1.0; 3]);
-        assert_ne!(bn.bias.data(), &[0.0; 3]);
-
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(bn.save(file.path().to_str().unwrap()).is_ok());
-
-        let mut loaded: BatchNorm2D<3> = Default::default();
-        assert!(loaded.load(file.path().to_str().unwrap()).is_ok());
-        assert_eq!(loaded.scale.data(), bn.scale.data());
-        assert_eq!(loaded.bias.data(), bn.bias.data());
-        assert_eq!(loaded.running_mean.data(), bn.running_mean.data());
-        assert_eq!(loaded.running_var.data(), bn.running_var.data());
     }
 }

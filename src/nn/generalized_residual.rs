@@ -1,9 +1,5 @@
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
-#[cfg(feature = "numpy")]
-use std::io::{Read, Seek, Write};
-#[cfg(feature = "numpy")]
-use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -91,24 +87,6 @@ where
     }
 }
 
-#[cfg(feature = "numpy")]
-impl<F: SaveToNpz, R: SaveToNpz> SaveToNpz for GeneralizedResidual<F, R> {
-    /// Pass through to `F`/`R`'s [SaveToNpz].
-    fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        self.f.write(&format!("{p}.f"), w)?;
-        self.r.write(&format!("{p}.r"), w)
-    }
-}
-
-#[cfg(feature = "numpy")]
-impl<F: LoadFromNpz, R: LoadFromNpz> LoadFromNpz for GeneralizedResidual<F, R> {
-    /// Pass through to `F`/`R`'s [LoadFromNpz].
-    fn read<Z: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<Z>) -> Result<(), NpzError> {
-        self.f.read(&format!("{p}.f"), r)?;
-        self.r.read(&format!("{p}.r"), r)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -150,35 +128,5 @@ mod tests {
         assert_close(g.ref_gradient(&model.f.bias), &[0.5; 2]);
         assert_close(g.ref_gradient(&model.r.weight), &[[-0.025407, 0.155879]; 2]);
         assert_close(g.ref_gradient(&model.r.bias), &[0.5; 2]);
-    }
-
-    #[cfg(feature = "numpy")]
-    mod numpy_tests {
-        use super::*;
-        use tempfile::NamedTempFile;
-
-        #[test]
-        fn test_save_load_generalized_residual() {
-            let mut rng = StdRng::seed_from_u64(0);
-            let mut saved_model: GeneralizedResidual<Linear<5, 3>, Linear<5, 3>> =
-                Default::default();
-            saved_model.reset_params(&mut rng);
-
-            let file = NamedTempFile::new().expect("failed to create tempfile");
-            assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
-
-            let mut loaded_model: GeneralizedResidual<Linear<5, 3>, Linear<5, 3>> =
-                Default::default();
-            assert_ne!(loaded_model.f.weight.data(), saved_model.f.weight.data());
-            assert_ne!(loaded_model.f.bias.data(), saved_model.f.bias.data());
-            assert_ne!(loaded_model.r.weight.data(), saved_model.r.weight.data());
-            assert_ne!(loaded_model.r.bias.data(), saved_model.r.bias.data());
-
-            assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
-            assert_eq!(loaded_model.f.weight.data(), saved_model.f.weight.data());
-            assert_eq!(loaded_model.f.bias.data(), saved_model.f.bias.data());
-            assert_eq!(loaded_model.r.weight.data(), saved_model.r.weight.data());
-            assert_eq!(loaded_model.r.bias.data(), saved_model.r.bias.data());
-        }
     }
 }

@@ -1,9 +1,5 @@
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
-#[cfg(feature = "numpy")]
-use std::io::{Read, Seek, Write};
-#[cfg(feature = "numpy")]
-use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// **Requires Nightly** A transformer encoder.
 ///
@@ -41,10 +37,10 @@ pub struct TransformerEncoderBlock<
     const NUM_HEADS: usize,
     const FF_DIM: usize,
 > {
-    self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS>,
-    norm1: LayerNorm1D<MODEL_DIM>,
-    ff: FF<MODEL_DIM, FF_DIM>,
-    norm2: LayerNorm1D<MODEL_DIM>,
+    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS>,
+    pub norm1: LayerNorm1D<MODEL_DIM>,
+    pub ff: FF<MODEL_DIM, FF_DIM>,
+    pub norm2: LayerNorm1D<MODEL_DIM>,
 }
 
 type FF<const M: usize, const F: usize> = Residual<(Linear<M, F>, ReLU, Linear<F, M>)>;
@@ -104,34 +100,6 @@ where
 
     fn forward_mut(&mut self, t: T) -> Self::Output {
         self.forward(t)
-    }
-}
-
-#[cfg(feature = "numpy")]
-impl<const M: usize, const H: usize, const F: usize> SaveToNpz
-    for TransformerEncoderBlock<M, H, F>
-{
-    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        self.self_attn.write(&format!("{pre}self_attn."), w)?;
-        self.norm1.write(&format!("{pre}norm1."), w)?;
-        self.norm2.write(&format!("{pre}norm2."), w)?;
-        self.ff.0 .0.write(&format!("{pre}linear1."), w)?;
-        self.ff.0 .2.write(&format!("{pre}linear2."), w)?;
-        Ok(())
-    }
-}
-
-#[cfg(feature = "numpy")]
-impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
-    for TransformerEncoderBlock<M, H, F>
-{
-    fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        self.self_attn.read(&format!("{pre}self_attn."), r)?;
-        self.norm1.read(&format!("{pre}norm1."), r)?;
-        self.norm2.read(&format!("{pre}norm2."), r)?;
-        self.ff.0 .0.read(&format!("{pre}linear1."), r)?;
-        self.ff.0 .2.read(&format!("{pre}linear2."), r)?;
-        Ok(())
     }
 }
 

@@ -53,38 +53,6 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> CanUpdateWi
     }
 }
 
-#[cfg(feature = "numpy")]
-impl<const M: usize, const H: usize, const K: usize, const V: usize> SaveToNpz
-    for MultiHeadAttention<M, H, K, V>
-{
-    fn write<W>(&self, pre: &str, w: &mut zip::ZipWriter<W>) -> zip::result::ZipResult<()>
-    where
-        W: std::io::Write + std::io::Seek,
-    {
-        self.w_q.write(&format!("{pre}w_q."), w)?;
-        self.w_k.write(&format!("{pre}w_k."), w)?;
-        self.w_v.write(&format!("{pre}w_v."), w)?;
-        self.w_o.write(&format!("{pre}w_o."), w)?;
-        Ok(())
-    }
-}
-
-#[cfg(feature = "numpy")]
-impl<const M: usize, const H: usize, const K: usize, const V: usize> LoadFromNpz
-    for MultiHeadAttention<M, H, K, V>
-{
-    fn read<R>(&mut self, pre: &str, r: &mut zip::ZipArchive<R>) -> Result<(), NpzError>
-    where
-        R: std::io::Read + std::io::Seek,
-    {
-        self.w_q.read(&format!("{pre}w_q."), r)?;
-        self.w_k.read(&format!("{pre}w_k."), r)?;
-        self.w_v.read(&format!("{pre}w_v."), r)?;
-        self.w_o.read(&format!("{pre}w_o."), r)?;
-        Ok(())
-    }
-}
-
 impl<
         const M: usize,
         const H: usize,
@@ -217,7 +185,6 @@ mod tests {
     use super::*;
     use crate::{nn::tests::SimpleGradients, tests::assert_close};
     use rand::{rngs::StdRng, thread_rng, SeedableRng};
-    use tempfile::NamedTempFile;
 
     #[test]
     fn test_mha_unbatched() {
@@ -326,28 +293,5 @@ mod tests {
         let mut unused = Default::default();
         mha.update(&mut g, &mut unused);
         assert!(unused.is_empty());
-    }
-
-    #[cfg(feature = "numpy")]
-    #[test]
-    fn test_save_and_load() {
-        let mut rng = thread_rng();
-
-        let mut saved: MultiHeadAttention<12, 4> = Default::default();
-        saved.reset_params(&mut rng);
-
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        saved.save(file.path()).expect("");
-
-        let mut loaded: MultiHeadAttention<12, 4> = Default::default();
-        loaded.load(file.path()).expect("");
-
-        let q: Tensor3D<2, 3, 12> = TensorCreator::randn(&mut rng);
-        let k: Tensor3D<2, 4, 12> = TensorCreator::randn(&mut rng);
-        let v: Tensor3D<2, 4, 12> = TensorCreator::randn(&mut rng);
-        let y1: Tensor3D<2, 3, 12, _> = saved.forward((q.clone(), k.clone(), v.clone()));
-        let y2: Tensor3D<2, 3, 12, _> = loaded.forward((q.clone(), k.clone(), v.clone()));
-
-        assert_eq!(y1.data(), y2.data());
     }
 }

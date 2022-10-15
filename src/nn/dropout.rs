@@ -68,11 +68,6 @@ impl<const N: usize> ResetParams for DropoutOneIn<N> {
     fn reset_params<R: Rng>(&mut self, _: &mut R) {}
 }
 
-#[cfg(feature = "numpy")]
-impl<const N: usize> SaveToNpz for DropoutOneIn<N> {}
-#[cfg(feature = "numpy")]
-impl<const N: usize> LoadFromNpz for DropoutOneIn<N> {}
-
 impl<const N: usize, T: Tensor<Dtype = f32, Tape = NoneTape>> Module<T> for DropoutOneIn<N> {
     type Output = T;
     /// Does nothing
@@ -167,11 +162,6 @@ impl ResetParams for Dropout {
     /// Does nothing.
     fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {}
 }
-
-#[cfg(feature = "numpy")]
-impl SaveToNpz for Dropout {}
-#[cfg(feature = "numpy")]
-impl LoadFromNpz for Dropout {}
 
 impl<T: Tensor<Dtype = f32, Tape = NoneTape>> Module<T> for Dropout {
     type Output = T;

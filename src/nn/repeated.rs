@@ -1,9 +1,5 @@
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
-#[cfg(feature = "numpy")]
-use std::io::{Read, Seek, Write};
-#[cfg(feature = "numpy")]
-use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///
@@ -53,39 +49,6 @@ impl<T: CanUpdateWithGradients, const N: usize> CanUpdateWithGradients for Repea
         for i in 0..N {
             self.modules[i].update(grads, unused);
         }
-    }
-}
-
-#[cfg(feature = "numpy")]
-impl<T: SaveToNpz, const N: usize> SaveToNpz for Repeated<T, N> {
-    /// Calls `SaveToNpz::write(self.modules[i], ...)` on each sub module. See [SaveToNpz].
-    ///
-    /// E.g. for a two items with `base == ""`, this will call:
-    /// 1. `self.modules[0].write("0.", w)`
-    /// 2. `self.modules[1].write("1.", w)`
-    fn write<W: Write + Seek>(&self, base: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        for i in 0..N {
-            self.modules[i].write(&format!("{base}{i}."), w)?;
-        }
-        Ok(())
-    }
-}
-
-#[cfg(feature = "numpy")]
-impl<T: LoadFromNpz, const N: usize> LoadFromNpz for Repeated<T, N> {
-    /// Calls `LoadFromNpz::read(self.modules[i], ...)` on each sub module. See [LoadFromNpz].
-    ///
-    /// E.g. for a two items with `base == ""`, this will call:
-    /// 1. `self.modules[0].read("0.", r)`
-    /// 2. `self.modules[1].read("1.", r)`
-    fn read<R>(&mut self, base: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError>
-    where
-        R: Read + Seek,
-    {
-        for i in 0..N {
-            self.modules[i].read(&format!("{base}{i}."), r)?;
-        }
-        Ok(())
     }
 }
 
@@ -154,64 +117,6 @@ mod tests {
         let x = m.modules[4].forward(x);
 
         assert_eq!(x.data(), m.forward_mut(Tensor1D::zeros()).data());
-    }
-
-    #[cfg(feature = "numpy")]
-    mod numpy_tests {
-        use super::*;
-        use std::fs::File;
-        use tempfile::NamedTempFile;
-
-        #[test]
-        fn test_save_repeated() {
-            let model: Repeated<Linear<3, 3>, 4> = Default::default();
-            let file = NamedTempFile::new().expect("failed to create tempfile");
-            model
-                .save(file.path().to_str().unwrap())
-                .expect("failed to save model");
-            let f = File::open(file.path()).expect("failed to open resulting file");
-            let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
-            let mut names = zip.file_names().collect::<Vec<&str>>();
-            names.sort_unstable();
-            assert_eq!(
-                &names,
-                &[
-                    "0.bias.npy",
-                    "0.weight.npy",
-                    "1.bias.npy",
-                    "1.weight.npy",
-                    "2.bias.npy",
-                    "2.weight.npy",
-                    "3.bias.npy",
-                    "3.weight.npy",
-                ]
-            );
-        }
-
-        #[test]
-        fn test_load_repeated() {
-            type Model = Repeated<Linear<3, 3>, 4>;
-
-            let mut rng = StdRng::seed_from_u64(0);
-            let mut saved_model: Model = Default::default();
-            saved_model.reset_params(&mut rng);
-
-            let file = NamedTempFile::new().expect("failed to create tempfile");
-            assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
-
-            let mut loaded_model: Model = Default::default();
-            assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
-            for i in 0..4 {
-                assert_eq!(
-                    loaded_model.modules[i].weight.data(),
-                    saved_model.modules[i].weight.data()
-                );
-                assert_eq!(
-                    loaded_model.modules[i].bias.data(),
-                    saved_model.modules[i].bias.data()
-                );
-            }
-        }
     }
 
     #[test]

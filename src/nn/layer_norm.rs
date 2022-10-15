@@ -2,10 +2,6 @@ use crate::arrays::Axis;
 use crate::devices::{Cpu, FillElements};
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
 use crate::prelude::*;
-#[cfg(feature = "numpy")]
-use std::io::{Read, Seek, Write};
-#[cfg(feature = "numpy")]
-use zip::{result::ZipResult, ZipArchive};
 
 /// Implements layer normalization as described in [Layer Normalization](https://arxiv.org/abs/1607.06450).
 ///
@@ -116,28 +112,6 @@ where
     }
 }
 
-#[cfg(feature = "numpy")]
-impl<const M: usize> SaveToNpz for LayerNorm1D<M> {
-    /// Saves [Self::gamma] to `{pre}gamma.npy` and [Self::beta] to `{pre}beta.npy`
-    /// using [npz_fwrite()].
-    fn write<W: Write + Seek>(&self, pre: &str, w: &mut zip::ZipWriter<W>) -> ZipResult<()> {
-        npz_fwrite(w, format!("{pre}gamma.npy"), self.gamma.data())?;
-        npz_fwrite(w, format!("{pre}beta.npy"), self.beta.data())?;
-        Ok(())
-    }
-}
-
-#[cfg(feature = "numpy")]
-impl<const M: usize> LoadFromNpz for LayerNorm1D<M> {
-    /// Reads [Self::gamma] from `{p}gamma.npy` and [Self::beta] from `{p}beta.npy`
-    /// using [npz_fread()].
-    fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        npz_fread(r, format!("{p}gamma.npy"), self.gamma.mut_data())?;
-        npz_fread(r, format!("{p}beta.npy"), self.beta.mut_data())?;
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -204,62 +178,6 @@ mod tests {
         assert_close(g.ref_gradient(&m.beta), &[0.2; 5]);
     }
 
-    #[cfg(feature = "numpy")]
-    mod numpy_tests {
-        use super::*;
-        use std::fs::File;
-        use tempfile::NamedTempFile;
-
-        #[test]
-        fn test_save_layer_norm() {
-            let model: LayerNorm1D<13> = Default::default();
-            let file = NamedTempFile::new().expect("failed to create tempfile");
-            model
-                .save(file.path().to_str().unwrap())
-                .expect("failed to save model");
-            let f = File::open(file.path()).expect("failed to open resulting file");
-            let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
-            let mut names = zip.file_names().collect::<Vec<&str>>();
-            names.sort_unstable();
-            assert_eq!(&names, &["beta.npy", "gamma.npy",]);
-        }
-
-        #[test]
-        fn test_save_layer_norm_tuple() {
-            let model: (LayerNorm1D<5>, LayerNorm1D<13>) = Default::default();
-            let file = NamedTempFile::new().expect("failed to create tempfile");
-            model
-                .save(file.path().to_str().unwrap())
-                .expect("failed to save model");
-            let f = File::open(file.path()).expect("failed to open resulting file");
-            let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
-            let mut names = zip.file_names().collect::<Vec<&str>>();
-            names.sort_unstable();
-            assert_eq!(
-                &names,
-                &["0.beta.npy", "0.gamma.npy", "1.beta.npy", "1.gamma.npy"]
-            );
-        }
-
-        #[test]
-        fn test_load_layer_norm() {
-            let mut rng = StdRng::seed_from_u64(0);
-            let mut saved_model: LayerNorm1D<13> = Default::default();
-            saved_model.gamma.randomize(&mut rng, &Standard);
-            saved_model.beta.randomize(&mut rng, &Standard);
-
-            let file = NamedTempFile::new().expect("failed to create tempfile");
-            assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
-
-            let mut loaded_model: LayerNorm1D<13> = Default::default();
-            assert!(loaded_model.gamma.data() != saved_model.gamma.data());
-            assert!(loaded_model.beta.data() != saved_model.beta.data());
-
-            assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
-            assert_eq!(loaded_model.gamma.data(), saved_model.gamma.data());
-            assert_eq!(loaded_model.beta.data(), saved_model.beta.data());
-        }
-    }
     #[test]
     fn test_layer_norm_missing_gradients() {
         let mut model: LayerNorm1D<5> = Default::default();
