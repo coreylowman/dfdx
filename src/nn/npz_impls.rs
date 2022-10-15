@@ -295,7 +295,7 @@ empty_npz_impl!(Dropout);
 empty_npz_impl!(AvgPoolGlobal);
 empty_npz_impl!(MaxPoolGlobal);
 empty_npz_impl!(MinPoolGlobal);
-empty_npz_impl!(FlattenImage);
+empty_npz_impl!(Flatten2D);
 
 impl<const N: usize> SaveToNpz for DropoutOneIn<N> {}
 impl<const N: usize> LoadFromNpz for DropoutOneIn<N> {}

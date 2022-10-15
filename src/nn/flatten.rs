@@ -8,25 +8,23 @@ use crate::{Assert, ConstTrue};
 /// Specifically:
 /// ```ignore
 /// # use dfdx::prelude::*;
-/// let _: Tensor1D<{3 * 5 * 7}> = FlattenImage.forward(Tensor3D::<3, 5, 7>::zeros());
-/// let _: Tensor2D<8, {3 * 5 * 7}> = FlattenImage.forward(Tensor4D::<8, 3, 5, 7>::zeros());
+/// let _: Tensor1D<{3 * 5 * 7}> = Flatten2D.forward(Tensor3D::<3, 5, 7>::zeros());
+/// let _: Tensor2D<8, {3 * 5 * 7}> = Flatten2D.forward(Tensor4D::<8, 3, 5, 7>::zeros());
 /// ```
 #[derive(Default, Clone, Copy)]
-pub struct FlattenImage;
+pub struct Flatten2D;
 
-impl ResetParams for FlattenImage {
-    /// Does nothing.
+impl ResetParams for Flatten2D {
     fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {}
 }
 
-impl CanUpdateWithGradients for FlattenImage {
-    /// Does nothing.
+impl CanUpdateWithGradients for Flatten2D {
     fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
 }
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const N: usize, const O: usize, H: Tape> Module<Tensor3D<M, N, O, H>>
-    for FlattenImage
+    for Flatten2D
 where
     Assert<{ M * N * O == (M * N * O) }>: ConstTrue,
 {
@@ -38,7 +36,7 @@ where
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const N: usize, const O: usize, const P: usize, H: Tape>
-    Module<Tensor4D<M, N, O, P, H>> for FlattenImage
+    Module<Tensor4D<M, N, O, P, H>> for Flatten2D
 where
     Assert<{ M * N * O * P == M * (N * O * P) }>: ConstTrue,
 {
@@ -48,7 +46,7 @@ where
     }
 }
 
-impl<T> ModuleMut<T> for FlattenImage
+impl<T> ModuleMut<T> for Flatten2D
 where
     Self: Module<T>,
 {
@@ -65,7 +63,7 @@ mod tests {
 
     #[test]
     fn test_flattens() {
-        let _: Tensor1D<{ 15 * 10 * 5 }> = FlattenImage.forward_mut(Tensor3D::<15, 10, 5>::zeros());
-        let _: Tensor2D<5, 24> = FlattenImage.forward_mut(Tensor4D::<5, 4, 3, 2>::zeros());
+        let _: Tensor1D<{ 15 * 10 * 5 }> = Flatten2D.forward_mut(Tensor3D::<15, 10, 5>::zeros());
+        let _: Tensor2D<5, 24> = Flatten2D.forward_mut(Tensor4D::<5, 4, 3, 2>::zeros());
     }
 }
