@@ -48,30 +48,6 @@ to do download/install anything for this to work!**
 
 To link to the `Intel MKL` libraries (assuming you installed it already) use the `intel-mkl` feature.
 
-Linking is currently tested & verified on the following platforms:
-
-- [x] Windows
-- [x] Linux
-- [x] macOS
-
-Example:
-```toml
-# dynamic link to lp64 version of mkl with OpenMP threading libraries
-# this will auto enable the "cblas" feature"
-dfdx = { version = "...", features = ["intel-mkl"] }
-```
-
-See [build.rs](build.rs) for more details.
-
-[1] For those familiar with Intel MKL, you may notice lp64 and ilp64 are not listed. These are chosen based on the target_pointer_width
-    value as detailed in build.rs.
-
-#### Installing Intel MKL libraries
-
-You will need to install Intel MKL on your own from [this page](https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit-download.html). It's pretty easy!
-
-[build.rs](build.rs) will fail helpfully if you don't have the correct path/environment variables.
-
 ## Features
 
 1. 👌 Simple Neural Networks API, completely type checked at compile time. See [examples/05-optim.rs](examples/05-optim.rs)

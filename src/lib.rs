@@ -97,6 +97,7 @@
 pub mod arrays;
 pub mod data;
 pub mod devices;
+pub mod feature_flags;
 pub mod gradients;
 pub mod losses;
 pub mod nn;
@@ -117,14 +118,6 @@ pub mod prelude {
     pub use crate::tensor::*;
     pub use crate::tensor_ops::*;
 }
-
-#[cfg(not(feature = "intel-mkl"))]
-/// The library used for BLAS. Configure with crate features.
-pub const BLAS_LIB: &str = "matrix-multiply";
-
-#[cfg(feature = "intel-mkl")]
-/// The library used for BLAS. Configure with crate features.
-pub const BLAS_LIB: &str = "intel-mkl";
 
 /// Sets a CPU `sse` flag to flush denormal floating point numbers to zero. The opposite of this is [keep_denormals()].
 ///
