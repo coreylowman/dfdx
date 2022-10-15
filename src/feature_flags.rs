@@ -1,5 +1,15 @@
 //! Information about the available feature flags
 //!
+//! # "std" **Default flag**
+//!
+//! Enables usage of the standard library. Otherwise [no_std_compat](https://crates.io/crates/no-std-compat)
+//! is used.
+//!
+//! Note that allocations are necessary, so the no_std_compat dependency looks like:
+//! ```toml
+//! no-std-compat = { version = "0.4.1", features = [ "alloc", "compat_hash" ] }
+//! ```
+//!
 //! # "intel-mkl"
 //!
 //! Enables using the `Intel MKL` libraries (assuming you installed it already) for matrix multiplication.
@@ -24,7 +34,7 @@
 //!
 //! `build.rs` will fail helpfully if you don't have the correct path/environment variables.
 //!
-//! # "numpy"
+//! # "numpy" **Default flag**
 //!
 //! Enables saving and loading arrays to .npy files, and saving and loading nn to .npz files.
 //!

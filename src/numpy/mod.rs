@@ -1,6 +1,11 @@
 //! Provides some generic functions to load & save Nd arrays in the [.npy](https://numpy.org/devdocs/reference/generated/numpy.lib.format.html)
 //! format. See [load()] and [save()]
 
+use std::{
+    string::{String, ToString},
+    vec::Vec,
+};
+
 mod load;
 mod save;
 

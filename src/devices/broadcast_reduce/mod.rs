@@ -17,12 +17,14 @@
 mod accumulator;
 mod indexing;
 
+pub use accumulator::*;
+
 use super::allocate::AllocateZeros;
 use super::fill::FillElements;
 use super::Cpu;
 use crate::arrays::{AllAxes, Axes2, Axes3, Axes4, Axis, CountElements};
-pub use accumulator::*;
 use indexing::{BroadcastMut, BroadcastRef};
+use std::boxed::Box;
 
 /// Device level broadcasts & reduces of type `T` along axes `Axes`.
 pub trait DeviceReduce<T: CountElements, Axes>:

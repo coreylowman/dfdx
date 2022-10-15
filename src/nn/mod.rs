@@ -123,6 +123,7 @@ mod npz_impls;
 mod tests {
     use crate::gradients::{GradientProvider, Gradients};
     use crate::unique_id::HasUniqueId;
+    use std::boxed::Box;
 
     #[derive(Default)]
     pub struct SimpleGradients(pub Gradients);

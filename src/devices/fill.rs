@@ -1,5 +1,6 @@
 use super::{AllocateZeros, Cpu};
 use crate::arrays::CountElements;
+use std::boxed::Box;
 
 /// Fills all elements with the specified function
 pub trait FillElements<T: CountElements>: Sized + AllocateZeros {

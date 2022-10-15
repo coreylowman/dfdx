@@ -3,6 +3,7 @@ use std::error::Error;
 use std::{
     io::{BufReader, BufWriter, Read, Seek, Write},
     path::Path,
+    string::String,
 };
 use zip::{
     result::{ZipError, ZipResult},

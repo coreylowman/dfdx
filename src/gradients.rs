@@ -1,6 +1,7 @@
 //! Implementations of [GradientTape] and generic Nd array containers via [Gradients].
 
 use std::collections::HashMap;
+use std::{boxed::Box, vec::Vec};
 
 use crate::arrays::HasArrayType;
 use crate::devices::{AllocateZeros, HasDevice};

@@ -1,10 +1,13 @@
 //! Provides some generic functions to save Nd arrays in the .npy format.
 
 use super::*;
+use std::vec;
 use std::{
     fs::File,
     io::{BufReader, Read},
     path::Path,
+    string::String,
+    vec::Vec,
 };
 
 /// Loads data from a .npy file. This calls [read()].

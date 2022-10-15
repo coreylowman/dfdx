@@ -3,7 +3,7 @@ use crate::devices::ForEachElement;
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, Gradients};
 use crate::prelude::*;
 use crate::unique_id::HasUniqueId;
-use std::marker::PhantomData;
+use std::{marker::PhantomData, boxed::Box};
 
 /// An implementation of the Adam optimizer from
 /// [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980)

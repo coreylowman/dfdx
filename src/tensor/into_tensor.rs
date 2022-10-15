@@ -1,4 +1,5 @@
 use super::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, TensorCreator};
+use std::boxed::Box;
 
 /// Creates a tensor using the data based in. The return type is based
 /// on the data you pass in. See [IntoTensor] for implementations.

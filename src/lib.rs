@@ -1,6 +1,3 @@
-#![allow(incomplete_features)]
-#![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
-
 //! Ergonomics & safety focused deep learning in Rust. Main features include:
 //! 1. Const generic tensor library with tensors up to 4d!
 //! 2. A large library of tensor operations (matrix multiplication, arithmetic, activation functions, etc).
@@ -93,6 +90,13 @@
 //! // pass the gradients & the model into the optimizer's update method
 //! opt.update(&mut model, gradients);
 //! ```
+
+#![no_std]
+#![allow(incomplete_features)]
+#![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
+
+extern crate alloc;
+extern crate no_std_compat as std;
 
 pub mod arrays;
 pub mod data;

@@ -25,6 +25,7 @@ mod pool2d;
 #[cfg(feature = "nightly")]
 pub use pool2d::*;
 
+use std::boxed::Box;
 use std::ops::*;
 
 /// The CPU device
