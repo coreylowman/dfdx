@@ -151,6 +151,7 @@ where
     }
 }
 
+#[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
     use super::*;

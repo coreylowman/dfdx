@@ -25,7 +25,6 @@ impl<const C: usize> LoadFromNpz for BatchNorm2D<C> {
     }
 }
 
-#[cfg(feature = "nightly")]
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize> SaveToNpz
     for Conv2D<I, O, K, S, P>
 {
@@ -36,7 +35,6 @@ impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: us
     }
 }
 
-#[cfg(feature = "nightly")]
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize> LoadFromNpz
     for Conv2D<I, O, K, S, P>
 {
@@ -159,7 +157,6 @@ impl<T: LoadFromNpz> LoadFromNpz for SplitInto<T> {
     }
 }
 
-#[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, const L: usize> SaveToNpz
     for TransformerDecoder<M, H, F, L>
 {
@@ -168,7 +165,6 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize> SaveToNpz
     }
 }
 
-#[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize> SaveToNpz
     for TransformerDecoderBlock<M, H, F>
 {
@@ -184,7 +180,6 @@ impl<const M: usize, const H: usize, const F: usize> SaveToNpz
     }
 }
 
-#[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
     for TransformerDecoderBlock<M, H, F>
 {
@@ -200,7 +195,6 @@ impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
     }
 }
 
-#[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, const L: usize> LoadFromNpz
     for TransformerDecoder<M, H, F, L>
 {
@@ -209,7 +203,6 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize> LoadFromNpz
     }
 }
 
-#[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize> SaveToNpz
     for TransformerEncoderBlock<M, H, F>
 {
@@ -223,7 +216,6 @@ impl<const M: usize, const H: usize, const F: usize> SaveToNpz
     }
 }
 
-#[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
     for TransformerEncoderBlock<M, H, F>
 {
@@ -237,7 +229,6 @@ impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
     }
 }
 
-#[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const K: usize, const V: usize> SaveToNpz
     for MultiHeadAttention<M, H, K, V>
 {
@@ -250,7 +241,6 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> SaveToNpz
     }
 }
 
-#[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const K: usize, const V: usize> LoadFromNpz
     for MultiHeadAttention<M, H, K, V>
 {
@@ -263,7 +253,6 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> LoadFromNpz
     }
 }
 
-#[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> SaveToNpz
     for Transformer<M, H, E, D, F>
 {
@@ -274,7 +263,6 @@ impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: us
     }
 }
 
-#[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> LoadFromNpz
     for Transformer<M, H, E, D, F>
 {
@@ -307,25 +295,16 @@ empty_npz_impl!(Dropout);
 empty_npz_impl!(AvgPoolGlobal);
 empty_npz_impl!(MaxPoolGlobal);
 empty_npz_impl!(MinPoolGlobal);
-#[cfg(feature = "nightly")]
 empty_npz_impl!(FlattenImage);
 
 impl<const N: usize> SaveToNpz for DropoutOneIn<N> {}
 impl<const N: usize> LoadFromNpz for DropoutOneIn<N> {}
 
-#[cfg(feature = "nightly")]
 impl<const K: usize, const S: usize, const P: usize> SaveToNpz for AvgPool2D<K, S, P> {}
-#[cfg(feature = "nightly")]
 impl<const K: usize, const S: usize, const P: usize> LoadFromNpz for AvgPool2D<K, S, P> {}
-
-#[cfg(feature = "nightly")]
 impl<const K: usize, const S: usize, const P: usize> SaveToNpz for MaxPool2D<K, S, P> {}
-#[cfg(feature = "nightly")]
 impl<const K: usize, const S: usize, const P: usize> LoadFromNpz for MaxPool2D<K, S, P> {}
-
-#[cfg(feature = "nightly")]
 impl<const K: usize, const S: usize, const P: usize> SaveToNpz for MinPool2D<K, S, P> {}
-#[cfg(feature = "nightly")]
 impl<const K: usize, const S: usize, const P: usize> LoadFromNpz for MinPool2D<K, S, P> {}
 
 #[cfg(test)]

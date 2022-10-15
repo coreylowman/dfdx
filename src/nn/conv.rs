@@ -1,4 +1,4 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
+use crate::gradients::*;
 use crate::prelude::*;
 use rand::Rng;
 use rand_distr::Uniform;
@@ -16,10 +16,12 @@ use rand_distr::Uniform;
 ///
 /// Examples:
 /// ```rust
-/// #![feature(generic_const_exprs)]
+/// #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 /// # use dfdx::prelude::*;
 /// let m: Conv2D<16, 33, 3> = Default::default();
+/// #[cfg(feature = "nightly")]
 /// let _: Tensor3D<33, 30, 62> = m.forward(Tensor3D::<16, 32, 64>::zeros());
+/// #[cfg(feature = "nightly")]
 /// let _: Tensor4D<2, 33, 13, 12> = m.forward(Tensor4D::<2, 16, 15, 14>::zeros());
 /// ```
 #[derive(Default, Debug, Clone)]
@@ -55,6 +57,7 @@ impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: us
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<
         T: Tape,
         const I: usize,
@@ -76,6 +79,7 @@ where
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<
         T: Tape,
         const B: usize,
@@ -109,6 +113,7 @@ where
     }
 }
 
+#[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
     use super::*;

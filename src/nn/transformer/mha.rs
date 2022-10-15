@@ -1,5 +1,6 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
+use crate::gradients::*;
 use crate::prelude::*;
+#[cfg(feature = "nightly")]
 use crate::{Assert, ConstTrue};
 use rand::Rng;
 
@@ -53,6 +54,7 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> CanUpdateWi
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<
         const M: usize,
         const H: usize,
@@ -106,6 +108,7 @@ where
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<
         const M: usize,
         const H: usize,
@@ -180,6 +183,7 @@ where
     }
 }
 
+#[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
     use super::*;

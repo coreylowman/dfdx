@@ -1,5 +1,6 @@
 use super::{Module, ModuleMut, ResetParams};
 use crate::gradients::*;
+#[cfg(feature = "nightly")]
 use crate::tensor::*;
 use rand::Rng;
 
@@ -45,6 +46,7 @@ macro_rules! impl_pools {
             fn reset_params<R: Rng>(&mut self, _: &mut R) {}
         }
 
+        #[cfg(feature = "nightly")]
         impl<
                 const K: usize,
                 const S: usize,
@@ -65,6 +67,7 @@ macro_rules! impl_pools {
             }
         }
 
+        #[cfg(feature = "nightly")]
         impl<
                 const K: usize,
                 const S: usize,
@@ -103,6 +106,7 @@ impl_pools!(AvgPool2D, avg2d);
 impl_pools!(MaxPool2D, max2d);
 impl_pools!(MinPool2D, min2d);
 
+#[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
     use super::*;

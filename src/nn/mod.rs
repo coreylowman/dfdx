@@ -78,29 +78,37 @@
 
 mod activations;
 mod batchnorm2d;
+mod conv;
 mod dropout;
+mod flatten;
 mod generalized_residual;
 mod impl_module_for_tuples;
 mod layer_norm;
 mod linear;
 mod module;
+mod pool2d;
 mod pool_global;
 mod repeated;
 mod residual;
 mod split_into;
+mod transformer;
 
 pub use activations::*;
 pub use batchnorm2d::*;
+pub use conv::*;
 pub use dropout::*;
+pub use flatten::*;
 pub use generalized_residual::*;
 pub use impl_module_for_tuples::*;
 pub use layer_norm::*;
 pub use linear::*;
 pub use module::*;
+pub use pool2d::*;
 pub use pool_global::*;
 pub use repeated::*;
 pub use residual::*;
 pub use split_into::*;
+pub use transformer::*;
 
 #[cfg(feature = "numpy")]
 mod npz;
@@ -110,28 +118,6 @@ pub use npz::*;
 
 #[cfg(feature = "numpy")]
 mod npz_impls;
-
-#[cfg(feature = "nightly")]
-mod transformer;
-
-#[cfg(feature = "nightly")]
-pub use transformer::*;
-
-#[cfg(feature = "nightly")]
-mod flatten;
-
-#[cfg(feature = "nightly")]
-pub use flatten::*;
-
-#[cfg(feature = "nightly")]
-mod conv;
-#[cfg(feature = "nightly")]
-pub use conv::*;
-
-#[cfg(feature = "nightly")]
-mod pool2d;
-#[cfg(feature = "nightly")]
-pub use pool2d::*;
 
 #[cfg(test)]
 mod tests {
