@@ -331,337 +331,132 @@ impl<const K: usize, const S: usize, const P: usize> LoadFromNpz for MinPool2D<K
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gradients::*;
-    use crate::nn::tests::SimpleGradients;
+    use crate::arrays::HasArrayType;
     use rand::thread_rng;
     use rand_distr::Standard;
-    use std::fs::File;
     use tempfile::NamedTempFile;
+
+    fn test_save_load<
+        I: Tensor<Dtype = f32> + TensorCreator + Clone,
+        M: Default + ResetParams + Module<I> + SaveToNpz + LoadFromNpz,
+    >()
+    where
+        M::Output: HasArrayData,
+        <M::Output as HasArrayType>::Array: std::fmt::Debug + PartialEq,
+    {
+        let mut rng = thread_rng();
+        let x: I = TensorCreator::randn(&mut rng);
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+
+        let mut saved: M = Default::default();
+        let mut loaded: M = Default::default();
+
+        saved.reset_params(&mut rng);
+        let y = saved.forward(x.clone());
+
+        assert_ne!(loaded.forward(x.clone()).data(), y.data());
+
+        saved.save(file.path()).expect("");
+        loaded.load(file.path()).expect("");
+
+        assert_eq!(loaded.forward(x).data(), y.data());
+    }
 
     #[test]
     fn test_batchnorm2d_save_load() {
         let mut rng = thread_rng();
-        let mut bn: BatchNorm2D<3> = Default::default();
-
-        assert_eq!(bn.running_mean.data(), &[0.0; 3]);
-        assert_eq!(bn.running_var.data(), &[1.0; 3]);
-        assert_eq!(bn.scale.data(), &[1.0; 3]);
-        assert_eq!(bn.bias.data(), &[0.0; 3]);
-
-        let x1: Tensor3D<3, 4, 5> = TensorCreator::randn(&mut rng);
-        let g = backward(bn.forward_mut(x1.trace()).exp().mean());
-        bn.update(&mut SimpleGradients(g), &mut Default::default());
-
-        assert_ne!(bn.running_mean.data(), &[0.0; 3]);
-        assert_ne!(bn.running_var.data(), &[1.0; 3]);
-        assert_ne!(bn.scale.data(), &[1.0; 3]);
-        assert_ne!(bn.bias.data(), &[0.0; 3]);
-
+        let x: Tensor3D<3, 4, 5> = TensorCreator::randn(&mut rng);
         let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(bn.save(file.path().to_str().unwrap()).is_ok());
 
+        let mut saved: BatchNorm2D<3> = Default::default();
         let mut loaded: BatchNorm2D<3> = Default::default();
-        assert!(loaded.load(file.path().to_str().unwrap()).is_ok());
-        assert_eq!(loaded.scale.data(), bn.scale.data());
-        assert_eq!(loaded.bias.data(), bn.bias.data());
-        assert_eq!(loaded.running_mean.data(), bn.running_mean.data());
-        assert_eq!(loaded.running_var.data(), bn.running_var.data());
+
+        saved.running_mean.randomize(&mut rng, &Standard);
+        saved.running_var.randomize(&mut rng, &Standard);
+        saved.scale.randomize(&mut rng, &Standard);
+        saved.bias.randomize(&mut rng, &Standard);
+        let y = saved.forward(x.clone());
+
+        assert_ne!(loaded.forward(x.clone()).data(), y.data());
+
+        saved.save(file.path()).expect("");
+        loaded.load(file.path()).expect("");
+
+        assert_eq!(loaded.forward(x).data(), y.data());
     }
 
     #[cfg(feature = "nightly")]
     #[test]
-    fn test_save_conv2d() {
-        let model: Conv2D<2, 4, 3> = Default::default();
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        model
-            .save(file.path().to_str().unwrap())
-            .expect("failed to save model");
-        let f = File::open(file.path()).expect("failed to open resulting file");
-        let mut zip = ZipArchive::new(f).expect("failed to create zip archive from file");
-        {
-            let weight_file = zip
-                .by_name("weight.npy")
-                .expect("failed to find weight.npy file");
-            assert!(weight_file.size() > 0);
-        }
-        {
-            let bias_file = zip
-                .by_name("bias.npy")
-                .expect("failed to find bias.npy file");
-            assert!(bias_file.size() > 0);
-        }
-    }
-
-    #[cfg(feature = "nightly")]
-    #[test]
-    fn test_load_conv() {
-        let mut rng = thread_rng();
-        let mut saved_model: Conv2D<2, 4, 3> = Default::default();
-        saved_model.reset_params(&mut rng);
-
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
-
-        let mut loaded_model: Conv2D<2, 4, 3> = Default::default();
-        assert!(loaded_model.weight.data() != saved_model.weight.data());
-        assert!(loaded_model.bias.data() != saved_model.bias.data());
-
-        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
-        assert_eq!(loaded_model.weight.data(), saved_model.weight.data());
-        assert_eq!(loaded_model.bias.data(), saved_model.bias.data());
+    fn test_save_load_conv() {
+        type T = Conv2D<2, 4, 3>;
+        test_save_load::<Tensor3D<2, 8, 8>, T>();
     }
 
     #[test]
     fn test_save_load_generalized_residual() {
-        let mut rng = thread_rng();
-        let mut saved_model: GeneralizedResidual<Linear<5, 3>, Linear<5, 3>> = Default::default();
-        saved_model.reset_params(&mut rng);
-
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
-
-        let mut loaded_model: GeneralizedResidual<Linear<5, 3>, Linear<5, 3>> = Default::default();
-        assert_ne!(loaded_model.f.weight.data(), saved_model.f.weight.data());
-        assert_ne!(loaded_model.f.bias.data(), saved_model.f.bias.data());
-        assert_ne!(loaded_model.r.weight.data(), saved_model.r.weight.data());
-        assert_ne!(loaded_model.r.bias.data(), saved_model.r.bias.data());
-
-        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
-        assert_eq!(loaded_model.f.weight.data(), saved_model.f.weight.data());
-        assert_eq!(loaded_model.f.bias.data(), saved_model.f.bias.data());
-        assert_eq!(loaded_model.r.weight.data(), saved_model.r.weight.data());
-        assert_eq!(loaded_model.r.bias.data(), saved_model.r.bias.data());
+        type T = GeneralizedResidual<Linear<5, 5>, Linear<5, 5>>;
+        test_save_load::<Tensor1D<5>, T>();
+        test_save_load::<Tensor1D<5>, (T, T)>();
     }
 
     #[test]
-    fn test_save_linear() {
-        let model: Linear<5, 3> = Default::default();
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        model
-            .save(file.path().to_str().unwrap())
-            .expect("failed to save model");
-        let f = File::open(file.path()).expect("failed to open resulting file");
-        let mut zip = ZipArchive::new(f).expect("failed to create zip archive from file");
-        {
-            let weight_file = zip
-                .by_name("weight.npy")
-                .expect("failed to find weight.npy file");
-            assert!(weight_file.size() > 0);
-        }
-        {
-            let bias_file = zip
-                .by_name("bias.npy")
-                .expect("failed to find bias.npy file");
-            assert!(bias_file.size() > 0);
-        }
+    fn test_save_load_linear() {
+        type T = Linear<5, 5>;
+        test_save_load::<Tensor1D<5>, T>();
+        test_save_load::<Tensor1D<5>, (T, T)>();
     }
 
     #[test]
-    fn test_load_linear() {
-        let mut rng = thread_rng();
-        let mut saved_model: Linear<5, 3> = Default::default();
-        saved_model.reset_params(&mut rng);
-
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
-
-        let mut loaded_model: Linear<5, 3> = Default::default();
-        assert!(loaded_model.weight.data() != saved_model.weight.data());
-        assert!(loaded_model.bias.data() != saved_model.bias.data());
-
-        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
-        assert_eq!(loaded_model.weight.data(), saved_model.weight.data());
-        assert_eq!(loaded_model.bias.data(), saved_model.bias.data());
-    }
-
-    #[test]
-    fn test_save_tuple() {
-        let model: (
-            Linear<1, 2>,
-            ReLU,
-            Linear<2, 3>,
-            (Dropout, Linear<1, 2>, Linear<3, 4>),
-        ) = Default::default();
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        model
-            .save(file.path().to_str().unwrap())
-            .expect("failed to save model");
-        let f = File::open(file.path()).expect("failed to open resulting file");
-        let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
-        let mut names = zip.file_names().collect::<Vec<&str>>();
-        names.sort_unstable();
-        assert_eq!(
-            &names,
-            &[
-                "0.bias.npy",
-                "0.weight.npy",
-                "2.bias.npy",
-                "2.weight.npy",
-                "3.1.bias.npy",
-                "3.1.weight.npy",
-                "3.2.bias.npy",
-                "3.2.weight.npy",
-            ]
-        );
-    }
-
-    #[test]
-    fn test_load_tuple() {
+    fn test_save_load_tuple() {
         type Model = (
             Linear<1, 2>,
             ReLU,
             Linear<2, 3>,
-            (Dropout, Linear<1, 2>, Linear<3, 4>),
+            (Dropout, Linear<3, 3>, Linear<3, 4>),
         );
+        test_save_load::<Tensor1D<1>, Model>();
+    }
+
+    #[test]
+    fn test_save_load_layer_norm() {
+        type M = LayerNorm1D<3>;
 
         let mut rng = thread_rng();
-        let mut saved_model: Model = Default::default();
-        saved_model.reset_params(&mut rng);
-
+        let x: Tensor1D<3> = TensorCreator::randn(&mut rng);
         let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
 
-        let mut loaded_model: Model = Default::default();
-        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
-        assert_eq!(loaded_model.0.weight.data(), saved_model.0.weight.data());
-        assert_eq!(loaded_model.0.bias.data(), saved_model.0.bias.data());
-        assert_eq!(loaded_model.2.weight.data(), saved_model.2.weight.data());
-        assert_eq!(loaded_model.2.bias.data(), saved_model.2.bias.data());
-        assert_eq!(
-            loaded_model.3 .1.weight.data(),
-            saved_model.3 .1.weight.data()
-        );
-        assert_eq!(loaded_model.3 .1.bias.data(), saved_model.3 .1.bias.data());
+        let mut saved: M = Default::default();
+        let mut loaded: M = Default::default();
 
-        assert_eq!(
-            loaded_model.3 .2.weight.data(),
-            saved_model.3 .2.weight.data()
-        );
-        assert_eq!(loaded_model.3 .2.bias.data(), saved_model.3 .2.bias.data());
+        saved.gamma.randomize(&mut rng, &Standard);
+        saved.beta.randomize(&mut rng, &Standard);
+        let y = saved.forward(x.clone());
+
+        assert_ne!(loaded.forward(x.clone()).data(), y.data());
+
+        saved.save(file.path()).expect("");
+        loaded.load(file.path()).expect("");
+
+        assert_eq!(loaded.forward(x).data(), y.data());
     }
 
     #[test]
-    fn test_save_layer_norm() {
-        let model: LayerNorm1D<13> = Default::default();
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        model
-            .save(file.path().to_str().unwrap())
-            .expect("failed to save model");
-        let f = File::open(file.path()).expect("failed to open resulting file");
-        let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
-        let mut names = zip.file_names().collect::<Vec<&str>>();
-        names.sort_unstable();
-        assert_eq!(&names, &["beta.npy", "gamma.npy",]);
-    }
-
-    #[test]
-    fn test_save_layer_norm_tuple() {
-        let model: (LayerNorm1D<5>, LayerNorm1D<13>) = Default::default();
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        model
-            .save(file.path().to_str().unwrap())
-            .expect("failed to save model");
-        let f = File::open(file.path()).expect("failed to open resulting file");
-        let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
-        let mut names = zip.file_names().collect::<Vec<&str>>();
-        names.sort_unstable();
-        assert_eq!(
-            &names,
-            &["0.beta.npy", "0.gamma.npy", "1.beta.npy", "1.gamma.npy"]
-        );
-    }
-
-    #[test]
-    fn test_load_layer_norm() {
-        let mut rng = thread_rng();
-        let mut saved_model: LayerNorm1D<13> = Default::default();
-        saved_model.gamma.randomize(&mut rng, &Standard);
-        saved_model.beta.randomize(&mut rng, &Standard);
-
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
-
-        let mut loaded_model: LayerNorm1D<13> = Default::default();
-        assert!(loaded_model.gamma.data() != saved_model.gamma.data());
-        assert!(loaded_model.beta.data() != saved_model.beta.data());
-
-        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
-        assert_eq!(loaded_model.gamma.data(), saved_model.gamma.data());
-        assert_eq!(loaded_model.beta.data(), saved_model.beta.data());
-    }
-
-    #[test]
-    fn test_save_repeated() {
-        let model: Repeated<Linear<3, 3>, 4> = Default::default();
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        model
-            .save(file.path().to_str().unwrap())
-            .expect("failed to save model");
-        let f = File::open(file.path()).expect("failed to open resulting file");
-        let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
-        let mut names = zip.file_names().collect::<Vec<&str>>();
-        names.sort_unstable();
-        assert_eq!(
-            &names,
-            &[
-                "0.bias.npy",
-                "0.weight.npy",
-                "1.bias.npy",
-                "1.weight.npy",
-                "2.bias.npy",
-                "2.weight.npy",
-                "3.bias.npy",
-                "3.weight.npy",
-            ]
-        );
-    }
-
-    #[test]
-    fn test_load_repeated() {
-        type Model = Repeated<Linear<3, 3>, 4>;
-
-        let mut rng = thread_rng();
-        let mut saved_model: Model = Default::default();
-        saved_model.reset_params(&mut rng);
-
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
-
-        let mut loaded_model: Model = Default::default();
-        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
-        for i in 0..4 {
-            assert_eq!(
-                loaded_model.modules[i].weight.data(),
-                saved_model.modules[i].weight.data()
-            );
-            assert_eq!(
-                loaded_model.modules[i].bias.data(),
-                saved_model.modules[i].bias.data()
-            );
-        }
+    fn test_save_load_repeated() {
+        type T = Repeated<Linear<3, 3>, 4>;
+        test_save_load::<Tensor1D<3>, T>();
+        test_save_load::<Tensor1D<3>, (T, T)>();
     }
 
     #[test]
     fn test_save_load_residual() {
-        let mut rng = thread_rng();
-        let mut saved_model: Residual<Linear<5, 3>> = Default::default();
-        saved_model.reset_params(&mut rng);
-
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
-
-        let mut loaded_model: Residual<Linear<5, 3>> = Default::default();
-        assert_ne!(loaded_model.0.weight.data(), saved_model.0.weight.data());
-        assert_ne!(loaded_model.0.bias.data(), saved_model.0.bias.data());
-
-        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
-        assert_eq!(loaded_model.0.weight.data(), saved_model.0.weight.data());
-        assert_eq!(loaded_model.0.bias.data(), saved_model.0.bias.data());
+        type T = Residual<Linear<5, 5>>;
+        test_save_load::<Tensor1D<5>, T>();
+        test_save_load::<Tensor1D<5>, (T, T)>();
     }
 
     #[cfg(feature = "nightly")]
     #[test]
-    fn test_save_and_load() {
+    fn test_save_load_mha() {
         let mut rng = thread_rng();
 
         let mut saved: MultiHeadAttention<12, 4> = Default::default();
@@ -684,7 +479,7 @@ mod tests {
 
     #[cfg(feature = "nightly")]
     #[test]
-    fn test_save_load() {
+    fn test_save_load_transformer() {
         let mut rng = thread_rng();
 
         let mut saved: Transformer<16, 4, 3, 4, 8> = Default::default();
