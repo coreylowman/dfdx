@@ -105,7 +105,7 @@ assert_eq!(t2.data(), &[[1.0; 3]; 2]);
 ### Module
 
 ```rust
-pub trait Module<Input>: Default + CanUpdateWithGrads {
+pub trait Module<Input> {
     type Output;
     fn forward(&self, input: Input) -> Self::Output;
 }
@@ -113,9 +113,8 @@ pub trait Module<Input>: Default + CanUpdateWithGrads {
 
 From this flexible trait we get:
 1. Single & batched inputs (just have multiple impls!)
-2. Update with gradients
-3. Multiple inputs/outputs (multi-headed modules, or rnns)
-4. Behavior different when tape is present or not (**not** the .train()/.eval() behavior present in other libraries!).
+2. Multiple inputs/outputs (multi-headed modules, or rnns)
+3. Behavior different when tape is present or not (**not** the .train()/.eval() behavior present in other libraries!).
 
 ### Tuples represent feedforward (a.k.a sequential) modules
 
