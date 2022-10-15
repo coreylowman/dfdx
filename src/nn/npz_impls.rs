@@ -29,11 +29,9 @@ impl<const C: usize> LoadFromNpz for BatchNorm2D<C> {
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize> SaveToNpz
     for Conv2D<I, O, K, S, P>
 {
-    /// Saves [Self::weight] to `{pre}weight.npy` and [Self::bias] to `{pre}bias.npy`
-    /// using [npz_fwrite()].
-    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        npz_fwrite(w, format!("{pre}weight.npy"), self.weight.data())?;
-        npz_fwrite(w, format!("{pre}bias.npy"), self.bias.data())?;
+    fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        npz_fwrite(w, format!("{p}weight.npy"), self.weight.data())?;
+        npz_fwrite(w, format!("{p}bias.npy"), self.bias.data())?;
         Ok(())
     }
 }
@@ -42,48 +40,36 @@ impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: us
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize> LoadFromNpz
     for Conv2D<I, O, K, S, P>
 {
-    /// Reads [Self::weight] from `{pre}weight.npy` and [Self::bias] from `{pre}bias.npy`
-    /// using [npz_fread()].
-    fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        npz_fread(r, format!("{pre}weight.npy"), self.weight.mut_data())?;
-        npz_fread(r, format!("{pre}bias.npy"), self.bias.mut_data())?;
+    fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        npz_fread(r, format!("{p}weight.npy"), self.weight.mut_data())?;
+        npz_fread(r, format!("{p}bias.npy"), self.bias.mut_data())?;
         Ok(())
     }
 }
 
-#[cfg(feature = "numpy")]
 impl<F: SaveToNpz, R: SaveToNpz> SaveToNpz for GeneralizedResidual<F, R> {
-    /// Pass through to `F`/`R`'s [SaveToNpz].
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.f.write(&format!("{p}.f"), w)?;
         self.r.write(&format!("{p}.r"), w)
     }
 }
 
-#[cfg(feature = "numpy")]
 impl<F: LoadFromNpz, R: LoadFromNpz> LoadFromNpz for GeneralizedResidual<F, R> {
-    /// Pass through to `F`/`R`'s [LoadFromNpz].
     fn read<Z: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<Z>) -> Result<(), NpzError> {
         self.f.read(&format!("{p}.f"), r)?;
         self.r.read(&format!("{p}.r"), r)
     }
 }
 
-#[cfg(feature = "numpy")]
 impl<const M: usize> SaveToNpz for LayerNorm1D<M> {
-    /// Saves [Self::gamma] to `{pre}gamma.npy` and [Self::beta] to `{pre}beta.npy`
-    /// using [npz_fwrite()].
-    fn write<W: Write + Seek>(&self, pre: &str, w: &mut zip::ZipWriter<W>) -> ZipResult<()> {
-        npz_fwrite(w, format!("{pre}gamma.npy"), self.gamma.data())?;
-        npz_fwrite(w, format!("{pre}beta.npy"), self.beta.data())?;
+    fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        npz_fwrite(w, format!("{p}gamma.npy"), self.gamma.data())?;
+        npz_fwrite(w, format!("{p}beta.npy"), self.beta.data())?;
         Ok(())
     }
 }
 
-#[cfg(feature = "numpy")]
 impl<const M: usize> LoadFromNpz for LayerNorm1D<M> {
-    /// Reads [Self::gamma] from `{p}gamma.npy` and [Self::beta] from `{p}beta.npy`
-    /// using [npz_fread()].
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         npz_fread(r, format!("{p}gamma.npy"), self.gamma.mut_data())?;
         npz_fread(r, format!("{p}beta.npy"), self.beta.mut_data())?;
@@ -92,27 +78,17 @@ impl<const M: usize> LoadFromNpz for LayerNorm1D<M> {
 }
 
 impl<const I: usize, const O: usize> SaveToNpz for Linear<I, O> {
-    /// Saves [Self::weight] to `{pre}weight.npy` and [Self::bias] to `{pre}bias.npy`
-    /// using [npz_fwrite()].
-    fn write<W>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()>
-    where
-        W: Write + Seek,
-    {
-        npz_fwrite(w, format!("{pre}weight.npy"), self.weight.data())?;
-        npz_fwrite(w, format!("{pre}bias.npy"), self.bias.data())?;
+    fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        npz_fwrite(w, format!("{p}weight.npy"), self.weight.data())?;
+        npz_fwrite(w, format!("{p}bias.npy"), self.bias.data())?;
         Ok(())
     }
 }
 
 impl<const I: usize, const O: usize> LoadFromNpz for Linear<I, O> {
-    /// Reads [Self::weight] from `{pre}weight.npy` and [Self::bias] from `{pre}bias.npy`
-    /// using [npz_fread()].
-    fn read<R>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError>
-    where
-        R: Read + Seek,
-    {
-        npz_fread(r, format!("{pre}weight.npy"), self.weight.mut_data())?;
-        npz_fread(r, format!("{pre}bias.npy"), self.bias.mut_data())?;
+    fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        npz_fread(r, format!("{p}weight.npy"), self.weight.mut_data())?;
+        npz_fread(r, format!("{p}bias.npy"), self.bias.mut_data())?;
         Ok(())
     }
 }
@@ -120,11 +96,6 @@ impl<const I: usize, const O: usize> LoadFromNpz for Linear<I, O> {
 macro_rules! tuple_npz_impl {
     ([$($name:ident),+], [$($idx:tt),+]) => {
 impl<$($name: SaveToNpz),+> SaveToNpz for ($($name,)+) {
-    /// Calls `SaveToNpz::write(self.<idx>, ...)` on each part of the tuple. See [SaveToNpz].
-    ///
-    /// E.g. for a two tuple (A, B) with `base == ""`, this will call:
-    /// 1. `self.0.write("0.", w)`
-    /// 2. `self.1.write("1.", w)`
     fn write<W: Write + Seek>(&self, base: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         $(self.$idx.write(&format!("{}{}.", base, $idx), w)?;)+
         Ok(())
@@ -132,11 +103,6 @@ impl<$($name: SaveToNpz),+> SaveToNpz for ($($name,)+) {
 }
 
 impl<$($name: LoadFromNpz),+> LoadFromNpz for ($($name,)+) {
-    /// Calls `LoadFromNpz::read(self.<idx>, ...)` on each part of the tuple. See [LoadFromNpz].
-    ///
-    /// E.g. for a two tuple (A, B) with `base == ""`, this will call:
-    /// 1. `self.0.read("0.", r)`
-    /// 2. `self.1.read("1.", r)`
     fn read<R: Read + Seek>(&mut self, base: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         $(self.$idx.read(&format!("{}{}.", base, $idx), r)?;)+
         Ok(())
@@ -151,71 +117,44 @@ tuple_npz_impl!([A, B, C, D], [0, 1, 2, 3]);
 tuple_npz_impl!([A, B, C, D, E], [0, 1, 2, 3, 4]);
 tuple_npz_impl!([A, B, C, D, E, F], [0, 1, 2, 3, 4, 5]);
 
-#[cfg(feature = "numpy")]
 impl<T: SaveToNpz, const N: usize> SaveToNpz for Repeated<T, N> {
-    /// Calls `SaveToNpz::write(self.modules[i], ...)` on each sub module. See [SaveToNpz].
-    ///
-    /// E.g. for a two items with `base == ""`, this will call:
-    /// 1. `self.modules[0].write("0.", w)`
-    /// 2. `self.modules[1].write("1.", w)`
-    fn write<W: Write + Seek>(&self, base: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+    fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         for i in 0..N {
-            self.modules[i].write(&format!("{base}{i}."), w)?;
+            self.modules[i].write(&format!("{p}{i}."), w)?;
         }
         Ok(())
     }
 }
 
-#[cfg(feature = "numpy")]
 impl<T: LoadFromNpz, const N: usize> LoadFromNpz for Repeated<T, N> {
-    /// Calls `LoadFromNpz::read(self.modules[i], ...)` on each sub module. See [LoadFromNpz].
-    ///
-    /// E.g. for a two items with `base == ""`, this will call:
-    /// 1. `self.modules[0].read("0.", r)`
-    /// 2. `self.modules[1].read("1.", r)`
-    fn read<R>(&mut self, base: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError>
-    where
-        R: Read + Seek,
-    {
+    fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         for i in 0..N {
-            self.modules[i].read(&format!("{base}{i}."), r)?;
+            self.modules[i].read(&format!("{p}{i}."), r)?;
         }
         Ok(())
     }
 }
 
-#[cfg(feature = "numpy")]
 impl<F: SaveToNpz> SaveToNpz for Residual<F> {
-    /// Pass through to `F`'s [SaveToNpz].
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.0.write(p, w)
     }
 }
 
-#[cfg(feature = "numpy")]
 impl<F: LoadFromNpz> LoadFromNpz for Residual<F> {
-    /// Pass through to `F`'s [LoadFromNpz].
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.0.read(p, r)
     }
 }
 
-#[cfg(feature = "numpy")]
 impl<T: SaveToNpz> SaveToNpz for SplitInto<T> {
-    fn write<W>(&self, p: &str, w: &mut zip::ZipWriter<W>) -> zip::result::ZipResult<()>
-    where
-        W: std::io::Write + std::io::Seek,
-    {
+    fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.0.write(p, w)
     }
 }
 
-#[cfg(feature = "numpy")]
 impl<T: LoadFromNpz> LoadFromNpz for SplitInto<T> {
-    fn read<R>(&mut self, p: &str, r: &mut zip::ZipArchive<R>) -> Result<(), NpzError>
-    where
-        R: std::io::Read + std::io::Seek,
-    {
+    fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.0.read(p, r)
     }
 }
@@ -224,8 +163,8 @@ impl<T: LoadFromNpz> LoadFromNpz for SplitInto<T> {
 impl<const M: usize, const H: usize, const F: usize, const L: usize> SaveToNpz
     for TransformerDecoder<M, H, F, L>
 {
-    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        self.0.write(pre, w)
+    fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        self.0.write(p, w)
     }
 }
 
@@ -233,14 +172,14 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize> SaveToNpz
 impl<const M: usize, const H: usize, const F: usize> SaveToNpz
     for TransformerDecoderBlock<M, H, F>
 {
-    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        self.self_attn.write(&format!("{pre}self_attn."), w)?;
-        self.norm1.write(&format!("{pre}norm1."), w)?;
-        self.mh_attn.write(&format!("{pre}mh_attn."), w)?;
-        self.norm2.write(&format!("{pre}norm2."), w)?;
-        self.ff.0 .0.write(&format!("{pre}linear1."), w)?;
-        self.ff.0 .2.write(&format!("{pre}linear2."), w)?;
-        self.norm3.write(&format!("{pre}norm3."), w)?;
+    fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        self.self_attn.write(&format!("{p}self_attn."), w)?;
+        self.norm1.write(&format!("{p}norm1."), w)?;
+        self.mh_attn.write(&format!("{p}mh_attn."), w)?;
+        self.norm2.write(&format!("{p}norm2."), w)?;
+        self.ff.0 .0.write(&format!("{p}linear1."), w)?;
+        self.ff.0 .2.write(&format!("{p}linear2."), w)?;
+        self.norm3.write(&format!("{p}norm3."), w)?;
         Ok(())
     }
 }
@@ -274,12 +213,12 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize> LoadFromNpz
 impl<const M: usize, const H: usize, const F: usize> SaveToNpz
     for TransformerEncoderBlock<M, H, F>
 {
-    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        self.self_attn.write(&format!("{pre}self_attn."), w)?;
-        self.norm1.write(&format!("{pre}norm1."), w)?;
-        self.norm2.write(&format!("{pre}norm2."), w)?;
-        self.ff.0 .0.write(&format!("{pre}linear1."), w)?;
-        self.ff.0 .2.write(&format!("{pre}linear2."), w)?;
+    fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        self.self_attn.write(&format!("{p}self_attn."), w)?;
+        self.norm1.write(&format!("{p}norm1."), w)?;
+        self.norm2.write(&format!("{p}norm2."), w)?;
+        self.ff.0 .0.write(&format!("{p}linear1."), w)?;
+        self.ff.0 .2.write(&format!("{p}linear2."), w)?;
         Ok(())
     }
 }
@@ -288,12 +227,12 @@ impl<const M: usize, const H: usize, const F: usize> SaveToNpz
 impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
     for TransformerEncoderBlock<M, H, F>
 {
-    fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        self.self_attn.read(&format!("{pre}self_attn."), r)?;
-        self.norm1.read(&format!("{pre}norm1."), r)?;
-        self.norm2.read(&format!("{pre}norm2."), r)?;
-        self.ff.0 .0.read(&format!("{pre}linear1."), r)?;
-        self.ff.0 .2.read(&format!("{pre}linear2."), r)?;
+    fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        self.self_attn.read(&format!("{p}self_attn."), r)?;
+        self.norm1.read(&format!("{p}norm1."), r)?;
+        self.norm2.read(&format!("{p}norm2."), r)?;
+        self.ff.0 .0.read(&format!("{p}linear1."), r)?;
+        self.ff.0 .2.read(&format!("{p}linear2."), r)?;
         Ok(())
     }
 }
@@ -302,14 +241,11 @@ impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
 impl<const M: usize, const H: usize, const K: usize, const V: usize> SaveToNpz
     for MultiHeadAttention<M, H, K, V>
 {
-    fn write<W>(&self, pre: &str, w: &mut zip::ZipWriter<W>) -> zip::result::ZipResult<()>
-    where
-        W: std::io::Write + std::io::Seek,
-    {
-        self.w_q.write(&format!("{pre}w_q."), w)?;
-        self.w_k.write(&format!("{pre}w_k."), w)?;
-        self.w_v.write(&format!("{pre}w_v."), w)?;
-        self.w_o.write(&format!("{pre}w_o."), w)?;
+    fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        self.w_q.write(&format!("{p}w_q."), w)?;
+        self.w_k.write(&format!("{p}w_k."), w)?;
+        self.w_v.write(&format!("{p}w_v."), w)?;
+        self.w_o.write(&format!("{p}w_o."), w)?;
         Ok(())
     }
 }
@@ -318,14 +254,11 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> SaveToNpz
 impl<const M: usize, const H: usize, const K: usize, const V: usize> LoadFromNpz
     for MultiHeadAttention<M, H, K, V>
 {
-    fn read<R>(&mut self, pre: &str, r: &mut zip::ZipArchive<R>) -> Result<(), NpzError>
-    where
-        R: std::io::Read + std::io::Seek,
-    {
-        self.w_q.read(&format!("{pre}w_q."), r)?;
-        self.w_k.read(&format!("{pre}w_k."), r)?;
-        self.w_v.read(&format!("{pre}w_v."), r)?;
-        self.w_o.read(&format!("{pre}w_o."), r)?;
+    fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        self.w_q.read(&format!("{p}w_q."), r)?;
+        self.w_k.read(&format!("{p}w_k."), r)?;
+        self.w_v.read(&format!("{p}w_v."), r)?;
+        self.w_o.read(&format!("{p}w_o."), r)?;
         Ok(())
     }
 }
@@ -334,9 +267,9 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> LoadFromNpz
 impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> SaveToNpz
     for Transformer<M, H, E, D, F>
 {
-    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        self.encoder.write(&format!("{pre}encoder."), w)?;
-        self.decoder.write(&format!("{pre}decoder."), w)?;
+    fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        self.encoder.write(&format!("{p}encoder."), w)?;
+        self.decoder.write(&format!("{p}decoder."), w)?;
         Ok(())
     }
 }
@@ -345,9 +278,9 @@ impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: us
 impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> LoadFromNpz
     for Transformer<M, H, E, D, F>
 {
-    fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        self.encoder.read(&format!("{pre}encoder."), r)?;
-        self.decoder.read(&format!("{pre}decoder."), r)?;
+    fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        self.encoder.read(&format!("{p}encoder."), r)?;
+        self.decoder.read(&format!("{p}decoder."), r)?;
         Ok(())
     }
 }
