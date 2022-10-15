@@ -19,7 +19,10 @@ macro_rules! activation_impls {
             fn reset_params<R: Rng>(&mut self, _: &mut R) {}
         }
 
+        #[cfg(feature = "numpy")]
         impl SaveToNpz for $struct_name {}
+
+        #[cfg(feature = "numpy")]
         impl LoadFromNpz for $struct_name {}
 
         impl<T: Tensor<Dtype = f32>> Module<T> for $struct_name {
@@ -66,7 +69,10 @@ impl ResetParams for Softmax {
     fn reset_params<R: Rng>(&mut self, _: &mut R) {}
 }
 
+#[cfg(feature = "numpy")]
 impl SaveToNpz for Softmax {}
+
+#[cfg(feature = "numpy")]
 impl LoadFromNpz for Softmax {}
 
 impl<T> Module<T> for Softmax

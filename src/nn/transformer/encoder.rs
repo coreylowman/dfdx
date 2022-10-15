@@ -1,6 +1,8 @@
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
+#[cfg(feature = "numpy")]
 use std::io::{Read, Seek, Write};
+#[cfg(feature = "numpy")]
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// **Requires Nightly** A transformer encoder.
@@ -105,6 +107,7 @@ where
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<const M: usize, const H: usize, const F: usize> SaveToNpz
     for TransformerEncoderBlock<M, H, F>
 {
@@ -118,6 +121,7 @@ impl<const M: usize, const H: usize, const F: usize> SaveToNpz
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
     for TransformerEncoderBlock<M, H, F>
 {

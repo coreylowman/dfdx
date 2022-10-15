@@ -32,6 +32,7 @@ impl<T: ResetParams> ResetParams for SplitInto<T> {
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<T: SaveToNpz> SaveToNpz for SplitInto<T> {
     fn write<W>(&self, p: &str, w: &mut zip::ZipWriter<W>) -> zip::result::ZipResult<()>
     where
@@ -41,6 +42,7 @@ impl<T: SaveToNpz> SaveToNpz for SplitInto<T> {
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<T: LoadFromNpz> LoadFromNpz for SplitInto<T> {
     fn read<R>(&mut self, p: &str, r: &mut zip::ZipArchive<R>) -> Result<(), NpzError>
     where

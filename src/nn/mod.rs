@@ -84,7 +84,6 @@ mod impl_module_for_tuples;
 mod layer_norm;
 mod linear;
 mod module;
-mod npz;
 mod pool_global;
 mod repeated;
 mod residual;
@@ -98,11 +97,16 @@ pub use impl_module_for_tuples::*;
 pub use layer_norm::*;
 pub use linear::*;
 pub use module::*;
-pub use npz::*;
 pub use pool_global::*;
 pub use repeated::*;
 pub use residual::*;
 pub use split_into::*;
+
+#[cfg(feature = "numpy")]
+mod npz;
+
+#[cfg(feature = "numpy")]
+pub use npz::*;
 
 #[cfg(feature = "nightly")]
 mod transformer;

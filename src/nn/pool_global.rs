@@ -1,4 +1,6 @@
-use super::{LoadFromNpz, Module, ModuleMut, ResetParams, SaveToNpz};
+#[cfg(feature = "numpy")]
+use super::{LoadFromNpz, SaveToNpz};
+use super::{Module, ModuleMut, ResetParams};
 use crate::gradients::*;
 use crate::tensor::*;
 
@@ -64,7 +66,11 @@ macro_rules! impl_pools {
         impl CanUpdateWithGradients for $PoolTy {
             fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
         }
+
+        #[cfg(feature = "numpy")]
         impl SaveToNpz for $PoolTy {}
+
+        #[cfg(feature = "numpy")]
         impl LoadFromNpz for $PoolTy {}
 
         impl<const C: usize, const L: usize, T: Tape> Module<Tensor2D<C, L, T>> for $PoolTy {

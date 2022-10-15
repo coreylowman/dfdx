@@ -1,6 +1,8 @@
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
+#[cfg(feature = "numpy")]
 use std::io::{Read, Seek, Write};
+#[cfg(feature = "numpy")]
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
@@ -89,6 +91,7 @@ where
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<F: SaveToNpz, R: SaveToNpz> SaveToNpz for GeneralizedResidual<F, R> {
     /// Pass through to `F`/`R`'s [SaveToNpz].
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
@@ -97,6 +100,7 @@ impl<F: SaveToNpz, R: SaveToNpz> SaveToNpz for GeneralizedResidual<F, R> {
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<F: LoadFromNpz, R: LoadFromNpz> LoadFromNpz for GeneralizedResidual<F, R> {
     /// Pass through to `F`/`R`'s [LoadFromNpz].
     fn read<Z: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<Z>) -> Result<(), NpzError> {
@@ -110,7 +114,6 @@ mod tests {
     use super::*;
     use crate::tests::assert_close;
     use rand::{prelude::StdRng, SeedableRng};
-    use tempfile::NamedTempFile;
 
     #[test]
     fn test_reset_generalized_residual() {
@@ -149,25 +152,33 @@ mod tests {
         assert_close(g.ref_gradient(&model.r.bias), &[0.5; 2]);
     }
 
-    #[test]
-    fn test_save_load_generalized_residual() {
-        let mut rng = StdRng::seed_from_u64(0);
-        let mut saved_model: GeneralizedResidual<Linear<5, 3>, Linear<5, 3>> = Default::default();
-        saved_model.reset_params(&mut rng);
+    #[cfg(feature = "numpy")]
+    mod numpy_tests {
+        use super::*;
+        use tempfile::NamedTempFile;
 
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
+        #[test]
+        fn test_save_load_generalized_residual() {
+            let mut rng = StdRng::seed_from_u64(0);
+            let mut saved_model: GeneralizedResidual<Linear<5, 3>, Linear<5, 3>> =
+                Default::default();
+            saved_model.reset_params(&mut rng);
 
-        let mut loaded_model: GeneralizedResidual<Linear<5, 3>, Linear<5, 3>> = Default::default();
-        assert_ne!(loaded_model.f.weight.data(), saved_model.f.weight.data());
-        assert_ne!(loaded_model.f.bias.data(), saved_model.f.bias.data());
-        assert_ne!(loaded_model.r.weight.data(), saved_model.r.weight.data());
-        assert_ne!(loaded_model.r.bias.data(), saved_model.r.bias.data());
+            let file = NamedTempFile::new().expect("failed to create tempfile");
+            assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
 
-        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
-        assert_eq!(loaded_model.f.weight.data(), saved_model.f.weight.data());
-        assert_eq!(loaded_model.f.bias.data(), saved_model.f.bias.data());
-        assert_eq!(loaded_model.r.weight.data(), saved_model.r.weight.data());
-        assert_eq!(loaded_model.r.bias.data(), saved_model.r.bias.data());
+            let mut loaded_model: GeneralizedResidual<Linear<5, 3>, Linear<5, 3>> =
+                Default::default();
+            assert_ne!(loaded_model.f.weight.data(), saved_model.f.weight.data());
+            assert_ne!(loaded_model.f.bias.data(), saved_model.f.bias.data());
+            assert_ne!(loaded_model.r.weight.data(), saved_model.r.weight.data());
+            assert_ne!(loaded_model.r.bias.data(), saved_model.r.bias.data());
+
+            assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
+            assert_eq!(loaded_model.f.weight.data(), saved_model.f.weight.data());
+            assert_eq!(loaded_model.f.bias.data(), saved_model.f.bias.data());
+            assert_eq!(loaded_model.r.weight.data(), saved_model.r.weight.data());
+            assert_eq!(loaded_model.r.bias.data(), saved_model.r.bias.data());
+        }
     }
 }

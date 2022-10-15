@@ -1,6 +1,8 @@
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
+#[cfg(feature = "numpy")]
 use std::io::{Read, Seek, Write};
+#[cfg(feature = "numpy")]
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
@@ -54,6 +56,7 @@ impl<T: CanUpdateWithGradients, const N: usize> CanUpdateWithGradients for Repea
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<T: SaveToNpz, const N: usize> SaveToNpz for Repeated<T, N> {
     /// Calls `SaveToNpz::write(self.modules[i], ...)` on each sub module. See [SaveToNpz].
     ///
@@ -68,6 +71,7 @@ impl<T: SaveToNpz, const N: usize> SaveToNpz for Repeated<T, N> {
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<T: LoadFromNpz, const N: usize> LoadFromNpz for Repeated<T, N> {
     /// Calls `LoadFromNpz::read(self.modules[i], ...)` on each sub module. See [LoadFromNpz].
     ///
@@ -113,8 +117,6 @@ mod tests {
     use crate::nn::tests::SimpleGradients;
     use crate::unique_id::HasUniqueId;
     use rand::{prelude::StdRng, SeedableRng};
-    use std::fs::File;
-    use tempfile::NamedTempFile;
 
     #[test]
     fn test_default_and_reset() {
@@ -154,54 +156,61 @@ mod tests {
         assert_eq!(x.data(), m.forward_mut(Tensor1D::zeros()).data());
     }
 
-    #[test]
-    fn test_save_repeated() {
-        let model: Repeated<Linear<3, 3>, 4> = Default::default();
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        model
-            .save(file.path().to_str().unwrap())
-            .expect("failed to save model");
-        let f = File::open(file.path()).expect("failed to open resulting file");
-        let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
-        let mut names = zip.file_names().collect::<Vec<&str>>();
-        names.sort_unstable();
-        assert_eq!(
-            &names,
-            &[
-                "0.bias.npy",
-                "0.weight.npy",
-                "1.bias.npy",
-                "1.weight.npy",
-                "2.bias.npy",
-                "2.weight.npy",
-                "3.bias.npy",
-                "3.weight.npy",
-            ]
-        );
-    }
+    #[cfg(feature = "numpy")]
+    mod numpy_tests {
+        use super::*;
+        use std::fs::File;
+        use tempfile::NamedTempFile;
 
-    #[test]
-    fn test_load_repeated() {
-        type Model = Repeated<Linear<3, 3>, 4>;
-
-        let mut rng = StdRng::seed_from_u64(0);
-        let mut saved_model: Model = Default::default();
-        saved_model.reset_params(&mut rng);
-
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
-
-        let mut loaded_model: Model = Default::default();
-        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
-        for i in 0..4 {
+        #[test]
+        fn test_save_repeated() {
+            let model: Repeated<Linear<3, 3>, 4> = Default::default();
+            let file = NamedTempFile::new().expect("failed to create tempfile");
+            model
+                .save(file.path().to_str().unwrap())
+                .expect("failed to save model");
+            let f = File::open(file.path()).expect("failed to open resulting file");
+            let zip = ZipArchive::new(f).expect("failed to create zip archive from file");
+            let mut names = zip.file_names().collect::<Vec<&str>>();
+            names.sort_unstable();
             assert_eq!(
-                loaded_model.modules[i].weight.data(),
-                saved_model.modules[i].weight.data()
+                &names,
+                &[
+                    "0.bias.npy",
+                    "0.weight.npy",
+                    "1.bias.npy",
+                    "1.weight.npy",
+                    "2.bias.npy",
+                    "2.weight.npy",
+                    "3.bias.npy",
+                    "3.weight.npy",
+                ]
             );
-            assert_eq!(
-                loaded_model.modules[i].bias.data(),
-                saved_model.modules[i].bias.data()
-            );
+        }
+
+        #[test]
+        fn test_load_repeated() {
+            type Model = Repeated<Linear<3, 3>, 4>;
+
+            let mut rng = StdRng::seed_from_u64(0);
+            let mut saved_model: Model = Default::default();
+            saved_model.reset_params(&mut rng);
+
+            let file = NamedTempFile::new().expect("failed to create tempfile");
+            assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
+
+            let mut loaded_model: Model = Default::default();
+            assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
+            for i in 0..4 {
+                assert_eq!(
+                    loaded_model.modules[i].weight.data(),
+                    saved_model.modules[i].weight.data()
+                );
+                assert_eq!(
+                    loaded_model.modules[i].bias.data(),
+                    saved_model.modules[i].bias.data()
+                );
+            }
         }
     }
 

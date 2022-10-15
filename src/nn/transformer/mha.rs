@@ -53,6 +53,7 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> CanUpdateWi
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<const M: usize, const H: usize, const K: usize, const V: usize> SaveToNpz
     for MultiHeadAttention<M, H, K, V>
 {
@@ -68,6 +69,7 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> SaveToNpz
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<const M: usize, const H: usize, const K: usize, const V: usize> LoadFromNpz
     for MultiHeadAttention<M, H, K, V>
 {
@@ -326,6 +328,7 @@ mod tests {
         assert!(unused.is_empty());
     }
 
+    #[cfg(feature = "numpy")]
     #[test]
     fn test_save_and_load() {
         let mut rng = thread_rng();

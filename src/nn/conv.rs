@@ -2,7 +2,10 @@ use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTen
 use crate::prelude::*;
 use rand::Rng;
 use rand_distr::Uniform;
+
+#[cfg(feature = "numpy")]
 use std::io::{Read, Seek, Write};
+#[cfg(feature = "numpy")]
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// **Requires Nightly** Performs 2d convolutions on 3d and 4d images.
@@ -57,6 +60,7 @@ impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: us
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize> SaveToNpz
     for Conv2D<I, O, K, S, P>
 {
@@ -69,6 +73,7 @@ impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: us
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize> LoadFromNpz
     for Conv2D<I, O, K, S, P>
 {
@@ -139,8 +144,6 @@ where
 mod tests {
     use super::*;
     use rand::thread_rng;
-    use std::fs::File;
-    use tempfile::NamedTempFile;
 
     #[test]
     fn test_forward_3d_sizes() {
@@ -187,45 +190,52 @@ mod tests {
         let _: Tensor3D<1, 8, 8> = <(A, B, C)>::default().forward_mut(Img::zeros());
     }
 
-    #[test]
-    fn test_save_conv2d() {
-        let model: Conv2D<2, 4, 3> = Default::default();
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        model
-            .save(file.path().to_str().unwrap())
-            .expect("failed to save model");
-        let f = File::open(file.path()).expect("failed to open resulting file");
-        let mut zip = ZipArchive::new(f).expect("failed to create zip archive from file");
-        {
-            let weight_file = zip
-                .by_name("weight.npy")
-                .expect("failed to find weight.npy file");
-            assert!(weight_file.size() > 0);
+    #[cfg(feature = "numpy")]
+    mod numpy_tests {
+        use super::*;
+        use std::fs::File;
+        use tempfile::NamedTempFile;
+
+        #[test]
+        fn test_save_conv2d() {
+            let model: Conv2D<2, 4, 3> = Default::default();
+            let file = NamedTempFile::new().expect("failed to create tempfile");
+            model
+                .save(file.path().to_str().unwrap())
+                .expect("failed to save model");
+            let f = File::open(file.path()).expect("failed to open resulting file");
+            let mut zip = ZipArchive::new(f).expect("failed to create zip archive from file");
+            {
+                let weight_file = zip
+                    .by_name("weight.npy")
+                    .expect("failed to find weight.npy file");
+                assert!(weight_file.size() > 0);
+            }
+            {
+                let bias_file = zip
+                    .by_name("bias.npy")
+                    .expect("failed to find bias.npy file");
+                assert!(bias_file.size() > 0);
+            }
         }
-        {
-            let bias_file = zip
-                .by_name("bias.npy")
-                .expect("failed to find bias.npy file");
-            assert!(bias_file.size() > 0);
+
+        #[test]
+        fn test_load_conv() {
+            let mut rng = thread_rng();
+            let mut saved_model: Conv2D<2, 4, 3> = Default::default();
+            saved_model.reset_params(&mut rng);
+
+            let file = NamedTempFile::new().expect("failed to create tempfile");
+            assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
+
+            let mut loaded_model: Conv2D<2, 4, 3> = Default::default();
+            assert!(loaded_model.weight.data() != saved_model.weight.data());
+            assert!(loaded_model.bias.data() != saved_model.bias.data());
+
+            assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
+            assert_eq!(loaded_model.weight.data(), saved_model.weight.data());
+            assert_eq!(loaded_model.bias.data(), saved_model.bias.data());
         }
-    }
-
-    #[test]
-    fn test_load_conv() {
-        let mut rng = thread_rng();
-        let mut saved_model: Conv2D<2, 4, 3> = Default::default();
-        saved_model.reset_params(&mut rng);
-
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        assert!(saved_model.save(file.path().to_str().unwrap()).is_ok());
-
-        let mut loaded_model: Conv2D<2, 4, 3> = Default::default();
-        assert!(loaded_model.weight.data() != saved_model.weight.data());
-        assert!(loaded_model.bias.data() != saved_model.bias.data());
-
-        assert!(loaded_model.load(file.path().to_str().unwrap()).is_ok());
-        assert_eq!(loaded_model.weight.data(), saved_model.weight.data());
-        assert_eq!(loaded_model.bias.data(), saved_model.bias.data());
     }
 
     #[test]

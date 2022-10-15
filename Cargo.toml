@@ -21,19 +21,20 @@ keywords = [
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [package.metadata.docs.rs]
-features = ["nightly"]
+features = ["nightly", "numpy"]
 
 [dependencies]
 rand = { version = "0.8.5", features = ["std_rng"] }
 rand_distr = { version = "0.4.3", features = [] }
 matrixmultiply = { version = "0.3.2", features = [] }
-zip = { version = "0.6.2", features = [] }
+zip = { version = "0.6.2", features = [], optional = true }
 cblas-sys = { version = "0.1.4", optional = true }
 libc = { version = "0.2", optional = true }
 
 [features]
-default = []
+default = ["numpy"]
 nightly = []
+numpy = ["dep:zip"]
 cblas = ["dep:cblas-sys", "dep:libc"]
 intel-mkl = ["cblas"]
 

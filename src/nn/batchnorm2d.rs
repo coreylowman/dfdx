@@ -1,9 +1,13 @@
-use super::{npz_fread, npz_fwrite, LoadFromNpz, NpzError, SaveToNpz};
 use super::{Module, ModuleMut, ResetParams};
 use crate::arrays::{HasArrayData, HasAxes};
 use crate::devices::{Cpu, FillElements};
 use crate::{gradients::*, tensor::*, tensor_ops::*};
+
+#[cfg(feature = "numpy")]
+use super::{npz_fread, npz_fwrite, LoadFromNpz, NpzError, SaveToNpz};
+#[cfg(feature = "numpy")]
 use std::io::{Read, Seek, Write};
+#[cfg(feature = "numpy")]
 use zip::{result::ZipResult, ZipArchive};
 
 /// Batch normalization for images as described in
@@ -191,6 +195,7 @@ impl<const C: usize> CanUpdateWithGradients for BatchNorm2D<C> {
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<const C: usize> SaveToNpz for BatchNorm2D<C> {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut zip::ZipWriter<W>) -> ZipResult<()> {
         npz_fwrite(w, format!("{p}scale.npy"), self.scale.data())?;
@@ -201,6 +206,7 @@ impl<const C: usize> SaveToNpz for BatchNorm2D<C> {
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<const C: usize> LoadFromNpz for BatchNorm2D<C> {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         npz_fread(r, format!("{p}scale.npy"), self.scale.mut_data())?;
@@ -323,6 +329,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "numpy")]
     #[test]
     fn test_batchnorm2d_save_load() {
         let mut rng = StdRng::seed_from_u64(13);

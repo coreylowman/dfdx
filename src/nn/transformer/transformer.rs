@@ -1,6 +1,8 @@
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
+#[cfg(feature = "numpy")]
 use std::io::{Read, Seek, Write};
+#[cfg(feature = "numpy")]
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// **Requires Nightly** Transformer architecture as described in
@@ -86,6 +88,7 @@ where
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> SaveToNpz
     for Transformer<M, H, E, D, F>
 {
@@ -96,6 +99,7 @@ impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: us
     }
 }
 
+#[cfg(feature = "numpy")]
 impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> LoadFromNpz
     for Transformer<M, H, E, D, F>
 {
@@ -148,6 +152,7 @@ mod tests {
         assert!(unused.is_empty());
     }
 
+    #[cfg(feature = "numpy")]
     #[test]
     fn test_save_load() {
         let mut rng = thread_rng();
