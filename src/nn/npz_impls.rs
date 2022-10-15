@@ -96,15 +96,15 @@ impl<const I: usize, const O: usize> LoadFromNpz for Linear<I, O> {
 macro_rules! tuple_npz_impl {
     ([$($name:ident),+], [$($idx:tt),+]) => {
 impl<$($name: SaveToNpz),+> SaveToNpz for ($($name,)+) {
-    fn write<W: Write + Seek>(&self, base: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        $(self.$idx.write(&format!("{}{}.", base, $idx), w)?;)+
+    fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        $(self.$idx.write(&format!("{p}{}.", $idx), w)?;)+
         Ok(())
     }
 }
 
 impl<$($name: LoadFromNpz),+> LoadFromNpz for ($($name,)+) {
-    fn read<R: Read + Seek>(&mut self, base: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        $(self.$idx.read(&format!("{}{}.", base, $idx), r)?;)+
+    fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        $(self.$idx.read(&format!("{p}{}.", $idx), r)?;)+
         Ok(())
     }
 }
@@ -137,25 +137,25 @@ impl<T: LoadFromNpz, const N: usize> LoadFromNpz for Repeated<T, N> {
 
 impl<F: SaveToNpz> SaveToNpz for Residual<F> {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        self.0.write(p, w)
+        self.0.write(&format!("{p}.0"), w)
     }
 }
 
 impl<F: LoadFromNpz> LoadFromNpz for Residual<F> {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        self.0.read(p, r)
+        self.0.read(&format!("{p}.0"), r)
     }
 }
 
 impl<T: SaveToNpz> SaveToNpz for SplitInto<T> {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        self.0.write(p, w)
+        self.0.write(&format!("{p}.0"), w)
     }
 }
 
 impl<T: LoadFromNpz> LoadFromNpz for SplitInto<T> {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        self.0.read(p, r)
+        self.0.read(&format!("{p}.0"), r)
     }
 }
 
@@ -164,7 +164,7 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize> SaveToNpz
     for TransformerDecoder<M, H, F, L>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        self.0.write(p, w)
+        self.0.write(&format!("{p}.0"), w)
     }
 }
 
@@ -204,8 +204,8 @@ impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
 impl<const M: usize, const H: usize, const F: usize, const L: usize> LoadFromNpz
     for TransformerDecoder<M, H, F, L>
 {
-    fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        self.0.read(pre, r)
+    fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        self.0.read(&format!("{p}.0"), r)
     }
 }
 
