@@ -16,10 +16,12 @@ use rand_distr::Uniform;
 ///
 /// Examples:
 /// ```rust
-/// #![feature(generic_const_exprs)]
+/// #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 /// # use dfdx::prelude::*;
 /// let m: Conv2D<16, 33, 3> = Default::default();
+/// #[cfg(feature = "nightly")]
 /// let _: Tensor3D<33, 30, 62> = m.forward(Tensor3D::<16, 32, 64>::zeros());
+/// #[cfg(feature = "nightly")]
 /// let _: Tensor4D<2, 33, 13, 12> = m.forward(Tensor4D::<2, 16, 15, 14>::zeros());
 /// ```
 #[derive(Default, Debug, Clone)]
