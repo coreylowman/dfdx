@@ -1,4 +1,4 @@
-use super::{LoadFromNpz, Module, ModuleMut, ResetParams, SaveToNpz};
+use super::{Module, ModuleMut, ResetParams};
 use crate::gradients::*;
 use crate::tensor::*;
 use rand::Rng;
@@ -44,9 +44,6 @@ macro_rules! impl_pools {
         impl<const K: usize, const S: usize, const P: usize> ResetParams for $PoolTy<K, S, P> {
             fn reset_params<R: Rng>(&mut self, _: &mut R) {}
         }
-
-        impl<const K: usize, const S: usize, const P: usize> SaveToNpz for $PoolTy<K, S, P> {}
-        impl<const K: usize, const S: usize, const P: usize> LoadFromNpz for $PoolTy<K, S, P> {}
 
         impl<
                 const K: usize,

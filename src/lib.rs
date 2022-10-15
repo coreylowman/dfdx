@@ -101,6 +101,7 @@ pub mod feature_flags;
 pub mod gradients;
 pub mod losses;
 pub mod nn;
+#[cfg(feature = "numpy")]
 pub mod numpy;
 pub mod optim;
 pub mod tensor;

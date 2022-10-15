@@ -23,9 +23,6 @@ impl CanUpdateWithGradients for FlattenImage {
     fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
 }
 
-impl SaveToNpz for FlattenImage {}
-impl LoadFromNpz for FlattenImage {}
-
 impl<const M: usize, const N: usize, const O: usize, H: Tape> Module<Tensor3D<M, N, O, H>>
     for FlattenImage
 where

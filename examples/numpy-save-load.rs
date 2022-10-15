@@ -1,8 +1,9 @@
 //! Demonstrates how to use dfdx::numpy to save and load arrays
 
-use dfdx::numpy as np;
-
+#[cfg(feature = "numpy")]
 fn main() {
+    use dfdx::numpy as np;
+
     np::save("0d-rs.npy", &1.234).expect("Saving failed");
     np::save("1d-rs.npy", &[1.0, 2.0, 3.0]).expect("Saving failed");
     np::save("2d-rs.npy", &[[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]).expect("Saving failed");
@@ -18,4 +19,9 @@ fn main() {
     let mut expected_2d = [[0.0; 3]; 2];
     np::load("2d-rs.npy", &mut expected_2d).expect("Loading failed");
     assert_eq!(expected_2d, [[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+}
+
+#[cfg(not(feature = "numpy"))]
+fn main() {
+    panic!("Use the 'numpy' feature to run this example");
 }

@@ -1,7 +1,5 @@
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
-use std::io::{Read, Seek, Write};
-use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// **Requires Nightly** Transformer architecture as described in
 /// [Attention is all you need](https://arxiv.org/abs/1706.03762).
@@ -34,8 +32,8 @@ pub struct Transformer<
     const NUM_DECODER_LAYERS: usize,
     const FF_DIM: usize,
 > {
-    encoder: TransformerEncoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_ENCODER_LAYERS>,
-    decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS>,
+    pub encoder: TransformerEncoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_ENCODER_LAYERS>,
+    pub decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS>,
 }
 
 impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> ResetParams
@@ -86,32 +84,11 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> SaveToNpz
-    for Transformer<M, H, E, D, F>
-{
-    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        self.encoder.write(&format!("{pre}encoder."), w)?;
-        self.decoder.write(&format!("{pre}decoder."), w)?;
-        Ok(())
-    }
-}
-
-impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> LoadFromNpz
-    for Transformer<M, H, E, D, F>
-{
-    fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        self.encoder.read(&format!("{pre}encoder."), r)?;
-        self.decoder.read(&format!("{pre}decoder."), r)?;
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::nn::tests::SimpleGradients;
-    use rand::{rngs::StdRng, thread_rng, SeedableRng};
-    use tempfile::NamedTempFile;
+    use rand::{rngs::StdRng, SeedableRng};
 
     #[test]
     fn test_forward() {
@@ -146,27 +123,5 @@ mod tests {
         t.update(&mut gs, &mut unused);
 
         assert!(unused.is_empty());
-    }
-
-    #[test]
-    fn test_save_load() {
-        let mut rng = thread_rng();
-
-        let mut saved: Transformer<16, 4, 3, 4, 8> = Default::default();
-        saved.reset_params(&mut rng);
-
-        let file = NamedTempFile::new().expect("failed to create tempfile");
-        saved.save(file.path()).expect("");
-
-        let mut loaded: Transformer<16, 4, 3, 4, 8> = Default::default();
-        loaded.load(file.path()).expect("");
-
-        let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
-        let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
-
-        let y1 = saved.forward_mut((src.clone(), tgt.clone()));
-        let y2 = loaded.forward_mut((src.clone(), tgt.clone()));
-
-        assert_eq!(y1.data(), y2.data());
     }
 }

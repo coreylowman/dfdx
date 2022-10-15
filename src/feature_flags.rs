@@ -24,6 +24,15 @@
 //!
 //! `build.rs` will fail helpfully if you don't have the correct path/environment variables.
 //!
+//! # "numpy"
+//!
+//! Enables saving and loading arrays to .npy files, and saving and loading nn to .npz files.
+//!
+//! Example:
+//! ```toml
+//! dfdx = { version = "...", features = ["numpy"] }
+//! ```
+//!
 //! # "nightly"
 //!
 //! Enables using all features that currently require the nightly rust compiler.

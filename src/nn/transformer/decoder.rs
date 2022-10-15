@@ -1,8 +1,6 @@
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 use rand::Rng;
-use std::io::{Read, Seek, Write};
-use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
 /// **Requires Nightly** A transformer decoder.
 ///
@@ -62,22 +60,6 @@ where
 
     fn forward_mut(&mut self, t: T) -> Self::Output {
         self.forward(t)
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, const L: usize> SaveToNpz
-    for TransformerDecoder<M, H, F, L>
-{
-    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        self.0.write(pre, w)
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, const L: usize> LoadFromNpz
-    for TransformerDecoder<M, H, F, L>
-{
-    fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        self.0.read(pre, r)
     }
 }
 
@@ -166,36 +148,6 @@ where
         let x = self.norm2.forward(x);
         let x = self.ff.forward(x);
         self.norm3.forward(x)
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize> SaveToNpz
-    for TransformerDecoderBlock<M, H, F>
-{
-    fn write<W: Write + Seek>(&self, pre: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        self.self_attn.write(&format!("{pre}self_attn."), w)?;
-        self.norm1.write(&format!("{pre}norm1."), w)?;
-        self.mh_attn.write(&format!("{pre}mh_attn."), w)?;
-        self.norm2.write(&format!("{pre}norm2."), w)?;
-        self.ff.0 .0.write(&format!("{pre}linear1."), w)?;
-        self.ff.0 .2.write(&format!("{pre}linear2."), w)?;
-        self.norm3.write(&format!("{pre}norm3."), w)?;
-        Ok(())
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
-    for TransformerDecoderBlock<M, H, F>
-{
-    fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        self.self_attn.read(&format!("{pre}self_attn."), r)?;
-        self.norm1.read(&format!("{pre}norm1."), r)?;
-        self.mh_attn.read(&format!("{pre}mh_attn."), r)?;
-        self.norm2.read(&format!("{pre}norm2."), r)?;
-        self.ff.0 .0.read(&format!("{pre}linear1."), r)?;
-        self.ff.0 .2.read(&format!("{pre}linear2."), r)?;
-        self.norm3.read(&format!("{pre}norm3."), r)?;
-        Ok(())
     }
 }
 
