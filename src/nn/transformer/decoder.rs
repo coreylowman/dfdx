@@ -1,3 +1,4 @@
+use super::mha::MultiHeadAttention;
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 use rand::Rng;

@@ -15,7 +15,7 @@ use rand_distr::Uniform;
 /// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
 ///
 /// Examples:
-/// ```rust
+/// ```ignore
 /// #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 /// # use dfdx::prelude::*;
 /// let m: Conv2D<16, 33, 3> = Default::default();
