@@ -1,7 +1,7 @@
 use crate::arrays::HasArrayType;
 use crate::gradients::{CanUpdateWithGradients, NoneTape, Tape};
 use crate::prelude::*;
-use crate::unique_id::{unique_id, HasUniqueId};
+use crate::unique_id::HasUniqueId;
 
 /// The main tensor trait. A tensor consists of mainly 1. an array, 2. a device, 3. a unique id.
 pub trait Tensor:
@@ -21,11 +21,6 @@ pub trait Tensor:
 
     /// Removes whatever Tape this tensor has and returns itself without a tape.
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
-
-    /// Returns this tensor with a **new id** and no tape, effectively
-    /// detaching any operations that are done with this tensor
-    /// from gradient computations.
-    fn detach(self) -> Self::NoTape;
 }
 
 macro_rules! tensor_impl {
@@ -39,14 +34,6 @@ impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
             Self::NoTape { id: self.id, data: self.data, tape: Default::default() },
             self.tape,
         )
-    }
-
-    fn detach(self) -> Self::NoTape {
-        Self::NoTape {
-            id: unique_id(),
-            data: self.data,
-            tape: Default::default(),
-        }
     }
 }
 
@@ -78,13 +65,6 @@ mod tests {
         let t1: Tensor1D<32> = TensorCreator::zeros();
         let t2: Tensor1D<32, NoneTape> = t1.clone();
         assert_eq!(t1.id, t2.id);
-    }
-
-    #[test]
-    fn test_ids_with_detach() {
-        let t1: Tensor1D<32> = TensorCreator::zeros();
-        let t2: Tensor1D<32, NoneTape> = t1.clone().detach();
-        assert_ne!(t1.id, t2.id);
     }
 
     #[test]
