@@ -38,7 +38,7 @@ where
 {
     T::Device::foreach_m(t.mut_data(), &mut |x| *x = f(x)); // clones if there is more than 1 reference to t
     let (t, mut tape) = t.split_tape();
-    let result = t.clone(); // will always a new reference to t, not start a new one
+    let result = t.clone().detach(); // result will have a new id but same data as t
     let phantom_result = result.phantom();
     tape.add_backward_op(move |grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &phantom_result);

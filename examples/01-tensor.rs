@@ -24,7 +24,7 @@ fn main() {
     let a_data: &[[[f32; 4]; 3]; 2] = a.data();
     println!("a={:?}", a_data);
 
-    // you can clone() a tensor (or duplicate()):
+    // you can clone() a tensor:
     let a_copy = a.clone();
     assert_eq!(a_copy.data(), a.data());
 }

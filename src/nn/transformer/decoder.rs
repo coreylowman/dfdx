@@ -38,14 +38,14 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize> CanUpdateWi
 impl<const M: usize, const H: usize, const F: usize, const L: usize, Tgt, Mem> Module<(Tgt, Mem)>
     for TransformerDecoder<M, H, F, L>
 where
-    Mem: Tensor<NoTape = Mem>,
+    Mem: Tensor<NoTape = Mem> + Clone,
     TransformerDecoderBlock<M, H, F>: Module<(Tgt, Mem), Output = Tgt>,
 {
     type Output = Tgt;
 
     fn forward(&self, (mut x, mem): (Tgt, Mem)) -> Self::Output {
         for block in self.0.modules.iter() {
-            x = block.forward((x, mem.duplicate()));
+            x = block.forward((x, mem.clone()));
         }
         x
     }
@@ -124,7 +124,7 @@ impl<const M: usize, const H: usize, const F: usize, Tgt, Mem> Module<(Tgt, Mem)
     for TransformerDecoderBlock<M, H, F>
 where
     Tgt: Tensor<Dtype = f32>,
-    Mem: Tensor<Dtype = f32, NoTape = Mem>,
+    Mem: Tensor<Dtype = f32, NoTape = Mem> + Clone,
     MultiHeadAttention<M, H>: Module<(Tgt, Tgt::NoTape, Tgt::NoTape), Output = Tgt>
         + Module<(Tgt, Mem, Mem), Output = Tgt>,
     LayerNorm1D<M>: Module<Tgt, Output = Tgt>,
@@ -134,16 +134,15 @@ where
 
     fn forward(&self, (tgt, mem): (Tgt, Mem)) -> Self::Output {
         let (tgt, tape) = tgt.split_tape();
-        let x = self.self_attn.forward((
-            tgt.duplicate().put_tape(tape),
-            tgt.duplicate(),
-            tgt.duplicate(),
-        ));
+        let x = self
+            .self_attn
+            .forward((tgt.clone().put_tape(tape), tgt.clone(), tgt.clone()));
         let x = add(x, &tgt);
         let x = self.norm1.forward(x);
 
-        let x_ = x.duplicate();
-        let x = self.mh_attn.forward((x, mem.duplicate(), mem));
+        let (x, tape) = x.split_tape();
+        let x_ = x.clone();
+        let x = self.mh_attn.forward((x.put_tape(tape), mem.clone(), mem));
         let x = add(x, &x_);
         let x = self.norm2.forward(x);
         let x = self.ff.forward(x);

@@ -19,10 +19,10 @@ where
     T::Array: HasAxes<Axes>,
 {
     let (t, tape) = t.split_tape();
-    let (std, tape) = stddev(t.duplicate().put_tape(tape), epsilon)
+    let (std, tape) = stddev(t.clone().put_tape(tape), epsilon)
         .broadcast()
         .split_tape();
-    let (mean, tape) = mean(t.duplicate().put_tape(tape)).broadcast().split_tape();
+    let (mean, tape) = mean(t.clone().put_tape(tape)).broadcast().split_tape();
     let centered = sub(t.put_tape(tape), &mean);
     div(centered, &std)
 }

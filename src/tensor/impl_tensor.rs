@@ -22,8 +22,10 @@ pub trait Tensor:
     /// Removes whatever Tape this tensor has and returns itself without a tape.
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
 
-    /// Clones the data and id of this tensor and returns something with [NoneTape].
-    fn duplicate(&self) -> Self::NoTape;
+    /// Returns this tensor with a **new id** and no tape, effectively
+    /// detaching any operations that are done with this tensor
+    /// from gradient computations.
+    fn detach(self) -> Self::NoTape;
 }
 
 macro_rules! tensor_impl {
@@ -39,20 +41,20 @@ impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
         )
     }
 
-    fn duplicate(&self) -> Self::NoTape {
+    fn detach(self) -> Self::NoTape {
         Self::NoTape {
-            id: self.id,
-            data: self.data.clone(),
+            id: unique_id(),
+            data: self.data,
             tape: Default::default(),
         }
     }
 }
 
 impl<$(const $Vs: usize, )* H: Clone> Clone for $struct<$($Vs, )* H> {
-    /// Clones the underlying data and tape. **Creates a new `id`.**
+    /// Clones the underlying id, data, and tape
     fn clone(&self) -> Self {
         Self {
-            id: unique_id(),
+            id: self.id,
             data: self.data.clone(),
             tape: self.tape.clone(),
         }
@@ -72,16 +74,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_ids_with_duplicate() {
+    fn test_ids_with_clone() {
         let t1: Tensor1D<32> = TensorCreator::zeros();
-        let t2: Tensor1D<32, NoneTape> = t1.duplicate();
+        let t2: Tensor1D<32, NoneTape> = t1.clone();
         assert_eq!(t1.id, t2.id);
     }
 
     #[test]
-    fn test_ids_with_clone() {
+    fn test_ids_with_detach() {
         let t1: Tensor1D<32> = TensorCreator::zeros();
-        let t2: Tensor1D<32, NoneTape> = t1.clone();
+        let t2: Tensor1D<32, NoneTape> = t1.clone().detach();
         assert_ne!(t1.id, t2.id);
     }
 

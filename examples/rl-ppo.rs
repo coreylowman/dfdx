@@ -48,9 +48,9 @@ fn main() {
         let ratio = (log_prob_a - &old_log_prob_a).exp();
 
         // because we need to re-use `ratio` a 2nd time, we need to do some tape manipulation here.
-        let r_ = ratio.duplicate();
-        let (surr1, tape) = (ratio * &advantage).split_tape();
-        let surr2 = (r_.put_tape(tape)).clamp(0.8, 1.2) * &advantage;
+        let (ratio, tape) = ratio.split_tape();
+        let (surr1, tape) = (ratio.clone().put_tape(tape) * &advantage).split_tape();
+        let surr2 = (ratio.put_tape(tape)).clamp(0.8, 1.2) * &advantage;
 
         let ppo_loss = -(minimum(surr2, &surr1).mean());
 
