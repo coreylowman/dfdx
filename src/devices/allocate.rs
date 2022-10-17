@@ -1,6 +1,7 @@
 use super::Cpu;
 use crate::arrays::CountElements;
 use std::alloc::{alloc_zeroed, Layout};
+use std::boxed::Box;
 
 /// Allocate an Nd array on the heap.
 pub trait AllocateZeros {

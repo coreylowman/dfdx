@@ -3,6 +3,7 @@ use super::{AllocateZeros, Cpu};
 use cblas_sys::{
     cblas_sgemm as sgemm, CblasNoTrans as NoTr, CblasRowMajor as RowMajor, CblasTrans as Tr,
 };
+use std::boxed::Box;
 
 /// **Requires nightly** 2d convolution with stride and padding specified at trait level.
 ///

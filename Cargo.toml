@@ -24,6 +24,7 @@ keywords = [
 features = ["nightly", "numpy"]
 
 [dependencies]
+no-std-compat = { version = "0.4.1", features = [ "alloc", "compat_hash" ] }
 rand = { version = "0.8.5", features = ["std_rng"] }
 rand_distr = { version = "0.4.3", features = [] }
 matrixmultiply = { version = "0.3.2", features = [] }
@@ -32,9 +33,10 @@ cblas-sys = { version = "0.1.4", optional = true }
 libc = { version = "0.2", optional = true }
 
 [features]
-default = ["numpy"]
+default = ["std", "numpy"]
+std = ["no-std-compat/std"]
 nightly = []
-numpy = ["dep:zip"]
+numpy = ["dep:zip", "std"]
 cblas = ["dep:cblas-sys", "dep:libc"]
 intel-mkl = ["cblas"]
 

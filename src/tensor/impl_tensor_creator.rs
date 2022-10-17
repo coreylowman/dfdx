@@ -5,6 +5,7 @@ use crate::prelude::*;
 use crate::unique_id::unique_id;
 use rand::prelude::Distribution;
 use rand_distr::{num_traits::One, Standard, StandardNormal};
+use std::boxed::Box;
 
 /// Something that can be created - currently only implemented for tensors with no tapes.
 pub trait TensorCreator: Sized + HasDevice {

@@ -1,6 +1,7 @@
 //! A collection of data utility classes such as [one_hot_encode()] and [SubsetIterator].
 
 use rand::prelude::SliceRandom;
+use std::vec::Vec;
 
 use crate::arrays::HasArrayData;
 use crate::tensor::{Tensor1D, Tensor2D, TensorCreator};

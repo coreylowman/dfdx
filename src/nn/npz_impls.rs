@@ -1,5 +1,6 @@
 use super::npz::{npz_fread, npz_fwrite, LoadFromNpz, SaveToNpz};
 use crate::prelude::*;
+use std::format;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 

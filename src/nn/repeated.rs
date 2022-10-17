@@ -1,5 +1,6 @@
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
+use std::vec::Vec;
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///

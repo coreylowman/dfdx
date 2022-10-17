@@ -37,6 +37,7 @@ impl std::fmt::Display for UnusedParamsError {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for UnusedParamsError {}
 
 #[allow(clippy::from_over_into)]
