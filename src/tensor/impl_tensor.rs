@@ -1,7 +1,7 @@
 use crate::arrays::HasArrayType;
 use crate::gradients::{CanUpdateWithGradients, NoneTape, Tape};
 use crate::prelude::*;
-use crate::unique_id::{unique_id, HasUniqueId};
+use crate::unique_id::HasUniqueId;
 
 /// The main tensor trait. A tensor consists of mainly 1. an array, 2. a device, 3. a unique id.
 pub trait Tensor:
@@ -21,9 +21,6 @@ pub trait Tensor:
 
     /// Removes whatever Tape this tensor has and returns itself without a tape.
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
-
-    /// Clones the data and id of this tensor and returns something with [NoneTape].
-    fn duplicate(&self) -> Self::NoTape;
 }
 
 macro_rules! tensor_impl {
@@ -38,21 +35,13 @@ impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
             self.tape,
         )
     }
-
-    fn duplicate(&self) -> Self::NoTape {
-        Self::NoTape {
-            id: self.id,
-            data: self.data.clone(),
-            tape: Default::default(),
-        }
-    }
 }
 
 impl<$(const $Vs: usize, )* H: Clone> Clone for $struct<$($Vs, )* H> {
-    /// Clones the underlying data and tape. **Creates a new `id`.**
+    /// Clones the underlying id, data, and tape
     fn clone(&self) -> Self {
         Self {
-            id: unique_id(),
+            id: self.id,
             data: self.data.clone(),
             tape: self.tape.clone(),
         }
@@ -72,17 +61,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_ids_with_duplicate() {
-        let t1: Tensor1D<32> = TensorCreator::zeros();
-        let t2: Tensor1D<32, NoneTape> = t1.duplicate();
-        assert_eq!(t1.id, t2.id);
-    }
-
-    #[test]
     fn test_ids_with_clone() {
         let t1: Tensor1D<32> = TensorCreator::zeros();
         let t2: Tensor1D<32, NoneTape> = t1.clone();
-        assert_ne!(t1.id, t2.id);
+        assert_eq!(t1.id, t2.id);
     }
 
     #[test]

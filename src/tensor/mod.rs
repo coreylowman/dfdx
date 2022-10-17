@@ -69,12 +69,6 @@
 //! let t_clone: Tensor1D<5, OwnedTape> = t.trace(); // copies t
 //! let t: Tensor1D<5, OwnedTape> = t.traced(); // takes ownership of t
 //! ```
-//!
-//! # Cloning/copying
-//!
-//! There are two primary methods for copying a tensor
-//! 1. [Clone] is implemented for tensors without a tape. **NOTE** that the unique id is modified when a tensor is cloned
-//! 2. [Tensor::duplicate()] is implemented for all tensors, it copies the [crate::unique_id::UniqueId], and returns a tensor with no tape.
 
 mod impl_default;
 mod impl_has_array;

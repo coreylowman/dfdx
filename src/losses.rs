@@ -1,7 +1,6 @@
 //! Standard loss functions such as [mse_loss()], [cross_entropy_with_logits_loss()], and more.
 
 use crate::arrays::{AllAxes, HasArrayType, HasLastAxis};
-use crate::tensor::Tensor;
 use crate::tensor_ops::*;
 
 /// [Mean Squared Error](https://en.wikipedia.org/wiki/Mean_squared_error).
@@ -150,7 +149,7 @@ where
 {
     let probs = log_softmax::<_, <T::Array as HasLastAxis>::LastAxis>(logits);
     let r = negate(mean::<_, AllAxes>(mul(
-        sub(probs, &ln(target_probs.duplicate())),
+        sub(probs, &ln(target_probs.clone())),
         target_probs,
     )));
     mul_scalar(r, <T::Array as HasLastAxis>::SIZE as f32)

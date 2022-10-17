@@ -51,9 +51,7 @@ pub fn logsumexp<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
 /// ```
 pub fn log_softmax<T: Reduce<Axes>, Axes>(t: T) -> T {
     let (t, tape) = t.split_tape();
-    let (lse, tape) = logsumexp(t.duplicate().put_tape(tape))
-        .broadcast()
-        .split_tape();
+    let (lse, tape) = logsumexp(t.clone().put_tape(tape)).broadcast().split_tape();
     sub(t.put_tape(tape), &lse)
 }
 

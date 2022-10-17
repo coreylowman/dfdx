@@ -77,9 +77,9 @@ impl<H: Tape, const B: usize, const M: usize> Module<Tensor2D<B, M, H>> for Laye
     /// 3. [add()] with [Self::beta]
     fn forward(&self, x: Tensor2D<B, M, H>) -> Self::Output {
         let (x, tape) = x.normalize::<Axis<1>>(self.epsilon).split_tape();
-        let g: Tensor2D<B, M, H> = self.gamma.duplicate().put_tape(tape).broadcast();
+        let g: Tensor2D<B, M, H> = self.gamma.clone().put_tape(tape).broadcast();
         let (x, tape) = mul(g, &x).split_tape();
-        let b = self.beta.duplicate().put_tape(tape).broadcast();
+        let b = self.beta.clone().put_tape(tape).broadcast();
         add(b, &x)
     }
 }
@@ -95,9 +95,9 @@ impl<H: Tape, const B: usize, const S: usize, const M: usize> Module<Tensor3D<B,
     /// 3. [add()] with [Self::beta]
     fn forward(&self, x: Tensor3D<B, S, M, H>) -> Self::Output {
         let (x, tape) = x.normalize::<Axis<2>>(self.epsilon).split_tape();
-        let g: Tensor3D<B, S, M, H> = self.gamma.duplicate().put_tape(tape).broadcast();
+        let g: Tensor3D<B, S, M, H> = self.gamma.clone().put_tape(tape).broadcast();
         let (x, tape) = mul(g, &x).split_tape();
-        let b = self.beta.duplicate().put_tape(tape).broadcast();
+        let b = self.beta.clone().put_tape(tape).broadcast();
         add(b, &x)
     }
 }

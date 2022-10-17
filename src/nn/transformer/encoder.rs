@@ -80,11 +80,9 @@ where
 
     fn forward(&self, src: Src) -> Self::Output {
         let (src, tape) = src.split_tape();
-        let x = self.self_attn.forward((
-            src.duplicate().put_tape(tape),
-            src.duplicate(),
-            src.duplicate(),
-        ));
+        let x = self
+            .self_attn
+            .forward((src.clone().put_tape(tape), src.clone(), src.clone()));
         let x = add(x, &src);
         let x = self.norm1.forward(x);
         let x = self.ff.forward(x);

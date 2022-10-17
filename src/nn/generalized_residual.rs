@@ -54,7 +54,7 @@ where
         let (x, tape) = x.split_tape();
 
         // do R(x) on the tape
-        let r_x = self.r.forward(x.duplicate().put_tape(tape));
+        let r_x = self.r.forward(x.clone().put_tape(tape));
         let (r_x, tape) = r_x.split_tape();
 
         // do F(x) on the tape
@@ -77,7 +77,7 @@ where
         let (x, tape) = x.split_tape();
 
         // do R(x) on the tape
-        let r_x = self.r.forward_mut(x.duplicate().put_tape(tape));
+        let r_x = self.r.forward_mut(x.clone().put_tape(tape));
         let (r_x, tape) = r_x.split_tape();
 
         // do F(x) on the tape

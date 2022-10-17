@@ -51,7 +51,7 @@ where
     fn forward(&self, x: Input) -> Self::Output {
         let (x, tape) = x.split_tape();
         let ($($heads, )+ $tail) = &self.0;
-        $(let ($heads, tape) = $heads.forward(x.duplicate().put_tape(tape)).split_tape();)+
+        $(let ($heads, tape) = $heads.forward(x.clone().put_tape(tape)).split_tape();)+
         let $tail = $tail.forward(x.put_tape(tape));
         (
             $($heads,)+
@@ -77,7 +77,7 @@ where
     fn forward_mut(&mut self, x: Input) -> Self::Output {
         let (x, tape) = x.split_tape();
         let ($($heads, )+ $tail) = &mut self.0;
-        $(let ($heads, tape) = $heads.forward_mut(x.duplicate().put_tape(tape)).split_tape();)+
+        $(let ($heads, tape) = $heads.forward_mut(x.clone().put_tape(tape)).split_tape();)+
         let $tail = $tail.forward_mut(x.put_tape(tape));
         (
             $($heads,)+

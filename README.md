@@ -158,7 +158,7 @@ Since all operations result in exactly 1 child, we can always move the gradient 
 *All of this together gives users unprecedented control/precision over what tensors are recorded on the gradient tape!*
 
 One advanced use case requires that tensors be re-used multiple times in a computation graph.
-This can be handled by duplicating the tensor, and manually moving the gradient tape around.
+This can be handled by cloning the tensor, and manually moving the gradient tape around.
 See [examples/12-multi-headed.rs](examples/12-multi-headed.rs) for an example.
 
 ### Type checked backward
