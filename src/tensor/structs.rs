@@ -1,4 +1,4 @@
-//! We use [std::sync::Arc] instead of [Box] here to:
+//! We use [std::sync::Arc] instead of [std::boxed::Box] here to:
 //! 1. reduce allocations when tensors are cloned.
 //! 2. make sharing tensors and things that contain tensors across threads easy
 //!
