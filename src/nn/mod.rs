@@ -95,19 +95,24 @@ mod transformer;
 
 pub use activations::*;
 pub use batchnorm2d::*;
-pub use conv::*;
 pub use dropout::*;
-pub use flatten::*;
 pub use generalized_residual::*;
 pub use impl_module_for_tuples::*;
 pub use layer_norm::*;
 pub use linear::*;
 pub use module::*;
-pub use pool2d::*;
 pub use pool_global::*;
 pub use repeated::*;
 pub use residual::*;
 pub use split_into::*;
+
+#[cfg(feature = "nightly")]
+pub use conv::*;
+#[cfg(feature = "nightly")]
+pub use flatten::*;
+#[cfg(feature = "nightly")]
+pub use pool2d::*;
+#[cfg(feature = "nightly")]
 pub use transformer::*;
 
 #[cfg(feature = "numpy")]

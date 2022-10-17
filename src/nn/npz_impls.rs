@@ -4,6 +4,16 @@ use std::format;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
+// nightly includes
+#[cfg(not(feature = "nightly"))]
+use super::conv::Conv2D;
+#[cfg(not(feature = "nightly"))]
+use super::flatten::*;
+#[cfg(not(feature = "nightly"))]
+use super::pool2d::*;
+#[cfg(not(feature = "nightly"))]
+use super::transformer::*;
+
 impl<const C: usize> SaveToNpz for BatchNorm2D<C> {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut zip::ZipWriter<W>) -> ZipResult<()> {
         npz_fwrite(w, format!("{p}scale.npy"), self.scale.data())?;
