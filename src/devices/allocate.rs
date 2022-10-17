@@ -1,21 +1,21 @@
 use super::Cpu;
-use crate::arrays::CountElements;
+use crate::arrays::{CountElements, ZeroElements};
 use std::alloc::{alloc_zeroed, Layout};
 use std::boxed::Box;
 
 /// Allocate an Nd array on the heap.
 pub trait AllocateZeros {
     /// Allocate T directly on the heap.
-    fn zeros<T: CountElements>() -> Box<T>;
+    fn zeros<T: CountElements + ZeroElements>() -> Box<T>;
 }
 
 impl AllocateZeros for Cpu {
     /// Allocates using [alloc_zeroed].
-    fn zeros<T: CountElements>() -> Box<T> {
-        // TODO is this function safe for any T?
+    fn zeros<T: CountElements + ZeroElements>() -> Box<T> {
         // TODO move to using safe code once we can allocate an array directly on the heap.
         let layout = Layout::new::<T>();
         debug_assert_eq!(layout.size(), T::NUM_BYTES);
+        // SAFETY: ZeroElements guarantees that 0 is a valid value for this type.
         unsafe {
             let ptr = alloc_zeroed(layout) as *mut T;
             Box::from_raw(ptr)

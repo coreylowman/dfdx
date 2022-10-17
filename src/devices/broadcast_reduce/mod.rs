@@ -22,13 +22,16 @@ pub use accumulator::*;
 use super::allocate::AllocateZeros;
 use super::fill::FillElements;
 use super::Cpu;
-use crate::arrays::{AllAxes, Axes2, Axes3, Axes4, Axis, CountElements};
+use crate::arrays::{AllAxes, Axes2, Axes3, Axes4, Axis, CountElements, ZeroElements};
 use indexing::{BroadcastMut, BroadcastRef};
 use std::boxed::Box;
 
 /// Device level broadcasts & reduces of type `T` along axes `Axes`.
-pub trait DeviceReduce<T: CountElements, Axes>:
+pub trait DeviceReduce<T, Axes>:
     FillElements<T> + FillElements<Self::Reduced> + AllocateZeros
+where
+    T: CountElements + ZeroElements,
+    Self::Reduced: ZeroElements,
 {
     /// The smaller type.
     type Reduced: CountElements<Dtype = T::Dtype>;
@@ -142,9 +145,9 @@ impl DeviceReduce<f32, AllAxes> for Cpu {
     }
 }
 
-impl<T: CountElements, const M: usize> DeviceReduce<[T; M], AllAxes> for Cpu
+impl<T: CountElements + ZeroElements, const M: usize> DeviceReduce<[T; M], AllAxes> for Cpu
 where
-    T::Dtype: CountElements<Dtype = T::Dtype>,
+    T::Dtype: CountElements<Dtype = T::Dtype> + ZeroElements,
     Self: DeviceReduce<T, AllAxes> + FillElements<[T; M]> + FillElements<T::Dtype>,
 {
     type Reduced = <Self as DeviceReduce<T, AllAxes>>::Reduced;

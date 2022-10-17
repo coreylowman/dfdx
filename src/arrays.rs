@@ -154,16 +154,16 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize> HasLastAxis
     const SIZE: usize = P;
 }
 
-/// Something that has compile time known zero values.
-pub trait ZeroElements {
+/// Something that has a valid 0 value represented by all 0 bits.
+pub unsafe trait ZeroElements {
     const ZEROS: Self;
 }
 
-impl ZeroElements for f32 {
+unsafe impl ZeroElements for f32 {
     const ZEROS: Self = 0.0;
 }
 
-impl<T: ZeroElements, const M: usize> ZeroElements for [T; M] {
+unsafe impl<T: ZeroElements, const M: usize> ZeroElements for [T; M] {
     const ZEROS: Self = [T::ZEROS; M];
 }
 

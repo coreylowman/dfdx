@@ -28,11 +28,13 @@ pub use pool2d::*;
 use std::boxed::Box;
 use std::ops::*;
 
+use crate::arrays::ZeroElements;
+
 /// The CPU device
 pub struct Cpu;
 
 /// Represents something that can act on `T`.
-pub trait Device<T: crate::arrays::CountElements>:
+pub trait Device<T: crate::arrays::CountElements + ZeroElements>:
     FillElements<T> + DeviceReduce<T, crate::arrays::AllAxes> + AllocateZeros + ForEachElement<T>
 {
     /// Allocate a new `T` and then store `f` applied to `t` in the new `T`. Uses [ForEachElement::foreach_mr].

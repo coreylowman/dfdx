@@ -1,9 +1,9 @@
 use super::{AllocateZeros, Cpu};
-use crate::arrays::CountElements;
+use crate::arrays::{CountElements, ZeroElements};
 use std::boxed::Box;
 
 /// Fills all elements with the specified function
-pub trait FillElements<T: CountElements>: Sized + AllocateZeros {
+pub trait FillElements<T: CountElements + ZeroElements>: Sized + AllocateZeros {
     fn fill<F: FnMut(&mut T::Dtype)>(out: &mut T, f: &mut F);
 
     fn filled<F: FnMut(&mut T::Dtype)>(f: &mut F) -> Box<T> {
@@ -19,7 +19,7 @@ impl FillElements<f32> for Cpu {
     }
 }
 
-impl<T: CountElements, const M: usize> FillElements<[T; M]> for Cpu
+impl<T: CountElements + ZeroElements, const M: usize> FillElements<[T; M]> for Cpu
 where
     Self: FillElements<T>,
 {
