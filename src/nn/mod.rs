@@ -126,10 +126,10 @@ mod npz_impls;
 
 #[cfg(test)]
 mod tests {
+    use crate::arrays::{HasArrayData, HasArrayType};
     use crate::gradients::{GradientProvider, Gradients};
     use crate::unique_id::HasUniqueId;
     use std::boxed::Box;
-    use crate::arrays::{HasArrayData, HasArrayType};
 
     #[derive(Default)]
     pub struct SimpleGradients(pub Gradients);
