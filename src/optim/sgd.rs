@@ -119,7 +119,7 @@ impl<M> Sgd<M> {
 impl<M> GradientProvider for Sgd<M> {
     fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
-        P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
+        P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice + HasArrayData,
     {
         let mut g_t = self.gradients.remove(p)?;
         match self.cfg.momentum {
