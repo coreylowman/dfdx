@@ -10,6 +10,11 @@ use std::{boxed::Box, marker::PhantomData};
 /// Nesterov Momentum is implemented as described in
 /// [On the importance of initialization and momentum in deep learning](https://proceedings.mlr.press/v28/sutskever13.html).
 ///
+/// Weight decay is implemented as described in
+/// [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101)
+/// Note that weight decay is applied after momentum updates and is not equivalent to L2
+/// regularization when momentum is used.
+///
 /// # Example Usage
 ///
 /// Constructing using default:
@@ -26,6 +31,7 @@ use std::{boxed::Box, marker::PhantomData};
 /// let mut opt: Sgd<Model> = Sgd::new(SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: Some(Momentum::Classic(0.5)),
+///     weight_decay: None,
 /// });
 /// ```
 ///
@@ -48,7 +54,8 @@ pub struct Sgd<M> {
 /// # use dfdx::prelude::*;
 /// SgdConfig {
 ///     lr: 1e-1,
-///     momentum: None
+///     momentum: None,
+///     weight_decay: None,
 /// };
 /// ```
 ///
@@ -57,7 +64,8 @@ pub struct Sgd<M> {
 /// # use dfdx::prelude::*;
 /// SgdConfig {
 ///     lr: 1e-2,
-///     momentum: Some(Momentum::Classic(0.5))
+///     momentum: Some(Momentum::Classic(0.5)),
+///     weight_decay: None,
 /// };
 /// ```
 ///
@@ -66,8 +74,20 @@ pub struct Sgd<M> {
 /// # use dfdx::prelude::*;
 /// SgdConfig {
 ///     lr: 1e-3,
-///     momentum: Some(Momentum::Nesterov(0.25))
+///     momentum: Some(Momentum::Nesterov(0.25)),
+///     weight_decay: None,
 /// };
+/// ```
+///
+/// Using weight decay:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// SgdConfig {
+///     lr: 1e-3,
+///     momentum: None,
+///     weight_decay: Some(1e-2),
+/// };
+///
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub struct SgdConfig {
@@ -76,6 +96,9 @@ pub struct SgdConfig {
 
     /// Optional momentum. Defaults to `None`.
     pub momentum: Option<Momentum>,
+
+    /// Optional weight decay. Defaults to `None`.
+    pub weight_decay: Option<f32>,
 }
 
 impl Default for SgdConfig {
@@ -83,6 +106,7 @@ impl Default for SgdConfig {
         Self {
             lr: 1e-2,
             momentum: None,
+            weight_decay: None,
         }
     }
 }
@@ -119,7 +143,7 @@ impl<M> Sgd<M> {
 impl<M> GradientProvider for Sgd<M> {
     fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
-        P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
+        P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice + HasArrayData,
     {
         let mut g_t = self.gradients.remove(p)?;
         match self.cfg.momentum {
@@ -138,6 +162,11 @@ impl<M> GradientProvider for Sgd<M> {
                 });
             }
             None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.cfg.lr),
+        }
+        if let Some(wd) = self.cfg.weight_decay {
+            P::Device::foreach_mr(g_t.as_mut(), p.data(), &mut |g, p_el| {
+               *g += wd * p_el;
+            });
         }
         Some(g_t)
     }
@@ -162,6 +191,7 @@ mod tests {
         let mut sgd = Sgd::new(SgdConfig {
             lr: 1.0,
             momentum: None,
+            weight_decay: None,
         });
 
         let mut pred: Tensor1D<5> = Tensor1D::zeros();
@@ -201,6 +231,7 @@ mod tests {
         let mut sgd = Sgd::new(SgdConfig {
             lr: 1e-2,
             momentum: Some(Momentum::Classic(0.5)),
+            weight_decay: None,
         });
 
         let mut t: Tensor1D<5> = Tensor1D::ones();
@@ -225,6 +256,7 @@ mod tests {
         let mut sgd = Sgd::new(SgdConfig {
             lr: 1e-2,
             momentum: Some(Momentum::Nesterov(0.5)),
+            weight_decay: None,
         });
 
         let mut t: Tensor1D<5> = Tensor1D::ones();
@@ -237,6 +269,54 @@ mod tests {
             [0.9981938, 0.98193747, 0.963875, 0.819375, -0.8062499],
         ];
 
+        for e in expected.iter() {
+            let gradients = backward((t.trace() * &rate).mean());
+            sgd.update(&mut t, gradients).expect("");
+            assert_eq!(t.data(), e);
+        }
+    }
+
+    #[test]
+    fn test_sgd_weight_decay_no_momentum() {
+        let mut sgd = Sgd::new(SgdConfig {
+            lr: 1e-2,
+            momentum: None,
+            weight_decay: Some(1e-3),
+        });
+
+        let mut t: Tensor1D<5> = Tensor1D::ones();
+        let rate = Tensor1D::new([0.1, 1.0, 2.0, 10.0, 100.0]);
+        let expected = [
+            [0.9988, 0.997, 0.995, 0.979, 0.799],
+            [0.99760115, 0.994003, 0.990005, 0.958021, 0.59820104],
+            [0.9964036, 0.991009, 0.98501503, 0.937063, 0.39760286],
+            [0.9952072, 0.988018, 0.98003, 0.9161259, 0.19720526],
+            [0.994012, 0.98502994, 0.97505, 0.8952098, -0.0029919297],
+        ];
+        for e in expected.iter() {
+            let gradients = backward((t.trace() * &rate).mean());
+            sgd.update(&mut t, gradients).expect("");
+            assert_eq!(t.data(), e);
+        }
+    }
+
+    #[test]
+    fn test_sgd_weight_decay_classic_momentum() {
+        let mut sgd = Sgd::new(SgdConfig {
+            lr: 1e-2,
+            momentum: Some(Momentum::Classic(0.5)),
+            weight_decay: Some(1e-3),
+        });
+
+        let mut t: Tensor1D<5> = Tensor1D::ones();
+        let rate = Tensor1D::new([0.1, 1.0, 2.0, 10.0, 100.0]);
+        let expected = [
+            [0.9988, 0.997, 0.995, 0.979, 0.799],
+            [0.9975012, 0.99300295, 0.988005, 0.948021, 0.49820104],
+            [0.9961537, 0.98850995, 0.980017, 0.91207296, 0.14770284],
+            [0.99478257, 0.98377144, 0.971537, 0.87366086, -0.22744486],
+            [0.9934003, 0.97891265, 0.96281546, 0.8340372, -0.61471736],
+        ];
         for e in expected.iter() {
             let gradients = backward((t.trace() * &rate).mean());
             sgd.update(&mut t, gradients).expect("");

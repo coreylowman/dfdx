@@ -25,6 +25,7 @@ fn main() {
     let mut sgd: Sgd<Mlp> = Sgd::new(SgdConfig {
         lr: 1e-1,
         momentum: Some(Momentum::Nesterov(0.9)),
+        weight_decay: None,
     });
 
     // let's initialize our model and some dummy data

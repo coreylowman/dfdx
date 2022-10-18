@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::{boxed::Box, vec::Vec};
 
-use crate::arrays::HasArrayType;
+use crate::arrays::{HasArrayData, HasArrayType};
 use crate::devices::{AllocateZeros, HasDevice};
 use crate::unique_id::{HasUniqueId, UniqueId};
 
@@ -264,7 +264,7 @@ pub trait GradientProvider {
     /// based on the associated data!
     fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
-        P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice;
+        P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice + HasArrayData;
 }
 
 /// Represents something that can be updated with [GradientProvider].
