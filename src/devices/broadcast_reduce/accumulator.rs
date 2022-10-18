@@ -65,6 +65,7 @@ impl Accumulator<f32> for EqAccum {
     }
 }
 
+#[inline(always)]
 pub(super) fn accum1d<A, L, R, const M: usize>(l: &mut L, r: &R)
 where
     L: IndexMut<Index = usize>,
@@ -76,6 +77,7 @@ where
     }
 }
 
+#[inline(always)]
 pub(super) fn accum2d<A, L, R, const M: usize, const N: usize>(l: &mut L, r: &R)
 where
     L: IndexMut<Index = [usize; 2]>,
@@ -89,6 +91,7 @@ where
     }
 }
 
+#[inline(always)]
 pub(super) fn accum3d<A, L, R, const M: usize, const N: usize, const O: usize>(l: &mut L, r: &R)
 where
     L: IndexMut<Index = [usize; 3]>,
@@ -104,6 +107,7 @@ where
     }
 }
 
+#[inline(always)]
 pub(super) fn accum4d<A, L, R, const M: usize, const N: usize, const O: usize, const P: usize>(
     l: &mut L,
     r: &R,
