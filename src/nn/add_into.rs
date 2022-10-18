@@ -31,6 +31,28 @@ impl<T: ResetParams> ResetParams for AddInto<T> {
     }
 }
 
+impl<Input: Tensor, Mod: Module<Input>> Module<(Input, )> for AddInto<(Mod, )>
+{
+    type Output = Mod::Output;
+    
+    fn forward(&self, x: (Input, )) -> Self::Output {
+        let (head, ) = x;
+        
+        // no need for adding
+        self.0.0.forward(head)
+    
+    }
+}
+
+impl<Input: Tensor, Mod: ModuleMut<Input>> ModuleMut<(Input, )> for AddInto<(Mod, )> {
+    type Output = Mod::Output;
+    
+    fn forward_mut(&mut self, x: (Input, )) -> Self::Output {
+        let (head, ) = x;
+        self.0.0.forward_mut(head)
+    }
+}
+
 // so what we want to do:
 // split off the head from the tuple
 // put the tail into an AddInto
@@ -38,15 +60,21 @@ impl<T: ResetParams> ResetParams for AddInto<T> {
 // add them together
 // return
 macro_rules! tuple_impls {
-    ($head:ident $[$tails:ident,+]) => {
+    ($headin: ident $head:ident [$($tailsin:ident $tails:ident),+]) => {
         impl<
-            Output: Tensor,
-            $head: Module<Input>,
-            $($tails: Module<Input, Output = $head::Output>,)+
-        > Module<Input> for AddInto<($head, $($tails,)+)> {
+            $headin: Tensor,
+            $(tailsin: Tensor,)+
+            $head: Module<$headin>,
+            $($tails: Module<$tailsin, Output = $head::Output>,)+
+        > Module<($headin, $($tailsin,)+)> for AddInto<($head, $($tails,)+)> {
             type Output = $head::Output;
             
-            fn forward(&self, x: T) -> Self::Output {
+            fn forward(&self, x: ($headin, $($tailsin,)+)) -> Self::Output {
+                let ($head, $($tails,)+) = x;
+                let head = $head;
+                let tails = $($tails)+;
+                let tail = AddInto(tails);
+                let (base, tape) = head.forward();
                 
             }
         }
