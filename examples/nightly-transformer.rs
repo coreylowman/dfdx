@@ -12,7 +12,7 @@ fn main() {
 
     let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
     let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
-    let out: Tensor3D<4, 6, 16, _> = t.forward_mut((src.trace(), tgt));
+    let _out: Tensor3D<4, 6, 16, _> = t.forward_mut((src.trace(), tgt));
 }
 
 #[cfg(not(feature = "nightly"))]

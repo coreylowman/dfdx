@@ -84,7 +84,8 @@
 //! // Use stochastic gradient descent (Sgd), with a learning rate of 1e-2, and 0.9 momentum.
 //! let mut opt = Sgd::new(SgdConfig {
 //!     lr: 1e-2,
-//!     momentum: Some(Momentum::Classic(0.9))
+//!     momentum: Some(Momentum::Classic(0.9)),
+//!     weight_decay: None,
 //! });
 //!
 //! // pass the gradients & the model into the optimizer's update method
