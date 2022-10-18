@@ -12,8 +12,7 @@ use std::{boxed::Box, marker::PhantomData};
 ///
 /// Weight decay is implemented as described in
 /// [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101)
-/// Note that weight decay is applied after momentum updates and is not equivalent to L2
-/// regularization when momentum is used.
+/// Both L2 weight_decay and decoupled weight_decay are available.
 ///
 /// # Example Usage
 ///
@@ -209,6 +208,7 @@ impl<M: CanUpdateWithGradients> Optimizer<M> for Sgd<M> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tests::assert_close;
     use rand::{prelude::StdRng, SeedableRng};
 
     #[test]
@@ -226,8 +226,8 @@ mod tests {
             let gradients = backward(loss);
             sgd.update(&mut pred, gradients).expect("");
         }
-        assert_eq!(pred.data(), &[1.0; 5]);
-        assert_eq!(targ.data(), &[1.0; 5]);
+        assert_close(pred.data(), &[1.0; 5]);
+        assert_close(targ.data(), &[1.0; 5]);
     }
 
     #[test]
@@ -247,7 +247,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = backward((t.trace() * &rate).mean());
             sgd.update(&mut t, gradients).expect("");
-            assert_eq!(t.data(), e);
+            assert_close(t.data(), e);
         }
     }
 
@@ -272,7 +272,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = backward((t.trace() * &rate).mean());
             sgd.update(&mut t, gradients).expect("");
-            assert_eq!(t.data(), e);
+            assert_close(t.data(), e);
         }
     }
 
@@ -297,7 +297,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = backward((t.trace() * &rate).mean());
             sgd.update(&mut t, gradients).expect("");
-            assert_eq!(t.data(), e);
+            assert_close(t.data(), e);
         }
     }
 
@@ -322,18 +322,18 @@ mod tests {
             [0.99760115, 0.994003, 0.990005, 0.958021, 0.59820104],
             [0.9964036, 0.991009, 0.98501503, 0.937063, 0.39760286],
             [0.9952072, 0.988018, 0.98003, 0.9161259, 0.19720526],
-            [0.994012, 0.98502994, 0.97505, 0.8952098, -0.0029919297],
+            [0.994012, 0.98502994, 0.97505, 0.8952098, -0.00299193],
         ];
         for e in expected.iter() {
             let gradients = backward((t.trace() * &rate).mean());
             sgd_l2.update(&mut t, gradients).expect("");
-            assert_eq!(t.data(), e);
+            assert_close(t.data(), e);
         }
         t = Tensor1D::ones();
         for e in expected.iter() {
             let gradients = backward((t.trace() * &rate).mean());
             sgd_decoupled.update(&mut t, gradients).expect("");
-            assert_eq!(t.data(), e);
+            assert_close(t.data(), e);
         }
     }
 
@@ -349,15 +349,15 @@ mod tests {
         let rate = Tensor1D::new([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9988, 0.997, 0.995, 0.979, 0.799],
-            [0.9975012, 0.99300295, 0.988005, 0.948021, 0.49820104],
-            [0.9961537, 0.98850995, 0.980017, 0.91207296, 0.14770284],
-            [0.99478257, 0.98377144, 0.971537, 0.87366086, -0.22744486],
-            [0.9934003, 0.97891265, 0.96281546, 0.8340372, -0.61471736],
+            [0.9975012, 0.993003, 0.988005, 0.948021, 0.498201],
+            [0.9961537, 0.98851, 0.980017, 0.912073, 0.147703],
+            [0.9947826, 0.983771, 0.971537, 0.873661, -0.227445],
+            [0.9934003, 0.978913, 0.962815, 0.834037, -0.614717],
         ];
         for e in expected.iter() {
             let gradients = backward((t.trace() * &rate).mean());
             sgd.update(&mut t, gradients).expect("");
-            assert_eq!(t.data(), e);
+            assert_close(t.data(), e);
         }
     }
 
@@ -387,7 +387,7 @@ mod tests {
     //     for e in expected.iter() {
     //         let gradients = backward((t.trace() * &rate).mean());
     //         sgd_l2.update(&mut t, gradients).expect("");
-    //         assert_eq!(t.data(), e);
+    //         assert_close(t.data(), e);
     //     }
     //
     //     // Should be equivalent to l2 regularization, even with momentum
@@ -399,7 +399,7 @@ mod tests {
     //
     //         let gradients = backward(loss);
     //         sgd.update(&mut t, gradients).expect("");
-    //         assert_eq!(t.data(), e);
+    //         assert_close(t.data(), e);
     //     }
     // }
 
