@@ -62,12 +62,13 @@ impl<Input: Tensor, Mod: ModuleMut<Input>> ModuleMut<(Input, )> for AddInto<(Mod
 macro_rules! tuple_impls {
     ($head:ident $headin:ident [$($tails:ident $tailsin:ident),+]) => {
         impl<
+            Output: Tensor,
             $headin: Tensor,
             $($tailsin: Tensor,)+
-            $head: Module<$headin>,
-            $($tails: Module<$tailsin, Output = $head::Output>,)+
+            $head: Module<$headin, Output = Output>,
+            $($tails: Module<$tailsin, Output = Output>,)+
         > Module<($headin, $($tailsin,)+)> for AddInto<($head, $($tails,)+)> {
-            type Output = $head::Output;
+            type Output = Output;
             
             fn forward(&self, x: ($headin, $($tailsin,)+)) -> Self::Output {
                 // modules
