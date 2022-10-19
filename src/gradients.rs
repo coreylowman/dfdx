@@ -73,6 +73,11 @@ impl GradientTape {
         }
         gradients
     }
+
+    /// Moves all the operations from `other` into self. Leaves `other` empty.
+    pub fn append(&mut self, other: &mut Self) {
+        self.operations.append(&mut other.operations);
+    }
 }
 
 /// Contains a boxed [GradientTape]. When [Tape::add_backward_op] is called,
@@ -101,6 +106,42 @@ impl Tape for OwnedTape {
 impl Tape for NoneTape {
     const OWNS_TAPE: bool = false;
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, _operation: F) {}
+}
+
+pub trait Merge<T> {
+    type Output;
+
+    /// Merges `T` into `self`
+    fn merge(self, other: T) -> Self::Output;
+}
+
+impl Merge<Self> for NoneTape {
+    type Output = Self;
+    fn merge(self, _: Self) -> Self::Output {
+        self
+    }
+}
+
+impl Merge<NoneTape> for OwnedTape {
+    type Output = Self;
+    fn merge(self, _: NoneTape) -> Self::Output {
+        self
+    }
+}
+
+impl Merge<OwnedTape> for NoneTape {
+    type Output = OwnedTape;
+    fn merge(self, other: OwnedTape) -> Self::Output {
+        other
+    }
+}
+
+impl Merge<Self> for OwnedTape {
+    type Output = Self;
+    fn merge(mut self, mut other: Self) -> Self::Output {
+        self.0.append(other.0.as_mut());
+        self
+    }
 }
 
 /// A generic container for keeping variable sized arrays associated with a [UniqueId].
