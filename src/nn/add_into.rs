@@ -60,23 +60,34 @@ impl<Input: Tensor, Mod: ModuleMut<Input>> ModuleMut<(Input, )> for AddInto<(Mod
 // add them together
 // return
 macro_rules! tuple_impls {
-    ($headin: ident $head:ident [$($tailsin:ident $tails:ident),+]) => {
+    ($head:ident $headin:ident [$($tails:ident $tailsin:ident),+]) => {
         impl<
             $headin: Tensor,
-            $(tailsin: Tensor,)+
+            $($tailsin: Tensor,)+
             $head: Module<$headin>,
             $($tails: Module<$tailsin, Output = $head::Output>,)+
         > Module<($headin, $($tailsin,)+)> for AddInto<($head, $($tails,)+)> {
             type Output = $head::Output;
             
             fn forward(&self, x: ($headin, $($tailsin,)+)) -> Self::Output {
-                let ($head, $($tails,)+) = x;
-                let head = $head;
-                let tails = $($tails)+;
-                let tail = AddInto(tails);
-                let (base, tape) = head.forward();
+                // modules
+                let ($head, $($tails),+) = self.0;
+                let head_module = $head;
+                let tail_module = AddInto(($($tails),+,));
                 
+                // inputs
+                let ($head, $($tails),+) = x;
+                let head_in = $head;
+                let tails_in = ($($tails),+,);
+                
+                // forward
+                let (head_x, tape) = head_module.forward(head_in).split_tape();
+                let tails_x = tail_module.forward(tails_in.put_tape(tape));
+                
+                add(tails_x, &head_x)
             }
         }
     }
 } 
+
+tuple_impls!(A Ai [B Bi]);
