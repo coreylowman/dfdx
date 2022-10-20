@@ -1,5 +1,6 @@
+use super::utils::BinaryOpTyping;
 use crate::arrays::{HasArrayType, HasAxes};
-use crate::gradients::Tape;
+use crate::gradients::{Merge, Tape};
 use crate::prelude::*;
 
 /// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Axes` of `T`. `epsilon` is passed to [stddev()].
@@ -15,16 +16,17 @@ use crate::prelude::*;
 /// ```
 pub fn normalize<T, Axes>(t: T, epsilon: T::Dtype) -> T
 where
-    T: Reduce<Axes>,
+    T: Reduce<Axes> + BinaryOpTyping<T::NoTape, Out = T>,
     T::Array: HasAxes<Axes>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     let (t, tape) = t.split_tape();
-    let (std, tape) = stddev(t.clone().put_tape(tape), epsilon)
-        .broadcast()
-        .split_tape();
-    let (mean, tape) = mean(t.clone().put_tape(tape)).broadcast().split_tape();
-    let centered = sub(t.put_tape(tape), &mean);
-    div(centered, &std)
+    let std: T = stddev(t.clone().put_tape(tape), epsilon).broadcast();
+    let (std, tape) = std.split_tape();
+    let mean: T = mean(t.clone().put_tape(tape)).broadcast();
+    let (mean, tape) = mean.split_tape();
+    let centered = sub(t.put_tape(tape), mean);
+    div(centered, std)
 }
 
 macro_rules! tensor_impl {
@@ -34,8 +36,9 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H>
     /// Calls [normalize()]
     pub fn normalize<Axes>(self, epsilon: f32) -> Self
     where
-        Self: Reduce<Axes>,
+        Self: Reduce<Axes> + BinaryOpTyping<<Self as Tensor>::NoTape, Out = Self>,
         <Self as HasArrayType>::Array: HasAxes<Axes>,
+        <Self as Tensor>::Tape: Merge<NoneTape, Output = <Self as Tensor>::Tape>,
     {
         normalize(self, epsilon)
     }

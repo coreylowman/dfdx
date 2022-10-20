@@ -1,6 +1,7 @@
 use super::mha::MultiHeadAttention;
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Merge, UnusedTensors};
 use crate::prelude::*;
+use crate::tensor_ops::utils::BinaryOpTyping;
 use rand::Rng;
 
 /// **Requires Nightly** A transformer decoder.
@@ -124,7 +125,8 @@ impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> CanUpd
 impl<const M: usize, const H: usize, const F: usize, Tgt, Mem> Module<(Tgt, Mem)>
     for TransformerDecoderBlock<M, H, F>
 where
-    Tgt: Tensor<Dtype = f32>,
+    Tgt: Tensor<Dtype = f32> + BinaryOpTyping<Tgt::NoTape, Out = Tgt>,
+    Tgt::Tape: Merge<NoneTape, Output = Tgt::Tape>,
     Mem: Tensor<Dtype = f32, NoTape = Mem> + Clone,
     MultiHeadAttention<M, H>: Module<(Tgt, Tgt::NoTape, Tgt::NoTape), Output = Tgt>
         + Module<(Tgt, Mem, Mem), Output = Tgt>,
@@ -138,13 +140,13 @@ where
         let x = self
             .self_attn
             .forward((tgt.clone().put_tape(tape), tgt.clone(), tgt.clone()));
-        let x = add(x, &tgt);
+        let x = add(x, tgt);
         let x = self.norm1.forward(x);
 
         let (x, tape) = x.split_tape();
         let x_ = x.clone();
         let x = self.mh_attn.forward((x.put_tape(tape), mem.clone(), mem));
-        let x = add(x, &x_);
+        let x = add(x, x_);
         let x = self.norm2.forward(x);
         let x = self.ff.forward(x);
         self.norm3.forward(x)

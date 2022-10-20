@@ -10,7 +10,7 @@
 use std::boxed::Box;
 
 use crate::devices::{AllocateZeros, Device, ForEachElement};
-use crate::gradients::{Gradients, Tape};
+use crate::gradients::{Gradients, Merge, Tape};
 use crate::prelude::*;
 
 /// `f(t)`. Applies a function `f` to every element of the [Tensor]. The derivative
@@ -54,41 +54,62 @@ where
     result.put_tape(tape)
 }
 
+pub trait BinaryOpTyping<Rhs> {
+    type Out;
+}
+
+macro_rules! binary_op_types {
+    ($TyName:ident, {$($Vs:tt),*}) => {
+impl<$(const $Vs: usize, )* LhsTape: Tape, RhsTape: Tape> BinaryOpTyping<$TyName<$($Vs, )* RhsTape>> for $TyName<$($Vs, )* LhsTape>
+where
+    LhsTape: Merge<RhsTape>
+{
+    type Out = $TyName<$($Vs, )* <LhsTape as Merge<RhsTape>>::Output>;
+}
+    };
+}
+
+binary_op_types!(Tensor0D, {});
+binary_op_types!(Tensor1D, { M });
+binary_op_types!(Tensor2D, {M, N});
+binary_op_types!(Tensor3D, {M, N, O});
+binary_op_types!(Tensor4D, {M, N, O, P});
+
 /// Applies a binary function `f`, it's partial wrt. x `dfdx`, and its partial wrt. y `dfdy`
 /// to a pair of [Tensor]s `lhs` and `rhs.
 ///
 /// This is primarily used to implement [add()], [sub()], [mul()], and [div()].
-pub(crate) fn binary_map<
-    T: Tensor<Dtype = f32>,
-    F: FnMut(&f32, &f32) -> f32,
-    Dfdx: FnMut(&f32, &f32) -> f32,
-    Dfdy: FnMut(&f32, &f32) -> f32,
->(
-    mut lhs: T,
-    rhs: &T::NoTape,
+pub(crate) fn binary_map<Lhs, Rhs, Out, F, Dfdx, Dfdy>(
+    mut lhs: Lhs,
+    mut rhs: Rhs,
     mut f: F,
     mut dfdx: Dfdx,
     mut dfdy: Dfdy,
-) -> T {
-    let mut result = T::NoTape::zeros();
+) -> Out
+where
+    Lhs: Tensor<Dtype = f32> + BinaryOpTyping<Rhs, Out = Out>,
+    Rhs: Tensor<Dtype = f32, Array = Lhs::Array>,
+    Out: Tensor<Dtype = f32, Array = Lhs::Array, Tape = <Lhs::Tape as Merge<Rhs::Tape>>::Output>,
+    Lhs::Tape: Merge<Rhs::Tape>,
+    F: FnMut(&f32, &f32) -> f32,
+    Dfdx: FnMut(&f32, &f32) -> f32,
+    Dfdy: FnMut(&f32, &f32) -> f32,
+{
+    let mut result: <<Lhs as BinaryOpTyping<Rhs>>::Out as Tensor>::NoTape = TensorCreator::zeros();
 
-    if !<T::Tape as Tape>::OWNS_TAPE {
-        let (lhs, tape) = lhs.split_tape();
-        T::Device::foreach_mrr(result.mut_data(), lhs.data(), rhs.data(), &mut |o, l, r| {
+    if !<Lhs::Tape as Tape>::OWNS_TAPE && !<Rhs::Tape as Tape>::OWNS_TAPE {
+        let (lhs, lhs_tape) = lhs.split_tape();
+        let (rhs, rhs_tape) = rhs.split_tape();
+        Lhs::Device::foreach_mrr(result.mut_data(), lhs.data(), rhs.data(), &mut |o, l, r| {
             *o = f(l, r);
         });
-        result.put_tape(tape)
+        result.put_tape(lhs_tape.merge(rhs_tape))
     } else {
-        let mut rhs_deriv: Box<T::Array> = T::Device::zeros();
-
-        // Clone rhs.data() into rhs_deriv
-        rhs_deriv.as_mut().clone_from(rhs.data());
-
         // compute result & derivatives
-        T::Device::foreach_mmm(
+        Lhs::Device::foreach_mmm(
             result.mut_data(),
             lhs.mut_data(),
-            rhs_deriv.as_mut(),
+            rhs.mut_data(),
             &mut |o, l, r| {
                 *o = f(l, r);
                 let dx = dfdx(l, r);
@@ -99,10 +120,10 @@ pub(crate) fn binary_map<
 
         move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
             let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
-            T::Device::addmul(lhs_grad, lhs.data(), result_grad);
+            Lhs::Device::addmul(lhs_grad, lhs.data(), result_grad);
 
             let (rhs_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
-            T::Device::addmul(rhs_grad, rhs_deriv.as_ref(), result_grad);
+            Lhs::Device::addmul(rhs_grad, rhs.data(), result_grad);
         })
     }
 }
@@ -127,19 +148,21 @@ where
 /// Moves tape from `lhs` to `out`, and does `tape.add_backward_op()` with `f`
 pub(super) fn move_tape_and_add_backward_binop<Lhs, Rhs, Out, F>(
     lhs: Lhs,
-    rhs: &Rhs,
+    rhs: Rhs,
     out: Out::NoTape,
     mut f: F,
 ) -> Out
 where
     Lhs: Tensor,
-    Rhs: 'static + Tensor,
-    Out: Tensor<Tape = Lhs::Tape>,
-    F: 'static + FnMut(Lhs::NoTape, PhantomTensor<Rhs>, PhantomTensor<Out::NoTape>, &mut Gradients),
+    Rhs: Tensor,
+    Out: Tensor<Tape = <Lhs::Tape as Merge<Rhs::Tape>>::Output>,
+    Lhs::Tape: Merge<Rhs::Tape>,
+    F: 'static + FnMut(Lhs::NoTape, Rhs::NoTape, PhantomTensor<Out::NoTape>, &mut Gradients),
 {
-    let phantom_rhs = rhs.phantom();
     let phantom_out = out.phantom();
-    let (lhs, mut tape) = lhs.split_tape();
-    tape.add_backward_op(move |grads| f(lhs, phantom_rhs, phantom_out, grads));
+    let (lhs, lhs_tape) = lhs.split_tape();
+    let (rhs, rhs_tape) = rhs.split_tape();
+    let mut tape = lhs_tape.merge(rhs_tape);
+    tape.add_backward_op(move |grads| f(lhs, rhs, phantom_out, grads));
     out.put_tape(tape)
 }

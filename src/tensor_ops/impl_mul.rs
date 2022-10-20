@@ -1,5 +1,5 @@
-use super::utils::binary_map;
-use crate::gradients::Tape;
+use super::utils::{binary_map, BinaryOpTyping};
+use crate::gradients::{Merge, Tape};
 use crate::prelude::*;
 
 /// Element wise multiplication.
@@ -12,16 +12,26 @@ use crate::prelude::*;
 /// let r = mul(a, &b); // or `a * &b`
 /// assert_eq!(r.data(), &[[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// ```
-pub fn mul<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
+pub fn mul<Lhs, Rhs, Out>(lhs: Lhs, rhs: Rhs) -> Out
+where
+    Lhs: Tensor<Dtype = f32> + BinaryOpTyping<Rhs, Out = Out>,
+    Rhs: Tensor<Dtype = f32, Array = Lhs::Array>,
+    Out: Tensor<Dtype = f32, Array = Lhs::Array, Tape = <Lhs::Tape as Merge<Rhs::Tape>>::Output>,
+    Lhs::Tape: Merge<Rhs::Tape>,
+{
     binary_map(lhs, rhs, |x, y| x * y, |_, y| *y, |x, _| *x)
 }
 
 macro_rules! binary_ops_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: Tape> std::ops::Mul<&$typename<$($Vs, )* NoneTape>> for $typename<$($Vs, )* H> {
-    type Output = $typename<$($Vs, )* H>;
-    /// Calls [mul()] - implements `T<H> * &T<NoneTape>`
-    fn mul(self, rhs: &$typename<$($Vs, )* NoneTape>) -> Self::Output {
+impl<$(const $Vs: usize, )* TapeL: Tape, TapeR: Tape> std::ops::Mul<$typename<$($Vs, )* TapeR>> for $typename<$($Vs, )* TapeL>
+where
+    TapeL: Merge<TapeR>,
+    <TapeL as Merge<TapeR>>::Output: Tape
+{
+    type Output = $typename<$($Vs, )* <TapeL as Merge<TapeR>>::Output>;
+    /// Calls [add()] - implements `T<H> + &T<I>`
+    fn mul(self, rhs: $typename<$($Vs, )* TapeR>) -> Self::Output {
         mul(self, rhs)
     }
 }
@@ -43,7 +53,7 @@ mod tests {
         let a = tensor(2.0);
         let b = tensor(3.0);
 
-        let r = a.trace() * &b;
+        let r = a.trace() * b.clone();
         assert_eq!(r.data(), &6.0);
         let gradients = r.backward();
         assert_eq!(gradients.ref_gradient(&a), &3.0);
@@ -55,7 +65,7 @@ mod tests {
         let a = tensor([1.0, 2.0, 3.0]);
         let b = tensor([1.0, -1.0, 0.0]);
 
-        let r = a.trace() * &b;
+        let r = a.trace() * b.clone();
         assert_eq!(r.data(), &[1.0, -2.0, 0.0]);
         let gradients = backward(r.mean());
         assert_eq!(gradients.ref_gradient(&a), &[1.0 / 3.0, -1.0 / 3.0, 0.0]);
@@ -67,7 +77,7 @@ mod tests {
         let a = tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
         let b = tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
-        let r = a.trace() * &b;
+        let r = a.trace() * b.clone();
         assert_eq!(
             r.data(),
             &[

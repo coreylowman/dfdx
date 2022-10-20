@@ -1,5 +1,5 @@
-use super::utils::binary_map;
-use crate::gradients::Tape;
+use super::utils::{binary_map, BinaryOpTyping};
+use crate::gradients::{Merge, Tape};
 use crate::prelude::*;
 
 /// Element wise maximum.
@@ -13,7 +13,13 @@ use crate::prelude::*;
 /// let b = tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
 /// let r = a.maximum(&b);
 /// assert_eq!(r.data(), &[[1.0, 2.0, 3.0], [-1.0, 2.0, -3.0]]);
-pub fn maximum<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
+pub fn maximum<Lhs, Rhs, Out>(lhs: Lhs, rhs: Rhs) -> Out
+where
+    Lhs: Tensor<Dtype = f32> + BinaryOpTyping<Rhs, Out = Out>,
+    Rhs: Tensor<Dtype = f32, Array = Lhs::Array>,
+    Out: Tensor<Dtype = f32, Array = Lhs::Array, Tape = <Lhs::Tape as Merge<Rhs::Tape>>::Output>,
+    Lhs::Tape: Merge<Rhs::Tape>,
+{
     fn f(x: &f32, y: &f32) -> f32 {
         x.max(*y)
     }
@@ -41,9 +47,12 @@ pub fn maximum<T: Tensor<Dtype = f32>>(lhs: T, rhs: &T::NoTape) -> T {
 
 macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
+impl<$(const $Vs: usize, )* TapeL: Tape> $typename<$($Vs, )* TapeL> {
     /// Calls [maximum()] on `self`.
-    pub fn maximum(self, other: &<Self as Tensor>::NoTape) -> Self {
+    pub fn maximum<TapeR: Tape, TapeO: Tape>(self, other: $typename<$($Vs, )* TapeR>) -> $typename<$($Vs, )* TapeO>
+    where
+        TapeL: Merge<TapeR, Output = TapeO>
+    {
         maximum(self, other)
     }
 }
@@ -65,7 +74,7 @@ mod tests {
         let a = tensor([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]]);
         let b = tensor([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
 
-        let result = maximum(a.trace(), &b);
+        let result = maximum(a.trace(), b.clone());
         assert_eq!(result.data(), &[[0.0, 0.0, 1.0], [3.0, 4.0, 5.0]]);
 
         let g = backward(result.sum());

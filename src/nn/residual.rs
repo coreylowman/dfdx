@@ -1,5 +1,6 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Merge, UnusedTensors};
 use crate::prelude::*;
+use crate::tensor_ops::utils::BinaryOpTyping;
 
 /// A residual connection around `F`: `F(x) + x`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -32,19 +33,27 @@ impl<F: ResetParams> ResetParams for Residual<F> {
     }
 }
 
-impl<T: Tensor<Dtype = f32>, F: Module<T, Output = T>> Module<T> for Residual<F> {
+impl<T: Tensor<Dtype = f32>, F: Module<T, Output = T>> Module<T> for Residual<F>
+where
+    T: BinaryOpTyping<T::NoTape, Out = T>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
+{
     type Output = F::Output;
     fn forward(&self, x: T) -> Self::Output {
         let (x, tape) = x.split_tape();
-        add(self.0.forward(x.clone().put_tape(tape)), &x)
+        add(self.0.forward(x.clone().put_tape(tape)), x)
     }
 }
 
-impl<T: Tensor<Dtype = f32>, F: ModuleMut<T, Output = T>> ModuleMut<T> for Residual<F> {
+impl<T: Tensor<Dtype = f32>, F: ModuleMut<T, Output = T>> ModuleMut<T> for Residual<F>
+where
+    T: BinaryOpTyping<T::NoTape, Out = T>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
+{
     type Output = F::Output;
     fn forward_mut(&mut self, x: T) -> Self::Output {
         let (x, tape) = x.split_tape();
-        add(self.0.forward_mut(x.clone().put_tape(tape)), &x)
+        add(self.0.forward_mut(x.clone().put_tape(tape)), x)
     }
 }
 

@@ -167,7 +167,7 @@ mod tests {
         let mut pred: Tensor1D<5> = Tensor1D::zeros();
         let targ: Tensor1D<5> = Tensor1D::ones();
         for _ in 0..5 {
-            let loss = (pred.trace() - &targ).abs().mean();
+            let loss = (pred.trace() - targ.clone()).abs().mean();
             let gradients = backward(loss);
             sgd.update(&mut pred, gradients).expect("");
         }
@@ -190,7 +190,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = backward((t.trace() * &rate).mean());
+            let gradients = backward((t.trace() * rate.clone()).mean());
             sgd.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
@@ -214,7 +214,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = backward((t.trace() * &rate).mean());
+            let gradients = backward((t.trace() * rate.clone()).mean());
             sgd.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
@@ -238,7 +238,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = backward((t.trace() * &rate).mean());
+            let gradients = backward((t.trace() * rate.clone()).mean());
             sgd.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }
@@ -257,7 +257,7 @@ mod tests {
         let mut opt: Sgd<Model> = Default::default();
 
         let py = model.forward(x.trace());
-        let loss = (py - &y).square().mean();
+        let loss = (py - y.clone()).square().mean();
         let gradients = backward(loss);
         opt.update(&mut model, gradients).expect("");
 

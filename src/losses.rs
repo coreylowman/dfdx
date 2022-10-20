@@ -1,29 +1,43 @@
 //! Standard loss functions such as [mse_loss()], [cross_entropy_with_logits_loss()], and more.
 
 use crate::arrays::{AllAxes, HasArrayType, HasLastAxis};
+use crate::gradients::{Merge, NoneTape};
+use crate::tensor_ops::utils::BinaryOpTyping;
 use crate::tensor_ops::*;
 
 /// [Mean Squared Error](https://en.wikipedia.org/wiki/Mean_squared_error).
-/// This computes `(&targ - pred).square().mean()`.
+/// This computes `(targ.clone() - pred).square().mean()`.
 ///
 /// See [mean()], [square()], and [sub()].
-pub fn mse_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape) -> T::Reduced {
+pub fn mse_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape) -> T::Reduced
+where
+    T: BinaryOpTyping<T::NoTape, Out = T>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
+{
     mean(square(sub(pred, targ)))
 }
 
 /// [Root Mean square error](https://en.wikipedia.org/wiki/Root-mean-square_deviation).
-/// This computes `(&targ - pred).square().mean().sqrt()`
+/// This computes `(targ.clone() - pred).square().mean().sqrt()`
 ///
 /// See [mse_loss()] and [sqrt()]
-pub fn rmse_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape) -> T::Reduced {
+pub fn rmse_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape) -> T::Reduced
+where
+    T: BinaryOpTyping<T::NoTape, Out = T>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
+{
     sqrt(mse_loss(pred, targ))
 }
 
 /// [Mean absolute error](https://en.wikipedia.org/wiki/Mean_absolute_error).
-/// This computes `(&targ - pred).abs().mean()`
+/// This computes `(targ.clone() - pred).abs().mean()`
 ///
 /// See [mean()], [abs()], and [sub()]
-pub fn mae_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape) -> T::Reduced {
+pub fn mae_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape) -> T::Reduced
+where
+    T: BinaryOpTyping<T::NoTape, Out = T>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
+{
     mean(abs(sub(pred, targ)))
 }
 
@@ -42,7 +56,11 @@ pub fn mae_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape) -> T::Reduced {
 /// let y = Tensor1D::new([0.5, 0.5]);
 /// let loss = huber_loss(x.traced(), &y, 1.0);
 /// ```
-pub fn huber_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape, delta: T::Dtype) -> T::Reduced {
+pub fn huber_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape, delta: T::Dtype) -> T::Reduced
+where
+    T: BinaryOpTyping<T::NoTape, Out = T>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
+{
     let f = move |x: &f32, y: &f32| {
         if (x - y).abs() < delta {
             (x - y).powi(2) * 0.5
@@ -88,7 +106,11 @@ pub fn huber_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape, delta: T::Dtype
 /// let y = Tensor1D::new([0.5, 0.5]);
 /// let loss = smooth_l1_loss(x.traced(), &y, 1.0);
 /// ```
-pub fn smooth_l1_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape, beta: T::Dtype) -> T::Reduced {
+pub fn smooth_l1_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape, beta: T::Dtype) -> T::Reduced
+where
+    T: BinaryOpTyping<T::NoTape, Out = T>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
+{
     div_scalar(huber_loss(pred, targ, beta), beta)
 }
 
@@ -108,14 +130,16 @@ pub fn smooth_l1_loss<T: Reduce<AllAxes>>(pred: T, targ: &T::NoTape, beta: T::Dt
 /// # use dfdx::prelude::*;
 /// let logits = Tensor1D::new([-1.0, -0.5]);
 /// let target_probs = Tensor1D::new([0.5, 0.5]);
-/// let loss = cross_entropy_with_logits_loss(logits.traced(), &target_probs);
+/// let loss = cross_entropy_with_logits_loss(logits.traced(), targ.clone()et_probs);
 /// ```
 pub fn cross_entropy_with_logits_loss<T>(
     logits: T,
-    target_probs: &T::NoTape,
+    target_probs: T::NoTape,
 ) -> <T as Reduce<AllAxes>>::Reduced
 where
     T: Reduce<AllAxes> + Reduce<<<T as HasArrayType>::Array as HasLastAxis>::LastAxis>,
+    T: BinaryOpTyping<T::NoTape, Out = T>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     let probs = log_softmax::<_, <T::Array as HasLastAxis>::LastAxis>(logits);
     let r = negate(mean::<_, AllAxes>(mul(probs, target_probs)));
@@ -138,18 +162,20 @@ where
 /// # use dfdx::prelude::*;
 /// let logits = Tensor1D::new([-1.0, -0.5]);
 /// let target_probs = Tensor1D::new([0.5, 0.5]);
-/// let loss = kl_div_with_logits_loss(logits.traced(), &target_probs);
+/// let loss = kl_div_with_logits_loss(logits.traced(), targ.clone()et_probs);
 /// ```
 pub fn kl_div_with_logits_loss<T>(
     logits: T,
-    target_probs: &T::NoTape,
+    target_probs: T::NoTape,
 ) -> <T as Reduce<AllAxes>>::Reduced
 where
     T: Reduce<AllAxes> + Reduce<<<T as HasArrayType>::Array as HasLastAxis>::LastAxis>,
+    T: BinaryOpTyping<T::NoTape, Out = T>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     let probs = log_softmax::<_, <T::Array as HasLastAxis>::LastAxis>(logits);
     let r = negate(mean::<_, AllAxes>(mul(
-        sub(probs, &ln(target_probs.clone())),
+        sub(probs, ln(target_probs.clone())),
         target_probs,
     )));
     mul_scalar(r, <T::Array as HasLastAxis>::SIZE as f32)
@@ -169,7 +195,7 @@ where
 /// # use dfdx::prelude::*;
 /// let logits = Tensor1D::new([-1.0, -0.5]);
 /// let target_probs = Tensor1D::new([1.0, 0.25]);
-/// let loss = binary_cross_entropy_with_logits_loss(logits.traced(), &target_probs);
+/// let loss = binary_cross_entropy_with_logits_loss(logits.traced(), targ.clone()et_probs);
 /// ```
 ///
 /// # Numerically Stable Derivation
@@ -178,8 +204,12 @@ where
 /// for more information on this.
 pub fn binary_cross_entropy_with_logits_loss<T: Reduce<AllAxes>>(
     logits: T,
-    target_probs: &T::NoTape,
-) -> T::Reduced {
+    target_probs: T::NoTape,
+) -> T::Reduced
+where
+    T: BinaryOpTyping<T::NoTape, Out = T>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
+{
     mean(crate::tensor_ops::utils::binary_map(
         logits,
         target_probs,
@@ -199,7 +229,7 @@ mod tests {
     fn test_mse() {
         let x = Tensor1D::new([0.87248087, -0.24252531, -1.0060949, 1.155084, 1.5545048]);
         let y = Tensor1D::new([-0.90954804, -1.0193185, -0.39221755, 2.2524886, 1.3035554]);
-        let loss = mse_loss(x.trace(), &y);
+        let loss = mse_loss(x.trace(), y.clone());
         assert_eq!(loss.data(), &1.0846305);
         let g = backward(loss);
         assert_eq!(
@@ -212,7 +242,7 @@ mod tests {
     fn test_mae() {
         let x = Tensor1D::new([0.87248087, -0.24252531, -1.0060949, 1.155084, 1.5545048]);
         let y = Tensor1D::new([-0.90954804, -1.0193186, -0.39221755, 2.2524886, 1.3035554]);
-        let loss = mae_loss(x.trace(), &y);
+        let loss = mae_loss(x.trace(), y.clone());
         assert_eq!(loss.data(), &0.9042107);
         let g = backward(loss);
         assert_eq!(g.ref_gradient(&x), &[0.2, 0.2, -0.2, -0.2, 0.2]);
@@ -228,7 +258,7 @@ mod tests {
             [0.3180433, 0.15164024, 0.2352255, 0.08821669, 0.20687431],
             [0.15627657, 0.29779273, 0.10897867, 0.2879545, 0.14899758],
         ]);
-        let loss = cross_entropy_with_logits_loss(x.trace(), &y);
+        let loss = cross_entropy_with_logits_loss(x.trace(), y.clone());
         assert_eq!(loss.data(), &1.9889611);
         let g = loss.backward();
         assert_close(
@@ -255,7 +285,7 @@ mod tests {
             let mut targ = [0.0; 5];
             targ[i] = 1.0;
             let y = Tensor1D::new(targ);
-            let loss = cross_entropy_with_logits_loss(x.trace(), &y);
+            let loss = cross_entropy_with_logits_loss(x.trace(), y.clone());
             assert_eq!(*loss.data(), losses[i]);
         }
     }
@@ -276,7 +306,7 @@ mod tests {
             [0.5809, 0.3623, 0.0568],
             [0.0166, 0.8512, 0.1322],
         ]);
-        let loss = kl_div_with_logits_loss(logits.trace(), &targ);
+        let loss = kl_div_with_logits_loss(logits.trace(), targ.clone());
         assert_eq!(loss.data(), &0.40656143);
         let gradients = loss.backward();
         assert_eq!(
@@ -303,7 +333,7 @@ mod tests {
             [0.168392, 0.7987092, 0.1177533],
             [0.7026833, 0.5563793, 0.6429267],
         ]);
-        let loss = binary_cross_entropy_with_logits_loss(logit.trace(), &prob);
+        let loss = binary_cross_entropy_with_logits_loss(logit.trace(), prob.clone());
         assert_eq!(loss.data(), &0.7045728);
 
         let gradients = backward(loss);
@@ -332,7 +362,7 @@ mod tests {
         let logit = Tensor2D::new([[100.0; 3], [-100.0; 3], [-1.0, 0.0, 1.0]]);
         let targ = Tensor2D::new([[0.0, 0.5, 1.0]; 3]);
 
-        let loss = binary_cross_entropy_with_logits_loss(logit.trace(), &targ);
+        let loss = binary_cross_entropy_with_logits_loss(logit.trace(), targ.clone());
         assert_eq!(loss.data(), &33.479965);
 
         let gradients = backward(loss);
@@ -369,7 +399,7 @@ mod tests {
             [-2.0449343, 1.8117315, 1.7505344, -1.2522424, 1.0921133],
         ]);
 
-        let loss = huber_loss(x.trace(), &y, 0.5);
+        let loss = huber_loss(x.trace(), y.clone(), 0.5);
         assert_eq!(loss.data(), &0.24506615);
 
         let gradients = backward(loss);
@@ -404,7 +434,7 @@ mod tests {
             [-2.0449343, 1.8117315, 1.7505344, -1.2522424, 1.0921133],
         ]);
 
-        let loss = smooth_l1_loss(x.trace(), &y, 0.5);
+        let loss = smooth_l1_loss(x.trace(), y.clone(), 0.5);
         assert_eq!(loss.data(), &0.4901323);
 
         let gradients = backward(loss);

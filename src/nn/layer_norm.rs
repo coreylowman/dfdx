@@ -1,6 +1,6 @@
 use crate::arrays::Axis;
 use crate::devices::{Cpu, FillElements};
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Merge, Tape, UnusedTensors};
 use crate::prelude::*;
 
 /// Implements layer normalization as described in [Layer Normalization](https://arxiv.org/abs/1607.06450).
@@ -54,7 +54,9 @@ impl<const M: usize> CanUpdateWithGradients for LayerNorm1D<M> {
     }
 }
 
-impl<H: Tape, const M: usize> Module<Tensor1D<M, H>> for LayerNorm1D<M> {
+impl<H: Tape + Merge<NoneTape, Output = H>, const M: usize> Module<Tensor1D<M, H>>
+    for LayerNorm1D<M>
+{
     type Output = Tensor1D<M, H>;
 
     /// Calls:
@@ -63,12 +65,14 @@ impl<H: Tape, const M: usize> Module<Tensor1D<M, H>> for LayerNorm1D<M> {
     /// 3. [add()] with [Self::beta]
     fn forward(&self, x: Tensor1D<M, H>) -> Self::Output {
         let x = x.normalize(self.epsilon);
-        let x = mul(x, &self.gamma);
-        add(x, &self.beta)
+        let x = mul(x, self.gamma.clone());
+        add(x, self.beta.clone())
     }
 }
 
-impl<H: Tape, const B: usize, const M: usize> Module<Tensor2D<B, M, H>> for LayerNorm1D<M> {
+impl<H: Tape + Merge<NoneTape, Output = H>, const B: usize, const M: usize>
+    Module<Tensor2D<B, M, H>> for LayerNorm1D<M>
+{
     type Output = Tensor2D<B, M, H>;
 
     /// Calls:
@@ -78,14 +82,14 @@ impl<H: Tape, const B: usize, const M: usize> Module<Tensor2D<B, M, H>> for Laye
     fn forward(&self, x: Tensor2D<B, M, H>) -> Self::Output {
         let (x, tape) = x.normalize::<Axis<1>>(self.epsilon).split_tape();
         let g: Tensor2D<B, M, H> = self.gamma.clone().put_tape(tape).broadcast();
-        let (x, tape) = mul(g, &x).split_tape();
-        let b = self.beta.clone().put_tape(tape).broadcast();
-        add(b, &x)
+        let (x, tape) = mul(g, x).split_tape();
+        let b: Self::Output = self.beta.clone().put_tape(tape).broadcast();
+        add(b, x)
     }
 }
 
-impl<H: Tape, const B: usize, const S: usize, const M: usize> Module<Tensor3D<B, S, M, H>>
-    for LayerNorm1D<M>
+impl<H: Tape + Merge<NoneTape, Output = H>, const B: usize, const S: usize, const M: usize>
+    Module<Tensor3D<B, S, M, H>> for LayerNorm1D<M>
 {
     type Output = Tensor3D<B, S, M, H>;
 
@@ -96,9 +100,9 @@ impl<H: Tape, const B: usize, const S: usize, const M: usize> Module<Tensor3D<B,
     fn forward(&self, x: Tensor3D<B, S, M, H>) -> Self::Output {
         let (x, tape) = x.normalize::<Axis<2>>(self.epsilon).split_tape();
         let g: Tensor3D<B, S, M, H> = self.gamma.clone().put_tape(tape).broadcast();
-        let (x, tape) = mul(g, &x).split_tape();
-        let b = self.beta.clone().put_tape(tape).broadcast();
-        add(b, &x)
+        let (x, tape) = mul(g, x).split_tape();
+        let b: Self::Output = self.beta.clone().put_tape(tape).broadcast();
+        add(b, x)
     }
 }
 

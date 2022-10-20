@@ -1,6 +1,6 @@
 use super::utils::move_tape_and_add_backward_binop;
 use crate::devices::{Cpu, MatMul, MatMulOp, Transpose};
-use crate::gradients::Tape;
+use crate::gradients::{Merge, Tape};
 use crate::prelude::*;
 
 /// Matrix multiplication. This also supports batched matrix multiplication,
@@ -30,11 +30,12 @@ use crate::prelude::*;
 /// let y: Tensor2D<2, 4> = TensorCreator::zeros();
 /// let result: Tensor3D<10, 3, 4> = matmul(x, &y);
 /// ```
-pub fn matmul<A, B, C>(a: A, b: &B) -> <A as MatMulTyping<B>>::C
+pub fn matmul<A, B, C>(a: A, b: B) -> <A as MatMulTyping<B>>::C
 where
     A: Tensor<Dtype = f32> + MatMulTyping<B, C = C>,
-    B: 'static + Tensor<Dtype = f32> + Clone,
-    C: Tensor<Dtype = f32, Tape = A::Tape>,
+    B: Tensor<Dtype = f32>,
+    C: Tensor<Dtype = f32>,
+    A::Tape: Merge<B::Tape, Output = C::Tape>,
     A::Array: Transpose,
     B::Array: Transpose,
     C::Array: Transpose,
@@ -43,11 +44,9 @@ where
     let mut c = C::NoTape::zeros();
     A::Device::mm(a.data(), b.data(), c.mut_data());
 
-    let b_ = b.clone();
-
     move_tape_and_add_backward_binop(a, b, c, move |a, b, c, grads| {
         let (a_grad, c_grad) = grads.mut_and_ref(&a, &c);
-        A::Device::mm_bt(c_grad, b_.data(), a_grad);
+        A::Device::mm_bt(c_grad, b.data(), a_grad);
 
         let (b_grad, c_grad) = grads.mut_and_ref(&b, &c);
         A::Device::mm_at(a.data(), c_grad, b_grad);
@@ -115,11 +114,12 @@ impl<const B: usize, const M: usize, const N: usize, const K: usize, H> MatMulTy
 /// let y: Tensor2D<4, 2> = TensorCreator::zeros();
 /// let result: Tensor3D<10, 3, 4> = matmul_transpose(x, &y);
 /// ```
-pub fn matmul_transpose<A, B, C>(a: A, b: &B) -> <A as MatMulTrTyping<B>>::C
+pub fn matmul_transpose<A, B, C>(a: A, b: B) -> <A as MatMulTrTyping<B>>::C
 where
     A: Tensor<Dtype = f32> + MatMulTrTyping<B, C = C>,
-    B: 'static + Tensor<Dtype = f32> + Clone,
-    C: Tensor<Dtype = f32, Tape = A::Tape>,
+    B: Tensor<Dtype = f32>,
+    C: Tensor<Dtype = f32>,
+    A::Tape: Merge<B::Tape, Output = C::Tape>,
     A::Array: Transpose,
     B::Array: Transpose,
     C::Array: Transpose,
@@ -128,11 +128,9 @@ where
     let mut c = C::NoTape::zeros();
     A::Device::mm_bt(a.data(), b.data(), c.mut_data());
 
-    let b_ = b.clone();
-
     move_tape_and_add_backward_binop(a, b, c, move |a, b, c, grads| {
         let (a_grad, c_grad) = grads.mut_and_ref(&a, &c);
-        A::Device::mm(c_grad, b_.data(), a_grad);
+        A::Device::mm(c_grad, b.data(), a_grad);
 
         let (b_grad, c_grad) = grads.mut_and_ref(&b, &c);
         A::Device::mm_atct(a.data(), c_grad, b_grad);
@@ -191,18 +189,19 @@ impl<const B: usize, const M: usize, const N: usize, const K: usize, H>
 /// let y: Tensor2D<2, 4> = TensorCreator::zeros();
 /// let result: Tensor1D<4> = vecmat_mul(x, &y);
 /// ```
-pub fn vecmat_mul<const K: usize, const N: usize, TAPE: Tape>(
-    lhs: Tensor1D<K, TAPE>,
-    rhs: &Tensor2D<K, N, NoneTape>,
-) -> Tensor1D<N, TAPE> {
+pub fn vecmat_mul<const K: usize, const N: usize, LhsTape: Tape, RhsTape: Tape>(
+    lhs: Tensor1D<K, LhsTape>,
+    rhs: Tensor2D<K, N, RhsTape>,
+) -> Tensor1D<N, <LhsTape as Merge<RhsTape>>::Output>
+where
+    LhsTape: Merge<RhsTape>,
+{
     let mut result = Tensor1D::zeros();
     Cpu::vm(lhs.data(), rhs.data(), result.mut_data());
 
-    let rhs_data = rhs.data.clone();
-
     move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
-        Cpu::vm_bt(result_grad, rhs_data.as_ref(), lhs_grad);
+        Cpu::vm_bt(result_grad, rhs.data(), lhs_grad);
 
         let (rhs_t_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
         Cpu::vv(lhs.data(), result_grad, rhs_t_grad);
@@ -229,20 +228,21 @@ pub fn vecmat_mul<const K: usize, const N: usize, TAPE: Tape>(
 /// let y: Tensor2D<4, 2> = TensorCreator::zeros();
 /// let result: Tensor1D<4> = vecmat_mul_transpose(x, &y);
 /// ```
-pub fn vecmat_mul_transpose<const K: usize, const N: usize, TAPE: Tape>(
-    lhs: Tensor1D<K, TAPE>,
-    rhs_t: &Tensor2D<N, K, NoneTape>,
-) -> Tensor1D<N, TAPE> {
+pub fn vecmat_mul_transpose<const K: usize, const N: usize, LhsTape: Tape, RhsTape: Tape>(
+    lhs: Tensor1D<K, LhsTape>,
+    rhs_t: Tensor2D<N, K, RhsTape>,
+) -> Tensor1D<N, <LhsTape as Merge<RhsTape>>::Output>
+where
+    LhsTape: Merge<RhsTape>,
+{
     let mut result = Tensor1D::zeros();
     Cpu::vm_bt(lhs.data(), rhs_t.data(), result.mut_data());
 
-    let rhs_t_data = rhs_t.data.clone();
-
-    move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs, result, grads| {
+    move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs_t, result, grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
-        Cpu::vm(result_grad, rhs_t_data.as_ref(), lhs_grad);
+        Cpu::vm(result_grad, rhs_t.data(), lhs_grad);
 
-        let (rhs_t_grad, result_grad) = grads.mut_and_ref(&rhs, &result);
+        let (rhs_t_grad, result_grad) = grads.mut_and_ref(&rhs_t, &result);
         Cpu::vv(result_grad, lhs.data(), rhs_t_grad);
     })
 }
@@ -256,19 +256,17 @@ mod tests {
 
     #[test]
     fn test_valid_matmuls() {
-        let _: Tensor2D<5, 2> = matmul(Tensor2D::<5, 3>::zeros(), &Tensor2D::<3, 2>::zeros());
+        let _: Tensor2D<5, 2> = matmul(Tensor2D::<5, 3>::zeros(), Tensor2D::<3, 2>::zeros());
 
         let _: Tensor3D<10, 5, 2> =
-            matmul(Tensor3D::<10, 5, 3>::zeros(), &Tensor2D::<3, 2>::zeros());
+            matmul(Tensor3D::<10, 5, 3>::zeros(), Tensor2D::<3, 2>::zeros());
 
-        let _: Tensor3D<10, 5, 2> = matmul(
-            Tensor3D::<10, 5, 3>::zeros(),
-            &Tensor3D::<10, 3, 2>::zeros(),
-        );
+        let _: Tensor3D<10, 5, 2> =
+            matmul(Tensor3D::<10, 5, 3>::zeros(), Tensor3D::<10, 3, 2>::zeros());
 
         let _: Tensor4D<20, 10, 5, 2> = matmul(
             Tensor4D::<20, 10, 5, 3>::zeros(),
-            &Tensor4D::<20, 10, 3, 2>::zeros(),
+            Tensor4D::<20, 10, 3, 2>::zeros(),
         );
     }
 
@@ -281,7 +279,7 @@ mod tests {
             [0.8119, 0.2693, 0.7249],
         ]);
         let b = tensor([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
-        let r = matmul(a.trace(), &b);
+        let r = matmul(a.trace(), b.clone());
         assert_close(
             r.data(),
             &[
@@ -316,10 +314,10 @@ mod tests {
         let mut rng = thread_rng();
         let a: Tensor2D<4, 3> = TensorCreator::randn(&mut rng);
         let b: Tensor2D<3, 2> = TensorCreator::randn(&mut rng);
-        let c = matmul(a.trace(), &b);
+        let c = matmul(a.trace(), b.clone());
 
         let b_t = Tensor2D::new(transpose(b.data()));
-        let c_tr = matmul_transpose(a.trace(), &b_t);
+        let c_tr = matmul_transpose(a.trace(), b_t.clone());
         assert_close(c_tr.data(), c.data());
 
         let gs = backward(c.exp().mean());
@@ -334,16 +332,16 @@ mod tests {
         let mut rng = thread_rng();
         let a: Tensor3D<N, 4, 3> = TensorCreator::randn(&mut rng);
         let b: Tensor2D<3, 2> = TensorCreator::randn(&mut rng);
-        let r = matmul(a.trace(), &b);
+        let r = matmul(a.trace(), b.clone());
         for i in 0..N {
             let sub_a = Tensor2D::new(a.data()[i]);
-            assert_close(&r.data()[i], matmul(sub_a, &b).data());
+            assert_close(&r.data()[i], matmul(sub_a, b.clone()).data());
         }
         let gs = backward(r.sum());
         let mut sub_bs_summed = [[0.0; 2]; 3];
         for i in 0..N {
             let sub_a = Tensor2D::new(a.data()[i]);
-            let sub_gs = backward(matmul(sub_a.trace(), &b).sum());
+            let sub_gs = backward(matmul(sub_a.trace(), b.clone()).sum());
             assert_close(&gs.ref_gradient(&a)[i], sub_gs.ref_gradient(&sub_a));
             <Cpu as Device<_>>::add(&mut sub_bs_summed, sub_gs.ref_gradient(&b));
         }
@@ -355,10 +353,10 @@ mod tests {
         let mut rng = thread_rng();
         let a: Tensor3D<2, 4, 3> = TensorCreator::randn(&mut rng);
         let b: Tensor2D<3, 2> = TensorCreator::randn(&mut rng);
-        let c = matmul(a.trace(), &b);
+        let c = matmul(a.trace(), b.clone());
 
         let b_t = Tensor2D::new(transpose(b.data()));
-        let c_tr = matmul_transpose(a.trace(), &b_t);
+        let c_tr = matmul_transpose(a.trace(), b_t.clone());
         assert_close(c_tr.data(), c.data());
 
         let gs = backward(c.exp().mean());
@@ -371,7 +369,7 @@ mod tests {
     fn test_vecmat_mul() {
         let a = tensor([0.7296, 0.3974, 0.9487]);
         let b = tensor([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
-        let r: Tensor1D<2, OwnedTape> = vecmat_mul(a.trace(), &b);
+        let r: Tensor1D<2, OwnedTape> = vecmat_mul(a.trace(), b.clone());
         assert_close(r.data(), &[1.261436, 1.5543157]);
         let g = backward(r.exp().mean());
         assert_close(g.ref_gradient(&a), &[2.6883178, 2.9369607, 2.9256766]);
@@ -389,7 +387,7 @@ mod tests {
     fn test_vecmat_mul_transpose() {
         let a = tensor([0.7296, 0.3974, 0.9487]);
         let b = tensor([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
-        let r: Tensor1D<2, OwnedTape> = vecmat_mul_transpose(a.trace(), &b);
+        let r: Tensor1D<2, OwnedTape> = vecmat_mul_transpose(a.trace(), b.clone());
         assert_close(r.data(), &[1.261436, 1.5543157]);
         let g = backward(r.exp().mean());
         assert_close(g.ref_gradient(&a), &[2.6883178, 2.9369607, 2.9256766]);

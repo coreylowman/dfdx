@@ -1,6 +1,7 @@
 use super::mha::MultiHeadAttention;
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Merge, UnusedTensors};
 use crate::prelude::*;
+use crate::tensor_ops::utils::BinaryOpTyping;
 
 /// **Requires Nightly** A transformer encoder.
 ///
@@ -71,7 +72,8 @@ impl<const M: usize, const H: usize, const F: usize> CanUpdateWithGradients
 impl<const M: usize, const H: usize, const F: usize, Src> Module<Src>
     for TransformerEncoderBlock<M, H, F>
 where
-    Src: Tensor<Dtype = f32>,
+    Src: Tensor<Dtype = f32> + BinaryOpTyping<Src::NoTape, Out = Src>,
+    Src::Tape: Merge<NoneTape, Output = Src::Tape>,
     MultiHeadAttention<M, H>: Module<(Src, Src::NoTape, Src::NoTape), Output = Src>,
     LayerNorm1D<M>: Module<Src, Output = Src>,
     FF<M, F>: Module<Src, Output = Src>,
@@ -83,7 +85,7 @@ where
         let x = self
             .self_attn
             .forward((src.clone().put_tape(tape), src.clone(), src.clone()));
-        let x = add(x, &src);
+        let x = add(x, src);
         let x = self.norm1.forward(x);
         let x = self.ff.forward(x);
         self.norm2.forward(x)

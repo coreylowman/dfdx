@@ -1,4 +1,4 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Merge, Tape, UnusedTensors};
 use crate::prelude::*;
 use rand::Rng;
 use rand_distr::Uniform;
@@ -50,36 +50,48 @@ impl<const I: usize, const O: usize> ResetParams for Linear<I, O> {
     }
 }
 
-impl<const I: usize, const O: usize, H: Tape> Module<Tensor1D<I, H>> for Linear<I, O> {
+impl<const I: usize, const O: usize, H: Tape + Merge<NoneTape, Output = H>> Module<Tensor1D<I, H>>
+    for Linear<I, O>
+{
     type Output = Tensor1D<O, H>;
 
     /// 1d forward using [vecmat_mul()] and [add()].
     fn forward(&self, x: Tensor1D<I, H>) -> Self::Output {
-        add(vecmat_mul_transpose(x, &self.weight), &self.bias)
+        add(
+            vecmat_mul_transpose(x, self.weight.clone()),
+            self.bias.clone(),
+        )
     }
 }
 
-impl<const B: usize, const I: usize, const O: usize, H: Tape> Module<Tensor2D<B, I, H>>
-    for Linear<I, O>
+impl<const B: usize, const I: usize, const O: usize, H: Tape + Merge<NoneTape, Output = H>>
+    Module<Tensor2D<B, I, H>> for Linear<I, O>
 {
     type Output = Tensor2D<B, O, H>;
 
     /// Batched 2d forward using [matmul()] and [add()]
     fn forward(&self, x: Tensor2D<B, I, H>) -> Self::Output {
-        let (x, tape) = matmul_transpose(x, &self.weight).split_tape();
-        add(self.bias.clone().put_tape(tape).broadcast(), &x)
+        let (x, tape) = matmul_transpose(x, self.weight.clone()).split_tape();
+        let bias: Self::Output = self.bias.clone().put_tape(tape).broadcast();
+        add(bias, x)
     }
 }
 
-impl<const B: usize, const S: usize, const I: usize, const O: usize, H: Tape>
-    Module<Tensor3D<B, S, I, H>> for Linear<I, O>
+impl<
+        const B: usize,
+        const S: usize,
+        const I: usize,
+        const O: usize,
+        H: Tape + Merge<NoneTape, Output = H>,
+    > Module<Tensor3D<B, S, I, H>> for Linear<I, O>
 {
     type Output = Tensor3D<B, S, O, H>;
 
     /// Batched 3d forward using [matmul()] and [add()]
     fn forward(&self, x: Tensor3D<B, S, I, H>) -> Self::Output {
-        let (x, tape) = matmul_transpose(x, &self.weight).split_tape();
-        add(self.bias.clone().put_tape(tape).broadcast(), &x)
+        let (x, tape) = matmul_transpose(x, self.weight.clone()).split_tape();
+        let bias: Self::Output = self.bias.clone().put_tape(tape).broadcast();
+        add(bias, x)
     }
 }
 

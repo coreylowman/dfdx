@@ -1,5 +1,6 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Merge, UnusedTensors};
 use crate::prelude::*;
+use crate::tensor_ops::utils::BinaryOpTyping;
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -43,9 +44,11 @@ impl<F: ResetParams, R: ResetParams> ResetParams for GeneralizedResidual<F, R> {
 impl<F, R, T> Module<T> for GeneralizedResidual<F, R>
 where
     T: Tensor<Dtype = f32>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
     F: Module<T>,
     R: Module<T, Output = F::Output>,
-    F::Output: Tensor<Dtype = f32, Tape = T::Tape>,
+    F::Output: Tensor<Dtype = f32, Tape = T::Tape>
+        + BinaryOpTyping<<F::Output as Tensor>::NoTape, Out = F::Output>,
 {
     type Output = F::Output;
 
@@ -60,16 +63,18 @@ where
         // do F(x) on the tape
         let f_x = self.f.forward(x.put_tape(tape));
 
-        add(f_x, &r_x)
+        add(f_x, r_x)
     }
 }
 
 impl<F, R, T> ModuleMut<T> for GeneralizedResidual<F, R>
 where
     T: Tensor<Dtype = f32>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
     F: ModuleMut<T>,
     R: ModuleMut<T, Output = F::Output>,
-    F::Output: Tensor<Dtype = f32, Tape = T::Tape>,
+    F::Output: Tensor<Dtype = f32, Tape = T::Tape>
+        + BinaryOpTyping<<F::Output as Tensor>::NoTape, Out = F::Output>,
 {
     type Output = F::Output;
 
@@ -83,7 +88,7 @@ where
         // do F(x) on the tape
         let f_x = self.f.forward_mut(x.put_tape(tape));
 
-        add(f_x, &r_x)
+        add(f_x, r_x)
     }
 }
 

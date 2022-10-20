@@ -1,6 +1,7 @@
 use super::{Module, ModuleMut, ResetParams};
 use crate::arrays::{HasArrayData, HasAxes};
 use crate::devices::{Cpu, FillElements};
+use crate::tensor_ops::utils::BinaryOpTyping;
 use crate::{gradients::*, tensor::*, tensor_ops::*};
 
 /// Batch normalization for images as described in
@@ -57,7 +58,7 @@ impl<const C: usize> BatchNorm2D<C> {
     /// generic forward for inference
     fn infer_fwd<T, Axes>(&self, x: T) -> T
     where
-        T: Tensor<Dtype = f32, NoTape = T>,
+        T: Tensor<Dtype = f32, Tape = NoneTape> + BinaryOpTyping<T, Out = T>,
         Tensor1D<C>: BroadcastTo<T, Axes>,
     {
         // statistics for normalizing
@@ -65,15 +66,17 @@ impl<const C: usize> BatchNorm2D<C> {
         let mean = self.running_mean.clone();
 
         // normalize & affine
-        let x = sub(x, &mean.broadcast());
-        let x = div(x, &std.broadcast());
-        let x = mul(x, &self.scale.clone().broadcast());
-        add(x, &self.bias.clone().broadcast())
+        let x = sub(x, mean.broadcast());
+        let x = div(x, std.broadcast());
+        let x = mul(x, self.scale.clone().broadcast());
+        add(x, self.bias.clone().broadcast())
     }
 
     fn train_fwd<T, Axes>(&mut self, x: T) -> T
     where
-        T: Tensor<Dtype = f32, Tape = OwnedTape> + ReduceTo<Tensor1D<C, OwnedTape>, Axes>,
+        T: Tensor<Dtype = f32, Tape = OwnedTape>
+            + ReduceTo<Tensor1D<C, OwnedTape>, Axes>
+            + BinaryOpTyping<T::NoTape, Out = T>,
         T::Array: HasAxes<Axes>,
         Tensor1D<C, OwnedTape>: BroadcastTo<T, Axes>,
     {
@@ -86,13 +89,13 @@ impl<const C: usize> BatchNorm2D<C> {
         // update statistics since we are training - off tape
         self.running_mean = add(
             self.running_mean.clone() * (1.0 - self.momentum),
-            &(mean_t.clone() * self.momentum),
+            mean_t.clone() * self.momentum,
         );
         let n = <T::Array as HasAxes<Axes>>::SIZE as f32;
         self.running_var = add(
             self.running_var.clone() * (1.0 - self.momentum),
             // NOTE: uses unbiased variance in running estimate
-            &(var_t.clone() * (self.momentum * n / (n - 1.0))),
+            var_t.clone() * (self.momentum * n / (n - 1.0)),
         );
 
         // statistics for normalizing - on tape
@@ -108,10 +111,10 @@ impl<const C: usize> BatchNorm2D<C> {
         let (bias, tape) = bias.split_tape();
 
         // normalize & affine - on tape
-        let x = sub(x.put_tape(tape), &mean);
-        let x = div(x, &std);
-        let x = mul(x, &scale);
-        add(x, &bias)
+        let x = sub(x.put_tape(tape), mean);
+        let x = div(x, std);
+        let x = mul(x, scale);
+        add(x, bias)
     }
 }
 

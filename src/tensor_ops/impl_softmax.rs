@@ -1,6 +1,8 @@
 use crate::devices::{Device, DeviceReduce, MaxAccum, SubAccum};
-use crate::gradients::Tape;
+use crate::gradients::{Merge, Tape};
 use crate::prelude::*;
+
+use super::utils::BinaryOpTyping;
 
 /// Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function across
 /// `Axes`
@@ -49,10 +51,14 @@ pub fn logsumexp<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
 /// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
 /// let _ = t.log_softmax::<Axes2<0, 2>>();
 /// ```
-pub fn log_softmax<T: Reduce<Axes>, Axes>(t: T) -> T {
+pub fn log_softmax<T: Reduce<Axes>, Axes>(t: T) -> T
+where
+    T: BinaryOpTyping<T::NoTape, Out = T>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
+{
     let (t, tape) = t.split_tape();
     let (lse, tape) = logsumexp(t.clone().put_tape(tape)).broadcast().split_tape();
-    sub(t.put_tape(tape), &lse)
+    sub(t.put_tape(tape), lse)
 }
 
 /// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function) across
@@ -77,7 +83,11 @@ pub fn log_softmax<T: Reduce<Axes>, Axes>(t: T) -> T {
 /// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
 /// let _ = t.softmax::<Axes2<1, 2>>();
 /// ```
-pub fn softmax<T: Reduce<Axes>, Axes>(t: T) -> T {
+pub fn softmax<T: Reduce<Axes>, Axes>(t: T) -> T
+where
+    T: BinaryOpTyping<T::NoTape, Out = T>,
+    T::Tape: Merge<NoneTape, Output = T::Tape>,
+{
     exp(log_softmax(t))
 }
 
@@ -85,15 +95,29 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [logsumexp()] on `self` with `Axes`.
-    pub fn logsumexp<T, Axes>(self) -> T where Self: ReduceTo<T, Axes> {
+    pub fn logsumexp<T, Axes>(self) -> T
+    where
+        Self: ReduceTo<T, Axes>,
+        <Self as Tensor>::Tape: Merge<NoneTape, Output = <Self as Tensor>::Tape>,
+    {
         logsumexp(self)
     }
     /// Calls [log_softmax()] on `self` with `Axes`
-    pub fn log_softmax<Axes>(self) -> Self where Self: Reduce<Axes> {
+    pub fn log_softmax<Axes>(self) -> Self
+    where
+        Self: Reduce<Axes>,
+        <Self as Tensor>::Tape: Merge<NoneTape, Output = <Self as Tensor>::Tape>,
+        Self: BinaryOpTyping<<Self as Tensor>::NoTape, Out = Self>,
+    {
         log_softmax(self)
     }
     /// Calls [softmax()] on `self` with `Axes`
-    pub fn softmax<Axes>(self) -> Self where Self: Reduce<Axes> {
+    pub fn softmax<Axes>(self) -> Self
+    where
+        Self: Reduce<Axes>,
+        <Self as Tensor>::Tape: Merge<NoneTape, Output = <Self as Tensor>::Tape>,
+        Self: BinaryOpTyping<<Self as Tensor>::NoTape, Out = Self>,
+    {
         softmax(self)
     }
 }
@@ -180,7 +204,7 @@ mod tests {
             r.data(),
             &[0.011656232, 0.031684924, 0.086128555, 0.23412168, 0.6364087]
         );
-        let l = mul(r, &tensor([0.0, 0.0, 1.0, 0.0, 0.0]));
+        let l = mul(r, tensor([0.0, 0.0, 1.0, 0.0, 0.0]));
         assert_eq!(l.data(), &[0.0, 0.0, 0.086128555, 0.0, 0.0]);
         let gradients = l.mean().backward();
         assert_eq!(
@@ -242,7 +266,7 @@ mod tests {
                 [0.002355633, 0.047314156, 0.9503302]
             ]
         );
-        let l = mul(r, &tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]));
+        let l = mul(r, tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]));
         assert_eq!(l.data(), &[[0.09003058, 0.0, 0.0], [0.0, 0.047314156, 0.0]]);
         let gradients = backward(l.mean());
         assert_eq!(
@@ -265,7 +289,7 @@ mod tests {
                 [0.95257413, 0.9933072, 0.9990892]
             ]
         );
-        let l = mul(r, &tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]));
+        let l = mul(r, tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]));
         assert_eq!(l.data(), &[[0.047425874, 0.0, 0.0], [0.0, 0.9933072, 0.0]]);
         let gradients = backward(l.mean());
         assert_eq!(

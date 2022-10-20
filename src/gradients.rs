@@ -108,8 +108,8 @@ impl Tape for NoneTape {
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, _operation: F) {}
 }
 
-pub trait Merge<T> {
-    type Output;
+pub trait Merge<T: Tape>: Tape {
+    type Output: Tape;
 
     /// Merges `T` into `self`
     fn merge(self, other: T) -> Self::Output;
