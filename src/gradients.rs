@@ -90,7 +90,7 @@ pub struct OwnedTape(pub(crate) Box<GradientTape>);
 pub struct NoneTape;
 
 /// Something that can add a gradient operation to [GradientTape].
-pub trait Tape: Merge<Self> + Merge<NoneTape> {
+pub trait Tape: Merge<Self> + Merge<NoneTape> + Default {
     /// Whether this object currently owns the [GradientTape]. This is known at compile time.
     const OWNS_TAPE: bool;
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, operation: F);

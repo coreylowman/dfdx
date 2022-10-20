@@ -78,19 +78,15 @@ where
         &self,
         (q, k, v): (Tensor2D<S1, M, TAPE>, Tensor2D<S2, M>, Tensor2D<S2, M>),
     ) -> Self::Output {
-        let (q, tape) = q.split_tape();
-
-        let v: Tensor2D<S2, V, _> = self.w_v.forward(v.put_tape(tape));
+        let v: Tensor2D<S2, V, TAPE> = self.w_v.forward(v.put_tape(Default::default()));
         let v: Tensor3D<S2, H, { V / H }, _> = v.reshape();
         let v: Tensor3D<H, S2, { V / H }, _> = v.permute();
-        let (v, tape) = v.split_tape();
 
-        let k: Tensor2D<S2, K, _> = self.w_k.forward(k.put_tape(tape));
+        let k: Tensor2D<S2, K, TAPE> = self.w_k.forward(k.put_tape(Default::default()));
         let k: Tensor3D<S2, H, { K / H }, _> = k.reshape();
         let k: Tensor3D<H, S2, { K / H }, _> = k.permute();
-        let (k, tape) = k.split_tape();
 
-        let q: Tensor2D<S1, K, _> = self.w_q.forward(q.put_tape(tape));
+        let q: Tensor2D<S1, K, _> = self.w_q.forward(q);
         let q: Tensor3D<S1, H, { K / H }, _> = q.reshape();
         let q: Tensor3D<H, S1, { K / H }, _> = q.permute();
 
@@ -141,19 +137,15 @@ where
             Tensor3D<B, S2, M>,
         ),
     ) -> Self::Output {
-        let (q, tape) = q.split_tape();
-
-        let v: Tensor3D<B, S2, V, _> = self.w_v.forward(v.put_tape(tape));
+        let v: Tensor3D<B, S2, V, TAPE> = self.w_v.forward(v.put_tape(Default::default()));
         let v: Tensor4D<B, S2, H, { V / H }, _> = v.reshape();
         let v: Tensor4D<B, H, S2, { V / H }, _> = v.permute();
-        let (v, tape) = v.split_tape();
 
-        let k: Tensor3D<B, S2, K, _> = self.w_k.forward(k.put_tape(tape));
+        let k: Tensor3D<B, S2, K, TAPE> = self.w_k.forward(k.put_tape(Default::default()));
         let k: Tensor4D<B, S2, H, { K / H }, _> = k.reshape();
         let k: Tensor4D<B, H, S2, { K / H }, _> = k.permute();
-        let (k, tape) = k.split_tape();
 
-        let q: Tensor3D<B, S1, K, _> = self.w_q.forward(q.put_tape(tape));
+        let q: Tensor3D<B, S1, K, _> = self.w_q.forward(q);
         let q: Tensor4D<B, S1, H, { K / H }, _> = q.reshape();
         let q: Tensor4D<B, H, S1, { K / H }, _> = q.permute();
 

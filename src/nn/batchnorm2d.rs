@@ -80,10 +80,12 @@ impl<const C: usize> BatchNorm2D<C> {
         let (x, tape) = x.split_tape();
 
         // compute statistics for updating running stats later - on tape
-        let (mean_t, tape): (Tensor1D<C>, _) = mean(x.clone().put_tape(tape)).split_tape();
-        let (var_t, tape): (Tensor1D<C>, _) = var(x.clone().put_tape(tape)).split_tape();
+        let mean_t: Tensor1D<C, _> = mean(taped::<T>(&x));
+        let var_t: Tensor1D<C, _> = var(taped::<T>(&x));
 
         // update statistics since we are training - off tape
+        let (mean_t, tape1) = mean_t.split_tape();
+        let (var_t, tape2) = var_t.split_tape();
         self.running_mean = add(
             self.running_mean.clone() * (1.0 - self.momentum),
             mean_t.clone() * self.momentum,
@@ -96,16 +98,12 @@ impl<const C: usize> BatchNorm2D<C> {
         );
 
         // statistics for normalizing - on tape
-        let std: T = (var_t.put_tape(tape) + self.epsilon).sqrt().broadcast();
-        let (std, tape) = std.split_tape();
-        let mean: T = mean_t.put_tape(tape).broadcast();
-        let (mean, tape) = mean.split_tape();
+        let mean: T = mean_t.put_tape(tape1).broadcast();
+        let std: T = (var_t.put_tape(tape2) + self.epsilon).sqrt().broadcast();
 
         // record broadcast of scale & bias - on tape
-        let scale: T = self.scale.clone().put_tape(tape).broadcast();
-        let (scale, tape) = scale.split_tape();
-        let bias: T = self.bias.clone().put_tape(tape).broadcast();
-        let (bias, tape) = bias.split_tape();
+        let scale: T = taped::<Tensor1D<C, _>>(&self.scale).broadcast();
+        let bias: T = taped::<Tensor1D<C, _>>(&self.bias).broadcast();
 
         // normalize & affine - on tape
         let x = sub(x.put_tape(tape), mean);

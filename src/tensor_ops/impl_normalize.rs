@@ -19,12 +19,10 @@ where
     T::Array: HasAxes<Axes>,
 {
     let (t, tape) = t.split_tape();
-    let std: T = stddev(t.clone().put_tape(tape), epsilon).broadcast();
-    let (std, tape) = std.split_tape();
-    let mean: T = mean(t.clone().put_tape(tape)).broadcast();
-    let (mean, tape) = mean.split_tape();
-    let centered = sub(t.put_tape(tape), mean);
-    div(centered, std)
+    let std: T::Reduced = stddev(taped::<T>(&t), epsilon);
+    let mean: T::Reduced = mean(taped::<T>(&t));
+    let centered = sub(t.put_tape(tape), mean.broadcast());
+    div(centered, std.broadcast())
 }
 
 macro_rules! tensor_impl {
@@ -51,6 +49,8 @@ tensor_impl!(Tensor4D, [M, N, O, P]);
 
 #[cfg(test)]
 mod tests {
+    use crate::tests::assert_close;
+
     use super::*;
 
     #[test]
@@ -109,13 +109,13 @@ mod tests {
             ]
         );
         let gradients = backward(r.exp().mean());
-        assert_eq!(
+        assert_close(
             gradients.ref_gradient(&a),
             &[
                 [0.019245632, 0.025835907],
                 [-0.038491584, -0.043060362],
-                [0.019245982, 0.017224466],
-            ]
+                [0.019245982, 0.01722446],
+            ],
         );
     }
 

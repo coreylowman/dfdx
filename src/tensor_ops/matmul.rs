@@ -60,31 +60,50 @@ pub trait MatMulTyping<B> {
 }
 
 // Normal matmul
-impl<const M: usize, const N: usize, const K: usize, H> MatMulTyping<Tensor2D<K, N>>
-    for Tensor2D<M, K, H>
+impl<const M: usize, const N: usize, const K: usize, R: Tape, L: Tape + Merge<R>>
+    MatMulTyping<Tensor2D<K, N, R>> for Tensor2D<M, K, L>
 {
-    type C = Tensor2D<M, N, H>;
+    type C = Tensor2D<M, N, L>;
 }
 
 // Batched matmul
-impl<const B: usize, const M: usize, const N: usize, const K: usize, H>
-    MatMulTyping<Tensor3D<B, K, N>> for Tensor3D<B, M, K, H>
+impl<
+        const B: usize,
+        const M: usize,
+        const N: usize,
+        const K: usize,
+        R: Tape,
+        L: Tape + Merge<R>,
+    > MatMulTyping<Tensor3D<B, K, N, R>> for Tensor3D<B, M, K, L>
 {
-    type C = Tensor3D<B, M, N, H>;
+    type C = Tensor3D<B, M, N, L>;
 }
 
 // Double batched matmul
-impl<const B1: usize, const B2: usize, const M: usize, const N: usize, const K: usize, H>
-    MatMulTyping<Tensor4D<B1, B2, K, N>> for Tensor4D<B1, B2, M, K, H>
+impl<
+        const B1: usize,
+        const B2: usize,
+        const M: usize,
+        const N: usize,
+        const K: usize,
+        R: Tape,
+        L: Tape + Merge<R>,
+    > MatMulTyping<Tensor4D<B1, B2, K, N, R>> for Tensor4D<B1, B2, M, K, L>
 {
-    type C = Tensor4D<B1, B2, M, N, H>;
+    type C = Tensor4D<B1, B2, M, N, L>;
 }
 
 // Broadcasted matmul
-impl<const B: usize, const M: usize, const N: usize, const K: usize, H> MatMulTyping<Tensor2D<K, N>>
-    for Tensor3D<B, M, K, H>
+impl<
+        const B: usize,
+        const M: usize,
+        const N: usize,
+        const K: usize,
+        R: Tape,
+        L: Tape + Merge<R>,
+    > MatMulTyping<Tensor2D<K, N, R>> for Tensor3D<B, M, K, L>
 {
-    type C = Tensor3D<B, M, N, H>;
+    type C = Tensor3D<B, M, N, L>;
 }
 
 /// Matrix multiplication with the transpose of `rhs`. Equivalent to `matmul(lhs, transpose(rhs))`.
@@ -143,28 +162,47 @@ pub trait MatMulTrTyping<B> {
     type C;
 }
 
-impl<const M: usize, const N: usize, const K: usize, H> MatMulTrTyping<Tensor2D<N, K>>
-    for Tensor2D<M, K, H>
+impl<const M: usize, const N: usize, const K: usize, R: Tape, L: Tape + Merge<R>>
+    MatMulTrTyping<Tensor2D<N, K, R>> for Tensor2D<M, K, L>
 {
-    type C = Tensor2D<M, N, H>;
+    type C = Tensor2D<M, N, L>;
 }
 
-impl<const B: usize, const M: usize, const N: usize, const K: usize, H>
-    MatMulTrTyping<Tensor3D<B, N, K>> for Tensor3D<B, M, K, H>
+impl<
+        const B: usize,
+        const M: usize,
+        const N: usize,
+        const K: usize,
+        R: Tape,
+        L: Tape + Merge<R>,
+    > MatMulTrTyping<Tensor3D<B, N, K, R>> for Tensor3D<B, M, K, L>
 {
-    type C = Tensor3D<B, M, N, H>;
+    type C = Tensor3D<B, M, N, L>;
 }
 
-impl<const B1: usize, const B2: usize, const M: usize, const N: usize, const K: usize, H>
-    MatMulTrTyping<Tensor4D<B1, B2, N, K>> for Tensor4D<B1, B2, M, K, H>
+impl<
+        const B1: usize,
+        const B2: usize,
+        const M: usize,
+        const N: usize,
+        const K: usize,
+        R: Tape,
+        L: Tape + Merge<R>,
+    > MatMulTrTyping<Tensor4D<B1, B2, N, K, R>> for Tensor4D<B1, B2, M, K, L>
 {
-    type C = Tensor4D<B1, B2, M, N, H>;
+    type C = Tensor4D<B1, B2, M, N, L>;
 }
 
-impl<const B: usize, const M: usize, const N: usize, const K: usize, H>
-    MatMulTrTyping<Tensor2D<N, K>> for Tensor3D<B, M, K, H>
+impl<
+        const B: usize,
+        const M: usize,
+        const N: usize,
+        const K: usize,
+        R: Tape,
+        L: Tape + Merge<R>,
+    > MatMulTrTyping<Tensor2D<N, K, R>> for Tensor3D<B, M, K, L>
 {
-    type C = Tensor3D<B, M, N, H>;
+    type C = Tensor3D<B, M, N, L>;
 }
 
 /// vector * matrix multiplication.
