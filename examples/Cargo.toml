@@ -1,0 +1,74 @@
+[package]
+name = "examples"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+# If you copy one of the examples into a new project, you should be using
+# [dependencies] instead, and delete the **path**.
+[dev-dependencies]
+dfdx = { version = "0.9.0", path = "../dfdx" }
+
+[[example]]
+name = "tensor"
+path = "01-tensor.rs"
+
+[[example]]
+name = "ops"
+path = "02-ops.rs"
+
+[[example]]
+name = "nn.rs"
+path = "03-nn.rs"
+
+[[example]]
+name = "gradients.rs"
+path = "04-gradients.rs"
+
+[[example]]
+name = "optim.rs"
+path = "05-optim.rs"
+
+[[example]]
+name = "mnist.rs"
+path = "06-mnist.rs"
+
+[[example]]
+name = "custom-module.rs"
+path = "07-custom-module.rs"
+
+[[example]]
+name = "tensor-broadcast-reduce.rs"
+path = "08-tensor-broadcast-reduce.rs"
+
+[[example]]
+name = "tensor-permute.rs"
+path = "09-tensor-permute.rs"
+
+[[example]]
+name = "tensor-index.rs"
+path = "10-tensor-index.rs"
+
+[[example]]
+name = "multi-headed.rs"
+path = "11-multi-headed.rs"
+
+[[example]]
+name = "nightly-conv-net"
+path = "nightly-conv-net.rs"
+
+[[example]]
+name = "nightly-transformer"
+path = "nightly-transformer.rs"
+
+[[example]]
+name = "numpy-save-load"
+path = "numpy-save-load.rs"
+
+[[example]]
+name = "rl-dqn"
+path = "rl-dqn.rs"
+
+[[example]]
+name = "rl-ppo"
+path = "rl-ppo.rs"

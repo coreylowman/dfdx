@@ -1,50 +1,9 @@
-[package]
-name = "dfdx"
-version = "0.9.0"
-edition = "2021"
-license = "MIT OR Apache-2.0"
+[workspace]
 
-description = "Ergonomic auto differentiation in Rust, with pytorch like apis."
-homepage = "https://github.com/coreylowman/dfdx"
-documentation = "https://docs.rs/dfdx"
-repository = "https://github.com/coreylowman/dfdx"
-readme = "README.md"
+members = [
+    "dfdx",
+    "dfdx-macros",
 
-keywords = [
-    "deep-learning",
-    "neural-network",
-    "backprop",
-    "tensor",
-    "autodiff",
+    # Internal
+    "examples",
 ]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[package.metadata.docs.rs]
-features = ["nightly", "numpy"]
-
-[dependencies]
-no-std-compat = { version = "0.4.1", features = [ "alloc", "compat_hash" ] }
-rand = { version = "0.8.5", features = ["std_rng"] }
-rand_distr = { version = "0.4.3", features = [] }
-matrixmultiply = { version = "0.3.2", features = [] }
-zip = { version = "0.6.2", features = [], optional = true }
-cblas-sys = { version = "0.1.4", optional = true }
-libc = { version = "0.2", optional = true }
-
-[features]
-default = ["std", "numpy"]
-std = ["no-std-compat/std"]
-nightly = []
-numpy = ["dep:zip", "std"]
-cblas = ["dep:cblas-sys", "dep:libc"]
-intel-mkl = ["cblas"]
-
-[dev-dependencies]
-rand = "0.8.5"
-tempfile = "3.3.0"
-mnist = "0.5.0"
-indicatif = "0.16.2"
-
-[build-dependencies]
-rustc_version = "0.4.0"
