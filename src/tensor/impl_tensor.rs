@@ -23,8 +23,6 @@ pub trait Tensor:
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
 }
 
-pub trait TensorOn<T: Tape>: Tensor<Tape = T> {}
-
 macro_rules! tensor_impl {
     ($struct:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
@@ -38,8 +36,6 @@ impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
         )
     }
 }
-
-impl<$(const $Vs: usize, )* H: Tape> TensorOn<H> for $struct<$($Vs, )* H> { }
 
 impl<$(const $Vs: usize, )* H: Clone> Clone for $struct<$($Vs, )* H> {
     /// Clones the underlying id, data, and tape
