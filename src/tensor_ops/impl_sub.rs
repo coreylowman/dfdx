@@ -27,7 +27,6 @@ macro_rules! binary_ops_impl {
 impl<$(const $Vs: usize, )* TapeL: Tape, TapeR: Tape> std::ops::Sub<$typename<$($Vs, )* TapeR>> for $typename<$($Vs, )* TapeL>
 where
     TapeL: Merge<TapeR>,
-    <TapeL as Merge<TapeR>>::Output: Tape
 {
     type Output = $typename<$($Vs, )* <TapeL as Merge<TapeR>>::Output>;
     /// Calls [add()] - implements `T<H> + &T<I>`
