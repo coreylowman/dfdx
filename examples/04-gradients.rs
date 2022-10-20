@@ -18,7 +18,7 @@ fn main() {
     let b: Tensor2D<3, 4, OwnedTape> = a.trace();
 
     // the tape will automatically move around as you perform ops
-    let c: Tensor2D<3, 2, OwnedTape> = matmul(b, &weight);
+    let c: Tensor2D<3, 2, OwnedTape> = matmul(b, weight.clone());
     let d: Tensor2D<3, 2, OwnedTape> = c.sin();
     let e: Tensor0D<OwnedTape> = d.mean();
 

@@ -202,7 +202,7 @@ mod tests {
         });
 
         let py = model.forward(x.trace());
-        let loss = (py - y.clone()).square().mean();
+        let loss = (py - y).square().mean();
         let gradients = backward(loss);
         opt.update(&mut model, gradients).expect("");
 

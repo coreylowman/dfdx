@@ -170,7 +170,7 @@ mod tests {
         // b's gradient: (a * (b * a).exp()) / 15
         let a_up: Tensor2D<5, 3> = a.clone().broadcast();
         let a_grad = mul(mul(b.clone(), a_up.clone()).exp(), b.clone()).sum::<_, Axis<0>>() / 15.0;
-        let b_grad = mul(mul(b.clone(), a_up.clone()).exp(), a_up.clone()) / 15.0;
+        let b_grad = mul(mul(b.clone(), a_up.clone()).exp(), a_up) / 15.0;
         g.ref_gradient(&a).assert_close(a_grad.data(), 1e-4);
         g.ref_gradient(&b).assert_close(b_grad.data(), 1e-4);
     }

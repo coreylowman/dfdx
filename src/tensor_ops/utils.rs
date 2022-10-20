@@ -7,9 +7,7 @@
 //! 4. You can't really separate these operations since they are very inter-dependent. So it makes
 //!    sense to have a single unit for doing it.
 
-use std::boxed::Box;
-
-use crate::devices::{AllocateZeros, Device, ForEachElement};
+use crate::devices::{Device, ForEachElement};
 use crate::gradients::{Gradients, Merge, Tape};
 use crate::prelude::*;
 

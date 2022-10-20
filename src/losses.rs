@@ -229,7 +229,7 @@ mod tests {
     fn test_mse() {
         let x = Tensor1D::new([0.87248087, -0.24252531, -1.0060949, 1.155084, 1.5545048]);
         let y = Tensor1D::new([-0.90954804, -1.0193185, -0.39221755, 2.2524886, 1.3035554]);
-        let loss = mse_loss(x.trace(), y.clone());
+        let loss = mse_loss(x.trace(), y);
         assert_eq!(loss.data(), &1.0846305);
         let g = backward(loss);
         assert_eq!(
@@ -242,7 +242,7 @@ mod tests {
     fn test_mae() {
         let x = Tensor1D::new([0.87248087, -0.24252531, -1.0060949, 1.155084, 1.5545048]);
         let y = Tensor1D::new([-0.90954804, -1.0193186, -0.39221755, 2.2524886, 1.3035554]);
-        let loss = mae_loss(x.trace(), y.clone());
+        let loss = mae_loss(x.trace(), y);
         assert_eq!(loss.data(), &0.9042107);
         let g = backward(loss);
         assert_eq!(g.ref_gradient(&x), &[0.2, 0.2, -0.2, -0.2, 0.2]);
@@ -306,7 +306,7 @@ mod tests {
             [0.5809, 0.3623, 0.0568],
             [0.0166, 0.8512, 0.1322],
         ]);
-        let loss = kl_div_with_logits_loss(logits.trace(), targ.clone());
+        let loss = kl_div_with_logits_loss(logits.trace(), targ);
         assert_eq!(loss.data(), &0.40656143);
         let gradients = loss.backward();
         assert_eq!(

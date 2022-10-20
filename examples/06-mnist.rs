@@ -86,7 +86,7 @@ fn main() {
             .map(|i| dataset.get_batch(i))
         {
             let logits = model.forward_mut(img.traced());
-            let loss = cross_entropy_with_logits_loss(logits, &lbl);
+            let loss = cross_entropy_with_logits_loss(logits, lbl);
 
             total_epoch_loss += loss.data();
             num_batches += 1;

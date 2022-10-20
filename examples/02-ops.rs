@@ -16,7 +16,7 @@ fn main() {
     dbg!(b.data());
 
     // we can do binary operations like add two tensors together
-    let c = add(a, &b);
+    let c = add(a, b);
     dbg!(c.data());
 
     // or unary operations like apply the `relu` function to each element
