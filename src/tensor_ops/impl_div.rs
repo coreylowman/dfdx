@@ -9,7 +9,7 @@ use crate::prelude::*;
 /// # use dfdx::prelude::*;
 /// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let b = tensor([[1.0, 0.5, 1.0], [0.5, 1.0, 3.0]]);
-/// let r = div(a, &b); // or `a / &b`
+/// let r = div(a, b); // or `a / b`
 /// assert_eq!(r.data(), &[[1.0, 4.0, 3.0], [-2.0, -2.0, -1.0]]);
 /// ```
 pub fn div<Lhs, Rhs>(lhs: Lhs, rhs: Rhs) -> Lhs
@@ -31,7 +31,7 @@ where
     TapeL: Merge<TapeR>
 {
     type Output = $typename<$($Vs, )* TapeL>;
-    /// Calls [div()] - implements `T<H> / &T<NoneTape>`
+    /// Calls [div()] - implements `T<L> / T<R>`
     fn div(self, rhs: $typename<$($Vs, )* TapeR>) -> Self::Output {
         div(self, rhs)
     }

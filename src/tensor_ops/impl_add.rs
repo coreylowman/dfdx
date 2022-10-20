@@ -9,7 +9,7 @@ use crate::prelude::*;
 /// # use dfdx::prelude::*;
 /// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let b = Tensor2D::ones();
-/// let r = add(a, &b); // or `a + &b`
+/// let r = add(a, b); // or `a + b`
 /// assert_eq!(r.data(), &[[2.0, 3.0, 4.0], [0.0, -1.0, -2.0]]);
 /// ```
 pub fn add<Lhs, Rhs>(lhs: Lhs, rhs: Rhs) -> Lhs
@@ -28,7 +28,7 @@ where
     TapeL: Merge<TapeR>
 {
     type Output = $typename<$($Vs, )* TapeL>;
-    /// Calls [add()] - implements `T<H> + &T<I>`
+    /// Calls [add()] - implements `T<L> + T<R>`
     fn add(self, rhs: $typename<$($Vs, )* TapeR>) -> Self::Output {
         add(self, rhs)
     }

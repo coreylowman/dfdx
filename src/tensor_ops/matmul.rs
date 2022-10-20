@@ -1,4 +1,4 @@
-use super::utils::move_tape_and_add_backward_binop;
+use super::utils::merge_tapes_and_add_backward_binop;
 use crate::devices::{Cpu, MatMul, MatMulOp, Transpose};
 use crate::gradients::{Merge, Tape};
 use crate::prelude::*;
@@ -12,7 +12,7 @@ use crate::prelude::*;
 /// # use dfdx::prelude::*;
 /// let x: Tensor2D<3, 2> = TensorCreator::zeros();
 /// let y: Tensor2D<2, 4> = TensorCreator::zeros();
-/// let result: Tensor2D<3, 4> = matmul(x, &y);
+/// let result: Tensor2D<3, 4> = matmul(x, y);
 /// ```
 ///
 /// 2. Batched matmul
@@ -20,7 +20,7 @@ use crate::prelude::*;
 /// # use dfdx::prelude::*;
 /// let x: Tensor3D<10, 3, 2> = TensorCreator::zeros();
 /// let y: Tensor3D<10, 2, 4> = TensorCreator::zeros();
-/// let result: Tensor3D<10, 3, 4> = matmul(x, &y);
+/// let result: Tensor3D<10, 3, 4> = matmul(x, y);
 /// ```
 ///
 /// 3. Broadcasted matmul
@@ -28,7 +28,7 @@ use crate::prelude::*;
 /// # use dfdx::prelude::*;
 /// let x: Tensor3D<10, 3, 2> = TensorCreator::zeros();
 /// let y: Tensor2D<2, 4> = TensorCreator::zeros();
-/// let result: Tensor3D<10, 3, 4> = matmul(x, &y);
+/// let result: Tensor3D<10, 3, 4> = matmul(x, y);
 /// ```
 pub fn matmul<A, B, C>(a: A, b: B) -> <A as MatMulTyping<B>>::C
 where
@@ -44,7 +44,7 @@ where
     let mut c = C::NoTape::zeros();
     A::Device::mm(a.data(), b.data(), c.mut_data());
 
-    move_tape_and_add_backward_binop(a, b, c, move |a, b, c, grads| {
+    merge_tapes_and_add_backward_binop(a, b, c, move |a, b, c, grads| {
         let (a_grad, c_grad) = grads.mut_and_ref(&a, &c);
         A::Device::mm_bt(c_grad, b.data(), a_grad);
 
@@ -98,7 +98,7 @@ matmul_typing!(tr Tensor4D<B1, B2, M, K, L>, Tensor4D<B1, B2, N, K, R>, Tensor4D
 /// # use dfdx::prelude::*;
 /// let x: Tensor2D<3, 2> = TensorCreator::zeros();
 /// let y: Tensor2D<4, 2> = TensorCreator::zeros();
-/// let result: Tensor2D<3, 4> = matmul_transpose(x, &y);
+/// let result: Tensor2D<3, 4> = matmul_transpose(x, y);
 /// ```
 ///
 /// 2. Batched matmul
@@ -106,7 +106,7 @@ matmul_typing!(tr Tensor4D<B1, B2, M, K, L>, Tensor4D<B1, B2, N, K, R>, Tensor4D
 /// # use dfdx::prelude::*;
 /// let x: Tensor3D<10, 3, 2> = TensorCreator::zeros();
 /// let y: Tensor3D<10, 4, 2> = TensorCreator::zeros();
-/// let result: Tensor3D<10, 3, 4> = matmul_transpose(x, &y);
+/// let result: Tensor3D<10, 3, 4> = matmul_transpose(x, y);
 /// ```
 ///
 /// 3. Broadcasted matmul
@@ -114,7 +114,7 @@ matmul_typing!(tr Tensor4D<B1, B2, M, K, L>, Tensor4D<B1, B2, N, K, R>, Tensor4D
 /// # use dfdx::prelude::*;
 /// let x: Tensor3D<10, 3, 2> = TensorCreator::zeros();
 /// let y: Tensor2D<4, 2> = TensorCreator::zeros();
-/// let result: Tensor3D<10, 3, 4> = matmul_transpose(x, &y);
+/// let result: Tensor3D<10, 3, 4> = matmul_transpose(x, y);
 /// ```
 pub fn matmul_transpose<A, B, C>(a: A, b: B) -> <A as MatMulTrTyping<B>>::C
 where
@@ -130,7 +130,7 @@ where
     let mut c = C::NoTape::zeros();
     A::Device::mm_bt(a.data(), b.data(), c.mut_data());
 
-    move_tape_and_add_backward_binop(a, b, c, move |a, b, c, grads| {
+    merge_tapes_and_add_backward_binop(a, b, c, move |a, b, c, grads| {
         let (a_grad, c_grad) = grads.mut_and_ref(&a, &c);
         A::Device::mm(c_grad, b.data(), a_grad);
 
@@ -159,7 +159,7 @@ where
 /// # use dfdx::prelude::*;
 /// let x: Tensor1D<2> = TensorCreator::zeros();
 /// let y: Tensor2D<2, 4> = TensorCreator::zeros();
-/// let result: Tensor1D<4> = vecmat_mul(x, &y);
+/// let result: Tensor1D<4> = vecmat_mul(x, y);
 /// ```
 pub fn vecmat_mul<const K: usize, const N: usize, LhsTape: Tape, RhsTape: Tape>(
     lhs: Tensor1D<K, LhsTape>,
@@ -171,7 +171,7 @@ where
     let mut result = Tensor1D::zeros();
     Cpu::vm(lhs.data(), rhs.data(), result.mut_data());
 
-    move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
+    merge_tapes_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
         Cpu::vm_bt(result_grad, rhs.data(), lhs_grad);
 
@@ -198,7 +198,7 @@ where
 /// # use dfdx::prelude::*;
 /// let x: Tensor1D<2> = TensorCreator::zeros();
 /// let y: Tensor2D<4, 2> = TensorCreator::zeros();
-/// let result: Tensor1D<4> = vecmat_mul_transpose(x, &y);
+/// let result: Tensor1D<4> = vecmat_mul_transpose(x, y);
 /// ```
 pub fn vecmat_mul_transpose<const K: usize, const N: usize, LhsTape: Tape, RhsTape: Tape>(
     lhs: Tensor1D<K, LhsTape>,
@@ -210,7 +210,7 @@ where
     let mut result = Tensor1D::zeros();
     Cpu::vm_bt(lhs.data(), rhs_t.data(), result.mut_data());
 
-    move_tape_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs_t, result, grads| {
+    merge_tapes_and_add_backward_binop(lhs, rhs_t, result, move |lhs, rhs_t, result, grads| {
         let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
         Cpu::vm(result_grad, rhs_t.data(), lhs_grad);
 

@@ -11,7 +11,7 @@ use crate::prelude::*;
 /// # use dfdx::prelude::*;
 /// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let b = tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
-/// let r = a.maximum(&b);
+/// let r = a.maximum(b);
 /// assert_eq!(r.data(), &[[1.0, 2.0, 3.0], [-1.0, 2.0, -3.0]]);
 pub fn maximum<Lhs, Rhs>(lhs: Lhs, rhs: Rhs) -> Lhs
 where

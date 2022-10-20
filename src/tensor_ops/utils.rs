@@ -94,7 +94,7 @@ where
             },
         );
 
-        move_tape_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
+        merge_tapes_and_add_backward_binop(lhs, rhs, result, move |lhs, rhs, result, grads| {
             let (lhs_grad, result_grad) = grads.mut_and_ref(&lhs, &result);
             Lhs::Device::addmul(lhs_grad, lhs.data(), result_grad);
 
@@ -122,7 +122,7 @@ where
 }
 
 /// Moves tape from `lhs` to `out`, and does `tape.add_backward_op()` with `f`
-pub(super) fn move_tape_and_add_backward_binop<Lhs, Rhs, Out, F>(
+pub(super) fn merge_tapes_and_add_backward_binop<Lhs, Rhs, Out, F>(
     lhs: Lhs,
     rhs: Rhs,
     out: Out::NoTape,
