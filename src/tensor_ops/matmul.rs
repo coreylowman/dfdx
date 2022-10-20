@@ -34,8 +34,8 @@ pub fn matmul<A, B, C>(a: A, b: B) -> <A as MatMulTyping<B>>::C
 where
     A: Tensor<Dtype = f32> + MatMulTyping<B, C = C>,
     B: Tensor<Dtype = f32>,
-    C: Tensor<Dtype = f32>,
-    A::Tape: Merge<B::Tape, Output = C::Tape>,
+    C: Tensor<Dtype = f32, Tape = A::Tape>,
+    A::Tape: Merge<B::Tape>,
     A::Array: Transpose,
     B::Array: Transpose,
     C::Array: Transpose,
@@ -118,8 +118,8 @@ pub fn matmul_transpose<A, B, C>(a: A, b: B) -> <A as MatMulTrTyping<B>>::C
 where
     A: Tensor<Dtype = f32> + MatMulTrTyping<B, C = C>,
     B: Tensor<Dtype = f32>,
-    C: Tensor<Dtype = f32>,
-    A::Tape: Merge<B::Tape, Output = C::Tape>,
+    C: Tensor<Dtype = f32, Tape = A::Tape>,
+    A::Tape: Merge<B::Tape>,
     A::Array: Transpose,
     B::Array: Transpose,
     C::Array: Transpose,
@@ -192,7 +192,7 @@ impl<const B: usize, const M: usize, const N: usize, const K: usize, H>
 pub fn vecmat_mul<const K: usize, const N: usize, LhsTape: Tape, RhsTape: Tape>(
     lhs: Tensor1D<K, LhsTape>,
     rhs: Tensor2D<K, N, RhsTape>,
-) -> Tensor1D<N, <LhsTape as Merge<RhsTape>>::Output>
+) -> Tensor1D<N, LhsTape>
 where
     LhsTape: Merge<RhsTape>,
 {
@@ -231,7 +231,7 @@ where
 pub fn vecmat_mul_transpose<const K: usize, const N: usize, LhsTape: Tape, RhsTape: Tape>(
     lhs: Tensor1D<K, LhsTape>,
     rhs_t: Tensor2D<N, K, RhsTape>,
-) -> Tensor1D<N, <LhsTape as Merge<RhsTape>>::Output>
+) -> Tensor1D<N, LhsTape>
 where
     LhsTape: Merge<RhsTape>,
 {

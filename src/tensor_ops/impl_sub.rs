@@ -16,7 +16,7 @@ pub fn sub<Lhs, Rhs>(lhs: Lhs, rhs: Rhs) -> Lhs
 where
     Lhs: Tensor<Dtype = f32>,
     Rhs: Tensor<Dtype = f32, Array = Lhs::Array>,
-    Lhs::Tape: Merge<Rhs::Tape, Output = Lhs::Tape>,
+    Lhs::Tape: Merge<Rhs::Tape>,
 {
     binary_map(lhs, rhs, |x, y| x - y, |_, _| 1.0, |_, _| -1.0)
 }
@@ -25,9 +25,9 @@ macro_rules! binary_ops_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* TapeL: Tape, TapeR: Tape> std::ops::Sub<$typename<$($Vs, )* TapeR>> for $typename<$($Vs, )* TapeL>
 where
-    TapeL: Merge<TapeR, Output = TapeL>
+    TapeL: Merge<TapeR>
 {
-    type Output = $typename<$($Vs, )* <TapeL as Merge<TapeR>>::Output>;
+    type Output = $typename<$($Vs, )* TapeL>;
     /// Calls [add()] - implements `T<H> + &T<I>`
     fn sub(self, rhs: $typename<$($Vs, )* TapeR>) -> Self::Output {
         sub(self, rhs)

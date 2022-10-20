@@ -90,7 +90,7 @@ pub struct OwnedTape(pub(crate) Box<GradientTape>);
 pub struct NoneTape;
 
 /// Something that can add a gradient operation to [GradientTape].
-pub trait Tape {
+pub trait Tape: Merge<Self> + Merge<NoneTape> {
     /// Whether this object currently owns the [GradientTape]. This is known at compile time.
     const OWNS_TAPE: bool;
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, operation: F);
@@ -108,30 +108,25 @@ impl Tape for NoneTape {
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients)>(&mut self, _operation: F) {}
 }
 
-impl<T: Tape> Merge<NoneTape> for T {
-    type Output = T;
-    fn merge(self, _: NoneTape) -> Self::Output {
+pub trait Merge<T: ?Sized> {
+    /// Merges `T` into `self`
+    fn merge(self, other: T) -> Self;
+}
+
+impl Merge<NoneTape> for NoneTape {
+    fn merge(self, _: NoneTape) -> Self {
         self
     }
 }
 
-pub trait Merge<T> {
-    type Output: Tape;
-
-    /// Merges `T` into `self`
-    fn merge(self, other: T) -> Self::Output;
-}
-
-impl Merge<OwnedTape> for NoneTape {
-    type Output = OwnedTape;
-    fn merge(self, other: OwnedTape) -> Self::Output {
-        other
+impl Merge<NoneTape> for OwnedTape {
+    fn merge(self, _: NoneTape) -> Self {
+        self
     }
 }
 
-impl Merge<Self> for OwnedTape {
-    type Output = Self;
-    fn merge(mut self, mut other: Self) -> Self::Output {
+impl Merge<OwnedTape> for OwnedTape {
+    fn merge(mut self, mut other: Self) -> Self {
         self.0.append(other.0.as_mut());
         self
     }

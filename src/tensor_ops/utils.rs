@@ -66,7 +66,7 @@ pub(crate) fn binary_map<Lhs, Rhs, F, Dfdx, Dfdy>(
 where
     Lhs: Tensor<Dtype = f32>,
     Rhs: Tensor<Dtype = f32, Array = Lhs::Array>,
-    Lhs::Tape: Merge<Rhs::Tape, Output = Lhs::Tape>,
+    Lhs::Tape: Merge<Rhs::Tape>,
     F: FnMut(&f32, &f32) -> f32,
     Dfdx: FnMut(&f32, &f32) -> f32,
     Dfdy: FnMut(&f32, &f32) -> f32,
@@ -131,7 +131,7 @@ pub(super) fn move_tape_and_add_backward_binop<Lhs, Rhs, Out, F>(
 where
     Lhs: Tensor,
     Rhs: Tensor,
-    Out: Tensor<Tape = <Lhs::Tape as Merge<Rhs::Tape>>::Output>,
+    Out: Tensor<Tape = Lhs::Tape>,
     Lhs::Tape: Merge<Rhs::Tape>,
     F: 'static + FnMut(Lhs::NoTape, Rhs::NoTape, PhantomTensor<Out::NoTape>, &mut Gradients),
 {

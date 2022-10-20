@@ -17,7 +17,7 @@ pub fn minimum<Lhs, Rhs>(lhs: Lhs, rhs: Rhs) -> Lhs
 where
     Lhs: Tensor<Dtype = f32>,
     Rhs: Tensor<Dtype = f32, Array = Lhs::Array>,
-    Lhs::Tape: Merge<Rhs::Tape, Output = Lhs::Tape>,
+    Lhs::Tape: Merge<Rhs::Tape>,
 {
     fn f(x: &f32, y: &f32) -> f32 {
         x.min(*y)
@@ -50,7 +50,7 @@ impl<$(const $Vs: usize, )* TapeL: Tape> $typename<$($Vs, )* TapeL> {
     /// Calls [minimum()] on `self`.
     pub fn minimum<TapeR: Tape>(self, other: $typename<$($Vs, )* TapeR>) -> $typename<$($Vs, )* TapeL>
     where
-        TapeL: Merge<TapeR, Output = TapeL>
+        TapeL: Merge<TapeR>
     {
         minimum(self, other)
     }

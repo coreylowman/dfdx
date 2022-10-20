@@ -16,7 +16,7 @@ pub fn div<Lhs, Rhs>(lhs: Lhs, rhs: Rhs) -> Lhs
 where
     Lhs: Tensor<Dtype = f32>,
     Rhs: Tensor<Dtype = f32, Array = Lhs::Array>,
-    Lhs::Tape: Merge<Rhs::Tape, Output = Lhs::Tape>,
+    Lhs::Tape: Merge<Rhs::Tape>,
 {
     fn dfdy(x: &f32, y: &f32) -> f32 {
         (-x) * y.powi(2).recip()
@@ -28,9 +28,9 @@ macro_rules! binary_ops_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* TapeL: Tape, TapeR: Tape> std::ops::Div<$typename<$($Vs, )* TapeR>> for $typename<$($Vs, )* TapeL>
 where
-    TapeL: Merge<TapeR, Output = TapeL>
+    TapeL: Merge<TapeR>
 {
-    type Output = $typename<$($Vs, )* <TapeL as Merge<TapeR>>::Output>;
+    type Output = $typename<$($Vs, )* TapeL>;
     /// Calls [div()] - implements `T<H> / &T<NoneTape>`
     fn div(self, rhs: $typename<$($Vs, )* TapeR>) -> Self::Output {
         div(self, rhs)
