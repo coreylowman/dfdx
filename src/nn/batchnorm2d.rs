@@ -1,7 +1,6 @@
 use super::{Module, ModuleMut, ResetParams};
 use crate::arrays::{HasArrayData, HasAxes};
 use crate::devices::{Cpu, FillElements};
-use crate::tensor_ops::utils::BinaryOpTyping;
 use crate::{gradients::*, tensor::*, tensor_ops::*};
 
 /// Batch normalization for images as described in
@@ -58,7 +57,7 @@ impl<const C: usize> BatchNorm2D<C> {
     /// generic forward for inference
     fn infer_fwd<T, Axes>(&self, x: T) -> T
     where
-        T: Tensor<Dtype = f32, Tape = NoneTape> + BinaryOpTyping<T, Out = T>,
+        T: Tensor<Dtype = f32, Tape = NoneTape>,
         Tensor1D<C>: BroadcastTo<T, Axes>,
     {
         // statistics for normalizing
@@ -74,9 +73,7 @@ impl<const C: usize> BatchNorm2D<C> {
 
     fn train_fwd<T, Axes>(&mut self, x: T) -> T
     where
-        T: Tensor<Dtype = f32, Tape = OwnedTape>
-            + ReduceTo<Tensor1D<C, OwnedTape>, Axes>
-            + BinaryOpTyping<T::NoTape, Out = T>,
+        T: Tensor<Dtype = f32, Tape = OwnedTape> + ReduceTo<Tensor1D<C, OwnedTape>, Axes>,
         T::Array: HasAxes<Axes>,
         Tensor1D<C, OwnedTape>: BroadcastTo<T, Axes>,
     {

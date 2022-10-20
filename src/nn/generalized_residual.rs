@@ -1,6 +1,5 @@
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
-use crate::tensor_ops::utils::BinaryOpTyping;
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -46,8 +45,7 @@ where
     T: Tensor<Dtype = f32>,
     F: Module<T>,
     R: Module<T, Output = F::Output>,
-    F::Output: Tensor<Dtype = f32, Tape = T::Tape>
-        + BinaryOpTyping<<F::Output as Tensor>::NoTape, Out = F::Output>,
+    F::Output: Tensor<Dtype = f32, Tape = T::Tape>,
 {
     type Output = F::Output;
 
@@ -71,8 +69,7 @@ where
     T: Tensor<Dtype = f32>,
     F: ModuleMut<T>,
     R: ModuleMut<T, Output = F::Output>,
-    F::Output: Tensor<Dtype = f32, Tape = T::Tape>
-        + BinaryOpTyping<<F::Output as Tensor>::NoTape, Out = F::Output>,
+    F::Output: Tensor<Dtype = f32, Tape = T::Tape>,
 {
     type Output = F::Output;
 

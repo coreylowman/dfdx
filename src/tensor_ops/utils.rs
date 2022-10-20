@@ -52,48 +52,26 @@ where
     result.put_tape(tape)
 }
 
-pub trait BinaryOpTyping<Rhs> {
-    type Out;
-}
-
-macro_rules! binary_op_types {
-    ($TyName:ident, {$($Vs:tt),*}) => {
-impl<$(const $Vs: usize, )* LhsTape: Tape, RhsTape: Tape> BinaryOpTyping<$TyName<$($Vs, )* RhsTape>> for $TyName<$($Vs, )* LhsTape>
-where
-    LhsTape: Merge<RhsTape>
-{
-    type Out = $TyName<$($Vs, )* <LhsTape as Merge<RhsTape>>::Output>;
-}
-    };
-}
-
-binary_op_types!(Tensor0D, {});
-binary_op_types!(Tensor1D, { M });
-binary_op_types!(Tensor2D, {M, N});
-binary_op_types!(Tensor3D, {M, N, O});
-binary_op_types!(Tensor4D, {M, N, O, P});
-
 /// Applies a binary function `f`, it's partial wrt. x `dfdx`, and its partial wrt. y `dfdy`
 /// to a pair of [Tensor]s `lhs` and `rhs.
 ///
 /// This is primarily used to implement [add()], [sub()], [mul()], and [div()].
-pub(crate) fn binary_map<Lhs, Rhs, Out, F, Dfdx, Dfdy>(
+pub(crate) fn binary_map<Lhs, Rhs, F, Dfdx, Dfdy>(
     mut lhs: Lhs,
     mut rhs: Rhs,
     mut f: F,
     mut dfdx: Dfdx,
     mut dfdy: Dfdy,
-) -> Out
+) -> Lhs
 where
-    Lhs: Tensor<Dtype = f32> + BinaryOpTyping<Rhs, Out = Out>,
+    Lhs: Tensor<Dtype = f32>,
     Rhs: Tensor<Dtype = f32, Array = Lhs::Array>,
-    Out: Tensor<Dtype = f32, Array = Lhs::Array, Tape = <Lhs::Tape as Merge<Rhs::Tape>>::Output>,
-    Lhs::Tape: Merge<Rhs::Tape>,
+    Lhs::Tape: Merge<Rhs::Tape, Output = Lhs::Tape>,
     F: FnMut(&f32, &f32) -> f32,
     Dfdx: FnMut(&f32, &f32) -> f32,
     Dfdy: FnMut(&f32, &f32) -> f32,
 {
-    let mut result: <<Lhs as BinaryOpTyping<Rhs>>::Out as Tensor>::NoTape = TensorCreator::zeros();
+    let mut result: Lhs::NoTape = TensorCreator::zeros();
 
     if !<Lhs::Tape as Tape>::OWNS_TAPE && !<Rhs::Tape as Tape>::OWNS_TAPE {
         let (lhs, lhs_tape) = lhs.split_tape();

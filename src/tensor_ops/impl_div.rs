@@ -1,4 +1,4 @@
-use super::utils::{binary_map, BinaryOpTyping};
+use super::utils::binary_map;
 use crate::gradients::{Merge, Tape};
 use crate::prelude::*;
 
@@ -12,12 +12,11 @@ use crate::prelude::*;
 /// let r = div(a, &b); // or `a / &b`
 /// assert_eq!(r.data(), &[[1.0, 4.0, 3.0], [-2.0, -2.0, -1.0]]);
 /// ```
-pub fn div<Lhs, Rhs, Out>(lhs: Lhs, rhs: Rhs) -> Out
+pub fn div<Lhs, Rhs>(lhs: Lhs, rhs: Rhs) -> Lhs
 where
-    Lhs: Tensor<Dtype = f32> + BinaryOpTyping<Rhs, Out = Out>,
+    Lhs: Tensor<Dtype = f32>,
     Rhs: Tensor<Dtype = f32, Array = Lhs::Array>,
-    Out: Tensor<Dtype = f32, Array = Lhs::Array, Tape = <Lhs::Tape as Merge<Rhs::Tape>>::Output>,
-    Lhs::Tape: Merge<Rhs::Tape>,
+    Lhs::Tape: Merge<Rhs::Tape, Output = Lhs::Tape>,
 {
     fn dfdy(x: &f32, y: &f32) -> f32 {
         (-x) * y.powi(2).recip()
@@ -29,7 +28,7 @@ macro_rules! binary_ops_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* TapeL: Tape, TapeR: Tape> std::ops::Div<$typename<$($Vs, )* TapeR>> for $typename<$($Vs, )* TapeL>
 where
-    TapeL: Merge<TapeR>,
+    TapeL: Merge<TapeR, Output = TapeL>
 {
     type Output = $typename<$($Vs, )* <TapeL as Merge<TapeR>>::Output>;
     /// Calls [div()] - implements `T<H> / &T<NoneTape>`

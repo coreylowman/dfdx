@@ -1,7 +1,6 @@
 use super::mha::MultiHeadAttention;
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
-use crate::tensor_ops::utils::BinaryOpTyping;
 
 /// **Requires Nightly** A transformer encoder.
 ///
@@ -72,7 +71,7 @@ impl<const M: usize, const H: usize, const F: usize> CanUpdateWithGradients
 impl<const M: usize, const H: usize, const F: usize, Src> Module<Src>
     for TransformerEncoderBlock<M, H, F>
 where
-    Src: Tensor<Dtype = f32> + BinaryOpTyping<Src::NoTape, Out = Src>,
+    Src: Tensor<Dtype = f32>,
     MultiHeadAttention<M, H>: Module<(Src, Src::NoTape, Src::NoTape), Output = Src>,
     LayerNorm1D<M>: Module<Src, Output = Src>,
     FF<M, F>: Module<Src, Output = Src>,

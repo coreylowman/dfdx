@@ -1,17 +1,13 @@
 //! Standard loss functions such as [mse_loss()], [cross_entropy_with_logits_loss()], and more.
 
 use crate::arrays::{AllAxes, HasArrayType, HasLastAxis};
-use crate::tensor_ops::utils::BinaryOpTyping;
 use crate::tensor_ops::*;
 
 /// [Mean Squared Error](https://en.wikipedia.org/wiki/Mean_squared_error).
 /// This computes `(targ.clone() - pred).square().mean()`.
 ///
 /// See [mean()], [square()], and [sub()].
-pub fn mse_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape) -> T::Reduced
-where
-    T: BinaryOpTyping<T::NoTape, Out = T>,
-{
+pub fn mse_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape) -> T::Reduced {
     mean(square(sub(pred, targ)))
 }
 
@@ -19,10 +15,7 @@ where
 /// This computes `(targ.clone() - pred).square().mean().sqrt()`
 ///
 /// See [mse_loss()] and [sqrt()]
-pub fn rmse_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape) -> T::Reduced
-where
-    T: BinaryOpTyping<T::NoTape, Out = T>,
-{
+pub fn rmse_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape) -> T::Reduced {
     sqrt(mse_loss(pred, targ))
 }
 
@@ -30,10 +23,7 @@ where
 /// This computes `(targ.clone() - pred).abs().mean()`
 ///
 /// See [mean()], [abs()], and [sub()]
-pub fn mae_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape) -> T::Reduced
-where
-    T: BinaryOpTyping<T::NoTape, Out = T>,
-{
+pub fn mae_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape) -> T::Reduced {
     mean(abs(sub(pred, targ)))
 }
 
@@ -52,10 +42,7 @@ where
 /// let y = Tensor1D::new([0.5, 0.5]);
 /// let loss = huber_loss(x.traced(), &y, 1.0);
 /// ```
-pub fn huber_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape, delta: T::Dtype) -> T::Reduced
-where
-    T: BinaryOpTyping<T::NoTape, Out = T>,
-{
+pub fn huber_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape, delta: T::Dtype) -> T::Reduced {
     let f = move |x: &f32, y: &f32| {
         if (x - y).abs() < delta {
             (x - y).powi(2) * 0.5
@@ -101,10 +88,7 @@ where
 /// let y = Tensor1D::new([0.5, 0.5]);
 /// let loss = smooth_l1_loss(x.traced(), &y, 1.0);
 /// ```
-pub fn smooth_l1_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape, beta: T::Dtype) -> T::Reduced
-where
-    T: BinaryOpTyping<T::NoTape, Out = T>,
-{
+pub fn smooth_l1_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape, beta: T::Dtype) -> T::Reduced {
     div_scalar(huber_loss(pred, targ, beta), beta)
 }
 
@@ -132,7 +116,6 @@ pub fn cross_entropy_with_logits_loss<T>(
 ) -> <T as Reduce<AllAxes>>::Reduced
 where
     T: Reduce<AllAxes> + Reduce<<<T as HasArrayType>::Array as HasLastAxis>::LastAxis>,
-    T: BinaryOpTyping<T::NoTape, Out = T>,
 {
     let probs = log_softmax::<_, <T::Array as HasLastAxis>::LastAxis>(logits);
     let r = negate(mean::<_, AllAxes>(mul(probs, target_probs)));
@@ -163,7 +146,6 @@ pub fn kl_div_with_logits_loss<T>(
 ) -> <T as Reduce<AllAxes>>::Reduced
 where
     T: Reduce<AllAxes> + Reduce<<<T as HasArrayType>::Array as HasLastAxis>::LastAxis>,
-    T: BinaryOpTyping<T::NoTape, Out = T>,
 {
     let probs = log_softmax::<_, <T::Array as HasLastAxis>::LastAxis>(logits);
     let r = negate(mean::<_, AllAxes>(mul(
@@ -197,10 +179,7 @@ where
 pub fn binary_cross_entropy_with_logits_loss<T: Reduce<AllAxes>>(
     logits: T,
     target_probs: T::NoTape,
-) -> T::Reduced
-where
-    T: BinaryOpTyping<T::NoTape, Out = T>,
-{
+) -> T::Reduced {
     mean(crate::tensor_ops::utils::binary_map(
         logits,
         target_probs,

@@ -1,7 +1,6 @@
 use super::mha::MultiHeadAttention;
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
-use crate::tensor_ops::utils::BinaryOpTyping;
 use rand::Rng;
 
 /// **Requires Nightly** A transformer decoder.
@@ -125,7 +124,7 @@ impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> CanUpd
 impl<const M: usize, const H: usize, const F: usize, Tgt, Mem> Module<(Tgt, Mem)>
     for TransformerDecoderBlock<M, H, F>
 where
-    Tgt: Tensor<Dtype = f32> + BinaryOpTyping<Tgt::NoTape, Out = Tgt>,
+    Tgt: Tensor<Dtype = f32>,
     Mem: Tensor<Dtype = f32, NoTape = Mem> + Clone,
     MultiHeadAttention<M, H>: Module<(Tgt, Tgt::NoTape, Tgt::NoTape), Output = Tgt>
         + Module<(Tgt, Mem, Mem), Output = Tgt>,

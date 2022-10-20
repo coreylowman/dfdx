@@ -1,4 +1,3 @@
-use super::utils::BinaryOpTyping;
 use crate::arrays::{HasArrayType, HasAxes};
 use crate::gradients::Tape;
 use crate::prelude::*;
@@ -16,7 +15,7 @@ use crate::prelude::*;
 /// ```
 pub fn normalize<T, Axes>(t: T, epsilon: T::Dtype) -> T
 where
-    T: Reduce<Axes> + BinaryOpTyping<T::NoTape, Out = T>,
+    T: Reduce<Axes>,
     T::Array: HasAxes<Axes>,
 {
     let (t, tape) = t.split_tape();
@@ -35,7 +34,7 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H>
     /// Calls [normalize()]
     pub fn normalize<Axes>(self, epsilon: f32) -> Self
     where
-        Self: Reduce<Axes> + BinaryOpTyping<<Self as Tensor>::NoTape, Out = Self>,
+        Self: Reduce<Axes>,
         <Self as HasArrayType>::Array: HasAxes<Axes>,
     {
         normalize(self, epsilon)
