@@ -1,6 +1,6 @@
 use crate::arrays::Axis;
 use crate::devices::{Cpu, FillElements};
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, Merge, Tape, UnusedTensors};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
 use crate::prelude::*;
 
 /// Implements layer normalization as described in [Layer Normalization](https://arxiv.org/abs/1607.06450).
@@ -54,9 +54,7 @@ impl<const M: usize> CanUpdateWithGradients for LayerNorm1D<M> {
     }
 }
 
-impl<H: Tape + Merge<NoneTape, Output = H>, const M: usize> Module<Tensor1D<M, H>>
-    for LayerNorm1D<M>
-{
+impl<H: Tape, const M: usize> Module<Tensor1D<M, H>> for LayerNorm1D<M> {
     type Output = Tensor1D<M, H>;
 
     /// Calls:
@@ -70,9 +68,7 @@ impl<H: Tape + Merge<NoneTape, Output = H>, const M: usize> Module<Tensor1D<M, H
     }
 }
 
-impl<H: Tape + Merge<NoneTape, Output = H>, const B: usize, const M: usize>
-    Module<Tensor2D<B, M, H>> for LayerNorm1D<M>
-{
+impl<H: Tape, const B: usize, const M: usize> Module<Tensor2D<B, M, H>> for LayerNorm1D<M> {
     type Output = Tensor2D<B, M, H>;
 
     /// Calls:
@@ -88,8 +84,8 @@ impl<H: Tape + Merge<NoneTape, Output = H>, const B: usize, const M: usize>
     }
 }
 
-impl<H: Tape + Merge<NoneTape, Output = H>, const B: usize, const S: usize, const M: usize>
-    Module<Tensor3D<B, S, M, H>> for LayerNorm1D<M>
+impl<H: Tape, const B: usize, const S: usize, const M: usize> Module<Tensor3D<B, S, M, H>>
+    for LayerNorm1D<M>
 {
     type Output = Tensor3D<B, S, M, H>;
 

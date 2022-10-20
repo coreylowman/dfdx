@@ -1,5 +1,5 @@
 use super::mha::MultiHeadAttention;
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, Merge, UnusedTensors};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 use crate::tensor_ops::utils::BinaryOpTyping;
 use rand::Rng;
@@ -126,7 +126,6 @@ impl<const M: usize, const H: usize, const F: usize, Tgt, Mem> Module<(Tgt, Mem)
     for TransformerDecoderBlock<M, H, F>
 where
     Tgt: Tensor<Dtype = f32> + BinaryOpTyping<Tgt::NoTape, Out = Tgt>,
-    Tgt::Tape: Merge<NoneTape, Output = Tgt::Tape>,
     Mem: Tensor<Dtype = f32, NoTape = Mem> + Clone,
     MultiHeadAttention<M, H>: Module<(Tgt, Tgt::NoTape, Tgt::NoTape), Output = Tgt>
         + Module<(Tgt, Mem, Mem), Output = Tgt>,

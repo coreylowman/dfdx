@@ -1,4 +1,4 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, Merge, Tape, UnusedTensors};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
 use crate::prelude::*;
 use rand::Rng;
 use rand_distr::Uniform;
@@ -50,9 +50,7 @@ impl<const I: usize, const O: usize> ResetParams for Linear<I, O> {
     }
 }
 
-impl<const I: usize, const O: usize, H: Tape + Merge<NoneTape, Output = H>> Module<Tensor1D<I, H>>
-    for Linear<I, O>
-{
+impl<const I: usize, const O: usize, H: Tape> Module<Tensor1D<I, H>> for Linear<I, O> {
     type Output = Tensor1D<O, H>;
 
     /// 1d forward using [vecmat_mul()] and [add()].
@@ -64,8 +62,8 @@ impl<const I: usize, const O: usize, H: Tape + Merge<NoneTape, Output = H>> Modu
     }
 }
 
-impl<const B: usize, const I: usize, const O: usize, H: Tape + Merge<NoneTape, Output = H>>
-    Module<Tensor2D<B, I, H>> for Linear<I, O>
+impl<const B: usize, const I: usize, const O: usize, H: Tape> Module<Tensor2D<B, I, H>>
+    for Linear<I, O>
 {
     type Output = Tensor2D<B, O, H>;
 
@@ -77,13 +75,8 @@ impl<const B: usize, const I: usize, const O: usize, H: Tape + Merge<NoneTape, O
     }
 }
 
-impl<
-        const B: usize,
-        const S: usize,
-        const I: usize,
-        const O: usize,
-        H: Tape + Merge<NoneTape, Output = H>,
-    > Module<Tensor3D<B, S, I, H>> for Linear<I, O>
+impl<const B: usize, const S: usize, const I: usize, const O: usize, H: Tape>
+    Module<Tensor3D<B, S, I, H>> for Linear<I, O>
 {
     type Output = Tensor3D<B, S, O, H>;
 

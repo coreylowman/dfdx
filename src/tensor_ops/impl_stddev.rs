@@ -1,5 +1,5 @@
 use crate::arrays::{HasArrayType, HasAxes};
-use crate::gradients::{Merge, Tape};
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 use super::utils::BinaryOpTyping;
@@ -22,7 +22,6 @@ pub fn stddev<T: Reduce<Axes>, Axes>(t: T, epsilon: T::Dtype) -> T::Reduced
 where
     T: BinaryOpTyping<T::NoTape, Out = T>,
     T::Array: HasAxes<Axes>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     sqrt(add_scalar(var(t), epsilon))
 }
@@ -45,7 +44,6 @@ pub fn var<T: Reduce<Axes>, Axes>(t: T) -> T::Reduced
 where
     T: BinaryOpTyping<T::NoTape, Out = T>,
     T::Array: HasAxes<Axes>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     let num_elements: f32 = <T::Array as HasAxes<Axes>>::SIZE as f32;
     let (t, tape) = t.split_tape();
@@ -61,7 +59,6 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     where
         Self: ReduceTo<T, Axes>,
         <Self as HasArrayType>::Array: HasAxes<Axes>,
-        <Self as Tensor>::Tape: Merge<NoneTape, Output = <Self as Tensor>::Tape>,
         Self: BinaryOpTyping<<Self as Tensor>::NoTape, Out = Self>,
     {
         stddev(self, epsilon)
@@ -71,7 +68,6 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     where
         Self: ReduceTo<T, Axes>,
         <Self as HasArrayType>::Array: HasAxes<Axes>,
-        <Self as Tensor>::Tape: Merge<NoneTape, Output = <Self as Tensor>::Tape>,
         Self: BinaryOpTyping<<Self as Tensor>::NoTape, Out = Self>,
     {
         var(self)

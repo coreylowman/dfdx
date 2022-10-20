@@ -1,5 +1,5 @@
 use crate::arrays::{HasArrayType, HasLastAxis};
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, Merge, UnusedTensors};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 use crate::tensor_ops::utils::BinaryOpTyping;
 use rand::Rng;
@@ -68,7 +68,6 @@ impl<T> Module<T> for Softmax
 where
     T: Reduce<<<T as HasArrayType>::Array as HasLastAxis>::LastAxis>
         + BinaryOpTyping<T::NoTape, Out = T>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     type Output = T;
     fn forward(&self, input: T) -> Self::Output {

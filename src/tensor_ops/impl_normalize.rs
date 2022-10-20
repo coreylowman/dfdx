@@ -1,6 +1,6 @@
 use super::utils::BinaryOpTyping;
 use crate::arrays::{HasArrayType, HasAxes};
-use crate::gradients::{Merge, Tape};
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 /// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Axes` of `T`. `epsilon` is passed to [stddev()].
@@ -18,7 +18,6 @@ pub fn normalize<T, Axes>(t: T, epsilon: T::Dtype) -> T
 where
     T: Reduce<Axes> + BinaryOpTyping<T::NoTape, Out = T>,
     T::Array: HasAxes<Axes>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     let (t, tape) = t.split_tape();
     let std: T = stddev(t.clone().put_tape(tape), epsilon).broadcast();
@@ -38,7 +37,6 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H>
     where
         Self: Reduce<Axes> + BinaryOpTyping<<Self as Tensor>::NoTape, Out = Self>,
         <Self as HasArrayType>::Array: HasAxes<Axes>,
-        <Self as Tensor>::Tape: Merge<NoneTape, Output = <Self as Tensor>::Tape>,
     {
         normalize(self, epsilon)
     }

@@ -1,5 +1,5 @@
 use crate::devices::{Device, DeviceReduce, MaxAccum, SubAccum};
-use crate::gradients::{Merge, Tape};
+use crate::gradients::Tape;
 use crate::prelude::*;
 
 use super::utils::BinaryOpTyping;
@@ -54,7 +54,6 @@ pub fn logsumexp<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
 pub fn log_softmax<T: Reduce<Axes>, Axes>(t: T) -> T
 where
     T: BinaryOpTyping<T::NoTape, Out = T>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     let (t, tape) = t.split_tape();
     let (lse, tape) = logsumexp(t.clone().put_tape(tape)).broadcast().split_tape();
@@ -86,7 +85,6 @@ where
 pub fn softmax<T: Reduce<Axes>, Axes>(t: T) -> T
 where
     T: BinaryOpTyping<T::NoTape, Out = T>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     exp(log_softmax(t))
 }
@@ -98,7 +96,6 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     pub fn logsumexp<T, Axes>(self) -> T
     where
         Self: ReduceTo<T, Axes>,
-        <Self as Tensor>::Tape: Merge<NoneTape, Output = <Self as Tensor>::Tape>,
     {
         logsumexp(self)
     }
@@ -106,7 +103,6 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     pub fn log_softmax<Axes>(self) -> Self
     where
         Self: Reduce<Axes>,
-        <Self as Tensor>::Tape: Merge<NoneTape, Output = <Self as Tensor>::Tape>,
         Self: BinaryOpTyping<<Self as Tensor>::NoTape, Out = Self>,
     {
         log_softmax(self)
@@ -115,7 +111,6 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     pub fn softmax<Axes>(self) -> Self
     where
         Self: Reduce<Axes>,
-        <Self as Tensor>::Tape: Merge<NoneTape, Output = <Self as Tensor>::Tape>,
         Self: BinaryOpTyping<<Self as Tensor>::NoTape, Out = Self>,
     {
         softmax(self)

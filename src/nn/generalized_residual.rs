@@ -1,4 +1,4 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, Merge, UnusedTensors};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 use crate::tensor_ops::utils::BinaryOpTyping;
 
@@ -44,7 +44,6 @@ impl<F: ResetParams, R: ResetParams> ResetParams for GeneralizedResidual<F, R> {
 impl<F, R, T> Module<T> for GeneralizedResidual<F, R>
 where
     T: Tensor<Dtype = f32>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
     F: Module<T>,
     R: Module<T, Output = F::Output>,
     F::Output: Tensor<Dtype = f32, Tape = T::Tape>
@@ -70,7 +69,6 @@ where
 impl<F, R, T> ModuleMut<T> for GeneralizedResidual<F, R>
 where
     T: Tensor<Dtype = f32>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
     F: ModuleMut<T>,
     R: ModuleMut<T, Output = F::Output>,
     F::Output: Tensor<Dtype = f32, Tape = T::Tape>

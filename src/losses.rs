@@ -1,7 +1,6 @@
 //! Standard loss functions such as [mse_loss()], [cross_entropy_with_logits_loss()], and more.
 
 use crate::arrays::{AllAxes, HasArrayType, HasLastAxis};
-use crate::gradients::{Merge, NoneTape};
 use crate::tensor_ops::utils::BinaryOpTyping;
 use crate::tensor_ops::*;
 
@@ -12,7 +11,6 @@ use crate::tensor_ops::*;
 pub fn mse_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape) -> T::Reduced
 where
     T: BinaryOpTyping<T::NoTape, Out = T>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     mean(square(sub(pred, targ)))
 }
@@ -24,7 +22,6 @@ where
 pub fn rmse_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape) -> T::Reduced
 where
     T: BinaryOpTyping<T::NoTape, Out = T>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     sqrt(mse_loss(pred, targ))
 }
@@ -36,7 +33,6 @@ where
 pub fn mae_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape) -> T::Reduced
 where
     T: BinaryOpTyping<T::NoTape, Out = T>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     mean(abs(sub(pred, targ)))
 }
@@ -59,7 +55,6 @@ where
 pub fn huber_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape, delta: T::Dtype) -> T::Reduced
 where
     T: BinaryOpTyping<T::NoTape, Out = T>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     let f = move |x: &f32, y: &f32| {
         if (x - y).abs() < delta {
@@ -109,7 +104,6 @@ where
 pub fn smooth_l1_loss<T: Reduce<AllAxes>>(pred: T, targ: T::NoTape, beta: T::Dtype) -> T::Reduced
 where
     T: BinaryOpTyping<T::NoTape, Out = T>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     div_scalar(huber_loss(pred, targ, beta), beta)
 }
@@ -139,7 +133,6 @@ pub fn cross_entropy_with_logits_loss<T>(
 where
     T: Reduce<AllAxes> + Reduce<<<T as HasArrayType>::Array as HasLastAxis>::LastAxis>,
     T: BinaryOpTyping<T::NoTape, Out = T>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     let probs = log_softmax::<_, <T::Array as HasLastAxis>::LastAxis>(logits);
     let r = negate(mean::<_, AllAxes>(mul(probs, target_probs)));
@@ -171,7 +164,6 @@ pub fn kl_div_with_logits_loss<T>(
 where
     T: Reduce<AllAxes> + Reduce<<<T as HasArrayType>::Array as HasLastAxis>::LastAxis>,
     T: BinaryOpTyping<T::NoTape, Out = T>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     let probs = log_softmax::<_, <T::Array as HasLastAxis>::LastAxis>(logits);
     let r = negate(mean::<_, AllAxes>(mul(
@@ -208,7 +200,6 @@ pub fn binary_cross_entropy_with_logits_loss<T: Reduce<AllAxes>>(
 ) -> T::Reduced
 where
     T: BinaryOpTyping<T::NoTape, Out = T>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     mean(crate::tensor_ops::utils::binary_map(
         logits,

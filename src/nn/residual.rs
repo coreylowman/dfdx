@@ -1,4 +1,4 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, Merge, UnusedTensors};
+use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 use crate::tensor_ops::utils::BinaryOpTyping;
 
@@ -36,7 +36,6 @@ impl<F: ResetParams> ResetParams for Residual<F> {
 impl<T: Tensor<Dtype = f32>, F: Module<T, Output = T>> Module<T> for Residual<F>
 where
     T: BinaryOpTyping<T::NoTape, Out = T>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     type Output = F::Output;
     fn forward(&self, x: T) -> Self::Output {
@@ -48,7 +47,6 @@ where
 impl<T: Tensor<Dtype = f32>, F: ModuleMut<T, Output = T>> ModuleMut<T> for Residual<F>
 where
     T: BinaryOpTyping<T::NoTape, Out = T>,
-    T::Tape: Merge<NoneTape, Output = T::Tape>,
 {
     type Output = F::Output;
     fn forward_mut(&mut self, x: T) -> Self::Output {
