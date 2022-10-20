@@ -8,6 +8,9 @@ edition = "2021"
 # [dependencies] instead, and delete the **path**.
 [dev-dependencies]
 dfdx = { version = "0.9.0", path = "../dfdx" }
+rand = { version = "0.8.5", features = ["std_rng"] }
+mnist = "0.5.0"
+indicatif = "0.16.2"
 
 [[example]]
 name = "tensor"
@@ -18,39 +21,39 @@ name = "ops"
 path = "02-ops.rs"
 
 [[example]]
-name = "nn.rs"
+name = "nn"
 path = "03-nn.rs"
 
 [[example]]
-name = "gradients.rs"
+name = "gradients"
 path = "04-gradients.rs"
 
 [[example]]
-name = "optim.rs"
+name = "optim"
 path = "05-optim.rs"
 
 [[example]]
-name = "mnist.rs"
+name = "mnist"
 path = "06-mnist.rs"
 
 [[example]]
-name = "custom-module.rs"
+name = "custom-module"
 path = "07-custom-module.rs"
 
 [[example]]
-name = "tensor-broadcast-reduce.rs"
+name = "tensor-broadcast-reduce"
 path = "08-tensor-broadcast-reduce.rs"
 
 [[example]]
-name = "tensor-permute.rs"
+name = "tensor-permute"
 path = "09-tensor-permute.rs"
 
 [[example]]
-name = "tensor-index.rs"
+name = "tensor-index"
 path = "10-tensor-index.rs"
 
 [[example]]
-name = "multi-headed.rs"
+name = "multi-headed"
 path = "11-multi-headed.rs"
 
 [[example]]

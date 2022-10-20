@@ -9,8 +9,9 @@ use proc_macro::TokenStream;
 
 /// Implements CanUpdateWithGradients for a Module
 ///
-/// ```rust
+/// ```ignore
 /// use dfdx::prelude::*;
+/// use dfdx_macros::CanUpdateWithGradients;
 ///
 /// #[derive(CanUpdateWithGradients)]
 /// pub struct Linear<const I: usize, const O: usize> {
