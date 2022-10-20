@@ -59,52 +59,35 @@ pub trait MatMulTyping<B> {
     type C;
 }
 
-// Normal matmul
-impl<const M: usize, const N: usize, const K: usize, R: Tape, L: Tape + Merge<R>>
-    MatMulTyping<Tensor2D<K, N, R>> for Tensor2D<M, K, L>
-{
-    type C = Tensor2D<M, N, L>;
+/// Enables concrete output types for generic matmul functions. Without this
+/// you'd have to specify type of output.
+pub trait MatMulTrTyping<B> {
+    type C;
 }
 
-// Batched matmul
-impl<
-        const B: usize,
-        const M: usize,
-        const N: usize,
-        const K: usize,
-        R: Tape,
-        L: Tape + Merge<R>,
-    > MatMulTyping<Tensor3D<B, K, N, R>> for Tensor3D<B, M, K, L>
+macro_rules! matmul_typing {
+    (nt $A:ty, $B:ty, $C:ty, {$($Vars:tt),*}) => {
+impl<$(const $Vars: usize, )* R: Tape, L: Tape + Merge<R>> MatMulTyping<$B> for $A
 {
-    type C = Tensor3D<B, M, N, L>;
+    type C = $C;
+}
+    };
+    (tr $A:ty, $B:ty, $C:ty, {$($Vars:tt),*}) => {
+impl<$(const $Vars: usize, )* R: Tape, L: Tape + Merge<R>> MatMulTrTyping<$B> for $A
+{
+    type C = $C;
+}
+    };
 }
 
-// Double batched matmul
-impl<
-        const B1: usize,
-        const B2: usize,
-        const M: usize,
-        const N: usize,
-        const K: usize,
-        R: Tape,
-        L: Tape + Merge<R>,
-    > MatMulTyping<Tensor4D<B1, B2, K, N, R>> for Tensor4D<B1, B2, M, K, L>
-{
-    type C = Tensor4D<B1, B2, M, N, L>;
-}
-
-// Broadcasted matmul
-impl<
-        const B: usize,
-        const M: usize,
-        const N: usize,
-        const K: usize,
-        R: Tape,
-        L: Tape + Merge<R>,
-    > MatMulTyping<Tensor2D<K, N, R>> for Tensor3D<B, M, K, L>
-{
-    type C = Tensor3D<B, M, N, L>;
-}
+matmul_typing!(nt Tensor2D<M, K, L>, Tensor2D<K, N, R>, Tensor2D<M, N, L>, {M, K, N});
+matmul_typing!(nt Tensor3D<B, M, K, L>, Tensor3D<B, K, N, R>, Tensor3D<B, M, N, L>, {B, M, K, N});
+matmul_typing!(nt Tensor3D<B, M, K, L>, Tensor2D<K, N, R>, Tensor3D<B, M, N, L>, {B, M, K, N});
+matmul_typing!(nt Tensor4D<B1, B2, M, K, L>, Tensor4D<B1, B2, K, N, R>, Tensor4D<B1, B2, M, N, L>, {B1, B2, M, K, N});
+matmul_typing!(tr Tensor2D<M, K, L>, Tensor2D<N, K, R>, Tensor2D<M, N, L>, {M, K, N});
+matmul_typing!(tr Tensor3D<B, M, K, L>, Tensor3D<B, N, K, R>, Tensor3D<B, M, N, L>, {B, M, K, N});
+matmul_typing!(tr Tensor3D<B, M, K, L>, Tensor2D<N, K, R>, Tensor3D<B, M, N, L>, {B, M, K, N});
+matmul_typing!(tr Tensor4D<B1, B2, M, K, L>, Tensor4D<B1, B2, N, K, R>, Tensor4D<B1, B2, M, N, L>, {B1, B2, M, K, N});
 
 /// Matrix multiplication with the transpose of `rhs`. Equivalent to `matmul(lhs, transpose(rhs))`.
 /// This supports the same variants as [matmul] (broadcasted, batched, etc).
@@ -154,55 +137,6 @@ where
         let (b_grad, c_grad) = grads.mut_and_ref(&b, &c);
         A::Device::mm_atct(a.data(), c_grad, b_grad);
     })
-}
-
-/// Enables concrete output types for generic matmul functions. Without this
-/// you'd have to specify type of output.
-pub trait MatMulTrTyping<B> {
-    type C;
-}
-
-impl<const M: usize, const N: usize, const K: usize, R: Tape, L: Tape + Merge<R>>
-    MatMulTrTyping<Tensor2D<N, K, R>> for Tensor2D<M, K, L>
-{
-    type C = Tensor2D<M, N, L>;
-}
-
-impl<
-        const B: usize,
-        const M: usize,
-        const N: usize,
-        const K: usize,
-        R: Tape,
-        L: Tape + Merge<R>,
-    > MatMulTrTyping<Tensor3D<B, N, K, R>> for Tensor3D<B, M, K, L>
-{
-    type C = Tensor3D<B, M, N, L>;
-}
-
-impl<
-        const B1: usize,
-        const B2: usize,
-        const M: usize,
-        const N: usize,
-        const K: usize,
-        R: Tape,
-        L: Tape + Merge<R>,
-    > MatMulTrTyping<Tensor4D<B1, B2, N, K, R>> for Tensor4D<B1, B2, M, K, L>
-{
-    type C = Tensor4D<B1, B2, M, N, L>;
-}
-
-impl<
-        const B: usize,
-        const M: usize,
-        const N: usize,
-        const K: usize,
-        R: Tape,
-        L: Tape + Merge<R>,
-    > MatMulTrTyping<Tensor2D<N, K, R>> for Tensor3D<B, M, K, L>
-{
-    type C = Tensor3D<B, M, N, L>;
 }
 
 /// vector * matrix multiplication.
