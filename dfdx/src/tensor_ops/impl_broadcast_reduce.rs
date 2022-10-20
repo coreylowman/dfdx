@@ -52,7 +52,7 @@ impl<$(const $Dims: usize, )* H: Tape> ReduceTo<$SrcTy, $AxesTy> for $DstTy {}
 impl<$(const $Dims: usize, )* H: Tape> BroadcastTo<$DstTy, $AxesTy> for $SrcTy {
     fn broadcast(self) -> $DstTy {
         let mut result = <$DstTy as Tensor>::NoTape::zeros();
-        <Cpu as DeviceReduce<_, $AxesTy>>::broadcast_into::<CopyAccum>(result.mut_data(), self.data());
+        <Cpu as DeviceReduce<_, $AxesTy>>::broadcast_into_no_reset::<CopyAccum>(result.mut_data(), self.data());
         move_tape_and_add_backward_op(self, result, move |t, result, grads| {
             let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
             <Cpu as DeviceReduce<_, $AxesTy>>::reduce_into_no_reset::<AddAccum>(t_grad, result_grad);

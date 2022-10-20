@@ -36,6 +36,7 @@ pub(super) trait IndexMut {
 impl<const M: usize> IndexRef for [f32; M] {
     type Index = usize;
     type Element = f32;
+    #[inline(always)]
     fn index_ref(&self, i: Self::Index) -> &Self::Element {
         &self[i]
     }
@@ -44,6 +45,7 @@ impl<const M: usize> IndexRef for [f32; M] {
 impl<const M: usize> IndexMut for [f32; M] {
     type Index = usize;
     type Element = f32;
+    #[inline(always)]
     fn index_mut(&mut self, i: Self::Index) -> &mut Self::Element {
         &mut self[i]
     }
@@ -52,6 +54,7 @@ impl<const M: usize> IndexMut for [f32; M] {
 impl<const M: usize, const N: usize> IndexRef for [[f32; N]; M] {
     type Index = [usize; 2];
     type Element = f32;
+    #[inline(always)]
     fn index_ref(&self, i: Self::Index) -> &Self::Element {
         &self[i[0]][i[1]]
     }
@@ -60,6 +63,7 @@ impl<const M: usize, const N: usize> IndexRef for [[f32; N]; M] {
 impl<const M: usize, const N: usize> IndexMut for [[f32; N]; M] {
     type Index = [usize; 2];
     type Element = f32;
+    #[inline(always)]
     fn index_mut(&mut self, i: Self::Index) -> &mut Self::Element {
         &mut self[i[0]][i[1]]
     }
@@ -68,6 +72,7 @@ impl<const M: usize, const N: usize> IndexMut for [[f32; N]; M] {
 impl<const M: usize, const N: usize, const O: usize> IndexRef for [[[f32; O]; N]; M] {
     type Index = [usize; 3];
     type Element = f32;
+    #[inline(always)]
     fn index_ref(&self, i: Self::Index) -> &Self::Element {
         &self[i[0]][i[1]][i[2]]
     }
@@ -76,6 +81,7 @@ impl<const M: usize, const N: usize, const O: usize> IndexRef for [[[f32; O]; N]
 impl<const M: usize, const N: usize, const O: usize> IndexMut for [[[f32; O]; N]; M] {
     type Index = [usize; 3];
     type Element = f32;
+    #[inline(always)]
     fn index_mut(&mut self, i: Self::Index) -> &mut Self::Element {
         &mut self[i[0]][i[1]][i[2]]
     }
@@ -86,6 +92,7 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize> IndexRef
 {
     type Index = [usize; 4];
     type Element = f32;
+    #[inline(always)]
     fn index_ref(&self, i: Self::Index) -> &Self::Element {
         &self[i[0]][i[1]][i[2]][i[3]]
     }
@@ -96,6 +103,7 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize> IndexMut
 {
     type Index = [usize; 4];
     type Element = f32;
+    #[inline(always)]
     fn index_mut(&mut self, i: Self::Index) -> &mut Self::Element {
         &mut self[i[0]][i[1]][i[2]][i[3]]
     }
@@ -107,6 +115,7 @@ macro_rules! impl_bcast {
             type Index = $IdxTy;
             type Element = f32;
             #[allow(unused_variables)]
+            #[inline(always)]
             fn index_ref(&self, i: Self::Index) -> &Self::Element {
                 &self.0 $([i[$Idx]])*
             }
@@ -115,6 +124,7 @@ macro_rules! impl_bcast {
             type Index = $IdxTy;
             type Element = f32;
             #[allow(unused_variables)]
+            #[inline(always)]
             fn index_mut(&mut self, i: Self::Index) -> &mut Self::Element {
                 &mut self.0 $([i[$Idx]])*
             }
