@@ -361,47 +361,49 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn test_sgd_l2_weight_decay_classic_momentum() {
-    //     let weight_decay = 1e-1;
-    //     let mut sgd_l2 = Sgd::new(SgdConfig {
-    //         lr: 1e-2,
-    //         momentum: Some(Momentum::Classic(0.5)),
-    //         weight_decay: Some(WeightDecay::L2(weight_decay)),
-    //     });
-    //     let mut sgd = Sgd::new(SgdConfig {
-    //         lr: 1e-2,
-    //         momentum: Some(Momentum::Classic(0.5)),
-    //         weight_decay: None,
-    //     });
-    //
-    //     let mut t: Tensor1D<5> = Tensor1D::ones();
-    //     let rate = Tensor1D::new([0.1, 1.0, 2.0, 10.0, 100.0]);
-    //     let expected = [
-    //         [0.9988, 0.997, 0.995, 0.979, 0.799],
-    //         [0.9970012, 0.992503, 0.987505, 0.947521, 0.49770102],
-    //         [0.99490476, 0.987262, 0.97877, 0.91083395, 0.14655378],
-    //         [0.99266165, 0.9816542, 0.9694238, 0.8715796, -0.22916639],
-    //         [0.99034745, 0.9758687, 0.9597812, 0.83108085, -0.6167973],
-    //     ];
-    //     for e in expected.iter() {
-    //         let gradients = backward((t.trace() * &rate).mean());
-    //         sgd_l2.update(&mut t, gradients).expect("");
-    //         assert_close(t.data(), e);
-    //     }
-    //
-    //     // Should be equivalent to l2 regularization, even with momentum
-    //     t = Tensor1D::ones();
-    //     for e in expected.iter() {
-    //         let normal_loss = (t.trace() * &rate).mean();
-    //         let l2_loss =  mul_scalar(t.clone().powi(2).mean(), weight_decay / 2.0);
-    //         let loss = add(normal_loss, &l2_loss);
-    //
-    //         let gradients = backward(loss);
-    //         sgd.update(&mut t, gradients).expect("");
-    //         assert_close(t.data(), e);
-    //     }
-    // }
+    #[test]
+    fn test_sgd_l2_weight_decay_classic_momentum() {
+        // adding l2_weight_decay should be equivalent to adding an L2 term to the loss
+        let weight_decay = 1e-1;
+        let mut sgd_l2 = Sgd::new(SgdConfig {
+            lr: 1e-2,
+            momentum: Some(Momentum::Classic(0.5)),
+            weight_decay: Some(WeightDecay::L2(weight_decay)),
+        });
+        let mut sgd = Sgd::new(SgdConfig {
+            lr: 1e-2,
+            momentum: Some(Momentum::Classic(0.5)),
+            weight_decay: None,
+        });
+
+        let mut t: Tensor1D<5> = Tensor1D::ones();
+        let rate = Tensor1D::new([0.1, 1.0, 2.0, 10.0, 100.0]);
+        let expected = [
+            [0.9988, 0.997, 0.995, 0.979, 0.799],
+            [0.9970012, 0.992503, 0.987505, 0.947521, 0.49770102],
+            [0.99490476, 0.987262, 0.97877, 0.91083395, 0.14655378],
+            [0.99266165, 0.9816542, 0.9694238, 0.8715796, -0.22916639],
+            [0.99034745, 0.9758687, 0.9597812, 0.83108085, -0.6167973],
+        ];
+        for e in expected.iter() {
+            let gradients = backward((t.trace() * &rate).mean());
+            sgd_l2.update(&mut t, gradients).expect("");
+            assert_close(t.data(), e);
+        }
+
+        // Should be equivalent to l2 regularization, even with momentum
+        t = Tensor1D::ones();
+        for e in expected.iter() {
+            let normal_loss = (t.trace() * &rate).mean();
+            let (normal_loss, tape) = normal_loss.split_tape();
+            let l2_loss = mul_scalar(t.clone().put_tape(tape).powi(2).sum(), weight_decay / (2.0));
+            let loss = add(l2_loss, &normal_loss);
+
+            let gradients = backward(loss);
+            sgd.update(&mut t, gradients).expect("");
+            assert_close(t.data(), e);
+        }
+    }
 
     #[test]
     fn test_sgd_changes_all_params() {
