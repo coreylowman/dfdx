@@ -100,8 +100,8 @@ impl<const C: usize> BatchNorm2D<C> {
         let std: T = (var_t.put_tape(tape2) + self.epsilon).sqrt().broadcast();
 
         // record broadcast of scale & bias - on tape
-        let scale: T = self.scale.clone().put_tape(Default::default()).broadcast();
-        let bias: T = self.bias.clone().put_tape(Default::default()).broadcast();
+        let scale: T = self.scale.retaped().broadcast();
+        let bias: T = self.bias.retaped().broadcast();
 
         // normalize & affine - on tape
         let x = sub(x, mean);

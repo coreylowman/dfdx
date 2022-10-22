@@ -4,6 +4,7 @@ use crate::gradients::Tape;
 pub trait PutTape<H: Tape> {
     type Output;
     fn put_tape(self, tape: H) -> Self::Output;
+    fn retaped(&self) -> Self::Output;
 }
 
 macro_rules! tensor_impl {
@@ -13,6 +14,9 @@ impl<$(const $Vs: usize, )* HIn: Tape, HOut: Tape> PutTape<HOut> for $typename<$
     type Output = $typename<$($Vs, )* HOut>;
     fn put_tape(self, tape: HOut) -> Self::Output {
         Self::Output { id: self.id, data: self.data, tape }
+    }
+    fn retaped(&self) -> Self::Output {
+        Self::Output { id: self.id, data: self.data.clone(), tape: HOut::default() }
     }
 }
     };
