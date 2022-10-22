@@ -20,3 +20,12 @@ impl UniqueId {
 pub trait HasUniqueId {
     fn id(&self) -> &UniqueId;
 }
+
+/// Internal only - for resetting ids of tensor
+pub(crate) mod private_reset {
+    /// Internal only - for resetting ids of tensor
+    pub trait ResetId {
+        /// Internal only - for resetting ids of tensor
+        fn reset_id(&mut self);
+    }
+}

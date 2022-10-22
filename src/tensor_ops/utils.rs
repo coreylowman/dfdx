@@ -10,6 +10,7 @@
 use crate::devices::{Device, ForEachElement};
 use crate::gradients::{Gradients, Merge, Tape};
 use crate::prelude::*;
+use crate::unique_id::private_reset::ResetId;
 
 /// `f(t)`. Applies a function `f` to every element of the [Tensor]. The derivative
 /// `df` must also be provided.
@@ -38,10 +39,8 @@ where
 {
     T::Device::foreach_m(t.mut_data(), &mut |x| *x = f(x)); // clones if there is more than 1 reference to t
     let (t, mut tape) = t.split_tape();
-
-    let mut result: T::NoTape = TensorCreator::zeros();
-    result.mut_data().clone_from(t.data());
-
+    let mut result = t.clone(); // inc t's reference count
+    result.reset_id(); // ensure there are two differet nodes in the graph
     let phantom_result = result.phantom();
     tape.add_backward_op(move |grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &phantom_result);

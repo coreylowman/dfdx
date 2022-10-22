@@ -1,11 +1,17 @@
 use crate::arrays::HasArrayType;
 use crate::gradients::{CanUpdateWithGradients, NoneTape, Tape};
 use crate::prelude::*;
-use crate::unique_id::HasUniqueId;
+use crate::unique_id::{private_reset, unique_id, HasUniqueId};
 
 /// The main tensor trait. A tensor consists of mainly 1. an array, 2. a device, 3. a unique id.
 pub trait Tensor:
-    HasArrayType + HasArrayData + HasDevice + CanUpdateWithGradients + HasUniqueId + IntoPhantom
+    HasArrayType
+    + HasArrayData
+    + HasDevice
+    + CanUpdateWithGradients
+    + HasUniqueId
+    + IntoPhantom
+    + private_reset::ResetId
 {
     /// The [Tape] this tensor owns.
     type Tape: Tape;
@@ -28,6 +34,11 @@ pub trait Tensor:
 
 macro_rules! tensor_impl {
     ($struct:ident, [$($Vs:tt),*]) => {
+impl<$(const $Vs: usize, )* H: Tape> private_reset::ResetId for $struct<$($Vs, )* H> {
+    fn reset_id(&mut self) {
+        self.id = unique_id();
+    }
+}
 impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
     type Tape = H;
     type NoTape = $struct<$($Vs, )* NoneTape>;
