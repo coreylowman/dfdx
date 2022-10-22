@@ -1,6 +1,6 @@
 use super::Cpu;
 use crate::arrays::CountElements;
-use std::alloc::{alloc_zeroed, Layout};
+use std::alloc::{alloc_zeroed, handle_alloc_error, Layout};
 use std::boxed::Box;
 
 /// Allocate an Nd array on the heap.
@@ -16,10 +16,11 @@ impl AllocateZeros for Cpu {
         // TODO move to using safe code once we can allocate an array directly on the heap.
         let layout = Layout::new::<T>();
         debug_assert_eq!(layout.size(), T::NUM_BYTES);
-        unsafe {
-            let ptr = alloc_zeroed(layout) as *mut T;
-            Box::from_raw(ptr)
+        let ptr: *mut T = unsafe { alloc_zeroed(layout) as *mut T };
+        if ptr.is_null() {
+            handle_alloc_error(layout);
         }
+        unsafe { Box::from_raw(ptr) }
     }
 }
 
