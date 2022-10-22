@@ -159,7 +159,6 @@ Since all operations result in exactly 1 child, we can always move the gradient 
 
 One advanced use case requires that tensors be re-used multiple times in a computation graph.
 This can be handled by cloning the tensor, and manually moving the gradient tape around.
-See [examples/12-multi-headed.rs](examples/12-multi-headed.rs) for an example.
 
 ### Type checked backward
 
@@ -168,7 +167,7 @@ tl;dr: If you forget to include a call to `trace()` or `traced()`, the program w
 ```diff
 -let pred = module.forward(x);
 +let pred = module.forward(x.traced());
-let loss = (&y - pred).square().mean();
+let loss = (y - pred).square().mean();
 let gradients = loss.backward();
 ```
 
