@@ -42,8 +42,7 @@ where
     T::Array: HasAxes<Axes>,
 {
     let num_elements: f32 = <T::Array as HasAxes<Axes>>::SIZE as f32;
-    let (t, tape) = t.split_tape();
-    let mean = mean(t.clone().put_tape(tape)).broadcast();
+    let mean = mean(t.with_new_tape()).broadcast();
     div_scalar(sum(square(sub(mean, t))), num_elements)
 }
 

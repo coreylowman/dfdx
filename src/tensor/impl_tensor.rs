@@ -21,6 +21,9 @@ pub trait Tensor:
 
     /// Removes whatever Tape this tensor has and returns itself without a tape.
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
+
+    /// Clones self and initializes a new empty tape.
+    fn with_new_tape(&self) -> Self;
 }
 
 macro_rules! tensor_impl {
@@ -34,6 +37,10 @@ impl<$(const $Vs: usize, )* H: Tape> Tensor for $struct<$($Vs, )* H> {
             Self::NoTape { id: self.id, data: self.data, tape: Default::default() },
             self.tape,
         )
+    }
+
+    fn with_new_tape(&self) -> Self {
+        Self { id: self.id, data: self.data.clone(), tape: H::default() }
     }
 }
 

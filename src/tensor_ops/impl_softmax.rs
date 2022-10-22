@@ -50,9 +50,7 @@ pub fn logsumexp<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
 /// let _ = t.log_softmax::<Axes2<0, 2>>();
 /// ```
 pub fn log_softmax<T: Reduce<Axes>, Axes>(t: T) -> T {
-    let (t, tape) = t.split_tape();
-    let (lse, tape) = logsumexp(t.clone().put_tape(tape)).broadcast().split_tape();
-    sub(t.put_tape(tape), lse)
+    sub(t.with_new_tape(), logsumexp(t).broadcast())
 }
 
 /// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function) across
@@ -85,23 +83,17 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     /// Calls [logsumexp()] on `self` with `Axes`.
-    pub fn logsumexp<T, Axes>(self) -> T
-    where
-        Self: ReduceTo<T, Axes>,
+    pub fn logsumexp<T, Axes>(self) -> T where Self: ReduceTo<T, Axes>
     {
         logsumexp(self)
     }
     /// Calls [log_softmax()] on `self` with `Axes`
-    pub fn log_softmax<Axes>(self) -> Self
-    where
-        Self: Reduce<Axes>,
+    pub fn log_softmax<Axes>(self) -> Self where Self: Reduce<Axes>
     {
         log_softmax(self)
     }
     /// Calls [softmax()] on `self` with `Axes`
-    pub fn softmax<Axes>(self) -> Self
-    where
-        Self: Reduce<Axes>,
+    pub fn softmax<Axes>(self) -> Self where Self: Reduce<Axes>
     {
         softmax(self)
     }
