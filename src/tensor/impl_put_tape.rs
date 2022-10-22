@@ -1,10 +1,19 @@
 use super::*;
 use crate::gradients::Tape;
 
+/// Changes the kind of tape inside a tensor.
 pub trait PutTape<H: Tape> {
     type Output;
+    /// Replaces whatever tape is in `self` with `tape`.
     fn put_tape(self, tape: H) -> Self::Output;
-    fn retaped(&self) -> Self::Output;
+
+    /// Clones `self` and put's a brand new tape on it
+    fn retaped(&self) -> Self::Output
+    where
+        Self: Clone,
+    {
+        self.clone().put_tape(Default::default())
+    }
 }
 
 macro_rules! tensor_impl {
@@ -14,9 +23,6 @@ impl<$(const $Vs: usize, )* HIn: Tape, HOut: Tape> PutTape<HOut> for $typename<$
     type Output = $typename<$($Vs, )* HOut>;
     fn put_tape(self, tape: HOut) -> Self::Output {
         Self::Output { id: self.id, data: self.data, tape }
-    }
-    fn retaped(&self) -> Self::Output {
-        Self::Output { id: self.id, data: self.data.clone(), tape: HOut::default() }
     }
 }
     };
