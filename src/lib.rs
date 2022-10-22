@@ -66,7 +66,7 @@
 //! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
 //! # let y: Tensor1D<5, OwnedTape> = model.forward(Tensor1D::zeros().trace());
 //! // compute cross entropy loss
-//! let loss: Tensor0D<OwnedTape> = cross_entropy_with_logits_loss(y, &y_true);
+//! let loss: Tensor0D<OwnedTape> = cross_entropy_with_logits_loss(y, y_true);
 //!
 //! // call `backward()` to compute gradients. The tensor *must* have `OwnedTape`!
 //! let gradients: Gradients = loss.backward();
@@ -79,7 +79,7 @@
 //! # let x: Tensor1D<10> = Tensor1D::zeros();
 //! # let y_true: Tensor1D<5> = Tensor1D::randn(&mut rng).softmax();
 //! # let y: Tensor1D<5, OwnedTape> = model.forward(x.trace());
-//! # let loss = cross_entropy_with_logits_loss(y, &y_true);
+//! # let loss = cross_entropy_with_logits_loss(y, y_true);
 //! # let gradients: Gradients = loss.backward();
 //! // Use stochastic gradient descent (Sgd), with a learning rate of 1e-2, and 0.9 momentum.
 //! let mut opt = Sgd::new(SgdConfig {

@@ -222,7 +222,7 @@ mod tests {
         let mut pred: Tensor1D<5> = Tensor1D::zeros();
         let targ: Tensor1D<5> = Tensor1D::ones();
         for _ in 0..5 {
-            let loss = (pred.trace() - &targ).abs().mean();
+            let loss = (pred.trace() - targ.clone()).abs().mean();
             let gradients = backward(loss);
             sgd.update(&mut pred, gradients).expect("");
         }
@@ -245,7 +245,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = backward((t.trace() * &rate).mean());
+            let gradients = backward((t.trace() * rate.clone()).mean());
             sgd.update(&mut t, gradients).expect("");
             assert_close(t.data(), e);
         }
@@ -270,7 +270,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = backward((t.trace() * &rate).mean());
+            let gradients = backward((t.trace() * rate.clone()).mean());
             sgd.update(&mut t, gradients).expect("");
             assert_close(t.data(), e);
         }
@@ -295,7 +295,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = backward((t.trace() * &rate).mean());
+            let gradients = backward((t.trace() * rate.clone()).mean());
             sgd.update(&mut t, gradients).expect("");
             assert_close(t.data(), e);
         }
@@ -325,13 +325,13 @@ mod tests {
             [0.994012, 0.98502994, 0.97505, 0.8952098, -0.00299193],
         ];
         for e in expected.iter() {
-            let gradients = backward((t.trace() * &rate).mean());
+            let gradients = backward((t.trace() * rate.clone()).mean());
             sgd_l2.update(&mut t, gradients).expect("");
             assert_close(t.data(), e);
         }
         t = Tensor1D::ones();
         for e in expected.iter() {
-            let gradients = backward((t.trace() * &rate).mean());
+            let gradients = backward((t.trace() * rate.clone()).mean());
             sgd_decoupled.update(&mut t, gradients).expect("");
             assert_close(t.data(), e);
         }
@@ -355,7 +355,7 @@ mod tests {
             [0.9934003, 0.978913, 0.962815, 0.834037, -0.614717],
         ];
         for e in expected.iter() {
-            let gradients = backward((t.trace() * &rate).mean());
+            let gradients = backward((t.trace() * rate.clone()).mean());
             sgd.update(&mut t, gradients).expect("");
             assert_close(t.data(), e);
         }
@@ -386,7 +386,7 @@ mod tests {
             [0.99034745, 0.9758687, 0.9597812, 0.83108085, -0.6167973],
         ];
         for e in expected.iter() {
-            let gradients = backward((t.trace() * &rate).mean());
+            let gradients = backward((t.trace() * rate.clone()).mean());
             sgd_l2.update(&mut t, gradients).expect("");
             assert_close(t.data(), e);
         }
@@ -394,10 +394,9 @@ mod tests {
         // Should be equivalent to l2 regularization, even with momentum
         t = Tensor1D::ones();
         for e in expected.iter() {
-            let normal_loss = (t.trace() * &rate).mean();
-            let (normal_loss, tape) = normal_loss.split_tape();
-            let l2_loss = mul_scalar(t.clone().put_tape(tape).powi(2).sum(), weight_decay / (2.0));
-            let loss = add(l2_loss, &normal_loss);
+            let normal_loss = (t.trace() * rate.clone()).mean();
+            let l2_loss = mul_scalar(t.trace().powi(2).sum(), weight_decay / (2.0));
+            let loss = add(l2_loss, normal_loss);
 
             let gradients = backward(loss);
             sgd.update(&mut t, gradients).expect("");
@@ -418,7 +417,7 @@ mod tests {
         let mut opt: Sgd<Model> = Default::default();
 
         let py = model.forward(x.trace());
-        let loss = (py - &y).square().mean();
+        let loss = (py - y).square().mean();
         let gradients = backward(loss);
         opt.update(&mut model, gradients).expect("");
 

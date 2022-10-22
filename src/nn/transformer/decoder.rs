@@ -138,13 +138,13 @@ where
         let x = self
             .self_attn
             .forward((tgt.clone().put_tape(tape), tgt.clone(), tgt.clone()));
-        let x = add(x, &tgt);
+        let x = add(x, tgt);
         let x = self.norm1.forward(x);
 
         let (x, tape) = x.split_tape();
         let x_ = x.clone();
         let x = self.mh_attn.forward((x.put_tape(tape), mem.clone(), mem));
-        let x = add(x, &x_);
+        let x = add(x, x_);
         let x = self.norm2.forward(x);
         let x = self.ff.forward(x);
         self.norm3.forward(x)

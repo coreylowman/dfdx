@@ -78,29 +78,25 @@ where
         &self,
         (q, k, v): (Tensor2D<S1, M, TAPE>, Tensor2D<S2, M>, Tensor2D<S2, M>),
     ) -> Self::Output {
-        let (q, tape) = q.split_tape();
-
-        let v: Tensor2D<S2, V, _> = self.w_v.forward(v.put_tape(tape));
+        let v: Tensor2D<S2, V, TAPE> = self.w_v.forward(v.put_tape(Default::default()));
         let v: Tensor3D<S2, H, { V / H }, _> = v.reshape();
         let v: Tensor3D<H, S2, { V / H }, _> = v.permute();
-        let (v, tape) = v.split_tape();
 
-        let k: Tensor2D<S2, K, _> = self.w_k.forward(k.put_tape(tape));
+        let k: Tensor2D<S2, K, TAPE> = self.w_k.forward(k.put_tape(Default::default()));
         let k: Tensor3D<S2, H, { K / H }, _> = k.reshape();
         let k: Tensor3D<H, S2, { K / H }, _> = k.permute();
-        let (k, tape) = k.split_tape();
 
-        let q: Tensor2D<S1, K, _> = self.w_q.forward(q.put_tape(tape));
+        let q: Tensor2D<S1, K, _> = self.w_q.forward(q);
         let q: Tensor3D<S1, H, { K / H }, _> = q.reshape();
         let q: Tensor3D<H, S1, { K / H }, _> = q.permute();
 
         // Get weights
         let scalar: f32 = 1.0 / ((K / H) as f32).sqrt();
-        let weights: Tensor3D<H, S1, S2, _> = matmul_transpose(q, &k) * scalar;
+        let weights: Tensor3D<H, S1, S2, _> = matmul_transpose(q, k) * scalar;
         let weights: Tensor3D<H, S1, S2, _> = weights.softmax::<Axis<2>>();
 
         // Get new tokens
-        let tokens: Tensor3D<H, S1, { V / H }, _> = matmul(weights, &v);
+        let tokens: Tensor3D<H, S1, { V / H }, _> = matmul(weights, v);
         let tokens: Tensor3D<S1, H, { V / H }, _> = tokens.permute();
         let tokens: Tensor2D<S1, V, _> = tokens.reshape();
 
@@ -141,29 +137,25 @@ where
             Tensor3D<B, S2, M>,
         ),
     ) -> Self::Output {
-        let (q, tape) = q.split_tape();
-
-        let v: Tensor3D<B, S2, V, _> = self.w_v.forward(v.put_tape(tape));
+        let v: Tensor3D<B, S2, V, TAPE> = self.w_v.forward(v.put_tape(Default::default()));
         let v: Tensor4D<B, S2, H, { V / H }, _> = v.reshape();
         let v: Tensor4D<B, H, S2, { V / H }, _> = v.permute();
-        let (v, tape) = v.split_tape();
 
-        let k: Tensor3D<B, S2, K, _> = self.w_k.forward(k.put_tape(tape));
+        let k: Tensor3D<B, S2, K, TAPE> = self.w_k.forward(k.put_tape(Default::default()));
         let k: Tensor4D<B, S2, H, { K / H }, _> = k.reshape();
         let k: Tensor4D<B, H, S2, { K / H }, _> = k.permute();
-        let (k, tape) = k.split_tape();
 
-        let q: Tensor3D<B, S1, K, _> = self.w_q.forward(q.put_tape(tape));
+        let q: Tensor3D<B, S1, K, _> = self.w_q.forward(q);
         let q: Tensor4D<B, S1, H, { K / H }, _> = q.reshape();
         let q: Tensor4D<B, H, S1, { K / H }, _> = q.permute();
 
         // Get weights
         let scalar: f32 = 1.0 / ((K / H) as f32).sqrt();
-        let weights: Tensor4D<B, H, S1, S2, _> = matmul_transpose(q, &k) * scalar;
+        let weights: Tensor4D<B, H, S1, S2, _> = matmul_transpose(q, k) * scalar;
         let weights: Tensor4D<B, H, S1, S2, _> = weights.softmax::<Axis<3>>();
 
         // Get new tokens
-        let tokens: Tensor4D<B, H, S1, { V / H }, _> = matmul(weights, &v);
+        let tokens: Tensor4D<B, H, S1, { V / H }, _> = matmul(weights, v);
         let tokens: Tensor4D<B, S1, H, { V / H }, _> = tokens.permute();
         let tokens: Tensor3D<B, S1, V, _> = tokens.reshape();
 
