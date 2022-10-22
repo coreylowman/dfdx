@@ -66,34 +66,29 @@ macro_rules! tuple_impls {
             $headin: Tensor<Dtype = f32>,
             $($tailsin: Tensor<Dtype = f32>,)+
             $head: Module<$headin, Output = Output>,
-            $($tails: Module<$tailsin, Output = Output>,)+
+            $($tails: Module<$tailsin>,)+
         > Module<($headin, $($tailsin,)+)> for AddInto<($head, $($tails,)+)> {
             type Output = Output;
             
+            #[allow(non_snake_case)]
             fn forward(&self, x: ($headin, $($tailsin,)+)) -> Self::Output {
-                
-                // split tape on input
-                let (head, tape) = x.0.split_tape();
-                
-                // forward all modules on the tape
-                
-                // add them all together
-                
-                // modules
-                let ($head, $($tails),+) = self.0;
-                let head_module = $head;
-                let tail_module = AddInto(($($tails),+,));
                 
                 // inputs
                 let ($head, $($tails),+) = x;
-                let head_in = $head;
-                let tails_in = ($($tails),+,);
+                let ($head, tape) = $head.split_tape();
+                
+                // layers
+                let ($headin, $($tailsin),+) = &self.0;
                 
                 // forward
-                let head_x = head_module.forward(head_in);
-                let tails_x = tail_module.forward(tails_in);
+                let ($head, $($tails),+) = ($headin.forward($head.put_tape(tape)), $($tailsin.forward($tails)),+);
                 
-                add(tails_x, &head_x)
+                // add together
+                $(
+                    let $head = add($head, &$tails);
+                )+
+                
+                $head
             }
         }
     }
