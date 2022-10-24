@@ -51,16 +51,7 @@ where
 
     /// Calls forward on `F` and `R` and then sums their result: `F(x) + R(x)`
     fn forward(&self, x: T) -> Self::Output {
-        let (x, tape) = x.split_tape();
-
-        // do R(x) on the tape
-        let r_x = self.r.forward(x.clone().put_tape(tape));
-        let (r_x, tape) = r_x.split_tape();
-
-        // do F(x) on the tape
-        let f_x = self.f.forward(x.put_tape(tape));
-
-        add(f_x, &r_x)
+        add(self.f.forward(x.with_new_tape()), self.r.forward(x))
     }
 }
 
@@ -74,16 +65,7 @@ where
     type Output = F::Output;
 
     fn forward_mut(&mut self, x: T) -> Self::Output {
-        let (x, tape) = x.split_tape();
-
-        // do R(x) on the tape
-        let r_x = self.r.forward_mut(x.clone().put_tape(tape));
-        let (r_x, tape) = r_x.split_tape();
-
-        // do F(x) on the tape
-        let f_x = self.f.forward_mut(x.put_tape(tape));
-
-        add(f_x, &r_x)
+        add(self.f.forward_mut(x.with_new_tape()), self.r.forward_mut(x))
     }
 }
 

@@ -57,7 +57,7 @@ impl<const C: usize> BatchNorm2D<C> {
     /// generic forward for inference
     fn infer_fwd<T, Axes>(&self, x: T) -> T
     where
-        T: Tensor<Dtype = f32, NoTape = T>,
+        T: Tensor<Dtype = f32, Tape = NoneTape>,
         Tensor1D<C>: BroadcastTo<T, Axes>,
     {
         // statistics for normalizing
@@ -65,10 +65,10 @@ impl<const C: usize> BatchNorm2D<C> {
         let mean = self.running_mean.clone();
 
         // normalize & affine
-        let x = sub(x, &mean.broadcast());
-        let x = div(x, &std.broadcast());
-        let x = mul(x, &self.scale.clone().broadcast());
-        add(x, &self.bias.clone().broadcast())
+        let x = sub(x, mean.broadcast());
+        let x = div(x, std.broadcast());
+        let x = mul(x, self.scale.clone().broadcast());
+        add(x, self.bias.clone().broadcast())
     }
 
     fn train_fwd<T, Axes>(&mut self, x: T) -> T
@@ -77,41 +77,37 @@ impl<const C: usize> BatchNorm2D<C> {
         T::Array: HasAxes<Axes>,
         Tensor1D<C, OwnedTape>: BroadcastTo<T, Axes>,
     {
-        let (x, tape) = x.split_tape();
-
         // compute statistics for updating running stats later - on tape
-        let (mean_t, tape): (Tensor1D<C>, _) = mean(x.clone().put_tape(tape)).split_tape();
-        let (var_t, tape): (Tensor1D<C>, _) = var(x.clone().put_tape(tape)).split_tape();
+        let mean_t: Tensor1D<C, T::Tape> = mean(x.with_new_tape());
+        let var_t: Tensor1D<C, T::Tape> = var(x.with_new_tape());
 
         // update statistics since we are training - off tape
+        let (mean_t, tape1) = mean_t.split_tape();
+        let (var_t, tape2) = var_t.split_tape();
         self.running_mean = add(
             self.running_mean.clone() * (1.0 - self.momentum),
-            &(mean_t.clone() * self.momentum),
+            mean_t.clone() * self.momentum,
         );
         let n = <T::Array as HasAxes<Axes>>::SIZE as f32;
         self.running_var = add(
             self.running_var.clone() * (1.0 - self.momentum),
             // NOTE: uses unbiased variance in running estimate
-            &(var_t.clone() * (self.momentum * n / (n - 1.0))),
+            var_t.clone() * (self.momentum * n / (n - 1.0)),
         );
 
         // statistics for normalizing - on tape
-        let std: T = (var_t.put_tape(tape) + self.epsilon).sqrt().broadcast();
-        let (std, tape) = std.split_tape();
-        let mean: T = mean_t.put_tape(tape).broadcast();
-        let (mean, tape) = mean.split_tape();
+        let mean: T = mean_t.put_tape(tape1).broadcast();
+        let std: T = (var_t.put_tape(tape2) + self.epsilon).sqrt().broadcast();
 
         // record broadcast of scale & bias - on tape
-        let scale: T = self.scale.clone().put_tape(tape).broadcast();
-        let (scale, tape) = scale.split_tape();
-        let bias: T = self.bias.clone().put_tape(tape).broadcast();
-        let (bias, tape) = bias.split_tape();
+        let scale: T = self.scale.retaped().broadcast();
+        let bias: T = self.bias.retaped().broadcast();
 
         // normalize & affine - on tape
-        let x = sub(x.put_tape(tape), &mean);
-        let x = div(x, &std);
-        let x = mul(x, &scale);
-        add(x, &bias)
+        let x = sub(x, mean);
+        let x = div(x, std);
+        let x = mul(x, scale);
+        add(x, bias)
     }
 }
 

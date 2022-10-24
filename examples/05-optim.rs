@@ -25,6 +25,7 @@ fn main() {
     let mut sgd: Sgd<Mlp> = Sgd::new(SgdConfig {
         lr: 1e-1,
         momentum: Some(Momentum::Nesterov(0.9)),
+        weight_decay: None,
     });
 
     // let's initialize our model and some dummy data
@@ -38,7 +39,7 @@ fn main() {
     let prediction: Tensor2D<3, 2, OwnedTape> = mlp.forward_mut(x.trace());
 
     // next compute the loss against the target dummy data
-    let loss = mse_loss(prediction, &y);
+    let loss = mse_loss(prediction, y.clone());
     dbg!(loss.data());
 
     // extract the gradients
@@ -53,7 +54,7 @@ fn main() {
     // let's do this a couple times to make sure the loss decreases!
     for i in 0..5 {
         let prediction = mlp.forward_mut(x.trace());
-        let loss = mse_loss(prediction, &y);
+        let loss = mse_loss(prediction, y.clone());
         println!("Loss after update {i}: {:?}", loss.data());
         let gradients: Gradients = loss.backward();
         sgd.update(&mut mlp, gradients)

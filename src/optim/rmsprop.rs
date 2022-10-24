@@ -110,7 +110,7 @@ impl<M> RMSprop<M> {
 impl<M> GradientProvider for RMSprop<M> {
     fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
     where
-        P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice,
+        P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice + HasArrayData,
     {
         let mut g_t = self.gradients.remove(p)?;
 
@@ -177,7 +177,7 @@ mod tests {
         let mut t: Tensor1D<5> = Tensor1D::ones();
         let mut opt = RMSprop::new(cfg);
         for e in expected.iter() {
-            let gradients = backward((t.trace() * &rate).square().sum());
+            let gradients = backward((t.trace() * rate.clone()).square().sum());
             opt.update(&mut t, gradients).expect("");
             assert_eq!(t.data(), e);
         }

@@ -128,6 +128,7 @@ mod npz_impls;
 
 #[cfg(test)]
 mod tests {
+    use crate::arrays::{HasArrayData, HasArrayType};
     use crate::gradients::{GradientProvider, Gradients};
     use crate::unique_id::HasUniqueId;
     use std::boxed::Box;
@@ -138,7 +139,7 @@ mod tests {
     impl GradientProvider for SimpleGradients {
         fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
         where
-            P: HasUniqueId + crate::arrays::HasArrayType<Dtype = f32> + crate::devices::HasDevice,
+            P: HasUniqueId + HasArrayType<Dtype = f32> + crate::devices::HasDevice + HasArrayData,
         {
             self.0.remove(p)
         }

@@ -69,8 +69,7 @@ impl<
         const W: usize,
     > Module<Tensor3D<I, H, W, T>> for Conv2D<I, O, K, S, P>
 where
-    [(); (W + 2 * P - K) / S + 1]:,
-    [(); (H + 2 * P - K) / S + 1]:,
+    [[[(); (W + 2 * P - K) / S + 1]; (H + 2 * P - K) / S + 1]; O]:,
 {
     type Output = Tensor3D<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T>;
 
@@ -92,8 +91,7 @@ impl<
         const W: usize,
     > Module<Tensor4D<B, I, H, W, T>> for Conv2D<I, O, K, S, P>
 where
-    [(); (W + 2 * P - K) / S + 1]:,
-    [(); (H + 2 * P - K) / S + 1]:,
+    [[[[(); (W + 2 * P - K) / S + 1]; (H + 2 * P - K) / S + 1]; O]; B]:,
 {
     type Output = Tensor4D<B, O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T>;
 

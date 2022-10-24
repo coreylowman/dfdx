@@ -52,7 +52,7 @@ impl<$(const $Dims: usize, )* H: Tape> ReduceTo<$SrcTy, $AxesTy> for $DstTy {}
 impl<$(const $Dims: usize, )* H: Tape> BroadcastTo<$DstTy, $AxesTy> for $SrcTy {
     fn broadcast(self) -> $DstTy {
         let mut result = <$DstTy as Tensor>::NoTape::zeros();
-        <Cpu as DeviceReduce<_, $AxesTy>>::broadcast_into::<CopyAccum>(result.mut_data(), self.data());
+        <Cpu as DeviceReduce<_, $AxesTy>>::broadcast_into_no_reset::<CopyAccum>(result.mut_data(), self.data());
         move_tape_and_add_backward_op(self, result, move |t, result, grads| {
             let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
             <Cpu as DeviceReduce<_, $AxesTy>>::reduce_into_no_reset::<AddAccum>(t_grad, result_grad);
@@ -164,13 +164,13 @@ mod tests {
         let b: Tensor2D<5, 3> = TensorCreator::randn(&mut rng);
         let a_up: Tensor2D<5, 3, OwnedTape> = a.trace().broadcast();
         a_up.data().assert_close(&[*a.data(); 5], 1e-4);
-        let r = mul(a_up, &b);
+        let r = mul(a_up, b.clone());
         let g = backward(r.exp().mean());
         // a's gradient: (b * (b * a).exp()).sum(0) / 15
         // b's gradient: (a * (b * a).exp()) / 15
         let a_up: Tensor2D<5, 3> = a.clone().broadcast();
-        let a_grad = mul(mul(b.clone(), &a_up).exp(), &b).sum::<_, Axis<0>>() / 15.0;
-        let b_grad = mul(mul(b.clone(), &a_up).exp(), &a_up) / 15.0;
+        let a_grad = mul(mul(b.clone(), a_up.clone()).exp(), b.clone()).sum::<_, Axis<0>>() / 15.0;
+        let b_grad = mul(mul(b.clone(), a_up.clone()).exp(), a_up) / 15.0;
         g.ref_gradient(&a).assert_close(a_grad.data(), 1e-4);
         g.ref_gradient(&b).assert_close(b_grad.data(), 1e-4);
     }

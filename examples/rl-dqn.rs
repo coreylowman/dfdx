@@ -32,6 +32,7 @@ fn main() {
     let mut sgd = Sgd::new(SgdConfig {
         lr: 1e-1,
         momentum: Some(Momentum::Nesterov(0.9)),
+        weight_decay: None,
     });
 
     // run through training data
@@ -43,13 +44,13 @@ fn main() {
         // loss = mse(curr_q, targ_q)
         let next_q_values: Tensor2D<64, ACTION_SIZE> = target_q_net.forward(next_state.clone());
         let max_next_q: Tensor1D<64> = next_q_values.max();
-        let target_q = 0.99 * mul(max_next_q, &(1.0 - done.clone())) + &reward;
+        let target_q = 0.99 * mul(max_next_q, 1.0 - done.clone()) + reward.clone();
 
         // forward through model, computing gradients
         let q_values = q_net.forward(state.trace());
         let action_qs: Tensor1D<64, OwnedTape> = q_values.select(&action);
 
-        let loss = mse_loss(action_qs, &target_q);
+        let loss = mse_loss(action_qs, target_q);
         let loss_v = *loss.data();
 
         // run backprop

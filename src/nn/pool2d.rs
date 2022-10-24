@@ -57,8 +57,7 @@ macro_rules! impl_pools {
                 T: Tape,
             > Module<Tensor3D<C, H, W, T>> for $PoolTy<K, S, P>
         where
-            [(); (W + 2 * P - K) / S + 1]:,
-            [(); (H + 2 * P - K) / S + 1]:,
+            [[(); (W + 2 * P - K) / S + 1]; (H + 2 * P - K) / S + 1]:,
         {
             type Output = Tensor3D<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T>;
 
@@ -79,8 +78,7 @@ macro_rules! impl_pools {
                 T: Tape,
             > Module<Tensor4D<B, C, H, W, T>> for $PoolTy<K, S, P>
         where
-            [(); (W + 2 * P - K) / S + 1]:,
-            [(); (H + 2 * P - K) / S + 1]:,
+            [[(); (W + 2 * P - K) / S + 1]; (H + 2 * P - K) / S + 1]:,
         {
             type Output =
                 Tensor4D<B, C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }, T>;

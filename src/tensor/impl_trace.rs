@@ -14,7 +14,7 @@ pub fn trace<T: Tensor<Tape = OwnedTape>>(t: &T::NoTape) -> T {
 ///
 /// See [trace()] for version that copies `t`.
 pub fn traced<T: Tensor<Tape = OwnedTape>>(t: T::NoTape) -> T {
-    t.put_tape(OwnedTape::default())
+    t.put_tape(Default::default())
 }
 
 macro_rules! tensor_impl {

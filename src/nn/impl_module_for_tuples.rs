@@ -121,6 +121,7 @@ mod tests {
         let mut sgd = Sgd::new(SgdConfig {
             lr: 1.0,
             momentum: None,
+            weight_decay: None,
         });
         sgd.update(&mut model, gradients).expect("");
 

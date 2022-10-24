@@ -19,7 +19,7 @@
 //! let mut model: MyModel = Default::default();
 //! let mut opt: Sgd<MyModel> = Default::default();
 //! # let y = model.forward(Tensor1D::zeros().traced());
-//! # let loss = mse_loss(y, &Tensor1D::zeros());
+//! # let loss = mse_loss(y, Tensor1D::zeros());
 //! // -- snip loss computation --
 //!
 //! let gradients: Gradients = backward(loss);

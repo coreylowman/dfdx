@@ -67,11 +67,11 @@
 //!
 //! // broadcast the 1nd axis
 //! let a: Tensor2D<2, 5> = Tensor1D::<5>::zeros().broadcast();
-//! add(a, &big);
+//! add(a, big.clone());
 //!
 //!// broadcast the 2nd axis
 //! let a: Tensor2D<2, 5> = Tensor1D::<2>::zeros().broadcast();
-//! add(a, &big);
+//! add(a, big);
 //! ```
 //!
 //! # Permutating axes

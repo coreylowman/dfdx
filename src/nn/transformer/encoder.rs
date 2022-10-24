@@ -83,7 +83,7 @@ where
         let x = self
             .self_attn
             .forward((src.clone().put_tape(tape), src.clone(), src.clone()));
-        let x = add(x, &src);
+        let x = add(x, src);
         let x = self.norm1.forward(x);
         let x = self.ff.forward(x);
         self.norm2.forward(x)
