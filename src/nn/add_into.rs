@@ -180,8 +180,7 @@ mod tests {
 
     #[test]
     fn test_add_into_6() {
-        
-type Model = AddInto<(
+        type Model = AddInto<(
             Linear<2, 5>,
             Linear<3, 5>,
             Linear<4, 5>,
@@ -206,7 +205,7 @@ type Model = AddInto<(
             Tensor2D::<3, 6>::zeros().traced(),
             Tensor2D::<3, 7>::zeros().traced(),
         ));
-     }
+    }
 
     #[test]
     fn test_missing_gradients() {
