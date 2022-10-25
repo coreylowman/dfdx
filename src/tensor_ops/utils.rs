@@ -10,7 +10,7 @@
 use crate::devices::{Device, ForEachElement};
 use crate::gradients::{Gradients, Merge, Tape};
 use crate::prelude::*;
-use crate::unique_id::private_reset::ResetId;
+use crate::unique_id::internal::ResetId;
 
 /// `f(t)`. Applies a function `f` to every element of the [Tensor]. The derivative
 /// `df` must also be provided.
