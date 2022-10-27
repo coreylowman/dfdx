@@ -25,6 +25,7 @@ use std::{boxed::Box, marker::PhantomData};
 ///     lr: 1e-2,
 ///     betas: [0.5, 0.25],
 ///     eps: 1e-6,
+///     weight_decay: Some(WeightDecay::Decoupled(1e-2)),
 /// });
 /// ```
 ///
@@ -51,6 +52,7 @@ pub struct Adam<M> {
 ///     lr: 1e-2,
 ///     betas: [0.1, 0.2],
 ///     eps: 1e-6,
+///     weight_decay: Some(WeightDecay::L2(1e-1)),
 /// };
 /// ```
 #[derive(Debug, Clone, Copy)]
@@ -63,6 +65,9 @@ pub struct AdamConfig {
 
     /// Epsilon for numerical stability. Defaults to `1e-8`.
     pub eps: f32,
+
+    /// Optional weight decay. Defaults to `None`.
+    pub weight_decay: Option<WeightDecay>,
 }
 
 impl Default for AdamConfig {
@@ -71,6 +76,7 @@ impl Default for AdamConfig {
             lr: 1e-3,
             betas: [0.9, 0.999],
             eps: 1e-8,
+            weight_decay: None,
         }
     }
 }
@@ -104,6 +110,11 @@ impl<M> GradientProvider for Adam<M> {
         let mut g_t = self.gradients.remove(p)?;
         let m_t = self.moment1.mut_gradient(p);
         let v_t = self.moment2.mut_gradient(p);
+        if let Some(WeightDecay::L2(wd)) = self.cfg.weight_decay {
+            P::Device::foreach_mr(g_t.as_mut(), p.data(), &mut |g, p_el| {
+                *g += wd * p_el;
+            });
+        }
         P::Device::foreach_mmm(g_t.as_mut(), m_t, v_t, &mut |g, m, v| {
             *m = *m * self.cfg.betas[0] + *g * (1.0 - self.cfg.betas[0]);
             *v = *v * self.cfg.betas[1] + g.powi(2) * (1.0 - self.cfg.betas[1]);
@@ -111,6 +122,11 @@ impl<M> GradientProvider for Adam<M> {
             let v_hat = *v * (1.0 - self.cfg.betas[1].powi(self.t)).recip();
             *g = self.cfg.lr * m_hat / (v_hat.sqrt() + self.cfg.eps)
         });
+        if let Some(WeightDecay::Decoupled(wd)) = self.cfg.weight_decay {
+            P::Device::foreach_mr(g_t.as_mut(), p.data(), &mut |g, p_el| {
+                *g += wd * self.cfg.lr * p_el;
+            });
+        }
         Some(g_t)
     }
 }
@@ -162,6 +178,7 @@ mod tests {
             lr: 1e-3,
             betas: [0.5, 0.25],
             eps: 1e-8,
+            weight_decay: None,
         });
         let mut t: Tensor1D<5> = Tensor1D::ones();
         let rate = Tensor1D::new([1e-4, 1e-3, 1e-2, 1e-1, 1e-0]);
@@ -199,6 +216,7 @@ mod tests {
             lr: 1e-3,
             betas: [0.9, 0.999],
             eps: 1e-8,
+            weight_decay: None,
         });
 
         let py = model.forward(x.trace());
@@ -224,5 +242,63 @@ mod tests {
         let y = model.1.forward(Tensor2D::<8, 16>::zeros().trace());
         let g = backward(y.mean());
         opt.update(&mut model, g).expect_err("");
+    }
+
+    #[test]
+    fn test_adam_l2_decay() {
+        let mut opt: Adam<Tensor1D<5>> = Adam::new(AdamConfig {
+            betas: [0.5, 0.25],
+            weight_decay: Some(WeightDecay::L2(1.0)),
+            ..Default::default()
+        });
+        let mut t: Tensor1D<5> = tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
+        #[rustfmt::skip]
+        let expected = [
+            [-0.499, -0.249, 0.099, 0.59900004, 0.999],
+            [-0.49799952, -0.24797276, 0.09799955, 0.5979998, 0.9979998],
+            [-0.49699846, -0.24689871, 0.09699859, 0.5969993, 0.99699926],
+            [-0.49599692,-0.24575013,0.095997185,0.5959985,0.99599856],
+            [-0.49499503,-0.24448763,0.094995454,0.5949976,0.9949977],
+            [-0.4939929, -0.24382699, 0.09399351, 0.59399647, 0.9939967],
+            [-0.49299058, -0.24413459, 0.09299142, 0.5929953, 0.9929956],
+            [-0.49198818, -0.24478404, 0.09198925, 0.59199405, 0.9919945],
+            [-0.49098572, -0.24561276, 0.09098703, 0.5909928, 0.9909934],
+            [-0.48998323, -0.24548599, 0.08998477, 0.58999157, 0.9899922],
+        ];
+
+        for e in expected.iter() {
+            let gradients = t.trace().exp().square().mean().backward();
+            opt.update(&mut t, gradients).expect("");
+            assert_eq!(t.data(), e);
+        }
+    }
+
+    #[test]
+    fn test_adam_decoupled_decay() {
+        let mut opt: Adam<Tensor1D<5>> = Adam::new(AdamConfig {
+            betas: [0.5, 0.25],
+            weight_decay: Some(WeightDecay::Decoupled(1.0)),
+            ..Default::default()
+        });
+        let mut t: Tensor1D<5> = tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
+        #[rustfmt::skip]
+        let expected = [
+            [-0.5005, -0.25075,  0.098900005,  0.5984,  0.998],
+            [-0.5009996, -0.25149944,  0.09780081,  0.59680116,  0.9960015],
+            [-0.50149894, -0.25224838,  0.09670238,  0.59520346,  0.9940043],
+            [-0.5019978, -0.25299674,  0.09560476,  0.59360695,  0.9920086],
+            [-0.50249636, -0.2537445,  0.09450804,  0.5920117,  0.99001455],
+            [-0.5029944, -0.25449163,  0.09341227,  0.59041786,  0.98802227],
+            [-0.50349206, -0.25523806,  0.092317514,  0.58882546,  0.9860318],
+            [-0.5039892, -0.25598377,  0.0912238,  0.5872346,  0.9840432],
+            [-0.5044859, -0.25672877,  0.09013115,  0.5856453,  0.98205656],
+            [-0.50498205, -0.25747302,  0.08903958,  0.58405757,  0.9800719],
+        ];
+
+        for e in expected.iter() {
+            let gradients = t.trace().exp().square().mean().backward();
+            opt.update(&mut t, gradients).expect("");
+            assert_eq!(t.data(), e);
+        }
     }
 }
