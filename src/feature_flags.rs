@@ -1,9 +1,20 @@
-//! Information about the available feature flags
+//! Information about the available feature flags.
 //!
-//! # "std" **Default flag**
+//! Default features:
+//! - "std"
+//! - "numpy"
+//!
+//! # "std"
+//!
+//! **Enabled by default**
 //!
 //! Enables usage of the standard library. Otherwise [no_std_compat](https://crates.io/crates/no-std-compat)
 //! is used.
+//!
+//! Example:
+//! ```toml
+//! dfdx = { version = "...", default-features = false }
+//! ```
 //!
 //! Note that allocations are necessary, so the no_std_compat dependency looks like:
 //! ```toml
@@ -34,7 +45,9 @@
 //!
 //! `build.rs` will fail helpfully if you don't have the correct path/environment variables.
 //!
-//! # "numpy" **Default flag**
+//! # "numpy"
+//!
+//! **Enabled by default**
 //!
 //! Enables saving and loading arrays to .npy files, and saving and loading nn to .npz files.
 //!
