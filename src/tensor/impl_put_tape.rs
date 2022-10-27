@@ -8,7 +8,7 @@ pub trait PutTape<H: Tape> {
     fn put_tape(self, tape: H) -> Self::Output;
 
     /// Clones `self` and put's a brand new tape on it
-    fn retaped(&self) -> Self::Output
+    fn with_diff_tape(&self) -> Self::Output
     where
         Self: Clone,
     {

@@ -42,7 +42,7 @@ where
     T::Array: HasAxes<Axes>,
 {
     let num_elements: f32 = <T::Array as HasAxes<Axes>>::SIZE as f32;
-    let mean = mean(t.with_new_tape()).broadcast();
+    let mean = mean(t.with_empty_tape()).broadcast();
     div_scalar(sum(square(sub(mean, t))), num_elements)
 }
 

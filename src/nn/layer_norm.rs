@@ -76,8 +76,8 @@ impl<H: Tape, const B: usize, const M: usize> Module<Tensor2D<B, M, H>> for Laye
     /// 2. [mul()] with [Self::gamma]
     /// 3. [add()] with [Self::beta]
     fn forward(&self, x: Tensor2D<B, M, H>) -> Self::Output {
-        let g: Self::Output = self.gamma.retaped().broadcast();
-        let b: Self::Output = self.beta.retaped().broadcast();
+        let g: Self::Output = self.gamma.with_diff_tape().broadcast();
+        let b: Self::Output = self.beta.with_diff_tape().broadcast();
         let x = x.normalize::<Axis<1>>(self.epsilon);
         let x = mul(g, x);
         add(x, b)
@@ -94,8 +94,8 @@ impl<H: Tape, const B: usize, const S: usize, const M: usize> Module<Tensor3D<B,
     /// 2. [add()] with [Self::gamma]
     /// 3. [add()] with [Self::beta]
     fn forward(&self, x: Tensor3D<B, S, M, H>) -> Self::Output {
-        let g: Self::Output = self.gamma.retaped().broadcast();
-        let b: Self::Output = self.beta.retaped().broadcast();
+        let g: Self::Output = self.gamma.with_diff_tape().broadcast();
+        let b: Self::Output = self.beta.with_diff_tape().broadcast();
         let x = x.normalize::<Axis<2>>(self.epsilon);
         let x = mul(g, x);
         add(b, x)
