@@ -35,6 +35,7 @@ use std::{boxed::Box, marker::PhantomData};
 ///     eps: 1e-8,
 ///     momentum: Some(0.5),
 ///     centered: false,
+///     weight_decay: Some(WeightDecay::Decoupled(1e-1)),
 /// });
 /// ```
 ///
@@ -71,6 +72,9 @@ pub struct RMSpropConfig {
     /// Whether the avg should be centered by the grad's avg value.
     /// Defaults to `false`.
     pub centered: bool,
+
+    /// Optional weight decay. Defaults to `None`.
+    pub weight_decay: Option<WeightDecay>,
 }
 
 impl Default for RMSpropConfig {
@@ -81,6 +85,7 @@ impl Default for RMSpropConfig {
             eps: 1e-8,
             momentum: None,
             centered: false,
+            weight_decay: None,
         }
     }
 }
@@ -119,6 +124,12 @@ impl<M> GradientProvider for RMSprop<M> {
             P::Device::fill(square_avg, &mut |v| *v = 1.0);
         }
 
+        if let Some(WeightDecay::L2(wd)) = self.cfg.weight_decay {
+            P::Device::foreach_mr(g_t.as_mut(), p.data(), &mut |g_i, p_i| {
+                *g_i += wd * p_i;
+            });
+        }
+
         P::Device::foreach_mr(square_avg, g_t.as_ref(), &mut |sa, g| {
             // sa = a * sa + (1 - a) * g^2
             *sa += (1.0 - self.cfg.alpha) * (g * g - *sa)
@@ -154,6 +165,13 @@ impl<M> GradientProvider for RMSprop<M> {
             }
             None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.cfg.lr),
         }
+
+        if let Some(WeightDecay::Decoupled(wd)) = self.cfg.weight_decay {
+            P::Device::foreach_mr(g_t.as_mut(), p.data(), &mut |g_i, p_i| {
+                *g_i += wd * self.cfg.lr * p_i;
+            });
+        }
+
         Some(g_t)
     }
 }
@@ -191,6 +209,7 @@ mod tests {
             eps: 1e-8,
             momentum: None,
             centered: false,
+            weight_decay: None,
         };
         const EXPECTED: [[f32; 5]; 5] = [
             [0.9997892, 0.98245883, 0.9703907, 0.9683808, 0.96837723],
@@ -210,6 +229,7 @@ mod tests {
             eps: 1e-8,
             momentum: Some(0.9),
             centered: false,
+            weight_decay: None,
         };
         const EXPECTED: [[f32; 5]; 5] = [
             [0.9997892, 0.98245883, 0.9703907, 0.9683808, 0.96837723],
@@ -229,6 +249,7 @@ mod tests {
             eps: 1e-8,
             momentum: None,
             centered: false,
+            weight_decay: None,
         };
         const EXPECTED: [[f32; 5]; 5] = [
             [0.99971724, 0.9873509, 0.9859671, 0.985858, 0.98585784],
@@ -248,6 +269,7 @@ mod tests {
             eps: 1e-2,
             momentum: None,
             centered: false,
+            weight_decay: None,
         };
         const EXPECTED: [[f32; 5]; 5] = [
             [0.9997904, 0.98252594, 0.97041094, 0.9683808, 0.96837723],
@@ -267,6 +289,7 @@ mod tests {
             eps: 1e-8,
             momentum: None,
             centered: true,
+            weight_decay: None,
         };
         const EXPECTED: [[f32; 5]; 5] = [
             [0.9997892, 0.98218256, 0.96900064, 0.9666708, 0.9666667],
@@ -276,6 +299,38 @@ mod tests {
             [0.9988262, 0.9190646, 0.8847198, 0.87998855, 0.8799804],
         ];
         test_matches_expected(CFG, EXPECTED);
+    }
+
+    #[test]
+    fn test_rmsprop_l2_weight_decay() {
+        let cfg: RMSpropConfig = RMSpropConfig {
+            weight_decay: Some(WeightDecay::L2(0.5)),
+            ..Default::default()
+        };
+        const EXPECTED: [[f32; 5]; 5] = [
+            [0.9945992, 0.9797556, 0.97018003, 0.96838075, 0.96837723],
+            [0.9890257, 0.96231526, 0.9482287, 0.94579273, 0.945788],
+            [0.98328084, 0.94663495, 0.92983353, 0.92705846, 0.9270531],
+            [0.9773666, 0.9321751, 0.9135383, 0.9105492, 0.91054344],
+            [0.97128564, 0.9186157, 0.89865, 0.89551276, 0.8955067],
+        ];
+        test_matches_expected(cfg, EXPECTED);
+    }
+
+    #[test]
+    fn test_rmsprop_decoupled_weight_decay() {
+        let cfg: RMSpropConfig = RMSpropConfig {
+            weight_decay: Some(WeightDecay::Decoupled(0.5)),
+            ..Default::default()
+        };
+        const EXPECTED: [[f32; 5]; 5] = [
+            [0.9947892, 0.97745883, 0.9653907, 0.9633808, 0.96337724],
+            [0.98959416, 0.9568803, 0.9387497, 0.93603325, 0.9360285],
+            [0.9844144, 0.93768346, 0.91579914, 0.9127129, 0.9127075],
+            [0.9792493, 0.91952574, 0.8950769, 0.89176315, 0.8917574],
+            [0.9740982, 0.90218556, 0.8758817, 0.8724158, 0.87240976],
+        ];
+        test_matches_expected(cfg, EXPECTED);
     }
 
     #[test]
