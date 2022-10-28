@@ -68,8 +68,8 @@ macro_rules! tuple_impls {
             Output: Tensor<Dtype = f32>,
             $headin: Tensor<Dtype = f32>,
             $($tailsin: Tensor<Dtype = f32>,)+
-            $head: Module<$headin, Output = Output>,
-            $($tails: Module<$tailsin, Output = Output>,)+
+            $head: ModuleMut<$headin, Output = Output>,
+            $($tails: ModuleMut<$tailsin, Output = Output>,)+
         > ModuleMut<($headin, $($tailsin,)+)> for AddInto<($head, $($tails,)+)> {
             type Output = Output;
 
@@ -80,10 +80,10 @@ macro_rules! tuple_impls {
                 let ($head, $($tails),+) = x;
 
                 // layers
-                let ($headin, $($tailsin),+) = &self.0;
+                let ($headin, $($tailsin),+) = &mut self.0;
 
                 // forward
-                let ($head, $($tails),+) = ($headin.forward($head), $($tailsin.forward($tails)),+);
+                let ($head, $($tails),+) = ($headin.forward_mut($head), $($tailsin.forward_mut($tails)),+);
 
                 // add together
                 $(
