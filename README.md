@@ -46,7 +46,7 @@ allocations when tensors are cloned.
 The [matrixmultiply crate](https://crates.io/crates/matrixmultiply) is the default BLAS library. **You don't need
 to do download/install anything for this to work!**
 
-To link to the `Intel MKL` libraries (assuming you installed it already) use the `intel-mkl` feature.
+To link to the `Intel MKL` libraries (assuming you installed it already) use the `intel-mkl` feature. See [feature flags docs](https://docs.rs/dfdx/latest/dfdx/feature_flags/index.html) for more info.
 
 ## API Preview
 
