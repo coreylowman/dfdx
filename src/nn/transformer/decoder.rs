@@ -2,6 +2,7 @@ use super::mha::MultiHeadAttention;
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 use rand::Rng;
+use dfdx_macros::CanUpdateWithGradients;
 
 /// **Requires Nightly** A transformer decoder.
 ///
@@ -12,7 +13,7 @@ use rand::Rng;
 ///   the feedforward network in [TransformerDecoderBlock].
 /// - `NUM_LAYERS`: The number of [TransformerDecoderBlock] to use.
 /// TODO: Doctests
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, CanUpdateWithGradients)]
 pub struct TransformerDecoder<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
@@ -28,13 +29,6 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize> ResetParams
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize> CanUpdateWithGradients
-    for TransformerDecoder<M, H, F, L>
-{
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.0.update(grads, unused);
-    }
-}
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, Tgt, Mem> Module<(Tgt, Mem)>
     for TransformerDecoder<M, H, F, L>
@@ -79,7 +73,7 @@ where
 /// )
 /// ```
 /// TODO: Doctests
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, CanUpdateWithGradients)]
 pub struct TransformerDecoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
@@ -108,18 +102,6 @@ impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> ResetP
     }
 }
 
-impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> CanUpdateWithGradients
-    for TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>
-{
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.self_attn.update(grads, unused);
-        self.norm1.update(grads, unused);
-        self.mh_attn.update(grads, unused);
-        self.norm2.update(grads, unused);
-        self.ff.update(grads, unused);
-        self.norm3.update(grads, unused);
-    }
-}
 
 impl<const M: usize, const H: usize, const F: usize, Tgt, Mem> Module<(Tgt, Mem)>
     for TransformerDecoderBlock<M, H, F>

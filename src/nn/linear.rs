@@ -1,5 +1,6 @@
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
 use crate::prelude::*;
+use dfdx_macros::CanUpdateWithGradients;
 use rand::Rng;
 use rand_distr::Uniform;
 
@@ -21,7 +22,7 @@ use rand_distr::Uniform;
 /// let y: Tensor1D<2> = model.forward(x);
 /// assert_eq!(y.data(), &[0.0; 2]);
 /// ```
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, CanUpdateWithGradients)]
 pub struct Linear<const I: usize, const O: usize> {
     /// Transposed weight matrix, shape (O, I)
     pub weight: Tensor2D<O, I>,
@@ -30,12 +31,6 @@ pub struct Linear<const I: usize, const O: usize> {
     pub bias: Tensor1D<O>,
 }
 
-impl<const I: usize, const O: usize> CanUpdateWithGradients for Linear<I, O> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.weight.update(grads, unused);
-        self.bias.update(grads, unused);
-    }
-}
 
 impl<const I: usize, const O: usize> ResetParams for Linear<I, O> {
     /// Initializes [Self::weight] and [Self::bias] from a [Uniform] distribution

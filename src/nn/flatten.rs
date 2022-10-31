@@ -1,3 +1,4 @@
+use dfdx_macros::CanUpdateWithGradients;
 use crate::gradients::*;
 use crate::prelude::*;
 #[cfg(feature = "nightly")]
@@ -11,16 +12,13 @@ use crate::{Assert, ConstTrue};
 /// let _: Tensor1D<{3 * 5 * 7}> = Flatten2D.forward(Tensor3D::<3, 5, 7>::zeros());
 /// let _: Tensor2D<8, {3 * 5 * 7}> = Flatten2D.forward(Tensor4D::<8, 3, 5, 7>::zeros());
 /// ```
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, CanUpdateWithGradients)]
 pub struct Flatten2D;
 
 impl ResetParams for Flatten2D {
     fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {}
 }
 
-impl CanUpdateWithGradients for Flatten2D {
-    fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
-}
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const N: usize, const O: usize, H: Tape> Module<Tensor3D<M, N, O, H>>

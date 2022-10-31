@@ -5,11 +5,15 @@ use rand::prelude::*;
 use dfdx::gradients::{CanUpdateWithGradients, GradientProvider, OwnedTape, Tape, UnusedTensors};
 use dfdx::nn::{Linear, Module, ReLU, ResetParams};
 use dfdx::tensor::{Tensor1D, Tensor2D, TensorCreator};
+use dfdx_macros::CanUpdateWithGradients;
 
 /// Custom model struct
 /// This case is trivial and should be done with a tuple of linears and relus,
 /// but it demonstrates how to build models with custom behavior
-#[derive(Default)]
+///
+/// CanUpdateWithGradients lets you update a model's parameters using gradients, and is implemented
+/// via a macro
+#[derive(Default, CanUpdateWithGradients)]
 struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
     l1: Linear<IN, INNER>,
     l2: Linear<INNER, OUT>,
@@ -25,16 +29,6 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> ResetParams for Mlp<
     }
 }
 
-// CanUpdateWithGradients lets you update a model's parameters using gradients
-impl<const IN: usize, const INNER: usize, const OUT: usize> CanUpdateWithGradients
-    for Mlp<IN, INNER, OUT>
-{
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.l1.update(grads, unused);
-        self.l2.update(grads, unused);
-        self.relu.update(grads, unused);
-    }
-}
 
 // impl Module for single item
 impl<const IN: usize, const INNER: usize, const OUT: usize> Module<Tensor1D<IN>>

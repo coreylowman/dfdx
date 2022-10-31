@@ -2,6 +2,7 @@ use crate::gradients::*;
 use crate::prelude::*;
 use rand::Rng;
 use rand_distr::Uniform;
+use dfdx_macros::CanUpdateWithGradients;
 
 /// **Requires Nightly** Performs 2d convolutions on 3d and 4d images.
 ///
@@ -24,7 +25,7 @@ use rand_distr::Uniform;
 /// #[cfg(feature = "nightly")]
 /// let _: Tensor4D<2, 33, 13, 12> = m.forward(Tensor4D::<2, 16, 15, 14>::zeros());
 /// ```
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, CanUpdateWithGradients)]
 pub struct Conv2D<
     const IN_CHAN: usize,
     const OUT_CHAN: usize,
@@ -36,14 +37,6 @@ pub struct Conv2D<
     pub bias: Tensor1D<OUT_CHAN>,
 }
 
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize>
-    CanUpdateWithGradients for Conv2D<I, O, K, S, P>
-{
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.weight.update(grads, unused);
-        self.bias.update(grads, unused);
-    }
-}
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize> ResetParams
     for Conv2D<I, O, K, S, P>

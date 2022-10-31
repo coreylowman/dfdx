@@ -3,6 +3,7 @@ use crate::gradients::*;
 #[cfg(feature = "nightly")]
 use crate::tensor::*;
 use rand::Rng;
+use dfdx_macros::CanUpdateWithGradients;
 
 /// Average pool with 2d kernel that operates on images (3d) and batches of images (4d).
 /// Each patch reduces to the average of the values in the patch.
@@ -11,7 +12,7 @@ use rand::Rng;
 /// - `KERNEL_SIZE`: The size of the kernel applied to both width and height of the images.
 /// - `STRIDE`: How far to move the kernel each step. Defaults to `1`
 /// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, CanUpdateWithGradients)]
 pub struct AvgPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PADDING: usize = 0>;
 
 /// Max pool with 2d kernel that operates on images (3d) and batches of images (4d).
@@ -21,7 +22,7 @@ pub struct AvgPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PA
 /// - `KERNEL_SIZE`: The size of the kernel applied to both width and height of the images.
 /// - `STRIDE`: How far to move the kernel each step. Defaults to `1`
 /// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, CanUpdateWithGradients)]
 pub struct MaxPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PADDING: usize = 0>;
 
 /// Minimum pool with 2d kernel that operates on images (3d) and batches of images (4d).
@@ -31,17 +32,11 @@ pub struct MaxPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PA
 /// - `KERNEL_SIZE`: The size of the kernel applied to both width and height of the images.
 /// - `STRIDE`: How far to move the kernel each step. Defaults to `1`
 /// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, CanUpdateWithGradients)]
 pub struct MinPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PADDING: usize = 0>;
 
 macro_rules! impl_pools {
     ($PoolTy:tt, $Method:ident) => {
-        impl<const K: usize, const S: usize, const P: usize> CanUpdateWithGradients
-            for $PoolTy<K, S, P>
-        {
-            fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
-        }
-
         impl<const K: usize, const S: usize, const P: usize> ResetParams for $PoolTy<K, S, P> {
             fn reset_params<R: Rng>(&mut self, _: &mut R) {}
         }

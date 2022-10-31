@@ -1,3 +1,4 @@
+use dfdx_macros::CanUpdateWithGradients;
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 
@@ -17,14 +18,9 @@ use crate::prelude::*;
 /// let model: Model = Default::default();
 /// let _: (Tensor1D<3>, Tensor1D<7>) = model.forward(Tensor1D::<5>::zeros());
 /// ```
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, CanUpdateWithGradients)]
 pub struct SplitInto<T>(pub T);
 
-impl<T: CanUpdateWithGradients> CanUpdateWithGradients for SplitInto<T> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.0.update(grads, unused);
-    }
-}
 
 impl<T: ResetParams> ResetParams for SplitInto<T> {
     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {

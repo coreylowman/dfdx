@@ -33,11 +33,12 @@ matrixmultiply = { version = "0.3.2", default-features = false }
 zip = { version = "0.6.2", default-features = false, optional = true }
 cblas-sys = { version = "0.1.4", default-features = false, optional = true }
 libc = { version = "0.2", default-features = false, optional = true }
-dfdx-macros = { path = "./dfdx-macros", default-features = false, optional = true }
+dfdx-macros = { version = "0.1.0", path = "./dfdx-macros", default-features = false, optional = true }
 
 [features]
 default = ["std", "numpy"]
 std = ["no-std-compat/std", "rand/std", "rand_distr/std"]
+derive = ["dfdx-macros"]
 nightly = []
 numpy = ["dep:zip", "std"]
 cblas = ["dep:cblas-sys", "dep:libc"]
@@ -48,6 +49,8 @@ rand = "0.8.5"
 tempfile = "3.3.0"
 mnist = "0.5.0"
 indicatif = "0.16.2"
+# workaround to enable dfdx-macros for tests: https://github.com/rust-lang/cargo/issues/2911#issuecomment-749580481
+dfdx = { path = ".", features = ["dfdx-macros"]}
 
 [build-dependencies]
 rustc_version = "0.4.0"

@@ -1,3 +1,4 @@
+use dfdx_macros::CanUpdateWithGradients;
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 
@@ -15,15 +16,9 @@ use crate::prelude::*;
 /// let y = module.forward(x);
 /// assert_eq!(y.data(), &[-2.0, -1.0, 0.0, 2.0, 4.0]);
 /// ```
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, CanUpdateWithGradients)]
 pub struct Residual<F>(pub F);
 
-impl<F: CanUpdateWithGradients> CanUpdateWithGradients for Residual<F> {
-    /// Pass through to `F`'s [CanUpdateWithGradients].
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.0.update(grads, unused);
-    }
-}
 
 impl<F: ResetParams> ResetParams for Residual<F> {
     /// Pass through to `F`'s [ResetParams].

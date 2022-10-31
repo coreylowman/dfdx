@@ -2,18 +2,19 @@ use crate::arrays::{HasArrayType, HasLastAxis};
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
 use rand::Rng;
+use dfdx_macros::CanUpdateWithGradients;
 
 macro_rules! activation_impls {
     ($struct_name:ident, $func_name:ident, #[$docstring:meta]) => {
         #[$docstring]
-        #[derive(Default, Debug, Clone, Copy)]
+        #[derive(Default, Debug, Clone, Copy, CanUpdateWithGradients)]
         pub struct $struct_name;
 
-        impl CanUpdateWithGradients for $struct_name {
+       /* impl CanUpdateWithGradients for $struct_name {
             /// Does nothing.
             fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
         }
-
+*/
         impl ResetParams for $struct_name {
             /// Does nothing.
             fn reset_params<R: Rng>(&mut self, _: &mut R) {}
@@ -50,13 +51,9 @@ activation_impls!(Sqrt, sqrt, #[doc="Unit struct that impls [Module] as calling 
 activation_impls!(Abs, abs, #[doc="Unit struct that impls [Module] as calling [abs()] on `input`."]);
 
 /// Unit struct that impls [Module] as calling [softmax()] on `input`."
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, CanUpdateWithGradients)]
 pub struct Softmax;
 
-impl CanUpdateWithGradients for Softmax {
-    /// Does nothing.
-    fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
-}
 
 impl ResetParams for Softmax {
     /// Does nothing.

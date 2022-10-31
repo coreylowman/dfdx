@@ -1,3 +1,4 @@
+use dfdx_macros::CanUpdateWithGradients;
 use super::mha::MultiHeadAttention;
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
@@ -32,7 +33,7 @@ pub type TransformerEncoder<
 /// )
 /// ```
 /// TODO: Doctests
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, CanUpdateWithGradients)]
 pub struct TransformerEncoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
@@ -57,16 +58,6 @@ impl<const M: usize, const H: usize, const F: usize> ResetParams
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize> CanUpdateWithGradients
-    for TransformerEncoderBlock<M, H, F>
-{
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.self_attn.update(grads, unused);
-        self.norm1.update(grads, unused);
-        self.ff.update(grads, unused);
-        self.norm2.update(grads, unused);
-    }
-}
 
 impl<const M: usize, const H: usize, const F: usize, Src> Module<Src>
     for TransformerEncoderBlock<M, H, F>

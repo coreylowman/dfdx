@@ -3,6 +3,7 @@ use crate::prelude::*;
 #[cfg(feature = "nightly")]
 use crate::{Assert, ConstTrue};
 use rand::Rng;
+use dfdx_macros::CanUpdateWithGradients;
 
 /// **Requires Nightly** A multi-head attention layer.
 ///
@@ -19,7 +20,7 @@ use rand::Rng;
 /// - `MultiHeadAttention<8, 2, 6, 4>` is an attention layer with the key and value dimension different
 ///   than the embed dimension
 /// TODO: Doctests fail for some reason
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, CanUpdateWithGradients)]
 pub struct MultiHeadAttention<
     const EMBED_DIM: usize,
     const NUM_HEADS: usize,
@@ -43,16 +44,6 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> ResetParams
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize> CanUpdateWithGradients
-    for MultiHeadAttention<M, H, K, V>
-{
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.w_q.update(grads, unused);
-        self.w_k.update(grads, unused);
-        self.w_v.update(grads, unused);
-        self.w_o.update(grads, unused);
-    }
-}
 
 #[cfg(feature = "nightly")]
 impl<
