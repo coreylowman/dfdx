@@ -168,6 +168,18 @@ impl<T: LoadFromNpz> LoadFromNpz for SplitInto<T> {
     }
 }
 
+impl<T: SaveToNpz> SaveToNpz for AddInto<T> {
+    fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
+        self.0.write(&format!("{p}.0"), w)
+    }
+}
+
+impl<T: LoadFromNpz> LoadFromNpz for AddInto<T> {
+    fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
+        self.0.read(&format!("{p}.0"), r)
+    }
+}
+
 impl<const M: usize, const H: usize, const F: usize, const L: usize> SaveToNpz
     for TransformerDecoder<M, H, F, L>
 {

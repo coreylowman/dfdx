@@ -78,8 +78,8 @@ impl<const C: usize> BatchNorm2D<C> {
         Tensor1D<C, OwnedTape>: BroadcastTo<T, Axes>,
     {
         // compute statistics for updating running stats later - on tape
-        let mean_t: Tensor1D<C, T::Tape> = mean(x.with_new_tape());
-        let var_t: Tensor1D<C, T::Tape> = var(x.with_new_tape());
+        let mean_t: Tensor1D<C, T::Tape> = mean(x.with_empty_tape());
+        let var_t: Tensor1D<C, T::Tape> = var(x.with_empty_tape());
 
         // update statistics since we are training - off tape
         let (mean_t, tape1) = mean_t.split_tape();
@@ -100,8 +100,8 @@ impl<const C: usize> BatchNorm2D<C> {
         let std: T = (var_t.put_tape(tape2) + self.epsilon).sqrt().broadcast();
 
         // record broadcast of scale & bias - on tape
-        let scale: T = self.scale.retaped().broadcast();
-        let bias: T = self.bias.retaped().broadcast();
+        let scale: T = self.scale.with_diff_tape().broadcast();
+        let bias: T = self.bias.with_diff_tape().broadcast();
 
         // normalize & affine - on tape
         let x = sub(x, mean);

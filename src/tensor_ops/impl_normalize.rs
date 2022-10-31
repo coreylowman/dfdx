@@ -18,8 +18,8 @@ where
     T: Reduce<Axes>,
     T::Array: HasAxes<Axes>,
 {
-    let std: T::Reduced = stddev(t.with_new_tape(), epsilon);
-    let mean: T::Reduced = mean(t.with_new_tape());
+    let std: T::Reduced = stddev(t.with_empty_tape(), epsilon);
+    let mean: T::Reduced = mean(t.with_empty_tape());
     let centered = sub(t, mean.broadcast());
     div(centered, std.broadcast())
 }

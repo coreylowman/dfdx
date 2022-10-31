@@ -50,7 +50,7 @@ pub fn logsumexp<T: Reduce<Axes>, Axes>(mut t: T) -> T::Reduced {
 /// let _ = t.log_softmax::<Axes2<0, 2>>();
 /// ```
 pub fn log_softmax<T: Reduce<Axes>, Axes>(t: T) -> T {
-    sub(t.with_new_tape(), logsumexp(t).broadcast())
+    sub(t.with_empty_tape(), logsumexp(t).broadcast())
 }
 
 /// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function) across
