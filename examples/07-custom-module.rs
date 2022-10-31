@@ -11,8 +11,8 @@ use dfdx_macros::CanUpdateWithGradients;
 /// This case is trivial and should be done with a tuple of linears and relus,
 /// but it demonstrates how to build models with custom behavior
 ///
-/// CanUpdateWithGradients lets you update a model's parameters using gradients, and is implemented
-/// via a macro
+/// CanUpdateWithGradients lets you update a model's parameters using gradients,
+/// The trait implementation is generated via a procedural macro
 #[derive(Default, CanUpdateWithGradients)]
 struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
     l1: Linear<IN, INNER>,

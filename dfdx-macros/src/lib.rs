@@ -34,7 +34,6 @@ pub fn derive_can_update_with_gradients(input: proc_macro::TokenStream) -> proc_
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let updates = get_updates(&ast.data);
 
-    // let code_block = quote_spanned! { Span::call_site() =>
     let code_block = quote! {
         impl #impl_generics CanUpdateWithGradients for #name #ty_generics #where_clause {
             fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
@@ -83,7 +82,7 @@ fn get_updates(data: &syn::Data) -> TokenStream {
                         self.#name.update(grads, unused);
                     }
                 });
-                quote_spanned! {fields.span() =>
+                quote! {
                     #(#recurse)*
                 }
             }
@@ -94,7 +93,7 @@ fn get_updates(data: &syn::Data) -> TokenStream {
                         self.#index.update(grads, unused);
                     }
                 });
-                quote_spanned! {fields.span() =>
+                quote! {
                     #(#recurse)*
                 }
             }

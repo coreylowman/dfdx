@@ -10,11 +10,6 @@ macro_rules! activation_impls {
         #[derive(Default, Debug, Clone, Copy, CanUpdateWithGradients)]
         pub struct $struct_name;
 
-        /* impl CanUpdateWithGradients for $struct_name {
-                    /// Does nothing.
-                    fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
-                }
-        */
         impl ResetParams for $struct_name {
             /// Does nothing.
             fn reset_params<R: Rng>(&mut self, _: &mut R) {}
