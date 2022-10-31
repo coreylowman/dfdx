@@ -31,7 +31,6 @@ pub struct Linear<const I: usize, const O: usize> {
     pub bias: Tensor1D<O>,
 }
 
-
 impl<const I: usize, const O: usize> ResetParams for Linear<I, O> {
     /// Initializes [Self::weight] and [Self::bias] from a [Uniform] distribution
     /// between [-1 / sqrt(I), 1 / sqrt(I)].

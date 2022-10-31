@@ -1,8 +1,8 @@
 use crate::gradients::*;
 use crate::prelude::*;
+use dfdx_macros::CanUpdateWithGradients;
 use rand::Rng;
 use rand_distr::Uniform;
-use dfdx_macros::CanUpdateWithGradients;
 
 /// **Requires Nightly** Performs 2d convolutions on 3d and 4d images.
 ///
@@ -36,7 +36,6 @@ pub struct Conv2D<
     pub weight: Tensor4D<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>,
     pub bias: Tensor1D<OUT_CHAN>,
 }
-
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize> ResetParams
     for Conv2D<I, O, K, S, P>

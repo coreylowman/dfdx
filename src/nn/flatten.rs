@@ -1,8 +1,8 @@
-use dfdx_macros::CanUpdateWithGradients;
 use crate::gradients::*;
 use crate::prelude::*;
 #[cfg(feature = "nightly")]
 use crate::{Assert, ConstTrue};
+use dfdx_macros::CanUpdateWithGradients;
 
 /// **Requires Nightly** Flattens 3d tensors to 1d, and 4d tensors to 2d.
 ///
@@ -18,7 +18,6 @@ pub struct Flatten2D;
 impl ResetParams for Flatten2D {
     fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {}
 }
-
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const N: usize, const O: usize, H: Tape> Module<Tensor3D<M, N, O, H>>

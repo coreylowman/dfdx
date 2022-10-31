@@ -1,7 +1,7 @@
-use dfdx_macros::CanUpdateWithGradients;
 use super::{Module, ModuleMut, ResetParams};
 use crate::gradients::*;
 use crate::tensor::*;
+use dfdx_macros::CanUpdateWithGradients;
 
 /// Applies average pooling over an entire image, fully reducing the height and width
 /// dimensions:

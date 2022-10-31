@@ -1,6 +1,6 @@
-use dfdx_macros::CanUpdateWithGradients;
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
+use dfdx_macros::CanUpdateWithGradients;
 
 /// Splits input into multiple heads. `T` should be a tuple,
 /// where every element of the tuple accepts the same input type.
@@ -20,7 +20,6 @@ use crate::prelude::*;
 /// ```
 #[derive(Debug, Default, Clone, CanUpdateWithGradients)]
 pub struct SplitInto<T>(pub T);
-
 
 impl<T: ResetParams> ResetParams for SplitInto<T> {
     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {

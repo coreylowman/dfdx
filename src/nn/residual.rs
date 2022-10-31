@@ -1,6 +1,6 @@
-use dfdx_macros::CanUpdateWithGradients;
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
+use dfdx_macros::CanUpdateWithGradients;
 
 /// A residual connection around `F`: `F(x) + x`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -18,7 +18,6 @@ use crate::prelude::*;
 /// ```
 #[derive(Debug, Clone, Default, CanUpdateWithGradients)]
 pub struct Residual<F>(pub F);
-
 
 impl<F: ResetParams> ResetParams for Residual<F> {
     /// Pass through to `F`'s [ResetParams].

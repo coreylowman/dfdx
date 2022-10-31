@@ -2,13 +2,12 @@
 use dfdx::optim::Sgd;
 use dfdx::tensor::*;
 
-use dfdx_macros::CanUpdateWithGradients;
-use dfdx::gradients::{UnusedTensors, GradientProvider, CanUpdateWithGradients};
+use dfdx::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use dfdx::nn::Linear;
+use dfdx_macros::CanUpdateWithGradients;
 
 #[test]
 fn test_named_fields() {
-
     #[derive(CanUpdateWithGradients, Default)]
     pub struct Linear<const I: usize, const O: usize> {
         // Transposed weight matrix, shape (O, I)
@@ -25,7 +24,6 @@ fn test_named_fields() {
 
 #[test]
 fn test_unnamed_fields() {
-
     #[derive(CanUpdateWithGradients, Default)]
     pub struct Residual<F>(pub F);
 

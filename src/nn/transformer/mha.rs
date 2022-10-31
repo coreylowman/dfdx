@@ -2,8 +2,8 @@ use crate::gradients::*;
 use crate::prelude::*;
 #[cfg(feature = "nightly")]
 use crate::{Assert, ConstTrue};
-use rand::Rng;
 use dfdx_macros::CanUpdateWithGradients;
+use rand::Rng;
 
 /// **Requires Nightly** A multi-head attention layer.
 ///
@@ -43,7 +43,6 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> ResetParams
         self.w_o.reset_params(rng);
     }
 }
-
 
 #[cfg(feature = "nightly")]
 impl<

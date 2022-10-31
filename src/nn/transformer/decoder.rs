@@ -1,8 +1,8 @@
 use super::mha::MultiHeadAttention;
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
-use rand::Rng;
 use dfdx_macros::CanUpdateWithGradients;
+use rand::Rng;
 
 /// **Requires Nightly** A transformer decoder.
 ///
@@ -28,7 +28,6 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize> ResetParams
         self.0.reset_params(rng);
     }
 }
-
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, Tgt, Mem> Module<(Tgt, Mem)>
     for TransformerDecoder<M, H, F, L>
@@ -101,7 +100,6 @@ impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> ResetP
         self.norm3.reset_params(rng);
     }
 }
-
 
 impl<const M: usize, const H: usize, const F: usize, Tgt, Mem> Module<(Tgt, Mem)>
     for TransformerDecoderBlock<M, H, F>

@@ -1,7 +1,7 @@
-use dfdx_macros::CanUpdateWithGradients;
 use super::mha::MultiHeadAttention;
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
 use crate::prelude::*;
+use dfdx_macros::CanUpdateWithGradients;
 
 /// **Requires Nightly** A transformer encoder.
 ///
@@ -57,7 +57,6 @@ impl<const M: usize, const H: usize, const F: usize> ResetParams
         self.norm2.reset_params(rng);
     }
 }
-
 
 impl<const M: usize, const H: usize, const F: usize, Src> Module<Src>
     for TransformerEncoderBlock<M, H, F>

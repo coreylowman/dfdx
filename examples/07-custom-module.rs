@@ -29,7 +29,6 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> ResetParams for Mlp<
     }
 }
 
-
 // impl Module for single item
 impl<const IN: usize, const INNER: usize, const OUT: usize> Module<Tensor1D<IN>>
     for Mlp<IN, INNER, OUT>

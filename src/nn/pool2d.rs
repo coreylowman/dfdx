@@ -2,8 +2,8 @@ use super::{Module, ModuleMut, ResetParams};
 use crate::gradients::*;
 #[cfg(feature = "nightly")]
 use crate::tensor::*;
-use rand::Rng;
 use dfdx_macros::CanUpdateWithGradients;
+use rand::Rng;
 
 /// Average pool with 2d kernel that operates on images (3d) and batches of images (4d).
 /// Each patch reduces to the average of the values in the patch.

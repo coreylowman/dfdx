@@ -5,11 +5,10 @@
 #[allow(unused_extern_crates)]
 extern crate proc_macro;
 
-use proc_macro2::{TokenStream};
+use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
-use syn::{DeriveInput, parse_macro_input, parse_quote};
-
+use syn::{parse_macro_input, parse_quote, DeriveInput};
 
 /// Implements CanUpdateWithGradients for a Module
 ///
@@ -51,11 +50,9 @@ pub fn derive_can_update_with_gradients(input: proc_macro::TokenStream) -> proc_
 // if the struct contains unnamed fields.
 fn add_trait_bounds(data: &syn::Data, mut generics: syn::Generics) -> syn::Generics {
     let add_trait_bounds = match *data {
-        syn::Data::Struct(ref data) => {
-            match data.fields {
-                syn::Fields::Unnamed(_) => true,
-                _ => false,
-            }
+        syn::Data::Struct(ref data) => match data.fields {
+            syn::Fields::Unnamed(_) => true,
+            _ => false,
         },
         _ => false,
     };
@@ -70,7 +67,6 @@ fn add_trait_bounds(data: &syn::Data, mut generics: syn::Generics) -> syn::Gener
     generics
 }
 
-
 // Generates the `self.f.update(grads, unused)` for each field
 fn get_updates(data: &syn::Data) -> TokenStream {
     // Currently only works if a struct doesn't have a mix of named and unnamed fields
@@ -79,32 +75,30 @@ fn get_updates(data: &syn::Data) -> TokenStream {
     //  maybe one attribute `nograd` and all the fields below won't have grads?
 
     match *data {
-        syn::Data::Struct(ref data) => {
-            match data.fields {
-                syn::Fields::Named(ref fields) => {
-                    let recurse = fields.named.iter().map(|f| {
-                        let name = &f.ident;
-                        quote_spanned! {f.span() =>
-                            self.#name.update(grads, unused);
-                        }
-                    });
-                    quote_spanned! {fields.span() =>
-                        #(#recurse)*
+        syn::Data::Struct(ref data) => match data.fields {
+            syn::Fields::Named(ref fields) => {
+                let recurse = fields.named.iter().map(|f| {
+                    let name = &f.ident;
+                    quote_spanned! {f.span() =>
+                        self.#name.update(grads, unused);
                     }
-                },
-                syn::Fields::Unnamed(ref fields) => {
-                    let recurse = fields.unnamed.iter().enumerate().map(|(i, f)| {
-                        let index = syn::Index::from(i);
-                        quote_spanned! {f.span() =>
-                            self.#index.update(grads, unused);
-                        }
-                    });
-                    quote_spanned! {fields.span() =>
-                        #(#recurse)*
-                    }
-                },
-                syn::Fields::Unit => quote! {},
+                });
+                quote_spanned! {fields.span() =>
+                    #(#recurse)*
+                }
             }
+            syn::Fields::Unnamed(ref fields) => {
+                let recurse = fields.unnamed.iter().enumerate().map(|(i, f)| {
+                    let index = syn::Index::from(i);
+                    quote_spanned! {f.span() =>
+                        self.#index.update(grads, unused);
+                    }
+                });
+                quote_spanned! {fields.span() =>
+                    #(#recurse)*
+                }
+            }
+            syn::Fields::Unit => quote! {},
         },
         syn::Data::Enum(_) | syn::Data::Union(_) => quote!(),
     }
