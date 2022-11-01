@@ -1,5 +1,5 @@
-use dfdx_macros::{CanUpdateWithGradients, ResetParams};
 use crate::prelude::*;
+use dfdx_macros::{CanUpdateWithGradients, ResetParams};
 use rand::Rng;
 
 /// Add inputs together into a single tensor. `T` should be a tuple
@@ -19,7 +19,6 @@ use rand::Rng;
 /// ```
 #[derive(Debug, Default, Clone, CanUpdateWithGradients, ResetParams)]
 pub struct AddInto<T>(pub T);
-
 
 macro_rules! tuple_impls {
     ($head:ident $headin:ident [$($tails:ident $tailsin:ident),+]) => {

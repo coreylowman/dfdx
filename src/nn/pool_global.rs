@@ -60,7 +60,6 @@ pub struct MinPoolGlobal;
 
 macro_rules! impl_pools {
     ($PoolTy:ty, $Method:ident) => {
-
         impl<const C: usize, const L: usize, T: Tape> Module<Tensor2D<C, L, T>> for $PoolTy {
             type Output = Tensor1D<C, T>;
             fn forward(&self, input: Tensor2D<C, L, T>) -> Self::Output {

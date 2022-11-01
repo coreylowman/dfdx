@@ -36,7 +36,6 @@ pub struct MinPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PA
 
 macro_rules! impl_pools {
     ($PoolTy:tt, $Method:ident) => {
-
         #[cfg(feature = "nightly")]
         impl<
                 const K: usize,

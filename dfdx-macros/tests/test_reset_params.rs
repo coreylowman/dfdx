@@ -2,11 +2,10 @@
 use dfdx::tensor::*;
 use rand::prelude::*;
 
+use dfdx::arrays::AllAxes;
+use dfdx::devices::{Cpu, FillElements};
 use dfdx::prelude::*;
 use dfdx_macros::ResetParams;
-use dfdx::devices::{Cpu, FillElements};
-use dfdx::arrays::AllAxes;
-
 
 #[test]
 fn test_named_fields_default_attribute() {
@@ -27,7 +26,7 @@ fn test_named_fields_default_attribute() {
 #[test]
 fn test_named_fields_with_attribute() {
     #[derive(ResetParams, Default)]
-    #[reset_params(initializer="ones")]
+    #[reset_params(initializer = "ones")]
     pub struct Linear<const I: usize, const O: usize> {
         // Transposed weight matrix, shape (O, I)
         pub weight: Tensor2D<O, I>,

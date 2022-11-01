@@ -19,7 +19,6 @@ use rand::Rng;
 #[derive(Debug, Clone, Default, CanUpdateWithGradients, ResetParams)]
 pub struct Residual<F>(pub F);
 
-
 impl<T: Tensor<Dtype = f32>, F: Module<T, Output = T>> Module<T> for Residual<F> {
     type Output = F::Output;
     fn forward(&self, x: T) -> Self::Output {

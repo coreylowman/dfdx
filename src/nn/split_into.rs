@@ -1,6 +1,6 @@
 use crate::prelude::*;
-use rand::Rng;
 use dfdx_macros::{CanUpdateWithGradients, ResetParams};
+use rand::Rng;
 
 /// Splits input into multiple heads. `T` should be a tuple,
 /// where every element of the tuple accepts the same input type.
@@ -20,7 +20,6 @@ use dfdx_macros::{CanUpdateWithGradients, ResetParams};
 /// ```
 #[derive(Debug, Default, Clone, CanUpdateWithGradients, ResetParams)]
 pub struct SplitInto<T>(pub T);
-
 
 macro_rules! tuple_impls {
     ([$($heads:ident),+] $tail:ident) => {

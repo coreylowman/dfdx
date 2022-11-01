@@ -1,10 +1,8 @@
 // Helper functions for the ResetParams derive macro
-use darling::{FromDeriveInput, FromMeta, Result, Error};
+use darling::{Error, FromDeriveInput, FromMeta, Result};
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
-
-
 
 #[derive(Debug)]
 enum Initializers {
@@ -59,7 +57,6 @@ pub fn gen(ast: syn::DeriveInput) -> TokenStream {
     }
 }
 
-
 // Add a bound `T: ResetParams` to every type parameter T
 // if the struct contains unnamed fields.
 fn add_trait_bounds(data: &syn::Data, mut generics: syn::Generics) -> syn::Generics {
@@ -79,7 +76,6 @@ fn add_trait_bounds(data: &syn::Data, mut generics: syn::Generics) -> syn::Gener
     }
     generics
 }
-
 
 // Generates `self.f.randomize(rng, &dist);` for each named field f
 // or `self.x.reset_params(rng);` for each unnamed field x
@@ -112,22 +108,20 @@ fn get_fields_code(data: &syn::Data, init: &Option<Initializers>) -> TokenStream
     }
 }
 
-
 fn get_named_field_fn(f: &syn::Field, init: &Option<Initializers>) -> TokenStream {
     let name = &f.ident;
     match init {
         Some(Initializers::Zeros) => {
             quote! { Cpu::fill(self.#name.mut_data(), &mut |v| *v = 0.0); }
-        },
+        }
         Some(Initializers::Ones) => {
             quote! { Cpu::fill(self.#name.mut_data(), &mut |v| *v = 1.0); }
-        },
+        }
         Some(Initializers::Normal) | None => {
             quote! { self.#name.randomize(rng, &dist); }
-        },
+        }
     }
 }
-
 
 fn get_initializer_code(data: &syn::Data, init: &Option<Initializers>) -> TokenStream {
     let add_initializer_code = match *data {
@@ -137,7 +131,9 @@ fn get_initializer_code(data: &syn::Data, init: &Option<Initializers>) -> TokenS
 
     if add_initializer_code {
         match init {
-            Some(Initializers::Zeros) | Some(Initializers::Ones) => { quote! {} },
+            Some(Initializers::Zeros) | Some(Initializers::Ones) => {
+                quote! {}
+            }
             Some(Initializers::Normal) | None => {
                 quote! { let dist = StandardNormal; }
             }

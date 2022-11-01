@@ -20,7 +20,6 @@ pub struct TransformerDecoder<
     const NUM_LAYERS: usize,
 >(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>, NUM_LAYERS>);
 
-
 impl<const M: usize, const H: usize, const F: usize, const L: usize, Tgt, Mem> Module<(Tgt, Mem)>
     for TransformerDecoder<M, H, F, L>
 where

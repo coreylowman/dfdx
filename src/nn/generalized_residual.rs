@@ -23,7 +23,7 @@ pub struct GeneralizedResidual<F, R> {
 }
 
 impl<F: CanUpdateWithGradients, R: CanUpdateWithGradients> CanUpdateWithGradients
-for GeneralizedResidual<F, R>
+    for GeneralizedResidual<F, R>
 {
     /// Pass through to `F`'s [CanUpdateWithGradients].
     fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
