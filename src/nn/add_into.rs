@@ -1,5 +1,5 @@
-use dfdx_macros::CanUpdateWithGradients;
 use crate::prelude::*;
+use dfdx_macros::CanUpdateWithGradients;
 
 /// Add inputs together into a single tensor. `T` should be a tuple
 /// where every element of the tuple has the same output type
@@ -18,7 +18,6 @@ use crate::prelude::*;
 /// ```
 #[derive(Debug, Default, Clone, CanUpdateWithGradients)]
 pub struct AddInto<T>(pub T);
-
 
 impl<T: ResetParams> ResetParams for AddInto<T> {
     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
