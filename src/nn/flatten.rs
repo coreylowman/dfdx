@@ -2,7 +2,7 @@ use crate::prelude::*;
 use dfdx_macros::CanUpdateWithGradients;
 #[cfg(feature = "nightly")]
 use {
-    crate::prelude::*,
+    crate::gradients::Tape,
     crate::{Assert, ConstTrue},
 };
 
