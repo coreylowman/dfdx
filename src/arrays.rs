@@ -62,6 +62,20 @@ pub type Axes3<const I: isize, const J: isize, const K: isize> = (Axis<I>, Axis<
 pub type Axes4<const I: isize, const J: isize, const K: isize, const L: isize> =
     (Axis<I>, Axis<J>, Axis<K>, Axis<L>);
 
+/// Five axes known at compile time.
+pub type Axes5<const I: isize, const J: isize, const K: isize, const L: isize, const M: isize> =
+    (Axis<I>, Axis<J>, Axis<K>, Axis<L>, Axis<M>);
+
+/// Six axes known at compile time.
+pub type Axes6<
+    const I: isize,
+    const J: isize,
+    const K: isize,
+    const L: isize,
+    const M: isize,
+    const N: isize,
+> = (Axis<I>, Axis<J>, Axis<K>, Axis<L>, Axis<M>, Axis<N>);
+
 /// Represents all available axes on a tensor.
 pub struct AllAxes;
 
@@ -93,6 +107,17 @@ impl_has_axis!([[[[f32; P]; O]; N]; M], 0, M, {M, N, O, P});
 impl_has_axis!([[[[f32; P]; O]; N]; M], 1, N, {M, N, O, P});
 impl_has_axis!([[[[f32; P]; O]; N]; M], 2, O, {M, N, O, P});
 impl_has_axis!([[[[f32; P]; O]; N]; M], 3, P, {M, N, O, P});
+impl_has_axis!([[[[[f32; Q]; P]; O]; N]; M], 0, M, {M, N, O, P, Q});
+impl_has_axis!([[[[[f32; Q]; P]; O]; N]; M], 1, N, {M, N, O, P, Q});
+impl_has_axis!([[[[[f32; Q]; P]; O]; N]; M], 2, O, {M, N, O, P, Q});
+impl_has_axis!([[[[[f32; Q]; P]; O]; N]; M], 3, P, {M, N, O, P, Q});
+impl_has_axis!([[[[[f32; Q]; P]; O]; N]; M], 4, Q, {M, N, O, P, Q});
+impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 0, M, {M, N, O, P, Q, R});
+impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 1, N, {M, N, O, P, Q, R});
+impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 2, O, {M, N, O, P, Q, R});
+impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 3, P, {M, N, O, P, Q, R});
+impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 4, Q, {M, N, O, P, Q, R});
+impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 5, R, {M, N, O, P, Q, R});
 
 impl<T: CountElements> HasAxes<AllAxes> for T {
     const SIZE: usize = T::NUM_ELEMENTS;
@@ -125,6 +150,43 @@ where
         * <T as HasAxes<Axis<L>>>::SIZE;
 }
 
+impl<T, const I: isize, const J: isize, const K: isize, const L: isize, const M: isize>
+    HasAxes<Axes5<I, J, K, L, M>> for T
+where
+    T: HasAxes<Axis<I>> + HasAxes<Axis<J>> + HasAxes<Axis<K>> + HasAxes<Axis<L>> + HasAxes<Axis<M>>,
+{
+    const SIZE: usize = <T as HasAxes<Axis<I>>>::SIZE
+        * <T as HasAxes<Axis<J>>>::SIZE
+        * <T as HasAxes<Axis<K>>>::SIZE
+        * <T as HasAxes<Axis<L>>>::SIZE
+        * <T as HasAxes<Axis<M>>>::SIZE;
+}
+
+impl<
+        T,
+        const I: isize,
+        const J: isize,
+        const K: isize,
+        const L: isize,
+        const M: isize,
+        const N: isize,
+    > HasAxes<Axes6<I, J, K, L, M, N>> for T
+where
+    T: HasAxes<Axis<I>>
+        + HasAxes<Axis<J>>
+        + HasAxes<Axis<K>>
+        + HasAxes<Axis<L>>
+        + HasAxes<Axis<M>>
+        + HasAxes<Axis<N>>,
+{
+    const SIZE: usize = <T as HasAxes<Axis<I>>>::SIZE
+        * <T as HasAxes<Axis<J>>>::SIZE
+        * <T as HasAxes<Axis<K>>>::SIZE
+        * <T as HasAxes<Axis<L>>>::SIZE
+        * <T as HasAxes<Axis<M>>>::SIZE
+        * <T as HasAxes<Axis<N>>>::SIZE;
+}
+
 /// Holds an axis that represents the last (or right most) axis.
 pub trait HasLastAxis {
     type LastAxis;
@@ -152,6 +214,24 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize> HasLastAxis
 {
     type LastAxis = Axis<3>;
     const SIZE: usize = P;
+}
+impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize> HasLastAxis
+    for [[[[[f32; Q]; P]; O]; N]; M]
+{
+    type LastAxis = Axis<4>;
+    const SIZE: usize = Q;
+}
+impl<
+        const M: usize,
+        const N: usize,
+        const O: usize,
+        const P: usize,
+        const Q: usize,
+        const R: usize,
+    > HasLastAxis for [[[[[[f32; R]; Q]; P]; O]; N]; M]
+{
+    type LastAxis = Axis<5>;
+    const SIZE: usize = R;
 }
 
 /// Something that has compile time known zero values.
