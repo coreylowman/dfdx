@@ -41,7 +41,7 @@ where
     let (t, mut tape) = t.split_tape();
     let mut result = t.clone(); // inc t's reference count
     result.reset_id(); // ensure there are two differet nodes in the graph
-    let phantom_result = result.phantom();
+    let phantom_result = result.clone();
     tape.add_backward_op(move |grads| {
         let (t_grad, result_grad) = grads.mut_and_ref(&t, &phantom_result);
         T::Device::foreach_mrr(t_grad, t.data(), result_grad, &mut |g, fx, r| {
@@ -112,9 +112,9 @@ pub(super) fn move_tape_and_add_backward_op<Inp, Out, F>(
 where
     Inp: Tensor,
     Out: Tensor<Tape = Inp::Tape>,
-    F: 'static + FnMut(Inp::NoTape, PhantomTensor<Out::NoTape>, &mut Gradients),
+    F: 'static + FnMut(Inp::NoTape, Out::NoTape, &mut Gradients),
 {
-    let phantom_out = out.phantom();
+    let phantom_out = out.clone();
     let (t, mut tape) = inp.split_tape();
     tape.add_backward_op(move |grads| f(t, phantom_out, grads));
     out.put_tape(tape)
@@ -132,9 +132,9 @@ where
     Rhs: Tensor,
     Out: Tensor<Tape = Lhs::Tape>,
     Lhs::Tape: Merge<Rhs::Tape>,
-    F: 'static + FnMut(Lhs::NoTape, Rhs::NoTape, PhantomTensor<Out::NoTape>, &mut Gradients),
+    F: 'static + FnMut(Lhs::NoTape, Rhs::NoTape, Out::NoTape, &mut Gradients),
 {
-    let phantom_out = out.phantom();
+    let phantom_out = out.clone();
     let (lhs, lhs_tape) = lhs.split_tape();
     let (rhs, rhs_tape) = rhs.split_tape();
     let mut tape = lhs_tape.merge(rhs_tape);

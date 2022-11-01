@@ -10,7 +10,6 @@ pub trait Tensor:
     + HasDevice
     + CanUpdateWithGradients
     + HasUniqueId
-    + IntoPhantom
     + internal::ResetId
 {
     /// The [Tape] this tensor owns.
