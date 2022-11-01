@@ -8,12 +8,12 @@ pub fn gen(ast: syn::DeriveInput) -> TokenStream {
 
     let generics = add_trait_bounds(&ast.data, ast.generics);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-    let updates = get_updates(&ast.data);
+    let fields_code = get_fields_code(&ast.data);
 
     quote! {
         impl #impl_generics dfdx::gradients::CanUpdateWithGradients for #name #ty_generics #where_clause {
             fn update<G: dfdx::gradients::GradientProvider>(&mut self, grads: &mut G, unused: &mut dfdx::gradients::UnusedTensors) {
-                #updates
+                #fields_code
             }
         }
     }
@@ -40,7 +40,7 @@ fn add_trait_bounds(data: &syn::Data, mut generics: syn::Generics) -> syn::Gener
 }
 
 // Generates the `self.f.update(grads, unused)` for each field
-fn get_updates(data: &syn::Data) -> TokenStream {
+fn get_fields_code(data: &syn::Data) -> TokenStream {
     // TODO: have attributes to mark which fields to add grads to (see batchnorm).
     //  maybe one attribute `nograd` and all the fields below won't have grads?
 
