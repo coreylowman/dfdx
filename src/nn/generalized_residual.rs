@@ -22,10 +22,8 @@ pub struct GeneralizedResidual<F, R> {
     pub r: R,
 }
 
-impl<
-        F: ::dfdx::gradients::CanUpdateWithGradients,
-        R: ::dfdx::gradients::CanUpdateWithGradients,
-    > ::dfdx::gradients::CanUpdateWithGradients for GeneralizedResidual<F, R>
+impl<F: CanUpdateWithGradients, R: CanUpdateWithGradients> CanUpdateWithGradients
+for GeneralizedResidual<F, R>
 {
     /// Pass through to `F`'s [CanUpdateWithGradients].
     fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {

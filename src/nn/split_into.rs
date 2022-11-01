@@ -1,5 +1,6 @@
 use crate::prelude::*;
-use dfdx_macros::CanUpdateWithGradients;
+use rand::Rng;
+use dfdx_macros::{CanUpdateWithGradients, ResetParams};
 
 /// Splits input into multiple heads. `T` should be a tuple,
 /// where every element of the tuple accepts the same input type.
@@ -17,14 +18,9 @@ use dfdx_macros::CanUpdateWithGradients;
 /// let model: Model = Default::default();
 /// let _: (Tensor1D<3>, Tensor1D<7>) = model.forward(Tensor1D::<5>::zeros());
 /// ```
-#[derive(Debug, Default, Clone, CanUpdateWithGradients)]
+#[derive(Debug, Default, Clone, CanUpdateWithGradients, ResetParams)]
 pub struct SplitInto<T>(pub T);
 
-impl<T: ResetParams> ResetParams for SplitInto<T> {
-    fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
-        self.0.reset_params(rng);
-    }
-}
 
 macro_rules! tuple_impls {
     ([$($heads:ident),+] $tail:ident) => {

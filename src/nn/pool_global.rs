@@ -1,7 +1,8 @@
-use super::{Module, ModuleMut, ResetParams};
+use super::{Module, ModuleMut};
 use crate::gradients::Tape;
 use crate::tensor::*;
-use dfdx_macros::CanUpdateWithGradients;
+use dfdx_macros::{CanUpdateWithGradients, ResetParams};
+use rand::Rng;
 
 /// Applies average pooling over an entire image, fully reducing the height and width
 /// dimensions:
@@ -18,7 +19,7 @@ use dfdx_macros::CanUpdateWithGradients;
 /// let _: Tensor1D<5> = m.forward(Tensor3D::<5, 16, 8>::zeros());
 /// let _: Tensor2D<10, 5> = m.forward(Tensor4D::<10, 5, 16, 8>::zeros());
 /// ```
-#[derive(Clone, Copy, Default, CanUpdateWithGradients)]
+#[derive(Clone, Copy, Default, CanUpdateWithGradients, ResetParams)]
 pub struct AvgPoolGlobal;
 
 /// Applies max pooling over an entire image, fully reducing the height and width
@@ -36,7 +37,7 @@ pub struct AvgPoolGlobal;
 /// let _: Tensor1D<5> = m.forward(Tensor3D::<5, 16, 8>::zeros());
 /// let _: Tensor2D<10, 5> = m.forward(Tensor4D::<10, 5, 16, 8>::zeros());
 /// ```
-#[derive(Clone, Copy, Default, CanUpdateWithGradients)]
+#[derive(Clone, Copy, Default, CanUpdateWithGradients, ResetParams)]
 pub struct MaxPoolGlobal;
 
 /// Applies min pooling over an entire image, fully reducing the height and width
@@ -54,14 +55,11 @@ pub struct MaxPoolGlobal;
 /// let _: Tensor1D<5> = m.forward(Tensor3D::<5, 16, 8>::zeros());
 /// let _: Tensor2D<10, 5> = m.forward(Tensor4D::<10, 5, 16, 8>::zeros());
 /// ```
-#[derive(Clone, Copy, Default, CanUpdateWithGradients)]
+#[derive(Clone, Copy, Default, CanUpdateWithGradients, ResetParams)]
 pub struct MinPoolGlobal;
 
 macro_rules! impl_pools {
     ($PoolTy:ty, $Method:ident) => {
-        impl ResetParams for $PoolTy {
-            fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {}
-        }
 
         impl<const C: usize, const L: usize, T: Tape> Module<Tensor2D<C, L, T>> for $PoolTy {
             type Output = Tensor1D<C, T>;

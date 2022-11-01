@@ -1,5 +1,6 @@
 use crate::prelude::*;
-use dfdx_macros::CanUpdateWithGradients;
+use dfdx_macros::{CanUpdateWithGradients, ResetParams};
+use rand::Rng;
 
 /// A residual connection around `F`: `F(x) + x`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -15,15 +16,9 @@ use dfdx_macros::CanUpdateWithGradients;
 /// let y = module.forward(x);
 /// assert_eq!(y.data(), &[-2.0, -1.0, 0.0, 2.0, 4.0]);
 /// ```
-#[derive(Debug, Clone, Default, CanUpdateWithGradients)]
+#[derive(Debug, Clone, Default, CanUpdateWithGradients, ResetParams)]
 pub struct Residual<F>(pub F);
 
-impl<F: ResetParams> ResetParams for Residual<F> {
-    /// Pass through to `F`'s [ResetParams].
-    fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
-        self.0.reset_params(rng);
-    }
-}
 
 impl<T: Tensor<Dtype = f32>, F: Module<T, Output = T>> Module<T> for Residual<F> {
     type Output = F::Output;

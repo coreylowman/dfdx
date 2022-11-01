@@ -1,18 +1,13 @@
 use crate::arrays::{HasArrayType, HasLastAxis};
 use crate::prelude::*;
-use dfdx_macros::CanUpdateWithGradients;
+use dfdx_macros::{CanUpdateWithGradients, ResetParams};
 use rand::Rng;
 
 macro_rules! activation_impls {
     ($struct_name:ident, $func_name:ident, #[$docstring:meta]) => {
         #[$docstring]
-        #[derive(Default, Debug, Clone, Copy, CanUpdateWithGradients)]
+        #[derive(Default, Debug, Clone, Copy, CanUpdateWithGradients, ResetParams)]
         pub struct $struct_name;
-
-        impl ResetParams for $struct_name {
-            /// Does nothing.
-            fn reset_params<R: Rng>(&mut self, _: &mut R) {}
-        }
 
         impl<T: Tensor<Dtype = f32>> Module<T> for $struct_name {
             type Output = T;

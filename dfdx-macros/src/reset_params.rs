@@ -46,7 +46,7 @@ pub fn gen(ast: syn::DeriveInput) -> TokenStream {
 
     let generics = add_trait_bounds(&ast.data, ast.generics);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-    let init_code = get_initializer_code(&opts.initializer);
+    let init_code = get_initializer_code(&ast.data, &opts.initializer);
     let fields_code = get_fields_code(&ast.data, &opts.initializer);
 
     quote! {
@@ -89,7 +89,7 @@ fn get_fields_code(data: &syn::Data, init: &Option<Initializers>) -> TokenStream
             syn::Fields::Named(ref fields) => {
                 let recurse = fields.named.iter().map(|f| {
                     let field_gen = get_named_field_fn(f, init);
-                    quote_spanned! {f.span() => #field_gen; }
+                    quote_spanned! {f.span() => #field_gen }
                 });
                 quote! {
                     #(#recurse)*
@@ -129,11 +129,20 @@ fn get_named_field_fn(f: &syn::Field, init: &Option<Initializers>) -> TokenStrea
 }
 
 
-fn get_initializer_code(init: &Option<Initializers>) -> TokenStream {
-    match init {
-        Some(Initializers::Zeros) | Some(Initializers::Ones) => { TokenStream::new() },
-        Some(Initializers::Normal) | None => {
-            quote! { let dist = StandardNormal; }
+fn get_initializer_code(data: &syn::Data, init: &Option<Initializers>) -> TokenStream {
+    let add_initializer_code = match *data {
+        syn::Data::Struct(ref data) => matches!(data.fields, syn::Fields::Named(_)),
+        _ => false,
+    };
+
+    if add_initializer_code {
+        match init {
+            Some(Initializers::Zeros) | Some(Initializers::Ones) => { quote! {} },
+            Some(Initializers::Normal) | None => {
+                quote! { let dist = StandardNormal; }
+            }
         }
+    } else {
+        quote! {}
     }
 }

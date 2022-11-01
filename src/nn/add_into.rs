@@ -1,8 +1,9 @@
-use crate::gradients::{GradientProvider, UnusedTensors};
+use dfdx_macros::{CanUpdateWithGradients, ResetParams};
 use crate::prelude::*;
+use rand::Rng;
 
 /// Add inputs together into a single tensor. `T` should be a tuple
-//// where every element of the tuple has the same output type
+/// where every element of the tuple has the same output type
 ///
 /// This provides a utility for networks where multiple inputs are needed
 ///
@@ -16,20 +17,9 @@ use crate::prelude::*;
 /// let model: Model = Default::default();
 /// let _: Tensor1D<5> = model.forward((Tensor1D::<2>::zeros(), Tensor1D::<3>::zeros()));
 /// ```
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, CanUpdateWithGradients, ResetParams)]
 pub struct AddInto<T>(pub T);
 
-impl<T: CanUpdateWithGradients> CanUpdateWithGradients for AddInto<T> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.0.update(grads, unused);
-    }
-}
-
-impl<T: ResetParams> ResetParams for AddInto<T> {
-    fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
-        self.0.reset_params(rng);
-    }
-}
 
 macro_rules! tuple_impls {
     ($head:ident $headin:ident [$($tails:ident $tailsin:ident),+]) => {

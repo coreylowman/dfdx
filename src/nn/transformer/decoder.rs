@@ -1,6 +1,6 @@
 use super::mha::MultiHeadAttention;
 use crate::prelude::*;
-use dfdx_macros::CanUpdateWithGradients;
+use dfdx_macros::{CanUpdateWithGradients, ResetParams};
 use rand::Rng;
 
 /// **Requires Nightly** A transformer decoder.
@@ -12,7 +12,7 @@ use rand::Rng;
 ///   the feedforward network in [TransformerDecoderBlock].
 /// - `NUM_LAYERS`: The number of [TransformerDecoderBlock] to use.
 /// TODO: Doctests
-#[derive(Clone, Debug, Default, CanUpdateWithGradients)]
+#[derive(Clone, Debug, Default, CanUpdateWithGradients, ResetParams)]
 pub struct TransformerDecoder<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
@@ -20,13 +20,6 @@ pub struct TransformerDecoder<
     const NUM_LAYERS: usize,
 >(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>, NUM_LAYERS>);
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize> ResetParams
-    for TransformerDecoder<M, H, F, L>
-{
-    fn reset_params<R: Rng>(&mut self, rng: &mut R) {
-        self.0.reset_params(rng);
-    }
-}
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, Tgt, Mem> Module<(Tgt, Mem)>
     for TransformerDecoder<M, H, F, L>
