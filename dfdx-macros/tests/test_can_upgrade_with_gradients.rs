@@ -2,7 +2,7 @@
 use dfdx::optim::Sgd;
 use dfdx::tensor::*;
 
-use dfdx::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
+use dfdx::gradients::{CanUpdateWithGradients, UnusedTensors};
 use dfdx::nn::Linear;
 use dfdx_macros::CanUpdateWithGradients;
 

@@ -1,5 +1,5 @@
 use super::{Module, ModuleMut, ResetParams};
-use crate::gradients::*;
+use crate::gradients::Tape;
 use crate::tensor::*;
 use dfdx_macros::CanUpdateWithGradients;
 

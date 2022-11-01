@@ -1,6 +1,6 @@
 use crate::arrays::Axis;
 use crate::devices::{Cpu, FillElements};
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
+use crate::gradients::{GradientProvider, Tape, UnusedTensors};
 use crate::prelude::*;
 
 /// Implements layer normalization as described in [Layer Normalization](https://arxiv.org/abs/1607.06450).

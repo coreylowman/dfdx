@@ -1,4 +1,4 @@
-use crate::gradients::*;
+use crate::gradients::Tape;
 use crate::prelude::*;
 use dfdx_macros::CanUpdateWithGradients;
 use rand::Rng;

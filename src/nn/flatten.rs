@@ -1,4 +1,4 @@
-use crate::gradients::*;
+use crate::gradients::Tape;
 use crate::prelude::*;
 #[cfg(feature = "nightly")]
 use crate::{Assert, ConstTrue};

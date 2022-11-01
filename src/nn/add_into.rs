@@ -1,4 +1,4 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
+use crate::gradients::{GradientProvider, UnusedTensors};
 use crate::prelude::*;
 
 /// Add inputs together into a single tensor. `T` should be a tuple

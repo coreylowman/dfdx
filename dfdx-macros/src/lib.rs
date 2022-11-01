@@ -35,8 +35,8 @@ pub fn derive_can_update_with_gradients(input: proc_macro::TokenStream) -> proc_
     let updates = get_updates(&ast.data);
 
     let code_block = quote! {
-        impl #impl_generics CanUpdateWithGradients for #name #ty_generics #where_clause {
-            fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+        impl #impl_generics dfdx::gradients::CanUpdateWithGradients for #name #ty_generics #where_clause {
+            fn update<G: dfdx::gradients::GradientProvider>(&mut self, grads: &mut G, unused: &mut dfdx::gradients::UnusedTensors) {
                 #updates
             }
         }
@@ -49,17 +49,16 @@ pub fn derive_can_update_with_gradients(input: proc_macro::TokenStream) -> proc_
 // if the struct contains unnamed fields.
 fn add_trait_bounds(data: &syn::Data, mut generics: syn::Generics) -> syn::Generics {
     let add_trait_bounds = match *data {
-        syn::Data::Struct(ref data) => match data.fields {
-            syn::Fields::Unnamed(_) => true,
-            _ => false,
-        },
+        syn::Data::Struct(ref data) => matches!(data.fields, syn::Fields::Unnamed(_)),
         _ => false,
     };
 
     if add_trait_bounds {
         for param in &mut generics.params {
             if let syn::GenericParam::Type(ref mut type_param) = *param {
-                type_param.bounds.push(parse_quote!(CanUpdateWithGradients));
+                type_param
+                    .bounds
+                    .push(parse_quote!(dfdx::gradients::CanUpdateWithGradients));
             }
         }
     }

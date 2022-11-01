@@ -1,4 +1,4 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
+use crate::gradients::{GradientProvider, UnusedTensors};
 use crate::prelude::*;
 use std::vec::Vec;
 

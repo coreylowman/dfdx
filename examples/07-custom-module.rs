@@ -2,7 +2,7 @@
 
 use rand::prelude::*;
 
-use dfdx::gradients::{CanUpdateWithGradients, GradientProvider, OwnedTape, Tape, UnusedTensors};
+use dfdx::gradients::{OwnedTape, Tape};
 use dfdx::nn::{Linear, Module, ReLU, ResetParams};
 use dfdx::tensor::{Tensor1D, Tensor2D, TensorCreator};
 use dfdx_macros::CanUpdateWithGradients;
