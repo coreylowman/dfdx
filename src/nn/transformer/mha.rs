@@ -1,9 +1,11 @@
-use crate::gradients::Tape;
 use crate::prelude::*;
-#[cfg(feature = "nightly")]
-use crate::{Assert, ConstTrue};
 use dfdx_macros::CanUpdateWithGradients;
 use rand::Rng;
+#[cfg(feature = "nightly")]
+use {
+    crate::gradients::Tape,
+    crate::{Assert, ConstTrue},
+};
 
 /// **Requires Nightly** A multi-head attention layer.
 ///

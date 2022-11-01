@@ -1,3 +1,4 @@
+#[cfg(feature = "nightly")]
 use crate::gradients::Tape;
 use crate::prelude::*;
 use dfdx_macros::CanUpdateWithGradients;

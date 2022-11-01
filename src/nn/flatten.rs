@@ -1,8 +1,10 @@
-use crate::gradients::Tape;
 use crate::prelude::*;
-#[cfg(feature = "nightly")]
-use crate::{Assert, ConstTrue};
 use dfdx_macros::CanUpdateWithGradients;
+#[cfg(feature = "nightly")]
+use {
+    crate::prelude::*,
+    crate::{Assert, ConstTrue},
+};
 
 /// **Requires Nightly** Flattens 3d tensors to 1d, and 4d tensors to 2d.
 ///
