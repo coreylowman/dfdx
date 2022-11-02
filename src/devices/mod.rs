@@ -80,6 +80,7 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: us
     Device<[[[[[f32; Q]; P]; O]; N]; M]> for Cpu
 {
 }
+#[cfg(tensor6d)]
 impl<
         const M: usize,
         const N: usize,

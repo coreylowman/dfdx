@@ -66,6 +66,7 @@ pub type Axes4<const I: isize, const J: isize, const K: isize, const L: isize> =
 pub type Axes5<const I: isize, const J: isize, const K: isize, const L: isize, const M: isize> =
     (Axis<I>, Axis<J>, Axis<K>, Axis<L>, Axis<M>);
 
+#[cfg(tensor6d)]
 /// Six axes known at compile time.
 pub type Axes6<
     const I: isize,
@@ -112,12 +113,19 @@ impl_has_axis!([[[[[f32; Q]; P]; O]; N]; M], 1, N, {M, N, O, P, Q});
 impl_has_axis!([[[[[f32; Q]; P]; O]; N]; M], 2, O, {M, N, O, P, Q});
 impl_has_axis!([[[[[f32; Q]; P]; O]; N]; M], 3, P, {M, N, O, P, Q});
 impl_has_axis!([[[[[f32; Q]; P]; O]; N]; M], 4, Q, {M, N, O, P, Q});
-impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 0, M, {M, N, O, P, Q, R});
-impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 1, N, {M, N, O, P, Q, R});
-impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 2, O, {M, N, O, P, Q, R});
-impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 3, P, {M, N, O, P, Q, R});
-impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 4, Q, {M, N, O, P, Q, R});
-impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 5, R, {M, N, O, P, Q, R});
+
+#[cfg(tensor6d)]
+pub use tensor6d::*;
+
+#[cfg(tensor6d)]
+mod tensor6d {
+    impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 0, M, {M, N, O, P, Q, R});
+    impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 1, N, {M, N, O, P, Q, R});
+    impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 2, O, {M, N, O, P, Q, R});
+    impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 3, P, {M, N, O, P, Q, R});
+    impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 4, Q, {M, N, O, P, Q, R});
+    impl_has_axis!([[[[[[f32; R]; Q]; P]; O]; N]; M], 5, R, {M, N, O, P, Q, R});
+}
 
 impl<T: CountElements> HasAxes<AllAxes> for T {
     const SIZE: usize = T::NUM_ELEMENTS;
@@ -162,6 +170,7 @@ where
         * <T as HasAxes<Axis<M>>>::SIZE;
 }
 
+#[cfg(tensor6d)]
 impl<
         T,
         const I: isize,
@@ -221,6 +230,7 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: us
     type LastAxis = Axis<4>;
     const SIZE: usize = Q;
 }
+#[cfg(tensor6d)]
 impl<
         const M: usize,
         const N: usize,

@@ -18,7 +18,7 @@
 //! this looping logic, but only differ in what they do with the indices.
 
 use super::Cpu;
-use crate::arrays::{Axes2, Axes3, Axes4};
+use crate::arrays::*;
 
 /// Permutes axes of `A` resulting in `B`.
 pub trait DevicePermute<A, B, Axes> {
@@ -28,7 +28,7 @@ pub trait DevicePermute<A, B, Axes> {
 
 /// Expands to the const generic for a specific axis. This is purely convention only.
 #[rustfmt::skip]
-macro_rules! axis { (0) => { M }; (1) => { N }; (2) => { O }; (3) => { P }; }
+macro_rules! axis { (0) => { M }; (1) => { N }; (2) => { O }; (3) => { P }; (4) => { Q }; (5) => { R }; }
 
 /// Expands to a array type using the axes passed in.
 /// E.g. `array!(2, 0, 1)` expands to `[[[f32; N]; M]; O]`
@@ -38,6 +38,8 @@ macro_rules! array {
     ($Ax0:tt, $Ax1:tt) => { [[f32; axis!($Ax1)]; axis!($Ax0)] };
     ($Ax0:tt, $Ax1:tt, $Ax2:tt) => { [[[f32; axis!($Ax2)]; axis!($Ax1)]; axis!($Ax0)] };
     ($Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt) => { [[[[f32; axis!($Ax3)]; axis!($Ax2)]; axis!($Ax1)]; axis!($Ax0)] };
+    ($Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt, $Ax4:tt) => { [[[[[f32; axis!($Ax4)]; axis!($Ax3)]; axis!($Ax2)]; axis!($Ax1)]; axis!($Ax0)] };
+    ($Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt, $Ax4:tt, $Ax5:tt) => { [[[[[[f32; axis!($Ax5)]; axis!($Ax4)]; axis!($Ax3)]; axis!($Ax2)]; axis!($Ax1)]; axis!($Ax0)] };
 }
 
 /// Concrete implementations for the permute and inverse permute functions.
@@ -95,6 +97,46 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize>
     }
 }
     };
+    ($Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt, $Ax4:tt) => {
+impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize>
+    DevicePermute<array!(0,1,2,3,4), array!($Ax0,$Ax1,$Ax2,$Ax3,$Ax4), Axes5<$Ax0,$Ax1,$Ax2,$Ax3,$Ax4>> for Cpu
+{
+    fn permute(a: &array!(0, 1, 2, 3, 4), b: &mut array!($Ax0, $Ax1, $Ax2, $Ax3, $Ax4)) {
+        permuted_loop5::<M, N, O, P, Q, $Ax0, $Ax1, $Ax2, $Ax3, $Ax4, _>(
+            &mut |[m, n, o, p, q], [c, d, e, f, g]| {
+                b[c][d][e][f][g] = a[m][n][o][p][q];
+            },
+        );
+    }
+    fn inverse_permute(a: &mut array!(0, 1, 2, 3, 4), b: &array!($Ax0, $Ax1, $Ax2, $Ax3, $Ax4)) {
+        permuted_loop5::<M, N, O, P, Q, $Ax0, $Ax1, $Ax2, $Ax3, $Ax4, _>(
+            &mut |[m, n, o, p, q], [c, d, e, f, g]| {
+                a[m][n][o][p][q] = b[c][d][e][f][g];
+            },
+        );
+    }
+}
+    };
+    ($Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt, $Ax4:tt, $Ax5:tt) => {
+impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize, const R: usize>
+    DevicePermute<array!(0,1,2,3,4,5), array!($Ax0,$Ax1,$Ax2,$Ax3,$Ax4,$Ax5), Axes6<$Ax0,$Ax1,$Ax2,$Ax3,$Ax4,$Ax5>> for Cpu
+{
+    fn permute(a: &array!(0, 1, 2, 3, 4, 5), b: &mut array!($Ax0, $Ax1, $Ax2, $Ax3, $Ax4, $Ax5)) {
+        permuted_loop6::<M, N, O, P, Q, R, $Ax0, $Ax1, $Ax2, $Ax3, $Ax4, $Ax5, _>(
+            &mut |[m, n, o, p, q, r], [c, d, e, f, g, h]| {
+                b[c][d][e][f][g][h] = a[m][n][o][p][q][r];
+            },
+        );
+    }
+    fn inverse_permute(a: &mut array!(0, 1, 2, 3, 4, 5), b: &array!($Ax0, $Ax1, $Ax2, $Ax3, $Ax4, $Ax5)) {
+        permuted_loop6::<M, N, O, P, Q, R, $Ax0, $Ax1, $Ax2, $Ax3, $Ax4, $Ax5, _>(
+            &mut |[m, n, o, p, q, r], [c, d, e, f, g, h]| {
+                a[m][n][o][p][q][r] = b[c][d][e][f][g][h];
+            },
+        );
+    }
+}
+    };
 }
 
 /// Index into `indices` using the const `I`. If `I` < 0 then use `N - I`.
@@ -121,7 +163,7 @@ where
     }
 }
 
-/// Apply a function `f` to two sets of 2d indices.
+/// Apply a function `f` to two sets of 3d indices.
 fn permuted_loop3<
     const M: usize,
     const N: usize,
@@ -146,7 +188,7 @@ fn permuted_loop3<
     }
 }
 
-/// Apply a function `f` to two sets of 2d indices.
+/// Apply a function `f` to two sets of 4d indices.
 fn permuted_loop4<
     const M: usize,
     const N: usize,
@@ -176,7 +218,83 @@ fn permuted_loop4<
     }
 }
 
-/// Expand out all the possible permutations for 2-4d
+/// Apply a function `f` to two sets of 5d indices.
+fn permuted_loop5<
+    const M: usize,
+    const N: usize,
+    const O: usize,
+    const P: usize,
+    const Q: usize,
+    const A: isize,
+    const B: isize,
+    const C: isize,
+    const D: isize,
+    const E: isize,
+    F: FnMut([usize; 5], [usize; 5]),
+>(
+    f: &mut F,
+) {
+    for m in 0..M {
+        for n in 0..N {
+            for o in 0..O {
+                for p in 0..P {
+                    for q in 0..Q {
+                        let indices = [m, n, o, p, q];
+                        let a = const_idx::<A, 5>(&indices);
+                        let b = const_idx::<B, 5>(&indices);
+                        let c = const_idx::<C, 5>(&indices);
+                        let d = const_idx::<D, 5>(&indices);
+                        let e = const_idx::<E, 5>(&indices);
+                        f(indices, [a, b, c, d, e]);
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[cfg(tensor6d)]
+/// Apply a function `f` to two sets of 6d indices.
+fn permuted_loop6<
+    const M: usize,
+    const N: usize,
+    const O: usize,
+    const P: usize,
+    const Q: usize,
+    const R: usize,
+    const A: isize,
+    const B: isize,
+    const C: isize,
+    const D: isize,
+    const E: isize,
+    const F: isize,
+    Fn: FnMut([usize; 6], [usize; 6]),
+>(
+    func: &mut Fn,
+) {
+    for m in 0..M {
+        for n in 0..N {
+            for o in 0..O {
+                for p in 0..P {
+                    for q in 0..Q {
+                        for r in 0..R {
+                            let indices = [m, n, o, p, q, r];
+                            let a = const_idx::<A, 6>(&indices);
+                            let b = const_idx::<B, 6>(&indices);
+                            let c = const_idx::<C, 6>(&indices);
+                            let d = const_idx::<D, 6>(&indices);
+                            let e = const_idx::<E, 6>(&indices);
+                            let f = const_idx::<F, 6>(&indices);
+                            func(indices, [a, b, c, d, e, f]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Expand out all the possible permutations for 2-6d
 macro_rules! permutations {
     ([$Ax0:tt, $Ax1:tt]) => {
         impl_permute!($Ax0, $Ax1);
@@ -208,11 +326,68 @@ macro_rules! permutations {
         impl_permute!($Ax0, $Ax1, $Ax2, $Ax3);
         impl_permute!($Ax0, $Ax1, $Ax3, $Ax2);
     };
+
+    ([$Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt, $Ax4:tt]) => {
+        permutations!($Ax0, [$Ax1, $Ax2, $Ax3, $Ax4]);
+        permutations!($Ax1, [$Ax0, $Ax2, $Ax3, $Ax4]);
+        permutations!($Ax2, [$Ax0, $Ax1, $Ax3, $Ax4]);
+        permutations!($Ax3, [$Ax0, $Ax1, $Ax2, $Ax4]);
+        permutations!($Ax4, [$Ax0, $Ax1, $Ax2, $Ax3]);
+    };
+    ($Ax0:tt, [$Ax1:tt, $Ax2:tt, $Ax3:tt, $Ax4:tt]) => {
+        permutations!($Ax0, $Ax1, [$Ax2, $Ax3, $Ax4]);
+        permutations!($Ax0, $Ax2, [$Ax1, $Ax3, $Ax4]);
+        permutations!($Ax0, $Ax3, [$Ax1, $Ax2, $Ax4]);
+        permutations!($Ax0, $Ax4, [$Ax1, $Ax2, $Ax3]);
+    };
+    ($Ax0:tt, $Ax1:tt, [$Ax2:tt, $Ax3:tt, $Ax4:tt]) => {
+        permutations!($Ax0, $Ax1, $Ax2, [$Ax3, $Ax4]);
+        permutations!($Ax0, $Ax1, $Ax3, [$Ax2, $Ax4]);
+        permutations!($Ax0, $Ax1, $Ax4, [$Ax2, $Ax3]);
+    };
+    ($Ax0:tt, $Ax1:tt, $Ax2:tt, [$Ax3:tt, $Ax4:tt]) => {
+        impl_permute!($Ax0, $Ax1, $Ax2, $Ax3, $Ax4);
+        impl_permute!($Ax0, $Ax1, $Ax2, $Ax4, $Ax3);
+    };
+
+    ([$Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt, $Ax4:tt, $Ax5:tt]) => {
+        permutations!($Ax0, [$Ax1, $Ax2, $Ax3, $Ax4, $Ax5]);
+        permutations!($Ax1, [$Ax0, $Ax2, $Ax3, $Ax4, $Ax5]);
+        permutations!($Ax2, [$Ax0, $Ax1, $Ax3, $Ax4, $Ax5]);
+        permutations!($Ax3, [$Ax0, $Ax1, $Ax2, $Ax4, $Ax5]);
+        permutations!($Ax4, [$Ax0, $Ax1, $Ax2, $Ax3, $Ax5]);
+        permutations!($Ax5, [$Ax0, $Ax1, $Ax2, $Ax3, $Ax4]);
+    };
+    ($Ax0:tt, [$Ax1:tt, $Ax2:tt, $Ax3:tt, $Ax4:tt, $Ax5:tt]) => {
+        permutations!($Ax0, $Ax1, [$Ax2, $Ax3, $Ax4, $Ax5]);
+        permutations!($Ax0, $Ax2, [$Ax1, $Ax3, $Ax4, $Ax5]);
+        permutations!($Ax0, $Ax3, [$Ax1, $Ax2, $Ax4, $Ax5]);
+        permutations!($Ax0, $Ax4, [$Ax1, $Ax2, $Ax3, $Ax5]);
+        permutations!($Ax0, $Ax5, [$Ax1, $Ax2, $Ax3, $Ax4]);
+    };
+    ($Ax0:tt, $Ax1:tt, [$Ax2:tt, $Ax3:tt, $Ax4:tt, $Ax5:tt]) => {
+        permutations!($Ax0, $Ax1, $Ax2, [$Ax3, $Ax4, $Ax5]);
+        permutations!($Ax0, $Ax1, $Ax3, [$Ax2, $Ax4, $Ax5]);
+        permutations!($Ax0, $Ax1, $Ax4, [$Ax2, $Ax3, $Ax5]);
+        permutations!($Ax0, $Ax1, $Ax5, [$Ax2, $Ax3, $Ax4]);
+    };
+    ($Ax0:tt, $Ax1:tt, $Ax2:tt, [$Ax3:tt, $Ax4:tt, $Ax5:tt]) => {
+        permutations!($Ax0, $Ax1, $Ax2, $Ax3, [$Ax4, $Ax5]);
+        permutations!($Ax0, $Ax1, $Ax2, $Ax4, [$Ax3, $Ax5]);
+        permutations!($Ax0, $Ax1, $Ax2, $Ax5, [$Ax3, $Ax4]);
+    };
+    ($Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt, [$Ax4:tt, $Ax5:tt]) => {
+        impl_permute!($Ax0, $Ax1, $Ax2, $Ax3, $Ax4, $Ax5);
+        impl_permute!($Ax0, $Ax1, $Ax2, $Ax3, $Ax5, $Ax4);
+    };
 }
 
 permutations!([0, 1]);
 permutations!([0, 1, 2]);
 permutations!([0, 1, 2, 3]);
+permutations!([0, 1, 2, 3, 4]);
+#[cfg(tensor6d)]
+permutations!([0, 1, 2, 3, 4, 5]);
 
 #[cfg(test)]
 mod tests {
@@ -256,6 +431,39 @@ mod tests {
 
         let mut c = [[[[0.0; 9]; 7]; 5]; 3];
         <Cpu as DevicePermute<_, _, Axes4<2, 3, 1, 0>>>::inverse_permute(&mut c, &b);
+
+        assert_eq!(a, c);
+    }
+
+    #[test]
+    fn test_5d_permute() {
+        let mut rng = thread_rng();
+        let mut a = [[[[[0.0; 11]; 9]; 7]; 5]; 3];
+        Cpu::fill(&mut a, &mut |v| *v = rng.gen());
+
+        let mut b = [[[[[0.0; 3]; 5]; 7]; 9]; 11];
+        <Cpu as DevicePermute<_, _, Axes5<4, 3, 2, 1, 0>>>::permute(&a, &mut b);
+        assert_ne!(b, [[[[[0.0; 3]; 5]; 7]; 9]; 11]);
+
+        let mut c = [[[[[0.0; 11]; 9]; 7]; 5]; 3];
+        <Cpu as DevicePermute<_, _, Axes5<4, 3, 2, 1, 0>>>::inverse_permute(&mut c, &b);
+
+        assert_eq!(a, c);
+    }
+
+    #[cfg(tensor6d)]
+    #[test]
+    fn test_6d_permute() {
+        let mut rng = thread_rng();
+        let mut a = [[[[[[0.0; 2]; 11]; 9]; 7]; 5]; 3];
+        Cpu::fill(&mut a, &mut |v| *v = rng.gen());
+
+        let mut b = [[[[[[0.0; 3]; 5]; 7]; 9]; 11]; 2];
+        <Cpu as DevicePermute<_, _, Axes6<5, 4, 3, 2, 1, 0>>>::permute(&a, &mut b);
+        assert_ne!(b, [[[[[[0.0; 3]; 5]; 7]; 9]; 11]; 2]);
+
+        let mut c = [[[[[[0.0; 2]; 11]; 9]; 7]; 5]; 3];
+        <Cpu as DevicePermute<_, _, Axes6<5, 4, 3, 2, 1, 0>>>::inverse_permute(&mut c, &b);
 
         assert_eq!(a, c);
     }

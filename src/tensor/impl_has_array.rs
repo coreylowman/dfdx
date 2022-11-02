@@ -24,6 +24,7 @@ tensor_impl!(Tensor2D, [M, N], [[f32; N]; M]);
 tensor_impl!(Tensor3D, [M, N, O], [[[f32; O]; N]; M]);
 tensor_impl!(Tensor4D, [M, N, O, P], [[[[f32; P]; O]; N]; M]);
 tensor_impl!(Tensor5D, [M, N, O, P, Q], [[[[[f32; Q]; P]; O]; N]; M]);
+#[cfg(tensor6d)]
 tensor_impl!(
     Tensor6D,
     [M, N, O, P, Q, R],

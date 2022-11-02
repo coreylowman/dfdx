@@ -126,3 +126,72 @@ pub(super) fn accum4d<A, L, R, const M: usize, const N: usize, const O: usize, c
         }
     }
 }
+
+#[inline(always)]
+pub(super) fn accum5d<
+    A,
+    L,
+    R,
+    const M: usize,
+    const N: usize,
+    const O: usize,
+    const P: usize,
+    const Q: usize,
+>(
+    l: &mut L,
+    r: &R,
+) where
+    L: IndexMut<Index = [usize; 5]>,
+    R: IndexRef<Index = [usize; 5], Element = L::Element>,
+    A: Accumulator<L::Element>,
+{
+    for m in 0..M {
+        for n in 0..N {
+            for o in 0..O {
+                for p in 0..P {
+                    for q in 0..Q {
+                        A::accum(l.index_mut([m, n, o, p, q]), r.index_ref([m, n, o, p, q]));
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[cfg(tensor6d)]
+#[inline(always)]
+pub(super) fn accum6d<
+    A,
+    Lhs,
+    Rhs,
+    const M: usize,
+    const N: usize,
+    const O: usize,
+    const P: usize,
+    const Q: usize,
+    const R: usize,
+>(
+    lhs: &mut Lhs,
+    rhs: &Rhs,
+) where
+    Lhs: IndexMut<Index = [usize; 6]>,
+    Rhs: IndexRef<Index = [usize; 6], Element = Lhs::Element>,
+    A: Accumulator<Lhs::Element>,
+{
+    for m in 0..M {
+        for n in 0..N {
+            for o in 0..O {
+                for p in 0..P {
+                    for q in 0..Q {
+                        for r in 0..R {
+                            A::accum(
+                                lhs.index_mut([m, n, o, p, q, r]),
+                                rhs.index_ref([m, n, o, p, q, r]),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

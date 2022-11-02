@@ -36,6 +36,7 @@ libc = { version = "0.2", default-features = false, optional = true }
 default = ["std", "numpy"]
 std = ["no-std-compat/std", "rand/std", "rand_distr/std"]
 nightly = []
+tensor6d = []
 numpy = ["dep:zip", "std"]
 cblas = ["dep:cblas-sys", "dep:libc"]
 intel-mkl = ["cblas"]

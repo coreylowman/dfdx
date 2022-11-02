@@ -22,7 +22,7 @@ pub use accumulator::*;
 use super::allocate::AllocateZeros;
 use super::fill::FillElements;
 use super::Cpu;
-use crate::arrays::{AllAxes, Axes2, Axes3, Axes4, Axis, CountElements};
+use crate::arrays::*;
 use indexing::{BroadcastMut, BroadcastRef};
 use std::boxed::Box;
 
@@ -131,6 +131,130 @@ impl_reduce!([[[[f32; P]; O]; N]; M], Axes3<1, 2, 3>, [f32; M], accum4d, {M, N, 
 
 // 4d -> 0d
 impl_reduce!([[[[f32; P]; O]; N]; M], Axes4<0, 1, 2, 3>, f32, accum4d, {M, N, O, P});
+
+// 5d -> 4d
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axis<0>, [[[[f32; Q]; P]; O]; N], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axis<1>, [[[[f32; Q]; P]; O]; M], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axis<2>, [[[[f32; Q]; P]; N]; M], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axis<3>, [[[[f32; Q]; O]; N]; M], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axis<4>, [[[[f32; P]; O]; N]; M], accum5d, {M, N, O, P, Q});
+
+// 5d -> 3d
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes2<0, 1>, [[[f32; Q]; P]; O], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes2<0, 2>, [[[f32; Q]; P]; N], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes2<0, 3>, [[[f32; Q]; O]; N], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes2<0, 4>, [[[f32; P]; O]; N], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes2<1, 2>, [[[f32; Q]; P]; M], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes2<1, 3>, [[[f32; Q]; O]; M], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes2<1, 4>, [[[f32; P]; O]; M], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes2<2, 3>, [[[f32; Q]; N]; M], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes2<2, 4>, [[[f32; P]; N]; M], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes2<3, 4>, [[[f32; O]; N]; M], accum5d, {M, N, O, P, Q});
+
+// 5d -> 2d
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes3<0, 1, 2>, [[f32; Q]; P], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes3<0, 1, 3>, [[f32; Q]; O], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes3<0, 1, 4>, [[f32; P]; O], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes3<0, 2, 3>, [[f32; Q]; N], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes3<0, 2, 4>, [[f32; P]; N], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes3<0, 3, 4>, [[f32; O]; N], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes3<1, 2, 3>, [[f32; Q]; M], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes3<1, 2, 4>, [[f32; P]; M], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes3<1, 3, 4>, [[f32; O]; M], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes3<2, 3, 4>, [[f32; N]; M], accum5d, {M, N, O, P, Q});
+
+// 5d -> 1d
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes4<0, 1, 2, 3>, [f32; Q], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes4<0, 1, 2, 4>, [f32; P], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes4<0, 1, 3, 4>, [f32; O], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes4<0, 2, 3, 4>, [f32; N], accum5d, {M, N, O, P, Q});
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes4<1, 2, 3, 4>, [f32; M], accum5d, {M, N, O, P, Q});
+
+// 5d -> 0d
+impl_reduce!([[[[[f32; Q]; P]; O]; N]; M], Axes5<0, 1, 2, 3, 4>, f32, accum5d, {M, N, O, P, Q});
+
+#[cfg(tensor6d)]
+pub use impl_tensor6d::*;
+
+#[cfg(tensor6d)]
+mod impl_tensor6d {
+    use crate::arrays::*;
+
+    // 6d -> 5d
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axis<0>, [[[[[f32; R]; Q]; P]; O]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axis<1>, [[[[[f32; R]; Q]; P]; O]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axis<2>, [[[[[f32; R]; Q]; P]; N]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axis<3>, [[[[[f32; R]; Q]; O]; N]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axis<4>, [[[[[f32; R]; P]; O]; N]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axis<5>, [[[[[f32; Q]; P]; O]; N]; M], accum6d, {M, N, O, P, Q, R});
+
+    // 6d -> 4d
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<0, 1>, [[[[f32; R]; Q]; P]; O], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<0, 2>, [[[[f32; R]; Q]; P]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<0, 3>, [[[[f32; R]; Q]; O]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<0, 4>, [[[[f32; R]; P]; O]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<0, 5>, [[[[f32; Q]; P]; O]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<1, 2>, [[[[f32; R]; Q]; P]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<1, 3>, [[[[f32; R]; Q]; O]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<1, 4>, [[[[f32; R]; P]; O]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<1, 5>, [[[[f32; Q]; P]; O]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<2, 3>, [[[[f32; R]; Q]; N]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<2, 4>, [[[[f32; R]; P]; N]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<2, 5>, [[[[f32; Q]; P]; N]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<3, 4>, [[[[f32; R]; O]; N]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<3, 5>, [[[[f32; Q]; O]; N]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes2<4, 5>, [[[[f32; P]; O]; N]; M], accum6d, {M, N, O, P, Q, R});
+
+    // 6d -> 3d
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<0, 1, 2>, [[[f32; R]; Q]; P], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<0, 1, 3>, [[[f32; R]; Q]; O], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<0, 1, 4>, [[[f32; R]; P]; O], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<0, 1, 5>, [[[f32; Q]; P]; O], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<0, 2, 3>, [[[f32; R]; Q]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<0, 2, 4>, [[[f32; R]; P]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<0, 2, 5>, [[[f32; Q]; P]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<0, 3, 4>, [[[f32; R]; O]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<0, 3, 5>, [[[f32; Q]; O]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<0, 4, 5>, [[[f32; P]; O]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<1, 2, 3>, [[[f32; R]; Q]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<1, 2, 4>, [[[f32; R]; P]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<1, 2, 5>, [[[f32; Q]; P]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<1, 3, 4>, [[[f32; R]; O]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<1, 3, 5>, [[[f32; Q]; O]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<1, 4, 5>, [[[f32; P]; O]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<2, 3, 4>, [[[f32; R]; N]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<2, 3, 5>, [[[f32; Q]; N]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<2, 4, 5>, [[[f32; P]; N]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes3<3, 4, 5>, [[[f32; O]; N]; M], accum6d, {M, N, O, P, Q, R});
+
+    // 6d -> 2d
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<0, 1, 2, 3>, [[f32; R]; Q], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<0, 1, 2, 4>, [[f32; R]; P], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<0, 1, 2, 5>, [[f32; Q]; P], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<0, 1, 3, 4>, [[f32; R]; O], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<0, 1, 3, 5>, [[f32; Q]; O], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<0, 1, 4, 5>, [[f32; P]; O], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<0, 2, 3, 4>, [[f32; R]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<0, 2, 3, 5>, [[f32; Q]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<0, 2, 4, 5>, [[f32; P]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<0, 3, 4, 5>, [[f32; O]; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<1, 2, 3, 4>, [[f32; R]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<1, 2, 3, 5>, [[f32; Q]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<1, 2, 4, 5>, [[f32; P]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<1, 3, 4, 5>, [[f32; O]; M], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes4<2, 3, 4, 5>, [[f32; N]; M], accum6d, {M, N, O, P, Q, R});
+
+    // 6d -> 1d
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes5<0, 1, 2, 3, 4>, [f32; R], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes5<0, 1, 2, 3, 5>, [f32; Q], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes5<0, 1, 2, 4, 5>, [f32; P], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes5<0, 1, 3, 4, 5>, [f32; O], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes5<0, 2, 3, 4, 5>, [f32; N], accum6d, {M, N, O, P, Q, R});
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes5<1, 2, 3, 4, 5>, [f32; M], accum6d, {M, N, O, P, Q, R});
+
+    // 6d -> 0d
+    impl_reduce!([[[[[[f32; R]; Q]; P]; O]; N]; M], Axes6<0, 1, 2, 3, 4, 5>, f32, accum6d, {M, N, O, P, Q, R});
+}
 
 impl DeviceReduce<f32, AllAxes> for Cpu {
     type Reduced = f32;

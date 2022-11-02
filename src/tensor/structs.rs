@@ -65,6 +65,7 @@ pub struct Tensor5D<
     pub(crate) tape: Tape,
 }
 
+#[cfg(tensor6d)]
 /// A 6d [super::Tensor] with shape (M, N, O, P, Q, R). Backed by data `[[[[[[f32; R]; Q]; P]; O]; N]; M]`.
 #[derive(Debug)]
 #[allow(clippy::type_complexity)]
