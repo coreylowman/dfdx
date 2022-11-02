@@ -11,7 +11,7 @@ macro_rules! tensor_impl {
     ($typename:ident, [$($Vs:tt),*]) => {
 impl<$(const $Vs: usize, )* H> Randomize<f32> for $typename<$($Vs, )* H> {
     /// Fills `self.mut_data()` with data from the distribution `D`
-    fn randomize<R: Rng, D: Distribution<f32>>(&mut self, rng: &mut R, dist: &D) {
+    fn randomize<RNG: Rng, D: Distribution<f32>>(&mut self, rng: &mut RNG, dist: &D) {
         <Self as HasDevice>::Device::fill(self.mut_data(), &mut |v| *v = dist.sample(rng));
     }
 }
@@ -23,6 +23,8 @@ tensor_impl!(Tensor1D, [M]);
 tensor_impl!(Tensor2D, [M, N]);
 tensor_impl!(Tensor3D, [M, N, O]);
 tensor_impl!(Tensor4D, [M, N, O, P]);
+tensor_impl!(Tensor5D, [M, N, O, P, Q]);
+tensor_impl!(Tensor6D, [M, N, O, P, Q, R]);
 
 #[cfg(test)]
 mod tests {

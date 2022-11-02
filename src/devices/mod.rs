@@ -76,6 +76,20 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize> Device<[[[[
     for Cpu
 {
 }
+impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize>
+    Device<[[[[[f32; Q]; P]; O]; N]; M]> for Cpu
+{
+}
+impl<
+        const M: usize,
+        const N: usize,
+        const O: usize,
+        const P: usize,
+        const Q: usize,
+        const R: usize,
+    > Device<[[[[[[f32; R]; Q]; P]; O]; N]; M]> for Cpu
+{
+}
 
 /// A [crate::arrays::HasArrayType] that has a [Device] for its [crate::arrays::HasArrayType::Array]
 pub trait HasDevice: crate::arrays::HasArrayType {

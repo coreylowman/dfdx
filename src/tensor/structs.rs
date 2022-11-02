@@ -48,3 +48,36 @@ pub struct Tensor4D<const M: usize, const N: usize, const O: usize, const P: usi
     pub(crate) data: std::sync::Arc<[[[[f32; P]; O]; N]; M]>,
     pub(crate) tape: Tape,
 }
+
+/// A 5d [super::Tensor] with shape (M, N, O, P, Q). Backed by data `[[[[[f32; Q]; P]; O]; N]; M]`.
+#[derive(Debug)]
+#[allow(clippy::type_complexity)]
+pub struct Tensor5D<
+    const M: usize,
+    const N: usize,
+    const O: usize,
+    const P: usize,
+    const Q: usize,
+    Tape = NoneTape,
+> {
+    pub(crate) id: UniqueId,
+    pub(crate) data: std::sync::Arc<[[[[[f32; Q]; P]; O]; N]; M]>,
+    pub(crate) tape: Tape,
+}
+
+/// A 6d [super::Tensor] with shape (M, N, O, P, Q, R). Backed by data `[[[[[[f32; R]; Q]; P]; O]; N]; M]`.
+#[derive(Debug)]
+#[allow(clippy::type_complexity)]
+pub struct Tensor6D<
+    const M: usize,
+    const N: usize,
+    const O: usize,
+    const P: usize,
+    const Q: usize,
+    const R: usize,
+    Tape = NoneTape,
+> {
+    pub(crate) id: UniqueId,
+    pub(crate) data: std::sync::Arc<[[[[[[f32; R]; Q]; P]; O]; N]; M]>,
+    pub(crate) tape: Tape,
+}
