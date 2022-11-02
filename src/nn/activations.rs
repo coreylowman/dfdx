@@ -39,6 +39,7 @@ macro_rules! activation_impls {
 }
 
 activation_impls!(ReLU, relu, #[doc="Unit struct that impls [Module] as calling [relu()] on `input`."]);
+activation_impls!(LeakyReLU, leakyrelu, #[doc="Unit struct that impls [Module] as calling [leakyrelu()] on `input`."]);
 activation_impls!(Softplus, softplus, #[doc="Unit struct that impls [Module] as calling [softplus()] on `input`."]);
 activation_impls!(Sin, sin, #[doc="Unit struct that impls [Module] as calling [sin()] on `input`."]);
 activation_impls!(Cos, cos, #[doc="Unit struct that impls [Module] as calling [cos()] on `input`."]);
@@ -93,6 +94,22 @@ mod tests {
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = ReLU.forward_mut(t.clone());
         let r2 = relu(t);
+        assert_eq!(r1.data(), r2.data());
+    }
+
+    #[test]
+    fn test_leakyrelu() {
+        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let r1 = LeakyReLU.forward_mut(t.clone());
+        let r2 = leakyrelu(t);
+        assert_eq!(r1.data(), r2.data());
+    }
+
+    #[test]
+    fn test_softplus() {
+        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let r1 = Softplus.forward_mut(t.clone());
+        let r2 = softplus(t);
         assert_eq!(r1.data(), r2.data());
     }
 
