@@ -35,6 +35,27 @@ pub fn relu<T: Tensor<Dtype = f32>>(t: T) -> T {
     map_df_uses_fx(t, |x| x.max(0.0), |fx| if fx > &0.0 { 1.0 } else { 0.0 })
 }
 
+/// [Softplus](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)#Softplus). `ln(1 + e^t)`
+///
+/// The derivative is the [Logistic](https://en.wikipedia.org/wiki/Logistic_function) function. `1 / (1 + e^-t)`
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
+///
+/// // use function version
+/// let r = softplus(t.clone());
+///
+/// // or the tensor method!
+/// let r2 = t.softplus();
+/// ```
+pub fn softplus<T: Tensor<Dtype = f32>>(t: T) -> T {
+    map_df_uses_fx(t,
+         |x| (1.0 + x.exp().ln()), 
+         |fx| 1.0 / (1.0 + (-fx).exp()))
+}
+
 /// `t^2`
 ///
 /// The derivative is `2 * t`.

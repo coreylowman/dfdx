@@ -39,6 +39,7 @@ macro_rules! activation_impls {
 }
 
 activation_impls!(ReLU, relu, #[doc="Unit struct that impls [Module] as calling [relu()] on `input`."]);
+activation_impls!(Softplus, softplus, #[doc="Unit struct that impls [Module] as calling [softplus()] on `input`."]);
 activation_impls!(Sin, sin, #[doc="Unit struct that impls [Module] as calling [sin()] on `input`."]);
 activation_impls!(Cos, cos, #[doc="Unit struct that impls [Module] as calling [cos()] on `input`."]);
 activation_impls!(Ln, ln, #[doc="Unit struct that impls [Module] as calling [ln()] on `input`."]);
