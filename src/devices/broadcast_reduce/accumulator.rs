@@ -128,7 +128,16 @@ pub(super) fn accum4d<A, L, R, const M: usize, const N: usize, const O: usize, c
 }
 
 #[inline(always)]
-pub(super) fn accum5d<A, L, R, const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize>(
+pub(super) fn accum5d<
+    A,
+    L,
+    R,
+    const M: usize,
+    const N: usize,
+    const O: usize,
+    const P: usize,
+    const Q: usize,
+>(
     l: &mut L,
     r: &R,
 ) where
@@ -151,7 +160,17 @@ pub(super) fn accum5d<A, L, R, const M: usize, const N: usize, const O: usize, c
 
 #[cfg(tensor6d)]
 #[inline(always)]
-pub(super) fn accum6d<A, Lhs, Rhs, const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize, const R: usize>(
+pub(super) fn accum6d<
+    A,
+    Lhs,
+    Rhs,
+    const M: usize,
+    const N: usize,
+    const O: usize,
+    const P: usize,
+    const Q: usize,
+    const R: usize,
+>(
     lhs: &mut Lhs,
     rhs: &Rhs,
 ) where
@@ -165,7 +184,10 @@ pub(super) fn accum6d<A, Lhs, Rhs, const M: usize, const N: usize, const O: usiz
                 for p in 0..P {
                     for q in 0..Q {
                         for r in 0..R {
-                            A::accum(lhs.index_mut([m, n, o, p, q, r]), rhs.index_ref([m, n, o, p, q, r]));
+                            A::accum(
+                                lhs.index_mut([m, n, o, p, q, r]),
+                                rhs.index_ref([m, n, o, p, q, r]),
+                            );
                         }
                     }
                 }

@@ -131,8 +131,14 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: us
     }
 }
 
-impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize, const R: usize> IndexRef
-    for [[[[[[f32; R]; Q]; P]; O]; N]; M]
+impl<
+        const M: usize,
+        const N: usize,
+        const O: usize,
+        const P: usize,
+        const Q: usize,
+        const R: usize,
+    > IndexRef for [[[[[[f32; R]; Q]; P]; O]; N]; M]
 {
     type Index = [usize; 6];
     type Element = f32;
@@ -142,8 +148,14 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: us
     }
 }
 
-impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize, const R: usize> IndexMut
-    for [[[[[[f32; R]; Q]; P]; O]; N]; M]
+impl<
+        const M: usize,
+        const N: usize,
+        const O: usize,
+        const P: usize,
+        const Q: usize,
+        const R: usize,
+    > IndexMut for [[[[[[f32; R]; Q]; P]; O]; N]; M]
 {
     type Index = [usize; 6];
     type Element = f32;
