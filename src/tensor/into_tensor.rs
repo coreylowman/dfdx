@@ -1,4 +1,4 @@
-use super::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D, TensorCreator};
+use super::*;
 use std::boxed::Box;
 
 /// Creates a tensor using the data based in. The return type is based
@@ -47,6 +47,7 @@ impl_into_tensor!([[f32; N]; M], Tensor2D<M, N>, {M, N});
 impl_into_tensor!([[[f32; O]; N]; M], Tensor3D<M, N, O>, {M, N, O});
 impl_into_tensor!([[[[f32; P]; O]; N]; M], Tensor4D<M, N, O, P>, {M, N, O, P});
 impl_into_tensor!([[[[[f32; Q]; P]; O]; N]; M], Tensor5D<M, N, O, P, Q>, {M, N, O, P, Q});
+#[cfg(tensor6d)]
 impl_into_tensor!([[[[[[f32; R]; Q]; P]; O]; N]; M], Tensor6D<M, N, O, P, Q, R>, {M, N, O, P, Q, R});
 
 #[cfg(test)]
