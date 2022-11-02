@@ -51,6 +51,7 @@ pub struct Tensor4D<const M: usize, const N: usize, const O: usize, const P: usi
 
 /// A 5d [super::Tensor] with shape (M, N, O, P, Q). Backed by data `[[[[[f32; Q]; P]; O]; N]; M]`.
 #[derive(Debug)]
+#[allow(clippy::type_complexity)]
 pub struct Tensor5D<
     const M: usize,
     const N: usize,
@@ -66,6 +67,7 @@ pub struct Tensor5D<
 
 /// A 6d [super::Tensor] with shape (M, N, O, P, Q, R). Backed by data `[[[[[[f32; R]; Q]; P]; O]; N]; M]`.
 #[derive(Debug)]
+#[allow(clippy::type_complexity)]
 pub struct Tensor6D<
     const M: usize,
     const N: usize,
