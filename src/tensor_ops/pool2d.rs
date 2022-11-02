@@ -76,7 +76,7 @@ impl<const B: usize, const C: usize, const H: usize, const W: usize, T: Tape>
             Cpu::pool_forward(x_i, r_i);
         }
         let (x, mut tape) = self.split_tape();
-        let r = result.phantom();
+        let r = result.clone();
         tape.add_backward_op(move |grads| {
             let (xg, rg) = grads.mut_and_ref(&x, &r);
             for ((x_i, rg_i), xg_i) in x.data().iter().zip(rg.iter()).zip(xg.iter_mut()) {

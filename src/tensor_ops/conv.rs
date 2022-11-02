@@ -21,9 +21,9 @@ impl<const C: usize, const H: usize, const W: usize, T: Tape> Tensor3D<C, H, W, 
 
         let f = filters.clone();
         let (x, mut tape) = self.split_tape();
-        let phf = filters.phantom();
-        let phb = bias.phantom();
-        let phr = result.phantom();
+        let phf = filters.clone();
+        let phb = bias.clone();
+        let phr = result.clone();
         tape.add_backward_op(move |grads| {
             let (fg, bg, ig, rg) = grads.muts_and_ref(&phf, &phb, &x, &phr);
             <Cpu as DeviceConv2D<S, P>>::conv_backward(x.data(), f.data(), rg, ig, fg, bg);
@@ -51,9 +51,9 @@ impl<const B: usize, const C: usize, const H: usize, const W: usize, T: Tape>
         let f = filters.clone();
 
         let (x, mut tape) = self.split_tape();
-        let phf = filters.phantom();
-        let phb = bias.phantom();
-        let phr = result.phantom();
+        let phf = filters.clone();
+        let phb = bias.clone();
+        let phr = result.clone();
         tape.add_backward_op(move |grads| {
             let (fg, bg, ig, r_grad) = grads.muts_and_ref(&phf, &phb, &x, &phr);
             let f = f.data();
