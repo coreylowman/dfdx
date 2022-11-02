@@ -109,6 +109,50 @@ impl<const M: usize, const N: usize, const O: usize, const P: usize> IndexMut
     }
 }
 
+impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize> IndexRef
+    for [[[[[f32; Q]; P]; O]; N]; M]
+{
+    type Index = [usize; 5];
+    type Element = f32;
+    #[inline(always)]
+    fn index_ref(&self, i: Self::Index) -> &Self::Element {
+        &self[i[0]][i[1]][i[2]][i[3]][i[4]]
+    }
+}
+
+impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize> IndexMut
+    for [[[[[f32; Q]; P]; O]; N]; M]
+{
+    type Index = [usize; 5];
+    type Element = f32;
+    #[inline(always)]
+    fn index_mut(&mut self, i: Self::Index) -> &mut Self::Element {
+        &mut self[i[0]][i[1]][i[2]][i[3]][i[4]]
+    }
+}
+
+impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize, const R: usize> IndexRef
+    for [[[[[[f32; R]; Q]; P]; O]; N]; M]
+{
+    type Index = [usize; 6];
+    type Element = f32;
+    #[inline(always)]
+    fn index_ref(&self, i: Self::Index) -> &Self::Element {
+        &self[i[0]][i[1]][i[2]][i[3]][i[4]][i[5]]
+    }
+}
+
+impl<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize, const R: usize> IndexMut
+    for [[[[[[f32; R]; Q]; P]; O]; N]; M]
+{
+    type Index = [usize; 6];
+    type Element = f32;
+    #[inline(always)]
+    fn index_mut(&mut self, i: Self::Index) -> &mut Self::Element {
+        &mut self[i[0]][i[1]][i[2]][i[3]][i[4]][i[5]]
+    }
+}
+
 macro_rules! impl_bcast {
     ($ArrTy:ty, [$($Idx:expr),*], $AxisTy:ty, $IdxTy:ty, {$($CVars:tt),*}) => {
         impl<'a, $(const $CVars: usize, )*> IndexRef for BroadcastRef<'a, $ArrTy, $AxisTy> {

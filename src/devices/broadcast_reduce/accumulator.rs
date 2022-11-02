@@ -126,3 +126,49 @@ pub(super) fn accum4d<A, L, R, const M: usize, const N: usize, const O: usize, c
         }
     }
 }
+
+#[inline(always)]
+pub(super) fn accum5d<A, L, R, const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize>(
+    l: &mut L,
+    r: &R,
+) where
+    L: IndexMut<Index = [usize; 5]>,
+    R: IndexRef<Index = [usize; 5], Element = L::Element>,
+    A: Accumulator<L::Element>,
+{
+    for m in 0..M {
+        for n in 0..N {
+            for o in 0..O {
+                for p in 0..P {
+                    for q in 0..Q {
+                        A::accum(l.index_mut([m, n, o, p, q]), r.index_ref([m, n, o, p, q]));
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[inline(always)]
+pub(super) fn accum5d<A, L, R, const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize, const R: usize>(
+    l: &mut L,
+    r: &R,
+) where
+    L: IndexMut<Index = [usize; 6]>,
+    R: IndexRef<Index = [usize; 6], Element = L::Element>,
+    A: Accumulator<L::Element>,
+{
+    for m in 0..M {
+        for n in 0..N {
+            for o in 0..O {
+                for p in 0..P {
+                    for q in 0..Q {
+                        for r in 0..R {
+                            A::accum(l.index_mut([m, n, o, p, q, r]), r.index_ref([m, n, o, p, q, r]));
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
