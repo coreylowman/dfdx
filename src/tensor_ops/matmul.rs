@@ -84,10 +84,16 @@ matmul_typing!(nt Tensor2D<M, K, L>, Tensor2D<K, N, R>, Tensor2D<M, N, L>, {M, K
 matmul_typing!(nt Tensor3D<B, M, K, L>, Tensor3D<B, K, N, R>, Tensor3D<B, M, N, L>, {B, M, K, N});
 matmul_typing!(nt Tensor3D<B, M, K, L>, Tensor2D<K, N, R>, Tensor3D<B, M, N, L>, {B, M, K, N});
 matmul_typing!(nt Tensor4D<B1, B2, M, K, L>, Tensor4D<B1, B2, K, N, R>, Tensor4D<B1, B2, M, N, L>, {B1, B2, M, K, N});
+matmul_typing!(nt Tensor5D<B1, B2, B3, M, K, L>, Tensor5D<B1, B2, B3, K, N, R>, Tensor5D<B1, B2, B3, M, N, L>, {B1, B2, B3, M, K, N});
+#[cfg(tensor6d)]
+matmul_typing!(nt Tensor6D<B1, B2, B3, B4, M, K, L>, Tensor6D<B1, B2, B3, B4, K, N, R>, Tensor6D<B1, B2, B3, B4, M, N, L>, {B1, B2, B3, B4, M, K, N});
 matmul_typing!(tr Tensor2D<M, K, L>, Tensor2D<N, K, R>, Tensor2D<M, N, L>, {M, K, N});
 matmul_typing!(tr Tensor3D<B, M, K, L>, Tensor3D<B, N, K, R>, Tensor3D<B, M, N, L>, {B, M, K, N});
 matmul_typing!(tr Tensor3D<B, M, K, L>, Tensor2D<N, K, R>, Tensor3D<B, M, N, L>, {B, M, K, N});
 matmul_typing!(tr Tensor4D<B1, B2, M, K, L>, Tensor4D<B1, B2, N, K, R>, Tensor4D<B1, B2, M, N, L>, {B1, B2, M, K, N});
+matmul_typing!(tr Tensor5D<B1, B2, B3, M, K, L>, Tensor5D<B1, B2, B3, N, K, R>, Tensor5D<B1, B2, B3, M, N, L>, {B1, B2, B3, M, K, N});
+#[cfg(tensor6d)]
+matmul_typing!(tr Tensor6D<B1, B2, B3, B4, M, K, L>, Tensor6D<B1, B2, B3, B4, N, K, R>, Tensor6D<B1, B2, B3, B4, M, N, L>, {B1, B2, B3, B4, M, K, N});
 
 /// Matrix multiplication with the transpose of `rhs`. Equivalent to `matmul(lhs, transpose(rhs))`.
 /// This supports the same variants as [matmul] (broadcasted, batched, etc).
@@ -239,6 +245,17 @@ mod tests {
         let _: Tensor4D<20, 10, 5, 2> = matmul(
             Tensor4D::<20, 10, 5, 3>::zeros(),
             Tensor4D::<20, 10, 3, 2>::zeros(),
+        );
+
+        let _: Tensor5D<20, 10, 5, 2, 2> = matmul(
+            Tensor5D::<20, 10, 5, 2, 3>::zeros(),
+            Tensor5D::<20, 10, 5, 3, 2>::zeros(),
+        );
+
+        #[cfg(tensor6d)]
+        let _: Tensor6D<20, 10, 5, 2, 2, 2> = matmul(
+            Tensor6D::<20, 10, 5, 2, 3, 2>::zeros(),
+            Tensor6D::<20, 10, 5, 3, 2, 3>::zeros(),
         );
     }
 

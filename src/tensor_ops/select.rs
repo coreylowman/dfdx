@@ -109,10 +109,47 @@ impl_select!(Axis<2>, SelectAx2, Tensor4D<M, N, O, P, H>, [[[usize; Z]; N]; M], 
 impl_select!(Axis<3>, SelectAx3, Tensor4D<M, N, O, P, H>, [[[usize; O]; N]; M], Tensor3D<M, N, O, H>, {M, N, O, P});
 impl_select!(Axis<3>, SelectAx3, Tensor4D<M, N, O, P, H>, [[[[usize; Z]; O]; N]; M], Tensor4D<M, N, O, Z, H>, {M, N, O, P, Z});
 
+// 5d
+impl_select!(Axis<0>, SelectAx0, Tensor5D<M, N, O, P, Q, H>, usize, Tensor4D<N, O, P, Q, H>, {M, N, O, P, Q});
+impl_select!(Axis<0>, SelectAx0, Tensor5D<M, N, O, P, Q, H>, [usize; Z], Tensor5D<Z, N, O, P, Q, H>, {M, N, O, P, Z, Q});
+impl_select!(Axis<1>, SelectAx1, Tensor5D<M, N, O, P, Q, H>, [usize; M], Tensor4D<M, O, P, Q, H>, {M, N, O, P, Q});
+impl_select!(Axis<1>, SelectAx1, Tensor5D<M, N, O, P, Q, H>, [[usize; Z]; M], Tensor5D<M, Z, O, P, Q, H>, {M, N, O, P, Z, Q});
+impl_select!(Axis<2>, SelectAx2, Tensor5D<M, N, O, P, Q, H>, [[usize; N]; M], Tensor4D<M, N, P, Q, H>, {M, N, O, P, Q});
+impl_select!(Axis<2>, SelectAx2, Tensor5D<M, N, O, P, Q, H>, [[[usize; Z]; N]; M], Tensor5D<M, N, Z, P, Q, H>, {M, N, O, P, Z, Q});
+impl_select!(Axis<3>, SelectAx3, Tensor5D<M, N, O, P, Q, H>, [[[usize; O]; N]; M], Tensor4D<M, N, O, Q, H>, {M, N, O, P, Q});
+impl_select!(Axis<3>, SelectAx3, Tensor5D<M, N, O, P, Q, H>, [[[[usize; Z]; O]; N]; M], Tensor5D<M, N, O, Z, Q, H>, {M, N, O, P, Z, Q});
+impl_select!(Axis<4>, SelectAx4, Tensor5D<M, N, O, P, Q, H>, [[[[usize; P]; O]; N]; M], Tensor4D<M, N, O, P, H>, {M, N, O, P, Q});
+impl_select!(Axis<4>, SelectAx4, Tensor5D<M, N, O, P, Q, H>, [[[[[usize; Z]; P]; O]; N]; M], Tensor5D<M, N, O, P, Z, H>, {M, N, O, P, Z, Q});
+
+#[cfg(tensor6d)]
+pub use tensor6d::*;
+
+#[cfg(tensor6d)]
+mod tensor6d {
+    use crate::prelude::*;
+
+    impl_select!(Axis<0>, SelectAx0, Tensor6D<M, N, O, P, Q, R, H>, usize, Tensor5D<N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+    impl_select!(Axis<0>, SelectAx0, Tensor6D<M, N, O, P, Q, R, H>, [usize; Z], Tensor6D<Z, N, O, P, R, Q, H>, {M, N, O, P, Z, Q, R});
+    impl_select!(Axis<1>, SelectAx1, Tensor6D<M, N, O, P, Q, R, H>, [usize; M], Tensor5D<M, O, P, Q, R, H>, {M, N, O, P, Q, R});
+    impl_select!(Axis<1>, SelectAx1, Tensor6D<M, N, O, P, Q, R, H>, [[usize; Z]; M], Tensor6D<M, Z, O, P, Q, R, H>, {M, N, O, P, Z, Q, R});
+    impl_select!(Axis<2>, SelectAx2, Tensor6D<M, N, O, P, Q, R, H>, [[usize; N]; M], Tensor5D<M, N, P, Q, R, H>, {M, N, O, P, Q, R});
+    impl_select!(Axis<2>, SelectAx2, Tensor6D<M, N, O, P, Q, R, H>, [[[usize; Z]; N]; M], Tensor6D<M, N, Z, P, Q, R, H>, {M, N, O, P, Z, Q, R});
+    impl_select!(Axis<3>, SelectAx3, Tensor6D<M, N, O, P, Q, R, H>, [[[usize; O]; N]; M], Tensor5D<M, N, O, Q, R, H>, {M, N, O, P, Q, R});
+    impl_select!(Axis<3>, SelectAx3, Tensor6D<M, N, O, P, Q, R, H>, [[[[usize; Z]; O]; N]; M], Tensor6D<M, N, O, Z, Q, R, H>, {M, N, O, P, Z, Q, R});
+    impl_select!(Axis<4>, SelectAx4, Tensor6D<M, N, O, P, Q, R, H>, [[[[usize; P]; O]; N]; M], Tensor5D<M, N, O, P, R, H>, {M, N, O, P, Q, R});
+    impl_select!(Axis<4>, SelectAx4, Tensor6D<M, N, O, P, Q, R, H>, [[[[[usize; Z]; P]; O]; N]; M], Tensor6D<M, N, O, P, Z, R, H>, {M, N, O, P, Z, Q, R});
+    impl_select!(Axis<5>, SelectAx5, Tensor6D<M, N, O, P, Q, R, H>, [[[[[usize; Q]; P]; O]; N]; M], Tensor5D<M, N, O, P, R, H>, {M, N, O, P, Q, R});
+    impl_select!(Axis<5>, SelectAx5, Tensor6D<M, N, O, P, Q, R, H>, [[[[[[usize; Z]; Q]; P]; O]; N]; M], Tensor6D<M, N, O, P, Z, R, H>, {M, N, O, P, Z, Q, R});
+}
+
 // batched select
 impl_select!(Axis<0>, BSelectAx1, Tensor1D<M, H>, [[usize; Z]; B], Tensor2D<B, Z, H>, {M, B, Z});
 impl_select!(Axis<0>, BSelectAx1, Tensor2D<M, N, H>, [[usize; Z]; B], Tensor3D<B, Z, N, H>, {M, N, B, Z});
 impl_select!(Axis<0>, BSelectAx1, Tensor3D<M, N, O, H>, [[usize; Z]; B], Tensor4D<B, Z, N, O, H>, {M, N, O, B, Z});
+impl_select!(Axis<0>, BSelectAx1, Tensor4D<M, N, O, P, H>, [[usize; Z]; B], Tensor5D<B, Z, N, O, P, H>, {M, N, O, P, B, Z});
+#[cfg(tensor6d)]
+impl_select!(Axis<0>, BSelectAx1, Tensor5D<M, N, O, P, Q, H>, [[usize; Z]; B], Tensor6D<B, Z, N, O, P, Q, H>, {M, N, O, P, Q, B, Z});
+
 
 pub(crate) fn select<T, I, R, Mode>(t: T, indices: &I) -> R
 where

@@ -31,6 +31,9 @@ macro_rules! impl_all_reshapes {
         tensor_impl!($src_ty, [$($SrcVs),*], Tensor2D, [M, N], $assert_lhs, (M * N));
         tensor_impl!($src_ty, [$($SrcVs),*], Tensor3D, [M, N, O], $assert_lhs, (M * N * O));
         tensor_impl!($src_ty, [$($SrcVs),*], Tensor4D, [M, N, O, P], $assert_lhs, (M * N * O * P));
+        tensor_impl!($src_ty, [$($SrcVs),*], Tensor5D, [M, N, O, P, Q], $assert_lhs, (M * N * O * P * Q));
+        #[cfg(tensor6d)]
+        tensor_impl!($src_ty, [$($SrcVs),*], Tensor6D, [M, N, O, P, Q, R], $assert_lhs, (M * N * O * P * Q * R));
     };
 }
 
@@ -39,6 +42,9 @@ impl_all_reshapes!(Tensor1D, [A], (A));
 impl_all_reshapes!(Tensor2D, [A, B], (A * B));
 impl_all_reshapes!(Tensor3D, [A, B, C], (A * B * C));
 impl_all_reshapes!(Tensor4D, [A, B, C, D], (A * B * C * D));
+impl_all_reshapes!(Tensor5D, [A, B, C, D, E], (A * B * C * D * E));
+#[cfg(tensor6d)]
+impl_all_reshapes!(Tensor6D, [A, B, C, D, E, F], (A * B * C * D * E * F));
 
 /// Reshapes `T` into `R`'s shape. This is unsafe because there are no compile
 /// time guaruntees that `T` and `R` have the same number of elements.
@@ -77,24 +83,56 @@ mod tests {
         let _: Tensor1D<16> = Tensor2D::<2, 8>::zeros().reshape();
         let _: Tensor1D<16> = Tensor3D::<2, 2, 4>::zeros().reshape();
         let _: Tensor1D<16> = Tensor4D::<2, 2, 2, 2>::zeros().reshape();
+        let _: Tensor1D<16> = Tensor5D::<2, 2, 2, 2, 1>::zeros().reshape();
+        #[cfg(tensor6d)]
+        let _: Tensor1D<16> = Tensor6D::<2, 2, 2, 2, 1, 1>::zeros().reshape();
 
         let _: Tensor2D<1, 1> = Tensor0D::zeros().reshape();
         let _: Tensor2D<2, 8> = Tensor1D::<16>::zeros().reshape();
         let _: Tensor2D<2, 8> = Tensor2D::<8, 2>::zeros().reshape();
         let _: Tensor2D<2, 8> = Tensor3D::<2, 2, 4>::zeros().reshape();
         let _: Tensor2D<2, 8> = Tensor4D::<2, 2, 2, 2>::zeros().reshape();
+        let _: Tensor2D<2, 8> = Tensor5D::<2, 2, 2, 2, 1>::zeros().reshape();
+        #[cfg(tensor6d)]
+        let _: Tensor2D<2, 8> = Tensor6D::<2, 2, 2, 2, 1, 1>::zeros().reshape();
 
         let _: Tensor3D<1, 1, 1> = Tensor0D::zeros().reshape();
         let _: Tensor3D<2, 2, 4> = Tensor1D::<16>::zeros().reshape();
         let _: Tensor3D<2, 2, 4> = Tensor2D::<2, 8>::zeros().reshape();
         let _: Tensor3D<2, 2, 4> = Tensor3D::<4, 2, 2>::zeros().reshape();
         let _: Tensor3D<2, 2, 4> = Tensor4D::<2, 2, 2, 2>::zeros().reshape();
+        let _: Tensor3D<2, 2, 4> = Tensor5D::<2, 2, 2, 2, 1>::zeros().reshape();
+        #[cfg(tensor6d)]
+        let _: Tensor3D<2, 2, 4> = Tensor6D::<2, 2, 2, 2, 1, 1>::zeros().reshape();
 
         let _: Tensor4D<1, 1, 1, 1> = Tensor0D::zeros().reshape();
         let _: Tensor4D<2, 2, 2, 2> = Tensor1D::<16>::zeros().reshape();
         let _: Tensor4D<2, 2, 2, 2> = Tensor2D::<2, 8>::zeros().reshape();
         let _: Tensor4D<2, 2, 2, 2> = Tensor3D::<4, 2, 2>::zeros().reshape();
         let _: Tensor4D<2, 2, 2, 2> = Tensor4D::<4, 1, 2, 2>::zeros().reshape();
+        let _: Tensor4D<2, 2, 2, 2> = Tensor5D::<4, 1, 2, 2, 1>::zeros().reshape();
+        #[cfg(tensor6d)]
+        let _: Tensor4D<2, 2, 2, 2> = Tensor6D::<4, 1, 2, 2, 1, 1>::zeros().reshape();
+
+        let _: Tensor5D<1, 1, 1, 1, 1> = Tensor0D::zeros().reshape();
+        let _: Tensor5D<2, 2, 2, 2, 2> = Tensor1D::<32>::zeros().reshape();
+        let _: Tensor5D<2, 2, 2, 2, 2> = Tensor2D::<2, 16>::zeros().reshape();
+        let _: Tensor5D<2, 2, 2, 2, 2> = Tensor3D::<4, 2, 4>::zeros().reshape();
+        let _: Tensor5D<2, 2, 2, 2, 2> = Tensor4D::<4, 1, 2, 4>::zeros().reshape();
+        let _: Tensor5D<2, 2, 2, 2, 2> = Tensor5D::<4, 1, 2, 2, 2>::zeros().reshape();
+        #[cfg(tensor6d)]
+        let _: Tensor5D<2, 2, 2, 2, 2> = Tensor6D::<4, 1, 2, 2, 2, 1>::zeros().reshape();
+
+        #[cfg(tensor6d)]
+        {
+            let _: Tensor6D<1, 1, 1, 1, 1, 1> = Tensor0D::zeros().reshape();
+            let _: Tensor6D<2, 2, 2, 2, 2, 2> = Tensor1D::<64>::zeros().reshape();
+            let _: Tensor6D<2, 2, 2, 2, 2, 2> = Tensor2D::<4, 16>::zeros().reshape();
+            let _: Tensor6D<2, 2, 2, 2, 2, 2> = Tensor3D::<8, 2, 4>::zeros().reshape();
+            let _: Tensor6D<2, 2, 2, 2, 2, 2> = Tensor4D::<8, 1, 2, 4>::zeros().reshape();
+            let _: Tensor6D<2, 2, 2, 2, 2, 2> = Tensor5D::<8, 1, 2, 2, 2>::zeros().reshape();
+            let _: Tensor6D<2, 2, 2, 2, 2, 2> = Tensor6D::<2, 4, 1, 2, 2, 2>::zeros().reshape();
+        }
     }
 
     #[test]

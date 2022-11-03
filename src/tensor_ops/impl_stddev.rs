@@ -73,6 +73,9 @@ impl_std_and_var!(Tensor1D, [M]);
 impl_std_and_var!(Tensor2D, [M, N]);
 impl_std_and_var!(Tensor3D, [M, N, O]);
 impl_std_and_var!(Tensor4D, [M, N, O, P]);
+impl_std_and_var!(Tensor5D, [M, N, O, P, Q]);
+#[cfg(tensor6d)]
+impl_std_and_var!(Tensor6D, [M, N, O, P, Q, R]);
 
 #[cfg(test)]
 mod tests {

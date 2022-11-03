@@ -55,6 +55,9 @@ min_axis_impl!(Tensor1D, [M]);
 min_axis_impl!(Tensor2D, [M, N]);
 min_axis_impl!(Tensor3D, [M, N, O]);
 min_axis_impl!(Tensor4D, [M, N, O, P]);
+min_axis_impl!(Tensor5D, [M, N, O, P, Q]);
+#[cfg(tensor6d)]
+min_axis_impl!(Tensor6D, [M, N, O, P, Q, R]);
 
 #[cfg(test)]
 mod tests {

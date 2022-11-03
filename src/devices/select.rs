@@ -45,6 +45,9 @@ pub(crate) type SelectAx0 = select_modes::Index;
 pub(crate) type SelectAx1 = select_modes::Recurse<SelectAx0>;
 pub(crate) type SelectAx2 = select_modes::Recurse<SelectAx1>;
 pub(crate) type SelectAx3 = select_modes::Recurse<SelectAx2>;
+pub(crate) type SelectAx4 = select_modes::Recurse<SelectAx3>;
+#[cfg(tensor6d)]
+pub(crate) type SelectAx5 = select_modes::Recurse<SelectAx4>;
 pub(crate) type BSelectAx1 = select_modes::Broadcast<SelectAx0>;
 
 /// Select values from `T` using indices `I`. `Mode` is used to disambiguate the impl.
