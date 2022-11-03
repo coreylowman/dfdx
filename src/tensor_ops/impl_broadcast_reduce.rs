@@ -139,7 +139,6 @@ impl_broadcast_reduce!(Tensor4D<M, N, P, Q, H>, Axis<2>, Tensor5D<M, N, O, P, Q,
 impl_broadcast_reduce!(Tensor4D<M, O, P, Q, H>, Axis<1>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
 impl_broadcast_reduce!(Tensor4D<N, O, P, Q, H>, Axis<0>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
 
-
 #[cfg(tensor6d)]
 pub use tensor6d::*;
 

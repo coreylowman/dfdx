@@ -150,7 +150,6 @@ impl_select!(Axis<0>, BSelectAx1, Tensor4D<M, N, O, P, H>, [[usize; Z]; B], Tens
 #[cfg(tensor6d)]
 impl_select!(Axis<0>, BSelectAx1, Tensor5D<M, N, O, P, Q, H>, [[usize; Z]; B], Tensor6D<B, Z, N, O, P, Q, H>, {M, N, O, P, Q, B, Z});
 
-
 pub(crate) fn select<T, I, R, Mode>(t: T, indices: &I) -> R
 where
     T: Tensor<Dtype = f32>,
