@@ -150,6 +150,7 @@ mod impl_nans;
 mod impl_normalize;
 mod impl_pow;
 mod impl_softmax;
+mod impl_stack_unstack;
 mod impl_stddev;
 mod impl_sub;
 mod impl_sum;
@@ -177,6 +178,7 @@ pub use impl_nans::*;
 pub use impl_normalize::*;
 pub use impl_pow::*;
 pub use impl_softmax::*;
+pub use impl_stack_unstack::*;
 pub use impl_stddev::*;
 pub use impl_sub::*;
 pub use impl_sum::*;
@@ -197,5 +199,6 @@ pub use conv::*;
 
 #[cfg(feature = "nightly")]
 mod pool2d;
+
 #[cfg(feature = "nightly")]
 pub use pool2d::*;
