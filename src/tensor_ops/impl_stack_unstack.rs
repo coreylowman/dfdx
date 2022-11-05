@@ -1,12 +1,13 @@
-use super::utils::move_tape_and_add_backward_op;
-use crate::arrays::{AllAxes, Axes2, Axes3, Axis, HasArrayType};
-use crate::devices::{AddAccum, CopyAccum, Cpu, DeviceReduce};
+use crate::arrays::{Axis};
+use crate::devices::{CopyAccum, Cpu, DeviceReduce};
+use crate::tensor_ops::SelectTo;
 use crate::gradients::Tape;
 use crate::prelude::*;
-use std::vec::Vec;
 
 /// Unstack self into a list of `T` along `Axes`. Opposite of [Stack].
-pub trait UnstackTo<T, Axes> {
+pub trait UnstackTo<L, T, Axes>
+    where L: AsRef<[T]>
+    {
     /// Broadcast `self` into `T`. This can be used to broadcast 1, 2, 3, and 4 axes.
     ///
     /// Examples:
@@ -21,7 +22,7 @@ pub trait UnstackTo<T, Axes> {
     /// // broadcast axes 1, 2, 3
     /// let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<3>::zeros().broadcast();
     /// ```
-    fn broadcast(self) -> T;
+    fn unstack(self) -> L;
 }
 
 /// Stack a list of Tensors along Axes to return a tensor with one more dimension. Opposite of [UnstackTo].
@@ -36,10 +37,10 @@ pub trait Stack<L, T, Axes>
 
     /// The resulting tensor type.
     /// This can be broadcast into Self via [BroadcastTo].
-    type Stacked: UnstackTo<T, Axes> + Tensor<Tape = T::Tape, Dtype = T::Dtype>;
+    type Stacked: UnstackTo<L, T, Axes> + Tensor<Tape = T::Tape, Dtype = T::Dtype>;
     // type DeviceR: DeviceReduce<T::Array, Axes, Reduced = <T::Reduced as HasArrayType>::Array>;
 
-    fn stack(self: L) -> Self::Stacked;
+    fn stack(self) -> Self::Stacked;
 }
 
 /// Stack `Axes` of `Self` to produce a `T`
@@ -48,26 +49,36 @@ pub trait Stack<L, T, Axes>
 
 
 
-impl<const M: usize, const N: usize, H: Tape> Stack<_, Tensor1D<M, H>, Axis<1>> for dyn AsRef<[Tensor1D<M, H>]> {
+impl<const M: usize, const N: usize, H: Tape> Stack<[Tensor1D<M, H>; N], Tensor1D<M, H>, Axis<1>> for [Tensor1D<M, H>; N] {
+    // where T: AsRef<[Tensor1D<M, H>]> {
     type Stacked = Tensor2D<M, N, H>;
 
-    fn stack(self: [Tensor1D<M, H>; N]) -> Tensor2D<M, N, H> {
+    fn stack(self) -> Tensor2D<M, N, H> {
         let mut result = <Tensor2D<M, N, H> as Tensor>::NoTape::zeros();
         for n in 0..N {
-            let mut result_slice: Tensor1D<M, H> = result.select(&[n]);
+            // <T as HasDevice>::Device::select_axis(t.data(), indices, result.mut_data());
+            let mut result_slice: Tensor1D<M, H> = SelectTo::<Tensor1D<M, H>, Axis<1>>::select(result, &[n]);
             <Cpu as DeviceReduce<_, Axis<1>>>::broadcast_into_no_reset::<CopyAccum>(result_slice.mut_data(), self[n].data());
         }
         result
     }
+}
 
-    // fn stack(tensors: [Tensor1D<M, H>; N]) -> Tensor2D<M, N, H> {
-    //     let mut result = <Tensor2D<M, N, H> as Tensor>::NoTape::zeros();
-    //     for n in 0..N {
-    //         let mut result_slice: Tensor1D<M, H> = result.select(&[n]);
-    //         <Cpu as DeviceReduce<_, Axis<1>>>::broadcast_into_no_reset::<CopyAccum>(result_slice.mut_data(), tensors[n].data());
-    //     }
-    //     result
-    // }
+// TODO: I get `tensor_ops::select::SelectTo<structs::Tensor1D<M, H>, arrays::Axis<1>>` is not implemented for `structs::Tensor2D<M, N>``
+// Is it because of the tape? doesn't work without tape?
+
+// TODO: also using Select consumes the original tensor, because we don't want multiple owners of the slice of data.
+// How can I select multiple slices of data, without running ownership issue?
+
+impl<const M: usize, const N: usize, H: Tape> UnstackTo<[Tensor1D<M, H>; N], Tensor1D<M, H>, Axis<1>> for Tensor2D<M, N, H> {
+    fn unstack(self) -> [Tensor1D<M, H>; N] {
+        let mut result: [Tensor1D<M, H>; N] = Default::default();
+        for n in 0..N {
+            let mut input_slice: Tensor1D<M, H> = self.select(&[n]);
+            <Cpu as DeviceReduce<_, Axis<1>>>::broadcast_into_no_reset::<CopyAccum>(result[n].mut_data(), input_slice.data());
+        }
+        result
+    }
 }
 
 
@@ -84,7 +95,8 @@ mod tests {
             Tensor1D::zeros(),
             Tensor1D::zeros()
         ];
-        let stacked = Stack::stack(tensors);
+        let stacked = tensors.stack();
+        // let stacked = Stack::stack(tensors);
         dbg!(stacked);
     }
 }
