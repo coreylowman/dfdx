@@ -42,7 +42,7 @@ macro_rules! tuple_impls {
         }
         */
         impl<
-            Input: Tensor,
+            Input,
             $last:
             $(Module::<$rev_tail ::Output>, $rev_tail: )+
             Module<Input>
@@ -57,7 +57,7 @@ macro_rules! tuple_impls {
         }
 
         impl<
-            Input: Tensor,
+            Input,
             $last:
             $(ModuleMut::<$rev_tail ::Output>, $rev_tail: )+
             ModuleMut<Input>
