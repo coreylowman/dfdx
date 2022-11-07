@@ -235,4 +235,27 @@ mod tests {
         model.update(&mut g, &mut unused);
         assert!(unused.is_empty());
     }
+
+    #[test]
+    fn longer_network() {
+        // check if it works in a longer neural net
+        let mut model: (AddInto<(Linear<5, 3>, Linear<5, 3>)>, ReLU, Linear<3, 1>) =
+            Default::default();
+        let _ = model.forward((
+            Tensor1D::<5>::zeros().traced(),
+            Tensor1D::<5>::zeros().traced(),
+        ));
+        let _ = model.forward((
+            Tensor2D::<5, 5>::zeros().traced(),
+            Tensor2D::<5, 5>::zeros().traced(),
+        ));
+        let _ = model.forward_mut((
+            Tensor1D::<5>::zeros().traced(),
+            Tensor1D::<5>::zeros().traced(),
+        ));
+        let _ = model.forward_mut((
+            Tensor2D::<5, 5>::zeros().traced(),
+            Tensor2D::<5, 5>::zeros().traced(),
+        ));
+    }
 }
