@@ -142,9 +142,11 @@ where
     out.put_tape(tape)
 }
 
+
 /// Moves tape from `inp` to `out`, and does `tape.add_backward_op()` with `f`
+/// TODO: maybe replace AsRef with const array?
 pub(super) fn move_tape_and_add_backward_listop<Inp, Out, F>(
-    inp: &AsRef<[Inp]>,
+    inp: &dyn AsRef<[Inp]>,
     out: Out::NoTape,
     mut f: F,
 ) -> Out
@@ -154,12 +156,11 @@ pub(super) fn move_tape_and_add_backward_listop<Inp, Out, F>(
         F: 'static + FnMut(Inp::NoTape, Out::NoTape, &mut Gradients),
 {
     let phantom_out = out.clone();
-    tape = inp[0];
+    let mut tape = inp[0];
     for inp_tensor in inp {
-        let (t, mut tape) = inp_tensor.split_tape();
-
+        let (_, temp_tape) = inp_tensor.split_tape();
+        tape = tape.merge(temp_tape);
     }
-    let (t, mut tape) = inp.split_tape();
     tape.add_backward_op(move |grads| f(inp, phantom_out, grads));
     out.put_tape(tape)
 }

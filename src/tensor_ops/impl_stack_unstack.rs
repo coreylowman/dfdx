@@ -1,9 +1,10 @@
 use super::utils::move_tape_and_add_backward_op;
 use crate::arrays::{Axis};
-use crate::devices::{CopyAccum, Cpu, DeviceReduce, FillElements, SelectAx1};
+use crate::devices::{AddAccum, CopyAccum, Cpu, DeviceReduce, FillElements, SelectAx1};
 use crate::tensor_ops::SelectTo;
 use crate::gradients::Tape;
 use crate::prelude::*;
+use crate::prelude::utils::move_tape_and_add_backward_listop;
 
 /// Unstack self into a list of `T` along `Axes`. Opposite of [Stack].
 pub trait UnstackTo<L, T, Axes>
@@ -48,10 +49,7 @@ pub trait Stack<L, T, Axes>
 // pub trait StackTo<L, T, Axes>: Stack<Axes, Stacked = T> {}
 
 
-
-
 impl<const M: usize, const N: usize, H: Tape> Stack<[Tensor1D<M, H>; N], Tensor1D<M, H>, Axis<1>> for [Tensor1D<M, H>; N] {
-    // where T: AsRef<[Tensor1D<M, H>]> {
     type Stacked = Tensor2D<M, N, H>;
 
     fn stack(mut self) -> Tensor2D<M, N, H> {
@@ -67,23 +65,29 @@ impl<const M: usize, const N: usize, H: Tape> Stack<[Tensor1D<M, H>; N], Tensor1
 
         // backward
 
-        // move tape out of all input tensors and merge it together
-        let phantom_out = out.clone();
-        let (lhs, lhs_tape) = lhs.split_tape();
-        let (rhs, rhs_tape) = rhs.split_tape();
-        // add backward op:
-        let mut tape = lhs_tape.merge(rhs_tape);
-        tape.add_backward_op(move |grads| f(lhs, rhs, phantom_out, grads));
-        out.put_tape(tape)
-
-
-
-        move_tape_and_add_backward_op(self, result, move |t, result, grads| {
-            let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-            <Cpu as DeviceReduce<_, $AxesTy>>::reduce_into_no_reset::<AddAccum>(t_grad, result_grad);
+        // // move tape out of all input tensors and merge it together
+        // let phantom_out = out.clone();
+        // let (lhs, lhs_tape) = lhs.split_tape();
+        // let (rhs, rhs_tape) = rhs.split_tape();
+        // // add backward op:
+        // let mut tape = lhs_tape.merge(rhs_tape);
+        // tape.add_backward_op(move |grads| f(lhs, rhs, phantom_out, grads));
+        // out.put_tape(tape);
+        //
+        //
+        //
+        // move_tape_and_add_backward_op(self, result, move |t, result, grads| {
+        //     let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
+        //     <Cpu as DeviceReduce<_, $AxesTy>>::reduce_into_no_reset::<AddAccum>(t_grad, result_grad);
+        // })
+        move_tape_and_add_backward_listop(&self, result, move |t_list, result, grads| {
+            for n in 0..N {
+                let select_indices: [usize; M] = [n; M];
+                let mut result_slice: Tensor1D<M> = SelectTo::<Tensor1D<M>, Axis<1>>::select(&result, &select_indices);
+                let (mut t_grad, result_grad) = grads.mut_and_ref(&t_list[n], &result_slice);
+                t_grad = result_grad;
+            }
         })
-
-        result
     }
 }
 
