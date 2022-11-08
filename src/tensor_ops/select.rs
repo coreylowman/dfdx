@@ -65,8 +65,6 @@ pub trait SelectTo<T, Axes> {
     /// let _: Tensor3D<2, 1, 5> = Tensor2D::<3, 5>::zeros().select(&[[0], [1]]);
     ///```
     fn select(self, indices: &Self::Indices) -> T;
-
-    // fn select_borrow(&self, indices: &Self::Indices) -> T;
 }
 
 macro_rules! impl_select {
@@ -75,12 +73,6 @@ impl<$(const $Dims: usize, )* H: Tape> Select<$IndTy, $Axes> for $SrcTy {
     type Output = $DstTy;
 }
 impl<$(const $Dims: usize, )* H: Tape> SelectTo<$DstTy, $Axes> for $SrcTy {
-    type Indices = $IndTy;
-    fn select(self, indices: &Self::Indices) -> $DstTy {
-        select::<_, _, _, $Mode>(self, indices)
-    }
-}
-impl<$(const $Dims: usize, )* H: Tape> SelectTo<$DstTy, $Axes> for &$SrcTy {
     type Indices = $IndTy;
     fn select(self, indices: &Self::Indices) -> $DstTy {
         select::<_, _, _, $Mode>(self, indices)
