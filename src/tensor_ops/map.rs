@@ -45,13 +45,17 @@ pub fn relu<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 ///
 /// // use function version
-/// let r = leakyrelu(t.clone());
+/// let r = leaky_relu(t.clone());
 ///
 /// // or the tensor method!
-/// let r2 = t.leakyrelu();
+/// let r2 = t.leaky_relu();
 /// ```
-pub fn leakyrelu<T: Tensor<Dtype = f32>>(t: T) -> T {
-    map_df_uses_fx(t, |x| x.max(0.01 * x), |fx| if fx > &0.0 { 1.0 } else { 0.01 })
+pub fn leaky_relu<T: Tensor<Dtype = f32>>(t: T) -> T {
+    map_df_uses_fx(
+        t,
+        |x| x.max(0.01 * x),
+        |fx| if fx > &0.0 { 1.0 } else { 0.01 },
+    )
 }
 
 /// [Softplus](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)#Softplus). `ln(1 + e^t)`
@@ -70,9 +74,7 @@ pub fn leakyrelu<T: Tensor<Dtype = f32>>(t: T) -> T {
 /// let r2 = t.softplus();
 /// ```
 pub fn softplus<T: Tensor<Dtype = f32>>(t: T) -> T {
-    map_df_uses_fx(t,
-         |x| (1.0 + x.exp()).ln(), 
-         |fx| 1.0 / (1.0 + (-fx).exp()))
+    map(t, |x| (1.0 + x.exp()).ln(), |fx| 1.0 / (1.0 + (-fx).exp()))
 }
 
 /// `t^2`
@@ -266,7 +268,7 @@ macro_rules! tensor_impl {
 impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     activation_impl!(negate, #[doc="Calls [negate()] on `self`."]);
     activation_impl!(relu, #[doc="Calls [relu()] on `self`."]);
-    activation_impl!(leakyrelu, #[doc="Calls [leakyrelu()] on `self`."]);
+    activation_impl!(leaky_relu, #[doc="Calls [leaky_relu()] on `self`."]);
     activation_impl!(softplus, #[doc="Calls [softplus()] on `self`."]);
     activation_impl!(sin, #[doc="Calls [sin()] on `self`."]);
     activation_impl!(cos, #[doc="Calls [cos()] on `self`."]);
@@ -315,11 +317,11 @@ mod tests {
     }
 
     #[test]
-    fn test_leakyrelu() {
+    fn test_leaky_relu() {
         let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = x.trace().leakyrelu();
+        let r = x.trace().leaky_relu();
         assert_eq!(r.data(), &[-0.02, -0.01, 0.0, 1.0, 2.0]);
-        // NOTE: call .exp() to make sure we cover cases where .leakyrelu() uses the result's gradient
+        // NOTE: call .exp() to make sure we cover cases where .leaky_relu() uses the result's gradient
         let gradients = backward(r.exp().mean());
         assert_eq!(
             gradients.ref_gradient(&x),
@@ -331,12 +333,15 @@ mod tests {
     fn test_softplus() {
         let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().softplus();
-        assert_eq!(r.data(), &[0.12692805, 0.31326166, 0.6931472, 1.3132616, 2.126928]);
+        assert_eq!(
+            r.data(),
+            &[0.12692805, 0.31326166, 0.6931472, 1.3132616, 2.126928]
+        );
         // NOTE: call .exp() to make sure we cover cases where .softplus() uses the result's gradient
         let gradients = backward(r.exp().mean());
         assert_eq!(
             gradients.ref_gradient(&x),
-            &[0.12072917, 0.15803963, 0.26666668, 0.58604467, 1.499113]
+            &[0.027067058, 0.073575884, 0.2, 0.54365635, 1.4778113]
         );
     }
 
