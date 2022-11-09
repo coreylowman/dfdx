@@ -98,7 +98,7 @@ mod tests {
     }
 
     #[test]
-    fn test_leakyrelu() {
+    fn test_leaky_relu() {
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = LeakyReLU.forward_mut(t.clone());
         let r2 = leaky_relu(t);
