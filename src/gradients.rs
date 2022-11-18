@@ -66,22 +66,25 @@ impl<D: Device> Gradients<D> {
     /// # use dfdx::{prelude::*, gradients::*};
     /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
     /// let mut gradients: Gradients = Default::default();
-    /// let g: &mut [f32; 3] = gradients.grad_mut(&t);
+    /// let g: &mut [f32; 3] = gradients.get_mut(&t);
     /// assert_eq!(g, &mut [0.0, 0.0, 0.0]);
     /// g[0] = 1.0;
     /// assert_eq!(gradients.ref_gradient(&t), &[1.0, 0.0, 0.0]);
     /// ```
-    pub fn grad_mut<T: HasUniqueId + HasShape + HasDtype>(
+    pub fn get_mut<T: HasUniqueId + HasShape + HasDtype>(
         &mut self,
         t: &T,
     ) -> Result<&mut D::Storage<T::Shape, T::Dtype>, D::Err> {
-        todo!();
-        // self.gradient_by_id
-        //     .entry(*t.id())
-        //     .or_insert_with(|| Box::new(self.device.alloc::<T::Shape, T::Dtype>(t.shape())))
-        //     .as_mut()
-        //     .downcast_mut()
-        //     .unwrap()
+        if !self.gradient_by_id.contains_key(t.id()) {
+            let grad = self.device.alloc::<T::Shape, T::Dtype>(t.shape())?;
+            self.gradient_by_id.insert(*t.id(), Box::new(grad));
+        }
+        Ok(self
+            .gradient_by_id
+            .get_mut(t.id())
+            .unwrap()
+            .downcast_mut()
+            .unwrap())
     }
 
     /// Returns a reference to the data associated with `t`.
@@ -99,7 +102,7 @@ impl<D: Device> Gradients<D> {
     /// gradients.mut_gradient(&t);
     /// assert_eq!(gradients.grad(&t), &[0.0, 0.0, 0.0]);
     /// ```
-    pub fn grad<T: HasUniqueId + HasShape + HasDtype>(
+    pub fn get<T: HasUniqueId + HasShape + HasDtype>(
         &self,
         t: &T,
     ) -> &D::Storage<T::Shape, T::Dtype> {
@@ -144,8 +147,8 @@ impl<D: Device> Gradients<D> {
         R: HasUniqueId + HasShape + HasDtype,
     {
         assert_ne!(l.id(), r.id());
-        let l_ptr = self.grad_mut(l)? as *mut _;
-        let r_ptr = self.grad(r) as *const _;
+        let l_ptr = self.get_mut(l)? as *mut _;
+        let r_ptr = self.get(r) as *const _;
         let l_ref = unsafe { &mut *l_ptr };
         let r_ref = unsafe { &*r_ptr };
         Ok((l_ref, r_ref))
@@ -173,10 +176,10 @@ impl<D: Device> Gradients<D> {
         R: HasUniqueId + HasShape + HasDtype,
     {
         // assert_ne!(l1.id(), r.id());
-        let l1_ptr = self.grad_mut(l1)? as *mut _;
-        let l2_ptr = self.grad_mut(l2)? as *mut _;
-        let l3_ptr = self.grad_mut(l3)? as *mut _;
-        let r_ptr = self.grad(r) as *const _;
+        let l1_ptr = self.get_mut(l1)? as *mut _;
+        let l2_ptr = self.get_mut(l2)? as *mut _;
+        let l3_ptr = self.get_mut(l3)? as *mut _;
+        let r_ptr = self.get(r) as *const _;
         let l1_ref = unsafe { &mut *l1_ptr };
         let l2_ref = unsafe { &mut *l2_ptr };
         let l3_ref = unsafe { &mut *l3_ptr };
@@ -254,12 +257,12 @@ impl<D: Device> GradientTape<D> {
     /// Compute the [Gradients]! This just runs all the operations on a new [Gradients] struct.
     ///
     /// Note that this method takes ownership of self, so it can't be called twice!
-    pub fn execute(mut self) -> Gradients<D> {
+    pub fn execute(mut self) -> Result<Gradients<D>, D::Err> {
         let mut gradients = Gradients::empty(self.device);
         for operation in self.operations.drain(..).rev() {
-            (operation)(&mut gradients);
+            (operation)(&mut gradients)?;
         }
-        gradients
+        Ok(gradients)
     }
 
     /// Moves all the operations from `other` into self. Leaves `other` empty.
