@@ -85,7 +85,12 @@ impl<S: Shape, E: Dtype, D: Device, T> HasUniqueId for Tensor<S, E, D, T> {
 
 impl<S: Shape, E: Dtype, D: Device> Tensor<S, E, D, NoneTape> {
     pub fn trace(&self) -> Tensor<S, E, D, OwnedTape<D>> {
-        self.clone().put_tape(OwnedTape::empty(self.device.clone()))
+        self.clone().traced()
+    }
+
+    pub fn traced(self) -> Tensor<S, E, D, OwnedTape<D>> {
+        let tape = OwnedTape::empty(self.device.clone());
+        self.put_tape(tape)
     }
 }
 
@@ -125,25 +130,3 @@ pub type Tensor6D<
     Tape = NoneTape,
     Elem = f32,
 > = Tensor<Rank6<M, N, O, P, Q, R>, Elem, D, Tape>;
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-
-//     #[test]
-//     fn test_ids_with_clone() {
-//         let t1: Tensor1D<32> = TensorCreator::zeros();
-//         let t2: Tensor1D<32, NoneTape> = t1.clone();
-//         assert_eq!(t1.id, t2.id);
-//     }
-
-//     #[test]
-//     fn test_ids_with_split_and_put() {
-//         let t1: Tensor1D<32> = TensorCreator::zeros();
-//         let t1_id = t1.id;
-//         let (t2, tape) = t1.split_tape();
-//         assert_eq!(t2.id, t1_id);
-//         let t3 = t2.put_tape(tape);
-//         assert_eq!(t3.id, t1_id);
-//     }
-// }

@@ -167,6 +167,15 @@ pub fn keep_denormals() {
 pub(crate) mod tests {
     const TOLERANCE: f32 = 1e-6;
 
+    macro_rules! build_test_device {
+        () => {{
+            use crate::devices::Cpu;
+            Cpu::default()
+        }};
+    }
+
+    pub(crate) use build_test_device;
+
     pub trait AssertClose {
         fn assert_close(&self, rhs: &Self, tolerance: f32);
     }

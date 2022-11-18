@@ -135,10 +135,10 @@ impl<S: Shape, Src, E: Dtype, D: Device> TryConvert<Src, Tensor<S, E, D, NoneTap
 where
     Self: TryConvert<Src, Self::Storage<S, E>>,
 {
-    fn try_from(&self, src: Src) -> Result<Tensor<S, E, D, NoneTape>, Self::Err> {
+    fn try_convert(&self, src: Src) -> Result<Tensor<S, E, D, NoneTape>, Self::Err> {
         Ok(Tensor {
             id: unique_id(),
-            storage: self.try_from(src)?,
+            storage: self.try_convert(src)?,
             device: self.clone(),
             tape: NoneTape,
         })
@@ -164,67 +164,3 @@ where
         self.storage.as_array()
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::unique_id::UniqueId;
-//     use rand::thread_rng;
-//     use std::collections::HashSet;
-
-//     #[test]
-//     fn test_id() {
-//         let mut ids: HashSet<UniqueId> = Default::default();
-//         ids.insert(unique_id());
-
-//         let x = Tensor0D::new(0.0);
-//         assert!(!ids.contains(&x.id));
-//         ids.insert(x.id);
-
-//         let x = Tensor0D::new(0.0);
-//         assert!(!ids.contains(&x.id));
-//         ids.insert(x.id);
-
-//         let x = Tensor1D::<5>::zeros();
-//         assert!(!ids.contains(&x.id));
-//         ids.insert(x.id);
-
-//         let x = Tensor2D::<3, 2>::ones();
-//         assert!(!ids.contains(&x.id));
-//         ids.insert(x.id);
-
-//         let x = Tensor3D::<4, 3, 2>::zeros();
-//         assert!(!ids.contains(&x.id));
-//         ids.insert(x.id);
-//     }
-
-//     #[test]
-//     fn test_zeros() {
-//         assert_eq!(Tensor2D::<3, 2>::zeros().data(), &[[0.0; 2]; 3]);
-//     }
-
-//     #[test]
-//     fn test_ones() {
-//         assert_eq!(Tensor2D::<3, 2>::ones().data(), &[[1.0; 2]; 3]);
-//     }
-
-//     #[test]
-//     fn test_new() {
-//         let t = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
-//         assert_eq!(Tensor2D::new(t).data(), &t);
-//     }
-
-//     #[test]
-//     fn fuzz_test_rand() {
-//         let mut rng = thread_rng();
-//         for &v in Tensor1D::<1000>::rand(&mut rng).data() {
-//             assert!((0.0..1.0).contains(&v));
-//         }
-//     }
-
-//     #[test]
-//     fn test_randn() {
-//         let mut rng = thread_rng();
-//         let _t = Tensor1D::<1000>::randn(&mut rng);
-//     }
-// }

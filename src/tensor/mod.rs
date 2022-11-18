@@ -75,3 +75,124 @@ mod impl_alloc;
 mod impl_update_with_grads;
 
 pub use base::{Tensor, Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::devices::{AsArray, AsVec, Ones, Rand, Randn, TryConvert, Zeros};
+    use crate::gradients::{NoneTape, OwnedTape};
+    use crate::tests::build_test_device;
+    use crate::unique_id::{unique_id, UniqueId};
+    use std::collections::HashSet;
+
+    #[test]
+    fn test_id() {
+        let dev = build_test_device!();
+
+        let mut ids: HashSet<UniqueId> = Default::default();
+        ids.insert(unique_id());
+
+        let x: Tensor0D<_> = dev.zeros();
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+
+        let x: Tensor0D<_> = dev.zeros();
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+
+        let x: Tensor1D<5, _> = dev.zeros();
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+
+        let x: Tensor2D<3, 2, _> = dev.ones();
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+
+        let x: Tensor3D<4, 3, 2, _> = dev.rand();
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+    }
+
+    #[test]
+    fn test_ids_with_clone() {
+        let dev = build_test_device!();
+        let t1: Tensor1D<32, _> = dev.zeros();
+        let t2: Tensor1D<32, _> = t1.clone();
+        assert_eq!(t1.id, t2.id);
+    }
+
+    #[test]
+    fn test_ids_with_split_and_put() {
+        let dev = build_test_device!();
+        let t1: Tensor1D<32, _> = dev.zeros();
+        let t1_id = t1.id;
+        let (t2, tape) = t1.split_tape();
+        assert_eq!(t2.id, t1_id);
+        let t3 = t2.put_tape(tape);
+        assert_eq!(t3.id, t1_id);
+    }
+
+    #[test]
+    fn test_zeros() {
+        let dev = build_test_device!();
+        let x: Tensor2D<3, 2, _> = dev.zeros();
+        assert_eq!(x.as_array(), [[0.0; 2]; 3]);
+    }
+
+    #[test]
+    fn test_ones() {
+        let dev = build_test_device!();
+        let x: Tensor2D<3, 2, _> = dev.ones();
+        assert_eq!(x.as_array(), [[1.0; 2]; 3]);
+    }
+
+    #[test]
+    fn test_convert_array() {
+        let dev = build_test_device!();
+        let a = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
+        let t: Tensor2D<2, 3, _> = dev.convert(a);
+        assert_eq!(t.as_array(), a);
+    }
+
+    #[test]
+    fn test_convert_slice() {
+        let dev = build_test_device!();
+        let data = [1.0, 2.0, 3.0, 4.0];
+        let t: Tensor2D<2, 2, _> = dev.convert(data.as_slice());
+        assert_eq!(t.as_array(), [[1.0, 2.0], [3.0, 4.0]]);
+    }
+
+    #[test]
+    fn test_convert_vec() {
+        let dev = build_test_device!();
+        let data = std::vec![1.0, 2.0, 3.0, 4.0];
+        let t: Tensor2D<2, 2, _> = dev.convert(data);
+        assert_eq!(t.as_array(), [[1.0, 2.0], [3.0, 4.0]]);
+    }
+
+    #[test]
+    fn fuzz_test_rand() {
+        let dev = build_test_device!();
+        let t: Tensor1D<1000, _> = dev.rand();
+        for v in t.as_vec() {
+            assert!((0.0..1.0).contains(&v));
+        }
+    }
+
+    #[test]
+    fn test_randn() {
+        let dev = build_test_device!();
+        let _: Tensor1D<1000, _> = dev.randn();
+    }
+
+    #[test]
+    fn test_split_and_put() {
+        let dev = build_test_device!();
+        let a: Tensor0D<_, NoneTape> = dev.zeros();
+        let b: Tensor0D<_, OwnedTape<_>> = a.traced();
+        let (c, tape): (Tensor0D<_>, OwnedTape<_>) = b.split_tape();
+        let d: Tensor0D<_, OwnedTape<_>> = c.put_tape(tape);
+        let _: Tensor0D<_, OwnedTape<_>> = d.with_empty_tape();
+        let _: Tensor0D<_, NoneTape> = d.with_diff_tape();
+    }
+}

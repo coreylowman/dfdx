@@ -166,7 +166,7 @@ where
 }
 
 impl<S: Shape + TryFromNumElements, E: Dtype> TryConvert<&[E], StridedArray<S, E>> for Cpu {
-    fn try_from(&self, src: &[E]) -> Result<StridedArray<S, E>, Self::Err> {
+    fn try_convert(&self, src: &[E]) -> Result<StridedArray<S, E>, Self::Err> {
         match S::try_from_num_elements(src.len()) {
             Some(shape) => {
                 let mut storage: StridedArray<S, E> =
@@ -181,7 +181,7 @@ impl<S: Shape + TryFromNumElements, E: Dtype> TryConvert<&[E], StridedArray<S, E
 }
 
 impl<S: Shape + TryFromNumElements, E: Dtype> TryConvert<Vec<E>, StridedArray<S, E>> for Cpu {
-    fn try_from(&self, src: Vec<E>) -> Result<StridedArray<S, E>, Self::Err> {
+    fn try_convert(&self, src: Vec<E>) -> Result<StridedArray<S, E>, Self::Err> {
         match S::try_from_num_elements(src.len()) {
             Some(shape) => Ok(StridedArray {
                 data: Arc::new(src),
@@ -194,7 +194,7 @@ impl<S: Shape + TryFromNumElements, E: Dtype> TryConvert<Vec<E>, StridedArray<S,
 }
 
 impl<E: Dtype> TryConvert<E, StridedArray<Rank0, E>> for Cpu {
-    fn try_from(&self, src: E) -> Result<StridedArray<Rank0, E>, Self::Err> {
+    fn try_convert(&self, src: E) -> Result<StridedArray<Rank0, E>, Self::Err> {
         let mut out: StridedArray<Rank0, E> = self.try_zeros()?;
         let data = Arc::make_mut(&mut out.data);
         data[0].clone_from(&src);
@@ -203,7 +203,7 @@ impl<E: Dtype> TryConvert<E, StridedArray<Rank0, E>> for Cpu {
 }
 
 impl<E: Dtype, const M: usize> TryConvert<[E; M], StridedArray<Rank1<M>, E>> for Cpu {
-    fn try_from(&self, src: [E; M]) -> Result<StridedArray<Rank1<M>, E>, Self::Err> {
+    fn try_convert(&self, src: [E; M]) -> Result<StridedArray<Rank1<M>, E>, Self::Err> {
         let mut out: StridedArray<Rank1<M>, E> = self.try_zeros()?;
         let mut out_iter = out.iter_mut();
         for m in 0..M {
@@ -216,7 +216,7 @@ impl<E: Dtype, const M: usize> TryConvert<[E; M], StridedArray<Rank1<M>, E>> for
 impl<E: Dtype, const M: usize, const N: usize> TryConvert<[[E; N]; M], StridedArray<Rank2<M, N>, E>>
     for Cpu
 {
-    fn try_from(&self, src: [[E; N]; M]) -> Result<StridedArray<Rank2<M, N>, E>, Self::Err> {
+    fn try_convert(&self, src: [[E; N]; M]) -> Result<StridedArray<Rank2<M, N>, E>, Self::Err> {
         let mut out: StridedArray<Rank2<M, N>, E> = self.try_zeros()?;
         let mut out_iter = out.iter_mut();
         for m in 0..M {

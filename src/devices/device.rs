@@ -77,10 +77,10 @@ pub trait RandnLike<Src, Dst>: Device {
 }
 
 pub trait TryConvert<Src, Dst>: Device {
-    fn from(&self, src: Src) -> Dst {
-        self.try_from(src).unwrap()
+    fn convert(&self, src: Src) -> Dst {
+        self.try_convert(src).unwrap()
     }
-    fn try_from(&self, src: Src) -> Result<Dst, Self::Err>;
+    fn try_convert(&self, src: Src) -> Result<Dst, Self::Err>;
 }
 
 pub trait AsArray {
