@@ -1,22 +1,28 @@
-use crate::devices::{Cpu, FillElements};
-use crate::gradients::{Gradients, Tape};
-use crate::prelude::*;
+use crate::arrays::{Dtype, Rank0};
+use crate::devices::{Device, Ones};
+use crate::gradients::{Gradients, OwnedTape, Tape};
+use crate::tensor::Tensor;
 
 /// Runs backprop algorithm with all operations contained in the tape that `t` has.
 ///
 /// This function takes ownership of `t` and returns [Gradients].
-///
-/// Note that `t` is required to have [OwnedTape], which means it currently owns the [crate::gradients::GradientTape].
-pub fn backward(t: Tensor0D<OwnedTape>) -> Gradients {
-    let (t, mut tape) = t.split_tape();
-    tape.add_backward_op(move |grads| {
-        Cpu::fill(grads.mut_gradient(&t), &mut |v| *v = 1.0);
-    });
-    tape.0.execute()
+pub trait TryBackward<D: Device>: Sized {
+    fn backward(self) -> Gradients<D> {
+        self.try_backward().unwrap()
+    }
+    fn try_backward(self) -> Result<Gradients<D>, D::Err>;
 }
 
-impl Tensor0D<OwnedTape> {
-    pub fn backward(self) -> Gradients {
-        backward(self)
+impl<E: Dtype, D: Device + Ones<D::Storage<Rank0, E>>> TryBackward<D>
+    for Tensor<Rank0, E, D, OwnedTape<D>>
+{
+    fn try_backward(self) -> Result<Gradients<D>, D::Err> {
+        let (t, mut tape) = self.split_tape();
+        tape.add_backward_op(move |grads| {
+            let g = grads.get_mut(&t)?;
+            t.device.fill_with_ones(g);
+            Ok(())
+        });
+        tape.0.execute()
     }
 }

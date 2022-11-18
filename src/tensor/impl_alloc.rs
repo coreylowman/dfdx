@@ -7,17 +7,37 @@ use crate::devices::{
 use crate::gradients::NoneTape;
 use crate::unique_id::unique_id;
 
+pub(crate) fn make_tensor<S: Shape, E: Dtype, D: Device>(
+    device: &D,
+    storage: D::Storage<S, E>,
+) -> Tensor<S, E, D, NoneTape> {
+    Tensor {
+        id: unique_id(),
+        storage,
+        device: device.clone(),
+        tape: NoneTape,
+    }
+}
+
+pub trait TensorSugar<Src, S: Shape, E: Dtype>: Device {
+    fn tensor(&self, src: Src) -> Tensor<S, E, Self, NoneTape>;
+}
+
+impl<Src, S: Shape, E: Dtype, D: Device> TensorSugar<Src, S, E> for D
+where
+    D: TryConvert<Src, Tensor<S, E, D, NoneTape>>,
+{
+    fn tensor(&self, src: Src) -> Tensor<S, E, Self, NoneTape> {
+        self.convert(src)
+    }
+}
+
 impl<S: Shape, E: Dtype, D: Device> Zeros<Tensor<S, E, D, NoneTape>> for D
 where
-    Self: Zeros<Self::Storage<S, E>>,
+    Self: Zeros<D::Storage<S, E>>,
 {
     fn try_zeros(&self) -> Result<Tensor<S, E, D, NoneTape>, Self::Err> {
-        Ok(Tensor {
-            id: unique_id(),
-            storage: self.try_zeros()?,
-            device: self.clone(),
-            tape: NoneTape,
-        })
+        Ok(make_tensor(self, self.try_zeros()?))
     }
     fn fill_with_zeros(&self, t: &mut Tensor<S, E, D, NoneTape>) {
         self.fill_with_zeros(&mut t.storage);
@@ -26,29 +46,19 @@ where
 
 impl<S: Shape, E: Dtype, D: Device> ZerosLike<S, Tensor<S, E, D, NoneTape>> for D
 where
-    Self: ZerosLike<S, Self::Storage<S, E>>,
+    Self: ZerosLike<S, D::Storage<S, E>>,
 {
     fn try_zeros_like(&self, src: S) -> Result<Tensor<S, E, D, NoneTape>, Self::Err> {
-        Ok(Tensor {
-            id: unique_id(),
-            storage: self.try_zeros_like(src)?,
-            device: self.clone(),
-            tape: NoneTape,
-        })
+        Ok(make_tensor(self, self.try_zeros_like(src)?))
     }
 }
 
 impl<S: Shape, E: Dtype, D: Device> Ones<Tensor<S, E, D, NoneTape>> for D
 where
-    Self: Ones<Self::Storage<S, E>>,
+    Self: Ones<D::Storage<S, E>>,
 {
     fn try_ones(&self) -> Result<Tensor<S, E, D, NoneTape>, Self::Err> {
-        Ok(Tensor {
-            id: unique_id(),
-            storage: self.try_ones()?,
-            device: self.clone(),
-            tape: NoneTape,
-        })
+        Ok(make_tensor(self, self.try_ones()?))
     }
     fn fill_with_ones(&self, t: &mut Tensor<S, E, D, NoneTape>) {
         self.fill_with_ones(&mut t.storage);
@@ -57,29 +67,19 @@ where
 
 impl<S: Shape, E: Dtype, D: Device> OnesLike<S, Tensor<S, E, D, NoneTape>> for D
 where
-    Self: OnesLike<S, Self::Storage<S, E>>,
+    Self: OnesLike<S, D::Storage<S, E>>,
 {
     fn try_ones_like(&self, src: S) -> Result<Tensor<S, E, D, NoneTape>, Self::Err> {
-        Ok(Tensor {
-            id: unique_id(),
-            storage: self.try_ones_like(src)?,
-            device: self.clone(),
-            tape: NoneTape,
-        })
+        Ok(make_tensor(self, self.try_ones_like(src)?))
     }
 }
 
 impl<S: Shape, E: Dtype, D: Device> Rand<Tensor<S, E, D, NoneTape>> for D
 where
-    Self: Rand<Self::Storage<S, E>>,
+    Self: Rand<D::Storage<S, E>>,
 {
     fn try_rand(&self) -> Result<Tensor<S, E, D, NoneTape>, Self::Err> {
-        Ok(Tensor {
-            id: unique_id(),
-            storage: self.try_rand()?,
-            device: self.clone(),
-            tape: NoneTape,
-        })
+        Ok(make_tensor(self, self.try_rand()?))
     }
     fn fill_with_rand(&self, t: &mut Tensor<S, E, D, NoneTape>) {
         self.fill_with_rand(&mut t.storage);
@@ -88,29 +88,19 @@ where
 
 impl<S: Shape, E: Dtype, D: Device> RandLike<S, Tensor<S, E, D, NoneTape>> for D
 where
-    Self: RandLike<S, Self::Storage<S, E>>,
+    Self: RandLike<S, D::Storage<S, E>>,
 {
     fn try_rand_like(&self, src: S) -> Result<Tensor<S, E, D, NoneTape>, Self::Err> {
-        Ok(Tensor {
-            id: unique_id(),
-            storage: self.try_rand_like(src)?,
-            device: self.clone(),
-            tape: NoneTape,
-        })
+        Ok(make_tensor(self, self.try_rand_like(src)?))
     }
 }
 
 impl<S: Shape, E: Dtype, D: Device> Randn<Tensor<S, E, D, NoneTape>> for D
 where
-    Self: Randn<Self::Storage<S, E>>,
+    Self: Randn<D::Storage<S, E>>,
 {
     fn try_randn(&self) -> Result<Tensor<S, E, D, NoneTape>, Self::Err> {
-        Ok(Tensor {
-            id: unique_id(),
-            storage: self.try_randn()?,
-            device: self.clone(),
-            tape: NoneTape,
-        })
+        Ok(make_tensor(self, self.try_randn()?))
     }
     fn fill_with_randn(&self, t: &mut Tensor<S, E, D, NoneTape>) {
         self.fill_with_randn(&mut t.storage);
@@ -119,29 +109,19 @@ where
 
 impl<S: Shape, E: Dtype, D: Device> RandnLike<S, Tensor<S, E, D, NoneTape>> for D
 where
-    Self: RandnLike<S, Self::Storage<S, E>>,
+    Self: RandnLike<S, D::Storage<S, E>>,
 {
     fn try_randn_like(&self, src: S) -> Result<Tensor<S, E, D, NoneTape>, Self::Err> {
-        Ok(Tensor {
-            id: unique_id(),
-            storage: self.try_randn_like(src)?,
-            device: self.clone(),
-            tape: NoneTape,
-        })
+        Ok(make_tensor(self, self.try_randn_like(src)?))
     }
 }
 
 impl<S: Shape, Src, E: Dtype, D: Device> TryConvert<Src, Tensor<S, E, D, NoneTape>> for D
 where
-    Self: TryConvert<Src, Self::Storage<S, E>>,
+    Self: TryConvert<Src, D::Storage<S, E>>,
 {
     fn try_convert(&self, src: Src) -> Result<Tensor<S, E, D, NoneTape>, Self::Err> {
-        Ok(Tensor {
-            id: unique_id(),
-            storage: self.try_convert(src)?,
-            device: self.clone(),
-            tape: NoneTape,
-        })
+        Ok(make_tensor(self, self.try_convert(src)?))
     }
 }
 

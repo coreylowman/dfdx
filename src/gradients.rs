@@ -154,17 +154,15 @@ impl<D: Device> Gradients<D> {
         Ok((l_ref, r_ref))
     }
 
-    pub fn muts_and_ref<L1, L2, L3, R>(
+    pub fn muts_and_ref<L1, L2, R>(
         &mut self,
         l1: &L1,
         l2: &L2,
-        l3: &L3,
         r: &R,
     ) -> Result<
         (
             &mut D::Storage<L1::Shape, L1::Dtype>,
             &mut D::Storage<L2::Shape, L2::Dtype>,
-            &mut D::Storage<L3::Shape, L3::Dtype>,
             &D::Storage<R::Shape, R::Dtype>,
         ),
         D::Err,
@@ -172,19 +170,18 @@ impl<D: Device> Gradients<D> {
     where
         L1: HasUniqueId + HasShape + HasDtype,
         L2: HasUniqueId + HasShape + HasDtype,
-        L3: HasUniqueId + HasShape + HasDtype,
         R: HasUniqueId + HasShape + HasDtype,
     {
-        // assert_ne!(l1.id(), r.id());
+        assert_ne!(l1.id(), l2.id());
+        assert_ne!(l1.id(), r.id());
+        assert_ne!(l2.id(), r.id());
         let l1_ptr = self.get_mut(l1)? as *mut _;
         let l2_ptr = self.get_mut(l2)? as *mut _;
-        let l3_ptr = self.get_mut(l3)? as *mut _;
         let r_ptr = self.get(r) as *const _;
         let l1_ref = unsafe { &mut *l1_ptr };
         let l2_ref = unsafe { &mut *l2_ptr };
-        let l3_ref = unsafe { &mut *l3_ptr };
         let r_ref = unsafe { &*r_ptr };
-        Ok((l1_ref, l2_ref, l3_ref, r_ref))
+        Ok((l1_ref, l2_ref, r_ref))
     }
 }
 

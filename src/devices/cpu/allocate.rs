@@ -1,4 +1,4 @@
-use crate::arrays::{Dtype, Rank0, Rank1, Rank2, Shape, StridesFor, TryFromNumElements};
+use crate::arrays::{Dtype, Rank0, Rank1, Rank2, Rank3, Shape, StridesFor, TryFromNumElements};
 use crate::devices::{
     AsArray, AsVec, Ones, OnesLike, Rand, RandLike, Randn, RandnLike, TryConvert, Zeros, ZerosLike,
 };
@@ -277,6 +277,22 @@ where
             for n in 0..N {
                 out[m][n].clone_from(iter.next().unwrap());
             }
+        }
+        out
+    }
+}
+
+impl<E: Dtype, const M: usize, const N: usize, const O: usize> AsArray
+    for StridedArray<Rank3<M, N, O>, E>
+where
+    [[[E; O]; N]; M]: Default,
+{
+    type Array = [[[E; O]; N]; M];
+    fn as_array(&self) -> Self::Array {
+        let mut out: Self::Array = Default::default();
+        let mut iter = self.iter_with_index();
+        while let Some((v, [m, n, o])) = iter.next() {
+            out[m][n][o].clone_from(v);
         }
         out
     }

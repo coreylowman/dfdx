@@ -110,13 +110,13 @@ pub mod gradients;
 pub mod numpy;
 // pub mod optim;
 pub mod tensor;
-// pub mod tensor_ops;
+pub mod tensor_ops;
 pub mod unique_id;
 
 /// Contains all public exports.
 pub mod prelude {
     // pub use crate::arrays::{AllAxes, Axes2, Axes3, Axes4, Axis, HasArrayData};
-    // pub use crate::devices::HasDevice;
+    // pub use crate::devices::*;
     // pub use crate::gradients::{NoneTape, OwnedTape};
     // pub use crate::losses::*;
     // pub use crate::nn::*;

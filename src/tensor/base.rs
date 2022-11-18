@@ -1,6 +1,7 @@
 use crate::arrays::{
     Dtype, HasDtype, HasShape, Rank0, Rank1, Rank2, Rank3, Rank4, Rank5, Rank6, Shape,
 };
+use crate::devices::device::HasErr;
 use crate::devices::Device;
 use crate::unique_id::HasUniqueId;
 use crate::{
@@ -81,6 +82,10 @@ impl<S: Shape, E: Dtype, D: Device, T> HasUniqueId for Tensor<S, E, D, T> {
     fn id(&self) -> &UniqueId {
         &self.id
     }
+}
+
+impl<S: Shape, E: Dtype, D: Device, T> HasErr for Tensor<S, E, D, T> {
+    type Err = D::Err;
 }
 
 impl<S: Shape, E: Dtype, D: Device> Tensor<S, E, D, NoneTape> {
