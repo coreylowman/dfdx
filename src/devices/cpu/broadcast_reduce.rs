@@ -3,7 +3,7 @@ use super::{
     iterate::LendingIterator,
 };
 use crate::arrays::*;
-use crate::devices::device::*;
+use crate::devices::{device::*, unary_ops};
 
 impl<Axes, Src: Shape, Dst: Shape + Default, Elem: Dtype + std::ops::AddAssign<Elem>>
     UnaryKernel<unary_ops::Broadcast<Dst, Axes>, Src, Dst, Elem> for Cpu
@@ -92,7 +92,7 @@ where
         let mut out_iter = out.iter_mut_as(&inp.shape);
         let mut inp_iter = inp.iter();
         while let Some((out_i, inp_i)) = out_iter.next().zip(inp_iter.next()) {
-            *out_i = out_i.max(*inp_i);
+            *out_i = f32::max(*out_i, *inp_i);
         }
         Ok(out)
     }
@@ -135,7 +135,7 @@ where
         let mut out_iter = out.iter_mut_as(&inp.shape);
         let mut inp_iter = inp.iter();
         while let Some((out_i, inp_i)) = out_iter.next().zip(inp_iter.next()) {
-            *out_i = out_i.min(*inp_i);
+            *out_i = f32::min(*out_i, *inp_i);
         }
         Ok(out)
     }

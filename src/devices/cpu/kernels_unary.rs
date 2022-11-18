@@ -1,6 +1,6 @@
 use super::Cpu;
 use crate::arrays::Shape;
-use crate::devices::device::*;
+use crate::devices::{device::*, unary_ops};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::Standard;
 use std::sync::Arc;

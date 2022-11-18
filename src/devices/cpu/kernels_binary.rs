@@ -1,6 +1,6 @@
 use super::{iterate::LendingIterator, Cpu};
 use crate::arrays::*;
-use crate::devices::device::*;
+use crate::devices::{binary_ops, device::*};
 
 trait Derivatives<T> {
     fn f(x: &T, y: &T) -> T;

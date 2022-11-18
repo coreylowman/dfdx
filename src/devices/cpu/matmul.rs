@@ -1,6 +1,6 @@
 use super::device::Cpu;
 use crate::arrays::*;
-use crate::devices::device::*;
+use crate::devices::{binary_ops, device::*};
 
 impl<const M: usize, const K: usize, const N: usize>
     BinaryKernel<binary_ops::MatMul, Rank2<M, K>, Rank2<K, N>, Rank2<M, N>, f32> for Cpu

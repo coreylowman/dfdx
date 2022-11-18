@@ -1,4 +1,4 @@
-use crate::arrays::{Dtype, Shape, StridesFor};
+use crate::arrays::{Dtype, HasShape, Shape, StridesFor};
 use crate::devices::device::*;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{cell::RefCell, sync::Arc, vec::Vec};
@@ -65,4 +65,7 @@ impl<S: Shape, E> HasShape for StridedArray<S, E> {
 impl Device for Cpu {
     type Storage<S: Shape, E: Dtype> = StridedArray<S, E>;
     type Err = CpuError;
+    fn alloc<S: Shape, E: Dtype>(&self, shape: &S) -> Self::Storage<S, E> {
+        todo!();
+    }
 }

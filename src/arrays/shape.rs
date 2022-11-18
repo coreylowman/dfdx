@@ -1,9 +1,12 @@
-pub trait Dtype: Copy + Clone + std::fmt::Debug + Default + PartialOrd + Send + Sync {}
+pub trait Dtype:
+    'static + Copy + Clone + std::fmt::Debug + Default + PartialOrd + Send + Sync
+{
+}
 impl Dtype for f32 {}
 impl Dtype for f64 {}
 impl Dtype for usize {}
 
-pub trait Dim: Copy + Clone + std::fmt::Debug + Send + Sync {
+pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync {
     fn size(&self) -> usize;
 }
 
@@ -29,7 +32,7 @@ impl<const M: usize> Dim for C<M> {
 #[derive(Clone, Copy, Debug)]
 pub struct StridesFor<Sh: Shape>(pub(crate) Sh::Concrete);
 
-pub trait Shape: std::fmt::Debug + Clone + Copy + Send + Sync {
+pub trait Shape: 'static + std::fmt::Debug + Clone + Copy + Send + Sync {
     const NUM_DIMS: usize;
     type Concrete: std::fmt::Debug
         + Clone
@@ -47,6 +50,16 @@ pub trait Shape: std::fmt::Debug + Clone + Copy + Send + Sync {
 
     fn concrete(&self) -> Self::Concrete;
     fn strides(&self) -> StridesFor<Self>;
+}
+
+pub trait HasShape {
+    type Shape: Shape;
+    fn shape(&self) -> &Self::Shape;
+}
+
+pub trait HasDtype {
+    type Dtype: Dtype;
+    fn dtype(&self) -> &Self::Dtype;
 }
 
 pub trait TryFromNumElements: Shape {

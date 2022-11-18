@@ -1,7 +1,7 @@
 use super::device::{Cpu, StridedArray};
 use super::iterate::LendingIterator;
 use crate::arrays::{Axis, Dim, Dtype, ReduceShape, Shape};
-use crate::devices::device::*;
+use crate::devices::{device::*, unary_ops};
 
 // (M, ) -> ()
 impl<E: Dtype + std::ops::AddAssign, D1: Dim>
