@@ -59,7 +59,6 @@ pub trait HasShape {
 
 pub trait HasDtype {
     type Dtype: Dtype;
-    fn dtype(&self) -> &Self::Dtype;
 }
 
 pub trait TryFromNumElements: Shape {

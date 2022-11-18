@@ -8,7 +8,12 @@ pub trait Device: Default + Clone {
         + Sync
         + HasShape<Shape = S>;
     type Err: std::fmt::Debug;
-    fn alloc<S: Shape, E: Dtype>(&self, shape: &S) -> Self::Storage<S, E>;
+    fn alloc<S: Shape, E: Dtype>(&self, shape: &S) -> Result<Self::Storage<S, E>, Self::Err>;
+    fn sub_assign<S: Shape, E: Dtype>(
+        &self,
+        lhs: &mut Self::Storage<S, E>,
+        rhs: &Self::Storage<S, E>,
+    );
 }
 
 pub trait Zeros<T>: Device {

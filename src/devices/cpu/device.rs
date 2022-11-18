@@ -65,7 +65,14 @@ impl<S: Shape, E> HasShape for StridedArray<S, E> {
 impl Device for Cpu {
     type Storage<S: Shape, E: Dtype> = StridedArray<S, E>;
     type Err = CpuError;
-    fn alloc<S: Shape, E: Dtype>(&self, shape: &S) -> Self::Storage<S, E> {
+    fn alloc<S: Shape, E: Dtype>(&self, shape: &S) -> Result<Self::Storage<S, E>, Self::Err> {
+        todo!();
+    }
+    fn sub_assign<S: Shape, E: Dtype>(
+        &self,
+        lhs: &mut Self::Storage<S, E>,
+        rhs: &Self::Storage<S, E>,
+    ) {
         todo!();
     }
 }

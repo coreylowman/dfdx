@@ -70,28 +70,8 @@
 //! let t: Tensor1D<5, OwnedTape> = t.traced(); // takes ownership of t
 //! ```
 
-mod impl_default;
-mod impl_has_array;
-mod impl_has_device;
-mod impl_has_unique_id;
-mod impl_put_tape;
-mod impl_randomize;
-mod impl_tensor;
-mod impl_tensor_creator;
-mod impl_trace;
+mod base;
+mod impl_alloc;
 mod impl_update_with_grads;
-mod into_tensor;
-mod structs;
 
-pub use impl_default::*;
-pub use impl_has_array::*;
-pub use impl_has_device::*;
-pub use impl_has_unique_id::*;
-pub use impl_put_tape::*;
-pub use impl_randomize::*;
-pub use impl_tensor::*;
-pub use impl_tensor_creator::*;
-pub use impl_trace::*;
-pub use impl_update_with_grads::*;
-pub use into_tensor::*;
-pub use structs::*;
+pub use base::{Tensor, Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};

@@ -28,7 +28,7 @@ pub struct Gradients<D: Device> {
 }
 
 impl<D: Device> Gradients<D> {
-    pub(crate) fn new(device: D) -> Self {
+    pub(crate) fn empty(device: D) -> Self {
         Self {
             gradient_by_id: Default::default(),
             device,
@@ -74,13 +74,14 @@ impl<D: Device> Gradients<D> {
     pub fn grad_mut<T: HasUniqueId + HasShape + HasDtype>(
         &mut self,
         t: &T,
-    ) -> &mut D::Storage<T::Shape, T::Dtype> {
-        self.gradient_by_id
-            .entry(*t.id())
-            .or_insert_with(|| Box::new(self.device.alloc::<T::Shape, T::Dtype>(t.shape())))
-            .as_mut()
-            .downcast_mut()
-            .unwrap()
+    ) -> Result<&mut D::Storage<T::Shape, T::Dtype>, D::Err> {
+        todo!();
+        // self.gradient_by_id
+        //     .entry(*t.id())
+        //     .or_insert_with(|| Box::new(self.device.alloc::<T::Shape, T::Dtype>(t.shape())))
+        //     .as_mut()
+        //     .downcast_mut()
+        //     .unwrap()
     }
 
     /// Returns a reference to the data associated with `t`.
@@ -131,20 +132,23 @@ impl<D: Device> Gradients<D> {
         &mut self,
         l: &L,
         r: &R,
-    ) -> (
-        &mut D::Storage<L::Shape, L::Dtype>,
-        &D::Storage<R::Shape, R::Dtype>,
-    )
+    ) -> Result<
+        (
+            &mut D::Storage<L::Shape, L::Dtype>,
+            &D::Storage<R::Shape, R::Dtype>,
+        ),
+        D::Err,
+    >
     where
         L: HasUniqueId + HasShape + HasDtype,
         R: HasUniqueId + HasShape + HasDtype,
     {
         assert_ne!(l.id(), r.id());
-        let l_ptr = self.grad_mut(l) as *mut _;
+        let l_ptr = self.grad_mut(l)? as *mut _;
         let r_ptr = self.grad(r) as *const _;
         let l_ref = unsafe { &mut *l_ptr };
         let r_ref = unsafe { &*r_ptr };
-        (l_ref, r_ref)
+        Ok((l_ref, r_ref))
     }
 
     pub fn muts_and_ref<L1, L2, L3, R>(
@@ -153,12 +157,15 @@ impl<D: Device> Gradients<D> {
         l2: &L2,
         l3: &L3,
         r: &R,
-    ) -> (
-        &mut D::Storage<L1::Shape, L1::Dtype>,
-        &mut D::Storage<L2::Shape, L2::Dtype>,
-        &mut D::Storage<L3::Shape, L3::Dtype>,
-        &D::Storage<R::Shape, R::Dtype>,
-    )
+    ) -> Result<
+        (
+            &mut D::Storage<L1::Shape, L1::Dtype>,
+            &mut D::Storage<L2::Shape, L2::Dtype>,
+            &mut D::Storage<L3::Shape, L3::Dtype>,
+            &D::Storage<R::Shape, R::Dtype>,
+        ),
+        D::Err,
+    >
     where
         L1: HasUniqueId + HasShape + HasDtype,
         L2: HasUniqueId + HasShape + HasDtype,
@@ -166,15 +173,15 @@ impl<D: Device> Gradients<D> {
         R: HasUniqueId + HasShape + HasDtype,
     {
         // assert_ne!(l1.id(), r.id());
-        let l1_ptr = self.grad_mut(l1) as *mut _;
-        let l2_ptr = self.grad_mut(l2) as *mut _;
-        let l3_ptr = self.grad_mut(l3) as *mut _;
+        let l1_ptr = self.grad_mut(l1)? as *mut _;
+        let l2_ptr = self.grad_mut(l2)? as *mut _;
+        let l3_ptr = self.grad_mut(l3)? as *mut _;
         let r_ptr = self.grad(r) as *const _;
         let l1_ref = unsafe { &mut *l1_ptr };
         let l2_ref = unsafe { &mut *l2_ptr };
         let l3_ref = unsafe { &mut *l3_ptr };
         let r_ref = unsafe { &*r_ptr };
-        (l1_ref, l2_ref, l3_ref, r_ref)
+        Ok((l1_ref, l2_ref, l3_ref, r_ref))
     }
 }
 
@@ -210,7 +217,7 @@ impl<D: Device> Gradients<D> {
 /// This would not be possible if these chain rule operations were inside of GradientTape!
 #[allow(clippy::type_complexity)]
 pub struct GradientTape<D: Device> {
-    operations: Vec<Box<dyn FnOnce(&mut Gradients<D>)>>,
+    operations: Vec<Box<dyn FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>>,
     device: D,
 }
 
@@ -223,6 +230,13 @@ impl<D: Device> std::fmt::Debug for GradientTape<D> {
 }
 
 impl<D: Device> GradientTape<D> {
+    pub(crate) fn empty(device: D) -> Self {
+        Self {
+            operations: Vec::new(),
+            device,
+        }
+    }
+
     /// Add an operation to be executed later. Implementation is all left to the caller,
     /// but the operation should likely call [Gradients::ref_gradient] and [Gradients::mut_gradient].
     ///
@@ -230,7 +244,10 @@ impl<D: Device> GradientTape<D> {
     /// * `operation` - A FnOnce that acts on [Gradients].
     ///
     /// See src/tensor_ops for implementation examples.
-    pub(crate) fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>)>(&mut self, operation: F) {
+    pub(crate) fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>(
+        &mut self,
+        operation: F,
+    ) {
         self.operations.push(Box::new(operation));
     }
 
@@ -238,7 +255,7 @@ impl<D: Device> GradientTape<D> {
     ///
     /// Note that this method takes ownership of self, so it can't be called twice!
     pub fn execute(mut self) -> Gradients<D> {
-        let mut gradients = Gradients::new(self.device.clone());
+        let mut gradients = Gradients::empty(self.device);
         for operation in self.operations.drain(..).rev() {
             (operation)(&mut gradients);
         }
@@ -264,19 +281,36 @@ pub struct NoneTape;
 pub trait Tape<D: Device>: Merge<Self> + Merge<NoneTape> {
     /// Whether this object currently owns the [GradientTape]. This is known at compile time.
     const OWNS_TAPE: bool;
-    fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>)>(&mut self, operation: F);
+    fn empty(device: D) -> Self;
+    fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>(
+        &mut self,
+        operation: F,
+    );
 }
 
 impl<D: Device> Tape<D> for OwnedTape<D> {
     const OWNS_TAPE: bool = true;
-    fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>)>(&mut self, operation: F) {
+    fn empty(device: D) -> Self {
+        Self(Box::new(GradientTape::empty(device)))
+    }
+    fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>(
+        &mut self,
+        operation: F,
+    ) {
         self.0.add_backward_op(operation)
     }
 }
 
 impl<D: Device> Tape<D> for NoneTape {
     const OWNS_TAPE: bool = false;
-    fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>)>(&mut self, _operation: F) {}
+    fn empty(_: D) -> Self {
+        Self
+    }
+    fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>(
+        &mut self,
+        _operation: F,
+    ) {
+    }
 }
 
 pub trait Merge<T: ?Sized> {
