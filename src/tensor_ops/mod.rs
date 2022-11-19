@@ -155,7 +155,7 @@ mod impl_mean;
 mod impl_sum;
 mod map;
 // mod matmul;
-// mod permute;
+mod permute;
 // mod select;
 pub(crate) mod utils;
 
