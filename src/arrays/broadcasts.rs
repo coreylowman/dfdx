@@ -33,6 +33,7 @@ broadcast_to!(Rank2<M, O>, Rank3<M, N, O>, Axis<1>, { M, N, O });
 broadcast_to!(Rank2<N, O>, Rank3<M, N, O>, Axis<0>, { M, N, O });
 broadcast_to!(Rank2<M, N>, Rank4<M, N, O, P>, Axes2<2, 3>, { M, N, O, P });
 broadcast_to!(Rank2<M, O>, Rank4<M, N, O, P>, Axes2<1, 3>, { M, N, O, P });
+broadcast_to!(Rank2<N, O>, Rank4<M, N, O, P>, Axes2<0, 3>, { M, N, O, P });
 broadcast_to!(Rank2<M, P>, Rank4<M, N, O, P>, Axes2<1, 2>, { M, N, O, P });
 broadcast_to!(Rank2<N, P>, Rank4<M, N, O, P>, Axes2<0, 2>, { M, N, O, P });
 broadcast_to!(Rank2<O, P>, Rank4<M, N, O, P>, Axes2<0, 1>, { M, N, O, P });
