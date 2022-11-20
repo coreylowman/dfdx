@@ -145,7 +145,7 @@ mod impl_broadcast_reduce;
 mod impl_mean;
 // mod impl_min;
 // mod impl_minimum;
-// mod impl_mul;
+mod impl_mul;
 // mod impl_nans;
 // mod impl_normalize;
 // mod impl_pow;
