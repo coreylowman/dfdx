@@ -151,7 +151,7 @@ mod impl_mean;
 // mod impl_pow;
 // mod impl_softmax;
 // mod impl_stddev;
-// mod impl_sub;
+mod impl_sub;
 mod impl_sum;
 mod map;
 // mod matmul;
