@@ -36,6 +36,24 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
     }
 }
 
+impl<D1: Dim, D2: Dim, E: Dtype> View<(D1, D2), E> {
+    fn transpose(self) -> View<(D2, D1), E> {
+        View {
+            ptr: self.ptr,
+            strides: [self.strides[1], self.strides[0]],
+        }
+    }
+}
+
+impl<D1: Dim, D2: Dim, E: Dtype> ViewMut<(D1, D2), E> {
+    fn transpose(self) -> ViewMut<(D2, D1), E> {
+        ViewMut {
+            ptr: self.ptr,
+            strides: [self.strides[1], self.strides[0]],
+        }
+    }
+}
+
 impl<D1: Dim, D2: Dim, D3: Dim, E: Dtype> View<(D1, D2, D3), E> {
     fn index(&self, index: usize) -> View<(D2, D3), E> {
         let [a, b, c] = self.strides;
@@ -94,11 +112,48 @@ fn matmul<const M: usize, const K: usize, const N: usize>(
     #[cfg(feature = "cblas")]
     unsafe {
         let (m, n, k) = (M as libc::c_int, N as libc::c_int, K as libc::c_int);
-        let [ar, _] = a.strides.map(|x| x as libc::c_int);
-        let [br, _] = b.strides.map(|x| x as libc::c_int);
-        let [cr, _] = c.strides.map(|x| x as libc::c_int);
+        let [ar, ac] = a.strides.map(|x| x as libc::c_int);
+        let [br, bc] = b.strides.map(|x| x as libc::c_int);
+        let [cr, cc] = c.strides.map(|x| x as libc::c_int);
+        let (layout, a_tr, b_tr, lda, ldb, ldc) = if cr < cc {
+            let layout = ColMajor;
+            let ldc = m;
+            let (lda, a_tr) = {
+                if ar < ac {
+                    (m, NoTr)
+                } else {
+                    (k, Tr)
+                }
+            };
+            let (ldb, b_tr) = {
+                if br < bc {
+                    (k, NoTr)
+                } else {
+                    (n, Tr)
+                }
+            };
+            (layout, a_tr, b_tr, lda, ldb, ldc)
+        } else {
+            let layout = RowMajor;
+            let ldc = n;
+            let (lda, a_tr) = {
+                if ar < ac {
+                    (m, Tr)
+                } else {
+                    (k, NoTr)
+                }
+            };
+            let (ldb, b_tr) = {
+                if br < bc {
+                    (k, Tr)
+                } else {
+                    (n, NoTr)
+                }
+            };
+            (layout, a_tr, b_tr, lda, ldb, ldc)
+        };
         sgemm(
-            RowMajor, NoTr, NoTr, m, n, k, 1.0, a.ptr, ar, b.ptr, br, 1.0, c.ptr, cr,
+            layout, a_tr, b_tr, m, n, k, 1.0, a.ptr, lda, b.ptr, ldb, 1.0, c.ptr, ldc,
         )
     }
 }
@@ -110,63 +165,13 @@ fn matmul_bwd<const M: usize, const K: usize, const N: usize>(
     grad_rhs: ViewMut<Rank2<K, N>, f32>,
     grad_out: View<Rank2<M, N>, f32>,
 ) {
-    {
-        // grad_lhs += grad_out * rhs^T
-        // (M, K) += (M, N) * (N, K)
-        let a = grad_out;
-        let b = rhs;
-        let c = grad_lhs;
+    // grad_lhs += grad_out * rhs^T
+    // (M, K) += (M, N) * (N, K)
+    matmul(grad_out, rhs.transpose(), grad_lhs);
 
-        #[cfg(not(feature = "cblas"))]
-        unsafe {
-            let [ar, ac] = a.strides.map(|x| x as isize);
-            let [br, bc] = b.strides.map(|x| x as isize);
-            let [cr, cc] = c.strides.map(|x| x as isize);
-            matrixmultiply::sgemm(
-                M, N, K, 1.0, a.ptr, ar, ac, b.ptr, bc, br, 1.0, c.ptr, cr, cc,
-            );
-        }
-
-        #[cfg(feature = "cblas")]
-        unsafe {
-            let [ar, _] = a.strides.map(|x| x as libc::c_int);
-            let [br, _] = b.strides.map(|x| x as libc::c_int);
-            let [cr, _] = c.strides.map(|x| x as libc::c_int);
-            let (m, n, k) = (M as libc::c_int, N as libc::c_int, K as libc::c_int);
-            sgemm(
-                RowMajor, NoTr, Tr, m, k, n, 1.0, a.ptr, ar, b.ptr, br, 1.0, c.ptr, cr,
-            )
-        }
-    }
-
-    {
-        // grad_rhs += lhs^T * grad_out
-        // (K, N) += (K, M) * (M, N)
-        let a = lhs;
-        let b = grad_out;
-        let c = grad_rhs;
-
-        #[cfg(not(feature = "cblas"))]
-        unsafe {
-            let [ar, ac] = a.strides.map(|x| x as isize);
-            let [br, bc] = b.strides.map(|x| x as isize);
-            let [cr, cc] = c.strides.map(|x| x as isize);
-            matrixmultiply::sgemm(
-                K, M, N, 1.0, a.ptr, ac, ar, b.ptr, br, bc, 1.0, c.ptr, cr, cc,
-            );
-        }
-
-        #[cfg(feature = "cblas")]
-        unsafe {
-            let [ar, _] = a.strides.map(|x| x as libc::c_int);
-            let [br, _] = b.strides.map(|x| x as libc::c_int);
-            let [cr, _] = c.strides.map(|x| x as libc::c_int);
-            let (m, n, k) = (M as libc::c_int, N as libc::c_int, K as libc::c_int);
-            sgemm(
-                RowMajor, Tr, NoTr, k, n, m, 1.0, a.ptr, ar, b.ptr, br, 1.0, c.ptr, cr,
-            )
-        }
-    }
+    // grad_rhs += lhs^T * grad_out
+    // (K, N) += (K, M) * (M, N)
+    matmul(lhs.transpose(), grad_out, grad_rhs);
 }
 
 impl<const M: usize, const K: usize, const N: usize>

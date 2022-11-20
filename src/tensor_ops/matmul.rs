@@ -182,8 +182,8 @@ mod tests {
         let c2 = b.trace().permute().matmul(a.trace().permute());
         let g2 = c2.exp().mean().backward();
 
-        assert_eq!(g1.get(&a).as_array(), g2.get(&a).as_array());
-        assert_eq!(g1.get(&b).as_array(), g2.get(&b).as_array());
+        assert_close(&g1.get(&a).as_array(), &g2.get(&a).as_array());
+        assert_close(&g1.get(&b).as_array(), &g2.get(&b).as_array());
     }
 
     #[test]
@@ -244,7 +244,7 @@ mod tests {
     }
 
     #[test]
-    fn test_matmul_vec() {
+    fn test_matmul_vec_normal() {
         let dev = build_test_device!();
 
         let a = dev.tensor([0.7296, 0.3974, 0.9487]);
