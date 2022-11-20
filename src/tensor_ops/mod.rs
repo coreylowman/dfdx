@@ -141,7 +141,7 @@ mod impl_div;
 // mod impl_dropout;
 // mod impl_mask;
 // mod impl_max;
-// mod impl_maximum;
+mod impl_maximum;
 mod impl_mean;
 // mod impl_min;
 mod impl_minimum;
