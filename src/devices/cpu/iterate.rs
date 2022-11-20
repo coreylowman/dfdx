@@ -194,11 +194,10 @@ mod tests {
 
     #[test]
     fn test_0d_contiguous_iter() {
-        let shape = Default::default();
         let s: StridedArray<Rank0, f32> = StridedArray {
             data: Arc::new(vec![0.0]),
-            shape,
-            strides: shape.strides(),
+            shape: (),
+            strides: ().strides(),
         };
         let mut i = s.iter();
         assert_eq!(i.next(), Some(&0.0));

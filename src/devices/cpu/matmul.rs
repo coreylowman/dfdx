@@ -36,8 +36,38 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
     }
 }
 
+impl<D1: Dim, E: Dtype> View<(D1,), E> {
+    fn br0(self) -> View<(C<1>, D1), E> {
+        View {
+            ptr: self.ptr,
+            strides: [0, self.strides[0]],
+        }
+    }
+    fn br1(self) -> View<(D1, C<1>), E> {
+        View {
+            ptr: self.ptr,
+            strides: [self.strides[0], 0],
+        }
+    }
+}
+
+impl<D1: Dim, E: Dtype> ViewMut<(D1,), E> {
+    fn br0(self) -> ViewMut<(C<1>, D1), E> {
+        ViewMut {
+            ptr: self.ptr,
+            strides: [0, self.strides[0]],
+        }
+    }
+    fn br1(self) -> ViewMut<(D1, C<1>), E> {
+        ViewMut {
+            ptr: self.ptr,
+            strides: [self.strides[0], 0],
+        }
+    }
+}
+
 impl<D1: Dim, D2: Dim, E: Dtype> View<(D1, D2), E> {
-    fn transpose(self) -> View<(D2, D1), E> {
+    fn tr(self) -> View<(D2, D1), E> {
         View {
             ptr: self.ptr,
             strides: [self.strides[1], self.strides[0]],
@@ -45,17 +75,8 @@ impl<D1: Dim, D2: Dim, E: Dtype> View<(D1, D2), E> {
     }
 }
 
-impl<D1: Dim, D2: Dim, E: Dtype> ViewMut<(D1, D2), E> {
-    fn transpose(self) -> ViewMut<(D2, D1), E> {
-        ViewMut {
-            ptr: self.ptr,
-            strides: [self.strides[1], self.strides[0]],
-        }
-    }
-}
-
 impl<D1: Dim, D2: Dim, D3: Dim, E: Dtype> View<(D1, D2, D3), E> {
-    fn index(&self, index: usize) -> View<(D2, D3), E> {
+    fn get(&self, index: usize) -> View<(D2, D3), E> {
         let [a, b, c] = self.strides;
         View {
             ptr: unsafe { self.ptr.add(index * a) },
@@ -65,7 +86,7 @@ impl<D1: Dim, D2: Dim, D3: Dim, E: Dtype> View<(D1, D2, D3), E> {
 }
 
 impl<D1: Dim, D2: Dim, D3: Dim, E: Dtype> ViewMut<(D1, D2, D3), E> {
-    fn index(&self, index: usize) -> ViewMut<(D2, D3), E> {
+    fn get(&self, index: usize) -> ViewMut<(D2, D3), E> {
         let [a, b, c] = self.strides;
         ViewMut {
             ptr: unsafe { self.ptr.add(index * a) },
@@ -75,7 +96,7 @@ impl<D1: Dim, D2: Dim, D3: Dim, E: Dtype> ViewMut<(D1, D2, D3), E> {
 }
 
 impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> View<(D1, D2, D3, D4), E> {
-    fn index(&self, index: usize) -> View<(D2, D3, D4), E> {
+    fn get(&self, index: usize) -> View<(D2, D3, D4), E> {
         let [a, b, c, d] = self.strides;
         View {
             ptr: unsafe { self.ptr.add(index * a) },
@@ -85,7 +106,7 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> View<(D1, D2, D3, D4), E> {
 }
 
 impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> ViewMut<(D1, D2, D3, D4), E> {
-    fn index(&self, index: usize) -> ViewMut<(D2, D3, D4), E> {
+    fn get(&self, index: usize) -> ViewMut<(D2, D3, D4), E> {
         let [a, b, c, d] = self.strides;
         ViewMut {
             ptr: unsafe { self.ptr.add(index * a) },
@@ -116,62 +137,18 @@ fn matmul<const M: usize, const K: usize, const N: usize>(
         let [br, bc] = b.strides.map(|x| x as libc::c_int);
         let [cr, cc] = c.strides.map(|x| x as libc::c_int);
         let (layout, a_tr, b_tr, lda, ldb, ldc) = if cr < cc {
-            let layout = ColMajor;
-            let ldc = m;
-            let (lda, a_tr) = {
-                if ar < ac {
-                    (m, NoTr)
-                } else {
-                    (k, Tr)
-                }
-            };
-            let (ldb, b_tr) = {
-                if br < bc {
-                    (k, NoTr)
-                } else {
-                    (n, Tr)
-                }
-            };
-            (layout, a_tr, b_tr, lda, ldb, ldc)
+            let (lda, a_tr) = if ar < ac { (m, NoTr) } else { (k, Tr) };
+            let (ldb, b_tr) = if br < bc { (k, NoTr) } else { (n, Tr) };
+            (ColMajor, a_tr, b_tr, lda, ldb, m)
         } else {
-            let layout = RowMajor;
-            let ldc = n;
-            let (lda, a_tr) = {
-                if ar < ac {
-                    (m, Tr)
-                } else {
-                    (k, NoTr)
-                }
-            };
-            let (ldb, b_tr) = {
-                if br < bc {
-                    (k, Tr)
-                } else {
-                    (n, NoTr)
-                }
-            };
-            (layout, a_tr, b_tr, lda, ldb, ldc)
+            let (lda, a_tr) = if ar < ac { (m, Tr) } else { (k, NoTr) };
+            let (ldb, b_tr) = if br < bc { (k, Tr) } else { (n, NoTr) };
+            (RowMajor, a_tr, b_tr, lda, ldb, n)
         };
         sgemm(
             layout, a_tr, b_tr, m, n, k, 1.0, a.ptr, lda, b.ptr, ldb, 1.0, c.ptr, ldc,
         )
     }
-}
-
-fn matmul_bwd<const M: usize, const K: usize, const N: usize>(
-    lhs: View<Rank2<M, K>, f32>,
-    grad_lhs: ViewMut<Rank2<M, K>, f32>,
-    rhs: View<Rank2<K, N>, f32>,
-    grad_rhs: ViewMut<Rank2<K, N>, f32>,
-    grad_out: View<Rank2<M, N>, f32>,
-) {
-    // grad_lhs += grad_out * rhs^T
-    // (M, K) += (M, N) * (N, K)
-    matmul(grad_out, rhs.transpose(), grad_lhs);
-
-    // grad_rhs += lhs^T * grad_out
-    // (K, N) += (K, M) * (M, N)
-    matmul(lhs.transpose(), grad_out, grad_rhs);
 }
 
 impl<const M: usize, const K: usize, const N: usize>
@@ -197,13 +174,9 @@ impl<const M: usize, const K: usize, const N: usize>
         grad_rhs: &mut Self::Storage<Rank2<K, N>, f32>,
         grad_out: &Self::Storage<Rank2<M, N>, f32>,
     ) {
-        matmul_bwd(
-            lhs.view(),
-            grad_lhs.view_mut(),
-            rhs.view(),
-            grad_rhs.view_mut(),
-            grad_out.view(),
-        );
+        let grad_out = grad_out.view();
+        matmul(grad_out, rhs.view().tr(), grad_lhs.view_mut());
+        matmul(lhs.view().tr(), grad_out, grad_rhs.view_mut());
     }
 }
 
@@ -223,7 +196,7 @@ impl<const B: usize, const M: usize, const K: usize, const N: usize>
         let c = out.view_mut();
 
         for batch in 0..B {
-            matmul(a.index(batch), b.index(batch), c.index(batch));
+            matmul(a.get(batch), b.get(batch), c.get(batch));
         }
 
         Ok(out)
@@ -243,14 +216,9 @@ impl<const B: usize, const M: usize, const K: usize, const N: usize>
         let rhs = rhs.view();
         let grad_rhs = grad_rhs.view_mut();
         let grad_out = grad_out.view();
-        for batch in 0..B {
-            matmul_bwd(
-                lhs.index(batch),
-                grad_lhs.index(batch),
-                rhs.index(batch),
-                grad_rhs.index(batch),
-                grad_out.index(batch),
-            );
+        for b in 0..B {
+            matmul(grad_out.get(b), rhs.get(b).tr(), grad_lhs.get(b));
+            matmul(lhs.get(b).tr(), grad_out.get(b), grad_rhs.get(b));
         }
     }
 }
@@ -273,9 +241,8 @@ impl<Batch: Dim, const M: usize, const K: usize, const N: usize>
         let a = lhs.view();
         let b = rhs.view();
         let c = out.view_mut();
-
         for batch in 0..batch_size {
-            matmul(a.index(batch), b, c.index(batch));
+            matmul(a.get(batch), b, c.get(batch));
         }
 
         Ok(out)
@@ -293,17 +260,12 @@ impl<Batch: Dim, const M: usize, const K: usize, const N: usize>
         let batch_size = lhs.shape().0.size();
         let lhs = lhs.view();
         let grad_lhs = grad_lhs.view_mut();
-        let rhs = rhs.view();
+        let rhs = rhs.view().tr();
         let grad_rhs = grad_rhs.view_mut();
         let grad_out = grad_out.view();
-        for batch in 0..batch_size {
-            matmul_bwd(
-                lhs.index(batch),
-                grad_lhs.index(batch),
-                rhs,
-                grad_rhs,
-                grad_out.index(batch),
-            );
+        for b in 0..batch_size {
+            matmul(grad_out.get(b), rhs, grad_lhs.get(b));
+            matmul(lhs.get(b).tr(), grad_out.get(b), grad_rhs);
         }
     }
 }
@@ -329,11 +291,7 @@ impl<const B: usize, const S: usize, const M: usize, const K: usize, const N: us
         let out_view = out.view_mut();
         for b in 0..B {
             for s in 0..S {
-                matmul(
-                    lhs.index(b).index(s),
-                    rhs.index(b).index(s),
-                    out_view.index(b).index(s),
-                );
+                matmul(lhs.get(b).get(s), rhs.get(b).get(s), out_view.get(b).get(s));
             }
         }
         Ok(out)
@@ -355,12 +313,15 @@ impl<const B: usize, const S: usize, const M: usize, const K: usize, const N: us
         let grad_out = grad_out.view();
         for b in 0..B {
             for s in 0..S {
-                matmul_bwd(
-                    lhs.index(b).index(s),
-                    grad_lhs.index(b).index(s),
-                    rhs.index(b).index(s),
-                    grad_rhs.index(b).index(s),
-                    grad_out.index(b).index(s),
+                matmul(
+                    grad_out.get(b).get(s),
+                    rhs.get(b).get(s).tr(),
+                    grad_lhs.get(b).get(s),
+                );
+                matmul(
+                    lhs.get(b).get(s).tr(),
+                    grad_out.get(b).get(s),
+                    grad_rhs.get(b).get(s),
                 );
             }
         }
@@ -377,19 +338,10 @@ impl<const K: usize, const N: usize>
         rhs: &Self::Storage<Rank2<K, N>, f32>,
     ) -> Result<Self::Storage<Rank1<N>, f32>, Self::Err> {
         let mut out: Self::Storage<Rank1<N>, f32> = self.try_zeros()?;
-        let lhs: View<(C<1>, C<K>), f32> = View {
-            ptr: lhs.data.as_ptr(),
-            strides: [0, lhs.strides.0[0]],
-        };
-        let rhs = rhs.view();
-        let out_view = out.view_mut();
-        let out_view: ViewMut<(C<1>, C<N>), f32> = ViewMut {
-            ptr: out_view.ptr,
-            strides: [0, out_view.strides[0]],
-        };
-        matmul(lhs, rhs, out_view);
+        matmul(lhs.view().br0(), rhs.view(), out.view_mut().br0());
         Ok(out)
     }
+
     fn binary_bwd(
         &self,
         _op: binary_ops::MatMul,
@@ -399,23 +351,9 @@ impl<const K: usize, const N: usize>
         grad_rhs: &mut Self::Storage<Rank2<K, N>, f32>,
         grad_out: &Self::Storage<Rank1<N>, f32>,
     ) {
-        let lhs: View<(C<1>, C<K>), f32> = View {
-            ptr: lhs.data.as_ptr(),
-            strides: [0, lhs.strides.0[0]],
-        };
-        let grad_lhs = grad_lhs.view_mut();
-        let grad_lhs: ViewMut<(C<1>, C<K>), f32> = ViewMut {
-            ptr: grad_lhs.ptr,
-            strides: [0, grad_lhs.strides[0]],
-        };
-        let rhs = rhs.view();
-        let grad_rhs = grad_rhs.view_mut();
-        let grad_out = grad_out.view();
-        let grad_out: View<(C<1>, C<N>), f32> = View {
-            ptr: grad_out.ptr,
-            strides: [0, grad_out.strides[0]],
-        };
-        matmul_bwd(lhs, grad_lhs, rhs, grad_rhs, grad_out);
+        let grad_out = grad_out.view().br0();
+        matmul(grad_out, rhs.view().tr(), grad_lhs.view_mut().br0());
+        matmul(lhs.view().br0().tr(), grad_out, grad_rhs.view_mut());
     }
 }
 
@@ -429,16 +367,7 @@ impl<const M: usize, const N: usize>
         rhs: &Self::Storage<Rank1<N>, f32>,
     ) -> Result<Self::Storage<Rank2<M, N>, f32>, Self::Err> {
         let mut out: Self::Storage<Rank2<M, N>, f32> = self.try_zeros()?;
-        let lhs: View<(C<M>, C<1>), f32> = View {
-            ptr: lhs.data.as_ptr(),
-            strides: [lhs.strides.0[0], 0],
-        };
-        let rhs: View<(C<1>, C<N>), f32> = View {
-            ptr: rhs.data.as_ptr(),
-            strides: [0, rhs.strides.0[0]],
-        };
-        let out_view = out.view_mut();
-        matmul(lhs, rhs, out_view);
+        matmul(lhs.view().br1(), rhs.view().br0(), out.view_mut());
         Ok(out)
     }
     fn binary_bwd(
@@ -450,27 +379,8 @@ impl<const M: usize, const N: usize>
         grad_rhs: &mut Self::Storage<Rank1<N>, f32>,
         grad_out: &Self::Storage<Rank2<M, N>, f32>,
     ) {
-        let lhs = lhs.view();
-        let lhs: View<(C<M>, C<1>), f32> = View {
-            ptr: lhs.ptr,
-            strides: [lhs.strides[0], 0],
-        };
-        let grad_lhs = grad_lhs.view_mut();
-        let grad_lhs: ViewMut<(C<M>, C<1>), f32> = ViewMut {
-            ptr: grad_lhs.ptr,
-            strides: [grad_lhs.strides[0], 0],
-        };
-        let rhs = rhs.view();
-        let rhs: View<(C<1>, C<N>), f32> = View {
-            ptr: rhs.ptr,
-            strides: [0, rhs.strides[0]],
-        };
-        let grad_rhs = grad_rhs.view_mut();
-        let grad_rhs: ViewMut<(C<1>, C<N>), f32> = ViewMut {
-            ptr: grad_rhs.ptr,
-            strides: [0, grad_rhs.strides[0]],
-        };
         let grad_out = grad_out.view();
-        matmul_bwd(lhs, grad_lhs, rhs, grad_rhs, grad_out);
+        matmul(grad_out, rhs.view().br0().tr(), grad_lhs.view_mut().br1());
+        matmul(lhs.view().br1().tr(), grad_out, grad_rhs.view_mut().br0());
     }
 }

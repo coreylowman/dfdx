@@ -59,7 +59,7 @@ impl Derivatives<f32> for binary_ops::Div {
         x / y
     }
     #[inline(always)]
-    fn dfdx(x: &f32, y: &f32) -> f32 {
+    fn dfdx(_: &f32, y: &f32) -> f32 {
         1.0 / y
     }
     #[inline(always)]

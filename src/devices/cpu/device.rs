@@ -45,15 +45,6 @@ impl<S: Shape, E: Clone> StridedArray<S, E> {
             strides: self.strides,
         })
     }
-
-    pub(super) fn strided_ptr(&self) -> (*const E, &S::Concrete) {
-        (self.data.as_ptr(), &self.strides.0)
-    }
-
-    pub(super) fn strided_ptr_mut(&mut self) -> (*mut E, &S::Concrete) {
-        let data = Arc::make_mut(&mut self.data);
-        (data.as_mut_ptr(), &self.strides.0)
-    }
 }
 
 impl<S: Shape, E> HasShape for StridedArray<S, E> {

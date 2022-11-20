@@ -1,3 +1,5 @@
+#![allow(clippy::needless_range_loop)]
+
 use crate::arrays::{
     Dtype, Rank0, Rank1, Rank2, Rank3, Rank4, Shape, StridesFor, TryFromNumElements,
 };
