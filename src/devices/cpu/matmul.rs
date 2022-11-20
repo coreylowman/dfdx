@@ -208,7 +208,7 @@ impl<const B: usize, const M: usize, const K: usize, const N: usize>
         lhs: &Self::Storage<Rank3<B, M, K>, f32>,
         grad_lhs: &mut Self::Storage<Rank3<B, M, K>, f32>,
         rhs: &Self::Storage<Rank3<B, K, N>, f32>,
-        grad_rhs: &mut Self::Storage<(C<B>, C<K>, C<N>), f32>,
+        grad_rhs: &mut Self::Storage<Rank3<B, K, N>, f32>,
         grad_out: &Self::Storage<Rank3<B, M, N>, f32>,
     ) {
         let lhs = lhs.view();
@@ -224,14 +224,14 @@ impl<const B: usize, const M: usize, const K: usize, const N: usize>
 }
 
 impl<Batch: Dim, const M: usize, const K: usize, const N: usize>
-    BinaryKernel<binary_ops::MatMul, (Batch, C<M>, C<K>), (C<K>, C<N>), (Batch, C<M>, C<N>), f32>
+    BinaryKernel<binary_ops::MatMul, (Batch, C<M>, C<K>), Rank2<K, N>, (Batch, C<M>, C<N>), f32>
     for Cpu
 {
     fn binary_fwd(
         &self,
         _op: binary_ops::MatMul,
         lhs: &Self::Storage<(Batch, C<M>, C<K>), f32>,
-        rhs: &Self::Storage<(C<K>, C<N>), f32>,
+        rhs: &Self::Storage<Rank2<K, N>, f32>,
     ) -> Result<Self::Storage<(Batch, C<M>, C<N>), f32>, Self::Err> {
         let batch_size = lhs.shape().0.size();
 
@@ -253,8 +253,8 @@ impl<Batch: Dim, const M: usize, const K: usize, const N: usize>
         _op: binary_ops::MatMul,
         lhs: &Self::Storage<(Batch, C<M>, C<K>), f32>,
         grad_lhs: &mut Self::Storage<(Batch, C<M>, C<K>), f32>,
-        rhs: &Self::Storage<(C<K>, C<N>), f32>,
-        grad_rhs: &mut Self::Storage<(C<K>, C<N>), f32>,
+        rhs: &Self::Storage<Rank2<K, N>, f32>,
+        grad_rhs: &mut Self::Storage<Rank2<K, N>, f32>,
         grad_out: &Self::Storage<(Batch, C<M>, C<N>), f32>,
     ) {
         let batch_size = lhs.shape().0.size();
@@ -271,21 +271,16 @@ impl<Batch: Dim, const M: usize, const K: usize, const N: usize>
 }
 
 impl<const B: usize, const S: usize, const M: usize, const K: usize, const N: usize>
-    BinaryKernel<
-        binary_ops::MatMul,
-        (C<B>, C<S>, C<M>, C<K>),
-        (C<B>, C<S>, C<K>, C<N>),
-        (C<B>, C<S>, C<M>, C<N>),
-        f32,
-    > for Cpu
+    BinaryKernel<binary_ops::MatMul, Rank4<B, S, M, K>, Rank4<B, S, K, N>, Rank4<B, S, M, N>, f32>
+    for Cpu
 {
     fn binary_fwd(
         &self,
         _op: binary_ops::MatMul,
-        lhs: &Self::Storage<(C<B>, C<S>, C<M>, C<K>), f32>,
-        rhs: &Self::Storage<(C<B>, C<S>, C<K>, C<N>), f32>,
-    ) -> Result<Self::Storage<(C<B>, C<S>, C<M>, C<N>), f32>, Self::Err> {
-        let mut out: Self::Storage<(C<B>, C<S>, C<M>, C<N>), f32> = self.try_zeros()?;
+        lhs: &Self::Storage<Rank4<B, S, M, K>, f32>,
+        rhs: &Self::Storage<Rank4<B, S, K, N>, f32>,
+    ) -> Result<Self::Storage<Rank4<B, S, M, N>, f32>, Self::Err> {
+        let mut out: Self::Storage<Rank4<B, S, M, N>, f32> = self.try_zeros()?;
         let lhs = lhs.view();
         let rhs = rhs.view();
         let out_view = out.view_mut();
@@ -300,11 +295,11 @@ impl<const B: usize, const S: usize, const M: usize, const K: usize, const N: us
     fn binary_bwd(
         &self,
         _op: binary_ops::MatMul,
-        lhs: &Self::Storage<(C<B>, C<S>, C<M>, C<K>), f32>,
-        grad_lhs: &mut Self::Storage<(C<B>, C<S>, C<M>, C<K>), f32>,
-        rhs: &Self::Storage<(C<B>, C<S>, C<K>, C<N>), f32>,
-        grad_rhs: &mut Self::Storage<(C<B>, C<S>, C<K>, C<N>), f32>,
-        grad_out: &Self::Storage<(C<B>, C<S>, C<M>, C<N>), f32>,
+        lhs: &Self::Storage<Rank4<B, S, M, K>, f32>,
+        grad_lhs: &mut Self::Storage<Rank4<B, S, M, K>, f32>,
+        rhs: &Self::Storage<Rank4<B, S, K, N>, f32>,
+        grad_rhs: &mut Self::Storage<Rank4<B, S, K, N>, f32>,
+        grad_out: &Self::Storage<Rank4<B, S, M, N>, f32>,
     ) {
         let lhs = lhs.view();
         let grad_lhs = grad_lhs.view_mut();
