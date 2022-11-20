@@ -235,12 +235,56 @@ mod tests {
 
     #[test]
     fn test_matmul_batched_3d() {
-        todo!();
+        let dev = build_test_device!();
+
+        let a: Tensor3D<5, 3, 2, _> = dev.randn();
+        let a_array = a.as_array();
+        let b: Tensor3D<5, 2, 4, _> = dev.randn();
+        let b_array = b.as_array();
+        let c = a.trace().matmul(b.clone());
+        let c_array = c.as_array();
+        let g = c.exp().sum().backward();
+
+        let g_a = g.get(&a).as_array();
+        let g_b = g.get(&b).as_array();
+
+        for i in 0..5 {
+            let sub_a = dev.tensor(a_array[i]);
+            let sub_b = dev.tensor(b_array[i]);
+            let sub_c = sub_a.trace().matmul(sub_b.clone());
+            assert_eq!(sub_c.as_array(), c_array[i]);
+            let sub_g = sub_c.exp().sum().backward();
+            assert_eq!(sub_g.get(&sub_a).as_array(), g_a[i]);
+            assert_eq!(sub_g.get(&sub_b).as_array(), g_b[i]);
+        }
     }
 
     #[test]
     fn test_matmul_batched_4d() {
-        todo!();
+        let dev = build_test_device!();
+
+        let a: Tensor4D<7, 5, 3, 2, _> = dev.randn();
+        let a_array = a.as_array();
+        let b: Tensor4D<7, 5, 2, 4, _> = dev.randn();
+        let b_array = b.as_array();
+        let c = a.trace().matmul(b.clone());
+        let c_array = c.as_array();
+        let g = c.exp().sum().backward();
+
+        let g_a = g.get(&a).as_array();
+        let g_b = g.get(&b).as_array();
+
+        for i in 0..7 {
+            for j in 0..5 {
+                let sub_a = dev.tensor(a_array[i][j]);
+                let sub_b = dev.tensor(b_array[i][j]);
+                let sub_c = sub_a.trace().matmul(sub_b.clone());
+                assert_eq!(sub_c.as_array(), c_array[i][j]);
+                let sub_g = sub_c.exp().sum().backward();
+                assert_eq!(sub_g.get(&sub_a).as_array(), g_a[i][j]);
+                assert_eq!(sub_g.get(&sub_b).as_array(), g_b[i][j]);
+            }
+        }
     }
 
     #[test]
