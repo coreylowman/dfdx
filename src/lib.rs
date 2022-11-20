@@ -177,30 +177,34 @@ pub(crate) mod tests {
     pub(crate) use build_test_device;
 
     pub trait AssertClose {
-        fn assert_close(&self, rhs: &Self, tolerance: f32);
-    }
-
-    impl<const M: usize> AssertClose for [f32; M] {
-        fn assert_close(&self, rhs: &Self, tolerance: f32) {
-            if !self
-                .iter()
-                .zip(rhs.iter())
-                .all(|(a, b)| (a - b).abs() <= tolerance)
-            {
+        fn is_close(&self, rhs: &Self, tolerance: f32) -> bool;
+        fn assert_close(&self, rhs: &Self, tolerance: f32)
+        where
+            Self: std::fmt::Debug,
+        {
+            if !self.is_close(rhs, tolerance) {
                 panic!("lhs: {:?} != rhs: {:?}", self, rhs);
             }
         }
     }
 
-    impl<T: AssertClose, const M: usize> AssertClose for [T; M] {
-        fn assert_close(&self, rhs: &Self, tolerance: f32) {
-            for (lhs_i, rhs_i) in self.iter().zip(rhs.iter()) {
-                lhs_i.assert_close(rhs_i, tolerance);
-            }
+    impl<const M: usize> AssertClose for [f32; M] {
+        fn is_close(&self, rhs: &Self, tolerance: f32) -> bool {
+            self.iter()
+                .zip(rhs.iter())
+                .all(|(a, b)| (a - b).abs() <= tolerance)
         }
     }
 
-    pub fn assert_close<T: AssertClose>(a: &T, b: &T) {
+    impl<T: AssertClose, const M: usize> AssertClose for [T; M] {
+        fn is_close(&self, rhs: &Self, tolerance: f32) -> bool {
+            self.iter()
+                .zip(rhs.iter())
+                .all(|(l, r)| l.is_close(r, tolerance))
+        }
+    }
+
+    pub fn assert_close<T: AssertClose + std::fmt::Debug>(a: &T, b: &T) {
         a.assert_close(b, TOLERANCE);
     }
 }

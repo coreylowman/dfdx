@@ -84,15 +84,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::devices::{AsArray, Zeros};
+    use crate::devices::{AsArray, Randn, Zeros};
     use crate::tensor::*;
     use crate::tensor_ops::impl_backward::TryBackward;
+    use crate::tensor_ops::impl_broadcast_reduce::BroadcastTo;
     use crate::tensor_ops::impl_mean::MeanTo;
+    use crate::tensor_ops::impl_sum::SumTo;
     use crate::tensor_ops::map::TryExp;
-    use crate::{
-        devices::Device,
-        tests::{assert_close, build_test_device},
-    };
+    use crate::tensor_ops::permute::PermuteTo;
+    use crate::tests::{assert_close, build_test_device};
 
     #[test]
     fn test_valid_matmuls() {
@@ -130,7 +130,7 @@ mod tests {
     }
 
     #[test]
-    fn test_matmul() {
+    fn test_matmul_normal() {
         let dev = build_test_device!();
 
         let a = dev.tensor([
@@ -170,185 +170,148 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_matmul_transpose() {
-    //     let mut rng = thread_rng();
-    //     let a: Tensor2D<4, 3> = TensorCreator::randn(&mut rng);
-    //     let b: Tensor2D<3, 2> = TensorCreator::randn(&mut rng);
-    //     let c = matmul(a.trace(), b.clone());
+    #[test]
+    fn test_matmul_transpose() {
+        let dev = build_test_device!();
+        let a: Tensor2D<4, 3, _> = dev.randn();
+        let b: Tensor2D<3, 2, _> = dev.randn();
 
-    //     let b_t = Tensor2D::new(transpose(b.data()));
-    //     let c_tr = matmul_transpose(a.trace(), b_t.clone());
-    //     assert_close(c_tr.data(), c.data());
+        let c = a.trace().matmul(b.clone());
+        let g1 = c.exp().mean().backward();
 
-    //     let gs = backward(c.exp().mean());
-    //     let gs_tr = backward(c_tr.exp().mean());
-    //     assert_close(gs_tr.ref_gradient(&a), gs.ref_gradient(&a));
-    //     assert_close(gs_tr.ref_gradient(&b_t), &transpose(gs.ref_gradient(&b)));
-    // }
+        let c2 = b.trace().permute().matmul(a.trace().permute());
+        let g2 = c2.exp().mean().backward();
 
-    // #[test]
-    // fn test_broadcasted_matmul() {
-    //     const N: usize = 5;
-    //     let mut rng = thread_rng();
-    //     let a: Tensor3D<N, 4, 3> = TensorCreator::randn(&mut rng);
-    //     let b: Tensor2D<3, 2> = TensorCreator::randn(&mut rng);
-    //     let r = matmul(a.trace(), b.clone());
-    //     for i in 0..N {
-    //         let sub_a = Tensor2D::new(a.data()[i]);
-    //         assert_close(&r.data()[i], matmul(sub_a, b.clone()).data());
-    //     }
-    //     let gs = backward(r.sum());
-    //     let mut sub_bs_summed = [[0.0; 2]; 3];
-    //     for i in 0..N {
-    //         let sub_a = Tensor2D::new(a.data()[i]);
-    //         let sub_gs = backward(matmul(sub_a.trace(), b.clone()).sum());
-    //         assert_close(&gs.ref_gradient(&a)[i], sub_gs.ref_gradient(&sub_a));
-    //         <Cpu as Device<_>>::add(&mut sub_bs_summed, sub_gs.ref_gradient(&b));
-    //     }
-    //     assert_close(gs.ref_gradient(&b), &sub_bs_summed);
-    // }
+        assert_eq!(g1.get(&a).as_array(), g2.get(&a).as_array());
+        assert_eq!(g1.get(&b).as_array(), g2.get(&b).as_array());
+    }
 
-    // #[test]
-    // fn test_broadcasted_matmul_transpose() {
-    //     let mut rng = thread_rng();
-    //     let a: Tensor3D<2, 4, 3> = TensorCreator::randn(&mut rng);
-    //     let b: Tensor2D<3, 2> = TensorCreator::randn(&mut rng);
-    //     let c = matmul(a.trace(), b.clone());
+    #[test]
+    fn test_matul_broadcast() {
+        const N: usize = 5;
+        let dev = build_test_device!();
+        let a: Tensor3D<N, 4, 3, _> = dev.randn();
+        let a_array = a.as_array();
+        let b: Tensor2D<3, 2, _> = dev.randn();
+        let r = a.trace().matmul(b.clone());
+        let r_array = r.as_array();
+        for i in 0..N {
+            let sub_a = dev.tensor(a_array[i]);
+            let sub_c = sub_a.matmul(b.clone());
+            assert_close(&r_array[i], &sub_c.as_array());
+        }
+        let gs = r.sum().backward();
+        let a_grad = gs.get(&a).as_array();
+        let mut sub_bs_summed = [[0.0; 2]; 3];
+        for i in 0..N {
+            let sub_a = dev.tensor(a_array[i]);
+            let sub_gs = sub_a.trace().matmul(b.clone()).sum().backward();
+            assert_close(&a_grad[i], &sub_gs.get(&sub_a).as_array());
+            let sub_b_grad = sub_gs.get(&b).as_array();
+            for x in 0..3 {
+                for y in 0..2 {
+                    sub_bs_summed[x][y] += sub_b_grad[x][y];
+                }
+            }
+        }
+        assert_close(&gs.get(&b).as_array(), &sub_bs_summed);
+    }
 
-    //     let b_t = Tensor2D::new(transpose(b.data()));
-    //     let c_tr = matmul_transpose(a.trace(), b_t.clone());
-    //     assert_close(c_tr.data(), c.data());
+    #[test]
+    fn test_matmul_broadcast_actual() {
+        const N: usize = 5;
+        let dev = build_test_device!();
+        let a: Tensor3D<N, 4, 3, _> = dev.randn();
+        let b: Tensor2D<3, 2, _> = dev.randn();
+        let b_up: Tensor3D<N, 3, 2, _, _> = b.trace().broadcast();
+        let r1 = a.trace().matmul(b_up);
+        let r2 = a.trace().matmul(b.clone());
+        assert_eq!(r1.as_array(), r2.as_array());
+        let g1 = r1.exp().mean().backward();
+        let g2 = r2.exp().mean().backward();
+        assert_eq!(g1.get(&a).as_array(), g2.get(&a).as_array());
+        assert_eq!(g1.get(&b).as_array(), g2.get(&b).as_array());
+    }
 
-    //     let gs = backward(c.exp().mean());
-    //     let gs_tr = backward(c_tr.exp().mean());
-    //     assert_close(gs_tr.ref_gradient(&a), gs.ref_gradient(&a));
-    //     assert_close(gs_tr.ref_gradient(&b_t), &transpose(gs.ref_gradient(&b)));
-    // }
+    #[test]
+    fn test_matmul_batched_3d() {
+        todo!();
+    }
 
-    // #[test]
-    // fn test_vecmat_mul() {
-    //     let a = tensor([0.7296, 0.3974, 0.9487]);
-    //     let b = tensor([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
-    //     let r: Tensor1D<2, OwnedTape> = vecmat_mul(a.trace(), b.clone());
-    //     assert_close(r.data(), &[1.261436, 1.5543157]);
-    //     let g = backward(r.exp().mean());
-    //     assert_close(g.ref_gradient(&a), &[2.6883178, 2.9369607, 2.9256766]);
-    //     assert_close(
-    //         g.ref_gradient(&b),
-    //         &[
-    //             [1.2879219, 1.7261779],
-    //             [0.70150787, 0.94021803],
-    //             [1.6746868, 2.244552],
-    //         ],
-    //     );
-    // }
+    #[test]
+    fn test_matmul_batched_4d() {
+        todo!();
+    }
 
-    // #[test]
-    // fn test_vecmat_mul_transpose() {
-    //     let a = tensor([0.7296, 0.3974, 0.9487]);
-    //     let b = tensor([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
-    //     let r: Tensor1D<2, OwnedTape> = vecmat_mul_transpose(a.trace(), b.clone());
-    //     assert_close(r.data(), &[1.261436, 1.5543157]);
-    //     let g = backward(r.exp().mean());
-    //     assert_close(g.ref_gradient(&a), &[2.6883178, 2.9369607, 2.9256766]);
-    //     assert_close(
-    //         g.ref_gradient(&b),
-    //         &[
-    //             [1.2879219, 0.70150787, 1.6746868],
-    //             [1.7261779, 0.94021803, 2.244552],
-    //         ],
-    //     );
-    // }
+    #[test]
+    fn test_matmul_vec() {
+        let dev = build_test_device!();
 
-    // fn transpose<const M: usize, const N: usize>(a: &[[f32; N]; M]) -> [[f32; M]; N] {
-    //     let mut t: [[f32; M]; N] = ZeroElements::ZEROS;
-    //     for (m, a_m) in a.iter().enumerate() {
-    //         for (n, a_mn) in a_m.iter().enumerate() {
-    //             t[n][m] = *a_mn;
-    //         }
-    //     }
-    //     t
-    // }
+        let a = dev.tensor([0.7296, 0.3974, 0.9487]);
+        let b = dev.tensor([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
+        let r = a.trace().matmul(b.clone());
+        assert_close(&r.as_array(), &[1.261436, 1.5543157]);
+        let g = r.exp().mean().backward();
+        assert_close(&g.get(&a).as_array(), &[2.6883178, 2.9369607, 2.9256766]);
+        assert_close(
+            &g.get(&b).as_array(),
+            &[
+                [1.2879219, 1.7261779],
+                [0.70150787, 0.94021803],
+                [1.6746868, 2.244552],
+            ],
+        );
+    }
+
+    #[test]
+    fn test_matmul_vec_transpose() {
+        let dev = build_test_device!();
+        let a = dev.tensor([0.7296, 0.3974, 0.9487]);
+        let b = dev.tensor([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
+        let r = a.trace().matmul(b.trace().permute());
+        assert_close(&r.as_array(), &[1.261436, 1.5543157]);
+        let g = r.exp().mean().backward();
+        assert_close(&g.get(&a).as_array(), &[2.6883178, 2.9369607, 2.9256766]);
+        assert_close(
+            &g.get(&b).as_array(),
+            &[
+                [1.2879219, 0.70150787, 1.6746868],
+                [1.7261779, 0.94021803, 2.244552],
+            ],
+        );
+    }
+
+    #[test]
+    fn test_vecvec() {
+        let dev = build_test_device!();
+        let a = dev.tensor([-1.5333828, 0.6136148, -0.77502704, -1.0014728, -2.0131118]);
+        let b = dev.tensor([0.43068963, -0.9757187, -0.50650096]);
+        let c = a.trace().matmul(b.clone());
+        assert_close(
+            &c.as_array(),
+            &[
+                [-0.66041213, 1.4961504, 0.7766599],
+                [0.26427752, -0.5987154, -0.31079647],
+                [-0.3337961, 0.75620836, 0.39255193],
+                [-0.43132398, 0.97715575, 0.507247],
+                [-0.8670264, 1.9642308, 1.0196431],
+            ],
+        );
+
+        let g = c.exp().mean().backward();
+        assert_close(
+            &g.get(&a).as_array(),
+            &[
+                -0.34898597,
+                -0.02309341,
+                -0.16800028,
+                -0.21024881,
+                -0.54529756,
+            ],
+        );
+        assert_close(
+            &g.get(&b).as_array(),
+            &[-0.13630435, -1.6781758, -0.75171506],
+        );
+    }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::tests::assert_close;
-
-//     #[test]
-//     fn test_matmul() {
-//         let x = [
-//             [1.0, 2.0, 3.0],
-//             [4.0, 5.0, 6.0],
-//             [7.0, 8.0, 9.0],
-//             [10.0, 11.0, 12.0],
-//         ];
-//         let x_t = [
-//             [1.0, 4.0, 7.0, 10.0],
-//             [2.0, 5.0, 8.0, 11.0],
-//             [3.0, 6.0, 9.0, 12.0],
-//         ];
-//         let y = [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]];
-//         let y_t = [[1.0, 3.0, 5.0], [2.0, 4.0, 6.0]];
-//         let expected = [[22.0, 28.0], [49.0, 64.0], [76.0, 100.0], [103.0, 136.0]];
-
-//         let mut out = [[0.0; 2]; 4];
-//         Cpu::mm(&x, &y, &mut out);
-//         assert_close(&out, &expected);
-
-//         let mut out = [[0.0; 2]; 4];
-//         Cpu::mm_at(&x_t, &y, &mut out);
-//         assert_close(&out, &expected);
-
-//         let mut out = [[0.0; 2]; 4];
-//         Cpu::mm_bt(&x, &y_t, &mut out);
-//         assert_close(&out, &expected);
-//     }
-
-//     #[test]
-//     fn test_vecmul() {
-//         let x = [1.0, 2.0, 3.0];
-//         let y = [[1.0, 2.0], [0.5, 1.0], [1.0 / 3.0, 1.0]];
-//         let y_t = [[1.0, 0.5, 1.0 / 3.0], [2.0, 1.0, 1.0]];
-//         let expected = [3.0, 7.0];
-
-//         let mut out = [0.0; 2];
-//         Cpu::vm(&x, &y, &mut out);
-//         assert_close(&out, &expected);
-
-//         let mut out = [0.0; 2];
-//         Cpu::vm_bt(&x, &y_t, &mut out);
-//         assert_close(&out, &expected);
-//     }
-
-//     #[test]
-//     fn test_vecvec() {
-//         let x = [1.0, 2.0, 3.0];
-//         let y = [-1.0, 0.5, -1.0 / 3.0, 0.25];
-
-//         let mut out = [[0.0; 4]; 3];
-//         Cpu::vv(&x, &y, &mut out);
-//         assert_close(
-//             &out,
-//             &[
-//                 [-1.0, 0.5, -1.0 / 3.0, 0.25],
-//                 [-2.0, 1.0, -2.0 / 3.0, 0.5],
-//                 [-3.0, 1.5, -1.0, 0.75],
-//             ],
-//         );
-
-//         let mut out = [[0.0; 3]; 4];
-//         Cpu::vv(&y, &x, &mut out);
-//         assert_close(
-//             &out,
-//             &[
-//                 [-1.0, -2.0, -3.0],
-//                 [0.5, 1.0, 1.5],
-//                 [-1.0 / 3.0, -2.0 / 3.0, -1.0],
-//                 [0.25, 0.5, 0.75],
-//             ],
-//         );
-//     }
-// }
