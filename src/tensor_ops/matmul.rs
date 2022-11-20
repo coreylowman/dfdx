@@ -278,30 +278,6 @@ mod tests {
 //     use crate::tests::assert_close;
 
 //     #[test]
-//     fn test_valid_matmuls() {
-//         type A = [[f32; 2]; 5];
-//         type B = [[f32; 3]; 2];
-//         type C = [[f32; 3]; 5];
-
-//         // normal matmul
-//         let _ = <Cpu as MatMul<A, B, C>>::mm;
-
-//         // batch 3d matmul
-//         let _ = <Cpu as MatMul<[A; 10], [B; 10], [C; 10]>>::mm;
-
-//         // batch 4d matmul
-//         let _ = <Cpu as MatMul<[[A; 10]; 12], [[B; 10]; 12], [[C; 10]; 12]>>::mm;
-
-//         // broadcast matmul
-//         let _ = <Cpu as MatMul<[A; 10], B, [C; 10]>>::mm;
-//         let _ = <Cpu as MatMul<[A; 10], [B; 10], C>>::mm;
-
-//         // transposed
-//         let _ = <Cpu as MatMul<C, <B as Transpose>::T, A>>::mm;
-//         let _ = <Cpu as MatMul<<A as Transpose>::T, C, B>>::mm;
-//     }
-
-//     #[test]
 //     fn test_matmul() {
 //         let x = [
 //             [1.0, 2.0, 3.0],
