@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::{boxed::Box, vec::Vec};
 
 use crate::arrays::{HasDtype, HasShape};
+use crate::devices::device::HasDeviceStorage;
 use crate::devices::Device;
 use crate::unique_id::{HasUniqueId, UniqueId};
 
@@ -72,12 +73,12 @@ impl<D: Device> Gradients<D> {
     /// g[0] = 1.0;
     /// assert_eq!(gradients.ref_gradient(&t), &[1.0, 0.0, 0.0]);
     /// ```
-    pub fn get_mut<T: HasUniqueId + HasShape + HasDtype>(
+    pub fn get_mut<T: HasUniqueId + HasDeviceStorage<Device = D>>(
         &mut self,
         t: &T,
     ) -> Result<&mut D::Storage<T::Shape, T::Dtype>, D::Err> {
         if !self.gradient_by_id.contains_key(t.id()) {
-            let grad = self.device.alloc::<T::Shape, T::Dtype>(t.shape())?;
+            let grad = self.device.alloc_like(t.storage())?;
             self.gradient_by_id.insert(*t.id(), Box::new(grad));
         }
         Ok(self
@@ -144,8 +145,8 @@ impl<D: Device> Gradients<D> {
         D::Err,
     >
     where
-        L: HasUniqueId + HasShape + HasDtype,
-        R: HasUniqueId + HasShape + HasDtype,
+        L: HasUniqueId + HasDeviceStorage<Device = D>,
+        R: HasUniqueId + HasDeviceStorage<Device = D>,
     {
         assert_ne!(l.id(), r.id());
         let l_ptr = self.get_mut(l)? as *mut _;
@@ -169,9 +170,9 @@ impl<D: Device> Gradients<D> {
         D::Err,
     >
     where
-        L1: HasUniqueId + HasShape + HasDtype,
-        L2: HasUniqueId + HasShape + HasDtype,
-        R: HasUniqueId + HasShape + HasDtype,
+        L1: HasUniqueId + HasDeviceStorage<Device = D>,
+        L2: HasUniqueId + HasDeviceStorage<Device = D>,
+        R: HasUniqueId + HasDeviceStorage<Device = D>,
     {
         assert_ne!(l1.id(), l2.id());
         assert_ne!(l1.id(), r.id());

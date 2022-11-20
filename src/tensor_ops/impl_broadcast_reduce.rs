@@ -49,17 +49,20 @@ where
     D: UnaryKernel<unary_ops::Broadcast<Dst, Axes>, Src, Dst, E>,
 {
     fn try_broadcast_to(self, dst: &Dst) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
-        let op = dst.into();
-        try_unary_op(op, self)
+        try_unary_op(dst.into(), self)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::devices::Zeros;
+    use crate::devices::{AsArray, Randn, Zeros};
     use crate::tensor::*;
-    use crate::tests::build_test_device;
+    use crate::tensor_ops::impl_backward::TryBackward;
+    use crate::tensor_ops::impl_mean::MeanTo;
+    use crate::tensor_ops::impl_sum::SumTo;
+    use crate::tensor_ops::map::TryExp;
+    use crate::tests::{build_test_device, AssertClose};
 
     #[test]
     fn test_valid_1d_broadcasts() {
@@ -111,21 +114,22 @@ mod tests {
         let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor1D<9, _>>::zeros(&dev).broadcast();
     }
 
-    // #[test]
-    // fn test_broadcast_backwards() {
-    //     let dev = build_test_device!();
-    //     let a: Tensor1D<3, _> = dev.randn();
-    //     let b: Tensor2D<5, 3, _> = dev.randn();
-    //     let a_up: Tensor2D<5, 3, _, OwnedTape<_>> = a.trace().broadcast();
-    //     a_up.data().assert_close(&[*a.data(); 5], 1e-4);
-    //     let r = mul(a_up, b.clone());
-    //     let g = backward(r.exp().mean());
-    //     // a's gradient: (b * (b * a).exp()).sum(0) / 15
-    //     // b's gradient: (a * (b * a).exp()) / 15
-    //     let a_up: Tensor2D<5, 3> = a.clone().broadcast();
-    //     let a_grad = mul(mul(b.clone(), a_up.clone()).exp(), b.clone()).sum::<_, Axis<0>>() / 15.0;
-    //     let b_grad = mul(mul(b.clone(), a_up.clone()).exp(), a_up) / 15.0;
-    //     g.ref_gradient(&a).assert_close(a_grad.data(), 1e-4);
-    //     g.ref_gradient(&b).assert_close(b_grad.data(), 1e-4);
-    // }
+    #[test]
+    fn test_broadcast_backwards() {
+        let dev = build_test_device!();
+        let a: Tensor1D<3, _> = dev.randn();
+        let b: Tensor2D<5, 3, _> = dev.randn();
+        let a_up: Tensor2D<5, 3, _, _> = a.trace().broadcast();
+        a_up.as_array().assert_close(&[a.as_array(); 5], 1e-4);
+        let r = a_up * b.clone();
+        let g = r.exp().mean().backward();
+
+        let a_up: Tensor2D<5, 3, _> = a.clone().broadcast();
+        // a's gradient: (b * (b * a).exp()).sum(0) / 15
+        let a_grad: Tensor1D<3, _> = (b.clone() * (b.clone() * a_up.clone()).exp()).sum() / 15.0;
+        // b's gradient: (a * (b * a).exp()) / 15
+        let b_grad = (a_up.clone() * (b.clone() * a_up).exp()) / 15.0;
+        g.get(&a).as_array().assert_close(&a_grad.as_array(), 1e-4);
+        g.get(&b).as_array().assert_close(&b_grad.as_array(), 1e-4);
+    }
 }

@@ -84,4 +84,10 @@ impl Device for Cpu {
     fn alloc<S: Shape, E: Dtype>(&self, shape: &S) -> Result<Self::Storage<S, E>, Self::Err> {
         self.try_zeros_like(*shape)
     }
+    fn alloc_like<S: Shape, E: Dtype>(
+        &self,
+        storage: &Self::Storage<S, E>,
+    ) -> Result<Self::Storage<S, E>, Self::Err> {
+        self.try_zeros_like(storage)
+    }
 }

@@ -1,4 +1,4 @@
-use crate::arrays::{Dtype, HasShape, Shape};
+use crate::arrays::{Dtype, HasDtype, HasShape, Shape};
 
 pub trait HasErr: Sized {
     type Err: std::fmt::Debug;
@@ -13,6 +13,15 @@ pub trait Device: 'static + Default + Clone + HasErr {
         + HasShape<Shape = S>;
 
     fn alloc<S: Shape, E: Dtype>(&self, shape: &S) -> Result<Self::Storage<S, E>, Self::Err>;
+    fn alloc_like<S: Shape, E: Dtype>(
+        &self,
+        storage: &Self::Storage<S, E>,
+    ) -> Result<Self::Storage<S, E>, Self::Err>;
+}
+
+pub trait HasDeviceStorage: HasShape + HasDtype {
+    type Device: Device;
+    fn storage(&self) -> &<Self::Device as Device>::Storage<Self::Shape, Self::Dtype>;
 }
 
 pub trait Zeros<T>: HasErr {

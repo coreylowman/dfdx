@@ -148,7 +148,7 @@ mod impl_mul;
 // mod impl_nans;
 // mod impl_normalize;
 mod impl_pow;
-// mod impl_softmax;
+mod impl_softmax;
 // mod impl_stddev;
 mod impl_sub;
 mod impl_sum;

@@ -33,6 +33,23 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
     }
 
     #[inline]
+    pub(super) fn try_new_like(other: &Self, elem: E) -> Result<Self, CpuError> {
+        let numel = other.data.len();
+        let shape = other.shape;
+        let strides = other.strides;
+        let mut data: Vec<E> = Vec::new();
+        data.try_reserve_exact(numel)
+            .map_err(|_| CpuError::OutOfMemory)?;
+        data.resize(numel, elem);
+        let data = Arc::new(data);
+        Ok(StridedArray {
+            data,
+            shape,
+            strides,
+        })
+    }
+
+    #[inline]
     fn try_filled_with<R, D>(shape: S, rng: &mut R, dist: &D) -> Result<Self, CpuError>
     where
         R: Rng,
@@ -40,6 +57,26 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
     {
         let numel = shape.num_elements();
         let strides: StridesFor<S> = shape.strides();
+        let mut data: Vec<E> = Vec::new();
+        data.try_reserve_exact(numel)
+            .map_err(|_| CpuError::OutOfMemory)?;
+        data.resize_with(numel, &mut || rng.sample(dist));
+        Ok(StridedArray {
+            data: Arc::new(data),
+            shape,
+            strides,
+        })
+    }
+
+    #[inline]
+    fn try_filled_like<R, D>(other: &Self, rng: &mut R, dist: &D) -> Result<Self, CpuError>
+    where
+        R: Rng,
+        D: Distribution<E>,
+    {
+        let numel = other.data.len();
+        let shape = other.shape;
+        let strides = other.strides;
         let mut data: Vec<E> = Vec::new();
         data.try_reserve_exact(numel)
             .map_err(|_| CpuError::OutOfMemory)?;
@@ -65,7 +102,7 @@ impl<S: Shape + Default, E: Dtype> Zeros<StridedArray<S, E>> for Cpu {
 
 impl<S: Shape, E: Dtype> ZerosLike<&StridedArray<S, E>, StridedArray<S, E>> for Cpu {
     fn try_zeros_like(&self, src: &StridedArray<S, E>) -> Result<StridedArray<S, E>, Self::Err> {
-        StridedArray::try_new_with(src.shape, Default::default())
+        StridedArray::try_new_like(src, Default::default())
     }
 }
 
@@ -87,7 +124,7 @@ impl<S: Shape + Default> Ones<StridedArray<S, f32>> for Cpu {
 
 impl<S: Shape> OnesLike<&StridedArray<S, f32>, StridedArray<S, f32>> for Cpu {
     fn try_ones_like(&self, src: &StridedArray<S, f32>) -> Result<StridedArray<S, f32>, Self::Err> {
-        StridedArray::try_new_with(src.shape, 1.0)
+        StridedArray::try_new_like(src, 1.0)
     }
 }
 
@@ -118,7 +155,7 @@ where
 {
     fn try_rand_like(&self, src: &StridedArray<S, E>) -> Result<StridedArray<S, E>, Self::Err> {
         let rng = &mut *self.rng.borrow_mut();
-        StridedArray::try_filled_with(src.shape, rng, &Standard)
+        StridedArray::try_filled_like(src, rng, &Standard)
     }
 }
 
@@ -153,7 +190,7 @@ where
 {
     fn try_randn_like(&self, src: &StridedArray<S, E>) -> Result<StridedArray<S, E>, Self::Err> {
         let rng = &mut *self.rng.borrow_mut();
-        StridedArray::try_filled_with(src.shape, rng, &StandardNormal)
+        StridedArray::try_filled_like(src, rng, &StandardNormal)
     }
 }
 
