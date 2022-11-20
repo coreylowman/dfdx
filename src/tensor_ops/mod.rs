@@ -135,7 +135,7 @@
 mod impl_add;
 mod impl_backward;
 mod impl_broadcast_reduce;
-// mod impl_clamp;
+mod impl_clamp;
 mod impl_div;
 // mod impl_dropout;
 // mod impl_mask;

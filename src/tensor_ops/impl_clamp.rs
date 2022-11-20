@@ -1,5 +1,14 @@
-use crate::gradients::Tape;
-use crate::prelude::*;
+use crate::{
+    arrays::{Dtype, Shape},
+    devices::{
+        device::{HasErr, UnaryKernel},
+        unary_ops, Device,
+    },
+    gradients::Tape,
+    tensor::Tensor,
+};
+
+use super::utils::try_unary_op;
 
 /// Clamp all elements between the provided min and max values.
 ///
@@ -10,63 +19,43 @@ use crate::prelude::*;
 /// let r = t.clamp(-0.5, 0.5);
 /// assert_eq!(r.data(), &[-0.5, -0.5, 0.0, 0.5, 0.5]);
 /// ```
-pub fn clamp<T: Tensor<Dtype = f32>>(t: T, min: T::Dtype, max: T::Dtype) -> T {
-    crate::tensor_ops::utils::map(
-        t,
-        move |x| x.clamp(min, max),
-        move |x| if (min..=max).contains(x) { 1.0 } else { 0.0 },
-    )
+pub trait TryClamp<E: Dtype>: HasErr {
+    fn clamp(self, min: E, max: E) -> Self {
+        self.try_clamp(min, max).unwrap()
+    }
+    fn try_clamp(self, min: E, max: E) -> Result<Self, Self::Err>;
 }
 
-macro_rules! tensor_impl {
-    ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [clamp()] on self
-    pub fn clamp(self, min: f32, max: f32) -> Self {
-        clamp(self, min, max)
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryClamp<E> for Tensor<S, E, D, T>
+where
+    D: UnaryKernel<unary_ops::Clamp<E>, S, S, E>,
+{
+    fn try_clamp(self, min: E, max: E) -> Result<Self, Self::Err> {
+        try_unary_op(unary_ops::Clamp { min, max }, self)
     }
 }
-    };
-}
-
-tensor_impl!(Tensor0D, []);
-tensor_impl!(Tensor1D, [M]);
-tensor_impl!(Tensor2D, [M, N]);
-tensor_impl!(Tensor3D, [M, N, O]);
-tensor_impl!(Tensor4D, [M, N, O, P]);
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        devices::AsArray,
+        tensor::{Tensor2D, TensorSugar},
+        tensor_ops::{impl_backward::TryBackward, impl_mean::MeanTo, map::TryExp},
+        tests::build_test_device,
+    };
+
     use super::*;
 
     #[test]
-    fn test_clamp_0d() {
-        let t = tensor(1.0);
-        let r = t.trace().clamp(0.0, 1.0);
-        assert_eq!(r.data(), &1.0);
-        let gradients = backward(r.mean());
-        assert_eq!(gradients.ref_gradient(&t), &1.0);
-    }
-
-    #[test]
-    fn test_clamp_1d() {
-        let t = tensor([-1.0, -0.5, -0.25, 0.0, 0.25, 0.5, 1.0]);
-        let r = t.trace().clamp(-0.5, 0.25);
-        assert_eq!(r.data(), &[-0.5, -0.5, -0.25, 0.0, 0.25, 0.25, 0.25]);
-        // NOTE: .exp() so we cover case where .clamp() needs to use result's grad
-        let gradients = backward(r.exp().mean());
-        assert_eq!(
-            gradients.ref_gradient(&t),
-            &[0.0, 0.08664724, 0.11125726, 0.14285715, 0.1834322, 0.0, 0.0]
-        );
-    }
-
-    #[test]
-    fn test_clamp_2d() {
-        let t: Tensor2D<2, 3> = tensor([[-1.0, 0.0, 1.0], [-2.0, 2.0, 1.1]]);
+    fn test_clamp() {
+        let dev = build_test_device!();
+        let t: Tensor2D<2, 3, _> = dev.tensor([[-1.0, 0.0, 1.0], [-2.0, 2.0, 1.1]]);
         let r = t.trace().clamp(-1.0, 1.0);
-        assert_eq!(r.data(), &[[-1.0, 0.0, 1.0], [-1.0, 1.0, 1.0]]);
-        let gradients = backward(r.mean());
-        assert_eq!(gradients.ref_gradient(&t), &[[1.0 / 6.0; 3], [0.0; 3]]);
+        assert_eq!(r.as_array(), [[-1.0, 0.0, 1.0], [-1.0, 1.0, 1.0]]);
+        let g = r.exp().mean().backward();
+        assert_eq!(
+            g.get(&t).as_array(),
+            [[0.06131324, 0.16666667, 0.45304698], [0.0; 3]]
+        );
     }
 }
