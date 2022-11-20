@@ -24,9 +24,6 @@ pub struct Abs;
 pub struct ReLU;
 
 #[derive(Debug, Clone, Copy)]
-pub struct Powi(pub(crate) i32);
-
-#[derive(Debug, Clone, Copy)]
 pub struct Pow<Elem>(pub(crate) Elem);
 
 #[derive(Debug, Clone, Copy)]

@@ -155,7 +155,7 @@ impl Derivatives<f32> for unary_ops::Clamp<f32> {
     }
 }
 
-impl Derivatives<f32> for unary_ops::Powi {
+impl Derivatives<f32> for unary_ops::Pow<i32> {
     #[inline(always)]
     fn f(&self, x: &f32) -> f32 {
         x.powi(self.0)

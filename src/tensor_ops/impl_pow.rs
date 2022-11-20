@@ -1,6 +1,14 @@
-use super::utils::map;
-use crate::gradients::Tape;
-use crate::prelude::*;
+use crate::{
+    arrays::{Dtype, Shape},
+    devices::{
+        device::{HasErr, UnaryKernel},
+        unary_ops, Device,
+    },
+    gradients::Tape,
+    tensor::Tensor,
+};
+
+use super::utils::try_unary_op;
 
 /// Raises to a float power. `t^i`.
 ///
@@ -14,8 +22,20 @@ use crate::prelude::*;
 /// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.powf(-3.2);
 /// ```
-pub fn powf<T: Tensor<Dtype = f32>>(t: T, i: T::Dtype) -> T {
-    map(t, move |x| x.powf(i), move |x| i * x.powf(i - 1.0))
+pub trait TryPowf<E: Dtype>: HasErr {
+    fn powf(self, i: E) -> Self {
+        self.try_powf(i).unwrap()
+    }
+    fn try_powf(self, i: E) -> Result<Self, Self::Err>;
+}
+
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryPowf<E> for Tensor<S, E, D, T>
+where
+    D: UnaryKernel<unary_ops::Pow<E>, S, S, E>,
+{
+    fn try_powf(self, i: E) -> Result<Self, Self::Err> {
+        try_unary_op(unary_ops::Pow(i), self)
+    }
 }
 
 /// Raises to an integer power. `t^i`.
@@ -30,46 +50,44 @@ pub fn powf<T: Tensor<Dtype = f32>>(t: T, i: T::Dtype) -> T {
 /// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.powi(3);
 /// ```
-pub fn powi<T: Tensor<Dtype = f32>>(t: T, i: i32) -> T {
-    map(t, move |x| x.powi(i), move |x| i as f32 * x.powi(i - 1))
+pub trait TryPowi: HasErr {
+    fn powi(self, i: i32) -> Self {
+        self.try_powi(i).unwrap()
+    }
+    fn try_powi(self, i: i32) -> Result<Self, Self::Err>;
 }
 
-macro_rules! tensor_impl {
-    ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [powf()] on `self`.
-    pub fn powf(self, i: f32) -> Self {
-        powf(self, i)
-    }
-
-    /// Calls [powi()] on `self`.
-    pub fn powi(self, i: i32) -> Self {
-        powi(self, i)
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryPowi for Tensor<S, E, D, T>
+where
+    D: UnaryKernel<unary_ops::Pow<i32>, S, S, E>,
+{
+    fn try_powi(self, i: i32) -> Result<Self, Self::Err> {
+        try_unary_op(unary_ops::Pow(i), self)
     }
 }
-    };
-}
-
-tensor_impl!(Tensor0D, []);
-tensor_impl!(Tensor1D, [M]);
-tensor_impl!(Tensor2D, [M, N]);
-tensor_impl!(Tensor3D, [M, N, O]);
-tensor_impl!(Tensor4D, [M, N, O, P]);
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        devices::AsArray,
+        tensor::TensorSugar,
+        tensor_ops::{impl_backward::TryBackward, impl_sum::SumTo},
+        tests::build_test_device,
+    };
 
     #[test]
     fn test_powf_positive() {
-        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let dev = build_test_device!();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powf(3.5);
-        assert!(r.data()[0].is_nan());
-        assert!(r.data()[1].is_nan());
-        assert_eq!(&r.data()[2..], &[0.0, 1.0, 11.313708]);
+        let r_array = r.as_array();
+        assert!(r_array[0].is_nan());
+        assert!(r_array[1].is_nan());
+        assert_eq!(&r_array[2..], &[0.0, 1.0, 11.313708]);
 
-        let g = backward(r.sum());
-        let grad = g.ref_gradient(&t);
+        let g = r.sum().backward();
+        let grad = g.get(&t).as_array();
         assert!(grad[0].is_nan());
         assert!(grad[1].is_nan());
         assert_eq!(&grad[2..], &[0.0, 3.5, 19.79899]);
@@ -77,14 +95,16 @@ mod tests {
 
     #[test]
     fn test_powf_negative() {
-        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let dev = build_test_device!();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powf(-1.2);
-        assert!(r.data()[0].is_nan());
-        assert!(r.data()[1].is_nan());
-        assert_eq!(&r.data()[2..], &[f32::INFINITY, 1.0, 0.43527526]);
+        let r_array = r.as_array();
+        assert!(r_array[0].is_nan());
+        assert!(r_array[1].is_nan());
+        assert_eq!(&r_array[2..], &[f32::INFINITY, 1.0, 0.43527526]);
 
-        let g = backward(r.sum());
-        let grad = g.ref_gradient(&t);
+        let g = r.sum().backward();
+        let grad = g.get(&t).as_array();
         assert!(grad[0].is_nan());
         assert!(grad[1].is_nan());
         assert_eq!(&grad[2..], &[f32::NEG_INFINITY, -1.2, -0.26116517]);
@@ -92,22 +112,24 @@ mod tests {
 
     #[test]
     fn test_powi_positive() {
-        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let dev = build_test_device!();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powi(3);
-        assert_eq!(r.data(), &[-8., -1., 0., 1., 8.]);
-        let g = backward(r.sum());
-        assert_eq!(g.ref_gradient(&t), &[12., 3., 0., 3., 12.]);
+        assert_eq!(r.as_array(), [-8., -1., 0., 1., 8.]);
+        let g = r.sum().backward();
+        assert_eq!(g.get(&t).as_array(), [12., 3., 0., 3., 12.]);
     }
 
     #[test]
     fn test_powi_negative() {
-        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let dev = build_test_device!();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powi(-3);
-        assert_eq!(r.data(), &[-0.125, -1.0, f32::INFINITY, 1.0, 0.125]);
-        let g = backward(r.sum());
+        assert_eq!(r.as_array(), [-0.125, -1.0, f32::INFINITY, 1.0, 0.125]);
+        let g = r.sum().backward();
         assert_eq!(
-            g.ref_gradient(&t),
-            &[-0.1875, -3., f32::NEG_INFINITY, -3., -0.1875]
+            g.get(&t).as_array(),
+            [-0.1875, -3., f32::NEG_INFINITY, -3., -0.1875]
         );
     }
 }
