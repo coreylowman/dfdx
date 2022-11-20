@@ -11,12 +11,14 @@ use cblas_sys::{
 #[derive(Copy, Clone)]
 struct View<S: Shape, E: Dtype> {
     ptr: *const E,
+    shape: S,
     strides: S::Concrete,
 }
 
 #[derive(Copy, Clone)]
 struct ViewMut<S: Shape, E: Dtype> {
     ptr: *mut E,
+    shape: S,
     strides: S::Concrete,
 }
 
@@ -24,6 +26,7 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
     fn view(&self) -> View<S, E> {
         View {
             ptr: self.data.as_ptr(),
+            shape: self.shape,
             strides: self.strides.0,
         }
     }
@@ -31,6 +34,7 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
     fn view_mut(&mut self) -> ViewMut<S, E> {
         ViewMut {
             ptr: std::sync::Arc::make_mut(&mut self.data).as_mut_ptr(),
+            shape: self.shape,
             strides: self.strides.0,
         }
     }
@@ -40,12 +44,14 @@ impl<D1: Dim, E: Dtype> View<(D1,), E> {
     fn br0(self) -> View<(C<1>, D1), E> {
         View {
             ptr: self.ptr,
+            shape: (C, self.shape.0),
             strides: [0, self.strides[0]],
         }
     }
     fn br1(self) -> View<(D1, C<1>), E> {
         View {
             ptr: self.ptr,
+            shape: (self.shape.0, C),
             strides: [self.strides[0], 0],
         }
     }
@@ -55,12 +61,14 @@ impl<D1: Dim, E: Dtype> ViewMut<(D1,), E> {
     fn br0(self) -> ViewMut<(C<1>, D1), E> {
         ViewMut {
             ptr: self.ptr,
+            shape: (C, self.shape.0),
             strides: [0, self.strides[0]],
         }
     }
     fn br1(self) -> ViewMut<(D1, C<1>), E> {
         ViewMut {
             ptr: self.ptr,
+            shape: (self.shape.0, C),
             strides: [self.strides[0], 0],
         }
     }
@@ -70,6 +78,7 @@ impl<D1: Dim, D2: Dim, E: Dtype> View<(D1, D2), E> {
     fn tr(self) -> View<(D2, D1), E> {
         View {
             ptr: self.ptr,
+            shape: (self.shape.1, self.shape.0),
             strides: [self.strides[1], self.strides[0]],
         }
     }
@@ -80,6 +89,7 @@ impl<D1: Dim, D2: Dim, D3: Dim, E: Dtype> View<(D1, D2, D3), E> {
         let [a, b, c] = self.strides;
         View {
             ptr: unsafe { self.ptr.add(index * a) },
+            shape: (self.shape.1, self.shape.2),
             strides: [b, c],
         }
     }
@@ -90,6 +100,7 @@ impl<D1: Dim, D2: Dim, D3: Dim, E: Dtype> ViewMut<(D1, D2, D3), E> {
         let [a, b, c] = self.strides;
         ViewMut {
             ptr: unsafe { self.ptr.add(index * a) },
+            shape: (self.shape.1, self.shape.2),
             strides: [b, c],
         }
     }
@@ -100,6 +111,7 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> View<(D1, D2, D3, D4), E> {
         let [a, b, c, d] = self.strides;
         View {
             ptr: unsafe { self.ptr.add(index * a) },
+            shape: (self.shape.1, self.shape.2, self.shape.3),
             strides: [b, c, d],
         }
     }
@@ -110,29 +122,33 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> ViewMut<(D1, D2, D3, D4), E> 
         let [a, b, c, d] = self.strides;
         ViewMut {
             ptr: unsafe { self.ptr.add(index * a) },
+            shape: (self.shape.1, self.shape.2, self.shape.3),
             strides: [b, c, d],
         }
     }
 }
 
-fn matmul<const M: usize, const K: usize, const N: usize>(
-    a: View<Rank2<M, K>, f32>,
-    b: View<Rank2<K, N>, f32>,
-    c: ViewMut<Rank2<M, N>, f32>,
+fn matmul<M: Dim, K: Dim, N: Dim>(
+    a: View<(M, K), f32>,
+    b: View<(K, N), f32>,
+    c: ViewMut<(M, N), f32>,
 ) {
+    let [m, k] = a.shape.concrete();
+    let n = b.shape.1.size();
+
     #[cfg(not(feature = "cblas"))]
     unsafe {
         let [ar, ac] = a.strides.map(|x| x as isize);
         let [br, bc] = b.strides.map(|x| x as isize);
         let [cr, cc] = c.strides.map(|x| x as isize);
         matrixmultiply::sgemm(
-            M, K, N, 1.0, a.ptr, ar, ac, b.ptr, br, bc, 1.0, c.ptr, cr, cc,
+            m, k, n, 1.0, a.ptr, ar, ac, b.ptr, br, bc, 1.0, c.ptr, cr, cc,
         );
     }
 
     #[cfg(feature = "cblas")]
     unsafe {
-        let (m, n, k) = (M as libc::c_int, N as libc::c_int, K as libc::c_int);
+        let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
         let [ar, ac] = a.strides.map(|x| x as libc::c_int);
         let [br, bc] = b.strides.map(|x| x as libc::c_int);
         let [cr, cc] = c.strides.map(|x| x as libc::c_int);
@@ -151,16 +167,16 @@ fn matmul<const M: usize, const K: usize, const N: usize>(
     }
 }
 
-impl<const M: usize, const K: usize, const N: usize>
-    BinaryKernel<binary_ops::MatMul, Rank2<M, K>, Rank2<K, N>, Rank2<M, N>, f32> for Cpu
+impl<M: Dim, const K: usize, const N: usize>
+    BinaryKernel<binary_ops::MatMul, (M, C<K>), Rank2<K, N>, (M, C<N>), f32> for Cpu
 {
     fn binary_fwd(
         &self,
         _op: binary_ops::MatMul,
-        lhs: &Self::Storage<Rank2<M, K>, f32>,
+        lhs: &Self::Storage<(M, C<K>), f32>,
         rhs: &Self::Storage<Rank2<K, N>, f32>,
-    ) -> Result<Self::Storage<Rank2<M, N>, f32>, Self::Err> {
-        let mut out: Self::Storage<Rank2<M, N>, f32> = self.try_zeros()?;
+    ) -> Result<Self::Storage<(M, C<N>), f32>, Self::Err> {
+        let mut out: Self::Storage<(M, C<N>), f32> = self.try_zeros_like((lhs.shape.0, C))?;
         matmul(lhs.view(), rhs.view(), out.view_mut());
         Ok(out)
     }
@@ -168,11 +184,11 @@ impl<const M: usize, const K: usize, const N: usize>
     fn binary_bwd(
         &self,
         _op: binary_ops::MatMul,
-        lhs: &Self::Storage<Rank2<M, K>, f32>,
-        grad_lhs: &mut Self::Storage<Rank2<M, K>, f32>,
+        lhs: &Self::Storage<(M, C<K>), f32>,
+        grad_lhs: &mut Self::Storage<(M, C<K>), f32>,
         rhs: &Self::Storage<Rank2<K, N>, f32>,
         grad_rhs: &mut Self::Storage<Rank2<K, N>, f32>,
-        grad_out: &Self::Storage<Rank2<M, N>, f32>,
+        grad_out: &Self::Storage<(M, C<N>), f32>,
     ) {
         let grad_out = grad_out.view();
         matmul(grad_out, rhs.view().tr(), grad_lhs.view_mut());
