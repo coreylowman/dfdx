@@ -1,4 +1,5 @@
 //! Implementations of [GradientTape] and generic Nd array containers via [Gradients].
+#![allow(clippy::type_complexity)]
 
 use std::collections::HashMap;
 use std::{boxed::Box, vec::Vec};

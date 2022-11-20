@@ -38,6 +38,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::needless_range_loop)]
+
     use super::*;
     use crate::arrays::{Axes2, Axes3, Axes4};
     use crate::devices::{AsArray, Cpu, Randn};
@@ -46,7 +48,6 @@ mod tests {
     use crate::tensor_ops::impl_sum::SumTo;
     use crate::tensor_ops::map::TryExp;
     use crate::tests::build_test_device;
-    use rand::thread_rng;
 
     #[test]
     fn test_permute_2d() {

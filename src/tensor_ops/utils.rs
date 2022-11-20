@@ -1,7 +1,7 @@
 use crate::{
     arrays::{Dtype, Shape},
     devices::{
-        device::{BinaryKernel, UnaryKernel},
+        device::{BinaryKernel, FullUnaryKernel, UnaryKernel},
         Device,
     },
     gradients::{Merge, Tape},
@@ -29,6 +29,33 @@ where
     tape.add_backward_op(move |grads| {
         let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
         inp.device.unary_bwd(op, &inp.storage, grad_inp, grad_out);
+        Ok(())
+    });
+    Ok(out.put_tape(tape))
+}
+
+pub(super) fn try_full_unary_op<
+    Op: 'static + Copy,
+    Inp: Shape,
+    Out: Shape,
+    E: Dtype,
+    D: Device,
+    T: Tape<D>,
+>(
+    op: Op,
+    inp: Tensor<Inp, E, D, T>,
+) -> Result<Tensor<Out, E, D, T>, D::Err>
+where
+    D: FullUnaryKernel<Op, Inp, Out, E>,
+{
+    let (inp, mut tape) = inp.split_tape();
+    let storage = inp.device.unary_fwd(op, &inp.storage)?;
+    let out = make_tensor(&inp.device, storage);
+    let phantom_out = out.clone();
+    tape.add_backward_op(move |grads| {
+        let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
+        inp.device
+            .unary_bwd(op, &inp.storage, grad_inp, &phantom_out.storage, grad_out);
         Ok(())
     });
     Ok(out.put_tape(tape))

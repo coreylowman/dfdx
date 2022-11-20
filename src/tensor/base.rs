@@ -99,12 +99,12 @@ impl<S: Shape, E: Dtype, D: Device> Tensor<S, E, D, NoneTape> {
     }
 }
 
-pub type Tensor0D<D, Tape = NoneTape, Elem = f32> = Tensor<Rank0, Elem, D, Tape>;
-pub type Tensor1D<const M: usize, D, Tape = NoneTape, Elem = f32> = Tensor<Rank1<M>, Elem, D, Tape>;
-pub type Tensor2D<const M: usize, const N: usize, D, Tape = NoneTape, Elem = f32> =
-    Tensor<Rank2<M, N>, Elem, D, Tape>;
-pub type Tensor3D<const M: usize, const N: usize, const O: usize, D, Tape = NoneTape, Elem = f32> =
-    Tensor<Rank3<M, N, O>, Elem, D, Tape>;
+pub type Tensor0D<D, Tape = NoneTape> = Tensor<Rank0, f32, D, Tape>;
+pub type Tensor1D<const M: usize, D, Tape = NoneTape> = Tensor<Rank1<M>, f32, D, Tape>;
+pub type Tensor2D<const M: usize, const N: usize, D, Tape = NoneTape> =
+    Tensor<Rank2<M, N>, f32, D, Tape>;
+pub type Tensor3D<const M: usize, const N: usize, const O: usize, D, Tape = NoneTape> =
+    Tensor<Rank3<M, N, O>, f32, D, Tape>;
 pub type Tensor4D<
     const M: usize,
     const N: usize,
@@ -112,8 +112,7 @@ pub type Tensor4D<
     const P: usize,
     D,
     Tape = NoneTape,
-    Elem = f32,
-> = Tensor<Rank4<M, N, O, P>, Elem, D, Tape>;
+> = Tensor<Rank4<M, N, O, P>, f32, D, Tape>;
 pub type Tensor5D<
     const M: usize,
     const N: usize,
@@ -122,8 +121,7 @@ pub type Tensor5D<
     const Q: usize,
     D,
     Tape = NoneTape,
-    Elem = f32,
-> = Tensor<Rank5<M, N, O, P, Q>, Elem, D, Tape>;
+> = Tensor<Rank5<M, N, O, P, Q>, f32, D, Tape>;
 pub type Tensor6D<
     const M: usize,
     const N: usize,
@@ -133,5 +131,4 @@ pub type Tensor6D<
     const R: usize,
     D,
     Tape = NoneTape,
-    Elem = f32,
-> = Tensor<Rank6<M, N, O, P, Q, R>, Elem, D, Tape>;
+> = Tensor<Rank6<M, N, O, P, Q, R>, f32, D, Tape>;
