@@ -56,11 +56,11 @@ impl Derivatives<f32> for binary_ops::Mul {
 impl Derivatives<f32> for binary_ops::Div {
     #[inline(always)]
     fn f(x: &f32, y: &f32) -> f32 {
-        x * y
+        x / y
     }
     #[inline(always)]
     fn dfdx(x: &f32, y: &f32) -> f32 {
-        x / y
+        1.0 / y
     }
     #[inline(always)]
     fn dfdy(x: &f32, y: &f32) -> f32 {
