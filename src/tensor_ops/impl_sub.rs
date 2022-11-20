@@ -2,16 +2,16 @@ use crate::{
     arrays::{Dtype, Shape},
     devices::{
         binary_ops,
-        device::{BinaryKernel, HasErr},
-        Device,
+        device::{BinaryKernel, HasErr, UnaryKernel},
+        unary_ops, Device,
     },
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::utils::try_binary_op;
+use super::utils::{try_binary_op, try_unary_op};
 
-/// Element wise subtraction.
+/// Element wise and scalar subtraction.
 ///
 /// Example:
 /// ```rust
@@ -20,6 +20,11 @@ use super::utils::try_binary_op;
 /// let b = Tensor2D::ones();
 /// let r = sub(a, b); // or `a - b`
 /// assert_eq!(r.data(), &[[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
+/// ```
+///
+/// Scalar Example:
+/// ```rust
+/// todo!()
 /// ```
 pub trait TrySub<Rhs = Self>: HasErr {
     fn try_sub(self, rhs: Rhs) -> Result<Self, Self::Err>;
@@ -33,6 +38,16 @@ where
 {
     fn try_sub(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, Self::Err> {
         try_binary_op(Default::default(), self, rhs)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TrySub<E> for Tensor<S, E, D, T>
+where
+    D: UnaryKernel<unary_ops::ScalarSub<E>, S, S, E>,
+{
+    fn try_sub(self, s: E) -> Result<Self, Self::Err> {
+        let op = unary_ops::ScalarSub(s);
+        try_unary_op(op, self)
     }
 }
 
@@ -53,6 +68,8 @@ mod tests {
     use crate::tensor::TensorSugar;
     use crate::tensor_ops::impl_backward::TryBackward;
     use crate::tensor_ops::impl_mean::MeanTo;
+    use crate::tensor_ops::impl_sum::SumTo;
+    use crate::tensor_ops::map::TryExp;
     use crate::tests::build_test_device;
 
     #[test]
@@ -99,5 +116,35 @@ mod tests {
         let g = r.mean().backward();
         assert_eq!(g.get(&a).as_array(), [[-1.0 / 6.0; 3]; 2]);
         assert_eq!(g.get(&b).as_array(), [[1.0 / 6.0; 3]; 2]);
+    }
+
+    #[test]
+    fn test_scalar_sub_0d() {
+        let dev = build_test_device!();
+        let x = dev.tensor(0.0);
+        let r = x.trace() - 1.0;
+        assert_eq!(r.as_array(), -1.0);
+        let g = r.exp().backward();
+        assert_eq!(g.get(&x).as_array(), (-1.0f32).exp());
+    }
+
+    #[test]
+    fn test_scalar_sub_1d() {
+        let dev = build_test_device!();
+        let x = dev.tensor([0.0, 1.0, 2.0]);
+        let r = x.trace() - 1.0;
+        assert_eq!(r.as_array(), [-1.0, 0.0, 1.0]);
+        let g = r.exp().sum().backward();
+        assert_eq!(g.get(&x).as_array(), [0.36787945, 1.0, 2.7182817]);
+    }
+
+    #[test]
+    fn test_scalar_sub_2d() {
+        let dev = build_test_device!();
+        let x = dev.tensor([[0.0; 2]; 3]);
+        let r = x.trace() - 1.0;
+        assert_eq!(r.as_array(), [[-1.0; 2]; 3]);
+        let g = r.exp().sum().backward();
+        assert_eq!(g.get(&x).as_array(), [[0.36787945; 2]; 3]);
     }
 }

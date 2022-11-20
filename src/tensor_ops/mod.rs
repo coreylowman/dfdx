@@ -132,7 +132,6 @@
 //! assert_eq!(b.data(), &[[1.0, 3.0], [5.0, 5.0]]);
 //! ```
 
-mod arith_scalar;
 mod impl_add;
 mod impl_backward;
 mod impl_broadcast_reduce;

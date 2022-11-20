@@ -2,16 +2,16 @@ use crate::{
     arrays::{Dtype, Shape},
     devices::{
         binary_ops,
-        device::{BinaryKernel, HasErr},
-        Device,
+        device::{BinaryKernel, HasErr, UnaryKernel},
+        unary_ops, Device,
     },
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::utils::try_binary_op;
+use super::utils::{try_binary_op, try_unary_op};
 
-/// Element wise multiplication.
+/// Element wise and scalar multiplication.
 ///
 /// Example:
 /// ```rust
@@ -20,6 +20,11 @@ use super::utils::try_binary_op;
 /// let b = Tensor2D::ones();
 /// let r = mul(a, b); // or `a * b`
 /// assert_eq!(r.data(), &[[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// ```
+///
+/// Scalar example:
+/// ```rust
+/// todo!();
 /// ```
 pub trait TryMul<Rhs = Self>: HasErr {
     fn try_mul(self, rhs: Rhs) -> Result<Self, Self::Err>;
@@ -33,6 +38,16 @@ where
 {
     fn try_mul(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, Self::Err> {
         try_binary_op(Default::default(), self, rhs)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryMul<E> for Tensor<S, E, D, T>
+where
+    D: UnaryKernel<unary_ops::ScalarMul<E>, S, S, E>,
+{
+    fn try_mul(self, s: E) -> Result<Self, Self::Err> {
+        let op = unary_ops::ScalarMul(s);
+        try_unary_op(op, self)
     }
 }
 
@@ -53,6 +68,8 @@ mod tests {
     use crate::tensor::TensorSugar;
     use crate::tensor_ops::impl_backward::TryBackward;
     use crate::tensor_ops::impl_mean::MeanTo;
+    use crate::tensor_ops::impl_sum::SumTo;
+    use crate::tensor_ops::map::TryExp;
     use crate::tests::build_test_device;
 
     #[test]
@@ -110,5 +127,35 @@ mod tests {
                 [0.0943, 0.11683333, 0.13903335]
             ]
         );
+    }
+
+    #[test]
+    fn test_scalar_mul_0d() {
+        let dev = build_test_device!();
+        let x = dev.tensor(1.0);
+        let r = x.trace() * 0.5;
+        assert_eq!(r.as_array(), 0.5);
+        let g = r.exp().backward();
+        assert_eq!(g.get(&x).as_array(), 0.8243606);
+    }
+
+    #[test]
+    fn test_scalar_mul_1d() {
+        let dev = build_test_device!();
+        let x = dev.tensor([0.0, 1.0, 2.0]);
+        let r = x.trace() * 0.5;
+        assert_eq!(r.as_array(), [0.0, 0.5, 1.0]);
+        let g = r.exp().sum().backward();
+        assert_eq!(g.get(&x).as_array(), [0.5, 0.8243606, 1.3591409]);
+    }
+
+    #[test]
+    fn test_scalar_mul_2d() {
+        let dev = build_test_device!();
+        let x = dev.tensor([[1.0; 2]; 3]);
+        let r = x.trace() * 0.5;
+        assert_eq!(r.as_array(), [[0.5; 2]; 3]);
+        let g = r.exp().sum().backward();
+        assert_eq!(g.get(&x).as_array(), [[0.8243606; 2]; 3]);
     }
 }

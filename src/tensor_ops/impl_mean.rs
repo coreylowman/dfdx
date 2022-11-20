@@ -5,7 +5,7 @@ use crate::{
     tensor::Tensor,
 };
 
-use super::arith_scalar::TryDivScalar;
+use super::impl_div::TryDiv;
 use super::impl_sum::SumTo;
 
 /// Average the values along `Axes` of `T`.
@@ -38,12 +38,12 @@ impl<Src: Shape, Dst: Shape, Axes: Default, D: Device, T: Tape<D>>
     MeanTo<Tensor<Dst, f32, D, T>, Axes> for Tensor<Src, f32, D, T>
 where
     Self: SumTo<Tensor<Dst, f32, D, T>, Axes>,
-    Tensor<Dst, f32, D, T>: TryDivScalar<f32, Err = Self::Err>,
+    Tensor<Dst, f32, D, T>: TryDiv<f32, Err = Self::Err>,
     Src: HasAxes<Axes>,
 {
     fn try_mean(self) -> Result<Tensor<Dst, f32, D, T>, Self::Err> {
         let num_elements_reduced = <Src as HasAxes<Axes>>::size(self.shape()) as f32;
-        self.try_sum()?.try_div_scalar(num_elements_reduced)
+        self.try_sum()?.try_div(num_elements_reduced)
     }
 }
 
@@ -133,7 +133,7 @@ mod tests {
         let r: Tensor1D<3, _, _> = t.trace().mean();
         let a: Tensor2D<3, 4, _, _> = t.trace().sum();
         let b: Tensor1D<3, _, _> = a.sum();
-        let r2 = b.div_scalar(8.0);
+        let r2 = b / 8.0;
         assert_close(&r.as_array(), &r2.as_array());
         let g = r.mean().backward();
         let g2 = r2.mean().backward();
@@ -147,7 +147,7 @@ mod tests {
         let t: Tensor3D<2, 3, 4, _> = dev.randn();
         let r: Tensor1D<4, _, _> = t.trace().mean();
         let a: Tensor2D<3, 4, _> = t.sum();
-        let r2: Tensor1D<4, _> = a.sum().div_scalar(6.0);
+        let r2: Tensor1D<4, _> = a.sum() / 6.0;
         assert_close(&r.as_array(), &r2.as_array());
     }
 }
