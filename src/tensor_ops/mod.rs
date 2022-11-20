@@ -153,7 +153,7 @@ mod impl_softmax;
 mod impl_sub;
 mod impl_sum;
 mod map;
-// mod matmul;
+mod matmul;
 mod permute;
 // mod select;
 pub(crate) mod utils;

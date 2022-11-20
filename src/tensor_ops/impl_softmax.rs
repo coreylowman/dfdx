@@ -141,28 +141,28 @@ pub trait TryLogSoftmax: HasErr {
 }
 impl<T: HasErr> TryLogSoftmax for T {}
 
-// /// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function) across
-// /// `Axes`.
-// ///
-// /// Equivalent to `exp(log_softmax(t))`.
-// ///
-// /// **Pytorch equivalent**: `t.softmax(Axes)`
-// ///
-// /// **Related functions**: [logsumexp()], [log_softmax()]
-// ///
-// /// Example:
-// /// ```rust
-// /// # use dfdx::prelude::*;
-// /// let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
-// /// let _ = t.softmax::<Axis<2>>();
-// /// ```
-// ///
-// /// Using multi axis softmax:
-// /// ```rust
-// /// # use dfdx::prelude::*;
-// /// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
-// /// let _ = t.softmax::<Axes2<1, 2>>();
-// /// ```
+/// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function) across
+/// `Axes`.
+///
+/// Equivalent to `exp(log_softmax(t))`.
+///
+/// **Pytorch equivalent**: `t.softmax(Axes)`
+///
+/// **Related functions**: [logsumexp()], [log_softmax()]
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
+/// let _ = t.softmax::<Axis<2>>();
+/// ```
+///
+/// Using multi axis softmax:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
+/// let _ = t.softmax::<Axes2<1, 2>>();
+/// ```
 pub trait TrySoftmax: HasErr {
     fn softmax<Axes>(self) -> Self
     where
