@@ -9,7 +9,7 @@ use crate::{
 };
 
 pub(super) fn try_unary_op<
-    Op: 'static + Copy,
+    Op: 'static + Clone,
     Inp: Shape,
     Out: Shape,
     E: Dtype,
@@ -23,7 +23,7 @@ where
     D: UnaryKernel<Op, Inp, Out, E>,
 {
     let (inp, mut tape) = inp.split_tape();
-    let storage = inp.device.unary_fwd(op, &inp.storage)?;
+    let storage = inp.device.unary_fwd(op.clone(), &inp.storage)?;
     let out = make_tensor(&inp.device, storage);
     let phantom_out = out.clone();
     tape.add_backward_op(move |grads| {

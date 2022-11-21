@@ -8,6 +8,7 @@ impl Dtype for usize {}
 
 pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync {
     fn size(&self) -> usize;
+    fn from_size(size: usize) -> Option<Self>;
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -18,6 +19,10 @@ impl Dim for Dyn {
     fn size(&self) -> usize {
         self.0
     }
+    #[inline(always)]
+    fn from_size(size: usize) -> Option<Self> {
+        Some(Self(size))
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -26,6 +31,14 @@ impl<const M: usize> Dim for C<M> {
     #[inline(always)]
     fn size(&self) -> usize {
         M
+    }
+    #[inline(always)]
+    fn from_size(size: usize) -> Option<Self> {
+        if size == M {
+            Some(C)
+        } else {
+            None
+        }
     }
 }
 
@@ -39,6 +52,7 @@ pub trait Shape: 'static + std::fmt::Debug + Clone + Copy + Send + Sync {
         + Copy
         + Default
         + std::ops::Index<usize, Output = usize>
+        + std::ops::IndexMut<usize>
         + Send
         + Sync
         + IntoIterator<Item = usize>;
@@ -50,6 +64,7 @@ pub trait Shape: 'static + std::fmt::Debug + Clone + Copy + Send + Sync {
 
     fn concrete(&self) -> Self::Concrete;
     fn strides(&self) -> StridesFor<Self>;
+    fn from_concrete(concrete: &Self::Concrete) -> Option<Self>;
 }
 
 pub trait HasShape {
@@ -93,6 +108,10 @@ impl Shape for () {
     fn strides(&self) -> StridesFor<Self> {
         StridesFor([])
     }
+    #[inline(always)]
+    fn from_concrete(_: &Self::Concrete) -> Option<Self> {
+        Some(())
+    }
 }
 
 impl TryFromNumElements for () {
@@ -115,6 +134,10 @@ impl<D1: Dim> Shape for (D1,) {
     #[inline(always)]
     fn strides(&self) -> StridesFor<Self> {
         StridesFor([1])
+    }
+    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
+        let d1 = D1::from_size(concrete[0])?;
+        Some((d1,))
     }
 }
 
@@ -144,6 +167,11 @@ impl<D1: Dim, D2: Dim> Shape for (D1, D2) {
     #[inline(always)]
     fn strides(&self) -> StridesFor<Self> {
         StridesFor([self.1.size(), 1])
+    }
+    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
+        let d1 = D1::from_size(concrete[0])?;
+        let d2 = D2::from_size(concrete[1])?;
+        Some((d1, d2))
     }
 }
 
@@ -192,6 +220,12 @@ impl<D1: Dim, D2: Dim, D3: Dim> Shape for (D1, D2, D3) {
         let c = b * self.1.size();
         StridesFor([c, b, a])
     }
+    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
+        let d1 = D1::from_size(concrete[0])?;
+        let d2 = D2::from_size(concrete[1])?;
+        let d3 = D3::from_size(concrete[2])?;
+        Some((d1, d2, d3))
+    }
 }
 
 impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim> Shape for (D1, D2, D3, D4) {
@@ -208,6 +242,13 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim> Shape for (D1, D2, D3, D4) {
         let c = b * self.2.size();
         let d = c * self.1.size();
         StridesFor([d, c, b, a])
+    }
+    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
+        let d1 = D1::from_size(concrete[0])?;
+        let d2 = D2::from_size(concrete[1])?;
+        let d3 = D3::from_size(concrete[2])?;
+        let d4 = D4::from_size(concrete[3])?;
+        Some((d1, d2, d3, d4))
     }
 }
 impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim> Shape for (D1, D2, D3, D4, D5) {
@@ -231,6 +272,14 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim> Shape for (D1, D2, D3, D4, D5)
         let d = c * self.2.size();
         let e = d * self.1.size();
         StridesFor([e, d, c, b, a])
+    }
+    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
+        let d1 = D1::from_size(concrete[0])?;
+        let d2 = D2::from_size(concrete[1])?;
+        let d3 = D3::from_size(concrete[2])?;
+        let d4 = D4::from_size(concrete[3])?;
+        let d5 = D5::from_size(concrete[4])?;
+        Some((d1, d2, d3, d4, d5))
     }
 }
 
@@ -257,5 +306,14 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, D6: Dim> Shape for (D1, D2, D3
         let e = d * self.2.size();
         let f = e * self.1.size();
         StridesFor([f, e, d, c, b, a])
+    }
+    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
+        let d1 = D1::from_size(concrete[0])?;
+        let d2 = D2::from_size(concrete[1])?;
+        let d3 = D3::from_size(concrete[2])?;
+        let d4 = D4::from_size(concrete[3])?;
+        let d5 = D5::from_size(concrete[4])?;
+        let d6 = D6::from_size(concrete[5])?;
+        Some((d1, d2, d3, d4, d5, d6))
     }
 }

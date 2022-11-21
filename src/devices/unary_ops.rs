@@ -92,9 +92,6 @@ impl<Axes> From<Axes> for MinReduce<Axes> {
     }
 }
 
-/// TODO SelectReduce<Axis>
-/// TODO SelectReplace<NewDim, Axis>
-/// TODO BatchSelected<Axis>
 #[derive(Debug, Clone, Copy)]
 pub struct Select<Dst, Axis, I: crate::arrays::Shape, D: super::Device> {
     pub(crate) dst: Dst,

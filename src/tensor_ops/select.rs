@@ -1,15 +1,14 @@
-use super::utils::move_tape_and_add_backward_op;
-use crate::devices::*;
-use crate::gradients::Tape;
-use crate::prelude::*;
+use crate::{
+    arrays::{Dtype, Dyn, HasShape, Rank0, Rank1, RustArrayRepr, Shape},
+    devices::{
+        device::{HasErr, UnaryKernel},
+        unary_ops, Device, TryConvert,
+    },
+    gradients::Tape,
+    tensor::{Tensor, TensorSugar},
+};
 
-/// Reverse trait of [SelectTo], it maps `Indices` and `Axes` to an output type,
-/// whereas [SelectTo] maps output type and axes to `Indices`.
-///
-/// **Not intended to be used outside of the crate.**
-pub trait Select<Indices, Axes>: SelectTo<Self::Output, Axes, Indices = Indices> {
-    type Output;
-}
+use super::utils::try_unary_op;
 
 /// Select values along `Axes` resulting in `T`. Equivalent
 /// to `torch.select` and `torch.gather` from pytorch.
@@ -22,9 +21,7 @@ pub trait Select<Indices, Axes>: SelectTo<Self::Output, Axes, Indices = Indices>
 /// number of times.
 ///
 /// You can also select batches of data with this trait.
-pub trait SelectTo<T, Axes> {
-    type Indices: Clone;
-
+pub trait SelectTo<T, Axes, Idx>: HasErr {
     /// Select sub elements using [Self::Indices].
     /// The same element can be selected multiple times depending
     /// on [Self::Indices].
@@ -64,192 +61,170 @@ pub trait SelectTo<T, Axes> {
     /// # use dfdx::prelude::*;
     /// let _: Tensor3D<2, 1, 5> = Tensor2D::<3, 5>::zeros().select(&[[0], [1]]);
     ///```
-    fn select(self, indices: &Self::Indices) -> T;
+    fn select(self, idx: Idx) -> T {
+        self.try_select(idx).unwrap()
+    }
+    fn try_select(self, idx: Idx) -> Result<T, Self::Err>;
 }
 
-macro_rules! impl_select {
-    ($Axes:ty, $Mode:ty, $SrcTy:ty, $IndTy:tt, $DstTy:ty, {$($Dims:tt),*}) => {
-impl<$(const $Dims: usize, )* H: Tape> Select<$IndTy, $Axes> for $SrcTy {
-    type Output = $DstTy;
-}
-impl<$(const $Dims: usize, )* H: Tape> SelectTo<$DstTy, $Axes> for $SrcTy {
-    type Indices = $IndTy;
-    fn select(self, indices: &Self::Indices) -> $DstTy {
-        select::<_, _, _, $Mode>(self, indices)
+pub trait SelectAlong<T, Idx>: HasErr {
+    fn select_along<Axes>(self, idx: Idx) -> T
+    where
+        Self: SelectTo<T, Axes, Idx>,
+    {
+        self.select(idx)
+    }
+    fn try_select_along<Axes>(self, idx: Idx) -> Result<T, Self::Err>
+    where
+        Self: SelectTo<T, Axes, Idx>,
+    {
+        self.try_select(idx)
     }
 }
-    };
+
+impl<Src: HasErr, T, Idx> SelectAlong<T, Idx> for Src {}
+
+impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>>
+    SelectTo<Tensor<Dst, E, D, T>, Axes, usize> for Tensor<Src, E, D, T>
+where
+    Self: SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<(), usize, D>>,
+    D: TensorSugar<usize, Rank0, usize>,
+{
+    fn try_select(self, idx: usize) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
+        let idx = self.device.tensor(idx);
+        self.try_select(idx)
+    }
 }
 
-// 1d
-impl_select!(Axis<0>, SelectAx0, Tensor1D<M, H>, usize, Tensor0D<H>, {M});
-impl_select!(Axis<0>, SelectAx0, Tensor1D<M, H>, [usize; Z], Tensor1D<Z, H>, {M, Z});
-
-// 2d
-impl_select!(Axis<0>, SelectAx0, Tensor2D<M, N, H>, usize, Tensor1D<N, H>, {M, N});
-impl_select!(Axis<0>, SelectAx0, Tensor2D<M, N, H>, [usize; Z], Tensor2D<Z, N, H>, {M, N, Z});
-impl_select!(Axis<1>, SelectAx1, Tensor2D<M, N, H>, [usize; M], Tensor1D<M, H>, {M, N});
-impl_select!(Axis<1>, SelectAx1, Tensor2D<M, N, H>, [[usize; Z]; M], Tensor2D<M, Z, H>, {M, N, Z});
-
-// 3d
-impl_select!(Axis<0>, SelectAx0, Tensor3D<M, N, O, H>, usize, Tensor2D<N, O, H>, {M, N, O});
-impl_select!(Axis<0>, SelectAx0, Tensor3D<M, N, O, H>, [usize; Z], Tensor3D<Z, N, O, H>, {M, N, O, Z});
-impl_select!(Axis<1>, SelectAx1, Tensor3D<M, N, O, H>, [usize; M], Tensor2D<M, O, H>, {M, N, O});
-impl_select!(Axis<1>, SelectAx1, Tensor3D<M, N, O, H>, [[usize; Z]; M], Tensor3D<M, Z, O, H>, {M, N, O, Z});
-impl_select!(Axis<2>, SelectAx2, Tensor3D<M, N, O, H>, [[usize; N]; M], Tensor2D<M, N, H>, {M, N, O});
-impl_select!(Axis<2>, SelectAx2, Tensor3D<M, N, O, H>, [[[usize; Z]; N]; M], Tensor3D<M, N, Z, H>, {M, N, O, Z});
-
-// 4d
-impl_select!(Axis<0>, SelectAx0, Tensor4D<M, N, O, P, H>, usize, Tensor3D<N, O, P, H>, {M, N, O, P});
-impl_select!(Axis<0>, SelectAx0, Tensor4D<M, N, O, P, H>, [usize; Z], Tensor4D<Z, N, O, P, H>, {M, N, O, P, Z});
-impl_select!(Axis<1>, SelectAx1, Tensor4D<M, N, O, P, H>, [usize; M], Tensor3D<M, O, P, H>, {M, N, O, P});
-impl_select!(Axis<1>, SelectAx1, Tensor4D<M, N, O, P, H>, [[usize; Z]; M], Tensor4D<M, Z, O, P, H>, {M, N, O, P, Z});
-impl_select!(Axis<2>, SelectAx2, Tensor4D<M, N, O, P, H>, [[usize; N]; M], Tensor3D<M, N, P, H>, {M, N, O, P});
-impl_select!(Axis<2>, SelectAx2, Tensor4D<M, N, O, P, H>, [[[usize; Z]; N]; M], Tensor4D<M, N, Z, P, H>, {M, N, O, P, Z});
-impl_select!(Axis<3>, SelectAx3, Tensor4D<M, N, O, P, H>, [[[usize; O]; N]; M], Tensor3D<M, N, O, H>, {M, N, O, P});
-impl_select!(Axis<3>, SelectAx3, Tensor4D<M, N, O, P, H>, [[[[usize; Z]; O]; N]; M], Tensor4D<M, N, O, Z, H>, {M, N, O, P, Z});
-
-// batched select
-impl_select!(Axis<0>, BSelectAx1, Tensor1D<M, H>, [[usize; Z]; B], Tensor2D<B, Z, H>, {M, B, Z});
-impl_select!(Axis<0>, BSelectAx1, Tensor2D<M, N, H>, [[usize; Z]; B], Tensor3D<B, Z, N, H>, {M, N, B, Z});
-impl_select!(Axis<0>, BSelectAx1, Tensor3D<M, N, O, H>, [[usize; Z]; B], Tensor4D<B, Z, N, O, H>, {M, N, O, B, Z});
-
-pub(crate) fn select<T, I, R, Mode>(t: T, indices: &I) -> R
+impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>, const Z: usize>
+    SelectTo<Tensor<Dst, E, D, T>, Axes, [usize; Z]> for Tensor<Src, E, D, T>
 where
-    T: Tensor<Dtype = f32>,
-    I: 'static + Clone,
-    R: Tensor<Dtype = f32, Tape = T::Tape>,
-    <T as HasDevice>::Device: DeviceSelect<T::Array, I, Mode, Result = R::Array>,
+    Self: SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<Rank1<Z>, usize, D>>,
+    D: TensorSugar<[usize; Z], Rank1<Z>, usize>,
 {
-    let mut result: <R as Tensor>::NoTape = TensorCreator::zeros();
-    <T as HasDevice>::Device::select_axis(t.data(), indices, result.mut_data());
+    fn try_select(self, idx: [usize; Z]) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
+        let idx = self.device.tensor(idx);
+        self.try_select(idx)
+    }
+}
 
-    #[allow(clippy::clone_on_copy)]
-    let i = indices.clone();
+impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>>
+    SelectTo<Tensor<Dst, E, D, T>, Axes, &[usize]> for Tensor<Src, E, D, T>
+where
+    Self: SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<(Dyn,), usize, D>>,
+    D: for<'a> TensorSugar<&'a [usize], (Dyn,), usize>,
+{
+    fn try_select(self, idx: &[usize]) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
+        let idx = self.device.tensor(idx);
+        self.try_select(idx)
+    }
+}
 
-    move_tape_and_add_backward_op(t, result, move |mut t, result, grads| {
-        let (t_grad, result_grad) = grads.mut_and_ref(&t, &result);
-        <T as HasDevice>::Device::fill(t.mut_data(), &mut |v| *v = 0.0);
-        <T as HasDevice>::Device::select_add(t.mut_data(), &i, result_grad);
-        <T as HasDevice>::Device::add(t_grad, t.data());
-    })
+impl<
+        Src: Shape,
+        Dst: Shape + Default,
+        Axes: 'static + Copy,
+        Idx: Shape,
+        E: Dtype,
+        D: Device,
+        T: Tape<D>,
+    > SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<Idx, usize, D>> for Tensor<Src, E, D, T>
+where
+    D: UnaryKernel<unary_ops::Select<Dst, Axes, Idx, D>, Src, Dst, E>,
+{
+    fn try_select(self, idx: Tensor<Idx, usize, D>) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
+        let dst: <Tensor<Dst, E, D, T> as HasShape>::Shape = Default::default();
+        let op = unary_ops::Select {
+            dst,
+            indices: idx.storage,
+            marker: std::marker::PhantomData,
+        };
+        try_unary_op(op, self)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::assert_close;
-    use rand::thread_rng;
-
-    #[test]
-    fn test_valid_selects_1d() {
-        let _: Tensor0D = Tensor1D::<5>::zeros().select(&0);
-        let _: Tensor1D<3> = Tensor1D::<5>::zeros().select(&[1, 2, 3]);
-        let _: Tensor1D<10> = Tensor1D::<5>::zeros().select(&[0, 1, 2, 3, 4, 0, 1, 2, 3, 4]);
-    }
-
-    #[test]
-    fn test_valid_select_batches() {
-        let _: Tensor2D<2, 1> = Tensor1D::<5>::zeros().select(&[[0], [1]]);
-        let _: Tensor3D<2, 1, 5> = Tensor2D::<3, 5>::zeros().select(&[[0], [1]]);
-        let _: Tensor4D<2, 1, 3, 5> = Tensor3D::<1, 3, 5>::zeros().select(&[[0], [0]]);
-    }
+    use crate::arrays::Axis;
+    use crate::devices::{AsArray, Randn};
+    use crate::tensor::*;
+    use crate::tensor_ops::impl_backward::TryBackward;
+    use crate::tensor_ops::impl_mean::MeanTo;
+    use crate::tensor_ops::impl_sum::SumTo;
+    use crate::tensor_ops::map::TryExp;
+    use crate::tests::build_test_device;
 
     #[test]
     fn test_select_1d_backward() {
-        let mut rng = thread_rng();
-        let t: Tensor1D<5> = TensorCreator::randn(&mut rng);
-        let r: Tensor0D<OwnedTape> = t.trace().select(&0);
-        assert_eq!(r.data(), &t.data()[0]);
-        let g = backward(r.exp().mean());
-        assert_eq!(g.ref_gradient(&t), &[t.data()[0].exp(), 0.0, 0.0, 0.0, 0.0]);
+        let dev = build_test_device!();
+        let t: Tensor1D<5, _> = dev.randn();
+        let t_array = t.as_array();
+        let r: Tensor0D<_, _> = t.trace().select(0);
+        assert_eq!(r.as_array(), t_array[0]);
+        let g = r.exp().backward();
+        assert_eq!(g.get(&t).as_array(), [t_array[0].exp(), 0.0, 0.0, 0.0, 0.0]);
     }
 
     #[test]
     fn test_select_1d_less_backward() {
-        let mut rng = thread_rng();
-        let t: Tensor1D<5> = TensorCreator::randn(&mut rng);
-        let r: Tensor1D<2, OwnedTape> = t.trace().select(&[0, 3]);
-        assert_eq!(r.data(), &[t.data()[0], t.data()[3]]);
-        let g = backward(r.mean());
-        assert_eq!(g.ref_gradient(&t), &[0.5, 0.0, 0.0, 0.5, 0.0]);
+        let dev = build_test_device!();
+        let t: Tensor1D<5, _> = dev.randn();
+        let t_array = t.as_array();
+        let r: Tensor1D<2, _, _> = t.trace().select([0, 3]);
+        assert_eq!(r.as_array(), [t_array[0], t_array[3]]);
+        let g = r.mean().backward();
+        assert_eq!(g.get(&t).as_array(), [0.5, 0.0, 0.0, 0.5, 0.0]);
     }
 
     #[test]
     fn test_select_1d_more_backward() {
-        let mut rng = thread_rng();
-        let t: Tensor1D<5> = TensorCreator::randn(&mut rng);
-        let _t = *t.data();
-        let r: Tensor1D<8, OwnedTape> = t.trace().select(&[0, 1, 2, 3, 4, 2, 4, 4]);
+        let dev = build_test_device!();
+        let t: Tensor1D<5, _> = dev.randn();
+        let _t = t.as_array();
+        let r: Tensor1D<8, _, _> = t.trace().select([0, 1, 2, 3, 4, 2, 4, 4]);
         assert_eq!(
-            r.data(),
-            &[_t[0], _t[1], _t[2], _t[3], _t[4], _t[2], _t[4], _t[4]]
+            r.as_array(),
+            [_t[0], _t[1], _t[2], _t[3], _t[4], _t[2], _t[4], _t[4]]
         );
-        let g = backward(r.mean());
+        let g = r.mean().backward();
         assert_eq!(
-            g.ref_gradient(&t),
-            &[1.0 / 8.0, 1.0 / 8.0, 2.0 / 8.0, 1.0 / 8.0, 3.0 / 8.0]
+            g.get(&t).as_array(),
+            [1.0 / 8.0, 1.0 / 8.0, 2.0 / 8.0, 1.0 / 8.0, 3.0 / 8.0]
         );
     }
 
     #[test]
     fn test_select_last_1d() {
-        let t: Tensor1D<3> = Tensor1D::new([1.0, 2.0, 3.0]);
-        let r: Tensor0D<OwnedTape> = t.trace().select(&2);
-        assert_eq!(r.data(), &3.0);
+        let dev = build_test_device!();
+        let t = dev.tensor([1.0, 2.0, 3.0]);
+        let r: Tensor0D<_, _> = t.trace().select(2);
+        assert_eq!(r.as_array(), 3.0);
         // NOTE: .exp() so we make sure its using result grad properly
-        let gradients = backward(r.exp());
-        assert_eq!(gradients.ref_gradient(&t), &[0.0, 0.0, 20.085537]);
+        let g = r.exp().backward();
+        assert_eq!(g.get(&t).as_array(), [0.0, 0.0, 20.085537]);
     }
 
     #[test]
     fn test_select_last_2d() {
-        let t: Tensor2D<2, 3> = Tensor2D::new([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-        let r: Tensor1D<2, OwnedTape> = t.trace().select(&[1, 2]);
-        assert_eq!(r.data(), &[2.0, -3.0]);
-        let gradients = backward(r.mean());
-        assert_eq!(
-            gradients.ref_gradient(&t),
-            &[[0.0, 0.5, 0.0], [0.0, 0.0, 0.5]]
-        );
-    }
-
-    #[test]
-    fn test_select_last_3d() {
-        let t: Tensor3D<4, 2, 3> = Tensor3D::new([
-            [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
-            [[-1.0, -2.0, -3.0], [-4.0, -5.0, -6.0]],
-            [[-3.0, 2.0, -1.0], [-6.0, 5.0, -4.0]],
-            [[1.0, -2.0, 3.0], [4.0, -5.0, 6.0]],
-        ]);
-        let r: Tensor2D<4, 2, OwnedTape> = t.trace().select(&[[0, 1], [2, 2], [1, 1], [0, 0]]);
-        assert_eq!(
-            r.data(),
-            &[[1.0, 5.0], [-3.0, -6.0], [2.0, 5.0], [1.0, 4.0]]
-        );
-        let gradients = backward(r.mean());
-        assert_eq!(
-            gradients.ref_gradient(&t),
-            &[
-                [[0.125, 0.0, 0.0], [0.0, 0.125, 0.0]],
-                [[0.0, 0.0, 0.125], [0.0, 0.0, 0.125]],
-                [[0.0, 0.125, 0.0], [0.0, 0.125, 0.0]],
-                [[0.125, 0.0, 0.0], [0.125, 0.0, 0.0]]
-            ]
-        );
+        let dev = build_test_device!();
+        let t: Tensor2D<2, 3, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+        let r: Tensor1D<2, _, _> = t.trace().select_along::<Axis<1>>(1);
+        assert_eq!(r.as_array(), [2.0, -2.0]);
+        let g = r.mean().backward();
+        assert_eq!(g.get(&t).as_array(), [[0.0, 0.5, 0.0], [0.0, 0.5, 0.0]]);
     }
 
     #[test]
     fn test_select_batch_backwards() {
-        let mut rng = thread_rng();
-        let t: Tensor2D<4, 5> = TensorCreator::randn(&mut rng);
-        let r: Tensor3D<2, 3, 5, _> = t.trace().select(&[[2, 0, 3], [0, 0, 3]]);
-        let r0: Tensor2D<3, 5> = t.clone().select(&[2, 0, 3]);
-        let r1: Tensor2D<3, 5> = t.clone().select(&[0, 0, 3]);
-        assert_close(&r.data()[0], r0.data());
-        assert_close(&r.data()[1], r1.data());
-
-        let g = backward(r.sum());
-        assert_eq!(g.ref_gradient(&t), &[[3.; 5], [0.; 5], [1.; 5], [2.; 5]]);
+        let dev = build_test_device!();
+        let t: Tensor2D<4, 5, _> = dev.randn();
+        let t_array = t.as_array();
+        let r: Tensor3D<2, 3, 5, _, _> = t.trace().select(dev.tensor([[2, 0, 3], [0, 0, 3]]));
+        let r_array = r.as_array();
+        assert_eq!(r_array[0], [t_array[2], t_array[0], t_array[3]]);
+        assert_eq!(r_array[1], [t_array[0], t_array[0], t_array[3]]);
+        let g = r.sum().backward();
+        assert_eq!(g.get(&t).as_array(), [[3.; 5], [0.; 5], [1.; 5], [2.; 5]]);
     }
 }

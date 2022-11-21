@@ -155,7 +155,7 @@ mod impl_sum;
 mod map;
 mod matmul;
 mod permute;
-// mod select;
+mod select;
 pub(crate) mod utils;
 
 // pub use arith_scalar::*;
