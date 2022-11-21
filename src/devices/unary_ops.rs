@@ -69,6 +69,9 @@ impl<S: Copy, Axes> From<&S> for Permute<S, Axes> {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
+pub struct Reshape<S>(pub(crate) S);
+
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Sum<Axes>(PhantomData<Axes>);
 impl<Axes> From<Axes> for Sum<Axes> {
     fn from(_: Axes) -> Self {

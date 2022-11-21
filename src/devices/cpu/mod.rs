@@ -10,4 +10,7 @@ mod permute;
 mod select;
 // mod pool2d;
 
+#[cfg(feature = "nightly")]
+mod reshape;
+
 pub use device::{Cpu, CpuError};

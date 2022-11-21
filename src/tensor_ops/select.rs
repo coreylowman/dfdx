@@ -1,8 +1,8 @@
 use crate::{
-    arrays::{Dtype, Dyn, HasShape, Rank0, Rank1, RustArrayRepr, Shape},
+    arrays::{Dtype, Dyn, HasShape, Rank0, Rank1, Shape},
     devices::{
         device::{HasErr, UnaryKernel},
-        unary_ops, Device, TryConvert,
+        unary_ops, Device,
     },
     gradients::Tape,
     tensor::{Tensor, TensorSugar},

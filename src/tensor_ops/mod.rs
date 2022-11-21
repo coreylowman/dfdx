@@ -184,8 +184,8 @@ pub(crate) mod utils;
 // pub use permute::*;
 // pub use select::SelectTo;
 
-// #[cfg(feature = "nightly")]
-// mod impl_reshape;
+#[cfg(feature = "nightly")]
+mod impl_reshape;
 // #[cfg(feature = "nightly")]
 // pub use impl_reshape::*;
 
