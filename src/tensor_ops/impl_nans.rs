@@ -1,5 +1,14 @@
-use crate::gradients::Tape;
-use crate::prelude::*;
+use crate::{
+    arrays::{Dtype, Shape},
+    devices::{
+        device::{HasErr, UnaryKernel},
+        unary_ops, Device,
+    },
+    gradients::Tape,
+    tensor::Tensor,
+};
+
+use super::utils::try_unary_op;
 
 /// Replaces any [std::f32::NAN] with `value`.
 ///
@@ -12,66 +21,40 @@ use crate::prelude::*;
 /// let r = t.nans_to(0.0);
 /// assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
 /// ```
-pub fn nans_to<T: Tensor<Dtype = f32>>(t: T, value: T::Dtype) -> T {
-    crate::tensor_ops::utils::map(
-        t,
-        move |x| if x.is_nan() { value } else { *x },
-        move |x| if x.is_nan() { 0.0 } else { 1.0 },
-    )
+pub trait TryNansTo<E: Dtype>: HasErr {
+    fn nans_to(self, value: E) -> Self {
+        self.try_nans_to(value).unwrap()
+    }
+    fn try_nans_to(self, value: E) -> Result<Self, Self::Err>;
 }
 
-macro_rules! tensor_impl {
-    ($typename:ident, [$($Vs:tt),*]) => {
-impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
-    /// Calls [nans_to()] on `self`.
-    pub fn nans_to(self, value: f32) -> Self {
-        nans_to(self, value)
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryNansTo<E> for Tensor<S, E, D, T>
+where
+    D: UnaryKernel<unary_ops::NansTo<E>, S, S, E>,
+{
+    fn try_nans_to(self, value: E) -> Result<Self, Self::Err> {
+        try_unary_op(unary_ops::NansTo(value), self)
     }
 }
-    };
-}
-
-tensor_impl!(Tensor0D, []);
-tensor_impl!(Tensor1D, [M]);
-tensor_impl!(Tensor2D, [M, N]);
-tensor_impl!(Tensor3D, [M, N, O]);
-tensor_impl!(Tensor4D, [M, N, O, P]);
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_nans_0d() {
-        let t = tensor(f32::NAN);
-        let r = t.trace().nans_to(0.0);
-        assert_eq!(r.data(), &0.0);
-        let gradients = backward(r.mean());
-        assert_eq!(gradients.ref_gradient(&t), &0.0);
-    }
+    use crate::{
+        devices::AsArray,
+        tensor::TensorSugar,
+        tensor_ops::{impl_backward::TryBackward, impl_mean::MeanTo, map::TryExp},
+        tests::build_test_device,
+    };
 
     #[test]
     fn test_nans_1d() {
-        let t: Tensor1D<4> = tensor([1.0, f32::NAN, f32::NAN, 4.0]);
+        let dev = build_test_device!();
+        let t = dev.tensor([1.0, f32::NAN, -f32::NAN, 4.0]);
         let r = t.trace().nans_to(0.0);
-        assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
+        assert_eq!(r.as_array(), [1.0, 0.0, 0.0, 4.0]);
         // NOTE: .exp() so we cover case where nans_to() needs to use result grad
-        let gradients = backward(r.exp().mean());
-        assert_eq!(
-            gradients.ref_gradient(&t),
-            &[0.67957044, 0.0, 0.0, 13.649537]
-        );
-    }
-
-    #[test]
-    fn test_nans_2d() {
-        let t: Tensor2D<2, 3> = tensor([[1.0, f32::NAN, 3.0], [f32::NAN, 4.0, f32::NAN]]);
-        let r = t.trace().nans_to(0.0);
-        assert_eq!(r.data(), &[[1.0, 0.0, 3.0], [0.0, 4.0, 0.0]]);
-        let gradients = backward(r.mean());
-        assert_eq!(
-            gradients.ref_gradient(&t),
-            &[[1.0 / 6.0, 0.0, 1.0 / 6.0], [0.0, 1.0 / 6.0, 0.0]]
-        );
+        let g = r.exp().mean().backward();
+        assert_eq!(g.get(&t).as_array(), [0.67957044, 0.0, 0.0, 13.649537]);
     }
 }
