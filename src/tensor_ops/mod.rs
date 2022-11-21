@@ -146,7 +146,7 @@ mod impl_min_reduce;
 mod impl_minimum;
 mod impl_mul;
 mod impl_nans;
-// mod impl_normalize;
+mod impl_normalize;
 mod impl_pow;
 mod impl_softmax;
 mod impl_stddev;
