@@ -1,5 +1,5 @@
-use super::device::{Cpu, StridedArray};
 use crate::arrays::*;
+use crate::devices::cpu::{Cpu, StridedArray};
 use crate::devices::{device::*, unary_ops};
 use std::sync::Arc;
 

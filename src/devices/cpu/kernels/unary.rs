@@ -1,5 +1,5 @@
-use super::Cpu;
 use crate::arrays::Shape;
+use crate::devices::cpu::Cpu;
 use crate::devices::{device::*, unary_ops};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::Standard;
@@ -302,5 +302,3 @@ impl<S: Shape> UnaryKernel<unary_ops::Dropout, S, S, f32> for Cpu {
         }
     }
 }
-
-// impl<S: Shape, E: Dtype> UnaryKernel<unary_ops::Select<Rank0, Self>, S, todo!(), E> for Cpu {}

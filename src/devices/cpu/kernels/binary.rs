@@ -1,5 +1,5 @@
-use super::{iterate::LendingIterator, Cpu};
 use crate::arrays::*;
+use crate::devices::cpu::{Cpu, LendingIterator};
 use crate::devices::{binary_ops, device::*};
 
 trait Derivatives<T> {

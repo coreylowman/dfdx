@@ -1,16 +1,10 @@
 mod allocate;
-mod broadcast_reduce;
 mod device;
 mod index;
 mod iterate;
-mod kernels_binary;
-mod kernels_unary;
-mod matmul;
-mod permute;
-mod select;
-// mod pool2d;
+mod kernels;
 
-#[cfg(feature = "nightly")]
-mod reshape;
+pub(crate) use device::StridedArray;
+use iterate::LendingIterator;
 
 pub use device::{Cpu, CpuError};

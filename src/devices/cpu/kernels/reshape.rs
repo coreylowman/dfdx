@@ -1,9 +1,6 @@
 use crate::arrays::{Dtype, HasSameNumelAs, Shape};
-use crate::devices::cpu::device::StridedArray;
-use crate::devices::device::UnaryKernel;
-use crate::devices::unary_ops;
-
-use super::Cpu;
+use crate::devices::cpu::{Cpu, StridedArray};
+use crate::devices::{device::UnaryKernel, unary_ops};
 
 impl<Src: Shape, Dst: Shape, E: Dtype + std::ops::AddAssign>
     UnaryKernel<unary_ops::Reshape<Dst>, Src, Dst, E> for Cpu
@@ -23,7 +20,7 @@ where
     }
     fn unary_bwd(
         &self,
-        op: unary_ops::Reshape<Dst>,
+        _op: unary_ops::Reshape<Dst>,
         _inp: &Self::Storage<Src, E>,
         grad_inp: &mut Self::Storage<Src, E>,
         grad_out: &Self::Storage<Dst, E>,

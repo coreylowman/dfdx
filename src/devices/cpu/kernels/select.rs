@@ -1,8 +1,7 @@
 #![allow(clippy::needless_range_loop)]
 
-use super::device::{Cpu, StridedArray};
-use super::iterate::LendingIterator;
 use crate::arrays::{Axis, Dim, Dtype, ReduceShape, ReplaceDim, Shape};
+use crate::devices::cpu::{Cpu, LendingIterator, StridedArray};
 use crate::devices::{device::*, unary_ops};
 
 // select reduce a single axis
