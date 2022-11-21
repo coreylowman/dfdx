@@ -1,7 +1,7 @@
 use super::iterate::LendingIterator;
 use crate::arrays::{Dtype, HasShape, Shape, StridesFor};
 use crate::devices::device::*;
-use rand::{rngs::StdRng, SeedableRng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{cell::RefCell, sync::Arc, vec::Vec};
 
 #[derive(Clone, Debug)]
@@ -80,5 +80,8 @@ impl Device for Cpu {
         storage: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err> {
         self.try_zeros_like(storage)
+    }
+    fn random_u64(&self) -> u64 {
+        self.rng.borrow_mut().gen()
     }
 }
