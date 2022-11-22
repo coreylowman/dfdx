@@ -33,7 +33,7 @@ cblas-sys = { version = "0.1.4", default-features = false, optional = true }
 libc = { version = "0.2", default-features = false, optional = true }
 
 [features]
-default = ["std", "numpy", "nightly"]
+default = ["std", "numpy"]
 std = ["no-std-compat/std", "rand/std", "rand_distr/std"]
 nightly = []
 numpy = ["dep:zip", "std"]
