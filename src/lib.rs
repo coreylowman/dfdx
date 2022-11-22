@@ -181,30 +181,36 @@ pub(crate) mod tests {
     pub(crate) use build_test_device;
 
     pub trait AssertClose {
-        fn is_close(&self, rhs: &Self, tolerance: f32) -> bool;
+        fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)>;
         fn assert_close(&self, rhs: &Self, tolerance: f32)
         where
             Self: std::fmt::Debug,
         {
-            if !self.is_close(rhs, tolerance) {
-                panic!("lhs: {:?} != rhs: {:?}", self, rhs);
+            if let Some((l, r)) = self.get_far_pair(rhs, tolerance) {
+                panic!("lhs != rhs | {l} != {r}\n\n{self:?}\n\n{rhs:?}");
             }
         }
     }
 
     impl<const M: usize> AssertClose for [f32; M] {
-        fn is_close(&self, rhs: &Self, tolerance: f32) -> bool {
-            self.iter()
-                .zip(rhs.iter())
-                .all(|(a, b)| (a - b).abs() <= tolerance)
+        fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)> {
+            for (l, r) in self.iter().zip(rhs.iter()) {
+                if (l - r).abs() > tolerance {
+                    return Some((*l, *r));
+                }
+            }
+            None
         }
     }
 
     impl<T: AssertClose, const M: usize> AssertClose for [T; M] {
-        fn is_close(&self, rhs: &Self, tolerance: f32) -> bool {
-            self.iter()
-                .zip(rhs.iter())
-                .all(|(l, r)| l.is_close(r, tolerance))
+        fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)> {
+            for (l, r) in self.iter().zip(rhs.iter()) {
+                if let Some(pair) = l.get_far_pair(r, tolerance) {
+                    return Some(pair);
+                }
+            }
+            None
         }
     }
 

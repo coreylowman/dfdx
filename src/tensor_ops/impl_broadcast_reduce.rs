@@ -43,7 +43,7 @@ pub trait BroadcastTo<T: HasShape, Axes>: HasErr {
     fn try_broadcast_to(self, dst: &T::Shape) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, Dst: Shape, Axes: 'static + Copy, E: Dtype, D: Device, T: Tape<D>>
+impl<Src: Shape, Dst: Shape, Axes: 'static + Clone, E: Dtype, D: Device, T: Tape<D>>
     BroadcastTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
 where
     D: UnaryKernel<unary_ops::Broadcast<Dst, Axes>, Src, Dst, E>,

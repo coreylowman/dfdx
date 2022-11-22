@@ -8,7 +8,7 @@ use cblas_sys::{
     CblasRowMajor as RowMajor, CblasTrans as Tr,
 };
 
-fn matmul<M: Dim, K: Dim, N: Dim>(
+pub(super) fn matmul<M: Dim, K: Dim, N: Dim>(
     a: View<(M, K), f32>,
     b: View<(K, N), f32>,
     c: ViewMut<(M, N), f32>,

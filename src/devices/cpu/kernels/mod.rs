@@ -11,3 +11,6 @@ mod reshape;
 
 #[cfg(feature = "nightly")]
 mod pool2d;
+
+#[cfg(feature = "nightly")]
+mod conv2d;

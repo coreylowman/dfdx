@@ -282,6 +282,22 @@ impl<E: Dtype, const M: usize, const N: usize, const O: usize>
     }
 }
 
+impl<E: Dtype, const M: usize, const N: usize, const O: usize, const P: usize>
+    TryConvert<[[[[E; P]; O]; N]; M], StridedArray<Rank4<M, N, O, P>, E>> for Cpu
+{
+    fn try_convert(
+        &self,
+        src: [[[[E; P]; O]; N]; M],
+    ) -> Result<StridedArray<Rank4<M, N, O, P>, E>, Self::Err> {
+        let mut out: StridedArray<Rank4<M, N, O, P>, E> = self.try_zeros()?;
+        let mut out_iter = out.iter_mut_with_index();
+        while let Some((v, [m, n, o, p])) = out_iter.next() {
+            v.clone_from(&src[m][n][o][p]);
+        }
+        Ok(out)
+    }
+}
+
 impl<const N: usize, S: Shape<Concrete = [usize; N]>, E: Dtype> AsVec for StridedArray<S, E> {
     type Vec = Vec<E>;
     fn as_vec(&self) -> Self::Vec {

@@ -146,3 +146,33 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> ViewMut<(D1, D2, D3, D4), E> 
         }
     }
 }
+
+impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, E: Dtype> View<(D1, D2, D3, D4, D5), E> {
+    pub(super) fn idx(&self, index: usize) -> View<(D2, D3, D4, D5), E> {
+        View {
+            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
+            shape: (self.shape.1, self.shape.2, self.shape.3, self.shape.4),
+            strides: [
+                self.strides[1],
+                self.strides[2],
+                self.strides[3],
+                self.strides[4],
+            ],
+        }
+    }
+}
+
+impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, E: Dtype> ViewMut<(D1, D2, D3, D4, D5), E> {
+    pub(super) fn idx(&self, index: usize) -> ViewMut<(D2, D3, D4, D5), E> {
+        ViewMut {
+            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
+            shape: (self.shape.1, self.shape.2, self.shape.3, self.shape.4),
+            strides: [
+                self.strides[1],
+                self.strides[2],
+                self.strides[3],
+                self.strides[4],
+            ],
+        }
+    }
+}
