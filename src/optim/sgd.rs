@@ -151,10 +151,9 @@ impl<M> Sgd<M> {
 }
 
 impl<M> GradientProvider for Sgd<M> {
-    fn gradient<D, P>(&mut self, p: &P) -> Option<D::Storage<P::Shape, P::Dtype>>
+    fn gradient<P>(&mut self, p: &P) -> Option<P::Storage>
     where
-        D: Device,
-        P: HasUniqueId + HasShape + HasDtype,
+        P: HasUniqueId + HasDeviceStorage,
     {
     }
     // fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>

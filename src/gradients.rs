@@ -321,24 +321,24 @@ impl<D: Device> Merge<OwnedTape<D>> for OwnedTape<D> {
 /// could.
 ///
 /// See [crate::optim::Sgd] and [crate::optim::Adam] for examples on implementing this.
-pub trait GradientProvider {
+pub trait GradientProvider<D: Device> {
     /// Retrieves the data associated with `p` if there is any.
     /// This can modify `self`, for instance if velocities are calculated
     /// based on the associated data!
     fn gradient<P>(&mut self, p: &P) -> Option<P::Storage>
     where
-        P: HasUniqueId + HasDeviceStorage;
+        P: HasUniqueId + HasDeviceStorage<Device = D>;
 }
 
 /// Represents something that can be updated with [GradientProvider].
 ///
 /// Most implementations of this trait will have sub structs that also
 /// implement [CanUpdateWithGradients].
-pub trait CanUpdateWithGradients {
+pub trait CanUpdateWithGradients<D: Device> {
     /// Updates self given the [GradientProvider]. When any parameters that
     /// are NOT present in `G`, then this function should
     /// add the tensor's [UniqueId] to [UnusedTensors].
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors);
+    fn update<G: GradientProvider<D>>(&mut self, grads: &mut G, unused: &mut UnusedTensors);
 }
 
 /// Holds [UniqueId] of tensors that were missing gradients during
