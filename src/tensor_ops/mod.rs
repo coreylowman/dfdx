@@ -139,6 +139,8 @@ mod impl_clamp;
 mod impl_div;
 mod impl_dropout;
 // mod impl_mask;
+mod impl_bce;
+mod impl_huber;
 mod impl_max_reduce;
 mod impl_maximum;
 mod impl_mean;
@@ -158,43 +160,44 @@ mod permute;
 mod select;
 pub(crate) mod utils;
 
-// pub use arith_scalar::*;
-// pub use impl_add::*;
-// pub use impl_backward::*;
-// pub use impl_broadcast_reduce::*;
-// pub use impl_clamp::*;
-// pub use impl_div::*;
-// pub use impl_dropout::*;
+pub use impl_add::*;
+pub use impl_backward::*;
+pub use impl_bce::*;
+pub use impl_broadcast_reduce::*;
+pub use impl_clamp::*;
+pub use impl_div::*;
+pub use impl_dropout::*;
+pub use impl_huber::*;
 // pub use impl_mask::*;
-// pub use impl_max::*;
-// pub use impl_maximum::*;
-// pub use impl_mean::*;
-// pub use impl_min::*;
-// pub use impl_minimum::*;
-// pub use impl_mul::*;
-// pub use impl_nans::*;
-// pub use impl_normalize::*;
-// pub use impl_pow::*;
-// pub use impl_softmax::*;
-// pub use impl_stddev::*;
-// pub use impl_sub::*;
-// pub use impl_sum::*;
-// pub use map::*;
-// pub use matmul::*;
-// pub use permute::*;
-// pub use select::SelectTo;
+pub use impl_max_reduce::*;
+pub use impl_maximum::*;
+pub use impl_mean::*;
+pub use impl_min_reduce::*;
+pub use impl_minimum::*;
+pub use impl_mul::*;
+pub use impl_nans::*;
+pub use impl_normalize::*;
+pub use impl_pow::*;
+pub use impl_softmax::*;
+pub use impl_stddev::*;
+pub use impl_sub::*;
+pub use impl_sum::*;
+pub use map::*;
+pub use matmul::*;
+pub use permute::*;
+pub use select::SelectTo;
 
 #[cfg(feature = "nightly")]
 mod impl_reshape;
-// #[cfg(feature = "nightly")]
-// pub use impl_reshape::*;
+#[cfg(feature = "nightly")]
+pub use impl_reshape::*;
 
 #[cfg(feature = "nightly")]
 mod conv2d;
-// #[cfg(feature = "nightly")]
-// pub use conv::*;
+#[cfg(feature = "nightly")]
+pub use conv2d::*;
 
 #[cfg(feature = "nightly")]
 mod pool2d;
-// #[cfg(feature = "nightly")]
-// pub use pool2d::*;
+#[cfg(feature = "nightly")]
+pub use pool2d::*;

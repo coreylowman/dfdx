@@ -83,7 +83,7 @@ impl<D1: Dim, E: Dtype> View<(D1,), E> {
     }
 }
 impl<D1: Dim, E: Dtype> ViewMut<(D1,), E> {
-    pub(super) fn idx(&self, index: usize) -> &mut E {
+    pub(super) fn idx(&mut self, index: usize) -> &mut E {
         unsafe { &mut *self.ptr.add(index * self.strides[0]) }
     }
 }
