@@ -92,7 +92,7 @@ impl<const B: usize, const M: usize, const K: usize, const N: usize>
         let c = out.view_mut();
 
         for batch in 0..B {
-            matmul(a.get(batch), b.get(batch), c.get(batch));
+            matmul(a.idx(batch), b.idx(batch), c.idx(batch));
         }
 
         Ok(out)
@@ -113,8 +113,8 @@ impl<const B: usize, const M: usize, const K: usize, const N: usize>
         let grad_rhs = grad_rhs.view_mut();
         let grad_out = grad_out.view();
         for b in 0..B {
-            matmul(grad_out.get(b), rhs.get(b).tr(), grad_lhs.get(b));
-            matmul(lhs.get(b).tr(), grad_out.get(b), grad_rhs.get(b));
+            matmul(grad_out.idx(b), rhs.idx(b).tr(), grad_lhs.idx(b));
+            matmul(lhs.idx(b).tr(), grad_out.idx(b), grad_rhs.idx(b));
         }
     }
 }
@@ -138,7 +138,7 @@ impl<Batch: Dim, const M: usize, const K: usize, const N: usize>
         let b = rhs.view();
         let c = out.view_mut();
         for batch in 0..batch_size {
-            matmul(a.get(batch), b, c.get(batch));
+            matmul(a.idx(batch), b, c.idx(batch));
         }
 
         Ok(out)
@@ -160,8 +160,8 @@ impl<Batch: Dim, const M: usize, const K: usize, const N: usize>
         let grad_rhs = grad_rhs.view_mut();
         let grad_out = grad_out.view();
         for b in 0..batch_size {
-            matmul(grad_out.get(b), rhs, grad_lhs.get(b));
-            matmul(lhs.get(b).tr(), grad_out.get(b), grad_rhs);
+            matmul(grad_out.idx(b), rhs, grad_lhs.idx(b));
+            matmul(lhs.idx(b).tr(), grad_out.idx(b), grad_rhs);
         }
     }
 }
@@ -182,7 +182,7 @@ impl<const B: usize, const S: usize, const M: usize, const K: usize, const N: us
         let out_view = out.view_mut();
         for b in 0..B {
             for s in 0..S {
-                matmul(lhs.get(b).get(s), rhs.get(b).get(s), out_view.get(b).get(s));
+                matmul(lhs.idx(b).idx(s), rhs.idx(b).idx(s), out_view.idx(b).idx(s));
             }
         }
         Ok(out)
@@ -205,14 +205,14 @@ impl<const B: usize, const S: usize, const M: usize, const K: usize, const N: us
         for b in 0..B {
             for s in 0..S {
                 matmul(
-                    grad_out.get(b).get(s),
-                    rhs.get(b).get(s).tr(),
-                    grad_lhs.get(b).get(s),
+                    grad_out.idx(b).idx(s),
+                    rhs.idx(b).idx(s).tr(),
+                    grad_lhs.idx(b).idx(s),
                 );
                 matmul(
-                    lhs.get(b).get(s).tr(),
-                    grad_out.get(b).get(s),
-                    grad_rhs.get(b).get(s),
+                    lhs.idx(b).idx(s).tr(),
+                    grad_out.idx(b).idx(s),
+                    grad_rhs.idx(b).idx(s),
                 );
             }
         }

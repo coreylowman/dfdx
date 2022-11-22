@@ -78,77 +78,71 @@ impl<D1: Dim, D2: Dim, E: Dtype> View<(D1, D2), E> {
 }
 
 impl<D1: Dim, E: Dtype> View<(D1,), E> {
-    pub(super) fn get(&self, index: usize) -> &E {
+    pub(super) fn idx(&self, index: usize) -> &E {
         unsafe { &*self.ptr.add(index * self.strides[0]) }
     }
 }
 impl<D1: Dim, E: Dtype> ViewMut<(D1,), E> {
-    pub(super) fn get(&self, index: usize) -> &mut E {
+    pub(super) fn idx(&self, index: usize) -> &mut E {
         unsafe { &mut *self.ptr.add(index * self.strides[0]) }
     }
 }
 
 impl<D1: Dim, D2: Dim, E: Dtype> View<(D1, D2), E> {
-    pub(super) fn get(&self, index: usize) -> View<(D2,), E> {
-        let [a, b] = self.strides;
+    pub(super) fn idx(&self, index: usize) -> View<(D2,), E> {
         View {
-            ptr: unsafe { self.ptr.add(index * a) },
+            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
             shape: (self.shape.1,),
-            strides: [b],
+            strides: [self.strides[1]],
         }
     }
 }
 impl<D1: Dim, D2: Dim, E: Dtype> ViewMut<(D1, D2), E> {
-    pub(super) fn get(&self, index: usize) -> ViewMut<(D2,), E> {
-        let [a, b] = self.strides;
+    pub(super) fn idx(&self, index: usize) -> ViewMut<(D2,), E> {
         ViewMut {
-            ptr: unsafe { self.ptr.add(index * a) },
+            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
             shape: (self.shape.1,),
-            strides: [b],
+            strides: [self.strides[1]],
         }
     }
 }
 
 impl<D1: Dim, D2: Dim, D3: Dim, E: Dtype> View<(D1, D2, D3), E> {
-    pub(super) fn get(&self, index: usize) -> View<(D2, D3), E> {
-        let [a, b, c] = self.strides;
+    pub(super) fn idx(&self, index: usize) -> View<(D2, D3), E> {
         View {
-            ptr: unsafe { self.ptr.add(index * a) },
+            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
             shape: (self.shape.1, self.shape.2),
-            strides: [b, c],
+            strides: [self.strides[1], self.strides[2]],
         }
     }
 }
 
 impl<D1: Dim, D2: Dim, D3: Dim, E: Dtype> ViewMut<(D1, D2, D3), E> {
-    pub(super) fn get(&self, index: usize) -> ViewMut<(D2, D3), E> {
-        let [a, b, c] = self.strides;
+    pub(super) fn idx(&self, index: usize) -> ViewMut<(D2, D3), E> {
         ViewMut {
-            ptr: unsafe { self.ptr.add(index * a) },
+            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
             shape: (self.shape.1, self.shape.2),
-            strides: [b, c],
+            strides: [self.strides[1], self.strides[2]],
         }
     }
 }
 
 impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> View<(D1, D2, D3, D4), E> {
-    pub(super) fn get(&self, index: usize) -> View<(D2, D3, D4), E> {
-        let [a, b, c, d] = self.strides;
+    pub(super) fn idx(&self, index: usize) -> View<(D2, D3, D4), E> {
         View {
-            ptr: unsafe { self.ptr.add(index * a) },
+            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
             shape: (self.shape.1, self.shape.2, self.shape.3),
-            strides: [b, c, d],
+            strides: [self.strides[1], self.strides[2], self.strides[3]],
         }
     }
 }
 
 impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> ViewMut<(D1, D2, D3, D4), E> {
-    pub(super) fn get(&self, index: usize) -> ViewMut<(D2, D3, D4), E> {
-        let [a, b, c, d] = self.strides;
+    pub(super) fn idx(&self, index: usize) -> ViewMut<(D2, D3, D4), E> {
         ViewMut {
-            ptr: unsafe { self.ptr.add(index * a) },
+            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
             shape: (self.shape.1, self.shape.2, self.shape.3),
-            strides: [b, c, d],
+            strides: [self.strides[1], self.strides[2], self.strides[3]],
         }
     }
 }

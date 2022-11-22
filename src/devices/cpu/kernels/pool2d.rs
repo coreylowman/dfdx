@@ -38,12 +38,12 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
                                 if y < H && x < W {
-                                    tmp += inp.get(c).get(y).get(x);
+                                    tmp += inp.idx(c).idx(y).idx(x);
                                 }
                             }
                         }
                     }
-                    *out.get(c).get(oh).get(ow) = tmp * inv_k2;
+                    *out.idx(c).idx(oh).idx(ow) = tmp * inv_k2;
                 }
             }
         }
@@ -61,14 +61,14 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
         for c in 0..C {
             for oh in 0..out_height {
                 for ow in 0..out_width {
-                    let g = out_grad.get(c).get(oh).get(ow) * inv_k2;
+                    let g = out_grad.idx(c).idx(oh).idx(ow) * inv_k2;
                     for k1 in 0..K {
                         let y = (oh * S + k1).checked_sub(P);
                         for k2 in 0..K {
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
                                 if x < W && y < H {
-                                    *inp_grad.get(c).get(y).get(x) += g;
+                                    *inp_grad.idx(c).idx(y).idx(x) += g;
                                 }
                             }
                         }
@@ -99,12 +99,12 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
                                 if y < H && x < W {
-                                    tmp = inp.get(c).get(y).get(x).max(tmp);
+                                    tmp = inp.idx(c).idx(y).idx(x).max(tmp);
                                 }
                             }
                         }
                     }
-                    *out.get(c).get(oh).get(ow) = tmp;
+                    *out.idx(c).idx(oh).idx(ow) = tmp;
                 }
             }
         }
@@ -121,7 +121,7 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
         for c in 0..C {
             for oh in 0..out_height {
                 for ow in 0..out_width {
-                    let o_g = *out_grad.get(c).get(oh).get(ow);
+                    let o_g = *out_grad.idx(c).idx(oh).idx(ow);
                     let mut tmp = f32::NEG_INFINITY;
                     for k1 in 0..K {
                         let y = (oh * S + k1).checked_sub(P);
@@ -129,7 +129,7 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
                                 if y < H && x < W {
-                                    tmp = inp.get(c).get(y).get(x).max(tmp);
+                                    tmp = inp.idx(c).idx(y).idx(x).max(tmp);
                                 }
                             }
                         }
@@ -140,8 +140,8 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
                         for k2 in 0..K {
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
-                                if y < H && x < W && *inp.get(c).get(y).get(x) == tmp {
-                                    *inp_grad.get(c).get(y).get(x) += o_g;
+                                if y < H && x < W && *inp.idx(c).idx(y).idx(x) == tmp {
+                                    *inp_grad.idx(c).idx(y).idx(x) += o_g;
                                 }
                             }
                         }
@@ -172,12 +172,12 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
                                 if y < H && x < W {
-                                    tmp = inp.get(c).get(y).get(x).min(tmp);
+                                    tmp = inp.idx(c).idx(y).idx(x).min(tmp);
                                 }
                             }
                         }
                     }
-                    *out.get(c).get(oh).get(ow) = tmp;
+                    *out.idx(c).idx(oh).idx(ow) = tmp;
                 }
             }
         }
@@ -194,7 +194,7 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
         for c in 0..C {
             for oh in 0..out_height {
                 for ow in 0..out_width {
-                    let o_g = *out_grad.get(c).get(oh).get(ow);
+                    let o_g = *out_grad.idx(c).idx(oh).idx(ow);
                     let mut tmp = f32::INFINITY;
                     for k1 in 0..K {
                         let y = (oh * S + k1).checked_sub(P);
@@ -202,7 +202,7 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
                                 if y < H && x < W {
-                                    tmp = inp.get(c).get(y).get(x).min(tmp);
+                                    tmp = inp.idx(c).idx(y).idx(x).min(tmp);
                                 }
                             }
                         }
@@ -213,8 +213,8 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
                         for k2 in 0..K {
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
-                                if y < H && x < W && *inp.get(c).get(y).get(x) == tmp {
-                                    *inp_grad.get(c).get(y).get(x) += o_g;
+                                if y < H && x < W && *inp.idx(c).idx(y).idx(x) == tmp {
+                                    *inp_grad.idx(c).idx(y).idx(x) += o_g;
                                 }
                             }
                         }
@@ -306,7 +306,7 @@ where
         let inp = inp.view();
         let out_view = out.view_mut();
         for b in 0..B {
-            op.pool_forward(inp.get(b), out_view.get(b));
+            op.pool_forward(inp.idx(b), out_view.idx(b));
         }
         Ok(out)
     }
@@ -324,7 +324,7 @@ where
         let grad_inp = grad_inp.view_mut();
         let grad_out = grad_out.view();
         for b in 0..B {
-            op.pool_backward(inp.get(b), grad_inp.get(b), grad_out.get(b));
+            op.pool_backward(inp.idx(b), grad_inp.idx(b), grad_out.idx(b));
         }
     }
 }
