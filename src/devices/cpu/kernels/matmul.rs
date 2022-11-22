@@ -69,10 +69,11 @@ impl<M: Dim, const K: usize, const N: usize>
         rhs: &Self::Storage<Rank2<K, N>, f32>,
         grad_rhs: &mut Self::Storage<Rank2<K, N>, f32>,
         grad_out: &Self::Storage<(M, C<N>), f32>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let grad_out = grad_out.view();
         matmul(grad_out, rhs.view().tr(), grad_lhs.view_mut());
         matmul(lhs.view().tr(), grad_out, grad_rhs.view_mut());
+        Ok(())
     }
 }
 
@@ -106,7 +107,7 @@ impl<const B: usize, const M: usize, const K: usize, const N: usize>
         rhs: &Self::Storage<Rank3<B, K, N>, f32>,
         grad_rhs: &mut Self::Storage<Rank3<B, K, N>, f32>,
         grad_out: &Self::Storage<Rank3<B, M, N>, f32>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let lhs = lhs.view();
         let grad_lhs = grad_lhs.view_mut();
         let rhs = rhs.view();
@@ -116,6 +117,7 @@ impl<const B: usize, const M: usize, const K: usize, const N: usize>
             matmul(grad_out.idx(b), rhs.idx(b).tr(), grad_lhs.idx(b));
             matmul(lhs.idx(b).tr(), grad_out.idx(b), grad_rhs.idx(b));
         }
+        Ok(())
     }
 }
 
@@ -152,7 +154,7 @@ impl<Batch: Dim, const M: usize, const K: usize, const N: usize>
         rhs: &Self::Storage<Rank2<K, N>, f32>,
         grad_rhs: &mut Self::Storage<Rank2<K, N>, f32>,
         grad_out: &Self::Storage<(Batch, C<M>, C<N>), f32>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let batch_size = lhs.shape().0.size();
         let lhs = lhs.view();
         let grad_lhs = grad_lhs.view_mut();
@@ -163,6 +165,7 @@ impl<Batch: Dim, const M: usize, const K: usize, const N: usize>
             matmul(grad_out.idx(b), rhs, grad_lhs.idx(b));
             matmul(lhs.idx(b).tr(), grad_out.idx(b), grad_rhs);
         }
+        Ok(())
     }
 }
 
@@ -196,7 +199,7 @@ impl<const B: usize, const S: usize, const M: usize, const K: usize, const N: us
         rhs: &Self::Storage<Rank4<B, S, K, N>, f32>,
         grad_rhs: &mut Self::Storage<Rank4<B, S, K, N>, f32>,
         grad_out: &Self::Storage<Rank4<B, S, M, N>, f32>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let lhs = lhs.view();
         let grad_lhs = grad_lhs.view_mut();
         let rhs = rhs.view();
@@ -216,6 +219,7 @@ impl<const B: usize, const S: usize, const M: usize, const K: usize, const N: us
                 );
             }
         }
+        Ok(())
     }
 }
 
@@ -241,10 +245,11 @@ impl<const K: usize, const N: usize>
         rhs: &Self::Storage<Rank2<K, N>, f32>,
         grad_rhs: &mut Self::Storage<Rank2<K, N>, f32>,
         grad_out: &Self::Storage<Rank1<N>, f32>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let grad_out = grad_out.view().br0();
         matmul(grad_out, rhs.view().tr(), grad_lhs.view_mut().br0());
         matmul(lhs.view().br0().tr(), grad_out, grad_rhs.view_mut());
+        Ok(())
     }
 }
 
@@ -269,9 +274,10 @@ impl<const M: usize, const N: usize>
         rhs: &Self::Storage<Rank1<N>, f32>,
         grad_rhs: &mut Self::Storage<Rank1<N>, f32>,
         grad_out: &Self::Storage<Rank2<M, N>, f32>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let grad_out = grad_out.view();
         matmul(grad_out, rhs.view().br0().tr(), grad_lhs.view_mut().br1());
         matmul(lhs.view().br1().tr(), grad_out, grad_rhs.view_mut().br0());
+        Ok(())
     }
 }

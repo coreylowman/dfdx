@@ -28,7 +28,7 @@ where
     let phantom_out = out.clone();
     tape.add_backward_op(move |grads| {
         let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
-        inp.device.unary_bwd(op, &inp.storage, grad_inp, grad_out);
+        inp.device.unary_bwd(op, &inp.storage, grad_inp, grad_out)?;
         Ok(())
     });
     Ok(out.put_tape(tape))
@@ -55,7 +55,7 @@ where
     tape.add_backward_op(move |grads| {
         let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
         inp.device
-            .unary_bwd(op, &inp.storage, grad_inp, &phantom_out.storage, grad_out);
+            .unary_bwd(op, &inp.storage, grad_inp, &phantom_out.storage, grad_out)?;
         Ok(())
     });
     Ok(out.put_tape(tape))
@@ -88,7 +88,7 @@ where
     tape.add_backward_op(move |grads| {
         let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out)?;
         lhs.device
-            .binary_bwd(op, &lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out);
+            .binary_bwd(op, &lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)?;
         Ok(())
     });
     Ok(out.put_tape(tape))

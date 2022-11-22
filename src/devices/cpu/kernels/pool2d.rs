@@ -267,8 +267,9 @@ where
             Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
             f32,
         >,
-    ) {
+    ) -> Result<(), Self::Err> {
         op.pool_backward(inp.view(), grad_inp.view_mut(), grad_out.view());
+        Ok(())
     }
 }
 
@@ -319,12 +320,13 @@ where
             Rank4<B, C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
             f32,
         >,
-    ) {
+    ) -> Result<(), Self::Err> {
         let inp = inp.view();
         let grad_inp = grad_inp.view_mut();
         let grad_out = grad_out.view();
         for b in 0..B {
             op.pool_backward(inp.idx(b), grad_inp.idx(b), grad_out.idx(b));
         }
+        Ok(())
     }
 }

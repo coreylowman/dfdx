@@ -32,12 +32,13 @@ where
         inp: &Self::Storage<Src, Elem>,
         grad_inp: &mut Self::Storage<Src, Elem>,
         grad_out: &Self::Storage<Dst, Elem>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let mut inp_iter = grad_inp.iter_mut();
         let mut out_iter = grad_out.iter_as(&inp.shape);
         while let Some((i, o)) = inp_iter.next().zip(out_iter.next()) {
             i.add_assign(o);
         }
+        Ok(())
     }
 }
 
@@ -68,7 +69,7 @@ where
         grad_inp: &mut Self::Storage<Src, f32>,
         out: &Self::Storage<Dst, f32>,
         grad_out: &Self::Storage<Dst, f32>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let mut inp_iter = inp.iter();
         let mut grad_inp_itr = grad_inp.iter_mut();
         let mut out_iter = out.iter_as(&inp.shape);
@@ -81,6 +82,7 @@ where
             };
             *grad_inp_itr.next().unwrap() += *grad_out_iter.next().unwrap() * d;
         }
+        Ok(())
     }
 }
 
@@ -111,7 +113,7 @@ where
         grad_inp: &mut Self::Storage<Src, f32>,
         out: &Self::Storage<Dst, f32>,
         grad_out: &Self::Storage<Dst, f32>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let mut inp_iter = inp.iter();
         let mut grad_inp_itr = grad_inp.iter_mut();
         let mut out_iter = out.iter_as(&inp.shape);
@@ -124,5 +126,6 @@ where
             };
             *grad_inp_itr.next().unwrap() += *grad_out_iter.next().unwrap() * d;
         }
+        Ok(())
     }
 }

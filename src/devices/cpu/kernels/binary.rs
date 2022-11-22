@@ -149,7 +149,7 @@ impl<Op: Derivatives<f32>, const N: usize, S: Shape<Concrete = [usize; N]>>
         rhs: &Self::Storage<S, f32>,
         grad_rhs: &mut Self::Storage<S, f32>,
         grad_out: &Self::Storage<S, f32>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let mut lhs_iter = lhs.iter();
         let mut rhs_iter = rhs.iter();
         let mut grad_lhs_iter = grad_lhs.iter_mut();
@@ -164,5 +164,6 @@ impl<Op: Derivatives<f32>, const N: usize, S: Shape<Concrete = [usize; N]>>
             let gr = grad_rhs_iter.next().unwrap();
             *gr += Op::dfdy(l, r) * go;
         }
+        Ok(())
     }
 }

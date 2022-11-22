@@ -24,11 +24,12 @@ where
         _inp: &Self::Storage<Src, E>,
         grad_inp: &mut Self::Storage<Src, E>,
         grad_out: &Self::Storage<Dst, E>,
-    ) {
+    ) -> Result<(), Self::Err> {
         assert_eq!(grad_inp.data.len(), grad_out.data.len());
         let inp_data = std::sync::Arc::make_mut(&mut grad_inp.data);
         for (i, o) in inp_data.iter_mut().zip(grad_out.data.iter()) {
             *i += *o;
         }
+        Ok(())
     }
 }

@@ -251,13 +251,14 @@ impl<Op: Derivatives<f32>, S: Shape> UnaryKernel<Op, S, S, f32> for Cpu {
         inp: &Self::Storage<S, f32>,
         grad_inp: &mut Self::Storage<S, f32>,
         grad_out: &Self::Storage<S, f32>,
-    ) {
+    ) -> Result<(), Self::Err> {
         assert_eq!(grad_inp.data.len(), grad_out.data.len());
         assert_eq!(inp.data.len(), grad_out.data.len());
         let data = Arc::make_mut(&mut grad_inp.data);
         for (i, data_i) in data.iter_mut().enumerate() {
             *data_i += op.df(&inp.data[i]) * grad_out.data[i];
         }
+        Ok(())
     }
 }
 
@@ -287,7 +288,7 @@ impl<S: Shape> UnaryKernel<unary_ops::Dropout, S, S, f32> for Cpu {
         inp: &Self::Storage<S, f32>,
         grad_inp: &mut Self::Storage<S, f32>,
         grad_out: &Self::Storage<S, f32>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let mut rng = StdRng::seed_from_u64(op.seed);
         assert_eq!(grad_inp.data.len(), grad_out.data.len());
         assert_eq!(inp.data.len(), grad_out.data.len());
@@ -300,5 +301,6 @@ impl<S: Shape> UnaryKernel<unary_ops::Dropout, S, S, f32> for Cpu {
                 1.0 / (1.0 - op.prob)
             } * grad_out.data[i];
         }
+        Ok(())
     }
 }

@@ -44,7 +44,7 @@ where
         _inp: &Self::Storage<S, E>,
         grad_inp: &mut Self::Storage<S, E>,
         grad_out: &Self::Storage<S::Reduced, E>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let mut out_iter = grad_out.iter_with_index();
         let idx = op.indices[[]];
         while let Some((o, i)) = out_iter.next() {
@@ -60,6 +60,7 @@ where
             }
             grad_inp[reidx] += *o;
         }
+        Ok(())
     }
 }
 
@@ -93,13 +94,14 @@ impl<
         _inp: &Self::Storage<S, E>,
         grad_inp: &mut Self::Storage<S, E>,
         grad_out: &Self::Storage<S::Replaced, E>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let mut out_iter = grad_out.iter_with_index();
         while let Some((o, mut i)) = out_iter.next() {
             let dim_i_idx = i[I as usize];
             i[I as usize] = op.indices[[dim_i_idx]];
             grad_inp[i] += *o;
         }
+        Ok(())
     }
 }
 
@@ -132,11 +134,12 @@ impl<E: Dtype + std::ops::AddAssign, Batch: Dim, Seq: Dim, Src1: Dim, Src2: Dim>
         _inp: &Self::Storage<(Src1, Src2), E>,
         grad_inp: &mut Self::Storage<(Src1, Src2), E>,
         grad_out: &Self::Storage<(Batch, Seq, Src2), E>,
-    ) {
+    ) -> Result<(), Self::Err> {
         let mut out_iter = grad_out.iter_with_index();
         while let Some((o, [b, s, i])) = out_iter.next() {
             let idx = op.indices[[b, s]];
             grad_inp[[idx, i]] += *o;
         }
+        Ok(())
     }
 }

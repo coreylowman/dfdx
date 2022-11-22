@@ -114,7 +114,7 @@ pub trait UnaryKernel<Op, Inp: Shape, Out: Shape, Elem: Dtype>: Device {
         inp: &Self::Storage<Inp, Elem>,
         grad_inp: &mut Self::Storage<Inp, Elem>,
         grad_out: &Self::Storage<Out, Elem>,
-    );
+    ) -> Result<(), Self::Err>;
 }
 
 pub trait FullUnaryKernel<Op, Inp: Shape, Out: Shape, Elem: Dtype>: Device {
@@ -130,7 +130,7 @@ pub trait FullUnaryKernel<Op, Inp: Shape, Out: Shape, Elem: Dtype>: Device {
         grad_inp: &mut Self::Storage<Inp, Elem>,
         out: &Self::Storage<Out, Elem>,
         grad_out: &Self::Storage<Out, Elem>,
-    );
+    ) -> Result<(), Self::Err>;
 }
 
 pub trait BinaryKernel<Op, Lhs: Shape, Rhs: Shape, Out: Shape, Elem: Dtype>: Device {
@@ -149,5 +149,5 @@ pub trait BinaryKernel<Op, Lhs: Shape, Rhs: Shape, Out: Shape, Elem: Dtype>: Dev
         rhs: &Self::Storage<Rhs, Elem>,
         grad_rhs: &mut Self::Storage<Rhs, Elem>,
         grad_out: &Self::Storage<Out, Elem>,
-    );
+    ) -> Result<(), Self::Err>;
 }

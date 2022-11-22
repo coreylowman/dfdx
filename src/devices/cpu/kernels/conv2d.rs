@@ -217,7 +217,7 @@ impl<
             Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
             f32,
         >,
-    ) {
+    ) -> Result<(), Self::Err> {
         self.conv2d_backward::<K, S, P, C, O, H, W>(
             lhs.view(),
             grad_lhs.view_mut(),
@@ -225,7 +225,6 @@ impl<
             grad_rhs.view_mut(),
             grad_out.view(),
         )
-        .unwrap();
     }
 }
 
@@ -281,7 +280,7 @@ impl<
             Rank4<B, O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
             f32,
         >,
-    ) {
+    ) -> Result<(), Self::Err> {
         let lhs = lhs.view();
         let grad_lhs = grad_lhs.view_mut();
         let rhs = rhs.view();
@@ -294,8 +293,8 @@ impl<
                 rhs,
                 grad_rhs,
                 grad_out.idx(b),
-            )
-            .unwrap();
+            )?;
         }
+        Ok(())
     }
 }
