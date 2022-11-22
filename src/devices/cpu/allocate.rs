@@ -237,8 +237,7 @@ impl<S: Shape + TryFromNumElements, E: Dtype> TryConvert<Vec<E>, StridedArray<S,
 impl<E: Dtype> TryConvert<E, StridedArray<Rank0, E>> for Cpu {
     fn try_convert(&self, src: E) -> Result<StridedArray<Rank0, E>, Self::Err> {
         let mut out: StridedArray<Rank0, E> = self.try_zeros()?;
-        let data = Arc::make_mut(&mut out.data);
-        data[0].clone_from(&src);
+        out[[]].clone_from(&src);
         Ok(out)
     }
 }
@@ -246,9 +245,9 @@ impl<E: Dtype> TryConvert<E, StridedArray<Rank0, E>> for Cpu {
 impl<E: Dtype, const M: usize> TryConvert<[E; M], StridedArray<Rank1<M>, E>> for Cpu {
     fn try_convert(&self, src: [E; M]) -> Result<StridedArray<Rank1<M>, E>, Self::Err> {
         let mut out: StridedArray<Rank1<M>, E> = self.try_zeros()?;
-        let mut out_iter = out.iter_mut();
-        for m in 0..M {
-            out_iter.next().unwrap().clone_from(&src[m]);
+        let mut out_iter = out.iter_mut_with_index();
+        while let Some((v, [m])) = out_iter.next() {
+            v.clone_from(&src[m]);
         }
         Ok(out)
     }
@@ -259,11 +258,25 @@ impl<E: Dtype, const M: usize, const N: usize> TryConvert<[[E; N]; M], StridedAr
 {
     fn try_convert(&self, src: [[E; N]; M]) -> Result<StridedArray<Rank2<M, N>, E>, Self::Err> {
         let mut out: StridedArray<Rank2<M, N>, E> = self.try_zeros()?;
-        let mut out_iter = out.iter_mut();
-        for m in 0..M {
-            for n in 0..N {
-                out_iter.next().unwrap().clone_from(&src[m][n]);
-            }
+        let mut out_iter = out.iter_mut_with_index();
+        while let Some((v, [m, n])) = out_iter.next() {
+            v.clone_from(&src[m][n]);
+        }
+        Ok(out)
+    }
+}
+
+impl<E: Dtype, const M: usize, const N: usize, const O: usize>
+    TryConvert<[[[E; O]; N]; M], StridedArray<Rank3<M, N, O>, E>> for Cpu
+{
+    fn try_convert(
+        &self,
+        src: [[[E; O]; N]; M],
+    ) -> Result<StridedArray<Rank3<M, N, O>, E>, Self::Err> {
+        let mut out: StridedArray<Rank3<M, N, O>, E> = self.try_zeros()?;
+        let mut out_iter = out.iter_mut_with_index();
+        while let Some((v, [m, n, o])) = out_iter.next() {
+            v.clone_from(&src[m][n][o]);
         }
         Ok(out)
     }

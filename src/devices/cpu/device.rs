@@ -17,6 +17,14 @@ impl Default for Cpu {
     }
 }
 
+impl Cpu {
+    pub fn with_seed(seed: u64) -> Self {
+        Self {
+            rng: Arc::new(RefCell::new(StdRng::seed_from_u64(seed))),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct StridedArray<S: Shape, Elem> {
     pub(super) data: Arc<Vec<Elem>>,

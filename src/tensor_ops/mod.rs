@@ -194,7 +194,7 @@ mod impl_reshape;
 // #[cfg(feature = "nightly")]
 // pub use conv::*;
 
-// #[cfg(feature = "nightly")]
-// mod pool2d;
+#[cfg(feature = "nightly")]
+mod pool2d;
 // #[cfg(feature = "nightly")]
 // pub use pool2d::*;

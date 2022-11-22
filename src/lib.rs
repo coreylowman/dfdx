@@ -172,6 +172,10 @@ pub(crate) mod tests {
             use crate::devices::Cpu;
             Cpu::default()
         }};
+        ($Seed:expr) => {{
+            use crate::devices::Cpu;
+            Cpu::with_seed($Seed)
+        }};
     }
 
     pub(crate) use build_test_device;

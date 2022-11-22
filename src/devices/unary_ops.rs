@@ -2,24 +2,34 @@ use core::marker::PhantomData;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Negate;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Square;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Sqrt;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Tanh;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Sigmoid;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Sin;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Cos;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Ln;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Exp;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Abs;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ReLU;
 
@@ -102,11 +112,16 @@ pub struct Select<Dst, Axis, I: crate::arrays::Shape, D: super::Device> {
     pub(crate) marker: PhantomData<Axis>,
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct MaxPool2D<const K: usize, const S: usize, const P: usize>;
+pub mod pooling {
+    #[derive(Debug, Default, Clone, Copy)]
+    pub struct Max;
+
+    #[derive(Debug, Default, Clone, Copy)]
+    pub struct Min;
+
+    #[derive(Debug, Default, Clone, Copy)]
+    pub struct Avg;
+}
 
 #[derive(Debug, Default, Clone, Copy)]
-pub struct MinPool2D<const K: usize, const S: usize, const P: usize>;
-
-#[derive(Debug, Default, Clone, Copy)]
-pub struct AvgPool2D<const K: usize, const S: usize, const P: usize>;
+pub struct Pool2D<Kind, const K: usize, const S: usize, const P: usize>(Kind);
