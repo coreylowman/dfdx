@@ -1,4 +1,7 @@
-use crate::gradients::{CanUpdateWithGradients, Gradients, UnusedTensors};
+use crate::{
+    devices::device::HasDeviceStorage,
+    gradients::{CanUpdateWithGradients, Gradients, UnusedTensors},
+};
 
 /// All optimizers must implement the update function, which takes an object
 /// that implements [CanUpdateWithGradients], and calls [CanUpdateWithGradients::update].
@@ -15,12 +18,16 @@ use crate::gradients::{CanUpdateWithGradients, Gradients, UnusedTensors};
 ///
 /// 3. Optimizer itself is generic over M, not the update method. This means a single optimizer object
 /// can only work on objects of type `M`. This also requires you to specify the model up front for the optimizer.
-pub trait Optimizer<M: CanUpdateWithGradients> {
+pub trait Optimizer<M: CanUpdateWithGradients + HasDeviceStorage> {
     /// Updates all of `module`'s parameters using `gradients`.
     ///
     /// Requires a `&mut self` because the optimizer may change some internally
     /// tracked values.
-    fn update(&mut self, module: &mut M, gradients: Gradients) -> Result<(), UnusedParamsError>;
+    fn update(
+        &mut self,
+        module: &mut M,
+        gradients: Gradients<M::Device>,
+    ) -> Result<(), UnusedParamsError>;
 }
 
 /// An error indicating that a parameter was not used in gradient

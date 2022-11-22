@@ -1,10 +1,10 @@
 //! Implementations of [GradientTape] and generic Nd array containers via [Gradients].
 #![allow(clippy::type_complexity)]
 
+use core::marker::PhantomData;
 use std::collections::HashMap;
 use std::{boxed::Box, vec::Vec};
 
-use crate::arrays::{HasDtype, HasShape};
 use crate::devices::device::HasDeviceStorage;
 use crate::devices::Device;
 use crate::unique_id::{HasUniqueId, UniqueId};
@@ -23,20 +23,13 @@ use crate::unique_id::{HasUniqueId, UniqueId};
 /// Under the hood, it actually is a HashMap, and stores values as Box<dyn Any>. The
 /// important part of key's implementing [HasArrayType] is that the associated type
 /// of that trait is used to downcast the box to the expected value.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Gradients<D: Device> {
     gradient_by_id: HashMap<UniqueId, Box<dyn std::any::Any>>,
-    device: D,
+    device: PhantomData<*const D>,
 }
 
 impl<D: Device> Gradients<D> {
-    pub(crate) fn empty(device: D) -> Self {
-        Self {
-            gradient_by_id: Default::default(),
-            device,
-        }
-    }
-
     /// Removes and returns the data associated with `t.id()`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
@@ -49,10 +42,10 @@ impl<D: Device> Gradients<D> {
     /// *gradients.mut_gradient(&t) = [-4.0, 5.0, -6.0];
     /// assert_eq!(gradients.remove(&t).expect("").as_ref(), &[-4.0, 5.0, -6.0]);
     /// ```
-    pub fn remove<T: HasUniqueId + HasShape + HasDtype>(
+    pub fn remove<T: HasUniqueId + HasDeviceStorage<Device = D>>(
         &mut self,
         t: &T,
-    ) -> Option<D::Storage<T::Shape, T::Dtype>> {
+    ) -> Option<T::Storage> {
         self.gradient_by_id
             .remove_entry(t.id())
             .map(|e| *e.1.downcast().unwrap())
@@ -73,12 +66,12 @@ impl<D: Device> Gradients<D> {
     /// g[0] = 1.0;
     /// assert_eq!(gradients.ref_gradient(&t), &[1.0, 0.0, 0.0]);
     /// ```
-    pub fn get_mut<T: HasUniqueId + HasDeviceStorage<Device = D>>(
-        &mut self,
-        t: &T,
-    ) -> Result<&mut D::Storage<T::Shape, T::Dtype>, D::Err> {
+    pub fn get_mut<T>(&mut self, t: &T) -> Result<&mut T::Storage, D::Err>
+    where
+        T: HasUniqueId + HasDeviceStorage<Device = D>,
+    {
         if !self.gradient_by_id.contains_key(t.id()) {
-            let grad = self.device.alloc_like(t.storage())?;
+            let grad = t.alloc_like()?;
             self.gradient_by_id.insert(*t.id(), Box::new(grad));
         }
         Ok(self
@@ -104,10 +97,7 @@ impl<D: Device> Gradients<D> {
     /// gradients.mut_gradient(&t);
     /// assert_eq!(gradients.grad(&t), &[0.0, 0.0, 0.0]);
     /// ```
-    pub fn get<T: HasUniqueId + HasShape + HasDtype>(
-        &self,
-        t: &T,
-    ) -> &D::Storage<T::Shape, T::Dtype> {
+    pub fn get<T: HasUniqueId + HasDeviceStorage<Device = D>>(&self, t: &T) -> &T::Storage {
         self.gradient_by_id
             .get(t.id())
             .unwrap()
@@ -137,13 +127,7 @@ impl<D: Device> Gradients<D> {
         &mut self,
         l: &L,
         r: &R,
-    ) -> Result<
-        (
-            &mut D::Storage<L::Shape, L::Dtype>,
-            &D::Storage<R::Shape, R::Dtype>,
-        ),
-        D::Err,
-    >
+    ) -> Result<(&mut L::Storage, &R::Storage), D::Err>
     where
         L: HasUniqueId + HasDeviceStorage<Device = D>,
         R: HasUniqueId + HasDeviceStorage<Device = D>,
@@ -161,14 +145,7 @@ impl<D: Device> Gradients<D> {
         l1: &L1,
         l2: &L2,
         r: &R,
-    ) -> Result<
-        (
-            &mut D::Storage<L1::Shape, L1::Dtype>,
-            &mut D::Storage<L2::Shape, L2::Dtype>,
-            &D::Storage<R::Shape, R::Dtype>,
-        ),
-        D::Err,
-    >
+    ) -> Result<(&mut L1::Storage, &mut L2::Storage, &R::Storage), D::Err>
     where
         L1: HasUniqueId + HasDeviceStorage<Device = D>,
         L2: HasUniqueId + HasDeviceStorage<Device = D>,
@@ -220,7 +197,16 @@ impl<D: Device> Gradients<D> {
 #[allow(clippy::type_complexity)]
 pub struct GradientTape<D: Device> {
     operations: Vec<Box<dyn FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>>,
-    device: D,
+    device: PhantomData<*const D>,
+}
+
+impl<D: Device> Default for GradientTape<D> {
+    fn default() -> Self {
+        Self {
+            operations: Vec::new(),
+            device: PhantomData,
+        }
+    }
 }
 
 impl<D: Device> std::fmt::Debug for GradientTape<D> {
@@ -232,13 +218,6 @@ impl<D: Device> std::fmt::Debug for GradientTape<D> {
 }
 
 impl<D: Device> GradientTape<D> {
-    pub(crate) fn empty(device: D) -> Self {
-        Self {
-            operations: Vec::new(),
-            device,
-        }
-    }
-
     /// Add an operation to be executed later. Implementation is all left to the caller,
     /// but the operation should likely call [Gradients::ref_gradient] and [Gradients::mut_gradient].
     ///
@@ -257,7 +236,7 @@ impl<D: Device> GradientTape<D> {
     ///
     /// Note that this method takes ownership of self, so it can't be called twice!
     pub fn execute(mut self) -> Result<Gradients<D>, D::Err> {
-        let mut gradients = Gradients::empty(self.device);
+        let mut gradients: Gradients<D> = Default::default();
         for operation in self.operations.drain(..).rev() {
             (operation)(&mut gradients)?;
         }
@@ -272,7 +251,7 @@ impl<D: Device> GradientTape<D> {
 
 /// Contains a boxed [GradientTape]. When [Tape::add_backward_op] is called,
 /// this function passes the operation directly to [GradientTape].
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct OwnedTape<D: Device>(pub(crate) Box<GradientTape<D>>);
 
 /// Contains nothing. When [Tape::add_backward_op] is called, this struct does nothing.
@@ -280,10 +259,9 @@ pub struct OwnedTape<D: Device>(pub(crate) Box<GradientTape<D>>);
 pub struct NoneTape;
 
 /// Something that can add a gradient operation to [GradientTape].
-pub trait Tape<D: Device>: Merge<Self> + Merge<NoneTape> {
+pub trait Tape<D: Device>: Default + Merge<Self> + Merge<NoneTape> {
     /// Whether this object currently owns the [GradientTape]. This is known at compile time.
     const OWNS_TAPE: bool;
-    fn empty(device: D) -> Self;
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>(
         &mut self,
         operation: F,
@@ -292,9 +270,6 @@ pub trait Tape<D: Device>: Merge<Self> + Merge<NoneTape> {
 
 impl<D: Device> Tape<D> for OwnedTape<D> {
     const OWNS_TAPE: bool = true;
-    fn empty(device: D) -> Self {
-        Self(Box::new(GradientTape::empty(device)))
-    }
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>(
         &mut self,
         operation: F,
@@ -305,9 +280,6 @@ impl<D: Device> Tape<D> for OwnedTape<D> {
 
 impl<D: Device> Tape<D> for NoneTape {
     const OWNS_TAPE: bool = false;
-    fn empty(_: D) -> Self {
-        Self
-    }
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>(
         &mut self,
         _operation: F,
@@ -353,10 +325,9 @@ pub trait GradientProvider {
     /// Retrieves the data associated with `p` if there is any.
     /// This can modify `self`, for instance if velocities are calculated
     /// based on the associated data!
-    fn gradient<D, P>(&mut self, p: &P) -> Option<D::Storage<P::Shape, P::Dtype>>
+    fn gradient<P>(&mut self, p: &P) -> Option<P::Storage>
     where
-        D: Device,
-        P: HasUniqueId + HasShape + HasDtype;
+        P: HasUniqueId + HasDeviceStorage;
 }
 
 /// Represents something that can be updated with [GradientProvider].

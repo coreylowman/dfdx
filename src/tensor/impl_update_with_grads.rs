@@ -14,7 +14,7 @@ where
 {
     /// Subtracts the gradient for the tensor from [HasArrayData::mut_data].
     fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        match grads.gradient::<D, Self>(self) {
+        match grads.gradient(self) {
             Some(grad) => self.storage.sub_assign(grad),
             None => unused.add(self),
         }

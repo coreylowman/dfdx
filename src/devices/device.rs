@@ -22,7 +22,10 @@ pub trait Device: 'static + Default + Clone + HasErr {
 
 pub trait HasDeviceStorage: HasShape + HasDtype {
     type Device: Device;
-    fn storage(&self) -> &<Self::Device as Device>::Storage<Self::Shape, Self::Dtype>;
+    type Storage: 'static;
+    fn dev(&self) -> &Self::Device;
+    fn storage(&self) -> &Self::Storage;
+    fn alloc_like(&self) -> Result<Self::Storage, <Self::Device as HasErr>::Err>;
 }
 
 pub trait Zeros<T>: HasErr {

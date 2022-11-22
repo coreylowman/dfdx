@@ -35,7 +35,7 @@ impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Tensor<S, E, D, T> {
             id: self.id,
             storage: self.storage.clone(),
             device: self.device.clone(),
-            tape: T::empty(self.device.clone()),
+            tape: Default::default(),
         }
     }
 
@@ -44,7 +44,7 @@ impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Tensor<S, E, D, T> {
             id: self.id,
             storage: self.storage.clone(),
             device: self.device.clone(),
-            tape: New::empty(self.device.clone()),
+            tape: Default::default(),
         }
     }
 
@@ -80,8 +80,15 @@ impl<S: Shape, E: Dtype, D: Device, T> HasDtype for Tensor<S, E, D, T> {
 
 impl<S: Shape, E: Dtype, D: Device, T> HasDeviceStorage for Tensor<S, E, D, T> {
     type Device = D;
-    fn storage(&self) -> &<Self::Device as Device>::Storage<Self::Shape, Self::Dtype> {
+    type Storage = D::Storage<S, E>;
+    fn dev(&self) -> &Self::Device {
+        &self.device
+    }
+    fn storage(&self) -> &Self::Storage {
         &self.storage
+    }
+    fn alloc_like(&self) -> Result<Self::Storage, D::Err> {
+        self.device.alloc_like(&self.storage)
     }
 }
 
@@ -101,8 +108,7 @@ impl<S: Shape, E: Dtype, D: Device> Tensor<S, E, D, NoneTape> {
     }
 
     pub fn traced(self) -> Tensor<S, E, D, OwnedTape<D>> {
-        let tape = OwnedTape::empty(self.device.clone());
-        self.put_tape(tape)
+        self.put_tape(Default::default())
     }
 }
 

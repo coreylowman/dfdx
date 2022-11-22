@@ -1,5 +1,7 @@
-use crate::arrays::HasArrayType;
-use crate::devices::ForEachElement;
+use super::weight_decay::WeightDecay;
+use crate::arrays::{HasDtype, HasShape};
+use crate::devices::device::HasDeviceStorage;
+use crate::devices::Device;
 use crate::gradients::{CanUpdateWithGradients, GradientProvider, Gradients};
 use crate::prelude::*;
 use crate::unique_id::HasUniqueId;
@@ -36,12 +38,12 @@ use std::{boxed::Box, marker::PhantomData};
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Sgd<M> {
+pub struct Sgd<M: HasDeviceStorage> {
     /// Hyperparameter configuration
     pub cfg: SgdConfig,
 
-    velocity: Gradients,
-    gradients: Gradients,
+    velocity: Gradients<M::Device>,
+    gradients: Gradients<M::Device>,
 
     marker: PhantomData<*const M>,
 }
@@ -149,40 +151,46 @@ impl<M> Sgd<M> {
 }
 
 impl<M> GradientProvider for Sgd<M> {
-    fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
+    fn gradient<D, P>(&mut self, p: &P) -> Option<D::Storage<P::Shape, P::Dtype>>
     where
-        P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice + HasArrayData,
+        D: Device,
+        P: HasUniqueId + HasShape + HasDtype,
     {
-        let mut g_t = self.gradients.remove(p)?;
-        if let Some(WeightDecay::L2(wd)) = self.cfg.weight_decay {
-            P::Device::foreach_mr(g_t.as_mut(), p.data(), &mut |g, p_el| {
-                *g += wd * p_el;
-            });
-        }
-        match self.cfg.momentum {
-            Some(Momentum::Classic(u)) => {
-                let v_t = self.velocity.mut_gradient(p);
-                P::Device::foreach_mm(g_t.as_mut(), v_t, &mut |g, v| {
-                    *v = *g + u * *v;
-                    *g = *v * self.cfg.lr;
-                });
-            }
-            Some(Momentum::Nesterov(u)) => {
-                let v_t = self.velocity.mut_gradient(p);
-                P::Device::foreach_mm(g_t.as_mut(), v_t, &mut |g, v| {
-                    *v = *g + u * *v;
-                    *g = (*g + u * *v) * self.cfg.lr;
-                });
-            }
-            None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.cfg.lr),
-        }
-        if let Some(WeightDecay::Decoupled(wd)) = self.cfg.weight_decay {
-            P::Device::foreach_mr(g_t.as_mut(), p.data(), &mut |g, p_el| {
-                *g += wd * self.cfg.lr * p_el;
-            });
-        }
-        Some(g_t)
     }
+    // fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
+    // where
+    //     P: HasUniqueId + HasArrayType<Dtype = f32> + HasDevice + HasArrayData,
+    // {
+    //     let mut g_t = self.gradients.remove(p)?;
+    //     if let Some(WeightDecay::L2(wd)) = self.cfg.weight_decay {
+    //         P::Device::foreach_mr(g_t.as_mut(), p.data(), &mut |g, p_el| {
+    //             *g += wd * p_el;
+    //         });
+    //     }
+    //     match self.cfg.momentum {
+    //         Some(Momentum::Classic(u)) => {
+    //             let v_t = self.velocity.mut_gradient(p);
+    //             P::Device::foreach_mm(g_t.as_mut(), v_t, &mut |g, v| {
+    //                 *v = *g + u * *v;
+    //                 *g = *v * self.cfg.lr;
+    //             });
+    //         }
+    //         Some(Momentum::Nesterov(u)) => {
+    //             let v_t = self.velocity.mut_gradient(p);
+    //             P::Device::foreach_mm(g_t.as_mut(), v_t, &mut |g, v| {
+    //                 *v = *g + u * *v;
+    //                 *g = (*g + u * *v) * self.cfg.lr;
+    //             });
+    //         }
+    //         None => P::Device::foreach_m(g_t.as_mut(), &mut |g| *g *= self.cfg.lr),
+    //     }
+    //     if let Some(WeightDecay::Decoupled(wd)) = self.cfg.weight_decay {
+    //         P::Device::foreach_mr(g_t.as_mut(), p.data(), &mut |g, p_el| {
+    //             *g += wd * self.cfg.lr * p_el;
+    //         });
+    //     }
+    //     Some(g_t)
+    // }
 }
 
 impl<M: CanUpdateWithGradients> Optimizer<M> for Sgd<M> {
