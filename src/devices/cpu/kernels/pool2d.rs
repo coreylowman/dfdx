@@ -1,20 +1,14 @@
 use crate::arrays::{Rank3, Rank4};
 use crate::devices::cpu::views::{View, ViewMut};
 use crate::devices::cpu::{Cpu, StridedArray};
-use crate::devices::{
-    device::*,
-    unary_ops::{self, pooling},
-};
+use crate::devices::{device::*, unary_ops};
 
-trait PoolForward<const K: usize, const S: usize, const P: usize> {
+trait Pooling<const K: usize, const S: usize, const P: usize> {
     fn pool_forward<const C: usize, const H: usize, const W: usize>(
         &self,
         inp: View<Rank3<C, H, W>, f32>,
         out: ViewMut<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
     );
-}
-
-trait PoolBackward<const K: usize, const S: usize, const P: usize> {
     fn pool_backward<const C: usize, const H: usize, const W: usize>(
         &self,
         inp: View<Rank3<C, H, W>, f32>,
@@ -23,7 +17,7 @@ trait PoolBackward<const K: usize, const S: usize, const P: usize> {
     );
 }
 
-impl<const K: usize, const S: usize, const P: usize> PoolForward<K, S, P>
+impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
     for unary_ops::Pool2D<unary_ops::pooling::Avg, K, S, P>
 {
     fn pool_forward<const C: usize, const H: usize, const W: usize>(
@@ -54,75 +48,7 @@ impl<const K: usize, const S: usize, const P: usize> PoolForward<K, S, P>
             }
         }
     }
-}
 
-impl<const K: usize, const S: usize, const P: usize> PoolForward<K, S, P>
-    for unary_ops::Pool2D<unary_ops::pooling::Max, K, S, P>
-{
-    fn pool_forward<const C: usize, const H: usize, const W: usize>(
-        &self,
-        inp: View<Rank3<C, H, W>, f32>,
-        out: ViewMut<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
-    ) {
-        let out_height = (H + 2 * P - K) / S + 1;
-        let out_width = (W + 2 * P - K) / S + 1;
-        for c in 0..C {
-            for oh in 0..out_height {
-                for ow in 0..out_width {
-                    let mut tmp = f32::NEG_INFINITY;
-                    for k1 in 0..K {
-                        let y = (oh * S + k1).checked_sub(P);
-                        for k2 in 0..K {
-                            let x = (ow * S + k2).checked_sub(P);
-                            if let Some((y, x)) = y.zip(x) {
-                                if y < H && x < W {
-                                    tmp = inp.get(c).get(y).get(x).max(tmp);
-                                }
-                            }
-                        }
-                    }
-                    *out.get(c).get(oh).get(ow) = tmp;
-                }
-            }
-        }
-    }
-}
-
-impl<const K: usize, const S: usize, const P: usize> PoolForward<K, S, P>
-    for unary_ops::Pool2D<unary_ops::pooling::Min, K, S, P>
-{
-    fn pool_forward<const C: usize, const H: usize, const W: usize>(
-        &self,
-        inp: View<Rank3<C, H, W>, f32>,
-        out: ViewMut<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
-    ) {
-        let out_height = (H + 2 * P - K) / S + 1;
-        let out_width = (W + 2 * P - K) / S + 1;
-        for c in 0..C {
-            for oh in 0..out_height {
-                for ow in 0..out_width {
-                    let mut tmp = f32::INFINITY;
-                    for k1 in 0..K {
-                        let y = (oh * S + k1).checked_sub(P);
-                        for k2 in 0..K {
-                            let x = (ow * S + k2).checked_sub(P);
-                            if let Some((y, x)) = y.zip(x) {
-                                if y < H && x < W {
-                                    tmp = inp.get(c).get(y).get(x).min(tmp);
-                                }
-                            }
-                        }
-                    }
-                    *out.get(c).get(oh).get(ow) = tmp;
-                }
-            }
-        }
-    }
-}
-
-impl<const K: usize, const S: usize, const P: usize> PoolBackward<K, S, P>
-    for unary_ops::Pool2D<pooling::Avg, K, S, P>
-{
     fn pool_backward<const C: usize, const H: usize, const W: usize>(
         &self,
         _inp: View<Rank3<C, H, W>, f32>,
@@ -153,9 +79,37 @@ impl<const K: usize, const S: usize, const P: usize> PoolBackward<K, S, P>
     }
 }
 
-impl<const K: usize, const S: usize, const P: usize> PoolBackward<K, S, P>
-    for unary_ops::Pool2D<pooling::Min, K, S, P>
+impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
+    for unary_ops::Pool2D<unary_ops::pooling::Max, K, S, P>
 {
+    fn pool_forward<const C: usize, const H: usize, const W: usize>(
+        &self,
+        inp: View<Rank3<C, H, W>, f32>,
+        out: ViewMut<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+    ) {
+        let out_height = (H + 2 * P - K) / S + 1;
+        let out_width = (W + 2 * P - K) / S + 1;
+        for c in 0..C {
+            for oh in 0..out_height {
+                for ow in 0..out_width {
+                    let mut tmp = f32::NEG_INFINITY;
+                    for k1 in 0..K {
+                        let y = (oh * S + k1).checked_sub(P);
+                        for k2 in 0..K {
+                            let x = (ow * S + k2).checked_sub(P);
+                            if let Some((y, x)) = y.zip(x) {
+                                if y < H && x < W {
+                                    tmp = inp.get(c).get(y).get(x).max(tmp);
+                                }
+                            }
+                        }
+                    }
+                    *out.get(c).get(oh).get(ow) = tmp;
+                }
+            }
+        }
+    }
+
     fn pool_backward<const C: usize, const H: usize, const W: usize>(
         &self,
         inp: View<Rank3<C, H, W>, f32>,
@@ -168,14 +122,14 @@ impl<const K: usize, const S: usize, const P: usize> PoolBackward<K, S, P>
             for oh in 0..out_height {
                 for ow in 0..out_width {
                     let o_g = *out_grad.get(c).get(oh).get(ow);
-                    let mut tmp = f32::INFINITY;
+                    let mut tmp = f32::NEG_INFINITY;
                     for k1 in 0..K {
                         let y = (oh * S + k1).checked_sub(P);
                         for k2 in 0..K {
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
                                 if y < H && x < W {
-                                    tmp = inp.get(c).get(y).get(x).min(tmp);
+                                    tmp = inp.get(c).get(y).get(x).max(tmp);
                                 }
                             }
                         }
@@ -198,9 +152,37 @@ impl<const K: usize, const S: usize, const P: usize> PoolBackward<K, S, P>
     }
 }
 
-impl<const K: usize, const S: usize, const P: usize> PoolBackward<K, S, P>
-    for unary_ops::Pool2D<pooling::Max, K, S, P>
+impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
+    for unary_ops::Pool2D<unary_ops::pooling::Min, K, S, P>
 {
+    fn pool_forward<const C: usize, const H: usize, const W: usize>(
+        &self,
+        inp: View<Rank3<C, H, W>, f32>,
+        out: ViewMut<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+    ) {
+        let out_height = (H + 2 * P - K) / S + 1;
+        let out_width = (W + 2 * P - K) / S + 1;
+        for c in 0..C {
+            for oh in 0..out_height {
+                for ow in 0..out_width {
+                    let mut tmp = f32::INFINITY;
+                    for k1 in 0..K {
+                        let y = (oh * S + k1).checked_sub(P);
+                        for k2 in 0..K {
+                            let x = (ow * S + k2).checked_sub(P);
+                            if let Some((y, x)) = y.zip(x) {
+                                if y < H && x < W {
+                                    tmp = inp.get(c).get(y).get(x).min(tmp);
+                                }
+                            }
+                        }
+                    }
+                    *out.get(c).get(oh).get(ow) = tmp;
+                }
+            }
+        }
+    }
+
     fn pool_backward<const C: usize, const H: usize, const W: usize>(
         &self,
         inp: View<Rank3<C, H, W>, f32>,
@@ -213,14 +195,14 @@ impl<const K: usize, const S: usize, const P: usize> PoolBackward<K, S, P>
             for oh in 0..out_height {
                 for ow in 0..out_width {
                     let o_g = *out_grad.get(c).get(oh).get(ow);
-                    let mut tmp = f32::NEG_INFINITY;
+                    let mut tmp = f32::INFINITY;
                     for k1 in 0..K {
                         let y = (oh * S + k1).checked_sub(P);
                         for k2 in 0..K {
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
                                 if y < H && x < W {
-                                    tmp = inp.get(c).get(y).get(x).max(tmp);
+                                    tmp = inp.get(c).get(y).get(x).min(tmp);
                                 }
                             }
                         }
@@ -259,7 +241,7 @@ impl<
         f32,
     > for Cpu
 where
-    unary_ops::Pool2D<Kind, K, S, P>: PoolForward<K, S, P> + PoolBackward<K, S, P>,
+    unary_ops::Pool2D<Kind, K, S, P>: Pooling<K, S, P>,
 {
     fn unary_fwd(
         &self,
@@ -307,7 +289,7 @@ impl<
         f32,
     > for Cpu
 where
-    unary_ops::Pool2D<Kind, K, S, P>: PoolForward<K, S, P> + PoolBackward<K, S, P>,
+    unary_ops::Pool2D<Kind, K, S, P>: Pooling<K, S, P>,
 {
     fn unary_fwd(
         &self,
