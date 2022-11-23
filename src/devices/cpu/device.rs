@@ -85,4 +85,10 @@ impl Device for Cpu {
     fn random_u64(&self) -> u64 {
         self.rng.borrow_mut().gen()
     }
+
+    fn fill_with<S: Shape, E: Dtype>(&self, storage: &mut Self::Storage<S, E>, value: E) {
+        for v in storage.buf_iter_mut() {
+            *v = value;
+        }
+    }
 }

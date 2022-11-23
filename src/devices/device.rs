@@ -18,6 +18,7 @@ pub trait Device: 'static + Default + Clone + HasErr {
         storage: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err>;
     fn random_u64(&self) -> u64;
+    fn fill_with<S: Shape, E: Dtype>(&self, storage: &mut Self::Storage<S, E>, value: E);
 }
 
 pub trait HasDevice {
