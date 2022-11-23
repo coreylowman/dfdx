@@ -183,11 +183,11 @@ where
         gradients: Gradients<D>,
     ) -> Result<(), OptimizerUpdateError<D>> {
         self.gradients = gradients;
-        let mut unused_tensors = Default::default();
-        module
-            .update(self, &mut unused_tensors)
-            .map_err(OptimizerUpdateError::DeviceError)?;
-        unused_tensors.into()
+        let mut unused = Default::default();
+        match module.update(self, &mut unused) {
+            Ok(_) => unused.into(),
+            Err(e) => Err(OptimizerUpdateError::DeviceError(e)),
+        }
     }
 }
 

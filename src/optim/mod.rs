@@ -26,7 +26,7 @@
 //! opt.update(&mut model, gradients);
 //! ```
 
-// mod adam;
+mod adam;
 mod optimizer;
 // mod rmsprop;
 mod sgd;
