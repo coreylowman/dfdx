@@ -1,7 +1,7 @@
 use crate::arrays::{Dtype, HasDtype, HasShape, Shape};
 
 pub trait HasErr: Sized {
-    type Err: std::fmt::Debug;
+    type Err: std::fmt::Debug + std::fmt::Display;
 }
 
 pub trait Device: 'static + Default + Clone + HasErr {
@@ -20,8 +20,11 @@ pub trait Device: 'static + Default + Clone + HasErr {
     fn random_u64(&self) -> u64;
 }
 
-pub trait HasDeviceStorage: HasShape + HasDtype {
+pub trait HasDevice {
     type Device: Device;
+}
+
+pub trait HasDeviceStorage: HasShape + HasDtype + HasDevice {
     type Storage: 'static;
     fn dev(&self) -> &Self::Device;
     fn storage(&self) -> &Self::Storage;

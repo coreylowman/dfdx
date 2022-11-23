@@ -1,4 +1,3 @@
-use super::iterate::LendingIterator;
 use crate::arrays::{Dtype, HasShape, Shape, StridesFor};
 use crate::devices::device::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -27,9 +26,9 @@ impl Cpu {
 
 #[derive(Debug)]
 pub struct StridedArray<S: Shape, Elem> {
-    pub(super) data: Arc<Vec<Elem>>,
-    pub(super) shape: S,
-    pub(super) strides: StridesFor<S>,
+    pub(crate) data: Arc<Vec<Elem>>,
+    pub(crate) shape: S,
+    pub(crate) strides: StridesFor<S>,
 }
 
 impl<S: Shape, E: Clone> Clone for StridedArray<S, E> {
@@ -42,6 +41,12 @@ impl<S: Shape, E: Clone> Clone for StridedArray<S, E> {
 pub enum CpuError {
     OutOfMemory,
     ShapeMismatch,
+}
+
+impl std::fmt::Display for CpuError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        todo!();
+    }
 }
 
 impl<S: Shape, E: Clone> StridedArray<S, E> {
@@ -64,18 +69,6 @@ impl<S: Shape, E> HasShape for StridedArray<S, E> {
 
 impl HasErr for Cpu {
     type Err = CpuError;
-}
-
-impl<const N: usize, S: Shape<Concrete = [usize; N]>, E: Dtype + std::ops::SubAssign<E>>
-    std::ops::SubAssign for StridedArray<S, E>
-{
-    fn sub_assign(&mut self, rhs: Self) {
-        let mut lhs_iter = self.iter_mut();
-        let mut rhs_iter = rhs.iter();
-        while let Some((l, r)) = lhs_iter.next().zip(rhs_iter.next()) {
-            *l -= *r;
-        }
-    }
 }
 
 impl Device for Cpu {

@@ -5,8 +5,8 @@ mod iterate;
 mod kernels;
 mod views;
 
-use iterate::LendingIterator;
-use views::{View, ViewMut};
+pub(crate) use iterate::LendingIterator;
+pub(crate) use views::{View, ViewMut};
 
 pub(crate) use device::StridedArray;
 

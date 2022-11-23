@@ -1,17 +1,32 @@
 pub trait Dtype:
-    'static + Copy + Clone + std::fmt::Debug + Default + PartialOrd + Send + Sync
+    'static
+    + Copy
+    + Clone
+    + std::fmt::Debug
+    + Default
+    + PartialOrd
+    + Send
+    + Sync
+    + std::ops::Add<Self, Output = Self>
+    + std::ops::Sub<Self, Output = Self>
+    + std::ops::Mul<Self, Output = Self>
+    + std::ops::Div<Self, Output = Self>
+    + std::ops::AddAssign
+    + std::ops::SubAssign
+    + std::ops::MulAssign
+    + std::ops::DivAssign
 {
 }
 impl Dtype for f32 {}
 impl Dtype for f64 {}
 impl Dtype for usize {}
 
-pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync {
+pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync + Eq + PartialEq {
     fn size(&self) -> usize;
     fn from_size(size: usize) -> Option<Self>;
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Dyn(pub usize);
 
 impl Dim for Dyn {
@@ -25,7 +40,7 @@ impl Dim for Dyn {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct C<const M: usize>;
 impl<const M: usize> Dim for C<M> {
     #[inline(always)]
@@ -42,15 +57,17 @@ impl<const M: usize> Dim for C<M> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct StridesFor<Sh: Shape>(pub(crate) Sh::Concrete);
 
-pub trait Shape: 'static + std::fmt::Debug + Clone + Copy + Send + Sync {
+pub trait Shape: 'static + std::fmt::Debug + Clone + Copy + Send + Sync + Eq + PartialEq {
     const NUM_DIMS: usize;
     type Concrete: std::fmt::Debug
         + Clone
         + Copy
         + Default
+        + Eq
+        + PartialEq
         + std::ops::Index<usize, Output = usize>
         + std::ops::IndexMut<usize>
         + Send

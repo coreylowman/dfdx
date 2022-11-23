@@ -30,10 +30,9 @@
 mod optimizer;
 // mod rmsprop;
 mod sgd;
-mod weight_decay;
 
 // pub use adam::*;
-// pub use optimizer::*;
+pub use optimizer::*;
 // pub use rmsprop::*;
-// pub use sgd::*;
+pub use sgd::*;
 // pub use weight_decay::*;

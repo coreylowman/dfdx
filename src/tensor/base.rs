@@ -1,7 +1,7 @@
 use crate::arrays::{
     Dtype, HasDtype, HasShape, Rank0, Rank1, Rank2, Rank3, Rank4, Rank5, Rank6, Shape,
 };
-use crate::devices::device::{HasDeviceStorage, HasErr};
+use crate::devices::device::{HasDevice, HasDeviceStorage, HasErr};
 use crate::devices::Device;
 use crate::unique_id::HasUniqueId;
 use crate::{
@@ -78,8 +78,11 @@ impl<S: Shape, E: Dtype, D: Device, T> HasDtype for Tensor<S, E, D, T> {
     type Dtype = E;
 }
 
-impl<S: Shape, E: Dtype, D: Device, T> HasDeviceStorage for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: Device, T> HasDevice for Tensor<S, E, D, T> {
     type Device = D;
+}
+
+impl<S: Shape, E: Dtype, D: Device, T> HasDeviceStorage for Tensor<S, E, D, T> {
     type Storage = D::Storage<S, E>;
     fn dev(&self) -> &Self::Device {
         &self.device

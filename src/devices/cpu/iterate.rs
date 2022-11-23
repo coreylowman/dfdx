@@ -62,49 +62,57 @@ impl<const N: usize, S: Shape<Concrete = [usize; N]>> NdIndex<S> {
     }
 }
 
-pub(super) struct StridedRefIter<'a, S: Shape, Elem> {
+pub(crate) struct StridedRefIter<'a, S: Shape, Elem> {
     data: &'a Vec<Elem>,
     index: NdIndex<S>,
 }
 
-pub(super) struct StridedMutIter<'a, S: Shape, Elem> {
+pub(crate) struct StridedMutIter<'a, S: Shape, Elem> {
     data: &'a mut Vec<Elem>,
     index: NdIndex<S>,
 }
 
-pub(super) struct StridedRefIndexIter<'a, S: Shape, Elem> {
+pub(crate) struct StridedRefIndexIter<'a, S: Shape, Elem> {
     data: &'a Vec<Elem>,
     index: NdIndex<S>,
 }
 
-pub(super) struct StridedMutIndexIter<'a, S: Shape, Elem> {
+pub(crate) struct StridedMutIndexIter<'a, S: Shape, Elem> {
     data: &'a mut Vec<Elem>,
     index: NdIndex<S>,
 }
 
 impl<S: Shape, Elem: Dtype> StridedArray<S, Elem> {
-    pub(super) fn iter(&self) -> StridedRefIter<S, Elem> {
+    pub(crate) fn buf_iter(&self) -> std::slice::Iter<'_, Elem> {
+        self.data.iter()
+    }
+
+    pub(crate) fn buf_iter_mut(&mut self) -> std::slice::IterMut<'_, Elem> {
+        std::sync::Arc::make_mut(&mut self.data).iter_mut()
+    }
+
+    pub(crate) fn iter(&self) -> StridedRefIter<S, Elem> {
         StridedRefIter {
             data: self.data.as_ref(),
             index: NdIndex::new(self.shape, self.strides),
         }
     }
 
-    pub(super) fn iter_mut(&mut self) -> StridedMutIter<S, Elem> {
+    pub(crate) fn iter_mut(&mut self) -> StridedMutIter<S, Elem> {
         StridedMutIter {
             data: std::sync::Arc::make_mut(&mut self.data),
             index: NdIndex::new(self.shape, self.strides),
         }
     }
 
-    pub(super) fn iter_with_index(&self) -> StridedRefIndexIter<S, Elem> {
+    pub(crate) fn iter_with_index(&self) -> StridedRefIndexIter<S, Elem> {
         StridedRefIndexIter {
             data: self.data.as_ref(),
             index: NdIndex::new(self.shape, self.strides),
         }
     }
 
-    pub(super) fn iter_mut_with_index(&mut self) -> StridedMutIndexIter<S, Elem> {
+    pub(crate) fn iter_mut_with_index(&mut self) -> StridedMutIndexIter<S, Elem> {
         StridedMutIndexIter {
             data: std::sync::Arc::make_mut(&mut self.data),
             index: NdIndex::new(self.shape, self.strides),
@@ -113,7 +121,7 @@ impl<S: Shape, Elem: Dtype> StridedArray<S, Elem> {
 }
 
 impl<S: Shape, Elem: Dtype> StridedArray<S, Elem> {
-    pub(super) fn iter_as<Axes, Dst: Shape>(&self, dst: &Dst) -> StridedRefIter<Dst, Elem>
+    pub(crate) fn iter_as<Axes, Dst: Shape>(&self, dst: &Dst) -> StridedRefIter<Dst, Elem>
     where
         S: BroadcastStrides<Dst, Axes>,
     {
@@ -123,7 +131,7 @@ impl<S: Shape, Elem: Dtype> StridedArray<S, Elem> {
         }
     }
 
-    pub(super) fn iter_mut_as<Axes, Dst: Shape>(&mut self, dst: &Dst) -> StridedMutIter<Dst, Elem>
+    pub(crate) fn iter_mut_as<Axes, Dst: Shape>(&mut self, dst: &Dst) -> StridedMutIter<Dst, Elem>
     where
         S: BroadcastStrides<Dst, Axes>,
     {
@@ -134,7 +142,7 @@ impl<S: Shape, Elem: Dtype> StridedArray<S, Elem> {
     }
 }
 
-pub(super) trait LendingIterator {
+pub(crate) trait LendingIterator {
     type Item<'a>
     where
         Self: 'a;

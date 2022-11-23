@@ -5,7 +5,8 @@ use core::marker::PhantomData;
 use std::collections::HashMap;
 use std::{boxed::Box, vec::Vec};
 
-use crate::devices::device::HasDeviceStorage;
+use crate::arrays::{Dtype, Shape};
+use crate::devices::device::{HasDeviceStorage, HasErr};
 use crate::devices::Device;
 use crate::unique_id::{HasUniqueId, UniqueId};
 
@@ -308,59 +309,6 @@ impl<D: Device> Merge<OwnedTape<D>> for OwnedTape<D> {
     fn merge(mut self, mut other: Self) -> Self {
         self.0.append(other.0.as_mut());
         self
-    }
-}
-
-/// Represents something that can return a gradient for a given key.
-///
-/// This is very similar to what [Gradients] does, however the intention
-/// is that any this object be passed to [CanUpdateWithGradients].
-///
-/// [Gradients] does **not** implement this, so you *have* to go through
-/// an optimizer to update a [CanUpdateWithGradients]. Although it very easily
-/// could.
-///
-/// See [crate::optim::Sgd] and [crate::optim::Adam] for examples on implementing this.
-pub trait GradientProvider<D: Device> {
-    /// Retrieves the data associated with `p` if there is any.
-    /// This can modify `self`, for instance if velocities are calculated
-    /// based on the associated data!
-    fn gradient<P>(&mut self, p: &P) -> Option<P::Storage>
-    where
-        P: HasUniqueId + HasDeviceStorage<Device = D>;
-}
-
-/// Represents something that can be updated with [GradientProvider].
-///
-/// Most implementations of this trait will have sub structs that also
-/// implement [CanUpdateWithGradients].
-pub trait CanUpdateWithGradients<D: Device> {
-    /// Updates self given the [GradientProvider]. When any parameters that
-    /// are NOT present in `G`, then this function should
-    /// add the tensor's [UniqueId] to [UnusedTensors].
-    fn update<G: GradientProvider<D>>(&mut self, grads: &mut G, unused: &mut UnusedTensors);
-}
-
-/// Holds [UniqueId] of tensors that were missing gradients during
-/// [CanUpdateWithGradients::update()], and therefore are unused
-#[derive(Debug, Default)]
-pub struct UnusedTensors {
-    pub ids: Vec<UniqueId>,
-}
-
-impl UnusedTensors {
-    /// Adds a single unnammed parameter
-    pub fn add<T: HasUniqueId>(&mut self, t: &T) {
-        self.ids.push(*t.id());
-    }
-
-    /// Returns `true` if there are no missing gradients present
-    pub fn is_empty(&self) -> bool {
-        self.ids.is_empty()
-    }
-
-    pub fn len(&self) -> usize {
-        self.ids.len()
     }
 }
 

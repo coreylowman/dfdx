@@ -2,7 +2,7 @@
 
 use rand::prelude::*;
 
-use dfdx::gradients::{CanUpdateWithGradients, GradientProvider, OwnedTape, Tape, UnusedTensors};
+use dfdx::gradients::{CanUpdateWithGradients, OwnedTape, ParamUpdater, Tape, UnusedTensors};
 use dfdx::nn::{Linear, Module, ReLU, ResetParams};
 use dfdx::tensor::{Tensor1D, Tensor2D, TensorCreator};
 
@@ -29,7 +29,7 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> ResetParams for Mlp<
 impl<const IN: usize, const INNER: usize, const OUT: usize> CanUpdateWithGradients
     for Mlp<IN, INNER, OUT>
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
+    fn update<G: ParamUpdater>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
         self.l1.update(grads, unused);
         self.l2.update(grads, unused);
         self.relu.update(grads, unused);

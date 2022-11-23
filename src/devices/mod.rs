@@ -5,6 +5,6 @@ pub(crate) mod unary_ops;
 
 pub use cpu::{Cpu, CpuError};
 pub use device::{
-    AsArray, AsVec, Device, Ones, OnesLike, Rand, RandLike, Randn, RandnLike, TryConvert, Zeros,
-    ZerosLike,
+    AsArray, AsVec, Device, HasDevice, Ones, OnesLike, Rand, RandLike, Randn, RandnLike,
+    TryConvert, Zeros, ZerosLike,
 };
