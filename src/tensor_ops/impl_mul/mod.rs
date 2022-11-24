@@ -2,12 +2,12 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{BinaryKernel, Device, HasErr, UnaryKernel},
+    devices::{Device, HasErr},
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::utils::{try_binary_op, try_unary_op};
+use super::utils::{try_binary_op, try_unary_op, BinaryKernel, UnaryKernel};
 
 /// Element wise and scalar multiplication.
 ///
@@ -69,10 +69,7 @@ where
 mod tests {
     use crate::devices::AsArray;
     use crate::tensor::TensorSugar;
-    use crate::tensor_ops::impl_backward::TryBackward;
-    use crate::tensor_ops::impl_mean::MeanTo;
-    use crate::tensor_ops::impl_sum::SumTo;
-    use crate::tensor_ops::map::TryExp;
+    use crate::tensor_ops::*;
     use crate::tests::build_test_device;
 
     #[test]

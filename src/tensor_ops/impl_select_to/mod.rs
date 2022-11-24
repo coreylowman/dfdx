@@ -2,12 +2,12 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Dyn, Rank0, Rank1, Shape},
-    devices::{Device, HasErr, UnaryKernel},
+    devices::{Device, HasErr},
     gradients::Tape,
     tensor::{Tensor, TensorSugar},
 };
 
-use super::utils::try_unary_op;
+use super::utils::{try_unary_op, UnaryKernel};
 
 /// Select values along `Axes` resulting in `T`. Equivalent
 /// to `torch.select` and `torch.gather` from pytorch.

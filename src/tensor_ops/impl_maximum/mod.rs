@@ -2,16 +2,12 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{
-        binary_ops,
-        device::{BinaryKernel, HasErr},
-        Device,
-    },
+    devices::{Device, HasErr},
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::utils::try_binary_op;
+use super::utils::{try_binary_op, BinaryKernel};
 
 /// Element wise maximum.
 ///
@@ -48,12 +44,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        devices::AsArray,
-        tensor::TensorSugar,
-        tensor_ops::{impl_backward::TryBackward, impl_sum::SumTo},
-        tests::build_test_device,
-    };
+    use crate::{devices::AsArray, tensor::TensorSugar, tensor_ops::*, tests::build_test_device};
 
     #[test]
     fn test_maximum() {

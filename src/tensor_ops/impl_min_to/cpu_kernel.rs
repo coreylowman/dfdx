@@ -1,6 +1,7 @@
 use crate::{
     arrays::{BroadcastStrides, Shape},
-    devices::{cpu::StridedArray, Cpu, FullUnaryKernel},
+    devices::cpu::{Cpu, LendingIterator, StridedArray},
+    tensor_ops::utils::FullUnaryKernel,
 };
 
 use super::MinReduceKernelOp;

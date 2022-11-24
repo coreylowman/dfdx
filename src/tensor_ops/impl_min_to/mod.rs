@@ -2,12 +2,12 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, FullUnaryKernel, HasErr},
+    devices::{Device, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::utils::try_full_unary_op;
+use super::utils::{try_full_unary_op, FullUnaryKernel};
 
 /// Reduces `Axes` of the tensor by gathering the minimum value from the axes.
 ///
@@ -56,10 +56,7 @@ mod tests {
     use super::*;
     use crate::devices::{AsArray, Randn, Zeros};
     use crate::tensor::*;
-    use crate::tensor_ops::impl_backward::TryBackward;
-    use crate::tensor_ops::impl_mean::MeanTo;
-    use crate::tensor_ops::impl_sum::SumTo;
-    use crate::tensor_ops::map::TryExp;
+    use crate::tensor_ops::*;
     use crate::tests::{assert_close, build_test_device};
 
     #[test]

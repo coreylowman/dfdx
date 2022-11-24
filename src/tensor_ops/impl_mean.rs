@@ -5,8 +5,7 @@ use crate::{
     tensor::Tensor,
 };
 
-use super::impl_div::TryDiv;
-use super::impl_sum::SumTo;
+use super::*;
 
 /// Average the values along `Axes` of `T`.
 ///
@@ -51,10 +50,9 @@ where
 mod tests {
     use super::*;
     use crate::{
-        devices::{AsArray, Cpu, Ones, Randn},
+        devices::*,
         gradients::OwnedTape,
         tensor::*,
-        tensor_ops::{impl_backward::TryBackward, map::TryExp},
         tests::{assert_close, build_test_device},
     };
 

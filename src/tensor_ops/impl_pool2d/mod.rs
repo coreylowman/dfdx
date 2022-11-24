@@ -2,12 +2,12 @@ mod cpu_kernel;
 
 use crate::{
     arrays::Shape,
-    devices::{Device, HasErr, UnaryKernel},
+    devices::{Device, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::utils::try_unary_op;
+use super::utils::{try_unary_op, UnaryKernel};
 
 pub(super) mod pooling {
     #[derive(Debug, Default, Clone, Copy)]

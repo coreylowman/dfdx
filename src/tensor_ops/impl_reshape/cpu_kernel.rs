@@ -1,7 +1,7 @@
 use super::ReshapeKernelOp;
 use crate::arrays::{Dtype, HasSameNumelAs, Shape};
 use crate::devices::cpu::{Cpu, StridedArray};
-use crate::devices::UnaryKernel;
+use crate::tensor_ops::utils::UnaryKernel;
 
 impl<Src: Shape, Dst: Shape, E: Dtype + std::ops::AddAssign>
     UnaryKernel<ReshapeKernelOp<Dst>, Src, Dst, E> for Cpu

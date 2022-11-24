@@ -1,10 +1,10 @@
 mod cpu_kernel;
 use crate::arrays::{Dtype, HasShape, PermuteShapeTo, Shape};
-use crate::devices::{Device, HasErr, UnaryKernel};
+use crate::devices::{Device, HasErr};
 use crate::gradients::Tape;
 use crate::tensor::Tensor;
 
-use super::utils::try_unary_op;
+use super::utils::{try_unary_op, UnaryKernel};
 
 /// Permutes self into `T` with the new order of axes specified via `Axes`.
 /// Permutes the tensor

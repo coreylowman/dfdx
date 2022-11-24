@@ -1,6 +1,9 @@
 use crate::arrays::*;
-use crate::devices::cpu::{Cpu, View, ViewMut};
-use crate::devices::device::*;
+use crate::devices::{
+    cpu::{Cpu, View, ViewMut},
+    Zeros, ZerosLike,
+};
+use crate::tensor_ops::utils::BinaryKernel;
 
 use super::MatMulKernelOp;
 

@@ -1,8 +1,7 @@
+use crate::tensor_ops::utils::UnaryKernel;
+use crate::{arrays::Shape, devices::Cpu};
+
 use super::DropoutKernelOp;
-use crate::{
-    arrays::Shape,
-    devices::{Cpu, UnaryKernel},
-};
 
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::Standard;

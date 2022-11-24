@@ -1,10 +1,7 @@
+use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     arrays::Shape,
-    devices::{
-        cpu::LendingIterator,
-        device::{BinaryKernel, UnaryKernel},
-        Cpu, ZerosLike,
-    },
+    devices::{cpu::LendingIterator, Cpu, ZerosLike},
 };
 
 pub trait UnaryDerivative<E> {

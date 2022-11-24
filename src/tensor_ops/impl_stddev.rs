@@ -83,7 +83,6 @@ mod tests {
     use super::*;
     use crate::devices::AsArray;
     use crate::tensor::*;
-    use crate::tensor_ops::impl_backward::TryBackward;
     use crate::tests::build_test_device;
 
     #[test]

@@ -1,7 +1,8 @@
-use super::BroadcastKernelOp;
 use crate::arrays::*;
 use crate::devices::cpu::{Cpu, StridedArray};
-use crate::devices::UnaryKernel;
+use crate::tensor_ops::utils::UnaryKernel;
+
+use super::BroadcastKernelOp;
 
 impl<Axes, Src: Shape, Dst: Shape, E: Dtype> UnaryKernel<BroadcastKernelOp<Dst, Axes>, Src, Dst, E>
     for Cpu

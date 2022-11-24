@@ -1,8 +1,11 @@
 #![allow(clippy::needless_range_loop)]
 
 use crate::arrays::{Axis, Dim, Dtype, ReduceShape, ReplaceDim, Shape};
-use crate::devices::cpu::{Cpu, LendingIterator, StridedArray};
-use crate::devices::device::*;
+use crate::devices::{
+    cpu::{Cpu, LendingIterator, StridedArray},
+    ZerosLike,
+};
+use crate::tensor_ops::utils::UnaryKernel;
 
 use super::SelectKernelOp;
 

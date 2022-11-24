@@ -2,12 +2,12 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{BinaryKernel, Device, HasErr},
+    devices::{Device, HasErr},
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::utils::try_binary_op;
+use super::utils::{try_binary_op, BinaryKernel};
 
 pub trait TryBceWithLogits<Rhs = Self>: HasErr {
     fn bce_with_logits(self, rhs: Rhs) -> Self {

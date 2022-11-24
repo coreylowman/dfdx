@@ -1,6 +1,9 @@
 use crate::arrays::{Rank3, Rank4, Rank5};
-use crate::devices::cpu::{Cpu, LendingIterator, StridedArray, View, ViewMut};
-use crate::devices::{device::*, CpuError};
+use crate::devices::{
+    cpu::{Cpu, CpuError, LendingIterator, StridedArray, View, ViewMut},
+    Zeros,
+};
+use crate::tensor_ops::utils::BinaryKernel;
 
 use super::Conv2DKernelOp;
 

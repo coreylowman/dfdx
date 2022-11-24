@@ -1,12 +1,61 @@
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{
-        device::{BinaryKernel, FullUnaryKernel, UnaryKernel},
-        Device,
-    },
+    devices::Device,
     gradients::{Merge, Tape},
     tensor::{make_tensor, Tensor},
 };
+
+pub(crate) trait UnaryKernel<Op, Inp: Shape, Out: Shape, E: Dtype>: Device {
+    fn unary_fwd(
+        &self,
+        op: Op,
+        inp: &Self::Storage<Inp, E>,
+    ) -> Result<Self::Storage<Out, E>, Self::Err>;
+    fn unary_bwd(
+        &self,
+        op: Op,
+        inp: &Self::Storage<Inp, E>,
+        grad_inp: &mut Self::Storage<Inp, E>,
+        grad_out: &Self::Storage<Out, E>,
+    ) -> Result<(), Self::Err>;
+}
+
+pub(crate) trait FullUnaryKernel<Op, Inp: Shape, Out: Shape, E: Dtype>: Device {
+    fn unary_fwd(
+        &self,
+        op: Op,
+        inp: &Self::Storage<Inp, E>,
+    ) -> Result<Self::Storage<Out, E>, Self::Err>;
+    fn unary_bwd(
+        &self,
+        op: Op,
+        inp: &Self::Storage<Inp, E>,
+        grad_inp: &mut Self::Storage<Inp, E>,
+        out: &Self::Storage<Out, E>,
+        grad_out: &Self::Storage<Out, E>,
+    ) -> Result<(), Self::Err>;
+}
+
+pub(crate) trait BinaryKernel<Op, Lhs: Shape, Rhs: Shape, Out: Shape, E: Dtype>:
+    Device
+{
+    fn binary_fwd(
+        &self,
+        op: Op,
+        lhs: &Self::Storage<Lhs, E>,
+        rhs: &Self::Storage<Rhs, E>,
+    ) -> Result<Self::Storage<Out, E>, Self::Err>;
+
+    fn binary_bwd(
+        &self,
+        op: Op,
+        lhs: &Self::Storage<Lhs, E>,
+        grad_lhs: &mut Self::Storage<Lhs, E>,
+        rhs: &Self::Storage<Rhs, E>,
+        grad_rhs: &mut Self::Storage<Rhs, E>,
+        grad_out: &Self::Storage<Out, E>,
+    ) -> Result<(), Self::Err>;
+}
 
 pub(crate) fn try_unary_op<
     Op: 'static + Clone,

@@ -2,12 +2,12 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr, UnaryKernel},
+    devices::{Device, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::utils::try_unary_op;
+use super::utils::{try_unary_op, UnaryKernel};
 
 /// Raises to a float power. `t^i`.
 ///
@@ -74,7 +74,7 @@ mod tests {
     use crate::{
         devices::AsArray,
         tensor::TensorSugar,
-        tensor_ops::{impl_backward::TryBackward, impl_sum::SumTo},
+        tensor_ops::*,
         tests::build_test_device,
     };
 

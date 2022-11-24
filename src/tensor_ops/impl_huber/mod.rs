@@ -2,12 +2,12 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, HasDtype, Shape},
-    devices::{BinaryKernel, Device, HasErr},
+    devices::{Device, HasErr},
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::utils::try_binary_op;
+use super::utils::{try_binary_op, BinaryKernel};
 
 pub trait TryHuberError<Rhs = Self>: HasErr + HasDtype {
     fn huber_error(self, rhs: Rhs, delta: Self::Dtype) -> Self {

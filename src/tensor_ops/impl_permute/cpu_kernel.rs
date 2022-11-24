@@ -1,6 +1,6 @@
 use crate::arrays::*;
 use crate::devices::cpu::{Cpu, StridedArray};
-use crate::devices::device::*;
+use crate::tensor_ops::utils::UnaryKernel;
 
 use super::PermuteKernelOp;
 

@@ -2,11 +2,12 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Rank4, Shape},
-    devices::{BinaryKernel, Device, HasDevice, HasErr},
+    devices::{Device, HasDevice, HasErr},
     gradients::Tape,
     tensor::Tensor,
-    tensor_ops::utils::try_binary_op,
 };
+
+use super::utils::{try_binary_op, BinaryKernel};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub(super) struct Conv2DKernelOp<const K: usize, const S: usize, const P: usize>;

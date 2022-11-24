@@ -73,9 +73,7 @@ mod tests {
     use crate::arrays::Axis;
     use crate::devices::{AsArray, Ones};
     use crate::tensor::*;
-    use crate::tensor_ops::impl_backward::TryBackward;
-    use crate::tensor_ops::impl_mean::MeanTo;
-    use crate::tensor_ops::map::TryExp;
+    use crate::tensor_ops::*;
     use crate::tests::{assert_close, build_test_device};
 
     #[test]

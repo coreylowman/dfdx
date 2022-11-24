@@ -2,12 +2,12 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr, UnaryKernel},
+    devices::{Device, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::utils::try_unary_op;
+use super::utils::{try_unary_op, UnaryKernel};
 
 /// Clamp all elements between the provided min and max values.
 ///
@@ -45,7 +45,7 @@ mod tests {
     use crate::{
         devices::AsArray,
         tensor::{Tensor2D, TensorSugar},
-        tensor_ops::{impl_backward::TryBackward, impl_mean::MeanTo, map::TryExp},
+        tensor_ops::*,
         tests::build_test_device,
     };
 

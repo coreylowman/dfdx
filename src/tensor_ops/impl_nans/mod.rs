@@ -2,12 +2,12 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr, UnaryKernel},
+    devices::{Device, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::utils::try_unary_op;
+use super::utils::{try_unary_op, UnaryKernel};
 
 /// Replaces any [std::f32::NAN] with `value`.
 ///
@@ -41,13 +41,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{
-        devices::AsArray,
-        tensor::TensorSugar,
-        tensor_ops::{impl_backward::TryBackward, impl_mean::MeanTo, map::TryExp},
-        tests::build_test_device,
-    };
+    use crate::{devices::AsArray, tensor::TensorSugar, tensor_ops::*, tests::build_test_device};
 
     #[test]
     fn test_nans_1d() {

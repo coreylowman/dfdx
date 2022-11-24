@@ -2,12 +2,12 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{BinaryKernel, Device, HasErr},
+    devices::{Device, HasErr},
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::utils::try_binary_op;
+use super::utils::{try_binary_op, BinaryKernel};
 
 /// Element wise minimum.
 ///
@@ -47,7 +47,7 @@ mod tests {
     use crate::{
         devices::AsArray,
         tensor::TensorSugar,
-        tensor_ops::{impl_backward::TryBackward, impl_sum::SumTo},
+        tensor_ops::*,
         tests::build_test_device,
     };
 

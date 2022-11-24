@@ -1,6 +1,10 @@
 use crate::{
     arrays::{BroadcastStrides, Dtype, Shape},
-    devices::{cpu::StridedArray, Cpu, UnaryKernel},
+    devices::{
+        cpu::{Cpu, LendingIterator, StridedArray},
+        Zeros,
+    },
+    tensor_ops::utils::UnaryKernel,
 };
 
 use super::SumKernelOp;
@@ -19,7 +23,7 @@ where
         let mut out_iter = out.iter_mut_as(&inp.shape);
         let mut inp_iter = inp.iter();
         while let Some((o, i)) = out_iter.next().zip(inp_iter.next()) {
-            o.add_assign(i);
+            o.add_assign(*i);
         }
         Ok(out)
     }
@@ -34,7 +38,7 @@ where
         let mut inp_iter = grad_inp.iter_mut();
         let mut out_iter = grad_out.iter_as(&inp.shape);
         while let Some((i, o)) = inp_iter.next().zip(out_iter.next()) {
-            i.add_assign(o);
+            i.add_assign(*o);
         }
         Ok(())
     }

@@ -2,12 +2,12 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, HasShape, Shape},
-    devices::{Device, HasErr, UnaryKernel},
+    devices::{Device, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::utils::try_unary_op;
+use super::utils::{try_unary_op, UnaryKernel};
 
 /// Broadcast self into `T` along `Axes`.
 ///
@@ -65,10 +65,7 @@ mod tests {
     use super::*;
     use crate::devices::{AsArray, Randn, Zeros};
     use crate::tensor::*;
-    use crate::tensor_ops::impl_backward::TryBackward;
-    use crate::tensor_ops::impl_mean::MeanTo;
-    use crate::tensor_ops::impl_sum::SumTo;
-    use crate::tensor_ops::map::TryExp;
+    use crate::tensor_ops::*;
     use crate::tests::{build_test_device, AssertClose};
 
     #[test]
