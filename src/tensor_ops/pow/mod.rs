@@ -71,7 +71,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{devices::AsArray, tensor::TensorSugar, tensor_ops::*, tests::build_test_device};
+    use crate::{
+        devices::AsArray, tensor::TensorFromArray, tensor_ops::*, tests::build_test_device,
+    };
 
     #[test]
     fn test_powf_positive() {

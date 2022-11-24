@@ -1,30 +1,31 @@
-//! Intro to dfdx::tensor
+//! Intro to dfdx::devices and dfdx::tensor
 
-use rand::thread_rng;
-
-use dfdx::arrays::HasArrayData;
-use dfdx::tensor::{tensor, Tensor1D, Tensor2D, Tensor3D, TensorCreator};
+use dfdx::devices::{AsArray, Cpu, Ones, Randn, Zeros};
+use dfdx::tensor::{Tensor1D, Tensor2D, Tensor3D, TensorFromArray};
 
 fn main() {
-    // easily create tensors using the `tensor` function
-    let _: Tensor1D<5> = tensor([1.0, 2.0, 3.0, 4.0, 5.0]);
+    // a device is required to create & modify tensors.
+    // we will use the Cpu device here for simplicity
+    let dev: Cpu = Default::default();
 
-    // you can also use [TensorCreator::new]
-    let _: Tensor1D<5> = TensorCreator::new([1.0, 2.0, 3.0, 4.0, 5.0]);
+    // easily create tensors using the `TensorSugar::tensor` method
+    // notice that Tensor's are generic over the device they are on.
+    let _: Tensor1D<5, Cpu> = dev.tensor([1.0, 2.0, 3.0, 4.0, 5.0]);
 
-    // [TensorCreator] has other helpful methods such as all zeros and all ones
-    let _: Tensor2D<2, 3> = TensorCreator::zeros();
-    let _: Tensor2D<2, 3> = TensorCreator::ones();
+    // You can also use [Zeros::zeros] and [Ones::ones] to create tensors
+    // filled with the corresponding values.
+    let _: Tensor2D<2, 3, Cpu> = dev.zeros();
+    let _: Tensor2D<2, 3, _> = dev.ones();
 
-    // we can also create random tensors
-    let mut rng = thread_rng();
-    let a: Tensor3D<2, 3, 4> = TensorCreator::randn(&mut rng);
+    // we can also create tensors filled with random values
+    // from a normal distribution
+    let a: Tensor3D<2, 3, 4, _> = dev.randn();
 
-    // use `.data()` to access the underlying array
-    let a_data: &[[[f32; 4]; 3]; 2] = a.data();
+    // use `AsArray::as_array` to get acces to the data as an array
+    let a_data: [[[f32; 4]; 3]; 2] = a.as_array();
     println!("a={:?}", a_data);
 
     // you can clone() a tensor:
     let a_copy = a.clone();
-    assert_eq!(a_copy.data(), a.data());
+    assert_eq!(a_copy.as_array(), a.as_array());
 }

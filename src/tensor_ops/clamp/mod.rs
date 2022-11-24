@@ -44,7 +44,7 @@ where
 mod tests {
     use crate::{
         devices::AsArray,
-        tensor::{Tensor2D, TensorSugar},
+        tensor::{Tensor2D, TensorFromArray},
         tensor_ops::*,
         tests::build_test_device,
     };

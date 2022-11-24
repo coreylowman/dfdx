@@ -68,7 +68,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::devices::AsArray;
-    use crate::tensor::TensorSugar;
+    use crate::tensor::TensorFromArray;
     use crate::tensor_ops::*;
     use crate::tests::build_test_device;
 

@@ -19,11 +19,11 @@ pub(crate) fn make_tensor<S: Shape, E: Dtype, D: Device>(
     }
 }
 
-pub trait TensorSugar<Src, S: Shape, E: Dtype>: Device {
+pub trait TensorFromArray<Src, S: Shape, E: Dtype>: Device {
     fn tensor(&self, src: Src) -> Tensor<S, E, Self, NoneTape>;
 }
 
-impl<Src, S: Shape, E: Dtype, D: Device> TensorSugar<Src, S, E> for D
+impl<Src, S: Shape, E: Dtype, D: Device> TensorFromArray<Src, S, E> for D
 where
     D: TryConvert<Src, Tensor<S, E, D, NoneTape>>,
 {

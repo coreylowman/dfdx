@@ -75,7 +75,7 @@ mod impl_alloc;
 
 pub use base::{Tensor, Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
 pub(crate) use impl_alloc::make_tensor;
-pub use impl_alloc::TensorSugar;
+pub use impl_alloc::TensorFromArray;
 
 #[cfg(test)]
 mod tests {

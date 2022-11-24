@@ -4,7 +4,7 @@ use crate::{
     arrays::{Dtype, Dyn, Rank0, Rank1, Shape},
     devices::{Device, HasErr},
     gradients::Tape,
-    tensor::{Tensor, TensorSugar},
+    tensor::{Tensor, TensorFromArray},
 };
 
 use super::utils::{try_unary_op, UnaryKernel};
@@ -87,7 +87,7 @@ impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>>
     SelectTo<Tensor<Dst, E, D, T>, Axes, usize> for Tensor<Src, E, D, T>
 where
     Self: SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<(), usize, D>>,
-    D: TensorSugar<usize, Rank0, usize>,
+    D: TensorFromArray<usize, Rank0, usize>,
 {
     fn try_select(self, idx: usize) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         let idx = self.device.tensor(idx);
@@ -99,7 +99,7 @@ impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>, const Z: usi
     SelectTo<Tensor<Dst, E, D, T>, Axes, [usize; Z]> for Tensor<Src, E, D, T>
 where
     Self: SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<Rank1<Z>, usize, D>>,
-    D: TensorSugar<[usize; Z], Rank1<Z>, usize>,
+    D: TensorFromArray<[usize; Z], Rank1<Z>, usize>,
 {
     fn try_select(self, idx: [usize; Z]) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         let idx = self.device.tensor(idx);
@@ -111,7 +111,7 @@ impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>>
     SelectTo<Tensor<Dst, E, D, T>, Axes, &[usize]> for Tensor<Src, E, D, T>
 where
     Self: SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<(Dyn,), usize, D>>,
-    D: for<'a> TensorSugar<&'a [usize], (Dyn,), usize>,
+    D: for<'a> TensorFromArray<&'a [usize], (Dyn,), usize>,
 {
     fn try_select(self, idx: &[usize]) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         let idx = self.device.tensor(idx);

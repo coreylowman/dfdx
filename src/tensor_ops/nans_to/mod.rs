@@ -41,7 +41,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{devices::AsArray, tensor::TensorSugar, tensor_ops::*, tests::build_test_device};
+    use crate::{
+        devices::AsArray, tensor::TensorFromArray, tensor_ops::*, tests::build_test_device,
+    };
 
     #[test]
     fn test_nans_1d() {

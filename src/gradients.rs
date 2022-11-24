@@ -5,8 +5,7 @@ use core::marker::PhantomData;
 use std::collections::HashMap;
 use std::{boxed::Box, vec::Vec};
 
-use crate::devices::device::HasDeviceStorage;
-use crate::devices::Device;
+use crate::devices::{Device, HasDeviceStorage};
 use crate::unique_id::{HasUniqueId, UniqueId};
 
 /// A generic container for keeping variable sized arrays associated with a [UniqueId].
