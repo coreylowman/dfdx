@@ -35,7 +35,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// and then instantiates two identical [StdRng] with that seed. These rngs
 /// are used in both the forward pass and backward pass to generate identical
 /// random numbers, so the masking is the same for both.
-pub trait TryDropout: HasErr {
+pub trait Dropout: HasErr {
     fn dropout(self, prob: f32) -> Self {
         self.try_dropout(prob).unwrap()
     }
@@ -48,7 +48,7 @@ pub(super) struct DropoutKernelOp {
     pub prob: f32,
 }
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryDropout for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Dropout for Tensor<S, E, D, T>
 where
     D: UnaryKernel<DropoutKernelOp, S, S, E>,
 {

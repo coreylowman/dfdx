@@ -24,7 +24,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.cos();
 /// ```
-pub trait TryCos: HasErr {
+pub trait Cos: HasErr {
     fn cos(self) -> Self {
         self.try_cos().unwrap()
     }
@@ -34,7 +34,7 @@ pub trait TryCos: HasErr {
 #[derive(Debug, Default, Copy, Clone)]
 pub(super) struct CosKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryCos for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Cos for Tensor<S, E, D, T>
 where
     D: UnaryKernel<CosKernelOp, S, S, E>,
 {

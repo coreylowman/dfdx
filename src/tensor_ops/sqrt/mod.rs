@@ -24,7 +24,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.sqrt();
 /// ```
-pub trait TrySqrt: HasErr {
+pub trait Sqrt: HasErr {
     fn sqrt(self) -> Self {
         self.try_sqrt().unwrap()
     }
@@ -34,7 +34,7 @@ pub trait TrySqrt: HasErr {
 #[derive(Debug, Default, Copy, Clone)]
 pub(super) struct SqrtKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TrySqrt for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Sqrt for Tensor<S, E, D, T>
 where
     D: UnaryKernel<SqrtKernelOp, S, S, E>,
 {

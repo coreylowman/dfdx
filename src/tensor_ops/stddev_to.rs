@@ -32,7 +32,7 @@ impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>>
     StddevTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
 where
     Self: VarTo<Tensor<Dst, E, D, T>, Axes, Err = D::Err>,
-    Tensor<Dst, E, D, T>: TryAdd<f32, Err = D::Err> + TrySqrt,
+    Tensor<Dst, E, D, T>: TryAdd<f32, Err = D::Err> + Sqrt,
 {
     fn try_stddev(self, epsilon: f32) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         self.try_var()?.try_add(epsilon)?.try_sqrt()

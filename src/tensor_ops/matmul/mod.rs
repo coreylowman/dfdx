@@ -50,7 +50,7 @@ use super::utils::{try_binary_op, BinaryKernel};
 /// ```rust
 /// todo!();
 /// ```
-pub trait TryMatMul<Rhs, Out>: HasErr {
+pub trait MatMul<Rhs, Out>: HasErr {
     fn matmul(self, rhs: Rhs) -> Out {
         self.try_matmul(rhs).unwrap()
     }
@@ -68,8 +68,7 @@ impl<
         D: Device,
         LhsTape: Tape<D>,
         RhsTape: Tape<D>,
-    > TryMatMul<Tensor<Rhs, E, D, RhsTape>, Tensor<Out, E, D, LhsTape>>
-    for Tensor<Lhs, E, D, LhsTape>
+    > MatMul<Tensor<Rhs, E, D, RhsTape>, Tensor<Out, E, D, LhsTape>> for Tensor<Lhs, E, D, LhsTape>
 where
     D: BinaryKernel<MatMulKernelOp, Lhs, Rhs, Out, E>,
     LhsTape: Merge<RhsTape>,

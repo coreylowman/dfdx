@@ -24,7 +24,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.sin();
 /// ```
-pub trait TrySin: HasErr {
+pub trait Sin: HasErr {
     fn sin(self) -> Self {
         self.try_sin().unwrap()
     }
@@ -34,7 +34,7 @@ pub trait TrySin: HasErr {
 #[derive(Debug, Default, Copy, Clone)]
 pub(super) struct SinKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TrySin for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Sin for Tensor<S, E, D, T>
 where
     D: UnaryKernel<SinKernelOp, S, S, E>,
 {

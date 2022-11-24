@@ -24,7 +24,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.relu();
 /// ```
-pub trait TryReLU: HasErr {
+pub trait ReLU: HasErr {
     fn relu(self) -> Self {
         self.try_relu().unwrap()
     }
@@ -34,7 +34,7 @@ pub trait TryReLU: HasErr {
 #[derive(Debug, Default, Copy, Clone)]
 pub(super) struct ReLUKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryReLU for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> ReLU for Tensor<S, E, D, T>
 where
     D: UnaryKernel<ReLUKernelOp, S, S, E>,
 {

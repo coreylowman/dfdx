@@ -40,11 +40,11 @@ where
     Tensor<Src, E, D>: MaxTo<Tensor<Dst, E, D>, Axes, Err = D::Err>,
     Tensor<Dst, E, D>: BroadcastTo<Tensor<Src, E, D>, Axes, Err = D::Err>,
     Tensor<Src, E, D, T>: TrySub<Tensor<Src, E, D>, Err = D::Err>
-        + TryExp<Err = D::Err>
+        + Exp<Err = D::Err>
         + SumTo<Tensor<Dst, E, D, T>, Axes, Err = D::Err>,
     Tensor<Dst, E, D, T>: BroadcastTo<Self, Axes, Err = D::Err>
         + TryAdd<Tensor<Dst, E, D>, Err = D::Err>
-        + TryLn<Err = D::Err>,
+        + Ln<Err = D::Err>,
 {
     fn try_logsumexp(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         // normalize t

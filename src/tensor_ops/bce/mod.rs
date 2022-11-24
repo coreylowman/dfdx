@@ -9,7 +9,7 @@ use crate::{
 
 use super::utils::{try_binary_op, BinaryKernel};
 
-pub trait TryBceWithLogits<Rhs = Self>: HasErr {
+pub trait BceWithLogits<Rhs = Self>: HasErr {
     fn bce_with_logits(self, rhs: Rhs) -> Self {
         self.try_bce_with_logits(rhs).unwrap()
     }
@@ -20,7 +20,7 @@ pub trait TryBceWithLogits<Rhs = Self>: HasErr {
 pub(super) struct BCEKernelOp;
 
 impl<S: Shape, E: Dtype, D: Device, LhsTape: Tape<D>, RhsTape: Tape<D>>
-    TryBceWithLogits<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
+    BceWithLogits<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
     D: BinaryKernel<BCEKernelOp, S, S, S, E>,
     LhsTape: Merge<RhsTape>,

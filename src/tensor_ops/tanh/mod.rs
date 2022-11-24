@@ -24,7 +24,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.tanh();
 /// ```
-pub trait TryTanh: HasErr {
+pub trait Tanh: HasErr {
     fn tanh(self) -> Self {
         self.try_tanh().unwrap()
     }
@@ -34,7 +34,7 @@ pub trait TryTanh: HasErr {
 #[derive(Debug, Default, Copy, Clone)]
 pub(super) struct TanhKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryTanh for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Tanh for Tensor<S, E, D, T>
 where
     D: UnaryKernel<TanhKernelOp, S, S, E>,
 {

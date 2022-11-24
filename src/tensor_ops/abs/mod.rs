@@ -24,7 +24,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.abs();
 /// ```
-pub trait TryAbs: HasErr {
+pub trait Abs: HasErr {
     fn abs(self) -> Self {
         self.try_abs().unwrap()
     }
@@ -34,7 +34,7 @@ pub trait TryAbs: HasErr {
 #[derive(Debug, Default, Copy, Clone)]
 pub(super) struct AbsKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryAbs for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Abs for Tensor<S, E, D, T>
 where
     D: UnaryKernel<AbsKernelOp, S, S, E>,
 {

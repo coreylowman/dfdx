@@ -33,7 +33,7 @@ impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>>
 where
     Self: MeanTo<Tensor<Dst, E, D, T>, Axes, Err = D::Err>
         + TrySub<Self>
-        + TrySquare
+        + Square
         + SumTo<Tensor<Dst, E, D, T>, Axes>,
     Tensor<Dst, E, D, T>: BroadcastTo<Self, Axes, Err = D::Err> + TryDiv<f32, Err = D::Err>,
 {
