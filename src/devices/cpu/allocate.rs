@@ -19,7 +19,7 @@ use super::{
 
 impl<S: Shape, E: Dtype> StridedArray<S, E> {
     #[inline]
-    pub(super) fn try_new_with(shape: S, elem: E) -> Result<Self, CpuError> {
+    pub(crate) fn try_new_with(shape: S, elem: E) -> Result<Self, CpuError> {
         let numel = shape.num_elements();
         let strides: StridesFor<S> = shape.strides();
         let mut data: Vec<E> = Vec::new();
@@ -35,7 +35,7 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
     }
 
     #[inline]
-    pub(super) fn try_new_like(other: &Self, elem: E) -> Result<Self, CpuError> {
+    pub(crate) fn try_new_like(other: &Self, elem: E) -> Result<Self, CpuError> {
         let numel = other.data.len();
         let shape = other.shape;
         let strides = other.strides;

@@ -6,10 +6,7 @@ mod internals {
         devices::Device,
         gradients::Tape,
         tensor::Tensor,
-        tensor_ops::{
-            impl_broadcast_reduce::BroadcastTo, impl_div::TryDiv, impl_mean::MeanTo,
-            impl_stddev::StddevTo, impl_sub::TrySub,
-        },
+        tensor_ops::*,
     };
 
     use super::*;
