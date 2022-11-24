@@ -179,7 +179,7 @@ mod tests {
         arrays::{Axes2, Axis},
         devices::{AsArray, Randn},
         tensor::*,
-        tensor_ops::{impl_backward::TryBackward, impl_mean::MeanTo},
+        tensor_ops::{backward::TryBackward, mean_to::MeanTo},
         tests::{assert_close, build_test_device},
     };
 
