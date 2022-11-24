@@ -1,138 +1,11 @@
 use crate::{
-    arrays::{Dtype, HasShape, Shape},
+    arrays::{Dtype, Shape},
     devices::{device::HasErr, Device},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::*;
-
-/// Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function across
-/// `Axes`
-///
-/// **Pytorch equivalent**: `t.exp().sum(Axes).log()`
-///
-/// **Related functions**: [ln()], [sum()], [exp()], [log_softmax()], [softmax()]
-///
-/// Example:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let t: Tensor3D<2, 4, 6> = TensorCreator::zeros();
-/// let _: Tensor2D<2, 4> = t.logsumexp();
-/// ```
-///
-/// Multi axis logsumexp:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// # let t: Tensor3D<2, 4, 6> = TensorCreator::zeros();
-/// let _: Tensor1D<4> = t.logsumexp();
-/// ```
-pub trait LogSumExpTo<T, Axes>: HasErr {
-    fn logsumexp(self) -> T {
-        self.try_logsumexp().unwrap()
-    }
-    fn try_logsumexp(self) -> Result<T, Self::Err>;
-}
-
-impl<Src: Shape, Dst: Shape, Axes: Default, E: Dtype, D: Device, T: Tape<D>>
-    LogSumExpTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
-where
-    Tensor<Src, E, D>: MaxTo<Tensor<Dst, E, D>, Axes, Err = D::Err>,
-    Tensor<Dst, E, D>: BroadcastTo<Tensor<Src, E, D>, Axes, Err = D::Err>,
-    Tensor<Src, E, D, T>: TrySub<Tensor<Src, E, D>, Err = D::Err>
-        + TryExp<Err = D::Err>
-        + SumTo<Tensor<Dst, E, D, T>, Axes, Err = D::Err>,
-    Tensor<Dst, E, D, T>: BroadcastTo<Self, Axes, Err = D::Err>
-        + TryAdd<Tensor<Dst, E, D>, Err = D::Err>
-        + TryLn<Err = D::Err>,
-{
-    fn try_logsumexp(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
-        // normalize t
-        let max: Tensor<Dst, E, D> = self.with_none_tape().try_max()?;
-        let max_b: Tensor<Src, E, D> = max.clone().try_broadcast_to(self.shape())?;
-        let t: Self = self.try_sub(max_b)?;
-
-        // do logsumexp
-        let t: Self = t.try_exp()?;
-        let t: Tensor<Dst, E, D, T> = t.try_sum()?;
-        let t: Tensor<Dst, E, D, T> = t.try_ln()?;
-
-        // un-normalize result
-        t.try_add(max)
-    }
-}
-
-pub(crate) mod softmax_internals {
-    use super::*;
-    use crate::arrays::ReduceShape;
-
-    pub trait LogSoftmaxAlong<Axes>: HasErr {
-        fn try_log_softmax_along(self) -> Result<Self, Self::Err>;
-    }
-
-    pub trait SoftmaxAlong<Axes>: HasErr {
-        fn try_softmax_along(self) -> Result<Self, Self::Err>;
-    }
-
-    impl<Src: Shape, Axes, E: Dtype, D: Device, T: Tape<D>> LogSoftmaxAlong<Axes>
-        for Tensor<Src, E, D, T>
-    where
-        Src: ReduceShape<Axes>,
-        Self: LogSumExpTo<Tensor<Src::Reduced, E, D, T>, Axes> + TrySub<Self, Err = D::Err>,
-        Tensor<Src::Reduced, E, D, T>: BroadcastTo<Self, Axes, Err = D::Err>,
-    {
-        fn try_log_softmax_along(self) -> Result<Self, Self::Err> {
-            let logsumexp: Tensor<Src::Reduced, E, D, T> =
-                self.with_empty_tape().try_logsumexp()?;
-            let logsumexp: Self = logsumexp.try_broadcast_to(self.shape())?;
-            self.try_sub(logsumexp)
-        }
-    }
-
-    impl<Src: Shape, Axes, E: Dtype, D: Device, T: Tape<D>> SoftmaxAlong<Axes> for Tensor<Src, E, D, T>
-    where
-        Self: LogSoftmaxAlong<Axes, Err = D::Err> + TryExp<Err = D::Err>,
-    {
-        fn try_softmax_along(self) -> Result<Self, Self::Err> {
-            self.try_log_softmax_along()?.try_exp()
-        }
-    }
-}
-
-/// `log(softmax(t))` in numerically stable way across `Axes`. Does `t - logsumexp(t)` under the hood.
-///
-/// **Pytorch equivalent**: `t.log_softmax(Axes)`
-///
-/// **Related functions**: [logsumexp()], [softmax()]
-///
-/// Example:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
-/// let _ = t.log_softmax::<Axis<2>>();
-/// ```
-///
-/// Using multi axis log_softmax:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
-/// let _ = t.log_softmax::<Axes2<0, 2>>();
-/// ```
-pub trait TryLogSoftmax: HasErr {
-    fn log_softmax<Axes>(self) -> Self
-    where
-        Self: softmax_internals::LogSoftmaxAlong<Axes>,
-    {
-        self.try_log_softmax().unwrap()
-    }
-    fn try_log_softmax<Axes>(self) -> Result<Self, Self::Err>
-    where
-        Self: softmax_internals::LogSoftmaxAlong<Axes>,
-    {
-        self.try_log_softmax_along()
-    }
-}
-impl<T: HasErr> TryLogSoftmax for T {}
+use super::{log_softmax::LogSoftmaxAxes, TryExp};
 
 /// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function) across
 /// `Axes`.
@@ -156,30 +29,44 @@ impl<T: HasErr> TryLogSoftmax for T {}
 /// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
 /// let _ = t.softmax::<Axes2<1, 2>>();
 /// ```
-pub trait TrySoftmax: HasErr {
-    fn softmax<Axes>(self) -> Self
+pub trait SoftmaxAxes<Axes>: HasErr {
+    fn try_softmax_axes(self) -> Result<Self, Self::Err>;
+}
+
+impl<Src: Shape, Axes, E: Dtype, D: Device, T: Tape<D>> SoftmaxAxes<Axes> for Tensor<Src, E, D, T>
+where
+    Self: LogSoftmaxAxes<Axes, Err = D::Err> + TryExp<Err = D::Err>,
+{
+    fn try_softmax_axes(self) -> Result<Self, Self::Err> {
+        self.try_log_softmax_axes()?.try_exp()
+    }
+}
+
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Tensor<S, E, D, T> {
+    /// See [SoftmaxAxes]
+    pub fn softmax<Axes>(self) -> Self
     where
-        Self: softmax_internals::SoftmaxAlong<Axes>,
+        Self: SoftmaxAxes<Axes>,
     {
         self.try_softmax().unwrap()
     }
-    fn try_softmax<Axes>(self) -> Result<Self, Self::Err>
+
+    /// See [SoftmaxAxes]
+    pub fn try_softmax<Axes>(self) -> Result<Self, <Self as HasErr>::Err>
     where
-        Self: softmax_internals::SoftmaxAlong<Axes>,
+        Self: SoftmaxAxes<Axes>,
     {
-        self.try_softmax_along()
+        self.try_softmax_axes()
     }
 }
-impl<T: HasErr> TrySoftmax for T {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
         arrays::{Axes2, Axis},
         devices::{AsArray, Randn},
         tensor::*,
-        tensor_ops::{backward::TryBackward, mean_to::MeanTo},
+        tensor_ops::*,
         tests::{assert_close, build_test_device},
     };
 

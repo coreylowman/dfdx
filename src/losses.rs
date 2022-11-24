@@ -5,7 +5,8 @@ use crate::{
     devices::Device,
     gradients::Tape,
     tensor::Tensor,
-    tensor_ops::{softmax_internals::LogSoftmaxAlong, *},
+    tensor_ops::log_softmax::LogSoftmaxAxes,
+    tensor_ops::*,
 };
 
 /// [Mean Squared Error](https://en.wikipedia.org/wiki/Mean_squared_error).
@@ -136,7 +137,7 @@ pub fn cross_entropy_with_logits_loss<
 ) -> Tensor<Rank0, E, D, T>
 where
     S: HasAxes<S::LastAxis>,
-    Tensor<S, E, D, T>: LogSoftmaxAlong<S::LastAxis>
+    Tensor<S, E, D, T>: LogSoftmaxAxes<S::LastAxis>
         + TryMul<Tensor<S, E, D>>
         + MeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
     Tensor<Rank0, E, D, T>: TryNegate + TryMul<f32>,
@@ -172,7 +173,7 @@ pub fn kl_div_with_logits_loss<S: Shape + HasLastAxis, E: Dtype, D: Device, T: T
 ) -> Tensor<Rank0, E, D, T>
 where
     S: HasAxes<S::LastAxis>,
-    Tensor<S, E, D, T>: LogSoftmaxAlong<S::LastAxis>
+    Tensor<S, E, D, T>: LogSoftmaxAxes<S::LastAxis>
         + TryMul<Tensor<S, E, D>>
         + TrySub<Tensor<S, E, D>>
         + MeanTo<Tensor<Rank0, E, D, T>, AllAxes>,

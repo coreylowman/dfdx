@@ -1,42 +1,10 @@
-use crate::devices::device::HasErr;
-
-mod internals {
-    use crate::{
-        arrays::{Dtype, HasShape, ReduceShape, Shape},
-        devices::Device,
-        gradients::Tape,
-        tensor::Tensor,
-        tensor_ops::*,
-    };
-
-    use super::*;
-
-    pub trait TryNormalizeAlong<Axes>: HasErr {
-        fn try_normalize_along(self, epsilon: f32) -> Result<Self, Self::Err>;
-    }
-
-    impl<Axes, Src: Shape + ReduceShape<Axes>, E: Dtype, D: Device, T: Tape<D>>
-        TryNormalizeAlong<Axes> for Tensor<Src, E, D, T>
-    where
-        Self: MeanTo<Tensor<Src::Reduced, E, D, T>, Axes>
-            + StddevTo<Tensor<Src::Reduced, E, D, T>, Axes>
-            + TrySub
-            + TryDiv,
-        Tensor<Src::Reduced, E, D, T>: BroadcastTo<Self, Axes, Err = Self::Err>,
-    {
-        fn try_normalize_along(self, epsilon: f32) -> Result<Self, Self::Err> {
-            let mean = self
-                .with_empty_tape()
-                .try_mean()?
-                .try_broadcast_to(self.shape())?;
-            let std = self
-                .with_empty_tape()
-                .try_stddev(epsilon)?
-                .try_broadcast_to(self.shape())?;
-            self.try_sub(mean)?.try_div(std)
-        }
-    }
-}
+use crate::{
+    arrays::{Dtype, HasShape, ReduceShape, Shape},
+    devices::{Device, HasErr},
+    gradients::Tape,
+    tensor::Tensor,
+    tensor_ops::{BroadcastTo, MeanTo, StddevTo, TryDiv, TrySub},
+};
 
 /// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Axes` of `T`. `epsilon` is passed to [stddev()].
 /// Computes `(t - t.mean(Axes)) / t.std(Axes, epsilon)`.
@@ -49,27 +17,52 @@ mod internals {
 /// let t: Tensor2D<2, 3> = TensorCreator::zeros();
 /// let _ = t.normalize::<Axis<1>>(1e-5);
 /// ```
-pub trait TryNormalize: HasErr {
-    fn normalize<Axes>(self, epsilon: f32) -> Self
+pub trait NormalizeAxes<Axes>: HasErr {
+    fn try_normalize_axes(self, epsilon: f32) -> Result<Self, Self::Err>;
+}
+
+impl<Axes, Src: Shape + ReduceShape<Axes>, E: Dtype, D: Device, T: Tape<D>> NormalizeAxes<Axes>
+    for Tensor<Src, E, D, T>
+where
+    Self: MeanTo<Tensor<Src::Reduced, E, D, T>, Axes>
+        + StddevTo<Tensor<Src::Reduced, E, D, T>, Axes>
+        + TrySub
+        + TryDiv,
+    Tensor<Src::Reduced, E, D, T>: BroadcastTo<Self, Axes, Err = Self::Err>,
+{
+    fn try_normalize_axes(self, epsilon: f32) -> Result<Self, Self::Err> {
+        let mean = self
+            .with_empty_tape()
+            .try_mean()?
+            .try_broadcast_to(self.shape())?;
+        let std = self
+            .with_empty_tape()
+            .try_stddev(epsilon)?
+            .try_broadcast_to(self.shape())?;
+        self.try_sub(mean)?.try_div(std)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Tensor<S, E, D, T> {
+    /// See [NormalizeAxes]
+    pub fn normalize<Axes>(self, epsilon: f32) -> Self
     where
-        Self: internals::TryNormalizeAlong<Axes>,
+        Self: NormalizeAxes<Axes>,
     {
         self.try_normalize(epsilon).unwrap()
     }
 
-    fn try_normalize<Axes>(self, epsilon: f32) -> Result<Self, Self::Err>
+    /// See [NormalizeAxes]
+    pub fn try_normalize<Axes>(self, epsilon: f32) -> Result<Self, <Self as HasErr>::Err>
     where
-        Self: internals::TryNormalizeAlong<Axes>,
+        Self: NormalizeAxes<Axes>,
     {
-        self.try_normalize_along(epsilon)
+        self.try_normalize_axes(epsilon)
     }
 }
 
-impl<T: HasErr> TryNormalize for T {}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::arrays::Axis;
     use crate::devices::{AsArray, Ones};
     use crate::tensor::*;

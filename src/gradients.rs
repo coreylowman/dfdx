@@ -5,8 +5,7 @@ use core::marker::PhantomData;
 use std::collections::HashMap;
 use std::{boxed::Box, vec::Vec};
 
-use crate::arrays::{Dtype, Shape};
-use crate::devices::device::{HasDeviceStorage, HasErr};
+use crate::devices::device::HasDeviceStorage;
 use crate::devices::Device;
 use crate::unique_id::{HasUniqueId, UniqueId};
 
