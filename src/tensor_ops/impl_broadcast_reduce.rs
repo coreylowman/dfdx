@@ -233,6 +233,18 @@ mod tests {
         let _: Tensor4D<3, 5, 7, 9> = Tensor3D::<3, 7, 9>::zeros().broadcast();
         let _: Tensor4D<3, 5, 7, 9> = Tensor3D::<3, 5, 9>::zeros().broadcast();
         let _: Tensor4D<3, 5, 7, 9> = Tensor3D::<3, 5, 7>::zeros().broadcast();
+
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor4D::<5, 7, 9, 11>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor4D::<3, 7, 9, 11>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor4D::<3, 5, 9, 11>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor4D::<3, 5, 7, 11>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor4D::<3, 5, 7, 9>::zeros().broadcast();
+
+        let _: Tensor6D<3, 5, 7, 9, 11, 13> = Tensor5D::<5, 7, 9, 11, 13>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 9, 11, 13> = Tensor5D::<3, 7, 9, 11, 13>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 9, 11, 13> = Tensor5D::<3, 5, 9, 11, 13>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 9, 11, 13> = Tensor5D::<3, 5, 7, 11, 13>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 9, 11, 13> = Tensor5D::<3, 5, 7, 9, 11>::zeros().broadcast();
     }
 
     #[test]
@@ -250,7 +262,29 @@ mod tests {
         let _: Tensor4D<3, 5, 7, 9> = Tensor2D::<5, 9>::zeros().broadcast();
         let _: Tensor4D<3, 5, 7, 9> = Tensor2D::<7, 9>::zeros().broadcast();
 
-        // let _: Tensor5D<3, 5, 7, 9, 8> = Tensor2D::<3, 5>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 8, 9> = Tensor3D::<3, 5, 7>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 8, 9> = Tensor3D::<3, 5, 8>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 8, 9> = Tensor3D::<3, 5, 9>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 8, 9> = Tensor3D::<3, 7, 8>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 8, 9> = Tensor3D::<3, 7, 9>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 8, 9> = Tensor3D::<3, 8, 9>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 8, 9> = Tensor3D::<5, 7, 8>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 8, 9> = Tensor3D::<5, 7, 9>::zeros().broadcast();
+
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<3, 5, 7, 9>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<3, 5, 7, 11>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<3, 5, 9, 11>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<3, 5, 8, 9>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<3, 5, 8, 11>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<3, 5, 9, 11>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<3, 7, 8, 9>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<3, 7, 8, 11>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<3, 7, 9, 11>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<5, 7, 8, 9>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<5, 7, 8, 11>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<5, 7, 9, 11>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<5, 8, 9, 11>::zeros().broadcast();
+        let _: Tensor6D<3, 5, 7, 8, 9, 11> = Tensor4D::<7, 8, 9, 11>::zeros().broadcast();
     }
 
     #[test]
@@ -261,6 +295,17 @@ mod tests {
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<5>::zeros().broadcast();
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<7>::zeros().broadcast();
         let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<9>::zeros().broadcast();
+
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor2D::<3, 5>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor2D::<3, 7>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor2D::<3, 9>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor2D::<3, 11>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor2D::<5, 7>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor2D::<5, 9>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor2D::<5, 11>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor2D::<7, 9>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor2D::<7, 11>::zeros().broadcast();
+        let _: Tensor5D<3, 5, 7, 9, 11> = Tensor2D::<9, 11>::zeros().broadcast();
     }
 
     #[test]

@@ -326,6 +326,26 @@ mod tests {
     }
 
     #[test]
+    fn test_permute_5d_backwards() {
+        let mut rng = thread_rng();
+        let t: Tensor5D<3, 6, 9, 11, 13> = TensorCreator::randn(&mut rng);
+        let r: Tensor5D<6, 3, 11, 13, 9, _> = t.trace().permute();
+        let g1 = backward(r.exp().sum());
+        let g2 = backward(t.trace().exp().sum());
+        assert_eq!(g1.ref_gradient(&t), g2.ref_gradient(&t));
+    }
+
+    #[test]
+    fn test_permute_6d_backwards() {
+        let mut rng = thread_rng();
+        let t: Tensor6D<3, 6, 7, 9, 11, 13> = TensorCreator::randn(&mut rng);
+        let r: Tensor6D<6, 7, 3, 11, 13, 9, _> = t.trace().permute();
+        let g1 = backward(r.exp().sum());
+        let g2 = backward(t.trace().exp().sum());
+        assert_eq!(g1.ref_gradient(&t), g2.ref_gradient(&t));
+    }
+
+    #[test]
     fn test_valid_permutations() {
         let _ = <Tensor2D<3, 5> as PermuteTo<_, Axes2<0, 1>>>::permute;
         let _ = <Tensor2D<3, 5> as PermuteTo<_, Axes2<1, 0>>>::permute;
@@ -361,5 +381,127 @@ mod tests {
         let _ = <Tensor4D<3, 5, 7, 9> as PermuteTo<_, Axes4<3, 1, 2, 0>>>::permute;
         let _ = <Tensor4D<3, 5, 7, 9> as PermuteTo<_, Axes4<3, 2, 0, 1>>>::permute;
         let _ = <Tensor4D<3, 5, 7, 9> as PermuteTo<_, Axes4<3, 2, 1, 0>>>::permute;
+
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 1, 2, 3, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 1, 2, 4, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 1, 3, 2, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 1, 3, 4, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 1, 4, 2, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 1, 4, 3, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 2, 1, 3, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 2, 1, 4, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 2, 3, 1, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 2, 3, 4, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 2, 4, 1, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 2, 4, 3, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 3, 1, 2, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 3, 1, 4, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 3, 2, 1, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 3, 2, 4, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 3, 4, 1, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 3, 4, 2, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 4, 1, 2, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 4, 1, 3, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 4, 2, 1, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 4, 2, 3, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 4, 3, 1, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<0, 4, 3, 2, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 0, 2, 3, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 0, 2, 4, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 0, 3, 2, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 0, 3, 4, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 0, 4, 2, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 0, 4, 3, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 2, 0, 3, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 2, 0, 4, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 2, 3, 0, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 2, 3, 4, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 2, 4, 0, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 2, 4, 3, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 3, 0, 2, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 3, 0, 4, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 3, 2, 0, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 3, 2, 4, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 3, 4, 0, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 3, 4, 2, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 4, 0, 2, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 4, 0, 3, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 4, 2, 0, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 4, 2, 3, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 4, 3, 0, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<1, 4, 3, 2, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 0, 1, 3, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 0, 1, 4, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 0, 3, 1, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 0, 3, 4, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 0, 4, 1, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 0, 4, 3, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 1, 0, 3, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 1, 0, 4, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 1, 3, 0, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 1, 3, 4, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 1, 4, 0, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 1, 4, 3, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 3, 0, 1, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 3, 0, 4, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 3, 1, 0, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 3, 1, 4, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 3, 4, 0, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 3, 4, 1, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 4, 0, 1, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 4, 0, 3, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 4, 1, 0, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 4, 1, 3, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 4, 3, 0, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<2, 4, 3, 1, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 0, 1, 2, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 0, 1, 4, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 0, 2, 1, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 0, 2, 4, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 0, 4, 1, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 0, 4, 2, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 1, 0, 2, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 1, 0, 4, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 1, 2, 0, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 1, 2, 4, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 1, 4, 0, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 1, 4, 2, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 2, 0, 1, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 2, 0, 4, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 2, 1, 0, 4>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 2, 1, 4, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 2, 4, 0, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 2, 4, 1, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 4, 0, 1, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 4, 0, 2, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 4, 1, 0, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 4, 1, 2, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 4, 2, 0, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<3, 4, 2, 1, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 0, 1, 2, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 0, 1, 3, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 0, 2, 1, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 0, 2, 3, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 0, 3, 1, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 0, 3, 2, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 1, 0, 2, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 1, 0, 3, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 1, 2, 0, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 1, 2, 3, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 1, 3, 0, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 1, 3, 2, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 2, 0, 1, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 2, 0, 3, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 2, 1, 0, 3>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 2, 1, 3, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 2, 3, 0, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 2, 3, 1, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 3, 0, 1, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 3, 0, 2, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 3, 1, 0, 2>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 3, 1, 2, 0>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 3, 2, 0, 1>>>::permute;
+        let _ = <Tensor5D<3, 5, 7, 9, 11> as PermuteTo<_, Axes5<4, 3, 2, 1, 0>>>::permute;
+
     }
 }
