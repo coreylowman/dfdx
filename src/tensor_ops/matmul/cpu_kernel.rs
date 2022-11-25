@@ -126,25 +126,24 @@ impl<const B: usize, const M: usize, const K: usize, const N: usize>
     }
 }
 
-impl<Batch: Dim, const M: usize, const K: usize, const N: usize>
-    BinaryKernel<MatMulKernelOp, (Batch, C<M>, C<K>), Rank2<K, N>, (Batch, C<M>, C<N>), f32>
-    for Cpu
+impl<Batch: Dim, Seq: Dim, const K: usize, const N: usize>
+    BinaryKernel<MatMulKernelOp, (Batch, Seq, C<K>), Rank2<K, N>, (Batch, Seq, C<N>), f32> for Cpu
 {
     fn binary_fwd(
         &self,
         _op: MatMulKernelOp,
-        lhs: &Self::Storage<(Batch, C<M>, C<K>), f32>,
+        lhs: &Self::Storage<(Batch, Seq, C<K>), f32>,
         rhs: &Self::Storage<Rank2<K, N>, f32>,
-    ) -> Result<Self::Storage<(Batch, C<M>, C<N>), f32>, Self::Err> {
-        let batch_size = lhs.shape().0.size();
+    ) -> Result<Self::Storage<(Batch, Seq, C<N>), f32>, Self::Err> {
+        let (batch, seq, _) = lhs.shape();
 
-        let mut out: Self::Storage<(Batch, C<M>, C<N>), f32> =
-            self.try_zeros_like((lhs.shape().0, C, C))?;
+        let mut out: Self::Storage<(Batch, Seq, C<N>), f32> =
+            self.try_zeros_like((*batch, *seq, C))?;
 
         let a = lhs.view();
         let b = rhs.view();
         let c = out.view_mut();
-        for batch in 0..batch_size {
+        for batch in 0..batch.size() {
             matmul(a.idx(batch), b, c.idx(batch));
         }
 
@@ -154,11 +153,11 @@ impl<Batch: Dim, const M: usize, const K: usize, const N: usize>
     fn binary_bwd(
         &self,
         _op: MatMulKernelOp,
-        lhs: &Self::Storage<(Batch, C<M>, C<K>), f32>,
-        grad_lhs: &mut Self::Storage<(Batch, C<M>, C<K>), f32>,
+        lhs: &Self::Storage<(Batch, Seq, C<K>), f32>,
+        grad_lhs: &mut Self::Storage<(Batch, Seq, C<K>), f32>,
         rhs: &Self::Storage<Rank2<K, N>, f32>,
         grad_rhs: &mut Self::Storage<Rank2<K, N>, f32>,
-        grad_out: &Self::Storage<(Batch, C<M>, C<N>), f32>,
+        grad_out: &Self::Storage<(Batch, Seq, C<N>), f32>,
     ) -> Result<(), Self::Err> {
         let batch_size = lhs.shape().0.size();
         let lhs = lhs.view();
@@ -258,27 +257,28 @@ impl<const K: usize, const N: usize>
     }
 }
 
-impl<const M: usize, const N: usize>
-    BinaryKernel<MatMulKernelOp, Rank1<M>, Rank1<N>, Rank2<M, N>, f32> for Cpu
+impl<Outer: Dim, Inner: Dim> BinaryKernel<MatMulKernelOp, (Outer,), (Inner,), (Outer, Inner), f32>
+    for Cpu
 {
     fn binary_fwd(
         &self,
         _op: MatMulKernelOp,
-        lhs: &Self::Storage<Rank1<M>, f32>,
-        rhs: &Self::Storage<Rank1<N>, f32>,
-    ) -> Result<Self::Storage<Rank2<M, N>, f32>, Self::Err> {
-        let mut out: Self::Storage<Rank2<M, N>, f32> = self.try_zeros()?;
+        lhs: &Self::Storage<(Outer,), f32>,
+        rhs: &Self::Storage<(Inner,), f32>,
+    ) -> Result<Self::Storage<(Outer, Inner), f32>, Self::Err> {
+        let mut out: Self::Storage<(Outer, Inner), f32> =
+            self.try_zeros_like((lhs.shape().0, rhs.shape().0))?;
         matmul(lhs.view().br1(), rhs.view().br0(), out.view_mut());
         Ok(out)
     }
     fn binary_bwd(
         &self,
         _op: MatMulKernelOp,
-        lhs: &Self::Storage<Rank1<M>, f32>,
-        grad_lhs: &mut Self::Storage<Rank1<M>, f32>,
-        rhs: &Self::Storage<Rank1<N>, f32>,
-        grad_rhs: &mut Self::Storage<Rank1<N>, f32>,
-        grad_out: &Self::Storage<Rank2<M, N>, f32>,
+        lhs: &Self::Storage<(Outer,), f32>,
+        grad_lhs: &mut Self::Storage<(Outer,), f32>,
+        rhs: &Self::Storage<(Inner,), f32>,
+        grad_rhs: &mut Self::Storage<(Inner,), f32>,
+        grad_out: &Self::Storage<(Outer, Inner), f32>,
     ) -> Result<(), Self::Err> {
         let grad_out = grad_out.view();
         matmul(grad_out, rhs.view().br0().tr(), grad_lhs.view_mut().br1());
