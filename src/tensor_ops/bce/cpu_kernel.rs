@@ -1,5 +1,5 @@
 use super::BCEKernelOp;
-use crate::tensor_ops::utils::cpu::BinaryDerivative;
+use crate::tensor_ops::cpu_kernels::BinaryDerivative;
 
 impl BinaryDerivative<f32> for BCEKernelOp {
     #[inline(always)]

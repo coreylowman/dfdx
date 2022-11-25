@@ -3,7 +3,7 @@ use crate::devices::{
     cpu::{Cpu, View, ViewMut},
     Zeros, ZerosLike,
 };
-use crate::tensor_ops::utils::BinaryKernel;
+use crate::tensor_ops::ops::BinaryKernel;
 
 use super::MatMulKernelOp;
 

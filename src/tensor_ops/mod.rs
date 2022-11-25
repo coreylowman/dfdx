@@ -170,8 +170,10 @@ mod stddev_to;
 mod sub;
 mod sum_to;
 mod tanh;
-pub(crate) mod utils;
 mod var_to;
+
+pub(crate) mod cpu_kernels;
+pub(crate) mod ops;
 
 pub use abs::TryAbs;
 pub use add::TryAdd;

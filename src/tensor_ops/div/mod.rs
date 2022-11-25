@@ -7,7 +7,7 @@ use crate::{
     tensor::Tensor,
 };
 
-use super::utils::{try_binary_op, try_unary_op, BinaryKernel, UnaryKernel};
+use super::ops::{try_binary_op, try_unary_op, BinaryKernel, UnaryKernel};
 
 /// Element wise and scalar division.
 ///

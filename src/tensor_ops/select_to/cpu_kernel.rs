@@ -5,7 +5,7 @@ use crate::devices::{
     cpu::{Cpu, LendingIterator, StridedArray},
     ZerosLike,
 };
-use crate::tensor_ops::utils::UnaryKernel;
+use crate::tensor_ops::ops::UnaryKernel;
 
 use super::SelectKernelOp;
 

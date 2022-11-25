@@ -1,5 +1,5 @@
 use super::{BinarySubKernelOp, ScalarSubKernelOp};
-use crate::tensor_ops::utils::cpu::{BinaryDerivative, UnaryDerivative};
+use crate::tensor_ops::cpu_kernels::{BinaryDerivative, UnaryDerivative};
 
 impl UnaryDerivative<f32> for ScalarSubKernelOp<f32> {
     fn f(&self, x: &f32) -> f32 {

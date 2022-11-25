@@ -7,7 +7,7 @@ use crate::{
     tensor::Tensor,
 };
 
-use super::utils::{try_binary_op, BinaryKernel};
+use super::ops::{try_binary_op, BinaryKernel};
 
 pub trait TryHuberError<Rhs = Self>: HasErr + HasDtype {
     fn huber_error(self, rhs: Rhs, delta: Self::Dtype) -> Self {

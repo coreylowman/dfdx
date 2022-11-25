@@ -3,7 +3,7 @@ use crate::devices::{
     cpu::{Cpu, CpuError, LendingIterator, StridedArray, View, ViewMut},
     Zeros,
 };
-use crate::tensor_ops::utils::BinaryKernel;
+use crate::tensor_ops::ops::BinaryKernel;
 
 use super::Conv2DKernelOp;
 

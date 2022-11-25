@@ -7,7 +7,7 @@ use crate::{
     tensor::{Tensor, TensorFromArray},
 };
 
-use super::utils::{try_unary_op, UnaryKernel};
+use super::ops::{try_unary_op, UnaryKernel};
 
 /// Select values along `Axes` resulting in `T`. Equivalent
 /// to `torch.select` and `torch.gather` from pytorch.

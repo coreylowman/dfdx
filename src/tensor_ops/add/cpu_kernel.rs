@@ -1,5 +1,5 @@
 use super::{BinaryAddKernelOp, ScalarAddKernelOp};
-use crate::tensor_ops::utils::cpu::{BinaryDerivative, UnaryDerivative};
+use crate::tensor_ops::cpu_kernels::{BinaryDerivative, UnaryDerivative};
 
 impl BinaryDerivative<f32> for BinaryAddKernelOp {
     #[inline(always)]

@@ -4,7 +4,7 @@ use crate::devices::{Device, HasErr};
 use crate::gradients::Tape;
 use crate::tensor::Tensor;
 
-use super::utils::{try_unary_op, UnaryKernel};
+use super::ops::{try_unary_op, UnaryKernel};
 
 /// Permutes self into `T` with the new order of axes specified via `Axes`.
 /// Permutes the tensor

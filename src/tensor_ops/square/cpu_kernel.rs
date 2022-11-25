@@ -1,5 +1,5 @@
 use super::SquareKernelOp;
-use crate::tensor_ops::utils::cpu::UnaryDerivative;
+use crate::tensor_ops::cpu_kernels::UnaryDerivative;
 
 impl UnaryDerivative<f32> for SquareKernelOp {
     #[inline(always)]

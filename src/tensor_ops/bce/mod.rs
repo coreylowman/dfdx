@@ -7,7 +7,7 @@ use crate::{
     tensor::Tensor,
 };
 
-use super::utils::{try_binary_op, BinaryKernel};
+use super::ops::{try_binary_op, BinaryKernel};
 
 pub trait TryBceWithLogits<Rhs = Self>: HasErr {
     fn bce_with_logits(self, rhs: Rhs) -> Self {

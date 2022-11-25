@@ -7,7 +7,7 @@ use crate::{
     tensor::Tensor,
 };
 
-use super::utils::{try_binary_op, BinaryKernel};
+use super::ops::{try_binary_op, BinaryKernel};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub(super) struct Conv2DKernelOp<const K: usize, const S: usize, const P: usize>;

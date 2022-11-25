@@ -7,7 +7,7 @@ use crate::{
     tensor::Tensor,
 };
 
-use super::utils::{try_unary_op, UnaryKernel};
+use super::ops::{try_unary_op, UnaryKernel};
 
 /// Replaces any [std::f32::NAN] with `value`.
 ///

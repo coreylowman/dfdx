@@ -7,7 +7,7 @@ use crate::{
     tensor::Tensor,
 };
 
-use super::utils::{try_unary_op, UnaryKernel};
+use super::ops::{try_unary_op, UnaryKernel};
 
 /// [Absolute value (abs)](https://en.wikipedia.org/wiki/Absolute_value). `|t|`
 ///

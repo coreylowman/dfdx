@@ -7,7 +7,7 @@ use crate::{
     tensor::Tensor,
 };
 
-use super::utils::{try_binary_op, BinaryKernel};
+use super::ops::{try_binary_op, BinaryKernel};
 
 /// Matrix * Matrix,, Vector * Matrix, and Vector * Vector multiplication.
 ///

@@ -1,7 +1,7 @@
 use crate::{
     arrays::{BroadcastStrides, Shape},
     devices::cpu::{Cpu, LendingIterator, StridedArray},
-    tensor_ops::utils::FullUnaryKernel,
+    tensor_ops::ops::FullUnaryKernel,
 };
 
 use super::MaxReduceKernelOp;

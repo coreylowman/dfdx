@@ -1,5 +1,5 @@
-use super::super::utils::cpu::UnaryDerivative;
 use super::ClampKernelOp;
+use crate::tensor_ops::cpu_kernels::UnaryDerivative;
 
 impl UnaryDerivative<f32> for ClampKernelOp<f32> {
     #[inline(always)]

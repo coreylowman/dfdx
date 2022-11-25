@@ -1,5 +1,5 @@
 use super::MinimumKernelOp;
-use crate::tensor_ops::utils::cpu::BinaryDerivative;
+use crate::tensor_ops::cpu_kernels::BinaryDerivative;
 
 impl BinaryDerivative<f32> for MinimumKernelOp {
     #[inline(always)]

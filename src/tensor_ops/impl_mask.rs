@@ -1,4 +1,4 @@
-use super::utils::move_tape_and_add_backward_op;
+use super::ops::move_tape_and_add_backward_op;
 use crate::devices::{Device, ForEachElement};
 use crate::gradients::Tape;
 use crate::prelude::*;

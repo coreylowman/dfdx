@@ -1,4 +1,4 @@
-use crate::tensor_ops::utils::UnaryKernel;
+use crate::tensor_ops::ops::UnaryKernel;
 use crate::{arrays::Shape, devices::Cpu};
 
 use super::DropoutKernelOp;

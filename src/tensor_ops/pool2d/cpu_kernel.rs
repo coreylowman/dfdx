@@ -1,6 +1,9 @@
 use crate::arrays::{Rank3, Rank4};
-use crate::devices::{Zeros, cpu::{Cpu, StridedArray, View, ViewMut}};
-use crate::tensor_ops::utils::UnaryKernel;
+use crate::devices::{
+    cpu::{Cpu, StridedArray, View, ViewMut},
+    Zeros,
+};
+use crate::tensor_ops::ops::UnaryKernel;
 
 use super::{pooling, Pool2DKernelOp};
 

@@ -7,7 +7,7 @@ use crate::{
     tensor::Tensor,
 };
 
-use super::utils::{try_full_unary_op, FullUnaryKernel};
+use super::ops::{try_full_unary_op, FullUnaryKernel};
 
 /// Reduces `Axes` of the tensor by gathering the minimum value from the axes.
 ///

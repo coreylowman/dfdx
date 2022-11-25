@@ -4,7 +4,7 @@ use crate::{
         cpu::{Cpu, LendingIterator, StridedArray},
         Zeros,
     },
-    tensor_ops::utils::UnaryKernel,
+    tensor_ops::ops::UnaryKernel,
 };
 
 use super::SumKernelOp;
