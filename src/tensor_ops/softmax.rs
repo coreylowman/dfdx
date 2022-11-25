@@ -5,7 +5,7 @@ use crate::{
     tensor::Tensor,
 };
 
-use super::{log_softmax::LogSoftmaxAxes, Exp};
+use super::{log_softmax::LogSoftmaxAxes, TryExp};
 
 /// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function) across
 /// `Axes`.
@@ -35,7 +35,7 @@ pub trait SoftmaxAxes<Axes>: HasErr {
 
 impl<Src: Shape, Axes, E: Dtype, D: Device, T: Tape<D>> SoftmaxAxes<Axes> for Tensor<Src, E, D, T>
 where
-    Self: LogSoftmaxAxes<Axes, Err = D::Err> + Exp<Err = D::Err>,
+    Self: LogSoftmaxAxes<Axes, Err = D::Err> + TryExp<Err = D::Err>,
 {
     fn try_softmax_axes(self) -> Result<Self, Self::Err> {
         self.try_log_softmax_axes()?.try_exp()

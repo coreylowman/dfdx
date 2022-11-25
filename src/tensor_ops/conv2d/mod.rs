@@ -46,7 +46,7 @@ mod internals {
     }
 }
 
-pub trait Conv2D<T, const C: usize, const O: usize, const K: usize>: HasErr + HasDevice {
+pub trait TryConv2D<T, const C: usize, const O: usize, const K: usize>: HasErr + HasDevice {
     fn conv2d<const S: usize, const P: usize>(
         self,
         filters: Tensor<Rank4<O, C, K, K>, f32, Self::Device>,
@@ -69,7 +69,7 @@ pub trait Conv2D<T, const C: usize, const O: usize, const K: usize>: HasErr + Ha
 }
 
 impl<Src: HasErr + HasDevice, Dst, const C: usize, const O: usize, const K: usize>
-    Conv2D<Dst, C, O, K> for Src
+    TryConv2D<Dst, C, O, K> for Src
 {
 }
 

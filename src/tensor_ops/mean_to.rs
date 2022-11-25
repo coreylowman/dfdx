@@ -26,7 +26,7 @@ use super::*;
 /// let r: Tensor1D<2> = t.mean();
 /// assert_eq!(r.as_array(), [2.0, 5.0]);
 /// ```
-pub trait MeanTo<T, Axes>: HasErr {
+pub trait TryMeanTo<T, Axes>: HasErr {
     fn mean(self) -> T {
         self.try_mean().unwrap()
     }
@@ -34,7 +34,7 @@ pub trait MeanTo<T, Axes>: HasErr {
 }
 
 impl<Src: Shape, Dst: Shape, Axes: Default, D: Device, T: Tape<D>>
-    MeanTo<Tensor<Dst, f32, D, T>, Axes> for Tensor<Src, f32, D, T>
+    TryMeanTo<Tensor<Dst, f32, D, T>, Axes> for Tensor<Src, f32, D, T>
 where
     Self: SumTo<Tensor<Dst, f32, D, T>, Axes>,
     Tensor<Dst, f32, D, T>: TryDiv<f32, Err = Self::Err>,
@@ -58,16 +58,16 @@ mod tests {
 
     #[test]
     fn test_valids_mean_axis() {
-        let _ = <Tensor1D<5, Cpu> as MeanTo<Tensor0D<Cpu>, _>>::try_mean;
-        let _ = <Tensor2D<5, 3, Cpu> as MeanTo<Tensor1D<3, Cpu>, _>>::try_mean;
-        let _ = <Tensor2D<5, 3, Cpu> as MeanTo<Tensor1D<5, Cpu>, _>>::try_mean;
-        let _ = <Tensor3D<7, 5, 3, Cpu> as MeanTo<Tensor2D<5, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor3D<7, 5, 3, Cpu> as MeanTo<Tensor2D<7, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor3D<7, 5, 3, Cpu> as MeanTo<Tensor2D<7, 5, Cpu>, _>>::try_mean;
-        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as MeanTo<Tensor3D<7, 5, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as MeanTo<Tensor3D<9, 5, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as MeanTo<Tensor3D<9, 7, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as MeanTo<Tensor3D<9, 7, 5, Cpu>, _>>::try_mean;
+        let _ = <Tensor1D<5, Cpu> as TryMeanTo<Tensor0D<Cpu>, _>>::try_mean;
+        let _ = <Tensor2D<5, 3, Cpu> as TryMeanTo<Tensor1D<3, Cpu>, _>>::try_mean;
+        let _ = <Tensor2D<5, 3, Cpu> as TryMeanTo<Tensor1D<5, Cpu>, _>>::try_mean;
+        let _ = <Tensor3D<7, 5, 3, Cpu> as TryMeanTo<Tensor2D<5, 3, Cpu>, _>>::try_mean;
+        let _ = <Tensor3D<7, 5, 3, Cpu> as TryMeanTo<Tensor2D<7, 3, Cpu>, _>>::try_mean;
+        let _ = <Tensor3D<7, 5, 3, Cpu> as TryMeanTo<Tensor2D<7, 5, Cpu>, _>>::try_mean;
+        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as TryMeanTo<Tensor3D<7, 5, 3, Cpu>, _>>::try_mean;
+        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as TryMeanTo<Tensor3D<9, 5, 3, Cpu>, _>>::try_mean;
+        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as TryMeanTo<Tensor3D<9, 7, 3, Cpu>, _>>::try_mean;
+        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as TryMeanTo<Tensor3D<9, 7, 5, Cpu>, _>>::try_mean;
     }
 
     #[test]

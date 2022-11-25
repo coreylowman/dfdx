@@ -3,7 +3,7 @@ use crate::{
     devices::{Device, HasErr},
     gradients::Tape,
     tensor::Tensor,
-    tensor_ops::{BroadcastTo, MeanTo, StddevTo, TryDiv, TrySub},
+    tensor_ops::{BroadcastTo, StddevTo, TryDiv, TryMeanTo, TrySub},
 };
 
 /// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Axes` of `T`. `epsilon` is passed to [stddev()].
@@ -24,7 +24,7 @@ pub trait NormalizeAxes<Axes>: HasErr {
 impl<Axes, Src: Shape + ReduceShape<Axes>, E: Dtype, D: Device, T: Tape<D>> NormalizeAxes<Axes>
     for Tensor<Src, E, D, T>
 where
-    Self: MeanTo<Tensor<Src::Reduced, E, D, T>, Axes>
+    Self: TryMeanTo<Tensor<Src::Reduced, E, D, T>, Axes>
         + StddevTo<Tensor<Src::Reduced, E, D, T>, Axes>
         + TrySub
         + TryDiv,

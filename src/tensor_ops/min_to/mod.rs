@@ -31,7 +31,7 @@ use super::utils::{try_full_unary_op, FullUnaryKernel};
 /// let r: Tensor0D = t.min();
 /// assert_eq!(r.data(), &-3.0);
 /// ```
-pub trait MinTo<T, Axes>: HasErr {
+pub trait TryMinTo<T, Axes>: HasErr {
     fn min(self) -> T {
         self.try_min().unwrap()
     }
@@ -42,7 +42,7 @@ pub trait MinTo<T, Axes>: HasErr {
 pub(super) struct MinReduceKernelOp<Axes>(std::marker::PhantomData<Axes>);
 
 impl<Src: Shape, Dst: Shape, Axes: 'static + Copy + Default, E: Dtype, D: Device, T: Tape<D>>
-    MinTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
+    TryMinTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
 where
     D: FullUnaryKernel<MinReduceKernelOp<Axes>, Src, Dst, E>,
 {
@@ -62,19 +62,19 @@ mod tests {
     #[test]
     fn test_valids_min_axis() {
         let dev = build_test_device!();
-        let _: Tensor0D<_> = <Tensor1D<5, _> as MinTo<_, _>>::min(dev.zeros());
+        let _: Tensor0D<_> = <Tensor1D<5, _> as TryMinTo<_, _>>::min(dev.zeros());
 
-        let _: Tensor1D<3, _> = <Tensor2D<5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-        let _: Tensor1D<5, _> = <Tensor2D<5, 3, _> as MinTo<_, _>>::min(dev.zeros());
+        let _: Tensor1D<3, _> = <Tensor2D<5, 3, _> as TryMinTo<_, _>>::min(dev.zeros());
+        let _: Tensor1D<5, _> = <Tensor2D<5, 3, _> as TryMinTo<_, _>>::min(dev.zeros());
 
-        let _: Tensor2D<5, 3, _> = <Tensor3D<7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-        let _: Tensor2D<7, 3, _> = <Tensor3D<7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-        let _: Tensor2D<7, 5, _> = <Tensor3D<7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
+        let _: Tensor2D<5, 3, _> = <Tensor3D<7, 5, 3, _> as TryMinTo<_, _>>::min(dev.zeros());
+        let _: Tensor2D<7, 3, _> = <Tensor3D<7, 5, 3, _> as TryMinTo<_, _>>::min(dev.zeros());
+        let _: Tensor2D<7, 5, _> = <Tensor3D<7, 5, 3, _> as TryMinTo<_, _>>::min(dev.zeros());
 
-        let _: Tensor3D<7, 5, 3, _> = <Tensor4D<9, 7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-        let _: Tensor3D<9, 5, 3, _> = <Tensor4D<9, 7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-        let _: Tensor3D<9, 7, 3, _> = <Tensor4D<9, 7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-        let _: Tensor3D<9, 7, 5, _> = <Tensor4D<9, 7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
+        let _: Tensor3D<7, 5, 3, _> = <Tensor4D<9, 7, 5, 3, _> as TryMinTo<_, _>>::min(dev.zeros());
+        let _: Tensor3D<9, 5, 3, _> = <Tensor4D<9, 7, 5, 3, _> as TryMinTo<_, _>>::min(dev.zeros());
+        let _: Tensor3D<9, 7, 3, _> = <Tensor4D<9, 7, 5, 3, _> as TryMinTo<_, _>>::min(dev.zeros());
+        let _: Tensor3D<9, 7, 5, _> = <Tensor4D<9, 7, 5, 3, _> as TryMinTo<_, _>>::min(dev.zeros());
     }
 
     #[test]
@@ -105,7 +105,7 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor3D<2, 3, 4, _> = dev.randn();
         let r: Tensor1D<4, _, _> = t.trace().min();
-        let r2: Tensor1D<4, _, _> = MinTo::<Tensor2D<3, 4, _, _>, _>::min(t.trace()).min();
+        let r2: Tensor1D<4, _, _> = TryMinTo::<Tensor2D<3, 4, _, _>, _>::min(t.trace()).min();
         assert_close(&r.as_array(), &r2.as_array());
         let g = r.mean().backward();
         let g2 = r2.mean().backward();

@@ -24,7 +24,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.ln();
 /// ```
-pub trait Ln: HasErr {
+pub trait TryLn: HasErr {
     fn ln(self) -> Self {
         self.try_ln().unwrap()
     }
@@ -34,7 +34,7 @@ pub trait Ln: HasErr {
 #[derive(Debug, Default, Copy, Clone)]
 pub(super) struct LnKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Ln for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryLn for Tensor<S, E, D, T>
 where
     D: UnaryKernel<LnKernelOp, S, S, E>,
 {

@@ -20,7 +20,7 @@ use super::utils::{try_binary_op, BinaryKernel};
 /// let b = tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
 /// let r = a.minimum(b);
 /// assert_eq!(r.data(), &[[1.0, 0.5, 1.0], [-2.0, -2.0, -3.5]]);
-pub trait Minimum<Rhs = Self>: HasErr {
+pub trait TryMinimum<Rhs = Self>: HasErr {
     fn minimum(self, rhs: Rhs) -> Self {
         self.try_minimum(rhs).unwrap()
     }
@@ -31,7 +31,7 @@ pub trait Minimum<Rhs = Self>: HasErr {
 pub(super) struct MinimumKernelOp;
 
 impl<S: Shape, E: Dtype, D: Device, LhsTape: Tape<D>, RhsTape: Tape<D>>
-    Minimum<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
+    TryMinimum<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
     D: BinaryKernel<MinimumKernelOp, S, S, S, E>,
     LhsTape: Merge<RhsTape>,

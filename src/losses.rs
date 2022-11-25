@@ -18,7 +18,8 @@ pub fn mse_loss<S: Shape, E: Dtype, D: Device, T: Tape<D>, AllAxes>(
     targ: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T>
 where
-    Tensor<S, E, D, T>: TrySub<Tensor<S, E, D>> + Square + MeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
+    Tensor<S, E, D, T>:
+        TrySub<Tensor<S, E, D>> + TrySquare + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
 {
     (pred - targ).square().mean()
 }
@@ -32,8 +33,9 @@ pub fn rmse_loss<S: Shape, E: Dtype, D: Device, T: Tape<D>, AllAxes>(
     targ: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T>
 where
-    Tensor<S, E, D, T>: TrySub<Tensor<S, E, D>> + Square + MeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
-    Tensor<Rank0, E, D, T>: Sqrt,
+    Tensor<S, E, D, T>:
+        TrySub<Tensor<S, E, D>> + TrySquare + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
+    Tensor<Rank0, E, D, T>: TrySqrt,
 {
     mse_loss(pred, targ).sqrt()
 }
@@ -47,7 +49,7 @@ pub fn mae_loss<S: Shape, E: Dtype, D: Device, T: Tape<D>, Axes>(
     targ: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T>
 where
-    Tensor<S, E, D, T>: TrySub<Tensor<S, E, D>> + Abs + MeanTo<Tensor<Rank0, E, D, T>, Axes>,
+    Tensor<S, E, D, T>: TrySub<Tensor<S, E, D>> + TryAbs + TryMeanTo<Tensor<Rank0, E, D, T>, Axes>,
 {
     (pred - targ).abs().mean()
 }
@@ -73,7 +75,7 @@ pub fn huber_loss<S: Shape, E: Dtype, D: Device, T: Tape<D>, AllAxes>(
     delta: <Tensor<S, E, D, T> as HasDtype>::Dtype,
 ) -> Tensor<Rank0, E, D, T>
 where
-    Tensor<S, E, D, T>: HuberError<Tensor<S, E, D>> + MeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
+    Tensor<S, E, D, T>: TryHuberError<Tensor<S, E, D>> + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
 {
     pred.huber_error(targ, delta).mean()
 }
@@ -99,7 +101,7 @@ pub fn smooth_l1_loss<S: Shape, E: Dtype, D: Device, T: Tape<D>, AllAxes>(
     beta: <Tensor<S, E, D, T> as HasDtype>::Dtype,
 ) -> Tensor<Rank0, E, D, T>
 where
-    Tensor<S, E, D, T>: HuberError<Tensor<S, E, D>> + MeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
+    Tensor<S, E, D, T>: TryHuberError<Tensor<S, E, D>> + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
     Tensor<Rank0, E, D, T>: TryDiv<<Tensor<S, E, D, T> as HasDtype>::Dtype>,
 {
     huber_loss(pred, targ, beta) / beta
@@ -137,8 +139,8 @@ where
     S: HasAxes<S::LastAxis>,
     Tensor<S, E, D, T>: LogSoftmaxAxes<S::LastAxis>
         + TryMul<Tensor<S, E, D>>
-        + MeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
-    Tensor<Rank0, E, D, T>: Negate + TryMul<f32>,
+        + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
+    Tensor<Rank0, E, D, T>: TryNegate + TryMul<f32>,
 {
     let last_axis_numel = <S as HasAxes<S::LastAxis>>::size(logits.shape()) as f32;
     (logits.log_softmax::<S::LastAxis>() * target_probs)
@@ -174,9 +176,9 @@ where
     Tensor<S, E, D, T>: LogSoftmaxAxes<S::LastAxis>
         + TryMul<Tensor<S, E, D>>
         + TrySub<Tensor<S, E, D>>
-        + MeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
-    Tensor<S, E, D>: Ln,
-    Tensor<Rank0, E, D, T>: Negate + TryMul<f32>,
+        + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
+    Tensor<S, E, D>: TryLn,
+    Tensor<Rank0, E, D, T>: TryNegate + TryMul<f32>,
 {
     let last_axis_numel = <S as HasAxes<S::LastAxis>>::size(logits.shape()) as f32;
     let probs = logits.log_softmax::<S::LastAxis>();
@@ -212,7 +214,8 @@ pub fn binary_cross_entropy_with_logits_loss<S: Shape, E: Dtype, D: Device, T: T
     target_probs: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T>
 where
-    Tensor<S, E, D, T>: BceWithLogits<Tensor<S, E, D>> + MeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
+    Tensor<S, E, D, T>:
+        TryBceWithLogits<Tensor<S, E, D>> + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
 {
     logits.bce_with_logits(target_probs).mean()
 }

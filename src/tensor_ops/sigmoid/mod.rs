@@ -26,7 +26,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.sigmoid();
 /// ```
-pub trait Sigmoid: HasErr {
+pub trait TrySigmoid: HasErr {
     fn sigmoid(self) -> Self {
         self.try_sigmoid().unwrap()
     }
@@ -36,7 +36,7 @@ pub trait Sigmoid: HasErr {
 #[derive(Debug, Default, Copy, Clone)]
 pub(super) struct SigmoidKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Sigmoid for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TrySigmoid for Tensor<S, E, D, T>
 where
     D: UnaryKernel<SigmoidKernelOp, S, S, E>,
 {

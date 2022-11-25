@@ -20,7 +20,7 @@ use super::utils::{try_binary_op, BinaryKernel};
 /// let b = tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
 /// let r = a.maximum(b);
 /// assert_eq!(r.data(), &[[1.0, 2.0, 3.0], [-1.0, 2.0, -3.0]]);
-pub trait Maximum<Rhs = Self>: HasErr {
+pub trait TryMaximum<Rhs = Self>: HasErr {
     fn maximum(self, rhs: Rhs) -> Self {
         self.try_maximum(rhs).unwrap()
     }
@@ -31,7 +31,7 @@ pub trait Maximum<Rhs = Self>: HasErr {
 pub(super) struct MaximumKernelOp;
 
 impl<S: Shape, E: Dtype, D: Device, LhsTape: Tape<D>, RhsTape: Tape<D>>
-    Maximum<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
+    TryMaximum<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
     D: BinaryKernel<MaximumKernelOp, S, S, S, E>,
     LhsTape: Merge<RhsTape>,

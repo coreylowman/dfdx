@@ -21,7 +21,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.powf(-3.2);
 /// ```
-pub trait Powf<E: Dtype>: HasErr {
+pub trait TryPowf<E: Dtype>: HasErr {
     fn powf(self, i: E) -> Self {
         self.try_powf(i).unwrap()
     }
@@ -31,7 +31,7 @@ pub trait Powf<E: Dtype>: HasErr {
 #[derive(Debug, Clone, Copy)]
 pub(super) struct PowKernelOp<E>(E);
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Powf<E> for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryPowf<E> for Tensor<S, E, D, T>
 where
     D: UnaryKernel<PowKernelOp<E>, S, S, E>,
 {
@@ -52,14 +52,14 @@ where
 /// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.powi(3);
 /// ```
-pub trait Powi: HasErr {
+pub trait TryPowi: HasErr {
     fn powi(self, i: i32) -> Self {
         self.try_powi(i).unwrap()
     }
     fn try_powi(self, i: i32) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Powi for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryPowi for Tensor<S, E, D, T>
 where
     D: UnaryKernel<PowKernelOp<i32>, S, S, E>,
 {

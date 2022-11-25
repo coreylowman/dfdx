@@ -18,7 +18,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// let r = -a; // or negate(a);
 /// assert_eq!(r.as_array(), [2.0, 0.0, -5.0]);
 /// ```
-pub trait Negate: HasErr {
+pub trait TryNegate: HasErr {
     fn negate(self) -> Self {
         self.try_negate().unwrap()
     }
@@ -28,7 +28,7 @@ pub trait Negate: HasErr {
 #[derive(Debug, Default, Copy, Clone)]
 pub(super) struct NegateKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Negate for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryNegate for Tensor<S, E, D, T>
 where
     D: UnaryKernel<NegateKernelOp, S, S, E>,
 {
@@ -39,7 +39,7 @@ where
 
 impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> std::ops::Neg for Tensor<S, E, D, T>
 where
-    Self: Negate,
+    Self: TryNegate,
 {
     type Output = Self;
     fn neg(self) -> Self::Output {

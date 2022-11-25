@@ -9,7 +9,7 @@ use crate::{
 
 use super::utils::{try_binary_op, BinaryKernel};
 
-pub trait HuberError<Rhs = Self>: HasErr + HasDtype {
+pub trait TryHuberError<Rhs = Self>: HasErr + HasDtype {
     fn huber_error(self, rhs: Rhs, delta: Self::Dtype) -> Self {
         self.try_huber_error(rhs, delta).unwrap()
     }
@@ -22,7 +22,7 @@ pub(super) struct HuberErrorKernelOp<E: Dtype> {
 }
 
 impl<S: Shape, E: Dtype, D: Device, LhsTape: Tape<D>, RhsTape: Tape<D>>
-    HuberError<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
+    TryHuberError<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
     D: BinaryKernel<HuberErrorKernelOp<E>, S, S, S, E>,
     LhsTape: Merge<RhsTape>,

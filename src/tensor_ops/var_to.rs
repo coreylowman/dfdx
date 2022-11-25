@@ -21,7 +21,7 @@ use super::*;
 /// let r: Tensor1D<2> = t.var();
 /// assert_eq!(r.data(), &[0.6666667, 6.0]);
 /// ```
-pub trait VarTo<T, Axes>: HasErr {
+pub trait TryVarTo<T, Axes>: HasErr {
     fn var(self) -> T {
         self.try_var().unwrap()
     }
@@ -29,11 +29,11 @@ pub trait VarTo<T, Axes>: HasErr {
 }
 
 impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>>
-    VarTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
+    TryVarTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
 where
-    Self: MeanTo<Tensor<Dst, E, D, T>, Axes, Err = D::Err>
+    Self: TryMeanTo<Tensor<Dst, E, D, T>, Axes, Err = D::Err>
         + TrySub<Self>
-        + Square
+        + TrySquare
         + SumTo<Tensor<Dst, E, D, T>, Axes>,
     Tensor<Dst, E, D, T>: BroadcastTo<Self, Axes, Err = D::Err> + TryDiv<f32, Err = D::Err>,
 {

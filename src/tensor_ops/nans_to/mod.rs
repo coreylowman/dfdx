@@ -20,7 +20,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// let r = t.nans_to(0.0);
 /// assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
 /// ```
-pub trait NansTo<E: Dtype>: HasErr {
+pub trait TryNansTo<E: Dtype>: HasErr {
     fn nans_to(self, value: E) -> Self {
         self.try_nans_to(value).unwrap()
     }
@@ -30,7 +30,7 @@ pub trait NansTo<E: Dtype>: HasErr {
 #[derive(Debug, Clone, Copy)]
 pub(super) struct NansToKernelOp<E>(E);
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> NansTo<E> for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryNansTo<E> for Tensor<S, E, D, T>
 where
     D: UnaryKernel<NansToKernelOp<E>, S, S, E>,
 {

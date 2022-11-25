@@ -24,7 +24,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.square();
 /// ```
-pub trait Square: HasErr {
+pub trait TrySquare: HasErr {
     fn square(self) -> Self {
         self.try_square().unwrap()
     }
@@ -34,7 +34,7 @@ pub trait Square: HasErr {
 #[derive(Debug, Default, Copy, Clone)]
 pub(super) struct SquareKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Square for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TrySquare for Tensor<S, E, D, T>
 where
     D: UnaryKernel<SquareKernelOp, S, S, E>,
 {

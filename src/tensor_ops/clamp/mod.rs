@@ -18,7 +18,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// let r = t.clamp(-0.5, 0.5);
 /// assert_eq!(r.data(), &[-0.5, -0.5, 0.0, 0.5, 0.5]);
 /// ```
-pub trait Clamp<E: Dtype>: HasErr {
+pub trait TryClamp<E: Dtype>: HasErr {
     fn clamp(self, min: E, max: E) -> Self {
         self.try_clamp(min, max).unwrap()
     }
@@ -31,7 +31,7 @@ pub(super) struct ClampKernelOp<E> {
     pub max: E,
 }
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Clamp<E> for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryClamp<E> for Tensor<S, E, D, T>
 where
     D: UnaryKernel<ClampKernelOp<E>, S, S, E>,
 {

@@ -49,7 +49,7 @@ mod internals {
     }
 }
 
-pub trait AvgPool2D<T>: HasErr {
+pub trait TryAvgPool2D<T>: HasErr {
     fn avg_pool2d<const K: usize, const S: usize, const P: usize>(self) -> T
     where
         Self: internals::PoolTo<T, pooling::Avg, K, S, P>,
@@ -64,7 +64,7 @@ pub trait AvgPool2D<T>: HasErr {
     }
 }
 
-pub trait MinPool2D<T>: HasErr {
+pub trait TryMinPool2D<T>: HasErr {
     fn min_pool2d<const K: usize, const S: usize, const P: usize>(self) -> T
     where
         Self: internals::PoolTo<T, pooling::Min, K, S, P>,
@@ -79,7 +79,7 @@ pub trait MinPool2D<T>: HasErr {
     }
 }
 
-pub trait MaxPool2D<T>: HasErr {
+pub trait TryMaxPool2D<T>: HasErr {
     fn max_pool2d<const K: usize, const S: usize, const P: usize>(self) -> T
     where
         Self: internals::PoolTo<T, pooling::Max, K, S, P>,
@@ -94,9 +94,9 @@ pub trait MaxPool2D<T>: HasErr {
     }
 }
 
-impl<Src: HasErr, Dst> AvgPool2D<Dst> for Src {}
-impl<Src: HasErr, Dst> MinPool2D<Dst> for Src {}
-impl<Src: HasErr, Dst> MaxPool2D<Dst> for Src {}
+impl<Src: HasErr, Dst> TryAvgPool2D<Dst> for Src {}
+impl<Src: HasErr, Dst> TryMinPool2D<Dst> for Src {}
+impl<Src: HasErr, Dst> TryMaxPool2D<Dst> for Src {}
 
 #[cfg(test)]
 mod tests {

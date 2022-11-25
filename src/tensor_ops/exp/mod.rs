@@ -24,7 +24,7 @@ use super::utils::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.exp();
 /// ```
-pub trait Exp: HasErr {
+pub trait TryExp: HasErr {
     fn exp(self) -> Self {
         self.try_exp().unwrap()
     }
@@ -34,7 +34,7 @@ pub trait Exp: HasErr {
 #[derive(Debug, Default, Copy, Clone)]
 pub(super) struct ExpKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Exp for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryExp for Tensor<S, E, D, T>
 where
     D: UnaryKernel<ExpKernelOp, S, S, E>,
 {
