@@ -19,9 +19,11 @@
 //! 3. `Tensor2D`: `Axis<0>`, `Axis<1>`
 //! 4. `Tensor3D`: `Axis<0>`, `Axis<1>`, `Axis<2>`,
 //! 5. `Tensor4D`: `Axis<0>`, `Axis<1>`, `Axis<2>`, `Axis<3>`
+//! 5. `Tensor5D`: `Axis<0>`, `Axis<1>`, `Axis<2>`, `Axis<3>`, `Axis<4>`
+//! 5. `Tensor6D`: `Axis<0>`, `Axis<1>`, `Axis<2>`, `Axis<3>`, `Axis<4>`, `Axis<5>`
 //!
 //! Additionally `AllAxes` is valid for all tensors.
-//! To specify multiple axes you can use `Axes2`, `Axes3`, and `Axes4`
+//! To specify multiple axes you can use `Axes2`, `Axes3`, `Axes4` and `Axes5`
 //!
 //! # Reductions
 //!
@@ -99,6 +101,21 @@
 //! let t: Tensor4D<2, 3, 4, 5> = TensorCreator::zeros();
 //! let _: Tensor4D<3, 5, 2, 4> = t.permute();
 //! ```
+//!
+//! 5D version:
+//! ```rust
+//! # use dfdx::prelude::*;
+//! let t: Tensor5D<2, 3, 4, 5, 6> = TensorCreator::zeros();
+//! let _: Tensor5D<3, 5, 2, 6, 4> = t.permute();
+//! ```
+//!
+//! 6D version:
+//! ```rust
+//! # use dfdx::prelude::*;
+//! let t: Tensor6D<2, 3, 4, 5, 6, 7> = TensorCreator::zeros();
+//! let _: Tensor6D<3, 5, 2, 6, 7, 4> = t.permute();
+//! ```
+//!
 //!
 //! # Selects/Indexing
 //!

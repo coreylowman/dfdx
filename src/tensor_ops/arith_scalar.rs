@@ -147,6 +147,8 @@ scalar_ops_impl!(Tensor1D, [N]);
 scalar_ops_impl!(Tensor2D, [M, N]);
 scalar_ops_impl!(Tensor3D, [M, N, O]);
 scalar_ops_impl!(Tensor4D, [M, N, O, P]);
+scalar_ops_impl!(Tensor5D, [M, N, O, P, Q]);
+scalar_ops_impl!(Tensor6D, [M, N, O, P, Q, R]);
 
 #[cfg(test)]
 mod tests {

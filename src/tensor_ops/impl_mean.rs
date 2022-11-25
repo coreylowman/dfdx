@@ -48,6 +48,8 @@ mean_axis_impl!(Tensor1D, [M]);
 mean_axis_impl!(Tensor2D, [M, N]);
 mean_axis_impl!(Tensor3D, [M, N, O]);
 mean_axis_impl!(Tensor4D, [M, N, O, P]);
+mean_axis_impl!(Tensor5D, [M, N, O, P, Q]);
+mean_axis_impl!(Tensor6D, [M, N, O, P, Q, R]);
 
 #[cfg(test)]
 mod tests {

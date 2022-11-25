@@ -1,5 +1,5 @@
 use super::utils::move_tape_and_add_backward_op;
-use crate::arrays::{AllAxes, Axes2, Axes3, Axis, HasArrayType};
+use crate::arrays::{AllAxes, Axes2, Axes3, Axes5, Axis, HasArrayType};
 use crate::devices::{AddAccum, CopyAccum, Cpu, DeviceReduce};
 use crate::gradients::Tape;
 use crate::prelude::*;
@@ -19,6 +19,12 @@ pub trait BroadcastTo<T, Axes> {
     ///
     /// // broadcast axes 1, 2, 3
     /// let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<3>::zeros().broadcast();
+    ///
+    /// // broadcast axes 1, 2, 3, 4
+    /// let _: Tensor5D<3, 5, 7, 9, 6> = Tensor1D::<3>::zeros().broadcast();
+    ///
+    /// // broadcast axes 1, 2, 3, 4, 5
+    /// let _: Tensor6D<3, 5, 7, 9, 6, 8> = Tensor1D::<3>::zeros().broadcast();
     /// ```
     fn broadcast(self) -> T;
 }
@@ -78,6 +84,8 @@ impl_broadcast_reduce!(Tensor0D<H>, AllAxes, Tensor1D<M, H>, {M});
 impl_broadcast_reduce!(Tensor0D<H>, AllAxes, Tensor2D<M, N, H>, {M, N});
 impl_broadcast_reduce!(Tensor0D<H>, AllAxes, Tensor3D<M, N, O, H>, {M, N, O});
 impl_broadcast_reduce!(Tensor0D<H>, AllAxes, Tensor4D<M, N, O, P, H>, {M, N, O, P});
+impl_broadcast_reduce!(Tensor0D<H>, AllAxes, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor0D<H>, AllAxes, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
 
 // 1d -> Nd
 impl_broadcast_reduce!(Tensor1D<M, H>, Axis<1>, Tensor2D<M, N, H>, {M, N});
@@ -89,6 +97,17 @@ impl_broadcast_reduce!(Tensor1D<M, H>, Axes3<1, 2, 3>, Tensor4D<M, N, O, P, H>, 
 impl_broadcast_reduce!(Tensor1D<N, H>, Axes3<0, 2, 3>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 impl_broadcast_reduce!(Tensor1D<O, H>, Axes3<0, 1, 3>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 impl_broadcast_reduce!(Tensor1D<P, H>, Axes3<0, 1, 2>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
+impl_broadcast_reduce!(Tensor1D<M, H>, Axes4<1, 2, 3, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor1D<N, H>, Axes4<0, 2, 3, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor1D<O, H>, Axes4<0, 1, 3, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor1D<P, H>, Axes4<0, 1, 2, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor1D<Q, H>, Axes4<0, 1, 2, 3>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor1D<M, H>, Axes5<1, 2, 3, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor1D<N, H>, Axes5<0, 2, 3, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor1D<O, H>, Axes5<0, 1, 3, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor1D<P, H>, Axes5<0, 1, 2, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor1D<Q, H>, Axes5<0, 1, 2, 3, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor1D<R, H>, Axes5<0, 1, 2, 3, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
 
 // 2d -> Nd
 impl_broadcast_reduce!(Tensor2D<M, N, H>, Axis<2>, Tensor3D<M, N, O, H>, {M, N, O});
@@ -100,12 +119,97 @@ impl_broadcast_reduce!(Tensor2D<M, P, H>, Axes2<1, 2>, Tensor4D<M, N, O, P, H>, 
 impl_broadcast_reduce!(Tensor2D<N, O, H>, Axes2<0, 3>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 impl_broadcast_reduce!(Tensor2D<N, P, H>, Axes2<0, 2>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 impl_broadcast_reduce!(Tensor2D<O, P, H>, Axes2<0, 1>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
+impl_broadcast_reduce!(Tensor2D<M, N, H>, Axes3<2, 3, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor2D<M, O, H>, Axes3<1, 3, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor2D<M, P, H>, Axes3<1, 2, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor2D<M, Q, H>, Axes3<1, 2, 3>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor2D<N, O, H>, Axes3<0, 3, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor2D<N, P, H>, Axes3<0, 2, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor2D<N, Q, H>, Axes3<0, 2, 3>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor2D<O, P, H>, Axes3<0, 1, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor2D<O, Q, H>, Axes3<0, 1, 3>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor2D<P, Q, H>, Axes3<0, 1, 2>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor2D<M, N, H>, Axes4<2, 3, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<M, O, H>, Axes4<1, 3, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<M, P, H>, Axes4<1, 2, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<M, Q, H>, Axes4<1, 2, 3, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<M, R, H>, Axes4<1, 2, 3, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<N, O, H>, Axes4<0, 3, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<N, P, H>, Axes4<0, 2, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<N, Q, H>, Axes4<0, 2, 3, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<N, R, H>, Axes4<0, 2, 3, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<O, P, H>, Axes4<0, 1, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<O, Q, H>, Axes4<0, 1, 3, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<O, R, H>, Axes4<0, 1, 3, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<P, Q, H>, Axes4<0, 1, 2, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<P, R, H>, Axes4<0, 1, 2, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor2D<Q, R, H>, Axes4<0, 1, 2, 3>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
 
-// 3d -> 4d
+// 3d -> Nd
 impl_broadcast_reduce!(Tensor3D<M, N, O, H>, Axis<3>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 impl_broadcast_reduce!(Tensor3D<M, N, P, H>, Axis<2>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 impl_broadcast_reduce!(Tensor3D<M, O, P, H>, Axis<1>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
 impl_broadcast_reduce!(Tensor3D<N, O, P, H>, Axis<0>, Tensor4D<M, N, O, P, H>, {M, N, O, P});
+impl_broadcast_reduce!(Tensor3D<M, N, O, H>, Axes2<3, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor3D<M, N, P, H>, Axes2<2, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor3D<M, N, Q, H>, Axes2<2, 3>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor3D<M, O, P, H>, Axes2<1, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor3D<M, O, Q, H>, Axes2<1, 3>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor3D<M, P, Q, H>, Axes2<1, 2>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor3D<N, O, P, H>, Axes2<0, 4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor3D<N, O, Q, H>, Axes2<0, 3>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor3D<N, P, Q, H>, Axes2<0, 2>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor3D<O, P, Q, H>, Axes2<0, 1>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor3D<M, N, O, H>, Axes3<3, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<M, N, P, H>, Axes3<2, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<M, N, Q, H>, Axes3<2, 3, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<M, N, R, H>, Axes3<2, 3, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<M, O, P, H>, Axes3<1, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<M, O, Q, H>, Axes3<1, 3, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<M, O, R, H>, Axes3<1, 3, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<M, P, Q, H>, Axes3<1, 2, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<M, P, R, H>, Axes3<1, 2, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<M, Q, R, H>, Axes3<1, 2, 3>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<N, O, P, H>, Axes3<0, 4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<N, O, Q, H>, Axes3<0, 3, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<N, O, R, H>, Axes3<0, 3, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<N, P, Q, H>, Axes3<0, 2, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<N, P, R, H>, Axes3<0, 2, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<N, Q, R, H>, Axes3<0, 2, 3>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<O, P, Q, H>, Axes3<0, 1, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<O, P, R, H>, Axes3<0, 1, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<O, Q, R, H>, Axes3<0, 1, 3>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor3D<P, Q, R, H>, Axes3<0, 1, 2>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+
+// 4d -> Nd
+impl_broadcast_reduce!(Tensor4D<M, N, O, P, H>, Axis<4>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor4D<M, N, O, Q, H>, Axis<3>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor4D<M, N, P, Q, H>, Axis<2>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor4D<M, O, P, Q, H>, Axis<1>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor4D<N, O, P, Q, H>, Axis<0>, Tensor5D<M, N, O, P, Q, H>, {M, N, O, P, Q});
+impl_broadcast_reduce!(Tensor4D<M, N, O, P, H>, Axes2<4, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<M, N, O, Q, H>, Axes2<3, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<M, N, O, R, H>, Axes2<3, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<M, N, P, Q, H>, Axes2<2, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<M, N, P, R, H>, Axes2<2, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<M, N, Q, R, H>, Axes2<2, 3>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<M, O, P, Q, H>, Axes2<1, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<M, O, P, R, H>, Axes2<1, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<M, O, Q, R, H>, Axes2<1, 3>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<M, P, Q, R, H>, Axes2<1, 2>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<N, O, P, Q, H>, Axes2<0, 5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<N, O, P, R, H>, Axes2<0, 4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<N, O, Q, R, H>, Axes2<0, 3>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<N, P, Q, R, H>, Axes2<0, 2>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor4D<O, P, Q, R, H>, Axes2<0, 1>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+
+// 5d -> 6d
+impl_broadcast_reduce!(Tensor5D<M, N, O, P, Q, H>, Axis<5>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor5D<M, N, O, P, R, H>, Axis<4>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor5D<M, N, O, Q, R, H>, Axis<3>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor5D<M, N, P, Q, R, H>, Axis<2>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor5D<M, O, P, Q, R, H>, Axis<1>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
+impl_broadcast_reduce!(Tensor5D<N, O, P, Q, R, H>, Axis<0>, Tensor6D<M, N, O, P, Q, R, H>, {M, N, O, P, Q, R});
 
 #[cfg(test)]
 mod tests {
@@ -145,6 +249,8 @@ mod tests {
         let _: Tensor4D<3, 5, 7, 9> = Tensor2D::<5, 7>::zeros().broadcast();
         let _: Tensor4D<3, 5, 7, 9> = Tensor2D::<5, 9>::zeros().broadcast();
         let _: Tensor4D<3, 5, 7, 9> = Tensor2D::<7, 9>::zeros().broadcast();
+
+        // let _: Tensor5D<3, 5, 7, 9, 8> = Tensor2D::<3, 5>::zeros().broadcast();
     }
 
     #[test]

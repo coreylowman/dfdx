@@ -41,6 +41,8 @@ binary_ops_impl!(Tensor1D, [N]);
 binary_ops_impl!(Tensor2D, [M, N]);
 binary_ops_impl!(Tensor3D, [M, N, O]);
 binary_ops_impl!(Tensor4D, [M, N, O, P]);
+binary_ops_impl!(Tensor5D, [M, N, O, P, Q]);
+binary_ops_impl!(Tensor6D, [M, N, O, P, Q, R]);
 
 #[cfg(test)]
 mod tests {

@@ -48,6 +48,8 @@ tensor_impl!(Tensor1D, [M]);
 tensor_impl!(Tensor2D, [M, N]);
 tensor_impl!(Tensor3D, [M, N, O]);
 tensor_impl!(Tensor4D, [M, N, O, P]);
+tensor_impl!(Tensor5D, [M, N, O, P, Q]);
+tensor_impl!(Tensor6D, [M, N, O, P, Q, R]);
 
 #[cfg(test)]
 mod tests {

@@ -52,6 +52,8 @@ sum_axis_impl!(Tensor1D, [M]);
 sum_axis_impl!(Tensor2D, [M, N]);
 sum_axis_impl!(Tensor3D, [M, N, O]);
 sum_axis_impl!(Tensor4D, [M, N, O, P]);
+sum_axis_impl!(Tensor5D, [M, N, O, P, Q]);
+sum_axis_impl!(Tensor6D, [M, N, O, P, Q, R]);
 
 #[cfg(test)]
 mod tests {

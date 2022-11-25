@@ -31,6 +31,8 @@ macro_rules! impl_all_reshapes {
         tensor_impl!($src_ty, [$($SrcVs),*], Tensor2D, [M, N], $assert_lhs, (M * N));
         tensor_impl!($src_ty, [$($SrcVs),*], Tensor3D, [M, N, O], $assert_lhs, (M * N * O));
         tensor_impl!($src_ty, [$($SrcVs),*], Tensor4D, [M, N, O, P], $assert_lhs, (M * N * O * P));
+        tensor_impl!($src_ty, [$($SrcVs),*], Tensor5D, [M, N, O, P, Q], $assert_lhs, (M * N * O * P * Q));
+        tensor_impl!($src_ty, [$($SrcVs),*], Tensor6D, [M, N, O, P, Q, R], $assert_lhs, (M * N * O * P * Q * R));
     };
 }
 
@@ -39,6 +41,8 @@ impl_all_reshapes!(Tensor1D, [A], (A));
 impl_all_reshapes!(Tensor2D, [A, B], (A * B));
 impl_all_reshapes!(Tensor3D, [A, B, C], (A * B * C));
 impl_all_reshapes!(Tensor4D, [A, B, C, D], (A * B * C * D));
+impl_all_reshapes!(Tensor5D, [A, B, C, D, E], (A * B * C * D * E ));
+impl_all_reshapes!(Tensor6D, [A, B, C, D, E, F], (A * B * C * D * E * F));
 
 /// Reshapes `T` into `R`'s shape. This is unsafe because there are no compile
 /// time guaruntees that `T` and `R` have the same number of elements.
