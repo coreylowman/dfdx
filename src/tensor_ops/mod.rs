@@ -144,6 +144,7 @@ mod bce;
 mod cos;
 mod exp;
 mod huber_error;
+mod is_tensor;
 mod ln;
 pub mod log_softmax;
 mod logsumexp;

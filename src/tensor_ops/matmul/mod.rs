@@ -9,6 +9,45 @@ use crate::{
 
 use super::ops::{try_binary_op, BinaryKernel};
 
+mod internals {
+    use super::*;
+    use crate::arrays::{Dim, Rank1, Rank2, Rank3, Rank4, C};
+
+    pub trait MatMulAlgebra<Rhs: Shape>: Shape {
+        type Out: Shape;
+    }
+
+    impl<Outer: Dim, Inner: Dim> MatMulAlgebra<(Inner,)> for (Outer,) {
+        type Out = (Outer, Inner);
+    }
+
+    impl<const K: usize, const N: usize> MatMulAlgebra<Rank2<K, N>> for Rank1<K> {
+        type Out = Rank1<N>;
+    }
+
+    impl<M: Dim, const K: usize, const N: usize> MatMulAlgebra<Rank2<K, N>> for (M, C<K>) {
+        type Out = (M, C<N>);
+    }
+
+    impl<Batch: Dim, Seq: Dim, const K: usize, const N: usize> MatMulAlgebra<Rank2<K, N>>
+        for (Batch, Seq, C<K>)
+    {
+        type Out = (Batch, Seq, C<N>);
+    }
+
+    impl<const B: usize, const M: usize, const K: usize, const N: usize>
+        MatMulAlgebra<Rank3<B, K, N>> for Rank3<B, M, K>
+    {
+        type Out = Rank3<B, M, N>;
+    }
+
+    impl<const B: usize, const S: usize, const M: usize, const K: usize, const N: usize>
+        MatMulAlgebra<Rank4<B, S, K, N>> for Rank4<B, S, M, K>
+    {
+        type Out = Rank4<B, S, M, N>;
+    }
+}
+
 /// Matrix * Matrix,, Vector * Matrix, and Vector * Vector multiplication.
 ///
 /// This also supports batching and broadcasting depending on device implementations.
@@ -50,34 +89,26 @@ use super::ops::{try_binary_op, BinaryKernel};
 /// ```rust
 /// todo!();
 /// ```
-pub trait TryMatMul<Rhs, Out>: HasErr {
-    fn matmul(self, rhs: Rhs) -> Out {
+pub trait TryMatMul<Rhs>: HasErr {
+    type Output;
+    fn matmul(self, rhs: Rhs) -> Self::Output {
         self.try_matmul(rhs).unwrap()
     }
-    fn try_matmul(self, rhs: Rhs) -> Result<Out, Self::Err>;
+    fn try_matmul(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
 }
 
 #[derive(Default, Copy, Clone)]
 pub(super) struct MatMulKernelOp;
 
-impl<
-        Lhs: Shape,
-        Rhs: Shape,
-        Out: Shape,
-        E: Dtype,
-        D: Device,
-        LhsTape: Tape<D>,
-        RhsTape: Tape<D>,
-    > TryMatMul<Tensor<Rhs, E, D, RhsTape>, Tensor<Out, E, D, LhsTape>>
-    for Tensor<Lhs, E, D, LhsTape>
+impl<Lhs: Shape, Rhs: Shape, E: Dtype, D: Device, LhsTape: Tape<D>, RhsTape: Tape<D>>
+    TryMatMul<Tensor<Rhs, E, D, RhsTape>> for Tensor<Lhs, E, D, LhsTape>
 where
-    D: BinaryKernel<MatMulKernelOp, Lhs, Rhs, Out, E>,
+    Lhs: internals::MatMulAlgebra<Rhs>,
+    D: BinaryKernel<MatMulKernelOp, Lhs, Rhs, Lhs::Out, E>,
     LhsTape: Merge<RhsTape>,
 {
-    fn try_matmul(
-        self,
-        rhs: Tensor<Rhs, E, D, RhsTape>,
-    ) -> Result<Tensor<Out, E, D, LhsTape>, Self::Err> {
+    type Output = Tensor<Lhs::Out, E, D, LhsTape>;
+    fn try_matmul(self, rhs: Tensor<Rhs, E, D, RhsTape>) -> Result<Self::Output, Self::Err> {
         try_binary_op(Default::default(), self, rhs)
     }
 }
