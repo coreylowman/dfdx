@@ -1,5 +1,5 @@
 use crate::{
-    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, HasShape, Shape},
+    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, HasShape, ReduceShape, Shape},
     devices::device::HasErr,
     gradients::Tape,
     tensor::Tensor,
@@ -32,6 +32,29 @@ pub trait LogSumExpTo<T, Axes>: HasErr {
         self.try_logsumexp().unwrap()
     }
     fn try_logsumexp(self) -> Result<T, Self::Err>;
+}
+
+pub(crate) fn try_logsumexp<
+    Ax: AxesAsArray,
+    S: Shape + ReduceShape<Ax>,
+    E: Dtype,
+    D: Device<E>,
+    T: Tape<D>,
+>(
+    t: Tensor<S, E, D, T>,
+) -> Result<Tensor<S::Reduced, E, D, T>, D::Err> {
+    // normalize t
+    let max: Tensor<S::Reduced, E, D> = t.with_none_tape().try_max()?;
+    let max_b: Tensor<S, E, D> = max.clone().try_broadcast_to(t.shape())?;
+    let t: Tensor<S, E, D, T> = t.try_sub(max_b)?;
+
+    // do logsumexp
+    let t: Tensor<S, E, D, T> = t.try_exp()?;
+    let t: Tensor<S::Reduced, E, D, T> = t.try_sum()?;
+    let t: Tensor<S::Reduced, E, D, T> = t.try_ln()?;
+
+    // un-normalize result
+    t.try_add(max)
 }
 
 impl<

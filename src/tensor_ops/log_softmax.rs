@@ -1,11 +1,10 @@
 use crate::{
-    arrays::{Dtype, HasShape, ReduceShape, Shape},
-    devices::{device::HasErr, DeviceStorage},
+    arrays::{AxesAsArray, Dtype, HasShape, ReduceShape, Shape},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::{BroadcastTo, LogSumExpTo, TrySub};
+use super::{logsumexp_to::try_logsumexp, BroadcastTo, Device, TrySub};
 
 /// `log(softmax(t))` in numerically stable way across `Axes`. Does `t - logsumexp(t)` under the hood.
 ///
@@ -26,39 +25,30 @@ use super::{BroadcastTo, LogSumExpTo, TrySub};
 /// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
 /// let _ = t.log_softmax::<Axes2<0, 2>>();
 /// ```
-pub trait LogSoftmaxAxes<Axes>: HasErr {
-    fn try_log_softmax_axes(self) -> Result<Self, Self::Err>;
+pub fn log_softmax<Ax: AxesAsArray, S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+) -> Tensor<S, E, D, T>
+where
+    S: ReduceShape<Ax>,
+{
+    t.log_softmax::<Ax>()
 }
 
-impl<Src: Shape, Axes, E: Dtype, D: DeviceStorage, T: Tape<D>> LogSoftmaxAxes<Axes>
-    for Tensor<Src, E, D, T>
-where
-    Src: ReduceShape<Axes>,
-    Self: LogSumExpTo<Tensor<Src::Reduced, E, D, T>, Axes> + TrySub<Self, Err = D::Err>,
-    Tensor<Src::Reduced, E, D, T>: BroadcastTo<Self, Axes, Err = D::Err>,
-{
-    fn try_log_softmax_axes(self) -> Result<Self, Self::Err> {
-        let logsumexp: Tensor<Src::Reduced, E, D, T> = self.with_empty_tape().try_logsumexp()?;
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn log_softmax<Ax: AxesAsArray>(self) -> Self
+    where
+        S: ReduceShape<Ax>,
+    {
+        self.try_log_softmax::<Ax>().unwrap()
+    }
+
+    pub fn try_log_softmax<Ax: AxesAsArray>(self) -> Result<Self, D::Err>
+    where
+        S: ReduceShape<Ax>,
+    {
+        let logsumexp: Tensor<S::Reduced, E, D, T> = try_logsumexp(self.with_empty_tape())?;
         let logsumexp: Self = logsumexp.try_broadcast_to(self.shape())?;
         self.try_sub(logsumexp)
-    }
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
-    /// See [LogSoftmaxAxes]
-    pub fn log_softmax<Axes>(self) -> Self
-    where
-        Self: LogSoftmaxAxes<Axes>,
-    {
-        self.try_log_softmax().unwrap()
-    }
-
-    /// See [LogSoftmaxAxes]
-    pub fn try_log_softmax<Axes>(self) -> Result<Self, <Self as HasErr>::Err>
-    where
-        Self: LogSoftmaxAxes<Axes>,
-    {
-        self.try_log_softmax_axes()
     }
 }
 

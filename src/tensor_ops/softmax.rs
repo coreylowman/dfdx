@@ -1,11 +1,10 @@
 use crate::{
-    arrays::{Dtype, Shape},
-    devices::{device::HasErr, DeviceStorage},
+    arrays::{AxesAsArray, Dtype, ReduceShape, Shape},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::{log_softmax::LogSoftmaxAxes, TryExp};
+use super::Device;
 
 /// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function) across
 /// `Axes`.
@@ -29,35 +28,28 @@ use super::{log_softmax::LogSoftmaxAxes, TryExp};
 /// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
 /// let _ = t.softmax::<Axes2<1, 2>>();
 /// ```
-pub trait SoftmaxAxes<Axes>: HasErr {
-    fn try_softmax_axes(self) -> Result<Self, Self::Err>;
-}
-
-impl<Src: Shape, Axes, E: Dtype, D: DeviceStorage, T: Tape<D>> SoftmaxAxes<Axes>
-    for Tensor<Src, E, D, T>
+pub fn softmax<Ax: AxesAsArray, S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+) -> Tensor<S, E, D, T>
 where
-    Self: LogSoftmaxAxes<Axes, Err = D::Err> + TryExp<Err = D::Err>,
+    S: ReduceShape<Ax>,
 {
-    fn try_softmax_axes(self) -> Result<Self, Self::Err> {
-        self.try_log_softmax_axes()?.try_exp()
-    }
+    t.softmax::<Ax>()
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
-    /// See [SoftmaxAxes]
-    pub fn softmax<Axes>(self) -> Self
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn softmax<Ax: AxesAsArray>(self) -> Self
     where
-        Self: SoftmaxAxes<Axes>,
+        S: ReduceShape<Ax>,
     {
-        self.try_softmax().unwrap()
+        self.try_softmax::<Ax>().unwrap()
     }
 
-    /// See [SoftmaxAxes]
-    pub fn try_softmax<Axes>(self) -> Result<Self, <Self as HasErr>::Err>
+    pub fn try_softmax<Ax: AxesAsArray>(self) -> Result<Self, D::Err>
     where
-        Self: SoftmaxAxes<Axes>,
+        S: ReduceShape<Ax>,
     {
-        self.try_softmax_axes()
+        self.try_log_softmax::<Ax>()?.try_exp()
     }
 }
 
@@ -70,79 +62,6 @@ mod tests {
         tensor_ops::*,
         tests::{assert_close, build_test_device},
     };
-
-    #[test]
-    fn test_logsumexp_1d() {
-        let dev = build_test_device!();
-        let a = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r: Tensor0D<_, _> = a.trace().logsumexp();
-        assert_eq!(r.as_array(), 2.4519143);
-        let g = r.backward();
-        assert_eq!(
-            g.get(&a).as_array(),
-            [0.011656231, 0.03168492, 0.08612854, 0.23412165, 0.6364086]
-        );
-    }
-
-    #[test]
-    fn test_logsumexp_2d() {
-        let dev = build_test_device!();
-        let a: Tensor2D<2, 3, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r: Tensor1D<2, _, _> = a.trace().logsumexp();
-        assert_eq!(r.as_array(), [0.40760595, 7.0509458]);
-        let g = r.mean().backward();
-        assert_eq!(
-            g.get(&a).as_array(),
-            [
-                [0.045015287, 0.12236424, 0.33262047],
-                [0.0011778167, 0.023657078, 0.47516513]
-            ]
-        );
-    }
-
-    #[test]
-    fn test_log_softmax_1d() {
-        let dev = build_test_device!();
-        let a = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = a.trace().log_softmax();
-        assert_eq!(
-            r.as_array(),
-            [-4.4519143, -3.4519143, -2.4519143, -1.4519143, -0.4519143]
-        );
-        let g = r.mean().backward();
-        assert_eq!(
-            g.get(&a).as_array(),
-            [
-                0.18834378,
-                0.16831508,
-                0.11387146,
-                -0.034121647,
-                -0.43640864
-            ]
-        );
-    }
-
-    #[test]
-    fn test_log_softmax_2d() {
-        let dev = build_test_device!();
-        let a = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r = a.trace().log_softmax::<Axis<1>>();
-        assert_eq!(
-            r.as_array(),
-            [
-                [-2.407606, -1.4076059, -0.40760595],
-                [-6.0509458, -3.0509458, -0.05094576]
-            ]
-        );
-        let g = r.mean().backward();
-        assert_eq!(
-            g.get(&a).as_array(),
-            [
-                [0.12165138, 0.044302434, -0.1659538],
-                [0.16548885, 0.14300959, -0.30849844]
-            ]
-        );
-    }
 
     #[test]
     fn test_softmax_1d() {
