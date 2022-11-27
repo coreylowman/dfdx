@@ -59,7 +59,6 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::devices::AsArray;
     use crate::tensor::*;
     use crate::tensor_ops::*;

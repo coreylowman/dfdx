@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::arrays::{Const, Dim, Dtype, Shape};
 use crate::devices::cpu::StridedArray;
 

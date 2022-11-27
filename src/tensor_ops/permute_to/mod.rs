@@ -1,10 +1,9 @@
 mod cpu_kernel;
+
 use crate::arrays::{AxesAsArray, Dtype, HasShape, PermuteShapeTo, Shape};
 use crate::devices::{DeviceStorage, HasErr};
 use crate::gradients::Tape;
 use crate::tensor::{make_tensor, Tensor};
-
-use super::ops::{try_unary_op, UnaryKernel};
 
 pub trait PermuteKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape<Concrete = Src::Concrete>, Axes: AxesAsArray>(
