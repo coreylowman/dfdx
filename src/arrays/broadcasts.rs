@@ -5,7 +5,7 @@ pub trait BroadcastShapeTo<S, Axes>: Sized {}
 pub trait ReduceShapeTo<S: BroadcastShapeTo<Self, Axes>, Axes>: Shape + Sized {}
 impl<Src: Shape, Dst: Shape + BroadcastShapeTo<Src, Axes>, Axes> ReduceShapeTo<Dst, Axes> for Src {}
 
-pub trait ReduceShape<Axes>: Shape {
+pub trait ReduceShape<Axes>: Shape + HasAxes<Axes> {
     type Reduced: Shape + Default + BroadcastStridesTo<Self, Axes>;
 }
 

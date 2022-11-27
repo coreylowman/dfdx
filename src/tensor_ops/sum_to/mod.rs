@@ -1,7 +1,7 @@
 mod cpu_kernel;
 
 use crate::{
-    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, Shape},
+    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, ReduceShape, Shape},
     devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::{make_tensor, Tensor},
@@ -51,6 +51,11 @@ pub trait SumKernel<E: Dtype>: DeviceStorage {
 /// # let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
 /// let _: Tensor1D<4> = t.sum();
 /// ```
+/// 
+/// Specifying axes instead of output types:
+/// ```rust
+/// todo!()
+/// ```
 pub trait SumTo<T, Axes>: HasErr {
     fn sum(self) -> T {
         self.try_sum().unwrap()
@@ -75,6 +80,22 @@ where
             Ok(())
         });
         Ok(out.put_tape(tape))
+    }
+}
+
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn sum_along<Ax: AxesAsArray>(self) -> Tensor<S::Reduced, E, D, T>
+    where
+        S: ReduceShape<Ax>,
+    {
+        self.try_sum_along().unwrap()
+    }
+
+    pub fn try_sum_along<Ax: AxesAsArray>(self) -> Result<Tensor<S::Reduced, E, D, T>, D::Err>
+    where
+        S: ReduceShape<Ax>,
+    {
+        self.try_sum()
     }
 }
 

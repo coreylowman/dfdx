@@ -27,6 +27,11 @@ use super::*;
 /// # let t: Tensor3D<2, 4, 6> = TensorCreator::zeros();
 /// let _: Tensor1D<4> = t.logsumexp();
 /// ```
+///
+/// Specifying axes to reduce:
+/// ```rust
+/// todo!();
+/// ```
 pub trait LogSumExpTo<T, Axes>: HasErr {
     fn logsumexp(self) -> T {
         self.try_logsumexp().unwrap()
@@ -34,32 +39,9 @@ pub trait LogSumExpTo<T, Axes>: HasErr {
     fn try_logsumexp(self) -> Result<T, Self::Err>;
 }
 
-pub(crate) fn try_logsumexp<
-    Ax: AxesAsArray,
-    S: Shape + ReduceShape<Ax>,
-    E: Dtype,
-    D: Device<E>,
-    T: Tape<D>,
->(
-    t: Tensor<S, E, D, T>,
-) -> Result<Tensor<S::Reduced, E, D, T>, D::Err> {
-    // normalize t
-    let max: Tensor<S::Reduced, E, D> = t.with_none_tape().try_max()?;
-    let max_b: Tensor<S, E, D> = max.clone().try_broadcast_to(t.shape())?;
-    let t: Tensor<S, E, D, T> = t.try_sub(max_b)?;
-
-    // do logsumexp
-    let t: Tensor<S, E, D, T> = t.try_exp()?;
-    let t: Tensor<S::Reduced, E, D, T> = t.try_sum()?;
-    let t: Tensor<S::Reduced, E, D, T> = t.try_ln()?;
-
-    // un-normalize result
-    t.try_add(max)
-}
-
 impl<
         Src: Shape,
-        Ax: Default + AxesAsArray,
+        Ax: AxesAsArray,
         Dst: Shape + Default + BroadcastShapeTo<Src, Ax>,
         E: Dtype,
         D: Device<E>,
@@ -79,6 +61,22 @@ impl<
 
         // un-normalize result
         t.try_add(max)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn logsumexp_along<Ax: AxesAsArray>(self) -> Tensor<S::Reduced, E, D, T>
+    where
+        S: ReduceShape<Ax>,
+    {
+        self.try_logsumexp_along::<Ax>().unwrap()
+    }
+
+    pub fn try_logsumexp_along<Ax: AxesAsArray>(self) -> Result<Tensor<S::Reduced, E, D, T>, D::Err>
+    where
+        S: ReduceShape<Ax>,
+    {
+        self.try_logsumexp()
     }
 }
 

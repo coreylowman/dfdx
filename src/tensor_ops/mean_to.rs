@@ -1,5 +1,5 @@
 use crate::{
-    arrays::{AxesAsArray, BroadcastShapeTo, HasAxes, HasShape, Shape},
+    arrays::{AxesAsArray, BroadcastShapeTo, HasAxes, HasShape, ReduceShape, Shape},
     devices::device::HasErr,
     gradients::Tape,
     tensor::Tensor,
@@ -26,15 +26,20 @@ use super::*;
 /// let r: Tensor1D<2> = t.mean();
 /// assert_eq!(r.as_array(), [2.0, 5.0]);
 /// ```
-pub trait TryMeanTo<T, Axes>: HasErr {
+///
+/// Specifying axes instead of output type:
+/// ```rust
+/// todo!()
+/// ```
+pub trait MeanTo<T, Axes>: HasErr {
     fn mean(self) -> T {
         self.try_mean().unwrap()
     }
     fn try_mean(self) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, Dst: Shape + Default, Ax: Default + AxesAsArray, D: Device<f32>, T: Tape<D>>
-    TryMeanTo<Tensor<Dst, f32, D, T>, Ax> for Tensor<Src, f32, D, T>
+impl<Src: Shape, Dst: Shape + Default, Ax: AxesAsArray, D: Device<f32>, T: Tape<D>>
+    MeanTo<Tensor<Dst, f32, D, T>, Ax> for Tensor<Src, f32, D, T>
 where
     Src: HasAxes<Ax>,
     Dst: BroadcastShapeTo<Src, Ax>,
@@ -42,6 +47,22 @@ where
     fn try_mean(self) -> Result<Tensor<Dst, f32, D, T>, Self::Err> {
         let num_elements_reduced = <Src as HasAxes<Ax>>::size(self.shape()) as f32;
         self.try_sum()?.try_div(num_elements_reduced)
+    }
+}
+
+impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
+    pub fn mean_along<Ax: AxesAsArray>(self) -> Tensor<S::Reduced, f32, D, T>
+    where
+        S: ReduceShape<Ax>,
+    {
+        self.try_mean_along().unwrap()
+    }
+
+    pub fn try_mean_along<Ax: AxesAsArray>(self) -> Result<Tensor<S::Reduced, f32, D, T>, D::Err>
+    where
+        S: ReduceShape<Ax>,
+    {
+        self.try_mean()
     }
 }
 
@@ -57,16 +78,16 @@ mod tests {
 
     #[test]
     fn test_valids_mean_axis() {
-        let _ = <Tensor1D<5, Cpu> as TryMeanTo<Tensor0D<Cpu>, _>>::try_mean;
-        let _ = <Tensor2D<5, 3, Cpu> as TryMeanTo<Tensor1D<3, Cpu>, _>>::try_mean;
-        let _ = <Tensor2D<5, 3, Cpu> as TryMeanTo<Tensor1D<5, Cpu>, _>>::try_mean;
-        let _ = <Tensor3D<7, 5, 3, Cpu> as TryMeanTo<Tensor2D<5, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor3D<7, 5, 3, Cpu> as TryMeanTo<Tensor2D<7, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor3D<7, 5, 3, Cpu> as TryMeanTo<Tensor2D<7, 5, Cpu>, _>>::try_mean;
-        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as TryMeanTo<Tensor3D<7, 5, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as TryMeanTo<Tensor3D<9, 5, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as TryMeanTo<Tensor3D<9, 7, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as TryMeanTo<Tensor3D<9, 7, 5, Cpu>, _>>::try_mean;
+        let _ = <Tensor1D<5, Cpu> as MeanTo<Tensor0D<Cpu>, _>>::try_mean;
+        let _ = <Tensor2D<5, 3, Cpu> as MeanTo<Tensor1D<3, Cpu>, _>>::try_mean;
+        let _ = <Tensor2D<5, 3, Cpu> as MeanTo<Tensor1D<5, Cpu>, _>>::try_mean;
+        let _ = <Tensor3D<7, 5, 3, Cpu> as MeanTo<Tensor2D<5, 3, Cpu>, _>>::try_mean;
+        let _ = <Tensor3D<7, 5, 3, Cpu> as MeanTo<Tensor2D<7, 3, Cpu>, _>>::try_mean;
+        let _ = <Tensor3D<7, 5, 3, Cpu> as MeanTo<Tensor2D<7, 5, Cpu>, _>>::try_mean;
+        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as MeanTo<Tensor3D<7, 5, 3, Cpu>, _>>::try_mean;
+        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as MeanTo<Tensor3D<9, 5, 3, Cpu>, _>>::try_mean;
+        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as MeanTo<Tensor3D<9, 7, 3, Cpu>, _>>::try_mean;
+        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as MeanTo<Tensor3D<9, 7, 5, Cpu>, _>>::try_mean;
     }
 
     #[test]

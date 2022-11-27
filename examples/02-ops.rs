@@ -2,7 +2,7 @@
 
 use dfdx::devices::{AsArray, Cpu, Randn};
 use dfdx::tensor::{Tensor0D, Tensor2D};
-use dfdx::tensor_ops::{TryMeanTo, TryReLU};
+use dfdx::tensor_ops::{MeanTo, TryReLU};
 
 fn main() {
     let dev: Cpu = Default::default();

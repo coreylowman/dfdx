@@ -1,6 +1,6 @@
 use crate::{
-    arrays::{Dtype, HasShape, Shape},
-    devices::{DeviceStorage, HasErr},
+    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, HasShape, ReduceShape, Shape},
+    devices::HasErr,
     gradients::Tape,
     tensor::Tensor,
 };
@@ -21,28 +21,46 @@ use super::*;
 /// let r: Tensor1D<2> = t.var();
 /// assert_eq!(r.data(), &[0.6666667, 6.0]);
 /// ```
-pub trait TryVarTo<T, Axes>: HasErr {
+///
+/// Reducing with axes:
+/// ```rust
+/// todo!();
+/// ```
+pub trait VarTo<T, Axes>: HasErr {
     fn var(self) -> T {
         self.try_var().unwrap()
     }
     fn try_var(self) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: DeviceStorage, T: Tape<D>>
-    TryVarTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
+impl<Src: Shape, Dst: Shape, Ax: AxesAsArray, E: Dtype, D: Device<E>, T: Tape<D>>
+    VarTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
-    Self: TryMeanTo<Tensor<Dst, E, D, T>, Axes, Err = D::Err>
-        + TrySub<Self>
-        + TrySquare
-        + SumTo<Tensor<Dst, E, D, T>, Axes>,
-    Tensor<Dst, E, D, T>: BroadcastTo<Self, Axes, Err = D::Err> + TryDiv<f32, Err = D::Err>,
+    Self: MeanTo<Tensor<Dst, E, D, T>, Ax, Err = D::Err>,
+    Dst: BroadcastShapeTo<Src, Ax>,
 {
-    fn try_var(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
+    fn try_var(self) -> Result<Tensor<Dst, E, D, T>, D::Err> {
         let mean = self
             .with_empty_tape()
             .try_mean()?
             .try_broadcast_to(self.shape())?;
         mean.try_sub(self)?.try_square()?.try_mean()
+    }
+}
+
+impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
+    pub fn var_along<Ax: AxesAsArray>(self) -> Tensor<S::Reduced, f32, D, T>
+    where
+        S: ReduceShape<Ax>,
+    {
+        self.try_var_along().unwrap()
+    }
+
+    pub fn try_var_along<Ax: AxesAsArray>(self) -> Result<Tensor<S::Reduced, f32, D, T>, D::Err>
+    where
+        S: ReduceShape<Ax>,
+    {
+        self.try_var()
     }
 }
 

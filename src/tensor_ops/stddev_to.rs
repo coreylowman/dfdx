@@ -1,6 +1,6 @@
 use crate::{
-    arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
+    arrays::{AxesAsArray, ReduceShape, Shape},
+    devices::HasErr,
     gradients::Tape,
     tensor::Tensor,
 };
@@ -28,14 +28,32 @@ pub trait StddevTo<T, Axes>: HasErr {
     fn try_stddev(self, epsilon: f32) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: DeviceStorage, T: Tape<D>>
-    StddevTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
+impl<Src: Shape, Dst: Shape, Ax, D: Device<f32>, T: Tape<D>> StddevTo<Tensor<Dst, f32, D, T>, Ax>
+    for Tensor<Src, f32, D, T>
 where
-    Self: TryVarTo<Tensor<Dst, E, D, T>, Axes, Err = D::Err>,
-    Tensor<Dst, E, D, T>: TryAdd<f32, Err = D::Err> + TrySqrt,
+    Self: VarTo<Tensor<Dst, f32, D, T>, Ax, Err = D::Err>,
 {
-    fn try_stddev(self, epsilon: f32) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
+    fn try_stddev(self, epsilon: f32) -> Result<Tensor<Dst, f32, D, T>, Self::Err> {
         self.try_var()?.try_add(epsilon)?.try_sqrt()
+    }
+}
+
+impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
+    pub fn stddev_along<Ax: AxesAsArray>(self, epsilon: f32) -> Tensor<S::Reduced, f32, D, T>
+    where
+        S: ReduceShape<Ax>,
+    {
+        self.try_stddev_along(epsilon).unwrap()
+    }
+
+    pub fn try_stddev_along<Ax: AxesAsArray>(
+        self,
+        epsilon: f32,
+    ) -> Result<Tensor<S::Reduced, f32, D, T>, D::Err>
+    where
+        S: ReduceShape<Ax>,
+    {
+        self.try_stddev(epsilon)
     }
 }
 

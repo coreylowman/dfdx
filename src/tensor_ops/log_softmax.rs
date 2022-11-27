@@ -4,7 +4,7 @@ use crate::{
     tensor::Tensor,
 };
 
-use super::{logsumexp_to::try_logsumexp, BroadcastTo, Device, TrySub};
+use super::{BroadcastTo, Device, TrySub};
 
 /// `log(softmax(t))` in numerically stable way across `Axes`. Does `t - logsumexp(t)` under the hood.
 ///
@@ -46,7 +46,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
     where
         S: ReduceShape<Ax>,
     {
-        let logsumexp: Tensor<S::Reduced, E, D, T> = try_logsumexp(self.with_empty_tape())?;
+        let logsumexp = self.with_empty_tape().try_logsumexp_along::<Ax>()?;
         let logsumexp: Self = logsumexp.try_broadcast_to(self.shape())?;
         self.try_sub(logsumexp)
     }
