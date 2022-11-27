@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -41,8 +41,14 @@ pub trait TryMaxTo<T, Axes>: HasErr {
 #[derive(Debug, Default, Clone, Copy)]
 pub(super) struct MaxReduceKernelOp<Axes>(std::marker::PhantomData<Axes>);
 
-impl<Src: Shape, Dst: Shape, Axes: 'static + Copy + Default, E: Dtype, D: Device, T: Tape<D>>
-    TryMaxTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
+impl<
+        Src: Shape,
+        Dst: Shape,
+        Axes: 'static + Copy + Default,
+        E: Dtype,
+        D: DeviceStorage,
+        T: Tape<D>,
+    > TryMaxTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
 where
     D: FullUnaryKernel<MaxReduceKernelOp<Axes>, Src, Dst, E>,
 {

@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
@@ -31,7 +31,7 @@ pub trait TryMul<Rhs = Self>: HasErr {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BinaryMulKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, LhsTape: Tape<D>, RhsTape: Tape<D>>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, RhsTape: Tape<D>>
     TryMul<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
     D: BinaryKernel<BinaryMulKernelOp, S, S, S, E>,
@@ -45,7 +45,7 @@ where
 #[derive(Debug, Clone, Copy)]
 pub(super) struct ScalarMulKernelOp<E>(E);
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryMul<E> for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryMul<E> for Tensor<S, E, D, T>
 where
     D: UnaryKernel<ScalarMulKernelOp<E>, S, S, E>,
 {
@@ -54,7 +54,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device, LhsTape: Tape<D>, Rhs> std::ops::Mul<Rhs>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, Rhs> std::ops::Mul<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryMul<Rhs>,

@@ -3,6 +3,6 @@ pub(crate) mod device;
 
 pub use cpu::{Cpu, CpuError};
 pub use device::{
-    AsArray, AsVec, Device, HasDevice, HasDeviceStorage, HasErr, Ones, OnesLike, Rand, RandLike,
-    Randn, RandnLike, TryConvert, Zeros, ZerosLike,
+    AsArray, AsVec, DeviceStorage, HasDevice, HasDeviceStorage, HasErr, Ones, OnesLike, Rand,
+    RandLike, Randn, RandnLike, TryConvert, Zeros, ZerosLike,
 };

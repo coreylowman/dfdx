@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, HasDtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
@@ -21,7 +21,7 @@ pub(super) struct HuberErrorKernelOp<E: Dtype> {
     pub delta: E,
 }
 
-impl<S: Shape, E: Dtype, D: Device, LhsTape: Tape<D>, RhsTape: Tape<D>>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, RhsTape: Tape<D>>
     TryHuberError<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
     D: BinaryKernel<HuberErrorKernelOp<E>, S, S, S, E>,

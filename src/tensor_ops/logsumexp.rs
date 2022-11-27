@@ -1,6 +1,6 @@
 use crate::{
     arrays::{Dtype, HasShape, Shape},
-    devices::{device::HasErr, Device},
+    devices::{device::HasErr, DeviceStorage},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -34,7 +34,7 @@ pub trait LogSumExpTo<T, Axes>: HasErr {
     fn try_logsumexp(self) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, Dst: Shape, Axes: Default, E: Dtype, D: Device, T: Tape<D>>
+impl<Src: Shape, Dst: Shape, Axes: Default, E: Dtype, D: DeviceStorage, T: Tape<D>>
     LogSumExpTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
 where
     Tensor<Src, E, D>: TryMaxTo<Tensor<Dst, E, D>, Axes, Err = D::Err>,

@@ -1,6 +1,6 @@
 use crate::{
     arrays::{Dtype, HasShape, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -28,7 +28,7 @@ pub trait TryVarTo<T, Axes>: HasErr {
     fn try_var(self) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>>
+impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: DeviceStorage, T: Tape<D>>
     TryVarTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
 where
     Self: TryMeanTo<Tensor<Dst, E, D, T>, Axes, Err = D::Err>

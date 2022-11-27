@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -31,7 +31,7 @@ pub(super) struct ClampKernelOp<E> {
     pub max: E,
 }
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryClamp<E> for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryClamp<E> for Tensor<S, E, D, T>
 where
     D: UnaryKernel<ClampKernelOp<E>, S, S, E>,
 {

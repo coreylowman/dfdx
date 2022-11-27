@@ -1,6 +1,6 @@
 use super::optimizer::*;
 use crate::arrays::{Dtype, Shape};
-use crate::devices::Device;
+use crate::devices::DeviceStorage;
 use crate::gradients::Gradients;
 use crate::tensor::Tensor;
 use std::marker::PhantomData;
@@ -111,7 +111,7 @@ impl Default for SgdConfig<f32> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Sgd<M, D: Device, E: Dtype> {
+pub struct Sgd<M, D: DeviceStorage, E: Dtype> {
     /// Hyperparameter configuration
     pub cfg: SgdConfig<E>,
 
@@ -121,7 +121,7 @@ pub struct Sgd<M, D: Device, E: Dtype> {
     marker: PhantomData<*const M>,
 }
 
-impl<M, D: Device, E: Dtype> Default for Sgd<M, D, E>
+impl<M, D: DeviceStorage, E: Dtype> Default for Sgd<M, D, E>
 where
     SgdConfig<E>: Default,
 {
@@ -131,7 +131,7 @@ where
     }
 }
 
-impl<M, D: Device, E: Dtype> Sgd<M, D, E> {
+impl<M, D: DeviceStorage, E: Dtype> Sgd<M, D, E> {
     /// Constructs using hyperparameters from `cfg`
     pub fn new(cfg: SgdConfig<E>) -> Self {
         Self {
@@ -143,7 +143,7 @@ impl<M, D: Device, E: Dtype> Sgd<M, D, E> {
     }
 }
 
-pub(super) trait SgdUpdate<D: Device, E: Dtype> {
+pub(super) trait SgdUpdate<D: DeviceStorage, E: Dtype> {
     fn update_param<S: Shape>(
         &self,
         param: &mut D::Storage<S, E>,
@@ -152,7 +152,7 @@ pub(super) trait SgdUpdate<D: Device, E: Dtype> {
     );
 }
 
-impl<M, D: Device, E: Dtype> ParamUpdater<D, E> for Sgd<M, D, E>
+impl<M, D: DeviceStorage, E: Dtype> ParamUpdater<D, E> for Sgd<M, D, E>
 where
     SgdConfig<E>: SgdUpdate<D, E>,
 {
@@ -173,7 +173,7 @@ where
     }
 }
 
-impl<E: Dtype, D: Device, M: CanUpdateWithGradients<D, E>> Optimizer<M, D> for Sgd<M, D, E>
+impl<E: Dtype, D: DeviceStorage, M: CanUpdateWithGradients<D, E>> Optimizer<M, D> for Sgd<M, D, E>
 where
     Self: ParamUpdater<D, E>,
 {

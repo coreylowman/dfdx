@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -28,7 +28,7 @@ pub trait TryNegate: HasErr {
 #[derive(Debug, Default, Copy, Clone)]
 pub(super) struct NegateKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryNegate for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryNegate for Tensor<S, E, D, T>
 where
     D: UnaryKernel<NegateKernelOp, S, S, E>,
 {
@@ -37,7 +37,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> std::ops::Neg for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> std::ops::Neg for Tensor<S, E, D, T>
 where
     Self: TryNegate,
 {

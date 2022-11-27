@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -31,7 +31,7 @@ pub trait TryPowf<E: Dtype>: HasErr {
 #[derive(Debug, Clone, Copy)]
 pub(super) struct PowKernelOp<E>(E);
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryPowf<E> for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryPowf<E> for Tensor<S, E, D, T>
 where
     D: UnaryKernel<PowKernelOp<E>, S, S, E>,
 {
@@ -59,7 +59,7 @@ pub trait TryPowi: HasErr {
     fn try_powi(self, i: i32) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryPowi for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryPowi for Tensor<S, E, D, T>
 where
     D: UnaryKernel<PowKernelOp<i32>, S, S, E>,
 {

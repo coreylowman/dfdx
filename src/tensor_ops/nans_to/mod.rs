@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -30,7 +30,7 @@ pub trait TryNansTo<E: Dtype>: HasErr {
 #[derive(Debug, Clone, Copy)]
 pub(super) struct NansToKernelOp<E>(E);
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryNansTo<E> for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryNansTo<E> for Tensor<S, E, D, T>
 where
     D: UnaryKernel<NansToKernelOp<E>, S, S, E>,
 {

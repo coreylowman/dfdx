@@ -5,7 +5,7 @@ use core::marker::PhantomData;
 use std::collections::HashMap;
 use std::{boxed::Box, vec::Vec};
 
-use crate::devices::{Device, HasDeviceStorage};
+use crate::devices::{DeviceStorage, HasDeviceStorage};
 use crate::unique_id::{HasUniqueId, UniqueId};
 
 /// A generic container for keeping variable sized arrays associated with a [UniqueId].
@@ -23,12 +23,12 @@ use crate::unique_id::{HasUniqueId, UniqueId};
 /// important part of key's implementing [HasArrayType] is that the associated type
 /// of that trait is used to downcast the box to the expected value.
 #[derive(Debug, Default)]
-pub struct Gradients<D: Device> {
+pub struct Gradients<D: DeviceStorage> {
     gradient_by_id: HashMap<UniqueId, Box<dyn std::any::Any>>,
     device: PhantomData<*const D>,
 }
 
-impl<D: Device> Gradients<D> {
+impl<D: DeviceStorage> Gradients<D> {
     /// Removes and returns the data associated with `t.id()`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
@@ -194,12 +194,12 @@ impl<D: Device> Gradients<D> {
 ///
 /// This would not be possible if these chain rule operations were inside of GradientTape!
 #[allow(clippy::type_complexity)]
-pub struct GradientTape<D: Device> {
+pub struct GradientTape<D: DeviceStorage> {
     operations: Vec<Box<dyn FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>>,
     device: PhantomData<*const D>,
 }
 
-impl<D: Device> Default for GradientTape<D> {
+impl<D: DeviceStorage> Default for GradientTape<D> {
     fn default() -> Self {
         Self {
             operations: Vec::new(),
@@ -208,7 +208,7 @@ impl<D: Device> Default for GradientTape<D> {
     }
 }
 
-impl<D: Device> std::fmt::Debug for GradientTape<D> {
+impl<D: DeviceStorage> std::fmt::Debug for GradientTape<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GradientTape")
             .field("num_operations", &self.operations.len())
@@ -216,7 +216,7 @@ impl<D: Device> std::fmt::Debug for GradientTape<D> {
     }
 }
 
-impl<D: Device> GradientTape<D> {
+impl<D: DeviceStorage> GradientTape<D> {
     /// Add an operation to be executed later. Implementation is all left to the caller,
     /// but the operation should likely call [Gradients::ref_gradient] and [Gradients::mut_gradient].
     ///
@@ -251,14 +251,14 @@ impl<D: Device> GradientTape<D> {
 /// Contains a boxed [GradientTape]. When [Tape::add_backward_op] is called,
 /// this function passes the operation directly to [GradientTape].
 #[derive(Debug, Default)]
-pub struct OwnedTape<D: Device>(pub(crate) Box<GradientTape<D>>);
+pub struct OwnedTape<D: DeviceStorage>(pub(crate) Box<GradientTape<D>>);
 
 /// Contains nothing. When [Tape::add_backward_op] is called, this struct does nothing.
 #[derive(Default, Debug, Clone, Copy)]
 pub struct NoneTape;
 
 /// Something that can add a gradient operation to [GradientTape].
-pub trait Tape<D: Device>: Default + Merge<Self> + Merge<NoneTape> {
+pub trait Tape<D: DeviceStorage>: Default + Merge<Self> + Merge<NoneTape> {
     /// Whether this object currently owns the [GradientTape]. This is known at compile time.
     const OWNS_TAPE: bool;
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>(
@@ -267,7 +267,7 @@ pub trait Tape<D: Device>: Default + Merge<Self> + Merge<NoneTape> {
     );
 }
 
-impl<D: Device> Tape<D> for OwnedTape<D> {
+impl<D: DeviceStorage> Tape<D> for OwnedTape<D> {
     const OWNS_TAPE: bool = true;
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>(
         &mut self,
@@ -277,7 +277,7 @@ impl<D: Device> Tape<D> for OwnedTape<D> {
     }
 }
 
-impl<D: Device> Tape<D> for NoneTape {
+impl<D: DeviceStorage> Tape<D> for NoneTape {
     const OWNS_TAPE: bool = false;
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>(
         &mut self,
@@ -297,13 +297,13 @@ impl Merge<NoneTape> for NoneTape {
     }
 }
 
-impl<D: Device> Merge<NoneTape> for OwnedTape<D> {
+impl<D: DeviceStorage> Merge<NoneTape> for OwnedTape<D> {
     fn merge(self, _: NoneTape) -> Self {
         self
     }
 }
 
-impl<D: Device> Merge<OwnedTape<D>> for OwnedTape<D> {
+impl<D: DeviceStorage> Merge<OwnedTape<D>> for OwnedTape<D> {
     fn merge(mut self, mut other: Self) -> Self {
         self.0.append(other.0.as_mut());
         self

@@ -1,6 +1,6 @@
 mod cpu_kernel;
 use crate::arrays::{Dtype, HasShape, PermuteShapeTo, Shape};
-use crate::devices::{Device, HasErr};
+use crate::devices::{DeviceStorage, HasErr};
 use crate::gradients::Tape;
 use crate::tensor::Tensor;
 
@@ -26,7 +26,7 @@ pub trait PermuteTo<T: HasShape, Axes>: HasErr {
 #[derive(Debug, Default, Clone, Copy)]
 pub(super) struct PermuteKernelOp<S, Axes>(S, std::marker::PhantomData<Axes>);
 
-impl<Src: Shape, Dst: Shape, Axes: 'static + Copy, E: Dtype, D: Device, T: Tape<D>>
+impl<Src: Shape, Dst: Shape, Axes: 'static + Copy, E: Dtype, D: DeviceStorage, T: Tape<D>>
     PermuteTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
 where
     Src: PermuteShapeTo<Dst, Axes>,

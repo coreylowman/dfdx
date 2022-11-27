@@ -1,6 +1,6 @@
 use crate::{
     arrays::{Dtype, HasShape, ReduceShape, Shape},
-    devices::{device::HasErr, Device},
+    devices::{device::HasErr, DeviceStorage},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -30,7 +30,7 @@ pub trait LogSoftmaxAxes<Axes>: HasErr {
     fn try_log_softmax_axes(self) -> Result<Self, Self::Err>;
 }
 
-impl<Src: Shape, Axes, E: Dtype, D: Device, T: Tape<D>> LogSoftmaxAxes<Axes>
+impl<Src: Shape, Axes, E: Dtype, D: DeviceStorage, T: Tape<D>> LogSoftmaxAxes<Axes>
     for Tensor<Src, E, D, T>
 where
     Src: ReduceShape<Axes>,
@@ -44,7 +44,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
     /// See [LogSoftmaxAxes]
     pub fn log_softmax<Axes>(self) -> Self
     where

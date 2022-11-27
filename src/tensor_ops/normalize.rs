@@ -1,6 +1,6 @@
 use crate::{
     arrays::{Dtype, HasShape, ReduceShape, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
     tensor_ops::{BroadcastTo, StddevTo, TryDiv, TryMeanTo, TrySub},
@@ -21,8 +21,8 @@ pub trait NormalizeAxes<Axes>: HasErr {
     fn try_normalize_axes(self, epsilon: f32) -> Result<Self, Self::Err>;
 }
 
-impl<Axes, Src: Shape + ReduceShape<Axes>, E: Dtype, D: Device, T: Tape<D>> NormalizeAxes<Axes>
-    for Tensor<Src, E, D, T>
+impl<Axes, Src: Shape + ReduceShape<Axes>, E: Dtype, D: DeviceStorage, T: Tape<D>>
+    NormalizeAxes<Axes> for Tensor<Src, E, D, T>
 where
     Self: TryMeanTo<Tensor<Src::Reduced, E, D, T>, Axes>
         + StddevTo<Tensor<Src::Reduced, E, D, T>, Axes>
@@ -43,7 +43,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
     /// See [NormalizeAxes]
     pub fn normalize<Axes>(self, epsilon: f32) -> Self
     where

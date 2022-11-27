@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::Device,
+    devices::DeviceStorage,
     gradients::Gradients,
 };
 
@@ -74,7 +74,7 @@ impl Default for AdamConfig<f32> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Adam<M, D: Device, E: Dtype> {
+pub struct Adam<M, D: DeviceStorage, E: Dtype> {
     /// Hyperparameter configuration
     pub cfg: AdamConfig<E>,
 
@@ -86,7 +86,7 @@ pub struct Adam<M, D: Device, E: Dtype> {
     marker: PhantomData<*const M>,
 }
 
-impl<M, D: Device, E: Dtype> Default for Adam<M, D, E>
+impl<M, D: DeviceStorage, E: Dtype> Default for Adam<M, D, E>
 where
     AdamConfig<E>: Default,
 {
@@ -96,7 +96,7 @@ where
     }
 }
 
-impl<M, D: Device, E: Dtype> Adam<M, D, E> {
+impl<M, D: DeviceStorage, E: Dtype> Adam<M, D, E> {
     /// Constructs using hyperparameters from `cfg`.
     pub fn new(cfg: AdamConfig<E>) -> Self {
         Self {
@@ -110,7 +110,7 @@ impl<M, D: Device, E: Dtype> Adam<M, D, E> {
     }
 }
 
-pub(super) trait AdamUpdate<D: Device, E: Dtype> {
+pub(super) trait AdamUpdate<D: DeviceStorage, E: Dtype> {
     fn update_param<S: Shape>(
         &self,
         t: i32,
@@ -121,7 +121,7 @@ pub(super) trait AdamUpdate<D: Device, E: Dtype> {
     );
 }
 
-impl<M, D: Device, E: Dtype> ParamUpdater<D, E> for Adam<M, D, E>
+impl<M, D: DeviceStorage, E: Dtype> ParamUpdater<D, E> for Adam<M, D, E>
 where
     AdamConfig<E>: AdamUpdate<D, E>,
 {
@@ -143,7 +143,7 @@ where
     }
 }
 
-impl<E: Dtype, D: Device, M: CanUpdateWithGradients<D, E>> Optimizer<M, D> for Adam<M, D, E>
+impl<E: Dtype, D: DeviceStorage, M: CanUpdateWithGradients<D, E>> Optimizer<M, D> for Adam<M, D, E>
 where
     Self: ParamUpdater<D, E>,
 {

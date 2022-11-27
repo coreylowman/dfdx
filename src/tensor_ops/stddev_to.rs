@@ -1,6 +1,6 @@
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -28,7 +28,7 @@ pub trait StddevTo<T, Axes>: HasErr {
     fn try_stddev(self, epsilon: f32) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>>
+impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: DeviceStorage, T: Tape<D>>
     StddevTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
 where
     Self: TryVarTo<Tensor<Dst, E, D, T>, Axes, Err = D::Err>,

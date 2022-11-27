@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
@@ -31,7 +31,7 @@ pub trait TryDiv<Rhs = Self>: HasErr {
 #[derive(Debug, Default, Clone, Copy)]
 pub(super) struct BinaryDivKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, LhsTape: Tape<D>, RhsTape: Tape<D>>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, RhsTape: Tape<D>>
     TryDiv<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
     D: BinaryKernel<BinaryDivKernelOp, S, S, S, E>,
@@ -45,7 +45,7 @@ where
 #[derive(Debug, Clone, Copy)]
 pub(super) struct ScalarDivKernelOp<E>(pub(crate) E);
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryDiv<E> for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryDiv<E> for Tensor<S, E, D, T>
 where
     D: UnaryKernel<ScalarDivKernelOp<E>, S, S, E>,
 {
@@ -54,7 +54,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device, LhsTape: Tape<D>, Rhs> std::ops::Div<Rhs>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, Rhs> std::ops::Div<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryDiv<Rhs>,

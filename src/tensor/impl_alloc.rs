@@ -1,13 +1,13 @@
 use super::base::Tensor;
 use crate::arrays::{Dtype, Shape};
 use crate::devices::{
-    AsArray, AsVec, Device, Ones, OnesLike, Rand, RandLike, Randn, RandnLike, TryConvert, Zeros,
-    ZerosLike,
+    AsArray, AsVec, DeviceStorage, Ones, OnesLike, Rand, RandLike, Randn, RandnLike, TryConvert,
+    Zeros, ZerosLike,
 };
 use crate::gradients::NoneTape;
 use crate::unique_id::unique_id;
 
-pub(crate) fn make_tensor<S: Shape, E: Dtype, D: Device>(
+pub(crate) fn make_tensor<S: Shape, E: Dtype, D: DeviceStorage>(
     device: &D,
     storage: D::Storage<S, E>,
 ) -> Tensor<S, E, D, NoneTape> {
@@ -19,11 +19,11 @@ pub(crate) fn make_tensor<S: Shape, E: Dtype, D: Device>(
     }
 }
 
-pub trait TensorFromArray<Src, S: Shape, E: Dtype>: Device {
+pub trait TensorFromArray<Src, S: Shape, E: Dtype>: DeviceStorage {
     fn tensor(&self, src: Src) -> Tensor<S, E, Self, NoneTape>;
 }
 
-impl<Src, S: Shape, E: Dtype, D: Device> TensorFromArray<Src, S, E> for D
+impl<Src, S: Shape, E: Dtype, D: DeviceStorage> TensorFromArray<Src, S, E> for D
 where
     D: TryConvert<Src, Tensor<S, E, D, NoneTape>>,
 {
@@ -32,7 +32,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device> Zeros<Tensor<S, E, D, NoneTape>> for D
+impl<S: Shape, E: Dtype, D: DeviceStorage> Zeros<Tensor<S, E, D, NoneTape>> for D
 where
     Self: Zeros<D::Storage<S, E>>,
 {
@@ -44,7 +44,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device> ZerosLike<S, Tensor<S, E, D, NoneTape>> for D
+impl<S: Shape, E: Dtype, D: DeviceStorage> ZerosLike<S, Tensor<S, E, D, NoneTape>> for D
 where
     Self: ZerosLike<S, D::Storage<S, E>>,
 {
@@ -53,7 +53,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device> Ones<Tensor<S, E, D, NoneTape>> for D
+impl<S: Shape, E: Dtype, D: DeviceStorage> Ones<Tensor<S, E, D, NoneTape>> for D
 where
     Self: Ones<D::Storage<S, E>>,
 {
@@ -65,7 +65,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device> OnesLike<S, Tensor<S, E, D, NoneTape>> for D
+impl<S: Shape, E: Dtype, D: DeviceStorage> OnesLike<S, Tensor<S, E, D, NoneTape>> for D
 where
     Self: OnesLike<S, D::Storage<S, E>>,
 {
@@ -74,7 +74,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device> Rand<Tensor<S, E, D, NoneTape>> for D
+impl<S: Shape, E: Dtype, D: DeviceStorage> Rand<Tensor<S, E, D, NoneTape>> for D
 where
     Self: Rand<D::Storage<S, E>>,
 {
@@ -86,7 +86,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device> RandLike<S, Tensor<S, E, D, NoneTape>> for D
+impl<S: Shape, E: Dtype, D: DeviceStorage> RandLike<S, Tensor<S, E, D, NoneTape>> for D
 where
     Self: RandLike<S, D::Storage<S, E>>,
 {
@@ -95,7 +95,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device> Randn<Tensor<S, E, D, NoneTape>> for D
+impl<S: Shape, E: Dtype, D: DeviceStorage> Randn<Tensor<S, E, D, NoneTape>> for D
 where
     Self: Randn<D::Storage<S, E>>,
 {
@@ -107,7 +107,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device> RandnLike<S, Tensor<S, E, D, NoneTape>> for D
+impl<S: Shape, E: Dtype, D: DeviceStorage> RandnLike<S, Tensor<S, E, D, NoneTape>> for D
 where
     Self: RandnLike<S, D::Storage<S, E>>,
 {
@@ -116,7 +116,7 @@ where
     }
 }
 
-impl<S: Shape, Src, E: Dtype, D: Device> TryConvert<Src, Tensor<S, E, D, NoneTape>> for D
+impl<S: Shape, Src, E: Dtype, D: DeviceStorage> TryConvert<Src, Tensor<S, E, D, NoneTape>> for D
 where
     Self: TryConvert<Src, D::Storage<S, E>>,
 {
@@ -125,7 +125,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device, T> AsVec for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> AsVec for Tensor<S, E, D, T>
 where
     D::Storage<S, E>: AsVec,
 {
@@ -135,7 +135,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device, T> AsArray for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> AsArray for Tensor<S, E, D, T>
 where
     D::Storage<S, E>: AsArray,
 {

@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -48,7 +48,7 @@ pub(super) struct DropoutKernelOp {
     pub prob: f32,
 }
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryDropout for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryDropout for Tensor<S, E, D, T>
 where
     D: UnaryKernel<DropoutKernelOp, S, S, E>,
 {

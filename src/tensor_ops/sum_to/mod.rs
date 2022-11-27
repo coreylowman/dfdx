@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -43,8 +43,14 @@ pub trait SumTo<T, Axes>: HasErr {
 #[derive(Debug, Default, Clone, Copy)]
 pub(super) struct SumKernelOp<Axes>(std::marker::PhantomData<Axes>);
 
-impl<Src: Shape, Dst: Shape, Axes: 'static + Copy + Default, E: Dtype, D: Device, T: Tape<D>>
-    SumTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
+impl<
+        Src: Shape,
+        Dst: Shape,
+        Axes: 'static + Copy + Default,
+        E: Dtype,
+        D: DeviceStorage,
+        T: Tape<D>,
+    > SumTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
 where
     D: UnaryKernel<SumKernelOp<Axes>, Src, Dst, E>,
 {

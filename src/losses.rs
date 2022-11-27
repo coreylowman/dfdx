@@ -2,7 +2,7 @@
 
 use crate::{
     arrays::{Dtype, HasAxes, HasDtype, HasLastAxis, HasShape, Rank0, Shape},
-    devices::Device,
+    devices::DeviceStorage,
     gradients::Tape,
     tensor::Tensor,
     tensor_ops::log_softmax::LogSoftmaxAxes,
@@ -13,7 +13,7 @@ use crate::{
 /// This computes `(pred - targ).square().mean()`.
 ///
 /// See [mean()], [square()], and [sub()].
-pub fn mse_loss<S: Shape, E: Dtype, D: Device, T: Tape<D>, AllAxes>(
+pub fn mse_loss<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, AllAxes>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T>
@@ -28,7 +28,7 @@ where
 /// This computes `(pred - targ).square().mean().sqrt()`
 ///
 /// See [mse_loss()] and [sqrt()]
-pub fn rmse_loss<S: Shape, E: Dtype, D: Device, T: Tape<D>, AllAxes>(
+pub fn rmse_loss<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, AllAxes>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T>
@@ -44,7 +44,7 @@ where
 /// This computes `(pred - targ).abs().mean()`
 ///
 /// See [mean()], [abs()], and [sub()]
-pub fn mae_loss<S: Shape, E: Dtype, D: Device, T: Tape<D>, Axes>(
+pub fn mae_loss<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Axes>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T>
@@ -69,7 +69,7 @@ where
 /// let y = Tensor1D::new([0.5, 0.5]);
 /// let loss = huber_loss(x.traced(), y, 1.0);
 /// ```
-pub fn huber_loss<S: Shape, E: Dtype, D: Device, T: Tape<D>, AllAxes>(
+pub fn huber_loss<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, AllAxes>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
     delta: <Tensor<S, E, D, T> as HasDtype>::Dtype,
@@ -95,7 +95,7 @@ where
 /// let y = Tensor1D::new([0.5, 0.5]);
 /// let loss = smooth_l1_loss(x.traced(), y, 1.0);
 /// ```
-pub fn smooth_l1_loss<S: Shape, E: Dtype, D: Device, T: Tape<D>, AllAxes>(
+pub fn smooth_l1_loss<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, AllAxes>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
     beta: <Tensor<S, E, D, T> as HasDtype>::Dtype,
@@ -128,7 +128,7 @@ where
 pub fn cross_entropy_with_logits_loss<
     S: Shape + HasLastAxis,
     E: Dtype,
-    D: Device,
+    D: DeviceStorage,
     T: Tape<D>,
     AllAxes,
 >(
@@ -167,7 +167,13 @@ where
 /// let target_probs = Tensor1D::new([0.5, 0.5]);
 /// let loss = kl_div_with_logits_loss(logits.traced(), target_probs);
 /// ```
-pub fn kl_div_with_logits_loss<S: Shape + HasLastAxis, E: Dtype, D: Device, T: Tape<D>, AllAxes>(
+pub fn kl_div_with_logits_loss<
+    S: Shape + HasLastAxis,
+    E: Dtype,
+    D: DeviceStorage,
+    T: Tape<D>,
+    AllAxes,
+>(
     logits: Tensor<S, E, D, T>,
     target_probs: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T>
@@ -209,7 +215,13 @@ where
 ///
 /// See <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>
 /// for more information on this.
-pub fn binary_cross_entropy_with_logits_loss<S: Shape, E: Dtype, D: Device, T: Tape<D>, AllAxes>(
+pub fn binary_cross_entropy_with_logits_loss<
+    S: Shape,
+    E: Dtype,
+    D: DeviceStorage,
+    T: Tape<D>,
+    AllAxes,
+>(
     logits: Tensor<S, E, D, T>,
     target_probs: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T>

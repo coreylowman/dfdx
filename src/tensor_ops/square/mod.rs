@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -34,7 +34,7 @@ pub trait TrySquare: HasErr {
 #[derive(Debug, Default, Copy, Clone)]
 pub(super) struct SquareKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TrySquare for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TrySquare for Tensor<S, E, D, T>
 where
     D: UnaryKernel<SquareKernelOp, S, S, E>,
 {

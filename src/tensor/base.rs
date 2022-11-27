@@ -2,7 +2,7 @@ use crate::arrays::{
     Dtype, HasDtype, HasShape, Rank0, Rank1, Rank2, Rank3, Rank4, Rank5, Rank6, Shape,
 };
 use crate::devices::device::{HasDevice, HasDeviceStorage, HasErr};
-use crate::devices::Device;
+use crate::devices::DeviceStorage;
 use crate::unique_id::HasUniqueId;
 use crate::{
     gradients::{NoneTape, OwnedTape, Tape},
@@ -10,14 +10,14 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Tensor<S: Shape, E: Dtype, D: Device, T = NoneTape> {
+pub struct Tensor<S: Shape, E: Dtype, D: DeviceStorage, T = NoneTape> {
     pub(crate) id: UniqueId,
     pub(crate) storage: D::Storage<S, E>,
     pub(crate) device: D,
     pub(crate) tape: T,
 }
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
     pub fn split_tape(self) -> (Tensor<S, E, D, NoneTape>, T) {
         (
             Tensor {
@@ -67,22 +67,22 @@ impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> Tensor<S, E, D, T> {
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device, T> HasShape for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
     type Shape = S;
     fn shape(&self) -> &Self::Shape {
         self.storage.shape()
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device, T> HasDtype for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasDtype for Tensor<S, E, D, T> {
     type Dtype = E;
 }
 
-impl<S: Shape, E: Dtype, D: Device, T> HasDevice for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasDevice for Tensor<S, E, D, T> {
     type Device = D;
 }
 
-impl<S: Shape, E: Dtype, D: Device, T> HasDeviceStorage for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasDeviceStorage for Tensor<S, E, D, T> {
     type Storage = D::Storage<S, E>;
     fn dev(&self) -> &Self::Device {
         &self.device
@@ -95,17 +95,17 @@ impl<S: Shape, E: Dtype, D: Device, T> HasDeviceStorage for Tensor<S, E, D, T> {
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device, T> HasUniqueId for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasUniqueId for Tensor<S, E, D, T> {
     fn id(&self) -> &UniqueId {
         &self.id
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device, T> HasErr for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
     type Err = D::Err;
 }
 
-impl<S: Shape, E: Dtype, D: Device> Tensor<S, E, D, NoneTape> {
+impl<S: Shape, E: Dtype, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
     pub fn trace(&self) -> Tensor<S, E, D, OwnedTape<D>> {
         self.clone().traced()
     }

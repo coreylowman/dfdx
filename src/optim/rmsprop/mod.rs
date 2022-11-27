@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::Device,
+    devices::DeviceStorage,
     gradients::Gradients,
     tensor::Tensor,
 };
@@ -86,7 +86,7 @@ impl Default for RMSpropConfig<f32> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct RMSprop<M, D: Device, E: Dtype> {
+pub struct RMSprop<M, D: DeviceStorage, E: Dtype> {
     /// Hyperparameter configuration
     pub cfg: RMSpropConfig<E>,
 
@@ -99,7 +99,7 @@ pub struct RMSprop<M, D: Device, E: Dtype> {
     marker: PhantomData<*const M>,
 }
 
-impl<M, D: Device, E: Dtype> Default for RMSprop<M, D, E>
+impl<M, D: DeviceStorage, E: Dtype> Default for RMSprop<M, D, E>
 where
     RMSpropConfig<E>: Default,
 {
@@ -109,7 +109,7 @@ where
     }
 }
 
-impl<M, D: Device, E: Dtype> RMSprop<M, D, E> {
+impl<M, D: DeviceStorage, E: Dtype> RMSprop<M, D, E> {
     /// Constructs using hyperparameters from `cfg`.
     pub fn new(cfg: RMSpropConfig<E>) -> Self {
         Self {
@@ -124,7 +124,7 @@ impl<M, D: Device, E: Dtype> RMSprop<M, D, E> {
     }
 }
 
-pub(super) trait RMSpropUpdate<D: Device, E: Dtype> {
+pub(super) trait RMSpropUpdate<D: DeviceStorage, E: Dtype> {
     fn update_param<S: Shape>(
         &self,
         param: &mut D::Storage<S, E>,
@@ -135,7 +135,7 @@ pub(super) trait RMSpropUpdate<D: Device, E: Dtype> {
     );
 }
 
-impl<M, D: Device> ParamUpdater<D, f32> for RMSprop<M, D, f32>
+impl<M, D: DeviceStorage> ParamUpdater<D, f32> for RMSprop<M, D, f32>
 where
     RMSpropConfig<f32>: RMSpropUpdate<D, f32>,
 {
@@ -163,7 +163,8 @@ where
     }
 }
 
-impl<E: Dtype, D: Device, M: CanUpdateWithGradients<D, E>> Optimizer<M, D> for RMSprop<M, D, E>
+impl<E: Dtype, D: DeviceStorage, M: CanUpdateWithGradients<D, E>> Optimizer<M, D>
+    for RMSprop<M, D, E>
 where
     Self: ParamUpdater<D, E>,
 {

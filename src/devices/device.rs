@@ -4,7 +4,7 @@ pub trait HasErr: Sized {
     type Err: std::fmt::Debug + std::fmt::Display;
 }
 
-pub trait Device: 'static + Default + Clone + HasErr {
+pub trait DeviceStorage: 'static + Default + Clone + HasErr {
     type Storage<S: Shape, Elem: Dtype>: 'static
         + std::fmt::Debug
         + Clone
@@ -22,7 +22,7 @@ pub trait Device: 'static + Default + Clone + HasErr {
 }
 
 pub trait HasDevice {
-    type Device: Device;
+    type Device: DeviceStorage;
 }
 
 pub trait HasDeviceStorage: HasShape + HasDtype + HasDevice {

@@ -71,7 +71,7 @@ impl HasErr for Cpu {
     type Err = CpuError;
 }
 
-impl Device for Cpu {
+impl DeviceStorage for Cpu {
     type Storage<S: Shape, E: Dtype> = StridedArray<S, E>;
     fn alloc<S: Shape, E: Dtype>(&self, shape: &S) -> Result<Self::Storage<S, E>, Self::Err> {
         self.try_zeros_like(*shape)

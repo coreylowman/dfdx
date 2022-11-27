@@ -1,6 +1,6 @@
 use crate::{
     arrays::{HasAxes, HasShape, Shape},
-    devices::{device::HasErr, Device},
+    devices::{device::HasErr, DeviceStorage},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -33,7 +33,7 @@ pub trait TryMeanTo<T, Axes>: HasErr {
     fn try_mean(self) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, Dst: Shape, Axes: Default, D: Device, T: Tape<D>>
+impl<Src: Shape, Dst: Shape, Axes: Default, D: DeviceStorage, T: Tape<D>>
     TryMeanTo<Tensor<Dst, f32, D, T>, Axes> for Tensor<Src, f32, D, T>
 where
     Self: SumTo<Tensor<Dst, f32, D, T>, Axes>,

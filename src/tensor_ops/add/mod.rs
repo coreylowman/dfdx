@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
@@ -31,7 +31,7 @@ pub trait TryAdd<Rhs = Self>: HasErr {
 #[derive(Debug, Default, Clone, Copy)]
 pub(super) struct BinaryAddKernelOp;
 
-impl<S: Shape, E: Dtype, D: Device, LhsTape: Tape<D>, RhsTape: Tape<D>>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, RhsTape: Tape<D>>
     TryAdd<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
     D: BinaryKernel<BinaryAddKernelOp, S, S, S, E>,
@@ -45,7 +45,7 @@ where
 #[derive(Debug, Clone, Copy)]
 pub(super) struct ScalarAddKernelOp<E>(pub(crate) E);
 
-impl<S: Shape, E: Dtype, D: Device, T: Tape<D>> TryAdd<E> for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryAdd<E> for Tensor<S, E, D, T>
 where
     D: UnaryKernel<ScalarAddKernelOp<E>, S, S, E>,
 {
@@ -54,7 +54,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device, LhsTape: Tape<D>, Rhs> std::ops::Add<Rhs>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, Rhs> std::ops::Add<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryAdd<Rhs>,

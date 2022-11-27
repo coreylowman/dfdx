@@ -1,6 +1,6 @@
 use crate::{
     arrays::{Dtype, Shape},
-    devices::Device,
+    devices::DeviceStorage,
     gradients::Gradients,
     tensor::Tensor,
     unique_id::{HasUniqueId, UniqueId},
@@ -42,7 +42,7 @@ pub enum Momentum<E> {
 ///
 /// 3. Optimizer itself is generic over M, not the update method. This means a single optimizer object
 /// can only work on objects of type `M`. This also requires you to specify the model up front for the optimizer.
-pub trait Optimizer<M, D: Device> {
+pub trait Optimizer<M, D: DeviceStorage> {
     /// Updates all of `module`'s parameters using `gradients`.
     ///
     /// Requires a `&mut self` because the optimizer may change some internally
@@ -64,7 +64,7 @@ pub trait Optimizer<M, D: Device> {
 /// could.
 ///
 /// See [crate::optim::Sgd] and [crate::optim::Adam] for examples on implementing this.
-pub trait ParamUpdater<D: Device, E: Dtype> {
+pub trait ParamUpdater<D: DeviceStorage, E: Dtype> {
     /// Retrieves the data associated with `p` if there is any.
     /// This can modify `self`, for instance if velocities are calculated
     /// based on the associated data!
@@ -102,7 +102,7 @@ impl UnusedTensors {
 ///
 /// Most implementations of this trait will have sub structs that also
 /// implement [CanUpdateWithGradients].
-pub trait CanUpdateWithGradients<D: Device, E: Dtype>: Sized {
+pub trait CanUpdateWithGradients<D: DeviceStorage, E: Dtype>: Sized {
     /// Updates self given the [GradientProvider]. When any parameters that
     /// are NOT present in `G`, then this function should
     /// add the tensor's [UniqueId] to [UnusedTensors].
@@ -113,7 +113,7 @@ pub trait CanUpdateWithGradients<D: Device, E: Dtype>: Sized {
     ) -> Result<(), D::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device> CanUpdateWithGradients<D, E> for Tensor<S, E, D> {
+impl<S: Shape, E: Dtype, D: DeviceStorage> CanUpdateWithGradients<D, E> for Tensor<S, E, D> {
     /// Subtracts the gradient for the tensor from [HasArrayData::mut_data].
     fn update<O: ParamUpdater<D, E>>(
         &mut self,
@@ -128,22 +128,22 @@ impl<S: Shape, E: Dtype, D: Device> CanUpdateWithGradients<D, E> for Tensor<S, E
 /// computation, and was therefore not present in [Gradients]
 /// while a [CanUpdateWithGradients] was trying to update it.
 #[derive(Debug)]
-pub enum OptimizerUpdateError<D: Device> {
+pub enum OptimizerUpdateError<D: DeviceStorage> {
     UnusedParams(UnusedTensors),
     DeviceError(D::Err),
 }
 
-impl<D: Device> std::fmt::Display for OptimizerUpdateError<D> {
+impl<D: DeviceStorage> std::fmt::Display for OptimizerUpdateError<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         todo!();
     }
 }
 
 #[cfg(feature = "std")]
-impl<D: Device + std::fmt::Debug> std::error::Error for OptimizerUpdateError<D> {}
+impl<D: DeviceStorage + std::fmt::Debug> std::error::Error for OptimizerUpdateError<D> {}
 
 #[allow(clippy::from_over_into)]
-impl<D: Device> Into<Result<(), OptimizerUpdateError<D>>> for UnusedTensors {
+impl<D: DeviceStorage> Into<Result<(), OptimizerUpdateError<D>>> for UnusedTensors {
     fn into(self) -> Result<(), OptimizerUpdateError<D>> {
         if self.is_empty() {
             Ok(())

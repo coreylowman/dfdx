@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Dyn, Rank0, Rank1, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::{Tensor, TensorFromArray},
 };
@@ -83,7 +83,7 @@ pub trait SelectAlong<T, Idx>: HasErr {
 
 impl<Src: HasErr, T, Idx> SelectAlong<T, Idx> for Src {}
 
-impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>>
+impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: DeviceStorage, T: Tape<D>>
     SelectTo<Tensor<Dst, E, D, T>, Axes, usize> for Tensor<Src, E, D, T>
 where
     Self: SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<(), usize, D>>,
@@ -95,7 +95,7 @@ where
     }
 }
 
-impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>, const Z: usize>
+impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: DeviceStorage, T: Tape<D>, const Z: usize>
     SelectTo<Tensor<Dst, E, D, T>, Axes, [usize; Z]> for Tensor<Src, E, D, T>
 where
     Self: SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<Rank1<Z>, usize, D>>,
@@ -107,7 +107,7 @@ where
     }
 }
 
-impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: Device, T: Tape<D>>
+impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: DeviceStorage, T: Tape<D>>
     SelectTo<Tensor<Dst, E, D, T>, Axes, &[usize]> for Tensor<Src, E, D, T>
 where
     Self: SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<(Dyn,), usize, D>>,
@@ -120,7 +120,7 @@ where
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(super) struct SelectKernelOp<Dst, Axis, I: Shape, D: Device> {
+pub(super) struct SelectKernelOp<Dst, Axis, I: Shape, D: DeviceStorage> {
     dst: Dst,
     indices: D::Storage<I, usize>,
     marker: std::marker::PhantomData<Axis>,
@@ -132,7 +132,7 @@ impl<
         Axes: 'static + Copy,
         Idx: Shape,
         E: Dtype,
-        D: Device,
+        D: DeviceStorage,
         T: Tape<D>,
     > SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<Idx, usize, D>> for Tensor<Src, E, D, T>
 where

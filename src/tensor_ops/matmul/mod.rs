@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
@@ -100,7 +100,7 @@ pub trait TryMatMul<Rhs>: HasErr {
 #[derive(Default, Copy, Clone)]
 pub(super) struct MatMulKernelOp;
 
-impl<Lhs: Shape, Rhs: Shape, E: Dtype, D: Device, LhsTape: Tape<D>, RhsTape: Tape<D>>
+impl<Lhs: Shape, Rhs: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, RhsTape: Tape<D>>
     TryMatMul<Tensor<Rhs, E, D, RhsTape>> for Tensor<Lhs, E, D, LhsTape>
 where
     Lhs: internals::MatMulAlgebra<Rhs>,

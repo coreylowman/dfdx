@@ -2,7 +2,7 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, HasShape, Shape},
-    devices::{Device, HasErr},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
@@ -50,7 +50,7 @@ impl<S: Copy, Axes> From<&S> for BroadcastKernelOp<S, Axes> {
     }
 }
 
-impl<Src: Shape, Dst: Shape, Axes: 'static + Clone, E: Dtype, D: Device, T: Tape<D>>
+impl<Src: Shape, Dst: Shape, Axes: 'static + Clone, E: Dtype, D: DeviceStorage, T: Tape<D>>
     BroadcastTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
 where
     D: UnaryKernel<BroadcastKernelOp<Dst, Axes>, Src, Dst, E>,
