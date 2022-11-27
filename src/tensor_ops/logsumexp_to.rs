@@ -1,6 +1,6 @@
 use crate::{
-    arrays::{Dtype, HasShape, Shape},
-    devices::{device::HasErr, DeviceStorage},
+    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, HasShape, Shape},
+    devices::device::HasErr,
     gradients::Tape,
     tensor::Tensor,
 };
@@ -34,17 +34,14 @@ pub trait LogSumExpTo<T, Axes>: HasErr {
     fn try_logsumexp(self) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, Dst: Shape, Axes: Default, E: Dtype, D: DeviceStorage, T: Tape<D>>
-    LogSumExpTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
-where
-    Tensor<Src, E, D>: TryMaxTo<Tensor<Dst, E, D>, Axes, Err = D::Err>,
-    Tensor<Dst, E, D>: BroadcastTo<Tensor<Src, E, D>, Axes, Err = D::Err>,
-    Tensor<Src, E, D, T>: TrySub<Tensor<Src, E, D>, Err = D::Err>
-        + TryExp<Err = D::Err>
-        + SumTo<Tensor<Dst, E, D, T>, Axes, Err = D::Err>,
-    Tensor<Dst, E, D, T>: BroadcastTo<Self, Axes, Err = D::Err>
-        + TryAdd<Tensor<Dst, E, D>, Err = D::Err>
-        + TryLn<Err = D::Err>,
+impl<
+        Src: Shape,
+        Ax: Default + AxesAsArray,
+        Dst: Shape + Default + BroadcastShapeTo<Src, Ax>,
+        E: Dtype,
+        D: Device<E>,
+        T: Tape<D>,
+    > LogSumExpTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 {
     fn try_logsumexp(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         // normalize t
