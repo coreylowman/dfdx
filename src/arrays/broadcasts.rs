@@ -1,8 +1,13 @@
 use super::*;
 
 pub trait BroadcastShapeTo<S, Axes> {}
-pub trait ReduceShape<Axes> {
-    type Reduced: Shape;
+
+pub trait BroadcastStrides<S: Shape, Axes>: Shape + BroadcastShapeTo<S, Axes> {
+    fn broadcast_strides(&self, strides: StridesFor<Self>) -> StridesFor<S>;
+}
+
+pub trait ReduceShape<Axes>: Shape {
+    type Reduced: Shape + Default + BroadcastStrides<Self, Axes>;
 }
 
 macro_rules! broadcast_to {
@@ -42,12 +47,6 @@ broadcast_to!(Rank3<M, N, O>, Rank4<M, N, O, P>, Axis<3>, {M, N, O, P});
 broadcast_to!(Rank3<M, N, P>, Rank4<M, N, O, P>, Axis<2>, {M, N, O, P});
 broadcast_to!(Rank3<M, O, P>, Rank4<M, N, O, P>, Axis<1>, {M, N, O, P});
 broadcast_to!(Rank3<N, O, P>, Rank4<M, N, O, P>, Axis<0>, {M, N, O, P});
-
-pub(crate) trait BroadcastStrides<S: Shape, Axes>:
-    Shape + BroadcastShapeTo<S, Axes>
-{
-    fn broadcast_strides(&self, strides: StridesFor<Self>) -> StridesFor<S>;
-}
 
 impl<
         const SRC_DIMS: usize,

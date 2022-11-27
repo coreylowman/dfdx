@@ -28,16 +28,16 @@ impl<S: Shape> NdIndex<S> {
     }
 }
 
-impl<const N: usize, S: Shape<Concrete = [usize; N]>> NdIndex<S> {
+impl<S: Shape> NdIndex<S> {
     #[inline(always)]
-    fn get_with_idx(&mut self) -> Option<(usize, [usize; N])> {
+    fn get_with_idx(&mut self) -> Option<(usize, S::Concrete)> {
         match self.next.as_mut() {
             Some(i) => {
                 let idx = (*i, self.indices);
-                if N == 0 {
+                if S::NUM_DIMS == 0 {
                     self.next = None;
                 } else {
-                    let mut curr = N - 1;
+                    let mut curr = S::NUM_DIMS - 1;
                     loop {
                         self.indices[curr] += 1;
                         if self.indices[curr] < self.shape[curr] {
@@ -149,30 +149,24 @@ pub(crate) trait LendingIterator {
     fn next(&'_ mut self) -> Option<Self::Item<'_>>;
 }
 
-impl<'q, const N: usize, S: Shape<Concrete = [usize; N]>, Elem> LendingIterator
-    for StridedRefIter<'q, S, Elem>
-{
-    type Item<'a> = &'a Elem where Self: 'a;
+impl<'q, S: Shape, E> LendingIterator for StridedRefIter<'q, S, E> {
+    type Item<'a> = &'a E where Self: 'a;
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
         self.index.get_with_idx().map(|(i, _)| &self.data[i])
     }
 }
 
-impl<'q, const N: usize, S: Shape<Concrete = [usize; N]>, Elem> LendingIterator
-    for StridedMutIter<'q, S, Elem>
-{
-    type Item<'a> = &'a mut Elem where Self: 'a;
+impl<'q, S: Shape, E> LendingIterator for StridedMutIter<'q, S, E> {
+    type Item<'a> = &'a mut E where Self: 'a;
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
         self.index.get_with_idx().map(|(i, _)| &mut self.data[i])
     }
 }
 
-impl<'q, const N: usize, S: Shape<Concrete = [usize; N]>, Elem> LendingIterator
-    for StridedRefIndexIter<'q, S, Elem>
-{
-    type Item<'a> = (&'a Elem, [usize; N]) where Self: 'a;
+impl<'q, S: Shape, E> LendingIterator for StridedRefIndexIter<'q, S, E> {
+    type Item<'a> = (&'a E, S::Concrete) where Self: 'a;
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
         self.index
@@ -181,10 +175,8 @@ impl<'q, const N: usize, S: Shape<Concrete = [usize; N]>, Elem> LendingIterator
     }
 }
 
-impl<'q, const N: usize, S: Shape<Concrete = [usize; N]>, Elem> LendingIterator
-    for StridedMutIndexIter<'q, S, Elem>
-{
-    type Item<'a> = (&'a mut Elem, [usize; N]) where Self: 'a;
+impl<'q, S: Shape, E> LendingIterator for StridedMutIndexIter<'q, S, E> {
+    type Item<'a> = (&'a mut E, S::Concrete) where Self: 'a;
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
         self.index
