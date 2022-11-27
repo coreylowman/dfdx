@@ -1,31 +1,31 @@
-use super::ReshapeKernelOp;
+use super::ReshapeKernel;
 use crate::arrays::{Dtype, HasSameNumelAs, Shape};
 use crate::devices::cpu::{Cpu, StridedArray};
-use crate::tensor_ops::ops::UnaryKernel;
 
-impl<Src: Shape, Dst: Shape, E: Dtype + std::ops::AddAssign>
-    UnaryKernel<ReshapeKernelOp<Dst>, Src, Dst, E> for Cpu
-where
-    Src: HasSameNumelAs<Dst>,
-{
-    fn unary_fwd(
+impl<E: Dtype> ReshapeKernel<E> for Cpu {
+    fn forward<Src: Shape, Dst: Shape>(
         &self,
-        op: ReshapeKernelOp<Dst>,
+        dst: Dst,
         inp: &Self::Storage<Src, E>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err> {
+    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+    where
+        Src: HasSameNumelAs<Dst>,
+    {
         Ok(StridedArray {
             data: inp.data.clone(),
-            shape: op.0,
-            strides: op.0.strides(),
+            shape: dst,
+            strides: dst.strides(),
         })
     }
-    fn unary_bwd(
+    fn backward<Src: Shape, Dst: Shape>(
         &self,
-        _op: ReshapeKernelOp<Dst>,
-        _inp: &Self::Storage<Src, E>,
+        inp: &Self::Storage<Src, E>,
         grad_inp: &mut Self::Storage<Src, E>,
         grad_out: &Self::Storage<Dst, E>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Self::Err>
+    where
+        Src: HasSameNumelAs<Dst>,
+    {
         debug_assert_eq!(grad_inp.data.len(), grad_out.data.len());
         for (i, o) in grad_inp.buf_iter_mut().zip(grad_out.buf_iter()) {
             *i += *o;

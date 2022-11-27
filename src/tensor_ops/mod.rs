@@ -223,12 +223,12 @@ mod reshape_to;
 #[cfg(feature = "nightly")]
 pub use reshape_to::ReshapeTo;
 
-#[cfg(feature = "nightly")]
-mod conv2d;
-#[cfg(feature = "nightly")]
-pub use conv2d::TryConv2D;
+// #[cfg(feature = "nightly")]
+// mod conv2d;
+// #[cfg(feature = "nightly")]
+// pub use conv2d::TryConv2D;
 
-#[cfg(feature = "nightly")]
-mod pool2d;
-#[cfg(feature = "nightly")]
-pub use pool2d::{TryAvgPool2D, TryMaxPool2D, TryMinPool2D};
+// #[cfg(feature = "nightly")]
+// mod pool2d;
+// #[cfg(feature = "nightly")]
+// pub use pool2d::{TryAvgPool2D, TryMaxPool2D, TryMinPool2D};

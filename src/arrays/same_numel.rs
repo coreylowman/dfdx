@@ -1,11 +1,12 @@
-use crate::arrays::C;
+use crate::arrays::Const;
 use crate::{Assert, ConstTrue};
 
 pub trait HasSameNumelAs<Dst> {}
 
 macro_rules! impl_same_num_elements {
     ([$($SrcVs:tt),*], $SrcNumEl:tt, [$($DstVs:tt),*], $DstNumEl:tt) => {
-impl<$(const $SrcVs: usize, )* $(const $DstVs: usize, )*> HasSameNumelAs<($(C<$SrcVs>, )*)> for ($(C<$DstVs>, )*)
+#[cfg(feature = "nightly")]
+impl<$(const $SrcVs: usize, )* $(const $DstVs: usize, )*> HasSameNumelAs<($(Const<$SrcVs>, )*)> for ($(Const<$DstVs>, )*)
 where
     Assert<{ $SrcNumEl == $DstNumEl }>: ConstTrue {}
     };

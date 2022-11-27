@@ -1,13 +1,31 @@
 mod cpu_kernel;
 
 use crate::{
-    arrays::{Dtype, Shape},
-    devices::{Device, HasErr},
+    arrays::{Dtype, HasSameNumelAs, Shape},
+    devices::{DeviceStorage, HasErr},
     gradients::Tape,
-    tensor::Tensor,
+    tensor::{make_tensor, Tensor},
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::Device;
+
+pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
+    fn forward<Src: Shape, Dst: Shape>(
+        &self,
+        dst: Dst,
+        inp: &Self::Storage<Src, E>,
+    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+    where
+        Src: HasSameNumelAs<Dst>;
+    fn backward<Src: Shape, Dst: Shape>(
+        &self,
+        inp: &Self::Storage<Src, E>,
+        grad_inp: &mut Self::Storage<Src, E>,
+        grad_out: &Self::Storage<Dst, E>,
+    ) -> Result<(), Self::Err>
+    where
+        Src: HasSameNumelAs<Dst>;
+}
 
 /// **Requires Nightly** Reshape `Self` into `T`.
 pub trait ReshapeTo<T>: HasErr {
@@ -17,16 +35,26 @@ pub trait ReshapeTo<T>: HasErr {
     fn try_reshape(self) -> Result<T, Self::Err>;
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub(super) struct ReshapeKernelOp<S>(S);
-
-impl<Src: Shape, Dst: Shape + Default, E: Dtype, D: Device, T: Tape<D>>
-    ReshapeTo<Tensor<Dst, E, D, T>> for Tensor<Src, E, D, T>
-where
-    D: UnaryKernel<ReshapeKernelOp<Dst>, Src, Dst, E>,
+impl<
+        Src: Shape + HasSameNumelAs<Dst>,
+        Dst: Shape + Default,
+        E: Dtype,
+        D: Device<E>,
+        T: Tape<D>,
+    > ReshapeTo<Tensor<Dst, E, D, T>> for Tensor<Src, E, D, T>
 {
     fn try_reshape(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
-        try_unary_op(Default::default(), self)
+        let dst: Dst = Default::default();
+        let (inp, mut tape) = self.split_tape();
+        let storage = ReshapeKernel::forward(&inp.device, dst, &inp.storage)?;
+        let out = make_tensor(&inp.device, storage);
+        let phantom_out = out.clone();
+        tape.add_backward_op(move |grads| {
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
+            ReshapeKernel::backward(&inp.device, &inp.storage, grad_inp, grad_out)?;
+            Ok(())
+        });
+        Ok(out.put_tape(tape))
     }
 }
 

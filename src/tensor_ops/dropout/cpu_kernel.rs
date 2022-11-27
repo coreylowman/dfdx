@@ -7,7 +7,7 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::Standard;
 
 impl UnaryKernel<DropoutKernelOp, f32> for Cpu {
-    fn unary_fwd<S: Shape>(
+    fn forward<S: Shape>(
         &self,
         op: DropoutKernelOp,
         inp: &Self::Storage<S, f32>,
@@ -25,7 +25,7 @@ impl UnaryKernel<DropoutKernelOp, f32> for Cpu {
         Ok(out)
     }
 
-    fn unary_bwd<S: Shape>(
+    fn backward<S: Shape>(
         &self,
         op: DropoutKernelOp,
         inp: &Self::Storage<S, f32>,

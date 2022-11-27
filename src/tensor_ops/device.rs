@@ -19,7 +19,7 @@ use super::{
     min_to::MinReduceKernel,
     minimum::MinimumKernelOp,
     ops::{BinaryKernel, UnaryKernel},
-    sum_to::SumKernel, mul::{ScalarMulKernelOp, BinaryMulKernelOp}, sub::{ScalarSubKernelOp, BinarySubKernelOp}, nans_to::NansToKernelOp, relu::ReLUKernelOp, negate::NegateKernelOp, sigmoid::SigmoidKernelOp, sin::SinKernelOp, sqrt::SqrtKernelOp, square::SquareKernelOp, tanh::TanhKernelOp, pow::PowKernelOp,
+    sum_to::SumKernel, mul::{ScalarMulKernelOp, BinaryMulKernelOp}, sub::{ScalarSubKernelOp, BinarySubKernelOp}, nans_to::NansToKernelOp, relu::ReLUKernelOp, negate::NegateKernelOp, sigmoid::SigmoidKernelOp, sin::SinKernelOp, sqrt::SqrtKernelOp, square::SquareKernelOp, tanh::TanhKernelOp, pow::PowKernelOp, reshape_to::ReshapeKernel,
 };
 use crate::{
     arrays::Dtype,
@@ -78,6 +78,8 @@ pub trait Device<E: Dtype>:
     + BinaryKernel<HuberErrorKernelOp<E>, E>
     + BinaryKernel<MaximumKernelOp, E>
     + BinaryKernel<MinimumKernelOp, E>
+
+    + ReshapeKernel<E>
 {
 }
 

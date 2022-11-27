@@ -16,7 +16,7 @@ pub trait BinaryDerivative<E> {
 }
 
 impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
-    fn unary_fwd<S: Shape>(
+    fn forward<S: Shape>(
         &self,
         op: Op,
         inp: &Self::Storage<S, E>,
@@ -28,7 +28,7 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
         Ok(out)
     }
 
-    fn unary_bwd<S: Shape>(
+    fn backward<S: Shape>(
         &self,
         op: Op,
         inp: &Self::Storage<S, E>,
@@ -45,7 +45,7 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
 }
 
 impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
-    fn binary_fwd<S: Shape>(
+    fn forward<S: Shape>(
         &self,
         op: Op,
         lhs: &Self::Storage<S, E>,
@@ -60,7 +60,7 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
         }
         Ok(out)
     }
-    fn binary_bwd<S: Shape>(
+    fn backward<S: Shape>(
         &self,
         op: Op,
         lhs: &Self::Storage<S, E>,

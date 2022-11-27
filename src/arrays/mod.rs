@@ -10,9 +10,7 @@ pub(crate) use broadcasts::{BroadcastShapeTo, BroadcastStridesTo, ReduceShape, R
 pub(crate) use permutes::PermuteShapeTo;
 pub(crate) use replace_dim::ReplaceDim;
 
-#[cfg(feature = "nightly")]
 mod same_numel;
-#[cfg(feature = "nightly")]
 pub(crate) use same_numel::HasSameNumelAs;
 
 pub use as_rust_array::RustArrayRepr;

@@ -6,12 +6,12 @@ use crate::{
 };
 
 pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
-    fn unary_fwd<S: Shape>(
+    fn forward<S: Shape>(
         &self,
         op: Op,
         inp: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err>;
-    fn unary_bwd<S: Shape>(
+    fn backward<S: Shape>(
         &self,
         op: Op,
         inp: &Self::Storage<S, E>,
@@ -21,14 +21,14 @@ pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
 }
 
 pub trait BinaryKernel<Op, E: Dtype>: DeviceStorage {
-    fn binary_fwd<S: Shape>(
+    fn forward<S: Shape>(
         &self,
         op: Op,
         lhs: &Self::Storage<S, E>,
         rhs: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err>;
 
-    fn binary_bwd<S: Shape>(
+    fn backward<S: Shape>(
         &self,
         op: Op,
         lhs: &Self::Storage<S, E>,
@@ -50,12 +50,12 @@ pub(crate) fn try_unary_op<
     inp: Tensor<S, E, D, T>,
 ) -> Result<Tensor<S, E, D, T>, D::Err> {
     let (inp, mut tape) = inp.split_tape();
-    let storage = inp.device.unary_fwd(op.clone(), &inp.storage)?;
+    let storage = inp.device.forward(op.clone(), &inp.storage)?;
     let out = make_tensor(&inp.device, storage);
     let phantom_out = out.clone();
     tape.add_backward_op(move |grads| {
         let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
-        inp.device.unary_bwd(op, &inp.storage, grad_inp, grad_out)?;
+        inp.device.backward(op, &inp.storage, grad_inp, grad_out)?;
         Ok(())
     });
     Ok(out.put_tape(tape))
@@ -76,13 +76,13 @@ pub(crate) fn try_binary_op<
     let (lhs, ltape) = lhs.split_tape();
     let (rhs, rtape) = rhs.split_tape();
     let mut tape = ltape.merge(rtape);
-    let storage = lhs.device.binary_fwd(op, &lhs.storage, &rhs.storage)?;
+    let storage = lhs.device.forward(op, &lhs.storage, &rhs.storage)?;
     let out = make_tensor(&lhs.device, storage);
     let phantom_out = out.clone();
     tape.add_backward_op(move |grads| {
         let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out)?;
         lhs.device
-            .binary_bwd(op, &lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)?;
+            .backward(op, &lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)?;
         Ok(())
     });
     Ok(out.put_tape(tape))
