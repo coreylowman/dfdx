@@ -2,30 +2,45 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::ops::{try_binary_op, BinaryKernel};
-
-pub trait TryBceWithLogits<Rhs = Self>: HasErr {
-    fn bce_with_logits(self, rhs: Rhs) -> Self {
-        self.try_bce_with_logits(rhs).unwrap()
-    }
-    fn try_bce_with_logits(self, rhs: Rhs) -> Result<Self, Self::Err>;
-}
+use super::{device::Device, ops::try_binary_op};
 
 #[derive(Debug, Default, Clone, Copy)]
-pub(super) struct BCEKernelOp;
+pub struct BCEKernelOp;
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, RhsTape: Tape<D>>
-    TryBceWithLogits<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
-where
-    D: BinaryKernel<BCEKernelOp, S, S, S, E>,
-    LhsTape: Merge<RhsTape>,
-{
-    fn try_bce_with_logits(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, Self::Err> {
-        try_binary_op(Default::default(), self, rhs)
+pub fn bce_with_logits<
+    S: Shape,
+    E: Dtype,
+    D: Device<E>,
+    T: Tape<D> + Merge<RhsTape>,
+    RhsTape: Tape<D>,
+>(
+    lhs: Tensor<S, E, D, T>,
+    rhs: Tensor<S, E, D, RhsTape>,
+) -> Tensor<S, E, D, T> {
+    lhs.bce_with_logits(rhs)
+}
+
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// Calls [bce_with_logits]
+    pub fn bce_with_logits<RhsTape: Tape<D>>(self, rhs: Tensor<S, E, D, RhsTape>) -> Self
+    where
+        T: Merge<RhsTape>,
+    {
+        self.try_bce_with_logits(rhs).unwrap()
+    }
+
+    /// Calls [try_bce_with_logits]
+    pub fn try_bce_with_logits<RhsTape: Tape<D>>(
+        self,
+        rhs: Tensor<S, E, D, RhsTape>,
+    ) -> Result<Self, D::Err>
+    where
+        T: Merge<RhsTape>,
+    {
+        try_binary_op(BCEKernelOp, self, rhs)
     }
 }

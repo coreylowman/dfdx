@@ -41,8 +41,8 @@ impl Dim for Dyn {
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct C<const M: usize>;
-impl<const M: usize> Dim for C<M> {
+pub struct Const<const M: usize>;
+impl<const M: usize> Dim for Const<M> {
     #[inline(always)]
     fn size(&self) -> usize {
         M
@@ -50,7 +50,7 @@ impl<const M: usize> Dim for C<M> {
     #[inline(always)]
     fn from_size(size: usize) -> Option<Self> {
         if size == M {
-            Some(C)
+            Some(Const)
         } else {
             None
         }
@@ -98,13 +98,13 @@ pub trait TryFromNumElements: Shape {
 }
 
 pub type Rank0 = ();
-pub type Rank1<const M: usize> = (C<M>,);
-pub type Rank2<const M: usize, const N: usize> = (C<M>, C<N>);
-pub type Rank3<const M: usize, const N: usize, const O: usize> = (C<M>, C<N>, C<O>);
+pub type Rank1<const M: usize> = (Const<M>,);
+pub type Rank2<const M: usize, const N: usize> = (Const<M>, Const<N>);
+pub type Rank3<const M: usize, const N: usize, const O: usize> = (Const<M>, Const<N>, Const<O>);
 pub type Rank4<const M: usize, const N: usize, const O: usize, const P: usize> =
-    (C<M>, C<N>, C<O>, C<P>);
+    (Const<M>, Const<N>, Const<O>, Const<P>);
 pub type Rank5<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize> =
-    (C<M>, C<N>, C<O>, C<P>, C<Q>);
+    (Const<M>, Const<N>, Const<O>, Const<P>, Const<Q>);
 pub type Rank6<
     const M: usize,
     const N: usize,
@@ -112,7 +112,7 @@ pub type Rank6<
     const P: usize,
     const Q: usize,
     const R: usize,
-> = (C<M>, C<N>, C<O>, C<P>, C<Q>, C<R>);
+> = (Const<M>, Const<N>, Const<O>, Const<P>, Const<Q>, Const<R>);
 
 impl Shape for () {
     const NUM_DIMS: usize = 0;
@@ -158,7 +158,7 @@ impl<D1: Dim> Shape for (D1,) {
     }
 }
 
-impl<const M: usize> TryFromNumElements for (C<M>,) {
+impl<const M: usize> TryFromNumElements for (Const<M>,) {
     fn try_from_num_elements(num_elements: usize) -> Option<Self> {
         if num_elements == M {
             Some(Default::default())
@@ -192,7 +192,7 @@ impl<D1: Dim, D2: Dim> Shape for (D1, D2) {
     }
 }
 
-impl<const M: usize, const N: usize> TryFromNumElements for (C<M>, C<N>) {
+impl<const M: usize, const N: usize> TryFromNumElements for (Const<M>, Const<N>) {
     fn try_from_num_elements(num_elements: usize) -> Option<Self> {
         let shape: Self = Default::default();
         if shape.num_elements() == num_elements {
@@ -203,20 +203,20 @@ impl<const M: usize, const N: usize> TryFromNumElements for (C<M>, C<N>) {
     }
 }
 
-impl<const N: usize> TryFromNumElements for (Dyn, C<N>) {
+impl<const N: usize> TryFromNumElements for (Dyn, Const<N>) {
     fn try_from_num_elements(num_elements: usize) -> Option<Self> {
         if num_elements % N == 0 {
-            Some((Dyn(num_elements / N), C))
+            Some((Dyn(num_elements / N), Const))
         } else {
             None
         }
     }
 }
 
-impl<const M: usize> TryFromNumElements for (C<M>, Dyn) {
+impl<const M: usize> TryFromNumElements for (Const<M>, Dyn) {
     fn try_from_num_elements(num_elements: usize) -> Option<Self> {
         if num_elements % M == 0 {
-            Some((C, Dyn(num_elements / M)))
+            Some((Const, Dyn(num_elements / M)))
         } else {
             None
         }

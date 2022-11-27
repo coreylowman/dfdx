@@ -35,10 +35,10 @@ impl<E: Dtype> RustArrayRepr<E> for (Dyn, Dyn) {
     type Repr = Vec<E>;
 }
 
-impl<E: Dtype, const M: usize> RustArrayRepr<E> for (Dyn, C<M>) {
+impl<E: Dtype, const M: usize> RustArrayRepr<E> for (Dyn, Const<M>) {
     type Repr = Vec<E>;
 }
 
-impl<E: Dtype, const M: usize> RustArrayRepr<E> for (C<M>, Dyn) {
+impl<E: Dtype, const M: usize> RustArrayRepr<E> for (Const<M>, Dyn) {
     type Repr = Vec<E>;
 }

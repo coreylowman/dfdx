@@ -2,12 +2,14 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::{ops::try_unary_op, Device};
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct SqrtKernelOp;
 
 /// `√t` or `t^0.5`
 ///
@@ -24,22 +26,18 @@ use super::ops::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.sqrt();
 /// ```
-pub trait TrySqrt: HasErr {
-    fn sqrt(self) -> Self {
-        self.try_sqrt().unwrap()
-    }
-    fn try_sqrt(self) -> Result<Self, Self::Err>;
+pub fn sqrt<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+) -> Tensor<S, E, D, T> {
+    t.sqrt()
 }
 
-#[derive(Debug, Default, Copy, Clone)]
-pub(super) struct SqrtKernelOp;
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TrySqrt for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<SqrtKernelOp, S, S, E>,
-{
-    fn try_sqrt(self) -> Result<Self, Self::Err> {
-        try_unary_op(Default::default(), self)
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn sqrt(self) -> Self {
+        self.try_sqrt().unwrap()
+    }
+    pub fn try_sqrt(self) -> Result<Self, D::Err> {
+        try_unary_op(SqrtKernelOp, self)
     }
 }
 

@@ -2,12 +2,14 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::{ops::try_unary_op, Device};
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct ReLUKernelOp;
 
 /// [Rectified Linear Unit (ReLU)](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)). `max(0, t)`
 ///
@@ -24,22 +26,18 @@ use super::ops::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.relu();
 /// ```
-pub trait TryReLU: HasErr {
-    fn relu(self) -> Self {
-        self.try_relu().unwrap()
-    }
-    fn try_relu(self) -> Result<Self, Self::Err>;
+pub fn relu<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+) -> Tensor<S, E, D, T> {
+    t.relu()
 }
 
-#[derive(Debug, Default, Copy, Clone)]
-pub(super) struct ReLUKernelOp;
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryReLU for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<ReLUKernelOp, S, S, E>,
-{
-    fn try_relu(self) -> Result<Self, Self::Err> {
-        try_unary_op(Default::default(), self)
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn relu(self) -> Self {
+        self.try_relu().unwrap()
+    }
+    pub fn try_relu(self) -> Result<Self, D::Err> {
+        try_unary_op(ReLUKernelOp, self)
     }
 }
 

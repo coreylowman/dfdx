@@ -1,13 +1,31 @@
 mod cpu_kernel;
 
 use crate::{
-    arrays::{Dtype, HasShape, Shape},
+    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, HasShape, Shape},
     devices::{DeviceStorage, HasErr},
     gradients::Tape,
-    tensor::Tensor,
+    tensor::{make_tensor, Tensor},
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::device::Device;
+
+pub trait BroadcastKernel<E: Dtype>: DeviceStorage {
+    fn forward<Src: Shape, Dst: Shape, Axes: AxesAsArray>(
+        &self,
+        dst: Dst,
+        inp: &Self::Storage<Src, E>,
+    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+    where
+        Src: BroadcastShapeTo<Dst, Axes>;
+    fn backward<Src: Shape, Dst: Shape, Axes: AxesAsArray>(
+        &self,
+        inp: &Self::Storage<Src, E>,
+        grad_inp: &mut Self::Storage<Src, E>,
+        grad_out: &Self::Storage<Dst, E>,
+    ) -> Result<(), Self::Err>
+    where
+        Src: BroadcastShapeTo<Dst, Axes>;
+}
 
 /// Broadcast self into `T` along `Axes`.
 ///
@@ -42,21 +60,22 @@ pub trait BroadcastTo<T: HasShape, Axes>: HasErr {
     fn try_broadcast_to(self, dst: &T::Shape) -> Result<T, Self::Err>;
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub(super) struct BroadcastKernelOp<S, Axes>(pub(crate) S, std::marker::PhantomData<Axes>);
-impl<S: Copy, Axes> From<&S> for BroadcastKernelOp<S, Axes> {
-    fn from(s: &S) -> Self {
-        Self(*s, std::marker::PhantomData)
-    }
-}
-
-impl<Src: Shape, Dst: Shape, Axes: 'static + Clone, E: Dtype, D: DeviceStorage, T: Tape<D>>
-    BroadcastTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Dst: Shape, Ax: AxesAsArray>
+    BroadcastTo<Tensor<Dst, E, D, T>, Ax> for Tensor<S, E, D, T>
 where
-    D: UnaryKernel<BroadcastKernelOp<Dst, Axes>, Src, Dst, E>,
+    S: BroadcastShapeTo<Dst, Ax>,
 {
     fn try_broadcast_to(self, dst: &Dst) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
-        try_unary_op(dst.into(), self)
+        let (inp, mut tape) = self.split_tape();
+        let storage = BroadcastKernel::forward(&inp.device, *dst, &inp.storage)?;
+        let out = make_tensor(&inp.device, storage);
+        let phantom_out = out.clone();
+        tape.add_backward_op(move |grads| {
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
+            BroadcastKernel::backward(&inp.device, &inp.storage, grad_inp, grad_out)?;
+            Ok(())
+        });
+        Ok(out.put_tape(tape))
     }
 }
 

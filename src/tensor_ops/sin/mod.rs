@@ -2,12 +2,14 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::{ops::try_unary_op, Device};
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct SinKernelOp;
 
 /// [Sine function](https://en.wikipedia.org/wiki/Sine_and_cosine).
 ///
@@ -24,22 +26,18 @@ use super::ops::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.sin();
 /// ```
-pub trait TrySin: HasErr {
-    fn sin(self) -> Self {
-        self.try_sin().unwrap()
-    }
-    fn try_sin(self) -> Result<Self, Self::Err>;
+pub fn sin<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+) -> Tensor<S, E, D, T> {
+    t.sin()
 }
 
-#[derive(Debug, Default, Copy, Clone)]
-pub(super) struct SinKernelOp;
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TrySin for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<SinKernelOp, S, S, E>,
-{
-    fn try_sin(self) -> Result<Self, Self::Err> {
-        try_unary_op(Default::default(), self)
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn sin(self) -> Self {
+        self.try_sin().unwrap()
+    }
+    pub fn try_sin(self) -> Result<Self, D::Err> {
+        try_unary_op(SinKernelOp, self)
     }
 }
 

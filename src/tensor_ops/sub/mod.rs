@@ -2,12 +2,21 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
+    devices::HasErr,
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::ops::{try_binary_op, try_unary_op, BinaryKernel, UnaryKernel};
+use super::{
+    ops::{try_binary_op, try_unary_op},
+    Device,
+};
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct BinarySubKernelOp;
+
+#[derive(Debug, Clone, Copy)]
+pub struct ScalarSubKernelOp<E>(E);
 
 /// Element wise and scalar subtraction.
 ///
@@ -24,37 +33,34 @@ use super::ops::{try_binary_op, try_unary_op, BinaryKernel, UnaryKernel};
 /// ```rust
 /// todo!()
 /// ```
+pub fn sub<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
+    lhs: Tensor<S, E, D, T>,
+    rhs: Tensor<S, E, D, RhsTape>,
+) -> Tensor<S, E, D, T> {
+    lhs - rhs
+}
+
 pub trait TrySub<Rhs = Self>: HasErr {
     fn try_sub(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub(super) struct BinarySubKernelOp;
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, RhsTape: Tape<D>>
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, RhsTape: Tape<D>>
     TrySub<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
-    D: BinaryKernel<BinarySubKernelOp, S, S, S, E>,
     LhsTape: Merge<RhsTape>,
 {
     fn try_sub(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, Self::Err> {
-        try_binary_op(Default::default(), self, rhs)
+        try_binary_op(BinarySubKernelOp, self, rhs)
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(super) struct ScalarSubKernelOp<E>(E);
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TrySub<E> for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<ScalarSubKernelOp<E>, S, S, E>,
-{
-    fn try_sub(self, s: E) -> Result<Self, Self::Err> {
-        try_unary_op(ScalarSubKernelOp(s), self)
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TrySub<E> for Tensor<S, E, D, T> {
+    fn try_sub(self, rhs: E) -> Result<Self, Self::Err> {
+        try_unary_op(ScalarSubKernelOp(rhs), self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, Rhs> std::ops::Sub<Rhs>
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, Rhs> std::ops::Sub<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TrySub<Rhs>,

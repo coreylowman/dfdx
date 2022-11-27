@@ -1,6 +1,6 @@
 use crate::{
-    arrays::{HasAxes, HasShape, Shape},
-    devices::{device::HasErr, DeviceStorage},
+    arrays::{AxesAsArray, BroadcastShapeTo, HasAxes, HasShape, Shape},
+    devices::device::HasErr,
     gradients::Tape,
     tensor::Tensor,
 };
@@ -33,15 +33,14 @@ pub trait TryMeanTo<T, Axes>: HasErr {
     fn try_mean(self) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, Dst: Shape, Axes: Default, D: DeviceStorage, T: Tape<D>>
-    TryMeanTo<Tensor<Dst, f32, D, T>, Axes> for Tensor<Src, f32, D, T>
+impl<Src: Shape, Dst: Shape + Default, Ax: Default + AxesAsArray, D: Device<f32>, T: Tape<D>>
+    TryMeanTo<Tensor<Dst, f32, D, T>, Ax> for Tensor<Src, f32, D, T>
 where
-    Self: SumTo<Tensor<Dst, f32, D, T>, Axes>,
-    Tensor<Dst, f32, D, T>: TryDiv<f32, Err = Self::Err>,
-    Src: HasAxes<Axes>,
+    Src: HasAxes<Ax>,
+    Dst: BroadcastShapeTo<Src, Ax>,
 {
     fn try_mean(self) -> Result<Tensor<Dst, f32, D, T>, Self::Err> {
-        let num_elements_reduced = <Src as HasAxes<Axes>>::size(self.shape()) as f32;
+        let num_elements_reduced = <Src as HasAxes<Ax>>::size(self.shape()) as f32;
         self.try_sum()?.try_div(num_elements_reduced)
     }
 }

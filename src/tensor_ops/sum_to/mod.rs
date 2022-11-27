@@ -1,13 +1,31 @@
 mod cpu_kernel;
 
 use crate::{
-    arrays::{Dtype, Shape},
+    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, Shape},
     devices::{DeviceStorage, HasErr},
     gradients::Tape,
-    tensor::Tensor,
+    tensor::{make_tensor, Tensor},
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::device::Device;
+
+pub trait SumKernel<E: Dtype>: DeviceStorage {
+    fn forward<Src: Shape, Dst: Shape, Ax: AxesAsArray>(
+        &self,
+        dst: Dst,
+        inp: &Self::Storage<Src, E>,
+    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+    where
+        Dst: BroadcastShapeTo<Src, Ax>;
+    fn backward<Src: Shape, Dst: Shape, Ax: AxesAsArray>(
+        &self,
+        inp: &Self::Storage<Src, E>,
+        grad_inp: &mut Self::Storage<Src, E>,
+        grad_out: &Self::Storage<Dst, E>,
+    ) -> Result<(), Self::Err>
+    where
+        Dst: BroadcastShapeTo<Src, Ax>;
+}
 
 /// Sum values along axes `Axes` of `T`.
 ///
@@ -40,22 +58,23 @@ pub trait SumTo<T, Axes>: HasErr {
     fn try_sum(self) -> Result<T, Self::Err>;
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub(super) struct SumKernelOp<Axes>(std::marker::PhantomData<Axes>);
-
-impl<
-        Src: Shape,
-        Dst: Shape,
-        Axes: 'static + Copy + Default,
-        E: Dtype,
-        D: DeviceStorage,
-        T: Tape<D>,
-    > SumTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
+impl<Src: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Dst: Shape + Default, Ax: AxesAsArray>
+    SumTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
-    D: UnaryKernel<SumKernelOp<Axes>, Src, Dst, E>,
+    Dst: BroadcastShapeTo<Src, Ax>,
 {
     fn try_sum(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
-        try_unary_op(Default::default(), self)
+        let dst: Dst = Default::default();
+        let (inp, mut tape) = self.split_tape();
+        let storage = SumKernel::forward(&inp.device, dst, &inp.storage)?;
+        let out = make_tensor(&inp.device, storage);
+        let phantom_out = out.clone();
+        tape.add_backward_op(move |grads| {
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
+            SumKernel::backward(&inp.device, &inp.storage, grad_inp, grad_out)?;
+            Ok(())
+        });
+        Ok(out.put_tape(tape))
     }
 }
 

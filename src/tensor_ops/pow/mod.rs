@@ -2,12 +2,14 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::{ops::try_unary_op, Device};
+
+#[derive(Debug, Clone, Copy)]
+pub struct PowKernelOp<E>(E);
 
 /// Raises to a float power. `t^i`.
 ///
@@ -21,22 +23,19 @@ use super::ops::{try_unary_op, UnaryKernel};
 /// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.powf(-3.2);
 /// ```
-pub trait TryPowf<E: Dtype>: HasErr {
-    fn powf(self, i: E) -> Self {
-        self.try_powf(i).unwrap()
-    }
-    fn try_powf(self, i: E) -> Result<Self, Self::Err>;
+pub fn powf<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+    exponent: E,
+) -> Tensor<S, E, D, T> {
+    t.powf(exponent)
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(super) struct PowKernelOp<E>(E);
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryPowf<E> for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<PowKernelOp<E>, S, S, E>,
-{
-    fn try_powf(self, i: E) -> Result<Self, Self::Err> {
-        try_unary_op(PowKernelOp(i), self)
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn powf(self, exponent: E) -> Self {
+        self.try_powf(exponent).unwrap()
+    }
+    pub fn try_powf(self, exponent: E) -> Result<Self, D::Err> {
+        try_unary_op(PowKernelOp(exponent), self)
     }
 }
 
@@ -52,19 +51,19 @@ where
 /// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.powi(3);
 /// ```
-pub trait TryPowi: HasErr {
-    fn powi(self, i: i32) -> Self {
-        self.try_powi(i).unwrap()
-    }
-    fn try_powi(self, i: i32) -> Result<Self, Self::Err>;
+pub fn powi<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+    exponent: i32,
+) -> Tensor<S, E, D, T> {
+    t.powi(exponent)
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryPowi for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<PowKernelOp<i32>, S, S, E>,
-{
-    fn try_powi(self, i: i32) -> Result<Self, Self::Err> {
-        try_unary_op(PowKernelOp(i), self)
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn powi(self, exponent: i32) -> Self {
+        self.try_powi(exponent).unwrap()
+    }
+    pub fn try_powi(self, exponent: i32) -> Result<Self, D::Err> {
+        try_unary_op(PowKernelOp(exponent), self)
     }
 }
 

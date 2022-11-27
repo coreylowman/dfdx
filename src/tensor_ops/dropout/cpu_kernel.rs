@@ -6,8 +6,8 @@ use super::DropoutKernelOp;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::Standard;
 
-impl<S: Shape> UnaryKernel<DropoutKernelOp, S, S, f32> for Cpu {
-    fn unary_fwd(
+impl UnaryKernel<DropoutKernelOp, f32> for Cpu {
+    fn unary_fwd<S: Shape>(
         &self,
         op: DropoutKernelOp,
         inp: &Self::Storage<S, f32>,
@@ -25,7 +25,7 @@ impl<S: Shape> UnaryKernel<DropoutKernelOp, S, S, f32> for Cpu {
         Ok(out)
     }
 
-    fn unary_bwd(
+    fn unary_bwd<S: Shape>(
         &self,
         op: DropoutKernelOp,
         inp: &Self::Storage<S, f32>,

@@ -2,12 +2,14 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::{device::Device, ops::try_unary_op};
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct ExpKernelOp;
 
 /// [Exponential function (exp)](https://en.wikipedia.org/wiki/Natural_logarithm). `e^t`
 ///
@@ -24,22 +26,18 @@ use super::ops::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.exp();
 /// ```
-pub trait TryExp: HasErr {
-    fn exp(self) -> Self {
-        self.try_exp().unwrap()
-    }
-    fn try_exp(self) -> Result<Self, Self::Err>;
+pub fn exp<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+) -> Tensor<S, E, D, T> {
+    t.exp()
 }
 
-#[derive(Debug, Default, Copy, Clone)]
-pub(super) struct ExpKernelOp;
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryExp for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<ExpKernelOp, S, S, E>,
-{
-    fn try_exp(self) -> Result<Self, Self::Err> {
-        try_unary_op(Default::default(), self)
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn exp(self) -> Self {
+        self.try_exp().unwrap()
+    }
+    pub fn try_exp(self) -> Result<Self, D::Err> {
+        try_unary_op(ExpKernelOp, self)
     }
 }
 

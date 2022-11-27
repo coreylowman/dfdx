@@ -1,24 +1,20 @@
 use crate::{
-    arrays::{BroadcastStrides, Shape},
+    arrays::{AxesAsArray, BroadcastShapeTo, Shape},
     devices::cpu::{Cpu, LendingIterator, StridedArray},
-    tensor_ops::ops::FullUnaryKernel,
 };
 
-use super::MinReduceKernelOp;
+use super::MinReduceKernel;
 
-impl<const N: usize, Axes, Src, Dst> FullUnaryKernel<MinReduceKernelOp<Axes>, Src, Dst, f32> for Cpu
-where
-    Dst: BroadcastStrides<Src, Axes>,
-    Src: Shape<Concrete = [usize; N]>,
-    Dst: Shape + Default,
-{
-    fn unary_fwd(
+impl MinReduceKernel<f32> for Cpu {
+    fn forward<Src: Shape, Dst: Shape, Ax: AxesAsArray>(
         &self,
-        _op: MinReduceKernelOp<Axes>,
+        dst: Dst,
         inp: &Self::Storage<Src, f32>,
-    ) -> Result<Self::Storage<Dst, f32>, Self::Err> {
-        let mut out: StridedArray<Dst, f32> =
-            StridedArray::try_new_with(Dst::default(), f32::INFINITY)?;
+    ) -> Result<Self::Storage<Dst, f32>, Self::Err>
+    where
+        Dst: BroadcastShapeTo<Src, Ax>,
+    {
+        let mut out: StridedArray<Dst, f32> = StridedArray::try_new_with(dst, f32::INFINITY)?;
         let mut out_iter = out.iter_mut_as(&inp.shape);
         let mut inp_iter = inp.iter();
         while let Some((out_i, inp_i)) = out_iter.next().zip(inp_iter.next()) {
@@ -27,14 +23,16 @@ where
         Ok(out)
     }
 
-    fn unary_bwd(
+    fn backward<Src: Shape, Dst: Shape, Ax: AxesAsArray>(
         &self,
-        _op: MinReduceKernelOp<Axes>,
         inp: &Self::Storage<Src, f32>,
         grad_inp: &mut Self::Storage<Src, f32>,
         out: &Self::Storage<Dst, f32>,
         grad_out: &Self::Storage<Dst, f32>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), Self::Err>
+    where
+        Dst: BroadcastShapeTo<Src, Ax>,
+    {
         let mut inp_iter = inp.iter();
         let mut grad_inp_itr = grad_inp.iter_mut();
         let mut out_iter = out.iter_as(&inp.shape);

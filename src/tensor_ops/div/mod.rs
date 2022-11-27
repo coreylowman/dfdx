@@ -2,12 +2,21 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
+    devices::HasErr,
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::ops::{try_binary_op, try_unary_op, BinaryKernel, UnaryKernel};
+use super::{
+    device::Device,
+    ops::{try_binary_op, try_unary_op},
+};
+
+#[derive(Debug, Clone, Copy)]
+pub struct ScalarDivKernelOp<E>(pub(crate) E);
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct BinaryDivKernelOp;
 
 /// Element wise and scalar division.
 ///
@@ -24,37 +33,34 @@ use super::ops::{try_binary_op, try_unary_op, BinaryKernel, UnaryKernel};
 /// ```rust
 /// todo!()
 /// ```
+pub fn div<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
+    lhs: Tensor<S, E, D, T>,
+    rhs: Tensor<S, E, D, RhsTape>,
+) -> Tensor<S, E, D, T> {
+    lhs / rhs
+}
+
 pub trait TryDiv<Rhs = Self>: HasErr {
     fn try_div(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub(super) struct BinaryDivKernelOp;
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, RhsTape: Tape<D>>
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, RhsTape: Tape<D>>
     TryDiv<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
-    D: BinaryKernel<BinaryDivKernelOp, S, S, S, E>,
     LhsTape: Merge<RhsTape>,
 {
     fn try_div(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, Self::Err> {
-        try_binary_op(Default::default(), self, rhs)
+        try_binary_op(BinaryDivKernelOp, self, rhs)
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(super) struct ScalarDivKernelOp<E>(pub(crate) E);
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryDiv<E> for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<ScalarDivKernelOp<E>, S, S, E>,
-{
-    fn try_div(self, s: E) -> Result<Self, Self::Err> {
-        try_unary_op(ScalarDivKernelOp(s), self)
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryDiv<E> for Tensor<S, E, D, T> {
+    fn try_div(self, rhs: E) -> Result<Self, Self::Err> {
+        try_unary_op(ScalarDivKernelOp(rhs), self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, Rhs> std::ops::Div<Rhs>
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, Rhs> std::ops::Div<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryDiv<Rhs>,

@@ -2,12 +2,14 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::{ops::try_unary_op, Device};
+
+#[derive(Debug, Clone, Copy)]
+pub struct NansToKernelOp<E>(E);
 
 /// Replaces any [std::f32::NAN] with `value`.
 ///
@@ -20,21 +22,18 @@ use super::ops::{try_unary_op, UnaryKernel};
 /// let r = t.nans_to(0.0);
 /// assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
 /// ```
-pub trait TryNansTo<E: Dtype>: HasErr {
-    fn nans_to(self, value: E) -> Self {
-        self.try_nans_to(value).unwrap()
-    }
-    fn try_nans_to(self, value: E) -> Result<Self, Self::Err>;
+pub fn nans_to<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+    value: E,
+) -> Tensor<S, E, D, T> {
+    t.nans_to(value)
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(super) struct NansToKernelOp<E>(E);
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryNansTo<E> for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<NansToKernelOp<E>, S, S, E>,
-{
-    fn try_nans_to(self, value: E) -> Result<Self, Self::Err> {
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn nans_to(self, value: E) -> Self {
+        self.try_nans_to(value).unwrap()
+    }
+    pub fn try_nans_to(self, value: E) -> Result<Self, D::Err> {
         try_unary_op(NansToKernelOp(value), self)
     }
 }

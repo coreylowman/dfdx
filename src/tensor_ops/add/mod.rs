@@ -2,12 +2,21 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
+    devices::HasErr,
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::ops::{try_binary_op, try_unary_op, BinaryKernel, UnaryKernel};
+use super::{
+    device::Device,
+    ops::{try_binary_op, try_unary_op},
+};
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct BinaryAddKernelOp;
+
+#[derive(Debug, Clone, Copy)]
+pub struct ScalarAddKernelOp<E>(pub(crate) E);
 
 /// Element wise and scalar addition.
 ///
@@ -24,37 +33,34 @@ use super::ops::{try_binary_op, try_unary_op, BinaryKernel, UnaryKernel};
 /// ```rust
 /// todo!()
 /// ```
+pub fn add<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
+    lhs: Tensor<S, E, D, T>,
+    rhs: Tensor<S, E, D, RhsTape>,
+) -> Tensor<S, E, D, T> {
+    lhs + rhs
+}
+
 pub trait TryAdd<Rhs = Self>: HasErr {
     fn try_add(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub(super) struct BinaryAddKernelOp;
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, RhsTape: Tape<D>>
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, RhsTape: Tape<D>>
     TryAdd<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
-    D: BinaryKernel<BinaryAddKernelOp, S, S, S, E>,
     LhsTape: Merge<RhsTape>,
 {
     fn try_add(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, Self::Err> {
-        try_binary_op(Default::default(), self, rhs)
+        try_binary_op(BinaryAddKernelOp, self, rhs)
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(super) struct ScalarAddKernelOp<E>(pub(crate) E);
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryAdd<E> for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<ScalarAddKernelOp<E>, S, S, E>,
-{
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryAdd<E> for Tensor<S, E, D, T> {
     fn try_add(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarAddKernelOp(rhs), self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, Rhs> std::ops::Add<Rhs>
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, Rhs> std::ops::Add<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryAdd<Rhs>,

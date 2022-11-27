@@ -1,6 +1,6 @@
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
-    arrays::Shape,
+    arrays::{Dtype, Shape},
     devices::{cpu::LendingIterator, Cpu, ZerosLike},
 };
 
@@ -15,25 +15,25 @@ pub trait BinaryDerivative<E> {
     fn dfdy(&self, x: &E, y: &E) -> E;
 }
 
-impl<Op: UnaryDerivative<f32>, S: Shape> UnaryKernel<Op, S, S, f32> for Cpu {
-    fn unary_fwd(
+impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
+    fn unary_fwd<S: Shape>(
         &self,
         op: Op,
-        inp: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
-        let mut out: Self::Storage<S, f32> = inp.try_clone()?;
+        inp: &Self::Storage<S, E>,
+    ) -> Result<Self::Storage<S, E>, Self::Err> {
+        let mut out: Self::Storage<S, E> = inp.try_clone()?;
         for x in out.buf_iter_mut() {
             *x = op.f(x);
         }
         Ok(out)
     }
 
-    fn unary_bwd(
+    fn unary_bwd<S: Shape>(
         &self,
         op: Op,
-        inp: &Self::Storage<S, f32>,
-        grad_inp: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
+        inp: &Self::Storage<S, E>,
+        grad_inp: &mut Self::Storage<S, E>,
+        grad_out: &Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
         debug_assert_eq!(grad_inp.data.len(), grad_out.data.len());
         debug_assert_eq!(inp.data.len(), grad_out.data.len());
@@ -44,16 +44,14 @@ impl<Op: UnaryDerivative<f32>, S: Shape> UnaryKernel<Op, S, S, f32> for Cpu {
     }
 }
 
-impl<Op: BinaryDerivative<f32>, const N: usize, S: Shape<Concrete = [usize; N]>>
-    BinaryKernel<Op, S, S, S, f32> for Cpu
-{
-    fn binary_fwd(
+impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
+    fn binary_fwd<S: Shape>(
         &self,
         op: Op,
-        lhs: &Self::Storage<S, f32>,
-        rhs: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
-        let mut out: Self::Storage<S, f32> = self.try_zeros_like(lhs.shape)?;
+        lhs: &Self::Storage<S, E>,
+        rhs: &Self::Storage<S, E>,
+    ) -> Result<Self::Storage<S, E>, Self::Err> {
+        let mut out: Self::Storage<S, E> = self.try_zeros_like(lhs.shape)?;
         let mut lhs_iter = lhs.iter();
         let mut rhs_iter = rhs.iter();
         let mut out_iter = out.iter_mut();
@@ -62,14 +60,14 @@ impl<Op: BinaryDerivative<f32>, const N: usize, S: Shape<Concrete = [usize; N]>>
         }
         Ok(out)
     }
-    fn binary_bwd(
+    fn binary_bwd<S: Shape>(
         &self,
         op: Op,
-        lhs: &Self::Storage<S, f32>,
-        grad_lhs: &mut Self::Storage<S, f32>,
-        rhs: &Self::Storage<S, f32>,
-        grad_rhs: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
+        lhs: &Self::Storage<S, E>,
+        grad_lhs: &mut Self::Storage<S, E>,
+        rhs: &Self::Storage<S, E>,
+        grad_rhs: &mut Self::Storage<S, E>,
+        grad_out: &Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
         let mut lhs_iter = lhs.iter();
         let mut rhs_iter = rhs.iter();
@@ -79,7 +77,7 @@ impl<Op: BinaryDerivative<f32>, const N: usize, S: Shape<Concrete = [usize; N]>>
         for _ in 0..lhs.shape.num_elements() {
             let l = lhs_iter.next().unwrap();
             let r = rhs_iter.next().unwrap();
-            let go = grad_out_iter.next().unwrap();
+            let go = *grad_out_iter.next().unwrap();
             let gl = grad_lhs_iter.next().unwrap();
             *gl += op.dfdx(l, r) * go;
             let gr = grad_rhs_iter.next().unwrap();

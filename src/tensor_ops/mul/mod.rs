@@ -2,12 +2,20 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
+    devices::HasErr,
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::ops::{try_binary_op, try_unary_op, BinaryKernel, UnaryKernel};
+use super::{
+    ops::{try_binary_op, try_unary_op},
+    Device,
+};
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct BinaryMulKernelOp;
+#[derive(Debug, Clone, Copy)]
+pub struct ScalarMulKernelOp<E>(E);
 
 /// Element wise and scalar multiplication.
 ///
@@ -24,37 +32,33 @@ use super::ops::{try_binary_op, try_unary_op, BinaryKernel, UnaryKernel};
 /// ```rust
 /// todo!();
 /// ```
+pub fn mul<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
+    lhs: Tensor<S, E, D, T>,
+    rhs: Tensor<S, E, D, RhsTape>,
+) -> Tensor<S, E, D, T> {
+    lhs * rhs
+}
 pub trait TryMul<Rhs = Self>: HasErr {
     fn try_mul(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub struct BinaryMulKernelOp;
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, RhsTape: Tape<D>>
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, RhsTape: Tape<D>>
     TryMul<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
-    D: BinaryKernel<BinaryMulKernelOp, S, S, S, E>,
     LhsTape: Merge<RhsTape>,
 {
     fn try_mul(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, Self::Err> {
-        try_binary_op(Default::default(), self, rhs)
+        try_binary_op(BinaryMulKernelOp, self, rhs)
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(super) struct ScalarMulKernelOp<E>(E);
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryMul<E> for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<ScalarMulKernelOp<E>, S, S, E>,
-{
-    fn try_mul(self, s: E) -> Result<Self, Self::Err> {
-        try_unary_op(ScalarMulKernelOp(s), self)
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryMul<E> for Tensor<S, E, D, T> {
+    fn try_mul(self, rhs: E) -> Result<Self, Self::Err> {
+        try_unary_op(ScalarMulKernelOp(rhs), self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, Rhs> std::ops::Mul<Rhs>
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, Rhs> std::ops::Mul<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryMul<Rhs>,
@@ -64,7 +68,6 @@ where
         self.try_mul(rhs).unwrap()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use crate::devices::AsArray;

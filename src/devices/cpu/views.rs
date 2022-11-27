@@ -1,4 +1,4 @@
-use crate::arrays::{Dim, Dtype, Shape, C};
+use crate::arrays::{Const, Dim, Dtype, Shape};
 use crate::devices::cpu::StridedArray;
 
 #[derive(Copy, Clone)]
@@ -34,34 +34,34 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
 }
 
 impl<D1: Dim, E: Dtype> View<(D1,), E> {
-    pub(crate) fn br0(self) -> View<(C<1>, D1), E> {
+    pub(crate) fn br0(self) -> View<(Const<1>, D1), E> {
         View {
             ptr: self.ptr,
-            shape: (C, self.shape.0),
+            shape: (Const, self.shape.0),
             strides: [0, self.strides[0]],
         }
     }
-    pub(crate) fn br1(self) -> View<(D1, C<1>), E> {
+    pub(crate) fn br1(self) -> View<(D1, Const<1>), E> {
         View {
             ptr: self.ptr,
-            shape: (self.shape.0, C),
+            shape: (self.shape.0, Const),
             strides: [self.strides[0], 0],
         }
     }
 }
 
 impl<D1: Dim, E: Dtype> ViewMut<(D1,), E> {
-    pub(crate) fn br0(self) -> ViewMut<(C<1>, D1), E> {
+    pub(crate) fn br0(self) -> ViewMut<(Const<1>, D1), E> {
         ViewMut {
             ptr: self.ptr,
-            shape: (C, self.shape.0),
+            shape: (Const, self.shape.0),
             strides: [0, self.strides[0]],
         }
     }
-    pub(crate) fn br1(self) -> ViewMut<(D1, C<1>), E> {
+    pub(crate) fn br1(self) -> ViewMut<(D1, Const<1>), E> {
         ViewMut {
             ptr: self.ptr,
-            shape: (self.shape.0, C),
+            shape: (self.shape.0, Const),
             strides: [self.strides[0], 0],
         }
     }

@@ -5,74 +5,50 @@ use crate::{
     tensor::{make_tensor, Tensor},
 };
 
-pub(crate) trait UnaryKernel<Op, Inp: Shape, Out: Shape, E: Dtype>: DeviceStorage {
-    fn unary_fwd(
+pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
+    fn unary_fwd<S: Shape>(
         &self,
         op: Op,
-        inp: &Self::Storage<Inp, E>,
-    ) -> Result<Self::Storage<Out, E>, Self::Err>;
-    fn unary_bwd(
+        inp: &Self::Storage<S, E>,
+    ) -> Result<Self::Storage<S, E>, Self::Err>;
+    fn unary_bwd<S: Shape>(
         &self,
         op: Op,
-        inp: &Self::Storage<Inp, E>,
-        grad_inp: &mut Self::Storage<Inp, E>,
-        grad_out: &Self::Storage<Out, E>,
+        inp: &Self::Storage<S, E>,
+        grad_inp: &mut Self::Storage<S, E>,
+        grad_out: &Self::Storage<S, E>,
     ) -> Result<(), Self::Err>;
 }
 
-pub(crate) trait FullUnaryKernel<Op, Inp: Shape, Out: Shape, E: Dtype>:
-    DeviceStorage
-{
-    fn unary_fwd(
+pub trait BinaryKernel<Op, E: Dtype>: DeviceStorage {
+    fn binary_fwd<S: Shape>(
         &self,
         op: Op,
-        inp: &Self::Storage<Inp, E>,
-    ) -> Result<Self::Storage<Out, E>, Self::Err>;
-    fn unary_bwd(
-        &self,
-        op: Op,
-        inp: &Self::Storage<Inp, E>,
-        grad_inp: &mut Self::Storage<Inp, E>,
-        out: &Self::Storage<Out, E>,
-        grad_out: &Self::Storage<Out, E>,
-    ) -> Result<(), Self::Err>;
-}
+        lhs: &Self::Storage<S, E>,
+        rhs: &Self::Storage<S, E>,
+    ) -> Result<Self::Storage<S, E>, Self::Err>;
 
-pub(crate) trait BinaryKernel<Op, Lhs: Shape, Rhs: Shape, Out: Shape, E: Dtype>:
-    DeviceStorage
-{
-    fn binary_fwd(
+    fn binary_bwd<S: Shape>(
         &self,
         op: Op,
-        lhs: &Self::Storage<Lhs, E>,
-        rhs: &Self::Storage<Rhs, E>,
-    ) -> Result<Self::Storage<Out, E>, Self::Err>;
-
-    fn binary_bwd(
-        &self,
-        op: Op,
-        lhs: &Self::Storage<Lhs, E>,
-        grad_lhs: &mut Self::Storage<Lhs, E>,
-        rhs: &Self::Storage<Rhs, E>,
-        grad_rhs: &mut Self::Storage<Rhs, E>,
-        grad_out: &Self::Storage<Out, E>,
+        lhs: &Self::Storage<S, E>,
+        grad_lhs: &mut Self::Storage<S, E>,
+        rhs: &Self::Storage<S, E>,
+        grad_rhs: &mut Self::Storage<S, E>,
+        grad_out: &Self::Storage<S, E>,
     ) -> Result<(), Self::Err>;
 }
 
 pub(crate) fn try_unary_op<
     Op: 'static + Clone,
-    Inp: Shape,
-    Out: Shape,
+    S: Shape,
     E: Dtype,
-    D: DeviceStorage,
+    D: UnaryKernel<Op, E>,
     T: Tape<D>,
 >(
     op: Op,
-    inp: Tensor<Inp, E, D, T>,
-) -> Result<Tensor<Out, E, D, T>, D::Err>
-where
-    D: UnaryKernel<Op, Inp, Out, E>,
-{
+    inp: Tensor<S, E, D, T>,
+) -> Result<Tensor<S, E, D, T>, D::Err> {
     let (inp, mut tape) = inp.split_tape();
     let storage = inp.device.unary_fwd(op.clone(), &inp.storage)?;
     let out = make_tensor(&inp.device, storage);
@@ -85,51 +61,18 @@ where
     Ok(out.put_tape(tape))
 }
 
-pub(crate) fn try_full_unary_op<
-    Op: 'static + Copy,
-    Inp: Shape,
-    Out: Shape,
-    E: Dtype,
-    D: DeviceStorage,
-    T: Tape<D>,
->(
-    op: Op,
-    inp: Tensor<Inp, E, D, T>,
-) -> Result<Tensor<Out, E, D, T>, D::Err>
-where
-    D: FullUnaryKernel<Op, Inp, Out, E>,
-{
-    let (inp, mut tape) = inp.split_tape();
-    let storage = inp.device.unary_fwd(op, &inp.storage)?;
-    let out = make_tensor(&inp.device, storage);
-    let phantom_out = out.clone();
-    tape.add_backward_op(move |grads| {
-        let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
-        inp.device
-            .unary_bwd(op, &inp.storage, grad_inp, &phantom_out.storage, grad_out)?;
-        Ok(())
-    });
-    Ok(out.put_tape(tape))
-}
-
 pub(crate) fn try_binary_op<
     Op: 'static + Copy,
-    Lhs: Shape,
-    Rhs: Shape,
-    Out: Shape,
+    S: Shape,
     E: Dtype,
-    D: DeviceStorage,
-    LhsTape: Tape<D>,
+    D: BinaryKernel<Op, E>,
     RhsTape: Tape<D>,
+    LhsTape: Tape<D> + Merge<RhsTape>,
 >(
     op: Op,
-    lhs: Tensor<Lhs, E, D, LhsTape>,
-    rhs: Tensor<Rhs, E, D, RhsTape>,
-) -> Result<Tensor<Out, E, D, LhsTape>, D::Err>
-where
-    D: BinaryKernel<Op, Lhs, Rhs, Out, E>,
-    LhsTape: Merge<RhsTape>,
-{
+    lhs: Tensor<S, E, D, LhsTape>,
+    rhs: Tensor<S, E, D, RhsTape>,
+) -> Result<Tensor<S, E, D, LhsTape>, D::Err> {
     let (lhs, ltape) = lhs.split_tape();
     let (rhs, rtape) = rhs.split_tape();
     let mut tape = ltape.merge(rtape);

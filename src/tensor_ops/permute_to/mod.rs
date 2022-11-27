@@ -1,10 +1,27 @@
 mod cpu_kernel;
-use crate::arrays::{Dtype, HasShape, PermuteShapeTo, Shape};
+use crate::arrays::{AxesAsArray, Dtype, HasShape, PermuteShapeTo, Shape};
 use crate::devices::{DeviceStorage, HasErr};
 use crate::gradients::Tape;
-use crate::tensor::Tensor;
+use crate::tensor::{make_tensor, Tensor};
 
 use super::ops::{try_unary_op, UnaryKernel};
+
+pub trait PermuteKernel<E: Dtype>: DeviceStorage {
+    fn forward<Src: Shape, Dst: Shape<Concrete = Src::Concrete>, Axes: AxesAsArray>(
+        &self,
+        inp: &Self::Storage<Src, E>,
+    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+    where
+        Src: PermuteShapeTo<Dst, Axes>;
+    fn backward<Src: Shape, Dst: Shape<Concrete = Src::Concrete>, Axes: AxesAsArray>(
+        &self,
+        inp: &Self::Storage<Src, E>,
+        grad_inp: &mut Self::Storage<Src, E>,
+        grad_out: &Self::Storage<Dst, E>,
+    ) -> Result<(), Self::Err>
+    where
+        Src: PermuteShapeTo<Dst, Axes>;
+}
 
 /// Permutes self into `T` with the new order of axes specified via `Axes`.
 /// Permutes the tensor
@@ -23,20 +40,29 @@ pub trait PermuteTo<T: HasShape, Axes>: HasErr {
     fn try_permute(self) -> Result<T, Self::Err>;
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub(super) struct PermuteKernelOp<S, Axes>(S, std::marker::PhantomData<Axes>);
-
-impl<Src: Shape, Dst: Shape, Axes: 'static + Copy, E: Dtype, D: DeviceStorage, T: Tape<D>>
-    PermuteTo<Tensor<Dst, E, D, T>, Axes> for Tensor<Src, E, D, T>
+impl<
+        Src: Shape,
+        Dst: Shape<Concrete = Src::Concrete>,
+        Ax: 'static + Copy + AxesAsArray,
+        E: Dtype,
+        D: DeviceStorage,
+        T: Tape<D>,
+    > PermuteTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
-    Src: PermuteShapeTo<Dst, Axes>,
-    D: UnaryKernel<PermuteKernelOp<Dst, Axes>, Src, Dst, E>,
+    Src: PermuteShapeTo<Dst, Ax>,
+    D: PermuteKernel<E>,
 {
     fn try_permute(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
-        try_unary_op(
-            PermuteKernelOp(self.shape().permuted(), std::marker::PhantomData),
-            self,
-        )
+        let (inp, mut tape) = self.split_tape();
+        let storage = PermuteKernel::forward(&inp.device, &inp.storage)?;
+        let out = make_tensor(&inp.device, storage);
+        let phantom_out = out.clone();
+        tape.add_backward_op(move |grads| {
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
+            PermuteKernel::backward(&inp.device, &inp.storage, grad_inp, grad_out)?;
+            Ok(())
+        });
+        Ok(out.put_tape(tape))
     }
 }
 

@@ -2,12 +2,14 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::{device::Device, ops::try_unary_op};
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct AbsKernelOp;
 
 /// [Absolute value (abs)](https://en.wikipedia.org/wiki/Absolute_value). `|t|`
 ///
@@ -24,22 +26,18 @@ use super::ops::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.abs();
 /// ```
-pub trait TryAbs: HasErr {
-    fn abs(self) -> Self {
-        self.try_abs().unwrap()
-    }
-    fn try_abs(self) -> Result<Self, Self::Err>;
+pub fn abs<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+) -> Tensor<S, E, D, T> {
+    t.abs()
 }
 
-#[derive(Debug, Default, Copy, Clone)]
-pub(super) struct AbsKernelOp;
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryAbs for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<AbsKernelOp, S, S, E>,
-{
-    fn try_abs(self) -> Result<Self, Self::Err> {
-        try_unary_op(Default::default(), self)
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn abs(self) -> Self {
+        self.try_abs().unwrap()
+    }
+    pub fn try_abs(self) -> Result<Self, D::Err> {
+        try_unary_op(AbsKernelOp, self)
     }
 }
 

@@ -2,12 +2,14 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::ops::{try_binary_op, BinaryKernel};
+use super::{ops::try_binary_op, Device};
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct MaximumKernelOp;
 
 /// Element wise maximum.
 ///
@@ -20,24 +22,28 @@ use super::ops::{try_binary_op, BinaryKernel};
 /// let b = tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
 /// let r = a.maximum(b);
 /// assert_eq!(r.data(), &[[1.0, 2.0, 3.0], [-1.0, 2.0, -3.0]]);
-pub trait TryMaximum<Rhs = Self>: HasErr {
-    fn maximum(self, rhs: Rhs) -> Self {
-        self.try_maximum(rhs).unwrap()
-    }
-    fn try_maximum(self, rhs: Rhs) -> Result<Self, Self::Err>;
+pub fn maximum<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
+    lhs: Tensor<S, E, D, T>,
+    rhs: Tensor<S, E, D, RhsTape>,
+) -> Tensor<S, E, D, T> {
+    lhs.maximum(rhs)
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub(super) struct MaximumKernelOp;
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// Calls [maximum]
+    pub fn maximum<R: Tape<D>>(self, rhs: Tensor<S, E, D, R>) -> Self
+    where
+        T: Merge<R>,
+    {
+        self.try_maximum(rhs).unwrap()
+    }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, RhsTape: Tape<D>>
-    TryMaximum<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
-where
-    D: BinaryKernel<MaximumKernelOp, S, S, S, E>,
-    LhsTape: Merge<RhsTape>,
-{
-    fn try_maximum(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, Self::Err> {
-        try_binary_op(Default::default(), self, rhs)
+    /// Calls [try_maximum]
+    pub fn try_maximum<R: Tape<D>>(self, rhs: Tensor<S, E, D, R>) -> Result<Self, D::Err>
+    where
+        T: Merge<R>,
+    {
+        try_binary_op(MaximumKernelOp, self, rhs)
     }
 }
 

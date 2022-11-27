@@ -1,33 +1,44 @@
 mod cpu_kernel;
 
 use crate::{
-    arrays::{Dtype, HasDtype, Shape},
-    devices::{DeviceStorage, HasErr},
+    arrays::{Dtype, Shape},
     gradients::{Merge, Tape},
     tensor::Tensor,
 };
 
-use super::ops::{try_binary_op, BinaryKernel};
-
-pub trait TryHuberError<Rhs = Self>: HasErr + HasDtype {
-    fn huber_error(self, rhs: Rhs, delta: Self::Dtype) -> Self {
-        self.try_huber_error(rhs, delta).unwrap()
-    }
-    fn try_huber_error(self, rhs: Rhs, delta: Self::Dtype) -> Result<Self, Self::Err>;
-}
+use super::{device::Device, ops::try_binary_op};
 
 #[derive(Debug, Default, Clone, Copy)]
-pub(super) struct HuberErrorKernelOp<E: Dtype> {
+pub struct HuberErrorKernelOp<E: Dtype> {
     pub delta: E,
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, RhsTape: Tape<D>>
-    TryHuberError<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
-where
-    D: BinaryKernel<HuberErrorKernelOp<E>, S, S, S, E>,
-    LhsTape: Merge<RhsTape>,
-{
-    fn try_huber_error(self, rhs: Tensor<S, E, D, RhsTape>, delta: E) -> Result<Self, Self::Err> {
+pub fn huber_error<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<R>, R: Tape<D>>(
+    lhs: Tensor<S, E, D, T>,
+    rhs: Tensor<S, E, D, R>,
+    delta: E,
+) -> Tensor<S, E, D, T> {
+    lhs.huber_error(rhs, delta)
+}
+
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// Calls [huber_error]
+    pub fn huber_error<R: Tape<D>>(self, rhs: Tensor<S, E, D, R>, delta: E) -> Self
+    where
+        T: Merge<R>,
+    {
+        self.try_huber_error(rhs, delta).unwrap()
+    }
+
+    /// Calls [try_huber_error]
+    pub fn try_huber_error<R: Tape<D>>(
+        self,
+        rhs: Tensor<S, E, D, R>,
+        delta: E,
+    ) -> Result<Self, D::Err>
+    where
+        T: Merge<R>,
+    {
         try_binary_op(HuberErrorKernelOp { delta }, self, rhs)
     }
 }

@@ -2,12 +2,17 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::{device::Device, ops::try_unary_op};
+
+#[derive(Debug, Clone, Copy)]
+pub struct ClampKernelOp<E> {
+    pub min: E,
+    pub max: E,
+}
 
 /// Clamp all elements between the provided min and max values.
 ///
@@ -18,24 +23,19 @@ use super::ops::{try_unary_op, UnaryKernel};
 /// let r = t.clamp(-0.5, 0.5);
 /// assert_eq!(r.data(), &[-0.5, -0.5, 0.0, 0.5, 0.5]);
 /// ```
-pub trait TryClamp<E: Dtype>: HasErr {
+pub fn clamp<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+    min: E,
+    max: E,
+) -> Tensor<S, E, D, T> {
+    t.clamp(min, max)
+}
+
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
     fn clamp(self, min: E, max: E) -> Self {
         self.try_clamp(min, max).unwrap()
     }
-    fn try_clamp(self, min: E, max: E) -> Result<Self, Self::Err>;
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(super) struct ClampKernelOp<E> {
-    pub min: E,
-    pub max: E,
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryClamp<E> for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<ClampKernelOp<E>, S, S, E>,
-{
-    fn try_clamp(self, min: E, max: E) -> Result<Self, Self::Err> {
+    fn try_clamp(self, min: E, max: E) -> Result<Self, D::Err> {
         try_unary_op(ClampKernelOp { min, max }, self)
     }
 }
@@ -48,8 +48,6 @@ mod tests {
         tensor_ops::*,
         tests::build_test_device,
     };
-
-    use super::*;
 
     #[test]
     fn test_clamp() {

@@ -2,12 +2,17 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::{device::Device, ops::try_unary_op};
+
+#[derive(Debug, Clone, Copy)]
+pub struct DropoutKernelOp {
+    pub seed: u64,
+    pub prob: f32,
+}
 
 /// Zeros elements with probability `p` and scales all elements by `1 / (1 - p)`.
 ///
@@ -35,24 +40,18 @@ use super::ops::{try_unary_op, UnaryKernel};
 /// and then instantiates two identical [StdRng] with that seed. These rngs
 /// are used in both the forward pass and backward pass to generate identical
 /// random numbers, so the masking is the same for both.
-pub trait TryDropout: HasErr {
-    fn dropout(self, prob: f32) -> Self {
+pub fn dropout<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+    prob: f32,
+) -> Tensor<S, E, D, T> {
+    t.dropout(prob)
+}
+
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn dropout(self, prob: f32) -> Self {
         self.try_dropout(prob).unwrap()
     }
-    fn try_dropout(self, prob: f32) -> Result<Self, Self::Err>;
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(super) struct DropoutKernelOp {
-    pub seed: u64,
-    pub prob: f32,
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryDropout for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<DropoutKernelOp, S, S, E>,
-{
-    fn try_dropout(self, prob: f32) -> Result<Self, Self::Err> {
+    pub fn try_dropout(self, prob: f32) -> Result<Self, D::Err> {
         let seed = self.device.random_u64();
         try_unary_op(DropoutKernelOp { seed, prob }, self)
     }

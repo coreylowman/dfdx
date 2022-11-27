@@ -1,7 +1,7 @@
 use super::shape::*;
 
-pub(crate) trait AxesAsArray {
-    type Array;
+pub trait AxesAsArray {
+    type Array: IntoIterator<Item = isize>;
     fn as_array() -> Self::Array;
 }
 

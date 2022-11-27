@@ -1,5 +1,5 @@
 use super::device::StridedArray;
-use crate::arrays::{BroadcastStrides, Dtype, Shape, StridesFor};
+use crate::arrays::{BroadcastStridesTo, Dtype, Shape, StridesFor};
 use std::sync::Arc;
 use std::vec::Vec;
 
@@ -123,7 +123,7 @@ impl<S: Shape, Elem: Dtype> StridedArray<S, Elem> {
 impl<S: Shape, Elem: Dtype> StridedArray<S, Elem> {
     pub(crate) fn iter_as<Axes, Dst: Shape>(&self, dst: &Dst) -> StridedRefIter<Dst, Elem>
     where
-        S: BroadcastStrides<Dst, Axes>,
+        S: BroadcastStridesTo<Dst, Axes>,
     {
         StridedRefIter {
             data: self.data.as_ref(),
@@ -133,7 +133,7 @@ impl<S: Shape, Elem: Dtype> StridedArray<S, Elem> {
 
     pub(crate) fn iter_mut_as<Axes, Dst: Shape>(&mut self, dst: &Dst) -> StridedMutIter<Dst, Elem>
     where
-        S: BroadcastStrides<Dst, Axes>,
+        S: BroadcastStridesTo<Dst, Axes>,
     {
         StridedMutIter {
             data: Arc::make_mut(&mut self.data),

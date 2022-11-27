@@ -2,12 +2,14 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::{ops::try_unary_op, Device};
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct SquareKernelOp;
 
 /// `t^2`
 ///
@@ -24,22 +26,18 @@ use super::ops::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.square();
 /// ```
-pub trait TrySquare: HasErr {
-    fn square(self) -> Self {
-        self.try_square().unwrap()
-    }
-    fn try_square(self) -> Result<Self, Self::Err>;
+pub fn square<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+) -> Tensor<S, E, D, T> {
+    t.square()
 }
 
-#[derive(Debug, Default, Copy, Clone)]
-pub(super) struct SquareKernelOp;
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TrySquare for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<SquareKernelOp, S, S, E>,
-{
-    fn try_square(self) -> Result<Self, Self::Err> {
-        try_unary_op(Default::default(), self)
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn square(self) -> Self {
+        self.try_square().unwrap()
+    }
+    pub fn try_square(self) -> Result<Self, D::Err> {
+        try_unary_op(SquareKernelOp, self)
     }
 }
 

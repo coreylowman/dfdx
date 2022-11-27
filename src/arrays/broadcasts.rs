@@ -1,13 +1,12 @@
 use super::*;
 
-pub trait BroadcastShapeTo<S, Axes> {}
+pub trait BroadcastShapeTo<S, Axes>: Sized {}
 
-pub trait BroadcastStrides<S: Shape, Axes>: Shape + BroadcastShapeTo<S, Axes> {
-    fn broadcast_strides(&self, strides: StridesFor<Self>) -> StridesFor<S>;
-}
+pub trait ReduceShapeTo<S: BroadcastShapeTo<Self, Axes>, Axes>: Shape + Sized {}
+impl<Src: Shape, Dst: Shape + BroadcastShapeTo<Src, Axes>, Axes> ReduceShapeTo<Dst, Axes> for Src {}
 
 pub trait ReduceShape<Axes>: Shape {
-    type Reduced: Shape + Default + BroadcastStrides<Self, Axes>;
+    type Reduced: Shape + Default + BroadcastStridesTo<Self, Axes>;
 }
 
 macro_rules! broadcast_to {
@@ -48,25 +47,21 @@ broadcast_to!(Rank3<M, N, P>, Rank4<M, N, O, P>, Axis<2>, {M, N, O, P});
 broadcast_to!(Rank3<M, O, P>, Rank4<M, N, O, P>, Axis<1>, {M, N, O, P});
 broadcast_to!(Rank3<N, O, P>, Rank4<M, N, O, P>, Axis<0>, {M, N, O, P});
 
-impl<
-        const SRC_DIMS: usize,
-        const DST_DIMS: usize,
-        const NUM_NEW_AXES: usize,
-        Src: Shape<Concrete = [usize; SRC_DIMS]>,
-        Dst: Shape<Concrete = [usize; DST_DIMS]>,
-        Axes: AxesAsArray<Array = [isize; NUM_NEW_AXES]>,
-    > BroadcastStrides<Dst, Axes> for Src
+pub trait BroadcastStridesTo<S: Shape, Axes>: Shape + BroadcastShapeTo<S, Axes> {
+    fn broadcast_strides(&self, strides: StridesFor<Self>) -> StridesFor<S>;
+}
+
+impl<Src: Shape, Dst: Shape, Axes: AxesAsArray> BroadcastStridesTo<Dst, Axes> for Src
 where
     Self: BroadcastShapeTo<Dst, Axes>,
 {
     #[inline(always)]
     fn broadcast_strides(&self, strides: StridesFor<Self>) -> StridesFor<Dst> {
-        let mut new_strides: [usize; DST_DIMS] = [0; DST_DIMS];
-        let axes = Axes::as_array().map(|x| x as usize);
+        let mut new_strides: Dst::Concrete = Default::default();
         let mut j = 0;
-        for (i, s) in new_strides.iter_mut().enumerate() {
-            if !axes.contains(&i) {
-                *s = strides.0[j];
+        for i in 0..Dst::NUM_DIMS {
+            if !Axes::as_array().into_iter().any(|x| x == i as isize) {
+                new_strides[i] = strides.0[j];
                 j += 1;
             }
         }

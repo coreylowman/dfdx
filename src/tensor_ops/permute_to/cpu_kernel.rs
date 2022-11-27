@@ -1,43 +1,37 @@
 use crate::arrays::*;
 use crate::devices::cpu::{Cpu, StridedArray};
-use crate::tensor_ops::ops::UnaryKernel;
 
-use super::PermuteKernelOp;
+use super::PermuteKernel;
 
-impl<
-        const N: usize,
-        Axes: AxesAsArray<Array = [isize; N]>,
-        Src: Shape<Concrete = [usize; N]>,
-        Dst: Shape<Concrete = [usize; N]>,
-    > UnaryKernel<PermuteKernelOp<Dst, Axes>, Src, Dst, f32> for Cpu
-where
-    Src: PermuteShapeTo<Dst, Axes>,
-{
-    fn unary_fwd(
+impl<E: Dtype> PermuteKernel<E> for Cpu {
+    fn forward<Src: Shape, Dst: Shape<Concrete = Src::Concrete>, Axes: AxesAsArray>(
         &self,
-        op: PermuteKernelOp<Dst, Axes>,
-        inp: &Self::Storage<Src, f32>,
-    ) -> Result<Self::Storage<Dst, f32>, Self::Err> {
+        inp: &Self::Storage<Src, E>,
+    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+    where
+        Src: PermuteShapeTo<Dst, Axes>,
+    {
         let out = inp.try_clone()?;
-        let mut out: StridedArray<Dst, f32> = StridedArray {
+        let shape = inp.shape.permuted();
+        let mut out: StridedArray<Dst, E> = StridedArray {
             data: out.data,
-            shape: op.0,
+            shape,
             strides: StridesFor(out.strides.0),
         };
-        let reidx = Axes::as_array().map(|x| x as usize);
-        for (i, &idx) in reidx.iter().enumerate() {
-            out.strides.0[i] = inp.strides.0[idx];
+        for (i, idx) in Axes::as_array().into_iter().enumerate() {
+            out.strides.0[i] = inp.strides.0[idx as usize];
         }
         Ok(out)
     }
-
-    fn unary_bwd(
+    fn backward<Src: Shape, Dst: Shape<Concrete = Src::Concrete>, Axes: AxesAsArray>(
         &self,
-        _op: PermuteKernelOp<Dst, Axes>,
-        _inp: &Self::Storage<Src, f32>,
-        grad_inp: &mut Self::Storage<Src, f32>,
-        grad_out: &Self::Storage<Dst, f32>,
-    ) -> Result<(), Self::Err> {
+        _inp: &Self::Storage<Src, E>,
+        grad_inp: &mut Self::Storage<Src, E>,
+        grad_out: &Self::Storage<Dst, E>,
+    ) -> Result<(), Self::Err>
+    where
+        Src: PermuteShapeTo<Dst, Axes>,
+    {
         debug_assert_eq!(grad_inp.data.len(), grad_out.data.len());
         for (i, data_i) in grad_inp.buf_iter_mut().enumerate() {
             *data_i += grad_out.data[i];

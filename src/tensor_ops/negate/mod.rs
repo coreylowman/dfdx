@@ -2,12 +2,14 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::{ops::try_unary_op, Device};
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct NegateKernelOp;
 
 /// Negates all elements.
 ///
@@ -18,29 +20,22 @@ use super::ops::{try_unary_op, UnaryKernel};
 /// let r = -a; // or negate(a);
 /// assert_eq!(r.as_array(), [2.0, 0.0, -5.0]);
 /// ```
-pub trait TryNegate: HasErr {
-    fn negate(self) -> Self {
+pub fn negate<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+) -> Tensor<S, E, D, T> {
+    t.negate()
+}
+
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn negate(self) -> Self {
         self.try_negate().unwrap()
     }
-    fn try_negate(self) -> Result<Self, Self::Err>;
-}
-
-#[derive(Debug, Default, Copy, Clone)]
-pub(super) struct NegateKernelOp;
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryNegate for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<NegateKernelOp, S, S, E>,
-{
-    fn try_negate(self) -> Result<Self, Self::Err> {
-        try_unary_op(Default::default(), self)
+    pub fn try_negate(self) -> Result<Self, D::Err> {
+        try_unary_op(NegateKernelOp, self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> std::ops::Neg for Tensor<S, E, D, T>
-where
-    Self: TryNegate,
-{
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> std::ops::Neg for Tensor<S, E, D, T> {
     type Output = Self;
     fn neg(self) -> Self::Output {
         self.negate()

@@ -2,12 +2,14 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::ops::{try_unary_op, UnaryKernel};
+use super::{device::Device, ops::try_unary_op};
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct LnKernelOp;
 
 /// [Natural Logarithm (ln)](https://en.wikipedia.org/wiki/Natural_logarithm). `log_e(t)`.
 ///
@@ -24,22 +26,18 @@ use super::ops::{try_unary_op, UnaryKernel};
 /// // or the tensor method!
 /// let r2 = t.ln();
 /// ```
-pub trait TryLn: HasErr {
-    fn ln(self) -> Self {
-        self.try_ln().unwrap()
-    }
-    fn try_ln(self) -> Result<Self, Self::Err>;
+pub fn ln<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+) -> Tensor<S, E, D, T> {
+    t.ln()
 }
 
-#[derive(Debug, Default, Copy, Clone)]
-pub(super) struct LnKernelOp;
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> TryLn for Tensor<S, E, D, T>
-where
-    D: UnaryKernel<LnKernelOp, S, S, E>,
-{
-    fn try_ln(self) -> Result<Self, Self::Err> {
-        try_unary_op(Default::default(), self)
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn ln(self) -> Self {
+        self.try_ln().unwrap()
+    }
+    pub fn try_ln(self) -> Result<Self, D::Err> {
+        try_unary_op(LnKernelOp, self)
     }
 }
 
