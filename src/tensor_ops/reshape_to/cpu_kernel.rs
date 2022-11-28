@@ -19,7 +19,7 @@ impl<E: Dtype> ReshapeKernel<E> for Cpu {
     }
     fn backward<Src: Shape, Dst: Shape>(
         &self,
-        inp: &Self::Storage<Src, E>,
+        _inp: &Self::Storage<Src, E>,
         grad_inp: &mut Self::Storage<Src, E>,
         grad_out: &Self::Storage<Dst, E>,
     ) -> Result<(), Self::Err>

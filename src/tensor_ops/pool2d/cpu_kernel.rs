@@ -1,40 +1,34 @@
-use crate::arrays::{Rank3, Rank4};
-use crate::devices::{
-    cpu::{Cpu, StridedArray, View, ViewMut},
-    Zeros,
-};
-use crate::tensor_ops::ops::UnaryKernel;
+use crate::arrays::{Const, Dim};
+use crate::devices::cpu::{Cpu, StridedArray, View, ViewMut};
+use crate::devices::ZerosLike;
 
-use super::{pooling, Pool2DKernelOp};
+use super::{pooling, Pool2DBatchedKernel, Pool2DKernel};
 
 trait Pooling<const K: usize, const S: usize, const P: usize> {
-    fn pool_forward<const C: usize, const H: usize, const W: usize>(
-        &self,
-        inp: View<Rank3<C, H, W>, f32>,
-        out: ViewMut<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+    #[rustfmt::skip]
+    fn forward<C: Dim, const H: usize, const W: usize>(
+        inp: View<(C, Const<H>, Const<W>), f32>,
+        out: ViewMut<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
     );
-    fn pool_backward<const C: usize, const H: usize, const W: usize>(
-        &self,
-        inp: View<Rank3<C, H, W>, f32>,
-        inp_grad: ViewMut<Rank3<C, H, W>, f32>,
-        out_grad: View<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+    #[rustfmt::skip]
+    fn backward<C: Dim, const H: usize, const W: usize>(
+        inp: View<(C, Const<H>, Const<W>), f32>,
+        inp_grad: ViewMut<(C, Const<H>, Const<W>), f32>,
+        out: View<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
+        out_grad: View<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
     );
 }
 
-impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
-    for Pool2DKernelOp<pooling::Avg, K, S, P>
-{
-    fn pool_forward<const C: usize, const H: usize, const W: usize>(
-        &self,
-        inp: View<Rank3<C, H, W>, f32>,
-        out: ViewMut<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P> for pooling::Avg {
+    #[rustfmt::skip]
+    fn forward<C: Dim, const H: usize, const W: usize>(
+        inp: View<(C, Const<H>, Const<W>), f32>,
+        out: ViewMut<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
     ) {
-        let out_height = (H + 2 * P - K) / S + 1;
-        let out_width = (W + 2 * P - K) / S + 1;
         let inv_k2 = 1.0 / (K * K) as f32;
-        for c in 0..C {
-            for oh in 0..out_height {
-                for ow in 0..out_width {
+        for c in 0..inp.shape.0.size() {
+            for oh in 0..out.shape.1.size() {
+                for ow in 0..out.shape.2.size() {
                     let mut tmp = 0.0;
                     for k1 in 0..K {
                         let y = (oh * S + k1).checked_sub(P);
@@ -53,18 +47,17 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
         }
     }
 
-    fn pool_backward<const C: usize, const H: usize, const W: usize>(
-        &self,
-        _inp: View<Rank3<C, H, W>, f32>,
-        inp_grad: ViewMut<Rank3<C, H, W>, f32>,
-        out_grad: View<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+    #[rustfmt::skip]
+    fn backward<C: Dim, const H: usize, const W: usize>(
+        inp: View<(C, Const<H>, Const<W>), f32>,
+        inp_grad: ViewMut<(C, Const<H>, Const<W>), f32>,
+        out: View<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
+        out_grad: View<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
     ) {
-        let out_height = (H + 2 * P - K) / S + 1;
-        let out_width = (W + 2 * P - K) / S + 1;
         let inv_k2 = 1.0 / (K * K) as f32;
-        for c in 0..C {
-            for oh in 0..out_height {
-                for ow in 0..out_width {
+        for c in 0..inp.shape.0.size() {
+            for oh in 0..out.shape.1.size() {
+                for ow in 0..out.shape.2.size() {
                     let g = out_grad.idx(c).idx(oh).idx(ow) * inv_k2;
                     for k1 in 0..K {
                         let y = (oh * S + k1).checked_sub(P);
@@ -83,19 +76,15 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
     }
 }
 
-impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
-    for Pool2DKernelOp<pooling::Max, K, S, P>
-{
-    fn pool_forward<const C: usize, const H: usize, const W: usize>(
-        &self,
-        inp: View<Rank3<C, H, W>, f32>,
-        out: ViewMut<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P> for pooling::Max {
+    #[rustfmt::skip]
+    fn forward<C: Dim, const H: usize, const W: usize>(
+        inp: View<(C, Const<H>, Const<W>), f32>,
+        out: ViewMut<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
     ) {
-        let out_height = (H + 2 * P - K) / S + 1;
-        let out_width = (W + 2 * P - K) / S + 1;
-        for c in 0..C {
-            for oh in 0..out_height {
-                for ow in 0..out_width {
+        for c in 0..inp.shape.0.size() {
+            for oh in 0..out.shape.1.size() {
+                for ow in 0..out.shape.2.size() {
                     let mut tmp = f32::NEG_INFINITY;
                     for k1 in 0..K {
                         let y = (oh * S + k1).checked_sub(P);
@@ -113,38 +102,26 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
             }
         }
     }
-
-    fn pool_backward<const C: usize, const H: usize, const W: usize>(
-        &self,
-        inp: View<Rank3<C, H, W>, f32>,
-        inp_grad: ViewMut<Rank3<C, H, W>, f32>,
-        out_grad: View<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+    #[rustfmt::skip]
+    fn backward<C: Dim, const H: usize, const W: usize>(
+        inp: View<(C, Const<H>, Const<W>), f32>,
+        inp_grad: ViewMut<(C, Const<H>, Const<W>), f32>,
+        out: View<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
+        out_grad: View<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
     ) {
         let out_height = (H + 2 * P - K) / S + 1;
         let out_width = (W + 2 * P - K) / S + 1;
-        for c in 0..C {
+        for c in 0..inp.shape.0.size() {
             for oh in 0..out_height {
                 for ow in 0..out_width {
                     let o_g = *out_grad.idx(c).idx(oh).idx(ow);
-                    let mut tmp = f32::NEG_INFINITY;
+                    let o = *out.idx(c).idx(oh).idx(ow);
                     for k1 in 0..K {
                         let y = (oh * S + k1).checked_sub(P);
                         for k2 in 0..K {
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
-                                if y < H && x < W {
-                                    tmp = inp.idx(c).idx(y).idx(x).max(tmp);
-                                }
-                            }
-                        }
-                    }
-
-                    for k1 in 0..K {
-                        let y = (oh * S + k1).checked_sub(P);
-                        for k2 in 0..K {
-                            let x = (ow * S + k2).checked_sub(P);
-                            if let Some((y, x)) = y.zip(x) {
-                                if y < H && x < W && *inp.idx(c).idx(y).idx(x) == tmp {
+                                if y < H && x < W && *inp.idx(c).idx(y).idx(x) == o {
                                     *inp_grad.idx(c).idx(y).idx(x) += o_g;
                                 }
                             }
@@ -156,19 +133,15 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
     }
 }
 
-impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
-    for Pool2DKernelOp<pooling::Min, K, S, P>
-{
-    fn pool_forward<const C: usize, const H: usize, const W: usize>(
-        &self,
-        inp: View<Rank3<C, H, W>, f32>,
-        out: ViewMut<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P> for pooling::Min {
+    #[rustfmt::skip]
+    fn forward<C: Dim, const H: usize, const W: usize>(
+        inp: View<(C, Const<H>, Const<W>), f32>,
+        out: ViewMut<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
     ) {
-        let out_height = (H + 2 * P - K) / S + 1;
-        let out_width = (W + 2 * P - K) / S + 1;
-        for c in 0..C {
-            for oh in 0..out_height {
-                for ow in 0..out_width {
+        for c in 0..inp.shape.0.size() {
+            for oh in 0..out.shape.1.size() {
+                for ow in 0..out.shape.2.size() {
                     let mut tmp = f32::INFINITY;
                     for k1 in 0..K {
                         let y = (oh * S + k1).checked_sub(P);
@@ -186,38 +159,24 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
             }
         }
     }
-
-    fn pool_backward<const C: usize, const H: usize, const W: usize>(
-        &self,
-        inp: View<Rank3<C, H, W>, f32>,
-        inp_grad: ViewMut<Rank3<C, H, W>, f32>,
-        out_grad: View<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+    #[rustfmt::skip]
+    fn backward<C: Dim, const H: usize, const W: usize>(
+        inp: View<(C, Const<H>, Const<W>), f32>,
+        inp_grad: ViewMut<(C, Const<H>, Const<W>), f32>,
+        out: View<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
+        out_grad: View<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
     ) {
-        let out_height = (H + 2 * P - K) / S + 1;
-        let out_width = (W + 2 * P - K) / S + 1;
-        for c in 0..C {
-            for oh in 0..out_height {
-                for ow in 0..out_width {
+        for c in 0..out.shape.0.size() {
+            for oh in 0..out.shape.1.size() {
+                for ow in 0..out.shape.2.size() {
                     let o_g = *out_grad.idx(c).idx(oh).idx(ow);
-                    let mut tmp = f32::INFINITY;
+                    let o = *out.idx(c).idx(oh).idx(ow);
                     for k1 in 0..K {
                         let y = (oh * S + k1).checked_sub(P);
                         for k2 in 0..K {
                             let x = (ow * S + k2).checked_sub(P);
                             if let Some((y, x)) = y.zip(x) {
-                                if y < H && x < W {
-                                    tmp = inp.idx(c).idx(y).idx(x).min(tmp);
-                                }
-                            }
-                        }
-                    }
-
-                    for k1 in 0..K {
-                        let y = (oh * S + k1).checked_sub(P);
-                        for k2 in 0..K {
-                            let x = (ow * S + k2).checked_sub(P);
-                            if let Some((y, x)) = y.zip(x) {
-                                if y < H && x < W && *inp.idx(c).idx(y).idx(x) == tmp {
+                                if y < H && x < W && *inp.idx(c).idx(y).idx(x) == o {
                                     *inp_grad.idx(c).idx(y).idx(x) += o_g;
                                 }
                             }
@@ -229,107 +188,72 @@ impl<const K: usize, const S: usize, const P: usize> Pooling<K, S, P>
     }
 }
 
-impl<
-        const K: usize,
-        const S: usize,
-        const P: usize,
-        const C: usize,
-        const H: usize,
-        const W: usize,
-        Kind: 'static,
-    >
-    UnaryKernel<
-        Pool2DKernelOp<Kind, K, S, P>,
-        Rank3<C, H, W>,
-        Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
-        f32,
-    > for Cpu
-where
-    Pool2DKernelOp<Kind, K, S, P>: Pooling<K, S, P>,
+impl<const K: usize, const S: usize, const P: usize, Kind: Pooling<K, S, P>>
+    Pool2DKernel<f32, Kind, K, S, P> for Cpu
 {
-    fn unary_fwd(
+    #[rustfmt::skip]
+    fn forward<C: Dim, const H: usize, const W: usize>(
         &self,
-        op: Pool2DKernelOp<Kind, K, S, P>,
-        inp: &Self::Storage<Rank3<C, H, W>, f32>,
+        inp: &Self::Storage<(C, Const<H>, Const<W>), f32>,
     ) -> Result<
-        Self::Storage<Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+        Self::Storage<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
         Self::Err,
     > {
-        let mut out: StridedArray<
-            Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
-            f32,
-        > = self.try_zeros()?;
-        op.pool_forward(inp.view(), out.view_mut());
+        let (c, _, _) = inp.shape;
+        let mut out: StridedArray<_, f32> = self.try_zeros_like((c, Const, Const))?;
+        Kind::forward(inp.view(), out.view_mut());
         Ok(out)
     }
-    fn unary_bwd(
+
+    #[rustfmt::skip]
+    fn backward<C: Dim, const H: usize, const W: usize>(
         &self,
-        op: Pool2DKernelOp<Kind, K, S, P>,
-        inp: &Self::Storage<Rank3<C, H, W>, f32>,
-        grad_inp: &mut Self::Storage<Rank3<C, H, W>, f32>,
-        grad_out: &Self::Storage<
-            Rank3<C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
-            f32,
-        >,
+        inp: &Self::Storage<(C, Const<H>, Const<W>), f32>,
+        grad_inp: &mut Self::Storage<(C, Const<H>, Const<W>), f32>,
+        out: &Self::Storage<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
+        grad_out: &Self::Storage<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
     ) -> Result<(), Self::Err> {
-        op.pool_backward(inp.view(), grad_inp.view_mut(), grad_out.view());
+        Kind::backward(inp.view(), grad_inp.view_mut(), out.view(), grad_out.view());
         Ok(())
     }
 }
 
-impl<
-        const B: usize,
-        const K: usize,
-        const S: usize,
-        const P: usize,
-        const C: usize,
-        const H: usize,
-        const W: usize,
-        Kind: 'static,
-    >
-    UnaryKernel<
-        Pool2DKernelOp<Kind, K, S, P>,
-        Rank4<B, C, H, W>,
-        Rank4<B, C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
-        f32,
-    > for Cpu
-where
-    Pool2DKernelOp<Kind, K, S, P>: Pooling<K, S, P>,
+impl<const K: usize, const S: usize, const P: usize, Kind: Pooling<K, S, P>>
+    Pool2DBatchedKernel<f32, Kind, K, S, P> for Cpu
 {
-    fn unary_fwd(
+    #[rustfmt::skip]
+    fn forward<B: Dim, C: Dim, const H: usize, const W: usize>(
         &self,
-        op: Pool2DKernelOp<Kind, K, S, P>,
-        inp: &Self::Storage<Rank4<B, C, H, W>, f32>,
+        inp: &Self::Storage<(B, C, Const<H>, Const<W>), f32>,
     ) -> Result<
-        Self::Storage<Rank4<B, C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+        Self::Storage<(B, C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
         Self::Err,
     > {
-        let mut out: StridedArray<
-            Rank4<B, C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
-            f32,
-        > = self.try_zeros()?;
+        let (batch, chan, _, _) = inp.shape;
+        let mut out: StridedArray<_, f32> = self.try_zeros_like((batch, chan, Const, Const))?;
         let inp = inp.view();
         let out_view = out.view_mut();
-        for b in 0..B {
-            op.pool_forward(inp.idx(b), out_view.idx(b));
+        for b in 0..batch.size() {
+            Kind::forward(inp.idx(b), out_view.idx(b));
         }
         Ok(out)
     }
-    fn unary_bwd(
+
+    #[rustfmt::skip]
+    fn backward<B: Dim, C: Dim, const H: usize, const W: usize>(
         &self,
-        op: Pool2DKernelOp<Kind, K, S, P>,
-        inp: &Self::Storage<Rank4<B, C, H, W>, f32>,
-        grad_inp: &mut Self::Storage<Rank4<B, C, H, W>, f32>,
-        grad_out: &Self::Storage<
-            Rank4<B, C, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
-            f32,
-        >,
+        inp: &Self::Storage<(B, C, Const<H>, Const<W>), f32>,
+        grad_inp: &mut Self::Storage<(B, C, Const<H>, Const<W>), f32>,
+        out: &Self::Storage<(B, C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
+        grad_out: &Self::Storage<(B, C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
     ) -> Result<(), Self::Err> {
+        let (batch, _, _, _) = inp.shape;
         let inp = inp.view();
         let grad_inp = grad_inp.view_mut();
+        let out = out.view();
         let grad_out = grad_out.view();
-        for b in 0..B {
-            op.pool_backward(inp.idx(b), grad_inp.idx(b), grad_out.idx(b));
+        for b in 0..batch.size() {
+            Kind::backward(inp.idx(b), grad_inp.idx(b), out.idx(b), grad_out.idx(b));
         }
         Ok(())
     }

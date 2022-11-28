@@ -1,13 +1,11 @@
 mod cpu_kernel;
 
 use crate::{
-    arrays::Shape,
-    devices::{Device, HasErr},
+    arrays::{Const, Dim, Dtype},
+    devices::DeviceStorage,
     gradients::Tape,
-    tensor::Tensor,
+    tensor::{make_tensor, Tensor},
 };
-
-use super::ops::{try_unary_op, UnaryKernel};
 
 pub(super) mod pooling {
     #[derive(Debug, Default, Clone, Copy)]
@@ -20,87 +18,167 @@ pub(super) mod pooling {
     pub struct Avg;
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub(super) struct Pool2DKernelOp<Kind, const K: usize, const S: usize, const P: usize>(Kind);
+pub trait Pool2DKernel<E: Dtype, Kind, const K: usize, const S: usize, const P: usize>:
+    DeviceStorage
+{
+    #[rustfmt::skip]
+    fn forward<C: Dim, const H: usize, const W: usize>(
+        &self,
+        inp: &Self::Storage<(C, Const<H>, Const<W>), E>,
+    ) -> Result<
+        Self::Storage<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), E>,
+        Self::Err,
+    >;
 
-mod internals {
-    use super::*;
+    #[rustfmt::skip]
+    fn backward<C: Dim, const H: usize, const W: usize>(
+        &self,
+        inp: &Self::Storage<(C, Const<H>, Const<W>), E>,
+        grad_inp: &mut Self::Storage<(C, Const<H>, Const<W>), E>,
+        out: &Self::Storage<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), E>,
+        grad_out: &Self::Storage<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), E>,
+    ) -> Result<(), Self::Err>;
+}
 
-    pub trait PoolTo<T, Kind, const K: usize, const S: usize, const P: usize>: HasErr {
-        fn try_pool_to(self) -> Result<T, Self::Err>;
+impl<C: Dim, const H: usize, const W: usize, D: DeviceStorage, T: Tape<D>>
+    Tensor<(C, Const<H>, Const<W>), f32, D, T>
+{
+    /// Avg pool on a single image. `K` is kernel size, `S` is stride, `P` is padding.
+    #[rustfmt::skip]
+    pub fn avg_pool2d<const K: usize, const S: usize, const P: usize>(
+        self,
+    ) -> Tensor<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32, D, T>
+    where
+        D: Pool2DKernel<f32, pooling::Avg, K, S, P>
+    {
+        self.try_pool2d().unwrap()
     }
 
-    impl<
-            Src: Shape,
-            Dst: Shape,
-            Kind: 'static + Default + Clone,
-            D: Device,
-            T: Tape<D>,
-            const K: usize,
-            const S: usize,
-            const P: usize,
-        > PoolTo<Tensor<Dst, f32, D, T>, Kind, K, S, P> for Tensor<Src, f32, D, T>
+    /// Max pool on a single image. `K` is kernel size, `S` is stride, `P` is padding.
+    #[rustfmt::skip]
+    pub fn max_pool2d<const K: usize, const S: usize, const P: usize>(
+        self,
+    ) -> Tensor<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32, D, T>
     where
-        D: UnaryKernel<Pool2DKernelOp<Kind, K, S, P>, Src, Dst, f32>,
+        D: Pool2DKernel<f32, pooling::Max, K, S, P>
     {
-        fn try_pool_to(self) -> Result<Tensor<Dst, f32, D, T>, Self::Err> {
-            try_unary_op(Default::default(), self)
-        }
+        self.try_pool2d().unwrap()
+    }
+
+    /// Min pool on a single image. `K` is kernel size, `S` is stride, `P` is padding.
+    #[rustfmt::skip]
+    pub fn min_pool2d<const K: usize, const S: usize, const P: usize>(
+        self,
+    ) -> Tensor<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32, D, T>
+    where
+        D: Pool2DKernel<f32, pooling::Min, K, S, P>
+    {
+        self.try_pool2d().unwrap()
+    }
+
+    #[rustfmt::skip]
+    fn try_pool2d<Kind: 'static, const K: usize, const S: usize, const P: usize>(
+        self,
+    ) -> Result<Tensor<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32, D, T>, D::Err>
+    where
+        D: Pool2DKernel<f32, Kind, K, S, P>,
+    {
+        let (inp, mut tape) = self.split_tape();
+        let storage = inp.device.forward(&inp.storage)?;
+        let out = make_tensor(&inp.device, storage);
+        let phantom_out = out.clone();
+        tape.add_backward_op(move |grads| {
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
+            inp.device.backward(&inp.storage, grad_inp, &phantom_out.storage, grad_out)?;
+            Ok(())
+        });
+        Ok(out.put_tape(tape))
     }
 }
 
-pub trait TryAvgPool2D<T>: HasErr {
-    fn avg_pool2d<const K: usize, const S: usize, const P: usize>(self) -> T
-    where
-        Self: internals::PoolTo<T, pooling::Avg, K, S, P>,
-    {
-        self.try_pool_to().unwrap()
-    }
-    fn try_avg_pool2d<const K: usize, const S: usize, const P: usize>(self) -> Result<T, Self::Err>
-    where
-        Self: internals::PoolTo<T, pooling::Avg, K, S, P>,
-    {
-        self.try_pool_to()
-    }
+pub trait Pool2DBatchedKernel<E: Dtype, Kind, const K: usize, const S: usize, const P: usize>:
+    DeviceStorage
+{
+    #[rustfmt::skip]
+    fn forward<B: Dim, C: Dim, const H: usize, const W: usize>(
+        &self,
+        inp: &Self::Storage<(B, C, Const<H>, Const<W>), E>,
+    ) -> Result<
+        Self::Storage<(B, C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), E>,
+        Self::Err,
+    >;
+
+    #[rustfmt::skip]
+    fn backward<B: Dim, C: Dim, const H: usize, const W: usize>(
+        &self,
+        inp: &Self::Storage<(B, C, Const<H>, Const<W>), E>,
+        grad_inp: &mut Self::Storage<(B, C, Const<H>, Const<W>), E>,
+        out: &Self::Storage<(B, C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), E>,
+        grad_out: &Self::Storage<(B, C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), E>,
+    ) -> Result<(), Self::Err>;
 }
 
-pub trait TryMinPool2D<T>: HasErr {
-    fn min_pool2d<const K: usize, const S: usize, const P: usize>(self) -> T
+impl<B: Dim, C: Dim, const H: usize, const W: usize, D: DeviceStorage, T: Tape<D>>
+    Tensor<(B, C, Const<H>, Const<W>), f32, D, T>
+{
+    /// Avg pool on a single image. `K` is kernel size, `S` is stride, `P` is padding.
+    #[rustfmt::skip]
+    pub fn avg_pool2d<const K: usize, const S: usize, const P: usize>(
+        self,
+    ) -> Tensor<(B, C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32, D, T>
     where
-        Self: internals::PoolTo<T, pooling::Min, K, S, P>,
+        D: Pool2DBatchedKernel<f32, pooling::Avg, K, S, P>
     {
-        self.try_pool_to().unwrap()
+        self.try_pool2d().unwrap()
     }
-    fn try_min_pool2d<const K: usize, const S: usize, const P: usize>(self) -> Result<T, Self::Err>
+
+    /// Max pool on a single image. `K` is kernel size, `S` is stride, `P` is padding.
+    #[rustfmt::skip]
+    pub fn max_pool2d<const K: usize, const S: usize, const P: usize>(
+        self,
+    ) -> Tensor<(B, C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32, D, T>
     where
-        Self: internals::PoolTo<T, pooling::Min, K, S, P>,
+        D: Pool2DBatchedKernel<f32, pooling::Max, K, S, P>
     {
-        self.try_pool_to()
+        self.try_pool2d().unwrap()
+    }
+
+    /// Min pool on a single image. `K` is kernel size, `S` is stride, `P` is padding.
+    #[rustfmt::skip]
+    pub fn min_pool2d<const K: usize, const S: usize, const P: usize>(
+        self,
+    ) -> Tensor<(B, C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32, D, T>
+    where
+        D: Pool2DBatchedKernel<f32, pooling::Min, K, S, P>
+    {
+        self.try_pool2d().unwrap()
+    }
+
+    #[rustfmt::skip]
+    fn try_pool2d<Kind: 'static, const K: usize, const S: usize, const P: usize>(
+        self,
+    ) -> Result<
+        Tensor<(B, C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32, D, T>,
+        D::Err,
+    >
+    where
+        D: Pool2DBatchedKernel<f32, Kind, K, S, P>,
+    {
+        let (inp, mut tape) = self.split_tape();
+        let storage = inp.device.forward(&inp.storage)?;
+        let out = make_tensor(&inp.device, storage);
+        let phantom_out = out.clone();
+        tape.add_backward_op(move |grads| {
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
+            inp.device.backward(&inp.storage, grad_inp, &phantom_out.storage, grad_out)?;
+            Ok(())
+        });
+        Ok(out.put_tape(tape))
     }
 }
-
-pub trait TryMaxPool2D<T>: HasErr {
-    fn max_pool2d<const K: usize, const S: usize, const P: usize>(self) -> T
-    where
-        Self: internals::PoolTo<T, pooling::Max, K, S, P>,
-    {
-        self.try_pool_to().unwrap()
-    }
-    fn try_max_pool2d<const K: usize, const S: usize, const P: usize>(self) -> Result<T, Self::Err>
-    where
-        Self: internals::PoolTo<T, pooling::Max, K, S, P>,
-    {
-        self.try_pool_to()
-    }
-}
-
-impl<Src: HasErr, Dst> TryAvgPool2D<Dst> for Src {}
-impl<Src: HasErr, Dst> TryMinPool2D<Dst> for Src {}
-impl<Src: HasErr, Dst> TryMaxPool2D<Dst> for Src {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::devices::{AsArray, Randn};
     use crate::tensor::*;
     use crate::tensor_ops::*;

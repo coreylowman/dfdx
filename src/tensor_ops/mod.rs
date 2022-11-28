@@ -226,7 +226,5 @@ pub use reshape_to::ReshapeTo;
 #[cfg(feature = "nightly")]
 mod conv2d;
 
-// #[cfg(feature = "nightly")]
-// mod pool2d;
-// #[cfg(feature = "nightly")]
-// pub use pool2d::{TryAvgPool2D, TryMaxPool2D, TryMinPool2D};
+#[cfg(feature = "nightly")]
+mod pool2d;

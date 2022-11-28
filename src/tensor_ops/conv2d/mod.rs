@@ -47,38 +47,24 @@ pub trait Conv2DBatchedKernel<
     const P: usize,
 >: DeviceStorage
 {
+    #[rustfmt::skip]
     fn forward<B: Dim, const H: usize, const W: usize>(
         &self,
         lhs: &Self::Storage<(B, Const<C>, Const<H>, Const<W>), E>,
         rhs: &Self::Storage<Rank4<O, C, K, K>, E>,
     ) -> Result<
-        Self::Storage<
-            (
-                B,
-                Const<O>,
-                Const<{ (H + 2 * P - K) / S + 1 }>,
-                Const<{ (W + 2 * P - K) / S + 1 }>,
-            ),
-            E,
-        >,
+        Self::Storage<(B, Const<O>, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), E>,
         Self::Err,
     >;
 
+    #[rustfmt::skip]
     fn backward<B: Dim, const H: usize, const W: usize>(
         &self,
         lhs: &Self::Storage<(B, Const<C>, Const<H>, Const<W>), E>,
         grad_lhs: &mut Self::Storage<(B, Const<C>, Const<H>, Const<W>), E>,
         rhs: &Self::Storage<Rank4<O, C, K, K>, E>,
         grad_rhs: &mut Self::Storage<Rank4<O, C, K, K>, E>,
-        grad_out: &Self::Storage<
-            (
-                B,
-                Const<O>,
-                Const<{ (H + 2 * P - K) / S + 1 }>,
-                Const<{ (W + 2 * P - K) / S + 1 }>,
-            ),
-            E,
-        >,
+        grad_out: &Self::Storage<(B, Const<O>, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), E>,
     ) -> Result<(), Self::Err>;
 }
 
@@ -131,20 +117,11 @@ impl<B: Dim, const C: usize, const H: usize, const W: usize, D: DeviceStorage, T
     /// **Requires Nightly** Perform a batched 2d convolution
     ///
     /// TODO docstring
+    #[rustfmt::skip]
     pub fn conv2d<const O: usize, const K: usize, const S: usize, const P: usize>(
         self,
         filters: Tensor<Rank4<O, C, K, K>, f32, D>,
-    ) -> Tensor<
-        (
-            B,
-            Const<O>,
-            Const<{ (H + 2 * P - K) / S + 1 }>,
-            Const<{ (W + 2 * P - K) / S + 1 }>,
-        ),
-        f32,
-        D,
-        T,
-    >
+    ) -> Tensor<(B, Const<O>, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32, D, T>
     where
         D: Conv2DBatchedKernel<f32, C, O, K, S, P>,
     {
@@ -154,21 +131,12 @@ impl<B: Dim, const C: usize, const H: usize, const W: usize, D: DeviceStorage, T
     /// **Requires Nightly** Fallible batched 2d convolution
     ///
     /// TODO docstring
+    #[rustfmt::skip]
     pub fn try_conv2d<const O: usize, const K: usize, const S: usize, const P: usize>(
         self,
         filters: Tensor<Rank4<O, C, K, K>, f32, D>,
     ) -> Result<
-        Tensor<
-            (
-                B,
-                Const<O>,
-                Const<{ (H + 2 * P - K) / S + 1 }>,
-                Const<{ (W + 2 * P - K) / S + 1 }>,
-            ),
-            f32,
-            D,
-            T,
-        >,
+        Tensor<(B, Const<O>, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32, D, T>,
         D::Err,
     >
     where
