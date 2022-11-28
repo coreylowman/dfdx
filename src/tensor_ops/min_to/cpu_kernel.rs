@@ -1,5 +1,5 @@
 use crate::{
-    arrays::{Axes, BroadcastShapeTo, Shape},
+    arrays::{Axes, ReduceShapeTo, Shape},
     devices::cpu::{Cpu, LendingIterator, StridedArray},
 };
 
@@ -12,7 +12,7 @@ impl MinReduceKernel<f32> for Cpu {
         inp: &Self::Storage<Src, f32>,
     ) -> Result<Self::Storage<Dst, f32>, Self::Err>
     where
-        Dst: BroadcastShapeTo<Src, Ax>,
+        Src: ReduceShapeTo<Dst, Ax>,
     {
         let mut out: StridedArray<Dst, f32> = StridedArray::try_new_with(dst, f32::INFINITY)?;
         let mut out_iter = out.iter_mut_as(&inp.shape);
@@ -31,7 +31,7 @@ impl MinReduceKernel<f32> for Cpu {
         grad_out: &Self::Storage<Dst, f32>,
     ) -> Result<(), Self::Err>
     where
-        Dst: BroadcastShapeTo<Src, Ax>,
+        Src: ReduceShapeTo<Dst, Ax>,
     {
         let mut inp_iter = inp.iter();
         let mut grad_inp_itr = grad_inp.iter_mut();

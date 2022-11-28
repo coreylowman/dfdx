@@ -34,9 +34,9 @@ pub trait LogSumExpTo<T, Axes>: HasErr {
 }
 
 impl<
-        Src: Shape,
         Ax: Axes,
-        Dst: Shape + Default + BroadcastShapeTo<Src, Ax>,
+        Src: Shape + ReduceShapeTo<Dst, Ax>,
+        Dst: Shape + Default,
         E: Dtype,
         D: Device<E>,
         T: Tape<D>,

@@ -35,7 +35,7 @@ pub trait MeanTo<T, Axes>: HasErr {
 impl<Ax: Axes, Src: Shape + HasAxes<Ax>, Dst: Shape + Default, D: Device<f32>, T: Tape<D>>
     MeanTo<Tensor<Dst, f32, D, T>, Ax> for Tensor<Src, f32, D, T>
 where
-    Dst: BroadcastShapeTo<Src, Ax>,
+    Src: ReduceShapeTo<Dst, Ax>,
 {
     fn try_mean(self) -> Result<Tensor<Dst, f32, D, T>, Self::Err> {
         let num_elements_reduced = <Src as HasAxes<Ax>>::size(self.shape()) as f32;

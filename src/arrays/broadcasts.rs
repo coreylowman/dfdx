@@ -1,22 +1,21 @@
 use super::*;
 
+pub trait ReduceShapeTo<S, Ax>: Sized {}
 pub trait BroadcastShapeTo<S, Ax>: Sized {}
 
-impl BroadcastShapeTo<(), Axis<0>> for () {}
+pub trait ReduceShape<Ax>: Sized + Shape + HasAxes<Ax> + ReduceShapeTo<Self::Reduced, Ax> {
+    type Reduced: Shape + Default + BroadcastShapeTo<Self, Ax>;
+}
+
+impl ReduceShapeTo<(), Axis<0>> for () {}
 impl ReduceShape<Axis<0>> for () {
     type Reduced = ();
 }
-
-pub trait ReduceShapeTo<S, Ax>: Sized {}
-impl<Src: Shape, Dst: Shape + BroadcastShapeTo<Src, Ax>, Ax> ReduceShapeTo<Dst, Ax> for Src {}
-
-pub trait ReduceShape<Ax>: Shape + HasAxes<Ax> {
-    type Reduced: Shape + Default + BroadcastStridesTo<Self, Ax>;
-}
+impl<Src: Shape, Dst: Shape + ReduceShapeTo<Src, Ax>, Ax> BroadcastShapeTo<Dst, Ax> for Src {}
 
 macro_rules! broadcast_to {
     (($($SrcDims:tt),*), ($($DstDims:tt),*), $Axes:ty) => {
-impl<$($DstDims: Dim, )*> BroadcastShapeTo<($($DstDims, )*), $Axes> for ($($SrcDims, )*) {}
+impl<$($DstDims: Dim, )*> ReduceShapeTo<($($SrcDims, )*), $Axes> for ($($DstDims, )*) {}
 impl<$($DstDims: Dim + Default, )*> ReduceShape<$Axes> for ($($DstDims, )*) {
     type Reduced = ($($SrcDims, )*);
 }

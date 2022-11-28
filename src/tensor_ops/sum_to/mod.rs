@@ -10,14 +10,14 @@ pub trait SumKernel<E: Dtype>: DeviceStorage {
         inp: &Self::Storage<Src, E>,
     ) -> Result<Self::Storage<Dst, E>, Self::Err>
     where
-        Dst: BroadcastShapeTo<Src, Ax>;
+        Src: ReduceShapeTo<Dst, Ax>;
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         grad_inp: &mut Self::Storage<Src, E>,
         grad_out: &Self::Storage<Dst, E>,
     ) -> Result<(), Self::Err>
     where
-        Dst: BroadcastShapeTo<Src, Ax>;
+        Src: ReduceShapeTo<Dst, Ax>;
 }
 
 /// Sum values along axes `Axes` of `T`.
@@ -60,7 +60,7 @@ impl<Src: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape + Default, A
     SumTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
     D: SumKernel<E>,
-    Dst: BroadcastShapeTo<Src, Ax>,
+    Src: ReduceShapeTo<Dst, Ax>,
 {
     fn try_sum(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         let dst: Dst = Default::default();

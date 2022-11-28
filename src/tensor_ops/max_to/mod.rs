@@ -9,7 +9,7 @@ pub trait MaxReduceKernel<E: Dtype>: DeviceStorage {
         inp: &Self::Storage<Src, E>,
     ) -> Result<Self::Storage<Dst, E>, Self::Err>
     where
-        Dst: BroadcastShapeTo<Src, Ax>;
+        Src: ReduceShapeTo<Dst, Ax>;
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         inp: &Self::Storage<Src, E>,
@@ -18,7 +18,7 @@ pub trait MaxReduceKernel<E: Dtype>: DeviceStorage {
         grad_out: &Self::Storage<Dst, E>,
     ) -> Result<(), Self::Err>
     where
-        Dst: BroadcastShapeTo<Src, Ax>;
+        Src: ReduceShapeTo<Dst, Ax>;
 }
 
 /// Reduces `Axes` of the tensor by gathering the maximum value from that dimension.
@@ -54,7 +54,7 @@ impl<Src: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape + Default, A
     MaxTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
     D: MaxReduceKernel<E>,
-    Dst: BroadcastShapeTo<Src, Ax>,
+    Src: ReduceShapeTo<Dst, Ax>,
 {
     fn try_max(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         let dst: Dst = Default::default();

@@ -1,5 +1,5 @@
 use crate::{
-    arrays::{Axes, BroadcastShapeTo, Dtype, Shape},
+    arrays::{Axes, Dtype, ReduceShapeTo, Shape},
     devices::{
         cpu::{Cpu, LendingIterator, StridedArray},
         ZerosLike,
@@ -15,7 +15,7 @@ impl<E: Dtype> SumKernel<E> for Cpu {
         inp: &Self::Storage<Src, E>,
     ) -> Result<Self::Storage<Dst, E>, Self::Err>
     where
-        Dst: BroadcastShapeTo<Src, Ax>,
+        Src: ReduceShapeTo<Dst, Ax>,
     {
         let mut out: StridedArray<Dst, E> = self.try_zeros_like(dst)?;
         let mut out_iter = out.iter_mut_as(&inp.shape);
@@ -31,7 +31,7 @@ impl<E: Dtype> SumKernel<E> for Cpu {
         grad_out: &Self::Storage<Dst, E>,
     ) -> Result<(), Self::Err>
     where
-        Dst: BroadcastShapeTo<Src, Ax>,
+        Src: ReduceShapeTo<Dst, Ax>,
     {
         let mut out_iter = grad_out.iter_as(&grad_inp.shape);
         let mut inp_iter = grad_inp.iter_mut();

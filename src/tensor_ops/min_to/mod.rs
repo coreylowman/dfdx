@@ -9,7 +9,7 @@ pub trait MinReduceKernel<E: Dtype>: DeviceStorage {
         inp: &Self::Storage<Src, E>,
     ) -> Result<Self::Storage<Dst, E>, Self::Err>
     where
-        Dst: BroadcastShapeTo<Src, Ax>;
+        Src: ReduceShapeTo<Dst, Ax>;
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         inp: &Self::Storage<Src, E>,
@@ -18,7 +18,7 @@ pub trait MinReduceKernel<E: Dtype>: DeviceStorage {
         grad_out: &Self::Storage<Dst, E>,
     ) -> Result<(), Self::Err>
     where
-        Dst: BroadcastShapeTo<Src, Ax>;
+        Src: ReduceShapeTo<Dst, Ax>;
 }
 
 /// Reduces `Axes` of the tensor by gathering the minimum value from the axes.
@@ -54,7 +54,7 @@ impl<Src: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape + Default, A
     MinTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
     D: MinReduceKernel<E>,
-    Dst: BroadcastShapeTo<Src, Ax>,
+    Src: ReduceShapeTo<Dst, Ax>,
 {
     fn try_min(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         let dst: Dst = Default::default();

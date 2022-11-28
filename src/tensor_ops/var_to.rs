@@ -31,7 +31,7 @@ impl<Src: Shape, Dst: Shape, Ax: Axes, E: Dtype, D: Device<E>, T: Tape<D>>
     VarTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
     Self: MeanTo<Tensor<Dst, E, D, T>, Ax, Err = D::Err>,
-    Dst: BroadcastShapeTo<Src, Ax>,
+    Src: ReduceShapeTo<Dst, Ax>,
 {
     fn try_var(self) -> Result<Tensor<Dst, E, D, T>, D::Err> {
         let mean = self
