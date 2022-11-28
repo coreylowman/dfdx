@@ -9,10 +9,7 @@ use crate::{arrays::*, gradients::Tape, tensor::Tensor, tensor_ops::*};
 pub fn mse_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
     pred: Tensor<S, f32, D, T>,
     targ: Tensor<S, f32, D>,
-) -> Tensor<Rank0, f32, D, T>
-where
-    S: ReduceShapeTo<Rank0, S::AllAxes>,
-{
+) -> Tensor<Rank0, f32, D, T> {
     (pred - targ).square().mean()
 }
 
@@ -23,10 +20,7 @@ where
 pub fn rmse_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
     pred: Tensor<S, f32, D, T>,
     targ: Tensor<S, f32, D>,
-) -> Tensor<Rank0, f32, D, T>
-where
-    S: ReduceShapeTo<Rank0, S::AllAxes>,
-{
+) -> Tensor<Rank0, f32, D, T> {
     mse_loss(pred, targ).sqrt()
 }
 
@@ -37,10 +31,7 @@ where
 pub fn mae_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
     pred: Tensor<S, f32, D, T>,
     targ: Tensor<S, f32, D>,
-) -> Tensor<Rank0, f32, D, T>
-where
-    S: ReduceShapeTo<Rank0, S::AllAxes>,
-{
+) -> Tensor<Rank0, f32, D, T> {
     (pred - targ).abs().mean()
 }
 
@@ -63,10 +54,7 @@ pub fn huber_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
     pred: Tensor<S, f32, D, T>,
     targ: Tensor<S, f32, D>,
     delta: f32,
-) -> Tensor<Rank0, f32, D, T>
-where
-    S: ReduceShapeTo<Rank0, S::AllAxes>,
-{
+) -> Tensor<Rank0, f32, D, T> {
     pred.huber_error(targ, delta).mean()
 }
 
@@ -89,10 +77,7 @@ pub fn smooth_l1_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
     pred: Tensor<S, f32, D, T>,
     targ: Tensor<S, f32, D>,
     delta: f32,
-) -> Tensor<Rank0, f32, D, T>
-where
-    S: ReduceShapeTo<Rank0, S::AllAxes>,
-{
+) -> Tensor<Rank0, f32, D, T> {
     huber_loss(pred, targ, delta) / delta
 }
 
@@ -125,7 +110,6 @@ pub fn cross_entropy_with_logits_loss<
 ) -> Tensor<Rank0, f32, D, T>
 where
     S: ReduceShape<Ax>,
-    S: ReduceShapeTo<Rank0, S::AllAxes>,
 {
     let last_axis_numel = <S as HasAxes<Ax>>::size(logits.shape()) as f32;
     (logits.log_softmax::<Ax>() * target_probs).mean().negate() * last_axis_numel
@@ -155,7 +139,6 @@ pub fn kl_div_with_logits_loss<Ax: Axes, S: Shape<LastAxis = Ax>, D: Device<f32>
 ) -> Tensor<Rank0, f32, D, T>
 where
     S: ReduceShape<Ax>,
-    S: ReduceShapeTo<Rank0, S::AllAxes>,
 {
     let last_axis_numel = <S as HasAxes<Ax>>::size(logits.shape()) as f32;
     let probs = logits.log_softmax::<Ax>();
@@ -189,10 +172,7 @@ where
 pub fn binary_cross_entropy_with_logits_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
     logits: Tensor<S, f32, D, T>,
     target_probs: Tensor<S, f32, D>,
-) -> Tensor<Rank0, f32, D, T>
-where
-    S: ReduceShapeTo<Rank0, S::AllAxes>,
-{
+) -> Tensor<Rank0, f32, D, T> {
     logits.bce_with_logits(target_probs).mean()
 }
 

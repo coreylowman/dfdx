@@ -1,4 +1,4 @@
-use super::axes::*;
+use super::{axes::*, ReduceShapeTo};
 pub trait Dtype:
     'static
     + Copy
@@ -69,6 +69,7 @@ pub trait Shape:
     + PartialEq
     + HasAxes<Self::AllAxes>
     + HasAxes<Self::LastAxis>
+    + ReduceShapeTo<(), Self::AllAxes>
 {
     const NUM_DIMS: usize;
     type Concrete: std::fmt::Debug
