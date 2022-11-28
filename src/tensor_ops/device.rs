@@ -1,26 +1,34 @@
-use super::{
-    abs::AbsKernelOp,
-    add::{BinaryAddKernelOp, ScalarAddKernelOp},
-    bce::BCEKernelOp,
-    broadcast_to::BroadcastKernel,
-    clamp::ClampKernelOp,
-    cos::CosKernelOp,
-    div::{BinaryDivKernelOp, ScalarDivKernelOp},
-    dropout::DropoutKernelOp,
-    exp::ExpKernelOp,
-    huber_error::HuberErrorKernelOp,
-    ln::LnKernelOp,
-    matmul::{
-        MatMatBatch3Kernel, MatMatBatch4Kernel, MatMatBrKernel, MatMatKernel, VecMatKernel,
-        VecVecKernel,
-    },
-    max_to::MaxReduceKernel,
-    maximum::MaximumKernelOp,
-    min_to::MinReduceKernel,
-    minimum::MinimumKernelOp,
-    ops::{BinaryKernel, UnaryKernel},
-    sum_to::SumKernel, mul::{ScalarMulKernelOp, BinaryMulKernelOp}, sub::{ScalarSubKernelOp, BinarySubKernelOp}, nans_to::NansToKernelOp, relu::ReLUKernelOp, negate::NegateKernelOp, sigmoid::SigmoidKernelOp, sin::SinKernelOp, sqrt::SqrtKernelOp, square::SquareKernelOp, tanh::TanhKernelOp, pow::PowKernelOp, select_to::{SelectAxisKernel, SelectBatchKernel, ReplaceAxisKernel},
-};
+use super::abs::AbsKernelOp;
+use super::add::{BinaryAddKernelOp, ScalarAddKernelOp};
+use super::bce::BCEKernelOp;
+use super::broadcast_to::BroadcastKernel;
+use super::clamp::ClampKernelOp;
+use super::cos::CosKernelOp;
+use super::div::{BinaryDivKernelOp, ScalarDivKernelOp};
+use super::dropout::DropoutKernelOp;
+use super::exp::ExpKernelOp;
+use super::huber_error::HuberErrorKernelOp;
+use super::ln::LnKernelOp;
+use super::matmul::*;
+use super::max_to::MaxReduceKernel;
+use super::maximum::MaximumKernelOp;
+use super::min_to::MinReduceKernel;
+use super::minimum::MinimumKernelOp;
+use super::ops::{BinaryKernel, UnaryKernel};
+use super::sum_to::SumKernel;
+use super::mul::{ScalarMulKernelOp, BinaryMulKernelOp};
+use super::sub::{ScalarSubKernelOp, BinarySubKernelOp};
+use super::nans_to::NansToKernelOp;
+use super::relu::ReLUKernelOp;
+use super::negate::NegateKernelOp;
+use super::sigmoid::SigmoidKernelOp;
+use super::sin::SinKernelOp;
+use super::sqrt::SqrtKernelOp;
+use super::square::SquareKernelOp;
+use super::tanh::TanhKernelOp;
+use super::pow::PowKernelOp;
+use super::select_to::{SelectAxisKernel, SelectBatchKernel, ReplaceAxisKernel};
+
 use crate::{
     arrays::Dtype,
     devices::{Cpu, DeviceStorage},
