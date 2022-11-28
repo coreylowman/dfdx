@@ -11,7 +11,7 @@ impl<E: Dtype> BroadcastKernel<E> for Cpu {
     where
         Src: BroadcastShapeTo<Dst, Ax>,
     {
-        let strides: StridesFor<Dst> = inp.shape.broadcast_strides(inp.strides);
+        let strides = inp.shape.broadcast_strides(inp.strides);
         let out: StridedArray<Dst, E> = StridedArray {
             data: inp.data.clone(),
             shape: dst,

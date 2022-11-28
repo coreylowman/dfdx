@@ -55,7 +55,7 @@ broadcast_to!((M, O, P), (M, N, O, P), Axis<1>);
 broadcast_to!((N, O, P), (M, N, O, P), Axis<0>);
 
 pub trait BroadcastStridesTo<S: Shape, Axes>: Shape + BroadcastShapeTo<S, Axes> {
-    fn broadcast_strides(&self, strides: StridesFor<Self>) -> StridesFor<S>;
+    fn broadcast_strides(&self, strides: Self::Concrete) -> S::Concrete;
 }
 
 impl<Src: Shape, Dst: Shape, Ax: Axes> BroadcastStridesTo<Dst, Ax> for Src
@@ -63,15 +63,15 @@ where
     Self: BroadcastShapeTo<Dst, Ax>,
 {
     #[inline(always)]
-    fn broadcast_strides(&self, strides: StridesFor<Self>) -> StridesFor<Dst> {
+    fn broadcast_strides(&self, strides: Self::Concrete) -> Dst::Concrete {
         let mut new_strides: Dst::Concrete = Default::default();
         let mut j = 0;
         for i in 0..Dst::NUM_DIMS {
             if !Ax::as_array().into_iter().any(|x| x == i as isize) {
-                new_strides[i] = strides.0[j];
+                new_strides[i] = strides[j];
                 j += 1;
             }
         }
-        StridesFor(new_strides)
+        new_strides
     }
 }

@@ -1,8 +1,6 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::arrays::{
-    Dtype, Rank0, Rank1, Rank2, Rank3, Rank4, Shape, StridesFor, TryFromNumElements,
-};
+use crate::arrays::*;
 use crate::devices::{
     AsArray, AsVec, Ones, OnesLike, Rand, RandLike, Randn, RandnLike, TryConvert, Zeros, ZerosLike,
 };
@@ -21,7 +19,7 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
     #[inline]
     pub(crate) fn try_new_with(shape: S, elem: E) -> Result<Self, CpuError> {
         let numel = shape.num_elements();
-        let strides: StridesFor<S> = shape.strides();
+        let strides: S::Concrete = shape.strides();
         let mut data: Vec<E> = Vec::new();
         data.try_reserve_exact(numel)
             .map_err(|_| CpuError::OutOfMemory)?;
@@ -58,7 +56,7 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
         D: Distribution<E>,
     {
         let numel = shape.num_elements();
-        let strides: StridesFor<S> = shape.strides();
+        let strides: S::Concrete = shape.strides();
         let mut data: Vec<E> = Vec::new();
         data.try_reserve_exact(numel)
             .map_err(|_| CpuError::OutOfMemory)?;

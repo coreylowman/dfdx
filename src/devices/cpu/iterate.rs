@@ -1,5 +1,5 @@
 use super::device::StridedArray;
-use crate::arrays::{BroadcastStridesTo, Dtype, Shape, StridesFor};
+use crate::arrays::{BroadcastStridesTo, Dtype, Shape};
 use std::sync::Arc;
 use std::vec::Vec;
 
@@ -11,10 +11,9 @@ struct NdIndex<S: Shape> {
 }
 
 impl<S: Shape> NdIndex<S> {
-    fn new(shape: S, strides: StridesFor<S>) -> Self {
+    fn new(shape: S, strides: S::Concrete) -> Self {
         let indices: S::Concrete = Default::default();
         let i: usize = strides
-            .0
             .into_iter()
             .zip(indices.into_iter())
             .map(|(a, b)| a * b)
@@ -22,7 +21,7 @@ impl<S: Shape> NdIndex<S> {
         Self {
             indices,
             shape: shape.concrete(),
-            strides: strides.0,
+            strides,
             next: Some(i),
         }
     }
@@ -187,7 +186,7 @@ impl<'q, S: Shape, E> LendingIterator for StridedMutIndexIter<'q, S, E> {
 
 #[cfg(test)]
 mod tests {
-    use crate::arrays::{Rank0, Rank1, Rank2, Rank3, StridesFor};
+    use crate::arrays::{Rank0, Rank1, Rank2, Rank3};
 
     use super::*;
     use std::vec;
@@ -239,12 +238,10 @@ mod tests {
 
     #[test]
     fn test_2d_broadcasted_0_iter() {
-        let base: Rank1<3> = Default::default();
-        let strides: StridesFor<Rank2<2, 3>> = base.broadcast_strides(base.strides());
         let s: StridedArray<Rank2<2, 3>, f32> = StridedArray {
             data: Arc::new(vec![1.0, 0.0, -1.0]),
             shape: Default::default(),
-            strides,
+            strides: [0, 1],
         };
         let mut i = s.iter();
         assert_eq!(i.next(), Some(&1.0));
@@ -258,12 +255,10 @@ mod tests {
 
     #[test]
     fn test_2d_broadcasted_1_iter() {
-        let base: Rank1<2> = Default::default();
-        let strides: StridesFor<Rank2<2, 3>> = base.broadcast_strides(base.strides());
         let s: StridedArray<Rank2<2, 3>, f32> = StridedArray {
             data: Arc::new(vec![1.0, -1.0]),
             shape: Default::default(),
-            strides,
+            strides: [1, 0],
         };
         let mut i = s.iter();
         assert_eq!(i.next(), Some(&1.0));
@@ -280,7 +275,7 @@ mod tests {
         let s: StridedArray<Rank2<3, 2>, f32> = StridedArray {
             data: Arc::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
             shape: Default::default(),
-            strides: StridesFor([1, 3]),
+            strides: [1, 3],
         };
         let mut i = s.iter();
         assert_eq!(i.next(), Some(&1.0));
@@ -297,7 +292,7 @@ mod tests {
         let s: StridedArray<Rank3<3, 1, 2>, f32> = StridedArray {
             data: Arc::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
             shape: Default::default(),
-            strides: StridesFor([2, 0, 1]),
+            strides: [2, 0, 1],
         };
         let mut i = s.iter();
         assert_eq!(i.next(), Some(&1.0));

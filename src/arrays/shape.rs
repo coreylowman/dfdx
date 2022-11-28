@@ -58,9 +58,6 @@ impl<const M: usize> Dim for Const<M> {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct StridesFor<S: Shape>(pub(crate) S::Concrete);
-
 pub trait Shape:
     'static
     + std::fmt::Debug
@@ -95,7 +92,7 @@ pub trait Shape:
     }
 
     fn concrete(&self) -> Self::Concrete;
-    fn strides(&self) -> StridesFor<Self>;
+    fn strides(&self) -> Self::Concrete;
     fn from_concrete(concrete: &Self::Concrete) -> Option<Self>;
 }
 
@@ -139,8 +136,8 @@ impl Shape for () {
         []
     }
     #[inline(always)]
-    fn strides(&self) -> StridesFor<Self> {
-        StridesFor([])
+    fn strides(&self) -> Self::Concrete {
+        []
     }
     #[inline(always)]
     fn from_concrete(_: &Self::Concrete) -> Option<Self> {
@@ -168,8 +165,8 @@ impl<D1: Dim> Shape for (D1,) {
         [self.0.size()]
     }
     #[inline(always)]
-    fn strides(&self) -> StridesFor<Self> {
-        StridesFor([1])
+    fn strides(&self) -> Self::Concrete {
+        [1]
     }
     fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
         let d1 = D1::from_size(concrete[0])?;
@@ -203,8 +200,8 @@ impl<D1: Dim, D2: Dim> Shape for (D1, D2) {
         [self.0.size(), self.1.size()]
     }
     #[inline(always)]
-    fn strides(&self) -> StridesFor<Self> {
-        StridesFor([self.1.size(), 1])
+    fn strides(&self) -> Self::Concrete {
+        [self.1.size(), 1]
     }
     fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
         let d1 = D1::from_size(concrete[0])?;
@@ -254,11 +251,11 @@ impl<D1: Dim, D2: Dim, D3: Dim> Shape for (D1, D2, D3) {
         [self.0.size(), self.1.size(), self.2.size()]
     }
     #[inline(always)]
-    fn strides(&self) -> StridesFor<Self> {
+    fn strides(&self) -> Self::Concrete {
         let a = 1;
         let b = a * self.2.size();
         let c = b * self.1.size();
-        StridesFor([c, b, a])
+        [c, b, a]
     }
     fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
         let d1 = D1::from_size(concrete[0])?;
@@ -278,12 +275,12 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim> Shape for (D1, D2, D3, D4) {
         [self.0.size(), self.1.size(), self.2.size(), self.3.size()]
     }
     #[inline(always)]
-    fn strides(&self) -> StridesFor<Self> {
+    fn strides(&self) -> Self::Concrete {
         let a = 1;
         let b = a * self.3.size();
         let c = b * self.2.size();
         let d = c * self.1.size();
-        StridesFor([d, c, b, a])
+        [d, c, b, a]
     }
     fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
         let d1 = D1::from_size(concrete[0])?;
@@ -309,13 +306,13 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim> Shape for (D1, D2, D3, D4, D5)
         ]
     }
     #[inline(always)]
-    fn strides(&self) -> StridesFor<Self> {
+    fn strides(&self) -> Self::Concrete {
         let a = 1;
         let b = a * self.4.size();
         let c = b * self.3.size();
         let d = c * self.2.size();
         let e = d * self.1.size();
-        StridesFor([e, d, c, b, a])
+        [e, d, c, b, a]
     }
     fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
         let d1 = D1::from_size(concrete[0])?;
@@ -344,14 +341,14 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, D6: Dim> Shape for (D1, D2, D3
         ]
     }
     #[inline(always)]
-    fn strides(&self) -> StridesFor<Self> {
+    fn strides(&self) -> Self::Concrete {
         let a = 1;
         let b = a * self.5.size();
         let c = b * self.4.size();
         let d = c * self.3.size();
         let e = d * self.2.size();
         let f = e * self.1.size();
-        StridesFor([f, e, d, c, b, a])
+        [f, e, d, c, b, a]
     }
     fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
         let d1 = D1::from_size(concrete[0])?;

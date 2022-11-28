@@ -16,10 +16,10 @@ impl<E: Dtype> PermuteKernel<E> for Cpu {
         let mut out: StridedArray<Dst, E> = StridedArray {
             data: out.data,
             shape,
-            strides: StridesFor(out.strides.0),
+            strides: out.strides,
         };
         for (i, idx) in Ax::as_array().into_iter().enumerate() {
-            out.strides.0[i] = inp.strides.0[idx as usize];
+            out.strides[i] = inp.strides[idx as usize];
         }
         Ok(out)
     }

@@ -1,4 +1,4 @@
-use crate::arrays::{Dtype, HasShape, Shape, StridesFor};
+use crate::arrays::{Dtype, HasShape, Shape};
 use crate::devices::device::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{cell::RefCell, sync::Arc, vec::Vec};
@@ -28,7 +28,7 @@ impl Cpu {
 pub struct StridedArray<S: Shape, Elem> {
     pub(crate) data: Arc<Vec<Elem>>,
     pub(crate) shape: S,
-    pub(crate) strides: StridesFor<S>,
+    pub(crate) strides: S::Concrete,
 }
 
 impl<S: Shape, E: Clone> Clone for StridedArray<S, E> {

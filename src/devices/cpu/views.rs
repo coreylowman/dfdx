@@ -15,7 +15,7 @@ impl<S: Shape, E: Dtype> View<S, E> {
         Self {
             ptr,
             shape,
-            strides: shape.strides().0,
+            strides: shape.strides(),
         }
     }
 }
@@ -32,7 +32,7 @@ impl<S: Shape, E: Dtype> ViewMut<S, E> {
         Self {
             ptr,
             shape,
-            strides: shape.strides().0,
+            strides: shape.strides(),
         }
     }
 }
@@ -42,7 +42,7 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
         View {
             ptr: self.data.as_ptr(),
             shape: self.shape,
-            strides: self.strides.0,
+            strides: self.strides,
         }
     }
 
@@ -50,7 +50,7 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
         ViewMut {
             ptr: std::sync::Arc::make_mut(&mut self.data).as_mut_ptr(),
             shape: self.shape,
-            strides: self.strides.0,
+            strides: self.strides,
         }
     }
 }

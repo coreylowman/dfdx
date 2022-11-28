@@ -14,7 +14,6 @@ impl<S: Shape, E: Dtype> std::ops::Index<S::Concrete> for StridedArray<S, E> {
         }
         let i: usize = self
             .strides
-            .0
             .into_iter()
             .zip(index.into_iter())
             .map(|(a, b)| a * b)
@@ -34,7 +33,6 @@ impl<S: Shape, E: Dtype> std::ops::IndexMut<S::Concrete> for StridedArray<S, E> 
         }
         let i: usize = self
             .strides
-            .0
             .into_iter()
             .zip(index.into_iter())
             .map(|(a, b)| a * b)

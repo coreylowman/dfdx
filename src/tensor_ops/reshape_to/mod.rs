@@ -39,19 +39,19 @@ impl<
         Src: Shape + HasSameNumelAs<Dst>,
         Dst: Shape + Default,
         E: Dtype,
-        D: Device<E>,
+        D: DeviceStorage + ReshapeKernel<E>,
         T: Tape<D>,
     > ReshapeTo<Tensor<Dst, E, D, T>> for Tensor<Src, E, D, T>
 {
     fn try_reshape(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         let dst: Dst = Default::default();
         let (inp, mut tape) = self.split_tape();
-        let storage = ReshapeKernel::forward(&inp.device, dst, &inp.storage)?;
+        let storage = inp.device.forward(dst, &inp.storage)?;
         let out = make_tensor(&inp.device, storage);
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
-            ReshapeKernel::backward(&inp.device, &inp.storage, grad_inp, grad_out)?;
+            inp.device.backward(&inp.storage, grad_inp, grad_out)?;
             Ok(())
         });
         Ok(out.put_tape(tape))
