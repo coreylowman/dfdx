@@ -163,6 +163,7 @@ mod normalize;
 mod permute_to;
 mod pow;
 mod relu;
+mod select_to;
 mod sigmoid;
 mod sin;
 mod softmax;
@@ -173,7 +174,6 @@ mod sub;
 mod sum_to;
 mod tanh;
 mod var_to;
-// mod select_to;
 
 pub(crate) mod cpu_kernels;
 pub(crate) mod ops;
@@ -205,6 +205,7 @@ pub use normalize::normalize;
 pub use permute_to::PermuteTo;
 pub use pow::{powf, powi};
 pub use relu::relu;
+pub use select_to::{SelectAlong, SelectTo};
 pub use sigmoid::sigmoid;
 pub use sin::sin;
 pub use softmax::softmax;
@@ -216,7 +217,6 @@ pub use sum_to::SumTo;
 pub use tanh::tanh;
 pub use var_to::VarTo;
 // pub use impl_mask::*;
-// pub use select_to::{SelectAlong, SelectTo};
 
 #[cfg(feature = "nightly")]
 mod reshape_to;

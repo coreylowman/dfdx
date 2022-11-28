@@ -19,7 +19,7 @@ use super::{
     min_to::MinReduceKernel,
     minimum::MinimumKernelOp,
     ops::{BinaryKernel, UnaryKernel},
-    sum_to::SumKernel, mul::{ScalarMulKernelOp, BinaryMulKernelOp}, sub::{ScalarSubKernelOp, BinarySubKernelOp}, nans_to::NansToKernelOp, relu::ReLUKernelOp, negate::NegateKernelOp, sigmoid::SigmoidKernelOp, sin::SinKernelOp, sqrt::SqrtKernelOp, square::SquareKernelOp, tanh::TanhKernelOp, pow::PowKernelOp, reshape_to::ReshapeKernel,
+    sum_to::SumKernel, mul::{ScalarMulKernelOp, BinaryMulKernelOp}, sub::{ScalarSubKernelOp, BinarySubKernelOp}, nans_to::NansToKernelOp, relu::ReLUKernelOp, negate::NegateKernelOp, sigmoid::SigmoidKernelOp, sin::SinKernelOp, sqrt::SqrtKernelOp, square::SquareKernelOp, tanh::TanhKernelOp, pow::PowKernelOp, select_to::{SelectAxisKernel, SelectBatchKernel, ReplaceAxisKernel},
 };
 use crate::{
     arrays::Dtype,
@@ -34,6 +34,11 @@ pub trait Device<E: Dtype>:
     + SumKernel<E>
     + MaxReduceKernel<E>
     + MinReduceKernel<E>
+
+    // indexing
+    + SelectAxisKernel<E>
+    + ReplaceAxisKernel<E>
+    + SelectBatchKernel<E>
     
     // matmuls
     + VecMatKernel<E>
@@ -78,8 +83,6 @@ pub trait Device<E: Dtype>:
     + BinaryKernel<HuberErrorKernelOp<E>, E>
     + BinaryKernel<MaximumKernelOp, E>
     + BinaryKernel<MinimumKernelOp, E>
-
-    + ReshapeKernel<E>
 {
 }
 

@@ -1,13 +1,13 @@
+#![allow(clippy::type_complexity)]
+
 mod cpu_kernel;
 
 use crate::{
-    arrays::{Dtype, Dyn, Rank0, Rank1, Shape},
+    arrays::{Axis, Dim, Dtype, Dyn, Rank0, Rank1, ReduceShape, ReplaceDim, Shape},
     devices::{DeviceStorage, HasErr},
     gradients::Tape,
-    tensor::{Tensor, TensorFromArray},
+    tensor::{make_tensor, Tensor, TensorFromArray},
 };
-
-use super::ops::{try_unary_op, UnaryKernel};
 
 /// Select values along `Axes` resulting in `T`. Equivalent
 /// to `torch.select` and `torch.gather` from pytorch.
@@ -66,89 +66,180 @@ pub trait SelectTo<T, Axes, Idx>: HasErr {
     fn try_select(self, idx: Idx) -> Result<T, Self::Err>;
 }
 
-pub trait SelectAlong<T, Idx>: HasErr {
-    fn select_along<Axes>(self, idx: Idx) -> T
-    where
-        Self: SelectTo<T, Axes, Idx>,
-    {
-        self.select(idx)
-    }
-    fn try_select_along<Axes>(self, idx: Idx) -> Result<T, Self::Err>
-    where
-        Self: SelectTo<T, Axes, Idx>,
-    {
-        self.try_select(idx)
-    }
-}
-
-impl<Src: HasErr, T, Idx> SelectAlong<T, Idx> for Src {}
-
-impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: DeviceStorage, T: Tape<D>>
-    SelectTo<Tensor<Dst, E, D, T>, Axes, usize> for Tensor<Src, E, D, T>
-where
-    Self: SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<(), usize, D>>,
-    D: TensorFromArray<usize, Rank0, usize>,
-{
-    fn try_select(self, idx: usize) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
-        let idx = self.device.tensor(idx);
-        self.try_select(idx)
-    }
-}
-
-impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: DeviceStorage, T: Tape<D>, const Z: usize>
-    SelectTo<Tensor<Dst, E, D, T>, Axes, [usize; Z]> for Tensor<Src, E, D, T>
-where
-    Self: SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<Rank1<Z>, usize, D>>,
-    D: TensorFromArray<[usize; Z], Rank1<Z>, usize>,
-{
-    fn try_select(self, idx: [usize; Z]) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
-        let idx = self.device.tensor(idx);
-        self.try_select(idx)
-    }
-}
-
-impl<Src: Shape, Dst: Shape, Axes, E: Dtype, D: DeviceStorage, T: Tape<D>>
-    SelectTo<Tensor<Dst, E, D, T>, Axes, &[usize]> for Tensor<Src, E, D, T>
-where
-    Self: SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<(Dyn,), usize, D>>,
-    D: for<'a> TensorFromArray<&'a [usize], (Dyn,), usize>,
-{
-    fn try_select(self, idx: &[usize]) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
-        let idx = self.device.tensor(idx);
-        self.try_select(idx)
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(super) struct SelectKernelOp<Dst, Axis, I: Shape, D: DeviceStorage> {
-    dst: Dst,
-    indices: D::Storage<I, usize>,
-    marker: std::marker::PhantomData<Axis>,
+pub trait SelectAxisKernel<E: Dtype>: DeviceStorage {
+    fn forward<const I: isize, S: Shape + ReduceShape<Axis<I>>>(
+        &self,
+        inp: &Self::Storage<S, E>,
+        idx: &Self::Storage<(), usize>,
+    ) -> Result<Self::Storage<S::Reduced, E>, Self::Err>;
+    fn backward<const I: isize, S: Shape + ReduceShape<Axis<I>>>(
+        &self,
+        grad_inp: &mut Self::Storage<S, E>,
+        idx: &Self::Storage<(), usize>,
+        grad_out: &Self::Storage<S::Reduced, E>,
+    ) -> Result<(), Self::Err>;
 }
 
 impl<
-        Src: Shape,
-        Dst: Shape + Default,
-        Axes: 'static + Copy,
-        Idx: Shape,
+        const I: isize,
+        S: Shape + ReduceShape<Axis<I>>,
         E: Dtype,
-        D: DeviceStorage,
+        D: DeviceStorage + SelectAxisKernel<E>,
         T: Tape<D>,
-    > SelectTo<Tensor<Dst, E, D, T>, Axes, Tensor<Idx, usize, D>> for Tensor<Src, E, D, T>
-where
-    D: UnaryKernel<SelectKernelOp<Dst, Axes, Idx, D>, Src, Dst, E>,
+    > SelectTo<Tensor<S::Reduced, E, D, T>, Axis<I>, Tensor<(), usize, D>> for Tensor<S, E, D, T>
 {
-    fn try_select(self, idx: Tensor<Idx, usize, D>) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
-        try_unary_op(
-            SelectKernelOp {
-                dst: Default::default(),
-                indices: idx.storage,
-                marker: std::marker::PhantomData,
-            },
-            self,
-        )
+    fn try_select(
+        self,
+        idx: Tensor<(), usize, D>,
+    ) -> Result<Tensor<S::Reduced, E, D, T>, Self::Err> {
+        let (inp, mut tape) = self.split_tape();
+        let storage = inp.device.forward(&inp.storage, &idx.storage)?;
+        let out = make_tensor(&inp.device, storage);
+        let phantom_out = out.clone();
+        tape.add_backward_op(move |grads| {
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
+            inp.device.backward(grad_inp, &idx.storage, grad_out)?;
+            Ok(())
+        });
+        Ok(out.put_tape(tape))
     }
 }
+
+pub trait ReplaceAxisKernel<E: Dtype>: DeviceStorage {
+    fn forward<const I: isize, D: Dim, S: Shape + ReplaceDim<I, D>>(
+        &self,
+        inp: &Self::Storage<S, E>,
+        idx: &Self::Storage<(D,), usize>,
+    ) -> Result<Self::Storage<S::Replaced, E>, Self::Err>;
+    fn backward<const I: isize, D: Dim, S: Shape + ReplaceDim<I, D>>(
+        &self,
+        grad_inp: &mut Self::Storage<S, E>,
+        idx: &Self::Storage<(D,), usize>,
+        grad_out: &Self::Storage<S::Replaced, E>,
+    ) -> Result<(), Self::Err>;
+}
+
+impl<
+        const I: isize,
+        New: Dim,
+        S: Shape + ReplaceDim<I, New>,
+        E: Dtype,
+        D: DeviceStorage + ReplaceAxisKernel<E>,
+        T: Tape<D>,
+    > SelectTo<Tensor<S::Replaced, E, D, T>, Axis<I>, Tensor<(New,), usize, D>>
+    for Tensor<S, E, D, T>
+{
+    fn try_select(
+        self,
+        idx: Tensor<(New,), usize, D>,
+    ) -> Result<Tensor<S::Replaced, E, D, T>, Self::Err> {
+        let (inp, mut tape) = self.split_tape();
+        let storage = inp.device.forward(&inp.storage, &idx.storage)?;
+        let out = make_tensor(&inp.device, storage);
+        let phantom_out = out.clone();
+        tape.add_backward_op(move |grads| {
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
+            inp.device.backward(grad_inp, &idx.storage, grad_out)?;
+            Ok(())
+        });
+        Ok(out.put_tape(tape))
+    }
+}
+
+pub trait SelectBatchKernel<E: Dtype>: DeviceStorage {
+    fn forward<Batch: Dim, Seq: Dim, S1: Dim, S2: Dim>(
+        &self,
+        inp: &Self::Storage<(S1, S2), E>,
+        idx: &Self::Storage<(Batch, Seq), usize>,
+    ) -> Result<Self::Storage<(Batch, Seq, S2), E>, Self::Err>;
+    fn backward<Batch: Dim, Seq: Dim, S1: Dim, S2: Dim>(
+        &self,
+        grad_inp: &mut Self::Storage<(S1, S2), E>,
+        idx: &Self::Storage<(Batch, Seq), usize>,
+        grad_out: &Self::Storage<(Batch, Seq, S2), E>,
+    ) -> Result<(), Self::Err>;
+}
+
+impl<
+        Batch: Dim,
+        Seq: Dim,
+        S1: Dim,
+        S2: Dim,
+        E: Dtype,
+        D: DeviceStorage + SelectBatchKernel<E>,
+        T: Tape<D>,
+    > SelectTo<Tensor<(Batch, Seq, S2), E, D, T>, Axis<0>, Tensor<(Batch, Seq), usize, D>>
+    for Tensor<(S1, S2), E, D, T>
+{
+    fn try_select(
+        self,
+        idx: Tensor<(Batch, Seq), usize, D>,
+    ) -> Result<Tensor<(Batch, Seq, S2), E, D, T>, Self::Err> {
+        let (inp, mut tape) = self.split_tape();
+        let storage = inp.device.forward(&inp.storage, &idx.storage)?;
+        let out = make_tensor(&inp.device, storage);
+        let phantom_out = out.clone();
+        tape.add_backward_op(move |grads| {
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
+            inp.device.backward(grad_inp, &idx.storage, grad_out)?;
+            Ok(())
+        });
+        Ok(out.put_tape(tape))
+    }
+}
+
+impl<Src: Shape, Dst, Ax, E: Dtype, D: DeviceStorage, T: Tape<D>> SelectTo<Dst, Ax, usize>
+    for Tensor<Src, E, D, T>
+where
+    Self: SelectTo<Dst, Ax, Tensor<(), usize, D>>,
+    D: TensorFromArray<usize, Rank0, usize>,
+{
+    fn try_select(self, idx: usize) -> Result<Dst, Self::Err> {
+        let idx = self.device.tensor(idx);
+        self.try_select(idx)
+    }
+}
+
+impl<Src: Shape, Dst, Ax, E: Dtype, D: DeviceStorage, T: Tape<D>, const Z: usize>
+    SelectTo<Dst, Ax, [usize; Z]> for Tensor<Src, E, D, T>
+where
+    Self: SelectTo<Dst, Ax, Tensor<Rank1<Z>, usize, D>>,
+    D: TensorFromArray<[usize; Z], Rank1<Z>, usize>,
+{
+    fn try_select(self, idx: [usize; Z]) -> Result<Dst, Self::Err> {
+        let idx = self.device.tensor(idx);
+        self.try_select(idx)
+    }
+}
+
+impl<Src: Shape, Dst, Ax, E: Dtype, D: DeviceStorage, T: Tape<D>> SelectTo<Dst, Ax, &[usize]>
+    for Tensor<Src, E, D, T>
+where
+    Self: SelectTo<Dst, Ax, Tensor<(Dyn,), usize, D>>,
+    D: for<'a> TensorFromArray<&'a [usize], (Dyn,), usize>,
+{
+    fn try_select(self, idx: &[usize]) -> Result<Dst, Self::Err> {
+        let idx = self.device.tensor(idx);
+        self.try_select(idx)
+    }
+}
+
+pub trait SelectAlong<T, Idx>: HasErr {
+    fn select_along<Ax>(self, idx: Idx) -> T
+    where
+        Self: SelectTo<T, Ax, Idx>,
+    {
+        self.try_select_along::<Ax>(idx).unwrap()
+    }
+    fn try_select_along<Ax>(self, idx: Idx) -> Result<T, Self::Err>
+    where
+        Self: SelectTo<T, Ax, Idx>,
+    {
+        self.try_select(idx)
+    }
+}
+
+impl<Src: HasErr, Dst, Idx> SelectAlong<Dst, Idx> for Src {}
 
 #[cfg(test)]
 mod tests {
@@ -164,7 +255,7 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor1D<5, _> = dev.randn();
         let t_array = t.as_array();
-        let r: Tensor0D<_, _> = t.trace().select(0);
+        let r = t.trace().select(0);
         assert_eq!(r.as_array(), t_array[0]);
         let g = r.exp().backward();
         assert_eq!(g.get(&t).as_array(), [t_array[0].exp(), 0.0, 0.0, 0.0, 0.0]);
@@ -175,7 +266,7 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor1D<5, _> = dev.randn();
         let t_array = t.as_array();
-        let r: Tensor1D<2, _, _> = t.trace().select([0, 3]);
+        let r = t.trace().select([0, 3]);
         assert_eq!(r.as_array(), [t_array[0], t_array[3]]);
         let g = r.mean().backward();
         assert_eq!(g.get(&t).as_array(), [0.5, 0.0, 0.0, 0.5, 0.0]);
@@ -186,7 +277,7 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor1D<5, _> = dev.randn();
         let _t = t.as_array();
-        let r: Tensor1D<8, _, _> = t.trace().select([0, 1, 2, 3, 4, 2, 4, 4]);
+        let r = t.trace().select([0, 1, 2, 3, 4, 2, 4, 4]);
         assert_eq!(
             r.as_array(),
             [_t[0], _t[1], _t[2], _t[3], _t[4], _t[2], _t[4], _t[4]]
@@ -202,7 +293,7 @@ mod tests {
     fn test_select_last_1d() {
         let dev = build_test_device!();
         let t = dev.tensor([1.0, 2.0, 3.0]);
-        let r: Tensor0D<_, _> = t.trace().select(2);
+        let r = t.trace().select(2);
         assert_eq!(r.as_array(), 3.0);
         // NOTE: .exp() so we make sure its using result grad properly
         let g = r.exp().backward();
@@ -224,7 +315,7 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor2D<4, 5, _> = dev.randn();
         let t_array = t.as_array();
-        let r: Tensor3D<2, 3, 5, _, _> = t.trace().select(dev.tensor([[2, 0, 3], [0, 0, 3]]));
+        let r = t.trace().select(dev.tensor([[2, 0, 3], [0, 0, 3]]));
         let r_array = r.as_array();
         assert_eq!(r_array[0], [t_array[2], t_array[0], t_array[3]]);
         assert_eq!(r_array[1], [t_array[0], t_array[0], t_array[3]]);
