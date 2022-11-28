@@ -1,25 +1,17 @@
 //! Standard loss functions such as [mse_loss()], [cross_entropy_with_logits_loss()], and more.
 
-use crate::{
-    arrays::{Dtype, HasAxes, HasDtype, HasLastAxis, HasShape, Rank0, Shape},
-    devices::DeviceStorage,
-    gradients::Tape,
-    tensor::Tensor,
-    tensor_ops::log_softmax::LogSoftmaxAxes,
-    tensor_ops::*,
-};
+use crate::{arrays::*, gradients::Tape, tensor::Tensor, tensor_ops::*};
 
 /// [Mean Squared Error](https://en.wikipedia.org/wiki/Mean_squared_error).
 /// This computes `(pred - targ).square().mean()`.
 ///
 /// See [mean()], [square()], and [sub()].
-pub fn mse_loss<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, AllAxes>(
-    pred: Tensor<S, E, D, T>,
-    targ: Tensor<S, E, D>,
-) -> Tensor<Rank0, E, D, T>
+pub fn mse_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
+    pred: Tensor<S, f32, D, T>,
+    targ: Tensor<S, f32, D>,
+) -> Tensor<Rank0, f32, D, T>
 where
-    Tensor<S, E, D, T>:
-        TrySub<Tensor<S, E, D>> + TrySquare + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
+    Rank0: BroadcastShapeTo<S, S::AllAxes>,
 {
     (pred - targ).square().mean()
 }
@@ -28,14 +20,12 @@ where
 /// This computes `(pred - targ).square().mean().sqrt()`
 ///
 /// See [mse_loss()] and [sqrt()]
-pub fn rmse_loss<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, AllAxes>(
-    pred: Tensor<S, E, D, T>,
-    targ: Tensor<S, E, D>,
-) -> Tensor<Rank0, E, D, T>
+pub fn rmse_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
+    pred: Tensor<S, f32, D, T>,
+    targ: Tensor<S, f32, D>,
+) -> Tensor<Rank0, f32, D, T>
 where
-    Tensor<S, E, D, T>:
-        TrySub<Tensor<S, E, D>> + TrySquare + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
-    Tensor<Rank0, E, D, T>: TrySqrt,
+    Rank0: BroadcastShapeTo<S, S::AllAxes>,
 {
     mse_loss(pred, targ).sqrt()
 }
@@ -44,12 +34,12 @@ where
 /// This computes `(pred - targ).abs().mean()`
 ///
 /// See [mean()], [abs()], and [sub()]
-pub fn mae_loss<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Axes>(
-    pred: Tensor<S, E, D, T>,
-    targ: Tensor<S, E, D>,
-) -> Tensor<Rank0, E, D, T>
+pub fn mae_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
+    pred: Tensor<S, f32, D, T>,
+    targ: Tensor<S, f32, D>,
+) -> Tensor<Rank0, f32, D, T>
 where
-    Tensor<S, E, D, T>: TrySub<Tensor<S, E, D>> + TryAbs + TryMeanTo<Tensor<Rank0, E, D, T>, Axes>,
+    Rank0: BroadcastShapeTo<S, S::AllAxes>,
 {
     (pred - targ).abs().mean()
 }
@@ -69,13 +59,13 @@ where
 /// let y = Tensor1D::new([0.5, 0.5]);
 /// let loss = huber_loss(x.traced(), y, 1.0);
 /// ```
-pub fn huber_loss<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, AllAxes>(
-    pred: Tensor<S, E, D, T>,
-    targ: Tensor<S, E, D>,
-    delta: <Tensor<S, E, D, T> as HasDtype>::Dtype,
-) -> Tensor<Rank0, E, D, T>
+pub fn huber_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
+    pred: Tensor<S, f32, D, T>,
+    targ: Tensor<S, f32, D>,
+    delta: f32,
+) -> Tensor<Rank0, f32, D, T>
 where
-    Tensor<S, E, D, T>: TryHuberError<Tensor<S, E, D>> + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
+    Rank0: BroadcastShapeTo<S, S::AllAxes>,
 {
     pred.huber_error(targ, delta).mean()
 }
@@ -95,16 +85,15 @@ where
 /// let y = Tensor1D::new([0.5, 0.5]);
 /// let loss = smooth_l1_loss(x.traced(), y, 1.0);
 /// ```
-pub fn smooth_l1_loss<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, AllAxes>(
-    pred: Tensor<S, E, D, T>,
-    targ: Tensor<S, E, D>,
-    beta: <Tensor<S, E, D, T> as HasDtype>::Dtype,
-) -> Tensor<Rank0, E, D, T>
+pub fn smooth_l1_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
+    pred: Tensor<S, f32, D, T>,
+    targ: Tensor<S, f32, D>,
+    delta: f32,
+) -> Tensor<Rank0, f32, D, T>
 where
-    Tensor<S, E, D, T>: TryHuberError<Tensor<S, E, D>> + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
-    Tensor<Rank0, E, D, T>: TryDiv<<Tensor<S, E, D, T> as HasDtype>::Dtype>,
+    Rank0: BroadcastShapeTo<S, S::AllAxes>,
 {
-    huber_loss(pred, targ, beta) / beta
+    huber_loss(pred, targ, delta) / delta
 }
 
 /// [Cross entropy loss](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression).
@@ -126,27 +115,20 @@ where
 /// let loss = cross_entropy_with_logits_loss(logits.traced(), target_probs);
 /// ```
 pub fn cross_entropy_with_logits_loss<
-    S: Shape + HasLastAxis,
-    E: Dtype,
-    D: DeviceStorage,
+    Ax: Axes,
+    S: Shape<LastAxis = Ax>,
+    D: Device<f32>,
     T: Tape<D>,
-    AllAxes,
 >(
-    logits: Tensor<S, E, D, T>,
-    target_probs: Tensor<S, E, D>,
-) -> Tensor<Rank0, E, D, T>
+    logits: Tensor<S, f32, D, T>,
+    target_probs: Tensor<S, f32, D>,
+) -> Tensor<Rank0, f32, D, T>
 where
-    S: HasAxes<S::LastAxis>,
-    Tensor<S, E, D, T>: LogSoftmaxAxes<S::LastAxis>
-        + TryMul<Tensor<S, E, D>>
-        + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
-    Tensor<Rank0, E, D, T>: TryNegate + TryMul<f32>,
+    S: ReduceShape<Ax>,
+    Rank0: BroadcastShapeTo<S, S::AllAxes>,
 {
-    let last_axis_numel = <S as HasAxes<S::LastAxis>>::size(logits.shape()) as f32;
-    (logits.log_softmax::<S::LastAxis>() * target_probs)
-        .mean()
-        .negate()
-        * last_axis_numel
+    let last_axis_numel = <S as HasAxes<Ax>>::size(logits.shape()) as f32;
+    (logits.log_softmax::<Ax>() * target_probs).mean().negate() * last_axis_numel
 }
 
 /// [KL Divergence loss](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence).
@@ -167,27 +149,16 @@ where
 /// let target_probs = Tensor1D::new([0.5, 0.5]);
 /// let loss = kl_div_with_logits_loss(logits.traced(), target_probs);
 /// ```
-pub fn kl_div_with_logits_loss<
-    S: Shape + HasLastAxis,
-    E: Dtype,
-    D: DeviceStorage,
-    T: Tape<D>,
-    AllAxes,
->(
-    logits: Tensor<S, E, D, T>,
-    target_probs: Tensor<S, E, D>,
-) -> Tensor<Rank0, E, D, T>
+pub fn kl_div_with_logits_loss<Ax: Axes, S: Shape<LastAxis = Ax>, D: Device<f32>, T: Tape<D>>(
+    logits: Tensor<S, f32, D, T>,
+    target_probs: Tensor<S, f32, D>,
+) -> Tensor<Rank0, f32, D, T>
 where
-    S: HasAxes<S::LastAxis>,
-    Tensor<S, E, D, T>: LogSoftmaxAxes<S::LastAxis>
-        + TryMul<Tensor<S, E, D>>
-        + TrySub<Tensor<S, E, D>>
-        + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
-    Tensor<S, E, D>: TryLn,
-    Tensor<Rank0, E, D, T>: TryNegate + TryMul<f32>,
+    S: ReduceShape<Ax>,
+    Rank0: BroadcastShapeTo<S, S::AllAxes>,
 {
-    let last_axis_numel = <S as HasAxes<S::LastAxis>>::size(logits.shape()) as f32;
-    let probs = logits.log_softmax::<S::LastAxis>();
+    let last_axis_numel = <S as HasAxes<Ax>>::size(logits.shape()) as f32;
+    let probs = logits.log_softmax::<Ax>();
     ((probs - target_probs.clone().ln()) * target_probs)
         .mean()
         .negate()
@@ -215,19 +186,12 @@ where
 ///
 /// See <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>
 /// for more information on this.
-pub fn binary_cross_entropy_with_logits_loss<
-    S: Shape,
-    E: Dtype,
-    D: DeviceStorage,
-    T: Tape<D>,
-    AllAxes,
->(
-    logits: Tensor<S, E, D, T>,
-    target_probs: Tensor<S, E, D>,
-) -> Tensor<Rank0, E, D, T>
+pub fn binary_cross_entropy_with_logits_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
+    logits: Tensor<S, f32, D, T>,
+    target_probs: Tensor<S, f32, D>,
+) -> Tensor<Rank0, f32, D, T>
 where
-    Tensor<S, E, D, T>:
-        TryBceWithLogits<Tensor<S, E, D>> + TryMeanTo<Tensor<Rank0, E, D, T>, AllAxes>,
+    Rank0: BroadcastShapeTo<S, S::AllAxes>,
 {
     logits.bce_with_logits(target_probs).mean()
 }

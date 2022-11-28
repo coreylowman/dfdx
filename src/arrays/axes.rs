@@ -76,23 +76,6 @@ impl<
     }
 }
 
-pub trait HasLastAxis {
-    type LastAxis;
-}
-macro_rules! impl_has_last_axis {
-    (($($Vars:tt),*), $Axis:ty) => {
-impl<$($Vars: Dim, )*> HasLastAxis for ($($Vars, )*) {
-    type LastAxis = $Axis;
-}
-    };
-}
-impl_has_last_axis!((D1), Axis<0>);
-impl_has_last_axis!((D1, D2), Axis<1>);
-impl_has_last_axis!((D1, D2, D3), Axis<2>);
-impl_has_last_axis!((D1, D2, D3, D4), Axis<3>);
-impl_has_last_axis!((D1, D2, D3, D4, D5), Axis<4>);
-impl_has_last_axis!((D1, D2, D3, D4, D5, D6), Axis<5>);
-
 pub trait HasAxes<Axes> {
     fn size(&self) -> usize;
 }

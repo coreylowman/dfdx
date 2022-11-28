@@ -2,7 +2,12 @@ use super::*;
 
 pub trait BroadcastShapeTo<S, Ax>: Sized {}
 
-pub trait ReduceShapeTo<S: BroadcastShapeTo<Self, Ax>, Ax>: Shape + Sized {}
+impl BroadcastShapeTo<(), Axis<0>> for () {}
+impl ReduceShape<Axis<0>> for () {
+    type Reduced = ();
+}
+
+pub trait ReduceShapeTo<S, Ax>: Sized {}
 impl<Src: Shape, Dst: Shape + BroadcastShapeTo<Src, Ax>, Ax> ReduceShapeTo<Dst, Ax> for Src {}
 
 pub trait ReduceShape<Ax>: Shape + HasAxes<Ax> {
@@ -10,42 +15,44 @@ pub trait ReduceShape<Ax>: Shape + HasAxes<Ax> {
 }
 
 macro_rules! broadcast_to {
-    ($SrcTy:ty, $DstTy:ty, $Axes:ty, {$($ConstVars:tt),*}) => {
-impl<$(const $ConstVars: usize, )*> BroadcastShapeTo<$DstTy, $Axes> for $SrcTy {}
-impl<$(const $ConstVars: usize, )*> ReduceShape<$Axes> for $DstTy {
-    type Reduced = $SrcTy;
+    (($($SrcDims:tt),*), ($($DstDims:tt),*), $Axes:ty) => {
+impl<$($DstDims: Dim, )*> BroadcastShapeTo<($($DstDims, )*), $Axes> for ($($SrcDims, )*) {}
+impl<$($DstDims: Dim + Default, )*> ReduceShape<$Axes> for ($($DstDims, )*) {
+    type Reduced = ($($SrcDims, )*);
 }
     };
 }
-broadcast_to!(Rank0, Rank1<M>, Axis<0>, { M });
-broadcast_to!(Rank0, Rank2<M, N>, Axes2<0, 1>, { M, N });
-broadcast_to!(Rank0, Rank3<M, N, O>, Axes3<0, 1, 2>, { M, N, O });
-broadcast_to!(Rank0, Rank4<M, N, O, P>, Axes4<0, 1, 2, 3>, { M, N, O, P });
+broadcast_to!((), (M), Axis<0>);
+broadcast_to!((), (M, N), Axes2<0, 1>);
+broadcast_to!((), (M, N, O), Axes3<0, 1, 2>);
+broadcast_to!((), (M, N, O, P), Axes4<0, 1, 2, 3>);
+broadcast_to!((), (M, N, O, P, Q), Axes5<0, 1, 2, 3, 4>);
+broadcast_to!((), (M, N, O, P, Q, R), Axes6<0, 1, 2, 3, 4, 5>);
 
-broadcast_to!(Rank1<M>, Rank2<M, N>, Axis<1>, { M, N });
-broadcast_to!(Rank1<N>, Rank2<M, N>, Axis<0>, { M, N });
-broadcast_to!(Rank1<M>, Rank3<M, N, O>, Axes2<1, 2>, { M, N, O });
-broadcast_to!(Rank1<N>, Rank3<M, N, O>, Axes2<0, 2>, { M, N, O });
-broadcast_to!(Rank1<O>, Rank3<M, N, O>, Axes2<0, 1>, { M, N, O });
-broadcast_to!(Rank1<M>, Rank4<M, N, O, P>, Axes3<1, 2, 3>, { M, N, O, P });
-broadcast_to!(Rank1<N>, Rank4<M, N, O, P>, Axes3<0, 2, 3>, { M, N, O, P });
-broadcast_to!(Rank1<O>, Rank4<M, N, O, P>, Axes3<0, 1, 3>, { M, N, O, P });
-broadcast_to!(Rank1<P>, Rank4<M, N, O, P>, Axes3<0, 1, 2>, { M, N, O, P });
+broadcast_to!((M), (M, N), Axis<1>);
+broadcast_to!((N), (M, N), Axis<0>);
+broadcast_to!((M), (M, N, O), Axes2<1, 2>);
+broadcast_to!((N), (M, N, O), Axes2<0, 2>);
+broadcast_to!((O), (M, N, O), Axes2<0, 1>);
+broadcast_to!((M), (M, N, O, P), Axes3<1, 2, 3>);
+broadcast_to!((N), (M, N, O, P), Axes3<0, 2, 3>);
+broadcast_to!((O), (M, N, O, P), Axes3<0, 1, 3>);
+broadcast_to!((P), (M, N, O, P), Axes3<0, 1, 2>);
 
-broadcast_to!(Rank2<M, N>, Rank3<M, N, O>, Axis<2>, { M, N, O });
-broadcast_to!(Rank2<M, O>, Rank3<M, N, O>, Axis<1>, { M, N, O });
-broadcast_to!(Rank2<N, O>, Rank3<M, N, O>, Axis<0>, { M, N, O });
-broadcast_to!(Rank2<M, N>, Rank4<M, N, O, P>, Axes2<2, 3>, { M, N, O, P });
-broadcast_to!(Rank2<M, O>, Rank4<M, N, O, P>, Axes2<1, 3>, { M, N, O, P });
-broadcast_to!(Rank2<N, O>, Rank4<M, N, O, P>, Axes2<0, 3>, { M, N, O, P });
-broadcast_to!(Rank2<M, P>, Rank4<M, N, O, P>, Axes2<1, 2>, { M, N, O, P });
-broadcast_to!(Rank2<N, P>, Rank4<M, N, O, P>, Axes2<0, 2>, { M, N, O, P });
-broadcast_to!(Rank2<O, P>, Rank4<M, N, O, P>, Axes2<0, 1>, { M, N, O, P });
+broadcast_to!((M, N), (M, N, O), Axis<2>);
+broadcast_to!((M, O), (M, N, O), Axis<1>);
+broadcast_to!((N, O), (M, N, O), Axis<0>);
+broadcast_to!((M, N), (M, N, O, P), Axes2<2, 3>);
+broadcast_to!((M, O), (M, N, O, P), Axes2<1, 3>);
+broadcast_to!((N, O), (M, N, O, P), Axes2<0, 3>);
+broadcast_to!((M, P), (M, N, O, P), Axes2<1, 2>);
+broadcast_to!((N, P), (M, N, O, P), Axes2<0, 2>);
+broadcast_to!((O, P), (M, N, O, P), Axes2<0, 1>);
 
-broadcast_to!(Rank3<M, N, O>, Rank4<M, N, O, P>, Axis<3>, {M, N, O, P});
-broadcast_to!(Rank3<M, N, P>, Rank4<M, N, O, P>, Axis<2>, {M, N, O, P});
-broadcast_to!(Rank3<M, O, P>, Rank4<M, N, O, P>, Axis<1>, {M, N, O, P});
-broadcast_to!(Rank3<N, O, P>, Rank4<M, N, O, P>, Axis<0>, {M, N, O, P});
+broadcast_to!((M, N, O), (M, N, O, P), Axis<3>);
+broadcast_to!((M, N, P), (M, N, O, P), Axis<2>);
+broadcast_to!((M, O, P), (M, N, O, P), Axis<1>);
+broadcast_to!((N, O, P), (M, N, O, P), Axis<0>);
 
 pub trait BroadcastStridesTo<S: Shape, Axes>: Shape + BroadcastShapeTo<S, Axes> {
     fn broadcast_strides(&self, strides: StridesFor<Self>) -> StridesFor<S>;

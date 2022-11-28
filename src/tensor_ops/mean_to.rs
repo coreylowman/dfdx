@@ -32,10 +32,9 @@ pub trait MeanTo<T, Axes>: HasErr {
     fn try_mean(self) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, Dst: Shape + Default, Ax: Axes, D: Device<f32>, T: Tape<D>>
+impl<Ax: Axes, Src: Shape + HasAxes<Ax>, Dst: Shape + Default, D: Device<f32>, T: Tape<D>>
     MeanTo<Tensor<Dst, f32, D, T>, Ax> for Tensor<Src, f32, D, T>
 where
-    Src: HasAxes<Ax>,
     Dst: BroadcastShapeTo<Src, Ax>,
 {
     fn try_mean(self) -> Result<Tensor<Dst, f32, D, T>, Self::Err> {

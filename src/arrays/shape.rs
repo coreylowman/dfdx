@@ -1,3 +1,4 @@
+use super::axes::*;
 pub trait Dtype:
     'static
     + Copy
@@ -58,9 +59,20 @@ impl<const M: usize> Dim for Const<M> {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct StridesFor<Sh: Shape>(pub(crate) Sh::Concrete);
+pub struct StridesFor<S: Shape>(pub(crate) S::Concrete);
 
-pub trait Shape: 'static + std::fmt::Debug + Clone + Copy + Send + Sync + Eq + PartialEq {
+pub trait Shape:
+    'static
+    + std::fmt::Debug
+    + Clone
+    + Copy
+    + Send
+    + Sync
+    + Eq
+    + PartialEq
+    + HasAxes<Self::AllAxes>
+    + HasAxes<Self::LastAxis>
+{
     const NUM_DIMS: usize;
     type Concrete: std::fmt::Debug
         + Clone
@@ -73,6 +85,9 @@ pub trait Shape: 'static + std::fmt::Debug + Clone + Copy + Send + Sync + Eq + P
         + Send
         + Sync
         + IntoIterator<Item = usize>;
+
+    type AllAxes: Axes;
+    type LastAxis: Axes;
 
     #[inline(always)]
     fn num_elements(&self) -> usize {
@@ -117,6 +132,8 @@ pub type Rank6<
 impl Shape for () {
     const NUM_DIMS: usize = 0;
     type Concrete = [usize; 0];
+    type AllAxes = Axis<0>;
+    type LastAxis = Axis<0>;
     #[inline(always)]
     fn concrete(&self) -> Self::Concrete {
         []
@@ -144,6 +161,8 @@ impl TryFromNumElements for () {
 impl<D1: Dim> Shape for (D1,) {
     const NUM_DIMS: usize = 1;
     type Concrete = [usize; 1];
+    type AllAxes = Axis<0>;
+    type LastAxis = Axis<0>;
     #[inline(always)]
     fn concrete(&self) -> Self::Concrete {
         [self.0.size()]
@@ -177,6 +196,8 @@ impl TryFromNumElements for (Dyn,) {
 impl<D1: Dim, D2: Dim> Shape for (D1, D2) {
     const NUM_DIMS: usize = 2;
     type Concrete = [usize; 2];
+    type AllAxes = Axes2<0, 1>;
+    type LastAxis = Axis<1>;
     #[inline(always)]
     fn concrete(&self) -> Self::Concrete {
         [self.0.size(), self.1.size()]
@@ -226,6 +247,8 @@ impl<const M: usize> TryFromNumElements for (Const<M>, Dyn) {
 impl<D1: Dim, D2: Dim, D3: Dim> Shape for (D1, D2, D3) {
     const NUM_DIMS: usize = 3;
     type Concrete = [usize; 3];
+    type AllAxes = Axes3<0, 1, 2>;
+    type LastAxis = Axis<2>;
     #[inline(always)]
     fn concrete(&self) -> Self::Concrete {
         [self.0.size(), self.1.size(), self.2.size()]
@@ -248,6 +271,8 @@ impl<D1: Dim, D2: Dim, D3: Dim> Shape for (D1, D2, D3) {
 impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim> Shape for (D1, D2, D3, D4) {
     const NUM_DIMS: usize = 4;
     type Concrete = [usize; 4];
+    type AllAxes = Axes4<0, 1, 2, 3>;
+    type LastAxis = Axis<3>;
     #[inline(always)]
     fn concrete(&self) -> Self::Concrete {
         [self.0.size(), self.1.size(), self.2.size(), self.3.size()]
@@ -271,6 +296,8 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim> Shape for (D1, D2, D3, D4) {
 impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim> Shape for (D1, D2, D3, D4, D5) {
     const NUM_DIMS: usize = 5;
     type Concrete = [usize; 5];
+    type AllAxes = Axes5<0, 1, 2, 3, 4>;
+    type LastAxis = Axis<4>;
     #[inline(always)]
     fn concrete(&self) -> Self::Concrete {
         [
@@ -303,6 +330,8 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim> Shape for (D1, D2, D3, D4, D5)
 impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, D6: Dim> Shape for (D1, D2, D3, D4, D5, D6) {
     const NUM_DIMS: usize = 6;
     type Concrete = [usize; 6];
+    type AllAxes = Axes6<0, 1, 2, 3, 4, 5>;
+    type LastAxis = Axis<5>;
     #[inline(always)]
     fn concrete(&self) -> Self::Concrete {
         [
