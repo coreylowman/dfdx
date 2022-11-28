@@ -15,10 +15,11 @@ use cblas_sys::{
     CblasRowMajor as RowMajor, CblasTrans as Tr,
 };
 
-pub(super) fn matmul<M: Dim, K: Dim, N: Dim>(
+pub(crate) fn matmul<M: Dim, K: Dim, N: Dim>(
     a: View<(M, K), f32>,
     b: View<(K, N), f32>,
     c: ViewMut<(M, N), f32>,
+    beta: f32,
 ) {
     let [m, k] = a.shape.concrete();
     let n = b.shape.1.size();
@@ -29,7 +30,7 @@ pub(super) fn matmul<M: Dim, K: Dim, N: Dim>(
         let [br, bc] = b.strides.map(|x| x as isize);
         let [cr, cc] = c.strides.map(|x| x as isize);
         matrixmultiply::sgemm(
-            m, k, n, 1.0, a.ptr, ar, ac, b.ptr, br, bc, 1.0, c.ptr, cr, cc,
+            m, k, n, 1.0, a.ptr, ar, ac, b.ptr, br, bc, beta, c.ptr, cr, cc,
         );
     }
 
@@ -49,7 +50,7 @@ pub(super) fn matmul<M: Dim, K: Dim, N: Dim>(
             (RowMajor, a_tr, b_tr, lda, ldb, n)
         };
         sgemm(
-            layout, a_tr, b_tr, m, n, k, 1.0, a.ptr, lda, b.ptr, ldb, 1.0, c.ptr, ldc,
+            layout, a_tr, b_tr, m, n, k, 1.0, a.ptr, lda, b.ptr, ldb, beta, c.ptr, ldc,
         )
     }
 }
@@ -62,7 +63,7 @@ impl VecVecKernel<f32> for Cpu {
     ) -> Result<Self::Storage<(M, N), f32>, Self::Err> {
         let mut out: Self::Storage<(M, N), f32> =
             self.try_zeros_like((lhs.shape().0, rhs.shape().0))?;
-        matmul(lhs.view().br1(), rhs.view().br0(), out.view_mut());
+        matmul(lhs.view().br1(), rhs.view().br0(), out.view_mut(), 1.0);
         Ok(out)
     }
     fn backward<M: Dim, N: Dim>(
@@ -74,8 +75,18 @@ impl VecVecKernel<f32> for Cpu {
         grad_out: &Self::Storage<(M, N), f32>,
     ) -> Result<(), Self::Err> {
         let grad_out = grad_out.view();
-        matmul(grad_out, rhs.view().br0().tr(), grad_lhs.view_mut().br1());
-        matmul(lhs.view().br1().tr(), grad_out, grad_rhs.view_mut().br0());
+        matmul(
+            grad_out,
+            rhs.view().br0().tr(),
+            grad_lhs.view_mut().br1(),
+            1.0,
+        );
+        matmul(
+            lhs.view().br1().tr(),
+            grad_out,
+            grad_rhs.view_mut().br0(),
+            1.0,
+        );
         Ok(())
     }
 }
@@ -88,7 +99,7 @@ impl VecMatKernel<f32> for Cpu {
     ) -> Result<Self::Storage<(N,), f32>, Self::Err> {
         let (_, n) = rhs.shape();
         let mut out: Self::Storage<(N,), f32> = self.try_zeros_like((*n,))?;
-        matmul(lhs.view().br0(), rhs.view(), out.view_mut().br0());
+        matmul(lhs.view().br0(), rhs.view(), out.view_mut().br0(), 1.0);
         Ok(out)
     }
     fn backward<const K: usize, N: Dim>(
@@ -100,8 +111,8 @@ impl VecMatKernel<f32> for Cpu {
         grad_out: &Self::Storage<(N,), f32>,
     ) -> Result<(), Self::Err> {
         let grad_out = grad_out.view().br0();
-        matmul(grad_out, rhs.view().tr(), grad_lhs.view_mut().br0());
-        matmul(lhs.view().br0().tr(), grad_out, grad_rhs.view_mut());
+        matmul(grad_out, rhs.view().tr(), grad_lhs.view_mut().br0(), 1.0);
+        matmul(lhs.view().br0().tr(), grad_out, grad_rhs.view_mut(), 1.0);
         Ok(())
     }
 }
@@ -115,7 +126,7 @@ impl MatMatKernel<f32> for Cpu {
         let (m, _) = lhs.shape();
         let (_, n) = rhs.shape();
         let mut out: Self::Storage<(M, N), f32> = self.try_zeros_like((*m, *n))?;
-        matmul(lhs.view(), rhs.view(), out.view_mut());
+        matmul(lhs.view(), rhs.view(), out.view_mut(), 1.0);
         Ok(out)
     }
     fn backward<M: Dim, const K: usize, N: Dim>(
@@ -127,8 +138,8 @@ impl MatMatKernel<f32> for Cpu {
         grad_out: &Self::Storage<(M, N), f32>,
     ) -> Result<(), Self::Err> {
         let grad_out = grad_out.view();
-        matmul(grad_out, rhs.view().tr(), grad_lhs.view_mut());
-        matmul(lhs.view().tr(), grad_out, grad_rhs.view_mut());
+        matmul(grad_out, rhs.view().tr(), grad_lhs.view_mut(), 1.0);
+        matmul(lhs.view().tr(), grad_out, grad_rhs.view_mut(), 1.0);
         Ok(())
     }
 }
@@ -146,7 +157,7 @@ impl MatMatBrKernel<f32> for Cpu {
         let b = rhs.view();
         let c = out.view_mut();
         for batch in 0..batch.size() {
-            matmul(a.idx(batch), b, c.idx(batch));
+            matmul(a.idx(batch), b, c.idx(batch), 1.0);
         }
 
         Ok(out)
@@ -166,8 +177,8 @@ impl MatMatBrKernel<f32> for Cpu {
         let grad_rhs = grad_rhs.view_mut();
         let grad_out = grad_out.view();
         for b in 0..batch_size {
-            matmul(grad_out.idx(b), rhs, grad_lhs.idx(b));
-            matmul(lhs.idx(b).tr(), grad_out.idx(b), grad_rhs);
+            matmul(grad_out.idx(b), rhs, grad_lhs.idx(b), 1.0);
+            matmul(lhs.idx(b).tr(), grad_out.idx(b), grad_rhs, 1.0);
         }
         Ok(())
     }
@@ -186,7 +197,7 @@ impl MatMatBatch3Kernel<f32> for Cpu {
         let b = rhs.view();
         let c = out.view_mut();
         for batch in 0..B {
-            matmul(a.idx(batch), b.idx(batch), c.idx(batch));
+            matmul(a.idx(batch), b.idx(batch), c.idx(batch), 1.0);
         }
         Ok(out)
     }
@@ -204,8 +215,8 @@ impl MatMatBatch3Kernel<f32> for Cpu {
         let grad_rhs = grad_rhs.view_mut();
         let grad_out = grad_out.view();
         for b in 0..B {
-            matmul(grad_out.idx(b), rhs.idx(b).tr(), grad_lhs.idx(b));
-            matmul(lhs.idx(b).tr(), grad_out.idx(b), grad_rhs.idx(b));
+            matmul(grad_out.idx(b), rhs.idx(b).tr(), grad_lhs.idx(b), 1.0);
+            matmul(lhs.idx(b).tr(), grad_out.idx(b), grad_rhs.idx(b), 1.0);
         }
         Ok(())
     }
@@ -226,7 +237,12 @@ impl MatMatBatch4Kernel<f32> for Cpu {
         let out_view = out.view_mut();
         for b in 0..B {
             for s in 0..S {
-                matmul(lhs.idx(b).idx(s), rhs.idx(b).idx(s), out_view.idx(b).idx(s));
+                matmul(
+                    lhs.idx(b).idx(s),
+                    rhs.idx(b).idx(s),
+                    out_view.idx(b).idx(s),
+                    1.0,
+                );
             }
         }
         Ok(out)
@@ -250,11 +266,13 @@ impl MatMatBatch4Kernel<f32> for Cpu {
                     grad_out.idx(b).idx(s),
                     rhs.idx(b).idx(s).tr(),
                     grad_lhs.idx(b).idx(s),
+                    1.0,
                 );
                 matmul(
                     lhs.idx(b).idx(s).tr(),
                     grad_out.idx(b).idx(s),
                     grad_rhs.idx(b).idx(s),
+                    1.0,
                 );
             }
         }

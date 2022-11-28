@@ -1,81 +1,197 @@
 mod cpu_kernel;
 
 use crate::{
-    arrays::{Rank4, Shape},
-    devices::{Device, HasDevice, HasErr},
+    arrays::{Const, Dim, Dtype, Rank3, Rank4},
+    devices::DeviceStorage,
     gradients::Tape,
-    tensor::Tensor,
+    tensor::{make_tensor, Tensor},
 };
 
-use super::ops::{try_binary_op, BinaryKernel};
-
-#[derive(Debug, Default, Clone, Copy)]
-pub(super) struct Conv2DKernelOp<const K: usize, const S: usize, const P: usize>;
-
-mod internals {
-    use super::*;
-
-    pub trait ConvTo<T, F, const K: usize, const S: usize, const P: usize>: HasErr {
-        fn conv2d(self, filters: F) -> T {
-            self.try_conv_to(filters).unwrap()
-        }
-        fn try_conv_to(self, filters: F) -> Result<T, Self::Err>;
-    }
-
-    impl<
-            Src: Shape,
-            Dst: Shape,
-            const O: usize,
-            const C: usize,
-            const K: usize,
-            const S: usize,
-            const P: usize,
-            D: Device,
-            T: Tape<D>,
-        > ConvTo<Tensor<Dst, f32, D, T>, Tensor<Rank4<O, C, K, K>, f32, D>, K, S, P>
-        for Tensor<Src, f32, D, T>
-    where
-        D: BinaryKernel<Conv2DKernelOp<K, S, P>, Src, Rank4<O, C, K, K>, Dst, f32>,
-    {
-        fn try_conv_to(
-            self,
-            filters: Tensor<Rank4<O, C, K, K>, f32, D>,
-        ) -> Result<Tensor<Dst, f32, D, T>, Self::Err> {
-            try_binary_op(Default::default(), self, filters)
-        }
-    }
-}
-
-pub trait TryConv2D<T, const C: usize, const O: usize, const K: usize>: HasErr + HasDevice {
-    fn conv2d<const S: usize, const P: usize>(
-        self,
-        filters: Tensor<Rank4<O, C, K, K>, f32, Self::Device>,
-    ) -> T
-    where
-        Self: internals::ConvTo<T, Tensor<Rank4<O, C, K, K>, f32, Self::Device>, K, S, P>,
-    {
-        self.try_conv_to(filters).unwrap()
-    }
-
-    fn try_conv2d<const S: usize, const P: usize>(
-        self,
-        filters: Tensor<Rank4<O, C, K, K>, f32, Self::Device>,
-    ) -> Result<T, Self::Err>
-    where
-        Self: internals::ConvTo<T, Tensor<Rank4<O, C, K, K>, f32, Self::Device>, K, S, P>,
-    {
-        self.try_conv_to(filters)
-    }
-}
-
-impl<Src: HasErr + HasDevice, Dst, const C: usize, const O: usize, const K: usize>
-    TryConv2D<Dst, C, O, K> for Src
+pub trait Conv2DKernel<
+    E: Dtype,
+    const C: usize,
+    const O: usize,
+    const K: usize,
+    const S: usize,
+    const P: usize,
+>: DeviceStorage
 {
+    fn forward<const H: usize, const W: usize>(
+        &self,
+        lhs: &Self::Storage<Rank3<C, H, W>, E>,
+        rhs: &Self::Storage<Rank4<O, C, K, K>, E>,
+    ) -> Result<
+        Self::Storage<Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, E>,
+        Self::Err,
+    >;
+
+    fn backward<const H: usize, const W: usize>(
+        &self,
+        lhs: &Self::Storage<Rank3<C, H, W>, E>,
+        grad_lhs: &mut Self::Storage<Rank3<C, H, W>, E>,
+        rhs: &Self::Storage<Rank4<O, C, K, K>, E>,
+        grad_rhs: &mut Self::Storage<Rank4<O, C, K, K>, E>,
+        grad_out: &Self::Storage<
+            Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
+            E,
+        >,
+    ) -> Result<(), Self::Err>;
+}
+
+pub trait Conv2DBatchedKernel<
+    E: Dtype,
+    const C: usize,
+    const O: usize,
+    const K: usize,
+    const S: usize,
+    const P: usize,
+>: DeviceStorage
+{
+    fn forward<B: Dim, const H: usize, const W: usize>(
+        &self,
+        lhs: &Self::Storage<(B, Const<C>, Const<H>, Const<W>), E>,
+        rhs: &Self::Storage<Rank4<O, C, K, K>, E>,
+    ) -> Result<
+        Self::Storage<
+            (
+                B,
+                Const<O>,
+                Const<{ (H + 2 * P - K) / S + 1 }>,
+                Const<{ (W + 2 * P - K) / S + 1 }>,
+            ),
+            E,
+        >,
+        Self::Err,
+    >;
+
+    fn backward<B: Dim, const H: usize, const W: usize>(
+        &self,
+        lhs: &Self::Storage<(B, Const<C>, Const<H>, Const<W>), E>,
+        grad_lhs: &mut Self::Storage<(B, Const<C>, Const<H>, Const<W>), E>,
+        rhs: &Self::Storage<Rank4<O, C, K, K>, E>,
+        grad_rhs: &mut Self::Storage<Rank4<O, C, K, K>, E>,
+        grad_out: &Self::Storage<
+            (
+                B,
+                Const<O>,
+                Const<{ (H + 2 * P - K) / S + 1 }>,
+                Const<{ (W + 2 * P - K) / S + 1 }>,
+            ),
+            E,
+        >,
+    ) -> Result<(), Self::Err>;
+}
+
+impl<const C: usize, const H: usize, const W: usize, D: DeviceStorage, T: Tape<D>>
+    Tensor<Rank3<C, H, W>, f32, D, T>
+{
+    /// **Requires Nightly** Perform a 2d convolution
+    ///
+    /// TODO docstring
+    pub fn conv2d<const O: usize, const K: usize, const S: usize, const P: usize>(
+        self,
+        filters: Tensor<Rank4<O, C, K, K>, f32, D>,
+    ) -> Tensor<Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32, D, T>
+    where
+        D: Conv2DKernel<f32, C, O, K, S, P>,
+    {
+        self.try_conv2d(filters).unwrap()
+    }
+
+    /// **Requires Nightly** Fallible version of 3d conv2d
+    pub fn try_conv2d<const O: usize, const K: usize, const S: usize, const P: usize>(
+        self,
+        filters: Tensor<Rank4<O, C, K, K>, f32, D>,
+    ) -> Result<
+        Tensor<Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32, D, T>,
+        D::Err,
+    >
+    where
+        D: Conv2DKernel<f32, C, O, K, S, P>,
+    {
+        let (lhs, ltape) = self.split_tape();
+        let (rhs, rtape) = filters.split_tape();
+        let mut tape = ltape.merge(rtape);
+        let storage = lhs.device.forward(&lhs.storage, &rhs.storage)?;
+        let out = make_tensor(&lhs.device, storage);
+        let phantom_out = out.clone();
+        tape.add_backward_op(move |grads| {
+            let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out)?;
+            lhs.device
+                .backward(&lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)?;
+            Ok(())
+        });
+        Ok(out.put_tape(tape))
+    }
+}
+
+impl<B: Dim, const C: usize, const H: usize, const W: usize, D: DeviceStorage, T: Tape<D>>
+    Tensor<(B, Const<C>, Const<H>, Const<W>), f32, D, T>
+{
+    /// **Requires Nightly** Perform a batched 2d convolution
+    ///
+    /// TODO docstring
+    pub fn conv2d<const O: usize, const K: usize, const S: usize, const P: usize>(
+        self,
+        filters: Tensor<Rank4<O, C, K, K>, f32, D>,
+    ) -> Tensor<
+        (
+            B,
+            Const<O>,
+            Const<{ (H + 2 * P - K) / S + 1 }>,
+            Const<{ (W + 2 * P - K) / S + 1 }>,
+        ),
+        f32,
+        D,
+        T,
+    >
+    where
+        D: Conv2DBatchedKernel<f32, C, O, K, S, P>,
+    {
+        self.try_conv2d(filters).unwrap()
+    }
+
+    /// **Requires Nightly** Fallible batched 2d convolution
+    ///
+    /// TODO docstring
+    pub fn try_conv2d<const O: usize, const K: usize, const S: usize, const P: usize>(
+        self,
+        filters: Tensor<Rank4<O, C, K, K>, f32, D>,
+    ) -> Result<
+        Tensor<
+            (
+                B,
+                Const<O>,
+                Const<{ (H + 2 * P - K) / S + 1 }>,
+                Const<{ (W + 2 * P - K) / S + 1 }>,
+            ),
+            f32,
+            D,
+            T,
+        >,
+        D::Err,
+    >
+    where
+        D: Conv2DBatchedKernel<f32, C, O, K, S, P>,
+    {
+        let (lhs, ltape) = self.split_tape();
+        let (rhs, rtape) = filters.split_tape();
+        let mut tape = ltape.merge(rtape);
+        let storage = lhs.device.forward(&lhs.storage, &rhs.storage)?;
+        let out = make_tensor(&lhs.device, storage);
+        let phantom_out = out.clone();
+        tape.add_backward_op(move |grads| {
+            let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out)?;
+            lhs.device
+                .backward(&lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)?;
+            Ok(())
+        });
+        Ok(out.put_tape(tape))
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
         arrays::{Axes2, Axes3},
         devices::{AsArray, Randn},
@@ -102,7 +218,7 @@ mod tests {
             [-0.86713916, 0.52773184, -0.95238322],
             [-0.64531374, 0.77809018, -0.49099201],
         ]]);
-        let result = x.trace().conv2d::<1, 0>(weight.clone())
+        let result = x.trace().conv2d::<2, 2, 1, 0>(weight.clone())
             + BroadcastTo::<_, Axes2<1, 2>>::broadcast(bias.trace());
         assert_close(
             &result.as_array(),
@@ -147,7 +263,7 @@ mod tests {
             [-0.31547278, 0.58071911, 0.86612970],
         ]]);
 
-        let result = x.trace().conv2d::<2, 0>(weight.clone())
+        let result = x.trace().conv2d::<2, 2, 2, 0>(weight.clone())
             + BroadcastTo::<_, Axes2<1, 2>>::broadcast(bias.trace());
         assert_close(&result.as_array(), &[[[-0.29368058]], [[0.30018353]]]);
 
@@ -183,7 +299,7 @@ mod tests {
 
         let x = dev.tensor([[[-0.32224107, -0.32800716]], [[-1.13570976, 0.93713200]]]);
 
-        let result = x.trace().conv2d::<1, 1>(weight.clone())
+        let result = x.trace().conv2d::<3, 2, 1, 1>(weight.clone())
             + BroadcastTo::<_, Axes2<1, 2>>::broadcast(bias.trace());
 
         #[rustfmt::skip]
@@ -233,7 +349,7 @@ mod tests {
         #[rustfmt::skip]
             let x = dev.tensor([[[0.69103152, 0.25624934],[-0.38448590, 0.03110456],[0.83753252, 0.53786588],[1.15540242, -0.54148245]]]);
 
-        let result = x.trace().conv2d::<3, 4>(weight.clone())
+        let result = x.trace().conv2d::<2, 3, 3, 4>(weight.clone())
             + BroadcastTo::<_, Axes2<1, 2>>::broadcast(bias.trace());
 
         #[rustfmt::skip]
@@ -282,7 +398,7 @@ mod tests {
                 [[[-0.22305037, 0.63030297], [0.65323567, -0.68972057]],[[-0.50617385, -0.87281805], [0.30253950, -1.75082350]]],
                 [[[1.65487242, 0.44441956], [-0.45107457, 1.41857898]],[[1.00477660, -0.16381662], [0.40009478, -0.57880658]]],
             ]);
-        let result = x.trace().conv2d::<1, 0>(weight.clone())
+        let result = x.trace().conv2d::<3, 1, 1, 0>(weight.clone())
             + BroadcastTo::<_, Axes3<0, 2, 3>>::broadcast(bias.trace());
 
         #[rustfmt::skip]
@@ -326,7 +442,7 @@ mod tests {
         let bias: Tensor1D<3, _> = dev.randn();
         let x: Tensor3D<5, 7, 6, _> = dev.randn();
 
-        let out = x.conv2d::<4, 3>(weight);
+        let out = x.conv2d::<3, 2, 4, 3>(weight);
         let out = out + BroadcastTo::<_, Axes2<1, 2>>::broadcast(bias);
 
         #[rustfmt::skip]

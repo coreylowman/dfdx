@@ -1,11 +1,12 @@
-use crate::arrays::{Rank3, Rank4, Rank5};
+use crate::arrays::{Const, Dim, Dyn, HasShape, Rank3, Rank4, Rank5};
+use crate::devices::ZerosLike;
 use crate::devices::{
     cpu::{Cpu, CpuError, LendingIterator, StridedArray, View, ViewMut},
     Zeros,
 };
-use crate::tensor_ops::ops::BinaryKernel;
 
-use super::Conv2DKernelOp;
+use super::{Conv2DBatchedKernel, Conv2DKernel};
+use crate::tensor_ops::matmul::cpu_kernel::matmul;
 
 impl Cpu {
     fn conv2d_forward<
@@ -37,25 +38,15 @@ impl Cpu {
         }
 
         // (O, C * K * K) * (C * K * K, OH * OW) = (O, OH * OW)
-        let m = O;
-        let k = C * K * K;
-        let n = ((H + 2 * P - K) / S + 1) * ((W + 2 * P - K) / S + 1);
-        let a = filters.ptr;
-        let b = patches.data.as_ptr();
-        let c = out.ptr;
-        #[cfg(not(feature = "cblas"))]
-        unsafe {
-            matrixmultiply::sgemm(
-                m, k, n, 1.0, a, k as isize, 1, b, n as isize, 1, 1.0, c, n as isize, 1,
-            )
-        }
-
-        #[cfg(feature = "cblas")]
-        unsafe {
-            let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
-            sgemm(RowMajor, NoTr, NoTr, m, n, k, 1.0, a, k, b, n, 1.0, c, n)
-        }
-
+        let m = Dyn(O);
+        let k = Dyn(C * K * K);
+        let n = Dyn(((H + 2 * P - K) / S + 1) * ((W + 2 * P - K) / S + 1));
+        matmul(
+            View::new(filters.ptr, (m, k)),
+            View::new(patches.data.as_ptr(), (k, n)),
+            ViewMut::new(out.ptr, (m, n)),
+            1.0,
+        );
         Ok(())
     }
 
@@ -115,48 +106,29 @@ impl Cpu {
         {
             // img_g += filters^T * unfold(grad_out)
             // (C, H * W) += (C, O * K * K) * (O * K * K, H * W)
-
-            let m = C;
-            let k = O * K * K;
-            let n = H * W;
-            let a = tr_filters.view().ptr;
-            let b = unfolded_grad_out.view().ptr;
-            let c = grad_img.ptr;
-            #[cfg(not(feature = "cblas"))]
-            unsafe {
-                matrixmultiply::sgemm(
-                    m, k, n, 1.0, a, k as isize, 1, b, n as isize, 1, 1.0, c, n as isize, 1,
-                )
-            }
-
-            #[cfg(feature = "cblas")]
-            unsafe {
-                let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
-                sgemm(RowMajor, NoTr, NoTr, m, n, k, 1.0, a, k, b, n, 1.0, c, n)
-            }
+            let m = Dyn(C);
+            let k = Dyn(O * K * K);
+            let n = Dyn(H * W);
+            matmul(
+                View::new(tr_filters.view().ptr, (m, k)),
+                View::new(unfolded_grad_out.view().ptr, (k, n)),
+                ViewMut::new(grad_img.ptr, (m, n)),
+                1.0,
+            );
         }
 
         {
             // weight_g^T += img * patches^T
             // (C, O * K * K) += (C, H * W) * (H * W, O * K * K)
-
-            let m = C;
-            let k = H * W;
-            let n = O * K * K;
-            let a = img.ptr;
-            let b = unfolded_grad_out.view().ptr;
-            let c = tr_filters.view_mut().ptr;
-            #[cfg(not(feature = "cblas"))]
-            unsafe {
-                matrixmultiply::sgemm(
-                    m, k, n, 1.0, a, k as isize, 1, b, 1, k as isize, 0.0, c, n as isize, 1,
-                )
-            }
-            #[cfg(feature = "cblas")]
-            unsafe {
-                let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
-                sgemm(RowMajor, NoTr, Tr, m, n, k, 1.0, a, k, b, k, 0.0, c, n)
-            }
+            let m = Dyn(C);
+            let k = Dyn(H * W);
+            let n = Dyn(O * K * K);
+            matmul(
+                View::new(img.ptr, (m, k)),
+                View::new(unfolded_grad_out.view().ptr, (n, k)).tr(),
+                ViewMut::new(tr_filters.view_mut().ptr, (m, n)),
+                0.0,
+            );
 
             {
                 let tr_filters = tr_filters.view();
@@ -177,42 +149,24 @@ impl Cpu {
     }
 }
 
-impl<
-        const K: usize,
-        const S: usize,
-        const P: usize,
-        const C: usize,
-        const O: usize,
-        const H: usize,
-        const W: usize,
-    >
-    BinaryKernel<
-        Conv2DKernelOp<K, S, P>,
-        Rank3<C, H, W>,
-        Rank4<O, C, K, K>,
-        Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
-        f32,
-    > for Cpu
+impl<const K: usize, const S: usize, const P: usize, const C: usize, const O: usize>
+    Conv2DKernel<f32, C, O, K, S, P> for Cpu
 {
-    fn binary_fwd(
+    fn forward<const H: usize, const W: usize>(
         &self,
-        _op: Conv2DKernelOp<K, S, P>,
         lhs: &Self::Storage<Rank3<C, H, W>, f32>,
         rhs: &Self::Storage<Rank4<O, C, K, K>, f32>,
     ) -> Result<
         Self::Storage<Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
         Self::Err,
     > {
-        let mut out: StridedArray<
-            Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
-            f32,
-        > = self.try_zeros()?;
+        let mut out: StridedArray<_, f32> = self.try_zeros()?;
         self.conv2d_forward::<K, S, P, C, O, H, W>(lhs.view(), rhs.view(), out.view_mut())?;
         Ok(out)
     }
-    fn binary_bwd(
+
+    fn backward<const H: usize, const W: usize>(
         &self,
-        _op: Conv2DKernelOp<K, S, P>,
         lhs: &Self::Storage<Rank3<C, H, W>, f32>,
         grad_lhs: &mut Self::Storage<Rank3<C, H, W>, f32>,
         rhs: &Self::Storage<Rank4<O, C, K, K>, f32>,
@@ -232,65 +186,60 @@ impl<
     }
 }
 
-impl<
-        const B: usize,
-        const K: usize,
-        const S: usize,
-        const P: usize,
-        const C: usize,
-        const O: usize,
-        const H: usize,
-        const W: usize,
-    >
-    BinaryKernel<
-        Conv2DKernelOp<K, S, P>,
-        Rank4<B, C, H, W>,
-        Rank4<O, C, K, K>,
-        Rank4<B, O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
-        f32,
-    > for Cpu
+impl<const K: usize, const S: usize, const P: usize, const C: usize, const O: usize>
+    Conv2DBatchedKernel<f32, C, O, K, S, P> for Cpu
 {
-    fn binary_fwd(
+    fn forward<B: Dim, const H: usize, const W: usize>(
         &self,
-        _op: Conv2DKernelOp<K, S, P>,
-        lhs: &Self::Storage<Rank4<B, C, H, W>, f32>,
+        lhs: &Self::Storage<(B, Const<C>, Const<H>, Const<W>), f32>,
         rhs: &Self::Storage<Rank4<O, C, K, K>, f32>,
     ) -> Result<
-        Self::Storage<Rank4<B, O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+        Self::Storage<
+            (
+                B,
+                Const<O>,
+                Const<{ (H + 2 * P - K) / S + 1 }>,
+                Const<{ (W + 2 * P - K) / S + 1 }>,
+            ),
+            f32,
+        >,
         Self::Err,
     > {
-        let mut out: StridedArray<
-            Rank4<B, O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
-            f32,
-        > = self.try_zeros()?;
+        let (batch, _, _, _) = lhs.shape();
+        let mut out: StridedArray<_, f32> = self.try_zeros_like((*batch, Const, Const, Const))?;
         {
             let lhs = lhs.view();
             let rhs = rhs.view();
             let out = out.view_mut();
-            for b in 0..B {
+            for b in 0..batch.size() {
                 self.conv2d_forward::<K, S, P, C, O, H, W>(lhs.idx(b), rhs, out.idx(b))?;
             }
         }
         Ok(out)
     }
-    fn binary_bwd(
+    fn backward<B: Dim, const H: usize, const W: usize>(
         &self,
-        _op: Conv2DKernelOp<K, S, P>,
-        lhs: &Self::Storage<Rank4<B, C, H, W>, f32>,
-        grad_lhs: &mut Self::Storage<Rank4<B, C, H, W>, f32>,
+        lhs: &Self::Storage<(B, Const<C>, Const<H>, Const<W>), f32>,
+        grad_lhs: &mut Self::Storage<(B, Const<C>, Const<H>, Const<W>), f32>,
         rhs: &Self::Storage<Rank4<O, C, K, K>, f32>,
         grad_rhs: &mut Self::Storage<Rank4<O, C, K, K>, f32>,
         grad_out: &Self::Storage<
-            Rank4<B, O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
+            (
+                B,
+                Const<O>,
+                Const<{ (H + 2 * P - K) / S + 1 }>,
+                Const<{ (W + 2 * P - K) / S + 1 }>,
+            ),
             f32,
         >,
     ) -> Result<(), Self::Err> {
+        let (batch, _, _, _) = lhs.shape();
         let lhs = lhs.view();
         let grad_lhs = grad_lhs.view_mut();
         let rhs = rhs.view();
         let grad_rhs = grad_rhs.view_mut();
         let grad_out = grad_out.view();
-        for b in 0..B {
+        for b in 0..batch.size() {
             self.conv2d_backward::<K, S, P, C, O, H, W>(
                 lhs.idx(b),
                 grad_lhs.idx(b),

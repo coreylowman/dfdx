@@ -1,6 +1,6 @@
 #![allow(clippy::type_complexity)]
 
-mod cpu_kernel;
+pub(super) mod cpu_kernel;
 
 use crate::{
     arrays::{Const, Dim, Dtype, Shape},

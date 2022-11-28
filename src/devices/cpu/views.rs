@@ -10,11 +10,31 @@ pub(crate) struct View<S: Shape, E: Dtype> {
     pub(crate) strides: S::Concrete,
 }
 
+impl<S: Shape, E: Dtype> View<S, E> {
+    pub(crate) fn new(ptr: *const E, shape: S) -> Self {
+        Self {
+            ptr,
+            shape,
+            strides: shape.strides().0,
+        }
+    }
+}
+
 #[derive(Copy, Clone)]
 pub(crate) struct ViewMut<S: Shape, E: Dtype> {
     pub(crate) ptr: *mut E,
     pub(crate) shape: S,
     pub(crate) strides: S::Concrete,
+}
+
+impl<S: Shape, E: Dtype> ViewMut<S, E> {
+    pub(crate) fn new(ptr: *mut E, shape: S) -> Self {
+        Self {
+            ptr,
+            shape,
+            strides: shape.strides().0,
+        }
+    }
 }
 
 impl<S: Shape, E: Dtype> StridedArray<S, E> {
