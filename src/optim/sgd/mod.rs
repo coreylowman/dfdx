@@ -1,11 +1,13 @@
-use super::optimizer::*;
+mod cpu_kernel;
+
+use std::marker::PhantomData;
+
 use crate::arrays::{Dtype, Shape};
 use crate::devices::DeviceStorage;
 use crate::gradients::Gradients;
 use crate::tensor::Tensor;
-use std::marker::PhantomData;
 
-mod cpu;
+use super::optimizer::*;
 
 /// Configuration of hyperparameters for [Sgd].
 ///
@@ -143,19 +145,16 @@ impl<M, D: DeviceStorage, E: Dtype> Sgd<M, D, E> {
     }
 }
 
-pub(super) trait SgdUpdate<D: DeviceStorage, E: Dtype> {
-    fn update_param<S: Shape>(
-        &self,
-        param: &mut D::Storage<S, E>,
-        velocity: &mut D::Storage<S, E>,
-        grad: D::Storage<S, E>,
+pub(super) trait SgdKernel<E: Dtype>: DeviceStorage {
+    fn update<S: Shape>(
+        cfg: &SgdConfig<E>,
+        param: &mut Self::Storage<S, E>,
+        velocity: &mut Self::Storage<S, E>,
+        grad: Self::Storage<S, E>,
     );
 }
 
-impl<M, D: DeviceStorage, E: Dtype> ParamUpdater<D, E> for Sgd<M, D, E>
-where
-    SgdConfig<E>: SgdUpdate<D, E>,
-{
+impl<M, D: DeviceStorage + SgdKernel<E>, E: Dtype> ParamUpdater<D, E> for Sgd<M, D, E> {
     fn update_param<S: Shape>(
         &mut self,
         p: &mut Tensor<S, E, D>,
@@ -166,7 +165,7 @@ where
             None => unused.add(p),
             Some(g) => {
                 let v = self.velocity.get_mut(p)?;
-                self.cfg.update_param(&mut p.storage, v, g);
+                D::update(&self.cfg, &mut p.storage, v, g);
             }
         }
         Ok(())

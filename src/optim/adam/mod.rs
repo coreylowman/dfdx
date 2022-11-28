@@ -1,4 +1,6 @@
-use core::marker::PhantomData;
+mod cpu_kernel;
+
+use std::marker::PhantomData;
 
 use crate::{
     arrays::{Dtype, Shape},
@@ -7,8 +9,6 @@ use crate::{
 };
 
 use super::{CanUpdateWithGradients, Optimizer, OptimizerUpdateError, ParamUpdater, WeightDecay};
-
-mod cpu;
 
 /// Configuration of hyperparameters for [Adam].
 ///
@@ -110,21 +110,18 @@ impl<M, D: DeviceStorage, E: Dtype> Adam<M, D, E> {
     }
 }
 
-pub(super) trait AdamUpdate<D: DeviceStorage, E: Dtype> {
-    fn update_param<S: Shape>(
-        &self,
+pub(super) trait AdamKernel<E: Dtype>: DeviceStorage {
+    fn update<S: Shape>(
         t: i32,
-        param: &mut D::Storage<S, E>,
-        moment1: &mut D::Storage<S, E>,
-        moment2: &mut D::Storage<S, E>,
-        grad: D::Storage<S, E>,
+        cfg: &AdamConfig<E>,
+        param: &mut Self::Storage<S, E>,
+        moment1: &mut Self::Storage<S, E>,
+        moment2: &mut Self::Storage<S, E>,
+        grad: Self::Storage<S, E>,
     );
 }
 
-impl<M, D: DeviceStorage, E: Dtype> ParamUpdater<D, E> for Adam<M, D, E>
-where
-    AdamConfig<E>: AdamUpdate<D, E>,
-{
+impl<M, D: DeviceStorage + AdamKernel<E>, E: Dtype> ParamUpdater<D, E> for Adam<M, D, E> {
     fn update_param<S: Shape>(
         &mut self,
         p: &mut crate::tensor::Tensor<S, E, D>,
@@ -136,7 +133,7 @@ where
             Some(g) => {
                 let m_t = self.moment1.get_mut(p)?;
                 let v_t = self.moment2.get_mut(p)?;
-                self.cfg.update_param(self.t, &mut p.storage, m_t, v_t, g);
+                D::update(self.t, &self.cfg, &mut p.storage, m_t, v_t, g);
             }
         }
         Ok(())

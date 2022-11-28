@@ -1,3 +1,5 @@
+mod cpu_kernel;
+
 use std::marker::PhantomData;
 
 use crate::{
@@ -11,8 +13,6 @@ use super::{
     CanUpdateWithGradients, Optimizer, OptimizerUpdateError, ParamUpdater, UnusedTensors,
     WeightDecay,
 };
-
-mod cpu;
 
 /// Configuration of hyperparameters for [RMSprop].
 #[derive(Debug, Clone, Copy)]
@@ -124,21 +124,18 @@ impl<M, D: DeviceStorage, E: Dtype> RMSprop<M, D, E> {
     }
 }
 
-pub(super) trait RMSpropUpdate<D: DeviceStorage, E: Dtype> {
-    fn update_param<S: Shape>(
-        &self,
-        param: &mut D::Storage<S, E>,
-        momentum: &mut D::Storage<S, E>,
-        square_avg: &mut D::Storage<S, E>,
-        grad_avg: &mut D::Storage<S, E>,
-        grad: D::Storage<S, E>,
+pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
+    fn update<S: Shape>(
+        cfg: &RMSpropConfig<E>,
+        param: &mut Self::Storage<S, E>,
+        momentum: &mut Self::Storage<S, E>,
+        square_avg: &mut Self::Storage<S, E>,
+        grad_avg: &mut Self::Storage<S, E>,
+        grad: Self::Storage<S, E>,
     );
 }
 
-impl<M, D: DeviceStorage> ParamUpdater<D, f32> for RMSprop<M, D, f32>
-where
-    RMSpropConfig<f32>: RMSpropUpdate<D, f32>,
-{
+impl<M, D: DeviceStorage + RMSpropKernel<f32>> ParamUpdater<D, f32> for RMSprop<M, D, f32> {
     fn update_param<S: Shape>(
         &mut self,
         p: &mut Tensor<S, f32, D>,
@@ -156,7 +153,7 @@ where
                     p.device.fill_with(sa, 1.0);
                 }
 
-                self.cfg.update_param(&mut p.storage, m, sa, ga, g);
+                D::update(&self.cfg, &mut p.storage, m, sa, ga, g);
             }
         }
         Ok(())

@@ -4,11 +4,11 @@ use crate::{
     optim::optimizer::{Momentum, WeightDecay},
 };
 
-use super::{SgdConfig, SgdUpdate};
+use super::{SgdConfig, SgdKernel};
 
-impl<E: Dtype> SgdUpdate<Cpu, E> for SgdConfig<E> {
-    fn update_param<S: Shape>(
-        &self,
+impl<E: Dtype> SgdKernel<E> for Cpu {
+    fn update<S: Shape>(
+        cfg: &SgdConfig<E>,
         param: &mut StridedArray<S, E>,
         velocity: &mut StridedArray<S, E>,
         grad: StridedArray<S, E>,
@@ -22,24 +22,24 @@ impl<E: Dtype> SgdUpdate<Cpu, E> for SgdConfig<E> {
             .zip(grad.buf_iter().cloned())
             .zip(velocity.buf_iter_mut())
         {
-            if let Some(WeightDecay::L2(wd)) = self.weight_decay {
+            if let Some(WeightDecay::L2(wd)) = cfg.weight_decay {
                 g += wd * *p;
             }
 
-            match self.momentum {
+            match cfg.momentum {
                 Some(Momentum::Classic(u)) => {
                     *v = g + u * *v;
-                    g = *v * self.lr;
+                    g = *v * cfg.lr;
                 }
                 Some(Momentum::Nesterov(u)) => {
                     *v = g + u * *v;
-                    g = (g + u * *v) * self.lr;
+                    g = (g + u * *v) * cfg.lr;
                 }
-                None => g *= self.lr,
+                None => g *= cfg.lr,
             }
 
-            if let Some(WeightDecay::Decoupled(wd)) = self.weight_decay {
-                g += wd * self.lr * *p;
+            if let Some(WeightDecay::Decoupled(wd)) = cfg.weight_decay {
+                g += wd * cfg.lr * *p;
             }
 
             *p -= g;

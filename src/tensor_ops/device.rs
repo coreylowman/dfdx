@@ -14,20 +14,20 @@ use super::max_to::MaxReduceKernel;
 use super::maximum::MaximumKernelOp;
 use super::min_to::MinReduceKernel;
 use super::minimum::MinimumKernelOp;
-use super::ops::{BinaryKernel, UnaryKernel};
-use super::sum_to::SumKernel;
-use super::mul::{ScalarMulKernelOp, BinaryMulKernelOp};
-use super::sub::{ScalarSubKernelOp, BinarySubKernelOp};
+use super::mul::{BinaryMulKernelOp, ScalarMulKernelOp};
 use super::nans_to::NansToKernelOp;
-use super::relu::ReLUKernelOp;
 use super::negate::NegateKernelOp;
+use super::ops::{BinaryKernel, UnaryKernel};
+use super::pow::PowKernelOp;
+use super::relu::ReLUKernelOp;
+use super::select_to::{ReplaceAxisKernel, SelectAxisKernel, SelectBatchKernel};
 use super::sigmoid::SigmoidKernelOp;
 use super::sin::SinKernelOp;
 use super::sqrt::SqrtKernelOp;
 use super::square::SquareKernelOp;
+use super::sub::{BinarySubKernelOp, ScalarSubKernelOp};
+use super::sum_to::SumKernel;
 use super::tanh::TanhKernelOp;
-use super::pow::PowKernelOp;
-use super::select_to::{SelectAxisKernel, SelectBatchKernel, ReplaceAxisKernel};
 
 use crate::{
     arrays::Dtype,
@@ -47,7 +47,7 @@ pub trait Device<E: Dtype>:
     + SelectAxisKernel<E>
     + ReplaceAxisKernel<E>
     + SelectBatchKernel<E>
-    
+
     // matmuls
     + VecMatKernel<E>
     + MatMatKernel<E>
