@@ -1,25 +1,18 @@
 mod cpu_kernel;
 
-use crate::{
-    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, ReduceShape, Shape},
-    devices::{DeviceStorage, HasErr},
-    gradients::Tape,
-    tensor::{make_tensor, Tensor},
-};
-
 use super::device::Device;
+use crate::{arrays::*, devices::*, gradients::Tape, tensor::*};
 
 pub trait SumKernel<E: Dtype>: DeviceStorage {
-    fn forward<Src: Shape, Dst: Shape, Ax: AxesAsArray>(
+    fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
         inp: &Self::Storage<Src, E>,
     ) -> Result<Self::Storage<Dst, E>, Self::Err>
     where
         Dst: BroadcastShapeTo<Src, Ax>;
-    fn backward<Src: Shape, Dst: Shape, Ax: AxesAsArray>(
+    fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        inp: &Self::Storage<Src, E>,
         grad_inp: &mut Self::Storage<Src, E>,
         grad_out: &Self::Storage<Dst, E>,
     ) -> Result<(), Self::Err>
@@ -51,7 +44,7 @@ pub trait SumKernel<E: Dtype>: DeviceStorage {
 /// # let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
 /// let _: Tensor1D<4> = t.sum();
 /// ```
-/// 
+///
 /// Specifying axes instead of output types:
 /// ```rust
 /// todo!()
@@ -63,20 +56,21 @@ pub trait SumTo<T, Axes>: HasErr {
     fn try_sum(self) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Dst: Shape + Default, Ax: AxesAsArray>
+impl<Src: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape + Default, Ax: Axes>
     SumTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
+    D: SumKernel<E>,
     Dst: BroadcastShapeTo<Src, Ax>,
 {
     fn try_sum(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         let dst: Dst = Default::default();
         let (inp, mut tape) = self.split_tape();
-        let storage = SumKernel::forward(&inp.device, dst, &inp.storage)?;
+        let storage = inp.device.forward(dst, &inp.storage)?;
         let out = make_tensor(&inp.device, storage);
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
-            SumKernel::backward(&inp.device, &inp.storage, grad_inp, grad_out)?;
+            inp.device.backward(grad_inp, grad_out)?;
             Ok(())
         });
         Ok(out.put_tape(tape))
@@ -84,14 +78,14 @@ where
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
-    pub fn sum_along<Ax: AxesAsArray>(self) -> Tensor<S::Reduced, E, D, T>
+    pub fn sum_along<Ax: Axes>(self) -> Tensor<S::Reduced, E, D, T>
     where
         S: ReduceShape<Ax>,
     {
         self.try_sum_along().unwrap()
     }
 
-    pub fn try_sum_along<Ax: AxesAsArray>(self) -> Result<Tensor<S::Reduced, E, D, T>, D::Err>
+    pub fn try_sum_along<Ax: Axes>(self) -> Result<Tensor<S::Reduced, E, D, T>, D::Err>
     where
         S: ReduceShape<Ax>,
     {
@@ -105,7 +99,6 @@ mod tests {
     use crate::devices::AsArray;
     use crate::devices::Randn;
     use crate::gradients::OwnedTape;
-    use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::{assert_close, build_test_device};
 

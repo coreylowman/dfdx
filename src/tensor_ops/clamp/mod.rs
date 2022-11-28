@@ -1,12 +1,7 @@
 mod cpu_kernel;
 
-use crate::{
-    arrays::{Dtype, Shape},
-    gradients::Tape,
-    tensor::Tensor,
-};
-
-use super::{device::Device, ops::try_unary_op};
+use super::{ops::try_unary_op, Device};
+use crate::{arrays::*, gradients::Tape, tensor::Tensor};
 
 #[derive(Debug, Clone, Copy)]
 pub struct ClampKernelOp<E> {
@@ -42,12 +37,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        devices::AsArray,
-        tensor::{Tensor2D, TensorFromArray},
-        tensor_ops::*,
-        tests::build_test_device,
-    };
+    use crate::{devices::AsArray, tensor::*, tensor_ops::*, tests::build_test_device};
 
     #[test]
     fn test_clamp() {

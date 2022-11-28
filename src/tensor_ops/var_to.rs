@@ -1,11 +1,5 @@
-use crate::{
-    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, HasShape, ReduceShape, Shape},
-    devices::HasErr,
-    gradients::Tape,
-    tensor::Tensor,
-};
-
 use super::*;
+use crate::{arrays::*, devices::HasErr, gradients::Tape, tensor::Tensor};
 
 /// Reduces `Axes` of `T` by computing variance of all values in those axes.
 /// Result [Tensor] has smaller number of dimensions.
@@ -26,14 +20,14 @@ use super::*;
 /// ```rust
 /// todo!();
 /// ```
-pub trait VarTo<T, Axes>: HasErr {
+pub trait VarTo<T, Ax>: HasErr {
     fn var(self) -> T {
         self.try_var().unwrap()
     }
     fn try_var(self) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, Dst: Shape, Ax: AxesAsArray, E: Dtype, D: Device<E>, T: Tape<D>>
+impl<Src: Shape, Dst: Shape, Ax: Axes, E: Dtype, D: Device<E>, T: Tape<D>>
     VarTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
     Self: MeanTo<Tensor<Dst, E, D, T>, Ax, Err = D::Err>,
@@ -49,14 +43,14 @@ where
 }
 
 impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
-    pub fn var_along<Ax: AxesAsArray>(self) -> Tensor<S::Reduced, f32, D, T>
+    pub fn var_along<Ax: Axes>(self) -> Tensor<S::Reduced, f32, D, T>
     where
         S: ReduceShape<Ax>,
     {
         self.try_var_along().unwrap()
     }
 
-    pub fn try_var_along<Ax: AxesAsArray>(self) -> Result<Tensor<S::Reduced, f32, D, T>, D::Err>
+    pub fn try_var_along<Ax: Axes>(self) -> Result<Tensor<S::Reduced, f32, D, T>, D::Err>
     where
         S: ReduceShape<Ax>,
     {

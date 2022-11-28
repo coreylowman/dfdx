@@ -1,13 +1,13 @@
 use super::shape::*;
 
-pub trait AxesAsArray {
+pub trait Axes: 'static + Default + Copy + Clone {
     type Array: IntoIterator<Item = isize>;
     fn as_array() -> Self::Array;
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Axis<const I: isize>;
-impl<const I: isize> AxesAsArray for Axis<I> {
+impl<const I: isize> Axes for Axis<I> {
     type Array = [isize; 1];
     fn as_array() -> Self::Array {
         [I]
@@ -16,7 +16,7 @@ impl<const I: isize> AxesAsArray for Axis<I> {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Axes2<const I: isize, const J: isize>;
-impl<const I: isize, const J: isize> AxesAsArray for Axes2<I, J> {
+impl<const I: isize, const J: isize> Axes for Axes2<I, J> {
     type Array = [isize; 2];
     fn as_array() -> Self::Array {
         [I, J]
@@ -25,7 +25,7 @@ impl<const I: isize, const J: isize> AxesAsArray for Axes2<I, J> {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Axes3<const I: isize, const J: isize, const K: isize>;
-impl<const I: isize, const J: isize, const K: isize> AxesAsArray for Axes3<I, J, K> {
+impl<const I: isize, const J: isize, const K: isize> Axes for Axes3<I, J, K> {
     type Array = [isize; 3];
     fn as_array() -> Self::Array {
         [I, J, K]
@@ -34,9 +34,7 @@ impl<const I: isize, const J: isize, const K: isize> AxesAsArray for Axes3<I, J,
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Axes4<const I: isize, const J: isize, const K: isize, const L: isize>;
-impl<const I: isize, const J: isize, const K: isize, const L: isize> AxesAsArray
-    for Axes4<I, J, K, L>
-{
+impl<const I: isize, const J: isize, const K: isize, const L: isize> Axes for Axes4<I, J, K, L> {
     type Array = [isize; 4];
     fn as_array() -> Self::Array {
         [I, J, K, L]
@@ -45,7 +43,7 @@ impl<const I: isize, const J: isize, const K: isize, const L: isize> AxesAsArray
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Axes5<const I: isize, const J: isize, const K: isize, const L: isize, const M: isize>;
-impl<const I: isize, const J: isize, const K: isize, const L: isize, const M: isize> AxesAsArray
+impl<const I: isize, const J: isize, const K: isize, const L: isize, const M: isize> Axes
     for Axes5<I, J, K, L, M>
 {
     type Array = [isize; 5];
@@ -70,7 +68,7 @@ impl<
         const L: isize,
         const M: isize,
         const N: isize,
-    > AxesAsArray for Axes6<I, J, K, L, M, N>
+    > Axes for Axes6<I, J, K, L, M, N>
 {
     type Array = [isize; 6];
     fn as_array() -> Self::Array {

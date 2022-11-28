@@ -1,11 +1,5 @@
-use crate::{
-    arrays::{AxesAsArray, BroadcastShapeTo, HasAxes, HasShape, ReduceShape, Shape},
-    devices::device::HasErr,
-    gradients::Tape,
-    tensor::Tensor,
-};
-
 use super::*;
+use crate::{arrays::*, devices::*, gradients::Tape, tensor::Tensor};
 
 /// Average the values along `Axes` of `T`.
 ///
@@ -38,7 +32,7 @@ pub trait MeanTo<T, Axes>: HasErr {
     fn try_mean(self) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, Dst: Shape + Default, Ax: AxesAsArray, D: Device<f32>, T: Tape<D>>
+impl<Src: Shape, Dst: Shape + Default, Ax: Axes, D: Device<f32>, T: Tape<D>>
     MeanTo<Tensor<Dst, f32, D, T>, Ax> for Tensor<Src, f32, D, T>
 where
     Src: HasAxes<Ax>,
@@ -51,14 +45,14 @@ where
 }
 
 impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
-    pub fn mean_along<Ax: AxesAsArray>(self) -> Tensor<S::Reduced, f32, D, T>
+    pub fn mean_along<Ax: Axes>(self) -> Tensor<S::Reduced, f32, D, T>
     where
         S: ReduceShape<Ax>,
     {
         self.try_mean_along().unwrap()
     }
 
-    pub fn try_mean_along<Ax: AxesAsArray>(self) -> Result<Tensor<S::Reduced, f32, D, T>, D::Err>
+    pub fn try_mean_along<Ax: Axes>(self) -> Result<Tensor<S::Reduced, f32, D, T>, D::Err>
     where
         S: ReduceShape<Ax>,
     {
@@ -70,7 +64,6 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
 mod tests {
     use super::*;
     use crate::{
-        devices::*,
         gradients::OwnedTape,
         tensor::*,
         tests::{assert_close, build_test_device},

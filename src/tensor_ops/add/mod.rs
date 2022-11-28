@@ -1,16 +1,7 @@
 mod cpu_kernel;
 
-use crate::{
-    arrays::{Dtype, Shape},
-    devices::HasErr,
-    gradients::{Merge, Tape},
-    tensor::Tensor,
-};
-
-use super::{
-    device::Device,
-    ops::{try_binary_op, try_unary_op},
-};
+use super::{ops::*, Device};
+use crate::{arrays::*, devices::HasErr, gradients::*, tensor::Tensor};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BinaryAddKernelOp;

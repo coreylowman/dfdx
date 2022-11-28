@@ -1,10 +1,5 @@
-use crate::{
-    arrays::{AxesAsArray, Dtype, ReduceShape, Shape},
-    gradients::Tape,
-    tensor::Tensor,
-};
-
 use super::Device;
+use crate::{arrays::*, gradients::Tape, tensor::Tensor};
 
 /// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function) across
 /// `Axes`.
@@ -28,7 +23,7 @@ use super::Device;
 /// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
 /// let _ = t.softmax::<Axes2<1, 2>>();
 /// ```
-pub fn softmax<Ax: AxesAsArray, S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn softmax<Ax: Axes, S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T>
 where
@@ -38,14 +33,14 @@ where
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
-    pub fn softmax<Ax: AxesAsArray>(self) -> Self
+    pub fn softmax<Ax: Axes>(self) -> Self
     where
         S: ReduceShape<Ax>,
     {
         self.try_softmax::<Ax>().unwrap()
     }
 
-    pub fn try_softmax<Ax: AxesAsArray>(self) -> Result<Self, D::Err>
+    pub fn try_softmax<Ax: Axes>(self) -> Result<Self, D::Err>
     where
         S: ReduceShape<Ax>,
     {

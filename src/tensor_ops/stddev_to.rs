@@ -1,11 +1,5 @@
-use crate::{
-    arrays::{AxesAsArray, ReduceShape, Shape},
-    devices::HasErr,
-    gradients::Tape,
-    tensor::Tensor,
-};
-
 use super::*;
+use crate::{arrays::*, devices::*, gradients::Tape, tensor::Tensor};
 
 /// Reduces `Axes` of `T` by computing std deviation of all values in those axes.
 /// Result [Tensor] has smaller number of dimensions.
@@ -21,7 +15,7 @@ use super::*;
 /// let r: Tensor1D<2> = t.stddev(0.0);
 /// assert_eq!(r.data(), &[0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
 /// ```
-pub trait StddevTo<T, Axes>: HasErr {
+pub trait StddevTo<T, Ax>: HasErr {
     fn stddev(self, epsilon: f32) -> T {
         self.try_stddev(epsilon).unwrap()
     }
@@ -39,14 +33,14 @@ where
 }
 
 impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
-    pub fn stddev_along<Ax: AxesAsArray>(self, epsilon: f32) -> Tensor<S::Reduced, f32, D, T>
+    pub fn stddev_along<Ax: Axes>(self, epsilon: f32) -> Tensor<S::Reduced, f32, D, T>
     where
         S: ReduceShape<Ax>,
     {
         self.try_stddev_along(epsilon).unwrap()
     }
 
-    pub fn try_stddev_along<Ax: AxesAsArray>(
+    pub fn try_stddev_along<Ax: Axes>(
         self,
         epsilon: f32,
     ) -> Result<Tensor<S::Reduced, f32, D, T>, D::Err>

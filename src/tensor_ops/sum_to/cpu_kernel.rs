@@ -1,5 +1,5 @@
 use crate::{
-    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, Shape},
+    arrays::{Axes, BroadcastShapeTo, Dtype, Shape},
     devices::{
         cpu::{Cpu, LendingIterator, StridedArray},
         ZerosLike,
@@ -9,7 +9,7 @@ use crate::{
 use super::SumKernel;
 
 impl<E: Dtype> SumKernel<E> for Cpu {
-    fn forward<Src: Shape, Dst: Shape, Ax: AxesAsArray>(
+    fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
         inp: &Self::Storage<Src, E>,
@@ -25,17 +25,16 @@ impl<E: Dtype> SumKernel<E> for Cpu {
         }
         Ok(out)
     }
-    fn backward<Src: Shape, Dst: Shape, Ax: AxesAsArray>(
+    fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        inp: &Self::Storage<Src, E>,
         grad_inp: &mut Self::Storage<Src, E>,
         grad_out: &Self::Storage<Dst, E>,
     ) -> Result<(), Self::Err>
     where
         Dst: BroadcastShapeTo<Src, Ax>,
     {
+        let mut out_iter = grad_out.iter_as(&grad_inp.shape);
         let mut inp_iter = grad_inp.iter_mut();
-        let mut out_iter = grad_out.iter_as(&inp.shape);
         while let Some((i, o)) = inp_iter.next().zip(out_iter.next()) {
             i.add_assign(*o);
         }

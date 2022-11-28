@@ -1,23 +1,16 @@
 mod cpu_kernel;
 
-use crate::{
-    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
-    gradients::Tape,
-    tensor::{make_tensor, Tensor},
-};
-
-use super::Device;
+use crate::{arrays::*, devices::*, gradients::Tape, tensor::*};
 
 pub trait MaxReduceKernel<E: Dtype>: DeviceStorage {
-    fn forward<Src: Shape, Dst: Shape, Ax: AxesAsArray>(
+    fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
         inp: &Self::Storage<Src, E>,
     ) -> Result<Self::Storage<Dst, E>, Self::Err>
     where
         Dst: BroadcastShapeTo<Src, Ax>;
-    fn backward<Src: Shape, Dst: Shape, Ax: AxesAsArray>(
+    fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         inp: &Self::Storage<Src, E>,
         grad_inp: &mut Self::Storage<Src, E>,
@@ -50,32 +43,29 @@ pub trait MaxReduceKernel<E: Dtype>: DeviceStorage {
 /// let r: Tensor0D = t.max();
 /// assert_eq!(r.data(), &3.0);
 /// ```
-pub trait MaxTo<T, Axes>: HasErr {
+pub trait MaxTo<T, Ax>: HasErr {
     fn max(self) -> T {
         self.try_max().unwrap()
     }
     fn try_max(self) -> Result<T, Self::Err>;
 }
-impl<Src: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Dst: Shape + Default, Ax: AxesAsArray>
+
+impl<Src: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape + Default, Ax: Axes>
     MaxTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
+    D: MaxReduceKernel<E>,
     Dst: BroadcastShapeTo<Src, Ax>,
 {
     fn try_max(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         let dst: Dst = Default::default();
         let (inp, mut tape) = self.split_tape();
-        let storage = MaxReduceKernel::forward(&inp.device, dst, &inp.storage)?;
+        let storage = inp.device.forward(dst, &inp.storage)?;
         let out = make_tensor(&inp.device, storage);
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
-            MaxReduceKernel::backward(
-                &inp.device,
-                &inp.storage,
-                grad_inp,
-                &phantom_out.storage,
-                grad_out,
-            )?;
+            inp.device
+                .backward(&inp.storage, grad_inp, &phantom_out.storage, grad_out)?;
             Ok(())
         });
         Ok(out.put_tape(tape))
@@ -85,8 +75,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::devices::{AsArray, Randn, Zeros};
-    use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::{assert_close, build_test_device};
 

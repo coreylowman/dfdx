@@ -1,11 +1,11 @@
 use crate::{
-    arrays::{AxesAsArray, HasShape, ReduceShape, Shape},
+    arrays::{Axes, HasShape, ReduceShape, Shape},
     devices::HasErr,
     gradients::Tape,
     tensor::Tensor,
 };
 
-use super::{Device, BroadcastTo, TryDiv, TrySub};
+use super::{BroadcastTo, Device, TryDiv, TrySub};
 
 /// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Axes` of `T`. `epsilon` is passed to [stddev()].
 /// Computes `(t - t.mean(Axes)) / t.std(Axes, epsilon)`.
@@ -18,7 +18,7 @@ use super::{Device, BroadcastTo, TryDiv, TrySub};
 /// let t: Tensor2D<2, 3> = TensorCreator::zeros();
 /// let _ = t.normalize::<Axis<1>>(1e-5);
 /// ```
-pub fn normalize<Ax: AxesAsArray, S: Shape + ReduceShape<Ax>, D: Device<f32>, T: Tape<D>>(
+pub fn normalize<Ax: Axes, S: Shape + ReduceShape<Ax>, D: Device<f32>, T: Tape<D>>(
     t: Tensor<S, f32, D, T>,
     epsilon: f32,
 ) -> Tensor<S, f32, D, T> {
@@ -27,7 +27,7 @@ pub fn normalize<Ax: AxesAsArray, S: Shape + ReduceShape<Ax>, D: Device<f32>, T:
 
 impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
     /// See [NormalizeAxes]
-    pub fn normalize_along<Ax: AxesAsArray>(self, epsilon: f32) -> Self
+    pub fn normalize_along<Ax: Axes>(self, epsilon: f32) -> Self
     where
         S: ReduceShape<Ax>,
     {
@@ -35,10 +35,7 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
     }
 
     /// See [NormalizeAxes]
-    pub fn try_normalize_along<Ax: AxesAsArray>(
-        self,
-        epsilon: f32,
-    ) -> Result<Self, <Self as HasErr>::Err>
+    pub fn try_normalize_along<Ax: Axes>(self, epsilon: f32) -> Result<Self, <Self as HasErr>::Err>
     where
         S: ReduceShape<Ax>,
     {

@@ -5,7 +5,7 @@ mod permutes;
 mod replace_dim;
 mod shape;
 
-pub(crate) use axes::AxesAsArray;
+pub(crate) use axes::Axes;
 pub(crate) use broadcasts::{BroadcastShapeTo, BroadcastStridesTo, ReduceShape, ReduceShapeTo};
 pub(crate) use permutes::PermuteShapeTo;
 pub(crate) use replace_dim::ReplaceDim;

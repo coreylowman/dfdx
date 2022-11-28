@@ -1,12 +1,7 @@
 mod cpu_kernel;
 
-use crate::{
-    arrays::{Dtype, Shape},
-    gradients::Tape,
-    tensor::Tensor,
-};
-
-use super::{device::Device, ops::try_unary_op};
+use super::{ops::try_unary_op, Device};
+use crate::{arrays::*, gradients::Tape, tensor::Tensor};
 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct AbsKernelOp;

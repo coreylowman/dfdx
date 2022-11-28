@@ -1,11 +1,5 @@
-use crate::{
-    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, HasShape, ReduceShape, Shape},
-    devices::device::HasErr,
-    gradients::Tape,
-    tensor::Tensor,
-};
-
 use super::*;
+use crate::{arrays::*, devices::*, gradients::Tape, tensor::Tensor};
 
 /// Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function across
 /// `Axes`
@@ -41,7 +35,7 @@ pub trait LogSumExpTo<T, Axes>: HasErr {
 
 impl<
         Src: Shape,
-        Ax: AxesAsArray,
+        Ax: Axes,
         Dst: Shape + Default + BroadcastShapeTo<Src, Ax>,
         E: Dtype,
         D: Device<E>,
@@ -65,14 +59,14 @@ impl<
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
-    pub fn logsumexp_along<Ax: AxesAsArray>(self) -> Tensor<S::Reduced, E, D, T>
+    pub fn logsumexp_along<Ax: Axes>(self) -> Tensor<S::Reduced, E, D, T>
     where
         S: ReduceShape<Ax>,
     {
         self.try_logsumexp_along::<Ax>().unwrap()
     }
 
-    pub fn try_logsumexp_along<Ax: AxesAsArray>(self) -> Result<Tensor<S::Reduced, E, D, T>, D::Err>
+    pub fn try_logsumexp_along<Ax: Axes>(self) -> Result<Tensor<S::Reduced, E, D, T>, D::Err>
     where
         S: ReduceShape<Ax>,
     {

@@ -1,12 +1,12 @@
 use crate::{
-    arrays::{AxesAsArray, BroadcastShapeTo, Shape},
+    arrays::{Axes, BroadcastShapeTo, Shape},
     devices::cpu::{Cpu, LendingIterator, StridedArray},
 };
 
 use super::MinReduceKernel;
 
 impl MinReduceKernel<f32> for Cpu {
-    fn forward<Src: Shape, Dst: Shape, Ax: AxesAsArray>(
+    fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
         inp: &Self::Storage<Src, f32>,
@@ -23,7 +23,7 @@ impl MinReduceKernel<f32> for Cpu {
         Ok(out)
     }
 
-    fn backward<Src: Shape, Dst: Shape, Ax: AxesAsArray>(
+    fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         inp: &Self::Storage<Src, f32>,
         grad_inp: &mut Self::Storage<Src, f32>,

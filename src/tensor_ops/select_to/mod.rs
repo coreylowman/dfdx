@@ -2,12 +2,7 @@
 
 mod cpu_kernel;
 
-use crate::{
-    arrays::{Axis, Dim, Dtype, Dyn, Rank0, Rank1, ReduceShape, ReplaceDim, Shape},
-    devices::{DeviceStorage, HasErr},
-    gradients::Tape,
-    tensor::{make_tensor, Tensor, TensorFromArray},
-};
+use crate::{arrays::*, devices::*, gradients::Tape, tensor::*};
 
 /// Select values along `Axes` resulting in `T`. Equivalent
 /// to `torch.select` and `torch.gather` from pytorch.
@@ -65,6 +60,24 @@ pub trait SelectTo<T, Axes, Idx>: HasErr {
     }
     fn try_select(self, idx: Idx) -> Result<T, Self::Err>;
 }
+
+/// TODO docstring
+pub trait SelectAlong<T, Idx>: HasErr {
+    fn select_along<Ax>(self, idx: Idx) -> T
+    where
+        Self: SelectTo<T, Ax, Idx>,
+    {
+        self.try_select_along::<Ax>(idx).unwrap()
+    }
+    fn try_select_along<Ax>(self, idx: Idx) -> Result<T, Self::Err>
+    where
+        Self: SelectTo<T, Ax, Idx>,
+    {
+        self.try_select(idx)
+    }
+}
+
+impl<Src: HasErr, Dst, Idx> SelectAlong<Dst, Idx> for Src {}
 
 pub trait SelectAxisKernel<E: Dtype>: DeviceStorage {
     fn forward<const I: isize, S: Shape + ReduceShape<Axis<I>>>(
@@ -224,29 +237,11 @@ where
     }
 }
 
-pub trait SelectAlong<T, Idx>: HasErr {
-    fn select_along<Ax>(self, idx: Idx) -> T
-    where
-        Self: SelectTo<T, Ax, Idx>,
-    {
-        self.try_select_along::<Ax>(idx).unwrap()
-    }
-    fn try_select_along<Ax>(self, idx: Idx) -> Result<T, Self::Err>
-    where
-        Self: SelectTo<T, Ax, Idx>,
-    {
-        self.try_select(idx)
-    }
-}
-
-impl<Src: HasErr, Dst, Idx> SelectAlong<Dst, Idx> for Src {}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::arrays::Axis;
     use crate::devices::{AsArray, Randn};
-    use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::build_test_device;
 

@@ -1,12 +1,7 @@
 mod cpu_kernel;
 
-use crate::{
-    arrays::{Dtype, Shape},
-    gradients::{Merge, Tape},
-    tensor::Tensor,
-};
-
 use super::{ops::try_binary_op, Device};
+use crate::{arrays::*, gradients::*, tensor::Tensor};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct MaximumKernelOp;

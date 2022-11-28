@@ -1,18 +1,14 @@
 mod cpu_kernel;
 
-use crate::{
-    arrays::{Dtype, Shape},
-    gradients::{Merge, Tape},
-    tensor::Tensor,
-};
-
-use super::{device::Device, ops::try_binary_op};
+use super::{ops::try_binary_op, Device};
+use crate::{arrays::*, gradients::*, tensor::Tensor};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct HuberErrorKernelOp<E: Dtype> {
     pub delta: E,
 }
 
+/// TODO docstring
 pub fn huber_error<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<R>, R: Tape<D>>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, R>,
@@ -30,7 +26,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
         self.try_huber_error(rhs, delta).unwrap()
     }
 
-    /// Calls [try_huber_error]
+    /// Calls [huber_error]
     pub fn try_huber_error<R: Tape<D>>(
         self,
         rhs: Tensor<S, E, D, R>,

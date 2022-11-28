@@ -1,30 +1,22 @@
 mod cpu_kernel;
 
-use crate::{
-    arrays::{AxesAsArray, BroadcastShapeTo, Dtype, HasShape, Shape},
-    devices::{DeviceStorage, HasErr},
-    gradients::Tape,
-    tensor::{make_tensor, Tensor},
-};
-
-use super::device::Device;
+use crate::{arrays::*, devices::*, gradients::Tape, tensor::*};
 
 pub trait BroadcastKernel<E: Dtype>: DeviceStorage {
-    fn forward<Src: Shape, Dst: Shape, Axes: AxesAsArray>(
+    fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
         inp: &Self::Storage<Src, E>,
     ) -> Result<Self::Storage<Dst, E>, Self::Err>
     where
-        Src: BroadcastShapeTo<Dst, Axes>;
-    fn backward<Src: Shape, Dst: Shape, Axes: AxesAsArray>(
+        Src: BroadcastShapeTo<Dst, Ax>;
+    fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        inp: &Self::Storage<Src, E>,
         grad_inp: &mut Self::Storage<Src, E>,
         grad_out: &Self::Storage<Dst, E>,
     ) -> Result<(), Self::Err>
     where
-        Src: BroadcastShapeTo<Dst, Axes>;
+        Src: BroadcastShapeTo<Dst, Ax>;
 }
 
 /// Broadcast self into `T` along `Axes`.
@@ -60,19 +52,20 @@ pub trait BroadcastTo<T: HasShape, Axes>: HasErr {
     fn try_broadcast_to(self, dst: &T::Shape) -> Result<T, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Dst: Shape, Ax: AxesAsArray>
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape, Ax: Axes>
     BroadcastTo<Tensor<Dst, E, D, T>, Ax> for Tensor<S, E, D, T>
 where
+    D: BroadcastKernel<E>,
     S: BroadcastShapeTo<Dst, Ax>,
 {
     fn try_broadcast_to(self, dst: &Dst) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         let (inp, mut tape) = self.split_tape();
-        let storage = BroadcastKernel::forward(&inp.device, *dst, &inp.storage)?;
+        let storage = inp.device.forward(*dst, &inp.storage)?;
         let out = make_tensor(&inp.device, storage);
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
-            BroadcastKernel::backward(&inp.device, &inp.storage, grad_inp, grad_out)?;
+            inp.device.backward(grad_inp, grad_out)?;
             Ok(())
         });
         Ok(out.put_tape(tape))
@@ -83,7 +76,6 @@ where
 mod tests {
     use super::*;
     use crate::devices::{AsArray, Randn, Zeros};
-    use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::{build_test_device, AssertClose};
 

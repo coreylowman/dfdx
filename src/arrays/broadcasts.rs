@@ -1,12 +1,12 @@
 use super::*;
 
-pub trait BroadcastShapeTo<S, Axes>: Sized {}
+pub trait BroadcastShapeTo<S, Ax>: Sized {}
 
-pub trait ReduceShapeTo<S: BroadcastShapeTo<Self, Axes>, Axes>: Shape + Sized {}
-impl<Src: Shape, Dst: Shape + BroadcastShapeTo<Src, Axes>, Axes> ReduceShapeTo<Dst, Axes> for Src {}
+pub trait ReduceShapeTo<S: BroadcastShapeTo<Self, Ax>, Ax>: Shape + Sized {}
+impl<Src: Shape, Dst: Shape + BroadcastShapeTo<Src, Ax>, Ax> ReduceShapeTo<Dst, Ax> for Src {}
 
-pub trait ReduceShape<Axes>: Shape + HasAxes<Axes> {
-    type Reduced: Shape + Default + BroadcastStridesTo<Self, Axes>;
+pub trait ReduceShape<Ax>: Shape + HasAxes<Ax> {
+    type Reduced: Shape + Default + BroadcastStridesTo<Self, Ax>;
 }
 
 macro_rules! broadcast_to {
@@ -51,16 +51,16 @@ pub trait BroadcastStridesTo<S: Shape, Axes>: Shape + BroadcastShapeTo<S, Axes> 
     fn broadcast_strides(&self, strides: StridesFor<Self>) -> StridesFor<S>;
 }
 
-impl<Src: Shape, Dst: Shape, Axes: AxesAsArray> BroadcastStridesTo<Dst, Axes> for Src
+impl<Src: Shape, Dst: Shape, Ax: Axes> BroadcastStridesTo<Dst, Ax> for Src
 where
-    Self: BroadcastShapeTo<Dst, Axes>,
+    Self: BroadcastShapeTo<Dst, Ax>,
 {
     #[inline(always)]
     fn broadcast_strides(&self, strides: StridesFor<Self>) -> StridesFor<Dst> {
         let mut new_strides: Dst::Concrete = Default::default();
         let mut j = 0;
         for i in 0..Dst::NUM_DIMS {
-            if !Axes::as_array().into_iter().any(|x| x == i as isize) {
+            if !Ax::as_array().into_iter().any(|x| x == i as isize) {
                 new_strides[i] = strides.0[j];
                 j += 1;
             }

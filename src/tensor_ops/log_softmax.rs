@@ -1,10 +1,5 @@
-use crate::{
-    arrays::{AxesAsArray, Dtype, HasShape, ReduceShape, Shape},
-    gradients::Tape,
-    tensor::Tensor,
-};
-
 use super::{BroadcastTo, Device, TrySub};
+use crate::{arrays::*, gradients::Tape, tensor::Tensor};
 
 /// `log(softmax(t))` in numerically stable way across `Axes`. Does `t - logsumexp(t)` under the hood.
 ///
@@ -25,7 +20,7 @@ use super::{BroadcastTo, Device, TrySub};
 /// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
 /// let _ = t.log_softmax::<Axes2<0, 2>>();
 /// ```
-pub fn log_softmax<Ax: AxesAsArray, S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn log_softmax<Ax: Axes, S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T>
 where
@@ -35,14 +30,14 @@ where
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
-    pub fn log_softmax<Ax: AxesAsArray>(self) -> Self
+    pub fn log_softmax<Ax: Axes>(self) -> Self
     where
         S: ReduceShape<Ax>,
     {
         self.try_log_softmax::<Ax>().unwrap()
     }
 
-    pub fn try_log_softmax<Ax: AxesAsArray>(self) -> Result<Self, D::Err>
+    pub fn try_log_softmax<Ax: Axes>(self) -> Result<Self, D::Err>
     where
         S: ReduceShape<Ax>,
     {

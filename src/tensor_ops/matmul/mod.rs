@@ -84,6 +84,7 @@ pub trait VecVecKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
+#[rustfmt::skip]
 fn try_binary_op<
     Lhs: Shape,
     Rhs: Shape,
@@ -92,17 +93,8 @@ fn try_binary_op<
     D: DeviceStorage,
     RhsTape: Tape<D>,
     LhsTape: Tape<D> + Merge<RhsTape>,
-    Fwd: 'static
-        + FnMut(&D, &D::Storage<Lhs, E>, &D::Storage<Rhs, E>) -> Result<D::Storage<Out, E>, D::Err>,
-    Bwd: 'static
-        + FnMut(
-            &D,
-            &D::Storage<Lhs, E>,
-            &mut D::Storage<Lhs, E>,
-            &D::Storage<Rhs, E>,
-            &mut D::Storage<Rhs, E>,
-            &D::Storage<Out, E>,
-        ) -> Result<(), D::Err>,
+    Fwd: 'static + FnMut(&D, &D::Storage<Lhs, E>, &D::Storage<Rhs, E>) -> Result<D::Storage<Out, E>, D::Err>,
+    Bwd: 'static + FnMut(&D, &D::Storage<Lhs, E>, &mut D::Storage<Lhs, E>, &D::Storage<Rhs, E>, &mut D::Storage<Rhs, E>, &D::Storage<Out, E>) -> Result<(), D::Err>,
 >(
     lhs: Tensor<Lhs, E, D, LhsTape>,
     rhs: Tensor<Rhs, E, D, RhsTape>,
@@ -117,14 +109,7 @@ fn try_binary_op<
     let phantom_out = out.clone();
     tape.add_backward_op(move |grads| {
         let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out)?;
-        bwd(
-            &lhs.device,
-            &lhs.storage,
-            grad_lhs,
-            &rhs.storage,
-            grad_rhs,
-            grad_out,
-        )?;
+        bwd(&lhs.device, &lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)?;
         Ok(())
     });
     Ok(out.put_tape(tape))
