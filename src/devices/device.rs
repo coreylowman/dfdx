@@ -25,11 +25,8 @@ pub trait HasDevice {
     type Device: DeviceStorage;
 }
 
-pub trait HasDeviceStorage: HasShape + HasDtype + HasDevice {
-    type Storage: 'static;
-    fn dev(&self) -> &Self::Device;
-    fn storage(&self) -> &Self::Storage;
-    fn alloc_like(&self) -> Result<Self::Storage, <Self::Device as HasErr>::Err>;
+pub trait AllocStorageOn<D: DeviceStorage>: HasShape + HasDtype {
+    fn alloc_like(&self) -> Result<D::Storage<Self::Shape, Self::Dtype>, D::Err>;
 }
 
 pub trait Zeros<T>: HasErr {

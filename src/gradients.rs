@@ -5,7 +5,8 @@ use core::marker::PhantomData;
 use std::collections::HashMap;
 use std::{boxed::Box, vec::Vec};
 
-use crate::devices::{DeviceStorage, HasDeviceStorage};
+use crate::arrays::{HasDtype, HasShape};
+use crate::devices::{AllocStorageOn, DeviceStorage};
 use crate::unique_id::{HasUniqueId, UniqueId};
 
 /// A generic container for keeping variable sized arrays associated with a [UniqueId].
@@ -41,10 +42,10 @@ impl<D: DeviceStorage> Gradients<D> {
     /// *gradients.mut_gradient(&t) = [-4.0, 5.0, -6.0];
     /// assert_eq!(gradients.remove(&t).expect("").as_ref(), &[-4.0, 5.0, -6.0]);
     /// ```
-    pub fn remove<T: HasUniqueId + HasDeviceStorage<Device = D>>(
+    pub fn remove<T: HasUniqueId + HasShape + HasDtype>(
         &mut self,
         t: &T,
-    ) -> Option<T::Storage> {
+    ) -> Option<D::Storage<T::Shape, T::Dtype>> {
         self.gradient_by_id
             .remove_entry(t.id())
             .map(|e| *e.1.downcast().unwrap())
@@ -65,9 +66,9 @@ impl<D: DeviceStorage> Gradients<D> {
     /// g[0] = 1.0;
     /// assert_eq!(gradients.ref_gradient(&t), &[1.0, 0.0, 0.0]);
     /// ```
-    pub fn get_mut<T>(&mut self, t: &T) -> Result<&mut T::Storage, D::Err>
+    pub fn get_mut<T>(&mut self, t: &T) -> Result<&mut D::Storage<T::Shape, T::Dtype>, D::Err>
     where
-        T: HasUniqueId + HasDeviceStorage<Device = D>,
+        T: HasUniqueId + AllocStorageOn<D>,
     {
         if !self.gradient_by_id.contains_key(t.id()) {
             let grad = t.alloc_like()?;
@@ -96,7 +97,10 @@ impl<D: DeviceStorage> Gradients<D> {
     /// gradients.mut_gradient(&t);
     /// assert_eq!(gradients.grad(&t), &[0.0, 0.0, 0.0]);
     /// ```
-    pub fn get<T: HasUniqueId + HasDeviceStorage<Device = D>>(&self, t: &T) -> &T::Storage {
+    pub fn get<T: HasUniqueId + HasDtype + HasShape>(
+        &self,
+        t: &T,
+    ) -> &D::Storage<T::Shape, T::Dtype> {
         self.gradient_by_id
             .get(t.id())
             .unwrap()
@@ -126,10 +130,16 @@ impl<D: DeviceStorage> Gradients<D> {
         &mut self,
         l: &L,
         r: &R,
-    ) -> Result<(&mut L::Storage, &R::Storage), D::Err>
+    ) -> Result<
+        (
+            &mut D::Storage<L::Shape, L::Dtype>,
+            &D::Storage<R::Shape, R::Dtype>,
+        ),
+        D::Err,
+    >
     where
-        L: HasUniqueId + HasDeviceStorage<Device = D>,
-        R: HasUniqueId + HasDeviceStorage<Device = D>,
+        L: HasUniqueId + AllocStorageOn<D>,
+        R: HasUniqueId + HasShape + HasDtype,
     {
         assert_ne!(l.id(), r.id());
         let l_ptr = self.get_mut(l)? as *mut _;
@@ -144,11 +154,18 @@ impl<D: DeviceStorage> Gradients<D> {
         l1: &L1,
         l2: &L2,
         r: &R,
-    ) -> Result<(&mut L1::Storage, &mut L2::Storage, &R::Storage), D::Err>
+    ) -> Result<
+        (
+            &mut D::Storage<L1::Shape, L1::Dtype>,
+            &mut D::Storage<L2::Shape, L2::Dtype>,
+            &D::Storage<R::Shape, R::Dtype>,
+        ),
+        D::Err,
+    >
     where
-        L1: HasUniqueId + HasDeviceStorage<Device = D>,
-        L2: HasUniqueId + HasDeviceStorage<Device = D>,
-        R: HasUniqueId + HasDeviceStorage<Device = D>,
+        L1: HasUniqueId + AllocStorageOn<D>,
+        L2: HasUniqueId + AllocStorageOn<D>,
+        R: HasUniqueId + HasShape + HasDtype,
     {
         assert_ne!(l1.id(), l2.id());
         assert_ne!(l1.id(), r.id());
@@ -332,7 +349,7 @@ impl<D: DeviceStorage> Merge<OwnedTape<D>> for OwnedTape<D> {
 //     }
 
 //     impl HasDevice for Tensor {
-//         type Device = Cpu;
+//         type Cpu;
 //     }
 
 //     #[test]
