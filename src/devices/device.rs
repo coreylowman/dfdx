@@ -21,10 +21,6 @@ pub trait DeviceStorage: 'static + Default + Clone + HasErr {
     fn fill_with<S: Shape, E: Dtype>(&self, storage: &mut Self::Storage<S, E>, value: E);
 }
 
-pub trait HasDevice {
-    type Device: DeviceStorage;
-}
-
 pub trait AllocStorageOn<D: DeviceStorage>: HasShape + HasDtype {
     fn alloc_like(&self) -> Result<D::Storage<Self::Shape, Self::Dtype>, D::Err>;
 }
