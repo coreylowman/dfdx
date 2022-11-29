@@ -30,30 +30,12 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
         )
     }
 
-    pub fn with_empty_tape(&self) -> Self {
+    pub fn retaped<New: Tape<D>>(&self) -> Tensor<S, E, D, New> {
         Tensor {
             id: self.id,
             storage: self.storage.clone(),
             device: self.device.clone(),
             tape: Default::default(),
-        }
-    }
-
-    pub fn with_diff_tape<New: Tape<D>>(&self) -> Tensor<S, E, D, New> {
-        Tensor {
-            id: self.id,
-            storage: self.storage.clone(),
-            device: self.device.clone(),
-            tape: Default::default(),
-        }
-    }
-
-    pub fn with_none_tape(&self) -> Tensor<S, E, D, NoneTape> {
-        Tensor {
-            id: self.id,
-            storage: self.storage.clone(),
-            device: self.device.clone(),
-            tape: NoneTape,
         }
     }
 

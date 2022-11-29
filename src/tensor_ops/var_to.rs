@@ -34,10 +34,7 @@ where
     Src: ReduceShapeTo<Dst, Ax>,
 {
     fn try_var(self) -> Result<Tensor<Dst, E, D, T>, D::Err> {
-        let mean = self
-            .with_empty_tape()
-            .try_mean()?
-            .try_broadcast_to(self.shape())?;
+        let mean = self.retaped().try_mean()?.try_broadcast_to(self.shape())?;
         mean.try_sub(self)?.try_square()?.try_mean()
     }
 }

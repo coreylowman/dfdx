@@ -44,7 +44,7 @@ impl<
 {
     fn try_logsumexp(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         // normalize t
-        let max: Tensor<Dst, E, D> = self.with_none_tape().try_max()?;
+        let max: Tensor<Dst, E, D> = self.retaped().try_max()?;
         let max_b: Tensor<Src, E, D> = max.clone().try_broadcast_to(self.shape())?;
         let t: Self = self.try_sub(max_b)?;
 

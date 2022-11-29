@@ -76,72 +76,72 @@
 //! mlp.load_state_dict(state_dict)
 //! ```
 
-mod activations;
-mod add_into;
-mod batchnorm2d;
-mod conv;
-mod dropout;
-mod flatten;
-mod generalized_residual;
-mod impl_module_for_tuples;
-mod layer_norm;
+// mod activations;
+// mod add_into;
+// mod batchnorm2d;
+// mod conv;
+// mod dropout;
+// mod flatten;
+// mod generalized_residual;
+// mod impl_module_for_tuples;
+// mod layer_norm;
 mod linear;
 mod module;
-mod pool2d;
-mod pool_global;
-mod repeated;
-mod residual;
-mod split_into;
-mod transformer;
+// mod pool2d;
+// mod pool_global;
+// mod repeated;
+// mod residual;
+// mod split_into;
+// mod transformer;
 
-pub use activations::*;
-pub use add_into::*;
-pub use batchnorm2d::*;
-pub use dropout::*;
-pub use generalized_residual::*;
-pub use impl_module_for_tuples::*;
-pub use layer_norm::*;
-pub use linear::*;
-pub use module::*;
-pub use pool_global::*;
-pub use repeated::*;
-pub use residual::*;
-pub use split_into::*;
+// pub use activations::*;
+// pub use add_into::*;
+// pub use batchnorm2d::*;
+// pub use dropout::*;
+// pub use generalized_residual::*;
+// pub use impl_module_for_tuples::*;
+// pub use layer_norm::*;
+// pub use linear::*;
+// pub use module::*;
+// pub use pool_global::*;
+// pub use repeated::*;
+// pub use residual::*;
+// pub use split_into::*;
 
-#[cfg(feature = "nightly")]
-pub use conv::*;
-#[cfg(feature = "nightly")]
-pub use flatten::*;
-#[cfg(feature = "nightly")]
-pub use pool2d::*;
-#[cfg(feature = "nightly")]
-pub use transformer::*;
+// #[cfg(feature = "nightly")]
+// pub use conv::*;
+// #[cfg(feature = "nightly")]
+// pub use flatten::*;
+// #[cfg(feature = "nightly")]
+// pub use pool2d::*;
+// #[cfg(feature = "nightly")]
+// pub use transformer::*;
 
-#[cfg(feature = "numpy")]
-mod npz;
+// #[cfg(feature = "numpy")]
+// mod npz;
 
-#[cfg(feature = "numpy")]
-pub use npz::*;
+// #[cfg(feature = "numpy")]
+// pub use npz::*;
 
-#[cfg(feature = "numpy")]
-mod npz_impls;
+// #[cfg(feature = "numpy")]
+// mod npz_impls;
 
-#[cfg(test)]
-mod tests {
-    use crate::arrays::{HasArrayData, HasArrayType};
-    use crate::gradients::{GradientProvider, Gradients};
-    use crate::unique_id::HasUniqueId;
-    use std::boxed::Box;
+// #[cfg(test)]
+// mod tests {
+//     use crate::arrays::{HasArrayData, HasArrayType};
+//     use crate::gradients::{GradientProvider, Gradients};
+//     use crate::unique_id::HasUniqueId;
+//     use std::boxed::Box;
 
-    #[derive(Default)]
-    pub struct SimpleGradients(pub Gradients);
+//     #[derive(Default)]
+//     pub struct SimpleGradients(pub Gradients);
 
-    impl GradientProvider for SimpleGradients {
-        fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
-        where
-            P: HasUniqueId + HasArrayType<Dtype = f32> + crate::devices::HasDevice + HasArrayData,
-        {
-            self.0.remove(p)
-        }
-    }
-}
+//     impl GradientProvider for SimpleGradients {
+//         fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
+//         where
+//             P: HasUniqueId + HasArrayType<Dtype = f32> + crate::devices::HasDevice + HasArrayData,
+//         {
+//             self.0.remove(p)
+//         }
+//     }
+// }

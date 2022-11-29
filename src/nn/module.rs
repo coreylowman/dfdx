@@ -52,12 +52,12 @@ pub trait ResetParams {
     /// }
     ///
     /// impl ResetParams for MyMulLayer {
-    ///     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
+    ///     fn reset_params(&mut self) {
     ///         for i in 0..5 {
     ///             self.scale.mut_data()[i] = rng.gen_range(0.0..1.0);
     ///         }
     ///     }
     /// }
     /// ```
-    fn reset_params<R: rand::Rng>(&mut self, rng: &mut R);
+    fn reset_params(&mut self);
 }

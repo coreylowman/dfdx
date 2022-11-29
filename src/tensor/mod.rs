@@ -193,7 +193,7 @@ mod tests {
         let b: Tensor0D<_, OwnedTape<_>> = a.traced();
         let (c, tape): (Tensor0D<_>, OwnedTape<_>) = b.split_tape();
         let d: Tensor0D<_, OwnedTape<_>> = c.put_tape(tape);
-        let _: Tensor0D<_, OwnedTape<_>> = d.with_empty_tape();
-        let _: Tensor0D<_, NoneTape> = d.with_diff_tape();
+        let _: Tensor0D<_, OwnedTape<_>> = d.retaped();
+        let _: Tensor0D<_, NoneTape> = d.retaped::<NoneTape>();
     }
 }

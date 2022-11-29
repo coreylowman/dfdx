@@ -12,6 +12,7 @@ pub trait Device<E: Dtype>:
     + super::sum_to::SumKernel<E>
     + super::max_to::MaxReduceKernel<E>
     + super::min_to::MinReduceKernel<E>
+    + super::permute_to::PermuteKernel<E>
 
     // indexing
     + super::select_to::SelectAxisKernel<E>
