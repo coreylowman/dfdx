@@ -1,6 +1,6 @@
 use crate::arrays::{Const, Dim};
-use crate::devices::cpu::{Cpu, StridedArray, View, ViewMut};
-use crate::devices::ZerosLike;
+use crate::tensor::storage::cpu::{Cpu, StridedArray, View, ViewMut};
+use crate::tensor::storage::ZerosLike;
 
 use super::{pooling, Pool2DBatchedKernel, Pool2DKernel};
 

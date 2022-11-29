@@ -1,5 +1,5 @@
 use super::*;
-use crate::{arrays::*, devices::*, gradients::Tape, tensor::Tensor};
+use crate::{arrays::*, gradients::Tape, tensor::*};
 
 /// Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function across
 /// `Axes`
@@ -77,7 +77,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{devices::AsArray, tensor::*, tests::build_test_device};
+    use crate::tests::build_test_device;
 
     #[test]
     fn test_logsumexp_1d() {

@@ -1,8 +1,7 @@
 use crate::{
     arrays::{Dtype, Shape},
-    devices::DeviceStorage,
     gradients::Gradients,
-    tensor::Tensor,
+    tensor::{DeviceStorage, Tensor},
     unique_id::{HasUniqueId, UniqueId},
 };
 

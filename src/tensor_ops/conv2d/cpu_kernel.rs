@@ -1,8 +1,7 @@
 use crate::arrays::{Const, Dim, Dyn, HasShape, Rank3, Rank4, Rank5};
-use crate::devices::ZerosLike;
-use crate::devices::{
+use crate::tensor::storage::{
     cpu::{Cpu, CpuError, LendingIterator, StridedArray, View, ViewMut},
-    Zeros,
+    Zeros, ZerosLike,
 };
 
 use super::{Conv2DBatchedKernel, Conv2DKernel};

@@ -2,8 +2,8 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Const, Dim, Dtype},
-    devices::DeviceStorage,
     gradients::Tape,
+    tensor::storage::DeviceStorage,
     tensor::{make_tensor, Tensor},
 };
 
@@ -179,7 +179,7 @@ impl<B: Dim, C: Dim, const H: usize, const W: usize, D: DeviceStorage, T: Tape<D
 
 #[cfg(test)]
 mod tests {
-    use crate::devices::{AsArray, Randn};
+    use crate::tensor::storage::{AsArray, Randn};
     use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::{assert_close, build_test_device};

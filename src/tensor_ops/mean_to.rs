@@ -1,5 +1,5 @@
 use super::*;
-use crate::{arrays::*, devices::*, gradients::Tape, tensor::Tensor};
+use crate::{arrays::*, gradients::Tape, tensor::*};
 
 /// Average the values along `Axes` of `T`.
 ///
@@ -64,7 +64,6 @@ mod tests {
     use super::*;
     use crate::{
         gradients::OwnedTape,
-        tensor::*,
         tests::{assert_close, build_test_device},
     };
 

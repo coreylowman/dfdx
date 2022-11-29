@@ -1,7 +1,7 @@
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     arrays::{Dtype, Shape},
-    devices::{cpu::LendingIterator, Cpu, ZerosLike},
+    tensor::storage::{cpu::LendingIterator, Cpu, ZerosLike},
 };
 
 pub trait UnaryDerivative<E> {

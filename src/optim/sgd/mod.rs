@@ -3,9 +3,8 @@ mod cpu_kernel;
 use std::marker::PhantomData;
 
 use crate::arrays::{Dtype, Shape};
-use crate::devices::DeviceStorage;
 use crate::gradients::Gradients;
-use crate::tensor::Tensor;
+use crate::tensor::{DeviceStorage, Tensor};
 
 use super::optimizer::*;
 
@@ -193,7 +192,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::devices::*;
     use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::{assert_close, build_test_device};

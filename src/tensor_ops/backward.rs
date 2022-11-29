@@ -1,7 +1,6 @@
 use crate::arrays::{Dtype, Rank0};
-use crate::devices::{DeviceStorage, Ones};
 use crate::gradients::{Gradients, OwnedTape, Tape};
-use crate::tensor::Tensor;
+use crate::tensor::{DeviceStorage, Ones, Tensor};
 
 /// Runs backprop algorithm with all operations contained in the tape that `t` has.
 ///

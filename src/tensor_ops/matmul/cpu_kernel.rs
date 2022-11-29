@@ -1,5 +1,5 @@
 use crate::arrays::*;
-use crate::devices::{
+use crate::tensor::storage::{
     cpu::{Cpu, View, ViewMut},
     ZerosLike,
 };

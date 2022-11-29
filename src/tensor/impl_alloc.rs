@@ -1,9 +1,9 @@
 use super::base::Tensor;
-use crate::arrays::{Dtype, Shape};
-use crate::devices::{
+use super::storage::{
     AsArray, AsVec, DeviceStorage, Ones, OnesLike, Rand, RandLike, Randn, RandnLike, TryConvert,
     Zeros, ZerosLike,
 };
+use crate::arrays::{Dtype, Shape};
 use crate::gradients::NoneTape;
 use crate::unique_id::unique_id;
 

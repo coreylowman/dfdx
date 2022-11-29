@@ -1,7 +1,7 @@
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     arrays::Dtype,
-    devices::{Cpu, DeviceStorage},
+    tensor::storage::{Cpu, DeviceStorage},
 };
 
 pub trait Device<E: Dtype>:

@@ -1,5 +1,5 @@
 use crate::arrays::*;
-use crate::devices::cpu::{Cpu, StridedArray};
+use crate::tensor::storage::cpu::{Cpu, StridedArray};
 
 use super::PermuteKernel;
 

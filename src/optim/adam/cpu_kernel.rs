@@ -1,5 +1,5 @@
 use super::{AdamConfig, AdamKernel};
-use crate::{arrays::Shape, devices::Cpu, optim::WeightDecay};
+use crate::{arrays::Shape, optim::WeightDecay, tensor::Cpu};
 
 impl AdamKernel<f32> for Cpu {
     fn update<S: Shape>(

@@ -1,6 +1,6 @@
 //! Intro to dfdx::devices and dfdx::tensor
 
-use dfdx::devices::{AsArray, Cpu, Ones, Randn, Zeros};
+use dfdx::tensor::storage::{AsArray, Cpu, Ones, Randn, Zeros};
 use dfdx::tensor::{Tensor1D, Tensor2D, Tensor3D, TensorFromArray};
 
 fn main() {

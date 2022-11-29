@@ -1,6 +1,6 @@
 mod cpu_kernel;
 
-use crate::{arrays::*, devices::*, gradients::Tape, tensor::*};
+use crate::{arrays::*, gradients::Tape, tensor::storage::*, tensor::*};
 
 pub trait MinReduceKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(

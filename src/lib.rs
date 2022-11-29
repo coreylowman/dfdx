@@ -101,7 +101,6 @@ extern crate no_std_compat as std;
 
 pub mod arrays;
 // pub mod data;
-pub mod devices;
 pub mod feature_flags;
 pub mod gradients;
 pub mod losses;
@@ -116,7 +115,7 @@ pub mod unique_id;
 /// Contains all public exports.
 pub mod prelude {
     // pub use crate::arrays::{AllAxes, Axes2, Axes3, Axes4, Axis, HasArrayData};
-    // pub use crate::devices::*;
+    // pub use crate::tensor::storage::*;
     // pub use crate::gradients::{NoneTape, OwnedTape};
     // pub use crate::losses::*;
     // pub use crate::nn::*;
@@ -169,11 +168,11 @@ pub(crate) mod tests {
 
     macro_rules! build_test_device {
         () => {{
-            use crate::devices::Cpu;
+            use crate::tensor::Cpu;
             Cpu::default()
         }};
         ($Seed:expr) => {{
-            use crate::devices::Cpu;
+            use crate::tensor::Cpu;
             Cpu::with_seed($Seed)
         }};
     }

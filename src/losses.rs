@@ -179,7 +179,6 @@ pub fn binary_cross_entropy_with_logits_loss<S: Shape, D: Device<f32>, T: Tape<D
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::devices::AsArray;
     use crate::tensor::*;
     use crate::tests::{assert_close, build_test_device};
 

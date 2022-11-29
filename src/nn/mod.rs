@@ -139,7 +139,7 @@ mod module;
 //     impl GradientProvider for SimpleGradients {
 //         fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
 //         where
-//             P: HasUniqueId + HasArrayType<Dtype = f32> + crate::devices::HasDevice + HasArrayData,
+//             P: HasUniqueId + HasArrayType<Dtype = f32> + crate::tensor::storage::HasDevice + HasArrayData,
 //         {
 //             self.0.remove(p)
 //         }

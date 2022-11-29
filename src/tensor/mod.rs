@@ -72,15 +72,16 @@
 
 mod base;
 mod impl_alloc;
+pub(crate) mod storage;
 
 pub use base::{Tensor, Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
 pub(crate) use impl_alloc::make_tensor;
 pub use impl_alloc::TensorFromArray;
+pub use storage::*;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::devices::{AsArray, AsVec, Ones, Rand, Randn, TryConvert, Zeros};
     use crate::gradients::{NoneTape, OwnedTape};
     use crate::tests::build_test_device;
     use crate::unique_id::{unique_id, UniqueId};

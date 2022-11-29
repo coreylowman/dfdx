@@ -1,8 +1,8 @@
 #![allow(clippy::needless_range_loop)]
 
 use crate::arrays::{Axis, Dim, Dtype, ReduceShape, ReplaceDim, Shape};
-use crate::devices::Zeros;
-use crate::devices::{
+use crate::tensor::storage::Zeros;
+use crate::tensor::storage::{
     cpu::{Cpu, LendingIterator, StridedArray},
     ZerosLike,
 };

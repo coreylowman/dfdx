@@ -1,6 +1,6 @@
 use super::{Module, ModuleMut, ResetParams};
 use crate::arrays::{HasArrayData, HasAxes};
-use crate::devices::{Cpu, FillElements};
+use crate::tensor::storage::{Cpu, FillElements};
 use crate::{gradients::*, tensor::*, tensor_ops::*};
 
 /// Batch normalization for images as described in

@@ -45,7 +45,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        devices::AsArray, tensor::TensorFromArray, tensor_ops::*, tests::build_test_device,
+        tensor::storage::AsArray, tensor::TensorFromArray, tensor_ops::*, tests::build_test_device,
     };
 
     #[test]

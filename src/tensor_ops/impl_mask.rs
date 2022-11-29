@@ -1,7 +1,7 @@
 use super::ops::move_tape_and_add_backward_op;
-use crate::devices::{Device, ForEachElement};
 use crate::gradients::Tape;
 use crate::prelude::*;
+use crate::tensor::storage::{Device, ForEachElement};
 
 /// Sets `t` to `value` anywhere `mask` equals value
 ///

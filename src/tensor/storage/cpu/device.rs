@@ -1,5 +1,5 @@
 use crate::arrays::{Dtype, HasShape, Shape};
-use crate::devices::device::*;
+use crate::tensor::storage::device::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{cell::RefCell, sync::Arc, vec::Vec};
 

@@ -1,6 +1,6 @@
 use crate::{
-    devices::cpu::{Cpu, StridedArray},
     optim::WeightDecay,
+    tensor::cpu::{Cpu, StridedArray},
 };
 
 use super::{RMSpropConfig, RMSpropKernel};

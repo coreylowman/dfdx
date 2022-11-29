@@ -1,7 +1,7 @@
 #![allow(clippy::needless_range_loop)]
 
 use crate::arrays::*;
-use crate::devices::{
+use crate::tensor::storage::{
     AsArray, AsVec, Ones, OnesLike, Rand, RandLike, Randn, RandnLike, TryConvert, Zeros, ZerosLike,
 };
 use rand::Rng;

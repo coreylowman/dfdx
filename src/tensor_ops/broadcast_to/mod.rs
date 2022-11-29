@@ -1,6 +1,6 @@
 mod cpu_kernel;
 
-use crate::{arrays::*, devices::*, gradients::Tape, tensor::*};
+use crate::{arrays::*, gradients::Tape, tensor::*};
 
 pub trait BroadcastKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
@@ -75,7 +75,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::devices::{AsArray, Randn, Zeros};
     use crate::tensor_ops::*;
     use crate::tests::{build_test_device, AssertClose};
 

@@ -2,8 +2,8 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Dtype, HasSameNumelAs, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::Tape,
+    tensor::storage::{DeviceStorage, HasErr},
     tensor::{make_tensor, Tensor},
 };
 
@@ -60,7 +60,7 @@ impl<
 
 #[cfg(test)]
 mod tests {
-    use crate::devices::{AsArray, Zeros};
+    use crate::tensor::storage::{AsArray, Zeros};
     use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::build_test_device;

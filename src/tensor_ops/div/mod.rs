@@ -1,7 +1,11 @@
 mod cpu_kernel;
 
 use super::{ops::*, Device};
-use crate::{arrays::*, devices::HasErr, gradients::*, tensor::Tensor};
+use crate::{
+    arrays::*,
+    gradients::*,
+    tensor::{HasErr, Tensor},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct ScalarDivKernelOp<E>(pub(crate) E);
@@ -64,7 +68,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::devices::AsArray;
     use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::build_test_device;

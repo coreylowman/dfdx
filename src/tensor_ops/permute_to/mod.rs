@@ -1,8 +1,8 @@
 mod cpu_kernel;
 
 use crate::arrays::{Axes, Dtype, HasShape, PermuteShapeTo, Shape};
-use crate::devices::{DeviceStorage, HasErr};
 use crate::gradients::Tape;
+use crate::tensor::storage::{DeviceStorage, HasErr};
 use crate::tensor::{make_tensor, Tensor};
 
 pub trait PermuteKernel<E: Dtype>: DeviceStorage {
@@ -70,7 +70,7 @@ mod tests {
 
     use super::*;
     use crate::arrays::{Axes2, Axes3, Axes4};
-    use crate::devices::{AsArray, Cpu, Randn};
+    use crate::tensor::storage::{AsArray, Cpu, Randn};
     use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::build_test_device;

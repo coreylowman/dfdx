@@ -4,9 +4,8 @@ use std::marker::PhantomData;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::DeviceStorage,
     gradients::Gradients,
-    tensor::Tensor,
+    tensor::{DeviceStorage, Tensor},
 };
 
 use super::{
@@ -184,7 +183,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::devices::*;
     use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::build_test_device;

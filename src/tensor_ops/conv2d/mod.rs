@@ -2,9 +2,8 @@ mod cpu_kernel;
 
 use crate::{
     arrays::{Const, Dim, Dtype, Rank3, Rank4},
-    devices::DeviceStorage,
     gradients::Tape,
-    tensor::{make_tensor, Tensor},
+    tensor::{make_tensor, DeviceStorage, Tensor},
 };
 
 pub trait Conv2DKernel<
@@ -162,7 +161,6 @@ impl<B: Dim, const C: usize, const H: usize, const W: usize, D: DeviceStorage, T
 mod tests {
     use crate::{
         arrays::{Axes2, Axes3},
-        devices::{AsArray, Randn},
         tensor::*,
         tensor_ops::*,
         tests::{assert_close, build_test_device, AssertClose},

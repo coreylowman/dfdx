@@ -1,5 +1,5 @@
 use super::*;
-use crate::{arrays::*, devices::*, gradients::Tape, tensor::Tensor};
+use crate::{arrays::*, gradients::Tape, tensor::*};
 
 /// Reduces `Axes` of `T` by computing std deviation of all values in those axes.
 /// Result [Tensor] has smaller number of dimensions.
@@ -54,7 +54,6 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::devices::AsArray;
     use crate::tensor::*;
     use crate::tests::build_test_device;
 

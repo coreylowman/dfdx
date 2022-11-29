@@ -1,8 +1,7 @@
+use super::storage::{AllocStorageOn, DeviceStorage, HasErr};
 use crate::arrays::{
     Dtype, HasDtype, HasShape, Rank0, Rank1, Rank2, Rank3, Rank4, Rank5, Rank6, Shape,
 };
-use crate::devices::device::{AllocStorageOn, HasErr};
-use crate::devices::DeviceStorage;
 use crate::unique_id::HasUniqueId;
 use crate::{
     gradients::{NoneTape, OwnedTape, Tape},

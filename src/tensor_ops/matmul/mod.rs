@@ -4,9 +4,8 @@ pub(super) mod cpu_kernel;
 
 use crate::{
     arrays::{Const, Dim, Dtype, Shape},
-    devices::{DeviceStorage, HasErr},
     gradients::{Merge, Tape},
-    tensor::{make_tensor, Tensor},
+    tensor::{make_tensor, DeviceStorage, HasErr, Tensor},
 };
 
 use super::device::Device;
@@ -300,7 +299,6 @@ impl<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::devices::{AsArray, Randn, Zeros};
     use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::{assert_close, build_test_device};

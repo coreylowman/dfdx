@@ -1,8 +1,7 @@
 use crate::{
     arrays::{Axes, HasShape, ReduceShape, Shape},
-    devices::HasErr,
     gradients::Tape,
-    tensor::Tensor,
+    tensor::{HasErr, Tensor},
 };
 
 use super::{BroadcastTo, Device, TryDiv, TrySub};
@@ -54,7 +53,6 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
 #[cfg(test)]
 mod tests {
     use crate::arrays::Axis;
-    use crate::devices::{AsArray, Ones};
     use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::{assert_close, build_test_device};

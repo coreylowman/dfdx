@@ -49,9 +49,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        arrays::Axis, devices::AsArray, tensor::*, tensor_ops::*, tests::build_test_device,
-    };
+    use crate::{arrays::Axis, tensor::*, tensor_ops::*, tests::build_test_device};
 
     #[test]
     fn test_log_softmax_1d() {

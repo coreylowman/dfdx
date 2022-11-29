@@ -1,6 +1,6 @@
 use super::BroadcastKernel;
 use crate::arrays::*;
-use crate::devices::cpu::{Cpu, StridedArray};
+use crate::tensor::storage::cpu::{Cpu, StridedArray};
 
 impl<E: Dtype> BroadcastKernel<E> for Cpu {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(

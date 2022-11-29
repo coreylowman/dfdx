@@ -114,7 +114,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::devices::AsArray;
     use crate::tests::{assert_close, build_test_device};
 
     const W: [[f32; 5]; 2] = [

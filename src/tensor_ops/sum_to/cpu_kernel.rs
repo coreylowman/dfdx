@@ -1,6 +1,6 @@
 use crate::{
     arrays::{Axes, Dtype, ReduceShapeTo, Shape},
-    devices::{
+    tensor::storage::{
         cpu::{Cpu, LendingIterator, StridedArray},
         ZerosLike,
     },

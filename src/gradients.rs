@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::{boxed::Box, vec::Vec};
 
 use crate::arrays::{HasDtype, HasShape};
-use crate::devices::{AllocStorageOn, DeviceStorage};
+use crate::tensor::storage::{AllocStorageOn, DeviceStorage};
 use crate::unique_id::{HasUniqueId, UniqueId};
 
 /// A generic container for keeping variable sized arrays associated with a [UniqueId].
@@ -330,7 +330,7 @@ impl<D: DeviceStorage> Merge<OwnedTape<D>> for OwnedTape<D> {
 // #[cfg(test)]
 // mod tests {
 //     use super::*;
-//     use crate::devices::Cpu;
+//     use crate::tensor::storage::Cpu;
 //     use crate::unique_id::unique_id;
 
 //     struct Tensor {

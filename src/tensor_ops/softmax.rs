@@ -52,7 +52,6 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 mod tests {
     use crate::{
         arrays::{Axes2, Axis},
-        devices::{AsArray, Randn},
         tensor::*,
         tensor_ops::*,
         tests::{assert_close, build_test_device},

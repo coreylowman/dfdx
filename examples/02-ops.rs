@@ -1,6 +1,6 @@
 //! Intro to dfdx::tensor_ops
 
-use dfdx::devices::{AsArray, Cpu, Randn};
+use dfdx::tensor::storage::{AsArray, Cpu, Randn};
 use dfdx::tensor::{Tensor0D, Tensor2D};
 use dfdx::tensor_ops::{MeanTo, TryReLU};
 

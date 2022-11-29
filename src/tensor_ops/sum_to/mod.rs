@@ -1,7 +1,7 @@
 mod cpu_kernel;
 
 use super::device::Device;
-use crate::{arrays::*, devices::*, gradients::Tape, tensor::*};
+use crate::{arrays::*, gradients::Tape, tensor::storage::*, tensor::*};
 
 pub trait SumKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
@@ -96,9 +96,9 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::devices::AsArray;
-    use crate::devices::Randn;
     use crate::gradients::OwnedTape;
+    use crate::tensor::storage::AsArray;
+    use crate::tensor::storage::Randn;
     use crate::tensor_ops::*;
     use crate::tests::{assert_close, build_test_device};
 

@@ -1,7 +1,11 @@
 mod cpu_kernel;
 
 use super::{ops::*, Device};
-use crate::{arrays::*, devices::HasErr, gradients::*, tensor::Tensor};
+use crate::{
+    arrays::*,
+    gradients::*,
+    tensor::{HasErr, Tensor},
+};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BinaryAddKernelOp;
@@ -64,8 +68,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::devices::AsArray;
-    use crate::tensor::TensorFromArray;
+    use crate::tensor::{AsArray, TensorFromArray};
     use crate::tensor_ops::*;
     use crate::tests::build_test_device;
 

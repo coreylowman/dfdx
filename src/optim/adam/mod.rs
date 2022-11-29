@@ -4,8 +4,8 @@ use std::marker::PhantomData;
 
 use crate::{
     arrays::{Dtype, Shape},
-    devices::DeviceStorage,
     gradients::Gradients,
+    tensor::DeviceStorage,
 };
 
 use super::{CanUpdateWithGradients, Optimizer, OptimizerUpdateError, ParamUpdater, WeightDecay};
@@ -162,7 +162,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::devices::*;
     use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::{assert_close, build_test_device};
