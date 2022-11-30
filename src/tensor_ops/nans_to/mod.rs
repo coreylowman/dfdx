@@ -44,9 +44,9 @@ mod tests {
         let dev = build_test_device!();
         let t = dev.tensor([1.0, f32::NAN, -f32::NAN, 4.0]);
         let r = t.trace().nans_to(0.0);
-        assert_eq!(r.as_array(), [1.0, 0.0, 0.0, 4.0]);
+        assert_eq!(r.array(), [1.0, 0.0, 0.0, 4.0]);
         // NOTE: .exp() so we cover case where nans_to() needs to use result grad
         let g = r.exp().mean().backward();
-        assert_eq!(g.get(&t).as_array(), [0.67957044, 0.0, 0.0, 13.649537]);
+        assert_eq!(g.get(&t).array(), [0.67957044, 0.0, 0.0, 13.649537]);
     }
 }

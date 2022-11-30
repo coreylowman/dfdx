@@ -106,17 +106,17 @@ mod tests {
 
         let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let y = model.forward(x);
-        assert_eq!(y.as_array(), [0.0, 0.0, 0.0, 1.0f32.tanh(), 2.0f32.tanh()]);
+        assert_eq!(y.array(), [0.0, 0.0, 0.0, 1.0f32.tanh(), 2.0f32.tanh()]);
     }
 
     #[test]
     fn test_2_tuple_update() {
         let dev = build_test_device!();
         let mut model: (Linear<2, 3, _>, Linear<3, 4, _>) = BuildModule::build(&dev);
-        assert_ne!(model.0.weight.as_array(), [[0.0; 2]; 3]);
-        assert_ne!(model.0.bias.as_array(), [0.0; 3]);
-        assert_ne!(model.1.weight.as_array(), [[0.0; 3]; 4]);
-        assert_ne!(model.1.bias.as_array(), [0.0; 4]);
+        assert_ne!(model.0.weight.array(), [[0.0; 2]; 3]);
+        assert_ne!(model.0.bias.array(), [0.0; 3]);
+        assert_ne!(model.1.weight.array(), [[0.0; 3]; 4]);
+        assert_ne!(model.1.bias.array(), [0.0; 4]);
 
         let m0 = model.clone();
 
@@ -126,10 +126,10 @@ mod tests {
             .mean();
         let g = loss.backward();
 
-        assert_ne!(g.get(&model.0.weight).as_array(), [[0.0; 2]; 3]);
-        assert_ne!(g.get(&model.0.bias).as_array(), [0.0; 3]);
-        assert_ne!(g.get(&model.1.weight).as_array(), [[0.0; 3]; 4]);
-        assert_ne!(g.get(&model.1.bias).as_array(), [0.0; 4]);
+        assert_ne!(g.get(&model.0.weight).array(), [[0.0; 2]; 3]);
+        assert_ne!(g.get(&model.0.bias).array(), [0.0; 3]);
+        assert_ne!(g.get(&model.1.weight).array(), [[0.0; 3]; 4]);
+        assert_ne!(g.get(&model.1.bias).array(), [0.0; 4]);
 
         let mut sgd = Sgd::new(SgdConfig {
             lr: 1.0,
@@ -138,10 +138,10 @@ mod tests {
         });
         sgd.update(&mut model, g).unwrap();
 
-        assert_ne!(model.0.weight.as_array(), m0.0.weight.as_array());
-        assert_ne!(model.0.bias.as_array(), m0.0.bias.as_array());
-        assert_ne!(model.1.weight.as_array(), m0.1.weight.as_array());
-        assert_ne!(model.1.bias.as_array(), m0.1.bias.as_array());
+        assert_ne!(model.0.weight.array(), m0.0.weight.array());
+        assert_ne!(model.0.bias.array(), m0.0.bias.array());
+        assert_ne!(model.1.weight.array(), m0.1.weight.array());
+        assert_ne!(model.1.bias.array(), m0.1.bias.array());
     }
 
     /// A struct to test the forward method of tuples. This sets the `I`th valuein a 1d tensors of size `N` to 1.0.
@@ -179,27 +179,27 @@ mod tests {
     fn test_set_to_1() {
         let dev = build_test_device!();
         assert_eq!(
-            SetTo1::<0, 5>::default().forward(dev.zeros()).as_array(),
+            SetTo1::<0, 5>::default().forward(dev.zeros()).array(),
             [1.0, 0.0, 0.0, 0.0, 0.0]
         );
 
         assert_eq!(
-            SetTo1::<1, 5>::default().forward(dev.zeros()).as_array(),
+            SetTo1::<1, 5>::default().forward(dev.zeros()).array(),
             [0.0, 1.0, 0.0, 0.0, 0.0]
         );
 
         assert_eq!(
-            SetTo1::<2, 5>::default().forward(dev.zeros()).as_array(),
+            SetTo1::<2, 5>::default().forward(dev.zeros()).array(),
             [0.0, 0.0, 1.0, 0.0, 0.0]
         );
 
         assert_eq!(
-            SetTo1::<3, 5>::default().forward(dev.zeros()).as_array(),
+            SetTo1::<3, 5>::default().forward(dev.zeros()).array(),
             [0.0, 0.0, 0.0, 1.0, 0.0]
         );
 
         assert_eq!(
-            SetTo1::<4, 5>::default().forward(dev.zeros()).as_array(),
+            SetTo1::<4, 5>::default().forward(dev.zeros()).array(),
             [0.0, 0.0, 0.0, 0.0, 1.0]
         );
     }
@@ -209,7 +209,7 @@ mod tests {
         let dev = build_test_device!();
         let model: (SetTo1<0, 2>, SetTo1<1, 2>) = Default::default();
         let y = model.forward(dev.zeros());
-        assert_eq!(y.as_array(), [1.0, 1.0]);
+        assert_eq!(y.array(), [1.0, 1.0]);
     }
 
     #[test]
@@ -217,7 +217,7 @@ mod tests {
         let dev = build_test_device!();
         let model: (SetTo1<0, 3>, SetTo1<1, 3>, SetTo1<2, 3>) = Default::default();
         let y = model.forward(dev.zeros());
-        assert_eq!(y.as_array(), [1.0, 1.0, 1.0]);
+        assert_eq!(y.array(), [1.0, 1.0, 1.0]);
     }
 
     #[test]
@@ -225,7 +225,7 @@ mod tests {
         let dev = build_test_device!();
         let model: (SetTo1<0, 4>, SetTo1<1, 4>, SetTo1<2, 4>, SetTo1<3, 4>) = Default::default();
         let y = model.forward(dev.zeros());
-        assert_eq!(y.as_array(), [1.0, 1.0, 1.0, 1.0]);
+        assert_eq!(y.array(), [1.0, 1.0, 1.0, 1.0]);
     }
 
     #[test]
@@ -239,7 +239,7 @@ mod tests {
             SetTo1<4, 5>,
         ) = Default::default();
         let y = model.forward(dev.zeros());
-        assert_eq!(y.as_array(), [1.0, 1.0, 1.0, 1.0, 1.0]);
+        assert_eq!(y.array(), [1.0, 1.0, 1.0, 1.0, 1.0]);
     }
 
     #[test]
@@ -254,7 +254,7 @@ mod tests {
             SetTo1<5, 6>,
         ) = Default::default();
         let y = model.forward(dev.zeros());
-        assert_eq!(y.as_array(), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
+        assert_eq!(y.array(), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
     }
 
     #[test]

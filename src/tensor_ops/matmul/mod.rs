@@ -351,7 +351,7 @@ mod tests {
         let b = dev.tensor([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
         let r = a.trace().matmul(b.clone());
         assert_close(
-            &r.as_array(),
+            &r.array(),
             &[
                 [0.62960154, 0.8554974],
                 [1.4642863, 1.5830379],
@@ -361,7 +361,7 @@ mod tests {
         );
         let g = r.exp().mean().backward();
         assert_close(
-            &g.get(&a).as_array(),
+            &g.get(&a).array(),
             &[
                 [0.37689444, 0.24156547, 0.30238447],
                 [0.80570966, 0.5184905, 0.6703743],
@@ -370,7 +370,7 @@ mod tests {
             ],
         );
         assert_close(
-            &g.get(&b).as_array(),
+            &g.get(&b).array(),
             &[
                 [0.8737376, 0.9888564],
                 [0.9339924, 0.991189],
@@ -391,8 +391,8 @@ mod tests {
         let c2 = b.trace().permute().matmul(a.trace().permute());
         let g2 = c2.exp().mean().backward();
 
-        assert_close(&g1.get(&a).as_array(), &g2.get(&a).as_array());
-        assert_close(&g1.get(&b).as_array(), &g2.get(&b).as_array());
+        assert_close(&g1.get(&a).array(), &g2.get(&a).array());
+        assert_close(&g1.get(&b).array(), &g2.get(&b).array());
     }
 
     #[test]
@@ -400,30 +400,30 @@ mod tests {
         const N: usize = 5;
         let dev = build_test_device!();
         let a: Tensor3D<N, 4, 3, _> = dev.randn();
-        let a_array = a.as_array();
+        let a_array = a.array();
         let b: Tensor2D<3, 2, _> = dev.randn();
         let r = a.trace().matmul(b.clone());
-        let r_array = r.as_array();
+        let r_array = r.array();
         for i in 0..N {
             let sub_a = dev.tensor(a_array[i]);
             let sub_c = sub_a.matmul(b.clone());
-            assert_close(&r_array[i], &sub_c.as_array());
+            assert_close(&r_array[i], &sub_c.array());
         }
         let gs = r.sum().backward();
-        let a_grad = gs.get(&a).as_array();
+        let a_grad = gs.get(&a).array();
         let mut sub_bs_summed = [[0.0; 2]; 3];
         for i in 0..N {
             let sub_a = dev.tensor(a_array[i]);
             let sub_gs = sub_a.trace().matmul(b.clone()).sum().backward();
-            assert_close(&a_grad[i], &sub_gs.get(&sub_a).as_array());
-            let sub_b_grad = sub_gs.get(&b).as_array();
+            assert_close(&a_grad[i], &sub_gs.get(&sub_a).array());
+            let sub_b_grad = sub_gs.get(&b).array();
             for x in 0..3 {
                 for y in 0..2 {
                     sub_bs_summed[x][y] += sub_b_grad[x][y];
                 }
             }
         }
-        assert_close(&gs.get(&b).as_array(), &sub_bs_summed);
+        assert_close(&gs.get(&b).array(), &sub_bs_summed);
     }
 
     #[test]
@@ -435,11 +435,11 @@ mod tests {
         let b_up: Tensor3D<N, 3, 2, _, _> = b.trace().broadcast();
         let r1 = a.trace().matmul(b_up);
         let r2 = a.trace().matmul(b.clone());
-        assert_eq!(r1.as_array(), r2.as_array());
+        assert_eq!(r1.array(), r2.array());
         let g1 = r1.exp().mean().backward();
         let g2 = r2.exp().mean().backward();
-        assert_eq!(g1.get(&a).as_array(), g2.get(&a).as_array());
-        assert_eq!(g1.get(&b).as_array(), g2.get(&b).as_array());
+        assert_eq!(g1.get(&a).array(), g2.get(&a).array());
+        assert_eq!(g1.get(&b).array(), g2.get(&b).array());
     }
 
     #[test]
@@ -447,24 +447,24 @@ mod tests {
         let dev = build_test_device!();
 
         let a: Tensor3D<5, 3, 2, _> = dev.randn();
-        let a_array = a.as_array();
+        let a_array = a.array();
         let b: Tensor3D<5, 2, 4, _> = dev.randn();
-        let b_array = b.as_array();
+        let b_array = b.array();
         let c = a.trace().matmul(b.clone());
-        let c_array = c.as_array();
+        let c_array = c.array();
         let g = c.exp().sum().backward();
 
-        let g_a = g.get(&a).as_array();
-        let g_b = g.get(&b).as_array();
+        let g_a = g.get(&a).array();
+        let g_b = g.get(&b).array();
 
         for i in 0..5 {
             let sub_a = dev.tensor(a_array[i]);
             let sub_b = dev.tensor(b_array[i]);
             let sub_c = sub_a.trace().matmul(sub_b.clone());
-            assert_eq!(sub_c.as_array(), c_array[i]);
+            assert_eq!(sub_c.array(), c_array[i]);
             let sub_g = sub_c.exp().sum().backward();
-            assert_eq!(sub_g.get(&sub_a).as_array(), g_a[i]);
-            assert_eq!(sub_g.get(&sub_b).as_array(), g_b[i]);
+            assert_eq!(sub_g.get(&sub_a).array(), g_a[i]);
+            assert_eq!(sub_g.get(&sub_b).array(), g_b[i]);
         }
     }
 
@@ -473,25 +473,25 @@ mod tests {
         let dev = build_test_device!();
 
         let a: Tensor4D<7, 5, 3, 2, _> = dev.randn();
-        let a_array = a.as_array();
+        let a_array = a.array();
         let b: Tensor4D<7, 5, 2, 4, _> = dev.randn();
-        let b_array = b.as_array();
+        let b_array = b.array();
         let c = a.trace().matmul(b.clone());
-        let c_array = c.as_array();
+        let c_array = c.array();
         let g = c.exp().sum().backward();
 
-        let g_a = g.get(&a).as_array();
-        let g_b = g.get(&b).as_array();
+        let g_a = g.get(&a).array();
+        let g_b = g.get(&b).array();
 
         for i in 0..7 {
             for j in 0..5 {
                 let sub_a = dev.tensor(a_array[i][j]);
                 let sub_b = dev.tensor(b_array[i][j]);
                 let sub_c = sub_a.trace().matmul(sub_b.clone());
-                assert_eq!(sub_c.as_array(), c_array[i][j]);
+                assert_eq!(sub_c.array(), c_array[i][j]);
                 let sub_g = sub_c.exp().sum().backward();
-                assert_eq!(sub_g.get(&sub_a).as_array(), g_a[i][j]);
-                assert_eq!(sub_g.get(&sub_b).as_array(), g_b[i][j]);
+                assert_eq!(sub_g.get(&sub_a).array(), g_a[i][j]);
+                assert_eq!(sub_g.get(&sub_b).array(), g_b[i][j]);
             }
         }
     }
@@ -503,11 +503,11 @@ mod tests {
         let a = dev.tensor([0.7296, 0.3974, 0.9487]);
         let b = dev.tensor([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
         let r = a.trace().matmul(b.clone());
-        assert_close(&r.as_array(), &[1.261436, 1.5543157]);
+        assert_close(&r.array(), &[1.261436, 1.5543157]);
         let g = r.exp().mean().backward();
-        assert_close(&g.get(&a).as_array(), &[2.6883178, 2.9369607, 2.9256766]);
+        assert_close(&g.get(&a).array(), &[2.6883178, 2.9369607, 2.9256766]);
         assert_close(
-            &g.get(&b).as_array(),
+            &g.get(&b).array(),
             &[
                 [1.2879219, 1.7261779],
                 [0.70150787, 0.94021803],
@@ -522,11 +522,11 @@ mod tests {
         let a = dev.tensor([0.7296, 0.3974, 0.9487]);
         let b = dev.tensor([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
         let r = a.trace().matmul(b.trace().permute());
-        assert_close(&r.as_array(), &[1.261436, 1.5543157]);
+        assert_close(&r.array(), &[1.261436, 1.5543157]);
         let g = r.exp().mean().backward();
-        assert_close(&g.get(&a).as_array(), &[2.6883178, 2.9369607, 2.9256766]);
+        assert_close(&g.get(&a).array(), &[2.6883178, 2.9369607, 2.9256766]);
         assert_close(
-            &g.get(&b).as_array(),
+            &g.get(&b).array(),
             &[
                 [1.2879219, 0.70150787, 1.6746868],
                 [1.7261779, 0.94021803, 2.244552],
@@ -541,7 +541,7 @@ mod tests {
         let b = dev.tensor([0.43068963, -0.9757187, -0.50650096]);
         let c = a.trace().matmul(b.clone());
         assert_close(
-            &c.as_array(),
+            &c.array(),
             &[
                 [-0.66041213, 1.4961504, 0.7766599],
                 [0.26427752, -0.5987154, -0.31079647],
@@ -553,7 +553,7 @@ mod tests {
 
         let g = c.exp().mean().backward();
         assert_close(
-            &g.get(&a).as_array(),
+            &g.get(&a).array(),
             &[
                 -0.34898597,
                 -0.02309341,
@@ -562,9 +562,6 @@ mod tests {
                 -0.54529756,
             ],
         );
-        assert_close(
-            &g.get(&b).as_array(),
-            &[-0.13630435, -1.6781758, -0.75171506],
-        );
+        assert_close(&g.get(&b).array(), &[-0.13630435, -1.6781758, -0.75171506]);
     }
 }

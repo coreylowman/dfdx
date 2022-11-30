@@ -22,10 +22,10 @@ fn main() {
     let a: Tensor3D<2, 3, 4, _> = dev.randn();
 
     // use `AsArray::as_array` to get acces to the data as an array
-    let a_data: [[[f32; 4]; 3]; 2] = a.as_array();
+    let a_data: [[[f32; 4]; 3]; 2] = a.array();
     println!("a={:?}", a_data);
 
     // you can clone() a tensor:
     let a_copy = a.clone();
-    assert_eq!(a_copy.as_array(), a.as_array());
+    assert_eq!(a_copy.array(), a.array());
 }

@@ -45,11 +45,11 @@ mod tests {
         let dev = build_test_device!();
         let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().ln();
-        let r_array = r.as_array();
+        let r_array = r.array();
         assert!(r_array[0].is_nan());
         assert!(r_array[1].is_nan());
         assert!(r_array[2..] == [f32::NEG_INFINITY, 0.0, std::f32::consts::LN_2]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&x).as_array(), [-0.1, -0.2, f32::INFINITY, 0.2, 0.1]);
+        assert_eq!(g.get(&x).array(), [-0.1, -0.2, f32::INFINITY, 0.2, 0.1]);
     }
 }

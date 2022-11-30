@@ -188,7 +188,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).square().mean().backward();
             opt.update(&mut t, gradients).expect("");
-            assert_close(&t.as_array(), e);
+            assert_close(&t.array(), e);
         }
     }
 
@@ -219,7 +219,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).square().mean().backward();
             opt.update(&mut t, gradients).expect("");
-            assert_eq!(&t.as_array(), e);
+            assert_eq!(&t.array(), e);
         }
     }
 
@@ -249,7 +249,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = t.trace().exp().square().mean().backward();
             opt.update(&mut t, gradients).expect("");
-            assert_eq!(&t.as_array(), e);
+            assert_eq!(&t.array(), e);
         }
     }
 
@@ -279,7 +279,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = t.trace().exp().square().mean().backward();
             opt.update(&mut t, gradients).expect("");
-            assert_eq!(&t.as_array(), e);
+            assert_eq!(&t.array(), e);
         }
     }
 

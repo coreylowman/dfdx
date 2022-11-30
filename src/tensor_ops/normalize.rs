@@ -62,13 +62,10 @@ mod tests {
         let dev = build_test_device!();
         let a = dev.tensor([-2.0, 0.0, 5.0]);
         let r = a.trace().normalize_along(1e-5);
-        assert_eq!(r.as_array(), [-1.0190487, -0.3396829, 1.3587316]);
+        assert_eq!(r.array(), [-1.0190487, -0.3396829, 1.3587316]);
         // NOTE: .exp() so we can make sure normalize is using result grad properly
         let g = r.exp().mean().backward();
-        assert_eq!(
-            g.get(&a).as_array(),
-            [0.033410847, -0.04677555, 0.013364702]
-        );
+        assert_eq!(g.get(&a).array(), [0.033410847, -0.04677555, 0.013364702]);
     }
 
     #[test]
@@ -77,7 +74,7 @@ mod tests {
         let a = dev.tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
         let r = a.trace().normalize_along::<Axis<1>>(1e-5);
         assert_eq!(
-            r.as_array(),
+            r.array(),
             [
                 [-1.0190487, -0.3396829, 1.3587316],
                 [-1.2247356, 0.0, 1.2247356]
@@ -85,7 +82,7 @@ mod tests {
         );
         let g = r.exp().mean().backward();
         assert_eq!(
-            g.get(&a).as_array(),
+            g.get(&a).array(),
             [
                 [0.016705424, -0.023387775, 0.006682351],
                 [0.05773133, -0.11547226, 0.057740927]
@@ -99,7 +96,7 @@ mod tests {
         let a = dev.tensor([[-2.0, 0.0], [1.0, 2.0], [4.0, 5.0]]);
         let r = a.trace().normalize_along::<Axis<0>>(1e-5);
         assert_eq!(
-            r.as_array(),
+            r.array(),
             [
                 [-1.2247438, -1.1355485],
                 [0.0, -0.16222118],
@@ -108,7 +105,7 @@ mod tests {
         );
         let g = r.exp().mean().backward();
         assert_close(
-            &g.get(&a).as_array(),
+            &g.get(&a).array(),
             &[
                 [0.019245632, 0.025835907],
                 [-0.038491584, -0.043060362],
@@ -122,8 +119,8 @@ mod tests {
         let dev = build_test_device!();
         let a: Tensor3D<4, 2, 3, _> = dev.ones();
         let r = a.trace().normalize_along::<Axis<2>>(1e-5);
-        assert_eq!(r.as_array(), [[[0.0; 3]; 2]; 4]);
+        assert_eq!(r.array(), [[[0.0; 3]; 2]; 4]);
         let g = r.exp().mean().backward();
-        assert_eq!(g.get(&a).as_array(), [[[0.0; 3]; 2]; 4]);
+        assert_eq!(g.get(&a).array(), [[[0.0; 3]; 2]; 4]);
     }
 }

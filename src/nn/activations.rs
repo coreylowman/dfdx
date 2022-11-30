@@ -115,7 +115,7 @@ mod tests {
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = ReLU.forward_mut(t.clone());
         let r2 = relu(t);
-        assert_eq!(r1.as_array(), r2.as_array());
+        assert_eq!(r1.array(), r2.array());
     }
 
     #[test]
@@ -124,7 +124,7 @@ mod tests {
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Sin.forward_mut(t.clone());
         let r2 = sin(t);
-        assert_eq!(r1.as_array(), r2.as_array());
+        assert_eq!(r1.array(), r2.array());
     }
     #[test]
     fn test_nn_activations_cos() {
@@ -132,7 +132,7 @@ mod tests {
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Cos.forward_mut(t.clone());
         let r2 = cos(t);
-        assert_eq!(r1.as_array(), r2.as_array());
+        assert_eq!(r1.array(), r2.array());
     }
     #[test]
     fn test_nn_activations_ln() {
@@ -140,7 +140,7 @@ mod tests {
         let t = dev.tensor([0.0, 1.0, 2.0, 3.0, 4.0]);
         let r1 = Ln.forward_mut(t.clone());
         let r2 = ln(t);
-        assert_eq!(r1.as_array(), r2.as_array());
+        assert_eq!(r1.array(), r2.array());
     }
     #[test]
     fn test_nn_activations_exp() {
@@ -148,7 +148,7 @@ mod tests {
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Exp.forward_mut(t.clone());
         let r2 = exp(t);
-        assert_eq!(r1.as_array(), r2.as_array());
+        assert_eq!(r1.array(), r2.array());
     }
 
     #[test]
@@ -157,7 +157,7 @@ mod tests {
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Sigmoid.forward_mut(t.clone());
         let r2 = sigmoid(t);
-        assert_eq!(r1.as_array(), r2.as_array());
+        assert_eq!(r1.array(), r2.array());
     }
     #[test]
     fn test_nn_activations_tanh() {
@@ -165,7 +165,7 @@ mod tests {
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Tanh.forward_mut(t.clone());
         let r2 = tanh(t);
-        assert_eq!(r1.as_array(), r2.as_array());
+        assert_eq!(r1.array(), r2.array());
     }
 
     #[test]
@@ -174,7 +174,7 @@ mod tests {
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Square.forward_mut(t.clone());
         let r2 = square(t);
-        assert_eq!(r1.as_array(), r2.as_array());
+        assert_eq!(r1.array(), r2.array());
     }
 
     #[test]
@@ -183,7 +183,7 @@ mod tests {
         let t = dev.tensor([0.0, 1.0, 2.0, 3.0, 4.0]);
         let r1 = Sqrt.forward_mut(t.clone());
         let r2 = sqrt(t);
-        assert_eq!(r1.as_array(), r2.as_array());
+        assert_eq!(r1.array(), r2.array());
     }
 
     #[test]
@@ -192,7 +192,7 @@ mod tests {
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Abs.forward_mut(t.clone());
         let r2 = abs(t);
-        assert_eq!(r1.as_array(), r2.as_array());
+        assert_eq!(r1.array(), r2.array());
     }
 
     #[test]
@@ -202,11 +202,11 @@ mod tests {
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Softmax.forward_mut(t.clone());
         let r2 = t.softmax();
-        assert_eq!(r1.as_array(), r2.as_array());
+        assert_eq!(r1.array(), r2.array());
 
         let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
         let r1 = Softmax.forward_mut(t.clone());
         let r2 = t.softmax::<crate::arrays::Axis<1>>();
-        assert_eq!(r1.as_array(), r2.as_array());
+        assert_eq!(r1.array(), r2.array());
     }
 }

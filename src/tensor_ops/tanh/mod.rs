@@ -46,12 +46,12 @@ mod tests {
         let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().tanh();
         assert_eq!(
-            r.as_array(),
+            r.array(),
             [-0.9640276, -0.7615942, 0., 0.7615942, 0.9640276]
         );
         let g = r.mean().backward();
         assert_eq!(
-            g.get(&x).as_array(),
+            g.get(&x).array(),
             [0.014130163, 0.083994865, 0.2, 0.083994865, 0.014130163]
         );
     }

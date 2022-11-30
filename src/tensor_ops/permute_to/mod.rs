@@ -79,8 +79,8 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor2D<2, 3, _> = dev.randn();
         let r: Tensor2D<3, 2, _> = t.clone().permute();
-        let t_array = t.as_array();
-        let r_array = r.as_array();
+        let t_array = t.array();
+        let r_array = r.array();
         for i in 0..2 {
             for j in 0..3 {
                 assert_eq!(r_array[j][i], t_array[i][j]);
@@ -93,8 +93,8 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor3D<3, 5, 7, _> = dev.randn();
         let r: Tensor3D<5, 7, 3, _> = t.clone().permute();
-        let t_array = t.as_array();
-        let r_array = r.as_array();
+        let t_array = t.array();
+        let r_array = r.array();
         for i in 0..3 {
             for j in 0..5 {
                 for k in 0..7 {
@@ -109,8 +109,8 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor4D<3, 5, 7, 9, _> = dev.randn();
         let r: Tensor4D<5, 9, 3, 7, _> = t.clone().permute();
-        let t_array = t.as_array();
-        let r_array = r.as_array();
+        let t_array = t.array();
+        let r_array = r.array();
         for i in 0..3 {
             for j in 0..5 {
                 for k in 0..7 {
@@ -128,7 +128,7 @@ mod tests {
         let t: Tensor2D<3, 6, _> = dev.randn();
         let g1 = t.trace().exp().sum().backward();
         let g2 = t.trace().permute().exp().sum().backward();
-        assert_eq!(g1.get(&t).as_array(), g2.get(&t).as_array());
+        assert_eq!(g1.get(&t).array(), g2.get(&t).array());
     }
 
     #[test]
@@ -140,7 +140,7 @@ mod tests {
             .exp()
             .sum()
             .backward();
-        assert_eq!(g1.get(&t).as_array(), g2.get(&t).as_array());
+        assert_eq!(g1.get(&t).array(), g2.get(&t).array());
     }
 
     #[test]
@@ -152,7 +152,7 @@ mod tests {
             .exp()
             .sum()
             .backward();
-        assert_eq!(g1.get(&t).as_array(), g2.get(&t).as_array());
+        assert_eq!(g1.get(&t).array(), g2.get(&t).array());
     }
 
     #[test]

@@ -45,10 +45,10 @@ mod tests {
         let dev = build_test_device!();
         let x = dev.tensor([-1.0, 0.0, 1.0, 4.0]);
         let r = x.trace().sqrt();
-        assert!(r.as_array()[0].is_nan());
-        assert_eq!(r.as_array()[1..], [0.0, 1.0, 2.0]);
+        assert!(r.array()[0].is_nan());
+        assert_eq!(r.array()[1..], [0.0, 1.0, 2.0]);
         let g = r.mean().backward();
-        let g = g.get(&x).as_array();
+        let g = g.get(&x).array();
         assert!(g[0].is_nan());
         assert_eq!(g[1..], [f32::INFINITY, 0.5 / 4.0, 0.25 / 4.0]);
     }

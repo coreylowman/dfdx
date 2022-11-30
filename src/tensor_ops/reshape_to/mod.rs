@@ -104,10 +104,10 @@ mod tests {
         let dev = build_test_device!();
         let a = dev.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]);
         let b: Tensor2D<2, 3, _, _> = a.trace().reshape();
-        assert_eq!(b.as_array(), [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
+        assert_eq!(b.array(), [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
         let g = b.exp().mean().backward();
         assert_eq!(
-            g.get(&a).as_array(),
+            g.get(&a).array(),
             [0.18419516, 0.20356713, 0.22497648, 0.24863747, 0.2747869, 0.3036865]
         )
     }

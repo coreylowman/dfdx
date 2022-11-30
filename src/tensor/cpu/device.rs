@@ -43,12 +43,13 @@ impl<S: Shape, E: Clone> Clone for StridedArray<S, E> {
 #[derive(Debug, Clone, Copy)]
 pub enum CpuError {
     OutOfMemory,
-    ShapeMismatch,
 }
 
 impl std::fmt::Display for CpuError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        todo!();
+        match self {
+            Self::OutOfMemory => f.write_str("CpuError::OutOfMemory"),
+        }
     }
 }
 

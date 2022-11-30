@@ -45,8 +45,8 @@ mod tests {
         let dev = build_test_device!();
         let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().square();
-        assert_eq!(r.as_array(), [4.0, 1.0, 0.0, 1.0, 4.0]);
+        assert_eq!(r.array(), [4.0, 1.0, 0.0, 1.0, 4.0]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&x).as_array(), [-0.8, -0.4, 0.0, 0.4, 0.8]);
+        assert_eq!(g.get(&x).array(), [-0.8, -0.4, 0.0, 0.4, 0.8]);
     }
 }

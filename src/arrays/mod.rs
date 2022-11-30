@@ -11,6 +11,8 @@ pub(crate) use permutes::PermuteShapeTo;
 pub(crate) use replace_dim::ReplaceDim;
 
 mod same_numel;
+
+#[allow(unused_imports)]
 pub(crate) use same_numel::HasSameNumelAs;
 
 pub use as_rust_array::RustArrayRepr;

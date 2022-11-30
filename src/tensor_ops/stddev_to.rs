@@ -61,10 +61,10 @@ mod tests {
         let dev = build_test_device!();
         let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r: Tensor1D<4, _, _> = t.trace().stddev(1e-8);
-        assert_eq!(r.as_array(), [0.5, 0.0001, 1.0, 3.0]);
+        assert_eq!(r.array(), [0.5, 0.0001, 1.0, 3.0]);
         let g = r.mean().backward();
         assert_eq!(
-            g.get(&t).as_array(),
+            g.get(&t).array(),
             [[0.125, 0.0, -0.125, -0.125], [-0.125, 0.0, 0.125, 0.125]]
         );
     }
@@ -74,10 +74,10 @@ mod tests {
         let dev = build_test_device!();
         let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r: Tensor1D<2, _, _> = t.trace().stddev(0.0);
-        assert_eq!(r.as_array(), [1.118034, 3.7666297]);
+        assert_eq!(r.array(), [1.118034, 3.7666297]);
         let g = r.mean().backward();
         assert_eq!(
-            g.get(&t).as_array(),
+            g.get(&t).array(),
             [
                 [-0.16770509, -0.0559017, 0.0559017, 0.16770509],
                 [-0.14104122, -0.07466887, 0.024889633, 0.19082046]

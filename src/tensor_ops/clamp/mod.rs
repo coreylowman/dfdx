@@ -44,10 +44,10 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor2D<2, 3, _> = dev.tensor([[-1.0, 0.0, 1.0], [-2.0, 2.0, 1.1]]);
         let r = t.trace().clamp(-1.0, 1.0);
-        assert_eq!(r.as_array(), [[-1.0, 0.0, 1.0], [-1.0, 1.0, 1.0]]);
+        assert_eq!(r.array(), [[-1.0, 0.0, 1.0], [-1.0, 1.0, 1.0]]);
         let g = r.exp().mean().backward();
         assert_eq!(
-            g.get(&t).as_array(),
+            g.get(&t).array(),
             [[0.06131324, 0.16666667, 0.45304698], [0.0; 3]]
         );
     }

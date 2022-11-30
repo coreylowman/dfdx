@@ -134,7 +134,10 @@ pub enum OptimizerUpdateError<D: DeviceStorage> {
 
 impl<D: DeviceStorage> std::fmt::Display for OptimizerUpdateError<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!();
+        match self {
+            Self::UnusedParams(unused) => write!(f, "Unused tensors: {:?}", unused),
+            Self::DeviceError(err) => write!(f, "{err}"),
+        }
     }
 }
 

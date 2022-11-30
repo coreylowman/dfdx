@@ -86,10 +86,10 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor1D<3, _> = dev.tensor([1.0, 2.0, 3.0]);
         let r: Tensor0D<_, OwnedTape<_>> = t.trace().mean();
-        assert_eq!(r.as_array(), 2.0);
+        assert_eq!(r.array(), 2.0);
         // NOTE: .exp() so we cover the case where .mean() has to use result grad.
         let g = r.exp().backward();
-        assert_eq!(g.get(&t).as_array(), [2.463019; 3]);
+        assert_eq!(g.get(&t).array(), [2.463019; 3]);
     }
 
     #[test]
@@ -97,9 +97,9 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor2D<2, 3, _> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
         let r: Tensor0D<_, OwnedTape<_>> = t.trace().mean();
-        assert_eq!(r.as_array(), 3.5);
+        assert_eq!(r.array(), 3.5);
         let g = r.backward();
-        assert_eq!(g.get(&t).as_array(), [[1.0 / 6.0; 3]; 2]);
+        assert_eq!(g.get(&t).array(), [[1.0 / 6.0; 3]; 2]);
     }
 
     #[test]
@@ -107,9 +107,9 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor3D<4, 2, 3, _> = dev.ones();
         let r: Tensor0D<_, OwnedTape<_>> = t.trace().mean();
-        assert_eq!(r.as_array(), 1.0);
+        assert_eq!(r.array(), 1.0);
         let g = r.backward();
-        assert_eq!(g.get(&t).as_array(), [[[1.0 / 24.0; 3]; 2]; 4]);
+        assert_eq!(g.get(&t).array(), [[[1.0 / 24.0; 3]; 2]; 4]);
     }
 
     #[test]
@@ -117,12 +117,9 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor2D<2, 3, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
         let r: Tensor1D<3, _, _> = t.trace().mean();
-        assert_eq!(r.as_array(), [-0.5, 3.0, -1.5]);
+        assert_eq!(r.array(), [-0.5, 3.0, -1.5]);
         let g = r.exp().mean().backward();
-        assert_eq!(
-            g.get(&t).as_array(),
-            [[0.10108845, 3.3475895, 0.037188362]; 2]
-        );
+        assert_eq!(g.get(&t).array(), [[0.10108845, 3.3475895, 0.037188362]; 2]);
     }
 
     #[test]
@@ -130,9 +127,9 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor2D<2, 3, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
         let r: Tensor1D<2, _, _> = t.trace().mean();
-        assert_eq!(r.as_array(), [2.0, -4.0 / 3.0]);
+        assert_eq!(r.array(), [2.0, -4.0 / 3.0]);
         let g = r.exp().mean().backward();
-        assert_eq!(g.get(&t).as_array(), [[1.2315094; 3], [0.043932855; 3]]);
+        assert_eq!(g.get(&t).array(), [[1.2315094; 3], [0.043932855; 3]]);
     }
 
     #[test]
@@ -143,11 +140,11 @@ mod tests {
         let a: Tensor2D<3, 4, _, _> = t.trace().sum();
         let b: Tensor1D<3, _, _> = a.sum();
         let r2 = b / 8.0;
-        assert_close(&r.as_array(), &r2.as_array());
+        assert_close(&r.array(), &r2.array());
         let g = r.mean().backward();
         let g2 = r2.mean().backward();
-        assert_close(&g.get(&t).as_array(), &[[[1. / 24.; 4]; 3]; 2]);
-        assert_close(&g.get(&t).as_array(), &g2.get(&t).as_array());
+        assert_close(&g.get(&t).array(), &[[[1. / 24.; 4]; 3]; 2]);
+        assert_close(&g.get(&t).array(), &g2.get(&t).array());
     }
 
     #[test]
@@ -157,6 +154,6 @@ mod tests {
         let r: Tensor1D<4, _, _> = t.trace().mean();
         let a: Tensor2D<3, 4, _> = t.sum();
         let r2: Tensor1D<4, _> = a.sum() / 6.0;
-        assert_close(&r.as_array(), &r2.as_array());
+        assert_close(&r.array(), &r2.array());
     }
 }

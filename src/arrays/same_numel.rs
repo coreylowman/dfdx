@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use crate::arrays::Const;
 use crate::{Assert, ConstTrue};
 

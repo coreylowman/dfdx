@@ -77,10 +77,10 @@ mod tests {
         let b = dev.tensor(1.0);
 
         let r = b.trace() - a.clone();
-        assert_eq!(r.as_array(), 0.0);
+        assert_eq!(r.array(), 0.0);
         let g = r.backward();
-        assert_eq!(g.get(&a).as_array(), -1.0);
-        assert_eq!(g.get(&b).as_array(), 1.0);
+        assert_eq!(g.get(&a).array(), -1.0);
+        assert_eq!(g.get(&b).array(), 1.0);
     }
 
     #[test]
@@ -90,10 +90,10 @@ mod tests {
         let b = dev.tensor([1.0, -1.0, 0.0]);
 
         let r = b.trace() - a.clone();
-        assert_eq!(r.as_array(), [0.0, -3.0, -3.0]);
+        assert_eq!(r.array(), [0.0, -3.0, -3.0]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&a).as_array(), [-1.0 / 3.0; 3]);
-        assert_eq!(g.get(&b).as_array(), [1.0 / 3.0; 3]);
+        assert_eq!(g.get(&a).array(), [-1.0 / 3.0; 3]);
+        assert_eq!(g.get(&b).array(), [1.0 / 3.0; 3]);
     }
 
     #[test]
@@ -104,15 +104,15 @@ mod tests {
 
         let r = b.trace() - a.clone();
         assert_eq!(
-            r.as_array(),
+            r.array(),
             [
                 [-0.13709998, 0.21360001, 0.2259],
                 [0.2601, -0.33279997, -0.7954]
             ]
         );
         let g = r.mean().backward();
-        assert_eq!(g.get(&a).as_array(), [[-1.0 / 6.0; 3]; 2]);
-        assert_eq!(g.get(&b).as_array(), [[1.0 / 6.0; 3]; 2]);
+        assert_eq!(g.get(&a).array(), [[-1.0 / 6.0; 3]; 2]);
+        assert_eq!(g.get(&b).array(), [[1.0 / 6.0; 3]; 2]);
     }
 
     #[test]
@@ -120,9 +120,9 @@ mod tests {
         let dev = build_test_device!();
         let x = dev.tensor(0.0);
         let r = x.trace() - 1.0;
-        assert_eq!(r.as_array(), -1.0);
+        assert_eq!(r.array(), -1.0);
         let g = r.exp().backward();
-        assert_eq!(g.get(&x).as_array(), (-1.0f32).exp());
+        assert_eq!(g.get(&x).array(), (-1.0f32).exp());
     }
 
     #[test]
@@ -130,9 +130,9 @@ mod tests {
         let dev = build_test_device!();
         let x = dev.tensor([0.0, 1.0, 2.0]);
         let r = x.trace() - 1.0;
-        assert_eq!(r.as_array(), [-1.0, 0.0, 1.0]);
+        assert_eq!(r.array(), [-1.0, 0.0, 1.0]);
         let g = r.exp().sum().backward();
-        assert_eq!(g.get(&x).as_array(), [0.36787945, 1.0, 2.7182817]);
+        assert_eq!(g.get(&x).array(), [0.36787945, 1.0, 2.7182817]);
     }
 
     #[test]
@@ -140,8 +140,8 @@ mod tests {
         let dev = build_test_device!();
         let x = dev.tensor([[0.0; 2]; 3]);
         let r = x.trace() - 1.0;
-        assert_eq!(r.as_array(), [[-1.0; 2]; 3]);
+        assert_eq!(r.array(), [[-1.0; 2]; 3]);
         let g = r.exp().sum().backward();
-        assert_eq!(g.get(&x).as_array(), [[0.36787945; 2]; 3]);
+        assert_eq!(g.get(&x).array(), [[0.36787945; 2]; 3]);
     }
 }

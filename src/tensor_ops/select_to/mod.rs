@@ -248,37 +248,37 @@ mod tests {
     fn test_select_1d_backward() {
         let dev = build_test_device!();
         let t: Tensor1D<5, _> = dev.randn();
-        let t_array = t.as_array();
+        let t_array = t.array();
         let r = t.trace().select(0);
-        assert_eq!(r.as_array(), t_array[0]);
+        assert_eq!(r.array(), t_array[0]);
         let g = r.exp().backward();
-        assert_eq!(g.get(&t).as_array(), [t_array[0].exp(), 0.0, 0.0, 0.0, 0.0]);
+        assert_eq!(g.get(&t).array(), [t_array[0].exp(), 0.0, 0.0, 0.0, 0.0]);
     }
 
     #[test]
     fn test_select_1d_less_backward() {
         let dev = build_test_device!();
         let t: Tensor1D<5, _> = dev.randn();
-        let t_array = t.as_array();
+        let t_array = t.array();
         let r = t.trace().select([0, 3]);
-        assert_eq!(r.as_array(), [t_array[0], t_array[3]]);
+        assert_eq!(r.array(), [t_array[0], t_array[3]]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&t).as_array(), [0.5, 0.0, 0.0, 0.5, 0.0]);
+        assert_eq!(g.get(&t).array(), [0.5, 0.0, 0.0, 0.5, 0.0]);
     }
 
     #[test]
     fn test_select_1d_more_backward() {
         let dev = build_test_device!();
         let t: Tensor1D<5, _> = dev.randn();
-        let _t = t.as_array();
+        let _t = t.array();
         let r = t.trace().select([0, 1, 2, 3, 4, 2, 4, 4]);
         assert_eq!(
-            r.as_array(),
+            r.array(),
             [_t[0], _t[1], _t[2], _t[3], _t[4], _t[2], _t[4], _t[4]]
         );
         let g = r.mean().backward();
         assert_eq!(
-            g.get(&t).as_array(),
+            g.get(&t).array(),
             [1.0 / 8.0, 1.0 / 8.0, 2.0 / 8.0, 1.0 / 8.0, 3.0 / 8.0]
         );
     }
@@ -288,10 +288,10 @@ mod tests {
         let dev = build_test_device!();
         let t = dev.tensor([1.0, 2.0, 3.0]);
         let r = t.trace().select(2);
-        assert_eq!(r.as_array(), 3.0);
+        assert_eq!(r.array(), 3.0);
         // NOTE: .exp() so we make sure its using result grad properly
         let g = r.exp().backward();
-        assert_eq!(g.get(&t).as_array(), [0.0, 0.0, 20.085537]);
+        assert_eq!(g.get(&t).array(), [0.0, 0.0, 20.085537]);
     }
 
     #[test]
@@ -299,21 +299,21 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor2D<2, 3, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
         let r: Tensor1D<2, _, _> = t.trace().select_along::<Axis<1>>(1);
-        assert_eq!(r.as_array(), [2.0, -2.0]);
+        assert_eq!(r.array(), [2.0, -2.0]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&t).as_array(), [[0.0, 0.5, 0.0], [0.0, 0.5, 0.0]]);
+        assert_eq!(g.get(&t).array(), [[0.0, 0.5, 0.0], [0.0, 0.5, 0.0]]);
     }
 
     #[test]
     fn test_select_batch_backwards() {
         let dev = build_test_device!();
         let t: Tensor2D<4, 5, _> = dev.randn();
-        let t_array = t.as_array();
+        let t_array = t.array();
         let r = t.trace().select(dev.tensor([[2, 0, 3], [0, 0, 3]]));
-        let r_array = r.as_array();
+        let r_array = r.array();
         assert_eq!(r_array[0], [t_array[2], t_array[0], t_array[3]]);
         assert_eq!(r_array[1], [t_array[0], t_array[0], t_array[3]]);
         let g = r.sum().backward();
-        assert_eq!(g.get(&t).as_array(), [[3.; 5], [0.; 5], [1.; 5], [2.; 5]]);
+        assert_eq!(g.get(&t).array(), [[3.; 5], [0.; 5], [1.; 5], [2.; 5]]);
     }
 }

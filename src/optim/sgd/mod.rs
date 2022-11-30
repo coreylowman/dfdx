@@ -212,8 +212,8 @@ mod tests {
             let gradients = loss.backward();
             sgd.update(&mut pred, gradients).expect("");
         }
-        assert_close(&pred.as_array(), &[1.0; 5]);
-        assert_close(&targ.as_array(), &[1.0; 5]);
+        assert_close(&pred.array(), &[1.0; 5]);
+        assert_close(&targ.array(), &[1.0; 5]);
     }
 
     #[test]
@@ -234,7 +234,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
             sgd.update(&mut t, gradients).expect("");
-            assert_close(&t.as_array(), e);
+            assert_close(&t.array(), e);
         }
     }
 
@@ -261,7 +261,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
             sgd.update(&mut t, gradients).expect("");
-            assert_close(&t.as_array(), e);
+            assert_close(&t.array(), e);
         }
     }
 
@@ -288,7 +288,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
             sgd.update(&mut t, gradients).expect("");
-            assert_close(&t.as_array(), e);
+            assert_close(&t.array(), e);
         }
     }
 
@@ -320,13 +320,13 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
             sgd_l2.update(&mut t, gradients).expect("");
-            assert_close(&t.as_array(), e);
+            assert_close(&t.array(), e);
         }
         t = dev.ones();
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
             sgd_decoupled.update(&mut t, gradients).expect("");
-            assert_close(&t.as_array(), e);
+            assert_close(&t.array(), e);
         }
     }
 
@@ -352,7 +352,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
             sgd.update(&mut t, gradients).expect("");
-            assert_close(&t.as_array(), e);
+            assert_close(&t.array(), e);
         }
     }
 
@@ -385,7 +385,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
             sgd_l2.update(&mut t, gradients).expect("");
-            assert_close(&t.as_array(), e);
+            assert_close(&t.array(), e);
         }
 
         // Should be equivalent to l2 regularization, even with momentum
@@ -397,7 +397,7 @@ mod tests {
 
             let gradients = loss.backward();
             sgd.update(&mut t, gradients).expect("");
-            assert_close(&t.as_array(), e);
+            assert_close(&t.array(), e);
         }
     }
 

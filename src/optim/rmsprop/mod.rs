@@ -197,7 +197,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).square().sum().backward();
             opt.update(&mut t, gradients).expect("");
-            assert_eq!(&t.as_array(), e);
+            assert_eq!(&t.array(), e);
         }
     }
 

@@ -48,12 +48,12 @@ mod tests {
         let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().sigmoid();
         assert_eq!(
-            r.as_array(),
+            r.array(),
             [0.11920292, 0.26894143, 0.5, 0.7310586, 0.880797]
         );
         let g = r.mean().backward();
         assert_eq!(
-            g.get(&x).as_array(),
+            g.get(&x).array(),
             [0.020998716, 0.039322387, 0.05, 0.039322387, 0.020998726]
         );
     }

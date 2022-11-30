@@ -194,7 +194,7 @@ pub trait TensorFromArray<Src, S: Shape, E: Dtype>: DeviceStorage {
 
 pub trait AsArray {
     type Array;
-    fn as_array(&self) -> Self::Array;
+    fn array(&self) -> Self::Array;
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage, T> AsVec for Tensor<S, E, D, T>
@@ -217,7 +217,7 @@ where
     D::Storage<S, E>: AsArray,
 {
     type Array = <D::Storage<S, E> as AsArray>::Array;
-    fn as_array(&self) -> Self::Array {
-        self.storage.as_array()
+    fn array(&self) -> Self::Array {
+        self.storage.array()
     }
 }

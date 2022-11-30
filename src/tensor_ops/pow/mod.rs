@@ -73,13 +73,13 @@ mod tests {
         let dev = build_test_device!();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powf(3.5);
-        let r_array = r.as_array();
+        let r_array = r.array();
         assert!(r_array[0].is_nan());
         assert!(r_array[1].is_nan());
         assert_eq!(&r_array[2..], &[0.0, 1.0, 11.313708]);
 
         let g = r.sum().backward();
-        let grad = g.get(&t).as_array();
+        let grad = g.get(&t).array();
         assert!(grad[0].is_nan());
         assert!(grad[1].is_nan());
         assert_eq!(&grad[2..], &[0.0, 3.5, 19.79899]);
@@ -90,13 +90,13 @@ mod tests {
         let dev = build_test_device!();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powf(-1.2);
-        let r_array = r.as_array();
+        let r_array = r.array();
         assert!(r_array[0].is_nan());
         assert!(r_array[1].is_nan());
         assert_eq!(&r_array[2..], &[f32::INFINITY, 1.0, 0.43527526]);
 
         let g = r.sum().backward();
-        let grad = g.get(&t).as_array();
+        let grad = g.get(&t).array();
         assert!(grad[0].is_nan());
         assert!(grad[1].is_nan());
         assert_eq!(&grad[2..], &[f32::NEG_INFINITY, -1.2, -0.26116517]);
@@ -107,9 +107,9 @@ mod tests {
         let dev = build_test_device!();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powi(3);
-        assert_eq!(r.as_array(), [-8., -1., 0., 1., 8.]);
+        assert_eq!(r.array(), [-8., -1., 0., 1., 8.]);
         let g = r.sum().backward();
-        assert_eq!(g.get(&t).as_array(), [12., 3., 0., 3., 12.]);
+        assert_eq!(g.get(&t).array(), [12., 3., 0., 3., 12.]);
     }
 
     #[test]
@@ -117,10 +117,10 @@ mod tests {
         let dev = build_test_device!();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powi(-3);
-        assert_eq!(r.as_array(), [-0.125, -1.0, f32::INFINITY, 1.0, 0.125]);
+        assert_eq!(r.array(), [-0.125, -1.0, f32::INFINITY, 1.0, 0.125]);
         let g = r.sum().backward();
         assert_eq!(
-            g.get(&t).as_array(),
+            g.get(&t).array(),
             [-0.1875, -3., f32::NEG_INFINITY, -3., -0.1875]
         );
     }

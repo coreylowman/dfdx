@@ -134,7 +134,7 @@ mod tests {
         let a: Tensor1D<3, _> = dev.randn();
         let b: Tensor2D<5, 3, _> = dev.randn();
         let a_up: Tensor2D<5, 3, _, _> = a.trace().broadcast();
-        a_up.as_array().assert_close(&[a.as_array(); 5], 1e-4);
+        a_up.array().assert_close(&[a.array(); 5], 1e-4);
         let r = a_up * b.clone();
         let g = r.exp().mean().backward();
 
@@ -143,7 +143,7 @@ mod tests {
         let a_grad: Tensor1D<3, _> = (b.clone() * (b.clone() * a_up.clone()).exp()).sum() / 15.0;
         // b's gradient: (a * (b * a).exp()) / 15
         let b_grad = (a_up.clone() * (b.clone() * a_up).exp()) / 15.0;
-        g.get(&a).as_array().assert_close(&a_grad.as_array(), 1e-4);
-        g.get(&b).as_array().assert_close(&b_grad.as_array(), 1e-4);
+        g.get(&a).array().assert_close(&a_grad.array(), 1e-4);
+        g.get(&b).array().assert_close(&b_grad.array(), 1e-4);
     }
 }

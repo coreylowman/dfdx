@@ -63,9 +63,9 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor0D<_> = dev.tensor(3.0);
         let r = t.trace().dropout(1.0);
-        assert_eq!(r.as_array(), 0.0);
+        assert_eq!(r.array(), 0.0);
         let g = r.backward();
-        assert_eq!(g.get(&t).as_array(), 0.0);
+        assert_eq!(g.get(&t).array(), 0.0);
     }
 
     #[test]
@@ -73,9 +73,9 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor0D<_> = dev.tensor(3.0);
         let r = t.trace().dropout(0.0);
-        assert_eq!(r.as_array(), 3.0);
+        assert_eq!(r.array(), 3.0);
         let g = r.backward();
-        assert_eq!(g.get(&t).as_array(), 1.0);
+        assert_eq!(g.get(&t).array(), 1.0);
     }
 
     #[test]
@@ -83,9 +83,9 @@ mod tests {
         let dev = build_test_device!();
         let t = dev.tensor([0.0, 2.0, -3.0, -4.0, 0.0]);
         let r = t.trace().dropout(0.5);
-        assert_eq!(r.as_array(), [0.0, 4.0, -6.0, 0.0, 0.0]);
+        assert_eq!(r.array(), [0.0, 4.0, -6.0, 0.0, 0.0]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&t).as_array(), [0.4, 0.4, 0.4, 0.0, 0.0]);
+        assert_eq!(g.get(&t).array(), [0.4, 0.4, 0.4, 0.0, 0.0]);
     }
 
     #[test]
@@ -93,11 +93,11 @@ mod tests {
         let dev = build_test_device!();
         let t = dev.tensor([[0.05, 0.1, -0.2], [0.3, -0.4, 0.5]]);
         let r = t.trace().dropout(0.6);
-        assert_close(&r.as_array(), &[[0.125, 0.25, -0.5], [0.0, 0.0, 1.25]]);
+        assert_close(&r.array(), &[[0.125, 0.25, -0.5], [0.0, 0.0, 1.25]]);
         // NOTE: .exp() so we ensure result grad is used properly
         let g = r.exp().mean().backward();
         assert_eq!(
-            g.get(&t).as_array(),
+            g.get(&t).array(),
             [[0.47214523, 0.5350107, 0.2527211], [0.0, 0.0, 1.4543099]]
         );
     }

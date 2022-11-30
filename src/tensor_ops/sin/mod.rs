@@ -47,12 +47,12 @@ mod tests {
         let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().sin();
         assert_close(
-            &r.as_array(),
+            &r.array(),
             &[-0.9092974, -0.84147096, 0.0, 0.84147096, 0.9092974],
         );
         let g = r.mean().backward();
         assert_close(
-            &g.get(&x).as_array(),
+            &g.get(&x).array(),
             &[-0.08322937, 0.10806046, 0.2, 0.10806046, -0.08322937],
         );
     }

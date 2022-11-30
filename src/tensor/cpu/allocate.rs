@@ -285,7 +285,7 @@ impl<S: Shape, E: Dtype> AsVec for StridedArray<S, E> {
 
 impl<E: Dtype> AsArray for StridedArray<Rank0, E> {
     type Array = E;
-    fn as_array(&self) -> Self::Array {
+    fn array(&self) -> Self::Array {
         let mut out: Self::Array = Default::default();
         out.clone_from(&self.data[0]);
         out
@@ -297,7 +297,7 @@ where
     [E; M]: Default,
 {
     type Array = [E; M];
-    fn as_array(&self) -> Self::Array {
+    fn array(&self) -> Self::Array {
         let mut out: Self::Array = Default::default();
         let mut iter = self.iter();
         for m in 0..M {
@@ -312,7 +312,7 @@ where
     [[E; N]; M]: Default,
 {
     type Array = [[E; N]; M];
-    fn as_array(&self) -> Self::Array {
+    fn array(&self) -> Self::Array {
         let mut out: Self::Array = Default::default();
         let mut iter = self.iter();
         for m in 0..M {
@@ -330,7 +330,7 @@ where
     [[[E; O]; N]; M]: Default,
 {
     type Array = [[[E; O]; N]; M];
-    fn as_array(&self) -> Self::Array {
+    fn array(&self) -> Self::Array {
         let mut out: Self::Array = Default::default();
         let mut iter = self.iter_with_index();
         while let Some((v, [m, n, o])) = iter.next() {
@@ -346,7 +346,7 @@ where
     [[[[E; P]; O]; N]; M]: Default,
 {
     type Array = [[[[E; P]; O]; N]; M];
-    fn as_array(&self) -> Self::Array {
+    fn array(&self) -> Self::Array {
         let mut out: Self::Array = Default::default();
         let mut iter = self.iter_with_index();
         while let Some((v, [m, n, o, p])) = iter.next() {

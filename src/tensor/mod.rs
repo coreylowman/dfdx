@@ -142,14 +142,14 @@ mod tests {
     fn test_zeros() {
         let dev = build_test_device!();
         let x: Tensor2D<3, 2, _> = dev.zeros();
-        assert_eq!(x.as_array(), [[0.0; 2]; 3]);
+        assert_eq!(x.array(), [[0.0; 2]; 3]);
     }
 
     #[test]
     fn test_ones() {
         let dev = build_test_device!();
         let x: Tensor2D<3, 2, _> = dev.ones();
-        assert_eq!(x.as_array(), [[1.0; 2]; 3]);
+        assert_eq!(x.array(), [[1.0; 2]; 3]);
     }
 
     #[test]
@@ -157,7 +157,7 @@ mod tests {
         let dev = build_test_device!();
         let a = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
         let t: Tensor2D<2, 3, _> = dev.tensor(a);
-        assert_eq!(t.as_array(), a);
+        assert_eq!(t.array(), a);
     }
 
     #[test]
@@ -165,7 +165,7 @@ mod tests {
         let dev = build_test_device!();
         let data = [1.0, 2.0, 3.0, 4.0];
         let t: Tensor2D<2, 2, _> = dev.from_slice(data.as_slice()).unwrap();
-        assert_eq!(t.as_array(), [[1.0, 2.0], [3.0, 4.0]]);
+        assert_eq!(t.array(), [[1.0, 2.0], [3.0, 4.0]]);
     }
 
     #[test]
@@ -173,7 +173,7 @@ mod tests {
         let dev = build_test_device!();
         let data = std::vec![1.0, 2.0, 3.0, 4.0];
         let t: Tensor2D<2, 2, _> = dev.from_vec(data).unwrap();
-        assert_eq!(t.as_array(), [[1.0, 2.0], [3.0, 4.0]]);
+        assert_eq!(t.array(), [[1.0, 2.0], [3.0, 4.0]]);
     }
 
     #[test]
