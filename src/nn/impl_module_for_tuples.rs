@@ -1,6 +1,6 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
-use crate::prelude::*;
-use rand::prelude::Rng;
+use crate::{arrays::*, gradients::Tape, optim::*, tensor::*, tensor_ops::*};
+
+use super::module::{Module, ModuleMut, ResetParams};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {

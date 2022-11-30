@@ -3,7 +3,7 @@
 use rand::prelude::*;
 
 use dfdx::gradients::{CanUpdateWithGradients, OwnedTape, ParamUpdater, Tape, UnusedTensors};
-use dfdx::nn::{Linear, Module, ReLU, ResetParams};
+use dfdx::nn::{BuildModule, Linear, Module, ReLU};
 use dfdx::tensor::{Tensor1D, Tensor2D, TensorCreator};
 
 /// Custom model struct
@@ -17,7 +17,7 @@ struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
 }
 
 // ResetParams lets you randomize a model's parameters
-impl<const IN: usize, const INNER: usize, const OUT: usize> ResetParams for Mlp<IN, INNER, OUT> {
+impl<const IN: usize, const INNER: usize, const OUT: usize> BuildModule for Mlp<IN, INNER, OUT> {
     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
         self.l1.reset_params(rng);
         self.l2.reset_params(rng);

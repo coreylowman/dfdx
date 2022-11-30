@@ -2,7 +2,7 @@
 
 use rand::prelude::*;
 
-use dfdx::nn::{Linear, Module, ModuleMut, ReLU, ResetParams};
+use dfdx::nn::{BuildModule, Linear, Module, ModuleMut, ReLU};
 use dfdx::tensor::{Tensor1D, Tensor2D, TensorCreator};
 
 fn main() {

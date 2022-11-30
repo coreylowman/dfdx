@@ -1,3 +1,5 @@
+use crate::{arrays::Dtype, tensor_ops::Device};
+
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
 pub trait Module<Input> {
@@ -39,7 +41,11 @@ pub trait ModuleMut<Input> {
 }
 
 /// Something that can reset it's parameters.
-pub trait ResetParams {
+pub trait BuildModule<D: Device<E>, E: Dtype> {
+    fn zeros(device: &D) -> Self;
+
+    fn standard(device: &D) -> Self;
+
     /// Mutate the unit's parameters using [rand::Rng]. Each implementor
     /// of this trait decides how the parameters are initialized. In
     /// fact, some impls may not even use the `rng`.

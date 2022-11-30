@@ -1,6 +1,6 @@
 use crate::{arrays::*, gradients::Tape, optim::*, tensor::*, tensor_ops::*};
 
-use super::module::{Module, ModuleMut, ResetParams};
+use super::module::{BuildModule, Module, ModuleMut};
 
 macro_rules! activation_impls {
     ($struct_name:ident, $func_name:ident, #[$docstring:meta]) => {
@@ -19,7 +19,13 @@ macro_rules! activation_impls {
             }
         }
 
-        impl ResetParams for $struct_name {
+        impl<D: Device<E>, E: Dtype> BuildModule<D, E> for $struct_name {
+            fn zeros(_: &D) -> Self {
+                Self
+            }
+            fn standard(_: &D) -> Self {
+                Self
+            }
             /// Does nothing.
             fn reset_params(&mut self) {}
         }
@@ -71,7 +77,13 @@ impl<D: DeviceStorage, E: Dtype> CanUpdateWithGradients<D, E> for Softmax {
     }
 }
 
-impl ResetParams for Softmax {
+impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Softmax {
+    fn zeros(_: &D) -> Self {
+        Self
+    }
+    fn standard(_: &D) -> Self {
+        Self
+    }
     /// Does nothing.
     fn reset_params(&mut self) {}
 }

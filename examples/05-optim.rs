@@ -5,7 +5,7 @@ use rand::prelude::*;
 use dfdx::arrays::HasArrayData;
 use dfdx::gradients::{Gradients, OwnedTape};
 use dfdx::losses::mse_loss;
-use dfdx::nn::{Linear, ModuleMut, ReLU, ResetParams, Tanh};
+use dfdx::nn::{BuildModule, Linear, ModuleMut, ReLU, Tanh};
 use dfdx::optim::{Momentum, Optimizer, Sgd, SgdConfig};
 use dfdx::tensor::{Tensor2D, TensorCreator};
 

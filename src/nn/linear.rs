@@ -5,7 +5,7 @@
 
 use crate::{arrays::*, gradients::Tape, optim::*, tensor::*, tensor_ops::*};
 
-use super::module::{Module, ModuleMut, ResetParams};
+use super::module::{BuildModule, Module, ModuleMut};
 
 /// A linear transformation of the form `weight * x + bias`, where `weight` is a matrix, `x` is a vector or matrix,
 /// and `bias` is a vector.
@@ -48,7 +48,22 @@ impl<const I: usize, const O: usize, D: Device<f32>> CanUpdateWithGradients<D, f
     }
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>> ResetParams for Linear<I, O, D> {
+impl<const I: usize, const O: usize, D: Device<f32>> BuildModule<D, f32> for Linear<I, O, D> {
+    fn zeros(device: &D) -> Self {
+        Self {
+            weight: device.zeros(),
+            bias: device.zeros(),
+        }
+    }
+
+    fn standard(device: &D) -> Self {
+        let bound: f32 = 1.0 / (I as f32).sqrt();
+        Self {
+            weight: (device.rand() - 0.5) * (2.0 * bound),
+            bias: (device.rand() - 0.5) * (2.0 * bound),
+        }
+    }
+
     /// Initializes [Self::weight] and [Self::bias] from a [Uniform] distribution
     /// between [-1 / sqrt(I), 1 / sqrt(I)].
     ///
@@ -121,6 +136,19 @@ mod tests {
         [0.11733949, 0.14059687, -0.10670426, -0.09373143, 0.18974298],
     ];
     const B: [f32; 2] = [0.3765365, -0.290717];
+
+    #[test]
+    fn test_linear_initialize() {
+        let dev = build_test_device!();
+        let m: Linear<2000, 1, _> = BuildModule::standard(&dev);
+        let bound = 1.0 / 2000.0f32.sqrt();
+        for v in m.weight.as_vec() {
+            assert!(-bound <= v && v <= bound && v != 0.0);
+        }
+        for v in m.bias.as_vec() {
+            assert!(-bound <= v && v <= bound && v != 0.0);
+        }
+    }
 
     #[test]
     fn test_forward_1d() {
