@@ -7,6 +7,12 @@ use crate::{
 pub trait Device<E: Dtype>:
     DeviceStorage
 
+    // allocation
+    + crate::tensor::ZerosTensor<E>
+    + crate::tensor::OnesTensor<E>
+    + crate::tensor::RandTensor<E>
+    + crate::tensor::RandnTensor<E>
+
     // broadcast & reduces
     + super::broadcast_to::BroadcastKernel<E>
     + super::sum_to::SumKernel<E>

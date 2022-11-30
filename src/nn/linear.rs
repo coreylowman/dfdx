@@ -54,11 +54,11 @@ impl<const I: usize, const O: usize, D: Device<f32>> ResetParams for Linear<I, O
     ///
     /// This uses [Randomize::randomize()] to set the values of the tensor.
     fn reset_params(&mut self) {
-        todo!();
-        //     let bound: f32 = 1.0 / (I as f32).sqrt();
-        //     let dist = Uniform::new(-bound, bound);
-        //     self.weight.randomize(rng, &dist);
-        //     self.bias.randomize(rng, &dist);
+        let bound: f32 = 1.0 / (I as f32).sqrt();
+        let new_weight = (self.weight.device.rand_like(&self.weight) - 0.5) * (2.0 * bound);
+        let new_bias = (self.bias.device.rand_like(&self.bias) - 0.5) * (2.0 * bound);
+        self.weight.clone_from(&new_weight);
+        self.bias.clone_from(&new_bias);
     }
 }
 

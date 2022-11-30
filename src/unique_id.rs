@@ -10,12 +10,6 @@ pub(crate) fn unique_id() -> UniqueId {
     UniqueId(COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
 }
 
-impl UniqueId {
-    pub(crate) fn as_u64(&self) -> u64 {
-        self.0 as u64
-    }
-}
-
 /// Something that has a [UniqueId]
 pub trait HasUniqueId {
     fn id(&self) -> &UniqueId;
