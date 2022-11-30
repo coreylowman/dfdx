@@ -83,7 +83,7 @@ mod activations;
 // mod dropout;
 // mod flatten;
 // mod generalized_residual;
-// mod impl_module_for_tuples;
+mod impl_module_for_tuples;
 // mod layer_norm;
 mod linear;
 mod module;
@@ -126,22 +126,26 @@ pub use module::*;
 // #[cfg(feature = "numpy")]
 // mod npz_impls;
 
-// #[cfg(test)]
-// mod tests {
-//     use crate::arrays::{HasArrayData, HasArrayType};
-//     use crate::gradients::{GradientProvider, Gradients};
-//     use crate::unique_id::HasUniqueId;
-//     use std::boxed::Box;
+#[cfg(test)]
+mod tests {
+    use crate::arrays::Dtype;
+    use crate::gradients::Gradients;
+    use crate::optim::UpdateParams;
+    use crate::tensor::DeviceStorage;
 
-//     #[derive(Default)]
-//     pub struct SimpleGradients(pub Gradients);
+    #[derive(Default)]
+    pub struct SimpleUpdater<D: DeviceStorage>(pub Gradients<D>);
 
-//     impl GradientProvider for SimpleGradients {
-//         fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
-//         where
-//             P: HasUniqueId + HasArrayType<Dtype = f32> + crate::tensor::storage::HasDevice + HasArrayData,
-//         {
-//             self.0.remove(p)
-//         }
-//     }
-// }
+    impl<D: DeviceStorage, E: Dtype> UpdateParams<D, E> for SimpleUpdater<D> {
+        fn update_param<S: crate::arrays::Shape>(
+            &mut self,
+            p: &mut crate::tensor::Tensor<S, E, D>,
+            unused: &mut crate::optim::UnusedTensors,
+        ) -> Result<(), <D>::Err> {
+            if self.0.remove(p).is_none() {
+                unused.add(p);
+            }
+            Ok(())
+        }
+    }
+}

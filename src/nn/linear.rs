@@ -129,7 +129,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::{assert_close, build_test_device};
+    use crate::{
+        nn::tests::SimpleUpdater,
+        tests::{assert_close, build_test_device},
+        unique_id::HasUniqueId,
+    };
 
     const W: [[f32; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
@@ -249,29 +253,31 @@ mod tests {
         assert_close(&g.get(&model.bias).as_array(), &[0.40265593, -0.2874091]);
     }
 
-    // #[test]
-    // fn test_linear_missing_gradients() {
-    //     let mut model: Linear<5, 3> = Default::default();
-    //     let mut g: SimpleGradients = Default::default();
+    #[test]
+    fn test_linear_missing_gradients() {
+        let dev = build_test_device!();
 
-    //     // no gradients present
-    //     let mut unused = Default::default();
-    //     model.update(&mut g, &mut unused);
-    //     assert_eq!(&unused.ids, &[*model.weight.id(), *model.bias.id()]);
+        let mut model: Linear<5, 3, _> = BuildModule::zeros(&dev);
+        let mut g: SimpleUpdater<_> = Default::default();
 
-    //     g.0.mut_gradient(&model.weight);
+        // no gradients present
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused).unwrap();
+        assert_eq!(&unused.ids, &[*model.weight.id(), *model.bias.id()]);
 
-    //     // weight gradient is present
-    //     let mut unused = Default::default();
-    //     model.update(&mut g, &mut unused);
-    //     assert_eq!(&unused.ids, &[*model.bias.id()]);
+        g.0.get_mut(&model.weight).unwrap();
 
-    //     g.0.mut_gradient(&model.weight);
-    //     g.0.mut_gradient(&model.bias);
+        // weight gradient is present
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused).unwrap();
+        assert_eq!(&unused.ids, &[*model.bias.id()]);
 
-    //     // both gradients present
-    //     let mut unused = Default::default();
-    //     model.update(&mut g, &mut unused);
-    //     assert!(unused.is_empty());
-    // }
+        g.0.get_mut(&model.weight).unwrap();
+        g.0.get_mut(&model.bias).unwrap();
+
+        // both gradients present
+        let mut unused = Default::default();
+        model.update(&mut g, &mut unused).unwrap();
+        assert!(unused.is_empty());
+    }
 }
