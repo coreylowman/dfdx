@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use crate::{
     arrays::{Dtype, Shape},
     gradients::Gradients,
-    tensor::{DeviceStorage, Tensor},
+    tensor::{DeviceStorage, OneFillStorage, Tensor},
 };
 
 use super::{
@@ -134,7 +134,9 @@ pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
     );
 }
 
-impl<M, D: DeviceStorage + RMSpropKernel<f32>> ParamUpdater<D, f32> for RMSprop<M, D, f32> {
+impl<M, D: DeviceStorage + RMSpropKernel<f32> + OneFillStorage<f32>> ParamUpdater<D, f32>
+    for RMSprop<M, D, f32>
+{
     fn update_param<S: Shape>(
         &mut self,
         p: &mut Tensor<S, f32, D>,
@@ -149,7 +151,7 @@ impl<M, D: DeviceStorage + RMSpropKernel<f32>> ParamUpdater<D, f32> for RMSprop<
                 let ga = self.grad_avg.get_mut(p)?;
 
                 if self.step == 0 {
-                    p.device.fill_with(sa, 1.0);
+                    p.device.fill_with_ones(sa)?;
                 }
 
                 D::update(&self.cfg, &mut p.storage, m, sa, ga, g);

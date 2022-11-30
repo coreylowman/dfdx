@@ -1,8 +1,5 @@
 use crate::arrays::*;
-use crate::tensor::storage::{
-    cpu::{Cpu, View, ViewMut},
-    ZerosLike,
-};
+use crate::tensor::cpu::{Cpu, StridedArray, View, ViewMut};
 
 use super::{
     MatMatBatch3Kernel, MatMatBatch4Kernel, MatMatBrKernel, MatMatKernel, VecMatKernel,
@@ -62,7 +59,7 @@ impl VecVecKernel<f32> for Cpu {
         rhs: &Self::Storage<(N,), f32>,
     ) -> Result<Self::Storage<(M, N), f32>, Self::Err> {
         let mut out: Self::Storage<(M, N), f32> =
-            self.try_zeros_like((lhs.shape().0, rhs.shape().0))?;
+            StridedArray::new((lhs.shape().0, rhs.shape().0))?;
         matmul(lhs.view().br1(), rhs.view().br0(), out.view_mut(), 1.0);
         Ok(out)
     }
@@ -98,7 +95,7 @@ impl VecMatKernel<f32> for Cpu {
         rhs: &Self::Storage<(Const<K>, N), f32>,
     ) -> Result<Self::Storage<(N,), f32>, Self::Err> {
         let (_, n) = rhs.shape();
-        let mut out: Self::Storage<(N,), f32> = self.try_zeros_like((*n,))?;
+        let mut out: Self::Storage<(N,), f32> = StridedArray::new((*n,))?;
         matmul(lhs.view().br0(), rhs.view(), out.view_mut().br0(), 1.0);
         Ok(out)
     }
@@ -125,7 +122,7 @@ impl MatMatKernel<f32> for Cpu {
     ) -> Result<Self::Storage<(M, N), f32>, Self::Err> {
         let (m, _) = lhs.shape();
         let (_, n) = rhs.shape();
-        let mut out: Self::Storage<(M, N), f32> = self.try_zeros_like((*m, *n))?;
+        let mut out: Self::Storage<(M, N), f32> = StridedArray::new((*m, *n))?;
         matmul(lhs.view(), rhs.view(), out.view_mut(), 1.0);
         Ok(out)
     }
@@ -152,7 +149,7 @@ impl MatMatBrKernel<f32> for Cpu {
     ) -> Result<Self::Storage<(B, M, N), f32>, Self::Err> {
         let (batch, seq, _) = lhs.shape();
         let (_, n) = rhs.shape();
-        let mut out: Self::Storage<(B, M, N), f32> = self.try_zeros_like((*batch, *seq, *n))?;
+        let mut out: Self::Storage<(B, M, N), f32> = StridedArray::new((*batch, *seq, *n))?;
         let a = lhs.view();
         let b = rhs.view();
         let c = out.view_mut();
@@ -192,7 +189,7 @@ impl MatMatBatch3Kernel<f32> for Cpu {
     ) -> Result<Self::Storage<(Const<B>, M, N), f32>, Self::Err> {
         let (_, m, _) = lhs.shape();
         let (_, _, n) = rhs.shape();
-        let mut out: Self::Storage<(Const<B>, M, N), f32> = self.try_zeros_like((Const, *m, *n))?;
+        let mut out: Self::Storage<(Const<B>, M, N), f32> = StridedArray::new((Const, *m, *n))?;
         let a = lhs.view();
         let b = rhs.view();
         let c = out.view_mut();
@@ -231,7 +228,7 @@ impl MatMatBatch4Kernel<f32> for Cpu {
         let (_, _, m, _) = lhs.shape();
         let (_, _, _, n) = rhs.shape();
         let mut out: Self::Storage<(Const<B>, Const<S>, M, N), f32> =
-            self.try_zeros_like((Const, Const, *m, *n))?;
+            StridedArray::new((Const, Const, *m, *n))?;
         let lhs = lhs.view();
         let rhs = rhs.view();
         let out_view = out.view_mut();

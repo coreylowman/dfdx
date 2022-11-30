@@ -1,17 +1,20 @@
 use crate::arrays::{Dtype, HasShape, Shape};
-use crate::tensor::storage::device::*;
+use crate::tensor::storage::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::{cell::RefCell, sync::Arc, vec::Vec};
+use std::{
+    sync::{Arc, Mutex},
+    vec::Vec,
+};
 
 #[derive(Clone, Debug)]
 pub struct Cpu {
-    pub(crate) rng: Arc<RefCell<StdRng>>,
+    pub(crate) rng: Arc<Mutex<StdRng>>,
 }
 
 impl Default for Cpu {
     fn default() -> Self {
         Self {
-            rng: Arc::new(RefCell::new(StdRng::seed_from_u64(0))),
+            rng: Arc::new(Mutex::new(StdRng::seed_from_u64(0))),
         }
     }
 }
@@ -19,7 +22,7 @@ impl Default for Cpu {
 impl Cpu {
     pub fn with_seed(seed: u64) -> Self {
         Self {
-            rng: Arc::new(RefCell::new(StdRng::seed_from_u64(seed))),
+            rng: Arc::new(Mutex::new(StdRng::seed_from_u64(seed))),
         }
     }
 }
@@ -73,22 +76,18 @@ impl HasErr for Cpu {
 
 impl DeviceStorage for Cpu {
     type Storage<S: Shape, E: Dtype> = StridedArray<S, E>;
-    fn alloc<S: Shape, E: Dtype>(&self, shape: &S) -> Result<Self::Storage<S, E>, Self::Err> {
-        self.try_zeros_like(*shape)
+    fn try_alloc<S: Shape, E: Dtype>(&self, shape: &S) -> Result<Self::Storage<S, E>, Self::Err> {
+        StridedArray::try_new_with(*shape, Default::default())
     }
-    fn alloc_like<S: Shape, E: Dtype>(
+
+    fn try_alloc_like<S: Shape, E: Dtype>(
         &self,
         storage: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err> {
-        self.try_zeros_like(storage)
-    }
-    fn random_u64(&self) -> u64 {
-        self.rng.borrow_mut().gen()
+        StridedArray::try_new_like(storage, Default::default())
     }
 
-    fn fill_with<S: Shape, E: Dtype>(&self, storage: &mut Self::Storage<S, E>, value: E) {
-        for v in storage.buf_iter_mut() {
-            *v = value;
-        }
+    fn random_u64(&self) -> u64 {
+        self.rng.lock().unwrap().gen()
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     arrays::{Dtype, Shape},
     optim::optimizer::{Momentum, WeightDecay},
-    tensor::storage::cpu::*,
+    tensor::cpu::*,
 };
 
 use super::{SgdConfig, SgdKernel};

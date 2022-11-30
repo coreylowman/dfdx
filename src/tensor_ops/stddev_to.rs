@@ -54,7 +54,6 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tensor::*;
     use crate::tests::build_test_device;
 
     #[test]

@@ -1,8 +1,8 @@
 use crate::{
     arrays::{Axes, Dtype, ReduceShapeTo, Shape},
-    tensor::storage::{
+    tensor::{
         cpu::{Cpu, LendingIterator, StridedArray},
-        ZerosLike,
+        storage::DeviceStorage,
     },
 };
 
@@ -17,7 +17,7 @@ impl<E: Dtype> SumKernel<E> for Cpu {
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
-        let mut out: StridedArray<Dst, E> = self.try_zeros_like(dst)?;
+        let mut out: StridedArray<Dst, E> = self.try_alloc(&dst)?;
         let mut out_iter = out.iter_mut_as(&inp.shape);
         let mut inp_iter = inp.iter();
         while let Some((o, i)) = out_iter.next().zip(inp_iter.next()) {

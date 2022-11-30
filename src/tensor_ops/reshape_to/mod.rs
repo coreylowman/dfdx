@@ -4,10 +4,8 @@ use crate::{
     arrays::{Dtype, HasSameNumelAs, Shape},
     gradients::Tape,
     tensor::storage::{DeviceStorage, HasErr},
-    tensor::{make_tensor, Tensor},
+    tensor::{Tensor, TensorFromStorage},
 };
-
-use super::Device;
 
 pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape>(
@@ -47,7 +45,7 @@ impl<
         let dst: Dst = Default::default();
         let (inp, mut tape) = self.split_tape();
         let storage = inp.device.forward(dst, &inp.storage)?;
-        let out = make_tensor(&inp.device, storage);
+        let out = inp.device.upgrade(storage);
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
@@ -60,7 +58,6 @@ impl<
 
 #[cfg(test)]
 mod tests {
-    use crate::tensor::storage::{AsArray, Zeros};
     use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::build_test_device;

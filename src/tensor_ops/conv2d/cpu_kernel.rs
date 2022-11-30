@@ -1,8 +1,5 @@
 use crate::arrays::{Const, Dim, Dyn, HasShape, Rank3, Rank4, Rank5};
-use crate::tensor::storage::{
-    cpu::{Cpu, CpuError, LendingIterator, StridedArray, View, ViewMut},
-    Zeros, ZerosLike,
-};
+use crate::tensor::cpu::*;
 
 use super::{Conv2DBatchedKernel, Conv2DKernel};
 use crate::tensor_ops::matmul::cpu_kernel::matmul;
@@ -25,7 +22,7 @@ impl Cpu {
         let mut patches: StridedArray<
             Rank5<C, K, K, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
             f32,
-        > = self.try_zeros()?;
+        > = StridedArray::new(Default::default())?;
 
         let mut patch_iter = patches.iter_mut_with_index();
         while let Some((p, [c, k1, k2, oh, ow])) = patch_iter.next() {
@@ -65,7 +62,8 @@ impl Cpu {
         grad_filters: ViewMut<Rank4<O, C, K, K>, f32>,
         grad_out: View<Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
     ) -> Result<(), CpuError> {
-        let mut tr_filters: StridedArray<Rank4<C, O, K, K>, f32> = self.try_zeros()?;
+        let mut tr_filters: StridedArray<Rank4<C, O, K, K>, f32> =
+            StridedArray::new(Default::default())?;
 
         {
             let tr_filters = tr_filters.view_mut();
@@ -81,7 +79,8 @@ impl Cpu {
             }
         }
 
-        let mut unfolded_grad_out: StridedArray<Rank5<O, K, K, H, W>, f32> = self.try_zeros()?;
+        let mut unfolded_grad_out: StridedArray<Rank5<O, K, K, H, W>, f32> =
+            StridedArray::new(Default::default())?;
         {
             let unfolded_grad_out = unfolded_grad_out.view_mut();
             for o in 0..O {
@@ -159,7 +158,7 @@ impl<const K: usize, const S: usize, const P: usize, const C: usize, const O: us
         Self::Storage<Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
         Self::Err,
     > {
-        let mut out: StridedArray<_, f32> = self.try_zeros()?;
+        let mut out: StridedArray<_, f32> = StridedArray::new(Default::default())?;
         self.conv2d_forward::<K, S, P, C, O, H, W>(lhs.view(), rhs.view(), out.view_mut())?;
         Ok(out)
     }
@@ -201,7 +200,7 @@ impl<const K: usize, const S: usize, const P: usize, const C: usize, const O: us
         Self::Err,
     > {
         let (batch, _, _, _) = lhs.shape();
-        let mut out: StridedArray<_, f32> = self.try_zeros_like((*batch, Const, Const, Const))?;
+        let mut out: StridedArray<_, f32> = StridedArray::new((*batch, Const, Const, Const))?;
         {
             let lhs = lhs.view();
             let rhs = rhs.view();

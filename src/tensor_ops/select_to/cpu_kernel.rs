@@ -1,11 +1,7 @@
 #![allow(clippy::needless_range_loop)]
 
 use crate::arrays::{Axis, Dim, Dtype, ReduceShape, ReplaceDim, Shape};
-use crate::tensor::storage::Zeros;
-use crate::tensor::storage::{
-    cpu::{Cpu, LendingIterator, StridedArray},
-    ZerosLike,
-};
+use crate::tensor::cpu::{Cpu, LendingIterator, StridedArray};
 
 use super::{ReplaceAxisKernel, SelectAxisKernel, SelectBatchKernel};
 
@@ -16,7 +12,7 @@ impl<E: Dtype> SelectAxisKernel<E> for Cpu {
         inp: &Self::Storage<S, E>,
         idx: &Self::Storage<(), usize>,
     ) -> Result<Self::Storage<S::Reduced, E>, Self::Err> {
-        let mut out: StridedArray<S::Reduced, E> = self.try_zeros()?;
+        let mut out: StridedArray<S::Reduced, E> = StridedArray::new(Default::default())?;
         let mut out_iter = out.iter_mut_with_index();
         let idx: usize = idx[[]];
         while let Some((o, i)) = out_iter.next() {
@@ -65,8 +61,7 @@ impl<E: Dtype> ReplaceAxisKernel<E> for Cpu {
         inp: &Self::Storage<S, E>,
         idx: &Self::Storage<(D,), usize>,
     ) -> Result<Self::Storage<S::Replaced, E>, Self::Err> {
-        let mut out: StridedArray<S::Replaced, E> =
-            self.try_zeros_like(inp.shape.replace(idx.shape.0))?;
+        let mut out = StridedArray::new(inp.shape.replace(idx.shape.0))?;
         let mut out_iter = out.iter_mut_with_index();
         while let Some((o, mut i)) = out_iter.next() {
             let dim_i_idx = i[I as usize];
@@ -100,7 +95,7 @@ impl<E: Dtype> SelectBatchKernel<E> for Cpu {
     ) -> Result<Self::Storage<(Batch, Seq, S2), E>, Self::Err> {
         let (_, s2) = inp.shape;
         let (batch, seq) = idx.shape;
-        let mut out: StridedArray<(Batch, Seq, S2), E> = self.try_zeros_like((batch, seq, s2))?;
+        let mut out = StridedArray::new((batch, seq, s2))?;
         let mut out_iter = out.iter_mut_with_index();
         while let Some((o, [b, s, i])) = out_iter.next() {
             let q = idx[[b, s]];

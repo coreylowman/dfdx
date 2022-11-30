@@ -1,6 +1,6 @@
 use crate::{
     arrays::{Axes, ReduceShapeTo, Shape},
-    tensor::storage::cpu::{Cpu, LendingIterator, StridedArray},
+    tensor::cpu::{Cpu, LendingIterator, StridedArray},
 };
 
 use super::MinReduceKernel;

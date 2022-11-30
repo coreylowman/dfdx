@@ -61,7 +61,7 @@ where
     fn try_broadcast_to(self, dst: &Dst) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         let (inp, mut tape) = self.split_tape();
         let storage = inp.device.forward(*dst, &inp.storage)?;
-        let out = make_tensor(&inp.device, storage);
+        let out = inp.device.upgrade(storage);
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
@@ -82,50 +82,50 @@ mod tests {
     fn test_valid_1d_broadcasts() {
         let dev = build_test_device!();
 
-        let _: Tensor1D<5, _> = Zeros::<Tensor0D<_>>::zeros(&dev).broadcast();
+        let _: Tensor1D<5, _> = dev.zeros::<Rank0>().broadcast();
 
-        let _: Tensor2D<5, 3, _> = Zeros::<Tensor1D<3, _>>::zeros(&dev).broadcast();
-        let _: Tensor2D<5, 3, _> = Zeros::<Tensor1D<5, _>>::zeros(&dev).broadcast();
+        let _: Tensor2D<5, 3, _> = dev.zeros::<Rank1<3>>().broadcast();
+        let _: Tensor2D<5, 3, _> = dev.zeros::<Rank1<5>>().broadcast();
 
-        let _: Tensor3D<3, 5, 7, _> = Zeros::<Tensor2D<5, 7, _>>::zeros(&dev).broadcast();
-        let _: Tensor3D<3, 5, 7, _> = Zeros::<Tensor2D<3, 7, _>>::zeros(&dev).broadcast();
-        let _: Tensor3D<3, 5, 7, _> = Zeros::<Tensor2D<3, 5, _>>::zeros(&dev).broadcast();
-        let _: Tensor3D<3, 5, 7, _> = Zeros::<Tensor2D<3, 5, _>>::zeros(&dev).broadcast();
+        let _: Tensor3D<3, 5, 7, _> = dev.zeros::<Rank2<5, 7>>().broadcast();
+        let _: Tensor3D<3, 5, 7, _> = dev.zeros::<Rank2<3, 7>>().broadcast();
+        let _: Tensor3D<3, 5, 7, _> = dev.zeros::<Rank2<3, 5>>().broadcast();
+        let _: Tensor3D<3, 5, 7, _> = dev.zeros::<Rank2<3, 5>>().broadcast();
 
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor3D<5, 7, 9, _>>::zeros(&dev).broadcast();
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor3D<3, 7, 9, _>>::zeros(&dev).broadcast();
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor3D<3, 5, 9, _>>::zeros(&dev).broadcast();
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor3D<3, 5, 7, _>>::zeros(&dev).broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank3<5, 7, 9>>().broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank3<3, 7, 9>>().broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank3<3, 5, 9>>().broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank3<3, 5, 7>>().broadcast();
     }
 
     #[test]
     fn test_valid_2d_broadcasts() {
         let dev = build_test_device!();
 
-        let _: Tensor2D<5, 3, _> = Zeros::<Tensor0D<_>>::zeros(&dev).broadcast();
+        let _: Tensor2D<5, 3, _> = dev.zeros::<Rank0>().broadcast();
 
-        let _: Tensor3D<3, 5, 7, _> = Zeros::<Tensor1D<3, _>>::zeros(&dev).broadcast();
-        let _: Tensor3D<3, 5, 7, _> = Zeros::<Tensor1D<5, _>>::zeros(&dev).broadcast();
-        let _: Tensor3D<3, 5, 7, _> = Zeros::<Tensor1D<7, _>>::zeros(&dev).broadcast();
+        let _: Tensor3D<3, 5, 7, _> = dev.zeros::<Rank1<3>>().broadcast();
+        let _: Tensor3D<3, 5, 7, _> = dev.zeros::<Rank1<5>>().broadcast();
+        let _: Tensor3D<3, 5, 7, _> = dev.zeros::<Rank1<7>>().broadcast();
 
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor2D<3, 5, _>>::zeros(&dev).broadcast();
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor2D<3, 7, _>>::zeros(&dev).broadcast();
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor2D<3, 9, _>>::zeros(&dev).broadcast();
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor2D<5, 7, _>>::zeros(&dev).broadcast();
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor2D<5, 9, _>>::zeros(&dev).broadcast();
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor2D<7, 9, _>>::zeros(&dev).broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank2<3, 5>>().broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank2<3, 7>>().broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank2<3, 9>>().broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank2<5, 7>>().broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank2<5, 9>>().broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank2<7, 9>>().broadcast();
     }
 
     #[test]
     fn test_valid_3d_broadcasts() {
         let dev = build_test_device!();
 
-        let _: Tensor3D<3, 5, 7, _> = Zeros::<Tensor0D<_>>::zeros(&dev).broadcast();
+        let _: Tensor3D<3, 5, 7, _> = dev.zeros::<Rank0>().broadcast();
 
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor1D<3, _>>::zeros(&dev).broadcast();
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor1D<5, _>>::zeros(&dev).broadcast();
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor1D<7, _>>::zeros(&dev).broadcast();
-        let _: Tensor4D<3, 5, 7, 9, _> = Zeros::<Tensor1D<9, _>>::zeros(&dev).broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank1<3>>().broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank1<5>>().broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank1<7>>().broadcast();
+        let _: Tensor4D<3, 5, 7, 9, _> = dev.zeros::<Rank1<9>>().broadcast();
     }
 
     #[test]

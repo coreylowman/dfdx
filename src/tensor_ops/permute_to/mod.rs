@@ -3,7 +3,7 @@ mod cpu_kernel;
 use crate::arrays::{Axes, Dtype, HasShape, PermuteShapeTo, Shape};
 use crate::gradients::Tape;
 use crate::tensor::storage::{DeviceStorage, HasErr};
-use crate::tensor::{make_tensor, Tensor};
+use crate::tensor::{Tensor, TensorFromStorage};
 
 pub trait PermuteKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape<Concrete = Src::Concrete>, Ax: Axes>(
@@ -53,7 +53,7 @@ where
     fn try_permute(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         let (inp, mut tape) = self.split_tape();
         let storage = inp.device.forward(&inp.storage)?;
-        let out = make_tensor(&inp.device, storage);
+        let out = inp.device.upgrade(storage);
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
@@ -70,7 +70,6 @@ mod tests {
 
     use super::*;
     use crate::arrays::{Axes2, Axes3, Axes4};
-    use crate::tensor::storage::{AsArray, Cpu, Randn};
     use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::build_test_device;

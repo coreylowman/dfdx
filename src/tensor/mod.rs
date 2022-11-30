@@ -71,12 +71,16 @@
 //! ```
 
 mod base;
-mod impl_alloc;
+pub(crate) mod cpu;
 pub(crate) mod storage;
 
+pub use cpu::{Cpu, CpuError};
+pub use storage::{
+    AsArray, AsVec, DeviceStorage, HasErr, OneFillStorage, OnesTensor, RandTensor, RandnTensor,
+    TensorFromArray, TensorFromSlice, TensorFromVec, ZeroFillStorage, ZerosTensor,
+};
+
 pub use base::{Tensor, Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
-pub(crate) use impl_alloc::make_tensor;
-pub use impl_alloc::TensorFromArray;
 pub use storage::*;
 
 #[cfg(test)]
@@ -152,7 +156,7 @@ mod tests {
     fn test_convert_array() {
         let dev = build_test_device!();
         let a = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
-        let t: Tensor2D<2, 3, _> = dev.convert(a);
+        let t: Tensor2D<2, 3, _> = dev.tensor(a);
         assert_eq!(t.as_array(), a);
     }
 
@@ -160,7 +164,7 @@ mod tests {
     fn test_convert_slice() {
         let dev = build_test_device!();
         let data = [1.0, 2.0, 3.0, 4.0];
-        let t: Tensor2D<2, 2, _> = dev.convert(data.as_slice());
+        let t: Tensor2D<2, 2, _> = dev.from_slice(data.as_slice()).unwrap();
         assert_eq!(t.as_array(), [[1.0, 2.0], [3.0, 4.0]]);
     }
 
@@ -168,7 +172,7 @@ mod tests {
     fn test_convert_vec() {
         let dev = build_test_device!();
         let data = std::vec![1.0, 2.0, 3.0, 4.0];
-        let t: Tensor2D<2, 2, _> = dev.convert(data);
+        let t: Tensor2D<2, 2, _> = dev.from_vec(data).unwrap();
         assert_eq!(t.as_array(), [[1.0, 2.0], [3.0, 4.0]]);
     }
 

@@ -102,6 +102,13 @@ pub trait HasShape {
     fn shape(&self) -> &Self::Shape;
 }
 
+impl<S: Shape> HasShape for S {
+    type Shape = Self;
+    fn shape(&self) -> &Self::Shape {
+        self
+    }
+}
+
 pub trait HasDtype {
     type Dtype: Dtype;
 }

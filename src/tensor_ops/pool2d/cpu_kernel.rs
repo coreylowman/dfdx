@@ -1,6 +1,5 @@
 use crate::arrays::{Const, Dim};
-use crate::tensor::storage::cpu::{Cpu, StridedArray, View, ViewMut};
-use crate::tensor::storage::ZerosLike;
+use crate::tensor::cpu::{Cpu, StridedArray, View, ViewMut};
 
 use super::{pooling, Pool2DBatchedKernel, Pool2DKernel};
 
@@ -200,7 +199,7 @@ impl<const K: usize, const S: usize, const P: usize, Kind: Pooling<K, S, P>>
         Self::Err,
     > {
         let (c, _, _) = inp.shape;
-        let mut out: StridedArray<_, f32> = self.try_zeros_like((c, Const, Const))?;
+        let mut out: StridedArray<_, f32> = StridedArray::new((c, Const, Const))?;
         Kind::forward(inp.view(), out.view_mut());
         Ok(out)
     }
@@ -230,7 +229,7 @@ impl<const K: usize, const S: usize, const P: usize, Kind: Pooling<K, S, P>>
         Self::Err,
     > {
         let (batch, chan, _, _) = inp.shape;
-        let mut out: StridedArray<_, f32> = self.try_zeros_like((batch, chan, Const, Const))?;
+        let mut out: StridedArray<_, f32> = StridedArray::new((batch, chan, Const, Const))?;
         let inp = inp.view();
         let out_view = out.view_mut();
         for b in 0..batch.size() {

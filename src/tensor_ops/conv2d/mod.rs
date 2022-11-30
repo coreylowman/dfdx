@@ -3,7 +3,7 @@ mod cpu_kernel;
 use crate::{
     arrays::{Const, Dim, Dtype, Rank3, Rank4},
     gradients::Tape,
-    tensor::{make_tensor, DeviceStorage, Tensor},
+    tensor::{DeviceStorage, Tensor, TensorFromStorage},
 };
 
 pub trait Conv2DKernel<
@@ -98,7 +98,7 @@ impl<const C: usize, const H: usize, const W: usize, D: DeviceStorage, T: Tape<D
         let (rhs, rtape) = filters.split_tape();
         let mut tape = ltape.merge(rtape);
         let storage = lhs.device.forward(&lhs.storage, &rhs.storage)?;
-        let out = make_tensor(&lhs.device, storage);
+        let out = lhs.device.upgrade(storage);
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out)?;
@@ -145,7 +145,7 @@ impl<B: Dim, const C: usize, const H: usize, const W: usize, D: DeviceStorage, T
         let (rhs, rtape) = filters.split_tape();
         let mut tape = ltape.merge(rtape);
         let storage = lhs.device.forward(&lhs.storage, &rhs.storage)?;
-        let out = make_tensor(&lhs.device, storage);
+        let out = lhs.device.upgrade(storage);
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out)?;

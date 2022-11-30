@@ -5,7 +5,7 @@ pub(super) mod cpu_kernel;
 use crate::{
     arrays::{Const, Dim, Dtype, Shape},
     gradients::{Merge, Tape},
-    tensor::{make_tensor, DeviceStorage, HasErr, Tensor},
+    tensor::{DeviceStorage, HasErr, Tensor, TensorFromStorage},
 };
 
 use super::device::Device;
@@ -104,7 +104,7 @@ fn try_binary_op<
     let (rhs, rtape) = rhs.split_tape();
     let mut tape = ltape.merge(rtape);
     let storage = fwd(&lhs.device, &lhs.storage, &rhs.storage)?;
-    let out = make_tensor(&lhs.device, storage);
+    let out = lhs.device.upgrade(storage);
     let phantom_out = out.clone();
     tape.add_backward_op(move |grads| {
         let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out)?;

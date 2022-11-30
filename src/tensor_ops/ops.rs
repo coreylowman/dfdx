@@ -1,7 +1,7 @@
 use crate::{
     arrays::{Dtype, Shape},
     gradients::{Merge, Tape},
-    tensor::{make_tensor, DeviceStorage, Tensor},
+    tensor::{DeviceStorage, Tensor, TensorFromStorage},
 };
 
 pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
@@ -50,7 +50,7 @@ pub(crate) fn try_unary_op<
 ) -> Result<Tensor<S, E, D, T>, D::Err> {
     let (inp, mut tape) = inp.split_tape();
     let storage = inp.device.forward(op.clone(), &inp.storage)?;
-    let out = make_tensor(&inp.device, storage);
+    let out = inp.device.upgrade(storage);
     let phantom_out = out.clone();
     tape.add_backward_op(move |grads| {
         let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
@@ -76,7 +76,7 @@ pub(crate) fn try_binary_op<
     let (rhs, rtape) = rhs.split_tape();
     let mut tape = ltape.merge(rtape);
     let storage = lhs.device.forward(op, &lhs.storage, &rhs.storage)?;
-    let out = make_tensor(&lhs.device, storage);
+    let out = lhs.device.upgrade(storage);
     let phantom_out = out.clone();
     tape.add_backward_op(move |grads| {
         let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out)?;

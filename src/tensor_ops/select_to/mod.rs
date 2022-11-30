@@ -107,7 +107,7 @@ impl<
     ) -> Result<Tensor<S::Reduced, E, D, T>, Self::Err> {
         let (inp, mut tape) = self.split_tape();
         let storage = inp.device.forward(&inp.storage, &idx.storage)?;
-        let out = make_tensor(&inp.device, storage);
+        let out = inp.device.upgrade(storage);
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
@@ -148,7 +148,7 @@ impl<
     ) -> Result<Tensor<S::Replaced, E, D, T>, Self::Err> {
         let (inp, mut tape) = self.split_tape();
         let storage = inp.device.forward(&inp.storage, &idx.storage)?;
-        let out = make_tensor(&inp.device, storage);
+        let out = inp.device.upgrade(storage);
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
@@ -190,7 +190,7 @@ impl<
     ) -> Result<Tensor<(Batch, Seq, S2), E, D, T>, Self::Err> {
         let (inp, mut tape) = self.split_tape();
         let storage = inp.device.forward(&inp.storage, &idx.storage)?;
-        let out = make_tensor(&inp.device, storage);
+        let out = inp.device.upgrade(storage);
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
@@ -241,7 +241,6 @@ where
 mod tests {
     use super::*;
     use crate::arrays::Axis;
-    use crate::tensor::storage::{AsArray, Randn};
     use crate::tensor_ops::*;
     use crate::tests::build_test_device;
 

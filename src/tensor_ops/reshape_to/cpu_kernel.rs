@@ -1,6 +1,6 @@
 use super::ReshapeKernel;
 use crate::arrays::{Dtype, HasSameNumelAs, Shape};
-use crate::tensor::storage::cpu::{Cpu, StridedArray};
+use crate::tensor::cpu::{Cpu, StridedArray};
 
 impl<E: Dtype> ReshapeKernel<E> for Cpu {
     fn forward<Src: Shape, Dst: Shape>(

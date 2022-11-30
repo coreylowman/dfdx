@@ -1,7 +1,10 @@
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     arrays::{Dtype, Shape},
-    tensor::storage::{cpu::LendingIterator, Cpu, ZerosLike},
+    tensor::{
+        cpu::{Cpu, LendingIterator},
+        DeviceStorage,
+    },
 };
 
 pub trait UnaryDerivative<E> {
@@ -51,7 +54,7 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
         lhs: &Self::Storage<S, E>,
         rhs: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err> {
-        let mut out: Self::Storage<S, E> = self.try_zeros_like(lhs.shape)?;
+        let mut out: Self::Storage<S, E> = self.try_alloc(&lhs.shape)?;
         let mut lhs_iter = lhs.iter();
         let mut rhs_iter = rhs.iter();
         let mut out_iter = out.iter_mut();
