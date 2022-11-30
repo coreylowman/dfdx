@@ -20,14 +20,12 @@ macro_rules! activation_impls {
         }
 
         impl<D: Device<E>, E: Dtype> BuildModule<D, E> for $struct_name {
-            fn zeros(_: &D) -> Self {
-                Self
+            fn try_build(_: &D) -> Result<Self, <D>::Err> {
+                Ok(Self)
             }
-            fn standard(_: &D) -> Self {
-                Self
+            fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
+                Ok(())
             }
-            /// Does nothing.
-            fn reset_params(&mut self) {}
         }
 
         impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<S, E, D, T>>
@@ -78,14 +76,12 @@ impl<D: DeviceStorage, E: Dtype> CanUpdateWithGradients<D, E> for Softmax {
 }
 
 impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Softmax {
-    fn zeros(_: &D) -> Self {
-        Self
+    fn try_build(_: &D) -> Result<Self, <D>::Err> {
+        Ok(Self)
     }
-    fn standard(_: &D) -> Self {
-        Self
+    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
+        Ok(())
     }
-    /// Does nothing.
-    fn reset_params(&mut self) {}
 }
 
 impl<Ax: Axes, S: Shape<LastAxis = Ax> + ReduceShape<Ax>, E: Dtype, D: Device<E>, T: Tape<D>>

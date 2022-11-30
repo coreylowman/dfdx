@@ -4,8 +4,8 @@ use crate::arrays::*;
 use crate::tensor::storage::*;
 use crate::tensor::{DeviceStorage, Tensor, TensorFromStorage};
 use rand::Rng;
-use rand_distr::{Standard, StandardNormal};
-use std::{vec::Vec, sync::Arc};
+use rand_distr::{Normal, Standard, StandardNormal, Uniform};
+use std::{sync::Arc, vec::Vec};
 
 use super::{
     device::{CpuError, StridedArray},
@@ -61,7 +61,7 @@ impl<E: Dtype> ZerosTensor<E> for Cpu {
 }
 
 impl<E: Dtype> ZeroFillStorage<E> for Cpu {
-    fn fill_with_zeros<S: Shape>(
+    fn try_fill_with_zeros<S: Shape>(
         &self,
         storage: &mut Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
@@ -81,7 +81,7 @@ impl OnesTensor<f32> for Cpu {
 }
 
 impl OneFillStorage<f32> for Cpu {
-    fn fill_with_ones<S: Shape>(
+    fn try_fill_with_ones<S: Shape>(
         &self,
         storage: &mut Self::Storage<S, f32>,
     ) -> Result<(), Self::Err> {
@@ -102,6 +102,36 @@ impl RandTensor<f32> for Cpu {
         }
         Ok(self.upgrade(storage))
     }
+    fn try_uniform_like<S: HasShape>(
+        &self,
+        src: &S,
+        min: f32,
+        max: f32,
+    ) -> Result<Tensor<S::Shape, f32, Self>, Self::Err> {
+        let mut storage = StridedArray::try_new_with(*src.shape(), Default::default())?;
+        let mut rng = self.rng.lock().unwrap();
+        let dist = Uniform::new(min, max);
+        for v in storage.buf_iter_mut() {
+            *v = rng.sample(dist);
+        }
+        Ok(self.upgrade(storage))
+    }
+}
+
+impl RandFillStorage<f32> for Cpu {
+    fn try_fill_with_uniform<S: Shape>(
+        &self,
+        storage: &mut Self::Storage<S, f32>,
+        min: f32,
+        max: f32,
+    ) -> Result<(), Self::Err> {
+        let mut rng = self.rng.lock().unwrap();
+        let dist = Uniform::new(min, max);
+        for v in storage.buf_iter_mut() {
+            *v = rng.sample(dist);
+        }
+        Ok(())
+    }
 }
 
 impl RandnTensor<f32> for Cpu {
@@ -115,6 +145,36 @@ impl RandnTensor<f32> for Cpu {
             *v = rng.sample(StandardNormal);
         }
         Ok(self.upgrade(storage))
+    }
+    fn try_normal_like<S: HasShape>(
+        &self,
+        src: &S,
+        mean: f32,
+        stddev: f32,
+    ) -> Result<Tensor<S::Shape, f32, Self>, Self::Err> {
+        let mut storage = StridedArray::try_new_with(*src.shape(), Default::default())?;
+        let mut rng = self.rng.lock().unwrap();
+        let dist = Normal::new(mean, stddev).unwrap();
+        for v in storage.buf_iter_mut() {
+            *v = rng.sample(dist);
+        }
+        Ok(self.upgrade(storage))
+    }
+}
+
+impl RandnFillStorage<f32> for Cpu {
+    fn try_fill_with_normal<S: Shape>(
+        &self,
+        storage: &mut Self::Storage<S, f32>,
+        mean: f32,
+        stddev: f32,
+    ) -> Result<(), Self::Err> {
+        let dist = Normal::new(mean, stddev).unwrap();
+        let mut rng = self.rng.lock().unwrap();
+        for v in storage.buf_iter_mut() {
+            *v = rng.sample(dist);
+        }
+        Ok(())
     }
 }
 

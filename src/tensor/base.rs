@@ -1,4 +1,5 @@
 use super::storage::{AllocOn, DeviceStorage, HasErr};
+use super::{OneFillStorage, RandFillStorage, RandnFillStorage, ZeroFillStorage};
 use crate::arrays::{
     Dtype, HasDtype, HasShape, Rank0, Rank1, Rank2, Rank3, Rank4, Rank5, Rank6, Shape,
 };
@@ -45,6 +46,48 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
             device: self.device,
             tape,
         }
+    }
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage + ZeroFillStorage<E>, T> Tensor<S, E, D, T> {
+    pub fn fill_with_zeros(&mut self) {
+        self.try_fill_with_zeros().unwrap()
+    }
+
+    pub fn try_fill_with_zeros(&mut self) -> Result<(), D::Err> {
+        self.device.try_fill_with_zeros(&mut self.storage)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage + OneFillStorage<E>, T> Tensor<S, E, D, T> {
+    pub fn fill_with_ones(&mut self) {
+        self.try_fill_with_ones().unwrap()
+    }
+
+    pub fn try_fill_with_ones(&mut self) -> Result<(), D::Err> {
+        self.device.try_fill_with_ones(&mut self.storage)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage + RandFillStorage<E>, T> Tensor<S, E, D, T> {
+    pub fn fill_with_uniform(&mut self, min: E, max: E) {
+        self.try_fill_with_uniform(min, max).unwrap()
+    }
+
+    pub fn try_fill_with_uniform(&mut self, min: E, max: E) -> Result<(), D::Err> {
+        self.device
+            .try_fill_with_uniform(&mut self.storage, min, max)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage + RandnFillStorage<E>, T> Tensor<S, E, D, T> {
+    pub fn fill_with_normal(&mut self, mean: E, stddev: E) {
+        self.try_fill_with_normal(mean, stddev).unwrap()
+    }
+
+    pub fn try_fill_with_normal(&mut self, mean: E, stddev: E) -> Result<(), D::Err> {
+        self.device
+            .try_fill_with_normal(&mut self.storage, mean, stddev)
     }
 }
 

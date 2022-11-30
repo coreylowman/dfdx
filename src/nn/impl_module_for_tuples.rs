@@ -17,18 +17,14 @@ macro_rules! tuple_impls {
 
         #[allow(non_snake_case)]
         impl<D: Device<E>, E: Dtype, $($name: BuildModule<D, E>),+> BuildModule<D, E> for ($($name,)+) {
-            fn zeros(device: &D) -> Self {
-                $(let $name = BuildModule::zeros(device);)*
-                ($($name, )*)
+            fn try_build(device: &D) -> Result<Self, D::Err> {
+                $(let $name = BuildModule::try_build(device)?;)*
+                Ok(($($name, )*))
             }
 
-            fn standard(device: &D) -> Self {
-                $(let $name = BuildModule::standard(device);)*
-                ($($name, )*)
-            }
-
-            fn reset_params(&mut self) {
-                $(self.$idx.reset_params());+
+            fn try_reset_params(&mut self) -> Result<(), D::Err> {
+                $(self.$idx.try_reset_params()?;)+
+                Ok(())
             }
         }
 
@@ -116,7 +112,7 @@ mod tests {
     #[test]
     fn test_2_tuple_update() {
         let dev = build_test_device!();
-        let mut model: (Linear<2, 3, _>, Linear<3, 4, _>) = BuildModule::standard(&dev);
+        let mut model: (Linear<2, 3, _>, Linear<3, 4, _>) = BuildModule::build(&dev);
         assert_ne!(model.0.weight.as_array(), [[0.0; 2]; 3]);
         assert_ne!(model.0.bias.as_array(), [0.0; 3]);
         assert_ne!(model.1.weight.as_array(), [[0.0; 3]; 4]);
@@ -164,13 +160,12 @@ mod tests {
         }
     }
     impl<const I: usize, const N: usize, D: Device<E>, E: Dtype> BuildModule<D, E> for SetTo1<I, N> {
-        fn zeros(_: &D) -> Self {
-            Self
+        fn try_build(_: &D) -> Result<Self, <D>::Err> {
+            Ok(Self)
         }
-        fn standard(_: &D) -> Self {
-            Self
+        fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
+            Ok(())
         }
-        fn reset_params(&mut self) {}
     }
     impl<const I: usize, const N: usize> Module<Tensor<Rank1<N>, f32, Cpu>> for SetTo1<I, N> {
         type Output = Tensor<Rank1<N>, f32, Cpu>;
@@ -266,7 +261,7 @@ mod tests {
     fn test_tuple_missing_gradients() {
         let dev = build_test_device!();
         let mut model: (Linear<5, 3, _>, Linear<5, 3, _>, Linear<5, 3, _>) =
-            BuildModule::zeros(&dev);
+            BuildModule::build(&dev);
         let mut g: SimpleUpdater<_> = Default::default();
 
         // no gradients present

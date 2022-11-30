@@ -1,7 +1,6 @@
-use super::{Module, ModuleMut, ResetParams};
-use crate::arrays::{HasArrayData, HasAxes};
-use crate::tensor::storage::{Cpu, FillElements};
-use crate::{gradients::*, tensor::*, tensor_ops::*};
+use crate::{arrays::*, gradients::*, optim::CanUpdateWithGradients, tensor::*, tensor_ops::*};
+
+use super::{BuildModule, Module, ModuleMut};
 
 /// Batch normalization for images as described in
 /// [Batch Normalization: Accelerating Deep Network Training
@@ -36,15 +35,15 @@ use crate::{gradients::*, tensor::*, tensor_ops::*};
 /// - Running statistics: **not** updated
 /// - Normalization: calculated using running stats
 #[derive(Clone, Debug)]
-pub struct BatchNorm2D<const C: usize> {
+pub struct BatchNorm2D<const C: usize, D: Device<f32> = Cpu> {
     /// Scale for affine transform. Defaults to 1.0
-    pub scale: Tensor1D<C>,
+    pub scale: Tensor<Rank1<C>, f32, D>,
     /// Bias for affine transform. Defaults to 0.0
-    pub bias: Tensor1D<C>,
+    pub bias: Tensor<Rank1<C>, f32, D>,
     /// Spatial mean that is updated during training. Defaults to 0.0
-    pub running_mean: Tensor1D<C>,
+    pub running_mean: Tensor<Rank1<C>, f32, D>,
     /// Spatial variance that is updated during training. Defaults to 1.0
-    pub running_var: Tensor1D<C>,
+    pub running_var: Tensor<Rank1<C>, f32, D>,
     /// Added to variance before taking sqrt for numerical stability. Defaults to 1e-5
     pub epsilon: f32,
     /// Controls exponential moving average of running stats.Defaults to 0.1
@@ -53,152 +52,156 @@ pub struct BatchNorm2D<const C: usize> {
     pub momentum: f32,
 }
 
-impl<const C: usize> BatchNorm2D<C> {
+impl<const C: usize, D: Device<f32>> BatchNorm2D<C, D> {
     /// generic forward for inference
-    fn infer_fwd<T, Axes>(&self, x: T) -> T
+    fn infer_fwd<S: Shape, Ax: Axes>(&self, x: Tensor<S, f32, D>) -> Tensor<S, f32, D>
     where
-        T: Tensor<Dtype = f32, Tape = NoneTape>,
-        Tensor1D<C>: BroadcastTo<T, Axes>,
+        Rank1<C>: BroadcastShapeTo<S, Ax>,
     {
+        let shape = *x.shape();
+
         // statistics for normalizing
         let std = (self.running_var.clone() + self.epsilon).sqrt();
         let mean = self.running_mean.clone();
 
         // normalize & affine
-        let x = sub(x, mean.broadcast());
-        let x = div(x, std.broadcast());
-        let x = mul(x, self.scale.clone().broadcast());
-        add(x, self.bias.clone().broadcast())
+        let x = sub(x, mean.broadcast_to(&shape));
+        let x = div(x, std.broadcast_to(&shape));
+        let x = mul(x, self.scale.clone().broadcast_to(&shape));
+        add(x, self.bias.clone().broadcast_to(&shape))
     }
 
-    fn train_fwd<T, Axes>(&mut self, x: T) -> T
+    fn train_fwd<S: Shape, T: Tape<D>, Ax: Axes>(
+        &mut self,
+        x: Tensor<S, f32, D, T>,
+    ) -> Tensor<S, f32, D, T>
     where
-        T: Tensor<Dtype = f32, Tape = OwnedTape> + ReduceTo<Tensor1D<C, OwnedTape>, Axes>,
-        T::Array: HasAxes<Axes>,
-        Tensor1D<C, OwnedTape>: BroadcastTo<T, Axes>,
+        S: HasAxes<Ax> + ReduceShapeTo<Rank1<C>, Ax>,
     {
+        let n = <S as HasAxes<Ax>>::size(x.shape()) as f32;
+        let shape = *x.shape();
+
         // compute statistics for updating running stats later - on tape
-        let mean_t: Tensor1D<C, T::Tape> = mean(x.with_empty_tape());
-        let var_t: Tensor1D<C, T::Tape> = var(x.with_empty_tape());
+        let mean_t = x.retaped::<T>().mean();
+        let var_t = x.retaped::<T>().var();
 
         // update statistics since we are training - off tape
         let (mean_t, tape1) = mean_t.split_tape();
         let (var_t, tape2) = var_t.split_tape();
-        self.running_mean = add(
-            self.running_mean.clone() * (1.0 - self.momentum),
-            mean_t.clone() * self.momentum,
-        );
-        let n = <T::Array as HasAxes<Axes>>::SIZE as f32;
-        self.running_var = add(
-            self.running_var.clone() * (1.0 - self.momentum),
-            // NOTE: uses unbiased variance in running estimate
-            var_t.clone() * (self.momentum * n / (n - 1.0)),
-        );
+        self.running_mean =
+            self.running_mean.clone() * (1.0 - self.momentum) + mean_t.clone() * self.momentum;
+
+        // NOTE: uses unbiased variance in running estimate
+        self.running_var = self.running_var.clone() * (1.0 - self.momentum)
+            + var_t.clone() * (self.momentum * n / (n - 1.0));
 
         // statistics for normalizing - on tape
-        let mean: T = mean_t.put_tape(tape1).broadcast();
-        let std: T = (var_t.put_tape(tape2) + self.epsilon).sqrt().broadcast();
+        let mean = mean_t.put_tape(tape1).broadcast_to(&shape);
+        let std = (var_t.put_tape(tape2) + self.epsilon)
+            .sqrt()
+            .broadcast_to(&shape);
 
         // record broadcast of scale & bias - on tape
-        let scale: T = self.scale.with_diff_tape().broadcast();
-        let bias: T = self.bias.with_diff_tape().broadcast();
+        let scale = self.scale.retaped::<T>().broadcast_to(&shape);
+        let bias = self.bias.retaped::<T>().broadcast_to(&shape);
 
         // normalize & affine - on tape
-        let x = sub(x, mean);
-        let x = div(x, std);
-        let x = mul(x, scale);
-        add(x, bias)
+        ((x - mean) / std) * scale + bias
     }
 }
 
-impl<const C: usize, const H: usize, const W: usize> Module<Tensor3D<C, H, W, NoneTape>>
-    for BatchNorm2D<C>
+impl<const C: usize, const H: usize, const W: usize, D: Device<f32>>
+    Module<Tensor<Rank3<C, H, W>, f32, D, NoneTape>> for BatchNorm2D<C, D>
 {
-    type Output = Tensor3D<C, H, W, NoneTape>;
+    type Output = Tensor<Rank3<C, H, W>, f32, D, NoneTape>;
 
     /// Inference 3d forward - does **not** update [Self::running_mean] and [Self::running_var]
-    fn forward(&self, x: Tensor3D<C, H, W, NoneTape>) -> Self::Output {
+    fn forward(&self, x: Tensor<Rank3<C, H, W>, f32, D, NoneTape>) -> Self::Output {
         self.infer_fwd(x)
     }
 }
 
-impl<const B: usize, const C: usize, const H: usize, const W: usize>
-    Module<Tensor4D<B, C, H, W, NoneTape>> for BatchNorm2D<C>
+impl<const B: usize, const C: usize, const H: usize, const W: usize, D: Device<f32>>
+    Module<Tensor<Rank4<B, C, H, W>, f32, D, NoneTape>> for BatchNorm2D<C, D>
 {
-    type Output = Tensor4D<B, C, H, W, NoneTape>;
+    type Output = Tensor<Rank4<B, C, H, W>, f32, D, NoneTape>;
 
     /// Inference 4d forward - does **not** update [Self::running_mean] and [Self::running_var]
-    fn forward(&self, x: Tensor4D<B, C, H, W, NoneTape>) -> Self::Output {
+    fn forward(&self, x: Tensor<Rank4<B, C, H, W>, f32, D, NoneTape>) -> Self::Output {
         self.infer_fwd(x)
     }
 }
 
-impl<const C: usize, const H: usize, const W: usize> ModuleMut<Tensor3D<C, H, W, OwnedTape>>
-    for BatchNorm2D<C>
+impl<const C: usize, const H: usize, const W: usize, D: Device<f32>>
+    ModuleMut<Tensor<Rank3<C, H, W>, f32, D, OwnedTape<D>>> for BatchNorm2D<C, D>
 {
-    type Output = Tensor3D<C, H, W, OwnedTape>;
+    type Output = Tensor<Rank3<C, H, W>, f32, D, OwnedTape<D>>;
 
     /// Training 3d forward - updates [Self::running_mean] and [Self::running_var]
-    fn forward_mut(&mut self, x: Tensor3D<C, H, W, OwnedTape>) -> Self::Output {
+    fn forward_mut(&mut self, x: Tensor<Rank3<C, H, W>, f32, D, OwnedTape<D>>) -> Self::Output {
         self.train_fwd(x)
     }
 }
 
-impl<const B: usize, const C: usize, const H: usize, const W: usize>
-    ModuleMut<Tensor4D<B, C, H, W, OwnedTape>> for BatchNorm2D<C>
+impl<const B: usize, const C: usize, const H: usize, const W: usize, D: Device<f32>>
+    ModuleMut<Tensor<Rank4<B, C, H, W>, f32, D, OwnedTape<D>>> for BatchNorm2D<C, D>
 {
-    type Output = Tensor4D<B, C, H, W, OwnedTape>;
+    type Output = Tensor<Rank4<B, C, H, W>, f32, D, OwnedTape<D>>;
 
     /// Training 4d forward - updates [Self::running_mean] and [Self::running_var]
-    fn forward_mut(&mut self, x: Tensor4D<B, C, H, W, OwnedTape>) -> Self::Output {
+    fn forward_mut(&mut self, x: Tensor<Rank4<B, C, H, W>, f32, D, OwnedTape<D>>) -> Self::Output {
         self.train_fwd(x)
     }
 }
 
-impl<const C: usize> Default for BatchNorm2D<C> {
-    fn default() -> Self {
-        Self {
-            scale: TensorCreator::ones(),
-            bias: TensorCreator::zeros(),
-            running_mean: TensorCreator::zeros(),
-            running_var: TensorCreator::ones(),
+impl<const C: usize, D: Device<f32>> BuildModule<D, f32> for BatchNorm2D<C, D> {
+    fn try_build(device: &D) -> Result<Self, D::Err> {
+        Ok(Self {
+            scale: device.try_ones()?,
+            bias: device.try_zeros()?,
+            running_mean: device.try_zeros()?,
+            running_var: device.try_ones()?,
             epsilon: 1e-5,
             momentum: 0.1,
-        }
+        })
+    }
+
+    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+        self.scale.try_fill_with_ones()?;
+        self.bias.try_fill_with_zeros()?;
+        self.running_mean.try_fill_with_zeros()?;
+        self.running_var.try_fill_with_ones()?;
+        Ok(())
     }
 }
 
-impl<const C: usize> ResetParams for BatchNorm2D<C> {
-    fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {
-        Cpu::fill(self.scale.mut_data(), &mut |v| *v = 1.0);
-        Cpu::fill(self.bias.mut_data(), &mut |v| *v = 0.0);
-        Cpu::fill(self.running_mean.mut_data(), &mut |v| *v = 0.0);
-        Cpu::fill(self.running_var.mut_data(), &mut |v| *v = 1.0);
-    }
-}
-
-impl<const C: usize> CanUpdateWithGradients for BatchNorm2D<C> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.scale.update(grads, unused);
-        self.bias.update(grads, unused);
+impl<const C: usize, D: Device<f32>> CanUpdateWithGradients<D, f32> for BatchNorm2D<C, D> {
+    fn update<U: crate::optim::UpdateParams<D, f32>>(
+        &mut self,
+        updater: &mut U,
+        unused: &mut crate::optim::UnusedTensors,
+    ) -> Result<(), <D>::Err> {
+        self.scale.update(updater, unused)?;
+        self.bias.update(updater, unused)?;
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::assert_close;
-    use rand::{rngs::StdRng, SeedableRng};
+    use crate::tests::{assert_close, build_test_device};
 
     #[test]
     fn test_batchnorm2d_3d_forward_mut() {
-        let mut rng = StdRng::seed_from_u64(0);
-        let x1: Tensor3D<3, 2, 2> = TensorCreator::randn(&mut rng);
-        let mut bn: BatchNorm2D<3> = Default::default();
+        let dev = build_test_device!(0);
+
+        let x1 = dev.randn::<Rank3<3, 2, 2>>();
+        let mut bn: BatchNorm2D<3, _> = BuildModule::build(&dev);
 
         let y1 = bn.forward_mut(x1.trace());
         assert_close(
-            y1.data(),
+            &y1.as_array(),
             &[
                 [[0.66747534, 0.77682495], [-1.698878, 0.25457793]],
                 [[-0.89111614, 1.2611268], [-1.0644908, 0.69448]],
@@ -206,13 +209,25 @@ mod tests {
             ],
         );
 
-        let g = backward(y1.exp().mean());
-        assert_close(bn.running_mean.data(), &[-0.0175438, -0.0214163, 0.0268384]);
-        assert_close(bn.running_var.data(), &[1.1361228, 1.0889612, 1.3478994]);
-        assert_close(g.ref_gradient(&bn.scale), &[0.2506705, 0.4257624, 0.257648]);
-        assert_close(g.ref_gradient(&bn.bias), &[0.4663894, 0.5239304, 0.4687197]);
+        let g = y1.exp().mean().backward();
         assert_close(
-            g.ref_gradient(&x1),
+            &bn.running_mean.as_array(),
+            &[-0.0175438, -0.0214163, 0.0268384],
+        );
+        assert_close(
+            &bn.running_var.as_array(),
+            &[1.1361228, 1.0889612, 1.3478994],
+        );
+        assert_close(
+            &g.get(&bn.scale).as_array(),
+            &[0.2506705, 0.4257624, 0.257648],
+        );
+        assert_close(
+            &g.get(&bn.bias).as_array(),
+            &[0.4663894, 0.5239304, 0.4687197],
+        );
+        assert_close(
+            &g.get(&x1).as_array(),
             &[
                 [[0.0030178577, 0.011973545], [0.0038383976, -0.018829815]],
                 [[-0.0016367957, 0.024275035], [0.0092941, -0.03193234]],
@@ -223,28 +238,29 @@ mod tests {
 
     #[test]
     fn test_batchnorm2d_4d_forward_mut() {
-        let mut rng = StdRng::seed_from_u64(2);
-        let x1: Tensor4D<2, 2, 2, 3> = TensorCreator::randn(&mut rng);
-        let mut bn: BatchNorm2D<2> = Default::default();
+        let dev = build_test_device!(2);
+
+        let x1 = dev.randn::<Rank4<2, 2, 2, 3>>();
+        let mut bn: BatchNorm2D<2, _> = BuildModule::build(&dev);
 
         let y1 = bn.forward_mut(x1.trace());
         #[rustfmt::skip]
         assert_close(
-            y1.data(),
+            &y1.as_array(),
             &[
                 [[[-0.93348885, -2.1979978, 0.19754872],[0.29159376, -0.6282544, -1.0415624]], [[1.1156346, 0.89029306, -1.1608727],[-0.73874927, 0.13254784, -0.77676374]]],
                 [[[0.60655713, 0.62703574, 0.12648833],[1.5577206, 0.18830705, 1.2060523]],[[0.37415895, -0.9069047, -0.9519587],[-0.02608296, 2.3435123, -0.2948149]]],
             ],
         );
 
-        let g = backward(y1.exp().mean());
-        assert_close(bn.running_mean.data(), &[-0.02424082, 0.00407672]);
-        assert_close(bn.running_var.data(), &[0.9676103, 1.0458221]);
-        assert_close(g.ref_gradient(&bn.scale), &[0.5582906, 1.1929206]);
-        assert_close(g.ref_gradient(&bn.bias), &[0.7535024, 0.92750454]);
+        let g = y1.exp().mean().backward();
+        assert_close(&bn.running_mean.as_array(), &[-0.02424082, 0.00407672]);
+        assert_close(&bn.running_var.as_array(), &[0.9676103, 1.0458221]);
+        assert_close(&g.get(&bn.scale).as_array(), &[0.5582906, 1.1929206]);
+        assert_close(&g.get(&bn.bias).as_array(), &[0.7535024, 0.92750454]);
         #[rustfmt::skip]
         assert_close(
-            g.ref_gradient(&x1),
+            &g.get(&x1).as_array(),
             &[
                 [[[-0.00378475, 0.05601016, -0.02694868],[-0.02614748, -0.01439525, 0.00047035]],[[-0.05280511, -0.05561727, 0.04425058],[0.01388359, -0.03710236, 0.01651]]],
                 [[[-0.01853323, -0.01773504, -0.02717264],[0.0794776, -0.02699574, 0.02575465]],[[-0.04663141, 0.02567738, 0.0289102],[-0.0294986, 0.10708933, -0.01466625]]],
@@ -254,37 +270,61 @@ mod tests {
 
     #[test]
     fn test_batchform2d_3d_repeated_forward_mut() {
-        let mut rng = StdRng::seed_from_u64(12);
+        let dev = build_test_device!(12);
 
-        let x1: Tensor3D<3, 4, 5> = TensorCreator::randn(&mut rng);
-        let mut bn: BatchNorm2D<3> = Default::default();
-
-        let _ = bn.forward_mut(x1.trace());
-        assert_close(bn.running_mean.data(), &[0.0083191, -0.0370511, -0.0079481]);
-        assert_close(bn.running_var.data(), &[1.0344709, 0.9340682, 1.0266376]);
+        let x1 = dev.randn::<Rank3<3, 4, 5>>();
+        let mut bn: BatchNorm2D<3, _> = BuildModule::build(&dev);
 
         let _ = bn.forward_mut(x1.trace());
-        assert_close(bn.running_mean.data(), &[0.0158063, -0.0703971, -0.0151013]);
-        assert_close(bn.running_var.data(), &[1.0654946, 0.87472963, 1.0506116]);
+        assert_close(
+            &bn.running_mean.as_array(),
+            &[0.0083191, -0.0370511, -0.0079481],
+        );
+        assert_close(
+            &bn.running_var.as_array(),
+            &[1.0344709, 0.9340682, 1.0266376],
+        );
 
         let _ = bn.forward_mut(x1.trace());
-        assert_close(bn.running_mean.data(), &[0.0225448, -0.1004085, -0.0215393]);
-        assert_close(bn.running_var.data(), &[1.093416, 0.8213248, 1.0721881]);
+        assert_close(
+            &bn.running_mean.as_array(),
+            &[0.0158063, -0.0703971, -0.0151013],
+        );
+        assert_close(
+            &bn.running_var.as_array(),
+            &[1.0654946, 0.87472963, 1.0506116],
+        );
 
         let _ = bn.forward_mut(x1.trace());
-        assert_close(bn.running_mean.data(), &[0.0286095, -0.1274188, -0.0273335]);
-        assert_close(bn.running_var.data(), &[1.1185452, 0.7732605, 1.0916069]);
+        assert_close(
+            &bn.running_mean.as_array(),
+            &[0.0225448, -0.1004085, -0.0215393],
+        );
+        assert_close(
+            &bn.running_var.as_array(),
+            &[1.093416, 0.8213248, 1.0721881],
+        );
+
+        let _ = bn.forward_mut(x1.trace());
+        assert_close(
+            &bn.running_mean.as_array(),
+            &[0.0286095, -0.1274188, -0.0273335],
+        );
+        assert_close(
+            &bn.running_var.as_array(),
+            &[1.1185452, 0.7732605, 1.0916069],
+        );
 
         let m = bn.running_mean.clone();
         let v = bn.running_var.clone();
 
-        let x2: Tensor3D<3, 2, 2> = TensorCreator::randn(&mut rng);
+        let x2 = dev.randn::<Rank3<3, 2, 2>>();
         let y2 = bn.forward(x2);
         // running stats shouldn't have been updated
-        assert_eq!(bn.running_mean.data(), m.data());
-        assert_eq!(bn.running_var.data(), v.data());
+        assert_eq!(bn.running_mean.as_array(), m.as_array());
+        assert_eq!(bn.running_var.as_array(), v.as_array());
         assert_close(
-            y2.data(),
+            &y2.as_array(),
             &[
                 [[0.0897828, -0.01880704], [-0.55082226, -0.50515544]],
                 [[0.13778551, 0.25317147], [-1.2689502, 0.61595416]],

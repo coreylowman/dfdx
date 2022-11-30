@@ -19,7 +19,7 @@ impl<E: Dtype, D: DeviceStorage + OneFillStorage<E>> TryBackward<D>
         let (t, mut tape) = self.split_tape();
         tape.add_backward_op(move |grads| {
             let g = grads.get_mut(&t)?;
-            t.device.fill_with_ones(g)?;
+            t.device.try_fill_with_ones(g)?;
             Ok(())
         });
         tape.0.execute()

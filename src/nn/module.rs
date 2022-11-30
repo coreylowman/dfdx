@@ -41,10 +41,12 @@ pub trait ModuleMut<Input> {
 }
 
 /// Something that can reset it's parameters.
-pub trait BuildModule<D: Device<E>, E: Dtype> {
-    fn zeros(device: &D) -> Self;
+pub trait BuildModule<D: Device<E>, E: Dtype>: Sized {
+    fn build(device: &D) -> Self {
+        Self::try_build(device).unwrap()
+    }
 
-    fn standard(device: &D) -> Self;
+    fn try_build(device: &D) -> Result<Self, D::Err>;
 
     /// Mutate the unit's parameters using [rand::Rng]. Each implementor
     /// of this trait decides how the parameters are initialized. In
@@ -65,5 +67,9 @@ pub trait BuildModule<D: Device<E>, E: Dtype> {
     ///     }
     /// }
     /// ```
-    fn reset_params(&mut self);
+    fn reset_params(&mut self) {
+        self.try_reset_params().unwrap();
+    }
+
+    fn try_reset_params(&mut self) -> Result<(), D::Err>;
 }

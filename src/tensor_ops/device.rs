@@ -12,6 +12,10 @@ pub trait Device<E: Dtype>:
     + crate::tensor::OnesTensor<E>
     + crate::tensor::RandTensor<E>
     + crate::tensor::RandnTensor<E>
+    + crate::tensor::OneFillStorage<E>
+    + crate::tensor::ZeroFillStorage<E>
+    + crate::tensor::RandFillStorage<E>
+    + crate::tensor::RandnFillStorage<E>
 
     // broadcast & reduces
     + super::broadcast_to::BroadcastKernel<E>

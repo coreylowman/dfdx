@@ -151,7 +151,7 @@ impl<M, D: DeviceStorage + RMSpropKernel<f32> + OneFillStorage<f32>> UpdateParam
                 let ga = self.grad_avg.get_mut(p)?;
 
                 if self.step == 0 {
-                    p.device.fill_with_ones(sa)?;
+                    p.device.try_fill_with_ones(sa)?;
                 }
 
                 D::update(&self.cfg, &mut p.storage, m, sa, ga, g);

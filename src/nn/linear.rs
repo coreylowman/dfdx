@@ -26,7 +26,7 @@ use super::module::{BuildModule, Module, ModuleMut};
 /// assert_eq!(y.data(), &[0.0; 2]);
 /// ```
 #[derive(Debug, Clone)]
-pub struct Linear<const I: usize, const O: usize, D: Device<f32>> {
+pub struct Linear<const I: usize, const O: usize, D: Device<f32> = Cpu> {
     /// Transposed weight matrix, shape (I, O)
     pub weight: Tensor<Rank2<O, I>, f32, D>,
 
@@ -49,31 +49,22 @@ impl<const I: usize, const O: usize, D: Device<f32>> CanUpdateWithGradients<D, f
 }
 
 impl<const I: usize, const O: usize, D: Device<f32>> BuildModule<D, f32> for Linear<I, O, D> {
-    fn zeros(device: &D) -> Self {
-        Self {
-            weight: device.zeros(),
-            bias: device.zeros(),
-        }
-    }
-
-    fn standard(device: &D) -> Self {
+    fn try_build(device: &D) -> Result<Self, D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
-        Self {
-            weight: (device.rand() - 0.5) * (2.0 * bound),
-            bias: (device.rand() - 0.5) * (2.0 * bound),
-        }
+        let weight = device.try_uniform(-bound, bound)?;
+        let bias = device.try_uniform(-bound, bound)?;
+        Ok(Self { weight, bias })
     }
 
     /// Initializes [Self::weight] and [Self::bias] from a [Uniform] distribution
     /// between [-1 / sqrt(I), 1 / sqrt(I)].
     ///
     /// This uses [Randomize::randomize()] to set the values of the tensor.
-    fn reset_params(&mut self) {
+    fn try_reset_params(&mut self) -> Result<(), D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
-        let new_weight = (self.weight.device.rand_like(&self.weight) - 0.5) * (2.0 * bound);
-        let new_bias = (self.bias.device.rand_like(&self.bias) - 0.5) * (2.0 * bound);
-        self.weight.clone_from(&new_weight);
-        self.bias.clone_from(&new_bias);
+        self.weight.try_fill_with_uniform(-bound, bound)?;
+        self.bias.try_fill_with_uniform(-bound, bound)?;
+        Ok(())
     }
 }
 
@@ -144,7 +135,7 @@ mod tests {
     #[test]
     fn test_linear_initialize() {
         let dev = build_test_device!();
-        let m: Linear<2000, 1, _> = BuildModule::standard(&dev);
+        let m: Linear<2000, 1, _> = BuildModule::build(&dev);
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);
@@ -257,7 +248,7 @@ mod tests {
     fn test_linear_missing_gradients() {
         let dev = build_test_device!();
 
-        let mut model: Linear<5, 3, _> = BuildModule::zeros(&dev);
+        let mut model: Linear<5, 3, _> = BuildModule::build(&dev);
         let mut g: SimpleUpdater<_> = Default::default();
 
         // no gradients present

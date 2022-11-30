@@ -58,8 +58,10 @@ pub trait ZerosTensor<E: Dtype>: DeviceStorage {
 }
 
 pub trait ZeroFillStorage<E: Dtype>: DeviceStorage {
-    fn fill_with_zeros<S: Shape>(&self, storage: &mut Self::Storage<S, E>)
-        -> Result<(), Self::Err>;
+    fn try_fill_with_zeros<S: Shape>(
+        &self,
+        storage: &mut Self::Storage<S, E>,
+    ) -> Result<(), Self::Err>;
 }
 
 pub trait OnesTensor<E: Dtype>: DeviceStorage {
@@ -76,7 +78,10 @@ pub trait OnesTensor<E: Dtype>: DeviceStorage {
 }
 
 pub trait OneFillStorage<E: Dtype>: DeviceStorage {
-    fn fill_with_ones<S: Shape>(&self, storage: &mut Self::Storage<S, E>) -> Result<(), Self::Err>;
+    fn try_fill_with_ones<S: Shape>(
+        &self,
+        storage: &mut Self::Storage<S, E>,
+    ) -> Result<(), Self::Err>;
 }
 
 pub trait RandTensor<E: Dtype>: DeviceStorage {
@@ -90,6 +95,29 @@ pub trait RandTensor<E: Dtype>: DeviceStorage {
         self.try_rand_like(src).unwrap()
     }
     fn try_rand_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
+
+    fn try_uniform<S: Shape + Default>(
+        &self,
+        min: E,
+        max: E,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        self.try_uniform_like::<S>(&Default::default(), min, max)
+    }
+    fn try_uniform_like<S: HasShape>(
+        &self,
+        src: &S,
+        min: E,
+        max: E,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
+}
+
+pub trait RandFillStorage<E: Dtype>: DeviceStorage {
+    fn try_fill_with_uniform<S: Shape>(
+        &self,
+        storage: &mut Self::Storage<S, E>,
+        min: E,
+        max: E,
+    ) -> Result<(), Self::Err>;
 }
 
 pub trait RandnTensor<E: Dtype>: DeviceStorage {
@@ -103,6 +131,28 @@ pub trait RandnTensor<E: Dtype>: DeviceStorage {
         self.try_randn_like(src).unwrap()
     }
     fn try_randn_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
+    fn try_normal<S: Shape + Default>(
+        &self,
+        mean: E,
+        stddev: E,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        self.try_normal_like::<S>(&Default::default(), mean, stddev)
+    }
+    fn try_normal_like<S: HasShape>(
+        &self,
+        src: &S,
+        mean: E,
+        stddev: E,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
+}
+
+pub trait RandnFillStorage<E: Dtype>: DeviceStorage {
+    fn try_fill_with_normal<S: Shape>(
+        &self,
+        storage: &mut Self::Storage<S, E>,
+        mean: E,
+        stddev: E,
+    ) -> Result<(), Self::Err>;
 }
 
 pub trait TensorFromVec<E: Dtype>: DeviceStorage {

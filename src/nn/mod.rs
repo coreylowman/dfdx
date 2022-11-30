@@ -78,7 +78,7 @@
 
 mod activations;
 // mod add_into;
-// mod batchnorm2d;
+mod batchnorm2d;
 // mod conv;
 // mod dropout;
 // mod flatten;
@@ -96,10 +96,10 @@ mod module;
 
 pub use activations::*;
 // pub use add_into::*;
-// pub use batchnorm2d::*;
+pub use batchnorm2d::*;
 // pub use dropout::*;
 // pub use generalized_residual::*;
-// pub use impl_module_for_tuples::*;
+pub use impl_module_for_tuples::*;
 // pub use layer_norm::*;
 pub use linear::*;
 pub use module::*;
