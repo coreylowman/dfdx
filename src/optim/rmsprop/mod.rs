@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    CanUpdateWithGradients, Optimizer, OptimizerUpdateError, ParamUpdater, UnusedTensors,
+    CanUpdateWithGradients, Optimizer, OptimizerUpdateError, UnusedTensors, UpdateParams,
     WeightDecay,
 };
 
@@ -134,7 +134,7 @@ pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
     );
 }
 
-impl<M, D: DeviceStorage + RMSpropKernel<f32> + OneFillStorage<f32>> ParamUpdater<D, f32>
+impl<M, D: DeviceStorage + RMSpropKernel<f32> + OneFillStorage<f32>> UpdateParams<D, f32>
     for RMSprop<M, D, f32>
 {
     fn update_param<S: Shape>(
@@ -164,7 +164,7 @@ impl<M, D: DeviceStorage + RMSpropKernel<f32> + OneFillStorage<f32>> ParamUpdate
 impl<E: Dtype, D: DeviceStorage, M: CanUpdateWithGradients<D, E>> Optimizer<M, D>
     for RMSprop<M, D, E>
 where
-    Self: ParamUpdater<D, E>,
+    Self: UpdateParams<D, E>,
 {
     fn update(
         &mut self,

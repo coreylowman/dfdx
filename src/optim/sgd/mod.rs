@@ -153,7 +153,7 @@ pub(super) trait SgdKernel<E: Dtype>: DeviceStorage {
     );
 }
 
-impl<M, D: DeviceStorage + SgdKernel<E>, E: Dtype> ParamUpdater<D, E> for Sgd<M, D, E> {
+impl<M, D: DeviceStorage + SgdKernel<E>, E: Dtype> UpdateParams<D, E> for Sgd<M, D, E> {
     fn update_param<S: Shape>(
         &mut self,
         p: &mut Tensor<S, E, D>,
@@ -173,7 +173,7 @@ impl<M, D: DeviceStorage + SgdKernel<E>, E: Dtype> ParamUpdater<D, E> for Sgd<M,
 
 impl<E: Dtype, D: DeviceStorage, M: CanUpdateWithGradients<D, E>> Optimizer<M, D> for Sgd<M, D, E>
 where
-    Self: ParamUpdater<D, E>,
+    Self: UpdateParams<D, E>,
 {
     fn update(
         &mut self,

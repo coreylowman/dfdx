@@ -10,9 +10,9 @@ macro_rules! activation_impls {
 
         impl<E: Dtype, D: DeviceStorage> CanUpdateWithGradients<D, E> for $struct_name {
             /// Does nothing.
-            fn update<P: ParamUpdater<D, E>>(
+            fn update<U: UpdateParams<D, E>>(
                 &mut self,
-                _: &mut P,
+                _: &mut U,
                 _: &mut UnusedTensors,
             ) -> Result<(), D::Err> {
                 Ok(())
@@ -62,9 +62,9 @@ pub struct Softmax;
 
 impl<D: DeviceStorage, E: Dtype> CanUpdateWithGradients<D, E> for Softmax {
     /// Does nothing.
-    fn update<O: ParamUpdater<D, E>>(
+    fn update<U: UpdateParams<D, E>>(
         &mut self,
-        _: &mut O,
+        _: &mut U,
         _: &mut UnusedTensors,
     ) -> Result<(), <D>::Err> {
         Ok(())

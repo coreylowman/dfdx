@@ -37,13 +37,13 @@ pub struct Linear<const I: usize, const O: usize, D: Device<f32>> {
 impl<const I: usize, const O: usize, D: Device<f32>> CanUpdateWithGradients<D, f32>
     for Linear<I, O, D>
 {
-    fn update<P: ParamUpdater<D, f32>>(
+    fn update<U: UpdateParams<D, f32>>(
         &mut self,
-        opt: &mut P,
+        updater: &mut U,
         unused: &mut UnusedTensors,
     ) -> Result<(), D::Err> {
-        self.weight.update(opt, unused)?;
-        self.bias.update(opt, unused)?;
+        self.weight.update(updater, unused)?;
+        self.bias.update(updater, unused)?;
         Ok(())
     }
 }

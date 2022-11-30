@@ -63,7 +63,7 @@ pub trait Optimizer<M, D: DeviceStorage> {
 /// could.
 ///
 /// See [crate::optim::Sgd] and [crate::optim::Adam] for examples on implementing this.
-pub trait ParamUpdater<D: DeviceStorage, E: Dtype> {
+pub trait UpdateParams<D: DeviceStorage, E: Dtype> {
     /// Retrieves the data associated with `p` if there is any.
     /// This can modify `self`, for instance if velocities are calculated
     /// based on the associated data!
@@ -105,16 +105,16 @@ pub trait CanUpdateWithGradients<D: DeviceStorage, E: Dtype>: Sized {
     /// Updates self given the [GradientProvider]. When any parameters that
     /// are NOT present in `G`, then this function should
     /// add the tensor's [UniqueId] to [UnusedTensors].
-    fn update<O: ParamUpdater<D, E>>(
+    fn update<U: UpdateParams<D, E>>(
         &mut self,
-        opt: &mut O,
+        updater: &mut U,
         unused: &mut UnusedTensors,
     ) -> Result<(), D::Err>;
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage> CanUpdateWithGradients<D, E> for Tensor<S, E, D> {
     /// Subtracts the gradient for the tensor from [HasArrayData::mut_data].
-    fn update<O: ParamUpdater<D, E>>(
+    fn update<O: UpdateParams<D, E>>(
         &mut self,
         opt: &mut O,
         unused: &mut UnusedTensors,
