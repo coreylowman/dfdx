@@ -1,7 +1,6 @@
-use crate::arrays::{HasArrayType, HasLastAxis};
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
-use crate::prelude::*;
-use rand::Rng;
+use crate::{arrays::*, gradients::Tape, optim::*, tensor::*, tensor_ops::*};
+
+use super::module::{Module, ModuleMut, ResetParams};
 
 macro_rules! activation_impls {
     ($struct_name:ident, $func_name:ident, #[$docstring:meta]) => {
@@ -9,19 +8,27 @@ macro_rules! activation_impls {
         #[derive(Default, Debug, Clone, Copy)]
         pub struct $struct_name;
 
-        impl CanUpdateWithGradients for $struct_name {
+        impl<E: Dtype, D: DeviceStorage> CanUpdateWithGradients<D, E> for $struct_name {
             /// Does nothing.
-            fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
+            fn update<P: ParamUpdater<D, E>>(
+                &mut self,
+                _: &mut P,
+                _: &mut UnusedTensors,
+            ) -> Result<(), D::Err> {
+                Ok(())
+            }
         }
 
         impl ResetParams for $struct_name {
             /// Does nothing.
-            fn reset_params<R: Rng>(&mut self, _: &mut R) {}
+            fn reset_params(&mut self) {}
         }
 
-        impl<T: Tensor<Dtype = f32>> Module<T> for $struct_name {
-            type Output = T;
-            fn forward(&self, input: T) -> Self::Output {
+        impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<S, E, D, T>>
+            for $struct_name
+        {
+            type Output = Tensor<S, E, D, T>;
+            fn forward(&self, input: Tensor<S, E, D, T>) -> Self::Output {
                 $func_name(input)
             }
         }
@@ -53,23 +60,28 @@ activation_impls!(Abs, abs, #[doc="Unit struct that impls [Module] as calling [a
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Softmax;
 
-impl CanUpdateWithGradients for Softmax {
+impl<D: DeviceStorage, E: Dtype> CanUpdateWithGradients<D, E> for Softmax {
     /// Does nothing.
-    fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
+    fn update<O: ParamUpdater<D, E>>(
+        &mut self,
+        _: &mut O,
+        _: &mut UnusedTensors,
+    ) -> Result<(), <D>::Err> {
+        Ok(())
+    }
 }
 
 impl ResetParams for Softmax {
     /// Does nothing.
-    fn reset_params<R: Rng>(&mut self, _: &mut R) {}
+    fn reset_params(&mut self) {}
 }
 
-impl<T> Module<T> for Softmax
-where
-    T: Reduce<<<T as HasArrayType>::Array as HasLastAxis>::LastAxis>,
+impl<Ax: Axes, S: Shape<LastAxis = Ax> + ReduceShape<Ax>, E: Dtype, D: Device<E>, T: Tape<D>>
+    Module<Tensor<S, E, D, T>> for Softmax
 {
-    type Output = T;
-    fn forward(&self, input: T) -> Self::Output {
-        softmax(input)
+    type Output = Tensor<S, E, D, T>;
+    fn forward(&self, input: Tensor<S, E, D, T>) -> Self::Output {
+        input.softmax::<Ax>()
     }
 }
 
@@ -85,99 +97,108 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::tests::build_test_device;
+
     use super::*;
 
     #[test]
-    fn test_relu() {
-        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+    fn test_nn_activations_relu() {
+        let dev = build_test_device!();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = ReLU.forward_mut(t.clone());
         let r2 = relu(t);
-        assert_eq!(r1.data(), r2.data());
+        assert_eq!(r1.as_array(), r2.as_array());
     }
 
     #[test]
-    fn test_sin() {
-        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+    fn test_nn_activations_sin() {
+        let dev = build_test_device!();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Sin.forward_mut(t.clone());
         let r2 = sin(t);
-        assert_eq!(r1.data(), r2.data());
+        assert_eq!(r1.as_array(), r2.as_array());
     }
     #[test]
-    fn test_cos() {
-        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+    fn test_nn_activations_cos() {
+        let dev = build_test_device!();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Cos.forward_mut(t.clone());
         let r2 = cos(t);
-        assert_eq!(r1.data(), r2.data());
+        assert_eq!(r1.as_array(), r2.as_array());
     }
     #[test]
-    fn test_ln() {
-        let t = tensor([0.0, 1.0, 2.0, 3.0, 4.0]);
+    fn test_nn_activations_ln() {
+        let dev = build_test_device!();
+        let t = dev.tensor([0.0, 1.0, 2.0, 3.0, 4.0]);
         let r1 = Ln.forward_mut(t.clone());
         let r2 = ln(t);
-        assert_eq!(r1.data(), r2.data());
+        assert_eq!(r1.as_array(), r2.as_array());
     }
     #[test]
-    fn test_exp() {
-        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+    fn test_nn_activations_exp() {
+        let dev = build_test_device!();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Exp.forward_mut(t.clone());
         let r2 = exp(t);
-        assert_eq!(r1.data(), r2.data());
+        assert_eq!(r1.as_array(), r2.as_array());
     }
 
     #[test]
-    fn test_sigmoid() {
-        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+    fn test_nn_activations_sigmoid() {
+        let dev = build_test_device!();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Sigmoid.forward_mut(t.clone());
         let r2 = sigmoid(t);
-        assert_eq!(r1.data(), r2.data());
+        assert_eq!(r1.as_array(), r2.as_array());
     }
     #[test]
-    fn test_tanh() {
-        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+    fn test_nn_activations_tanh() {
+        let dev = build_test_device!();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Tanh.forward_mut(t.clone());
         let r2 = tanh(t);
-        assert_eq!(r1.data(), r2.data());
+        assert_eq!(r1.as_array(), r2.as_array());
     }
 
     #[test]
-    fn test_square() {
-        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+    fn test_nn_activations_square() {
+        let dev = build_test_device!();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Square.forward_mut(t.clone());
         let r2 = square(t);
-        assert_eq!(r1.data(), r2.data());
+        assert_eq!(r1.as_array(), r2.as_array());
     }
 
     #[test]
-    fn test_sqrt() {
-        let t = tensor([0.0, 1.0, 2.0, 3.0, 4.0]);
+    fn test_nn_activations_sqrt() {
+        let dev = build_test_device!();
+        let t = dev.tensor([0.0, 1.0, 2.0, 3.0, 4.0]);
         let r1 = Sqrt.forward_mut(t.clone());
         let r2 = sqrt(t);
-        assert_eq!(r1.data(), r2.data());
+        assert_eq!(r1.as_array(), r2.as_array());
     }
 
     #[test]
-    fn test_abs() {
-        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+    fn test_nn_activations_abs() {
+        let dev = build_test_device!();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Abs.forward_mut(t.clone());
         let r2 = abs(t);
-        assert_eq!(r1.data(), r2.data());
+        assert_eq!(r1.as_array(), r2.as_array());
     }
 
     #[test]
-    fn test_softmax() {
-        let t = Tensor0D::new(0.0);
+    fn test_nn_activations_softmax() {
+        let dev = build_test_device!();
+
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Softmax.forward_mut(t.clone());
         let r2 = t.softmax();
-        assert_eq!(r1.data(), r2.data());
+        assert_eq!(r1.as_array(), r2.as_array());
 
-        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = Softmax.forward_mut(t.clone());
-        let r2 = t.softmax();
-        assert_eq!(r1.data(), r2.data());
-
-        let t = Tensor2D::new([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
+        let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
         let r1 = Softmax.forward_mut(t.clone());
         let r2 = t.softmax::<crate::arrays::Axis<1>>();
-        assert_eq!(r1.data(), r2.data());
+        assert_eq!(r1.as_array(), r2.as_array());
     }
 }
