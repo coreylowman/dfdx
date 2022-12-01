@@ -1,4 +1,4 @@
-use crate::{arrays::Dtype, optim::CanUpdateWithGradients, tensor_ops::Device};
+use crate::{arrays::Dtype, optim::*, tensor_ops::Device};
 
 use super::{BuildModule, Module, ModuleMut};
 
@@ -49,11 +49,10 @@ impl<T, const N: usize> std::ops::Index<usize> for Repeated<T, N> {
 impl<D: Device<E>, E: Dtype, T: CanUpdateWithGradients<D, E>, const N: usize>
     CanUpdateWithGradients<D, E> for Repeated<T, N>
 {
-    fn update<U: crate::prelude::UpdateParams<D, E>>(
-        &mut self,
-        updater: &mut U,
-        unused: &mut crate::prelude::UnusedTensors,
-    ) -> Result<(), <D>::Err> {
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
+    where
+        U: UpdateParams<D, E>,
+    {
         for m in self.modules.iter_mut() {
             m.update(updater, unused)?;
         }

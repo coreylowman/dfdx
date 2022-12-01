@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use crate::{
     arrays::{Dtype, Shape},
     gradients::Gradients,
-    tensor::DeviceStorage,
+    tensor::{Cpu, DeviceStorage},
 };
 
 use super::{CanUpdateWithGradients, Optimizer, OptimizerUpdateError, UpdateParams, WeightDecay};
@@ -74,7 +74,7 @@ impl Default for AdamConfig<f32> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Adam<M, D: DeviceStorage, E: Dtype> {
+pub struct Adam<M, D: DeviceStorage = Cpu, E: Dtype = f32> {
     /// Hyperparameter configuration
     pub cfg: AdamConfig<E>,
 

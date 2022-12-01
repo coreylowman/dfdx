@@ -1,4 +1,4 @@
-use crate::{arrays::*, gradients::Tape, optim::CanUpdateWithGradients, tensor::*, tensor_ops::*};
+use crate::{arrays::*, gradients::Tape, optim::*, tensor::*, tensor_ops::*};
 
 use super::{BuildModule, Module, ModuleMut};
 
@@ -44,11 +44,10 @@ impl<const M: usize, D: Device<f32>> BuildModule<D, f32> for LayerNorm1D<M, D> {
 }
 
 impl<const M: usize, D: Device<f32>> CanUpdateWithGradients<D, f32> for LayerNorm1D<M, D> {
-    fn update<U: crate::optim::UpdateParams<D, f32>>(
-        &mut self,
-        updater: &mut U,
-        unused: &mut crate::optim::UnusedTensors,
-    ) -> Result<(), <D>::Err> {
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
+    where
+        U: UpdateParams<D, f32>,
+    {
         self.gamma.update(updater, unused)?;
         self.beta.update(updater, unused)?;
         Ok(())
@@ -64,22 +63,22 @@ impl<const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<Rank1<M>, f32, D,
     }
 }
 
-impl<const B: usize, const M: usize, D: Device<f32>, T: Tape<D>>
-    Module<Tensor<Rank2<B, M>, f32, D, T>> for LayerNorm1D<M, D>
+impl<B: Dim, const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<(B, Const<M>), f32, D, T>>
+    for LayerNorm1D<M, D>
 {
-    type Output = Tensor<Rank2<B, M>, f32, D, T>;
-    fn forward(&self, x: Tensor<Rank2<B, M>, f32, D, T>) -> Self::Output {
+    type Output = Tensor<(B, Const<M>), f32, D, T>;
+    fn forward(&self, x: Tensor<(B, Const<M>), f32, D, T>) -> Self::Output {
         let shape = *x.shape();
         x.normalize_along::<Axis<1>>(self.epsilon) * self.gamma.retaped::<T>().broadcast_to(&shape)
             + self.beta.retaped::<T>().broadcast_to(&shape)
     }
 }
 
-impl<const B: usize, const S: usize, const M: usize, D: Device<f32>, T: Tape<D>>
-    Module<Tensor<Rank3<B, S, M>, f32, D, T>> for LayerNorm1D<M, D>
+impl<B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
+    Module<Tensor<(B, S, Const<M>), f32, D, T>> for LayerNorm1D<M, D>
 {
-    type Output = Tensor<Rank3<B, S, M>, f32, D, T>;
-    fn forward(&self, x: Tensor<Rank3<B, S, M>, f32, D, T>) -> Self::Output {
+    type Output = Tensor<(B, S, Const<M>), f32, D, T>;
+    fn forward(&self, x: Tensor<(B, S, Const<M>), f32, D, T>) -> Self::Output {
         let shape = *x.shape();
         x.normalize_along::<Axis<2>>(self.epsilon) * self.gamma.retaped::<T>().broadcast_to(&shape)
             + self.beta.retaped::<T>().broadcast_to(&shape)

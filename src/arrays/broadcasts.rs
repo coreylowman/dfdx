@@ -16,7 +16,7 @@ impl<Src: Shape, Dst: Shape + ReduceShapeTo<Src, Ax>, Ax> BroadcastShapeTo<Dst, 
 macro_rules! broadcast_to {
     (($($SrcDims:tt),*), ($($DstDims:tt),*), $Axes:ty) => {
 impl<$($DstDims: Dim, )*> ReduceShapeTo<($($SrcDims, )*), $Axes> for ($($DstDims, )*) {}
-impl<$($DstDims: Dim + Default, )*> ReduceShape<$Axes> for ($($DstDims, )*) {
+impl<$($DstDims: Dim, )*> ReduceShape<$Axes> for ($($DstDims, )*) {
     type Reduced = ($($SrcDims, )*);
 }
     };

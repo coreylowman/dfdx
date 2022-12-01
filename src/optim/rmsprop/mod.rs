@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use crate::{
     arrays::{Dtype, Shape},
     gradients::Gradients,
-    tensor::{DeviceStorage, OneFillStorage, Tensor},
+    tensor::{Cpu, DeviceStorage, OneFillStorage, Tensor},
 };
 
 use super::{
@@ -85,7 +85,7 @@ impl Default for RMSpropConfig<f32> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct RMSprop<M, D: DeviceStorage, E: Dtype> {
+pub struct RMSprop<M, D: DeviceStorage = Cpu, E: Dtype = f32> {
     /// Hyperparameter configuration
     pub cfg: RMSpropConfig<E>,
 

@@ -105,11 +105,9 @@ pub trait CanUpdateWithGradients<D: DeviceStorage, E: Dtype>: Sized {
     /// Updates self given the [GradientProvider]. When any parameters that
     /// are NOT present in `G`, then this function should
     /// add the tensor's [UniqueId] to [UnusedTensors].
-    fn update<U: UpdateParams<D, E>>(
-        &mut self,
-        updater: &mut U,
-        unused: &mut UnusedTensors,
-    ) -> Result<(), D::Err>;
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
+    where
+        U: UpdateParams<D, E>;
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage> CanUpdateWithGradients<D, E> for Tensor<S, E, D> {

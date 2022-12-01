@@ -1,4 +1,4 @@
-use crate::{arrays::*, gradients::*, optim::CanUpdateWithGradients, tensor::*, tensor_ops::*};
+use crate::{arrays::*, gradients::*, optim::*, tensor::*, tensor_ops::*};
 
 use super::{BuildModule, Module, ModuleMut};
 
@@ -109,46 +109,49 @@ impl<const C: usize, D: Device<f32>> BatchNorm2D<C, D> {
     }
 }
 
-impl<const C: usize, const H: usize, const W: usize, D: Device<f32>>
-    Module<Tensor<Rank3<C, H, W>, f32, D, NoneTape>> for BatchNorm2D<C, D>
+impl<const C: usize, H: Dim, W: Dim, D: Device<f32>>
+    Module<Tensor<(Const<C>, H, W), f32, D, NoneTape>> for BatchNorm2D<C, D>
 {
-    type Output = Tensor<Rank3<C, H, W>, f32, D, NoneTape>;
+    type Output = Tensor<(Const<C>, H, W), f32, D, NoneTape>;
 
     /// Inference 3d forward - does **not** update [Self::running_mean] and [Self::running_var]
-    fn forward(&self, x: Tensor<Rank3<C, H, W>, f32, D, NoneTape>) -> Self::Output {
+    fn forward(&self, x: Tensor<(Const<C>, H, W), f32, D, NoneTape>) -> Self::Output {
         self.infer_fwd(x)
     }
 }
 
-impl<const B: usize, const C: usize, const H: usize, const W: usize, D: Device<f32>>
-    Module<Tensor<Rank4<B, C, H, W>, f32, D, NoneTape>> for BatchNorm2D<C, D>
+impl<B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>>
+    Module<Tensor<(B, Const<C>, H, W), f32, D, NoneTape>> for BatchNorm2D<C, D>
 {
-    type Output = Tensor<Rank4<B, C, H, W>, f32, D, NoneTape>;
+    type Output = Tensor<(B, Const<C>, H, W), f32, D, NoneTape>;
 
     /// Inference 4d forward - does **not** update [Self::running_mean] and [Self::running_var]
-    fn forward(&self, x: Tensor<Rank4<B, C, H, W>, f32, D, NoneTape>) -> Self::Output {
+    fn forward(&self, x: Tensor<(B, Const<C>, H, W), f32, D, NoneTape>) -> Self::Output {
         self.infer_fwd(x)
     }
 }
 
-impl<const C: usize, const H: usize, const W: usize, D: Device<f32>>
-    ModuleMut<Tensor<Rank3<C, H, W>, f32, D, OwnedTape<D>>> for BatchNorm2D<C, D>
+impl<const C: usize, H: Dim, W: Dim, D: Device<f32>>
+    ModuleMut<Tensor<(Const<C>, H, W), f32, D, OwnedTape<D>>> for BatchNorm2D<C, D>
 {
-    type Output = Tensor<Rank3<C, H, W>, f32, D, OwnedTape<D>>;
+    type Output = Tensor<(Const<C>, H, W), f32, D, OwnedTape<D>>;
 
     /// Training 3d forward - updates [Self::running_mean] and [Self::running_var]
-    fn forward_mut(&mut self, x: Tensor<Rank3<C, H, W>, f32, D, OwnedTape<D>>) -> Self::Output {
+    fn forward_mut(&mut self, x: Tensor<(Const<C>, H, W), f32, D, OwnedTape<D>>) -> Self::Output {
         self.train_fwd(x)
     }
 }
 
-impl<const B: usize, const C: usize, const H: usize, const W: usize, D: Device<f32>>
-    ModuleMut<Tensor<Rank4<B, C, H, W>, f32, D, OwnedTape<D>>> for BatchNorm2D<C, D>
+impl<B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>>
+    ModuleMut<Tensor<(B, Const<C>, H, W), f32, D, OwnedTape<D>>> for BatchNorm2D<C, D>
 {
-    type Output = Tensor<Rank4<B, C, H, W>, f32, D, OwnedTape<D>>;
+    type Output = Tensor<(B, Const<C>, H, W), f32, D, OwnedTape<D>>;
 
     /// Training 4d forward - updates [Self::running_mean] and [Self::running_var]
-    fn forward_mut(&mut self, x: Tensor<Rank4<B, C, H, W>, f32, D, OwnedTape<D>>) -> Self::Output {
+    fn forward_mut(
+        &mut self,
+        x: Tensor<(B, Const<C>, H, W), f32, D, OwnedTape<D>>,
+    ) -> Self::Output {
         self.train_fwd(x)
     }
 }
@@ -175,11 +178,10 @@ impl<const C: usize, D: Device<f32>> BuildModule<D, f32> for BatchNorm2D<C, D> {
 }
 
 impl<const C: usize, D: Device<f32>> CanUpdateWithGradients<D, f32> for BatchNorm2D<C, D> {
-    fn update<U: crate::optim::UpdateParams<D, f32>>(
-        &mut self,
-        updater: &mut U,
-        unused: &mut crate::optim::UnusedTensors,
-    ) -> Result<(), <D>::Err> {
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
+    where
+        U: UpdateParams<D, f32>,
+    {
         self.scale.update(updater, unused)?;
         self.bias.update(updater, unused)?;
         Ok(())

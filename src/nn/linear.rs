@@ -37,11 +37,10 @@ pub struct Linear<const I: usize, const O: usize, D: Device<f32> = Cpu> {
 impl<const I: usize, const O: usize, D: Device<f32>> CanUpdateWithGradients<D, f32>
     for Linear<I, O, D>
 {
-    fn update<U: UpdateParams<D, f32>>(
-        &mut self,
-        updater: &mut U,
-        unused: &mut UnusedTensors,
-    ) -> Result<(), D::Err> {
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
+    where
+        U: UpdateParams<D, f32>,
+    {
         self.weight.update(updater, unused)?;
         self.bias.update(updater, unused)?;
         Ok(())
@@ -79,31 +78,29 @@ impl<const I: usize, const O: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<R
     }
 }
 
-impl<const B: usize, const I: usize, const O: usize, D: Device<f32>, T: Tape<D>>
-    Module<Tensor<Rank2<B, I>, f32, D, T>> for Linear<I, O, D>
+impl<B: Dim, const I: usize, const O: usize, D: Device<f32>, T: Tape<D>>
+    Module<Tensor<(B, Const<I>), f32, D, T>> for Linear<I, O, D>
 {
-    type Output = Tensor<Rank2<B, O>, f32, D, T>;
+    type Output = Tensor<(B, Const<O>), f32, D, T>;
 
     /// Batched 2d forward using [matmul()] and [add()]
-    fn forward(&self, x: Tensor<Rank2<B, I>, f32, D, T>) -> Self::Output {
-        x.matmul(self.weight.retaped::<T>().permute()) + self.bias.retaped::<T>().broadcast()
+    fn forward(&self, x: Tensor<(B, Const<I>), f32, D, T>) -> Self::Output {
+        let batch = x.shape().0;
+        x.matmul(self.weight.retaped::<T>().permute())
+            + self.bias.retaped::<T>().broadcast_to(&(batch, Const))
     }
 }
 
-impl<
-        const B: usize,
-        const S: usize,
-        const I: usize,
-        const O: usize,
-        D: Device<f32>,
-        T: Tape<D>,
-    > Module<Tensor<Rank3<B, S, I>, f32, D, T>> for Linear<I, O, D>
+impl<B: Dim, S: Dim, const I: usize, const O: usize, D: Device<f32>, T: Tape<D>>
+    Module<Tensor<(B, S, Const<I>), f32, D, T>> for Linear<I, O, D>
 {
-    type Output = Tensor<Rank3<B, S, O>, f32, D, T>;
+    type Output = Tensor<(B, S, Const<O>), f32, D, T>;
 
     /// Batched 3d forward using [matmul()] and [add()]
-    fn forward(&self, x: Tensor<Rank3<B, S, I>, f32, D, T>) -> Self::Output {
-        x.matmul(self.weight.retaped::<T>().permute()) + self.bias.retaped::<T>().broadcast()
+    fn forward(&self, x: Tensor<(B, S, Const<I>), f32, D, T>) -> Self::Output {
+        let &(batch, seq, _) = x.shape();
+        x.matmul(self.weight.retaped::<T>().permute())
+            + self.bias.retaped::<T>().broadcast_to(&(batch, seq, Const))
     }
 }
 

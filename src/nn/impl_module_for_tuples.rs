@@ -151,11 +151,10 @@ mod tests {
     impl<const I: usize, const N: usize, D: Device<E>, E: Dtype> CanUpdateWithGradients<D, E>
         for SetTo1<I, N>
     {
-        fn update<U: UpdateParams<D, E>>(
-            &mut self,
-            _: &mut U,
-            _: &mut UnusedTensors,
-        ) -> Result<(), <D>::Err> {
+        fn update<U>(&mut self, _: &mut U, _: &mut UnusedTensors) -> Result<(), <D>::Err>
+        where
+            U: UpdateParams<D, E>,
+        {
             Ok(())
         }
     }

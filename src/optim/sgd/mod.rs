@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use crate::arrays::{Dtype, Shape};
 use crate::gradients::Gradients;
-use crate::tensor::{DeviceStorage, Tensor};
+use crate::tensor::{Cpu, DeviceStorage, Tensor};
 
 use super::optimizer::*;
 
@@ -112,7 +112,7 @@ impl Default for SgdConfig<f32> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Sgd<M, D: DeviceStorage, E: Dtype> {
+pub struct Sgd<M, D: DeviceStorage = Cpu, E: Dtype = f32> {
     /// Hyperparameter configuration
     pub cfg: SgdConfig<E>,
 
