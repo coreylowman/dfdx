@@ -8,7 +8,7 @@ use super::{
 
 #[cfg(feature = "cblas")]
 use cblas_sys::{
-    cblas_sgemm as sgemm, cblas_sgemv as sgemv, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
+    cblas_sgemm as sgemm, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
     CblasRowMajor as RowMajor, CblasTrans as Tr,
 };
 

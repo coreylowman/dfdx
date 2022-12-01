@@ -103,8 +103,7 @@ fn try_binary_op<
     let (lhs, ltape) = lhs.split_tape();
     let (rhs, rtape) = rhs.split_tape();
     let mut tape = ltape.merge(rtape);
-    let storage = fwd(&lhs.device, &lhs.storage, &rhs.storage)?;
-    let out = lhs.device.upgrade(storage);
+    let out = lhs.device.upgrade(fwd(&lhs.device, &lhs.storage, &rhs.storage)?);
     let phantom_out = out.clone();
     tape.add_backward_op(move |grads| {
         let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out)?;

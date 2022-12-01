@@ -11,12 +11,10 @@ impl<E: Dtype> PermuteKernel<E> for Cpu {
     where
         Src: PermuteShapeTo<Dst, Ax>,
     {
-        let out = inp.try_clone()?;
-        let shape = inp.shape.permuted();
         let mut out: StridedArray<Dst, E> = StridedArray {
-            data: out.data,
-            shape,
-            strides: out.strides,
+            data: inp.data.clone(),
+            shape: inp.shape.permuted(),
+            strides: inp.strides,
         };
         for (i, idx) in Ax::as_array().into_iter().enumerate() {
             out.strides[i] = inp.strides[idx as usize];
@@ -32,8 +30,8 @@ impl<E: Dtype> PermuteKernel<E> for Cpu {
         Src: PermuteShapeTo<Dst, Ax>,
     {
         debug_assert_eq!(grad_inp.data.len(), grad_out.data.len());
-        for (i, data_i) in grad_inp.buf_iter_mut().enumerate() {
-            *data_i += grad_out.data[i];
+        for (inp_i, out_i) in grad_inp.buf_iter_mut().zip(grad_out.buf_iter()) {
+            *inp_i += *out_i;
         }
         Ok(())
     }

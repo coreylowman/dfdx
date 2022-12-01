@@ -39,19 +39,21 @@ impl<S: Shape> NdIndex<S> {
                     let mut curr = S::NUM_DIMS - 1;
                     loop {
                         self.indices[curr] += 1;
+                        *i += self.strides[curr];
+
                         if self.indices[curr] < self.shape[curr] {
-                            *i += self.strides[curr];
                             break;
-                        } else {
-                            *i -= (self.shape[curr] - 1) * self.strides[curr];
-                            self.indices[curr] = 0;
                         }
-                        if curr > 0 {
-                            curr -= 1;
-                        } else {
+
+                        *i -= self.shape[curr] * self.strides[curr];
+                        self.indices[curr] = 0;
+
+                        if curr == 0 {
                             self.next = None;
                             break;
                         }
+
+                        curr -= 1;
                     }
                 }
                 Some(idx)
