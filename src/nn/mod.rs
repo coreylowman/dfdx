@@ -88,7 +88,7 @@ mod layer_norm;
 mod linear;
 mod module;
 // mod pool2d;
-// mod pool_global;
+mod pool_global;
 mod repeated;
 mod residual;
 // mod split_into;

@@ -1,6 +1,6 @@
-use super::{Module, ModuleMut, ResetParams};
-use crate::gradients::*;
-use crate::tensor::*;
+use crate::{arrays::*, gradients::*, optim::*, tensor::*, tensor_ops::*};
+
+use super::{BuildModule, Module, ModuleMut};
 
 /// Applies average pooling over an entire image, fully reducing the height and width
 /// dimensions:
@@ -58,34 +58,38 @@ pub struct MinPoolGlobal;
 
 macro_rules! impl_pools {
     ($PoolTy:ty, $Method:ident) => {
-        impl ResetParams for $PoolTy {
-            fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {}
-        }
-        impl CanUpdateWithGradients for $PoolTy {
-            fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
-        }
-
-        impl<const C: usize, const L: usize, T: Tape> Module<Tensor2D<C, L, T>> for $PoolTy {
-            type Output = Tensor1D<C, T>;
-            fn forward(&self, input: Tensor2D<C, L, T>) -> Self::Output {
-                input.$Method()
+        impl<D: Device<E>, E: Dtype> BuildModule<D, E> for $PoolTy {
+            fn try_build(_: &D) -> Result<Self, <D>::Err> {
+                Ok(Self)
+            }
+            fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
+                Ok(())
             }
         }
 
-        impl<const C: usize, const H: usize, const W: usize, T: Tape> Module<Tensor3D<C, H, W, T>>
-            for $PoolTy
-        {
-            type Output = Tensor1D<C, T>;
-            fn forward(&self, input: Tensor3D<C, H, W, T>) -> Self::Output {
-                input.$Method()
+        impl<D: Device<E>, E: Dtype> CanUpdateWithGradients<D, E> for $PoolTy {
+            fn update<U>(&mut self, _: &mut U, _: &mut UnusedTensors) -> Result<(), <D>::Err>
+            where
+                U: UpdateParams<D, E>,
+            {
+                Ok(())
             }
         }
 
-        impl<const B: usize, const C: usize, const H: usize, const W: usize, T: Tape>
-            Module<Tensor4D<B, C, H, W, T>> for $PoolTy
+        impl<C: Dim, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
+            Module<Tensor<(C, H, W), f32, D, T>> for $PoolTy
         {
-            type Output = Tensor2D<B, C, T>;
-            fn forward(&self, input: Tensor4D<B, C, H, W, T>) -> Self::Output {
+            type Output = Tensor<(C,), f32, D, T>;
+            fn forward(&self, input: Tensor<(C, H, W), f32, D, T>) -> Self::Output {
+                input.min()
+            }
+        }
+
+        impl<B: Dim, C: Dim, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
+            Module<Tensor<(B, C, H, W), f32, D, T>> for $PoolTy
+        {
+            type Output = Tensor<(B, C), f32, D, T>;
+            fn forward(&self, input: Tensor<(B, C, H, W), f32, D, T>) -> Self::Output {
                 input.$Method()
             }
         }
