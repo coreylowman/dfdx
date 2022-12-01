@@ -4,7 +4,7 @@ pub trait ReduceShapeTo<S, Ax>: Sized {}
 pub trait BroadcastShapeTo<S, Ax>: Sized {}
 
 pub trait ReduceShape<Ax>: Sized + Shape + HasAxes<Ax> + ReduceShapeTo<Self::Reduced, Ax> {
-    type Reduced: Shape + Default + BroadcastShapeTo<Self, Ax>;
+    type Reduced: Shape + BroadcastShapeTo<Self, Ax>;
 }
 
 impl ReduceShapeTo<(), Axis<0>> for () {}
@@ -53,7 +53,7 @@ broadcast_to!((M, N, P), (M, N, O, P), Axis<2>);
 broadcast_to!((M, O, P), (M, N, O, P), Axis<1>);
 broadcast_to!((N, O, P), (M, N, O, P), Axis<0>);
 
-pub trait BroadcastStridesTo<S: Shape, Axes>: Shape + BroadcastShapeTo<S, Axes> {
+pub trait BroadcastStridesTo<S: Shape, Ax>: Shape + BroadcastShapeTo<S, Ax> {
     fn broadcast_strides(&self, strides: Self::Concrete) -> S::Concrete;
 }
 
@@ -72,5 +72,68 @@ where
             }
         }
         new_strides
+    }
+}
+
+pub trait ReduceStridesTo<S: Shape, Ax>: Shape + ReduceShapeTo<S, Ax> {
+    fn reduced(&self) -> S;
+}
+
+impl<Src: Shape, Dst: Shape, Ax: Axes> ReduceStridesTo<Dst, Ax> for Src
+where
+    Self: ReduceShapeTo<Dst, Ax>,
+{
+    #[inline(always)]
+    fn reduced(&self) -> Dst {
+        let src_dims = self.concrete();
+        let mut dst_dims: Dst::Concrete = Default::default();
+        let mut i_dst = 0;
+        for i_src in 0..Src::NUM_DIMS {
+            if !Ax::as_array().into_iter().any(|x| x == i_src as isize) {
+                dst_dims[i_dst] = src_dims[i_src];
+                i_dst += 1;
+            }
+        }
+        Dst::from_concrete(&dst_dims).unwrap()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_no_conflict_reductions() {
+        let src = (Dyn(1), Const::<2>, Dyn(3), Const::<4>);
+
+        let dst: (Dyn, Const<2>) = src.reduced();
+        assert_eq!(dst, (Dyn(1), Const::<2>));
+
+        let dst: (Const<2>, Dyn) = src.reduced();
+        assert_eq!(dst, (Const::<2>, Dyn(3)));
+
+        let dst: (Dyn, Dyn) = src.reduced();
+        assert_eq!(dst, (Dyn(1), Dyn(3)));
+    }
+
+    #[test]
+    fn test_conflicting_reductions() {
+        let src = (Dyn(1), Dyn(2), Const::<3>);
+
+        let dst = ReduceStridesTo::<_, Axis<1>>::reduced(&src);
+        assert_eq!(dst, (Dyn(1), Const::<3>));
+
+        let dst = ReduceStridesTo::<_, Axis<0>>::reduced(&src);
+        assert_eq!(dst, (Dyn(2), Const::<3>));
+    }
+
+    #[test]
+    fn test_broadcast_strides() {
+        let src = (Dyn(1),);
+        let dst_strides = BroadcastStridesTo::<(Dyn, Dyn, Dyn), Axes2<0, 2>>::broadcast_strides(
+            &src,
+            src.strides(),
+        );
+        assert_eq!(dst_strides, [0, 1, 0]);
     }
 }

@@ -1,6 +1,6 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::arrays::{Axis, Dim, Dtype, ReduceShape, ReplaceDim, Shape};
+use crate::arrays::{Axis, Dim, Dtype, ReduceShape, ReduceStridesTo, ReplaceDim, Shape};
 use crate::tensor::cpu::{Cpu, LendingIterator, StridedArray};
 
 use super::{ReplaceAxisKernel, SelectAxisKernel, SelectBatchKernel};
@@ -12,7 +12,7 @@ impl<E: Dtype> SelectAxisKernel<E> for Cpu {
         inp: &Self::Storage<S, E>,
         idx: &Self::Storage<(), usize>,
     ) -> Result<Self::Storage<S::Reduced, E>, Self::Err> {
-        let mut out: StridedArray<S::Reduced, E> = StridedArray::new(Default::default())?;
+        let mut out: StridedArray<S::Reduced, E> = StridedArray::new(inp.shape.reduced())?;
         let mut out_iter = out.iter_mut_with_index();
         let idx: usize = idx[[]];
         while let Some((o, i)) = out_iter.next() {

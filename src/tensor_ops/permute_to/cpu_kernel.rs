@@ -11,15 +11,11 @@ impl<E: Dtype> PermuteKernel<E> for Cpu {
     where
         Src: PermuteShapeTo<Dst, Ax>,
     {
-        let mut out: StridedArray<Dst, E> = StridedArray {
+        Ok(StridedArray {
             data: inp.data.clone(),
             shape: inp.shape.permuted(),
-            strides: inp.strides,
-        };
-        for (i, idx) in Ax::as_array().into_iter().enumerate() {
-            out.strides[i] = inp.strides[idx as usize];
-        }
-        Ok(out)
+            strides: inp.shape.permute_strides(inp.strides),
+        })
     }
     fn backward<Src: Shape, Dst: Shape<Concrete = Src::Concrete>, Ax: Axes>(
         &self,

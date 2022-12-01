@@ -56,14 +56,14 @@ pub trait SumTo<T, Axes>: HasErr {
     fn try_sum(self) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape + Default, Ax: Axes>
+impl<Src: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape, Ax: Axes>
     SumTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
     D: SumKernel<E>,
     Src: ReduceShapeTo<Dst, Ax>,
 {
     fn try_sum(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
-        let dst: Dst = Default::default();
+        let dst: Dst = self.shape().reduced();
         let (inp, mut tape) = self.split_tape();
         let storage = inp.device.forward(dst, &inp.storage)?;
         let out = inp.device.upgrade(storage);

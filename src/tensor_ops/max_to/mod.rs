@@ -50,14 +50,14 @@ pub trait MaxTo<T, Ax>: HasErr {
     fn try_max(self) -> Result<T, Self::Err>;
 }
 
-impl<Src: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape + Default, Ax: Axes>
+impl<Src: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape, Ax: Axes>
     MaxTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
     D: MaxReduceKernel<E>,
     Src: ReduceShapeTo<Dst, Ax>,
 {
     fn try_max(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
-        let dst: Dst = Default::default();
+        let dst: Dst = self.shape().reduced();
         let (inp, mut tape) = self.split_tape();
         let storage = inp.device.forward(dst, &inp.storage)?;
         let out = inp.device.upgrade(storage);
