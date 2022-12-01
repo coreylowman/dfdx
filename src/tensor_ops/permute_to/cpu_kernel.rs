@@ -26,8 +26,8 @@ impl<E: Dtype> PermuteKernel<E> for Cpu {
         Src: PermuteShapeTo<Dst, Ax>,
     {
         debug_assert_eq!(grad_inp.data.len(), grad_out.data.len());
-        for (inp_i, out_i) in grad_inp.buf_iter_mut().zip(grad_out.buf_iter()) {
-            *inp_i += *out_i;
+        for (i, o) in grad_inp.buf_iter_mut().zip(grad_out.buf_iter()) {
+            *i += *o;
         }
         Ok(())
     }

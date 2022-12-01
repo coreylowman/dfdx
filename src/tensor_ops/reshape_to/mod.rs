@@ -17,7 +17,6 @@ pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
         Src: HasSameNumelAs<Dst>;
     fn backward<Src: Shape, Dst: Shape>(
         &self,
-        inp: &Self::Storage<Src, E>,
         grad_inp: &mut Self::Storage<Src, E>,
         grad_out: &Self::Storage<Dst, E>,
     ) -> Result<(), Self::Err>
@@ -49,7 +48,7 @@ impl<
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
-            inp.device.backward(&inp.storage, grad_inp, grad_out)?;
+            inp.device.backward(grad_inp, grad_out)?;
             Ok(())
         });
         Ok(out.put_tape(tape))

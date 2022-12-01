@@ -218,9 +218,7 @@ pub use tanh::tanh;
 pub use var_to::VarTo;
 // pub use impl_mask::*;
 
-#[cfg(feature = "nightly")]
 mod reshape_to;
-#[cfg(feature = "nightly")]
 pub use reshape_to::ReshapeTo;
 
 #[cfg(feature = "nightly")]

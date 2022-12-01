@@ -10,7 +10,7 @@ macro_rules! impl_same_num_elements {
 #[cfg(feature = "nightly")]
 impl<$(const $SrcVs: usize, )* $(const $DstVs: usize, )*> HasSameNumelAs<($(Const<$SrcVs>, )*)> for ($(Const<$DstVs>, )*)
 where
-    Assert<{ $SrcNumEl == $DstNumEl }>: ConstTrue {}
+    Assert<{ $DstNumEl == $SrcNumEl }>: ConstTrue {}
     };
 }
 

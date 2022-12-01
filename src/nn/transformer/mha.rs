@@ -1,8 +1,7 @@
-use crate::gradients::*;
-use crate::prelude::*;
+use crate::{gradients::Tape, nn::*, optim::*, arrays::*, tensor::*, tensor_ops::*};
+
 #[cfg(feature = "nightly")]
 use crate::{Assert, ConstTrue};
-use rand::Rng;
 
 /// **Requires Nightly** A multi-head attention layer.
 ///
@@ -19,38 +18,52 @@ use rand::Rng;
 /// - `MultiHeadAttention<8, 2, 6, 4>` is an attention layer with the key and value dimension different
 ///   than the embed dimension
 /// TODO: Doctests fail for some reason
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct MultiHeadAttention<
     const EMBED_DIM: usize,
     const NUM_HEADS: usize,
+    D: Device<f32> = Cpu,
     const K_DIM: usize = EMBED_DIM,
     const V_DIM: usize = EMBED_DIM,
 > {
-    pub w_q: Linear<EMBED_DIM, K_DIM>,
-    pub w_k: Linear<EMBED_DIM, K_DIM>,
-    pub w_v: Linear<EMBED_DIM, V_DIM>,
-    pub w_o: Linear<V_DIM, EMBED_DIM>,
+    pub w_q: Linear<EMBED_DIM, K_DIM, D>,
+    pub w_k: Linear<EMBED_DIM, K_DIM, D>,
+    pub w_v: Linear<EMBED_DIM, V_DIM, D>,
+    pub w_o: Linear<V_DIM, EMBED_DIM, D>,
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize> ResetParams
-    for MultiHeadAttention<M, H, K, V>
+impl<const M: usize, const H: usize, D: Device<f32>, const K: usize, const V: usize>
+    BuildModule<D, f32> for MultiHeadAttention<M, H, D, K, V>
 {
-    fn reset_params<R: Rng>(&mut self, rng: &mut R) {
-        self.w_q.reset_params(rng);
-        self.w_k.reset_params(rng);
-        self.w_v.reset_params(rng);
-        self.w_o.reset_params(rng);
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self {
+            w_q: BuildModule::try_build(device)?,
+            w_k: BuildModule::try_build(device)?,
+            w_v: BuildModule::try_build(device)?,
+            w_o: BuildModule::try_build(device)?,
+        })
+    }
+    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
+        self.w_q.try_reset_params()?;
+        self.w_k.try_reset_params()?;
+        self.w_v.try_reset_params()?;
+        self.w_o.try_reset_params()?;
+        Ok(())
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize> CanUpdateWithGradients
-    for MultiHeadAttention<M, H, K, V>
+impl<const M: usize, const H: usize, D: Device<f32>, const K: usize, const V: usize>
+    CanUpdateWithGradients<D, f32> for MultiHeadAttention<M, H, D, K, V>
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.w_q.update(grads, unused);
-        self.w_k.update(grads, unused);
-        self.w_v.update(grads, unused);
-        self.w_o.update(grads, unused);
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
+    where
+        U: UpdateParams<D, f32>,
+    {
+        self.w_q.update(updater, unused)?;
+        self.w_k.update(updater, unused)?;
+        self.w_v.update(updater, unused)?;
+        self.w_o.update(updater, unused)?;
+        Ok(())
     }
 }
 
@@ -58,47 +71,56 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> CanUpdateWi
 impl<
         const M: usize,
         const H: usize,
+        D: Device<f32>,
         const K: usize,
         const V: usize,
         const S1: usize,
         const S2: usize,
-        TAPE: 'static + Tape,
-    > Module<(Tensor2D<S1, M, TAPE>, Tensor2D<S2, M>, Tensor2D<S2, M>)>
-    for MultiHeadAttention<M, H, K, V>
+        T: Tape<D>,
+    >
+    Module<(
+        Tensor<Rank2<S1, M>, f32, D, T>,
+        Tensor<Rank2<S2, M>, f32, D>,
+        Tensor<Rank2<S2, M>, f32, D>,
+    )> for MultiHeadAttention<M, H, D, K, V>
 where
     Assert<{ S1 * K == S1 * H * (K / H) }>: ConstTrue,
     Assert<{ S2 * K == S2 * H * (K / H) }>: ConstTrue,
     Assert<{ S2 * V == S2 * H * (V / H) }>: ConstTrue,
     Assert<{ S1 * H * (V / H) == S1 * V }>: ConstTrue,
 {
-    type Output = Tensor2D<S1, M, TAPE>;
+    type Output = Tensor<Rank2<S1, M>, f32, D, T>;
 
     /// Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
     fn forward(
         &self,
-        (q, k, v): (Tensor2D<S1, M, TAPE>, Tensor2D<S2, M>, Tensor2D<S2, M>),
+        (q, k, v): (
+            Tensor<Rank2<S1, M>, f32, D, T>,
+            Tensor<Rank2<S2, M>, f32, D>,
+            Tensor<Rank2<S2, M>, f32, D>,
+        ),
     ) -> Self::Output {
-        let v: Tensor2D<S2, V, TAPE> = self.w_v.forward(v.put_tape(Default::default()));
-        let v: Tensor3D<S2, H, { V / H }, _> = v.reshape();
-        let v: Tensor3D<H, S2, { V / H }, _> = v.permute();
+        let v: Tensor<Rank2<S2, V>, _, _, _> = self.w_v.forward(v.retaped::<T>());
+        let v: Tensor<Rank3<S2, H, { V / H }>, _, _, _> = v.reshape();
+        let v: Tensor<Rank3<H, S2, { V / H }>, _, _, _> = v.permute();
 
-        let k: Tensor2D<S2, K, TAPE> = self.w_k.forward(k.put_tape(Default::default()));
-        let k: Tensor3D<S2, H, { K / H }, _> = k.reshape();
-        let k: Tensor3D<H, S2, { K / H }, _> = k.permute();
+        let k: Tensor<Rank2<S2, K>, _, _, _> = self.w_k.forward(k.retaped::<T>());
+        let k: Tensor<Rank3<S2, H, { K / H }>, _, _, _> = k.reshape();
+        let k: Tensor<Rank3<H, { K / H }, S2>, _, _, _> = k.permute();
 
-        let q: Tensor2D<S1, K, _> = self.w_q.forward(q);
-        let q: Tensor3D<S1, H, { K / H }, _> = q.reshape();
-        let q: Tensor3D<H, S1, { K / H }, _> = q.permute();
+        let q: Tensor<Rank2<S1, K>, _, _, _> = self.w_q.forward(q);
+        let q: Tensor<Rank3<S1, H, { K / H }>, _, _, _> = q.reshape();
+        let q: Tensor<Rank3<H, S1, { K / H }>, _, _, _> = q.permute();
 
         // Get weights
         let scalar: f32 = 1.0 / ((K / H) as f32).sqrt();
-        let weights: Tensor3D<H, S1, S2, _> = matmul_transpose(q, k) * scalar;
-        let weights: Tensor3D<H, S1, S2, _> = weights.softmax::<Axis<2>>();
+        let weights: Tensor<Rank3<H, S1, S2>, _, _, _> = q.matmul(k) * scalar;
+        let weights: Tensor<Rank3<H, S1, S2>, _, _, _> = weights.softmax::<Axis<2>>();
 
         // Get new tokens
-        let tokens: Tensor3D<H, S1, { V / H }, _> = matmul(weights, v);
-        let tokens: Tensor3D<S1, H, { V / H }, _> = tokens.permute();
-        let tokens: Tensor2D<S1, V, _> = tokens.reshape();
+        let tokens: Tensor<Rank3<H, S1, { V / H }>, _, _, _> = weights.matmul(v);
+        let tokens: Tensor<Rank3<S1, H, { V / H }>, _, _, _> = tokens.permute();
+        let tokens: Tensor<Rank2<S1, V>, _, _, _> = tokens.reshape();
 
         self.w_o.forward(tokens)
     }
@@ -108,63 +130,64 @@ where
 impl<
         const M: usize,
         const H: usize,
+        D: Device<f32>,
         const K: usize,
         const V: usize,
         const B: usize,
         const S1: usize,
         const S2: usize,
-        TAPE: 'static + Tape,
+        T: Tape<D>,
     >
     Module<(
-        Tensor3D<B, S1, M, TAPE>,
-        Tensor3D<B, S2, M>,
-        Tensor3D<B, S2, M>,
-    )> for MultiHeadAttention<M, H, K, V>
+        Tensor<Rank3<B, S1, M>, f32, D, T>,
+        Tensor<Rank3<B, S2, M>, f32, D>,
+        Tensor<Rank3<B, S2, M>, f32, D>,
+    )> for MultiHeadAttention<M, H, D, K, V>
 where
     Assert<{ B * S1 * K == B * S1 * H * (K / H) }>: ConstTrue,
     Assert<{ B * S2 * K == B * S2 * H * (K / H) }>: ConstTrue,
     Assert<{ B * S2 * V == B * S2 * H * (V / H) }>: ConstTrue,
     Assert<{ B * S1 * H * (V / H) == B * S1 * V }>: ConstTrue,
 {
-    type Output = Tensor3D<B, S1, M, TAPE>;
+    type Output = Tensor<Rank3<B, S1, M>, f32, D, T>;
 
     /// Batched Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
     fn forward(
         &self,
         (q, k, v): (
-            Tensor3D<B, S1, M, TAPE>,
-            Tensor3D<B, S2, M>,
-            Tensor3D<B, S2, M>,
+            Tensor<Rank3<B, S1, M>, f32, D, T>,
+            Tensor<Rank3<B, S2, M>, f32, D>,
+            Tensor<Rank3<B, S2, M>, f32, D>,
         ),
     ) -> Self::Output {
-        let v: Tensor3D<B, S2, V, TAPE> = self.w_v.forward(v.put_tape(Default::default()));
-        let v: Tensor4D<B, S2, H, { V / H }, _> = v.reshape();
-        let v: Tensor4D<B, H, S2, { V / H }, _> = v.permute();
+        let v: Tensor<Rank3<B, S2, V>, _, _, _> = self.w_v.forward(v.retaped::<T>());
+        let v: Tensor<Rank4<B, S2, H, { V / H }>, _, _, _> = v.reshape();
+        let v: Tensor<Rank4<B, H, S2, { V / H }>, _, _, _> = v.permute();
 
-        let k: Tensor3D<B, S2, K, TAPE> = self.w_k.forward(k.put_tape(Default::default()));
-        let k: Tensor4D<B, S2, H, { K / H }, _> = k.reshape();
-        let k: Tensor4D<B, H, S2, { K / H }, _> = k.permute();
+        let k: Tensor<Rank3<B, S2, K>, _, _, _> = self.w_k.forward(k.retaped::<T>());
+        let k: Tensor<Rank4<B, S2, H, { K / H }>, _, _, _> = k.reshape();
+        let k: Tensor<Rank4<B, H, { K / H }, S2>, _, _, _> = k.permute();
 
-        let q: Tensor3D<B, S1, K, _> = self.w_q.forward(q);
-        let q: Tensor4D<B, S1, H, { K / H }, _> = q.reshape();
-        let q: Tensor4D<B, H, S1, { K / H }, _> = q.permute();
+        let q: Tensor<Rank3<B, S1, K>, _, _, _> = self.w_q.forward(q);
+        let q: Tensor<Rank4<B, S1, H, { K / H }>, _, _, _> = q.reshape();
+        let q: Tensor<Rank4<B, H, S1, { K / H }>, _, _, _> = q.permute();
 
         // Get weights
         let scalar: f32 = 1.0 / ((K / H) as f32).sqrt();
-        let weights: Tensor4D<B, H, S1, S2, _> = matmul_transpose(q, k) * scalar;
-        let weights: Tensor4D<B, H, S1, S2, _> = weights.softmax::<Axis<3>>();
+        let weights: Tensor<Rank4<B, H, S1, S2>, _, _, _> = q.matmul(k) * scalar;
+        let weights: Tensor<Rank4<B, H, S1, S2>, _, _, _> = weights.softmax::<Axis<3>>();
 
         // Get new tokens
-        let tokens: Tensor4D<B, H, S1, { V / H }, _> = matmul(weights, v);
-        let tokens: Tensor4D<B, S1, H, { V / H }, _> = tokens.permute();
-        let tokens: Tensor3D<B, S1, V, _> = tokens.reshape();
+        let tokens: Tensor<Rank4<B, H, S1, { V / H }>, _, _, _> = weights.matmul(v);
+        let tokens: Tensor<Rank4<B, S1, H, { V / H }>, _, _, _> = tokens.permute();
+        let tokens: Tensor<Rank3<B, S1, V>, _, _, _> = tokens.reshape();
 
         self.w_o.forward(tokens)
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, T> ModuleMut<T>
-    for MultiHeadAttention<M, H, K, V>
+impl<const M: usize, const H: usize, D: Device<f32>, const K: usize, const V: usize, T> ModuleMut<T>
+    for MultiHeadAttention<M, H, D, K, V>
 where
     Self: Module<T>,
 {
@@ -179,26 +202,27 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::tests::SimpleGradients, tests::assert_close};
-    use rand::{rngs::StdRng, thread_rng, SeedableRng};
+    use crate::{
+        nn::tests::SimpleUpdater,
+        tests::{assert_close, build_test_device},
+    };
 
     #[test]
     fn test_mha_unbatched() {
-        let mut rng = StdRng::seed_from_u64(0);
+        let dev = build_test_device!(0);
 
         const EMBED_DIM: usize = 8;
         const NUM_HEADS: usize = 2;
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mut mha: MultiHeadAttention<EMBED_DIM, NUM_HEADS> = Default::default();
-        mha.reset_params(&mut rng);
+        let mha: MultiHeadAttention<EMBED_DIM, NUM_HEADS, _> = BuildModule::build(&dev);
 
-        let q: Tensor2D<S1, EMBED_DIM> = TensorCreator::randn(&mut rng);
-        let k: Tensor2D<S2, EMBED_DIM> = TensorCreator::randn(&mut rng);
-        let v: Tensor2D<S2, EMBED_DIM> = TensorCreator::randn(&mut rng);
+        let q = dev.randn::<Rank2<S1, EMBED_DIM>>();
+        let k = dev.randn::<Rank2<S2, EMBED_DIM>>();
+        let v = dev.randn::<Rank2<S2, EMBED_DIM>>();
 
-        let y: Tensor2D<S1, EMBED_DIM> = mha.forward((q, k, v));
+        let y = mha.forward((q, k, v));
 
         // This expected y was generated by:
         // 1. saving `mha` parameters, `q`, `k`, `v` to a file
@@ -207,7 +231,7 @@ mod tests {
         // See https://github.com/coreylowman/dfdx/wiki/Exporting-MultiHeadAttention-to-pytorch-for-unit-tests
         #[rustfmt::skip]
         assert_close(
-            y.data(),
+            &y.array(),
             &[
                 [-0.41689563,-0.46807843,-0.10825230,-0.05752429, 0.18448383,-0.56645262,-0.03250163,-0.17918219],
                 [-0.26238847,-0.43888292,-0.09987387,-0.03572154, 0.11067177,-0.48738408, 0.03990822,-0.34435043],
@@ -218,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_mha_batched() {
-        let mut rng = StdRng::seed_from_u64(1);
+        let dev = build_test_device!(1);
 
         const BATCH: usize = 5;
         const EMBED_DIM: usize = 8;
@@ -226,14 +250,13 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mut mha: MultiHeadAttention<EMBED_DIM, NUM_HEADS> = Default::default();
-        mha.reset_params(&mut rng);
+        let mha: MultiHeadAttention<EMBED_DIM, NUM_HEADS, _> = BuildModule::build(&dev);
 
-        let q: Tensor3D<BATCH, S1, EMBED_DIM> = TensorCreator::randn(&mut rng);
-        let k: Tensor3D<BATCH, S2, EMBED_DIM> = TensorCreator::randn(&mut rng);
-        let v: Tensor3D<BATCH, S2, EMBED_DIM> = TensorCreator::randn(&mut rng);
+        let q = dev.randn::<Rank3<BATCH, S1, EMBED_DIM>>();
+        let k = dev.randn::<Rank3<BATCH, S2, EMBED_DIM>>();
+        let v = dev.randn::<Rank3<BATCH, S2, EMBED_DIM>>();
 
-        let y: Tensor3D<BATCH, S1, EMBED_DIM> = mha.forward((q, k, v));
+        let y = mha.forward((q, k, v));
 
         // This expected y was generated by:
         // 1. saving `mha` parameters, `q`, `k`, `v` to a file
@@ -242,7 +265,7 @@ mod tests {
         // See https://github.com/coreylowman/dfdx/wiki/Exporting-MultiHeadAttention-to-pytorch-for-unit-tests
         #[rustfmt::skip]
         assert_close(
-            y.data(),
+            &y.array(),
             &[
                 [
                     [-0.32666653, 0.23977730, 0.25563523,-0.46537930, 0.19651681,-0.37467819, 0.44978297, 0.04501118],
@@ -275,19 +298,18 @@ mod tests {
 
     #[test]
     fn test_backward_updates_all() {
-        let mut rng = thread_rng();
+        let dev = build_test_device!();
 
-        let mut mha: MultiHeadAttention<12, 4> = Default::default();
-        mha.reset_params(&mut rng);
+        let mut mha: MultiHeadAttention<12, 4, _> = BuildModule::build(&dev);
 
-        let q: Tensor3D<2, 3, 12> = TensorCreator::randn(&mut rng);
-        let k: Tensor3D<2, 4, 12> = TensorCreator::randn(&mut rng);
-        let v: Tensor3D<2, 4, 12> = TensorCreator::randn(&mut rng);
-        let y: Tensor3D<2, 3, 12, _> = mha.forward((q.trace(), k, v));
+        let q = dev.randn::<Rank3<2, 3, 12>>();
+        let k = dev.randn::<Rank3<2, 4, 12>>();
+        let v = dev.randn::<Rank3<2, 4, 12>>();
+        let y = mha.forward((q.trace(), k, v));
 
-        let mut g = SimpleGradients(backward(y.mean()));
+        let mut g = SimpleUpdater(y.mean().backward());
         let mut unused = Default::default();
-        mha.update(&mut g, &mut unused);
+        mha.update(&mut g, &mut unused).unwrap();
         assert!(unused.is_empty());
     }
 }

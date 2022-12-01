@@ -23,6 +23,7 @@ pub trait Device<E: Dtype>:
     + super::max_to::MaxReduceKernel<E>
     + super::min_to::MinReduceKernel<E>
     + super::permute_to::PermuteKernel<E>
+    + super::reshape_to::ReshapeKernel<E>
 
     // indexing
     + super::select_to::SelectAxisKernel<E>

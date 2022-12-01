@@ -3,6 +3,7 @@ mod axes;
 mod broadcasts;
 mod permutes;
 mod replace_dim;
+mod same_numel;
 mod shape;
 
 pub(crate) use axes::Axes;
@@ -11,8 +12,6 @@ pub(crate) use broadcasts::{
 };
 pub(crate) use permutes::{PermuteShapeTo, PermuteStridesTo};
 pub(crate) use replace_dim::ReplaceDim;
-
-mod same_numel;
 
 #[allow(unused_imports)]
 pub(crate) use same_numel::HasSameNumelAs;

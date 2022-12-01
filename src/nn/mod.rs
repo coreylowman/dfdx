@@ -92,7 +92,7 @@ mod pool_global;
 mod repeated;
 mod residual;
 // mod split_into;
-// mod transformer;
+mod transformer;
 
 pub use activations::*;
 // pub use add_into::*;
@@ -114,8 +114,8 @@ pub use residual::*;
 // pub use flatten::*;
 // #[cfg(feature = "nightly")]
 // pub use pool2d::*;
-// #[cfg(feature = "nightly")]
-// pub use transformer::*;
+#[cfg(feature = "nightly")]
+pub use transformer::*;
 
 // #[cfg(feature = "numpy")]
 // mod npz;
