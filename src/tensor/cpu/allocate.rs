@@ -24,8 +24,7 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
         let numel = shape.num_elements();
         let strides: S::Concrete = shape.strides();
         let mut data: Vec<E> = Vec::new();
-        data.try_reserve_exact(numel)
-            .map_err(|_| CpuError::OutOfMemory)?;
+        data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
         data.resize(numel, elem);
         let data = Arc::new(data);
         Ok(StridedArray {
@@ -41,8 +40,7 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
         let shape = other.shape;
         let strides = other.strides;
         let mut data: Vec<E> = Vec::new();
-        data.try_reserve_exact(numel)
-            .map_err(|_| CpuError::OutOfMemory)?;
+        data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
         data.resize(numel, elem);
         let data = Arc::new(data);
         Ok(StridedArray {
@@ -96,9 +94,11 @@ impl RandTensor<f32> for Cpu {
         src: &S,
     ) -> Result<Tensor<S::Shape, f32, Self>, Self::Err> {
         let mut storage = StridedArray::try_new_with(*src.shape(), Default::default())?;
-        let mut rng = self.rng.lock().unwrap();
-        for v in storage.buf_iter_mut() {
-            *v = rng.sample(Standard);
+        {
+            let mut rng = self.rng.lock().unwrap();
+            for v in storage.buf_iter_mut() {
+                *v = rng.sample(Standard);
+            }
         }
         Ok(self.upgrade(storage))
     }
@@ -109,10 +109,12 @@ impl RandTensor<f32> for Cpu {
         max: f32,
     ) -> Result<Tensor<S::Shape, f32, Self>, Self::Err> {
         let mut storage = StridedArray::try_new_with(*src.shape(), Default::default())?;
-        let mut rng = self.rng.lock().unwrap();
         let dist = Uniform::new(min, max);
-        for v in storage.buf_iter_mut() {
-            *v = rng.sample(dist);
+        {
+            let mut rng = self.rng.lock().unwrap();
+            for v in storage.buf_iter_mut() {
+                *v = rng.sample(dist);
+            }
         }
         Ok(self.upgrade(storage))
     }
@@ -125,10 +127,12 @@ impl RandFillStorage<f32> for Cpu {
         min: f32,
         max: f32,
     ) -> Result<(), Self::Err> {
-        let mut rng = self.rng.lock().unwrap();
         let dist = Uniform::new(min, max);
-        for v in storage.buf_iter_mut() {
-            *v = rng.sample(dist);
+        {
+            let mut rng = self.rng.lock().unwrap();
+            for v in storage.buf_iter_mut() {
+                *v = rng.sample(dist);
+            }
         }
         Ok(())
     }
@@ -140,9 +144,11 @@ impl RandnTensor<f32> for Cpu {
         src: &S,
     ) -> Result<Tensor<S::Shape, f32, Self>, Self::Err> {
         let mut storage = StridedArray::try_new_with(*src.shape(), Default::default())?;
-        let mut rng = self.rng.lock().unwrap();
-        for v in storage.buf_iter_mut() {
-            *v = rng.sample(StandardNormal);
+        {
+            let mut rng = self.rng.lock().unwrap();
+            for v in storage.buf_iter_mut() {
+                *v = rng.sample(StandardNormal);
+            }
         }
         Ok(self.upgrade(storage))
     }
@@ -153,10 +159,12 @@ impl RandnTensor<f32> for Cpu {
         stddev: f32,
     ) -> Result<Tensor<S::Shape, f32, Self>, Self::Err> {
         let mut storage = StridedArray::try_new_with(*src.shape(), Default::default())?;
-        let mut rng = self.rng.lock().unwrap();
         let dist = Normal::new(mean, stddev).unwrap();
-        for v in storage.buf_iter_mut() {
-            *v = rng.sample(dist);
+        {
+            let mut rng = self.rng.lock().unwrap();
+            for v in storage.buf_iter_mut() {
+                *v = rng.sample(dist);
+            }
         }
         Ok(self.upgrade(storage))
     }
@@ -170,9 +178,11 @@ impl RandnFillStorage<f32> for Cpu {
         stddev: f32,
     ) -> Result<(), Self::Err> {
         let dist = Normal::new(mean, stddev).unwrap();
-        let mut rng = self.rng.lock().unwrap();
-        for v in storage.buf_iter_mut() {
-            *v = rng.sample(dist);
+        {
+            let mut rng = self.rng.lock().unwrap();
+            for v in storage.buf_iter_mut() {
+                *v = rng.sample(dist);
+            }
         }
         Ok(())
     }
