@@ -19,7 +19,7 @@ pub trait DeviceStorage: 'static + Default + Clone + HasErr {
 
     fn random_u64(&self) -> u64;
     fn try_alloc<S: Shape, E: Dtype>(&self, shape: &S) -> Result<Self::Storage<S, E>, Self::Err>;
-    fn try_alloc_like<S: Shape, E: Dtype>(
+    fn try_alloc_grad<S: Shape, E: Dtype>(
         &self,
         storage: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err>;
@@ -40,8 +40,8 @@ impl<D: DeviceStorage> TensorFromStorage for D {
     }
 }
 
-pub trait AllocOn<D: DeviceStorage>: HasShape + HasDtype {
-    fn try_alloc_like(&self) -> Result<D::Storage<Self::Shape, Self::Dtype>, D::Err>;
+pub trait AllocGradOn<D: DeviceStorage>: HasShape + HasDtype {
+    fn try_alloc_grad(&self) -> Result<D::Storage<Self::Shape, Self::Dtype>, D::Err>;
 }
 
 pub trait ZerosTensor<E: Dtype>: DeviceStorage {

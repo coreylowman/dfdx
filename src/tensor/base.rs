@@ -1,4 +1,4 @@
-use super::storage::{AllocOn, DeviceStorage, HasErr};
+use super::storage::{AllocGradOn, DeviceStorage, HasErr};
 use super::{OneFillStorage, RandFillStorage, RandnFillStorage, ZeroFillStorage};
 use crate::arrays::{
     Dtype, HasDtype, HasShape, Rank0, Rank1, Rank2, Rank3, Rank4, Rank5, Rank6, Shape,
@@ -102,9 +102,9 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasDtype for Tensor<S, E, D, T> {
     type Dtype = E;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> AllocOn<D> for Tensor<S, E, D, T> {
-    fn try_alloc_like(&self) -> Result<D::Storage<Self::Shape, Self::Dtype>, D::Err> {
-        self.device.try_alloc_like(&self.storage)
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> AllocGradOn<D> for Tensor<S, E, D, T> {
+    fn try_alloc_grad(&self) -> Result<D::Storage<Self::Shape, Self::Dtype>, D::Err> {
+        self.device.try_alloc_grad(&self.storage)
     }
 }
 

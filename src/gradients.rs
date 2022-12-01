@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::{boxed::Box, vec::Vec};
 
 use crate::arrays::{HasDtype, HasShape};
-use crate::tensor::storage::{AllocOn, DeviceStorage};
+use crate::tensor::storage::{AllocGradOn, DeviceStorage};
 use crate::unique_id::{HasUniqueId, UniqueId};
 
 /// A generic container for keeping variable sized arrays associated with a [UniqueId].
@@ -68,10 +68,10 @@ impl<D: DeviceStorage> Gradients<D> {
     /// ```
     pub fn get_mut<T>(&mut self, t: &T) -> Result<&mut D::Storage<T::Shape, T::Dtype>, D::Err>
     where
-        T: HasUniqueId + AllocOn<D>,
+        T: HasUniqueId + AllocGradOn<D>,
     {
         if !self.gradient_by_id.contains_key(t.id()) {
-            let grad = t.try_alloc_like()?;
+            let grad = t.try_alloc_grad()?;
             self.gradient_by_id.insert(*t.id(), Box::new(grad));
         }
         Ok(self
@@ -138,7 +138,7 @@ impl<D: DeviceStorage> Gradients<D> {
         D::Err,
     >
     where
-        L: HasUniqueId + AllocOn<D>,
+        L: HasUniqueId + AllocGradOn<D>,
         R: HasUniqueId + HasShape + HasDtype,
     {
         assert_ne!(l.id(), r.id());
@@ -163,8 +163,8 @@ impl<D: DeviceStorage> Gradients<D> {
         D::Err,
     >
     where
-        L1: HasUniqueId + AllocOn<D>,
-        L2: HasUniqueId + AllocOn<D>,
+        L1: HasUniqueId + AllocGradOn<D>,
+        L2: HasUniqueId + AllocGradOn<D>,
         R: HasUniqueId + HasShape + HasDtype,
     {
         assert_ne!(l1.id(), l2.id());

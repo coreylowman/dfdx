@@ -27,17 +27,11 @@ impl Cpu {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StridedArray<S: Shape, Elem> {
     pub(crate) data: Arc<Vec<Elem>>,
     pub(crate) shape: S,
     pub(crate) strides: S::Concrete,
-}
-
-impl<S: Shape, E: Clone> Clone for StridedArray<S, E> {
-    fn clone(&self) -> Self {
-        self.try_clone().unwrap()
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -81,7 +75,7 @@ impl DeviceStorage for Cpu {
         StridedArray::try_new_with(*shape, Default::default())
     }
 
-    fn try_alloc_like<S: Shape, E: Dtype>(
+    fn try_alloc_grad<S: Shape, E: Dtype>(
         &self,
         storage: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err> {
