@@ -82,31 +82,30 @@ impl<const C: usize, D: Device<f32>> BatchNorm2D<C, D> {
         let shape = *x.shape();
 
         // compute statistics for updating running stats later - on tape
-        let mean_t = x.retaped::<T>().mean();
-        let var_t = x.retaped::<T>().var();
+        let mean_chan: Tensor<Rank1<C>, f32, D, T> = x.retaped::<T>().mean();
 
         // update statistics since we are training - off tape
-        let (mean_t, tape1) = mean_t.split_tape();
-        let (var_t, tape2) = var_t.split_tape();
-        self.running_mean =
-            self.running_mean.clone() * (1.0 - self.momentum) + mean_t.clone() * self.momentum;
+        self.running_mean = self.running_mean.clone() * (1.0 - self.momentum)
+            + mean_chan.retaped::<NoneTape>() * self.momentum;
+
+        let mean = mean_chan.broadcast_to(&shape);
+        let centered = x - mean;
+
+        let var_chan: Tensor<Rank1<C>, f32, D, T> = centered.retaped::<T>().square().mean();
 
         // NOTE: uses unbiased variance in running estimate
         self.running_var = self.running_var.clone() * (1.0 - self.momentum)
-            + var_t.clone() * (self.momentum * n / (n - 1.0));
+            + var_chan.retaped::<NoneTape>() * (self.momentum * n / (n - 1.0));
 
         // statistics for normalizing - on tape
-        let mean = mean_t.put_tape(tape1).broadcast_to(&shape);
-        let std = (var_t.put_tape(tape2) + self.epsilon)
-            .sqrt()
-            .broadcast_to(&shape);
+        let std = (var_chan + self.epsilon).sqrt().broadcast_to(&shape);
 
         // record broadcast of scale & bias - on tape
         let scale = self.scale.retaped::<T>().broadcast_to(&shape);
         let bias = self.bias.retaped::<T>().broadcast_to(&shape);
 
         // normalize & affine - on tape
-        ((x - mean) / std) * scale + bias
+        (centered / std) * scale + bias
     }
 }
 
