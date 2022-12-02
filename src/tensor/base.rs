@@ -18,7 +18,43 @@ pub struct Tensor<S: Shape, E: Dtype, D: DeviceStorage, T = NoneTape> {
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
-    pub fn split_tape(self) -> (Tensor<S, E, D, NoneTape>, T) {
+    pub fn retaped<New: Tape<D>>(&self) -> Tensor<S, E, D, New> {
+        Tensor {
+            id: self.id,
+            storage: self.storage.clone(),
+            device: self.device.clone(),
+            tape: Default::default(),
+        }
+    }
+}
+
+pub trait PutTape<T> {
+    type Output;
+    fn put_tape(self, tape: T) -> Self::Output;
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> PutTape<T> for Tensor<S, E, D> {
+    type Output = Tensor<S, E, D, T>;
+    fn put_tape(self, tape: T) -> Self::Output {
+        Tensor {
+            id: self.id,
+            storage: self.storage,
+            device: self.device,
+            tape,
+        }
+    }
+}
+
+pub trait SplitTape {
+    type Tape;
+    type NoTape: Clone + PutTape<Self::Tape, Output = Self>;
+    fn split_tape(self) -> (Self::NoTape, Self::Tape);
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> SplitTape for Tensor<S, E, D, T> {
+    type Tape = T;
+    type NoTape = Tensor<S, E, D>;
+    fn split_tape(self) -> (Self::NoTape, Self::Tape) {
         (
             Tensor {
                 id: self.id,
@@ -28,24 +64,6 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
             },
             self.tape,
         )
-    }
-
-    pub fn retaped<New: Tape<D>>(&self) -> Tensor<S, E, D, New> {
-        Tensor {
-            id: self.id,
-            storage: self.storage.clone(),
-            device: self.device.clone(),
-            tape: Default::default(),
-        }
-    }
-
-    pub fn put_tape<New: Tape<D>>(self, tape: New) -> Tensor<S, E, D, New> {
-        Tensor {
-            id: self.id,
-            storage: self.storage,
-            device: self.device,
-            tape,
-        }
     }
 }
 

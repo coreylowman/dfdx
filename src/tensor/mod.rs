@@ -80,7 +80,10 @@ pub use storage::{
     TensorFromArray, TensorFromSlice, TensorFromVec, ZeroFillStorage, ZerosTensor,
 };
 
-pub use base::{Tensor, Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
+pub use base::{
+    PutTape, SplitTape, Tensor, Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D,
+    Tensor6D,
+};
 pub use storage::*;
 
 #[cfg(test)]

@@ -1,7 +1,11 @@
+use crate::{
+    nn::{BuildModule, LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, Residual},
+    optim::{CanUpdateWithGradients, UnusedTensors, UpdateParams},
+    tensor::{Cpu, PutTape, SplitTape},
+    tensor_ops::Device,
+};
+
 use super::mha::MultiHeadAttention;
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
-use crate::prelude::*;
-use rand::Rng;
 
 /// **Requires Nightly** A transformer decoder.
 ///
@@ -12,48 +16,60 @@ use rand::Rng;
 ///   the feedforward network in [TransformerDecoderBlock].
 /// - `NUM_LAYERS`: The number of [TransformerDecoderBlock] to use.
 /// TODO: Doctests
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct TransformerDecoder<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
     const FF_DIM: usize,
     const NUM_LAYERS: usize,
->(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>, NUM_LAYERS>);
+    D: Device<f32> = Cpu,
+>(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, D>, NUM_LAYERS>);
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize> ResetParams
-    for TransformerDecoder<M, H, F, L>
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
+    BuildModule<D, f32> for TransformerDecoder<M, H, F, L, D>
 {
-    fn reset_params<R: Rng>(&mut self, rng: &mut R) {
-        self.0.reset_params(rng);
+    fn try_build(device: &D) -> Result<Self, D::Err> {
+        Ok(Self(BuildModule::try_build(device)?))
+    }
+    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+        self.0.try_reset_params()
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize> CanUpdateWithGradients
-    for TransformerDecoder<M, H, F, L>
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
+    CanUpdateWithGradients<D, f32> for TransformerDecoder<M, H, F, L, D>
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.0.update(grads, unused);
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
+    where
+        U: UpdateParams<D, f32>,
+    {
+        self.0.update(updater, unused)
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize, Tgt, Mem> Module<(Tgt, Mem)>
-    for TransformerDecoder<M, H, F, L>
+impl<
+        const M: usize,
+        const H: usize,
+        const F: usize,
+        const L: usize,
+        D: Device<f32>,
+        Tgt,
+        Mem: Clone,
+    > Module<(Tgt, Mem)> for TransformerDecoder<M, H, F, L, D>
 where
-    Mem: Tensor<NoTape = Mem> + Clone,
-    TransformerDecoderBlock<M, H, F>: Module<(Tgt, Mem), Output = Tgt>,
+    TransformerDecoderBlock<M, H, F, D>: Module<(Tgt, Mem), Output = Tgt>,
 {
     type Output = Tgt;
-
-    fn forward(&self, (mut x, mem): (Tgt, Mem)) -> Self::Output {
+    fn forward(&self, (mut tgt, mem): (Tgt, Mem)) -> Self::Output {
         for block in self.0.modules.iter() {
-            x = block.forward((x, mem.clone()));
+            tgt = block.forward((tgt, mem.clone()));
         }
-        x
+        tgt
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize, T> ModuleMut<T>
-    for TransformerDecoder<M, H, F, L>
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>, T> ModuleMut<T>
+    for TransformerDecoder<M, H, F, L, D>
 where
     Self: Module<T>,
 {
@@ -79,72 +95,85 @@ where
 /// )
 /// ```
 /// TODO: Doctests
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Debug)]
 pub struct TransformerDecoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
     const FF_DIM: usize,
+    D: Device<f32>,
 > {
-    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS>,
-    pub norm1: LayerNorm1D<MODEL_DIM>,
-    pub mh_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS>,
-    pub norm2: LayerNorm1D<MODEL_DIM>,
-    pub ff: FF<MODEL_DIM, FF_DIM>,
-    pub norm3: LayerNorm1D<MODEL_DIM>,
+    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, D>,
+    pub norm1: LayerNorm1D<MODEL_DIM, D>,
+    pub mh_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, D>,
+    pub norm2: LayerNorm1D<MODEL_DIM, D>,
+    pub ff: FF<MODEL_DIM, FF_DIM, D>,
+    pub norm3: LayerNorm1D<MODEL_DIM, D>,
 }
 
-type FF<const M: usize, const F: usize> = Residual<(Linear<M, F>, ReLU, Linear<F, M>)>;
+type FF<const M: usize, const F: usize, D> = Residual<(Linear<M, F, D>, ReLU, Linear<F, M, D>)>;
 
-impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> ResetParams
-    for TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>
+impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
+    for TransformerDecoderBlock<M, N, F, D>
 {
-    fn reset_params<R: Rng>(&mut self, rng: &mut R) {
-        self.self_attn.reset_params(rng);
-        self.norm1.reset_params(rng);
-        self.mh_attn.reset_params(rng);
-        self.norm2.reset_params(rng);
-        self.ff.reset_params(rng);
-        self.norm3.reset_params(rng);
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self {
+            self_attn: BuildModule::try_build(device)?,
+            norm1: BuildModule::try_build(device)?,
+            mh_attn: BuildModule::try_build(device)?,
+            norm2: BuildModule::try_build(device)?,
+            ff: BuildModule::try_build(device)?,
+            norm3: BuildModule::try_build(device)?,
+        })
+    }
+    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+        self.self_attn.try_reset_params()?;
+        self.norm1.try_reset_params()?;
+        self.mh_attn.try_reset_params()?;
+        self.norm2.try_reset_params()?;
+        self.ff.try_reset_params()?;
+        self.norm3.try_reset_params()?;
+        Ok(())
     }
 }
 
-impl<const MODEL_DIM: usize, const NUM_HEADS: usize, const FF_DIM: usize> CanUpdateWithGradients
-    for TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> CanUpdateWithGradients<D, f32>
+    for TransformerDecoderBlock<M, H, F, D>
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.self_attn.update(grads, unused);
-        self.norm1.update(grads, unused);
-        self.mh_attn.update(grads, unused);
-        self.norm2.update(grads, unused);
-        self.ff.update(grads, unused);
-        self.norm3.update(grads, unused);
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
+    where
+        U: UpdateParams<D, f32>,
+    {
+        self.self_attn.update(updater, unused)?;
+        self.norm1.update(updater, unused)?;
+        self.mh_attn.update(updater, unused)?;
+        self.norm2.update(updater, unused)?;
+        self.ff.update(updater, unused)?;
+        self.norm3.update(updater, unused)?;
+        Ok(())
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, Tgt, Mem> Module<(Tgt, Mem)>
-    for TransformerDecoderBlock<M, H, F>
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, Tgt, Mem> Module<(Tgt, Mem)>
+    for TransformerDecoderBlock<M, H, F, D>
 where
-    Tgt: Tensor<Dtype = f32>,
-    Mem: Tensor<Dtype = f32, NoTape = Mem> + Clone,
-    MultiHeadAttention<M, H>: Module<(Tgt, Tgt::NoTape, Tgt::NoTape), Output = Tgt>
-        + Module<(Tgt, Mem, Mem), Output = Tgt>,
-    LayerNorm1D<M>: Module<Tgt, Output = Tgt>,
-    FF<M, F>: Module<Tgt, Output = Tgt>,
+    Tgt: SplitTape + std::ops::Add<Tgt::NoTape, Output = Tgt>,
+    Mem: Clone,
+    MultiHeadAttention<M, H, D>: Module<Tgt, Output = Tgt> + Module<(Tgt, Mem, Mem), Output = Tgt>,
+    LayerNorm1D<M, D>: Module<Tgt, Output = Tgt>,
+    FF<M, F, D>: Module<Tgt, Output = Tgt>,
 {
     type Output = Tgt;
 
     fn forward(&self, (tgt, mem): (Tgt, Mem)) -> Self::Output {
         let (tgt, tape) = tgt.split_tape();
-        let x = self
-            .self_attn
-            .forward((tgt.clone().put_tape(tape), tgt.clone(), tgt.clone()));
-        let x = add(x, tgt);
+        let x = self.self_attn.forward(tgt.clone().put_tape(tape));
+        let x = x + tgt;
         let x = self.norm1.forward(x);
 
         let (x, tape) = x.split_tape();
-        let x_ = x.clone();
+        let x_residual = x.clone();
         let x = self.mh_attn.forward((x.put_tape(tape), mem.clone(), mem));
-        let x = add(x, x_);
+        let x = x + x_residual;
         let x = self.norm2.forward(x);
         let x = self.ff.forward(x);
         self.norm3.forward(x)
@@ -155,12 +184,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::assert_close;
-    use rand::{rngs::StdRng, SeedableRng};
+    use crate::{
+        arrays::Rank3,
+        tensor::{AsArray, RandnTensor},
+        tests::{assert_close, build_test_device},
+    };
 
     #[test]
     fn test_decoder_block_forward() {
-        let mut rng = StdRng::seed_from_u64(2);
+        let dev = build_test_device!(2);
 
         const BATCH: usize = 4;
         const S1: usize = 8;
@@ -169,12 +201,12 @@ mod tests {
         const NUM_HEADS: usize = 6;
         const FF_DIM: usize = 2;
 
-        let mut decoder: TransformerDecoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM> = Default::default();
-        decoder.reset_params(&mut rng);
+        let decoder: TransformerDecoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> =
+            BuildModule::build(&dev);
 
-        let tgt: Tensor3D<BATCH, S1, EMBED_DIM> = TensorCreator::randn(&mut rng);
-        let mem: Tensor3D<BATCH, S2, EMBED_DIM> = TensorCreator::randn(&mut rng);
-        let y: Tensor3D<BATCH, S1, EMBED_DIM> = decoder.forward((tgt, mem));
+        let tgt = dev.randn::<Rank3<BATCH, S1, EMBED_DIM>>();
+        let mem = dev.randn::<Rank3<BATCH, S2, EMBED_DIM>>();
+        let y = decoder.forward((tgt, mem));
 
         // This expected y was generated by:
         // 1. saving `decoder` parameters, `tgt`, `mem` and `y` to a npz files
@@ -183,7 +215,7 @@ mod tests {
         // See https://github.com/coreylowman/dfdx/wiki/Exporting-MultiHeadAttention-to-pytorch-for-unit-tests
         #[rustfmt::skip]
         assert_close(
-            y.data(),
+            &y.array(),
             &[
                 [
                     [-1.87558722, 0.45965099, 0.20498508,-1.73645127, 1.19475269,-0.07198015, 1.87802076, 0.18534835, 0.09591459,-0.19824848,-0.35261178, 0.21620668],

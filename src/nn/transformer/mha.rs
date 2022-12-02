@@ -1,4 +1,4 @@
-use crate::{gradients::Tape, nn::*, optim::*, arrays::*, tensor::*, tensor_ops::*};
+use crate::{arrays::*, gradients::Tape, nn::*, optim::*, tensor::*, tensor_ops::*};
 
 #[cfg(feature = "nightly")]
 use crate::{Assert, ConstTrue};
@@ -183,6 +183,24 @@ where
         let tokens: Tensor<Rank3<B, S1, V>, _, _, _> = tokens.reshape();
 
         self.w_o.forward(tokens)
+    }
+}
+
+impl<
+        const M: usize,
+        const H: usize,
+        D: Device<f32>,
+        const K: usize,
+        const V: usize,
+        Src: SplitTape,
+    > Module<Src> for MultiHeadAttention<M, H, D, K, V>
+where
+    Self: Module<(Src, Src::NoTape, Src::NoTape), Output = Src>,
+{
+    type Output = Src;
+    fn forward(&self, src: Src) -> Self::Output {
+        let (src, tape) = src.split_tape();
+        self.forward((src.clone().put_tape(tape), src.clone(), src))
     }
 }
 

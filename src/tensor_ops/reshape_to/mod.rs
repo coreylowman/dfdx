@@ -4,7 +4,7 @@ use crate::{
     arrays::{Dtype, HasSameNumelAs, Shape},
     gradients::Tape,
     tensor::storage::{DeviceStorage, HasErr},
-    tensor::{Tensor, TensorFromStorage},
+    tensor::{PutTape, SplitTape, Tensor, TensorFromStorage},
 };
 
 pub trait ReshapeKernel<E: Dtype>: DeviceStorage {

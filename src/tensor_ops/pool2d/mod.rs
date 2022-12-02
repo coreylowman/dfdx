@@ -4,7 +4,7 @@ use crate::{
     arrays::{Const, Dim, Dtype},
     gradients::Tape,
     tensor::storage::DeviceStorage,
-    tensor::{Tensor, TensorFromStorage},
+    tensor::{PutTape, SplitTape, Tensor, TensorFromStorage},
 };
 
 pub(super) mod pooling {

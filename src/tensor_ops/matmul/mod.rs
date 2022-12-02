@@ -5,7 +5,7 @@ pub(super) mod cpu_kernel;
 use crate::{
     arrays::{Const, Dim, Dtype, Shape},
     gradients::{Merge, Tape},
-    tensor::{DeviceStorage, HasErr, Tensor, TensorFromStorage},
+    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor, TensorFromStorage},
 };
 
 use super::device::Device;
