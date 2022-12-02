@@ -223,6 +223,10 @@ pub use reshape_to::ReshapeTo;
 
 #[cfg(feature = "nightly")]
 mod conv2d;
+#[cfg(feature = "nightly")]
+pub use conv2d::TryConv2D;
+#[cfg(feature = "nightly")]
+pub(crate) use conv2d::TryConv2DTo;
 
 #[cfg(feature = "nightly")]
 mod pool2d;

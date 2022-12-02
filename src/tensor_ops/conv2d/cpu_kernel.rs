@@ -5,94 +5,67 @@ use super::{Conv2DBatchedKernel, Conv2DKernel};
 use crate::tensor_ops::matmul::cpu_kernel::matmul;
 
 impl Cpu {
-    fn conv2d_forward<
-        const K: usize,
-        const S: usize,
-        const P: usize,
-        const C: usize,
-        const O: usize,
-        const H: usize,
-        const W: usize,
-    >(
+    fn conv2d_forward<C: Dim, H: Dim, W: Dim, O: Dim, K: Dim, OH: Dim, OW: Dim>(
         &self,
-        img: View<Rank3<C, H, W>, f32>,
-        filters: View<Rank4<O, C, K, K>, f32>,
-        out: ViewMut<Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+        img: View<(C, H, W), f32>,
+        filters: View<(O, C, K, K), f32>,
+        out: ViewMut<(O, OH, OW), f32>,
+        stride: usize,
+        padding: usize,
+        buf_patches: &mut StridedArray<(C, K, K, OH, OW), f32>,
     ) -> Result<(), CpuError> {
-        let mut patches: StridedArray<
-            Rank5<C, K, K, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
-            f32,
-        > = StridedArray::new(Default::default())?;
+        let (chan, height, width) = img.shape;
+        let (out_chan, out_height, out_width) = out.shape;
+        let kernel = filters.shape.3;
 
-        let mut patch_iter = patches.iter_mut_with_index();
+        let mut patch_iter = buf_patches.iter_mut_with_index();
         while let Some((p, [c, k1, k2, oh, ow])) = patch_iter.next() {
-            let y = (oh * S + k1).wrapping_sub(P);
-            let x = (ow * S + k2).wrapping_sub(P);
-            if y < H && x < W {
+            let y = (oh * stride + k1).wrapping_sub(padding);
+            let x = (ow * stride + k2).wrapping_sub(padding);
+            if y < height.size() && x < width.size() {
                 *p = *img.idx(c).idx(y).idx(x);
             }
         }
 
         // (O, C * K * K) * (C * K * K, OH * OW) = (O, OH * OW)
-        let m = Dyn(O);
-        let k = Dyn(C * K * K);
-        let n = Dyn(((H + 2 * P - K) / S + 1) * ((W + 2 * P - K) / S + 1));
+        let m = out_chan;
+        let k = Dyn(chan.size() * kernel.size() * kernel.size());
+        let n = Dyn(out_width.size() * out_height.size());
         matmul(
             View::new(filters.ptr, (m, k)),
-            View::new(patches.data.as_ptr(), (k, n)),
+            View::new(buf_patches.view().ptr, (k, n)),
             ViewMut::new(out.ptr, (m, n)),
-            1.0,
         );
         Ok(())
     }
 
-    fn conv2d_backward<
-        const K: usize,
-        const S: usize,
-        const P: usize,
-        const C: usize,
-        const O: usize,
-        const H: usize,
-        const W: usize,
-    >(
+    fn conv2d_backward<C: Dim, H: Dim, W: Dim, O: Dim, K: Dim, OH: Dim, OW: Dim>(
         &self,
-        img: View<Rank3<C, H, W>, f32>,
-        grad_img: ViewMut<Rank3<C, H, W>, f32>,
-        filters: View<Rank4<O, C, K, K>, f32>,
-        grad_filters: ViewMut<Rank4<O, C, K, K>, f32>,
-        grad_out: View<Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32>,
+        img: View<(C, H, W), f32>,
+        grad_img: ViewMut<(C, H, W), f32>,
+        filters_tr: View<(C, O, K, K), f32>,
+        grad_filters_tr: ViewMut<(C, O, K, K), f32>,
+        grad_out: View<(O, OH, OW), f32>,
+        stride: usize,
+        padding: usize,
+        buf_patches: &mut StridedArray<(O, K, K, H, W), f32>,
     ) -> Result<(), CpuError> {
-        let mut tr_filters: StridedArray<Rank4<C, O, K, K>, f32> =
-            StridedArray::new(Default::default())?;
+        let (chan, height, width) = img.shape;
+        let (out_chan, out_height, out_width) = grad_out.shape;
+        let kernel = filters_tr.shape.3;
 
         {
-            let tr_filters = tr_filters.view_mut();
-            for c in 0..C {
-                for o in 0..O {
-                    for k1 in 0..K {
-                        for k2 in 0..K {
-                            *tr_filters.idx(c).idx(o).idx(k1).idx(k2) =
-                                *filters.idx(o).idx(c).idx(k1).idx(k2);
-                        }
-                    }
-                }
-            }
-        }
-
-        let mut unfolded_grad_out: StridedArray<Rank5<O, K, K, H, W>, f32> =
-            StridedArray::new(Default::default())?;
-        {
-            let unfolded_grad_out = unfolded_grad_out.view_mut();
-            for o in 0..O {
-                for oh in 0..(H + 2 * P - K) / S + 1 {
-                    for ow in 0..(W + 2 * P - K) / S + 1 {
+            let buf_patches = buf_patches.view_mut();
+            for o in 0..out_chan.size() {
+                for oh in 0..out_height.size() {
+                    for ow in 0..out_width.size() {
                         let g = *grad_out.idx(o).idx(oh).idx(ow);
-                        for k1 in 0..K {
-                            for k2 in 0..K {
-                                let y = (oh * S + k1).wrapping_sub(P);
-                                let x = (ow * S + k2).wrapping_sub(P);
-                                if y < H && x < W {
-                                    *unfolded_grad_out.idx(o).idx(k1).idx(k2).idx(y).idx(x) = g;
+                        for k1 in 0..kernel.size() {
+                            for k2 in 0..kernel.size() {
+                                let y = (oh * stride + k1).wrapping_sub(padding);
+                                let x = (ow * stride + k2).wrapping_sub(padding);
+                                if y < height.size() && x < width.size() {
+                                    *buf_patches.idx(o).idx(k1).idx(k2).idx(y).idx(x) = g;
                                 }
                             }
                         }
@@ -104,43 +77,27 @@ impl Cpu {
         {
             // img_g += filters^T * unfold(grad_out)
             // (C, H * W) += (C, O * K * K) * (O * K * K, H * W)
-            let m = Dyn(C);
-            let k = Dyn(O * K * K);
-            let n = Dyn(H * W);
+            let m = chan;
+            let k = Dyn(out_chan.size() * kernel.size() * kernel.size());
+            let n = Dyn(height.size() * width.size());
             matmul(
-                View::new(tr_filters.view().ptr, (m, k)),
-                View::new(unfolded_grad_out.view().ptr, (k, n)),
+                View::new(filters_tr.ptr, (m, k)),
+                View::new(buf_patches.view().ptr, (k, n)),
                 ViewMut::new(grad_img.ptr, (m, n)),
-                1.0,
             );
         }
 
         {
             // weight_g^T += img * patches^T
             // (C, O * K * K) += (C, H * W) * (H * W, O * K * K)
-            let m = Dyn(C);
-            let k = Dyn(H * W);
-            let n = Dyn(O * K * K);
+            let m = chan;
+            let k = Dyn(height.size() * width.size());
+            let n = Dyn(out_chan.size() * kernel.size() * kernel.size());
             matmul(
                 View::new(img.ptr, (m, k)),
-                View::new(unfolded_grad_out.view().ptr, (n, k)).tr(),
-                ViewMut::new(tr_filters.view_mut().ptr, (m, n)),
-                0.0,
+                View::new(buf_patches.view().ptr, (n, k)).tr(),
+                ViewMut::new(grad_filters_tr.ptr, (m, n)),
             );
-
-            {
-                let tr_filters = tr_filters.view();
-                for o in 0..O {
-                    for c in 0..C {
-                        for k1 in 0..K {
-                            for k2 in 0..K {
-                                *grad_filters.idx(o).idx(c).idx(k1).idx(k2) +=
-                                    tr_filters.idx(c).idx(o).idx(k1).idx(k2);
-                            }
-                        }
-                    }
-                }
-            }
         }
 
         Ok(())
@@ -159,7 +116,11 @@ impl<const K: usize, const S: usize, const P: usize, const C: usize, const O: us
         Self::Err,
     > {
         let mut out: StridedArray<_, f32> = StridedArray::new(Default::default())?;
-        self.conv2d_forward::<K, S, P, C, O, H, W>(lhs.view(), rhs.view(), out.view_mut())?;
+        let mut patches: StridedArray<
+            Rank5<C, K, K, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
+            f32,
+        > = StridedArray::new(Default::default())?;
+        self.conv2d_forward(lhs.view(), rhs.view(), out.view_mut(), S, P, &mut patches)?;
         Ok(out)
     }
 
@@ -174,13 +135,41 @@ impl<const K: usize, const S: usize, const P: usize, const C: usize, const O: us
             f32,
         >,
     ) -> Result<(), Self::Err> {
-        self.conv2d_backward::<K, S, P, C, O, H, W>(
+        let mut patches: StridedArray<Rank5<O, K, K, H, W>, f32> =
+            StridedArray::new(Default::default())?;
+        let mut f1023: StridedArray<Rank4<C, O, K, K>, f32> =
+            StridedArray::new(Default::default())?;
+        let mut grad_f1023: StridedArray<Rank4<C, O, K, K>, f32> =
+            StridedArray::new(Default::default())?;
+
+        {
+            let rhs_view = rhs.view();
+            let mut f_iter = f1023.iter_mut_with_index();
+            while let Some((f, [c, o, k1, k2])) = f_iter.next() {
+                *f = *rhs_view.idx(o).idx(c).idx(k1).idx(k2);
+            }
+        }
+
+        self.conv2d_backward(
             lhs.view(),
             grad_lhs.view_mut(),
-            rhs.view(),
-            grad_rhs.view_mut(),
+            f1023.view(),
+            grad_f1023.view_mut(),
             grad_out.view(),
-        )
+            S,
+            P,
+            &mut patches,
+        )?;
+
+        {
+            let grad_f1023 = grad_f1023.view();
+            let mut iter = grad_rhs.iter_mut_with_index();
+            while let Some((f, [o, c, k1, k2])) = iter.next() {
+                *f += *grad_f1023.idx(c).idx(o).idx(k1).idx(k2);
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -200,13 +189,17 @@ impl<const K: usize, const S: usize, const P: usize, const C: usize, const O: us
         Self::Err,
     > {
         let (batch, _, _, _) = lhs.shape();
+        let mut patches: StridedArray<
+            Rank5<C, K, K, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
+            f32,
+        > = StridedArray::new(Default::default())?;
         let mut out: StridedArray<_, f32> = StridedArray::new((*batch, Const, Const, Const))?;
         {
             let lhs = lhs.view();
             let rhs = rhs.view();
             let out = out.view_mut();
             for b in 0..batch.size() {
-                self.conv2d_forward::<K, S, P, C, O, H, W>(lhs.idx(b), rhs, out.idx(b))?;
+                self.conv2d_forward(lhs.idx(b), rhs, out.idx(b), S, P, &mut patches)?;
             }
         }
         Ok(out)
@@ -224,20 +217,45 @@ impl<const K: usize, const S: usize, const P: usize, const C: usize, const O: us
         >,
     ) -> Result<(), Self::Err> {
         let (batch, _, _, _) = lhs.shape();
+        let mut patches: StridedArray<Rank5<O, K, K, H, W>, f32> =
+            StridedArray::new(Default::default())?;
+        let mut filters_1023: StridedArray<Rank4<C, O, K, K>, f32> =
+            StridedArray::new(Default::default())?;
+        let mut grad_filters_1023: StridedArray<Rank4<C, O, K, K>, f32> =
+            StridedArray::new(Default::default())?;
+
+        {
+            let rhs_view = rhs.view();
+            let mut f_iter = filters_1023.iter_mut_with_index();
+            while let Some((f, [c, o, k1, k2])) = f_iter.next() {
+                *f = *rhs_view.idx(o).idx(c).idx(k1).idx(k2);
+            }
+        }
+
         let lhs = lhs.view();
         let grad_lhs = grad_lhs.view_mut();
-        let rhs = rhs.view();
-        let grad_rhs = grad_rhs.view_mut();
         let grad_out = grad_out.view();
         for b in 0..batch.size() {
-            self.conv2d_backward::<K, S, P, C, O, H, W>(
+            self.conv2d_backward(
                 lhs.idx(b),
                 grad_lhs.idx(b),
-                rhs,
-                grad_rhs,
+                filters_1023.view(),
+                grad_filters_1023.view_mut(),
                 grad_out.idx(b),
+                S,
+                P,
+                &mut patches
             )?;
         }
+
+        {
+            let grad_filters_1023 = grad_filters_1023.view();
+            let mut iter = grad_rhs.iter_mut_with_index();
+            while let Some((f, [o, c, k1, k2])) = iter.next() {
+                *f += *grad_filters_1023.idx(c).idx(o).idx(k1).idx(k2);
+            }
+        }
+
         Ok(())
     }
 }
