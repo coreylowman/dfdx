@@ -4,133 +4,167 @@ mod mha;
 
 pub use decoder::*;
 pub use encoder::*;
-// pub use mha::*;
+pub use mha::*;
 
-// use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
-// use crate::prelude::*;
+use crate::{
+    optim::{CanUpdateWithGradients, UnusedTensors, UpdateParams},
+    tensor::{Cpu, PutTape, SplitTape},
+    tensor_ops::Device,
+};
 
-// /// **Requires Nightly** Transformer architecture as described in
-// /// [Attention is all you need](https://arxiv.org/abs/1706.03762).
-// ///
-// /// This is comprised of a [TransformerEncoder] and a [TransformerDecoder].
-// ///
-// /// Generics:
-// /// - `MODEL_DIM`: Size of the input features to the encoder/decoder.
-// /// - `NUM_HEADS`: Number of heads for [MultiHeadAttention].
-// /// - `NUM_ENCODER_LAYERS`: Number of [TransformerEncoderBlock] to use
-// /// - `NUM_DECODER_LAYERS`: Number of [TransformerDecoderBlock] to use
-// /// - `FF_DIM`: Feedforward hidden dimension for both encoder/decoder
-// ///
-// /// **Pytorch equivalent**:
-// /// ```python
-// /// torch.nn.Transformer(
-// ///     d_model=MODEL_DIM,
-// ///     nhead=NUM_HEADS,
-// ///     num_encoder_layers=NUM_ENCODER_LAYERS,
-// ///     num_decoder_layers=NUM_DECODER_LAYERS,
-// ///     dim_feedforward=FF_DIM,
-// ///     batch_first=True,
-// /// )
-// /// ```
-// #[derive(Debug, Default, Clone)]
-// pub struct Transformer<
-//     const MODEL_DIM: usize,
-//     const NUM_HEADS: usize,
-//     const NUM_ENCODER_LAYERS: usize,
-//     const NUM_DECODER_LAYERS: usize,
-//     const FF_DIM: usize,
-// > {
-//     pub encoder: TransformerEncoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_ENCODER_LAYERS>,
-//     pub decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS>,
-// }
+use super::{BuildModule, Module, ModuleMut};
 
-// impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> ResetParams
-//     for Transformer<M, H, E, D, F>
-// {
-//     fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
-//         self.encoder.reset_params(rng);
-//         self.decoder.reset_params(rng);
-//     }
-// }
+/// **Requires Nightly** Transformer architecture as described in
+/// [Attention is all you need](https://arxiv.org/abs/1706.03762).
+///
+/// This is comprised of a [TransformerEncoder] and a [TransformerDecoder].
+///
+/// Generics:
+/// - `MODEL_DIM`: Size of the input features to the encoder/decoder.
+/// - `NUM_HEADS`: Number of heads for [MultiHeadAttention].
+/// - `NUM_ENCODER_LAYERS`: Number of [TransformerEncoderBlock] to use
+/// - `NUM_DECODER_LAYERS`: Number of [TransformerDecoderBlock] to use
+/// - `FF_DIM`: Feedforward hidden dimension for both encoder/decoder
+///
+/// **Pytorch equivalent**:
+/// ```python
+/// torch.nn.Transformer(
+///     d_model=MODEL_DIM,
+///     nhead=NUM_HEADS,
+///     num_encoder_layers=NUM_ENCODER_LAYERS,
+///     num_decoder_layers=NUM_DECODER_LAYERS,
+///     dim_feedforward=FF_DIM,
+///     batch_first=True,
+/// )
+/// ```
+#[derive(Debug, Clone)]
+pub struct Transformer<
+    const MODEL_DIM: usize,
+    const NUM_HEADS: usize,
+    const NUM_ENCODER_LAYERS: usize,
+    const NUM_DECODER_LAYERS: usize,
+    const FF_DIM: usize,
+    D: Device<f32> = Cpu,
+> {
+    pub encoder: TransformerEncoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_ENCODER_LAYERS, D>,
+    pub decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS, D>,
+}
 
-// impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize>
-//     CanUpdateWithGradients for Transformer<M, H, E, D, F>
-// {
-//     fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-//         self.encoder.update(grads, unused);
-//         self.decoder.update(grads, unused);
-//     }
-// }
+impl<
+        const M: usize,
+        const H: usize,
+        const EL: usize,
+        const DL: usize,
+        const F: usize,
+        D: Device<f32>,
+    > BuildModule<D, f32> for Transformer<M, H, EL, DL, F, D>
+{
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self {
+            encoder: BuildModule::try_build(device)?,
+            decoder: BuildModule::try_build(device)?,
+        })
+    }
+    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
+        self.encoder.try_reset_params()?;
+        self.decoder.try_reset_params()?;
+        Ok(())
+    }
+}
 
-// impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize, Src, Tgt>
-//     Module<(Src, Tgt)> for Transformer<M, H, E, D, F>
-// where
-//     Src: Tensor<Dtype = f32>,
-//     Tgt: Tensor<Dtype = f32> + PutTape<Src::Tape>,
-//     TransformerEncoder<M, H, F, E>: Module<Src, Output = Src>,
-//     TransformerDecoder<M, H, F, D>: Module<
-//         (<Tgt as PutTape<Src::Tape>>::Output, Src::NoTape),
-//         Output = <Tgt as PutTape<Src::Tape>>::Output,
-//     >,
-// {
-//     type Output = <Tgt as PutTape<Src::Tape>>::Output;
+impl<
+        const M: usize,
+        const H: usize,
+        const EL: usize,
+        const DL: usize,
+        const F: usize,
+        D: Device<f32>,
+    > CanUpdateWithGradients<D, f32> for Transformer<M, H, EL, DL, F, D>
+{
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
+    where
+        U: UpdateParams<D, f32>,
+    {
+        self.encoder.update(updater, unused)?;
+        self.decoder.update(updater, unused)?;
+        Ok(())
+    }
+}
 
-//     fn forward(&self, (src, tgt): (Src, Tgt)) -> Self::Output {
-//         let (mem, tape) = self.encoder.forward(src).split_tape();
-//         self.decoder.forward((tgt.put_tape(tape), mem))
-//     }
-// }
+impl<
+        const M: usize,
+        const H: usize,
+        const EL: usize,
+        const DL: usize,
+        const F: usize,
+        D: Device<f32>,
+        Src: SplitTape,
+        Tgt: PutTape<Src::Tape>,
+    > Module<(Src, Tgt)> for Transformer<M, H, EL, DL, F, D>
+where
+    TransformerEncoder<M, H, F, EL, D>: Module<Src, Output = Src>,
+    TransformerDecoder<M, H, F, DL, D>: Module<
+        (<Tgt as PutTape<Src::Tape>>::Output, Src::NoTape),
+        Output = <Tgt as PutTape<Src::Tape>>::Output,
+    >,
+{
+    type Output = <Tgt as PutTape<Src::Tape>>::Output;
 
-// impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize, T> ModuleMut<T>
-//     for Transformer<M, H, E, D, F>
-// where
-//     Self: Module<T>,
-// {
-//     type Output = <Self as Module<T>>::Output;
-//     fn forward_mut(&mut self, t: T) -> Self::Output {
-//         self.forward(t)
-//     }
-// }
+    fn forward(&self, (src, tgt): (Src, Tgt)) -> Self::Output {
+        let (mem, tape) = self.encoder.forward(src).split_tape();
+        self.decoder.forward((tgt.put_tape(tape), mem))
+    }
+}
 
-// #[cfg(feature = "nightly")]
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::nn::tests::SimpleGradients;
-//     use rand::{rngs::StdRng, SeedableRng};
+impl<const M: usize, const H: usize, const I: usize, const J: usize, const F: usize, D, T>
+    ModuleMut<T> for Transformer<M, H, I, J, F, D>
+where
+    D: Device<f32>,
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, t: T) -> Self::Output {
+        self.forward(t)
+    }
+}
 
-//     #[test]
-//     fn test_forward() {
-//         let mut rng = StdRng::seed_from_u64(0);
-//         let mut t: Transformer<16, 4, 3, 3, 8> = Default::default();
-//         t.reset_params(&mut rng);
+#[cfg(feature = "nightly")]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        arrays::*, nn::tests::SimpleUpdater, tensor::*, tensor_ops::*, tests::build_test_device,
+    };
 
-//         // unbatched
-//         let src: Tensor2D<7, 16> = TensorCreator::randn(&mut rng);
-//         let tgt: Tensor2D<9, 16> = TensorCreator::randn(&mut rng);
-//         let _: Tensor2D<9, 16> = t.forward_mut((src, tgt));
+    #[test]
+    fn test_forward() {
+        let dev = build_test_device!(0);
+        let mut t: Transformer<16, 4, 3, 3, 8, _> = BuildModule::build(&dev);
 
-//         // batched
-//         let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
-//         let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
-//         let _: Tensor3D<4, 6, 16> = t.forward_mut((src, tgt));
-//     }
+        // unbatched
+        let src = dev.randn::<Rank2<7, 16>>();
+        let tgt = dev.randn::<Rank2<9, 16>>();
+        let _: Tensor<Rank2<9, 16>, _, _, _> = t.forward_mut((src, tgt));
 
-//     #[test]
-//     fn test_backward() {
-//         let mut rng = StdRng::seed_from_u64(0);
-//         let mut t: Transformer<16, 4, 3, 3, 8> = Default::default();
-//         t.reset_params(&mut rng);
+        // batched
+        let src = dev.randn::<Rank3<4, 12, 16>>();
+        let tgt = dev.randn::<Rank3<4, 6, 16>>();
+        let _: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward_mut((src, tgt));
+    }
 
-//         let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
-//         let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
-//         let out: Tensor3D<4, 6, 16, _> = t.forward_mut((src.trace(), tgt));
-//         let g = backward(out.mean());
+    #[test]
+    fn test_backward() {
+        let dev = build_test_device!(0);
+        let mut t: Transformer<16, 4, 3, 3, 8> = BuildModule::build(&dev);
 
-//         let mut gs = SimpleGradients(g);
-//         let mut unused: UnusedTensors = Default::default();
-//         t.update(&mut gs, &mut unused);
+        let src = dev.randn::<Rank3<4, 12, 16>>();
+        let tgt = dev.randn::<Rank3<4, 6, 16>>();
+        let out: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward_mut((src.trace(), tgt));
+        let g = out.mean().backward();
 
-//         assert!(unused.is_empty());
-//     }
-// }
+        let mut gs = SimpleUpdater(g);
+        let mut unused: UnusedTensors = Default::default();
+        t.update(&mut gs, &mut unused).unwrap();
+        assert!(unused.is_empty());
+    }
+}
