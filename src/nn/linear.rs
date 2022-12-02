@@ -5,7 +5,10 @@
 
 use crate::{arrays::*, gradients::Tape, optim::*, tensor::*, tensor_ops::*};
 
-use super::module::{BuildModule, Module, ModuleMut};
+use super::{
+    bias::Bias1D,
+    module::{BuildModule, Module, ModuleMut},
+};
 
 /// A linear transformation of the form `weight * x + bias`, where `weight` is a matrix, `x` is a vector or matrix,
 /// and `bias` is a vector.
@@ -31,7 +34,7 @@ pub struct Linear<const I: usize, const O: usize, D: Device<f32> = Cpu> {
     pub weight: Tensor<Rank2<O, I>, f32, D>,
 
     /// Bias vector, shape (O, )
-    pub bias: Tensor<Rank1<O>, f32, D>,
+    pub bias: Bias1D<O, D>,
 }
 
 impl<const I: usize, const O: usize, D: Device<f32>> CanUpdateWithGradients<D, f32>
@@ -42,7 +45,7 @@ impl<const I: usize, const O: usize, D: Device<f32>> CanUpdateWithGradients<D, f
         U: UpdateParams<D, f32>,
     {
         self.weight.update(updater, unused)?;
-        self.bias.update(updater, unused)?;
+        self.bias.beta.update(updater, unused)?;
         Ok(())
     }
 }
@@ -51,8 +54,11 @@ impl<const I: usize, const O: usize, D: Device<f32>> BuildModule<D, f32> for Lin
     fn try_build(device: &D) -> Result<Self, D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
         let weight = device.try_uniform(-bound, bound)?;
-        let bias = device.try_uniform(-bound, bound)?;
-        Ok(Self { weight, bias })
+        let beta = device.try_uniform(-bound, bound)?;
+        Ok(Self {
+            weight,
+            bias: Bias1D { beta },
+        })
     }
 
     /// Initializes [Self::weight] and [Self::bias] from a [Uniform] distribution
@@ -62,45 +68,23 @@ impl<const I: usize, const O: usize, D: Device<f32>> BuildModule<D, f32> for Lin
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
         self.weight.try_fill_with_uniform(-bound, bound)?;
-        self.bias.try_fill_with_uniform(-bound, bound)?;
+        self.bias.beta.try_fill_with_uniform(-bound, bound)?;
         Ok(())
     }
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<Rank1<I>, f32, D, T>>
-    for Linear<I, O, D>
+impl<const I: usize, const O: usize, D: Device<f32>, T> Module<T> for Linear<I, O, D>
+where
+    T: SplitTape + TryMatMul<Tensor<Rank2<I, O>, f32, D, T::Tape>>,
+    T::Tape: Tape<D>,
+    Bias1D<O, D>: Module<T::Output, Output = T::Output>,
 {
-    type Output = Tensor<Rank1<O>, f32, D, T>;
+    type Output = T::Output;
 
     /// 1d forward using [vecmat_mul()] and [add()].
-    fn forward(&self, x: Tensor<Rank1<I>, f32, D, T>) -> Self::Output {
-        x.matmul(self.weight.retaped::<T>().permute()) + self.bias.clone()
-    }
-}
-
-impl<B: Dim, const I: usize, const O: usize, D: Device<f32>, T: Tape<D>>
-    Module<Tensor<(B, Const<I>), f32, D, T>> for Linear<I, O, D>
-{
-    type Output = Tensor<(B, Const<O>), f32, D, T>;
-
-    /// Batched 2d forward using [matmul()] and [add()]
-    fn forward(&self, x: Tensor<(B, Const<I>), f32, D, T>) -> Self::Output {
-        let batch = x.shape().0;
-        x.matmul(self.weight.retaped::<T>().permute())
-            + self.bias.retaped::<T>().broadcast_to(&(batch, Const))
-    }
-}
-
-impl<B: Dim, S: Dim, const I: usize, const O: usize, D: Device<f32>, T: Tape<D>>
-    Module<Tensor<(B, S, Const<I>), f32, D, T>> for Linear<I, O, D>
-{
-    type Output = Tensor<(B, S, Const<O>), f32, D, T>;
-
-    /// Batched 3d forward using [matmul()] and [add()]
-    fn forward(&self, x: Tensor<(B, S, Const<I>), f32, D, T>) -> Self::Output {
-        let &(batch, seq, _) = x.shape();
-        x.matmul(self.weight.retaped::<T>().permute())
-            + self.bias.retaped::<T>().broadcast_to(&(batch, seq, Const))
+    fn forward(&self, x: T) -> Self::Output {
+        let o = x.matmul(self.weight.retaped::<T::Tape>().permute());
+        self.bias.forward(o)
     }
 }
 
@@ -137,7 +121,7 @@ mod tests {
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);
         }
-        for v in m.bias.as_vec() {
+        for v in m.bias.beta.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);
         }
     }
@@ -148,7 +132,9 @@ mod tests {
 
         let model = Linear {
             weight: dev.tensor(W),
-            bias: dev.tensor(B),
+            bias: Bias1D {
+                beta: dev.tensor(B),
+            },
         };
 
         let x = dev.tensor([-0.8808001f32, 2.4185333, 2.2478335, 0.0565211, 2.031299]);
@@ -163,7 +149,7 @@ mod tests {
                 [-0.07596206, 0.20857942, 0.19385791, 0.004874499, 0.17518352],
             ],
         );
-        assert_close(&g.get(&model.bias).array(), &[-0.93430865, 0.08624211]);
+        assert_close(&g.get(&model.bias.beta).array(), &[-0.93430865, 0.08624211]);
     }
 
     #[test]
@@ -172,7 +158,9 @@ mod tests {
 
         let model = Linear {
             weight: dev.tensor(W),
-            bias: dev.tensor(B),
+            bias: Bias1D {
+                beta: dev.tensor(B),
+            },
         };
 
         let x = dev.tensor([
@@ -198,7 +186,7 @@ mod tests {
                 [0.29272807, -0.17702839, 0.08586791, -0.24057935, 0.5286576],
             ],
         );
-        assert_close(&g.get(&model.bias).array(), &[0.7679174, -0.31687993]);
+        assert_close(&g.get(&model.bias.beta).array(), &[0.7679174, -0.31687993]);
     }
 
     #[test]
@@ -207,7 +195,9 @@ mod tests {
 
         let model = Linear {
             weight: dev.tensor(W),
-            bias: dev.tensor(B),
+            bias: Bias1D {
+                beta: dev.tensor(B),
+            },
         };
 
         #[rustfmt::skip]
@@ -238,7 +228,7 @@ mod tests {
             &g.get(&model.weight).array(),
             &[[-0.16088384, 0.10978711, -0.9008978, 0.59211355, -0.029177088], [0.35563633, -0.38838047, -0.17600831, -0.2034213, 0.31128058]],
         );
-        assert_close(&g.get(&model.bias).array(), &[0.40265593, -0.2874091]);
+        assert_close(&g.get(&model.bias.beta).array(), &[0.40265593, -0.2874091]);
     }
 
     #[test]
@@ -251,17 +241,17 @@ mod tests {
         // no gradients present
         let mut unused = Default::default();
         model.update(&mut g, &mut unused).unwrap();
-        assert_eq!(&unused.ids, &[*model.weight.id(), *model.bias.id()]);
+        assert_eq!(&unused.ids, &[*model.weight.id(), *model.bias.beta.id()]);
 
         g.0.get_mut(&model.weight).unwrap();
 
         // weight gradient is present
         let mut unused = Default::default();
         model.update(&mut g, &mut unused).unwrap();
-        assert_eq!(&unused.ids, &[*model.bias.id()]);
+        assert_eq!(&unused.ids, &[*model.bias.beta.id()]);
 
         g.0.get_mut(&model.weight).unwrap();
-        g.0.get_mut(&model.bias).unwrap();
+        g.0.get_mut(&model.bias.beta).unwrap();
 
         // both gradients present
         let mut unused = Default::default();
