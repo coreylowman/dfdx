@@ -1,6 +1,7 @@
 use super::utils::{map, map_df_uses_fx};
 use crate::gradients::Tape;
 use crate::prelude::*;
+use core::f32::consts::PI;
 use std::ops::Neg;
 
 /// Negates all elements.
@@ -212,6 +213,33 @@ pub fn abs<T: Tensor<Dtype = f32>>(t: T) -> T {
     map(t, |x| x.abs(), |x| if x == &0.0 { 0.0 } else { x.signum() })
 }
 
+/// [Gaussian Error Linear Units (GELU)](https://pytorch.org/docs/stable/generated/torch.nn.GELU.html#torch.nn.GELU) (approximate version). `0.5 * x * (1 + tanh(√(2/pi)*(x + 0.044715 * x^3)))`
+///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
+///
+/// // use function version
+/// let r = gelu(t.clone());
+///
+/// // or the tensor method!
+/// let r2 = t.gelu();
+/// ```
+pub fn gelu<T: Tensor<Dtype = f32>>(t: T) -> T {
+    map(
+        t,
+        |x| 0.5 * x * (1.0 + ((2.0 / PI).sqrt() * (x + 0.044715 * x.powi(3))).tanh()),
+        |x| {
+            0.5 * (1.0 + ((2.0 / PI).sqrt() * (x + 0.044715 * x.powi(3))).tanh())
+                + 0.5 * x * (2.0 / PI).sqrt() * (1.0 + 0.134145 * x.powi(2))
+                    / ((2.0 / PI).sqrt() * (x + 0.044715 * x.powi(3)))
+                        .cosh()
+                        .powi(2)
+        },
+    )
+}
+
 macro_rules! activation_impl {
     ($func_name:ident, #[$docstring:meta]) => {
         #[$docstring]
@@ -235,6 +263,7 @@ impl<$(const $Vs: usize, )* H: Tape> $typename<$($Vs, )* H> {
     activation_impl!(square, #[doc="Calls [square()] on `self`."]);
     activation_impl!(sqrt, #[doc="Calls [sqrt()] on `self`."]);
     activation_impl!(abs, #[doc="Calls [abs()] on `self`."]);
+    activation_impl!(gelu, #[doc="Calls [gelu()] on `self`."]);
 }
 
 impl<$(const $Vs: usize, )* H: Tape> std::ops::Neg for $typename<$($Vs, )* H>
@@ -391,6 +420,21 @@ mod tests {
         assert_eq!(r.data(), &[2.0, 1.0, 0.0, 1.0, 2.0]);
         let gradients = backward(r.mean());
         assert_eq!(gradients.ref_gradient(&x), &[-0.2, -0.2, 0.0, 0.2, 0.2]);
+    }
+
+    #[test]
+    fn test_gelu() {
+        let x = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let r = x.trace().gelu();
+        assert_close(
+            r.data(),
+            &[-0.045402306, -0.158808009, 0.0, 0.8411919906, 1.9545976941],
+        );
+        let gradients = backward(r.mean());
+        assert_close(
+            gradients.ref_gradient(&x),
+            &[-0.017219851, -0.016592817, 0.1, 0.2165928168, 0.2172198513],
+        );
     }
 
     #[test]

@@ -48,6 +48,7 @@ activation_impls!(Tanh, tanh, #[doc="Unit struct that impls [Module] as calling 
 activation_impls!(Square, square, #[doc="Unit struct that impls [Module] as calling [square()] on `input`."]);
 activation_impls!(Sqrt, sqrt, #[doc="Unit struct that impls [Module] as calling [sqrt()] on `input`."]);
 activation_impls!(Abs, abs, #[doc="Unit struct that impls [Module] as calling [abs()] on `input`."]);
+activation_impls!(GELU, gelu, #[doc="Unit struct that impls [Module] as calling [gelu()] on `input`."]);
 
 /// Unit struct that impls [Module] as calling [softmax()] on `input`."
 #[derive(Default, Debug, Clone, Copy)]
@@ -160,6 +161,14 @@ mod tests {
         let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Abs.forward_mut(t.clone());
         let r2 = abs(t);
+        assert_eq!(r1.data(), r2.data());
+    }
+
+    #[test]
+    fn test_gelu() {
+        let t = tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let r1 = GELU.forward_mut(t.clone());
+        let r2 = gelu(t);
         assert_eq!(r1.data(), r2.data());
     }
 
