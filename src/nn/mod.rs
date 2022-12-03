@@ -79,7 +79,7 @@
 mod activations;
 // mod add_into;
 mod batchnorm2d;
-// mod dropout;
+mod dropout;
 // mod flatten;
 mod generalized_residual;
 mod impl_module_for_tuples;

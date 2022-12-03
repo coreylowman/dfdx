@@ -302,13 +302,10 @@ impl<E: Dtype> AsArray for StridedArray<Rank0, E> {
     }
 }
 
-impl<E: Dtype, const M: usize> AsArray for StridedArray<Rank1<M>, E>
-where
-    [E; M]: Default,
-{
+impl<E: Dtype, const M: usize> AsArray for StridedArray<Rank1<M>, E> {
     type Array = [E; M];
     fn array(&self) -> Self::Array {
-        let mut out: Self::Array = Default::default();
+        let mut out: Self::Array = [Default::default(); M];
         let mut iter = self.iter();
         for m in 0..M {
             out[m].clone_from(iter.next().unwrap());
@@ -317,13 +314,10 @@ where
     }
 }
 
-impl<E: Dtype, const M: usize, const N: usize> AsArray for StridedArray<Rank2<M, N>, E>
-where
-    [[E; N]; M]: Default,
-{
+impl<E: Dtype, const M: usize, const N: usize> AsArray for StridedArray<Rank2<M, N>, E> {
     type Array = [[E; N]; M];
     fn array(&self) -> Self::Array {
-        let mut out: Self::Array = Default::default();
+        let mut out: Self::Array = [[Default::default(); N]; M];
         let mut iter = self.iter();
         for m in 0..M {
             for n in 0..N {
@@ -336,12 +330,10 @@ where
 
 impl<E: Dtype, const M: usize, const N: usize, const O: usize> AsArray
     for StridedArray<Rank3<M, N, O>, E>
-where
-    [[[E; O]; N]; M]: Default,
 {
     type Array = [[[E; O]; N]; M];
     fn array(&self) -> Self::Array {
-        let mut out: Self::Array = Default::default();
+        let mut out: Self::Array = [[[Default::default(); O]; N]; M];
         let mut iter = self.iter_with_index();
         while let Some((v, [m, n, o])) = iter.next() {
             out[m][n][o].clone_from(v);
@@ -352,12 +344,10 @@ where
 
 impl<E: Dtype, const M: usize, const N: usize, const O: usize, const P: usize> AsArray
     for StridedArray<Rank4<M, N, O, P>, E>
-where
-    [[[[E; P]; O]; N]; M]: Default,
 {
     type Array = [[[[E; P]; O]; N]; M];
     fn array(&self) -> Self::Array {
-        let mut out: Self::Array = Default::default();
+        let mut out: Self::Array = [[[[Default::default(); P]; O]; N]; M];
         let mut iter = self.iter_with_index();
         while let Some((v, [m, n, o, p])) = iter.next() {
             out[m][n][o][p].clone_from(v);
