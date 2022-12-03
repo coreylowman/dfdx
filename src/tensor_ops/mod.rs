@@ -182,7 +182,7 @@ pub use abs::abs;
 pub use add::{add, TryAdd};
 pub use backward::TryBackward;
 pub use bce::bce_with_logits;
-pub use broadcast_to::BroadcastTo;
+pub use broadcast_to::{Broadcast, BroadcastAlong, BroadcastTo};
 pub use clamp::clamp;
 pub use cos::cos;
 pub use div::{div, TryDiv};

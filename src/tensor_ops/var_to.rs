@@ -40,16 +40,16 @@ where
 }
 
 pub trait VarTo<Ax: Axes>: HasShape + HasErr {
-    fn var_to<Dst: Shape>(self) -> Self::With<Dst>
+    fn var_to<Dst: Shape>(self) -> Self::WithShape<Dst>
     where
-        Self: VarInto<Self::With<Dst>, Ax>,
+        Self: VarInto<Self::WithShape<Dst>, Ax>,
     {
         self.var()
     }
 
-    fn try_var_to<Dst: Shape>(self) -> Result<Self::With<Dst>, Self::Err>
+    fn try_var_to<Dst: Shape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
-        Self: VarInto<Self::With<Dst>, Ax>,
+        Self: VarInto<Self::WithShape<Dst>, Ax>,
     {
         self.try_var()
     }

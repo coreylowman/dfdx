@@ -78,16 +78,16 @@ where
 }
 
 pub trait SumTo<Ax: Axes>: HasShape + HasErr {
-    fn sum_to<Dst: Shape>(self) -> Self::With<Dst>
+    fn sum_to<Dst: Shape>(self) -> Self::WithShape<Dst>
     where
-        Self: SumInto<Self::With<Dst>, Ax>,
+        Self: SumInto<Self::WithShape<Dst>, Ax>,
     {
         self.sum()
     }
 
-    fn try_sum_to<Dst: Shape>(self) -> Result<Self::With<Dst>, Self::Err>
+    fn try_sum_to<Dst: Shape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
-        Self: SumInto<Self::With<Dst>, Ax>,
+        Self: SumInto<Self::WithShape<Dst>, Ax>,
     {
         self.try_sum()
     }

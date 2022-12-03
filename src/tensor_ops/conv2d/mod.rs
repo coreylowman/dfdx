@@ -188,7 +188,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        arrays::{Axes2, Axes3},
+        arrays::*,
         tensor::*,
         tensor_ops::*,
         tests::{assert_close, build_test_device, AssertClose},
@@ -213,7 +213,7 @@ mod tests {
             [-0.64531374, 0.77809018, -0.49099201],
         ]]);
         let result = x.trace().conv2d::<1, 0>(weight.clone())
-            + BroadcastTo::<_, Axes2<1, 2>>::broadcast(bias.trace());
+            + bias.trace().broadcast_along::<Axes2<1, 2>>();
         assert_close(
             &result.array(),
             &[[[0.24369538, 0.71453357]], [[-0.69169492, -0.06172103]]],
@@ -258,7 +258,7 @@ mod tests {
         ]]);
 
         let result = x.trace().conv2d::<2, 0>(weight.clone())
-            + BroadcastTo::<_, Axes2<1, 2>>::broadcast(bias.trace());
+            + bias.trace().broadcast_along::<Axes2<1, 2>>();
         assert_close(&result.array(), &[[[-0.29368058]], [[0.30018353]]]);
 
         let g = result.exp().mean().backward();
@@ -294,7 +294,7 @@ mod tests {
         let x = dev.tensor([[[-0.32224107, -0.32800716]], [[-1.13570976, 0.93713200]]]);
 
         let result = x.trace().conv2d::<1, 1>(weight.clone())
-            + BroadcastTo::<_, Axes2<1, 2>>::broadcast(bias.trace());
+            + bias.trace().broadcast_along::<Axes2<1, 2>>();
 
         #[rustfmt::skip]
             assert_close(
@@ -341,7 +341,7 @@ mod tests {
             let x = dev.tensor([[[0.69103152, 0.25624934],[-0.38448590, 0.03110456],[0.83753252, 0.53786588],[1.15540242, -0.54148245]]]);
 
         let result = x.trace().conv2d::<3, 4>(weight.clone())
-            + BroadcastTo::<_, Axes2<1, 2>>::broadcast(bias.trace());
+            + bias.trace().broadcast_along::<Axes2<1, 2>>();
 
         #[rustfmt::skip]
             assert_close(
@@ -390,7 +390,7 @@ mod tests {
                 [[[1.65487242, 0.44441956], [-0.45107457, 1.41857898]],[[1.00477660, -0.16381662], [0.40009478, -0.57880658]]],
             ]);
         let result = x.trace().conv2d::<1, 0>(weight.clone())
-            + BroadcastTo::<_, Axes3<0, 2, 3>>::broadcast(bias.trace());
+            + bias.trace().broadcast_along::<Axes3<0, 2, 3>>();
 
         #[rustfmt::skip]
         result.array().assert_close(
@@ -426,12 +426,12 @@ mod tests {
     fn test_conv2d_s4p3k2() {
         let dev = build_test_device!(432);
 
-        let weight: Tensor4D<3, 5, 2, 2, _> = dev.randn();
-        let bias: Tensor1D<3, _> = dev.randn();
-        let x: Tensor3D<5, 7, 6, _> = dev.randn();
+        let weight = dev.randn::<Rank4<3, 5, 2, 2>>();
+        let bias = dev.randn::<Rank1<3>>();
+        let x = dev.randn::<Rank3<5, 7, 6>>();
 
         let out = x.conv2d::<4, 3>(weight);
-        let out = out + BroadcastTo::<_, Axes2<1, 2>>::broadcast(bias);
+        let out = out + bias.broadcast_along::<Axes2<1, 2>>();
 
         #[rustfmt::skip]
         assert_close(&out.array(), &[

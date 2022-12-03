@@ -59,7 +59,7 @@ impl<S: Shape, E: Clone> StridedArray<S, E> {
 }
 
 impl<S: Shape, E> HasShape for StridedArray<S, E> {
-    type With<New: Shape> = StridedArray<New, S>;
+    type WithShape<New: Shape> = StridedArray<New, S>;
     type Shape = S;
     fn shape(&self) -> &S {
         &self.shape

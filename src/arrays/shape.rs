@@ -98,13 +98,13 @@ pub trait Shape:
 }
 
 pub trait HasShape {
-    type With<New: Shape>: HasShape<Shape = New>;
+    type WithShape<New: Shape>: HasShape<Shape = New>;
     type Shape: Shape;
     fn shape(&self) -> &Self::Shape;
 }
 
 impl<S: Shape> HasShape for S {
-    type With<New: Shape> = New;
+    type WithShape<New: Shape> = New;
     type Shape = Self;
     fn shape(&self) -> &Self::Shape {
         self

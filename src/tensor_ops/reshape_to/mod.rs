@@ -53,16 +53,16 @@ impl<
 }
 
 pub trait ReshapeTo: HasShape + HasErr {
-    fn reshape_to<Dst: Shape>(self) -> Self::With<Dst>
+    fn reshape_to<Dst: Shape>(self) -> Self::WithShape<Dst>
     where
-        Self: ReshapeInto<Self::With<Dst>>,
+        Self: ReshapeInto<Self::WithShape<Dst>>,
     {
         self.reshape()
     }
 
-    fn try_reshape_to<Dst: Shape>(self) -> Result<Self::With<Dst>, Self::Err>
+    fn try_reshape_to<Dst: Shape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
-        Self: ReshapeInto<Self::With<Dst>>,
+        Self: ReshapeInto<Self::WithShape<Dst>>,
     {
         self.try_reshape()
     }

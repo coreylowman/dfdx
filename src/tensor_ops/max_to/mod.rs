@@ -75,16 +75,16 @@ where
 }
 
 pub trait MaxTo<Ax: Axes>: HasShape + HasErr {
-    fn max_to<Dst: Shape>(self) -> Self::With<Dst>
+    fn max_to<Dst: Shape>(self) -> Self::WithShape<Dst>
     where
-        Self: MaxInto<Self::With<Dst>, Ax>,
+        Self: MaxInto<Self::WithShape<Dst>, Ax>,
     {
         self.max()
     }
 
-    fn try_max_to<Dst: Shape>(self) -> Result<Self::With<Dst>, Self::Err>
+    fn try_max_to<Dst: Shape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
-        Self: MaxInto<Self::With<Dst>, Ax>,
+        Self: MaxInto<Self::WithShape<Dst>, Ax>,
     {
         self.try_max()
     }

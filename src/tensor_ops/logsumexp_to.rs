@@ -59,16 +59,16 @@ impl<
 }
 
 pub trait LogSumExpTo<Ax: Axes>: HasShape + HasErr {
-    fn logsumexp_to<Dst: Shape>(self) -> Self::With<Dst>
+    fn logsumexp_to<Dst: Shape>(self) -> Self::WithShape<Dst>
     where
-        Self: LogSumExpInto<Self::With<Dst>, Ax>,
+        Self: LogSumExpInto<Self::WithShape<Dst>, Ax>,
     {
         self.logsumexp()
     }
 
-    fn try_logsumexp_to<Dst: Shape>(self) -> Result<Self::With<Dst>, Self::Err>
+    fn try_logsumexp_to<Dst: Shape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
-        Self: LogSumExpInto<Self::With<Dst>, Ax>,
+        Self: LogSumExpInto<Self::WithShape<Dst>, Ax>,
     {
         self.try_logsumexp()
     }

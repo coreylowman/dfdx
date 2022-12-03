@@ -65,15 +65,15 @@ where
 }
 
 pub trait PermuteTo<Ax: Axes>: HasShape + HasErr {
-    fn permute_to<Dst: Shape>(self) -> Self::With<Dst>
+    fn permute_to<Dst: Shape>(self) -> Self::WithShape<Dst>
     where
-        Self: PermuteInto<Self::With<Dst>, Ax>,
+        Self: PermuteInto<Self::WithShape<Dst>, Ax>,
     {
         self.permute()
     }
-    fn try_permute_to<Dst: Shape>(self) -> Result<Self::With<Dst>, Self::Err>
+    fn try_permute_to<Dst: Shape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
-        Self: PermuteInto<Self::With<Dst>, Ax>,
+        Self: PermuteInto<Self::WithShape<Dst>, Ax>,
     {
         self.try_permute()
     }

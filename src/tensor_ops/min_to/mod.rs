@@ -75,16 +75,16 @@ where
 }
 
 pub trait MinTo<Ax: Axes>: HasShape + HasErr {
-    fn min_to<Dst: Shape>(self) -> Self::With<Dst>
+    fn min_to<Dst: Shape>(self) -> Self::WithShape<Dst>
     where
-        Self: MinInto<Self::With<Dst>, Ax>,
+        Self: MinInto<Self::WithShape<Dst>, Ax>,
     {
         self.min()
     }
 
-    fn try_min_to<Dst: Shape>(self) -> Result<Self::With<Dst>, Self::Err>
+    fn try_min_to<Dst: Shape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
-        Self: MinInto<Self::With<Dst>, Ax>,
+        Self: MinInto<Self::WithShape<Dst>, Ax>,
     {
         self.try_min()
     }

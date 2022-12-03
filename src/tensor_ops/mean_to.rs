@@ -44,16 +44,16 @@ where
 }
 
 pub trait MeanTo<Ax: Axes>: HasShape + HasErr {
-    fn mean_to<Dst: Shape>(self) -> Self::With<Dst>
+    fn mean_to<Dst: Shape>(self) -> Self::WithShape<Dst>
     where
-        Self: MeanInto<Self::With<Dst>, Ax>,
+        Self: MeanInto<Self::WithShape<Dst>, Ax>,
     {
         self.mean()
     }
 
-    fn try_mean_to<Dst: Shape>(self) -> Result<Self::With<Dst>, Self::Err>
+    fn try_mean_to<Dst: Shape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
-        Self: MeanInto<Self::With<Dst>, Ax>,
+        Self: MeanInto<Self::WithShape<Dst>, Ax>,
     {
         self.try_mean()
     }

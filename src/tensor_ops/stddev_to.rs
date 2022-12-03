@@ -33,16 +33,16 @@ where
 }
 
 pub trait StddevTo<Ax: Axes>: HasShape + HasErr {
-    fn stddev_to<Dst: Shape>(self, epsilon: f32) -> Self::With<Dst>
+    fn stddev_to<Dst: Shape>(self, epsilon: f32) -> Self::WithShape<Dst>
     where
-        Self: StddevInto<Self::With<Dst>, Ax>,
+        Self: StddevInto<Self::WithShape<Dst>, Ax>,
     {
         self.stddev(epsilon)
     }
 
-    fn try_stddev_to<Dst: Shape>(self, epsilon: f32) -> Result<Self::With<Dst>, Self::Err>
+    fn try_stddev_to<Dst: Shape>(self, epsilon: f32) -> Result<Self::WithShape<Dst>, Self::Err>
     where
-        Self: StddevInto<Self::With<Dst>, Ax>,
+        Self: StddevInto<Self::WithShape<Dst>, Ax>,
     {
         self.try_stddev(epsilon)
     }

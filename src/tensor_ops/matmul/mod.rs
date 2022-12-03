@@ -298,9 +298,8 @@ impl<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tensor::*;
-    use crate::tensor_ops::*;
     use crate::tests::{assert_close, build_test_device};
+    use crate::{arrays::*, tensor::*, tensor_ops::*};
 
     #[test]
     fn test_valid_matmuls() {
@@ -429,9 +428,9 @@ mod tests {
     fn test_matmul_broadcast_actual() {
         const N: usize = 5;
         let dev = build_test_device!();
-        let a: Tensor3D<N, 4, 3, _> = dev.randn();
-        let b: Tensor2D<3, 2, _> = dev.randn();
-        let b_up: Tensor3D<N, 3, 2, _, _> = b.trace().broadcast();
+        let a = dev.randn::<Rank3<N, 4, 3>>();
+        let b = dev.randn::<Rank2<3, 2>>();
+        let b_up = b.trace().broadcast::<Rank3<N, 3, 2>>();
         let r1 = a.trace().matmul(b_up);
         let r2 = a.trace().matmul(b.clone());
         assert_eq!(r1.array(), r2.array());
