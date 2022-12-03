@@ -110,6 +110,7 @@ impl<S: Shape, E: Dtype, D: DeviceStorage + RandnFillStorage<E>, T> Tensor<S, E,
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
+    type With<New: Shape> = Tensor<New, E, D, T>;
     type Shape = S;
     fn shape(&self) -> &Self::Shape {
         self.storage.shape()

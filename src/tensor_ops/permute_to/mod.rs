@@ -31,7 +31,7 @@ pub trait PermuteKernel<E: Dtype>: DeviceStorage {
 /// let _: Tensor3D<3, 4, 2> = Tensor3D::<2, 3, 4>::zeros().permute();
 /// let _: Tensor4D<3, 4, 5, 2> = Tensor4D::<2, 3, 4, 5>::zeros().permute();
 /// ```
-pub trait PermuteTo<T: HasShape, Ax>: HasErr {
+pub trait PermuteInto<T: HasShape, Ax>: HasErr {
     fn permute(self) -> T {
         self.try_permute().unwrap()
     }
@@ -45,7 +45,7 @@ impl<
         E: Dtype,
         D: DeviceStorage,
         T: Tape<D>,
-    > PermuteTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
+    > PermuteInto<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
     Src: PermuteShapeTo<Dst, Ax>,
     D: PermuteKernel<E>,
@@ -64,12 +64,32 @@ where
     }
 }
 
+pub trait PermuteTo<Ax: Axes>: HasShape + HasErr {
+    fn permute_to<Dst: Shape>(self) -> Self::With<Dst>
+    where
+        Self: PermuteInto<Self::With<Dst>, Ax>,
+    {
+        self.permute()
+    }
+    fn try_permute_to<Dst: Shape>(self) -> Result<Self::With<Dst>, Self::Err>
+    where
+        Self: PermuteInto<Self::With<Dst>, Ax>,
+    {
+        self.try_permute()
+    }
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Ax: Axes> PermuteTo<Ax>
+    for Tensor<S, E, D, T>
+{
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::needless_range_loop)]
 
     use super::*;
-    use crate::arrays::{Axes2, Axes3, Axes4};
+    use crate::arrays::{Axes2, Axes3, Axes4, Rank2, Rank3, Rank4};
     use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::build_test_device;
@@ -91,8 +111,8 @@ mod tests {
     #[test]
     fn test_permute_3d() {
         let dev = build_test_device!();
-        let t: Tensor3D<3, 5, 7, _> = dev.randn();
-        let r: Tensor3D<5, 7, 3, _> = t.clone().permute();
+        let t = dev.randn::<Rank3<3, 5, 7>>();
+        let r = t.clone().permute_to::<Rank3<5, 7, 3>>();
         let t_array = t.array();
         let r_array = r.array();
         for i in 0..3 {
@@ -107,8 +127,8 @@ mod tests {
     #[test]
     fn test_permute_4d() {
         let dev = build_test_device!();
-        let t: Tensor4D<3, 5, 7, 9, _> = dev.randn();
-        let r: Tensor4D<5, 9, 3, 7, _> = t.clone().permute();
+        let t = dev.randn::<Rank4<3, 5, 7, 9>>();
+        let r = t.clone().permute_to::<Rank4<5, 9, 3, 7>>();
         let t_array = t.array();
         let r_array = r.array();
         for i in 0..3 {
@@ -125,7 +145,7 @@ mod tests {
     #[test]
     fn test_permute_2d_backwards() {
         let dev = build_test_device!();
-        let t: Tensor2D<3, 6, _> = dev.randn();
+        let t = dev.randn::<Rank2<3, 6>>();
         let g1 = t.trace().exp().sum().backward();
         let g2 = t.trace().permute().exp().sum().backward();
         assert_eq!(g1.get(&t).array(), g2.get(&t).array());
@@ -134,9 +154,11 @@ mod tests {
     #[test]
     fn test_permute_3d_backwards() {
         let dev = build_test_device!();
-        let t: Tensor3D<3, 6, 9, _> = dev.randn();
+        let t = dev.randn::<Rank3<3, 6, 9>>();
         let g1 = t.trace().exp().sum().backward();
-        let g2 = PermuteTo::<Tensor3D<6, 3, 9, _, _>, _>::permute(t.trace())
+        let g2 = t
+            .trace()
+            .permute_to::<Rank3<6, 3, 9>>()
             .exp()
             .sum()
             .backward();
@@ -146,9 +168,11 @@ mod tests {
     #[test]
     fn test_permute_4d_backwards() {
         let dev = build_test_device!();
-        let t: Tensor4D<3, 6, 9, 11, _> = dev.randn();
+        let t = dev.randn::<Rank4<3, 6, 9, 11>>();
         let g1 = t.trace().exp().sum().backward();
-        let g2 = PermuteTo::<Tensor4D<6, 3, 11, 9, _, _>, _>::permute(t.trace())
+        let g2 = t
+            .trace()
+            .permute_to::<Rank4<6, 3, 11, 9>>()
             .exp()
             .sum()
             .backward();
@@ -159,38 +183,38 @@ mod tests {
     fn test_valid_permutations() {
         type D = Cpu;
         // let _ = <Tensor2D<3, 5, _> as PermuteTo<_, Axes2<0, 1>>>::permute;
-        let _ = <Tensor2D<3, 5, D> as PermuteTo<_, Axes2<1, 0>>>::permute;
+        let _ = <Tensor2D<3, 5, D> as PermuteInto<_, Axes2<1, 0>>>::permute;
 
         // let _ = <Tensor3D<3, 5, 7, _> as PermuteTo<_, Axes3<0, 1, 2>>>::permute;
-        let _ = <Tensor3D<3, 5, 7, D> as PermuteTo<_, Axes3<0, 2, 1>>>::permute;
-        let _ = <Tensor3D<3, 5, 7, D> as PermuteTo<_, Axes3<1, 0, 2>>>::permute;
-        let _ = <Tensor3D<3, 5, 7, D> as PermuteTo<_, Axes3<1, 2, 0>>>::permute;
-        let _ = <Tensor3D<3, 5, 7, D> as PermuteTo<_, Axes3<2, 0, 1>>>::permute;
-        let _ = <Tensor3D<3, 5, 7, D> as PermuteTo<_, Axes3<2, 1, 0>>>::permute;
+        let _ = <Tensor3D<3, 5, 7, D> as PermuteInto<_, Axes3<0, 2, 1>>>::permute;
+        let _ = <Tensor3D<3, 5, 7, D> as PermuteInto<_, Axes3<1, 0, 2>>>::permute;
+        let _ = <Tensor3D<3, 5, 7, D> as PermuteInto<_, Axes3<1, 2, 0>>>::permute;
+        let _ = <Tensor3D<3, 5, 7, D> as PermuteInto<_, Axes3<2, 0, 1>>>::permute;
+        let _ = <Tensor3D<3, 5, 7, D> as PermuteInto<_, Axes3<2, 1, 0>>>::permute;
 
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<0, 1, 2, 3>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<0, 1, 3, 2>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<0, 2, 1, 3>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<0, 2, 3, 1>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<0, 3, 2, 1>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<0, 3, 1, 2>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<1, 0, 2, 3>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<1, 0, 3, 2>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<1, 2, 0, 3>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<1, 2, 3, 0>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<1, 3, 0, 2>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<1, 3, 2, 0>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<2, 0, 1, 3>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<2, 0, 3, 1>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<2, 1, 0, 3>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<2, 1, 3, 0>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<2, 3, 0, 1>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<2, 3, 1, 0>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<3, 0, 1, 2>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<3, 0, 2, 1>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<3, 1, 0, 2>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<3, 1, 2, 0>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<3, 2, 0, 1>>>::permute;
-        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteTo<_, Axes4<3, 2, 1, 0>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<0, 1, 2, 3>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<0, 1, 3, 2>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<0, 2, 1, 3>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<0, 2, 3, 1>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<0, 3, 2, 1>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<0, 3, 1, 2>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<1, 0, 2, 3>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<1, 0, 3, 2>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<1, 2, 0, 3>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<1, 2, 3, 0>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<1, 3, 0, 2>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<1, 3, 2, 0>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<2, 0, 1, 3>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<2, 0, 3, 1>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<2, 1, 0, 3>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<2, 1, 3, 0>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<2, 3, 0, 1>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<2, 3, 1, 0>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<3, 0, 1, 2>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<3, 0, 2, 1>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<3, 1, 0, 2>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<3, 1, 2, 0>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<3, 2, 0, 1>>>::permute;
+        let _ = <Tensor4D<3, 5, 7, 9, D> as PermuteInto<_, Axes4<3, 2, 1, 0>>>::permute;
     }
 }

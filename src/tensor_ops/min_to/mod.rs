@@ -2,6 +2,8 @@ mod cpu_kernel;
 
 use crate::{arrays::*, gradients::Tape, tensor::storage::*, tensor::*};
 
+use super::Device;
+
 pub trait MinReduceKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
@@ -43,7 +45,7 @@ pub trait MinReduceKernel<E: Dtype>: DeviceStorage {
 /// let r: Tensor0D = t.min();
 /// assert_eq!(r.data(), &-3.0);
 /// ```
-pub trait MinTo<T, Ax>: HasErr {
+pub trait MinInto<T, Ax>: HasErr {
     fn min(self) -> T {
         self.try_min().unwrap()
     }
@@ -51,7 +53,7 @@ pub trait MinTo<T, Ax>: HasErr {
 }
 
 impl<Src: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape, Ax: Axes>
-    MinTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
+    MinInto<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
     D: MinReduceKernel<E>,
     Src: ReduceShapeTo<Dst, Ax>,
@@ -72,6 +74,39 @@ where
     }
 }
 
+pub trait MinTo<Ax: Axes>: HasShape + HasErr {
+    fn min_to<Dst: Shape>(self) -> Self::With<Dst>
+    where
+        Self: MinInto<Self::With<Dst>, Ax>,
+    {
+        self.min()
+    }
+
+    fn try_min_to<Dst: Shape>(self) -> Result<Self::With<Dst>, Self::Err>
+    where
+        Self: MinInto<Self::With<Dst>, Ax>,
+    {
+        self.try_min()
+    }
+}
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Ax: Axes> MinTo<Ax> for Tensor<S, E, D, T> {}
+
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn min_along<Ax: Axes>(self) -> Tensor<S::Reduced, E, D, T>
+    where
+        S: ReduceShape<Ax>,
+    {
+        self.try_min_along().unwrap()
+    }
+
+    pub fn try_min_along<Ax: Axes>(self) -> Result<Tensor<S::Reduced, E, D, T>, D::Err>
+    where
+        S: ReduceShape<Ax>,
+    {
+        self.try_min()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -81,26 +116,23 @@ mod tests {
     #[test]
     fn test_valids_min_axis() {
         let dev = build_test_device!();
-        let _: Tensor0D<_> = <Tensor1D<5, _> as MinTo<_, _>>::min(dev.zeros());
-
-        let _: Tensor1D<3, _> = <Tensor2D<5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-        let _: Tensor1D<5, _> = <Tensor2D<5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-
-        let _: Tensor2D<5, 3, _> = <Tensor3D<7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-        let _: Tensor2D<7, 3, _> = <Tensor3D<7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-        let _: Tensor2D<7, 5, _> = <Tensor3D<7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-
-        let _: Tensor3D<7, 5, 3, _> = <Tensor4D<9, 7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-        let _: Tensor3D<9, 5, 3, _> = <Tensor4D<9, 7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-        let _: Tensor3D<9, 7, 3, _> = <Tensor4D<9, 7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
-        let _: Tensor3D<9, 7, 5, _> = <Tensor4D<9, 7, 5, 3, _> as MinTo<_, _>>::min(dev.zeros());
+        let _ = dev.zeros::<Rank1<5>>().min_to::<Rank0>();
+        let _ = dev.zeros::<Rank2<5, 3>>().min_to::<Rank1<3>>();
+        let _ = dev.zeros::<Rank2<5, 3>>().min_to::<Rank1<5>>();
+        let _ = dev.zeros::<Rank3<7, 5, 3>>().min_to::<Rank2<5, 3>>();
+        let _ = dev.zeros::<Rank3<7, 5, 3>>().min_to::<Rank2<7, 3>>();
+        let _ = dev.zeros::<Rank3<7, 5, 3>>().min_to::<Rank2<7, 5>>();
+        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().min_to::<Rank3<7, 5, 3>>();
+        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().min_to::<Rank3<9, 5, 3>>();
+        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().min_to::<Rank3<9, 7, 3>>();
+        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().min_to::<Rank3<9, 7, 5>>();
     }
 
     #[test]
     fn test_min_axis_0_2d() {
         let dev = build_test_device!();
         let t = dev.tensor([[1.0, 1.0, 2.0], [3.0, -2.0, 2.0]]);
-        let r: Tensor1D<3, _, _> = t.trace().min();
+        let r = t.trace().min_to::<Rank1<3>>();
         assert_eq!(r.array(), [1.0, -2.0, 2.0]);
         let g = r.exp().mean().backward();
         assert_eq!(
@@ -113,7 +145,7 @@ mod tests {
     fn test_min_axis_1_2d() {
         let dev = build_test_device!();
         let t = dev.tensor([[1.0, 1.0, 2.0], [3.0, -2.0, 2.0]]);
-        let r: Tensor1D<2, _, _> = t.trace().min();
+        let r = t.trace().min_to::<Rank1<2>>();
         assert_eq!(r.array(), [1.0, -2.0]);
         let g = r.sum().backward();
         assert_eq!(g.get(&t).array(), [[1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]);
@@ -122,9 +154,9 @@ mod tests {
     #[test]
     fn test_min_axes_3d_to_1d() {
         let dev = build_test_device!();
-        let t: Tensor3D<2, 3, 4, _> = dev.randn();
-        let r: Tensor1D<4, _, _> = t.trace().min();
-        let r2: Tensor1D<4, _, _> = MinTo::<Tensor2D<3, 4, _, _>, _>::min(t.trace()).min();
+        let t = dev.randn::<Rank3<2, 3, 4>>();
+        let r = t.trace().min_to::<Rank1<4>>();
+        let r2 = t.trace().min_to::<Rank2<3, 4>>().min_to::<Rank1<4>>();
         assert_close(&r.array(), &r2.array());
         let g = r.mean().backward();
         let g2 = r2.mean().backward();

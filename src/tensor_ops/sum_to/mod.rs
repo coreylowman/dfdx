@@ -49,7 +49,7 @@ pub trait SumKernel<E: Dtype>: DeviceStorage {
 /// ```rust
 /// todo!()
 /// ```
-pub trait SumTo<T, Axes>: HasErr {
+pub trait SumInto<T, Axes>: HasErr {
     fn sum(self) -> T {
         self.try_sum().unwrap()
     }
@@ -57,7 +57,7 @@ pub trait SumTo<T, Axes>: HasErr {
 }
 
 impl<Src: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape, Ax: Axes>
-    SumTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
+    SumInto<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 where
     D: SumKernel<E>,
     Src: ReduceShapeTo<Dst, Ax>,
@@ -76,6 +76,23 @@ where
         Ok(out.put_tape(tape))
     }
 }
+
+pub trait SumTo<Ax: Axes>: HasShape + HasErr {
+    fn sum_to<Dst: Shape>(self) -> Self::With<Dst>
+    where
+        Self: SumInto<Self::With<Dst>, Ax>,
+    {
+        self.sum()
+    }
+
+    fn try_sum_to<Dst: Shape>(self) -> Result<Self::With<Dst>, Self::Err>
+    where
+        Self: SumInto<Self::With<Dst>, Ax>,
+    {
+        self.try_sum()
+    }
+}
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Ax: Axes> SumTo<Ax> for Tensor<S, E, D, T> {}
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
     pub fn sum_along<Ax: Axes>(self) -> Tensor<S::Reduced, E, D, T>
@@ -96,7 +113,6 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gradients::OwnedTape;
     use crate::tensor_ops::*;
     use crate::tests::{assert_close, build_test_device};
 
@@ -104,7 +120,7 @@ mod tests {
     fn test_sum_1d() {
         let dev = build_test_device!();
         let t = dev.tensor([1.0, 2.0, 3.0]);
-        let r: Tensor0D<_, OwnedTape<_>> = t.trace().sum();
+        let r = t.trace().sum_to::<Rank0>();
         assert_eq!(r.array(), 6.0);
         // NOTE: .exp() to make sure its using result grad properly
         let g = r.exp().backward();
@@ -115,7 +131,7 @@ mod tests {
     fn test_sum_axis_0_2d() {
         let dev = build_test_device!();
         let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
-        let r: Tensor1D<3, _, _> = t.trace().sum();
+        let r = t.trace().sum_to::<Rank1<3>>();
         assert_eq!(r.array(), [-1.0, 6.0, -3.0]);
         let g = r.exp().mean().backward();
         assert_eq!(g.get(&t).array(), [[0.12262648, 134.47627, 0.01659569]; 2]);
@@ -124,8 +140,8 @@ mod tests {
     #[test]
     fn test_sum_axis_1_2d() {
         let dev = build_test_device!();
-        let t: Tensor2D<2, 3, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
-        let r: Tensor1D<2, _, _> = t.trace().sum();
+        let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
+        let r = t.trace().sum_to::<Rank1<2>>();
         assert_eq!(r.array(), [6.0, -4.0]);
         let g = r.exp().mean().backward();
         assert_eq!(g.get(&t).array(), [[201.7144; 3], [0.00915782; 3]]);
@@ -134,10 +150,9 @@ mod tests {
     #[test]
     fn test_sum_axes_3d_to_1d() {
         let dev = build_test_device!();
-        let t: Tensor3D<2, 3, 4, _, _> = dev.randn();
-        let r: Tensor1D<3, _, _> = t.trace().sum();
-        let a: Tensor2D<3, 4, _, _> = t.trace().sum();
-        let r2: Tensor1D<3, _, _> = a.sum();
+        let t = dev.randn::<Rank3<2, 3, 4>>();
+        let r = t.trace().sum_to::<Rank1<3>>();
+        let r2 = t.trace().sum_to::<Rank2<3, 4>>().sum_to::<Rank1<3>>();
         assert_close(&r.array(), &r2.array());
         let g = r.mean().backward();
         let g2 = r2.mean().backward();

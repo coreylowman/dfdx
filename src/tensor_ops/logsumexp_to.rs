@@ -26,7 +26,7 @@ use crate::{arrays::*, gradients::Tape, tensor::*};
 /// ```rust
 /// todo!();
 /// ```
-pub trait LogSumExpTo<T, Axes>: HasErr {
+pub trait LogSumExpInto<T, Axes>: HasErr {
     fn logsumexp(self) -> T {
         self.try_logsumexp().unwrap()
     }
@@ -40,7 +40,7 @@ impl<
         E: Dtype,
         D: Device<E>,
         T: Tape<D>,
-    > LogSumExpTo<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
+    > LogSumExpInto<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
 {
     fn try_logsumexp(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         // normalize t
@@ -56,6 +56,26 @@ impl<
         // un-normalize result
         t.try_add(max)
     }
+}
+
+pub trait LogSumExpTo<Ax: Axes>: HasShape + HasErr {
+    fn logsumexp_to<Dst: Shape>(self) -> Self::With<Dst>
+    where
+        Self: LogSumExpInto<Self::With<Dst>, Ax>,
+    {
+        self.logsumexp()
+    }
+
+    fn try_logsumexp_to<Dst: Shape>(self) -> Result<Self::With<Dst>, Self::Err>
+    where
+        Self: LogSumExpInto<Self::With<Dst>, Ax>,
+    {
+        self.try_logsumexp()
+    }
+}
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Ax: Axes> LogSumExpTo<Ax>
+    for Tensor<S, E, D, T>
+{
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
@@ -83,7 +103,7 @@ mod tests {
     fn test_logsumexp_1d() {
         let dev = build_test_device!();
         let a = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r: Tensor0D<_, _> = a.trace().logsumexp();
+        let r = a.trace().logsumexp();
         assert_eq!(r.array(), 2.4519143);
         let g = r.backward();
         assert_eq!(
@@ -95,8 +115,8 @@ mod tests {
     #[test]
     fn test_logsumexp_2d() {
         let dev = build_test_device!();
-        let a: Tensor2D<2, 3, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r: Tensor1D<2, _, _> = a.trace().logsumexp();
+        let a = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
+        let r = a.trace().logsumexp_to::<Rank1<2>>();
         assert_eq!(r.array(), [0.40760595, 7.0509458]);
         let g = r.mean().backward();
         assert_eq!(
