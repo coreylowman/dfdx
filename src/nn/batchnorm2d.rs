@@ -82,7 +82,7 @@ impl<const C: usize, D: Device<f32>> BatchNorm2D<C, D> {
         let shape = *x.shape();
 
         // compute statistics for updating running stats later - on tape
-        let mean_chan: Tensor<Rank1<C>, f32, D, T> = x.retaped::<T>().mean();
+        let mean_chan = x.retaped::<T>().mean_to::<Rank1<C>>();
 
         // update statistics since we are training - off tape
         self.running_mean = self.running_mean.clone() * (1.0 - self.momentum)
@@ -91,7 +91,7 @@ impl<const C: usize, D: Device<f32>> BatchNorm2D<C, D> {
         let mean = mean_chan.broadcast_to(&shape);
         let centered = x - mean;
 
-        let var_chan: Tensor<Rank1<C>, f32, D, T> = centered.retaped::<T>().square().mean();
+        let var_chan = centered.retaped::<T>().square().mean_to::<Rank1<C>>();
 
         // NOTE: uses unbiased variance in running estimate
         self.running_var = self.running_var.clone() * (1.0 - self.momentum)

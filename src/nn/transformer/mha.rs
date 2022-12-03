@@ -1,7 +1,7 @@
-use crate::{arrays::*, gradients::Tape, nn::*, optim::*, tensor::*, tensor_ops::*};
+use crate::{nn::*, optim::*, tensor::*, tensor_ops::*};
 
 #[cfg(feature = "nightly")]
-use crate::{Assert, ConstTrue};
+use crate::{Assert, ConstTrue, arrays::*, gradients::Tape};
 
 /// **Requires Nightly** A multi-head attention layer.
 ///
@@ -101,26 +101,26 @@ where
         ),
     ) -> Self::Output {
         let v: Tensor<Rank2<S2, V>, _, _, _> = self.w_v.forward(v.retaped::<T>());
-        let v: Tensor<Rank3<S2, H, { V / H }>, _, _, _> = v.reshape();
-        let v: Tensor<Rank3<H, S2, { V / H }>, _, _, _> = v.permute();
+        let v = v.reshape_to::<Rank3<S2, H, { V / H }>>();
+        let v = v.permute_to::<Rank3<H, S2, { V / H }>>();
 
         let k: Tensor<Rank2<S2, K>, _, _, _> = self.w_k.forward(k.retaped::<T>());
-        let k: Tensor<Rank3<S2, H, { K / H }>, _, _, _> = k.reshape();
-        let k: Tensor<Rank3<H, { K / H }, S2>, _, _, _> = k.permute();
+        let k = k.reshape_to::<Rank3<S2, H, { K / H }>>();
+        let k = k.permute_to::<Rank3<H, { K / H }, S2>>();
 
         let q: Tensor<Rank2<S1, K>, _, _, _> = self.w_q.forward(q);
-        let q: Tensor<Rank3<S1, H, { K / H }>, _, _, _> = q.reshape();
-        let q: Tensor<Rank3<H, S1, { K / H }>, _, _, _> = q.permute();
+        let q = q.reshape_to::<Rank3<S1, H, { K / H }>>();
+        let q = q.permute_to::<Rank3<H, S1, { K / H }>>();
 
         // Get weights
         let scalar: f32 = 1.0 / ((K / H) as f32).sqrt();
         let weights: Tensor<Rank3<H, S1, S2>, _, _, _> = q.matmul(k) * scalar;
-        let weights: Tensor<Rank3<H, S1, S2>, _, _, _> = weights.softmax::<Axis<2>>();
+        let weights = weights.softmax::<Axis<2>>();
 
         // Get new tokens
         let tokens: Tensor<Rank3<H, S1, { V / H }>, _, _, _> = weights.matmul(v);
-        let tokens: Tensor<Rank3<S1, H, { V / H }>, _, _, _> = tokens.permute();
-        let tokens: Tensor<Rank2<S1, V>, _, _, _> = tokens.reshape();
+        let tokens = tokens.permute_to::<Rank3<S1, H, { V / H }>>();
+        let tokens = tokens.reshape_to::<Rank2<S1, V>>();
 
         self.w_o.forward(tokens)
     }
@@ -161,26 +161,26 @@ where
         ),
     ) -> Self::Output {
         let v: Tensor<Rank3<B, S2, V>, _, _, _> = self.w_v.forward(v.retaped::<T>());
-        let v: Tensor<Rank4<B, S2, H, { V / H }>, _, _, _> = v.reshape();
-        let v: Tensor<Rank4<B, H, S2, { V / H }>, _, _, _> = v.permute();
+        let v = v.reshape_to::<Rank4<B, S2, H, { V / H }>>();
+        let v = v.permute_to::<Rank4<B, H, S2, { V / H }>>();
 
         let k: Tensor<Rank3<B, S2, K>, _, _, _> = self.w_k.forward(k.retaped::<T>());
-        let k: Tensor<Rank4<B, S2, H, { K / H }>, _, _, _> = k.reshape();
-        let k: Tensor<Rank4<B, H, { K / H }, S2>, _, _, _> = k.permute();
+        let k = k.reshape_to::<Rank4<B, S2, H, { K / H }>>();
+        let k = k.permute_to::<Rank4<B, H, { K / H }, S2>>();
 
         let q: Tensor<Rank3<B, S1, K>, _, _, _> = self.w_q.forward(q);
-        let q: Tensor<Rank4<B, S1, H, { K / H }>, _, _, _> = q.reshape();
-        let q: Tensor<Rank4<B, H, S1, { K / H }>, _, _, _> = q.permute();
+        let q = q.reshape_to::<Rank4<B, S1, H, { K / H }>>();
+        let q = q.permute_to::<Rank4<B, H, S1, { K / H }>>();
 
         // Get weights
         let scalar: f32 = 1.0 / ((K / H) as f32).sqrt();
         let weights: Tensor<Rank4<B, H, S1, S2>, _, _, _> = q.matmul(k) * scalar;
-        let weights: Tensor<Rank4<B, H, S1, S2>, _, _, _> = weights.softmax::<Axis<3>>();
+        let weights = weights.softmax::<Axis<3>>();
 
         // Get new tokens
         let tokens: Tensor<Rank4<B, H, S1, { V / H }>, _, _, _> = weights.matmul(v);
-        let tokens: Tensor<Rank4<B, S1, H, { V / H }>, _, _, _> = tokens.permute();
-        let tokens: Tensor<Rank3<B, S1, V>, _, _, _> = tokens.reshape();
+        let tokens = tokens.permute_to::<Rank4<B, S1, H, { V / H }>>();
+        let tokens = tokens.reshape_to::<Rank3<B, S1, V>>();
 
         self.w_o.forward(tokens)
     }

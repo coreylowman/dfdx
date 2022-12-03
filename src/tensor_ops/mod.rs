@@ -219,7 +219,7 @@ pub use var_to::{VarInto, VarTo};
 // pub use impl_mask::*;
 
 mod reshape_to;
-pub use reshape_to::ReshapeInto;
+pub use reshape_to::{ReshapeInto, ReshapeTo};
 
 #[cfg(feature = "nightly")]
 mod conv2d;
