@@ -1,11 +1,12 @@
 use crate::{
     arrays::*,
+    gradients::Tape,
     optim::*,
     tensor::{Cpu, Tensor},
-    tensor_ops::{Device, TryConv2DTo},
+    tensor_ops::{BroadcastTo, Device, TryConv2DTo},
 };
 
-use super::{bias::Bias2D, BuildModule, Module, ModuleMut};
+use super::{BuildModule, Module, ModuleMut};
 
 /// **Requires Nightly** Performs 2d convolutions on 3d and 4d images.
 ///
@@ -38,7 +39,7 @@ pub struct Conv2D<
     D: Device<f32> = Cpu,
 > {
     pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>, f32, D>,
-    pub bias: Bias2D<OUT_CHAN, D>,
+    pub bias: Tensor<Rank1<OUT_CHAN>, f32, D>,
 }
 
 impl<
@@ -55,7 +56,7 @@ impl<
         U: UpdateParams<D, f32>,
     {
         self.weight.update(updater, unused)?;
-        self.bias.beta.update(updater, unused)?;
+        self.bias.update(updater, unused)?;
         Ok(())
     }
 }
@@ -74,16 +75,14 @@ impl<
         let bound = 1.0 / k.sqrt();
         Ok(Self {
             weight: device.try_uniform(-bound, bound)?,
-            bias: Bias2D {
-                beta: device.try_uniform(-bound, bound)?,
-            },
+            bias: device.try_uniform(-bound, bound)?,
         })
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         let k = (I * K * K) as f32;
         let bound = 1.0 / k.sqrt();
         self.weight.try_fill_with_uniform(-bound, bound)?;
-        self.bias.beta.try_fill_with_uniform(-bound, bound)?;
+        self.bias.try_fill_with_uniform(-bound, bound)?;
         Ok(())
     }
 }
@@ -98,11 +97,11 @@ impl<
         Img: TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P>,
     > Module<Img> for Conv2D<C, O, K, S, P, D>
 where
-    Bias2D<O, D>: Module<Img::Output, Output = Img::Output>,
+    for<'a> Bias2D<'a, O, D>: Module<Img::Output, Output = Img::Output>,
 {
     type Output = Img::Output;
     fn forward(&self, x: Img) -> Self::Output {
-        self.bias.forward(x.conv2d_to(self.weight.clone()))
+        Bias2D { beta: &self.bias }.forward(x.conv2d_to(self.weight.clone()))
     }
 }
 
@@ -121,6 +120,29 @@ where
     type Output = <Self as Module<Img>>::Output;
     fn forward_mut(&mut self, input: Img) -> Self::Output {
         self.forward(input)
+    }
+}
+
+#[derive(Clone, Debug)]
+struct Bias2D<'a, const C: usize, D: Device<f32> = Cpu> {
+    beta: &'a Tensor<Rank1<C>, f32, D>,
+}
+
+impl<'a, const C: usize, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
+    Module<Tensor<(Const<C>, H, W), f32, D, T>> for Bias2D<'a, C, D>
+{
+    type Output = Tensor<(Const<C>, H, W), f32, D, T>;
+    fn forward(&self, input: Tensor<(Const<C>, H, W), f32, D, T>) -> Self::Output {
+        self.beta.retaped::<T>().broadcast_to(input.shape()) + input
+    }
+}
+
+impl<'a, B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
+    Module<Tensor<(B, Const<C>, H, W), f32, D, T>> for Bias2D<'a, C, D>
+{
+    type Output = Tensor<(B, Const<C>, H, W), f32, D, T>;
+    fn forward(&self, input: Tensor<(B, Const<C>, H, W), f32, D, T>) -> Self::Output {
+        self.beta.retaped::<T>().broadcast_to(input.shape()) + input
     }
 }
 

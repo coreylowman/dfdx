@@ -79,8 +79,6 @@
 mod activations;
 // mod add_into;
 mod batchnorm2d;
-mod bias;
-mod conv;
 // mod dropout;
 // mod flatten;
 mod generalized_residual;
@@ -98,7 +96,6 @@ mod transformer;
 pub use activations::*;
 // pub use add_into::*;
 pub use batchnorm2d::*;
-pub use bias::{Bias1D, Bias2D};
 // pub use dropout::*;
 pub use generalized_residual::*;
 pub use impl_module_for_tuples::*;
@@ -110,8 +107,10 @@ pub use repeated::*;
 pub use residual::*;
 // pub use split_into::*;
 
-// #[cfg(feature = "nightly")]
-// pub use conv::*;
+#[cfg(feature = "nightly")]
+mod conv;
+#[cfg(feature = "nightly")]
+pub use conv::*;
 // #[cfg(feature = "nightly")]
 // pub use flatten::*;
 // #[cfg(feature = "nightly")]
