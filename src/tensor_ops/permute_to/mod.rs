@@ -52,13 +52,11 @@ where
 {
     fn try_permute(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
         let (inp, mut tape) = self.split_tape();
-        let storage = inp.device.forward(&inp.storage)?;
-        let out = inp.device.upgrade(storage);
+        let out = inp.device.upgrade(inp.device.forward(&inp.storage)?);
         let phantom_out = out.clone();
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
-            inp.device.backward(grad_inp, grad_out)?;
-            Ok(())
+            inp.device.backward(grad_inp, grad_out)
         });
         Ok(out.put_tape(tape))
     }

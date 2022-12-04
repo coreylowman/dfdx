@@ -125,8 +125,7 @@ where
         tape.add_backward_op(move |grads| {
             let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out)?;
             lhs.device
-                .backward(&lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)?;
-            Ok(())
+                .backward(&lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)
         });
         Ok(out.put_tape(tape))
     }
