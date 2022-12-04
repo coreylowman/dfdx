@@ -100,7 +100,7 @@ extern crate alloc;
 extern crate no_std_compat as std;
 
 pub mod arrays;
-// pub mod data;
+pub mod data;
 pub mod feature_flags;
 pub mod gradients;
 pub mod losses;
@@ -114,8 +114,7 @@ pub mod unique_id;
 
 /// Contains all public exports.
 pub mod prelude {
-    // pub use crate::arrays::{AllAxes, Axes2, Axes3, Axes4, Axis, HasArrayData};
-    // pub use crate::tensor::storage::*;
+    // pub use crate::arrays::*;
     // pub use crate::gradients::{NoneTape, OwnedTape};
     // pub use crate::losses::*;
     // pub use crate::nn::*;

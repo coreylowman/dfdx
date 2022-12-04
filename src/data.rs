@@ -3,8 +3,13 @@
 use rand::prelude::SliceRandom;
 use std::vec::Vec;
 
-use crate::arrays::HasArrayData;
-use crate::tensor::{Tensor1D, Tensor2D, TensorCreator};
+use crate::{
+    arrays::{Const, Dyn, Rank1},
+    tensor::{DeviceStorage, Tensor, TensorFromVec},
+};
+
+// use crate::arrays::HasArrayData;
+// use crate::tensor::{Tensor1D, Tensor2D, TensorCreator};
 
 /// Generates a tensor with ordered data from 0 to `N`.
 ///
@@ -20,13 +25,16 @@ use crate::tensor::{Tensor1D, Tensor2D, TensorCreator};
 /// let t: Tensor1D<10> = arange();
 /// assert_eq!(t.data(), &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
 /// ```
-pub fn arange<const N: usize>() -> Tensor1D<N> {
-    let mut output = Tensor1D::zeros();
-    for i in 0..N {
-        output.mut_data()[i] = i as f32;
+pub trait Arange: DeviceStorage + TensorFromVec<f32> {
+    fn arange<const N: usize>(&self) -> Tensor<Rank1<N>, f32, Self> {
+        let mut data = Vec::with_capacity(N);
+        for i in 0..N {
+            data.push(i as f32);
+        }
+        self.from_vec(data).unwrap()
     }
-    output
 }
+impl<D: DeviceStorage + TensorFromVec<f32>> Arange for D {}
 
 /// One hot encodes an array of class labels into a [Tensor2D] of probability
 /// vectors. This can be used in tandem with [crate::losses::cross_entropy_with_logits_loss()].
@@ -54,13 +62,21 @@ pub fn arange<const N: usize>() -> Tensor1D<N> {
 ///     [0.0, 1.0, 0.0],
 /// ]);
 /// ```
-pub fn one_hot_encode<const B: usize, const N: usize>(class_labels: &[usize; B]) -> Tensor2D<B, N> {
-    let mut result = Tensor2D::zeros();
-    for (i, row) in result.mut_data().iter_mut().enumerate() {
-        row[class_labels[i]] = 1.0;
+pub trait OneHotEncode: DeviceStorage + TensorFromVec<f32> {
+    fn one_hot_encode<const N: usize>(
+        &self,
+        labels: &[usize],
+    ) -> Tensor<(Dyn, Const<N>), f32, Self> {
+        let mut data = Vec::with_capacity(labels.len() * N);
+        for &l in labels {
+            for i in 0..N {
+                data.push(if i == l { 1.0 } else { 0.0 });
+            }
+        }
+        self.from_vec(data).unwrap()
     }
-    result
 }
+impl<D: DeviceStorage + TensorFromVec<f32>> OneHotEncode for D {}
 
 /// A utility class to simplify sampling a fixed number of indices for
 /// data from a dataset.
