@@ -80,13 +80,11 @@ mod activations;
 // mod add_into;
 mod batchnorm2d;
 mod dropout;
-// mod flatten;
 mod generalized_residual;
 mod impl_module_for_tuples;
 mod layer_norm;
 mod linear;
 mod module;
-
 mod pool_global;
 mod repeated;
 mod residual;
@@ -111,8 +109,10 @@ pub use residual::*;
 mod conv;
 #[cfg(feature = "nightly")]
 pub use conv::*;
-// #[cfg(feature = "nightly")]
-// pub use flatten::*;
+#[cfg(feature = "nightly")]
+mod flatten;
+#[cfg(feature = "nightly")]
+pub use flatten::*;
 #[cfg(feature = "nightly")]
 mod pool2d;
 #[cfg(feature = "nightly")]
