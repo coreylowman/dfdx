@@ -236,6 +236,17 @@ impl<E: Dtype, const M: usize> TensorFromArray<[E; M], Rank1<M>, E> for Cpu {
     }
 }
 
+impl<E: Dtype, const M: usize> TensorFromArray<&[E; M], Rank1<M>, E> for Cpu {
+    fn try_from_array(&self, src: &[E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
+        let mut storage: StridedArray<Rank1<M>, E> = self.try_alloc(&Default::default())?;
+        let mut iter = storage.iter_mut_with_index();
+        while let Some((v, [m])) = iter.next() {
+            v.clone_from(&src[m]);
+        }
+        Ok(self.upgrade(storage))
+    }
+}
+
 impl<E: Dtype, const M: usize, const N: usize> TensorFromArray<[[E; N]; M], Rank2<M, N>, E>
     for Cpu
 {

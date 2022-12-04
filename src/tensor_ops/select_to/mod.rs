@@ -211,12 +211,12 @@ where
 }
 
 impl<Src: Shape, Dst, Ax, E: Dtype, D: DeviceStorage, T: Tape<D>, const Z: usize>
-    SelectTo<Dst, Ax, [usize; Z]> for Tensor<Src, E, D, T>
+    SelectTo<Dst, Ax, &[usize; Z]> for Tensor<Src, E, D, T>
 where
     Self: SelectTo<Dst, Ax, Tensor<Rank1<Z>, usize, D>>,
-    D: TensorFromArray<[usize; Z], Rank1<Z>, usize>,
+    D: for<'a> TensorFromArray<&'a [usize; Z], Rank1<Z>, usize>,
 {
-    fn try_select(self, idx: [usize; Z]) -> Result<Dst, Self::Err> {
+    fn try_select(self, idx: &[usize; Z]) -> Result<Dst, Self::Err> {
         let idx = self.device.tensor(idx);
         self.try_select(idx)
     }
@@ -257,7 +257,7 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor1D<5, _> = dev.randn();
         let t_array = t.array();
-        let r = t.trace().select([0, 3]);
+        let r = t.trace().select(&[0, 3]);
         assert_eq!(r.array(), [t_array[0], t_array[3]]);
         let g = r.mean().backward();
         assert_eq!(g.get(&t).array(), [0.5, 0.0, 0.0, 0.5, 0.0]);
@@ -268,7 +268,7 @@ mod tests {
         let dev = build_test_device!();
         let t: Tensor1D<5, _> = dev.randn();
         let _t = t.array();
-        let r = t.trace().select([0, 1, 2, 3, 4, 2, 4, 4]);
+        let r = t.trace().select(&[0, 1, 2, 3, 4, 2, 4, 4]);
         assert_eq!(
             r.array(),
             [_t[0], _t[1], _t[2], _t[3], _t[4], _t[2], _t[4], _t[4]]

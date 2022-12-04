@@ -47,7 +47,7 @@ pub(crate) fn matmul<M: Dim, K: Dim, N: Dim>(
             (RowMajor, a_tr, b_tr, lda, ldb, n)
         };
         sgemm(
-            layout, a_tr, b_tr, m, n, k, a.ptr, lda, b.ptr, ldb, 1.0, c.ptr, ldc,
+            layout, a_tr, b_tr, m, n, k, 1.0, a.ptr, lda, b.ptr, ldb, 1.0, c.ptr, ldc,
         )
     }
 }

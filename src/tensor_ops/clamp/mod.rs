@@ -27,10 +27,10 @@ pub fn clamp<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
-    fn clamp(self, min: E, max: E) -> Self {
+    pub fn clamp(self, min: E, max: E) -> Self {
         self.try_clamp(min, max).unwrap()
     }
-    fn try_clamp(self, min: E, max: E) -> Result<Self, D::Err> {
+    pub fn try_clamp(self, min: E, max: E) -> Result<Self, D::Err> {
         try_unary_op(ClampKernelOp { min, max }, self)
     }
 }
