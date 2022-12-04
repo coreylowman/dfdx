@@ -174,15 +174,15 @@ mod tests {
         model.update(&mut g, &mut unused).unwrap();
         assert_eq!(&unused.ids, &[*model.gamma.id(), *model.beta.id()]);
 
-        g.0.get_mut(&model.gamma).unwrap();
+        g.0.try_alloc_for(&model.gamma).unwrap();
 
         // weight gradient is present
         let mut unused = Default::default();
         model.update(&mut g, &mut unused).unwrap();
         assert_eq!(&unused.ids, &[*model.beta.id()]);
 
-        g.0.get_mut(&model.gamma).unwrap();
-        g.0.get_mut(&model.beta).unwrap();
+        g.0.try_alloc_for(&model.gamma).unwrap();
+        g.0.try_alloc_for(&model.beta).unwrap();
 
         // all gradients present
         let mut unused = Default::default();

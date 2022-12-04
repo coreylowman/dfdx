@@ -224,10 +224,10 @@ mod tests {
         );
 
         // weight gradient is present
-        g.0.get_mut(&model.0 .0.weight).unwrap();
-        g.0.get_mut(&model.0 .0.bias).unwrap();
-        g.0.get_mut(&model.0 .1.weight).unwrap();
-        g.0.get_mut(&model.0 .1.bias).unwrap();
+        g.0.try_alloc_for(&model.0 .0.weight).unwrap();
+        g.0.try_alloc_for(&model.0 .0.bias).unwrap();
+        g.0.try_alloc_for(&model.0 .1.weight).unwrap();
+        g.0.try_alloc_for(&model.0 .1.bias).unwrap();
 
         let mut unused = Default::default();
         model.update(&mut g, &mut unused).unwrap();

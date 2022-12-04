@@ -163,7 +163,7 @@ impl<M, D: DeviceStorage + SgdKernel<E>, E: Dtype> UpdateParams<D, E> for Sgd<M,
         match g {
             None => unused.add(p),
             Some(g) => {
-                let v = self.velocity.get_mut(p)?;
+                let v = self.velocity.get_or_alloc_mut(p)?;
                 D::update(&self.cfg, &mut p.storage, v, g);
             }
         }

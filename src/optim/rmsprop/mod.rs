@@ -146,9 +146,9 @@ impl<M, D: DeviceStorage + RMSpropKernel<f32> + OneFillStorage<f32>> UpdateParam
         match g {
             None => unused.add(p),
             Some(g) => {
-                let m = self.momentums.get_mut(p)?;
-                let sa = self.square_avg.get_mut(p)?;
-                let ga = self.grad_avg.get_mut(p)?;
+                let m = self.momentums.get_or_alloc_mut(p)?;
+                let sa = self.square_avg.get_or_alloc_mut(p)?;
+                let ga = self.grad_avg.get_or_alloc_mut(p)?;
 
                 if self.step == 0 {
                     p.device.try_fill_with_ones(sa)?;

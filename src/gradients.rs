@@ -30,6 +30,28 @@ pub struct Gradients<D: DeviceStorage> {
 }
 
 impl<D: DeviceStorage> Gradients<D> {
+    pub(crate) fn get_or_alloc_mut<T>(
+        &mut self,
+        t: &T,
+    ) -> Result<&mut D::Storage<T::Shape, T::Dtype>, D::Err>
+    where
+        T: HasUniqueId + AllocGradOn<D>,
+    {
+        self.try_alloc_for(t)?;
+        Ok(self.get_mut(t))
+    }
+
+    pub(crate) fn try_alloc_for<T>(&mut self, t: &T) -> Result<(), D::Err>
+    where
+        T: HasUniqueId + AllocGradOn<D>,
+    {
+        if !self.gradient_by_id.contains_key(t.id()) {
+            let grad = t.try_alloc_grad()?;
+            self.gradient_by_id.insert(*t.id(), Box::new(grad));
+        }
+        Ok(())
+    }
+
     /// Removes and returns the data associated with `t.id()`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
@@ -66,20 +88,15 @@ impl<D: DeviceStorage> Gradients<D> {
     /// g[0] = 1.0;
     /// assert_eq!(gradients.ref_gradient(&t), &[1.0, 0.0, 0.0]);
     /// ```
-    pub fn get_mut<T>(&mut self, t: &T) -> Result<&mut D::Storage<T::Shape, T::Dtype>, D::Err>
+    pub fn get_mut<T>(&mut self, t: &T) -> &mut D::Storage<T::Shape, T::Dtype>
     where
-        T: HasUniqueId + AllocGradOn<D>,
+        T: HasUniqueId + HasDtype + HasShape,
     {
-        if !self.gradient_by_id.contains_key(t.id()) {
-            let grad = t.try_alloc_grad()?;
-            self.gradient_by_id.insert(*t.id(), Box::new(grad));
-        }
-        Ok(self
-            .gradient_by_id
+        self.gradient_by_id
             .get_mut(t.id())
             .unwrap()
             .downcast_mut()
-            .unwrap())
+            .unwrap()
     }
 
     /// Returns a reference to the data associated with `t`.
@@ -130,23 +147,20 @@ impl<D: DeviceStorage> Gradients<D> {
         &mut self,
         l: &L,
         r: &R,
-    ) -> Result<
-        (
-            &mut D::Storage<L::Shape, L::Dtype>,
-            &D::Storage<R::Shape, R::Dtype>,
-        ),
-        D::Err,
-    >
+    ) -> (
+        &mut D::Storage<L::Shape, L::Dtype>,
+        &D::Storage<R::Shape, R::Dtype>,
+    )
     where
-        L: HasUniqueId + AllocGradOn<D>,
+        L: HasUniqueId + HasShape + HasDtype,
         R: HasUniqueId + HasShape + HasDtype,
     {
         assert_ne!(l.id(), r.id());
-        let l_ptr = self.get_mut(l)? as *mut _;
+        let l_ptr = self.get_mut(l) as *mut _;
         let r_ptr = self.get(r) as *const _;
         let l_ref = unsafe { &mut *l_ptr };
         let r_ref = unsafe { &*r_ptr };
-        Ok((l_ref, r_ref))
+        (l_ref, r_ref)
     }
 
     pub fn muts_and_ref<L1, L2, R>(
@@ -154,29 +168,26 @@ impl<D: DeviceStorage> Gradients<D> {
         l1: &L1,
         l2: &L2,
         r: &R,
-    ) -> Result<
-        (
-            &mut D::Storage<L1::Shape, L1::Dtype>,
-            &mut D::Storage<L2::Shape, L2::Dtype>,
-            &D::Storage<R::Shape, R::Dtype>,
-        ),
-        D::Err,
-    >
+    ) -> (
+        &mut D::Storage<L1::Shape, L1::Dtype>,
+        &mut D::Storage<L2::Shape, L2::Dtype>,
+        &D::Storage<R::Shape, R::Dtype>,
+    )
     where
-        L1: HasUniqueId + AllocGradOn<D>,
-        L2: HasUniqueId + AllocGradOn<D>,
+        L1: HasUniqueId + HasShape + HasDtype,
+        L2: HasUniqueId + HasShape + HasDtype,
         R: HasUniqueId + HasShape + HasDtype,
     {
         assert_ne!(l1.id(), l2.id());
         assert_ne!(l1.id(), r.id());
         assert_ne!(l2.id(), r.id());
-        let l1_ptr = self.get_mut(l1)? as *mut _;
-        let l2_ptr = self.get_mut(l2)? as *mut _;
+        let l1_ptr = self.get_mut(l1) as *mut _;
+        let l2_ptr = self.get_mut(l2) as *mut _;
         let r_ptr = self.get(r) as *const _;
         let l1_ref = unsafe { &mut *l1_ptr };
         let l2_ref = unsafe { &mut *l2_ptr };
         let r_ref = unsafe { &*r_ptr };
-        Ok((l1_ref, l2_ref, r_ref))
+        (l1_ref, l2_ref, r_ref)
     }
 }
 
@@ -213,14 +224,14 @@ impl<D: DeviceStorage> Gradients<D> {
 #[allow(clippy::type_complexity)]
 pub struct GradientTape<D: DeviceStorage> {
     operations: Vec<Box<dyn FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>>,
-    device: PhantomData<*const D>,
+    gradients: Gradients<D>,
 }
 
 impl<D: DeviceStorage> Default for GradientTape<D> {
     fn default() -> Self {
         Self {
             operations: Vec::new(),
-            device: PhantomData,
+            gradients: Default::default(),
         }
     }
 }
@@ -252,15 +263,17 @@ impl<D: DeviceStorage> GradientTape<D> {
     ///
     /// Note that this method takes ownership of self, so it can't be called twice!
     pub fn execute(mut self) -> Result<Gradients<D>, D::Err> {
-        let mut gradients: Gradients<D> = Default::default();
         for operation in self.operations.drain(..).rev() {
-            (operation)(&mut gradients)?;
+            (operation)(&mut self.gradients)?;
         }
-        Ok(gradients)
+        Ok(self.gradients)
     }
 
     /// Moves all the operations from `other` into self. Leaves `other` empty.
     pub fn append(&mut self, other: &mut Self) {
+        self.gradients
+            .gradient_by_id
+            .extend(other.gradients.gradient_by_id.drain());
         self.operations.append(&mut other.operations);
     }
 }
@@ -282,6 +295,9 @@ pub trait Tape<D: DeviceStorage>: Default + Merge<Self> + Merge<NoneTape> {
         &mut self,
         operation: F,
     );
+    fn try_alloc_grad<T>(&mut self, t: &T) -> Result<(), D::Err>
+    where
+        T: HasUniqueId + AllocGradOn<D>;
 }
 
 impl<D: DeviceStorage> Tape<D> for OwnedTape<D> {
@@ -292,6 +308,12 @@ impl<D: DeviceStorage> Tape<D> for OwnedTape<D> {
     ) {
         self.0.add_backward_op(operation)
     }
+    fn try_alloc_grad<T>(&mut self, t: &T) -> Result<(), <D>::Err>
+    where
+        T: HasUniqueId + AllocGradOn<D>,
+    {
+        self.0.gradients.try_alloc_for(t)
+    }
 }
 
 impl<D: DeviceStorage> Tape<D> for NoneTape {
@@ -300,6 +322,12 @@ impl<D: DeviceStorage> Tape<D> for NoneTape {
         &mut self,
         _operation: F,
     ) {
+    }
+    fn try_alloc_grad<T>(&mut self, _: &T) -> Result<(), <D>::Err>
+    where
+        T: HasUniqueId + AllocGradOn<D>,
+    {
+        Ok(())
     }
 }
 

@@ -131,8 +131,8 @@ impl<M, D: DeviceStorage + AdamKernel<E>, E: Dtype> UpdateParams<D, E> for Adam<
         match g {
             None => unused.add(p),
             Some(g) => {
-                let m_t = self.moment1.get_mut(p)?;
-                let v_t = self.moment2.get_mut(p)?;
+                let m_t = self.moment1.get_or_alloc_mut(p)?;
+                let v_t = self.moment2.get_or_alloc_mut(p)?;
                 D::update(self.t, &self.cfg, &mut p.storage, m_t, v_t, g);
             }
         }

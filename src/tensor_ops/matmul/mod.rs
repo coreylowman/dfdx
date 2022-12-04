@@ -105,8 +105,11 @@ fn try_binary_op<
     let mut tape = ltape.merge(rtape);
     let out = lhs.device.upgrade(fwd(&lhs.device, &lhs.storage, &rhs.storage)?);
     let phantom_out = out.clone();
+    tape.try_alloc_grad(&lhs)?;
+    tape.try_alloc_grad(&rhs)?;
+    tape.try_alloc_grad(&out)?;
     tape.add_backward_op(move |grads| {
-        let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out)?;
+        let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
         bwd(&lhs.device, &lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)
     });
     Ok(out.put_tape(tape))

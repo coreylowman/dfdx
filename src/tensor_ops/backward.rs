@@ -17,10 +17,7 @@ impl<E: Dtype, D: DeviceStorage + OneFillStorage<E>> TryBackward<D>
 {
     fn try_backward(self) -> Result<Gradients<D>, D::Err> {
         let (t, mut tape) = self.split_tape();
-        tape.add_backward_op(move |grads| {
-            let g = grads.get_mut(&t)?;
-            t.device.try_fill_with_ones(g)
-        });
+        tape.add_backward_op(move |grads| t.device.try_fill_with_ones(grads.get_mut(&t)));
         tape.0.execute()
     }
 }

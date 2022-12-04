@@ -107,12 +107,23 @@ mod tests {
     #![allow(clippy::type_complexity)]
 
     use super::*;
-    use crate::{arrays::*, gradients::*, tensor::*};
+    use crate::{arrays::*, gradients::*, tensor::*, tensor_ops::*};
     use crate::{
         nn::{tests::SimpleUpdater, Linear},
         tests::build_test_device,
         unique_id::HasUniqueId,
     };
+
+    #[test]
+    fn test_unused() {
+        let dev = build_test_device!();
+        let m: SplitInto<(Linear<1, 1, _>, Linear<1, 1, _>)> = BuildModule::build(&dev);
+        let (left, right) = m.forward(dev.randn::<Rank1<1>>().trace());
+        let r = right.retaped::<NoneTape>();
+        let g = right.mean().backward();
+        assert_eq!(g.get(&left).array(), [0.0; 1]);
+        assert_ne!(g.get(&r).array(), [0.0; 1]);
+    }
 
     #[test]
     fn test_split_into_2() {
@@ -240,10 +251,10 @@ mod tests {
         );
 
         // weight gradient is present
-        g.0.get_mut(&model.0 .0.weight).unwrap();
-        g.0.get_mut(&model.0 .0.bias).unwrap();
-        g.0.get_mut(&model.0 .1.weight).unwrap();
-        g.0.get_mut(&model.0 .1.bias).unwrap();
+        g.0.try_alloc_for(&model.0 .0.weight).unwrap();
+        g.0.try_alloc_for(&model.0 .0.bias).unwrap();
+        g.0.try_alloc_for(&model.0 .1.weight).unwrap();
+        g.0.try_alloc_for(&model.0 .1.bias).unwrap();
 
         let mut unused = Default::default();
         model.update(&mut g, &mut unused).unwrap();

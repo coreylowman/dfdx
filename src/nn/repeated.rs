@@ -143,7 +143,7 @@ mod tests {
 
         // weight gradient is present
         for i in 0..3 {
-            g.0.get_mut(&model[i].weight).unwrap();
+            g.0.try_alloc_for(&model[i].weight).unwrap();
         }
 
         let mut unused = Default::default();
@@ -159,8 +159,8 @@ mod tests {
 
         // all gradients present
         for i in 0..3 {
-            g.0.get_mut(&model[i].weight).unwrap();
-            g.0.get_mut(&model[i].bias).unwrap();
+            g.0.try_alloc_for(&model[i].weight).unwrap();
+            g.0.try_alloc_for(&model[i].bias).unwrap();
         }
 
         let mut unused = Default::default();

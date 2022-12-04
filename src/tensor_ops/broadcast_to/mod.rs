@@ -52,8 +52,10 @@ where
         let (inp, mut tape) = self.split_tape();
         let out = inp.device.upgrade(inp.device.forward(*dst, &inp.storage)?);
         let phantom_out = out.clone();
+        tape.try_alloc_grad(&inp)?;
+        tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
-            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out)?;
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
             inp.device.backward(grad_inp, grad_out)
         });
         Ok(out.put_tape(tape))

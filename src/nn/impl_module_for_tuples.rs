@@ -279,9 +279,9 @@ mod tests {
         );
 
         // weight gradient is present
-        g.0.get_mut(&model.0.weight).unwrap();
-        g.0.get_mut(&model.1.weight).unwrap();
-        g.0.get_mut(&model.2.weight).unwrap();
+        g.0.try_alloc_for(&model.0.weight).unwrap();
+        g.0.try_alloc_for(&model.1.weight).unwrap();
+        g.0.try_alloc_for(&model.2.weight).unwrap();
 
         let mut unused: UnusedTensors = Default::default();
         model.update(&mut g, &mut unused).unwrap();
@@ -290,12 +290,12 @@ mod tests {
             &[*model.0.bias.id(), *model.1.bias.id(), *model.2.bias.id(),]
         );
 
-        g.0.get_mut(&model.0.weight).unwrap();
-        g.0.get_mut(&model.0.bias).unwrap();
-        g.0.get_mut(&model.1.weight).unwrap();
-        g.0.get_mut(&model.1.bias).unwrap();
-        g.0.get_mut(&model.2.weight).unwrap();
-        g.0.get_mut(&model.2.bias).unwrap();
+        g.0.try_alloc_for(&model.0.weight).unwrap();
+        g.0.try_alloc_for(&model.0.bias).unwrap();
+        g.0.try_alloc_for(&model.1.weight).unwrap();
+        g.0.try_alloc_for(&model.1.bias).unwrap();
+        g.0.try_alloc_for(&model.2.weight).unwrap();
+        g.0.try_alloc_for(&model.2.bias).unwrap();
 
         let mut unused: UnusedTensors = Default::default();
         model.update(&mut g, &mut unused).unwrap();
