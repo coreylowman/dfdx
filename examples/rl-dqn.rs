@@ -4,29 +4,32 @@ use dfdx::prelude::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::time::Instant;
 
-const STATE_SIZE: usize = 4;
-const ACTION_SIZE: usize = 2;
+const BATCH: usize = 64;
+const STATE: usize = 4;
+const ACTION: usize = 2;
 
 // our simple 2 layer feedforward network with ReLU activations
 type QNetwork = (
-    (Linear<STATE_SIZE, 32>, ReLU),
+    (Linear<STATE, 32>, ReLU),
     (Linear<32, 32>, ReLU),
-    Linear<32, ACTION_SIZE>,
+    Linear<32, ACTION>,
 );
 
 fn main() {
-    let mut rng = StdRng::seed_from_u64(0);
+    let dev: Cpu = Default::default();
 
-    let state: Tensor2D<64, STATE_SIZE> = Tensor2D::randn(&mut rng);
-    let action: [usize; 64] = [(); 64].map(|_| rng.gen_range(0..ACTION_SIZE));
-    let reward: Tensor1D<64> = Tensor1D::randn(&mut rng);
-    let done: Tensor1D<64> = Tensor1D::zeros();
-    let next_state: Tensor2D<64, STATE_SIZE> = Tensor2D::randn(&mut rng);
+    let state = dev.randn::<Rank2<BATCH, STATE>>();
+    let mut i = 0;
+    let action: [usize; BATCH] = [(); BATCH].map(|_| {
+        i += 1;
+        i % ACTION
+    });
+    let reward = dev.randn::<Rank1<BATCH>>();
+    let done = dev.zeros::<Rank1<BATCH>>();
+    let next_state = dev.randn::<Rank2<BATCH, STATE>>();
 
-    // initiliaze model - all weights are 0s
-    let mut q_net: QNetwork = Default::default();
-    q_net.reset_params(&mut rng);
-
+    // initiliaze model
+    let mut q_net: QNetwork = BuildModule::build(&dev);
     let target_q_net: QNetwork = q_net.clone();
 
     let mut sgd = Sgd::new(SgdConfig {
@@ -42,16 +45,17 @@ fn main() {
         // targ_q = R + discount * max(Q(S'))
         // curr_q = Q(S)[A]
         // loss = mse(curr_q, targ_q)
-        let next_q_values: Tensor2D<64, ACTION_SIZE> = target_q_net.forward(next_state.clone());
-        let max_next_q: Tensor1D<64> = next_q_values.max();
-        let target_q = 0.99 * mul(max_next_q, 1.0 - done.clone()) + reward.clone();
+        let next_q_values = target_q_net.forward(next_state.clone());
+        let max_next_q = next_q_values.max_to::<Rank1<BATCH>>();
+
+        let target_q = (max_next_q * (-done.clone() + 1.0)) * 0.99 + reward.clone();
 
         // forward through model, computing gradients
-        let q_values = q_net.forward(state.trace());
-        let action_qs: Tensor1D<64, OwnedTape> = q_values.select(&action);
+        let q_values: Tensor<Rank2<BATCH, ACTION>, _, _, _> = q_net.forward(state.trace());
+        let action_qs: Tensor<Rank1<BATCH>, _, _, _> = q_values.select(&action);
 
         let loss = mse_loss(action_qs, target_q);
-        let loss_v = *loss.data();
+        let loss_v = loss.array();
 
         // run backprop
         let gradients = loss.backward();

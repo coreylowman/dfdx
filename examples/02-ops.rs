@@ -1,16 +1,18 @@
 //! Intro to dfdx::tensor_ops
 
-use dfdx::tensor::storage::{AsArray, Cpu, Randn};
-use dfdx::tensor::{Tensor0D, Tensor2D};
-use dfdx::tensor_ops::{MeanTo, TryReLU};
+use dfdx::{
+    arrays::{Rank0, Rank1, Rank2},
+    tensor::{AsArray, Cpu, RandnTensor},
+    tensor_ops::{MeanTo, TryMatMul},
+};
 
 fn main() {
     let dev: Cpu = Default::default();
 
-    let a: Tensor2D<2, 3, _> = dev.randn();
+    let a = dev.randn::<Rank2<2, 3>>();
     dbg!(a.array());
 
-    let b: Tensor2D<2, 3, _> = dev.randn();
+    let b = dev.randn::<Rank2<2, 3>>();
     dbg!(b.array());
 
     // we can do binary operations like add two tensors together
@@ -26,6 +28,27 @@ fn main() {
     dbg!(e.array());
 
     // or reduce tensors to smaller sizes
-    let f: Tensor0D<Cpu> = e.mean();
+    let f = e.mean_to::<Rank0>();
     dbg!(f.array());
+
+    // and of course you can chain all of these together
+    let _ = dev
+        .randn::<Rank2<5, 10>>()
+        .clamp(-1.0, 1.0)
+        .exp()
+        .abs()
+        .powf(0.5)
+        / 2.0;
+
+    // then we have things like matrix and vector multiplication:
+    let a = dev.randn::<Rank2<3, 5>>();
+    let b = dev.randn::<Rank2<5, 7>>();
+    let c = a.matmul(b);
+    dbg!(c.array());
+
+    // which even the outer product between two vectors!
+    let a = dev.randn::<Rank1<3>>();
+    let b = dev.randn::<Rank1<7>>();
+    let c = a.matmul(b);
+    dbg!(c.array());
 }

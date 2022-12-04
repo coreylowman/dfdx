@@ -1,25 +1,39 @@
-//! Intro to dfdx::devices and dfdx::tensor
+//! Intro to dfdx::arrays and dfdx::tensor
 
-use dfdx::tensor::storage::{AsArray, Cpu, Ones, Randn, Zeros};
-use dfdx::tensor::{Tensor1D, Tensor2D, Tensor3D, TensorFromArray};
+use dfdx::{
+    arrays::{Rank1, Rank2, Rank3},
+    tensor::{
+        AsArray, Cpu, OnesTensor, RandTensor, RandnTensor, Tensor, TensorFromArray, ZerosTensor,
+    },
+};
 
 fn main() {
     // a device is required to create & modify tensors.
     // we will use the Cpu device here for simplicity
     let dev: Cpu = Default::default();
 
-    // easily create tensors using the `TensorSugar::tensor` method
-    // notice that Tensor's are generic over the device they are on.
-    let _: Tensor1D<5, Cpu> = dev.tensor([1.0, 2.0, 3.0, 4.0, 5.0]);
+    // easily create tensors using the `TensorFromArray::tensor` method of devices
+    // tensors are generic over the:
+    // 1. Shape (in this case a rank 1 (1 dimension) array with 5 elements)
+    // 2. Data type (in this case f32 values)
+    // 3. The device they are stored on (in this case the Cpu)
+    let _: Tensor<Rank1<5>, f32, Cpu> = dev.tensor([1.0, 2.0, 3.0, 4.0, 5.0]);
 
-    // You can also use [Zeros::zeros] and [Ones::ones] to create tensors
+    // You can also use [ZerosTensor::zeros] and [OnesTensor::ones] to create tensors
     // filled with the corresponding values.
-    let _: Tensor2D<2, 3, Cpu> = dev.zeros();
-    let _: Tensor2D<2, 3, _> = dev.ones();
+    let _: Tensor<Rank2<2, 3>, f32, Cpu> = dev.zeros();
+    let _: Tensor<Rank3<1, 2, 3>, f32, _> = dev.ones();
+
+    // each of the creation methods also supports specifying the shape on the function
+    let _: Tensor<Rank2<2, 3>, f64, _> = dev.zeros();
+    let _ = dev.ones::<Rank2<2, 3>>();
 
     // we can also create tensors filled with random values
     // from a normal distribution
-    let a: Tensor3D<2, 3, 4, _> = dev.randn();
+    let _ = dev.randn::<Rank3<2, 3, 4>>();
+
+    // or a uniform distribution
+    let a = dev.rand::<Rank3<2, 3, 4>>();
 
     // use `AsArray::as_array` to get acces to the data as an array
     let a_data: [[[f32; 4]; 3]; 2] = a.array();

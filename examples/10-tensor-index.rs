@@ -1,18 +1,22 @@
 //! Demonstrates how to select sub tensors (index) from tensors
 
-use dfdx::arrays::HasArrayData;
-use dfdx::tensor::{tensor, Tensor2D, Tensor3D};
-use dfdx::tensor_ops::SelectTo;
+use dfdx::{
+    arrays::Rank2,
+    tensor::{Cpu, Tensor, TensorFromArray},
+    tensor_ops::SelectTo,
+};
 
 fn main() {
-    let a: Tensor3D<3, 2, 3> = tensor([
+    let dev: Cpu = Default::default();
+
+    let a = dev.tensor([
         [[0.00, 0.01, 0.02], [0.10, 0.11, 0.12]],
         [[1.00, 1.01, 1.02], [1.10, 1.11, 1.12]],
         [[2.00, 2.01, 2.02], [2.10, 2.11, 2.12]],
     ]);
 
     // the easiest thing to do is to select a single element from axis 0
-    let b: Tensor2D<2, 3> = a.clone().select(&0);
+    let b: Tensor<Rank2<2, 3>, _, _> = a.clone().select(&0);
     assert_eq!(b.data(), &a.data()[0]);
 
     // but we can also select multiple elements from axis 0!

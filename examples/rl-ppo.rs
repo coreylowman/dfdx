@@ -1,29 +1,27 @@
 //! Implements the reinforcement learning algorithm Proximal Policy Optimization (PPO) on random data.
 
 use dfdx::prelude::*;
-use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::time::Instant;
 
-const STATE_SIZE: usize = 4;
-const ACTION_SIZE: usize = 2;
+const BATCH: usize = 64;
+const STATE: usize = 4;
+const ACTION: usize = 2;
 
 type PolicyNetwork = (
-    (Linear<STATE_SIZE, 32>, ReLU),
+    (Linear<STATE, 32>, ReLU),
     (Linear<32, 32>, ReLU),
-    Linear<32, ACTION_SIZE>,
+    Linear<32, ACTION>,
 );
 
 fn main() {
-    let mut rng = StdRng::seed_from_u64(0);
+    let dev: Cpu = Default::default();
 
-    let state: Tensor2D<64, STATE_SIZE> = Tensor2D::randn(&mut rng);
-    let action: [usize; 64] = [(); 64].map(|_| rng.gen_range(0..ACTION_SIZE));
-    let advantage: Tensor1D<64> = Tensor1D::randn(&mut rng);
+    let state = dev.randn::<Rank2<BATCH, STATE>>();
+    let action: [usize; 64] = [(); 64].map(|_| rng.gen_range(0..ACTION));
+    let advantage = dev.randn::<Rank1<BATCH>>();
 
     // initiliaze model - all weights are 0s
-    let mut pi_net: PolicyNetwork = Default::default();
-    pi_net.reset_params(&mut rng);
-
+    let mut pi_net: PolicyNetwork = BuildModule::build(&dev);
     let target_pi_net: PolicyNetwork = pi_net.clone();
 
     let mut sgd = Sgd::new(SgdConfig {
@@ -49,12 +47,12 @@ fn main() {
         let ratio = (log_prob_a - old_log_prob_a).exp();
 
         // because we need to re-use `ratio` a 2nd time, we need to do some tape manipulation here.
-        let surr1 = ratio.with_empty_tape() * advantage.clone();
+        let surr1 = ratio.retaped() * advantage.clone();
         let surr2 = ratio.clamp(0.8, 1.2) * advantage.clone();
 
-        let ppo_loss = -(minimum(surr2, surr1).mean());
+        let ppo_loss = -(surr2.minimum(surr1).mean());
 
-        let loss_v = *ppo_loss.data();
+        let loss_v = ppo_loss.array();
 
         // run backprop
         let gradients = ppo_loss.backward();
