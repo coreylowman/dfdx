@@ -1,6 +1,6 @@
-use crate::{arrays::*, gradients::Tape, optim::*, tensor::*, tensor_ops::*};
+use crate::{arrays::*, gradients::Tape, tensor::*, tensor_ops::*};
 
-use super::module::{BuildModule, Module, ModuleMut, ZeroSizedModule};
+use super::module::{Module, ModuleMut, ZeroSizedModule};
 
 macro_rules! activation_impls {
     ($struct_name:ident, $func_name:ident, #[$docstring:meta]) => {
@@ -46,25 +46,7 @@ activation_impls!(Abs, abs, #[doc="Unit struct that impls [Module] as calling [a
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Softmax;
 
-impl<D: DeviceStorage, E: Dtype> CanUpdateWithGradients<D, E> for Softmax {
-    /// Does nothing.
-    fn update<U: UpdateParams<D, E>>(
-        &mut self,
-        _: &mut U,
-        _: &mut UnusedTensors,
-    ) -> Result<(), <D>::Err> {
-        Ok(())
-    }
-}
-
-impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Softmax {
-    fn try_build(_: &D) -> Result<Self, <D>::Err> {
-        Ok(Self)
-    }
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        Ok(())
-    }
-}
+impl ZeroSizedModule for Softmax {}
 
 impl<Ax: Axes, S: Shape<LastAxis = Ax> + ReduceShape<Ax>, E: Dtype, D: Device<E>, T: Tape<D>>
     Module<Tensor<S, E, D, T>> for Softmax
