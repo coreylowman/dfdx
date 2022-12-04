@@ -1,12 +1,11 @@
 use crate::{
     arrays::*,
     gradients::{NoneTape, OwnedTape},
-    optim::*,
     tensor::Tensor,
     tensor_ops::{dropout, Device},
 };
 
-use super::{BuildModule, Module, ModuleMut};
+use super::{Module, ModuleMut, ZeroSizedModule};
 
 /// Does nothing as a [Module], and calls [dropout()] as [ModuleMut] with probability `1.0 / N`.
 ///
@@ -48,23 +47,7 @@ use super::{BuildModule, Module, ModuleMut};
 #[derive(Clone, Debug, Default)]
 pub struct DropoutOneIn<const N: usize>;
 
-impl<const N: usize, D: Device<E>, E: Dtype> CanUpdateWithGradients<D, E> for DropoutOneIn<N> {
-    fn update<U>(&mut self, _: &mut U, _: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: UpdateParams<D, E>,
-    {
-        Ok(())
-    }
-}
-
-impl<const N: usize, D: Device<E>, E: Dtype> BuildModule<D, E> for DropoutOneIn<N> {
-    fn try_build(_: &D) -> Result<Self, <D>::Err> {
-        Ok(Self)
-    }
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        Ok(())
-    }
-}
+impl<const N: usize> ZeroSizedModule for DropoutOneIn<N> {}
 
 impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>>
     for DropoutOneIn<N>
@@ -135,23 +118,7 @@ impl Default for Dropout {
     }
 }
 
-impl<D: Device<E>, E: Dtype> CanUpdateWithGradients<D, E> for Dropout {
-    fn update<U>(&mut self, _: &mut U, _: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: UpdateParams<D, E>,
-    {
-        Ok(())
-    }
-}
-
-impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Dropout {
-    fn try_build(_: &D) -> Result<Self, D::Err> {
-        Ok(Self { p: 0.5 })
-    }
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        Ok(())
-    }
-}
+impl ZeroSizedModule for Dropout {}
 
 impl<S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>> for Dropout {
     type Output = Tensor<S, E, D, NoneTape>;

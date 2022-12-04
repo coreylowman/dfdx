@@ -1,6 +1,6 @@
 use crate::{arrays::*, gradients::Tape, optim::*, tensor::*, tensor_ops::*};
 
-use super::module::{BuildModule, Module, ModuleMut};
+use super::module::{BuildModule, Module, ModuleMut, ZeroSizedModule};
 
 macro_rules! activation_impls {
     ($struct_name:ident, $func_name:ident, #[$docstring:meta]) => {
@@ -8,25 +8,7 @@ macro_rules! activation_impls {
         #[derive(Default, Debug, Clone, Copy)]
         pub struct $struct_name;
 
-        impl<E: Dtype, D: DeviceStorage> CanUpdateWithGradients<D, E> for $struct_name {
-            /// Does nothing.
-            fn update<U: UpdateParams<D, E>>(
-                &mut self,
-                _: &mut U,
-                _: &mut UnusedTensors,
-            ) -> Result<(), D::Err> {
-                Ok(())
-            }
-        }
-
-        impl<D: Device<E>, E: Dtype> BuildModule<D, E> for $struct_name {
-            fn try_build(_: &D) -> Result<Self, <D>::Err> {
-                Ok(Self)
-            }
-            fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-                Ok(())
-            }
-        }
+        impl ZeroSizedModule for $struct_name {}
 
         impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<S, E, D, T>>
             for $struct_name

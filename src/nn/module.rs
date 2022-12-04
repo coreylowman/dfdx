@@ -1,4 +1,4 @@
-use crate::{arrays::Dtype, tensor_ops::Device};
+use crate::{arrays::Dtype, optim::CanUpdateWithGradients, tensor_ops::Device};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
@@ -72,4 +72,24 @@ pub trait BuildModule<D: Device<E>, E: Dtype>: Sized {
     }
 
     fn try_reset_params(&mut self) -> Result<(), D::Err>;
+}
+
+pub trait ZeroSizedModule: Default {}
+
+impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> BuildModule<D, E> for T {
+    fn try_build(_: &D) -> Result<Self, <D>::Err> {
+        Ok(Default::default())
+    }
+    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
+        Ok(())
+    }
+}
+
+impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> CanUpdateWithGradients<D, E> for T {
+    fn update<U>(&mut self, _: &mut U, _: &mut crate::optim::UnusedTensors) -> Result<(), <D>::Err>
+    where
+        U: crate::optim::UpdateParams<D, E>,
+    {
+        Ok(())
+    }
 }

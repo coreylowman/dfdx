@@ -1,6 +1,6 @@
-use crate::{arrays::*, gradients::*, optim::*, tensor::*, tensor_ops::*};
+use crate::{arrays::*, gradients::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, Module, ModuleMut};
+use super::{Module, ModuleMut, ZeroSizedModule};
 
 /// Applies average pooling over an entire image, fully reducing the height and width
 /// dimensions:
@@ -58,23 +58,7 @@ pub struct MinPoolGlobal;
 
 macro_rules! impl_pools {
     ($PoolTy:ty, $Method:ident) => {
-        impl<D: Device<E>, E: Dtype> BuildModule<D, E> for $PoolTy {
-            fn try_build(_: &D) -> Result<Self, <D>::Err> {
-                Ok(Self)
-            }
-            fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-                Ok(())
-            }
-        }
-
-        impl<D: Device<E>, E: Dtype> CanUpdateWithGradients<D, E> for $PoolTy {
-            fn update<U>(&mut self, _: &mut U, _: &mut UnusedTensors) -> Result<(), <D>::Err>
-            where
-                U: UpdateParams<D, E>,
-            {
-                Ok(())
-            }
-        }
+        impl ZeroSizedModule for $PoolTy {}
 
         impl<C: Dim, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
             Module<Tensor<(C, H, W), f32, D, T>> for $PoolTy
