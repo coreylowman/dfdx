@@ -86,7 +86,7 @@ mod impl_module_for_tuples;
 mod layer_norm;
 mod linear;
 mod module;
-// mod pool2d;
+
 mod pool_global;
 mod repeated;
 mod residual;
@@ -96,7 +96,7 @@ mod transformer;
 pub use activations::*;
 // pub use add_into::*;
 pub use batchnorm2d::*;
-// pub use dropout::*;
+pub use dropout::*;
 pub use generalized_residual::*;
 pub use impl_module_for_tuples::*;
 pub use layer_norm::*;
@@ -113,8 +113,10 @@ mod conv;
 pub use conv::*;
 // #[cfg(feature = "nightly")]
 // pub use flatten::*;
-// #[cfg(feature = "nightly")]
-// pub use pool2d::*;
+#[cfg(feature = "nightly")]
+mod pool2d;
+#[cfg(feature = "nightly")]
+pub use pool2d::*;
 #[cfg(feature = "nightly")]
 pub use transformer::*;
 

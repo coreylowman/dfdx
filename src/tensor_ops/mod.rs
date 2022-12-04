@@ -230,3 +230,7 @@ pub(crate) use conv2d::TryConv2DTo;
 
 #[cfg(feature = "nightly")]
 mod pool2d;
+#[cfg(feature = "nightly")]
+pub use pool2d::TryPool2D;
+#[cfg(feature = "nightly")]
+pub(crate) use pool2d::TryPool2DTo;
