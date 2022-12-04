@@ -77,7 +77,7 @@
 //! ```
 
 mod activations;
-// mod add_into;
+mod add_into;
 mod batchnorm2d;
 mod dropout;
 mod generalized_residual;
@@ -92,7 +92,7 @@ mod split_into;
 mod transformer;
 
 pub use activations::*;
-// pub use add_into::*;
+pub use add_into::*;
 pub use batchnorm2d::*;
 pub use dropout::*;
 pub use generalized_residual::*;

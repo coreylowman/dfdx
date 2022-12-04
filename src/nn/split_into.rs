@@ -67,10 +67,7 @@ where
         let ($($heads, )+ $tail) = &self.0;
         $(let ($heads, tape) = $heads.forward(x.clone().put_tape(tape)).split_tape();)+
         let $tail = $tail.forward(x.put_tape(tape));
-        (
-            $($heads,)+
-            $tail
-        )
+        ($($heads,)+ $tail)
     }
 }
 
@@ -93,10 +90,7 @@ where
         let ($($heads, )+ $tail) = &mut self.0;
         $(let ($heads, tape) = $heads.forward_mut(x.clone().put_tape(tape)).split_tape();)+
         let $tail = $tail.forward_mut(x.put_tape(tape));
-        (
-            $($heads,)+
-            $tail
-        )
+        ($($heads,)+ $tail)
     }
 }
 }
@@ -113,11 +107,9 @@ mod tests {
     #![allow(clippy::type_complexity)]
 
     use super::*;
+    use crate::{arrays::*, gradients::*, tensor::*};
     use crate::{
-        arrays::{Rank1, Rank2},
-        gradients::OwnedTape,
         nn::{tests::SimpleUpdater, Linear},
-        tensor::{Tensor, ZerosTensor},
         tests::build_test_device,
         unique_id::HasUniqueId,
     };
