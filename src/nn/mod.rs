@@ -88,7 +88,7 @@ mod module;
 mod pool_global;
 mod repeated;
 mod residual;
-// mod split_into;
+mod split_into;
 mod transformer;
 
 pub use activations::*;
@@ -103,7 +103,7 @@ pub use module::*;
 pub use pool_global::*;
 pub use repeated::*;
 pub use residual::*;
-// pub use split_into::*;
+pub use split_into::*;
 
 #[cfg(feature = "nightly")]
 mod conv;
