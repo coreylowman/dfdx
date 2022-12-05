@@ -1,4 +1,4 @@
-use crate::arrays::{Const, Dim};
+use crate::shapes::{Const, Dim};
 use crate::tensor::cpu::{Cpu, StridedArray, View, ViewMut};
 
 use super::{pooling, Pool2DBatchedKernel, Pool2DKernel};

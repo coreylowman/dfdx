@@ -1,5 +1,5 @@
 use super::device::StridedArray;
-use crate::arrays::{BroadcastStridesTo, Dtype, Shape};
+use crate::shapes::{BroadcastStridesTo, Dtype, Shape};
 use std::sync::Arc;
 use std::vec::Vec;
 
@@ -188,7 +188,7 @@ impl<'q, S: Shape, E> LendingIterator for StridedMutIndexIter<'q, S, E> {
 
 #[cfg(test)]
 mod tests {
-    use crate::arrays::{Rank0, Rank1, Rank2, Rank3};
+    use crate::shapes::{Rank0, Rank1, Rank2, Rank3};
 
     use super::*;
     use std::vec;

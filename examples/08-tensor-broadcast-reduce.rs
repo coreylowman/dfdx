@@ -2,7 +2,7 @@
 //! with BroadcastTo and ReduceTo
 
 use dfdx::{
-    arrays::{Axis, Rank2, Rank4},
+    shapes::{Axis, Rank2, Rank4},
     tensor::{AsArray, Cpu, Tensor, TensorFromArray},
     tensor_ops::{Broadcast, BroadcastAlong, MeanTo},
 };

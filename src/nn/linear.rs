@@ -3,7 +3,7 @@
 // use rand::Rng;
 // use rand_distr::Uniform;
 
-use crate::{arrays::*, gradients::Tape, optim::*, tensor::*, tensor_ops::*};
+use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::module::{BuildModule, Module, ModuleMut};
 

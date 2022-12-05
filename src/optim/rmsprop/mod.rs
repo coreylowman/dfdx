@@ -3,8 +3,8 @@ mod cpu_kernel;
 use std::marker::PhantomData;
 
 use crate::{
-    arrays::{Dtype, Shape},
     gradients::Gradients,
+    shapes::{Dtype, Shape},
     tensor::{Cpu, DeviceStorage, OneFillStorage, Tensor},
 };
 

@@ -1,8 +1,8 @@
 mod cpu_kernel;
 
 use crate::{
-    arrays::{Const, Dim, Dtype},
     gradients::Tape,
+    shapes::{Const, Dim, Dtype},
     tensor::{storage::DeviceStorage, HasErr},
     tensor::{PutTape, SplitTape, Tensor, TensorFromStorage},
 };

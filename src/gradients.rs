@@ -5,7 +5,7 @@ use core::marker::PhantomData;
 use std::collections::HashMap;
 use std::{boxed::Box, vec::Vec};
 
-use crate::arrays::{HasDtype, HasShape};
+use crate::shapes::{HasDtype, HasShape};
 use crate::tensor::storage::{AllocGradOn, DeviceStorage};
 use crate::unique_id::{HasUniqueId, UniqueId};
 

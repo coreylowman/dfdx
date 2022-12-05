@@ -1,5 +1,5 @@
 use super::*;
-use crate::{arrays::*, gradients::Tape, tensor::*};
+use crate::{gradients::Tape, shapes::*, tensor::*};
 
 /// Reduces `Axes` of `T` by computing variance of all values in those axes.
 /// Result [Tensor] has smaller number of dimensions.

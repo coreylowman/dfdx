@@ -1,8 +1,8 @@
 //! Intro to dfdx::nn
 
 use dfdx::{
-    arrays::{Rank1, Rank2},
     nn::{BuildModule, Linear, Module, ModuleMut, ReLU},
+    shapes::{Rank1, Rank2},
     tensor::{AsArray, Cpu, RandnTensor, Tensor, ZerosTensor},
 };
 

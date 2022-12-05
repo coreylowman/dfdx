@@ -2,8 +2,8 @@ mod cpu_kernel;
 
 use std::marker::PhantomData;
 
-use crate::arrays::{Dtype, Shape};
 use crate::gradients::Gradients;
+use crate::shapes::{Dtype, Shape};
 use crate::tensor::{Cpu, DeviceStorage, Tensor};
 
 use super::optimizer::*;

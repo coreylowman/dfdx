@@ -1,5 +1,5 @@
 use crate::{
-    arrays::{Dtype, HasDtype, HasShape, Shape, TryFromNumElements},
+    shapes::{Dtype, HasDtype, HasShape, Shape, TryFromNumElements},
     unique_id::unique_id,
 };
 

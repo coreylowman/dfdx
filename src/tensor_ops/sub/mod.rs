@@ -1,7 +1,7 @@
 mod cpu_kernel;
 
 use super::{ops::*, Device};
-use crate::{arrays::*, gradients::*, tensor::storage::HasErr, tensor::Tensor};
+use crate::{gradients::*, shapes::*, tensor::storage::HasErr, tensor::Tensor};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BinarySubKernelOp;

@@ -1,8 +1,8 @@
 //! Intro to dfdx::gradients and tapes
 
 use dfdx::{
-    arrays::Rank2,
     gradients::{Gradients, NoneTape, OwnedTape},
+    shapes::Rank2,
     tensor::{AsArray, Cpu, RandnTensor, Tensor},
     tensor_ops::{MeanInto, TryBackward, TryMatMul},
 };

@@ -99,7 +99,6 @@
 extern crate alloc;
 extern crate no_std_compat as std;
 
-pub mod arrays;
 pub mod data;
 pub mod feature_flags;
 pub mod gradients;
@@ -108,19 +107,20 @@ pub mod nn;
 #[cfg(feature = "numpy")]
 pub mod numpy;
 pub mod optim;
+pub mod shapes;
 pub mod tensor;
 pub mod tensor_ops;
 pub mod unique_id;
 
 /// Contains all public exports.
 pub mod prelude {
-    // pub use crate::arrays::*;
-    // pub use crate::gradients::{NoneTape, OwnedTape};
-    // pub use crate::losses::*;
-    // pub use crate::nn::*;
-    // pub use crate::optim::*;
-    // pub use crate::tensor::*;
-    // pub use crate::tensor_ops::*;
+    pub use crate::gradients::{NoneTape, OwnedTape};
+    pub use crate::losses::*;
+    pub use crate::nn::*;
+    pub use crate::optim::*;
+    pub use crate::shapes::*;
+    pub use crate::tensor::*;
+    pub use crate::tensor_ops::*;
 }
 
 /// Sets a CPU `sse` flag to flush denormal floating point numbers to zero. The opposite of this is [keep_denormals()].

@@ -1,7 +1,7 @@
 mod cpu_kernel;
 
-use crate::arrays::{Axes, Dtype, HasShape, PermuteShapeTo, Shape};
 use crate::gradients::Tape;
+use crate::shapes::{Axes, Dtype, HasShape, PermuteShapeTo, Shape};
 use crate::tensor::storage::{DeviceStorage, HasErr};
 use crate::tensor::{PutTape, SplitTape, Tensor, TensorFromStorage};
 
@@ -89,7 +89,7 @@ mod tests {
     #![allow(clippy::needless_range_loop)]
 
     use super::*;
-    use crate::arrays::{Axes2, Axes3, Axes4, Rank2, Rank3, Rank4};
+    use crate::shapes::{Axes2, Axes3, Axes4, Rank2, Rank3, Rank4};
     use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::build_test_device;

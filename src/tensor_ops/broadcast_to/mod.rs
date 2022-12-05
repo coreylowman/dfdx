@@ -1,6 +1,6 @@
 mod cpu_kernel;
 
-use crate::{arrays::*, gradients::Tape, tensor::*};
+use crate::{gradients::Tape, shapes::*, tensor::*};
 
 use super::Device;
 

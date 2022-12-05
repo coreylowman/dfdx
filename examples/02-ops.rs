@@ -1,7 +1,7 @@
 //! Intro to dfdx::tensor_ops
 
 use dfdx::{
-    arrays::{Rank0, Rank1, Rank2},
+    shapes::{Rank0, Rank1, Rank2},
     tensor::{AsArray, Cpu, RandnTensor},
     tensor_ops::{MeanTo, TryMatMul},
 };

@@ -1,7 +1,7 @@
 //! Demonstrates how to select sub tensors (index) from tensors
 
 use dfdx::{
-    arrays::Rank2,
+    shapes::Rank2,
     tensor::{Cpu, Tensor, TensorFromArray},
     tensor_ops::SelectTo,
 };

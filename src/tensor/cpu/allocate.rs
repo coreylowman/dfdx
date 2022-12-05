@@ -1,6 +1,6 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::arrays::*;
+use crate::shapes::*;
 use crate::tensor::storage::*;
 use crate::tensor::{DeviceStorage, Tensor, TensorFromStorage};
 use rand::Rng;

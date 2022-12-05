@@ -2,8 +2,8 @@ mod cpu_kernel;
 
 use super::{ops::*, Device};
 use crate::{
-    arrays::*,
     gradients::*,
+    shapes::*,
     tensor::{HasErr, Tensor},
 };
 

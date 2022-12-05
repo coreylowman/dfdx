@@ -1,6 +1,6 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::arrays::{Axis, Dim, Dtype, ReduceShape, ReduceStridesTo, ReplaceDim, Shape};
+use crate::shapes::{Axis, Dim, Dtype, ReduceShape, ReduceStridesTo, ReplaceDim, Shape};
 use crate::tensor::cpu::{Cpu, LendingIterator, StridedArray};
 
 use super::{ReplaceAxisKernel, SelectAxisKernel, SelectBatchKernel};

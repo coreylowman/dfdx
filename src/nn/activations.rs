@@ -1,4 +1,4 @@
-use crate::{arrays::*, gradients::Tape, tensor::*, tensor_ops::*};
+use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::module::{Module, ModuleMut, ZeroSizedModule};
 
@@ -170,7 +170,7 @@ mod tests {
 
         let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
         let r1 = Softmax.forward_mut(t.clone());
-        let r2 = t.softmax::<crate::arrays::Axis<1>>();
+        let r2 = t.softmax::<crate::shapes::Axis<1>>();
         assert_eq!(r1.array(), r2.array());
     }
 }

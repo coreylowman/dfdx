@@ -4,7 +4,7 @@ use rand::prelude::SliceRandom;
 use std::vec::Vec;
 
 use crate::{
-    arrays::{Const, Dyn, Rank1},
+    shapes::{Const, Dyn, Rank1},
     tensor::{DeviceStorage, Tensor, TensorFromVec},
 };
 

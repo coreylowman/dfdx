@@ -6,7 +6,7 @@ use crate::{
 use super::{RMSpropConfig, RMSpropKernel};
 
 impl RMSpropKernel<f32> for Cpu {
-    fn update<S: crate::arrays::Shape>(
+    fn update<S: crate::shapes::Shape>(
         cfg: &RMSpropConfig<f32>,
         param: &mut StridedArray<S, f32>,
         momentum: &mut StridedArray<S, f32>,

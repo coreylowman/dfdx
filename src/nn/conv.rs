@@ -1,7 +1,7 @@
 use crate::{
-    arrays::*,
     gradients::Tape,
     optim::*,
+    shapes::*,
     tensor::{Cpu, Tensor},
     tensor_ops::{BroadcastTo, Device, TryConv2DTo},
 };

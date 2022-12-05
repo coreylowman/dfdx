@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 
-use crate::arrays::Const;
+use crate::shapes::Const;
 use crate::{Assert, ConstTrue};
 
 pub trait HasSameNumelAs<Dst> {}

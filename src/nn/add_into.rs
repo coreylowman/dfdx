@@ -1,6 +1,6 @@
 use crate::{
-    arrays::Dtype,
     optim::{CanUpdateWithGradients, UnusedTensors, UpdateParams},
+    shapes::Dtype,
     tensor_ops::Device,
 };
 
@@ -90,9 +90,9 @@ add_into_impls!([A a Ai a_i], [B b Bi b_i], [C c Ci c_i], [D d Di d_i], [E e Ei 
 mod tests {
     use super::*;
     use crate::{
-        arrays::*,
         gradients::OwnedTape,
         nn::{tests::SimpleUpdater, Linear, ReLU},
+        shapes::*,
         tensor::*,
         tests::build_test_device,
         unique_id::HasUniqueId,

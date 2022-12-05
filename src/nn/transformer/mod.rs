@@ -133,7 +133,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        arrays::*, nn::tests::SimpleUpdater, tensor::*, tensor_ops::*, tests::build_test_device,
+        nn::tests::SimpleUpdater, shapes::*, tensor::*, tensor_ops::*, tests::build_test_device,
     };
 
     #[test]

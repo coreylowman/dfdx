@@ -1,8 +1,8 @@
-use crate::arrays::{Const, Dim, Dyn, HasShape, Rank3, Rank4, Rank5};
+use crate::shapes::{Const, Dim, Dyn, HasShape, Rank3, Rank4, Rank5};
 use crate::tensor::cpu::*;
+use crate::tensor_ops::matmul::cpu_kernel::matmul;
 
 use super::{Conv2DBatchedKernel, Conv2DKernel};
-use crate::tensor_ops::matmul::cpu_kernel::matmul;
 
 impl Cpu {
     fn conv2d_forward<C: Dim, H: Dim, W: Dim, O: Dim, K: Dim, OH: Dim, OW: Dim>(

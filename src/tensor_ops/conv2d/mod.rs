@@ -1,8 +1,8 @@
 mod cpu_kernel;
 
 use crate::{
-    arrays::{Const, Dim, Dtype, Rank3, Rank4},
     gradients::Tape,
+    shapes::{Const, Dim, Dtype, Rank3, Rank4},
     tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor, TensorFromStorage},
 };
 
@@ -193,7 +193,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        arrays::*,
+        shapes::*,
         tensor::*,
         tensor_ops::*,
         tests::{assert_close, build_test_device, AssertClose},

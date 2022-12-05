@@ -1,6 +1,6 @@
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
-    arrays::{Dtype, Shape},
+    shapes::{Dtype, Shape},
     tensor::{
         cpu::{Cpu, LendingIterator},
         DeviceStorage,

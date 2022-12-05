@@ -1,7 +1,7 @@
 //! Intro to dfdx::arrays and dfdx::tensor
 
 use dfdx::{
-    arrays::{Rank1, Rank2, Rank3},
+    shapes::{Rank1, Rank2, Rank3},
     tensor::{
         AsArray, Cpu, OnesTensor, RandTensor, RandnTensor, Tensor, TensorFromArray, ZerosTensor,
     },

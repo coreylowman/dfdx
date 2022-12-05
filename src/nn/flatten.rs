@@ -1,7 +1,7 @@
 use super::{Module, ModuleMut, ZeroSizedModule};
 
 use crate::{
-    arrays::*,
+    shapes::*,
     tensor::Tensor,
     tensor_ops::{Device, ReshapeInto},
 };

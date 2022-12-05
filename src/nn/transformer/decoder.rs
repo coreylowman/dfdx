@@ -185,7 +185,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        arrays::Rank3,
+        shapes::Rank3,
         tensor::{AsArray, RandnTensor},
         tests::{assert_close, build_test_device},
     };

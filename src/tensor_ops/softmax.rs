@@ -1,5 +1,5 @@
 use super::Device;
-use crate::{arrays::*, gradients::Tape, tensor::Tensor};
+use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 /// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function) across
 /// `Axes`.
@@ -51,7 +51,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        arrays::{Axes2, Axis},
+        shapes::{Axes2, Axis},
         tensor::*,
         tensor_ops::*,
         tests::{assert_close, build_test_device},

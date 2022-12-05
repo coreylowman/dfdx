@@ -1,5 +1,5 @@
 use super::device::StridedArray;
-use crate::arrays::{Dtype, Shape};
+use crate::shapes::{Dtype, Shape};
 use std::sync::Arc;
 
 impl<S: Shape, E: Dtype> std::ops::Index<S::Concrete> for StridedArray<S, E> {

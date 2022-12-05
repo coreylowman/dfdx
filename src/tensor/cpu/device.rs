@@ -1,4 +1,4 @@
-use crate::arrays::{Dtype, HasShape, Shape};
+use crate::shapes::{Dtype, HasShape, Shape};
 use crate::tensor::storage::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{

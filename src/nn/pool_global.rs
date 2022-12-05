@@ -1,4 +1,4 @@
-use crate::{arrays::*, gradients::*, tensor::*, tensor_ops::*};
+use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{Module, ModuleMut, ZeroSizedModule};
 

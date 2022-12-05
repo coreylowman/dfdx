@@ -1,4 +1,4 @@
-use crate::arrays::*;
+use crate::shapes::*;
 use crate::tensor::cpu::{Cpu, StridedArray, View, ViewMut};
 
 use super::{

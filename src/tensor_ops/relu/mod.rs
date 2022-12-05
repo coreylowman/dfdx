@@ -1,7 +1,7 @@
 mod cpu_kernel;
 
 use super::{ops::try_unary_op, Device};
-use crate::{arrays::*, gradients::Tape, tensor::Tensor};
+use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct ReLUKernelOp;

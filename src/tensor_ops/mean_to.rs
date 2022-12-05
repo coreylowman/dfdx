@@ -1,5 +1,5 @@
 use super::*;
-use crate::{arrays::*, gradients::Tape, tensor::*};
+use crate::{gradients::Tape, shapes::*, tensor::*};
 
 /// Average the values along `Axes` of `T`.
 ///

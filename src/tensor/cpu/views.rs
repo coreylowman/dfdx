@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use super::StridedArray;
-use crate::arrays::{Const, Dim, Dtype, Shape};
+use crate::shapes::{Const, Dim, Dtype, Shape};
 
 #[derive(Copy, Clone)]
 pub(crate) struct View<S: Shape, E: Dtype> {

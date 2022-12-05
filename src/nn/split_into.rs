@@ -1,6 +1,6 @@
 use crate::{
-    arrays::Dtype,
     optim::{CanUpdateWithGradients, UnusedTensors, UpdateParams},
+    shapes::Dtype,
     tensor::{PutTape, SplitTape},
     tensor_ops::Device,
 };
@@ -107,7 +107,7 @@ mod tests {
     #![allow(clippy::type_complexity)]
 
     use super::*;
-    use crate::{arrays::*, gradients::*, tensor::*, tensor_ops::*};
+    use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
     use crate::{
         nn::{tests::SimpleUpdater, Linear},
         tests::build_test_device,

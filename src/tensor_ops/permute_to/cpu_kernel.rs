@@ -1,4 +1,4 @@
-use crate::arrays::*;
+use crate::shapes::*;
 use crate::tensor::cpu::{Cpu, StridedArray};
 
 use super::PermuteKernel;

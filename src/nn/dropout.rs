@@ -1,6 +1,6 @@
 use crate::{
-    arrays::*,
     gradients::{NoneTape, OwnedTape},
+    shapes::*,
     tensor::Tensor,
     tensor_ops::{dropout, Device},
 };
@@ -139,7 +139,7 @@ impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<D>>> 
 #[cfg(test)]
 mod tests {
     use crate::{
-        arrays::Rank1,
+        shapes::Rank1,
         tensor::{AsArray, OnesTensor},
         tests::build_test_device,
     };

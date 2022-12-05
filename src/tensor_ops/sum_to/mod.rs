@@ -1,7 +1,7 @@
 mod cpu_kernel;
 
 use super::device::Device;
-use crate::{arrays::*, gradients::Tape, tensor::storage::*, tensor::*};
+use crate::{gradients::Tape, shapes::*, tensor::storage::*, tensor::*};
 
 pub trait SumKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(

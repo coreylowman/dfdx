@@ -1,6 +1,6 @@
 use crate::{
-    arrays::{Dtype, Shape},
     gradients::Gradients,
+    shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Tensor},
     unique_id::{HasUniqueId, UniqueId},
 };

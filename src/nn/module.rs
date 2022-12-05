@@ -1,4 +1,4 @@
-use crate::{arrays::Dtype, optim::CanUpdateWithGradients, tensor_ops::Device};
+use crate::{optim::CanUpdateWithGradients, shapes::Dtype, tensor_ops::Device};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.

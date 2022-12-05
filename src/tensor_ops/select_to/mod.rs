@@ -2,7 +2,7 @@
 
 mod cpu_kernel;
 
-use crate::{arrays::*, gradients::Tape, tensor::storage::*, tensor::*};
+use crate::{gradients::Tape, shapes::*, tensor::storage::*, tensor::*};
 
 /// Select values along `Axes` resulting in `T`. Equivalent
 /// to `torch.select` and `torch.gather` from pytorch.
@@ -243,7 +243,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arrays::Axis;
+    use crate::shapes::Axis;
     use crate::tensor_ops::*;
     use crate::tests::build_test_device;
 

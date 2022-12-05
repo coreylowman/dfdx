@@ -1,7 +1,7 @@
 mod cpu_kernel;
 
 use super::{ops::try_binary_op, Device};
-use crate::{arrays::*, gradients::*, tensor::Tensor};
+use crate::{gradients::*, shapes::*, tensor::Tensor};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BCEKernelOp;

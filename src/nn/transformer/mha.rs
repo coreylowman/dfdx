@@ -1,7 +1,7 @@
 use crate::{nn::*, optim::*, tensor::*, tensor_ops::*};
 
 #[cfg(feature = "nightly")]
-use crate::{arrays::*, gradients::Tape, Assert, ConstTrue};
+use crate::{gradients::Tape, shapes::*, Assert, ConstTrue};
 
 /// **Requires Nightly** A multi-head attention layer.
 ///

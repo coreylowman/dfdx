@@ -1,10 +1,10 @@
 //! Intro to dfdx::optim
 
 use dfdx::{
-    arrays::Rank2,
     losses::mse_loss,
     nn::{BuildModule, Linear, ModuleMut, ReLU, Tanh},
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
+    shapes::Rank2,
     tensor::{AsArray, Cpu, RandnTensor},
     tensor_ops::TryBackward,
 };

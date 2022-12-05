@@ -1,5 +1,5 @@
 use super::ReshapeKernel;
-use crate::arrays::{Dtype, HasSameNumelAs, Shape};
+use crate::shapes::{Dtype, HasSameNumelAs, Shape};
 use crate::tensor::cpu::{Cpu, LendingIterator, StridedArray};
 
 impl<E: Dtype> ReshapeKernel<E> for Cpu {

@@ -1,5 +1,5 @@
 use super::*;
-use crate::{arrays::*, gradients::Tape, tensor::*};
+use crate::{gradients::Tape, shapes::*, tensor::*};
 
 /// Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function across
 /// `Axes`

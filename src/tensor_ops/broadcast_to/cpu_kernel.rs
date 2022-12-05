@@ -1,5 +1,5 @@
 use super::BroadcastKernel;
-use crate::arrays::*;
+use crate::shapes::*;
 use crate::tensor::cpu::{Cpu, StridedArray};
 
 impl<E: Dtype> BroadcastKernel<E> for Cpu {

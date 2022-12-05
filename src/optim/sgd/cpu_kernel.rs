@@ -1,6 +1,6 @@
 use crate::{
-    arrays::{Dtype, Shape},
     optim::optimizer::{Momentum, WeightDecay},
+    shapes::{Dtype, Shape},
     tensor::cpu::*,
 };
 

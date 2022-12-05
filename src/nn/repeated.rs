@@ -1,4 +1,4 @@
-use crate::{arrays::Dtype, optim::*, tensor_ops::Device};
+use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
 
 use super::{BuildModule, Module, ModuleMut};
 
@@ -85,8 +85,8 @@ impl<Input, T: ModuleMut<Input, Output = Input>, const N: usize> ModuleMut<Input
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arrays::Rank1;
     use crate::nn::{Linear, ReLU};
+    use crate::shapes::Rank1;
     use crate::tensor::*;
     use crate::unique_id::HasUniqueId;
     use crate::{nn::tests::SimpleUpdater, tests::build_test_device};

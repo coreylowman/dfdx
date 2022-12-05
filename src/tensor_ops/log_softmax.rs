@@ -1,5 +1,5 @@
 use super::{BroadcastTo, Device, TrySub};
-use crate::{arrays::*, gradients::Tape, tensor::Tensor};
+use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 /// `log(softmax(t))` in numerically stable way across `Axes`. Does `t - logsumexp(t)` under the hood.
 ///
@@ -49,7 +49,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{arrays::Axis, tensor::*, tensor_ops::*, tests::build_test_device};
+    use crate::{shapes::Axis, tensor::*, tensor_ops::*, tests::build_test_device};
 
     #[test]
     fn test_log_softmax_1d() {

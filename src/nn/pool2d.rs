@@ -1,8 +1,8 @@
 use super::{BuildModule, Module, ModuleMut};
 
 use crate::{
-    arrays::*,
     optim::*,
+    shapes::*,
     tensor_ops::{Device, TryPool2DTo},
 };
 

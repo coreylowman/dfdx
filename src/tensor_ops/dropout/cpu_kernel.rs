@@ -1,5 +1,5 @@
 use crate::tensor_ops::ops::UnaryKernel;
-use crate::{arrays::Shape, tensor::Cpu};
+use crate::{shapes::Shape, tensor::Cpu};
 
 use super::DropoutKernelOp;
 

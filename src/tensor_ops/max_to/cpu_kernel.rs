@@ -1,5 +1,5 @@
 use crate::{
-    arrays::{Axes, ReduceShapeTo, Shape},
+    shapes::{Axes, ReduceShapeTo, Shape},
     tensor::cpu::{Cpu, LendingIterator, StridedArray},
 };
 

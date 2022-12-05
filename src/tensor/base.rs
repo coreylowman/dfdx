@@ -1,6 +1,6 @@
 use super::storage::{AllocGradOn, DeviceStorage, HasErr};
 use super::{OneFillStorage, RandFillStorage, RandnFillStorage, ZeroFillStorage};
-use crate::arrays::{
+use crate::shapes::{
     Dtype, HasDtype, HasShape, Rank0, Rank1, Rank2, Rank3, Rank4, Rank5, Rank6, Shape,
 };
 use crate::unique_id::HasUniqueId;

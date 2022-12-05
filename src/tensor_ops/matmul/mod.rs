@@ -3,8 +3,8 @@
 pub(super) mod cpu_kernel;
 
 use crate::{
-    arrays::{Const, Dim, Dtype, Shape},
     gradients::{Merge, Tape},
+    shapes::{Const, Dim, Dtype, Shape},
     tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor, TensorFromStorage},
 };
 
@@ -301,7 +301,7 @@ impl<
 mod tests {
     use super::*;
     use crate::tests::{assert_close, build_test_device};
-    use crate::{arrays::*, tensor::*, tensor_ops::*};
+    use crate::{shapes::*, tensor::*, tensor_ops::*};
 
     #[test]
     fn test_valid_matmuls() {
