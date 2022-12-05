@@ -432,7 +432,7 @@ mod tests {
         let dev = build_test_device!();
         let a = dev.randn::<Rank3<N, 4, 3>>();
         let b = dev.randn::<Rank2<3, 2>>();
-        let b_up = b.trace().broadcast::<Rank3<N, 3, 2>>();
+        let b_up = b.trace().broadcast::<Rank3<N, 3, 2>, _>();
         let r1 = a.trace().matmul(b_up);
         let r2 = a.trace().matmul(b.clone());
         assert_eq!(r1.array(), r2.array());

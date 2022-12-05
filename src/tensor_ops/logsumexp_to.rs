@@ -26,26 +26,25 @@ use crate::{gradients::Tape, shapes::*, tensor::*};
 /// ```rust
 /// todo!();
 /// ```
-pub trait LogSumExpInto<T, Axes>: HasErr {
-    fn logsumexp(self) -> T {
+pub trait LogSumExpTo: HasErr + HasShape {
+    fn logsumexp<Dst: Shape, Ax: Axes>(self) -> Self::WithShape<Dst>
+    where
+        Self::Shape: ReduceShapeTo<Dst, Ax>,
+    {
         self.try_logsumexp().unwrap()
     }
-    fn try_logsumexp(self) -> Result<T, Self::Err>;
+    fn try_logsumexp<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    where
+        Self::Shape: ReduceShapeTo<Dst, Ax>;
 }
 
-impl<
-        Ax: Axes,
-        Src: Shape + ReduceShapeTo<Dst, Ax>,
-        Dst: Shape,
-        E: Dtype,
-        D: Device<E>,
-        T: Tape<D>,
-    > LogSumExpInto<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
-{
-    fn try_logsumexp(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
-        // normalize t
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> LogSumExpTo for Tensor<S, E, D, T> {
+    fn try_logsumexp<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    where
+        Self::Shape: ReduceShapeTo<Dst, Ax>,
+    {
         let max: Tensor<Dst, E, D> = self.retaped().try_max()?;
-        let max_b: Tensor<Src, E, D> = max.clone().try_broadcast_to(self.shape())?;
+        let max_b: Tensor<S, E, D> = max.clone().try_broadcast_like(self.shape())?;
         let t: Self = self.try_sub(max_b)?;
 
         // do logsumexp
@@ -55,42 +54,6 @@ impl<
 
         // un-normalize result
         t.try_add(max)
-    }
-}
-
-pub trait LogSumExpTo<Ax: Axes>: HasShape + HasErr {
-    fn logsumexp_to<Dst: Shape>(self) -> Self::WithShape<Dst>
-    where
-        Self: LogSumExpInto<Self::WithShape<Dst>, Ax>,
-    {
-        self.logsumexp()
-    }
-
-    fn try_logsumexp_to<Dst: Shape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
-    where
-        Self: LogSumExpInto<Self::WithShape<Dst>, Ax>,
-    {
-        self.try_logsumexp()
-    }
-}
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Ax: Axes> LogSumExpTo<Ax>
-    for Tensor<S, E, D, T>
-{
-}
-
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
-    pub fn logsumexp_along<Ax: Axes>(self) -> Tensor<S::Reduced, E, D, T>
-    where
-        S: ReduceShape<Ax>,
-    {
-        self.try_logsumexp_along::<Ax>().unwrap()
-    }
-
-    pub fn try_logsumexp_along<Ax: Axes>(self) -> Result<Tensor<S::Reduced, E, D, T>, D::Err>
-    where
-        S: ReduceShape<Ax>,
-    {
-        self.try_logsumexp()
     }
 }
 
@@ -116,7 +79,7 @@ mod tests {
     fn test_logsumexp_2d() {
         let dev = build_test_device!();
         let a = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r = a.trace().logsumexp_to::<Rank1<2>>();
+        let r = a.trace().logsumexp::<Rank1<2>, _>();
         assert_eq!(r.array(), [0.40760595, 7.0509458]);
         let g = r.mean().backward();
         assert_eq!(

@@ -20,55 +20,28 @@ use crate::{gradients::Tape, shapes::*, tensor::*};
 /// ```rust
 /// todo!();
 /// ```
-pub trait VarInto<T, Ax>: HasErr {
-    fn var(self) -> T {
+pub trait VarTo: HasErr + HasShape {
+    fn var<Dst: Shape, Ax: Axes>(self) -> Self::WithShape<Dst>
+    where
+        Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
+    {
         self.try_var().unwrap()
     }
-    fn try_var(self) -> Result<T, Self::Err>;
+    fn try_var<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    where
+        Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
 }
 
-impl<Src: Shape, Dst: Shape, Ax: Axes, E: Dtype, D: Device<E>, T: Tape<D>>
-    VarInto<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
-where
-    Self: MeanInto<Tensor<Dst, E, D, T>, Ax, Err = D::Err>,
-    Src: ReduceShapeTo<Dst, Ax>,
-{
-    fn try_var(self) -> Result<Tensor<Dst, E, D, T>, D::Err> {
-        let mean = self.retaped().try_mean()?.try_broadcast_to(self.shape())?;
+impl<S: Shape, D: Device<f32>, T: Tape<D>> VarTo for Tensor<S, f32, D, T> {
+    fn try_var<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    where
+        Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
+    {
+        let mean = self
+            .retaped::<T>()
+            .try_mean::<Dst, Ax>()?
+            .try_broadcast_like(self.shape())?;
         mean.try_sub(self)?.try_square()?.try_mean()
-    }
-}
-
-pub trait VarTo<Ax: Axes>: HasShape + HasErr {
-    fn var_to<Dst: Shape>(self) -> Self::WithShape<Dst>
-    where
-        Self: VarInto<Self::WithShape<Dst>, Ax>,
-    {
-        self.var()
-    }
-
-    fn try_var_to<Dst: Shape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
-    where
-        Self: VarInto<Self::WithShape<Dst>, Ax>,
-    {
-        self.try_var()
-    }
-}
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Ax: Axes> VarTo<Ax> for Tensor<S, E, D, T> {}
-
-impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
-    pub fn var_along<Ax: Axes>(self) -> Tensor<S::Reduced, f32, D, T>
-    where
-        S: ReduceShape<Ax>,
-    {
-        self.try_var_along().unwrap()
-    }
-
-    pub fn try_var_along<Ax: Axes>(self) -> Result<Tensor<S::Reduced, f32, D, T>, D::Err>
-    where
-        S: ReduceShape<Ax>,
-    {
-        self.try_var()
     }
 }
 
@@ -81,7 +54,7 @@ mod tests {
     fn test_var_axis_0_2d() {
         let dev = build_test_device!();
         let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
-        let r = t.trace().var_to::<Rank1<4>>();
+        let r = t.trace().var::<Rank1<4>, _>();
         assert_eq!(r.array(), [0.25, 0.0, 1.0, 9.0]);
         let g = r.mean().backward();
         assert_eq!(
@@ -94,7 +67,7 @@ mod tests {
     fn test_var_axis_1_2d() {
         let dev = build_test_device!();
         let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
-        let r = t.trace().var_to::<Rank1<2>>();
+        let r = t.trace().var::<Rank1<2>, _>();
         assert_eq!(r.array(), [1.25, 14.1875]);
         let g = r.mean().backward();
         assert_eq!(

@@ -1,9 +1,10 @@
 use super::{Module, ModuleMut, ZeroSizedModule};
 
 use crate::{
+    gradients::Tape,
     shapes::*,
     tensor::Tensor,
-    tensor_ops::{Device, ReshapeInto},
+    tensor_ops::{Device, ReshapeTo},
 };
 
 /// **Requires Nightly** Flattens 3d tensors to 1d, and 4d tensors to 2d.
@@ -19,10 +20,10 @@ pub struct Flatten2D;
 
 impl ZeroSizedModule for Flatten2D {}
 
-impl<const C: usize, const H: usize, const W: usize, D: Device<E>, E: Dtype, T>
+impl<const C: usize, const H: usize, const W: usize, D: Device<E>, E: Dtype, T: Tape<D>>
     Module<Tensor<Rank3<C, H, W>, E, D, T>> for Flatten2D
 where
-    Tensor<Rank3<C, H, W>, E, D, T>: ReshapeInto<Tensor<Rank1<{ C * H * W }>, E, D, T>>,
+    Rank3<C, H, W>: HasSameNumelAs<Rank1<{ C * H * W }>>,
 {
     type Output = Tensor<Rank1<{ C * H * W }>, E, D, T>;
     fn forward(&self, input: Tensor<Rank3<C, H, W>, E, D, T>) -> Self::Output {
@@ -30,14 +31,20 @@ where
     }
 }
 
-impl<B: Dim, const C: usize, const H: usize, const W: usize, D: Device<E>, E: Dtype, T>
-    Module<Tensor<(B, Const<C>, Const<H>, Const<W>), E, D, T>> for Flatten2D
+impl<
+        const B: usize,
+        const C: usize,
+        const H: usize,
+        const W: usize,
+        D: Device<E>,
+        E: Dtype,
+        T: Tape<D>,
+    > Module<Tensor<Rank4<B, C, H, W>, E, D, T>> for Flatten2D
 where
-    Tensor<(B, Const<C>, Const<H>, Const<W>), E, D, T>:
-        ReshapeInto<Tensor<(B, Const<{ C * H * W }>), E, D, T>>,
+    Rank4<B, C, H, W>: HasSameNumelAs<Rank2<B, { C * H * W }>>,
 {
-    type Output = Tensor<(B, Const<{ C * H * W }>), E, D, T>;
-    fn forward(&self, input: Tensor<(B, Const<C>, Const<H>, Const<W>), E, D, T>) -> Self::Output {
+    type Output = Tensor<Rank2<B, { C * H * W }>, E, D, T>;
+    fn forward(&self, input: Tensor<Rank4<B, C, H, W>, E, D, T>) -> Self::Output {
         input.reshape()
     }
 }

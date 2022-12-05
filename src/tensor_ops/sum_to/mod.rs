@@ -1,6 +1,5 @@
 mod cpu_kernel;
 
-use super::device::Device;
 use crate::{gradients::Tape, shapes::*, tensor::storage::*, tensor::*};
 
 pub trait SumKernel<E: Dtype>: DeviceStorage {
@@ -49,20 +48,23 @@ pub trait SumKernel<E: Dtype>: DeviceStorage {
 /// ```rust
 /// todo!()
 /// ```
-pub trait SumInto<T, Axes>: HasErr {
-    fn sum(self) -> T {
+pub trait SumTo: HasErr + HasShape {
+    fn sum<Dst: Shape, Ax: Axes>(self) -> Self::WithShape<Dst>
+    where
+        Self::Shape: ReduceShapeTo<Dst, Ax>,
+    {
         self.try_sum().unwrap()
     }
-    fn try_sum(self) -> Result<T, Self::Err>;
+    fn try_sum<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    where
+        Self::Shape: ReduceShapeTo<Dst, Ax>;
 }
 
-impl<Src: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape, Ax: Axes>
-    SumInto<Tensor<Dst, E, D, T>, Ax> for Tensor<Src, E, D, T>
-where
-    D: SumKernel<E>,
-    Src: ReduceShapeTo<Dst, Ax>,
-{
-    fn try_sum(self) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
+impl<S: Shape, E: Dtype, D: DeviceStorage + SumKernel<E>, T: Tape<D>> SumTo for Tensor<S, E, D, T> {
+    fn try_sum<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    where
+        Self::Shape: ReduceShapeTo<Dst, Ax>,
+    {
         let dst: Dst = self.shape().reduced();
         let (inp, mut tape) = self.split_tape();
         let out = inp.device.upgrade(inp.device.forward(dst, &inp.storage)?);
@@ -77,39 +79,6 @@ where
     }
 }
 
-pub trait SumTo<Ax: Axes>: HasShape + HasErr {
-    fn sum_to<Dst: Shape>(self) -> Self::WithShape<Dst>
-    where
-        Self: SumInto<Self::WithShape<Dst>, Ax>,
-    {
-        self.sum()
-    }
-
-    fn try_sum_to<Dst: Shape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
-    where
-        Self: SumInto<Self::WithShape<Dst>, Ax>,
-    {
-        self.try_sum()
-    }
-}
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Ax: Axes> SumTo<Ax> for Tensor<S, E, D, T> {}
-
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
-    pub fn sum_along<Ax: Axes>(self) -> Tensor<S::Reduced, E, D, T>
-    where
-        S: ReduceShape<Ax>,
-    {
-        self.try_sum_along().unwrap()
-    }
-
-    pub fn try_sum_along<Ax: Axes>(self) -> Result<Tensor<S::Reduced, E, D, T>, D::Err>
-    where
-        S: ReduceShape<Ax>,
-    {
-        self.try_sum()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,7 +89,7 @@ mod tests {
     fn test_sum_1d() {
         let dev = build_test_device!();
         let t = dev.tensor([1.0, 2.0, 3.0]);
-        let r = t.trace().sum_to::<Rank0>();
+        let r = t.trace().sum::<Rank0, _>();
         assert_eq!(r.array(), 6.0);
         // NOTE: .exp() to make sure its using result grad properly
         let g = r.exp().backward();
@@ -131,7 +100,7 @@ mod tests {
     fn test_sum_axis_0_2d() {
         let dev = build_test_device!();
         let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
-        let r = t.trace().sum_to::<Rank1<3>>();
+        let r = t.trace().sum::<Rank1<3>, _>();
         assert_eq!(r.array(), [-1.0, 6.0, -3.0]);
         let g = r.exp().mean().backward();
         assert_eq!(g.get(&t).array(), [[0.12262648, 134.47627, 0.01659569]; 2]);
@@ -141,7 +110,7 @@ mod tests {
     fn test_sum_axis_1_2d() {
         let dev = build_test_device!();
         let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
-        let r = t.trace().sum_to::<Rank1<2>>();
+        let r = t.trace().sum::<Rank1<2>, _>();
         assert_eq!(r.array(), [6.0, -4.0]);
         let g = r.exp().mean().backward();
         assert_eq!(g.get(&t).array(), [[201.7144; 3], [0.00915782; 3]]);
@@ -151,8 +120,8 @@ mod tests {
     fn test_sum_axes_3d_to_1d() {
         let dev = build_test_device!();
         let t = dev.randn::<Rank3<2, 3, 4>>();
-        let r = t.trace().sum_to::<Rank1<3>>();
-        let r2 = t.trace().sum_to::<Rank2<3, 4>>().sum_to::<Rank1<3>>();
+        let r = t.trace().sum::<Rank1<3>, _>();
+        let r2 = t.trace().sum::<Rank2<3, 4>, _>().sum::<Rank1<3>, _>();
         assert_close(&r.array(), &r2.array());
         let g = r.mean().backward();
         let g2 = r2.mean().backward();

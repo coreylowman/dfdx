@@ -101,16 +101,16 @@ where
         ),
     ) -> Self::Output {
         let v: Tensor<Rank2<S2, V>, _, _, _> = self.w_v.forward(v.retaped::<T>());
-        let v = v.reshape_to::<Rank3<S2, H, { V / H }>>();
-        let v = v.permute_to::<Rank3<H, S2, { V / H }>>();
+        let v = v.reshape::<Rank3<S2, H, { V / H }>>();
+        let v = v.permute::<Rank3<H, S2, { V / H }>, _>();
 
         let k: Tensor<Rank2<S2, K>, _, _, _> = self.w_k.forward(k.retaped::<T>());
-        let k = k.reshape_to::<Rank3<S2, H, { K / H }>>();
-        let k = k.permute_to::<Rank3<H, { K / H }, S2>>();
+        let k = k.reshape::<Rank3<S2, H, { K / H }>>();
+        let k = k.permute::<Rank3<H, { K / H }, S2>, _>();
 
         let q: Tensor<Rank2<S1, K>, _, _, _> = self.w_q.forward(q);
-        let q = q.reshape_to::<Rank3<S1, H, { K / H }>>();
-        let q = q.permute_to::<Rank3<H, S1, { K / H }>>();
+        let q = q.reshape::<Rank3<S1, H, { K / H }>>();
+        let q = q.permute::<Rank3<H, S1, { K / H }>, _>();
 
         // Get weights
         let scalar: f32 = 1.0 / ((K / H) as f32).sqrt();
@@ -119,8 +119,8 @@ where
 
         // Get new tokens
         let tokens: Tensor<Rank3<H, S1, { V / H }>, _, _, _> = weights.matmul(v);
-        let tokens = tokens.permute_to::<Rank3<S1, H, { V / H }>>();
-        let tokens = tokens.reshape_to::<Rank2<S1, V>>();
+        let tokens = tokens.permute::<Rank3<S1, H, { V / H }>, _>();
+        let tokens = tokens.reshape::<Rank2<S1, V>>();
 
         self.w_o.forward(tokens)
     }
@@ -161,16 +161,16 @@ where
         ),
     ) -> Self::Output {
         let v: Tensor<Rank3<B, S2, V>, _, _, _> = self.w_v.forward(v.retaped::<T>());
-        let v = v.reshape_to::<Rank4<B, S2, H, { V / H }>>();
-        let v = v.permute_to::<Rank4<B, H, S2, { V / H }>>();
+        let v = v.reshape::<Rank4<B, S2, H, { V / H }>>();
+        let v = v.permute::<Rank4<B, H, S2, { V / H }>, _>();
 
         let k: Tensor<Rank3<B, S2, K>, _, _, _> = self.w_k.forward(k.retaped::<T>());
-        let k = k.reshape_to::<Rank4<B, S2, H, { K / H }>>();
-        let k = k.permute_to::<Rank4<B, H, { K / H }, S2>>();
+        let k = k.reshape::<Rank4<B, S2, H, { K / H }>>();
+        let k = k.permute::<Rank4<B, H, { K / H }, S2>, _>();
 
         let q: Tensor<Rank3<B, S1, K>, _, _, _> = self.w_q.forward(q);
-        let q = q.reshape_to::<Rank4<B, S1, H, { K / H }>>();
-        let q = q.permute_to::<Rank4<B, H, S1, { K / H }>>();
+        let q = q.reshape::<Rank4<B, S1, H, { K / H }>>();
+        let q = q.permute::<Rank4<B, H, S1, { K / H }>, _>();
 
         // Get weights
         let scalar: f32 = 1.0 / ((K / H) as f32).sqrt();
@@ -179,8 +179,8 @@ where
 
         // Get new tokens
         let tokens: Tensor<Rank4<B, H, S1, { V / H }>, _, _, _> = weights.matmul(v);
-        let tokens = tokens.permute_to::<Rank4<B, S1, H, { V / H }>>();
-        let tokens = tokens.reshape_to::<Rank3<B, S1, V>>();
+        let tokens = tokens.permute::<Rank4<B, S1, H, { V / H }>, _>();
+        let tokens = tokens.reshape::<Rank3<B, S1, V>>();
 
         self.w_o.forward(tokens)
     }

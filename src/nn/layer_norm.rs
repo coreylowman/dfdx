@@ -59,7 +59,7 @@ impl<const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<Rank1<M>, f32, D,
 {
     type Output = Tensor<Rank1<M>, f32, D, T>;
     fn forward(&self, x: Tensor<Rank1<M>, f32, D, T>) -> Self::Output {
-        x.normalize_along(self.epsilon) * self.gamma.clone() + self.beta.clone()
+        x.normalize(self.epsilon) * self.gamma.clone() + self.beta.clone()
     }
 }
 
@@ -69,8 +69,8 @@ impl<B: Dim, const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<(B, Const
     type Output = Tensor<(B, Const<M>), f32, D, T>;
     fn forward(&self, x: Tensor<(B, Const<M>), f32, D, T>) -> Self::Output {
         let shape = *x.shape();
-        x.normalize_along::<Axis<1>>(self.epsilon) * self.gamma.retaped::<T>().broadcast_to(&shape)
-            + self.beta.retaped::<T>().broadcast_to(&shape)
+        x.normalize::<Axis<1>>(self.epsilon) * self.gamma.retaped::<T>().broadcast_like(&shape)
+            + self.beta.retaped::<T>().broadcast_like(&shape)
     }
 }
 
@@ -80,8 +80,8 @@ impl<B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
     type Output = Tensor<(B, S, Const<M>), f32, D, T>;
     fn forward(&self, x: Tensor<(B, S, Const<M>), f32, D, T>) -> Self::Output {
         let shape = *x.shape();
-        x.normalize_along::<Axis<2>>(self.epsilon) * self.gamma.retaped::<T>().broadcast_to(&shape)
-            + self.beta.retaped::<T>().broadcast_to(&shape)
+        x.normalize::<Axis<2>>(self.epsilon) * self.gamma.retaped::<T>().broadcast_like(&shape)
+            + self.beta.retaped::<T>().broadcast_like(&shape)
     }
 }
 

@@ -65,10 +65,10 @@ impl<const C: usize, D: Device<f32>> BatchNorm2D<C, D> {
         let mean = self.running_mean.clone();
 
         // normalize & affine
-        let x = sub(x, mean.broadcast_to(&shape));
-        let x = div(x, std.broadcast_to(&shape));
-        let x = mul(x, self.scale.clone().broadcast_to(&shape));
-        add(x, self.bias.clone().broadcast_to(&shape))
+        let x = sub(x, mean.broadcast_like(&shape));
+        let x = div(x, std.broadcast_like(&shape));
+        let x = mul(x, self.scale.clone().broadcast_like(&shape));
+        add(x, self.bias.clone().broadcast_like(&shape))
     }
 
     fn train_fwd<S: Shape, T: Tape<D>, Ax: Axes>(
@@ -82,27 +82,27 @@ impl<const C: usize, D: Device<f32>> BatchNorm2D<C, D> {
         let shape = *x.shape();
 
         // compute statistics for updating running stats later - on tape
-        let mean_chan = x.retaped::<T>().mean_to::<Rank1<C>>();
+        let mean_chan = x.retaped::<T>().mean::<Rank1<C>, _>();
 
         // update statistics since we are training - off tape
         self.running_mean = self.running_mean.clone() * (1.0 - self.momentum)
             + mean_chan.retaped::<NoneTape>() * self.momentum;
 
-        let mean = mean_chan.broadcast_to(&shape);
+        let mean = mean_chan.broadcast_like(&shape);
         let centered = x - mean;
 
-        let var_chan = centered.retaped::<T>().square().mean_to::<Rank1<C>>();
+        let var_chan = centered.retaped::<T>().square().mean::<Rank1<C>, _>();
 
         // NOTE: uses unbiased variance in running estimate
         self.running_var = self.running_var.clone() * (1.0 - self.momentum)
             + var_chan.retaped::<NoneTape>() * (self.momentum * n / (n - 1.0));
 
         // statistics for normalizing - on tape
-        let std = (var_chan + self.epsilon).sqrt().broadcast_to(&shape);
+        let std = (var_chan + self.epsilon).sqrt().broadcast_like(&shape);
 
         // record broadcast of scale & bias - on tape
-        let scale = self.scale.retaped::<T>().broadcast_to(&shape);
-        let bias = self.bias.retaped::<T>().broadcast_to(&shape);
+        let scale = self.scale.retaped::<T>().broadcast_like(&shape);
+        let bias = self.bias.retaped::<T>().broadcast_like(&shape);
 
         // normalize & affine - on tape
         (centered / std) * scale + bias

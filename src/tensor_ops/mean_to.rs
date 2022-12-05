@@ -25,54 +25,25 @@ use crate::{gradients::Tape, shapes::*, tensor::*};
 /// ```rust
 /// todo!()
 /// ```
-pub trait MeanInto<T, Axes>: HasErr {
-    fn mean(self) -> T {
+pub trait MeanTo: HasErr + HasShape {
+    fn mean<Dst: Shape, Ax: Axes>(self) -> Self::WithShape<Dst>
+    where
+        Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
+    {
         self.try_mean().unwrap()
     }
-    fn try_mean(self) -> Result<T, Self::Err>;
+    fn try_mean<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    where
+        Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
 }
 
-impl<Ax: Axes, Src: Shape + HasAxes<Ax>, Dst: Shape, D: Device<f32>, T: Tape<D>>
-    MeanInto<Tensor<Dst, f32, D, T>, Ax> for Tensor<Src, f32, D, T>
-where
-    Src: ReduceShapeTo<Dst, Ax>,
-{
-    fn try_mean(self) -> Result<Tensor<Dst, f32, D, T>, Self::Err> {
-        let num_elements_reduced = <Src as HasAxes<Ax>>::size(self.shape()) as f32;
+impl<S: Shape, D: Device<f32>, T: Tape<D>> MeanTo for Tensor<S, f32, D, T> {
+    fn try_mean<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    where
+        Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
+    {
+        let num_elements_reduced = <S as HasAxes<Ax>>::size(self.shape()) as f32;
         self.try_sum()?.try_div(num_elements_reduced)
-    }
-}
-
-pub trait MeanTo<Ax: Axes>: HasShape + HasErr {
-    fn mean_to<Dst: Shape>(self) -> Self::WithShape<Dst>
-    where
-        Self: MeanInto<Self::WithShape<Dst>, Ax>,
-    {
-        self.mean()
-    }
-
-    fn try_mean_to<Dst: Shape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
-    where
-        Self: MeanInto<Self::WithShape<Dst>, Ax>,
-    {
-        self.try_mean()
-    }
-}
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Ax: Axes> MeanTo<Ax> for Tensor<S, E, D, T> {}
-
-impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
-    pub fn mean_along<Ax: Axes>(self) -> Tensor<S::Reduced, f32, D, T>
-    where
-        S: ReduceShape<Ax>,
-    {
-        self.try_mean_along().unwrap()
-    }
-
-    pub fn try_mean_along<Ax: Axes>(self) -> Result<Tensor<S::Reduced, f32, D, T>, D::Err>
-    where
-        S: ReduceShape<Ax>,
-    {
-        self.try_mean()
     }
 }
 
@@ -83,16 +54,17 @@ mod tests {
 
     #[test]
     fn test_valids_mean_axis() {
-        let _ = <Tensor1D<5, Cpu> as MeanInto<Tensor0D<Cpu>, _>>::try_mean;
-        let _ = <Tensor2D<5, 3, Cpu> as MeanInto<Tensor1D<3, Cpu>, _>>::try_mean;
-        let _ = <Tensor2D<5, 3, Cpu> as MeanInto<Tensor1D<5, Cpu>, _>>::try_mean;
-        let _ = <Tensor3D<7, 5, 3, Cpu> as MeanInto<Tensor2D<5, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor3D<7, 5, 3, Cpu> as MeanInto<Tensor2D<7, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor3D<7, 5, 3, Cpu> as MeanInto<Tensor2D<7, 5, Cpu>, _>>::try_mean;
-        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as MeanInto<Tensor3D<7, 5, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as MeanInto<Tensor3D<9, 5, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as MeanInto<Tensor3D<9, 7, 3, Cpu>, _>>::try_mean;
-        let _ = <Tensor4D<9, 7, 5, 3, Cpu> as MeanInto<Tensor3D<9, 7, 5, Cpu>, _>>::try_mean;
+        let dev = build_test_device!();
+        let _ = dev.zeros::<Rank1<5>>().mean::<Rank0, _>();
+        let _ = dev.zeros::<Rank2<5, 3>>().mean::<Rank1<3>, _>();
+        let _ = dev.zeros::<Rank2<5, 3>>().mean::<Rank1<5>, _>();
+        let _ = dev.zeros::<Rank3<7, 5, 3>>().mean::<Rank2<5, 3>, _>();
+        let _ = dev.zeros::<Rank3<7, 5, 3>>().mean::<Rank2<7, 3>, _>();
+        let _ = dev.zeros::<Rank3<7, 5, 3>>().mean::<Rank2<7, 5>, _>();
+        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().mean::<Rank3<7, 5, 3>, _>();
+        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().mean::<Rank3<9, 5, 3>, _>();
+        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().mean::<Rank3<9, 7, 3>, _>();
+        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().mean::<Rank3<9, 7, 5>, _>();
     }
 
     #[test]
@@ -130,7 +102,7 @@ mod tests {
     fn test_mean_axis_0_2d() {
         let dev = build_test_device!();
         let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
-        let r = t.trace().mean_to::<Rank1<3>>();
+        let r = t.trace().mean::<Rank1<3>, _>();
         assert_eq!(r.array(), [-0.5, 3.0, -1.5]);
         let g = r.exp().mean().backward();
         assert_eq!(g.get(&t).array(), [[0.10108845, 3.3475895, 0.037188362]; 2]);
@@ -140,7 +112,7 @@ mod tests {
     fn test_mean_axis_1_2d() {
         let dev = build_test_device!();
         let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
-        let r = t.trace().mean_to::<Rank1<2>>();
+        let r = t.trace().mean::<Rank1<2>, _>();
         assert_eq!(r.array(), [2.0, -4.0 / 3.0]);
         let g = r.exp().mean().backward();
         assert_eq!(g.get(&t).array(), [[1.2315094; 3], [0.043932855; 3]]);
@@ -150,8 +122,8 @@ mod tests {
     fn test_mean_axes_3d_to_1d_02() {
         let dev = build_test_device!();
         let t = dev.randn::<Rank3<2, 3, 4>>();
-        let r = t.trace().mean_to::<Rank1<3>>();
-        let r2 = t.trace().sum_to::<Rank2<3, 4>>().sum_to::<Rank1<3>>() / 8.0;
+        let r = t.trace().mean::<Rank1<3>, _>();
+        let r2 = t.trace().sum::<_, Axis<0>>().sum::<_, Axis<1>>() / 8.0;
         assert_close(&r.array(), &r2.array());
         let g = r.mean().backward();
         let g2 = r2.mean().backward();
@@ -163,8 +135,8 @@ mod tests {
     fn test_mean_axes_3d_to_1d_01() {
         let dev = build_test_device!();
         let t = dev.randn::<Rank3<2, 3, 4>>();
-        let r = t.trace().mean_to::<Rank1<4>>();
-        let r2 = t.sum_to::<Rank2<3, 4>>().sum_to::<Rank1<4>>() / 6.0;
+        let r = t.trace().mean::<Rank1<4>, _>();
+        let r2 = t.sum::<_, Axis<0>>().sum::<_, Axis<0>>() / 6.0;
         assert_close(&r.array(), &r2.array());
     }
 }

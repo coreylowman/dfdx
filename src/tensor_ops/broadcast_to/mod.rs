@@ -2,8 +2,6 @@ mod cpu_kernel;
 
 use crate::{gradients::Tape, shapes::*, tensor::*};
 
-use super::Device;
-
 pub trait BroadcastKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
@@ -35,20 +33,45 @@ pub trait BroadcastKernel<E: Dtype>: DeviceStorage {
 /// // broadcast axes 1, 2, 3
 /// let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<3>::zeros().broadcast_into();
 /// ```
-pub trait BroadcastTo<T: HasShape, Ax>: HasErr {
-    fn broadcast_to(self, dst: &T::Shape) -> T {
-        self.try_broadcast_to(dst).unwrap()
+pub trait BroadcastTo: HasErr + HasShape {
+    fn broadcast<Dst: Shape + Default, Ax: Axes>(self) -> Self::WithShape<Dst>
+    where
+        Self::Shape: BroadcastShapeTo<Dst, Ax>,
+    {
+        self.try_broadcast_like(&Default::default()).unwrap()
     }
-    fn try_broadcast_to(self, dst: &T::Shape) -> Result<T, Self::Err>;
+    fn try_broadcast<Dst: Shape + Default, Ax: Axes>(
+        self,
+    ) -> Result<Self::WithShape<Dst>, Self::Err>
+    where
+        Self::Shape: BroadcastShapeTo<Dst, Ax>,
+    {
+        self.try_broadcast_like(&Default::default())
+    }
+    fn broadcast_like<Dst: Shape, Ax: Axes>(self, dst: &Dst) -> Self::WithShape<Dst>
+    where
+        Self::Shape: BroadcastShapeTo<Dst, Ax>,
+    {
+        self.try_broadcast_like(dst).unwrap()
+    }
+    fn try_broadcast_like<Dst: Shape, Ax: Axes>(
+        self,
+        dst: &Dst,
+    ) -> Result<Self::WithShape<Dst>, Self::Err>
+    where
+        Self::Shape: BroadcastShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>, Dst: Shape, Ax: Axes>
-    BroadcastTo<Tensor<Dst, E, D, T>, Ax> for Tensor<S, E, D, T>
-where
-    D: BroadcastKernel<E>,
-    S: BroadcastShapeTo<Dst, Ax>,
+impl<S: Shape, E: Dtype, D: DeviceStorage + BroadcastKernel<E>, T: Tape<D>> BroadcastTo
+    for Tensor<S, E, D, T>
 {
-    fn try_broadcast_to(self, dst: &Dst) -> Result<Tensor<Dst, E, D, T>, Self::Err> {
+    fn try_broadcast_like<Dst: Shape, Ax: Axes>(
+        self,
+        dst: &Dst,
+    ) -> Result<Self::WithShape<Dst>, Self::Err>
+    where
+        Self::Shape: BroadcastShapeTo<Dst, Ax>,
+    {
         let (inp, mut tape) = self.split_tape();
         let out = inp.device.upgrade(inp.device.forward(*dst, &inp.storage)?);
         let phantom_out = out.clone();
@@ -62,47 +85,6 @@ where
     }
 }
 
-pub trait Broadcast<Ax: Axes>: HasErr + HasShape {
-    fn broadcast<Dst: Shape + Default>(self) -> Self::WithShape<Dst>
-    where
-        Self: BroadcastTo<Self::WithShape<Dst>, Ax>,
-    {
-        self.broadcast_to(&Default::default())
-    }
-
-    fn try_broadcast<Dst: Shape + Default>(self) -> Result<Self::WithShape<Dst>, Self::Err>
-    where
-        Self: BroadcastTo<Self::WithShape<Dst>, Ax>,
-    {
-        self.try_broadcast_to(&Default::default())
-    }
-}
-
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Ax: Axes> Broadcast<Ax> for Tensor<S, E, D, T> {}
-
-pub trait BroadcastAlong<Dst: Shape>: HasShape + HasErr {
-    fn broadcast_along<Ax: Axes>(self) -> Self::WithShape<Dst>
-    where
-        Self: BroadcastTo<Self::WithShape<Dst>, Ax>,
-        Dst: Default,
-    {
-        self.broadcast_to(&Default::default())
-    }
-
-    fn try_broadcast_along<Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
-    where
-        Self: BroadcastTo<Self::WithShape<Dst>, Ax>,
-        Dst: Default,
-    {
-        self.try_broadcast_to(&Default::default())
-    }
-}
-
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Dst: Shape> BroadcastAlong<Dst>
-    for Tensor<S, E, D, T>
-{
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -113,28 +95,28 @@ mod tests {
     fn test_valid_1d_broadcasts() {
         let dev = build_test_device!();
 
-        let _ = dev.zeros::<Rank0>().broadcast::<Rank1<5>>();
+        let _ = dev.rand::<Rank0>().broadcast::<Rank1<5>, _>();
 
-        let _ = dev.zeros::<Rank1<3>>().broadcast::<Rank2<5, 3>>();
-        let _ = dev.zeros::<Rank1<5>>().broadcast::<Rank2<5, 3>>();
+        let _ = dev.rand::<Rank1<3>>().broadcast::<Rank2<5, 3>, _>();
+        let _ = dev.rand::<Rank1<5>>().broadcast::<Rank2<5, 3>, _>();
 
-        let _ = dev.zeros::<Rank2<5, 7>>().broadcast::<Rank3<3, 5, 7>>();
-        let _ = dev.zeros::<Rank2<3, 7>>().broadcast::<Rank3<3, 5, 7>>();
-        let _ = dev.zeros::<Rank2<3, 5>>().broadcast::<Rank3<3, 5, 7>>();
-        let _ = dev.zeros::<Rank2<3, 5>>().broadcast::<Rank3<3, 5, 7>>();
+        let _ = dev.rand::<Rank2<5, 7>>().broadcast::<Rank3<3, 5, 7>, _>();
+        let _ = dev.rand::<Rank2<3, 7>>().broadcast::<Rank3<3, 5, 7>, _>();
+        let _ = dev.rand::<Rank2<3, 5>>().broadcast::<Rank3<3, 5, 7>, _>();
+        let _ = dev.rand::<Rank2<3, 5>>().broadcast::<Rank3<3, 5, 7>, _>();
 
         let _ = dev
-            .zeros::<Rank3<5, 7, 9>>()
-            .broadcast::<Rank4<3, 5, 7, 9>>();
+            .rand::<Rank3<5, 7, 9>>()
+            .broadcast::<Rank4<3, 5, 7, 9>, _>();
         let _ = dev
-            .zeros::<Rank3<3, 7, 9>>()
-            .broadcast::<Rank4<3, 5, 7, 9>>();
+            .rand::<Rank3<3, 7, 9>>()
+            .broadcast::<Rank4<3, 5, 7, 9>, _>();
         let _ = dev
-            .zeros::<Rank3<3, 5, 9>>()
-            .broadcast::<Rank4<3, 5, 7, 9>>();
+            .rand::<Rank3<3, 5, 9>>()
+            .broadcast::<Rank4<3, 5, 7, 9>, _>();
         let _ = dev
-            .zeros::<Rank3<3, 5, 7>>()
-            .broadcast::<Rank4<3, 5, 7, 9>>();
+            .rand::<Rank3<3, 5, 7>>()
+            .broadcast::<Rank4<3, 5, 7, 9>, _>();
     }
 
     #[test]
@@ -172,14 +154,14 @@ mod tests {
         let dev = build_test_device!();
         let a = dev.randn::<Rank1<3>>();
         let b = dev.randn::<Rank2<5, 3>>();
-        let a_up = a.trace().broadcast::<Rank2<5, 3>>();
+        let a_up = a.trace().broadcast::<Rank2<5, 3>, _>();
         a_up.array().assert_close(&[a.array(); 5], 1e-4);
         let r = a_up * b.clone();
         let g = r.exp().mean().backward();
 
-        let a_up = a.clone().broadcast::<Rank2<5, 3>>();
+        let a_up = a.clone().broadcast::<Rank2<5, 3>, _>();
         // a's gradient: (b * (b * a).exp()).sum(0) / 15
-        let a_grad = (b.clone() * (b.clone() * a_up.clone()).exp()).sum_to::<Rank1<3>>() / 15.0;
+        let a_grad = (b.clone() * (b.clone() * a_up.clone()).exp()).sum::<Rank1<3>, _>() / 15.0;
         // b's gradient: (a * (b * a).exp()) / 15
         let b_grad = (a_up.clone() * (b.clone() * a_up).exp()) / 15.0;
         g.get(&a).array().assert_close(&a_grad.array(), 1e-4);

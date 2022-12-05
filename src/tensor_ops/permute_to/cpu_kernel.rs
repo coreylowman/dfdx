@@ -4,7 +4,7 @@ use crate::tensor::cpu::{Cpu, StridedArray};
 use super::PermuteKernel;
 
 impl<E: Dtype> PermuteKernel<E> for Cpu {
-    fn forward<Src: Shape, Dst: Shape<Concrete = Src::Concrete>, Ax: Axes>(
+    fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         inp: &Self::Storage<Src, E>,
     ) -> Result<Self::Storage<Dst, E>, Self::Err>
@@ -17,7 +17,7 @@ impl<E: Dtype> PermuteKernel<E> for Cpu {
             strides: inp.shape.permute_strides(inp.strides),
         })
     }
-    fn backward<Src: Shape, Dst: Shape<Concrete = Src::Concrete>, Ax: Axes>(
+    fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         grad_inp: &mut Self::Storage<Src, E>,
         grad_out: &Self::Storage<Dst, E>,

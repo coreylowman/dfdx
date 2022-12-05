@@ -15,56 +15,30 @@ use crate::{gradients::Tape, shapes::*, tensor::*};
 /// let r: Tensor1D<2> = t.stddev(0.0);
 /// assert_eq!(r.data(), &[0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
 /// ```
-pub trait StddevInto<T, Ax>: HasErr {
-    fn stddev(self, epsilon: f32) -> T {
+pub trait StddevTo: HasErr + HasShape {
+    fn stddev<Dst: Shape, Ax: Axes>(self, epsilon: f32) -> Self::WithShape<Dst>
+    where
+        Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
+    {
         self.try_stddev(epsilon).unwrap()
     }
-    fn try_stddev(self, epsilon: f32) -> Result<T, Self::Err>;
-}
-
-impl<Src: Shape, Dst: Shape, Ax, D: Device<f32>, T: Tape<D>> StddevInto<Tensor<Dst, f32, D, T>, Ax>
-    for Tensor<Src, f32, D, T>
-where
-    Self: VarInto<Tensor<Dst, f32, D, T>, Ax, Err = D::Err>,
-{
-    fn try_stddev(self, epsilon: f32) -> Result<Tensor<Dst, f32, D, T>, Self::Err> {
-        self.try_var()?.try_add(epsilon)?.try_sqrt()
-    }
-}
-
-pub trait StddevTo<Ax: Axes>: HasShape + HasErr {
-    fn stddev_to<Dst: Shape>(self, epsilon: f32) -> Self::WithShape<Dst>
-    where
-        Self: StddevInto<Self::WithShape<Dst>, Ax>,
-    {
-        self.stddev(epsilon)
-    }
-
-    fn try_stddev_to<Dst: Shape>(self, epsilon: f32) -> Result<Self::WithShape<Dst>, Self::Err>
-    where
-        Self: StddevInto<Self::WithShape<Dst>, Ax>,
-    {
-        self.try_stddev(epsilon)
-    }
-}
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>, Ax: Axes> StddevTo<Ax> for Tensor<S, E, D, T> {}
-
-impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
-    pub fn stddev_along<Ax: Axes>(self, epsilon: f32) -> Tensor<S::Reduced, f32, D, T>
-    where
-        S: ReduceShape<Ax>,
-    {
-        self.try_stddev_along(epsilon).unwrap()
-    }
-
-    pub fn try_stddev_along<Ax: Axes>(
+    fn try_stddev<Dst: Shape, Ax: Axes>(
         self,
         epsilon: f32,
-    ) -> Result<Tensor<S::Reduced, f32, D, T>, D::Err>
+    ) -> Result<Self::WithShape<Dst>, Self::Err>
     where
-        S: ReduceShape<Ax>,
+        Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
+}
+
+impl<S: Shape, D: Device<f32>, T: Tape<D>> StddevTo for Tensor<S, f32, D, T> {
+    fn try_stddev<Dst: Shape, Ax: Axes>(
+        self,
+        epsilon: f32,
+    ) -> Result<Self::WithShape<Dst>, Self::Err>
+    where
+        Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {
-        self.try_stddev(epsilon)
+        self.try_var()?.try_add(epsilon)?.try_sqrt()
     }
 }
 
@@ -77,7 +51,7 @@ mod tests {
     fn test_std_axis_0_2d() {
         let dev = build_test_device!();
         let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
-        let r = t.trace().stddev_to::<Rank1<4>>(1e-8);
+        let r = t.trace().stddev::<Rank1<4>, _>(1e-8);
         assert_eq!(r.array(), [0.5, 0.0001, 1.0, 3.0]);
         let g = r.mean().backward();
         assert_eq!(
@@ -90,7 +64,7 @@ mod tests {
     fn test_std_axis_1_2d() {
         let dev = build_test_device!();
         let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
-        let r = t.trace().stddev_to::<Rank1<2>>(0.0);
+        let r = t.trace().stddev::<Rank1<2>, _>(0.0);
         assert_eq!(r.array(), [1.118034, 3.7666297]);
         let g = r.mean().backward();
         assert_eq!(
