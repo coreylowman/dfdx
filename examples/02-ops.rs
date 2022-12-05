@@ -28,7 +28,7 @@ fn main() {
     dbg!(e.array());
 
     // or reduce tensors to smaller sizes
-    let f = e.mean_to::<Rank0>();
+    let f = e.mean::<Rank0, _>();
     dbg!(f.array());
 
     // and of course you can chain all of these together

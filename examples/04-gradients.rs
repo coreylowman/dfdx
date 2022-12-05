@@ -2,9 +2,9 @@
 
 use dfdx::{
     gradients::{Gradients, NoneTape, OwnedTape},
-    shapes::Rank2,
+    shapes::{Rank0, Rank2},
     tensor::{AsArray, Cpu, RandnTensor, Tensor},
-    tensor_ops::{MeanInto, TryBackward, TryMatMul},
+    tensor_ops::{MeanTo, TryBackward, TryMatMul},
 };
 
 fn main() {
@@ -24,9 +24,9 @@ fn main() {
     // the tape will **automatically** be moved around as you perform ops
     // ie. the tapes on inputs to operations are moved to the output
     // of the operation.
-    let c: Tensor<_, _, _, OwnedTape<_>> = b.matmul(weight.clone());
-    let d: Tensor<_, _, _, OwnedTape<_>> = c.sin();
-    let e: Tensor<_, _, _, OwnedTape<_>> = d.mean();
+    let c: Tensor<Rank2<3, 2>, f32, Cpu, OwnedTape<_>> = b.matmul(weight.clone());
+    let d: Tensor<Rank2<3, 2>, f32, Cpu, OwnedTape<_>> = c.sin();
+    let e: Tensor<Rank0, f32, Cpu, OwnedTape<_>> = d.mean();
 
     // finally you can use .backward() to extract the gradients!
     // NOTE: that this method is only available on tensors that **own**
