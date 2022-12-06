@@ -26,15 +26,6 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
             tape: Default::default(),
         }
     }
-
-    pub fn with_empty_tape(&self) -> Self {
-        Self {
-            id: self.id,
-            storage: self.storage.clone(),
-            device: self.device.clone(),
-            tape: Default::default(),
-        }
-    }
 }
 
 pub trait PutTape<T> {
@@ -55,12 +46,13 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T> PutTape<T> for Tensor<S, E, D> {
 }
 
 pub trait SplitTape {
-    type Tape;
+    type Tape: Default;
     type NoTape: Clone + PutTape<Self::Tape, Output = Self>;
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
+    fn with_empty_tape(&self) -> Self;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> SplitTape for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Default> SplitTape for Tensor<S, E, D, T> {
     type Tape = T;
     type NoTape = Tensor<S, E, D>;
     fn split_tape(self) -> (Self::NoTape, Self::Tape) {
@@ -73,6 +65,15 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T> SplitTape for Tensor<S, E, D, T> {
             },
             self.tape,
         )
+    }
+
+    fn with_empty_tape(&self) -> Self {
+        Self {
+            id: self.id,
+            storage: self.storage.clone(),
+            device: self.device.clone(),
+            tape: Default::default(),
+        }
     }
 }
 

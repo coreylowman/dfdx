@@ -42,14 +42,10 @@ pub struct Conv2D<
     pub bias: Tensor<Rank1<OUT_CHAN>, f32, D>,
 }
 
-impl<
-        const I: usize,
-        const O: usize,
-        const K: usize,
-        const S: usize,
-        const P: usize,
-        D: Device<f32>,
-    > CanUpdateWithGradients<D, f32> for Conv2D<I, O, K, S, P, D>
+impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
+    CanUpdateWithGradients<D, f32> for Conv2D<I, O, K, S, P, D>
+where
+    D: Device<f32>,
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
@@ -61,14 +57,10 @@ impl<
     }
 }
 
-impl<
-        const I: usize,
-        const O: usize,
-        const K: usize,
-        const S: usize,
-        const P: usize,
-        D: Device<f32>,
-    > BuildModule<D, f32> for Conv2D<I, O, K, S, P, D>
+impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
+    BuildModule<D, f32> for Conv2D<I, O, K, S, P, D>
+where
+    D: Device<f32>,
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         let k = (I * K * K) as f32;
@@ -87,16 +79,11 @@ impl<
     }
 }
 
-impl<
-        const C: usize,
-        const O: usize,
-        const K: usize,
-        const S: usize,
-        const P: usize,
-        D: Device<f32>,
-        Img: TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P>,
-    > Module<Img> for Conv2D<C, O, K, S, P, D>
+impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: usize, D, Img>
+    Module<Img> for Conv2D<C, O, K, S, P, D>
 where
+    D: Device<f32>,
+    Img: TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P>,
     for<'a> Bias2D<'a, O, D>: Module<Img::Output, Output = Img::Output>,
 {
     type Output = Img::Output;
@@ -105,16 +92,10 @@ where
     }
 }
 
-impl<
-        const I: usize,
-        const O: usize,
-        const K: usize,
-        const S: usize,
-        const P: usize,
-        D: Device<f32>,
-        Img,
-    > ModuleMut<Img> for Conv2D<I, O, K, S, P, D>
+impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D, Img>
+    ModuleMut<Img> for Conv2D<I, O, K, S, P, D>
 where
+    D: Device<f32>,
     Self: Module<Img>,
 {
     type Output = <Self as Module<Img>>::Output;

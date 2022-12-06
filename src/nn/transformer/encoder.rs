@@ -45,7 +45,7 @@ pub struct TransformerEncoderBlock<
     const FF_DIM: usize,
     D: Device<f32> = Cpu,
 > {
-    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, D>,
+    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
     pub norm1: LayerNorm1D<MODEL_DIM, D>,
     pub ff: FF<MODEL_DIM, FF_DIM, D>,
     pub norm2: LayerNorm1D<MODEL_DIM, D>,
@@ -92,7 +92,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, Src> Module
     for TransformerEncoderBlock<M, H, F, D>
 where
     Src: SplitTape + std::ops::Add<Src::NoTape, Output = Src>,
-    MultiHeadAttention<M, H, D>: Module<Src, Output = Src>,
+    MultiHeadAttention<M, H, M, M, D>: Module<Src, Output = Src>,
     LayerNorm1D<M, D>: Module<Src, Output = Src>,
     FF<M, F, D>: Module<Src, Output = Src>,
 {

@@ -25,6 +25,11 @@ use super::module::{BuildModule, Module, ModuleMut};
 /// let y: Tensor1D<2> = model.forward(x);
 /// assert_eq!(y.data(), &[0.0; 2]);
 /// ```
+/// 
+/// Initializes [Self::weight] and [Self::bias] from a [Uniform] distribution
+/// between [-1 / sqrt(I), 1 / sqrt(I)].
+///
+/// This uses [Randomize::randomize()] to set the values of the tensor.
 #[derive(Debug, Clone)]
 pub struct Linear<const I: usize, const O: usize, D: Device<f32> = Cpu> {
     /// Transposed weight matrix, shape (I, O)
@@ -55,10 +60,6 @@ impl<const I: usize, const O: usize, D: Device<f32>> BuildModule<D, f32> for Lin
         Ok(Self { weight, bias })
     }
 
-    /// Initializes [Self::weight] and [Self::bias] from a [Uniform] distribution
-    /// between [-1 / sqrt(I), 1 / sqrt(I)].
-    ///
-    /// This uses [Randomize::randomize()] to set the values of the tensor.
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
         self.weight.try_fill_with_uniform(-bound, bound)?;

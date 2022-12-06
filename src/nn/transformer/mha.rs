@@ -22,9 +22,9 @@ use crate::{gradients::Tape, shapes::*, Assert, ConstTrue};
 pub struct MultiHeadAttention<
     const EMBED_DIM: usize,
     const NUM_HEADS: usize,
-    D: Device<f32> = Cpu,
     const K_DIM: usize = EMBED_DIM,
     const V_DIM: usize = EMBED_DIM,
+    D: Device<f32> = Cpu,
 > {
     pub w_q: Linear<EMBED_DIM, K_DIM, D>,
     pub w_k: Linear<EMBED_DIM, K_DIM, D>,
@@ -32,8 +32,8 @@ pub struct MultiHeadAttention<
     pub w_o: Linear<V_DIM, EMBED_DIM, D>,
 }
 
-impl<const M: usize, const H: usize, D: Device<f32>, const K: usize, const V: usize>
-    BuildModule<D, f32> for MultiHeadAttention<M, H, D, K, V>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
+    BuildModule<D, f32> for MultiHeadAttention<M, H, K, V, D>
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
@@ -52,8 +52,8 @@ impl<const M: usize, const H: usize, D: Device<f32>, const K: usize, const V: us
     }
 }
 
-impl<const M: usize, const H: usize, D: Device<f32>, const K: usize, const V: usize>
-    CanUpdateWithGradients<D, f32> for MultiHeadAttention<M, H, D, K, V>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
+    CanUpdateWithGradients<D, f32> for MultiHeadAttention<M, H, K, V, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
@@ -71,9 +71,9 @@ impl<const M: usize, const H: usize, D: Device<f32>, const K: usize, const V: us
 impl<
         const M: usize,
         const H: usize,
-        D: Device<f32>,
         const K: usize,
         const V: usize,
+        D: Device<f32>,
         const S1: usize,
         const S2: usize,
         T: Tape<D>,
@@ -82,7 +82,7 @@ impl<
         Tensor<Rank2<S1, M>, f32, D, T>,
         Tensor<Rank2<S2, M>, f32, D>,
         Tensor<Rank2<S2, M>, f32, D>,
-    )> for MultiHeadAttention<M, H, D, K, V>
+    )> for MultiHeadAttention<M, H, K, V, D>
 where
     Assert<{ S1 * K == S1 * H * (K / H) }>: ConstTrue,
     Assert<{ S2 * K == S2 * H * (K / H) }>: ConstTrue,
@@ -130,9 +130,9 @@ where
 impl<
         const M: usize,
         const H: usize,
-        D: Device<f32>,
         const K: usize,
         const V: usize,
+        D: Device<f32>,
         const B: usize,
         const S1: usize,
         const S2: usize,
@@ -142,7 +142,7 @@ impl<
         Tensor<Rank3<B, S1, M>, f32, D, T>,
         Tensor<Rank3<B, S2, M>, f32, D>,
         Tensor<Rank3<B, S2, M>, f32, D>,
-    )> for MultiHeadAttention<M, H, D, K, V>
+    )> for MultiHeadAttention<M, H, K, V, D>
 where
     Assert<{ B * S1 * K == B * S1 * H * (K / H) }>: ConstTrue,
     Assert<{ B * S2 * K == B * S2 * H * (K / H) }>: ConstTrue,
@@ -186,15 +186,11 @@ where
     }
 }
 
-impl<
-        const M: usize,
-        const H: usize,
-        D: Device<f32>,
-        const K: usize,
-        const V: usize,
-        Src: SplitTape,
-    > Module<Src> for MultiHeadAttention<M, H, D, K, V>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D, Src> Module<Src>
+    for MultiHeadAttention<M, H, K, V, D>
 where
+    D: Device<f32>,
+    Src: SplitTape,
     Self: Module<(Src, Src::NoTape, Src::NoTape), Output = Src>,
 {
     type Output = Src;
@@ -204,8 +200,8 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, D: Device<f32>, const K: usize, const V: usize, T> ModuleMut<T>
-    for MultiHeadAttention<M, H, D, K, V>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>, T> ModuleMut<T>
+    for MultiHeadAttention<M, H, K, V, D>
 where
     Self: Module<T>,
 {
@@ -229,16 +225,16 @@ mod tests {
     fn test_mha_unbatched() {
         let dev = build_test_device!(0);
 
-        const EMBED_DIM: usize = 8;
+        const M: usize = 8;
         const NUM_HEADS: usize = 2;
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha: MultiHeadAttention<EMBED_DIM, NUM_HEADS, _> = BuildModule::build(&dev);
+        let mha: MultiHeadAttention<M, NUM_HEADS, M, M, _> = BuildModule::build(&dev);
 
-        let q = dev.randn::<Rank2<S1, EMBED_DIM>>();
-        let k = dev.randn::<Rank2<S2, EMBED_DIM>>();
-        let v = dev.randn::<Rank2<S2, EMBED_DIM>>();
+        let q = dev.randn::<Rank2<S1, M>>();
+        let k = dev.randn::<Rank2<S2, M>>();
+        let v = dev.randn::<Rank2<S2, M>>();
 
         let y = mha.forward((q, k, v));
 
@@ -263,16 +259,16 @@ mod tests {
         let dev = build_test_device!(1);
 
         const BATCH: usize = 5;
-        const EMBED_DIM: usize = 8;
+        const M: usize = 8;
         const NUM_HEADS: usize = 2;
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha: MultiHeadAttention<EMBED_DIM, NUM_HEADS, _> = BuildModule::build(&dev);
+        let mha: MultiHeadAttention<M, NUM_HEADS, M, M, _> = BuildModule::build(&dev);
 
-        let q = dev.randn::<Rank3<BATCH, S1, EMBED_DIM>>();
-        let k = dev.randn::<Rank3<BATCH, S2, EMBED_DIM>>();
-        let v = dev.randn::<Rank3<BATCH, S2, EMBED_DIM>>();
+        let q = dev.randn::<Rank3<BATCH, S1, M>>();
+        let k = dev.randn::<Rank3<BATCH, S2, M>>();
+        let v = dev.randn::<Rank3<BATCH, S2, M>>();
 
         let y = mha.forward((q, k, v));
 
@@ -318,7 +314,7 @@ mod tests {
     fn test_backward_updates_all() {
         let dev = build_test_device!();
 
-        let mut mha: MultiHeadAttention<12, 4, _> = BuildModule::build(&dev);
+        let mut mha: MultiHeadAttention<12, 4, 12, 12, _> = BuildModule::build(&dev);
 
         let q = dev.randn::<Rank3<2, 3, 12>>();
         let k = dev.randn::<Rank3<2, 4, 12>>();

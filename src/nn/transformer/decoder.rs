@@ -47,16 +47,10 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f
     }
 }
 
-impl<
-        const M: usize,
-        const H: usize,
-        const F: usize,
-        const L: usize,
-        D: Device<f32>,
-        Tgt,
-        Mem: Clone,
-    > Module<(Tgt, Mem)> for TransformerDecoder<M, H, F, L, D>
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D, Tgt, Mem: Clone>
+    Module<(Tgt, Mem)> for TransformerDecoder<M, H, F, L, D>
 where
+    D: Device<f32>,
     TransformerDecoderBlock<M, H, F, D>: Module<(Tgt, Mem), Output = Tgt>,
 {
     type Output = Tgt;
@@ -102,9 +96,9 @@ pub struct TransformerDecoderBlock<
     const FF_DIM: usize,
     D: Device<f32>,
 > {
-    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, D>,
+    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
     pub norm1: LayerNorm1D<MODEL_DIM, D>,
-    pub mh_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, D>,
+    pub mh_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
     pub norm2: LayerNorm1D<MODEL_DIM, D>,
     pub ff: FF<MODEL_DIM, FF_DIM, D>,
     pub norm3: LayerNorm1D<MODEL_DIM, D>,
@@ -158,7 +152,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, Tgt, Mem> M
 where
     Tgt: SplitTape + std::ops::Add<Tgt::NoTape, Output = Tgt>,
     Mem: Clone,
-    MultiHeadAttention<M, H, D>: Module<Tgt, Output = Tgt> + Module<(Tgt, Mem, Mem), Output = Tgt>,
+    MultiHeadAttention<M, H, M, M, D>: Module<Tgt, Output = Tgt> + Module<(Tgt, Mem, Mem), Output = Tgt>,
     LayerNorm1D<M, D>: Module<Tgt, Output = Tgt>,
     FF<M, F, D>: Module<Tgt, Output = Tgt>,
 {

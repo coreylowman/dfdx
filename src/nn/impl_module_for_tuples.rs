@@ -5,11 +5,10 @@ use super::module::{BuildModule, Module, ModuleMut};
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
         impl<D: Device<E>, E: Dtype, $($name: CanUpdateWithGradients<D, E>),+> CanUpdateWithGradients<D, E> for ($($name,)+) {
-            fn update<U: UpdateParams<D, E>>(
-                &mut self,
-                updater: &mut U,
-                unused: &mut UnusedTensors,
-            ) -> Result<(), D::Err> {
+            fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
+            where
+                U: UpdateParams<D, E>
+            {
                 $(self.$idx.update(updater, unused)?;)+
                 Ok(())
             }
@@ -120,10 +119,8 @@ mod tests {
 
         let m0 = model.clone();
 
-        let loss = model
-            .forward_mut(dev.randn::<Rank1<2>>().traced())
-            .square()
-            .mean();
+        let x = dev.randn::<Rank1<2>>().traced();
+        let loss = model.forward_mut(x).square().mean();
         let g = loss.backward();
 
         assert_ne!(g.get(&model.0.weight).array(), [[0.0; 2]; 3]);
@@ -147,25 +144,7 @@ mod tests {
     /// A struct to test the forward method of tuples. This sets the `I`th valuein a 1d tensors of size `N` to 1.0.
     #[derive(Debug, Default, Clone)]
     struct SetTo1<const I: usize, const N: usize>;
-
-    impl<const I: usize, const N: usize, D: Device<E>, E: Dtype> CanUpdateWithGradients<D, E>
-        for SetTo1<I, N>
-    {
-        fn update<U>(&mut self, _: &mut U, _: &mut UnusedTensors) -> Result<(), <D>::Err>
-        where
-            U: UpdateParams<D, E>,
-        {
-            Ok(())
-        }
-    }
-    impl<const I: usize, const N: usize, D: Device<E>, E: Dtype> BuildModule<D, E> for SetTo1<I, N> {
-        fn try_build(_: &D) -> Result<Self, <D>::Err> {
-            Ok(Self)
-        }
-        fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-            Ok(())
-        }
-    }
+    impl<const I: usize, const N: usize> ZeroSizedModule for SetTo1<I, N> {}
     impl<const I: usize, const N: usize> Module<Tensor<Rank1<N>, f32, Cpu>> for SetTo1<I, N> {
         type Output = Tensor<Rank1<N>, f32, Cpu>;
         fn forward(&self, mut input: Tensor<Rank1<N>, f32, Cpu>) -> Self::Output {

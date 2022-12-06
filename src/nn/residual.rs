@@ -1,4 +1,4 @@
-use crate::{gradients::Tape, optim::*, shapes::*, tensor::Tensor, tensor_ops::Device};
+use crate::{optim::*, shapes::*, tensor::SplitTape, tensor_ops::Device};
 
 use super::{BuildModule, Module, ModuleMut};
 
@@ -32,38 +32,28 @@ impl<D: Device<E>, E: Dtype, F: CanUpdateWithGradients<D, E>> CanUpdateWithGradi
 
 impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Residual<F> {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self(F::try_build(device)?))
+        Ok(Self(BuildModule::try_build(device)?))
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.0.try_reset_params()
     }
 }
 
-impl<
-        S: Shape,
-        E: Dtype,
-        D: Device<E>,
-        T: Tape<D>,
-        F: Module<Tensor<S, E, D, T>, Output = Tensor<S, E, D, T>>,
-    > Module<Tensor<S, E, D, T>> for Residual<F>
+impl<T: SplitTape + std::ops::Add<T, Output = T>, F: Module<T, Output = T>> Module<T>
+    for Residual<F>
 {
-    type Output = Tensor<S, E, D, T>;
-    fn forward(&self, x: Tensor<S, E, D, T>) -> Self::Output {
-        self.0.forward(x.retaped::<T>()) + x
+    type Output = T;
+    fn forward(&self, x: T) -> Self::Output {
+        self.0.forward(x.with_empty_tape()) + x
     }
 }
 
-impl<
-        S: Shape,
-        E: Dtype,
-        D: Device<E>,
-        T: Tape<D>,
-        F: ModuleMut<Tensor<S, E, D, T>, Output = Tensor<S, E, D, T>>,
-    > ModuleMut<Tensor<S, E, D, T>> for Residual<F>
+impl<T: SplitTape + std::ops::Add<T, Output = T>, F: ModuleMut<T, Output = T>> ModuleMut<T>
+    for Residual<F>
 {
-    type Output = Tensor<S, E, D, T>;
-    fn forward_mut(&mut self, x: Tensor<S, E, D, T>) -> Self::Output {
-        self.0.forward_mut(x.retaped::<T>()) + x
+    type Output = T;
+    fn forward_mut(&mut self, x: T) -> Self::Output {
+        self.0.forward_mut(x.with_empty_tape()) + x
     }
 }
 

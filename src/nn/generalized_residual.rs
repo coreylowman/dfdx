@@ -1,4 +1,4 @@
-use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{optim::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{BuildModule, Module, ModuleMut};
 
@@ -52,33 +52,25 @@ impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>, R: BuildModule<D, E>> BuildMo
     }
 }
 
-impl<F, R, S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<S, E, D, T>>
+impl<T: SplitTape, F: Module<T>, R: Module<T, Output = F::Output>> Module<T>
     for GeneralizedResidual<F, R>
 where
-    F: Module<Tensor<S, E, D, T>>,
-    R: Module<Tensor<S, E, D, T>, Output = F::Output>,
     F::Output: std::ops::Add<F::Output>,
 {
     type Output = <F::Output as std::ops::Add<F::Output>>::Output;
-
-    /// Calls forward on `F` and `R` and then sums their result: `F(x) + R(x)`
-    fn forward(&self, x: Tensor<S, E, D, T>) -> Self::Output {
-        self.f.forward(x.retaped::<T>()) + self.r.forward(x)
+    fn forward(&self, x: T) -> Self::Output {
+        self.f.forward(x.with_empty_tape()) + self.r.forward(x)
     }
 }
 
-impl<F, R, S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> ModuleMut<Tensor<S, E, D, T>>
+impl<T: SplitTape, F: ModuleMut<T>, R: ModuleMut<T, Output = F::Output>> ModuleMut<T>
     for GeneralizedResidual<F, R>
 where
-    F: ModuleMut<Tensor<S, E, D, T>>,
-    R: ModuleMut<Tensor<S, E, D, T>, Output = F::Output>,
     F::Output: std::ops::Add<F::Output>,
 {
     type Output = <F::Output as std::ops::Add<F::Output>>::Output;
-
-    /// Calls forward on `F` and `R` and then sums their result: `F(x) + R(x)`
-    fn forward_mut(&mut self, x: Tensor<S, E, D, T>) -> Self::Output {
-        self.f.forward_mut(x.retaped::<T>()) + self.r.forward_mut(x)
+    fn forward_mut(&mut self, x: T) -> Self::Output {
+        self.f.forward_mut(x.with_empty_tape()) + self.r.forward_mut(x)
     }
 }
 
