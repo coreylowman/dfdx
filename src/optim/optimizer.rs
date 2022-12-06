@@ -27,13 +27,13 @@ pub enum Momentum<E> {
 }
 
 /// All optimizers must implement the update function, which takes an object
-/// that implements [CanUpdateWithGradients], and calls [CanUpdateWithGradients::update].
+/// that implements [GradientUpdate], and calls [GradientUpdate::update].
 ///
 /// # Notes
 ///
-/// 1. [CanUpdateWithGradients] requires an object that implements [crate::gradients::GradientProvider].
+/// 1. [GradientUpdate] requires an object that implements [crate::gradients::GradientProvider].
 /// A common implementation involves implementing both [Optimizer] and [crate::gradients::GradientProvider]
-/// on one struct, and passing self to [CanUpdateWithGradients::update]. See [super::Sgd] for an example
+/// on one struct, and passing self to [GradientUpdate::update]. See [super::Sgd] for an example
 /// of implementing this trait.
 ///
 /// 2. Update takes ownership of [Gradients], so update cannot be called
@@ -56,14 +56,14 @@ pub trait Optimizer<M, D: DeviceStorage> {
 /// Represents something that can return a gradient for a given key.
 ///
 /// This is very similar to what [Gradients] does, however the intention
-/// is that any this object be passed to [CanUpdateWithGradients].
+/// is that any this object be passed to [GradientUpdate].
 ///
 /// [Gradients] does **not** implement this, so you *have* to go through
-/// an optimizer to update a [CanUpdateWithGradients]. Although it very easily
+/// an optimizer to update a [GradientUpdate]. Although it very easily
 /// could.
 ///
 /// See [crate::optim::Sgd] and [crate::optim::Adam] for examples on implementing this.
-pub trait UpdateParams<D: DeviceStorage, E: Dtype> {
+pub trait ParamUpdater<D: DeviceStorage, E: Dtype> {
     /// Retrieves the data associated with `p` if there is any.
     /// This can modify `self`, for instance if velocities are calculated
     /// based on the associated data!
@@ -75,7 +75,7 @@ pub trait UpdateParams<D: DeviceStorage, E: Dtype> {
 }
 
 /// Holds [UniqueId] of tensors that were missing gradients during
-/// [CanUpdateWithGradients::update()], and therefore are unused
+/// [GradientUpdate::update()], and therefore are unused
 #[derive(Debug, Default)]
 pub struct UnusedTensors {
     pub ids: std::vec::Vec<UniqueId>,
@@ -91,30 +91,26 @@ impl UnusedTensors {
     pub fn is_empty(&self) -> bool {
         self.ids.is_empty()
     }
-
-    pub fn len(&self) -> usize {
-        self.ids.len()
-    }
 }
 
 /// Represents something that can be updated with [GradientProvider].
 ///
 /// Most implementations of this trait will have sub structs that also
-/// implement [CanUpdateWithGradients].
-pub trait CanUpdateWithGradients<D: DeviceStorage, E: Dtype>: Sized {
+/// implement [GradientUpdate].
+pub trait GradientUpdate<D: DeviceStorage, E: Dtype>: Sized {
     /// Updates self given the [GradientProvider]. When any parameters that
     /// are NOT present in `G`, then this function should
     /// add the tensor's [UniqueId] to [UnusedTensors].
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
     where
-        U: UpdateParams<D, E>;
+        U: ParamUpdater<D, E>;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage> CanUpdateWithGradients<D, E> for Tensor<S, E, D> {
+impl<S: Shape, E: Dtype, D: DeviceStorage> GradientUpdate<D, E> for Tensor<S, E, D> {
     /// Subtracts the gradient for the tensor from [HasArrayData::mut_data].
-    fn update<O: UpdateParams<D, E>>(
+    fn update<U: ParamUpdater<D, E>>(
         &mut self,
-        opt: &mut O,
+        opt: &mut U,
         unused: &mut UnusedTensors,
     ) -> Result<(), D::Err> {
         opt.update_param(self, unused)
@@ -123,7 +119,7 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> CanUpdateWithGradients<D, E> for Tens
 
 /// An error indicating that a parameter was not used in gradient
 /// computation, and was therefore not present in [Gradients]
-/// while a [CanUpdateWithGradients] was trying to update it.
+/// while a [GradientUpdate] was trying to update it.
 #[derive(Debug)]
 pub enum OptimizerUpdateError<D: DeviceStorage> {
     UnusedParams(UnusedTensors),

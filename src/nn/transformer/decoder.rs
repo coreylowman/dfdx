@@ -1,6 +1,6 @@
 use crate::{
     nn::{BuildModule, LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, Residual},
-    optim::{CanUpdateWithGradients, UnusedTensors, UpdateParams},
+    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
 };
@@ -37,11 +37,11 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f
 }
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
-    CanUpdateWithGradients<D, f32> for TransformerDecoder<M, H, F, L, D>
+    GradientUpdate<D, f32> for TransformerDecoder<M, H, F, L, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
     where
-        U: UpdateParams<D, f32>,
+        U: ParamUpdater<D, f32>,
     {
         self.0.update(updater, unused)
     }
@@ -130,12 +130,12 @@ impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildModule
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> CanUpdateWithGradients<D, f32>
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpdate<D, f32>
     for TransformerDecoderBlock<M, H, F, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
-        U: UpdateParams<D, f32>,
+        U: ParamUpdater<D, f32>,
     {
         self.self_attn.update(updater, unused)?;
         self.norm1.update(updater, unused)?;
@@ -152,7 +152,8 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, Tgt, Mem> M
 where
     Tgt: SplitTape + std::ops::Add<Tgt::NoTape, Output = Tgt>,
     Mem: Clone,
-    MultiHeadAttention<M, H, M, M, D>: Module<Tgt, Output = Tgt> + Module<(Tgt, Mem, Mem), Output = Tgt>,
+    MultiHeadAttention<M, H, M, M, D>:
+        Module<Tgt, Output = Tgt> + Module<(Tgt, Mem, Mem), Output = Tgt>,
     LayerNorm1D<M, D>: Module<Tgt, Output = Tgt>,
     FF<M, F, D>: Module<Tgt, Output = Tgt>,
 {

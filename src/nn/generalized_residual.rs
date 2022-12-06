@@ -23,12 +23,12 @@ pub struct GeneralizedResidual<F, R> {
     pub r: R,
 }
 
-impl<D: Device<E>, E: Dtype, F: CanUpdateWithGradients<D, E>, R: CanUpdateWithGradients<D, E>>
-    CanUpdateWithGradients<D, E> for GeneralizedResidual<F, R>
+impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>, R: GradientUpdate<D, E>> GradientUpdate<D, E>
+    for GeneralizedResidual<F, R>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
-        U: UpdateParams<D, E>,
+        U: ParamUpdater<D, E>,
     {
         self.f.update(updater, unused)?;
         self.r.update(updater, unused)?;

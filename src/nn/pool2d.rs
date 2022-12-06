@@ -39,11 +39,11 @@ pub struct MinPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PA
 macro_rules! impl_pools {
     ($PoolTy:tt, $Method:ident) => {
         impl<const K: usize, const S: usize, const P: usize, D: Device<E>, E: Dtype>
-            CanUpdateWithGradients<D, E> for $PoolTy<K, S, P>
+            GradientUpdate<D, E> for $PoolTy<K, S, P>
         {
             fn update<U>(&mut self, _: &mut U, _: &mut UnusedTensors) -> Result<(), D::Err>
             where
-                U: UpdateParams<D, E>,
+                U: ParamUpdater<D, E>,
             {
                 Ok(())
             }

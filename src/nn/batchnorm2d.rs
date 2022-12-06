@@ -177,10 +177,10 @@ impl<const C: usize, D: Device<f32>> BuildModule<D, f32> for BatchNorm2D<C, D> {
     }
 }
 
-impl<const C: usize, D: Device<f32>> CanUpdateWithGradients<D, f32> for BatchNorm2D<C, D> {
+impl<const C: usize, D: Device<f32>> GradientUpdate<D, f32> for BatchNorm2D<C, D> {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
-        U: UpdateParams<D, f32>,
+        U: ParamUpdater<D, f32>,
     {
         self.scale.update(updater, unused)?;
         self.bias.update(updater, unused)?;

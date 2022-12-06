@@ -1,6 +1,6 @@
 use crate::{
     nn::{BuildModule, LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, Residual},
-    optim::{CanUpdateWithGradients, UnusedTensors, UpdateParams},
+    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
 };
@@ -73,12 +73,12 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> CanUpdateWithGradients<D, f32>
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpdate<D, f32>
     for TransformerEncoderBlock<M, H, F, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
-        U: UpdateParams<D, f32>,
+        U: ParamUpdater<D, f32>,
     {
         self.self_attn.update(updater, unused)?;
         self.norm1.update(updater, unused)?;

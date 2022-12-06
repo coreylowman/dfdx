@@ -19,12 +19,10 @@ use super::{BuildModule, Module, ModuleMut};
 #[derive(Debug, Clone, Default)]
 pub struct Residual<F>(pub F);
 
-impl<D: Device<E>, E: Dtype, F: CanUpdateWithGradients<D, E>> CanUpdateWithGradients<D, E>
-    for Residual<F>
-{
+impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>> GradientUpdate<D, E> for Residual<F> {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
     where
-        U: UpdateParams<D, E>,
+        U: ParamUpdater<D, E>,
     {
         self.0.update(updater, unused)
     }

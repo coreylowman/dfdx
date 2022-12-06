@@ -1,4 +1,4 @@
-use crate::{optim::CanUpdateWithGradients, shapes::Dtype, tensor_ops::Device};
+use crate::{optim::GradientUpdate, shapes::Dtype, tensor_ops::Device};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
@@ -85,10 +85,10 @@ impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> BuildModule<D, E> for T {
     }
 }
 
-impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> CanUpdateWithGradients<D, E> for T {
+impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> GradientUpdate<D, E> for T {
     fn update<U>(&mut self, _: &mut U, _: &mut crate::optim::UnusedTensors) -> Result<(), <D>::Err>
     where
-        U: crate::optim::UpdateParams<D, E>,
+        U: crate::optim::ParamUpdater<D, E>,
     {
         Ok(())
     }

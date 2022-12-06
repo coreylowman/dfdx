@@ -4,10 +4,10 @@ use super::module::{BuildModule, Module, ModuleMut};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
-        impl<D: Device<E>, E: Dtype, $($name: CanUpdateWithGradients<D, E>),+> CanUpdateWithGradients<D, E> for ($($name,)+) {
+        impl<D: Device<E>, E: Dtype, $($name: GradientUpdate<D, E>),+> GradientUpdate<D, E> for ($($name,)+) {
             fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
             where
-                U: UpdateParams<D, E>
+                U: ParamUpdater<D, E>
             {
                 $(self.$idx.update(updater, unused)?;)+
                 Ok(())

@@ -43,10 +43,10 @@ impl<const M: usize, D: Device<f32>> BuildModule<D, f32> for LayerNorm1D<M, D> {
     }
 }
 
-impl<const M: usize, D: Device<f32>> CanUpdateWithGradients<D, f32> for LayerNorm1D<M, D> {
+impl<const M: usize, D: Device<f32>> GradientUpdate<D, f32> for LayerNorm1D<M, D> {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
-        U: UpdateParams<D, f32>,
+        U: ParamUpdater<D, f32>,
     {
         self.gamma.update(updater, unused)?;
         self.beta.update(updater, unused)?;

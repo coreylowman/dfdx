@@ -3,7 +3,7 @@
 use dfdx::{
     gradients::Tape,
     nn::{self, Module},
-    optim::{CanUpdateWithGradients, UnusedTensors, UpdateParams},
+    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     shapes::{Rank1, Rank2},
     tensor::{Cpu, HasErr, RandnTensor, Tensor},
 };
@@ -35,8 +35,8 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> nn::BuildModule<Cpu,
     }
 }
 
-// CanUpdateWithGradients lets you update a model's parameters using gradients
-impl<const IN: usize, const INNER: usize, const OUT: usize> CanUpdateWithGradients<Cpu, f32>
+// GradientUpdate lets you update a model's parameters using gradients
+impl<const IN: usize, const INNER: usize, const OUT: usize> GradientUpdate<Cpu, f32>
     for Mlp<IN, INNER, OUT>
 {
     fn update<U>(
@@ -45,7 +45,7 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> CanUpdateWithGradien
         unused: &mut UnusedTensors,
     ) -> Result<(), <Cpu as HasErr>::Err>
     where
-        U: UpdateParams<Cpu, f32>,
+        U: ParamUpdater<Cpu, f32>,
     {
         self.l1.update(updater, unused)?;
         self.l2.update(updater, unused)?;

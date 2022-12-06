@@ -1,8 +1,3 @@
-// use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
-// use crate::prelude::*;
-// use rand::Rng;
-// use rand_distr::Uniform;
-
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::module::{BuildModule, Module, ModuleMut};
@@ -25,7 +20,7 @@ use super::module::{BuildModule, Module, ModuleMut};
 /// let y: Tensor1D<2> = model.forward(x);
 /// assert_eq!(y.data(), &[0.0; 2]);
 /// ```
-/// 
+///
 /// Initializes [Self::weight] and [Self::bias] from a [Uniform] distribution
 /// between [-1 / sqrt(I), 1 / sqrt(I)].
 ///
@@ -39,12 +34,10 @@ pub struct Linear<const I: usize, const O: usize, D: Device<f32> = Cpu> {
     pub bias: Tensor<Rank1<O>, f32, D>,
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>> CanUpdateWithGradients<D, f32>
-    for Linear<I, O, D>
-{
+impl<const I: usize, const O: usize, D: Device<f32>> GradientUpdate<D, f32> for Linear<I, O, D> {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
     where
-        U: UpdateParams<D, f32>,
+        U: ParamUpdater<D, f32>,
     {
         self.weight.update(updater, unused)?;
         self.bias.update(updater, unused)?;

@@ -8,7 +8,7 @@ use crate::{
     tensor::{Cpu, DeviceStorage},
 };
 
-use super::{CanUpdateWithGradients, Optimizer, OptimizerUpdateError, UpdateParams, WeightDecay};
+use super::{GradientUpdate, Optimizer, OptimizerUpdateError, ParamUpdater, WeightDecay};
 
 /// Configuration of hyperparameters for [Adam].
 ///
@@ -121,7 +121,7 @@ pub(super) trait AdamKernel<E: Dtype>: DeviceStorage {
     );
 }
 
-impl<M, D: DeviceStorage + AdamKernel<E>, E: Dtype> UpdateParams<D, E> for Adam<M, D, E> {
+impl<M, D: DeviceStorage + AdamKernel<E>, E: Dtype> ParamUpdater<D, E> for Adam<M, D, E> {
     fn update_param<S: Shape>(
         &mut self,
         p: &mut crate::tensor::Tensor<S, E, D>,
@@ -140,9 +140,9 @@ impl<M, D: DeviceStorage + AdamKernel<E>, E: Dtype> UpdateParams<D, E> for Adam<
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, M: CanUpdateWithGradients<D, E>> Optimizer<M, D> for Adam<M, D, E>
+impl<E: Dtype, D: DeviceStorage, M: GradientUpdate<D, E>> Optimizer<M, D> for Adam<M, D, E>
 where
-    Self: UpdateParams<D, E>,
+    Self: ParamUpdater<D, E>,
 {
     fn update(
         &mut self,

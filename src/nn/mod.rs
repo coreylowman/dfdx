@@ -131,16 +131,13 @@ pub use transformer::*;
 
 #[cfg(test)]
 mod tests {
-    use crate::arrays::Dtype;
-    use crate::gradients::Gradients;
-    use crate::optim::UpdateParams;
-    use crate::tensor::DeviceStorage;
+    use crate::{gradients::Gradients, optim::ParamUpdater, shapes::Dtype, tensor::DeviceStorage};
 
     #[derive(Default)]
     pub struct SimpleUpdater<D: DeviceStorage>(pub Gradients<D>);
 
-    impl<D: DeviceStorage, E: Dtype> UpdateParams<D, E> for SimpleUpdater<D> {
-        fn update_param<S: crate::arrays::Shape>(
+    impl<D: DeviceStorage, E: Dtype> ParamUpdater<D, E> for SimpleUpdater<D> {
+        fn update_param<S: crate::shapes::Shape>(
             &mut self,
             p: &mut crate::tensor::Tensor<S, E, D>,
             unused: &mut crate::optim::UnusedTensors,

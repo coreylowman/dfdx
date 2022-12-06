@@ -153,12 +153,12 @@ pub(super) trait SgdKernel<E: Dtype>: DeviceStorage {
     );
 }
 
-impl<M, D: DeviceStorage + SgdKernel<E>, E: Dtype> UpdateParams<D, E> for Sgd<M, D, E> {
+impl<M, D: DeviceStorage + SgdKernel<E>, E: Dtype> ParamUpdater<D, E> for Sgd<M, D, E> {
     fn update_param<S: Shape>(
         &mut self,
         p: &mut Tensor<S, E, D>,
-        unused: &mut super::optimizer::UnusedTensors,
-    ) -> Result<(), <D>::Err> {
+        unused: &mut UnusedTensors,
+    ) -> Result<(), D::Err> {
         let g = self.gradients.remove(p);
         match g {
             None => unused.add(p),
@@ -171,9 +171,9 @@ impl<M, D: DeviceStorage + SgdKernel<E>, E: Dtype> UpdateParams<D, E> for Sgd<M,
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, M: CanUpdateWithGradients<D, E>> Optimizer<M, D> for Sgd<M, D, E>
+impl<E: Dtype, D: DeviceStorage, M: GradientUpdate<D, E>> Optimizer<M, D> for Sgd<M, D, E>
 where
-    Self: UpdateParams<D, E>,
+    Self: ParamUpdater<D, E>,
 {
     fn update(
         &mut self,

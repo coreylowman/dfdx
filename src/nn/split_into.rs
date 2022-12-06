@@ -1,5 +1,5 @@
 use crate::{
-    optim::{CanUpdateWithGradients, UnusedTensors, UpdateParams},
+    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     shapes::Dtype,
     tensor::{PutTape, SplitTape},
     tensor_ops::Device,
@@ -26,12 +26,10 @@ use super::{BuildModule, Module, ModuleMut};
 #[derive(Debug, Default, Clone)]
 pub struct SplitInto<T>(pub T);
 
-impl<T: CanUpdateWithGradients<D, E>, D: Device<E>, E: Dtype> CanUpdateWithGradients<D, E>
-    for SplitInto<T>
-{
+impl<T: GradientUpdate<D, E>, D: Device<E>, E: Dtype> GradientUpdate<D, E> for SplitInto<T> {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
-        U: UpdateParams<D, E>,
+        U: ParamUpdater<D, E>,
     {
         self.0.update(updater, unused)
     }

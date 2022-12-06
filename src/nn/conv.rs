@@ -43,13 +43,13 @@ pub struct Conv2D<
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
-    CanUpdateWithGradients<D, f32> for Conv2D<I, O, K, S, P, D>
+    GradientUpdate<D, f32> for Conv2D<I, O, K, S, P, D>
 where
     D: Device<f32>,
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
-        U: UpdateParams<D, f32>,
+        U: ParamUpdater<D, f32>,
     {
         self.weight.update(updater, unused)?;
         self.bias.update(updater, unused)?;
