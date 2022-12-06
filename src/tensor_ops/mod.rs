@@ -205,7 +205,7 @@ pub use normalize::normalize;
 pub use permute_to::PermuteTo;
 pub use pow::{powf, powi};
 pub use relu::relu;
-pub use select_to::{SelectAlong, SelectTo};
+pub use select_to::SelectTo;
 pub use sigmoid::sigmoid;
 pub use sin::sin;
 pub use softmax::softmax;

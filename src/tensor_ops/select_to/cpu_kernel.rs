@@ -1,86 +1,65 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::shapes::{Axis, Dim, Dtype, ReduceShape, ReduceStridesTo, ReplaceDim, Shape};
+use crate::shapes::{Dim, Dtype, ReplaceDimTo, Shape};
 use crate::tensor::cpu::{Cpu, LendingIterator, StridedArray};
 
-use super::{ReplaceAxisKernel, SelectAxisKernel, SelectBatchKernel};
+use super::{ReplaceDimKernel, SelectBatchKernel};
 
-// select reduce a single axis
-impl<E: Dtype> SelectAxisKernel<E> for Cpu {
-    fn forward<const I: isize, S: Shape + ReduceShape<Axis<I>>>(
+impl<E: Dtype> ReplaceDimKernel<E> for Cpu {
+    fn forward<const I: isize, Src: Shape, Dst: Shape>(
         &self,
-        inp: &Self::Storage<S, E>,
-        idx: &Self::Storage<(), usize>,
-    ) -> Result<Self::Storage<S::Reduced, E>, Self::Err> {
-        let mut out: StridedArray<S::Reduced, E> = StridedArray::new(inp.shape.reduced())?;
+        inp: &Self::Storage<Src, E>,
+        idx: &Self::Storage<Src::Index, usize>,
+    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+    where
+        Src: ReplaceDimTo<Dst, I>,
+    {
+        assert!(<Src::Index as Shape>::NUM_DIMS >= I as usize);
+        let offset = <Src::Index as Shape>::NUM_DIMS - I as usize;
+        let mut out = StridedArray::new(inp.shape.replace(idx.shape))?;
         let mut out_iter = out.iter_mut_with_index();
-        let idx: usize = idx[[]];
-        while let Some((o, i)) = out_iter.next() {
-            let mut j = 0;
-            let mut reidx: S::Concrete = Default::default();
-            for n in 0..S::NUM_DIMS {
-                if n == I as usize {
-                    reidx[n] = idx;
-                } else {
-                    reidx[n] = i[j];
-                    j += 1;
-                }
+        while let Some((x, i_replaced)) = out_iter.next() {
+            let mut i_idx: <Src::Index as Shape>::Concrete = Default::default();
+            let mut i_inp: Src::Concrete = Default::default();
+            for j in 0..<Src::Index as Shape>::NUM_DIMS {
+                i_idx[j] = i_replaced[j];
             }
-            *o = inp[reidx];
+            for j in 0..Src::NUM_DIMS {
+                i_inp[j] = match j.cmp(&(I as usize)) {
+                    std::cmp::Ordering::Less => i_replaced[j],
+                    std::cmp::Ordering::Equal => idx[i_idx],
+                    std::cmp::Ordering::Greater => i_replaced[j - 1 + offset],
+                };
+            }
+            *x = inp[i_inp];
         }
         Ok(out)
     }
-    fn backward<const I: isize, S: Shape + ReduceShape<Axis<I>>>(
+    fn backward<const I: isize, Src: Shape, Dst: Shape>(
         &self,
-        grad_inp: &mut Self::Storage<S, E>,
-        idx: &Self::Storage<(), usize>,
-        grad_out: &Self::Storage<S::Reduced, E>,
-    ) -> Result<(), Self::Err> {
+        grad_inp: &mut Self::Storage<Src, E>,
+        idx: &Self::Storage<Src::Index, usize>,
+        grad_out: &Self::Storage<Dst, E>,
+    ) -> Result<(), Self::Err>
+    where
+        Src: ReplaceDimTo<Dst, I>,
+    {
+        let offset = <Src::Index as Shape>::NUM_DIMS - I as usize;
         let mut out_iter = grad_out.iter_with_index();
-        let idx: usize = idx[[]];
-        while let Some((o, i)) = out_iter.next() {
-            let mut j = 0;
-            let mut reidx: S::Concrete = Default::default();
-            for n in 0..S::NUM_DIMS {
-                if n == I as usize {
-                    reidx[n] = idx;
-                } else {
-                    reidx[n] = i[j];
-                    j += 1;
-                }
+        while let Some((x, i_replaced)) = out_iter.next() {
+            let mut i_idx: <Src::Index as Shape>::Concrete = Default::default();
+            let mut i_inp: Src::Concrete = Default::default();
+            for j in 0..<Src::Index as Shape>::NUM_DIMS {
+                i_idx[j] = i_replaced[j];
             }
-            grad_inp[reidx] += *o;
-        }
-        Ok(())
-    }
-}
-
-impl<E: Dtype> ReplaceAxisKernel<E> for Cpu {
-    fn forward<const I: isize, D: Dim, S: Shape + ReplaceDim<I, D>>(
-        &self,
-        inp: &Self::Storage<S, E>,
-        idx: &Self::Storage<(D,), usize>,
-    ) -> Result<Self::Storage<S::Replaced, E>, Self::Err> {
-        let mut out = StridedArray::new(inp.shape.replace(idx.shape.0))?;
-        let mut out_iter = out.iter_mut_with_index();
-        while let Some((o, mut i)) = out_iter.next() {
-            let dim_i_idx = i[I as usize];
-            i[I as usize] = idx[[dim_i_idx]];
-            *o = inp[i];
-        }
-        Ok(out)
-    }
-    fn backward<const I: isize, D: Dim, S: Shape + ReplaceDim<I, D>>(
-        &self,
-        grad_inp: &mut Self::Storage<S, E>,
-        idx: &Self::Storage<(D,), usize>,
-        grad_out: &Self::Storage<S::Replaced, E>,
-    ) -> Result<(), Self::Err> {
-        let mut out_iter = grad_out.iter_with_index();
-        while let Some((o, mut i)) = out_iter.next() {
-            let dim_i_idx = i[I as usize];
-            i[I as usize] = idx[[dim_i_idx]];
-            grad_inp[i] += *o;
+            for j in 0..Src::NUM_DIMS {
+                i_inp[j] = match j.cmp(&(I as usize)) {
+                    std::cmp::Ordering::Less => i_replaced[j],
+                    std::cmp::Ordering::Equal => idx[i_idx],
+                    std::cmp::Ordering::Greater => i_replaced[j - 1 + offset],
+                };
+            }
+            grad_inp[i_inp] += *x;
         }
         Ok(())
     }

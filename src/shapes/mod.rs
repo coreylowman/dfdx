@@ -11,7 +11,7 @@ pub(crate) use broadcasts::{
     BroadcastShapeTo, BroadcastStridesTo, ReduceShape, ReduceShapeTo, ReduceStridesTo,
 };
 pub(crate) use permutes::{PermuteShapeTo, PermuteStridesTo};
-pub(crate) use replace_dim::ReplaceDim;
+pub(crate) use replace_dim::ReplaceDimTo;
 
 #[allow(unused_imports)]
 pub(crate) use same_numel::HasSameNumelAs;
