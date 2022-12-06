@@ -1,7 +1,6 @@
 //! Implements Deep Q Learning on random data.
 
 use dfdx::prelude::*;
-use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::time::Instant;
 
 const BATCH: usize = 64;
@@ -20,10 +19,10 @@ fn main() {
 
     let state = dev.randn::<Rank2<BATCH, STATE>>();
     let mut i = 0;
-    let action: [usize; BATCH] = [(); BATCH].map(|_| {
+    let action: Tensor<Rank1<BATCH>, usize, _> = dev.tensor([(); BATCH].map(|_| {
         i += 1;
         i % ACTION
-    });
+    }));
     let reward = dev.randn::<Rank1<BATCH>>();
     let done = dev.zeros::<Rank1<BATCH>>();
     let next_state = dev.randn::<Rank2<BATCH, STATE>>();
@@ -46,13 +45,13 @@ fn main() {
         // curr_q = Q(S)[A]
         // loss = mse(curr_q, targ_q)
         let next_q_values = target_q_net.forward(next_state.clone());
-        let max_next_q = next_q_values.max_to::<Rank1<BATCH>>();
+        let max_next_q = next_q_values.max::<Rank1<BATCH>, _>();
 
         let target_q = (max_next_q * (-done.clone() + 1.0)) * 0.99 + reward.clone();
 
         // forward through model, computing gradients
-        let q_values: Tensor<Rank2<BATCH, ACTION>, _, _, _> = q_net.forward(state.trace());
-        let action_qs: Tensor<Rank1<BATCH>, _, _, _> = q_values.select(&action);
+        let q_values = q_net.forward(state.trace());
+        let action_qs = q_values.select::<Rank1<BATCH>, _>(action.clone());
 
         let loss = mse_loss(action_qs, target_q);
         let loss_v = loss.array();

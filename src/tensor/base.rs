@@ -26,6 +26,15 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
             tape: Default::default(),
         }
     }
+
+    pub fn with_empty_tape(&self) -> Self {
+        Self {
+            id: self.id,
+            storage: self.storage.clone(),
+            device: self.device.clone(),
+            tape: Default::default(),
+        }
+    }
 }
 
 pub trait PutTape<T> {
