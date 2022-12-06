@@ -5,6 +5,7 @@ pub trait ReplaceDimTo<Dst: Shape, const I: isize>: Shape {
     #[inline]
     fn replace(&self, idx: Self::Index) -> Dst {
         if Dst::NUM_DIMS == Self::NUM_DIMS {
+            // replace case
             let src_dims = self.concrete();
             let mut dst_dims: Dst::Concrete = Default::default();
             for i in 0..Dst::NUM_DIMS {
@@ -13,6 +14,7 @@ pub trait ReplaceDimTo<Dst: Shape, const I: isize>: Shape {
             dst_dims[I as usize] = idx.concrete().into_iter().last().unwrap();
             Dst::from_concrete(&dst_dims).unwrap()
         } else {
+            // remove case. this is similar to ReduceShapeTo::reduce
             let src_dims = self.concrete();
             let mut dst_dims: Dst::Concrete = Default::default();
             let mut i_dst = 0;
