@@ -1,6 +1,9 @@
 //! Implements the reinforcement learning algorithm Proximal Policy Optimization (PPO) on random data.
 
-use dfdx::prelude::*;
+use dfdx::{
+    optim::{Momentum, Sgd, SgdConfig},
+    prelude::*,
+};
 use std::time::Instant;
 
 const BATCH: usize = 64;

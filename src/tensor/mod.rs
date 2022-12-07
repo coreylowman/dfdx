@@ -74,17 +74,17 @@ mod base;
 pub(crate) mod cpu;
 pub(crate) mod storage;
 
-pub use cpu::{Cpu, CpuError};
-pub use storage::{
-    AsArray, AsVec, DeviceStorage, HasErr, OneFillStorage, OnesTensor, RandTensor, RandnTensor,
-    TensorFromArray, TensorFromSlice, TensorFromVec, ZeroFillStorage, ZerosTensor,
+pub(crate) use storage::{
+    OneFillStorage, RandFillStorage, RandnFillStorage, TensorFromStorage, ZeroFillStorage,
 };
 
-pub use base::{
-    PutTape, SplitTape, Tensor, Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D,
-    Tensor6D,
-};
-pub use storage::*;
+pub use cpu::{Cpu, CpuError};
+pub use storage::{AsArray, AsVec, TensorFromArray, TensorFromSlice, TensorFromVec};
+pub use storage::{DeviceStorage, HasErr};
+pub use storage::{OnesTensor, RandTensor, RandnTensor, ZerosTensor};
+
+pub use base::{PutTape, SplitTape, Tensor};
+pub use base::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
 
 #[cfg(test)]
 mod tests {

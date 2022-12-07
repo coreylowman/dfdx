@@ -47,17 +47,6 @@ impl std::fmt::Display for CpuError {
     }
 }
 
-impl<S: Shape, E: Clone> StridedArray<S, E> {
-    pub(crate) fn try_clone(&self) -> Result<Self, CpuError> {
-        // TODO fallible version cloning vec
-        Ok(StridedArray {
-            data: self.data.clone(),
-            shape: self.shape,
-            strides: self.strides,
-        })
-    }
-}
-
 impl<S: Shape, E> HasShape for StridedArray<S, E> {
     type WithShape<New: Shape> = StridedArray<New, S>;
     type Shape = S;

@@ -13,7 +13,7 @@ impl UnaryKernel<DropoutKernelOp, f32> for Cpu {
         inp: &Self::Storage<S, f32>,
     ) -> Result<Self::Storage<S, f32>, Self::Err> {
         let mut rng = StdRng::seed_from_u64(op.seed);
-        let mut out: Self::Storage<S, f32> = inp.try_clone()?;
+        let mut out: Self::Storage<S, f32> = inp.clone();
         for x in out.buf_iter_mut() {
             let val: f32 = rng.sample(Standard);
             *x = if val < op.prob {

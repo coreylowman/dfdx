@@ -115,10 +115,9 @@ pub mod unique_id;
 /// Contains all public exports.
 pub mod prelude {
     pub use crate::gradients::{NoneTape, OwnedTape};
-    pub use crate::losses::*;
     pub use crate::nn::*;
-    pub use crate::optim::*;
-    pub use crate::shapes::*;
+    pub use crate::optim::prelude::*;
+    pub use crate::shapes::prelude::*;
     pub use crate::tensor::*;
     pub use crate::tensor_ops::*;
 }

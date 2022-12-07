@@ -1,10 +1,12 @@
 use super::{axes::*, ReduceShapeTo};
+
+/// Represents a data type or element of an array.
 pub trait Dtype:
     'static
     + Copy
     + Clone
-    + std::fmt::Debug
     + Default
+    + std::fmt::Debug
     + PartialOrd
     + Send
     + Sync
@@ -22,11 +24,18 @@ impl Dtype for f32 {}
 impl Dtype for f64 {}
 impl Dtype for usize {}
 
+/// Represents something that has a [Dtype].
+pub trait HasDtype {
+    type Dtype: Dtype;
+}
+
+/// Represents a single dimension of a multi dimensional [Shape]
 pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync + Eq + PartialEq {
     fn size(&self) -> usize;
     fn from_size(size: usize) -> Option<Self>;
 }
 
+/// Represents a [Dim] with size known at runtime
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Dyn(pub usize);
 
@@ -41,6 +50,7 @@ impl Dim for Dyn {
     }
 }
 
+/// Represents a [Dim] with size known at compile time
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Const<const M: usize>;
 impl<const M: usize> Dim for Const<M> {
@@ -58,6 +68,8 @@ impl<const M: usize> Dim for Const<M> {
     }
 }
 
+/// A collection of dimensions ([Dim]) that change how a multi-dimensional
+/// array is interacted with.
 pub trait Shape:
     'static
     + std::fmt::Debug
@@ -71,7 +83,10 @@ pub trait Shape:
     + HasAxes<Self::LastAxis>
     + ReduceShapeTo<(), Self::AllAxes>
 {
+    /// The number of dimensions the shape has
     const NUM_DIMS: usize;
+
+    /// Is `[usize; Self::NUM_DIMS]`, but that is not usable yet.
     type Concrete: std::fmt::Debug
         + Clone
         + Copy
@@ -84,19 +99,35 @@ pub trait Shape:
         + Sync
         + IntoIterator<Item = usize>;
 
+    /// All the [Axes] of this shape
     type AllAxes: Axes;
+
+    /// The last [Axes] of this shape
     type LastAxis: Axes;
 
+    fn concrete(&self) -> Self::Concrete;
+    fn from_concrete(concrete: &Self::Concrete) -> Option<Self>;
+
+    /// The number of elements in this shape; the product of all dimensions.
     #[inline(always)]
     fn num_elements(&self) -> usize {
         self.concrete().into_iter().product()
     }
 
-    fn concrete(&self) -> Self::Concrete;
-    fn strides(&self) -> Self::Concrete;
-    fn from_concrete(concrete: &Self::Concrete) -> Option<Self>;
+    /// The strides of how this shape is layed out in memory.
+    #[inline(always)]
+    fn strides(&self) -> Self::Concrete {
+        let sizes = self.concrete();
+        let mut strides: Self::Concrete = Default::default();
+        strides[Self::NUM_DIMS - 1] = 1;
+        for i in (0..(Self::NUM_DIMS - 1)).rev() {
+            strides[i] = strides[i + 1] * sizes[i + 1];
+        }
+        strides
+    }
 }
 
+/// Represents something that has a [Shape].
 pub trait HasShape {
     type WithShape<New: Shape>: HasShape<Shape = New>;
     type Shape: Shape;
@@ -111,14 +142,6 @@ impl<S: Shape> HasShape for S {
     }
 }
 
-pub trait HasDtype {
-    type Dtype: Dtype;
-}
-
-pub trait TryFromNumElements: Shape {
-    fn try_from_num_elements(num_elements: usize) -> Option<Self>;
-}
-
 pub type Rank0 = ();
 pub type Rank1<const M: usize> = (Const<M>,);
 pub type Rank2<const M: usize, const N: usize> = (Const<M>, Const<N>);
@@ -127,14 +150,28 @@ pub type Rank4<const M: usize, const N: usize, const O: usize, const P: usize> =
     (Const<M>, Const<N>, Const<O>, Const<P>);
 pub type Rank5<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize> =
     (Const<M>, Const<N>, Const<O>, Const<P>, Const<Q>);
-pub type Rank6<
-    const M: usize,
-    const N: usize,
-    const O: usize,
-    const P: usize,
-    const Q: usize,
-    const R: usize,
-> = (Const<M>, Const<N>, Const<O>, Const<P>, Const<Q>, Const<R>);
+#[rustfmt::skip]
+pub type Rank6<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize, const R: usize> =
+    (Const<M>, Const<N>, Const<O>, Const<P>, Const<Q>, Const<R>);
+
+macro_rules! shape {
+    (($($D:tt $Idx:tt),*), rank=$Num:expr, all=$All:tt) => {
+impl<$($D: Dim, )*> Shape for ($($D, )*) {
+    const NUM_DIMS: usize = $Num;
+    type Concrete = [usize; $Num];
+    type AllAxes = $All<$($Idx,)*>;
+    type LastAxis = Axis<{$Num - 1}>;
+    #[inline(always)]
+    fn concrete(&self) -> Self::Concrete {
+        [$(self.$Idx.size(), )*]
+    }
+    #[inline(always)]
+    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
+        Some(($(Dim::from_size(concrete[$Idx])?, )*))
+    }
+}
+    };
+}
 
 impl Shape for () {
     const NUM_DIMS: usize = 0;
@@ -155,218 +192,9 @@ impl Shape for () {
     }
 }
 
-impl TryFromNumElements for () {
-    fn try_from_num_elements(num_elements: usize) -> Option<Self> {
-        if num_elements == 1 {
-            Some(())
-        } else {
-            None
-        }
-    }
-}
-
-impl<D1: Dim> Shape for (D1,) {
-    const NUM_DIMS: usize = 1;
-    type Concrete = [usize; 1];
-    type AllAxes = Axis<0>;
-    type LastAxis = Axis<0>;
-    #[inline(always)]
-    fn concrete(&self) -> Self::Concrete {
-        [self.0.size()]
-    }
-    #[inline(always)]
-    fn strides(&self) -> Self::Concrete {
-        [1]
-    }
-    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
-        let d1 = D1::from_size(concrete[0])?;
-        Some((d1,))
-    }
-}
-
-impl<const M: usize> TryFromNumElements for (Const<M>,) {
-    fn try_from_num_elements(num_elements: usize) -> Option<Self> {
-        if num_elements == M {
-            Some(Default::default())
-        } else {
-            None
-        }
-    }
-}
-
-impl TryFromNumElements for (Dyn,) {
-    fn try_from_num_elements(num_elements: usize) -> Option<Self> {
-        Some((Dyn(num_elements),))
-    }
-}
-
-impl<D1: Dim, D2: Dim> Shape for (D1, D2) {
-    const NUM_DIMS: usize = 2;
-    type Concrete = [usize; 2];
-    type AllAxes = Axes2<0, 1>;
-    type LastAxis = Axis<1>;
-    #[inline(always)]
-    fn concrete(&self) -> Self::Concrete {
-        [self.0.size(), self.1.size()]
-    }
-    #[inline(always)]
-    fn strides(&self) -> Self::Concrete {
-        [self.1.size(), 1]
-    }
-    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
-        let d1 = D1::from_size(concrete[0])?;
-        let d2 = D2::from_size(concrete[1])?;
-        Some((d1, d2))
-    }
-}
-
-impl<const M: usize, const N: usize> TryFromNumElements for (Const<M>, Const<N>) {
-    fn try_from_num_elements(num_elements: usize) -> Option<Self> {
-        let shape: Self = Default::default();
-        if shape.num_elements() == num_elements {
-            Some(shape)
-        } else {
-            None
-        }
-    }
-}
-
-impl<const N: usize> TryFromNumElements for (Dyn, Const<N>) {
-    fn try_from_num_elements(num_elements: usize) -> Option<Self> {
-        if num_elements % N == 0 {
-            Some((Dyn(num_elements / N), Const))
-        } else {
-            None
-        }
-    }
-}
-
-impl<const M: usize> TryFromNumElements for (Const<M>, Dyn) {
-    fn try_from_num_elements(num_elements: usize) -> Option<Self> {
-        if num_elements % M == 0 {
-            Some((Const, Dyn(num_elements / M)))
-        } else {
-            None
-        }
-    }
-}
-
-impl<D1: Dim, D2: Dim, D3: Dim> Shape for (D1, D2, D3) {
-    const NUM_DIMS: usize = 3;
-    type Concrete = [usize; 3];
-    type AllAxes = Axes3<0, 1, 2>;
-    type LastAxis = Axis<2>;
-    #[inline(always)]
-    fn concrete(&self) -> Self::Concrete {
-        [self.0.size(), self.1.size(), self.2.size()]
-    }
-    #[inline(always)]
-    fn strides(&self) -> Self::Concrete {
-        let a = 1;
-        let b = a * self.2.size();
-        let c = b * self.1.size();
-        [c, b, a]
-    }
-    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
-        let d1 = D1::from_size(concrete[0])?;
-        let d2 = D2::from_size(concrete[1])?;
-        let d3 = D3::from_size(concrete[2])?;
-        Some((d1, d2, d3))
-    }
-}
-
-impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim> Shape for (D1, D2, D3, D4) {
-    const NUM_DIMS: usize = 4;
-    type Concrete = [usize; 4];
-    type AllAxes = Axes4<0, 1, 2, 3>;
-    type LastAxis = Axis<3>;
-    #[inline(always)]
-    fn concrete(&self) -> Self::Concrete {
-        [self.0.size(), self.1.size(), self.2.size(), self.3.size()]
-    }
-    #[inline(always)]
-    fn strides(&self) -> Self::Concrete {
-        let a = 1;
-        let b = a * self.3.size();
-        let c = b * self.2.size();
-        let d = c * self.1.size();
-        [d, c, b, a]
-    }
-    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
-        let d1 = D1::from_size(concrete[0])?;
-        let d2 = D2::from_size(concrete[1])?;
-        let d3 = D3::from_size(concrete[2])?;
-        let d4 = D4::from_size(concrete[3])?;
-        Some((d1, d2, d3, d4))
-    }
-}
-impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim> Shape for (D1, D2, D3, D4, D5) {
-    const NUM_DIMS: usize = 5;
-    type Concrete = [usize; 5];
-    type AllAxes = Axes5<0, 1, 2, 3, 4>;
-    type LastAxis = Axis<4>;
-    #[inline(always)]
-    fn concrete(&self) -> Self::Concrete {
-        [
-            self.0.size(),
-            self.1.size(),
-            self.2.size(),
-            self.3.size(),
-            self.4.size(),
-        ]
-    }
-    #[inline(always)]
-    fn strides(&self) -> Self::Concrete {
-        let a = 1;
-        let b = a * self.4.size();
-        let c = b * self.3.size();
-        let d = c * self.2.size();
-        let e = d * self.1.size();
-        [e, d, c, b, a]
-    }
-    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
-        let d1 = D1::from_size(concrete[0])?;
-        let d2 = D2::from_size(concrete[1])?;
-        let d3 = D3::from_size(concrete[2])?;
-        let d4 = D4::from_size(concrete[3])?;
-        let d5 = D5::from_size(concrete[4])?;
-        Some((d1, d2, d3, d4, d5))
-    }
-}
-
-impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, D6: Dim> Shape for (D1, D2, D3, D4, D5, D6) {
-    const NUM_DIMS: usize = 6;
-    type Concrete = [usize; 6];
-    type AllAxes = Axes6<0, 1, 2, 3, 4, 5>;
-    type LastAxis = Axis<5>;
-    #[inline(always)]
-    fn concrete(&self) -> Self::Concrete {
-        [
-            self.0.size(),
-            self.1.size(),
-            self.2.size(),
-            self.3.size(),
-            self.4.size(),
-            self.5.size(),
-        ]
-    }
-    #[inline(always)]
-    fn strides(&self) -> Self::Concrete {
-        let a = 1;
-        let b = a * self.5.size();
-        let c = b * self.4.size();
-        let d = c * self.3.size();
-        let e = d * self.2.size();
-        let f = e * self.1.size();
-        [f, e, d, c, b, a]
-    }
-    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
-        let d1 = D1::from_size(concrete[0])?;
-        let d2 = D2::from_size(concrete[1])?;
-        let d3 = D3::from_size(concrete[2])?;
-        let d4 = D4::from_size(concrete[3])?;
-        let d5 = D5::from_size(concrete[4])?;
-        let d6 = D6::from_size(concrete[5])?;
-        Some((d1, d2, d3, d4, d5, d6))
-    }
-}
+shape!((D1 0), rank=1, all=Axis);
+shape!((D1 0, D2 1), rank=2, all=Axes2);
+shape!((D1 0, D2 1, D3 2), rank=3, all=Axes3);
+shape!((D1 0, D2 1, D3 2, D4 3), rank=4, all=Axes4);
+shape!((D1 0, D2 1, D3 2, D4 3, D5 4), rank=5, all=Axes5);
+shape!((D1 0, D2 1, D3 2, D4 3, D5 4, D6 5), rank=6, all=Axes6);

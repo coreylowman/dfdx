@@ -30,35 +30,36 @@ impl<S: Shape> NdIndex<S> {
 impl<S: Shape> NdIndex<S> {
     #[inline(always)]
     fn get_with_idx(&mut self) -> Option<(usize, S::Concrete)> {
-        match self.next.as_mut() {
-            Some(i) => {
+        match (S::NUM_DIMS, self.next.as_mut()) {
+            (_, None) => None,
+            (0, Some(i)) => {
                 let idx = (*i, self.indices);
-                if S::NUM_DIMS == 0 {
-                    self.next = None;
-                } else {
-                    let mut curr = S::NUM_DIMS - 1;
-                    loop {
-                        self.indices[curr] += 1;
-                        *i += self.strides[curr];
+                self.next = None;
+                Some(idx)
+            }
+            (_, Some(i)) => {
+                let idx = (*i, self.indices);
+                let mut dim = S::NUM_DIMS - 1;
+                loop {
+                    self.indices[dim] += 1;
+                    *i += self.strides[dim];
 
-                        if self.indices[curr] < self.shape[curr] {
-                            break;
-                        }
-
-                        *i -= self.shape[curr] * self.strides[curr];
-                        self.indices[curr] = 0;
-
-                        if curr == 0 {
-                            self.next = None;
-                            break;
-                        }
-
-                        curr -= 1;
+                    if self.indices[dim] < self.shape[dim] {
+                        break;
                     }
+
+                    *i -= self.shape[dim] * self.strides[dim];
+                    self.indices[dim] = 0;
+
+                    if dim == 0 {
+                        self.next = None;
+                        break;
+                    }
+
+                    dim -= 1;
                 }
                 Some(idx)
             }
-            None => None,
         }
     }
 }

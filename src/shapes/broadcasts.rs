@@ -1,8 +1,13 @@
 use super::*;
 
+/// Marker for shapes that can be reduced to [Shape] `S` along [Axes] `Ax`.
 pub trait ReduceShapeTo<S, Ax>: Sized {}
+
+/// Marker for shapes that can be broadcasted to [Shape] `S` along [Axes] `Ax`.
 pub trait BroadcastShapeTo<S, Ax>: Sized {}
 
+/// Marker for shapes that can have their [Axes] `Ax` reduced. See Self::Reduced
+/// for the resulting type.
 pub trait ReduceShape<Ax>: Sized + Shape + HasAxes<Ax> + ReduceShapeTo<Self::Reduced, Ax> {
     type Reduced: Shape + BroadcastShapeTo<Self, Ax>;
 }

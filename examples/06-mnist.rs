@@ -2,7 +2,7 @@
 //! to build a neural network that learns to recognize
 //! the MNIST digits.
 
-use dfdx::{data::SubsetIterator, prelude::*};
+use dfdx::{data::SubsetIterator, losses::cross_entropy_with_logits_loss, optim::Adam, prelude::*};
 use indicatif::ProgressBar;
 use mnist::*;
 use rand::prelude::{SeedableRng, StdRng};

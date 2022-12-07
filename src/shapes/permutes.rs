@@ -32,35 +32,33 @@ where
 }
 
 #[rustfmt::skip]
-macro_rules! dim { (0) => { D1 }; (1) => { D2 }; (2) => { D3 }; (3) => { D4 }; (4) => { D5 }; (5) => { D6 }; }
+macro_rules! d { (0) => { D1 }; (1) => { D2 }; (2) => { D3 }; (3) => { D4 }; (4) => { D5 }; (5) => { D6 }; }
 
 macro_rules! impl_permute {
     ($Ax0:tt, $Ax1:tt) => {
-        impl<D1: Dim, D2: Dim> PermuteShapeTo<(dim!($Ax0), dim!($Ax1)), Axes2<$Ax0, $Ax1>>
+        impl<D1: Dim, D2: Dim> PermuteShapeTo<(d!($Ax0), d!($Ax1)), Axes2<$Ax0, $Ax1>>
             for (D1, D2)
         {
         }
     };
     ($Ax0:tt, $Ax1:tt, $Ax2:tt) => {
         impl<D1: Dim, D2: Dim, D3: Dim>
-            PermuteShapeTo<(dim!($Ax0), dim!($Ax1), dim!($Ax2)), Axes3<$Ax0, $Ax1, $Ax2>>
+            PermuteShapeTo<(d!($Ax0), d!($Ax1), d!($Ax2)), Axes3<$Ax0, $Ax1, $Ax2>>
             for (D1, D2, D3)
         {
         }
     };
     ($Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt) => {
         impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim>
-            PermuteShapeTo<
-                (dim!($Ax0), dim!($Ax1), dim!($Ax2), dim!($Ax3)),
-                Axes4<$Ax0, $Ax1, $Ax2, $Ax3>,
-            > for (D1, D2, D3, D4)
+            PermuteShapeTo<(d!($Ax0), d!($Ax1), d!($Ax2), d!($Ax3)), Axes4<$Ax0, $Ax1, $Ax2, $Ax3>>
+            for (D1, D2, D3, D4)
         {
         }
     };
     ($Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt, $Ax4:tt) => {
         impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim>
             PermuteShapeTo<
-                (dim!($Ax0), dim!($Ax1), dim!($Ax2), dim!($Ax3), dim!($Ax4)),
+                (d!($Ax0), d!($Ax1), d!($Ax2), d!($Ax3), d!($Ax4)),
                 Axes5<$Ax0, $Ax1, $Ax2, $Ax3, $Ax4>,
             > for (D1, D2, D3, D4, D5)
         {
@@ -69,14 +67,7 @@ macro_rules! impl_permute {
     ($Ax0:tt, $Ax1:tt, $Ax2:tt, $Ax3:tt, $Ax4:tt, $Ax5:tt) => {
         impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, D6: Dim>
             PermuteShapeTo<
-                (
-                    dim!($Ax0),
-                    dim!($Ax1),
-                    dim!($Ax2),
-                    dim!($Ax3),
-                    dim!($Ax4),
-                    dim!($Ax5),
-                ),
+                (d!($Ax0), d!($Ax1), d!($Ax2), d!($Ax3), d!($Ax4), d!($Ax5)),
                 Axes6<$Ax0, $Ax1, $Ax2, $Ax3, $Ax4, $Ax5>,
             > for (D1, D2, D3, D4, D5, D6)
         {

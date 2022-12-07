@@ -1,17 +1,14 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::shapes::*;
-use crate::tensor::storage::*;
-use crate::tensor::{DeviceStorage, Tensor, TensorFromStorage};
+use crate::{
+    shapes::*,
+    tensor::{storage::*, Tensor},
+};
 use rand::Rng;
 use rand_distr::{Normal, Standard, StandardNormal, Uniform};
 use std::{sync::Arc, vec::Vec};
 
-use super::{
-    device::{CpuError, StridedArray},
-    iterate::LendingIterator,
-    Cpu,
-};
+use super::{Cpu, CpuError, LendingIterator, StridedArray};
 
 impl<S: Shape, E: Dtype> StridedArray<S, E> {
     #[inline]

@@ -9,6 +9,7 @@ pub trait Axes: 'static + Default + Copy + Clone {
 pub struct Axis<const I: isize>;
 impl<const I: isize> Axes for Axis<I> {
     type Array = [isize; 1];
+    #[inline(always)]
     fn as_array() -> Self::Array {
         [I]
     }
@@ -18,6 +19,7 @@ impl<const I: isize> Axes for Axis<I> {
 pub struct Axes2<const I: isize, const J: isize>;
 impl<const I: isize, const J: isize> Axes for Axes2<I, J> {
     type Array = [isize; 2];
+    #[inline(always)]
     fn as_array() -> Self::Array {
         [I, J]
     }
@@ -27,6 +29,7 @@ impl<const I: isize, const J: isize> Axes for Axes2<I, J> {
 pub struct Axes3<const I: isize, const J: isize, const K: isize>;
 impl<const I: isize, const J: isize, const K: isize> Axes for Axes3<I, J, K> {
     type Array = [isize; 3];
+    #[inline(always)]
     fn as_array() -> Self::Array {
         [I, J, K]
     }
@@ -36,6 +39,7 @@ impl<const I: isize, const J: isize, const K: isize> Axes for Axes3<I, J, K> {
 pub struct Axes4<const I: isize, const J: isize, const K: isize, const L: isize>;
 impl<const I: isize, const J: isize, const K: isize, const L: isize> Axes for Axes4<I, J, K, L> {
     type Array = [isize; 4];
+    #[inline(always)]
     fn as_array() -> Self::Array {
         [I, J, K, L]
     }
@@ -47,30 +51,21 @@ impl<const I: isize, const J: isize, const K: isize, const L: isize, const M: is
     for Axes5<I, J, K, L, M>
 {
     type Array = [isize; 5];
+    #[inline(always)]
     fn as_array() -> Self::Array {
         [I, J, K, L, M]
     }
 }
 
+#[rustfmt::skip]
 #[derive(Clone, Copy, Debug, Default)]
-pub struct Axes6<
-    const I: isize,
-    const J: isize,
-    const K: isize,
-    const L: isize,
-    const M: isize,
-    const N: isize,
->;
-impl<
-        const I: isize,
-        const J: isize,
-        const K: isize,
-        const L: isize,
-        const M: isize,
-        const N: isize,
-    > Axes for Axes6<I, J, K, L, M, N>
+pub struct Axes6<const I: isize, const J: isize, const K: isize, const L: isize, const M: isize, const N: isize>;
+#[rustfmt::skip]
+impl<const I: isize, const J: isize, const K: isize, const L: isize, const M: isize, const N: isize> Axes
+    for Axes6<I, J, K, L, M, N>
 {
     type Array = [isize; 6];
+    #[inline(always)]
     fn as_array() -> Self::Array {
         [I, J, K, L, M, N]
     }
@@ -83,6 +78,7 @@ pub trait HasAxes<Axes> {
 macro_rules! impl_has_axis {
     (($($Vars:tt),*), $Axis:tt) => {
 impl<$($Vars: Dim, )*> HasAxes<Axis<$Axis>> for ($($Vars, )*) {
+    #[inline(always)]
     fn size(&self) -> usize {
         self.$Axis.size()
     }
@@ -91,6 +87,7 @@ impl<$($Vars: Dim, )*> HasAxes<Axis<$Axis>> for ($($Vars, )*) {
 }
 
 impl HasAxes<Axis<0>> for () {
+    #[inline(always)]
     fn size(&self) -> usize {
         1
     }
@@ -122,6 +119,7 @@ impl<const I: isize, const J: isize, S> HasAxes<Axes2<I, J>> for S
 where
     Self: HasAxes<Axis<I>> + HasAxes<Axis<J>>,
 {
+    #[inline(always)]
     fn size(&self) -> usize {
         <Self as HasAxes<Axis<I>>>::size(self) * <Self as HasAxes<Axis<J>>>::size(self)
     }
@@ -131,6 +129,7 @@ impl<const I: isize, const J: isize, const K: isize, S> HasAxes<Axes3<I, J, K>> 
 where
     Self: HasAxes<Axis<I>> + HasAxes<Axis<J>> + HasAxes<Axis<K>>,
 {
+    #[inline(always)]
     fn size(&self) -> usize {
         <Self as HasAxes<Axis<I>>>::size(self)
             * <Self as HasAxes<Axis<J>>>::size(self)
@@ -143,6 +142,7 @@ impl<const I: isize, const J: isize, const K: isize, const L: isize, S> HasAxes<
 where
     Self: HasAxes<Axis<I>> + HasAxes<Axis<J>> + HasAxes<Axis<K>> + HasAxes<Axis<L>>,
 {
+    #[inline(always)]
     fn size(&self) -> usize {
         <Self as HasAxes<Axis<I>>>::size(self)
             * <Self as HasAxes<Axis<J>>>::size(self)
@@ -160,6 +160,7 @@ where
         + HasAxes<Axis<L>>
         + HasAxes<Axis<M>>,
 {
+    #[inline(always)]
     fn size(&self) -> usize {
         <Self as HasAxes<Axis<I>>>::size(self)
             * <Self as HasAxes<Axis<J>>>::size(self)
@@ -186,6 +187,7 @@ where
         + HasAxes<Axis<M>>
         + HasAxes<Axis<N>>,
 {
+    #[inline(always)]
     fn size(&self) -> usize {
         <Self as HasAxes<Axis<I>>>::size(self)
             * <Self as HasAxes<Axis<J>>>::size(self)

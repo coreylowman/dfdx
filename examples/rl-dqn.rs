@@ -1,6 +1,10 @@
 //! Implements Deep Q Learning on random data.
 
-use dfdx::prelude::*;
+use dfdx::{
+    losses::mse_loss,
+    optim::{Momentum, Sgd, SgdConfig},
+    prelude::*,
+};
 use std::time::Instant;
 
 const BATCH: usize = 64;

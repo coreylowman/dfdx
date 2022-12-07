@@ -24,7 +24,7 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
         op: Op,
         inp: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err> {
-        let mut out: Self::Storage<S, E> = inp.try_clone()?;
+        let mut out: Self::Storage<S, E> = inp.clone();
         for x in out.buf_iter_mut() {
             *x = op.f(x);
         }
