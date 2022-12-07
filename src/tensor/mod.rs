@@ -72,6 +72,10 @@
 
 mod base;
 pub(crate) mod cpu;
+
+#[cfg(feature = "numpy")]
+pub(crate) mod numpy;
+
 pub(crate) mod storage;
 
 pub(crate) use storage::{
@@ -79,7 +83,7 @@ pub(crate) use storage::{
 };
 
 pub use cpu::{Cpu, CpuError};
-pub use storage::{AsArray, AsVec, TensorFromArray, TensorFromSlice, TensorFromVec};
+pub use storage::{AsArray, AsVec, TensorFromArray, TensorFromSlice};
 pub use storage::{DeviceStorage, HasErr};
 pub use storage::{OnesTensor, RandTensor, RandnTensor, ZerosTensor};
 
@@ -167,15 +171,7 @@ mod tests {
     fn test_convert_slice() {
         let dev = build_test_device!();
         let data = [1.0, 2.0, 3.0, 4.0];
-        let t: Tensor2D<2, 2, _> = dev.from_slice(data.as_slice()).unwrap();
-        assert_eq!(t.array(), [[1.0, 2.0], [3.0, 4.0]]);
-    }
-
-    #[test]
-    fn test_convert_vec() {
-        let dev = build_test_device!();
-        let data = std::vec![1.0, 2.0, 3.0, 4.0];
-        let t: Tensor2D<2, 2, _> = dev.from_vec(data).unwrap();
+        let t: Tensor2D<2, 2, _> = dev.copy(&data).unwrap();
         assert_eq!(t.array(), [[1.0, 2.0], [3.0, 4.0]]);
     }
 

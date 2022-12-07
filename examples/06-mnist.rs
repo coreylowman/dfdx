@@ -44,8 +44,8 @@ impl MnistDataset {
             lbl_data.extend(choices);
         }
         (
-            dev.from_vec::<Rank2<B, 784>>(img_data).unwrap(),
-            dev.from_vec::<Rank2<B, 10>>(lbl_data).unwrap(),
+            dev.copy::<Rank2<B, 784>>(&img_data).unwrap(),
+            dev.copy::<Rank2<B, 10>>(&lbl_data).unwrap(),
         )
     }
 }
@@ -113,8 +113,8 @@ fn main() {
     }
 
     // save our model to a .npz file
-    // #[cfg(feature = "numpy")]
-    // model
-    //     .save("mnist-classifier.npz")
-    //     .expect("failed to save model");
+    #[cfg(feature = "numpy")]
+    model
+        .save("mnist-classifier.npz")
+        .expect("failed to save model");
 }

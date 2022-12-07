@@ -64,9 +64,13 @@ impl Cpu {
                             for k2 in 0..kernel.size() {
                                 let y = (oh * stride + k1).wrapping_sub(padding);
                                 let x = (ow * stride + k2).wrapping_sub(padding);
-                                #[rustfmt::skip]
                                 if y < height.size() && x < width.size() {
-                                    *out_patches_buf.idx_mut(o).idx_mut(k1).idx_mut(k2).idx_mut(y).idx_mut(x) = g;
+                                    *out_patches_buf
+                                        .idx_mut(o)
+                                        .idx_mut(k1)
+                                        .idx_mut(k2)
+                                        .idx_mut(y)
+                                        .idx_mut(x) = g;
                                 }
                             }
                         }

@@ -5,7 +5,7 @@ use std::vec::Vec;
 
 use crate::{
     shapes::{Const, Dyn, Rank1},
-    tensor::{DeviceStorage, Tensor, TensorFromVec},
+    tensor::{DeviceStorage, Tensor, TensorFromSlice},
 };
 
 // use crate::arrays::HasArrayData;
@@ -25,16 +25,16 @@ use crate::{
 /// let t: Tensor1D<10> = arange();
 /// assert_eq!(t.data(), &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
 /// ```
-pub trait Arange: DeviceStorage + TensorFromVec<f32> {
+pub trait Arange: DeviceStorage + TensorFromSlice<f32> {
     fn arange<const N: usize>(&self) -> Tensor<Rank1<N>, f32, Self> {
         let mut data = Vec::with_capacity(N);
         for i in 0..N {
             data.push(i as f32);
         }
-        self.from_vec(data).unwrap()
+        self.copy(&data).unwrap()
     }
 }
-impl<D: DeviceStorage + TensorFromVec<f32>> Arange for D {}
+impl<D: DeviceStorage + TensorFromSlice<f32>> Arange for D {}
 
 /// One hot encodes an array of class labels into a [Tensor2D] of probability
 /// vectors. This can be used in tandem with [crate::losses::cross_entropy_with_logits_loss()].
@@ -62,7 +62,7 @@ impl<D: DeviceStorage + TensorFromVec<f32>> Arange for D {}
 ///     [0.0, 1.0, 0.0],
 /// ]);
 /// ```
-pub trait OneHotEncode: DeviceStorage + TensorFromVec<f32> {
+pub trait OneHotEncode: DeviceStorage + TensorFromSlice<f32> {
     fn one_hot_encode<const N: usize>(
         &self,
         labels: &[usize],
@@ -73,10 +73,10 @@ pub trait OneHotEncode: DeviceStorage + TensorFromVec<f32> {
                 data.push(if i == l { 1.0 } else { 0.0 });
             }
         }
-        self.from_vec(data).unwrap()
+        self.copy(&data).unwrap()
     }
 }
-impl<D: DeviceStorage + TensorFromVec<f32>> OneHotEncode for D {}
+impl<D: DeviceStorage + TensorFromSlice<f32>> OneHotEncode for D {}
 
 /// A utility class to simplify sampling a fixed number of indices for
 /// data from a dataset.

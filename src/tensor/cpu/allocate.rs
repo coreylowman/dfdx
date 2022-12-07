@@ -186,7 +186,7 @@ impl RandnFillStorage<f32> for Cpu {
 }
 
 impl<E: Dtype> TensorFromSlice<E> for Cpu {
-    fn try_from_slice<S: Shape + TryFromNumElements>(
+    fn try_copy<S: Shape + TryFromNumElements>(
         &self,
         src: &[E],
     ) -> Option<Result<Tensor<S, E, Self>, Self::Err>> {
@@ -196,26 +196,16 @@ impl<E: Dtype> TensorFromSlice<E> for Cpu {
             Ok(self.upgrade(storage))
         })
     }
-}
-
-impl<E: Dtype> TensorFromVec<E> for Cpu {
-    fn try_from_vec<S: Shape + TryFromNumElements>(
-        &self,
-        src: std::vec::Vec<E>,
-    ) -> Option<Result<Tensor<S, E, Self>, Self::Err>> {
-        S::try_from_num_elements(src.len()).map(|shape| {
-            let storage = StridedArray {
-                data: std::sync::Arc::new(src),
-                shape,
-                strides: shape.strides(),
-            };
-            Ok(self.upgrade(storage))
-        })
+    fn copy_from<S: Shape, T>(src: &[E], dst: &mut Tensor<S, E, Self, T>) {
+        std::sync::Arc::make_mut(&mut dst.storage.data).copy_from_slice(src);
+    }
+    fn copy_into<S: Shape, T>(src: &Tensor<S, E, Self, T>, dst: &mut [E]) {
+        dst.copy_from_slice(src.storage.data.as_ref());
     }
 }
 
 impl<E: Dtype> TensorFromArray<E, Rank0, E> for Cpu {
-    fn try_from_array(&self, src: E) -> Result<Tensor<Rank0, E, Self>, Self::Err> {
+    fn try_tensor(&self, src: E) -> Result<Tensor<Rank0, E, Self>, Self::Err> {
         let mut storage: StridedArray<Rank0, E> = self.try_alloc(&Default::default())?;
         storage[[]].clone_from(&src);
         Ok(self.upgrade(storage))
@@ -223,7 +213,7 @@ impl<E: Dtype> TensorFromArray<E, Rank0, E> for Cpu {
 }
 
 impl<E: Dtype, const M: usize> TensorFromArray<[E; M], Rank1<M>, E> for Cpu {
-    fn try_from_array(&self, src: [E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
+    fn try_tensor(&self, src: [E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
         let mut storage: StridedArray<Rank1<M>, E> = self.try_alloc(&Default::default())?;
         let mut iter = storage.iter_mut_with_index();
         while let Some((v, [m])) = iter.next() {
@@ -234,7 +224,7 @@ impl<E: Dtype, const M: usize> TensorFromArray<[E; M], Rank1<M>, E> for Cpu {
 }
 
 impl<E: Dtype, const M: usize> TensorFromArray<&[E; M], Rank1<M>, E> for Cpu {
-    fn try_from_array(&self, src: &[E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
+    fn try_tensor(&self, src: &[E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
         let mut storage: StridedArray<Rank1<M>, E> = self.try_alloc(&Default::default())?;
         let mut iter = storage.iter_mut_with_index();
         while let Some((v, [m])) = iter.next() {
@@ -247,7 +237,7 @@ impl<E: Dtype, const M: usize> TensorFromArray<&[E; M], Rank1<M>, E> for Cpu {
 impl<E: Dtype, const M: usize, const N: usize> TensorFromArray<[[E; N]; M], Rank2<M, N>, E>
     for Cpu
 {
-    fn try_from_array(&self, src: [[E; N]; M]) -> Result<Tensor<Rank2<M, N>, E, Self>, Self::Err> {
+    fn try_tensor(&self, src: [[E; N]; M]) -> Result<Tensor<Rank2<M, N>, E, Self>, Self::Err> {
         let mut storage: StridedArray<Rank2<M, N>, E> = self.try_alloc(&Default::default())?;
         let mut iter = storage.iter_mut_with_index();
         while let Some((v, [m, n])) = iter.next() {
@@ -260,7 +250,7 @@ impl<E: Dtype, const M: usize, const N: usize> TensorFromArray<[[E; N]; M], Rank
 impl<E: Dtype, const M: usize, const N: usize, const O: usize>
     TensorFromArray<[[[E; O]; N]; M], Rank3<M, N, O>, E> for Cpu
 {
-    fn try_from_array(
+    fn try_tensor(
         &self,
         src: [[[E; O]; N]; M],
     ) -> Result<Tensor<Rank3<M, N, O>, E, Self>, Self::Err> {
@@ -276,7 +266,7 @@ impl<E: Dtype, const M: usize, const N: usize, const O: usize>
 impl<E: Dtype, const M: usize, const N: usize, const O: usize, const P: usize>
     TensorFromArray<[[[[E; P]; O]; N]; M], Rank4<M, N, O, P>, E> for Cpu
 {
-    fn try_from_array(
+    fn try_tensor(
         &self,
         src: [[[[E; P]; O]; N]; M],
     ) -> Result<Tensor<Rank4<M, N, O, P>, E, Self>, Self::Err> {
@@ -290,8 +280,7 @@ impl<E: Dtype, const M: usize, const N: usize, const O: usize, const P: usize>
 }
 
 impl<S: Shape, E: Dtype> AsVec for StridedArray<S, E> {
-    type Vec = Vec<E>;
-    fn as_vec(&self) -> Self::Vec {
+    fn as_vec(&self) -> Vec<E> {
         let mut out = Vec::with_capacity(self.shape.num_elements());
         let mut iter = self.iter();
         while let Some(x) = iter.next() {

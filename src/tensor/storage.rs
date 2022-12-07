@@ -155,63 +155,30 @@ pub trait RandnFillStorage<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-pub trait TensorFromVec<E: Dtype>: DeviceStorage {
-    fn from_vec<S: Shape + TryFromNumElements>(
-        &self,
-        src: std::vec::Vec<E>,
-    ) -> Option<Tensor<S, E, Self>> {
-        self.try_from_vec(src).map(|t| t.unwrap())
-    }
-
-    fn try_from_vec<S: Shape + TryFromNumElements>(
-        &self,
-        src: std::vec::Vec<E>,
-    ) -> Option<Result<Tensor<S, E, Self>, Self::Err>>;
-}
-
 pub trait TensorFromSlice<E: Dtype>: DeviceStorage {
-    fn from_slice<S: Shape + TryFromNumElements>(&self, src: &[E]) -> Option<Tensor<S, E, Self>> {
-        self.try_from_slice(src).map(|t| t.unwrap())
+    fn copy<S: Shape + TryFromNumElements>(&self, src: &[E]) -> Option<Tensor<S, E, Self>> {
+        self.try_copy(src).map(|t| t.unwrap())
     }
-    fn try_from_slice<S: Shape + TryFromNumElements>(
+    fn try_copy<S: Shape + TryFromNumElements>(
         &self,
         src: &[E],
     ) -> Option<Result<Tensor<S, E, Self>, Self::Err>>;
+
+    fn copy_from<S: Shape, T>(src: &[E], dst: &mut Tensor<S, E, Self, T>);
+    fn copy_into<S: Shape, T>(src: &Tensor<S, E, Self, T>, dst: &mut [E]);
 }
 
 pub trait TensorFromArray<Src, S: Shape, E: Dtype>: DeviceStorage {
     fn tensor(&self, src: Src) -> Tensor<S, E, Self> {
-        self.try_from_array(src).unwrap()
+        self.try_tensor(src).unwrap()
     }
-    fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.try_from_array(src)
-    }
-    fn from_array(&self, src: Src) -> Tensor<S, E, Self> {
-        self.try_from_array(src).unwrap()
-    }
-    fn try_from_array(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
+    fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
 }
 
 pub trait AsArray {
-    type Array;
+    type Array: std::fmt::Debug;
     fn array(&self) -> Self::Array;
 }
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> AsVec for Tensor<S, E, D, T>
-where
-    D::Storage<S, E>: AsVec,
-{
-    type Vec = <D::Storage<S, E> as AsVec>::Vec;
-    fn as_vec(&self) -> Self::Vec {
-        self.storage.as_vec()
-    }
-}
-
-pub trait AsVec {
-    type Vec;
-    fn as_vec(&self) -> Self::Vec;
-}
-
 impl<S: Shape, E: Dtype, D: DeviceStorage, T> AsArray for Tensor<S, E, D, T>
 where
     D::Storage<S, E>: AsArray,
@@ -219,5 +186,18 @@ where
     type Array = <D::Storage<S, E> as AsArray>::Array;
     fn array(&self) -> Self::Array {
         self.storage.array()
+    }
+}
+
+pub trait AsVec: HasDtype {
+    fn as_vec(&self) -> std::vec::Vec<Self::Dtype>;
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> AsVec for Tensor<S, E, D, T>
+where
+    D::Storage<S, E>: HasDtype<Dtype = E> + AsVec,
+{
+    fn as_vec(&self) -> std::vec::Vec<E> {
+        self.storage.as_vec()
     }
 }

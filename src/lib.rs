@@ -104,8 +104,6 @@ pub mod feature_flags;
 pub mod gradients;
 pub mod losses;
 pub mod nn;
-#[cfg(feature = "numpy")]
-pub mod numpy;
 pub mod optim;
 pub mod shapes;
 pub mod tensor;
@@ -163,6 +161,8 @@ pub fn keep_denormals() {
 #[cfg(test)]
 pub(crate) mod tests {
     const TOLERANCE: f32 = 1e-6;
+
+    pub type TestDevice = crate::tensor::Cpu;
 
     macro_rules! build_test_device {
         () => {{

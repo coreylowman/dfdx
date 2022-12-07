@@ -1,11 +1,12 @@
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     shapes::Dtype,
-    tensor::{Cpu, DeviceStorage},
+    tensor::{Cpu, DeviceStorage, TensorFromSlice},
 };
 
 pub trait Device<E: Dtype>:
     DeviceStorage
+    + TensorFromSlice<E>
 
     // allocation
     + crate::tensor::ZerosTensor<E>

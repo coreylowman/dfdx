@@ -1,57 +1,69 @@
-use super::npz::{npz_fread, npz_fwrite, LoadFromNpz, SaveToNpz};
-use crate::prelude::*;
+use super::{
+    npz::{LoadFromNpz, SaveToNpz},
+    *,
+};
+use crate::{tensor::numpy::NpzError, tensor_ops::Device};
 use std::format;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
 
-// nightly includes
-#[cfg(not(feature = "nightly"))]
-use super::conv::Conv2D;
-#[cfg(not(feature = "nightly"))]
-use super::flatten::*;
-#[cfg(not(feature = "nightly"))]
-use super::pool2d::*;
-#[cfg(not(feature = "nightly"))]
-use super::transformer::*;
+impl<T: ZeroSizedModule> SaveToNpz for T {}
+impl<T: ZeroSizedModule> LoadFromNpz for T {}
 
-impl<const C: usize> SaveToNpz for BatchNorm2D<C> {
+impl<const C: usize, D: Device<f32>> SaveToNpz for BatchNorm2D<C, D> {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut zip::ZipWriter<W>) -> ZipResult<()> {
-        npz_fwrite(w, format!("{p}scale.npy"), self.scale.data())?;
-        npz_fwrite(w, format!("{p}bias.npy"), self.bias.data())?;
-        npz_fwrite(w, format!("{p}running_mean.npy"), self.running_mean.data())?;
-        npz_fwrite(w, format!("{p}running_var.npy"), self.running_var.data())?;
+        self.scale.write_to_npz(w, format!("{p}scale.npy"))?;
+        self.bias.write_to_npz(w, format!("{p}bias.npy"))?;
+        self.running_mean
+            .write_to_npz(w, format!("{p}running_mean.npy"))?;
+        self.running_var
+            .write_to_npz(w, format!("{p}running_var.npy"))?;
         Ok(())
     }
 }
 
-impl<const C: usize> LoadFromNpz for BatchNorm2D<C> {
+impl<const C: usize, D: Device<f32>> LoadFromNpz for BatchNorm2D<C, D> {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        npz_fread(r, format!("{p}scale.npy"), self.scale.mut_data())?;
-        npz_fread(r, format!("{p}bias.npy"), self.bias.mut_data())?;
-        let mean = self.running_mean.mut_data();
-        npz_fread(r, format!("{p}running_mean.npy"), mean)?;
-        let var = self.running_var.mut_data();
-        npz_fread(r, format!("{p}running_var.npy"), var)?;
+        self.scale.read_from_npz(r, format!("{p}scale.npy"))?;
+        self.bias.read_from_npz(r, format!("{p}bias.npy"))?;
+        self.running_mean
+            .read_from_npz(r, format!("{p}running_mean.npy"))?;
+        self.running_var
+            .read_from_npz(r, format!("{p}running_var.npy"))?;
         Ok(())
     }
 }
 
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize> SaveToNpz
-    for Conv2D<I, O, K, S, P>
+#[cfg(feature = "nightly")]
+impl<
+        const I: usize,
+        const O: usize,
+        const K: usize,
+        const S: usize,
+        const P: usize,
+        D: Device<f32>,
+    > SaveToNpz for Conv2D<I, O, K, S, P, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        npz_fwrite(w, format!("{p}weight.npy"), self.weight.data())?;
-        npz_fwrite(w, format!("{p}bias.npy"), self.bias.data())?;
+        self.weight.write_to_npz(w, format!("{p}weight.npy"))?;
+        self.bias.write_to_npz(w, format!("{p}bias.npy"))?;
         Ok(())
     }
 }
 
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize> LoadFromNpz
-    for Conv2D<I, O, K, S, P>
+#[cfg(feature = "nightly")]
+impl<
+        const I: usize,
+        const O: usize,
+        const K: usize,
+        const S: usize,
+        const P: usize,
+        D: Device<f32>,
+    > LoadFromNpz for Conv2D<I, O, K, S, P, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        npz_fread(r, format!("{p}weight.npy"), self.weight.mut_data())?;
-        npz_fread(r, format!("{p}bias.npy"), self.bias.mut_data())?;
+        self.weight.read_from_npz(r, format!("{p}weight.npy"))?;
+        self.bias.read_from_npz(r, format!("{p}bias.npy"))?;
         Ok(())
     }
 }
@@ -70,34 +82,34 @@ impl<F: LoadFromNpz, R: LoadFromNpz> LoadFromNpz for GeneralizedResidual<F, R> {
     }
 }
 
-impl<const M: usize> SaveToNpz for LayerNorm1D<M> {
+impl<const M: usize, D: Device<f32>> SaveToNpz for LayerNorm1D<M, D> {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        npz_fwrite(w, format!("{p}gamma.npy"), self.gamma.data())?;
-        npz_fwrite(w, format!("{p}beta.npy"), self.beta.data())?;
+        self.gamma.write_to_npz(w, format!("{p}gamma.npy"))?;
+        self.beta.write_to_npz(w, format!("{p}beta.npy"))?;
         Ok(())
     }
 }
 
-impl<const M: usize> LoadFromNpz for LayerNorm1D<M> {
+impl<const M: usize, D: Device<f32>> LoadFromNpz for LayerNorm1D<M, D> {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        npz_fread(r, format!("{p}gamma.npy"), self.gamma.mut_data())?;
-        npz_fread(r, format!("{p}beta.npy"), self.beta.mut_data())?;
+        self.gamma.read_from_npz(r, format!("{p}gamma.npy"))?;
+        self.beta.read_from_npz(r, format!("{p}beta.npy"))?;
         Ok(())
     }
 }
 
-impl<const I: usize, const O: usize> SaveToNpz for Linear<I, O> {
+impl<const I: usize, const O: usize, D: Device<f32>> SaveToNpz for Linear<I, O, D> {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
-        npz_fwrite(w, format!("{p}weight.npy"), self.weight.data())?;
-        npz_fwrite(w, format!("{p}bias.npy"), self.bias.data())?;
+        self.weight.write_to_npz(w, format!("{p}weight.npy"))?;
+        self.bias.write_to_npz(w, format!("{p}bias.npy"))?;
         Ok(())
     }
 }
 
-impl<const I: usize, const O: usize> LoadFromNpz for Linear<I, O> {
+impl<const I: usize, const O: usize, D: Device<f32>> LoadFromNpz for Linear<I, O, D> {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
-        npz_fread(r, format!("{p}weight.npy"), self.weight.mut_data())?;
-        npz_fread(r, format!("{p}bias.npy"), self.bias.mut_data())?;
+        self.weight.read_from_npz(r, format!("{p}weight.npy"))?;
+        self.bias.read_from_npz(r, format!("{p}bias.npy"))?;
         Ok(())
     }
 }
@@ -180,16 +192,18 @@ impl<T: LoadFromNpz> LoadFromNpz for AddInto<T> {
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize> SaveToNpz
-    for TransformerDecoder<M, H, F, L>
+#[cfg(feature = "nightly")]
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>> SaveToNpz
+    for TransformerDecoder<M, H, F, L, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.0.write(&format!("{p}.0"), w)
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize> SaveToNpz
-    for TransformerDecoderBlock<M, H, F>
+#[cfg(feature = "nightly")]
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> SaveToNpz
+    for TransformerDecoderBlock<M, H, F, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.self_attn.write(&format!("{p}self_attn."), w)?;
@@ -203,8 +217,9 @@ impl<const M: usize, const H: usize, const F: usize> SaveToNpz
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
-    for TransformerDecoderBlock<M, H, F>
+#[cfg(feature = "nightly")]
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> LoadFromNpz
+    for TransformerDecoderBlock<M, H, F, D>
 {
     fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.self_attn.read(&format!("{pre}self_attn."), r)?;
@@ -218,16 +233,18 @@ impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize> LoadFromNpz
-    for TransformerDecoder<M, H, F, L>
+#[cfg(feature = "nightly")]
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>> LoadFromNpz
+    for TransformerDecoder<M, H, F, L, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.0.read(&format!("{p}.0"), r)
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize> SaveToNpz
-    for TransformerEncoderBlock<M, H, F>
+#[cfg(feature = "nightly")]
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> SaveToNpz
+    for TransformerEncoderBlock<M, H, F, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.self_attn.write(&format!("{p}self_attn."), w)?;
@@ -239,8 +256,9 @@ impl<const M: usize, const H: usize, const F: usize> SaveToNpz
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
-    for TransformerEncoderBlock<M, H, F>
+#[cfg(feature = "nightly")]
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> LoadFromNpz
+    for TransformerEncoderBlock<M, H, F, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.self_attn.read(&format!("{p}self_attn."), r)?;
@@ -252,8 +270,9 @@ impl<const M: usize, const H: usize, const F: usize> LoadFromNpz
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize> SaveToNpz
-    for MultiHeadAttention<M, H, K, V>
+#[cfg(feature = "nightly")]
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>> SaveToNpz
+    for MultiHeadAttention<M, H, K, V, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.w_q.write(&format!("{p}w_q."), w)?;
@@ -264,8 +283,9 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> SaveToNpz
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize> LoadFromNpz
-    for MultiHeadAttention<M, H, K, V>
+#[cfg(feature = "nightly")]
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>> LoadFromNpz
+    for MultiHeadAttention<M, H, K, V, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.w_q.read(&format!("{p}w_q."), r)?;
@@ -276,8 +296,15 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize> LoadFromNpz
     }
 }
 
-impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> SaveToNpz
-    for Transformer<M, H, E, D, F>
+#[cfg(feature = "nightly")]
+impl<
+        const M: usize,
+        const H: usize,
+        const E: usize,
+        const D: usize,
+        const F: usize,
+        Dev: Device<f32>,
+    > SaveToNpz for Transformer<M, H, E, D, F, Dev>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.encoder.write(&format!("{p}encoder."), w)?;
@@ -286,8 +313,15 @@ impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: us
     }
 }
 
-impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> LoadFromNpz
-    for Transformer<M, H, E, D, F>
+#[cfg(feature = "nightly")]
+impl<
+        const M: usize,
+        const H: usize,
+        const E: usize,
+        const D: usize,
+        const F: usize,
+        Dev: Device<f32>,
+    > LoadFromNpz for Transformer<M, H, E, D, F, Dev>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.encoder.read(&format!("{p}encoder."), r)?;
@@ -296,209 +330,193 @@ impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: us
     }
 }
 
-macro_rules! empty_npz_impl {
-    ($TyName:ty) => {
-        impl SaveToNpz for $TyName {}
-        impl LoadFromNpz for $TyName {}
-    };
-}
-
-empty_npz_impl!(ReLU);
-empty_npz_impl!(Sin);
-empty_npz_impl!(Cos);
-empty_npz_impl!(Ln);
-empty_npz_impl!(Exp);
-empty_npz_impl!(Sigmoid);
-empty_npz_impl!(Tanh);
-empty_npz_impl!(Square);
-empty_npz_impl!(Sqrt);
-empty_npz_impl!(Abs);
-empty_npz_impl!(Softmax);
-empty_npz_impl!(Dropout);
-empty_npz_impl!(AvgPoolGlobal);
-empty_npz_impl!(MaxPoolGlobal);
-empty_npz_impl!(MinPoolGlobal);
-empty_npz_impl!(Flatten2D);
-
-impl<const N: usize> SaveToNpz for DropoutOneIn<N> {}
-impl<const N: usize> LoadFromNpz for DropoutOneIn<N> {}
-
-impl<const K: usize, const S: usize, const P: usize> SaveToNpz for AvgPool2D<K, S, P> {}
-impl<const K: usize, const S: usize, const P: usize> LoadFromNpz for AvgPool2D<K, S, P> {}
-impl<const K: usize, const S: usize, const P: usize> SaveToNpz for MaxPool2D<K, S, P> {}
-impl<const K: usize, const S: usize, const P: usize> LoadFromNpz for MaxPool2D<K, S, P> {}
-impl<const K: usize, const S: usize, const P: usize> SaveToNpz for MinPool2D<K, S, P> {}
-impl<const K: usize, const S: usize, const P: usize> LoadFromNpz for MinPool2D<K, S, P> {}
-
 #[cfg(test)]
 mod tests {
+    use crate::{
+        prelude::{AsArray, RandnTensor},
+        shapes::{Dtype, Rank1, Rank3, Shape},
+        tensor::Tensor,
+        tensor_ops::Device,
+        tests::{build_test_device, TestDevice},
+    };
+
     use super::*;
-    use crate::arrays::HasArrayType;
-    use rand::thread_rng;
-    use rand_distr::Standard;
     use tempfile::NamedTempFile;
 
     fn test_save_load<
-        I: Tensor<Dtype = f32> + TensorCreator + Clone,
-        M: Default + ResetParams + Module<I> + SaveToNpz + LoadFromNpz,
-    >()
-    where
-        M::Output: HasArrayData,
-        <M::Output as HasArrayType>::Array: std::fmt::Debug + PartialEq,
+        S: Shape + Default,
+        E: Dtype,
+        D: Device<E>,
+        M: BuildModule<D, E> + Module<Tensor<S, E, D>> + SaveToNpz + LoadFromNpz,
+    >(
+        dev: &D,
+    ) where
+        M::Output: AsArray,
+        <M::Output as AsArray>::Array: PartialEq,
     {
-        let mut rng = thread_rng();
-        let x: I = TensorCreator::randn(&mut rng);
+        let x = dev.randn();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let mut saved: M = Default::default();
-        let mut loaded: M = Default::default();
+        let saved: M = BuildModule::build(dev);
+        let mut loaded: M = BuildModule::build(dev);
 
-        saved.reset_params(&mut rng);
         let y = saved.forward(x.clone());
 
-        assert_ne!(loaded.forward(x.clone()).data(), y.data());
+        assert_ne!(loaded.forward(x.clone()).array(), y.array());
 
         saved.save(file.path()).expect("");
         loaded.load(file.path()).expect("");
 
-        assert_eq!(loaded.forward(x).data(), y.data());
+        assert_eq!(loaded.forward(x).array(), y.array());
     }
 
     #[test]
     fn test_batchnorm2d_save_load() {
-        let mut rng = thread_rng();
-        let x: Tensor3D<3, 4, 5> = TensorCreator::randn(&mut rng);
+        let dev = build_test_device!();
+
+        let x = dev.randn::<Rank3<3, 4, 5>>();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let mut saved: BatchNorm2D<3> = Default::default();
-        let mut loaded: BatchNorm2D<3> = Default::default();
+        let mut saved: BatchNorm2D<3> = BuildModule::build(&dev);
+        let mut loaded: BatchNorm2D<3> = BuildModule::build(&dev);
 
-        saved.running_mean.randomize(&mut rng, &Standard);
-        saved.running_var.randomize(&mut rng, &Standard);
-        saved.scale.randomize(&mut rng, &Standard);
-        saved.bias.randomize(&mut rng, &Standard);
+        saved.running_mean.fill_with_uniform(0.0, 1.0);
+        saved.running_var.fill_with_uniform(0.0, 1.0);
+        saved.scale.fill_with_uniform(0.0, 1.0);
+        saved.bias.fill_with_uniform(0.0, 1.0);
         let y = saved.forward(x.clone());
 
-        assert_ne!(loaded.forward(x.clone()).data(), y.data());
+        assert_ne!(loaded.forward(x.clone()).array(), y.array());
 
         saved.save(file.path()).expect("");
         loaded.load(file.path()).expect("");
 
-        assert_eq!(loaded.forward(x).data(), y.data());
+        assert_eq!(loaded.forward(x).array(), y.array());
     }
 
     #[cfg(feature = "nightly")]
     #[test]
     fn test_save_load_conv() {
-        type T = Conv2D<2, 4, 3>;
-        test_save_load::<Tensor3D<2, 8, 8>, T>();
+        type T = Conv2D<2, 4, 3, 1, 0, TestDevice>;
+        let dev = build_test_device!();
+        test_save_load::<Rank3<2, 8, 8>, f32, TestDevice, T>(&dev);
     }
 
     #[test]
     fn test_save_load_generalized_residual() {
-        type T = GeneralizedResidual<Linear<5, 5>, Linear<5, 5>>;
-        test_save_load::<Tensor1D<5>, T>();
-        test_save_load::<Tensor1D<5>, (T, T)>();
+        let dev = build_test_device!();
+        type T = GeneralizedResidual<Linear<5, 5, TestDevice>, Linear<5, 5, TestDevice>>;
+        test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
+        test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
     }
 
     #[test]
     fn test_save_load_linear() {
-        type T = Linear<5, 5>;
-        test_save_load::<Tensor1D<5>, T>();
-        test_save_load::<Tensor1D<5>, (T, T)>();
+        let dev = build_test_device!();
+        type T = Linear<5, 5, TestDevice>;
+        test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
+        test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
     }
 
     #[test]
     fn test_save_load_tuple() {
-        type Model = (
-            Linear<1, 2>,
+        let dev = build_test_device!();
+        type T = (
+            Linear<1, 2, TestDevice>,
             ReLU,
-            Linear<2, 3>,
-            (Dropout, Linear<3, 3>, Linear<3, 4>),
+            Linear<2, 3, TestDevice>,
+            (Dropout, Linear<3, 3, TestDevice>, Linear<3, 4, TestDevice>),
         );
-        test_save_load::<Tensor1D<1>, Model>();
+        test_save_load::<Rank1<1>, f32, TestDevice, T>(&dev);
     }
 
     #[test]
     fn test_save_load_layer_norm() {
-        type M = LayerNorm1D<3>;
+        type M = LayerNorm1D<3, TestDevice>;
+        let dev = build_test_device!();
+        let x = dev.randn::<Rank1<3>>();
 
-        let mut rng = thread_rng();
-        let x: Tensor1D<3> = TensorCreator::randn(&mut rng);
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let mut saved: M = Default::default();
-        let mut loaded: M = Default::default();
+        let mut saved: M = BuildModule::build(&dev);
+        let mut loaded: M = BuildModule::build(&dev);
 
-        saved.gamma.randomize(&mut rng, &Standard);
-        saved.beta.randomize(&mut rng, &Standard);
+        saved.gamma.fill_with_uniform(0.0, 1.0);
+        saved.beta.fill_with_uniform(0.0, 1.0);
         let y = saved.forward(x.clone());
 
-        assert_ne!(loaded.forward(x.clone()).data(), y.data());
+        assert_ne!(loaded.forward(x.clone()).array(), y.array());
 
         saved.save(file.path()).expect("");
         loaded.load(file.path()).expect("");
 
-        assert_eq!(loaded.forward(x).data(), y.data());
+        assert_eq!(loaded.forward(x).array(), y.array());
     }
 
     #[test]
     fn test_save_load_repeated() {
-        type T = Repeated<Linear<3, 3>, 4>;
-        test_save_load::<Tensor1D<3>, T>();
-        test_save_load::<Tensor1D<3>, (T, T)>();
+        type T = Repeated<Linear<3, 3, TestDevice>, 4>;
+        let dev = build_test_device!();
+        test_save_load::<Rank1<3>, f32, TestDevice, T>(&dev);
+        test_save_load::<Rank1<3>, f32, TestDevice, (T, T)>(&dev);
     }
 
     #[test]
     fn test_save_load_residual() {
-        type T = Residual<Linear<5, 5>>;
-        test_save_load::<Tensor1D<5>, T>();
-        test_save_load::<Tensor1D<5>, (T, T)>();
+        type T = Residual<Linear<5, 5, TestDevice>>;
+        let dev = build_test_device!();
+        test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
+        test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
     }
 
     #[cfg(feature = "nightly")]
     #[test]
     fn test_save_load_mha() {
-        let mut rng = thread_rng();
+        let dev = build_test_device!();
 
-        let mut saved: MultiHeadAttention<12, 4> = Default::default();
-        saved.reset_params(&mut rng);
+        let saved: MultiHeadAttention<12, 4, 12, 12, TestDevice> = BuildModule::build(&dev);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         saved.save(file.path()).expect("");
 
-        let mut loaded: MultiHeadAttention<12, 4> = Default::default();
+        let mut loaded: MultiHeadAttention<12, 4, 12, 12, TestDevice> = BuildModule::build(&dev);
+
+        let q = dev.randn::<Rank3<2, 3, 12>>();
+        let k = dev.randn::<Rank3<2, 4, 12>>();
+        let v = dev.randn::<Rank3<2, 4, 12>>();
+        let y1 = saved.forward((q.clone(), k.clone(), v.clone()));
+
+        let y2 = loaded.forward((q.clone(), k.clone(), v.clone()));
+        assert_ne!(y1.array(), y2.array());
+
         loaded.load(file.path()).expect("");
 
-        let q: Tensor3D<2, 3, 12> = TensorCreator::randn(&mut rng);
-        let k: Tensor3D<2, 4, 12> = TensorCreator::randn(&mut rng);
-        let v: Tensor3D<2, 4, 12> = TensorCreator::randn(&mut rng);
-        let y1: Tensor3D<2, 3, 12, _> = saved.forward((q.clone(), k.clone(), v.clone()));
-        let y2: Tensor3D<2, 3, 12, _> = loaded.forward((q.clone(), k.clone(), v.clone()));
-
-        assert_eq!(y1.data(), y2.data());
+        let y2 = loaded.forward((q.clone(), k.clone(), v.clone()));
+        assert_eq!(y1.array(), y2.array());
     }
 
     #[cfg(feature = "nightly")]
     #[test]
     fn test_save_load_transformer() {
-        let mut rng = thread_rng();
+        let dev = build_test_device!();
 
-        let mut saved: Transformer<16, 4, 3, 4, 8> = Default::default();
-        saved.reset_params(&mut rng);
+        let mut saved: Transformer<16, 4, 3, 4, 8, TestDevice> = BuildModule::build(&dev);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         saved.save(file.path()).expect("");
 
-        let mut loaded: Transformer<16, 4, 3, 4, 8> = Default::default();
+        let mut loaded: Transformer<16, 4, 3, 4, 8, TestDevice> = BuildModule::build(&dev);
+
+        let src = dev.randn::<Rank3<4, 12, 16>>();
+        let tgt = dev.randn::<Rank3<4, 6, 16>>();
+        let y1 = saved.forward_mut((src.clone(), tgt.clone()));
+
+        let y2 = loaded.forward_mut((src.clone(), tgt.clone()));
+        assert_ne!(y1.array(), y2.array());
+
         loaded.load(file.path()).expect("");
 
-        let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
-        let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
-
-        let y1 = saved.forward_mut((src.clone(), tgt.clone()));
         let y2 = loaded.forward_mut((src.clone(), tgt.clone()));
-
-        assert_eq!(y1.data(), y2.data());
+        assert_eq!(y1.array(), y2.array());
     }
 }

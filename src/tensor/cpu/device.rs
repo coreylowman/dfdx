@@ -1,4 +1,4 @@
-use crate::shapes::{Dtype, HasShape, Shape};
+use crate::shapes::{Dtype, HasDtype, HasShape, Shape};
 use crate::tensor::storage::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{
@@ -53,6 +53,10 @@ impl<S: Shape, E> HasShape for StridedArray<S, E> {
     fn shape(&self) -> &S {
         &self.shape
     }
+}
+
+impl<S: Shape, E: Dtype> HasDtype for StridedArray<S, E> {
+    type Dtype = E;
 }
 
 impl HasErr for Cpu {

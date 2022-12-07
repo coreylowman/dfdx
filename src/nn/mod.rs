@@ -120,14 +120,14 @@ pub use pool2d::*;
 #[cfg(feature = "nightly")]
 pub use transformer::*;
 
-// #[cfg(feature = "numpy")]
-// mod npz;
+#[cfg(feature = "numpy")]
+mod npz;
 
-// #[cfg(feature = "numpy")]
-// pub use npz::*;
+#[cfg(feature = "numpy")]
+pub use npz::*;
 
-// #[cfg(feature = "numpy")]
-// mod npz_impls;
+#[cfg(feature = "numpy")]
+mod npz_impls;
 
 #[cfg(test)]
 mod tests {
