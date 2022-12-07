@@ -3,39 +3,48 @@
 use super::StridedArray;
 use crate::shapes::{Const, Dim, Dtype, Shape};
 
-#[derive(Copy, Clone)]
-pub(crate) struct View<S: Shape, E: Dtype> {
-    pub(crate) ptr: *const E,
+#[derive(Clone, Copy)]
+pub(crate) struct View<'a, S: Shape, E: Dtype> {
+    pub(crate) data: &'a [E],
     pub(crate) shape: S,
     pub(crate) strides: S::Concrete,
 }
 
-impl<S: Shape, E: Dtype> View<S, E> {
+impl<'a, S: Shape, E: Dtype> View<'a, S, E> {
     #[inline(always)]
-    pub(crate) fn new(ptr: *const E, shape: S) -> Self {
+    pub(crate) fn new(data: &'a [E], shape: S) -> Self {
         Self {
-            ptr,
+            data,
             shape,
             strides: shape.strides(),
         }
     }
+
+    #[inline(always)]
+    pub(crate) fn ptr(&self) -> *const E {
+        self.data.as_ptr()
+    }
 }
 
-#[derive(Copy, Clone)]
-pub(crate) struct ViewMut<S: Shape, E: Dtype> {
-    pub(crate) ptr: *mut E,
+pub(crate) struct ViewMut<'a, S: Shape, E: Dtype> {
+    pub(crate) data: &'a mut [E],
     pub(crate) shape: S,
     pub(crate) strides: S::Concrete,
 }
 
-impl<S: Shape, E: Dtype> ViewMut<S, E> {
+impl<'a, S: Shape, E: Dtype> ViewMut<'a, S, E> {
     #[inline(always)]
-    pub(crate) fn new(ptr: *mut E, shape: S) -> Self {
+    pub(crate) fn new(data: &'a mut [E], shape: S) -> Self {
         Self {
-            ptr,
+            data,
             shape,
             strides: shape.strides(),
         }
+    }
+
+    #[inline(always)]
+    pub(crate) fn ptr_mut(&mut self) -> *mut E {
+        self.data.as_mut_ptr()
     }
 }
 
@@ -43,7 +52,7 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
     #[inline(always)]
     pub(crate) fn view(&self) -> View<S, E> {
         View {
-            ptr: self.data.as_ptr(),
+            data: self.data.as_slice(),
             shape: self.shape,
             strides: self.strides,
         }
@@ -52,145 +61,167 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
     #[inline(always)]
     pub(crate) fn view_mut(&mut self) -> ViewMut<S, E> {
         ViewMut {
-            ptr: std::sync::Arc::make_mut(&mut self.data).as_mut_ptr(),
+            data: std::sync::Arc::make_mut(&mut self.data).as_mut_slice(),
             shape: self.shape,
             strides: self.strides,
         }
     }
 }
 
-impl<D1: Dim, E: Dtype> View<(D1,), E> {
+impl<'a, D1: Dim, E: Dtype> View<'a, (D1,), E> {
     #[inline(always)]
-    pub(crate) fn br0(self) -> View<(Const<1>, D1), E> {
+    pub(crate) fn br0(self) -> View<'a, (Const<1>, D1), E> {
         View {
-            ptr: self.ptr,
+            data: self.data,
             shape: (Const, self.shape.0),
             strides: [0, self.strides[0]],
         }
     }
     #[inline(always)]
-    pub(crate) fn br1(self) -> View<(D1, Const<1>), E> {
+    pub(crate) fn br1(self) -> View<'a, (D1, Const<1>), E> {
         View {
-            ptr: self.ptr,
+            data: self.data,
             shape: (self.shape.0, Const),
             strides: [self.strides[0], 0],
         }
     }
 }
 
-impl<D1: Dim, E: Dtype> ViewMut<(D1,), E> {
+impl<'a, D1: Dim, E: Dtype> ViewMut<'a, (D1,), E> {
     #[inline(always)]
-    pub(crate) fn br0(self) -> ViewMut<(Const<1>, D1), E> {
+    pub(crate) fn br0(self) -> ViewMut<'a, (Const<1>, D1), E> {
         ViewMut {
-            ptr: self.ptr,
+            data: self.data,
             shape: (Const, self.shape.0),
             strides: [0, self.strides[0]],
         }
     }
     #[inline(always)]
-    pub(crate) fn br1(self) -> ViewMut<(D1, Const<1>), E> {
+    pub(crate) fn br1(self) -> ViewMut<'a, (D1, Const<1>), E> {
         ViewMut {
-            ptr: self.ptr,
+            data: self.data,
             shape: (self.shape.0, Const),
             strides: [self.strides[0], 0],
         }
     }
 }
 
-impl<D1: Dim, D2: Dim, E: Dtype> View<(D1, D2), E> {
+impl<'a, D1: Dim, D2: Dim, E: Dtype> View<'a, (D1, D2), E> {
     #[inline(always)]
-    pub(crate) fn tr(self) -> View<(D2, D1), E> {
+    pub(crate) fn tr(self) -> View<'a, (D2, D1), E> {
         View {
-            ptr: self.ptr,
+            data: self.data,
             shape: (self.shape.1, self.shape.0),
             strides: [self.strides[1], self.strides[0]],
         }
     }
 }
 
-impl<D1: Dim, E: Dtype> View<(D1,), E> {
+impl<'a, D1: Dim, E: Dtype> View<'a, (D1,), E> {
     #[inline(always)]
-    pub(crate) fn idx(&self, index: usize) -> &E {
-        unsafe { &*self.ptr.add(index * self.strides[0]) }
+    pub(crate) fn idx(&'a self, index: usize) -> &'a E {
+        &self.data[index * self.strides[0]]
     }
 }
-impl<D1: Dim, E: Dtype> ViewMut<(D1,), E> {
+impl<'a, D1: Dim, E: Dtype> ViewMut<'a, (D1,), E> {
     #[inline(always)]
-    pub(crate) fn idx(&mut self, index: usize) -> &mut E {
-        unsafe { &mut *self.ptr.add(index * self.strides[0]) }
+    pub(crate) fn idx_mut(&'a mut self, index: usize) -> &'a mut E {
+        &mut self.data[index * self.strides[0]]
     }
 }
 
-impl<D1: Dim, D2: Dim, E: Dtype> View<(D1, D2), E> {
+impl<'a, D1: Dim, D2: Dim, E: Dtype> View<'a, (D1, D2), E> {
     #[inline(always)]
-    pub(crate) fn idx(&self, index: usize) -> View<(D2,), E> {
+    pub(crate) fn idx<'b>(&'b self, index: usize) -> View<'b, (D2,), E>
+    where
+        'a: 'b,
+    {
         View {
-            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
-            shape: (self.shape.1,),
-            strides: [self.strides[1]],
-        }
-    }
-}
-impl<D1: Dim, D2: Dim, E: Dtype> ViewMut<(D1, D2), E> {
-    #[inline(always)]
-    pub(crate) fn idx(&self, index: usize) -> ViewMut<(D2,), E> {
-        ViewMut {
-            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
+            data: self.data.split_at(index * self.strides[0]).1,
             shape: (self.shape.1,),
             strides: [self.strides[1]],
         }
     }
 }
 
-impl<D1: Dim, D2: Dim, D3: Dim, E: Dtype> View<(D1, D2, D3), E> {
+impl<'a, D1: Dim, D2: Dim, E: Dtype> ViewMut<'a, (D1, D2), E> {
     #[inline(always)]
-    pub(crate) fn idx(&self, index: usize) -> View<(D2, D3), E> {
+    pub(crate) fn idx_mut<'b>(&'b mut self, index: usize) -> ViewMut<'b, (D2,), E>
+    where
+        'a: 'b,
+    {
+        ViewMut {
+            data: self.data.split_at_mut(index * self.strides[0]).1,
+            shape: (self.shape.1,),
+            strides: [self.strides[1]],
+        }
+    }
+}
+
+impl<'a, D1: Dim, D2: Dim, D3: Dim, E: Dtype> View<'a, (D1, D2, D3), E> {
+    #[inline(always)]
+    pub(crate) fn idx<'b>(&'b self, index: usize) -> View<'b, (D2, D3), E>
+    where
+        'a: 'b,
+    {
         View {
-            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
+            data: self.data.split_at(index * self.strides[0]).1,
             shape: (self.shape.1, self.shape.2),
             strides: [self.strides[1], self.strides[2]],
         }
     }
 }
 
-impl<D1: Dim, D2: Dim, D3: Dim, E: Dtype> ViewMut<(D1, D2, D3), E> {
+impl<'a, D1: Dim, D2: Dim, D3: Dim, E: Dtype> ViewMut<'a, (D1, D2, D3), E> {
     #[inline(always)]
-    pub(crate) fn idx(&self, index: usize) -> ViewMut<(D2, D3), E> {
+    pub(crate) fn idx_mut<'b>(&'b mut self, index: usize) -> ViewMut<'b, (D2, D3), E>
+    where
+        'a: 'b,
+    {
         ViewMut {
-            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
+            data: self.data.split_at_mut(index * self.strides[0]).1,
             shape: (self.shape.1, self.shape.2),
             strides: [self.strides[1], self.strides[2]],
         }
     }
 }
 
-impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> View<(D1, D2, D3, D4), E> {
+impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> View<'a, (D1, D2, D3, D4), E> {
     #[inline(always)]
-    pub(crate) fn idx(&self, index: usize) -> View<(D2, D3, D4), E> {
+    pub(crate) fn idx<'b>(&'b self, index: usize) -> View<'b, (D2, D3, D4), E>
+    where
+        'a: 'b,
+    {
         View {
-            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
+            data: self.data.split_at(index * self.strides[0]).1,
             shape: (self.shape.1, self.shape.2, self.shape.3),
             strides: [self.strides[1], self.strides[2], self.strides[3]],
         }
     }
 }
 
-impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> ViewMut<(D1, D2, D3, D4), E> {
+impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> ViewMut<'a, (D1, D2, D3, D4), E> {
     #[inline(always)]
-    pub(crate) fn idx(&self, index: usize) -> ViewMut<(D2, D3, D4), E> {
+    pub(crate) fn idx_mut<'b>(&'b mut self, index: usize) -> ViewMut<'b, (D2, D3, D4), E>
+    where
+        'a: 'b,
+    {
         ViewMut {
-            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
+            data: self.data.split_at_mut(index * self.strides[0]).1,
             shape: (self.shape.1, self.shape.2, self.shape.3),
             strides: [self.strides[1], self.strides[2], self.strides[3]],
         }
     }
 }
 
-impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, E: Dtype> View<(D1, D2, D3, D4, D5), E> {
+impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, E: Dtype> View<'a, (D1, D2, D3, D4, D5), E> {
     #[inline(always)]
-    pub(crate) fn idx(&self, index: usize) -> View<(D2, D3, D4, D5), E> {
+    pub(crate) fn idx<'b>(&'b self, index: usize) -> View<'b, (D2, D3, D4, D5), E>
+    where
+        'a: 'b,
+    {
         View {
-            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
+            data: self.data.split_at(index * self.strides[0]).1,
             shape: (self.shape.1, self.shape.2, self.shape.3, self.shape.4),
             strides: [
                 self.strides[1],
@@ -202,11 +233,16 @@ impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, E: Dtype> View<(D1, D2, D3, D4
     }
 }
 
-impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, E: Dtype> ViewMut<(D1, D2, D3, D4, D5), E> {
+impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, E: Dtype>
+    ViewMut<'a, (D1, D2, D3, D4, D5), E>
+{
     #[inline(always)]
-    pub(crate) fn idx(&self, index: usize) -> ViewMut<(D2, D3, D4, D5), E> {
+    pub(crate) fn idx_mut<'b>(&'b mut self, index: usize) -> ViewMut<'b, (D2, D3, D4, D5), E>
+    where
+        'a: 'b,
+    {
         ViewMut {
-            ptr: unsafe { self.ptr.add(index * self.strides[0]) },
+            data: self.data.split_at_mut(index * self.strides[0]).1,
             shape: (self.shape.1, self.shape.2, self.shape.3, self.shape.4),
             strides: [
                 self.strides[1],

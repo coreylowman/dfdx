@@ -43,7 +43,8 @@ pub trait PermuteTo: HasErr + HasShape {
         Self::Shape: PermuteShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage + PermuteKernel<E>, T: Tape<D>> PermuteTo for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype, D: DeviceStorage + PermuteKernel<E>, T: Tape<D>> PermuteTo
+    for Tensor<S, E, D, T>
 {
     fn try_permute<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
@@ -169,29 +170,30 @@ mod tests {
         let _ = dev.randn::<Rank3<3, 5, 7>>().permute::<_, Axes3<2, 0, 1>>();
         let _ = dev.randn::<Rank3<3, 5, 7>>().permute::<_, Axes3<2, 1, 0>>();
 
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<0, 1, 2, 3>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<0, 1, 3, 2>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<0, 2, 1, 3>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<0, 2, 3, 1>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<0, 3, 2, 1>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<0, 3, 1, 2>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<1, 0, 2, 3>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<1, 0, 3, 2>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<1, 2, 0, 3>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<1, 2, 3, 0>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<1, 3, 0, 2>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<1, 3, 2, 0>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<2, 0, 1, 3>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<2, 0, 3, 1>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<2, 1, 0, 3>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<2, 1, 3, 0>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<2, 3, 0, 1>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<2, 3, 1, 0>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<3, 0, 1, 2>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<3, 0, 2, 1>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<3, 1, 0, 2>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<3, 1, 2, 0>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<3, 2, 0, 1>>();
-        let _ = dev.randn::<Rank4<3, 5, 7, 9>>().permute::<_, Axes4<3, 2, 1, 0>>();
+        let x = dev.randn::<Rank4<3, 5, 7, 9>>();
+        x.clone().permute::<_, Axes4<0, 1, 2, 3>>();
+        x.clone().permute::<_, Axes4<0, 1, 3, 2>>();
+        x.clone().permute::<_, Axes4<0, 2, 1, 3>>();
+        x.clone().permute::<_, Axes4<0, 2, 3, 1>>();
+        x.clone().permute::<_, Axes4<0, 3, 2, 1>>();
+        x.clone().permute::<_, Axes4<0, 3, 1, 2>>();
+        x.clone().permute::<_, Axes4<1, 0, 2, 3>>();
+        x.clone().permute::<_, Axes4<1, 0, 3, 2>>();
+        x.clone().permute::<_, Axes4<1, 2, 0, 3>>();
+        x.clone().permute::<_, Axes4<1, 2, 3, 0>>();
+        x.clone().permute::<_, Axes4<1, 3, 0, 2>>();
+        x.clone().permute::<_, Axes4<1, 3, 2, 0>>();
+        x.clone().permute::<_, Axes4<2, 0, 1, 3>>();
+        x.clone().permute::<_, Axes4<2, 0, 3, 1>>();
+        x.clone().permute::<_, Axes4<2, 1, 0, 3>>();
+        x.clone().permute::<_, Axes4<2, 1, 3, 0>>();
+        x.clone().permute::<_, Axes4<2, 3, 0, 1>>();
+        x.clone().permute::<_, Axes4<2, 3, 1, 0>>();
+        x.clone().permute::<_, Axes4<3, 0, 1, 2>>();
+        x.clone().permute::<_, Axes4<3, 0, 2, 1>>();
+        x.clone().permute::<_, Axes4<3, 1, 0, 2>>();
+        x.clone().permute::<_, Axes4<3, 1, 2, 0>>();
+        x.clone().permute::<_, Axes4<3, 2, 0, 1>>();
+        x.permute::<_, Axes4<3, 2, 1, 0>>();
     }
 }

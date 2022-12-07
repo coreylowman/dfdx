@@ -16,19 +16,21 @@ use cblas_sys::{
 pub(crate) fn matmul<M: Dim, K: Dim, N: Dim>(
     a: View<(M, K), f32>,
     b: View<(K, N), f32>,
-    c: ViewMut<(M, N), f32>,
+    c: &mut ViewMut<(M, N), f32>,
 ) {
     let [m, k] = a.shape.concrete();
     let n = b.shape.1.size();
+
+    let ap = a.ptr();
+    let bp = b.ptr();
+    let cp = c.ptr_mut();
 
     #[cfg(not(feature = "cblas"))]
     unsafe {
         let [ar, ac] = a.strides.map(|x| x as isize);
         let [br, bc] = b.strides.map(|x| x as isize);
         let [cr, cc] = c.strides.map(|x| x as isize);
-        matrixmultiply::sgemm(
-            m, k, n, 1.0, a.ptr, ar, ac, b.ptr, br, bc, 1.0, c.ptr, cr, cc,
-        );
+        matrixmultiply::sgemm(m, k, n, 1.0, ap, ar, ac, bp, br, bc, 1.0, cp, cr, cc);
     }
 
     #[cfg(feature = "cblas")]
@@ -47,7 +49,7 @@ pub(crate) fn matmul<M: Dim, K: Dim, N: Dim>(
             (RowMajor, a_tr, b_tr, lda, ldb, n)
         };
         sgemm(
-            layout, a_tr, b_tr, m, n, k, 1.0, a.ptr, lda, b.ptr, ldb, 1.0, c.ptr, ldc,
+            layout, a_tr, b_tr, m, n, k, 1.0, ap, lda, bp, ldb, 1.0, cp, ldc,
         )
     }
 }
@@ -59,7 +61,7 @@ impl VecVecKernel<f32> for Cpu {
         rhs: &Self::Storage<(N,), f32>,
     ) -> Result<Self::Storage<(M, N), f32>, Self::Err> {
         let mut out = StridedArray::new((lhs.shape().0, rhs.shape().0))?;
-        matmul(lhs.view().br1(), rhs.view().br0(), out.view_mut());
+        matmul(lhs.view().br1(), rhs.view().br0(), &mut out.view_mut());
         Ok(out)
     }
     fn backward<M: Dim, N: Dim>(
@@ -71,8 +73,10 @@ impl VecVecKernel<f32> for Cpu {
         grad_out: &Self::Storage<(M, N), f32>,
     ) -> Result<(), Self::Err> {
         let grad_out = grad_out.view();
-        matmul(grad_out, rhs.view().br0().tr(), grad_lhs.view_mut().br1());
-        matmul(lhs.view().br1().tr(), grad_out, grad_rhs.view_mut().br0());
+        let lhs = lhs.view().br1().tr();
+        let rhs = rhs.view().br0().tr();
+        matmul(grad_out, rhs, &mut grad_lhs.view_mut().br1());
+        matmul(lhs, grad_out, &mut grad_rhs.view_mut().br0());
         Ok(())
     }
 }
@@ -84,7 +88,7 @@ impl VecMatKernel<f32> for Cpu {
         rhs: &Self::Storage<(Const<K>, N), f32>,
     ) -> Result<Self::Storage<(N,), f32>, Self::Err> {
         let mut out = StridedArray::new((rhs.shape.1,))?;
-        matmul(lhs.view().br0(), rhs.view(), out.view_mut().br0());
+        matmul(lhs.view().br0(), rhs.view(), &mut out.view_mut().br0());
         Ok(out)
     }
     fn backward<const K: usize, N: Dim>(
@@ -96,8 +100,8 @@ impl VecMatKernel<f32> for Cpu {
         grad_out: &Self::Storage<(N,), f32>,
     ) -> Result<(), Self::Err> {
         let grad_out = grad_out.view().br0();
-        matmul(grad_out, rhs.view().tr(), grad_lhs.view_mut().br0());
-        matmul(lhs.view().br0().tr(), grad_out, grad_rhs.view_mut());
+        matmul(grad_out, rhs.view().tr(), &mut grad_lhs.view_mut().br0());
+        matmul(lhs.view().br0().tr(), grad_out, &mut grad_rhs.view_mut());
         Ok(())
     }
 }
@@ -109,7 +113,7 @@ impl MatMatKernel<f32> for Cpu {
         rhs: &Self::Storage<(Const<K>, N), f32>,
     ) -> Result<Self::Storage<(M, N), f32>, Self::Err> {
         let mut out = StridedArray::new((lhs.shape.0, rhs.shape.1))?;
-        matmul(lhs.view(), rhs.view(), out.view_mut());
+        matmul(lhs.view(), rhs.view(), &mut out.view_mut());
         Ok(out)
     }
     fn backward<M: Dim, const K: usize, N: Dim>(
@@ -121,8 +125,8 @@ impl MatMatKernel<f32> for Cpu {
         grad_out: &Self::Storage<(M, N), f32>,
     ) -> Result<(), Self::Err> {
         let grad_out = grad_out.view();
-        matmul(grad_out, rhs.view().tr(), grad_lhs.view_mut());
-        matmul(lhs.view().tr(), grad_out, grad_rhs.view_mut());
+        matmul(grad_out, rhs.view().tr(), &mut grad_lhs.view_mut());
+        matmul(lhs.view().tr(), grad_out, &mut grad_rhs.view_mut());
         Ok(())
     }
 }
@@ -133,16 +137,15 @@ impl MatMatBrKernel<f32> for Cpu {
         lhs: &Self::Storage<(B, M, Const<K>), f32>,
         rhs: &Self::Storage<(Const<K>, N), f32>,
     ) -> Result<Self::Storage<(B, M, N), f32>, Self::Err> {
-        let &(batch, seq, _) = lhs.shape();
-        let &(_, n) = rhs.shape();
+        let (batch, seq, _) = *lhs.shape();
+        let (_, n) = *rhs.shape();
         let mut out = StridedArray::new((batch, seq, n))?;
         let a = lhs.view();
         let b = rhs.view();
-        let c = out.view_mut();
+        let mut c = out.view_mut();
         for batch in 0..batch.size() {
-            matmul(a.idx(batch), b, c.idx(batch));
+            matmul(a.idx(batch), b, &mut c.idx_mut(batch));
         }
-
         Ok(out)
     }
     fn backward<B: Dim, M: Dim, const K: usize, N: Dim>(
@@ -155,14 +158,14 @@ impl MatMatBrKernel<f32> for Cpu {
     ) -> Result<(), Self::Err> {
         let batch_size = lhs.shape().0.size();
         let lhs = lhs.view();
-        let grad_lhs = grad_lhs.view_mut();
+        let mut grad_lhs = grad_lhs.view_mut();
         let rhs = rhs.view().tr();
-        let grad_rhs = grad_rhs.view_mut();
+        let mut grad_rhs = grad_rhs.view_mut();
         let grad_out = grad_out.view();
         for b in 0..batch_size {
             let go = grad_out.idx(b);
-            matmul(go, rhs, grad_lhs.idx(b));
-            matmul(lhs.idx(b).tr(), go, grad_rhs);
+            matmul(go, rhs, &mut grad_lhs.idx_mut(b));
+            matmul(lhs.idx(b).tr(), go, &mut grad_rhs);
         }
         Ok(())
     }
@@ -174,14 +177,14 @@ impl MatMatBatch3Kernel<f32> for Cpu {
         lhs: &Self::Storage<(Const<B>, M, Const<K>), f32>,
         rhs: &Self::Storage<(Const<B>, Const<K>, N), f32>,
     ) -> Result<Self::Storage<(Const<B>, M, N), f32>, Self::Err> {
-        let (_, m, _) = lhs.shape();
-        let (_, _, n) = rhs.shape();
-        let mut out = StridedArray::new((Const, *m, *n))?;
+        let m: M = lhs.shape().1;
+        let n: N = rhs.shape().2;
+        let mut out = StridedArray::new((Const, m, n))?;
         let a = lhs.view();
         let b = rhs.view();
-        let c = out.view_mut();
+        let mut c = out.view_mut();
         for batch in 0..B {
-            matmul(a.idx(batch), b.idx(batch), c.idx(batch));
+            matmul(a.idx(batch), b.idx(batch), &mut c.idx_mut(batch));
         }
         Ok(out)
     }
@@ -194,14 +197,14 @@ impl MatMatBatch3Kernel<f32> for Cpu {
         grad_out: &Self::Storage<(Const<B>, M, N), f32>,
     ) -> Result<(), Self::Err> {
         let lhs = lhs.view();
-        let grad_lhs = grad_lhs.view_mut();
+        let mut grad_lhs = grad_lhs.view_mut();
         let rhs = rhs.view();
-        let grad_rhs = grad_rhs.view_mut();
+        let mut grad_rhs = grad_rhs.view_mut();
         let grad_out = grad_out.view();
         for b in 0..B {
             let go = grad_out.idx(b);
-            matmul(go, rhs.idx(b).tr(), grad_lhs.idx(b));
-            matmul(lhs.idx(b).tr(), go, grad_rhs.idx(b));
+            matmul(go, rhs.idx(b).tr(), &mut grad_lhs.idx_mut(b));
+            matmul(lhs.idx(b).tr(), go, &mut grad_rhs.idx_mut(b));
         }
         Ok(())
     }
@@ -213,18 +216,18 @@ impl MatMatBatch4Kernel<f32> for Cpu {
         lhs: &Self::Storage<(Const<B>, Const<S>, M, Const<K>), f32>,
         rhs: &Self::Storage<(Const<B>, Const<S>, Const<K>, N), f32>,
     ) -> Result<Self::Storage<(Const<B>, Const<S>, M, N), f32>, Self::Err> {
-        let (_, _, m, _) = lhs.shape();
-        let (_, _, _, n) = rhs.shape();
-        let mut out = StridedArray::new((Const, Const, *m, *n))?;
+        let m: M = lhs.shape.2;
+        let n: N = rhs.shape.3;
+        let mut out = StridedArray::new((Const, Const, m, n))?;
         let lhs = lhs.view();
         let rhs = rhs.view();
-        let out_view = out.view_mut();
+        let mut out_view = out.view_mut();
         for b in 0..B {
             let l_b = lhs.idx(b);
             let r_b = rhs.idx(b);
-            let o_b = out_view.idx(b);
+            let mut o_b = out_view.idx_mut(b);
             for s in 0..S {
-                matmul(l_b.idx(s), r_b.idx(s), o_b.idx(s));
+                matmul(l_b.idx(s), r_b.idx(s), &mut o_b.idx_mut(s));
             }
         }
         Ok(out)
@@ -238,19 +241,19 @@ impl MatMatBatch4Kernel<f32> for Cpu {
         grad_out: &Self::Storage<(Const<B>, Const<S>, M, N), f32>,
     ) -> Result<(), Self::Err> {
         let lhs = lhs.view();
-        let grad_lhs = grad_lhs.view_mut();
+        let mut grad_lhs = grad_lhs.view_mut();
         let rhs = rhs.view();
-        let grad_rhs = grad_rhs.view_mut();
+        let mut grad_rhs = grad_rhs.view_mut();
         let grad_out = grad_out.view();
         for b in 0..B {
             let l_b = lhs.idx(b);
-            let gl_b = grad_lhs.idx(b);
+            let mut gl_b = grad_lhs.idx_mut(b);
             let r_b = rhs.idx(b);
-            let gr_b = grad_rhs.idx(b);
+            let mut gr_b = grad_rhs.idx_mut(b);
             let go_b = grad_out.idx(b);
             for s in 0..S {
-                matmul(go_b.idx(s), r_b.idx(s).tr(), gl_b.idx(s));
-                matmul(l_b.idx(s).tr(), go_b.idx(s), gr_b.idx(s));
+                matmul(go_b.idx(s), r_b.idx(s).tr(), &mut gl_b.idx_mut(s));
+                matmul(l_b.idx(s).tr(), go_b.idx(s), &mut gr_b.idx_mut(s));
             }
         }
         Ok(())
