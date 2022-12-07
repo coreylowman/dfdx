@@ -1,7 +1,6 @@
-use super::HuberErrorKernelOp;
 use crate::tensor_ops::cpu_kernels::BinaryDerivative;
 
-impl BinaryDerivative<f32> for HuberErrorKernelOp<f32> {
+impl BinaryDerivative<f32> for super::HuberErrorKernelOp<f32> {
     #[inline(always)]
     fn f(&self, x: &f32, y: &f32) -> f32 {
         if (x - y).abs() < self.delta {

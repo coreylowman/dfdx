@@ -1,7 +1,6 @@
-use super::SigmoidKernelOp;
 use crate::tensor_ops::cpu_kernels::UnaryDerivative;
 
-impl UnaryDerivative<f32> for SigmoidKernelOp {
+impl UnaryDerivative<f32> for super::SigmoidKernelOp {
     #[inline(always)]
     fn f(&self, x: &f32) -> f32 {
         1.0 / (1.0 + (-x).exp())

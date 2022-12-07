@@ -3,9 +3,7 @@ use crate::{
     tensor::cpu::{Cpu, LendingIterator, StridedArray},
 };
 
-use super::MaxReduceKernel;
-
-impl MaxReduceKernel<f32> for Cpu {
+impl super::MaxReduceKernel<f32> for Cpu {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
@@ -34,7 +32,7 @@ impl MaxReduceKernel<f32> for Cpu {
         Src: ReduceShapeTo<Dst, Ax>,
     {
         let mut inp_iter = inp.iter();
-        let mut grad_inp_itr = grad_inp.iter_mut();
+        let mut grad_inp_iter = grad_inp.iter_mut();
         let mut out_iter = out.iter_as(&inp.shape);
         let mut grad_out_iter = grad_out.iter_as(&inp.shape);
         for _ in 0..inp.shape.num_elements() {
@@ -43,7 +41,7 @@ impl MaxReduceKernel<f32> for Cpu {
             } else {
                 0.0
             };
-            *grad_inp_itr.next().unwrap() += *grad_out_iter.next().unwrap() * d;
+            *grad_inp_iter.next().unwrap() += *grad_out_iter.next().unwrap() * d;
         }
         Ok(())
     }

@@ -1,7 +1,6 @@
-use super::LnKernelOp;
 use crate::tensor_ops::cpu_kernels::UnaryDerivative;
 
-impl UnaryDerivative<f32> for LnKernelOp {
+impl UnaryDerivative<f32> for super::LnKernelOp {
     #[inline(always)]
     fn f(&self, x: &f32) -> f32 {
         x.ln()

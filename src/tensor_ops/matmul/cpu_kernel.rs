@@ -1,11 +1,6 @@
 use crate::shapes::*;
 use crate::tensor::cpu::{Cpu, StridedArray, View, ViewMut};
 
-use super::{
-    MatMatBatch3Kernel, MatMatBatch4Kernel, MatMatBrKernel, MatMatKernel, VecMatKernel,
-    VecVecKernel,
-};
-
 #[cfg(feature = "cblas")]
 use cblas_sys::{
     cblas_sgemm as sgemm, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
@@ -54,7 +49,7 @@ pub(crate) fn matmul<M: Dim, K: Dim, N: Dim>(
     }
 }
 
-impl VecVecKernel<f32> for Cpu {
+impl super::VecVecKernel<f32> for Cpu {
     fn forward<M: Dim, N: Dim>(
         &self,
         lhs: &Self::Storage<(M,), f32>,
@@ -81,7 +76,7 @@ impl VecVecKernel<f32> for Cpu {
     }
 }
 
-impl VecMatKernel<f32> for Cpu {
+impl super::VecMatKernel<f32> for Cpu {
     fn forward<const K: usize, N: Dim>(
         &self,
         lhs: &Self::Storage<(Const<K>,), f32>,
@@ -106,7 +101,7 @@ impl VecMatKernel<f32> for Cpu {
     }
 }
 
-impl MatMatKernel<f32> for Cpu {
+impl super::MatMatKernel<f32> for Cpu {
     fn forward<M: Dim, const K: usize, N: Dim>(
         &self,
         lhs: &Self::Storage<(M, Const<K>), f32>,
@@ -131,7 +126,7 @@ impl MatMatKernel<f32> for Cpu {
     }
 }
 
-impl MatMatBrKernel<f32> for Cpu {
+impl super::MatMatBrKernel<f32> for Cpu {
     fn forward<B: Dim, M: Dim, const K: usize, N: Dim>(
         &self,
         lhs: &Self::Storage<(B, M, Const<K>), f32>,
@@ -171,7 +166,7 @@ impl MatMatBrKernel<f32> for Cpu {
     }
 }
 
-impl MatMatBatch3Kernel<f32> for Cpu {
+impl super::MatMatBatch3Kernel<f32> for Cpu {
     fn forward<const B: usize, M: Dim, const K: usize, N: Dim>(
         &self,
         lhs: &Self::Storage<(Const<B>, M, Const<K>), f32>,
@@ -210,7 +205,7 @@ impl MatMatBatch3Kernel<f32> for Cpu {
     }
 }
 
-impl MatMatBatch4Kernel<f32> for Cpu {
+impl super::MatMatBatch4Kernel<f32> for Cpu {
     fn forward<const B: usize, const S: usize, M: Dim, const K: usize, N: Dim>(
         &self,
         lhs: &Self::Storage<(Const<B>, Const<S>, M, Const<K>), f32>,

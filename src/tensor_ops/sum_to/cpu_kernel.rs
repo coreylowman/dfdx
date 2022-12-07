@@ -3,9 +3,7 @@ use crate::{
     tensor::cpu::{Cpu, LendingIterator, StridedArray},
 };
 
-use super::SumKernel;
-
-impl<E: Dtype> SumKernel<E> for Cpu {
+impl<E: Dtype> super::SumKernel<E> for Cpu {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,

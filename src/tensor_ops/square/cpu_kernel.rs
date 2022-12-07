@@ -1,7 +1,6 @@
-use super::SquareKernelOp;
 use crate::tensor_ops::cpu_kernels::UnaryDerivative;
 
-impl UnaryDerivative<f32> for SquareKernelOp {
+impl UnaryDerivative<f32> for super::SquareKernelOp {
     #[inline(always)]
     fn f(&self, x: &f32) -> f32 {
         x.powi(2)

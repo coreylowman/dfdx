@@ -3,9 +3,7 @@ use crate::{
     tensor::cpu::{Cpu, LendingIterator, StridedArray},
 };
 
-use super::MinReduceKernel;
-
-impl MinReduceKernel<f32> for Cpu {
+impl super::MinReduceKernel<f32> for Cpu {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,

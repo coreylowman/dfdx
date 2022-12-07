@@ -1,7 +1,6 @@
-use super::MaximumKernelOp;
 use crate::tensor_ops::cpu_kernels::BinaryDerivative;
 
-impl BinaryDerivative<f32> for MaximumKernelOp {
+impl BinaryDerivative<f32> for super::MaximumKernelOp {
     #[inline(always)]
     fn f(&self, x: &f32, y: &f32) -> f32 {
         x.max(*y)

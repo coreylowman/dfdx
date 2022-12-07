@@ -103,7 +103,7 @@ impl<
         const K: usize,
         const S: usize,
         const P: usize,
-        D: DeviceStorage + Conv2DKernel<f32, C, O, K, S, P>,
+        D: Conv2DKernel<f32, C, O, K, S, P>,
         T: Tape<D>,
     > TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P> for Tensor<Rank3<C, H, W>, f32, D, T>
 where
@@ -143,7 +143,7 @@ impl<
         const K: usize,
         const S: usize,
         const P: usize,
-        D: DeviceStorage + Conv2DBatchedKernel<f32, C, O, K, S, P>,
+        D: Conv2DBatchedKernel<f32, C, O, K, S, P>,
         T: Tape<D>,
     > TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P>
     for Tensor<(B, Const<C>, Const<H>, Const<W>), f32, D, T>

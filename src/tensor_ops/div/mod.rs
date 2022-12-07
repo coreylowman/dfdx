@@ -1,11 +1,7 @@
 mod cpu_kernel;
 
 use super::{ops::*, Device};
-use crate::{
-    gradients::*,
-    shapes::*,
-    tensor::{HasErr, Tensor},
-};
+use crate::{gradients::*, shapes::*, tensor::*};
 
 #[derive(Debug, Clone, Copy)]
 pub struct ScalarDivKernelOp<E>(pub(crate) E);
@@ -35,6 +31,7 @@ pub fn div<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTap
     lhs / rhs
 }
 
+/// Fallible version of std::ops::Div
 pub trait TryDiv<Rhs = Self>: HasErr {
     fn try_div(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
@@ -44,12 +41,14 @@ impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, RhsTape: Tape<D>>
 where
     LhsTape: Merge<RhsTape>,
 {
+    /// See [div]
     fn try_div(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, Self::Err> {
         try_binary_op(BinaryDivKernelOp, self, rhs)
     }
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryDiv<E> for Tensor<S, E, D, T> {
+    /// See [div]
     fn try_div(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarDivKernelOp(rhs), self)
     }
@@ -61,6 +60,7 @@ where
     Self: TryDiv<Rhs>,
 {
     type Output = Self;
+    /// See [div]
     fn div(self, rhs: Rhs) -> Self::Output {
         self.try_div(rhs).unwrap()
     }

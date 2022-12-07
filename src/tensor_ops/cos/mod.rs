@@ -28,9 +28,11 @@ pub fn cos<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// See [cos]
     pub fn cos(self) -> Self {
         self.try_cos().unwrap()
     }
+    /// See [cos]
     pub fn try_cos(self) -> Result<Self, D::Err> {
         try_unary_op(CosKernelOp, self)
     }

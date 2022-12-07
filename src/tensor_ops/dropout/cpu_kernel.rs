@@ -33,8 +33,8 @@ impl UnaryKernel<DropoutKernelOp, f32> for Cpu {
         grad_out: &Self::Storage<S, f32>,
     ) -> Result<(), Self::Err> {
         let mut rng = StdRng::seed_from_u64(op.seed);
-        assert_eq!(grad_inp.data.len(), grad_out.data.len());
-        assert_eq!(inp.data.len(), grad_out.data.len());
+        debug_assert_eq!(grad_inp.data.len(), grad_out.data.len());
+        debug_assert_eq!(inp.data.len(), grad_out.data.len());
         for (i, data_i) in grad_inp.buf_iter_mut().enumerate() {
             let val: f32 = rng.sample(Standard);
             *data_i += if val < op.prob {

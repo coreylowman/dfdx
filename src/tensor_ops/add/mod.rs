@@ -35,6 +35,7 @@ pub fn add<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTap
     lhs + rhs
 }
 
+/// Fallible version of std::ops::Add
 pub trait TryAdd<Rhs = Self>: HasErr {
     fn try_add(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
@@ -44,12 +45,14 @@ impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, RhsTape: Tape<D>>
 where
     LhsTape: Merge<RhsTape>,
 {
+    /// See [add]
     fn try_add(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, Self::Err> {
         try_binary_op(BinaryAddKernelOp, self, rhs)
     }
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryAdd<E> for Tensor<S, E, D, T> {
+    /// See [add]
     fn try_add(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarAddKernelOp(rhs), self)
     }
@@ -61,6 +64,7 @@ where
     Self: TryAdd<Rhs>,
 {
     type Output = Self;
+    /// See [add]
     fn add(self, rhs: Rhs) -> Self::Output {
         self.try_add(rhs).unwrap()
     }

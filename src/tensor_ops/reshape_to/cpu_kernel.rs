@@ -1,8 +1,7 @@
-use super::ReshapeKernel;
 use crate::shapes::{Dtype, HasSameNumelAs, Shape};
 use crate::tensor::cpu::{Cpu, LendingIterator, StridedArray};
 
-impl<E: Dtype> ReshapeKernel<E> for Cpu {
+impl<E: Dtype> super::ReshapeKernel<E> for Cpu {
     fn forward<Src: Shape, Dst: Shape>(
         &self,
         dst: Dst,

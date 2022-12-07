@@ -28,9 +28,11 @@ pub fn abs<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// See [abs]
     pub fn abs(self) -> Self {
         self.try_abs().unwrap()
     }
+    /// See [abs]
     pub fn try_abs(self) -> Result<Self, D::Err> {
         try_unary_op(AbsKernelOp, self)
     }

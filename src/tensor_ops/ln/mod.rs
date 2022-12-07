@@ -28,9 +28,11 @@ pub fn ln<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// See [ln]
     pub fn ln(self) -> Self {
         self.try_ln().unwrap()
     }
+    /// See [ln]
     pub fn try_ln(self) -> Result<Self, D::Err> {
         try_unary_op(LnKernelOp, self)
     }

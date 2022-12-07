@@ -42,7 +42,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
         S: ReduceShape<Ax>,
     {
         let logsumexp = self.retaped::<T>().try_logsumexp::<S::Reduced, Ax>()?;
-        let logsumexp: Self = logsumexp.try_broadcast_like(self.shape())?;
+        let logsumexp = logsumexp.try_broadcast_like(self.shape())?;
         self.try_sub(logsumexp)
     }
 }

@@ -6,35 +6,30 @@ use crate::{gradients::*, shapes::*, tensor::Tensor};
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BCEKernelOp;
 
-pub fn bce_with_logits<
-    S: Shape,
-    E: Dtype,
-    D: Device<E>,
-    T: Tape<D> + Merge<RhsTape>,
-    RhsTape: Tape<D>,
->(
-    lhs: Tensor<S, E, D, T>,
+pub fn bce_with_logits<S: Shape, E: Dtype, D: Device<E>, LhsTape, RhsTape>(
+    lhs: Tensor<S, E, D, LhsTape>,
     rhs: Tensor<S, E, D, RhsTape>,
-) -> Tensor<S, E, D, T> {
+) -> Tensor<S, E, D, LhsTape>
+where
+    LhsTape: Tape<D> + Merge<RhsTape>,
+    RhsTape: Tape<D>,
+{
     lhs.bce_with_logits(rhs)
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
-    /// Calls [bce_with_logits]
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>> Tensor<S, E, D, LhsTape> {
+    /// See [bce_with_logits]
     pub fn bce_with_logits<RhsTape: Tape<D>>(self, rhs: Tensor<S, E, D, RhsTape>) -> Self
     where
-        T: Merge<RhsTape>,
+        LhsTape: Merge<RhsTape>,
     {
         self.try_bce_with_logits(rhs).unwrap()
     }
-
-    /// Calls [try_bce_with_logits]
-    pub fn try_bce_with_logits<RhsTape: Tape<D>>(
-        self,
-        rhs: Tensor<S, E, D, RhsTape>,
-    ) -> Result<Self, D::Err>
+    /// See [bce_with_logits]
+    pub fn try_bce_with_logits<RhsTape>(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, D::Err>
     where
-        T: Merge<RhsTape>,
+        RhsTape: Tape<D>,
+        LhsTape: Merge<RhsTape>,
     {
         try_binary_op(BCEKernelOp, self, rhs)
     }

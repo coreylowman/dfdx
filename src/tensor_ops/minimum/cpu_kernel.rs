@@ -1,7 +1,6 @@
-use super::MinimumKernelOp;
 use crate::tensor_ops::cpu_kernels::BinaryDerivative;
 
-impl BinaryDerivative<f32> for MinimumKernelOp {
+impl super::BinaryDerivative<f32> for MinimumKernelOp {
     #[inline(always)]
     fn f(&self, x: &f32, y: &f32) -> f32 {
         x.min(*y)

@@ -25,7 +25,7 @@ pub fn normalize<Ax: Axes, S: Shape + ReduceShape<Ax>, D: Device<f32>, T: Tape<D
 }
 
 impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
-    /// See [NormalizeAxes]
+    /// See [normalize]
     pub fn normalize<Ax: Axes>(self, epsilon: f32) -> Self
     where
         S: ReduceShape<Ax>,
@@ -33,18 +33,18 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
         self.try_normalize(epsilon).unwrap()
     }
 
-    /// See [NormalizeAxes]
+    /// See [normalize]
     pub fn try_normalize<Ax: Axes>(self, epsilon: f32) -> Result<Self, <Self as HasErr>::Err>
     where
         S: ReduceShape<Ax>,
     {
         let mean = self
             .retaped::<T>()
-            .try_mean::<S::Reduced, Ax>()?
+            .try_mean()?
             .try_broadcast_like(self.shape())?;
         let std = self
             .retaped::<T>()
-            .try_stddev::<S::Reduced, Ax>(epsilon)?
+            .try_stddev(epsilon)?
             .try_broadcast_like(self.shape())?;
         self.try_sub(mean)?.try_div(std)
     }

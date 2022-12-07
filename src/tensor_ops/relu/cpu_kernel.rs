@@ -1,7 +1,6 @@
-use super::ReLUKernelOp;
 use crate::tensor_ops::cpu_kernels::UnaryDerivative;
 
-impl UnaryDerivative<f32> for ReLUKernelOp {
+impl UnaryDerivative<f32> for super::ReLUKernelOp {
     #[inline(always)]
     fn f(&self, x: &f32) -> f32 {
         x.max(0.0)

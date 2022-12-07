@@ -28,9 +28,11 @@ pub fn exp<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// See [exp]
     pub fn exp(self) -> Self {
         self.try_exp().unwrap()
     }
+    /// See [exp]
     pub fn try_exp(self) -> Result<Self, D::Err> {
         try_unary_op(ExpKernelOp, self)
     }

@@ -18,7 +18,7 @@ pub fn huber_error<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<R>, R: T
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
-    /// Calls [huber_error]
+    /// See [huber_error]
     pub fn huber_error<R: Tape<D>>(self, rhs: Tensor<S, E, D, R>, delta: E) -> Self
     where
         T: Merge<R>,
@@ -26,7 +26,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
         self.try_huber_error(rhs, delta).unwrap()
     }
 
-    /// Calls [huber_error]
+    /// See [huber_error]
     pub fn try_huber_error<R: Tape<D>>(
         self,
         rhs: Tensor<S, E, D, R>,

@@ -1,9 +1,7 @@
 use crate::shapes::*;
 use crate::tensor::cpu::{Cpu, StridedArray};
 
-use super::PermuteKernel;
-
-impl<E: Dtype> PermuteKernel<E> for Cpu {
+impl<E: Dtype> super::PermuteKernel<E> for Cpu {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         inp: &Self::Storage<Src, E>,

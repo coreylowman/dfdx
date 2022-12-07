@@ -1,7 +1,6 @@
-use super::{BinarySubKernelOp, ScalarSubKernelOp};
 use crate::tensor_ops::cpu_kernels::{BinaryDerivative, UnaryDerivative};
 
-impl UnaryDerivative<f32> for ScalarSubKernelOp<f32> {
+impl UnaryDerivative<f32> for super::ScalarSubKernelOp<f32> {
     fn f(&self, x: &f32) -> f32 {
         x - self.0
     }
@@ -10,7 +9,7 @@ impl UnaryDerivative<f32> for ScalarSubKernelOp<f32> {
     }
 }
 
-impl BinaryDerivative<f32> for BinarySubKernelOp {
+impl BinaryDerivative<f32> for super::BinarySubKernelOp {
     #[inline(always)]
     fn f(&self, x: &f32, y: &f32) -> f32 {
         x - y

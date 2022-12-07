@@ -43,9 +43,11 @@ pub fn dropout<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// See [dropout]
     pub fn dropout(self, prob: f32) -> Self {
         self.try_dropout(prob).unwrap()
     }
+    /// See [dropout]
     pub fn try_dropout(self, prob: f32) -> Result<Self, D::Err> {
         let seed = self.device.random_u64();
         try_unary_op(DropoutKernelOp { seed, prob }, self)
