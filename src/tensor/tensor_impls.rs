@@ -1,12 +1,9 @@
-use super::storage::{AllocGradOn, DeviceStorage, HasErr};
+use super::storage_traits::{DeviceStorage, HasErr};
 use super::{OneFillStorage, RandFillStorage, RandnFillStorage, ZeroFillStorage};
-use crate::shapes::{
-    Dtype, HasDtype, HasShape, Rank0, Rank1, Rank2, Rank3, Rank4, Rank5, Rank6, Shape,
-};
-use crate::unique_id::HasUniqueId;
 use crate::{
     gradients::{NoneTape, OwnedTape, Tape},
-    unique_id::UniqueId,
+    shapes::*,
+    unique_id::{HasUniqueId, UniqueId},
 };
 
 #[derive(Debug, Clone)]
@@ -15,6 +12,38 @@ pub struct Tensor<S: Shape, E: Dtype, D: DeviceStorage, T = NoneTape> {
     pub(crate) storage: D::Storage<S, E>,
     pub(crate) device: D,
     pub(crate) tape: T,
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
+    type WithShape<New: Shape> = Tensor<New, E, D, T>;
+    type Shape = S;
+    fn shape(&self) -> &Self::Shape {
+        self.storage.shape()
+    }
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasDtype for Tensor<S, E, D, T> {
+    type Dtype = E;
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasUniqueId for Tensor<S, E, D, T> {
+    fn id(&self) -> &UniqueId {
+        &self.id
+    }
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
+    type Err = D::Err;
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
+    pub fn trace(&self) -> Tensor<S, E, D, OwnedTape<D>> {
+        self.clone().traced()
+    }
+
+    pub fn traced(self) -> Tensor<S, E, D, OwnedTape<D>> {
+        self.put_tape(Default::default())
+    }
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
@@ -116,44 +145,6 @@ impl<S: Shape, E: Dtype, D: DeviceStorage + RandnFillStorage<E>, T> Tensor<S, E,
     pub fn try_fill_with_normal(&mut self, mean: E, stddev: E) -> Result<(), D::Err> {
         self.device
             .try_fill_with_normal(&mut self.storage, mean, stddev)
-    }
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
-    type WithShape<New: Shape> = Tensor<New, E, D, T>;
-    type Shape = S;
-    fn shape(&self) -> &Self::Shape {
-        self.storage.shape()
-    }
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasDtype for Tensor<S, E, D, T> {
-    type Dtype = E;
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> AllocGradOn<D> for Tensor<S, E, D, T> {
-    fn try_alloc_grad(&self) -> Result<D::Storage<Self::Shape, Self::Dtype>, D::Err> {
-        self.device.try_alloc_grad(&self.storage)
-    }
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasUniqueId for Tensor<S, E, D, T> {
-    fn id(&self) -> &UniqueId {
-        &self.id
-    }
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
-    type Err = D::Err;
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
-    pub fn trace(&self) -> Tensor<S, E, D, OwnedTape<D>> {
-        self.clone().traced()
-    }
-
-    pub fn traced(self) -> Tensor<S, E, D, OwnedTape<D>> {
-        self.put_tape(Default::default())
     }
 }
 

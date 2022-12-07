@@ -64,9 +64,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        tensor::storage::AsArray, tensor::TensorFromArray, tensor_ops::*, tests::build_test_device,
-    };
+    use crate::{tensor::*, tensor_ops::*, tests::build_test_device};
 
     #[test]
     fn test_powf_positive() {

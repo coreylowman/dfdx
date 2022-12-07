@@ -2,7 +2,7 @@
 
 use crate::{
     shapes::*,
-    tensor::{storage::*, Tensor},
+    tensor::{storage_traits::*, Tensor},
 };
 use rand::Rng;
 use rand_distr::{Normal, Standard, StandardNormal, Uniform};
@@ -185,18 +185,8 @@ impl RandnFillStorage<f32> for Cpu {
     }
 }
 
-impl<E: Dtype> TensorFromSlice<E> for Cpu {
-    fn try_copy<S: Shape + TryFromNumElements>(
-        &self,
-        src: &[E],
-    ) -> Option<Result<Tensor<S, E, Self>, Self::Err>> {
-        S::try_from_num_elements(src.len()).map(|shape| {
-            let mut storage = StridedArray::try_new_with(shape, Default::default())?;
-            std::sync::Arc::make_mut(&mut storage.data).copy_from_slice(src);
-            Ok(self.upgrade(storage))
-        })
-    }
-    fn copy_from<S: Shape, T>(src: &[E], dst: &mut Tensor<S, E, Self, T>) {
+impl<E: Dtype> CopySlice<E> for Cpu {
+    fn copy_from<S: Shape, T>(dst: &mut Tensor<S, E, Self, T>, src: &[E]) {
         std::sync::Arc::make_mut(&mut dst.storage.data).copy_from_slice(src);
     }
     fn copy_into<S: Shape, T>(src: &Tensor<S, E, Self, T>, dst: &mut [E]) {
@@ -206,7 +196,7 @@ impl<E: Dtype> TensorFromSlice<E> for Cpu {
 
 impl<E: Dtype> TensorFromArray<E, Rank0, E> for Cpu {
     fn try_tensor(&self, src: E) -> Result<Tensor<Rank0, E, Self>, Self::Err> {
-        let mut storage: StridedArray<Rank0, E> = self.try_alloc(&Default::default())?;
+        let mut storage: StridedArray<_, E> = StridedArray::new(Default::default())?;
         storage[[]].clone_from(&src);
         Ok(self.upgrade(storage))
     }
@@ -214,7 +204,7 @@ impl<E: Dtype> TensorFromArray<E, Rank0, E> for Cpu {
 
 impl<E: Dtype, const M: usize> TensorFromArray<[E; M], Rank1<M>, E> for Cpu {
     fn try_tensor(&self, src: [E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
-        let mut storage: StridedArray<Rank1<M>, E> = self.try_alloc(&Default::default())?;
+        let mut storage: StridedArray<Rank1<M>, E> = StridedArray::new(Default::default())?;
         let mut iter = storage.iter_mut_with_index();
         while let Some((v, [m])) = iter.next() {
             v.clone_from(&src[m]);
@@ -225,7 +215,7 @@ impl<E: Dtype, const M: usize> TensorFromArray<[E; M], Rank1<M>, E> for Cpu {
 
 impl<E: Dtype, const M: usize> TensorFromArray<&[E; M], Rank1<M>, E> for Cpu {
     fn try_tensor(&self, src: &[E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
-        let mut storage: StridedArray<Rank1<M>, E> = self.try_alloc(&Default::default())?;
+        let mut storage: StridedArray<Rank1<M>, E> = StridedArray::new(Default::default())?;
         let mut iter = storage.iter_mut_with_index();
         while let Some((v, [m])) = iter.next() {
             v.clone_from(&src[m]);
@@ -238,7 +228,7 @@ impl<E: Dtype, const M: usize, const N: usize> TensorFromArray<[[E; N]; M], Rank
     for Cpu
 {
     fn try_tensor(&self, src: [[E; N]; M]) -> Result<Tensor<Rank2<M, N>, E, Self>, Self::Err> {
-        let mut storage: StridedArray<Rank2<M, N>, E> = self.try_alloc(&Default::default())?;
+        let mut storage: StridedArray<Rank2<M, N>, E> = StridedArray::new(Default::default())?;
         let mut iter = storage.iter_mut_with_index();
         while let Some((v, [m, n])) = iter.next() {
             v.clone_from(&src[m][n]);
@@ -254,7 +244,7 @@ impl<E: Dtype, const M: usize, const N: usize, const O: usize>
         &self,
         src: [[[E; O]; N]; M],
     ) -> Result<Tensor<Rank3<M, N, O>, E, Self>, Self::Err> {
-        let mut storage: StridedArray<Rank3<M, N, O>, E> = self.try_alloc(&Default::default())?;
+        let mut storage: StridedArray<Rank3<M, N, O>, E> = StridedArray::new(Default::default())?;
         let mut iter = storage.iter_mut_with_index();
         while let Some((v, [m, n, o])) = iter.next() {
             v.clone_from(&src[m][n][o]);
@@ -270,7 +260,8 @@ impl<E: Dtype, const M: usize, const N: usize, const O: usize, const P: usize>
         &self,
         src: [[[[E; P]; O]; N]; M],
     ) -> Result<Tensor<Rank4<M, N, O, P>, E, Self>, Self::Err> {
-        let mut storage: StridedArray<Rank4<M, N, O, P>, E> = self.try_alloc(&Default::default())?;
+        let mut storage: StridedArray<Rank4<M, N, O, P>, E> =
+            StridedArray::new(Default::default())?;
         let mut iter = storage.iter_mut_with_index();
         while let Some((v, [m, n, o, p])) = iter.next() {
             v.clone_from(&src[m][n][o][p]);

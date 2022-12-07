@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::{boxed::Box, vec::Vec};
 
 use crate::shapes::{HasDtype, HasShape};
-use crate::tensor::storage::{AllocGradOn, DeviceStorage};
+use crate::tensor::storage_traits::{AllocGrad, DeviceStorage};
 use crate::unique_id::{HasUniqueId, UniqueId};
 
 /// A generic container for keeping variable sized arrays associated with a [UniqueId].
@@ -35,7 +35,7 @@ impl<D: DeviceStorage> Gradients<D> {
         t: &T,
     ) -> Result<&mut D::Storage<T::Shape, T::Dtype>, D::Err>
     where
-        T: HasUniqueId + AllocGradOn<D>,
+        T: HasUniqueId + AllocGrad<D>,
     {
         self.try_alloc_for(t)?;
         Ok(self.get_mut(t))
@@ -43,7 +43,7 @@ impl<D: DeviceStorage> Gradients<D> {
 
     pub(crate) fn try_alloc_for<T>(&mut self, t: &T) -> Result<(), D::Err>
     where
-        T: HasUniqueId + AllocGradOn<D>,
+        T: HasUniqueId + AllocGrad<D>,
     {
         if !self.gradient_by_id.contains_key(t.id()) {
             let grad = t.try_alloc_grad()?;
@@ -295,9 +295,7 @@ pub trait Tape<D: DeviceStorage>: Default + Merge<Self> + Merge<NoneTape> {
         &mut self,
         operation: F,
     );
-    fn try_alloc_grad<T>(&mut self, t: &T) -> Result<(), D::Err>
-    where
-        T: HasUniqueId + AllocGradOn<D>;
+    fn try_alloc_grad<T: HasUniqueId + AllocGrad<D>>(&mut self, t: &T) -> Result<(), D::Err>;
 }
 
 impl<D: DeviceStorage> Tape<D> for OwnedTape<D> {
@@ -308,10 +306,7 @@ impl<D: DeviceStorage> Tape<D> for OwnedTape<D> {
     ) {
         self.0.add_backward_op(operation)
     }
-    fn try_alloc_grad<T>(&mut self, t: &T) -> Result<(), <D>::Err>
-    where
-        T: HasUniqueId + AllocGradOn<D>,
-    {
+    fn try_alloc_grad<T: HasUniqueId + AllocGrad<D>>(&mut self, t: &T) -> Result<(), D::Err> {
         self.0.gradients.try_alloc_for(t)
     }
 }
@@ -320,13 +315,10 @@ impl<D: DeviceStorage> Tape<D> for NoneTape {
     const OWNS_TAPE: bool = false;
     fn add_backward_op<F: 'static + FnOnce(&mut Gradients<D>) -> Result<(), D::Err>>(
         &mut self,
-        _operation: F,
+        _: F,
     ) {
     }
-    fn try_alloc_grad<T>(&mut self, _: &T) -> Result<(), <D>::Err>
-    where
-        T: HasUniqueId + AllocGradOn<D>,
-    {
+    fn try_alloc_grad<T: HasUniqueId + AllocGrad<D>>(&mut self, _: &T) -> Result<(), D::Err> {
         Ok(())
     }
 }

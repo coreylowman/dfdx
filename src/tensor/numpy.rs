@@ -1,6 +1,6 @@
 use crate::shapes::{Dtype, HasShape, Shape};
 
-use super::{DeviceStorage, Tensor, TensorFromSlice};
+use super::{CopySlice, DeviceStorage, Tensor};
 
 use std::{
     fs::File,
@@ -15,7 +15,7 @@ use zip::result::{ZipError, ZipResult};
 const MAGIC_NUMBER: &[u8] = b"\x93NUMPY";
 const VERSION: &[u8] = &[1, 0];
 
-impl<S: Shape, E: Dtype + NumpyDtype, D: DeviceStorage + TensorFromSlice<E>, T> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>, T> Tensor<S, E, D, T> {
     /// Writes `data` to a new file in a zip archive named `filename`.
     pub fn write_to_npz<W: Write + Seek>(
         &self,
@@ -38,40 +38,28 @@ impl<S: Shape, E: Dtype + NumpyDtype, D: DeviceStorage + TensorFromSlice<E>, T> 
         Ok(())
     }
 
-    pub fn load_from_npy<P>(&mut self, path: P) -> Result<(), NpyError>
-    where
-        P: AsRef<Path>,
-    {
+    pub fn load_from_npy<P: AsRef<Path>>(&mut self, path: P) -> Result<(), NpyError> {
         let mut f = BufReader::new(File::open(path)?);
         self.read_from(&mut f)
     }
 
-    pub fn save_to_npy<P>(&self, path: P) -> io::Result<()>
-    where
-        P: AsRef<Path>,
-    {
+    pub fn save_to_npy<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut f = BufWriter::new(File::create(path)?);
         self.write_to(&mut f)
     }
 
-    pub(crate) fn read_from<R>(&mut self, r: &mut R) -> Result<(), NpyError>
-    where
-        R: Read,
-    {
+    pub(crate) fn read_from<R: Read>(&mut self, r: &mut R) -> Result<(), NpyError> {
         let endian = read_header::<R, E>(r, self.shape().concrete().into_iter().collect())?;
         let numel = self.shape().num_elements();
         let mut buf = Vec::with_capacity(numel);
         for _ in 0..numel {
             buf.push(E::read_endian(r, endian)?);
         }
-        D::copy_from(&buf, self);
+        D::copy_from(self, &buf);
         Ok(())
     }
 
-    pub(crate) fn write_to<W>(&self, w: &mut W) -> io::Result<()>
-    where
-        W: Write,
-    {
+    pub(crate) fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
         let endian = Endian::Little;
         write_header::<W, E>(w, endian, self.shape().concrete().into_iter().collect())?;
         let numel = self.shape().num_elements();

@@ -1,5 +1,5 @@
 use crate::shapes::{Dtype, HasDtype, HasShape, Shape};
-use crate::tensor::storage::*;
+use crate::tensor::storage_traits::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{
     sync::{Arc, Mutex},
@@ -65,9 +65,6 @@ impl HasErr for Cpu {
 
 impl DeviceStorage for Cpu {
     type Storage<S: Shape, E: Dtype> = StridedArray<S, E>;
-    fn try_alloc<S: Shape, E: Dtype>(&self, shape: &S) -> Result<Self::Storage<S, E>, Self::Err> {
-        StridedArray::try_new_with(*shape, Default::default())
-    }
 
     fn try_alloc_grad<S: Shape, E: Dtype>(
         &self,

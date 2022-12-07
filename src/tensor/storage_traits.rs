@@ -1,5 +1,5 @@
 use crate::{
-    shapes::{Dtype, HasDtype, HasShape, Shape, TryFromNumElements},
+    shapes::{Dtype, HasDtype, HasShape, Shape},
     unique_id::unique_id,
 };
 
@@ -18,7 +18,6 @@ pub trait DeviceStorage: 'static + Default + Clone + HasErr {
         + HasShape<Shape = S>;
 
     fn random_u64(&self) -> u64;
-    fn try_alloc<S: Shape, E: Dtype>(&self, shape: &S) -> Result<Self::Storage<S, E>, Self::Err>;
     fn try_alloc_grad<S: Shape, E: Dtype>(
         &self,
         storage: &Self::Storage<S, E>,
@@ -40,8 +39,28 @@ impl<D: DeviceStorage> TensorFromStorage for D {
     }
 }
 
-pub trait AllocGradOn<D: DeviceStorage>: HasShape + HasDtype {
+pub trait AllocGrad<D: DeviceStorage>: HasShape + HasDtype {
     fn try_alloc_grad(&self) -> Result<D::Storage<Self::Shape, Self::Dtype>, D::Err>;
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> AllocGrad<D> for Tensor<S, E, D, T> {
+    fn try_alloc_grad(&self) -> Result<D::Storage<Self::Shape, Self::Dtype>, D::Err> {
+        self.device.try_alloc_grad(&self.storage)
+    }
+}
+
+pub trait CopySlice<E: Dtype>: DeviceStorage {
+    fn copy_from<S: Shape, T>(dst: &mut Tensor<S, E, Self, T>, src: &[E]);
+    fn copy_into<S: Shape, T>(src: &Tensor<S, E, Self, T>, dst: &mut [E]);
+}
+
+impl<S: Shape, E: Dtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
+    pub fn copy_from(&mut self, src: &[E]) {
+        D::copy_from(self, src);
+    }
+    pub fn copy_into(&self, dst: &mut [E]) {
+        D::copy_into(self, dst);
+    }
 }
 
 pub trait ZerosTensor<E: Dtype>: DeviceStorage {
@@ -153,19 +172,6 @@ pub trait RandnFillStorage<E: Dtype>: DeviceStorage {
         mean: E,
         stddev: E,
     ) -> Result<(), Self::Err>;
-}
-
-pub trait TensorFromSlice<E: Dtype>: DeviceStorage {
-    fn copy<S: Shape + TryFromNumElements>(&self, src: &[E]) -> Option<Tensor<S, E, Self>> {
-        self.try_copy(src).map(|t| t.unwrap())
-    }
-    fn try_copy<S: Shape + TryFromNumElements>(
-        &self,
-        src: &[E],
-    ) -> Option<Result<Tensor<S, E, Self>, Self::Err>>;
-
-    fn copy_from<S: Shape, T>(src: &[E], dst: &mut Tensor<S, E, Self, T>);
-    fn copy_into<S: Shape, T>(src: &Tensor<S, E, Self, T>, dst: &mut [E]);
 }
 
 pub trait TensorFromArray<Src, S: Shape, E: Dtype>: DeviceStorage {

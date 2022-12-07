@@ -1,6 +1,6 @@
 mod cpu_kernel;
 
-use crate::{gradients::Tape, shapes::*, tensor::storage::*, tensor::*};
+use crate::{gradients::Tape, shapes::*, tensor::*};
 
 pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape>(

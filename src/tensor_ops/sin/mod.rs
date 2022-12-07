@@ -39,7 +39,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 #[cfg(test)]
 mod tests {
     use crate::tests::{assert_close, build_test_device};
-    use crate::{tensor::storage::AsArray, tensor::*, tensor_ops::*};
+    use crate::{tensor::*, tensor_ops::*};
 
     #[test]
     fn test_sin() {

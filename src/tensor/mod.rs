@@ -70,25 +70,25 @@
 //! let t: Tensor1D<5, OwnedTape> = t.traced(); // takes ownership of t
 //! ```
 
-mod base;
 pub(crate) mod cpu;
+mod tensor_impls;
 
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
 
-pub(crate) mod storage;
+pub(crate) mod storage_traits;
 
-pub(crate) use storage::{
+pub(crate) use storage_traits::{
     OneFillStorage, RandFillStorage, RandnFillStorage, TensorFromStorage, ZeroFillStorage,
 };
 
 pub use cpu::{Cpu, CpuError};
-pub use storage::{AsArray, AsVec, TensorFromArray, TensorFromSlice};
-pub use storage::{DeviceStorage, HasErr};
-pub use storage::{OnesTensor, RandTensor, RandnTensor, ZerosTensor};
+pub use storage_traits::{AsArray, AsVec, CopySlice, TensorFromArray};
+pub use storage_traits::{DeviceStorage, HasErr};
+pub use storage_traits::{OnesTensor, RandTensor, RandnTensor, ZerosTensor};
 
-pub use base::{PutTape, SplitTape, Tensor};
-pub use base::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
+pub use tensor_impls::{PutTape, SplitTape, Tensor};
+pub use tensor_impls::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
 
 #[cfg(test)]
 mod tests {
@@ -171,7 +171,8 @@ mod tests {
     fn test_convert_slice() {
         let dev = build_test_device!();
         let data = [1.0, 2.0, 3.0, 4.0];
-        let t: Tensor2D<2, 2, _> = dev.copy(&data).unwrap();
+        let mut t: Tensor2D<2, 2, _> = dev.zeros();
+        t.copy_from(&data);
         assert_eq!(t.array(), [[1.0, 2.0], [3.0, 4.0]]);
     }
 
