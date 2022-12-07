@@ -1,4 +1,3 @@
-mod as_rust_array;
 mod axes;
 mod broadcasts;
 mod permutes;
@@ -16,7 +15,6 @@ pub(crate) use replace_dim::ReplaceDimTo;
 #[allow(unused_imports)]
 pub(crate) use same_numel::HasSameNumelAs;
 
-pub use as_rust_array::RustArrayRepr;
 pub use axes::{Axes2, Axes3, Axes4, Axes5, Axes6, Axis, HasAxes};
 pub use shape::{Const, Dim, Dyn};
 pub use shape::{Dtype, HasDtype};
