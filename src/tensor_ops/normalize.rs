@@ -40,11 +40,11 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
     {
         let mean = self
             .retaped::<T>()
-            .try_mean()?
+            .try_mean::<_, Ax>()?
             .try_broadcast_like(self.shape())?;
         let std = self
             .retaped::<T>()
-            .try_stddev(epsilon)?
+            .try_stddev::<_, Ax>(epsilon)?
             .try_broadcast_like(self.shape())?;
         self.try_sub(mean)?.try_div(std)
     }

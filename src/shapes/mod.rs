@@ -1,3 +1,4 @@
+/// Shape related traits/structes like [Shape], [Dtype], [Dim], [Axes]
 mod axes;
 mod broadcasts;
 mod permutes;
