@@ -17,15 +17,15 @@ fn main() {
     // 1. Shape (in this case a rank 1 (1 dimension) array with 5 elements)
     // 2. Data type (in this case f32 values)
     // 3. The device they are stored on (in this case the Cpu)
-    let _: Tensor<Rank1<5>, f32, Cpu> = dev.tensor([1.0, 2.0, 3.0, 4.0, 5.0]);
+    let _: Tensor<Rank1<5>, f32> = dev.tensor([1.0, 2.0, 3.0, 4.0, 5.0]);
 
     // You can also use [ZerosTensor::zeros] and [OnesTensor::ones] to create tensors
     // filled with the corresponding values.
-    let _: Tensor<Rank2<2, 3>, f32, Cpu> = dev.zeros();
-    let _: Tensor<Rank3<1, 2, 3>, f32, _> = dev.ones();
+    let _: Tensor<Rank2<2, 3>, f32> = dev.zeros();
+    let _: Tensor<Rank3<1, 2, 3>, f32> = dev.ones();
 
     // each of the creation methods also supports specifying the shape on the function
-    let _: Tensor<Rank2<2, 3>, f64, _> = dev.zeros();
+    let _: Tensor<Rank2<2, 3>, f64> = dev.zeros();
     let _ = dev.ones::<Rank2<2, 3>>();
 
     // we can also create tensors filled with random values

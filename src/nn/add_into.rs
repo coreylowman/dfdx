@@ -19,7 +19,7 @@ use super::{BuildModule, Module, ModuleMut};
 /// # use dfdx::prelude::*;
 /// type Model = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
 /// let model: Model = Default::default();
-/// let _: Tensor1D<5> = model.forward((Tensor1D::<2>::zeros(), Tensor1D::<3>::zeros()));
+/// let _: Tensor<Rank1<5>, _> = model.forward((Tensor:Rank1<:>, _<2>::zeros(), Tensor:Rank1<:>, _<3>::zeros()));
 /// ```
 #[derive(Debug, Default, Clone)]
 pub struct AddInto<T>(pub T);
@@ -100,11 +100,11 @@ mod tests {
     fn test_add_into_2() {
         let dev = build_test_device!();
         let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>)> = BuildModule::build(&dev);
-        let _: Tensor1D<5, _, OwnedTape<_>> = m.forward((
+        let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
         ));
-        let _: Tensor2D<3, 5, _, OwnedTape<_>> = m.forward((
+        let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank2<3, 2>>().traced(),
             dev.zeros::<Rank2<3, 3>>().traced(),
         ));
@@ -114,12 +114,12 @@ mod tests {
     fn test_add_into_3() {
         let dev = build_test_device!();
         let m: AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>)> = BuildModule::build(&dev);
-        let _: Tensor1D<5, _, OwnedTape<_>> = m.forward((
+        let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
             dev.zeros::<Rank1<4>>().traced(),
         ));
-        let _: Tensor2D<3, 5, _, OwnedTape<_>> = m.forward((
+        let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank2<3, 2>>().traced(),
             dev.zeros::<Rank2<3, 3>>().traced(),
             dev.zeros::<Rank2<3, 4>>().traced(),
@@ -131,13 +131,13 @@ mod tests {
         let dev = build_test_device!();
         type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>, Linear<5, 5>)>;
         let m: Model = BuildModule::build(&dev);
-        let _: Tensor1D<5, _, OwnedTape<_>> = m.forward((
+        let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
             dev.zeros::<Rank1<4>>().traced(),
             dev.zeros::<Rank1<5>>().traced(),
         ));
-        let _: Tensor2D<3, 5, _, OwnedTape<_>> = m.forward((
+        let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank2<3, 2>>().traced(),
             dev.zeros::<Rank2<3, 3>>().traced(),
             dev.zeros::<Rank2<3, 4>>().traced(),
@@ -156,14 +156,14 @@ mod tests {
             Linear<6, 5>,
         )>;
         let m: Model = BuildModule::build(&dev);
-        let _: Tensor1D<5, _, OwnedTape<_>> = m.forward((
+        let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
             dev.zeros::<Rank1<4>>().traced(),
             dev.zeros::<Rank1<5>>().traced(),
             dev.zeros::<Rank1<6>>().traced(),
         ));
-        let _: Tensor2D<3, 5, _, OwnedTape<_>> = m.forward((
+        let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank2<3, 2>>().traced(),
             dev.zeros::<Rank2<3, 3>>().traced(),
             dev.zeros::<Rank2<3, 4>>().traced(),
@@ -184,7 +184,7 @@ mod tests {
             Linear<7, 5>,
         )>;
         let m: Model = BuildModule::build(&dev);
-        let _: Tensor1D<5, _, OwnedTape<_>> = m.forward((
+        let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
             dev.zeros::<Rank1<4>>().traced(),
@@ -192,7 +192,7 @@ mod tests {
             dev.zeros::<Rank1<6>>().traced(),
             dev.zeros::<Rank1<7>>().traced(),
         ));
-        let _: Tensor2D<3, 5, _, OwnedTape<_>> = m.forward((
+        let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank2<3, 2>>().traced(),
             dev.zeros::<Rank2<3, 3>>().traced(),
             dev.zeros::<Rank2<3, 4>>().traced(),

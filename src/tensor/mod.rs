@@ -23,14 +23,14 @@
 //! 1. With raw rust arrays use the [TensorCreator::new()] method.
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t: Tensor1D<3> = TensorCreator::new([1.0, 2.0, 3.0]);
+//! let t: Tensor<3> = TensorCreator::new([1.0, 2.0, 3.0]);
 //! ```
 //!
 //! 2. Filled with 0s or 1s use [TensorCreator::zeros()] and [TensorCreator::ones()].
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t: Tensor1D<5> = TensorCreator::zeros();
-//! let q: Tensor2D<3, 2> = TensorCreator::ones();
+//! let t: Tensor<5> = TensorCreator::zeros();
+//! let q: Tensor<3, 2> = TensorCreator::ones();
 //! ```
 //!
 //! 3. Filled with random data use [TensorCreator::rand()] and [TensorCreator::randn()].
@@ -65,9 +65,9 @@
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t: Tensor1D<5, NoneTape> = Tensor1D::<5>::zeros();
-//! let t_clone: Tensor1D<5, OwnedTape> = t.trace(); // copies t
-//! let t: Tensor1D<5, OwnedTape> = t.traced(); // takes ownership of t
+//! let t: Tensor<5, NoneTape> = Tensor1D::<5>::zeros();
+//! let t_clone: Tensor<5, OwnedTape> = t.trace(); // copies t
+//! let t: Tensor<5, OwnedTape> = t.traced(); // takes ownership of t
 //! ```
 
 pub(crate) mod cpu;
@@ -93,7 +93,7 @@ pub use tensor_impls::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gradients::{NoneTape, OwnedTape};
+    use crate::shapes::*;
     use crate::tests::build_test_device;
     use crate::unique_id::{unique_id, UniqueId};
     use std::collections::HashSet;
@@ -105,23 +105,23 @@ mod tests {
         let mut ids: HashSet<UniqueId> = Default::default();
         ids.insert(unique_id());
 
-        let x: Tensor0D<_> = dev.zeros();
+        let x: Tensor<Rank0, f32, _> = dev.zeros();
         assert!(!ids.contains(&x.id));
         ids.insert(x.id);
 
-        let x: Tensor0D<_> = dev.zeros();
+        let x: Tensor<Rank0, f32, _> = dev.zeros();
         assert!(!ids.contains(&x.id));
         ids.insert(x.id);
 
-        let x: Tensor1D<5, _> = dev.zeros();
+        let x: Tensor<Rank1<5>, f32, _> = dev.zeros();
         assert!(!ids.contains(&x.id));
         ids.insert(x.id);
 
-        let x: Tensor2D<3, 2, _> = dev.ones();
+        let x: Tensor<Rank2<3, 2>, f32, _> = dev.ones();
         assert!(!ids.contains(&x.id));
         ids.insert(x.id);
 
-        let x: Tensor3D<4, 3, 2, _> = dev.rand();
+        let x: Tensor<Rank3<4, 3, 2>, f32, _> = dev.rand();
         assert!(!ids.contains(&x.id));
         ids.insert(x.id);
     }
@@ -129,15 +129,15 @@ mod tests {
     #[test]
     fn test_ids_with_clone() {
         let dev = build_test_device!();
-        let t1: Tensor1D<32, _> = dev.zeros();
-        let t2: Tensor1D<32, _> = t1.clone();
+        let t1: Tensor<Rank1<32>, f32, _> = dev.zeros();
+        let t2 = t1.clone();
         assert_eq!(t1.id, t2.id);
     }
 
     #[test]
     fn test_ids_with_split_and_put() {
         let dev = build_test_device!();
-        let t1: Tensor1D<32, _> = dev.zeros();
+        let t1: Tensor<Rank1<32>, f32, _> = dev.zeros();
         let t1_id = t1.id;
         let (t2, tape) = t1.split_tape();
         assert_eq!(t2.id, t1_id);
@@ -148,14 +148,14 @@ mod tests {
     #[test]
     fn test_zeros() {
         let dev = build_test_device!();
-        let x: Tensor2D<3, 2, _> = dev.zeros();
+        let x: Tensor<Rank2<3, 2>, f32, _> = dev.zeros();
         assert_eq!(x.array(), [[0.0; 2]; 3]);
     }
 
     #[test]
     fn test_ones() {
         let dev = build_test_device!();
-        let x: Tensor2D<3, 2, _> = dev.ones();
+        let x: Tensor<Rank2<3, 2>, f32, _> = dev.ones();
         assert_eq!(x.array(), [[1.0; 2]; 3]);
     }
 
@@ -163,7 +163,7 @@ mod tests {
     fn test_convert_array() {
         let dev = build_test_device!();
         let a = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
-        let t: Tensor2D<2, 3, _> = dev.tensor(a);
+        let t = dev.tensor(a);
         assert_eq!(t.array(), a);
     }
 
@@ -171,7 +171,7 @@ mod tests {
     fn test_convert_slice() {
         let dev = build_test_device!();
         let data = [1.0, 2.0, 3.0, 4.0];
-        let mut t: Tensor2D<2, 2, _> = dev.zeros();
+        let mut t: Tensor<Rank2<2, 2>, f32, _> = dev.zeros();
         t.copy_from(&data);
         assert_eq!(t.array(), [[1.0, 2.0], [3.0, 4.0]]);
     }
@@ -179,7 +179,7 @@ mod tests {
     #[test]
     fn fuzz_test_rand() {
         let dev = build_test_device!();
-        let t: Tensor1D<1000, _> = dev.rand();
+        let t: Tensor<Rank1<1000>, f32, _> = dev.rand();
         for v in t.as_vec() {
             assert!((0.0..1.0).contains(&v));
         }
@@ -188,17 +188,6 @@ mod tests {
     #[test]
     fn test_randn() {
         let dev = build_test_device!();
-        let _: Tensor1D<1000, _> = dev.randn();
-    }
-
-    #[test]
-    fn test_split_and_put() {
-        let dev = build_test_device!();
-        let a: Tensor0D<_, NoneTape> = dev.zeros();
-        let b: Tensor0D<_, OwnedTape<_>> = a.traced();
-        let (c, tape): (Tensor0D<_>, OwnedTape<_>) = b.split_tape();
-        let d: Tensor0D<_, OwnedTape<_>> = c.put_tape(tape);
-        let _: Tensor0D<_, OwnedTape<_>> = d.retaped();
-        let _: Tensor0D<_, NoneTape> = d.retaped::<NoneTape>();
+        let _ = dev.randn::<Rank1<1000>>();
     }
 }
