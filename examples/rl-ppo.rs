@@ -43,13 +43,11 @@ fn main() {
 
         // old_log_prob_a = log(P(action | state, target_pi_net))
         let old_logits = target_pi_net.forward(state.clone());
-        let old_log_prob_a: Tensor<Rank1<BATCH>, _, _> =
-            old_logits.log_softmax::<Axis<1>>().select(action.clone());
+        let old_log_prob_a = old_logits.log_softmax::<Axis<1>>().select(action.clone());
 
         // log_prob_a = log(P(action | state, pi_net))
         let logits = pi_net.forward(state.trace());
-        let log_prob_a: Tensor<Rank1<BATCH>, _, _, _> =
-            logits.log_softmax::<Axis<1>>().select(action.clone());
+        let log_prob_a = logits.log_softmax::<Axis<1>>().select(action.clone());
 
         // ratio = P(action | state, pi_net) / P(action | state, target_pi_net)
         // but compute in log space and then do .exp() to bring it back out of log space

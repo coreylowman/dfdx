@@ -3,13 +3,34 @@ use super::{
     shape::{Dim, Shape},
 };
 
-pub trait ReplaceDimTo<Dst: Shape, Ax: Axes<Array = [isize; 1]>>: Shape {
-    type Index: Shape;
+pub trait RemoveDimTo<Dst: Shape, Idx: Shape>: Shape {
+    type Ax: Axes<Array = [isize; 1]>;
+
     #[inline]
-    fn replace(&self, idx: Self::Index) -> Dst {
-        let ax = Ax::as_array()[0] as usize;
-        if Dst::NUM_DIMS == Self::NUM_DIMS {
-            // replace case
+    fn remove(&self, _: Idx) -> Dst {
+        let ax = Self::Ax::as_array()[0] as usize;
+        // remove case. this is similar to ReduceShapeTo::reduce
+        let src_dims = self.concrete();
+        let mut dst_dims: Dst::Concrete = Default::default();
+        let mut i_dst = 0;
+        for i_src in 0..Self::NUM_DIMS {
+            if i_src != ax {
+                dst_dims[i_dst] = src_dims[i_src];
+                i_dst += 1;
+            }
+        }
+        Dst::from_concrete(&dst_dims).unwrap()
+    }
+}
+
+pub trait ReplaceDimTo<Dst: Shape, Idx: Shape>: Shape {
+    type Ax: Axes<Array = [isize; 1]>;
+
+    #[inline]
+    fn replace(&self, idx: Idx) -> Dst {
+        let ax = Self::Ax::as_array()[0] as usize;
+        if Self::NUM_DIMS == Dst::NUM_DIMS {
+            // replace 1 dim case
             let src_dims = self.concrete();
             let mut dst_dims: Dst::Concrete = Default::default();
             for i in 0..Dst::NUM_DIMS {
@@ -17,22 +38,10 @@ pub trait ReplaceDimTo<Dst: Shape, Ax: Axes<Array = [isize; 1]>>: Shape {
             }
             dst_dims[ax] = idx.concrete().into_iter().last().unwrap();
             Dst::from_concrete(&dst_dims).unwrap()
-        } else if Dst::NUM_DIMS == Self::NUM_DIMS - 1 {
-            // remove case. this is similar to ReduceShapeTo::reduce
-            let src_dims = self.concrete();
-            let mut dst_dims: Dst::Concrete = Default::default();
-            let mut i_dst = 0;
-            for i_src in 0..Self::NUM_DIMS {
-                if i_src != ax {
-                    dst_dims[i_dst] = src_dims[i_src];
-                    i_dst += 1;
-                }
-            }
-            Dst::from_concrete(&dst_dims).unwrap()
         } else {
-            // batch select case (M, N) * (B, Z) -> (B, Z, N)
+            // batch replace case (M, N) * (B, Z) -> (B, Z, N)
             assert_eq!(Dst::NUM_DIMS, Self::NUM_DIMS + 1);
-            assert_eq!(Self::NUM_DIMS, <Self::Index as Shape>::NUM_DIMS);
+            assert_eq!(Self::NUM_DIMS, <Idx as Shape>::NUM_DIMS);
             assert_eq!(ax, 0);
             let src_dims = self.concrete();
             let idx_dims = idx.concrete();
@@ -51,16 +60,16 @@ pub trait ReplaceDimTo<Dst: Shape, Ax: Axes<Array = [isize; 1]>>: Shape {
 
 macro_rules! replace {
     (($($DimVars:tt),*), $Ax:ty, $Dst:ty, $Idx:ty) => {
-impl<$($DimVars: Dim, )* New: Dim> ReplaceDimTo<$Dst, $Ax> for ($($DimVars, )*) {
-    type Index = $Idx;
+impl<$($DimVars: Dim, )* New: Dim> ReplaceDimTo<$Dst, $Idx> for ($($DimVars, )*) {
+    type Ax = $Ax;
 }
     };
 }
 
 macro_rules! removed {
     (($($DimVars:tt),*), $Ax:ty, $Dst:ty, $Idx:ty) => {
-impl<$($DimVars: Dim, )*> ReplaceDimTo<$Dst, $Ax> for ($($DimVars, )*) {
-    type Index = $Idx;
+impl<$($DimVars: Dim, )*> RemoveDimTo<$Dst, $Idx> for ($($DimVars, )*) {
+    type Ax = $Ax;
 }
     };
 }
@@ -95,6 +104,8 @@ replace!(
 removed!((D1, D2, D3, D4), Axis<3>, (D1, D2, D3), (D1, D2, D3));
 
 // batched select
-impl<Batch: Dim, Seq: Dim, S1: Dim, S2: Dim> ReplaceDimTo<(Batch, Seq, S2), Axis<0>> for (S1, S2) {
-    type Index = (Batch, Seq);
+impl<Batch: Dim, Seq: Dim, S1: Dim, S2: Dim> ReplaceDimTo<(Batch, Seq, S2), (Batch, Seq)>
+    for (S1, S2)
+{
+    type Ax = Axis<0>;
 }

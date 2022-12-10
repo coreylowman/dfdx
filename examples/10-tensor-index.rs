@@ -1,9 +1,9 @@
-//! Demonstrates how to select sub tensors (index) from tensors
+//! Demonstrates how to select or gather sub tensors (index) from tensors
 
 use dfdx::{
-    shapes::{Rank2, Rank3},
+    shapes::Rank3,
     tensor::{AsArray, Cpu, Tensor, TensorFromArray},
-    tensor_ops::SelectTo,
+    tensor_ops::{GatherTo, SelectTo},
 };
 
 fn main() {
@@ -16,37 +16,39 @@ fn main() {
         [[3.00, 3.01, 3.02], [3.10, 3.11, 3.12]],
     ]);
 
-    // the easiest thing to do is to select a single element from axis 0.
-    // we can specify the expected shape using the generic arguments of the select
-    // method. Note that the axis 0 (4) has been removed in the shape
-    let b = a.clone().select::<Rank2<2, 3>, _>(dev.tensor(0));
+    // the easiest thing to do is to `select` a single value from a given axis.
+    // to do that, you need indices with a shape up to the axis you are select from.
+    // for example, given shape (M, N, O), here are the index shapes for each axis:
+    // - Axis 0: index shape ()
+    // - Axis 1: index shape (M, )
+    // - Axis 2: index shape (M, N)
+    // here we select from axis 0 so we just need 1 value.
+    let b = a.clone().select(dev.tensor(0));
     assert_eq!(b.array(), a.array()[0]);
 
-    // but we can also select multiple elements from axis 0!
-    // note that our axis 0 is now 6 instead of 4,
-    // *and* we have 6 indices in our index tensor.
-    // the numebr of indices determines the size of the new tensor.
-    let c = a
-        .clone()
-        .select::<Rank3<6, 2, 3>, _>(dev.tensor([0, 0, 1, 1, 2, 2]));
+    // to `select` from axis 1, we use a tensor with shape (4,)
+    let d = a.clone().select(dev.tensor([0, 1, 0, 1]));
+    assert_eq!(
+        d.array(),
+        [
+            [0.00, 0.01, 0.02],
+            [1.10, 1.11, 1.12],
+            [2.00, 2.01, 2.02],
+            [3.10, 3.11, 3.12]
+        ]
+    );
+
+    // We can also `gather` multiple elements from each axis. This lets you grab
+    // the same elements multiple times! This requires an index with shape similar to select,
+    // but with an extra dimension at the end that says how many elements to gather from the axis:
+    // - Axis 0: index shape (Z, )
+    // - Axis 1: index shape (M, Z)
+    // - Axis 2: index shape (M, N, Z)
+    // here, we `gather` from axis 0 because we have a 1d tensor. the new size will be (6, 2, 3)!
+    let c = a.clone().gather(dev.tensor([0, 0, 1, 1, 2, 2]));
     dbg!(c.array());
 
-    // a 1d array of indices in this case can also be used to
-    // select from axis 1.
-    // note here that we have the same number of indices
-    // as the size of the axis 0 (4).
-    let d = a.clone().select::<Rank2<4, 3>, _>(dev.tensor([0, 1, 0, 1]));
-    dbg!(d.array());
-
-    // of course we can also select multiple values from axis 1.
-    // in this case we just specify multiple indices instead of a single one
-    // note here that for `d`, we specified 4 indices. here we are specifying [[usize; 6]; 4]
-    // indices, and we get a (4, 6, 3) tensor instead of a (4, 3) tensor
-    let e = a.select::<Rank3<4, 6, 3>, _>(dev.tensor([
-        [0; 6],
-        [1; 6],
-        [1, 1, 1, 0, 0, 0],
-        [0, 0, 0, 1, 1, 1],
-    ]));
+    // and similarly, we can `gather` from axis 1 with a 2d tensor. the new size will be (4, 6, 3)!
+    let e = a.gather(dev.tensor([[0; 6], [1; 6], [1, 1, 1, 0, 0, 0], [0, 0, 0, 1, 1, 1]]));
     dbg!(e.array());
 }

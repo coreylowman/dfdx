@@ -27,7 +27,8 @@ pub trait Device<E: Dtype>:
     + super::reshape_to::ReshapeKernel<E>
 
     // indexing
-    + super::select_to::ReplaceDimKernel<E>
+    + super::select_and_gather::ReplaceDimKernel<E>
+    + super::select_and_gather::RemoveDimKernel<E>
 
     // matmuls
     + super::matmul::VecMatKernel<E>

@@ -55,7 +55,7 @@ fn main() {
 
         // forward through model, computing gradients
         let q_values = q_net.forward(state.trace());
-        let action_qs = q_values.select::<Rank1<BATCH>, _>(action.clone());
+        let action_qs = q_values.select(action.clone());
 
         let loss = mse_loss(action_qs, target_q);
         let loss_v = loss.array();
