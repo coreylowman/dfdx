@@ -133,9 +133,7 @@ pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
     );
 }
 
-impl<M, D: DeviceStorage + RMSpropKernel<f32> + OneFillStorage<f32>> ParamUpdater<D, f32>
-    for RMSprop<M, D, f32>
-{
+impl<M, D: RMSpropKernel<f32> + OneFillStorage<f32>> ParamUpdater<D, f32> for RMSprop<M, D, f32> {
     fn update_param<S: Shape>(
         &mut self,
         p: &mut Tensor<S, f32, D>,
@@ -160,7 +158,7 @@ impl<M, D: DeviceStorage + RMSpropKernel<f32> + OneFillStorage<f32>> ParamUpdate
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, M: GradientUpdate<D, E>> Optimizer<M, D> for RMSprop<M, D, E>
+impl<E: Dtype, D: DeviceStorage, M: GradientUpdate<D, E>> Optimizer<M, D, E> for RMSprop<M, D, E>
 where
     Self: ParamUpdater<D, E>,
 {

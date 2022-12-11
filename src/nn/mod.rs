@@ -25,14 +25,13 @@
 //!
 //! # Initializing
 //!
-//! All modules implement [Default], and this initializes all parameters to `0.0`. The intention is then
-//! to call [ResetParams::reset_params()], which randomizes the parameters:
+//! All modules implement [ResetParams], which can be combined with [ModuleBuilder]
+//! implementation on devices like so:
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
-//! # let mut rng = rand::thread_rng();
-//! let mut model: Linear<5, 2> = Default::default(); // set all params to 0
-//! model.reset_params(&mut rng); // randomize weights
+//! let dev: Cpu = Default::default();
+//! let model: Linear<5, 2> = dev.build(); // will allocate & randomize params
 //! ```
 //!
 //! # Sequential models

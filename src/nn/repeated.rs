@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
 
-use super::{BuildModule, Module, ModuleMut};
+use super::{Module, ModuleMut, ResetParams};
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///
@@ -11,22 +11,23 @@ use super::{BuildModule, Module, ModuleMut};
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
 /// type Model = Repeated<(Linear<10, 10>, ReLU), 5>;
-/// let model: Model = Default::default();
-/// let out: Tensor1D<10> = model.forward(Tensor1D::zeros());
+/// let model: Model = dev.build();
+/// let out: Tensor<Rank1<10>, f32> = model.forward(dev.zeros());
 /// ```
 #[derive(Debug, Clone)]
 pub struct Repeated<T, const N: usize> {
     pub modules: std::vec::Vec<T>,
 }
 
-impl<D: Device<E>, E: Dtype, T: BuildModule<D, E>, const N: usize> BuildModule<D, E>
+impl<D: Device<E>, E: Dtype, T: ResetParams<D, E>, const N: usize> ResetParams<D, E>
     for Repeated<T, N>
 {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+    fn try_new(device: &D) -> Result<Self, <D>::Err> {
         let mut modules = std::vec::Vec::with_capacity(N);
         for _ in 0..N {
-            modules.push(BuildModule::try_build(device)?);
+            modules.push(ResetParams::try_new(device)?);
         }
         Ok(Self { modules })
     }
@@ -92,7 +93,7 @@ mod tests {
     fn test_default_and_reset() {
         let dev = build_test_device!();
 
-        let m: Repeated<(Linear<3, 3, _>, ReLU), 5> = BuildModule::build(&dev);
+        let m: Repeated<(Linear<3, 3, _>, ReLU), 5> = dev.build();
 
         for i in 0..5 {
             assert_ne!(m.modules[i].0.weight.array(), [[0.0; 3]; 3]);
@@ -104,7 +105,7 @@ mod tests {
     fn test_forward() {
         let dev = build_test_device!();
 
-        let mut m: Repeated<(Linear<3, 3, _>, ReLU), 5> = BuildModule::build(&dev);
+        let mut m: Repeated<(Linear<3, 3, _>, ReLU), 5> = dev.build();
 
         let x = dev.zeros::<Rank1<3>>();
         let x = m.modules[0].forward(x);
@@ -120,7 +121,7 @@ mod tests {
     fn test_repeated_missing_gradients() {
         let dev = build_test_device!();
 
-        let mut model: Repeated<Linear<5, 5, _>, 3> = BuildModule::build(&dev);
+        let mut model: Repeated<Linear<5, 5, _>, 3> = dev.build();
         let mut g: SimpleUpdater<_> = Default::default();
 
         // no gradients present

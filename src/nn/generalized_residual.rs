@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, Module, ModuleMut};
+use super::{Module, ModuleMut, ResetParams};
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -12,10 +12,11 @@ use super::{BuildModule, Module, ModuleMut};
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let module: GeneralizedResidual<ReLU, Square> = Default::default();
-/// let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+/// # let dev: Cpu = Default::default();
+/// let module: GeneralizedResidual<ReLU, Square> = dev.build();
+/// let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
 /// let y = module.forward(x);
-/// assert_eq!(y.data(), &[4.0, 1.0, 0.0, 2.0, 6.0]);
+/// assert_eq!(y.array(), [4.0, 1.0, 0.0, 2.0, 6.0]);
 /// ```
 #[derive(Debug, Clone, Default)]
 pub struct GeneralizedResidual<F, R> {
@@ -36,13 +37,13 @@ impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>, R: GradientUpdate<D, E>> G
     }
 }
 
-impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>, R: BuildModule<D, E>> BuildModule<D, E>
+impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>, R: ResetParams<D, E>> ResetParams<D, E>
     for GeneralizedResidual<F, R>
 {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+    fn try_new(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            f: BuildModule::try_build(device)?,
-            r: BuildModule::try_build(device)?,
+            f: ResetParams::try_new(device)?,
+            r: ResetParams::try_new(device)?,
         })
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
@@ -77,14 +78,14 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::Linear;
+    use crate::nn::{Linear, ModuleBuilder};
     use crate::tests::{assert_close, build_test_device};
 
     #[test]
     fn test_reset_generalized_residual() {
         let dev = build_test_device!();
 
-        let model: GeneralizedResidual<Linear<2, 5, _>, Linear<2, 5, _>> = BuildModule::build(&dev);
+        let model: GeneralizedResidual<Linear<2, 5, _>, Linear<2, 5, _>> = dev.build();
         assert_ne!(model.f.weight.array(), [[0.0; 2]; 5]);
         assert_ne!(model.f.bias.array(), [0.0; 5]);
         assert_ne!(model.r.weight.array(), [[0.0; 2]; 5]);
@@ -95,7 +96,7 @@ mod tests {
     fn test_generalized_residual_gradients() {
         let dev = build_test_device!();
 
-        let model: GeneralizedResidual<Linear<2, 2, _>, Linear<2, 2, _>> = BuildModule::build(&dev);
+        let model: GeneralizedResidual<Linear<2, 2, _>, Linear<2, 2, _>> = dev.build();
 
         let x = dev.randn::<Rank2<4, 2>>();
         let y = model.forward(x.trace());

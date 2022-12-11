@@ -1,24 +1,13 @@
-use super::{Module, ModuleMut, ZeroSizedModule};
+use super::{Module, ModuleMut, NonMutableModule, ZeroSizedModule};
 
-use crate::{
-    gradients::Tape,
-    shapes::*,
-    tensor::Tensor,
-    tensor_ops::{Device, ReshapeTo},
-};
+use crate::{gradients::Tape, shapes::*, tensor::Tensor, tensor_ops::*};
 
 /// **Requires Nightly** Flattens 3d tensors to 1d, and 4d tensors to 2d.
-///
-/// Specifically:
-/// ```ignore
-/// # use dfdx::prelude::*;
-/// let _: Tensor1D<{3 * 5 * 7}> = Flatten2D.forward(Tensor3D::<3, 5, 7>::zeros());
-/// let _: Tensor2D<8, {3 * 5 * 7}> = Flatten2D.forward(Tensor4D::<8, 3, 5, 7>::zeros());
-/// ```
 #[derive(Default, Clone, Copy)]
 pub struct Flatten2D;
 
 impl ZeroSizedModule for Flatten2D {}
+impl NonMutableModule for Flatten2D {}
 
 impl<const C: usize, const H: usize, const W: usize, D: Device<E>, E: Dtype, T: Tape<D>>
     Module<Tensor<Rank3<C, H, W>, E, D, T>> for Flatten2D
@@ -31,31 +20,15 @@ where
     }
 }
 
-impl<
-        const B: usize,
-        const C: usize,
-        const H: usize,
-        const W: usize,
-        D: Device<E>,
-        E: Dtype,
-        T: Tape<D>,
-    > Module<Tensor<Rank4<B, C, H, W>, E, D, T>> for Flatten2D
+impl<const B: usize, const C: usize, const H: usize, const W: usize, D, E: Dtype, T: Tape<D>>
+    Module<Tensor<Rank4<B, C, H, W>, E, D, T>> for Flatten2D
 where
+    D: Device<E>,
     Rank4<B, C, H, W>: HasSameNumelAs<Rank2<B, { C * H * W }>>,
 {
     type Output = Tensor<Rank2<B, { C * H * W }>, E, D, T>;
     fn forward(&self, input: Tensor<Rank4<B, C, H, W>, E, D, T>) -> Self::Output {
         input.reshape()
-    }
-}
-
-impl<T> ModuleMut<T> for Flatten2D
-where
-    Self: Module<T>,
-{
-    type Output = <Self as Module<T>>::Output;
-    fn forward_mut(&mut self, input: T) -> Self::Output {
-        self.forward(input)
     }
 }
 

@@ -1,10 +1,6 @@
-use super::{BuildModule, Module, ModuleMut};
+use super::{Module, NonMutableModule, ZeroSizedModule};
 
-use crate::{
-    optim::*,
-    shapes::*,
-    tensor_ops::{Device, TryPool2DTo},
-};
+use crate::{shapes::*, tensor_ops::TryPool2DTo};
 
 /// Average pool with 2d kernel that operates on images (3d) and batches of images (4d).
 /// Each patch reduces to the average of the values in the patch.
@@ -38,27 +34,8 @@ pub struct MinPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PA
 
 macro_rules! impl_pools {
     ($PoolTy:tt, $Method:ident) => {
-        impl<const K: usize, const S: usize, const P: usize, D: Device<E>, E: Dtype>
-            GradientUpdate<D, E> for $PoolTy<K, S, P>
-        {
-            fn update<U>(&mut self, _: &mut U, _: &mut UnusedTensors) -> Result<(), D::Err>
-            where
-                U: ParamUpdater<D, E>,
-            {
-                Ok(())
-            }
-        }
-
-        impl<const K: usize, const S: usize, const P: usize, D: Device<E>, E: Dtype>
-            BuildModule<D, E> for $PoolTy<K, S, P>
-        {
-            fn try_build(_: &D) -> Result<Self, D::Err> {
-                Ok(Self)
-            }
-            fn try_reset_params(&mut self) -> Result<(), D::Err> {
-                Ok(())
-            }
-        }
+        impl<const K: usize, const S: usize, const P: usize> ZeroSizedModule for $PoolTy<K, S, P> {}
+        impl<const K: usize, const S: usize, const P: usize> NonMutableModule for $PoolTy<K, S, P> {}
 
         impl<const K: usize, const S: usize, const P: usize, Img: TryPool2DTo<K, S, P>> Module<Img>
             for $PoolTy<K, S, P>
@@ -66,16 +43,6 @@ macro_rules! impl_pools {
             type Output = Img::Output;
             fn forward(&self, x: Img) -> Self::Output {
                 x.$Method().unwrap()
-            }
-        }
-
-        impl<T, const K: usize, const S: usize, const P: usize> ModuleMut<T> for $PoolTy<K, S, P>
-        where
-            Self: Module<T>,
-        {
-            type Output = <Self as Module<T>>::Output;
-            fn forward_mut(&mut self, input: T) -> Self::Output {
-                self.forward(input)
             }
         }
     };

@@ -8,15 +8,7 @@ pub trait Module<Input> {
 
     /// Forward `Input` through the module and produce [Module::Output].
     ///
-    /// **See [ModuleMut] for version that can mutate `self`.**
-    ///
-    /// Example Usage:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// let model: Linear<7, 2> = Default::default();
-    /// let y1: Tensor1D<2> = model.forward(Tensor1D::zeros());
-    /// let y2: Tensor2D<10, 2> = model.forward(Tensor2D::zeros());
-    /// ```
+    /// **See [ModuleMut::forward_mut()] for version that can mutate `self`.**
     fn forward(&self, input: Input) -> Self::Output;
 }
 
@@ -29,55 +21,46 @@ pub trait ModuleMut<Input> {
     /// Forward `Input` through the module and produce [ModuleMut::Output].
     ///
     /// **See [Module::forward()] for immutable version**
-    ///
-    /// Example Usage:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// let mut model: Linear<7, 2> = Default::default();
-    /// let y1: Tensor1D<2> = model.forward_mut(Tensor1D::zeros());
-    /// let y2: Tensor2D<10, 2> = model.forward_mut(Tensor2D::zeros());
-    /// ```
     fn forward_mut(&mut self, input: Input) -> Self::Output;
 }
 
 /// Something that can reset it's parameters.
-pub trait BuildModule<D: Device<E>, E: Dtype>: Sized {
-    fn build(device: &D) -> Self {
-        Self::try_build(device).unwrap()
+pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
+    /// Construct it on the device
+    fn new(device: &D) -> Self {
+        Self::try_new(device).unwrap()
     }
+    /// Fallible version of [ResetParams::new]
+    fn try_new(device: &D) -> Result<Self, D::Err>;
 
-    fn try_build(device: &D) -> Result<Self, D::Err>;
-
-    /// Mutate the unit's parameters using [rand::Rng]. Each implementor
+    /// Mutates parameters. Each implementor
     /// of this trait decides how the parameters are initialized. In
-    /// fact, some impls may not even use the `rng`.
-    ///
-    /// # Example:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// struct MyMulLayer {
-    ///     scale: Tensor1D<5, NoneTape>,
-    /// }
-    ///
-    /// impl ResetParams for MyMulLayer {
-    ///     fn reset_params(&mut self) {
-    ///         for i in 0..5 {
-    ///             self.scale.mut_data()[i] = rng.gen_range(0.0..1.0);
-    ///         }
-    ///     }
-    /// }
-    /// ```
+    /// fact, some impls may not even use randomness.
     fn reset_params(&mut self) {
         self.try_reset_params().unwrap();
     }
 
+    /// Fallible version of [ResetParams::reset_params].
     fn try_reset_params(&mut self) -> Result<(), D::Err>;
 }
 
+/// Extension trait for [Device] that can build anything that implements [ResetParams].
+pub trait ModuleBuilder<E: Dtype>: Device<E> {
+    fn build<M: ResetParams<Self, E>>(&self) -> M {
+        ResetParams::new(self)
+    }
+    fn try_build<M: ResetParams<Self, E>>(&self) -> Result<M, Self::Err> {
+        ResetParams::try_new(self)
+    }
+}
+impl<D: Device<E>, E: Dtype> ModuleBuilder<E> for D {}
+
+/// Marker trait for modules with no updatable parameters. These have
+/// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]
 pub trait ZeroSizedModule: Default {}
 
-impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> BuildModule<D, E> for T {
-    fn try_build(_: &D) -> Result<Self, <D>::Err> {
+impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> ResetParams<D, E> for T {
+    fn try_new(_: &D) -> Result<Self, <D>::Err> {
         Ok(Default::default())
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
@@ -91,5 +74,19 @@ impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> GradientUpdate<D, E> for T {
         U: crate::optim::ParamUpdater<D, E>,
     {
         Ok(())
+    }
+}
+
+/// Marker trait for modules that don't have different behavior between
+/// mutable forwards and non-mutable forwards
+pub trait NonMutableModule {}
+
+impl<M: NonMutableModule, T> ModuleMut<T> for M
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
     }
 }

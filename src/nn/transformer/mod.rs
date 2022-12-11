@@ -12,7 +12,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{BuildModule, Module, ModuleMut};
+use super::{Module, ModuleMut, ResetParams};
 
 /// **Requires Nightly** Transformer architecture as described in
 /// [Attention is all you need](https://arxiv.org/abs/1706.03762).
@@ -57,12 +57,12 @@ impl<
         const DL: usize,
         const F: usize,
         D: Device<f32>,
-    > BuildModule<D, f32> for Transformer<M, H, EL, DL, F, D>
+    > ResetParams<D, f32> for Transformer<M, H, EL, DL, F, D>
 {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+    fn try_new(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            encoder: BuildModule::try_build(device)?,
-            decoder: BuildModule::try_build(device)?,
+            encoder: ResetParams::try_new(device)?,
+            decoder: ResetParams::try_new(device)?,
         })
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
@@ -133,13 +133,17 @@ where
 mod tests {
     use super::*;
     use crate::{
-        nn::tests::SimpleUpdater, shapes::*, tensor::*, tensor_ops::*, tests::build_test_device,
+        nn::{tests::SimpleUpdater, ModuleBuilder},
+        shapes::*,
+        tensor::*,
+        tensor_ops::*,
+        tests::build_test_device,
     };
 
     #[test]
     fn test_forward() {
         let dev = build_test_device!(0);
-        let mut t: Transformer<16, 4, 3, 3, 8, _> = BuildModule::build(&dev);
+        let mut t: Transformer<16, 4, 3, 3, 8, _> = dev.build();
 
         // unbatched
         let src = dev.randn::<Rank2<7, 16>>();
@@ -155,7 +159,7 @@ mod tests {
     #[test]
     fn test_backward() {
         let dev = build_test_device!(0);
-        let mut t: Transformer<16, 4, 3, 3, 8> = BuildModule::build(&dev);
+        let mut t: Transformer<16, 4, 3, 3, 8> = dev.build();
 
         let src = dev.randn::<Rank3<4, 12, 16>>();
         let tgt = dev.randn::<Rank3<4, 6, 16>>();

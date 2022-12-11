@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{Module, ModuleMut, ZeroSizedModule};
+use super::module::{Module, ZeroSizedModule, NonMutableModule};
 
 macro_rules! activation_impls {
     ($struct_name:ident, $func_name:ident, #[$docstring:meta]) => {
@@ -9,6 +9,7 @@ macro_rules! activation_impls {
         pub struct $struct_name;
 
         impl ZeroSizedModule for $struct_name {}
+        impl NonMutableModule for $struct_name {}
 
         impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<S, E, D, T>>
             for $struct_name
@@ -16,16 +17,6 @@ macro_rules! activation_impls {
             type Output = Tensor<S, E, D, T>;
             fn forward(&self, input: Tensor<S, E, D, T>) -> Self::Output {
                 $func_name(input)
-            }
-        }
-
-        impl<T> ModuleMut<T> for $struct_name
-        where
-            Self: Module<T>,
-        {
-            type Output = <Self as Module<T>>::Output;
-            fn forward_mut(&mut self, input: T) -> Self::Output {
-                self.forward(input)
             }
         }
     };
@@ -47,6 +38,7 @@ activation_impls!(Abs, abs, #[doc="Unit struct that impls [Module] as calling [a
 pub struct Softmax;
 
 impl ZeroSizedModule for Softmax {}
+impl NonMutableModule for Softmax {}
 
 impl<Ax: Axes, S: Shape<LastAxis = Ax> + ReduceShape<Ax>, E: Dtype, D: Device<E>, T: Tape<D>>
     Module<Tensor<S, E, D, T>> for Softmax
@@ -57,19 +49,9 @@ impl<Ax: Axes, S: Shape<LastAxis = Ax> + ReduceShape<Ax>, E: Dtype, D: Device<E>
     }
 }
 
-impl<T> ModuleMut<T> for Softmax
-where
-    Self: Module<T>,
-{
-    type Output = <Self as Module<T>>::Output;
-    fn forward_mut(&mut self, input: T) -> Self::Output {
-        self.forward(input)
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::tests::build_test_device;
+    use crate::{nn::ModuleMut, tests::build_test_device};
 
     use super::*;
 

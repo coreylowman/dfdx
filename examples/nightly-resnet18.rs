@@ -42,7 +42,7 @@ fn main() {
 
     let dev: Cpu = Default::default();
     let x = dev.randn::<Rank3<3, 224, 224>>();
-    let m: Resnet18<1000> = BuildModule::build(&dev);
+    let m: Resnet18<1000> = dev.build();
     for _ in 0.. {
         let start = Instant::now();
         let _ = m.forward(x.clone());

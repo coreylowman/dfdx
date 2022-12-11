@@ -2,7 +2,7 @@
 //! outputs using `SplitInto`.
 
 use dfdx::{
-    nn::{BuildModule, Linear, Module, SplitInto},
+    nn::{Linear, Module, ModuleBuilder, SplitInto},
     shapes::Rank1,
     tensor::{Cpu, Tensor, TensorFromArray},
 };
@@ -13,7 +13,7 @@ fn main() {
     // SplitInto accepts a tuple of modules. Each one of the items in the
     // tuple must accept the same type of input.
     // Note that here, both of the linears have the same size input (1)
-    let m: SplitInto<(Linear<1, 3>, Linear<1, 5>)> = BuildModule::build(&dev);
+    let m: SplitInto<(Linear<1, 3>, Linear<1, 5>)> = dev.build();
 
     // when we forward data through, we get a tuple back!
     let _: (Tensor<Rank1<3>, f32>, Tensor<Rank1<5>, f32>) = m.forward(dev.tensor([1.0]));

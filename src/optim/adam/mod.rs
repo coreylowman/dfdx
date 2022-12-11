@@ -140,7 +140,7 @@ impl<M, D: DeviceStorage + AdamKernel<E>, E: Dtype> ParamUpdater<D, E> for Adam<
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, M: GradientUpdate<D, E>> Optimizer<M, D> for Adam<M, D, E>
+impl<E: Dtype, D: DeviceStorage, M: GradientUpdate<D, E>> Optimizer<M, D, E> for Adam<M, D, E>
 where
     Self: ParamUpdater<D, E>,
 {

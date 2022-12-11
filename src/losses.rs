@@ -43,7 +43,7 @@ pub fn mae_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
 ///
 /// # Example
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*};
 /// # let dev: Cpu = Default::default();
 /// let x = dev.tensor([-1.0, -0.5]);
 /// let y = dev.tensor([0.5, 0.5]);
@@ -67,7 +67,7 @@ pub fn huber_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
 ///
 /// # Example
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*};
 /// # let dev: Cpu = Default::default();
 /// let x = dev.tensor([-1.0, -0.5]);
 /// let y = dev.tensor([0.5, 0.5]);
@@ -94,7 +94,7 @@ pub fn smooth_l1_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
 ///
 /// # Example
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*};
 /// # let dev: Cpu = Default::default();
 /// let logits = dev.tensor([-1.0, -0.5]);
 /// let target_probs = dev.tensor([0.5, 0.5]);
@@ -124,7 +124,7 @@ where
 ///
 /// # Example
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*};
 /// # let dev: Cpu = Default::default();
 /// let logits = dev.tensor([-1.0, -0.5]);
 /// let target_probs = dev.tensor([0.5, 0.5]);
@@ -156,7 +156,7 @@ where
 ///
 /// # Example
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*};
 /// # let dev: Cpu = Default::default();
 /// let logits = dev.tensor([-1.0, -0.5]);
 /// let target_probs = dev.tensor([1.0, 0.25]);

@@ -1,9 +1,4 @@
-use crate::{
-    gradients::{NoneTape, OwnedTape},
-    shapes::*,
-    tensor::Tensor,
-    tensor_ops::{dropout, Device},
-};
+use crate::{gradients::*, shapes::*, tensor::Tensor, tensor_ops::*};
 
 use super::{Module, ModuleMut, ZeroSizedModule};
 
@@ -20,17 +15,17 @@ use super::{Module, ModuleMut, ZeroSizedModule};
 /// 1. Using [Module] with [OwnedTape] **fails to compile**
 /// ```compile_fail
 /// # use dfdx::prelude::*;
-/// let dropout: DropoutOneIn<2> = Default::default();
-/// let x: Tensor1D<5, OwnedTape> = Tensor1D::zeros().trace();
-/// dropout.forward(x);
+/// # let dev: Cpu = Default::default();
+/// let dropout: DropoutOneIn<2> = dev.build();
+/// dropout.forward(dev.zeros::<Rank1<5>>().trace());
 /// ```
 ///
 /// 2. Using [ModuleMut] with [NoneTape] **fails to compile**
 /// ```compile_fail
 /// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
 /// let mut dropout: DropoutOneIn<2> = Default::default();
-/// let x: Tensor1D<5, NoneTape> = TensorCreator::zeros();
-/// dropout.forward_mut(x);
+/// dropout.forward_mut(dev.zeros::<Rank1<5>>());
 /// ```
 ///
 /// Generics:
@@ -39,10 +34,10 @@ use super::{Module, ModuleMut, ZeroSizedModule};
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
 /// let mut dropout: DropoutOneIn<2> = Default::default();
-/// let t: Tensor2D<2, 5> = Tensor2D::ones();
-/// let r = dropout.forward_mut(t.trace());
-/// assert_eq!(r.data(), &[[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
+/// let r = dropout.forward_mut(dev.ones::<Rank2<2, 5>>().trace());
+/// assert_eq!(r.array(), [[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug, Default)]
 pub struct DropoutOneIn<const N: usize>;
@@ -82,17 +77,17 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D,
 /// 1. Using [Module] with [OwnedTape] **fails to compile**
 /// ```compile_fail
 /// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
 /// let dropout: Dropout = Default::default();
-/// let x: Tensor1D<5, OwnedTape> = Tensor1D::zeros().trace();
-/// dropout.forward(x);
+/// dropout.forward(dev.zeros::<Rank1<5>>().trace());
 /// ```
 ///
 /// 2. Using [ModuleMut] with [NoneTape] **fails to compile**
 /// ```compile_fail
 /// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
 /// let mut dropout: Dropout = Default::default();
-/// let x: Tensor1D<5, NoneTape> = TensorCreator::zeros();
-/// dropout.forward_mut(x);
+/// dropout.forward_mut(dev.zeros::<Rank1<5>>());
 /// ```
 ///
 /// Generics:
@@ -101,10 +96,10 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D,
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let mut dropout = Dropout::new(0.5, 0);
-/// let t: Tensor2D<2, 5> = Tensor2D::ones();
-/// let r = dropout.forward_mut(t.trace());
-/// assert_eq!(r.data(), &[[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
+/// # let dev: Cpu = Default::default();
+/// let mut dropout = Dropout { p: 0.5 };
+/// let r = dropout.forward_mut(dev.ones::<Rank2<2, 5>>().trace());
+/// assert_eq!(r.array(), [[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Dropout {

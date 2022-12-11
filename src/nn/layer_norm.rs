@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, Module, ModuleMut};
+use super::{Module, ModuleMut, ResetParams};
 
 /// Implements layer normalization as described in [Layer Normalization](https://arxiv.org/abs/1607.06450).
 ///
@@ -15,9 +15,9 @@ use super::{BuildModule, Module, ModuleMut};
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let model: LayerNorm1D<5> = Default::default();
-/// let x: Tensor1D<5> = Default::default();
-/// let _: Tensor1D<5> = model.forward(x);
+/// # let dev: Cpu = Default::default();
+/// let model: LayerNorm1D<5> = dev.build();
+/// let _: Tensor<Rank1<5>, f32> = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(Debug, Clone)]
 pub struct LayerNorm1D<const M: usize, D: Device<f32> = Cpu> {
@@ -26,9 +26,9 @@ pub struct LayerNorm1D<const M: usize, D: Device<f32> = Cpu> {
     pub epsilon: f32,
 }
 
-impl<const M: usize, D: Device<f32>> BuildModule<D, f32> for LayerNorm1D<M, D> {
+impl<const M: usize, D: Device<f32>> ResetParams<D, f32> for LayerNorm1D<M, D> {
     /// Fills [Self::gamma] with 1s and [Self::beta] with 0s and sets [Self::epsilon] to `1e-5`.
-    fn try_build(device: &D) -> Result<Self, D::Err> {
+    fn try_new(device: &D) -> Result<Self, D::Err> {
         Ok(Self {
             gamma: device.try_ones()?,
             beta: device.try_zeros()?,
@@ -98,7 +98,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::tests::SimpleUpdater;
+    use crate::nn::{tests::SimpleUpdater, ModuleBuilder};
     use crate::tests::{assert_close, build_test_device};
     use crate::unique_id::HasUniqueId;
 
@@ -106,7 +106,7 @@ mod tests {
     fn test_layer_norm_reset() {
         let dev = build_test_device!();
 
-        let mut m: LayerNorm1D<5, _> = BuildModule::build(&dev);
+        let mut m: LayerNorm1D<5, _> = dev.build();
         assert_eq!(m.gamma.array(), [1.0; 5]);
         assert_eq!(m.beta.array(), [0.0; 5]);
 
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn test_layer_norm_1d_forward() {
         let dev = build_test_device!();
-        let mut m: LayerNorm1D<5, _> = BuildModule::build(&dev);
+        let mut m: LayerNorm1D<5, _> = dev.build();
         let x = dev.randn::<Rank1<5>>();
         let r = m.forward_mut(x.trace());
         assert_close(
@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn test_layer_norm_2d_forward() {
         let dev = build_test_device!();
-        let m: LayerNorm1D<5, _> = BuildModule::build(&dev);
+        let m: LayerNorm1D<5, _> = dev.build();
         let x = dev.randn::<Rank2<3, 5>>();
         let r = m.forward(x.trace());
         assert_close(
@@ -166,7 +166,7 @@ mod tests {
     fn test_layer_norm_missing_gradients() {
         let dev = build_test_device!();
 
-        let mut model: LayerNorm1D<5, _> = BuildModule::build(&dev);
+        let mut model: LayerNorm1D<5, _> = dev.build();
         let mut g: SimpleUpdater<_> = Default::default();
 
         // no gradients present

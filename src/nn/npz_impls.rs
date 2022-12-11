@@ -347,7 +347,7 @@ mod tests {
         S: Shape + Default,
         E: Dtype,
         D: Device<E>,
-        M: BuildModule<D, E> + Module<Tensor<S, E, D>> + SaveToNpz + LoadFromNpz,
+        M: ResetParams<D, E> + Module<Tensor<S, E, D>> + SaveToNpz + LoadFromNpz,
     >(
         dev: &D,
     ) where
@@ -357,8 +357,8 @@ mod tests {
         let x = dev.randn();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let saved: M = BuildModule::build(dev);
-        let mut loaded: M = BuildModule::build(dev);
+        let saved: M = dev.build();
+        let mut loaded: M = dev.build();
 
         let y = saved.forward(x.clone());
 
@@ -377,8 +377,8 @@ mod tests {
         let x = dev.randn::<Rank3<3, 4, 5>>();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let mut saved: BatchNorm2D<3> = BuildModule::build(&dev);
-        let mut loaded: BatchNorm2D<3> = BuildModule::build(&dev);
+        let mut saved: BatchNorm2D<3> = dev.build();
+        let mut loaded: BatchNorm2D<3> = dev.build();
 
         saved.running_mean.fill_with_uniform(0.0, 1.0);
         saved.running_var.fill_with_uniform(0.0, 1.0);
@@ -438,8 +438,8 @@ mod tests {
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let mut saved: M = BuildModule::build(&dev);
-        let mut loaded: M = BuildModule::build(&dev);
+        let mut saved: M = dev.build();
+        let mut loaded: M = dev.build();
 
         saved.gamma.fill_with_uniform(0.0, 1.0);
         saved.beta.fill_with_uniform(0.0, 1.0);
@@ -474,12 +474,12 @@ mod tests {
     fn test_save_load_mha() {
         let dev = build_test_device!();
 
-        let saved: MultiHeadAttention<12, 4, 12, 12, TestDevice> = BuildModule::build(&dev);
+        let saved: MultiHeadAttention<12, 4, 12, 12, TestDevice> = dev.build();
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         saved.save(file.path()).expect("");
 
-        let mut loaded: MultiHeadAttention<12, 4, 12, 12, TestDevice> = BuildModule::build(&dev);
+        let mut loaded: MultiHeadAttention<12, 4, 12, 12, TestDevice> = dev.build();
 
         let q = dev.randn::<Rank3<2, 3, 12>>();
         let k = dev.randn::<Rank3<2, 4, 12>>();
@@ -500,12 +500,12 @@ mod tests {
     fn test_save_load_transformer() {
         let dev = build_test_device!();
 
-        let mut saved: Transformer<16, 4, 3, 4, 8, TestDevice> = BuildModule::build(&dev);
+        let mut saved: Transformer<16, 4, 3, 4, 8, TestDevice> = dev.build();
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         saved.save(file.path()).expect("");
 
-        let mut loaded: Transformer<16, 4, 3, 4, 8, TestDevice> = BuildModule::build(&dev);
+        let mut loaded: Transformer<16, 4, 3, 4, 8, TestDevice> = dev.build();
 
         let src = dev.randn::<Rank3<4, 12, 16>>();
         let tgt = dev.randn::<Rank3<4, 6, 16>>();

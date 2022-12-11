@@ -1,9 +1,12 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{BuildModule, Module, ModuleMut};
+use super::module::{Module, ModuleMut, ResetParams};
 
 /// A linear transformation of the form `weight * x + bias`, where `weight` is a matrix, `x` is a vector or matrix,
 /// and `bias` is a vector.
+/// 
+/// Initializes [Self::weight] and [Self::bias] from a [Uniform] distribution
+/// between [-1 / sqrt(I), 1 / sqrt(I)].
 ///
 /// # Generics
 /// - `I` The "input" size of vectors & matrices.
@@ -13,18 +16,13 @@ use super::module::{BuildModule, Module, ModuleMut};
 /// `Linear<5, 2>` can act on vectors with 5 elements, and results in vectors with 2 elements.
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let model: Linear<5, 2> = Default::default();
-/// assert_eq!(model.weight.data(), &[[0.0; 5]; 2]);
-/// assert_eq!(model.bias.data(), &[0.0; 2]);
-/// let x: Tensor1D<5> = Default::default();
-/// let y: Tensor1D<2> = model.forward(x);
-/// assert_eq!(y.data(), &[0.0; 2]);
+/// # let dev: Cpu = Default::default();
+/// let model: Linear<5, 2> = dev.build();
+/// // single item forward
+/// let _: Tensor<Rank1<2>, f32> = model.forward(dev.zeros::<Rank1<5>>());
+/// // batched forward
+/// let _: Tensor<Rank2<10, 2>, f32> = model.forward(dev.zeros::<Rank2<10, 5>>());
 /// ```
-///
-/// Initializes [Self::weight] and [Self::bias] from a [Uniform] distribution
-/// between [-1 / sqrt(I), 1 / sqrt(I)].
-///
-/// This uses [Randomize::randomize()] to set the values of the tensor.
 #[derive(Debug, Clone)]
 pub struct Linear<const I: usize, const O: usize, D: Device<f32> = Cpu> {
     /// Transposed weight matrix, shape (I, O)
@@ -45,8 +43,8 @@ impl<const I: usize, const O: usize, D: Device<f32>> GradientUpdate<D, f32> for 
     }
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>> BuildModule<D, f32> for Linear<I, O, D> {
-    fn try_build(device: &D) -> Result<Self, D::Err> {
+impl<const I: usize, const O: usize, D: Device<f32>> ResetParams<D, f32> for Linear<I, O, D> {
+    fn try_new(device: &D) -> Result<Self, D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
         let weight = device.try_uniform(-bound, bound)?;
         let bias = device.try_uniform(-bound, bound)?;
@@ -122,7 +120,7 @@ impl<'a, B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
 mod tests {
     use super::*;
     use crate::{
-        nn::tests::SimpleUpdater,
+        nn::{tests::SimpleUpdater, ModuleBuilder},
         tests::{assert_close, build_test_device},
         unique_id::HasUniqueId,
     };
@@ -136,7 +134,7 @@ mod tests {
     #[test]
     fn test_linear_initialize() {
         let dev = build_test_device!();
-        let m: Linear<2000, 1, _> = BuildModule::build(&dev);
+        let m: Linear<2000, 1, _> = dev.build();
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);
@@ -249,7 +247,7 @@ mod tests {
     fn test_linear_missing_gradients() {
         let dev = build_test_device!();
 
-        let mut model: Linear<5, 3, _> = BuildModule::build(&dev);
+        let mut model: Linear<5, 3, _> = dev.build();
         let mut g: SimpleUpdater<_> = Default::default();
 
         // no gradients present

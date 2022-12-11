@@ -1,5 +1,5 @@
 use crate::{
-    nn::{BuildModule, LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, Residual},
+    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual},
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
@@ -53,15 +53,15 @@ pub struct TransformerEncoderBlock<
 
 type FF<const M: usize, const F: usize, D> = Residual<(Linear<M, F, D>, ReLU, Linear<F, M, D>)>;
 
-impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
     for TransformerEncoderBlock<M, H, F, D>
 {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+    fn try_new(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            self_attn: BuildModule::try_build(device)?,
-            norm1: BuildModule::try_build(device)?,
-            ff: BuildModule::try_build(device)?,
-            norm2: BuildModule::try_build(device)?,
+            self_attn: ResetParams::try_new(device)?,
+            norm1: ResetParams::try_new(device)?,
+            ff: ResetParams::try_new(device)?,
+            norm2: ResetParams::try_new(device)?,
         })
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
@@ -125,6 +125,7 @@ where
 mod tests {
     use super::*;
     use crate::{
+        nn::ModuleBuilder,
         shapes::Rank3,
         tensor::{AsArray, RandnTensor},
         tests::{assert_close, build_test_device},
@@ -140,8 +141,7 @@ mod tests {
         const NUM_HEADS: usize = 3;
         const FF_DIM: usize = 16;
 
-        let encoder: TransformerEncoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> =
-            BuildModule::build(&dev);
+        let encoder: TransformerEncoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> = dev.build();
 
         let x = dev.randn::<Rank3<BATCH, SEQ_LEN, EMBED_DIM>>();
         let y = encoder.forward(x);

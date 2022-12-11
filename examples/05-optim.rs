@@ -2,8 +2,9 @@
 
 use dfdx::{
     losses::mse_loss,
-    nn::{BuildModule, Linear, ModuleMut, ReLU, Tanh},
+    nn::{Linear, ModuleMut, ReLU, ResetParams, Tanh},
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
+    prelude::ModuleBuilder,
     shapes::Rank2,
     tensor::{AsArray, Cpu, RandnTensor},
     tensor_ops::Backward,
@@ -29,7 +30,7 @@ fn main() {
     });
 
     // let's initialize our model and some dummy data
-    let mut mlp: Mlp = BuildModule::build(&dev);
+    let mut mlp: Mlp = dev.build();
     let x = dev.randn::<Rank2<3, 5>>();
     let y = dev.randn::<Rank2<3, 2>>();
 
