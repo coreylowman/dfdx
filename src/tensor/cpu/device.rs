@@ -6,6 +6,11 @@ use std::{
     vec::Vec,
 };
 
+/// A device that stores data on the heap.
+///
+/// The [Default] impl seeds the underlying rng with seed of 0.
+///
+/// Use [Cpu::seed_from_u64] to control what seed is used.
 #[derive(Clone, Debug)]
 pub struct Cpu {
     pub(crate) rng: Arc<Mutex<StdRng>>,
@@ -20,13 +25,15 @@ impl Default for Cpu {
 }
 
 impl Cpu {
-    pub fn with_seed(seed: u64) -> Self {
+    /// Constructs rng with the given seed.
+    pub fn seed_from_u64(seed: u64) -> Self {
         Self {
             rng: Arc::new(Mutex::new(StdRng::seed_from_u64(seed))),
         }
     }
 }
 
+/// The storage for the cpu device
 #[derive(Debug, Clone)]
 pub struct StridedArray<S: Shape, Elem> {
     pub(crate) data: Arc<Vec<Elem>>,
@@ -36,6 +43,7 @@ pub struct StridedArray<S: Shape, Elem> {
 
 #[derive(Debug, Clone, Copy)]
 pub enum CpuError {
+    /// Device is out of memory
     OutOfMemory,
 }
 
@@ -46,6 +54,9 @@ impl std::fmt::Display for CpuError {
         }
     }
 }
+
+#[cfg(feature = "std")]
+impl std::error::Error for CpuError {}
 
 impl<S: Shape, E> HasShape for StridedArray<S, E> {
     type WithShape<New: Shape> = StridedArray<New, S>;
