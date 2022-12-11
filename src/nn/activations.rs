@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{Module, ZeroSizedModule, NonMutableModule};
+use super::module::{Module, NonMutableModule, ZeroSizedModule};
 
 macro_rules! activation_impls {
     ($struct_name:ident, $func_name:ident, #[$docstring:meta]) => {

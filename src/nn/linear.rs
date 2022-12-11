@@ -4,7 +4,7 @@ use super::module::{Module, ModuleMut, ResetParams};
 
 /// A linear transformation of the form `weight * x + bias`, where `weight` is a matrix, `x` is a vector or matrix,
 /// and `bias` is a vector.
-/// 
+///
 /// Initializes [Self::weight] and [Self::bias] from a [Uniform] distribution
 /// between [-1 / sqrt(I), 1 / sqrt(I)].
 ///
