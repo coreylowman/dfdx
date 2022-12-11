@@ -2,7 +2,7 @@
 
 use dfdx::{
     losses::mse_loss,
-    nn::{Linear, ModuleMut, ReLU, ResetParams, Tanh},
+    nn::{Linear, ModuleMut, ReLU, Tanh},
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
     prelude::ModuleBuilder,
     shapes::Rank2,

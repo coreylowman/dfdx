@@ -4,15 +4,13 @@
 #[cfg(feature = "nightly")]
 fn main() {
     use dfdx::prelude::*;
-    use rand::prelude::*;
 
-    let mut rng = StdRng::seed_from_u64(0);
-    let mut t: Transformer<16, 4, 3, 3, 8> = Default::default();
-    t.reset_params(&mut rng);
+    let dev: Cpu = Default::default();
+    let t: Transformer<16, 4, 3, 3, 8> = dev.build();
 
-    let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
-    let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
-    let _out: Tensor3D<4, 6, 16, _> = t.forward_mut((src.trace(), tgt));
+    let src: Tensor<Rank3<4, 12, 16>, f32> = dev.randn();
+    let tgt: Tensor<Rank3<4, 6, 16>, f32> = dev.randn();
+    let _: Tensor<Rank3<4, 6, 16>, f32, _, _> = t.forward((src.trace(), tgt));
 }
 
 #[cfg(not(feature = "nightly"))]
