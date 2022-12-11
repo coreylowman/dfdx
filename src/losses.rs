@@ -5,7 +5,7 @@ use crate::{gradients::Tape, shapes::*, tensor::Tensor, tensor_ops::*};
 /// [Mean Squared Error](https://en.wikipedia.org/wiki/Mean_squared_error).
 /// This computes `(pred - targ).square().mean()`.
 ///
-/// See [mean()], [square()], and [sub()].
+/// See [MeanTo], [square()], and [sub()].
 pub fn mse_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
     pred: Tensor<S, f32, D, T>,
     targ: Tensor<S, f32, D>,
@@ -27,7 +27,7 @@ pub fn rmse_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
 /// [Mean absolute error](https://en.wikipedia.org/wiki/Mean_absolute_error).
 /// This computes `(pred - targ).abs().mean()`
 ///
-/// See [mean()], [abs()], and [sub()]
+/// See [MeanTo], [abs()], and [sub()]
 pub fn mae_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
     pred: Tensor<S, f32, D, T>,
     targ: Tensor<S, f32, D>,
@@ -39,15 +39,14 @@ pub fn mae_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
 /// uses absolute error when the error is higher than `beta`, and squared error when the
 /// error is lower than `beta`.
 ///
-/// It computes:
-/// 1. if `|x - y| < delta`: `0.5 * (x - y)^2`
-/// 2. otherwise: `delta * (|x - y| - 0.5 * delta)`
+/// See [huber_error()]
 ///
 /// # Example
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x = Tensor1D::new([-1.0, -0.5]);
-/// let y = Tensor1D::new([0.5, 0.5]);
+/// # let dev: Cpu = Default::default();
+/// let x = dev.tensor([-1.0, -0.5]);
+/// let y = dev.tensor([0.5, 0.5]);
 /// let loss = huber_loss(x.traced(), y, 1.0);
 /// ```
 pub fn huber_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
@@ -69,8 +68,9 @@ pub fn huber_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
 /// # Example
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x = Tensor1D::new([-1.0, -0.5]);
-/// let y = Tensor1D::new([0.5, 0.5]);
+/// # let dev: Cpu = Default::default();
+/// let x = dev.tensor([-1.0, -0.5]);
+/// let y = dev.tensor([0.5, 0.5]);
 /// let loss = smooth_l1_loss(x.traced(), y, 1.0);
 /// ```
 pub fn smooth_l1_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
@@ -95,21 +95,17 @@ pub fn smooth_l1_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
 /// # Example
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let logits = Tensor1D::new([-1.0, -0.5]);
-/// let target_probs = Tensor1D::new([0.5, 0.5]);
+/// # let dev: Cpu = Default::default();
+/// let logits = dev.tensor([-1.0, -0.5]);
+/// let target_probs = dev.tensor([0.5, 0.5]);
 /// let loss = cross_entropy_with_logits_loss(logits.traced(), target_probs);
 /// ```
-pub fn cross_entropy_with_logits_loss<
-    Ax: Axes,
-    S: Shape<LastAxis = Ax>,
-    D: Device<f32>,
-    T: Tape<D>,
->(
+pub fn cross_entropy_with_logits_loss<Ax: Axes, S, D: Device<f32>, T: Tape<D>>(
     logits: Tensor<S, f32, D, T>,
     target_probs: Tensor<S, f32, D>,
 ) -> Tensor<Rank0, f32, D, T>
 where
-    S: ReduceShape<Ax>,
+    S: Shape<LastAxis = Ax> + ReduceShape<Ax>,
 {
     let last_axis_numel = <S as HasAxes<Ax>>::size(logits.shape()) as f32;
     (logits.log_softmax::<Ax>() * target_probs).mean().negate() * last_axis_numel
@@ -129,8 +125,9 @@ where
 /// # Example
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let logits = Tensor1D::new([-1.0, -0.5]);
-/// let target_probs = Tensor1D::new([0.5, 0.5]);
+/// # let dev: Cpu = Default::default();
+/// let logits = dev.tensor([-1.0, -0.5]);
+/// let target_probs = dev.tensor([0.5, 0.5]);
 /// let loss = kl_div_with_logits_loss(logits.traced(), target_probs);
 /// ```
 pub fn kl_div_with_logits_loss<Ax: Axes, S: Shape<LastAxis = Ax>, D: Device<f32>, T: Tape<D>>(
@@ -148,10 +145,10 @@ where
         * last_axis_numel
 }
 
-/// [Binary Cross Entropy](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression) With Logits in numerically stable way.
+/// [Binary Cross Entropy](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression)
+/// With Logits in numerically stable way.
 ///
-/// Computes `target_probs * log(sigmoid(logits)) + (1 - target_probs) * log(1 - sigmoid(logits))`
-/// as `(1 - target_probs) * logits + log(1 + exp(-logits))`.
+/// See [bce_with_logits].
 ///
 /// # Inputs
 /// - `logits` - unnormalized inputs. **NOT** output of sigmoid
@@ -160,15 +157,11 @@ where
 /// # Example
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let logits = Tensor1D::new([-1.0, -0.5]);
-/// let target_probs = Tensor1D::new([1.0, 0.25]);
+/// # let dev: Cpu = Default::default();
+/// let logits = dev.tensor([-1.0, -0.5]);
+/// let target_probs = dev.tensor([1.0, 0.25]);
 /// let loss = binary_cross_entropy_with_logits_loss(logits.traced(), target_probs);
 /// ```
-///
-/// # Numerically Stable Derivation
-///
-/// See <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>
-/// for more information on this.
 pub fn binary_cross_entropy_with_logits_loss<S: Shape, D: Device<f32>, T: Tape<D>>(
     logits: Tensor<S, f32, D, T>,
     target_probs: Tensor<S, f32, D>,

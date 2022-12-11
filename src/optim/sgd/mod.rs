@@ -12,7 +12,7 @@ use super::optimizer::*;
 ///
 /// Using different learning rate:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*, optim::*};
 /// SgdConfig {
 ///     lr: 1e-1,
 ///     momentum: None,
@@ -22,7 +22,7 @@ use super::optimizer::*;
 ///
 /// Using classic momentum:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*, optim::*};
 /// SgdConfig {
 ///     lr: 1e-2,
 ///     momentum: Some(Momentum::Classic(0.5)),
@@ -32,7 +32,7 @@ use super::optimizer::*;
 ///
 /// Using nesterov momentum:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*, optim::*};
 /// SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: Some(Momentum::Nesterov(0.25)),
@@ -42,7 +42,7 @@ use super::optimizer::*;
 ///
 /// Using L2 weight decay:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*, optim::*};
 /// SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: None,
@@ -52,7 +52,7 @@ use super::optimizer::*;
 ///
 /// Using decoupled weight decay:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*, optim::*};
 /// SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: None,
@@ -94,15 +94,15 @@ impl Default for SgdConfig<f32> {
 ///
 /// Constructing using default:
 /// ```rust
-/// # use dfdx::prelude::*;
-/// # type Model = Tensor0D;
+/// # use dfdx::{prelude::*, optim::*};
+/// # type Model = Tensor<Rank0, f32>;
 /// let mut opt: Sgd<Model> = Default::default();
 /// ```
 ///
 /// Constructing using new:
 /// ```rust
-/// # use dfdx::prelude::*;
-/// # type Model = Tensor0D;
+/// # use dfdx::{prelude::*, optim::*};
+/// # type Model = Tensor<Rank0, f32>;
 /// let mut opt: Sgd<Model> = Sgd::new(SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: Some(Momentum::Classic(0.5)),

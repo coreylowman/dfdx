@@ -18,10 +18,10 @@ use crate::unique_id::{HasUniqueId, UniqueId};
 /// 4. Access mutable references to arrays
 ///
 /// This structure is similar to a HashMap, where all the methods require a key
-/// implementing [UniqueId] and [HasArrayType].
+/// implementing [UniqueId], [HasShape], and [HasDtype].
 ///
 /// Under the hood, it actually is a HashMap, and stores values as Box<dyn Any>. The
-/// important part of key's implementing [HasArrayType] is that the associated type
+/// important part of key's implementing [HasShape], and [HasDtype] is that the associated type
 /// of that trait is used to downcast the box to the expected value.
 #[derive(Debug, Default)]
 pub struct Gradients<D: DeviceStorage> {
@@ -30,6 +30,7 @@ pub struct Gradients<D: DeviceStorage> {
 }
 
 impl<D: DeviceStorage> Gradients<D> {
+    /// Retrieves mutable gradient for `t`, allocating one if it isn't present.
     pub(crate) fn get_or_alloc_mut<T>(
         &mut self,
         t: &T,
@@ -41,6 +42,7 @@ impl<D: DeviceStorage> Gradients<D> {
         Ok(self.get_mut(t))
     }
 
+    /// Inserts a gradient for `t`
     pub(crate) fn try_alloc_for<T>(&mut self, t: &T) -> Result<(), D::Err>
     where
         T: HasUniqueId + AllocGrad<D>,
@@ -55,16 +57,7 @@ impl<D: DeviceStorage> Gradients<D> {
     /// Removes and returns the data associated with `t.id()`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
-    ///
-    /// Example usage:
-    /// ```
-    /// # use dfdx::{prelude::*, gradients::*};
-    /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
-    /// let mut gradients: Gradients = Default::default();
-    /// *gradients.mut_gradient(&t) = [-4.0, 5.0, -6.0];
-    /// assert_eq!(gradients.remove(&t).expect("").as_ref(), &[-4.0, 5.0, -6.0]);
-    /// ```
-    pub fn remove<T: HasUniqueId + HasShape + HasDtype>(
+    pub(crate) fn remove<T: HasUniqueId + HasShape + HasDtype>(
         &mut self,
         t: &T,
     ) -> Option<D::Storage<T::Shape, T::Dtype>> {
@@ -75,20 +68,8 @@ impl<D: DeviceStorage> Gradients<D> {
 
     /// Returns a mutable reference to the data associated with `t`.
     ///
-    /// If no data is associated with `t`, then [AllocateZeros::zeros] is called
-    /// to allocate the data.
-    ///
-    /// Example usage:
-    /// ```
-    /// # use dfdx::{prelude::*, gradients::*};
-    /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
-    /// let mut gradients: Gradients = Default::default();
-    /// let g: &mut [f32; 3] = gradients.get_mut(&t);
-    /// assert_eq!(g, &mut [0.0, 0.0, 0.0]);
-    /// g[0] = 1.0;
-    /// assert_eq!(gradients.ref_gradient(&t), &[1.0, 0.0, 0.0]);
-    /// ```
-    pub fn get_mut<T>(&mut self, t: &T) -> &mut D::Storage<T::Shape, T::Dtype>
+    /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
+    pub(crate) fn get_mut<T>(&mut self, t: &T) -> &mut D::Storage<T::Shape, T::Dtype>
     where
         T: HasUniqueId + HasDtype + HasShape,
     {
@@ -99,21 +80,12 @@ impl<D: DeviceStorage> Gradients<D> {
             .unwrap()
     }
 
-    /// Returns a reference to the data associated with `t`.
+    /// Returns a reference to the gradient associated with `t`.
     ///
     /// # Panics
     ///
     /// If no data is associated with `t` yet, this will panic due to an unwrap()
     /// on a .get() to the underlying hashmap.
-    ///
-    /// # Example usage:
-    /// ```
-    /// # use dfdx::{prelude::*, gradients::*};
-    /// let t = Tensor1D::new([1.0, 2.0, 3.0]);
-    /// let mut gradients: Gradients = Default::default();
-    /// gradients.mut_gradient(&t);
-    /// assert_eq!(gradients.grad(&t), &[0.0, 0.0, 0.0]);
-    /// ```
     pub fn get<T: HasUniqueId + HasDtype + HasShape>(
         &self,
         t: &T,
@@ -130,20 +102,7 @@ impl<D: DeviceStorage> Gradients<D> {
     /// `l` is the gradient to update, and `r` is the gradient to backprop.
     ///
     /// **Panics** if `l` and `r` have the same id.
-    ///
-    /// Examples:
-    /// ```rust
-    /// # use dfdx::{prelude::*, gradients::*};
-    /// let a = Tensor1D::new([1.0, 2.0, 3.0]);
-    /// let b: Tensor1D<5> = Tensor1D::zeros();
-    /// let mut gradients: Gradients = Default::default();
-    /// *gradients.mut_gradient(&a) = [-4.0, 5.0, -6.0];
-    /// *gradients.mut_gradient(&b) = [1.0, 2.0, 3.0, 4.0, 5.0];
-    /// let (g_a, g_b) = gradients.mut_and_ref(&a, &b);
-    /// assert_eq!(g_a, &mut [-4.0, 5.0, -6.0]);
-    /// assert_eq!(g_b, &[1.0, 2.0, 3.0, 4.0, 5.0]);
-    /// ```
-    pub fn mut_and_ref<L, R>(
+    pub(crate) fn mut_and_ref<L, R>(
         &mut self,
         l: &L,
         r: &R,
@@ -163,7 +122,8 @@ impl<D: DeviceStorage> Gradients<D> {
         (l_ref, r_ref)
     }
 
-    pub fn muts_and_ref<L1, L2, R>(
+    /// Borrows a triplet of gradients `(&mut L1, &mut L2, &R)`.
+    pub(crate) fn muts_and_ref<L1, L2, R>(
         &mut self,
         l1: &L1,
         l2: &L2,
@@ -262,7 +222,7 @@ impl<D: DeviceStorage> GradientTape<D> {
     /// Compute the [Gradients]! This just runs all the operations on a new [Gradients] struct.
     ///
     /// Note that this method takes ownership of self, so it can't be called twice!
-    pub fn execute(mut self) -> Result<Gradients<D>, D::Err> {
+    pub(crate) fn execute(mut self) -> Result<Gradients<D>, D::Err> {
         for operation in self.operations.drain(..).rev() {
             (operation)(&mut self.gradients)?;
         }
@@ -270,7 +230,7 @@ impl<D: DeviceStorage> GradientTape<D> {
     }
 
     /// Moves all the operations from `other` into self. Leaves `other` empty.
-    pub fn append(&mut self, other: &mut Self) {
+    pub(crate) fn append(&mut self, other: &mut Self) {
         self.gradients
             .gradient_by_id
             .extend(other.gradients.gradient_by_id.drain());
@@ -323,6 +283,7 @@ impl<D: DeviceStorage> Tape<D> for NoneTape {
     }
 }
 
+/// Combine two things
 pub trait Merge<T: ?Sized> {
     /// Merges `T` into `self`
     fn merge(self, other: T) -> Self;

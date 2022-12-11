@@ -31,8 +31,8 @@ pub enum Momentum<E> {
 ///
 /// # Notes
 ///
-/// 1. [GradientUpdate] requires an object that implements [crate::gradients::GradientProvider].
-/// A common implementation involves implementing both [Optimizer] and [crate::gradients::GradientProvider]
+/// 1. [GradientUpdate] requires an object that implements [crate::optim::ParamUpdater].
+/// A common implementation involves implementing both [Optimizer] and [crate::optim::ParamUpdater]
 /// on one struct, and passing self to [GradientUpdate::update]. See [super::Sgd] for an example
 /// of implementing this trait.
 ///
@@ -53,14 +53,7 @@ pub trait Optimizer<M, D: DeviceStorage> {
     ) -> Result<(), OptimizerUpdateError<D>>;
 }
 
-/// Represents something that can return a gradient for a given key.
-///
-/// This is very similar to what [Gradients] does, however the intention
-/// is that any this object be passed to [GradientUpdate].
-///
-/// [Gradients] does **not** implement this, so you *have* to go through
-/// an optimizer to update a [GradientUpdate]. Although it very easily
-/// could.
+/// Represents something that can update a tensor.
 ///
 /// See [crate::optim::Sgd] and [crate::optim::Adam] for examples on implementing this.
 pub trait ParamUpdater<D: DeviceStorage, E: Dtype> {
@@ -93,14 +86,9 @@ impl UnusedTensors {
     }
 }
 
-/// Represents something that can be updated with [GradientProvider].
-///
-/// Most implementations of this trait will have sub structs that also
-/// implement [GradientUpdate].
+/// Represents something that can be updated with a [ParamUpdater].
 pub trait GradientUpdate<D: DeviceStorage, E: Dtype>: Sized {
-    /// Updates self given the [GradientProvider]. When any parameters that
-    /// are NOT present in `G`, then this function should
-    /// add the tensor's [UniqueId] to [UnusedTensors].
+    /// Updates self given the [ParamUpdater].
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
     where
         U: ParamUpdater<D, E>;

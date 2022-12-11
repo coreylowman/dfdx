@@ -14,15 +14,16 @@
 //! the [crate::gradients::Gradients]:
 //!
 //! ```rust
-//! # use dfdx::{prelude::*, gradients::*};
+//! # use dfdx::{prelude::*, optim::*, losses, gradients::Gradients};
 //! # type MyModel = Linear<5, 2>;
-//! let mut model: MyModel = Default::default();
+//! # let dev: Cpu = Default::default();
+//! let mut model: MyModel = BuildModule::build(&dev);
 //! let mut opt: Sgd<MyModel> = Default::default();
-//! # let y = model.forward(Tensor1D::zeros().traced());
-//! # let loss = mse_loss(y, Tensor1D::zeros());
+//! # let y = model.forward(dev.zeros::<Rank1<5>>().traced());
+//! # let loss = losses::mse_loss(y, dev.zeros());
 //! // -- snip loss computation --
 //!
-//! let gradients: Gradients = backward(loss);
+//! let gradients: Gradients<Cpu> = loss.backward();
 //! opt.update(&mut model, gradients);
 //! ```
 

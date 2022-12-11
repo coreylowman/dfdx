@@ -14,7 +14,7 @@ use super::{GradientUpdate, Optimizer, OptimizerUpdateError, ParamUpdater, Weigh
 ///
 /// Changing all default parameters:
 /// ```rust
-/// # use dfdx::prelude::*;
+/// # use dfdx::{prelude::*, optim::*};
 /// AdamConfig {
 ///     lr: 1e-2,
 ///     betas: [0.1, 0.2],
@@ -55,15 +55,15 @@ impl Default for AdamConfig<f32> {
 ///
 /// Constructing using default:
 /// ```rust
-/// # use dfdx::prelude::*;
-/// # type Model = Tensor0D;
+/// # use dfdx::{prelude::*, optim::*};
+/// # type Model = Tensor<Rank0, f32>;
 /// let mut opt: Adam<Model> = Default::default();
 /// ```
 ///
 /// Changing using new
 /// ```rust
-/// # use dfdx::prelude::*;
-/// # type Model = Tensor0D;
+/// # use dfdx::{prelude::*, optim::*};
+/// # type Model = Tensor<Rank0, f32>;
 /// let mut opt: Adam<Model> = Adam::new(AdamConfig {
 ///     lr: 1e-2,
 ///     betas: [0.5, 0.25],

@@ -1,4 +1,4 @@
-//! A collection of data utility classes such as [one_hot_encode()] and [SubsetIterator].
+//! A collection of data utility classes such as [Arange], [OneHotEncode], and [SubsetIterator].
 
 use rand::prelude::SliceRandom;
 use std::vec::Vec;
@@ -8,22 +8,14 @@ use crate::{
     tensor::{CopySlice, DeviceStorage, Tensor, ZerosTensor},
 };
 
-// use crate::arrays::HasArrayData;
-// use crate::tensor::{Tensor1D, Tensor2D, TensorCreator};
-
 /// Generates a tensor with ordered data from 0 to `N`.
 ///
 /// Examples:
 /// ```rust
-/// # use dfdx::{prelude::*, data::arange};
-/// let t = arange::<5>();
-/// assert_eq!(t.data(), &[0.0, 1.0, 2.0, 3.0, 4.0]);
-/// ```
-///
-/// ```rust
-/// # use dfdx::{prelude::*, data::arange};
-/// let t: Tensor1D<10> = arange();
-/// assert_eq!(t.data(), &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
+/// use dfdx::{prelude::*, data::Arange};
+/// let dev: Cpu = Default::default();
+/// let t = dev.arange::<5>();
+/// assert_eq!(t.array(), [0.0, 1.0, 2.0, 3.0, 4.0]);
 /// ```
 pub trait Arange: DeviceStorage + ZerosTensor<f32> + CopySlice<f32> {
     fn arange<const N: usize>(&self) -> Tensor<Rank1<N>, f32, Self> {
@@ -38,30 +30,30 @@ pub trait Arange: DeviceStorage + ZerosTensor<f32> + CopySlice<f32> {
 }
 impl<D: DeviceStorage + ZerosTensor<f32> + CopySlice<f32>> Arange for D {}
 
-/// One hot encodes an array of class labels into a [Tensor2D] of probability
+/// One hot encodes an array of class labels into a 2d tensor of probability
 /// vectors. This can be used in tandem with [crate::losses::cross_entropy_with_logits_loss()].
 ///
 /// Const Generic Arguments:
-/// - `B` - the batch size
 /// - `N` - the number of classes
 ///
 /// Arguments:
 /// - `class_labels` - an array of size `B` where each element is the class label
 ///
-/// Outputs: [Tensor2D] with shape (B, N)
+/// Outputs: [Tensor] with shape `(Dyn, Const<N>)`
 ///
 /// Examples:
 /// ```rust
-/// # use dfdx::{prelude::*, data::one_hot_encode};
+/// use dfdx::{prelude::*, data::OneHotEncode};
+/// let dev: Cpu = Default::default();
 /// let class_labels = [0, 1, 2, 1, 1];
 /// // NOTE: 5 is the batch size, 3 is the number of classes
-/// let probs = one_hot_encode::<5, 3>(&class_labels);
-/// assert_eq!(probs.data(), &[
-///     [1.0, 0.0, 0.0],
-///     [0.0, 1.0, 0.0],
-///     [0.0, 0.0, 1.0],
-///     [0.0, 1.0, 0.0],
-///     [0.0, 1.0, 0.0],
+/// let probs: Tensor<(Dyn, Const<3>), f32> = dev.one_hot_encode::<3>(&class_labels);
+/// assert_eq!(&probs.as_vec(), &[
+///     1.0, 0.0, 0.0,
+///     0.0, 1.0, 0.0,
+///     0.0, 0.0, 1.0,
+///     0.0, 1.0, 0.0,
+///     0.0, 1.0, 0.0,
 /// ]);
 /// ```
 pub trait OneHotEncode: DeviceStorage + ZerosTensor<f32> + CopySlice<f32> {
