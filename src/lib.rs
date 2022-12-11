@@ -171,7 +171,7 @@ pub(crate) mod tests {
         }};
         ($Seed:expr) => {{
             use crate::tensor::Cpu;
-            Cpu::with_seed($Seed)
+            Cpu::seed_from_u64($Seed)
         }};
     }
 

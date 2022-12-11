@@ -1,6 +1,6 @@
 mod cpu_kernel;
 
-use super::{ops::try_unary_op, Device};
+use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -13,24 +13,22 @@ pub struct SinKernelOp;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
-///
-/// // use function version
-/// let r = sin(t.clone());
-///
-/// // or the tensor method!
-/// let r2 = t.sin();
+/// # let dev: Cpu = Default::default();
+/// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
+/// let r = t.sin();
 /// ```
-pub fn sin<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn sin<S: Shape, E: Dtype, D: UnaryKernel<SinKernelOp, E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.sin()
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<SinKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// See [sin]
     pub fn sin(self) -> Self {
         self.try_sin().unwrap()
     }
+    /// See [sin]
     pub fn try_sin(self) -> Result<Self, D::Err> {
         try_unary_op(SinKernelOp, self)
     }

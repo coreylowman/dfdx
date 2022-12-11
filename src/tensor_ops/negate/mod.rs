@@ -1,6 +1,6 @@
 mod cpu_kernel;
 
-use super::{ops::try_unary_op, Device};
+use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -11,17 +11,18 @@ pub struct NegateKernelOp;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a: Tensor1D<3> = tensor([-2.0, 0.0, 5.0]);
-/// let r = -a; // or negate(a);
-/// assert_eq!(r.as_array(), [2.0, 0.0, -5.0]);
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([-2.0, 0.0, 5.0]);
+/// let r = -a;
+/// assert_eq!(r.array(), [2.0, 0.0, -5.0]);
 /// ```
-pub fn negate<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn negate<S: Shape, E: Dtype, D: UnaryKernel<NegateKernelOp, E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.negate()
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<NegateKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
     pub fn negate(self) -> Self {
         self.try_negate().unwrap()
     }
@@ -30,7 +31,9 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> std::ops::Neg for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<NegateKernelOp, E>, T: Tape<D>> std::ops::Neg
+    for Tensor<S, E, D, T>
+{
     type Output = Self;
     fn neg(self) -> Self::Output {
         self.negate()

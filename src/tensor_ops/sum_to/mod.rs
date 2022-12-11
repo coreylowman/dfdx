@@ -19,48 +19,40 @@ pub trait SumKernel<E: Dtype>: DeviceStorage {
         Src: ReduceShapeTo<Dst, Ax>;
 }
 
-/// Sum values along axes `Axes` of `T`.
-///
-/// **Pytorch equivalent**: `t.sum(Axes)`
-///
-/// Example:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
-/// let _: Tensor0D = t.sum();
-/// ```
-///
-/// Reducing 1 axis:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// # let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
-/// let _: Tensor2D<3, 4> = t.sum();
-/// ```
-///
-/// Reducing multiple axes:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// # let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
-/// let _: Tensor1D<4> = t.sum();
-/// ```
-///
-/// Specifying axes instead of output types:
-/// ```rust
-/// todo!()
-/// ```
+/// Reduction along multiple axes using `sum`.
 pub trait SumTo: HasErr + HasShape {
+    /// Sum reduction. **Pytorch equivalent**: `t.sum(Ax)`
+    ///
+    /// Example reducing a single axis:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let t: Tensor<Rank2<2, 3>, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+    /// let r = t.sum::<Rank1<2>, _>(); // or `sum::<_, Axis<1>>()`
+    /// assert_eq!(r.array(), [6.0, -6.0]);
+    /// ```
+    ///
+    /// Reducing multiple axes:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// # let t = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+    /// let r = t.sum::<Rank0, _>(); // or `sum::<_, Axes2<0, 1>>()`
+    /// assert_eq!(r.array(), 0.0);
+    /// ```
     fn sum<Dst: Shape, Ax: Axes>(self) -> Self::WithShape<Dst>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>,
     {
         self.try_sum().unwrap()
     }
+    /// Fallible version of [SumTo::sum]
     fn try_sum<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage + SumKernel<E>, T: Tape<D>> SumTo for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: SumKernel<E>, T: Tape<D>> SumTo for Tensor<S, E, D, T> {
     fn try_sum<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>,

@@ -1,6 +1,6 @@
 mod cpu_kernel;
 
-use super::{ops::try_unary_op, Device};
+use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -13,21 +13,18 @@ pub struct AbsKernelOp;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
-///
-/// // use function version
-/// let r = abs(t.clone());
-///
-/// // or the tensor method!
-/// let r2 = t.abs();
+/// # let dev: Cpu = Default::default();
+/// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
+/// let r = t.abs();
+/// assert_eq!(r.array(), [1.0, 0.0, 1.0, 2.0]);
 /// ```
-pub fn abs<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn abs<S: Shape, E: Dtype, D: UnaryKernel<AbsKernelOp, E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.abs()
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<AbsKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
     /// See [abs]
     pub fn abs(self) -> Self {
         self.try_abs().unwrap()

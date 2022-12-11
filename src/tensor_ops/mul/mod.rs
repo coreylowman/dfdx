@@ -14,15 +14,19 @@ pub struct ScalarMulKernelOp<E>(E);
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let b = Tensor2D::ones();
-/// let r = mul(a, b); // or `a * b`
-/// assert_eq!(r.data(), &[[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let r = a * dev.ones();
+/// assert_eq!(r.array(), [[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// ```
 ///
 /// Scalar example:
 /// ```rust
-/// todo!();
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let r = a * 2.0;
+/// assert_eq!(r.array(), [[2.0, 4.0, 6.0], [-2.0, -4.0, -6.0]]);
 /// ```
 pub fn mul<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
     lhs: Tensor<S, E, D, T>,

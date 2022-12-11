@@ -1,37 +1,34 @@
 use super::*;
 use crate::{gradients::Tape, shapes::*, tensor::*};
 
-/// Average the values along `Axes` of `T`.
-///
-/// **Pytorch equivalent**: `t.mean(Axes)`
-///
-/// Example:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-/// let r: Tensor0D = t.mean();
-/// assert_eq!(r.as_array(), 3.5);
-/// ```
-///
-/// Reducing 1 axis:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// # let t: Tensor2D<2, 3> = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-/// let r: Tensor1D<2> = t.mean();
-/// assert_eq!(r.as_array(), [2.0, 5.0]);
-/// ```
-///
-/// Specifying axes instead of output type:
-/// ```rust
-/// todo!()
-/// ```
+/// Reduction along multiple axes using `mean`.
 pub trait MeanTo: HasErr + HasShape {
+    /// Mean reduction. **Pytorch equivalent**: `t.mean(Axes)`
+    ///
+    /// Example:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+    /// let r = t.mean::<Rank0, _>(); // or `mean::<_, Axes2<0, 1>>()`
+    /// assert_eq!(r.array(), 3.5);
+    /// ```
+    ///
+    /// Reducing 1 axis:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+    /// let r = t.mean::<Rank1<2>, _>(); // or `mean::<_, Axis<1>>()`
+    /// assert_eq!(r.array(), [2.0, 5.0]);
+    /// ```
     fn mean<Dst: Shape, Ax: Axes>(self) -> Self::WithShape<Dst>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {
         self.try_mean().unwrap()
     }
+    /// Fallible version of [MeanTo::mean]
     fn try_mean<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;

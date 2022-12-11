@@ -1,6 +1,6 @@
 mod cpu_kernel;
 
-use super::{ops::try_unary_op, Device};
+use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -13,21 +13,17 @@ pub struct ExpKernelOp;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
-///
-/// // use function version
-/// let r = exp(t.clone());
-///
-/// // or the tensor method!
-/// let r2 = t.exp();
+/// # let dev: Cpu = Default::default();
+/// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
+/// let r = t.exp();
 /// ```
-pub fn exp<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn exp<S: Shape, E: Dtype, D: UnaryKernel<ExpKernelOp, E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.exp()
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<ExpKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
     /// See [exp]
     pub fn exp(self) -> Self {
         self.try_exp().unwrap()

@@ -118,7 +118,7 @@ pub trait ZerosTensor<E: Dtype>: DeviceStorage {
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<2, 3>, f32> = dev.zeros();
-    /// let b = dev.zeros_like(&a);
+    /// let b: Tensor<Rank2<2, 3>, f32> = dev.zeros_like(&a);
     /// ```
     fn zeros_like<S: HasShape>(&self, src: &S) -> Tensor<S::Shape, E, Self> {
         self.try_zeros_like(src).unwrap()

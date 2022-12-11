@@ -8,46 +8,52 @@ use crate::{
     tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor},
 };
 
-/// Matrix * Matrix,, Vector * Matrix, and Vector * Vector multiplication.
-///
-/// This also supports batching and broadcasting depending on device implementations.
+/// Matrix * Matrix, Vector * Matrix, Vector * Vector, and broadcasted/batched versions.
 ///
 /// # Examples
-/// 1. Normal matmul
+/// 1. Matrix & Matrix
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x: Tensor2D<3, 2> = TensorCreator::zeros();
-/// let y: Tensor2D<2, 4> = TensorCreator::zeros();
-/// let result: Tensor2D<3, 4> = matmul(x, y);
+/// # let dev: Cpu = Default::default();
+/// let x: Tensor<Rank2<3, 10>, f32> = dev.zeros();
+/// let y: Tensor<Rank2<10, 5>, f32> = dev.zeros();
+/// let result: Tensor<Rank2<3, 5>, f32> = x.matmul(y);
 /// ```
 ///
-/// 2. Batched matmul
+/// 2. Vector x Matrix
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x: Tensor3D<10, 3, 2> = TensorCreator::zeros();
-/// let y: Tensor3D<10, 2, 4> = TensorCreator::zeros();
-/// let result: Tensor3D<10, 3, 4> = matmul(x, y);
+/// # let dev: Cpu = Default::default();
+/// let x: Tensor<Rank1<2>, f32> = dev.zeros();
+/// let y: Tensor<Rank2<2, 4>, f32> = dev.zeros();
+/// let result: Tensor<Rank1<4>, f32> = x.matmul(y);
 /// ```
 ///
-/// 3. Broadcasted matmul
+/// 3. Vector x Vector
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x: Tensor3D<10, 3, 2> = TensorCreator::zeros();
-/// let y: Tensor2D<2, 4> = TensorCreator::zeros();
-/// let result: Tensor3D<10, 3, 4> = matmul(x, y);
+/// # let dev: Cpu = Default::default();
+/// let x: Tensor<Rank1<2>, f32> = dev.zeros();
+/// let y: Tensor<Rank1<4>, f32> = dev.zeros();
+/// let result: Tensor<Rank2<2, 4>, f32> = x.matmul(y);
 /// ```
 ///
-/// 4. Vector x Matrix
+/// 4. Batched matmul
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let x: Tensor1D<2> = TensorCreator::zeros();
-/// let y: Tensor2D<2, 4> = TensorCreator::zeros();
-/// let result: Tensor1D<4> = vecmat_mul(x, y);
+/// # let dev: Cpu = Default::default();
+/// let x: Tensor<Rank3<10, 3, 2>, f32> = dev.zeros();
+/// let y: Tensor<Rank3<10, 2, 4>, f32> = dev.zeros();
+/// let result: Tensor<Rank3<10, 3, 4>, f32> = x.matmul(y);
 /// ```
 ///
-/// 5. Vector x Vector
+/// 5. Broadcasted matmul
 /// ```rust
-/// todo!();
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let x: Tensor<Rank3<10, 3, 2>, f32> = dev.zeros();
+/// let y: Tensor<Rank2<2, 4>, f32> = dev.zeros();
+/// let result: Tensor<Rank3<10, 3, 4>, f32> = x.matmul(y);
 /// ```
 pub fn matmul<Lhs, Rhs>(lhs: Lhs, rhs: Rhs) -> Lhs::Output
 where
@@ -56,6 +62,7 @@ where
     lhs.matmul(rhs)
 }
 
+/// Fallible matrix multiplication. See [matmul] for examples.
 pub trait TryMatMul<Rhs>: HasErr {
     type Output;
     fn matmul(self, rhs: Rhs) -> Self::Output {

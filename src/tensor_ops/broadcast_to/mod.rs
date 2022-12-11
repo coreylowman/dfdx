@@ -19,27 +19,27 @@ pub trait BroadcastKernel<E: Dtype>: DeviceStorage {
         Src: BroadcastShapeTo<Dst, Ax>;
 }
 
-/// Broadcast self into `T` along `Axes`.
-///
-/// Examples:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// // broadcast axis 1
-/// let _: Tensor3D<3, 5, 7> = Tensor2D::<3, 7>::zeros().broadcast_into();
-///
-/// // broadcast axes 0, 1
-/// let _: Tensor3D<7, 5, 3> = Tensor1D::<3>::zeros().broadcast_into();
-///
-/// // broadcast axes 1, 2, 3
-/// let _: Tensor4D<3, 5, 7, 9> = Tensor1D::<3>::zeros().broadcast_into();
-/// ```
+/// Broadcast self into a new shape.
 pub trait BroadcastTo: HasErr + HasShape {
+    /// Broadcast into shape `Dst` along axes `Ax`:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let a: Tensor<Rank2<3, 7>, f32> = dev.zeros();
+    ///
+    /// // broadcast axis 1
+    /// let _ = a.clone().broadcast::<Rank3<3, 5, 7>, _>();
+    ///
+    /// // broadcast axis 0 and axis 2
+    /// let _ = a.clone().broadcast::<Rank4<1, 3, 5, 7>, _>();
+    /// ```
     fn broadcast<Dst: Shape + Default, Ax: Axes>(self) -> Self::WithShape<Dst>
     where
         Self::Shape: BroadcastShapeTo<Dst, Ax>,
     {
         self.try_broadcast_like(&Default::default()).unwrap()
     }
+    /// Fallible version of [BroadcastTo::broadcast]
     fn try_broadcast<Dst: Shape + Default, Ax: Axes>(
         self,
     ) -> Result<Self::WithShape<Dst>, Self::Err>
@@ -48,12 +48,14 @@ pub trait BroadcastTo: HasErr + HasShape {
     {
         self.try_broadcast_like(&Default::default())
     }
+    /// Same as [BroadcastTo::broadcast], but the target shape is given
     fn broadcast_like<Dst: Shape, Ax: Axes>(self, dst: &Dst) -> Self::WithShape<Dst>
     where
         Self::Shape: BroadcastShapeTo<Dst, Ax>,
     {
         self.try_broadcast_like(dst).unwrap()
     }
+    /// fallible version of [BroadcastTo::broadcast_like]
     fn try_broadcast_like<Dst: Shape, Ax: Axes>(
         self,
         dst: &Dst,
@@ -62,9 +64,7 @@ pub trait BroadcastTo: HasErr + HasShape {
         Self::Shape: BroadcastShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage + BroadcastKernel<E>, T: Tape<D>> BroadcastTo
-    for Tensor<S, E, D, T>
-{
+impl<S: Shape, E: Dtype, D: BroadcastKernel<E>, T: Tape<D>> BroadcastTo for Tensor<S, E, D, T> {
     fn try_broadcast_like<Dst: Shape, Ax: Axes>(
         self,
         dst: &Dst,

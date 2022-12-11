@@ -1,6 +1,6 @@
 mod cpu_kernel;
 
-use super::{ops::try_unary_op, Device};
+use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -13,21 +13,17 @@ pub struct LnKernelOp;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
-///
-/// // use function version
-/// let r = ln(t.clone());
-///
-/// // or the tensor method!
-/// let r2 = t.ln();
+/// # let dev: Cpu = Default::default();
+/// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
+/// let r = t.ln();
 /// ```
-pub fn ln<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn ln<S: Shape, E: Dtype, D: UnaryKernel<LnKernelOp, E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.ln()
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<LnKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
     /// See [ln]
     pub fn ln(self) -> Self {
         self.try_ln().unwrap()

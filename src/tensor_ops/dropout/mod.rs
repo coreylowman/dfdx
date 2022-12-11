@@ -1,6 +1,6 @@
 mod cpu_kernel;
 
-use super::{ops::try_unary_op, Device};
+use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 #[derive(Debug, Clone, Copy)]
@@ -16,17 +16,10 @@ pub struct DropoutKernelOp {
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # use rand::prelude::*;
-/// let mut rng = StdRng::seed_from_u64(4);
-/// let t = tensor([1.0, 2.0, 3.0, 4.0]);
-///
-/// // no tape in t, this won't do anything
-/// let a = dropout(t.clone(), 0.5, &mut rng);
-/// assert_eq!(a.data(), t.data());
-///
-/// // now t has the tape, dropout!
-/// let a = dropout(t.trace(), 0.5, &mut rng);
-/// assert_eq!(a.data(), &[2.0, 4.0, 0.0, 8.0]);
+/// # let dev: Cpu = Default::default();
+/// let t = dev.tensor([1.0, 2.0, 3.0, 4.0]);
+/// let r = t.dropout(0.5);
+/// assert_eq!(r.array(), [2.0, 4.0, 6.0, 0.0]);
 /// ```
 ///
 /// ### Implementation details:
@@ -35,14 +28,14 @@ pub struct DropoutKernelOp {
 /// and then instantiates two identical [StdRng] with that seed. These rngs
 /// are used in both the forward pass and backward pass to generate identical
 /// random numbers, so the masking is the same for both.
-pub fn dropout<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn dropout<S: Shape, E: Dtype, D: UnaryKernel<DropoutKernelOp, E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
     prob: f32,
 ) -> Tensor<S, E, D, T> {
     t.dropout(prob)
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<DropoutKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
     /// See [dropout]
     pub fn dropout(self, prob: f32) -> Self {
         self.try_dropout(prob).unwrap()

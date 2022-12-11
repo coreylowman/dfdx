@@ -4,7 +4,7 @@ use dfdx::{
     gradients::{Gradients, NoneTape, OwnedTape},
     shapes::{Rank0, Rank2},
     tensor::{AsArray, Cpu, RandnTensor, Tensor},
-    tensor_ops::{MeanTo, TryBackward, TryMatMul},
+    tensor_ops::{Backward, MeanTo, TryMatMul},
 };
 
 fn main() {

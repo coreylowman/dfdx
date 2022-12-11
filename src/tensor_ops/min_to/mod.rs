@@ -21,43 +21,43 @@ pub trait MinReduceKernel<E: Dtype>: DeviceStorage {
         Src: ReduceShapeTo<Dst, Ax>;
 }
 
-/// Reduces `Axes` of the tensor by gathering the minimum value from the axes.
-///
-/// **Pytorch equivalent**: `t.amin(Axes)`
-///
-/// **NOTE** This evenly distributes gradients between all equal minimum values, instead
-/// of only exactly 1 value.
-///
-/// Example:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let t = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let r: Tensor1D<2> = t.min();
-/// assert_eq!(r.data(), &[1.0, -3.0]);
-/// ```
-///
-/// Reducing 2 axes:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// # let t = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let r: Tensor0D = t.min();
-/// assert_eq!(r.data(), &-3.0);
-/// ```
+/// Reduction along multiple axes using `min`.
 pub trait MinTo: HasErr + HasShape {
+    /// Min reduction. **Pytorch equivalent**: `t.amin(Ax)`
+    ///
+    /// **NOTE** This evenly distributes gradients between all equal maximum values, instead
+    /// of only exactly 1 value.
+    ///
+    /// Example reducing a single axis:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let t: Tensor<Rank2<2, 3>, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+    /// let r = t.min::<Rank1<2>, _>(); // or `min::<_, Axis<1>>()`
+    /// assert_eq!(r.array(), [1.0, -3.0]);
+    /// ```
+    ///
+    /// Reducing multiple axes:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// # let t = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+    /// let r = t.min::<Rank0, _>();
+    /// assert_eq!(r.array(), -3.0);
+    /// ```
     fn min<Dst: Shape, Ax: Axes>(self) -> Self::WithShape<Dst>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>,
     {
         self.try_min().unwrap()
     }
+    /// Fallible version of [MinTo::min]
     fn try_min<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage + MinReduceKernel<E>, T: Tape<D>> MinTo
-    for Tensor<S, E, D, T>
-{
+impl<S: Shape, E: Dtype, D: MinReduceKernel<E>, T: Tape<D>> MinTo for Tensor<S, E, D, T> {
     fn try_min<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>,

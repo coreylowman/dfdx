@@ -14,15 +14,20 @@ pub struct BinaryDivKernelOp;
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let b = tensor([[1.0, 0.5, 1.0], [0.5, 1.0, 3.0]]);
-/// let r = div(a, b); // or `a / b`
-/// assert_eq!(r.data(), &[[1.0, 4.0, 3.0], [-2.0, -2.0, -1.0]]);
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let b = dev.tensor([[1.0, 0.5, 1.0], [0.5, 1.0, 3.0]]);
+/// let r = a / b;
+/// assert_eq!(r.array(), [[1.0, 4.0, 3.0], [-2.0, -2.0, -1.0]]);
 /// ```
 ///
 /// Scalar example:
 /// ```rust
-/// todo!()
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let r = a / 2.0;
+/// assert_eq!(r.array(), [[0.5, 1.0, 1.5], [-0.5, -1.0, -1.5]]);
 /// ```
 pub fn div<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
     lhs: Tensor<S, E, D, T>,

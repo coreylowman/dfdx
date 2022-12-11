@@ -4,6 +4,7 @@ use crate::{
     tensor::{CopySlice, Cpu, DeviceStorage},
 };
 
+/// A [DeviceStorage] that requires all the tensor ops implementations
 pub trait Device<E: Dtype>:
     DeviceStorage
     + CopySlice<E>

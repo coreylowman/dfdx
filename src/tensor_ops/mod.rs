@@ -4,9 +4,9 @@
 //!
 //! All functionality is provided in two ways.
 //! 1. The generic standalone function that takes a generic parameter. e.g. [relu()].
-//! 2. The struct method for tensor structs. e.g. [crate::tensor::Tensor1D::relu()].
+//! 2. The struct method for tensor structs. e.g. [crate::tensor::Tensor::relu()].
 //!
-//! The struct methods are all just pass throughs to the generic function.
+//! The functions are all just pass throughs to the tensor methods.
 //!
 //! # Axes/Dimensions for broadcasting/reductions/selecting
 //!
@@ -14,122 +14,125 @@
 //! the axis to apply the transformation to.
 //!
 //! Here are the valid axes for each tensor:
-//! 1. `Tensor0D`: `Axis<0>`
-//! 2. `Tensor1D`: `Axis<0>`
-//! 3. `Tensor2D`: `Axis<0>`, `Axis<1>`
-//! 4. `Tensor3D`: `Axis<0>`, `Axis<1>`, `Axis<2>`,
-//! 5. `Tensor4D`: `Axis<0>`, `Axis<1>`, `Axis<2>`, `Axis<3>`
+//! 1. 0d tensor: `Axis<0>`
+//! 2. 1d tensor: `Axis<0>`
+//! 3. 2d tensor: `Axis<0>`, `Axis<1>`
+//! 4. 3d tensor: `Axis<0>`, `Axis<1>`, `Axis<2>`,
+//! 5. 4d tensor: `Axis<0>`, `Axis<1>`, `Axis<2>`, `Axis<3>`
+//! 6. etc.
 //!
-//! Additionally `AllAxes` is valid for all tensors.
 //! To specify multiple axes you can use `Axes2`, `Axes3`, and `Axes4`
 //!
 //! # Reductions
 //!
-//! There are a number of functions that reduce 1 or more axes. Valid axes and reductions
-//! can be seen by viewing the [Reduce] or [ReduceTo] traits. Anything that can be [Reduce]'d can also
-//! be [BroadcastTo] the same tensor.
+//! There are a number of methods that reduce 1 or more axes.Anything that can be reduced can also
+//! be broadcasted back to the original shape using [BroadcastTo].
 //!
-//! There are 2 ways to call each axis reducing function:
-//! 1. The tensor method (e.g. [crate::tensor::Tensor1D::sum()]), where the axes are inferred based
-//!    on the output type.
+//! Each axis reducing function has two generic parameters:
+//! 1. The target shape
+//! 2. The axes to reduce along
+//! **You only need to specify one of these!** Generally it is better practice to specify the
+//! target shape, unless it is ambiguous in which case you should specify the axes.
+//!
+//! For example:
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t: Tensor3D<2, 4, 6> = TensorCreator::zeros();
-//! let _: Tensor1D<4> = t.sum();
-//! ```
-//! 2. The generic function (e.g. [sum]), where you need to specify the axes as generic parameters
-//! ```rust
-//! # use dfdx::prelude::*;
-//! let t: Tensor3D<2, 4, 6> = TensorCreator::zeros();
-//! let _: Tensor1D<4> = sum::<_, Axes2<0, 2>>(t);
+//! # let dev: Cpu = Default::default();
+//! let t: Tensor<Rank3<2, 4, 6>, f32> = dev.zeros();
+//! // shape version
+//! let _: Tensor<Rank1<4>, f32> = t.clone().sum::<Rank1<4>, _>();
+//! // axes version
+//! let _: Tensor<Rank1<2>, f32> = t.clone().sum::<_, Axes2<1, 2>>();
 //! ```
 //!
 //! Complete list of reductions:
 //!
-//! - [max()]
-//! - [mean()]
-//! - [min()]
-//! - [sum()]
-//! - [var()]
-//! - [stddev()]
-//! - [logsumexp()]
+//! - [MaxTo]
+//! - [MeanTo]
+//! - [MinTo]
+//! - [SumTo]
+//! - [VarTo]
+//! - [StddevTo]
+//! - [LogSumExpTo]
 //!
 //! # Broadcasts
 //!
-//! Broadcasting tensors is provided through the [BroadcastTo] trait. Generally the axes
-//! can be inferred by the type of the output, so you don't have to explicitly
-//! specify them.
+//! Broadcasting tensors is provided through the [BroadcastTo] trait. Similar to reductions
+//! there are two generic parameters to broadcast:
+//! 1. (Required) The target shape
+//! 2. (usually optional) The axes *of the result type* to broadcast
+//! You'll only need to specify axes if the shape makes the broadcasts ambiguous.
 //!
-//! To broadcast a tensor to be the same size as another tensor you can use like so:
+//! For example:
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let big: Tensor2D<2, 5> = TensorCreator::zeros();
-//!
-//! // broadcast the 1nd axis
-//! let a: Tensor2D<2, 5> = Tensor1D::<5>::zeros().broadcast();
-//! add(a, big.clone());
-//!
-//!// broadcast the 2nd axis
-//! let a: Tensor2D<2, 5> = Tensor1D::<2>::zeros().broadcast();
-//! add(a, big);
+//! # let dev: Cpu = Default::default();
+//! let t: Tensor<Rank1<4>, f32> = dev.zeros();
+//! // shape version
+//! let _: Tensor<Rank3<2, 4, 6>, f32> = t.clone().broadcast::<Rank3<2, 4, 6>, _>();
 //! ```
 //!
-//! # Permutating axes
-//!
-//! Permutating axes is done via [PermuteTo], and similar to braodcasting/reducing,
-//! you can just specify the output type and the axes will be inferred.
-//!
-//! 2D version:
+//! Rust can also infer the output type if you use it in another operation:
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t: Tensor2D<2, 3> = TensorCreator::zeros();
-//! let _: Tensor2D<3, 2> = t.permute();
+//! # let dev: Cpu = Default::default();
+//! let big: Tensor<Rank2<2, 5>, f32> = dev.zeros();
+//! let small: Tensor<Rank1<5>, f32> = dev.zeros();
+//! let _ = big + small.broadcast();
 //! ```
 //!
-//! 3D version:
+//! # Permutes
+//!
+//! Permuting has an identical interface to broadcasts/reductions:
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t: Tensor3D<2, 3, 4> = TensorCreator::zeros();
-//! let _: Tensor3D<3, 4, 2> = t.permute();
+//! # let dev: Cpu = Default::default();
+//! let t: Tensor<Rank3<2, 3, 4>, f32> = dev.zeros();
+//! // shape version
+//! let _ = t.clone().permute::<Rank3<3, 4, 2>, _>();
+//! // axes version
+//! let _ = t.clone().permute::<_, Axes3<1, 2, 0>>();
 //! ```
 //!
-//! 4D version:
+//! # Indexing using select and gather
+//!
+//! Two traits provide indexing capability [SelectTo] and [GatherTo]. The difference is:
+//! 1. [SelectTo::select] allows you to select a single value
+//! 2. [GatherTo::gather] allows you select multiple values from the same axis.
+//!
+//! For example you can select from the 0th axis like so:
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t: Tensor4D<2, 3, 4, 5> = TensorCreator::zeros();
-//! let _: Tensor4D<3, 5, 2, 4> = t.permute();
+//! # let dev: Cpu = Default::default();
+//! let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+//! let r: Tensor<Rank1<3>, f32> = t.select(dev.tensor(1));
+//! assert_eq!(r.array(), [4.0, 5.0, 6.0]);
 //! ```
 //!
-//! # Selects/Indexing
-//!
-//! Selecting or indexing into a tensor is done via [SelectTo::select()]. This traits enables
-//! 2 behaviors for each axis of a given tensor:
-//!
-//! 1. Select exactly 1 element from that axis.
-//! 2. Select Z elements (can be different from the size of the axis) from that axis
-//!
-//! For example here is selecting from the 0th axis of a 2d tensor:
+//! Or you can gather from the 0th axis to select multiple entries:
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t = Tensor2D::new([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-//!
-//! let a: Tensor1D<3> = t.clone().select(&0); // select the first row
-//! assert_eq!(a.data(), &[1.0, 2.0, 3.0]);
-//!
-//! let b: Tensor2D<5, 3> = t.select(&[0, 0, 1, 1, 1]); // select each row multiple times
+//! # let dev: Cpu = Default::default();
+//! let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+//! let r: Tensor<Rank2<3, 3>, f32> = t.gather(dev.tensor([1, 1, 0]));
+//! assert_eq!(r.array(), [
+//!     [4.0, 5.0, 6.0],
+//!     [4.0, 5.0, 6.0],
+//!     [1.0, 2.0, 3.0],
+//! ]);
 //! ```
 //!
-//! This can be done per axis as well, which allows a number of combinations.
-//! Here is the same example but selecting from the last axis of a 2d tensor:
+//! To select from anything after the 0th axis, you need a multi-dimensional
+//! axis. See [GatherTo] and [SelectTo] docstrings for examples of this.
+//!
+//! But you can use [BroadcastTo] to make this easy! In this example we select
+//! the same index from the 1st axis of a tensor:
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t = tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-//!
-//! let a: Tensor1D<2> = t.clone().select(&[0, 2]); // select one element from the last axis
-//! assert_eq!(a.data(), &[1.0, 6.0]);
-//!
-//! let b: Tensor2D<2, 2> = t.select(&[[0, 2], [1, 1]]); // select multiple from the last axis
-//! assert_eq!(b.data(), &[[1.0, 3.0], [5.0, 5.0]]);
+//! # let dev: Cpu = Default::default();
+//! let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+//! let r = t.select::<Rank1<2>, _>(dev.tensor(1).broadcast());
+//! assert_eq!(r.array(), [2.0, 5.0]);
 //! ```
 
 mod device;
@@ -180,7 +183,7 @@ pub(crate) mod ops;
 
 pub use abs::abs;
 pub use add::{add, TryAdd};
-pub use backward::TryBackward;
+pub use backward::Backward;
 pub use bce::bce_with_logits;
 pub use broadcast_to::BroadcastTo;
 pub use clamp::clamp;

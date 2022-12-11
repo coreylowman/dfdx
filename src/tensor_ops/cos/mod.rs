@@ -1,6 +1,6 @@
 mod cpu_kernel;
 
-use super::{ops::try_unary_op, Device};
+use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 #[derive(Debug, Default, Copy, Clone)]
@@ -13,21 +13,17 @@ pub struct CosKernelOp;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
-///
-/// // use function version
-/// let r = cos(t.clone());
-///
-/// // or the tensor method!
-/// let r2 = t.cos();
+/// # let dev: Cpu = Default::default();
+/// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
+/// let r = t.cos();
 /// ```
-pub fn cos<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn cos<S: Shape, E: Dtype, D: UnaryKernel<CosKernelOp, E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.cos()
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<CosKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
     /// See [cos]
     pub fn cos(self) -> Self {
         self.try_cos().unwrap()

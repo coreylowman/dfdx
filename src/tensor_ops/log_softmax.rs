@@ -1,23 +1,25 @@
 use super::{BroadcastTo, Device, LogSumExpTo, TrySub};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
-/// `log(softmax(t))` in numerically stable way across `Axes`. Does `t - logsumexp(t)` under the hood.
+/// `log(softmax(t))` in numerically stable way across `Ax`. Does `t - logsumexp(t)` under the hood.
 ///
-/// **Pytorch equivalent**: `t.log_softmax(Axes)`
+/// **Pytorch equivalent**: `t.log_softmax(Ax)`
 ///
 /// **Related functions**: [logsumexp()], [softmax()]
 ///
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
+/// # let dev: Cpu = Default::default();
+/// let t: Tensor<Rank3<2, 3, 5>, f32> = dev.zeros();
 /// let _ = t.log_softmax::<Axis<2>>();
 /// ```
 ///
 /// Using multi axis log_softmax:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
+/// # let dev: Cpu = Default::default();
+/// # let t: Tensor<Rank3<2, 3, 5>, f32> = dev.zeros();
 /// let _ = t.log_softmax::<Axes2<0, 2>>();
 /// ```
 pub fn log_softmax<Ax: Axes, S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
@@ -30,13 +32,14 @@ where
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// See [log_softmax]
     pub fn log_softmax<Ax: Axes>(self) -> Self
     where
         S: ReduceShape<Ax>,
     {
         self.try_log_softmax::<Ax>().unwrap()
     }
-
+    /// See [log_softmax]
     pub fn try_log_softmax<Ax: Axes>(self) -> Result<Self, D::Err>
     where
         S: ReduceShape<Ax>,

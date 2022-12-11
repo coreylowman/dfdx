@@ -18,31 +18,29 @@ pub trait PermuteKernel<E: Dtype>: DeviceStorage {
         Src: PermuteShapeTo<Dst, Ax>;
 }
 
-/// Permutes self into `T` with the new order of axes specified via `Axes`.
-/// Permutes the tensor
-///
-/// Examples
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let _: Tensor2D<3, 2> = Tensor2D::<2, 3>::zeros().permute();
-/// let _: Tensor3D<3, 4, 2> = Tensor3D::<2, 3, 4>::zeros().permute();
-/// let _: Tensor4D<3, 4, 5, 2> = Tensor4D::<2, 3, 4, 5>::zeros().permute();
-/// ```
+/// Changes order of dimensions/axes
 pub trait PermuteTo: HasErr + HasShape {
+    /// Permutes the tensor:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let a: Tensor<Rank3<1, 2, 3>, f32> = dev.zeros();
+    /// let _ = a.clone().permute::<Rank3<3, 2, 1>, _>(); // or `permute::<_, Axes<2, 1, 0>>()`
+    /// let _ = a.clone().permute::<Rank3<2, 1, 3>, _>(); // or `permute::<_, Axes<1, 0, 2>>()`
+    /// ```
     fn permute<Dst: Shape, Ax: Axes>(self) -> Self::WithShape<Dst>
     where
         Self::Shape: PermuteShapeTo<Dst, Ax>,
     {
         self.try_permute().unwrap()
     }
+    /// Fallible version of [PermuteTo::permute]
     fn try_permute<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: PermuteShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage + PermuteKernel<E>, T: Tape<D>> PermuteTo
-    for Tensor<S, E, D, T>
-{
+impl<S: Shape, E: Dtype, D: PermuteKernel<E>, T: Tape<D>> PermuteTo for Tensor<S, E, D, T> {
     fn try_permute<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: PermuteShapeTo<Dst, Ax>,

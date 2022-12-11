@@ -1,38 +1,36 @@
 use super::*;
 use crate::{gradients::Tape, shapes::*, tensor::*};
 
-/// Computes the [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) function across
-/// `Axes`
-///
-/// **Pytorch equivalent**: `t.exp().sum(Axes).log()`
-///
-/// **Related functions**: [ln()], [sum()], [exp()], [log_softmax()], [softmax()]
-///
-/// Example:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let t: Tensor3D<2, 4, 6> = TensorCreator::zeros();
-/// let _: Tensor2D<2, 4> = t.logsumexp();
-/// ```
-///
-/// Multi axis logsumexp:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// # let t: Tensor3D<2, 4, 6> = TensorCreator::zeros();
-/// let _: Tensor1D<4> = t.logsumexp();
-/// ```
-///
-/// Specifying axes to reduce:
-/// ```rust
-/// todo!();
-/// ```
+/// Reduction along multiple axes using [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp).
 pub trait LogSumExpTo: HasErr + HasShape {
+    /// [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp) reduction.
+    ///
+    /// **Pytorch equivalent**: `t.exp().sum(Axes).log()`
+    ///
+    /// **Related functions**: [ln()], [exp()], [log_softmax()], [softmax()]
+    ///
+    /// Example:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let t: Tensor<Rank3<2, 4, 6>, f32> = dev.zeros();
+    /// let _ = t.logsumexp::<Rank2<2, 4>, _>(); // or `logsumexp::<_, Axis<2>>()`
+    /// ```
+    ///
+    /// Multi axis logsumexp:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// # let t: Tensor<Rank3<2, 4, 6>, f32> = dev.zeros();
+    /// let _ = t.logsumexp::<Rank1<4>, _>(); // or `logsumexp::<_, Axes2<0, 2>>()`
+    /// ```
     fn logsumexp<Dst: Shape, Ax: Axes>(self) -> Self::WithShape<Dst>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>,
     {
         self.try_logsumexp().unwrap()
     }
+    /// Fallible version of [LogSumExpTo::logsumexp]
     fn try_logsumexp<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>;

@@ -1,27 +1,27 @@
 use super::*;
 use crate::{gradients::Tape, shapes::*, tensor::*};
 
-/// Reduces `Axes` of `T` by computing std deviation of all values in those axes.
-/// Result [Tensor] has smaller number of dimensions.
-///
-/// **Pytorch equivalent**: `t.std(Axes, unbiased=False)`
-///
-/// **Related functions**: [var()], [sqrt()].
-///
-/// Examples:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let t: Tensor2D<2, 3> = tensor([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
-/// let r: Tensor1D<2> = t.stddev(0.0);
-/// assert_eq!(r.data(), &[0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
-/// ```
+/// Reduction along multiple axes using standard deviation.
 pub trait StddevTo: HasErr + HasShape {
+    /// Standard deviation reduction.
+    ///
+    /// **Pytorch equivalent**: `t.std(Axes, unbiased=False)`
+    ///
+    /// Examples:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let t = dev.tensor([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
+    /// let r = t.stddev::<Rank1<2>, _>(0.0); // or `stddev::<_, Axis<1>>(0.0)`
+    /// assert_eq!(r.array(), [0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
+    /// ```
     fn stddev<Dst: Shape, Ax: Axes>(self, epsilon: f32) -> Self::WithShape<Dst>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {
         self.try_stddev(epsilon).unwrap()
     }
+    /// Fallible version of [StddevTo::stddev]
     fn try_stddev<Dst: Shape, Ax: Axes>(
         self,
         epsilon: f32,

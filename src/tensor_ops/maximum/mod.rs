@@ -13,30 +13,31 @@ pub struct MaximumKernelOp;
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let b = tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let b = dev.tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
 /// let r = a.maximum(b);
-/// assert_eq!(r.data(), &[[1.0, 2.0, 3.0], [-1.0, 2.0, -3.0]]);
-pub fn maximum<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
-    lhs: Tensor<S, E, D, T>,
-    rhs: Tensor<S, E, D, RhsTape>,
-) -> Tensor<S, E, D, T> {
+/// assert_eq!(r.array(), [[1.0, 2.0, 3.0], [-1.0, 2.0, -3.0]]);
+pub fn maximum<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D> + Merge<RTape>, RTape: Tape<D>>(
+    lhs: Tensor<S, E, D, LTape>,
+    rhs: Tensor<S, E, D, RTape>,
+) -> Tensor<S, E, D, LTape> {
     lhs.maximum(rhs)
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
-    /// Calls [maximum]
-    pub fn maximum<R: Tape<D>>(self, rhs: Tensor<S, E, D, R>) -> Self
+impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
+    /// See [maximum]
+    pub fn maximum<RTape: Tape<D>>(self, rhs: Tensor<S, E, D, RTape>) -> Self
     where
-        T: Merge<R>,
+        LTape: Merge<RTape>,
     {
         self.try_maximum(rhs).unwrap()
     }
 
-    /// Calls [try_maximum]
+    /// See [maximum]
     pub fn try_maximum<R: Tape<D>>(self, rhs: Tensor<S, E, D, R>) -> Result<Self, D::Err>
     where
-        T: Merge<R>,
+        LTape: Merge<R>,
     {
         try_binary_op(MaximumKernelOp, self, rhs)
     }

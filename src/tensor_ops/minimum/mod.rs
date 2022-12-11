@@ -13,30 +13,31 @@ pub struct MinimumKernelOp;
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let b = tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let b = dev.tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
 /// let r = a.minimum(b);
-/// assert_eq!(r.data(), &[[1.0, 0.5, 1.0], [-2.0, -2.0, -3.5]]);
-pub fn minimum<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
-    lhs: Tensor<S, E, D, T>,
-    rhs: Tensor<S, E, D, RhsTape>,
-) -> Tensor<S, E, D, T> {
+/// assert_eq!(r.array(), [[1.0, 0.5, 1.0], [-2.0, -2.0, -3.5]]);
+pub fn minimum<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D> + Merge<RTape>, RTape: Tape<D>>(
+    lhs: Tensor<S, E, D, LTape>,
+    rhs: Tensor<S, E, D, RTape>,
+) -> Tensor<S, E, D, LTape> {
     lhs.minimum(rhs)
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
     /// Calls [minimum]
-    pub fn minimum<R: Tape<D>>(self, rhs: Tensor<S, E, D, R>) -> Self
+    pub fn minimum<RTape: Tape<D>>(self, rhs: Tensor<S, E, D, RTape>) -> Self
     where
-        T: Merge<R>,
+        LTape: Merge<RTape>,
     {
         self.try_minimum(rhs).unwrap()
     }
 
     /// Calls [try_minimum]
-    pub fn try_minimum<R: Tape<D>>(self, rhs: Tensor<S, E, D, R>) -> Result<Self, D::Err>
+    pub fn try_minimum<RTape: Tape<D>>(self, rhs: Tensor<S, E, D, RTape>) -> Result<Self, D::Err>
     where
-        T: Merge<R>,
+        LTape: Merge<RTape>,
     {
         try_binary_op(MinimumKernelOp, self, rhs)
     }

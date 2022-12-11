@@ -14,15 +14,20 @@ pub struct ScalarSubKernelOp<E>(E);
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let a = tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-/// let b = Tensor2D::ones();
-/// let r = sub(a, b); // or `a - b`
-/// assert_eq!(r.data(), &[[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let b = dev.ones();
+/// let r = a - b;
+/// assert_eq!(r.array(), [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
 /// ```
 ///
 /// Scalar Example:
 /// ```rust
-/// todo!()
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+/// let r = a - 1.0;
+/// assert_eq!(r.array(), [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
 /// ```
 pub fn sub<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
     lhs: Tensor<S, E, D, T>,
@@ -31,16 +36,17 @@ pub fn sub<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTap
     lhs - rhs
 }
 
+/// Fallible version of std::ops::Sub
 pub trait TrySub<Rhs = Self>: HasErr {
     fn try_sub(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, RhsTape: Tape<D>>
-    TrySub<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
+impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>, RTape: Tape<D>>
+    TrySub<Tensor<S, E, D, RTape>> for Tensor<S, E, D, LTape>
 where
-    LhsTape: Merge<RhsTape>,
+    LTape: Merge<RTape>,
 {
-    fn try_sub(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, Self::Err> {
+    fn try_sub(self, rhs: Tensor<S, E, D, RTape>) -> Result<Self, Self::Err> {
         try_binary_op(BinarySubKernelOp, self, rhs)
     }
 }
@@ -51,8 +57,8 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TrySub<E> for Tensor<S, E, D,
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, Rhs> std::ops::Sub<Rhs>
-    for Tensor<S, E, D, LhsTape>
+impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>, Rhs> std::ops::Sub<Rhs>
+    for Tensor<S, E, D, LTape>
 where
     Self: TrySub<Rhs>,
 {

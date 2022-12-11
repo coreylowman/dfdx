@@ -1,38 +1,34 @@
 mod cpu_kernel;
 
-use super::{ops::try_unary_op, Device};
+use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct SigmoidKernelOp;
 
-/// [Sigmoid](https://en.wikipedia.org/wiki/Sigmoid_function).
-///
-/// Equivalent to `1 / (1 + exp(-t))`.
+/// [Sigmoid](https://en.wikipedia.org/wiki/Sigmoid_function). `1 / (1 + exp(-t))`.
 ///
 /// The derivative is `sigmoid(t) * (1.0 - sigmoid(t))`.
 ///
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = tensor([-1.0, 0.0, 1.0, 2.0]);
-///
-/// // use function version
-/// let r = sigmoid(t.clone());
-///
-/// // or the tensor method!
-/// let r2 = t.sigmoid();
+/// # let dev: Cpu = Default::default();
+/// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
+/// let r = t.sigmoid();
 /// ```
-pub fn sigmoid<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn sigmoid<S: Shape, E: Dtype, D: UnaryKernel<SigmoidKernelOp, E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.sigmoid()
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<SigmoidKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// See [sigmoid]
     pub fn sigmoid(self) -> Self {
         self.try_sigmoid().unwrap()
     }
+    /// See [sigmoid]
     pub fn try_sigmoid(self) -> Result<Self, D::Err> {
         try_unary_op(SigmoidKernelOp, self)
     }

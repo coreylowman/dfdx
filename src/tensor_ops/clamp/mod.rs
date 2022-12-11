@@ -1,6 +1,6 @@
 mod cpu_kernel;
 
-use super::{ops::try_unary_op, Device};
+use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 #[derive(Debug, Clone, Copy)]
@@ -14,11 +14,12 @@ pub struct ClampKernelOp<E> {
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t = tensor([-1.0, -0.5, 0.0, 0.5, 1.0]);
+/// # let dev: Cpu = Default::default();
+/// let t = dev.tensor([-1.0, -0.5, 0.0, 0.5, 1.0]);
 /// let r = t.clamp(-0.5, 0.5);
-/// assert_eq!(r.data(), &[-0.5, -0.5, 0.0, 0.5, 0.5]);
+/// assert_eq!(r.array(), [-0.5, -0.5, 0.0, 0.5, 0.5]);
 /// ```
-pub fn clamp<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn clamp<S: Shape, E: Dtype, D: UnaryKernel<ClampKernelOp<E>, E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
     min: E,
     max: E,
@@ -26,7 +27,7 @@ pub fn clamp<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
     t.clamp(min, max)
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<ClampKernelOp<E>, E>, T: Tape<D>> Tensor<S, E, D, T> {
     /// See [clamp]
     pub fn clamp(self, min: E, max: E) -> Self {
         self.try_clamp(min, max).unwrap()

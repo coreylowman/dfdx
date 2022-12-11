@@ -1,32 +1,27 @@
 use super::*;
 use crate::{gradients::Tape, shapes::*, tensor::*};
 
-/// Reduces `Axes` of `T` by computing variance of all values in those axes.
-/// Result [Tensor] has smaller number of dimensions.
-///
-/// **Pytorch equivalent**: `t.var(Axes, unbiased=False)`
-///
-/// **Related functions**: [stddev()], [mean()].
-///
-/// Examples:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// let t: Tensor2D<2, 3> = tensor([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
-/// let r: Tensor1D<2> = t.var();
-/// assert_eq!(r.data(), &[0.6666667, 6.0]);
-/// ```
-///
-/// Reducing with axes:
-/// ```rust
-/// todo!();
-/// ```
+/// Reduction alogn multiple axes using variance
 pub trait VarTo: HasErr + HasShape {
+    /// Result [Tensor] has smaller number of dimensions.
+    ///
+    /// **Pytorch equivalent**: `t.var(Axes, unbiased=False)`
+    ///
+    /// Examples:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let t = dev.tensor([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
+    /// let r = t.var::<Rank1<2>, _>(); // or `var::<_, Axis<1>>()`
+    /// assert_eq!(r.array(), [0.6666667, 6.0]);
+    /// ```
     fn var<Dst: Shape, Ax: Axes>(self) -> Self::WithShape<Dst>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {
         self.try_var().unwrap()
     }
+    /// Fallible version of [VarTo::var]
     fn try_var<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;

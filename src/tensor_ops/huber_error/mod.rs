@@ -8,7 +8,22 @@ pub struct HuberErrorKernelOp<E: Dtype> {
     pub delta: E,
 }
 
-/// TODO docstring
+/// [Huber Loss](https://en.wikipedia.org/wiki/Huber_loss)
+/// uses absolute error when the error is higher than `beta`, and squared error when the
+/// error is lower than `beta`.
+///
+/// It computes:
+/// 1. if `|x - y| < delta`: `0.5 * (x - y)^2`
+/// 2. otherwise: `delta * (|x - y| - 0.5 * delta)`
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([1.0, 1.0, 1.0]);
+/// let b = dev.tensor([1.5, 1.75, 2.5]);
+/// let r = a.huber_error(b, 1.0);
+/// assert_eq!(r.array(), [0.125, 0.28125, 1.0]);
+/// ```
 pub fn huber_error<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<R>, R: Tape<D>>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, R>,

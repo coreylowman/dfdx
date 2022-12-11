@@ -1,6 +1,6 @@
 mod cpu_kernel;
 
-use super::{ops::try_unary_op, Device};
+use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 #[derive(Debug, Clone, Copy)]
@@ -13,21 +13,24 @@ pub struct NansToKernelOp<E>(E);
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t: Tensor1D<4> = tensor([1.0, f32::NAN, f32::NAN, 4.0]);
+/// # let dev: Cpu = Default::default();
+/// let t = dev.tensor([1.0, f32::NAN, f32::NAN, 4.0]);
 /// let r = t.nans_to(0.0);
-/// assert_eq!(r.data(), &[1.0, 0.0, 0.0, 4.0]);
+/// assert_eq!(r.array(), [1.0, 0.0, 0.0, 4.0]);
 /// ```
-pub fn nans_to<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn nans_to<S: Shape, E: Dtype, D: UnaryKernel<NansToKernelOp<E>, E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
     value: E,
 ) -> Tensor<S, E, D, T> {
     t.nans_to(value)
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<NansToKernelOp<E>, E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// See [nans_to]
     pub fn nans_to(self, value: E) -> Self {
         self.try_nans_to(value).unwrap()
     }
+    /// See [nans_to]
     pub fn try_nans_to(self, value: E) -> Result<Self, D::Err> {
         try_unary_op(NansToKernelOp(value), self)
     }

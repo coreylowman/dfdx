@@ -6,15 +6,14 @@ use crate::{
 
 use super::{BroadcastTo, Device, MeanTo, StddevTo, TryDiv, TrySub};
 
-/// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Axes` of `T`. `epsilon` is passed to [stddev()].
-/// Computes `(t - t.mean(Axes)) / t.std(Axes, epsilon)`.
-///
-/// **Related functions:** [mean()], [stddev()], [var()]
+/// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Ax`. `epsilon` is used during stddev.
+/// Computes `(t - t.mean(Ax)) / t.std(Ax, epsilon)`.
 ///
 /// Normalizing a single axis:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t: Tensor2D<2, 3> = TensorCreator::zeros();
+/// # let dev: Cpu = Default::default();
+/// let t: Tensor<Rank2<2, 3>, f32> = dev.zeros();
 /// let _ = t.normalize::<Axis<1>>(1e-5);
 /// ```
 pub fn normalize<Ax: Axes, S: Shape + ReduceShape<Ax>, D: Device<f32>, T: Tape<D>>(

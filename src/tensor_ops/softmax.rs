@@ -2,26 +2,18 @@ use super::Device;
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 /// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function) across
-/// `Axes`.
+/// `Ax`.
 ///
 /// Equivalent to `exp(log_softmax(t))`.
 ///
 /// **Pytorch equivalent**: `t.softmax(Axes)`
 ///
-/// **Related functions**: [logsumexp()], [log_softmax()]
-///
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
+/// # let dev: Cpu = Default::default();
+/// let t: Tensor<Rank3<2, 3, 5>, f32> = dev.zeros();
 /// let _ = t.softmax::<Axis<2>>();
-/// ```
-///
-/// Using multi axis softmax:
-/// ```rust
-/// # use dfdx::prelude::*;
-/// # let t: Tensor3D<2, 3, 5> = TensorCreator::zeros();
-/// let _ = t.softmax::<Axes2<1, 2>>();
 /// ```
 pub fn softmax<Ax: Axes, S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
@@ -33,13 +25,14 @@ where
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// See [softmax]
     pub fn softmax<Ax: Axes>(self) -> Self
     where
         S: ReduceShape<Ax>,
     {
         self.try_softmax::<Ax>().unwrap()
     }
-
+    /// See [softmax]
     pub fn try_softmax<Ax: Axes>(self) -> Result<Self, D::Err>
     where
         S: ReduceShape<Ax>,
