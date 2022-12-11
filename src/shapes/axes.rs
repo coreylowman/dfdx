@@ -1,10 +1,12 @@
 use super::shape::*;
 
+/// Represents indices into the dimensions of shapes
 pub trait Axes: 'static + Default + Copy + Clone {
     type Array: IntoIterator<Item = isize>;
     fn as_array() -> Self::Array;
 }
 
+/// A singular axis, e.g. `Axis<0>` or `Axis<1>`
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Axis<const I: isize>;
 impl<const I: isize> Axes for Axis<I> {
@@ -15,6 +17,7 @@ impl<const I: isize> Axes for Axis<I> {
     }
 }
 
+/// A set of 2 axes, e.g. `Axes2<0, 1>`, or `Axes2<1, 3>`.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Axes2<const I: isize, const J: isize>;
 impl<const I: isize, const J: isize> Axes for Axes2<I, J> {
@@ -25,6 +28,7 @@ impl<const I: isize, const J: isize> Axes for Axes2<I, J> {
     }
 }
 
+/// A set of 3 axes, e.g. `Axes3<1, 3, 4>`
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Axes3<const I: isize, const J: isize, const K: isize>;
 impl<const I: isize, const J: isize, const K: isize> Axes for Axes3<I, J, K> {
@@ -35,6 +39,7 @@ impl<const I: isize, const J: isize, const K: isize> Axes for Axes3<I, J, K> {
     }
 }
 
+/// A set of 4 axes
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Axes4<const I: isize, const J: isize, const K: isize, const L: isize>;
 impl<const I: isize, const J: isize, const K: isize, const L: isize> Axes for Axes4<I, J, K, L> {
@@ -45,6 +50,7 @@ impl<const I: isize, const J: isize, const K: isize, const L: isize> Axes for Ax
     }
 }
 
+/// A set of 5 axes
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Axes5<const I: isize, const J: isize, const K: isize, const L: isize, const M: isize>;
 impl<const I: isize, const J: isize, const K: isize, const L: isize, const M: isize> Axes
@@ -57,6 +63,7 @@ impl<const I: isize, const J: isize, const K: isize, const L: isize, const M: is
     }
 }
 
+/// A set of 6 axes
 #[rustfmt::skip]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Axes6<const I: isize, const J: isize, const K: isize, const L: isize, const M: isize, const N: isize>;
@@ -71,7 +78,9 @@ impl<const I: isize, const J: isize, const K: isize, const L: isize, const M: is
     }
 }
 
-pub trait HasAxes<Axes> {
+/// Represents something that has the axes `Ax`
+pub trait HasAxes<Ax> {
+    /// Returns the number of elements in dimensions along `Ax`
     fn size(&self) -> usize;
 }
 

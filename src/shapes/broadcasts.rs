@@ -58,6 +58,7 @@ broadcast_to!((M, N, P), (M, N, O, P), Axis<2>);
 broadcast_to!((M, O, P), (M, N, O, P), Axis<1>);
 broadcast_to!((N, O, P), (M, N, O, P), Axis<0>);
 
+/// Internal implementation for broadcasting strides
 pub trait BroadcastStridesTo<S: Shape, Ax>: Shape + BroadcastShapeTo<S, Ax> {
     fn broadcast_strides(&self, strides: Self::Concrete) -> S::Concrete;
 }
@@ -80,6 +81,7 @@ where
     }
 }
 
+/// Internal implementation for reducing a shape
 pub trait ReduceStridesTo<S: Shape, Ax>: Shape + ReduceShapeTo<S, Ax> {
     fn reduced(&self) -> S;
 }

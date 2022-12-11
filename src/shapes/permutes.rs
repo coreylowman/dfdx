@@ -1,6 +1,11 @@
 use super::*;
 
-pub trait PermuteShapeTo<Dst, Axes> {}
+/// Marker for shapes that can be permuted into `Dst` by using `Ax`
+/// as the new indices.
+///
+/// E.g. `PermuteShapeTo<_, Axes2<1, 0>>` would mean you can reverse
+/// axes 0 and 1.
+pub trait PermuteShapeTo<Dst, Ax> {}
 
 pub trait PermuteStridesTo<S: Shape, Ax>: Shape + PermuteShapeTo<S, Ax> {
     fn permuted(&self) -> S;

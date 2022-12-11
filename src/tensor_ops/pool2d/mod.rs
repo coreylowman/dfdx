@@ -3,7 +3,7 @@ mod cpu_kernel;
 use crate::{
     gradients::Tape,
     shapes::{Const, Dim, Dtype},
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor, TensorFromStorage},
+    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor},
 };
 
 pub(super) mod pooling {

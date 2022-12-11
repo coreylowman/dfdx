@@ -99,10 +99,10 @@ pub trait Shape:
         + Sync
         + IntoIterator<Item = usize>;
 
-    /// All the [Axes] of this shape
+    /// All the axes of this shape
     type AllAxes: Axes;
 
-    /// The last [Axes] of this shape
+    /// The last axis of this shape
     type LastAxis: Axes;
 
     fn concrete(&self) -> Self::Concrete;
@@ -142,15 +142,22 @@ impl<S: Shape> HasShape for S {
     }
 }
 
+/// Compile time known shape with 0 dimensions
 pub type Rank0 = ();
+/// Compile time known shape with 1 dimensions
 pub type Rank1<const M: usize> = (Const<M>,);
+/// Compile time known shape with 2 dimensions
 pub type Rank2<const M: usize, const N: usize> = (Const<M>, Const<N>);
+/// Compile time known shape with 3 dimensions
 pub type Rank3<const M: usize, const N: usize, const O: usize> = (Const<M>, Const<N>, Const<O>);
+/// Compile time known shape with 4 dimensions
 pub type Rank4<const M: usize, const N: usize, const O: usize, const P: usize> =
     (Const<M>, Const<N>, Const<O>, Const<P>);
+/// Compile time known shape with 5 dimensions
 pub type Rank5<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize> =
     (Const<M>, Const<N>, Const<O>, Const<P>, Const<Q>);
 #[rustfmt::skip]
+/// Compile time known shape with 6 dimensions
 pub type Rank6<const M: usize, const N: usize, const O: usize, const P: usize, const Q: usize, const R: usize> =
     (Const<M>, Const<N>, Const<O>, Const<P>, Const<Q>, Const<R>);
 

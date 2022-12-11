@@ -3,7 +3,7 @@ mod cpu_kernel;
 use crate::{
     gradients::Tape,
     shapes::{Const, Dim, Dtype, Rank3, Rank4},
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor, TensorFromStorage},
+    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor},
 };
 
 pub trait Conv2DKernel<

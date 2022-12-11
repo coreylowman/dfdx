@@ -5,7 +5,7 @@ pub(super) mod cpu_kernel;
 use crate::{
     gradients::{Merge, Tape},
     shapes::{Const, Dim, Dtype, Shape},
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor, TensorFromStorage},
+    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor},
 };
 
 /// Matrix * Matrix,, Vector * Matrix, and Vector * Vector multiplication.

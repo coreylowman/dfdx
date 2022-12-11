@@ -3,6 +3,7 @@
 use crate::shapes::Const;
 use crate::{Assert, ConstTrue};
 
+/// Marker for shapes that have the same number of elements as `Dst`
 pub trait HasSameNumelAs<Dst> {}
 
 macro_rules! impl_same_num_elements {

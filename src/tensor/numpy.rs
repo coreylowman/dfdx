@@ -38,11 +38,13 @@ impl<S: Shape, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>, T> Tensor
         Ok(())
     }
 
+    /// Attemps to load the data from a `.npy` file at `path`
     pub fn load_from_npy<P: AsRef<Path>>(&mut self, path: P) -> Result<(), NpyError> {
         let mut f = BufReader::new(File::open(path)?);
         self.read_from(&mut f)
     }
 
+    /// Saves the tensor to a `.npy` file located at `path`
     pub fn save_to_npy<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut f = BufWriter::new(File::create(path)?);
         self.write_to(&mut f)
