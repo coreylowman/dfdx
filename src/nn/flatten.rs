@@ -1,4 +1,4 @@
-use super::{Module, ModuleMut, NonMutableModule, ZeroSizedModule};
+use super::{Module, NonMutableModule, ZeroSizedModule};
 
 use crate::{gradients::Tape, shapes::*, tensor::Tensor, tensor_ops::*};
 
@@ -36,7 +36,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{tensor::ZerosTensor, tests::build_test_device};
+    use crate::{nn::ModuleMut, tensor::ZerosTensor, tests::build_test_device};
 
     #[test]
     fn test_flattens() {

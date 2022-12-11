@@ -1,6 +1,6 @@
 use super::{Module, NonMutableModule, ZeroSizedModule};
 
-use crate::{shapes::*, tensor_ops::TryPool2DTo};
+use crate::tensor_ops::TryPool2DTo;
 
 /// Average pool with 2d kernel that operates on images (3d) and batches of images (4d).
 /// Each patch reduces to the average of the values in the patch.
@@ -56,7 +56,7 @@ impl_pools!(MinPool2D, try_min_pool2d_to);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{tensor::*, tests::build_test_device};
+    use crate::{shapes::*, tensor::*, tests::build_test_device};
 
     #[test]
     fn test_max_forward_3d_sizes() {

@@ -136,7 +136,7 @@ impl<const K: usize, const S: usize, const P: usize, Kind: Pooling<K, S, P>>
     > {
         let (c, _, _) = inp.shape;
         let mut out: StridedArray<_, f32> = StridedArray::new((c, Const, Const))?;
-        Kind::forward(inp.view(), &mut out.view_mut());
+        Kind::forward::<C, H, W>(inp.view(), &mut out.view_mut());
         Ok(out)
     }
 
@@ -148,7 +148,7 @@ impl<const K: usize, const S: usize, const P: usize, Kind: Pooling<K, S, P>>
         out: &Self::Storage<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
         grad_out: &Self::Storage<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
     ) -> Result<(), Self::Err> {
-        Kind::backward(inp.view(), &mut grad_inp.view_mut(), out.view(), grad_out.view());
+        Kind::backward::<C, H, W>(inp.view(), &mut grad_inp.view_mut(), out.view(), grad_out.view());
         Ok(())
     }
 }
@@ -169,7 +169,7 @@ impl<const K: usize, const S: usize, const P: usize, Kind: Pooling<K, S, P>>
         let inp = inp.view();
         let mut out_view = out.view_mut();
         for b in 0..batch.size() {
-            Kind::forward(inp.idx(b), &mut out_view.idx_mut(b));
+            Kind::forward::<C, H, W>(inp.idx(b), &mut out_view.idx_mut(b));
         }
         Ok(out)
     }
@@ -188,7 +188,7 @@ impl<const K: usize, const S: usize, const P: usize, Kind: Pooling<K, S, P>>
         let out = out.view();
         let grad_out = grad_out.view();
         for b in 0..batch.size() {
-            Kind::backward(inp.idx(b), &mut grad_inp.idx_mut(b), out.idx(b), grad_out.idx(b));
+            Kind::backward::<C, H, W>(inp.idx(b), &mut grad_inp.idx_mut(b), out.idx(b), grad_out.idx(b));
         }
         Ok(())
     }

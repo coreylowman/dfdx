@@ -119,7 +119,7 @@ where
         let (lhs, ltape) = self.split_tape();
         let (rhs, rtape) = filters.split_tape();
         let mut tape = ltape.merge(rtape);
-        let storage = lhs.device.forward(&lhs.storage, &rhs.storage)?;
+        let storage = lhs.device.forward::<H, W>(&lhs.storage, &rhs.storage)?;
         let out = lhs.device.upgrade(storage);
         let phantom_out = out.clone();
         tape.try_alloc_grad(&lhs)?;
@@ -128,7 +128,7 @@ where
         tape.add_backward_op(move |grads| {
             let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
             lhs.device
-                .backward(&lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)
+                .backward::<H, W>(&lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -173,7 +173,7 @@ where
         let (lhs, ltape) = self.split_tape();
         let (rhs, rtape) = filters.split_tape();
         let mut tape = ltape.merge(rtape);
-        let storage = lhs.device.forward(&lhs.storage, &rhs.storage)?;
+        let storage = lhs.device.forward::<B, H, W>(&lhs.storage, &rhs.storage)?;
         let out = lhs.device.upgrade(storage);
         let phantom_out = out.clone();
         tape.try_alloc_grad(&lhs)?;
@@ -181,8 +181,13 @@ where
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
-            lhs.device
-                .backward(&lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)?;
+            lhs.device.backward::<B, H, W>(
+                &lhs.storage,
+                grad_lhs,
+                &rhs.storage,
+                grad_rhs,
+                grad_out,
+            )?;
             Ok(())
         });
         Ok(out.put_tape(tape))
