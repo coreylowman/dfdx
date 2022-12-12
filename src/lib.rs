@@ -5,7 +5,7 @@
 //!     a. All tensor operations shape and type checked at compile time!!
 //! 4. Ergonomic neural network building blocks (like `Linear`, `Conv2D`, and `Transformer`).
 //! 5. Standard deep learning optimizers such as `Sgd`, `Adam`, `AdamW`, `RMSprop`, and more.
-//! 6. Reverse mode auto differentiation[1] implementation.
+//! 6. Reverse mode auto differentiation implementation.
 //! 7. Serialization to/from `.npy` and `.npz` for transferring models to/from python.
 //!
 //! # A quick tutorial
@@ -28,7 +28,7 @@
 //! );
 //! ```
 //!
-//! 3. Instantiate models with [crate::nn::BuildModule]
+//! 3. Instantiate models with [crate::nn::ResetParams] and [crate::nn::ModuleBuilder]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();

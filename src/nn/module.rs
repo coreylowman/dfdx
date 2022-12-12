@@ -30,7 +30,7 @@ pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
     fn build(device: &D) -> Self {
         Self::try_build(device).unwrap()
     }
-    /// Fallible version of [ResetParams::new]
+    /// Fallible version of [ResetParams::build]
     fn try_build(device: &D) -> Result<Self, D::Err>;
 
     /// Mutates parameters. Each implementor

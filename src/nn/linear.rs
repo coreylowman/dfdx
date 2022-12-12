@@ -5,7 +5,7 @@ use super::module::{Module, ModuleMut, ResetParams};
 /// A linear transformation of the form `weight * x + bias`, where `weight` is a matrix, `x` is a vector or matrix,
 /// and `bias` is a vector.
 ///
-/// Initializes [Self::weight] and [Self::bias] from a [Uniform] distribution
+/// Initializes [Self::weight] and [Self::bias] from a Uniform distribution
 /// between [-1 / sqrt(I), 1 / sqrt(I)].
 ///
 /// # Generics
@@ -67,7 +67,7 @@ where
 {
     type Output = T::Output;
 
-    /// 1d forward using [vecmat_mul()] and [add()].
+    /// 1d forward using [matmul()] and [add()].
     fn forward(&self, x: T) -> Self::Output {
         let o = x.matmul(self.weight.retaped::<T::Tape>().permute());
         Bias1D { beta: &self.bias }.forward(o)

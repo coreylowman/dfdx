@@ -5,8 +5,6 @@ use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 ///
 /// **Pytorch equivalent**: `t.log_softmax(Ax)`
 ///
-/// **Related functions**: [logsumexp()], [softmax()]
-///
 /// Example:
 /// ```rust
 /// # use dfdx::prelude::*;

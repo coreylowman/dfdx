@@ -25,7 +25,7 @@ pub struct DropoutKernelOp {
 /// ### Implementation details:
 ///
 /// To reduce memory usage, this function first samples a u64 seed from `rng`,
-/// and then instantiates two identical [StdRng] with that seed. These rngs
+/// and then instantiates two identical [rand::rngs::StdRng] with that seed. These rngs
 /// are used in both the forward pass and backward pass to generate identical
 /// random numbers, so the masking is the same for both.
 pub fn dropout<S: Shape, E: Dtype, D: UnaryKernel<DropoutKernelOp, E>, T: Tape<D>>(

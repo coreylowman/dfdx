@@ -107,7 +107,7 @@ pub struct Dropout {
 }
 
 impl Default for Dropout {
-    /// Sets `self.p` to `0.5`, and seeds [StdRng] with 0.
+    /// Sets `self.p` to `0.5`
     fn default() -> Self {
         Self { p: 0.5 }
     }

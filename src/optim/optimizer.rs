@@ -16,13 +16,13 @@ pub enum WeightDecay<E> {
     Decoupled(E),
 }
 
-/// Momentum used for [Sgd]
+/// Momentum used for [super::Sgd] and others
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Momentum<E> {
     /// Momentum that is applied to the velocity of a parameter directly.
     Classic(E),
 
-    /// Momentum that is applied to both velocity and gradients. See [Sgd] nesterov paper for more.
+    /// Momentum that is applied to both velocity and gradients. See [super::Sgd] nesterov paper for more.
     Nesterov(E),
 }
 
@@ -95,7 +95,6 @@ pub trait GradientUpdate<D: DeviceStorage, E: Dtype>: Sized {
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage> GradientUpdate<D, E> for Tensor<S, E, D> {
-    /// Subtracts the gradient for the tensor from [HasArrayData::mut_data].
     fn update<U: ParamUpdater<D, E>>(
         &mut self,
         opt: &mut U,

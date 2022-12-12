@@ -102,7 +102,7 @@
 //!
 //! See [Tensor::save_to_npy] and [Tensor::load_from_npy].
 //!
-//! You can also use [Tensor::write_to_npz] and [Tensor::load_from_npz] when working with
+//! You can also use [Tensor::write_to_npz] and [Tensor::read_from_npz] when working with
 //! zip archives.
 
 pub(crate) mod cpu;
