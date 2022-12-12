@@ -13,7 +13,7 @@ Features at a glance:
 1. Tensor library with shapes up to 6d!
 2. Shapes with both compile and runtime sized dimensions. (e.g. `Tensor<(Dyn, Const<10>), f32>` and `Tensor<Rank2<5, 10>, f32>`)
 3. A large library of tensor operations (including `matmul`, `conv2d`, and much more).
-    a. All tensor operations shape and type checked at compile time!!
+    1. All tensor operations shape and type checked at compile time!!
 4. Ergonomic neural network building blocks (like `Linear`, `Conv2D`, and `Transformer`).
 5. Standard deep learning optimizers such as `Sgd`, `Adam`, `AdamW`, `RMSprop`, and more.
 6. Reverse mode auto differentiation[1] implementation.
