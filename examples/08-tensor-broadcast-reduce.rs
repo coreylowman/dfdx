@@ -1,38 +1,41 @@
 //! Demonstrates broadcasting tensors to different sizes, and axis reductions
 //! with BroadcastTo and ReduceTo
 
-use dfdx::arrays::{Axis, HasArrayData};
-use dfdx::tensor::{tensor, Tensor1D, Tensor2D, Tensor4D};
-use dfdx::tensor_ops::BroadcastTo;
+use dfdx::{
+    shapes::{Axis, Rank2, Rank4},
+    tensor::{AsArray, Cpu, TensorFromArray},
+    tensor_ops::{BroadcastTo, MeanTo},
+};
 
 fn main() {
-    let a: Tensor1D<3> = tensor([1.0, 2.0, 3.0]);
+    let dev: Cpu = Default::default();
+    let a = dev.tensor([1.0, 2.0, 3.0]);
 
-    // to broadcast, use `BroadcastTo::broadcast()` and specify
+    // to broadcast, use `Broadcast::broadcast()` and specify
     // the output type. the axes that are broadcast are inferred for you!
-    let b: Tensor2D<5, 3> = a.broadcast();
-    assert_eq!(b.data(), &[[1.0, 2.0, 3.0]; 5]);
+    let b = a.broadcast::<Rank2<5, 3>, _>();
+    assert_eq!(b.array(), [[1.0, 2.0, 3.0]; 5]);
 
     // we can really broadcast any axes on either side
     // here a (5,3) tensor is broadcast to (7,5,3,2).
     // so 7 is added in front, and 2 is added last
-    let c: Tensor4D<7, 5, 3, 2> = b.broadcast();
-    assert_eq!(c.data(), &[[[[1.0; 2], [2.0; 2], [3.0; 2]]; 5]; 7]);
+    let c = b.broadcast::<Rank4<7, 5, 3, 2>, _>();
+    assert_eq!(c.array(), [[[[1.0; 2], [2.0; 2], [3.0; 2]]; 5]; 7]);
 
     // the opposite of broadcast is reducing
     // we've already introduced one reduction which is mean
-    let d: Tensor2D<5, 3> = c.mean();
-    assert_eq!(d.data(), &[[1.0, 2.0, 3.0]; 5]);
+    let d = c.mean::<Rank2<5, 3>, _>();
+    assert_eq!(d.array(), [[1.0, 2.0, 3.0]; 5]);
 
-    // generally you can just specify the output type
-    // and the reduction & broadcast will work.
-    // sometimes it's ambiguous though
-    let e: Tensor1D<1> = tensor([1.0]);
+    // Sometimes it's ambiguous which axes you mean to broadcast or reduce.
+    // Here rust doesn't know if the new axis is the first or second.
+    // We can specify the axes parameter of broadcast in addition to the new shape
+    let e = dev.tensor([1.0]);
+    let f = e.broadcast::<Rank2<1, 1>, Axis<1>>();
+    // NOTE: will fail with "Multiple impls satisfying...":
+    // let f = e.broadcast::<Rank2<1, 1>, _>();
 
-    // here rust doesn't know if the new axis is the first or second
-    // so we have to explicitly tell it
-    let f: Tensor2D<1, 1> = BroadcastTo::<_, Axis<1>>::broadcast(e);
-
-    // reductions have the same problem when it's ambiguous
-    let _: Tensor1D<1> = f.mean::<_, Axis<0>>();
+    // reductions have the same problem when it's ambiguous,
+    // so we can also use mean_along with an axis
+    let _ = f.mean::<_, Axis<0>>();
 }

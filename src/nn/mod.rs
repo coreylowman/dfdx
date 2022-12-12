@@ -25,14 +25,13 @@
 //!
 //! # Initializing
 //!
-//! All modules implement [Default], and this initializes all parameters to `0.0`. The intention is then
-//! to call [ResetParams::reset_params()], which randomizes the parameters:
+//! All modules implement [ResetParams], which can be combined with [ModuleBuilder]
+//! implementation on devices like so:
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
-//! # let mut rng = rand::thread_rng();
-//! let mut model: Linear<5, 2> = Default::default(); // set all params to 0
-//! model.reset_params(&mut rng); // randomize weights
+//! let dev: Cpu = Default::default();
+//! let model: Linear<5, 2> = dev.build_module(); // will allocate & randomize params
 //! ```
 //!
 //! # Sequential models
@@ -79,15 +78,12 @@
 mod activations;
 mod add_into;
 mod batchnorm2d;
-mod conv;
 mod dropout;
-mod flatten;
 mod generalized_residual;
 mod impl_module_for_tuples;
 mod layer_norm;
 mod linear;
 mod module;
-mod pool2d;
 mod pool_global;
 mod repeated;
 mod residual;
@@ -109,9 +105,15 @@ pub use residual::*;
 pub use split_into::*;
 
 #[cfg(feature = "nightly")]
+mod conv;
+#[cfg(feature = "nightly")]
 pub use conv::*;
 #[cfg(feature = "nightly")]
+mod flatten;
+#[cfg(feature = "nightly")]
 pub use flatten::*;
+#[cfg(feature = "nightly")]
+mod pool2d;
 #[cfg(feature = "nightly")]
 pub use pool2d::*;
 #[cfg(feature = "nightly")]
@@ -128,20 +130,21 @@ mod npz_impls;
 
 #[cfg(test)]
 mod tests {
-    use crate::arrays::{HasArrayData, HasArrayType};
-    use crate::gradients::{GradientProvider, Gradients};
-    use crate::unique_id::HasUniqueId;
-    use std::boxed::Box;
+    use crate::{gradients::Gradients, optim::ParamUpdater, shapes::Dtype, tensor::DeviceStorage};
 
     #[derive(Default)]
-    pub struct SimpleGradients(pub Gradients);
+    pub struct SimpleUpdater<D: DeviceStorage>(pub Gradients<D>);
 
-    impl GradientProvider for SimpleGradients {
-        fn gradient<P>(&mut self, p: &P) -> Option<Box<P::Array>>
-        where
-            P: HasUniqueId + HasArrayType<Dtype = f32> + crate::devices::HasDevice + HasArrayData,
-        {
-            self.0.remove(p)
+    impl<D: DeviceStorage, E: Dtype> ParamUpdater<D, E> for SimpleUpdater<D> {
+        fn update_param<S: crate::shapes::Shape>(
+            &mut self,
+            p: &mut crate::tensor::Tensor<S, E, D>,
+            unused: &mut crate::optim::UnusedTensors,
+        ) -> Result<(), <D>::Err> {
+            if self.0.remove(p).is_none() {
+                unused.add(p);
+            }
+            Ok(())
         }
     }
 }

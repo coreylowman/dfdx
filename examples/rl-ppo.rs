@@ -1,29 +1,34 @@
 //! Implements the reinforcement learning algorithm Proximal Policy Optimization (PPO) on random data.
 
-use dfdx::prelude::*;
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use dfdx::{
+    optim::{Momentum, Sgd, SgdConfig},
+    prelude::*,
+};
 use std::time::Instant;
 
-const STATE_SIZE: usize = 4;
-const ACTION_SIZE: usize = 2;
+const BATCH: usize = 64;
+const STATE: usize = 4;
+const ACTION: usize = 2;
 
 type PolicyNetwork = (
-    (Linear<STATE_SIZE, 32>, ReLU),
+    (Linear<STATE, 32>, ReLU),
     (Linear<32, 32>, ReLU),
-    Linear<32, ACTION_SIZE>,
+    Linear<32, ACTION>,
 );
 
 fn main() {
-    let mut rng = StdRng::seed_from_u64(0);
+    let dev: Cpu = Default::default();
 
-    let state: Tensor2D<64, STATE_SIZE> = Tensor2D::randn(&mut rng);
-    let action: [usize; 64] = [(); 64].map(|_| rng.gen_range(0..ACTION_SIZE));
-    let advantage: Tensor1D<64> = Tensor1D::randn(&mut rng);
+    let state = dev.randn::<Rank2<BATCH, STATE>>();
+    let mut i = 0;
+    let action: Tensor<Rank1<BATCH>, usize, _> = dev.tensor([(); BATCH].map(|_| {
+        i += 1;
+        i % ACTION
+    }));
+    let advantage = dev.randn::<Rank1<BATCH>>();
 
     // initiliaze model - all weights are 0s
-    let mut pi_net: PolicyNetwork = Default::default();
-    pi_net.reset_params(&mut rng);
-
+    let mut pi_net: PolicyNetwork = dev.build_module();
     let target_pi_net: PolicyNetwork = pi_net.clone();
 
     let mut sgd = Sgd::new(SgdConfig {
@@ -38,11 +43,11 @@ fn main() {
 
         // old_log_prob_a = log(P(action | state, target_pi_net))
         let old_logits = target_pi_net.forward(state.clone());
-        let old_log_prob_a: Tensor1D<64> = old_logits.log_softmax::<Axis<1>>().select(&action);
+        let old_log_prob_a = old_logits.log_softmax::<Axis<1>>().select(action.clone());
 
         // log_prob_a = log(P(action | state, pi_net))
         let logits = pi_net.forward(state.trace());
-        let log_prob_a: Tensor1D<64, OwnedTape> = logits.log_softmax::<Axis<1>>().select(&action);
+        let log_prob_a = logits.log_softmax::<Axis<1>>().select(action.clone());
 
         // ratio = P(action | state, pi_net) / P(action | state, target_pi_net)
         // but compute in log space and then do .exp() to bring it back out of log space
@@ -52,9 +57,9 @@ fn main() {
         let surr1 = ratio.with_empty_tape() * advantage.clone();
         let surr2 = ratio.clamp(0.8, 1.2) * advantage.clone();
 
-        let ppo_loss = -(minimum(surr2, surr1).mean());
+        let ppo_loss = -(surr2.minimum(surr1).mean());
 
-        let loss_v = *ppo_loss.data();
+        let loss_v = ppo_loss.array();
 
         // run backprop
         let gradients = ppo_loss.backward();

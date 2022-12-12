@@ -1,35 +1,43 @@
 //! Intro to dfdx::gradients and tapes
 
-use rand::prelude::*;
-
-use dfdx::gradients::{Gradients, NoneTape, OwnedTape};
-use dfdx::tensor::{Tensor0D, Tensor2D, TensorCreator};
-use dfdx::tensor_ops::matmul;
+use dfdx::{
+    gradients::{Gradients, NoneTape, OwnedTape},
+    shapes::{Rank0, Rank2},
+    tensor::{AsArray, Cpu, RandnTensor, Tensor},
+    tensor_ops::{Backward, MeanTo, TryMatMul},
+};
 
 fn main() {
-    let mut rng = StdRng::seed_from_u64(0);
+    let dev: Cpu = Default::default();
 
-    // tensors are first created with no tapes on them - the NoneTape!
-    let weight: Tensor2D<4, 2, NoneTape> = TensorCreator::randn(&mut rng);
-    let a: Tensor2D<3, 4, NoneTape> = TensorCreator::randn(&mut rng);
+    // tensors are actually generic over a fourth field: the tape
+    // by default tensors are created with a `NoneTape`, which
+    // means they don't currently **own** a tape.
+    let weight: Tensor<Rank2<4, 2>, f32, Cpu, NoneTape> = dev.randn::<Rank2<4, 2>>();
+    let a: Tensor<Rank2<3, 4>, f32, Cpu, NoneTape> = dev.randn::<Rank2<3, 4>>();
 
     // the first step to tracing is to call .trace()
     // this sticks a gradient tape into the input tensor!
-    let b: Tensor2D<3, 4, OwnedTape> = a.trace();
+    // NOTE: the tape has changed from a `NoneTape` to an `OwnedTape`.
+    let b: Tensor<Rank2<3, 4>, f32, Cpu, OwnedTape<Cpu>> = a.trace();
 
-    // the tape will automatically move around as you perform ops
-    let c: Tensor2D<3, 2, OwnedTape> = matmul(b, weight.clone());
-    let d: Tensor2D<3, 2, OwnedTape> = c.sin();
-    let e: Tensor0D<OwnedTape> = d.mean();
+    // the tape will **automatically** be moved around as you perform ops
+    // ie. the tapes on inputs to operations are moved to the output
+    // of the operation.
+    let c: Tensor<Rank2<3, 2>, f32, Cpu, OwnedTape<_>> = b.matmul(weight.clone());
+    let d: Tensor<Rank2<3, 2>, f32, Cpu, OwnedTape<_>> = c.sin();
+    let e: Tensor<Rank0, f32, Cpu, OwnedTape<_>> = d.mean();
 
     // finally you can use .backward() to extract the gradients!
-    let gradients: Gradients = e.backward();
+    // NOTE: that this method is only available on tensors that **own**
+    //       the tape!
+    let gradients: Gradients<Cpu> = e.backward();
 
     // now you can extract gradients for specific tensors
     // by querying with them
-    let weight_grad: &[[f32; 2]; 4] = gradients.ref_gradient(&weight);
+    let weight_grad: [[f32; 2]; 4] = gradients.get(&weight).array();
     dbg!(weight_grad);
 
-    let a_grad: &[[f32; 4]; 3] = gradients.ref_gradient(&a);
+    let a_grad: [[f32; 4]; 3] = gradients.get(&a).array();
     dbg!(a_grad);
 }

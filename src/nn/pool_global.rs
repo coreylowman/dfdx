@@ -1,10 +1,9 @@
-use super::{Module, ModuleMut, ResetParams};
-use crate::gradients::*;
-use crate::tensor::*;
+use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
+
+use super::{Module, NonMutableModule, ZeroSizedModule};
 
 /// Applies average pooling over an entire image, fully reducing the height and width
 /// dimensions:
-/// - Reduces 2d (C, L) to 1d (C, )
 /// - Reduces 3d (C, H, W) to 1d (C, )
 /// - Reduces 4d (B, C, H, W) to 2d (B, C)
 ///
@@ -13,16 +12,16 @@ use crate::tensor::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
 /// let m: AvgPoolGlobal = Default::default();
-/// let _: Tensor1D<5> = m.forward(Tensor3D::<5, 16, 8>::zeros());
-/// let _: Tensor2D<10, 5> = m.forward(Tensor4D::<10, 5, 16, 8>::zeros());
+/// let _: Tensor<Rank1<5>, f32> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());
+/// let _: Tensor<Rank2<10, 5>, f32> = m.forward(dev.zeros::<Rank4<10, 5, 16, 8>>());
 /// ```
 #[derive(Clone, Copy, Default)]
 pub struct AvgPoolGlobal;
 
 /// Applies max pooling over an entire image, fully reducing the height and width
 /// dimensions:
-/// - Reduces 2d (C, L) to 1d (C, )
 /// - Reduces 3d (C, H, W) to 1d (C, )
 /// - Reduces 4d (B, C, H, W) to 2d (B, C)
 ///
@@ -31,16 +30,16 @@ pub struct AvgPoolGlobal;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
 /// let m: MaxPoolGlobal = Default::default();
-/// let _: Tensor1D<5> = m.forward(Tensor3D::<5, 16, 8>::zeros());
-/// let _: Tensor2D<10, 5> = m.forward(Tensor4D::<10, 5, 16, 8>::zeros());
+/// let _: Tensor<Rank1<5>, f32> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());
+/// let _: Tensor<Rank2<10, 5>, f32> = m.forward(dev.zeros::<Rank4<10, 5, 16, 8>>());
 /// ```
 #[derive(Clone, Copy, Default)]
 pub struct MaxPoolGlobal;
 
 /// Applies min pooling over an entire image, fully reducing the height and width
 /// dimensions:
-/// - Reduces 2d (C, L) to 1d (C, )
 /// - Reduces 3d (C, H, W) to 1d (C, )
 /// - Reduces 4d (B, C, H, W) to 2d (B, C)
 ///
@@ -49,54 +48,34 @@ pub struct MaxPoolGlobal;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
 /// let m: MinPoolGlobal = Default::default();
-/// let _: Tensor1D<5> = m.forward(Tensor3D::<5, 16, 8>::zeros());
-/// let _: Tensor2D<10, 5> = m.forward(Tensor4D::<10, 5, 16, 8>::zeros());
+/// let _: Tensor<Rank1<5>, f32> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());
+/// let _: Tensor<Rank2<10, 5>, f32> = m.forward(dev.zeros::<Rank4<10, 5, 16, 8>>());
 /// ```
 #[derive(Clone, Copy, Default)]
 pub struct MinPoolGlobal;
 
 macro_rules! impl_pools {
     ($PoolTy:ty, $Method:ident) => {
-        impl ResetParams for $PoolTy {
-            fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {}
-        }
-        impl CanUpdateWithGradients for $PoolTy {
-            fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
-        }
+        impl ZeroSizedModule for $PoolTy {}
+        impl NonMutableModule for $PoolTy {}
 
-        impl<const C: usize, const L: usize, T: Tape> Module<Tensor2D<C, L, T>> for $PoolTy {
-            type Output = Tensor1D<C, T>;
-            fn forward(&self, input: Tensor2D<C, L, T>) -> Self::Output {
-                input.$Method()
+        impl<C: Dim, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
+            Module<Tensor<(C, H, W), f32, D, T>> for $PoolTy
+        {
+            type Output = Tensor<(C,), f32, D, T>;
+            fn forward(&self, input: Tensor<(C, H, W), f32, D, T>) -> Self::Output {
+                input.min()
             }
         }
 
-        impl<const C: usize, const H: usize, const W: usize, T: Tape> Module<Tensor3D<C, H, W, T>>
-            for $PoolTy
+        impl<B: Dim, C: Dim, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
+            Module<Tensor<(B, C, H, W), f32, D, T>> for $PoolTy
         {
-            type Output = Tensor1D<C, T>;
-            fn forward(&self, input: Tensor3D<C, H, W, T>) -> Self::Output {
+            type Output = Tensor<(B, C), f32, D, T>;
+            fn forward(&self, input: Tensor<(B, C, H, W), f32, D, T>) -> Self::Output {
                 input.$Method()
-            }
-        }
-
-        impl<const B: usize, const C: usize, const H: usize, const W: usize, T: Tape>
-            Module<Tensor4D<B, C, H, W, T>> for $PoolTy
-        {
-            type Output = Tensor2D<B, C, T>;
-            fn forward(&self, input: Tensor4D<B, C, H, W, T>) -> Self::Output {
-                input.$Method()
-            }
-        }
-
-        impl<T> ModuleMut<T> for $PoolTy
-        where
-            Self: Module<T>,
-        {
-            type Output = <Self as Module<T>>::Output;
-            fn forward_mut(&mut self, input: T) -> Self::Output {
-                self.forward(input)
             }
         }
     };

@@ -1,63 +1,90 @@
-//! The struct definitions for all TensorXD, [Tensor] trait, and more.
+//! The [Tensor] struct, [Cpu] device, and
+//! traits like [ZerosTensor], [OnesTensor], [RandTensor], [RandnTensor].
 //!
-//! At a high level a tensor consists of only three parts
-//! 1. A [crate::unique_id::UniqueId] to track which gradients are associated with what tensors
-//! 2. An Nd rust array stored in a [std::sync::Arc].
-//! 3. A tape, which can either actually be a tape ([crate::gradients::OwnedTape]) or be empty ([crate::gradients::NoneTape]).
+//! At a high level a tensor is made up of:
+//! 1. The [crate::shapes::Shape] of the array it stores
+//! 2. The [crate::shapes::Dtype] of the elements of the array
+//! 3. The [DeviceStorage] (e.g. [Cpu]) that it uses to store the nd array
+//! 4. A [crate::gradients::Tape], which can either actually be a tape ([crate::gradients::OwnedTape])
+//!    or be empty ([crate::gradients::NoneTape]).
+//!
+//! # Creating a device
+//!
+//! In order to do anything with tensors, you first need to construct the device that they will be stored on:
+//!
+//! ```rust
+//! # use dfdx::prelude::*;
+//! let dev: Cpu = Default::default();
+//! ```
 //!
 //! # Creating tensors
 //!
-//! ### Use the tensor function
+//! ### From arrays
 //!
-//! See [tensor()].
+//! See [TensorFromArray].
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t = tensor([1.0, 2.0, 3.0]);
+//! # let dev: Cpu = Default::default();
+//! let t = dev.tensor([1.0, 2.0, 3.0]);
 //! ```
 //!
-//! ### Use the TensorCreator trait
+//! ### Filled with 0s or 1s
 //!
-//! See [TensorCreator].
+//! See [ZerosTensor] and [OnesTensor].
 //!
-//! 1. With raw rust arrays use the [TensorCreator::new()] method.
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t: Tensor1D<3> = TensorCreator::new([1.0, 2.0, 3.0]);
+//! # let dev: Cpu = Default::default();
+//! let _: Tensor<Rank1<5>, f32> = dev.zeros();
+//! let _: Tensor<Rank2<3, 2>, f32> = dev.ones();
 //! ```
 //!
-//! 2. Filled with 0s or 1s use [TensorCreator::zeros()] and [TensorCreator::ones()].
+//! ### Filled with random data
+//!
+//! See [RandTensor] and [RandnTensor]
+//!
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t: Tensor1D<5> = TensorCreator::zeros();
-//! let q: Tensor2D<3, 2> = TensorCreator::ones();
+//! # let dev: Cpu = Default::default();
+//! let _: Tensor<Rank1<3>, f32> = dev.rand(); // uniform random data
+//! let _: Tensor<Rank2<4, 3>, f32> = dev.randn(); // normal random data
 //! ```
 //!
-//! 3. Filled with random data use [TensorCreator::rand()] and [TensorCreator::randn()].
+//! ### Copy data from slices
+//!
+//! You can use [Tensor::copy_from] and [Tensor::copy_into] to copy data into a tensor:
+//!
 //! ```rust
 //! # use dfdx::prelude::*;
-//! # use rand::prelude::*;
-//! let mut rng = StdRng::seed_from_u64(0);
-//! let a = Tensor1D::<3>::rand(&mut rng); // uniform random data
-//! let b = Tensor2D::<4, 3>::randn(&mut rng); // gaussian random data
+//! # let dev: Cpu = Default::default();
+//! let mut a: Tensor<Rank1<1000>, f32> = dev.zeros();
+//! let buf: Vec<f32> = vec![1.0; 1000];
+//! a.copy_from(&buf);
 //! ```
 //!
-//! # Accessing or modifying underlying data
+//! # Modifying an already constructed tensor
 //!
-//! Use [crate::arrays::HasArrayData::data()] and [crate::arrays::HasArrayData::mut_data()]
-//! to view or modify the underlying arrays.
+//! There are only a few ways to do this, as normally you should just create a new tensor with tensor_ops.
+//!
+//! See [Tensor::fill_with_zeros], [Tensor::fill_with_ones], [Tensor::fill_with_uniform], [Tensor::fill_with_normal].
+//!
+//! # Converting tensors to rust arrays
+//!
+//! Since the way tensors are stored is opaque to users (driven by whatever device the tensor is stored on),
+//! use the [AsArray] trait to convert tensors to actual rust arrays if you want to work
+//! with them directly.
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let mut t = Tensor1D::<3>::zeros();
-//! assert_eq!(t.data(), &[0.0, 0.0, 0.0]);
-//! t.mut_data()[1] = 2.0;
-//! assert_eq!(t.data(), &[0.0, 2.0, 0.0]);
+//! # let dev: Cpu = Default::default();
+//! let t: Tensor<Rank2<2, 3>, f32> = dev.zeros();
+//! let t: [[f32; 3]; 2] = t.array();
 //! ```
 //!
 //! # Tracking gradients
 //!
-//! Use the [trace()] or [traced()] methods to add [crate::gradients::OwnedTape] to the [Tensor].
+//! Use the [Tensor::trace] or [Tensor::traced] methods to add [crate::gradients::OwnedTape] to the [Tensor].
 //! `.trace()` will clone the [crate::unique_id::UniqueId] & data, while `.traced()` will take ownership of
 //! the tensor and return a version with an [crate::gradients::OwnedTape].
 //!
@@ -65,33 +92,137 @@
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
-//! let t: Tensor1D<5, NoneTape> = Tensor1D::<5>::zeros();
-//! let t_clone: Tensor1D<5, OwnedTape> = t.trace(); // copies t
-//! let t: Tensor1D<5, OwnedTape> = t.traced(); // takes ownership of t
+//! # let dev: Cpu = Default::default();
+//! let t: Tensor<Rank1<5>, f32> = dev.zeros();
+//! let t_clone: Tensor<Rank1<5>, f32, _, OwnedTape<_>> = t.trace(); // copies t
+//! let t = t.traced(); // takes ownership of t
 //! ```
+//!
+//! # Serialization using numpy
+//!
+//! See [Tensor::save_to_npy] and [Tensor::load_from_npy].
+//!
+//! You can also use [Tensor::write_to_npz] and [Tensor::load_from_npz] when working with
+//! zip archives.
 
-mod impl_default;
-mod impl_has_array;
-mod impl_has_device;
-mod impl_has_unique_id;
-mod impl_put_tape;
-mod impl_randomize;
-mod impl_tensor;
-mod impl_tensor_creator;
-mod impl_trace;
-mod impl_update_with_grads;
-mod into_tensor;
-mod structs;
+pub(crate) mod cpu;
+mod tensor_impls;
 
-pub use impl_default::*;
-pub use impl_has_array::*;
-pub use impl_has_device::*;
-pub use impl_has_unique_id::*;
-pub use impl_put_tape::*;
-pub use impl_randomize::*;
-pub use impl_tensor::*;
-pub use impl_tensor_creator::*;
-pub use impl_trace::*;
-pub use impl_update_with_grads::*;
-pub use into_tensor::*;
-pub use structs::*;
+#[cfg(feature = "numpy")]
+pub(crate) mod numpy;
+
+pub(crate) mod storage_traits;
+
+pub(crate) use storage_traits::{
+    OneFillStorage, RandFillStorage, RandnFillStorage, ZeroFillStorage,
+};
+
+pub use cpu::{Cpu, CpuError};
+pub use storage_traits::{AsArray, AsVec, CopySlice, TensorFromArray};
+pub use storage_traits::{DeviceStorage, HasErr};
+pub use storage_traits::{OnesTensor, RandTensor, RandnTensor, ZerosTensor};
+
+pub use tensor_impls::{PutTape, SplitTape, Tensor};
+pub use tensor_impls::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::shapes::*;
+    use crate::tests::build_test_device;
+    use crate::unique_id::{unique_id, UniqueId};
+    use std::collections::HashSet;
+
+    #[test]
+    fn test_id() {
+        let dev = build_test_device!();
+
+        let mut ids: HashSet<UniqueId> = Default::default();
+        ids.insert(unique_id());
+
+        let x: Tensor<Rank0, f32, _> = dev.zeros();
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+
+        let x: Tensor<Rank0, f32, _> = dev.zeros();
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+
+        let x: Tensor<Rank1<5>, f32, _> = dev.zeros();
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+
+        let x: Tensor<Rank2<3, 2>, f32, _> = dev.ones();
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+
+        let x: Tensor<Rank3<4, 3, 2>, f32, _> = dev.rand();
+        assert!(!ids.contains(&x.id));
+        ids.insert(x.id);
+    }
+
+    #[test]
+    fn test_ids_with_clone() {
+        let dev = build_test_device!();
+        let t1: Tensor<Rank1<32>, f32, _> = dev.zeros();
+        let t2 = t1.clone();
+        assert_eq!(t1.id, t2.id);
+    }
+
+    #[test]
+    fn test_ids_with_split_and_put() {
+        let dev = build_test_device!();
+        let t1: Tensor<Rank1<32>, f32, _> = dev.zeros();
+        let t1_id = t1.id;
+        let (t2, tape) = t1.split_tape();
+        assert_eq!(t2.id, t1_id);
+        let t3 = t2.put_tape(tape);
+        assert_eq!(t3.id, t1_id);
+    }
+
+    #[test]
+    fn test_zeros() {
+        let dev = build_test_device!();
+        let x: Tensor<Rank2<3, 2>, f32, _> = dev.zeros();
+        assert_eq!(x.array(), [[0.0; 2]; 3]);
+    }
+
+    #[test]
+    fn test_ones() {
+        let dev = build_test_device!();
+        let x: Tensor<Rank2<3, 2>, f32, _> = dev.ones();
+        assert_eq!(x.array(), [[1.0; 2]; 3]);
+    }
+
+    #[test]
+    fn test_convert_array() {
+        let dev = build_test_device!();
+        let a = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
+        let t = dev.tensor(a);
+        assert_eq!(t.array(), a);
+    }
+
+    #[test]
+    fn test_convert_slice() {
+        let dev = build_test_device!();
+        let data = [1.0, 2.0, 3.0, 4.0];
+        let mut t: Tensor<Rank2<2, 2>, f32, _> = dev.zeros();
+        t.copy_from(&data);
+        assert_eq!(t.array(), [[1.0, 2.0], [3.0, 4.0]]);
+    }
+
+    #[test]
+    fn fuzz_test_rand() {
+        let dev = build_test_device!();
+        let t: Tensor<Rank1<1000>, f32, _> = dev.rand();
+        for v in t.as_vec() {
+            assert!((0.0..1.0).contains(&v));
+        }
+    }
+
+    #[test]
+    fn test_randn() {
+        let dev = build_test_device!();
+        let _ = dev.randn::<Rank1<1000>>();
+    }
+}

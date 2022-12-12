@@ -1,5 +1,6 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
-use crate::prelude::*;
+use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
+
+use super::{Module, ModuleMut, ResetParams};
 
 /// Add inputs together into a single tensor. `T` should be a tuple
 //// where every element of the tuple has the same output type
@@ -12,148 +13,139 @@ use crate::prelude::*;
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
-/// type Model = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
-/// let model: Model = Default::default();
-/// let _: Tensor1D<5> = model.forward((Tensor1D::<2>::zeros(), Tensor1D::<3>::zeros()));
+/// # let dev: Cpu = Default::default();
+/// let model: AddInto<(Linear<2, 5>, Linear<3, 5>)> = dev.build_module();
+/// let a = dev.zeros::<Rank1<2>>();
+/// let b = dev.zeros::<Rank1<3>>();
+/// let _: Tensor<Rank1<5>, f32> = model.forward((a, b));
 /// ```
 #[derive(Debug, Default, Clone)]
 pub struct AddInto<T>(pub T);
 
-impl<T: CanUpdateWithGradients> CanUpdateWithGradients for AddInto<T> {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.0.update(grads, unused);
+impl<T: GradientUpdate<D, E>, D: Device<E>, E: Dtype> GradientUpdate<D, E> for AddInto<T> {
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
+    where
+        U: ParamUpdater<D, E>,
+    {
+        self.0.update(updater, unused)
     }
 }
 
-impl<T: ResetParams> ResetParams for AddInto<T> {
-    fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
-        self.0.reset_params(rng);
+impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for AddInto<T> {
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self(ResetParams::try_build(device)?))
+    }
+    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
+        self.0.try_reset_params()
     }
 }
 
-macro_rules! tuple_impls {
-    ($head:ident $headin:ident [$($tails:ident $tailsin:ident),+]) => {
+macro_rules! sum {
+    ($H:tt) => { $H };
+    ($H:tt, $($T:tt),+) => { $H + sum!($($T),+) };
+}
+
+macro_rules! add_into_impls {
+    ($([$Mod:tt $ModVar:tt $Inp:tt $InpVar:tt]),+) => {
         impl<
-            Output: Tensor<Dtype = f32>,
-            $headin: Tensor<Dtype = f32>,
-            $($tailsin: Tensor<Dtype = f32>,)+
-            $head: Module<$headin, Output = Output>,
-            $($tails: Module<$tailsin, Output = Output>,)+
-        > Module<($headin, $($tailsin,)+)> for AddInto<($head, $($tails,)+)> {
-            type Output = Output;
-
-            #[allow(non_snake_case)]
-            fn forward(&self, x: ($headin, $($tailsin,)+)) -> Self::Output {
-
-                // inputs
-                let ($head, $($tails),+) = x;
-
-                // layers
-                let ($headin, $($tailsin),+) = &self.0;
-
-                // forward
-                let ($head, $($tails),+) = ($headin.forward($head), $($tailsin.forward($tails)),+);
-
-                // add together
-                $(
-                    let $head = add($head, $tails);
-                )+
-
-                $head
+            Out: std::ops::Add<Out, Output = Out>,
+            $($Inp, )+
+            $($Mod: Module<$Inp, Output = Out>, )+
+        > Module<($($Inp, )+)> for AddInto<($($Mod, )+)> {
+            type Output = Out;
+            fn forward(&self, x: ($($Inp, )+)) -> Self::Output {
+                let ($($ModVar, )+) = &self.0;
+                let ($($InpVar, )+) = x;
+                $(let $InpVar = $ModVar.forward($InpVar);)+
+                sum!($($InpVar),*)
             }
         }
-
-
         impl<
-            Output: Tensor<Dtype = f32>,
-            $headin: Tensor<Dtype = f32>,
-            $($tailsin: Tensor<Dtype = f32>,)+
-            $head: ModuleMut<$headin, Output = Output>,
-            $($tails: ModuleMut<$tailsin, Output = Output>,)+
-        > ModuleMut<($headin, $($tailsin,)+)> for AddInto<($head, $($tails,)+)> {
-            type Output = Output;
-
-            #[allow(non_snake_case)]
-            fn forward_mut(&mut self, x: ($headin, $($tailsin,)+)) -> Self::Output {
-
-                // inputs
-                let ($head, $($tails),+) = x;
-
-                // layers
-                let ($headin, $($tailsin),+) = &mut self.0;
-
-                // forward
-                let ($head, $($tails),+) = ($headin.forward_mut($head), $($tailsin.forward_mut($tails)),+);
-
-                // add together
-                $(
-                    let $head = add($head, $tails);
-                )+
-
-                $head
+            Out: std::ops::Add<Out, Output = Out>,
+            $($Inp, )+
+            $($Mod: ModuleMut<$Inp, Output = Out>, )+
+        > ModuleMut<($($Inp, )+)> for AddInto<($($Mod, )+)> {
+            type Output = Out;
+            fn forward_mut(&mut self, x: ($($Inp, )+)) -> Self::Output {
+                let ($($ModVar, )+) = &mut self.0;
+                let ($($InpVar, )+) = x;
+                $(let $InpVar = $ModVar.forward_mut($InpVar);)+
+                sum!($($InpVar),*)
             }
-        }    }
+        }
+    };
 }
 
-tuple_impls!(A Ai [B Bi]);
-tuple_impls!(A Ai [B Bi, C Ci]);
-tuple_impls!(A Ai [B Bi, C Ci, D Di]);
-tuple_impls!(A Ai [B Bi, C Ci, D Di, E Ei]);
-tuple_impls!(A Ai [B Bi, C Ci, D Di, E Ei, F Fi]);
+add_into_impls!([A a Ai a_i], [B b Bi b_i]);
+add_into_impls!([A a Ai a_i], [B b Bi b_i], [C c Ci c_i]);
+add_into_impls!([A a Ai a_i], [B b Bi b_i], [C c Ci c_i], [D d Di d_i]);
+add_into_impls!([A a Ai a_i], [B b Bi b_i], [C c Ci c_i], [D d Di d_i], [E e Ei e_i]);
+add_into_impls!([A a Ai a_i], [B b Bi b_i], [C c Ci c_i], [D d Di d_i], [E e Ei e_i], [F f Fi f_i]);
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::tests::SimpleGradients, unique_id::HasUniqueId};
+    use crate::{
+        gradients::OwnedTape,
+        nn::{tests::SimpleUpdater, Linear, ModuleBuilder, ReLU},
+        shapes::*,
+        tensor::*,
+        tests::build_test_device,
+        unique_id::HasUniqueId,
+    };
 
     #[test]
     fn test_add_into_2() {
-        type Model = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
-        let m: Model = Default::default();
-        let _: Tensor1D<5, OwnedTape> =
-            m.forward((Tensor1D::zeros().traced(), Tensor1D::zeros().traced()));
-        let _: Tensor2D<3, 5, OwnedTape> = m.forward((
-            Tensor2D::<3, 2>::zeros().traced(),
-            Tensor2D::<3, 3>::zeros().traced(),
+        let dev = build_test_device!();
+        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>)> = dev.build_module();
+        let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
+            dev.zeros::<Rank1<2>>().traced(),
+            dev.zeros::<Rank1<3>>().traced(),
+        ));
+        let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_>> = m.forward((
+            dev.zeros::<Rank2<3, 2>>().traced(),
+            dev.zeros::<Rank2<3, 3>>().traced(),
         ));
     }
 
     #[test]
     fn test_add_into_3() {
-        type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>)>;
-        let m: Model = Default::default();
-        let _: Tensor1D<5, OwnedTape> = m.forward((
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
+        let dev = build_test_device!();
+        let m: AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>)> = dev.build_module();
+        let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
+            dev.zeros::<Rank1<2>>().traced(),
+            dev.zeros::<Rank1<3>>().traced(),
+            dev.zeros::<Rank1<4>>().traced(),
         ));
-        let _: Tensor2D<3, 5, OwnedTape> = m.forward((
-            Tensor2D::<3, 2>::zeros().traced(),
-            Tensor2D::<3, 3>::zeros().traced(),
-            Tensor2D::<3, 4>::zeros().traced(),
+        let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_>> = m.forward((
+            dev.zeros::<Rank2<3, 2>>().traced(),
+            dev.zeros::<Rank2<3, 3>>().traced(),
+            dev.zeros::<Rank2<3, 4>>().traced(),
         ));
     }
 
     #[test]
     fn test_add_into_4() {
+        let dev = build_test_device!();
         type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>, Linear<5, 5>)>;
-        let m: Model = Default::default();
-        let _: Tensor1D<5, OwnedTape> = m.forward((
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
+        let m: Model = dev.build_module();
+        let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
+            dev.zeros::<Rank1<2>>().traced(),
+            dev.zeros::<Rank1<3>>().traced(),
+            dev.zeros::<Rank1<4>>().traced(),
+            dev.zeros::<Rank1<5>>().traced(),
         ));
-        let _: Tensor2D<3, 5, OwnedTape> = m.forward((
-            Tensor2D::<3, 2>::zeros().traced(),
-            Tensor2D::<3, 3>::zeros().traced(),
-            Tensor2D::<3, 4>::zeros().traced(),
-            Tensor2D::<3, 5>::zeros().traced(),
+        let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_>> = m.forward((
+            dev.zeros::<Rank2<3, 2>>().traced(),
+            dev.zeros::<Rank2<3, 3>>().traced(),
+            dev.zeros::<Rank2<3, 4>>().traced(),
+            dev.zeros::<Rank2<3, 5>>().traced(),
         ));
     }
 
     #[test]
     fn test_add_into_5() {
+        let dev = build_test_device!();
         type Model = AddInto<(
             Linear<2, 5>,
             Linear<3, 5>,
@@ -161,25 +153,26 @@ mod tests {
             Linear<5, 5>,
             Linear<6, 5>,
         )>;
-        let m: Model = Default::default();
-        let _: Tensor1D<5, OwnedTape> = m.forward((
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
+        let m: Model = dev.build_module();
+        let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
+            dev.zeros::<Rank1<2>>().traced(),
+            dev.zeros::<Rank1<3>>().traced(),
+            dev.zeros::<Rank1<4>>().traced(),
+            dev.zeros::<Rank1<5>>().traced(),
+            dev.zeros::<Rank1<6>>().traced(),
         ));
-        let _: Tensor2D<3, 5, OwnedTape> = m.forward((
-            Tensor2D::<3, 2>::zeros().traced(),
-            Tensor2D::<3, 3>::zeros().traced(),
-            Tensor2D::<3, 4>::zeros().traced(),
-            Tensor2D::<3, 5>::zeros().traced(),
-            Tensor2D::<3, 6>::zeros().traced(),
+        let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_>> = m.forward((
+            dev.zeros::<Rank2<3, 2>>().traced(),
+            dev.zeros::<Rank2<3, 3>>().traced(),
+            dev.zeros::<Rank2<3, 4>>().traced(),
+            dev.zeros::<Rank2<3, 5>>().traced(),
+            dev.zeros::<Rank2<3, 6>>().traced(),
         ));
     }
 
     #[test]
     fn test_add_into_6() {
+        let dev = build_test_device!();
         type Model = AddInto<(
             Linear<2, 5>,
             Linear<3, 5>,
@@ -188,33 +181,34 @@ mod tests {
             Linear<6, 5>,
             Linear<7, 5>,
         )>;
-        let m: Model = Default::default();
-        let _: Tensor1D<5, OwnedTape> = m.forward((
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
-            Tensor1D::zeros().traced(),
+        let m: Model = dev.build_module();
+        let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
+            dev.zeros::<Rank1<2>>().traced(),
+            dev.zeros::<Rank1<3>>().traced(),
+            dev.zeros::<Rank1<4>>().traced(),
+            dev.zeros::<Rank1<5>>().traced(),
+            dev.zeros::<Rank1<6>>().traced(),
+            dev.zeros::<Rank1<7>>().traced(),
         ));
-        let _: Tensor2D<3, 5, OwnedTape> = m.forward((
-            Tensor2D::<3, 2>::zeros().traced(),
-            Tensor2D::<3, 3>::zeros().traced(),
-            Tensor2D::<3, 4>::zeros().traced(),
-            Tensor2D::<3, 5>::zeros().traced(),
-            Tensor2D::<3, 6>::zeros().traced(),
-            Tensor2D::<3, 7>::zeros().traced(),
+        let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_>> = m.forward((
+            dev.zeros::<Rank2<3, 2>>().traced(),
+            dev.zeros::<Rank2<3, 3>>().traced(),
+            dev.zeros::<Rank2<3, 4>>().traced(),
+            dev.zeros::<Rank2<3, 5>>().traced(),
+            dev.zeros::<Rank2<3, 6>>().traced(),
+            dev.zeros::<Rank2<3, 7>>().traced(),
         ));
     }
 
     #[test]
     fn test_missing_gradients() {
-        let mut model: AddInto<(Linear<5, 3>, Linear<5, 3>)> = Default::default();
-        let mut g: SimpleGradients = Default::default();
+        let dev = build_test_device!();
+        let mut model: AddInto<(Linear<5, 3, _>, Linear<5, 3, _>)> = dev.build_module();
+        let mut g: SimpleUpdater<_> = Default::default();
 
         // no gradients present
         let mut unused = Default::default();
-        model.update(&mut g, &mut unused);
+        model.update(&mut g, &mut unused).unwrap();
         assert_eq!(
             &unused.ids,
             &[
@@ -226,36 +220,40 @@ mod tests {
         );
 
         // weight gradient is present
-        g.0.mut_gradient(&model.0 .0.weight);
-        g.0.mut_gradient(&model.0 .0.bias);
-        g.0.mut_gradient(&model.0 .1.weight);
-        g.0.mut_gradient(&model.0 .1.bias);
+        g.0.try_alloc_for(&model.0 .0.weight).unwrap();
+        g.0.try_alloc_for(&model.0 .0.bias).unwrap();
+        g.0.try_alloc_for(&model.0 .1.weight).unwrap();
+        g.0.try_alloc_for(&model.0 .1.bias).unwrap();
 
         let mut unused = Default::default();
-        model.update(&mut g, &mut unused);
+        model.update(&mut g, &mut unused).unwrap();
         assert!(unused.is_empty());
     }
 
     #[test]
     fn longer_network() {
+        let dev = build_test_device!();
         // check if it works in a longer neural net
-        let mut model: (AddInto<(Linear<5, 3>, Linear<5, 3>)>, ReLU, Linear<3, 1>) =
-            Default::default();
-        let _ = model.forward((
-            Tensor1D::<5>::zeros().traced(),
-            Tensor1D::<5>::zeros().traced(),
+        let mut model: (
+            AddInto<(Linear<5, 3, _>, Linear<5, 3, _>)>,
+            ReLU,
+            Linear<3, 1, _>,
+        ) = dev.build_module();
+        let _: Tensor<Rank1<1>, _, _, OwnedTape<_>> = model.forward((
+            dev.zeros::<Rank1<5>>().traced(),
+            dev.zeros::<Rank1<5>>().traced(),
         ));
-        let _ = model.forward((
-            Tensor2D::<5, 5>::zeros().traced(),
-            Tensor2D::<5, 5>::zeros().traced(),
+        let _: Tensor<Rank2<5, 1>, _, _, OwnedTape<_>> = model.forward((
+            dev.zeros::<Rank2<5, 5>>().traced(),
+            dev.zeros::<Rank2<5, 5>>().traced(),
         ));
-        let _ = model.forward_mut((
-            Tensor1D::<5>::zeros().traced(),
-            Tensor1D::<5>::zeros().traced(),
+        let _: Tensor<Rank1<1>, _, _, OwnedTape<_>> = model.forward_mut((
+            dev.zeros::<Rank1<5>>().traced(),
+            dev.zeros::<Rank1<5>>().traced(),
         ));
-        let _ = model.forward_mut((
-            Tensor2D::<5, 5>::zeros().traced(),
-            Tensor2D::<5, 5>::zeros().traced(),
+        let _: Tensor<Rank2<5, 1>, _, _, OwnedTape<_>> = model.forward_mut((
+            dev.zeros::<Rank2<5, 5>>().traced(),
+            dev.zeros::<Rank2<5, 5>>().traced(),
         ));
     }
 }

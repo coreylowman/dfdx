@@ -6,8 +6,13 @@ pub use decoder::*;
 pub use encoder::*;
 pub use mha::*;
 
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
-use crate::prelude::*;
+use crate::{
+    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
+    tensor::{Cpu, PutTape, SplitTape},
+    tensor_ops::Device,
+};
+
+use super::{Module, ModuleMut, ResetParams};
 
 /// **Requires Nightly** Transformer architecture as described in
 /// [Attention is all you need](https://arxiv.org/abs/1706.03762).
@@ -32,43 +37,73 @@ use crate::prelude::*;
 ///     batch_first=True,
 /// )
 /// ```
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Transformer<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
     const NUM_ENCODER_LAYERS: usize,
     const NUM_DECODER_LAYERS: usize,
     const FF_DIM: usize,
+    D: Device<f32> = Cpu,
 > {
-    pub encoder: TransformerEncoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_ENCODER_LAYERS>,
-    pub decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS>,
+    pub encoder: TransformerEncoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_ENCODER_LAYERS, D>,
+    pub decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS, D>,
 }
 
-impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize> ResetParams
-    for Transformer<M, H, E, D, F>
+impl<
+        const M: usize,
+        const H: usize,
+        const EL: usize,
+        const DL: usize,
+        const F: usize,
+        D: Device<f32>,
+    > ResetParams<D, f32> for Transformer<M, H, EL, DL, F, D>
 {
-    fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
-        self.encoder.reset_params(rng);
-        self.decoder.reset_params(rng);
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self {
+            encoder: ResetParams::try_build(device)?,
+            decoder: ResetParams::try_build(device)?,
+        })
+    }
+    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
+        self.encoder.try_reset_params()?;
+        self.decoder.try_reset_params()?;
+        Ok(())
     }
 }
 
-impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize>
-    CanUpdateWithGradients for Transformer<M, H, E, D, F>
+impl<
+        const M: usize,
+        const H: usize,
+        const EL: usize,
+        const DL: usize,
+        const F: usize,
+        D: Device<f32>,
+    > GradientUpdate<D, f32> for Transformer<M, H, EL, DL, F, D>
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.encoder.update(grads, unused);
-        self.decoder.update(grads, unused);
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
+    where
+        U: ParamUpdater<D, f32>,
+    {
+        self.encoder.update(updater, unused)?;
+        self.decoder.update(updater, unused)?;
+        Ok(())
     }
 }
 
-impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize, Src, Tgt>
-    Module<(Src, Tgt)> for Transformer<M, H, E, D, F>
+impl<
+        const M: usize,
+        const H: usize,
+        const EL: usize,
+        const DL: usize,
+        const F: usize,
+        D: Device<f32>,
+        Src: SplitTape,
+        Tgt: PutTape<Src::Tape>,
+    > Module<(Src, Tgt)> for Transformer<M, H, EL, DL, F, D>
 where
-    Src: Tensor<Dtype = f32>,
-    Tgt: Tensor<Dtype = f32> + PutTape<Src::Tape>,
-    TransformerEncoder<M, H, F, E>: Module<Src, Output = Src>,
-    TransformerDecoder<M, H, F, D>: Module<
+    TransformerEncoder<M, H, F, EL, D>: Module<Src, Output = Src>,
+    TransformerDecoder<M, H, F, DL, D>: Module<
         (<Tgt as PutTape<Src::Tape>>::Output, Src::NoTape),
         Output = <Tgt as PutTape<Src::Tape>>::Output,
     >,
@@ -81,9 +116,10 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const E: usize, const D: usize, const F: usize, T> ModuleMut<T>
-    for Transformer<M, H, E, D, F>
+impl<const M: usize, const H: usize, const I: usize, const J: usize, const F: usize, D, T>
+    ModuleMut<T> for Transformer<M, H, I, J, F, D>
 where
+    D: Device<f32>,
     Self: Module<T>,
 {
     type Output = <Self as Module<T>>::Output;
@@ -96,41 +132,43 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::tests::SimpleGradients;
-    use rand::{rngs::StdRng, SeedableRng};
+    use crate::{
+        nn::{tests::SimpleUpdater, ModuleBuilder},
+        shapes::*,
+        tensor::*,
+        tensor_ops::*,
+        tests::build_test_device,
+    };
 
     #[test]
     fn test_forward() {
-        let mut rng = StdRng::seed_from_u64(0);
-        let mut t: Transformer<16, 4, 3, 3, 8> = Default::default();
-        t.reset_params(&mut rng);
+        let dev = build_test_device!(0);
+        let mut t: Transformer<16, 4, 3, 3, 8, _> = dev.build_module();
 
         // unbatched
-        let src: Tensor2D<7, 16> = TensorCreator::randn(&mut rng);
-        let tgt: Tensor2D<9, 16> = TensorCreator::randn(&mut rng);
-        let _: Tensor2D<9, 16> = t.forward_mut((src, tgt));
+        let src = dev.randn::<Rank2<7, 16>>();
+        let tgt = dev.randn::<Rank2<9, 16>>();
+        let _: Tensor<Rank2<9, 16>, _, _, _> = t.forward_mut((src, tgt));
 
         // batched
-        let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
-        let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
-        let _: Tensor3D<4, 6, 16> = t.forward_mut((src, tgt));
+        let src = dev.randn::<Rank3<4, 12, 16>>();
+        let tgt = dev.randn::<Rank3<4, 6, 16>>();
+        let _: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward_mut((src, tgt));
     }
 
     #[test]
     fn test_backward() {
-        let mut rng = StdRng::seed_from_u64(0);
-        let mut t: Transformer<16, 4, 3, 3, 8> = Default::default();
-        t.reset_params(&mut rng);
+        let dev = build_test_device!(0);
+        let mut t: Transformer<16, 4, 3, 3, 8> = dev.build_module();
 
-        let src: Tensor3D<4, 12, 16> = TensorCreator::randn(&mut rng);
-        let tgt: Tensor3D<4, 6, 16> = TensorCreator::randn(&mut rng);
-        let out: Tensor3D<4, 6, 16, _> = t.forward_mut((src.trace(), tgt));
-        let g = backward(out.mean());
+        let src = dev.randn::<Rank3<4, 12, 16>>();
+        let tgt = dev.randn::<Rank3<4, 6, 16>>();
+        let out: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward_mut((src.trace(), tgt));
+        let g = out.mean().backward();
 
-        let mut gs = SimpleGradients(g);
+        let mut gs = SimpleUpdater(g);
         let mut unused: UnusedTensors = Default::default();
-        t.update(&mut gs, &mut unused);
-
+        t.update(&mut gs, &mut unused).unwrap();
         assert!(unused.is_empty());
     }
 }

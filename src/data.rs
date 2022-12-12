@@ -1,66 +1,78 @@
-//! A collection of data utility classes such as [one_hot_encode()] and [SubsetIterator].
+//! A collection of data utility classes such as [Arange], [OneHotEncode], and [SubsetIterator].
 
 use rand::prelude::SliceRandom;
 use std::vec::Vec;
 
-use crate::arrays::HasArrayData;
-use crate::tensor::{Tensor1D, Tensor2D, TensorCreator};
+use crate::{
+    shapes::{Const, Dyn, Rank1},
+    tensor::{CopySlice, DeviceStorage, Tensor, ZerosTensor},
+};
 
 /// Generates a tensor with ordered data from 0 to `N`.
 ///
 /// Examples:
 /// ```rust
-/// # use dfdx::{prelude::*, data::arange};
-/// let t = arange::<5>();
-/// assert_eq!(t.data(), &[0.0, 1.0, 2.0, 3.0, 4.0]);
+/// use dfdx::{prelude::*, data::Arange};
+/// let dev: Cpu = Default::default();
+/// let t = dev.arange::<5>();
+/// assert_eq!(t.array(), [0.0, 1.0, 2.0, 3.0, 4.0]);
 /// ```
-///
-/// ```rust
-/// # use dfdx::{prelude::*, data::arange};
-/// let t: Tensor1D<10> = arange();
-/// assert_eq!(t.data(), &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
-/// ```
-pub fn arange<const N: usize>() -> Tensor1D<N> {
-    let mut output = Tensor1D::zeros();
-    for i in 0..N {
-        output.mut_data()[i] = i as f32;
+pub trait Arange: DeviceStorage + ZerosTensor<f32> + CopySlice<f32> {
+    fn arange<const N: usize>(&self) -> Tensor<Rank1<N>, f32, Self> {
+        let mut data = Vec::with_capacity(N);
+        for i in 0..N {
+            data.push(i as f32);
+        }
+        let mut t = self.zeros();
+        t.copy_from(&data);
+        t
     }
-    output
 }
+impl<D: DeviceStorage + ZerosTensor<f32> + CopySlice<f32>> Arange for D {}
 
-/// One hot encodes an array of class labels into a [Tensor2D] of probability
+/// One hot encodes an array of class labels into a 2d tensor of probability
 /// vectors. This can be used in tandem with [crate::losses::cross_entropy_with_logits_loss()].
 ///
 /// Const Generic Arguments:
-/// - `B` - the batch size
 /// - `N` - the number of classes
 ///
 /// Arguments:
 /// - `class_labels` - an array of size `B` where each element is the class label
 ///
-/// Outputs: [Tensor2D] with shape (B, N)
+/// Outputs: [Tensor] with shape `(Dyn, Const<N>)`
 ///
 /// Examples:
 /// ```rust
-/// # use dfdx::{prelude::*, data::one_hot_encode};
+/// use dfdx::{prelude::*, data::OneHotEncode};
+/// let dev: Cpu = Default::default();
 /// let class_labels = [0, 1, 2, 1, 1];
 /// // NOTE: 5 is the batch size, 3 is the number of classes
-/// let probs = one_hot_encode::<5, 3>(&class_labels);
-/// assert_eq!(probs.data(), &[
-///     [1.0, 0.0, 0.0],
-///     [0.0, 1.0, 0.0],
-///     [0.0, 0.0, 1.0],
-///     [0.0, 1.0, 0.0],
-///     [0.0, 1.0, 0.0],
+/// let probs: Tensor<(Dyn, Const<3>), f32> = dev.one_hot_encode::<3>(&class_labels);
+/// assert_eq!(&probs.as_vec(), &[
+///     1.0, 0.0, 0.0,
+///     0.0, 1.0, 0.0,
+///     0.0, 0.0, 1.0,
+///     0.0, 1.0, 0.0,
+///     0.0, 1.0, 0.0,
 /// ]);
 /// ```
-pub fn one_hot_encode<const B: usize, const N: usize>(class_labels: &[usize; B]) -> Tensor2D<B, N> {
-    let mut result = Tensor2D::zeros();
-    for (i, row) in result.mut_data().iter_mut().enumerate() {
-        row[class_labels[i]] = 1.0;
+pub trait OneHotEncode: DeviceStorage + ZerosTensor<f32> + CopySlice<f32> {
+    fn one_hot_encode<const N: usize>(
+        &self,
+        labels: &[usize],
+    ) -> Tensor<(Dyn, Const<N>), f32, Self> {
+        let mut data = Vec::with_capacity(labels.len() * N);
+        for &l in labels {
+            for i in 0..N {
+                data.push(if i == l { 1.0 } else { 0.0 });
+            }
+        }
+        let mut t = self.zeros_like(&(Dyn(labels.len()), Const::<N>));
+        t.copy_from(&data);
+        t
     }
-    result
 }
+impl<D: DeviceStorage + ZerosTensor<f32> + CopySlice<f32>> OneHotEncode for D {}
 
 /// A utility class to simplify sampling a fixed number of indices for
 /// data from a dataset.

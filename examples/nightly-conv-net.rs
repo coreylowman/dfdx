@@ -5,7 +5,6 @@
 #[cfg(feature = "nightly")]
 fn main() {
     use dfdx::prelude::*;
-    use rand::thread_rng;
 
     type Model = (
         (Conv2D<3, 4, 3>, ReLU),
@@ -15,17 +14,16 @@ fn main() {
         Linear<7744, 10>,
     );
 
-    let mut rng = thread_rng();
-    let mut m: Model = Default::default();
-    m.reset_params(&mut rng);
+    let dev: Cpu = Default::default();
+    let m: Model = dev.build_module();
 
     // single image forward
-    let x: Tensor3D<3, 28, 28> = TensorCreator::randn(&mut rng);
-    let _: Tensor1D<10> = m.forward(x);
+    let x: Tensor<Rank3<3, 28, 28>, f32> = dev.randn();
+    let _: Tensor<Rank1<10>, f32> = m.forward(x);
 
     // batched image forward
-    let x: Tensor4D<32, 3, 28, 28> = TensorCreator::randn(&mut rng);
-    let _: Tensor2D<32, 10> = m.forward(x);
+    let x: Tensor<Rank4<32, 3, 28, 28>, f32> = dev.randn();
+    let _: Tensor<Rank2<32, 10>, f32> = m.forward(x);
 }
 
 #[cfg(not(feature = "nightly"))]

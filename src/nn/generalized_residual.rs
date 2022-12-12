@@ -1,5 +1,6 @@
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
-use crate::prelude::*;
+use crate::{optim::*, shapes::*, tensor::*, tensor_ops::*};
+
+use super::{Module, ModuleMut, ResetParams};
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -11,10 +12,11 @@ use crate::prelude::*;
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let module: GeneralizedResidual<ReLU, Square> = Default::default();
-/// let x = Tensor1D::new([-2.0, -1.0, 0.0, 1.0, 2.0]);
+/// # let dev: Cpu = Default::default();
+/// let module: GeneralizedResidual<ReLU, Square> = dev.build_module();
+/// let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
 /// let y = module.forward(x);
-/// assert_eq!(y.data(), &[4.0, 1.0, 0.0, 2.0, 6.0]);
+/// assert_eq!(y.array(), [4.0, 1.0, 0.0, 2.0, 6.0]);
 /// ```
 #[derive(Debug, Clone, Default)]
 pub struct GeneralizedResidual<F, R> {
@@ -22,96 +24,91 @@ pub struct GeneralizedResidual<F, R> {
     pub r: R,
 }
 
-impl<F: CanUpdateWithGradients, R: CanUpdateWithGradients> CanUpdateWithGradients
+impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>, R: GradientUpdate<D, E>> GradientUpdate<D, E>
     for GeneralizedResidual<F, R>
 {
-    /// Pass through to `F`'s [CanUpdateWithGradients].
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.f.update(grads, unused);
-        self.r.update(grads, unused);
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
+    where
+        U: ParamUpdater<D, E>,
+    {
+        self.f.update(updater, unused)?;
+        self.r.update(updater, unused)?;
+        Ok(())
     }
 }
 
-impl<F: ResetParams, R: ResetParams> ResetParams for GeneralizedResidual<F, R> {
-    /// Pass through to `F`'s [ResetParams].
-    fn reset_params<RNG: rand::Rng>(&mut self, rng: &mut RNG) {
-        self.f.reset_params(rng);
-        self.r.reset_params(rng);
-    }
-}
-
-impl<F, R, T> Module<T> for GeneralizedResidual<F, R>
-where
-    T: Tensor<Dtype = f32>,
-    F: Module<T>,
-    R: Module<T, Output = F::Output>,
-    F::Output: Tensor<Dtype = f32, Tape = T::Tape>,
+impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>, R: ResetParams<D, E>> ResetParams<D, E>
+    for GeneralizedResidual<F, R>
 {
-    type Output = F::Output;
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self {
+            f: ResetParams::try_build(device)?,
+            r: ResetParams::try_build(device)?,
+        })
+    }
+    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
+        self.f.try_reset_params()?;
+        self.r.try_reset_params()?;
+        Ok(())
+    }
+}
 
-    /// Calls forward on `F` and `R` and then sums their result: `F(x) + R(x)`
+impl<T: SplitTape, F: Module<T>, R: Module<T, Output = F::Output>> Module<T>
+    for GeneralizedResidual<F, R>
+where
+    F::Output: std::ops::Add<F::Output>,
+{
+    type Output = <F::Output as std::ops::Add<F::Output>>::Output;
     fn forward(&self, x: T) -> Self::Output {
-        add(self.f.forward(x.with_empty_tape()), self.r.forward(x))
+        self.f.forward(x.with_empty_tape()) + self.r.forward(x)
     }
 }
 
-impl<F, R, T> ModuleMut<T> for GeneralizedResidual<F, R>
+impl<T: SplitTape, F: ModuleMut<T>, R: ModuleMut<T, Output = F::Output>> ModuleMut<T>
+    for GeneralizedResidual<F, R>
 where
-    T: Tensor<Dtype = f32>,
-    F: ModuleMut<T>,
-    R: ModuleMut<T, Output = F::Output>,
-    F::Output: Tensor<Dtype = f32, Tape = T::Tape>,
+    F::Output: std::ops::Add<F::Output>,
 {
-    type Output = F::Output;
-
+    type Output = <F::Output as std::ops::Add<F::Output>>::Output;
     fn forward_mut(&mut self, x: T) -> Self::Output {
-        add(
-            self.f.forward_mut(x.with_empty_tape()),
-            self.r.forward_mut(x),
-        )
+        self.f.forward_mut(x.with_empty_tape()) + self.r.forward_mut(x)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::assert_close;
-    use rand::{prelude::StdRng, SeedableRng};
+    use crate::nn::{Linear, ModuleBuilder};
+    use crate::tests::{assert_close, build_test_device};
 
     #[test]
     fn test_reset_generalized_residual() {
-        let mut rng = StdRng::seed_from_u64(0);
-        let mut model: GeneralizedResidual<Linear<2, 5>, Linear<2, 5>> = Default::default();
-        assert_eq!(model.f.weight.data(), &[[0.0; 2]; 5]);
-        assert_eq!(model.f.bias.data(), &[0.0; 5]);
-        assert_eq!(model.r.weight.data(), &[[0.0; 2]; 5]);
-        assert_eq!(model.r.bias.data(), &[0.0; 5]);
+        let dev = build_test_device!();
 
-        model.reset_params(&mut rng);
-        assert_ne!(model.f.weight.data(), &[[0.0; 2]; 5]);
-        assert_ne!(model.f.bias.data(), &[0.0; 5]);
-        assert_ne!(model.r.weight.data(), &[[0.0; 2]; 5]);
-        assert_ne!(model.r.bias.data(), &[0.0; 5]);
+        let model: GeneralizedResidual<Linear<2, 5, _>, Linear<2, 5, _>> = dev.build_module();
+        assert_ne!(model.f.weight.array(), [[0.0; 2]; 5]);
+        assert_ne!(model.f.bias.array(), [0.0; 5]);
+        assert_ne!(model.r.weight.array(), [[0.0; 2]; 5]);
+        assert_ne!(model.r.bias.array(), [0.0; 5]);
     }
 
     #[test]
     fn test_generalized_residual_gradients() {
-        let mut rng = StdRng::seed_from_u64(0);
+        let dev = build_test_device!();
 
-        let mut model: GeneralizedResidual<Linear<2, 2>, Linear<2, 2>> = Default::default();
-        model.reset_params(&mut rng);
+        let model: GeneralizedResidual<Linear<2, 2, _>, Linear<2, 2, _>> = dev.build_module();
 
-        let x: Tensor2D<4, 2> = TensorCreator::randn(&mut rng);
-        let y = model.forward_mut(x.trace());
+        let x = dev.randn::<Rank2<4, 2>>();
+        let y = model.forward(x.trace());
 
         #[rustfmt::skip]
-        assert_close(y.data(), &[[-0.81360567, -1.1473482], [1.0925694, 0.17383915], [-0.32519114, 0.49806428], [0.08259219, -0.7277866]]);
+        assert_close(&y.array(), &[[-0.81360567, -1.1473482], [1.0925694, 0.17383915], [-0.32519114, 0.49806428], [0.08259219, -0.7277866]]);
 
-        let g = backward(y.mean());
-        assert_close(g.ref_gradient(&x), &[[0.15889636, 0.062031522]; 4]);
-        assert_close(g.ref_gradient(&model.f.weight), &[[-0.025407, 0.155879]; 2]);
-        assert_close(g.ref_gradient(&model.f.bias), &[0.5; 2]);
-        assert_close(g.ref_gradient(&model.r.weight), &[[-0.025407, 0.155879]; 2]);
-        assert_close(g.ref_gradient(&model.r.bias), &[0.5; 2]);
+        let g = y.mean().backward();
+        assert_close(&g.get(&x).array(), &[[0.15889636, 0.062031522]; 4]);
+        assert_close(&g.get(&model.f.weight).array(), &[[-0.025407, 0.155879]; 2]);
+        assert_close(&g.get(&model.f.bias).array(), &[0.5; 2]);
+        assert_close(&g.get(&model.r.weight).array(), &[[-0.025407, 0.155879]; 2]);
+        assert_close(&g.get(&model.r.bias).array(), &[0.5; 2]);
     }
 }

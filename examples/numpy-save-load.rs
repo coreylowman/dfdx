@@ -1,24 +1,37 @@
-//! Demonstrates how to use dfdx::numpy to save and load arrays
+//! Demonstrates how to save and load arrays with tensors
 
 #[cfg(feature = "numpy")]
 fn main() {
-    use dfdx::numpy as np;
+    use dfdx::{
+        shapes::{Rank0, Rank1, Rank2},
+        tensor::{AsArray, Cpu, Tensor, TensorFromArray, ZerosTensor},
+    };
 
-    np::save("0d-rs.npy", &1.234).expect("Saving failed");
-    np::save("1d-rs.npy", &[1.0, 2.0, 3.0]).expect("Saving failed");
-    np::save("2d-rs.npy", &[[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]).expect("Saving failed");
+    let dev: Cpu = Default::default();
 
-    let mut expected_0d = 0.0;
-    np::load("0d-rs.npy", &mut expected_0d).expect("Loading failed");
-    assert_eq!(expected_0d, 1.234);
+    dev.tensor(1.234f32)
+        .save_to_npy("0d-rs.npy")
+        .expect("Saving failed");
 
-    let mut expected_1d = [0.0; 3];
-    np::load("1d-rs.npy", &mut expected_1d).expect("Loading failed");
-    assert_eq!(expected_1d, [1.0, 2.0, 3.0]);
+    dev.tensor([1.0f32, 2.0, 3.0])
+        .save_to_npy("1d-rs.npy")
+        .expect("Saving failed");
 
-    let mut expected_2d = [[0.0; 3]; 2];
-    np::load("2d-rs.npy", &mut expected_2d).expect("Loading failed");
-    assert_eq!(expected_2d, [[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+    dev.tensor([[1.0f32, 2.0, 3.0], [-1.0, -2.0, -3.0]])
+        .save_to_npy("2d-rs.npy")
+        .expect("Saving failed");
+
+    let mut a: Tensor<Rank0, f32, _> = dev.zeros();
+    a.load_from_npy("0d-rs.npy").expect("Loading failed");
+    assert_eq!(a.array(), 1.234);
+
+    let mut b: Tensor<Rank1<3>, f32, _> = dev.zeros();
+    b.load_from_npy("1d-rs.npy").expect("Loading failed");
+    assert_eq!(b.array(), [1.0, 2.0, 3.0]);
+
+    let mut c: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
+    c.load_from_npy("2d-rs.npy").expect("Loading failed");
+    assert_eq!(c.array(), [[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 }
 
 #[cfg(not(feature = "numpy"))]

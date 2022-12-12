@@ -14,15 +14,16 @@
 //! the [crate::gradients::Gradients]:
 //!
 //! ```rust
-//! # use dfdx::{prelude::*, gradients::*};
+//! # use dfdx::{prelude::*, optim::*, losses, gradients::Gradients};
 //! # type MyModel = Linear<5, 2>;
-//! let mut model: MyModel = Default::default();
+//! # let dev: Cpu = Default::default();
+//! let mut model: MyModel = dev.build_module();
 //! let mut opt: Sgd<MyModel> = Default::default();
-//! # let y = model.forward(Tensor1D::zeros().traced());
-//! # let loss = mse_loss(y, Tensor1D::zeros());
+//! # let y = model.forward(dev.zeros::<Rank1<5>>().traced());
+//! # let loss = losses::mse_loss(y, dev.zeros());
 //! // -- snip loss computation --
 //!
-//! let gradients: Gradients = backward(loss);
+//! let gradients: Gradients<Cpu> = loss.backward();
 //! opt.update(&mut model, gradients);
 //! ```
 
@@ -30,10 +31,13 @@ mod adam;
 mod optimizer;
 mod rmsprop;
 mod sgd;
-mod weight_decay;
 
-pub use adam::*;
-pub use optimizer::*;
-pub use rmsprop::*;
-pub use sgd::*;
-pub use weight_decay::*;
+pub use adam::{Adam, AdamConfig};
+pub use optimizer::{GradientUpdate, Optimizer, OptimizerUpdateError, ParamUpdater, UnusedTensors};
+pub use optimizer::{Momentum, WeightDecay};
+pub use rmsprop::{RMSprop, RMSpropConfig};
+pub use sgd::{Sgd, SgdConfig};
+
+pub mod prelude {
+    pub use super::{GradientUpdate, Optimizer, OptimizerUpdateError, ParamUpdater, UnusedTensors};
+}

@@ -1,6 +1,11 @@
+use crate::{
+    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual},
+    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
+    tensor::{Cpu, PutTape, SplitTape},
+    tensor_ops::Device,
+};
+
 use super::mha::MultiHeadAttention;
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, UnusedTensors};
-use crate::prelude::*;
 
 /// **Requires Nightly** A transformer encoder.
 ///
@@ -16,7 +21,8 @@ pub type TransformerEncoder<
     const NUM_HEADS: usize,
     const FF_DIM: usize,
     const NUM_LAYERS: usize,
-> = Repeated<TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM>, NUM_LAYERS>;
+    D = Cpu,
+> = Repeated<TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, D>, NUM_LAYERS>;
 
 /// **Requires Nightly** A single transformer encoder block
 ///
@@ -32,66 +38,78 @@ pub type TransformerEncoder<
 /// )
 /// ```
 /// TODO: Doctests
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct TransformerEncoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
     const FF_DIM: usize,
+    D: Device<f32> = Cpu,
 > {
-    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS>,
-    pub norm1: LayerNorm1D<MODEL_DIM>,
-    pub ff: FF<MODEL_DIM, FF_DIM>,
-    pub norm2: LayerNorm1D<MODEL_DIM>,
+    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
+    pub norm1: LayerNorm1D<MODEL_DIM, D>,
+    pub ff: FF<MODEL_DIM, FF_DIM, D>,
+    pub norm2: LayerNorm1D<MODEL_DIM, D>,
 }
 
-type FF<const M: usize, const F: usize> = Residual<(Linear<M, F>, ReLU, Linear<F, M>)>;
+type FF<const M: usize, const F: usize, D> = Residual<(Linear<M, F, D>, ReLU, Linear<F, M, D>)>;
 
-impl<const M: usize, const H: usize, const F: usize> ResetParams
-    for TransformerEncoderBlock<M, H, F>
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
+    for TransformerEncoderBlock<M, H, F, D>
 {
-    fn reset_params<R: rand::Rng>(&mut self, rng: &mut R) {
-        self.self_attn.reset_params(rng);
-        self.norm1.reset_params(rng);
-        self.ff.reset_params(rng);
-        self.norm2.reset_params(rng);
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self {
+            self_attn: ResetParams::try_build(device)?,
+            norm1: ResetParams::try_build(device)?,
+            ff: ResetParams::try_build(device)?,
+            norm2: ResetParams::try_build(device)?,
+        })
+    }
+    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
+        self.self_attn.try_reset_params()?;
+        self.norm1.try_reset_params()?;
+        self.ff.try_reset_params()?;
+        self.norm2.try_reset_params()?;
+        Ok(())
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize> CanUpdateWithGradients
-    for TransformerEncoderBlock<M, H, F>
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpdate<D, f32>
+    for TransformerEncoderBlock<M, H, F, D>
 {
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.self_attn.update(grads, unused);
-        self.norm1.update(grads, unused);
-        self.ff.update(grads, unused);
-        self.norm2.update(grads, unused);
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
+    where
+        U: ParamUpdater<D, f32>,
+    {
+        self.self_attn.update(updater, unused)?;
+        self.norm1.update(updater, unused)?;
+        self.ff.update(updater, unused)?;
+        self.norm2.update(updater, unused)?;
+        Ok(())
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, Src> Module<Src>
-    for TransformerEncoderBlock<M, H, F>
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, Src> Module<Src>
+    for TransformerEncoderBlock<M, H, F, D>
 where
-    Src: Tensor<Dtype = f32>,
-    MultiHeadAttention<M, H>: Module<(Src, Src::NoTape, Src::NoTape), Output = Src>,
-    LayerNorm1D<M>: Module<Src, Output = Src>,
-    FF<M, F>: Module<Src, Output = Src>,
+    Src: SplitTape + std::ops::Add<Src::NoTape, Output = Src>,
+    MultiHeadAttention<M, H, M, M, D>: Module<Src, Output = Src>,
+    LayerNorm1D<M, D>: Module<Src, Output = Src>,
+    FF<M, F, D>: Module<Src, Output = Src>,
 {
     type Output = Src;
 
     fn forward(&self, src: Src) -> Self::Output {
         let (src, tape) = src.split_tape();
-        let x = self
-            .self_attn
-            .forward((src.clone().put_tape(tape), src.clone(), src.clone()));
-        let x = add(x, src);
+        let x = self.self_attn.forward(src.clone().put_tape(tape));
+        let x = x + src;
         let x = self.norm1.forward(x);
         let x = self.ff.forward(x);
         self.norm2.forward(x)
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, T> ModuleMut<T>
-    for TransformerEncoderBlock<M, H, F>
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, T> ModuleMut<T>
+    for TransformerEncoderBlock<M, H, F, D>
 where
     Self: Module<T>,
 {
@@ -106,12 +124,16 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::assert_close;
-    use rand::{rngs::StdRng, SeedableRng};
+    use crate::{
+        nn::ModuleBuilder,
+        shapes::Rank3,
+        tensor::{AsArray, RandnTensor},
+        tests::{assert_close, build_test_device},
+    };
 
     #[test]
     fn test_encoder_block_forward() {
-        let mut rng = StdRng::seed_from_u64(2);
+        let dev = build_test_device!(2);
 
         const BATCH: usize = 3;
         const SEQ_LEN: usize = 5;
@@ -119,11 +141,10 @@ mod tests {
         const NUM_HEADS: usize = 3;
         const FF_DIM: usize = 16;
 
-        let mut encoder: TransformerEncoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM> = Default::default();
-        encoder.reset_params(&mut rng);
+        let encoder: TransformerEncoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> = dev.build_module();
 
-        let x: Tensor3D<BATCH, SEQ_LEN, EMBED_DIM> = TensorCreator::randn(&mut rng);
-        let y: Tensor3D<BATCH, SEQ_LEN, EMBED_DIM> = encoder.forward(x);
+        let x = dev.randn::<Rank3<BATCH, SEQ_LEN, EMBED_DIM>>();
+        let y = encoder.forward(x);
 
         // This expected y was generated by:
         // 1. saving `encoder` parameters, `x` and `y` to a npz files
@@ -132,7 +153,7 @@ mod tests {
         // See https://github.com/coreylowman/dfdx/wiki/Exporting-MultiHeadAttention-to-pytorch-for-unit-tests
         #[rustfmt::skip]
         assert_close(
-            y.data(),
+            &y.array(),
             &[
                 [
                     [0.83316803, 0.85057360, 0.37431455, 1.48506296,-0.38405111,-1.89352179,-1.07049453,-0.50913972, 0.31408834],

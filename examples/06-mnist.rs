@@ -2,8 +2,7 @@
 //! to build a neural network that learns to recognize
 //! the MNIST digits.
 
-use dfdx::data::SubsetIterator;
-use dfdx::prelude::*;
+use dfdx::{data::SubsetIterator, losses::cross_entropy_with_logits_loss, optim::Adam, prelude::*};
 use indicatif::ProgressBar;
 use mnist::*;
 use rand::prelude::{SeedableRng, StdRng};
@@ -29,17 +28,25 @@ impl MnistDataset {
 
     pub fn get_batch<const B: usize>(
         &self,
+        dev: &Cpu,
         idxs: [usize; B],
-    ) -> (Tensor2D<B, 784>, Tensor2D<B, 10>) {
-        let mut img = Tensor2D::zeros();
-        let mut lbl = Tensor2D::zeros();
-        let img_data = img.mut_data();
-        let lbl_data = lbl.mut_data();
-        for (batch_i, &img_idx) in idxs.iter().enumerate() {
+    ) -> (
+        Tensor<Rank2<B, 784>, f32, Cpu>,
+        Tensor<Rank2<B, 10>, f32, Cpu>,
+    ) {
+        let mut img_data: Vec<f32> = Vec::with_capacity(B * 784);
+        let mut lbl_data: Vec<f32> = Vec::with_capacity(B * 10);
+        for (_batch_i, &img_idx) in idxs.iter().enumerate() {
             let start = 784 * img_idx;
-            img_data[batch_i].copy_from_slice(&self.img[start..start + 784]);
-            lbl_data[batch_i][self.lbl[img_idx]] = 1.0;
+            img_data.extend(&self.img[start..start + 784]);
+            let mut choices = [0.0; 10];
+            choices[self.lbl[img_idx]] = 1.0;
+            lbl_data.extend(choices);
         }
+        let mut img = dev.zeros();
+        img.copy_from(&img_data);
+        let mut lbl = dev.zeros();
+        lbl.copy_from(&lbl_data);
         (img, lbl)
     }
 }
@@ -66,11 +73,11 @@ fn main() {
     println!("Loading mnist from args[1] = {mnist_path}");
     println!("Override mnist path with `cargo run --example mnist_classifier -- <path to mnist>`");
 
+    let dev: Cpu = Default::default();
     let mut rng = StdRng::seed_from_u64(0);
 
     // initialize model and optimizer
-    let mut model: Mlp = Default::default();
-    model.reset_params(&mut rng);
+    let mut model: Mlp = dev.build_module();
     let mut opt: Adam<Mlp> = Default::default();
 
     // initialize dataset
@@ -83,23 +90,23 @@ fn main() {
         let start = Instant::now();
         let bar = ProgressBar::new(dataset.len() as u64);
         for (img, lbl) in SubsetIterator::<BATCH_SIZE>::shuffled(dataset.len(), &mut rng)
-            .map(|i| dataset.get_batch(i))
+            .map(|i| dataset.get_batch(&dev, i))
         {
             let logits = model.forward_mut(img.traced());
             let loss = cross_entropy_with_logits_loss(logits, lbl);
 
-            total_epoch_loss += loss.data();
+            total_epoch_loss += loss.array();
             num_batches += 1;
             bar.inc(BATCH_SIZE as u64);
 
-            opt.update(&mut model, loss.backward())
-                .expect("Unused params");
+            let gradients = loss.backward();
+            opt.update(&mut model, gradients).unwrap();
         }
         let dur = Instant::now() - start;
         bar.finish_and_clear();
 
         println!(
-            "Epoch {i_epoch} in {:?} ({:.3} batches/s): avg sample loss {:.3}",
+            "Epoch {i_epoch} in {:?} ({:.3} batches/s): avg sample loss {:.5}",
             dur,
             num_batches as f32 / dur.as_secs_f32(),
             BATCH_SIZE as f32 * total_epoch_loss / num_batches as f32,

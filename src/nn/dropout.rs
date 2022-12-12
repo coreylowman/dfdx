@@ -1,9 +1,6 @@
-use super::*;
-use crate::gradients::*;
-use crate::tensor::*;
-use crate::tensor_ops::dropout;
-use crate::unique_id::unique_id;
-use rand::prelude::*;
+use crate::{gradients::*, shapes::*, tensor::Tensor, tensor_ops::*};
+
+use super::{Module, ModuleMut, ZeroSizedModule};
 
 /// Does nothing as a [Module], and calls [dropout()] as [ModuleMut] with probability `1.0 / N`.
 ///
@@ -18,17 +15,17 @@ use rand::prelude::*;
 /// 1. Using [Module] with [OwnedTape] **fails to compile**
 /// ```compile_fail
 /// # use dfdx::prelude::*;
-/// let dropout: DropoutOneIn<2> = Default::default();
-/// let x: Tensor1D<5, OwnedTape> = Tensor1D::zeros().trace();
-/// dropout.forward(x);
+/// # let dev: Cpu = Default::default();
+/// let dropout: DropoutOneIn<2> = dev.build_module();
+/// dropout.forward(dev.zeros::<Rank1<5>>().trace());
 /// ```
 ///
 /// 2. Using [ModuleMut] with [NoneTape] **fails to compile**
 /// ```compile_fail
 /// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
 /// let mut dropout: DropoutOneIn<2> = Default::default();
-/// let x: Tensor1D<5, NoneTape> = TensorCreator::zeros();
-/// dropout.forward_mut(x);
+/// dropout.forward_mut(dev.zeros::<Rank1<5>>());
 /// ```
 ///
 /// Generics:
@@ -37,50 +34,33 @@ use rand::prelude::*;
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
 /// let mut dropout: DropoutOneIn<2> = Default::default();
-/// let t: Tensor2D<2, 5> = Tensor2D::ones();
-/// let r = dropout.forward_mut(t.trace());
-/// assert_eq!(r.data(), &[[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
+/// let r = dropout.forward_mut(dev.ones::<Rank2<2, 5>>().trace());
+/// assert_eq!(r.array(), [[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
 /// ```
-#[derive(Clone, Debug)]
-pub struct DropoutOneIn<const N: usize> {
-    rng: StdRng,
-}
+#[derive(Clone, Debug, Default)]
+pub struct DropoutOneIn<const N: usize>;
 
-impl<const N: usize> Default for DropoutOneIn<N> {
-    /// Seeds [StdRng] with a new seed every time this is called. The seed is initialized
-    /// with a deterministic value.
-    fn default() -> Self {
-        let seed = unique_id().as_u64();
-        Self {
-            rng: StdRng::seed_from_u64(seed),
-        }
-    }
-}
+impl<const N: usize> ZeroSizedModule for DropoutOneIn<N> {}
 
-impl<const N: usize> CanUpdateWithGradients for DropoutOneIn<N> {
-    /// Does nothing.
-    fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
-}
-
-impl<const N: usize> ResetParams for DropoutOneIn<N> {
-    /// Does nothing.
-    fn reset_params<R: Rng>(&mut self, _: &mut R) {}
-}
-
-impl<const N: usize, T: Tensor<Dtype = f32, Tape = NoneTape>> Module<T> for DropoutOneIn<N> {
-    type Output = T;
+impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>>
+    for DropoutOneIn<N>
+{
+    type Output = Tensor<S, E, D, NoneTape>;
     /// Does nothing
-    fn forward(&self, input: T) -> Self::Output {
+    fn forward(&self, input: Tensor<S, E, D, NoneTape>) -> Self::Output {
         input
     }
 }
 
-impl<const N: usize, T: Tensor<Dtype = f32, Tape = OwnedTape>> ModuleMut<T> for DropoutOneIn<N> {
-    type Output = T;
+impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<D>>>
+    for DropoutOneIn<N>
+{
+    type Output = Tensor<S, E, D, OwnedTape<D>>;
     /// Calls [dropout()] with `p=1/N` using `self.rng`.
-    fn forward_mut(&mut self, input: T) -> Self::Output {
-        dropout(input, 1.0 / N as f32, &mut self.rng)
+    fn forward_mut(&mut self, input: Tensor<S, E, D, OwnedTape<D>>) -> Self::Output {
+        dropout(input, 1.0 / N as f32)
     }
 }
 
@@ -97,17 +77,17 @@ impl<const N: usize, T: Tensor<Dtype = f32, Tape = OwnedTape>> ModuleMut<T> for 
 /// 1. Using [Module] with [OwnedTape] **fails to compile**
 /// ```compile_fail
 /// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
 /// let dropout: Dropout = Default::default();
-/// let x: Tensor1D<5, OwnedTape> = Tensor1D::zeros().trace();
-/// dropout.forward(x);
+/// dropout.forward(dev.zeros::<Rank1<5>>().trace());
 /// ```
 ///
 /// 2. Using [ModuleMut] with [NoneTape] **fails to compile**
 /// ```compile_fail
 /// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
 /// let mut dropout: Dropout = Default::default();
-/// let x: Tensor1D<5, NoneTape> = TensorCreator::zeros();
-/// dropout.forward_mut(x);
+/// dropout.forward_mut(dev.zeros::<Rank1<5>>());
 /// ```
 ///
 /// Generics:
@@ -116,99 +96,79 @@ impl<const N: usize, T: Tensor<Dtype = f32, Tape = OwnedTape>> ModuleMut<T> for 
 /// Examples:
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let mut dropout = Dropout::new(0.5, 0);
-/// let t: Tensor2D<2, 5> = Tensor2D::ones();
-/// let r = dropout.forward_mut(t.trace());
-/// assert_eq!(r.data(), &[[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
+/// # let dev: Cpu = Default::default();
+/// let mut dropout = Dropout { p: 0.5 };
+/// let r = dropout.forward_mut(dev.ones::<Rank2<2, 5>>().trace());
+/// assert_eq!(r.array(), [[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Dropout {
     pub p: f32,
-    rng: StdRng,
-}
-
-impl Dropout {
-    /// Constructs [Dropout] with `p` and `rng`.
-    pub fn new(p: f32, rng_seed: u64) -> Self {
-        Self {
-            p,
-            rng: StdRng::seed_from_u64(rng_seed),
-        }
-    }
-
-    /// Constructs [Dropout] with `p` and a different seed every call.
-    pub fn p(p: f32) -> Self {
-        let seed = unique_id().as_u64();
-        Self {
-            p,
-            rng: StdRng::seed_from_u64(seed),
-        }
-    }
 }
 
 impl Default for Dropout {
     /// Sets `self.p` to `0.5`, and seeds [StdRng] with 0.
     fn default() -> Self {
-        Self::new(0.5, 0)
+        Self { p: 0.5 }
     }
 }
 
-impl CanUpdateWithGradients for Dropout {
-    /// Does nothing.
-    fn update<G: GradientProvider>(&mut self, _: &mut G, _: &mut UnusedTensors) {}
-}
+impl ZeroSizedModule for Dropout {}
 
-impl ResetParams for Dropout {
+impl<S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>> for Dropout {
+    type Output = Tensor<S, E, D, NoneTape>;
     /// Does nothing.
-    fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {}
-}
-
-impl<T: Tensor<Dtype = f32, Tape = NoneTape>> Module<T> for Dropout {
-    type Output = T;
-    /// Does nothing.
-    fn forward(&self, input: T) -> Self::Output {
+    fn forward(&self, input: Tensor<S, E, D, NoneTape>) -> Self::Output {
         input
     }
 }
 
-impl<T: Tensor<Dtype = f32, Tape = OwnedTape>> ModuleMut<T> for Dropout {
-    type Output = T;
+impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<D>>> for Dropout {
+    type Output = Tensor<S, E, D, OwnedTape<D>>;
     /// Calls [dropout()]
-    fn forward_mut(&mut self, input: T) -> Self::Output {
-        dropout(input, self.p, &mut self.rng)
+    fn forward_mut(&mut self, input: Tensor<S, E, D, OwnedTape<D>>) -> Self::Output {
+        dropout(input, self.p)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        shapes::Rank1,
+        tensor::{AsArray, OnesTensor},
+        tests::build_test_device,
+    };
+
     use super::*;
-    use crate::arrays::HasArrayData;
 
     #[test]
     fn test_dropout_internal_rng_reproduce() {
-        let mut d1 = Dropout::new(0.5, 0);
-        let mut d2 = Dropout::new(0.5, 0);
-        let t: Tensor1D<100> = Tensor1D::ones();
+        let dev = build_test_device!();
+        let mut d1 = Dropout { p: 0.5 };
+        let mut d2 = Dropout { p: 0.5 };
+        let t = dev.ones::<Rank1<100>>();
         let r1 = d1.forward_mut(t.trace());
         let r2 = d2.forward_mut(t.trace());
         let r1_2 = d1.forward_mut(t.trace());
-        assert_eq!(r1.data(), r2.data());
-        assert!(r1.data() != r1_2.data());
+        assert_ne!(r1.array(), r2.array());
+        assert_ne!(r1.array(), r1_2.array());
     }
 
     #[test]
     fn test_dropout_no_tape() {
-        let dropout = Dropout::p(0.5);
-        let t: Tensor1D<100> = Tensor1D::ones();
+        let dev = build_test_device!();
+        let dropout = Dropout { p: 0.5 };
+        let t = dev.ones::<Rank1<100>>();
         let r = dropout.forward(t.clone());
-        assert_eq!(t.data(), r.data());
+        assert_eq!(t.array(), r.array());
     }
 
     #[test]
     fn test_dropout_tape() {
-        let mut dropout = Dropout::p(0.5);
-        let t: Tensor1D<100> = Tensor1D::ones();
+        let dev = build_test_device!();
+        let mut dropout = Dropout { p: 0.5 };
+        let t = dev.ones::<Rank1<100>>();
         let r = dropout.forward_mut(t.trace());
-        assert!(t.data() != r.data());
+        assert_ne!(t.array(), r.array());
     }
 }

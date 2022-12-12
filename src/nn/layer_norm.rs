@@ -1,7 +1,6 @@
-use crate::arrays::Axis;
-use crate::devices::{Cpu, FillElements};
-use crate::gradients::{CanUpdateWithGradients, GradientProvider, Tape, UnusedTensors};
-use crate::prelude::*;
+use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
+
+use super::{Module, ModuleMut, ResetParams};
 
 /// Implements layer normalization as described in [Layer Normalization](https://arxiv.org/abs/1607.06450).
 ///
@@ -16,93 +15,77 @@ use crate::prelude::*;
 /// # Examples
 /// ```rust
 /// # use dfdx::prelude::*;
-/// let model: LayerNorm1D<5> = Default::default();
-/// let x: Tensor1D<5> = Default::default();
-/// let _: Tensor1D<5> = model.forward(x);
+/// # let dev: Cpu = Default::default();
+/// let model: LayerNorm1D<5> = dev.build_module();
+/// let _: Tensor<Rank1<5>, f32> = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(Debug, Clone)]
-pub struct LayerNorm1D<const M: usize> {
-    pub gamma: Tensor1D<M>,
-    pub beta: Tensor1D<M>,
+pub struct LayerNorm1D<const M: usize, D: Device<f32> = Cpu> {
+    pub gamma: Tensor<Rank1<M>, f32, D>,
+    pub beta: Tensor<Rank1<M>, f32, D>,
     pub epsilon: f32,
 }
 
-impl<const M: usize> Default for LayerNorm1D<M> {
+impl<const M: usize, D: Device<f32>> ResetParams<D, f32> for LayerNorm1D<M, D> {
     /// Fills [Self::gamma] with 1s and [Self::beta] with 0s and sets [Self::epsilon] to `1e-5`.
-    fn default() -> Self {
-        Self {
-            gamma: TensorCreator::ones(),
-            beta: TensorCreator::zeros(),
+    fn try_build(device: &D) -> Result<Self, D::Err> {
+        Ok(Self {
+            gamma: device.try_ones()?,
+            beta: device.try_zeros()?,
             epsilon: 1e-5,
-        }
+        })
+    }
+
+    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+        self.gamma.try_fill_with_ones()?;
+        self.beta.try_fill_with_zeros()?;
+        Ok(())
     }
 }
 
-impl<const M: usize> ResetParams for LayerNorm1D<M> {
-    /// Fills [Self::gamma] with 1s and [Self::beta] with 0s.
-    fn reset_params<R: rand::Rng>(&mut self, _: &mut R) {
-        Cpu::fill(self.gamma.mut_data(), &mut |v| *v = 1.0);
-        Cpu::fill(self.beta.mut_data(), &mut |v| *v = 0.0);
+impl<const M: usize, D: Device<f32>> GradientUpdate<D, f32> for LayerNorm1D<M, D> {
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
+    where
+        U: ParamUpdater<D, f32>,
+    {
+        self.gamma.update(updater, unused)?;
+        self.beta.update(updater, unused)?;
+        Ok(())
     }
 }
 
-impl<const M: usize> CanUpdateWithGradients for LayerNorm1D<M> {
-    /// Updates [Self::gamma] and [Self::beta].
-    fn update<G: GradientProvider>(&mut self, grads: &mut G, unused: &mut UnusedTensors) {
-        self.gamma.update(grads, unused);
-        self.beta.update(grads, unused);
-    }
-}
-
-impl<H: Tape, const M: usize> Module<Tensor1D<M, H>> for LayerNorm1D<M> {
-    type Output = Tensor1D<M, H>;
-
-    /// Calls:
-    /// 1. [normalize()] with [Self::epsilon]
-    /// 2. [mul()] with [Self::gamma]
-    /// 3. [add()] with [Self::beta]
-    fn forward(&self, x: Tensor1D<M, H>) -> Self::Output {
-        let x = x.normalize(self.epsilon);
-        let x = mul(x, self.gamma.clone());
-        add(x, self.beta.clone())
-    }
-}
-
-impl<H: Tape, const B: usize, const M: usize> Module<Tensor2D<B, M, H>> for LayerNorm1D<M> {
-    type Output = Tensor2D<B, M, H>;
-
-    /// Calls:
-    /// 1. [normalize()] with [Self::epsilon].
-    /// 2. [mul()] with [Self::gamma]
-    /// 3. [add()] with [Self::beta]
-    fn forward(&self, x: Tensor2D<B, M, H>) -> Self::Output {
-        let g: Self::Output = self.gamma.with_diff_tape().broadcast();
-        let b: Self::Output = self.beta.with_diff_tape().broadcast();
-        let x = x.normalize::<Axis<1>>(self.epsilon);
-        let x = mul(g, x);
-        add(x, b)
-    }
-}
-
-impl<H: Tape, const B: usize, const S: usize, const M: usize> Module<Tensor3D<B, S, M, H>>
-    for LayerNorm1D<M>
+impl<const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<Rank1<M>, f32, D, T>>
+    for LayerNorm1D<M, D>
 {
-    type Output = Tensor3D<B, S, M, H>;
-
-    /// Calls:
-    /// 1. [normalize()] with [Self::epsilon].
-    /// 2. [add()] with [Self::gamma]
-    /// 3. [add()] with [Self::beta]
-    fn forward(&self, x: Tensor3D<B, S, M, H>) -> Self::Output {
-        let g: Self::Output = self.gamma.with_diff_tape().broadcast();
-        let b: Self::Output = self.beta.with_diff_tape().broadcast();
-        let x = x.normalize::<Axis<2>>(self.epsilon);
-        let x = mul(g, x);
-        add(b, x)
+    type Output = Tensor<Rank1<M>, f32, D, T>;
+    fn forward(&self, x: Tensor<Rank1<M>, f32, D, T>) -> Self::Output {
+        x.normalize(self.epsilon) * self.gamma.clone() + self.beta.clone()
     }
 }
 
-impl<T, const M: usize> ModuleMut<T> for LayerNorm1D<M>
+impl<B: Dim, const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<(B, Const<M>), f32, D, T>>
+    for LayerNorm1D<M, D>
+{
+    type Output = Tensor<(B, Const<M>), f32, D, T>;
+    fn forward(&self, x: Tensor<(B, Const<M>), f32, D, T>) -> Self::Output {
+        let shape = *x.shape();
+        x.normalize::<Axis<1>>(self.epsilon) * self.gamma.retaped::<T>().broadcast_like(&shape)
+            + self.beta.retaped::<T>().broadcast_like(&shape)
+    }
+}
+
+impl<B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
+    Module<Tensor<(B, S, Const<M>), f32, D, T>> for LayerNorm1D<M, D>
+{
+    type Output = Tensor<(B, S, Const<M>), f32, D, T>;
+    fn forward(&self, x: Tensor<(B, S, Const<M>), f32, D, T>) -> Self::Output {
+        let shape = *x.shape();
+        x.normalize::<Axis<2>>(self.epsilon) * self.gamma.retaped::<T>().broadcast_like(&shape)
+            + self.beta.retaped::<T>().broadcast_like(&shape)
+    }
+}
+
+impl<T, const M: usize, D: Device<f32>> ModuleMut<T> for LayerNorm1D<M, D>
 where
     Self: Module<T>,
 {
@@ -115,92 +98,95 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nn::{tests::SimpleUpdater, ModuleBuilder};
+    use crate::tests::{assert_close, build_test_device};
     use crate::unique_id::HasUniqueId;
-    use crate::{nn::tests::SimpleGradients, tests::assert_close};
-    use rand::{prelude::StdRng, SeedableRng};
-    use rand_distr::Standard;
 
     #[test]
     fn test_layer_norm_reset() {
-        let mut m: LayerNorm1D<5> = Default::default();
-        assert_eq!(m.gamma.data(), &[1.0; 5]);
-        assert_eq!(m.beta.data(), &[0.0; 5]);
+        let dev = build_test_device!();
 
-        let mut rng = StdRng::seed_from_u64(0);
-        m.gamma.randomize(&mut rng, &Standard);
-        m.beta.randomize(&mut rng, &Standard);
+        let mut m: LayerNorm1D<5, _> = dev.build_module();
+        assert_eq!(m.gamma.array(), [1.0; 5]);
+        assert_eq!(m.beta.array(), [0.0; 5]);
 
-        assert_ne!(m.gamma.data(), &[1.0; 5]);
-        assert_ne!(m.beta.data(), &[0.0; 5]);
+        m.gamma = dev.randn();
+        m.beta = dev.randn();
 
-        m.reset_params(&mut rng);
-        assert_eq!(m.gamma.data(), &[1.0; 5]);
-        assert_eq!(m.beta.data(), &[0.0; 5]);
+        assert_ne!(m.gamma.array(), [1.0; 5]);
+        assert_ne!(m.beta.array(), [0.0; 5]);
+
+        m.reset_params();
+
+        assert_eq!(m.gamma.array(), [1.0; 5]);
+        assert_eq!(m.beta.array(), [0.0; 5]);
     }
 
     #[test]
     fn test_layer_norm_1d_forward() {
-        let mut rng = StdRng::seed_from_u64(0);
-        let mut m: LayerNorm1D<5> = Default::default();
-        let x: Tensor1D<5> = TensorCreator::randn(&mut rng);
+        let dev = build_test_device!();
+        let mut m: LayerNorm1D<5, _> = dev.build_module();
+        let x = dev.randn::<Rank1<5>>();
         let r = m.forward_mut(x.trace());
         assert_close(
-            r.data(),
+            &r.array(),
             &[0.873304, 0.9879816, -1.6083492, 0.44028836, -0.6932247],
         );
-        let g = backward(r.mean());
+        let g = r.mean().backward();
         assert_close(
-            g.ref_gradient(&m.gamma),
+            &g.get(&m.gamma).array(),
             &[0.1746608, 0.19759633, -0.32166985, 0.088057674, -0.13864495],
         );
-        assert_close(g.ref_gradient(&m.beta), &[0.2; 5]);
+        assert_close(&g.get(&m.beta).array(), &[0.2; 5]);
     }
 
     #[test]
     fn test_layer_norm_2d_forward() {
-        let mut rng = StdRng::seed_from_u64(0);
-        let m: LayerNorm1D<5> = Default::default();
-        let x: Tensor2D<3, 5> = TensorCreator::randn(&mut rng);
+        let dev = build_test_device!();
+        let m: LayerNorm1D<5, _> = dev.build_module();
+        let x = dev.randn::<Rank2<3, 5>>();
         let r = m.forward(x.trace());
         assert_close(
-            r.data(),
+            &r.array(),
             &[
                 [0.873304, 0.9879816, -1.6083492, 0.44028836, -0.6932247],
                 [0.663322, -1.8449169, 0.05217871, 0.056903206, 1.0725129],
                 [1.0343355, -1.5559655, -0.40086073, 1.1405537, -0.21806297],
             ],
         );
-        let g = backward(r.mean());
+        let g = r.mean().backward();
         assert_close(
-            g.ref_gradient(&m.gamma),
+            &g.get(&m.gamma).array(),
             &[0.1713974, -0.16086, -0.1304687, 0.109183, 0.0107483],
         );
-        assert_close(g.ref_gradient(&m.beta), &[0.2; 5]);
+        assert_close(&g.get(&m.beta).array(), &[0.2; 5]);
     }
 
     #[test]
     fn test_layer_norm_missing_gradients() {
-        let mut model: LayerNorm1D<5> = Default::default();
-        let mut g: SimpleGradients = Default::default();
+        let dev = build_test_device!();
+
+        let mut model: LayerNorm1D<5, _> = dev.build_module();
+        let mut g: SimpleUpdater<_> = Default::default();
 
         // no gradients present
         let mut unused = Default::default();
-        model.update(&mut g, &mut unused);
+        model.update(&mut g, &mut unused).unwrap();
         assert_eq!(&unused.ids, &[*model.gamma.id(), *model.beta.id()]);
 
-        g.0.mut_gradient(&model.gamma);
+        g.0.try_alloc_for(&model.gamma).unwrap();
 
         // weight gradient is present
         let mut unused = Default::default();
-        model.update(&mut g, &mut unused);
+        model.update(&mut g, &mut unused).unwrap();
         assert_eq!(&unused.ids, &[*model.beta.id()]);
 
-        g.0.mut_gradient(&model.gamma);
-        g.0.mut_gradient(&model.beta);
+        g.0.try_alloc_for(&model.gamma).unwrap();
+        g.0.try_alloc_for(&model.beta).unwrap();
 
         // all gradients present
         let mut unused = Default::default();
-        model.update(&mut g, &mut unused);
+        model.update(&mut g, &mut unused).unwrap();
         assert!(unused.is_empty());
     }
 }
