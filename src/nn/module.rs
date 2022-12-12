@@ -27,11 +27,11 @@ pub trait ModuleMut<Input> {
 /// Something that can reset it's parameters.
 pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
     /// Construct it on the device
-    fn new(device: &D) -> Self {
-        Self::try_new(device).unwrap()
+    fn build(device: &D) -> Self {
+        Self::try_build(device).unwrap()
     }
     /// Fallible version of [ResetParams::new]
-    fn try_new(device: &D) -> Result<Self, D::Err>;
+    fn try_build(device: &D) -> Result<Self, D::Err>;
 
     /// Mutates parameters. Each implementor
     /// of this trait decides how the parameters are initialized. In
@@ -46,11 +46,11 @@ pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
 
 /// Extension trait for [Device] that can build anything that implements [ResetParams].
 pub trait ModuleBuilder<E: Dtype>: Device<E> {
-    fn build<M: ResetParams<Self, E>>(&self) -> M {
-        ResetParams::new(self)
+    fn build_module<M: ResetParams<Self, E>>(&self) -> M {
+        ResetParams::build(self)
     }
     fn try_build<M: ResetParams<Self, E>>(&self) -> Result<M, Self::Err> {
-        ResetParams::try_new(self)
+        ResetParams::try_build(self)
     }
 }
 impl<D: Device<E>, E: Dtype> ModuleBuilder<E> for D {}
@@ -60,7 +60,7 @@ impl<D: Device<E>, E: Dtype> ModuleBuilder<E> for D {}
 pub trait ZeroSizedModule: Default {}
 
 impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> ResetParams<D, E> for T {
-    fn try_new(_: &D) -> Result<Self, <D>::Err> {
+    fn try_build(_: &D) -> Result<Self, <D>::Err> {
         Ok(Default::default())
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {

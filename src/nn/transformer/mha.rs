@@ -35,12 +35,12 @@ pub struct MultiHeadAttention<
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
     ResetParams<D, f32> for MultiHeadAttention<M, H, K, V, D>
 {
-    fn try_new(device: &D) -> Result<Self, <D>::Err> {
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            w_q: ResetParams::try_new(device)?,
-            w_k: ResetParams::try_new(device)?,
-            w_v: ResetParams::try_new(device)?,
-            w_o: ResetParams::try_new(device)?,
+            w_q: ResetParams::try_build(device)?,
+            w_k: ResetParams::try_build(device)?,
+            w_v: ResetParams::try_build(device)?,
+            w_o: ResetParams::try_build(device)?,
         })
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
@@ -230,7 +230,7 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha: MultiHeadAttention<M, NUM_HEADS, M, M, _> = dev.build();
+        let mha: MultiHeadAttention<M, NUM_HEADS, M, M, _> = dev.build_module();
 
         let q = dev.randn::<Rank2<S1, M>>();
         let k = dev.randn::<Rank2<S2, M>>();
@@ -264,7 +264,7 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha: MultiHeadAttention<M, NUM_HEADS, M, M, _> = dev.build();
+        let mha: MultiHeadAttention<M, NUM_HEADS, M, M, _> = dev.build_module();
 
         let q = dev.randn::<Rank3<BATCH, S1, M>>();
         let k = dev.randn::<Rank3<BATCH, S2, M>>();
@@ -314,7 +314,7 @@ mod tests {
     fn test_backward_updates_all() {
         let dev = build_test_device!();
 
-        let mut mha: MultiHeadAttention<12, 4, 12, 12, _> = dev.build();
+        let mut mha: MultiHeadAttention<12, 4, 12, 12, _> = dev.build_module();
 
         let q = dev.randn::<Rank3<2, 3, 12>>();
         let k = dev.randn::<Rank3<2, 4, 12>>();

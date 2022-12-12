@@ -13,7 +13,7 @@ use super::{Module, NonMutableModule, ZeroSizedModule};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let m: AvgPoolGlobal = dev.build();
+/// let m: AvgPoolGlobal = Default::default();
 /// let _: Tensor<Rank1<5>, f32> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());
 /// let _: Tensor<Rank2<10, 5>, f32> = m.forward(dev.zeros::<Rank4<10, 5, 16, 8>>());
 /// ```
@@ -31,7 +31,7 @@ pub struct AvgPoolGlobal;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let m: MaxPoolGlobal = dev.build();
+/// let m: MaxPoolGlobal = Default::default();
 /// let _: Tensor<Rank1<5>, f32> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());
 /// let _: Tensor<Rank2<10, 5>, f32> = m.forward(dev.zeros::<Rank4<10, 5, 16, 8>>());
 /// ```
@@ -49,7 +49,7 @@ pub struct MaxPoolGlobal;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let m: MinPoolGlobal = dev.build();
+/// let m: MinPoolGlobal = Default::default();
 /// let _: Tensor<Rank1<5>, f32> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());
 /// let _: Tensor<Rank2<10, 5>, f32> = m.forward(dev.zeros::<Rank4<10, 5, 16, 8>>());
 /// ```

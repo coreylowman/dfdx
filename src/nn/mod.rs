@@ -31,7 +31,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();
-//! let model: Linear<5, 2> = dev.build(); // will allocate & randomize params
+//! let model: Linear<5, 2> = dev.build_module(); // will allocate & randomize params
 //! ```
 //!
 //! # Sequential models

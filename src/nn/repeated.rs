@@ -12,8 +12,7 @@ use super::{Module, ModuleMut, ResetParams};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// type Model = Repeated<(Linear<10, 10>, ReLU), 5>;
-/// let model: Model = dev.build();
+/// let model: Repeated<(Linear<10, 10>, ReLU), 5> = dev.build_module();
 /// let out: Tensor<Rank1<10>, f32> = model.forward(dev.zeros());
 /// ```
 #[derive(Debug, Clone)]
@@ -24,10 +23,10 @@ pub struct Repeated<T, const N: usize> {
 impl<D: Device<E>, E: Dtype, T: ResetParams<D, E>, const N: usize> ResetParams<D, E>
     for Repeated<T, N>
 {
-    fn try_new(device: &D) -> Result<Self, <D>::Err> {
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
         let mut modules = std::vec::Vec::with_capacity(N);
         for _ in 0..N {
-            modules.push(ResetParams::try_new(device)?);
+            modules.push(ResetParams::try_build(device)?);
         }
         Ok(Self { modules })
     }
@@ -93,7 +92,7 @@ mod tests {
     fn test_default_and_reset() {
         let dev = build_test_device!();
 
-        let m: Repeated<(Linear<3, 3, _>, ReLU), 5> = dev.build();
+        let m: Repeated<(Linear<3, 3, _>, ReLU), 5> = dev.build_module();
 
         for i in 0..5 {
             assert_ne!(m.modules[i].0.weight.array(), [[0.0; 3]; 3]);
@@ -105,7 +104,7 @@ mod tests {
     fn test_forward() {
         let dev = build_test_device!();
 
-        let mut m: Repeated<(Linear<3, 3, _>, ReLU), 5> = dev.build();
+        let mut m: Repeated<(Linear<3, 3, _>, ReLU), 5> = dev.build_module();
 
         let x = dev.zeros::<Rank1<3>>();
         let x = m.modules[0].forward(x);
@@ -121,7 +120,7 @@ mod tests {
     fn test_repeated_missing_gradients() {
         let dev = build_test_device!();
 
-        let mut model: Repeated<Linear<5, 5, _>, 3> = dev.build();
+        let mut model: Repeated<Linear<5, 5, _>, 3> = dev.build_module();
         let mut g: SimpleUpdater<_> = Default::default();
 
         // no gradients present

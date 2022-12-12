@@ -6,7 +6,7 @@ fn main() {
     use dfdx::prelude::*;
 
     let dev: Cpu = Default::default();
-    let t: Transformer<16, 4, 3, 3, 8> = dev.build();
+    let t: Transformer<16, 4, 3, 3, 8> = dev.build_module();
 
     let src: Tensor<Rank3<4, 12, 16>, f32> = dev.randn();
     let tgt: Tensor<Rank3<4, 6, 16>, f32> = dev.randn();

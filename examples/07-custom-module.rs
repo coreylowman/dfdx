@@ -21,10 +21,10 @@ struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
 impl<const IN: usize, const INNER: usize, const OUT: usize> nn::ResetParams<Cpu, f32>
     for Mlp<IN, INNER, OUT>
 {
-    fn try_new(device: &Cpu) -> Result<Self, <Cpu as HasErr>::Err> {
+    fn try_build(device: &Cpu) -> Result<Self, <Cpu as HasErr>::Err> {
         Ok(Self {
-            l1: nn::ResetParams::try_new(device)?,
-            l2: nn::ResetParams::try_new(device)?,
+            l1: nn::ResetParams::try_build(device)?,
+            l2: nn::ResetParams::try_build(device)?,
             relu: nn::ReLU,
         })
     }
@@ -84,7 +84,7 @@ fn main() {
     let dev: Cpu = Default::default();
 
     // Construct model
-    let model: Mlp<10, 512, 20> = dev.build();
+    let model: Mlp<10, 512, 20> = dev.build_module();
 
     // Forward pass with a single sample
     let _: Tensor<Rank1<20>, f32, Cpu> = model.forward(dev.randn::<Rank1<10>>());

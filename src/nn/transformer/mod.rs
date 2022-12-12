@@ -59,10 +59,10 @@ impl<
         D: Device<f32>,
     > ResetParams<D, f32> for Transformer<M, H, EL, DL, F, D>
 {
-    fn try_new(device: &D) -> Result<Self, <D>::Err> {
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            encoder: ResetParams::try_new(device)?,
-            decoder: ResetParams::try_new(device)?,
+            encoder: ResetParams::try_build(device)?,
+            decoder: ResetParams::try_build(device)?,
         })
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn test_forward() {
         let dev = build_test_device!(0);
-        let mut t: Transformer<16, 4, 3, 3, 8, _> = dev.build();
+        let mut t: Transformer<16, 4, 3, 3, 8, _> = dev.build_module();
 
         // unbatched
         let src = dev.randn::<Rank2<7, 16>>();
@@ -159,7 +159,7 @@ mod tests {
     #[test]
     fn test_backward() {
         let dev = build_test_device!(0);
-        let mut t: Transformer<16, 4, 3, 3, 8> = dev.build();
+        let mut t: Transformer<16, 4, 3, 3, 8> = dev.build_module();
 
         let src = dev.randn::<Rank3<4, 12, 16>>();
         let tgt = dev.randn::<Rank3<4, 6, 16>>();

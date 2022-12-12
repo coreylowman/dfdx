@@ -14,7 +14,7 @@ use super::{Module, ModuleMut, ResetParams};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let model: AddInto<(Linear<2, 5>, Linear<3, 5>)> = dev.build();
+/// let model: AddInto<(Linear<2, 5>, Linear<3, 5>)> = dev.build_module();
 /// let a = dev.zeros::<Rank1<2>>();
 /// let b = dev.zeros::<Rank1<3>>();
 /// let _: Tensor<Rank1<5>, f32> = model.forward((a, b));
@@ -32,8 +32,8 @@ impl<T: GradientUpdate<D, E>, D: Device<E>, E: Dtype> GradientUpdate<D, E> for A
 }
 
 impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for AddInto<T> {
-    fn try_new(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self(ResetParams::try_new(device)?))
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self(ResetParams::try_build(device)?))
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.0.try_reset_params()
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn test_add_into_2() {
         let dev = build_test_device!();
-        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>)> = dev.build();
+        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>)> = dev.build_module();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn test_add_into_3() {
         let dev = build_test_device!();
-        let m: AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>)> = dev.build();
+        let m: AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>)> = dev.build_module();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -128,7 +128,7 @@ mod tests {
     fn test_add_into_4() {
         let dev = build_test_device!();
         type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>, Linear<5, 5>)>;
-        let m: Model = dev.build();
+        let m: Model = dev.build_module();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -153,7 +153,7 @@ mod tests {
             Linear<5, 5>,
             Linear<6, 5>,
         )>;
-        let m: Model = dev.build();
+        let m: Model = dev.build_module();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -181,7 +181,7 @@ mod tests {
             Linear<6, 5>,
             Linear<7, 5>,
         )>;
-        let m: Model = dev.build();
+        let m: Model = dev.build_module();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -203,7 +203,7 @@ mod tests {
     #[test]
     fn test_missing_gradients() {
         let dev = build_test_device!();
-        let mut model: AddInto<(Linear<5, 3, _>, Linear<5, 3, _>)> = dev.build();
+        let mut model: AddInto<(Linear<5, 3, _>, Linear<5, 3, _>)> = dev.build_module();
         let mut g: SimpleUpdater<_> = Default::default();
 
         // no gradients present
@@ -238,7 +238,7 @@ mod tests {
             AddInto<(Linear<5, 3, _>, Linear<5, 3, _>)>,
             ReLU,
             Linear<3, 1, _>,
-        ) = dev.build();
+        ) = dev.build_module();
         let _: Tensor<Rank1<1>, _, _, OwnedTape<_>> = model.forward((
             dev.zeros::<Rank1<5>>().traced(),
             dev.zeros::<Rank1<5>>().traced(),

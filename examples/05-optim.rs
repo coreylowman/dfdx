@@ -30,7 +30,7 @@ fn main() {
     });
 
     // let's initialize our model and some dummy data
-    let mut mlp: Mlp = dev.build();
+    let mut mlp: Mlp = dev.build_module();
     let x = dev.randn::<Rank2<3, 5>>();
     let y = dev.randn::<Rank2<3, 2>>();
 

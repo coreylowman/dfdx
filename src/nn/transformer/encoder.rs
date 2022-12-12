@@ -56,12 +56,12 @@ type FF<const M: usize, const F: usize, D> = Residual<(Linear<M, F, D>, ReLU, Li
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
     for TransformerEncoderBlock<M, H, F, D>
 {
-    fn try_new(device: &D) -> Result<Self, <D>::Err> {
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            self_attn: ResetParams::try_new(device)?,
-            norm1: ResetParams::try_new(device)?,
-            ff: ResetParams::try_new(device)?,
-            norm2: ResetParams::try_new(device)?,
+            self_attn: ResetParams::try_build(device)?,
+            norm1: ResetParams::try_build(device)?,
+            ff: ResetParams::try_build(device)?,
+            norm2: ResetParams::try_build(device)?,
         })
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
@@ -141,7 +141,7 @@ mod tests {
         const NUM_HEADS: usize = 3;
         const FF_DIM: usize = 16;
 
-        let encoder: TransformerEncoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> = dev.build();
+        let encoder: TransformerEncoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> = dev.build_module();
 
         let x = dev.randn::<Rank3<BATCH, SEQ_LEN, EMBED_DIM>>();
         let y = encoder.forward(x);

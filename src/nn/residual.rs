@@ -12,7 +12,7 @@ use super::{Module, ModuleMut, ResetParams};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let module: Residual<ReLU> = dev.build();
+/// let module: Residual<ReLU> = dev.build_module();
 /// let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
 /// let y = module.forward(x);
 /// assert_eq!(y.array(), [-2.0, -1.0, 0.0, 2.0, 4.0]);
@@ -30,8 +30,8 @@ impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>> GradientUpdate<D, E> for R
 }
 
 impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>> ResetParams<D, E> for Residual<F> {
-    fn try_new(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self(ResetParams::try_new(device)?))
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self(ResetParams::try_build(device)?))
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.0.try_reset_params()
@@ -69,7 +69,7 @@ mod tests {
     #[test]
     fn test_residual_reset() {
         let dev = build_test_device!();
-        let model: Residual<Linear<2, 5, _>> = dev.build();
+        let model: Residual<Linear<2, 5, _>> = dev.build_module();
         assert_ne!(model.0.weight.array(), [[0.0; 2]; 5]);
         assert_ne!(model.0.bias.array(), [0.0; 5]);
     }
@@ -78,7 +78,7 @@ mod tests {
     fn test_residual_gradients() {
         let dev = build_test_device!();
 
-        let model: Residual<Linear<2, 2, _>> = dev.build();
+        let model: Residual<Linear<2, 2, _>> = dev.build_module();
 
         let x = dev.randn::<Rank2<4, 2>>();
         let y = model.forward(x.trace());

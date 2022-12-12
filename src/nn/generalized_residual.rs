@@ -13,7 +13,7 @@ use super::{Module, ModuleMut, ResetParams};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let module: GeneralizedResidual<ReLU, Square> = dev.build();
+/// let module: GeneralizedResidual<ReLU, Square> = dev.build_module();
 /// let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
 /// let y = module.forward(x);
 /// assert_eq!(y.array(), [4.0, 1.0, 0.0, 2.0, 6.0]);
@@ -40,10 +40,10 @@ impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>, R: GradientUpdate<D, E>> G
 impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>, R: ResetParams<D, E>> ResetParams<D, E>
     for GeneralizedResidual<F, R>
 {
-    fn try_new(device: &D) -> Result<Self, <D>::Err> {
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            f: ResetParams::try_new(device)?,
-            r: ResetParams::try_new(device)?,
+            f: ResetParams::try_build(device)?,
+            r: ResetParams::try_build(device)?,
         })
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
@@ -85,7 +85,7 @@ mod tests {
     fn test_reset_generalized_residual() {
         let dev = build_test_device!();
 
-        let model: GeneralizedResidual<Linear<2, 5, _>, Linear<2, 5, _>> = dev.build();
+        let model: GeneralizedResidual<Linear<2, 5, _>, Linear<2, 5, _>> = dev.build_module();
         assert_ne!(model.f.weight.array(), [[0.0; 2]; 5]);
         assert_ne!(model.f.bias.array(), [0.0; 5]);
         assert_ne!(model.r.weight.array(), [[0.0; 2]; 5]);
@@ -96,7 +96,7 @@ mod tests {
     fn test_generalized_residual_gradients() {
         let dev = build_test_device!();
 
-        let model: GeneralizedResidual<Linear<2, 2, _>, Linear<2, 2, _>> = dev.build();
+        let model: GeneralizedResidual<Linear<2, 2, _>, Linear<2, 2, _>> = dev.build_module();
 
         let x = dev.randn::<Rank2<4, 2>>();
         let y = model.forward(x.trace());

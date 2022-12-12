@@ -17,7 +17,7 @@
 //! # use dfdx::{prelude::*, optim::*, losses, gradients::Gradients};
 //! # type MyModel = Linear<5, 2>;
 //! # let dev: Cpu = Default::default();
-//! let mut model: MyModel = dev.build();
+//! let mut model: MyModel = dev.build_module();
 //! let mut opt: Sgd<MyModel> = Default::default();
 //! # let y = model.forward(dev.zeros::<Rank1<5>>().traced());
 //! # let loss = losses::mse_loss(y, dev.zeros());

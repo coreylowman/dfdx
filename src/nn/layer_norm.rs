@@ -16,7 +16,7 @@ use super::{Module, ModuleMut, ResetParams};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let model: LayerNorm1D<5> = dev.build();
+/// let model: LayerNorm1D<5> = dev.build_module();
 /// let _: Tensor<Rank1<5>, f32> = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(Debug, Clone)]
@@ -28,7 +28,7 @@ pub struct LayerNorm1D<const M: usize, D: Device<f32> = Cpu> {
 
 impl<const M: usize, D: Device<f32>> ResetParams<D, f32> for LayerNorm1D<M, D> {
     /// Fills [Self::gamma] with 1s and [Self::beta] with 0s and sets [Self::epsilon] to `1e-5`.
-    fn try_new(device: &D) -> Result<Self, D::Err> {
+    fn try_build(device: &D) -> Result<Self, D::Err> {
         Ok(Self {
             gamma: device.try_ones()?,
             beta: device.try_zeros()?,
@@ -106,7 +106,7 @@ mod tests {
     fn test_layer_norm_reset() {
         let dev = build_test_device!();
 
-        let mut m: LayerNorm1D<5, _> = dev.build();
+        let mut m: LayerNorm1D<5, _> = dev.build_module();
         assert_eq!(m.gamma.array(), [1.0; 5]);
         assert_eq!(m.beta.array(), [0.0; 5]);
 
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn test_layer_norm_1d_forward() {
         let dev = build_test_device!();
-        let mut m: LayerNorm1D<5, _> = dev.build();
+        let mut m: LayerNorm1D<5, _> = dev.build_module();
         let x = dev.randn::<Rank1<5>>();
         let r = m.forward_mut(x.trace());
         assert_close(
@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn test_layer_norm_2d_forward() {
         let dev = build_test_device!();
-        let m: LayerNorm1D<5, _> = dev.build();
+        let m: LayerNorm1D<5, _> = dev.build_module();
         let x = dev.randn::<Rank2<3, 5>>();
         let r = m.forward(x.trace());
         assert_close(
@@ -166,7 +166,7 @@ mod tests {
     fn test_layer_norm_missing_gradients() {
         let dev = build_test_device!();
 
-        let mut model: LayerNorm1D<5, _> = dev.build();
+        let mut model: LayerNorm1D<5, _> = dev.build_module();
         let mut g: SimpleUpdater<_> = Default::default();
 
         // no gradients present

@@ -17,7 +17,7 @@ use super::module::{Module, ModuleMut, ResetParams};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let model: Linear<5, 2> = dev.build();
+/// let model: Linear<5, 2> = dev.build_module();
 /// // single item forward
 /// let _: Tensor<Rank1<2>, f32> = model.forward(dev.zeros::<Rank1<5>>());
 /// // batched forward
@@ -44,7 +44,7 @@ impl<const I: usize, const O: usize, D: Device<f32>> GradientUpdate<D, f32> for 
 }
 
 impl<const I: usize, const O: usize, D: Device<f32>> ResetParams<D, f32> for Linear<I, O, D> {
-    fn try_new(device: &D) -> Result<Self, D::Err> {
+    fn try_build(device: &D) -> Result<Self, D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
         let weight = device.try_uniform(-bound, bound)?;
         let bias = device.try_uniform(-bound, bound)?;
@@ -134,7 +134,7 @@ mod tests {
     #[test]
     fn test_linear_initialize() {
         let dev = build_test_device!();
-        let m: Linear<2000, 1, _> = dev.build();
+        let m: Linear<2000, 1, _> = dev.build_module();
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);
@@ -247,7 +247,7 @@ mod tests {
     fn test_linear_missing_gradients() {
         let dev = build_test_device!();
 
-        let mut model: Linear<5, 3, _> = dev.build();
+        let mut model: Linear<5, 3, _> = dev.build_module();
         let mut g: SimpleUpdater<_> = Default::default();
 
         // no gradients present

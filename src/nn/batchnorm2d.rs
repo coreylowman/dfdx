@@ -23,7 +23,7 @@ use super::{Module, ModuleMut, ResetParams};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let bn: BatchNorm2D<3> = dev.build();
+/// let bn: BatchNorm2D<3> = dev.build_module();
 /// let _ = bn.forward(dev.zeros::<Rank3<3, 2, 2>>());
 /// let _ = bn.forward(dev.zeros::<Rank4<4, 3, 2, 2>>());
 /// ```
@@ -158,7 +158,7 @@ impl<B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>>
 }
 
 impl<const C: usize, D: Device<f32>> ResetParams<D, f32> for BatchNorm2D<C, D> {
-    fn try_new(device: &D) -> Result<Self, D::Err> {
+    fn try_build(device: &D) -> Result<Self, D::Err> {
         Ok(Self {
             scale: device.try_ones()?,
             bias: device.try_zeros()?,
@@ -202,7 +202,7 @@ mod tests {
         let dev = build_test_device!(0);
 
         let x1 = dev.randn::<Rank3<3, 2, 2>>();
-        let mut bn: BatchNorm2D<3, _> = dev.build();
+        let mut bn: BatchNorm2D<3, _> = dev.build_module();
 
         let y1 = bn.forward_mut(x1.trace());
         assert_close(
@@ -237,7 +237,7 @@ mod tests {
         let dev = build_test_device!(2);
 
         let x1 = dev.randn::<Rank4<2, 2, 2, 3>>();
-        let mut bn: BatchNorm2D<2, _> = dev.build();
+        let mut bn: BatchNorm2D<2, _> = dev.build_module();
 
         let y1 = bn.forward_mut(x1.trace());
         #[rustfmt::skip]
@@ -269,7 +269,7 @@ mod tests {
         let dev = build_test_device!(12);
 
         let x1 = dev.randn::<Rank3<3, 4, 5>>();
-        let mut bn: BatchNorm2D<3, _> = dev.build();
+        let mut bn: BatchNorm2D<3, _> = dev.build_module();
 
         let _ = bn.forward_mut(x1.trace());
         assert_close(

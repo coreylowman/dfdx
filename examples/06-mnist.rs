@@ -77,7 +77,7 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     // initialize model and optimizer
-    let mut model: Mlp = dev.build();
+    let mut model: Mlp = dev.build_module();
     let mut opt: Adam<Mlp> = Default::default();
 
     // initialize dataset
