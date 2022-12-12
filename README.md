@@ -10,11 +10,12 @@ Ergonomics & safety focused deep learning in Rust.
 **Still in pre-alpha state. The next few releases are planned to be breaking releases.**
 
 Features at a glance:
-1. Const generic tensor library with tensors up to 4d!
-2. Shape and type checked at compile time.
-3. A large library of tensor operations (including matmuls, convolutions, and shape transformations)
-4. Safe & easy to use neural network building blocks (including `Linear`, `Conv2D`, and `Transformer`).
-5. Standard deep learning optimizers such as Sgd and Adam.
+1. Tensor library with shapes up to 6d!
+2. Shapes with both compile and runtime sized dimensions. (e.g. `Tensor<(Dyn, Const<10>), f32>` and `Tensor<Rank2<5, 10>, f32>`)
+3. A large library of tensor operations (including `matmul`, `conv2d`, and much more).
+    a. All tensor operations shape and type checked at compile time!!
+4. Ergonomic neural network building blocks (like `Linear`, `Conv2D`, and `Transformer`).
+5. Standard deep learning optimizers such as `Sgd`, `Adam`, `AdamW`, `RMSprop`, and more.
 6. Reverse mode auto differentiation[1] implementation.
 7. Serialization to/from `.npy` and `.npz` for transferring models to/from python.
 
@@ -34,9 +35,9 @@ See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
 2. Check as much at compile time as possible (i.e. don't compile if something is not correct).
 3. Maximize performance.
 4. Minimize unsafe code[1]
-5. Minimize Arc/Rc and RefCells used in internal code[2]
+5. Minimize Rc<RefCell<T>> used in internal code[2]
 
-[1] Currently the only unsafe calls are for matrix multiplication, and instantiating large arrays directly on the heap.
+[1] Currently the only unsafe calls are for matrix multiplication.
 
 [2] The only things that use `Arc` are tensors to store their data. `Arc` is used instead of `Box` to reduce
 allocations when tensors are cloned.
@@ -55,16 +56,17 @@ Check [examples/](examples/) for more details.
 1. 👌 Simple Neural Networks API, completely shape checked at compile time.
 
 ```rust
-type MLP = (
+type Mlp = (
     (Linear<10, 32>, ReLU),
     (Linear<32, 32>, ReLU),
     (Linear<32, 2>, Tanh),
 );
 
 fn main() {
-    let mlp: MLP = Default::default();
-    let x: Tensor1D<10> = Tensor1D::zeros();
-    let y /*: Tensor1D<2>*/ = mlp.forward(x);
+    let dev: Cpu = Default::default();
+    let mlp: Mlp = dev.build_module();
+    let x: Tensor<Rank1<10>, f32> = dev.zeros();
+    let y /*: Tensor<Rank1<2>, f32>*/ = mlp.forward(x);
     println!("{:?}", y);
     mlp.save("checkpoint.npz")?;
 }
@@ -79,23 +81,23 @@ let mut sgd = Sgd::new(SgdConfig {
     momentum: Some(Momentum::Nesterov(0.9))
 });
 
-let loss: Tensor0D<OwnedTape> = ...
+let loss: Tensor<Rank0, f32, _, OwnedTape<_>> = ...
 
 // run backprop to get the gradients
 let gradients = loss.backward();
 sgd.update(&mut model, gradients);
 ```
 
-3. 💡 Tensors are backed by normal rust arrays, making it easy to access the underlying data!
+3. 💡 Tensors can be converted to and from normal rust arrays
 ```rust
-let t0: Tensor0D = tensor(0.0);
-assert_eq!(t0.data(), &0.0);
+let t0: Tensor<Rank0, f32> = dev.tensor(0.0);
+assert_eq!(t0.array(), &0.0);
 
-let t1 /*: Tensor1D<3>*/ = tensor([1.0, 2.0, 3.0]);
-assert_eq!(t1.data(), &[1.0, 2.0, 3.0]);
+let t1 /*: Tensor<Rank1<3>, f32>*/ = dev.tensor([1.0, 2.0, 3.0]);
+assert_eq!(t1.array(), [1.0, 2.0, 3.0]);
 
-let t2: Tensor2D<2, 3> = TensorCreator::ones();
-assert_eq!(t2.data(), &[[1.0; 3]; 2]);
+let t2: Tensor<Rank2<2, 3>, f32> = dev.randn();
+assert_ne!(t2.array(), [[0.0; 3]; 2]);
 ```
 
 ## Fun/notable implementation details
@@ -121,11 +123,11 @@ for sequentially executing modules.
 
 ```rust
 // no idea why you would do this, but you could!
-let model: (ReLU, Sigmoid, Tanh) = Default::default();
+let model: (ReLU, Sigmoid, Tanh) = dev.build_module();
 ```
 
 ```rust
-let model: (Linear<10, 5>, Tanh) = Default::default();
+let model: (Linear<10, 5>, Tanh) = dev.build_module();
 ```
 
 How implementing Module for a 2-tuple looks:
@@ -175,57 +177,6 @@ Since we know exactly what tensors own the gradient tape, we can require the ten
 And further, we can require it be moved into `.backward()`, so it can destruct the tape and construct the gradients!
 
 __All of this can be checked at compile time 🎉__
-
-```rust
-pub fn backward(t: Tensor0D<OwnedTape>) -> Gradients {
-    ...
-}
-```
-
-### Recursive trait definitions for CPU Device
-
-Our [src/devices](src/devices/) backend for computing operations on the CPU
-is built using __recursive trait definitions__.
-
-The main idea behind this is similar to recursion or induction proofs. First we specify
-the base trait, and then we specify the recursive trait.
-
-A simple example is counting the number of elements in an arbitrarily nested array
-at compile time.
-
-First we specify the trait we want to do this:
-
-```rust
-pub trait CountElements {
-    const NUM_ELEMENTS: usize;
-}
-```
-
-Now for the base case (assuming these will be arrays of floats), is just a single floating point number:
-
-```rust
-impl CountElements for f32 {
-    const NUM_ELEMENTS: usize = 1;
-}
-```
-
-And finally the recursive trait:
-
-```rust
-impl<T: CountElements, const M: usize> CountElements for [T; M] {
-    const NUM_ELEMENTS: usize = M * T::NUM_ELEMENTS;
-}
-```
-
-Notice the restriction on T also implementing `CountElements`. This allows us to use `T::NUM_ELEMENTS` in the trait body.
-
-Another few powerful things recursive traits can do:
-1. Map all elements of arbitarily nested arrays using a function
-2. Add two arrays together
-3. Reduce an array to one number
-4. Even more!
-
-Encourage you to check out all the code in [src/devices](src/devices/)!
 
 ### 📄 Validated against pytorch
 
