@@ -130,7 +130,5 @@ fn main() {
 
     // save our model to a .npz file
     #[cfg(feature = "numpy")]
-    model
-        .save("mnist-classifier.npz")
-        .expect("failed to save model");
+    model.save("06-mnist.npz").expect("failed to save model");
 }
