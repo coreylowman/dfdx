@@ -11,7 +11,7 @@ Ergonomics & safety focused deep learning in Rust.
 
 Features at a glance:
 1. Tensor library with shapes up to 6d!
-2. Shapes with both compile and runtime sized dimensions. (e.g. `Tensor<(Dyn, Const<10>), f32>` and `Tensor<Rank2<5, 10>, f32>`)
+2. Shapes with both compile and runtime sized dimensions. (e.g. `Tensor<(Dyn, Const<10>)>` and `Tensor<Rank2<5, 10>>`)
 3. A large library of tensor operations (including `matmul`, `conv2d`, and much more).
     1. All tensor operations shape and type checked at compile time!!
 4. Ergonomic neural network building blocks (like `Linear`, `Conv2D`, and `Transformer`).
@@ -65,8 +65,8 @@ type Mlp = (
 fn main() {
     let dev: Cpu = Default::default();
     let mlp: Mlp = dev.build_module();
-    let x: Tensor<Rank1<10>, f32> = dev.zeros();
-    let y /*: Tensor<Rank1<2>, f32>*/ = mlp.forward(x);
+    let x: Tensor<Rank1<10>> = dev.zeros();
+    let y /*: Tensor<Rank1<2>>*/ = mlp.forward(x);
     println!("{:?}", y);
     mlp.save("checkpoint.npz")?;
 }
@@ -81,7 +81,7 @@ let mut sgd = Sgd::new(SgdConfig {
     momentum: Some(Momentum::Nesterov(0.9))
 });
 
-let loss: Tensor<Rank0, f32, _, OwnedTape<_>> = ...
+let loss: Tensor<Rank0, _, _, OwnedTape<_>> = ...
 
 // run backprop to get the gradients
 let gradients = loss.backward();
@@ -90,13 +90,13 @@ sgd.update(&mut model, gradients);
 
 3. 💡 Tensors can be converted to and from normal rust arrays
 ```rust
-let t0: Tensor<Rank0, f32> = dev.tensor(0.0);
+let t0: Tensor<Rank0> = dev.tensor(0.0);
 assert_eq!(t0.array(), &0.0);
 
-let t1 /*: Tensor<Rank1<3>, f32>*/ = dev.tensor([1.0, 2.0, 3.0]);
+let t1 /*: Tensor<Rank1<3>>*/ = dev.tensor([1.0, 2.0, 3.0]);
 assert_eq!(t1.array(), [1.0, 2.0, 3.0]);
 
-let t2: Tensor<Rank2<2, 3>, f32> = dev.randn();
+let t2: Tensor<Rank2<2, 3>> = dev.randn();
 assert_ne!(t2.array(), [[0.0; 3]; 2]);
 ```
 

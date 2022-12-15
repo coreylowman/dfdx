@@ -16,5 +16,5 @@ fn main() {
     let m: SplitInto<(Linear<1, 3>, Linear<1, 5>)> = dev.build_module();
 
     // when we forward data through, we get a tuple back!
-    let _: (Tensor<Rank1<3>, f32>, Tensor<Rank1<5>, f32>) = m.forward(dev.tensor([1.0]));
+    let _: (Tensor<Rank1<3>>, Tensor<Rank1<5>>) = m.forward(dev.tensor([1.0]));
 }

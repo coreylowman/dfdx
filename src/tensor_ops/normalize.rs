@@ -13,7 +13,7 @@ use super::{BroadcastTo, Device, MeanTo, StddevTo, TryDiv, TrySub};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let t: Tensor<Rank2<2, 3>, f32> = dev.zeros();
+/// let t: Tensor<Rank2<2, 3>> = dev.zeros();
 /// let _ = t.normalize::<Axis<1>>(1e-5);
 /// ```
 pub fn normalize<Ax: Axes, S: Shape + ReduceShape<Ax>, D: Device<f32>, T: Tape<D>>(

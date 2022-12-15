@@ -15,16 +15,18 @@ fn main() {
     // easily create tensors using the `TensorFromArray::tensor` method of devices
     // tensors are generic over the:
     // 1. Shape (in this case a rank 1 (1 dimension) array with 5 elements)
-    // 2. Data type (in this case f32 values)
-    // 3. The device they are stored on (in this case the Cpu)
-    let _: Tensor<Rank1<5>, f32> = dev.tensor([1.0, 2.0, 3.0, 4.0, 5.0]);
+    // 2. Data type (in this case the default of `f32`)
+    // 3. The device they are stored on (in this case the default of `Cpu`)
+    // 4. A tape - see examples/04-gradients.rs
+    let _: Tensor<Rank1<5>> = dev.tensor([1.0, 2.0, 3.0, 4.0, 5.0]);
 
     // You can also use [ZerosTensor::zeros] and [OnesTensor::ones] to create tensors
     // filled with the corresponding values.
-    let _: Tensor<Rank2<2, 3>, f32> = dev.zeros();
-    let _: Tensor<Rank3<1, 2, 3>, f32> = dev.ones();
+    let _: Tensor<Rank2<2, 3>> = dev.zeros();
+    let _: Tensor<Rank3<1, 2, 3>> = dev.ones();
 
     // each of the creation methods also supports specifying the shape on the function
+    // note to change the dtype we specify the dtype as the 2nd generic parameter
     let _: Tensor<Rank2<2, 3>, f64> = dev.zeros();
     let _ = dev.ones::<Rank2<2, 3>>();
 

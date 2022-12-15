@@ -38,11 +38,11 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let t: Tensor<Rank3<2, 4, 6>, f32> = dev.zeros();
+//! let t: Tensor<Rank3<2, 4, 6>> = dev.zeros();
 //! // shape version
-//! let _: Tensor<Rank1<4>, f32> = t.clone().sum::<Rank1<4>, _>();
+//! let _: Tensor<Rank1<4>> = t.clone().sum::<Rank1<4>, _>();
 //! // axes version
-//! let _: Tensor<Rank1<2>, f32> = t.clone().sum::<_, Axes2<1, 2>>();
+//! let _: Tensor<Rank1<2>> = t.clone().sum::<_, Axes2<1, 2>>();
 //! ```
 //!
 //! Complete list of reductions:
@@ -67,17 +67,17 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let t: Tensor<Rank1<4>, f32> = dev.zeros();
+//! let t: Tensor<Rank1<4>> = dev.zeros();
 //! // shape version
-//! let _: Tensor<Rank3<2, 4, 6>, f32> = t.clone().broadcast::<Rank3<2, 4, 6>, _>();
+//! let _: Tensor<Rank3<2, 4, 6>> = t.clone().broadcast::<Rank3<2, 4, 6>, _>();
 //! ```
 //!
 //! Rust can also infer the output type if you use it in another operation:
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let big: Tensor<Rank2<2, 5>, f32> = dev.zeros();
-//! let small: Tensor<Rank1<5>, f32> = dev.zeros();
+//! let big: Tensor<Rank2<2, 5>> = dev.zeros();
+//! let small: Tensor<Rank1<5>> = dev.zeros();
 //! let _ = big + small.broadcast();
 //! ```
 //!
@@ -87,7 +87,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let t: Tensor<Rank3<2, 3, 4>, f32> = dev.zeros();
+//! let t: Tensor<Rank3<2, 3, 4>> = dev.zeros();
 //! // shape version
 //! let _ = t.clone().permute::<Rank3<3, 4, 2>, _>();
 //! // axes version
@@ -105,7 +105,7 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-//! let r: Tensor<Rank1<3>, f32> = t.select(dev.tensor(1));
+//! let r: Tensor<Rank1<3>> = t.select(dev.tensor(1));
 //! assert_eq!(r.array(), [4.0, 5.0, 6.0]);
 //! ```
 //!
@@ -114,7 +114,7 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-//! let r: Tensor<Rank2<3, 3>, f32> = t.gather(dev.tensor([1, 1, 0]));
+//! let r: Tensor<Rank2<3, 3>> = t.gather(dev.tensor([1, 1, 0]));
 //! assert_eq!(r.array(), [
 //!     [4.0, 5.0, 6.0],
 //!     [4.0, 5.0, 6.0],

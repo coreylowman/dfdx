@@ -16,7 +16,7 @@ use super::{Module, ModuleMut, ResetParams};
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let model: SplitInto<(Linear<5, 3>, Linear<5, 7>)> = dev.build_module();
-/// let _: (Tensor<Rank1<3>, f32>, Tensor<Rank1<7>, f32>) = model.forward(dev.zeros::<Rank1<5>>());
+/// let _: (Tensor<Rank1<3>>, Tensor<Rank1<7>>) = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(Debug, Default, Clone)]
 pub struct SplitInto<T>(pub T);

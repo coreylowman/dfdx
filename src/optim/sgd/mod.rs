@@ -95,14 +95,14 @@ impl Default for SgdConfig<f32> {
 /// Constructing using default:
 /// ```rust
 /// # use dfdx::{prelude::*, optim::*};
-/// # type Model = Tensor<Rank0, f32>;
+/// # type Model = Tensor<Rank0>;
 /// let mut opt: Sgd<Model> = Default::default();
 /// ```
 ///
 /// Constructing using new:
 /// ```rust
 /// # use dfdx::{prelude::*, optim::*};
-/// # type Model = Tensor<Rank0, f32>;
+/// # type Model = Tensor<Rank0>;
 /// let mut opt: Sgd<Model> = Sgd::new(SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: Some(Momentum::Classic(0.5)),
