@@ -35,18 +35,14 @@ pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync + Eq + Par
     fn from_size(size: usize) -> Option<Self>;
 }
 
-/// Represents a [Dim] with size known at runtime
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Dyn(pub usize);
-
-impl Dim for Dyn {
+impl Dim for usize {
     #[inline(always)]
     fn size(&self) -> usize {
-        self.0
+        *self
     }
     #[inline(always)]
     fn from_size(size: usize) -> Option<Self> {
-        Some(Self(size))
+        Some(size)
     }
 }
 

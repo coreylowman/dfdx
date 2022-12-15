@@ -111,36 +111,37 @@ mod tests {
 
     #[test]
     fn test_no_conflict_reductions() {
-        let src = (Dyn(1), Const::<2>, Dyn(3), Const::<4>);
+        let src = (1, Const::<2>, 3, Const::<4>);
 
-        let dst: (Dyn, Const<2>) = src.reduced();
-        assert_eq!(dst, (Dyn(1), Const::<2>));
+        let dst: (usize, Const<2>) = src.reduced();
+        assert_eq!(dst, (1, Const::<2>));
 
-        let dst: (Const<2>, Dyn) = src.reduced();
-        assert_eq!(dst, (Const::<2>, Dyn(3)));
+        let dst: (Const<2>, usize) = src.reduced();
+        assert_eq!(dst, (Const::<2>, 3));
 
-        let dst: (Dyn, Dyn) = src.reduced();
-        assert_eq!(dst, (Dyn(1), Dyn(3)));
+        let dst: (usize, usize) = src.reduced();
+        assert_eq!(dst, (1, 3));
     }
 
     #[test]
     fn test_conflicting_reductions() {
-        let src = (Dyn(1), Dyn(2), Const::<3>);
+        let src = (1, 2, Const::<3>);
 
         let dst = ReduceStridesTo::<_, Axis<1>>::reduced(&src);
-        assert_eq!(dst, (Dyn(1), Const::<3>));
+        assert_eq!(dst, (1, Const::<3>));
 
         let dst = ReduceStridesTo::<_, Axis<0>>::reduced(&src);
-        assert_eq!(dst, (Dyn(2), Const::<3>));
+        assert_eq!(dst, (2, Const::<3>));
     }
 
     #[test]
     fn test_broadcast_strides() {
-        let src = (Dyn(1),);
-        let dst_strides = BroadcastStridesTo::<(Dyn, Dyn, Dyn), Axes2<0, 2>>::broadcast_strides(
-            &src,
-            src.strides(),
-        );
+        let src = (1,);
+        let dst_strides =
+            BroadcastStridesTo::<(usize, usize, usize), Axes2<0, 2>>::broadcast_strides(
+                &src,
+                src.strides(),
+            );
         assert_eq!(dst_strides, [0, 1, 0]);
     }
 }
