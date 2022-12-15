@@ -1,6 +1,21 @@
 //! This example ties all the previous ones together
 //! to build a neural network that learns to recognize
 //! the MNIST digits.
+//!
+//! To download the MNIST dataset, do the following:
+//! ```
+//! mkdir tmp/ && cd tmp/
+//! curl -O http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz \
+//!     -O http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz \
+//!     -O http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz \
+//!     -O http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
+//! gunzip t*-ubyte.gz
+//! cd -
+//! ```
+//! Then, you may run this example with:
+//! ```
+//! cargo run --example 06-mnist -- tmp/
+//! ```
 
 use dfdx::{data::SubsetIterator, losses::cross_entropy_with_logits_loss, optim::Adam, prelude::*};
 use indicatif::ProgressBar;
@@ -71,7 +86,7 @@ fn main() {
         .unwrap_or_else(|| "./datasets/MNIST/raw".to_string());
 
     println!("Loading mnist from args[1] = {mnist_path}");
-    println!("Override mnist path with `cargo run --example mnist_classifier -- <path to mnist>`");
+    println!("Override mnist path with `cargo run --example 06-mnist -- <path to mnist>`");
 
     let dev: Cpu = Default::default();
     let mut rng = StdRng::seed_from_u64(0);
