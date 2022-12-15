@@ -30,7 +30,7 @@ use crate::{
 /// type C = Tensor<Rank3<4, 2, 3>, usize, Cpu, NoneTape>;
 /// ```
 #[derive(Debug, Clone)]
-pub struct Tensor<S: Shape, E: Dtype, D: DeviceStorage = Cpu, T = NoneTape> {
+pub struct Tensor<S: Shape, E: Unit, D: DeviceStorage = Cpu, T = NoneTape> {
     pub(crate) id: UniqueId,
     pub(crate) storage: D::Storage<S, E>,
     pub(crate) device: D,
@@ -43,6 +43,10 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
     fn shape(&self) -> &Self::Shape {
         self.storage.shape()
     }
+}
+
+impl<S: Shape, E: Unit, D: DeviceStorage, T> HasUnitType for Tensor<S, E, D, T> {
+    type Unit = E;
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasDtype for Tensor<S, E, D, T> {

@@ -1,15 +1,23 @@
 use super::{axes::*, ReduceShapeTo};
 
+/// Represents a unit type, but no arithmetic.
+pub trait Unit:
+    'static + Copy + Clone + Default + std::fmt::Debug + PartialOrd + Send + Sync
+{
+}
+impl Unit for f32 {}
+impl Unit for f64 {}
+impl Unit for usize {}
+impl Unit for bool {}
+
+/// Represents something that has a [Unit].
+pub trait HasUnitType {
+    type Unit: Unit;
+}
+
 /// Represents a data type or element of an array.
 pub trait Dtype:
-    'static
-    + Copy
-    + Clone
-    + Default
-    + std::fmt::Debug
-    + PartialOrd
-    + Send
-    + Sync
+    Unit
     + std::ops::Add<Self, Output = Self>
     + std::ops::Sub<Self, Output = Self>
     + std::ops::Mul<Self, Output = Self>

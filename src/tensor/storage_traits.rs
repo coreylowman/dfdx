@@ -1,5 +1,5 @@
 use crate::{
-    shapes::{Dtype, HasDtype, HasShape, Shape},
+    shapes::{Dtype, HasDtype, HasShape, HasUnitType, Shape, Unit},
     unique_id::unique_id,
 };
 
@@ -13,7 +13,7 @@ pub trait HasErr: Sized {
 /// Something that can store nd arrays for a given [Shape] and [Dtype]
 pub trait DeviceStorage: 'static + Default + Clone + HasErr {
     /// Generic storage type
-    type Storage<S: Shape, E: Dtype>: 'static
+    type Storage<S: Shape, E: Unit>: 'static
         + std::fmt::Debug
         + Clone
         + Send
@@ -30,7 +30,7 @@ pub trait DeviceStorage: 'static + Default + Clone + HasErr {
     ) -> Result<Self::Storage<S, E>, Self::Err>;
 
     /// Upgrades the device storage into a tensor
-    fn upgrade<S: Shape, E: Dtype>(&self, storage: Self::Storage<S, E>) -> Tensor<S, E, Self> {
+    fn upgrade<S: Shape, E: Unit>(&self, storage: Self::Storage<S, E>) -> Tensor<S, E, Self> {
         Tensor {
             id: unique_id(),
             storage,
@@ -52,12 +52,12 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T> AllocGrad<D> for Tensor<S, E, D, T
 }
 
 /// Enables copying data into and out of tensors
-pub trait CopySlice<E: Dtype>: DeviceStorage {
+pub trait CopySlice<E: Unit>: DeviceStorage {
     fn copy_from<S: Shape, T>(dst: &mut Tensor<S, E, Self, T>, src: &[E]);
     fn copy_into<S: Shape, T>(src: &Tensor<S, E, Self, T>, dst: &mut [E]);
 }
 
-impl<S: Shape, E: Dtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: CopySlice<E>, T> Tensor<S, E, D, T> {
     /// Copy data from a slice - **panics** if there are not enough elements in the slice.
     ///
     /// ```rust
@@ -88,7 +88,7 @@ impl<S: Shape, E: Dtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
 }
 
 /// Construct tensors filled with zeros.
-pub trait ZerosTensor<E: Dtype>: DeviceStorage {
+pub trait ZerosTensor<E: Unit>: DeviceStorage {
     /// Creates a tensor filled with zeros.
     /// ```rust
     /// # use dfdx::prelude::*;
@@ -128,7 +128,7 @@ pub trait ZerosTensor<E: Dtype>: DeviceStorage {
     fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 }
 
-pub trait ZeroFillStorage<E: Dtype>: DeviceStorage {
+pub trait ZeroFillStorage<E: Unit>: DeviceStorage {
     fn try_fill_with_zeros<S: Shape>(
         &self,
         storage: &mut Self::Storage<S, E>,
@@ -136,7 +136,7 @@ pub trait ZeroFillStorage<E: Dtype>: DeviceStorage {
 }
 
 /// Construct tensors filled with ones.
-pub trait OnesTensor<E: Dtype>: DeviceStorage {
+pub trait OnesTensor<E: Unit>: DeviceStorage {
     /// Creates a tensor filled with ones.
     /// ```rust
     /// # use dfdx::prelude::*;
@@ -176,7 +176,7 @@ pub trait OnesTensor<E: Dtype>: DeviceStorage {
     fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 }
 
-pub trait OneFillStorage<E: Dtype>: DeviceStorage {
+pub trait OneFillStorage<E: Unit>: DeviceStorage {
     fn try_fill_with_ones<S: Shape>(
         &self,
         storage: &mut Self::Storage<S, E>,
@@ -184,7 +184,7 @@ pub trait OneFillStorage<E: Dtype>: DeviceStorage {
 }
 
 /// Constructs tensors filled with random values from a uniform distribution.
-pub trait RandTensor<E: Dtype>: DeviceStorage {
+pub trait RandTensor<E: Unit>: DeviceStorage {
     /// Creates a tensor filled with random data in the range [0.0, 1.0).
     /// ```rust
     /// # use dfdx::prelude::*;
@@ -238,7 +238,7 @@ pub trait RandTensor<E: Dtype>: DeviceStorage {
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 }
 
-pub trait RandFillStorage<E: Dtype>: DeviceStorage {
+pub trait RandFillStorage<E: Unit>: DeviceStorage {
     fn try_fill_with_uniform<S: Shape>(
         &self,
         storage: &mut Self::Storage<S, E>,
@@ -248,7 +248,7 @@ pub trait RandFillStorage<E: Dtype>: DeviceStorage {
 }
 
 /// Construct tensors with random values from a normal distribution
-pub trait RandnTensor<E: Dtype>: DeviceStorage {
+pub trait RandnTensor<E: Unit>: DeviceStorage {
     /// Creates a tensor filled with random data from a normal distribution with mean 0 and stddev 1.
     /// ```rust
     /// # use dfdx::prelude::*;
@@ -301,7 +301,7 @@ pub trait RandnTensor<E: Dtype>: DeviceStorage {
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 }
 
-pub trait RandnFillStorage<E: Dtype>: DeviceStorage {
+pub trait RandnFillStorage<E: Unit>: DeviceStorage {
     fn try_fill_with_normal<S: Shape>(
         &self,
         storage: &mut Self::Storage<S, E>,
@@ -311,7 +311,7 @@ pub trait RandnFillStorage<E: Dtype>: DeviceStorage {
 }
 
 /// Construct tensors from rust arrays
-pub trait TensorFromArray<Src, S: Shape, E: Dtype>: DeviceStorage {
+pub trait TensorFromArray<Src, S: Shape, E: Unit>: DeviceStorage {
     /// Create a tensor from a rust array
     /// ```rust
     /// # use dfdx::prelude::*;
@@ -330,7 +330,7 @@ pub trait AsArray {
     type Array: std::fmt::Debug;
     fn array(&self) -> Self::Array;
 }
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> AsArray for Tensor<S, E, D, T>
+impl<S: Shape, E: Unit, D: DeviceStorage, T> AsArray for Tensor<S, E, D, T>
 where
     D::Storage<S, E>: AsArray,
 {
@@ -341,13 +341,13 @@ where
 }
 
 /// Convert tensors to [std::vec::Vec]
-pub trait AsVec: HasDtype {
-    fn as_vec(&self) -> std::vec::Vec<Self::Dtype>;
+pub trait AsVec: HasUnitType {
+    fn as_vec(&self) -> std::vec::Vec<Self::Unit>;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> AsVec for Tensor<S, E, D, T>
+impl<S: Shape, E: Unit, D: DeviceStorage, T> AsVec for Tensor<S, E, D, T>
 where
-    D::Storage<S, E>: HasDtype<Dtype = E> + AsVec,
+    D::Storage<S, E>: HasUnitType<Unit = E> + AsVec,
 {
     fn as_vec(&self) -> std::vec::Vec<E> {
         self.storage.as_vec()

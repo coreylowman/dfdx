@@ -1,4 +1,4 @@
-use crate::shapes::{Dtype, HasDtype, HasShape, Shape};
+use crate::shapes::{Dtype, HasDtype, HasShape, HasUnitType, Shape, Unit};
 use crate::tensor::storage_traits::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{
@@ -35,8 +35,8 @@ impl Cpu {
 
 /// The storage for the cpu device
 #[derive(Debug, Clone)]
-pub struct StridedArray<S: Shape, Elem> {
-    pub(crate) data: Arc<Vec<Elem>>,
+pub struct StridedArray<S: Shape, E> {
+    pub(crate) data: Arc<Vec<E>>,
     pub(crate) shape: S,
     pub(crate) strides: S::Concrete,
 }
@@ -66,6 +66,10 @@ impl<S: Shape, E> HasShape for StridedArray<S, E> {
     }
 }
 
+impl<S: Shape, E: Unit> HasUnitType for StridedArray<S, E> {
+    type Unit = E;
+}
+
 impl<S: Shape, E: Dtype> HasDtype for StridedArray<S, E> {
     type Dtype = E;
 }
@@ -75,7 +79,7 @@ impl HasErr for Cpu {
 }
 
 impl DeviceStorage for Cpu {
-    type Storage<S: Shape, E: Dtype> = StridedArray<S, E>;
+    type Storage<S: Shape, E: Unit> = StridedArray<S, E>;
 
     fn try_alloc_grad<S: Shape, E: Dtype>(
         &self,
