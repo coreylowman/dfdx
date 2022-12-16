@@ -13,7 +13,7 @@ use super::{Module, ModuleMut, ResetParams};
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let model: Repeated<(Linear<10, 10>, ReLU), 5> = dev.build_module();
-/// let out: Tensor<Rank1<10>, f32> = model.forward(dev.zeros());
+/// let out: Tensor<Rank1<10>> = model.forward(dev.zeros());
 /// ```
 #[derive(Debug, Clone)]
 pub struct Repeated<T, const N: usize> {

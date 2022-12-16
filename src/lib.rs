@@ -1,6 +1,6 @@
 //! Ergonomics & safety focused deep learning in Rust. Main features include:
 //! 1. Tensor library with shapes up to 6d!
-//! 2. Shapes with both compile and runtime sized dimensions. (e.g. `Tensor<(usize, Const<10>), f32>` and `Tensor<Rank2<5, 10>, f32>`)
+//! 2. Shapes with both compile and runtime sized dimensions. (e.g. `Tensor<(usize, Const<10>)>` and `Tensor<Rank2<5, 10>>`)
 //! 3. A large library of tensor operations (including `matmul`, `conv2d`, and much more).
 //!     a. All tensor operations shape and type checked at compile time!!
 //! 4. Ergonomic neural network building blocks (like `Linear`, `Conv2D`, and `Transformer`).
@@ -15,7 +15,7 @@
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();
 //! let x = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-//! let y: Tensor<Rank2<2, 3>, f32> = dev.ones();
+//! let y: Tensor<Rank2<2, 3>> = dev.ones();
 //! ```
 //!
 //! 2. Neural networks are built with types. Tuples are sequential models. See [crate::nn].
@@ -40,8 +40,8 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let mlp: Linear<5, 2> = dev.build_module();
-//! let x: Tensor<Rank1<5>, f32> = dev.zeros();
-//! let y = mlp.forward(x); // compiler infers that `y` must be `Tensor<Rank1<2>, f32>`
+//! let x: Tensor<Rank1<5>> = dev.zeros();
+//! let y = mlp.forward(x); // compiler infers that `y` must be `Tensor<Rank1<2>>`
 //! ```
 //!
 //! 5. Trace gradients using [crate::tensor::Tensor::trace()]
@@ -49,7 +49,7 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! # let model: Linear<10, 5> = dev.build_module();
-//! # let y_true: Tensor<Rank1<5>, f32> = dev.randn().softmax();
+//! # let y_true: Tensor<Rank1<5>> = dev.randn().softmax();
 //! // tensors default to not having a tape
 //! let x: Tensor<Rank1<10>, f32, Cpu, NoneTape> = dev.zeros();
 //!

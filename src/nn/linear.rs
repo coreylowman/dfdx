@@ -19,9 +19,9 @@ use super::module::{Module, ModuleMut, ResetParams};
 /// # let dev: Cpu = Default::default();
 /// let model: Linear<5, 2> = dev.build_module();
 /// // single item forward
-/// let _: Tensor<Rank1<2>, f32> = model.forward(dev.zeros::<Rank1<5>>());
+/// let _: Tensor<Rank1<2>> = model.forward(dev.zeros::<Rank1<5>>());
 /// // batched forward
-/// let _: Tensor<Rank2<10, 2>, f32> = model.forward(dev.zeros::<Rank2<10, 5>>());
+/// let _: Tensor<Rank2<10, 2>> = model.forward(dev.zeros::<Rank2<10, 5>>());
 /// ```
 #[derive(Debug, Clone)]
 pub struct Linear<const I: usize, const O: usize, D: Device<f32> = Cpu> {

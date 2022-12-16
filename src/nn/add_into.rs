@@ -17,7 +17,7 @@ use super::{Module, ModuleMut, ResetParams};
 /// let model: AddInto<(Linear<2, 5>, Linear<3, 5>)> = dev.build_module();
 /// let a = dev.zeros::<Rank1<2>>();
 /// let b = dev.zeros::<Rank1<3>>();
-/// let _: Tensor<Rank1<5>, f32> = model.forward((a, b));
+/// let _: Tensor<Rank1<5>> = model.forward((a, b));
 /// ```
 #[derive(Debug, Default, Clone)]
 pub struct AddInto<T>(pub T);
