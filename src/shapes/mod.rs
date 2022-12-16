@@ -17,6 +17,6 @@ pub(crate) use replace_dim::{RemoveDimTo, ReplaceDimTo};
 pub(crate) use same_numel::HasSameNumelAs;
 
 pub use axes::{Axes2, Axes3, Axes4, Axes5, Axes6, Axis, HasAxes};
-pub use shape::{Const, Dim, Dyn};
+pub use shape::{Const, Dim};
 pub use shape::{Dtype, HasDtype};
 pub use shape::{HasShape, Rank0, Rank1, Rank2, Rank3, Rank4, Rank5, Rank6, Shape};
