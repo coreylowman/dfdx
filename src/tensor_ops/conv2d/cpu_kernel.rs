@@ -1,4 +1,4 @@
-use crate::shapes::{Const, Dim, Dyn, HasShape, Rank3, Rank4};
+use crate::shapes::{Const, Dim, HasShape, Rank3, Rank4};
 use crate::tensor::cpu::*;
 use crate::tensor_ops::matmul::cpu_kernel::matmul;
 
@@ -29,8 +29,8 @@ impl Cpu {
 
         // (O, C * K * K) * (C * K * K, OH * OW) = (O, OH * OW)
         let m = out_chan;
-        let k = Dyn(chan.size() * kernel.size() * kernel.size());
-        let n = Dyn(out_width.size() * out_height.size());
+        let k = chan.size() * kernel.size() * kernel.size();
+        let n = out_width.size() * out_height.size();
         matmul(
             View::new(filters.data, (m, k)),
             View::new(inp_patches_buf.view().data, (k, n)),
@@ -83,8 +83,8 @@ impl Cpu {
             // img_g += filters^T * unfold(grad_out)
             // (C, H * W) += (C, O * K * K) * (O * K * K, H * W)
             let m = chan;
-            let k = Dyn(out_chan.size() * kernel.size() * kernel.size());
-            let n = Dyn(height.size() * width.size());
+            let k = out_chan.size() * kernel.size() * kernel.size();
+            let n = height.size() * width.size();
             matmul(
                 View::new(filters_tr.data, (m, k)),
                 View::new(out_patches_buf.view().data, (k, n)),
@@ -96,8 +96,8 @@ impl Cpu {
             // weight_g^T += img * patches^T
             // (C, O * K * K) += (C, H * W) * (H * W, O * K * K)
             let m = chan;
-            let k = Dyn(height.size() * width.size());
-            let n = Dyn(out_chan.size() * kernel.size() * kernel.size());
+            let k = height.size() * width.size();
+            let n = out_chan.size() * kernel.size() * kernel.size();
             matmul(
                 View::new(img.data, (m, k)),
                 View::new(out_patches_buf.view().data, (n, k)).tr(),
