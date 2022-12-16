@@ -1,16 +1,16 @@
 #![allow(dead_code)]
 
 use super::StridedArray;
-use crate::shapes::{Const, Dim, Dtype, Shape};
+use crate::shapes::{Const, Dim, Shape};
 
 #[derive(Clone, Copy)]
-pub(crate) struct View<'a, S: Shape, E: Dtype> {
+pub(crate) struct View<'a, S: Shape, E> {
     pub(crate) data: &'a [E],
     pub(crate) shape: S,
     pub(crate) strides: S::Concrete,
 }
 
-impl<'a, S: Shape, E: Dtype> View<'a, S, E> {
+impl<'a, S: Shape, E> View<'a, S, E> {
     #[inline(always)]
     pub(crate) fn new(data: &'a [E], shape: S) -> Self {
         Self {
@@ -26,13 +26,13 @@ impl<'a, S: Shape, E: Dtype> View<'a, S, E> {
     }
 }
 
-pub(crate) struct ViewMut<'a, S: Shape, E: Dtype> {
+pub(crate) struct ViewMut<'a, S: Shape, E> {
     pub(crate) data: &'a mut [E],
     pub(crate) shape: S,
     pub(crate) strides: S::Concrete,
 }
 
-impl<'a, S: Shape, E: Dtype> ViewMut<'a, S, E> {
+impl<'a, S: Shape, E> ViewMut<'a, S, E> {
     #[inline(always)]
     pub(crate) fn new(data: &'a mut [E], shape: S) -> Self {
         Self {
@@ -48,7 +48,7 @@ impl<'a, S: Shape, E: Dtype> ViewMut<'a, S, E> {
     }
 }
 
-impl<S: Shape, E: Dtype> StridedArray<S, E> {
+impl<S: Shape, E> StridedArray<S, E> {
     #[inline(always)]
     pub(crate) fn view(&self) -> View<S, E> {
         View {
@@ -57,7 +57,9 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
             strides: self.strides,
         }
     }
+}
 
+impl<S: Shape, E: Clone> StridedArray<S, E> {
     #[inline(always)]
     pub(crate) fn view_mut(&mut self) -> ViewMut<S, E> {
         ViewMut {
@@ -68,7 +70,7 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
     }
 }
 
-impl<'a, D1: Dim, E: Dtype> View<'a, (D1,), E> {
+impl<'a, D1: Dim, E> View<'a, (D1,), E> {
     #[inline(always)]
     pub(crate) fn br0(self) -> View<'a, (Const<1>, D1), E> {
         View {
@@ -87,7 +89,7 @@ impl<'a, D1: Dim, E: Dtype> View<'a, (D1,), E> {
     }
 }
 
-impl<'a, D1: Dim, E: Dtype> ViewMut<'a, (D1,), E> {
+impl<'a, D1: Dim, E> ViewMut<'a, (D1,), E> {
     #[inline(always)]
     pub(crate) fn br0(self) -> ViewMut<'a, (Const<1>, D1), E> {
         ViewMut {
@@ -106,7 +108,7 @@ impl<'a, D1: Dim, E: Dtype> ViewMut<'a, (D1,), E> {
     }
 }
 
-impl<'a, D1: Dim, D2: Dim, E: Dtype> View<'a, (D1, D2), E> {
+impl<'a, D1: Dim, D2: Dim, E> View<'a, (D1, D2), E> {
     #[inline(always)]
     pub(crate) fn tr(self) -> View<'a, (D2, D1), E> {
         View {
@@ -117,20 +119,20 @@ impl<'a, D1: Dim, D2: Dim, E: Dtype> View<'a, (D1, D2), E> {
     }
 }
 
-impl<'a, D1: Dim, E: Dtype> View<'a, (D1,), E> {
+impl<'a, D1: Dim, E> View<'a, (D1,), E> {
     #[inline(always)]
     pub(crate) fn idx(&'a self, index: usize) -> &'a E {
         &self.data[index * self.strides[0]]
     }
 }
-impl<'a, D1: Dim, E: Dtype> ViewMut<'a, (D1,), E> {
+impl<'a, D1: Dim, E> ViewMut<'a, (D1,), E> {
     #[inline(always)]
     pub(crate) fn idx_mut(&'a mut self, index: usize) -> &'a mut E {
         &mut self.data[index * self.strides[0]]
     }
 }
 
-impl<'a, D1: Dim, D2: Dim, E: Dtype> View<'a, (D1, D2), E> {
+impl<'a, D1: Dim, D2: Dim, E> View<'a, (D1, D2), E> {
     #[inline(always)]
     pub(crate) fn idx<'b>(&'b self, index: usize) -> View<'b, (D2,), E>
     where
@@ -144,7 +146,7 @@ impl<'a, D1: Dim, D2: Dim, E: Dtype> View<'a, (D1, D2), E> {
     }
 }
 
-impl<'a, D1: Dim, D2: Dim, E: Dtype> ViewMut<'a, (D1, D2), E> {
+impl<'a, D1: Dim, D2: Dim, E> ViewMut<'a, (D1, D2), E> {
     #[inline(always)]
     pub(crate) fn idx_mut<'b>(&'b mut self, index: usize) -> ViewMut<'b, (D2,), E>
     where
@@ -158,7 +160,7 @@ impl<'a, D1: Dim, D2: Dim, E: Dtype> ViewMut<'a, (D1, D2), E> {
     }
 }
 
-impl<'a, D1: Dim, D2: Dim, D3: Dim, E: Dtype> View<'a, (D1, D2, D3), E> {
+impl<'a, D1: Dim, D2: Dim, D3: Dim, E> View<'a, (D1, D2, D3), E> {
     #[inline(always)]
     pub(crate) fn idx<'b>(&'b self, index: usize) -> View<'b, (D2, D3), E>
     where
@@ -172,7 +174,7 @@ impl<'a, D1: Dim, D2: Dim, D3: Dim, E: Dtype> View<'a, (D1, D2, D3), E> {
     }
 }
 
-impl<'a, D1: Dim, D2: Dim, D3: Dim, E: Dtype> ViewMut<'a, (D1, D2, D3), E> {
+impl<'a, D1: Dim, D2: Dim, D3: Dim, E> ViewMut<'a, (D1, D2, D3), E> {
     #[inline(always)]
     pub(crate) fn idx_mut<'b>(&'b mut self, index: usize) -> ViewMut<'b, (D2, D3), E>
     where
@@ -186,7 +188,7 @@ impl<'a, D1: Dim, D2: Dim, D3: Dim, E: Dtype> ViewMut<'a, (D1, D2, D3), E> {
     }
 }
 
-impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> View<'a, (D1, D2, D3, D4), E> {
+impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, E> View<'a, (D1, D2, D3, D4), E> {
     #[inline(always)]
     pub(crate) fn idx<'b>(&'b self, index: usize) -> View<'b, (D2, D3, D4), E>
     where
@@ -200,7 +202,7 @@ impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> View<'a, (D1, D2, D3, D4)
     }
 }
 
-impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> ViewMut<'a, (D1, D2, D3, D4), E> {
+impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, E> ViewMut<'a, (D1, D2, D3, D4), E> {
     #[inline(always)]
     pub(crate) fn idx_mut<'b>(&'b mut self, index: usize) -> ViewMut<'b, (D2, D3, D4), E>
     where
@@ -214,7 +216,7 @@ impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, E: Dtype> ViewMut<'a, (D1, D2, D3, 
     }
 }
 
-impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, E: Dtype> View<'a, (D1, D2, D3, D4, D5), E> {
+impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, E> View<'a, (D1, D2, D3, D4, D5), E> {
     #[inline(always)]
     pub(crate) fn idx<'b>(&'b self, index: usize) -> View<'b, (D2, D3, D4, D5), E>
     where
@@ -233,9 +235,7 @@ impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, E: Dtype> View<'a, (D1, D2
     }
 }
 
-impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, E: Dtype>
-    ViewMut<'a, (D1, D2, D3, D4, D5), E>
-{
+impl<'a, D1: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, E> ViewMut<'a, (D1, D2, D3, D4, D5), E> {
     #[inline(always)]
     pub(crate) fn idx_mut<'b>(&'b mut self, index: usize) -> ViewMut<'b, (D2, D3, D4, D5), E>
     where

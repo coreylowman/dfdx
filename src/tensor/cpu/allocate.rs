@@ -10,7 +10,7 @@ use std::{sync::Arc, vec::Vec};
 
 use super::{Cpu, CpuError, LendingIterator, StridedArray};
 
-impl<S: Shape, E: Dtype> StridedArray<S, E> {
+impl<S: Shape, E: Default + Clone> StridedArray<S, E> {
     #[inline]
     pub(crate) fn new(shape: S) -> Result<Self, CpuError> {
         Self::try_new_with(shape, Default::default())
@@ -48,14 +48,14 @@ impl<S: Shape, E: Dtype> StridedArray<S, E> {
     }
 }
 
-impl<E: Dtype> ZerosTensor<E> for Cpu {
+impl<E: Unit> ZerosTensor<E> for Cpu {
     fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let storage = StridedArray::try_new_with(*src.shape(), Default::default())?;
         Ok(self.upgrade(storage))
     }
 }
 
-impl<E: Dtype> ZeroFillStorage<E> for Cpu {
+impl<E: Unit> ZeroFillStorage<E> for Cpu {
     fn try_fill_with_zeros<S: Shape>(
         &self,
         storage: &mut Self::Storage<S, E>,
@@ -185,7 +185,7 @@ impl RandnFillStorage<f32> for Cpu {
     }
 }
 
-impl<E: Dtype> CopySlice<E> for Cpu {
+impl<E: Unit> CopySlice<E> for Cpu {
     fn copy_from<S: Shape, T>(dst: &mut Tensor<S, E, Self, T>, src: &[E]) {
         std::sync::Arc::make_mut(&mut dst.storage.data).copy_from_slice(src);
     }
@@ -194,7 +194,7 @@ impl<E: Dtype> CopySlice<E> for Cpu {
     }
 }
 
-impl<E: Dtype> TensorFromArray<E, Rank0, E> for Cpu {
+impl<E: Unit> TensorFromArray<E, Rank0, E> for Cpu {
     fn try_tensor(&self, src: E) -> Result<Tensor<Rank0, E, Self>, Self::Err> {
         let mut storage: StridedArray<_, E> = StridedArray::new(Default::default())?;
         storage[[]].clone_from(&src);
@@ -202,7 +202,7 @@ impl<E: Dtype> TensorFromArray<E, Rank0, E> for Cpu {
     }
 }
 
-impl<E: Dtype, const M: usize> TensorFromArray<[E; M], Rank1<M>, E> for Cpu {
+impl<E: Unit, const M: usize> TensorFromArray<[E; M], Rank1<M>, E> for Cpu {
     fn try_tensor(&self, src: [E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
         let mut storage: StridedArray<Rank1<M>, E> = StridedArray::new(Default::default())?;
         let mut iter = storage.iter_mut_with_index();
@@ -213,7 +213,7 @@ impl<E: Dtype, const M: usize> TensorFromArray<[E; M], Rank1<M>, E> for Cpu {
     }
 }
 
-impl<E: Dtype, const M: usize> TensorFromArray<&[E; M], Rank1<M>, E> for Cpu {
+impl<E: Unit, const M: usize> TensorFromArray<&[E; M], Rank1<M>, E> for Cpu {
     fn try_tensor(&self, src: &[E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
         let mut storage: StridedArray<Rank1<M>, E> = StridedArray::new(Default::default())?;
         let mut iter = storage.iter_mut_with_index();
@@ -224,9 +224,7 @@ impl<E: Dtype, const M: usize> TensorFromArray<&[E; M], Rank1<M>, E> for Cpu {
     }
 }
 
-impl<E: Dtype, const M: usize, const N: usize> TensorFromArray<[[E; N]; M], Rank2<M, N>, E>
-    for Cpu
-{
+impl<E: Unit, const M: usize, const N: usize> TensorFromArray<[[E; N]; M], Rank2<M, N>, E> for Cpu {
     fn try_tensor(&self, src: [[E; N]; M]) -> Result<Tensor<Rank2<M, N>, E, Self>, Self::Err> {
         let mut storage: StridedArray<Rank2<M, N>, E> = StridedArray::new(Default::default())?;
         let mut iter = storage.iter_mut_with_index();
@@ -237,7 +235,7 @@ impl<E: Dtype, const M: usize, const N: usize> TensorFromArray<[[E; N]; M], Rank
     }
 }
 
-impl<E: Dtype, const M: usize, const N: usize, const O: usize>
+impl<E: Unit, const M: usize, const N: usize, const O: usize>
     TensorFromArray<[[[E; O]; N]; M], Rank3<M, N, O>, E> for Cpu
 {
     fn try_tensor(
@@ -253,7 +251,7 @@ impl<E: Dtype, const M: usize, const N: usize, const O: usize>
     }
 }
 
-impl<E: Dtype, const M: usize, const N: usize, const O: usize, const P: usize>
+impl<E: Unit, const M: usize, const N: usize, const O: usize, const P: usize>
     TensorFromArray<[[[[E; P]; O]; N]; M], Rank4<M, N, O, P>, E> for Cpu
 {
     fn try_tensor(
@@ -270,7 +268,7 @@ impl<E: Dtype, const M: usize, const N: usize, const O: usize, const P: usize>
     }
 }
 
-impl<S: Shape, E: Dtype> AsVec for StridedArray<S, E> {
+impl<S: Shape, E: Unit> AsVec for StridedArray<S, E> {
     fn as_vec(&self) -> Vec<E> {
         let mut out = Vec::with_capacity(self.shape.num_elements());
         let mut iter = self.iter();
@@ -281,7 +279,7 @@ impl<S: Shape, E: Dtype> AsVec for StridedArray<S, E> {
     }
 }
 
-impl<E: Dtype> AsArray for StridedArray<Rank0, E> {
+impl<E: Unit> AsArray for StridedArray<Rank0, E> {
     type Array = E;
     fn array(&self) -> Self::Array {
         let mut out: Self::Array = Default::default();
@@ -290,7 +288,7 @@ impl<E: Dtype> AsArray for StridedArray<Rank0, E> {
     }
 }
 
-impl<E: Dtype, const M: usize> AsArray for StridedArray<Rank1<M>, E> {
+impl<E: Unit, const M: usize> AsArray for StridedArray<Rank1<M>, E> {
     type Array = [E; M];
     fn array(&self) -> Self::Array {
         let mut out: Self::Array = [Default::default(); M];
@@ -302,7 +300,7 @@ impl<E: Dtype, const M: usize> AsArray for StridedArray<Rank1<M>, E> {
     }
 }
 
-impl<E: Dtype, const M: usize, const N: usize> AsArray for StridedArray<Rank2<M, N>, E> {
+impl<E: Unit, const M: usize, const N: usize> AsArray for StridedArray<Rank2<M, N>, E> {
     type Array = [[E; N]; M];
     fn array(&self) -> Self::Array {
         let mut out: Self::Array = [[Default::default(); N]; M];
@@ -316,7 +314,7 @@ impl<E: Dtype, const M: usize, const N: usize> AsArray for StridedArray<Rank2<M,
     }
 }
 
-impl<E: Dtype, const M: usize, const N: usize, const O: usize> AsArray
+impl<E: Unit, const M: usize, const N: usize, const O: usize> AsArray
     for StridedArray<Rank3<M, N, O>, E>
 {
     type Array = [[[E; O]; N]; M];
@@ -330,7 +328,7 @@ impl<E: Dtype, const M: usize, const N: usize, const O: usize> AsArray
     }
 }
 
-impl<E: Dtype, const M: usize, const N: usize, const O: usize, const P: usize> AsArray
+impl<E: Unit, const M: usize, const N: usize, const O: usize, const P: usize> AsArray
     for StridedArray<Rank4<M, N, O, P>, E>
 {
     type Array = [[[[E; P]; O]; N]; M];
