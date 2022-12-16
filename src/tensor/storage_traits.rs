@@ -110,7 +110,7 @@ pub trait ZerosTensor<E: Dtype>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<(Dyn, Const<3>), f32> = dev.zeros_like(&(Dyn(5), Const::<3>));
+    /// let a: Tensor<(usize, Const<3>), f32> = dev.zeros_like(&(5, Const));
     /// ```
     ///
     /// Given another tensor:
@@ -158,7 +158,7 @@ pub trait OnesTensor<E: Dtype>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<(Dyn, Const<3>), f32> = dev.ones_like(&(Dyn(5), Const::<3>));
+    /// let a: Tensor<(usize, Const<3>), f32> = dev.ones_like(&(5, Const));
     /// ```
     ///
     /// Given another tensor:
@@ -204,7 +204,7 @@ pub trait RandTensor<E: Dtype>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<(Dyn, Const<3>), f32> = dev.rand_like(&(Dyn(5), Const::<3>));
+    /// let a: Tensor<(usize, Const<3>), f32> = dev.rand_like(&(5, Const::<3>));
     /// ```
     ///
     /// Given another tensor:
@@ -268,7 +268,7 @@ pub trait RandnTensor<E: Dtype>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<(Dyn, Const<3>), f32> = dev.randn_like(&(Dyn(5), Const::<3>));
+    /// let a: Tensor<(usize, Const<3>), f32> = dev.randn_like(&(5, Const::<3>));
     /// ```
     ///
     /// Given another tensor:

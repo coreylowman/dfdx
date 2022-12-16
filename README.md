@@ -11,7 +11,7 @@ Ergonomics & safety focused deep learning in Rust.
 
 Features at a glance:
 1. Tensor library with shapes up to 6d!
-2. Shapes with both compile and runtime sized dimensions. (e.g. `Tensor<(Dyn, Const<10>), f32>` and `Tensor<Rank2<5, 10>, f32>`)
+2. Shapes with both compile and runtime sized dimensions. (e.g. `Tensor<(usize, Const<10>), f32>` and `Tensor<Rank2<5, 10>, f32>`)
 3. A large library of tensor operations (including `matmul`, `conv2d`, and much more).
     1. All tensor operations shape and type checked at compile time!!
 4. Ergonomic neural network building blocks (like `Linear`, `Conv2D`, and `Transformer`).
