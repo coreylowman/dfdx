@@ -14,8 +14,8 @@ use super::{Module, NonMutableModule, ZeroSizedModule};
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let m: AvgPoolGlobal = Default::default();
-/// let _: Tensor<Rank1<5>, f32> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());
-/// let _: Tensor<Rank2<10, 5>, f32> = m.forward(dev.zeros::<Rank4<10, 5, 16, 8>>());
+/// let _: Tensor<Rank1<5>> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());
+/// let _: Tensor<Rank2<10, 5>> = m.forward(dev.zeros::<Rank4<10, 5, 16, 8>>());
 /// ```
 #[derive(Clone, Copy, Default)]
 pub struct AvgPoolGlobal;
@@ -32,8 +32,8 @@ pub struct AvgPoolGlobal;
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let m: MaxPoolGlobal = Default::default();
-/// let _: Tensor<Rank1<5>, f32> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());
-/// let _: Tensor<Rank2<10, 5>, f32> = m.forward(dev.zeros::<Rank4<10, 5, 16, 8>>());
+/// let _: Tensor<Rank1<5>> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());
+/// let _: Tensor<Rank2<10, 5>> = m.forward(dev.zeros::<Rank4<10, 5, 16, 8>>());
 /// ```
 #[derive(Clone, Copy, Default)]
 pub struct MaxPoolGlobal;
@@ -50,8 +50,8 @@ pub struct MaxPoolGlobal;
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let m: MinPoolGlobal = Default::default();
-/// let _: Tensor<Rank1<5>, f32> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());
-/// let _: Tensor<Rank2<10, 5>, f32> = m.forward(dev.zeros::<Rank4<10, 5, 16, 8>>());
+/// let _: Tensor<Rank1<5>> = m.forward(dev.zeros::<Rank3<5, 16, 8>>());
+/// let _: Tensor<Rank2<10, 5>> = m.forward(dev.zeros::<Rank4<10, 5, 16, 8>>());
 /// ```
 #[derive(Clone, Copy, Default)]
 pub struct MinPoolGlobal;

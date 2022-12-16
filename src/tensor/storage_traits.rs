@@ -64,7 +64,7 @@ impl<S: Shape, E: Unit, D: CopySlice<E>, T> Tensor<S, E, D, T> {
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let data = [1.0, 2.0, 3.0, 4.0];
-    /// let mut t: Tensor<Rank2<2, 2>, f32, _> = dev.zeros();
+    /// let mut t: Tensor<Rank2<2, 2>> = dev.zeros();
     /// t.copy_from(&data);
     /// assert_eq!(t.array(), [[1.0, 2.0], [3.0, 4.0]]);
     /// ```
@@ -77,7 +77,7 @@ impl<S: Shape, E: Unit, D: CopySlice<E>, T> Tensor<S, E, D, T> {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let t: Tensor<Rank2<2, 2>, f32, _> = dev.tensor([[1.0, 2.0], [3.0, 4.0]]);
+    /// let t: Tensor<Rank2<2, 2>> = dev.tensor([[1.0, 2.0], [3.0, 4.0]]);
     /// let mut data = [0.0; 4];
     /// t.copy_into(&mut data);
     /// assert_eq!(data, [1.0, 2.0, 3.0, 4.0]);
@@ -93,7 +93,7 @@ pub trait ZerosTensor<E: Unit>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<2, 3>, f32> = dev.zeros();
+    /// let a: Tensor<Rank2<2, 3>> = dev.zeros();
     /// ```
     fn zeros<S: Shape + Default>(&self) -> Tensor<S, E, Self> {
         self.try_zeros_like::<S>(&Default::default()).unwrap()
@@ -110,15 +110,15 @@ pub trait ZerosTensor<E: Unit>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<(usize, Const<3>), f32> = dev.zeros_like(&(5, Const));
+    /// let a: Tensor<(usize, Const<3>)> = dev.zeros_like(&(5, Const));
     /// ```
     ///
     /// Given another tensor:
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<2, 3>, f32> = dev.zeros();
-    /// let b: Tensor<Rank2<2, 3>, f32> = dev.zeros_like(&a);
+    /// let a: Tensor<Rank2<2, 3>> = dev.zeros();
+    /// let b: Tensor<Rank2<2, 3>> = dev.zeros_like(&a);
     /// ```
     fn zeros_like<S: HasShape>(&self, src: &S) -> Tensor<S::Shape, E, Self> {
         self.try_zeros_like(src).unwrap()
@@ -141,7 +141,7 @@ pub trait OnesTensor<E: Unit>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<2, 3>, f32> = dev.ones();
+    /// let a: Tensor<Rank2<2, 3>> = dev.ones();
     /// ```
     fn ones<S: Shape + Default>(&self) -> Tensor<S, E, Self> {
         self.try_ones_like::<S>(&Default::default()).unwrap()
@@ -158,14 +158,14 @@ pub trait OnesTensor<E: Unit>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<(usize, Const<3>), f32> = dev.ones_like(&(5, Const));
+    /// let a: Tensor<(usize, Const<3>)> = dev.ones_like(&(5, Const));
     /// ```
     ///
     /// Given another tensor:
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<2, 3>, f32> = dev.ones();
+    /// let a: Tensor<Rank2<2, 3>> = dev.ones();
     /// let b = dev.ones_like(&a);
     /// ```
     fn ones_like<S: HasShape>(&self, src: &S) -> Tensor<S::Shape, E, Self> {
@@ -189,7 +189,7 @@ pub trait RandTensor<E: Unit>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<2, 3>, f32> = dev.rand();
+    /// let a: Tensor<Rank2<2, 3>> = dev.rand();
     /// ```
     fn rand<S: Shape + Default>(&self) -> Tensor<S, E, Self> {
         self.try_rand_like::<S>(&Default::default()).unwrap()
@@ -204,14 +204,14 @@ pub trait RandTensor<E: Unit>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<(usize, Const<3>), f32> = dev.rand_like(&(5, Const::<3>));
+    /// let a: Tensor<(usize, Const<3>)> = dev.rand_like(&(5, Const::<3>));
     /// ```
     ///
     /// Given another tensor:
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<2, 3>, f32> = dev.rand();
+    /// let a: Tensor<Rank2<2, 3>> = dev.rand();
     /// let b = dev.rand_like(&a);
     /// ```
     fn rand_like<S: HasShape>(&self, src: &S) -> Tensor<S::Shape, E, Self> {
@@ -253,7 +253,7 @@ pub trait RandnTensor<E: Unit>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<2, 3>, f32> = dev.randn();
+    /// let a: Tensor<Rank2<2, 3>> = dev.randn();
     /// ```
     fn randn<S: Shape + Default>(&self) -> Tensor<S, E, Self> {
         self.try_randn_like::<S>(&Default::default()).unwrap()
@@ -268,14 +268,14 @@ pub trait RandnTensor<E: Unit>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<(usize, Const<3>), f32> = dev.randn_like(&(5, Const::<3>));
+    /// let a: Tensor<(usize, Const<3>)> = dev.randn_like(&(5, Const::<3>));
     /// ```
     ///
     /// Given another tensor:
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<2, 3>, f32> = dev.randn();
+    /// let a: Tensor<Rank2<2, 3>> = dev.randn();
     /// let b = dev.randn_like(&a);
     /// ```
     fn randn_like<S: HasShape>(&self, src: &S) -> Tensor<S::Shape, E, Self> {
@@ -316,7 +316,7 @@ pub trait TensorFromArray<Src, S: Shape, E: Unit>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let _: Tensor<Rank2<2, 3>, f32> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+    /// let _: Tensor<Rank2<2, 3>> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
     /// ```
     fn tensor(&self, src: Src) -> Tensor<S, E, Self> {
         self.try_tensor(src).unwrap()

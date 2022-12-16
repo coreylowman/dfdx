@@ -30,7 +30,7 @@ use crate::{
 /// type C = Tensor<Rank3<4, 2, 3>, usize, Cpu, NoneTape>;
 /// ```
 #[derive(Debug, Clone)]
-pub struct Tensor<S: Shape, E: Unit, D: DeviceStorage = Cpu, T = NoneTape> {
+pub struct Tensor<S: Shape, E: Unit = f32, D: DeviceStorage = Cpu, T = NoneTape> {
     pub(crate) id: UniqueId,
     pub(crate) storage: D::Storage<S, E>,
     pub(crate) device: D,
@@ -90,7 +90,7 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let a: Tensor<Rank2<2, 3>, f32> = dev.zeros();
+/// let a: Tensor<Rank2<2, 3>> = dev.zeros();
 /// let a: Tensor<Rank2<2, 3>, f32, _, OwnedTape<Cpu>> = a.put_tape(Default::default());
 /// ```
 pub trait PutTape<T> {

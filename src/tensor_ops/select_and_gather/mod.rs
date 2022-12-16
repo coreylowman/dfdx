@@ -58,15 +58,15 @@ pub trait SelectTo<D: DeviceStorage>: HasErr + HasShape {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<3, 5>, f32> = dev.zeros();
+    /// let a: Tensor<Rank2<3, 5>> = dev.zeros();
     ///
     /// // select from the 0th axis
     /// let idx: Tensor<Rank0, usize> = dev.tensor(0);
-    /// let _: Tensor<Rank1<5>, f32> = a.clone().select(idx);
+    /// let _: Tensor<Rank1<5>> = a.clone().select(idx);
     ///
     /// // select from the 1st axis
     /// let idx: Tensor<Rank1<3>, usize> = dev.tensor([0, 2, 4]);
-    /// let _: Tensor<Rank1<3>, f32> = a.select(idx);
+    /// let _: Tensor<Rank1<3>> = a.select(idx);
     ///```
     fn select<Dst: Shape, Idx: Shape>(self, idx: Tensor<Idx, usize, D>) -> Self::WithShape<Dst>
     where
@@ -126,15 +126,15 @@ pub trait GatherTo<D: DeviceStorage>: HasErr + HasShape {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<3, 5>, f32> = dev.zeros();
+    /// let a: Tensor<Rank2<3, 5>> = dev.zeros();
     ///
     /// // gather from the 0th axis; dimension 0 becomes 4
     /// let idx: Tensor<Rank1<4>, usize> = dev.tensor([0, 0, 1, 2]);
-    /// let _: Tensor<Rank2<4, 5>, f32> = a.clone().gather(idx);
+    /// let _: Tensor<Rank2<4, 5>> = a.clone().gather(idx);
     ///
     /// // gather from the 1st axis; dimension 1 becomes 2
     /// let idx: Tensor<Rank2<3, 2>, usize> = dev.tensor([[0, 1], [2, 3], [4, 4]]);
-    /// let _: Tensor<Rank2<3, 2>, f32> = a.gather(idx);
+    /// let _: Tensor<Rank2<3, 2>> = a.gather(idx);
     ///```
     fn gather<Dst: Shape, Idx: Shape>(self, idx: Tensor<Idx, usize, D>) -> Self::WithShape<Dst>
     where

@@ -8,6 +8,8 @@
 //! 4. A [crate::gradients::Tape], which can either actually be a tape ([crate::gradients::OwnedTape])
 //!    or be empty ([crate::gradients::NoneTape]).
 //!
+//! Which are all generic parameters of [Tensor]. See the type's docstring for more info
+//!
 //! # Creating a device
 //!
 //! In order to do anything with tensors, you first need to construct the device that they will be stored on:
@@ -36,8 +38,8 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let _: Tensor<Rank1<5>, f32> = dev.zeros();
-//! let _: Tensor<Rank2<3, 2>, f32> = dev.ones();
+//! let _: Tensor<Rank1<5>> = dev.zeros();
+//! let _: Tensor<Rank2<3, 2>> = dev.ones();
 //! ```
 //!
 //! ### Filled with random data
@@ -47,8 +49,8 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let _: Tensor<Rank1<3>, f32> = dev.rand(); // uniform random data
-//! let _: Tensor<Rank2<4, 3>, f32> = dev.randn(); // normal random data
+//! let _: Tensor<Rank1<3>> = dev.rand(); // uniform random data
+//! let _: Tensor<Rank2<4, 3>> = dev.randn(); // normal random data
 //! ```
 //!
 //! ### Copy data from slices
@@ -58,7 +60,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let mut a: Tensor<Rank1<1000>, f32> = dev.zeros();
+//! let mut a: Tensor<Rank1<1000>> = dev.zeros();
 //! let buf: Vec<f32> = vec![1.0; 1000];
 //! a.copy_from(&buf);
 //! ```
@@ -78,7 +80,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let t: Tensor<Rank2<2, 3>, f32> = dev.zeros();
+//! let t: Tensor<Rank2<2, 3>> = dev.zeros();
 //! let t: [[f32; 3]; 2] = t.array();
 //! ```
 //!
@@ -93,8 +95,8 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let t: Tensor<Rank1<5>, f32> = dev.zeros();
-//! let t_clone: Tensor<Rank1<5>, f32, _, OwnedTape<_>> = t.trace(); // copies t
+//! let t: Tensor<Rank1<5>> = dev.zeros();
+//! let t_clone: Tensor<Rank1<5>, _, _, OwnedTape<_>> = t.trace(); // copies t
 //! let t = t.traced(); // takes ownership of t
 //! ```
 //!

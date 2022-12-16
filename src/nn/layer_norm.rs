@@ -17,7 +17,7 @@ use super::{Module, ModuleMut, ResetParams};
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let model: LayerNorm1D<5> = dev.build_module();
-/// let _: Tensor<Rank1<5>, f32> = model.forward(dev.zeros::<Rank1<5>>());
+/// let _: Tensor<Rank1<5>> = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(Debug, Clone)]
 pub struct LayerNorm1D<const M: usize, D: Device<f32> = Cpu> {

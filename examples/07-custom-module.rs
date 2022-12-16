@@ -54,12 +54,12 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> GradientUpdate<Cpu, 
 }
 
 // impl Module for single item
-impl<const IN: usize, const INNER: usize, const OUT: usize> nn::Module<Tensor<Rank1<IN>, f32, Cpu>>
+impl<const IN: usize, const INNER: usize, const OUT: usize> nn::Module<Tensor<Rank1<IN>>>
     for Mlp<IN, INNER, OUT>
 {
-    type Output = Tensor<Rank1<OUT>, f32, Cpu>;
+    type Output = Tensor<Rank1<OUT>>;
 
-    fn forward(&self, x: Tensor<Rank1<IN>, f32, Cpu>) -> Self::Output {
+    fn forward(&self, x: Tensor<Rank1<IN>>) -> Self::Output {
         let x = self.l1.forward(x);
         let x = self.relu.forward(x);
         self.l2.forward(x)
