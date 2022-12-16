@@ -110,6 +110,9 @@
 pub(crate) mod cpu;
 mod tensor_impls;
 
+#[cfg(feature = "cuda")]
+pub(crate) mod cuda;
+
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
 

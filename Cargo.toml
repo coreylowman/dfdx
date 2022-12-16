@@ -31,14 +31,17 @@ matrixmultiply = { version = "0.3.2", default-features = false }
 zip = { version = "0.6.2", default-features = false, optional = true }
 cblas-sys = { version = "0.1.4", default-features = false, optional = true }
 libc = { version = "0.2", default-features = false, optional = true }
+cudarc = { version = "0.3.0", default-features = false, optional = true }
 
 [features]
-default = ["std", "numpy"]
+default = ["std", "numpy", "cuda"]
 std = ["no-std-compat/std", "rand/std", "rand_distr/std"]
 nightly = []
 numpy = ["dep:zip", "std"]
 cblas = ["dep:cblas-sys", "dep:libc"]
 intel-mkl = ["cblas"]
+cuda = ["dep:cudarc"]
+test-cuda = ["cuda"]
 
 [dev-dependencies]
 rand = "0.8.5"
