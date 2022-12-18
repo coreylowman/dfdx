@@ -165,7 +165,11 @@ pub fn keep_denormals() {
 pub(crate) mod tests {
     const TOLERANCE: f32 = 1e-6;
 
+    #[cfg(not(feature = "test-cuda"))]
     pub type TestDevice = crate::tensor::Cpu;
+
+    #[cfg(feature = "test-cuda")]
+    pub type TestDevice = crate::tensor::Cuda;
 
     macro_rules! build_test_device {
         () => {{

@@ -51,18 +51,22 @@ pub struct Cuda {
 
 impl Default for Cuda {
     fn default() -> Self {
-        Self::seed_from_u64(0, 0)
+        Self::seed_from_u64(0)
     }
 }
 
 impl Cuda {
     /// Constructs rng with the given seed.
-    pub fn seed_from_u64(ordinal: usize, seed: u64) -> Self {
-        Self::try_seed_from_u64(ordinal, seed).unwrap()
+    pub fn seed_from_u64(seed: u64) -> Self {
+        Self::try_seed_from_u64(seed).unwrap()
     }
 
     /// Constructs rng with the given seed.
-    pub fn try_seed_from_u64(ordinal: usize, seed: u64) -> Result<Self, CudaError> {
+    pub fn try_seed_from_u64(seed: u64) -> Result<Self, CudaError> {
+        Self::try_build(0, seed)
+    }
+
+    pub fn try_build(ordinal: usize, seed: u64) -> Result<Self, CudaError> {
         let cpu = Cpu::seed_from_u64(seed);
         let dev = CudaDeviceBuilder::new(ordinal).build()?;
         let blas = Arc::new(CudaBlas::new(dev.clone())?);
