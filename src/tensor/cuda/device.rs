@@ -4,10 +4,8 @@ use crate::tensor::storage_traits::{DeviceStorage, HasErr};
 use cudarc::{
     blas::CudaBlas,
     cublas::result::CublasError,
-    device::{
-        BuildError, CudaDevice, CudaDeviceBuilder, CudaError as DeviceError, CudaSlice,
-        ValidAsZeroBits,
-    },
+    device::{BuildError, CudaDevice, CudaDeviceBuilder, CudaSlice},
+    driver::result::DriverError,
 };
 use rand::SeedableRng;
 use rand::{rngs::StdRng, Rng};
@@ -17,7 +15,25 @@ use std::sync::{Arc, Mutex};
 pub enum CudaError {
     Build(BuildError),
     Blas(CublasError),
-    Device(DeviceError),
+    Driver(DriverError),
+}
+
+impl From<BuildError> for CudaError {
+    fn from(value: BuildError) -> Self {
+        Self::Build(value)
+    }
+}
+
+impl From<CublasError> for CudaError {
+    fn from(value: CublasError) -> Self {
+        Self::Blas(value)
+    }
+}
+
+impl From<DriverError> for CudaError {
+    fn from(value: DriverError) -> Self {
+        Self::Driver(value)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -42,7 +58,7 @@ impl Cuda {
     /// Constructs rng with the given seed.
     pub fn try_seed_from_u64(ordinal: usize, seed: u64) -> Result<Self, CudaError> {
         let rng = Arc::new(Mutex::new(StdRng::seed_from_u64(seed)));
-        let dev = CudaDeviceBuilder::new(0).build()?;
+        let dev = CudaDeviceBuilder::new(ordinal).build()?;
         let blas = Arc::new(CudaBlas::new(dev.clone())?);
         Ok(Self { rng, dev, blas })
     }
@@ -73,7 +89,7 @@ impl<S: Shape, E: Dtype> HasDtype for CudaArray<S, E> {
 
 impl std::fmt::Display for CudaError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        todo!();
+        write!(f, "{:?}", self)
     }
 }
 
@@ -98,38 +114,30 @@ impl DeviceStorage for Cuda {
 
 impl Cuda {
     #[inline]
-    pub(crate) fn try_new_with<S: Shape, E: Default + Clone + ValidAsZeroBits>(
+    pub(crate) fn try_new_with<S: Shape, E: Default + Clone>(
         &self,
         shape: S,
         elem: E,
     ) -> Result<CudaArray<S, E>, CudaError> {
         let numel = shape.num_elements();
         let strides: S::Concrete = shape.strides();
-        let mut data = self.dev.alloc_zeros_async::<E>(numel)?;
-        let host_data = std::vec![elem; numel];
-        self.dev.sync_copy_into(&host_data, &mut data)?;
-        let data = Arc::new(data);
         Ok(CudaArray {
-            data,
+            data: Arc::new(self.dev.take_async(std::vec![elem; numel])?),
             shape,
             strides,
         })
     }
 
     #[inline]
-    pub(crate) fn try_new_like<S: Shape, E: Default + Clone + ValidAsZeroBits>(
+    pub(crate) fn try_new_like<S: Shape, E: Default + Clone>(
         &self,
         other: &CudaArray<S, E>,
         elem: E,
     ) -> Result<CudaArray<S, E>, CudaError> {
         let numel = other.shape.num_elements();
         let strides: S::Concrete = other.shape.strides();
-        let mut data = self.dev.alloc_zeros_async::<E>(numel)?;
-        let host_data = std::vec![elem; numel];
-        self.dev.sync_copy_into(&host_data, &mut data)?;
-        let data = Arc::new(data);
         Ok(CudaArray {
-            data,
+            data: Arc::new(self.dev.take_async(std::vec![elem; numel])?),
             shape: other.shape,
             strides,
         })
