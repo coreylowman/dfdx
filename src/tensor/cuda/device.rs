@@ -1,4 +1,5 @@
 use crate::shapes::{Dtype, HasDtype, HasShape, HasUnitType, Shape, Unit};
+use crate::tensor::cpu::{Cpu, CpuError};
 use crate::tensor::storage_traits::{DeviceStorage, HasErr};
 
 use cudarc::{
@@ -7,15 +8,20 @@ use cudarc::{
     device::{BuildError, CudaDevice, CudaDeviceBuilder, CudaSlice},
     driver::result::DriverError,
 };
-use rand::SeedableRng;
-use rand::{rngs::StdRng, Rng};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub enum CudaError {
     Build(BuildError),
     Blas(CublasError),
     Driver(DriverError),
+    Cpu(CpuError),
+}
+
+impl From<CpuError> for CudaError {
+    fn from(value: CpuError) -> Self {
+        Self::Cpu(value)
+    }
 }
 
 impl From<BuildError> for CudaError {
@@ -38,7 +44,7 @@ impl From<DriverError> for CudaError {
 
 #[derive(Clone, Debug)]
 pub struct Cuda {
-    pub(crate) rng: Arc<Mutex<StdRng>>,
+    pub(crate) cpu: Cpu,
     pub(crate) dev: Arc<CudaDevice>,
     pub(crate) blas: Arc<CudaBlas>,
 }
@@ -57,10 +63,10 @@ impl Cuda {
 
     /// Constructs rng with the given seed.
     pub fn try_seed_from_u64(ordinal: usize, seed: u64) -> Result<Self, CudaError> {
-        let rng = Arc::new(Mutex::new(StdRng::seed_from_u64(seed)));
+        let cpu = Cpu::seed_from_u64(seed);
         let dev = CudaDeviceBuilder::new(ordinal).build()?;
         let blas = Arc::new(CudaBlas::new(dev.clone())?);
-        Ok(Self { rng, dev, blas })
+        Ok(Self { cpu, dev, blas })
     }
 }
 
@@ -104,32 +110,17 @@ impl DeviceStorage for Cuda {
         &self,
         storage: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err> {
-        self.try_new_like(storage, Default::default())
+        self.try_filled_with_like(storage, Default::default())
     }
 
     fn random_u64(&self) -> u64 {
-        self.rng.lock().unwrap().gen()
+        self.cpu.random_u64()
     }
 }
 
 impl Cuda {
     #[inline]
-    pub(crate) fn try_new_with<S: Shape, E: Default + Clone>(
-        &self,
-        shape: S,
-        elem: E,
-    ) -> Result<CudaArray<S, E>, CudaError> {
-        let numel = shape.num_elements();
-        let strides: S::Concrete = shape.strides();
-        Ok(CudaArray {
-            data: Arc::new(self.dev.take_async(std::vec![elem; numel])?),
-            shape,
-            strides,
-        })
-    }
-
-    #[inline]
-    pub(crate) fn try_new_like<S: Shape, E: Default + Clone>(
+    pub(crate) fn try_filled_with_like<S: Shape, E: Default + Clone>(
         &self,
         other: &CudaArray<S, E>,
         elem: E,
