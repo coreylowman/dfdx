@@ -167,19 +167,6 @@ pub(crate) mod tests {
 
     pub type TestDevice = crate::tensor::Cpu;
 
-    macro_rules! build_test_device {
-        () => {{
-            use crate::tensor::Cpu;
-            Cpu::default()
-        }};
-        ($Seed:expr) => {{
-            use crate::tensor::Cpu;
-            Cpu::seed_from_u64($Seed)
-        }};
-    }
-
-    pub(crate) use build_test_device;
-
     pub trait AssertClose {
         fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)>;
         fn assert_close(&self, rhs: &Self, tolerance: f32)

@@ -51,11 +51,11 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<DropoutKernelOp, E>, T: Tape<D>> Tensor<
 mod tests {
     use crate::tensor::*;
     use crate::tensor_ops::*;
-    use crate::tests::{assert_close, build_test_device};
+    use crate::tests::{assert_close, TestDevice};
 
     #[test]
     fn test_dropout_all_0d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t: Tensor0D<_> = dev.tensor(3.0);
         let r = t.trace().dropout(1.0);
         assert_eq!(r.array(), 0.0);
@@ -65,7 +65,7 @@ mod tests {
 
     #[test]
     fn test_dropout_none_0d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t: Tensor0D<_> = dev.tensor(3.0);
         let r = t.trace().dropout(0.0);
         assert_eq!(r.array(), 3.0);
@@ -75,7 +75,7 @@ mod tests {
 
     #[test]
     fn test_dropout_1d_with_non_positive_values() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([0.0, 2.0, -3.0, -4.0, 0.0]);
         let r = t.trace().dropout(0.5);
         assert_eq!(r.array(), [0.0, 4.0, -6.0, 0.0, 0.0]);
@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn test_dropout_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([[0.05, 0.1, -0.2], [0.3, -0.4, 0.5]]);
         let r = t.trace().dropout(0.6);
         assert_close(&r.array(), &[[0.125, 0.25, -0.5], [0.0, 0.0, 1.25]]);

@@ -45,11 +45,11 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> StddevTo for Tensor<S, f32, D, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::build_test_device;
+    use crate::tests::TestDevice;
 
     #[test]
     fn test_std_axis_0_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r = t.trace().stddev::<Rank1<4>, _>(1e-8);
         assert_eq!(r.array(), [0.5, 0.0001, 1.0, 3.0]);
@@ -62,7 +62,7 @@ mod tests {
 
     #[test]
     fn test_std_axis_1_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r = t.trace().stddev::<Rank1<2>, _>(0.0);
         assert_eq!(r.array(), [1.118034, 3.7666297]);

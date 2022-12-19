@@ -54,11 +54,11 @@ mod tests {
     use crate::shapes::Axis;
     use crate::tensor::*;
     use crate::tensor_ops::*;
-    use crate::tests::{assert_close, build_test_device};
+    use crate::tests::{assert_close, TestDevice};
 
     #[test]
     fn test_1d_normalize_axis_last() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([-2.0, 0.0, 5.0]);
         let r = a.trace().normalize(1e-5);
         assert_eq!(r.array(), [-1.0190487, -0.3396829, 1.3587316]);
@@ -69,7 +69,7 @@ mod tests {
 
     #[test]
     fn test_2d_normalize_axis_last() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
         let r = a.trace().normalize::<Axis<1>>(1e-5);
         assert_eq!(
@@ -91,7 +91,7 @@ mod tests {
 
     #[test]
     fn test_2d_normalize_axis_first() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([[-2.0, 0.0], [1.0, 2.0], [4.0, 5.0]]);
         let r = a.trace().normalize::<Axis<0>>(1e-5);
         assert_eq!(
@@ -115,7 +115,7 @@ mod tests {
 
     #[test]
     fn test_3d_normalize_axis_last() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a: Tensor3D<4, 2, 3, _> = dev.ones();
         let r = a.trace().normalize::<Axis<2>>(1e-5);
         assert_eq!(r.array(), [[[0.0; 3]; 2]; 4]);

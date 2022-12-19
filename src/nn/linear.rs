@@ -121,7 +121,7 @@ mod tests {
     use super::*;
     use crate::{
         nn::{tests::SimpleUpdater, ModuleBuilder},
-        tests::{assert_close, build_test_device},
+        tests::{assert_close, TestDevice},
         unique_id::HasUniqueId,
     };
 
@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn test_linear_initialize() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let m: Linear<2000, 1, _> = dev.build_module();
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
@@ -146,7 +146,7 @@ mod tests {
 
     #[test]
     fn test_forward_1d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let model = Linear {
             weight: dev.tensor(W),
@@ -170,7 +170,7 @@ mod tests {
 
     #[test]
     fn test_forward_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let model = Linear {
             weight: dev.tensor(W),
@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn test_forward_3d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let model = Linear {
             weight: dev.tensor(W),
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_linear_missing_gradients() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut model: Linear<5, 3, _> = dev.build_module();
         let mut g: SimpleUpdater<_> = Default::default();

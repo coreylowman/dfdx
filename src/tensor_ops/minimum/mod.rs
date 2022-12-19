@@ -44,11 +44,11 @@ impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
 }
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::build_test_device};
+    use crate::{tensor::*, tensor_ops::*, tests::TestDevice};
 
     #[test]
     fn test_minimum() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]]);
         let b = dev.tensor([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
 

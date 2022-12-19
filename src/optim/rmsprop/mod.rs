@@ -183,10 +183,10 @@ mod tests {
     use super::*;
     use crate::tensor::*;
     use crate::tensor_ops::*;
-    use crate::tests::build_test_device;
+    use crate::tests::TestDevice;
 
     fn test_matches_expected(cfg: RMSpropConfig<f32>, expected: [[f32; 5]; 5]) {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let mut t: Tensor1D<5, _> = dev.ones();
         let mut opt = RMSprop::new(cfg);

@@ -173,11 +173,11 @@ pub fn binary_cross_entropy_with_logits_loss<S: Shape, D: Device<f32>, T: Tape<D
 mod tests {
     use super::*;
     use crate::tensor::*;
-    use crate::tests::{assert_close, build_test_device};
+    use crate::tests::{assert_close, TestDevice};
 
     #[test]
     fn test_mse() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor([0.87248087, -0.24252531, -1.0060949, 1.155084, 1.5545048]);
         let y = dev.tensor([-0.90954804, -1.0193185, -0.39221755, 2.2524886, 1.3035554]);
         let loss = mse_loss(x.trace(), y);
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn test_mae() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor([0.87248087, -0.24252531, -1.0060949, 1.155084, 1.5545048]);
         let y = dev.tensor([-0.90954804, -1.0193186, -0.39221755, 2.2524886, 1.3035554]);
         let loss = mae_loss(x.trace(), y);
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_soft_cross_entropy() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor([
             [0.01322946, 0.7367754, -0.8874471, 0.6997109, 0.98312855],
             [-0.19822043, 1.192167, -0.7495395, -1.5733303, -1.4898887],
@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn test_hard_crossentropy() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor([0.87248087, -0.24252531, -1.0060949, 1.155084, 1.5545048]);
         let losses = [1.5655229, 2.680529, 3.444099, 1.2829198, 0.883499];
         for i in 0..5 {
@@ -246,7 +246,7 @@ mod tests {
 
     #[test]
     fn test_kl_div() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let logits = dev.tensor([
             [-0.2354, 0.4408, 0.9688],
             [-0.2187, -0.3451, -1.5473],
@@ -278,7 +278,7 @@ mod tests {
 
     #[test]
     fn test_bce() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let logit = dev.tensor([
             [-0.4092005, -0.6706018, 0.9201696],
             [-1.6583557, 1.6978683, -1.4827578],
@@ -315,7 +315,7 @@ mod tests {
 
     #[test]
     fn test_bce_wide_range() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let logit = dev.tensor([[100.0; 3], [-100.0; 3], [-1.0, 0.0, 1.0]]);
         let targ = dev.tensor([[0.0, 0.5, 1.0]; 3]);
 
@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_huber_loss() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor([
             [1.0095837, -1.0026205, -0.1126093, -0.1539351, -0.3688708],
             [2.6373475, 0.6761999, -1.3586733, 0.486154, -0.6206786],
@@ -381,7 +381,7 @@ mod tests {
 
     #[test]
     fn test_smooth_l1_loss() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor([
             [1.0095837, -1.0026205, -0.1126093, -0.1539351, -0.3688708],
             [2.6373475, 0.6761999, -1.3586733, 0.486154, -0.6206786],

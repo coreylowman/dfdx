@@ -183,12 +183,12 @@ mod tests {
         nn::ModuleBuilder,
         shapes::Rank3,
         tensor::{AsArray, RandnTensor},
-        tests::{assert_close, build_test_device},
+        tests::{assert_close, TestDevice},
     };
 
     #[test]
     fn test_decoder_block_forward() {
-        let dev = build_test_device!(2);
+        let dev = TestDevice::seed_from_u64(2);
 
         const BATCH: usize = 4;
         const S1: usize = 8;

@@ -131,13 +131,13 @@ pub use tensor_impls::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5
 mod tests {
     use super::*;
     use crate::shapes::*;
-    use crate::tests::build_test_device;
+    use crate::tests::TestDevice;
     use crate::unique_id::{unique_id, UniqueId};
     use std::collections::HashSet;
 
     #[test]
     fn test_id() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut ids: HashSet<UniqueId> = Default::default();
         ids.insert(unique_id());
@@ -165,7 +165,7 @@ mod tests {
 
     #[test]
     fn test_ids_with_clone() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t1: Tensor<Rank1<32>, f32, _> = dev.zeros();
         let t2 = t1.clone();
         assert_eq!(t1.id, t2.id);
@@ -173,7 +173,7 @@ mod tests {
 
     #[test]
     fn test_ids_with_split_and_put() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t1: Tensor<Rank1<32>, f32, _> = dev.zeros();
         let t1_id = t1.id;
         let (t2, tape) = t1.split_tape();
@@ -184,21 +184,21 @@ mod tests {
 
     #[test]
     fn test_zeros() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x: Tensor<Rank2<3, 2>, f32, _> = dev.zeros();
         assert_eq!(x.array(), [[0.0; 2]; 3]);
     }
 
     #[test]
     fn test_ones() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x: Tensor<Rank2<3, 2>, f32, _> = dev.ones();
         assert_eq!(x.array(), [[1.0; 2]; 3]);
     }
 
     #[test]
     fn test_convert_array() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
         let t = dev.tensor(a);
         assert_eq!(t.array(), a);
@@ -206,7 +206,7 @@ mod tests {
 
     #[test]
     fn test_convert_slice() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let data = [1.0, 2.0, 3.0, 4.0];
         let mut t: Tensor<Rank2<2, 2>, f32, _> = dev.zeros();
         t.copy_from(&data);
@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn fuzz_test_rand() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t: Tensor<Rank1<1000>, f32, _> = dev.rand();
         for v in t.as_vec() {
             assert!((0.0..1.0).contains(&v));
@@ -224,7 +224,7 @@ mod tests {
 
     #[test]
     fn test_randn() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let _ = dev.randn::<Rank1<1000>>();
     }
 }

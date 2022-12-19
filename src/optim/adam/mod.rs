@@ -164,11 +164,11 @@ mod tests {
     use super::*;
     use crate::tensor::*;
     use crate::tensor_ops::*;
-    use crate::tests::{assert_close, build_test_device};
+    use crate::tests::{assert_close, TestDevice};
 
     #[test]
     fn test_default_adam_params() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let mut opt = Adam::default();
         let mut t: Tensor1D<5, _> = dev.ones();
         let rate = dev.tensor([1e-6, 1e-5, 1e-4, 1e-3, 1e-2]);
@@ -194,7 +194,7 @@ mod tests {
 
     #[test]
     fn test_custom_adam_one_params() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let mut opt = Adam::new(AdamConfig {
             lr: 1e-3,
             betas: [0.5, 0.25],
@@ -225,7 +225,7 @@ mod tests {
 
     #[test]
     fn test_adam_l2_decay() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let mut opt = Adam::new(AdamConfig {
             betas: [0.5, 0.25],
             weight_decay: Some(WeightDecay::L2(1.0)),
@@ -255,7 +255,7 @@ mod tests {
 
     #[test]
     fn test_adam_decoupled_decay() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let mut opt = Adam::new(AdamConfig {
             betas: [0.5, 0.25],
             weight_decay: Some(WeightDecay::Decoupled(1.0)),
@@ -285,7 +285,7 @@ mod tests {
 
     // #[test]
     // fn test_adam_changes_all_params() {
-    //     let dev = build_test_device!();
+    //     let dev: TestDevice = Default::default();
     //     type Model = (Linear<5, 16>, ReLU, Linear<16, 16>, ReLU, Linear<16, 10>);
     //     let mut rng = StdRng::seed_from_u64(0);
     //     let mut model: Model = Default::default();
@@ -318,7 +318,7 @@ mod tests {
 
     // #[test]
     // fn test_adam_unused_params() {
-    //     let dev = build_test_device!();
+    //     let dev: TestDevice = Default::default();
     //     type Model = (Linear<5, 16>, Linear<16, 10>);
     //     let mut model: Model = Default::default();
     //     let mut opt: Adam<Model> = Default::default();

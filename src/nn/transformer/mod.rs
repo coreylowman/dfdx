@@ -137,12 +137,12 @@ mod tests {
         shapes::*,
         tensor::*,
         tensor_ops::*,
-        tests::build_test_device,
+        tests::TestDevice,
     };
 
     #[test]
     fn test_forward() {
-        let dev = build_test_device!(0);
+        let dev = TestDevice::seed_from_u64(0);
         let mut t: Transformer<16, 4, 3, 3, 8, _> = dev.build_module();
 
         // unbatched
@@ -158,7 +158,7 @@ mod tests {
 
     #[test]
     fn test_backward() {
-        let dev = build_test_device!(0);
+        let dev = TestDevice::seed_from_u64(0);
         let mut t: Transformer<16, 4, 3, 3, 8> = dev.build_module();
 
         let src = dev.randn::<Rank3<4, 12, 16>>();

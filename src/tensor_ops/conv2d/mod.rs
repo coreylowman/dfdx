@@ -201,7 +201,7 @@ mod tests {
         shapes::*,
         tensor::*,
         tensor_ops::*,
-        tests::{assert_close, build_test_device, AssertClose},
+        tests::{assert_close, AssertClose, TestDevice},
     };
 
     #[test]
@@ -212,7 +212,7 @@ mod tests {
     /// q(x).exp().mean().backward()
     /// ```
     fn test_conv2d_default_stride_and_padding() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let weight = dev.tensor([
             [[[-0.04958433, -0.43007267], [0.01935136, 0.09778714]]],
             [[[0.44083858, -0.20507240], [-0.30017477, -0.10937047]]],
@@ -254,7 +254,7 @@ mod tests {
     /// q(x).exp().mean().backward()
     /// ```
     fn test_conv2d_stride_2() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let weight = dev.tensor([
             [[[0.44704646, -0.29563826], [0.29228759, -0.16575140]]],
             [[[-0.30488998, 0.25222939], [0.13279295, 0.38153177]]],
@@ -291,7 +291,7 @@ mod tests {
 
     #[test]
     fn test_conv2d_padding_1() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         #[rustfmt::skip]
         let weight = dev.tensor([
             [[[0.10215953, 0.06263646], [-0.04124039, -0.09729567]], [[-0.32656857, 0.24254093], [-0.27209827, 0.15361503]]],
@@ -338,7 +338,7 @@ mod tests {
 
     #[test]
     fn test_conv2d_stride_3_padding_4() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         #[rustfmt::skip]
         let weight = dev.tensor([
             [[[-0.10252278, -0.14387409, -0.14627469],[0.28396228, -0.14590892, 0.29269591],[0.01090384, 0.14785287, 0.29242596]]],
@@ -384,7 +384,7 @@ mod tests {
 
     #[test]
     fn test_batched_conv2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let weight = dev.tensor([
             [[[0.05998272]], [[-0.07759511]]],
             [[[0.68307382]], [[-0.56570816]]],
@@ -434,7 +434,7 @@ mod tests {
 
     #[test]
     fn test_conv2d_s4p3k2() {
-        let dev = build_test_device!(432);
+        let dev = TestDevice::seed_from_u64(432);
 
         let weight = dev.randn::<Rank4<3, 5, 2, 2>>();
         let bias = dev.randn::<Rank1<3>>();

@@ -179,11 +179,11 @@ impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<D>> GatherTo<D>
 mod tests {
     use super::*;
     use crate::tensor_ops::*;
-    use crate::tests::{assert_close, build_test_device};
+    use crate::tests::{assert_close, TestDevice};
 
     #[test]
     fn test_remove_1d_backward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.randn::<Rank1<5>>();
         let r = t.trace().select(dev.tensor(0));
         let t_array = t.array();
@@ -194,7 +194,7 @@ mod tests {
 
     #[test]
     fn test_replace_1d_backward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.randn::<Rank1<5>>();
         let r = t.trace().gather(dev.tensor([0, 1, 1, 3]));
         let t_array = t.array();
@@ -214,7 +214,7 @@ mod tests {
 
     #[test]
     fn test_replace_1d_less_backward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t: Tensor1D<5, _> = dev.randn();
         let t_array = t.array();
         let r = t.trace().gather(dev.tensor([0, 3]));
@@ -225,7 +225,7 @@ mod tests {
 
     #[test]
     fn test_select_last_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
         let r = t.trace().select(dev.tensor([1, 1]));
         assert_eq!(r.array(), [2.0, -2.0]);
@@ -235,7 +235,7 @@ mod tests {
 
     #[test]
     fn test_replace_1d_more_backward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t: Tensor1D<5, _> = dev.randn();
         let _t = t.array();
         let r = t.trace().gather(dev.tensor([0, 1, 2, 3, 4, 2, 4, 4]));
@@ -252,7 +252,7 @@ mod tests {
 
     #[test]
     fn test_remove_3d_axis_0_backward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.randn::<Rank3<2, 3, 4>>();
         let t_array = t.array();
         let r = t.trace().select(dev.tensor(0));
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn test_remove_3d_axis_1_backward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.randn::<Rank3<2, 3, 4>>();
         let t_array = t.array();
         let r = t.trace().select(dev.tensor([1, 2]));
@@ -284,7 +284,7 @@ mod tests {
 
     #[test]
     fn test_remove_3d_axis_2_backward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.randn::<Rank3<2, 3, 4>>();
         let t_array = t.array();
         let r = t.trace().select(dev.tensor([[2, 3, 2], [1, 1, 0]]));
@@ -315,7 +315,7 @@ mod tests {
 
     #[test]
     fn test_select_batch_backwards() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t: Tensor2D<4, 5, _> = dev.randn::<Rank2<4, 5>>();
         let t_array = t.array();
         let r = t.trace().gather(dev.tensor([[2, 0, 3], [0, 0, 3]]));

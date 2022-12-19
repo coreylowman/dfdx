@@ -89,11 +89,11 @@ impl<S: Shape, E: Dtype, D: BroadcastKernel<E>, T: Tape<D>> BroadcastTo for Tens
 mod tests {
     use super::*;
     use crate::tensor_ops::*;
-    use crate::tests::{build_test_device, AssertClose};
+    use crate::tests::{AssertClose, TestDevice};
 
     #[test]
     fn test_valid_1d_broadcasts() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let _ = dev.rand::<Rank0>().broadcast::<Rank1<5>, _>();
 
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_valid_2d_broadcasts() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let _: Tensor2D<5, 3, _> = dev.zeros::<Rank0>().broadcast();
 
@@ -139,7 +139,7 @@ mod tests {
 
     #[test]
     fn test_valid_3d_broadcasts() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let _: Tensor3D<3, 5, 7, _> = dev.zeros::<Rank0>().broadcast();
 
@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn test_broadcast_backwards() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.randn::<Rank1<3>>();
         let b = dev.randn::<Rank2<5, 3>>();
         let a_up = a.trace().broadcast::<Rank2<5, 3>, _>();

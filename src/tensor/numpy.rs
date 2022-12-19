@@ -363,7 +363,7 @@ impl From<std::io::Error> for NpzError {
 mod tests {
     use crate::{
         tensor::{AsArray, TensorFromArray},
-        tests::build_test_device,
+        tests::TestDevice,
     };
 
     use super::*;
@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn test_0d_f32_save() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let x = dev.tensor(0.0f32);
 
@@ -400,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_1d_f32_save() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let x = dev.tensor([0.0f32, 1.0, 2.0, 3.0, -4.0]);
 
@@ -427,7 +427,7 @@ mod tests {
 
     #[test]
     fn test_2d_f32_save() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let x = dev.tensor([[0.0f32, 1.0, 2.0], [3.0, 4.0, 5.0]]);
 
@@ -454,7 +454,7 @@ mod tests {
 
     #[test]
     fn test_0d_f32_load() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor(2.0f32);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
@@ -473,7 +473,7 @@ mod tests {
 
     #[test]
     fn test_1d_f32_load() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let x = dev.tensor([0.0f32, 1.0, 2.0, 3.0, -4.0]);
 
@@ -496,7 +496,7 @@ mod tests {
 
     #[test]
     fn test_2d_f32_load() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor([[0.0f32, 1.0, 2.0], [3.0, 4.0, 5.0]]);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");

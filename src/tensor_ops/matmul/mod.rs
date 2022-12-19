@@ -283,12 +283,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::{assert_close, build_test_device};
+    use crate::tests::{assert_close, TestDevice};
     use crate::{shapes::*, tensor::*, tensor_ops::*};
 
     #[test]
     fn test_valid_matmuls() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         {
             let a: Tensor1D<3, _> = dev.zeros();
@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn test_matmul_normal() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let a = dev.tensor([
             [0.5086, 0.5234, 0.2684],
@@ -364,7 +364,7 @@ mod tests {
 
     #[test]
     fn test_matmul_transpose() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a: Tensor2D<4, 3, _> = dev.randn();
         let b: Tensor2D<3, 2, _> = dev.randn();
 
@@ -381,7 +381,7 @@ mod tests {
     #[test]
     fn test_matul_broadcast() {
         const N: usize = 5;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a: Tensor3D<N, 4, 3, _> = dev.randn();
         let a_array = a.array();
         let b: Tensor2D<3, 2, _> = dev.randn();
@@ -412,7 +412,7 @@ mod tests {
     #[test]
     fn test_matmul_broadcast_actual() {
         const N: usize = 5;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.randn::<Rank3<N, 4, 3>>();
         let b = dev.randn::<Rank2<3, 2>>();
         let b_up = b.trace().broadcast::<Rank3<N, 3, 2>, _>();
@@ -427,7 +427,7 @@ mod tests {
 
     #[test]
     fn test_matmul_batched_3d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let a: Tensor3D<5, 3, 2, _> = dev.randn();
         let a_array = a.array();
@@ -453,7 +453,7 @@ mod tests {
 
     #[test]
     fn test_matmul_batched_4d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let a: Tensor4D<7, 5, 3, 2, _> = dev.randn();
         let a_array = a.array();
@@ -481,7 +481,7 @@ mod tests {
 
     #[test]
     fn test_matmul_vec_normal() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let a = dev.tensor([0.7296, 0.3974, 0.9487]);
         let b = dev.tensor([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
@@ -501,7 +501,7 @@ mod tests {
 
     #[test]
     fn test_matmul_vec_transpose() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([0.7296, 0.3974, 0.9487]);
         let b = dev.tensor([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
         let r = a.trace().matmul(b.trace().permute());
@@ -519,7 +519,7 @@ mod tests {
 
     #[test]
     fn test_vecvec() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([-1.5333828, 0.6136148, -0.77502704, -1.0014728, -2.0131118]);
         let b = dev.tensor([0.43068963, -0.9757187, -0.50650096]);
         let c = a.trace().matmul(b.clone());

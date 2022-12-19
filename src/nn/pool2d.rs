@@ -56,11 +56,11 @@ impl_pools!(MinPool2D, try_min_pool2d_to);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{shapes::*, tensor::*, tests::build_test_device};
+    use crate::{shapes::*, tensor::*, tests::TestDevice};
 
     #[test]
     fn test_max_forward_3d_sizes() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.zeros::<Rank3<3, 10, 10>>();
         let _: Tensor<Rank3<3, 8, 8>, _, _> = MaxPool2D::<3>::default().forward(x.clone());
         let _: Tensor<Rank3<3, 9, 9>, _, _> = MaxPool2D::<2>::default().forward(x.clone());
@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_max_forward_4d_sizes() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.zeros::<Rank4<5, 3, 10, 10>>();
         let _: Tensor<Rank4<5, 3, 7, 7>, _, _> = MaxPool2D::<4>::default().forward(x.clone());
         let _: Tensor<Rank4<5, 3, 8, 8>, _, _> = MaxPool2D::<3>::default().forward(x.clone());
@@ -92,7 +92,7 @@ mod tests {
     fn test_max_tuple_pool_sizes() {
         type A = MaxPool2D<3>;
         type B = MaxPool2D<1, 1, 1>;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.zeros::<Rank3<1, 10, 10>>();
 
         let _: Tensor<Rank3<1, 6, 6>, _, _> = <(A, A)>::default().forward(x.clone());
@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_min_forward_3d_sizes() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.zeros::<Rank3<3, 10, 10>>();
         let _: Tensor<Rank3<3, 8, 8>, _, _> = MinPool2D::<3>::default().forward(x.clone());
         let _: Tensor<Rank3<3, 9, 9>, _, _> = MinPool2D::<2>::default().forward(x.clone());
@@ -115,7 +115,7 @@ mod tests {
 
     #[test]
     fn test_min_forward_4d_sizes() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.zeros::<Rank4<5, 3, 10, 10>>();
         let _: Tensor<Rank4<5, 3, 7, 7>, _, _> = MinPool2D::<4>::default().forward(x.clone());
         let _: Tensor<Rank4<5, 3, 8, 8>, _, _> = MinPool2D::<3>::default().forward(x.clone());
@@ -133,7 +133,7 @@ mod tests {
     fn test_min_tuple_pool_sizes() {
         type A = MinPool2D<3>;
         type B = MinPool2D<1, 1, 1>;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.zeros::<Rank3<1, 10, 10>>();
 
         let _: Tensor<Rank3<1, 6, 6>, _, _> = <(A, A)>::default().forward(x.clone());
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_avgforward_3d_sizes() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.zeros::<Rank3<3, 10, 10>>();
         let _: Tensor<Rank3<3, 8, 8>, _, _> = AvgPool2D::<3>::default().forward(x.clone());
         let _: Tensor<Rank3<3, 9, 9>, _, _> = AvgPool2D::<2>::default().forward(x.clone());
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_avgforward_4d_sizes() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.zeros::<Rank4<5, 3, 10, 10>>();
         let _: Tensor<Rank4<5, 3, 7, 7>, _, _> = AvgPool2D::<4>::default().forward(x.clone());
         let _: Tensor<Rank4<5, 3, 8, 8>, _, _> = AvgPool2D::<3>::default().forward(x.clone());
@@ -174,7 +174,7 @@ mod tests {
     fn test_avgtuple_pool_sizes() {
         type A = AvgPool2D<3>;
         type B = AvgPool2D<1, 1, 1>;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.zeros::<Rank3<1, 10, 10>>();
 
         let _: Tensor<Rank3<1, 6, 6>, _, _> = <(A, A)>::default().forward(x.clone());

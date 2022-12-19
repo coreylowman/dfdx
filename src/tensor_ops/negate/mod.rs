@@ -42,11 +42,11 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<NegateKernelOp, E>, T: Tape<D>> std::ops
 
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::build_test_device};
+    use crate::{tensor::*, tensor_ops::*, tests::TestDevice};
 
     #[test]
     fn test_1d_neg() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([-2.0, 0.0, 5.0]);
         let r = -(a.trace());
         assert_eq!(r.array(), [2.0, 0.0, -5.0]);

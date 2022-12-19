@@ -103,13 +103,13 @@ mod tests {
     use crate::{gradients::*, shapes::*, tensor_ops::*};
     use crate::{
         nn::{tests::SimpleUpdater, Linear, ModuleBuilder},
-        tests::build_test_device,
+        tests::TestDevice,
         unique_id::HasUniqueId,
     };
 
     #[test]
     fn test_unused() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let m: SplitInto<(Linear<1, 1, _>, Linear<1, 1, _>)> = dev.build_module();
         let (left, right) = m.forward(dev.randn::<Rank1<1>>().trace());
         let r = right.retaped::<NoneTape>();
@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     fn test_split_into_2() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>)>;
         let m: Model = dev.build_module();
         let _: (Tensor<Rank1<1>, _, _>, Tensor<Rank1<2>, _, _, OwnedTape<_>>) =
@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn test_split_into_3() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>, Linear<5, 3>)>;
         let m: Model = dev.build_module();
         let _: (
@@ -151,7 +151,7 @@ mod tests {
     #[test]
     fn test_split_into_4() {
         type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>, Linear<5, 3>, Linear<5, 4>)>;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let m: Model = dev.build_module();
         let _: (
             Tensor<Rank1<1>, _, _>,
@@ -176,7 +176,7 @@ mod tests {
             Linear<5, 4>,
             Linear<5, 5>,
         )>;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let m: Model = dev.build_module();
         let _: (
             Tensor<Rank1<1>, _, _>,
@@ -204,7 +204,7 @@ mod tests {
             Linear<5, 5>,
             Linear<5, 6>,
         )>;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let m: Model = dev.build_module();
         let _: (
             Tensor<Rank1<1>, _, _>,
@@ -226,7 +226,7 @@ mod tests {
 
     #[test]
     fn test_missing_gradients() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let mut model: SplitInto<(Linear<5, 3, _>, Linear<5, 3, _>)> = dev.build_module();
         let mut g: SimpleUpdater<_> = Default::default();
 
