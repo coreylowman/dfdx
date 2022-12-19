@@ -95,11 +95,11 @@ mod tests {
     use super::*;
     use crate::nn::tests::SimpleUpdater;
     use crate::unique_id::HasUniqueId;
-    use crate::{nn::*, tensor::*, tests::build_test_device};
+    use crate::{nn::*, tensor::*, tests::TestDevice};
 
     #[test]
     fn test_2_tuple() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let model: (ReLU, Tanh) = Default::default();
 
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn test_2_tuple_update() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let mut model: (Linear<2, 3, _>, Linear<3, 4, _>) = dev.build_module();
         assert_ne!(model.0.weight.array(), [[0.0; 2]; 3]);
         assert_ne!(model.0.bias.array(), [0.0; 3]);
@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn test_set_to_1() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         assert_eq!(
             SetTo1::<0, 5>::default().forward(dev.zeros()).array(),
             [1.0, 0.0, 0.0, 0.0, 0.0]
@@ -184,7 +184,7 @@ mod tests {
 
     #[test]
     fn test_2_tuple_forward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let model: (SetTo1<0, 2>, SetTo1<1, 2>) = Default::default();
         let y = model.forward(dev.zeros());
         assert_eq!(y.array(), [1.0, 1.0]);
@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn test_3_tuple_forward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let model: (SetTo1<0, 3>, SetTo1<1, 3>, SetTo1<2, 3>) = Default::default();
         let y = model.forward(dev.zeros());
         assert_eq!(y.array(), [1.0, 1.0, 1.0]);
@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn test_4_tuple_forward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let model: (SetTo1<0, 4>, SetTo1<1, 4>, SetTo1<2, 4>, SetTo1<3, 4>) = Default::default();
         let y = model.forward(dev.zeros());
         assert_eq!(y.array(), [1.0, 1.0, 1.0, 1.0]);
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_5_tuple_forward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let model: (
             SetTo1<0, 5>,
             SetTo1<1, 5>,
@@ -222,7 +222,7 @@ mod tests {
 
     #[test]
     fn test_6_tuple_forward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let model: (
             SetTo1<0, 6>,
             SetTo1<1, 6>,
@@ -237,7 +237,7 @@ mod tests {
 
     #[test]
     fn test_tuple_missing_gradients() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let mut model: (Linear<5, 3, _>, Linear<5, 3, _>, Linear<5, 3, _>) = dev.build_module();
         let mut g: SimpleUpdater<_> = Default::default();
 

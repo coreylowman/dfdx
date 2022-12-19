@@ -194,11 +194,11 @@ mod tests {
     use super::*;
     use crate::tensor::*;
     use crate::tensor_ops::*;
-    use crate::tests::{assert_close, build_test_device};
+    use crate::tests::{assert_close, TestDevice};
 
     #[test]
     fn test_perfect_sgd() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let mut sgd = Sgd::new(SgdConfig {
             lr: 1.0,
             momentum: None,
@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn test_sgd_no_momentum() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let mut sgd = Sgd::new(Default::default());
 
         let mut t: Tensor1D<5, _> = dev.ones();
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn test_sgd_classic_momentum() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut sgd = Sgd::new(SgdConfig {
             lr: 1e-2,
@@ -267,7 +267,7 @@ mod tests {
 
     #[test]
     fn test_sgd_nesterov_momentum() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut sgd = Sgd::new(SgdConfig {
             lr: 1e-2,
@@ -294,7 +294,7 @@ mod tests {
 
     #[test]
     fn test_sgd_weight_decay_no_momentum() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         // With no momentum, both versions should be the same
         let mut sgd_l2 = Sgd::new(SgdConfig {
@@ -332,7 +332,7 @@ mod tests {
 
     #[test]
     fn test_sgd_decoupled_weight_decay_classic_momentum() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut sgd = Sgd::new(SgdConfig {
             lr: 1e-2,
@@ -358,7 +358,7 @@ mod tests {
 
     #[test]
     fn test_sgd_l2_weight_decay_classic_momentum() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         // adding l2_weight_decay should be equivalent to adding an L2 term to the loss
         let weight_decay = 1e-1;

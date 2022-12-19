@@ -194,12 +194,12 @@ mod tests {
     use super::*;
     use crate::{
         nn::ModuleBuilder,
-        tests::{assert_close, build_test_device},
+        tests::{assert_close, TestDevice},
     };
 
     #[test]
     fn test_batchnorm2d_3d_forward_mut() {
-        let dev = build_test_device!(0);
+        let dev = TestDevice::seed_from_u64(0);
 
         let x1 = dev.randn::<Rank3<3, 2, 2>>();
         let mut bn: BatchNorm2D<3, _> = dev.build_module();
@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn test_batchnorm2d_4d_forward_mut() {
-        let dev = build_test_device!(2);
+        let dev = TestDevice::seed_from_u64(2);
 
         let x1 = dev.randn::<Rank4<2, 2, 2, 3>>();
         let mut bn: BatchNorm2D<2, _> = dev.build_module();
@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn test_batchform2d_3d_repeated_forward_mut() {
-        let dev = build_test_device!(12);
+        let dev = TestDevice::seed_from_u64(12);
 
         let x1 = dev.randn::<Rank3<3, 4, 5>>();
         let mut bn: BatchNorm2D<3, _> = dev.build_module();

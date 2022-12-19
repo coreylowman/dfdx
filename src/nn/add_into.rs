@@ -90,13 +90,13 @@ mod tests {
         nn::{tests::SimpleUpdater, Linear, ModuleBuilder, ReLU},
         shapes::*,
         tensor::*,
-        tests::build_test_device,
+        tests::TestDevice,
         unique_id::HasUniqueId,
     };
 
     #[test]
     fn test_add_into_2() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>)> = dev.build_module();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn test_add_into_3() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let m: AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>)> = dev.build_module();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
@@ -126,7 +126,7 @@ mod tests {
 
     #[test]
     fn test_add_into_4() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>, Linear<5, 5>)>;
         let m: Model = dev.build_module();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn test_add_into_5() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         type Model = AddInto<(
             Linear<2, 5>,
             Linear<3, 5>,
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_add_into_6() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         type Model = AddInto<(
             Linear<2, 5>,
             Linear<3, 5>,
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_missing_gradients() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let mut model: AddInto<(Linear<5, 3, _>, Linear<5, 3, _>)> = dev.build_module();
         let mut g: SimpleUpdater<_> = Default::default();
 
@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn longer_network() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         // check if it works in a longer neural net
         let mut model: (
             AddInto<(Linear<5, 3, _>, Linear<5, 3, _>)>,

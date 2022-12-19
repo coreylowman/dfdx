@@ -85,12 +85,12 @@ impl<Input, T: ModuleMut<Input, Output = Input>, const N: usize> ModuleMut<Input
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::tests::SimpleUpdater, tests::build_test_device};
+    use crate::{nn::tests::SimpleUpdater, tests::TestDevice};
     use crate::{nn::*, shapes::*, tensor::*, unique_id::HasUniqueId};
 
     #[test]
     fn test_default_and_reset() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let m: Repeated<(Linear<3, 3, _>, ReLU), 5> = dev.build_module();
 
@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn test_forward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut m: Repeated<(Linear<3, 3, _>, ReLU), 5> = dev.build_module();
 
@@ -118,7 +118,7 @@ mod tests {
 
     #[test]
     fn test_repeated_missing_gradients() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut model: Repeated<Linear<5, 5, _>, 3> = dev.build_module();
         let mut g: SimpleUpdater<_> = Default::default();

@@ -40,11 +40,11 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ClampKernelOp<E>, E>, T: Tape<D>> Tensor
 
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::build_test_device};
+    use crate::{tensor::*, tensor_ops::*, tests::TestDevice};
 
     #[test]
     fn test_clamp() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t: Tensor2D<2, 3, _> = dev.tensor([[-1.0, 0.0, 1.0], [-2.0, 2.0, 1.1]]);
         let r = t.trace().clamp(-1.0, 1.0);
         assert_eq!(r.array(), [[-1.0, 0.0, 1.0], [-1.0, 1.0, 1.0]]);

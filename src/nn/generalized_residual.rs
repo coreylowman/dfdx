@@ -79,11 +79,11 @@ where
 mod tests {
     use super::*;
     use crate::nn::{Linear, ModuleBuilder};
-    use crate::tests::{assert_close, build_test_device};
+    use crate::tests::{assert_close, TestDevice};
 
     #[test]
     fn test_reset_generalized_residual() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let model: GeneralizedResidual<Linear<2, 5, _>, Linear<2, 5, _>> = dev.build_module();
         assert_ne!(model.f.weight.array(), [[0.0; 2]; 5]);
@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn test_generalized_residual_gradients() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let model: GeneralizedResidual<Linear<2, 2, _>, Linear<2, 2, _>> = dev.build_module();
 

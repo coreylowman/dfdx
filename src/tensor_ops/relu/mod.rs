@@ -37,11 +37,11 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ReLUKernelOp, E>, T: Tape<D>> Tensor<S, 
 
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::build_test_device};
+    use crate::{tensor::*, tensor_ops::*, tests::TestDevice};
 
     #[test]
     fn test_relu() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().relu();
         assert_eq!(r.array(), [0.0, 0.0, 0.0, 1.0, 2.0]);

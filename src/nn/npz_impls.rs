@@ -333,11 +333,10 @@ impl<
 #[cfg(test)]
 mod tests {
     use crate::{
-        prelude::{AsArray, RandnTensor},
         shapes::{Dtype, Rank1, Rank3, Shape},
-        tensor::Tensor,
+        tensor::{AsArray, RandnTensor, Tensor},
         tensor_ops::Device,
-        tests::{build_test_device, TestDevice},
+        tests::TestDevice,
     };
 
     use super::*;
@@ -372,7 +371,7 @@ mod tests {
 
     #[test]
     fn test_batchnorm2d_save_load() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let x = dev.randn::<Rank3<3, 4, 5>>();
         let file = NamedTempFile::new().expect("failed to create tempfile");
@@ -398,13 +397,13 @@ mod tests {
     #[test]
     fn test_save_load_conv() {
         type T = Conv2D<2, 4, 3, 1, 0, TestDevice>;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         test_save_load::<Rank3<2, 8, 8>, f32, TestDevice, T>(&dev);
     }
 
     #[test]
     fn test_save_load_generalized_residual() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         type T = GeneralizedResidual<Linear<5, 5, TestDevice>, Linear<5, 5, TestDevice>>;
         test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
         test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
@@ -412,7 +411,7 @@ mod tests {
 
     #[test]
     fn test_save_load_linear() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         type T = Linear<5, 5, TestDevice>;
         test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
         test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
@@ -420,7 +419,7 @@ mod tests {
 
     #[test]
     fn test_save_load_tuple() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         type T = (
             Linear<1, 2, TestDevice>,
             ReLU,
@@ -433,7 +432,7 @@ mod tests {
     #[test]
     fn test_save_load_layer_norm() {
         type M = LayerNorm1D<3, TestDevice>;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.randn::<Rank1<3>>();
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
@@ -456,7 +455,7 @@ mod tests {
     #[test]
     fn test_save_load_repeated() {
         type T = Repeated<Linear<3, 3, TestDevice>, 4>;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         test_save_load::<Rank1<3>, f32, TestDevice, T>(&dev);
         test_save_load::<Rank1<3>, f32, TestDevice, (T, T)>(&dev);
     }
@@ -464,7 +463,7 @@ mod tests {
     #[test]
     fn test_save_load_residual() {
         type T = Residual<Linear<5, 5, TestDevice>>;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
         test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
     }
@@ -472,7 +471,7 @@ mod tests {
     #[cfg(feature = "nightly")]
     #[test]
     fn test_save_load_mha() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let saved: MultiHeadAttention<12, 4, 12, 12, TestDevice> = dev.build_module();
 
@@ -498,7 +497,7 @@ mod tests {
     #[cfg(feature = "nightly")]
     #[test]
     fn test_save_load_transformer() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut saved: Transformer<16, 4, 3, 4, 8, TestDevice> = dev.build_module();
 

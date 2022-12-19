@@ -36,11 +36,11 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<LnKernelOp, E>, T: Tape<D>> Tensor<S, E,
 
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::build_test_device};
+    use crate::{tensor::*, tensor_ops::*, tests::TestDevice};
 
     #[test]
     fn test_ln() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().ln();
         let r_array = r.array();
