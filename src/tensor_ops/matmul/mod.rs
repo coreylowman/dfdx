@@ -365,8 +365,8 @@ mod tests {
     #[test]
     fn test_matmul_transpose() {
         let dev: TestDevice = Default::default();
-        let a: Tensor2D<4, 3, _> = dev.randn();
-        let b: Tensor2D<3, 2, _> = dev.randn();
+        let a: Tensor2D<4, 3, _> = dev.sample_normal();
+        let b: Tensor2D<3, 2, _> = dev.sample_normal();
 
         let c = a.trace().matmul(b.clone());
         let g1 = c.exp().mean().backward();
@@ -382,9 +382,9 @@ mod tests {
     fn test_matul_broadcast() {
         const N: usize = 5;
         let dev: TestDevice = Default::default();
-        let a: Tensor3D<N, 4, 3, _> = dev.randn();
+        let a: Tensor3D<N, 4, 3, _> = dev.sample_normal();
         let a_array = a.array();
-        let b: Tensor2D<3, 2, _> = dev.randn();
+        let b: Tensor2D<3, 2, _> = dev.sample_normal();
         let r = a.trace().matmul(b.clone());
         let r_array = r.array();
         for i in 0..N {
@@ -413,8 +413,8 @@ mod tests {
     fn test_matmul_broadcast_actual() {
         const N: usize = 5;
         let dev: TestDevice = Default::default();
-        let a = dev.randn::<Rank3<N, 4, 3>>();
-        let b = dev.randn::<Rank2<3, 2>>();
+        let a = dev.sample_normal::<Rank3<N, 4, 3>>();
+        let b = dev.sample_normal::<Rank2<3, 2>>();
         let b_up = b.trace().broadcast::<Rank3<N, 3, 2>, _>();
         let r1 = a.trace().matmul(b_up);
         let r2 = a.trace().matmul(b.clone());
@@ -429,9 +429,9 @@ mod tests {
     fn test_matmul_batched_3d() {
         let dev: TestDevice = Default::default();
 
-        let a: Tensor3D<5, 3, 2, _> = dev.randn();
+        let a: Tensor3D<5, 3, 2, _> = dev.sample_normal();
         let a_array = a.array();
-        let b: Tensor3D<5, 2, 4, _> = dev.randn();
+        let b: Tensor3D<5, 2, 4, _> = dev.sample_normal();
         let b_array = b.array();
         let c = a.trace().matmul(b.clone());
         let c_array = c.array();
@@ -455,9 +455,9 @@ mod tests {
     fn test_matmul_batched_4d() {
         let dev: TestDevice = Default::default();
 
-        let a: Tensor4D<7, 5, 3, 2, _> = dev.randn();
+        let a: Tensor4D<7, 5, 3, 2, _> = dev.sample_normal();
         let a_array = a.array();
-        let b: Tensor4D<7, 5, 2, 4, _> = dev.randn();
+        let b: Tensor4D<7, 5, 2, 4, _> = dev.sample_normal();
         let b_array = b.array();
         let c = a.trace().matmul(b.clone());
         let c_array = c.array();

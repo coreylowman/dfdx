@@ -3,7 +3,7 @@
 use dfdx::{
     gradients::{Gradients, NoneTape, OwnedTape},
     shapes::{Rank0, Rank2},
-    tensor::{AsArray, Cpu, RandnTensor, Tensor},
+    tensor::{AsArray, Cpu, SampleTensor, Tensor},
     tensor_ops::{Backward, MeanTo, TryMatMul},
 };
 
@@ -13,8 +13,8 @@ fn main() {
     // tensors are actually generic over a fourth field: the tape
     // by default tensors are created with a `NoneTape`, which
     // means they don't currently **own** a tape.
-    let weight: Tensor<Rank2<4, 2>, f32, Cpu, NoneTape> = dev.randn::<Rank2<4, 2>>();
-    let a: Tensor<Rank2<3, 4>, f32, Cpu, NoneTape> = dev.randn::<Rank2<3, 4>>();
+    let weight: Tensor<Rank2<4, 2>, f32, Cpu, NoneTape> = dev.sample_normal();
+    let a: Tensor<Rank2<3, 4>, f32, Cpu, NoneTape> = dev.sample_normal();
 
     // the first step to tracing is to call .trace()
     // this sticks a gradient tape into the input tensor!

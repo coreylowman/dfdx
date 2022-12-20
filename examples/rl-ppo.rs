@@ -19,13 +19,13 @@ type PolicyNetwork = (
 fn main() {
     let dev: Cpu = Default::default();
 
-    let state = dev.randn::<Rank2<BATCH, STATE>>();
+    let state = dev.sample_normal::<Rank2<BATCH, STATE>>();
     let mut i = 0;
     let action: Tensor<Rank1<BATCH>, usize, _> = dev.tensor([(); BATCH].map(|_| {
         i += 1;
         i % ACTION
     }));
-    let advantage = dev.randn::<Rank1<BATCH>>();
+    let advantage = dev.sample_normal::<Rank1<BATCH>>();
 
     // initiliaze model - all weights are 0s
     let mut pi_net: PolicyNetwork = dev.build_module();

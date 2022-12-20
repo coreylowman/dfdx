@@ -262,7 +262,7 @@ mod tests {
     #[test]
     fn test_pool2d_3d_max2d() {
         let dev = TestDevice::seed_from_u64(234);
-        let x: Tensor3D<2, 3, 4, _> = dev.randn();
+        let x: Tensor3D<2, 3, 4, _> = dev.sample_normal();
         let r = x.trace().max_pool2d::<2, 2, 0>();
         assert_close(
             &r.array(),
@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn test_pool2d_3d_min2d() {
         let dev = TestDevice::seed_from_u64(234);
-        let x: Tensor3D<2, 3, 4, _> = dev.randn();
+        let x: Tensor3D<2, 3, 4, _> = dev.sample_normal();
         let r = x.trace().min_pool2d::<2, 2, 0>();
         assert_close(
             &r.array(),
@@ -302,7 +302,7 @@ mod tests {
     #[test]
     fn test_pool2d_3d_avg2d() {
         let dev = TestDevice::seed_from_u64(234);
-        let x: Tensor3D<2, 3, 4, _> = dev.randn();
+        let x: Tensor3D<2, 3, 4, _> = dev.sample_normal();
         let r = x.trace().avg_pool2d::<2, 2, 0>();
         // assert_close(
         //     &r.array(),
@@ -322,7 +322,7 @@ mod tests {
     #[test]
     fn test_pool2d_4d_avg2d() {
         let dev = TestDevice::seed_from_u64(234);
-        let x: Tensor4D<2, 4, 2, 2, _> = dev.randn();
+        let x: Tensor4D<2, 4, 2, 2, _> = dev.sample_normal();
         let r = x.trace().avg_pool2d::<1, 2, 0>();
         assert_close(
             &r.array(),

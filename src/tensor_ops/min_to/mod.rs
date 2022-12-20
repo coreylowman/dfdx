@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn test_min_axes_3d_to_1d() {
         let dev: TestDevice = Default::default();
-        let t = dev.randn::<Rank3<2, 3, 4>>();
+        let t = dev.sample_normal::<Rank3<2, 3, 4>>();
         let r = t.trace().min::<Rank1<4>, _>();
         let r2 = t.trace().min::<Rank2<3, 4>, _>().min::<Rank1<4>, _>();
         assert_close(&r.array(), &r2.array());

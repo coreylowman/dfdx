@@ -2,11 +2,10 @@
 
 use dfdx::{
     losses::mse_loss,
-    nn::{Linear, ModuleMut, ReLU, Tanh},
+    nn::{Linear, ModuleBuilder, ModuleMut, ReLU, Tanh},
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
-    prelude::ModuleBuilder,
     shapes::Rank2,
-    tensor::{AsArray, Cpu, RandnTensor},
+    tensor::{AsArray, Cpu, SampleTensor},
     tensor_ops::Backward,
 };
 
@@ -31,8 +30,8 @@ fn main() {
 
     // let's initialize our model and some dummy data
     let mut mlp: Mlp = dev.build_module();
-    let x = dev.randn::<Rank2<3, 5>>();
-    let y = dev.randn::<Rank2<3, 2>>();
+    let x = dev.sample_normal::<Rank2<3, 5>>();
+    let y = dev.sample_normal::<Rank2<3, 2>>();
 
     // first we pass our gradient tracing input through the network.
     // since we are training, we use forward_mut() instead of forward

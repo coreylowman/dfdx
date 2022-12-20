@@ -201,7 +201,7 @@ mod tests {
     fn test_batchnorm2d_3d_forward_mut() {
         let dev = TestDevice::seed_from_u64(0);
 
-        let x1 = dev.randn::<Rank3<3, 2, 2>>();
+        let x1: Tensor<Rank3<3, 2, 2>> = dev.sample(rand_distr::StandardNormal);
         let mut bn: BatchNorm2D<3, _> = dev.build_module();
 
         let y1 = bn.forward_mut(x1.trace());
@@ -236,7 +236,7 @@ mod tests {
     fn test_batchnorm2d_4d_forward_mut() {
         let dev = TestDevice::seed_from_u64(2);
 
-        let x1 = dev.randn::<Rank4<2, 2, 2, 3>>();
+        let x1 = dev.sample_normal::<Rank4<2, 2, 2, 3>>();
         let mut bn: BatchNorm2D<2, _> = dev.build_module();
 
         let y1 = bn.forward_mut(x1.trace());
@@ -268,7 +268,7 @@ mod tests {
     fn test_batchform2d_3d_repeated_forward_mut() {
         let dev = TestDevice::seed_from_u64(12);
 
-        let x1 = dev.randn::<Rank3<3, 4, 5>>();
+        let x1 = dev.sample_normal::<Rank3<3, 4, 5>>();
         let mut bn: BatchNorm2D<3, _> = dev.build_module();
 
         let _ = bn.forward_mut(x1.trace());
@@ -302,7 +302,7 @@ mod tests {
         let m = bn.running_mean.clone();
         let v = bn.running_var.clone();
 
-        let x2 = dev.randn::<Rank3<3, 2, 2>>();
+        let x2 = dev.sample_normal::<Rank3<3, 2, 2>>();
         let y2 = bn.forward(x2);
         // running stats shouldn't have been updated
         assert_eq!(bn.running_mean.array(), m.array());

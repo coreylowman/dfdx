@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn test_sum_axes_3d_to_1d() {
         let dev: TestDevice = Default::default();
-        let t = dev.randn::<Rank3<2, 3, 4>>();
+        let t = dev.sample::<Rank3<2, 3, 4>, _>(rand_distr::StandardNormal);
         let r = t.trace().sum::<Rank1<3>, _>();
         let r2 = t.trace().sum::<Rank2<3, 4>, _>().sum::<Rank1<3>, _>();
         assert_close(&r.array(), &r2.array());

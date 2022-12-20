@@ -208,7 +208,7 @@ mod tests {
     /// Produced by
     /// ```python
     /// q = torch.nn.Conv2d(1, 2, 2)
-    /// x = torch.randn(1, 2, 3, requires_grad=True)
+    /// x = torch.sample_normal(1, 2, 3, requires_grad=True)
     /// q(x).exp().mean().backward()
     /// ```
     fn test_conv2d_default_stride_and_padding() {
@@ -250,7 +250,7 @@ mod tests {
     /// Produced by
     /// ```python
     /// q = torch.nn.Conv2d(1, 2, 2, stride=2)
-    /// x = torch.randn(1, 2, 3, requires_grad=True)
+    /// x = torch.sample_normal(1, 2, 3, requires_grad=True)
     /// q(x).exp().mean().backward()
     /// ```
     fn test_conv2d_stride_2() {
@@ -436,9 +436,9 @@ mod tests {
     fn test_conv2d_s4p3k2() {
         let dev = TestDevice::seed_from_u64(432);
 
-        let weight = dev.randn::<Rank4<3, 5, 2, 2>>();
-        let bias = dev.randn::<Rank1<3>>();
-        let x = dev.randn::<Rank3<5, 7, 6>>();
+        let weight = dev.sample_normal::<Rank4<3, 5, 2, 2>>();
+        let bias = dev.sample_normal::<Rank1<3>>();
+        let x = dev.sample_normal::<Rank3<5, 7, 6>>();
 
         let out = x.conv2d::<4, 3>(weight);
         let out = out + bias.broadcast::<_, Axes2<1, 2>>();

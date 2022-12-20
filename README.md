@@ -96,7 +96,7 @@ assert_eq!(t0.array(), &0.0);
 let t1 /*: Tensor<Rank1<3>>*/ = dev.tensor([1.0, 2.0, 3.0]);
 assert_eq!(t1.array(), [1.0, 2.0, 3.0]);
 
-let t2: Tensor<Rank2<2, 3>> = dev.randn();
+let t2: Tensor<Rank2<2, 3>> = dev.sample_normal();
 assert_ne!(t2.array(), [[0.0; 3]; 2]);
 ```
 

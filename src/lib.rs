@@ -49,7 +49,7 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! # let model: Linear<10, 5> = dev.build_module();
-//! # let y_true: Tensor<Rank1<5>> = dev.randn().softmax();
+//! # let y_true: Tensor<Rank1<5>> = dev.sample_normal().softmax();
 //! // tensors default to not having a tape
 //! let x: Tensor<Rank1<10>, f32, Cpu, NoneTape> = dev.zeros();
 //!
@@ -66,7 +66,7 @@
 //! # use dfdx::{prelude::*, gradients::Gradients};
 //! # let dev: Cpu = Default::default();
 //! # let model: Linear<10, 5> = dev.build_module();
-//! # let y_true = dev.randn::<Rank1<5>>().softmax();
+//! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
 //! # let y = model.forward(dev.zeros::<Rank1<10>>().trace());
 //! // compute cross entropy loss
 //! let loss = cross_entropy_with_logits_loss(y, y_true);
@@ -79,7 +79,7 @@
 //! # use dfdx::{prelude::*, gradients::Gradients, optim::*};
 //! # let dev: Cpu = Default::default();
 //! # let mut model: Linear<10, 5> = dev.build_module();
-//! # let y_true = dev.randn::<Rank1<5>>().softmax();
+//! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
 //! # let y = model.forward(dev.zeros::<Rank1<10>>().trace());
 //! # let loss = cross_entropy_with_logits_loss(y, y_true);
 //! # let gradients: Gradients<Cpu> = loss.backward();

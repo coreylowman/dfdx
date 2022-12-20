@@ -1,5 +1,7 @@
+use rand::distributions::Distribution;
+
 use super::storage_traits::{DeviceStorage, HasErr};
-use super::{Cpu, OneFillStorage, RandFillStorage, RandnFillStorage, ZeroFillStorage};
+use super::{Cpu, OneFillStorage, SampleTensor, ZeroFillStorage};
 use crate::{
     gradients::{NoneTape, OwnedTape, Tape},
     shapes::*,
@@ -175,27 +177,18 @@ impl<S: Shape, E: Dtype, D: OneFillStorage<E>, T> Tensor<S, E, D, T> {
     }
 }
 
-impl<S: Shape, E: Dtype, D: RandFillStorage<E>, T> Tensor<S, E, D, T> {
-    /// Fills the tensor with uniform random data
-    pub fn fill_with_uniform(&mut self, min: E, max: E) {
-        self.try_fill_with_uniform(min, max).unwrap()
+impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
+    /// Fills the tensor with random data from the distribution
+    pub fn fill_with_distr<Distr: Distribution<E>>(&mut self, distr: Distr) {
+        self.try_fill_with_distr(distr).unwrap()
     }
-    /// Fallible version of [Tensor::fill_with_uniform]
-    pub fn try_fill_with_uniform(&mut self, min: E, max: E) -> Result<(), D::Err> {
-        self.device
-            .try_fill_with_uniform(&mut self.storage, min, max)
-    }
-}
 
-impl<S: Shape, E: Dtype, D: RandnFillStorage<E>, T> Tensor<S, E, D, T> {
-    /// Fills the tensor with normal random data
-    pub fn fill_with_normal(&mut self, mean: E, stddev: E) {
-        self.try_fill_with_normal(mean, stddev).unwrap()
-    }
-    /// Fallible verison of [Tensor::fill_with_normal]
-    pub fn try_fill_with_normal(&mut self, mean: E, stddev: E) -> Result<(), D::Err> {
-        self.device
-            .try_fill_with_normal(&mut self.storage, mean, stddev)
+    /// Fallible version of [Tensor::fill_with_distr]
+    pub fn try_fill_with_distr<Distr: Distribution<E>>(
+        &mut self,
+        distr: Distr,
+    ) -> Result<(), D::Err> {
+        self.device.try_fill_with_distr(&mut self.storage, distr)
     }
 }
 
