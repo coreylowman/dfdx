@@ -12,7 +12,6 @@ use crate::{
 use super::{Cuda, CudaArray, CudaError};
 
 use rand::Rng;
-use rand_distr::{Normal, Uniform};
 use std::{sync::Arc, vec::Vec};
 
 impl Cuda {
@@ -82,71 +81,26 @@ impl OneFillStorage<f32> for Cuda {
     }
 }
 
-impl<E: Unit> RandTensor<E> for Cuda
+impl<E: Unit> SampleTensor<E> for Cuda
 where
-    Cpu: RandTensor<E>,
+    Cpu: SampleTensor<E>,
 {
-    fn try_rand_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
-        self.take_cpu_tensor(self.cpu.try_rand_like(src)?)
-    }
-    fn try_uniform_like<S: HasShape>(
+    fn try_sample_like<S: HasShape, D: rand_distr::Distribution<E>>(
         &self,
         src: &S,
-        min: E,
-        max: E,
+        distr: D,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
-        self.take_cpu_tensor(self.cpu.try_uniform_like(src, min, max)?)
+        self.take_cpu_tensor(self.cpu.try_sample_like(src, distr)?)
     }
-}
-
-impl RandFillStorage<f32> for Cuda {
-    fn try_fill_with_uniform<S: Shape>(
+    fn try_fill_with_distr<S: Shape, D: rand_distr::Distribution<E>>(
         &self,
-        storage: &mut Self::Storage<S, f32>,
-        min: f32,
-        max: f32,
+        storage: &mut Self::Storage<S, E>,
+        distr: D,
     ) -> Result<(), Self::Err> {
-        let dist = Uniform::new(min, max);
-        let mut host_data = std::vec![0.0; storage.data.len()];
+        let mut host_vec = std::vec![Default::default(); storage.data.len()];
         {
             let mut rng = self.cpu.rng.lock().unwrap();
-            host_data.fill_with(|| rng.sample(dist));
-        }
-        self.dev
-            .copy_into_async(host_data, Arc::make_mut(&mut storage.data))?;
-        Ok(())
-    }
-}
-
-impl<E: Unit> RandnTensor<E> for Cuda
-where
-    Cpu: RandnTensor<E>,
-{
-    fn try_randn_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
-        self.take_cpu_tensor(self.cpu.try_randn_like(src)?)
-    }
-    fn try_normal_like<S: HasShape>(
-        &self,
-        src: &S,
-        mean: E,
-        stddev: E,
-    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
-        self.take_cpu_tensor(self.cpu.try_normal_like(src, mean, stddev)?)
-    }
-}
-
-impl RandnFillStorage<f32> for Cuda {
-    fn try_fill_with_normal<S: Shape>(
-        &self,
-        storage: &mut Self::Storage<S, f32>,
-        mean: f32,
-        stddev: f32,
-    ) -> Result<(), Self::Err> {
-        let dist = Normal::new(mean, stddev).unwrap();
-        let mut host_vec = std::vec![0.0; storage.data.len()];
-        {
-            let mut rng = self.cpu.rng.lock().unwrap();
-            host_vec.fill_with(|| rng.sample(dist));
+            host_vec.fill_with(|| rng.sample(&distr));
         }
         self.dev
             .copy_into_async(host_vec, Arc::make_mut(&mut storage.data))?;
