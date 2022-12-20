@@ -114,27 +114,16 @@ impl DeviceStorage for Cuda {
         &self,
         storage: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err> {
-        self.try_filled_with_like(storage, Default::default())
+        let numel = storage.shape.num_elements();
+        let strides: S::Concrete = storage.shape.strides();
+        Ok(Self::Storage {
+            data: Arc::new(self.dev.take_async(std::vec![Default::default(); numel])?),
+            shape: storage.shape,
+            strides,
+        })
     }
 
     fn random_u64(&self) -> u64 {
         self.cpu.random_u64()
-    }
-}
-
-impl Cuda {
-    #[inline]
-    pub(crate) fn try_filled_with_like<S: Shape, E: Default + Clone>(
-        &self,
-        other: &CudaArray<S, E>,
-        elem: E,
-    ) -> Result<CudaArray<S, E>, CudaError> {
-        let numel = other.shape.num_elements();
-        let strides: S::Concrete = other.shape.strides();
-        Ok(CudaArray {
-            data: Arc::new(self.dev.take_async(std::vec![elem; numel])?),
-            shape: other.shape,
-            strides,
-        })
     }
 }
