@@ -34,7 +34,7 @@ libc = { version = "0.2", default-features = false, optional = true }
 cudarc = { path = "../cudarc", default-features = false, optional = true }
 
 [features]
-default = ["std", "numpy", "cuda"]
+default = ["std", "numpy"]
 std = ["no-std-compat/std", "rand/std", "rand_distr/std"]
 nightly = []
 numpy = ["dep:zip", "std"]
