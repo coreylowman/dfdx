@@ -3,7 +3,7 @@
 use dfdx::{
     nn::{Linear, Module, ModuleBuilder, ModuleMut, ReLU, ResetParams},
     shapes::{Rank1, Rank2},
-    tensor::{AsArray, Cpu, RandnTensor, Tensor, ZerosTensor},
+    tensor::{AsArray, Cpu, SampleTensor, Tensor, ZerosTensor},
 };
 
 fn main() {
@@ -33,7 +33,7 @@ fn main() {
     let mlp: (Linear<4, 2>, ReLU, Linear<2, 1>) = dev.build_module();
 
     // and of course forward passes the input through each module sequentially:
-    let x = dev.randn::<Rank1<4>>();
+    let x = dev.sample_normal::<Rank1<4>>();
     let a: Tensor<Rank1<1>> = mlp.forward(x.clone());
     let b = mlp.2.forward(mlp.1.forward(mlp.0.forward(x)));
     assert_eq!(a.array(), b.array());

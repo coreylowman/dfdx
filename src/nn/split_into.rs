@@ -111,7 +111,7 @@ mod tests {
     fn test_unused() {
         let dev: TestDevice = Default::default();
         let m: SplitInto<(Linear<1, 1, _>, Linear<1, 1, _>)> = dev.build_module();
-        let (left, right) = m.forward(dev.randn::<Rank1<1>>().trace());
+        let (left, right) = m.forward(dev.sample_normal::<Rank1<1>>().trace());
         let r = right.retaped::<NoneTape>();
         let g = right.mean().backward();
         assert_eq!(g.get(&left).array(), [0.0; 1]);

@@ -54,16 +54,18 @@ where
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         let k = (I * K * K) as f32;
         let bound = 1.0 / k.sqrt();
+        let distr = rand_distr::Uniform::new(-bound, bound);
         Ok(Self {
-            weight: device.try_uniform(-bound, bound)?,
-            bias: device.try_uniform(-bound, bound)?,
+            weight: device.try_sample(distr)?,
+            bias: device.try_sample(distr)?,
         })
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         let k = (I * K * K) as f32;
         let bound = 1.0 / k.sqrt();
-        self.weight.try_fill_with_uniform(-bound, bound)?;
-        self.bias.try_fill_with_uniform(-bound, bound)?;
+        let distr = rand_distr::Uniform::new(-bound, bound);
+        self.weight.try_fill_with_distr(distr)?;
+        self.bias.try_fill_with_distr(distr)?;
         Ok(())
     }
 }
@@ -121,7 +123,7 @@ impl<'a, B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
 mod tests {
     use crate::{
         nn::ModuleBuilder,
-        tensor::{AsArray, RandnTensor, ZerosTensor},
+        tensor::{AsArray, SampleTensor, ZerosTensor},
         tensor_ops::*,
         tests::TestDevice,
     };
@@ -190,7 +192,7 @@ mod tests {
         let bias_init = m.bias.clone();
 
         let mut opt: Sgd<_, _> = Default::default();
-        let out = m.forward(dev.randn::<Rank4<8, 2, 28, 28>>().trace());
+        let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().trace());
         let g = out.square().mean().backward();
 
         assert_ne!(g.get(&m.weight).array(), [[[[0.0; 3]; 3]; 2]; 4]);

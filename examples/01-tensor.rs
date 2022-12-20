@@ -2,9 +2,7 @@
 
 use dfdx::{
     shapes::{Rank1, Rank2, Rank3},
-    tensor::{
-        AsArray, Cpu, OnesTensor, RandTensor, RandnTensor, Tensor, TensorFromArray, ZerosTensor,
-    },
+    tensor::{AsArray, Cpu, OnesTensor, SampleTensor, Tensor, TensorFromArray, ZerosTensor},
 };
 
 fn main() {
@@ -32,10 +30,10 @@ fn main() {
 
     // we can also create tensors filled with random values
     // from a normal distribution
-    let _ = dev.randn::<Rank3<2, 3, 4>>();
+    let _: Tensor<Rank3<2, 3, 4>> = dev.sample(rand_distr::StandardNormal);
 
     // or a uniform distribution
-    let a = dev.rand::<Rank3<2, 3, 4>>();
+    let a: Tensor<Rank3<2, 3, 4>> = dev.sample(rand_distr::Uniform::new(0.0f32, 1.0));
 
     // use `AsArray::as_array` to get acces to the data as an array
     let a_data: [[[f32; 4]; 3]; 2] = a.array();

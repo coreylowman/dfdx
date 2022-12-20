@@ -146,13 +146,13 @@ mod tests {
         let mut t: Transformer<16, 4, 3, 3, 8, _> = dev.build_module();
 
         // unbatched
-        let src = dev.randn::<Rank2<7, 16>>();
-        let tgt = dev.randn::<Rank2<9, 16>>();
+        let src = dev.sample_normal::<Rank2<7, 16>>();
+        let tgt = dev.sample_normal::<Rank2<9, 16>>();
         let _: Tensor<Rank2<9, 16>, _, _, _> = t.forward_mut((src, tgt));
 
         // batched
-        let src = dev.randn::<Rank3<4, 12, 16>>();
-        let tgt = dev.randn::<Rank3<4, 6, 16>>();
+        let src = dev.sample_normal::<Rank3<4, 12, 16>>();
+        let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();
         let _: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward_mut((src, tgt));
     }
 
@@ -161,8 +161,8 @@ mod tests {
         let dev = TestDevice::seed_from_u64(0);
         let mut t: Transformer<16, 4, 3, 3, 8> = dev.build_module();
 
-        let src = dev.randn::<Rank3<4, 12, 16>>();
-        let tgt = dev.randn::<Rank3<4, 6, 16>>();
+        let src = dev.sample_normal::<Rank3<4, 12, 16>>();
+        let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();
         let out: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward_mut((src.trace(), tgt));
         let g = out.mean().backward();
 

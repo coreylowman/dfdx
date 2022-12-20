@@ -44,7 +44,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        shapes::{Axes2, Axis},
+        shapes::*,
         tensor::*,
         tensor_ops::*,
         tests::{assert_close, TestDevice},
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn test_softmax_3d_to_1d_12() {
         let dev: TestDevice = Default::default();
-        let t: Tensor3D<2, 3, 4, _> = dev.randn();
+        let t = dev.sample_normal::<Rank3<2, 3, 4>>();
         let r = t.trace().softmax::<Axes2<1, 2>>();
         #[rustfmt::skip]
         assert_close(

@@ -1,5 +1,5 @@
 //! The [Tensor] struct, [Cpu] device, and
-//! traits like [ZerosTensor], [OnesTensor], [RandTensor], [RandnTensor].
+//! traits like [ZerosTensor], [OnesTensor], [SampleTensor].
 //!
 //! At a high level a tensor is made up of:
 //! 1. The [crate::shapes::Shape] of the array it stores
@@ -44,13 +44,16 @@
 //!
 //! ### Filled with random data
 //!
-//! See [RandTensor] and [RandnTensor]
+//! See [SampleTensor]
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let _: Tensor<Rank1<3>> = dev.rand(); // uniform random data
-//! let _: Tensor<Rank2<4, 3>> = dev.randn(); // normal random data
+//! let _: Tensor<Rank1<5>> = dev.sample_uniform();
+//! let _: Tensor<Rank2<3, 5>> = dev.sample_normal();
+//! // or pass in actual distributions
+//! let _: Tensor<Rank1<3>> = dev.sample(rand_distr::Standard);
+//! let _: Tensor<Rank2<4, 3>> = dev.sample(rand_distr::StandardNormal);
 //! ```
 //!
 //! ### Copy data from slices
@@ -69,7 +72,7 @@
 //!
 //! There are only a few ways to do this, as normally you should just create a new tensor with tensor_ops.
 //!
-//! See [Tensor::fill_with_zeros], [Tensor::fill_with_ones], [Tensor::fill_with_uniform], [Tensor::fill_with_normal].
+//! See [Tensor::fill_with_zeros], [Tensor::fill_with_ones], [Tensor::fill_with_distr]
 //!
 //! # Converting tensors to rust arrays
 //!
@@ -115,14 +118,12 @@ pub(crate) mod numpy;
 
 pub(crate) mod storage_traits;
 
-pub(crate) use storage_traits::{
-    OneFillStorage, RandFillStorage, RandnFillStorage, ZeroFillStorage,
-};
+pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 
 pub use cpu::{Cpu, CpuError};
 pub use storage_traits::{AsArray, AsVec, CopySlice, TensorFromArray};
 pub use storage_traits::{DeviceStorage, HasErr};
-pub use storage_traits::{OnesTensor, RandTensor, RandnTensor, ZerosTensor};
+pub use storage_traits::{OnesTensor, SampleTensor, ZerosTensor};
 
 pub use tensor_impls::{PutTape, SplitTape, Tensor};
 pub use tensor_impls::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
@@ -158,7 +159,7 @@ mod tests {
         assert!(!ids.contains(&x.id));
         ids.insert(x.id);
 
-        let x: Tensor<Rank3<4, 3, 2>, f32, _> = dev.rand();
+        let x: Tensor<Rank3<4, 3, 2>, f32, _> = dev.sample(rand_distr::Standard);
         assert!(!ids.contains(&x.id));
         ids.insert(x.id);
     }
@@ -216,15 +217,15 @@ mod tests {
     #[test]
     fn fuzz_test_rand() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<Rank1<1000>, f32, _> = dev.rand();
+        let t: Tensor<Rank1<1000>, f32, _> = dev.sample(rand_distr::Standard);
         for v in t.as_vec() {
             assert!((0.0..1.0).contains(&v));
         }
     }
 
     #[test]
-    fn test_randn() {
+    fn test_sample_normal() {
         let dev: TestDevice = Default::default();
-        let _ = dev.randn::<Rank1<1000>>();
+        let _: Tensor<Rank1<1000>, f32, _> = dev.sample(rand_distr::StandardNormal);
     }
 }

@@ -18,11 +18,11 @@ fn main() {
     let m: Model = dev.build_module();
 
     // single image forward
-    let x: Tensor<Rank3<3, 28, 28>> = dev.randn();
+    let x: Tensor<Rank3<3, 28, 28>> = dev.sample_normal();
     let _: Tensor<Rank1<10>> = m.forward(x);
 
     // batched image forward
-    let x: Tensor<Rank4<32, 3, 28, 28>> = dev.randn();
+    let x: Tensor<Rank4<32, 3, 28, 28>> = dev.sample_normal();
     let _: Tensor<Rank2<32, 10>> = m.forward(x);
 }
 

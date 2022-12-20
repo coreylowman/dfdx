@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn test_mean_axes_3d_to_1d_02() {
         let dev: TestDevice = Default::default();
-        let t = dev.randn::<Rank3<2, 3, 4>>();
+        let t = dev.sample_normal::<Rank3<2, 3, 4>>();
         let r = t.trace().mean::<Rank1<3>, _>();
         let r2 = t.trace().sum::<_, Axis<0>>().sum::<_, Axis<1>>() / 8.0;
         assert_close(&r.array(), &r2.array());
@@ -131,7 +131,7 @@ mod tests {
     #[test]
     fn test_mean_axes_3d_to_1d_01() {
         let dev: TestDevice = Default::default();
-        let t = dev.randn::<Rank3<2, 3, 4>>();
+        let t = dev.sample_normal::<Rank3<2, 3, 4>>();
         let r = t.trace().mean::<Rank1<4>, _>();
         let r2 = t.sum::<_, Axis<0>>().sum::<_, Axis<0>>() / 6.0;
         assert_close(&r.array(), &r2.array());

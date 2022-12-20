@@ -80,7 +80,7 @@ mod tests {
 
         let model: Residual<Linear<2, 2, _>> = dev.build_module();
 
-        let x = dev.randn::<Rank2<4, 2>>();
+        let x = dev.sample_normal::<Rank2<4, 2>>();
         let y = model.forward(x.trace());
 
         #[rustfmt::skip]

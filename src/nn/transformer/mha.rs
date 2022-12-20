@@ -232,9 +232,9 @@ mod tests {
 
         let mha: MultiHeadAttention<M, NUM_HEADS, M, M, _> = dev.build_module();
 
-        let q = dev.randn::<Rank2<S1, M>>();
-        let k = dev.randn::<Rank2<S2, M>>();
-        let v = dev.randn::<Rank2<S2, M>>();
+        let q = dev.sample_normal::<Rank2<S1, M>>();
+        let k = dev.sample_normal::<Rank2<S2, M>>();
+        let v = dev.sample_normal::<Rank2<S2, M>>();
 
         let y = mha.forward((q, k, v));
 
@@ -266,9 +266,9 @@ mod tests {
 
         let mha: MultiHeadAttention<M, NUM_HEADS, M, M, _> = dev.build_module();
 
-        let q = dev.randn::<Rank3<BATCH, S1, M>>();
-        let k = dev.randn::<Rank3<BATCH, S2, M>>();
-        let v = dev.randn::<Rank3<BATCH, S2, M>>();
+        let q = dev.sample_normal::<Rank3<BATCH, S1, M>>();
+        let k = dev.sample_normal::<Rank3<BATCH, S2, M>>();
+        let v = dev.sample_normal::<Rank3<BATCH, S2, M>>();
 
         let y = mha.forward((q, k, v));
 
@@ -316,9 +316,9 @@ mod tests {
 
         let mut mha: MultiHeadAttention<12, 4, 12, 12, _> = dev.build_module();
 
-        let q = dev.randn::<Rank3<2, 3, 12>>();
-        let k = dev.randn::<Rank3<2, 4, 12>>();
-        let v = dev.randn::<Rank3<2, 4, 12>>();
+        let q = dev.sample_normal::<Rank3<2, 3, 12>>();
+        let k = dev.sample_normal::<Rank3<2, 4, 12>>();
+        let v = dev.sample_normal::<Rank3<2, 4, 12>>();
         let y = mha.forward((q.trace(), k, v));
 
         let mut g = SimpleUpdater(y.mean().backward());
