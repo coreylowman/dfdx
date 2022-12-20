@@ -41,7 +41,7 @@ fn main() {
     );
 
     let dev: Cpu = Default::default();
-    let x = dev.randn::<Rank3<3, 224, 224>>();
+    let x = dev.sample_normal::<Rank3<3, 224, 224>>();
     let m: Resnet18<1000> = dev.build_module();
     for _ in 0.. {
         let start = Instant::now();

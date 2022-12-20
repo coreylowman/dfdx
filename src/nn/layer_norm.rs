@@ -99,19 +99,19 @@ where
 mod tests {
     use super::*;
     use crate::nn::{tests::SimpleUpdater, ModuleBuilder};
-    use crate::tests::{assert_close, build_test_device};
+    use crate::tests::{assert_close, TestDevice};
     use crate::unique_id::HasUniqueId;
 
     #[test]
     fn test_layer_norm_reset() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut m: LayerNorm1D<5, _> = dev.build_module();
         assert_eq!(m.gamma.array(), [1.0; 5]);
         assert_eq!(m.beta.array(), [0.0; 5]);
 
-        m.gamma = dev.randn();
-        m.beta = dev.randn();
+        m.gamma = dev.sample_normal();
+        m.beta = dev.sample_normal();
 
         assert_ne!(m.gamma.array(), [1.0; 5]);
         assert_ne!(m.beta.array(), [0.0; 5]);
@@ -124,9 +124,9 @@ mod tests {
 
     #[test]
     fn test_layer_norm_1d_forward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let mut m: LayerNorm1D<5, _> = dev.build_module();
-        let x = dev.randn::<Rank1<5>>();
+        let x = dev.sample_normal::<Rank1<5>>();
         let r = m.forward_mut(x.trace());
         assert_close(
             &r.array(),
@@ -142,9 +142,9 @@ mod tests {
 
     #[test]
     fn test_layer_norm_2d_forward() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let m: LayerNorm1D<5, _> = dev.build_module();
-        let x = dev.randn::<Rank2<3, 5>>();
+        let x = dev.sample_normal::<Rank2<3, 5>>();
         let r = m.forward(x.trace());
         assert_close(
             &r.array(),
@@ -164,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_layer_norm_missing_gradients() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut model: LayerNorm1D<5, _> = dev.build_module();
         let mut g: SimpleUpdater<_> = Default::default();

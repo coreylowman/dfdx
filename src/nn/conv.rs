@@ -54,16 +54,18 @@ where
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         let k = (I * K * K) as f32;
         let bound = 1.0 / k.sqrt();
+        let distr = rand_distr::Uniform::new(-bound, bound);
         Ok(Self {
-            weight: device.try_uniform(-bound, bound)?,
-            bias: device.try_uniform(-bound, bound)?,
+            weight: device.try_sample(distr)?,
+            bias: device.try_sample(distr)?,
         })
     }
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         let k = (I * K * K) as f32;
         let bound = 1.0 / k.sqrt();
-        self.weight.try_fill_with_uniform(-bound, bound)?;
-        self.bias.try_fill_with_uniform(-bound, bound)?;
+        let distr = rand_distr::Uniform::new(-bound, bound);
+        self.weight.try_fill_with_distr(distr)?;
+        self.bias.try_fill_with_distr(distr)?;
         Ok(())
     }
 }
@@ -121,9 +123,9 @@ impl<'a, B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
 mod tests {
     use crate::{
         nn::ModuleBuilder,
-        tensor::{AsArray, RandnTensor, ZerosTensor},
+        tensor::{AsArray, SampleTensor, ZerosTensor},
         tensor_ops::*,
-        tests::build_test_device,
+        tests::TestDevice,
     };
 
     use super::*;
@@ -131,33 +133,33 @@ mod tests {
     #[rustfmt::skip]
     #[test]
     fn test_forward_3d_sizes() {
-        let d = build_test_device!();
-        let x = d.zeros::<Rank3<3, 10, 10>>();
-        let _: Tensor<Rank3<2, 8, 8>, _, _, _> = Conv2D::<3, 2, 3, 1, 0, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank3<4, 8, 8>, _, _, _> = Conv2D::<3, 4, 3, 1, 0, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank3<4, 9, 9>, _, _, _> = Conv2D::<3, 4, 2, 1, 0, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank3<4, 7, 7>, _, _, _> = Conv2D::<3, 4, 4, 1, 0, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank3<2, 4, 4>, _, _, _> = Conv2D::<3, 2, 3, 2, 0, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank3<2, 3, 3>, _, _, _> = Conv2D::<3, 2, 3, 3, 0, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank3<2, 10, 10>, _, _, _> = Conv2D::<3, 2, 3, 1, 1, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank3<2, 12, 12>, _, _, _> = Conv2D::<3, 2, 3, 1, 2, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank3<2, 6, 6>, _, _, _> = Conv2D::<3, 2, 3, 2, 2, _>::build(&d).forward(x.clone());
+        let dev: TestDevice = Default::default();
+        let x = dev.zeros::<Rank3<3, 10, 10>>();
+        let _: Tensor<Rank3<2, 8, 8>, _, _, _> = Conv2D::<3, 2, 3, 1, 0, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<4, 8, 8>, _, _, _> = Conv2D::<3, 4, 3, 1, 0, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<4, 9, 9>, _, _, _> = Conv2D::<3, 4, 2, 1, 0, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<4, 7, 7>, _, _, _> = Conv2D::<3, 4, 4, 1, 0, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<2, 4, 4>, _, _, _> = Conv2D::<3, 2, 3, 2, 0, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<2, 3, 3>, _, _, _> = Conv2D::<3, 2, 3, 3, 0, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<2, 10, 10>, _, _, _> = Conv2D::<3, 2, 3, 1, 1, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<2, 12, 12>, _, _, _> = Conv2D::<3, 2, 3, 1, 2, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<2, 6, 6>, _, _, _> = Conv2D::<3, 2, 3, 2, 2, _>::build(&dev).forward(x.clone());
     }
 
     #[rustfmt::skip]
     #[test]
     fn test_forward_4d_sizes() {
-        let d = build_test_device!();
-        let x = d.zeros::<Rank4<5, 3, 10, 10>>();
-        let _: Tensor<Rank4<5, 2, 8, 8>, _, _, _> = Conv2D::<3, 2, 3, 1, 0, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank4<5, 4, 8, 8>, _, _, _> = Conv2D::<3, 4, 3, 1, 0, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank4<5, 4, 9, 9>, _, _, _> = Conv2D::<3, 4, 2, 1, 0, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank4<5, 4, 7, 7>, _, _, _> = Conv2D::<3, 4, 4, 1, 0, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 4, 4>, _, _, _> = Conv2D::<3, 2, 3, 2, 0, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 3, 3>, _, _, _> = Conv2D::<3, 2, 3, 3, 0, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 10, 10>, _, _, _> = Conv2D::<3, 2, 3, 1, 1, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 12, 12>, _, _, _> = Conv2D::<3, 2, 3, 1, 2, _>::build(&d).forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 6, 6>, _, _, _> = Conv2D::<3, 2, 3, 2, 2, _>::build(&d).forward(x.clone());
+        let dev: TestDevice = Default::default();
+        let x = dev.zeros::<Rank4<5, 3, 10, 10>>();
+        let _: Tensor<Rank4<5, 2, 8, 8>, _, _, _> = Conv2D::<3, 2, 3, 1, 0, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 8, 8>, _, _, _> = Conv2D::<3, 4, 3, 1, 0, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 9, 9>, _, _, _> = Conv2D::<3, 4, 2, 1, 0, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 7, 7>, _, _, _> = Conv2D::<3, 4, 4, 1, 0, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 4, 4>, _, _, _> = Conv2D::<3, 2, 3, 2, 0, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 3, 3>, _, _, _> = Conv2D::<3, 2, 3, 3, 0, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 10, 10>, _, _, _> = Conv2D::<3, 2, 3, 1, 1, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 12, 12>, _, _, _> = Conv2D::<3, 2, 3, 1, 2, _>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 6, 6>, _, _, _> = Conv2D::<3, 2, 3, 2, 2, _>::build(&dev).forward(x.clone());
     }
 
     #[test]
@@ -182,7 +184,7 @@ mod tests {
 
     #[test]
     fn test_conv_with_optimizer() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut m: Conv2D<2, 4, 3, 1, 0, _> = dev.build_module();
 
@@ -190,7 +192,7 @@ mod tests {
         let bias_init = m.bias.clone();
 
         let mut opt: Sgd<_, _> = Default::default();
-        let out = m.forward(dev.randn::<Rank4<8, 2, 28, 28>>().trace());
+        let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().trace());
         let g = out.square().mean().backward();
 
         assert_ne!(g.get(&m.weight).array(), [[[[0.0; 3]; 3]; 2]; 4]);

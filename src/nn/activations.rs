@@ -51,13 +51,13 @@ impl<Ax: Axes, S: Shape<LastAxis = Ax> + ReduceShape<Ax>, E: Dtype, D: Device<E>
 
 #[cfg(test)]
 mod tests {
-    use crate::{nn::ModuleMut, tests::build_test_device};
+    use crate::{nn::ModuleMut, tests::TestDevice};
 
     use super::*;
 
     #[test]
     fn test_nn_activations_relu() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = ReLU.forward_mut(t.clone());
         let r2 = relu(t);
@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn test_nn_activations_sin() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Sin.forward_mut(t.clone());
         let r2 = sin(t);
@@ -74,7 +74,7 @@ mod tests {
     }
     #[test]
     fn test_nn_activations_cos() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Cos.forward_mut(t.clone());
         let r2 = cos(t);
@@ -82,7 +82,7 @@ mod tests {
     }
     #[test]
     fn test_nn_activations_ln() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([0.0, 1.0, 2.0, 3.0, 4.0]);
         let r1 = Ln.forward_mut(t.clone());
         let r2 = ln(t);
@@ -90,7 +90,7 @@ mod tests {
     }
     #[test]
     fn test_nn_activations_exp() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Exp.forward_mut(t.clone());
         let r2 = exp(t);
@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn test_nn_activations_sigmoid() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Sigmoid.forward_mut(t.clone());
         let r2 = sigmoid(t);
@@ -107,7 +107,7 @@ mod tests {
     }
     #[test]
     fn test_nn_activations_tanh() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Tanh.forward_mut(t.clone());
         let r2 = tanh(t);
@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn test_nn_activations_square() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Square.forward_mut(t.clone());
         let r2 = square(t);
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_nn_activations_sqrt() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([0.0, 1.0, 2.0, 3.0, 4.0]);
         let r1 = Sqrt.forward_mut(t.clone());
         let r2 = sqrt(t);
@@ -134,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_nn_activations_abs() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Abs.forward_mut(t.clone());
         let r2 = abs(t);
@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn test_nn_activations_softmax() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = Softmax.forward_mut(t.clone());

@@ -44,15 +44,15 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        shapes::{Axes2, Axis},
+        shapes::*,
         tensor::*,
         tensor_ops::*,
-        tests::{assert_close, build_test_device},
+        tests::{assert_close, TestDevice},
     };
 
     #[test]
     fn test_softmax_1d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = a.trace().softmax();
         assert_eq!(
@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn test_softmax_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
         let r = a.trace().softmax::<Axis<1>>();
         assert_eq!(
@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn test_softmax_2d_0th_axis() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
         let r = a.trace().softmax::<Axis<0>>();
         assert_eq!(
@@ -124,8 +124,8 @@ mod tests {
 
     #[test]
     fn test_softmax_3d_to_1d_12() {
-        let dev = build_test_device!();
-        let t: Tensor3D<2, 3, 4, _> = dev.randn();
+        let dev: TestDevice = Default::default();
+        let t = dev.sample_normal::<Rank3<2, 3, 4>>();
         let r = t.trace().softmax::<Axes2<1, 2>>();
         #[rustfmt::skip]
         assert_close(

@@ -218,12 +218,12 @@ mod tests {
     use super::*;
     use crate::{
         nn::tests::SimpleUpdater,
-        tests::{assert_close, build_test_device},
+        tests::{assert_close, TestDevice},
     };
 
     #[test]
     fn test_mha_unbatched() {
-        let dev = build_test_device!(0);
+        let dev = TestDevice::seed_from_u64(0);
 
         const M: usize = 8;
         const NUM_HEADS: usize = 2;
@@ -232,9 +232,9 @@ mod tests {
 
         let mha: MultiHeadAttention<M, NUM_HEADS, M, M, _> = dev.build_module();
 
-        let q = dev.randn::<Rank2<S1, M>>();
-        let k = dev.randn::<Rank2<S2, M>>();
-        let v = dev.randn::<Rank2<S2, M>>();
+        let q = dev.sample_normal::<Rank2<S1, M>>();
+        let k = dev.sample_normal::<Rank2<S2, M>>();
+        let v = dev.sample_normal::<Rank2<S2, M>>();
 
         let y = mha.forward((q, k, v));
 
@@ -256,7 +256,7 @@ mod tests {
 
     #[test]
     fn test_mha_batched() {
-        let dev = build_test_device!(1);
+        let dev = TestDevice::seed_from_u64(1);
 
         const BATCH: usize = 5;
         const M: usize = 8;
@@ -266,9 +266,9 @@ mod tests {
 
         let mha: MultiHeadAttention<M, NUM_HEADS, M, M, _> = dev.build_module();
 
-        let q = dev.randn::<Rank3<BATCH, S1, M>>();
-        let k = dev.randn::<Rank3<BATCH, S2, M>>();
-        let v = dev.randn::<Rank3<BATCH, S2, M>>();
+        let q = dev.sample_normal::<Rank3<BATCH, S1, M>>();
+        let k = dev.sample_normal::<Rank3<BATCH, S2, M>>();
+        let v = dev.sample_normal::<Rank3<BATCH, S2, M>>();
 
         let y = mha.forward((q, k, v));
 
@@ -312,13 +312,13 @@ mod tests {
 
     #[test]
     fn test_backward_updates_all() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut mha: MultiHeadAttention<12, 4, 12, 12, _> = dev.build_module();
 
-        let q = dev.randn::<Rank3<2, 3, 12>>();
-        let k = dev.randn::<Rank3<2, 4, 12>>();
-        let v = dev.randn::<Rank3<2, 4, 12>>();
+        let q = dev.sample_normal::<Rank3<2, 3, 12>>();
+        let k = dev.sample_normal::<Rank3<2, 4, 12>>();
+        let v = dev.sample_normal::<Rank3<2, 4, 12>>();
         let y = mha.forward((q.trace(), k, v));
 
         let mut g = SimpleUpdater(y.mean().backward());

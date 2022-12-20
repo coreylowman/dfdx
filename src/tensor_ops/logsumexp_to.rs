@@ -51,11 +51,11 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> LogSumExpTo for Tensor<S, E, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::build_test_device;
+    use crate::tests::TestDevice;
 
     #[test]
     fn test_logsumexp_1d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = a.trace().logsumexp();
         assert_eq!(r.array(), 2.4519143);
@@ -68,7 +68,7 @@ mod tests {
 
     #[test]
     fn test_logsumexp_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
         let r = a.trace().logsumexp::<Rank1<2>, _>();
         assert_eq!(r.array(), [0.40760595, 7.0509458]);

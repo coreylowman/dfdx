@@ -1,3 +1,6 @@
+use rand::distributions::Distribution;
+use rand_distr::{Standard, StandardNormal};
+
 use crate::{
     shapes::{Dtype, HasDtype, HasShape, HasUnitType, Shape, Unit},
     unique_id::unique_id,
@@ -183,130 +186,49 @@ pub trait OneFillStorage<E: Unit>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-/// Constructs tensors filled with random values from a uniform distribution.
-pub trait RandTensor<E: Unit>: DeviceStorage {
-    /// Creates a tensor filled with random data in the range [0.0, 1.0).
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<2, 3>> = dev.rand();
-    /// ```
-    fn rand<S: Shape + Default>(&self) -> Tensor<S, E, Self> {
-        self.try_rand_like::<S>(&Default::default()).unwrap()
+/// Constructs tensors filled with random values from a given distribution.
+pub trait SampleTensor<E: Unit>: DeviceStorage {
+    fn sample_uniform<S: Shape + Default>(&self) -> Tensor<S, E, Self>
+    where
+        Standard: Distribution<E>,
+    {
+        self.sample::<S, _>(Standard)
     }
-    /// Fallible version of [RandTensor::rand]
-    fn try_rand<S: Shape + Default>(&self) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.try_rand_like::<S>(&Default::default())
-    }
-    /// Build the tensor with a shape given by something else.
-    ///
-    /// Given a shape directly:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<(usize, Const<3>)> = dev.rand_like(&(5, Const::<3>));
-    /// ```
-    ///
-    /// Given another tensor:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<2, 3>> = dev.rand();
-    /// let b = dev.rand_like(&a);
-    /// ```
-    fn rand_like<S: HasShape>(&self, src: &S) -> Tensor<S::Shape, E, Self> {
-        self.try_rand_like(src).unwrap()
-    }
-    /// Fallible version of [RandTensor::rand_like]
-    fn try_rand_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 
-    /// Creates a tensor filled with random data in a custom range.
-    fn try_uniform<S: Shape + Default>(
-        &self,
-        min: E,
-        max: E,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.try_uniform_like::<S>(&Default::default(), min, max)
+    fn sample_normal<S: Shape + Default>(&self) -> Tensor<S, E, Self>
+    where
+        StandardNormal: Distribution<E>,
+    {
+        self.sample::<S, _>(StandardNormal)
     }
-    /// Creates a tensor filled with random data in a custom range, using the shape of
-    /// something else.
-    fn try_uniform_like<S: HasShape>(
+
+    fn sample<S: Shape + Default, D: Distribution<E>>(&self, distr: D) -> Tensor<S, E, Self> {
+        self.try_sample_like::<S, D>(&Default::default(), distr)
+            .unwrap()
+    }
+    fn try_sample<S: Shape + Default, D: Distribution<E>>(
+        &self,
+        distr: D,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        self.try_sample_like::<S, D>(&Default::default(), distr)
+    }
+    fn sample_like<S: HasShape, D: Distribution<E>>(
         &self,
         src: &S,
-        min: E,
-        max: E,
-    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
-}
-
-pub trait RandFillStorage<E: Unit>: DeviceStorage {
-    fn try_fill_with_uniform<S: Shape>(
-        &self,
-        storage: &mut Self::Storage<S, E>,
-        min: E,
-        max: E,
-    ) -> Result<(), Self::Err>;
-}
-
-/// Construct tensors with random values from a normal distribution
-pub trait RandnTensor<E: Unit>: DeviceStorage {
-    /// Creates a tensor filled with random data from a normal distribution with mean 0 and stddev 1.
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<2, 3>> = dev.randn();
-    /// ```
-    fn randn<S: Shape + Default>(&self) -> Tensor<S, E, Self> {
-        self.try_randn_like::<S>(&Default::default()).unwrap()
+        distr: D,
+    ) -> Tensor<S::Shape, E, Self> {
+        self.try_sample_like(src, distr).unwrap()
     }
-    /// Fallible version of [RandnTensor::randn]
-    fn try_randn<S: Shape + Default>(&self) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.try_randn_like::<S>(&Default::default())
-    }
-    /// Build the tensor with a shape given by something else.
-    ///
-    /// Given a shape directly:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<(usize, Const<3>)> = dev.randn_like(&(5, Const::<3>));
-    /// ```
-    ///
-    /// Given another tensor:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<2, 3>> = dev.randn();
-    /// let b = dev.randn_like(&a);
-    /// ```
-    fn randn_like<S: HasShape>(&self, src: &S) -> Tensor<S::Shape, E, Self> {
-        self.try_randn_like(src).unwrap()
-    }
-    /// Fallible version of [RandnTensor::randn_like]
-    fn try_randn_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
-    /// Creates a tensor filled with random data with custom parameters.
-    fn try_normal<S: Shape + Default>(
-        &self,
-        mean: E,
-        stddev: E,
-    ) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.try_normal_like::<S>(&Default::default(), mean, stddev)
-    }
-    /// Creates a tensor filled with random data with custom parameters, using the shape of
-    /// something else.
-    fn try_normal_like<S: HasShape>(
+    fn try_sample_like<S: HasShape, D: Distribution<E>>(
         &self,
         src: &S,
-        mean: E,
-        stddev: E,
+        distr: D,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
-}
 
-pub trait RandnFillStorage<E: Unit>: DeviceStorage {
-    fn try_fill_with_normal<S: Shape>(
+    fn try_fill_with_distr<S: Shape, D: Distribution<E>>(
         &self,
         storage: &mut Self::Storage<S, E>,
-        mean: E,
-        stddev: E,
+        distr: D,
     ) -> Result<(), Self::Err>;
 }
 

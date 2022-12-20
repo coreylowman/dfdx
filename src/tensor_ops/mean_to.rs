@@ -47,11 +47,11 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> MeanTo for Tensor<S, f32, D, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::{assert_close, build_test_device};
+    use crate::tests::{assert_close, TestDevice};
 
     #[test]
     fn test_valids_mean_axis() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let _ = dev.zeros::<Rank1<5>>().mean::<Rank0, _>();
         let _ = dev.zeros::<Rank2<5, 3>>().mean::<Rank1<3>, _>();
         let _ = dev.zeros::<Rank2<5, 3>>().mean::<Rank1<5>, _>();
@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn test_mean_1d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([1.0, 2.0, 3.0]);
         let r = t.trace().mean();
         assert_eq!(r.array(), 2.0);
@@ -77,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_mean_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
         let r = t.trace().mean();
         assert_eq!(r.array(), 3.5);
@@ -87,7 +87,7 @@ mod tests {
 
     #[test]
     fn test_mean_3d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.ones::<Rank3<4, 2, 3>>();
         let r = t.trace().mean();
         assert_eq!(r.array(), 1.0);
@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn test_mean_axis_0_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
         let r = t.trace().mean::<Rank1<3>, _>();
         assert_eq!(r.array(), [-0.5, 3.0, -1.5]);
@@ -107,7 +107,7 @@ mod tests {
 
     #[test]
     fn test_mean_axis_1_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
         let r = t.trace().mean::<Rank1<2>, _>();
         assert_eq!(r.array(), [2.0, -4.0 / 3.0]);
@@ -117,8 +117,8 @@ mod tests {
 
     #[test]
     fn test_mean_axes_3d_to_1d_02() {
-        let dev = build_test_device!();
-        let t = dev.randn::<Rank3<2, 3, 4>>();
+        let dev: TestDevice = Default::default();
+        let t = dev.sample_normal::<Rank3<2, 3, 4>>();
         let r = t.trace().mean::<Rank1<3>, _>();
         let r2 = t.trace().sum::<_, Axis<0>>().sum::<_, Axis<1>>() / 8.0;
         assert_close(&r.array(), &r2.array());
@@ -130,8 +130,8 @@ mod tests {
 
     #[test]
     fn test_mean_axes_3d_to_1d_01() {
-        let dev = build_test_device!();
-        let t = dev.randn::<Rank3<2, 3, 4>>();
+        let dev: TestDevice = Default::default();
+        let t = dev.sample_normal::<Rank3<2, 3, 4>>();
         let r = t.trace().mean::<Rank1<4>, _>();
         let r2 = t.sum::<_, Axis<0>>().sum::<_, Axis<0>>() / 6.0;
         assert_close(&r.array(), &r2.array());

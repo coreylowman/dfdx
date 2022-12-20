@@ -56,13 +56,13 @@ impl<S: Shape, E: Dtype, D: ReshapeKernel<E>, T: Tape<D>> ReshapeTo for Tensor<S
 mod tests {
     use crate::tensor::*;
     use crate::tensor_ops::*;
-    use crate::tests::build_test_device;
+    use crate::tests::TestDevice;
 
     use super::*;
 
     #[test]
     fn test_valid_reshapes() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let t: Tensor0D<_> = dev.zeros();
         let _: Tensor1D<1, _> = t.clone().reshape();
@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn test_1d_reshape() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]);
         let b = a.trace().reshape::<Rank2<2, 3>>();
         assert_eq!(b.array(), [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);

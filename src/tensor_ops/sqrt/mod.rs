@@ -36,11 +36,11 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<SqrtKernelOp, E>, T: Tape<D>> Tensor<S, 
 
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::build_test_device};
+    use crate::{tensor::*, tensor_ops::*, tests::TestDevice};
 
     #[test]
     fn test_sqrt() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor([-1.0, 0.0, 1.0, 4.0]);
         let r = x.trace().sqrt();
         assert!(r.array()[0].is_nan());

@@ -5,7 +5,7 @@ use dfdx::{
     nn::{self, Module, ModuleBuilder},
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     shapes::{Rank1, Rank2},
-    tensor::{Cpu, HasErr, RandnTensor, Tensor},
+    tensor::{Cpu, HasErr, SampleTensor, Tensor},
 };
 
 /// Custom model struct
@@ -87,8 +87,10 @@ fn main() {
     let model: Mlp<10, 512, 20> = dev.build_module();
 
     // Forward pass with a single sample
-    let _: Tensor<Rank1<20>, f32, Cpu> = model.forward(dev.randn::<Rank1<10>>());
+    let item: Tensor<Rank1<10>> = dev.sample_normal();
+    let _: Tensor<Rank1<20>, f32, Cpu> = model.forward(item);
 
     // Forward pass with a batch of samples
-    let _: Tensor<Rank2<32, 20>, f32, Cpu, _> = model.forward(dev.randn::<Rank2<32, 10>>().trace());
+    let batch: Tensor<Rank2<32, 10>> = dev.sample_normal();
+    let _: Tensor<Rank2<32, 20>, f32, Cpu, _> = model.forward(batch.trace());
 }

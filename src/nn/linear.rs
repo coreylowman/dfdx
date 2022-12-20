@@ -46,15 +46,17 @@ impl<const I: usize, const O: usize, D: Device<f32>> GradientUpdate<D, f32> for 
 impl<const I: usize, const O: usize, D: Device<f32>> ResetParams<D, f32> for Linear<I, O, D> {
     fn try_build(device: &D) -> Result<Self, D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
-        let weight = device.try_uniform(-bound, bound)?;
-        let bias = device.try_uniform(-bound, bound)?;
+        let distr = rand_distr::Uniform::new(-bound, bound);
+        let weight = device.try_sample(distr)?;
+        let bias = device.try_sample(distr)?;
         Ok(Self { weight, bias })
     }
 
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
-        self.weight.try_fill_with_uniform(-bound, bound)?;
-        self.bias.try_fill_with_uniform(-bound, bound)?;
+        let distr = rand_distr::Uniform::new(-bound, bound);
+        self.weight.try_fill_with_distr(distr)?;
+        self.bias.try_fill_with_distr(distr)?;
         Ok(())
     }
 }
@@ -121,7 +123,7 @@ mod tests {
     use super::*;
     use crate::{
         nn::{tests::SimpleUpdater, ModuleBuilder},
-        tests::{assert_close, build_test_device},
+        tests::{assert_close, TestDevice},
         unique_id::HasUniqueId,
     };
 
@@ -133,7 +135,7 @@ mod tests {
 
     #[test]
     fn test_linear_initialize() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let m: Linear<2000, 1, _> = dev.build_module();
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
@@ -146,7 +148,7 @@ mod tests {
 
     #[test]
     fn test_forward_1d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let model = Linear {
             weight: dev.tensor(W),
@@ -170,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_forward_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let model = Linear {
             weight: dev.tensor(W),
@@ -205,7 +207,7 @@ mod tests {
 
     #[test]
     fn test_forward_3d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let model = Linear {
             weight: dev.tensor(W),
@@ -245,7 +247,7 @@ mod tests {
 
     #[test]
     fn test_linear_missing_gradients() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut model: Linear<5, 3, _> = dev.build_module();
         let mut g: SimpleUpdater<_> = Default::default();

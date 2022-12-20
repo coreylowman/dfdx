@@ -50,11 +50,11 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{shapes::Axis, tensor::*, tensor_ops::*, tests::build_test_device};
+    use crate::{shapes::Axis, tensor::*, tensor_ops::*, tests::TestDevice};
 
     #[test]
     fn test_log_softmax_1d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = a.trace().log_softmax();
         assert_eq!(
@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn test_log_softmax_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
         let r = a.trace().log_softmax::<Axis<1>>();
         assert_eq!(

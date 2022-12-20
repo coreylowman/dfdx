@@ -136,14 +136,14 @@ mod tests {
     use crate::{
         shapes::Rank1,
         tensor::{AsArray, OnesTensor},
-        tests::build_test_device,
+        tests::TestDevice,
     };
 
     use super::*;
 
     #[test]
     fn test_dropout_internal_rng_reproduce() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let mut d1 = Dropout { p: 0.5 };
         let mut d2 = Dropout { p: 0.5 };
         let t = dev.ones::<Rank1<100>>();
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_dropout_no_tape() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let dropout = Dropout { p: 0.5 };
         let t = dev.ones::<Rank1<100>>();
         let r = dropout.forward(t.clone());
@@ -165,7 +165,7 @@ mod tests {
 
     #[test]
     fn test_dropout_tape() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let mut dropout = Dropout { p: 0.5 };
         let t = dev.ones::<Rank1<100>>();
         let r = dropout.forward_mut(t.trace());

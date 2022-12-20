@@ -59,7 +59,7 @@ impl<T: SplitTape + std::ops::Add<T, Output = T>, F: ModuleMut<T, Output = T>> M
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::{assert_close, build_test_device};
+    use crate::tests::{assert_close, TestDevice};
     use crate::{
         nn::{Linear, ModuleBuilder},
         tensor::*,
@@ -68,7 +68,7 @@ mod tests {
 
     #[test]
     fn test_residual_reset() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let model: Residual<Linear<2, 5, _>> = dev.build_module();
         assert_ne!(model.0.weight.array(), [[0.0; 2]; 5]);
         assert_ne!(model.0.bias.array(), [0.0; 5]);
@@ -76,11 +76,11 @@ mod tests {
 
     #[test]
     fn test_residual_gradients() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let model: Residual<Linear<2, 2, _>> = dev.build_module();
 
-        let x = dev.randn::<Rank2<4, 2>>();
+        let x = dev.sample_normal::<Rank2<4, 2>>();
         let y = model.forward(x.trace());
 
         #[rustfmt::skip]

@@ -36,11 +36,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::ModuleMut, tensor::ZerosTensor, tests::build_test_device};
+    use crate::{nn::ModuleMut, tensor::ZerosTensor, tests::TestDevice};
 
     #[test]
     fn test_flattens() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let _: Tensor<Rank1<100>, _, _> = Flatten2D.forward_mut(dev.zeros::<Rank3<10, 5, 2>>());
         let _: Tensor<Rank2<5, 24>, _, _> = Flatten2D.forward_mut(dev.zeros::<Rank4<5, 4, 3, 2>>());
     }

@@ -192,12 +192,11 @@ mod tests {
     use crate::shapes::{Rank0, Rank1, Rank2, Rank3};
 
     use super::*;
-    use std::vec;
 
     #[test]
     fn test_0d_contiguous_iter() {
         let s: StridedArray<Rank0, f32> = StridedArray {
-            data: Arc::new(vec![0.0]),
+            data: Arc::new([0.0].to_vec()),
             shape: (),
             strides: ().strides(),
         };
@@ -210,7 +209,7 @@ mod tests {
     fn test_1d_contiguous_iter() {
         let shape = Default::default();
         let s: StridedArray<Rank1<3>, f32> = StridedArray {
-            data: Arc::new(vec![0.0, 1.0, 2.0]),
+            data: Arc::new([0.0, 1.0, 2.0].to_vec()),
             shape,
             strides: shape.strides(),
         };
@@ -225,7 +224,7 @@ mod tests {
     fn test_2d_contiguous_iter() {
         let shape = Default::default();
         let s: StridedArray<Rank2<2, 3>, f32> = StridedArray {
-            data: Arc::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
+            data: Arc::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0].to_vec()),
             shape,
             strides: shape.strides(),
         };
@@ -242,7 +241,7 @@ mod tests {
     #[test]
     fn test_2d_broadcasted_0_iter() {
         let s: StridedArray<Rank2<2, 3>, f32> = StridedArray {
-            data: Arc::new(vec![1.0, 0.0, -1.0]),
+            data: Arc::new([1.0, 0.0, -1.0].to_vec()),
             shape: Default::default(),
             strides: [0, 1],
         };
@@ -259,7 +258,7 @@ mod tests {
     #[test]
     fn test_2d_broadcasted_1_iter() {
         let s: StridedArray<Rank2<2, 3>, f32> = StridedArray {
-            data: Arc::new(vec![1.0, -1.0]),
+            data: Arc::new([1.0, -1.0].to_vec()),
             shape: Default::default(),
             strides: [1, 0],
         };
@@ -276,7 +275,7 @@ mod tests {
     #[test]
     fn test_2d_permuted_iter() {
         let s: StridedArray<Rank2<3, 2>, f32> = StridedArray {
-            data: Arc::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
+            data: Arc::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0].to_vec()),
             shape: Default::default(),
             strides: [1, 3],
         };
@@ -293,7 +292,7 @@ mod tests {
     #[test]
     fn test_3d_broadcasted_iter() {
         let s: StridedArray<Rank3<3, 1, 2>, f32> = StridedArray {
-            data: Arc::new(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
+            data: Arc::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0].to_vec()),
             shape: Default::default(),
             strides: [2, 0, 1],
         };

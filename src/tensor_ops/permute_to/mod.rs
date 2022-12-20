@@ -65,13 +65,13 @@ mod tests {
     use super::*;
     use crate::shapes::{Axes2, Axes3, Axes4, Rank2, Rank3, Rank4};
     use crate::tensor_ops::*;
-    use crate::tests::build_test_device;
+    use crate::tests::TestDevice;
 
     #[test]
     fn test_permute_2d() {
-        let dev = build_test_device!();
-        let t: Tensor2D<2, 3, _> = dev.randn();
-        let r: Tensor2D<3, 2, _> = t.clone().permute();
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank2<2, 3>, f32, _> = dev.sample_normal();
+        let r: Tensor<Rank2<3, 2>, f32, _> = t.clone().permute();
         let t_array = t.array();
         let r_array = r.array();
         for i in 0..2 {
@@ -83,8 +83,8 @@ mod tests {
 
     #[test]
     fn test_permute_3d() {
-        let dev = build_test_device!();
-        let t = dev.randn::<Rank3<3, 5, 7>>();
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank3<3, 5, 7>, f32, _> = dev.sample_normal();
         let r = t.clone().permute::<Rank3<5, 7, 3>, _>();
         let t_array = t.array();
         let r_array = r.array();
@@ -99,8 +99,8 @@ mod tests {
 
     #[test]
     fn test_permute_4d() {
-        let dev = build_test_device!();
-        let t = dev.randn::<Rank4<3, 5, 7, 9>>();
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.sample_normal();
         let r = t.clone().permute::<Rank4<5, 9, 3, 7>, _>();
         let t_array = t.array();
         let r_array = r.array();
@@ -117,8 +117,8 @@ mod tests {
 
     #[test]
     fn test_permute_2d_backwards() {
-        let dev = build_test_device!();
-        let t = dev.randn::<Rank2<3, 6>>();
+        let dev: TestDevice = Default::default();
+        let t = dev.sample_normal::<Rank2<3, 6>>();
         let g1 = t.trace().exp().sum().backward();
         let g2 = t.trace().permute().exp().sum().backward();
         assert_eq!(g1.get(&t).array(), g2.get(&t).array());
@@ -126,8 +126,8 @@ mod tests {
 
     #[test]
     fn test_permute_3d_backwards() {
-        let dev = build_test_device!();
-        let t = dev.randn::<Rank3<3, 6, 9>>();
+        let dev: TestDevice = Default::default();
+        let t = dev.sample_normal::<Rank3<3, 6, 9>>();
         let g1 = t.trace().exp().sum().backward();
         let g2 = t
             .trace()
@@ -140,8 +140,8 @@ mod tests {
 
     #[test]
     fn test_permute_4d_backwards() {
-        let dev = build_test_device!();
-        let t = dev.randn::<Rank4<3, 6, 9, 11>>();
+        let dev: TestDevice = Default::default();
+        let t = dev.sample_normal::<Rank4<3, 6, 9, 11>>();
         let g1 = t.trace().exp().sum().backward();
         let g2 = t
             .trace()
@@ -154,17 +154,19 @@ mod tests {
 
     #[test]
     fn test_valid_permutations() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
-        let _ = dev.randn::<Rank2<3, 5>>().permute::<_, Axes2<1, 0>>();
+        let x: Tensor<Rank2<3, 5>, f32, _> = dev.sample_normal();
+        let _ = x.permute::<_, Axes2<1, 0>>();
 
-        let _ = dev.randn::<Rank3<3, 5, 7>>().permute::<_, Axes3<0, 2, 1>>();
-        let _ = dev.randn::<Rank3<3, 5, 7>>().permute::<_, Axes3<1, 0, 2>>();
-        let _ = dev.randn::<Rank3<3, 5, 7>>().permute::<_, Axes3<1, 2, 0>>();
-        let _ = dev.randn::<Rank3<3, 5, 7>>().permute::<_, Axes3<2, 0, 1>>();
-        let _ = dev.randn::<Rank3<3, 5, 7>>().permute::<_, Axes3<2, 1, 0>>();
+        let x: Tensor<Rank3<3, 5, 7>, f32, _> = dev.sample_normal();
+        let _ = x.clone().permute::<_, Axes3<0, 2, 1>>();
+        let _ = x.clone().permute::<_, Axes3<1, 0, 2>>();
+        let _ = x.clone().permute::<_, Axes3<1, 2, 0>>();
+        let _ = x.clone().permute::<_, Axes3<2, 0, 1>>();
+        let _ = x.permute::<_, Axes3<2, 1, 0>>();
 
-        let x = dev.randn::<Rank4<3, 5, 7, 9>>();
+        let x: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.sample_normal();
         x.clone().permute::<_, Axes4<0, 1, 2, 3>>();
         x.clone().permute::<_, Axes4<0, 1, 3, 2>>();
         x.clone().permute::<_, Axes4<0, 2, 1, 3>>();

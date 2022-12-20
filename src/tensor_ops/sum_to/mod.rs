@@ -75,11 +75,11 @@ impl<S: Shape, E: Dtype, D: SumKernel<E>, T: Tape<D>> SumTo for Tensor<S, E, D, 
 mod tests {
     use super::*;
     use crate::tensor_ops::*;
-    use crate::tests::{assert_close, build_test_device};
+    use crate::tests::{assert_close, TestDevice};
 
     #[test]
     fn test_sum_1d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([1.0, 2.0, 3.0]);
         let r = t.trace().sum::<Rank0, _>();
         assert_eq!(r.array(), 6.0);
@@ -90,7 +90,7 @@ mod tests {
 
     #[test]
     fn test_sum_axis_0_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
         let r = t.trace().sum::<Rank1<3>, _>();
         assert_eq!(r.array(), [-1.0, 6.0, -3.0]);
@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn test_sum_axis_1_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
         let r = t.trace().sum::<Rank1<2>, _>();
         assert_eq!(r.array(), [6.0, -4.0]);
@@ -110,8 +110,8 @@ mod tests {
 
     #[test]
     fn test_sum_axes_3d_to_1d() {
-        let dev = build_test_device!();
-        let t = dev.randn::<Rank3<2, 3, 4>>();
+        let dev: TestDevice = Default::default();
+        let t = dev.sample::<Rank3<2, 3, 4>, _>(rand_distr::StandardNormal);
         let r = t.trace().sum::<Rank1<3>, _>();
         let r2 = t.trace().sum::<Rank2<3, 4>, _>().sum::<Rank1<3>, _>();
         assert_close(&r.array(), &r2.array());

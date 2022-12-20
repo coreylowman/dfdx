@@ -21,15 +21,15 @@ type QNetwork = (
 fn main() {
     let dev: Cpu = Default::default();
 
-    let state = dev.randn::<Rank2<BATCH, STATE>>();
+    let state = dev.sample_normal::<Rank2<BATCH, STATE>>();
     let mut i = 0;
     let action: Tensor<Rank1<BATCH>, usize, _> = dev.tensor([(); BATCH].map(|_| {
         i += 1;
         i % ACTION
     }));
-    let reward = dev.randn::<Rank1<BATCH>>();
+    let reward = dev.sample_normal::<Rank1<BATCH>>();
     let done = dev.zeros::<Rank1<BATCH>>();
-    let next_state = dev.randn::<Rank2<BATCH, STATE>>();
+    let next_state = dev.sample_normal::<Rank2<BATCH, STATE>>();
 
     // initiliaze model
     let mut q_net: QNetwork = dev.build_module();

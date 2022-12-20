@@ -75,11 +75,11 @@ where
 mod tests {
     use crate::tensor::*;
     use crate::tensor_ops::*;
-    use crate::tests::build_test_device;
+    use crate::tests::TestDevice;
 
     #[test]
     fn test_div_0d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let a = dev.tensor(2.0);
         let b = dev.tensor(4.0);
@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_div_1d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([1.0, 2.0, 3.0]);
         let b = dev.tensor([1.0, -1.0, 0.0]);
 
@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn test_div_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let a = dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
         let b = dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
@@ -137,7 +137,7 @@ mod tests {
 
     #[test]
     fn test_scalar_div_0d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor(1.0);
         let r = x.trace() / 2.0;
         assert_eq!(r.array(), 0.5);
@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn test_scalar_div_1d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor([0.0, 1.0, 2.0]);
         let r = x.trace() / 2.0;
         assert_eq!(r.array(), [0.0, 0.5, 1.0]);
@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_scalar_div_2d() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         let x = dev.tensor([[1.0; 2]; 3]);
         let r = x.trace() / 2.0;
         assert_eq!(r.array(), [[0.5; 2]; 3]);

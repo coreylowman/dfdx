@@ -333,14 +333,14 @@ impl<
 #[cfg(test)]
 mod tests {
     use crate::{
-        prelude::{AsArray, RandnTensor},
         shapes::{Dtype, Rank1, Rank3, Shape},
-        tensor::Tensor,
+        tensor::{AsArray, SampleTensor, Tensor},
         tensor_ops::Device,
-        tests::{build_test_device, TestDevice},
+        tests::TestDevice,
     };
 
     use super::*;
+    use rand_distr::{Distribution, Standard, StandardNormal};
     use tempfile::NamedTempFile;
 
     fn test_save_load<
@@ -353,8 +353,9 @@ mod tests {
     ) where
         M::Output: AsArray,
         <M::Output as AsArray>::Array: PartialEq,
+        StandardNormal: Distribution<E>,
     {
-        let x = dev.randn();
+        let x = dev.sample_normal();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
         let saved: M = dev.build_module();
@@ -372,18 +373,18 @@ mod tests {
 
     #[test]
     fn test_batchnorm2d_save_load() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
-        let x = dev.randn::<Rank3<3, 4, 5>>();
+        let x = dev.sample_normal::<Rank3<3, 4, 5>>();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
         let mut saved: BatchNorm2D<3> = dev.build_module();
         let mut loaded: BatchNorm2D<3> = dev.build_module();
 
-        saved.running_mean.fill_with_uniform(0.0, 1.0);
-        saved.running_var.fill_with_uniform(0.0, 1.0);
-        saved.scale.fill_with_uniform(0.0, 1.0);
-        saved.bias.fill_with_uniform(0.0, 1.0);
+        saved.running_mean.fill_with_distr(Standard);
+        saved.running_var.fill_with_distr(Standard);
+        saved.scale.fill_with_distr(Standard);
+        saved.bias.fill_with_distr(Standard);
         let y = saved.forward(x.clone());
 
         assert_ne!(loaded.forward(x.clone()).array(), y.array());
@@ -398,13 +399,13 @@ mod tests {
     #[test]
     fn test_save_load_conv() {
         type T = Conv2D<2, 4, 3, 1, 0, TestDevice>;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         test_save_load::<Rank3<2, 8, 8>, f32, TestDevice, T>(&dev);
     }
 
     #[test]
     fn test_save_load_generalized_residual() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         type T = GeneralizedResidual<Linear<5, 5, TestDevice>, Linear<5, 5, TestDevice>>;
         test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
         test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
@@ -412,7 +413,7 @@ mod tests {
 
     #[test]
     fn test_save_load_linear() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         type T = Linear<5, 5, TestDevice>;
         test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
         test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
@@ -420,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_save_load_tuple() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         type T = (
             Linear<1, 2, TestDevice>,
             ReLU,
@@ -433,16 +434,16 @@ mod tests {
     #[test]
     fn test_save_load_layer_norm() {
         type M = LayerNorm1D<3, TestDevice>;
-        let dev = build_test_device!();
-        let x = dev.randn::<Rank1<3>>();
+        let dev: TestDevice = Default::default();
+        let x = dev.sample_normal::<Rank1<3>>();
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
         let mut saved: M = dev.build_module();
         let mut loaded: M = dev.build_module();
 
-        saved.gamma.fill_with_uniform(0.0, 1.0);
-        saved.beta.fill_with_uniform(0.0, 1.0);
+        saved.gamma.fill_with_distr(Standard);
+        saved.beta.fill_with_distr(Standard);
         let y = saved.forward(x.clone());
 
         assert_ne!(loaded.forward(x.clone()).array(), y.array());
@@ -456,7 +457,7 @@ mod tests {
     #[test]
     fn test_save_load_repeated() {
         type T = Repeated<Linear<3, 3, TestDevice>, 4>;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         test_save_load::<Rank1<3>, f32, TestDevice, T>(&dev);
         test_save_load::<Rank1<3>, f32, TestDevice, (T, T)>(&dev);
     }
@@ -464,7 +465,7 @@ mod tests {
     #[test]
     fn test_save_load_residual() {
         type T = Residual<Linear<5, 5, TestDevice>>;
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
         test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
         test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
     }
@@ -472,7 +473,7 @@ mod tests {
     #[cfg(feature = "nightly")]
     #[test]
     fn test_save_load_mha() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let saved: MultiHeadAttention<12, 4, 12, 12, TestDevice> = dev.build_module();
 
@@ -481,9 +482,9 @@ mod tests {
 
         let mut loaded: MultiHeadAttention<12, 4, 12, 12, TestDevice> = dev.build_module();
 
-        let q = dev.randn::<Rank3<2, 3, 12>>();
-        let k = dev.randn::<Rank3<2, 4, 12>>();
-        let v = dev.randn::<Rank3<2, 4, 12>>();
+        let q = dev.sample_normal::<Rank3<2, 3, 12>>();
+        let k = dev.sample_normal::<Rank3<2, 4, 12>>();
+        let v = dev.sample_normal::<Rank3<2, 4, 12>>();
         let y1 = saved.forward((q.clone(), k.clone(), v.clone()));
 
         let y2 = loaded.forward((q.clone(), k.clone(), v.clone()));
@@ -498,7 +499,7 @@ mod tests {
     #[cfg(feature = "nightly")]
     #[test]
     fn test_save_load_transformer() {
-        let dev = build_test_device!();
+        let dev: TestDevice = Default::default();
 
         let mut saved: Transformer<16, 4, 3, 4, 8, TestDevice> = dev.build_module();
 
@@ -507,8 +508,8 @@ mod tests {
 
         let mut loaded: Transformer<16, 4, 3, 4, 8, TestDevice> = dev.build_module();
 
-        let src = dev.randn::<Rank3<4, 12, 16>>();
-        let tgt = dev.randn::<Rank3<4, 6, 16>>();
+        let src = dev.sample_normal::<Rank3<4, 12, 16>>();
+        let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();
         let y1 = saved.forward_mut((src.clone(), tgt.clone()));
 
         let y2 = loaded.forward_mut((src.clone(), tgt.clone()));
