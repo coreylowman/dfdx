@@ -181,14 +181,13 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tensor::*;
-    use crate::tensor_ops::*;
     use crate::tests::TestDevice;
+    use crate::{shapes::*, tensor::*, tensor_ops::*};
 
     fn test_matches_expected(cfg: RMSpropConfig<f32>, expected: [[f32; 5]; 5]) {
         let dev: TestDevice = Default::default();
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
-        let mut t: Tensor1D<5, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
         let mut opt = RMSprop::new(cfg);
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).square().sum().backward();

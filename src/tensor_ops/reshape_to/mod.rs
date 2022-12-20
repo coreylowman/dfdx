@@ -67,35 +67,35 @@ mod tests {
     fn test_valid_reshapes() {
         let dev: TestDevice = Default::default();
 
-        let t: Tensor0D<_> = dev.zeros();
-        let _: Tensor1D<1, _> = t.clone().reshape();
-        let _: Tensor2D<1, 1, _> = t.clone().reshape();
-        let _: Tensor3D<1, 1, 1, _> = t.clone().reshape();
-        let _: Tensor4D<1, 1, 1, 1, _> = t.clone().reshape();
+        let t: Tensor<Rank0, f32, _> = dev.zeros();
+        let _: Tensor<Rank1<1>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank2<1, 1>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank3<1, 1, 1>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank4<1, 1, 1, 1>, f32, _> = t.clone().reshape();
 
-        let t: Tensor1D<16, _> = dev.zeros();
-        let _: Tensor1D<16, _> = t.clone().reshape();
-        let _: Tensor2D<2, 8, _> = t.clone().reshape();
-        let _: Tensor3D<2, 2, 4, _> = t.clone().reshape();
-        let _: Tensor4D<2, 2, 2, 2, _> = t.clone().reshape();
+        let t: Tensor<Rank1<16>, f32, _> = dev.zeros();
+        let _: Tensor<Rank1<16>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank2<2, 8>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank3<2, 2, 4>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank4<2, 2, 2, 2>, f32, _> = t.clone().reshape();
 
-        let t: Tensor2D<2, 8, _> = dev.zeros();
-        let _: Tensor1D<16, _> = t.clone().reshape();
-        let _: Tensor2D<8, 2, _> = t.clone().reshape();
-        let _: Tensor3D<2, 2, 4, _> = t.clone().reshape();
-        let _: Tensor4D<2, 2, 2, 2, _> = t.clone().reshape();
+        let t: Tensor<Rank2<2, 8>, f32, _> = dev.zeros();
+        let _: Tensor<Rank1<16>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank2<8, 2>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank3<2, 2, 4>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank4<2, 2, 2, 2>, f32, _> = t.clone().reshape();
 
-        let t: Tensor3D<2, 2, 4, _> = dev.zeros();
-        let _: Tensor1D<16, _> = t.clone().reshape();
-        let _: Tensor2D<2, 8, _> = t.clone().reshape();
-        let _: Tensor3D<4, 2, 2, _> = t.clone().reshape();
-        let _: Tensor4D<2, 2, 2, 2, _> = t.clone().reshape();
+        let t: Tensor<Rank3<2, 2, 4>, f32, _> = dev.zeros();
+        let _: Tensor<Rank1<16>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank2<2, 8>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank3<4, 2, 2>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank4<2, 2, 2, 2>, f32, _> = t.clone().reshape();
 
-        let t: Tensor4D<2, 2, 2, 2, _> = dev.zeros();
-        let _: Tensor1D<16, _> = t.clone().reshape();
-        let _: Tensor2D<2, 8, _> = t.clone().reshape();
-        let _: Tensor3D<2, 2, 4, _> = t.clone().reshape();
-        let _: Tensor4D<4, 1, 2, 2, _> = t.clone().reshape();
+        let t: Tensor<Rank4<2, 2, 2, 2>, f32, _> = dev.zeros();
+        let _: Tensor<Rank1<16>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank2<2, 8>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank3<2, 2, 4>, f32, _> = t.clone().reshape();
+        let _: Tensor<Rank4<4, 1, 2, 2>, f32, _> = t.clone().reshape();
     }
 
     #[test]

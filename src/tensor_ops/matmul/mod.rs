@@ -294,33 +294,33 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         {
-            let a: Tensor1D<3, _> = dev.zeros();
-            let b: Tensor2D<3, 2, _> = dev.zeros();
-            let _: Tensor1D<2, _> = a.matmul(b);
+            let a: Tensor<Rank1<3>, f32, _> = dev.zeros();
+            let b: Tensor<Rank2<3, 2>, f32, _> = dev.zeros();
+            let _: Tensor<Rank1<2>, f32, _> = a.matmul(b);
         }
 
         {
-            let a: Tensor2D<5, 3, _> = dev.zeros();
-            let b: Tensor2D<3, 2, _> = dev.zeros();
-            let _: Tensor2D<5, 2, _> = a.matmul(b);
+            let a: Tensor<Rank2<5, 3>, f32, _> = dev.zeros();
+            let b: Tensor<Rank2<3, 2>, f32, _> = dev.zeros();
+            let _: Tensor<Rank2<5, 2>, f32, _> = a.matmul(b);
         }
 
         {
-            let a: Tensor3D<10, 5, 3, _> = dev.zeros();
-            let b: Tensor2D<3, 2, _> = dev.zeros();
-            let _: Tensor3D<10, 5, 2, _> = a.matmul(b);
+            let a: Tensor<Rank3<10, 5, 3>, f32, _> = dev.zeros();
+            let b: Tensor<Rank2<3, 2>, f32, _> = dev.zeros();
+            let _: Tensor<Rank3<10, 5, 2>, f32, _> = a.matmul(b);
         }
 
         {
-            let a: Tensor3D<10, 5, 3, _> = dev.zeros();
-            let b: Tensor3D<10, 3, 2, _> = dev.zeros();
-            let _: Tensor3D<10, 5, 2, _> = a.matmul(b);
+            let a: Tensor<Rank3<10, 5, 3>, f32, _> = dev.zeros();
+            let b: Tensor<Rank3<10, 3, 2>, f32, _> = dev.zeros();
+            let _: Tensor<Rank3<10, 5, 2>, f32, _> = a.matmul(b);
         }
 
         {
-            let a: Tensor4D<10, 20, 5, 3, _> = dev.zeros();
-            let b: Tensor4D<10, 20, 3, 2, _> = dev.zeros();
-            let _: Tensor4D<10, 20, 5, 2, _> = a.matmul(b);
+            let a: Tensor<Rank4<10, 20, 5, 3>, f32, _> = dev.zeros();
+            let b: Tensor<Rank4<10, 20, 3, 2>, f32, _> = dev.zeros();
+            let _: Tensor<Rank4<10, 20, 5, 2>, f32, _> = a.matmul(b);
         }
     }
 
@@ -368,8 +368,8 @@ mod tests {
     #[test]
     fn test_matmul_transpose() {
         let dev: TestDevice = Default::default();
-        let a: Tensor2D<4, 3, _> = dev.sample_normal();
-        let b: Tensor2D<3, 2, _> = dev.sample_normal();
+        let a: Tensor<Rank2<4, 3>, f32, _> = dev.sample_normal();
+        let b: Tensor<Rank2<3, 2>, f32, _> = dev.sample_normal();
 
         let c = a.trace().matmul(b.clone());
         let g1 = c.exp().mean().backward();
@@ -385,9 +385,9 @@ mod tests {
     fn test_matul_broadcast() {
         const N: usize = 5;
         let dev: TestDevice = Default::default();
-        let a: Tensor3D<N, 4, 3, _> = dev.sample_normal();
+        let a: Tensor<Rank3<N, 4, 3>, f32, _> = dev.sample_normal();
         let a_array = a.array();
-        let b: Tensor2D<3, 2, _> = dev.sample_normal();
+        let b: Tensor<Rank2<3, 2>, f32, _> = dev.sample_normal();
         let r = a.trace().matmul(b.clone());
         let r_array = r.array();
         for i in 0..N {
@@ -432,9 +432,9 @@ mod tests {
     fn test_matmul_batched_3d() {
         let dev: TestDevice = Default::default();
 
-        let a: Tensor3D<5, 3, 2, _> = dev.sample_normal();
+        let a: Tensor<Rank3<5, 3, 2>, f32, _> = dev.sample_normal();
         let a_array = a.array();
-        let b: Tensor3D<5, 2, 4, _> = dev.sample_normal();
+        let b: Tensor<Rank3<5, 2, 4>, f32, _> = dev.sample_normal();
         let b_array = b.array();
         let c = a.trace().matmul(b.clone());
         let c_array = c.array();
@@ -458,9 +458,9 @@ mod tests {
     fn test_matmul_batched_4d() {
         let dev: TestDevice = Default::default();
 
-        let a: Tensor4D<7, 5, 3, 2, _> = dev.sample_normal();
+        let a: Tensor<Rank4<7, 5, 3, 2>, f32, _> = dev.sample_normal();
         let a_array = a.array();
-        let b: Tensor4D<7, 5, 2, 4, _> = dev.sample_normal();
+        let b: Tensor<Rank4<7, 5, 2, 4>, f32, _> = dev.sample_normal();
         let b_array = b.array();
         let c = a.trace().matmul(b.clone());
         let c_array = c.array();
