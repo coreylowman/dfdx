@@ -51,10 +51,8 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::shapes::Axis;
-    use crate::tensor::*;
-    use crate::tensor_ops::*;
     use crate::tests::{assert_close, TestDevice};
+    use crate::{shapes::*, tensor::*, tensor_ops::*};
 
     #[test]
     fn test_1d_normalize_axis_last() {
@@ -116,7 +114,7 @@ mod tests {
     #[test]
     fn test_3d_normalize_axis_last() {
         let dev: TestDevice = Default::default();
-        let a: Tensor3D<4, 2, 3, _> = dev.ones();
+        let a: Tensor<Rank3<4, 2, 3>, f32, _> = dev.ones();
         let r = a.trace().normalize::<Axis<2>>(1e-5);
         assert_eq!(r.array(), [[[0.0; 3]; 2]; 4]);
         let g = r.exp().mean().backward();

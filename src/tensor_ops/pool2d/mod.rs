@@ -235,9 +235,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tensor::*;
-    use crate::tensor_ops::*;
     use crate::tests::{assert_close, TestDevice};
+    use crate::{shapes::*, tensor::*, tensor_ops::*};
 
     #[test]
     fn test_pool2d_3d_max2d_eq_grads() {
@@ -262,7 +261,7 @@ mod tests {
     #[test]
     fn test_pool2d_3d_max2d() {
         let dev = TestDevice::seed_from_u64(234);
-        let x: Tensor3D<2, 3, 4, _> = dev.sample_normal();
+        let x: Tensor<Rank3<2, 3, 4>, f32, _> = dev.sample_normal();
         let r = x.trace().max_pool2d::<2, 2, 0>();
         assert_close(
             &r.array(),
@@ -282,7 +281,7 @@ mod tests {
     #[test]
     fn test_pool2d_3d_min2d() {
         let dev = TestDevice::seed_from_u64(234);
-        let x: Tensor3D<2, 3, 4, _> = dev.sample_normal();
+        let x: Tensor<Rank3<2, 3, 4>, f32, _> = dev.sample_normal();
         let r = x.trace().min_pool2d::<2, 2, 0>();
         assert_close(
             &r.array(),
@@ -302,12 +301,12 @@ mod tests {
     #[test]
     fn test_pool2d_3d_avg2d() {
         let dev = TestDevice::seed_from_u64(234);
-        let x: Tensor3D<2, 3, 4, _> = dev.sample_normal();
+        let x: Tensor<Rank3<2, 3, 4>, f32, _> = dev.sample_normal();
         let r = x.trace().avg_pool2d::<2, 2, 0>();
-        // assert_close(
-        //     &r.array(),
-        //     &[[[0.03031558, -0.25052455]], [[0.39499030, 0.04878314]]],
-        // );
+        assert_close(
+            &r.array(),
+            &[[[0.03031558, -0.25052455]], [[0.39499030, 0.04878314]]],
+        );
         let g = r.exp().mean().backward();
         #[rustfmt::skip]
         assert_close(
@@ -322,7 +321,7 @@ mod tests {
     #[test]
     fn test_pool2d_4d_avg2d() {
         let dev = TestDevice::seed_from_u64(234);
-        let x: Tensor4D<2, 4, 2, 2, _> = dev.sample_normal();
+        let x: Tensor<Rank4<2, 4, 2, 2>, f32, _> = dev.sample_normal();
         let r = x.trace().avg_pool2d::<1, 2, 0>();
         assert_close(
             &r.array(),
