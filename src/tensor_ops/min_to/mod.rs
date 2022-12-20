@@ -1,5 +1,8 @@
 mod cpu_kernel;
 
+#[cfg(feature = "cuda")]
+mod cuda_kernel;
+
 use crate::{gradients::Tape, shapes::*, tensor::*};
 
 pub trait MinReduceKernel<E: Dtype>: DeviceStorage {
