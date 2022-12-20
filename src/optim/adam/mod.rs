@@ -162,15 +162,14 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tensor::*;
-    use crate::tensor_ops::*;
     use crate::tests::{assert_close, TestDevice};
+    use crate::{shapes::*, tensor::*, tensor_ops::*};
 
     #[test]
     fn test_default_adam_params() {
         let dev: TestDevice = Default::default();
         let mut opt = Adam::default();
-        let mut t: Tensor1D<5, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
         let rate = dev.tensor([1e-6, 1e-5, 1e-4, 1e-3, 1e-2]);
         let expected = [
             [0.99999994, 0.999996, 0.9997143, 0.9990244, 0.99900025],
@@ -201,7 +200,7 @@ mod tests {
             eps: 1e-8,
             weight_decay: None,
         });
-        let mut t: Tensor1D<5, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
         let rate = dev.tensor([1e-4, 1e-3, 1e-2, 1e-1, 1e-0]);
         let expected = [
             [0.9997143, 0.9990244, 0.99900025, 0.999, 0.999],
@@ -231,7 +230,7 @@ mod tests {
             weight_decay: Some(WeightDecay::L2(1.0)),
             ..Default::default()
         });
-        let mut t: Tensor1D<5, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
+        let mut t: Tensor<Rank1<5>, f32, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
         #[rustfmt::skip]
         let expected = [
             [-0.499, -0.249, 0.099, 0.59900004, 0.999],
@@ -261,7 +260,7 @@ mod tests {
             weight_decay: Some(WeightDecay::Decoupled(1.0)),
             ..Default::default()
         });
-        let mut t: Tensor1D<5, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
+        let mut t: Tensor<Rank1<5>, f32, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
         #[rustfmt::skip]
         let expected = [
             [-0.5005, -0.25075,  0.098900005,  0.5984,  0.998],

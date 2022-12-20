@@ -56,7 +56,7 @@ mod tests {
     #[test]
     fn test_dropout_all_0d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor0D<_> = dev.tensor(3.0);
+        let t = dev.tensor(3.0);
         let r = t.trace().dropout(1.0);
         assert_eq!(r.array(), 0.0);
         let g = r.backward();
@@ -66,7 +66,7 @@ mod tests {
     #[test]
     fn test_dropout_none_0d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor0D<_> = dev.tensor(3.0);
+        let t = dev.tensor(3.0);
         let r = t.trace().dropout(0.0);
         assert_eq!(r.array(), 3.0);
         let g = r.backward();

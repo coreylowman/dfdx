@@ -192,9 +192,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tensor::*;
-    use crate::tensor_ops::*;
     use crate::tests::{assert_close, TestDevice};
+    use crate::{shapes::*, tensor::*, tensor_ops::*};
 
     #[test]
     fn test_perfect_sgd() {
@@ -205,8 +204,8 @@ mod tests {
             weight_decay: None,
         });
 
-        let mut pred: Tensor1D<5, _> = dev.zeros();
-        let targ: Tensor1D<5, _> = dev.ones();
+        let mut pred: Tensor<Rank1<5>, f32, _> = dev.zeros();
+        let targ: Tensor<Rank1<5>, f32, _> = dev.ones();
         for _ in 0..5 {
             let loss = (pred.trace() - targ.clone()).abs().mean();
             let gradients = loss.backward();
@@ -221,7 +220,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut sgd = Sgd::new(Default::default());
 
-        let mut t: Tensor1D<5, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9998, 0.998, 0.996, 0.98, 0.8],
@@ -248,7 +247,7 @@ mod tests {
             weight_decay: None,
         });
 
-        let mut t: Tensor1D<5, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9998, 0.998, 0.996, 0.98, 0.8],
@@ -275,7 +274,7 @@ mod tests {
             weight_decay: None,
         });
 
-        let mut t: Tensor1D<5, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9997, 0.997, 0.994, 0.97, 0.70000005],
@@ -308,7 +307,7 @@ mod tests {
             weight_decay: Some(WeightDecay::Decoupled(1e-1)),
         });
 
-        let mut t: Tensor1D<5, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9988, 0.997, 0.995, 0.979, 0.799],
@@ -340,7 +339,7 @@ mod tests {
             weight_decay: Some(WeightDecay::Decoupled(1e-1)),
         });
 
-        let mut t: Tensor1D<5, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9988, 0.997, 0.995, 0.979, 0.799],
@@ -373,7 +372,7 @@ mod tests {
             weight_decay: None,
         });
 
-        let mut t: Tensor1D<5, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9988, 0.997, 0.995, 0.979, 0.799],
