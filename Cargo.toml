@@ -31,11 +31,11 @@ matrixmultiply = { version = "0.3.2", default-features = false }
 zip = { version = "0.6.2", default-features = false, optional = true }
 cblas-sys = { version = "0.1.4", default-features = false, optional = true }
 libc = { version = "0.2", default-features = false, optional = true }
-cudarc = { version = "0.4.0", default-features = false, optional = true }
+cudarc = { path = "../cudarc", default-features = false, optional = true }
 
 [features]
-default = ["std", "numpy"]
-std = ["no-std-compat/std", "rand/std", "rand_distr/std"]
+default = ["std", "numpy", "cuda", "test-cuda"]
+std = ["no-std-compat/std", "rand/std", "rand_distr/std", "cudarc?/std"]
 nightly = []
 numpy = ["dep:zip", "std"]
 cblas = ["dep:cblas-sys", "dep:libc"]
@@ -51,3 +51,4 @@ indicatif = "0.16.2"
 
 [build-dependencies]
 rustc_version = "0.4.0"
+glob = "0.3.0"

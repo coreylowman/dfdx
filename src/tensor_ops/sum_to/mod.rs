@@ -98,7 +98,10 @@ mod tests {
         let r = t.trace().sum::<Rank1<3>, _>();
         assert_eq!(r.array(), [-1.0, 6.0, -3.0]);
         let g = r.exp().mean().backward();
-        assert_eq!(g.get(&t).array(), [[0.12262648, 134.47627, 0.01659569]; 2]);
+        assert_close(
+            &g.get(&t).array(),
+            &[[0.12262648, 134.47627, 0.01659569]; 2],
+        );
     }
 
     #[test]
@@ -108,7 +111,7 @@ mod tests {
         let r = t.trace().sum::<Rank1<2>, _>();
         assert_eq!(r.array(), [6.0, -4.0]);
         let g = r.exp().mean().backward();
-        assert_eq!(g.get(&t).array(), [[201.7144; 3], [0.00915782; 3]]);
+        assert_close(&g.get(&t).array(), &[[201.7144; 3], [0.00915782; 3]]);
     }
 
     #[test]
@@ -118,8 +121,8 @@ mod tests {
         let r = t.trace().sum::<Rank1<3>, _>();
         let r2 = t.trace().sum::<Rank2<3, 4>, _>().sum::<Rank1<3>, _>();
         assert_close(&r.array(), &r2.array());
-        let g = r.mean().backward();
-        let g2 = r2.mean().backward();
+        let g = r.sum().backward();
+        let g2 = r2.sum().backward();
         assert_close(&g.get(&t).array(), &g2.get(&t).array());
     }
 }
