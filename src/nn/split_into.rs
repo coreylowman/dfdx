@@ -121,8 +121,7 @@ mod tests {
     #[test]
     fn test_split_into_2() {
         let dev: TestDevice = Default::default();
-        type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>)>;
-        let m: Model = dev.build_module();
+        let m: SplitInto<(Linear<5, 1, _>, Linear<5, 2, _>)> = dev.build_module();
         let _: (Tensor<Rank1<1>, _, _>, Tensor<Rank1<2>, _, _, OwnedTape<_>>) =
             m.forward(dev.zeros::<Rank1<5>>().traced());
         let _: (
@@ -134,8 +133,7 @@ mod tests {
     #[test]
     fn test_split_into_3() {
         let dev: TestDevice = Default::default();
-        type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>, Linear<5, 3>)>;
-        let m: Model = dev.build_module();
+        let m: SplitInto<(Linear<5, 1, _>, Linear<5, 2, _>, Linear<5, 3, _>)> = dev.build_module();
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
@@ -150,9 +148,13 @@ mod tests {
 
     #[test]
     fn test_split_into_4() {
-        type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>, Linear<5, 3>, Linear<5, 4>)>;
         let dev: TestDevice = Default::default();
-        let m: Model = dev.build_module();
+        let m: SplitInto<(
+            Linear<5, 1, _>,
+            Linear<5, 2, _>,
+            Linear<5, 3, _>,
+            Linear<5, 4, _>,
+        )> = dev.build_module();
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
@@ -169,15 +171,14 @@ mod tests {
 
     #[test]
     fn test_split_into_5() {
-        type Model = SplitInto<(
-            Linear<5, 1>,
-            Linear<5, 2>,
-            Linear<5, 3>,
-            Linear<5, 4>,
-            Linear<5, 5>,
-        )>;
         let dev: TestDevice = Default::default();
-        let m: Model = dev.build_module();
+        let m: SplitInto<(
+            Linear<5, 1, _>,
+            Linear<5, 2, _>,
+            Linear<5, 3, _>,
+            Linear<5, 4, _>,
+            Linear<5, 5, _>,
+        )> = dev.build_module();
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
@@ -196,16 +197,15 @@ mod tests {
 
     #[test]
     fn test_split_into_6() {
-        type Model = SplitInto<(
-            Linear<5, 1>,
-            Linear<5, 2>,
-            Linear<5, 3>,
-            Linear<5, 4>,
-            Linear<5, 5>,
-            Linear<5, 6>,
-        )>;
         let dev: TestDevice = Default::default();
-        let m: Model = dev.build_module();
+        let m: SplitInto<(
+            Linear<5, 1, _>,
+            Linear<5, 2, _>,
+            Linear<5, 3, _>,
+            Linear<5, 4, _>,
+            Linear<5, 5, _>,
+            Linear<5, 6, _>,
+        )> = dev.build_module();
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,

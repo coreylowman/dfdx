@@ -1,5 +1,8 @@
 mod cpu_kernel;
 
+#[cfg(feature = "cuda")]
+mod cuda_kernel;
+
 use std::marker::PhantomData;
 
 use crate::gradients::Gradients;

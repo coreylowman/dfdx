@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn test_add_into_3() {
         let dev: TestDevice = Default::default();
-        let m: AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>)> = dev.build_module();
+        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>, Linear<4, 5, _>)> = dev.build_module();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -127,8 +127,12 @@ mod tests {
     #[test]
     fn test_add_into_4() {
         let dev: TestDevice = Default::default();
-        type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>, Linear<5, 5>)>;
-        let m: Model = dev.build_module();
+        let m: AddInto<(
+            Linear<2, 5, _>,
+            Linear<3, 5, _>,
+            Linear<4, 5, _>,
+            Linear<5, 5, _>,
+        )> = dev.build_module();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -146,14 +150,13 @@ mod tests {
     #[test]
     fn test_add_into_5() {
         let dev: TestDevice = Default::default();
-        type Model = AddInto<(
-            Linear<2, 5>,
-            Linear<3, 5>,
-            Linear<4, 5>,
-            Linear<5, 5>,
-            Linear<6, 5>,
-        )>;
-        let m: Model = dev.build_module();
+        let m: AddInto<(
+            Linear<2, 5, _>,
+            Linear<3, 5, _>,
+            Linear<4, 5, _>,
+            Linear<5, 5, _>,
+            Linear<6, 5, _>,
+        )> = dev.build_module();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -173,15 +176,14 @@ mod tests {
     #[test]
     fn test_add_into_6() {
         let dev: TestDevice = Default::default();
-        type Model = AddInto<(
-            Linear<2, 5>,
-            Linear<3, 5>,
-            Linear<4, 5>,
-            Linear<5, 5>,
-            Linear<6, 5>,
-            Linear<7, 5>,
-        )>;
-        let m: Model = dev.build_module();
+        let m: AddInto<(
+            Linear<2, 5, _>,
+            Linear<3, 5, _>,
+            Linear<4, 5, _>,
+            Linear<5, 5, _>,
+            Linear<6, 5, _>,
+            Linear<7, 5, _>,
+        )> = dev.build_module();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),

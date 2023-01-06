@@ -1,5 +1,8 @@
 mod cpu_kernel;
 
+#[cfg(feature = "cuda")]
+mod cuda_kernel;
+
 use super::{ops::*, Device};
 use crate::{gradients::*, shapes::*, tensor::*};
 

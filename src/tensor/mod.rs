@@ -113,6 +113,9 @@
 pub(crate) mod cpu;
 mod tensor_impls;
 
+#[cfg(feature = "cuda")]
+pub(crate) mod cuda;
+
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
 
@@ -121,6 +124,10 @@ pub(crate) mod storage_traits;
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 
 pub use cpu::{Cpu, CpuError};
+
+#[cfg(feature = "cuda")]
+pub use cuda::{Cuda, CudaError};
+
 pub use storage_traits::{AsArray, AsVec, CopySlice, TensorFromArray};
 pub use storage_traits::{DeviceStorage, HasErr};
 pub use storage_traits::{OnesTensor, SampleTensor, ZerosTensor};
@@ -217,7 +224,7 @@ mod tests {
     #[test]
     fn fuzz_test_rand() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<Rank1<1000>, f32, _> = dev.sample(rand_distr::Standard);
+        let t: Tensor<Rank1<1000>, f32, _> = dev.sample_uniform();
         for v in t.as_vec() {
             assert!((0.0..1.0).contains(&v));
         }
@@ -226,6 +233,6 @@ mod tests {
     #[test]
     fn test_sample_normal() {
         let dev: TestDevice = Default::default();
-        let _: Tensor<Rank1<1000>, f32, _> = dev.sample(rand_distr::StandardNormal);
+        let _: Tensor<Rank1<1000>, f32, _> = dev.sample_normal();
     }
 }

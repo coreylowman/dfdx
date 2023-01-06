@@ -378,8 +378,8 @@ mod tests {
         let x = dev.sample_normal::<Rank3<3, 4, 5>>();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let mut saved: BatchNorm2D<3> = dev.build_module();
-        let mut loaded: BatchNorm2D<3> = dev.build_module();
+        let mut saved: BatchNorm2D<3, _> = dev.build_module();
+        let mut loaded: BatchNorm2D<3, _> = dev.build_module();
 
         saved.running_mean.fill_with_distr(Standard);
         saved.running_var.fill_with_distr(Standard);

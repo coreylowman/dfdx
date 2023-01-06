@@ -1,15 +1,12 @@
-use crate::tensor_ops::ops::UnaryKernel;
-use crate::{shapes::Shape, tensor::Cpu};
-
-use super::DropoutKernelOp;
+use crate::{shapes::Shape, tensor::Cpu, tensor_ops::ops::UnaryKernel};
 
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::Standard;
 
-impl UnaryKernel<DropoutKernelOp, f32> for Cpu {
+impl UnaryKernel<super::DropoutKernelOp, f32> for Cpu {
     fn forward<S: Shape>(
         &self,
-        op: DropoutKernelOp,
+        op: super::DropoutKernelOp,
         inp: &Self::Storage<S, f32>,
     ) -> Result<Self::Storage<S, f32>, Self::Err> {
         let mut rng = StdRng::seed_from_u64(op.seed);
@@ -27,7 +24,7 @@ impl UnaryKernel<DropoutKernelOp, f32> for Cpu {
 
     fn backward<S: Shape>(
         &self,
-        op: DropoutKernelOp,
+        op: super::DropoutKernelOp,
         inp: &Self::Storage<S, f32>,
         grad_inp: &mut Self::Storage<S, f32>,
         grad_out: &Self::Storage<S, f32>,

@@ -2,7 +2,7 @@ use super::{axes::*, ReduceShapeTo};
 
 /// Represents a unit type, but no arithmetic.
 pub trait Unit:
-    'static + Copy + Clone + Default + std::fmt::Debug + PartialOrd + Send + Sync
+    'static + Copy + Clone + Default + std::fmt::Debug + PartialOrd + Send + Sync + std::marker::Unpin
 {
 }
 impl Unit for f32 {}

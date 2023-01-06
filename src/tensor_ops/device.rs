@@ -1,7 +1,7 @@
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     shapes::Dtype,
-    tensor::{CopySlice, Cpu, DeviceStorage},
+    tensor::{CopySlice, DeviceStorage},
 };
 
 /// A [DeviceStorage] that requires all the tensor ops implementations
@@ -74,4 +74,7 @@ pub trait Device<E: Dtype>:
 {
 }
 
-impl Device<f32> for Cpu {}
+impl Device<f32> for crate::tensor::Cpu {}
+
+#[cfg(feature = "cuda")]
+impl Device<f32> for crate::tensor::Cuda {}
