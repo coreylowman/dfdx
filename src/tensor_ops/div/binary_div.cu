@@ -58,8 +58,8 @@ extern "C" __global__ void binary_div_backward(
     unsigned int rhs_i = get_strided_index(i, num_dims, dims, rhs_strides);
     unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
 
-    auto x = rhs[rhs_i];
-    auto y = lhs[lhs_i];
+    auto x = lhs[lhs_i];
+    auto y = rhs[rhs_i];
     auto go = grad_out[out_i];
 
     float dfdx = 1.0 / y;

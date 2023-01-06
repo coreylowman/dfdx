@@ -1,11 +1,6 @@
 use crate::tensor_ops::cuda_kernels::{BinaryOpCudaKernel, UnaryOpCudaKernel};
 
-unsafe impl cudarc::device::IntoKernelParam for super::ScalarDivKernelOp<f32> {
-    #[inline(always)]
-    fn into_kernel_param(self) -> *mut std::ffi::c_void {
-        (&self) as *const Self as *mut std::ffi::c_void
-    }
-}
+unsafe impl cudarc::device::AsKernelParam for super::ScalarDivKernelOp<f32> {}
 
 impl UnaryOpCudaKernel for super::ScalarDivKernelOp<f32> {
     const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/scalar_div.ptx"));

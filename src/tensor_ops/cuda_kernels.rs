@@ -3,7 +3,7 @@ use crate::{
     tensor::cuda::{Cuda, CudaArray},
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
-use cudarc::device::{CudaSlice, IntoKernelParam, LaunchAsync, LaunchConfig};
+use cudarc::device::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 pub trait UnaryOpCudaKernel {
@@ -22,7 +22,7 @@ pub trait UnaryOpCudaKernel {
     const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
 }
 
-impl<K: UnaryOpCudaKernel + IntoKernelParam> UnaryKernel<K, f32> for Cuda {
+impl<K: UnaryOpCudaKernel + AsKernelParam> UnaryKernel<K, f32> for Cuda {
     fn forward<S: Shape>(
         &self,
         op: K,
