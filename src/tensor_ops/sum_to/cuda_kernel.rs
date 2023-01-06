@@ -64,7 +64,6 @@ impl super::SumKernel<f32> for Cuda {
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
-<<<<<<< HEAD
         let bwd_fn = self.dev.get_func(MODULE_NAME, BWD_FN_NAME).unwrap();
 
         let dims: CudaSlice<usize> = self.dev.take_async(grad_inp.shape.concrete().into())?;
@@ -86,8 +85,5 @@ impl super::SumKernel<f32> for Cuda {
         );
         unsafe { bwd_fn.launch_async(cfg, params) }?;
         Ok(())
-=======
-        todo!()
->>>>>>> main
     }
 }
