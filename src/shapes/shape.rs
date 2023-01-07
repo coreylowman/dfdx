@@ -101,7 +101,8 @@ pub trait Shape:
         + std::ops::IndexMut<usize>
         + Send
         + Sync
-        + IntoIterator<Item = usize>;
+        + IntoIterator<Item = usize>
+        + Into<std::vec::Vec<usize>>;
 
     /// All the axes of this shape
     type AllAxes: Axes;

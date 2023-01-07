@@ -1,46 +1,17 @@
-use crate::{
-    shapes::Shape,
-    tensor::Cuda,
-    tensor_ops::ops::{BinaryKernel, UnaryKernel},
-};
+use crate::tensor_ops::cuda_kernels::{BinaryOpCudaKernel, UnaryOpCudaKernel};
 
-impl UnaryKernel<super::ScalarDivKernelOp<f32>, f32> for Cuda {
-    fn forward<S: Shape>(
-        &self,
-        op: super::ScalarDivKernelOp<f32>,
-        inp: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
-        todo!()
-    }
-    fn backward<S: Shape>(
-        &self,
-        op: super::ScalarDivKernelOp<f32>,
-        inp: &Self::Storage<S, f32>,
-        grad_inp: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
-    ) -> Result<(), Self::Err> {
-        todo!()
-    }
+unsafe impl cudarc::device::AsKernelParam for super::ScalarDivKernelOp<f32> {}
+
+impl UnaryOpCudaKernel for super::ScalarDivKernelOp<f32> {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/scalar_div.ptx"));
+    const MODULE_NAME: &'static str = "scalar_div";
+    const FWD_FN_NAME: &'static str = "scalar_div_forward";
+    const BWD_FN_NAME: &'static str = "scalar_div_backward";
 }
 
-impl BinaryKernel<super::BinaryDivKernelOp, f32> for Cuda {
-    fn forward<S: Shape>(
-        &self,
-        op: super::BinaryDivKernelOp,
-        lhs: &Self::Storage<S, f32>,
-        rhs: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
-        todo!()
-    }
-    fn backward<S: Shape>(
-        &self,
-        op: super::BinaryDivKernelOp,
-        lhs: &Self::Storage<S, f32>,
-        grad_lhs: &mut Self::Storage<S, f32>,
-        rhs: &Self::Storage<S, f32>,
-        grad_rhs: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
-    ) -> Result<(), Self::Err> {
-        todo!()
-    }
+impl BinaryOpCudaKernel for super::BinaryDivKernelOp {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/binary_div.ptx"));
+    const MODULE_NAME: &'static str = "binary_div";
+    const FWD_FN_NAME: &'static str = "binary_div_forward";
+    const BWD_FN_NAME: &'static str = "binary_div_backward";
 }

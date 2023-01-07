@@ -179,6 +179,8 @@ mod tanh;
 mod var_to;
 
 pub(crate) mod cpu_kernels;
+#[cfg(feature = "cuda")]
+pub(crate) mod cuda_kernels;
 pub(crate) mod ops;
 
 pub use abs::abs;

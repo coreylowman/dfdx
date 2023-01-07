@@ -6,8 +6,11 @@ mod cuda_kernel;
 use super::{ops::*, Device};
 use crate::{gradients::*, shapes::*, tensor::*};
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub struct ScalarDivKernelOp<E>(pub(crate) E);
+pub struct ScalarDivKernelOp<E> {
+    pub(crate) scalar: E,
+}
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BinaryDivKernelOp;
@@ -58,7 +61,7 @@ where
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryDiv<E> for Tensor<S, E, D, T> {
     /// See [div]
     fn try_div(self, rhs: E) -> Result<Self, Self::Err> {
-        try_unary_op(ScalarDivKernelOp(rhs), self)
+        try_unary_op(ScalarDivKernelOp { scalar: rhs }, self)
     }
 }
 

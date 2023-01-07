@@ -8,8 +8,39 @@ fn main() {
         println!("cargo:rustc-cfg=feature=\"nightly\"");
     }
 
+    #[cfg(feature = "cuda")]
+    cuda::build_ptx();
+
     #[cfg(feature = "intel-mkl")]
     intel_mkl::link().unwrap();
+}
+
+#[cfg(feature = "cuda")]
+mod cuda {
+    pub fn build_ptx() {
+        // TODO build ptx file in source tree and don't call nvcc if so
+        let out_dir = std::env::var("OUT_DIR").unwrap();
+        let kernel_paths: Vec<std::path::PathBuf> = glob::glob("src/**/*.cu")
+            .unwrap()
+            .map(|p| p.unwrap())
+            .collect();
+        println!("cargo:warning=Found kernels {kernel_paths:?}");
+        for kernel_path in kernel_paths {
+            println!("cargo:rerun-if-changed={}", kernel_path.display());
+            let output = std::process::Command::new("nvcc")
+                .arg("--ptx")
+                .args(["--output-directory", &out_dir])
+                .arg(&kernel_path)
+                .output()
+                .unwrap();
+
+            assert!(
+                output.status.success(),
+                "nvcc error while compiling {kernel_path:?}: {:?}",
+                output
+            );
+        }
+    }
 }
 
 #[cfg(feature = "intel-mkl")]
