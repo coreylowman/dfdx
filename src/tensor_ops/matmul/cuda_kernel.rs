@@ -219,7 +219,39 @@ impl super::MatMatKernel<f32> for Cuda {
         lhs: &Self::Storage<(M, Const<K>), f32>,
         rhs: &Self::Storage<(Const<K>, N), f32>,
     ) -> Result<Self::Storage<(M, N), f32>, Self::Err> {
-        todo!()
+        let (m, _) = lhs.shape;
+        let (k, n) = rhs.shape;
+        let shape = (m, n);
+        let mut storage = self.dev.alloc_zeros_async::<f32>(shape.num_elements())?;
+
+        // TODO: use strides
+        unsafe {
+            // storage = lhs * rhs
+            let m_op = m.size() as i32;
+            let n_op = n.size() as i32;
+            let k_op = k.size() as i32;
+            self.blas.gemm_async(
+                cublasOperation_t::CUBLAS_OP_N,
+                cublasOperation_t::CUBLAS_OP_N,
+                n_op,
+                m_op,
+                k_op,
+                1.0,
+                rhs.data.as_ref(),
+                n_op,
+                lhs.data.as_ref(),
+                k_op,
+                0.0,
+                &mut storage,
+                n_op,
+            )
+        }?;
+
+        Ok(CudaArray {
+            data: Arc::new(storage),
+            shape,
+            strides: shape.strides(),
+        })
     }
     fn backward<M: Dim, const K: usize, N: Dim>(
         &self,
@@ -229,7 +261,56 @@ impl super::MatMatKernel<f32> for Cuda {
         grad_rhs: &mut Self::Storage<(Const<K>, N), f32>,
         grad_out: &Self::Storage<(M, N), f32>,
     ) -> Result<(), Self::Err> {
-        todo!()
+        let (m, _) = lhs.shape;
+        let (k, n) = rhs.shape;
+        // TODO use strides
+        {
+            // grad_lhs += grad_out * rhs^T
+            let m_op = m.size() as i32;
+            let n_op = k.size() as i32;
+            let k_op = n.size() as i32;
+            unsafe {
+                self.blas.gemm_async(
+                    cublasOperation_t::CUBLAS_OP_T,
+                    cublasOperation_t::CUBLAS_OP_N,
+                    n_op,
+                    m_op,
+                    k_op,
+                    1.0,
+                    rhs.data.as_ref(),
+                    k_op,
+                    grad_out.data.as_ref(),
+                    k_op,
+                    1.0,
+                    Arc::make_mut(&mut grad_lhs.data),
+                    n_op,
+                )
+            }?;
+        }
+        {
+            // grad_rhs += lhs^T * grad_out
+            let m_op = k.size() as i32;
+            let n_op = n.size() as i32;
+            let k_op = m.size() as i32;
+            unsafe {
+                self.blas.gemm_async(
+                    cublasOperation_t::CUBLAS_OP_N,
+                    cublasOperation_t::CUBLAS_OP_T,
+                    n_op,
+                    m_op,
+                    k_op,
+                    1.0,
+                    grad_out.data.as_ref(),
+                    n_op,
+                    lhs.data.as_ref(),
+                    m_op,
+                    1.0,
+                    Arc::make_mut(&mut grad_rhs.data),
+                    n_op,
+                )
+            }?;
+        }
+        Ok(())
     }
 }
 
