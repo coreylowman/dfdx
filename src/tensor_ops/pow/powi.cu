@@ -1,7 +1,9 @@
-struct SinKernelOp {};
+struct PowIKernelOp {
+    int rhs;
+};
 
-extern "C" __global__ void sin_forward(
-    const SinKernelOp op,
+extern "C" __global__ void powi_forward(
+    const PowIKernelOp op,
     const size_t numel,
     const float *inp,
     float *out
@@ -10,11 +12,13 @@ extern "C" __global__ void sin_forward(
     if (i >= numel) {
         return;
     }
-    out[i] = sinf(inp[i]);
+    // Intentionally uses the 64 bit version of pow to ensure that the exponent
+    // isn't rounded
+    out[i] = pow(inp[i], op.rhs);
 }
 
-extern "C" __global__ void sin_backward(
-    const SinKernelOp op,
+extern "C" __global__ void powi_backward(
+    const PowIKernelOp op,
     const size_t numel,
     const float *inp,
     float *grad_inp,
@@ -24,6 +28,6 @@ extern "C" __global__ void sin_backward(
     if (i >= numel) {
         return;
     }
-    float dx = cosf(inp[i]);
+    float dx = op.rhs * pow(inp[i], op.rhs - 1);
     grad_inp[i] += dx * grad_out[i];
 }

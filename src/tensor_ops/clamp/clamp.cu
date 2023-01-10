@@ -13,7 +13,7 @@ extern "C" __global__ void clamp_forward(
     if (i >= numel) {
         return;
     }
-    out[i] = max(min(inp[i], op.max), op.min);
+    out[i] = fmaxf(fminf(inp[i], op.max), op.min);
 }
 
 extern "C" __global__ void clamp_backward(

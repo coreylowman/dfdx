@@ -10,7 +10,7 @@ extern "C" __global__ void abs_forward(
     if (i >= numel) {
         return;
     }
-    out[i] = abs(inp[i]);
+    out[i] = fabsf(inp[i]);
 }
 
 extern "C" __global__ void abs_backward(

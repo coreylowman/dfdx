@@ -39,7 +39,7 @@ extern "C" __global__ void bce_forward(
     float logit = lhs[lhs_i];
     float prob = rhs[rhs_i];
 
-    out[out_i] = max(logit, 0.0) - logit * prob + logf(1.0 + expf(-abs(logit)));
+    out[out_i] = fmaxf(logit, 0.0) - logit * prob + logf(1.0 + expf(-fabsf(logit)));
 }
 
 extern "C" __global__ void bce_backward(

@@ -10,7 +10,7 @@ extern "C" __global__ void relu_forward(
     if (i >= numel) {
         return;
     }
-    out[i] = max(inp[i], 0.0);
+    out[i] = fmaxf(inp[i], 0.0);
 }
 
 extern "C" __global__ void relu_backward(

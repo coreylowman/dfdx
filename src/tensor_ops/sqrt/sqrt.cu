@@ -10,7 +10,7 @@ extern "C" __global__ void sqrt_forward(
     if (i >= numel) {
         return;
     }
-    out[i] = sqrt(inp[i]);
+    out[i] = sqrtf(inp[i]);
 }
 
 extern "C" __global__ void sqrt_backward(
@@ -24,6 +24,6 @@ extern "C" __global__ void sqrt_backward(
     if (i >= numel) {
         return;
     }
-    float dx = 0.5 / sqrt(inp[i]);
+    float dx = 0.5 / sqrtf(inp[i]);
     grad_inp[i] += dx * grad_out[i];
 }

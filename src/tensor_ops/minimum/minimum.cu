@@ -36,7 +36,7 @@ extern "C" __global__ void minimum_forward(
     unsigned int rhs_i = get_strided_index(i, num_dims, dims, rhs_strides);
     unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
 
-    out[out_i] = min(lhs[lhs_i], rhs[rhs_i]);
+    out[out_i] = fminf(lhs[lhs_i], rhs[rhs_i]);
 }
 
 extern "C" __global__ void minimum_backward(

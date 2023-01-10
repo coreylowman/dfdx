@@ -40,10 +40,10 @@ extern "C" __global__ void huber_error_forward(
 
     float a = lhs[lhs_i] - rhs[rhs_i];
 
-    if (abs(a) < op.delta) {
+    if (fabsf(a) < op.delta) {
         out[out_i] = a * a * 0.5;
     } else {
-        out[out_i] = op.delta * (abs(a) - 0.5 * op.delta);
+        out[out_i] = op.delta * (fabsf(a) - 0.5 * op.delta);
     }
 }
 
@@ -77,10 +77,10 @@ extern "C" __global__ void huber_error_backward(
 
     if (a == 0.0) {
         dfdx = 0.0;
-    } else if (abs(a) < op.delta) {
+    } else if (fabsf(a) < op.delta) {
         dfdx = a;
     } else {
-        dfdx = copysign(op.delta, a);
+        dfdx = copysignf(op.delta, a);
     }
 
     dfdy = -dfdx;

@@ -36,7 +36,7 @@ extern "C" __global__ void maximum_forward(
     unsigned int rhs_i = get_strided_index(i, num_dims, dims, rhs_strides);
     unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
 
-    out[out_i] = max(lhs[lhs_i], rhs[rhs_i]);
+    out[out_i] = fmaxf(lhs[lhs_i], rhs[rhs_i]);
 }
 
 extern "C" __global__ void maximum_backward(
