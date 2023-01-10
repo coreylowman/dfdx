@@ -70,8 +70,8 @@ extern "C" __global__ void bce_backward(
     auto go = grad_out[out_i];
 
     float dfdx = 1.0 - prob - 1 / (1.0 + expf(logit));
-    grad_lhs[lhs_i] += dfdx * go;
+    atomicAdd(grad_lhs + lhs_i, dfdx * go);
 
     float dfdy = -logit;
-    grad_rhs[rhs_i] += dfdy * go;
+    atomicAdd(grad_rhs + rhs_i, dfdy * go);
 }

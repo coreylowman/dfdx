@@ -9,8 +9,11 @@ use crate::{gradients::*, shapes::*, tensor::*};
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BinarySubKernelOp;
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub struct ScalarSubKernelOp<E>(E);
+pub struct ScalarSubKernelOp<E> {
+    scalar: E,
+}
 
 /// Element wise and scalar subtraction.
 ///
@@ -56,7 +59,7 @@ where
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TrySub<E> for Tensor<S, E, D, T> {
     fn try_sub(self, rhs: E) -> Result<Self, Self::Err> {
-        try_unary_op(ScalarSubKernelOp(rhs), self)
+        try_unary_op(ScalarSubKernelOp { scalar: rhs }, self)
     }
 }
 

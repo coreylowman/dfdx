@@ -66,9 +66,6 @@ extern "C" __global__ void binary_add_backward(
     auto y = rhs[rhs_i];
     auto go = grad_out[out_i];
 
-    float dfdx = 1.0;
-    grad_lhs[lhs_i] += dfdx * go;
-
-    float dfdy = 1.0;
-    grad_rhs[rhs_i] += dfdy * go;
+    atomicAdd(grad_lhs + lhs_i, go);
+    atomicAdd(grad_rhs + rhs_i, go);
 }

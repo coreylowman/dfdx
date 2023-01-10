@@ -67,8 +67,8 @@ extern "C" __global__ void binary_div_backward(
     auto go = grad_out[out_i];
 
     float dfdx = 1.0 / y;
-    grad_lhs[lhs_i] += dfdx * go;
+    atomicAdd(grad_lhs + lhs_i, dfdx * go);
 
     float dfdy = -x / (y * y);
-    grad_rhs[rhs_i] += dfdy * go;
+    atomicAdd(grad_rhs + rhs_i, dfdy * go);
 }

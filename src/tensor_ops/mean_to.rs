@@ -72,7 +72,7 @@ mod tests {
         assert_eq!(r.array(), 2.0);
         // NOTE: .exp() so we cover the case where .mean() has to use result grad.
         let g = r.exp().backward();
-        assert_eq!(g.get(&t).array(), [2.463019; 3]);
+        assert_close(&g.get(&t).array(), &[2.463019; 3]);
     }
 
     #[test]
@@ -112,7 +112,7 @@ mod tests {
         let r = t.trace().mean::<Rank1<2>, _>();
         assert_eq!(r.array(), [2.0, -4.0 / 3.0]);
         let g = r.exp().mean().backward();
-        assert_eq!(g.get(&t).array(), [[1.2315094; 3], [0.043932855; 3]]);
+        assert_close(&g.get(&t).array(), &[[1.2315094; 3], [0.043932855; 3]]);
     }
 
     #[test]

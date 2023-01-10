@@ -10,11 +10,15 @@ use crate::{
     tensor::{HasErr, Tensor},
 };
 
+#[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BinaryAddKernelOp;
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub struct ScalarAddKernelOp<E>(pub(crate) E);
+pub struct ScalarAddKernelOp<E> {
+    scalar: E,
+}
 
 /// Element wise and scalar addition.
 ///
@@ -61,7 +65,7 @@ where
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryAdd<E> for Tensor<S, E, D, T> {
     /// See [add]
     fn try_add(self, rhs: E) -> Result<Self, Self::Err> {
-        try_unary_op(ScalarAddKernelOp(rhs), self)
+        try_unary_op(ScalarAddKernelOp { scalar: rhs }, self)
     }
 }
 
@@ -79,9 +83,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::tensor::{AsArray, TensorFromArray};
-    use crate::tensor_ops::*;
-    use crate::tests::TestDevice;
+    use crate::{tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_add_0d() {
