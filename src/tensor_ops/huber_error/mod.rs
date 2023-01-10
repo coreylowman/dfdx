@@ -6,6 +6,7 @@ mod cuda_kernel;
 use super::{ops::try_binary_op, Device};
 use crate::{gradients::*, shapes::*, tensor::Tensor};
 
+#[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
 pub struct HuberErrorKernelOp<E: Dtype> {
     pub delta: E,
@@ -81,9 +82,12 @@ mod tests {
             &r1.array(),
             &[
                 [0.8626251, 0.0013595072, 0.37522575],
-                [0.16297975, 0.003332735, 0.79848814]
+                [0.16297975, 0.003332735, 0.79848814],
             ],
         );
-        assert_close(&r2.array(), &((a.clone() - b.clone()).square() / 2.0).array());
+        assert_close(
+            &r2.array(),
+            &((a.clone() - b.clone()).square() / 2.0).array(),
+        );
     }
 }

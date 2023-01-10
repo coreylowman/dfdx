@@ -66,9 +66,6 @@ extern "C" __global__ void binary_mul_backward(
     auto y = rhs[rhs_i];
     auto go = grad_out[out_i];
 
-    float dfdx = y;
-    grad_lhs[lhs_i] += dfdx * go;
-
-    float dfdy = x;
-    grad_rhs[rhs_i] += dfdy * go;
+    atomicAdd(grad_lhs + lhs_i, y * go);
+    atomicAdd(grad_rhs + rhs_i, x * go);
 }

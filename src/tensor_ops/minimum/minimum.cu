@@ -79,6 +79,6 @@ extern "C" __global__ void minimum_backward(
         dfdy = 0.5;
     }
 
-    grad_lhs[lhs_i] += dfdx * go;
-    grad_rhs[rhs_i] += dfdy * go;
+    atomicAdd(grad_lhs + lhs_i, dfdx * go);
+    atomicAdd(grad_rhs + rhs_i, dfdy * go);
 }

@@ -9,8 +9,11 @@ use crate::{gradients::*, shapes::*, tensor::*};
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BinaryMulKernelOp;
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub struct ScalarMulKernelOp<E>(E);
+pub struct ScalarMulKernelOp<E> {
+    scalar: E,
+}
 
 /// Element wise and scalar multiplication.
 ///
@@ -53,7 +56,7 @@ where
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryMul<E> for Tensor<S, E, D, T> {
     fn try_mul(self, rhs: E) -> Result<Self, Self::Err> {
-        try_unary_op(ScalarMulKernelOp(rhs), self)
+        try_unary_op(ScalarMulKernelOp { scalar: rhs }, self)
     }
 }
 
@@ -69,9 +72,7 @@ where
 }
 #[cfg(test)]
 mod tests {
-    use crate::tensor::*;
-    use crate::tensor_ops::*;
-    use crate::tests::TestDevice;
+    use crate::{tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_mul_0d() {
