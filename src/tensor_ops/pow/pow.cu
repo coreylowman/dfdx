@@ -1,9 +1,9 @@
-struct PowIKernelOp {
-    int rhs;
+struct PowFKernelOp {
+    float rhs;
 };
 
-extern "C" __global__ void powi_forward(
-    const PowIKernelOp op,
+extern "C" __global__ void pow_forward(
+    const PowFKernelOp op,
     const size_t numel,
     const float *inp,
     float *out
@@ -12,13 +12,11 @@ extern "C" __global__ void powi_forward(
     if (i >= numel) {
         return;
     }
-    // Intentionally uses the 64 bit version of pow to ensure that the exponent
-    // isn't rounded
-    out[i] = pow(inp[i], op.rhs);
+    out[i] = powf(inp[i], op.rhs);
 }
 
-extern "C" __global__ void powi_backward(
-    const PowIKernelOp op,
+extern "C" __global__ void pow_backward(
+    const PowFKernelOp op,
     const size_t numel,
     const float *inp,
     float *grad_inp,
@@ -28,6 +26,6 @@ extern "C" __global__ void powi_backward(
     if (i >= numel) {
         return;
     }
-    float dx = op.rhs * pow(inp[i], op.rhs - 1);
+    float dx = op.rhs * powf(inp[i], op.rhs - 1.0);
     grad_inp[i] += dx * grad_out[i];
 }
