@@ -6,6 +6,7 @@ mod cuda_kernel;
 use super::{ops::*, Device};
 use crate::{gradients::*, shapes::*, tensor::*};
 
+#[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BinaryMulKernelOp;
 
