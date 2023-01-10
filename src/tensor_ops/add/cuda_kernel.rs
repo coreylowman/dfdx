@@ -1,46 +1,18 @@
-use crate::{
-    shapes::Shape,
-    tensor::Cuda,
-    tensor_ops::ops::{BinaryKernel, UnaryKernel},
-};
+use crate::tensor_ops::cuda_kernels::{BinaryOpCudaKernel, UnaryOpCudaKernel};
 
-impl UnaryKernel<super::ScalarAddKernelOp<f32>, f32> for Cuda {
-    fn forward<S: Shape>(
-        &self,
-        op: super::ScalarAddKernelOp<f32>,
-        inp: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
-        todo!()
-    }
-    fn backward<S: Shape>(
-        &self,
-        op: super::ScalarAddKernelOp<f32>,
-        inp: &Self::Storage<S, f32>,
-        grad_inp: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
-    ) -> Result<(), Self::Err> {
-        todo!()
-    }
+unsafe impl cudarc::device::AsKernelParam for super::ScalarAddKernelOp<f32> {}
+unsafe impl cudarc::device::AsKernelParam for super::BinaryAddKernelOp {}
+
+impl UnaryOpCudaKernel for super::ScalarAddKernelOp<f32> {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/scalar_add.ptx"));
+    const MODULE_NAME: &'static str = "scalar_add";
+    const FWD_FN_NAME: &'static str = "scalar_add_forward";
+    const BWD_FN_NAME: &'static str = "scalar_add_backward";
 }
 
-impl BinaryKernel<super::BinaryAddKernelOp, f32> for Cuda {
-    fn forward<S: Shape>(
-        &self,
-        op: super::BinaryAddKernelOp,
-        lhs: &Self::Storage<S, f32>,
-        rhs: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
-        todo!()
-    }
-    fn backward<S: Shape>(
-        &self,
-        op: super::BinaryAddKernelOp,
-        lhs: &Self::Storage<S, f32>,
-        grad_lhs: &mut Self::Storage<S, f32>,
-        rhs: &Self::Storage<S, f32>,
-        grad_rhs: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
-    ) -> Result<(), Self::Err> {
-        todo!()
-    }
+impl BinaryOpCudaKernel for super::BinaryAddKernelOp {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/binary_add.ptx"));
+    const MODULE_NAME: &'static str = "binary_add";
+    const FWD_FN_NAME: &'static str = "binary_add_forward";
+    const BWD_FN_NAME: &'static str = "binary_add_backward";
 }

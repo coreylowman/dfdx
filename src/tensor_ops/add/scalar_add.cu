@@ -1,7 +1,9 @@
-struct AbsKernelOp {};
+struct ScalarAddKernelOp {
+    float scalar;
+};
 
-extern "C" __global__ void abs_forward(
-    const AbsKernelOp op,
+extern "C" __global__ void scalar_add_forward(
+    const ScalarAddKernelOp op,
     const size_t numel,
     const float *inp,
     float *out
@@ -10,11 +12,11 @@ extern "C" __global__ void abs_forward(
     if (i >= numel) {
         return;
     }
-    out[i] = abs(inp[i]);
+    out[i] = inp[i] + op.scalar;
 }
 
-extern "C" __global__ void abs_backward(
-    const AbsKernelOp op,
+extern "C" __global__ void scalar_add_backward(
+    const ScalarAddKernelOp op,
     const size_t numel,
     const float *inp,
     float *grad_inp,
@@ -24,7 +26,6 @@ extern "C" __global__ void abs_backward(
     if (i >= numel) {
         return;
     }
-    // NOTE: signbit returns a non-zero value when its input is negative
-    float dx = inp[i] == 0.0 ? 0.0 : (signbit(inp[i]) ? -1.0 : 1.0);
-    grad_inp[i] += dx * grad_out[i];
+    float df = 1.0;
+    grad_inp[i] += df * grad_out[i];
 }

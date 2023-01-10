@@ -1,4 +1,6 @@
-struct BinaryDivOp {};
+struct HuberErrorOp {
+    float delta;
+};
 
 __device__ unsigned int get_strided_index(
     unsigned int idx,
@@ -15,8 +17,8 @@ __device__ unsigned int get_strided_index(
     return strided_i;
 }
 
-extern "C" __global__ void binary_div_forward(
-    const BinaryDivOp op,
+extern "C" __global__ void huber_error_forward(
+    const HuberErrorOp op,
     const size_t numel,
     const size_t num_dims,
     const size_t *dims,
@@ -36,11 +38,17 @@ extern "C" __global__ void binary_div_forward(
     unsigned int rhs_i = get_strided_index(i, num_dims, dims, rhs_strides);
     unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
 
-    out[out_i] = lhs[lhs_i] / rhs[rhs_i];
+    float a = lhs[lhs_i] - rhs[rhs_i];
+
+    if (abs(a) < op.delta) {
+        out[out_i] = a * a * 0.5;
+    } else {
+        out[out_i] = op.delta * (abs(a) - 0.5 * op.delta);
+    }
 }
 
-extern "C" __global__ void binary_div_backward(
-    const BinaryDivOp op,
+extern "C" __global__ void huber_error_backward(
+    const HuberErrorOp op,
     const size_t numel,
     const size_t num_dims,
     const size_t *dims,
@@ -62,13 +70,21 @@ extern "C" __global__ void binary_div_backward(
     unsigned int rhs_i = get_strided_index(i, num_dims, dims, rhs_strides);
     unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
 
-    auto x = lhs[lhs_i];
-    auto y = rhs[rhs_i];
+    auto a = lhs[lhs_i] - rhs[rhs_i];
     auto go = grad_out[out_i];
 
-    float dfdx = 1.0 / y;
-    grad_lhs[lhs_i] += dfdx * go;
+    float dfdx, dfdy;
 
-    float dfdy = -x / (y * y);
+    if (a == 0.0) {
+        dfdx = 0.0;
+    } else if (abs(a) < op.delta) {
+        dfdx = a;
+    } else {
+        dfdx = copysign(op.delta, a);
+    }
+
+    dfdy = -dfdx;
+
+    grad_lhs[lhs_i] += dfdx * go;
     grad_rhs[rhs_i] += dfdy * go;
 }
