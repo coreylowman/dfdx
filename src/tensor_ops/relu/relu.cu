@@ -1,7 +1,7 @@
-struct AbsKernelOp {};
+struct ReLUKernelOp {};
 
-extern "C" __global__ void abs_forward(
-    const AbsKernelOp op,
+extern "C" __global__ void relu_forward(
+    const ReLUKernelOp op,
     const size_t numel,
     const float *inp,
     float *out
@@ -10,11 +10,11 @@ extern "C" __global__ void abs_forward(
     if (i >= numel) {
         return;
     }
-    out[i] = fabsf(inp[i]);
+    out[i] = fmaxf(inp[i], 0.0);
 }
 
-extern "C" __global__ void abs_backward(
-    const AbsKernelOp op,
+extern "C" __global__ void relu_backward(
+    const ReLUKernelOp op,
     const size_t numel,
     const float *inp,
     float *grad_inp,
@@ -24,7 +24,6 @@ extern "C" __global__ void abs_backward(
     if (i >= numel) {
         return;
     }
-    // NOTE: signbit returns a non-zero value when its input is negative
-    float dx = inp[i] == 0.0 ? 0.0 : copysignf(1.0, inp[i]);
+    float dx = inp[i] > 0.0 ? 1.0 : 0.0;
     grad_inp[i] += dx * grad_out[i];
 }

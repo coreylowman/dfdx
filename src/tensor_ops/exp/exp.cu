@@ -10,7 +10,7 @@ extern "C" __global__ void exp_forward(
     if (i >= numel) {
         return;
     }
-    out[i] = exp(inp[i]);
+    out[i] = expf(inp[i]);
 }
 
 extern "C" __global__ void exp_backward(
@@ -24,5 +24,5 @@ extern "C" __global__ void exp_backward(
     if (i >= numel) {
         return;
     }
-    grad_inp[i] += exp(inp[i]) * grad_out[i];
+    grad_inp[i] += expf(inp[i]) * grad_out[i];
 }

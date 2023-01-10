@@ -1,4 +1,4 @@
-struct BinaryDivOp {};
+struct BCEKernelOp {};
 
 __device__ unsigned int get_strided_index(
     unsigned int idx,
@@ -15,8 +15,8 @@ __device__ unsigned int get_strided_index(
     return strided_i;
 }
 
-extern "C" __global__ void binary_div_forward(
-    const BinaryDivOp op,
+extern "C" __global__ void bce_forward(
+    const BCEKernelOp op,
     const size_t numel,
     const size_t num_dims,
     const size_t *dims,
@@ -36,11 +36,14 @@ extern "C" __global__ void binary_div_forward(
     unsigned int rhs_i = get_strided_index(i, num_dims, dims, rhs_strides);
     unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
 
-    out[out_i] = lhs[lhs_i] / rhs[rhs_i];
+    float logit = lhs[lhs_i];
+    float prob = rhs[rhs_i];
+
+    out[out_i] = fmaxf(logit, 0.0) - logit * prob + logf(1.0 + expf(-fabsf(logit)));
 }
 
-extern "C" __global__ void binary_div_backward(
-    const BinaryDivOp op,
+extern "C" __global__ void bce_backward(
+    const BCEKernelOp op,
     const size_t numel,
     const size_t num_dims,
     const size_t *dims,
@@ -62,13 +65,13 @@ extern "C" __global__ void binary_div_backward(
     unsigned int rhs_i = get_strided_index(i, num_dims, dims, rhs_strides);
     unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
 
-    auto x = lhs[lhs_i];
-    auto y = rhs[rhs_i];
+    auto logit = lhs[lhs_i];
+    auto prob = rhs[rhs_i];
     auto go = grad_out[out_i];
 
-    float dfdx = 1.0 / y;
+    float dfdx = 1.0 - prob - 1 / (1.0 + expf(logit));
     grad_lhs[lhs_i] += dfdx * go;
 
-    float dfdy = -x / (y * y);
+    float dfdy = -logit;
     grad_rhs[rhs_i] += dfdy * go;
 }

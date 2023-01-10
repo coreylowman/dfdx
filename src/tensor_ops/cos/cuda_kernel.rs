@@ -1,20 +1,10 @@
-use crate::{shapes::Shape, tensor::Cuda, tensor_ops::ops::UnaryKernel};
+use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
 
-impl UnaryKernel<super::CosKernelOp, f32> for Cuda {
-    fn forward<S: Shape>(
-        &self,
-        op: super::CosKernelOp,
-        inp: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
-        todo!()
-    }
-    fn backward<S: Shape>(
-        &self,
-        op: super::CosKernelOp,
-        inp: &Self::Storage<S, f32>,
-        grad_inp: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
-    ) -> Result<(), Self::Err> {
-        todo!()
-    }
+unsafe impl cudarc::device::AsKernelParam for super::CosKernelOp {}
+
+impl UnaryOpCudaKernel for super::CosKernelOp {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cos.ptx"));
+    const MODULE_NAME: &'static str = "cos";
+    const FWD_FN_NAME: &'static str = "cos_forward";
+    const BWD_FN_NAME: &'static str = "cos_backward";
 }
