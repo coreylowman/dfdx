@@ -25,6 +25,6 @@ extern "C" __global__ void abs_backward(
         return;
     }
     // NOTE: signbit returns a non-zero value when its input is negative
-    float dx = inp[i] == 0.0 ? 0.0 : (signbit(inp[i]) ? -1.0 : 1.0);
+    float dx = inp[i] == 0.0 ? 0.0 : copysignf(1.0, inp[i]);
     grad_inp[i] += dx * grad_out[i];
 }
