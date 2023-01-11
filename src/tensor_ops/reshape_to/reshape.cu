@@ -21,5 +21,5 @@ extern "C" __global__ void reshape_backward(
         return;
     }
 
-    grad_inp[i] += grad_out[i];
+    atomicAdd(grad_inp + i, grad_out[i]);
 }
