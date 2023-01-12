@@ -159,7 +159,7 @@ mod tests {
     #[test]
     fn test_backward() {
         let dev = TestDevice::seed_from_u64(0);
-        let mut t: Transformer<16, 4, 3, 3, 8> = dev.build_module();
+        let mut t: Transformer<16, 4, 3, 3, 8, _> = dev.build_module();
 
         let src = dev.sample_normal::<Rank3<4, 12, 16>>();
         let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();
