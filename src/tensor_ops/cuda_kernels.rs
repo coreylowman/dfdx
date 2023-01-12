@@ -146,7 +146,7 @@ impl<K: BinaryOpCudaKernel + AsKernelParam> BinaryKernel<K, f32> for Cuda {
         grad_out: &Self::Storage<S, f32>,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
-        let numel = lhs.shape.num_elements();
+        let numel = grad_out.shape.num_elements();
 
         let dims: CudaSlice<usize> = self.dev.take_async(lhs.shape.concrete().into())?;
         let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;

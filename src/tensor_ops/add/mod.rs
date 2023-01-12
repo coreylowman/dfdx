@@ -128,6 +128,44 @@ mod tests {
     }
 
     #[test]
+    fn test_add_broadcast_bottom() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b = dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+
+        let a2: Tensor3D<2, 3, 4, TestDevice> = a.broadcast();
+        let b2: Tensor3D<2, 3, 4, TestDevice> = b.broadcast();
+
+        let r = a2.trace() + b2.clone();
+        assert_eq!(
+            r.array(),
+            [[[1.1769f32; 4], [0.5552; 4], [0.5259; 4]], [[1.3917; 4], [1.0692; 4], [0.873; 4]]]
+        );
+        let g = r.mean().backward();
+        assert_eq!(g.get(&a2).array(), [[[1.0 / 6.0; 4]; 3]; 2]);
+        assert_eq!(g.get(&b2).array(), [[[1.0 / 6.0; 4]; 3]; 2]);
+    }
+
+    #[test]
+    fn test_add_broadcast_top() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b = dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+
+        let a2: Tensor3D<4, 2, 3, TestDevice> = a.broadcast();
+        let b2: Tensor3D<4, 2, 3, TestDevice> = b.broadcast();
+
+        let r = a2.trace() + b2.clone();
+        assert_eq!(
+            r.array(),
+            [[[1.1769f32, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]; 4]
+        );
+        let g = r.mean().backward();
+        assert_eq!(g.get(&a2).array(), [[[1.0 / 6.0; 3]; 2]; 4]);
+        assert_eq!(g.get(&b2).array(), [[[1.0 / 6.0; 3]; 2]; 4]);
+    }
+
+    #[test]
     fn test_scalar_add_0d() {
         let dev: TestDevice = Default::default();
         let x = dev.tensor(0.0);
