@@ -21,12 +21,21 @@ __device__ unsigned int get_gathered_index(
     const size_t *idx,
     const size_t idx_num_dims,
     const size_t *idx_dims,
-    const size_t *idx_strides
+    const size_t *idx_strides,
+    const size_t out_num_dims
 ) {
-    unsigned int elem_size = 1; // the size of each indexed element
-    unsigned int row_len = inp_dims[idx_num_dims - 1]; // the size of the indexed dimension
+    unsigned int ax;
 
-    for (unsigned int d = 0; d < inp_num_dims - idx_num_dims; d++) {
+    if (out_num_dims > inp_num_dims) {
+        ax = 0;
+    } else {
+        ax = idx_num_dims - 1;
+    }
+
+    unsigned int elem_size = 1; // the size of each indexed element
+    unsigned int row_len = inp_dims[ax]; // the size of the indexed dimension
+
+    for (unsigned int d = 0; d < inp_num_dims - ax - 1; d++) {
         unsigned int dim_idx = inp_num_dims - 1 - d;
         elem_size *= inp_dims[dim_idx];
     }
@@ -55,17 +64,16 @@ extern "C" __global__ void gather_forward(
     const size_t *idx_dims,
     const size_t *idx_strides,
     float *out,
-    const size_t *out_dims,
-    const size_t *out_strides
+    const size_t out_num_dims
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= numel) {
         return;
     }
 
-    unsigned int out_i = get_strided_index(i, inp_num_dims, out_dims, out_strides);
+    unsigned int out_i = i;
     unsigned int inp_i =
-        get_gathered_index(i, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides);
+        get_gathered_index(i, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out_num_dims);
 
     out[out_i] = inp[inp_i];
 }
@@ -81,17 +89,16 @@ extern "C" __global__ void gather_backward(
     const size_t *idx_dims,
     const size_t *idx_strides,
     const float *grad_out,
-    const size_t *out_dims,
-    const size_t *out_strides
+    const size_t out_num_dims
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= numel) {
         return;
     }
 
-    unsigned int out_i = get_strided_index(i, inp_num_dims, out_dims, out_strides);
+    unsigned int out_i = i;
     unsigned int inp_i =
-        get_gathered_index(i, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides);
+        get_gathered_index(i, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out_num_dims);
 
     atomicAdd(grad_inp + inp_i, grad_out[out_i]);
 }

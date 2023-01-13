@@ -34,10 +34,8 @@ impl super::ReplaceDimKernel<f32> for Cuda {
 
         let inp_dims: CudaSlice<usize> = self.dev.take_async(inp.shape.concrete().into())?;
         let idx_dims: CudaSlice<usize> = self.dev.take_async(idx.shape.concrete().into())?;
-        let dst_dims: CudaSlice<usize> = self.dev.take_async(dst.concrete().into())?;
         let inp_strides: CudaSlice<usize> = self.dev.take_async(inp.strides.into())?;
         let idx_strides: CudaSlice<usize> = self.dev.take_async(idx.strides.into())?;
-        let dst_strides: CudaSlice<usize> = self.dev.take_async(dst.strides().into())?;
 
         let fwd_fn = self.dev.get_func(GATHER_MODULE_NAME, GATHER_FWD_FN_NAME).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -52,8 +50,7 @@ impl super::ReplaceDimKernel<f32> for Cuda {
             &idx_dims,         // const size_t *idx_dims,
             &idx_strides,      // const size_t *idx_strides,
             &mut storage,      // float *out,
-            &dst_dims,         // const size_t *out_dims,
-            &dst_strides       // const size_t *out_strides
+            Dst::NUM_DIMS,     // const size_t out_num_dims,
         );
         unsafe { fwd_fn.launch_async(cfg, params) }?;
 
@@ -95,8 +92,7 @@ impl super::ReplaceDimKernel<f32> for Cuda {
             &idx_dims,                         // const size_t *idx_dims,
             &idx_strides,                      // const size_t *idx_strides,
             grad_out.data.as_ref(),            // const float *grad_out,
-            &out_dims,                         // const size_t *out_dims,
-            &out_strides,                      // const size_t *out_strides
+            Dst::NUM_DIMS,                     // const size_t out_num_dims,
         );
         unsafe { bwd_fn.launch_async(cfg, params) }?;
         Ok(())
