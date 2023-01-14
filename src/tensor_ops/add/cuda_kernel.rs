@@ -1,7 +1,7 @@
 use crate::tensor_ops::cuda_kernels::{BinaryOpCudaKernel, UnaryOpCudaKernel};
 
-unsafe impl cudarc::device::AsKernelParam for super::ScalarAddKernelOp<f32> {}
-unsafe impl cudarc::device::AsKernelParam for super::BinaryAddKernelOp {}
+unsafe impl cudarc::driver::AsKernelParam for super::ScalarAddKernelOp<f32> {}
+unsafe impl cudarc::driver::AsKernelParam for super::BinaryAddKernelOp {}
 
 impl UnaryOpCudaKernel for super::ScalarAddKernelOp<f32> {
     const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/scalar_add.ptx"));

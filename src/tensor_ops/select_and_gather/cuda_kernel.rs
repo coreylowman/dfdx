@@ -1,11 +1,10 @@
 #![allow(clippy::needless_range_loop)]
 
 use crate::{
-    shapes::{Axes, Dtype, RemoveDimTo, ReplaceDimTo, Shape},
+    shapes::{RemoveDimTo, ReplaceDimTo, Shape},
     tensor::cuda::{Cuda, CudaArray},
-    tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
-use cudarc::device::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig, ValidAsZeroBits};
+use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 const GATHER_PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/gather.ptx"));
@@ -24,8 +23,11 @@ impl super::ReplaceDimKernel<f32> for Cuda {
         Src: ReplaceDimTo<Dst, Idx>,
     {
         if !self.dev.has_func(GATHER_MODULE_NAME, GATHER_FWD_FN_NAME) {
-            self.dev
-                .load_ptx(GATHER_PTX_SRC.into(), GATHER_MODULE_NAME, &GATHER_ALL_FN_NAMES)?;
+            self.dev.load_ptx(
+                GATHER_PTX_SRC.into(),
+                GATHER_MODULE_NAME,
+                &GATHER_ALL_FN_NAMES,
+            )?;
         }
 
         let dst = inp.shape.replace(idx.shape);
@@ -37,7 +39,10 @@ impl super::ReplaceDimKernel<f32> for Cuda {
         let inp_strides: CudaSlice<usize> = self.dev.take_async(inp.strides.into())?;
         let idx_strides: CudaSlice<usize> = self.dev.take_async(idx.strides.into())?;
 
-        let fwd_fn = self.dev.get_func(GATHER_MODULE_NAME, GATHER_FWD_FN_NAME).unwrap();
+        let fwd_fn = self
+            .dev
+            .get_func(GATHER_MODULE_NAME, GATHER_FWD_FN_NAME)
+            .unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (
             numel,             // const size_t numel,
@@ -70,15 +75,16 @@ impl super::ReplaceDimKernel<f32> for Cuda {
     where
         Src: ReplaceDimTo<Dst, Idx>,
     {
-        let bwd_fn = self.dev.get_func(GATHER_MODULE_NAME, GATHER_BWD_FN_NAME).unwrap();
+        let bwd_fn = self
+            .dev
+            .get_func(GATHER_MODULE_NAME, GATHER_BWD_FN_NAME)
+            .unwrap();
         let numel = grad_out.data.len();
 
         let inp_dims: CudaSlice<usize> = self.dev.take_async(grad_inp.shape.concrete().into())?;
         let idx_dims: CudaSlice<usize> = self.dev.take_async(idx.shape.concrete().into())?;
-        let out_dims: CudaSlice<usize> = self.dev.take_async(grad_out.shape.concrete().into())?;
         let inp_strides: CudaSlice<usize> = self.dev.take_async(grad_inp.strides.into())?;
         let idx_strides: CudaSlice<usize> = self.dev.take_async(idx.strides.into())?;
-        let out_strides: CudaSlice<usize> = self.dev.take_async(grad_out.strides.into())?;
 
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (
@@ -115,8 +121,11 @@ impl super::RemoveDimKernel<f32> for Cuda {
         Src: RemoveDimTo<Dst, Idx>,
     {
         if !self.dev.has_func(SELECT_MODULE_NAME, SELECT_FWD_FN_NAME) {
-            self.dev
-                .load_ptx(SELECT_PTX_SRC.into(), SELECT_MODULE_NAME, &SELECT_ALL_FN_NAMES)?;
+            self.dev.load_ptx(
+                SELECT_PTX_SRC.into(),
+                SELECT_MODULE_NAME,
+                &SELECT_ALL_FN_NAMES,
+            )?;
         }
 
         let dst = inp.shape.remove(idx.shape);
@@ -130,7 +139,10 @@ impl super::RemoveDimKernel<f32> for Cuda {
         let idx_strides: CudaSlice<usize> = self.dev.take_async(idx.strides.into())?;
         let dst_strides: CudaSlice<usize> = self.dev.take_async(dst.strides().into())?;
 
-        let fwd_fn = self.dev.get_func(SELECT_MODULE_NAME, SELECT_FWD_FN_NAME).unwrap();
+        let fwd_fn = self
+            .dev
+            .get_func(SELECT_MODULE_NAME, SELECT_FWD_FN_NAME)
+            .unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (
             numel,             // const size_t numel,
@@ -144,7 +156,7 @@ impl super::RemoveDimKernel<f32> for Cuda {
             &idx_strides,      // const size_t *idx_strides,
             &mut storage,      // float *out,
             &dst_dims,         // const size_t *out_dims,
-            &dst_strides       // const size_t *out_strides
+            &dst_strides,      // const size_t *out_strides
         );
         unsafe { fwd_fn.launch_async(cfg, params) }?;
 
@@ -164,7 +176,10 @@ impl super::RemoveDimKernel<f32> for Cuda {
     where
         Src: RemoveDimTo<Dst, Idx>,
     {
-        let bwd_fn = self.dev.get_func(SELECT_MODULE_NAME, SELECT_BWD_FN_NAME).unwrap();
+        let bwd_fn = self
+            .dev
+            .get_func(SELECT_MODULE_NAME, SELECT_BWD_FN_NAME)
+            .unwrap();
         let numel = grad_out.data.len();
 
         let inp_dims: CudaSlice<usize> = self.dev.take_async(grad_inp.shape.concrete().into())?;

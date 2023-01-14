@@ -1,7 +1,7 @@
 use crate::shapes::*;
 use crate::tensor::cuda::{Cuda, CudaArray};
 
-use cudarc::device::{LaunchAsync, LaunchConfig};
+use cudarc::driver::{LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/permute_to.ptx"));
