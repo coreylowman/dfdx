@@ -10,7 +10,7 @@ extern "C" __global__ void abs_forward(
     if (i >= numel) {
         return;
     }
-    out[i] = abs(inp[i]);
+    out[i] = fabsf(inp[i]);
 }
 
 extern "C" __global__ void abs_backward(
@@ -24,6 +24,7 @@ extern "C" __global__ void abs_backward(
     if (i >= numel) {
         return;
     }
-    float dx = inp[i] == 0.0 ? 0.0 : (signbit(inp[i]) ? 1.0 : -1.0);
+    // NOTE: signbit returns a non-zero value when its input is negative
+    float dx = inp[i] == 0.0 ? 0.0 : copysignf(1.0, inp[i]);
     grad_inp[i] += dx * grad_out[i];
 }

@@ -6,6 +6,7 @@ mod cuda_kernel;
 use super::{ops::try_binary_op, Device};
 use crate::{gradients::*, shapes::*, tensor::Tensor};
 
+#[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
 pub struct HuberErrorKernelOp<E: Dtype> {
     pub delta: E,
@@ -54,5 +55,39 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
         T: Merge<R>,
     {
         try_binary_op(HuberErrorKernelOp { delta }, self, rhs)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        tensor::*,
+        tests::{assert_close, TestDevice},
+    };
+
+    #[test]
+    fn test_huber_error() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor([
+            [-0.84240317, 0.63094819, 1.04164326],
+            [1.32522500, 0.58402753, 1.91676331],
+        ]);
+        let b = dev.tensor([
+            [0.52022195, 0.57880402, 0.17535722],
+            [0.75429636, 0.66566986, 0.61827511],
+        ]);
+        let r1 = a.trace().huber_error(b.trace(), 1.0);
+        let r2 = a.trace().huber_error(b.trace(), 100.0);
+        assert_close(
+            &r1.array(),
+            &[
+                [0.8626251, 0.0013595072, 0.37522575],
+                [0.16297975, 0.003332735, 0.79848814],
+            ],
+        );
+        assert_close(
+            &r2.array(),
+            &((a.clone() - b.clone()).square() / 2.0).array(),
+        );
     }
 }

@@ -6,11 +6,15 @@ mod cuda_kernel;
 use super::{ops::*, Device};
 use crate::{gradients::*, shapes::*, tensor::*};
 
+#[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BinarySubKernelOp;
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
-pub struct ScalarSubKernelOp<E>(E);
+pub struct ScalarSubKernelOp<E> {
+    scalar: E,
+}
 
 /// Element wise and scalar subtraction.
 ///
@@ -56,7 +60,7 @@ where
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TrySub<E> for Tensor<S, E, D, T> {
     fn try_sub(self, rhs: E) -> Result<Self, Self::Err> {
-        try_unary_op(ScalarSubKernelOp(rhs), self)
+        try_unary_op(ScalarSubKernelOp { scalar: rhs }, self)
     }
 }
 
@@ -75,7 +79,7 @@ where
 mod tests {
     use crate::tensor::*;
     use crate::tensor_ops::*;
-    use crate::tests::TestDevice;
+    use crate::tests::*;
 
     #[test]
     fn test_sub_0d() {
@@ -130,7 +134,7 @@ mod tests {
         let r = x.trace() - 1.0;
         assert_eq!(r.array(), -1.0);
         let g = r.exp().backward();
-        assert_eq!(g.get(&x).array(), (-1.0f32).exp());
+        assert_close(&[g.get(&x).array()], &[(-1.0f32).exp()]);
     }
 
     #[test]
@@ -138,9 +142,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x = dev.tensor([0.0, 1.0, 2.0]);
         let r = x.trace() - 1.0;
-        assert_eq!(r.array(), [-1.0, 0.0, 1.0]);
+        assert_eq!(&r.array(), &[-1.0, 0.0, 1.0]);
         let g = r.exp().sum().backward();
-        assert_eq!(g.get(&x).array(), [0.36787945, 1.0, 2.7182817]);
+        assert_close(&g.get(&x).array(), &[0.36787945, 1.0, 2.7182817]);
     }
 
     #[test]
@@ -150,6 +154,6 @@ mod tests {
         let r = x.trace() - 1.0;
         assert_eq!(r.array(), [[-1.0; 2]; 3]);
         let g = r.exp().sum().backward();
-        assert_eq!(g.get(&x).array(), [[0.36787945; 2]; 3]);
+        assert_close(&g.get(&x).array(), &[[0.36787945; 2]; 3]);
     }
 }

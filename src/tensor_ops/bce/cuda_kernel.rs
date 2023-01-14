@@ -1,23 +1,10 @@
-use crate::{shapes::Shape, tensor::Cuda, tensor_ops::ops::BinaryKernel};
+use crate::tensor_ops::cuda_kernels::BinaryOpCudaKernel;
 
-impl BinaryKernel<super::BCEKernelOp, f32> for Cuda {
-    fn forward<S: Shape>(
-        &self,
-        op: super::BCEKernelOp,
-        lhs: &Self::Storage<S, f32>,
-        rhs: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
-        todo!()
-    }
-    fn backward<S: Shape>(
-        &self,
-        op: super::BCEKernelOp,
-        lhs: &Self::Storage<S, f32>,
-        grad_lhs: &mut Self::Storage<S, f32>,
-        rhs: &Self::Storage<S, f32>,
-        grad_rhs: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
-    ) -> Result<(), Self::Err> {
-        todo!()
-    }
+unsafe impl cudarc::driver::AsKernelParam for super::BCEKernelOp {}
+
+impl BinaryOpCudaKernel for super::BCEKernelOp {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/bce.ptx"));
+    const MODULE_NAME: &'static str = "bce";
+    const FWD_FN_NAME: &'static str = "bce_forward";
+    const BWD_FN_NAME: &'static str = "bce_backward";
 }

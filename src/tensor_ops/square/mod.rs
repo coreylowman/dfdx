@@ -6,6 +6,7 @@ mod cuda_kernel;
 use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
+#[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
 pub struct SquareKernelOp;
 

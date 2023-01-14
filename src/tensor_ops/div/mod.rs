@@ -12,6 +12,7 @@ pub struct ScalarDivKernelOp<E> {
     pub(crate) scalar: E,
 }
 
+#[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
 pub struct BinaryDivKernelOp;
 

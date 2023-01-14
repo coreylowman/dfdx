@@ -1,20 +1,10 @@
-use crate::{shapes::Shape, tensor::Cuda, tensor_ops::ops::UnaryKernel};
+use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
 
-impl UnaryKernel<super::SquareKernelOp, f32> for Cuda {
-    fn forward<S: Shape>(
-        &self,
-        op: super::SquareKernelOp,
-        inp: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
-        todo!()
-    }
-    fn backward<S: Shape>(
-        &self,
-        op: super::SquareKernelOp,
-        inp: &Self::Storage<S, f32>,
-        grad_inp: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
-    ) -> Result<(), Self::Err> {
-        todo!()
-    }
+unsafe impl cudarc::driver::AsKernelParam for super::SquareKernelOp {}
+
+impl UnaryOpCudaKernel for super::SquareKernelOp {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/square.ptx"));
+    const MODULE_NAME: &'static str = "square";
+    const FWD_FN_NAME: &'static str = "square_forward";
+    const BWD_FN_NAME: &'static str = "square_backward";
 }

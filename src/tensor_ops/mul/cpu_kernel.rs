@@ -2,10 +2,10 @@ use crate::tensor_ops::cpu_kernels::{BinaryDerivative, UnaryDerivative};
 
 impl UnaryDerivative<f32> for super::ScalarMulKernelOp<f32> {
     fn f(&self, x: &f32) -> f32 {
-        x * self.0
+        x * self.scalar
     }
     fn df(&self, _: &f32) -> f32 {
-        self.0
+        self.scalar
     }
 }
 

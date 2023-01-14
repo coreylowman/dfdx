@@ -6,6 +6,7 @@ mod cuda_kernel;
 use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct ClampKernelOp<E> {
     pub min: E,
@@ -43,18 +44,18 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ClampKernelOp<E>, E>, T: Tape<D>> Tensor
 
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::TestDevice};
+    use crate::{tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_clamp() {
         let dev: TestDevice = Default::default();
         let t = dev.tensor([[-1.0, 0.0, 1.0], [-2.0, 2.0, 1.1]]);
         let r = t.trace().clamp(-1.0, 1.0);
-        assert_eq!(r.array(), [[-1.0, 0.0, 1.0], [-1.0, 1.0, 1.0]]);
+        assert_close(&r.array(), &[[-1.0, 0.0, 1.0], [-1.0, 1.0, 1.0]]);
         let g = r.exp().mean().backward();
-        assert_eq!(
-            g.get(&t).array(),
-            [[0.06131324, 0.16666667, 0.45304698], [0.0; 3]]
+        assert_close(
+            &g.get(&t).array(),
+            &[[0.06131324, 0.16666667, 0.45304698], [0.0; 3]],
         );
     }
 }

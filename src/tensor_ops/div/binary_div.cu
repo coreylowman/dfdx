@@ -1,3 +1,5 @@
+struct BinaryDivOp {};
+
 __device__ unsigned int get_strided_index(
     unsigned int idx,
     const size_t num_dims,
@@ -14,6 +16,7 @@ __device__ unsigned int get_strided_index(
 }
 
 extern "C" __global__ void binary_div_forward(
+    const BinaryDivOp op,
     const size_t numel,
     const size_t num_dims,
     const size_t *dims,
@@ -37,6 +40,7 @@ extern "C" __global__ void binary_div_forward(
 }
 
 extern "C" __global__ void binary_div_backward(
+    const BinaryDivOp op,
     const size_t numel,
     const size_t num_dims,
     const size_t *dims,
@@ -63,8 +67,8 @@ extern "C" __global__ void binary_div_backward(
     auto go = grad_out[out_i];
 
     float dfdx = 1.0 / y;
-    grad_lhs[lhs_i] += dfdx * go;
+    atomicAdd(grad_lhs + lhs_i, dfdx * go);
 
     float dfdy = -x / (y * y);
-    grad_rhs[rhs_i] += dfdy * go;
+    atomicAdd(grad_rhs + rhs_i, dfdy * go);
 }

@@ -3,7 +3,7 @@ use crate::{
     tensor::cuda::{Cuda, CudaArray},
 };
 
-use cudarc::device::{CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 
 use std::sync::Arc;
 

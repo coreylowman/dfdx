@@ -1,46 +1,18 @@
-use crate::{
-    shapes::Shape,
-    tensor::Cuda,
-    tensor_ops::ops::{BinaryKernel, UnaryKernel},
-};
+use crate::tensor_ops::cuda_kernels::{BinaryOpCudaKernel, UnaryOpCudaKernel};
 
-impl UnaryKernel<super::ScalarSubKernelOp<f32>, f32> for Cuda {
-    fn forward<S: Shape>(
-        &self,
-        op: super::ScalarSubKernelOp<f32>,
-        inp: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
-        todo!()
-    }
-    fn backward<S: Shape>(
-        &self,
-        op: super::ScalarSubKernelOp<f32>,
-        inp: &Self::Storage<S, f32>,
-        grad_inp: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
-    ) -> Result<(), Self::Err> {
-        todo!()
-    }
+unsafe impl cudarc::driver::AsKernelParam for super::ScalarSubKernelOp<f32> {}
+unsafe impl cudarc::driver::AsKernelParam for super::BinarySubKernelOp {}
+
+impl UnaryOpCudaKernel for super::ScalarSubKernelOp<f32> {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/scalar_sub.ptx"));
+    const MODULE_NAME: &'static str = "scalar_sub";
+    const FWD_FN_NAME: &'static str = "scalar_sub_forward";
+    const BWD_FN_NAME: &'static str = "scalar_sub_backward";
 }
 
-impl BinaryKernel<super::BinarySubKernelOp, f32> for Cuda {
-    fn forward<S: Shape>(
-        &self,
-        op: super::BinarySubKernelOp,
-        lhs: &Self::Storage<S, f32>,
-        rhs: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
-        todo!()
-    }
-    fn backward<S: Shape>(
-        &self,
-        op: super::BinarySubKernelOp,
-        lhs: &Self::Storage<S, f32>,
-        grad_lhs: &mut Self::Storage<S, f32>,
-        rhs: &Self::Storage<S, f32>,
-        grad_rhs: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
-    ) -> Result<(), Self::Err> {
-        todo!()
-    }
+impl BinaryOpCudaKernel for super::BinarySubKernelOp {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/binary_sub.ptx"));
+    const MODULE_NAME: &'static str = "binary_sub";
+    const FWD_FN_NAME: &'static str = "binary_sub_forward";
+    const BWD_FN_NAME: &'static str = "binary_sub_backward";
 }

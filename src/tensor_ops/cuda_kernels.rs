@@ -3,7 +3,7 @@ use crate::{
     tensor::cuda::{Cuda, CudaArray},
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
-use cudarc::device::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 pub trait UnaryOpCudaKernel {
@@ -91,10 +91,10 @@ pub trait BinaryOpCudaKernel {
     const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
 }
 
-impl<K: BinaryOpCudaKernel> BinaryKernel<K, f32> for Cuda {
+impl<K: BinaryOpCudaKernel + AsKernelParam> BinaryKernel<K, f32> for Cuda {
     fn forward<S: Shape>(
         &self,
-        _: K,
+        op: K,
         lhs: &Self::Storage<S, f32>,
         rhs: &Self::Storage<S, f32>,
     ) -> Result<Self::Storage<S, f32>, Self::Err> {
@@ -117,6 +117,7 @@ impl<K: BinaryOpCudaKernel> BinaryKernel<K, f32> for Cuda {
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (
+            op,
             numel,             // const size_t numel,
             S::NUM_DIMS,       // const size_t num_dims,
             &dims,             // const size_t *dims,
@@ -137,7 +138,7 @@ impl<K: BinaryOpCudaKernel> BinaryKernel<K, f32> for Cuda {
 
     fn backward<S: Shape>(
         &self,
-        _: K,
+        op: K,
         lhs: &Self::Storage<S, f32>,
         grad_lhs: &mut Self::Storage<S, f32>,
         rhs: &Self::Storage<S, f32>,
@@ -154,6 +155,7 @@ impl<K: BinaryOpCudaKernel> BinaryKernel<K, f32> for Cuda {
 
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (
+            op,
             numel,                             // const size_t numel,
             S::NUM_DIMS,                       // const size_t num_dims,
             &dims,                             // const size_t *dims,
