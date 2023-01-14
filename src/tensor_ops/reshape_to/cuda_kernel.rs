@@ -1,9 +1,8 @@
 use crate::{
-    shapes::{Dtype, HasSameNumelAs, Shape},
+    shapes::{HasSameNumelAs, Shape},
     tensor::cuda::{Cuda, CudaArray},
-    tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
-use cudarc::device::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig, ValidAsZeroBits};
+use cudarc::device::{CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/reshape.ptx"));
@@ -45,7 +44,7 @@ impl super::ReshapeKernel<f32> for Cuda {
             &mut storage,      // float *out
             Dst::NUM_DIMS,     // const size_t out_num_dims,
             &dst_dims,         // const size_t *out_dims,
-            &dst_strides       // const size_t *out_strides,
+            &dst_strides,      // const size_t *out_strides,
         );
         unsafe { fwd_fn.launch_async(cfg, params) }?;
 
