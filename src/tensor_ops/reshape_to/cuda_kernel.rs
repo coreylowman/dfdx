@@ -2,7 +2,7 @@ use crate::{
     shapes::{HasSameNumelAs, Shape},
     tensor::cuda::{Cuda, CudaArray},
 };
-use cudarc::device::{CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/reshape.ptx"));

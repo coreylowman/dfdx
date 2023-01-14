@@ -1,6 +1,6 @@
 use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
 
-unsafe impl cudarc::device::AsKernelParam for super::SqrtKernelOp {}
+unsafe impl cudarc::driver::AsKernelParam for super::SqrtKernelOp {}
 
 impl UnaryOpCudaKernel for super::SqrtKernelOp {
     const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/sqrt.ptx"));

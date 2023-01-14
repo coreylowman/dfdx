@@ -3,10 +3,8 @@ use crate::tensor::cpu::{Cpu, CpuError};
 use crate::tensor::storage_traits::{DeviceStorage, HasErr};
 
 use cudarc::{
-    blas::CudaBlas,
-    cublas::result::CublasError,
-    device::{BuildError, CudaDevice, CudaDeviceBuilder, CudaSlice},
-    driver::result::DriverError,
+    cublas::{result::CublasError, CudaBlas},
+    driver::{result::DriverError, BuildError, CudaDevice, CudaDeviceBuilder, CudaSlice},
 };
 use std::sync::Arc;
 

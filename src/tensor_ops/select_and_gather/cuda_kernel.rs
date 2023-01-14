@@ -4,7 +4,7 @@ use crate::{
     shapes::{RemoveDimTo, ReplaceDimTo, Shape},
     tensor::cuda::{Cuda, CudaArray},
 };
-use cudarc::device::{CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 const GATHER_PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/gather.ptx"));
