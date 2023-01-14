@@ -1,7 +1,7 @@
-use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
 use super::PowKernelOp;
+use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
 
-unsafe impl cudarc::device::AsKernelParam for super::PowKernelOp<f32> {}
+unsafe impl cudarc::driver::AsKernelParam for super::PowKernelOp<f32> {}
 
 impl UnaryOpCudaKernel for super::PowKernelOp<f32> {
     const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/pow.ptx"));

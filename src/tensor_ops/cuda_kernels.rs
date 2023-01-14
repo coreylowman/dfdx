@@ -3,7 +3,7 @@ use crate::{
     tensor::cuda::{Cuda, CudaArray},
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
-use cudarc::device::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 pub trait UnaryOpCudaKernel {

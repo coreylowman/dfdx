@@ -1,6 +1,6 @@
 use crate::tensor_ops::cuda_kernels::BinaryOpCudaKernel;
 
-unsafe impl cudarc::device::AsKernelParam for super::BCEKernelOp {}
+unsafe impl cudarc::driver::AsKernelParam for super::BCEKernelOp {}
 
 impl BinaryOpCudaKernel for super::BCEKernelOp {
     const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/bce.ptx"));

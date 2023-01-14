@@ -1,6 +1,6 @@
 use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
 
-unsafe impl cudarc::device::AsKernelParam for super::SigmoidKernelOp {}
+unsafe impl cudarc::driver::AsKernelParam for super::SigmoidKernelOp {}
 
 impl UnaryOpCudaKernel for super::SigmoidKernelOp {
     const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/sigmoid.ptx"));
