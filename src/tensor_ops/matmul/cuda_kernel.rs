@@ -3,10 +3,7 @@ use crate::{
     tensor::cuda::{Cuda, CudaArray},
 };
 
-use cudarc::{
-    blas::{Gemm, Gemv},
-    cublas::sys::cublasOperation_t,
-};
+use cudarc::cublas::{sys::cublasOperation_t, Gemm, GemmConfig, Gemv, GemvConfig};
 use std::sync::Arc;
 
 impl super::VecVecKernel<f32> for Cuda {
@@ -27,21 +24,20 @@ impl super::VecVecKernel<f32> for Cuda {
             let m_op = m.size() as i32;
             let n_op = n.size() as i32;
             let k_op = k.size() as i32;
-            self.blas.gemm_async(
-                cublasOperation_t::CUBLAS_OP_N,
-                cublasOperation_t::CUBLAS_OP_N,
-                n_op,
-                m_op,
-                k_op,
-                1.0,
-                rhs.data.as_ref(),
-                n_op,
-                lhs.data.as_ref(),
-                k_op,
-                0.0,
-                &mut storage,
-                n_op,
-            )
+            let cfg = GemmConfig {
+                transa: cublasOperation_t::CUBLAS_OP_N,
+                transb: cublasOperation_t::CUBLAS_OP_N,
+                m: n_op,
+                n: m_op,
+                k: k_op,
+                alpha: 1.0,
+                lda: n_op,
+                ldb: k_op,
+                beta: 0.0,
+                ldc: n_op,
+            };
+            self.blas
+                .gemm_async(cfg, rhs.data.as_ref(), lhs.data.as_ref(), &mut storage)
         }?;
 
         Ok(CudaArray {
@@ -67,21 +63,24 @@ impl super::VecVecKernel<f32> for Cuda {
             let m_op = m.size() as i32;
             let n_op = k.size() as i32;
             let k_op = n.size() as i32;
+            let cfg = GemmConfig {
+                transa: cublasOperation_t::CUBLAS_OP_N,
+                transb: cublasOperation_t::CUBLAS_OP_N,
+                m: n_op,
+                n: m_op,
+                k: k_op,
+                alpha: 1.0,
+                lda: n_op,
+                ldb: k_op,
+                beta: 0.0,
+                ldc: n_op,
+            };
             unsafe {
                 self.blas.gemm_async(
-                    cublasOperation_t::CUBLAS_OP_N,
-                    cublasOperation_t::CUBLAS_OP_N,
-                    n_op,
-                    m_op,
-                    k_op,
-                    1.0,
+                    cfg,
                     rhs.data.as_ref(),
-                    n_op,
                     grad_out.data.as_ref(),
-                    k_op,
-                    1.0,
                     Arc::make_mut(&mut grad_lhs.data),
-                    n_op,
                 )
             }?;
         }
@@ -90,21 +89,24 @@ impl super::VecVecKernel<f32> for Cuda {
             let m_op = k.size() as i32;
             let n_op = n.size() as i32;
             let k_op = m.size() as i32;
+            let cfg = GemmConfig {
+                transa: cublasOperation_t::CUBLAS_OP_N,
+                transb: cublasOperation_t::CUBLAS_OP_N,
+                m: n_op,
+                n: m_op,
+                k: k_op,
+                alpha: 1.0,
+                lda: n_op,
+                ldb: k_op,
+                beta: 1.0,
+                ldc: n_op,
+            };
             unsafe {
                 self.blas.gemm_async(
-                    cublasOperation_t::CUBLAS_OP_N,
-                    cublasOperation_t::CUBLAS_OP_N,
-                    n_op,
-                    m_op,
-                    k_op,
-                    1.0,
+                    cfg,
                     grad_out.data.as_ref(),
-                    n_op,
                     lhs.data.as_ref(),
-                    k_op,
-                    1.0,
                     Arc::make_mut(&mut grad_rhs.data),
-                    n_op,
                 )
             }?;
         }
@@ -129,22 +131,21 @@ impl super::VecMatKernel<f32> for Cuda {
             let m_op = m.size() as i32;
             let n_op = n.size() as i32;
             let k_op = k.size() as i32;
-            self.blas.gemm_async(
-                cublasOperation_t::CUBLAS_OP_N,
-                cublasOperation_t::CUBLAS_OP_N,
-                n_op,
-                m_op,
-                k_op,
-                1.0,
-                rhs.data.as_ref(),
-                n_op,
-                lhs.data.as_ref(),
-                k_op,
-                0.0,
-                &mut storage,
-                n_op,
-            )
-        }?;
+            let cfg = GemmConfig {
+                transa: cublasOperation_t::CUBLAS_OP_N,
+                transb: cublasOperation_t::CUBLAS_OP_N,
+                m: n_op,
+                n: m_op,
+                k: k_op,
+                alpha: 1.0,
+                lda: n_op,
+                ldb: k_op,
+                beta: 0.0,
+                ldc: n_op,
+            };
+            self.blas
+                .gemm_async(cfg, rhs.data.as_ref(), lhs.data.as_ref(), &mut storage)?;
+        }
 
         Ok(CudaArray {
             data: Arc::new(storage),
@@ -163,51 +164,53 @@ impl super::VecMatKernel<f32> for Cuda {
         let m = Const::<1>;
         let (k, n) = rhs.shape;
         // TODO use strides
-        {
+        unsafe {
             // grad_lhs += grad_out * rhs^T
             let m_op = m.size() as i32;
             let n_op = k.size() as i32;
             let k_op = n.size() as i32;
-            unsafe {
-                self.blas.gemm_async(
-                    cublasOperation_t::CUBLAS_OP_T,
-                    cublasOperation_t::CUBLAS_OP_N,
-                    n_op,
-                    m_op,
-                    k_op,
-                    1.0,
-                    rhs.data.as_ref(),
-                    k_op,
-                    grad_out.data.as_ref(),
-                    k_op,
-                    1.0,
-                    Arc::make_mut(&mut grad_lhs.data),
-                    n_op,
-                )
-            }?;
+            let cfg = GemmConfig {
+                transa: cublasOperation_t::CUBLAS_OP_T,
+                transb: cublasOperation_t::CUBLAS_OP_N,
+                m: n_op,
+                n: m_op,
+                k: k_op,
+                alpha: 1.0,
+                lda: k_op,
+                ldb: k_op,
+                beta: 1.0,
+                ldc: n_op,
+            };
+            self.blas.gemm_async(
+                cfg,
+                rhs.data.as_ref(),
+                grad_out.data.as_ref(),
+                Arc::make_mut(&mut grad_lhs.data),
+            )?;
         }
-        {
+        unsafe {
             // grad_rhs += lhs * grad_out
             let m_op = k.size() as i32;
             let n_op = n.size() as i32;
             let k_op = m.size() as i32;
-            unsafe {
-                self.blas.gemm_async(
-                    cublasOperation_t::CUBLAS_OP_N,
-                    cublasOperation_t::CUBLAS_OP_N,
-                    n_op,
-                    m_op,
-                    k_op,
-                    1.0,
-                    grad_out.data.as_ref(),
-                    n_op,
-                    lhs.data.as_ref(),
-                    k_op,
-                    1.0,
-                    Arc::make_mut(&mut grad_rhs.data),
-                    n_op,
-                )
-            }?;
+            let cfg = GemmConfig {
+                transa: cublasOperation_t::CUBLAS_OP_N,
+                transb: cublasOperation_t::CUBLAS_OP_N,
+                m: n_op,
+                n: m_op,
+                k: k_op,
+                alpha: 1.0,
+                lda: n_op,
+                ldb: k_op,
+                beta: 1.0,
+                ldc: n_op,
+            };
+            self.blas.gemm_async(
+                cfg,
+                grad_out.data.as_ref(),
+                lhs.data.as_ref(),
+                Arc::make_mut(&mut grad_rhs.data),
+            )?;
         }
         Ok(())
     }
@@ -230,22 +233,21 @@ impl super::MatMatKernel<f32> for Cuda {
             let m_op = m.size() as i32;
             let n_op = n.size() as i32;
             let k_op = k.size() as i32;
-            self.blas.gemm_async(
-                cublasOperation_t::CUBLAS_OP_N,
-                cublasOperation_t::CUBLAS_OP_N,
-                n_op,
-                m_op,
-                k_op,
-                1.0,
-                rhs.data.as_ref(),
-                n_op,
-                lhs.data.as_ref(),
-                k_op,
-                0.0,
-                &mut storage,
-                n_op,
-            )
-        }?;
+            let cfg = GemmConfig {
+                transa: cublasOperation_t::CUBLAS_OP_N,
+                transb: cublasOperation_t::CUBLAS_OP_N,
+                m: n_op,
+                n: m_op,
+                k: k_op,
+                alpha: 1.0,
+                lda: n_op,
+                ldb: k_op,
+                beta: 0.0,
+                ldc: n_op,
+            };
+            self.blas
+                .gemm_async(cfg, rhs.data.as_ref(), lhs.data.as_ref(), &mut storage)?;
+        }
 
         Ok(CudaArray {
             data: Arc::new(storage),
@@ -264,51 +266,53 @@ impl super::MatMatKernel<f32> for Cuda {
         let (m, _) = lhs.shape;
         let (k, n) = rhs.shape;
         // TODO use strides
-        {
+        unsafe {
             // grad_lhs += grad_out * rhs^T
             let m_op = m.size() as i32;
             let n_op = k.size() as i32;
             let k_op = n.size() as i32;
-            unsafe {
-                self.blas.gemm_async(
-                    cublasOperation_t::CUBLAS_OP_T,
-                    cublasOperation_t::CUBLAS_OP_N,
-                    n_op,
-                    m_op,
-                    k_op,
-                    1.0,
-                    rhs.data.as_ref(),
-                    k_op,
-                    grad_out.data.as_ref(),
-                    k_op,
-                    1.0,
-                    Arc::make_mut(&mut grad_lhs.data),
-                    n_op,
-                )
-            }?;
+            let cfg = GemmConfig {
+                transa: cublasOperation_t::CUBLAS_OP_T,
+                transb: cublasOperation_t::CUBLAS_OP_N,
+                m: n_op,
+                n: m_op,
+                k: k_op,
+                alpha: 1.0,
+                lda: k_op,
+                ldb: k_op,
+                beta: 1.0,
+                ldc: n_op,
+            };
+            self.blas.gemm_async(
+                cfg,
+                rhs.data.as_ref(),
+                grad_out.data.as_ref(),
+                Arc::make_mut(&mut grad_lhs.data),
+            )?;
         }
-        {
+        unsafe {
             // grad_rhs += lhs^T * grad_out
             let m_op = k.size() as i32;
             let n_op = n.size() as i32;
             let k_op = m.size() as i32;
-            unsafe {
-                self.blas.gemm_async(
-                    cublasOperation_t::CUBLAS_OP_N,
-                    cublasOperation_t::CUBLAS_OP_T,
-                    n_op,
-                    m_op,
-                    k_op,
-                    1.0,
-                    grad_out.data.as_ref(),
-                    n_op,
-                    lhs.data.as_ref(),
-                    m_op,
-                    1.0,
-                    Arc::make_mut(&mut grad_rhs.data),
-                    n_op,
-                )
-            }?;
+            let cfg = GemmConfig {
+                transa: cublasOperation_t::CUBLAS_OP_N,
+                transb: cublasOperation_t::CUBLAS_OP_T,
+                m: n_op,
+                n: m_op,
+                k: k_op,
+                alpha: 1.0,
+                lda: n_op,
+                ldb: m_op,
+                beta: 1.0,
+                ldc: n_op,
+            };
+            self.blas.gemm_async(
+                cfg,
+                grad_out.data.as_ref(),
+                lhs.data.as_ref(),
+                Arc::make_mut(&mut grad_rhs.data),
+            )?;
         }
         Ok(())
     }
