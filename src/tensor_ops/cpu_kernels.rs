@@ -94,7 +94,7 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
         lhs: &Self::Storage<S, E>,
         rhs: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err> {
-        let mut out: Self::Storage<S, E> = StridedArray::try_new_merge(&lhs, &rhs, E::default())?;
+        let mut out: Self::Storage<S, E> = StridedArray::try_new_merge(lhs, rhs, E::default())?;
         let lhs_incrs = get_strided_incrs(lhs.shape, lhs.strides);
         let rhs_incrs = get_strided_incrs(lhs.shape, rhs.strides);
 
@@ -103,8 +103,8 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
 
         let out_data = Arc::make_mut(&mut out.data);
 
-        for out_i in 0..out_data.len() {
-            out_data[out_i] = op.f(&lhs.data[lhs_i], &rhs.data[rhs_i]);
+        for (out_i, o) in out_data.iter_mut().enumerate() {
+            *o = op.f(&lhs.data[lhs_i], &rhs.data[rhs_i]);
 
             let dim = get_incr_dim::<S>(out_i + 1, out.strides);
             incr_arg_i::<S>(&mut lhs_i, lhs_incrs, dim);
@@ -129,8 +129,6 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
 
         let lhs_data = Arc::make_mut(&mut grad_lhs.data);
         let rhs_data = Arc::make_mut(&mut grad_rhs.data);
-
-        std::println!("{:?}", grad_out.data);
 
         for out_i in 0..grad_out.data.len() {
             let go = grad_out.data[out_i];
