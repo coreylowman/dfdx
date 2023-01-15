@@ -1,7 +1,7 @@
 use crate::{
     shapes::Shape,
     tensor::cuda::{Cuda, CudaArray},
-    tensor_ops::ops::{BinaryKernel, UnaryKernel},
+    tensor_ops::ops::{BinaryKernel, UnaryKernel, merge_strides},
 };
 use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
@@ -104,8 +104,7 @@ impl<K: BinaryOpCudaKernel + AsKernelParam> BinaryKernel<K, f32> for Cuda {
         }
 
         let shape = lhs.shape;
-        let strides = lhs.shape.strides();
-        let numel = shape.num_elements();
+        let (numel, strides) = merge_strides(lhs.shape, lhs.strides, rhs.strides);
 
         let mut storage = self.dev.alloc_zeros_async::<f32>(numel)?;
 
@@ -146,7 +145,7 @@ impl<K: BinaryOpCudaKernel + AsKernelParam> BinaryKernel<K, f32> for Cuda {
         grad_out: &Self::Storage<S, f32>,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
-        let numel = lhs.shape.num_elements();
+        let numel = grad_out.data.len();
 
         let dims: CudaSlice<usize> = self.dev.take_async(lhs.shape.concrete().into())?;
         let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;

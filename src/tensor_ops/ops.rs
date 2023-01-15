@@ -91,3 +91,20 @@ pub(crate) fn try_binary_op<
     });
     Ok(out.put_tape(tape))
 }
+
+pub(crate) fn merge_strides<S: Shape>(
+    shape: S,
+    mut strides1: S::Concrete,
+    strides2: S::Concrete
+) -> (usize, S::Concrete) {
+    let mut prod = 1;
+    let dims = shape.concrete();
+
+    for i in (0..S::NUM_DIMS).rev() {
+        if strides1[i] > 0 || strides2[i] > 0 {
+            strides1[i] = prod;
+            prod *= dims[i];
+        }
+    }
+    (prod, strides1)
+}
