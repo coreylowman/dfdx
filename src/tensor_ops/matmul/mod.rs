@@ -286,8 +286,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::{assert_close, TestDevice};
-    use crate::{shapes::*, tensor::*, tensor_ops::*};
+    use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_valid_matmuls() {
@@ -382,7 +381,7 @@ mod tests {
     }
 
     #[test]
-    fn test_matul_broadcast() {
+    fn test_matmul_broadcast() {
         const N: usize = 5;
         let dev: TestDevice = Default::default();
         let a: Tensor<Rank3<N, 4, 3>, f32, _> = dev.sample_normal();
@@ -450,7 +449,7 @@ mod tests {
             assert_eq!(sub_c.array(), c_array[i]);
             let sub_g = sub_c.exp().sum().backward();
             assert_eq!(sub_g.get(&sub_a).array(), g_a[i]);
-            assert_eq!(sub_g.get(&sub_b).array(), g_b[i]);
+            sub_g.get(&sub_b).array().assert_close(&g_b[i], 1e-5);
         }
     }
 
@@ -477,7 +476,7 @@ mod tests {
                 assert_eq!(sub_c.array(), c_array[i][j]);
                 let sub_g = sub_c.exp().sum().backward();
                 assert_eq!(sub_g.get(&sub_a).array(), g_a[i][j]);
-                assert_eq!(sub_g.get(&sub_b).array(), g_b[i][j]);
+                sub_g.get(&sub_b).array().assert_close(&g_b[i][j], 1e-5);
             }
         }
     }
