@@ -3,6 +3,7 @@
 use crate::{
     shapes::*,
     tensor::{storage_traits::*, Tensor},
+    tensor_ops::ops::merge_strides
 };
 use rand::{distributions::Distribution, Rng};
 use std::{sync::Arc, vec::Vec};
@@ -35,6 +36,21 @@ impl<S: Shape, E: Default + Clone> StridedArray<S, E> {
         let numel = other.data.len();
         let shape = other.shape;
         let strides = other.strides;
+        let mut data: Vec<E> = Vec::new();
+        data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
+        data.resize(numel, elem);
+        let data = Arc::new(data);
+        Ok(StridedArray {
+            data,
+            shape,
+            strides,
+        })
+    }
+
+    #[inline]
+    pub(crate) fn try_new_merge(lhs: &Self, rhs: &Self, elem: E) -> Result<Self, CpuError> {
+        let shape = lhs.shape;
+        let (numel, strides) = merge_strides(shape, lhs.strides, rhs.strides);
         let mut data: Vec<E> = Vec::new();
         data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
         data.resize(numel, elem);

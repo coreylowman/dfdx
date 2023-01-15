@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     shapes::{Dtype, Shape},
@@ -44,6 +45,48 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
     }
 }
 
+/// Yields the amount to increment an index into a strided array when transitioning across a given
+/// index
+fn get_strided_incrs<S: Shape>(shape: S, strides: S::Concrete) -> S::Concrete {
+    let mut out: S::Concrete = Default::default();
+    let dims = shape.concrete();
+    let mut elem_size = 1;
+
+    for i in (0..S::NUM_DIMS).rev() {
+        if strides[i] == 0 {
+            out[i] = -(elem_size as isize - 1) as usize;
+        } else {
+            elem_size *= dims[i];
+            out[i] = 1;
+        }
+    }
+
+    out
+}
+
+/// outputs the dimension that the index is transitioning across
+#[inline]
+fn get_incr_dim<S: Shape>(out_i: usize, strides: S::Concrete) -> usize {
+    strides
+        .into_iter()
+        .position(|stride| {
+            if stride == 0 {
+                false
+            } else {
+                out_i % stride == 0
+            }
+        })
+        .unwrap_or(0)
+}
+
+#[inline]
+fn incr_arg_i<S: Shape>(i: &mut usize, incrs: S::Concrete, dim: usize) {
+    if dim >= S::NUM_DIMS {
+        return;
+    }
+    *i = (*i as isize + incrs[dim] as isize) as usize;
+}
+
 impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
     fn forward<S: Shape>(
         &self,
@@ -51,12 +94,21 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
         lhs: &Self::Storage<S, E>,
         rhs: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err> {
-        let mut out: Self::Storage<S, E> = StridedArray::new(lhs.shape)?;
-        let mut lhs_iter = lhs.iter();
-        let mut rhs_iter = rhs.iter();
-        let mut out_iter = out.iter_mut();
-        while let Some((o, (l, r))) = out_iter.next().zip(lhs_iter.next().zip(rhs_iter.next())) {
-            *o = op.f(l, r);
+        let mut out: Self::Storage<S, E> = StridedArray::try_new_merge(&lhs, &rhs, E::default())?;
+        let lhs_incrs = get_strided_incrs(lhs.shape, lhs.strides);
+        let rhs_incrs = get_strided_incrs(lhs.shape, rhs.strides);
+
+        let mut lhs_i = 0;
+        let mut rhs_i = 0;
+
+        let out_data = Arc::make_mut(&mut out.data);
+
+        for out_i in 0..out_data.len() {
+            out_data[out_i] = op.f(&lhs.data[lhs_i], &rhs.data[rhs_i]);
+
+            let dim = get_incr_dim::<S>(out_i + 1, out.strides);
+            incr_arg_i::<S>(&mut lhs_i, lhs_incrs, dim);
+            incr_arg_i::<S>(&mut rhs_i, rhs_incrs, dim);
         }
         Ok(out)
     }
@@ -69,20 +121,25 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
         grad_rhs: &mut Self::Storage<S, E>,
         grad_out: &Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
-        let mut lhs_iter = lhs.iter();
-        let mut rhs_iter = rhs.iter();
-        let mut grad_lhs_iter = grad_lhs.iter_mut();
-        let mut grad_rhs_iter = grad_rhs.iter_mut();
-        let mut grad_out_iter = grad_out.iter();
-        for _ in 0..lhs.shape.num_elements() {
-            let l = lhs_iter.next().unwrap();
-            let r = rhs_iter.next().unwrap();
-            let go = *grad_out_iter.next().unwrap();
-            let gl = grad_lhs_iter.next().unwrap();
-            *gl += op.dfdx(l, r) * go;
-            let gr = grad_rhs_iter.next().unwrap();
-            *gr += op.dfdy(l, r) * go;
+        let lhs_incrs = get_strided_incrs(lhs.shape, lhs.strides);
+        let rhs_incrs = get_strided_incrs(lhs.shape, rhs.strides);
+
+        let mut lhs_i = 0;
+        let mut rhs_i = 0;
+
+        let lhs_data = Arc::make_mut(&mut grad_lhs.data);
+        let rhs_data = Arc::make_mut(&mut grad_rhs.data);
+
+        for out_i in 0..grad_out.data.len() {
+            let go = grad_out.data[out_i];
+            lhs_data[lhs_i] = op.dfdx(&lhs.data[lhs_i], &rhs.data[rhs_i]) * go;
+            rhs_data[rhs_i] = op.dfdy(&lhs.data[lhs_i], &rhs.data[rhs_i]) * go;
+
+            let dim = get_incr_dim::<S>(out_i + 1, grad_out.strides);
+            incr_arg_i::<S>(&mut lhs_i, lhs_incrs, dim);
+            incr_arg_i::<S>(&mut rhs_i, rhs_incrs, dim);
         }
+
         Ok(())
     }
 }
