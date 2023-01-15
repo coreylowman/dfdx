@@ -3,10 +3,106 @@ use crate::{
     tensor::cuda::{Cuda, CudaArray},
 };
 
-use cudarc::cublas::{
-    sys::cublasOperation_t, Gemm, GemmConfig, Gemv, GemvConfig, StridedBatchedConfig,
+use cudarc::{
+    cublas::{
+        result::CublasError, sys::cublasOperation_t, CudaBlas, Gemm, GemmConfig,
+        StridedBatchedConfig,
+    },
+    driver::{DevicePtr, DevicePtrMut},
 };
 use std::sync::Arc;
+
+/// sgemm helper.
+///
+/// # case 1: c is not transposed
+/// note that lhs becomes b and rhs becomes a since cuda expects
+/// column major data, but dfdx uses row major. So this function actually
+/// calls the underlying cuda gemm call as `(N, K) * (K, M) = (N, M)`.
+///
+/// Since `(N, K)` in column major format is equal to (K, N) in row major format,
+/// we can just pass rhs normally. We can pass the row major format `out` directly
+/// in without transposing or anything because of this fact also.
+///
+/// # case 2: c is transposed
+///
+/// lhs is a and rhs is b, but we have to transpose them if they are not already
+#[allow(clippy::too_many_arguments)]
+unsafe fn sgemm<
+    M: Dim,
+    K: Dim,
+    N: Dim,
+    A: DevicePtr<f32>,
+    B: DevicePtr<f32>,
+    C: DevicePtrMut<f32>,
+>(
+    blas: &CudaBlas,
+    m: M,
+    k: K,
+    n: N,
+    lhs: &A,
+    lhs_strides: [usize; 2],
+    rhs: &B,
+    rhs_strides: [usize; 2],
+    beta: f32,
+    out: &mut C,
+    out_strides: [usize; 2],
+) -> Result<(), CublasError> {
+    if out_strides[0] > 1 {
+        // out is stored in row major format
+        let (transa, lda) = if rhs_strides[0] > 1 {
+            (cublasOperation_t::CUBLAS_OP_N, n.size() as i32)
+        } else {
+            (cublasOperation_t::CUBLAS_OP_T, k.size() as i32)
+        };
+        let (transb, ldb) = if lhs_strides[0] > 1 {
+            (cublasOperation_t::CUBLAS_OP_N, k.size() as i32)
+        } else {
+            (cublasOperation_t::CUBLAS_OP_T, m.size() as i32)
+        };
+        let cfg = GemmConfig {
+            transa,
+            transb,
+            m: n.size() as i32,
+            n: m.size() as i32,
+            k: k.size() as i32,
+            alpha: 1.0,
+            lda,
+            ldb,
+            beta,
+            ldc: n.size() as i32,
+        };
+        blas.gemm_async(cfg, rhs, lhs, out)
+    } else {
+        // out is stored in column major format
+        let (transa, lda) = if lhs_strides[0] > 1 {
+            // lhs is stored in row major format
+            (cublasOperation_t::CUBLAS_OP_T, k.size() as i32)
+        } else {
+            (cublasOperation_t::CUBLAS_OP_N, m.size() as i32)
+        };
+        let (transb, ldb) = if rhs_strides[0] > 1 {
+            // rhs is stored in row major format
+            (cublasOperation_t::CUBLAS_OP_T, n.size() as i32)
+        } else {
+            (cublasOperation_t::CUBLAS_OP_N, k.size() as i32)
+        };
+
+        // storage = lhs * rhs
+        let cfg = GemmConfig {
+            transa,
+            transb,
+            m: m.size() as i32,
+            n: n.size() as i32,
+            k: k.size() as i32,
+            alpha: 1.0,
+            lda,
+            ldb,
+            beta,
+            ldc: m.size() as i32,
+        };
+        blas.gemm_async(cfg, lhs, rhs, out)
+    }
+}
 
 impl super::VecVecKernel<f32> for Cuda {
     fn forward<M: Dim, N: Dim>(
@@ -227,29 +323,24 @@ impl super::MatMatKernel<f32> for Cuda {
         let (m, _) = lhs.shape;
         let (k, n) = rhs.shape;
         let shape = (m, n);
+        let strides = shape.strides();
         let mut storage = self.dev.alloc_zeros_async::<f32>(shape.num_elements())?;
 
-        // TODO: use strides
         unsafe {
-            // storage = lhs * rhs
-            let m_op = m.size() as i32;
-            let n_op = n.size() as i32;
-            let k_op = k.size() as i32;
-            let cfg = GemmConfig {
-                transa: cublasOperation_t::CUBLAS_OP_N,
-                transb: cublasOperation_t::CUBLAS_OP_N,
-                m: n_op,
-                n: m_op,
-                k: k_op,
-                alpha: 1.0,
-                lda: n_op,
-                ldb: k_op,
-                beta: 0.0,
-                ldc: n_op,
-            };
-            self.blas
-                .gemm_async(cfg, rhs.data.as_ref(), lhs.data.as_ref(), &mut storage)?;
-        }
+            sgemm(
+                self.blas.as_ref(),
+                m,
+                k,
+                n,
+                lhs.data.as_ref(),
+                lhs.strides,
+                rhs.data.as_ref(),
+                rhs.strides,
+                0.0,
+                &mut storage,
+                strides,
+            )
+        }?;
 
         Ok(CudaArray {
             data: Arc::new(storage),
@@ -257,6 +348,7 @@ impl super::MatMatKernel<f32> for Cuda {
             strides: shape.strides(),
         })
     }
+
     fn backward<M: Dim, const K: usize, N: Dim>(
         &self,
         lhs: &Self::Storage<(M, Const<K>), f32>,
@@ -267,53 +359,37 @@ impl super::MatMatKernel<f32> for Cuda {
     ) -> Result<(), Self::Err> {
         let (m, _) = lhs.shape;
         let (k, n) = rhs.shape;
-        // TODO use strides
         unsafe {
             // grad_lhs += grad_out * rhs^T
-            let m_op = m.size() as i32;
-            let n_op = k.size() as i32;
-            let k_op = n.size() as i32;
-            let cfg = GemmConfig {
-                transa: cublasOperation_t::CUBLAS_OP_T,
-                transb: cublasOperation_t::CUBLAS_OP_N,
-                m: n_op,
-                n: m_op,
-                k: k_op,
-                alpha: 1.0,
-                lda: k_op,
-                ldb: k_op,
-                beta: 1.0,
-                ldc: n_op,
-            };
-            self.blas.gemm_async(
-                cfg,
-                rhs.data.as_ref(),
+            sgemm(
+                self.blas.as_ref(),
+                m,
+                n,
+                k,
                 grad_out.data.as_ref(),
+                grad_out.strides,
+                rhs.data.as_ref(),
+                [rhs.strides[1], rhs.strides[0]],
+                1.0,
                 Arc::make_mut(&mut grad_lhs.data),
+                grad_lhs.strides,
             )?;
         }
+
         unsafe {
             // grad_rhs += lhs^T * grad_out
-            let m_op = k.size() as i32;
-            let n_op = n.size() as i32;
-            let k_op = m.size() as i32;
-            let cfg = GemmConfig {
-                transa: cublasOperation_t::CUBLAS_OP_N,
-                transb: cublasOperation_t::CUBLAS_OP_T,
-                m: n_op,
-                n: m_op,
-                k: k_op,
-                alpha: 1.0,
-                lda: n_op,
-                ldb: m_op,
-                beta: 1.0,
-                ldc: n_op,
-            };
-            self.blas.gemm_async(
-                cfg,
-                grad_out.data.as_ref(),
+            sgemm(
+                self.blas.as_ref(),
+                k,
+                m,
+                n,
                 lhs.data.as_ref(),
+                [lhs.strides[1], lhs.strides[0]],
+                grad_out.data.as_ref(),
+                grad_out.strides,
+                1.0,
                 Arc::make_mut(&mut grad_rhs.data),
+                grad_rhs.strides,
             )?;
         }
         Ok(())
