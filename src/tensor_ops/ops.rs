@@ -98,7 +98,7 @@ pub(crate) fn try_binary_op<
 pub(crate) fn merge_strides<S: Shape>(
     shape: S,
     mut strides1: S::Concrete,
-    strides2: S::Concrete
+    strides2: S::Concrete,
 ) -> (usize, S::Concrete) {
     let mut prod = 1;
     let dims = shape.concrete();

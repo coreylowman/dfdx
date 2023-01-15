@@ -1,7 +1,7 @@
 use crate::{
     shapes::Shape,
     tensor::cuda::{Cuda, CudaArray},
-    tensor_ops::ops::{BinaryKernel, UnaryKernel, merge_strides},
+    tensor_ops::ops::{merge_strides, BinaryKernel, UnaryKernel},
 };
 use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;

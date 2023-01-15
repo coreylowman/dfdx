@@ -3,7 +3,7 @@
 use crate::{
     shapes::*,
     tensor::{storage_traits::*, Tensor},
-    tensor_ops::ops::merge_strides
+    tensor_ops::ops::merge_strides,
 };
 use rand::{distributions::Distribution, Rng};
 use std::{sync::Arc, vec::Vec};

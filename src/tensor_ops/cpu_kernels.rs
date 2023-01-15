@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     shapes::{Dtype, Shape},
     tensor::cpu::{Cpu, StridedArray},
 };
+use std::sync::Arc;
 
 pub trait UnaryDerivative<E> {
     fn f(&self, x: &E) -> E;
