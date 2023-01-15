@@ -46,7 +46,7 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
 }
 
 /// Yields the amount to increment an index into a strided array when transitioning across a given
-/// index
+/// dimension
 fn get_strided_incrs<S: Shape>(shape: S, strides: S::Concrete) -> S::Concrete {
     let mut out: S::Concrete = Default::default();
     let dims = shape.concrete();
