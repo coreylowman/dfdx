@@ -92,8 +92,8 @@ pub(crate) fn try_binary_op<
     Ok(out.put_tape(tape))
 }
 
-/// combines the strides for two tensors so that the resulting strides can store the result of a
-/// binary operation between the inputs
+/// computes the strides needed to store the result of a binary tensor operation given the strides
+/// of the input tensors
 // TODO: put this somewhere better
 pub(crate) fn merge_strides<S: Shape>(
     shape: S,
