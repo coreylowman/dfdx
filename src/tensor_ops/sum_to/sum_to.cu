@@ -61,5 +61,5 @@ extern "C" __global__ void sum_to_backward(
     // at a time. this means we don't have to worry about multiple concurrent writes
     // like we do with forward.
     unsigned int inp_strided_i = get_strided_index(i, num_dims, dims, inp_strides);
-    grad_inp[inp_strided_i] += tmp;
+    atomicAdd(grad_inp + inp_strided_i, tmp);
 }

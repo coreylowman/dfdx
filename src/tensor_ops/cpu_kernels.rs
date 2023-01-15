@@ -2,7 +2,7 @@ use std::sync::Arc;
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::cpu::{Cpu, LendingIterator, StridedArray},
+    tensor::cpu::{Cpu, StridedArray},
 };
 
 pub trait UnaryDerivative<E> {
@@ -130,10 +130,12 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
         let lhs_data = Arc::make_mut(&mut grad_lhs.data);
         let rhs_data = Arc::make_mut(&mut grad_rhs.data);
 
+        std::println!("{:?}", grad_out.data);
+
         for out_i in 0..grad_out.data.len() {
             let go = grad_out.data[out_i];
-            lhs_data[lhs_i] = op.dfdx(&lhs.data[lhs_i], &rhs.data[rhs_i]) * go;
-            rhs_data[rhs_i] = op.dfdy(&lhs.data[lhs_i], &rhs.data[rhs_i]) * go;
+            lhs_data[lhs_i] += op.dfdx(&lhs.data[lhs_i], &rhs.data[rhs_i]) * go;
+            rhs_data[rhs_i] += op.dfdy(&lhs.data[lhs_i], &rhs.data[rhs_i]) * go;
 
             let dim = get_incr_dim::<S>(out_i + 1, grad_out.strides);
             incr_arg_i::<S>(&mut lhs_i, lhs_incrs, dim);

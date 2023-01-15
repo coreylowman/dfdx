@@ -80,12 +80,6 @@ extern "C" __global__ void huber_error_backward(
         return;
     }
 
-    unsigned int virtual_numel = 1;
-    for (unsigned int d = 0; d < num_dims; d++) {
-        virtual_numel *= dims[d];
-    }
-    float mul = virtual_numel / numel;
-
     unsigned int i = get_unstrided_index(out_i, num_dims, dims, out_strides);
     unsigned int lhs_i = get_strided_index(i, num_dims, dims, lhs_strides);
     unsigned int rhs_i = get_strided_index(i, num_dims, dims, rhs_strides);
@@ -105,6 +99,6 @@ extern "C" __global__ void huber_error_backward(
 
     dfdy = -dfdx;
 
-    atomicAdd(grad_lhs + lhs_i, dfdx * go * mul);
-    atomicAdd(grad_rhs + rhs_i, dfdy * go * mul);
+    atomicAdd(grad_lhs + lhs_i, dfdx * go);
+    atomicAdd(grad_rhs + rhs_i, dfdy * go);
 }
