@@ -530,6 +530,8 @@ mod tests {
         let a = dev.tensor([-1.5333828, 0.6136148, -0.77502704, -1.0014728, -2.0131118]);
         let b = dev.tensor([0.43068963, -0.9757187, -0.50650096]);
         let c = a.trace().matmul(b.clone());
+        let c_t = b.trace().matmul(a.clone()).permute();
+        assert_eq!(c.array(), c_t.array());
         assert_close(
             &c.array(),
             &[
