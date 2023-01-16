@@ -451,6 +451,8 @@ impl super::MatMatBrKernel<f32> for Cuda {
         }
         let grad_rhs_buf = Arc::make_mut(&mut grad_rhs.data);
         for b in 0..batch.size() {
+            // NOTE: these have to be sequential since grad_rhs is broadcasted and cublas doesn't support
+            // 0 strides with atomicAdd
             unsafe {
                 // grad_rhs += lhs^T * grad_out
                 sgemm(
