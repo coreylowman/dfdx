@@ -12,6 +12,9 @@ use cudarc::{
 };
 use std::sync::Arc;
 
+const TRANS: cublasOperation_t = cublasOperation_t::CUBLAS_OP_T;
+const NO_TRANS: cublasOperation_t = cublasOperation_t::CUBLAS_OP_N;
+
 /// sgemm helper.
 ///
 /// # case 1: c is not transposed
@@ -36,9 +39,7 @@ unsafe fn sgemm<
     C: DevicePtrMut<f32>,
 >(
     blas: &CudaBlas,
-    m: M,
-    k: K,
-    n: N,
+    (m, k, n): (M, K, N),
     lhs: &A,
     lhs_strides: [usize; 2],
     rhs: &B,
@@ -47,60 +48,149 @@ unsafe fn sgemm<
     out: &mut C,
     out_strides: [usize; 2],
 ) -> Result<(), CublasError> {
-    if out_strides[0] > 1 {
+    assert!(lhs_strides[0] == 1 || lhs_strides[1] == 1);
+    assert!(rhs_strides[0] == 1 || rhs_strides[1] == 1);
+    assert!(out_strides[0] == 1 || out_strides[1] == 1);
+
+    let lhs_stride = lhs_strides[0].max(lhs_strides[1]);
+    let rhs_stride = rhs_strides[0].max(rhs_strides[1]);
+    let out_stride = out_strides[0].max(out_strides[1]);
+
+    let lhs_trans = if lhs_stride == k.size() {
+        false
+    } else {
+        assert_eq!(lhs_stride, m.size());
+        true
+    };
+
+    let rhs_trans = if rhs_stride == n.size() {
+        false
+    } else {
+        assert_eq!(rhs_stride, k.size());
+        true
+    };
+
+    if out_stride == n.size() {
         // out is stored in row major format
-        let (transa, lda) = if rhs_strides[0] > 1 {
-            (cublasOperation_t::CUBLAS_OP_N, n.size() as i32)
-        } else {
-            (cublasOperation_t::CUBLAS_OP_T, k.size() as i32)
-        };
-        let (transb, ldb) = if lhs_strides[0] > 1 {
-            (cublasOperation_t::CUBLAS_OP_N, k.size() as i32)
-        } else {
-            (cublasOperation_t::CUBLAS_OP_T, m.size() as i32)
-        };
         let cfg = GemmConfig {
-            transa,
-            transb,
+            transa: if rhs_trans { TRANS } else { NO_TRANS },
+            transb: if lhs_trans { TRANS } else { NO_TRANS },
             m: n.size() as i32,
             n: m.size() as i32,
             k: k.size() as i32,
             alpha: 1.0,
-            lda,
-            ldb,
+            lda: rhs_stride as i32,
+            ldb: lhs_stride as i32,
             beta,
-            ldc: n.size() as i32,
+            ldc: out_stride as i32,
         };
         blas.gemm_async(cfg, rhs, lhs, out)
     } else {
         // out is stored in column major format
-        let (transa, lda) = if lhs_strides[0] > 1 {
-            // lhs is stored in row major format
-            (cublasOperation_t::CUBLAS_OP_T, k.size() as i32)
-        } else {
-            (cublasOperation_t::CUBLAS_OP_N, m.size() as i32)
-        };
-        let (transb, ldb) = if rhs_strides[0] > 1 {
-            // rhs is stored in row major format
-            (cublasOperation_t::CUBLAS_OP_T, n.size() as i32)
-        } else {
-            (cublasOperation_t::CUBLAS_OP_N, k.size() as i32)
-        };
-
-        // storage = lhs * rhs
+        assert_eq!(out_stride, m.size());
         let cfg = GemmConfig {
-            transa,
-            transb,
+            transa: if lhs_trans { NO_TRANS } else { TRANS },
+            transb: if rhs_trans { NO_TRANS } else { TRANS },
             m: m.size() as i32,
             n: n.size() as i32,
             k: k.size() as i32,
             alpha: 1.0,
-            lda,
-            ldb,
+            lda: lhs_stride as i32,
+            ldb: rhs_stride as i32,
             beta,
-            ldc: m.size() as i32,
+            ldc: out_stride as i32,
         };
         blas.gemm_async(cfg, lhs, rhs, out)
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+unsafe fn sgemm_batch<
+    Batch: Dim,
+    M: Dim,
+    K: Dim,
+    N: Dim,
+    A: DevicePtr<f32>,
+    B: DevicePtr<f32>,
+    C: DevicePtrMut<f32>,
+>(
+    blas: &CudaBlas,
+    (batch, m, k, n): (Batch, M, K, N),
+    lhs: &A,
+    lhs_strides: [usize; 3],
+    rhs: &B,
+    rhs_strides: [usize; 3],
+    beta: f32,
+    out: &mut C,
+    out_strides: [usize; 3],
+) -> Result<(), CublasError> {
+    // NOTE: lhs_strides[0] and rhs_strides[0] can be 0
+    assert_ne!(out_strides[0], 0);
+    assert!(lhs_strides[1] == 1 || lhs_strides[2] == 1);
+    assert!(rhs_strides[1] == 1 || rhs_strides[2] == 1);
+    assert!(out_strides[1] == 1 || out_strides[2] == 1);
+
+    let lhs_stride = lhs_strides[1].max(lhs_strides[2]);
+    let rhs_stride = rhs_strides[1].max(rhs_strides[2]);
+    let out_stride = out_strides[1].max(out_strides[2]);
+
+    let lhs_trans = if lhs_stride == k.size() {
+        false
+    } else {
+        assert_eq!(lhs_stride, m.size());
+        true
+    };
+
+    let rhs_trans = if rhs_stride == n.size() {
+        false
+    } else {
+        assert_eq!(rhs_stride, k.size());
+        true
+    };
+
+    if out_stride == n.size() {
+        // out is stored in row major format
+        let cfg = StridedBatchedConfig {
+            gemm: GemmConfig {
+                transa: if rhs_trans { TRANS } else { NO_TRANS },
+                transb: if lhs_trans { TRANS } else { NO_TRANS },
+                m: n.size() as i32,
+                n: m.size() as i32,
+                k: k.size() as i32,
+                alpha: 1.0,
+                lda: rhs_stride as i32,
+                ldb: lhs_stride as i32,
+                beta,
+                ldc: out_stride as i32,
+            },
+            stride_a: rhs_strides[0] as i64,
+            stride_b: lhs_strides[0] as i64,
+            stride_c: out_strides[0] as i64,
+            batch_size: batch.size() as i32,
+        };
+        blas.gemm_strided_batched_async(cfg, rhs, lhs, out)
+    } else {
+        // out is stored in column major format
+        assert_eq!(out_stride, m.size());
+        let cfg = StridedBatchedConfig {
+            gemm: GemmConfig {
+                transa: if lhs_trans { NO_TRANS } else { TRANS },
+                transb: if rhs_trans { NO_TRANS } else { TRANS },
+                m: m.size() as i32,
+                n: n.size() as i32,
+                k: k.size() as i32,
+                alpha: 1.0,
+                lda: lhs_stride as i32,
+                ldb: rhs_stride as i32,
+                beta,
+                ldc: out_stride as i32,
+            },
+            stride_a: lhs_strides[0] as i64,
+            stride_b: rhs_strides[0] as i64,
+            stride_c: out_strides[0] as i64,
+            batch_size: batch.size() as i32,
+        };
+        blas.gemm_strided_batched_async(cfg, lhs, rhs, out)
     }
 }
 
@@ -221,28 +311,22 @@ impl super::VecMatKernel<f32> for Cuda {
         let m = Const::<1>;
         let (k, n) = rhs.shape;
         let shape = (n,);
+        let strides = shape.strides();
         let mut storage = self.dev.alloc_zeros_async::<f32>(shape.num_elements())?;
 
-        // TODO: use strides
         unsafe {
             // storage = lhs * rhs
-            let m_op = m.size() as i32;
-            let n_op = n.size() as i32;
-            let k_op = k.size() as i32;
-            let cfg = GemmConfig {
-                transa: cublasOperation_t::CUBLAS_OP_N,
-                transb: cublasOperation_t::CUBLAS_OP_N,
-                m: n_op,
-                n: m_op,
-                k: k_op,
-                alpha: 1.0,
-                lda: n_op,
-                ldb: k_op,
-                beta: 0.0,
-                ldc: n_op,
-            };
-            self.blas
-                .gemm_async(cfg, rhs.data.as_ref(), lhs.data.as_ref(), &mut storage)?;
+            sgemm(
+                self.blas.as_ref(),
+                (m, k, n),
+                lhs.data.as_ref(),
+                [0, lhs.strides[0]],
+                rhs.data.as_ref(),
+                rhs.strides,
+                0.0,
+                &mut storage,
+                [0, strides[0]],
+            )?;
         }
 
         Ok(CudaArray {
@@ -261,53 +345,32 @@ impl super::VecMatKernel<f32> for Cuda {
     ) -> Result<(), Self::Err> {
         let m = Const::<1>;
         let (k, n) = rhs.shape;
-        // TODO use strides
         unsafe {
             // grad_lhs += grad_out * rhs^T
-            let m_op = m.size() as i32;
-            let n_op = k.size() as i32;
-            let k_op = n.size() as i32;
-            let cfg = GemmConfig {
-                transa: cublasOperation_t::CUBLAS_OP_T,
-                transb: cublasOperation_t::CUBLAS_OP_N,
-                m: n_op,
-                n: m_op,
-                k: k_op,
-                alpha: 1.0,
-                lda: k_op,
-                ldb: k_op,
-                beta: 1.0,
-                ldc: n_op,
-            };
-            self.blas.gemm_async(
-                cfg,
-                rhs.data.as_ref(),
+            sgemm(
+                self.blas.as_ref(),
+                (m, n, k),
                 grad_out.data.as_ref(),
+                [0, grad_out.strides[0]],
+                rhs.data.as_ref(),
+                [rhs.strides[1], rhs.strides[0]],
+                1.0,
                 Arc::make_mut(&mut grad_lhs.data),
+                [0, grad_lhs.strides[0]],
             )?;
         }
         unsafe {
-            // grad_rhs += lhs * grad_out
-            let m_op = k.size() as i32;
-            let n_op = n.size() as i32;
-            let k_op = m.size() as i32;
-            let cfg = GemmConfig {
-                transa: cublasOperation_t::CUBLAS_OP_N,
-                transb: cublasOperation_t::CUBLAS_OP_N,
-                m: n_op,
-                n: m_op,
-                k: k_op,
-                alpha: 1.0,
-                lda: n_op,
-                ldb: k_op,
-                beta: 1.0,
-                ldc: n_op,
-            };
-            self.blas.gemm_async(
-                cfg,
-                grad_out.data.as_ref(),
+            // grad_rhs += lhs^T * grad_out
+            sgemm(
+                self.blas.as_ref(),
+                (k, m, n),
                 lhs.data.as_ref(),
+                [lhs.strides[0], 0],
+                grad_out.data.as_ref(),
+                [0, grad_out.strides[0]],
+                1.0,
                 Arc::make_mut(&mut grad_rhs.data),
+                grad_rhs.strides,
             )?;
         }
         Ok(())
@@ -329,9 +392,7 @@ impl super::MatMatKernel<f32> for Cuda {
         unsafe {
             sgemm(
                 self.blas.as_ref(),
-                m,
-                k,
-                n,
+                (m, k, n),
                 lhs.data.as_ref(),
                 lhs.strides,
                 rhs.data.as_ref(),
@@ -363,9 +424,7 @@ impl super::MatMatKernel<f32> for Cuda {
             // grad_lhs += grad_out * rhs^T
             sgemm(
                 self.blas.as_ref(),
-                m,
-                n,
-                k,
+                (m, n, k),
                 grad_out.data.as_ref(),
                 grad_out.strides,
                 rhs.data.as_ref(),
@@ -380,9 +439,7 @@ impl super::MatMatKernel<f32> for Cuda {
             // grad_rhs += lhs^T * grad_out
             sgemm(
                 self.blas.as_ref(),
-                k,
-                m,
-                n,
+                (k, m, n),
                 lhs.data.as_ref(),
                 [lhs.strides[1], lhs.strides[0]],
                 grad_out.data.as_ref(),
@@ -408,35 +465,17 @@ impl super::MatMatBrKernel<f32> for Cuda {
         let strides = shape.strides();
         let mut storage = self.dev.alloc_zeros_async::<f32>(shape.num_elements())?;
 
-        // TODO: use strides
         unsafe {
-            // storage = lhs * rhs
-            let m_op = m.size() as i32;
-            let n_op = n.size() as i32;
-            let k_op = k.size() as i32;
-            let cfg = StridedBatchedConfig {
-                gemm: GemmConfig {
-                    transa: cublasOperation_t::CUBLAS_OP_N,
-                    transb: cublasOperation_t::CUBLAS_OP_N,
-                    m: n_op,
-                    n: m_op,
-                    k: k_op,
-                    alpha: 1.0,
-                    lda: n_op,
-                    ldb: k_op,
-                    beta: 0.0,
-                    ldc: n_op,
-                },
-                stride_a: 0,
-                stride_b: lhs.strides[0] as i64,
-                stride_c: strides[0] as i64,
-                batch_size: batch.size() as i32,
-            };
-            self.blas.gemm_strided_batched_async(
-                cfg,
-                rhs.data.as_ref(),
+            sgemm_batch(
+                self.blas.as_ref(),
+                (batch, m, k, n),
                 lhs.data.as_ref(),
+                lhs.strides,
+                rhs.data.as_ref(),
+                [0, rhs.strides[0], rhs.strides[1]],
+                0.0,
                 &mut storage,
+                strides,
             )?;
         }
         Ok(CudaArray {
@@ -453,63 +492,38 @@ impl super::MatMatBrKernel<f32> for Cuda {
         grad_rhs: &mut Self::Storage<(Const<K>, N), f32>,
         grad_out: &Self::Storage<(B, M, N), f32>,
     ) -> Result<(), Self::Err> {
+        assert_ne!(grad_lhs.strides[0], 0);
         let (batch, m, _) = lhs.shape;
         let (k, n) = rhs.shape;
-        // TODO use strides
         unsafe {
             // grad_lhs += grad_out * rhs^T
-            let m_op = m.size() as i32;
-            let n_op = k.size() as i32;
-            let k_op = n.size() as i32;
-            let cfg = StridedBatchedConfig {
-                gemm: GemmConfig {
-                    transa: cublasOperation_t::CUBLAS_OP_T,
-                    transb: cublasOperation_t::CUBLAS_OP_N,
-                    m: n_op,
-                    n: m_op,
-                    k: k_op,
-                    alpha: 1.0,
-                    lda: k_op,
-                    ldb: k_op,
-                    beta: 1.0,
-                    ldc: n_op,
-                },
-                stride_a: 0,
-                stride_b: grad_out.strides[0] as i64,
-                stride_c: grad_lhs.strides[0] as i64,
-                batch_size: batch.size() as i32,
-            };
-            self.blas.gemm_strided_batched_async(
-                cfg,
-                rhs.data.as_ref(),
+            sgemm_batch(
+                self.blas.as_ref(),
+                (batch, m, n, k),
                 grad_out.data.as_ref(),
+                grad_out.strides,
+                rhs.data.as_ref(),
+                [0, rhs.strides[1], rhs.strides[0]],
+                1.0,
                 Arc::make_mut(&mut grad_lhs.data),
+                grad_lhs.strides,
             )?;
         }
-        // TODO handle stride 0
         let grad_rhs_buf = Arc::make_mut(&mut grad_rhs.data);
         for b in 0..batch.size() {
             unsafe {
                 // grad_rhs += lhs^T * grad_out
-                let m_op = k.size() as i32;
-                let n_op = n.size() as i32;
-                let k_op = m.size() as i32;
-                let cfg = GemmConfig {
-                    transa: cublasOperation_t::CUBLAS_OP_N,
-                    transb: cublasOperation_t::CUBLAS_OP_T,
-                    m: n_op,
-                    n: m_op,
-                    k: k_op,
-                    alpha: 1.0,
-                    lda: n_op,
-                    ldb: m_op,
-                    beta: 1.0,
-                    ldc: n_op,
-                };
-                let grad_out_b = grad_out.data.try_slice(b * grad_out.strides[0]..).unwrap();
-                let lhs_b = lhs.data.try_slice(b * lhs.strides[0]..).unwrap();
-                self.blas
-                    .gemm_async(cfg, &grad_out_b, &lhs_b, grad_rhs_buf)?;
+                sgemm(
+                    self.blas.as_ref(),
+                    (k, m, n),
+                    &lhs.data.try_slice(b * lhs.strides[0]..).unwrap(),
+                    [lhs.strides[2], lhs.strides[1]],
+                    &grad_out.data.try_slice(b * grad_out.strides[0]..).unwrap(),
+                    [grad_out.strides[1], grad_out.strides[2]],
+                    1.0,
+                    grad_rhs_buf,
+                    grad_rhs.strides,
+                )?;
             }
         }
         Ok(())
@@ -528,35 +542,18 @@ impl super::MatMatBatch3Kernel<f32> for Cuda {
         let strides = shape.strides();
         let mut storage = self.dev.alloc_zeros_async::<f32>(shape.num_elements())?;
 
-        // TODO: use strides
         unsafe {
             // storage = lhs * rhs
-            let m_op = m.size() as i32;
-            let n_op = n.size() as i32;
-            let k_op = k.size() as i32;
-            let cfg = StridedBatchedConfig {
-                gemm: GemmConfig {
-                    transa: cublasOperation_t::CUBLAS_OP_N,
-                    transb: cublasOperation_t::CUBLAS_OP_N,
-                    m: n_op,
-                    n: m_op,
-                    k: k_op,
-                    alpha: 1.0,
-                    lda: n_op,
-                    ldb: k_op,
-                    beta: 0.0,
-                    ldc: n_op,
-                },
-                stride_a: rhs.strides[0] as i64,
-                stride_b: lhs.strides[0] as i64,
-                stride_c: strides[0] as i64,
-                batch_size: batch.size() as i32,
-            };
-            self.blas.gemm_strided_batched_async(
-                cfg,
-                rhs.data.as_ref(),
+            sgemm_batch(
+                self.blas.as_ref(),
+                (batch, m, k, n),
                 lhs.data.as_ref(),
+                lhs.strides,
+                rhs.data.as_ref(),
+                rhs.strides,
+                0.0,
                 &mut storage,
+                strides,
             )?;
         }
         Ok(CudaArray {
@@ -573,69 +570,36 @@ impl super::MatMatBatch3Kernel<f32> for Cuda {
         grad_rhs: &mut Self::Storage<(Const<B>, Const<K>, N), f32>,
         grad_out: &Self::Storage<(Const<B>, M, N), f32>,
     ) -> Result<(), Self::Err> {
+        assert_ne!(grad_lhs.strides[0], 0);
+        assert_ne!(grad_rhs.strides[0], 0);
         let (batch, m, _) = lhs.shape;
         let (_, k, n) = rhs.shape;
-        // TODO use strides
         unsafe {
-            // TODO handle strides[0] == 0
             // grad_lhs += grad_out * rhs^T
-            let m_op = m.size() as i32;
-            let n_op = k.size() as i32;
-            let k_op = n.size() as i32;
-            let cfg = StridedBatchedConfig {
-                gemm: GemmConfig {
-                    transa: cublasOperation_t::CUBLAS_OP_T,
-                    transb: cublasOperation_t::CUBLAS_OP_N,
-                    m: n_op,
-                    n: m_op,
-                    k: k_op,
-                    alpha: 1.0,
-                    lda: k_op,
-                    ldb: k_op,
-                    beta: 1.0,
-                    ldc: n_op,
-                },
-                stride_a: rhs.strides[0] as i64,
-                stride_b: grad_out.strides[0] as i64,
-                stride_c: grad_lhs.strides[0] as i64,
-                batch_size: batch.size() as i32,
-            };
-            self.blas.gemm_strided_batched_async(
-                cfg,
-                rhs.data.as_ref(),
+            sgemm_batch(
+                self.blas.as_ref(),
+                (batch, m, n, k),
                 grad_out.data.as_ref(),
+                grad_out.strides,
+                rhs.data.as_ref(),
+                [rhs.strides[0], rhs.strides[2], rhs.strides[1]],
+                1.0,
                 Arc::make_mut(&mut grad_lhs.data),
+                grad_lhs.strides,
             )?;
         }
         unsafe {
-            // TODO handle strides[0] == 0
             // grad_rhs += lhs^T * grad_out
-            let m_op = k.size() as i32;
-            let n_op = n.size() as i32;
-            let k_op = m.size() as i32;
-            let cfg = StridedBatchedConfig {
-                gemm: GemmConfig {
-                    transa: cublasOperation_t::CUBLAS_OP_N,
-                    transb: cublasOperation_t::CUBLAS_OP_T,
-                    m: n_op,
-                    n: m_op,
-                    k: k_op,
-                    alpha: 1.0,
-                    lda: n_op,
-                    ldb: m_op,
-                    beta: 1.0,
-                    ldc: n_op,
-                },
-                stride_a: grad_out.strides[0] as i64,
-                stride_b: lhs.strides[0] as i64,
-                stride_c: grad_rhs.strides[0] as i64,
-                batch_size: batch.size() as i32,
-            };
-            self.blas.gemm_strided_batched_async(
-                cfg,
-                grad_out.data.as_ref(),
+            sgemm_batch(
+                self.blas.as_ref(),
+                (batch, k, m, n),
                 lhs.data.as_ref(),
+                [lhs.strides[0], lhs.strides[2], lhs.strides[1]],
+                grad_out.data.as_ref(),
+                grad_out.strides,
+                1.0,
                 Arc::make_mut(&mut grad_rhs.data),
+                grad_rhs.strides,
             )?;
         }
         Ok(())
@@ -655,36 +619,19 @@ impl super::MatMatBatch4Kernel<f32> for Cuda {
         let mut storage = self.dev.alloc_zeros_async::<f32>(shape.num_elements())?;
 
         for b in 0..batch.size() {
-            // TODO: use strides
             // TODO: use separate streams
             unsafe {
-                // storage = lhs * rhs
-                let m_op = m.size() as i32;
-                let n_op = n.size() as i32;
-                let k_op = k.size() as i32;
-                let cfg = StridedBatchedConfig {
-                    gemm: GemmConfig {
-                        transa: cublasOperation_t::CUBLAS_OP_N,
-                        transb: cublasOperation_t::CUBLAS_OP_N,
-                        m: n_op,
-                        n: m_op,
-                        k: k_op,
-                        alpha: 1.0,
-                        lda: n_op,
-                        ldb: k_op,
-                        beta: 0.0,
-                        ldc: n_op,
-                    },
-                    stride_a: rhs.strides[1] as i64,
-                    stride_b: lhs.strides[1] as i64,
-                    stride_c: strides[1] as i64,
-                    batch_size: seq.size() as i32,
-                };
-                let lhs_b = lhs.data.try_slice(b * lhs.strides[0]..).unwrap();
-                let rhs_b = rhs.data.try_slice(b * rhs.strides[0]..).unwrap();
-                let mut out_b = storage.try_slice_mut(b * strides[0]..).unwrap();
-                self.blas
-                    .gemm_strided_batched_async(cfg, &rhs_b, &lhs_b, &mut out_b)?;
+                sgemm_batch(
+                    self.blas.as_ref(),
+                    (seq, m, k, n),
+                    &lhs.data.try_slice(b * lhs.strides[0]..).unwrap(),
+                    [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
+                    &rhs.data.try_slice(b * rhs.strides[0]..).unwrap(),
+                    [rhs.strides[1], rhs.strides[2], rhs.strides[3]],
+                    0.0,
+                    &mut storage.try_slice_mut(b * strides[0]..).unwrap(),
+                    [strides[1], strides[2], strides[3]],
+                )?;
             }
         }
         Ok(CudaArray {
@@ -697,83 +644,51 @@ impl super::MatMatBatch4Kernel<f32> for Cuda {
     fn backward<const B: usize, const S: usize, M: Dim, const K: usize, N: Dim>(
         &self,
         lhs: &Self::Storage<(Const<B>, Const<S>, M, Const<K>), f32>,
-        grad_lhs: &mut Self::Storage<(Const<B>, Const<S>, M, Const<K>), f32>,
+        gl: &mut Self::Storage<(Const<B>, Const<S>, M, Const<K>), f32>,
         rhs: &Self::Storage<(Const<B>, Const<S>, Const<K>, N), f32>,
-        grad_rhs: &mut Self::Storage<(Const<B>, Const<S>, Const<K>, N), f32>,
-        grad_out: &Self::Storage<(Const<B>, Const<S>, M, N), f32>,
+        gr: &mut Self::Storage<(Const<B>, Const<S>, Const<K>, N), f32>,
+        go: &Self::Storage<(Const<B>, Const<S>, M, N), f32>,
     ) -> Result<(), Self::Err> {
+        assert_ne!(gl.strides[0], 0);
+        assert_ne!(gr.strides[0], 0);
+        assert_ne!(gl.strides[1], 0);
+        assert_ne!(gr.strides[1], 0);
+
         let (batch, seq, m, _) = lhs.shape;
         let (_, _, k, n) = rhs.shape;
-        // TODO use strides
         // TODO use streams
-        let grad_lhs_buf = Arc::make_mut(&mut grad_lhs.data);
+        let gl_buf = Arc::make_mut(&mut gl.data);
         for b in 0..batch.size() {
             unsafe {
-                // TODO handle strides[1] == 0
-                // grad_lhs += grad_out * rhs^T
-                let m_op = m.size() as i32;
-                let n_op = k.size() as i32;
-                let k_op = n.size() as i32;
-                let cfg = StridedBatchedConfig {
-                    gemm: GemmConfig {
-                        transa: cublasOperation_t::CUBLAS_OP_T,
-                        transb: cublasOperation_t::CUBLAS_OP_N,
-                        m: n_op,
-                        n: m_op,
-                        k: k_op,
-                        alpha: 1.0,
-                        lda: k_op,
-                        ldb: k_op,
-                        beta: 1.0,
-                        ldc: n_op,
-                    },
-                    stride_a: rhs.strides[1] as i64,
-                    stride_b: grad_out.strides[1] as i64,
-                    stride_c: grad_lhs.strides[1] as i64,
-                    batch_size: seq.size() as i32,
-                };
-                let rhs_b = rhs.data.try_slice(b * rhs.strides[0]..).unwrap();
-                let grad_out_b = grad_out.data.try_slice(b * grad_out.strides[0]..).unwrap();
-                let mut grad_lhs_b = grad_lhs_buf
-                    .try_slice_mut(b * grad_lhs.strides[0]..)
-                    .unwrap();
-                self.blas
-                    .gemm_strided_batched_async(cfg, &rhs_b, &grad_out_b, &mut grad_lhs_b)?;
+                // gl += go * rhs^T
+                sgemm_batch(
+                    self.blas.as_ref(),
+                    (seq, m, n, k),
+                    &go.data.try_slice(b * go.strides[0]..).unwrap(),
+                    [go.strides[1], go.strides[2], go.strides[3]],
+                    &rhs.data.try_slice(b * rhs.strides[0]..).unwrap(),
+                    [rhs.strides[1], rhs.strides[3], rhs.strides[2]],
+                    1.0,
+                    &mut gl_buf.try_slice_mut(b * gl.strides[0]..).unwrap(),
+                    [gl.strides[1], gl.strides[2], gl.strides[3]],
+                )?;
             }
         }
-        let grad_rhs_buf = Arc::make_mut(&mut grad_rhs.data);
+        let gr_buf = Arc::make_mut(&mut gr.data);
         for b in 0..batch.size() {
             unsafe {
-                // TODO handle strides[1] == 0
-                // grad_rhs += lhs^T * grad_out
-                let m_op = k.size() as i32;
-                let n_op = n.size() as i32;
-                let k_op = m.size() as i32;
-                let cfg = StridedBatchedConfig {
-                    gemm: GemmConfig {
-                        transa: cublasOperation_t::CUBLAS_OP_N,
-                        transb: cublasOperation_t::CUBLAS_OP_T,
-                        m: n_op,
-                        n: m_op,
-                        k: k_op,
-                        alpha: 1.0,
-                        lda: n_op,
-                        ldb: m_op,
-                        beta: 1.0,
-                        ldc: n_op,
-                    },
-                    stride_a: grad_out.strides[1] as i64,
-                    stride_b: lhs.strides[1] as i64,
-                    stride_c: grad_rhs.strides[1] as i64,
-                    batch_size: seq.size() as i32,
-                };
-                let grad_out_b = grad_out.data.try_slice(b * grad_out.strides[0]..).unwrap();
-                let lhs_b = lhs.data.try_slice(b * lhs.strides[0]..).unwrap();
-                let mut grad_rhs_b = grad_rhs_buf
-                    .try_slice_mut(b * grad_rhs.strides[0]..)
-                    .unwrap();
-                self.blas
-                    .gemm_strided_batched_async(cfg, &grad_out_b, &lhs_b, &mut grad_rhs_b)?;
+                // gr += lhs^T * go
+                sgemm_batch(
+                    self.blas.as_ref(),
+                    (seq, k, m, n),
+                    &lhs.data.try_slice(b * lhs.strides[0]..).unwrap(),
+                    [lhs.strides[1], lhs.strides[3], lhs.strides[2]],
+                    &go.data.try_slice(b * go.strides[0]..).unwrap(),
+                    [go.strides[1], go.strides[2], go.strides[3]],
+                    1.0,
+                    &mut gr_buf.try_slice_mut(b * gr.strides[0]..).unwrap(),
+                    [gr.strides[1], gr.strides[2], gr.strides[3]],
+                )?;
             }
         }
         Ok(())
