@@ -37,11 +37,15 @@ impl super::SumKernel<f32> for Cuda {
 
         let mut storage = self.dev.alloc_zeros_async::<f32>(dst.num_elements())?;
 
-        let inp_numel = inp.shape.num_elements();
+        let inp_numel = inp.data.len();
+        let numel = inp.shape.num_elements();
+        let mul = (numel / inp_numel) as f32;
+
         let cfg = LaunchConfig::for_num_elems(inp_numel as u32);
         let params = (
-            inp_numel,         // size_t numel,
-            Src::NUM_DIMS,     // size_t num_dims,
+            inp_numel,         // const size_t numel,
+            Src::NUM_DIMS,     // const size_t num_dims,
+            mul,               // const float mul,
             &dims,             // const size_t *dims,
             inp.data.as_ref(), // const float *inp,
             &inp_strides,      // const size_t *inp_strides,
@@ -72,11 +76,15 @@ impl super::SumKernel<f32> for Cuda {
             BroadcastStridesTo::<Src, Ax>::broadcast_strides(&grad_out.shape, grad_out.strides);
         let out_strides: CudaSlice<usize> = self.dev.take_async(out_strides.into())?;
 
-        let inp_numel = grad_inp.shape.num_elements();
+        let inp_numel = grad_inp.data.len();
+        let numel = grad_inp.shape.num_elements();
+        let mul = (numel / inp_numel) as f32;
+
         let cfg = LaunchConfig::for_num_elems(inp_numel as u32);
         let params = (
-            inp_numel,                         // size_t numel,
-            Src::NUM_DIMS,                     // size_t num_dims,
+            inp_numel,                         // const size_t numel,
+            Src::NUM_DIMS,                     // const size_t num_dims,
+            mul,                               // const float mul,
             &dims,                             // const size_t *dims,
             Arc::make_mut(&mut grad_inp.data), // float *grad_inp,
             &inp_strides,                      // const size_t *inp_strides,
