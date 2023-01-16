@@ -194,8 +194,8 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
 
 pub type Tensor0D<Tape = NoneTape> = Tensor<Rank0, f32, Cpu, Tape>;
 pub type Tensor1D<const M: usize, Tape = NoneTape> = Tensor<Rank1<M>, f32, Cpu, Tape>;
-pub type Tensor2D<const M: usize, const N: usize, Tape = NoneTape> =
-    Tensor<Rank2<M, N>, f32, Cpu, Tape>;
+pub type Tensor2D<const M: usize, const N: usize, D = Cpu, Tape = NoneTape> =
+    Tensor<Rank2<M, N>, f32, D, Tape>;
 pub type Tensor3D<const M: usize, const N: usize, const O: usize, D, Tape = NoneTape> =
     Tensor<Rank3<M, N, O>, f32, D, Tape>;
 pub type Tensor4D<const M: usize, const N: usize, const O: usize, const P: usize, Tape = NoneTape> =
