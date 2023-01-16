@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{
     gradients::Tape,
-    shapes::{Const, Dim, Dtype, Rank3, Rank4},
+    shapes::*,
     tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor},
 };
 
@@ -110,7 +110,7 @@ impl<
         T: Tape<D>,
     > TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P> for Tensor<Rank3<C, H, W>, f32, D, T>
 where
-    Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>: Sized,
+    Rank2<{ (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>: Sized,
 {
     type Output =
         Tensor<Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32, D, T>;
@@ -151,12 +151,7 @@ impl<
     > TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P>
     for Tensor<(B, Const<C>, Const<H>, Const<W>), f32, D, T>
 where
-    (
-        B,
-        Const<O>,
-        Const<{ (H + 2 * P - K) / S + 1 }>,
-        Const<{ (W + 2 * P - K) / S + 1 }>,
-    ):,
+    Rank2<{ (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>:,
 {
     type Output = Tensor<
         (
@@ -201,7 +196,6 @@ where
 mod tests {
     use super::*;
     use crate::{
-        shapes::*,
         tensor::*,
         tensor_ops::*,
         tests::{assert_close, AssertClose, TestDevice},

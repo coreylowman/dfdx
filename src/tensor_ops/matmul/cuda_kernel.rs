@@ -91,7 +91,7 @@ fn sgemm_config<M: Dim, K: Dim, N: Dim>(
 ///
 /// lhs is a and rhs is b, but we have to transpose them if they are not already
 #[allow(clippy::too_many_arguments)]
-unsafe fn sgemm<
+pub(crate) unsafe fn sgemm<
     M: Dim,
     K: Dim,
     N: Dim,
