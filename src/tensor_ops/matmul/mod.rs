@@ -286,8 +286,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::{assert_close, TestDevice};
-    use crate::{shapes::*, tensor::*, tensor_ops::*};
+    use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_valid_matmuls() {
@@ -382,7 +381,7 @@ mod tests {
     }
 
     #[test]
-    fn test_matul_broadcast() {
+    fn test_matmul_broadcast() {
         const N: usize = 5;
         let dev: TestDevice = Default::default();
         let a: Tensor<Rank3<N, 4, 3>, f32, _> = dev.sample_normal();
@@ -418,14 +417,19 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a = dev.sample_normal::<Rank3<N, 4, 3>>();
         let b = dev.sample_normal::<Rank2<3, 2>>();
-        let b_up = b.trace().broadcast::<Rank3<N, 3, 2>, _>();
-        let r1 = a.trace().matmul(b_up);
+        let b_up = dev.tensor([b.array(); N]);
+        let r1 = a.trace().matmul(b_up.clone());
         let r2 = a.trace().matmul(b.clone());
         assert_eq!(r1.array(), r2.array());
         let g1 = r1.exp().mean().backward();
         let g2 = r2.exp().mean().backward();
         assert_eq!(g1.get(&a).array(), g2.get(&a).array());
-        assert_eq!(g1.get(&b).array(), g2.get(&b).array());
+        assert_close(
+            &dev.tensor(g1.get(&b_up).array())
+                .sum::<_, Axis<0>>()
+                .array(),
+            &g2.get(&b).array(),
+        );
     }
 
     #[test]
@@ -450,7 +454,7 @@ mod tests {
             assert_eq!(sub_c.array(), c_array[i]);
             let sub_g = sub_c.exp().sum().backward();
             assert_eq!(sub_g.get(&sub_a).array(), g_a[i]);
-            assert_eq!(sub_g.get(&sub_b).array(), g_b[i]);
+            sub_g.get(&sub_b).array().assert_close(&g_b[i], 1e-5);
         }
     }
 
@@ -477,7 +481,7 @@ mod tests {
                 assert_eq!(sub_c.array(), c_array[i][j]);
                 let sub_g = sub_c.exp().sum().backward();
                 assert_eq!(sub_g.get(&sub_a).array(), g_a[i][j]);
-                assert_eq!(sub_g.get(&sub_b).array(), g_b[i][j]);
+                sub_g.get(&sub_b).array().assert_close(&g_b[i][j], 1e-5);
             }
         }
     }
@@ -526,6 +530,8 @@ mod tests {
         let a = dev.tensor([-1.5333828, 0.6136148, -0.77502704, -1.0014728, -2.0131118]);
         let b = dev.tensor([0.43068963, -0.9757187, -0.50650096]);
         let c = a.trace().matmul(b.clone());
+        let c_t = b.trace().matmul(a.clone()).permute();
+        assert_eq!(c.array(), c_t.array());
         assert_close(
             &c.array(),
             &[

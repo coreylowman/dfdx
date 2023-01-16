@@ -31,7 +31,7 @@ matrixmultiply = { version = "0.3.2", default-features = false }
 zip = { version = "0.6.2", default-features = false, optional = true }
 cblas-sys = { version = "0.1.4", default-features = false, optional = true }
 libc = { version = "0.2", default-features = false, optional = true }
-cudarc = { version = "0.6.0", default-features = false, optional = true }
+cudarc = { version = "0.6.1", default-features = false, optional = true }
 
 [features]
 default = ["std", "numpy"]
