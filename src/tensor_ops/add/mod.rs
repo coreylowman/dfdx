@@ -150,6 +150,25 @@ mod tests {
     }
 
     #[test]
+    fn test_add_broadcast_top() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b = dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+
+        let a2: Tensor3D<4, 2, 3, TestDevice> = a.broadcast();
+        let b2: Tensor3D<4, 2, 3, TestDevice> = b.broadcast();
+
+        let r = a2.trace() + b2.clone();
+        assert_eq!(
+            r.array(),
+            [[[1.1769f32, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]; 4]
+        );
+        let g = r.mean().backward();
+        assert_eq!(g.get(&a2).array(), [[[1.0 / 6.0; 3]; 2]; 4]);
+        assert_eq!(g.get(&b2).array(), [[[1.0 / 6.0; 3]; 2]; 4]);
+    }
+
+    #[test]
     fn test_add_permuted() {
         let dev: TestDevice = Default::default();
         let a = dev.tensor([[0.6570f32, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
@@ -170,25 +189,6 @@ mod tests {
         let g = r.mean().backward();
         assert_eq!(g.get(&a2).array(), [[1.0 / 6.0; 2]; 3]);
         assert_eq!(g.get(&b2).array(), [[1.0 / 6.0; 2]; 3]);
-    }
-
-    #[test]
-    fn test_add_broadcast_top() {
-        let dev: TestDevice = Default::default();
-        let a = dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b = dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
-
-        let a2: Tensor3D<4, 2, 3, TestDevice> = a.broadcast();
-        let b2: Tensor3D<4, 2, 3, TestDevice> = b.broadcast();
-
-        let r = a2.trace() + b2.clone();
-        assert_eq!(
-            r.array(),
-            [[[1.1769f32, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]; 4]
-        );
-        let g = r.mean().backward();
-        assert_eq!(g.get(&a2).array(), [[[1.0 / 6.0; 3]; 2]; 4]);
-        assert_eq!(g.get(&b2).array(), [[[1.0 / 6.0; 3]; 2]; 4]);
     }
 
     #[test]

@@ -50,15 +50,14 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
 fn get_strided_incrs<S: Shape>(shape: S, strides: S::Concrete) -> S::Concrete {
     let mut out: S::Concrete = Default::default();
     let dims = shape.concrete();
-    let mut elem_size = 1;
+    let mut max_reachable = 0;
 
     for i in (0..S::NUM_DIMS).rev() {
-        if strides[i] == 0 {
-            out[i] = -(elem_size as isize - 1) as usize;
-        } else {
-            elem_size *= dims[i];
-            out[i] = 1;
-        }
+        // strides[i] is the index which represents [0, .., 0, 1, 0, .., 0]
+        // where the 1 is at index i, and max_reachable is the index which represents
+        // [0, .., 0, dims[i + 1] - 1, dims[i + 2] - 1, .., dims[len - 1] - 1]
+        out[i] = (strides[i] as isize - max_reachable as isize) as usize;
+        max_reachable += strides[i] * (dims[i] - 1);
     }
 
     out
