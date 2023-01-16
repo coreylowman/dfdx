@@ -417,14 +417,19 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a = dev.sample_normal::<Rank3<N, 4, 3>>();
         let b = dev.sample_normal::<Rank2<3, 2>>();
-        let b_up = b.trace().broadcast::<Rank3<N, 3, 2>, _>();
-        let r1 = a.trace().matmul(b_up);
+        let b_up = dev.tensor([b.array(); N]);
+        let r1 = a.trace().matmul(b_up.clone());
         let r2 = a.trace().matmul(b.clone());
         assert_eq!(r1.array(), r2.array());
         let g1 = r1.exp().mean().backward();
         let g2 = r2.exp().mean().backward();
         assert_eq!(g1.get(&a).array(), g2.get(&a).array());
-        assert_eq!(g1.get(&b).array(), g2.get(&b).array());
+        assert_close(
+            &dev.tensor(g1.get(&b_up).array())
+                .sum::<_, Axis<0>>()
+                .array(),
+            &g2.get(&b).array(),
+        );
     }
 
     #[test]
