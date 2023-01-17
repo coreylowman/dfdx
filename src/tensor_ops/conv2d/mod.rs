@@ -5,68 +5,46 @@ mod cuda_kernel;
 
 use crate::{
     gradients::Tape,
-    shapes::{Const, Dim, Dtype, Rank3, Rank4},
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor},
+    shapes::*,
+    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor, ZerosTensor},
 };
 
-pub trait Conv2DKernel<
-    E: Dtype,
-    const C: usize,
-    const O: usize,
-    const K: usize,
-    const S: usize,
-    const P: usize,
->: DeviceStorage
-{
-    fn forward<const H: usize, const W: usize>(
-        &self,
-        lhs: &Self::Storage<Rank3<C, H, W>, E>,
-        rhs: &Self::Storage<Rank4<O, C, K, K>, E>,
-    ) -> Result<
-        Self::Storage<Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, E>,
-        Self::Err,
-    >;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub(super) struct ConvParams {
+    pub stride: usize,
+    pub padding: usize,
+    pub kernel_size: usize,
 
-    fn backward<const H: usize, const W: usize>(
-        &self,
-        lhs: &Self::Storage<Rank3<C, H, W>, E>,
-        grad_lhs: &mut Self::Storage<Rank3<C, H, W>, E>,
-        rhs: &Self::Storage<Rank4<O, C, K, K>, E>,
-        grad_rhs: &mut Self::Storage<Rank4<O, C, K, K>, E>,
-        grad_out: &Self::Storage<
-            Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>,
-            E,
-        >,
-    ) -> Result<(), Self::Err>;
+    pub batch_size: usize,
+
+    pub channels_in: usize,
+    pub channels_out: usize,
+
+    pub height_in: usize,
+    pub height_out: usize,
+
+    pub width_in: usize,
+    pub width_out: usize,
 }
 
-pub trait Conv2DBatchedKernel<
-    E: Dtype,
-    const C: usize,
-    const O: usize,
-    const K: usize,
-    const S: usize,
-    const P: usize,
->: DeviceStorage
-{
-    #[rustfmt::skip]
-    fn forward<B: Dim, const H: usize, const W: usize>(
+pub(super) trait Conv2DKernel<E: Dtype>: DeviceStorage {
+    fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
-        lhs: &Self::Storage<(B, Const<C>, Const<H>, Const<W>), E>,
-        rhs: &Self::Storage<Rank4<O, C, K, K>, E>,
-    ) -> Result<
-        Self::Storage<(B, Const<O>, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), E>,
-        Self::Err,
-    >;
+        op: ConvParams,
+        lhs: &Self::Storage<L, E>,
+        rhs: &Self::Storage<R, E>,
+        out: &mut Self::Storage<O, E>,
+    ) -> Result<(), Self::Err>;
 
-    #[rustfmt::skip]
-    fn backward<B: Dim, const H: usize, const W: usize>(
+    fn backward<L: Shape, R: Shape, O: Shape>(
         &self,
-        lhs: &Self::Storage<(B, Const<C>, Const<H>, Const<W>), E>,
-        grad_lhs: &mut Self::Storage<(B, Const<C>, Const<H>, Const<W>), E>,
-        rhs: &Self::Storage<Rank4<O, C, K, K>, E>,
-        grad_rhs: &mut Self::Storage<Rank4<O, C, K, K>, E>,
-        grad_out: &Self::Storage<(B, Const<O>, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), E>,
+        op: ConvParams,
+        lhs: &Self::Storage<L, E>,
+        grad_lhs: &mut Self::Storage<L, E>,
+        rhs: &Self::Storage<R, E>,
+        grad_rhs: &mut Self::Storage<R, E>,
+        grad_out: &Self::Storage<O, E>,
     ) -> Result<(), Self::Err>;
 }
 
@@ -106,11 +84,11 @@ impl<
         const K: usize,
         const S: usize,
         const P: usize,
-        D: Conv2DKernel<f32, C, O, K, S, P>,
-        T: Tape<D>,
+        D: Conv2DKernel<f32> + ZerosTensor<f32>,
+        T: 'static + Tape<D>,
     > TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P> for Tensor<Rank3<C, H, W>, f32, D, T>
 where
-    Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>: Sized,
+    Rank2<{ (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>: Sized,
 {
     type Output =
         Tensor<Rank3<O, { (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>, f32, D, T>;
@@ -119,11 +97,29 @@ where
         self,
         filters: Tensor<Rank4<O, C, K, K>, f32, D>,
     ) -> Result<Self::Output, Self::Err> {
+        let op = ConvParams {
+            stride: S,
+            padding: P,
+            kernel_size: K,
+
+            batch_size: 1,
+
+            channels_in: C,
+            channels_out: O,
+
+            height_in: H,
+            height_out: (H + 2 * P - K) / S + 1,
+
+            width_in: W,
+            width_out: (W + 2 * P - K) / S + 1,
+        };
+
         let (lhs, ltape) = self.split_tape();
         let (rhs, rtape) = filters.split_tape();
         let mut tape = ltape.merge(rtape);
-        let storage = lhs.device.forward::<H, W>(&lhs.storage, &rhs.storage)?;
-        let out = lhs.device.upgrade(storage);
+        let mut out = lhs.device.try_zeros()?;
+        lhs.device
+            .forward(op, &lhs.storage, &rhs.storage, &mut out.storage)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&lhs)?;
         tape.try_alloc_grad(&rhs)?;
@@ -131,7 +127,7 @@ where
         tape.add_backward_op(move |grads| {
             let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
             lhs.device
-                .backward::<H, W>(&lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)
+                .backward(op, &lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -146,17 +142,12 @@ impl<
         const K: usize,
         const S: usize,
         const P: usize,
-        D: Conv2DBatchedKernel<f32, C, O, K, S, P>,
-        T: Tape<D>,
+        D: Conv2DKernel<f32> + ZerosTensor<f32>,
+        T: 'static + Tape<D>,
     > TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P>
     for Tensor<(B, Const<C>, Const<H>, Const<W>), f32, D, T>
 where
-    (
-        B,
-        Const<O>,
-        Const<{ (H + 2 * P - K) / S + 1 }>,
-        Const<{ (W + 2 * P - K) / S + 1 }>,
-    ):,
+    Rank2<{ (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>:,
 {
     type Output = Tensor<
         (
@@ -173,24 +164,38 @@ where
         self,
         filters: Tensor<Rank4<O, C, K, K>, f32, D>,
     ) -> Result<Self::Output, Self::Err> {
+        let batch = self.shape().0;
+        let op = ConvParams {
+            stride: S,
+            padding: P,
+            kernel_size: K,
+
+            batch_size: batch.size(),
+
+            channels_in: C,
+            channels_out: O,
+
+            height_in: H,
+            height_out: (H + 2 * P - K) / S + 1,
+
+            width_in: W,
+            width_out: (W + 2 * P - K) / S + 1,
+        };
+
         let (lhs, ltape) = self.split_tape();
         let (rhs, rtape) = filters.split_tape();
+        let mut out = lhs.device.try_zeros_like(&(batch, Const, Const, Const))?;
         let mut tape = ltape.merge(rtape);
-        let storage = lhs.device.forward::<B, H, W>(&lhs.storage, &rhs.storage)?;
-        let out = lhs.device.upgrade(storage);
+        lhs.device
+            .forward(op, &lhs.storage, &rhs.storage, &mut out.storage)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&lhs)?;
         tape.try_alloc_grad(&rhs)?;
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
-            lhs.device.backward::<B, H, W>(
-                &lhs.storage,
-                grad_lhs,
-                &rhs.storage,
-                grad_rhs,
-                grad_out,
-            )?;
+            lhs.device
+                .backward(op, &lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)?;
             Ok(())
         });
         Ok(out.put_tape(tape))
@@ -200,12 +205,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        shapes::*,
-        tensor::*,
-        tensor_ops::*,
-        tests::{assert_close, AssertClose, TestDevice},
-    };
+    use crate::{tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     /// Produced by
