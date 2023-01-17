@@ -43,34 +43,29 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        shapes::*,
-        tensor::*,
-        tensor_ops::*,
-        tests::{assert_close, TestDevice},
-    };
+    use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_softmax_1d() {
         let dev: TestDevice = Default::default();
         let a = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = a.trace().softmax();
-        assert_eq!(
-            r.array(),
-            [0.011656232, 0.031684924, 0.086128555, 0.23412168, 0.6364087]
+        assert_close(
+            &r.array(),
+            &[0.011656232, 0.031684924, 0.086128555, 0.23412168, 0.6364087],
         );
         let l = r * dev.tensor([0.0, 0.0, 1.0, 0.0, 0.0]);
-        assert_eq!(l.array(), [0.0, 0.0, 0.086128555, 0.0, 0.0]);
+        assert_close(&l.array(), &[0.0, 0.0, 0.086128555, 0.0, 0.0]);
         let g = l.mean().backward();
-        assert_eq!(
-            g.get(&a).array(),
-            [
+        assert_close(
+            &g.get(&a).array(),
+            &[
                 -0.00020078686,
                 -0.00054579525,
                 0.015742086,
                 -0.0040329117,
-                -0.010962591
-            ]
+                -0.010962591,
+            ],
         );
     }
 
@@ -79,22 +74,25 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
         let r = a.trace().softmax::<Axis<1>>();
-        assert_eq!(
-            r.array(),
-            [
+        assert_close(
+            &r.array(),
+            &[
                 [0.09003058, 0.24472849, 0.66524094],
-                [0.002355633, 0.047314156, 0.9503302]
-            ]
+                [0.002355633, 0.047314156, 0.9503302],
+            ],
         );
         let l = r * dev.tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]);
-        assert_eq!(l.array(), [[0.09003058, 0.0, 0.0], [0.0, 0.047314156, 0.0]]);
+        assert_close(
+            &l.array(),
+            &[[0.09003058, 0.0, 0.0], [0.0, 0.047314156, 0.0]],
+        );
         let g = l.mean().backward();
-        assert_eq!(
-            g.get(&a).array(),
-            [
+        assert_close(
+            &g.get(&a).array(),
+            &[
                 [0.01365418, -0.0036721744, -0.009982005],
-                [-1.85758e-5, 0.0075125876, -0.0074940124]
-            ]
+                [-1.85758e-5, 0.0075125876, -0.0074940124],
+            ],
         );
     }
 
@@ -103,22 +101,25 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
         let r = a.trace().softmax::<Axis<0>>();
-        assert_eq!(
-            r.array(),
-            [
+        assert_close(
+            &r.array(),
+            &[
                 [0.047425874, 0.0066928514, 0.0009110514],
-                [0.95257413, 0.9933072, 0.9990892]
-            ]
+                [0.95257413, 0.9933072, 0.9990892],
+            ],
         );
         let l = r * dev.tensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]);
-        assert_eq!(l.array(), [[0.047425874, 0.0, 0.0], [0.0, 0.9933072, 0.0]]);
+        assert_close(
+            &l.array(),
+            &[[0.047425874, 0.0, 0.0], [0.0, 0.9933072, 0.0]],
+        );
         let g = l.mean().backward();
-        assert_eq!(
-            g.get(&a).array(),
-            [
+        assert_close(
+            &g.get(&a).array(),
+            &[
                 [0.0075294436, -0.0011080095, 0.0],
-                [-0.0075294436, 0.0011080056, 0.0]
-            ]
+                [-0.0075294436, 0.0011080056, 0.0],
+            ],
         );
     }
 
