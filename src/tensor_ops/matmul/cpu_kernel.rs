@@ -53,7 +53,7 @@ pub(crate) fn matmul<M: Dim, K: Dim, N: Dim>(
             [0, 1] => (n as i32, false),
             [ld, 1] => (ld as i32, false),
             [1, ld] => (ld as i32, true),
-            _ => panic!("At least one of b's strides must be 1 for cblas"),
+            _ => panic!("At least one of c's strides must be 1 for cblas"),
         };
 
         let layout = if c_trans { ColMajor } else { RowMajor };
