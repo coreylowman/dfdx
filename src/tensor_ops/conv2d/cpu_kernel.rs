@@ -20,15 +20,15 @@ impl Cpu {
         while let Some((p, [c, k1, k2, oh, ow])) = patch_iter.next() {
             let y = (oh * op.stride + k1).wrapping_sub(op.padding);
             let x = (ow * op.stride + k2).wrapping_sub(op.padding);
-            if y < op.height_in && x < op.width_in {
-                *p = img[c * (op.width_in * op.height_in) + y * op.width_in + x];
+            if y < op.h_in && x < op.w_in {
+                *p = img[c * (op.w_in * op.h_in) + y * op.w_in + x];
             }
         }
 
         // (O, C * K * K) * (C * K * K, OH * OW) = (O, OH * OW)
-        let m = op.channels_out;
-        let k = op.channels_in * op.kernel_size * op.kernel_size;
-        let n = op.width_out * op.height_out;
+        let m = op.chan_out;
+        let k = op.chan_in * op.kernel * op.kernel;
+        let n = op.w_out * op.h_out;
         matmul(
             View::new(filters, (m, k)),
             View::new(inp_patches_buf.view().data, (k, n)),
@@ -50,16 +50,15 @@ impl Cpu {
     ) -> Result<(), CpuError> {
         {
             let out_patches_buf = out_patches_buf.view_mut();
-            for o in 0..op.channels_out {
-                for oh in 0..op.height_out {
-                    for ow in 0..op.width_out {
-                        let g =
-                            grad_out[o * (op.height_out * op.width_out) + oh * op.width_out + ow];
-                        for k1 in 0..op.kernel_size {
-                            for k2 in 0..op.kernel_size {
+            for o in 0..op.chan_out {
+                for oh in 0..op.h_out {
+                    for ow in 0..op.w_out {
+                        let g = grad_out[o * (op.h_out * op.w_out) + oh * op.w_out + ow];
+                        for k1 in 0..op.kernel {
+                            for k2 in 0..op.kernel {
                                 let y = (oh * op.stride + k1).wrapping_sub(op.padding);
                                 let x = (ow * op.stride + k2).wrapping_sub(op.padding);
-                                if y < op.height_in && x < op.width_in {
+                                if y < op.h_in && x < op.w_in {
                                     out_patches_buf.data[o * out_patches_buf.strides[0]
                                         + k1 * out_patches_buf.strides[1]
                                         + k2 * out_patches_buf.strides[2]
@@ -76,9 +75,9 @@ impl Cpu {
         {
             // img_g += filters^T * unfold(grad_out)
             // (C, H * W) += (C, O * K * K) * (O * K * K, H * W)
-            let m = op.channels_in;
-            let k = op.channels_out * op.kernel_size * op.kernel_size;
-            let n = op.height_in * op.width_in;
+            let m = op.chan_in;
+            let k = op.chan_out * op.kernel * op.kernel;
+            let n = op.h_in * op.w_in;
             matmul(
                 View::new(filters_tr, (m, k)),
                 View::new(out_patches_buf.view().data, (k, n)),
@@ -89,9 +88,9 @@ impl Cpu {
         {
             // weight_g^T += img * patches^T
             // (C, O * K * K) += (C, H * W) * (H * W, O * K * K)
-            let m = op.channels_in;
-            let k = op.height_in * op.width_in;
-            let n = op.channels_out * op.kernel_size * op.kernel_size;
+            let m = op.chan_in;
+            let k = op.h_in * op.w_in;
+            let n = op.chan_out * op.kernel * op.kernel;
             matmul(
                 View::new(img, (m, k)),
                 View::new(out_patches_buf.view().data, (n, k)).tr(),
@@ -111,13 +110,7 @@ impl Conv2DKernel<f32> for Cpu {
         rhs: &Self::Storage<R, f32>,
         out: &mut Self::Storage<O, f32>,
     ) -> Result<(), Self::Err> {
-        let mut patches: StridedArray<_, f32> = StridedArray::new((
-            op.channels_in,
-            op.kernel_size,
-            op.kernel_size,
-            op.height_out,
-            op.width_out,
-        ))?;
+        let mut patches: StridedArray<_, f32> = StridedArray::new(op.inp_patches_shape())?;
         let [lstride, ostride] = if L::NUM_DIMS == 3 {
             [0; 2]
         } else {
@@ -127,7 +120,7 @@ impl Conv2DKernel<f32> for Cpu {
         let lhs = lhs.data.as_ref();
         let rhs = rhs.data.as_ref();
         let out = Arc::make_mut(&mut out.data);
-        for i_batch in 0..op.batch_size {
+        for i_batch in 0..op.batch {
             self.conv2d_forward(
                 &op,
                 &lhs[i_batch * lstride..],
@@ -148,26 +141,9 @@ impl Conv2DKernel<f32> for Cpu {
         grad_rhs: &mut Self::Storage<R, f32>,
         grad_out: &Self::Storage<O, f32>,
     ) -> Result<(), Self::Err> {
-        let mut patches: StridedArray<_, f32> = StridedArray::new((
-            op.channels_out,
-            op.kernel_size,
-            op.kernel_size,
-            op.height_in,
-            op.width_in,
-        ))?;
-
-        let mut f1023: StridedArray<_, f32> = StridedArray::new((
-            op.channels_in,
-            op.channels_out,
-            op.kernel_size,
-            op.kernel_size,
-        ))?;
-        let mut grad_f1023: StridedArray<_, f32> = StridedArray::new((
-            op.channels_in,
-            op.channels_out,
-            op.kernel_size,
-            op.kernel_size,
-        ))?;
+        let mut patches: StridedArray<_, f32> = StridedArray::new(op.out_patches_shape())?;
+        let mut f1023: StridedArray<_, f32> = StridedArray::new(op.filters_tr_shape())?;
+        let mut grad_f1023: StridedArray<_, f32> = StridedArray::new(op.filters_tr_shape())?;
 
         {
             // transpose filters in f1023
@@ -194,7 +170,7 @@ impl Conv2DKernel<f32> for Cpu {
         let grad_f = Arc::make_mut(&mut grad_f1023.data);
         let grad_out = grad_out.data.as_ref();
 
-        for i_batch in 0..op.batch_size {
+        for i_batch in 0..op.batch {
             self.conv2d_backward(
                 &op,
                 &lhs[i_batch * lstride..],

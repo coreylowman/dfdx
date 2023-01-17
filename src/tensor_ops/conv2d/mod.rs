@@ -14,36 +14,44 @@ use crate::{
 pub(super) struct Conv2DOp {
     pub stride: usize,
     pub padding: usize,
-    pub kernel_size: usize,
-    pub batch_size: usize,
-    pub channels_in: usize,
-    pub channels_out: usize,
-    pub height_in: usize,
-    pub height_out: usize,
-    pub width_in: usize,
-    pub width_out: usize,
+    pub kernel: usize,
+    pub batch: usize,
+    pub chan_in: usize,
+    pub chan_out: usize,
+    pub h_in: usize,
+    pub h_out: usize,
+    pub w_in: usize,
+    pub w_out: usize,
 }
 
 impl Conv2DOp {
-    fn new(
-        stride: usize,
-        padding: usize,
-        kernel_size: usize,
-        inp_shape: [usize; 4],
-        channels_out: usize,
-    ) -> Self {
+    fn new(s: usize, p: usize, k: usize, [b, c, h_in, w_in]: [usize; 4], o: usize) -> Self {
         Self {
-            stride,
-            padding,
-            kernel_size,
-            batch_size: inp_shape[0],
-            channels_in: inp_shape[1],
-            channels_out,
-            height_in: inp_shape[2],
-            height_out: (inp_shape[2] + 2 * padding - kernel_size) / stride + 1,
-            width_in: inp_shape[3],
-            width_out: (inp_shape[3] + 2 * padding - kernel_size) / stride + 1,
+            stride: s,
+            padding: p,
+            kernel: k,
+            batch: b,
+            chan_in: c,
+            chan_out: o,
+            h_in,
+            h_out: (h_in + 2 * p - k) / s + 1,
+            w_in,
+            w_out: (w_in + 2 * p - k) / s + 1,
         }
+    }
+
+    #[rustfmt::skip]
+    pub(super) fn inp_patches_shape(&self) -> (usize, usize, usize, usize, usize) {
+        (self.chan_in, self.kernel, self.kernel, self.h_out, self.w_out)
+    }
+
+    #[rustfmt::skip]
+    pub(super) fn out_patches_shape(&self) -> (usize, usize, usize, usize, usize) {
+        (self.chan_out, self.kernel, self.kernel, self.h_in, self.w_in)
+    }
+
+    pub(super) fn filters_tr_shape(&self) -> (usize, usize, usize, usize) {
+        (self.chan_in, self.chan_out, self.kernel, self.kernel)
     }
 }
 
