@@ -1,10 +1,10 @@
 // atomicMax is not implemented for floats,
 // solution copied https://stackoverflow.com/questions/17399119/how-do-i-use-atomicmax-on-floating-point-values-in-cuda
-__device__ __forceinline__ float atomicMaxf(float * addr, float value) {
+__device__ __forceinline__ float atomicMinf(float * addr, float value) {
     if (value >= 0) {
-        return  __int_as_float(atomicMax((int *)addr, __float_as_int(value)));
+        return __int_as_float(atomicMin((int *)addr, __float_as_int(value)));
     } else {
-        return __uint_as_float(atomicMin((unsigned int *)addr, __float_as_uint(value)));
+        return __uint_as_float(atomicMax((unsigned int *)addr, __float_as_uint(value)));
     }
 }
 
@@ -33,7 +33,7 @@ extern "C" __global__ void fill_with(float *buf, float value, const size_t numel
 
 // Accepts pre-broadcasted strides for both input & output.
 // So both inp & out are expected to be broadcasted to the same size.
-extern "C" __global__ void max_to_forward(
+extern "C" __global__ void min_to_forward(
     const size_t numel,
     const size_t num_dims,
     const size_t *dims,
@@ -51,12 +51,12 @@ extern "C" __global__ void max_to_forward(
     unsigned int inp_strided_i = get_strided_index(i, num_dims, dims, inp_strides);
     unsigned int out_strided_i = get_strided_index(i, num_dims, dims, out_strides);
 
-    atomicMaxf(out + out_strided_i, inp[inp_strided_i]);
+    atomicMinf(out + out_strided_i, inp[inp_strided_i]);
 }
 
 // Accepts pre-broadcasted strides for both input & output.
 // So both inp & out are expected to be broadcasted to the same size.
-extern "C" __global__ void max_to_backward(
+extern "C" __global__ void min_to_backward(
     const size_t numel,
     const size_t num_dims,
     const size_t *dims,

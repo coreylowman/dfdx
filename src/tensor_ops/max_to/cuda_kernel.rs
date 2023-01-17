@@ -10,7 +10,7 @@ use std::sync::Arc;
 const MODULE_NAME: &str = "max_to";
 const FWD_FN_NAME: &str = "max_to_forward";
 const BWD_FN_NAME: &str = "max_to_backward";
-const ALL_FN_NAMES: [&str; 2] = [FWD_FN_NAME, BWD_FN_NAME];
+const ALL_FN_NAMES: [&str; 3] = [FWD_FN_NAME, BWD_FN_NAME, "fill_with"];
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/max_to.ptx"));
 
 impl super::MaxReduceKernel<f32> for Cuda {
@@ -27,15 +27,21 @@ impl super::MaxReduceKernel<f32> for Cuda {
                 .load_ptx(PTX_SRC.into(), MODULE_NAME, &ALL_FN_NAMES)?;
         }
 
+        let mut storage = self.dev.alloc_zeros_async::<f32>(dst.num_elements())?;
+        let fill_fn = self.dev.get_func(MODULE_NAME, "fill_with").unwrap();
+        unsafe {
+            fill_fn.launch_async(
+                LaunchConfig::for_num_elems(dst.num_elements() as u32),
+                (&mut storage, f32::NEG_INFINITY, dst.num_elements()),
+            )
+        }?;
+
         let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
 
         let dims: CudaSlice<usize> = self.dev.take_async(inp.shape.concrete().into())?;
         let inp_strides: CudaSlice<usize> = self.dev.take_async(inp.strides.into())?;
-        let out_strides: Src::Concrete =
-            BroadcastStridesTo::<Src, Ax>::broadcast_strides(&dst, dst.strides());
+        let out_strides = BroadcastStridesTo::<Src, Ax>::broadcast_strides(&dst, dst.strides());
         let out_strides: CudaSlice<usize> = self.dev.take_async(out_strides.into())?;
-
-        let mut storage = self.dev.alloc_zeros_async::<f32>(dst.num_elements())?;
 
         let inp_numel = inp.shape.num_elements();
         let cfg = LaunchConfig::for_num_elems(inp_numel as u32);
