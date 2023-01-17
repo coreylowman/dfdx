@@ -62,7 +62,7 @@ mod tests {
         assert_eq!(r.array(), [-1.0190487, -0.3396829, 1.3587316]);
         // NOTE: .exp() so we can make sure normalize is using result grad properly
         let g = r.exp().mean().backward();
-        assert_eq!(g.get(&a).array(), [0.033410847, -0.04677555, 0.013364702]);
+        assert_close(&g.get(&a).array(), &[0.033410847, -0.04677555, 0.013364702]);
     }
 
     #[test]
@@ -78,12 +78,12 @@ mod tests {
             ]
         );
         let g = r.exp().mean().backward();
-        assert_eq!(
-            g.get(&a).array(),
-            [
+        assert_close(
+            &g.get(&a).array(),
+            &[
                 [0.016705424, -0.023387775, 0.006682351],
-                [0.05773133, -0.11547226, 0.057740927]
-            ]
+                [0.05773133, -0.11547226, 0.057740927],
+            ],
         );
     }
 
