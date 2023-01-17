@@ -11,27 +11,46 @@ use crate::{
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub(super) struct ConvParams {
+pub(super) struct Conv2DOp {
     pub stride: usize,
     pub padding: usize,
     pub kernel_size: usize,
-
     pub batch_size: usize,
-
     pub channels_in: usize,
     pub channels_out: usize,
-
     pub height_in: usize,
     pub height_out: usize,
-
     pub width_in: usize,
     pub width_out: usize,
+}
+
+impl Conv2DOp {
+    fn new(
+        stride: usize,
+        padding: usize,
+        kernel_size: usize,
+        inp_shape: [usize; 4],
+        channels_out: usize,
+    ) -> Self {
+        Self {
+            stride,
+            padding,
+            kernel_size,
+            batch_size: inp_shape[0],
+            channels_in: inp_shape[1],
+            channels_out,
+            height_in: inp_shape[2],
+            height_out: (inp_shape[2] + 2 * padding - kernel_size) / stride + 1,
+            width_in: inp_shape[3],
+            width_out: (inp_shape[3] + 2 * padding - kernel_size) / stride + 1,
+        }
+    }
 }
 
 pub(super) trait Conv2DKernel<E: Dtype>: DeviceStorage {
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
-        op: ConvParams,
+        op: Conv2DOp,
         lhs: &Self::Storage<L, E>,
         rhs: &Self::Storage<R, E>,
         out: &mut Self::Storage<O, E>,
@@ -39,7 +58,7 @@ pub(super) trait Conv2DKernel<E: Dtype>: DeviceStorage {
 
     fn backward<L: Shape, R: Shape, O: Shape>(
         &self,
-        op: ConvParams,
+        op: Conv2DOp,
         lhs: &Self::Storage<L, E>,
         grad_lhs: &mut Self::Storage<L, E>,
         rhs: &Self::Storage<R, E>,
@@ -97,23 +116,7 @@ where
         self,
         filters: Tensor<Rank4<O, C, K, K>, f32, D>,
     ) -> Result<Self::Output, Self::Err> {
-        let op = ConvParams {
-            stride: S,
-            padding: P,
-            kernel_size: K,
-
-            batch_size: 1,
-
-            channels_in: C,
-            channels_out: O,
-
-            height_in: H,
-            height_out: (H + 2 * P - K) / S + 1,
-
-            width_in: W,
-            width_out: (W + 2 * P - K) / S + 1,
-        };
-
+        let op = Conv2DOp::new(S, P, K, [1, C, H, W], O);
         let (lhs, ltape) = self.split_tape();
         let (rhs, rtape) = filters.split_tape();
         let mut tape = ltape.merge(rtape);
@@ -165,23 +168,7 @@ where
         filters: Tensor<Rank4<O, C, K, K>, f32, D>,
     ) -> Result<Self::Output, Self::Err> {
         let batch = self.shape().0;
-        let op = ConvParams {
-            stride: S,
-            padding: P,
-            kernel_size: K,
-
-            batch_size: batch.size(),
-
-            channels_in: C,
-            channels_out: O,
-
-            height_in: H,
-            height_out: (H + 2 * P - K) / S + 1,
-
-            width_in: W,
-            width_out: (W + 2 * P - K) / S + 1,
-        };
-
+        let op = Conv2DOp::new(S, P, K, [batch.size(), C, H, W], O);
         let (lhs, ltape) = self.split_tape();
         let (rhs, rtape) = filters.split_tape();
         let mut out = lhs.device.try_zeros_like(&(batch, Const, Const, Const))?;

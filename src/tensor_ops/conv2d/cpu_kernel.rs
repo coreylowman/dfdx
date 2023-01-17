@@ -2,7 +2,7 @@ use crate::shapes::Shape;
 use crate::tensor::cpu::*;
 use crate::tensor_ops::matmul::cpu_kernel::matmul;
 
-use super::{Conv2DKernel, ConvParams};
+use super::{Conv2DKernel, Conv2DOp};
 
 use std::sync::Arc;
 
@@ -10,7 +10,7 @@ impl Cpu {
     #[inline]
     fn conv2d_forward<P: Shape<Concrete = [usize; 5]>>(
         &self,
-        op: &ConvParams,
+        op: &Conv2DOp,
         img: &[f32],
         filters: &[f32],
         out: &mut [f32],
@@ -40,7 +40,7 @@ impl Cpu {
     #[inline]
     fn conv2d_backward<P: Shape<Concrete = [usize; 5]>>(
         &self,
-        op: &ConvParams,
+        op: &Conv2DOp,
         img: &[f32],
         grad_img: &mut [f32],
         filters_tr: &[f32],
@@ -104,9 +104,9 @@ impl Cpu {
 }
 
 impl Conv2DKernel<f32> for Cpu {
-    fn forward<L: crate::shapes::Shape, R: crate::shapes::Shape, O: crate::shapes::Shape>(
+    fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
-        op: super::ConvParams,
+        op: Conv2DOp,
         lhs: &Self::Storage<L, f32>,
         rhs: &Self::Storage<R, f32>,
         out: &mut Self::Storage<O, f32>,
@@ -139,9 +139,9 @@ impl Conv2DKernel<f32> for Cpu {
         Ok(())
     }
 
-    fn backward<L: crate::shapes::Shape, R: crate::shapes::Shape, O: crate::shapes::Shape>(
+    fn backward<L: Shape, R: Shape, O: Shape>(
         &self,
-        op: super::ConvParams,
+        op: Conv2DOp,
         lhs: &Self::Storage<L, f32>,
         grad_lhs: &mut Self::Storage<L, f32>,
         rhs: &Self::Storage<R, f32>,
