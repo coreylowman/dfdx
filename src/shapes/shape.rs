@@ -43,6 +43,10 @@ pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync + Eq + Par
     fn from_size(size: usize) -> Option<Self>;
 }
 
+/// Represents a single dimension where all
+/// instances are guarunteed to be the same size at compile time.
+pub trait ConstDim: Default + Dim {}
+
 impl Dim for usize {
     #[inline(always)]
     fn size(&self) -> usize {
@@ -71,6 +75,8 @@ impl<const M: usize> Dim for Const<M> {
         }
     }
 }
+
+impl<const M: usize> ConstDim for Const<M> {}
 
 /// A collection of dimensions ([Dim]) that change how a multi-dimensional
 /// array is interacted with.
@@ -132,6 +138,9 @@ pub trait Shape:
     }
 }
 
+/// Represents a [Shape] that has all [ConstDim]s
+pub trait ConstShape: Default + Shape {}
+
 /// Represents something that has a [Shape].
 pub trait HasShape {
     type WithShape<New: Shape>: HasShape<Shape = New>;
@@ -182,6 +191,7 @@ impl<$($D: Dim, )*> Shape for ($($D, )*) {
         Some(($(Dim::from_size(concrete[$Idx])?, )*))
     }
 }
+impl<$($D: ConstDim, )*> ConstShape for ($($D, )*) { }
     };
 }
 
@@ -203,6 +213,7 @@ impl Shape for () {
         Some(())
     }
 }
+impl ConstShape for () {}
 
 shape!((D1 0), rank=1, all=Axis);
 shape!((D1 0, D2 1), rank=2, all=Axes2);

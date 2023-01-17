@@ -333,7 +333,7 @@ impl<
 #[cfg(test)]
 mod tests {
     use crate::{
-        shapes::{Dtype, Rank1, Rank3, Shape},
+        shapes::*,
         tensor::{AsArray, SampleTensor, Tensor},
         tensor_ops::Device,
         tests::TestDevice,
@@ -344,7 +344,7 @@ mod tests {
     use tempfile::NamedTempFile;
 
     fn test_save_load<
-        S: Shape + Default,
+        S: ConstShape,
         E: Dtype,
         D: Device<E>,
         M: ResetParams<D, E> + Module<Tensor<S, E, D>> + SaveToNpz + LoadFromNpz,
