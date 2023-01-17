@@ -49,7 +49,7 @@ impl Cpu {
         out_patches_buf: &mut StridedArray<P, f32>,
     ) -> Result<(), CpuError> {
         {
-            let out_patches_buf = out_patches_buf.view_mut();
+            let buf = out_patches_buf.view_mut();
             for o in 0..op.chan_out {
                 for oh in 0..op.h_out {
                     for ow in 0..op.w_out {
@@ -59,11 +59,12 @@ impl Cpu {
                                 let y = (oh * op.stride + k1).wrapping_sub(op.padding);
                                 let x = (ow * op.stride + k2).wrapping_sub(op.padding);
                                 if y < op.h_in && x < op.w_in {
-                                    out_patches_buf.data[o * out_patches_buf.strides[0]
-                                        + k1 * out_patches_buf.strides[1]
-                                        + k2 * out_patches_buf.strides[2]
-                                        + y * out_patches_buf.strides[3]
-                                        + x * out_patches_buf.strides[4]] = g;
+                                    let idx = o * buf.strides[0]
+                                        + k1 * buf.strides[1]
+                                        + k2 * buf.strides[2]
+                                        + y * buf.strides[3]
+                                        + x * buf.strides[4];
+                                    buf.data[idx] = g;
                                 }
                             }
                         }
@@ -97,7 +98,6 @@ impl Cpu {
                 &mut ViewMut::new(grad_filters_tr, (m, n)),
             );
         }
-
         Ok(())
     }
 }
@@ -147,14 +147,14 @@ impl Conv2DKernel<f32> for Cpu {
 
         {
             // transpose filters in f1023
-            let rhs_buf = rhs.data.as_ref();
+            let buf = rhs.data.as_ref();
             let mut f_iter = f1023.iter_mut_with_index();
-
             while let Some((f, [c, o, k1, k2])) = f_iter.next() {
-                *f = rhs_buf[o * rhs.strides[0]
+                let idx = o * rhs.strides[0]
                     + c * rhs.strides[1]
                     + k1 * rhs.strides[2]
-                    + k2 * rhs.strides[3]];
+                    + k2 * rhs.strides[3];
+                *f = buf[idx];
             }
         }
 
@@ -184,14 +184,14 @@ impl Conv2DKernel<f32> for Cpu {
 
         {
             // untranspose filters
-            let grad_rhs_buf = Arc::make_mut(&mut grad_rhs.data);
+            let buf = Arc::make_mut(&mut grad_rhs.data);
             let mut f_iter = grad_f1023.iter_with_index();
-
             while let Some((f, [c, o, k1, k2])) = f_iter.next() {
-                grad_rhs_buf[o * rhs.strides[0]
+                let idx = o * rhs.strides[0]
                     + c * rhs.strides[1]
                     + k1 * rhs.strides[2]
-                    + k2 * rhs.strides[3]] = *f;
+                    + k2 * rhs.strides[3];
+                buf[idx] = *f;
             }
         }
 
