@@ -32,7 +32,7 @@ __device__ unsigned int get_unstrided_index(
 extern "C" __global__ void sum_to_forward(
     const size_t numel,
     const size_t num_dims,
-    const float mul,
+    const float elems_per_thread,
     const size_t *dims,
     const float *inp,
     const size_t *inp_strides,
@@ -49,7 +49,7 @@ extern "C" __global__ void sum_to_forward(
 
     unsigned int i = get_unstrided_index(inp_i, num_dims, dims, inp_strides);
     unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
-    atomicAdd(out + out_i, tmp * mul);
+    atomicAdd(out + out_i, tmp * elems_per_thread);
 }
 
 // Accepts pre-broadcasted strides for both input & output.
@@ -57,7 +57,7 @@ extern "C" __global__ void sum_to_forward(
 extern "C" __global__ void sum_to_backward(
     const size_t numel,
     const size_t num_dims,
-    const float mul,
+    const float elems_per_thread,
     const size_t *dims,
     float *grad_inp,
     const size_t *inp_strides,
@@ -77,5 +77,5 @@ extern "C" __global__ void sum_to_backward(
     // NOTE: since size of output is less than input, only 1 thread will be writing to inp
     // at a time. this means we don't have to worry about multiple concurrent writes
     // like we do with forward.
-    grad_inp[inp_i] += tmp * mul;
+    grad_inp[inp_i] += tmp * elems_per_thread;
 }
