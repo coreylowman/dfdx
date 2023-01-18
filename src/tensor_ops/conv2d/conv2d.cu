@@ -14,11 +14,10 @@ struct Conv2DOp {
 extern "C" __global__ void unfold_input_into_patches(
     const Conv2DOp op,
     const float *image, // 4d (Batch, Channels, Height, Width)
-    const size_t *image_strides, // 4d
-    float *patches, // 6d (Batch, Channels, KernelSize, KernelSize, HeightOut, WidthOut)
-    const size_t patches_numel
+    float *patches // 6d (Batch, Channels, KernelSize, KernelSize, HeightOut, WidthOut)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    const auto patches_numel = op.batch * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
     if (i >= patches_numel) {
         return;
     }
@@ -43,29 +42,30 @@ extern "C" __global__ void unfold_input_into_patches(
         return;
     }
     const size_t y = y_plus_p - op.padding;
+    if y >= op.h_in {
+        return;
+    }
 
     const size_t x_plus_p = ow * op.stride + k2;
     if (x_plus_p < op.padding) {
         return;
     }
     const size_t x = x_plus_p - op.padding;
-
-    if (y >= op.h_in || x >= op.w_in) {
+    if (x >= op.w_in) {
         return;
     }
 
-    size_t i_image = b * image_strides[0] + c * image_strides[1] + y * image_strides[2] + x * image_strides[3];
+    size_t i_image = b * (op.chan_in * op.h_in * op.w_in) + c * (op.h_in * op.w_in) + y * (op.w_in) + x;
     patches[i] = image[i_image];
 }
 
 extern "C" __global__ void unfold_output_into_patches(
     const Conv2DOp op,
     const float *image_out, // 4d (Batch, ChanOut, HeightOut, WidthOut)
-    const size_t *image_strides, // 4d
-    float *patches, // 6d (Batch, ChanOut, KernelSize, KernelSize, HeightIn, WidthIn)
-    const size_t patches_numel
+    float *patches // 6d (Batch, ChanOut, KernelSize, KernelSize, HeightIn, WidthIn)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    const auto patches_numel = op.batch * op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
     if (i >= patches_numel) {
         return;
     }
@@ -110,7 +110,7 @@ extern "C" __global__ void unfold_output_into_patches(
         return;
     }
 
-    size_t image_i = b * image_strides[0] + o * image_strides[1] + oh * image_strides[2]  + ow * image_strides[3];
+    size_t image_i = b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out) + oh * (op.w_out)  + ow;
     patches[i] = image_out[image_i];
 }
 

@@ -42,29 +42,12 @@ impl super::Conv2DKernel<f32> for Cuda {
         let patches_numel = op.batch * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
         let mut patches = self.dev.alloc_zeros_async::<f32>(patches_numel)?;
 
-        let lhs_strides = {
-            if L::NUM_DIMS == 3 {
-                self.dev
-                    .take_async([0, lhs.strides[0], lhs.strides[1], lhs.strides[2]].into())
-            } else {
-                debug_assert_eq!(L::NUM_DIMS, 4);
-                self.dev.take_async(lhs.strides.into())
-            }
-        }?;
-
         let unfold_fn = self.dev.get_func(MODULE_NAME, UNFOLD_INPUT_FN).unwrap();
         let cfg = LaunchConfig::for_num_elems(patches.len() as u32);
-        let params = (
-            op,
-            lhs.data.as_ref(),
-            &lhs_strides,
-            &mut patches,
-            patches_numel,
-        );
+        let params = (op, lhs.data.as_ref(), &mut patches);
         unsafe { unfold_fn.launch_async(cfg, params) }?;
 
-        // (B, C * K * K, W_OUT * H_OUT)
-        // (O, C * K * K)
+        // (O, C * K * K) * (B, C * K * K, OH * OW) = (B, O, OH * OW)
         let m = op.chan_out;
         let k = op.chan_in * op.kernel * op.kernel;
         let n = op.h_out * op.w_out;
@@ -79,7 +62,8 @@ impl super::Conv2DKernel<f32> for Cuda {
                 0.0,
                 Arc::make_mut(&mut out.data),
                 [m * n, n, 1],
-            )?;
+            )
+            .unwrap();
         }
 
         Ok(())
@@ -89,35 +73,19 @@ impl super::Conv2DKernel<f32> for Cuda {
         &self,
         op: super::Conv2DOp,
         lhs: &Self::Storage<L, f32>,
-        gl: &mut Self::Storage<L, f32>,
+        grad_lhs: &mut Self::Storage<L, f32>,
         rhs: &Self::Storage<R, f32>,
         grad_rhs: &mut Self::Storage<R, f32>,
-        go: &Self::Storage<O, f32>,
+        grad_out: &Self::Storage<O, f32>,
     ) -> Result<(), Self::Err> {
         let patches_numel = op.batch * op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
         let mut patches = self.dev.alloc_zeros_async::<f32>(patches_numel)?;
 
         {
             // unfold grad_out into patches
-            let grad_out_strides = {
-                if O::NUM_DIMS == 3 {
-                    let strides = [0, go.strides[0], go.strides[1], go.strides[2]];
-                    self.dev.take_async(strides.into())
-                } else {
-                    debug_assert_eq!(O::NUM_DIMS, 4);
-                    self.dev.take_async(go.strides.into())
-                }
-            }?;
-
             let unfold_fn = self.dev.get_func(MODULE_NAME, UNFOLD_OUTPUT_FN).unwrap();
             let cfg = LaunchConfig::for_num_elems(patches_numel as u32);
-            let params = (
-                op,
-                go.data.as_ref(),
-                &grad_out_strides,
-                &mut patches,
-                patches_numel,
-            );
+            let params = (op, grad_out.data.as_ref(), &mut patches);
             unsafe { unfold_fn.launch_async(cfg, params) }?;
         }
 
@@ -149,7 +117,7 @@ impl super::Conv2DKernel<f32> for Cuda {
                     &patches,
                     [k * n, n, 1],
                     1.0,
-                    Arc::make_mut(&mut gl.data),
+                    Arc::make_mut(&mut grad_lhs.data),
                     [m * n, n, 1],
                 )
                 .unwrap();
@@ -176,9 +144,7 @@ impl super::Conv2DKernel<f32> for Cuda {
                 )
                 .unwrap();
             }
-        }
 
-        {
             // sum all the gradients collected in our broadcasted grad_f
             // into grad_rhs
             let sum_fn = self.dev.get_func(MODULE_NAME, COLLECT_GRADS_FN).unwrap();
