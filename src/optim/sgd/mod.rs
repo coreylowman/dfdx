@@ -149,11 +149,12 @@ impl<M, D: DeviceStorage, E: Dtype> Sgd<M, D, E> {
 
 pub(super) trait SgdKernel<E: Dtype>: DeviceStorage {
     fn update<S: Shape>(
+        &self,
         cfg: &SgdConfig<E>,
         param: &mut Self::Storage<S, E>,
         velocity: &mut Self::Storage<S, E>,
         grad: Self::Storage<S, E>,
-    );
+    ) -> Result<(), Self::Err>;
 }
 
 impl<M, D: SgdKernel<E>, E: Dtype> ParamUpdater<D, E> for Sgd<M, D, E> {
@@ -167,7 +168,7 @@ impl<M, D: SgdKernel<E>, E: Dtype> ParamUpdater<D, E> for Sgd<M, D, E> {
             None => unused.add(p),
             Some(g) => {
                 let v = self.velocity.get_or_alloc_mut(p)?;
-                D::update(&self.cfg, &mut p.storage, v, g);
+                p.device.update(&self.cfg, &mut p.storage, v, g)?;
             }
         }
         Ok(())
