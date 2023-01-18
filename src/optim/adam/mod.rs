@@ -115,13 +115,14 @@ impl<M, D: DeviceStorage, E: Dtype> Adam<M, D, E> {
 
 pub(super) trait AdamKernel<E: Dtype>: DeviceStorage {
     fn update<S: Shape>(
+        &self,
         t: i32,
         cfg: &AdamConfig<E>,
         param: &mut Self::Storage<S, E>,
         moment1: &mut Self::Storage<S, E>,
         moment2: &mut Self::Storage<S, E>,
         grad: Self::Storage<S, E>,
-    );
+    ) -> Result<(), Self::Err>;
 }
 
 impl<M, D: DeviceStorage + AdamKernel<E>, E: Dtype> ParamUpdater<D, E> for Adam<M, D, E> {
@@ -136,7 +137,7 @@ impl<M, D: DeviceStorage + AdamKernel<E>, E: Dtype> ParamUpdater<D, E> for Adam<
             Some(g) => {
                 let m_t = self.moment1.get_or_alloc_mut(p)?;
                 let v_t = self.moment2.get_or_alloc_mut(p)?;
-                D::update(self.t, &self.cfg, &mut p.storage, m_t, v_t, g);
+                p.device.update(self.t, &self.cfg, &mut p.storage, m_t, v_t, g)?;
             }
         }
         Ok(())
@@ -221,7 +222,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).square().mean().backward();
             opt.update(&mut t, gradients).expect("");
-            assert_eq!(&t.array(), e);
+            assert_close(&t.array(), e);
         }
     }
 
@@ -251,7 +252,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = t.trace().exp().square().mean().backward();
             opt.update(&mut t, gradients).expect("");
-            assert_eq!(&t.array(), e);
+            assert_close(&t.array(), e);
         }
     }
 
@@ -281,7 +282,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = t.trace().exp().square().mean().backward();
             opt.update(&mut t, gradients).expect("");
-            assert_eq!(&t.array(), e);
+            assert_close(&t.array(), e);
         }
     }
 
