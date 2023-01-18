@@ -6,6 +6,7 @@ mod cuda_kernel;
 use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct DropoutKernelOp {
     pub seed: u64,
@@ -52,9 +53,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<DropoutKernelOp, E>, T: Tape<D>> Tensor<
 
 #[cfg(test)]
 mod tests {
-    use crate::tensor::*;
-    use crate::tensor_ops::*;
-    use crate::tests::{assert_close, TestDevice};
+    use crate::{tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_dropout_all_0d() {
@@ -94,9 +93,9 @@ mod tests {
         assert_close(&r.array(), &[[0.125, 0.25, -0.5], [0.0, 0.0, 1.25]]);
         // NOTE: .exp() so we ensure result grad is used properly
         let g = r.exp().mean().backward();
-        assert_eq!(
-            g.get(&t).array(),
-            [[0.47214523, 0.5350107, 0.2527211], [0.0, 0.0, 1.4543099]]
+        assert_close(
+            &g.get(&t).array(),
+            &[[0.47214523, 0.5350107, 0.2527211], [0.0, 0.0, 1.4543099]],
         );
     }
 }

@@ -2,7 +2,7 @@
 
 use dfdx::{
     nn::{Linear, Module, ModuleBuilder, ModuleMut, ReLU, ResetParams},
-    shapes::{Rank1, Rank2},
+    shapes::{Const, Rank1, Rank2},
     tensor::{AsArray, Cpu, SampleTensor, Tensor, ZerosTensor},
 };
 
@@ -28,6 +28,10 @@ fn main() {
     // Note: the Rank2 with a batch size of 10 in the input
     //       AND the output
     let _: Tensor<Rank2<10, 2>> = m.forward(dev.zeros::<Rank2<10, 4>>());
+
+    // Even dynamic size is supported;
+    let batch_size = 3;
+    let _: Tensor<(usize, Const<2>)> = m.forward(dev.zeros_like(&(batch_size, Const)));
 
     // you can also combine multiple modules with tuples
     let mlp: (Linear<4, 2>, ReLU, Linear<2, 1>) = dev.build_module();

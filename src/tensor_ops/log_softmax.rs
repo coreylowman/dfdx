@@ -50,7 +50,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{shapes::Axis, tensor::*, tensor_ops::*, tests::TestDevice};
+    use crate::{shapes::Axis, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_log_softmax_1d() {
@@ -62,15 +62,15 @@ mod tests {
             [-4.4519143, -3.4519143, -2.4519143, -1.4519143, -0.4519143]
         );
         let g = r.mean().backward();
-        assert_eq!(
-            g.get(&a).array(),
-            [
+        assert_close(
+            &g.get(&a).array(),
+            &[
                 0.18834378,
                 0.16831508,
                 0.11387146,
                 -0.034121647,
-                -0.43640864
-            ]
+                -0.43640864,
+            ],
         );
     }
 
@@ -79,20 +79,20 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
         let r = a.trace().log_softmax::<Axis<1>>();
-        assert_eq!(
-            r.array(),
-            [
+        assert_close(
+            &r.array(),
+            &[
                 [-2.407606, -1.4076059, -0.40760595],
-                [-6.0509458, -3.0509458, -0.05094576]
-            ]
+                [-6.0509458, -3.0509458, -0.05094576],
+            ],
         );
         let g = r.mean().backward();
-        assert_eq!(
-            g.get(&a).array(),
-            [
+        assert_close(
+            &g.get(&a).array(),
+            &[
                 [0.12165138, 0.044302434, -0.1659538],
-                [0.16548885, 0.14300959, -0.30849844]
-            ]
+                [0.16548885, 0.14300959, -0.30849844],
+            ],
         );
     }
 }

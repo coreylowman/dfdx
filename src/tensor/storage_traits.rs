@@ -2,7 +2,7 @@ use rand::distributions::Distribution;
 use rand_distr::{Standard, StandardNormal};
 
 use crate::{
-    shapes::{Dtype, HasDtype, HasShape, HasUnitType, Shape, Unit},
+    shapes::{ConstShape, Dtype, HasDtype, HasShape, HasUnitType, Shape, Unit},
     unique_id::unique_id,
 };
 
@@ -98,12 +98,12 @@ pub trait ZerosTensor<E: Unit>: DeviceStorage {
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<2, 3>> = dev.zeros();
     /// ```
-    fn zeros<S: Shape + Default>(&self) -> Tensor<S, E, Self> {
+    fn zeros<S: ConstShape>(&self) -> Tensor<S, E, Self> {
         self.try_zeros_like::<S>(&Default::default()).unwrap()
     }
 
     /// Fallible version of [ZerosTensor::zeros]
-    fn try_zeros<S: Shape + Default>(&self) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn try_zeros<S: ConstShape>(&self) -> Result<Tensor<S, E, Self>, Self::Err> {
         self.try_zeros_like::<S>(&Default::default())
     }
 
@@ -146,12 +146,12 @@ pub trait OnesTensor<E: Unit>: DeviceStorage {
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<2, 3>> = dev.ones();
     /// ```
-    fn ones<S: Shape + Default>(&self) -> Tensor<S, E, Self> {
+    fn ones<S: ConstShape>(&self) -> Tensor<S, E, Self> {
         self.try_ones_like::<S>(&Default::default()).unwrap()
     }
 
     /// Fallible version of [OnesTensor::ones]
-    fn try_ones<S: Shape + Default>(&self) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn try_ones<S: ConstShape>(&self) -> Result<Tensor<S, E, Self>, Self::Err> {
         self.try_ones_like::<S>(&Default::default())
     }
 
@@ -188,25 +188,25 @@ pub trait OneFillStorage<E: Unit>: DeviceStorage {
 
 /// Constructs tensors filled with random values from a given distribution.
 pub trait SampleTensor<E: Unit>: DeviceStorage {
-    fn sample_uniform<S: Shape + Default>(&self) -> Tensor<S, E, Self>
+    fn sample_uniform<S: ConstShape>(&self) -> Tensor<S, E, Self>
     where
         Standard: Distribution<E>,
     {
         self.sample::<S, _>(Standard)
     }
 
-    fn sample_normal<S: Shape + Default>(&self) -> Tensor<S, E, Self>
+    fn sample_normal<S: ConstShape>(&self) -> Tensor<S, E, Self>
     where
         StandardNormal: Distribution<E>,
     {
         self.sample::<S, _>(StandardNormal)
     }
 
-    fn sample<S: Shape + Default, D: Distribution<E>>(&self, distr: D) -> Tensor<S, E, Self> {
+    fn sample<S: ConstShape, D: Distribution<E>>(&self, distr: D) -> Tensor<S, E, Self> {
         self.try_sample_like::<S, D>(&Default::default(), distr)
             .unwrap()
     }
-    fn try_sample<S: Shape + Default, D: Distribution<E>>(
+    fn try_sample<S: ConstShape, D: Distribution<E>>(
         &self,
         distr: D,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {

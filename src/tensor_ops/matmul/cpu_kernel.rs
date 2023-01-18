@@ -31,17 +31,36 @@ pub(crate) fn matmul<M: Dim, K: Dim, N: Dim>(
     #[cfg(feature = "cblas")]
     unsafe {
         let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
-        let [ar, ac] = a.strides.map(|x| x as libc::c_int);
-        let [br, bc] = b.strides.map(|x| x as libc::c_int);
-        let [cr, cc] = c.strides.map(|x| x as libc::c_int);
-        let (layout, a_tr, b_tr, lda, ldb, ldc) = if cr < cc {
-            let (lda, a_tr) = if ar < ac { (m, NoTr) } else { (k, Tr) };
-            let (ldb, b_tr) = if br < bc { (k, NoTr) } else { (n, Tr) };
-            (ColMajor, a_tr, b_tr, lda, ldb, m)
+
+        let (lda, a_tr) = match a.strides {
+            [1, 0] => (m as i32, true),
+            [0, 1] => (k as i32, false),
+            [ld, 1] => (ld as i32, false),
+            [1, ld] => (ld as i32, true),
+            _ => panic!("At least one of a's strides must be 1 for cblas"),
+        };
+
+        let (ldb, b_tr) = match b.strides {
+            [1, 0] => (k as i32, true),
+            [0, 1] => (n as i32, false),
+            [ld, 1] => (ld as i32, false),
+            [1, ld] => (ld as i32, true),
+            _ => panic!("At least one of b's strides must be 1 for cblas"),
+        };
+
+        let (ldc, c_trans) = match c.strides {
+            [1, 0] => (m as i32, true),
+            [0, 1] => (n as i32, false),
+            [ld, 1] => (ld as i32, false),
+            [1, ld] => (ld as i32, true),
+            _ => panic!("At least one of c's strides must be 1 for cblas"),
+        };
+
+        let layout = if c_trans { ColMajor } else { RowMajor };
+        let (a_tr, b_tr) = if c_trans {
+            (if a_tr { NoTr } else { Tr }, if b_tr { NoTr } else { Tr })
         } else {
-            let (lda, a_tr) = if ar < ac { (m, Tr) } else { (k, NoTr) };
-            let (ldb, b_tr) = if br < bc { (k, Tr) } else { (n, NoTr) };
-            (RowMajor, a_tr, b_tr, lda, ldb, n)
+            (if a_tr { Tr } else { NoTr }, if b_tr { Tr } else { NoTr })
         };
         sgemm(
             layout, a_tr, b_tr, m, n, k, 1.0, ap, lda, bp, ldb, 1.0, cp, ldc,
