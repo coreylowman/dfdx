@@ -428,6 +428,8 @@ mod tests {
         );
 
         assert_close(&g.get(&bias).array(), &[0.55381978, 0.55677116, 0.30686682]);
+
+        assert!(false);
     }
 
     #[test]

@@ -119,7 +119,7 @@ pub(crate) unsafe fn sgemm<
 }
 
 #[allow(clippy::too_many_arguments)]
-unsafe fn sgemm_batch<
+pub(crate) unsafe fn sgemm_batch<
     Batch: Dim,
     M: Dim,
     K: Dim,
