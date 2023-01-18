@@ -1,8 +1,8 @@
-use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
-use std::sync::Arc;
-use crate::{shapes::Shape, tensor::Cuda};
 use super::RMSpropConfig;
 use crate::optim::optimizer::*;
+use crate::{shapes::Shape, tensor::Cuda};
+use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
+use std::sync::Arc;
 
 #[repr(C)]
 struct CudaRMSpropConfig<E> {
@@ -18,7 +18,7 @@ struct CudaRMSpropConfig<E> {
 
 unsafe impl<E> AsKernelParam for CudaRMSpropConfig<E> {}
 
-fn rmsprop_config_to_cuda<E: Default+Copy>(config: &RMSpropConfig<E>) -> CudaRMSpropConfig<E> {
+fn rmsprop_config_to_cuda<E: Default + Copy>(config: &RMSpropConfig<E>) -> CudaRMSpropConfig<E> {
     let (weight_decay_type, weight_decay) = weight_decay_to_cuda(config.weight_decay);
     let (has_momentum, momentum) = if let Some(m) = config.momentum {
         (true, m)
@@ -34,7 +34,7 @@ fn rmsprop_config_to_cuda<E: Default+Copy>(config: &RMSpropConfig<E>) -> CudaRMS
         has_momentum,
         momentum,
         weight_decay_type,
-        weight_decay
+        weight_decay,
     }
 }
 
@@ -57,8 +57,7 @@ impl super::RMSpropKernel<f32> for Cuda {
         debug_assert_eq!(param.strides, grad.strides);
 
         if !self.dev.has_func(MODULE_NAME, FN_NAME) {
-            self.dev
-                .load_ptx(PTX_SRC.into(), MODULE_NAME, &[FN_NAME])?;
+            self.dev.load_ptx(PTX_SRC.into(), MODULE_NAME, &[FN_NAME])?;
         }
 
         let rmsprop_cfg = rmsprop_config_to_cuda(cfg);

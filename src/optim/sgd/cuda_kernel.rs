@@ -1,8 +1,8 @@
-use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
-use std::sync::Arc;
-use crate::{shapes::Shape, tensor::Cuda};
 use super::SgdConfig;
 use crate::optim::optimizer::*;
+use crate::{shapes::Shape, tensor::Cuda};
+use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
+use std::sync::Arc;
 
 #[repr(C)]
 struct CudaSgdConfig<E> {
@@ -15,7 +15,7 @@ struct CudaSgdConfig<E> {
 
 unsafe impl<E> AsKernelParam for CudaSgdConfig<E> {}
 
-fn sgd_config_to_cuda<E: Default+Copy>(config: &SgdConfig<E>) -> CudaSgdConfig<E> {
+fn sgd_config_to_cuda<E: Default + Copy>(config: &SgdConfig<E>) -> CudaSgdConfig<E> {
     let (momentum_type, momentum) = momentum_to_cuda(config.momentum);
     let (weight_decay_type, weight_decay) = weight_decay_to_cuda(config.weight_decay);
 
@@ -24,7 +24,7 @@ fn sgd_config_to_cuda<E: Default+Copy>(config: &SgdConfig<E>) -> CudaSgdConfig<E
         momentum_type,
         momentum,
         weight_decay_type,
-        weight_decay
+        weight_decay,
     }
 }
 
@@ -45,8 +45,7 @@ impl super::SgdKernel<f32> for Cuda {
         debug_assert_eq!(param.strides, grad.strides);
 
         if !self.dev.has_func(MODULE_NAME, FN_NAME) {
-            self.dev
-                .load_ptx(PTX_SRC.into(), MODULE_NAME, &[FN_NAME])?;
+            self.dev.load_ptx(PTX_SRC.into(), MODULE_NAME, &[FN_NAME])?;
         }
 
         let sgd_cfg = sgd_config_to_cuda(cfg);

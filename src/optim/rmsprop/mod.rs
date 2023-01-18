@@ -185,7 +185,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::{TestDevice, assert_close};
+    use crate::tests::{assert_close, TestDevice};
     use crate::{shapes::*, tensor::*, tensor_ops::*};
 
     fn test_matches_expected(cfg: RMSpropConfig<f32>, expected: [[f32; 5]; 5]) {
