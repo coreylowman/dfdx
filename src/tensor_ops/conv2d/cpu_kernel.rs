@@ -191,7 +191,7 @@ impl Conv2DKernel<f32> for Cpu {
                     + c * rhs.strides[1]
                     + k1 * rhs.strides[2]
                     + k2 * rhs.strides[3];
-                buf[idx] = *f;
+                buf[idx] += *f;
             }
         }
 
