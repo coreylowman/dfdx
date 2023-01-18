@@ -151,7 +151,8 @@ impl super::Conv2DKernel<f32> for Cuda {
                     1.0,
                     Arc::make_mut(&mut gl.data),
                     [m * n, n, 1],
-                )?;
+                )
+                .unwrap();
             }
         }
 
@@ -168,11 +169,12 @@ impl super::Conv2DKernel<f32> for Cuda {
                     lhs.data.as_ref(),
                     [m * k, k, 1],
                     &patches,
-                    [k * n, 1, n],
+                    [k * n, 1, k],
                     1.0,
                     &mut grad_f_b1023,
                     [m * n, n, 1],
-                )?;
+                )
+                .unwrap();
             }
         }
 
@@ -184,9 +186,6 @@ impl super::Conv2DKernel<f32> for Cuda {
             let params = (op, &grad_f_b1023, Arc::make_mut(&mut grad_rhs.data));
             unsafe { sum_fn.launch_async(cfg, params) }?;
         }
-
-        std::println!("{:?}", op);
-        std::println!("{:?}", self.dev.sync_release(grad_f_b1023).unwrap());
 
         Ok(())
     }
