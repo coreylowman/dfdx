@@ -16,6 +16,25 @@ pub enum WeightDecay<E> {
     Decoupled(E),
 }
 
+/// Used to communicate the "WeightDecay" enum to cuda kernels
+#[cfg(feature = "cuda")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(C)]
+pub(super) enum WeightDecayType {
+    None,
+    L2,
+    Decoupled,
+}
+
+#[cfg(feature = "cuda")]
+pub(super) fn weight_decay_to_cuda<E: Default>(wd: Option<WeightDecay<E>>) -> (WeightDecayType, E) {
+    match wd {
+        None => (WeightDecayType::None, Default::default()),
+        Some(WeightDecay::L2(x)) => (WeightDecayType::L2, x),
+        Some(WeightDecay::Decoupled(x)) => (WeightDecayType::Decoupled, x),
+    }
+}
+
 /// Momentum used for [super::Sgd] and others
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Momentum<E> {
@@ -24,6 +43,25 @@ pub enum Momentum<E> {
 
     /// Momentum that is applied to both velocity and gradients. See [super::Sgd] nesterov paper for more.
     Nesterov(E),
+}
+
+/// Used to communicate the "Momentum" enum to cuda kernels
+#[cfg(feature = "cuda")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(C)]
+pub(super) enum MomentumType {
+    None,
+    Classic,
+    Nesterov,
+}
+
+#[cfg(feature = "cuda")]
+pub(super) fn momentum_to_cuda<E: Default>(wd: Option<Momentum<E>>) -> (MomentumType, E) {
+    match wd {
+        None => (MomentumType::None, Default::default()),
+        Some(Momentum::Classic(x)) => (MomentumType::Classic, x),
+        Some(Momentum::Nesterov(x)) => (MomentumType::Nesterov, x),
+    }
 }
 
 /// All optimizers must implement the update function, which takes an object

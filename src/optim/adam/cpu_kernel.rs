@@ -3,13 +3,14 @@ use crate::{optim::WeightDecay, shapes::Shape, tensor::Cpu};
 
 impl AdamKernel<f32> for Cpu {
     fn update<S: Shape>(
+        &self,
         t: i32,
         cfg: &AdamConfig<f32>,
         param: &mut Self::Storage<S, f32>,
         moment1: &mut Self::Storage<S, f32>,
         moment2: &mut Self::Storage<S, f32>,
         grad: Self::Storage<S, f32>,
-    ) {
+    ) -> Result<(), Self::Err> {
         debug_assert_eq!(param.data.len(), grad.data.len());
         debug_assert_eq!(param.shape, grad.shape);
         debug_assert_eq!(param.strides, grad.strides);
@@ -35,5 +36,6 @@ impl AdamKernel<f32> for Cpu {
 
             *p -= g;
         }
+        Ok(())
     }
 }
