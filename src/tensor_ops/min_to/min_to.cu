@@ -1,10 +1,10 @@
 // atomicMax is not implemented for floats,
 // solution copied https://stackoverflow.com/questions/17399119/how-do-i-use-atomicmax-on-floating-point-values-in-cuda
 __device__ __forceinline__ float atomicMinf(float * addr, float value) {
-    if (value >= 0) {
-        return __int_as_float(atomicMin((int *)addr, __float_as_int(value)));
-    } else {
+    if (signbit(value)) {
         return __uint_as_float(atomicMax((unsigned int *)addr, __float_as_uint(value)));
+    } else {
+        return __int_as_float(atomicMin((int *)addr, __float_as_int(value)));
     }
 }
 
