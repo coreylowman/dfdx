@@ -33,6 +33,7 @@ cblas-sys = { version = "0.1.4", default-features = false, optional = true }
 libc = { version = "0.2", default-features = false, optional = true }
 cudarc = { version = "0.8.0", default-features = false, optional = true }
 num-traits = { version = "0.2.15", default-features = false }
+safetensors = { version = "0.2", default-features = false, optional = true }
 
 [dev-dependencies]
 tempfile = "3.3.0"
@@ -50,12 +51,23 @@ threaded-cpu = ["std", "matrixmultiply/threading"]
 fast-alloc = ["std"]
 nightly = []
 numpy = ["dep:zip", "std"]
+safetensors = ["dep:safetensors", "std"]
 cblas = ["dep:cblas-sys", "dep:libc"]
 intel-mkl = ["cblas"]
 cuda = ["dep:cudarc", "dep:glob"]
 test-cuda = ["cuda"]
 test-f64 = []
 ci-check = ["cudarc?/ci-check"]
+
+[dev-dependencies]
+rand = "0.8.5"
+tempfile = "3.3.0"
+mnist = "0.5.0"
+indicatif = "0.16.2"
+
+[build-dependencies]
+rustc_version = "0.4.0"
+glob = "0.3.0"
 
 [[bench]]
 name = "batchnorm2d"
