@@ -6,12 +6,23 @@ use crate::{
 use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 
 use std::sync::Arc;
+use std::vec::Vec;
 
 const MODULE_NAME: &str = "sum_to";
 const FWD_FN_NAME: &str = "sum_to_forward";
 const BWD_FN_NAME: &str = "sum_to_backward";
 const ALL_FN_NAMES: [&str; 2] = [FWD_FN_NAME, BWD_FN_NAME];
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/sum_to.ptx"));
+
+pub fn remove_broadcasted_dims<I>(dims: I, strides: I) -> (Vec<usize>, Vec<usize>)
+    where I: IntoIterator<Item=usize>
+{
+    dims
+        .into_iter()
+        .zip(strides.into_iter())
+        .filter(|(_, stride)| *stride != 0)
+        .unzip()
+}
 
 impl super::SumKernel<f32> for Cuda {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
@@ -29,11 +40,10 @@ impl super::SumKernel<f32> for Cuda {
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
 
-        let dims: CudaSlice<usize> = self.dev.take_async(inp.shape.concrete().into())?;
-        let inp_strides: CudaSlice<usize> = self.dev.take_async(inp.strides.into())?;
-        let out_strides: Src::Concrete =
-            BroadcastStridesTo::<Src, Ax>::broadcast_strides(&dst, dst.strides());
-        let out_strides: CudaSlice<usize> = self.dev.take_async(out_strides.into())?;
+        let (dims, strides) = remove_broadcasted_dims(inp.shape.concrete(), inp.strides);
+        let num_dims = dims.len();
+        let dims: CudaSlice<usize> = self.dev.take_async(dims)?;
+        let inp_strides: CudaSlice<usize> = self.dev.take_async(strides)?;
 
         let mut storage = self.dev.alloc_zeros_async::<f32>(dst.num_elements())?;
 
@@ -41,16 +51,18 @@ impl super::SumKernel<f32> for Cuda {
         let virtual_numel = inp.shape.num_elements();
         let elems_per_thread = (virtual_numel / physical_numel) as f32;
 
+        let chunk_len = physical_numel / dst.num_elements();
+
         let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
         let params = (
             physical_numel,    // const size_t numel,
-            Src::NUM_DIMS,     // const size_t num_dims,
+            num_dims,          // const size_t num_dims,
             elems_per_thread,  // const float elems_per_thread,
+            chunk_len,         // const size_t chunk_len,
             &dims,             // const size_t *dims,
             inp.data.as_ref(), // const float *inp,
             &inp_strides,      // const size_t *inp_strides,
-            &mut storage,      // float *out,
-            &out_strides,      // const size_t *out_strides
+            &mut storage,      // float *out
         );
         unsafe { fwd_fn.launch_async(cfg, params) }?;
         Ok(CudaArray {
