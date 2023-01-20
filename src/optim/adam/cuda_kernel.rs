@@ -1,8 +1,8 @@
-use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
-use std::sync::Arc;
-use crate::{shapes::Shape, tensor::Cuda};
 use super::AdamConfig;
 use crate::optim::optimizer::*;
+use crate::{shapes::Shape, tensor::Cuda};
+use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
+use std::sync::Arc;
 
 #[repr(C)]
 struct CudaAdamConfig<E> {
@@ -16,7 +16,7 @@ struct CudaAdamConfig<E> {
 
 unsafe impl<E> AsKernelParam for CudaAdamConfig<E> {}
 
-fn adam_config_to_cuda<E: Default+Copy>(config: &AdamConfig<E>) -> CudaAdamConfig<E> {
+fn adam_config_to_cuda<E: Default + Copy>(config: &AdamConfig<E>) -> CudaAdamConfig<E> {
     let (weight_decay_type, weight_decay) = weight_decay_to_cuda(config.weight_decay);
 
     CudaAdamConfig {
@@ -25,7 +25,7 @@ fn adam_config_to_cuda<E: Default+Copy>(config: &AdamConfig<E>) -> CudaAdamConfi
         beta2: config.betas[1],
         eps: config.eps,
         weight_decay_type,
-        weight_decay
+        weight_decay,
     }
 }
 
@@ -48,8 +48,7 @@ impl super::AdamKernel<f32> for Cuda {
         debug_assert_eq!(param.strides, grad.strides);
 
         if !self.dev.has_func(MODULE_NAME, FN_NAME) {
-            self.dev
-                .load_ptx(PTX_SRC.into(), MODULE_NAME, &[FN_NAME])?;
+            self.dev.load_ptx(PTX_SRC.into(), MODULE_NAME, &[FN_NAME])?;
         }
 
         let adam_cfg = adam_config_to_cuda(cfg);

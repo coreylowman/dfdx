@@ -137,7 +137,8 @@ impl<M, D: DeviceStorage + AdamKernel<E>, E: Dtype> ParamUpdater<D, E> for Adam<
             Some(g) => {
                 let m_t = self.moment1.get_or_alloc_mut(p)?;
                 let v_t = self.moment2.get_or_alloc_mut(p)?;
-                p.device.update(self.t, &self.cfg, &mut p.storage, m_t, v_t, g)?;
+                p.device
+                    .update(self.t, &self.cfg, &mut p.storage, m_t, v_t, g)?;
             }
         }
         Ok(())
