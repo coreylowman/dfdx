@@ -1,8 +1,8 @@
+use crate::tensor_ops::internal_reshapes::permute_for_reductions;
 use crate::{
     shapes::{Axes, BroadcastStridesTo, ReduceShapeTo, Shape},
     tensor::cuda::{Cuda, CudaArray},
 };
-use crate::tensor_ops::internal_reshapes::permute_for_reductions;
 
 use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 

@@ -181,8 +181,8 @@ mod var_to;
 pub(crate) mod cpu_kernels;
 #[cfg(feature = "cuda")]
 pub(crate) mod cuda_kernels;
-pub(crate) mod ops;
 mod internal_reshapes;
+pub(crate) mod ops;
 
 pub use abs::abs;
 pub use add::{add, TryAdd};
