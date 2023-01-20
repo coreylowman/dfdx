@@ -8,11 +8,12 @@ use super::{SgdConfig, SgdKernel};
 
 impl<E: Dtype> SgdKernel<E> for Cpu {
     fn update<S: Shape>(
+        &self,
         cfg: &SgdConfig<E>,
         param: &mut StridedArray<S, E>,
         velocity: &mut StridedArray<S, E>,
         grad: StridedArray<S, E>,
-    ) {
+    ) -> Result<(), Self::Err> {
         debug_assert_eq!(param.data.len(), grad.data.len());
         debug_assert_eq!(param.shape, grad.shape);
         debug_assert_eq!(param.strides, grad.strides);
@@ -44,5 +45,7 @@ impl<E: Dtype> SgdKernel<E> for Cpu {
 
             *p -= g;
         }
+
+        Ok(())
     }
 }
