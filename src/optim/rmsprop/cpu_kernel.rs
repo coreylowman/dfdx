@@ -7,13 +7,14 @@ use super::{RMSpropConfig, RMSpropKernel};
 
 impl RMSpropKernel<f32> for Cpu {
     fn update<S: crate::shapes::Shape>(
+        &self,
         cfg: &RMSpropConfig<f32>,
         param: &mut StridedArray<S, f32>,
         momentum: &mut StridedArray<S, f32>,
         square_avg: &mut StridedArray<S, f32>,
         grad_avg: &mut StridedArray<S, f32>,
         grad: StridedArray<S, f32>,
-    ) {
+    ) -> Result<(), Self::Err> {
         debug_assert_eq!(param.data.len(), grad.data.len());
         debug_assert_eq!(param.shape, grad.shape);
         debug_assert_eq!(param.strides, grad.strides);
@@ -58,5 +59,6 @@ impl RMSpropKernel<f32> for Cpu {
 
             *p -= g;
         }
+        Ok(())
     }
 }
