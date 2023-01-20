@@ -34,9 +34,9 @@ impl super::AvgPool2DKernel<f32> for Cpu {
                                 let x = (ow * op.stride + k2).checked_sub(op.padding);
                                 if let Some((y, x)) = y.zip(x) {
                                     if y < op.h_in && x < op.w_in {
-                                        let pixel = buf
-                                            [b * istr[0] + c * istr[1] + y * istr[2] + x * istr[3]];
-                                        tmp += pixel;
+                                        let inp_idx =
+                                            b * istr[0] + c * istr[1] + y * istr[2] + x * istr[3];
+                                        tmp += buf[inp_idx];
                                     }
                                 }
                             }
