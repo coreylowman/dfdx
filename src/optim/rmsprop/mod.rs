@@ -127,13 +127,14 @@ impl<M, D: DeviceStorage, E: Dtype> RMSprop<M, D, E> {
 
 pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
     fn update<S: Shape>(
+        &self,
         cfg: &RMSpropConfig<E>,
         param: &mut Self::Storage<S, E>,
         momentum: &mut Self::Storage<S, E>,
         square_avg: &mut Self::Storage<S, E>,
         grad_avg: &mut Self::Storage<S, E>,
         grad: Self::Storage<S, E>,
-    );
+    ) -> Result<(), Self::Err>;
 }
 
 impl<M, D: RMSpropKernel<f32> + OneFillStorage<f32>> ParamUpdater<D, f32> for RMSprop<M, D, f32> {
@@ -154,7 +155,7 @@ impl<M, D: RMSpropKernel<f32> + OneFillStorage<f32>> ParamUpdater<D, f32> for RM
                     p.device.try_fill_with_ones(sa)?;
                 }
 
-                D::update(&self.cfg, &mut p.storage, m, sa, ga, g);
+                p.device.update(&self.cfg, &mut p.storage, m, sa, ga, g)?;
             }
         }
         Ok(())
@@ -184,7 +185,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::TestDevice;
+    use crate::tests::{assert_close, TestDevice};
     use crate::{shapes::*, tensor::*, tensor_ops::*};
 
     fn test_matches_expected(cfg: RMSpropConfig<f32>, expected: [[f32; 5]; 5]) {
@@ -195,7 +196,8 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).square().sum().backward();
             opt.update(&mut t, gradients).expect("");
-            assert_eq!(&t.array(), e);
+            std::println!("{:?}", t.array());
+            assert_close(&t.array(), e);
         }
     }
 
