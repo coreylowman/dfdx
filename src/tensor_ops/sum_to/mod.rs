@@ -125,4 +125,14 @@ mod tests {
         let g2 = r2.sum().backward();
         assert_close(&g.get(&t).array(), &g2.get(&t).array());
     }
+
+    #[test]
+    fn test_sum_chunking() {
+        let dev: TestDevice = Default::default();
+        let t = dev.tensor([[1.0; 100]; 60]);
+        let r = t.trace().sum::<Rank1<60>, _>();
+        assert_eq!(r.array(), [100.0; 60]);
+        // let g = r.sum().backward();
+        // assert_close(&g.get(&t).array(), &g2.get(&t).array());
+    }
 }

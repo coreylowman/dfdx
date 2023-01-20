@@ -57,6 +57,8 @@ __device__ void chunk_sum(
     unsigned int chunk_start = max((int)(block_i - chunk_i), 0);
     unsigned int chunk_end = min((unsigned int)(block_i + chunk_len - chunk_i), blockDim.x);
 
+    chunk_i = block_i - chunk_start;
+
     size_t max_chunk_len = min(chunk_end - chunk_start, blockDim.x);
     size_t incr = next_power_of_two(max_chunk_len) >> 1;
 
@@ -67,8 +69,9 @@ __device__ void chunk_sum(
     for (; incr > 0; incr >>= 1) {
         unsigned int block_i_2 = block_i + incr;
 
-        if (block_i_2 < chunk_end) {
-            // This is sount because all threads read and write at the same time
+        if (block_i_2 < chunk_end && chunk_i < incr) {
+            // This is sound because __syncthreads and the conditions above
+            // ensure that no data races occur
             buf[block_i] += buf[block_i_2];
         }
 

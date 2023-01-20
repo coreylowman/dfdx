@@ -29,7 +29,7 @@ fn permute_axes_to_end<Ax: Axes>(vec: &mut Vec<usize>) {
     }
 }
 
-fn get_sum_dims_strides<I, Ax: Axes>(dims: I, strides: I) -> (Vec<usize>, Vec<usize>)
+fn reduction_dims_and_strides<I, Ax: Axes>(dims: I, strides: I) -> (Vec<usize>, Vec<usize>)
 where
     I: IntoIterator<Item = usize>,
 {
@@ -60,7 +60,9 @@ impl super::SumKernel<f32> for Cuda {
         }
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
-        let (dims, strides) = get_sum_dims_strides::<_, Ax>(inp.shape.concrete(), inp.strides);
+
+        let (dims, strides) =
+            reduction_dims_and_strides::<_, Ax>(inp.shape.concrete(), inp.strides);
         let num_dims = dims.len();
         let dims: CudaSlice<usize> = self.dev.take_async(dims)?;
         let inp_strides: CudaSlice<usize> = self.dev.take_async(strides)?;
