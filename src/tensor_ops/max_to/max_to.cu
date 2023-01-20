@@ -45,14 +45,13 @@ extern "C" __global__ void fill_with(float *buf, float value, const size_t numel
     buf[i] = value;
 }
 
+// Sourced from https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
 __device__ __forceinline__ unsigned int next_power_of_two(unsigned int v) {
-    // Sourced from https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
     v--;
     v |= v >> 1;
     v |= v >> 2;
     v |= v >> 4;
     v |= v >> 8;
-    v |= v >> 16;
     v++;
     return v;
 }
@@ -100,15 +99,16 @@ __device__ void chunk_max(
         atomicMaxf(out + i / chunk_len, buf[block_i]);
     }
 }
-// Accepts pre-broadcasted strides for both input & output.
-// So both inp & out are expected to be broadcasted to the same size.
+
+// strides and dims specify how to index inp to put all summed elements next to
+// each other, and chunk_len is len(inp) / len(out)
 extern "C" __global__ void max_to_forward(
     const size_t numel,
     const size_t num_dims,
     const size_t chunk_len,
-    const size_t *dims,
     const float *inp,
-    const size_t *inp_strides,
+    const size_t *dims,
+    const size_t *strides,
     float *out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -117,7 +117,7 @@ extern "C" __global__ void max_to_forward(
         return;
     }
 
-    unsigned int inp_i = get_strided_index(i, num_dims, dims, inp_strides);
+    unsigned int inp_i = get_strided_index(i, num_dims, dims, strides);
     chunk_max(numel, chunk_len, inp[inp_i], out);
 }
 

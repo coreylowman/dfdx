@@ -33,7 +33,7 @@ impl super::SumKernel<f32> for Cuda {
         let (dims, strides) = permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
         let num_dims = dims.len();
         let dims: CudaSlice<usize> = self.dev.take_async(dims)?;
-        let inp_strides: CudaSlice<usize> = self.dev.take_async(strides)?;
+        let strides: CudaSlice<usize> = self.dev.take_async(strides)?;
 
         let mut storage = self.dev.alloc_zeros_async::<f32>(dst.num_elements())?;
 
@@ -49,9 +49,9 @@ impl super::SumKernel<f32> for Cuda {
             num_dims,          // const size_t num_dims,
             elems_per_thread,  // const float elems_per_thread,
             chunk_len,         // const size_t chunk_len,
-            &dims,             // const size_t *dims,
             inp.data.as_ref(), // const float *inp,
-            &inp_strides,      // const size_t *inp_strides,
+            &dims,             // const size_t *dims,
+            &strides,          // const size_t *strides,
             &mut storage,      // float *out
         );
         unsafe { fwd_fn.launch_async(cfg, params) }?;
