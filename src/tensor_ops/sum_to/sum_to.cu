@@ -101,7 +101,7 @@ extern "C" __global__ void sum_to_forward(
     }
 
     unsigned int inp_i = get_strided_index(i, num_dims, dims, inp_strides);
-    chunk_sum(numel, chunk_len, inp[inp_i], out);
+    chunk_sum(numel, chunk_len, inp[inp_i] * elems_per_thread, out);
 }
 
 // Accepts pre-broadcasted strides for both input & output.

@@ -210,6 +210,10 @@ pub(crate) mod tests {
     pub fn assert_close<T: AssertClose + std::fmt::Debug>(a: &T, b: &T) {
         a.assert_close(b, TOLERANCE);
     }
+
+    pub fn assert_close_with_tolerance<T: AssertClose + std::fmt::Debug>(a: &T, b: &T, tolerance: f32) {
+        a.assert_close(b, tolerance);
+    }
 }
 
 /// Used to assert things about const generics
