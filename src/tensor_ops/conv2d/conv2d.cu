@@ -42,7 +42,7 @@ extern "C" __global__ void unfold_input_into_patches(
         return;
     }
     const size_t y = y_plus_p - op.padding;
-    if y >= op.h_in {
+    if (y >= op.h_in) {
         return;
     }
 
@@ -55,7 +55,7 @@ extern "C" __global__ void unfold_input_into_patches(
         return;
     }
 
-    size_t i_image = b * (op.chan_in * op.h_in * op.w_in) + c * (op.h_in * op.w_in) + y * (op.w_in) + x;
+    const size_t i_image = b * (op.chan_in * op.h_in * op.w_in) + c * (op.h_in * op.w_in) + y * (op.w_in) + x;
     patches[i] = image[i_image];
 }
 
