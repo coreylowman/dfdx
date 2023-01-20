@@ -14,33 +14,28 @@ const BWD_FN_NAME: &str = "sum_to_backward";
 const ALL_FN_NAMES: [&str; 2] = [FWD_FN_NAME, BWD_FN_NAME];
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/sum_to.ptx"));
 
-fn permute_axes_to_end<Ax: Axes>(vec: &mut Vec<usize>) {
-    let mut tmp = vec.iter().map(|x| (false, *x)).collect::<Vec<_>>();
+/// Moves all axes in Ax to the end of dims and strides and removes broadcasted dimensions
+/// so that a cuda kernel called for each physical element of the input tensor will place elements
+/// to be reduced with each other next to each other in memory.
+fn permute_for_reductions<I, Ax: Axes>(dims: I, strides: I) -> (Vec<usize>, Vec<usize>)
+where
+    I: IntoIterator<Item = usize>,
+{
+    let mut tmp = dims
+        .into_iter()
+        .zip(strides.into_iter())
+        .map(|x| (false, x))
+        .collect::<Vec<_>>();
 
     for i in Ax::as_array().into_iter() {
         tmp[i as usize].0 = true;
     }
 
-    // requires stable sorting
+    // requires stable sorting to keep non-summed axes in the correct order
     tmp.sort_by_key(|x| x.0);
 
-    for (v, t) in vec.iter_mut().zip(tmp.iter()) {
-        *v = t.1;
-    }
-}
-
-fn reduction_dims_and_strides<I, Ax: Axes>(dims: I, strides: I) -> (Vec<usize>, Vec<usize>)
-where
-    I: IntoIterator<Item = usize>,
-{
-    let mut dims: Vec<usize> = dims.into_iter().collect();
-    let mut strides: Vec<usize> = strides.into_iter().collect();
-
-    permute_axes_to_end::<Ax>(&mut dims);
-    permute_axes_to_end::<Ax>(&mut strides);
-
-    dims.into_iter()
-        .zip(strides.into_iter())
+    tmp.into_iter()
+        .map(|(_, x)| x)
         .filter(|(_, stride)| *stride != 0)
         .unzip()
 }
@@ -61,8 +56,7 @@ impl super::SumKernel<f32> for Cuda {
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
 
-        let (dims, strides) =
-            reduction_dims_and_strides::<_, Ax>(inp.shape.concrete(), inp.strides);
+        let (dims, strides) = permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
         let num_dims = dims.len();
         let dims: CudaSlice<usize> = self.dev.take_async(dims)?;
         let inp_strides: CudaSlice<usize> = self.dev.take_async(strides)?;

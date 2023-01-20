@@ -211,7 +211,11 @@ pub(crate) mod tests {
         a.assert_close(b, TOLERANCE);
     }
 
-    pub fn assert_close_with_tolerance<T: AssertClose + std::fmt::Debug>(a: &T, b: &T, tolerance: f32) {
+    pub fn assert_close_with_tolerance<T: AssertClose + std::fmt::Debug>(
+        a: &T,
+        b: &T,
+        tolerance: f32,
+    ) {
         a.assert_close(b, tolerance);
     }
 }
