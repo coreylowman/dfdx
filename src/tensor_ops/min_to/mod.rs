@@ -87,7 +87,7 @@ mod tests {
     use crate::tests::{assert_close, TestDevice};
 
     #[test]
-    fn test_valids_min_axis() {
+    fn test_min_valid_axes() {
         let dev: TestDevice = Default::default();
         let _ = dev.zeros::<Rank1<5>>().min::<Rank0, _>();
         let _ = dev.zeros::<Rank2<5, 3>>().min::<Rank1<3>, _>();
