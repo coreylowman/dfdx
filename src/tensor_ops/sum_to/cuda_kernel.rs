@@ -14,9 +14,30 @@ const BWD_FN_NAME: &str = "sum_to_backward";
 const ALL_FN_NAMES: [&str; 2] = [FWD_FN_NAME, BWD_FN_NAME];
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/sum_to.ptx"));
 
-pub fn remove_broadcasted_dims<I>(dims: I, strides: I) -> (Vec<usize>, Vec<usize>)
-    where I: IntoIterator<Item=usize>
+fn permute_with<Ax: Axes>(vec: &mut Vec<usize>) {
+    let mut tmp = vec
+        .iter()
+        .enumerate()
+        .map(|(i, x)| (Ax::as_array().into_iter().any(|x| x == i as isize), *x))
+        .collect::<Vec<_>>();
+
+    // requires stable sorting
+    tmp.sort_by_key(|x| x.0);
+
+    for (v, t) in vec.iter_mut().zip(tmp.iter()) {
+        *v = t.1;
+    } 
+}
+
+fn get_sum_dims_strides<I, Ax: Axes>(dims: I, strides: I) -> (Vec<usize>, Vec<usize>)
+    where I: IntoIterator<Item=usize>,
 {
+    let mut dims: Vec<usize> = dims.into_iter().collect();
+    let mut strides: Vec<usize> = strides.into_iter().collect();
+
+    permute_with::<Ax>(&mut dims);
+    permute_with::<Ax>(&mut strides);
+
     dims
         .into_iter()
         .zip(strides.into_iter())
@@ -31,7 +52,7 @@ impl super::SumKernel<f32> for Cuda {
         inp: &Self::Storage<Src, f32>,
     ) -> Result<Self::Storage<Dst, f32>, Self::Err>
     where
-        Src: ReduceShapeTo<Dst, Ax>,
+        Src: ReduceShapeTo<Dst, Ax>
     {
         if !self.dev.has_func(MODULE_NAME, FWD_FN_NAME) {
             self.dev
@@ -39,8 +60,7 @@ impl super::SumKernel<f32> for Cuda {
         }
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
-
-        let (dims, strides) = remove_broadcasted_dims(inp.shape.concrete(), inp.strides);
+        let (dims, strides) = get_sum_dims_strides::<_, Ax>(inp.shape.concrete(), inp.strides);
         let num_dims = dims.len();
         let dims: CudaSlice<usize> = self.dev.take_async(dims)?;
         let inp_strides: CudaSlice<usize> = self.dev.take_async(strides)?;
