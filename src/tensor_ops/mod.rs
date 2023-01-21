@@ -145,6 +145,7 @@ mod backward;
 mod bce;
 mod broadcast_to;
 mod clamp;
+mod cmp;
 mod cos;
 mod div;
 mod dropout;
