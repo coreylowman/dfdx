@@ -177,21 +177,36 @@ pub type Rank6<const M: usize, const N: usize, const O: usize, const P: usize, c
 
 macro_rules! shape {
     (($($D:tt $Idx:tt),*), rank=$Num:expr, all=$All:tt) => {
-impl<$($D: Dim, )*> Shape for ($($D, )*) {
-    const NUM_DIMS: usize = $Num;
-    type Concrete = [usize; $Num];
-    type AllAxes = $All<$($Idx,)*>;
-    type LastAxis = Axis<{$Num - 1}>;
-    #[inline(always)]
-    fn concrete(&self) -> Self::Concrete {
-        [$(self.$Idx.size(), )*]
-    }
-    #[inline(always)]
-    fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
-        Some(($(Dim::from_size(concrete[$Idx])?, )*))
-    }
-}
-impl<$($D: ConstDim, )*> ConstShape for ($($D, )*) { }
+        impl<$($D: Dim, )*> Shape for ($($D, )*) {
+            const NUM_DIMS: usize = $Num;
+            type Concrete = [usize; $Num];
+            type AllAxes = $All<$($Idx,)*>;
+            type LastAxis = Axis<{$Num - 1}>;
+            #[inline(always)]
+            fn concrete(&self) -> Self::Concrete {
+                [$(self.$Idx.size(), )*]
+            }
+            #[inline(always)]
+            fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
+                Some(($(Dim::from_size(concrete[$Idx])?, )*))
+            }
+        }
+        impl<$($D: ConstDim, )*> ConstShape for ($($D, )*) { }
+
+        impl Shape for [usize; $Num] {
+            const NUM_DIMS: usize = $Num;
+            type Concrete = Self;
+            type AllAxes = $All<$($Idx,)*>;
+            type LastAxis = Axis<{$Num - 1}>;
+
+            fn concrete(&self) -> Self::Concrete {
+                *self
+            }
+
+            fn from_concrete(concrete: &Self::Concrete) -> Option<Self> {
+                Some(*concrete)
+            }
+        }
     };
 }
 
