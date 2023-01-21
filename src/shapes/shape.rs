@@ -8,6 +8,17 @@ pub trait Unit:
 impl Unit for f32 {}
 impl Unit for f64 {}
 impl Unit for usize {}
+impl Unit for u8 {}
+impl Unit for u16 {}
+impl Unit for u32 {}
+impl Unit for u64 {}
+impl Unit for u128 {}
+impl Unit for isize {}
+impl Unit for i8 {}
+impl Unit for i16 {}
+impl Unit for i32 {}
+impl Unit for i64 {}
+impl Unit for i128 {}
 impl Unit for bool {}
 
 /// Represents something that has a [Unit].
