@@ -21,32 +21,34 @@ fn sgemm_config<M: Dim, K: Dim, N: Dim>(
     rhs_strides: [usize; 2],
     beta: f32,
     out_strides: [usize; 2],
-) -> GemmConfig<f32> {
-    assert!(lhs_strides[0] == 1 || lhs_strides[1] == 1);
-    assert!(rhs_strides[0] == 1 || rhs_strides[1] == 1);
-    assert!(out_strides[0] == 1 || out_strides[1] == 1);
-
-    let lhs_stride = lhs_strides[0].max(lhs_strides[1]);
-    let rhs_stride = rhs_strides[0].max(rhs_strides[1]);
-    let out_stride = out_strides[0].max(out_strides[1]);
-
-    let lhs_trans = if lhs_stride == k.size() {
-        false
-    } else {
-        assert_eq!(lhs_stride, m.size());
-        true
+) -> (GemmConfig<f32>, bool) {
+    let (lhs_stride, lhs_trans) = match lhs_strides {
+        [1, 0] => (m.size(), true),
+        [0, 1] => (k.size(), false),
+        [ld, 1] => (ld, false),
+        [1, ld] => (ld, true),
+        _ => panic!("At least one of a's strides must be 1 for cublas"),
     };
 
-    let rhs_trans = if rhs_stride == n.size() {
-        false
-    } else {
-        assert_eq!(rhs_stride, k.size());
-        true
+    let (rhs_stride, rhs_trans) = match rhs_strides {
+        [1, 0] => (k.size(), true),
+        [0, 1] => (n.size(), false),
+        [ld, 1] => (ld, false),
+        [1, ld] => (ld, true),
+        _ => panic!("At least one of b's strides must be 1 for cublas"),
     };
 
-    if out_stride == n.size() {
+    let (out_stride, out_trans) = match out_strides {
+        [1, 0] => (m.size(), true),
+        [0, 1] => (n.size(), false),
+        [ld, 1] => (ld, false),
+        [1, ld] => (ld, true),
+        _ => panic!("At least one of c's strides must be 1 for cublas"),
+    };
+
+    if !out_trans {
         // out is stored in row major format
-        GemmConfig {
+        let cfg = GemmConfig {
             transa: if rhs_trans { TRANS } else { NO_TRANS },
             transb: if lhs_trans { TRANS } else { NO_TRANS },
             m: n.size() as i32,
@@ -57,11 +59,11 @@ fn sgemm_config<M: Dim, K: Dim, N: Dim>(
             ldb: lhs_stride as i32,
             beta,
             ldc: out_stride as i32,
-        }
+        };
+        (cfg, true)
     } else {
         // out is stored in column major format
-        assert_eq!(out_stride, m.size());
-        GemmConfig {
+        let cfg = GemmConfig {
             transa: if lhs_trans { NO_TRANS } else { TRANS },
             transb: if rhs_trans { NO_TRANS } else { TRANS },
             m: m.size() as i32,
@@ -72,7 +74,8 @@ fn sgemm_config<M: Dim, K: Dim, N: Dim>(
             ldb: rhs_stride as i32,
             beta,
             ldc: out_stride as i32,
-        }
+        };
+        (cfg, false)
     }
 }
 
@@ -91,7 +94,7 @@ fn sgemm_config<M: Dim, K: Dim, N: Dim>(
 ///
 /// lhs is a and rhs is b, but we have to transpose them if they are not already
 #[allow(clippy::too_many_arguments)]
-unsafe fn sgemm<
+pub(crate) unsafe fn sgemm<
     M: Dim,
     K: Dim,
     N: Dim,
@@ -109,17 +112,17 @@ unsafe fn sgemm<
     out: &mut C,
     out_strides: [usize; 2],
 ) -> Result<(), CublasError> {
-    let cfg = sgemm_config((m, k, n), lhs_strides, rhs_strides, beta, out_strides);
+    let (cfg, swap_ops) = sgemm_config((m, k, n), lhs_strides, rhs_strides, beta, out_strides);
 
-    if cfg.ldc == n.size() as i32 {
-        blas.gemm_async(cfg, rhs, lhs, out)
-    } else {
+    if !swap_ops {
         blas.gemm_async(cfg, lhs, rhs, out)
+    } else {
+        blas.gemm_async(cfg, rhs, lhs, out)
     }
 }
 
 #[allow(clippy::too_many_arguments)]
-unsafe fn sgemm_batch<
+pub(crate) unsafe fn sgemm_batch<
     Batch: Dim,
     M: Dim,
     K: Dim,
@@ -141,7 +144,7 @@ unsafe fn sgemm_batch<
     // NOTE: lhs_strides[0] and rhs_strides[0] can be 0
     assert_ne!(out_strides[0], 0);
 
-    let gemm = sgemm_config(
+    let (gemm, swap_ops) = sgemm_config(
         (m, k, n),
         [lhs_strides[1], lhs_strides[2]],
         [rhs_strides[1], rhs_strides[2]],
@@ -149,16 +152,7 @@ unsafe fn sgemm_batch<
         [out_strides[1], out_strides[2]],
     );
 
-    if gemm.ldc == n.size() as i32 {
-        let cfg = StridedBatchedConfig {
-            gemm,
-            stride_a: rhs_strides[0] as i64,
-            stride_b: lhs_strides[0] as i64,
-            stride_c: out_strides[0] as i64,
-            batch_size: batch.size() as i32,
-        };
-        blas.gemm_strided_batched_async(cfg, rhs, lhs, out)
-    } else {
+    if !swap_ops {
         let cfg = StridedBatchedConfig {
             gemm,
             stride_a: lhs_strides[0] as i64,
@@ -167,6 +161,15 @@ unsafe fn sgemm_batch<
             batch_size: batch.size() as i32,
         };
         blas.gemm_strided_batched_async(cfg, lhs, rhs, out)
+    } else {
+        let cfg = StridedBatchedConfig {
+            gemm,
+            stride_a: rhs_strides[0] as i64,
+            stride_b: lhs_strides[0] as i64,
+            stride_c: out_strides[0] as i64,
+            batch_size: batch.size() as i32,
+        };
+        blas.gemm_strided_batched_async(cfg, rhs, lhs, out)
     }
 }
 

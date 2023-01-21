@@ -3,7 +3,7 @@
 pub(super) mod cpu_kernel;
 
 #[cfg(feature = "cuda")]
-mod cuda_kernel;
+pub(super) mod cuda_kernel;
 
 use crate::{
     gradients::{Merge, Tape},
