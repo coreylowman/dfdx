@@ -85,13 +85,20 @@ pub trait HasAxes<Ax> {
 }
 
 macro_rules! impl_has_axis {
-    (($($Vars:tt),*), $Axis:tt) => {
-impl<$($Vars: Dim, )*> HasAxes<Axis<$Axis>> for ($($Vars, )*) {
-    #[inline(always)]
-    fn size(&self) -> usize {
-        self.$Axis.size()
-    }
-}
+    (($($Vars:tt),*), $Num:tt, $Axis:tt) => {
+        impl<$($Vars: Dim, )*> HasAxes<Axis<$Axis>> for ($($Vars, )*) {
+            #[inline(always)]
+            fn size(&self) -> usize {
+                self.$Axis.size()
+            }
+        }
+
+        impl HasAxes<Axis<$Axis>> for [usize; $Num] {
+            #[inline(always)]
+            fn size(&self) -> usize {
+                self[$Axis]
+            }
+        }
     };
 }
 
@@ -102,27 +109,27 @@ impl HasAxes<Axis<0>> for () {
     }
 }
 
-impl_has_axis!((D1), 0);
-impl_has_axis!((D1, D2), 0);
-impl_has_axis!((D1, D2), 1);
-impl_has_axis!((D1, D2, D3), 0);
-impl_has_axis!((D1, D2, D3), 1);
-impl_has_axis!((D1, D2, D3), 2);
-impl_has_axis!((D1, D2, D3, D4), 0);
-impl_has_axis!((D1, D2, D3, D4), 1);
-impl_has_axis!((D1, D2, D3, D4), 2);
-impl_has_axis!((D1, D2, D3, D4), 3);
-impl_has_axis!((D1, D2, D3, D4, D5), 0);
-impl_has_axis!((D1, D2, D3, D4, D5), 1);
-impl_has_axis!((D1, D2, D3, D4, D5), 2);
-impl_has_axis!((D1, D2, D3, D4, D5), 3);
-impl_has_axis!((D1, D2, D3, D4, D5), 4);
-impl_has_axis!((D1, D2, D3, D4, D5, D6), 0);
-impl_has_axis!((D1, D2, D3, D4, D5, D6), 1);
-impl_has_axis!((D1, D2, D3, D4, D5, D6), 2);
-impl_has_axis!((D1, D2, D3, D4, D5, D6), 3);
-impl_has_axis!((D1, D2, D3, D4, D5, D6), 4);
-impl_has_axis!((D1, D2, D3, D4, D5, D6), 5);
+impl_has_axis!((D1), 1, 0);
+impl_has_axis!((D1, D2), 2, 0);
+impl_has_axis!((D1, D2), 2, 1);
+impl_has_axis!((D1, D2, D3), 3, 0);
+impl_has_axis!((D1, D2, D3), 3, 1);
+impl_has_axis!((D1, D2, D3), 3, 2);
+impl_has_axis!((D1, D2, D3, D4), 4, 0);
+impl_has_axis!((D1, D2, D3, D4), 4, 1);
+impl_has_axis!((D1, D2, D3, D4), 4, 2);
+impl_has_axis!((D1, D2, D3, D4), 4, 3);
+impl_has_axis!((D1, D2, D3, D4, D5), 5, 0);
+impl_has_axis!((D1, D2, D3, D4, D5), 5, 1);
+impl_has_axis!((D1, D2, D3, D4, D5), 5, 2);
+impl_has_axis!((D1, D2, D3, D4, D5), 5, 3);
+impl_has_axis!((D1, D2, D3, D4, D5), 5, 4);
+impl_has_axis!((D1, D2, D3, D4, D5, D6), 6, 0);
+impl_has_axis!((D1, D2, D3, D4, D5, D6), 6, 1);
+impl_has_axis!((D1, D2, D3, D4, D5, D6), 6, 2);
+impl_has_axis!((D1, D2, D3, D4, D5, D6), 6, 3);
+impl_has_axis!((D1, D2, D3, D4, D5, D6), 6, 4);
+impl_has_axis!((D1, D2, D3, D4, D5, D6), 6, 5);
 
 impl<const I: isize, const J: isize, S> HasAxes<Axes2<I, J>> for S
 where
