@@ -1,6 +1,6 @@
 use super::{Module, NonMutableModule, ZeroSizedModule};
 
-use crate::tensor_ops::TryPool2DTo;
+use crate::tensor_ops::{ConstAvgPool2D, ConstMaxPool2D, ConstMinPool2D};
 
 /// Average pool with 2d kernel that operates on images (3d) and batches of images (4d).
 /// Each patch reduces to the average of the values in the patch.
@@ -33,24 +33,24 @@ pub struct MaxPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PA
 pub struct MinPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PADDING: usize = 0>;
 
 macro_rules! impl_pools {
-    ($PoolTy:tt, $Method:ident) => {
+    ($PoolTy:tt, $Trait:ident) => {
         impl<const K: usize, const S: usize, const P: usize> ZeroSizedModule for $PoolTy<K, S, P> {}
         impl<const K: usize, const S: usize, const P: usize> NonMutableModule for $PoolTy<K, S, P> {}
 
-        impl<const K: usize, const S: usize, const P: usize, Img: TryPool2DTo<K, S, P>> Module<Img>
+        impl<const K: usize, const S: usize, const P: usize, Img: $Trait<K, S, P>> Module<Img>
             for $PoolTy<K, S, P>
         {
             type Output = Img::Output;
             fn forward(&self, x: Img) -> Self::Output {
-                x.$Method().unwrap()
+                x.try_pool2d().unwrap()
             }
         }
     };
 }
 
-impl_pools!(AvgPool2D, try_avg_pool2d_to);
-impl_pools!(MaxPool2D, try_max_pool2d_to);
-impl_pools!(MinPool2D, try_min_pool2d_to);
+impl_pools!(AvgPool2D, ConstAvgPool2D);
+impl_pools!(MaxPool2D, ConstMaxPool2D);
+impl_pools!(MinPool2D, ConstMinPool2D);
 
 #[cfg(feature = "nightly")]
 #[cfg(test)]
