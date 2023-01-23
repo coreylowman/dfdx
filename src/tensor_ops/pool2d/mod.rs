@@ -9,6 +9,8 @@ use crate::{
     tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor, ZerosTensor},
 };
 
+use super::conv2d::ConvAlgebra;
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Pool2DOp {
@@ -93,13 +95,14 @@ macro_rules! pool2d {
                 const P: usize,
             > $ConstTrait<K, S, P> for Tensor<(C, Const<H>, Const<W>), f32, D, T>
         where
-            Rank2<{ (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>: Sized,
+            Const<H>: ConvAlgebra<K, S, P>,
+            Const<W>: ConvAlgebra<K, S, P>,
         {
             type Output = Tensor<
                 (
                     C,
-                    Const<{ (H + 2 * P - K) / S + 1 }>,
-                    Const<{ (W + 2 * P - K) / S + 1 }>,
+                    <Const<H> as ConvAlgebra<K, S, P>>::Convolved,
+                    <Const<W> as ConvAlgebra<K, S, P>>::Convolved,
                 ),
                 f32,
                 D,
@@ -110,7 +113,9 @@ macro_rules! pool2d {
                 let &(chan, _, _) = self.shape();
                 let op = Pool2DOp::new(K, S, P, [1, chan.size(), H, W]);
                 let (inp, mut tape) = self.split_tape();
-                let mut out = inp.device.try_zeros_like(&(chan, Const, Const))?;
+                let mut out =
+                    inp.device
+                        .try_zeros_like(&(chan, Default::default(), Default::default()))?;
                 inp.device.forward(op, &inp.storage, &mut out.storage)?;
                 let phantom_out = out.clone();
                 tape.try_alloc_grad(&inp)?;
@@ -136,14 +141,15 @@ macro_rules! pool2d {
                 const P: usize,
             > $ConstTrait<K, S, P> for Tensor<(B, C, Const<H>, Const<W>), f32, D, T>
         where
-            Rank2<{ (H + 2 * P - K) / S + 1 }, { (W + 2 * P - K) / S + 1 }>: Sized,
+            Const<H>: ConvAlgebra<K, S, P>,
+            Const<W>: ConvAlgebra<K, S, P>,
         {
             type Output = Tensor<
                 (
                     B,
                     C,
-                    Const<{ (H + 2 * P - K) / S + 1 }>,
-                    Const<{ (W + 2 * P - K) / S + 1 }>,
+                    <Const<H> as ConvAlgebra<K, S, P>>::Convolved,
+                    <Const<W> as ConvAlgebra<K, S, P>>::Convolved,
                 ),
                 f32,
                 D,
@@ -154,7 +160,12 @@ macro_rules! pool2d {
                 let &(batch, chan, _, _) = self.shape();
                 let op = Pool2DOp::new(K, S, P, [batch.size(), chan.size(), H, W]);
                 let (inp, mut tape) = self.split_tape();
-                let mut out = inp.device.try_zeros_like(&(batch, chan, Const, Const))?;
+                let mut out = inp.device.try_zeros_like(&(
+                    batch,
+                    chan,
+                    Default::default(),
+                    Default::default(),
+                ))?;
                 inp.device.forward(op, &inp.storage, &mut out.storage)?;
                 let phantom_out = out.clone();
                 tape.try_alloc_grad(&inp)?;
