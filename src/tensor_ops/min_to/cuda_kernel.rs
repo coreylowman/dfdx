@@ -1,3 +1,4 @@
+use crate::tensor_ops::internal_reshapes::permute_for_reductions;
 use crate::{
     shapes::{Axes, BroadcastStridesTo, ReduceShapeTo, Shape},
     tensor::cuda::{Cuda, CudaArray},
@@ -38,21 +39,22 @@ impl super::MinReduceKernel<f32> for Cuda {
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
 
-        let dims: CudaSlice<usize> = self.dev.take_async(inp.shape.concrete().into())?;
-        let inp_strides: CudaSlice<usize> = self.dev.take_async(inp.strides.into())?;
-        let out_strides = BroadcastStridesTo::<Src, Ax>::broadcast_strides(&dst, dst.strides());
-        let out_strides: CudaSlice<usize> = self.dev.take_async(out_strides.into())?;
+        let (dims, strides) = permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
+        let dims: CudaSlice<usize> = self.dev.take_async(dims)?;
+        let strides: CudaSlice<usize> = self.dev.take_async(strides)?;
 
-        let inp_numel = inp.shape.num_elements();
-        let cfg = LaunchConfig::for_num_elems(inp_numel as u32);
+        let physical_numel = inp.data.len();
+        let chunk_len = physical_numel / dst.num_elements();
+
+        let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
         let params = (
-            inp_numel,         // size_t numel,
-            Src::NUM_DIMS,     // size_t num_dims,
-            &dims,             // const size_t *dims,
+            physical_numel,    // const size_t numel,
+            dims.len(),        // const size_t num_dims,
+            chunk_len,         // const size_t chunk_len,
             inp.data.as_ref(), // const float *inp,
-            &inp_strides,      // const size_t *inp_strides,
-            &mut storage,      // float *out,
-            &out_strides,      // const size_t *out_strides
+            &dims,             // const size_t *dims,
+            &strides,          // const size_t *strides,
+            &mut storage,      // float *out
         );
         unsafe { fwd_fn.launch_async(cfg, params) }?;
         Ok(CudaArray {
@@ -80,11 +82,15 @@ impl super::MinReduceKernel<f32> for Cuda {
             BroadcastStridesTo::<Src, Ax>::broadcast_strides(&grad_out.shape, grad_out.strides);
         let out_strides: CudaSlice<usize> = self.dev.take_async(out_strides.into())?;
 
-        let inp_numel = grad_inp.shape.num_elements();
-        let cfg = LaunchConfig::for_num_elems(inp_numel as u32);
+        let physical_numel = grad_inp.data.len();
+        let virtual_numel = grad_inp.shape.num_elements();
+        let elems_per_thread = (virtual_numel / physical_numel) as f32;
+
+        let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
         let params = (
-            inp_numel,                         // size_t numel,
-            Src::NUM_DIMS,                     // size_t num_dims,
+            physical_numel,                    // const size_t numel,
+            Src::NUM_DIMS,                     // const size_t num_dims,
+            elems_per_thread as f32,           // const float elems_per_thread,
             &dims,                             // const size_t *dims,
             inp.data.as_ref(),                 // const float *inp,
             Arc::make_mut(&mut grad_inp.data), // float *grad_inp,

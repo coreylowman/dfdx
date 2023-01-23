@@ -78,7 +78,7 @@ impl<S: Shape, E: Dtype, D: SumKernel<E>, T: Tape<D>> SumTo for Tensor<S, E, D, 
 mod tests {
     use super::*;
     use crate::tensor_ops::*;
-    use crate::tests::{assert_close, TestDevice};
+    use crate::tests::*;
 
     #[test]
     fn test_sum_1d() {
@@ -124,5 +124,27 @@ mod tests {
         let g = r.sum().backward();
         let g2 = r2.sum().backward();
         assert_close(&g.get(&t).array(), &g2.get(&t).array());
+    }
+
+    #[test]
+    fn test_sum_broadcasted() {
+        let dev: TestDevice = Default::default();
+        let t1 = dev.sample::<Rank2<4, 3>, _>(rand_distr::StandardNormal);
+        let t2 = t1.clone().broadcast::<Rank3<4, 3, 5>, _>();
+        let r1 = t1.trace().sum::<Rank1<4>, _>() * 5.0;
+        let r2 = t2.trace().sum::<Rank1<4>, _>();
+        assert_close_with_tolerance(&r1.array(), &r2.array(), 3e-6);
+        let g = r1.sum().backward();
+        assert_close(&g.get(&t1).array(), &[[5.0; 3]; 4]);
+    }
+
+    #[test]
+    fn test_sum_chunking() {
+        let dev: TestDevice = Default::default();
+        let t = dev.tensor([[1.0; 100]; 60]);
+        let r = t.trace().sum::<Rank1<60>, _>();
+        assert_eq!(r.array(), [100.0; 60]);
+        let g = r.sum().backward();
+        assert_close(&g.get(&t).array(), &t.array());
     }
 }
