@@ -91,7 +91,9 @@ where
     }
 }
 
-/// A trait which allows a module to be used with the [OnDevice] type alias.
+/// A trait which allows a module to be used with the [OnDevice] type alias. This is implemented
+/// automatically for any [ZeroSizedModule].
+///
 /// Here's an example of how this can be implemented for a custom struct:
 /// ```rust
 /// use dfdx::prelude::*;
@@ -111,8 +113,9 @@ pub trait OnDeviceTrait<D> {
     type Output;
 }
 
-/// A type alias that allows types that implement [OnDeviceTrait] to be changed to a corresponding
-/// type on the specified device.
+/// A type alias that yields the type of a module `M` as it would exist on device `D`. This can be
+/// very useful when creating sequential networks that need to be parameterized by a device.
+///
 /// Examples:
 /// ```rust
 /// # use dfdx::nn::*;
@@ -130,8 +133,11 @@ pub trait OnDeviceTrait<D> {
 /// ```
 pub type OnDevice<M, D> = <M as OnDeviceTrait<D>>::Output;
 
+/// Equivalent to `OnDevice<M, Cuda>`
 #[cfg(feature = "cuda")]
 pub type OnCuda<M> = OnDevice<M, crate::prelude::Cuda>;
+
+/// Equivalent to `OnDevice<M, Cpu>`
 pub type OnCpu<M> = OnDevice<M, Cpu>;
 
 impl<T: ZeroSizedModule, D> OnDeviceTrait<D> for T {
