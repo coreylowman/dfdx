@@ -125,3 +125,8 @@ pub type OnCuda<M> = OnDevice<M, crate::prelude::Cuda>;
 
 /// Equivalent to OnDevice<M, Cpu>
 pub type OnCpu<M> = OnDevice<M, Cpu>;
+
+macro_rules! impl_on_device_for_empty {
+    ($type:ident) => {
+    }
+}

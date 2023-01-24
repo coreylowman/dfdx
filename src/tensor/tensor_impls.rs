@@ -2,6 +2,7 @@ use rand::distributions::Distribution;
 
 use super::storage_traits::{DeviceStorage, HasErr};
 use super::{Cpu, OneFillStorage, SampleTensor, ZeroFillStorage};
+use nn::OnDeviceTrait;
 use crate::{
     gradients::{NoneTape, OwnedTape, Tape},
     shapes::*,
@@ -190,6 +191,10 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
     ) -> Result<(), D::Err> {
         self.device.try_fill_with_distr(&mut self.storage, distr)
     }
+}
+
+impl<S: Shape, E: Unit, D1: DeviceStorage, T, D2: DeviceStorage> OnDeviceTrait<D2> for Tensor<S, E, D1, T> {
+    type Output = Tensor<S, E, D2, T>;
 }
 
 pub type Tensor0D<Tape = NoneTape> = Tensor<Rank0, f32, Cpu, Tape>;

@@ -27,7 +27,6 @@ macro_rules! tuple_impls {
             }
         }
 
-        #[allow(non_snake_case)]
         impl<$($name: OnDeviceTrait<D>,)+ D> OnDeviceTrait<D> for ($($name,)+) {
             type Output = ($(OnDevice<$name, D>,)+);
         }
