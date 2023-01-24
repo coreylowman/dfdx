@@ -1,6 +1,6 @@
 use crate::{gradients::*, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{Module, ModuleMut, ResetParams};
+use super::{Module, ModuleMut, ResetParams, OnDeviceTrait};
 
 /// Batch normalization for images as described in
 /// [Batch Normalization: Accelerating Deep Network Training
@@ -187,6 +187,10 @@ impl<const C: usize, D: Device<f32>> GradientUpdate<D, f32> for BatchNorm2D<C, D
         self.bias.update(updater, unused)?;
         Ok(())
     }
+}
+
+impl<const C: usize, D1: Device<f32>, D2: Device<f32>> OnDeviceTrait<D2> for BatchNorm2D<C, D1> {
+    type Output = BatchNorm2D<C, D2>;
 }
 
 #[cfg(test)]

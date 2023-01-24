@@ -1,4 +1,4 @@
-use super::{Module, NonMutableModule, ZeroSizedModule};
+use super::{Module, NonMutableModule, ZeroSizedModule, OnDeviceTrait};
 
 use crate::{gradients::Tape, shapes::*, tensor::Tensor, tensor_ops::*};
 
@@ -30,6 +30,10 @@ where
     fn forward(&self, input: Tensor<Rank4<B, C, H, W>, E, D, T>) -> Self::Output {
         input.reshape()
     }
+}
+
+impl<D> OnDeviceTrait<D> for Flatten2D {
+    type Output = Flatten2D;
 }
 
 #[cfg(feature = "nightly")]

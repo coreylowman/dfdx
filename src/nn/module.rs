@@ -130,9 +130,6 @@ pub trait OnDeviceTrait<D> {
 /// ```
 pub type OnDevice<M, D> = <M as OnDeviceTrait<D>>::Output;
 
-/// Equivalent to OnDevice<M, Cuda>
 #[cfg(feature = "cuda")]
 pub type OnCuda<M> = OnDevice<M, crate::prelude::Cuda>;
-
-/// Equivalent to OnDevice<M, Cpu>
 pub type OnCpu<M> = OnDevice<M, Cpu>;

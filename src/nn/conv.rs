@@ -6,7 +6,7 @@ use crate::{
     tensor_ops::{BroadcastTo, Device, TryConv2DTo},
 };
 
-use super::{Module, ModuleMut, ResetParams};
+use super::{Module, ModuleMut, ResetParams, OnDeviceTrait};
 
 /// **Requires Nightly** Performs 2d convolutions on 3d and 4d images.
 ///
@@ -68,6 +68,14 @@ where
         self.bias.try_fill_with_distr(distr)?;
         Ok(())
     }
+}
+
+impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D1, D2>
+    OnDeviceTrait<D2> for Conv2D<I, O, K, S, P, D1>
+where
+    D1: Device<f32>, D2: Device<f32>,
+{
+    type Output = Conv2D<I, O, K, S, P, D2>;
 }
 
 impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: usize, D, Img>

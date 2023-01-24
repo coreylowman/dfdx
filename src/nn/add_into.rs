@@ -98,6 +98,10 @@ mod tests {
         unique_id::HasUniqueId,
     };
 
+    type TestAddIntoCpu = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
+    #[allow(unused)]
+    type TestAddInto<D> = OnDevice<TestAddIntoCpu, D>;
+
     #[test]
     fn test_add_into_2() {
         let dev: TestDevice = Default::default();

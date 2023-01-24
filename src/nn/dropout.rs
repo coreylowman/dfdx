@@ -1,6 +1,6 @@
 use crate::{gradients::*, shapes::*, tensor::Tensor, tensor_ops::*};
 
-use super::{Module, ModuleMut, ZeroSizedModule};
+use super::{Module, ModuleMut, ZeroSizedModule, OnDeviceTrait};
 
 /// Does nothing as a [Module], and calls [dropout()] as [ModuleMut] with probability `1.0 / N`.
 ///
@@ -129,6 +129,10 @@ impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<D>>> 
     fn forward_mut(&mut self, input: Tensor<S, E, D, OwnedTape<D>>) -> Self::Output {
         dropout(input, self.p)
     }
+}
+
+impl<D> OnDeviceTrait<D> for Dropout {
+    type Output = Dropout;
 }
 
 #[cfg(test)]
