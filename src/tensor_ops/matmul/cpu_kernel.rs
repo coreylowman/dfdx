@@ -30,10 +30,10 @@ pub(crate) fn matmul<M: Dim, K: Dim, N: Dim>(
 
     #[cfg(feature = "cblas")]
     unsafe {
-        let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
         let (lda, a_tr) = super::matrix_strides((m, k), a.strides);
         let (ldb, b_tr) = super::matrix_strides((k, n), b.strides);
         let (ldc, c_tr) = super::matrix_strides((m, n), c.strides);
+        let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
         let layout = if c_tr { ColMajor } else { RowMajor };
         let (a_tr, b_tr) = if c_tr {
             (if a_tr { NoTr } else { Tr }, if b_tr { NoTr } else { Tr })
@@ -41,7 +41,7 @@ pub(crate) fn matmul<M: Dim, K: Dim, N: Dim>(
             (if a_tr { Tr } else { NoTr }, if b_tr { Tr } else { NoTr })
         };
         sgemm(
-            layout, a_tr, b_tr, m, n, k, 1.0, ap, lda, bp, ldb, 1.0, cp, ldc,
+            layout, a_tr, b_tr, m, n, k, 1.0, ap, lda as i32, bp, ldb as i32, 1.0, cp, ldc as i32,
         )
     }
 }
