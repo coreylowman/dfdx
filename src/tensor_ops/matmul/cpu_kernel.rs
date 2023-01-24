@@ -31,33 +31,11 @@ pub(crate) fn matmul<M: Dim, K: Dim, N: Dim>(
     #[cfg(feature = "cblas")]
     unsafe {
         let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
-
-        let (lda, a_tr) = match a.strides {
-            [1, 0] => (m as i32, true),
-            [0, 1] => (k as i32, false),
-            [ld, 1] => (ld as i32, false),
-            [1, ld] => (ld as i32, true),
-            _ => panic!("At least one of a's strides must be 1 for cblas"),
-        };
-
-        let (ldb, b_tr) = match b.strides {
-            [1, 0] => (k as i32, true),
-            [0, 1] => (n as i32, false),
-            [ld, 1] => (ld as i32, false),
-            [1, ld] => (ld as i32, true),
-            _ => panic!("At least one of b's strides must be 1 for cblas"),
-        };
-
-        let (ldc, c_trans) = match c.strides {
-            [1, 0] => (m as i32, true),
-            [0, 1] => (n as i32, false),
-            [ld, 1] => (ld as i32, false),
-            [1, ld] => (ld as i32, true),
-            _ => panic!("At least one of c's strides must be 1 for cblas"),
-        };
-
-        let layout = if c_trans { ColMajor } else { RowMajor };
-        let (a_tr, b_tr) = if c_trans {
+        let (lda, a_tr) = super::matrix_strides((m, k), a.strides);
+        let (ldb, b_tr) = super::matrix_strides((k, n), b.strides);
+        let (ldc, c_tr) = super::matrix_strides((m, n), c.strides);
+        let layout = if c_tr { ColMajor } else { RowMajor };
+        let (a_tr, b_tr) = if c_tr {
             (if a_tr { NoTr } else { Tr }, if b_tr { NoTr } else { Tr })
         } else {
             (if a_tr { Tr } else { NoTr }, if b_tr { Tr } else { NoTr })

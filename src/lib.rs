@@ -185,14 +185,13 @@ pub(crate) mod tests {
         }
     }
 
-    impl<const M: usize> AssertClose for [f32; M] {
+    impl AssertClose for f32 {
         fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)> {
-            for (l, r) in self.iter().zip(rhs.iter()) {
-                if (l - r).abs() > tolerance {
-                    return Some((*l, *r));
-                }
+            if (self - rhs).abs() > tolerance {
+                Some((*self, *rhs))
+            } else {
+                None
             }
-            None
         }
     }
 

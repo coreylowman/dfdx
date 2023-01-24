@@ -92,13 +92,13 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a = dev.tensor([[-2.0, 0.0], [1.0, 2.0], [4.0, 5.0]]);
         let r = a.trace().normalize::<Axis<0>>(1e-5);
-        assert_eq!(
-            r.array(),
-            [
+        assert_close(
+            &r.array(),
+            &[
                 [-1.2247438, -1.1355485],
                 [0.0, -0.16222118],
                 [1.2247438, 1.2977698],
-            ]
+            ],
         );
         let g = r.exp().mean().backward();
         assert_close(

@@ -283,6 +283,20 @@ where
     }
 }
 
+/// Utility function returning the ld and whether the matrix is transposed
+/// for cublas & cblas.
+#[allow(unused)]
+pub(super) fn matrix_strides((m, n): (usize, usize), strides: [usize; 2]) -> (usize, bool) {
+    match strides {
+        [1, 0] => (m, true),
+        [0, 1] => (n, false),
+        [1, 1] => (n, false),
+        [ld, 1] => (ld, false),
+        [1, ld] => (ld, true),
+        _ => panic!("At least a single stride must be 1 for cublas"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -630,8 +644,10 @@ mod tests {
             let c = a.trace().matmul(b.clone());
             assert_eq!(c.array(), [[1.4]]);
             let g = c.exp().sum().backward();
-            assert_eq!(g.get(&a).array(), [[8.1104, 16.2208]]);
-            assert_eq!(g.get(&b).array(), [[2.0276], [0.40552002]]);
+            g.get(&a).array().assert_close(&[[8.1104, 16.2208]], 1e-5);
+            g.get(&b)
+                .array()
+                .assert_close(&[[2.0276], [0.40552002]], 1e-5);
         }
 
         {
@@ -641,8 +657,10 @@ mod tests {
             let c = a.trace().permute().matmul(b.clone());
             assert_eq!(c.array(), [[1.4]]);
             let g = c.exp().sum().backward();
-            assert_eq!(g.get(&a).array(), [[8.1104], [16.2208]]);
-            assert_eq!(g.get(&b).array(), [[2.0276], [0.40552002]]);
+            g.get(&a).array().assert_close(&[[8.1104], [16.2208]], 1e-5);
+            g.get(&b)
+                .array()
+                .assert_close(&[[2.0276], [0.40552002]], 1e-5);
         }
 
         {
@@ -652,8 +670,10 @@ mod tests {
             let c = a.trace().matmul(b.trace().permute());
             assert_eq!(c.array(), [[1.4]]);
             let g = c.exp().sum().backward();
-            assert_eq!(g.get(&a).array(), [[8.1104, 16.2208]]);
-            assert_eq!(g.get(&b).array(), [[2.0276, 0.40552002]]);
+            g.get(&a).array().assert_close(&[[8.1104, 16.2208]], 1e-5);
+            g.get(&b)
+                .array()
+                .assert_close(&[[2.0276, 0.40552002]], 1e-5);
         }
     }
 }

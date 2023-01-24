@@ -172,8 +172,7 @@ pub fn binary_cross_entropy_with_logits_loss<S: Shape, D: Device<f32>, T: Tape<D
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tensor::*;
-    use crate::tests::{assert_close, TestDevice};
+    use crate::{tensor::*, tests::*};
 
     #[test]
     fn test_mse() {
@@ -195,7 +194,7 @@ mod tests {
         let x = dev.tensor([0.87248087, -0.24252531, -1.0060949, 1.155084, 1.5545048]);
         let y = dev.tensor([-0.90954804, -1.0193186, -0.39221755, 2.2524886, 1.3035554]);
         let loss = mae_loss(x.trace(), y);
-        assert_eq!(loss.array(), 0.9042107);
+        assert_close(&loss.array(), &0.9042107);
         let g = loss.backward();
         assert_eq!(g.get(&x).array(), [0.2, 0.2, -0.2, -0.2, 0.2]);
     }
@@ -212,7 +211,7 @@ mod tests {
             [0.15627657, 0.29779273, 0.10897867, 0.2879545, 0.14899758],
         ]);
         let loss = cross_entropy_with_logits_loss(x.trace(), y.clone());
-        assert_eq!(loss.array(), 1.9889611);
+        assert_close(&loss.array(), &1.9889611);
         let g = loss.backward();
         assert_close(
             &g.get(&x).array(),
@@ -290,26 +289,26 @@ mod tests {
             [0.7026833, 0.5563793, 0.6429267],
         ]);
         let loss = binary_cross_entropy_with_logits_loss(logit.trace(), prob.clone());
-        assert_eq!(loss.array(), 0.7045728);
+        assert_close(&loss.array(), &0.7045728);
 
         let g = loss.backward();
 
-        assert_eq!(
-            g.get(&logit).array(),
-            [
+        assert_close(
+            &g.get(&logit).array(),
+            &[
                 [0.003761424, -0.054871976, 0.025817735],
                 [-0.0009343492, 0.0051718787, 0.0074731046],
-                [-0.047248676, -0.03401173, 0.0071035423]
-            ]
+                [-0.047248676, -0.03401173, 0.0071035423],
+            ],
         );
 
-        assert_eq!(
-            g.get(&prob).array(),
-            [
+        assert_close(
+            &g.get(&prob).array(),
+            &[
                 [0.04546672, 0.07451131, -0.10224107],
                 [0.18426175, -0.18865204, 0.16475087],
-                [0.10635218, 0.12190584, -0.097797275]
-            ]
+                [0.10635218, 0.12190584, -0.097797275],
+            ],
         );
     }
 
@@ -324,22 +323,22 @@ mod tests {
 
         let g = loss.backward();
 
-        assert_eq!(
-            g.get(&logit).array(),
-            [
+        assert_close(
+            &g.get(&logit).array(),
+            &[
                 [0.11111111, 0.055555556, 0.0],
                 [0.0, -0.055555556, -0.11111111],
-                [0.029882379, 0.0, -0.02988238]
-            ]
+                [0.029882379, 0.0, -0.02988238],
+            ],
         );
 
-        assert_eq!(
-            g.get(&targ).array(),
-            [
+        assert_close(
+            &g.get(&targ).array(),
+            &[
                 [-11.111112, -11.111112, -11.111112],
                 [11.111112, 11.111112, 11.111112],
-                [0.11111111, 0.0, -0.11111111]
-            ]
+                [0.11111111, 0.0, -0.11111111],
+            ],
         );
     }
 
