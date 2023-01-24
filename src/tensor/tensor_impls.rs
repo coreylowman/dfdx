@@ -2,7 +2,7 @@ use rand::distributions::Distribution;
 
 use super::storage_traits::{DeviceStorage, HasErr};
 use super::{Cpu, OneFillStorage, SampleTensor, ZeroFillStorage};
-use nn::OnDeviceTrait;
+use crate::nn::OnDeviceTrait;
 use crate::{
     gradients::{NoneTape, OwnedTape, Tape},
     shapes::*,

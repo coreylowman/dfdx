@@ -92,13 +92,19 @@ where
 }
 
 /// A trait which allows a module to be used with the [OnDevice] type alias.
-/// Example implementation for Linear
+/// Here's an example of how this can be implemented for a custom struct:
 /// ```rust
-/// // Need two device generics to allow converting from one device to another
-/// impl<const I: usize, const O: usize, D1: Device<f32>, D2: Device<f32>>
-///     OnDeviceTrait<D2> for Linear<I, O, D1>
-/// {
-///     type Output = Linear<I, O, D2>;
+/// use dfdx::prelude::*;
+///
+/// struct MLP<D: Device<f32>> {
+///     l1: Linear<5, 10, D>,
+///     a1: ReLU,
+///     l2: Linear<10, 1, D>,
+/// }
+/// 
+/// // Need two device types to allow converting from one device to another
+/// impl<D1: Device<f32>, D2: Device<f32>> OnDeviceTrait<D2> for MLP<D1> {
+///     type Output = MLP<D2>;
 /// }
 /// ````
 pub trait OnDeviceTrait<D> {
@@ -109,13 +115,18 @@ pub trait OnDeviceTrait<D> {
 /// type on the specified device.
 /// Examples:
 /// ```rust
+/// # use dfdx::nn::*;
 /// type MLP<D> = OnDevice<(Linear<5, 10>, ReLU, Linear<10, 1>), D>;
-/// ````
+/// ```
+///
 /// ```rust
+/// # // Only compiles with cuda
+/// # use dfdx::prelude::*;
+/// #
 /// // All modules exist on the cpu by default
 /// type CpuMLP = (Linear<5, 10>, ReLU, Linear<10, 1>);
-/// type MLP<D> = OnDevice<MLP, D>;
-/// type CudaMLP = OnDevice<MLP, Cuda>;
+/// type MLP<D> = OnDevice<CpuMLP, D>;
+/// type CudaMLP = OnDevice<CpuMLP, Cuda>;
 /// ```
 pub type OnDevice<M, D> = <M as OnDeviceTrait<D>>::Output;
 
@@ -125,8 +136,3 @@ pub type OnCuda<M> = OnDevice<M, crate::prelude::Cuda>;
 
 /// Equivalent to OnDevice<M, Cpu>
 pub type OnCpu<M> = OnDevice<M, Cpu>;
-
-macro_rules! impl_on_device_for_empty {
-    ($type:ident) => {
-    }
-}
