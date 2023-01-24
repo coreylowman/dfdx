@@ -1,4 +1,4 @@
-use crate::{optim::GradientUpdate, shapes::Dtype, tensor_ops::Device};
+use crate::{optim::GradientUpdate, prelude::Cpu, shapes::Dtype, tensor_ops::Device};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
@@ -91,8 +91,37 @@ where
     }
 }
 
+/// A trait which allows a module to be used with the [OnDevice] type alias.
+/// Example implementation for Linear
+/// ```rust
+/// // Need two device generics to allow converting from one device to another
+/// impl<const I: usize, const O: usize, D1: Device<f32>, D2: Device<f32>>
+///     OnDeviceTrait<D2> for Linear<I, O, D1>
+/// {
+///     type Output = Linear<I, O, D2>;
+/// }
+/// ````
 pub trait OnDeviceTrait<D> {
     type Output;
 }
 
+/// A type alias that allows types that implement [OnDeviceTrait] to be changed to a corresponding
+/// type on the specified device.
+/// Examples:
+/// ```rust
+/// type MLP<D> = OnDevice<(Linear<5, 10>, ReLU, Linear<10, 1>), D>;
+/// ````
+/// ```rust
+/// // All modules exist on the cpu by default
+/// type CpuMLP = (Linear<5, 10>, ReLU, Linear<10, 1>);
+/// type MLP<D> = OnDevice<MLP, D>;
+/// type CudaMLP = OnDevice<MLP, Cuda>;
+/// ```
 pub type OnDevice<M, D> = <M as OnDeviceTrait<D>>::Output;
+
+/// Equivalent to OnDevice<M, Cuda>
+#[cfg(feature = "cuda")]
+pub type OnCuda<M> = OnDevice<M, crate::prelude::Cuda>;
+
+/// Equivalent to OnDevice<M, Cpu>
+pub type OnCpu<M> = OnDevice<M, Cpu>;

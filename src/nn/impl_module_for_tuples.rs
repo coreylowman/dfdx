@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::*, tensor_ops::*};
 
-use super::module::{Module, ModuleMut, ResetParams, OnDeviceTrait, OnDevice};
+use super::module::{Module, ModuleMut, OnDevice, OnDeviceTrait, ResetParams};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
