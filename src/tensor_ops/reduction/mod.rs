@@ -1,3 +1,13 @@
+pub use super::*;
+
+pub(crate) mod max_to;
+pub(crate) mod min_to;
+pub(crate) mod sum_to;
+
+pub use max_to::MaxTo;
+pub use min_to::MinTo;
+pub use sum_to::SumTo;
+
 #[cfg(feature = "cuda")]
 use crate::prelude::Axes;
 #[cfg(feature = "cuda")]
