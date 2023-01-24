@@ -23,6 +23,12 @@ use mnist::*;
 use rand::prelude::{SeedableRng, StdRng};
 use std::time::Instant;
 
+#[cfg(feature = "cuda")]
+type Dev = Cuda;
+
+#[cfg(not(feature = "cuda"))]
+type Dev = Cpu;
+
 struct MnistDataset {
     img: Vec<f32>,
     lbl: Vec<usize>,
@@ -43,11 +49,11 @@ impl MnistDataset {
 
     pub fn get_batch<const B: usize>(
         &self,
-        dev: &Cpu,
+        dev: &Dev,
         idxs: [usize; B],
     ) -> (
-        Tensor<Rank2<B, 784>, f32, Cpu>,
-        Tensor<Rank2<B, 10>, f32, Cpu>,
+        Tensor<Rank2<B, 784>, f32, Dev>,
+        Tensor<Rank2<B, 10>, f32, Dev>,
     ) {
         let mut img_data: Vec<f32> = Vec::with_capacity(B * 784);
         let mut lbl_data: Vec<f32> = Vec::with_capacity(B * 10);
@@ -68,10 +74,10 @@ impl MnistDataset {
 
 // our network structure
 type Mlp = (
-    (Linear<784, 512>, ReLU),
-    (Linear<512, 128>, ReLU),
-    (Linear<128, 32>, ReLU),
-    Linear<32, 10>,
+    (Linear<784, 512, Dev>, ReLU),
+    (Linear<512, 128, Dev>, ReLU),
+    (Linear<128, 32, Dev>, ReLU),
+    Linear<32, 10, Dev>,
 );
 
 // training batch size
@@ -88,12 +94,12 @@ fn main() {
     println!("Loading mnist from args[1] = {mnist_path}");
     println!("Override mnist path with `cargo run --example 06-mnist -- <path to mnist>`");
 
-    let dev: Cpu = Default::default();
+    let dev: Dev = Default::default();
     let mut rng = StdRng::seed_from_u64(0);
 
     // initialize model and optimizer
     let mut model: Mlp = dev.build_module();
-    let mut opt: Adam<Mlp> = Default::default();
+    let mut opt: Adam<Mlp, Dev> = Default::default();
 
     // initialize dataset
     let dataset = MnistDataset::train(&mnist_path);
