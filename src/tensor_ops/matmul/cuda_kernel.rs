@@ -22,29 +22,9 @@ fn sgemm_config<M: Dim, K: Dim, N: Dim>(
     beta: f32,
     out_strides: [usize; 2],
 ) -> (GemmConfig<f32>, bool) {
-    let (lhs_stride, lhs_trans) = match lhs_strides {
-        [1, 0] => (m.size(), true),
-        [0, 1] => (k.size(), false),
-        [ld, 1] => (ld, false),
-        [1, ld] => (ld, true),
-        _ => panic!("At least one of a's strides must be 1 for cublas"),
-    };
-
-    let (rhs_stride, rhs_trans) = match rhs_strides {
-        [1, 0] => (k.size(), true),
-        [0, 1] => (n.size(), false),
-        [ld, 1] => (ld, false),
-        [1, ld] => (ld, true),
-        _ => panic!("At least one of b's strides must be 1 for cublas"),
-    };
-
-    let (out_stride, out_trans) = match out_strides {
-        [1, 0] => (m.size(), true),
-        [0, 1] => (n.size(), false),
-        [ld, 1] => (ld, false),
-        [1, ld] => (ld, true),
-        _ => panic!("At least one of c's strides must be 1 for cublas"),
-    };
+    let (lhs_stride, lhs_trans) = super::matrix_strides((m.size(), k.size()), lhs_strides);
+    let (rhs_stride, rhs_trans) = super::matrix_strides((k.size(), n.size()), rhs_strides);
+    let (out_stride, out_trans) = super::matrix_strides((m.size(), n.size()), out_strides);
 
     if !out_trans {
         // out is stored in row major format

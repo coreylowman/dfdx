@@ -181,6 +181,7 @@ mod var_to;
 pub(crate) mod cpu_kernels;
 #[cfg(feature = "cuda")]
 pub(crate) mod cuda_kernels;
+mod internal_reshapes;
 pub(crate) mod ops;
 
 pub use abs::abs;
@@ -236,6 +237,6 @@ pub(crate) use conv2d::TryConv2DTo;
 #[cfg(feature = "nightly")]
 mod pool2d;
 #[cfg(feature = "nightly")]
-pub use pool2d::TryPool2D;
+pub(crate) use pool2d::{ConstAvgPool2D, ConstMaxPool2D, ConstMinPool2D};
 #[cfg(feature = "nightly")]
-pub(crate) use pool2d::TryPool2DTo;
+pub use pool2d::{TryAvgPool2D, TryMaxPool2D, TryMinPool2D};

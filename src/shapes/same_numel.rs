@@ -8,10 +8,10 @@ pub trait HasSameNumelAs<Dst> {}
 
 macro_rules! impl_same_num_elements {
     ([$($SrcVs:tt),*], $SrcNumEl:tt, [$($DstVs:tt),*], $DstNumEl:tt) => {
-#[cfg(feature = "nightly")]
-impl<$(const $SrcVs: usize, )* $(const $DstVs: usize, )*> HasSameNumelAs<($(Const<$SrcVs>, )*)> for ($(Const<$DstVs>, )*)
-where
-    Assert<{ $DstNumEl == $SrcNumEl }>: ConstTrue {}
+        #[cfg(feature = "nightly")]
+        impl<$(const $SrcVs: usize, )* $(const $DstVs: usize, )*> HasSameNumelAs<($(Const<$SrcVs>, )*)> for ($(Const<$DstVs>, )*)
+        where
+            Assert<{ $DstNumEl == $SrcNumEl }>: ConstTrue {}
     };
 }
 

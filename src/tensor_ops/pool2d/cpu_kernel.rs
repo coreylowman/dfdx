@@ -1,194 +1,265 @@
-use crate::shapes::{Const, Dim};
-use crate::tensor::cpu::{Cpu, StridedArray, View, ViewMut};
+use crate::shapes::*;
+use crate::tensor::cpu::Cpu;
 
-use super::{pooling, Pool2DBatchedKernel, Pool2DKernel};
+use std::sync::Arc;
 
-trait Fold {
-    fn init() -> f32;
-    fn fold(accum: &mut f32, item: &f32);
-    fn finalize(accum: &mut f32, num: f32);
-    fn filter(item: &f32, grad: &f32) -> bool;
-}
-
-impl Fold for pooling::Avg {
-    fn init() -> f32 {
-        0.0
-    }
-    fn fold(accum: &mut f32, item: &f32) {
-        *accum += item;
-    }
-    fn finalize(accum: &mut f32, num: f32) {
-        *accum /= num;
-    }
-    fn filter(_: &f32, _: &f32) -> bool {
-        true
+fn make_4d<S: Shape>(strides: S::Concrete) -> [usize; 4] {
+    match S::NUM_DIMS {
+        3 => [0, strides[0], strides[1], strides[2]],
+        4 => [strides[0], strides[1], strides[2], strides[3]],
+        _ => panic!("Only implemented for 3d & 4d arrays"),
     }
 }
 
-impl Fold for pooling::Max {
-    fn init() -> f32 {
-        f32::NEG_INFINITY
-    }
-    fn fold(accum: &mut f32, item: &f32) {
-        *accum = accum.max(*item);
-    }
-    fn finalize(_: &mut f32, _: f32) {}
-    fn filter(a: &f32, b: &f32) -> bool {
-        a == b
-    }
-}
-
-impl Fold for pooling::Min {
-    fn init() -> f32 {
-        f32::INFINITY
-    }
-    fn fold(accum: &mut f32, item: &f32) {
-        *accum = accum.min(*item);
-    }
-    fn finalize(_: &mut f32, _: f32) {}
-    fn filter(a: &f32, b: &f32) -> bool {
-        a == b
-    }
-}
-
-trait Pooling<const K: usize, const S: usize, const P: usize> {
-    #[rustfmt::skip]
-    fn forward<C: Dim, const H: usize, const W: usize>(
-        inp: View<(C, Const<H>, Const<W>), f32>,
-        out: &mut ViewMut<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
-    );
-    #[rustfmt::skip]
-    fn backward<C: Dim, const H: usize, const W: usize>(
-        inp: View<(C, Const<H>, Const<W>), f32>,
-        inp_grad: &mut ViewMut<(C, Const<H>, Const<W>), f32>,
-        out: View<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
-        out_grad: View<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
-    );
-}
-
-impl<F: 'static + Fold, const K: usize, const S: usize, const P: usize> Pooling<K, S, P> for F {
-    #[rustfmt::skip]
-    fn forward<C: Dim, const H: usize, const W: usize>(
-        inp: View<(C, Const<H>, Const<W>), f32>,
-        out: &mut ViewMut<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
-    ) {
-        for c in 0..inp.shape.0.size() {
-            for oh in 0..out.shape.1.size() {
-                for ow in 0..out.shape.2.size() {
-                    let mut tmp = Self::init();
-                    for k1 in 0..K {
-                        let y = (oh * S + k1).checked_sub(P);
-                        for k2 in 0..K {
-                            let x = (ow * S + k2).checked_sub(P);
-                            if let Some((y, x)) = y.zip(x) {
-                                if y < H && x < W {
-                                    Self::fold(&mut tmp, inp.idx(c).idx(y).idx(x));
-                                }
-                            }
-                        }
-                    }
-                    Self::finalize(&mut tmp, (K * K) as f32);
-                    *out.idx_mut(c).idx_mut(oh).idx_mut(ow) = tmp;
-                }
-            }
-        }
-    }
-
-    #[rustfmt::skip]
-    fn backward<C: Dim, const H: usize, const W: usize>(
-        inp: View<(C, Const<H>, Const<W>), f32>,
-        inp_grad: &mut ViewMut<(C, Const<H>, Const<W>), f32>,
-        out: View<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
-        out_grad: View<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
-    ) {
-        for c in 0..inp.shape.0.size() {
-            for oh in 0..out.shape.1.size() {
-                for ow in 0..out.shape.2.size() {
-                    let mut g = *out_grad.idx(c).idx(oh).idx(ow);
-                    Self::finalize(&mut g, (K * K) as f32);
-                    for k1 in 0..K {
-                        let y = (oh * S + k1).checked_sub(P);
-                        for k2 in 0..K {
-                            let x = (ow * S + k2).checked_sub(P);
-                            if let Some((y, x)) = y.zip(x) {
-                                if x < W && y < H && Self::filter(inp.idx(c).idx(y).idx(x), out.idx(c).idx(oh).idx(ow)) {
-                                    *inp_grad.idx_mut(c).idx_mut(y).idx_mut(x) += g;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-impl<const K: usize, const S: usize, const P: usize, Kind: Pooling<K, S, P>>
-    Pool2DKernel<f32, Kind, K, S, P> for Cpu
-{
-    #[rustfmt::skip]
-    fn forward<C: Dim, const H: usize, const W: usize>(
+impl super::AvgPool2DKernel<f32> for Cpu {
+    fn forward<I: Shape, O: Shape>(
         &self,
-        inp: &Self::Storage<(C, Const<H>, Const<W>), f32>,
-    ) -> Result<
-        Self::Storage<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
-        Self::Err,
-    > {
-        let (c, _, _) = inp.shape;
-        let mut out: StridedArray<_, f32> = StridedArray::new((c, Const, Const))?;
-        Kind::forward::<C, H, W>(inp.view(), &mut out.view_mut());
-        Ok(out)
-    }
-
-    #[rustfmt::skip]
-    fn backward<C: Dim, const H: usize, const W: usize>(
-        &self,
-        inp: &Self::Storage<(C, Const<H>, Const<W>), f32>,
-        grad_inp: &mut Self::Storage<(C, Const<H>, Const<W>), f32>,
-        out: &Self::Storage<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
-        grad_out: &Self::Storage<(C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
+        op: super::Pool2DOp,
+        inp: &Self::Storage<I, f32>,
+        out: &mut Self::Storage<O, f32>,
     ) -> Result<(), Self::Err> {
-        Kind::backward::<C, H, W>(inp.view(), &mut grad_inp.view_mut(), out.view(), grad_out.view());
+        let istr = make_4d::<I>(inp.strides);
+        let ostr = make_4d::<O>(out.strides);
+
+        let buf = inp.data.as_ref();
+        let out_buf = Arc::make_mut(&mut out.data);
+        for b in 0..op.batch {
+            for c in 0..op.chan {
+                for oh in 0..op.h_out {
+                    for ow in 0..op.w_out {
+                        let mut tmp = 0.0;
+                        for k1 in 0..op.kernel {
+                            let y = (oh * op.stride + k1).checked_sub(op.padding);
+                            for k2 in 0..op.kernel {
+                                let x = (ow * op.stride + k2).checked_sub(op.padding);
+                                if let Some((y, x)) = y.zip(x) {
+                                    if y < op.h_in && x < op.w_in {
+                                        let inp_idx =
+                                            b * istr[0] + c * istr[1] + y * istr[2] + x * istr[3];
+                                        tmp += buf[inp_idx];
+                                    }
+                                }
+                            }
+                        }
+                        tmp /= (op.kernel * op.kernel) as f32;
+                        out_buf[b * ostr[0] + c * ostr[1] + oh * ostr[2] + ow * ostr[3]] = tmp;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn backward<I: Shape, O: Shape>(
+        &self,
+        op: super::Pool2DOp,
+        inp: &Self::Storage<I, f32>,
+        grad_inp: &mut Self::Storage<I, f32>,
+        out: &Self::Storage<O, f32>,
+        grad_out: &Self::Storage<O, f32>,
+    ) -> Result<(), Self::Err> {
+        let istr = make_4d::<I>(inp.strides);
+        let ostr = make_4d::<O>(out.strides);
+
+        let ginp_buf = Arc::make_mut(&mut grad_inp.data);
+        let buf = grad_out.data.as_ref();
+
+        for b in 0..op.batch {
+            for c in 0..op.chan {
+                for oh in 0..op.h_out {
+                    for ow in 0..op.w_out {
+                        let g = buf[b * ostr[0] + c * ostr[1] + oh * ostr[2] + ow * ostr[3]]
+                            / (op.kernel * op.kernel) as f32;
+
+                        for k1 in 0..op.kernel {
+                            let y = (oh * op.stride + k1).checked_sub(op.padding);
+                            for k2 in 0..op.kernel {
+                                let x = (ow * op.stride + k2).checked_sub(op.padding);
+                                if let Some((y, x)) = y.zip(x) {
+                                    if x < op.w_in && y < op.h_in {
+                                        ginp_buf[b * istr[0]
+                                            + c * istr[1]
+                                            + y * istr[2]
+                                            + x * istr[3]] += g;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         Ok(())
     }
 }
 
-impl<const K: usize, const S: usize, const P: usize, Kind: Pooling<K, S, P>>
-    Pool2DBatchedKernel<f32, Kind, K, S, P> for Cpu
-{
-    #[rustfmt::skip]
-    fn forward<B: Dim, C: Dim, const H: usize, const W: usize>(
+impl super::MaxPool2DKernel<f32> for Cpu {
+    fn forward<I: Shape, O: Shape>(
         &self,
-        inp: &Self::Storage<(B, C, Const<H>, Const<W>), f32>,
-    ) -> Result<
-        Self::Storage<(B, C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
-        Self::Err,
-    > {
-        let (batch, chan, _, _) = inp.shape;
-        let mut out: StridedArray<_, f32> = StridedArray::new((batch, chan, Const, Const))?;
-        let inp = inp.view();
-        let mut out_view = out.view_mut();
-        for b in 0..batch.size() {
-            Kind::forward::<C, H, W>(inp.idx(b), &mut out_view.idx_mut(b));
-        }
-        Ok(out)
-    }
-
-    #[rustfmt::skip]
-    fn backward<B: Dim, C: Dim, const H: usize, const W: usize>(
-        &self,
-        inp: &Self::Storage<(B, C, Const<H>, Const<W>), f32>,
-        grad_inp: &mut Self::Storage<(B, C, Const<H>, Const<W>), f32>,
-        out: &Self::Storage<(B, C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
-        grad_out: &Self::Storage<(B, C, Const<{ (H + 2 * P - K) / S + 1 }>, Const<{ (W + 2 * P - K) / S + 1 }>), f32>,
+        op: super::Pool2DOp,
+        inp: &Self::Storage<I, f32>,
+        out: &mut Self::Storage<O, f32>,
     ) -> Result<(), Self::Err> {
-        let (batch, _, _, _) = inp.shape;
-        let inp = inp.view();
-        let mut grad_inp = grad_inp.view_mut();
-        let out = out.view();
-        let grad_out = grad_out.view();
-        for b in 0..batch.size() {
-            Kind::backward::<C, H, W>(inp.idx(b), &mut grad_inp.idx_mut(b), out.idx(b), grad_out.idx(b));
+        let istr = make_4d::<I>(inp.strides);
+        let ostr = make_4d::<O>(out.strides);
+
+        let buf = inp.data.as_ref();
+        let out_buf = Arc::make_mut(&mut out.data);
+        for b in 0..op.batch {
+            for c in 0..op.chan {
+                for oh in 0..op.h_out {
+                    for ow in 0..op.w_out {
+                        let mut tmp = f32::NEG_INFINITY;
+                        for k1 in 0..op.kernel {
+                            let y = (oh * op.stride + k1).checked_sub(op.padding);
+                            for k2 in 0..op.kernel {
+                                let x = (ow * op.stride + k2).checked_sub(op.padding);
+                                if let Some((y, x)) = y.zip(x) {
+                                    if y < op.h_in && x < op.w_in {
+                                        tmp = tmp.max(
+                                            buf[b * istr[0]
+                                                + c * istr[1]
+                                                + y * istr[2]
+                                                + x * istr[3]],
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        out_buf[b * ostr[0] + c * ostr[1] + oh * ostr[2] + ow * ostr[3]] = tmp;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+    fn backward<I: Shape, O: Shape>(
+        &self,
+        op: super::Pool2DOp,
+        inp: &Self::Storage<I, f32>,
+        grad_inp: &mut Self::Storage<I, f32>,
+        out: &Self::Storage<O, f32>,
+        grad_out: &Self::Storage<O, f32>,
+    ) -> Result<(), Self::Err> {
+        let istr = make_4d::<I>(inp.strides);
+        let ostr = make_4d::<O>(out.strides);
+
+        let inp_buf = inp.data.as_ref();
+        let ginp_buf = Arc::make_mut(&mut grad_inp.data);
+        let out_buf = out.data.as_ref();
+        let gout_buf = grad_out.data.as_ref();
+
+        for b in 0..op.batch {
+            for c in 0..op.chan {
+                for oh in 0..op.h_out {
+                    for ow in 0..op.w_out {
+                        let out_idx = b * ostr[0] + c * ostr[1] + oh * ostr[2] + ow * ostr[3];
+                        let go = gout_buf[out_idx];
+                        let vo = out_buf[out_idx];
+                        for k1 in 0..op.kernel {
+                            let y = (oh * op.stride + k1).checked_sub(op.padding);
+                            for k2 in 0..op.kernel {
+                                let x = (ow * op.stride + k2).checked_sub(op.padding);
+                                if let Some((y, x)) = y.zip(x) {
+                                    if x < op.w_in && y < op.h_in {
+                                        let inp_idx =
+                                            b * istr[0] + c * istr[1] + y * istr[2] + x * istr[3];
+                                        if inp_buf[inp_idx] == vo {
+                                            ginp_buf[inp_idx] += go;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl super::MinPool2DKernel<f32> for Cpu {
+    fn forward<I: Shape, O: Shape>(
+        &self,
+        op: super::Pool2DOp,
+        inp: &Self::Storage<I, f32>,
+        out: &mut Self::Storage<O, f32>,
+    ) -> Result<(), Self::Err> {
+        let istr = make_4d::<I>(inp.strides);
+        let ostr = make_4d::<O>(out.strides);
+
+        let buf = inp.data.as_ref();
+        let out_buf = Arc::make_mut(&mut out.data);
+        for b in 0..op.batch {
+            for c in 0..op.chan {
+                for oh in 0..op.h_out {
+                    for ow in 0..op.w_out {
+                        let mut tmp = f32::INFINITY;
+                        for k1 in 0..op.kernel {
+                            let y = (oh * op.stride + k1).checked_sub(op.padding);
+                            for k2 in 0..op.kernel {
+                                let x = (ow * op.stride + k2).checked_sub(op.padding);
+                                if let Some((y, x)) = y.zip(x) {
+                                    if y < op.h_in && x < op.w_in {
+                                        tmp = tmp.min(
+                                            buf[b * istr[0]
+                                                + c * istr[1]
+                                                + y * istr[2]
+                                                + x * istr[3]],
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        out_buf[b * ostr[0] + c * ostr[1] + oh * ostr[2] + ow * ostr[3]] = tmp;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+    fn backward<I: Shape, O: Shape>(
+        &self,
+        op: super::Pool2DOp,
+        inp: &Self::Storage<I, f32>,
+        grad_inp: &mut Self::Storage<I, f32>,
+        out: &Self::Storage<O, f32>,
+        grad_out: &Self::Storage<O, f32>,
+    ) -> Result<(), Self::Err> {
+        let istr = make_4d::<I>(inp.strides);
+        let ostr = make_4d::<O>(out.strides);
+
+        let inp_buf = inp.data.as_ref();
+        let ginp_buf = Arc::make_mut(&mut grad_inp.data);
+        let out_buf = out.data.as_ref();
+        let gout_buf = grad_out.data.as_ref();
+
+        for b in 0..op.batch {
+            for c in 0..op.chan {
+                for oh in 0..op.h_out {
+                    for ow in 0..op.w_out {
+                        let out_idx = b * ostr[0] + c * ostr[1] + oh * ostr[2] + ow * ostr[3];
+                        let go = gout_buf[out_idx];
+                        let vo = out_buf[out_idx];
+                        for k1 in 0..op.kernel {
+                            let y = (oh * op.stride + k1).checked_sub(op.padding);
+                            for k2 in 0..op.kernel {
+                                let x = (ow * op.stride + k2).checked_sub(op.padding);
+                                if let Some((y, x)) = y.zip(x) {
+                                    if x < op.w_in && y < op.h_in {
+                                        let inp_idx =
+                                            b * istr[0] + c * istr[1] + y * istr[2] + x * istr[3];
+                                        if inp_buf[inp_idx] == vo {
+                                            ginp_buf[inp_idx] += go;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         Ok(())
     }

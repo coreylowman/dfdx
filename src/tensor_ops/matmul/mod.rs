@@ -283,6 +283,20 @@ where
     }
 }
 
+/// Utility function returning the ld and whether the matrix is transposed
+/// for cublas & cblas.
+#[allow(unused)]
+pub(super) fn matrix_strides((m, n): (usize, usize), strides: [usize; 2]) -> (usize, bool) {
+    match strides {
+        [1, 0] => (m, true),
+        [0, 1] => (n, false),
+        [1, 1] => (n, false),
+        [ld, 1] => (ld, false),
+        [1, ld] => (ld, true),
+        _ => panic!("At least a single stride must be 1 for cublas"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -555,5 +569,111 @@ mod tests {
             ],
         );
         assert_close(&g.get(&b).array(), &[-0.13630435, -1.6781758, -0.75171506]);
+    }
+
+    #[test]
+    fn test_small_matmul_vv() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor([0.5f32]);
+        let b = dev.tensor([2.0f32]);
+        let c = a.trace().matmul(b.clone());
+        assert_eq!(c.array(), [[1.0]]);
+        let g = c.exp().sum().backward();
+        assert_eq!(g.get(&a).array(), [5.4365635]);
+        assert_eq!(g.get(&b).array(), [1.3591409]);
+    }
+
+    #[test]
+    fn test_small_matmul_vm() {
+        let dev: TestDevice = Default::default();
+
+        // 1 * 1x1
+        let a = dev.tensor([0.5f32]);
+        let b = dev.tensor([[2.0f32]]);
+        let c = a.trace().matmul(b.clone());
+        assert_eq!(c.array(), [1.0]);
+        let g = c.exp().sum().backward();
+        assert_eq!(g.get(&a).array(), [5.4365635]);
+        assert_eq!(g.get(&b).array(), [[1.3591409]]);
+
+        // 1 * 1x1 (permuted)
+        let c = a.trace().matmul(b.trace().permute());
+        assert_eq!(c.array(), [1.0]);
+        let g = c.exp().sum().backward();
+        assert_eq!(g.get(&a).array(), [5.4365635]);
+        assert_eq!(g.get(&b).array(), [[1.3591409]]);
+
+        // 1 * 1x2
+        let a = dev.tensor([0.5f32]);
+        let b = dev.tensor([[2.0f32, 4.0]]);
+        let c = a.trace().matmul(b.clone());
+        assert_eq!(c.array(), [1.0, 2.0]);
+        let g = c.exp().sum().backward();
+        assert_eq!(g.get(&a).array(), [34.99279]);
+        assert_eq!(g.get(&b).array(), [[1.3591409, 3.694528]]);
+
+        // 1 * 1x2 (permuted)
+        let a = dev.tensor([0.5f32]);
+        let b = dev.tensor([[2.0f32], [4.0]]);
+        let c = a.trace().matmul(b.trace().permute());
+        assert_eq!(c.array(), [1.0, 2.0]);
+        let g = c.exp().sum().backward();
+        assert_eq!(g.get(&a).array(), [34.99279]);
+        assert_eq!(g.get(&b).array(), [[1.3591409], [3.694528]]);
+    }
+
+    #[test]
+    fn test_small_matmul_mm() {
+        let dev: TestDevice = Default::default();
+
+        {
+            // 1x1 * 1x1
+            let a = dev.tensor([[0.5f32]]);
+            let b = dev.tensor([[2.0f32]]);
+            let c = a.trace().matmul(b.clone());
+            assert_eq!(c.array(), [[1.0]]);
+            let g = c.exp().sum().backward();
+            assert_eq!(g.get(&a).array(), [[5.4365635]]);
+            assert_eq!(g.get(&b).array(), [[1.3591409]]);
+        }
+
+        {
+            // 1x2 * 2x1
+            let a = dev.tensor([[0.5f32, 0.1]]);
+            let b = dev.tensor([[2.0f32], [4.0]]);
+            let c = a.trace().matmul(b.clone());
+            assert_eq!(c.array(), [[1.4]]);
+            let g = c.exp().sum().backward();
+            g.get(&a).array().assert_close(&[[8.1104, 16.2208]], 1e-5);
+            g.get(&b)
+                .array()
+                .assert_close(&[[2.0276], [0.40552002]], 1e-5);
+        }
+
+        {
+            // 1x2 (permuted) * 2x1
+            let a = dev.tensor([[0.5f32], [0.1]]);
+            let b = dev.tensor([[2.0f32], [4.0]]);
+            let c = a.trace().permute().matmul(b.clone());
+            assert_eq!(c.array(), [[1.4]]);
+            let g = c.exp().sum().backward();
+            g.get(&a).array().assert_close(&[[8.1104], [16.2208]], 1e-5);
+            g.get(&b)
+                .array()
+                .assert_close(&[[2.0276], [0.40552002]], 1e-5);
+        }
+
+        {
+            // 1x2 * 2x1 (permuted)
+            let a = dev.tensor([[0.5f32, 0.1]]);
+            let b = dev.tensor([[2.0f32, 4.0]]);
+            let c = a.trace().matmul(b.trace().permute());
+            assert_eq!(c.array(), [[1.4]]);
+            let g = c.exp().sum().backward();
+            g.get(&a).array().assert_close(&[[8.1104, 16.2208]], 1e-5);
+            g.get(&b)
+                .array()
+                .assert_close(&[[2.0276, 0.40552002]], 1e-5);
+        }
     }
 }
