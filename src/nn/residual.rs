@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::*, tensor::SplitTape, tensor_ops::Device};
 
-use super::{Module, ModuleMut, ResetParams};
+use super::{Module, ModuleMut, ResetParams, OnDevice, OnDeviceTrait};
 
 /// A residual connection around `F`: `F(x) + x`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -36,6 +36,10 @@ impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>> ResetParams<D, E> for Residua
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.0.try_reset_params()
     }
+}
+
+impl<F: OnDeviceTrait<D>, D> OnDeviceTrait<D> for Residual<F> {
+    type Output = Residual<OnDevice<F, D>>;
 }
 
 impl<T: SplitTape + std::ops::Add<T, Output = T>, F: Module<T, Output = T>> Module<T>

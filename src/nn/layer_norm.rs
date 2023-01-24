@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{Module, ModuleMut, ResetParams};
+use super::{Module, ModuleMut, ResetParams, OnDeviceTrait};
 
 /// Implements layer normalization as described in [Layer Normalization](https://arxiv.org/abs/1607.06450).
 ///
@@ -52,6 +52,10 @@ impl<const M: usize, D: Device<f32>> GradientUpdate<D, f32> for LayerNorm1D<M, D
         self.beta.update(updater, unused)?;
         Ok(())
     }
+}
+
+impl<const M: usize, D1: Device<f32>, D2: Device<f32>> OnDeviceTrait<D2> for LayerNorm1D<M, D1> {
+    type Output = LayerNorm1D<M, D2>;
 }
 
 impl<const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<Rank1<M>, f32, D, T>>

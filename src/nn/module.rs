@@ -133,3 +133,7 @@ pub type OnDevice<M, D> = <M as OnDeviceTrait<D>>::Output;
 #[cfg(feature = "cuda")]
 pub type OnCuda<M> = OnDevice<M, crate::prelude::Cuda>;
 pub type OnCpu<M> = OnDevice<M, Cpu>;
+
+impl<T: ZeroSizedModule, D> OnDeviceTrait<D> for T {
+    type Output = T;
+}

@@ -1,5 +1,5 @@
 use crate::{
-    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual},
+    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual, OnDeviceTrait},
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
@@ -86,6 +86,12 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpd
         self.norm2.update(updater, unused)?;
         Ok(())
     }
+}
+
+impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device<f32>>
+    OnDeviceTrait<D2> for TransformerEncoderBlock<M, H, F, D1>
+{
+    type Output = TransformerEncoderBlock<M, H, F, D2>;
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, Src> Module<Src>

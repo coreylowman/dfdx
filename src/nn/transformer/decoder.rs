@@ -1,5 +1,5 @@
 use crate::{
-    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual},
+    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual, OnDeviceTrait},
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
@@ -45,6 +45,12 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f
     {
         self.0.update(updater, unused)
     }
+}
+
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D1: Device<f32>, D2: Device<f32>>
+    OnDeviceTrait<D2> for TransformerDecoder<M, H, F, L, D1>
+{
+    type Output = TransformerDecoder<M, H, F, L, D2>;
 }
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D, Tgt, Mem: Clone>
@@ -145,6 +151,12 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpd
         self.norm3.update(updater, unused)?;
         Ok(())
     }
+}
+
+impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device<f32>>
+    OnDeviceTrait<D2> for TransformerDecoderBlock<M, H, F, D1>
+{
+    type Output = TransformerDecoderBlock<M, H, F, D2>;
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, Tgt, Mem> Module<(Tgt, Mem)>

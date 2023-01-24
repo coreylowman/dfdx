@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{Module, NonMutableModule, ZeroSizedModule, OnDeviceTrait};
+use super::module::{Module, NonMutableModule, ZeroSizedModule};
 
 macro_rules! activation_impls {
     ($struct_name:ident, $func_name:ident, #[$docstring:meta]) => {
@@ -18,10 +18,6 @@ macro_rules! activation_impls {
             fn forward(&self, input: Tensor<S, E, D, T>) -> Self::Output {
                 $func_name(input)
             }
-        }
-
-        impl<D> OnDeviceTrait<D> for $struct_name {
-            type Output = $struct_name;
         }
     };
 }

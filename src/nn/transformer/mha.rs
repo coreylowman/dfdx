@@ -67,6 +67,12 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
     }
 }
 
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D1: Device<f32>, D2: Device<f32>>
+    OnDeviceTrait<D2> for MultiHeadAttention<M, H, K, V, D1>
+{
+    type Output = MultiHeadAttention<M, H, K, V, D2>;
+}
+
 #[cfg(feature = "nightly")]
 impl<
         const M: usize,

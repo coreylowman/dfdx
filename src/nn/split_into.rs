@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor::*, tensor_ops::Device};
 
-use super::{Module, ModuleMut, ResetParams};
+use super::{Module, ModuleMut, ResetParams, OnDevice, OnDeviceTrait};
 
 /// Splits input into multiple heads. `T` should be a tuple,
 /// where every element of the tuple accepts the same input type.
@@ -37,6 +37,10 @@ impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for SplitIn
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.0.try_reset_params()
     }
+}
+
+impl<T: OnDeviceTrait<D>, D> OnDeviceTrait<D> for SplitInto<T> {
+    type Output = SplitInto<OnDevice<T, D>>;
 }
 
 macro_rules! tuple_impls {
