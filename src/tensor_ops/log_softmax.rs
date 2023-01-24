@@ -57,9 +57,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = a.trace().log_softmax();
-        assert_eq!(
-            r.array(),
-            [-4.4519143, -3.4519143, -2.4519143, -1.4519143, -0.4519143]
+        assert_close(
+            &r.array(),
+            &[-4.4519143, -3.4519143, -2.4519143, -1.4519143, -0.4519143],
         );
         let g = r.mean().backward();
         assert_close(

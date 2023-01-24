@@ -58,7 +58,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = a.trace().logsumexp();
-        assert_eq!(r.array(), 2.4519143);
+        assert_close(&r.array(), &2.4519143);
         let g = r.backward();
         assert_close(
             &g.get(&a).array(),
