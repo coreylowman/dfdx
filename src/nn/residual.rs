@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::*, tensor::SplitTape, tensor_ops::Device};
 
-use super::{Module, ModuleMut, ResetParams, OnDevice, OnDeviceTrait};
+use super::{Module, ModuleMut, OnDevice, OnDeviceTrait, ResetParams};
 
 /// A residual connection around `F`: `F(x) + x`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).

@@ -1,5 +1,8 @@
 use crate::{
-    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual, OnDeviceTrait},
+    nn::{
+        LayerNorm1D, Linear, Module, ModuleMut, OnDeviceTrait, ReLU, Repeated, ResetParams,
+        Residual,
+    },
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
@@ -47,8 +50,14 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize, D1: Device<f32>, D2: Device<f32>>
-    OnDeviceTrait<D2> for TransformerDecoder<M, H, F, L, D1>
+impl<
+        const M: usize,
+        const H: usize,
+        const F: usize,
+        const L: usize,
+        D1: Device<f32>,
+        D2: Device<f32>,
+    > OnDeviceTrait<D2> for TransformerDecoder<M, H, F, L, D1>
 {
     type Output = TransformerDecoder<M, H, F, L, D2>;
 }

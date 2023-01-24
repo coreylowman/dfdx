@@ -193,7 +193,9 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
     }
 }
 
-impl<S: Shape, E: Unit, D1: DeviceStorage, T, D2: DeviceStorage> OnDeviceTrait<D2> for Tensor<S, E, D1, T> {
+impl<S: Shape, E: Unit, D1: DeviceStorage, T, D2: DeviceStorage> OnDeviceTrait<D2>
+    for Tensor<S, E, D1, T>
+{
     type Output = Tensor<S, E, D2, T>;
 }
 

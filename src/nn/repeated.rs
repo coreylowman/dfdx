@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
 
-use super::{Module, ModuleMut, ResetParams, OnDeviceTrait, OnDevice};
+use super::{Module, ModuleMut, OnDevice, OnDeviceTrait, ResetParams};
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///

@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor::*, tensor_ops::Device};
 
-use super::{Module, ModuleMut, ResetParams, OnDevice, OnDeviceTrait};
+use super::{Module, ModuleMut, OnDevice, OnDeviceTrait, ResetParams};
 
 /// Splits input into multiple heads. `T` should be a tuple,
 /// where every element of the tuple accepts the same input type.

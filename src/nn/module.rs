@@ -101,7 +101,7 @@ where
 ///     a1: ReLU,
 ///     l2: Linear<10, 1, D>,
 /// }
-/// 
+///
 /// // Need two device types to allow converting from one device to another
 /// impl<D1: Device<f32>, D2: Device<f32>> OnDeviceTrait<D2> for MLP<D1> {
 ///     type Output = MLP<D2>;

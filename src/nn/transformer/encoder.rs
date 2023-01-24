@@ -1,5 +1,8 @@
 use crate::{
-    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual, OnDeviceTrait},
+    nn::{
+        LayerNorm1D, Linear, Module, ModuleMut, OnDeviceTrait, ReLU, Repeated, ResetParams,
+        Residual,
+    },
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,

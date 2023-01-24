@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{Module, ModuleMut, ResetParams, OnDeviceTrait};
+use super::{Module, ModuleMut, OnDeviceTrait, ResetParams};
 
 /// Implements layer normalization as described in [Layer Normalization](https://arxiv.org/abs/1607.06450).
 ///
