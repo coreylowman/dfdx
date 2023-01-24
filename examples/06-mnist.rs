@@ -72,7 +72,6 @@ impl MnistDataset {
     }
 }
 
-
 // our network structure
 type Mlp = (
     (Linear<784, 512, Dev>, ReLU),
