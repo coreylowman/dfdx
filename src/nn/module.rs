@@ -90,3 +90,9 @@ where
         self.forward(input)
     }
 }
+
+pub trait OnDeviceTrait<D> {
+    type Output;
+}
+
+pub type OnDevice<M, D> = <M as OnDeviceTrait<D>>::Output;

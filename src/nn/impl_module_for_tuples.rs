@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::*, tensor_ops::*};
 
-use super::module::{Module, ModuleMut, ResetParams};
+use super::module::{Module, ModuleMut, ResetParams, OnDeviceTrait, OnDevice};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
@@ -25,6 +25,11 @@ macro_rules! tuple_impls {
                 $(self.$idx.try_reset_params()?;)+
                 Ok(())
             }
+        }
+
+        #[allow(non_snake_case)]
+        impl<$($name: OnDeviceTrait<D>,)+ D> OnDeviceTrait<D> for ($($name,)+) {
+            type Output = ($(OnDevice<$name, D>,)+);
         }
 
         /*This macro expands like this for a 4-tuple:
