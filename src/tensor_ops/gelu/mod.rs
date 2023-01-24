@@ -39,29 +39,27 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<GeLUKernelOp, E>, T: Tape<D>> Tensor<S, 
 
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::TestDevice};
-
-    fn simplify(data: &[f32]) -> no_std_compat::vec::Vec<f32> {
-        let precision = 3;
-        let m = 10.0 * 10.0f32.powf(precision as f32);
-        data.iter().map(|x| (x * m).round() / m).collect()
-    }
+    use crate::{
+        tensor::*,
+        tensor_ops::*,
+        tests::{assert_close, TestDevice},
+    };
 
     #[test]
     fn test_gelu() {
         let dev: TestDevice = Default::default();
         let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().gelu();
-        assert_eq!(
-            simplify(&r.array()),
-            [-0.0454, -0.1588, 0.0, 0.8412, 1.9546]
+        assert_close(
+            &r.array(),
+            &[-0.04540229, -0.158808, 0.0, 0.841192, 1.9545977],
         );
 
         // NOTE: call .exp() to make sure we cover cases where .gelu() uses the result's gradient
         let g = r.exp().mean().backward();
-        assert_eq!(
-            simplify(&g.get(&x).array()),
-            [-0.0165, -0.0142, 0.1, 0.5023, 1.5338]
+        assert_close(
+            &g.get(&x).array(),
+            &[-0.016455507, -0.014156329, 0.1, 0.5023068, 1.5338063],
         );
     }
 }
