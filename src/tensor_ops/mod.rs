@@ -136,18 +136,18 @@
 //! ```
 
 mod binary;
-mod unary;
-mod shape;
 mod compound;
 mod nn;
 mod reduction;
+mod shape;
+mod unary;
 
 pub use binary::*;
-pub use unary::*;
-pub use shape::*;
 pub use compound::*;
 pub use nn::*;
 pub use reduction::*;
+pub use shape::*;
+pub use unary::*;
 
 mod backward;
 mod device;
@@ -162,4 +162,3 @@ pub(crate) mod cuda_kernels;
 
 // mod impl_mask;
 // pub use impl_mask::*;
-
