@@ -120,12 +120,12 @@ pub trait OnDeviceTrait<D> {
 /// ```
 ///
 /// ```rust
-/// # // Only compiles with cuda
 /// # use dfdx::prelude::*;
 /// #
 /// // All modules exist on the cpu by default
 /// type CpuMLP = (Linear<5, 10>, ReLU, Linear<10, 1>);
 /// type MLP<D> = OnDevice<CpuMLP, D>;
+/// # #[cfg(feature = "cuda")]
 /// type CudaMLP = OnDevice<CpuMLP, Cuda>;
 /// ```
 pub type OnDevice<M, D> = <M as OnDeviceTrait<D>>::Output;
