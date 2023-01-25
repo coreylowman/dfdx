@@ -6,7 +6,7 @@ use crate::{
     tensor_ops::{BroadcastTo, Device, TryConv2DTo},
 };
 
-use super::{Module, ModuleMut, ToDevice, ResetParams};
+use super::{Module, ModuleMut, ResetParams, ToDevice};
 
 /// **Requires Nightly** Performs 2d convolutions on 3d and 4d images.
 ///

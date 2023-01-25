@@ -1,8 +1,5 @@
 use crate::{
-    nn::{
-        LayerNorm1D, Linear, Module, ModuleMut, ToDevice, ReLU, Repeated, ResetParams,
-        Residual,
-    },
+    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual, ToDevice},
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
@@ -166,8 +163,8 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpd
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device<f32>>
-    ToDevice<D2> for TransformerDecoderBlock<M, H, F, D1>
+impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2>
+    for TransformerDecoderBlock<M, H, F, D1>
 {
     type Output = TransformerDecoderBlock<M, H, F, D2>;
 

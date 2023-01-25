@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
 
-use super::{Module, ModuleMut, OnDevice, ToDevice, ResetParams};
+use super::{Module, ModuleMut, OnDevice, ResetParams, ToDevice};
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///
@@ -65,7 +65,11 @@ impl<T: ToDevice<D>, const N: usize, D> ToDevice<D> for Repeated<T, N> {
 
     fn to_device(&self, device: &D) -> Self::Output {
         Repeated {
-            modules: self.modules.iter().map(|module| module.to_device(device)).collect(),
+            modules: self
+                .modules
+                .iter()
+                .map(|module| module.to_device(device))
+                .collect(),
         }
     }
 }

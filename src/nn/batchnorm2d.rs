@@ -1,6 +1,6 @@
 use crate::{gradients::*, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{Module, ModuleMut, ToDevice, ResetParams};
+use super::{Module, ModuleMut, ResetParams, ToDevice};
 
 /// Batch normalization for images as described in
 /// [Batch Normalization: Accelerating Deep Network Training
