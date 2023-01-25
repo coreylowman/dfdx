@@ -18,10 +18,6 @@ pub struct GeLUKernelOp;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.gelu();
-/// // assert_close(
-/// //     &r.array(),
-/// //     &[-0.04540229, -0.158808, 0.0, 0.841192, 1.9545977],
-/// // );
 /// ```
 pub fn gelu<S: Shape, E: Dtype, D: UnaryKernel<GeLUKernelOp, E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
