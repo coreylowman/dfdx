@@ -2,7 +2,6 @@
 
 [![crates.io](https://img.shields.io/crates/v/dfdx.svg)](https://crates.io/crates/dfdx)
 [![docs.rs](https://img.shields.io/docsrs/dfdx)](https://docs.rs/dfdx)
-[![codecov](https://codecov.io/gh/coreylowman/dfdx/branch/main/graph/badge.svg?token=X9OWP9Q840)](https://codecov.io/gh/coreylowman/dfdx)
 [![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/AtUhGqBDP5)
 
 Ergonomics & safety focused deep learning in Rust.
