@@ -108,7 +108,7 @@ where
 /// impl<D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for MLP<D1> {
 ///     type Output = MLP<D2>;
 ///
-///     fn to_device(self, device: &D2) -> Self::Output {
+///     fn to_device(&self, device: &D2) -> Self::Output {
 ///         MLP {
 ///             l1: self.l1.to_device(device),
 ///             a1: self.a1,
@@ -119,7 +119,7 @@ where
 /// ````
 pub trait ToDevice<D> {
     type Output;
-    fn to_device(self, device: &D) -> Self::Output;
+    fn to_device(&self, device: &D) -> Self::Output;
 }
 
 /// A type alias that yields the type of a module `M` as it would exist on device `D`. This can be
@@ -149,10 +149,10 @@ pub type OnCuda<M> = OnDevice<M, crate::prelude::Cuda>;
 /// Equivalent to `OnDevice<M, Cpu>`
 pub type OnCpu<M> = OnDevice<M, Cpu>;
 
-impl<T: ZeroSizedModule, D> ToDevice<D> for T {
+impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {
     type Output = T;
 
-    fn to_device(self, _device: &D) -> Self {
-        self
+    fn to_device(&self, _device: &D) -> Self {
+        self.clone()
     }
 }

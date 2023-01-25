@@ -124,7 +124,7 @@ impl<const I: usize, const O: usize, D1: Device<f32>, D2: Device<f32>>
 {
     type Output = Linear<I, O, D2>;
 
-    fn to_device(self, device: &D2) -> Self::Output {
+    fn to_device(&self, device: &D2) -> Self::Output {
         Linear {
             weight: self.weight.to_device(device),
             bias: self.bias.to_device(device),

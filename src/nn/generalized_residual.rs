@@ -56,7 +56,7 @@ impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>, R: ResetParams<D, E>> ResetPa
 impl<D, F: ToDevice<D>, R: ToDevice<D>> ToDevice<D> for GeneralizedResidual<F, R> {
     type Output = GeneralizedResidual<OnDevice<F, D>, OnDevice<R, D>>;
 
-    fn to_device(self, device: &D) -> Self::Output {
+    fn to_device(&self, device: &D) -> Self::Output {
         GeneralizedResidual {
             f: self.f.to_device(device),
             r: self.r.to_device(device),

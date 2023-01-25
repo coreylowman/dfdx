@@ -192,7 +192,7 @@ impl<const C: usize, D: Device<f32>> GradientUpdate<D, f32> for BatchNorm2D<C, D
 impl<const C: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for BatchNorm2D<C, D1> {
     type Output = BatchNorm2D<C, D2>;
 
-    fn to_device(self, device: &D2) -> Self::Output {
+    fn to_device(&self, device: &D2) -> Self::Output {
         BatchNorm2D {
             scale: self.scale.to_device(device),
             bias: self.bias.to_device(device),

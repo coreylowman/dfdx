@@ -78,7 +78,7 @@ impl<
 {
     type Output = MultiHeadAttention<M, H, K, V, D2>;
 
-    fn to_device(self, device: &D2) -> Self::Output {
+    fn to_device(&self, device: &D2) -> Self::Output {
         MultiHeadAttention {
             w_q: self.w_q.to_device(device),
             w_k: self.w_k.to_device(device),

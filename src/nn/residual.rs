@@ -41,7 +41,7 @@ impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>> ResetParams<D, E> for Residua
 impl<F: ToDevice<D>, D> ToDevice<D> for Residual<F> {
     type Output = Residual<OnDevice<F, D>>;
 
-    fn to_device(self, device: &D) -> Self::Output {
+    fn to_device(&self, device: &D) -> Self::Output {
         Residual(self.0.to_device(device))
     }
 }

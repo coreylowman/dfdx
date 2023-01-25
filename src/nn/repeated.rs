@@ -63,9 +63,9 @@ impl<D: Device<E>, E: Dtype, T: GradientUpdate<D, E>, const N: usize> GradientUp
 impl<T: ToDevice<D>, const N: usize, D> ToDevice<D> for Repeated<T, N> {
     type Output = Repeated<OnDevice<T, D>, N>;
 
-    fn to_device(self, device: &D) -> Self::Output {
+    fn to_device(&self, device: &D) -> Self::Output {
         Repeated {
-            modules: self.modules.into_iter().map(|module| module.to_device(device)).collect(),
+            modules: self.modules.iter().map(|module| module.to_device(device)).collect(),
         }
     }
 }

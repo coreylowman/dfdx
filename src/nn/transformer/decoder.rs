@@ -61,7 +61,7 @@ impl<
 {
     type Output = TransformerDecoder<M, H, F, L, D2>;
 
-    fn to_device(self, device: &D2) -> Self::Output {
+    fn to_device(&self, device: &D2) -> Self::Output {
         TransformerDecoder(self.0.to_device(device))
     }
 }
@@ -171,7 +171,7 @@ impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device
 {
     type Output = TransformerDecoderBlock<M, H, F, D2>;
 
-    fn to_device(self, device: &D2) -> Self::Output {
+    fn to_device(&self, device: &D2) -> Self::Output {
         TransformerDecoderBlock {
             self_attn: self.self_attn.to_device(device),
             norm1: self.norm1.to_device(device),

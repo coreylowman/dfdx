@@ -78,7 +78,7 @@ where
 {
     type Output = Conv2D<I, O, K, S, P, D2>;
 
-    fn to_device(self, device: &D2) -> Self::Output {
+    fn to_device(&self, device: &D2) -> Self::Output {
         Conv2D {
             weight: self.weight.to_device(device),
             bias: self.bias.to_device(device),

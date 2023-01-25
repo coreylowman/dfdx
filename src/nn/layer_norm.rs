@@ -57,7 +57,7 @@ impl<const M: usize, D: Device<f32>> GradientUpdate<D, f32> for LayerNorm1D<M, D
 impl<const M: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for LayerNorm1D<M, D1> {
     type Output = LayerNorm1D<M, D2>;
 
-    fn to_device(self, device: &D2) -> Self::Output {
+    fn to_device(&self, device: &D2) -> Self::Output {
         LayerNorm1D {
             gamma: self.gamma.to_device(device),
             beta: self.beta.to_device(device),

@@ -43,7 +43,7 @@ impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for AddInto
 impl<T: ToDevice<D>, D> ToDevice<D> for AddInto<T> {
     type Output = AddInto<OnDevice<T, D>>;
 
-    fn to_device(self, device: &D) -> Self::Output {
+    fn to_device(&self, device: &D) -> Self::Output {
         AddInto(self.0.to_device(device))
     }
 }

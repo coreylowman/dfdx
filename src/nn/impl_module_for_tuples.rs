@@ -30,7 +30,7 @@ macro_rules! tuple_impls {
         impl<$($name: ToDevice<D>,)+ D> ToDevice<D> for ($($name,)+) {
             type Output = ($(OnDevice<$name, D>,)+);
 
-            fn to_device(self, device: &D) -> Self::Output {
+            fn to_device(&self, device: &D) -> Self::Output {
                 ($(self.$idx.to_device(device)),+)
             }
         }

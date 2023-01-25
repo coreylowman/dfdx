@@ -199,9 +199,9 @@ impl<S: Shape, E: Dtype + Unit, D1: Device<E>, T, D2: Device<E>> ToDevice<D2>
 {
     type Output = Tensor<S, E, D2, NoneTape>;
 
-    fn to_device(self, device: &D2) -> Self::Output {
+    fn to_device(&self, device: &D2) -> Self::Output {
         let mut buf = std::vec![E::default(); self.shape().num_elements()];
-        let mut out: Self::Output = device.zeros_like(&self);
+        let mut out: Self::Output = device.zeros_like(self);
         self.copy_into(&mut buf);
         out.copy_from(&buf);
         out
