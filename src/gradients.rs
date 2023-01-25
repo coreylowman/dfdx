@@ -238,7 +238,10 @@ pub trait Tape<D: DeviceStorage>: Default + Merge<Self> + Merge<NoneTape> {
         &mut self,
         operation: F,
     );
-    fn try_alloc_grad<T: HasUniqueId + AllocGrad<Err = D::Err>>(&mut self, t: &T) -> Result<(), D::Err>;
+    fn try_alloc_grad<T: HasUniqueId + AllocGrad<Err = D::Err>>(
+        &mut self,
+        t: &T,
+    ) -> Result<(), D::Err>;
 }
 
 impl<D: DeviceStorage> Tape<D> for OwnedTape<D> {
@@ -249,15 +252,22 @@ impl<D: DeviceStorage> Tape<D> for OwnedTape<D> {
     ) {
         self.0.add_backward_op(operation)
     }
-    fn try_alloc_grad<T: HasUniqueId + AllocGrad<Err = D::Err>>(&mut self, t: &T) -> Result<(),D::Err> {
+    fn try_alloc_grad<T: HasUniqueId + AllocGrad<Err = D::Err>>(
+        &mut self,
+        t: &T,
+    ) -> Result<(), D::Err> {
         self.0.gradients.try_alloc_for(t)
     }
 }
 
 impl<D: DeviceStorage> Tape<D> for NoneTape {
     const OWNS_TAPE: bool = false;
-    fn add_backward_op<F: 'static + FnOnce(&mut Gradients) -> Result<(), D::Err>>(&mut self, _: F) {}
-    fn try_alloc_grad<T: HasUniqueId + AllocGrad<Err = D::Err>>(&mut self, _: &T) -> Result<(), D::Err> {
+    fn add_backward_op<F: 'static + FnOnce(&mut Gradients) -> Result<(), D::Err>>(&mut self, _: F) {
+    }
+    fn try_alloc_grad<T: HasUniqueId + AllocGrad<Err = D::Err>>(
+        &mut self,
+        _: &T,
+    ) -> Result<(), D::Err> {
         Ok(())
     }
 }
