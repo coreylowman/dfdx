@@ -1,7 +1,7 @@
 use crate::{
     gradients::Gradients,
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, Tensor},
+    tensor::{DeviceStorage, HasErr, Tensor},
     unique_id::{HasUniqueId, UniqueId},
 };
 
@@ -79,7 +79,7 @@ pub(super) fn momentum_to_cuda<E: Default>(wd: Option<Momentum<E>>) -> (Momentum
 ///
 /// 3. Optimizer itself is generic over M, not the update method. This means a single optimizer object
 /// can only work on objects of type `M`. This also requires you to specify the model up front for the optimizer.
-pub trait Optimizer<M: GradientUpdate<D, E>, D: DeviceStorage, E: Dtype> {
+pub trait Optimizer<M, D: DeviceStorage, E: Dtype> {
     /// Updates all of `module`'s parameters using `gradients`.
     ///
     /// Requires a `&mut self` because the optimizer may change some internally
@@ -87,8 +87,28 @@ pub trait Optimizer<M: GradientUpdate<D, E>, D: DeviceStorage, E: Dtype> {
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients<D>,
+        gradients: Gradients,
     ) -> Result<(), OptimizerUpdateError<D>>;
+}
+
+/// Represents something that can be updated with a [ParamUpdater].
+pub trait GradientUpdate<D: DeviceStorage, E: Dtype> {
+    /// Updates self given the [ParamUpdater].
+    fn update<U: ParamUpdater<D, E>>(
+        &mut self,
+        updater: &mut U,
+        unused: &mut UnusedTensors,
+    ) -> Result<(), D::Err>;
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage> GradientUpdate<D, E> for Tensor<S, E, D> {
+    fn update<U: ParamUpdater<D, E>>(
+        &mut self,
+        updater: &mut U,
+        unused: &mut UnusedTensors,
+    ) -> Result<(), <Self as HasErr>::Err> {
+        updater.update_param(self, unused)
+    }
 }
 
 /// Represents something that can update a tensor.
@@ -121,24 +141,6 @@ impl UnusedTensors {
     /// Returns `true` if there are no missing gradients present
     pub fn is_empty(&self) -> bool {
         self.ids.is_empty()
-    }
-}
-
-/// Represents something that can be updated with a [ParamUpdater].
-pub trait GradientUpdate<D: DeviceStorage, E: Dtype>: Sized {
-    /// Updates self given the [ParamUpdater].
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-    where
-        U: ParamUpdater<D, E>;
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage> GradientUpdate<D, E> for Tensor<S, E, D> {
-    fn update<U: ParamUpdater<D, E>>(
-        &mut self,
-        opt: &mut U,
-        unused: &mut UnusedTensors,
-    ) -> Result<(), D::Err> {
-        opt.update_param(self, unused)
     }
 }
 

@@ -7,7 +7,7 @@ use std::marker::PhantomData;
 
 use crate::gradients::Gradients;
 use crate::shapes::{Dtype, Shape};
-use crate::tensor::{Cpu, DeviceStorage, Tensor};
+use crate::tensor::{DeviceStorage, Tensor};
 
 use super::optimizer::*;
 
@@ -115,17 +115,17 @@ impl Default for SgdConfig<f32> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Sgd<M, D: DeviceStorage = Cpu, E: Dtype = f32> {
+pub struct Sgd<M, E: Dtype = f32> {
     /// Hyperparameter configuration
     pub cfg: SgdConfig<E>,
 
-    velocity: Gradients<D>,
-    gradients: Gradients<D>,
+    velocity: Gradients,
+    gradients: Gradients,
 
     marker: PhantomData<*const M>,
 }
 
-impl<M, D: DeviceStorage, E: Dtype> Default for Sgd<M, D, E>
+impl<M, E: Dtype> Default for Sgd<M, E>
 where
     SgdConfig<E>: Default,
 {
@@ -135,7 +135,7 @@ where
     }
 }
 
-impl<M, D: DeviceStorage, E: Dtype> Sgd<M, D, E> {
+impl<M, E: Dtype> Sgd<M, E> {
     /// Constructs using hyperparameters from `cfg`
     pub fn new(cfg: SgdConfig<E>) -> Self {
         Self {
@@ -157,7 +157,7 @@ pub(super) trait SgdKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, D: SgdKernel<E>, E: Dtype> ParamUpdater<D, E> for Sgd<M, D, E> {
+impl<M, D: SgdKernel<E>, E: Dtype> ParamUpdater<D, E> for Sgd<M, E> {
     fn update_param<S: Shape>(
         &mut self,
         p: &mut Tensor<S, E, D>,
@@ -175,14 +175,14 @@ impl<M, D: SgdKernel<E>, E: Dtype> ParamUpdater<D, E> for Sgd<M, D, E> {
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, M: GradientUpdate<D, E>> Optimizer<M, D, E> for Sgd<M, D, E>
+impl<M: GradientUpdate<D, E>, D: SgdKernel<E>, E: Dtype> Optimizer<M, D, E> for Sgd<M, E>
 where
     Self: ParamUpdater<D, E>,
 {
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients<D>,
+        gradients: Gradients,
     ) -> Result<(), OptimizerUpdateError<D>> {
         self.gradients = gradients;
         let mut unused = Default::default();

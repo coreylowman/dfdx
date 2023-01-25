@@ -31,7 +31,7 @@ fn main() {
     // finally you can use .backward() to extract the gradients!
     // NOTE: that this method is only available on tensors that **own**
     //       the tape!
-    let gradients: Gradients<Cpu> = e.backward();
+    let gradients: Gradients = e.backward();
 
     // now you can extract gradients for specific tensors
     // by querying with them
