@@ -1,5 +1,5 @@
 use crate::tensor_ops::cpu_kernels::UnaryDerivative;
-use no_std_compat::f32::consts::PI;
+use std::f32::consts::PI;
 
 impl UnaryDerivative<f32> for super::GeLUKernelOp {
     #[inline(always)]
