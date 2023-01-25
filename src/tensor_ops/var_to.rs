@@ -1,7 +1,7 @@
 use super::*;
 use crate::{gradients::Tape, shapes::*, tensor::*};
 
-/// Reduction along multiple axes using variance
+/// Reduction alogn multiple axes using variance
 pub trait VarTo: HasErr + HasShape {
     /// Result [Tensor] has smaller number of dimensions.
     ///

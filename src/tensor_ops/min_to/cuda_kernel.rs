@@ -1,4 +1,4 @@
-use super::super::permute_for_reductions;
+use crate::tensor_ops::internal_reshapes::permute_for_reductions;
 use crate::{
     shapes::{Axes, BroadcastStridesTo, ReduceShapeTo, Shape},
     tensor::cuda::{Cuda, CudaArray},
@@ -8,13 +8,13 @@ use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 
 use std::sync::Arc;
 
-const MODULE_NAME: &str = "max_to";
-const FWD_FN_NAME: &str = "max_to_forward";
-const BWD_FN_NAME: &str = "max_to_backward";
+const MODULE_NAME: &str = "min_to";
+const FWD_FN_NAME: &str = "min_to_forward";
+const BWD_FN_NAME: &str = "min_to_backward";
 const ALL_FN_NAMES: [&str; 3] = [FWD_FN_NAME, BWD_FN_NAME, "fill_with"];
-const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/max_to.ptx"));
+const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/min_to.ptx"));
 
-impl super::MaxReduceKernel<f32> for Cuda {
+impl super::MinReduceKernel<f32> for Cuda {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
@@ -33,7 +33,7 @@ impl super::MaxReduceKernel<f32> for Cuda {
         unsafe {
             fill_fn.launch_async(
                 LaunchConfig::for_num_elems(dst.num_elements() as u32),
-                (&mut storage, f32::NEG_INFINITY, dst.num_elements()),
+                (&mut storage, f32::INFINITY, dst.num_elements()),
             )
         }?;
 

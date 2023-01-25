@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use crate::tensor_ops::ops::{try_unary_op, UnaryKernel};
+use super::ops::{try_unary_op, UnaryKernel};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 #[repr(C)]

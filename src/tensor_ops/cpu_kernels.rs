@@ -15,6 +15,35 @@ pub trait BinaryDerivative<E> {
     fn dfdy(&self, x: &E, y: &E) -> E;
 }
 
+impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
+    fn forward<S: Shape>(
+        &self,
+        op: Op,
+        inp: &Self::Storage<S, E>,
+    ) -> Result<Self::Storage<S, E>, Self::Err> {
+        let mut out: Self::Storage<S, E> = inp.clone();
+        for x in out.buf_iter_mut() {
+            *x = op.f(x);
+        }
+        Ok(out)
+    }
+
+    fn backward<S: Shape>(
+        &self,
+        op: Op,
+        inp: &Self::Storage<S, E>,
+        grad_inp: &mut Self::Storage<S, E>,
+        grad_out: &Self::Storage<S, E>,
+    ) -> Result<(), Self::Err> {
+        debug_assert_eq!(grad_inp.data.len(), grad_out.data.len());
+        debug_assert_eq!(inp.data.len(), grad_out.data.len());
+        for (i, x) in grad_inp.buf_iter_mut().enumerate() {
+            *x += op.df(&inp.data[i]) * grad_out.data[i];
+        }
+        Ok(())
+    }
+}
+
 impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
     fn forward<S: Shape>(
         &self,
@@ -53,35 +82,6 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
             *gl += op.dfdx(l, r) * go;
             let gr = grad_rhs_iter.next().unwrap();
             *gr += op.dfdy(l, r) * go;
-        }
-        Ok(())
-    }
-}
-
-impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
-    fn forward<S: Shape>(
-        &self,
-        op: Op,
-        inp: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, E>, Self::Err> {
-        let mut out: Self::Storage<S, E> = inp.clone();
-        for x in out.buf_iter_mut() {
-            *x = op.f(x);
-        }
-        Ok(out)
-    }
-
-    fn backward<S: Shape>(
-        &self,
-        op: Op,
-        inp: &Self::Storage<S, E>,
-        grad_inp: &mut Self::Storage<S, E>,
-        grad_out: &Self::Storage<S, E>,
-    ) -> Result<(), Self::Err> {
-        debug_assert_eq!(grad_inp.data.len(), grad_out.data.len());
-        debug_assert_eq!(inp.data.len(), grad_out.data.len());
-        for (i, x) in grad_inp.buf_iter_mut().enumerate() {
-            *x += op.df(&inp.data[i]) * grad_out.data[i];
         }
         Ok(())
     }

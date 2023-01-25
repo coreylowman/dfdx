@@ -135,30 +135,108 @@
 //! assert_eq!(r.array(), [2.0, 5.0]);
 //! ```
 
-mod binary;
-mod compound;
-mod nn;
-mod reduction;
-mod shape;
-mod unary;
-
-pub use binary::*;
-pub use compound::*;
-pub use nn::*;
-pub use reduction::*;
-pub use shape::*;
-pub use unary::*;
-
-mod backward;
 mod device;
-pub(crate) mod ops;
-
-pub use backward::Backward;
 pub use device::Device;
+
+// mod impl_mask;
+mod abs;
+mod add;
+mod backward;
+mod bce;
+mod broadcast_to;
+mod clamp;
+mod cos;
+mod div;
+mod dropout;
+mod exp;
+mod huber_error;
+mod ln;
+mod log_softmax;
+mod logsumexp_to;
+mod matmul;
+mod max_to;
+mod maximum;
+mod mean_to;
+mod min_to;
+mod minimum;
+mod mul;
+mod nans_to;
+mod negate;
+mod normalize;
+mod permute_to;
+mod pow;
+mod relu;
+mod select_and_gather;
+mod sigmoid;
+mod sin;
+mod softmax;
+mod sqrt;
+mod square;
+mod stddev_to;
+mod sub;
+mod sum_to;
+mod tanh;
+mod var_to;
 
 pub(crate) mod cpu_kernels;
 #[cfg(feature = "cuda")]
 pub(crate) mod cuda_kernels;
+mod internal_reshapes;
+pub(crate) mod ops;
 
-// mod impl_mask;
+pub use abs::abs;
+pub use add::{add, TryAdd};
+pub use backward::Backward;
+pub use bce::bce_with_logits;
+pub use broadcast_to::BroadcastTo;
+pub use clamp::clamp;
+pub use cos::cos;
+pub use div::{div, TryDiv};
+pub use dropout::dropout;
+pub use exp::exp;
+pub use huber_error::huber_error;
+pub use ln::ln;
+pub use log_softmax::log_softmax;
+pub use logsumexp_to::LogSumExpTo;
+pub use matmul::{matmul, TryMatMul};
+pub use max_to::MaxTo;
+pub use maximum::maximum;
+pub use mean_to::MeanTo;
+pub use min_to::MinTo;
+pub use minimum::minimum;
+pub use mul::{mul, TryMul};
+pub use nans_to::nans_to;
+pub use negate::negate;
+pub use normalize::normalize;
+pub use permute_to::PermuteTo;
+pub use pow::{powf, powi};
+pub use relu::relu;
+pub use select_and_gather::{GatherTo, SelectTo};
+pub use sigmoid::sigmoid;
+pub use sin::sin;
+pub use softmax::softmax;
+pub use sqrt::sqrt;
+pub use square::square;
+pub use stddev_to::StddevTo;
+pub use sub::{sub, TrySub};
+pub use sum_to::SumTo;
+pub use tanh::tanh;
+pub use var_to::VarTo;
 // pub use impl_mask::*;
+
+mod reshape_to;
+pub use reshape_to::ReshapeTo;
+
+#[cfg(feature = "nightly")]
+mod conv2d;
+#[cfg(feature = "nightly")]
+pub use conv2d::TryConv2D;
+#[cfg(feature = "nightly")]
+pub(crate) use conv2d::TryConv2DTo;
+
+#[cfg(feature = "nightly")]
+mod pool2d;
+#[cfg(feature = "nightly")]
+pub(crate) use pool2d::{ConstAvgPool2D, ConstMaxPool2D, ConstMinPool2D};
+#[cfg(feature = "nightly")]
+pub use pool2d::{TryAvgPool2D, TryMaxPool2D, TryMinPool2D};

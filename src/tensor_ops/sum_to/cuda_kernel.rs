@@ -1,4 +1,4 @@
-use super::super::permute_for_reductions;
+use crate::tensor_ops::internal_reshapes::permute_for_reductions;
 use crate::{
     shapes::{Axes, BroadcastStridesTo, ReduceShapeTo, Shape},
     tensor::cuda::{Cuda, CudaArray},
@@ -8,13 +8,13 @@ use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 
 use std::sync::Arc;
 
-const MODULE_NAME: &str = "min_to";
-const FWD_FN_NAME: &str = "min_to_forward";
-const BWD_FN_NAME: &str = "min_to_backward";
-const ALL_FN_NAMES: [&str; 3] = [FWD_FN_NAME, BWD_FN_NAME, "fill_with"];
-const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/min_to.ptx"));
+const MODULE_NAME: &str = "sum_to";
+const FWD_FN_NAME: &str = "sum_to_forward";
+const BWD_FN_NAME: &str = "sum_to_backward";
+const ALL_FN_NAMES: [&str; 2] = [FWD_FN_NAME, BWD_FN_NAME];
+const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/sum_to.ptx"));
 
-impl super::MinReduceKernel<f32> for Cuda {
+impl super::SumKernel<f32> for Cuda {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
@@ -28,28 +28,26 @@ impl super::MinReduceKernel<f32> for Cuda {
                 .load_ptx(PTX_SRC.into(), MODULE_NAME, &ALL_FN_NAMES)?;
         }
 
-        let mut storage = self.dev.alloc_zeros_async::<f32>(dst.num_elements())?;
-        let fill_fn = self.dev.get_func(MODULE_NAME, "fill_with").unwrap();
-        unsafe {
-            fill_fn.launch_async(
-                LaunchConfig::for_num_elems(dst.num_elements() as u32),
-                (&mut storage, f32::INFINITY, dst.num_elements()),
-            )
-        }?;
-
         let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
 
         let (dims, strides) = permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
+        let num_dims = dims.len();
         let dims: CudaSlice<usize> = self.dev.take_async(dims)?;
         let strides: CudaSlice<usize> = self.dev.take_async(strides)?;
 
+        let mut storage = self.dev.alloc_zeros_async::<f32>(dst.num_elements())?;
+
         let physical_numel = inp.data.len();
+        let virtual_numel = inp.shape.num_elements();
+        let elems_per_thread = (virtual_numel / physical_numel) as f32;
+
         let chunk_len = physical_numel / dst.num_elements();
 
         let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
         let params = (
             physical_numel,    // const size_t numel,
-            dims.len(),        // const size_t num_dims,
+            num_dims,          // const size_t num_dims,
+            elems_per_thread,  // const float elems_per_thread,
             chunk_len,         // const size_t chunk_len,
             inp.data.as_ref(), // const float *inp,
             &dims,             // const size_t *dims,
@@ -66,9 +64,7 @@ impl super::MinReduceKernel<f32> for Cuda {
 
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        inp: &Self::Storage<Src, f32>,
         grad_inp: &mut Self::Storage<Src, f32>,
-        out: &Self::Storage<Dst, f32>,
         grad_out: &Self::Storage<Dst, f32>,
     ) -> Result<(), Self::Err>
     where
@@ -90,12 +86,10 @@ impl super::MinReduceKernel<f32> for Cuda {
         let params = (
             physical_numel,                    // const size_t numel,
             Src::NUM_DIMS,                     // const size_t num_dims,
-            elems_per_thread as f32,           // const float elems_per_thread,
+            elems_per_thread,                  // const float elems_per_thread,
             &dims,                             // const size_t *dims,
-            inp.data.as_ref(),                 // const float *inp,
             Arc::make_mut(&mut grad_inp.data), // float *grad_inp,
             &inp_strides,                      // const size_t *inp_strides,
-            out.data.as_ref(),                 // const float *out,
             grad_out.data.as_ref(),            // const float *grad_out,
             &out_strides,                      // const size_t *out_strides
         );
