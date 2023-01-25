@@ -1,4 +1,8 @@
-use crate::{optim::GradientUpdate, prelude::Cpu, shapes::Dtype, tensor_ops::Device};
+use crate::{optim::GradientUpdate, shapes::Dtype, tensor_ops::Device};
+
+#[cfg(feature = "cuda")]
+pub use crate::tensor::OnCuda;
+pub use crate::tensor::{OnCpu, OnDevice, ToDevice};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
@@ -90,64 +94,6 @@ where
         self.forward(input)
     }
 }
-
-/// A trait which allows a module to be used with the [OnDevice] type alias. This is implemented
-/// automatically for any [ZeroSizedModule].
-///
-/// Here's an example of how this can be implemented for a custom struct:
-/// ```rust
-/// use dfdx::prelude::*;
-///
-/// struct MLP<D: Device<f32>> {
-///     l1: Linear<5, 10, D>,
-///     a1: ReLU,
-///     l2: Linear<10, 1, D>,
-/// }
-///
-/// // Need two device types to allow converting from one device to another
-/// impl<D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for MLP<D1> {
-///     type Output = MLP<D2>;
-///
-///     fn to_device(&self, device: &D2) -> Self::Output {
-///         MLP {
-///             l1: self.l1.to_device(device),
-///             a1: self.a1,
-///             l2: self.l2.to_device(device),
-///         }
-///     }
-/// }
-/// ````
-pub trait ToDevice<D> {
-    type Output;
-    fn to_device(&self, device: &D) -> Self::Output;
-}
-
-/// A type alias that yields the type of a module `M` as it would exist on device `D`. This can be
-/// very useful when creating sequential networks that need to be parameterized by a device.
-///
-/// Examples:
-/// ```rust
-/// # use dfdx::nn::*;
-/// type MLP<D> = OnDevice<(Linear<5, 10>, ReLU, Linear<10, 1>), D>;
-/// ```
-///
-/// ```rust
-/// # use dfdx::prelude::*;
-/// #
-/// // All modules exist on the cpu by default
-/// type CpuMLP = (Linear<5, 10>, ReLU, Linear<10, 1>);
-/// type MLP<D> = OnDevice<CpuMLP, D>;
-/// # #[cfg(feature = "cuda")]
-/// type CudaMLP = OnDevice<CpuMLP, Cuda>;
-/// ```
-pub type OnDevice<M, D> = <M as ToDevice<D>>::Output;
-
-/// Equivalent to `OnDevice<M, Cuda>`
-#[cfg(feature = "cuda")]
-pub type OnCuda<M> = OnDevice<M, crate::prelude::Cuda>;
-
-/// Equivalent to `OnDevice<M, Cpu>`
-pub type OnCpu<M> = OnDevice<M, Cpu>;
 
 impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {
     type Output = T;
