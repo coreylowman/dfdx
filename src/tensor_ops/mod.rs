@@ -165,6 +165,7 @@ mod normalize;
 mod permute_to;
 mod pow;
 mod relu;
+mod reshape_to;
 mod select_and_gather;
 mod sigmoid;
 mod sin;
@@ -176,7 +177,6 @@ mod sub;
 mod sum_to;
 mod tanh;
 mod var_to;
-mod reshape_to;
 
 pub use abs::abs;
 pub use add::{add, TryAdd};
@@ -204,6 +204,7 @@ pub use normalize::normalize;
 pub use permute_to::PermuteTo;
 pub use pow::{powf, powi};
 pub use relu::relu;
+pub use reshape_to::ReshapeTo;
 pub use select_and_gather::{GatherTo, SelectTo};
 pub use sigmoid::sigmoid;
 pub use sin::sin;
@@ -215,9 +216,7 @@ pub use sub::{sub, TrySub};
 pub use sum_to::SumTo;
 pub use tanh::tanh;
 pub use var_to::VarTo;
-pub use reshape_to::ReshapeTo;
 // pub use impl_mask::*;
-
 
 #[cfg(feature = "nightly")]
 mod conv2d;
