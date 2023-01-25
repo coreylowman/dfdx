@@ -97,7 +97,7 @@ impl<S: Shape, E: Dtype> HasDtype for CudaArray<S, E> {
 
 impl std::fmt::Display for CudaError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 

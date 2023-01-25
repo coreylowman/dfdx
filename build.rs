@@ -57,8 +57,7 @@ mod cuda {
 
             assert!(
                 output.status.success(),
-                "nvcc error while compiling {kernel_path:?}: {:?}",
-                output
+                "nvcc error while compiling {kernel_path:?}: {output:?}",
             );
         }
     }
