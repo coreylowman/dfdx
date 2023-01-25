@@ -135,13 +135,12 @@
 //! assert_eq!(r.array(), [2.0, 5.0]);
 //! ```
 
-mod device;
-pub use device::Device;
+mod utilities;
+pub use utilities::*;
 
 // mod impl_mask;
 mod abs;
 mod add;
-mod backward;
 mod bce;
 mod broadcast_to;
 mod clamp;
@@ -177,16 +176,10 @@ mod sub;
 mod sum_to;
 mod tanh;
 mod var_to;
-
-pub(crate) mod cpu_kernels;
-#[cfg(feature = "cuda")]
-pub(crate) mod cuda_kernels;
-mod internal_reshapes;
-pub(crate) mod ops;
+mod reshape_to;
 
 pub use abs::abs;
 pub use add::{add, TryAdd};
-pub use backward::Backward;
 pub use bce::bce_with_logits;
 pub use broadcast_to::BroadcastTo;
 pub use clamp::clamp;
@@ -222,10 +215,9 @@ pub use sub::{sub, TrySub};
 pub use sum_to::SumTo;
 pub use tanh::tanh;
 pub use var_to::VarTo;
+pub use reshape_to::ReshapeTo;
 // pub use impl_mask::*;
 
-mod reshape_to;
-pub use reshape_to::ReshapeTo;
 
 #[cfg(feature = "nightly")]
 mod conv2d;

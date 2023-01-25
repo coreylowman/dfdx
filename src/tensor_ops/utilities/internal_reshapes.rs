@@ -7,7 +7,7 @@ use std::vec::Vec;
 /// so that a cuda kernel called for each physical element of the input tensor will place elements
 /// to be reduced with each other next to each other in memory.
 #[cfg(feature = "cuda")]
-pub(super) fn permute_for_reductions<I, Ax: Axes>(dims: I, strides: I) -> (Vec<usize>, Vec<usize>)
+pub(crate) fn permute_for_reductions<I, Ax: Axes>(dims: I, strides: I) -> (Vec<usize>, Vec<usize>)
 where
     I: IntoIterator<Item = usize>,
 {
