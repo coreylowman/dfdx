@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{Module, ModuleMut, OnDeviceTrait, ResetParams};
+use super::module::{Module, ModuleMut, ToDevice, ResetParams};
 
 /// A linear transformation of the form `weight * x + bias`, where `weight` is a matrix, `x` is a vector or matrix,
 /// and `bias` is a vector.
@@ -120,9 +120,16 @@ impl<'a, B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
 
 #[rustfmt::skip]
 impl<const I: usize, const O: usize, D1: Device<f32>, D2: Device<f32>>
-    OnDeviceTrait<D2> for Linear<I, O, D1>
+    ToDevice<D2> for Linear<I, O, D1>
 {
     type Output = Linear<I, O, D2>;
+
+    fn to_device(self, device: &D2) -> Self::Output {
+        Linear {
+            weight: self.weight.to_device(device),
+            bias: self.bias.to_device(device),
+        }
+    }
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
 
-use super::{Module, ModuleMut, OnDevice, OnDeviceTrait, ResetParams};
+use super::{Module, ModuleMut, OnDevice, ToDevice, ResetParams};
 
 /// Add inputs together into a single tensor. `T` should be a tuple
 //// where every element of the tuple has the same output type
@@ -40,8 +40,12 @@ impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for AddInto
     }
 }
 
-impl<T: OnDeviceTrait<D>, D> OnDeviceTrait<D> for AddInto<T> {
+impl<T: ToDevice<D>, D> ToDevice<D> for AddInto<T> {
     type Output = AddInto<OnDevice<T, D>>;
+
+    fn to_device(self, device: &D) -> Self::Output {
+        AddInto(self.0.to_device(device))
+    }
 }
 
 macro_rules! sum {

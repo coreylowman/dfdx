@@ -2,7 +2,8 @@ use rand::distributions::Distribution;
 
 use super::storage_traits::{DeviceStorage, HasErr};
 use super::{Cpu, OneFillStorage, SampleTensor, ZeroFillStorage};
-use crate::nn::OnDeviceTrait;
+use crate::nn::ToDevice;
+use crate::tensor_ops::Device;
 use crate::{
     gradients::{NoneTape, OwnedTape, Tape},
     shapes::*,
@@ -193,10 +194,18 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
     }
 }
 
-impl<S: Shape, E: Unit, D1: DeviceStorage, T, D2: DeviceStorage> OnDeviceTrait<D2>
+impl<S: Shape, E: Dtype + Unit, D1: Device<E>, T, D2: Device<E>> ToDevice<D2>
     for Tensor<S, E, D1, T>
 {
-    type Output = Tensor<S, E, D2, T>;
+    type Output = Tensor<S, E, D2, NoneTape>;
+
+    fn to_device(self, device: &D2) -> Self::Output {
+        let mut buf = std::vec![E::default(); self.shape().num_elements()];
+        let mut out: Self::Output = device.zeros_like(&self);
+        self.copy_into(&mut buf);
+        out.copy_from(&buf);
+        out
+    }
 }
 
 pub type Tensor0D<Tape = NoneTape> = Tensor<Rank0, f32, Cpu, Tape>;

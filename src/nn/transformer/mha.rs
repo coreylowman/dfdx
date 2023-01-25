@@ -74,9 +74,18 @@ impl<
         const V: usize,
         D1: Device<f32>,
         D2: Device<f32>,
-    > OnDeviceTrait<D2> for MultiHeadAttention<M, H, K, V, D1>
+    > ToDevice<D2> for MultiHeadAttention<M, H, K, V, D1>
 {
     type Output = MultiHeadAttention<M, H, K, V, D2>;
+
+    fn to_device(self, device: &D2) -> Self::Output {
+        MultiHeadAttention {
+            w_q: self.w_q.to_device(device),
+            w_k: self.w_k.to_device(device),
+            w_v: self.w_v.to_device(device),
+            w_o: self.w_o.to_device(device),
+        }
+    }
 }
 
 #[cfg(feature = "nightly")]

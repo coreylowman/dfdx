@@ -1,6 +1,6 @@
 use crate::{
     nn::{
-        LayerNorm1D, Linear, Module, ModuleMut, OnDeviceTrait, ReLU, Repeated, ResetParams,
+        LayerNorm1D, Linear, Module, ModuleMut, ToDevice, ReLU, Repeated, ResetParams,
         Residual,
     },
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
@@ -57,9 +57,13 @@ impl<
         const L: usize,
         D1: Device<f32>,
         D2: Device<f32>,
-    > OnDeviceTrait<D2> for TransformerDecoder<M, H, F, L, D1>
+    > ToDevice<D2> for TransformerDecoder<M, H, F, L, D1>
 {
     type Output = TransformerDecoder<M, H, F, L, D2>;
+
+    fn to_device(self, device: &D2) -> Self::Output {
+        TransformerDecoder(self.0.to_device(device))
+    }
 }
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D, Tgt, Mem: Clone>
@@ -163,9 +167,20 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpd
 }
 
 impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device<f32>>
-    OnDeviceTrait<D2> for TransformerDecoderBlock<M, H, F, D1>
+    ToDevice<D2> for TransformerDecoderBlock<M, H, F, D1>
 {
     type Output = TransformerDecoderBlock<M, H, F, D2>;
+
+    fn to_device(self, device: &D2) -> Self::Output {
+        TransformerDecoderBlock {
+            self_attn: self.self_attn.to_device(device),
+            norm1: self.norm1.to_device(device),
+            mh_attn: self.mh_attn.to_device(device),
+            norm2: self.norm2.to_device(device),
+            ff: self.ff.to_device(device),
+            norm3: self.norm3.to_device(device),
+        }
+    }
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, Tgt, Mem> Module<(Tgt, Mem)>
