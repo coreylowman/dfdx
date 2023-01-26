@@ -90,7 +90,7 @@ impl super::MaxReduceKernel<f32> for Cuda {
         let params = (
             physical_numel,                    // const size_t numel,
             Src::NUM_DIMS,                     // const size_t num_dims,
-            elems_per_thread as f32,           // const float elems_per_thread,
+            elems_per_thread,                  // const float elems_per_thread,
             &dims,                             // const size_t *dims,
             inp.data.as_ref(),                 // const float *inp,
             Arc::make_mut(&mut grad_inp.data), // float *grad_inp,
