@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{Module, ModuleMut, ResetParams};
+use super::module::{Module, ModuleMut, ResetParams, ToDevice};
 
 /// A linear transformation of the form `weight * x + bias`, where `weight` is a matrix, `x` is a vector or matrix,
 /// and `bias` is a vector.
@@ -118,6 +118,20 @@ impl<'a, B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
     }
 }
 
+#[rustfmt::skip]
+impl<const I: usize, const O: usize, D1: Device<f32>, D2: Device<f32>>
+    ToDevice<D2> for Linear<I, O, D1>
+{
+    type Output = Linear<I, O, D2>;
+
+    fn to_device(&self, device: &D2) -> Self::Output {
+        Linear {
+            weight: self.weight.to_device(device),
+            bias: self.bias.to_device(device),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,6 +146,18 @@ mod tests {
         [0.11733949, 0.14059687, -0.10670426, -0.09373143, 0.18974298],
     ];
     const B: [f32; 2] = [0.3765365, -0.290717];
+
+    #[cfg(feature = "cuda")]
+    #[test]
+    fn test_linear_ondevice() {
+        use super::super::module::OnDevice;
+
+        let cpu: Cpu = Default::default();
+        let cuda: Cuda = Default::default();
+        let _: Linear<1, 1, _> = cpu.build_module();
+        let _: OnDevice<Linear<1, 1>, Cuda> = cuda.build_module();
+        let _: OnDevice<(Linear<1, 2>, Linear<2, 1>), Cuda> = cuda.build_module();
+    }
 
     #[test]
     fn test_linear_initialize() {

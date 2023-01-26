@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
 
-use super::{Module, ModuleMut, ResetParams};
+use super::{Module, ModuleMut, OnDevice, ResetParams, ToDevice};
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///
@@ -57,6 +57,20 @@ impl<D: Device<E>, E: Dtype, T: GradientUpdate<D, E>, const N: usize> GradientUp
             m.update(updater, unused)?;
         }
         Ok(())
+    }
+}
+
+impl<T: ToDevice<D>, const N: usize, D> ToDevice<D> for Repeated<T, N> {
+    type Output = Repeated<OnDevice<T, D>, N>;
+
+    fn to_device(&self, device: &D) -> Self::Output {
+        Repeated {
+            modules: self
+                .modules
+                .iter()
+                .map(|module| module.to_device(device))
+                .collect(),
+        }
     }
 }
 
