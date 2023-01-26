@@ -5,7 +5,7 @@ use dfdx::{
     nn::{Linear, ModuleBuilder, ModuleMut, ReLU, Tanh},
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
     shapes::Rank2,
-    tensor::{AsArray, Cpu, SampleTensor},
+    tensor::{AsArray, AutoDevice, SampleTensor},
     tensor_ops::Backward,
 };
 
@@ -17,7 +17,7 @@ type Mlp = (
 );
 
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev: AutoDevice = Default::default();
 
     // The first step to optimizing is to initialize the optimizer.
     // Here we construct a stochastic gradient descent optimizer

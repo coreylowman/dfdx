@@ -17,11 +17,11 @@ type PolicyNetwork = (
 );
 
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev: AutoDevice = Default::default();
 
     let state = dev.sample_normal::<Rank2<BATCH, STATE>>();
     let mut i = 0;
-    let action: Tensor<Rank1<BATCH>, usize, _> = dev.tensor([(); BATCH].map(|_| {
+    let action: Tensor<Rank1<BATCH>, usize> = dev.tensor([(); BATCH].map(|_| {
         i += 1;
         i % ACTION
     }));

@@ -4,10 +4,10 @@
 fn main() {
     use dfdx::{
         shapes::{Rank0, Rank1, Rank2},
-        tensor::{AsArray, Cpu, Tensor, TensorFromArray, ZerosTensor},
+        tensor::{AsArray, AutoDevice, Tensor, TensorFromArray, ZerosTensor},
     };
 
-    let dev: Cpu = Default::default();
+    let dev: AutoDevice = Default::default();
 
     dev.tensor(1.234f32)
         .save_to_npy("0d-rs.npy")

@@ -20,7 +20,7 @@ use super::{Module, ModuleMut, ResetParams};
 /// let _: Tensor<Rank1<5>> = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(Debug, Clone)]
-pub struct LayerNorm1D<const M: usize, D: Device<f32> = Cpu> {
+pub struct LayerNorm1D<const M: usize, D: Device<f32> = AutoDevice> {
     pub gamma: Tensor<Rank1<M>, f32, D>,
     pub beta: Tensor<Rank1<M>, f32, D>,
     pub epsilon: f32,

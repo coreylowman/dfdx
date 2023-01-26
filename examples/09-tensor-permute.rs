@@ -1,11 +1,11 @@
 //! Demonstrates how to re-order (permute/transpose) the axes of a tensor
 
 use dfdx::shapes::{Axes3, Rank3};
-use dfdx::tensor::{Cpu, Tensor, ZerosTensor};
+use dfdx::tensor::{AutoDevice, Tensor, ZerosTensor};
 use dfdx::tensor_ops::PermuteTo;
 
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev: AutoDevice = Default::default();
 
     let a: Tensor<Rank3<3, 5, 7>> = dev.zeros();
 

@@ -128,6 +128,12 @@ pub use cpu::{Cpu, CpuError};
 #[cfg(feature = "cuda")]
 pub use cuda::{Cuda, CudaError};
 
+#[cfg(not(feature = "cuda"))]
+pub type AutoDevice = Cpu;
+
+#[cfg(feature = "cuda")]
+pub type DefaultDevice = Cuda;
+
 pub use storage_traits::{AsArray, AsVec, CopySlice, TensorFromArray};
 pub use storage_traits::{DeviceStorage, HasErr};
 pub use storage_traits::{OnesTensor, SampleTensor, ZerosTensor};

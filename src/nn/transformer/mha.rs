@@ -24,7 +24,7 @@ pub struct MultiHeadAttention<
     const NUM_HEADS: usize,
     const K_DIM: usize = EMBED_DIM,
     const V_DIM: usize = EMBED_DIM,
-    D: Device<f32> = Cpu,
+    D: Device<f32> = AutoDevice,
 > {
     pub w_q: Linear<EMBED_DIM, K_DIM, D>,
     pub w_k: Linear<EMBED_DIM, K_DIM, D>,

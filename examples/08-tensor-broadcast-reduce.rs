@@ -3,12 +3,12 @@
 
 use dfdx::{
     shapes::{Axis, Rank2, Rank4},
-    tensor::{AsArray, Cpu, TensorFromArray},
+    tensor::{AsArray, AutoDevice, TensorFromArray},
     tensor_ops::{BroadcastTo, MeanTo},
 };
 
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev: AutoDevice = Default::default();
     let a = dev.tensor([1.0, 2.0, 3.0]);
 
     // to broadcast, use `Broadcast::broadcast()` and specify

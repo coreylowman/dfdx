@@ -1,7 +1,7 @@
 use crate::{
     nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual},
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
-    tensor::{Cpu, PutTape, SplitTape},
+    tensor::{AutoDevice, PutTape, SplitTape},
     tensor_ops::Device,
 };
 
@@ -21,7 +21,7 @@ pub type TransformerEncoder<
     const NUM_HEADS: usize,
     const FF_DIM: usize,
     const NUM_LAYERS: usize,
-    D = Cpu,
+    D = AutoDevice,
 > = Repeated<TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, D>, NUM_LAYERS>;
 
 /// **Requires Nightly** A single transformer encoder block
@@ -43,7 +43,7 @@ pub struct TransformerEncoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
     const FF_DIM: usize,
-    D: Device<f32> = Cpu,
+    D: Device<f32> = AutoDevice,
 > {
     pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
     pub norm1: LayerNorm1D<MODEL_DIM, D>,

@@ -3,11 +3,11 @@
 use dfdx::{
     nn::{Linear, Module, ModuleBuilder, ModuleMut, ReLU, ResetParams},
     shapes::{Const, Rank1, Rank2},
-    tensor::{AsArray, Cpu, SampleTensor, Tensor, ZerosTensor},
+    tensor::{AsArray, AutoDevice, SampleTensor, Tensor, ZerosTensor},
 };
 
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev: AutoDevice = Default::default();
 
     // nn exposes many different neural network types, like the Linear layer!
     // you can use Build::build to construct an initialized model

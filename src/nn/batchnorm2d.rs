@@ -36,7 +36,7 @@ use super::{Module, ModuleMut, ResetParams};
 /// - Running statistics: **not** updated
 /// - Normalization: calculated using running stats
 #[derive(Clone, Debug)]
-pub struct BatchNorm2D<const C: usize, D: Device<f32> = Cpu> {
+pub struct BatchNorm2D<const C: usize, D: Device<f32> = AutoDevice> {
     /// Scale for affine transform. Defaults to 1.0
     pub scale: Tensor<Rank1<C>, f32, D>,
     /// Bias for affine transform. Defaults to 0.0

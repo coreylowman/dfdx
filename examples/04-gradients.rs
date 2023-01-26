@@ -3,30 +3,30 @@
 use dfdx::{
     gradients::{Gradients, NoneTape, OwnedTape},
     shapes::{Rank0, Rank2},
-    tensor::{AsArray, Cpu, SampleTensor, Tensor},
+    tensor::{AsArray, AutoDevice, SampleTensor, Tensor},
     tensor_ops::{Backward, MeanTo, TryMatMul},
 };
 
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev: AutoDevice = Default::default();
 
     // tensors are actually generic over a fourth field: the tape
     // by default tensors are created with a `NoneTape`, which
     // means they don't currently **own** a tape.
-    let weight: Tensor<Rank2<4, 2>, f32, Cpu, NoneTape> = dev.sample_normal();
-    let a: Tensor<Rank2<3, 4>, f32, Cpu, NoneTape> = dev.sample_normal();
+    let weight: Tensor<Rank2<4, 2>, f32, AutoDevice, NoneTape> = dev.sample_normal();
+    let a: Tensor<Rank2<3, 4>, f32, AutoDevice, NoneTape> = dev.sample_normal();
 
     // the first step to tracing is to call .trace()
     // this sticks a gradient tape into the input tensor!
     // NOTE: the tape has changed from a `NoneTape` to an `OwnedTape`.
-    let b: Tensor<Rank2<3, 4>, f32, Cpu, OwnedTape<Cpu>> = a.trace();
+    let b: Tensor<Rank2<3, 4>, f32, AutoDevice, OwnedTape<AutoDevice>> = a.trace();
 
     // the tape will **automatically** be moved around as you perform ops
     // ie. the tapes on inputs to operations are moved to the output
     // of the operation.
-    let c: Tensor<Rank2<3, 2>, f32, Cpu, OwnedTape<_>> = b.matmul(weight.clone());
-    let d: Tensor<Rank2<3, 2>, f32, Cpu, OwnedTape<_>> = c.sin();
-    let e: Tensor<Rank0, f32, Cpu, OwnedTape<_>> = d.mean();
+    let c: Tensor<Rank2<3, 2>, f32, AutoDevice, OwnedTape<_>> = b.matmul(weight.clone());
+    let d: Tensor<Rank2<3, 2>, f32, AutoDevice, OwnedTape<_>> = c.sin();
+    let e: Tensor<Rank0, f32, AutoDevice, OwnedTape<_>> = d.mean();
 
     // finally you can use .backward() to extract the gradients!
     // NOTE: that this method is only available on tensors that **own**

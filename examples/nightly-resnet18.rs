@@ -40,7 +40,7 @@ fn main() {
         (AvgPoolGlobal, Linear<512, NUM_CLASSES>),
     );
 
-    let dev: Cpu = Default::default();
+    let dev: AutoDevice = Default::default();
     let x = dev.sample_normal::<Rank3<3, 224, 224>>();
     let m: Resnet18<1000> = dev.build_module();
     for _ in 0.. {

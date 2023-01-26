@@ -2,13 +2,13 @@
 
 use dfdx::{
     shapes::{Const, HasShape, Rank1, Rank2, Rank3},
-    tensor::{AsArray, Cpu, OnesTensor, SampleTensor, Tensor, TensorFromArray, ZerosTensor},
+    tensor::{AsArray, AutoDevice, OnesTensor, SampleTensor, Tensor, TensorFromArray, ZerosTensor},
 };
 
 fn main() {
     // a device is required to create & modify tensors.
     // we will use the Cpu device here for simplicity
-    let dev: Cpu = Default::default();
+    let dev: AutoDevice = Default::default();
 
     // easily create tensors using the `TensorFromArray::tensor` method of devices
     // tensors are generic over the:

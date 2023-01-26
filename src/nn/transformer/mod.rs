@@ -8,7 +8,7 @@ pub use mha::*;
 
 use crate::{
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
-    tensor::{Cpu, PutTape, SplitTape},
+    tensor::{AutoDevice, PutTape, SplitTape},
     tensor_ops::Device,
 };
 
@@ -44,7 +44,7 @@ pub struct Transformer<
     const NUM_ENCODER_LAYERS: usize,
     const NUM_DECODER_LAYERS: usize,
     const FF_DIM: usize,
-    D: Device<f32> = Cpu,
+    D: Device<f32> = AutoDevice,
 > {
     pub encoder: TransformerEncoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_ENCODER_LAYERS, D>,
     pub decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS, D>,

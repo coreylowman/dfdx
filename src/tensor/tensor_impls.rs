@@ -1,7 +1,7 @@
 use rand::distributions::Distribution;
 
 use super::storage_traits::{DeviceStorage, HasErr};
-use super::{Cpu, OneFillStorage, SampleTensor, ZeroFillStorage};
+use super::{AutoDevice, OneFillStorage, SampleTensor, ZeroFillStorage};
 use crate::{
     gradients::{NoneTape, OwnedTape, Tape},
     shapes::*,
@@ -32,7 +32,7 @@ use crate::{
 /// type C = Tensor<Rank3<4, 2, 3>, usize, Cpu, NoneTape>;
 /// ```
 #[derive(Debug, Clone)]
-pub struct Tensor<S: Shape, E: Unit = f32, D: DeviceStorage = Cpu, T = NoneTape> {
+pub struct Tensor<S: Shape, E: Unit = f32, D: DeviceStorage = AutoDevice, T = NoneTape> {
     pub(crate) id: UniqueId,
     pub(crate) storage: D::Storage<S, E>,
     pub(crate) device: D,
@@ -192,14 +192,14 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
     }
 }
 
-pub type Tensor0D<Tape = NoneTape> = Tensor<Rank0, f32, Cpu, Tape>;
-pub type Tensor1D<const M: usize, Tape = NoneTape> = Tensor<Rank1<M>, f32, Cpu, Tape>;
+pub type Tensor0D<Tape = NoneTape> = Tensor<Rank0, f32, AutoDevice, Tape>;
+pub type Tensor1D<const M: usize, Tape = NoneTape> = Tensor<Rank1<M>, f32, AutoDevice, Tape>;
 pub type Tensor2D<const M: usize, const N: usize, Tape = NoneTape> =
-    Tensor<Rank2<M, N>, f32, Cpu, Tape>;
-pub type Tensor3D<const M: usize, const N: usize, const O: usize, D, Tape = NoneTape> =
-    Tensor<Rank3<M, N, O>, f32, D, Tape>;
+    Tensor<Rank2<M, N>, f32, AutoDevice, Tape>;
+pub type Tensor3D<const M: usize, const N: usize, const O: usize, Tape = NoneTape> =
+    Tensor<Rank3<M, N, O>, f32, AutoDevice, Tape>;
 pub type Tensor4D<const M: usize, const N: usize, const O: usize, const P: usize, Tape = NoneTape> =
-    Tensor<Rank4<M, N, O, P>, f32, Cpu, Tape>;
+    Tensor<Rank4<M, N, O, P>, f32, AutoDevice, Tape>;
 pub type Tensor5D<
     const M: usize,
     const N: usize,
@@ -207,7 +207,7 @@ pub type Tensor5D<
     const P: usize,
     const Q: usize,
     Tape = NoneTape,
-> = Tensor<Rank5<M, N, O, P, Q>, f32, Cpu, Tape>;
+> = Tensor<Rank5<M, N, O, P, Q>, f32, AutoDevice, Tape>;
 pub type Tensor6D<
     const M: usize,
     const N: usize,
@@ -216,4 +216,4 @@ pub type Tensor6D<
     const Q: usize,
     const R: usize,
     Tape = NoneTape,
-> = Tensor<Rank6<M, N, O, P, Q, R>, f32, Cpu, Tape>;
+> = Tensor<Rank6<M, N, O, P, Q, R>, f32, AutoDevice, Tape>;

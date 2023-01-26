@@ -1,7 +1,7 @@
 use crate::{
     nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual},
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
-    tensor::{Cpu, PutTape, SplitTape},
+    tensor::{AutoDevice, PutTape, SplitTape},
     tensor_ops::Device,
 };
 
@@ -22,7 +22,7 @@ pub struct TransformerDecoder<
     const NUM_HEADS: usize,
     const FF_DIM: usize,
     const NUM_LAYERS: usize,
-    D: Device<f32> = Cpu,
+    D: Device<f32> = AutoDevice,
 >(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, D>, NUM_LAYERS>);
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>

@@ -25,7 +25,7 @@ pub struct Conv2D<
     const KERNEL_SIZE: usize,
     const STRIDE: usize = 1,
     const PADDING: usize = 0,
-    D: Device<f32> = Cpu,
+    D: Device<f32> = DefaultDevice,
 > {
     pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>, f32, D>,
     pub bias: Tensor<Rank1<OUT_CHAN>, f32, D>,
@@ -96,7 +96,7 @@ where
 }
 
 #[derive(Clone, Debug)]
-struct Bias2D<'a, const C: usize, D: Device<f32> = Cpu> {
+struct Bias2D<'a, const C: usize, D: Device<f32>> {
     beta: &'a Tensor<Rank1<C>, f32, D>,
 }
 
@@ -164,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_2_conv_sizes() {
-        let dev = Cpu::default();
+        let dev: TestDevice = Default::default();
         type A = Conv2D<1, 2, 3>;
         type B = Conv2D<2, 4, 3>;
         let _: Tensor<Rank3<4, 6, 6>, _, _> =
@@ -177,7 +177,7 @@ mod tests {
         type B = Conv2D<2, 4, 3>;
         type C = Conv2D<4, 1, 1, 1, 1>;
 
-        let dev = Cpu::default();
+        let dev: TestDevice = Default::default();
         let _: Tensor<Rank3<1, 8, 8>, _, _> =
             <(A, B, C)>::build(&dev).forward_mut(dev.zeros::<Rank3<1, 10, 10>>());
     }

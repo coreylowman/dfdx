@@ -4,11 +4,11 @@
 use dfdx::{
     nn::{Linear, Module, ModuleBuilder, SplitInto},
     shapes::Rank1,
-    tensor::{Cpu, Tensor, TensorFromArray},
+    tensor::{AutoDevice, Tensor, TensorFromArray},
 };
 
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev: AutoDevice = Default::default();
 
     // SplitInto accepts a tuple of modules. Each one of the items in the
     // tuple must accept the same type of input.

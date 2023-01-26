@@ -2,12 +2,12 @@
 
 use dfdx::{
     shapes::Rank3,
-    tensor::{AsArray, Cpu, Tensor, TensorFromArray},
+    tensor::{AsArray, AutoDevice, Tensor, TensorFromArray},
     tensor_ops::{GatherTo, SelectTo},
 };
 
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev: AutoDevice = Default::default();
 
     let a: Tensor<Rank3<4, 2, 3>> = dev.tensor([
         [[0.00, 0.01, 0.02], [0.10, 0.11, 0.12]],

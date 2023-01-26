@@ -14,7 +14,7 @@ fn main() {
         Linear<7744, 10>,
     );
 
-    let dev: Cpu = Default::default();
+    let dev: AutoDevice = Default::default();
     let m: Model = dev.build_module();
 
     // single image forward

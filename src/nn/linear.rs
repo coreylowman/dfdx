@@ -24,7 +24,7 @@ use super::module::{Module, ModuleMut, ResetParams};
 /// let _: Tensor<Rank2<10, 2>> = model.forward(dev.zeros::<Rank2<10, 5>>());
 /// ```
 #[derive(Debug, Clone)]
-pub struct Linear<const I: usize, const O: usize, D: Device<f32> = Cpu> {
+pub struct Linear<const I: usize, const O: usize, D: Device<f32> = AutoDevice> {
     /// Transposed weight matrix, shape (I, O)
     pub weight: Tensor<Rank2<O, I>, f32, D>,
 
@@ -87,7 +87,7 @@ where
 }
 
 #[derive(Clone, Debug)]
-struct Bias1D<'a, const M: usize, D: Device<f32> = Cpu> {
+struct Bias1D<'a, const M: usize, D: Device<f32>> {
     beta: &'a Tensor<Rank1<M>, f32, D>,
 }
 

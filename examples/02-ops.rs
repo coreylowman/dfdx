@@ -2,12 +2,12 @@
 
 use dfdx::{
     shapes::{Rank0, Rank1, Rank2},
-    tensor::{AsArray, Cpu, SampleTensor},
+    tensor::{AsArray, AutoDevice, SampleTensor},
     tensor_ops::{MeanTo, TryMatMul},
 };
 
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev: AutoDevice = Default::default();
 
     let a = dev.sample_normal::<Rank2<2, 3>>();
     dbg!(a.array());
