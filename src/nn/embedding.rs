@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{Module, ModuleMut, ResetParams};
+use super::module::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 
 /// An embedding
 /// Initializes [Self::weight] from a Uniform distribution
@@ -18,7 +18,7 @@ use super::module::{Module, ModuleMut, ResetParams};
 ///
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let model: Embedding<7, 2> = dev.build_module();
+/// let mut model: Embedding<7, 2> = BuildModule::build(&dev);
 /// // single sequence of ids
 /// let inputs: Tensor<_, usize> = dev.zeros::<Rank1<5>>();
 /// let _: Tensor<(Const<5>, Const<2>,), f32> = model.forward(inputs);
@@ -84,13 +84,6 @@ impl<const VOCAB: usize, const DIM: usize, D: Device<f32>> GradientUpdate<D, f32
 impl<const VOCAB: usize, const DIM: usize, D: Device<f32>> ResetParams<D, f32>
     for Embedding<VOCAB, DIM, D>
 {
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        let bound: f32 = 1.0 / (VOCAB as f32).sqrt();
-        let distr = rand_distr::Uniform::new(-bound, bound);
-        let weight = device.try_sample(distr)?;
-        Ok(Self { weight })
-    }
-
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         let bound: f32 = 1.0 / (VOCAB as f32).sqrt();
         let distr = rand_distr::Uniform::new(-bound, bound);
@@ -99,11 +92,33 @@ impl<const VOCAB: usize, const DIM: usize, D: Device<f32>> ResetParams<D, f32>
     }
 }
 
+impl<const VOCAB: usize, const DIM: usize, D: Device<f32>> BuildModule<D, f32>
+    for Embedding<VOCAB, DIM, D>
+{
+    fn try_build(device: &D) -> Result<Self, D::Err> {
+        let bound: f32 = 1.0 / (VOCAB as f32).sqrt();
+        let distr = rand_distr::Uniform::new(-bound, bound);
+        let weight = device.try_sample(distr)?;
+        Ok(Self { weight })
+    }
+}
+
+impl<const VOCAB: usize, const DIM: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2>
+    for Embedding<VOCAB, DIM, D1>
+{
+    type Output = Embedding<VOCAB, DIM, D2>;
+    fn to_device(&self, device: &D2) -> Self::Output {
+        Embedding {
+            weight: self.weight.to_device(device),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
-        nn::{tests::SimpleUpdater, ModuleBuilder},
+        nn::{tests::SimpleUpdater, BuildModule},
         tests::{assert_close, TestDevice},
         unique_id::HasUniqueId,
     };
@@ -116,7 +131,7 @@ mod tests {
     #[test]
     fn test_embedding_initialize() {
         let dev: TestDevice = Default::default();
-        let m: Embedding<2000, 1> = dev.build_module();
+        let m: Embedding<2000, 1> = BuildModule::build(&dev);
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);
@@ -214,7 +229,7 @@ mod tests {
     fn test_embedding_missing_gradients() {
         let dev: TestDevice = Default::default();
 
-        let mut model: Embedding<5, 3> = dev.build_module();
+        let mut model: Embedding<5, 3> = BuildModule::build(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present
