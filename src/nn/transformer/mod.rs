@@ -12,7 +12,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams};
+use super::{Module, ModuleMut, ResetParams, ToDevice};
 
 /// **Requires Nightly** Transformer architecture as described in
 /// [Attention is all you need](https://arxiv.org/abs/1706.03762).
@@ -96,6 +96,26 @@ where
         self.encoder.update(updater, unused)?;
         self.decoder.update(updater, unused)?;
         Ok(())
+    }
+}
+
+impl<
+        const M: usize,
+        const H: usize,
+        const EL: usize,
+        const DL: usize,
+        const F: usize,
+        D1: Device<f32>,
+        D2: Device<f32>,
+    > ToDevice<D2> for Transformer<M, H, EL, DL, F, D1>
+{
+    type Output = Transformer<M, H, EL, DL, F, D2>;
+
+    fn to_device(&self, device: &D2) -> Self::Output {
+        Transformer {
+            encoder: self.encoder.to_device(device),
+            decoder: self.decoder.to_device(device),
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams};
+use super::{Module, ModuleMut, OnDevice, ResetParams, ToDevice};
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -61,6 +61,17 @@ impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>, R: ResetParams<D, E>> ResetPa
         self.f.try_reset_params()?;
         self.r.try_reset_params()?;
         Ok(())
+    }
+}
+
+impl<D, F: ToDevice<D>, R: ToDevice<D>> ToDevice<D> for GeneralizedResidual<F, R> {
+    type Output = GeneralizedResidual<OnDevice<F, D>, OnDevice<R, D>>;
+
+    fn to_device(&self, device: &D) -> Self::Output {
+        GeneralizedResidual {
+            f: self.f.to_device(device),
+            r: self.r.to_device(device),
+        }
     }
 }
 
