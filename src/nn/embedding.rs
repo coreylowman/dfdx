@@ -37,7 +37,8 @@ impl<const VOCAB: usize, const DIM: usize, const SEQ: usize, D: Device<f32>, T: 
 {
     type Output = Tensor<Rank2<SEQ, DIM>, f32, D, T>;
     fn forward(&self, input: Tensor<Rank1<SEQ>, usize, D, T>) -> Self::Output {
-        self.weight.retaped::<T>().gather(input)
+        let (input, tape) = input.split_tape();
+        self.weight.clone().put_tape(tape).gather(input)
     }
 }
 
@@ -52,7 +53,8 @@ impl<
 {
     type Output = Tensor<Rank3<BATCH, SEQ, DIM>, f32, D, T>;
     fn forward(&self, input: Tensor<Rank2<BATCH, SEQ>, usize, D, T>) -> Self::Output {
-        self.weight.retaped::<T>().gather(input)
+        let (input, tape) = input.split_tape();
+        self.weight.clone().put_tape(tape).gather(input)
     }
 }
 
