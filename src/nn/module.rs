@@ -1,9 +1,5 @@
 use crate::{optim::GradientUpdate, shapes::Dtype, tensor_ops::Device};
 
-#[cfg(feature = "cuda")]
-pub use crate::tensor::OnCuda;
-pub use crate::tensor::{OnCpu, OnDevice, ToDevice};
-
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
 pub trait Module<Input> {
@@ -63,7 +59,7 @@ impl<D: Device<E>, E: Dtype> ModuleBuilder<E> for D {}
 /// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]
 pub trait ZeroSizedModule: Default {}
 
-impl<T: ZeroSizedModule + Clone, D: Device<E>, E: Dtype> ResetParams<D, E> for T {
+impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> ResetParams<D, E> for T {
     fn try_build(_: &D) -> Result<Self, <D>::Err> {
         Ok(Default::default())
     }
@@ -92,13 +88,5 @@ where
     type Output = <Self as Module<T>>::Output;
     fn forward_mut(&mut self, input: T) -> Self::Output {
         self.forward(input)
-    }
-}
-
-impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {
-    type Output = T;
-
-    fn to_device(&self, _device: &D) -> Self {
-        self.clone()
     }
 }

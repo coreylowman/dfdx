@@ -1,5 +1,5 @@
 use crate::{
-    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual, ToDevice},
+    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual},
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
@@ -44,22 +44,6 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f
         U: ParamUpdater<D, f32>,
     {
         self.0.update(updater, unused)
-    }
-}
-
-impl<
-        const M: usize,
-        const H: usize,
-        const F: usize,
-        const L: usize,
-        D1: Device<f32>,
-        D2: Device<f32>,
-    > ToDevice<D2> for TransformerDecoder<M, H, F, L, D1>
-{
-    type Output = TransformerDecoder<M, H, F, L, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        TransformerDecoder(self.0.to_device(device))
     }
 }
 
@@ -160,23 +144,6 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpd
         self.ff.update(updater, unused)?;
         self.norm3.update(updater, unused)?;
         Ok(())
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2>
-    for TransformerDecoderBlock<M, H, F, D1>
-{
-    type Output = TransformerDecoderBlock<M, H, F, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        TransformerDecoderBlock {
-            self_attn: self.self_attn.to_device(device),
-            norm1: self.norm1.to_device(device),
-            mh_attn: self.mh_attn.to_device(device),
-            norm2: self.norm2.to_device(device),
-            ff: self.ff.to_device(device),
-            norm3: self.norm3.to_device(device),
-        }
     }
 }
 
