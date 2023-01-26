@@ -185,7 +185,7 @@ pub use add::{add, TryAdd};
 pub use bce::bce_with_logits;
 pub use broadcast_to::BroadcastTo;
 pub use clamp::clamp;
-pub use cmp::eq;
+pub use cmp::{eq, ge, gt, le, lt, ne};
 pub use cos::cos;
 pub use div::{div, TryDiv};
 pub use dropout::dropout;

@@ -3,7 +3,7 @@ use crate::{
     tensor::cpu::{Cpu, LendingIterator, StridedArray},
 };
 
-use super::{CmpKernel, EqKernelOp};
+use super::{CmpKernel, EqKernelOp, GeKernelOp, GtKernelOp, LeKernelOp, LtKernelOp, NeKernelOp};
 
 trait CmpOpCpuKernel<E: Unit> {
     fn func(lhs: E, rhs: E) -> bool;
@@ -29,5 +29,35 @@ impl<Op: CmpOpCpuKernel<E>, E: Unit> CmpKernel<Op, E> for Cpu {
 impl<E: Unit> CmpOpCpuKernel<E> for EqKernelOp {
     fn func(lhs: E, rhs: E) -> bool {
         lhs == rhs
+    }
+}
+
+impl<E: Unit> CmpOpCpuKernel<E> for NeKernelOp {
+    fn func(lhs: E, rhs: E) -> bool {
+        lhs != rhs
+    }
+}
+
+impl<E: Unit> CmpOpCpuKernel<E> for GtKernelOp {
+    fn func(lhs: E, rhs: E) -> bool {
+        lhs > rhs
+    }
+}
+
+impl<E: Unit> CmpOpCpuKernel<E> for GeKernelOp {
+    fn func(lhs: E, rhs: E) -> bool {
+        lhs >= rhs
+    }
+}
+
+impl<E: Unit> CmpOpCpuKernel<E> for LtKernelOp {
+    fn func(lhs: E, rhs: E) -> bool {
+        lhs < rhs
+    }
+}
+
+impl<E: Unit> CmpOpCpuKernel<E> for LeKernelOp {
+    fn func(lhs: E, rhs: E) -> bool {
+        lhs <= rhs
     }
 }

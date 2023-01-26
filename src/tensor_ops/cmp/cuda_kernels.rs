@@ -6,7 +6,7 @@ use crate::{
 use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
-use super::CmpKernel;
+use super::{CmpKernel, EqKernelOp, GeKernelOp, GtKernelOp, LeKernelOp, LtKernelOp, NeKernelOp};
 
 trait CmpOpCudaKernel<E: Unit> {
     /// Compiled by build.rs
@@ -63,10 +63,38 @@ impl<Op: CmpOpCudaKernel<f32>> CmpKernel<Op, f32> for Cuda {
     }
 }
 
-use super::EqKernelOp;
-
 impl CmpOpCudaKernel<f32> for EqKernelOp {
     const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
     const MODULE_NAME: &'static str = "eq";
     const FWD_FN_NAME: &'static str = "eq_forward";
+}
+
+impl CmpOpCudaKernel<f32> for NeKernelOp {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const MODULE_NAME: &'static str = "ne";
+    const FWD_FN_NAME: &'static str = "ne_forward";
+}
+
+impl CmpOpCudaKernel<f32> for GtKernelOp {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const MODULE_NAME: &'static str = "gt";
+    const FWD_FN_NAME: &'static str = "gt_forward";
+}
+
+impl CmpOpCudaKernel<f32> for GeKernelOp {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const MODULE_NAME: &'static str = "ge";
+    const FWD_FN_NAME: &'static str = "ge_forward";
+}
+
+impl CmpOpCudaKernel<f32> for LtKernelOp {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const MODULE_NAME: &'static str = "lt";
+    const FWD_FN_NAME: &'static str = "lt_forward";
+}
+
+impl CmpOpCudaKernel<f32> for LeKernelOp {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const MODULE_NAME: &'static str = "le";
+    const FWD_FN_NAME: &'static str = "le_forward";
 }
