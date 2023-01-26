@@ -1,5 +1,6 @@
 # dfdx: shape checked deep learning in rust
 
+[![CUDA](https://badgen.net/badge/CUDA/passing/green)](#)
 [![crates.io](https://img.shields.io/crates/v/dfdx.svg)](https://crates.io/crates/dfdx)
 [![docs.rs](https://img.shields.io/docsrs/dfdx)](https://docs.rs/dfdx)
 [![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/AtUhGqBDP5)
@@ -9,14 +10,12 @@ Ergonomics & safety focused deep learning in Rust.
 **Still in pre-alpha state. The next few releases are planned to be breaking releases.**
 
 Features at a glance:
-1. Tensor library with shapes up to 6d!
+1. :fire: GPU accelerated tensor library with shapes up to 6d!
 2. Shapes with both compile and runtime sized dimensions. (e.g. `Tensor<(usize, Const<10>)>` and `Tensor<Rank2<5, 10>>`)
 3. A large library of tensor operations (including `matmul`, `conv2d`, and much more).
     1. All tensor operations shape and type checked at compile time!!
 4. Ergonomic neural network building blocks (like `Linear`, `Conv2D`, and `Transformer`).
 5. Standard deep learning optimizers such as `Sgd`, `Adam`, `AdamW`, `RMSprop`, and more.
-6. Reverse mode auto differentiation[1] implementation.
-7. Serialization to/from `.npy` and `.npz` for transferring models to/from python.
 
 `dfdx` is on [crates.io](https://crates.io/crates/dfdx)! Use by adding this to your `Cargo.toml`:
 
@@ -41,6 +40,10 @@ See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
 [2] The only things that use `Arc` are tensors to store their data. `Arc` is used instead of `Box` to reduce
 allocations when tensors are cloned.
 
+## GPU acceleration with CUDA
+
+Enable the `cuda` feature to start using the `Cuda` device! Requires the installation of nvidia's cuda toolkit. See [feature flags docs](https://docs.rs/dfdx/latest/dfdx/feature_flags/index.html) for more info.
+
 ## BLAS libraries
 
 The [matrixmultiply crate](https://crates.io/crates/matrixmultiply) is the default BLAS library. **You don't need
@@ -63,6 +66,7 @@ type Mlp = (
 
 fn main() {
     let dev: Cpu = Default::default();
+    // OR `let dev: Cuda = Default::default();`
     let mlp = Mlp::build_on_device(&dev);
     let x: Tensor<Rank1<10>> = dev.zeros();
     let y /*: Tensor<Rank1<2>>*/ = mlp.forward(x);
