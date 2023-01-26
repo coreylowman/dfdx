@@ -1,4 +1,4 @@
-use crate::{optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::module::{Module, ModuleMut, ResetParams};
 
@@ -18,13 +18,13 @@ use super::module::{Module, ModuleMut, ResetParams};
 ///
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let model: Embedding<5, 2> = dev.build_module();
-/// // single item forward
-/// let inputs: Tensor<(Const<5>,), usize> = dev.zeros::<Rank1<5>>();
-/// let _: Tensor<(Const<2>,), f32> = model.forward(inputs);
-/// // batched forward
-/// let inputs: Tensor<(Const<10>, Const<5>,), usize> = dev.zeros::<Rank2<10, 5>>();
-/// let _: Tensor<(Const<10>, Const<2>), f32> = model.forward(inputs);
+/// let model: Embedding<7, 2> = dev.build_module();
+/// // single sequence of ids
+/// let inputs: Tensor<_, usize> = dev.zeros::<Rank1<5>>();
+/// let _: Tensor<(Const<5>, Const<2>,), f32> = model.forward(inputs);
+/// // batched sequence of ids
+/// let inputs: Tensor<_, usize> = dev.zeros::<Rank2<10, 5>>();
+/// let _: Tensor<(Const<10>, Const<5>, Const<2>), f32> = model.forward(inputs);
 /// ```
 #[derive(Debug, Clone)]
 pub struct Embedding<const VOCAB: usize, const DIM: usize, D: Device<f32> = Cpu> {
@@ -32,12 +32,12 @@ pub struct Embedding<const VOCAB: usize, const DIM: usize, D: Device<f32> = Cpu>
     pub weight: Tensor<Rank2<VOCAB, DIM>, f32, D>,
 }
 
-impl<const VOCAB: usize, const DIM: usize, const SEQ: usize, D: Device<f32>>
-    Module<Tensor<Rank1<SEQ>, usize, D>> for Embedding<VOCAB, DIM, D>
+impl<const VOCAB: usize, const DIM: usize, const SEQ: usize, D: Device<f32>, T: Tape<D>>
+    Module<Tensor<Rank1<SEQ>, usize, D, T>> for Embedding<VOCAB, DIM, D>
 {
-    type Output = Tensor<Rank2<SEQ, DIM>, f32, D>;
-    fn forward(&self, input: Tensor<Rank1<SEQ>, usize, D>) -> Self::Output {
-        self.weight.retaped().gather(input)
+    type Output = Tensor<Rank2<SEQ, DIM>, f32, D, T>;
+    fn forward(&self, input: Tensor<Rank1<SEQ>, usize, D, T>) -> Self::Output {
+        self.weight.retaped::<T>().gather(input)
     }
 }
 
@@ -47,11 +47,12 @@ impl<
         const SEQ: usize,
         const BATCH: usize,
         D: Device<f32>,
-    > Module<Tensor<Rank2<BATCH, SEQ>, usize, D>> for Embedding<VOCAB, DIM, D>
+        T: Tape<D>,
+    > Module<Tensor<Rank2<BATCH, SEQ>, usize, D, T>> for Embedding<VOCAB, DIM, D>
 {
-    type Output = Tensor<Rank3<BATCH, SEQ, DIM>, f32, D>;
-    fn forward(&self, input: Tensor<Rank2<BATCH, SEQ>, usize, D>) -> Self::Output {
-        self.weight.retaped().gather(input)
+    type Output = Tensor<Rank3<BATCH, SEQ, DIM>, f32, D, T>;
+    fn forward(&self, input: Tensor<Rank2<BATCH, SEQ>, usize, D, T>) -> Self::Output {
+        self.weight.retaped::<T>().gather(input)
     }
 }
 
@@ -129,7 +130,7 @@ mod tests {
         };
 
         let x = dev.tensor([0, 0, 1]);
-        let y = model.forward(x);
+        let y = model.forward(x.trace());
         assert_close(
             &y.array(),
             &[
@@ -139,14 +140,26 @@ mod tests {
             ],
         );
 
-        // let g = y.square().mean().backward();
-        // assert_close(
-        //     &g.get(&model.weight).array(),
-        //     &[
-        //         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
-        //         [0.11733949, 0.14059687, -0.10670426, -0.09373143, 0.18974298],
-        //     ],
-        // );
+        let g = y.square().mean().backward();
+        assert_close(
+            &g.get(&model.weight).array(),
+            &[
+                [
+                    -0.09223715,
+                    -0.08099073,
+                    -0.09898819,
+                    0.03814289,
+                    -0.007172427,
+                ],
+                [
+                    0.015645266,
+                    0.01874625,
+                    -0.014227235,
+                    -0.012497525,
+                    0.025299065,
+                ],
+            ],
+        );
     }
 
     #[test]
@@ -158,8 +171,7 @@ mod tests {
         };
 
         let x = dev.tensor([[0, 0], [0, 1]]);
-        // let y = model.forward(x.trace());
-        let y = model.forward(x);
+        let y = model.forward(x.trace());
         assert_close(
             &y.array(),
             &[
@@ -174,14 +186,26 @@ mod tests {
             ],
         );
 
-        // let g = y.square().mean().backward();
-        // assert_close(
-        //     &g.get(&model.weight).array(),
-        //     &[
-        //         [-1.1541969, 0.6956873, -0.8553807, 0.9289255, 0.04931633],
-        //         [0.29272807, -0.17702839, 0.08586791, -0.24057935, 0.5286576],
-        //     ],
-        // );
+        let g = y.square().mean().backward();
+        assert_close(
+            &g.get(&model.weight).array(),
+            &[
+                [
+                    -0.103766784,
+                    -0.091114566,
+                    -0.11136171,
+                    0.042910747,
+                    -0.008068981,
+                ],
+                [
+                    0.011733949,
+                    0.014059687,
+                    -0.010670426,
+                    -0.009373143,
+                    0.018974299,
+                ],
+            ],
+        );
     }
 
     #[test]

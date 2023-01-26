@@ -139,16 +139,19 @@ pub trait GatherTo<D: DeviceStorage>: HasErr + HasShape {
     /// let idx: Tensor<Rank2<3, 2>, usize> = dev.tensor([[0, 1], [2, 3], [4, 4]]);
     /// let _: Tensor<Rank2<3, 2>> = a.gather(idx);
     ///```
-    fn gather<Dst: Shape, Idx: Shape>(self, idx: Tensor<Idx, usize, D>) -> Self::WithShape<Dst>
+    fn gather<Dst: Shape, Idx: Shape, T: Tape<D>>(
+        self,
+        idx: Tensor<Idx, usize, D, T>,
+    ) -> Self::WithShape<Dst>
     where
         Self::Shape: ReplaceDimTo<Dst, Idx>,
     {
         self.try_gather(idx).unwrap()
     }
 
-    fn try_gather<Dst: Shape, Idx: Shape>(
+    fn try_gather<Dst: Shape, Idx: Shape, T: Tape<D>>(
         self,
-        idx: Tensor<Idx, usize, D>,
+        idx: Tensor<Idx, usize, D, T>,
     ) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: ReplaceDimTo<Dst, Idx>;
@@ -157,9 +160,9 @@ pub trait GatherTo<D: DeviceStorage>: HasErr + HasShape {
 impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<D>> GatherTo<D>
     for Tensor<Src, E, D, T>
 {
-    fn try_gather<Dst: Shape, Idx: Shape>(
+    fn try_gather<Dst: Shape, Idx: Shape, TT: Tape<D>>(
         self,
-        idx: Tensor<Idx, usize, D>,
+        idx: Tensor<Idx, usize, D, TT>,
     ) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: ReplaceDimTo<Dst, Idx>,
