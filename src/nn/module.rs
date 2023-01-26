@@ -75,11 +75,11 @@ pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
 /// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]
 pub trait ZeroSizedModule: Default {}
 
-impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> BuildModule<D, E> for T {
-    fn try_build(_: &D) -> Result<Self, <D>::Err> {
-        Ok(Default::default())
-    }
-}
+// impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> BuildModule<D, E> for T {
+//     fn try_build(_: &D) -> Result<Self, <D>::Err> {
+//         Ok(Default::default())
+//     }
+// }
 
 impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> ResetParams<D, E> for T {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
@@ -89,7 +89,6 @@ impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> ResetParams<D, E> for T {
 
 impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {
     type Output = T;
-
     fn to_device(&self, _device: &D) -> Self {
         self.clone()
     }

@@ -2,7 +2,7 @@
 use crate::{gradients::Tape, shapes::*, tensor::Tensor, tensor_ops::*};
 
 #[allow(unused)]
-use super::{Module, NonMutableModule, ZeroSizedModule};
+use super::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
 
 /// **Requires Nightly** Flattens 3d tensors to 1d, and 4d tensors to 2d.
 #[derive(Default, Clone, Copy)]
@@ -10,6 +10,12 @@ pub struct Flatten2D;
 
 impl ZeroSizedModule for Flatten2D {}
 impl NonMutableModule for Flatten2D {}
+
+impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Flatten2D {
+    fn try_build(_: &D) -> Result<Self, <D>::Err> {
+        Ok(Default::default())
+    }
+}
 
 #[cfg(feature = "nightly")]
 impl<const C: usize, const H: usize, const W: usize, D: Device<E>, E: Dtype, T: Tape<D>>
