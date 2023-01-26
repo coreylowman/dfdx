@@ -2,7 +2,7 @@
 
 use dfdx::{
     losses::mse_loss,
-    nn::{Linear, ModuleBuilder, ModuleMut, ReLU, Tanh},
+    nn::{BuildOnDevice, Linear, ModuleMut, ReLU, Tanh},
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
     shapes::Rank2,
     tensor::{AsArray, Cpu, SampleTensor},
@@ -29,7 +29,7 @@ fn main() {
     });
 
     // let's initialize our model and some dummy data
-    let mut mlp: Mlp = dev.build_module();
+    let mut mlp = Mlp::build_on_device(&dev);
     let x = dev.sample_normal::<Rank2<3, 5>>();
     let y = dev.sample_normal::<Rank2<3, 2>>();
 

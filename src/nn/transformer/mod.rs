@@ -140,18 +140,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        nn::{tests::SimpleUpdater, ModuleBuilder},
-        shapes::*,
-        tensor::*,
-        tensor_ops::*,
-        tests::TestDevice,
-    };
+    use crate::{nn::tests::SimpleUpdater, shapes::*, tensor::*, tensor_ops::*, tests::TestDevice};
 
     #[test]
     fn test_forward() {
         let dev = TestDevice::seed_from_u64(0);
-        let mut t: Transformer<16, 4, 3, 3, 8, _> = dev.build_module();
+        let mut t: Transformer<16, 4, 3, 3, 8, _> = BuildModule::build(&dev);
 
         // unbatched
         let src = dev.sample_normal::<Rank2<7, 16>>();
@@ -167,7 +161,7 @@ mod tests {
     #[test]
     fn test_backward() {
         let dev = TestDevice::seed_from_u64(0);
-        let mut t: Transformer<16, 4, 3, 3, 8, _> = dev.build_module();
+        let mut t: Transformer<16, 4, 3, 3, 8, _> = BuildModule::build(&dev);
 
         let src = dev.sample_normal::<Rank3<4, 12, 16>>();
         let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();

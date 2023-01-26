@@ -17,7 +17,7 @@ use super::module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let model: Linear<5, 2> = dev.build_module();
+/// let model: Linear<5, 2> = BuildModule::build(&dev);
 /// // single item forward
 /// let _: Tensor<Rank1<2>> = model.forward(dev.zeros::<Rank1<5>>());
 /// // batched forward
@@ -140,7 +140,7 @@ mod tests {
     #[test]
     fn test_linear_initialize() {
         let dev: TestDevice = Default::default();
-        let m: Linear<2000, 1, _> = BuildModule::build(&dev);
+        let m = Linear::<2000, 1>::build_on_device(&dev);
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);

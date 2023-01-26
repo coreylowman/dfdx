@@ -16,7 +16,7 @@ use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let model: LayerNorm1D<5> = dev.build_module();
+/// let model: LayerNorm1D<5> = BuildModule::build(&dev);
 /// let _: Tensor<Rank1<5>> = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(Debug, Clone)]

@@ -63,7 +63,7 @@ type Mlp = (
 
 fn main() {
     let dev: Cpu = Default::default();
-    let mlp: Mlp = dev.build_module();
+    let mlp = Mlp::build_on_device(&dev);
     let x: Tensor<Rank1<10>> = dev.zeros();
     let y /*: Tensor<Rank1<2>>*/ = mlp.forward(x);
     println!("{:?}", y);
@@ -122,11 +122,11 @@ for sequentially executing modules.
 
 ```rust
 // no idea why you would do this, but you could!
-let model: (ReLU, Sigmoid, Tanh) = dev.build_module();
+let model: (ReLU, Sigmoid, Tanh) = BuildModule::build(&dev);
 ```
 
 ```rust
-let model: (Linear<10, 5>, Tanh) = dev.build_module();
+let model: (Linear<10, 5>, Tanh) = BuildModule::build(&dev);
 ```
 
 How implementing Module for a 2-tuple looks:

@@ -205,10 +205,9 @@ where
 mod tests {
     use super::*;
     use crate::{
-        nn::ModuleBuilder,
         shapes::Rank3,
         tensor::{AsArray, SampleTensor},
-        tests::{assert_close, TestDevice},
+        tests::*,
     };
 
     #[test]
@@ -222,7 +221,8 @@ mod tests {
         const NUM_HEADS: usize = 6;
         const FF_DIM: usize = 2;
 
-        let decoder: TransformerDecoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> = dev.build_module();
+        let decoder: TransformerDecoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> =
+            BuildModule::build(&dev);
 
         let tgt = dev.sample_normal::<Rank3<BATCH, S1, EMBED_DIM>>();
         let mem = dev.sample_normal::<Rank3<BATCH, S2, EMBED_DIM>>();

@@ -12,7 +12,7 @@ use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let model: Repeated<(Linear<10, 10>, ReLU), 5> = dev.build_module();
+/// let model: Repeated<(Linear<10, 10>, ReLU), 5> = BuildModule::build(&dev);
 /// let out: Tensor<Rank1<10>> = model.forward(dev.zeros());
 /// ```
 #[derive(Debug, Clone)]

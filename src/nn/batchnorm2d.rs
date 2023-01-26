@@ -1,6 +1,6 @@
 use crate::{gradients::*, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{Module, ModuleMut, ResetParams, BuildModule, BuildOnDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams};
 
 /// Batch normalization for images as described in
 /// [Batch Normalization: Accelerating Deep Network Training
@@ -23,7 +23,7 @@ use super::{Module, ModuleMut, ResetParams, BuildModule, BuildOnDevice};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let bn: BatchNorm2D<3> = dev.build_module();
+/// let bn: BatchNorm2D<3> = BuildModule::build(&dev);
 /// let _ = bn.forward(dev.zeros::<Rank3<3, 2, 2>>());
 /// let _ = bn.forward(dev.zeros::<Rank4<4, 3, 2, 2>>());
 /// ```
@@ -170,7 +170,9 @@ impl<const C: usize, D: Device<f32>> BuildModule<D, f32> for BatchNorm2D<C, D> {
     }
 }
 
-impl<const C: usize, Src: Device<f32>, Dst: Device<f32>> BuildOnDevice<Dst, f32> for BatchNorm2D<C, Src> {
+impl<const C: usize, Src: Device<f32>, Dst: Device<f32>> BuildOnDevice<Dst, f32>
+    for BatchNorm2D<C, Src>
+{
     type Built = BatchNorm2D<C, Dst>;
 }
 
@@ -198,9 +200,7 @@ impl<const C: usize, D: Device<f32>> GradientUpdate<D, f32> for BatchNorm2D<C, D
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        tests::*,
-    };
+    use crate::tests::*;
 
     #[test]
     fn test_batchnorm2d_3d_forward_mut() {

@@ -15,7 +15,7 @@ use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let model: SplitInto<(Linear<5, 3>, Linear<5, 7>)> = dev.build_module();
+/// let model: SplitInto<(Linear<5, 3>, Linear<5, 7>)> = BuildModule::build(&dev);
 /// let _: (Tensor<Rank1<3>>, Tensor<Rank1<7>>) = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(Debug, Default, Clone)]

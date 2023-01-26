@@ -68,9 +68,12 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule
 
 impl<const M: usize, const H: usize, const F: usize, S, D> BuildOnDevice<D, f32>
     for TransformerEncoderBlock<M, H, F, S>
-    where S: Device<f32>, D: Device<f32> {
-        type Built = TransformerEncoderBlock<M, H, F, D>;
-    }
+where
+    S: Device<f32>,
+    D: Device<f32>,
+{
+    type Built = TransformerEncoderBlock<M, H, F, D>;
+}
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
     for TransformerEncoderBlock<M, H, F, D>
@@ -136,10 +139,9 @@ where
 mod tests {
     use super::*;
     use crate::{
-        nn::ModuleBuilder,
         shapes::Rank3,
         tensor::{AsArray, SampleTensor},
-        tests::{assert_close, TestDevice},
+        tests::*,
     };
 
     #[test]
@@ -152,7 +154,8 @@ mod tests {
         const NUM_HEADS: usize = 3;
         const FF_DIM: usize = 16;
 
-        let encoder: TransformerEncoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> = dev.build_module();
+        let encoder: TransformerEncoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> =
+            BuildModule::build(&dev);
 
         let x = dev.sample_normal::<Rank3<BATCH, SEQ_LEN, EMBED_DIM>>();
         let y = encoder.forward(x);

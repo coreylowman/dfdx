@@ -133,10 +133,8 @@ impl<'a, B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
 #[cfg(test)]
 mod tests {
     use crate::{
-        nn::ModuleBuilder,
         tensor::{AsArray, SampleTensor, ZerosTensor},
-        tensor_ops::*,
-        tests::TestDevice,
+        tests::*,
     };
 
     use super::*;
@@ -197,7 +195,7 @@ mod tests {
     fn test_conv_with_optimizer() {
         let dev: TestDevice = Default::default();
 
-        let mut m: Conv2D<2, 4, 3, 1, 0, _> = dev.build_module();
+        let mut m = Conv2D::<2, 4, 3>::build_on_device(&dev);
 
         let weight_init = m.weight.clone();
         let bias_init = m.bias.clone();

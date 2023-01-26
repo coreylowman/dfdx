@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
 
-use super::{Module, ModuleMut, ResetParams, BuildModule, BuildOnDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams};
 
 /// Add inputs together into a single tensor. `T` should be a tuple
 //// where every element of the tuple has the same output type
@@ -14,7 +14,7 @@ use super::{Module, ModuleMut, ResetParams, BuildModule, BuildOnDevice};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let model: AddInto<(Linear<2, 5>, Linear<3, 5>)> = dev.build_module();
+/// let model: AddInto<(Linear<2, 5>, Linear<3, 5>)> = BuildModule::build(&dev);
 /// let a = dev.zeros::<Rank1<2>>();
 /// let b = dev.zeros::<Rank1<3>>();
 /// let _: Tensor<Rank1<5>> = model.forward((a, b));
@@ -118,7 +118,8 @@ mod tests {
     #[test]
     fn test_add_into_3() {
         let dev: TestDevice = Default::default();
-        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>, Linear<4, 5, _>)> = BuildModule::build(&dev);
+        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>, Linear<4, 5, _>)> =
+            BuildModule::build(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -134,12 +135,8 @@ mod tests {
     #[test]
     fn test_add_into_4() {
         let dev: TestDevice = Default::default();
-        let m: AddInto<(
-            Linear<2, 5, _>,
-            Linear<3, 5, _>,
-            Linear<4, 5, _>,
-            Linear<5, 5, _>,
-        )> = BuildModule::build(&dev);
+        type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>, Linear<5, 5>)>;
+        let m = Model::build_on_device(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -157,13 +154,14 @@ mod tests {
     #[test]
     fn test_add_into_5() {
         let dev: TestDevice = Default::default();
-        let m: AddInto<(
-            Linear<2, 5, _>,
-            Linear<3, 5, _>,
-            Linear<4, 5, _>,
-            Linear<5, 5, _>,
-            Linear<6, 5, _>,
-        )> = BuildModule::build(&dev);
+        type Model = AddInto<(
+            Linear<2, 5>,
+            Linear<3, 5>,
+            Linear<4, 5>,
+            Linear<5, 5>,
+            Linear<6, 5>,
+        )>;
+        let m = Model::build_on_device(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -243,11 +241,8 @@ mod tests {
     fn longer_network() {
         let dev: TestDevice = Default::default();
         // check if it works in a longer neural net
-        let mut model: (
-            AddInto<(Linear<5, 3, _>, Linear<5, 3, _>)>,
-            ReLU,
-            Linear<3, 1, _>,
-        ) = BuildModule::build(&dev);
+        type Model = (AddInto<(Linear<5, 3>, Linear<5, 3>)>, ReLU, Linear<3, 1>);
+        let mut model = Model::build_on_device(&dev);
         let _: Tensor<Rank1<1>, _, _, OwnedTape<_>> = model.forward((
             dev.zeros::<Rank1<5>>().traced(),
             dev.zeros::<Rank1<5>>().traced(),

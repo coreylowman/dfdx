@@ -16,7 +16,7 @@ use super::{Module, ModuleMut, ZeroSizedModule};
 /// ```compile_fail
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let dropout: DropoutOneIn<2> = dev.build_module();
+/// let dropout: DropoutOneIn<2> = BuildModule::build(&dev);
 /// dropout.forward(dev.zeros::<Rank1<5>>().trace());
 /// ```
 ///

@@ -25,13 +25,36 @@
 //!
 //! # Initializing
 //!
-//! All modules implement [ResetParams], which can be combined with [ModuleBuilder]
-//! implementation on devices like so:
+//! All modules implement [BuildModule]:
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();
-//! let model: Linear<5, 2> = dev.build_module(); // will allocate & randomize params
+//! let model: Linear<5, 2> = BuildModule::build(&dev); // will allocate & randomize params
+//! ```
+//!
+//! However, this becomes hard to use when you are using multiple devices. In case you are
+//! using another device, you should use [BuildOnDevice]:
+//!
+//! ```rust
+//! # use dfdx::prelude::*;
+//! # let dev: Cpu = Default::default();
+//! type Model = Linear<5, 2>;
+//! let model = Model::build_on_device(&dev);
+//! ```
+//!
+//! Here, the return type of [BuildOnDevice] depends on the device you pass in.
+//!
+//! # Resetting parameters
+//!
+//! All modules implement [ResetParams], which allows you to reset a module back to a randomized
+//! state:
+//!
+//! ```rust
+//! # use dfdx::prelude::*;
+//! # let dev: Cpu = Default::default();
+//! let mut model: Linear<5, 2> = BuildModule::build(&dev);
+//! model.reset_params();
 //! ```
 //!
 //! # Sequential models
@@ -78,20 +101,20 @@
 mod activations;
 mod add_into;
 mod batchnorm2d;
+mod conv;
 mod dropout;
+mod flatten;
 mod generalized_residual;
 mod impl_module_for_tuples;
 mod layer_norm;
 mod linear;
 mod module;
+mod pool2d;
 mod pool_global;
 mod repeated;
 mod residual;
 mod split_into;
 mod transformer;
-mod conv;
-mod flatten;
-mod pool2d;
 
 pub use activations::*;
 pub use add_into::*;
