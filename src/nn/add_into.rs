@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
 
-use super::{Module, ModuleMut, OnDevice, ResetParams, ToDevice};
+use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 
 /// Add inputs together into a single tensor. `T` should be a tuple
 //// where every element of the tuple has the same output type
@@ -37,10 +37,6 @@ impl<T: BuildModule<D, E>, D: Device<E>, E: Dtype> BuildModule<D, E> for AddInto
     }
 }
 
-impl<T: BuildOnDevice<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for AddInto<T> {
-    type Built = AddInto<T::Built>;
-}
-
 impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for AddInto<T> {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.0.try_reset_params()
@@ -48,8 +44,7 @@ impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for AddInto
 }
 
 impl<T: ToDevice<D>, D> ToDevice<D> for AddInto<T> {
-    type Output = AddInto<OnDevice<T, D>>;
-
+    type Output = AddInto<T::Output>;
     fn to_device(&self, device: &D) -> Self::Output {
         AddInto(self.0.to_device(device))
     }
@@ -102,7 +97,7 @@ mod tests {
     use super::*;
     use crate::{
         gradients::OwnedTape,
-        nn::{tests::SimpleUpdater, Linear, ReLU},
+        nn::{tests::SimpleUpdater, BuildOnDevice, Linear, ReLU},
         shapes::*,
         tensor::*,
         tests::TestDevice,

@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 
 /// Implements layer normalization as described in [Layer Normalization](https://arxiv.org/abs/1607.06450).
 ///
@@ -37,27 +37,10 @@ impl<const M: usize, D: Device<f32>> BuildModule<D, f32> for LayerNorm1D<M, D> {
     }
 }
 
-impl<const M: usize, Src: Device<f32>, Dst: Device<f32>> BuildOnDevice<Dst, f32>
-    for LayerNorm1D<M, Src>
-{
-    type Built = LayerNorm1D<M, Dst>;
-}
-
 impl<const M: usize, D: Device<f32>> ResetParams<D, f32> for LayerNorm1D<M, D> {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.gamma.try_fill_with_ones()?;
         self.beta.try_fill_with_zeros()?;
-        Ok(())
-    }
-}
-
-impl<const M: usize, D: Device<f32>> GradientUpdate<D, f32> for LayerNorm1D<M, D> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, f32>,
-    {
-        self.gamma.update(updater, unused)?;
-        self.beta.update(updater, unused)?;
         Ok(())
     }
 }
@@ -71,6 +54,17 @@ impl<const M: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for LayerNor
             beta: self.beta.to_device(device),
             epsilon: self.epsilon,
         }
+    }
+}
+
+impl<const M: usize, D: Device<f32>> GradientUpdate<D, f32> for LayerNorm1D<M, D> {
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
+    where
+        U: ParamUpdater<D, f32>,
+    {
+        self.gamma.update(updater, unused)?;
+        self.beta.update(updater, unused)?;
+        Ok(())
     }
 }
 

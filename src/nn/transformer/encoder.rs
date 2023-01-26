@@ -1,5 +1,5 @@
 use crate::{
-    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual, ToDevice},
+    nn::*,
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
@@ -66,15 +66,6 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, S, D> BuildOnDevice<D, f32>
-    for TransformerEncoderBlock<M, H, F, S>
-where
-    S: Device<f32>,
-    D: Device<f32>,
-{
-    type Built = TransformerEncoderBlock<M, H, F, D>;
-}
-
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
     for TransformerEncoderBlock<M, H, F, D>
 {
@@ -106,7 +97,6 @@ impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device
     for TransformerEncoderBlock<M, H, F, D1>
 {
     type Output = TransformerEncoderBlock<M, H, F, D2>;
-
     fn to_device(&self, device: &D2) -> Self::Output {
         TransformerEncoderBlock {
             self_attn: self.self_attn.to_device(device),

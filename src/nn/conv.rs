@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 
 /// **Requires Nightly** Performs 2d convolutions on 3d and 4d images.
 ///
@@ -56,15 +56,6 @@ where
     }
 }
 
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, Src, D>
-    BuildOnDevice<D, f32> for Conv2D<I, O, K, S, P, Src>
-where
-    Src: Device<f32>,
-    D: Device<f32>,
-{
-    type Built = Conv2D<I, O, K, S, P, D>;
-}
-
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
     ResetParams<D, f32> for Conv2D<I, O, K, S, P, D>
 where
@@ -96,6 +87,7 @@ where
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: usize, D, Img>
     Module<Img> for Conv2D<C, O, K, S, P, D>
 where

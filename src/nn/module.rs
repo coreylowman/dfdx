@@ -42,14 +42,20 @@ pub trait BuildModule<D: Device<E>, E: Dtype>: Sized {
 /// than it is on. Builds [BuildOnDevice::Built].
 ///
 /// Related to [BuildModule]
-pub trait BuildOnDevice<D: Device<E>, E: Dtype> {
-    type Built: BuildModule<D, E>;
-    fn build_on_device(device: &D) -> Self::Built {
+pub trait BuildOnDevice<D: Device<E>, E: Dtype>: ToDevice<D>
+where
+    Self::Output: BuildModule<D, E>,
+{
+    fn build_on_device(device: &D) -> Self::Output {
         BuildModule::build(device)
     }
-    fn try_build_on_device(device: &D) -> Result<Self::Built, D::Err> {
+    fn try_build_on_device(device: &D) -> Result<Self::Output, D::Err> {
         BuildModule::try_build(device)
     }
+}
+impl<T: ToDevice<D>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for T where
+    T::Output: BuildModule<D, E>
+{
 }
 
 /// Something that can reset it's parameters.
@@ -69,19 +75,26 @@ pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
 /// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]
 pub trait ZeroSizedModule: Default {}
 
-impl<T: ZeroSizedModule + Clone, D: Device<E>, E: Dtype> ResetParams<D, E> for T {
+impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> BuildModule<D, E> for T {
     fn try_build(_: &D) -> Result<Self, <D>::Err> {
         Ok(Default::default())
     }
 }
-impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for T {
-    type Built = Self;
-}
+
 impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> ResetParams<D, E> for T {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         Ok(())
     }
 }
+
+impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {
+    type Output = T;
+
+    fn to_device(&self, _device: &D) -> Self {
+        self.clone()
+    }
+}
+
 impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> GradientUpdate<D, E> for T {
     fn update<U>(&mut self, _: &mut U, _: &mut crate::optim::UnusedTensors) -> Result<(), <D>::Err>
     where
@@ -102,13 +115,5 @@ where
     type Output = <Self as Module<T>>::Output;
     fn forward_mut(&mut self, input: T) -> Self::Output {
         self.forward(input)
-    }
-}
-
-impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {
-    type Output = T;
-
-    fn to_device(&self, _device: &D) -> Self {
-        self.clone()
     }
 }

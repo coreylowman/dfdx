@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor::*, tensor_ops::Device};
 
-use super::{Module, ModuleMut, OnDevice, ResetParams, ToDevice};
+use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 
 /// Splits input into multiple heads. `T` should be a tuple,
 /// where every element of the tuple accepts the same input type.
@@ -36,10 +36,6 @@ impl<T: BuildModule<D, E>, D: Device<E>, E: Dtype> BuildModule<D, E> for SplitIn
     }
 }
 
-impl<T: BuildOnDevice<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for SplitInto<T> {
-    type Built = SplitInto<T::Built>;
-}
-
 impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for SplitInto<T> {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.0.try_reset_params()
@@ -47,7 +43,7 @@ impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for SplitIn
 }
 
 impl<T: ToDevice<D>, D> ToDevice<D> for SplitInto<T> {
-    type Output = SplitInto<OnDevice<T, D>>;
+    type Output = SplitInto<T::Output>;
 
     fn to_device(&self, device: &D) -> Self::Output {
         SplitInto(self.0.to_device(device))

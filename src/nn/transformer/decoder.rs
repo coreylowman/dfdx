@@ -1,5 +1,5 @@
 use crate::{
-    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual, ToDevice},
+    nn::*,
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
@@ -31,15 +31,6 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f
     fn try_build(device: &D) -> Result<Self, D::Err> {
         Ok(Self(BuildModule::try_build(device)?))
     }
-}
-
-impl<const M: usize, const H: usize, const F: usize, const L: usize, S, D> BuildOnDevice<D, f32>
-    for TransformerDecoder<M, H, F, L, S>
-where
-    S: Device<f32>,
-    D: Device<f32>,
-{
-    type Built = TransformerDecoder<M, H, F, L, D>;
 }
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
@@ -149,12 +140,6 @@ impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildModule
             norm3: BuildModule::try_build(device)?,
         })
     }
-}
-
-impl<const M: usize, const N: usize, const F: usize, S: Device<f32>, D: Device<f32>>
-    BuildOnDevice<D, f32> for TransformerDecoderBlock<M, N, F, S>
-{
-    type Built = TransformerDecoderBlock<M, N, F, D>;
 }
 
 impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>

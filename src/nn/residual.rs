@@ -1,6 +1,8 @@
 use crate::{optim::*, shapes::*, tensor::SplitTape, tensor_ops::Device};
 
-use super::{Module, ModuleMut, OnDevice, ResetParams, ToDevice};
+use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+
+use std::ops::Add;
 
 /// A residual connection around `F`: `F(x) + x`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -35,10 +37,6 @@ impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Residua
     }
 }
 
-impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>> BuildOnDevice<D, E> for Residual<F> {
-    type Built = Residual<F::Built>;
-}
-
 impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>> ResetParams<D, E> for Residual<F> {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.0.try_reset_params()
@@ -46,25 +44,20 @@ impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>> ResetParams<D, E> for Residua
 }
 
 impl<F: ToDevice<D>, D> ToDevice<D> for Residual<F> {
-    type Output = Residual<OnDevice<F, D>>;
-
+    type Output = Residual<F::Output>;
     fn to_device(&self, device: &D) -> Self::Output {
         Residual(self.0.to_device(device))
     }
 }
 
-impl<T: SplitTape + std::ops::Add<T, Output = T>, F: Module<T, Output = T>> Module<T>
-    for Residual<F>
-{
+impl<T: SplitTape + Add<T, Output = T>, F: Module<T, Output = T>> Module<T> for Residual<F> {
     type Output = T;
     fn forward(&self, x: T) -> Self::Output {
         self.0.forward(x.with_empty_tape()) + x
     }
 }
 
-impl<T: SplitTape + std::ops::Add<T, Output = T>, F: ModuleMut<T, Output = T>> ModuleMut<T>
-    for Residual<F>
-{
+impl<T: SplitTape + Add<T, Output = T>, F: ModuleMut<T, Output = T>> ModuleMut<T> for Residual<F> {
     type Output = T;
     fn forward_mut(&mut self, x: T) -> Self::Output {
         self.0.forward_mut(x.with_empty_tape()) + x

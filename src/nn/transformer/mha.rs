@@ -45,15 +45,6 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, S, D> BuildOnDevice<D, f32>
-    for MultiHeadAttention<M, H, K, V, S>
-where
-    S: Device<f32>,
-    D: Device<f32>,
-{
-    type Built = MultiHeadAttention<M, H, K, V, D>;
-}
-
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
     ResetParams<D, f32> for MultiHeadAttention<M, H, K, V, D>
 {
@@ -81,14 +72,11 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
     }
 }
 
-impl<
-        const M: usize,
-        const H: usize,
-        const K: usize,
-        const V: usize,
-        D1: Device<f32>,
-        D2: Device<f32>,
-    > ToDevice<D2> for MultiHeadAttention<M, H, K, V, D1>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D1, D2> ToDevice<D2>
+    for MultiHeadAttention<M, H, K, V, D1>
+where
+    D1: Device<f32>,
+    D2: Device<f32>,
 {
     type Output = MultiHeadAttention<M, H, K, V, D2>;
 

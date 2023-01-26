@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{Module, ModuleMut, ResetParams, ToDevice};
+use super::module::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 
 /// A linear transformation of the form `weight * x + bias`, where `weight` is a matrix, `x` is a vector or matrix,
 /// and `bias` is a vector.
@@ -53,12 +53,6 @@ impl<const I: usize, const O: usize, D: Device<f32>> BuildModule<D, f32> for Lin
     }
 }
 
-impl<const I: usize, const O: usize, Src: Device<f32>, Dst: Device<f32>> BuildOnDevice<Dst, f32>
-    for Linear<I, O, Src>
-{
-    type Built = Linear<I, O, Dst>;
-}
-
 impl<const I: usize, const O: usize, D: Device<f32>> ResetParams<D, f32> for Linear<I, O, D> {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
@@ -66,6 +60,18 @@ impl<const I: usize, const O: usize, D: Device<f32>> ResetParams<D, f32> for Lin
         self.weight.try_fill_with_distr(distr)?;
         self.bias.try_fill_with_distr(distr)?;
         Ok(())
+    }
+}
+
+impl<const I: usize, const O: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2>
+    for Linear<I, O, D1>
+{
+    type Output = Linear<I, O, D2>;
+    fn to_device(&self, device: &D2) -> Self::Output {
+        Linear {
+            weight: self.weight.to_device(device),
+            bias: self.bias.to_device(device),
+        }
     }
 }
 
@@ -126,23 +132,10 @@ impl<'a, B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
     }
 }
 
-#[rustfmt::skip]
-impl<const I: usize, const O: usize, D1: Device<f32>, D2: Device<f32>>
-    ToDevice<D2> for Linear<I, O, D1>
-{
-    type Output = Linear<I, O, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        Linear {
-            weight: self.weight.to_device(device),
-            bias: self.bias.to_device(device),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nn::BuildOnDevice;
     use crate::{nn::tests::SimpleUpdater, tests::*, unique_id::HasUniqueId};
 
     const W: [[f32; 5]; 2] = [

@@ -1,6 +1,6 @@
 use crate::{gradients::*, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 
 /// Batch normalization for images as described in
 /// [Batch Normalization: Accelerating Deep Network Training
@@ -170,12 +170,6 @@ impl<const C: usize, D: Device<f32>> BuildModule<D, f32> for BatchNorm2D<C, D> {
     }
 }
 
-impl<const C: usize, Src: Device<f32>, Dst: Device<f32>> BuildOnDevice<Dst, f32>
-    for BatchNorm2D<C, Src>
-{
-    type Built = BatchNorm2D<C, Dst>;
-}
-
 impl<const C: usize, D: Device<f32>> ResetParams<D, f32> for BatchNorm2D<C, D> {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.scale.try_fill_with_ones()?;
@@ -183,6 +177,20 @@ impl<const C: usize, D: Device<f32>> ResetParams<D, f32> for BatchNorm2D<C, D> {
         self.running_mean.try_fill_with_zeros()?;
         self.running_var.try_fill_with_ones()?;
         Ok(())
+    }
+}
+
+impl<const C: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for BatchNorm2D<C, D1> {
+    type Output = BatchNorm2D<C, D2>;
+    fn to_device(&self, device: &D2) -> Self::Output {
+        BatchNorm2D {
+            scale: self.scale.to_device(device),
+            bias: self.bias.to_device(device),
+            running_mean: self.running_mean.to_device(device),
+            running_var: self.running_var.to_device(device),
+            epsilon: self.epsilon,
+            momentum: self.momentum,
+        }
     }
 }
 
@@ -194,21 +202,6 @@ impl<const C: usize, D: Device<f32>> GradientUpdate<D, f32> for BatchNorm2D<C, D
         self.scale.update(updater, unused)?;
         self.bias.update(updater, unused)?;
         Ok(())
-    }
-}
-
-impl<const C: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for BatchNorm2D<C, D1> {
-    type Output = BatchNorm2D<C, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        BatchNorm2D {
-            scale: self.scale.to_device(device),
-            bias: self.bias.to_device(device),
-            running_mean: self.running_mean.to_device(device),
-            running_var: self.running_var.to_device(device),
-            epsilon: self.epsilon,
-            momentum: self.momentum,
-        }
     }
 }
 

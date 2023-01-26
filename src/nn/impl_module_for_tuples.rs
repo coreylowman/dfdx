@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::*, tensor_ops::*};
 
-use super::module::{Module, ModuleMut, OnDevice, ResetParams, ToDevice};
+use super::module::{BuildModule, Module, ModuleMut, OnDevice, ResetParams, ToDevice};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
@@ -22,10 +22,6 @@ macro_rules! tuple_impls {
             }
         }
 
-        impl<D: Device<E>, E: Dtype, $($name: BuildOnDevice<D, E>),+> BuildOnDevice<D, E> for ($($name,)+) {
-            type Built = ($($name::Built, )+);
-        }
-
         impl<D: Device<E>, E: Dtype, $($name: ResetParams<D, E>),+> ResetParams<D, E> for ($($name,)+) {
             #[allow(non_snake_case)]
             fn try_reset_params(&mut self) -> Result<(), D::Err> {
@@ -36,7 +32,6 @@ macro_rules! tuple_impls {
 
         impl<$($name: ToDevice<D>,)+ D> ToDevice<D> for ($($name,)+) {
             type Output = ($(OnDevice<$name, D>,)+);
-
             fn to_device(&self, device: &D) -> Self::Output {
                 ($(self.$idx.to_device(device)),+)
             }
