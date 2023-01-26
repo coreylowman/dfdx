@@ -1,6 +1,6 @@
 use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{Module, NonMutableModule, ZeroSizedModule, BuildModule};
+use super::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
 
 /// Applies average pooling over an entire image, fully reducing the height and width
 /// dimensions:
