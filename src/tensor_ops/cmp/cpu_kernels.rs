@@ -3,8 +3,7 @@ use crate::{
     tensor::cpu::{Cpu, LendingIterator, StridedArray},
 };
 
-use super::CmpKernel;
-use super::EqKernelOp;
+use super::{CmpKernel, EqKernelOp};
 
 trait CmpOpCpuKernel<E: Unit> {
     fn func(lhs: E, rhs: E) -> bool;

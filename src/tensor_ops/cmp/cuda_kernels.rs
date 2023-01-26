@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use super::CmpKernel;
 
-pub(crate) trait CmpOpCudaKernel<E: Unit> {
+trait CmpOpCudaKernel<E: Unit> {
     /// Compiled by build.rs
     const PTX_SRC: &'static str;
 
