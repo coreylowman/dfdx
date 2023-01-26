@@ -250,7 +250,7 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let mut model: Linear<5, 3, _> = dev.build_module();
-        let mut g: SimpleUpdater<_> = Default::default();
+        let mut g: SimpleUpdater = Default::default();
 
         // no gradients present
         let mut unused = Default::default();

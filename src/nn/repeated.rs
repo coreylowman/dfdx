@@ -121,7 +121,7 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let mut model: Repeated<Linear<5, 5, _>, 3> = dev.build_module();
-        let mut g: SimpleUpdater<_> = Default::default();
+        let mut g: SimpleUpdater = Default::default();
 
         // no gradients present
         let mut unused = Default::default();

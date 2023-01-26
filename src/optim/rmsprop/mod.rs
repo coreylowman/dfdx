@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 use crate::{
     gradients::Gradients,
     shapes::{Dtype, Shape},
-    tensor::{Cpu, DeviceStorage, OneFillStorage, Tensor},
+    tensor::{DeviceStorage, OneFillStorage, Tensor},
 };
 
 use super::{
@@ -87,20 +87,20 @@ impl Default for RMSpropConfig<f32> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct RMSprop<M, D: DeviceStorage = Cpu, E: Dtype = f32> {
+pub struct RMSprop<M, E: Dtype = f32> {
     /// Hyperparameter configuration
     pub cfg: RMSpropConfig<E>,
 
     step: usize,
-    momentums: Gradients<D>,
-    square_avg: Gradients<D>,
-    grad_avg: Gradients<D>,
-    gradients: Gradients<D>,
+    momentums: Gradients,
+    square_avg: Gradients,
+    grad_avg: Gradients,
+    gradients: Gradients,
 
     marker: PhantomData<*const M>,
 }
 
-impl<M, D: DeviceStorage, E: Dtype> Default for RMSprop<M, D, E>
+impl<M, E: Dtype> Default for RMSprop<M, E>
 where
     RMSpropConfig<E>: Default,
 {
@@ -110,7 +110,7 @@ where
     }
 }
 
-impl<M, D: DeviceStorage, E: Dtype> RMSprop<M, D, E> {
+impl<M, E: Dtype> RMSprop<M, E> {
     /// Constructs using hyperparameters from `cfg`.
     pub fn new(cfg: RMSpropConfig<E>) -> Self {
         Self {
@@ -137,7 +137,7 @@ pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, D: RMSpropKernel<f32> + OneFillStorage<f32>> ParamUpdater<D, f32> for RMSprop<M, D, f32> {
+impl<M, D: RMSpropKernel<f32> + OneFillStorage<f32>> ParamUpdater<D, f32> for RMSprop<M, f32> {
     fn update_param<S: Shape>(
         &mut self,
         p: &mut Tensor<S, f32, D>,
@@ -162,14 +162,14 @@ impl<M, D: RMSpropKernel<f32> + OneFillStorage<f32>> ParamUpdater<D, f32> for RM
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, M: GradientUpdate<D, E>> Optimizer<M, D, E> for RMSprop<M, D, E>
+impl<M: GradientUpdate<D, E>, D: RMSpropKernel<E>, E: Dtype> Optimizer<M, D, E> for RMSprop<M, E>
 where
     Self: ParamUpdater<D, E>,
 {
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients<D>,
+        gradients: Gradients,
     ) -> Result<(), OptimizerUpdateError<D>> {
         self.gradients = gradients;
         let mut unused = Default::default();

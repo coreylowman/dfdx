@@ -133,9 +133,9 @@ mod tests {
     use crate::{gradients::Gradients, optim::ParamUpdater, shapes::Dtype, tensor::DeviceStorage};
 
     #[derive(Default)]
-    pub struct SimpleUpdater<D: DeviceStorage>(pub Gradients<D>);
+    pub struct SimpleUpdater(pub Gradients);
 
-    impl<D: DeviceStorage, E: Dtype> ParamUpdater<D, E> for SimpleUpdater<D> {
+    impl<D: DeviceStorage, E: Dtype> ParamUpdater<D, E> for SimpleUpdater {
         fn update_param<S: crate::shapes::Shape>(
             &mut self,
             p: &mut crate::tensor::Tensor<S, E, D>,
