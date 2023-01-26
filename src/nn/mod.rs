@@ -25,39 +25,13 @@
 //!
 //! # Initializing
 //!
-//! Use [BuildOnDevice] for device agnostic module creation/randomization:
+//! All modules implement [ResetParams], which can be combined with [ModuleBuilder]
+//! implementation on devices like so:
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
-//! # let dev: Cpu = Default::default();
-//! type Model = Linear<5, 2>;
-//! let model = Model::build_on_device(&dev);
-//! ```
-//!
-//! Here, the return type of [BuildOnDevice] depends on the device you pass in.
-//!
-//! For example, when using device [Cpu], the type is `Linear<5, 2, Cpu>`, or when using
-//! a `Cuda` device, the type is `Linear<5, 2, Cuda>`.
-//!
-//! Alternatively, you can use [BuildModule], which requires device specific model definitions:
-//!
-//! ```rust
-//! # use dfdx::prelude::*;
-//! type Dev = Cpu;
-//! let dev: Dev = Default::default();
-//! let model: Linear<5, 2, Dev> = BuildModule::build(&dev);
-//! ```
-//!
-//! # Resetting parameters
-//!
-//! All modules implement [ResetParams], which allows you to reset a module back to a randomized
-//! state:
-//!
-//! ```rust
-//! # use dfdx::prelude::*;
-//! # let dev: Cpu = Default::default();
-//! let mut model: Linear<5, 2> = BuildModule::build(&dev);
-//! model.reset_params();
+//! let dev: Cpu = Default::default();
+//! let model: Linear<5, 2> = dev.build_module(); // will allocate & randomize params
 //! ```
 //!
 //! # Sequential models
@@ -104,15 +78,12 @@
 mod activations;
 mod add_into;
 mod batchnorm2d;
-mod conv;
 mod dropout;
-mod flatten;
 mod generalized_residual;
 mod impl_module_for_tuples;
 mod layer_norm;
 mod linear;
 mod module;
-mod pool2d;
 mod pool_global;
 mod repeated;
 mod residual;
@@ -134,9 +105,15 @@ pub use residual::*;
 pub use split_into::*;
 
 #[cfg(feature = "nightly")]
+mod conv;
+#[cfg(feature = "nightly")]
 pub use conv::*;
 #[cfg(feature = "nightly")]
+mod flatten;
+#[cfg(feature = "nightly")]
 pub use flatten::*;
+#[cfg(feature = "nightly")]
+mod pool2d;
 #[cfg(feature = "nightly")]
 pub use pool2d::*;
 #[cfg(feature = "nightly")]

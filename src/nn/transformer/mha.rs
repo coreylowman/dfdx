@@ -33,21 +33,16 @@ pub struct MultiHeadAttention<
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    BuildModule<D, f32> for MultiHeadAttention<M, H, K, V, D>
+    ResetParams<D, f32> for MultiHeadAttention<M, H, K, V, D>
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            w_q: BuildModule::try_build(device)?,
-            w_k: BuildModule::try_build(device)?,
-            w_v: BuildModule::try_build(device)?,
-            w_o: BuildModule::try_build(device)?,
+            w_q: ResetParams::try_build(device)?,
+            w_k: ResetParams::try_build(device)?,
+            w_v: ResetParams::try_build(device)?,
+            w_o: ResetParams::try_build(device)?,
         })
     }
-}
-
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    ResetParams<D, f32> for MultiHeadAttention<M, H, K, V, D>
-{
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.w_q.try_reset_params()?;
         self.w_k.try_reset_params()?;
@@ -72,11 +67,14 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D1, D2> ToDevice<D2>
-    for MultiHeadAttention<M, H, K, V, D1>
-where
-    D1: Device<f32>,
-    D2: Device<f32>,
+impl<
+        const M: usize,
+        const H: usize,
+        const K: usize,
+        const V: usize,
+        D1: Device<f32>,
+        D2: Device<f32>,
+    > ToDevice<D2> for MultiHeadAttention<M, H, K, V, D1>
 {
     type Output = MultiHeadAttention<M, H, K, V, D2>;
 
@@ -253,7 +251,7 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha = MultiHeadAttention::<M, NUM_HEADS>::build_on_device(&dev);
+        let mha: MultiHeadAttention<M, NUM_HEADS, M, M, _> = dev.build_module();
 
         let q = dev.sample_normal::<Rank2<S1, M>>();
         let k = dev.sample_normal::<Rank2<S2, M>>();
@@ -287,7 +285,7 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha = MultiHeadAttention::<M, NUM_HEADS>::build_on_device(&dev);
+        let mha: MultiHeadAttention<M, NUM_HEADS, M, M, _> = dev.build_module();
 
         let q = dev.sample_normal::<Rank3<BATCH, S1, M>>();
         let k = dev.sample_normal::<Rank3<BATCH, S2, M>>();
@@ -337,7 +335,7 @@ mod tests {
     fn test_backward_updates_all() {
         let dev: TestDevice = Default::default();
 
-        let mut mha = MultiHeadAttention::<12, 4>::build_on_device(&dev);
+        let mut mha: MultiHeadAttention<12, 4, 12, 12, _> = dev.build_module();
 
         let q = dev.sample_normal::<Rank3<2, 3, 12>>();
         let k = dev.sample_normal::<Rank3<2, 4, 12>>();

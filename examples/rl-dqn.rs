@@ -32,8 +32,8 @@ fn main() {
     let next_state = dev.sample_normal::<Rank2<BATCH, STATE>>();
 
     // initiliaze model
-    let mut q_net = QNetwork::build_on_device(&dev);
-    let target_q_net = q_net.clone();
+    let mut q_net: QNetwork = dev.build_module();
+    let target_q_net: QNetwork = q_net.clone();
 
     let mut sgd = Sgd::new(SgdConfig {
         lr: 1e-1,

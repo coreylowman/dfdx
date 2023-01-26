@@ -1,5 +1,5 @@
 use crate::{
-    nn::*,
+    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual, ToDevice},
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
@@ -53,22 +53,17 @@ pub struct TransformerEncoderBlock<
 
 type FF<const M: usize, const F: usize, D> = Residual<(Linear<M, F, D>, ReLU, Linear<F, M, D>)>;
 
-impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
     for TransformerEncoderBlock<M, H, F, D>
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            self_attn: BuildModule::try_build(device)?,
-            norm1: BuildModule::try_build(device)?,
-            ff: BuildModule::try_build(device)?,
-            norm2: BuildModule::try_build(device)?,
+            self_attn: ResetParams::try_build(device)?,
+            norm1: ResetParams::try_build(device)?,
+            ff: ResetParams::try_build(device)?,
+            norm2: ResetParams::try_build(device)?,
         })
     }
-}
-
-impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
-    for TransformerEncoderBlock<M, H, F, D>
-{
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.self_attn.try_reset_params()?;
         self.norm1.try_reset_params()?;
@@ -97,6 +92,7 @@ impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device
     for TransformerEncoderBlock<M, H, F, D1>
 {
     type Output = TransformerEncoderBlock<M, H, F, D2>;
+
     fn to_device(&self, device: &D2) -> Self::Output {
         TransformerEncoderBlock {
             self_attn: self.self_attn.to_device(device),
@@ -144,9 +140,10 @@ where
 mod tests {
     use super::*;
     use crate::{
+        nn::ModuleBuilder,
         shapes::Rank3,
         tensor::{AsArray, SampleTensor},
-        tests::*,
+        tests::{assert_close, TestDevice},
     };
 
     #[test]
@@ -159,8 +156,7 @@ mod tests {
         const NUM_HEADS: usize = 3;
         const FF_DIM: usize = 16;
 
-        let encoder =
-            TransformerEncoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build_on_device(&dev);
+        let encoder: TransformerEncoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> = dev.build_module();
 
         let x = dev.sample_normal::<Rank3<BATCH, SEQ_LEN, EMBED_DIM>>();
         let y = encoder.forward(x);

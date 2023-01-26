@@ -1,6 +1,6 @@
 use crate::{gradients::*, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::{Module, ModuleMut, ResetParams, ToDevice};
 
 /// Batch normalization for images as described in
 /// [Batch Normalization: Accelerating Deep Network Training
@@ -23,8 +23,7 @@ use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// type Model = BatchNorm2D<3>;
-/// let bn = Model::build_on_device(&dev);
+/// let bn: BatchNorm2D<3> = dev.build_module();
 /// let _ = bn.forward(dev.zeros::<Rank3<3, 2, 2>>());
 /// let _ = bn.forward(dev.zeros::<Rank4<4, 3, 2, 2>>());
 /// ```
@@ -158,7 +157,7 @@ impl<B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>>
     }
 }
 
-impl<const C: usize, D: Device<f32>> BuildModule<D, f32> for BatchNorm2D<C, D> {
+impl<const C: usize, D: Device<f32>> ResetParams<D, f32> for BatchNorm2D<C, D> {
     fn try_build(device: &D) -> Result<Self, D::Err> {
         Ok(Self {
             scale: device.try_ones()?,
@@ -169,29 +168,13 @@ impl<const C: usize, D: Device<f32>> BuildModule<D, f32> for BatchNorm2D<C, D> {
             momentum: 0.1,
         })
     }
-}
 
-impl<const C: usize, D: Device<f32>> ResetParams<D, f32> for BatchNorm2D<C, D> {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.scale.try_fill_with_ones()?;
         self.bias.try_fill_with_zeros()?;
         self.running_mean.try_fill_with_zeros()?;
         self.running_var.try_fill_with_ones()?;
         Ok(())
-    }
-}
-
-impl<const C: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for BatchNorm2D<C, D1> {
-    type Output = BatchNorm2D<C, D2>;
-    fn to_device(&self, device: &D2) -> Self::Output {
-        BatchNorm2D {
-            scale: self.scale.to_device(device),
-            bias: self.bias.to_device(device),
-            running_mean: self.running_mean.to_device(device),
-            running_var: self.running_var.to_device(device),
-            epsilon: self.epsilon,
-            momentum: self.momentum,
-        }
     }
 }
 
@@ -206,17 +189,35 @@ impl<const C: usize, D: Device<f32>> GradientUpdate<D, f32> for BatchNorm2D<C, D
     }
 }
 
+impl<const C: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for BatchNorm2D<C, D1> {
+    type Output = BatchNorm2D<C, D2>;
+
+    fn to_device(&self, device: &D2) -> Self::Output {
+        BatchNorm2D {
+            scale: self.scale.to_device(device),
+            bias: self.bias.to_device(device),
+            running_mean: self.running_mean.to_device(device),
+            running_var: self.running_var.to_device(device),
+            epsilon: self.epsilon,
+            momentum: self.momentum,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::*;
+    use crate::{
+        nn::ModuleBuilder,
+        tests::{assert_close, TestDevice},
+    };
 
     #[test]
     fn test_batchnorm2d_3d_forward_mut() {
         let dev = TestDevice::seed_from_u64(0);
 
         let x1: Tensor<Rank3<3, 2, 2>, f32, _> = dev.sample(rand_distr::StandardNormal);
-        let mut bn: BatchNorm2D<3, _> = BuildModule::build(&dev);
+        let mut bn: BatchNorm2D<3, _> = dev.build_module();
 
         let y1 = bn.forward_mut(x1.trace());
         assert_close(
@@ -251,7 +252,7 @@ mod tests {
         let dev = TestDevice::seed_from_u64(2);
 
         let x1 = dev.sample_normal::<Rank4<2, 2, 2, 3>>();
-        let mut bn: BatchNorm2D<2, _> = BuildModule::build(&dev);
+        let mut bn: BatchNorm2D<2, _> = dev.build_module();
 
         let y1 = bn.forward_mut(x1.trace());
         #[rustfmt::skip]
@@ -283,7 +284,7 @@ mod tests {
         let dev = TestDevice::seed_from_u64(12);
 
         let x1 = dev.sample_normal::<Rank3<3, 4, 5>>();
-        let mut bn: BatchNorm2D<3, _> = BuildModule::build(&dev);
+        let mut bn: BatchNorm2D<3, _> = dev.build_module();
 
         let _ = bn.forward_mut(x1.trace());
         assert_close(

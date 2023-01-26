@@ -28,8 +28,8 @@ fn main() {
     let advantage = dev.sample_normal::<Rank1<BATCH>>();
 
     // initiliaze model - all weights are 0s
-    let mut pi_net = PolicyNetwork::build_on_device(&dev);
-    let target_pi_net = pi_net.clone();
+    let mut pi_net: PolicyNetwork = dev.build_module();
+    let target_pi_net: PolicyNetwork = pi_net.clone();
 
     let mut sgd = Sgd::new(SgdConfig {
         lr: 1e-1,
