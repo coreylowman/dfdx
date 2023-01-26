@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{Module, NonMutableModule, ZeroSizedModule};
+use super::module::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
 
 macro_rules! activation_impls {
     ($struct_name:ident, $func_name:ident, #[$docstring:meta]) => {
@@ -10,6 +10,12 @@ macro_rules! activation_impls {
 
         impl ZeroSizedModule for $struct_name {}
         impl NonMutableModule for $struct_name {}
+
+        impl<D: Device<E>, E: Dtype> BuildModule<D, E> for $struct_name {
+            fn try_build(_: &D) -> Result<Self, <D>::Err> {
+                Ok(Default::default())
+            }
+        }
 
         impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<S, E, D, T>>
             for $struct_name
@@ -40,6 +46,12 @@ pub struct Softmax;
 
 impl ZeroSizedModule for Softmax {}
 impl NonMutableModule for Softmax {}
+
+impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Softmax {
+    fn try_build(_: &D) -> Result<Self, <D>::Err> {
+        Ok(Default::default())
+    }
+}
 
 impl<Ax: Axes, S: Shape<LastAxis = Ax> + ReduceShape<Ax>, E: Dtype, D: Device<E>, T: Tape<D>>
     Module<Tensor<S, E, D, T>> for Softmax

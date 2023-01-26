@@ -1,6 +1,6 @@
 use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{Module, NonMutableModule, ZeroSizedModule};
+use super::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
 
 /// Applies average pooling over an entire image, fully reducing the height and width
 /// dimensions:
@@ -60,6 +60,12 @@ macro_rules! impl_pools {
     ($PoolTy:ty, $Method:ident) => {
         impl ZeroSizedModule for $PoolTy {}
         impl NonMutableModule for $PoolTy {}
+
+        impl<D: Device<E>, E: Dtype> BuildModule<D, E> for $PoolTy {
+            fn try_build(_: &D) -> Result<Self, <D>::Err> {
+                Ok(Default::default())
+            }
+        }
 
         impl<C: Dim, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
             Module<Tensor<(C, H, W), f32, D, T>> for $PoolTy

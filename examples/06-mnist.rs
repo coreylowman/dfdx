@@ -74,10 +74,10 @@ impl MnistDataset {
 
 // our network structure
 type Mlp = (
-    (Linear<784, 512, Dev>, ReLU),
-    (Linear<512, 128, Dev>, ReLU),
-    (Linear<128, 32, Dev>, ReLU),
-    Linear<32, 10, Dev>,
+    (Linear<784, 512>, ReLU),
+    (Linear<512, 128>, ReLU),
+    (Linear<128, 32>, ReLU),
+    Linear<32, 10>,
 );
 
 // training batch size
@@ -98,8 +98,8 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     // initialize model and optimizer
-    let mut model: Mlp = dev.build_module();
-    let mut opt: Adam<Mlp> = Default::default();
+    let mut model = Mlp::build_on_device(&dev);
+    let mut opt = Adam::default();
 
     // initialize dataset
     let dataset = MnistDataset::train(&mnist_path);

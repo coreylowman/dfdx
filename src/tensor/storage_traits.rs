@@ -251,7 +251,7 @@ pub trait TensorFromArray<Src, S: Shape, E: Unit>: DeviceStorage {
 
 /// Convert tensors to rust arrays
 pub trait AsArray {
-    type Array: std::fmt::Debug;
+    type Array: std::fmt::Debug + PartialEq;
     fn array(&self) -> Self::Array;
 }
 impl<S: Shape, E: Unit, D: DeviceStorage, T> AsArray for Tensor<S, E, D, T>

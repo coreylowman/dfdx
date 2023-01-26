@@ -1,6 +1,8 @@
 use crate::{optim::*, shapes::*, tensor::SplitTape, tensor_ops::Device};
 
-use super::{Module, ModuleMut, OnDevice, ResetParams, ToDevice};
+use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+
+use std::ops::Add;
 
 /// A residual connection around `F`: `F(x) + x`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -12,9 +14,10 @@ use super::{Module, ModuleMut, OnDevice, ResetParams, ToDevice};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let module: Residual<ReLU> = dev.build_module();
+/// type Model = Residual<ReLU>;
+/// let model = Model::build_on_device(&dev);
 /// let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-/// let y = module.forward(x);
+/// let y = model.forward(x);
 /// assert_eq!(y.array(), [-2.0, -1.0, 0.0, 2.0, 4.0]);
 /// ```
 #[derive(Debug, Clone, Default)]
@@ -29,35 +32,33 @@ impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>> GradientUpdate<D, E> for R
     }
 }
 
-impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>> ResetParams<D, E> for Residual<F> {
+impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Residual<F> {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self(ResetParams::try_build(device)?))
+        Ok(Self(BuildModule::try_build(device)?))
     }
+}
+
+impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>> ResetParams<D, E> for Residual<F> {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.0.try_reset_params()
     }
 }
 
 impl<F: ToDevice<D>, D> ToDevice<D> for Residual<F> {
-    type Output = Residual<OnDevice<F, D>>;
-
+    type Output = Residual<F::Output>;
     fn to_device(&self, device: &D) -> Self::Output {
         Residual(self.0.to_device(device))
     }
 }
 
-impl<T: SplitTape + std::ops::Add<T, Output = T>, F: Module<T, Output = T>> Module<T>
-    for Residual<F>
-{
+impl<T: SplitTape + Add<T, Output = T>, F: Module<T, Output = T>> Module<T> for Residual<F> {
     type Output = T;
     fn forward(&self, x: T) -> Self::Output {
         self.0.forward(x.with_empty_tape()) + x
     }
 }
 
-impl<T: SplitTape + std::ops::Add<T, Output = T>, F: ModuleMut<T, Output = T>> ModuleMut<T>
-    for Residual<F>
-{
+impl<T: SplitTape + Add<T, Output = T>, F: ModuleMut<T, Output = T>> ModuleMut<T> for Residual<F> {
     type Output = T;
     fn forward_mut(&mut self, x: T) -> Self::Output {
         self.0.forward_mut(x.with_empty_tape()) + x
@@ -68,16 +69,12 @@ impl<T: SplitTape + std::ops::Add<T, Output = T>, F: ModuleMut<T, Output = T>> M
 mod tests {
     use super::*;
     use crate::tests::{assert_close, TestDevice};
-    use crate::{
-        nn::{Linear, ModuleBuilder},
-        tensor::*,
-        tensor_ops::*,
-    };
+    use crate::{nn::Linear, tensor::*, tensor_ops::*};
 
     #[test]
     fn test_residual_reset() {
         let dev: TestDevice = Default::default();
-        let model: Residual<Linear<2, 5, _>> = dev.build_module();
+        let model: Residual<Linear<2, 5, _>> = BuildModule::build(&dev);
         assert_ne!(model.0.weight.array(), [[0.0; 2]; 5]);
         assert_ne!(model.0.bias.array(), [0.0; 5]);
     }
@@ -86,7 +83,7 @@ mod tests {
     fn test_residual_gradients() {
         let dev: TestDevice = Default::default();
 
-        let model: Residual<Linear<2, 2, _>> = dev.build_module();
+        let model: Residual<Linear<2, 2, _>> = BuildModule::build(&dev);
 
         let x = dev.sample_normal::<Rank2<4, 2>>();
         let y = model.forward(x.trace());

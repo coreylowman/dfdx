@@ -28,15 +28,38 @@ pub trait ModuleMut<Input> {
     fn forward_mut(&mut self, input: Input) -> Self::Output;
 }
 
-/// Something that can reset it's parameters.
-pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
+/// Something that can be built. Related to [BuildOnDevice]
+pub trait BuildModule<D: Device<E>, E: Dtype>: Sized {
     /// Construct it on the device
     fn build(device: &D) -> Self {
         Self::try_build(device).unwrap()
     }
-    /// Fallible version of [ResetParams::build]
+    /// Fallible version of [BuildModule::build]
     fn try_build(device: &D) -> Result<Self, D::Err>;
+}
 
+/// Something that can be built on a different device
+/// than it is on. Builds [ToDevice::Output].
+///
+/// Related to [BuildModule]
+pub trait BuildOnDevice<D: Device<E>, E: Dtype>: ToDevice<D>
+where
+    Self::Output: BuildModule<D, E>,
+{
+    fn build_on_device(device: &D) -> Self::Output {
+        BuildModule::build(device)
+    }
+    fn try_build_on_device(device: &D) -> Result<Self::Output, D::Err> {
+        BuildModule::try_build(device)
+    }
+}
+impl<T: ToDevice<D>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for T where
+    T::Output: BuildModule<D, E>
+{
+}
+
+/// Something that can reset it's parameters.
+pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
     /// Mutates parameters. Each implementor
     /// of this trait decides how the parameters are initialized. In
     /// fact, some impls may not even use randomness.
@@ -48,27 +71,20 @@ pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
     fn try_reset_params(&mut self) -> Result<(), D::Err>;
 }
 
-/// Extension trait for [Device] that can build anything that implements [ResetParams].
-pub trait ModuleBuilder<E: Dtype>: Device<E> {
-    fn build_module<M: ResetParams<Self, E>>(&self) -> M {
-        ResetParams::build(self)
-    }
-    fn try_build<M: ResetParams<Self, E>>(&self) -> Result<M, Self::Err> {
-        ResetParams::try_build(self)
-    }
-}
-impl<D: Device<E>, E: Dtype> ModuleBuilder<E> for D {}
-
 /// Marker trait for modules with no updatable parameters. These have
 /// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]
 pub trait ZeroSizedModule: Default {}
 
-impl<T: ZeroSizedModule + Clone, D: Device<E>, E: Dtype> ResetParams<D, E> for T {
-    fn try_build(_: &D) -> Result<Self, <D>::Err> {
-        Ok(Default::default())
-    }
+impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> ResetParams<D, E> for T {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         Ok(())
+    }
+}
+
+impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {
+    type Output = T;
+    fn to_device(&self, _device: &D) -> Self {
+        self.clone()
     }
 }
 
@@ -92,13 +108,5 @@ where
     type Output = <Self as Module<T>>::Output;
     fn forward_mut(&mut self, input: T) -> Self::Output {
         self.forward(input)
-    }
-}
-
-impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {
-    type Output = T;
-
-    fn to_device(&self, _device: &D) -> Self {
-        self.clone()
     }
 }
