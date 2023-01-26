@@ -1,12 +1,6 @@
-use crate::{
-    gradients::Tape,
-    optim::*,
-    shapes::*,
-    tensor::{Cpu, Tensor},
-    tensor_ops::{BroadcastTo, Device, TryConv2DTo},
-};
+use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{Module, ModuleMut, ResetParams};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams};
 
 /// **Requires Nightly** Performs 2d convolutions on 3d and 4d images.
 ///
@@ -47,7 +41,7 @@ where
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
-    ResetParams<D, f32> for Conv2D<I, O, K, S, P, D>
+    BuildModule<D, f32> for Conv2D<I, O, K, S, P, D>
 where
     D: Device<f32>,
 {
@@ -60,6 +54,22 @@ where
             bias: device.try_sample(distr)?,
         })
     }
+}
+
+impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, Src, D>
+    BuildOnDevice<D, f32> for Conv2D<I, O, K, S, P, Src>
+where
+    Src: Device<f32>,
+    D: Device<f32>,
+{
+    type Built = Conv2D<I, O, K, S, P, D>;
+}
+
+impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
+    ResetParams<D, f32> for Conv2D<I, O, K, S, P, D>
+where
+    D: Device<f32>,
+{
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         let k = (I * K * K) as f32;
         let bound = 1.0 / k.sqrt();
@@ -70,6 +80,7 @@ where
     }
 }
 
+#[cfg(feature = "nightly")]
 impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: usize, D, Img>
     Module<Img> for Conv2D<C, O, K, S, P, D>
 where

@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor::*, tensor_ops::Device};
 
-use super::{Module, ModuleMut, ResetParams};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams};
 
 /// Splits input into multiple heads. `T` should be a tuple,
 /// where every element of the tuple accepts the same input type.
@@ -30,10 +30,17 @@ impl<T: GradientUpdate<D, E>, D: Device<E>, E: Dtype> GradientUpdate<D, E> for S
     }
 }
 
-impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for SplitInto<T> {
+impl<T: BuildModule<D, E>, D: Device<E>, E: Dtype> BuildModule<D, E> for SplitInto<T> {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self(ResetParams::try_build(device)?))
+        Ok(Self(BuildModule::try_build(device)?))
     }
+}
+
+impl<T: BuildOnDevice<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for SplitInto<T> {
+    type Built = SplitInto<T::Built>;
+}
+
+impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for SplitInto<T> {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.0.try_reset_params()
     }
@@ -102,7 +109,7 @@ mod tests {
     use super::*;
     use crate::{gradients::*, shapes::*, tensor_ops::*};
     use crate::{
-        nn::{tests::SimpleUpdater, Linear, ModuleBuilder},
+        nn::{tests::SimpleUpdater, Linear},
         tests::TestDevice,
         unique_id::HasUniqueId,
     };
@@ -110,7 +117,7 @@ mod tests {
     #[test]
     fn test_unused() {
         let dev: TestDevice = Default::default();
-        let m: SplitInto<(Linear<1, 1, _>, Linear<1, 1, _>)> = dev.build_module();
+        let m: SplitInto<(Linear<1, 1, _>, Linear<1, 1, _>)> = BuildModule::build(&dev);
         let (left, right) = m.forward(dev.sample_normal::<Rank1<1>>().trace());
         let r = right.retaped::<NoneTape>();
         let g = right.mean().backward();
@@ -121,7 +128,7 @@ mod tests {
     #[test]
     fn test_split_into_2() {
         let dev: TestDevice = Default::default();
-        let m: SplitInto<(Linear<5, 1, _>, Linear<5, 2, _>)> = dev.build_module();
+        let m: SplitInto<(Linear<5, 1, _>, Linear<5, 2, _>)> = BuildModule::build(&dev);
         let _: (Tensor<Rank1<1>, _, _>, Tensor<Rank1<2>, _, _, OwnedTape<_>>) =
             m.forward(dev.zeros::<Rank1<5>>().traced());
         let _: (
@@ -133,7 +140,8 @@ mod tests {
     #[test]
     fn test_split_into_3() {
         let dev: TestDevice = Default::default();
-        let m: SplitInto<(Linear<5, 1, _>, Linear<5, 2, _>, Linear<5, 3, _>)> = dev.build_module();
+        let m: SplitInto<(Linear<5, 1, _>, Linear<5, 2, _>, Linear<5, 3, _>)> =
+            BuildModule::build(&dev);
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
@@ -154,7 +162,7 @@ mod tests {
             Linear<5, 2, _>,
             Linear<5, 3, _>,
             Linear<5, 4, _>,
-        )> = dev.build_module();
+        )> = BuildModule::build(&dev);
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
@@ -178,7 +186,7 @@ mod tests {
             Linear<5, 3, _>,
             Linear<5, 4, _>,
             Linear<5, 5, _>,
-        )> = dev.build_module();
+        )> = BuildModule::build(&dev);
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
@@ -205,7 +213,7 @@ mod tests {
             Linear<5, 4, _>,
             Linear<5, 5, _>,
             Linear<5, 6, _>,
-        )> = dev.build_module();
+        )> = BuildModule::build(&dev);
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
@@ -227,7 +235,7 @@ mod tests {
     #[test]
     fn test_missing_gradients() {
         let dev: TestDevice = Default::default();
-        let mut model: SplitInto<(Linear<5, 3, _>, Linear<5, 3, _>)> = dev.build_module();
+        let mut model: SplitInto<(Linear<5, 3, _>, Linear<5, 3, _>)> = BuildModule::build(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

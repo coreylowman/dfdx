@@ -89,6 +89,9 @@ mod repeated;
 mod residual;
 mod split_into;
 mod transformer;
+mod conv;
+mod flatten;
+mod pool2d;
 
 pub use activations::*;
 pub use add_into::*;
@@ -105,15 +108,9 @@ pub use residual::*;
 pub use split_into::*;
 
 #[cfg(feature = "nightly")]
-mod conv;
-#[cfg(feature = "nightly")]
 pub use conv::*;
 #[cfg(feature = "nightly")]
-mod flatten;
-#[cfg(feature = "nightly")]
 pub use flatten::*;
-#[cfg(feature = "nightly")]
-mod pool2d;
 #[cfg(feature = "nightly")]
 pub use pool2d::*;
 #[cfg(feature = "nightly")]

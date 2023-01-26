@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{Module, ModuleMut, ResetParams};
+use super::module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams};
 
 /// A linear transformation of the form `weight * x + bias`, where `weight` is a matrix, `x` is a vector or matrix,
 /// and `bias` is a vector.
@@ -43,7 +43,7 @@ impl<const I: usize, const O: usize, D: Device<f32>> GradientUpdate<D, f32> for 
     }
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>> ResetParams<D, f32> for Linear<I, O, D> {
+impl<const I: usize, const O: usize, D: Device<f32>> BuildModule<D, f32> for Linear<I, O, D> {
     fn try_build(device: &D) -> Result<Self, D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
         let distr = rand_distr::Uniform::new(-bound, bound);
@@ -51,7 +51,15 @@ impl<const I: usize, const O: usize, D: Device<f32>> ResetParams<D, f32> for Lin
         let bias = device.try_sample(distr)?;
         Ok(Self { weight, bias })
     }
+}
 
+impl<const I: usize, const O: usize, Src: Device<f32>, Dst: Device<f32>> BuildOnDevice<Dst, f32>
+    for Linear<I, O, Src>
+{
+    type Built = Linear<I, O, Dst>;
+}
+
+impl<const I: usize, const O: usize, D: Device<f32>> ResetParams<D, f32> for Linear<I, O, D> {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
         let distr = rand_distr::Uniform::new(-bound, bound);
@@ -121,11 +129,7 @@ impl<'a, B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        nn::{tests::SimpleUpdater, ModuleBuilder},
-        tests::{assert_close, TestDevice},
-        unique_id::HasUniqueId,
-    };
+    use crate::{nn::tests::SimpleUpdater, tests::*, unique_id::HasUniqueId};
 
     const W: [[f32; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
@@ -136,7 +140,7 @@ mod tests {
     #[test]
     fn test_linear_initialize() {
         let dev: TestDevice = Default::default();
-        let m: Linear<2000, 1, _> = dev.build_module();
+        let m: Linear<2000, 1, _> = BuildModule::build(&dev);
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);
@@ -249,7 +253,7 @@ mod tests {
     fn test_linear_missing_gradients() {
         let dev: TestDevice = Default::default();
 
-        let mut model: Linear<5, 3, _> = dev.build_module();
+        let mut model: Linear<5, 3, _> = BuildModule::build(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

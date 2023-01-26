@@ -347,7 +347,7 @@ mod tests {
         S: ConstShape,
         E: Dtype,
         D: Device<E>,
-        M: ResetParams<D, E> + Module<Tensor<S, E, D>> + SaveToNpz + LoadFromNpz,
+        M: BuildModule<D, E> + Module<Tensor<S, E, D>> + SaveToNpz + LoadFromNpz,
     >(
         dev: &D,
     ) where
@@ -358,8 +358,8 @@ mod tests {
         let x = dev.sample_normal();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let saved: M = dev.build_module();
-        let mut loaded: M = dev.build_module();
+        let saved: M = BuildModule::build(dev);
+        let mut loaded: M = BuildModule::build(dev);
 
         let y = saved.forward(x.clone());
 
@@ -378,8 +378,8 @@ mod tests {
         let x = dev.sample_normal::<Rank3<3, 4, 5>>();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let mut saved: BatchNorm2D<3, _> = dev.build_module();
-        let mut loaded: BatchNorm2D<3, _> = dev.build_module();
+        let mut saved: BatchNorm2D<3, _> = BuildModule::build(&dev);
+        let mut loaded: BatchNorm2D<3, _> = BuildModule::build(&dev);
 
         saved.running_mean.fill_with_distr(Standard);
         saved.running_var.fill_with_distr(Standard);
@@ -439,8 +439,8 @@ mod tests {
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let mut saved: M = dev.build_module();
-        let mut loaded: M = dev.build_module();
+        let mut saved: M = BuildModule::build(&dev);
+        let mut loaded: M = BuildModule::build(&dev);
 
         saved.gamma.fill_with_distr(Standard);
         saved.beta.fill_with_distr(Standard);
@@ -475,12 +475,12 @@ mod tests {
     fn test_save_load_mha() {
         let dev: TestDevice = Default::default();
 
-        let saved: MultiHeadAttention<12, 4, 12, 12, TestDevice> = dev.build_module();
+        let saved: MultiHeadAttention<12, 4, 12, 12, TestDevice> = BuildModule::build(&dev);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         saved.save(file.path()).expect("");
 
-        let mut loaded: MultiHeadAttention<12, 4, 12, 12, TestDevice> = dev.build_module();
+        let mut loaded: MultiHeadAttention<12, 4, 12, 12, TestDevice> = BuildModule::build(&dev);
 
         let q = dev.sample_normal::<Rank3<2, 3, 12>>();
         let k = dev.sample_normal::<Rank3<2, 4, 12>>();
@@ -501,12 +501,12 @@ mod tests {
     fn test_save_load_transformer() {
         let dev: TestDevice = Default::default();
 
-        let mut saved: Transformer<16, 4, 3, 4, 8, TestDevice> = dev.build_module();
+        let mut saved: Transformer<16, 4, 3, 4, 8, TestDevice> = BuildModule::build(&dev);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         saved.save(file.path()).expect("");
 
-        let mut loaded: Transformer<16, 4, 3, 4, 8, TestDevice> = dev.build_module();
+        let mut loaded: Transformer<16, 4, 3, 4, 8, TestDevice> = BuildModule::build(&dev);
 
         let src = dev.sample_normal::<Rank3<4, 12, 16>>();
         let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();

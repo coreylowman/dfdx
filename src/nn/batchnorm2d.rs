@@ -1,6 +1,6 @@
 use crate::{gradients::*, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{Module, ModuleMut, ResetParams};
+use super::{Module, ModuleMut, ResetParams, BuildModule, BuildOnDevice};
 
 /// Batch normalization for images as described in
 /// [Batch Normalization: Accelerating Deep Network Training
@@ -157,7 +157,7 @@ impl<B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>>
     }
 }
 
-impl<const C: usize, D: Device<f32>> ResetParams<D, f32> for BatchNorm2D<C, D> {
+impl<const C: usize, D: Device<f32>> BuildModule<D, f32> for BatchNorm2D<C, D> {
     fn try_build(device: &D) -> Result<Self, D::Err> {
         Ok(Self {
             scale: device.try_ones()?,
@@ -168,7 +168,13 @@ impl<const C: usize, D: Device<f32>> ResetParams<D, f32> for BatchNorm2D<C, D> {
             momentum: 0.1,
         })
     }
+}
 
+impl<const C: usize, Src: Device<f32>, Dst: Device<f32>> BuildOnDevice<Dst, f32> for BatchNorm2D<C, Src> {
+    type Built = BatchNorm2D<C, Dst>;
+}
+
+impl<const C: usize, D: Device<f32>> ResetParams<D, f32> for BatchNorm2D<C, D> {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.scale.try_fill_with_ones()?;
         self.bias.try_fill_with_zeros()?;
@@ -193,8 +199,7 @@ impl<const C: usize, D: Device<f32>> GradientUpdate<D, f32> for BatchNorm2D<C, D
 mod tests {
     use super::*;
     use crate::{
-        nn::ModuleBuilder,
-        tests::{assert_close, TestDevice},
+        tests::*,
     };
 
     #[test]
@@ -202,7 +207,7 @@ mod tests {
         let dev = TestDevice::seed_from_u64(0);
 
         let x1: Tensor<Rank3<3, 2, 2>, f32, _> = dev.sample(rand_distr::StandardNormal);
-        let mut bn: BatchNorm2D<3, _> = dev.build_module();
+        let mut bn: BatchNorm2D<3, _> = BuildModule::build(&dev);
 
         let y1 = bn.forward_mut(x1.trace());
         assert_close(
@@ -237,7 +242,7 @@ mod tests {
         let dev = TestDevice::seed_from_u64(2);
 
         let x1 = dev.sample_normal::<Rank4<2, 2, 2, 3>>();
-        let mut bn: BatchNorm2D<2, _> = dev.build_module();
+        let mut bn: BatchNorm2D<2, _> = BuildModule::build(&dev);
 
         let y1 = bn.forward_mut(x1.trace());
         #[rustfmt::skip]
@@ -269,7 +274,7 @@ mod tests {
         let dev = TestDevice::seed_from_u64(12);
 
         let x1 = dev.sample_normal::<Rank3<3, 4, 5>>();
-        let mut bn: BatchNorm2D<3, _> = dev.build_module();
+        let mut bn: BatchNorm2D<3, _> = BuildModule::build(&dev);
 
         let _ = bn.forward_mut(x1.trace());
         assert_close(

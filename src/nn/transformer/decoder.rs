@@ -1,5 +1,5 @@
 use crate::{
-    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual},
+    nn::*,
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
@@ -26,11 +26,25 @@ pub struct TransformerDecoder<
 >(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, D>, NUM_LAYERS>);
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
-    ResetParams<D, f32> for TransformerDecoder<M, H, F, L, D>
+    BuildModule<D, f32> for TransformerDecoder<M, H, F, L, D>
 {
     fn try_build(device: &D) -> Result<Self, D::Err> {
-        Ok(Self(ResetParams::try_build(device)?))
+        Ok(Self(BuildModule::try_build(device)?))
     }
+}
+
+impl<const M: usize, const H: usize, const F: usize, const L: usize, S, D> BuildOnDevice<D, f32>
+    for TransformerDecoder<M, H, F, L, S>
+where
+    S: Device<f32>,
+    D: Device<f32>,
+{
+    type Built = TransformerDecoder<M, H, F, L, D>;
+}
+
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
+    ResetParams<D, f32> for TransformerDecoder<M, H, F, L, D>
+{
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.0.try_reset_params()
     }
@@ -106,19 +120,30 @@ pub struct TransformerDecoderBlock<
 
 type FF<const M: usize, const F: usize, D> = Residual<(Linear<M, F, D>, ReLU, Linear<F, M, D>)>;
 
-impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
+impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
     for TransformerDecoderBlock<M, N, F, D>
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            self_attn: ResetParams::try_build(device)?,
-            norm1: ResetParams::try_build(device)?,
-            mh_attn: ResetParams::try_build(device)?,
-            norm2: ResetParams::try_build(device)?,
-            ff: ResetParams::try_build(device)?,
-            norm3: ResetParams::try_build(device)?,
+            self_attn: BuildModule::try_build(device)?,
+            norm1: BuildModule::try_build(device)?,
+            mh_attn: BuildModule::try_build(device)?,
+            norm2: BuildModule::try_build(device)?,
+            ff: BuildModule::try_build(device)?,
+            norm3: BuildModule::try_build(device)?,
         })
     }
+}
+
+impl<const M: usize, const N: usize, const F: usize, S: Device<f32>, D: Device<f32>>
+    BuildOnDevice<D, f32> for TransformerDecoderBlock<M, N, F, S>
+{
+    type Built = TransformerDecoderBlock<M, N, F, D>;
+}
+
+impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
+    for TransformerDecoderBlock<M, N, F, D>
+{
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.self_attn.try_reset_params()?;
         self.norm1.try_reset_params()?;

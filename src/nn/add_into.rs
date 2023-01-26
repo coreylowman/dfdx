@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
 
-use super::{Module, ModuleMut, ResetParams};
+use super::{Module, ModuleMut, ResetParams, BuildModule, BuildOnDevice};
 
 /// Add inputs together into a single tensor. `T` should be a tuple
 //// where every element of the tuple has the same output type
@@ -31,10 +31,17 @@ impl<T: GradientUpdate<D, E>, D: Device<E>, E: Dtype> GradientUpdate<D, E> for A
     }
 }
 
-impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for AddInto<T> {
+impl<T: BuildModule<D, E>, D: Device<E>, E: Dtype> BuildModule<D, E> for AddInto<T> {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self(ResetParams::try_build(device)?))
+        Ok(Self(BuildModule::try_build(device)?))
     }
+}
+
+impl<T: BuildOnDevice<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for AddInto<T> {
+    type Built = AddInto<T::Built>;
+}
+
+impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for AddInto<T> {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.0.try_reset_params()
     }
@@ -87,7 +94,7 @@ mod tests {
     use super::*;
     use crate::{
         gradients::OwnedTape,
-        nn::{tests::SimpleUpdater, Linear, ModuleBuilder, ReLU},
+        nn::{tests::SimpleUpdater, Linear, ReLU},
         shapes::*,
         tensor::*,
         tests::TestDevice,
@@ -97,7 +104,7 @@ mod tests {
     #[test]
     fn test_add_into_2() {
         let dev: TestDevice = Default::default();
-        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>)> = dev.build_module();
+        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>)> = BuildModule::build(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -111,7 +118,7 @@ mod tests {
     #[test]
     fn test_add_into_3() {
         let dev: TestDevice = Default::default();
-        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>, Linear<4, 5, _>)> = dev.build_module();
+        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>, Linear<4, 5, _>)> = BuildModule::build(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -132,7 +139,7 @@ mod tests {
             Linear<3, 5, _>,
             Linear<4, 5, _>,
             Linear<5, 5, _>,
-        )> = dev.build_module();
+        )> = BuildModule::build(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -156,7 +163,7 @@ mod tests {
             Linear<4, 5, _>,
             Linear<5, 5, _>,
             Linear<6, 5, _>,
-        )> = dev.build_module();
+        )> = BuildModule::build(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -183,7 +190,7 @@ mod tests {
             Linear<5, 5, _>,
             Linear<6, 5, _>,
             Linear<7, 5, _>,
-        )> = dev.build_module();
+        )> = BuildModule::build(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -205,7 +212,7 @@ mod tests {
     #[test]
     fn test_missing_gradients() {
         let dev: TestDevice = Default::default();
-        let mut model: AddInto<(Linear<5, 3, _>, Linear<5, 3, _>)> = dev.build_module();
+        let mut model: AddInto<(Linear<5, 3, _>, Linear<5, 3, _>)> = BuildModule::build(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present
@@ -240,7 +247,7 @@ mod tests {
             AddInto<(Linear<5, 3, _>, Linear<5, 3, _>)>,
             ReLU,
             Linear<3, 1, _>,
-        ) = dev.build_module();
+        ) = BuildModule::build(&dev);
         let _: Tensor<Rank1<1>, _, _, OwnedTape<_>> = model.forward((
             dev.zeros::<Rank1<5>>().traced(),
             dev.zeros::<Rank1<5>>().traced(),

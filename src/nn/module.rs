@@ -24,15 +24,32 @@ pub trait ModuleMut<Input> {
     fn forward_mut(&mut self, input: Input) -> Self::Output;
 }
 
-/// Something that can reset it's parameters.
-pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
+/// Something that can be built. Related to [BuildOnDevice]
+pub trait BuildModule<D: Device<E>, E: Dtype>: Sized {
     /// Construct it on the device
     fn build(device: &D) -> Self {
         Self::try_build(device).unwrap()
     }
     /// Fallible version of [ResetParams::build]
     fn try_build(device: &D) -> Result<Self, D::Err>;
+}
 
+/// Something that can be built on a different device
+/// than it is on. Builds [BuildOnDevice::Built].
+///
+/// Related to [BuildModule]
+pub trait BuildOnDevice<D: Device<E>, E: Dtype> {
+    type Built: BuildModule<D, E>;
+    fn build_on_device(device: &D) -> Self::Built {
+        BuildModule::build(device)
+    }
+    fn try_build_on_device(device: &D) -> Result<Self::Built, D::Err> {
+        BuildModule::try_build(device)
+    }
+}
+
+/// Something that can reset it's parameters.
+pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
     /// Mutates parameters. Each implementor
     /// of this trait decides how the parameters are initialized. In
     /// fact, some impls may not even use randomness.
@@ -44,30 +61,23 @@ pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
     fn try_reset_params(&mut self) -> Result<(), D::Err>;
 }
 
-/// Extension trait for [Device] that can build anything that implements [ResetParams].
-pub trait ModuleBuilder<E: Dtype>: Device<E> {
-    fn build_module<M: ResetParams<Self, E>>(&self) -> M {
-        ResetParams::build(self)
-    }
-    fn try_build<M: ResetParams<Self, E>>(&self) -> Result<M, Self::Err> {
-        ResetParams::try_build(self)
-    }
-}
-impl<D: Device<E>, E: Dtype> ModuleBuilder<E> for D {}
-
 /// Marker trait for modules with no updatable parameters. These have
 /// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]
 pub trait ZeroSizedModule: Default {}
 
-impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> ResetParams<D, E> for T {
+impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> BuildModule<D, E> for T {
     fn try_build(_: &D) -> Result<Self, <D>::Err> {
         Ok(Default::default())
     }
+}
+impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for T {
+    type Built = Self;
+}
+impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> ResetParams<D, E> for T {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         Ok(())
     }
 }
-
 impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> GradientUpdate<D, E> for T {
     fn update<U>(&mut self, _: &mut U, _: &mut crate::optim::UnusedTensors) -> Result<(), <D>::Err>
     where

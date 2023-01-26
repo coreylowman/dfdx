@@ -1,6 +1,8 @@
-use super::{Module, NonMutableModule, ZeroSizedModule};
-
+#[cfg(feature = "nightly")]
 use crate::tensor_ops::{ConstAvgPool2D, ConstMaxPool2D, ConstMinPool2D};
+
+#[allow(unused)]
+use super::{Module, NonMutableModule, ZeroSizedModule};
 
 /// Average pool with 2d kernel that operates on images (3d) and batches of images (4d).
 /// Each patch reduces to the average of the values in the patch.
@@ -37,6 +39,7 @@ macro_rules! impl_pools {
         impl<const K: usize, const S: usize, const P: usize> ZeroSizedModule for $PoolTy<K, S, P> {}
         impl<const K: usize, const S: usize, const P: usize> NonMutableModule for $PoolTy<K, S, P> {}
 
+        #[cfg(feature = "nightly")]
         impl<const K: usize, const S: usize, const P: usize, Img: $Trait<K, S, P>> Module<Img>
             for $PoolTy<K, S, P>
         {

@@ -12,7 +12,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{Module, ModuleMut, ResetParams};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams};
 
 /// **Requires Nightly** Transformer architecture as described in
 /// [Attention is all you need](https://arxiv.org/abs/1706.03762).
@@ -50,21 +50,33 @@ pub struct Transformer<
     pub decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS, D>,
 }
 
-impl<
-        const M: usize,
-        const H: usize,
-        const EL: usize,
-        const DL: usize,
-        const F: usize,
-        D: Device<f32>,
-    > ResetParams<D, f32> for Transformer<M, H, EL, DL, F, D>
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
+    BuildModule<D, f32> for Transformer<M, H, A, B, F, D>
+where
+    D: Device<f32>,
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            encoder: ResetParams::try_build(device)?,
-            decoder: ResetParams::try_build(device)?,
+            encoder: BuildModule::try_build(device)?,
+            decoder: BuildModule::try_build(device)?,
         })
     }
+}
+
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, S, D>
+    BuildOnDevice<D, f32> for Transformer<M, H, A, B, F, S>
+where
+    S: Device<f32>,
+    D: Device<f32>,
+{
+    type Built = Transformer<M, H, A, B, F, D>;
+}
+
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
+    ResetParams<D, f32> for Transformer<M, H, A, B, F, D>
+where
+    D: Device<f32>,
+{
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.encoder.try_reset_params()?;
         self.decoder.try_reset_params()?;
@@ -72,14 +84,10 @@ impl<
     }
 }
 
-impl<
-        const M: usize,
-        const H: usize,
-        const EL: usize,
-        const DL: usize,
-        const F: usize,
-        D: Device<f32>,
-    > GradientUpdate<D, f32> for Transformer<M, H, EL, DL, F, D>
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
+    GradientUpdate<D, f32> for Transformer<M, H, A, B, F, D>
+where
+    D: Device<f32>,
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
@@ -116,8 +124,8 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const I: usize, const J: usize, const F: usize, D, T>
-    ModuleMut<T> for Transformer<M, H, I, J, F, D>
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D, T>
+    ModuleMut<T> for Transformer<M, H, A, B, F, D>
 where
     D: Device<f32>,
     Self: Module<T>,

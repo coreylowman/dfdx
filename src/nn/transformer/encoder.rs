@@ -1,5 +1,5 @@
 use crate::{
-    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual},
+    nn::*,
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
@@ -53,17 +53,28 @@ pub struct TransformerEncoderBlock<
 
 type FF<const M: usize, const F: usize, D> = Residual<(Linear<M, F, D>, ReLU, Linear<F, M, D>)>;
 
-impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
     for TransformerEncoderBlock<M, H, F, D>
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            self_attn: ResetParams::try_build(device)?,
-            norm1: ResetParams::try_build(device)?,
-            ff: ResetParams::try_build(device)?,
-            norm2: ResetParams::try_build(device)?,
+            self_attn: BuildModule::try_build(device)?,
+            norm1: BuildModule::try_build(device)?,
+            ff: BuildModule::try_build(device)?,
+            norm2: BuildModule::try_build(device)?,
         })
     }
+}
+
+impl<const M: usize, const H: usize, const F: usize, S, D> BuildOnDevice<D, f32>
+    for TransformerEncoderBlock<M, H, F, S>
+    where S: Device<f32>, D: Device<f32> {
+        type Built = TransformerEncoderBlock<M, H, F, D>;
+    }
+
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
+    for TransformerEncoderBlock<M, H, F, D>
+{
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.self_attn.try_reset_params()?;
         self.norm1.try_reset_params()?;

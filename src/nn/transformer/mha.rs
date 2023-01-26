@@ -33,16 +33,30 @@ pub struct MultiHeadAttention<
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    ResetParams<D, f32> for MultiHeadAttention<M, H, K, V, D>
+    BuildModule<D, f32> for MultiHeadAttention<M, H, K, V, D>
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            w_q: ResetParams::try_build(device)?,
-            w_k: ResetParams::try_build(device)?,
-            w_v: ResetParams::try_build(device)?,
-            w_o: ResetParams::try_build(device)?,
+            w_q: BuildModule::try_build(device)?,
+            w_k: BuildModule::try_build(device)?,
+            w_v: BuildModule::try_build(device)?,
+            w_o: BuildModule::try_build(device)?,
         })
     }
+}
+
+impl<const M: usize, const H: usize, const K: usize, const V: usize, S, D> BuildOnDevice<D, f32>
+    for MultiHeadAttention<M, H, K, V, S>
+where
+    S: Device<f32>,
+    D: Device<f32>,
+{
+    type Built = MultiHeadAttention<M, H, K, V, D>;
+}
+
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
+    ResetParams<D, f32> for MultiHeadAttention<M, H, K, V, D>
+{
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.w_q.try_reset_params()?;
         self.w_k.try_reset_params()?;

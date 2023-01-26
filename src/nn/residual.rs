@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::*, tensor::SplitTape, tensor_ops::Device};
 
-use super::{Module, ModuleMut, ResetParams};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams};
 
 /// A residual connection around `F`: `F(x) + x`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -29,10 +29,17 @@ impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>> GradientUpdate<D, E> for R
     }
 }
 
-impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>> ResetParams<D, E> for Residual<F> {
+impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Residual<F> {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self(ResetParams::try_build(device)?))
+        Ok(Self(BuildModule::try_build(device)?))
     }
+}
+
+impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>> BuildOnDevice<D, E> for Residual<F> {
+    type Built = Residual<F::Built>;
+}
+
+impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>> ResetParams<D, E> for Residual<F> {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.0.try_reset_params()
     }
@@ -60,16 +67,12 @@ impl<T: SplitTape + std::ops::Add<T, Output = T>, F: ModuleMut<T, Output = T>> M
 mod tests {
     use super::*;
     use crate::tests::{assert_close, TestDevice};
-    use crate::{
-        nn::{Linear, ModuleBuilder},
-        tensor::*,
-        tensor_ops::*,
-    };
+    use crate::{nn::Linear, tensor::*, tensor_ops::*};
 
     #[test]
     fn test_residual_reset() {
         let dev: TestDevice = Default::default();
-        let model: Residual<Linear<2, 5, _>> = dev.build_module();
+        let model: Residual<Linear<2, 5, _>> = BuildModule::build(&dev);
         assert_ne!(model.0.weight.array(), [[0.0; 2]; 5]);
         assert_ne!(model.0.bias.array(), [0.0; 5]);
     }
@@ -78,7 +81,7 @@ mod tests {
     fn test_residual_gradients() {
         let dev: TestDevice = Default::default();
 
-        let model: Residual<Linear<2, 2, _>> = dev.build_module();
+        let model: Residual<Linear<2, 2, _>> = BuildModule::build(&dev);
 
         let x = dev.sample_normal::<Rank2<4, 2>>();
         let y = model.forward(x.trace());
