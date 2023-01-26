@@ -6,6 +6,39 @@ use super::{Conv2DKernel, Conv2DOp};
 
 use std::sync::Arc;
 
+impl Conv2DOp {
+    #[inline(always)]
+    fn unfold_idx(&self, [k1, k2, y, x]: [usize; 4]) -> Option<[usize; 2]> {
+        let mut oh = y + self.padding;
+        if oh < k1 {
+            return None;
+        }
+        oh -= k1;
+        if oh % self.stride != 0 {
+            return None;
+        }
+        oh /= self.stride;
+        if oh >= self.h_out {
+            return None;
+        }
+
+        let mut ow = x + self.padding;
+        if ow < k2 {
+            return None;
+        }
+        ow -= k2;
+        if ow % self.stride != 0 {
+            return None;
+        }
+        ow /= self.stride;
+        if ow >= self.w_out {
+            return None;
+        }
+
+        Some([oh, ow])
+    }
+}
+
 impl Cpu {
     #[inline]
     fn conv2d_forward<P: Shape<Concrete = [usize; 5]>>(
@@ -16,12 +49,24 @@ impl Cpu {
         out: &mut [f32],
         inp_patches_buf: &mut StridedArray<P, f32>,
     ) -> Result<(), CpuError> {
-        let mut patch_iter = inp_patches_buf.iter_mut_with_index();
-        while let Some((p, [c, k1, k2, oh, ow])) = patch_iter.next() {
-            let y = (oh * op.stride + k1).wrapping_sub(op.padding);
-            let x = (ow * op.stride + k2).wrapping_sub(op.padding);
-            if y < op.h_in && x < op.w_in {
-                *p = img[c * (op.w_in * op.h_in) + y * op.w_in + x];
+        {
+            let buf = Arc::make_mut(&mut inp_patches_buf.data);
+            let mut i = 0;
+            for c in 0..op.chan_in {
+                for k1 in 0..op.kernel {
+                    for k2 in 0..op.kernel {
+                        for oh in 0..op.h_out {
+                            for ow in 0..op.w_out {
+                                let y = (oh * op.stride + k1).wrapping_sub(op.padding);
+                                let x = (ow * op.stride + k2).wrapping_sub(op.padding);
+                                if y < op.h_in && x < op.w_in {
+                                    buf[i] = img[c * (op.w_in * op.h_in) + y * op.w_in + x];
+                                }
+                                i += 1;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -50,23 +95,18 @@ impl Cpu {
         out_patches_buf: &mut StridedArray<P, f32>,
     ) -> Result<(), CpuError> {
         {
-            let buf = out_patches_buf.view_mut();
+            let mut i = 0;
+            let buf = Arc::make_mut(&mut out_patches_buf.data);
             for o in 0..op.chan_out {
-                for oh in 0..op.h_out {
-                    for ow in 0..op.w_out {
-                        let g = grad_out[o * (op.h_out * op.w_out) + oh * op.w_out + ow];
-                        for k1 in 0..op.kernel {
-                            for k2 in 0..op.kernel {
-                                let y = (oh * op.stride + k1).wrapping_sub(op.padding);
-                                let x = (ow * op.stride + k2).wrapping_sub(op.padding);
-                                if y < op.h_in && x < op.w_in {
-                                    let idx = o * buf.strides[0]
-                                        + k1 * buf.strides[1]
-                                        + k2 * buf.strides[2]
-                                        + y * buf.strides[3]
-                                        + x * buf.strides[4];
-                                    buf.data[idx] = g;
+                for k1 in 0..op.kernel {
+                    for k2 in 0..op.kernel {
+                        for y in 0..op.h_in {
+                            for x in 0..op.w_in {
+                                if let Some([oh, ow]) = op.unfold_idx([k1, k2, y, x]) {
+                                    buf[i] =
+                                        grad_out[o * (op.h_out * op.w_out) + oh * op.w_out + ow];
                                 }
+                                i += 1;
                             }
                         }
                     }
@@ -112,11 +152,10 @@ impl Conv2DKernel<f32> for Cpu {
         out: &mut Self::Storage<O, f32>,
     ) -> Result<(), Self::Err> {
         let mut patches: StridedArray<_, f32> = StridedArray::new(op.inp_patches_shape())?;
-        let [lstride, ostride] = if L::NUM_DIMS == 3 {
-            [0; 2]
-        } else {
-            debug_assert_eq!(L::NUM_DIMS, 4);
-            [lhs.strides[0], out.strides[0]]
+        let [lstride, ostride] = match L::NUM_DIMS {
+            3 => [0; 2],
+            4 => [lhs.strides[0], out.strides[0]],
+            _ => unreachable!(),
         };
         let lhs = lhs.data.as_ref();
         let rhs = rhs.data.as_ref();
@@ -159,11 +198,10 @@ impl Conv2DKernel<f32> for Cpu {
             }
         }
 
-        let [lstride, ostride] = if L::NUM_DIMS == 3 {
-            [0; 2]
-        } else {
-            debug_assert_eq!(L::NUM_DIMS, 4);
-            [lhs.strides[0], grad_out.strides[0]]
+        let [lstride, ostride] = match L::NUM_DIMS {
+            3 => [0; 2],
+            4 => [lhs.strides[0], grad_out.strides[0]],
+            _ => unreachable!(),
         };
         let lhs = lhs.data.as_ref();
         let grad_lhs = Arc::make_mut(&mut grad_lhs.data);
