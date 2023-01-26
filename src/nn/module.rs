@@ -34,7 +34,7 @@ pub trait BuildModule<D: Device<E>, E: Dtype>: Sized {
     fn build(device: &D) -> Self {
         Self::try_build(device).unwrap()
     }
-    /// Fallible version of [ResetParams::build]
+    /// Fallible version of [BuildModule::build]
     fn try_build(device: &D) -> Result<Self, D::Err>;
 }
 
