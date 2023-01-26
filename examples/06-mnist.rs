@@ -99,7 +99,7 @@ fn main() {
 
     // initialize model and optimizer
     let mut model = Mlp::build_on_device(&dev);
-    let mut opt: Adam<Mlp> = Default::default();
+    let mut opt = Adam::default();
 
     // initialize dataset
     let dataset = MnistDataset::train(&mnist_path);

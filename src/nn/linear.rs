@@ -150,11 +150,14 @@ mod tests {
     fn test_linear_ondevice() {
         use super::super::module::OnDevice;
 
-        let cpu: Cpu = Default::default();
         let cuda: Cuda = Default::default();
-        let _: Linear<1, 1, _> = cpu.build_module();
-        let _: OnDevice<Linear<1, 1>, Cuda> = cuda.build_module();
-        let _: OnDevice<(Linear<1, 2>, Linear<2, 1>), Cuda> = cuda.build_module();
+        let _: Linear<1, 1, _> = BuildModule::build(&cuda);
+        let _: OnDevice<Linear<1, 1>, Cuda> = BuildModule::build(&cuda);
+        let _: OnDevice<(Linear<1, 2>, Linear<2, 1>), Cuda> = BuildModule::build(&cuda);
+
+        let _: Linear<1, 1, Cuda> = Linear::<1, 1>::build_on_device(&cuda);
+        let _: Linear<1, 1, _> = Linear::<1, 1>::build_on_device(&cuda);
+        let _ = Linear::<1, 1>::build_on_device(&cuda);
     }
 
     #[test]
