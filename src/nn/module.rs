@@ -50,14 +50,10 @@ pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
 
 /// Extension trait for [Device] that can build anything that implements [ResetParams].
 pub trait ModuleBuilder<E: Dtype>: Device<E> {
-    fn build_module<M: ToDevice<Self>>(&self) -> OnDevice<M, Self>
-        where OnDevice<M, Self>: ResetParams<Self, E>
-    {
+    fn build_module<M: ResetParams<Self, E>>(&self) -> M {
         ResetParams::build(self)
     }
-    fn try_build<M: ToDevice<Self>>(&self) -> Result<OnDevice<M, Self>, Self::Err>
-        where OnDevice<M, Self>: ResetParams<Self, E>
-    {
+    fn try_build<M: ResetParams<Self, E>>(&self) -> Result<M, Self::Err> {
         ResetParams::try_build(self)
     }
 }
