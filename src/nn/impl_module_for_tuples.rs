@@ -248,8 +248,8 @@ mod tests {
     #[test]
     fn test_tuple_missing_gradients() {
         let dev: TestDevice = Default::default();
-        let mut model: (Linear<5, 3, _>, Linear<5, 3, _>, Linear<5, 3, _>) =
-            BuildModule::build(&dev);
+        type Model = (Linear<5, 3>, Linear<5, 3>, Linear<5, 3>);
+        let mut model = Model::build_on_device(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present
