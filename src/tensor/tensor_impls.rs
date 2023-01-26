@@ -192,8 +192,8 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
     }
 }
 
-/// A trait which allows a module to be used with the [OnDevice] type alias. This is implemented
-/// automatically for any [ZeroSizedModule].
+/// A trait which allows a [Module] to be copied to another [Device] and to be used with the
+/// [OnDevice] type alias
 ///
 /// Here's an example of how this can be implemented for a custom struct:
 /// ```rust
@@ -224,7 +224,7 @@ pub trait ToDevice<D> {
 }
 
 /// A type alias that yields the type of a module `M` as it would exist on device `D`. This can be
-/// very useful when creating sequential networks that need to be parameterized by a device.
+/// useful when creating sequential networks that need to be parameterized by a device.
 ///
 /// Examples:
 /// ```rust
