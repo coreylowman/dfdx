@@ -87,7 +87,7 @@ mod tests {
     use crate::tests::{assert_close, TestDevice};
 
     #[test]
-    fn test_valids_min_axis() {
+    fn test_min_valid_axes() {
         let dev: TestDevice = Default::default();
         let _ = dev.zeros::<Rank1<5>>().min::<Rank0, _>();
         let _ = dev.zeros::<Rank2<5, 3>>().min::<Rank1<3>, _>();
@@ -134,5 +134,18 @@ mod tests {
         let g = r.mean().backward();
         let g2 = r2.mean().backward();
         assert_close(&g.get(&t).array(), &g2.get(&t).array());
+    }
+
+    #[test]
+    fn test_min_negative_zero() {
+        let dev: TestDevice = Default::default();
+        let t = dev.tensor([[-0.0, 0.0], [0.0, -0.0], [-1.0, -0.0], [-1.0, 0.0]]);
+        let r = t.trace().min::<_, Axis<1>>();
+        assert_eq!(r.array(), [-0.0, -0.0, -1.0, -1.0]);
+        let g = r.sum().backward();
+        assert_eq!(
+            g.get(&t).array(),
+            [[1.0, 1.0], [1.0, 1.0], [1.0, 0.0], [1.0, 0.0]]
+        );
     }
 }

@@ -74,7 +74,7 @@
 //! let loss = cross_entropy_with_logits_loss(y, y_true);
 //!
 //! // call `backward()` to compute gradients. The tensor *must* have `OwnedTape`!
-//! let gradients: Gradients<Cpu> = loss.backward();
+//! let gradients: Gradients = loss.backward();
 //! ```
 //! 7. Use an optimizer from [crate::optim] to optimize your network!
 //! ```rust
@@ -84,7 +84,7 @@
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
 //! # let y = model.forward(dev.zeros::<Rank1<10>>().trace());
 //! # let loss = cross_entropy_with_logits_loss(y, y_true);
-//! # let gradients: Gradients<Cpu> = loss.backward();
+//! # let gradients: Gradients = loss.backward();
 //! // Use stochastic gradient descent (Sgd), with a learning rate of 1e-2, and 0.9 momentum.
 //! let mut opt = Sgd::new(SgdConfig {
 //!     lr: 1e-2,
@@ -185,14 +185,13 @@ pub(crate) mod tests {
         }
     }
 
-    impl<const M: usize> AssertClose for [f32; M] {
+    impl AssertClose for f32 {
         fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)> {
-            for (l, r) in self.iter().zip(rhs.iter()) {
-                if (l - r).abs() > tolerance {
-                    return Some((*l, *r));
-                }
+            if (self - rhs).abs() > tolerance {
+                Some((*self, *rhs))
+            } else {
+                None
             }
-            None
         }
     }
 
@@ -209,6 +208,14 @@ pub(crate) mod tests {
 
     pub fn assert_close<T: AssertClose + std::fmt::Debug>(a: &T, b: &T) {
         a.assert_close(b, TOLERANCE);
+    }
+
+    pub fn assert_close_with_tolerance<T: AssertClose + std::fmt::Debug>(
+        a: &T,
+        b: &T,
+        tolerance: f32,
+    ) {
+        a.assert_close(b, tolerance);
     }
 }
 

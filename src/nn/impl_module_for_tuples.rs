@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::*, tensor_ops::*};
 
-use super::module::{Module, ModuleMut, ResetParams};
+use super::module::{Module, ModuleMut, OnDevice, ResetParams, ToDevice};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
@@ -24,6 +24,14 @@ macro_rules! tuple_impls {
             fn try_reset_params(&mut self) -> Result<(), D::Err> {
                 $(self.$idx.try_reset_params()?;)+
                 Ok(())
+            }
+        }
+
+        impl<$($name: ToDevice<D>,)+ D> ToDevice<D> for ($($name,)+) {
+            type Output = ($(OnDevice<$name, D>,)+);
+
+            fn to_device(&self, device: &D) -> Self::Output {
+                ($(self.$idx.to_device(device)),+)
             }
         }
 
@@ -239,7 +247,7 @@ mod tests {
     fn test_tuple_missing_gradients() {
         let dev: TestDevice = Default::default();
         let mut model: (Linear<5, 3, _>, Linear<5, 3, _>, Linear<5, 3, _>) = dev.build_module();
-        let mut g: SimpleUpdater<_> = Default::default();
+        let mut g: SimpleUpdater = Default::default();
 
         // no gradients present
         let mut unused: UnusedTensors = Default::default();

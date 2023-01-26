@@ -1,7 +1,7 @@
 use crate::{
     gradients::Gradients,
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, Tensor},
+    tensor::{DeviceStorage, HasErr, Tensor},
     unique_id::{HasUniqueId, UniqueId},
 };
 
@@ -16,6 +16,25 @@ pub enum WeightDecay<E> {
     Decoupled(E),
 }
 
+/// Used to communicate the "WeightDecay" enum to cuda kernels
+#[cfg(feature = "cuda")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(C)]
+pub(super) enum WeightDecayType {
+    None,
+    L2,
+    Decoupled,
+}
+
+#[cfg(feature = "cuda")]
+pub(super) fn weight_decay_to_cuda<E: Default>(wd: Option<WeightDecay<E>>) -> (WeightDecayType, E) {
+    match wd {
+        None => (WeightDecayType::None, Default::default()),
+        Some(WeightDecay::L2(x)) => (WeightDecayType::L2, x),
+        Some(WeightDecay::Decoupled(x)) => (WeightDecayType::Decoupled, x),
+    }
+}
+
 /// Momentum used for [super::Sgd] and others
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Momentum<E> {
@@ -24,6 +43,25 @@ pub enum Momentum<E> {
 
     /// Momentum that is applied to both velocity and gradients. See [super::Sgd] nesterov paper for more.
     Nesterov(E),
+}
+
+/// Used to communicate the "Momentum" enum to cuda kernels
+#[cfg(feature = "cuda")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(C)]
+pub(super) enum MomentumType {
+    None,
+    Classic,
+    Nesterov,
+}
+
+#[cfg(feature = "cuda")]
+pub(super) fn momentum_to_cuda<E: Default>(wd: Option<Momentum<E>>) -> (MomentumType, E) {
+    match wd {
+        None => (MomentumType::None, Default::default()),
+        Some(Momentum::Classic(x)) => (MomentumType::Classic, x),
+        Some(Momentum::Nesterov(x)) => (MomentumType::Nesterov, x),
+    }
 }
 
 /// All optimizers must implement the update function, which takes an object
@@ -41,7 +79,7 @@ pub enum Momentum<E> {
 ///
 /// 3. Optimizer itself is generic over M, not the update method. This means a single optimizer object
 /// can only work on objects of type `M`. This also requires you to specify the model up front for the optimizer.
-pub trait Optimizer<M: GradientUpdate<D, E>, D: DeviceStorage, E: Dtype> {
+pub trait Optimizer<M, D: DeviceStorage, E: Dtype> {
     /// Updates all of `module`'s parameters using `gradients`.
     ///
     /// Requires a `&mut self` because the optimizer may change some internally
@@ -49,8 +87,28 @@ pub trait Optimizer<M: GradientUpdate<D, E>, D: DeviceStorage, E: Dtype> {
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients<D>,
+        gradients: Gradients,
     ) -> Result<(), OptimizerUpdateError<D>>;
+}
+
+/// Represents something that can be updated with a [ParamUpdater].
+pub trait GradientUpdate<D: DeviceStorage, E: Dtype> {
+    /// Updates self given the [ParamUpdater].
+    fn update<U: ParamUpdater<D, E>>(
+        &mut self,
+        updater: &mut U,
+        unused: &mut UnusedTensors,
+    ) -> Result<(), D::Err>;
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage> GradientUpdate<D, E> for Tensor<S, E, D> {
+    fn update<U: ParamUpdater<D, E>>(
+        &mut self,
+        updater: &mut U,
+        unused: &mut UnusedTensors,
+    ) -> Result<(), <Self as HasErr>::Err> {
+        updater.update_param(self, unused)
+    }
 }
 
 /// Represents something that can update a tensor.
@@ -86,24 +144,6 @@ impl UnusedTensors {
     }
 }
 
-/// Represents something that can be updated with a [ParamUpdater].
-pub trait GradientUpdate<D: DeviceStorage, E: Dtype>: Sized {
-    /// Updates self given the [ParamUpdater].
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-    where
-        U: ParamUpdater<D, E>;
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage> GradientUpdate<D, E> for Tensor<S, E, D> {
-    fn update<U: ParamUpdater<D, E>>(
-        &mut self,
-        opt: &mut U,
-        unused: &mut UnusedTensors,
-    ) -> Result<(), D::Err> {
-        opt.update_param(self, unused)
-    }
-}
-
 /// An error indicating that a parameter was not used in gradient
 /// computation, and was therefore not present in [Gradients]
 /// while a [GradientUpdate] was trying to update it.
@@ -116,7 +156,7 @@ pub enum OptimizerUpdateError<D: DeviceStorage> {
 impl<D: DeviceStorage> std::fmt::Display for OptimizerUpdateError<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UnusedParams(unused) => write!(f, "Unused tensors: {:?}", unused),
+            Self::UnusedParams(unused) => write!(f, "Unused tensors: {unused:?}"),
             Self::DeviceError(err) => write!(f, "{err}"),
         }
     }

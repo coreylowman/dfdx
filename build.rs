@@ -24,20 +24,40 @@ mod cuda {
             .unwrap()
             .map(|p| p.unwrap())
             .collect();
+        let mut include_directories: Vec<std::path::PathBuf> = glob::glob("src/**/*.cuh")
+            .unwrap()
+            .map(|p| p.unwrap())
+            .collect();
+
+        for path in &mut include_directories {
+            println!("cargo:rerun-if-changed={}", path.display());
+            path.pop();
+        }
+
+        include_directories.sort();
+        include_directories.dedup();
+
         println!("cargo:warning=Found kernels {kernel_paths:?}");
+        println!("cargo:warning=Found include directories {include_directories:?}");
+
+        let include_options: Vec<String> = include_directories
+            .into_iter()
+            .map(|s| "-I".to_string() + &s.into_os_string().into_string().unwrap())
+            .collect::<Vec<_>>();
+
         for kernel_path in kernel_paths {
             println!("cargo:rerun-if-changed={}", kernel_path.display());
             let output = std::process::Command::new("nvcc")
                 .arg("--ptx")
                 .args(["--output-directory", &out_dir])
+                .args(&include_options)
                 .arg(&kernel_path)
                 .output()
                 .unwrap();
 
             assert!(
                 output.status.success(),
-                "nvcc error while compiling {kernel_path:?}: {:?}",
-                output
+                "nvcc error while compiling {kernel_path:?}: {output:?}",
             );
         }
     }

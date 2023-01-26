@@ -2,7 +2,7 @@ use rand::distributions::Distribution;
 use rand_distr::{Standard, StandardNormal};
 
 use crate::{
-    shapes::{ConstShape, Dtype, HasDtype, HasShape, HasUnitType, Shape, Unit},
+    shapes::{ConstShape, Dtype, HasShape, HasUnitType, Shape, Unit},
     unique_id::unique_id,
 };
 
@@ -44,12 +44,14 @@ pub trait DeviceStorage: 'static + Default + Clone + HasErr {
 }
 
 /// Internal trait - Represents something that can allocate its own gradient.
-pub trait AllocGrad<D: DeviceStorage>: HasShape + HasDtype {
-    fn try_alloc_grad(&self) -> Result<D::Storage<Self::Shape, Self::Dtype>, D::Err>;
+pub trait AllocGrad: HasErr {
+    type Gradient: 'static;
+    fn try_alloc_grad(&self) -> Result<Self::Gradient, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> AllocGrad<D> for Tensor<S, E, D, T> {
-    fn try_alloc_grad(&self) -> Result<D::Storage<Self::Shape, Self::Dtype>, D::Err> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> AllocGrad for Tensor<S, E, D, T> {
+    type Gradient = D::Storage<S, E>;
+    fn try_alloc_grad(&self) -> Result<Self::Gradient, D::Err> {
         self.device.try_alloc_grad(&self.storage)
     }
 }

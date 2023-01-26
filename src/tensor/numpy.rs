@@ -264,18 +264,17 @@ pub enum NpyError {
 impl std::fmt::Display for NpyError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            NpyError::InvalidMagicNumber(num) => write!(fmt, "invalid magic number: {:?}", num),
-            NpyError::InvalidVersion(ver) => write!(fmt, "invalid version: {:?}", ver),
-            NpyError::IoError(err) => write!(fmt, "{}", err),
-            NpyError::Utf8Error(err) => write!(fmt, "{}", err),
+            NpyError::InvalidMagicNumber(num) => write!(fmt, "invalid magic number: {num:?}"),
+            NpyError::InvalidVersion(ver) => write!(fmt, "invalid version: {ver:?}"),
+            NpyError::IoError(err) => write!(fmt, "{err}"),
+            NpyError::Utf8Error(err) => write!(fmt, "{err}"),
             NpyError::ParsingMismatch {
                 expected_str,
                 found_str,
                 ..
             } => write!(
                 fmt,
-                "error while parsing: expected {} found {}",
-                expected_str, found_str
+                "error while parsing: expected {expected_str} found {found_str}"
             ),
             NpyError::InvalidAlignment => write!(fmt, "invalid alignment"),
         }
@@ -326,8 +325,8 @@ pub enum NpzError {
 impl std::fmt::Display for NpzError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            NpzError::Zip(err) => write!(fmt, "{}", err),
-            NpzError::Npy(err) => write!(fmt, "{}", err),
+            NpzError::Zip(err) => write!(fmt, "{err}"),
+            NpzError::Npy(err) => write!(fmt, "{err}"),
         }
     }
 }

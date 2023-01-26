@@ -23,6 +23,7 @@ macro_rules! activation_impls {
 }
 
 activation_impls!(ReLU, relu, #[doc="Unit struct that impls [Module] as calling [relu()] on `input`."]);
+activation_impls!(GeLU, gelu, #[doc="Unit struct that impls [Module] as calling [gelu()] on `input`."]);
 activation_impls!(Sin, sin, #[doc="Unit struct that impls [Module] as calling [sin()] on `input`."]);
 activation_impls!(Cos, cos, #[doc="Unit struct that impls [Module] as calling [cos()] on `input`."]);
 activation_impls!(Ln, ln, #[doc="Unit struct that impls [Module] as calling [ln()] on `input`."]);
@@ -61,6 +62,15 @@ mod tests {
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = ReLU.forward_mut(t.clone());
         let r2 = relu(t);
+        assert_eq!(r1.array(), r2.array());
+    }
+
+    #[test]
+    fn test_nn_activations_gelu() {
+        let dev: TestDevice = Default::default();
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let r1 = GeLU.forward_mut(t.clone());
+        let r2 = gelu(t);
         assert_eq!(r1.array(), r2.array());
     }
 

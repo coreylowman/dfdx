@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 use crate::{
     gradients::Gradients,
     shapes::{Dtype, Shape},
-    tensor::{Cpu, DeviceStorage},
+    tensor::DeviceStorage,
 };
 
 use super::{GradientUpdate, Optimizer, OptimizerUpdateError, ParamUpdater, WeightDecay};
@@ -77,19 +77,19 @@ impl Default for AdamConfig<f32> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Adam<M, D: DeviceStorage = Cpu, E: Dtype = f32> {
+pub struct Adam<M, E: Dtype = f32> {
     /// Hyperparameter configuration
     pub cfg: AdamConfig<E>,
 
     t: i32,
-    gradients: Gradients<D>,
-    moment1: Gradients<D>,
-    moment2: Gradients<D>,
+    gradients: Gradients,
+    moment1: Gradients,
+    moment2: Gradients,
 
     marker: PhantomData<*const M>,
 }
 
-impl<M, D: DeviceStorage, E: Dtype> Default for Adam<M, D, E>
+impl<M, E: Dtype> Default for Adam<M, E>
 where
     AdamConfig<E>: Default,
 {
@@ -99,7 +99,7 @@ where
     }
 }
 
-impl<M, D: DeviceStorage, E: Dtype> Adam<M, D, E> {
+impl<M, E: Dtype> Adam<M, E> {
     /// Constructs using hyperparameters from `cfg`.
     pub fn new(cfg: AdamConfig<E>) -> Self {
         Self {
@@ -115,16 +115,17 @@ impl<M, D: DeviceStorage, E: Dtype> Adam<M, D, E> {
 
 pub(super) trait AdamKernel<E: Dtype>: DeviceStorage {
     fn update<S: Shape>(
+        &self,
         t: i32,
         cfg: &AdamConfig<E>,
         param: &mut Self::Storage<S, E>,
         moment1: &mut Self::Storage<S, E>,
         moment2: &mut Self::Storage<S, E>,
         grad: Self::Storage<S, E>,
-    );
+    ) -> Result<(), Self::Err>;
 }
 
-impl<M, D: DeviceStorage + AdamKernel<E>, E: Dtype> ParamUpdater<D, E> for Adam<M, D, E> {
+impl<M, D: DeviceStorage + AdamKernel<E>, E: Dtype> ParamUpdater<D, E> for Adam<M, E> {
     fn update_param<S: Shape>(
         &mut self,
         p: &mut crate::tensor::Tensor<S, E, D>,
@@ -136,21 +137,22 @@ impl<M, D: DeviceStorage + AdamKernel<E>, E: Dtype> ParamUpdater<D, E> for Adam<
             Some(g) => {
                 let m_t = self.moment1.get_or_alloc_mut(p)?;
                 let v_t = self.moment2.get_or_alloc_mut(p)?;
-                D::update(self.t, &self.cfg, &mut p.storage, m_t, v_t, g);
+                p.device
+                    .update(self.t, &self.cfg, &mut p.storage, m_t, v_t, g)?;
             }
         }
         Ok(())
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, M: GradientUpdate<D, E>> Optimizer<M, D, E> for Adam<M, D, E>
+impl<M: GradientUpdate<D, E>, D: AdamKernel<E>, E: Dtype> Optimizer<M, D, E> for Adam<M, E>
 where
     Self: ParamUpdater<D, E>,
 {
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients<D>,
+        gradients: Gradients,
     ) -> Result<(), OptimizerUpdateError<D>> {
         self.t = self.t.checked_add(1).unwrap();
         self.gradients = gradients;
@@ -221,7 +223,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).square().mean().backward();
             opt.update(&mut t, gradients).expect("");
-            assert_eq!(&t.array(), e);
+            assert_close(&t.array(), e);
         }
     }
 
@@ -251,7 +253,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = t.trace().exp().square().mean().backward();
             opt.update(&mut t, gradients).expect("");
-            assert_eq!(&t.array(), e);
+            assert_close(&t.array(), e);
         }
     }
 
@@ -281,7 +283,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = t.trace().exp().square().mean().backward();
             opt.update(&mut t, gradients).expect("");
-            assert_eq!(&t.array(), e);
+            assert_close(&t.array(), e);
         }
     }
 
