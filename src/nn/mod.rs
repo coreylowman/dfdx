@@ -25,16 +25,7 @@
 //!
 //! # Initializing
 //!
-//! All modules implement [BuildModule]:
-//!
-//! ```rust
-//! # use dfdx::prelude::*;
-//! let dev: Cpu = Default::default();
-//! let model: Linear<5, 2> = BuildModule::build(&dev); // will allocate & randomize params
-//! ```
-//!
-//! However, this becomes hard to use when you are using multiple devices. In case you are
-//! using another device, you should use [BuildOnDevice]:
+//! Use [BuildOnDevice] for device agnostic module creation/randomization:
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
@@ -44,6 +35,18 @@
 //! ```
 //!
 //! Here, the return type of [BuildOnDevice] depends on the device you pass in.
+//!
+//! For example, when using device [Cpu], the type is `Linear<5, 2, Cpu>`, or when using
+//! a `Cuda` device, the type is `Linear<5, 2, Cuda>`.
+//!
+//! Alternatively, you can use [BuildModule], which requires device specific model definitions:
+//!
+//! ```rust
+//! # use dfdx::prelude::*;
+//! type Dev = Cpu;
+//! let dev: Dev = Default::default();
+//! let model: Linear<5, 2, Dev> = BuildModule::build(&dev);
+//! ```
 //!
 //! # Resetting parameters
 //!

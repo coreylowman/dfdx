@@ -122,11 +122,13 @@ for sequentially executing modules.
 
 ```rust
 // no idea why you would do this, but you could!
-let model: (ReLU, Sigmoid, Tanh) = BuildModule::build(&dev);
+type Model = (ReLU, Sigmoid, Tanh);
+let model = Model::build_on_device(&dev);
 ```
 
 ```rust
-let model: (Linear<10, 5>, Tanh) = BuildModule::build(&dev);
+type Model = (Linear<10, 5>, Tanh)
+let model = Model::build_on_device(&dev);
 ```
 
 How implementing Module for a 2-tuple looks:

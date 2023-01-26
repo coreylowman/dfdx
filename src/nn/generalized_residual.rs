@@ -13,9 +13,10 @@ use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let module: GeneralizedResidual<ReLU, Square> = Default::default();
+/// type Model = GeneralizedResidual<ReLU, Square>;
+/// let model = Model::build_on_device(&dev);
 /// let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-/// let y = module.forward(x);
+/// let y = model.forward(x);
 /// assert_eq!(y.array(), [4.0, 1.0, 0.0, 2.0, 6.0]);
 /// ```
 #[derive(Debug, Clone, Default)]

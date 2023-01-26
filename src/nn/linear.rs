@@ -17,7 +17,8 @@ use super::module::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let model: Linear<5, 2> = BuildModule::build(&dev);
+/// type Model = Linear<5, 2>;
+/// let model = Model::build_on_device(&dev);
 /// // single item forward
 /// let _: Tensor<Rank1<2>> = model.forward(dev.zeros::<Rank1<5>>());
 /// // batched forward

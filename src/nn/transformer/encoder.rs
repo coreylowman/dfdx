@@ -159,8 +159,8 @@ mod tests {
         const NUM_HEADS: usize = 3;
         const FF_DIM: usize = 16;
 
-        let encoder: TransformerEncoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> =
-            BuildModule::build(&dev);
+        let encoder =
+            TransformerEncoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build_on_device(&dev);
 
         let x = dev.sample_normal::<Rank3<BATCH, SEQ_LEN, EMBED_DIM>>();
         let y = encoder.forward(x);

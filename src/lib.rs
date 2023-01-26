@@ -30,7 +30,7 @@
 //! );
 //! ```
 //!
-//! 3. Instantiate models with [crate::nn::BuildModule] and [crate::nn::BuildOnDevice]
+//! 3. Instantiate models with [crate::nn::BuildOnDevice]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();
@@ -42,7 +42,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let mlp: Linear<5, 2> = BuildModule::build(&dev);
+//! # let mlp: Linear<5, 2> = BuildModule::build(&dev);
 //! let x: Tensor<Rank1<5>> = dev.zeros();
 //! let y = mlp.forward(x); // compiler infers that `y` must be `Tensor<Rank1<2>>`
 //! ```

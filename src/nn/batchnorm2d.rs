@@ -23,7 +23,8 @@ use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let bn: BatchNorm2D<3> = BuildModule::build(&dev);
+/// type Model = BatchNorm2D<3>;
+/// let bn = Model::build_on_device(&dev);
 /// let _ = bn.forward(dev.zeros::<Rank3<3, 2, 2>>());
 /// let _ = bn.forward(dev.zeros::<Rank4<4, 3, 2, 2>>());
 /// ```

@@ -39,7 +39,7 @@ pub trait BuildModule<D: Device<E>, E: Dtype>: Sized {
 }
 
 /// Something that can be built on a different device
-/// than it is on. Builds [BuildOnDevice::Built].
+/// than it is on. Builds [ToDevice::Output].
 ///
 /// Related to [BuildModule]
 pub trait BuildOnDevice<D: Device<E>, E: Dtype>: ToDevice<D>

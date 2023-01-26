@@ -14,9 +14,10 @@ use std::ops::Add;
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let module: Residual<ReLU> = Default::default();
+/// type Model = Residual<ReLU>;
+/// let model = Model::build_on_device(&dev);
 /// let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-/// let y = module.forward(x);
+/// let y = model.forward(x);
 /// assert_eq!(y.array(), [-2.0, -1.0, 0.0, 2.0, 4.0]);
 /// ```
 #[derive(Debug, Clone, Default)]

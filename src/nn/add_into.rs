@@ -14,7 +14,8 @@ use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let model: AddInto<(Linear<2, 5>, Linear<3, 5>)> = BuildModule::build(&dev);
+/// type Model = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
+/// let model = Model::build_on_device(&dev);
 /// let a = dev.zeros::<Rank1<2>>();
 /// let b = dev.zeros::<Rank1<3>>();
 /// let _: Tensor<Rank1<5>> = model.forward((a, b));

@@ -115,7 +115,7 @@ pub struct TransformerDecoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
     const FF_DIM: usize,
-    D: Device<f32>,
+    D: Device<f32> = Cpu,
 > {
     pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
     pub norm1: LayerNorm1D<MODEL_DIM, D>,
@@ -239,8 +239,8 @@ mod tests {
         const NUM_HEADS: usize = 6;
         const FF_DIM: usize = 2;
 
-        let decoder: TransformerDecoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> =
-            BuildModule::build(&dev);
+        let decoder =
+            TransformerDecoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build_on_device(&dev);
 
         let tgt = dev.sample_normal::<Rank3<BATCH, S1, EMBED_DIM>>();
         let mem = dev.sample_normal::<Rank3<BATCH, S2, EMBED_DIM>>();
