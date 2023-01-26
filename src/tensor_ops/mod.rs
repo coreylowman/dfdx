@@ -135,13 +135,12 @@
 //! assert_eq!(r.array(), [2.0, 5.0]);
 //! ```
 
-mod device;
-pub use device::Device;
+mod utilities;
+pub use utilities::*;
 
 // mod impl_mask;
 mod abs;
 mod add;
-mod backward;
 mod bce;
 mod broadcast_to;
 mod clamp;
@@ -167,6 +166,7 @@ mod normalize;
 mod permute_to;
 mod pow;
 mod relu;
+mod reshape_to;
 mod select_and_gather;
 mod sigmoid;
 mod sin;
@@ -179,15 +179,8 @@ mod sum_to;
 mod tanh;
 mod var_to;
 
-pub(crate) mod cpu_kernels;
-#[cfg(feature = "cuda")]
-pub(crate) mod cuda_kernels;
-mod internal_reshapes;
-pub(crate) mod ops;
-
 pub use abs::abs;
 pub use add::{add, TryAdd};
-pub use backward::Backward;
 pub use bce::bce_with_logits;
 pub use broadcast_to::BroadcastTo;
 pub use clamp::clamp;
@@ -213,6 +206,7 @@ pub use normalize::normalize;
 pub use permute_to::PermuteTo;
 pub use pow::{powf, powi};
 pub use relu::relu;
+pub use reshape_to::ReshapeTo;
 pub use select_and_gather::{GatherTo, SelectTo};
 pub use sigmoid::sigmoid;
 pub use sin::sin;
@@ -225,9 +219,6 @@ pub use sum_to::SumTo;
 pub use tanh::tanh;
 pub use var_to::VarTo;
 // pub use impl_mask::*;
-
-mod reshape_to;
-pub use reshape_to::ReshapeTo;
 
 #[cfg(feature = "nightly")]
 mod conv2d;

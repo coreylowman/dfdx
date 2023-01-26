@@ -38,6 +38,7 @@ impl Cpu {
     }
 
     #[inline]
+    #[allow(clippy::too_many_arguments)]
     fn conv2d_backward<P: Shape<Concrete = [usize; 5]>>(
         &self,
         op: &Conv2DOp,
@@ -124,7 +125,7 @@ impl Conv2DKernel<f32> for Cpu {
             self.conv2d_forward(
                 &op,
                 &lhs[i_batch * lstride..],
-                &rhs,
+                rhs,
                 &mut out[i_batch * ostride..],
                 &mut patches,
             )?;
