@@ -1,4 +1,4 @@
-#define UNARY_OP(FORWARD, BACKWARD, OP_STRUCT, FUNC, DERIVATIVE) \
+#define LONG_UNARY_OP(FORWARD, BACKWARD, OP_STRUCT, FUNC, DERIVATIVE) \
 extern "C" __global__ void FORWARD( \
     const OP_STRUCT op, \
     const size_t numel, \
@@ -10,9 +10,9 @@ extern "C" __global__ void FORWARD( \
         return; \
     } \
     float x = inp[i]; \
-    out[i] = (FUNC); \
+    FUNC \
 } \
- \
+\
 extern "C" __global__ void BACKWARD( \
     const OP_STRUCT op, \
     const size_t numel, \
@@ -26,6 +26,10 @@ extern "C" __global__ void BACKWARD( \
     } \
     \
     float x = inp[i]; \
-    float dx = (DERIVATIVE); \
+    float dx; \
+    DERIVATIVE \
     grad_inp[i] += dx * grad_out[i]; \
 }
+
+#define UNARY_OP(FORWARD, BACKWARD, OP_STRUCT, FUNC, DERIVATIVE) \
+    LONG_UNARY_OP(FORWARD, BACKWARD, OP_STRUCT, out[i] = (FUNC);, dx = (DERIVATIVE);)
