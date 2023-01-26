@@ -192,8 +192,8 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
     }
 }
 
-/// A trait which allows a [Module] to be copied to another [Device] and to be used with the
-/// [OnDevice] type alias
+/// Something that can be copied to another [Device] and can be used with the [OnDevice] type
+/// alias.
 ///
 /// Here's an example of how this can be implemented for a custom struct:
 /// ```rust
