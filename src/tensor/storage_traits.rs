@@ -1,6 +1,5 @@
 use rand::distributions::Distribution;
 use rand_distr::{Standard, StandardNormal};
-use std::vec::Vec;
 
 use crate::{
     shapes::{ConstShape, Dtype, HasShape, HasUnitType, Shape, Unit},
@@ -250,39 +249,6 @@ pub trait TensorFromArray<Src, S: Shape, E: Unit>: DeviceStorage {
     fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
 }
 
-pub trait TensorFrom<S: Shape, Src, E: Unit>: DeviceStorage {
-    fn tensor_with_shape(&self, src: Src, shape: &S) -> Tensor<S, E, Self> {
-        self.try_tensor_with_shape(src, shape).unwrap()
-    }
-
-    fn try_tensor_with_shape(&self, src: Src, shape: &S) -> Result<Tensor<S, E, Self>, Self::Err>;
-}
-
-pub trait ConstShapeTensorFrom<S: ConstShape, Src, E: Unit>: DeviceStorage {
-    fn tensor(&self, src: Src) -> Tensor<S, E, Self> {
-        self.try_tensor(src).unwrap()
-    }
-
-    fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
-}
-
-impl<S: ConstShape, Src, E: Unit, T: TensorFrom<S, Src, E>> ConstShapeTensorFrom<S, Src, E> for T {
-    fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.try_tensor_with_shape(src, &S::default())
-    }
-}
-
-impl<S: Shape, Src: Iterator<Item = I>, E: Unit, I, T> TensorFrom<S, Src, E> for T
-where
-    I: std::ops::Deref<Target = E>,
-    T: TensorFrom<S, Vec<E>, E>,
-{
-    fn try_tensor_with_shape(&self, src: Src, shape: &S) -> Result<Tensor<S, E, Self>, Self::Err> {
-        let vec: Vec<E> = src.take(shape.num_elements()).map(|x| *x).collect();
-        self.try_tensor_with_shape(vec, shape)
-    }
-}
-
 /// Convert tensors to rust arrays
 pub trait AsArray {
     type Array: std::fmt::Debug + PartialEq;
@@ -300,14 +266,14 @@ where
 
 /// Convert tensors to [std::vec::Vec]
 pub trait AsVec: HasUnitType {
-    fn as_vec(&self) -> Vec<Self::Unit>;
+    fn as_vec(&self) -> std::vec::Vec<Self::Unit>;
 }
 
 impl<S: Shape, E: Unit, D: DeviceStorage, T> AsVec for Tensor<S, E, D, T>
 where
     D::Storage<S, E>: HasUnitType<Unit = E> + AsVec,
 {
-    fn as_vec(&self) -> Vec<E> {
+    fn as_vec(&self) -> std::vec::Vec<E> {
         self.storage.as_vec()
     }
 }
