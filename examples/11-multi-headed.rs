@@ -4,7 +4,7 @@
 use dfdx::{
     nn::{BuildOnDevice, Linear, Module, SplitInto},
     shapes::Rank1,
-    tensor::{Cpu, Tensor, TensorFrom},
+    tensor::{Cpu, Tensor, TensorFromArray},
 };
 
 fn main() {

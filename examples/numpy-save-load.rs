@@ -4,7 +4,7 @@
 fn main() {
     use dfdx::{
         shapes::{Rank0, Rank1, Rank2},
-        tensor::{AsArray, Cpu, Tensor, TensorFrom, ZerosTensor},
+        tensor::{AsArray, Cpu, Tensor, TensorFromArray, ZerosTensor},
     };
 
     let dev: Cpu = Default::default();

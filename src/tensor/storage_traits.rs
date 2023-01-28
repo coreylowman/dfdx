@@ -235,94 +235,53 @@ pub trait SampleTensor<E: Unit>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-// /// Construct tensors from rust arrays
-// pub trait TensorFromArray<Src, S: Shape, E: Unit>: DeviceStorage {
-    // /// Create a tensor from a rust array
-    // /// ```rust
-    // /// # use dfdx::prelude::*;
-    // /// # let dev: Cpu = Default::default();
-    // /// let _: Tensor<Rank2<2, 3>> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-    // /// ```
-    // fn tensor(&self, src: Src) -> Tensor<S, E, Self> {
-        // self.try_tensor(src).unwrap()
-    // }
-    // /// Fallible version of [TensorFromArray::tensor]
-    // fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
-// }
-
-pub trait DynamicTensorFrom<Src, S: Shape, E: Unit>: DeviceStorage {
-    fn tensor_with_shape_internal(&self, src: Src, shape: S) -> Tensor<S, E, Self> {
-        self.try_tensor_with_shape_internal(src, shape).unwrap()
+/// Construct tensors from rust arrays
+pub trait TensorFromArray<Src, S: Shape, E: Unit>: DeviceStorage {
+    /// Create a tensor from a rust array
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let _: Tensor<Rank2<2, 3>> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+    /// ```
+    fn tensor(&self, src: Src) -> Tensor<S, E, Self> {
+        self.try_tensor(src).unwrap()
     }
-
-    fn try_tensor_with_shape_internal(&self, src: Src, shape: S) -> Result<Tensor<S, E, Self>, Self::Err>;
+    /// Fallible version of [TensorFromArray::tensor]
+    fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
 }
 
-pub trait ConstShapeTensorFrom<Src, S: ConstShape, E: Unit>: DeviceStorage + DynamicTensorFrom<Src, S, E> {
-    fn tensor_internal(&self, src: Src) -> Tensor<S, E, Self> {
-        self.try_tensor_internal(src).unwrap()
+pub trait TensorFrom<S: Shape, Src, E: Unit>: DeviceStorage {
+    fn tensor_with_shape(&self, src: Src, shape: &S) -> Tensor<S, E, Self> {
+        self.try_tensor_with_shape(src, shape).unwrap()
     }
 
-    fn try_tensor_internal(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.try_tensor_with_shape_internal(src, S::default())
+    fn try_tensor_with_shape(&self, src: Src, shape: &S) -> Result<Tensor<S, E, Self>, Self::Err>;
+}
+
+pub trait ConstShapeTensorFrom<S: ConstShape, Src, E: Unit>: DeviceStorage {
+    fn tensor(&self, src: Src) -> Tensor<S, E, Self> {
+        self.try_tensor(src).unwrap()
+    }
+
+    fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
+}
+
+impl<S: ConstShape, Src, E: Unit, T: TensorFrom<S, Src, E>> ConstShapeTensorFrom<S, Src, E> for T {
+    fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err> {
+        self.try_tensor_with_shape(src, &S::default())
     }
 }
 
-impl<Src, S: ConstShape, E: Unit, T> ConstShapeTensorFrom<Src, S, E> for T
+impl<S: Shape, Src: Iterator<Item = I>, E: Unit, I, T> TensorFrom<S, Src, E> for T
 where
-    T: DynamicTensorFrom<Src, S, E>
+    I: std::ops::Deref<Target = E>,
+    T: TensorFrom<S, Vec<E>, E>,
 {
-}
-
-pub trait TensorFrom<Src, E: Unit>: DeviceStorage {
-    fn tensor_with_shape<S: Shape>(&self, src: Src, shape: S) -> Tensor<S, E, Self>
-        where Self: DynamicTensorFrom<Src, S, E>
-    {
-        self.tensor_with_shape_internal(src, shape)
-    }
-
-    fn try_tensor_with_shape<S: Shape>(&self, src: Src, shape: S) -> Result<Tensor<S, E, Self>, Self::Err>
-        where Self: DynamicTensorFrom<Src, S, E>
-    {
-        self.try_tensor_with_shape_internal(src, shape)
-    }
-
-    fn tensor<S: ConstShape>(&self, src: Src) -> Tensor<S, E, Self>
-        where Self: ConstShapeTensorFrom<Src, S, E>
-    {
-        self.tensor_internal(src)
-    }
-
-    fn try_tensor<S: ConstShape>(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>
-        where Self: ConstShapeTensorFrom<Src, S, E>
-    {
-        self.try_tensor_internal(src)
+    fn try_tensor_with_shape(&self, src: Src, shape: &S) -> Result<Tensor<S, E, Self>, Self::Err> {
+        let vec: Vec<E> = src.take(shape.num_elements()).map(|x| *x).collect();
+        self.try_tensor_with_shape(vec, shape)
     }
 }
-
-impl <Src, E: Unit, T: DeviceStorage> TensorFrom<Src, E> for T {}
-
-// impl<S: Shape, Src: Iterator<Item = I>, E: Unit, I, T> DynamicTensorFrom<Src, S, E> for T
-// where
-    // I: std::ops::Deref<Target = E>,
-    // T: DynamicTensorFrom<Vec<E>, S, E>,
-// {
-    // fn try_tensor_with_shape(&self, src: Src, shape: &S) -> Result<Tensor<S, E, Self>, Self::Err> {
-        // let vec: Vec<E> = src.take(shape.num_elements()).map(|x| *x).collect();
-        // self.try_tensor_with_shape(vec, shape)
-    // }
-// }
-
-// impl<S: Shape, Src: Iterator<Item = I>, E: Unit, I, T> ConstShapeTensorFrom<S, Src, E> for T
-// where
-    // I: std::ops::Deref<Target = E>,
-    // T: ConstShapeTensorFrom<S, Vec<E>, E>,
-// {
-    // fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err> {
-        // let vec: Vec<E> = src.take(S::default().num_elements()).map(|x| *x).collect();
-        // self.try_tensor(vec)
-    // }
-// }
 
 /// Convert tensors to rust arrays
 pub trait AsArray {

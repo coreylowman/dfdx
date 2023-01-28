@@ -3,7 +3,7 @@
 
 use dfdx::{
     shapes::{Axis, Rank2, Rank4},
-    tensor::{AsArray, Cpu, TensorFrom},
+    tensor::{AsArray, Cpu, TensorFromArray},
     tensor_ops::{BroadcastTo, MeanTo},
 };
 
