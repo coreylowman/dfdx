@@ -142,17 +142,6 @@ impl<E: Unit, const M: usize> TensorFromArray<[E; M], Rank1<M>, E> for Cpu {
     }
 }
 
-#[test]
-fn test_tensor_from() {
-    let device = Cpu::default();
-    let _tensor = device.tensor_with_shape(std::vec![1.0, 2.0], (2,));
-}
-
-#[allow(unused)]
-fn test_tensor_from2<D: crate::prelude::Device<f32>>(device: D) {
-    let _tensor = device.tensor_with_shape(std::vec![1.0, 2.0], (2,));
-}
-
 impl<E: Unit, const M: usize> TensorFromArray<&[E; M], Rank1<M>, E> for Cpu {
     fn try_tensor(&self, src: &[E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
         let mut storage: StridedArray<Rank1<M>, E> = StridedArray::new(Default::default())?;
