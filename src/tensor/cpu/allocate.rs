@@ -209,7 +209,11 @@ impl<E: Unit, const M: usize, const N: usize, const O: usize, const P: usize>
 }
 
 impl<E: Unit> TensorFromVec<E> for Cpu {
-    fn try_tensor_with_shape<S: Shape>(&self, mut src: Vec<E>, shape: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn try_tensor_with_shape<S: Shape>(
+        &self,
+        mut src: Vec<E>,
+        shape: S,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
         let num_elements = shape.num_elements();
 
         if src.len() < num_elements {
@@ -220,7 +224,7 @@ impl<E: Unit> TensorFromVec<E> for Cpu {
             let array = StridedArray {
                 data: Arc::new(src),
                 shape,
-                strides: shape.strides()
+                strides: shape.strides(),
             };
 
             Ok(self.upgrade(array))

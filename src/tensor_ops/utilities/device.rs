@@ -1,7 +1,7 @@
 use super::super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     shapes::Dtype,
-    tensor::{CopySlice, TensorFromVec, DeviceStorage},
+    tensor::{CopySlice, DeviceStorage, TensorFromVec},
 };
 
 /// A [DeviceStorage] that requires all the tensor ops implementations

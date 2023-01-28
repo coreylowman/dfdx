@@ -255,7 +255,7 @@ impl<
         E: Dtype + Unit,
         T,
         D1: DeviceStorage + CopySlice<E>,
-        D2: DeviceStorage + TensorFromVec<E>
+        D2: DeviceStorage + TensorFromVec<E>,
     > ToDevice<D2> for Tensor<S, E, D1, T>
 {
     type Output = Tensor<S, E, D2, NoneTape>;

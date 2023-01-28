@@ -263,32 +263,32 @@ pub trait TensorFromVec<E: Unit>: DeviceStorage {
 }
 
 // pub trait TensorFrom<Src, E: Unit, S: Shape = ()>: DeviceStorage {
-    // type FromShape<S2: Shape>: Shape;
+// type FromShape<S2: Shape>: Shape;
 
-    // fn tensor_with_shape(&self, src: Src, shape: Self::FromShape<S>) -> Tensor<Self::FromShape<S>, E, Self>
-        // where Self::FromShape<S>: Shape
-    // {
-        // self.try_tensor_with_shape(src, shape).unwrap()
-    // }
+// fn tensor_with_shape(&self, src: Src, shape: Self::FromShape<S>) -> Tensor<Self::FromShape<S>, E, Self>
+// where Self::FromShape<S>: Shape
+// {
+// self.try_tensor_with_shape(src, shape).unwrap()
+// }
 
-    // fn try_tensor_with_shape(
-        // &self,
-        // src: Src,
-        // shape: Self::FromShape<S>,
-    // ) -> Result<Tensor<Self::FromShape<S>, E, Self>, Self::Err>
-        // where Self::FromShape<S>: Shape;
+// fn try_tensor_with_shape(
+// &self,
+// src: Src,
+// shape: Self::FromShape<S>,
+// ) -> Result<Tensor<Self::FromShape<S>, E, Self>, Self::Err>
+// where Self::FromShape<S>: Shape;
 
-    // fn tensor(&self, src: Src) -> Tensor<Self::FromShape<S>, E, Self>
-        // where Self::FromShape<S>: ConstShape
-    // {
-        // self.try_tensor(src).unwrap()
-    // }
+// fn tensor(&self, src: Src) -> Tensor<Self::FromShape<S>, E, Self>
+// where Self::FromShape<S>: ConstShape
+// {
+// self.try_tensor(src).unwrap()
+// }
 
-    // fn try_tensor(&self, src: Src) -> Result<Tensor<Self::FromShape<S>, E, Self>, Self::Err>
-        // where Self::FromShape<S>: ConstShape
-    // {
-        // self.try_tensor_with_shape(src, Self::FromShape::<S>::default())
-    // }
+// fn try_tensor(&self, src: Src) -> Result<Tensor<Self::FromShape<S>, E, Self>, Self::Err>
+// where Self::FromShape<S>: ConstShape
+// {
+// self.try_tensor_with_shape(src, Self::FromShape::<S>::default())
+// }
 // }
 
 /// Convert tensors to rust arrays

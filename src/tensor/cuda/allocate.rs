@@ -139,7 +139,11 @@ where
 }
 
 impl<E: Unit> TensorFromVec<E> for Cuda {
-    fn try_tensor_with_shape<S: Shape>(&self, src: Vec<E>, shape: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+    fn try_tensor_with_shape<S: Shape>(
+        &self,
+        src: Vec<E>,
+        shape: S,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
         self.take_cpu_tensor(self.cpu.try_tensor_with_shape(src, shape)?)
     }
 }
