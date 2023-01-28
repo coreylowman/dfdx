@@ -254,7 +254,7 @@ impl<
         S: Shape,
         E: Dtype + Unit,
         T,
-        D1: DeviceStorage + CopySlice<E>,
+        D1: DeviceStorage + ZerosTensor<E> + CopySlice<E>,
         D2: DeviceStorage + ZerosTensor<E> + CopySlice<E>,
     > ToDevice<D2> for Tensor<S, E, D1, T>
 {
