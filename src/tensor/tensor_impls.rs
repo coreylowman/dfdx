@@ -1,6 +1,6 @@
 use rand::distributions::Distribution;
 
-use super::storage_traits::{CopySlice, DeviceStorage, HasErr, ZerosTensor};
+use super::storage_traits::{CopySlice, DeviceStorage, HasErr, TensorFromVec};
 use super::{Cpu, OneFillStorage, SampleTensor, ZeroFillStorage};
 use crate::{
     gradients::{NoneTape, OwnedTape, Tape},
@@ -254,18 +254,16 @@ impl<
         S: Shape,
         E: Dtype + Unit,
         T,
-        D1: DeviceStorage + ZerosTensor<E> + CopySlice<E>,
-        D2: DeviceStorage + ZerosTensor<E> + CopySlice<E>,
+        D1: DeviceStorage + CopySlice<E>,
+        D2: DeviceStorage + TensorFromVec<E>
     > ToDevice<D2> for Tensor<S, E, D1, T>
 {
     type Output = Tensor<S, E, D2, NoneTape>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
         let mut buf = std::vec![E::default(); self.shape().num_elements()];
-        let mut out: Self::Output = device.zeros_like(self);
         self.copy_into(&mut buf);
-        out.copy_from(&buf);
-        out
+        device.tensor_with_shape(buf, *self.shape())
     }
 }
 

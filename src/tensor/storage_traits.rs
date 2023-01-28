@@ -1,5 +1,6 @@
 use rand::distributions::Distribution;
 use rand_distr::{Standard, StandardNormal};
+use std::vec::Vec;
 
 use crate::{
     shapes::{ConstShape, Dtype, HasShape, HasUnitType, Shape, Unit},
@@ -248,6 +249,47 @@ pub trait TensorFromArray<Src, S: Shape, E: Unit>: DeviceStorage {
     /// Fallible version of [TensorFromArray::tensor]
     fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
 }
+
+pub trait TensorFromVec<E: Unit>: DeviceStorage {
+    fn tensor_with_shape<S: Shape>(&self, src: Vec<E>, shape: S) -> Tensor<S, E, Self> {
+        self.try_tensor_with_shape::<S>(src, shape).unwrap()
+    }
+
+    fn try_tensor_with_shape<S: Shape>(
+        &self,
+        src: Vec<E>,
+        shape: S,
+    ) -> Result<Tensor<S, E, Self>, Self::Err>;
+}
+
+// pub trait TensorFrom<Src, E: Unit, S: Shape = ()>: DeviceStorage {
+    // type FromShape<S2: Shape>: Shape;
+
+    // fn tensor_with_shape(&self, src: Src, shape: Self::FromShape<S>) -> Tensor<Self::FromShape<S>, E, Self>
+        // where Self::FromShape<S>: Shape
+    // {
+        // self.try_tensor_with_shape(src, shape).unwrap()
+    // }
+
+    // fn try_tensor_with_shape(
+        // &self,
+        // src: Src,
+        // shape: Self::FromShape<S>,
+    // ) -> Result<Tensor<Self::FromShape<S>, E, Self>, Self::Err>
+        // where Self::FromShape<S>: Shape;
+
+    // fn tensor(&self, src: Src) -> Tensor<Self::FromShape<S>, E, Self>
+        // where Self::FromShape<S>: ConstShape
+    // {
+        // self.try_tensor(src).unwrap()
+    // }
+
+    // fn try_tensor(&self, src: Src) -> Result<Tensor<Self::FromShape<S>, E, Self>, Self::Err>
+        // where Self::FromShape<S>: ConstShape
+    // {
+        // self.try_tensor_with_shape(src, Self::FromShape::<S>::default())
+    // }
+// }
 
 /// Convert tensors to rust arrays
 pub trait AsArray {
