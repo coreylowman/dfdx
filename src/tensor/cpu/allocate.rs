@@ -206,8 +206,7 @@ impl<E: Unit> TensorFromVec<E> for Cpu {
         let num_elements = shape.num_elements();
 
         if src.len() < num_elements {
-            // TODO: This error makes no sense
-            Err(CpuError::OutOfMemory)
+            Err(CpuError::NotEnoughElements)
         } else {
             src.truncate(num_elements);
             let array = StridedArray {
