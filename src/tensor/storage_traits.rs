@@ -250,11 +250,19 @@ pub trait TensorFromArray<Src, S: Shape, E: Unit>: DeviceStorage {
     fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
 }
 
+/// Construct tensors from rust vectors
 pub trait TensorFromVec<E: Unit>: DeviceStorage {
+    /// Create a tensor from a rust vector
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let _ = dev.tensor_from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], (2, 3));
+    /// ```
     fn tensor_from_vec<S: Shape>(&self, src: Vec<E>, shape: S) -> Tensor<S, E, Self> {
         self.try_tensor_from_vec::<S>(src, shape).unwrap()
     }
 
+    /// Fallible version of [TensorFromVec::tensor_from_vec]
     fn try_tensor_from_vec<S: Shape>(
         &self,
         src: Vec<E>,
