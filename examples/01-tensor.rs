@@ -2,7 +2,7 @@
 
 use dfdx::{
     shapes::{Const, HasShape, Rank1, Rank2, Rank3},
-    tensor::{AsArray, Cpu, OnesTensor, SampleTensor, Tensor, TensorFromArray, ZerosTensor},
+    tensor::{AsArray, Cpu, OnesTensor, SampleTensor, Tensor, TensorFrom, ZerosTensor},
 };
 
 fn main() {
@@ -10,7 +10,7 @@ fn main() {
     // we will use the Cpu device here for simplicity
     let dev: Cpu = Default::default();
 
-    // easily create tensors using the `TensorFromArray::tensor` method of devices
+    // easily create tensors using the `TensorFrom::tensor` method of devices
     // tensors are generic over the:
     // 1. Shape (in this case a rank 1 (1 dimension) array with 5 elements)
     // 2. Data type (in this case the default of `f32`)

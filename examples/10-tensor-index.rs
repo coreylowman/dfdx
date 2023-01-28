@@ -2,7 +2,7 @@
 
 use dfdx::{
     shapes::Rank3,
-    tensor::{AsArray, Cpu, Tensor, TensorFromArray},
+    tensor::{AsArray, Cpu, Tensor, TensorFrom},
     tensor_ops::{GatherTo, SelectTo},
 };
 

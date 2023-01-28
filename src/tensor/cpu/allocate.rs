@@ -123,16 +123,22 @@ impl<E: Unit> CopySlice<E> for Cpu {
     }
 }
 
-impl<E: Unit> TensorFromArray<E, Rank0, E> for Cpu {
-    fn try_tensor(&self, src: E) -> Result<Tensor<Rank0, E, Self>, Self::Err> {
+impl<E: Unit> DynamicTensorFrom<E, Rank0, E> for Cpu {
+    fn try_tensor_with_shape_internal(&self, src: E, _shape: Rank0) -> Result<Tensor<Rank0, E, Self>, Self::Err> {
         let mut storage: StridedArray<_, E> = StridedArray::new(Default::default())?;
         storage[[]].clone_from(&src);
         Ok(self.upgrade(storage))
     }
 }
 
-impl<E: Unit, const M: usize> TensorFromArray<[E; M], Rank1<M>, E> for Cpu {
-    fn try_tensor(&self, src: [E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
+impl<E: Unit, const M: usize> DynamicTensorFrom<[E; M], Rank1<M>, E> for Cpu {
+    fn try_tensor_with_shape_internal(&self, src: [E; M], shape: Rank1<M>) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
+        self.try_tensor_with_shape_internal(&src, shape)
+    }
+}
+
+impl<E: Unit, const M: usize> DynamicTensorFrom<&[E; M], Rank1<M>, E> for Cpu {
+    fn try_tensor_with_shape_internal(&self, src: &[E; M], _shape: Rank1<M>) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
         let mut storage: StridedArray<Rank1<M>, E> = StridedArray::new(Default::default())?;
         let mut iter = storage.iter_mut_with_index();
         while let Some((v, [m])) = iter.next() {
@@ -142,19 +148,8 @@ impl<E: Unit, const M: usize> TensorFromArray<[E; M], Rank1<M>, E> for Cpu {
     }
 }
 
-impl<E: Unit, const M: usize> TensorFromArray<&[E; M], Rank1<M>, E> for Cpu {
-    fn try_tensor(&self, src: &[E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
-        let mut storage: StridedArray<Rank1<M>, E> = StridedArray::new(Default::default())?;
-        let mut iter = storage.iter_mut_with_index();
-        while let Some((v, [m])) = iter.next() {
-            v.clone_from(&src[m]);
-        }
-        Ok(self.upgrade(storage))
-    }
-}
-
-impl<E: Unit, const M: usize, const N: usize> TensorFromArray<[[E; N]; M], Rank2<M, N>, E> for Cpu {
-    fn try_tensor(&self, src: [[E; N]; M]) -> Result<Tensor<Rank2<M, N>, E, Self>, Self::Err> {
+impl<E: Unit, const M: usize, const N: usize> DynamicTensorFrom<[[E; N]; M], Rank2<M, N>, E> for Cpu {
+    fn try_tensor_with_shape_internal(&self, src: [[E; N]; M], _shape: Rank2<M, N>) -> Result<Tensor<Rank2<M, N>, E, Self>, Self::Err> {
         let mut storage: StridedArray<Rank2<M, N>, E> = StridedArray::new(Default::default())?;
         let mut iter = storage.iter_mut_with_index();
         while let Some((v, [m, n])) = iter.next() {
@@ -165,11 +160,12 @@ impl<E: Unit, const M: usize, const N: usize> TensorFromArray<[[E; N]; M], Rank2
 }
 
 impl<E: Unit, const M: usize, const N: usize, const O: usize>
-    TensorFromArray<[[[E; O]; N]; M], Rank3<M, N, O>, E> for Cpu
+    DynamicTensorFrom<[[[E; O]; N]; M], Rank3<M, N, O>, E> for Cpu
 {
-    fn try_tensor(
+    fn try_tensor_with_shape_internal(
         &self,
         src: [[[E; O]; N]; M],
+        _shape: Rank3<M, N, O>,
     ) -> Result<Tensor<Rank3<M, N, O>, E, Self>, Self::Err> {
         let mut storage: StridedArray<Rank3<M, N, O>, E> = StridedArray::new(Default::default())?;
         let mut iter = storage.iter_mut_with_index();
@@ -181,11 +177,12 @@ impl<E: Unit, const M: usize, const N: usize, const O: usize>
 }
 
 impl<E: Unit, const M: usize, const N: usize, const O: usize, const P: usize>
-    TensorFromArray<[[[[E; P]; O]; N]; M], Rank4<M, N, O, P>, E> for Cpu
+    DynamicTensorFrom<[[[[E; P]; O]; N]; M], Rank4<M, N, O, P>, E> for Cpu
 {
-    fn try_tensor(
+    fn try_tensor_with_shape_internal(
         &self,
         src: [[[[E; P]; O]; N]; M],
+        _shape: Rank4<M, N, O, P>,
     ) -> Result<Tensor<Rank4<M, N, O, P>, E, Self>, Self::Err> {
         let mut storage: StridedArray<Rank4<M, N, O, P>, E> =
             StridedArray::new(Default::default())?;
@@ -194,6 +191,26 @@ impl<E: Unit, const M: usize, const N: usize, const O: usize, const P: usize>
             v.clone_from(&src[m][n][o][p]);
         }
         Ok(self.upgrade(storage))
+    }
+}
+
+impl<E: Unit, S: Shape> DynamicTensorFrom<Vec<E>, S, E> for Cpu {
+    fn try_tensor_with_shape_internal(&self, mut src: Vec<E>, shape: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+        let needed_len = shape.num_elements();
+
+        if src.len() < needed_len {
+            // TODO: This error doesn't make sense
+            Err(CpuError::OutOfMemory)
+        } else {
+            src.truncate(needed_len);
+            let storage = StridedArray {
+                data: Arc::new(src),
+                shape,
+                strides: shape.strides()
+            };
+
+            Ok(self.upgrade(storage))
+        }
     }
 }
 
