@@ -24,7 +24,7 @@ impl Cuda {
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = self.dev.alloc_zeros_async::<u8>(numel)?;
+        let mut storage = self.dev.take_async(std::vec![false; numel])?;
 
         let dims: CudaSlice<usize> = self.dev.take_async(shape.concrete().into())?;
         let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
@@ -44,9 +44,7 @@ impl Cuda {
         );
         unsafe { fwd_fn.launch_async(cfg, params) }?;
         Ok(CudaArray {
-            data: Arc::new(unsafe {
-                std::mem::transmute::<CudaSlice<u8>, CudaSlice<bool>>(storage)
-            }),
+            data: Arc::new(storage),
             shape,
             strides,
         })
@@ -64,7 +62,7 @@ impl BooleanKernel for Cuda {
         }
 
         let numel = inp.data.len();
-        let mut storage = self.dev.alloc_zeros_async::<u8>(numel)?;
+        let mut storage = self.dev.take_async(std::vec![false; numel])?;
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, "boolean_not").unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -76,9 +74,7 @@ impl BooleanKernel for Cuda {
         unsafe { fwd_fn.launch_async(cfg, params) }?;
 
         Ok(CudaArray {
-            data: Arc::new(unsafe {
-                std::mem::transmute::<CudaSlice<u8>, CudaSlice<bool>>(storage)
-            }),
+            data: Arc::new(storage),
             shape: inp.shape,
             strides: inp.strides,
         })
