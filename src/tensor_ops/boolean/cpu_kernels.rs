@@ -1,4 +1,10 @@
-use crate::{prelude::{Cpu, cpu::{StridedArray, LendingIterator}, HasErr}, shapes::{Shape, Unit}};
+use crate::{
+    prelude::{
+        cpu::{LendingIterator, StridedArray},
+        Cpu, HasErr,
+    },
+    shapes::{Shape, Unit},
+};
 
 use super::BooleanKernel;
 
@@ -24,8 +30,7 @@ impl BooleanKernel for Cpu {
     fn not<S: Shape>(
         &self,
         inp: &Self::Storage<S, bool>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>
-    {
+    ) -> Result<Self::Storage<S, bool>, Self::Err> {
         let mut out: Self::Storage<S, bool> = inp.clone();
         for x in out.buf_iter_mut() {
             *x = !*x;
@@ -37,8 +42,7 @@ impl BooleanKernel for Cpu {
         &self,
         lhs: &Self::Storage<S, bool>,
         rhs: &Self::Storage<S, bool>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>
-    {
+    ) -> Result<Self::Storage<S, bool>, Self::Err> {
         self.eval_binary(|l, r| l && r, lhs, rhs)
     }
 
@@ -46,8 +50,7 @@ impl BooleanKernel for Cpu {
         &self,
         lhs: &Self::Storage<S, bool>,
         rhs: &Self::Storage<S, bool>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>
-    {
+    ) -> Result<Self::Storage<S, bool>, Self::Err> {
         self.eval_binary(|l, r| l || r, lhs, rhs)
     }
 
@@ -55,8 +58,7 @@ impl BooleanKernel for Cpu {
         &self,
         lhs: &Self::Storage<S, bool>,
         rhs: &Self::Storage<S, bool>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>
-    {
+    ) -> Result<Self::Storage<S, bool>, Self::Err> {
         self.eval_binary(|l, r| l ^ r, lhs, rhs)
     }
 }

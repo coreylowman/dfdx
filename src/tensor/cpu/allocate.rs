@@ -65,10 +65,7 @@ impl<E: Unit> ZeroFillStorage<E> for Cpu {
 }
 
 impl<E: Unit> OnesTensor<E> for Cpu {
-    fn try_ones_like<S: HasShape>(
-        &self,
-        src: &S,
-    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+    fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let storage = StridedArray::try_new_with(*src.shape(), E::ONE)?;
         Ok(self.upgrade(storage))
     }

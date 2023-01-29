@@ -1,5 +1,5 @@
 use super::BooleanKernel;
-use crate::prelude::{*, cuda::CudaArray};
+use crate::prelude::{cuda::CudaArray, *};
 use cudarc::prelude::*;
 
 use std::sync::Arc;
@@ -57,8 +57,7 @@ impl BooleanKernel for Cuda {
     fn not<S: Shape>(
         &self,
         inp: &Self::Storage<S, bool>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>
-    {
+    ) -> Result<Self::Storage<S, bool>, Self::Err> {
         if !self.dev.has_func(MODULE_NAME, "boolean_not") {
             self.dev
                 .load_ptx(PTX_SRC.into(), MODULE_NAME, &ALL_FN_NAMES)?;
@@ -89,8 +88,7 @@ impl BooleanKernel for Cuda {
         &self,
         lhs: &Self::Storage<S, bool>,
         rhs: &Self::Storage<S, bool>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>
-    {
+    ) -> Result<Self::Storage<S, bool>, Self::Err> {
         self.call_binary("boolean_and", lhs, rhs)
     }
 
@@ -98,8 +96,7 @@ impl BooleanKernel for Cuda {
         &self,
         lhs: &Self::Storage<S, bool>,
         rhs: &Self::Storage<S, bool>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>
-    {
+    ) -> Result<Self::Storage<S, bool>, Self::Err> {
         self.call_binary("boolean_or", lhs, rhs)
     }
 
@@ -107,8 +104,7 @@ impl BooleanKernel for Cuda {
         &self,
         lhs: &Self::Storage<S, bool>,
         rhs: &Self::Storage<S, bool>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>
-    {
+    ) -> Result<Self::Storage<S, bool>, Self::Err> {
         self.call_binary("boolean_xor", lhs, rhs)
     }
 }

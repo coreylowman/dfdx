@@ -6,10 +6,18 @@ pub trait Unit:
 {
     const ONE: Self;
 }
-impl Unit for f32 { const ONE: Self = 1.0; }
-impl Unit for f64 { const ONE: Self = 1.0; }
-impl Unit for usize { const ONE: Self = 1; }
-impl Unit for bool { const ONE: Self = true; }
+impl Unit for f32 {
+    const ONE: Self = 1.0;
+}
+impl Unit for f64 {
+    const ONE: Self = 1.0;
+}
+impl Unit for usize {
+    const ONE: Self = 1;
+}
+impl Unit for bool {
+    const ONE: Self = true;
+}
 
 /// Represents something that has a [Unit].
 pub trait HasUnitType {

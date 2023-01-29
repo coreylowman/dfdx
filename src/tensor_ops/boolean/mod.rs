@@ -4,8 +4,9 @@ mod cpu_kernels;
 mod cuda_kernels;
 
 use crate::{
+    prelude::{OnesTensor, Tensor, ZerosTensor},
     shapes::*,
-    tensor::DeviceStorage, prelude::{OnesTensor, ZerosTensor, Tensor},
+    tensor::DeviceStorage,
 };
 
 use std::ops::{BitAnd, BitOr, BitXor, Not};
@@ -93,7 +94,8 @@ macro_rules! boolean_op_impl {
             type Output = Self;
 
             fn $method1(self, rhs: Self) -> Self {
-                self.device.upgrade(self.device.$method2(&self.storage, &rhs.storage).unwrap())
+                self.device
+                    .upgrade(self.device.$method2(&self.storage, &rhs.storage).unwrap())
             }
         }
 
@@ -101,7 +103,8 @@ macro_rules! boolean_op_impl {
             type Output = Tensor<S, bool, D>;
 
             fn $method1(self, rhs: Self) -> Self::Output {
-                self.device.upgrade(self.device.$method2(&self.storage, &rhs.storage).unwrap())
+                self.device
+                    .upgrade(self.device.$method2(&self.storage, &rhs.storage).unwrap())
             }
         }
 
@@ -109,7 +112,8 @@ macro_rules! boolean_op_impl {
             type Output = Self;
 
             fn $method1(self, rhs: bool) -> Self {
-                self.device.upgrade(self.device.$method3(&self.storage, rhs).unwrap())
+                self.device
+                    .upgrade(self.device.$method3(&self.storage, rhs).unwrap())
             }
         }
 
@@ -117,10 +121,11 @@ macro_rules! boolean_op_impl {
             type Output = Tensor<S, bool, D>;
 
             fn $method1(self, rhs: bool) -> Self::Output {
-                self.device.upgrade(self.device.$method3(&self.storage, rhs).unwrap())
+                self.device
+                    .upgrade(self.device.$method3(&self.storage, rhs).unwrap())
             }
         }
-    }
+    };
 }
 
 boolean_op_impl!(BitAnd, bitand, and, scalar_and);
@@ -155,10 +160,7 @@ mod tests {
         let r1 = &a & &b;
         let r2 = &a & true;
         let r3 = &a & false;
-        assert_eq!(
-            r1.array(),
-            [[false, false, false, true]; 2]
-        );
+        assert_eq!(r1.array(), [[false, false, false, true]; 2]);
         assert_eq!(r2.array(), a.array());
         assert_eq!(r3.array(), dev.zeros_like(&a).array());
     }
@@ -172,10 +174,7 @@ mod tests {
         let r1 = &a | &b;
         let r2 = &a | true;
         let r3 = &a | false;
-        assert_eq!(
-            r1.array(),
-            [[false, true, true, true]; 2]
-        );
+        assert_eq!(r1.array(), [[false, true, true, true]; 2]);
         assert_eq!(r2.array(), dev.ones_like(&a).array());
         assert_eq!(r3.array(), a.array());
     }
@@ -189,10 +188,7 @@ mod tests {
         let r1 = &a ^ &b;
         let r2 = &a ^ true;
         let r3 = &a ^ false;
-        assert_eq!(
-            r1.array(),
-            [[false, true, true, false]; 2]
-        );
+        assert_eq!(r1.array(), [[false, true, true, false]; 2]);
         assert_eq!(r2.array(), (!&a).array());
         assert_eq!(r3.array(), a.array());
     }
