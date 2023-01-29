@@ -47,14 +47,30 @@ pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync + Eq + Par
 /// instances are guarunteed to be the same size at compile time.
 pub trait ConstDim: Default + Dim {}
 
-impl Dim for usize {
+// impl Dim for usize {
+//     #[inline(always)]
+//     fn size(&self) -> usize {
+//         *self
+//     }
+//     #[inline(always)]
+//     fn from_size(size: usize) -> Option<Self> {
+//         Some(size)
+//     }
+// }
+
+/// Represents a [Dim] with size known at compile time
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Dyn<const M: char>(pub usize);
+
+impl<const M: char> Dim for Dyn<M> {
     #[inline(always)]
     fn size(&self) -> usize {
-        *self
+        self.0
     }
+
     #[inline(always)]
     fn from_size(size: usize) -> Option<Self> {
-        Some(size)
+        Some(Dyn(size))
     }
 }
 

@@ -4,7 +4,7 @@ use rand::prelude::SliceRandom;
 use std::vec::Vec;
 
 use crate::{
-    shapes::{Const, Rank1},
+    shapes::{Const, Dyn, Rank1},
     tensor::{CopySlice, DeviceStorage, Tensor, ZerosTensor},
 };
 
@@ -47,7 +47,7 @@ impl<D: DeviceStorage + ZerosTensor<f32> + CopySlice<f32>> Arange for D {}
 /// let dev: Cpu = Default::default();
 /// let class_labels = [0, 1, 2, 1, 1];
 /// // NOTE: 5 is the batch size, 3 is the number of classes
-/// let probs: Tensor<(usize, Const<3>), f32, _> = dev.one_hot_encode::<3>(&class_labels);
+/// let probs: Tensor<(Dyn<'B'>, Const<3>), f32, _> = dev.one_hot_encode::<3, 'B'>(&class_labels);
 /// assert_eq!(&probs.as_vec(), &[
 ///     1.0, 0.0, 0.0,
 ///     0.0, 1.0, 0.0,
@@ -57,17 +57,17 @@ impl<D: DeviceStorage + ZerosTensor<f32> + CopySlice<f32>> Arange for D {}
 /// ]);
 /// ```
 pub trait OneHotEncode: DeviceStorage + ZerosTensor<f32> + CopySlice<f32> {
-    fn one_hot_encode<const N: usize>(
+    fn one_hot_encode<const N: usize, const B: char>(
         &self,
         labels: &[usize],
-    ) -> Tensor<(usize, Const<N>), f32, Self> {
+    ) -> Tensor<(Dyn<B>, Const<N>), f32, Self> {
         let mut data = Vec::with_capacity(labels.len() * N);
         for &l in labels {
             for i in 0..N {
                 data.push(if i == l { 1.0 } else { 0.0 });
             }
         }
-        let mut t = self.zeros_like(&(labels.len(), Const::<N>));
+        let mut t = self.zeros_like(&(Dyn::<B>(labels.len()), Const::<N>));
         t.copy_from(&data);
         t
     }

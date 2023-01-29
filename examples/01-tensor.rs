@@ -1,7 +1,7 @@
 //! Intro to dfdx::arrays and dfdx::tensor
 
 use dfdx::{
-    shapes::{Const, HasShape, Rank1, Rank2, Rank3},
+    shapes::{Const, Dyn, HasShape, Rank1, Rank2, Rank3},
     tensor::{AsArray, Cpu, OnesTensor, SampleTensor, Tensor, TensorFromArray, ZerosTensor},
 };
 
@@ -24,7 +24,8 @@ fn main() {
     let _: Tensor<Rank3<1, 2, 3>, f32, Cpu> = dev.ones();
 
     // Dynamic size
-    let dynamic: Tensor<(usize, Const<3>, Const<4>), f32, Cpu> = dev.zeros_like(&(5, Const, Const));
+    let dynamic: Tensor<(Dyn<'B'>, Const<3>, Const<4>), f32, Cpu> =
+        dev.zeros_like(&(Dyn::<'B'>(5), Const, Const));
     println!("Dynamic shape={:?}", dynamic.shape());
 
     // each of the creation methods also supports specifying the shape on the function

@@ -176,18 +176,18 @@ mod tests {
 
     #[test]
     fn test_permutes() {
-        let src = (1, Const::<2>, 3, Const::<4>);
+        let src = (Dyn::<'B'>(1), Const::<2>, Dyn::<'C'>(3), Const::<4>);
 
         let dst = PermuteStridesTo::<_, Axes4<1, 0, 3, 2>>::permuted(&src);
-        assert_eq!(dst, (Const::<2>, 1, Const::<4>, 3));
+        assert_eq!(dst, (Const::<2>, Dyn::<'B'>(1), Const::<4>, Dyn::<'C'>(3)));
 
         let dst = PermuteStridesTo::<_, Axes4<2, 3, 0, 1>>::permuted(&src);
-        assert_eq!(dst, (3, Const::<4>, 1, Const::<2>));
+        assert_eq!(dst, (Dyn::<'C'>(3), Const::<4>, Dyn::<'B'>(1), Const::<2>));
     }
 
     #[test]
     fn test_permute_strides() {
-        let src = (1, Const::<2>, 3);
+        let src = (Dyn::<'B'>(1), Const::<2>, Dyn::<'C'>(3));
         let dst_strides =
             PermuteStridesTo::<_, Axes3<1, 2, 0>>::permute_strides(&src, src.strides());
         assert_eq!(src.strides(), [6, 3, 1]);

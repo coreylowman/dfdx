@@ -2,7 +2,7 @@
 
 use dfdx::{
     nn::{BuildOnDevice, Linear, Module, ModuleMut, ReLU, ResetParams},
-    shapes::{Const, Rank1, Rank2},
+    shapes::{Const, Dyn, Rank1, Rank2},
     tensor::{AsArray, Cpu, SampleTensor, Tensor, ZerosTensor},
 };
 
@@ -31,7 +31,8 @@ fn main() {
 
     // Even dynamic size is supported;
     let batch_size = 3;
-    let _: Tensor<(usize, Const<2>), f32, _> = m.forward(dev.zeros_like(&(batch_size, Const)));
+    let _: Tensor<(Dyn<'B'>, Const<2>), f32, _> =
+        m.forward(dev.zeros_like(&(Dyn::<'B'>(3), Const)));
 
     // you can also combine multiple modules with tuples
     type Mlp = (Linear<4, 2>, ReLU, Linear<2, 1>);
