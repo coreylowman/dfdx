@@ -186,6 +186,7 @@ pub use bce::bce_with_logits;
 pub use boolean::{bool_and, bool_not, bool_or, bool_xor};
 pub use broadcast_to::BroadcastTo;
 pub use clamp::clamp;
+pub use choose::ChooseFrom;
 pub use cos::cos;
 pub use div::{div, TryDiv};
 pub use dropout::dropout;

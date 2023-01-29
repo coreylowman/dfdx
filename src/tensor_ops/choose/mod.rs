@@ -9,7 +9,7 @@ use crate::{
     shapes::{Dtype, Shape},
 };
 
-trait ChooseKernel<E: Dtype>: DeviceStorage {
+pub trait ChooseKernel<E: Dtype>: DeviceStorage {
     fn forward<S: Shape>(
         &self,
         cond: &Self::Storage<S, bool>,
@@ -27,7 +27,7 @@ trait ChooseKernel<E: Dtype>: DeviceStorage {
 }
 
 /// Choose values from two tensors using a boolean mask. Equivalent to `torch.where` from pytorch.
-trait Choose<Lhs, Rhs>: HasErr {
+pub trait ChooseFrom<Lhs, Rhs>: HasErr {
     type Output;
 
     /// Construct a new tensor, where the output tensor contains the elements of lhs where self is
@@ -46,7 +46,7 @@ impl<
         D: ChooseKernel<E>,
         LhsTape: Tape<D> + Merge<RhsTape>,
         RhsTape: Tape<D>,
-    > Choose<Tensor<S, E, D, LhsTape>, Tensor<S, E, D, RhsTape>> for Tensor<S, bool, D>
+    > ChooseFrom<Tensor<S, E, D, LhsTape>, Tensor<S, E, D, RhsTape>> for Tensor<S, bool, D>
 {
     type Output = Tensor<S, E, D, LhsTape>;
 
