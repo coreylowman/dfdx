@@ -11,6 +11,8 @@ use crate::{
 
 use std::ops::{BitAnd, BitOr, BitXor, Not};
 
+use super::Device;
+
 pub trait BooleanKernel: DeviceStorage + OnesTensor<bool> + ZerosTensor<bool> {
     fn not<S: Shape>(
         &self,
@@ -131,6 +133,129 @@ macro_rules! boolean_op_impl {
 boolean_op_impl!(BitAnd, bitand, and, scalar_and);
 boolean_op_impl!(BitOr, bitor, or, scalar_or);
 boolean_op_impl!(BitXor, bitxor, xor, scalar_xor);
+
+/// Inverts each value in a boolean tensor.
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([false, true, false]);
+///
+/// // Can take either a reference or an owned value
+/// let r1 = !&a;
+/// let r2 = !a;
+/// assert_eq!(r1.array(), [true, false, true]);
+/// assert_eq!(r2.array(), [true, false, true]);
+/// ```
+pub fn bool_not<S: Shape, E: Dtype, D: Device<E>>(inp: &Tensor<S, bool, D>) -> Tensor<S, bool, D> {
+    !inp
+}
+
+/// Element wise and scalar boolean 'and'.
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([false, false, true, true]);
+/// let b = dev.tensor([false, true, false, true]);
+///
+/// // Can take either references or owned values
+/// let r1 = &a & &b;
+/// let r2 = a & b;
+/// assert_eq!(r1.array(), [false, false, false, true]);
+/// assert_eq!(r2.array(), [false, false, false, true]);
+/// ```
+///
+/// And-ing with a scalar:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([false, true, false]);
+///
+/// let r1 = &a & true;
+/// let r2 = &a & false;
+///
+/// assert_eq!(r1.array(), a.array());
+/// assert_eq!(r2.array(), [false; 3]);
+/// ```
+pub fn bool_and<S: Shape, E: Dtype, D: Device<E>>(
+    lhs: &Tensor<S, bool, D>,
+    rhs: &Tensor<S, bool, D>,
+) -> Tensor<S, bool, D> {
+    lhs & rhs
+}
+
+/// Element wise and scalar boolean 'or'.
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([false, false, true, true]);
+/// let b = dev.tensor([false, true, false, true]);
+///
+/// // Can take either references or owned values
+/// let r1 = &a | &b;
+/// let r2 = a | b;
+/// assert_eq!(r1.array(), [false, true, true, true]);
+/// assert_eq!(r2.array(), [false, true, true, true]);
+/// ```
+///
+/// And-ing with a scalar:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([false, true, false]);
+///
+/// let r1 = &a | true;
+/// let r2 = &a | false;
+///
+/// assert_eq!(r1.array(), [true; 3]);
+/// assert_eq!(r2.array(), a.array());
+/// ```
+pub fn bool_or<S: Shape, E: Dtype, D: Device<E>>(
+    lhs: &Tensor<S, bool, D>,
+    rhs: &Tensor<S, bool, D>,
+) -> Tensor<S, bool, D> {
+    lhs | rhs
+}
+
+/// Element wise and scalar boolean 'xor'.
+///
+/// Example:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([false, false, true, true]);
+/// let b = dev.tensor([false, true, false, true]);
+///
+/// // Can take either references or owned values
+/// let r1 = &a ^ &b;
+/// let r2 = a ^ b;
+/// assert_eq!(r1.array(), [false, true, true, false]);
+/// assert_eq!(r2.array(), [false, true, true, false]);
+/// ```
+///
+/// And-ing with a scalar:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a = dev.tensor([false, true, false]);
+///
+/// let r1 = &a ^ true;
+/// let r2 = &a ^ false;
+///
+/// assert_eq!(r1.array(), (!&a).array());
+/// assert_eq!(r2.array(), a.array());
+/// ```
+pub fn bool_xor<S: Shape, E: Dtype, D: Device<E>>(
+    lhs: &Tensor<S, bool, D>,
+    rhs: &Tensor<S, bool, D>,
+) -> Tensor<S, bool, D> {
+    lhs ^ rhs
+}
 
 #[cfg(test)]
 mod tests {
