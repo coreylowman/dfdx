@@ -4,11 +4,12 @@ use super::{axes::*, ReduceShapeTo};
 pub trait Unit:
     'static + Copy + Clone + Default + std::fmt::Debug + PartialOrd + Send + Sync + std::marker::Unpin
 {
+    const ONE: Self;
 }
-impl Unit for f32 {}
-impl Unit for f64 {}
-impl Unit for usize {}
-impl Unit for bool {}
+impl Unit for f32 { const ONE: Self = 1.0; }
+impl Unit for f64 { const ONE: Self = 1.0; }
+impl Unit for usize { const ONE: Self = 1; }
+impl Unit for bool { const ONE: Self = true; }
 
 /// Represents something that has a [Unit].
 pub trait HasUnitType {

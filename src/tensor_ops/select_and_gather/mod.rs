@@ -320,7 +320,7 @@ mod tests {
     fn test_select_batch_backwards() {
         let dev: TestDevice = Default::default();
         let t = dev.sample_normal::<Rank2<4, 5>>();
-        let t_array = t.array();
+        let t_array: [[f32; 5]; 4] = t.array();
         let r = t.trace().gather(dev.tensor([[2, 0, 3], [0, 0, 3]]));
         let r_array = r.array();
         assert_eq!(r_array[0], [t_array[2], t_array[0], t_array[3]]);

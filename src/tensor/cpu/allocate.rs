@@ -64,22 +64,22 @@ impl<E: Unit> ZeroFillStorage<E> for Cpu {
     }
 }
 
-impl OnesTensor<f32> for Cpu {
+impl<E: Unit> OnesTensor<E> for Cpu {
     fn try_ones_like<S: HasShape>(
         &self,
         src: &S,
-    ) -> Result<Tensor<S::Shape, f32, Self>, Self::Err> {
-        let storage = StridedArray::try_new_with(*src.shape(), 1.0)?;
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+        let storage = StridedArray::try_new_with(*src.shape(), E::ONE)?;
         Ok(self.upgrade(storage))
     }
 }
 
-impl OneFillStorage<f32> for Cpu {
+impl<E: Unit> OneFillStorage<E> for Cpu {
     fn try_fill_with_ones<S: Shape>(
         &self,
-        storage: &mut Self::Storage<S, f32>,
+        storage: &mut Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
-        std::sync::Arc::make_mut(&mut storage.data).fill(1.0);
+        std::sync::Arc::make_mut(&mut storage.data).fill(E::ONE);
         Ok(())
     }
 }

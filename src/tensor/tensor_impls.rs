@@ -39,7 +39,7 @@ pub struct Tensor<S: Shape, E: Unit = f32, D: DeviceStorage = Cpu, T = NoneTape>
     pub(crate) tape: T,
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
     type WithShape<New: Shape> = Tensor<New, E, D, T>;
     type Shape = S;
     fn shape(&self) -> &Self::Shape {

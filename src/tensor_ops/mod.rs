@@ -142,6 +142,7 @@ pub use utilities::*;
 mod abs;
 mod add;
 mod bce;
+mod boolean;
 mod broadcast_to;
 mod clamp;
 mod cos;
