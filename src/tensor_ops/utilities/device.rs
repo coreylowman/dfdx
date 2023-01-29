@@ -1,7 +1,7 @@
 use super::super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     shapes::Dtype,
-    tensor::{CopySlice, DeviceStorage},
+    tensor::{CopySlice, DeviceStorage}
 };
 
 /// A [DeviceStorage] that requires all the tensor ops implementations
@@ -47,6 +47,9 @@ pub trait Device<E: Dtype>:
     + BinaryKernel<super::super::sub::BinarySubKernelOp, E>
     + BinaryKernel<super::super::mul::BinaryMulKernelOp, E>
     + BinaryKernel<super::super::div::BinaryDivKernelOp, E>
+
+    // boolean operations
+    + super::super::boolean::BooleanKernel
 
     // unary
     + UnaryKernel<super::super::abs::AbsKernelOp, E>
