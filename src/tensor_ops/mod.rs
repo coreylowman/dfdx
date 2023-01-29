@@ -138,7 +138,6 @@
 mod utilities;
 pub use utilities::*;
 
-// mod impl_mask;
 mod abs;
 mod add;
 mod bce;
@@ -221,7 +220,6 @@ pub use sub::{sub, TrySub};
 pub use sum_to::SumTo;
 pub use tanh::tanh;
 pub use var_to::VarTo;
-// pub use impl_mask::*;
 
 #[cfg(feature = "nightly")]
 mod conv2d;
