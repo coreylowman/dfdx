@@ -1,10 +1,10 @@
 #include "cuda_utils.cuh"
 
-extern "C" __global__ void replace_where_forward(
+extern "C" __global__ void choose_forward(
     const size_t numel,
     const size_t num_dims,
     const size_t *dims,
-    const float *cond,
+    const bool *cond,
     const size_t *cond_strides,
     const float *lhs,
     const size_t *lhs_strides,
@@ -24,11 +24,11 @@ extern "C" __global__ void replace_where_forward(
     out[out_i] = cond[cond_i] ? lhs[lhs_i] : rhs[rhs_i];
 }
 
-extern "C" __global__ void replace_where_backward(
+extern "C" __global__ void choose_backward(
     const size_t numel,
     const size_t num_dims,
     const size_t *dims,
-    const float *cond,
+    const bool *cond,
     const size_t *cond_strides,
     float *grad_lhs,
     const size_t *lhs_strides,

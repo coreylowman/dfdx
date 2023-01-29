@@ -1,4 +1,4 @@
-use super::ReplaceWhereKernel;
+use super::ChooseKernel;
 use crate::{
     prelude::{
         cpu::{LendingIterator, StridedArray},
@@ -7,11 +7,11 @@ use crate::{
     shapes::Shape,
 };
 
-impl<E: Dtype> ReplaceWhereKernel<E> for Cpu {
+impl<E: Dtype> ChooseKernel<E> for Cpu {
     fn forward<S: Shape>(
         &self,
-        lhs: &Self::Storage<S, E>,
         cond: &Self::Storage<S, bool>,
+        lhs: &Self::Storage<S, E>,
         rhs: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err> {
         let mut out: Self::Storage<S, E> = StridedArray::new(lhs.shape)?;
@@ -24,15 +24,15 @@ impl<E: Dtype> ReplaceWhereKernel<E> for Cpu {
             .zip(cond_iter.next())
             .zip(lhs_iter.next().zip(rhs_iter.next()))
         {
-            *o = if *c { *r } else { *l };
+            *o = if *c { *l } else { *r };
         }
         Ok(out)
     }
 
     fn backward<S: Shape>(
         &self,
-        grad_lhs: &mut Self::Storage<S, E>,
         cond: &Self::Storage<S, bool>,
+        grad_lhs: &mut Self::Storage<S, E>,
         grad_rhs: &mut Self::Storage<S, E>,
         grad_out: &Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
@@ -46,9 +46,9 @@ impl<E: Dtype> ReplaceWhereKernel<E> for Cpu {
             .zip(out_iter.next().zip(cond_iter.next()))
         {
             if *c {
-                *r += *o;
-            } else {
                 *l += *o;
+            } else {
+                *r += *o;
             }
         }
         Ok(())

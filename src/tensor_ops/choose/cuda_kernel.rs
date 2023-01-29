@@ -1,4 +1,4 @@
-use super::ReplaceWhereKernel;
+use super::ChooseKernel;
 use crate::{
     shapes::Shape,
     tensor::cuda::{Cuda, CudaArray},
@@ -6,17 +6,17 @@ use crate::{
 use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
-const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/replace_where.ptx"));
-const MODULE_NAME: &str = "replace_where";
-const FWD_FN_NAME: &str = "replace_where_forward";
-const BWD_FN_NAME: &str = "replace_where_backward";
+const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/choose.ptx"));
+const MODULE_NAME: &str = "choose";
+const FWD_FN_NAME: &str = "choose_forward";
+const BWD_FN_NAME: &str = "choose_backward";
 const ALL_FN_NAMES: [&str; 2] = [FWD_FN_NAME, BWD_FN_NAME];
 
-impl ReplaceWhereKernel<f32> for Cuda {
+impl ChooseKernel<f32> for Cuda {
     fn forward<S: Shape>(
         &self,
-        lhs: &Self::Storage<S, f32>,
         cond: &Self::Storage<S, bool>,
+        lhs: &Self::Storage<S, f32>,
         rhs: &Self::Storage<S, f32>,
     ) -> Result<Self::Storage<S, f32>, Self::Err> {
         if !self.dev.has_func(MODULE_NAME, FWD_FN_NAME) {
@@ -41,7 +41,7 @@ impl ReplaceWhereKernel<f32> for Cuda {
             numel,              // const size_t numel,
             S::NUM_DIMS,        // const size_t num_dims,
             &dims,              // const size_t *dims,
-            cond.data.as_ref(), // const float *cond,
+            cond.data.as_ref(), // const bool *cond,
             &cond_strides,      // const size_t *cond_strides,
             lhs.data.as_ref(),  // const float *lhs,
             &lhs_strides,       // const size_t *lhs_strides,
@@ -59,8 +59,8 @@ impl ReplaceWhereKernel<f32> for Cuda {
 
     fn backward<S: Shape>(
         &self,
-        grad_lhs: &mut Self::Storage<S, f32>,
         cond: &Self::Storage<S, bool>,
+        grad_lhs: &mut Self::Storage<S, f32>,
         grad_rhs: &mut Self::Storage<S, f32>,
         grad_out: &Self::Storage<S, f32>,
     ) -> Result<(), Self::Err> {
@@ -77,7 +77,7 @@ impl ReplaceWhereKernel<f32> for Cuda {
             numel,                             // const size_t numel,
             S::NUM_DIMS,                       // const size_t num_dims,
             &dims,                             // const size_t *dims,
-            cond.data.as_ref(),                // bool *cond,
+            cond.data.as_ref(),                // const bool *cond,
             &cond_strides,                     // const size_t *cond_strides,
             Arc::make_mut(&mut grad_lhs.data), // float *grad_lhs,
             &lhs_strides,                      // const size_t *lhs_strides,
