@@ -96,10 +96,25 @@ mod tests {
 
         let a_array = a.array();
         let b_array = b.array();
-        assert_eq!(r.array(), [b_array[0], a_array[1], b_array[2], a_array[3], b_array[4]]);
+        assert_eq!(
+            r.array(),
+            [b_array[0], a_array[1], b_array[2], a_array[3], b_array[4]]
+        );
         let g = r.exp().sum().backward();
-        assert_eq!(g.get(&a).array(), [0.0, a_array[1].exp(), 0.0, a_array[3].exp(), 0.0]);
-        assert_eq!(g.get(&b).array(), [b_array[0].exp(), 0.0, b_array[2].exp(), 0.0, b_array[4].exp()]);
+        assert_eq!(
+            g.get(&a).array(),
+            [0.0, a_array[1].exp(), 0.0, a_array[3].exp(), 0.0]
+        );
+        assert_eq!(
+            g.get(&b).array(),
+            [
+                b_array[0].exp(),
+                0.0,
+                b_array[2].exp(),
+                0.0,
+                b_array[4].exp()
+            ]
+        );
     }
 
     #[test]
@@ -112,9 +127,21 @@ mod tests {
 
         let a_array = a.array();
         let b_array = b.array();
-        assert_eq!(r.array(), [[b_array[0][0], a_array[0][1]], [a_array[1][0], b_array[1][1]]]);
+        assert_eq!(
+            r.array(),
+            [
+                [b_array[0][0], a_array[0][1]],
+                [a_array[1][0], b_array[1][1]]
+            ]
+        );
         let g = r.exp().sum().backward();
-        assert_eq!(g.get(&a).array(), [[0.0, a_array[0][1].exp()], [a_array[1][0].exp(), 0.0]]);
-        assert_eq!(g.get(&b).array(), [[b_array[0][0].exp(), 0.0], [0.0, b_array[1][1].exp()]]);
+        assert_eq!(
+            g.get(&a).array(),
+            [[0.0, a_array[0][1].exp()], [a_array[1][0].exp(), 0.0]]
+        );
+        assert_eq!(
+            g.get(&b).array(),
+            [[b_array[0][0].exp(), 0.0], [0.0, b_array[1][1].exp()]]
+        );
     }
 }
