@@ -1,3 +1,9 @@
+// See https://stackoverflow.com/a/37569519
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+#else
+__device__ double atomicAdd(double* a, double b) { return b; }
+#endif
+
 __device__ unsigned int get_strided_index(
     unsigned int idx,
     const size_t num_dims,
@@ -39,7 +45,15 @@ __device__ __forceinline__ unsigned int next_power_of_two(unsigned int v) {
     return v;
 }
 
-extern "C" __global__ void fill_with(float *buf, float value, const size_t numel) {
+extern "C" __global__ void fill_with_f32(float *buf, float value, const size_t numel) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= numel) {
+        return;
+    }
+    buf[i] = value;
+}
+
+extern "C" __global__ void fill_with_f64(double *buf, double value, const size_t numel) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= numel) {
         return;
