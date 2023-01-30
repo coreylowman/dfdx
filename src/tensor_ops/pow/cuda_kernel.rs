@@ -6,11 +6,11 @@ use crate::{
 
 unsafe impl cudarc::driver::AsKernelParam for super::PowfKernelOp<f32> {}
 
-impl UnaryOpCudaKernel for super::PowfKernelOp<f32> {
+impl UnaryOpCudaKernel<f32> for super::PowfKernelOp<f32> {
     const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/pow.ptx"));
     const MODULE_NAME: &'static str = "pow";
-    const FWD_FN_NAME: &'static str = "pow_forward";
-    const BWD_FN_NAME: &'static str = "pow_backward";
+    const FWD_FN_NAME: &'static str = "pow_forward_f32";
+    const BWD_FN_NAME: &'static str = "pow_backward_f32";
 }
 
 impl UnaryKernel<super::PowiKernelOp, f32> for Cuda {

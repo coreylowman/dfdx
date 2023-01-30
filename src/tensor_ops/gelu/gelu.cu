@@ -2,7 +2,7 @@
 
 struct GeLUKernelOp {};
 
-LONG_UNARY_OP(gelu_forward, gelu_backward, GeLUKernelOp,
+LONG_UNARY_OP(float, gelu_forward_f32, gelu_backward_f32, GeLUKernelOp,
     {
         constexpr float fastCoeff = 0.044715;
         float x_sq = x * x;

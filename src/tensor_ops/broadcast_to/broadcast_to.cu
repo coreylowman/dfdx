@@ -1,4 +1,4 @@
-extern "C" __global__ void sum(
+extern "C" __global__ void sum_f32(
     const size_t numel,
     const float *inp,
     float *out

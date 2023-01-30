@@ -11,8 +11,8 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::Standard;
 
 const MODULE_NAME: &str = "dropout";
-const FWD_FN_NAME: &str = "dropout_forward";
-const BWD_FN_NAME: &str = "dropout_backward";
+const FWD_FN_NAME: &str = "dropout_forward_f32";
+const BWD_FN_NAME: &str = "dropout_backward_f32";
 const ALL_FN_NAMES: [&str; 2] = [FWD_FN_NAME, BWD_FN_NAME];
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/dropout.ptx"));
 

@@ -1,4 +1,4 @@
-extern "C" __global__ void dropout_forward(
+extern "C" __global__ void dropout_forward_f32(
     const float prob,
     const size_t numel,
     const float *inp,
@@ -14,7 +14,7 @@ extern "C" __global__ void dropout_forward(
     out[i] = inp[i] * scalar;
 }
 
-extern "C" __global__ void dropout_backward(
+extern "C" __global__ void dropout_backward_f32(
     const float prob,
     const size_t numel,
     const float *noise,

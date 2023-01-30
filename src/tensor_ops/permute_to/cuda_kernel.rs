@@ -28,11 +28,11 @@ impl<E: Dtype> super::PermuteKernel<E> for Cuda {
     where
         Src: PermuteShapeTo<Dst, Ax>,
     {
-        if !self.dev.has_func("permute_to", "sum") {
-            self.dev.load_ptx(PTX_SRC.into(), "permute_to", &["sum"])?;
+        if !self.dev.has_func("permute_to", "sum_f32") {
+            self.dev.load_ptx(PTX_SRC.into(), "permute_to", &["sum_f32"])?;
         }
 
-        let f = self.dev.get_func("permute_to", "sum").unwrap();
+        let f = self.dev.get_func("permute_to", "sum_f32").unwrap();
 
         let numel = grad_inp.data.len();
         let cfg = LaunchConfig::for_num_elems(numel as u32);

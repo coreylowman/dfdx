@@ -35,7 +35,7 @@ cudarc = { version = "0.6.1", default-features = false, optional = true }
 num-traits = { version = "0.2.15", default-features = false }
 
 [features]
-default = ["std", "numpy"]
+default = ["std", "numpy", "test-cuda"]
 std = ["no-std-compat/std", "rand/std", "rand_distr/std", "cudarc?/std"]
 nightly = []
 numpy = ["dep:zip", "std"]

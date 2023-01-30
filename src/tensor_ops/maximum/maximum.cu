@@ -2,7 +2,7 @@
 
 struct MaximumKernalOp {};
 
-LONG_BINARY_OP(maximum_forward, maximum_backward, MaximumKernalOp,
+LONG_BINARY_OP(float, maximum_forward_f32, maximum_backward_f32, MaximumKernalOp,
     {
         fx = fmaxf(x, y);
     },

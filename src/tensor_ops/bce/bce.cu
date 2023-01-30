@@ -2,7 +2,7 @@
 
 struct BCEKernelOp {};
 
-LONG_BINARY_OP(bce_forward, bce_backward, BCEKernelOp,
+LONG_BINARY_OP(float, bce_forward_f32, bce_backward_f32, BCEKernelOp,
     {
         float logit = lhs[lhs_i];
         float prob = rhs[rhs_i];

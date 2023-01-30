@@ -2,7 +2,7 @@
 
 struct MinimumKernelOp {};
 
-LONG_BINARY_OP(minimum_forward, minimum_backward, MinimumKernelOp,
+LONG_BINARY_OP(float, minimum_forward_f32, minimum_backward_f32, MinimumKernelOp,
     {
         fx = fminf(x, y);
     },

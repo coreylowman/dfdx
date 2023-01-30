@@ -4,7 +4,7 @@ struct HuberErrorOp {
     float delta;
 };
 
-LONG_BINARY_OP(huber_error_forward, huber_error_backward, HuberErrorOp,
+LONG_BINARY_OP(float, huber_error_forward_f32, huber_error_backward_f32, HuberErrorOp,
     {
         float a = x - y;
 

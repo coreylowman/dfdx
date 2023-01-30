@@ -1,9 +1,10 @@
 #include "unary_op_macros.cuh"
 
+template<typename F>
 struct ScalarMulKernelOp {
-    float scalar;
+    F scalar;
 };
 
-UNARY_OP(scalar_mul_forward, scalar_mul_backward, ScalarMulKernelOp,
+UNARY_OP(float, scalar_mul_forward_f32, scalar_mul_backward_f32, ScalarMulKernelOp<float>,
         x * op.scalar,
         op.scalar);

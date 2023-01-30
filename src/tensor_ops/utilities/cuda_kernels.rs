@@ -1,12 +1,12 @@
 use crate::{
-    shapes::Shape,
+    shapes::{Shape, Dtype},
     tensor::cuda::{Cuda, CudaArray},
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
-use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig, ValidAsZeroBits};
 use std::sync::Arc;
 
-pub trait UnaryOpCudaKernel {
+pub trait UnaryOpCudaKernel<E> {
     /// Compiled by build.rs
     const PTX_SRC: &'static str;
 
@@ -22,19 +22,19 @@ pub trait UnaryOpCudaKernel {
     const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
 }
 
-impl<K: UnaryOpCudaKernel + AsKernelParam> UnaryKernel<K, f32> for Cuda {
+impl<E: Dtype + ValidAsZeroBits, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryKernel<K, E> for Cuda {
     fn forward<S: Shape>(
         &self,
         op: K,
-        inp: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
+        inp: &Self::Storage<S, E>,
+    ) -> Result<Self::Storage<S, E>, Self::Err> {
         if !self.dev.has_func(K::MODULE_NAME, K::FWD_FN_NAME) {
             self.dev
                 .load_ptx(K::PTX_SRC.into(), K::MODULE_NAME, &K::ALL_FN_NAMES)?;
         }
 
         let numel = inp.data.len();
-        let mut storage = self.dev.alloc_zeros_async::<f32>(numel)?;
+        let mut storage = self.dev.alloc_zeros_async::<E>(numel)?;
 
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -56,9 +56,9 @@ impl<K: UnaryOpCudaKernel + AsKernelParam> UnaryKernel<K, f32> for Cuda {
     fn backward<S: Shape>(
         &self,
         op: K,
-        inp: &Self::Storage<S, f32>,
-        grad_inp: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
+        inp: &Self::Storage<S, E>,
+        grad_inp: &mut Self::Storage<S, E>,
+        grad_out: &Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
         let numel = inp.data.len();
@@ -75,7 +75,7 @@ impl<K: UnaryOpCudaKernel + AsKernelParam> UnaryKernel<K, f32> for Cuda {
     }
 }
 
-pub trait BinaryOpCudaKernel {
+pub trait BinaryOpCudaKernel<E> {
     /// Compiled by build.rs
     const PTX_SRC: &'static str;
 
@@ -91,13 +91,13 @@ pub trait BinaryOpCudaKernel {
     const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
 }
 
-impl<K: BinaryOpCudaKernel + AsKernelParam> BinaryKernel<K, f32> for Cuda {
+impl<E: Dtype + ValidAsZeroBits, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for Cuda {
     fn forward<S: Shape>(
         &self,
         op: K,
-        lhs: &Self::Storage<S, f32>,
-        rhs: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
+        lhs: &Self::Storage<S, E>,
+        rhs: &Self::Storage<S, E>,
+    ) -> Result<Self::Storage<S, E>, Self::Err> {
         if !self.dev.has_func(K::MODULE_NAME, K::FWD_FN_NAME) {
             self.dev
                 .load_ptx(K::PTX_SRC.into(), K::MODULE_NAME, &K::ALL_FN_NAMES)?;
@@ -107,7 +107,7 @@ impl<K: BinaryOpCudaKernel + AsKernelParam> BinaryKernel<K, f32> for Cuda {
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = self.dev.alloc_zeros_async::<f32>(numel)?;
+        let mut storage = self.dev.alloc_zeros_async::<E>(numel)?;
 
         let dims: CudaSlice<usize> = self.dev.take_async(shape.concrete().into())?;
         let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
@@ -139,11 +139,11 @@ impl<K: BinaryOpCudaKernel + AsKernelParam> BinaryKernel<K, f32> for Cuda {
     fn backward<S: Shape>(
         &self,
         op: K,
-        lhs: &Self::Storage<S, f32>,
-        grad_lhs: &mut Self::Storage<S, f32>,
-        rhs: &Self::Storage<S, f32>,
-        grad_rhs: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
+        lhs: &Self::Storage<S, E>,
+        grad_lhs: &mut Self::Storage<S, E>,
+        rhs: &Self::Storage<S, E>,
+        grad_rhs: &mut Self::Storage<S, E>,
+        grad_out: &Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
         let numel = lhs.shape.num_elements();

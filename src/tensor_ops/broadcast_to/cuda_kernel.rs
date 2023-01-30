@@ -29,12 +29,12 @@ impl<E: Dtype> super::BroadcastKernel<E> for Cuda {
     where
         Src: BroadcastShapeTo<Dst, Ax>,
     {
-        if !self.dev.has_func("broadcast_to", "sum") {
+        if !self.dev.has_func("broadcast_to", "sum_f32") {
             self.dev
-                .load_ptx(PTX_SRC.into(), "broadcast_to", &["sum"])?;
+                .load_ptx(PTX_SRC.into(), "broadcast_to", &["sum_f32"])?;
         }
 
-        let f = self.dev.get_func("broadcast_to", "sum").unwrap();
+        let f = self.dev.get_func("broadcast_to", "sum_f32").unwrap();
 
         let numel = grad_inp.data.len();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
