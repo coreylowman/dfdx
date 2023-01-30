@@ -60,12 +60,12 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, No
     }
 }
 
-impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<D>>>
+impl<const N: usize, S: Shape, D: Device<f32>> ModuleMut<Tensor<S, f32, D, OwnedTape<D>>>
     for DropoutOneIn<N>
 {
-    type Output = Tensor<S, E, D, OwnedTape<D>>;
+    type Output = Tensor<S, f32, D, OwnedTape<D>>;
     /// Calls [dropout()] with `p=1/N` using `self.rng`.
-    fn forward_mut(&mut self, input: Tensor<S, E, D, OwnedTape<D>>) -> Self::Output {
+    fn forward_mut(&mut self, input: Tensor<S, f32, D, OwnedTape<D>>) -> Self::Output {
         dropout(input, 1.0 / N as f32)
     }
 }
@@ -135,10 +135,10 @@ impl<S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>> for Dro
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<D>>> for Dropout {
-    type Output = Tensor<S, E, D, OwnedTape<D>>;
+impl<S: Shape, D: Device<f32>> ModuleMut<Tensor<S, f32, D, OwnedTape<D>>> for Dropout {
+    type Output = Tensor<S, f32, D, OwnedTape<D>>;
     /// Calls [dropout()]
-    fn forward_mut(&mut self, input: Tensor<S, E, D, OwnedTape<D>>) -> Self::Output {
+    fn forward_mut(&mut self, input: Tensor<S, f32, D, OwnedTape<D>>) -> Self::Output {
         dropout(input, self.p)
     }
 }

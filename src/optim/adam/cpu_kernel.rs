@@ -1,15 +1,19 @@
 use super::{AdamConfig, AdamKernel};
-use crate::{optim::WeightDecay, shapes::Shape, tensor::Cpu};
+use crate::{
+    optim::WeightDecay,
+    shapes::{Dtype, Shape},
+    tensor::Cpu,
+};
 
-impl AdamKernel<f32> for Cpu {
+impl<F: num_traits::Float + Dtype> AdamKernel<F> for Cpu {
     fn update<S: Shape>(
         &self,
         t: i32,
-        cfg: &AdamConfig<f32>,
-        param: &mut Self::Storage<S, f32>,
-        moment1: &mut Self::Storage<S, f32>,
-        moment2: &mut Self::Storage<S, f32>,
-        grad: Self::Storage<S, f32>,
+        cfg: &AdamConfig<F>,
+        param: &mut Self::Storage<S, F>,
+        moment1: &mut Self::Storage<S, F>,
+        moment2: &mut Self::Storage<S, F>,
+        grad: Self::Storage<S, F>,
     ) -> Result<(), Self::Err> {
         debug_assert_eq!(param.data.len(), grad.data.len());
         debug_assert_eq!(param.shape, grad.shape);
@@ -24,10 +28,10 @@ impl AdamKernel<f32> for Cpu {
                 g += wd * *p;
             }
 
-            *m = *m * cfg.betas[0] + g * (1.0 - cfg.betas[0]);
-            *v = *v * cfg.betas[1] + g.powi(2) * (1.0 - cfg.betas[1]);
-            let m_hat = *m * (1.0 - cfg.betas[0].powi(t)).recip();
-            let v_hat = *v * (1.0 - cfg.betas[1].powi(t)).recip();
+            *m = *m * cfg.betas[0] + g * (F::one() - cfg.betas[0]);
+            *v = *v * cfg.betas[1] + g.powi(2) * (F::one() - cfg.betas[1]);
+            let m_hat = *m * (F::one() - cfg.betas[0].powi(t)).recip();
+            let v_hat = *v * (F::one() - cfg.betas[1].powi(t)).recip();
             g = cfg.lr * m_hat / (v_hat.sqrt() + cfg.eps);
 
             if let Some(WeightDecay::Decoupled(wd)) = cfg.weight_decay {

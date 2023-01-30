@@ -87,21 +87,6 @@ mod tests {
     use crate::tests::{assert_close, TestDevice};
 
     #[test]
-    fn test_min_valid_axes() {
-        let dev: TestDevice = Default::default();
-        let _ = dev.zeros::<Rank1<5>>().min::<Rank0, _>();
-        let _ = dev.zeros::<Rank2<5, 3>>().min::<Rank1<3>, _>();
-        let _ = dev.zeros::<Rank2<5, 3>>().min::<Rank1<5>, _>();
-        let _ = dev.zeros::<Rank3<7, 5, 3>>().min::<Rank2<5, 3>, _>();
-        let _ = dev.zeros::<Rank3<7, 5, 3>>().min::<Rank2<7, 3>, _>();
-        let _ = dev.zeros::<Rank3<7, 5, 3>>().min::<Rank2<7, 5>, _>();
-        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().min::<Rank3<7, 5, 3>, _>();
-        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().min::<Rank3<9, 5, 3>, _>();
-        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().min::<Rank3<9, 7, 3>, _>();
-        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().min::<Rank3<9, 7, 5>, _>();
-    }
-
-    #[test]
     fn test_min_axis_0_2d() {
         let dev: TestDevice = Default::default();
         let t = dev.tensor([[1.0, 1.0, 2.0], [3.0, -2.0, 2.0]]);

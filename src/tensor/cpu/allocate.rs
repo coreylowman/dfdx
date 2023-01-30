@@ -4,10 +4,12 @@ use crate::{
     shapes::*,
     tensor::{storage_traits::*, Tensor},
 };
-use rand::{distributions::Distribution, Rng};
-use std::{sync::Arc, vec::Vec};
 
 use super::{Cpu, CpuError, LendingIterator, StridedArray};
+
+use num_traits::One;
+use rand::{distributions::Distribution, Rng};
+use std::{sync::Arc, vec::Vec};
 
 impl<S: Shape, E: Default + Clone> StridedArray<S, E> {
     #[inline]
@@ -64,22 +66,19 @@ impl<E: Unit> ZeroFillStorage<E> for Cpu {
     }
 }
 
-impl OnesTensor<f32> for Cpu {
-    fn try_ones_like<S: HasShape>(
-        &self,
-        src: &S,
-    ) -> Result<Tensor<S::Shape, f32, Self>, Self::Err> {
-        let storage = StridedArray::try_new_with(*src.shape(), 1.0)?;
+impl<E: Unit + One> OnesTensor<E> for Cpu {
+    fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+        let storage = StridedArray::try_new_with(*src.shape(), One::one())?;
         Ok(self.upgrade(storage))
     }
 }
 
-impl OneFillStorage<f32> for Cpu {
+impl<E: Unit + One> OneFillStorage<E> for Cpu {
     fn try_fill_with_ones<S: Shape>(
         &self,
-        storage: &mut Self::Storage<S, f32>,
+        storage: &mut Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
-        std::sync::Arc::make_mut(&mut storage.data).fill(1.0);
+        std::sync::Arc::make_mut(&mut storage.data).fill(One::one());
         Ok(())
     }
 }

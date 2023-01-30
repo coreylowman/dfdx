@@ -1,6 +1,6 @@
-use crate::shapes::Shape;
+use crate::shapes::{Dtype, Shape};
 use crate::tensor::cpu::*;
-use crate::tensor_ops::matmul::cpu_kernel::matmul;
+use crate::tensor_ops::matmul::cpu_kernel::MatMulImpl;
 
 use super::{Conv2DKernel, Conv2DOp};
 
@@ -41,14 +41,17 @@ impl Conv2DOp {
 
 impl Cpu {
     #[inline]
-    fn conv2d_forward<P: Shape<Concrete = [usize; 5]>>(
+    fn conv2d_forward<F: Dtype, P: Shape<Concrete = [usize; 5]>>(
         &self,
         op: &Conv2DOp,
-        img: &[f32],
-        filters: &[f32],
-        out: &mut [f32],
-        inp_patches_buf: &mut StridedArray<P, f32>,
-    ) -> Result<(), CpuError> {
+        img: &[F],
+        filters: &[F],
+        out: &mut [F],
+        inp_patches_buf: &mut StridedArray<P, F>,
+    ) -> Result<(), CpuError>
+    where
+        Self: MatMulImpl<F>,
+    {
         {
             let buf = Arc::make_mut(&mut inp_patches_buf.data);
             let mut i = 0;
@@ -74,7 +77,7 @@ impl Cpu {
         let m = op.chan_out;
         let k = op.chan_in * op.kernel * op.kernel;
         let n = op.w_out * op.h_out;
-        matmul(
+        Self::matmul(
             View::new(filters, (m, k)),
             View::new(inp_patches_buf.view().data, (k, n)),
             &mut ViewMut::new(out, (m, n)),
@@ -84,16 +87,19 @@ impl Cpu {
 
     #[inline]
     #[allow(clippy::too_many_arguments)]
-    fn conv2d_backward<P: Shape<Concrete = [usize; 5]>>(
+    fn conv2d_backward<F: Dtype, P: Shape<Concrete = [usize; 5]>>(
         &self,
         op: &Conv2DOp,
-        img: &[f32],
-        grad_img: &mut [f32],
-        filters_tr: &[f32],
-        grad_filters_tr: &mut [f32],
-        grad_out: &[f32],
-        out_patches_buf: &mut StridedArray<P, f32>,
-    ) -> Result<(), CpuError> {
+        img: &[F],
+        grad_img: &mut [F],
+        filters_tr: &[F],
+        grad_filters_tr: &mut [F],
+        grad_out: &[F],
+        out_patches_buf: &mut StridedArray<P, F>,
+    ) -> Result<(), CpuError>
+    where
+        Self: MatMulImpl<F>,
+    {
         {
             let mut i = 0;
             let buf = Arc::make_mut(&mut out_patches_buf.data);
@@ -120,7 +126,7 @@ impl Cpu {
             let m = op.chan_in;
             let k = op.chan_out * op.kernel * op.kernel;
             let n = op.h_in * op.w_in;
-            matmul(
+            Self::matmul(
                 View::new(filters_tr, (m, k)),
                 View::new(out_patches_buf.view().data, (k, n)),
                 &mut ViewMut::new(grad_img, (m, n)),
@@ -133,7 +139,7 @@ impl Cpu {
             let m = op.chan_in;
             let k = op.h_in * op.w_in;
             let n = op.chan_out * op.kernel * op.kernel;
-            matmul(
+            Self::matmul(
                 View::new(img, (m, k)),
                 View::new(out_patches_buf.view().data, (n, k)).tr(),
                 &mut ViewMut::new(grad_filters_tr, (m, n)),
@@ -143,15 +149,18 @@ impl Cpu {
     }
 }
 
-impl Conv2DKernel<f32> for Cpu {
+impl<F: Dtype> Conv2DKernel<F> for Cpu
+where
+    Self: MatMulImpl<F>,
+{
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: Conv2DOp,
-        lhs: &Self::Storage<L, f32>,
-        rhs: &Self::Storage<R, f32>,
-        out: &mut Self::Storage<O, f32>,
+        lhs: &Self::Storage<L, F>,
+        rhs: &Self::Storage<R, F>,
+        out: &mut Self::Storage<O, F>,
     ) -> Result<(), Self::Err> {
-        let mut patches: StridedArray<_, f32> = StridedArray::new(op.inp_patches_shape())?;
+        let mut patches: StridedArray<_, F> = StridedArray::new(op.inp_patches_shape())?;
         let [lstride, ostride] = match L::NUM_DIMS {
             3 => [0; 2],
             4 => [lhs.strides[0], out.strides[0]],
@@ -175,15 +184,15 @@ impl Conv2DKernel<f32> for Cpu {
     fn backward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: Conv2DOp,
-        lhs: &Self::Storage<L, f32>,
-        grad_lhs: &mut Self::Storage<L, f32>,
-        rhs: &Self::Storage<R, f32>,
-        grad_rhs: &mut Self::Storage<R, f32>,
-        grad_out: &Self::Storage<O, f32>,
+        lhs: &Self::Storage<L, F>,
+        grad_lhs: &mut Self::Storage<L, F>,
+        rhs: &Self::Storage<R, F>,
+        grad_rhs: &mut Self::Storage<R, F>,
+        grad_out: &Self::Storage<O, F>,
     ) -> Result<(), Self::Err> {
-        let mut patches: StridedArray<_, f32> = StridedArray::new(op.out_patches_shape())?;
-        let mut f1023: StridedArray<_, f32> = StridedArray::new(op.filters_tr_shape())?;
-        let mut grad_f1023: StridedArray<_, f32> = StridedArray::new(op.filters_tr_shape())?;
+        let mut patches: StridedArray<_, F> = StridedArray::new(op.out_patches_shape())?;
+        let mut f1023: StridedArray<_, F> = StridedArray::new(op.filters_tr_shape())?;
+        let mut grad_f1023: StridedArray<_, F> = StridedArray::new(op.filters_tr_shape())?;
 
         {
             // transpose filters in f1023

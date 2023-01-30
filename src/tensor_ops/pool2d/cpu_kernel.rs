@@ -3,6 +3,8 @@ use crate::tensor::cpu::Cpu;
 
 use std::sync::Arc;
 
+use num_traits::Float;
+
 fn make_4d<S: Shape>(strides: S::Concrete) -> [usize; 4] {
     match S::NUM_DIMS {
         3 => [0, strides[0], strides[1], strides[2]],
@@ -11,12 +13,14 @@ fn make_4d<S: Shape>(strides: S::Concrete) -> [usize; 4] {
     }
 }
 
-impl super::AvgPool2DKernel<f32> for Cpu {
+impl<F: Float + Unit + std::ops::AddAssign + std::ops::DivAssign> super::AvgPool2DKernel<F>
+    for Cpu
+{
     fn forward<I: Shape, O: Shape>(
         &self,
         op: super::Pool2DOp,
-        inp: &Self::Storage<I, f32>,
-        out: &mut Self::Storage<O, f32>,
+        inp: &Self::Storage<I, F>,
+        out: &mut Self::Storage<O, F>,
     ) -> Result<(), Self::Err> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
@@ -27,7 +31,7 @@ impl super::AvgPool2DKernel<f32> for Cpu {
             for c in 0..op.chan {
                 for oh in 0..op.h_out {
                     for ow in 0..op.w_out {
-                        let mut tmp = 0.0;
+                        let mut tmp = F::zero();
                         for k1 in 0..op.kernel {
                             let y = (oh * op.stride + k1).checked_sub(op.padding);
                             for k2 in 0..op.kernel {
@@ -41,7 +45,7 @@ impl super::AvgPool2DKernel<f32> for Cpu {
                                 }
                             }
                         }
-                        tmp /= (op.kernel * op.kernel) as f32;
+                        tmp /= F::from(op.kernel * op.kernel).unwrap();
                         out_buf[b * ostr[0] + c * ostr[1] + oh * ostr[2] + ow * ostr[3]] = tmp;
                     }
                 }
@@ -53,10 +57,10 @@ impl super::AvgPool2DKernel<f32> for Cpu {
     fn backward<I: Shape, O: Shape>(
         &self,
         op: super::Pool2DOp,
-        inp: &Self::Storage<I, f32>,
-        grad_inp: &mut Self::Storage<I, f32>,
-        out: &Self::Storage<O, f32>,
-        grad_out: &Self::Storage<O, f32>,
+        inp: &Self::Storage<I, F>,
+        grad_inp: &mut Self::Storage<I, F>,
+        out: &Self::Storage<O, F>,
+        grad_out: &Self::Storage<O, F>,
     ) -> Result<(), Self::Err> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
@@ -69,7 +73,7 @@ impl super::AvgPool2DKernel<f32> for Cpu {
                 for oh in 0..op.h_out {
                     for ow in 0..op.w_out {
                         let g = buf[b * ostr[0] + c * ostr[1] + oh * ostr[2] + ow * ostr[3]]
-                            / (op.kernel * op.kernel) as f32;
+                            / F::from(op.kernel * op.kernel).unwrap();
 
                         for k1 in 0..op.kernel {
                             let y = (oh * op.stride + k1).checked_sub(op.padding);
@@ -93,12 +97,12 @@ impl super::AvgPool2DKernel<f32> for Cpu {
     }
 }
 
-impl super::MaxPool2DKernel<f32> for Cpu {
+impl<F: Float + Unit + std::ops::AddAssign> super::MaxPool2DKernel<F> for Cpu {
     fn forward<I: Shape, O: Shape>(
         &self,
         op: super::Pool2DOp,
-        inp: &Self::Storage<I, f32>,
-        out: &mut Self::Storage<O, f32>,
+        inp: &Self::Storage<I, F>,
+        out: &mut Self::Storage<O, F>,
     ) -> Result<(), Self::Err> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
@@ -109,7 +113,7 @@ impl super::MaxPool2DKernel<f32> for Cpu {
             for c in 0..op.chan {
                 for oh in 0..op.h_out {
                     for ow in 0..op.w_out {
-                        let mut tmp = f32::NEG_INFINITY;
+                        let mut tmp = F::neg_infinity();
                         for k1 in 0..op.kernel {
                             let y = (oh * op.stride + k1).checked_sub(op.padding);
                             for k2 in 0..op.kernel {
@@ -136,10 +140,10 @@ impl super::MaxPool2DKernel<f32> for Cpu {
     fn backward<I: Shape, O: Shape>(
         &self,
         op: super::Pool2DOp,
-        inp: &Self::Storage<I, f32>,
-        grad_inp: &mut Self::Storage<I, f32>,
-        out: &Self::Storage<O, f32>,
-        grad_out: &Self::Storage<O, f32>,
+        inp: &Self::Storage<I, F>,
+        grad_inp: &mut Self::Storage<I, F>,
+        out: &Self::Storage<O, F>,
+        grad_out: &Self::Storage<O, F>,
     ) -> Result<(), Self::Err> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
@@ -179,12 +183,12 @@ impl super::MaxPool2DKernel<f32> for Cpu {
     }
 }
 
-impl super::MinPool2DKernel<f32> for Cpu {
+impl<F: Float + Unit + std::ops::AddAssign> super::MinPool2DKernel<F> for Cpu {
     fn forward<I: Shape, O: Shape>(
         &self,
         op: super::Pool2DOp,
-        inp: &Self::Storage<I, f32>,
-        out: &mut Self::Storage<O, f32>,
+        inp: &Self::Storage<I, F>,
+        out: &mut Self::Storage<O, F>,
     ) -> Result<(), Self::Err> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
@@ -195,7 +199,7 @@ impl super::MinPool2DKernel<f32> for Cpu {
             for c in 0..op.chan {
                 for oh in 0..op.h_out {
                     for ow in 0..op.w_out {
-                        let mut tmp = f32::INFINITY;
+                        let mut tmp = F::infinity();
                         for k1 in 0..op.kernel {
                             let y = (oh * op.stride + k1).checked_sub(op.padding);
                             for k2 in 0..op.kernel {
@@ -222,10 +226,10 @@ impl super::MinPool2DKernel<f32> for Cpu {
     fn backward<I: Shape, O: Shape>(
         &self,
         op: super::Pool2DOp,
-        inp: &Self::Storage<I, f32>,
-        grad_inp: &mut Self::Storage<I, f32>,
-        out: &Self::Storage<O, f32>,
-        grad_out: &Self::Storage<O, f32>,
+        inp: &Self::Storage<I, F>,
+        grad_inp: &mut Self::Storage<I, F>,
+        out: &Self::Storage<O, F>,
+        grad_out: &Self::Storage<O, F>,
     ) -> Result<(), Self::Err> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);

@@ -8,7 +8,7 @@ use crate::{gradients::*, shapes::*, tensor::Tensor};
 
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
-pub struct HuberErrorKernelOp<E: Dtype> {
+pub struct HuberErrorKernelOp<E> {
     pub delta: E,
 }
 

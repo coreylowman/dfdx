@@ -1,16 +1,17 @@
 use crate::tensor_ops::cpu_kernels::UnaryDerivative;
+use num_traits::{clamp, Float};
 
-impl UnaryDerivative<f32> for super::ClampKernelOp<f32> {
+impl<F: Float + PartialOrd> UnaryDerivative<F> for super::ClampKernelOp<F> {
     #[inline(always)]
-    fn f(&self, x: &f32) -> f32 {
-        x.clamp(self.min, self.max)
+    fn f(&self, &x: &F) -> F {
+        clamp(x, self.min, self.max)
     }
     #[inline(always)]
-    fn df(&self, x: &f32) -> f32 {
+    fn df(&self, x: &F) -> F {
         if (self.min..=self.max).contains(x) {
-            1.0
+            F::one()
         } else {
-            0.0
+            F::zero()
         }
     }
 }

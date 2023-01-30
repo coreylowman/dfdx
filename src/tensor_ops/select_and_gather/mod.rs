@@ -187,7 +187,7 @@ mod tests {
     #[test]
     fn test_remove_1d_backward() {
         let dev: TestDevice = Default::default();
-        let t = dev.sample_normal::<Rank1<5>>();
+        let t: Tensor<Rank1<5>, f32, _> = dev.sample_normal();
         let r = t.trace().select(dev.tensor(0));
         let t_array = t.array();
         assert_eq!(r.array(), t_array[0]);
@@ -198,7 +198,7 @@ mod tests {
     #[test]
     fn test_replace_1d_backward() {
         let dev: TestDevice = Default::default();
-        let t = dev.sample_normal::<Rank1<5>>();
+        let t: Tensor<Rank1<5>, f32, _> = dev.sample_normal();
         let r = t.trace().gather(dev.tensor([0, 1, 1, 3]));
         let t_array = t.array();
         assert_eq!(r.array(), [t_array[0], t_array[1], t_array[1], t_array[3]]);
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn test_select_batch_backwards() {
         let dev: TestDevice = Default::default();
-        let t = dev.sample_normal::<Rank2<4, 5>>();
+        let t: Tensor<Rank2<4, 5>, f32, _> = dev.sample_normal();
         let t_array = t.array();
         let r = t.trace().gather(dev.tensor([[2, 0, 3], [0, 0, 3]]));
         let r_array = r.array();

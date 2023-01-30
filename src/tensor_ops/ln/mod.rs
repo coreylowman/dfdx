@@ -45,7 +45,7 @@ mod tests {
     #[test]
     fn test_ln() {
         let dev: TestDevice = Default::default();
-        let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = dev.tensor([-2.0f32, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().ln();
         let r_array = r.array();
         assert!(r_array[0].is_nan());

@@ -43,7 +43,7 @@ impl Pool2DOp {
 
 macro_rules! pool2d {
     (Kernel=$Kernel:ident, ConstTrait=$ConstTrait:ident, TryTrait=$TryTrait:ident, Meth=$Meth:ident, TryMeth=$TryMeth:ident) => {
-        pub trait $Kernel<E: Dtype>: DeviceStorage {
+        pub trait $Kernel<E: Unit>: DeviceStorage {
             fn forward<I: Shape, O: Shape>(
                 &self,
                 op: Pool2DOp,

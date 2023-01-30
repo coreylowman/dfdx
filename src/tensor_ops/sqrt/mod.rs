@@ -45,7 +45,7 @@ mod tests {
     #[test]
     fn test_sqrt() {
         let dev: TestDevice = Default::default();
-        let x = dev.tensor([-1.0, 0.0, 1.0, 4.0]);
+        let x = dev.tensor([-1.0f32, 0.0, 1.0, 4.0]);
         let r = x.trace().sqrt();
         assert!(r.array()[0].is_nan());
         assert_eq!(r.array()[1..], [0.0, 1.0, 2.0]);

@@ -429,8 +429,8 @@ mod tests {
     fn test_matmul_broadcast_actual() {
         const N: usize = 5;
         let dev: TestDevice = Default::default();
-        let a = dev.sample_normal::<Rank3<N, 4, 3>>();
-        let b = dev.sample_normal::<Rank2<3, 2>>();
+        let a: Tensor<Rank3<N, 4, 3>, f32, _> = dev.sample_normal();
+        let b: Tensor<Rank2<3, 2>, f32, _> = dev.sample_normal();
         let b_up = dev.tensor([b.array(); N]);
         let r1 = a.trace().matmul(b_up.clone());
         let r2 = a.trace().matmul(b.clone());

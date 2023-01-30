@@ -1,8 +1,8 @@
 use crate::tensor_ops::cpu_kernels::UnaryDerivative;
 
-impl UnaryDerivative<f32> for super::NansToKernelOp<f32> {
+impl<F: num_traits::Float> UnaryDerivative<F> for super::NansToKernelOp<F> {
     #[inline(always)]
-    fn f(&self, x: &f32) -> f32 {
+    fn f(&self, x: &F) -> F {
         if x.is_nan() {
             self.0
         } else {
@@ -10,11 +10,11 @@ impl UnaryDerivative<f32> for super::NansToKernelOp<f32> {
         }
     }
     #[inline(always)]
-    fn df(&self, x: &f32) -> f32 {
+    fn df(&self, x: &F) -> F {
         if x.is_nan() {
-            0.0
+            F::zero()
         } else {
-            1.0
+            F::one()
         }
     }
 }

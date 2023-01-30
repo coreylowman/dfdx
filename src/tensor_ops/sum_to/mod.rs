@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn test_sum_1d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([1.0, 2.0, 3.0]);
+        let t = dev.tensor([1.0f32, 2.0, 3.0]);
         let r = t.trace().sum::<Rank0, _>();
         assert_eq!(r.array(), 6.0);
         // NOTE: .exp() to make sure its using result grad properly
@@ -117,7 +117,7 @@ mod tests {
     #[test]
     fn test_sum_axes_3d_to_1d() {
         let dev: TestDevice = Default::default();
-        let t = dev.sample::<Rank3<2, 3, 4>, _>(rand_distr::StandardNormal);
+        let t: Tensor<Rank3<2, 3, 4>, f32, _> = dev.sample(rand_distr::StandardNormal);
         let r = t.trace().sum::<Rank1<3>, _>();
         let r2 = t.trace().sum::<Rank2<3, 4>, _>().sum::<Rank1<3>, _>();
         assert_close(&r.array(), &r2.array());

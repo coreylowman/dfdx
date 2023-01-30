@@ -121,7 +121,7 @@ mod tests {
     #[test]
     fn test_permute_2d_backwards() {
         let dev: TestDevice = Default::default();
-        let t = dev.sample_normal::<Rank2<3, 6>>();
+        let t: Tensor<Rank2<3, 5>, f32, _> = dev.sample_normal();
         let g1 = t.trace().exp().sum().backward();
         let g2 = t.trace().permute().exp().sum().backward();
         assert_eq!(g1.get(&t).array(), g2.get(&t).array());
@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn test_permute_3d_backwards() {
         let dev: TestDevice = Default::default();
-        let t = dev.sample_normal::<Rank3<3, 6, 9>>();
+        let t: Tensor<Rank3<3, 6, 9>, f32, _> = dev.sample_normal();
         let g1 = t.trace().exp().sum().backward();
         let g2 = t
             .trace()
@@ -144,7 +144,7 @@ mod tests {
     #[test]
     fn test_permute_4d_backwards() {
         let dev: TestDevice = Default::default();
-        let t = dev.sample_normal::<Rank4<3, 6, 9, 11>>();
+        let t: Tensor<Rank4<3, 6, 9, 11>, f32, _> = dev.sample_normal();
         let g1 = t.trace().exp().sum().backward();
         let g2 = t
             .trace()

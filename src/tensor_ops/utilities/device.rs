@@ -52,7 +52,7 @@ pub trait Device<E: Dtype>:
     + UnaryKernel<super::super::abs::AbsKernelOp, E>
     + UnaryKernel<super::super::clamp::ClampKernelOp<E>, E>
     + UnaryKernel<super::super::cos::CosKernelOp, E>
-    + UnaryKernel<super::super::dropout::DropoutKernelOp, E>
+    + super::super::dropout::DropoutKernel<E>
     + UnaryKernel<super::super::exp::ExpKernelOp, E>
     + UnaryKernel<super::super::ln::LnKernelOp, E>
     + UnaryKernel<super::super::nans_to::NansToKernelOp<E>, E>
@@ -64,8 +64,8 @@ pub trait Device<E: Dtype>:
     + UnaryKernel<super::super::sqrt::SqrtKernelOp, E>
     + UnaryKernel<super::super::square::SquareKernelOp, E>
     + UnaryKernel<super::super::tanh::TanhKernelOp, E>
-    + UnaryKernel<super::super::pow::PowKernelOp<E>, E>
-    + UnaryKernel<super::super::pow::PowKernelOp<i32>, E>
+    + UnaryKernel<super::super::pow::PowfKernelOp<E>, E>
+    + UnaryKernel<super::super::pow::PowiKernelOp, E>
 
     // binary
     + BinaryKernel<super::super::bce::BCEKernelOp, E>

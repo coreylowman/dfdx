@@ -1,12 +1,12 @@
 use crate::tensor_ops::cpu_kernels::UnaryDerivative;
 
-impl UnaryDerivative<f32> for super::TanhKernelOp {
+impl<F: num_traits::Float> UnaryDerivative<F> for super::TanhKernelOp {
     #[inline(always)]
-    fn f(&self, x: &f32) -> f32 {
+    fn f(&self, x: &F) -> F {
         x.tanh()
     }
     #[inline(always)]
-    fn df(&self, x: &f32) -> f32 {
-        1.0 - x.tanh().powi(2)
+    fn df(&self, x: &F) -> F {
+        F::one() - x.tanh().powi(2)
     }
 }
