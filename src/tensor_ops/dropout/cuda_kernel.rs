@@ -1,7 +1,6 @@
 use crate::{
-    shapes::Shape,
+    shapes::{Shape},
     tensor::cuda::{Cuda, CudaArray},
-    tensor_ops::ops::UnaryKernel,
 };
 
 use std::{sync::Arc, vec::Vec};
@@ -17,10 +16,10 @@ const BWD_FN_NAME: &str = "dropout_backward";
 const ALL_FN_NAMES: [&str; 2] = [FWD_FN_NAME, BWD_FN_NAME];
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/dropout.ptx"));
 
-impl UnaryKernel<super::DropoutKernelOp, f32> for Cuda {
+impl super::DropoutKernel<f32> for Cuda {
     fn forward<S: Shape>(
         &self,
-        op: super::DropoutKernelOp,
+        op: super::DropoutKernelOp<f32>,
         inp: &Self::Storage<S, f32>,
     ) -> Result<Self::Storage<S, f32>, Self::Err> {
         let noise = {
@@ -56,7 +55,7 @@ impl UnaryKernel<super::DropoutKernelOp, f32> for Cuda {
     }
     fn backward<S: Shape>(
         &self,
-        op: super::DropoutKernelOp,
+        op: super::DropoutKernelOp<f32>,
         inp: &Self::Storage<S, f32>,
         grad_inp: &mut Self::Storage<S, f32>,
         grad_out: &Self::Storage<S, f32>,

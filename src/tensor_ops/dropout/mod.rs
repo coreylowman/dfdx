@@ -39,7 +39,7 @@ pub trait DropoutKernel<E: Dtype>: DeviceStorage {
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let t = dev.tensor([1.0, 2.0, 3.0, 4.0]);
+/// let t = dev.tensor([1.0f32, 2.0, 3.0, 4.0]);
 /// let r = t.dropout(0.5);
 /// assert_eq!(r.array(), [2.0, 4.0, 6.0, 0.0]);
 /// ```
@@ -67,7 +67,7 @@ impl<S: Shape, E: Dtype, D: DropoutKernel<E>, T: Tape<D>> Tensor<S, E, D, T> {
         let seed = self.device.random_u64();
         let op = DropoutKernelOp { seed, prob };
         let (inp, mut tape) = self.split_tape();
-        let storage = inp.device.forward(op.clone(), &inp.storage)?;
+        let storage = inp.device.forward(op, &inp.storage)?;
         let out = inp.device.upgrade(storage);
         let phantom_out = out.clone();
         tape.try_alloc_grad(&inp)?;

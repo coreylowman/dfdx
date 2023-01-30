@@ -170,7 +170,7 @@ pub trait OnesTensor<E: Unit>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<2, 3>> = dev.ones();
+    /// let a: Tensor<Rank2<2, 3>, f32> = dev.ones();
     /// let b = dev.ones_like(&a);
     /// ```
     fn ones_like<S: HasShape>(&self, src: &S) -> Tensor<S::Shape, E, Self> {
