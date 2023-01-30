@@ -43,6 +43,7 @@ cblas = ["dep:cblas-sys", "dep:libc"]
 intel-mkl = ["cblas"]
 cuda = ["dep:cudarc"]
 test-cuda = ["cuda"]
+test-f64 = []
 
 [dev-dependencies]
 rand = "0.8.5"
