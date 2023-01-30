@@ -1,4 +1,6 @@
 #include "unary_op_macros.cuh"
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 struct GeLUKernelOp {};
 
@@ -10,16 +12,16 @@ LONG_UNARY_OP(float, gelu_forward_f32, gelu_backward_f32, GeLUKernelOp,
 
         float alpha = x + fastCoeff * x_cube;
 
-        float y = 0.5 * x * (1.0 + tanh(M_2_SQRTPI * M_SQRT1_2 * alpha));
+        float y = 0.5 * x * (1.0 + tanhf(M_2_SQRTPI * M_SQRT1_2 * alpha));
         out[i] = y;
     },
     {
-        float kBeta = M_2_SQRTPI * M_SQRT2 * 0.5;                       
+        constexpr float kBeta = M_2_SQRTPI * M_SQRT2 * 0.5;                       
         constexpr float fastCoeff = 0.044715;
         float x_sq = x * x;
         float x_cube = x_sq * x;
         float inner = kBeta * (x + fastCoeff * x_cube);
-        float tanh_inner = tanh(inner);
+        float tanh_inner = tanhf(inner);
 
         float left = 0.5 * x;
         float right = 1.0 + tanh_inner;
