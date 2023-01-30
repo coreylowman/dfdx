@@ -41,7 +41,7 @@ fn main() {
 
     // use `AsArray::as_array` to get acces to the data as an array
     let a_data: [[[f32; 4]; 3]; 2] = a.array();
-    println!("a={:?}", a_data);
+    println!("a={a_data:?}");
 
     // you can clone() a tensor:
     let a_copy = a.clone();

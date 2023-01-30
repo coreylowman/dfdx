@@ -31,7 +31,7 @@ fn main() {
     let mut pi_net = PolicyNetwork::build_on_device(&dev);
     let target_pi_net = pi_net.clone();
 
-    let mut sgd = Sgd::new(SgdConfig {
+    let mut sgd = Sgd::new(&pi_net, SgdConfig {
         lr: 1e-1,
         momentum: Some(Momentum::Nesterov(0.9)),
         weight_decay: None,

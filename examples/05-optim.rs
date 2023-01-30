@@ -19,17 +19,18 @@ type Mlp = (
 fn main() {
     let dev: Cpu = Default::default();
 
-    // The first step to optimizing is to initialize the optimizer.
+    // First randomly initialize our model
+    let mut mlp = Mlp::build_on_device(&dev);
+
     // Here we construct a stochastic gradient descent optimizer
     // for our Mlp.
-    let mut sgd: Sgd<Mlp> = Sgd::new(SgdConfig {
+    let mut sgd = Sgd::new(&mlp, SgdConfig {
         lr: 1e-1,
         momentum: Some(Momentum::Nesterov(0.9)),
         weight_decay: None,
     });
 
-    // let's initialize our model and some dummy data
-    let mut mlp = Mlp::build_on_device(&dev);
+    // let's initialize some dummy data
     let x = dev.sample_normal::<Rank2<3, 5>>();
     let y = dev.sample_normal::<Rank2<3, 2>>();
 

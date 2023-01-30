@@ -35,7 +35,7 @@ fn main() {
     let mut q_net = QNetwork::build_on_device(&dev);
     let target_q_net = q_net.clone();
 
-    let mut sgd = Sgd::new(SgdConfig {
+    let mut sgd = Sgd::new(&q_net, SgdConfig {
         lr: 1e-1,
         momentum: Some(Momentum::Nesterov(0.9)),
         weight_decay: None,
