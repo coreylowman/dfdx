@@ -2,20 +2,13 @@
 //! to build a neural network that learns to recognize
 //! the MNIST digits.
 //!
-//! To download the MNIST dataset, do the following:
-//! ```
-//! mkdir tmp/ && cd tmp/
-//! curl -O http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz \
-//!     -O http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz \
-//!     -O http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz \
-//!     -O http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
-//! gunzip t*-ubyte.gz
-//! cd -
-//! ```
 //! Then, you may run this example with:
 //! ```
-//! cargo run --example 06-mnist -- tmp/
+//! cargo run --release --example 06-mnist
 //! ```
+//! which will automatically download and extract the
+//! MNIST dataset into a `data/` directory if it is
+//! not already present
 
 use dfdx::{data::SubsetIterator, losses::cross_entropy_with_logits_loss, optim::Adam, prelude::*};
 use indicatif::ProgressBar;
@@ -36,7 +29,12 @@ struct MnistDataset {
 
 impl MnistDataset {
     fn train(path: &str) -> Self {
-        let mnist: Mnist = MnistBuilder::new().base_path(path).finalize();
+        let mnist: Mnist = MnistBuilder::new()
+            .base_url("http://yann.lecun.com/exdb/mnist/")
+            // .base_url("https://cmoran.xyz/data/mnist/standard/")
+            .base_path(path)
+            .download_and_extract()
+            .finalize();
         Self {
             img: mnist.trn_img.iter().map(|&v| v as f32 / 255.0).collect(),
             lbl: mnist.trn_lbl.iter().map(|&v| v as usize).collect(),
@@ -89,7 +87,7 @@ fn main() {
 
     let mnist_path = std::env::args()
         .nth(1)
-        .unwrap_or_else(|| "./datasets/MNIST/raw".to_string());
+        .unwrap_or_else(|| "./data/".to_string());
 
     println!("Loading mnist from args[1] = {mnist_path}");
     println!("Override mnist path with `cargo run --example 06-mnist -- <path to mnist>`");
