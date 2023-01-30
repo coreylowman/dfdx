@@ -24,11 +24,14 @@ fn main() {
 
     // Here we construct a stochastic gradient descent optimizer
     // for our Mlp.
-    let mut sgd = Sgd::new(&mlp, SgdConfig {
-        lr: 1e-1,
-        momentum: Some(Momentum::Nesterov(0.9)),
-        weight_decay: None,
-    });
+    let mut sgd = Sgd::new(
+        &mlp,
+        SgdConfig {
+            lr: 1e-1,
+            momentum: Some(Momentum::Nesterov(0.9)),
+            weight_decay: None,
+        },
+    );
 
     // let's initialize some dummy data
     let x = dev.sample_normal::<Rank2<3, 5>>();

@@ -183,12 +183,15 @@ mod tests {
     fn test_custom_adam_one_params() {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
-        let mut opt = Adam::new(&t, AdamConfig {
-            lr: 1e-3,
-            betas: [0.5, 0.25],
-            eps: 1e-8,
-            weight_decay: None,
-        });
+        let mut opt = Adam::new(
+            &t,
+            AdamConfig {
+                lr: 1e-3,
+                betas: [0.5, 0.25],
+                eps: 1e-8,
+                weight_decay: None,
+            },
+        );
         let rate = dev.tensor([1e-4, 1e-3, 1e-2, 1e-1, 1e-0]);
         let expected = [
             [0.9997143, 0.9990244, 0.99900025, 0.999, 0.999],
@@ -214,11 +217,14 @@ mod tests {
     fn test_adam_l2_decay() {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, f32, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
-        let mut opt = Adam::new(&t, AdamConfig {
-            betas: [0.5, 0.25],
-            weight_decay: Some(WeightDecay::L2(1.0)),
-            ..Default::default()
-        });
+        let mut opt = Adam::new(
+            &t,
+            AdamConfig {
+                betas: [0.5, 0.25],
+                weight_decay: Some(WeightDecay::L2(1.0)),
+                ..Default::default()
+            },
+        );
         #[rustfmt::skip]
         let expected = [
             [-0.499, -0.249, 0.099, 0.59900004, 0.999],
@@ -244,11 +250,14 @@ mod tests {
     fn test_adam_decoupled_decay() {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, f32, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
-        let mut opt = Adam::new(&t, AdamConfig {
-            betas: [0.5, 0.25],
-            weight_decay: Some(WeightDecay::Decoupled(1.0)),
-            ..Default::default()
-        });
+        let mut opt = Adam::new(
+            &t,
+            AdamConfig {
+                betas: [0.5, 0.25],
+                weight_decay: Some(WeightDecay::Decoupled(1.0)),
+                ..Default::default()
+            },
+        );
         #[rustfmt::skip]
         let expected = [
             [-0.5005, -0.25075,  0.098900005,  0.5984,  0.998],

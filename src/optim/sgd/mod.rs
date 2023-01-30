@@ -94,7 +94,7 @@ impl Default for SgdConfig<f32> {
 /// Both L2 weight_decay and decoupled weight_decay are available.
 ///
 /// # Example Usage
-/// 
+///
 /// ```rust
 /// # use dfdx::{prelude::*, optim::*};
 /// # let dev: Cpu = Default::default();
@@ -187,11 +187,14 @@ mod tests {
     fn test_perfect_sgd() {
         let dev: TestDevice = Default::default();
         let mut pred: Tensor<Rank1<5>, f32, _> = dev.zeros();
-        let mut sgd = Sgd::new(&pred, SgdConfig {
-            lr: 1.0,
-            momentum: None,
-            weight_decay: None,
-        });
+        let mut sgd = Sgd::new(
+            &pred,
+            SgdConfig {
+                lr: 1.0,
+                momentum: None,
+                weight_decay: None,
+            },
+        );
 
         let targ: Tensor<Rank1<5>, f32, _> = dev.ones();
         for _ in 0..5 {
@@ -230,11 +233,14 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
-        let mut sgd = Sgd::new(&t, SgdConfig {
-            lr: 1e-2,
-            momentum: Some(Momentum::Classic(0.5)),
-            weight_decay: None,
-        });
+        let mut sgd = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: Some(Momentum::Classic(0.5)),
+                weight_decay: None,
+            },
+        );
 
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
@@ -257,11 +263,14 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
-        let mut sgd = Sgd::new(&t, SgdConfig {
-            lr: 1e-2,
-            momentum: Some(Momentum::Nesterov(0.5)),
-            weight_decay: None,
-        });
+        let mut sgd = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: Some(Momentum::Nesterov(0.5)),
+                weight_decay: None,
+            },
+        );
 
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
@@ -285,17 +294,23 @@ mod tests {
 
         // With no momentum, both versions should be the same
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
-        let mut sgd_l2 = Sgd::new(&t, SgdConfig {
-            lr: 1e-2,
-            momentum: None,
-            weight_decay: Some(WeightDecay::L2(1e-1)),
-        });
-        let mut sgd_decoupled = Sgd::new(&t, SgdConfig {
-            lr: 1e-2,
-            momentum: None,
-            weight_decay: Some(WeightDecay::Decoupled(1e-1)),
-        });
-        
+        let mut sgd_l2 = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: None,
+                weight_decay: Some(WeightDecay::L2(1e-1)),
+            },
+        );
+        let mut sgd_decoupled = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: None,
+                weight_decay: Some(WeightDecay::Decoupled(1e-1)),
+            },
+        );
+
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9988, 0.997, 0.995, 0.979, 0.799],
@@ -322,11 +337,14 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
-        let mut sgd = Sgd::new(&t, SgdConfig {
-            lr: 1e-2,
-            momentum: Some(Momentum::Classic(0.5)),
-            weight_decay: Some(WeightDecay::Decoupled(1e-1)),
-        });
+        let mut sgd = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: Some(Momentum::Classic(0.5)),
+                weight_decay: Some(WeightDecay::Decoupled(1e-1)),
+            },
+        );
 
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
@@ -350,16 +368,22 @@ mod tests {
         // adding l2_weight_decay should be equivalent to adding an L2 term to the loss
         let weight_decay = 1e-1;
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
-        let mut sgd_l2 = Sgd::new(&t, SgdConfig {
-            lr: 1e-2,
-            momentum: Some(Momentum::Classic(0.5)),
-            weight_decay: Some(WeightDecay::L2(weight_decay)),
-        });
-        let mut sgd = Sgd::new(&t, SgdConfig {
-            lr: 1e-2,
-            momentum: Some(Momentum::Classic(0.5)),
-            weight_decay: None,
-        });
+        let mut sgd_l2 = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: Some(Momentum::Classic(0.5)),
+                weight_decay: Some(WeightDecay::L2(weight_decay)),
+            },
+        );
+        let mut sgd = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: Some(Momentum::Classic(0.5)),
+                weight_decay: None,
+            },
+        );
 
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
