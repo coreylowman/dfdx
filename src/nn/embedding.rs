@@ -131,7 +131,7 @@ mod tests {
     #[test]
     fn test_embedding_initialize() {
         let dev: TestDevice = Default::default();
-        let m: Embedding<2000, 1> = BuildModule::build(&dev);
+        let m: Embedding<2000, 1, _> = BuildModule::build(&dev);
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);
@@ -229,7 +229,7 @@ mod tests {
     fn test_embedding_missing_gradients() {
         let dev: TestDevice = Default::default();
 
-        let mut model: Embedding<5, 3> = BuildModule::build(&dev);
+        let mut model: Embedding<5, 3, _> = BuildModule::build(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present
