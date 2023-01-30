@@ -66,12 +66,12 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<PowiKernelOp, E>, T: Tape<D>> Tensor<S, 
 
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::TestDevice};
+    use crate::{tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_powf_positive() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([-2.0f32, -1.0, 0.0, 1.0, 2.0]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powf(3.5);
         let r_array = r.array();
         assert!(r_array[0].is_nan());
@@ -88,7 +88,7 @@ mod tests {
     #[test]
     fn test_powf_negative() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([-2.0f32, -1.0, 0.0, 1.0, 2.0]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powf(-1.2);
         let r_array = r.array();
         assert!(r_array[0].is_nan());
@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn test_powi_positive() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powi(3);
         assert_eq!(r.array(), [-8., -1., 0., 1., 8.]);
         let g = r.sum().backward();
@@ -115,7 +115,7 @@ mod tests {
     #[test]
     fn test_powi_negative() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powi(-3);
         assert_eq!(r.array(), [-0.125, -1.0, f32::INFINITY, 1.0, 0.125]);
         let g = r.sum().backward();

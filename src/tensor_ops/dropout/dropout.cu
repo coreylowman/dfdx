@@ -28,3 +28,34 @@ extern "C" __global__ void dropout_backward_f32(
 
     grad_inp[i] += (noise[i] < prob) ? 0.0 : (grad_out[i] / (1.0 - prob));
 }
+
+extern "C" __global__ void dropout_forward_f64(
+    const double prob,
+    const size_t numel,
+    const double *inp,
+    const double *noise,
+    double *out
+) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= numel) {
+        return;
+    }
+
+    double scalar = (noise[i] < prob) ? 0.0 : (1.0 / (1.0 - prob));
+    out[i] = inp[i] * scalar;
+}
+
+extern "C" __global__ void dropout_backward_f64(
+    const double prob,
+    const size_t numel,
+    const double *noise,
+    double *grad_inp,
+    const double *grad_out
+) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= numel) {
+        return;
+    }
+
+    grad_inp[i] += (noise[i] < prob) ? 0.0 : (grad_out[i] / (1.0 - prob));
+}

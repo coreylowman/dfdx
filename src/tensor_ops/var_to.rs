@@ -43,12 +43,12 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> VarTo for Tensor<S, f32, D, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::TestDevice;
+    use crate::tests::*;
 
     #[test]
     fn test_var_axis_0_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r = t.trace().var::<Rank1<4>, _>();
         assert_eq!(r.array(), [0.25, 0.0, 1.0, 9.0]);
         let g = r.mean().backward();
@@ -61,7 +61,7 @@ mod tests {
     #[test]
     fn test_var_axis_1_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r = t.trace().var::<Rank1<2>, _>();
         assert_eq!(r.array(), [1.25, 14.1875]);
         let g = r.mean().backward();

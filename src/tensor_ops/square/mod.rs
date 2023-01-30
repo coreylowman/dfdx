@@ -40,12 +40,12 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<SquareKernelOp, E>, T: Tape<D>> Tensor<S
 
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::TestDevice};
+    use crate::{tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_square() {
         let dev: TestDevice = Default::default();
-        let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().square();
         assert_eq!(r.array(), [4.0, 1.0, 0.0, 1.0, 4.0]);
         let g = r.mean().backward();

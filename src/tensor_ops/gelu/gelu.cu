@@ -32,3 +32,34 @@ LONG_UNARY_OP(float, gelu_forward_f32, gelu_backward_f32, GeLUKernelOp,
         dx = left_derivative + right_derivative;
     }
 )
+
+LONG_UNARY_OP(double, gelu_forward_f64, gelu_backward_f64, GeLUKernelOp,
+    {
+        constexpr double fastCoeff = 0.044715;
+        double x_sq = x * x;
+        double x_cube = x_sq * x;
+
+        double alpha = x + fastCoeff * x_cube;
+
+        double y = 0.5 * x * (1.0 + tanh(M_2_SQRTPI * M_SQRT1_2 * alpha));
+        out[i] = y;
+    },
+    {
+        double kBeta = M_2_SQRTPI * M_SQRT2 * 0.5;                       
+        constexpr double fastCoeff = 0.044715;
+        double x_sq = x * x;
+        double x_cube = x_sq * x;
+        double inner = kBeta * (x + fastCoeff * x_cube);
+        double tanh_inner = tanh(inner);
+
+        double left = 0.5 * x;
+        double right = 1.0 + tanh_inner;
+        
+        double left_derivative = 0.5 * right;
+
+        double tanh_derivative = 1.0 - tanh_inner * tanh_inner;
+        double inner_derivative = kBeta * (1.0 + 3.0 * fastCoeff * x_sq);
+        double right_derivative = left * tanh_derivative * inner_derivative;
+        dx = left_derivative + right_derivative;
+    }
+)

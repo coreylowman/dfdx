@@ -1,5 +1,5 @@
 use crate::{
-    shapes::{Shape, Dtype},
+    shapes::{Dtype, Shape},
     tensor::cuda::{Cuda, CudaArray},
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
@@ -22,7 +22,9 @@ pub trait UnaryOpCudaKernel<E> {
     const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
 }
 
-impl<E: Dtype + ValidAsZeroBits, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryKernel<K, E> for Cuda {
+impl<E: Dtype + ValidAsZeroBits, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryKernel<K, E>
+    for Cuda
+{
     fn forward<S: Shape>(
         &self,
         op: K,
@@ -91,7 +93,9 @@ pub trait BinaryOpCudaKernel<E> {
     const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
 }
 
-impl<E: Dtype + ValidAsZeroBits, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for Cuda {
+impl<E: Dtype + ValidAsZeroBits, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E>
+    for Cuda
+{
     fn forward<S: Shape>(
         &self,
         op: K,

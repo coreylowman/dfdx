@@ -42,12 +42,12 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<NansToKernelOp<E>, E>, T: Tape<D>> Tenso
 
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::TestDevice};
+    use crate::{tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_nans_1d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([1.0, f32::NAN, -f32::NAN, 4.0]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, TestDtype::NAN, -TestDtype::NAN, 4.0]);
         let r = t.trace().nans_to(0.0);
         assert_eq!(r.array(), [1.0, 0.0, 0.0, 4.0]);
         // NOTE: .exp() so we cover case where nans_to() needs to use result grad

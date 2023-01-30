@@ -174,6 +174,12 @@ pub(crate) mod tests {
     #[cfg(feature = "test-cuda")]
     pub type TestDevice = crate::tensor::Cuda;
 
+    #[cfg(not(feature = "test-f64"))]
+    pub type TestDtype = f32;
+
+    #[cfg(feature = "test-f64")]
+    pub type TestDtype = f64;
+
     pub trait AssertClose {
         fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)>;
         fn assert_close(&self, rhs: &Self, tolerance: f32)

@@ -8,3 +8,10 @@ impl BinaryOpCudaKernel<f32> for super::BCEKernelOp {
     const FWD_FN_NAME: &'static str = "bce_forward_f32";
     const BWD_FN_NAME: &'static str = "bce_backward_f32";
 }
+
+impl BinaryOpCudaKernel<f64> for super::BCEKernelOp {
+    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/bce.ptx"));
+    const MODULE_NAME: &'static str = "bce";
+    const FWD_FN_NAME: &'static str = "bce_forward_f64";
+    const BWD_FN_NAME: &'static str = "bce_backward_f64";
+}

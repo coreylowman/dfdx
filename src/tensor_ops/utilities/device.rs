@@ -76,6 +76,10 @@ pub trait Device<E: Dtype>:
 }
 
 impl Device<f32> for crate::tensor::Cpu {}
+impl Device<f64> for crate::tensor::Cpu {}
 
 #[cfg(feature = "cuda")]
 impl Device<f32> for crate::tensor::Cuda {}
+
+#[cfg(feature = "cuda")]
+impl Device<f64> for crate::tensor::Cuda {}

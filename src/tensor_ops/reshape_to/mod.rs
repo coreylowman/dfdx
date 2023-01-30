@@ -59,7 +59,7 @@ impl<S: Shape, E: Dtype, D: ReshapeKernel<E>, T: Tape<D>> ReshapeTo for Tensor<S
 mod tests {
     use crate::tensor::*;
     use crate::tensor_ops::*;
-    use crate::tests::TestDevice;
+    use crate::tests::*;
 
     use super::*;
 
@@ -67,41 +67,41 @@ mod tests {
     fn test_valid_reshapes() {
         let dev: TestDevice = Default::default();
 
-        let t: Tensor<Rank0, f32, _> = dev.zeros();
-        let _: Tensor<Rank1<1>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank2<1, 1>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank3<1, 1, 1>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank4<1, 1, 1, 1>, f32, _> = t.clone().reshape();
+        let t: Tensor<Rank0, TestDtype, _> = dev.zeros();
+        let _: Tensor<Rank1<1>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank2<1, 1>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank3<1, 1, 1>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank4<1, 1, 1, 1>, TestDtype, _> = t.clone().reshape();
 
-        let t: Tensor<Rank1<16>, f32, _> = dev.zeros();
-        let _: Tensor<Rank1<16>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank2<2, 8>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank3<2, 2, 4>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank4<2, 2, 2, 2>, f32, _> = t.clone().reshape();
+        let t: Tensor<Rank1<16>, TestDtype, _> = dev.zeros();
+        let _: Tensor<Rank1<16>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank2<2, 8>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank3<2, 2, 4>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank4<2, 2, 2, 2>, TestDtype, _> = t.clone().reshape();
 
-        let t: Tensor<Rank2<2, 8>, f32, _> = dev.zeros();
-        let _: Tensor<Rank1<16>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank2<8, 2>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank3<2, 2, 4>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank4<2, 2, 2, 2>, f32, _> = t.clone().reshape();
+        let t: Tensor<Rank2<2, 8>, TestDtype, _> = dev.zeros();
+        let _: Tensor<Rank1<16>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank2<8, 2>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank3<2, 2, 4>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank4<2, 2, 2, 2>, TestDtype, _> = t.clone().reshape();
 
-        let t: Tensor<Rank3<2, 2, 4>, f32, _> = dev.zeros();
-        let _: Tensor<Rank1<16>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank2<2, 8>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank3<4, 2, 2>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank4<2, 2, 2, 2>, f32, _> = t.clone().reshape();
+        let t: Tensor<Rank3<2, 2, 4>, TestDtype, _> = dev.zeros();
+        let _: Tensor<Rank1<16>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank2<2, 8>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank3<4, 2, 2>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank4<2, 2, 2, 2>, TestDtype, _> = t.clone().reshape();
 
-        let t: Tensor<Rank4<2, 2, 2, 2>, f32, _> = dev.zeros();
-        let _: Tensor<Rank1<16>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank2<2, 8>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank3<2, 2, 4>, f32, _> = t.clone().reshape();
-        let _: Tensor<Rank4<4, 1, 2, 2>, f32, _> = t.clone().reshape();
+        let t: Tensor<Rank4<2, 2, 2, 2>, TestDtype, _> = dev.zeros();
+        let _: Tensor<Rank1<16>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank2<2, 8>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank3<2, 2, 4>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank4<4, 1, 2, 2>, TestDtype, _> = t.clone().reshape();
     }
 
     #[test]
     fn test_1d_reshape() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]);
         let b = a.trace().reshape::<Rank2<2, 3>>();
         assert_eq!(b.array(), [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
         let g = b.exp().mean().backward();

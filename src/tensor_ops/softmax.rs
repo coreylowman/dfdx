@@ -48,7 +48,7 @@ mod tests {
     #[test]
     fn test_softmax_1d() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = a.trace().softmax();
         assert_close(
             &r.array(),
@@ -72,7 +72,7 @@ mod tests {
     #[test]
     fn test_softmax_2d() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
         let r = a.trace().softmax::<Axis<1>>();
         assert_close(
             &r.array(),
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn test_softmax_2d_0th_axis() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
         let r = a.trace().softmax::<Axis<0>>();
         assert_close(
             &r.array(),
@@ -126,7 +126,7 @@ mod tests {
     #[test]
     fn test_softmax_3d_to_1d_12() {
         let dev: TestDevice = Default::default();
-        let t = dev.sample_normal::<Rank3<2, 3, 4>>();
+        let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let r = t.trace().softmax::<Axes2<1, 2>>();
         #[rustfmt::skip]
         assert_close(

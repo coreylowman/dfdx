@@ -1,5 +1,11 @@
 #include "cuda_utils.cuh"
 
+// See https://stackoverflow.com/a/37569519
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+#else
+__device__ double atomicAdd(double* a, double b) { return b; }
+#endif
+
 #define LONG_BINARY_OP(TYPENAME, FORWARD, BACKWARD, OP_STRUCT, FUNC, DERIVATIVES) \
 extern "C" __global__ void FORWARD( \
     const OP_STRUCT op, \

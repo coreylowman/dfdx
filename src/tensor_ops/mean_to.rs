@@ -47,7 +47,7 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> MeanTo for Tensor<S, f32, D, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::{assert_close, TestDevice};
+    use crate::tests::*;
 
     #[test]
     fn test_valids_mean_axis() {
@@ -67,7 +67,7 @@ mod tests {
     #[test]
     fn test_mean_1d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([1.0, 2.0, 3.0]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
         let r = t.trace().mean();
         assert_eq!(r.array(), 2.0);
         // NOTE: .exp() so we cover the case where .mean() has to use result grad.
@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn test_mean_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
         let r = t.trace().mean();
         assert_eq!(r.array(), 3.5);
         let g = r.backward();
@@ -88,7 +88,7 @@ mod tests {
     #[test]
     fn test_mean_3d() {
         let dev: TestDevice = Default::default();
-        let t = dev.ones::<Rank3<4, 2, 3>>();
+        let t: Tensor<_, TestDtype, _> = dev.ones::<Rank3<4, 2, 3>>();
         let r = t.trace().mean();
         assert_eq!(r.array(), 1.0);
         let g = r.backward();
@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn test_mean_axis_0_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
         let r = t.trace().mean::<Rank1<3>, _>();
         assert_eq!(r.array(), [-0.5, 3.0, -1.5]);
         let g = r.exp().mean().backward();
@@ -108,7 +108,7 @@ mod tests {
     #[test]
     fn test_mean_axis_1_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
         let r = t.trace().mean::<Rank1<2>, _>();
         assert_eq!(r.array(), [2.0, -4.0 / 3.0]);
         let g = r.exp().mean().backward();
@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn test_mean_axes_3d_to_1d_02() {
         let dev: TestDevice = Default::default();
-        let t = dev.sample_normal::<Rank3<2, 3, 4>>();
+        let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let r = t.trace().mean::<Rank1<3>, _>();
         let r2 = t.trace().sum::<_, Axis<0>>().sum::<_, Axis<1>>() / 8.0;
         assert_close(&r.array(), &r2.array());
@@ -131,7 +131,7 @@ mod tests {
     #[test]
     fn test_mean_axes_3d_to_1d_01() {
         let dev: TestDevice = Default::default();
-        let t = dev.sample_normal::<Rank3<2, 3, 4>>();
+        let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let r = t.trace().mean::<Rank1<4>, _>();
         let r2 = t.sum::<_, Axis<0>>().sum::<_, Axis<0>>() / 6.0;
         assert_close(&r.array(), &r2.array());

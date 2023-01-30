@@ -84,12 +84,12 @@ impl<S: Shape, E: Dtype, D: MinReduceKernel<E>, T: Tape<D>> MinTo for Tensor<S, 
 mod tests {
     use super::*;
     use crate::tensor_ops::*;
-    use crate::tests::{assert_close, TestDevice};
+    use crate::tests::*;
 
     #[test]
     fn test_min_axis_0_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 1.0, 2.0], [3.0, -2.0, 2.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 1.0, 2.0], [3.0, -2.0, 2.0]]);
         let r = t.trace().min::<Rank1<3>, _>();
         assert_eq!(r.array(), [1.0, -2.0, 2.0]);
         let g = r.exp().mean().backward();
@@ -102,7 +102,7 @@ mod tests {
     #[test]
     fn test_min_axis_1_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 1.0, 2.0], [3.0, -2.0, 2.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 1.0, 2.0], [3.0, -2.0, 2.0]]);
         let r = t.trace().min::<Rank1<2>, _>();
         assert_eq!(r.array(), [1.0, -2.0]);
         let g = r.sum().backward();
@@ -112,7 +112,7 @@ mod tests {
     #[test]
     fn test_min_axes_3d_to_1d() {
         let dev: TestDevice = Default::default();
-        let t = dev.sample_normal::<Rank3<2, 3, 4>>();
+        let t: Tensor<_, TestDtype, _> = dev.sample_normal::<Rank3<2, 3, 4>>();
         let r = t.trace().min::<Rank1<4>, _>();
         let r2 = t.trace().min::<Rank2<3, 4>, _>().min::<Rank1<4>, _>();
         assert_close(&r.array(), &r2.array());
@@ -124,7 +124,8 @@ mod tests {
     #[test]
     fn test_min_negative_zero() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[-0.0, 0.0], [0.0, -0.0], [-1.0, -0.0], [-1.0, 0.0]]);
+        let t: Tensor<_, TestDtype, _> =
+            dev.tensor([[-0.0, 0.0], [0.0, -0.0], [-1.0, -0.0], [-1.0, 0.0]]);
         let r = t.trace().min::<_, Axis<1>>();
         assert_eq!(r.array(), [-0.0, -0.0, -1.0, -1.0]);
         let g = r.sum().backward();

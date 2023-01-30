@@ -213,7 +213,7 @@ mod tests {
     #[test]
     fn test_pool2d_3d_max2d_eq_grads() {
         let dev: TestDevice = Default::default();
-        let x = dev.tensor([[[1.0f32, 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]]);
+        let x: Tensor<_, TestDtype, _> = dev.tensor([[[1.0, 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]]);
         let r = x.trace().max_pool2d::<2, 1, 0>();
         assert_close(&r.array(), &[[[1., 1., 1.2]]]);
         let g = r.sum().backward();
@@ -223,7 +223,7 @@ mod tests {
     #[test]
     fn test_pool2d_3d_min2d_eq_grads() {
         let dev: TestDevice = Default::default();
-        let x = dev.tensor([[[1., 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]]);
+        let x: Tensor<_, TestDtype, _> = dev.tensor([[[1., 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]]);
         let r = x.trace().min_pool2d::<2, 1, 0>();
         assert_close(&r.array(), &[[[0.2, 0.2, 0.2]]]);
         let g = r.sum().backward();
@@ -233,7 +233,7 @@ mod tests {
     #[test]
     fn test_pool2d_3d_max2d() {
         let dev = TestDevice::seed_from_u64(234);
-        let x: Tensor<Rank3<2, 3, 4>, f32, _> = dev.sample_normal();
+        let x: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let r = x.trace().max_pool2d::<2, 2, 0>();
         assert_close(
             &r.array(),
@@ -253,7 +253,7 @@ mod tests {
     #[test]
     fn test_pool2d_3d_min2d() {
         let dev = TestDevice::seed_from_u64(234);
-        let x: Tensor<Rank3<2, 3, 4>, f32, _> = dev.sample_normal();
+        let x: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let r = x.trace().min_pool2d::<2, 2, 0>();
         assert_close(
             &r.array(),
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn test_pool2d_3d_avg2d() {
         let dev = TestDevice::seed_from_u64(234);
-        let x: Tensor<Rank3<2, 3, 4>, f32, _> = dev.sample_normal();
+        let x: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let r = x.trace().avg_pool2d::<2, 2, 0>();
         assert_close(
             &r.array(),
@@ -293,7 +293,7 @@ mod tests {
     #[test]
     fn test_pool2d_4d_avg2d() {
         let dev = TestDevice::seed_from_u64(234);
-        let x: Tensor<Rank4<2, 4, 2, 2>, f32, _> = dev.sample_normal();
+        let x: Tensor<Rank4<2, 4, 2, 2>, TestDtype, _> = dev.sample_normal();
         let r = x.trace().avg_pool2d::<1, 2, 0>();
         assert_close(
             &r.array(),

@@ -92,54 +92,54 @@ impl<S: Shape, E: Dtype, D: BroadcastKernel<E>, T: Tape<D>> BroadcastTo for Tens
 mod tests {
     use super::*;
     use crate::tensor_ops::*;
-    use crate::tests::{AssertClose, TestDevice};
+    use crate::tests::*;
 
     #[test]
     fn test_valid_1d_broadcasts() {
         let dev: TestDevice = Default::default();
-        let _: Tensor<Rank1<5>, f32, _> = dev.zeros::<Rank0>().broadcast();
-        let _: Tensor<Rank2<5, 3>, f32, _> = dev.zeros::<Rank1<3>>().broadcast();
-        let _: Tensor<Rank2<5, 3>, f32, _> = dev.zeros::<Rank1<5>>().broadcast();
-        let _: Tensor<Rank3<3, 5, 7>, f32, _> = dev.zeros::<Rank2<5, 7>>().broadcast();
-        let _: Tensor<Rank3<3, 5, 7>, f32, _> = dev.zeros::<Rank2<3, 7>>().broadcast();
-        let _: Tensor<Rank3<3, 5, 7>, f32, _> = dev.zeros::<Rank2<3, 5>>().broadcast();
-        let _: Tensor<Rank3<3, 5, 7>, f32, _> = dev.zeros::<Rank2<3, 5>>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank3<5, 7, 9>>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank3<3, 7, 9>>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank3<3, 5, 9>>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank3<3, 5, 7>>().broadcast();
+        let _: Tensor<Rank1<5>, TestDtype, _> = dev.zeros::<Rank0>().broadcast();
+        let _: Tensor<Rank2<5, 3>, TestDtype, _> = dev.zeros::<Rank1<3>>().broadcast();
+        let _: Tensor<Rank2<5, 3>, TestDtype, _> = dev.zeros::<Rank1<5>>().broadcast();
+        let _: Tensor<Rank3<3, 5, 7>, TestDtype, _> = dev.zeros::<Rank2<5, 7>>().broadcast();
+        let _: Tensor<Rank3<3, 5, 7>, TestDtype, _> = dev.zeros::<Rank2<3, 7>>().broadcast();
+        let _: Tensor<Rank3<3, 5, 7>, TestDtype, _> = dev.zeros::<Rank2<3, 5>>().broadcast();
+        let _: Tensor<Rank3<3, 5, 7>, TestDtype, _> = dev.zeros::<Rank2<3, 5>>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank3<5, 7, 9>>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank3<3, 7, 9>>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank3<3, 5, 9>>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank3<3, 5, 7>>().broadcast();
     }
 
     #[test]
     fn test_valid_2d_broadcasts() {
         let dev: TestDevice = Default::default();
-        let _: Tensor<Rank2<5, 3>, f32, _> = dev.zeros::<Rank0>().broadcast();
-        let _: Tensor<Rank3<3, 5, 7>, f32, _> = dev.zeros::<Rank1<3>>().broadcast();
-        let _: Tensor<Rank3<3, 5, 7>, f32, _> = dev.zeros::<Rank1<5>>().broadcast();
-        let _: Tensor<Rank3<3, 5, 7>, f32, _> = dev.zeros::<Rank1<7>>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank2<3, 5>>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank2<3, 7>>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank2<3, 9>>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank2<5, 7>>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank2<5, 9>>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank2<7, 9>>().broadcast();
+        let _: Tensor<Rank2<5, 3>, TestDtype, _> = dev.zeros::<Rank0>().broadcast();
+        let _: Tensor<Rank3<3, 5, 7>, TestDtype, _> = dev.zeros::<Rank1<3>>().broadcast();
+        let _: Tensor<Rank3<3, 5, 7>, TestDtype, _> = dev.zeros::<Rank1<5>>().broadcast();
+        let _: Tensor<Rank3<3, 5, 7>, TestDtype, _> = dev.zeros::<Rank1<7>>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank2<3, 5>>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank2<3, 7>>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank2<3, 9>>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank2<5, 7>>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank2<5, 9>>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank2<7, 9>>().broadcast();
     }
 
     #[test]
     fn test_valid_3d_broadcasts() {
         let dev: TestDevice = Default::default();
-        let _: Tensor<Rank3<3, 5, 7>, f32, _> = dev.zeros::<Rank0>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank1<3>>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank1<5>>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank1<7>>().broadcast();
-        let _: Tensor<Rank4<3, 5, 7, 9>, f32, _> = dev.zeros::<Rank1<9>>().broadcast();
+        let _: Tensor<Rank3<3, 5, 7>, TestDtype, _> = dev.zeros::<Rank0>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank1<3>>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank1<5>>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank1<7>>().broadcast();
+        let _: Tensor<Rank4<3, 5, 7, 9>, TestDtype, _> = dev.zeros::<Rank1<9>>().broadcast();
     }
 
     #[test]
     fn test_broadcast_backwards() {
         let dev: TestDevice = Default::default();
-        let a = dev.sample_normal::<Rank1<3>>();
-        let b = dev.sample_normal::<Rank2<5, 3>>();
+        let a: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
+        let b: Tensor<Rank2<5, 3>, TestDtype, _> = dev.sample_normal();
         let a_up = a.trace().broadcast::<Rank2<5, 3>, _>();
         a_up.array().assert_close(&[a.array(); 5], 1e-4);
         let r = a_up * b.clone();

@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn test_sum_1d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([1.0f32, 2.0, 3.0]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
         let r = t.trace().sum::<Rank0, _>();
         assert_eq!(r.array(), 6.0);
         // NOTE: .exp() to make sure its using result grad properly
@@ -94,7 +94,7 @@ mod tests {
     #[test]
     fn test_sum_axis_0_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
         let r = t.trace().sum::<Rank1<3>, _>();
         assert_eq!(r.array(), [-1.0, 6.0, -3.0]);
         let g = r.exp().mean().backward();
@@ -107,7 +107,7 @@ mod tests {
     #[test]
     fn test_sum_axis_1_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
         let r = t.trace().sum::<Rank1<2>, _>();
         assert_eq!(r.array(), [6.0, -4.0]);
         let g = r.exp().mean().backward();
@@ -117,7 +117,7 @@ mod tests {
     #[test]
     fn test_sum_axes_3d_to_1d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<Rank3<2, 3, 4>, f32, _> = dev.sample(rand_distr::StandardNormal);
+        let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let r = t.trace().sum::<Rank1<3>, _>();
         let r2 = t.trace().sum::<Rank2<3, 4>, _>().sum::<Rank1<3>, _>();
         assert_close(&r.array(), &r2.array());
@@ -129,7 +129,7 @@ mod tests {
     #[test]
     fn test_sum_broadcasted() {
         let dev: TestDevice = Default::default();
-        let t1 = dev.sample::<Rank2<4, 3>, _>(rand_distr::StandardNormal);
+        let t1: Tensor<Rank2<4, 3>, TestDtype, _> = dev.sample_normal();
         let t2 = t1.clone().broadcast::<Rank3<4, 3, 5>, _>();
         let r1 = t1.trace().sum::<Rank1<4>, _>() * 5.0;
         let r2 = t2.trace().sum::<Rank1<4>, _>();
@@ -141,7 +141,7 @@ mod tests {
     #[test]
     fn test_sum_chunking() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0; 100]; 60]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0; 100]; 60]);
         let r = t.trace().sum::<Rank1<60>, _>();
         assert_eq!(r.array(), [100.0; 60]);
         let g = r.sum().backward();

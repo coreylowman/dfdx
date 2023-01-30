@@ -40,18 +40,21 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<LnKernelOp, E>, T: Tape<D>> Tensor<S, E,
 
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::TestDevice};
+    use crate::{tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_ln() {
         let dev: TestDevice = Default::default();
-        let x = dev.tensor([-2.0f32, -1.0, 0.0, 1.0, 2.0]);
+        let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0f32, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().ln();
         let r_array = r.array();
         assert!(r_array[0].is_nan());
         assert!(r_array[1].is_nan());
-        assert!(r_array[2..] == [f32::NEG_INFINITY, 0.0, std::f32::consts::LN_2]);
+        assert!(r_array[2..] == [TestDtype::NEG_INFINITY, 0.0, TestDtype::ln(2.0)]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&x).array(), [-0.1, -0.2, f32::INFINITY, 0.2, 0.1]);
+        assert_eq!(
+            g.get(&x).array(),
+            [-0.1, -0.2, TestDtype::INFINITY, 0.2, 0.1]
+        );
     }
 }

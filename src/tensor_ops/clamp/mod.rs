@@ -49,7 +49,7 @@ mod tests {
     #[test]
     fn test_clamp() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[-1.0, 0.0, 1.0], [-2.0, 2.0, 1.1]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[-1.0, 0.0, 1.0], [-2.0, 2.0, 1.1]]);
         let r = t.trace().clamp(-1.0, 1.0);
         assert_close(&r.array(), &[[-1.0, 0.0, 1.0], [-1.0, 1.0, 1.0]]);
         let g = r.exp().mean().backward();
