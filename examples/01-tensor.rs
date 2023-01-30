@@ -30,7 +30,7 @@ fn main() {
     // each of the creation methods also supports specifying the shape on the function
     // note to change the dtype we specify the dtype as the 2nd generic parameter
     let _: Tensor<Rank2<2, 3>, f64> = dev.zeros();
-    let _ = dev.ones::<Rank2<2, 3>>();
+    let _: Tensor<Rank2<2, 3>, f64> = dev.ones();
 
     // we can also create tensors filled with random values
     // from a normal distribution

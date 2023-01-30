@@ -2,7 +2,7 @@
 
 use dfdx::{
     shapes::{Rank0, Rank1, Rank2},
-    tensor::{AsArray, Cpu, SampleTensor},
+    tensor::{AsArray, Cpu, SampleTensor, Tensor},
     tensor_ops::{MeanTo, TryMatMul},
 };
 
@@ -41,14 +41,14 @@ fn main() {
         / 2.0;
 
     // then we have things like matrix and vector multiplication:
-    let a = dev.sample_normal::<Rank2<3, 5>>();
-    let b = dev.sample_normal::<Rank2<5, 7>>();
+    let a: Tensor<Rank2<3, 5>, f32, _> = dev.sample_normal();
+    let b: Tensor<Rank2<5, 7>, f32, _> = dev.sample_normal();
     let c = a.matmul(b);
     dbg!(c.array());
 
     // which even the outer product between two vectors!
-    let a = dev.sample_normal::<Rank1<3>>();
-    let b = dev.sample_normal::<Rank1<7>>();
+    let a: Tensor<Rank1<3>, f32, _> = dev.sample_normal();
+    let b: Tensor<Rank1<7>, f32, _> = dev.sample_normal();
     let c = a.matmul(b);
     dbg!(c.array());
 }
