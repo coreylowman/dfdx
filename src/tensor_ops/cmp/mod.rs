@@ -25,6 +25,23 @@ fn try_cmp_op<Op, S: Shape, E: Unit, D: CmpKernel<Op, E>, T: Tape<D>>(
     Ok(out)
 }
 
+pub trait ScalarCmpKernel<Op, E: Unit>: DeviceStorage {
+    fn forward<S: Shape>(
+        &self,
+        tensor: &Self::Storage<S, E>,
+        scalar: E,
+    ) -> Result<Self::Storage<S, bool>, Self::Err>;
+}
+
+fn try_scalar_cmp_op<Op, S: Shape, E: Unit, D: ScalarCmpKernel<Op, E>, T: Tape<D>>(
+    tensor: &Tensor<S, E, D, T>,
+    scalar: E,
+) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
+    let storage = tensor.device.forward(&tensor.storage, scalar)?;
+    let out = tensor.device.upgrade(storage);
+    Ok(out)
+}
+
 pub enum EqKernelOp {}
 pub enum NeKernelOp {}
 pub enum GtKernelOp {}
@@ -50,6 +67,16 @@ impl<S: Shape, E: Unit, D: CmpKernel<EqKernelOp, E>, T: Tape<D>> Tensor<S, E, D,
     }
 }
 
+impl<S: Shape, E: Unit, D: ScalarCmpKernel<EqKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn try_scalar_eq(&self, scalar: E) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
+        try_scalar_cmp_op(self, scalar)
+    }
+
+    pub fn scalar_eq(&self, scalar: E) -> Tensor<S, bool, D, NoneTape> {
+        self.try_scalar_eq(scalar).unwrap()
+    }
+}
+
 ///
 pub fn ne<S: Shape, E: Unit, D: CmpKernel<NeKernelOp, E>, T: Tape<D>>(
     lhs: &Tensor<S, E, D, T>,
@@ -58,7 +85,6 @@ pub fn ne<S: Shape, E: Unit, D: CmpKernel<NeKernelOp, E>, T: Tape<D>>(
     lhs.ne(rhs)
 }
 
-///
 impl<S: Shape, E: Unit, D: CmpKernel<NeKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
     pub fn try_ne(&self, other: &Self) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
         try_cmp_op(self, other)
@@ -66,6 +92,16 @@ impl<S: Shape, E: Unit, D: CmpKernel<NeKernelOp, E>, T: Tape<D>> Tensor<S, E, D,
 
     pub fn ne(&self, other: &Self) -> Tensor<S, bool, D, NoneTape> {
         self.try_ne(other).unwrap()
+    }
+}
+
+impl<S: Shape, E: Unit, D: ScalarCmpKernel<NeKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn try_scalar_ne(&self, scalar: E) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
+        try_scalar_cmp_op(self, scalar)
+    }
+
+    pub fn scalar_ne(&self, scalar: E) -> Tensor<S, bool, D, NoneTape> {
+        self.try_scalar_ne(scalar).unwrap()
     }
 }
 
@@ -87,6 +123,16 @@ impl<S: Shape, E: Unit, D: CmpKernel<GtKernelOp, E>, T: Tape<D>> Tensor<S, E, D,
     }
 }
 
+impl<S: Shape, E: Unit, D: ScalarCmpKernel<GtKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn try_scalar_gt(&self, scalar: E) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
+        try_scalar_cmp_op(self, scalar)
+    }
+
+    pub fn scalar_gt(&self, scalar: E) -> Tensor<S, bool, D, NoneTape> {
+        self.try_scalar_gt(scalar).unwrap()
+    }
+}
+
 ///
 pub fn ge<S: Shape, E: Unit, D: CmpKernel<GeKernelOp, E>, T: Tape<D>>(
     lhs: &Tensor<S, E, D, T>,
@@ -102,6 +148,16 @@ impl<S: Shape, E: Unit, D: CmpKernel<GeKernelOp, E>, T: Tape<D>> Tensor<S, E, D,
 
     pub fn ge(&self, other: &Self) -> Tensor<S, bool, D, NoneTape> {
         self.try_ge(other).unwrap()
+    }
+}
+
+impl<S: Shape, E: Unit, D: ScalarCmpKernel<GeKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn try_scalar_ge(&self, scalar: E) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
+        try_scalar_cmp_op(self, scalar)
+    }
+
+    pub fn scalar_ge(&self, scalar: E) -> Tensor<S, bool, D, NoneTape> {
+        self.try_scalar_ge(scalar).unwrap()
     }
 }
 
@@ -123,6 +179,16 @@ impl<S: Shape, E: Unit, D: CmpKernel<LtKernelOp, E>, T: Tape<D>> Tensor<S, E, D,
     }
 }
 
+impl<S: Shape, E: Unit, D: ScalarCmpKernel<LtKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn try_scalar_lt(&self, scalar: E) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
+        try_scalar_cmp_op(self, scalar)
+    }
+
+    pub fn scalar_lt(&self, scalar: E) -> Tensor<S, bool, D, NoneTape> {
+        self.try_scalar_lt(scalar).unwrap()
+    }
+}
+
 ///
 pub fn le<S: Shape, E: Unit, D: CmpKernel<LeKernelOp, E>, T: Tape<D>>(
     lhs: &Tensor<S, E, D, T>,
@@ -138,6 +204,16 @@ impl<S: Shape, E: Unit, D: CmpKernel<LeKernelOp, E>, T: Tape<D>> Tensor<S, E, D,
 
     pub fn le(&self, other: &Self) -> Tensor<S, bool, D, NoneTape> {
         self.try_le(other).unwrap()
+    }
+}
+
+impl<S: Shape, E: Unit, D: ScalarCmpKernel<LeKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+    pub fn try_scalar_le(&self, scalar: E) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
+        try_scalar_cmp_op(self, scalar)
+    }
+
+    pub fn scalar_le(&self, scalar: E) -> Tensor<S, bool, D, NoneTape> {
+        self.try_scalar_le(scalar).unwrap()
     }
 }
 
@@ -167,6 +243,14 @@ mod tests {
     }
 
     #[test]
+    fn test_scalar_eq() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor([[0.0, 1.2], [3.4, -5.6]]);
+        let r = a.scalar_eq(1.2);
+        assert_eq!(r.array(), [[false, true], [false, false]]);
+    }
+
+    #[test]
     fn test_ne() {
         let dev: TestDevice = Default::default();
         let a = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]]);
@@ -185,6 +269,14 @@ mod tests {
 
         let r = a.ne(&b);
         assert_eq!(r.array(), [[true, false, true], [true, false, true]]);
+    }
+
+    #[test]
+    fn test_scalar_ne() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor([[0.0, 1.2], [3.4, -5.6]]);
+        let r = a.scalar_ne(1.2);
+        assert_eq!(r.array(), [[true, false], [true, true]]);
     }
 
     #[test]
@@ -209,6 +301,14 @@ mod tests {
     }
 
     #[test]
+    fn test_scalar_gt() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor([[0.0, 1.2], [3.4, -5.6]]);
+        let r = a.scalar_gt(1.2);
+        assert_eq!(r.array(), [[false, false], [true, false]]);
+    }
+
+    #[test]
     fn test_ge() {
         let dev: TestDevice = Default::default();
         let a = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]]);
@@ -227,6 +327,14 @@ mod tests {
 
         let r = a.ge(&b);
         assert_eq!(r.array(), [[true, true, true], [true, true, false]]);
+    }
+
+    #[test]
+    fn test_scalar_ge() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor([[0.0, 1.2], [3.4, -5.6]]);
+        let r = a.scalar_ge(1.2);
+        assert_eq!(r.array(), [[false, true], [true, false]]);
     }
 
     #[test]
@@ -251,6 +359,14 @@ mod tests {
     }
 
     #[test]
+    fn test_scalar_lt() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor([[0.0, 1.2], [3.4, -5.6]]);
+        let r = a.scalar_lt(1.2);
+        assert_eq!(r.array(), [[true, false], [false, true]]);
+    }
+
+    #[test]
     fn test_le() {
         let dev: TestDevice = Default::default();
         let a = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]]);
@@ -269,5 +385,13 @@ mod tests {
 
         let r = a.le(&b);
         assert_eq!(r.array(), [[false, true, false], [false, true, true]]);
+    }
+
+    #[test]
+    fn test_scalar_le() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor([[0.0, 1.2], [3.4, -5.6]]);
+        let r = a.scalar_le(1.2);
+        assert_eq!(r.array(), [[true, true], [false, true]]);
     }
 }

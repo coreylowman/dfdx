@@ -3,7 +3,10 @@ use crate::{
     tensor::cpu::{Cpu, LendingIterator, StridedArray},
 };
 
-use super::{CmpKernel, EqKernelOp, GeKernelOp, GtKernelOp, LeKernelOp, LtKernelOp, NeKernelOp};
+use super::{
+    CmpKernel, EqKernelOp, GeKernelOp, GtKernelOp, LeKernelOp, LtKernelOp, NeKernelOp,
+    ScalarCmpKernel,
+};
 
 trait CmpOpCpuKernel<E: Unit> {
     fn func(lhs: E, rhs: E) -> bool;
@@ -21,6 +24,22 @@ impl<Op: CmpOpCpuKernel<E>, E: Unit> CmpKernel<Op, E> for Cpu {
         let mut out_iter = out.iter_mut();
         while let Some((o, (l, r))) = out_iter.next().zip(lhs_iter.next().zip(rhs_iter.next())) {
             *o = Op::func(*l, *r);
+        }
+        Ok(out)
+    }
+}
+
+impl<Op: CmpOpCpuKernel<E>, E: Unit> ScalarCmpKernel<Op, E> for Cpu {
+    fn forward<S: Shape>(
+        &self,
+        lhs: &Self::Storage<S, E>,
+        scalar: E,
+    ) -> Result<Self::Storage<S, bool>, Self::Err> {
+        let mut out: Self::Storage<S, bool> = StridedArray::new(lhs.shape)?;
+        let mut lhs_iter = lhs.iter();
+        let mut out_iter = out.iter_mut();
+        while let Some((o, l)) = out_iter.next().zip(lhs_iter.next()) {
+            *o = Op::func(*l, scalar);
         }
         Ok(out)
     }
