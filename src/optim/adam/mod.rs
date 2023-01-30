@@ -59,14 +59,14 @@ impl Default for AdamConfig<f32> {
 /// Constructing using default:
 /// ```rust
 /// # use dfdx::{prelude::*, optim::*};
-/// # type Model = Tensor<Rank0>;
+/// # type Model = Tensor<Rank0, f32, Cpu>;
 /// let mut opt: Adam<Model> = Default::default();
 /// ```
 ///
 /// Changing using new
 /// ```rust
 /// # use dfdx::{prelude::*, optim::*};
-/// # type Model = Tensor<Rank0>;
+/// # type Model = Tensor<Rank0, f32, Cpu>;
 /// let mut opt: Adam<Model> = Adam::new(AdamConfig {
 ///     lr: 1e-2,
 ///     betas: [0.5, 0.25],

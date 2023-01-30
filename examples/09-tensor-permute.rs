@@ -7,7 +7,7 @@ use dfdx::tensor_ops::PermuteTo;
 fn main() {
     let dev: Cpu = Default::default();
 
-    let a: Tensor<Rank3<3, 5, 7>> = dev.zeros();
+    let a: Tensor<Rank3<3, 5, 7>,f32, _> = dev.zeros();
 
     // permuting is as easy as just expressing the desired shape
     // note that we are reversing the order of the axes here!
@@ -19,7 +19,7 @@ fn main() {
     // Just like broadcast/reduce there are times when
     // type inference is impossible because of ambiguities.
     // You can specify axes explicitly to get aroudn this.
-    let c: Tensor<Rank3<1, 1, 1>> = dev.zeros();
+    let c: Tensor<Rank3<1, 1, 1>, f32, _> = dev.zeros();
     let _ = c.permute::<_, Axes3<1, 0, 2>>();
     // NOTE: fails with "Multiple impls satisfying..."
     // let _ = c.permute::<Rank3<1, 1, 1>, _>();
