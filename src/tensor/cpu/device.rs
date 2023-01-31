@@ -46,14 +46,14 @@ pub enum CpuError {
     /// Device is out of memory
     OutOfMemory,
     /// Not enough elements were provided when creating a tensor
-    NotEnoughElements,
+    WrongNumElements,
 }
 
 impl std::fmt::Display for CpuError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::OutOfMemory => f.write_str("CpuError::OutOfMemory"),
-            Self::NotEnoughElements => f.write_str("CpuError::NotEnoughElements"),
+            Self::WrongNumElements => f.write_str("CpuError::WrongNumElements"),
         }
     }
 }

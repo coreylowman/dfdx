@@ -200,15 +200,14 @@ impl<E: Unit, const M: usize, const N: usize, const O: usize, const P: usize>
 impl<E: Unit> TensorFromVec<E> for Cpu {
     fn try_tensor_from_vec<S: Shape>(
         &self,
-        mut src: Vec<E>,
+        src: Vec<E>,
         shape: S,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
         let num_elements = shape.num_elements();
 
-        if src.len() < num_elements {
-            Err(CpuError::NotEnoughElements)
+        if src.len() != num_elements {
+            Err(CpuError::WrongNumElements)
         } else {
-            src.truncate(num_elements);
             let array = StridedArray {
                 data: Arc::new(src),
                 shape,
