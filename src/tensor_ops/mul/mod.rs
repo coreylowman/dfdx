@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use super::{ops::*, Device};
+use super::ops::*;
 use crate::{gradients::*, shapes::*, tensor::*};
 
 #[repr(C)]
@@ -35,19 +35,33 @@ pub struct ScalarMulKernelOp<E> {
 /// let r = a * 2.0;
 /// assert_eq!(r.array(), [[2.0, 4.0, 6.0], [-2.0, -4.0, -6.0]]);
 /// ```
-pub fn mul<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
+pub fn mul<S: ConstShape, E: Dtype, D, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, RhsTape>,
-) -> Tensor<S, E, D, T> {
+) -> Tensor<S, E, D, T>
+where
+    D: BinaryKernel<BinaryMulKernelOp, E>,
+{
     lhs * rhs
 }
-pub trait TryMul<Rhs = Self>: HasErr {
+
+/// Fallible version of std::ops::Mul with compile time known shapes
+pub trait TryConstMul<Rhs = Self>: HasErr {
     fn try_mul(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, RhsTape: Tape<D>>
-    TryMul<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
+/// Runtime shape checked multiplication
+pub trait TryCheckedMul<Rhs = Self>: HasErr {
+    fn checked_mul(self, rhs: Rhs) -> Option<Self> {
+        self.try_checked_mul(rhs).map(Result::unwrap)
+    }
+    fn try_checked_mul(self, rhs: Rhs) -> Option<Result<Self, Self::Err>>;
+}
+
+impl<S: ConstShape, E: Dtype, D, LhsTape: Tape<D>, RhsTape: Tape<D>>
+    TryConstMul<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
+    D: BinaryKernel<BinaryMulKernelOp, E>,
     LhsTape: Merge<RhsTape>,
 {
     fn try_mul(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, Self::Err> {
@@ -55,22 +69,36 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryMul<E> for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D, LhsTape: Tape<D>, RhsTape: Tape<D>>
+    TryCheckedMul<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
+where
+    D: BinaryKernel<BinaryMulKernelOp, E>,
+    LhsTape: Merge<RhsTape>,
+{
+    fn try_checked_mul(self, rhs: Tensor<S, E, D, RhsTape>) -> Option<Result<Self, Self::Err>> {
+        try_checked_binary_op(BinaryMulKernelOp, self, rhs)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarMulKernelOp<E>, E>, T: Tape<D>> TryConstMul<E>
+    for Tensor<S, E, D, T>
+{
     fn try_mul(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarMulKernelOp { scalar: rhs }, self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, Rhs> std::ops::Mul<Rhs>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, Rhs> std::ops::Mul<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
-    Self: TryMul<Rhs>,
+    Self: TryConstMul<Rhs>,
 {
     type Output = Self;
     fn mul(self, rhs: Rhs) -> Self::Output {
         self.try_mul(rhs).unwrap()
     }
 }
+
 #[cfg(test)]
 mod tests {
     use crate::{tensor::*, tensor_ops::*, tests::*};

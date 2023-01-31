@@ -36,7 +36,10 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> VarTo for Tensor<S, f32, D, T> {
             .retaped::<T>()
             .try_mean::<Dst, Ax>()?
             .try_broadcast_like(self.shape())?;
-        mean.try_sub(self)?.try_square()?.try_mean()
+        mean.try_checked_sub(self)
+            .unwrap()?
+            .try_square()?
+            .try_mean()
     }
 }
 

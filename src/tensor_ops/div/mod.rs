@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use super::{ops::*, Device};
+use super::ops::*;
 use crate::{gradients::*, shapes::*, tensor::*};
 
 #[repr(C)]
@@ -36,21 +36,33 @@ pub struct BinaryDivKernelOp;
 /// let r = a / 2.0;
 /// assert_eq!(r.array(), [[0.5, 1.0, 1.5], [-0.5, -1.0, -1.5]]);
 /// ```
-pub fn div<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
+pub fn div<S: ConstShape, E: Dtype, D, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, RhsTape>,
-) -> Tensor<S, E, D, T> {
+) -> Tensor<S, E, D, T>
+where
+    D: BinaryKernel<BinaryDivKernelOp, E>,
+{
     lhs / rhs
 }
 
-/// Fallible version of std::ops::Div
-pub trait TryDiv<Rhs = Self>: HasErr {
+/// Fallible version of std::ops::Div with compile time known shapes
+pub trait TryConstDiv<Rhs = Self>: HasErr {
     fn try_div(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, RhsTape: Tape<D>>
-    TryDiv<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
+/// Runetime shape checked division
+pub trait TryCheckedDiv<Rhs = Self>: HasErr {
+    fn checked_div(self, rhs: Rhs) -> Option<Self> {
+        self.try_checked_div(rhs).map(Result::unwrap)
+    }
+    fn try_checked_div(self, rhs: Rhs) -> Option<Result<Self, Self::Err>>;
+}
+
+impl<S: ConstShape, E: Dtype, D, LhsTape: Tape<D>, RhsTape: Tape<D>>
+    TryConstDiv<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
+    D: BinaryKernel<BinaryDivKernelOp, E>,
     LhsTape: Merge<RhsTape>,
 {
     /// See [div]
@@ -59,17 +71,31 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryDiv<E> for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D, LhsTape: Tape<D>, RhsTape: Tape<D>>
+    TryCheckedDiv<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
+where
+    D: BinaryKernel<BinaryDivKernelOp, E>,
+    LhsTape: Merge<RhsTape>,
+{
+    /// See [div]
+    fn try_checked_div(self, rhs: Tensor<S, E, D, RhsTape>) -> Option<Result<Self, Self::Err>> {
+        try_checked_binary_op(BinaryDivKernelOp, self, rhs)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarDivKernelOp<E>, E>, T: Tape<D>> TryConstDiv<E>
+    for Tensor<S, E, D, T>
+{
     /// See [div]
     fn try_div(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarDivKernelOp { scalar: rhs }, self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, Rhs> std::ops::Div<Rhs>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, Rhs> std::ops::Div<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
-    Self: TryDiv<Rhs>,
+    Self: TryConstDiv<Rhs>,
 {
     type Output = Self;
     /// See [div]

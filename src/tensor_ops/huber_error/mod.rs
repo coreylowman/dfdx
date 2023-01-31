@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use super::{ops::try_binary_op, Device};
+use super::ops::{try_binary_op, try_checked_binary_op, BinaryKernel};
 use crate::{gradients::*, shapes::*, tensor::Tensor};
 
 #[repr(C)]
@@ -28,16 +28,21 @@ pub struct HuberErrorKernelOp<E: Dtype> {
 /// let r = a.huber_error(b, 1.0);
 /// assert_eq!(r.array(), [0.125, 0.28125, 1.0]);
 /// ```
-pub fn huber_error<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<R>, R: Tape<D>>(
+pub fn huber_error<S: ConstShape, E: Dtype, D, T: Tape<D> + Merge<R>, R: Tape<D>>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, R>,
     delta: E,
-) -> Tensor<S, E, D, T> {
+) -> Tensor<S, E, D, T>
+where
+    D: BinaryKernel<HuberErrorKernelOp<E>, E>,
+{
     lhs.huber_error(rhs, delta)
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
-    /// See [huber_error]
+impl<S: ConstShape, E: Dtype, D: BinaryKernel<HuberErrorKernelOp<E>, E>, T: Tape<D>>
+    Tensor<S, E, D, T>
+{
+    /// Requires compile time shapes. See [huber_error]
     pub fn huber_error<R: Tape<D>>(self, rhs: Tensor<S, E, D, R>, delta: E) -> Self
     where
         T: Merge<R>,
@@ -45,7 +50,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
         self.try_huber_error(rhs, delta).unwrap()
     }
 
-    /// See [huber_error]
+    /// Requires compile time shapes. See [huber_error]
     pub fn try_huber_error<R: Tape<D>>(
         self,
         rhs: Tensor<S, E, D, R>,
@@ -55,6 +60,28 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
         T: Merge<R>,
     {
         try_binary_op(HuberErrorKernelOp { delta }, self, rhs)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: BinaryKernel<HuberErrorKernelOp<E>, E>, T: Tape<D>> Tensor<S, E, D, T> {
+    /// Runtime shape checked. See [huber_error]
+    pub fn checked_huber_error<R: Tape<D>>(self, rhs: Tensor<S, E, D, R>, delta: E) -> Option<Self>
+    where
+        T: Merge<R>,
+    {
+        self.try_checked_huber_error(rhs, delta).map(Result::unwrap)
+    }
+
+    /// Runtime shape checked. See [huber_error]
+    pub fn try_checked_huber_error<R: Tape<D>>(
+        self,
+        rhs: Tensor<S, E, D, R>,
+        delta: E,
+    ) -> Option<Result<Self, D::Err>>
+    where
+        T: Merge<R>,
+    {
+        try_checked_binary_op(HuberErrorKernelOp { delta }, self, rhs)
     }
 }
 

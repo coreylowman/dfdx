@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use super::{ops::try_binary_op, Device};
+use super::ops::{try_binary_op, try_checked_binary_op, BinaryKernel};
 use crate::{gradients::*, shapes::*, tensor::Tensor};
 
 #[repr(C)]
@@ -22,15 +22,20 @@ pub struct MaximumKernelOp;
 /// let b = dev.tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
 /// let r = a.maximum(b);
 /// assert_eq!(r.array(), [[1.0, 2.0, 3.0], [-1.0, 2.0, -3.0]]);
-pub fn maximum<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D> + Merge<RTape>, RTape: Tape<D>>(
+pub fn maximum<S: ConstShape, E: Dtype, D, LTape: Tape<D> + Merge<RTape>, RTape: Tape<D>>(
     lhs: Tensor<S, E, D, LTape>,
     rhs: Tensor<S, E, D, RTape>,
-) -> Tensor<S, E, D, LTape> {
+) -> Tensor<S, E, D, LTape>
+where
+    D: BinaryKernel<MaximumKernelOp, E>,
+{
     lhs.maximum(rhs)
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
-    /// See [maximum]
+impl<S: ConstShape, E: Dtype, D: BinaryKernel<MaximumKernelOp, E>, LTape: Tape<D>>
+    Tensor<S, E, D, LTape>
+{
+    /// Requires compile time shapes. See [maximum]
     pub fn maximum<RTape: Tape<D>>(self, rhs: Tensor<S, E, D, RTape>) -> Self
     where
         LTape: Merge<RTape>,
@@ -38,12 +43,35 @@ impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
         self.try_maximum(rhs).unwrap()
     }
 
-    /// See [maximum]
+    /// Requires compile time shapes. See [maximum]
     pub fn try_maximum<R: Tape<D>>(self, rhs: Tensor<S, E, D, R>) -> Result<Self, D::Err>
     where
         LTape: Merge<R>,
     {
         try_binary_op(MaximumKernelOp, self, rhs)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: BinaryKernel<MaximumKernelOp, E>, LTape: Tape<D>>
+    Tensor<S, E, D, LTape>
+{
+    /// Runtime shape checked. See [maximum]
+    pub fn checked_maximum<RTape: Tape<D>>(self, rhs: Tensor<S, E, D, RTape>) -> Option<Self>
+    where
+        LTape: Merge<RTape>,
+    {
+        self.try_checked_maximum(rhs).map(Result::unwrap)
+    }
+
+    /// Runtime shape checked. See [maximum]
+    pub fn try_checked_maximum<R: Tape<D>>(
+        self,
+        rhs: Tensor<S, E, D, R>,
+    ) -> Option<Result<Self, D::Err>>
+    where
+        LTape: Merge<R>,
+    {
+        try_checked_binary_op(MaximumKernelOp, self, rhs)
     }
 }
 

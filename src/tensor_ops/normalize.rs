@@ -4,7 +4,7 @@ use crate::{
     tensor::{HasErr, Tensor},
 };
 
-use super::{BroadcastTo, Device, MeanTo, StddevTo, TryDiv, TrySub};
+use super::{BroadcastTo, Device, MeanTo, StddevTo, TryCheckedDiv, TryCheckedSub};
 
 /// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Ax`. `epsilon` is used during stddev.
 /// Computes `(t - t.mean(Ax)) / t.std(Ax, epsilon)`.
@@ -45,7 +45,10 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
             .retaped::<T>()
             .try_stddev::<_, Ax>(epsilon)?
             .try_broadcast_like(self.shape())?;
-        self.try_sub(mean)?.try_div(std)
+        self.try_checked_sub(mean)
+            .unwrap()?
+            .try_checked_div(std)
+            .unwrap()
     }
 }
 

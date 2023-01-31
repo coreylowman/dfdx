@@ -43,8 +43,14 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> LogSumExpTo for Tensor<S, E, 
     {
         let shape = *self.shape();
         let max: Tensor<Dst, E, D> = self.retaped().try_max()?;
-        let t = self.try_sub(max.clone().try_broadcast_like::<_, Ax>(&shape)?)?;
-        t.try_exp()?.try_sum::<Dst, Ax>()?.try_ln()?.try_add(max)
+        let t = self
+            .try_checked_sub(max.clone().try_broadcast_like::<_, Ax>(&shape)?)
+            .unwrap()?;
+        t.try_exp()?
+            .try_sum::<Dst, Ax>()?
+            .try_ln()?
+            .try_checked_add(max)
+            .unwrap()
     }
 }
 

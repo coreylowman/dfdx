@@ -3,12 +3,8 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use super::{ops::*, Device};
-use crate::{
-    gradients::*,
-    shapes::*,
-    tensor::{HasErr, Tensor},
-};
+use super::ops::*;
+use crate::{gradients::*, shapes::*, tensor::*};
 
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
@@ -39,40 +35,69 @@ pub struct ScalarAddKernelOp<E> {
 /// let r = a + 1.0;
 /// assert_eq!(r.array(), [[2.0, 3.0, 4.0], [0.0, -1.0, -2.0]]);
 /// ```
-pub fn add<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
+pub fn add<S: ConstShape, E: Dtype, D, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, RhsTape>,
-) -> Tensor<S, E, D, T> {
+) -> Tensor<S, E, D, T>
+where
+    D: BinaryKernel<BinaryAddKernelOp, E>,
+{
     lhs + rhs
 }
 
-/// Fallible version of std::ops::Add
-pub trait TryAdd<Rhs = Self>: HasErr {
+/// Fallible version of std::ops::Add with compile time known shapes
+pub trait TryConstAdd<Rhs = Self>: HasErr {
     fn try_add(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, RhsTape: Tape<D>>
-    TryAdd<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
+/// Runtime shape checked addition
+pub trait TryCheckedAdd<Rhs = Self>: HasErr {
+    fn checked_add(self, rhs: Rhs) -> Option<Self> {
+        self.try_checked_add(rhs).map(Result::unwrap)
+    }
+    fn try_checked_add(self, rhs: Rhs) -> Option<Result<Self, Self::Err>>;
+}
+
+/// We don't need to check anything for compile time known shapes
+impl<S: ConstShape, E: Dtype, D, LhsTape: Tape<D>, RhsTape: Tape<D>>
+    TryConstAdd<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
+    D: BinaryKernel<BinaryAddKernelOp, E>,
     LhsTape: Merge<RhsTape>,
 {
-    /// See [add]
+    /// Requires compile time shapes. See [add]
     fn try_add(self, rhs: Tensor<S, E, D, RhsTape>) -> Result<Self, Self::Err> {
         try_binary_op(BinaryAddKernelOp, self, rhs)
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryAdd<E> for Tensor<S, E, D, T> {
+/// We require checked operations with dynamic shapes
+impl<S: Shape, E: Dtype, D, LhsTape: Tape<D>, RhsTape: Tape<D>>
+    TryCheckedAdd<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
+where
+    D: BinaryKernel<BinaryAddKernelOp, E>,
+    LhsTape: Merge<RhsTape>,
+{
+    /// Runtime shape checked. See [add]
+    fn try_checked_add(self, rhs: Tensor<S, E, D, RhsTape>) -> Option<Result<Self, Self::Err>> {
+        try_checked_binary_op(BinaryAddKernelOp, self, rhs)
+    }
+}
+
+/// For scalar addition, we support any shape
+impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarAddKernelOp<E>, E>, T: Tape<D>> TryConstAdd<E>
+    for Tensor<S, E, D, T>
+{
     /// See [add]
     fn try_add(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarAddKernelOp { scalar: rhs }, self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, Rhs> std::ops::Add<Rhs>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, Rhs> std::ops::Add<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
-    Self: TryAdd<Rhs>,
+    Self: TryConstAdd<Rhs>,
 {
     type Output = Self;
     /// See [add]

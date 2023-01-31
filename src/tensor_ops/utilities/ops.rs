@@ -1,6 +1,6 @@
 use crate::{
     gradients::{Merge, Tape},
-    shapes::{Dtype, Shape},
+    shapes::{Dtype, Shape, HasShape},
     tensor::{DeviceStorage, PutTape, SplitTape, Tensor},
 };
 
@@ -62,6 +62,25 @@ pub(crate) fn try_unary_op<
     Ok(out.put_tape(tape))
 }
 
+pub(crate) fn try_checked_binary_op<
+    Op: 'static + Copy,
+    S: Shape,
+    E: Dtype,
+    D: BinaryKernel<Op, E>,
+    RhsTape: Tape<D>,
+    LhsTape: Tape<D> + Merge<RhsTape>,
+>(
+    op: Op,
+    lhs: Tensor<S, E, D, LhsTape>,
+    rhs: Tensor<S, E, D, RhsTape>,
+) -> Option<Result<Tensor<S, E, D, LhsTape>, D::Err>> {
+    if lhs.shape().concrete() == rhs.shape().concrete() {
+        Some(try_binary_op(op, lhs, rhs))
+    } else {
+        None
+    }
+}
+
 pub(crate) fn try_binary_op<
     Op: 'static + Copy,
     S: Shape,
@@ -74,6 +93,9 @@ pub(crate) fn try_binary_op<
     lhs: Tensor<S, E, D, LhsTape>,
     rhs: Tensor<S, E, D, RhsTape>,
 ) -> Result<Tensor<S, E, D, LhsTape>, D::Err> {
+    // for constant shapes this should be optimized away, since all values will be known
+    // for dynamic shapes, this is a sanity check - other things should handle this
+    assert_eq!(lhs.shape().concrete(), rhs.shape().concrete());
     let (lhs, ltape) = lhs.split_tape();
     let (rhs, rtape) = rhs.split_tape();
     let mut tape = ltape.merge(rtape);

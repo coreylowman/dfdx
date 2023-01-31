@@ -1,4 +1,4 @@
-use super::{BroadcastTo, Device, LogSumExpTo, TrySub};
+use super::{BroadcastTo, Device, LogSumExpTo, TryCheckedSub};
 use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 
 /// `log(softmax(t))` in numerically stable way across `Ax`. Does `t - logsumexp(t)` under the hood.
@@ -44,7 +44,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
     {
         let logsumexp = self.retaped::<T>().try_logsumexp::<S::Reduced, Ax>()?;
         let logsumexp = logsumexp.try_broadcast_like(self.shape())?;
-        self.try_sub(logsumexp)
+        self.try_checked_sub(logsumexp).unwrap()
     }
 }
 

@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use super::ops::{try_binary_op, BinaryKernel};
+use super::ops::{try_binary_op, try_checked_binary_op, BinaryKernel};
 use crate::{gradients::*, shapes::*, tensor::Tensor};
 
 #[repr(C)]
@@ -23,7 +23,7 @@ pub struct BCEKernelOp;
 ///
 /// See <https://www.tensorflow.org/api_docs/python/tf/nn/sigmoid_cross_entropy_with_logits>
 /// for more information on this.
-pub fn bce_with_logits<S: Shape, E: Dtype, D: BinaryKernel<BCEKernelOp, E>, LTape, RTape>(
+pub fn bce_with_logits<S: ConstShape, E: Dtype, D: BinaryKernel<BCEKernelOp, E>, LTape, RTape>(
     logits: Tensor<S, E, D, LTape>,
     probs: Tensor<S, E, D, RTape>,
 ) -> Tensor<S, E, D, LTape>
@@ -34,21 +34,44 @@ where
     logits.bce_with_logits(probs)
 }
 
-impl<S: Shape, E: Dtype, D: BinaryKernel<BCEKernelOp, E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
-    /// See [bce_with_logits]
+impl<S: ConstShape, E: Dtype, D: BinaryKernel<BCEKernelOp, E>, LTape: Tape<D>>
+    Tensor<S, E, D, LTape>
+{
+    /// Requires compile time shapes. See [bce_with_logits]
     pub fn bce_with_logits<RTape: Tape<D>>(self, prob: Tensor<S, E, D, RTape>) -> Self
     where
         LTape: Merge<RTape>,
     {
         self.try_bce_with_logits(prob).unwrap()
     }
-    /// See [bce_with_logits]
+    /// Requires compile time shapes. See [bce_with_logits]
     pub fn try_bce_with_logits<RTape>(self, prob: Tensor<S, E, D, RTape>) -> Result<Self, D::Err>
     where
         RTape: Tape<D>,
         LTape: Merge<RTape>,
     {
         try_binary_op(BCEKernelOp, self, prob)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: BinaryKernel<BCEKernelOp, E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
+    /// Runtime shape checked. See [bce_with_logits]
+    pub fn checked_bce_with_logits<R: Tape<D>>(self, prob: Tensor<S, E, D, R>) -> Option<Self>
+    where
+        LTape: Merge<R>,
+    {
+        self.try_checked_bce_with_logits(prob).map(Result::unwrap)
+    }
+    /// Runtime shape checked. See [bce_with_logits]
+    pub fn try_checked_bce_with_logits<R>(
+        self,
+        prob: Tensor<S, E, D, R>,
+    ) -> Option<Result<Self, D::Err>>
+    where
+        R: Tape<D>,
+        LTape: Merge<R>,
+    {
+        try_checked_binary_op(BCEKernelOp, self, prob)
     }
 }
 

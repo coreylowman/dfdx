@@ -56,7 +56,7 @@ pub struct BatchNorm2D<const C: usize, D: Device<f32> = Cpu> {
 
 impl<const C: usize, D: Device<f32>> BatchNorm2D<C, D> {
     /// generic forward for inference
-    fn infer_fwd<S: Shape, Ax: Axes>(&self, x: Tensor<S, f32, D>) -> Tensor<S, f32, D>
+    fn infer_fwd<S: Shape, Ax: Axes>(&self, x: Tensor<S, f32, D>) -> Option<Tensor<S, f32, D>>
     where
         Rank1<C>: BroadcastShapeTo<S, Ax>,
     {
@@ -67,16 +67,16 @@ impl<const C: usize, D: Device<f32>> BatchNorm2D<C, D> {
         let mean = self.running_mean.clone();
 
         // normalize & affine
-        let x = sub(x, mean.broadcast_like(&shape));
-        let x = div(x, std.broadcast_like(&shape));
-        let x = mul(x, self.scale.clone().broadcast_like(&shape));
-        add(x, self.bias.clone().broadcast_like(&shape))
+        let x = x.checked_sub(mean.broadcast_like(&shape))?;
+        let x = x.checked_div(std.broadcast_like(&shape))?;
+        let x = x.checked_mul(self.scale.clone().broadcast_like(&shape))?;
+        x.checked_add(self.bias.clone().broadcast_like(&shape))
     }
 
     fn train_fwd<S: Shape, T: Tape<D>, Ax: Axes>(
         &mut self,
         x: Tensor<S, f32, D, T>,
-    ) -> Tensor<S, f32, D, T>
+    ) -> Option<Tensor<S, f32, D, T>>
     where
         S: HasAxes<Ax> + ReduceShapeTo<Rank1<C>, Ax>,
     {
@@ -91,7 +91,7 @@ impl<const C: usize, D: Device<f32>> BatchNorm2D<C, D> {
             + mean_chan.retaped::<NoneTape>() * self.momentum;
 
         let mean = mean_chan.broadcast_like(&shape);
-        let centered = x - mean;
+        let centered = x.checked_sub(mean)?;
 
         let var_chan = centered.retaped::<T>().square().mean::<Rank1<C>, _>();
 
@@ -107,7 +107,10 @@ impl<const C: usize, D: Device<f32>> BatchNorm2D<C, D> {
         let bias = self.bias.retaped::<T>().broadcast_like(&shape);
 
         // normalize & affine - on tape
-        (centered / std) * scale + bias
+        centered
+            .checked_div(std)?
+            .checked_mul(scale)?
+            .checked_add(bias)
     }
 }
 
@@ -118,7 +121,7 @@ impl<const C: usize, H: Dim, W: Dim, D: Device<f32>>
 
     /// Inference 3d forward - does **not** update [Self::running_mean] and [Self::running_var]
     fn forward(&self, x: Tensor<(Const<C>, H, W), f32, D, NoneTape>) -> Self::Output {
-        self.infer_fwd(x)
+        self.infer_fwd(x).unwrap()
     }
 }
 
@@ -129,7 +132,7 @@ impl<B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>>
 
     /// Inference 4d forward - does **not** update [Self::running_mean] and [Self::running_var]
     fn forward(&self, x: Tensor<(B, Const<C>, H, W), f32, D, NoneTape>) -> Self::Output {
-        self.infer_fwd(x)
+        self.infer_fwd(x).unwrap()
     }
 }
 
@@ -140,7 +143,7 @@ impl<const C: usize, H: Dim, W: Dim, D: Device<f32>>
 
     /// Training 3d forward - updates [Self::running_mean] and [Self::running_var]
     fn forward_mut(&mut self, x: Tensor<(Const<C>, H, W), f32, D, OwnedTape<D>>) -> Self::Output {
-        self.train_fwd(x)
+        self.train_fwd(x).unwrap()
     }
 }
 
@@ -154,7 +157,7 @@ impl<B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>>
         &mut self,
         x: Tensor<(B, Const<C>, H, W), f32, D, OwnedTape<D>>,
     ) -> Self::Output {
-        self.train_fwd(x)
+        self.train_fwd(x).unwrap()
     }
 }
 

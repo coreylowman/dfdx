@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use super::{ops::try_binary_op, Device};
+use super::ops::{try_binary_op, try_checked_binary_op, BinaryKernel};
 use crate::{gradients::*, shapes::*, tensor::Tensor};
 
 #[repr(C)]
@@ -22,15 +22,20 @@ pub struct MinimumKernelOp;
 /// let b = dev.tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
 /// let r = a.minimum(b);
 /// assert_eq!(r.array(), [[1.0, 0.5, 1.0], [-2.0, -2.0, -3.5]]);
-pub fn minimum<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D> + Merge<RTape>, RTape: Tape<D>>(
+pub fn minimum<S: ConstShape, E: Dtype, D, LTape: Tape<D> + Merge<RTape>, RTape: Tape<D>>(
     lhs: Tensor<S, E, D, LTape>,
     rhs: Tensor<S, E, D, RTape>,
-) -> Tensor<S, E, D, LTape> {
+) -> Tensor<S, E, D, LTape>
+where
+    D: BinaryKernel<MinimumKernelOp, E>,
+{
     lhs.minimum(rhs)
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
-    /// See [minimum]
+impl<S: ConstShape, E: Dtype, D: BinaryKernel<MinimumKernelOp, E>, LTape: Tape<D>>
+    Tensor<S, E, D, LTape>
+{
+    /// Requires compile time shapes. See [minimum]
     pub fn minimum<RTape: Tape<D>>(self, rhs: Tensor<S, E, D, RTape>) -> Self
     where
         LTape: Merge<RTape>,
@@ -38,7 +43,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
         self.try_minimum(rhs).unwrap()
     }
 
-    /// See [minimum]
+    /// Requires compile time shapes. See [minimum]
     pub fn try_minimum<RTape: Tape<D>>(self, rhs: Tensor<S, E, D, RTape>) -> Result<Self, D::Err>
     where
         LTape: Merge<RTape>,
@@ -46,6 +51,30 @@ impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
         try_binary_op(MinimumKernelOp, self, rhs)
     }
 }
+
+impl<S: Shape, E: Dtype, D: BinaryKernel<MinimumKernelOp, E>, LTape: Tape<D>>
+    Tensor<S, E, D, LTape>
+{
+    /// Requires compile time shapes. See [minimum]
+    pub fn checked_minimum<RTape: Tape<D>>(self, rhs: Tensor<S, E, D, RTape>) -> Option<Self>
+    where
+        LTape: Merge<RTape>,
+    {
+        self.try_checked_minimum(rhs).map(Result::unwrap)
+    }
+
+    /// Requires compile time shapes. See [minimum]
+    pub fn try_checked_minimum<RTape: Tape<D>>(
+        self,
+        rhs: Tensor<S, E, D, RTape>,
+    ) -> Option<Result<Self, D::Err>>
+    where
+        LTape: Merge<RTape>,
+    {
+        try_checked_binary_op(MinimumKernelOp, self, rhs)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{tensor::*, tensor_ops::*, tests::TestDevice};

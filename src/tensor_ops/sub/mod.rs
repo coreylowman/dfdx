@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use super::{ops::*, Device};
+use super::ops::*;
 use crate::{gradients::*, shapes::*, tensor::*};
 
 #[repr(C)]
@@ -36,21 +36,42 @@ pub struct ScalarSubKernelOp<E> {
 /// let r = a - 1.0;
 /// assert_eq!(r.array(), [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
 /// ```
-pub fn sub<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
+///
+/// Dynamic sizes will fail to compile:
+/// ```compile_fail
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a: Tensor<(usize, Const<5>), f32, _> = dev.zeros_like(&(1, Const::<5>));
+/// let b: Tensor<(usize, Const<5>), f32, _> = dev.zeros_like(&(2, Const::<5>));
+/// let r = a - b;
+/// ```
+pub fn sub<S: ConstShape, E: Dtype, D, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, RhsTape>,
-) -> Tensor<S, E, D, T> {
+) -> Tensor<S, E, D, T>
+where
+    D: BinaryKernel<BinarySubKernelOp, E>,
+{
     lhs - rhs
 }
 
 /// Fallible version of std::ops::Sub
-pub trait TrySub<Rhs = Self>: HasErr {
+pub trait TryConstSub<Rhs = Self>: HasErr {
     fn try_sub(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>, RTape: Tape<D>>
-    TrySub<Tensor<S, E, D, RTape>> for Tensor<S, E, D, LTape>
+/// Runtime shape checked subtraction
+pub trait TryCheckedSub<Rhs = Self>: HasErr {
+    fn checked_sub(self, rhs: Rhs) -> Option<Self> {
+        self.try_checked_sub(rhs).map(Result::unwrap)
+    }
+    fn try_checked_sub(self, rhs: Rhs) -> Option<Result<Self, Self::Err>>;
+}
+
+impl<S: ConstShape, E: Dtype, D, LTape: Tape<D>, RTape: Tape<D>> TryConstSub<Tensor<S, E, D, RTape>>
+    for Tensor<S, E, D, LTape>
 where
+    D: BinaryKernel<BinarySubKernelOp, E>,
     LTape: Merge<RTape>,
 {
     fn try_sub(self, rhs: Tensor<S, E, D, RTape>) -> Result<Self, Self::Err> {
@@ -58,16 +79,29 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TrySub<E> for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D, LTape: Tape<D>, RTape: Tape<D>> TryCheckedSub<Tensor<S, E, D, RTape>>
+    for Tensor<S, E, D, LTape>
+where
+    D: BinaryKernel<BinarySubKernelOp, E>,
+    LTape: Merge<RTape>,
+{
+    fn try_checked_sub(self, rhs: Tensor<S, E, D, RTape>) -> Option<Result<Self, Self::Err>> {
+        try_checked_binary_op(BinarySubKernelOp, self, rhs)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarSubKernelOp<E>, E>, T: Tape<D>> TryConstSub<E>
+    for Tensor<S, E, D, T>
+{
     fn try_sub(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarSubKernelOp { scalar: rhs }, self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>, Rhs> std::ops::Sub<Rhs>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LTape: Tape<D>, Rhs> std::ops::Sub<Rhs>
     for Tensor<S, E, D, LTape>
 where
-    Self: TrySub<Rhs>,
+    Self: TryConstSub<Rhs>,
 {
     type Output = Self;
     fn sub(self, rhs: Rhs) -> Self::Output {

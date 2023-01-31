@@ -84,8 +84,11 @@ impl<B: Dim, const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<(B, Const
     type Output = Tensor<(B, Const<M>), f32, D, T>;
     fn forward(&self, x: Tensor<(B, Const<M>), f32, D, T>) -> Self::Output {
         let shape = *x.shape();
-        x.normalize::<Axis<1>>(self.epsilon) * self.gamma.retaped::<T>().broadcast_like(&shape)
-            + self.beta.retaped::<T>().broadcast_like(&shape)
+        x.normalize::<Axis<1>>(self.epsilon)
+            .checked_mul(self.gamma.retaped::<T>().broadcast_like(&shape))
+            .unwrap()
+            .checked_add(self.beta.retaped::<T>().broadcast_like(&shape))
+            .unwrap()
     }
 }
 
@@ -95,8 +98,11 @@ impl<B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
     type Output = Tensor<(B, S, Const<M>), f32, D, T>;
     fn forward(&self, x: Tensor<(B, S, Const<M>), f32, D, T>) -> Self::Output {
         let shape = *x.shape();
-        x.normalize::<Axis<2>>(self.epsilon) * self.gamma.retaped::<T>().broadcast_like(&shape)
-            + self.beta.retaped::<T>().broadcast_like(&shape)
+        x.normalize::<Axis<2>>(self.epsilon)
+            .checked_mul(self.gamma.retaped::<T>().broadcast_like(&shape))
+            .unwrap()
+            .checked_add(self.beta.retaped::<T>().broadcast_like(&shape))
+            .unwrap()
     }
 }
 

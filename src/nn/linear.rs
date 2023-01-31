@@ -120,7 +120,11 @@ impl<'a, B: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
 {
     type Output = Tensor<(B, Const<M>), f32, D, T>;
     fn forward(&self, input: Tensor<(B, Const<M>), f32, D, T>) -> Self::Output {
-        self.beta.retaped::<T>().broadcast_like(input.shape()) + input
+        self.beta
+            .retaped::<T>()
+            .broadcast_like(input.shape())
+            .checked_add(input)
+            .unwrap()
     }
 }
 
@@ -129,7 +133,11 @@ impl<'a, B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
 {
     type Output = Tensor<(B, S, Const<M>), f32, D, T>;
     fn forward(&self, input: Tensor<(B, S, Const<M>), f32, D, T>) -> Self::Output {
-        self.beta.retaped::<T>().broadcast_like(input.shape()) + input
+        self.beta
+            .retaped::<T>()
+            .broadcast_like(input.shape())
+            .checked_add(input)
+            .unwrap()
     }
 }
 
