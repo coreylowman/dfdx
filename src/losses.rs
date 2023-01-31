@@ -135,7 +135,7 @@ pub fn kl_div_with_logits_loss<Ax: Axes, S, D: Device<f32>, T: Tape<D>>(
     target_probs: Tensor<S, f32, D>,
 ) -> Tensor<Rank0, f32, D, T>
 where
-    S:ConstShape + Shape<LastAxis = Ax> + ReduceShape<Ax>,
+    S: ConstShape + Shape<LastAxis = Ax> + ReduceShape<Ax>,
 {
     let last_axis_numel = <S as HasAxes<Ax>>::size(logits.shape()) as f32;
     let probs = logits.log_softmax::<Ax>();

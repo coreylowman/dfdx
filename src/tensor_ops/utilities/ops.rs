@@ -1,6 +1,6 @@
 use crate::{
     gradients::{Merge, Tape},
-    shapes::{Dtype, Shape, HasShape},
+    shapes::{Dtype, HasShape, Shape},
     tensor::{DeviceStorage, PutTape, SplitTape, Tensor},
 };
 
