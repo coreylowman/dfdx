@@ -18,7 +18,7 @@
 //! # type MyModel = Linear<5, 2>;
 //! # let dev: Cpu = Default::default();
 //! let mut model = MyModel::build_on_device(&dev);
-//! let mut opt: Sgd<MyModel> = Default::default();
+//! let mut opt = Sgd::new(&model, Default::default());
 //! # let y = model.forward(dev.zeros::<Rank1<5>>().traced());
 //! # let loss = losses::mse_loss(y, dev.zeros());
 //! // -- snip loss computation --

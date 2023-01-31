@@ -79,7 +79,7 @@ fn main() {
 
 ```rust
 let mut model: Model = ...
-let mut sgd = Sgd::new(SgdConfig {
+let mut sgd = Sgd::new(&model, SgdConfig {
     lr: 1e-2,
     momentum: Some(Momentum::Nesterov(0.9))
 });

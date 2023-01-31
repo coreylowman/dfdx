@@ -87,7 +87,7 @@
 //! # let loss = cross_entropy_with_logits_loss(y, y_true);
 //! # let gradients: Gradients = loss.backward();
 //! // Use stochastic gradient descent (Sgd), with a learning rate of 1e-2, and 0.9 momentum.
-//! let mut opt = Sgd::new(SgdConfig {
+//! let mut opt = Sgd::new(&model, SgdConfig {
 //!     lr: 1e-2,
 //!     momentum: Some(Momentum::Classic(0.9)),
 //!     weight_decay: None,
