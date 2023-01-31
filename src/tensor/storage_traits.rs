@@ -252,22 +252,40 @@ pub trait TensorFromArray<Src, S: Shape, E: Unit>: DeviceStorage {
 
 /// Construct tensors from rust vectors
 pub trait TensorFromVec<E: Unit>: DeviceStorage {
-    /// Create a tensor from a rust vector
+    /// Create a tensor with a dynamic shape from a rust vector
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let _ = dev.tensor_from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], (2, 3));
+    /// let _ = dev.dynamic_tensor_from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]);
     /// ```
-    fn tensor_from_vec<S: Shape>(&self, src: Vec<E>, shape: S) -> Tensor<S, E, Self> {
-        self.try_tensor_from_vec::<S>(src, shape).unwrap()
+    fn dynamic_tensor_from_vec<S: Shape>(&self, src: Vec<E>, shape: S) -> Tensor<S, E, Self> {
+        self.try_dynamic_tensor_from_vec::<S>(src, shape).unwrap()
     }
 
-    /// Fallible version of [TensorFromVec::tensor_from_vec]
-    fn try_tensor_from_vec<S: Shape>(
+    /// Fallible version of [TensorFromVec::dynamic_tensor_from_vec]
+    fn try_dynamic_tensor_from_vec<S: Shape>(
         &self,
         src: Vec<E>,
         shape: S,
     ) -> Result<Tensor<S, E, Self>, Self::Err>;
+
+    /// Create a tensor from a rust vector
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let _ = dev.dynamic_tensor_from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]);
+    /// ```
+    fn tensor_from_vec<S: ConstShape>(&self, src: Vec<E>) -> Tensor<S, E, Self> {
+        self.dynamic_tensor_from_vec::<S>(src, S::default())
+    }
+
+    /// Fallible version of [TensorFromVec::tensor_from_vec]
+    fn try_tensor_from_vec<S: ConstShape>(
+        &self,
+        src: Vec<E>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        self.try_dynamic_tensor_from_vec(src, S::default())
+    }
 }
 
 /// Convert tensors to rust arrays

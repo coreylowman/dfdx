@@ -198,7 +198,7 @@ impl<E: Unit, const M: usize, const N: usize, const O: usize, const P: usize>
 }
 
 impl<E: Unit> TensorFromVec<E> for Cpu {
-    fn try_tensor_from_vec<S: Shape>(
+    fn try_dynamic_tensor_from_vec<S: Shape>(
         &self,
         src: Vec<E>,
         shape: S,

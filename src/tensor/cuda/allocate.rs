@@ -3,7 +3,7 @@
 use crate::{
     shapes::*,
     tensor::{
-        cpu::{Cpu, StridedArray, CpuError},
+        cpu::{Cpu, CpuError, StridedArray},
         storage_traits::*,
         Tensor,
     },
@@ -139,7 +139,7 @@ where
 }
 
 impl<E: Unit> TensorFromVec<E> for Cuda {
-    fn try_tensor_from_vec<S: Shape>(
+    fn try_dynamic_tensor_from_vec<S: Shape>(
         &self,
         src: Vec<E>,
         shape: S,

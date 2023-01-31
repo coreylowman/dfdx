@@ -263,7 +263,7 @@ impl<
     fn to_device(&self, device: &D2) -> Self::Output {
         let mut buf = std::vec![E::default(); self.shape().num_elements()];
         self.copy_into(&mut buf);
-        device.tensor_from_vec(buf, *self.shape())
+        device.dynamic_tensor_from_vec(buf, *self.shape())
     }
 }
 
