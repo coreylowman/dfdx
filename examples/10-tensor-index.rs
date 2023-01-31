@@ -9,7 +9,7 @@ use dfdx::{
 fn main() {
     let dev: Cpu = Default::default();
 
-    let a: Tensor<Rank3<4, 2, 3>> = dev.tensor([
+    let a: Tensor<Rank3<4, 2, 3>, f32, _> = dev.tensor([
         [[0.00, 0.01, 0.02], [0.10, 0.11, 0.12]],
         [[1.00, 1.01, 1.02], [1.10, 1.11, 1.12]],
         [[2.00, 2.01, 2.02], [2.10, 2.11, 2.12]],

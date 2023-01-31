@@ -20,11 +20,11 @@ use super::module::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// # let dev: Cpu = Default::default();
 /// let mut model: Embedding<7, 2> = BuildModule::build(&dev);
 /// // single sequence of ids
-/// let inputs: Tensor<_, usize> = dev.zeros::<Rank1<5>>();
-/// let _: Tensor<(Const<5>, Const<2>,), f32> = model.forward(inputs);
+/// let inputs: Tensor<Rank1<5>, usize, _> = dev.zeros();
+/// let _: Tensor<(Const<5>, Const<2>,), f32, _> = model.forward(inputs);
 /// // batched sequence of ids
-/// let inputs: Tensor<_, usize> = dev.zeros::<Rank2<10, 5>>();
-/// let _: Tensor<(Const<10>, Const<5>, Const<2>), f32> = model.forward(inputs);
+/// let inputs: Tensor<Rank2<10, 5>, usize, _> = dev.zeros();
+/// let _: Tensor<(Const<10>, Const<5>, Const<2>), f32, _> = model.forward(inputs);
 /// ```
 #[derive(Debug, Clone)]
 pub struct Embedding<const VOCAB: usize, const DIM: usize, D: Device<f32> = Cpu> {

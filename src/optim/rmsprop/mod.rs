@@ -67,14 +67,14 @@ impl Default for RMSpropConfig<f32> {
 /// Constructing using default:
 /// ```rust
 /// # use dfdx::{prelude::*, optim::*};
-/// # type Model = Tensor<Rank0>;
+/// # type Model = Tensor<Rank0, f32, Cpu>;
 /// let mut opt: RMSprop<Model> = Default::default();
 /// ```
 ///
 /// Constructing using new:
 /// ```rust
 /// # use dfdx::{prelude::*, optim::*};
-/// # type Model = Tensor<Rank0>;
+/// # type Model = Tensor<Rank0, f32, Cpu>;
 /// let rmsprop: RMSprop<Model> = RMSprop::new(RMSpropConfig {
 ///     lr: 1e-3,
 ///     alpha: 0.5,

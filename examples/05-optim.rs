@@ -5,7 +5,7 @@ use dfdx::{
     nn::{BuildOnDevice, Linear, ModuleMut, ReLU, Tanh},
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
     shapes::Rank2,
-    tensor::{AsArray, Cpu, SampleTensor},
+    tensor::{AsArray, Cpu, SampleTensor, Tensor},
     tensor_ops::Backward,
 };
 
@@ -30,8 +30,8 @@ fn main() {
 
     // let's initialize our model and some dummy data
     let mut mlp = Mlp::build_on_device(&dev);
-    let x = dev.sample_normal::<Rank2<3, 5>>();
-    let y = dev.sample_normal::<Rank2<3, 2>>();
+    let x: Tensor<Rank2<3, 5>, f32, _> = dev.sample_normal();
+    let y: Tensor<Rank2<3, 2>, f32, _> = dev.sample_normal();
 
     // first we pass our gradient tracing input through the network.
     // since we are training, we use forward_mut() instead of forward
