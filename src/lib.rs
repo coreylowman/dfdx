@@ -15,9 +15,9 @@
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();
 //! let x = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-//! let y: Tensor<Rank2<2, 3>> = dev.ones();
+//! let y: Tensor<Rank2<2, 3>, f32, Cpu> = dev.ones();
 //! // Runtime shape
-//! let z: Tensor<(usize, Const<3>)> = dev.ones_like(&(10, Const));
+//! let z: Tensor<(usize, Const<3>), f32, _> = dev.ones_like(&(10, Const));
 //! ```
 //!
 //! 2. Neural networks are built with types. Tuples are sequential models. See [crate::nn].
@@ -43,7 +43,7 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! # let mlp: Linear<5, 2> = BuildModule::build(&dev);
-//! let x: Tensor<Rank1<5>> = dev.zeros();
+//! let x: Tensor<Rank1<5>, f32, _> = dev.zeros();
 //! let y = mlp.forward(x); // compiler infers that `y` must be `Tensor<Rank1<2>>`
 //! ```
 //!
@@ -52,7 +52,7 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! # let model: Linear<10, 5> = BuildModule::build(&dev);
-//! # let y_true: Tensor<Rank1<5>> = dev.sample_normal().softmax();
+//! # let y_true: Tensor<Rank1<5>, f32, _> = dev.sample_normal().softmax();
 //! // tensors default to not having a tape
 //! let x: Tensor<Rank1<10>, f32, Cpu, NoneTape> = dev.zeros();
 //!

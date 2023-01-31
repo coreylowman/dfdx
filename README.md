@@ -68,8 +68,8 @@ fn main() {
     let dev: Cpu = Default::default();
     // OR `let dev: Cuda = Default::default();`
     let mlp = Mlp::build_on_device(&dev);
-    let x: Tensor<Rank1<10>> = dev.zeros();
-    let y /*: Tensor<Rank1<2>>*/ = mlp.forward(x);
+    let x: Tensor<Rank1<10>, f32, Cpu> = dev.zeros();
+    let y /*: Tensor<Rank1<2>, f32, Cpu>*/ = mlp.forward(x);
     println!("{:?}", y);
     mlp.save("checkpoint.npz")?;
 }
@@ -93,13 +93,13 @@ sgd.update(&mut model, gradients);
 
 3. 💡 Tensors can be converted to and from normal rust arrays
 ```rust
-let t0: Tensor<Rank0> = dev.tensor(0.0);
+let t0: Tensor<Rank0, f32, _> = dev.tensor(0.0);
 assert_eq!(t0.array(), &0.0);
 
-let t1 /*: Tensor<Rank1<3>>*/ = dev.tensor([1.0, 2.0, 3.0]);
+let t1 /*: Tensor<Rank1<3>, f32, _>*/ = dev.tensor([1.0, 2.0, 3.0]);
 assert_eq!(t1.array(), [1.0, 2.0, 3.0]);
 
-let t2: Tensor<Rank2<2, 3>> = dev.sample_normal();
+let t2: Tensor<Rank2<2, 3>, f32, _> = dev.sample_normal();
 assert_ne!(t2.array(), [[0.0; 3]; 2]);
 ```
 

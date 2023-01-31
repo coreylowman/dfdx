@@ -28,7 +28,7 @@ pub trait BroadcastTo: HasErr + HasShape {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<3, 7>, f32> = dev.zeros();
+    /// let a: Tensor<Rank2<3, 7>, f32, _> = dev.zeros();
     ///
     /// // broadcast axis 1
     /// let _ = a.clone().broadcast::<Rank3<3, 5, 7>, _>();

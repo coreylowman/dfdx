@@ -74,13 +74,9 @@ impl Default for RMSpropConfig<f32> {
 ///     lr: 1e-3,
 ///     alpha: 0.5,
 ///     eps: 1e-8,
-///     momentum: Some(0.5),
 ///     centered: false,
 ///     weight_decay: Some(WeightDecay::Decoupled(1e-1)),
 /// });
-/// ```
-///
-/// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
 pub struct RMSprop<M, E: Dtype = f32> {
     /// Hyperparameter configuration
