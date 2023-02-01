@@ -36,41 +36,38 @@ pub trait BooleanKernel: DeviceStorage + OnesTensor<bool> + ZerosTensor<bool> {
         lhs: &Self::Storage<S, bool>,
         rhs: &Self::Storage<S, bool>,
     ) -> Result<Self::Storage<S, bool>, Self::Err>;
+}
 
-    fn scalar_and<S: Shape>(
-        &self,
-        lhs: &Self::Storage<S, bool>,
-        rhs: bool,
-    ) -> Result<Self::Storage<S, bool>, Self::Err> {
-        if rhs {
-            Ok(lhs.clone())
-        } else {
-            Ok(self.try_zeros_like(lhs)?.storage)
-        }
+fn scalar_and<D: BooleanKernel, S: Shape>(
+    lhs: &Tensor<S, bool, D>,
+    rhs: bool,
+) -> Result<Tensor<S, bool, D>, D::Err> {
+    if rhs {
+        Ok(lhs.clone())
+    } else {
+        lhs.device.try_zeros_like(lhs)
     }
+}
 
-    fn scalar_or<S: Shape>(
-        &self,
-        lhs: &Self::Storage<S, bool>,
-        rhs: bool,
-    ) -> Result<Self::Storage<S, bool>, Self::Err> {
-        if rhs {
-            Ok(self.try_ones_like(lhs)?.storage)
-        } else {
-            Ok(lhs.clone())
-        }
+fn scalar_or<D: BooleanKernel, S: Shape>(
+    lhs: &Tensor<S, bool, D>,
+    rhs: bool,
+) -> Result<Tensor<S, bool, D>, D::Err> {
+    if rhs {
+        lhs.device.try_ones_like(lhs)
+    } else {
+        Ok(lhs.clone())
     }
+}
 
-    fn scalar_xor<S: Shape>(
-        &self,
-        lhs: &Self::Storage<S, bool>,
-        rhs: bool,
-    ) -> Result<Self::Storage<S, bool>, Self::Err> {
-        if rhs {
-            self.not(lhs)
-        } else {
-            Ok(lhs.clone())
-        }
+fn scalar_xor<D: BooleanKernel, S: Shape>(
+    lhs: &Tensor<S, bool, D>,
+    rhs: bool,
+) -> Result<Tensor<S, bool, D>, D::Err> {
+    if rhs {
+        Ok(lhs.device.upgrade(lhs.device.not(&lhs.storage)?))
+    } else {
+        Ok(lhs.clone())
     }
 }
 
@@ -91,40 +88,46 @@ impl<S: Shape, D: BooleanKernel> Not for &Tensor<S, bool, D> {
 }
 
 macro_rules! boolean_op_impl {
-    ($op:ident, $method1:ident, $method2:ident, $method3:ident) => {
+    ($op:ident, $op_method:ident, $binary_kernel_method:ident, $scalar_function:ident) => {
         impl<S: Shape, D: BooleanKernel> $op for Tensor<S, bool, D> {
             type Output = Self;
 
-            fn $method1(self, rhs: Self) -> Self {
-                self.device
-                    .upgrade(self.device.$method2(&self.storage, &rhs.storage).unwrap())
+            fn $op_method(self, rhs: Self) -> Self {
+                assert_eq!(self.shape(), rhs.shape());
+                self.device.upgrade(
+                    self.device
+                        .$binary_kernel_method(&self.storage, &rhs.storage)
+                        .unwrap(),
+                )
             }
         }
 
         impl<S: Shape, D: BooleanKernel> $op for &Tensor<S, bool, D> {
             type Output = Tensor<S, bool, D>;
 
-            fn $method1(self, rhs: Self) -> Self::Output {
-                self.device
-                    .upgrade(self.device.$method2(&self.storage, &rhs.storage).unwrap())
+            fn $op_method(self, rhs: Self) -> Self::Output {
+                assert_eq!(self.shape(), rhs.shape());
+                self.device.upgrade(
+                    self.device
+                        .$binary_kernel_method(&self.storage, &rhs.storage)
+                        .unwrap(),
+                )
             }
         }
 
         impl<S: Shape, D: BooleanKernel> $op<bool> for Tensor<S, bool, D> {
             type Output = Self;
 
-            fn $method1(self, rhs: bool) -> Self {
-                self.device
-                    .upgrade(self.device.$method3(&self.storage, rhs).unwrap())
+            fn $op_method(self, rhs: bool) -> Self {
+                $scalar_function(&self, rhs).unwrap()
             }
         }
 
         impl<S: Shape, D: BooleanKernel> $op<bool> for &Tensor<S, bool, D> {
             type Output = Tensor<S, bool, D>;
 
-            fn $method1(self, rhs: bool) -> Self::Output {
-                self.device
-                    .upgrade(self.device.$method3(&self.storage, rhs).unwrap())
+            fn $op_method(self, rhs: bool) -> Self::Output {
+                $scalar_function(self, rhs).unwrap()
             }
         }
     };

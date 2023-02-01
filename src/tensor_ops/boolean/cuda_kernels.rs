@@ -4,7 +4,7 @@ use cudarc::prelude::*;
 
 use std::sync::Arc;
 
-const MODULE_NAME: &str = "/boolean.ptx";
+const MODULE_NAME: &str = "boolean";
 const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/boolean.ptx"));
 const ALL_FN_NAMES: [&str; 4] = ["boolean_not", "boolean_and", "boolean_or", "boolean_xor"];
 
@@ -26,6 +26,8 @@ impl Cuda {
 
         let mut storage = self.dev.take_async(std::vec![false; numel])?;
 
+        // TODO: modify this to be `self.dev.alloc_zeros_async(numel)?` once cudarc implements
+        // ValidAsZeroBits for bool
         let dims: CudaSlice<usize> = self.dev.take_async(shape.concrete().into())?;
         let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
         let rhs_strides: CudaSlice<usize> = self.dev.take_async(rhs.strides.into())?;
@@ -62,6 +64,8 @@ impl BooleanKernel for Cuda {
         }
 
         let numel = inp.data.len();
+        // TODO: modify this to be `self.dev.alloc_zeros_async(numel)?` once cudarc implements
+        // ValidAsZeroBits for bool
         let mut storage = self.dev.take_async(std::vec![false; numel])?;
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, "boolean_not").unwrap();
