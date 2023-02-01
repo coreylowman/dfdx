@@ -6,7 +6,7 @@ mod cuda_kernel;
 use crate::{
     gradients::{Merge, Tape},
     prelude::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor},
-    shapes::{Dtype, Shape},
+    shapes::{Dtype, Shape, HasShape},
 };
 
 pub trait ChooseKernel<E: Dtype>: DeviceStorage {
@@ -55,6 +55,9 @@ impl<
         lhs: Tensor<S, E, D, LhsTape>,
         rhs: Tensor<S, E, D, RhsTape>,
     ) -> Result<Self::Output, Self::Err> {
+        assert_eq!(self.shape(), lhs.shape());
+        assert_eq!(lhs.shape(), rhs.shape());
+
         let (lhs, tape) = lhs.split_tape();
         let (rhs, rhs_tape) = rhs.split_tape();
 
