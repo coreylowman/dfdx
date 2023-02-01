@@ -256,14 +256,15 @@ pub trait TensorFromVec<E: Unit>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let _ = dev.dynamic_tensor_from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]);
+    /// let _ = dev.tensor_from_vec_with_shape(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]);
     /// ```
-    fn dynamic_tensor_from_vec<S: Shape>(&self, src: Vec<E>, shape: S) -> Tensor<S, E, Self> {
-        self.try_dynamic_tensor_from_vec::<S>(src, shape).unwrap()
+    fn tensor_from_vec_with_shape<S: Shape>(&self, src: Vec<E>, shape: S) -> Tensor<S, E, Self> {
+        self.try_tensor_from_vec_with_shape::<S>(src, shape)
+            .unwrap()
     }
 
     /// Fallible version of [TensorFromVec::dynamic_tensor_from_vec]
-    fn try_dynamic_tensor_from_vec<S: Shape>(
+    fn try_tensor_from_vec_with_shape<S: Shape>(
         &self,
         src: Vec<E>,
         shape: S,
@@ -273,10 +274,10 @@ pub trait TensorFromVec<E: Unit>: DeviceStorage {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let _ = dev.dynamic_tensor_from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]);
+    /// let _ = dev.tensor_from_vec::<Rank2<2, 3>>(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
     /// ```
     fn tensor_from_vec<S: ConstShape>(&self, src: Vec<E>) -> Tensor<S, E, Self> {
-        self.dynamic_tensor_from_vec::<S>(src, S::default())
+        self.tensor_from_vec_with_shape::<S>(src, S::default())
     }
 
     /// Fallible version of [TensorFromVec::tensor_from_vec]
@@ -284,7 +285,7 @@ pub trait TensorFromVec<E: Unit>: DeviceStorage {
         &self,
         src: Vec<E>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.try_dynamic_tensor_from_vec(src, S::default())
+        self.try_tensor_from_vec_with_shape(src, S::default())
     }
 }
 
