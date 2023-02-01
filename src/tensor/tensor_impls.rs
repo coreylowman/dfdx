@@ -26,13 +26,13 @@ use crate::{
 /// type A = Tensor<Rank1<1000>, f32, Cpu>;
 ///
 /// // A 2d tensor with bool elements, stored on the Cpu
-/// type B = Tensor<Rank2<2, 3>, bool>;
+/// type B = Tensor<Rank2<2, 3>, bool, Cpu>;
 ///
 /// // A 3d tensor with usize elements, stored on the Cpu, without any tape
 /// type C = Tensor<Rank3<4, 2, 3>, usize, Cpu, NoneTape>;
 /// ```
 #[derive(Debug, Clone)]
-pub struct Tensor<S: Shape, E: Unit = f32, D: DeviceStorage = Cpu, T = NoneTape> {
+pub struct Tensor<S: Shape, E: Unit, D: DeviceStorage, T = NoneTape> {
     pub(crate) id: UniqueId,
     pub(crate) storage: D::Storage<S, E>,
     pub(crate) device: D,
@@ -89,14 +89,14 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
 }
 
 /// Put a tape of type `T` into the tensor
-/// ```rust
-/// # use dfdx::prelude::*;
-/// # let dev: Cpu = Default::default();
-/// let a: Tensor<Rank2<2, 3>> = dev.zeros();
-/// let a: Tensor<Rank2<2, 3>, f32, _, OwnedTape<Cpu>> = a.put_tape(Default::default());
-/// ```
 pub trait PutTape<T> {
     type Output;
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let a: Tensor<Rank2<2, 3>, f32, _, NoneTape> = dev.zeros();
+    /// let a: Tensor<Rank2<2, 3>, f32, _, OwnedTape<Cpu>> = a.put_tape(Default::default());
+    /// ```
     fn put_tape(self, tape: T) -> Self::Output;
 }
 
@@ -113,18 +113,18 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T> PutTape<T> for Tensor<S, E, D> {
 }
 
 /// Remove the tape from a tensor
-///
-/// ```rust
-/// # use dfdx::prelude::*;
-/// # let dev: Cpu = Default::default();
-/// let a: Tensor<Rank1<5>, f32, _, OwnedTape<Cpu>> = dev.zeros().traced();
-/// let (a, tape): (Tensor<Rank1<5>, f32>, OwnedTape<Cpu>) = a.split_tape();
 pub trait SplitTape {
     /// The type of tape the tensor has now
     type Tape: Default;
     // The type of Self without the tape.
     type NoTape: Clone + PutTape<Self::Tape, Output = Self>;
     /// Splits tape off of self
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let a: Tensor<Rank1<5>, f32, _, OwnedTape<_>> = dev.zeros().traced();
+    /// let (a, tape): (Tensor<_, _, _, NoneTape>, OwnedTape<_>) = a.split_tape();
+    /// ```
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
     /// Clones self and inserts a new empty tape into the clone
     fn with_empty_tape(&self) -> Self;
@@ -192,7 +192,7 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
     }
 }
 
-/// Something that can be copied to another [Device] and can be used with the [OnDevice] type
+/// Something that can be copied to another `Device` and can be used with the [OnDevice] type
 /// alias.
 ///
 /// Here's an example of how this can be implemented for a custom struct:
@@ -234,7 +234,6 @@ pub trait ToDevice<D> {
 ///
 /// ```rust
 /// # use dfdx::prelude::*;
-/// #
 /// // All modules exist on the cpu by default
 /// type CpuMLP = (Linear<5, 10>, ReLU, Linear<10, 1>);
 /// type MLP<D> = OnDevice<CpuMLP, D>;
@@ -273,8 +272,8 @@ pub type Tensor0D<Tape = NoneTape> = Tensor<Rank0, f32, Cpu, Tape>;
 pub type Tensor1D<const M: usize, Tape = NoneTape> = Tensor<Rank1<M>, f32, Cpu, Tape>;
 pub type Tensor2D<const M: usize, const N: usize, Tape = NoneTape> =
     Tensor<Rank2<M, N>, f32, Cpu, Tape>;
-pub type Tensor3D<const M: usize, const N: usize, const O: usize, D, Tape = NoneTape> =
-    Tensor<Rank3<M, N, O>, f32, D, Tape>;
+pub type Tensor3D<const M: usize, const N: usize, const O: usize, Tape = NoneTape> =
+    Tensor<Rank3<M, N, O>, f32, Cpu, Tape>;
 pub type Tensor4D<const M: usize, const N: usize, const O: usize, const P: usize, Tape = NoneTape> =
     Tensor<Rank4<M, N, O, P>, f32, Cpu, Tape>;
 pub type Tensor5D<

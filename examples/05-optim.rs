@@ -5,7 +5,7 @@ use dfdx::{
     nn::{BuildOnDevice, Linear, ModuleMut, ReLU, Tanh},
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
     shapes::Rank2,
-    tensor::{AsArray, Cpu, SampleTensor},
+    tensor::{AsArray, Cpu, SampleTensor, Tensor},
     tensor_ops::Backward,
 };
 
@@ -19,19 +19,23 @@ type Mlp = (
 fn main() {
     let dev: Cpu = Default::default();
 
-    // The first step to optimizing is to initialize the optimizer.
+    // First randomly initialize our model
+    let mut mlp = Mlp::build_on_device(&dev);
+
     // Here we construct a stochastic gradient descent optimizer
     // for our Mlp.
-    let mut sgd: Sgd<Mlp> = Sgd::new(SgdConfig {
-        lr: 1e-1,
-        momentum: Some(Momentum::Nesterov(0.9)),
-        weight_decay: None,
-    });
+    let mut sgd = Sgd::new(
+        &mlp,
+        SgdConfig {
+            lr: 1e-1,
+            momentum: Some(Momentum::Nesterov(0.9)),
+            weight_decay: None,
+        },
+    );
 
-    // let's initialize our model and some dummy data
-    let mut mlp = Mlp::build_on_device(&dev);
-    let x = dev.sample_normal::<Rank2<3, 5>>();
-    let y = dev.sample_normal::<Rank2<3, 2>>();
+    // let's initialize some dummy data to optimize with
+    let x: Tensor<Rank2<3, 5>, f32, _> = dev.sample_normal();
+    let y: Tensor<Rank2<3, 2>, f32, _> = dev.sample_normal();
 
     // first we pass our gradient tracing input through the network.
     // since we are training, we use forward_mut() instead of forward

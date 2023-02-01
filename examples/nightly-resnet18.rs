@@ -41,7 +41,7 @@ fn main() {
     );
 
     let dev: Cpu = Default::default();
-    let x = dev.sample_normal::<Rank3<3, 224, 224>>();
+    let x: Tensor<Rank3<3, 224, 224>, f32, _> = dev.sample_normal();
     let m = Resnet18::<1000>::build_on_device(&dev);
     for _ in 0.. {
         let start = Instant::now();

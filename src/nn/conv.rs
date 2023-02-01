@@ -208,7 +208,7 @@ mod tests {
         let weight_init = m.weight.clone();
         let bias_init = m.bias.clone();
 
-        let mut opt: Sgd<_, _> = Default::default();
+        let mut opt = Sgd::new(&m, Default::default());
         let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().trace());
         let g = out.square().mean().backward();
 

@@ -18,45 +18,45 @@ use crate::{
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let x: Tensor<Rank2<3, 10>> = dev.zeros();
-/// let y: Tensor<Rank2<10, 5>> = dev.zeros();
-/// let result: Tensor<Rank2<3, 5>> = x.matmul(y);
+/// let x: Tensor<Rank2<3, 10>, f32, _> = dev.zeros();
+/// let y: Tensor<Rank2<10, 5>, f32, _> = dev.zeros();
+/// let _: Tensor<Rank2<3, 5>, f32, _> = x.matmul(y);
 /// ```
 ///
 /// 2. Vector x Matrix
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let x: Tensor<Rank1<2>> = dev.zeros();
-/// let y: Tensor<Rank2<2, 4>> = dev.zeros();
-/// let result: Tensor<Rank1<4>> = x.matmul(y);
+/// let x: Tensor<Rank1<2>, f32, _> = dev.zeros();
+/// let y: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
+/// let _: Tensor<Rank1<4>, f32, _> = x.matmul(y);
 /// ```
 ///
 /// 3. Vector x Vector
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let x: Tensor<Rank1<2>> = dev.zeros();
-/// let y: Tensor<Rank1<4>> = dev.zeros();
-/// let result: Tensor<Rank2<2, 4>> = x.matmul(y);
+/// let x: Tensor<Rank1<2>, f32, _> = dev.zeros();
+/// let y: Tensor<Rank1<4>, f32, _> = dev.zeros();
+/// let _: Tensor<Rank2<2, 4>, f32, _> = x.matmul(y);
 /// ```
 ///
 /// 4. Batched matmul
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let x: Tensor<Rank3<10, 3, 2>> = dev.zeros();
-/// let y: Tensor<Rank3<10, 2, 4>> = dev.zeros();
-/// let result: Tensor<Rank3<10, 3, 4>> = x.matmul(y);
+/// let x: Tensor<Rank3<10, 3, 2>, f32, _> = dev.zeros();
+/// let y: Tensor<Rank3<10, 2, 4>, f32, _> = dev.zeros();
+/// let _: Tensor<Rank3<10, 3, 4>, f32, _> = x.matmul(y);
 /// ```
 ///
 /// 5. Broadcasted matmul
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let x: Tensor<Rank3<10, 3, 2>> = dev.zeros();
-/// let y: Tensor<Rank2<2, 4>> = dev.zeros();
-/// let result: Tensor<Rank3<10, 3, 4>> = x.matmul(y);
+/// let x: Tensor<Rank3<10, 3, 2>, f32, _> = dev.zeros();
+/// let y: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
+/// let _: Tensor<Rank3<10, 3, 4>, f32, _> = x.matmul(y);
 /// ```
 pub fn matmul<Lhs, Rhs>(lhs: Lhs, rhs: Rhs) -> Lhs::Output
 where

@@ -19,14 +19,14 @@ fn main() {
     // the first step to tracing is to call .trace()
     // this sticks a gradient tape into the input tensor!
     // NOTE: the tape has changed from a `NoneTape` to an `OwnedTape`.
-    let b: Tensor<Rank2<3, 4>, f32, Cpu, OwnedTape<Cpu>> = a.trace();
+    let b: Tensor<Rank2<3, 4>, _, _, OwnedTape<Cpu>> = a.trace();
 
     // the tape will **automatically** be moved around as you perform ops
     // ie. the tapes on inputs to operations are moved to the output
     // of the operation.
-    let c: Tensor<Rank2<3, 2>, f32, Cpu, OwnedTape<_>> = b.matmul(weight.clone());
-    let d: Tensor<Rank2<3, 2>, f32, Cpu, OwnedTape<_>> = c.sin();
-    let e: Tensor<Rank0, f32, Cpu, OwnedTape<_>> = d.mean();
+    let c: Tensor<Rank2<3, 2>, _, _, OwnedTape<_>> = b.matmul(weight.clone());
+    let d: Tensor<Rank2<3, 2>, _, _, OwnedTape<_>> = c.sin();
+    let e: Tensor<Rank0, _, _, OwnedTape<_>> = d.mean();
 
     // finally you can use .backward() to extract the gradients!
     // NOTE: that this method is only available on tensors that **own**
