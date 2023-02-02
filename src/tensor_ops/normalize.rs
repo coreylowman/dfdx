@@ -1,6 +1,6 @@
 use crate::{
     gradients::Tape,
-    shapes::{Axes, HasShape, ReduceShape, Shape},
+    shapes::{Axes, Dtype, HasShape, ReduceShape, Shape},
     tensor::{HasErr, Tensor},
 };
 
@@ -16,16 +16,16 @@ use super::{BroadcastTo, Device, MeanTo, StddevTo, TryDiv, TrySub};
 /// let t: Tensor<Rank2<2, 3>> = dev.zeros();
 /// let _ = t.normalize::<Axis<1>>(1e-5);
 /// ```
-pub fn normalize<Ax: Axes, S: Shape + ReduceShape<Ax>, D: Device<f32>, T: Tape<D>>(
-    t: Tensor<S, f32, D, T>,
-    epsilon: f32,
-) -> Tensor<S, f32, D, T> {
+pub fn normalize<Ax: Axes, S: Shape + ReduceShape<Ax>, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+    epsilon: E,
+) -> Tensor<S, E, D, T> {
     t.normalize::<Ax>(epsilon)
 }
 
-impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
     /// See [normalize]
-    pub fn normalize<Ax: Axes>(self, epsilon: f32) -> Self
+    pub fn normalize<Ax: Axes>(self, epsilon: E) -> Self
     where
         S: ReduceShape<Ax>,
     {
@@ -33,7 +33,7 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
     }
 
     /// See [normalize]
-    pub fn try_normalize<Ax: Axes>(self, epsilon: f32) -> Result<Self, <Self as HasErr>::Err>
+    pub fn try_normalize<Ax: Axes>(self, epsilon: E) -> Result<Self, <Self as HasErr>::Err>
     where
         S: ReduceShape<Ax>,
     {

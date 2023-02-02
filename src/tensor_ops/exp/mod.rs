@@ -49,7 +49,7 @@ mod tests {
         let r = x.trace().exp();
         assert_close(
             &r.array(),
-            &[0.13533528, 0.36787945, 1.0, std::f32::consts::E, 7.389056],
+            &[0.13533528, 0.36787945, 1.0, TestDtype::exp(1.0), 7.389056],
         );
         let g = r.mean().backward();
         assert_close(

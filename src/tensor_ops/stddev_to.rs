@@ -2,7 +2,7 @@ use super::*;
 use crate::{gradients::Tape, shapes::*, tensor::*};
 
 /// Reduction along multiple axes using standard deviation.
-pub trait StddevTo: HasErr + HasShape {
+pub trait StddevTo<E: Dtype>: HasErr + HasShape {
     /// Standard deviation reduction.
     ///
     /// **Pytorch equivalent**: `t.std(Axes, unbiased=False)`
@@ -15,7 +15,7 @@ pub trait StddevTo: HasErr + HasShape {
     /// let r = t.stddev::<Rank1<2>, _>(0.0); // or `stddev::<_, Axis<1>>(0.0)`
     /// assert_eq!(r.array(), [0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
     /// ```
-    fn stddev<Dst: Shape, Ax: Axes>(self, epsilon: f32) -> Self::WithShape<Dst>
+    fn stddev<Dst: Shape, Ax: Axes>(self, epsilon: E) -> Self::WithShape<Dst>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {
@@ -24,17 +24,14 @@ pub trait StddevTo: HasErr + HasShape {
     /// Fallible version of [StddevTo::stddev]
     fn try_stddev<Dst: Shape, Ax: Axes>(
         self,
-        epsilon: f32,
+        epsilon: E,
     ) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, D: Device<f32>, T: Tape<D>> StddevTo for Tensor<S, f32, D, T> {
-    fn try_stddev<Dst: Shape, Ax: Axes>(
-        self,
-        epsilon: f32,
-    ) -> Result<Self::WithShape<Dst>, Self::Err>
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> StddevTo<E> for Tensor<S, E, D, T> {
+    fn try_stddev<Dst: Shape, Ax: Axes>(self, epsilon: E) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {

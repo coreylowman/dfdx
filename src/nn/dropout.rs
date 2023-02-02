@@ -148,7 +148,7 @@ mod tests {
     use crate::{
         shapes::Rank1,
         tensor::{AsArray, OnesTensor},
-        tests::TestDevice,
+        tests::*,
     };
 
     use super::*;
@@ -170,7 +170,7 @@ mod tests {
     fn test_dropout_no_tape() {
         let dev: TestDevice = Default::default();
         let dropout = Dropout { p: 0.5 };
-        let t = dev.ones::<Rank1<100>>();
+        let t: Tensor<Rank1<100>, TestDtype, _> = dev.ones();
         let r = dropout.forward(t.clone());
         assert_eq!(t.array(), r.array());
     }

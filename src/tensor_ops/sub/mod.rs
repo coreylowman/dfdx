@@ -136,7 +136,7 @@ mod tests {
         let r = x.trace() - 1.0;
         assert_eq!(r.array(), -1.0);
         let g = r.exp().backward();
-        assert_close(&[g.get(&x).array()], &[(-1.0f32).exp()]);
+        assert_close(&[g.get(&x).array()], &[TestDtype::exp(-1.0)]);
     }
 
     #[test]

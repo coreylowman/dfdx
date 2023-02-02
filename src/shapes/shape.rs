@@ -26,6 +26,7 @@ pub trait Dtype:
     + std::ops::SubAssign
     + std::ops::MulAssign
     + std::ops::DivAssign
+    + num_traits::FromPrimitive
 {
 }
 impl Dtype for f32 {}

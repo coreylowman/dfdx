@@ -34,12 +34,12 @@ pub trait MeanTo: HasErr + HasShape {
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, D: Device<f32>, T: Tape<D>> MeanTo for Tensor<S, f32, D, T> {
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> MeanTo for Tensor<S, E, D, T> {
     fn try_mean<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {
-        let num_elements_reduced = <S as HasAxes<Ax>>::size(self.shape()) as f32;
+        let num_elements_reduced = E::from_usize(<S as HasAxes<Ax>>::size(self.shape())).unwrap();
         self.try_sum()?.try_div(num_elements_reduced)
     }
 }
@@ -52,16 +52,20 @@ mod tests {
     #[test]
     fn test_valids_mean_axis() {
         let dev: TestDevice = Default::default();
-        let _ = dev.zeros::<Rank1<5>>().mean::<Rank0, _>();
-        let _ = dev.zeros::<Rank2<5, 3>>().mean::<Rank1<3>, _>();
-        let _ = dev.zeros::<Rank2<5, 3>>().mean::<Rank1<5>, _>();
-        let _ = dev.zeros::<Rank3<7, 5, 3>>().mean::<Rank2<5, 3>, _>();
-        let _ = dev.zeros::<Rank3<7, 5, 3>>().mean::<Rank2<7, 3>, _>();
-        let _ = dev.zeros::<Rank3<7, 5, 3>>().mean::<Rank2<7, 5>, _>();
-        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().mean::<Rank3<7, 5, 3>, _>();
-        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().mean::<Rank3<9, 5, 3>, _>();
-        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().mean::<Rank3<9, 7, 3>, _>();
-        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().mean::<Rank3<9, 7, 5>, _>();
+        let _: Tensor<_, TestDtype, _> = dev.zeros::<Rank1<5>>().mean::<Rank0, _>();
+        let _: Tensor<_, TestDtype, _> = dev.zeros::<Rank2<5, 3>>().mean::<Rank1<3>, _>();
+        let _: Tensor<_, TestDtype, _> = dev.zeros::<Rank2<5, 3>>().mean::<Rank1<5>, _>();
+        let _: Tensor<_, TestDtype, _> = dev.zeros::<Rank3<7, 5, 3>>().mean::<Rank2<5, 3>, _>();
+        let _: Tensor<_, TestDtype, _> = dev.zeros::<Rank3<7, 5, 3>>().mean::<Rank2<7, 3>, _>();
+        let _: Tensor<_, TestDtype, _> = dev.zeros::<Rank3<7, 5, 3>>().mean::<Rank2<7, 5>, _>();
+        let _: Tensor<_, TestDtype, _> =
+            dev.zeros::<Rank4<9, 7, 5, 3>>().mean::<Rank3<7, 5, 3>, _>();
+        let _: Tensor<_, TestDtype, _> =
+            dev.zeros::<Rank4<9, 7, 5, 3>>().mean::<Rank3<9, 5, 3>, _>();
+        let _: Tensor<_, TestDtype, _> =
+            dev.zeros::<Rank4<9, 7, 5, 3>>().mean::<Rank3<9, 7, 3>, _>();
+        let _: Tensor<_, TestDtype, _> =
+            dev.zeros::<Rank4<9, 7, 5, 3>>().mean::<Rank3<9, 7, 5>, _>();
     }
 
     #[test]

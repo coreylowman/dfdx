@@ -166,7 +166,6 @@ pub fn keep_denormals() {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    const TOLERANCE: f32 = 1e-6;
 
     #[cfg(not(feature = "test-cuda"))]
     pub type TestDevice = crate::tensor::Cpu;
@@ -180,9 +179,16 @@ pub(crate) mod tests {
     #[cfg(feature = "test-f64")]
     pub type TestDtype = f64;
 
+    const TOLERANCE: TestDtype = 1e-6;
+
     pub trait AssertClose {
-        fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)>;
-        fn assert_close(&self, rhs: &Self, tolerance: f32)
+        type Elem: std::fmt::Display + std::fmt::Debug + Copy;
+        fn get_far_pair(
+            &self,
+            rhs: &Self,
+            tolerance: Self::Elem,
+        ) -> Option<(Self::Elem, Self::Elem)>;
+        fn assert_close(&self, rhs: &Self, tolerance: Self::Elem)
         where
             Self: std::fmt::Debug,
         {
@@ -193,6 +199,7 @@ pub(crate) mod tests {
     }
 
     impl AssertClose for f32 {
+        type Elem = f32;
         fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)> {
             if (self - rhs).abs() > tolerance {
                 Some((*self, *rhs))
@@ -202,8 +209,24 @@ pub(crate) mod tests {
         }
     }
 
+    impl AssertClose for f64 {
+        type Elem = f64;
+        fn get_far_pair(&self, rhs: &Self, tolerance: f64) -> Option<(f64, f64)> {
+            if (self - rhs).abs() > tolerance {
+                Some((*self, *rhs))
+            } else {
+                None
+            }
+        }
+    }
+
     impl<T: AssertClose, const M: usize> AssertClose for [T; M] {
-        fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)> {
+        type Elem = T::Elem;
+        fn get_far_pair(
+            &self,
+            rhs: &Self,
+            tolerance: Self::Elem,
+        ) -> Option<(Self::Elem, Self::Elem)> {
             for (l, r) in self.iter().zip(rhs.iter()) {
                 if let Some(pair) = l.get_far_pair(r, tolerance) {
                     return Some(pair);
@@ -213,14 +236,14 @@ pub(crate) mod tests {
         }
     }
 
-    pub fn assert_close<T: AssertClose + std::fmt::Debug>(a: &T, b: &T) {
+    pub fn assert_close<T: AssertClose<Elem = TestDtype> + std::fmt::Debug>(a: &T, b: &T) {
         a.assert_close(b, TOLERANCE);
     }
 
     pub fn assert_close_with_tolerance<T: AssertClose + std::fmt::Debug>(
         a: &T,
         b: &T,
-        tolerance: f32,
+        tolerance: T::Elem,
     ) {
         a.assert_close(b, tolerance);
     }

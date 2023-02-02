@@ -151,7 +151,7 @@ mod tests {
         assert_eq!(
             r.array(),
             [
-                [[1.1769f32; 4], [0.5552; 4], [0.5259; 4]],
+                [[1.1769; 4], [0.5552; 4], [0.5259; 4]],
                 [[1.3917; 4], [1.0692; 4], [0.873; 4]]
             ]
         );
@@ -174,7 +174,7 @@ mod tests {
         let r = a2.trace() + b2.clone();
         assert_eq!(
             r.array(),
-            [[[1.1769f32, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]; 4]
+            [[[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]; 4]
         );
         let g = r.mean().backward();
         assert_eq!(g.get(&a2).array(), [[[1.0 / 6.0; 3]; 2]; 4]);
@@ -188,7 +188,7 @@ mod tests {
         let r = x.trace() + 1.0;
         assert_eq!(r.array(), 1.0);
         let g = r.exp().backward();
-        assert_eq!(g.get(&x).array(), 1.0f32.exp());
+        assert_eq!(g.get(&x).array(), TestDtype::exp(1.0));
     }
 
     #[test]

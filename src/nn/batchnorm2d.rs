@@ -215,7 +215,7 @@ mod tests {
     fn test_batchnorm2d_3d_forward_mut() {
         let dev = TestDevice::seed_from_u64(0);
 
-        let x1: Tensor<Rank3<3, 2, 2>, f32, _> = dev.sample(rand_distr::StandardNormal);
+        let x1: Tensor<Rank3<3, 2, 2>, f32, _> = dev.sample_normal();
         let mut bn: BatchNorm2D<3, _> = BuildModule::build(&dev);
 
         let y1 = bn.forward_mut(x1.trace());

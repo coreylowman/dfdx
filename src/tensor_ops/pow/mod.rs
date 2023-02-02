@@ -93,13 +93,13 @@ mod tests {
         let r_array = r.array();
         assert!(r_array[0].is_nan());
         assert!(r_array[1].is_nan());
-        assert_eq!(&r_array[2..], &[f32::INFINITY, 1.0, 0.43527526]);
+        assert_eq!(&r_array[2..], &[TestDtype::INFINITY, 1.0, 0.43527526]);
 
         let g = r.sum().backward();
         let grad = g.get(&t).array();
         assert!(grad[0].is_nan());
         assert!(grad[1].is_nan());
-        assert_eq!(&grad[2..], &[f32::NEG_INFINITY, -1.2, -0.26116517]);
+        assert_eq!(&grad[2..], &[TestDtype::NEG_INFINITY, -1.2, -0.26116517]);
     }
 
     #[test]
@@ -117,11 +117,11 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.trace().powi(-3);
-        assert_eq!(r.array(), [-0.125, -1.0, f32::INFINITY, 1.0, 0.125]);
+        assert_eq!(r.array(), [-0.125, -1.0, TestDtype::INFINITY, 1.0, 0.125]);
         let g = r.sum().backward();
         assert_eq!(
             g.get(&t).array(),
-            [-0.1875, -3., f32::NEG_INFINITY, -3., -0.1875]
+            [-0.1875, -3., TestDtype::NEG_INFINITY, -3., -0.1875]
         );
     }
 }
