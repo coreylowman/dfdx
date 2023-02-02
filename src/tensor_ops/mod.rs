@@ -142,11 +142,12 @@
 mod utilities;
 pub use utilities::*;
 
-// mod impl_mask;
 mod abs;
 mod add;
 mod bce;
+mod boolean;
 mod broadcast_to;
+mod choose;
 mod clamp;
 mod cos;
 mod div;
@@ -186,7 +187,9 @@ mod var_to;
 pub use abs::abs;
 pub use add::{add, TryAdd};
 pub use bce::bce_with_logits;
+pub use boolean::{bool_and, bool_not, bool_or, bool_xor};
 pub use broadcast_to::BroadcastTo;
+pub use choose::ChooseFrom;
 pub use clamp::clamp;
 pub use cos::cos;
 pub use div::{div, TryDiv};
@@ -222,7 +225,6 @@ pub use sub::{sub, TrySub};
 pub use sum_to::SumTo;
 pub use tanh::tanh;
 pub use var_to::VarTo;
-// pub use impl_mask::*;
 
 #[cfg(feature = "nightly")]
 mod conv2d;

@@ -27,6 +27,7 @@ pub trait Device<E: Dtype>:
     // indexing
     + super::super::select_and_gather::ReplaceDimKernel<E>
     + super::super::select_and_gather::RemoveDimKernel<E>
+    + super::super::choose::ChooseKernel<E>
 
     // matmuls
     + super::super::matmul::VecMatKernel<E>
@@ -47,6 +48,9 @@ pub trait Device<E: Dtype>:
     + BinaryKernel<super::super::sub::BinarySubKernelOp, E>
     + BinaryKernel<super::super::mul::BinaryMulKernelOp, E>
     + BinaryKernel<super::super::div::BinaryDivKernelOp, E>
+
+    // boolean operations
+    + super::super::boolean::BooleanKernel
 
     // unary
     + UnaryKernel<super::super::abs::AbsKernelOp, E>

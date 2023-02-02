@@ -39,7 +39,7 @@ pub struct Tensor<S: Shape, E: Unit, D: DeviceStorage, T = NoneTape> {
     pub(crate) tape: T,
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
     type WithShape<New: Shape> = Tensor<New, E, D, T>;
     type Shape = S;
     fn shape(&self) -> &Self::Shape {
@@ -61,7 +61,7 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasUniqueId for Tensor<S, E, D, T>
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
     type Err = D::Err;
 }
 
