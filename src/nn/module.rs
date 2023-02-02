@@ -30,26 +30,14 @@ pub trait ModuleMut<Input> {
 
 /// Something that can be built. Related to [BuildOnDevice]
 pub trait BuildModule<D: DeviceStorage, E: Dtype>: Sized {
+    type Built;
+
     /// Construct it on the device
-    fn build(device: &D) -> Self {
+    fn build(device: &D) -> Self::Built {
         Self::try_build(device).unwrap()
     }
     /// Fallible version of [BuildModule::build]
-    fn try_build(device: &D) -> Result<Self, D::Err>;
-}
-
-/// Something that can be built on a different device
-/// than it is on. Builds [ToDevice::Output].
-///
-/// Related to [BuildModule]
-pub trait BuildOnDevice<D: DeviceStorage, E: Dtype> {
-    type Built: BuildModule<D, E>;
-    fn build_on_device(device: &D) -> Self::Built {
-        BuildModule::build(device)
-    }
-    fn try_build_on_device(device: &D) -> Result<Self::Built, D::Err> {
-        BuildModule::try_build(device)
-    }
+    fn try_build(device: &D) -> Result<Self::Built, D::Err>;
 }
 
 /// Something that can reset it's parameters.
@@ -80,10 +68,6 @@ impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {
     fn to_device(&self, _device: &D) -> Self {
         self.clone()
     }
-}
-
-impl<T: ZeroSizedModule + BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for T {
-    type Built = T;
 }
 
 impl<T: ZeroSizedModule, D: DeviceStorage, E: Dtype> GradientUpdate<D, E> for T {

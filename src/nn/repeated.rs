@@ -24,12 +24,13 @@ pub struct Repeated<T, const N: usize> {
 impl<D: Device<E>, E: Dtype, T: BuildModule<D, E>, const N: usize> BuildModule<D, E>
     for Repeated<T, N>
 {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+    type Built = Repeated<T::Built, N>;
+    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
         let mut modules = std::vec::Vec::with_capacity(N);
         for _ in 0..N {
-            modules.push(BuildModule::try_build(device)?);
+            modules.push(T::try_build(device)?);
         }
-        Ok(Self { modules })
+        Ok(Self::Built { modules })
     }
 }
 
@@ -110,7 +111,8 @@ mod tests {
     fn test_default_and_reset() {
         let dev: TestDevice = Default::default();
 
-        let m: Repeated<(DeviceLinear<3, 3, _>, ReLU), 5> = BuildModule::build(&dev);
+        type Model = Repeated<(Linear<3, 3>, ReLU), 5>;
+        let m = Model::build(&dev);
 
         for i in 0..5 {
             assert_ne!(m.modules[i].0.weight.array(), [[0.0; 3]; 3]);
@@ -122,7 +124,8 @@ mod tests {
     fn test_forward() {
         let dev: TestDevice = Default::default();
 
-        let mut m: Repeated<(DeviceLinear<3, 3, _>, ReLU), 5> = BuildModule::build(&dev);
+        type Model = Repeated<(Linear<3, 3>, ReLU), 5>;
+        let mut m = Model::build(&dev);
 
         let x = dev.zeros::<Rank1<3>>();
         let x = m.modules[0].forward(x);
@@ -138,7 +141,8 @@ mod tests {
     fn test_repeated_missing_gradients() {
         let dev: TestDevice = Default::default();
 
-        let mut model: Repeated<DeviceLinear<5, 5, _>, 3> = BuildModule::build(&dev);
+        type Model = Repeated<Linear<5, 5>, 3>;
+        let mut model = Model::build(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

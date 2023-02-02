@@ -1,4 +1,4 @@
-use crate::{nn::*, optim::*, tensor::*, tensor_ops::*};
+use crate::{nn::*, optim::*, shapes::Dtype, tensor::*, tensor_ops::*};
 
 #[cfg(feature = "nightly")]
 use crate::{gradients::Tape, shapes::*, Assert, ConstTrue};
@@ -24,29 +24,39 @@ pub struct MultiHeadAttention<
     const NUM_HEADS: usize,
     const K_DIM: usize = EMBED_DIM,
     const V_DIM: usize = EMBED_DIM,
-    D: Device<f32> = Cpu,
-> {
-    pub w_q: DeviceLinear<EMBED_DIM, K_DIM, D>,
-    pub w_k: DeviceLinear<EMBED_DIM, K_DIM, D>,
-    pub w_v: DeviceLinear<EMBED_DIM, V_DIM, D>,
-    pub w_o: DeviceLinear<V_DIM, EMBED_DIM, D>,
-}
+>;
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    BuildModule<D, f32> for MultiHeadAttention<M, H, K, V, D>
+    BuildModule<D, f32> for MultiHeadAttention<M, H, K, V>
 {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self {
-            w_q: BuildModule::try_build(device)?,
-            w_k: BuildModule::try_build(device)?,
-            w_v: BuildModule::try_build(device)?,
-            w_o: BuildModule::try_build(device)?,
+    type Built = DeviceMHA<M, H, K, V, f32, D>;
+    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
+        Ok(Self::Built {
+            w_q: Linear::try_build(device)?,
+            w_k: Linear::try_build(device)?,
+            w_v: Linear::try_build(device)?,
+            w_o: Linear::try_build(device)?,
         })
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct DeviceMHA<
+    const M: usize,
+    const H: usize,
+    const K: usize,
+    const V: usize,
+    E: Dtype,
+    D: DeviceStorage,
+> {
+    pub w_q: DeviceLinear<M, K, E, D>,
+    pub w_k: DeviceLinear<M, K, E, D>,
+    pub w_v: DeviceLinear<M, V, E, D>,
+    pub w_o: DeviceLinear<V, M, E, D>,
+}
+
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    ResetParams<D, f32> for MultiHeadAttention<M, H, K, V, D>
+    ResetParams<D, f32> for DeviceMHA<M, H, K, V, f32, D>
 {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.w_q.try_reset_params()?;
@@ -57,8 +67,8 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    GradientUpdate<D, f32> for MultiHeadAttention<M, H, K, V, D>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D: DeviceStorage>
+    GradientUpdate<D, f32> for DeviceMHA<M, H, K, V, f32, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
@@ -73,15 +83,15 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D1, D2> ToDevice<D2>
-    for MultiHeadAttention<M, H, K, V, D1>
+    for DeviceMHA<M, H, K, V, f32, D1>
 where
     D1: Device<f32>,
     D2: Device<f32>,
 {
-    type Output = MultiHeadAttention<M, H, K, V, D2>;
+    type Output = DeviceMHA<M, H, K, V, f32, D2>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
-        MultiHeadAttention {
+        DeviceMHA {
             w_q: self.w_q.to_device(device),
             w_k: self.w_k.to_device(device),
             w_v: self.w_v.to_device(device),
@@ -105,7 +115,7 @@ impl<
         Tensor<Rank2<S1, M>, f32, D, T>,
         Tensor<Rank2<S2, M>, f32, D>,
         Tensor<Rank2<S2, M>, f32, D>,
-    )> for MultiHeadAttention<M, H, K, V, D>
+    )> for DeviceMHA<M, H, K, V, f32, D>
 where
     Assert<{ S1 * K == S1 * H * (K / H) }>: ConstTrue,
     Assert<{ S2 * K == S2 * H * (K / H) }>: ConstTrue,
@@ -165,7 +175,7 @@ impl<
         Tensor<Rank3<B, S1, M>, f32, D, T>,
         Tensor<Rank3<B, S2, M>, f32, D>,
         Tensor<Rank3<B, S2, M>, f32, D>,
-    )> for MultiHeadAttention<M, H, K, V, D>
+    )> for DeviceMHA<M, H, K, V, f32, D>
 where
     Assert<{ B * S1 * K == B * S1 * H * (K / H) }>: ConstTrue,
     Assert<{ B * S2 * K == B * S2 * H * (K / H) }>: ConstTrue,
@@ -209,10 +219,11 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D, Src> Module<Src>
-    for MultiHeadAttention<M, H, K, V, D>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D, Src> Module<Src>
+    for DeviceMHA<M, H, K, V, E, D>
 where
-    D: Device<f32>,
+    E: Dtype,
+    D: Device<E>,
     Src: SplitTape,
     Self: Module<(Src, Src::NoTape, Src::NoTape), Output = Src>,
 {
@@ -223,8 +234,8 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>, T> ModuleMut<T>
-    for MultiHeadAttention<M, H, K, V, D>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E: Dtype, D: Device<E>, T>
+    ModuleMut<T> for DeviceMHA<M, H, K, V, E, D>
 where
     Self: Module<T>,
 {

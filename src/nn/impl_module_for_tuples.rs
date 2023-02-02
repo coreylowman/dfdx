@@ -1,8 +1,6 @@
 use crate::{optim::*, shapes::*, tensor_ops::*};
 
-use super::module::{
-    BuildModule, BuildOnDevice, Module, ModuleMut, OnDevice, ResetParams, ToDevice,
-};
+use super::module::{BuildModule, Module, ModuleMut, OnDevice, ResetParams, ToDevice};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
@@ -16,14 +14,11 @@ macro_rules! tuple_impls {
             }
         }
 
-        impl<D: Device<E>, E: Dtype, $($name: BuildOnDevice<D, E>),+> BuildOnDevice<D, E> for ($($name,)+) {
-            type Built = ($($name::Built, )+);
-        }
-
         impl<D: Device<E>, E: Dtype, $($name: BuildModule<D, E>),+> BuildModule<D, E> for ($($name,)+) {
+            type Built = ($($name::Built, )+);
             #[allow(non_snake_case)]
-            fn try_build(device: &D) -> Result<Self, D::Err> {
-                $(let $name = BuildModule::try_build(device)?;)*
+            fn try_build(device: &D) -> Result<Self::Built, D::Err> {
+                $(let $name = $name::try_build(device)?;)*
                 Ok(($($name, )*))
             }
         }
@@ -127,7 +122,8 @@ mod tests {
     #[test]
     fn test_2_tuple_update() {
         let dev: TestDevice = Default::default();
-        let mut model: (DeviceLinear<2, 3, _>, DeviceLinear<3, 4, _>) = BuildModule::build(&dev);
+        type Model = (Linear<2, 3>, Linear<3, 4>);
+        let mut model = Model::build(&dev);
         assert_ne!(model.0.weight.array(), [[0.0; 2]; 3]);
         assert_ne!(model.0.bias.array(), [0.0; 3]);
         assert_ne!(model.1.weight.array(), [[0.0; 3]; 4]);
@@ -258,7 +254,7 @@ mod tests {
     fn test_tuple_missing_gradients() {
         let dev: TestDevice = Default::default();
         type Model = (Linear<5, 3>, Linear<5, 3>, Linear<5, 3>);
-        let mut model = Model::build_on_device(&dev);
+        let mut model = Model::build(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

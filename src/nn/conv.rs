@@ -2,6 +2,30 @@ use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 
+pub struct Conv2D<
+    const IN_CHAN: usize,
+    const OUT_CHAN: usize,
+    const KERNEL_SIZE: usize,
+    const STRIDE: usize = 1,
+    const PADDING: usize = 0,
+>;
+impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
+    BuildModule<D, f32> for Conv2D<I, O, K, S, P>
+where
+    D: Device<f32>,
+{
+    type Built = DeviceConv2D<I, O, K, S, P, f32, D>;
+    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
+        let k = (I * K * K) as f32;
+        let bound = 1.0 / k.sqrt();
+        let distr = rand_distr::Uniform::new(-bound, bound);
+        Ok(Self::Built {
+            weight: device.try_sample(distr)?,
+            bias: device.try_sample(distr)?,
+        })
+    }
+}
+
 /// **Requires Nightly** Performs 2d convolutions on 3d and 4d images.
 ///
 /// **Pytorch Equivalent**: `torch.nn.Conv2d`
@@ -13,20 +37,21 @@ use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// - `STRIDE`: How far to move the kernel each step. Defaults to `1`
 /// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
 #[derive(Debug, Clone)]
-pub struct Conv2D<
-    const IN_CHAN: usize,
-    const OUT_CHAN: usize,
-    const KERNEL_SIZE: usize,
-    const STRIDE: usize = 1,
-    const PADDING: usize = 0,
-    D: Device<f32> = Cpu,
+pub struct DeviceConv2D<
+    const I: usize,
+    const O: usize,
+    const K: usize,
+    const S: usize,
+    const P: usize,
+    E: Dtype,
+    D: DeviceStorage,
 > {
-    pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>, f32, D>,
-    pub bias: Tensor<Rank1<OUT_CHAN>, f32, D>,
+    pub weight: Tensor<Rank4<O, I, K, K>, E, D>,
+    pub bias: Tensor<Rank1<O>, E, D>,
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
-    GradientUpdate<D, f32> for Conv2D<I, O, K, S, P, D>
+    GradientUpdate<D, f32> for DeviceConv2D<I, O, K, S, P, f32, D>
 where
     D: Device<f32>,
 {
@@ -41,23 +66,7 @@ where
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
-    BuildModule<D, f32> for Conv2D<I, O, K, S, P, D>
-where
-    D: Device<f32>,
-{
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        let k = (I * K * K) as f32;
-        let bound = 1.0 / k.sqrt();
-        let distr = rand_distr::Uniform::new(-bound, bound);
-        Ok(Self {
-            weight: device.try_sample(distr)?,
-            bias: device.try_sample(distr)?,
-        })
-    }
-}
-
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
-    ResetParams<D, f32> for Conv2D<I, O, K, S, P, D>
+    ResetParams<D, f32> for DeviceConv2D<I, O, K, S, P, f32, D>
 where
     D: Device<f32>,
 {
@@ -72,15 +81,15 @@ where
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D1, D2>
-    ToDevice<D2> for Conv2D<I, O, K, S, P, D1>
+    ToDevice<D2> for DeviceConv2D<I, O, K, S, P, f32, D1>
 where
     D1: Device<f32>,
     D2: Device<f32>,
 {
-    type Output = Conv2D<I, O, K, S, P, D2>;
+    type Output = DeviceConv2D<I, O, K, S, P, f32, D2>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
-        Conv2D {
+        DeviceConv2D {
             weight: self.weight.to_device(device),
             bias: self.bias.to_device(device),
         }
@@ -89,7 +98,7 @@ where
 
 #[cfg(feature = "nightly")]
 impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: usize, D, Img>
-    Module<Img> for Conv2D<C, O, K, S, P, D>
+    Module<Img> for DeviceConv2D<C, O, K, S, P, f32, D>
 where
     D: Device<f32>,
     Img: TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P>,
@@ -102,7 +111,7 @@ where
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D, Img>
-    ModuleMut<Img> for Conv2D<I, O, K, S, P, D>
+    ModuleMut<Img> for DeviceConv2D<I, O, K, S, P, f32, D>
 where
     D: Device<f32>,
     Self: Module<Img>,
@@ -114,12 +123,12 @@ where
 }
 
 #[derive(Clone, Debug)]
-struct Bias2D<'a, const C: usize, D: Device<f32> = Cpu> {
-    beta: &'a Tensor<Rank1<C>, f32, D>,
+struct Bias2D<'a, const C: usize, E: Dtype, D: DeviceStorage> {
+    beta: &'a Tensor<Rank1<C>, E, D>,
 }
 
 impl<'a, const C: usize, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
-    Module<Tensor<(Const<C>, H, W), f32, D, T>> for Bias2D<'a, C, D>
+    Module<Tensor<(Const<C>, H, W), f32, D, T>> for Bias2D<'a, C, f32, D>
 {
     type Output = Tensor<(Const<C>, H, W), f32, D, T>;
     fn forward(&self, input: Tensor<(Const<C>, H, W), f32, D, T>) -> Self::Output {
@@ -128,7 +137,7 @@ impl<'a, const C: usize, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
 }
 
 impl<'a, B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
-    Module<Tensor<(B, Const<C>, H, W), f32, D, T>> for Bias2D<'a, C, D>
+    Module<Tensor<(B, Const<C>, H, W), f32, D, T>> for Bias2D<'a, C, f32, D>
 {
     type Output = Tensor<(B, Const<C>, H, W), f32, D, T>;
     fn forward(&self, input: Tensor<(B, Const<C>, H, W), f32, D, T>) -> Self::Output {
@@ -152,15 +161,15 @@ mod tests {
     fn test_forward_3d_sizes() {
         let dev: TestDevice = Default::default();
         let x = dev.zeros::<Rank3<3, 10, 10>>();
-        let _: Tensor<Rank3<2, 8, 8>, _, _, _> = Conv2D::<3, 2, 3>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank3<4, 8, 8>, _, _, _> = Conv2D::<3, 4, 3>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank3<4, 9, 9>, _, _, _> = Conv2D::<3, 4, 2>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank3<4, 7, 7>, _, _, _> = Conv2D::<3, 4, 4>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank3<2, 4, 4>, _, _, _> = Conv2D::<3, 2, 3, 2>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank3<2, 3, 3>, _, _, _> = Conv2D::<3, 2, 3, 3>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank3<2, 10, 10>, _, _, _> = Conv2D::<3, 2, 3, 1, 1>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank3<2, 12, 12>, _, _, _> = Conv2D::<3, 2, 3, 1, 2>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank3<2, 6, 6>, _, _, _> = Conv2D::<3, 2, 3, 2, 2>::build_on_device(&dev).forward(x.clone());
+        let _: Tensor<Rank3<2, 8, 8>, _, _, _> = Conv2D::<3, 2, 3>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<4, 8, 8>, _, _, _> = Conv2D::<3, 4, 3>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<4, 9, 9>, _, _, _> = Conv2D::<3, 4, 2>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<4, 7, 7>, _, _, _> = Conv2D::<3, 4, 4>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<2, 4, 4>, _, _, _> = Conv2D::<3, 2, 3, 2>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<2, 3, 3>, _, _, _> = Conv2D::<3, 2, 3, 3>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<2, 10, 10>, _, _, _> = Conv2D::<3, 2, 3, 1, 1>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<2, 12, 12>, _, _, _> = Conv2D::<3, 2, 3, 1, 2>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank3<2, 6, 6>, _, _, _> = Conv2D::<3, 2, 3, 2, 2>::build(&dev).forward(x.clone());
     }
 
     #[rustfmt::skip]
@@ -168,15 +177,15 @@ mod tests {
     fn test_forward_4d_sizes() {
         let dev: TestDevice = Default::default();
         let x = dev.zeros::<Rank4<5, 3, 10, 10>>();
-        let _: Tensor<Rank4<5, 2, 8, 8>, _, _, _> = Conv2D::<3, 2, 3>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank4<5, 4, 8, 8>, _, _, _> = Conv2D::<3, 4, 3>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank4<5, 4, 9, 9>, _, _, _> = Conv2D::<3, 4, 2>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank4<5, 4, 7, 7>, _, _, _> = Conv2D::<3, 4, 4>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 4, 4>, _, _, _> = Conv2D::<3, 2, 3, 2>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 3, 3>, _, _, _> = Conv2D::<3, 2, 3, 3>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 10, 10>, _, _, _> = Conv2D::<3, 2, 3, 1, 1>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 12, 12>, _, _, _> = Conv2D::<3, 2, 3, 1, 2>::build_on_device(&dev).forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 6, 6>, _, _, _> = Conv2D::<3, 2, 3, 2, 2>::build_on_device(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 8, 8>, _, _, _> = Conv2D::<3, 2, 3>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 8, 8>, _, _, _> = Conv2D::<3, 4, 3>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 9, 9>, _, _, _> = Conv2D::<3, 4, 2>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 7, 7>, _, _, _> = Conv2D::<3, 4, 4>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 4, 4>, _, _, _> = Conv2D::<3, 2, 3, 2>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 3, 3>, _, _, _> = Conv2D::<3, 2, 3, 3>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 10, 10>, _, _, _> = Conv2D::<3, 2, 3, 1, 1>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 12, 12>, _, _, _> = Conv2D::<3, 2, 3, 1, 2>::build(&dev).forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 6, 6>, _, _, _> = Conv2D::<3, 2, 3, 2, 2>::build(&dev).forward(x.clone());
     }
 
     #[test]
@@ -185,7 +194,7 @@ mod tests {
         type A = Conv2D<1, 2, 3>;
         type B = Conv2D<2, 4, 3>;
         let _: Tensor<Rank3<4, 6, 6>, _, _> =
-            <(A, B)>::build_on_device(&dev).forward(dev.zeros::<Rank3<1, 10, 10>>());
+            <(A, B)>::build(&dev).forward(dev.zeros::<Rank3<1, 10, 10>>());
     }
 
     #[test]
@@ -196,14 +205,14 @@ mod tests {
 
         let dev = Cpu::default();
         let _: Tensor<Rank3<1, 8, 8>, _, _> =
-            <(A, B, C)>::build_on_device(&dev).forward_mut(dev.zeros::<Rank3<1, 10, 10>>());
+            <(A, B, C)>::build(&dev).forward_mut(dev.zeros::<Rank3<1, 10, 10>>());
     }
 
     #[test]
     fn test_conv_with_optimizer() {
         let dev: TestDevice = Default::default();
 
-        let mut m = Conv2D::<2, 4, 3>::build_on_device(&dev);
+        let mut m = Conv2D::<2, 4, 3>::build(&dev);
 
         let weight_init = m.weight.clone();
         let bias_init = m.bias.clone();

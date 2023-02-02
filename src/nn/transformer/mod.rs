@@ -8,7 +8,8 @@ pub use mha::*;
 
 use crate::{
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
-    tensor::{Cpu, PutTape, SplitTape},
+    shapes::Dtype,
+    tensor::{DeviceStorage, PutTape, SplitTape},
     tensor_ops::Device,
 };
 
@@ -44,27 +45,38 @@ pub struct Transformer<
     const NUM_ENCODER_LAYERS: usize,
     const NUM_DECODER_LAYERS: usize,
     const FF_DIM: usize,
-    D: Device<f32> = Cpu,
-> {
-    pub encoder: TransformerEncoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_ENCODER_LAYERS, D>,
-    pub decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS, D>,
-}
+>;
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
-    BuildModule<D, f32> for Transformer<M, H, A, B, F, D>
+    BuildModule<D, f32> for Transformer<M, H, A, B, F>
 where
     D: Device<f32>,
 {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self {
-            encoder: BuildModule::try_build(device)?,
-            decoder: BuildModule::try_build(device)?,
+    type Built = DeviceTransformer<M, H, A, B, F, f32, D>;
+    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
+        Ok(Self::Built {
+            encoder: TransformerEncoder::try_build(device)?,
+            decoder: TransformerDecoder::try_build(device)?,
         })
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct DeviceTransformer<
+    const M: usize,
+    const H: usize,
+    const EL: usize,
+    const DL: usize,
+    const F: usize,
+    E: Dtype,
+    D: DeviceStorage,
+> {
+    pub encoder: DeviceEncoder<M, H, F, EL, E, D>,
+    pub decoder: DeviceDecoder<M, H, F, DL, E, D>,
+}
+
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
-    ResetParams<D, f32> for Transformer<M, H, A, B, F, D>
+    ResetParams<D, f32> for DeviceTransformer<M, H, A, B, F, f32, D>
 where
     D: Device<f32>,
 {
@@ -76,7 +88,7 @@ where
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
-    GradientUpdate<D, f32> for Transformer<M, H, A, B, F, D>
+    GradientUpdate<D, f32> for DeviceTransformer<M, H, A, B, F, f32, D>
 where
     D: Device<f32>,
 {
@@ -91,15 +103,15 @@ where
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D1, D2>
-    ToDevice<D2> for Transformer<M, H, A, B, F, D1>
+    ToDevice<D2> for DeviceTransformer<M, H, A, B, F, f32, D1>
 where
     D1: Device<f32>,
     D2: Device<f32>,
 {
-    type Output = Transformer<M, H, A, B, F, D2>;
+    type Output = DeviceTransformer<M, H, A, B, F, f32, D2>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
-        Transformer {
+        DeviceTransformer {
             encoder: self.encoder.to_device(device),
             decoder: self.decoder.to_device(device),
         }
@@ -115,10 +127,10 @@ impl<
         D: Device<f32>,
         Src: SplitTape,
         Tgt: PutTape<Src::Tape>,
-    > Module<(Src, Tgt)> for Transformer<M, H, EL, DL, F, D>
+    > Module<(Src, Tgt)> for DeviceTransformer<M, H, EL, DL, F, f32, D>
 where
-    TransformerEncoder<M, H, F, EL, D>: Module<Src, Output = Src>,
-    TransformerDecoder<M, H, F, DL, D>: Module<
+    DeviceEncoder<M, H, F, EL, f32, D>: Module<Src, Output = Src>,
+    DeviceDecoder<M, H, F, DL, f32, D>: Module<
         (<Tgt as PutTape<Src::Tape>>::Output, Src::NoTape),
         Output = <Tgt as PutTape<Src::Tape>>::Output,
     >,
@@ -132,7 +144,7 @@ where
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D, T>
-    ModuleMut<T> for Transformer<M, H, A, B, F, D>
+    ModuleMut<T> for DeviceTransformer<M, H, A, B, F, f32, D>
 where
     D: Device<f32>,
     Self: Module<T>,

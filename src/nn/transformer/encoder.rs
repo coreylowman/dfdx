@@ -1,11 +1,12 @@
 use crate::{
     nn::*,
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
-    tensor::{Cpu, PutTape, SplitTape},
+    shapes::Dtype,
+    tensor::{PutTape, SplitTape},
     tensor_ops::Device,
 };
 
-use super::mha::MultiHeadAttention;
+use super::{mha::DeviceMHA, MultiHeadAttention};
 
 /// **Requires Nightly** A transformer encoder.
 ///
@@ -16,13 +17,8 @@ use super::mha::MultiHeadAttention;
 ///   the feedforward network in [TransformerEncoderBlock].
 /// - `NUM_LAYERS`: The number of [TransformerEncoderBlock] to use.
 /// TODO: Doctests
-pub type TransformerEncoder<
-    const MODEL_DIM: usize,
-    const NUM_HEADS: usize,
-    const FF_DIM: usize,
-    const NUM_LAYERS: usize,
-    D = Cpu,
-> = Repeated<TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, D>, NUM_LAYERS>;
+pub type DeviceEncoder<const M: usize, const H: usize, const F: usize, const L: usize, E, D> =
+    Repeated<DeviceEncoderBlock<M, H, F, E, D>, L>;
 
 /// **Requires Nightly** A single transformer encoder block
 ///
@@ -38,37 +34,47 @@ pub type TransformerEncoder<
 /// )
 /// ```
 /// TODO: Doctests
-#[derive(Clone, Debug)]
 pub struct TransformerEncoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
     const FF_DIM: usize,
-    D: Device<f32> = Cpu,
-> {
-    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
-    pub norm1: DeviceLayerNorm1D<MODEL_DIM, D>,
-    pub ff: FF<MODEL_DIM, FF_DIM, D>,
-    pub norm2: DeviceLayerNorm1D<MODEL_DIM, D>,
-}
-
-type FF<const M: usize, const F: usize, D> =
-    Residual<(DeviceLinear<M, F, D>, ReLU, DeviceLinear<F, M, D>)>;
+>;
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
-    for TransformerEncoderBlock<M, H, F, D>
+    for TransformerEncoderBlock<M, H, F>
 {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self {
-            self_attn: BuildModule::try_build(device)?,
-            norm1: BuildModule::try_build(device)?,
-            ff: BuildModule::try_build(device)?,
-            norm2: BuildModule::try_build(device)?,
+    type Built = DeviceEncoderBlock<M, H, F, f32, D>;
+    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
+        Ok(Self::Built {
+            self_attn: MultiHeadAttention::try_build(device)?,
+            norm1: LayerNorm1D::try_build(device)?,
+            ff: FF::try_build(device)?,
+            norm2: LayerNorm1D::try_build(device)?,
         })
     }
 }
 
+type FF<const M: usize, const F: usize> = Residual<(Linear<M, F>, ReLU, Linear<F, M>)>;
+
+type DeviceFF<const M: usize, const F: usize, E, D> =
+    Residual<(DeviceLinear<M, F, E, D>, ReLU, DeviceLinear<F, M, E, D>)>;
+
+#[derive(Clone, Debug)]
+pub struct DeviceEncoderBlock<
+    const M: usize,
+    const H: usize,
+    const F: usize,
+    E: Dtype,
+    D: DeviceStorage,
+> {
+    pub self_attn: DeviceMHA<M, H, M, M, E, D>,
+    pub norm1: DeviceLayerNorm1D<M, E, D>,
+    pub ff: DeviceFF<M, F, E, D>,
+    pub norm2: DeviceLayerNorm1D<M, E, D>,
+}
+
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
-    for TransformerEncoderBlock<M, H, F, D>
+    for DeviceEncoderBlock<M, H, F, f32, D>
 {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.self_attn.try_reset_params()?;
@@ -80,7 +86,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpdate<D, f32>
-    for TransformerEncoderBlock<M, H, F, D>
+    for DeviceEncoderBlock<M, H, F, f32, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
@@ -95,11 +101,11 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpd
 }
 
 impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2>
-    for TransformerEncoderBlock<M, H, F, D1>
+    for DeviceEncoderBlock<M, H, F, f32, D1>
 {
-    type Output = TransformerEncoderBlock<M, H, F, D2>;
+    type Output = DeviceEncoderBlock<M, H, F, f32, D2>;
     fn to_device(&self, device: &D2) -> Self::Output {
-        TransformerEncoderBlock {
+        DeviceEncoderBlock {
             self_attn: self.self_attn.to_device(device),
             norm1: self.norm1.to_device(device),
             ff: self.ff.to_device(device),
@@ -109,12 +115,12 @@ impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, Src> Module<Src>
-    for TransformerEncoderBlock<M, H, F, D>
+    for DeviceEncoderBlock<M, H, F, f32, D>
 where
     Src: SplitTape + std::ops::Add<Src::NoTape, Output = Src>,
-    MultiHeadAttention<M, H, M, M, D>: Module<Src, Output = Src>,
-    DeviceLayerNorm1D<M, D>: Module<Src, Output = Src>,
-    FF<M, F, D>: Module<Src, Output = Src>,
+    DeviceMHA<M, H, M, M, f32, D>: Module<Src, Output = Src>,
+    DeviceLayerNorm1D<M, f32, D>: Module<Src, Output = Src>,
+    DeviceFF<M, F, f32, D>: Module<Src, Output = Src>,
 {
     type Output = Src;
 
@@ -129,7 +135,7 @@ where
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, T> ModuleMut<T>
-    for TransformerEncoderBlock<M, H, F, D>
+    for DeviceEncoderBlock<M, H, F, f32, D>
 where
     Self: Module<T>,
 {

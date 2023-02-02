@@ -2,7 +2,13 @@ use super::{
     npz::{LoadFromNpz, SaveToNpz},
     *,
 };
-use crate::{tensor::numpy::NpzError, tensor_ops::Device};
+use crate::{
+    shapes::Dtype,
+    tensor::{
+        numpy::{NpzError, NumpyDtype},
+        CopySlice, DeviceStorage,
+    },
+};
 use std::format;
 use std::io::{Read, Seek, Write};
 use zip::{result::ZipResult, ZipArchive, ZipWriter};
@@ -10,7 +16,9 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 impl<T: ZeroSizedModule> SaveToNpz for T {}
 impl<T: ZeroSizedModule> LoadFromNpz for T {}
 
-impl<const C: usize, D: Device<f32>> SaveToNpz for DeviceBatchNorm2D<C, D> {
+impl<const C: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> SaveToNpz
+    for DeviceBatchNorm2D<C, E, D>
+{
     fn write<W: Write + Seek>(&self, p: &str, w: &mut zip::ZipWriter<W>) -> ZipResult<()> {
         self.scale.write_to_npz(w, format!("{p}scale.npy"))?;
         self.bias.write_to_npz(w, format!("{p}bias.npy"))?;
@@ -22,7 +30,9 @@ impl<const C: usize, D: Device<f32>> SaveToNpz for DeviceBatchNorm2D<C, D> {
     }
 }
 
-impl<const C: usize, D: Device<f32>> LoadFromNpz for DeviceBatchNorm2D<C, D> {
+impl<const C: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> LoadFromNpz
+    for DeviceBatchNorm2D<C, E, D>
+{
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.scale.read_from_npz(r, format!("{p}scale.npy"))?;
         self.bias.read_from_npz(r, format!("{p}bias.npy"))?;
@@ -41,8 +51,9 @@ impl<
         const K: usize,
         const S: usize,
         const P: usize,
-        D: Device<f32>,
-    > SaveToNpz for Conv2D<I, O, K, S, P, D>
+        E: Dtype + NumpyDtype,
+        D: CopySlice<E>,
+    > SaveToNpz for DeviceConv2D<I, O, K, S, P, E, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.weight.write_to_npz(w, format!("{p}weight.npy"))?;
@@ -58,8 +69,9 @@ impl<
         const K: usize,
         const S: usize,
         const P: usize,
-        D: Device<f32>,
-    > LoadFromNpz for Conv2D<I, O, K, S, P, D>
+        E: Dtype + NumpyDtype,
+        D: CopySlice<E>,
+    > LoadFromNpz for DeviceConv2D<I, O, K, S, P, E, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.weight.read_from_npz(r, format!("{p}weight.npy"))?;
@@ -82,7 +94,9 @@ impl<F: LoadFromNpz, R: LoadFromNpz> LoadFromNpz for GeneralizedResidual<F, R> {
     }
 }
 
-impl<const M: usize, D: Device<f32>> SaveToNpz for DeviceLayerNorm1D<M, D> {
+impl<const M: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> SaveToNpz
+    for DeviceLayerNorm1D<M, E, D>
+{
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.gamma.write_to_npz(w, format!("{p}gamma.npy"))?;
         self.beta.write_to_npz(w, format!("{p}beta.npy"))?;
@@ -90,7 +104,9 @@ impl<const M: usize, D: Device<f32>> SaveToNpz for DeviceLayerNorm1D<M, D> {
     }
 }
 
-impl<const M: usize, D: Device<f32>> LoadFromNpz for DeviceLayerNorm1D<M, D> {
+impl<const M: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> LoadFromNpz
+    for DeviceLayerNorm1D<M, E, D>
+{
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.gamma.read_from_npz(r, format!("{p}gamma.npy"))?;
         self.beta.read_from_npz(r, format!("{p}beta.npy"))?;
@@ -98,7 +114,9 @@ impl<const M: usize, D: Device<f32>> LoadFromNpz for DeviceLayerNorm1D<M, D> {
     }
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>> SaveToNpz for DeviceLinear<I, O, D> {
+impl<const I: usize, const O: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> SaveToNpz
+    for DeviceLinear<I, O, E, D>
+{
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.weight.write_to_npz(w, format!("{p}weight.npy"))?;
         self.bias.write_to_npz(w, format!("{p}bias.npy"))?;
@@ -106,7 +124,9 @@ impl<const I: usize, const O: usize, D: Device<f32>> SaveToNpz for DeviceLinear<
     }
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>> LoadFromNpz for DeviceLinear<I, O, D> {
+impl<const I: usize, const O: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> LoadFromNpz
+    for DeviceLinear<I, O, E, D>
+{
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.weight.read_from_npz(r, format!("{p}weight.npy"))?;
         self.bias.read_from_npz(r, format!("{p}bias.npy"))?;
@@ -343,8 +363,9 @@ mod tests {
     use rand_distr::{Distribution, Standard, StandardNormal};
     use tempfile::NamedTempFile;
 
-    fn test_save_load<S: ConstShape, E: Dtype, D: Device<E>, M: BuildOnDevice<D, E>>(dev: &D)
-    where
+    fn test_save_load<S: ConstShape, E: Dtype + NumpyDtype, D: Device<E>, M: BuildModule<D, E>>(
+        dev: &D,
+    ) where
         M::Built: Module<Tensor<S, E, D>> + SaveToNpz + LoadFromNpz,
         <M::Built as Module<Tensor<S, E, D>>>::Output: AsArray,
         StandardNormal: Distribution<E>,
@@ -352,8 +373,8 @@ mod tests {
         let x = dev.sample_normal();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let saved: M::Built = M::build_on_device(dev);
-        let mut loaded: M::Built = M::build_on_device(dev);
+        let saved: M::Built = M::build(dev);
+        let mut loaded: M::Built = M::build(dev);
 
         let y = saved.forward(x.clone());
 
@@ -373,8 +394,8 @@ mod tests {
         let x = dev.sample_normal::<Rank3<3, 4, 5>>();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let mut saved = Model::build_on_device(&dev);
-        let mut loaded = Model::build_on_device(&dev);
+        let mut saved = Model::build(&dev);
+        let mut loaded = Model::build(&dev);
 
         saved.running_mean.fill_with_distr(Standard);
         saved.running_var.fill_with_distr(Standard);
@@ -432,8 +453,8 @@ mod tests {
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let mut saved = M::build_on_device(&dev);
-        let mut loaded = M::build_on_device(&dev);
+        let mut saved = M::build(&dev);
+        let mut loaded = M::build(&dev);
 
         saved.gamma.fill_with_distr(Standard);
         saved.beta.fill_with_distr(Standard);

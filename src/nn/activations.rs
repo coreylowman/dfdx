@@ -12,6 +12,7 @@ macro_rules! activation_impls {
         impl NonMutableModule for $struct_name {}
 
         impl<D: Device<E>, E: Dtype> BuildModule<D, E> for $struct_name {
+            type Built = Self;
             fn try_build(_: &D) -> Result<Self, <D>::Err> {
                 Ok(Default::default())
             }
@@ -48,6 +49,7 @@ impl ZeroSizedModule for Softmax {}
 impl NonMutableModule for Softmax {}
 
 impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Softmax {
+    type Built = Self;
     fn try_build(_: &D) -> Result<Self, <D>::Err> {
         Ok(Default::default())
     }
