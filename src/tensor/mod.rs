@@ -23,7 +23,7 @@
 //!
 //! ### From arrays
 //!
-//! See [TensorFromArray].
+//! See [TensorFrom].
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
@@ -128,7 +128,7 @@ pub use cpu::{Cpu, CpuError};
 #[cfg(feature = "cuda")]
 pub use cuda::{Cuda, CudaError};
 
-pub use storage_traits::{AsArray, AsVec, CopySlice, TensorFromArray, TensorFromVec};
+pub use storage_traits::{AsArray, AsVec, CopySlice, TensorFrom, TensorFromVec};
 pub use storage_traits::{DeviceStorage, HasErr};
 pub use storage_traits::{OnesTensor, SampleTensor, ZerosTensor};
 

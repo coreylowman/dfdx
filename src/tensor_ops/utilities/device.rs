@@ -8,7 +8,6 @@ use crate::{
 pub trait Device<E: Dtype>:
     DeviceStorage
     + CopySlice<E>
-    + TensorFromVec<E>
 
     // allocation
     + crate::tensor::ZerosTensor<E>
@@ -73,6 +72,8 @@ pub trait Device<E: Dtype>:
     + BinaryKernel<super::super::huber_error::HuberErrorKernelOp<E>, E>
     + BinaryKernel<super::super::maximum::MaximumKernelOp, E>
     + BinaryKernel<super::super::minimum::MinimumKernelOp, E>
+where
+    Self: TensorFromVec<E>
 {
 }
 

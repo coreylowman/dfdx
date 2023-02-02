@@ -2,7 +2,7 @@
 
 use dfdx::{
     shapes::{Const, HasShape, Rank1, Rank2, Rank3},
-    tensor::{AsArray, Cpu, OnesTensor, SampleTensor, Tensor, TensorFromArray, ZerosTensor},
+    tensor::{AsArray, Cpu, OnesTensor, SampleTensor, Tensor, TensorFrom, ZerosTensor},
 };
 
 fn main() {

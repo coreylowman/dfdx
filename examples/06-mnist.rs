@@ -64,7 +64,7 @@ impl MnistDataset {
             choices[self.lbl[img_idx]] = 1.0;
             lbl_data.extend(choices);
         }
-        (dev.tensor_from_vec(img_data), dev.tensor_from_vec(lbl_data))
+        (dev.tensor(img_data), dev.tensor(lbl_data))
     }
 }
 

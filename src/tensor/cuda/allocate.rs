@@ -129,17 +129,8 @@ impl<S: Shape, E: Unit> AsVec for CudaArray<S, E> {
     }
 }
 
-impl<Src, S: Shape, E: Unit> TensorFromArray<Src, S, E> for Cuda
-where
-    Cpu: TensorFromArray<Src, S, E>,
-{
-    fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.take_cpu_tensor(self.cpu.try_tensor(src)?)
-    }
-}
-
 impl<E: Unit> TensorFromVec<E> for Cuda {
-    fn try_tensor_from_vec_with_shape<S: Shape>(
+    fn try_tensor_from_vec<S: Shape>(
         &self,
         src: Vec<E>,
         shape: S,
