@@ -138,11 +138,14 @@ mod tests {
         assert_ne!(g.get(&model.1.weight).array(), [[0.0; 3]; 4]);
         assert_ne!(g.get(&model.1.bias).array(), [0.0; 4]);
 
-        let mut sgd = Sgd::new(SgdConfig {
-            lr: 1.0,
-            momentum: None,
-            weight_decay: None,
-        });
+        let mut sgd = Sgd::new(
+            &model,
+            SgdConfig {
+                lr: 1.0,
+                momentum: None,
+                weight_decay: None,
+            },
+        );
         sgd.update(&mut model, g).unwrap();
 
         assert_ne!(model.0.weight.array(), m0.0.weight.array());

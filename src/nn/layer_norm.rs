@@ -18,7 +18,7 @@ use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// # let dev: Cpu = Default::default();
 /// type Model = LayerNorm1D<5>;
 /// let model = Model::build_on_device(&dev);
-/// let _: Tensor<Rank1<5>> = model.forward(dev.zeros::<Rank1<5>>());
+/// let _: Tensor<Rank1<5>, f32, _> = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(Debug, Clone)]
 pub struct LayerNorm1D<const M: usize, D: Device<f32> = Cpu> {

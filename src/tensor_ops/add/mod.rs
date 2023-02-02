@@ -83,7 +83,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::*};
+    use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_add_0d() {
@@ -133,8 +133,8 @@ mod tests {
         let a = dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
         let b = dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
-        let a2: Tensor3D<2, 3, 4, TestDevice> = a.broadcast();
-        let b2: Tensor3D<2, 3, 4, TestDevice> = b.broadcast();
+        let a2: Tensor<Rank3<2, 3, 4>, f32, TestDevice> = a.broadcast();
+        let b2: Tensor<Rank3<2, 3, 4>, f32, TestDevice> = b.broadcast();
 
         let r = a2.trace() + b2.clone();
         assert_eq!(
@@ -155,8 +155,8 @@ mod tests {
         let a = dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
         let b = dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
-        let a2: Tensor3D<4, 2, 3, TestDevice> = a.broadcast();
-        let b2: Tensor3D<4, 2, 3, TestDevice> = b.broadcast();
+        let a2: Tensor<Rank3<4, 2, 3>, f32, TestDevice> = a.broadcast();
+        let b2: Tensor<Rank3<4, 2, 3>, f32, TestDevice> = b.broadcast();
 
         let r = a2.trace() + b2.clone();
         assert_eq!(

@@ -38,8 +38,8 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let _: Tensor<Rank1<5>> = dev.zeros();
-//! let _: Tensor<Rank2<3, 2>> = dev.ones();
+//! let _: Tensor<Rank1<5>,f32 , _> = dev.zeros();
+//! let _: Tensor<Rank2<3, 2>, f32, _> = dev.ones();
 //! ```
 //!
 //! ### Filled with random data
@@ -49,11 +49,11 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let _: Tensor<Rank1<5>> = dev.sample_uniform();
-//! let _: Tensor<Rank2<3, 5>> = dev.sample_normal();
+//! let _: Tensor<Rank1<5>, f32, _> = dev.sample_uniform();
+//! let _: Tensor<Rank2<3, 5>, f32, _> = dev.sample_normal();
 //! // or pass in actual distributions
-//! let _: Tensor<Rank1<3>> = dev.sample(rand_distr::Standard);
-//! let _: Tensor<Rank2<4, 3>> = dev.sample(rand_distr::StandardNormal);
+//! let _: Tensor<Rank1<3>, f32, _> = dev.sample(rand_distr::Standard);
+//! let _: Tensor<Rank2<4, 3>, f32, _> = dev.sample(rand_distr::StandardNormal);
 //! ```
 //!
 //! ### Copy data from slices
@@ -63,7 +63,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let mut a: Tensor<Rank1<1000>> = dev.zeros();
+//! let mut a: Tensor<Rank1<1000>, f32, _> = dev.zeros();
 //! let buf: Vec<f32> = vec![1.0; 1000];
 //! a.copy_from(&buf);
 //! ```
@@ -83,7 +83,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let t: Tensor<Rank2<2, 3>> = dev.zeros();
+//! let t: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
 //! let t: [[f32; 3]; 2] = t.array();
 //! ```
 //!
@@ -98,7 +98,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let t: Tensor<Rank1<5>> = dev.zeros();
+//! let t: Tensor<Rank1<5>,f32, _> = dev.zeros();
 //! let t_clone: Tensor<Rank1<5>, _, _, OwnedTape<_>> = t.trace(); // copies t
 //! let t = t.traced(); // takes ownership of t
 //! ```

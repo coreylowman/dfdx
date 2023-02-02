@@ -30,7 +30,7 @@ pub trait SumTo: HasErr + HasShape {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let t: Tensor<Rank2<2, 3>, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+    /// let t: Tensor<Rank2<2, 3>, f32, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
     /// let r = t.sum::<Rank1<2>, _>(); // or `sum::<_, Axis<1>>()`
     /// assert_eq!(r.array(), [6.0, -6.0]);
     /// ```
@@ -117,7 +117,7 @@ mod tests {
     #[test]
     fn test_sum_axes_3d_to_1d() {
         let dev: TestDevice = Default::default();
-        let t = dev.sample::<Rank3<2, 3, 4>, _>(rand_distr::StandardNormal);
+        let t: Tensor<_, f32, _> = dev.sample::<Rank3<2, 3, 4>, _>(rand_distr::StandardNormal);
         let r = t.trace().sum::<Rank1<3>, _>();
         let r2 = t.trace().sum::<Rank2<3, 4>, _>().sum::<Rank1<3>, _>();
         assert_close(&r.array(), &r2.array());

@@ -17,7 +17,7 @@ use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// # let dev: Cpu = Default::default();
 /// type Model = SplitInto<(Linear<5, 3>, Linear<5, 7>)>;
 /// let model = Model::build_on_device(&dev);
-/// let _: (Tensor<Rank1<3>>, Tensor<Rank1<7>>) = model.forward(dev.zeros::<Rank1<5>>());
+/// let _: (Tensor<Rank1<3>, f32, _>, Tensor<Rank1<7>, f32, _>) = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(Debug, Default, Clone)]
 pub struct SplitInto<T>(pub T);

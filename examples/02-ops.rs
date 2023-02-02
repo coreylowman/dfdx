@@ -2,17 +2,19 @@
 
 use dfdx::{
     shapes::{Rank0, Rank1, Rank2},
-    tensor::{AsArray, Cpu, SampleTensor},
+    tensor::{AsArray, Cpu, SampleTensor, Tensor},
     tensor_ops::{MeanTo, TryMatMul},
 };
 
 fn main() {
     let dev: Cpu = Default::default();
 
-    let a = dev.sample_normal::<Rank2<2, 3>>();
+    let a: Tensor<Rank2<2, 3>, f32, _> = dev.sample_normal();
     dbg!(a.array());
 
-    let b = dev.sample_normal::<Rank2<2, 3>>();
+    // rust can infer the shape & dtype here because we add this
+    // to a below!
+    let b = dev.sample_normal();
     dbg!(b.array());
 
     // we can do binary operations like add two tensors together
@@ -41,14 +43,14 @@ fn main() {
         / 2.0;
 
     // then we have things like matrix and vector multiplication:
-    let a = dev.sample_normal::<Rank2<3, 5>>();
-    let b = dev.sample_normal::<Rank2<5, 7>>();
+    let a: Tensor<Rank2<3, 5>, f32, _> = dev.sample_normal();
+    let b: Tensor<Rank2<5, 7>, f32, _> = dev.sample_normal();
     let c = a.matmul(b);
     dbg!(c.array());
 
     // which even the outer product between two vectors!
-    let a = dev.sample_normal::<Rank1<3>>();
-    let b = dev.sample_normal::<Rank1<7>>();
+    let a: Tensor<Rank1<3>, f32, _> = dev.sample_normal();
+    let b: Tensor<Rank1<7>, f32, _> = dev.sample_normal();
     let c = a.matmul(b);
     dbg!(c.array());
 }

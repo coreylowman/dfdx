@@ -55,19 +55,12 @@ impl Default for AdamConfig<f32> {
 /// [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980)
 ///
 /// # Example Usage
-///
-/// Constructing using default:
 /// ```rust
 /// # use dfdx::{prelude::*, optim::*};
-/// # type Model = Tensor<Rank0>;
-/// let mut opt: Adam<Model> = Default::default();
-/// ```
-///
-/// Changing using new
-/// ```rust
-/// # use dfdx::{prelude::*, optim::*};
-/// # type Model = Tensor<Rank0>;
-/// let mut opt: Adam<Model> = Adam::new(AdamConfig {
+/// # type Model = Tensor<Rank0, f32, Cpu>;
+/// # let dev: Cpu = Default::default();
+/// # let model: Model = dev.zeros();
+/// let mut opt: Adam<Model> = Adam::new(&model, AdamConfig {
 ///     lr: 1e-2,
 ///     betas: [0.5, 0.25],
 ///     eps: 1e-6,
@@ -89,19 +82,9 @@ pub struct Adam<M, E: Dtype = f32> {
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype> Default for Adam<M, E>
-where
-    AdamConfig<E>: Default,
-{
-    /// See [AdamConfig]
-    fn default() -> Self {
-        Self::new(Default::default())
-    }
-}
-
 impl<M, E: Dtype> Adam<M, E> {
     /// Constructs using hyperparameters from `cfg`.
-    pub fn new(cfg: AdamConfig<E>) -> Self {
+    pub fn new(_model: &M, cfg: AdamConfig<E>) -> Self {
         Self {
             cfg,
             t: 0,
@@ -173,8 +156,8 @@ mod tests {
     #[test]
     fn test_default_adam_params() {
         let dev: TestDevice = Default::default();
-        let mut opt = Adam::default();
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut opt = Adam::new(&t, Default::default());
         let rate = dev.tensor([1e-6, 1e-5, 1e-4, 1e-3, 1e-2]);
         let expected = [
             [0.99999994, 0.999996, 0.9997143, 0.9990244, 0.99900025],
@@ -199,13 +182,16 @@ mod tests {
     #[test]
     fn test_custom_adam_one_params() {
         let dev: TestDevice = Default::default();
-        let mut opt = Adam::new(AdamConfig {
-            lr: 1e-3,
-            betas: [0.5, 0.25],
-            eps: 1e-8,
-            weight_decay: None,
-        });
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut opt = Adam::new(
+            &t,
+            AdamConfig {
+                lr: 1e-3,
+                betas: [0.5, 0.25],
+                eps: 1e-8,
+                weight_decay: None,
+            },
+        );
         let rate = dev.tensor([1e-4, 1e-3, 1e-2, 1e-1, 1e-0]);
         let expected = [
             [0.9997143, 0.9990244, 0.99900025, 0.999, 0.999],
@@ -230,12 +216,15 @@ mod tests {
     #[test]
     fn test_adam_l2_decay() {
         let dev: TestDevice = Default::default();
-        let mut opt = Adam::new(AdamConfig {
-            betas: [0.5, 0.25],
-            weight_decay: Some(WeightDecay::L2(1.0)),
-            ..Default::default()
-        });
         let mut t: Tensor<Rank1<5>, f32, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
+        let mut opt = Adam::new(
+            &t,
+            AdamConfig {
+                betas: [0.5, 0.25],
+                weight_decay: Some(WeightDecay::L2(1.0)),
+                ..Default::default()
+            },
+        );
         #[rustfmt::skip]
         let expected = [
             [-0.499, -0.249, 0.099, 0.59900004, 0.999],
@@ -260,12 +249,15 @@ mod tests {
     #[test]
     fn test_adam_decoupled_decay() {
         let dev: TestDevice = Default::default();
-        let mut opt = Adam::new(AdamConfig {
-            betas: [0.5, 0.25],
-            weight_decay: Some(WeightDecay::Decoupled(1.0)),
-            ..Default::default()
-        });
         let mut t: Tensor<Rank1<5>, f32, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
+        let mut opt = Adam::new(
+            &t,
+            AdamConfig {
+                betas: [0.5, 0.25],
+                weight_decay: Some(WeightDecay::Decoupled(1.0)),
+                ..Default::default()
+            },
+        );
         #[rustfmt::skip]
         let expected = [
             [-0.5005, -0.25075,  0.098900005,  0.5984,  0.998],
@@ -286,48 +278,4 @@ mod tests {
             assert_close(&t.array(), e);
         }
     }
-
-    // #[test]
-    // fn test_adam_changes_all_params() {
-    //     let dev: TestDevice = Default::default();
-    //     type Model = (Linear<5, 16>, ReLU, Linear<16, 16>, ReLU, Linear<16, 10>);
-    //     let mut rng = StdRng::seed_from_u64(0);
-    //     let mut model: Model = Default::default();
-    //     model.reset_params(&mut rng);
-    //     let model_0 = model.clone();
-
-    //     let x: Tensor2D<16, 5> = Tensor2D::rand(&mut rng);
-    //     let y: Tensor2D<16, 10> = Tensor2D::rand(&mut rng);
-    //     let mut opt: Adam<Model> = Adam::new(AdamConfig {
-    //         lr: 1e-3,
-    //         betas: [0.9, 0.999],
-    //         eps: 1e-8,
-    //         weight_decay: None,
-    //     });
-
-    //     let py = model.forward(x.trace());
-    //     let loss = (py - y).square().mean();
-    //     let gradients = loss.backward();
-    //     opt.update(&mut model, gradients).expect("");
-
-    //     let model_1 = model.clone();
-
-    //     assert!(model_0.0.weight.data() != model_1.0.weight.data());
-    //     assert!(model_0.0.bias.data() != model_1.0.bias.data());
-    //     assert!(model_0.2.weight.data() != model_1.2.weight.data());
-    //     assert!(model_0.2.bias.data() != model_1.2.bias.data());
-    //     assert!(model_0.4.weight.data() != model_1.4.weight.data());
-    //     assert!(model_0.4.bias.data() != model_1.4.bias.data());
-    // }
-
-    // #[test]
-    // fn test_adam_unused_params() {
-    //     let dev: TestDevice = Default::default();
-    //     type Model = (Linear<5, 16>, Linear<16, 10>);
-    //     let mut model: Model = Default::default();
-    //     let mut opt: Adam<Model> = Default::default();
-    //     let y = model.1.forward(Tensor2D::<8, 16>::zeros().trace());
-    //     let g = y.mean().backward();
-    //     opt.update(&mut model, g).expect_err("");
-    // }
 }

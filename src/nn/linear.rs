@@ -20,9 +20,9 @@ use super::module::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// type Model = Linear<5, 2>;
 /// let model = Model::build_on_device(&dev);
 /// // single item forward
-/// let _: Tensor<Rank1<2>> = model.forward(dev.zeros::<Rank1<5>>());
+/// let _: Tensor<Rank1<2>, f32, _> = model.forward(dev.zeros::<Rank1<5>>());
 /// // batched forward
-/// let _: Tensor<Rank2<10, 2>> = model.forward(dev.zeros::<Rank2<10, 5>>());
+/// let _: Tensor<Rank2<10, 2>, f32, _> = model.forward(dev.zeros::<Rank2<10, 5>>());
 /// ```
 #[derive(Debug, Clone)]
 pub struct Linear<const I: usize, const O: usize, D: Device<f32> = Cpu> {
