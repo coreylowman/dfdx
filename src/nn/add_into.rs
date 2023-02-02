@@ -112,7 +112,8 @@ mod tests {
     #[test]
     fn test_add_into_2() {
         let dev: TestDevice = Default::default();
-        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>)> = BuildModule::build(&dev);
+        type Model = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
+        let m = Model::build_on_device(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -126,8 +127,8 @@ mod tests {
     #[test]
     fn test_add_into_3() {
         let dev: TestDevice = Default::default();
-        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>, Linear<4, 5, _>)> =
-            BuildModule::build(&dev);
+        type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>)>;
+        let m = Model::build_on_device(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),

@@ -26,10 +26,10 @@ pub struct MultiHeadAttention<
     const V_DIM: usize = EMBED_DIM,
     D: Device<f32> = Cpu,
 > {
-    pub w_q: Linear<EMBED_DIM, K_DIM, D>,
-    pub w_k: Linear<EMBED_DIM, K_DIM, D>,
-    pub w_v: Linear<EMBED_DIM, V_DIM, D>,
-    pub w_o: Linear<V_DIM, EMBED_DIM, D>,
+    pub w_q: DeviceLinear<EMBED_DIM, K_DIM, D>,
+    pub w_k: DeviceLinear<EMBED_DIM, K_DIM, D>,
+    pub w_v: DeviceLinear<EMBED_DIM, V_DIM, D>,
+    pub w_o: DeviceLinear<V_DIM, EMBED_DIM, D>,
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>

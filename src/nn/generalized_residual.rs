@@ -94,14 +94,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::Linear;
+    use crate::nn::{BuildOnDevice, Linear};
     use crate::tests::{assert_close, TestDevice};
 
     #[test]
     fn test_reset_generalized_residual() {
         let dev: TestDevice = Default::default();
 
-        let model: GeneralizedResidual<Linear<2, 5, _>, Linear<2, 5, _>> = BuildModule::build(&dev);
+        type Model = GeneralizedResidual<Linear<2, 5>, Linear<2, 5>>;
+        let model = Model::build_on_device(&dev);
         assert_ne!(model.f.weight.array(), [[0.0; 2]; 5]);
         assert_ne!(model.f.bias.array(), [0.0; 5]);
         assert_ne!(model.r.weight.array(), [[0.0; 2]; 5]);
@@ -112,7 +113,8 @@ mod tests {
     fn test_generalized_residual_gradients() {
         let dev: TestDevice = Default::default();
 
-        let model: GeneralizedResidual<Linear<2, 2, _>, Linear<2, 2, _>> = BuildModule::build(&dev);
+        type Model = GeneralizedResidual<Linear<2, 2>, Linear<2, 2>>;
+        let model = Model::build_on_device(&dev);
 
         let x = dev.sample_normal::<Rank2<4, 2>>();
         let y = model.forward(x.trace());

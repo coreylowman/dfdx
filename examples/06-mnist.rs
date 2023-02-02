@@ -74,10 +74,10 @@ impl MnistDataset {
 
 // our network structure
 type Mlp = (
-    (Linear<784, 512>, ReLU),
-    (Linear<512, 128>, ReLU),
-    (Linear<128, 32>, ReLU),
-    Linear<32, 10>,
+    (DeviceLinear<784, 512>, ReLU),
+    (DeviceLinear<512, 128>, ReLU),
+    (DeviceLinear<128, 32>, ReLU),
+    DeviceLinear<32, 10>,
 );
 
 // training batch size

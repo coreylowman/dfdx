@@ -118,14 +118,15 @@ pub struct TransformerDecoderBlock<
     D: Device<f32> = Cpu,
 > {
     pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
-    pub norm1: LayerNorm1D<MODEL_DIM, D>,
+    pub norm1: DeviceLayerNorm1D<MODEL_DIM, D>,
     pub mh_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
-    pub norm2: LayerNorm1D<MODEL_DIM, D>,
+    pub norm2: DeviceLayerNorm1D<MODEL_DIM, D>,
     pub ff: FF<MODEL_DIM, FF_DIM, D>,
-    pub norm3: LayerNorm1D<MODEL_DIM, D>,
+    pub norm3: DeviceLayerNorm1D<MODEL_DIM, D>,
 }
 
-type FF<const M: usize, const F: usize, D> = Residual<(Linear<M, F, D>, ReLU, Linear<F, M, D>)>;
+type FF<const M: usize, const F: usize, D> =
+    Residual<(DeviceLinear<M, F, D>, ReLU, DeviceLinear<F, M, D>)>;
 
 impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
     for TransformerDecoderBlock<M, N, F, D>
@@ -197,7 +198,7 @@ where
     Mem: Clone,
     MultiHeadAttention<M, H, M, M, D>:
         Module<Tgt, Output = Tgt> + Module<(Tgt, Mem, Mem), Output = Tgt>,
-    LayerNorm1D<M, D>: Module<Tgt, Output = Tgt>,
+    DeviceLayerNorm1D<M, D>: Module<Tgt, Output = Tgt>,
     FF<M, F, D>: Module<Tgt, Output = Tgt>,
 {
     type Output = Tgt;

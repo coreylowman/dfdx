@@ -10,7 +10,7 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 impl<T: ZeroSizedModule> SaveToNpz for T {}
 impl<T: ZeroSizedModule> LoadFromNpz for T {}
 
-impl<const C: usize, D: Device<f32>> SaveToNpz for BatchNorm2D<C, D> {
+impl<const C: usize, D: Device<f32>> SaveToNpz for DeviceBatchNorm2D<C, D> {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut zip::ZipWriter<W>) -> ZipResult<()> {
         self.scale.write_to_npz(w, format!("{p}scale.npy"))?;
         self.bias.write_to_npz(w, format!("{p}bias.npy"))?;
@@ -22,7 +22,7 @@ impl<const C: usize, D: Device<f32>> SaveToNpz for BatchNorm2D<C, D> {
     }
 }
 
-impl<const C: usize, D: Device<f32>> LoadFromNpz for BatchNorm2D<C, D> {
+impl<const C: usize, D: Device<f32>> LoadFromNpz for DeviceBatchNorm2D<C, D> {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.scale.read_from_npz(r, format!("{p}scale.npy"))?;
         self.bias.read_from_npz(r, format!("{p}bias.npy"))?;
@@ -82,7 +82,7 @@ impl<F: LoadFromNpz, R: LoadFromNpz> LoadFromNpz for GeneralizedResidual<F, R> {
     }
 }
 
-impl<const M: usize, D: Device<f32>> SaveToNpz for LayerNorm1D<M, D> {
+impl<const M: usize, D: Device<f32>> SaveToNpz for DeviceLayerNorm1D<M, D> {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.gamma.write_to_npz(w, format!("{p}gamma.npy"))?;
         self.beta.write_to_npz(w, format!("{p}beta.npy"))?;
@@ -90,7 +90,7 @@ impl<const M: usize, D: Device<f32>> SaveToNpz for LayerNorm1D<M, D> {
     }
 }
 
-impl<const M: usize, D: Device<f32>> LoadFromNpz for LayerNorm1D<M, D> {
+impl<const M: usize, D: Device<f32>> LoadFromNpz for DeviceLayerNorm1D<M, D> {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.gamma.read_from_npz(r, format!("{p}gamma.npy"))?;
         self.beta.read_from_npz(r, format!("{p}beta.npy"))?;
@@ -98,7 +98,7 @@ impl<const M: usize, D: Device<f32>> LoadFromNpz for LayerNorm1D<M, D> {
     }
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>> SaveToNpz for Linear<I, O, D> {
+impl<const I: usize, const O: usize, D: Device<f32>> SaveToNpz for DeviceLinear<I, O, D> {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.weight.write_to_npz(w, format!("{p}weight.npy"))?;
         self.bias.write_to_npz(w, format!("{p}bias.npy"))?;
@@ -106,7 +106,7 @@ impl<const I: usize, const O: usize, D: Device<f32>> SaveToNpz for Linear<I, O, 
     }
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>> LoadFromNpz for Linear<I, O, D> {
+impl<const I: usize, const O: usize, D: Device<f32>> LoadFromNpz for DeviceLinear<I, O, D> {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.weight.read_from_npz(r, format!("{p}weight.npy"))?;
         self.bias.read_from_npz(r, format!("{p}bias.npy"))?;
@@ -345,15 +345,15 @@ mod tests {
 
     fn test_save_load<S: ConstShape, E: Dtype, D: Device<E>, M: BuildOnDevice<D, E>>(dev: &D)
     where
-        OnDevice<M, D>: BuildModule<D, E> + Module<Tensor<S, E, D>> + SaveToNpz + LoadFromNpz,
-        <OnDevice<M, D> as Module<Tensor<S, E, D>>>::Output: AsArray,
+        M::Built: Module<Tensor<S, E, D>> + SaveToNpz + LoadFromNpz,
+        <M::Built as Module<Tensor<S, E, D>>>::Output: AsArray,
         StandardNormal: Distribution<E>,
     {
         let x = dev.sample_normal();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let saved: OnDevice<M, D> = M::build_on_device(dev);
-        let mut loaded: OnDevice<M, D> = M::build_on_device(dev);
+        let saved: M::Built = M::build_on_device(dev);
+        let mut loaded: M::Built = M::build_on_device(dev);
 
         let y = saved.forward(x.clone());
 

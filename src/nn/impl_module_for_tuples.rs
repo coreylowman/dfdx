@@ -1,6 +1,8 @@
 use crate::{optim::*, shapes::*, tensor_ops::*};
 
-use super::module::{BuildModule, Module, ModuleMut, OnDevice, ResetParams, ToDevice};
+use super::module::{
+    BuildModule, BuildOnDevice, Module, ModuleMut, OnDevice, ResetParams, ToDevice,
+};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
@@ -12,6 +14,10 @@ macro_rules! tuple_impls {
                 $(self.$idx.update(updater, unused)?;)+
                 Ok(())
             }
+        }
+
+        impl<D: Device<E>, E: Dtype, $($name: BuildOnDevice<D, E>),+> BuildOnDevice<D, E> for ($($name,)+) {
+            type Built = ($($name::Built, )+);
         }
 
         impl<D: Device<E>, E: Dtype, $($name: BuildModule<D, E>),+> BuildModule<D, E> for ($($name,)+) {
@@ -121,7 +127,7 @@ mod tests {
     #[test]
     fn test_2_tuple_update() {
         let dev: TestDevice = Default::default();
-        let mut model: (Linear<2, 3, _>, Linear<3, 4, _>) = BuildModule::build(&dev);
+        let mut model: (DeviceLinear<2, 3, _>, DeviceLinear<3, 4, _>) = BuildModule::build(&dev);
         assert_ne!(model.0.weight.array(), [[0.0; 2]; 3]);
         assert_ne!(model.0.bias.array(), [0.0; 3]);
         assert_ne!(model.1.weight.array(), [[0.0; 3]; 4]);

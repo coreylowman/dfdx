@@ -2,7 +2,7 @@
 
 use dfdx::{
     losses::mse_loss,
-    nn::{BuildOnDevice, Linear, ModuleMut, ReLU, Tanh},
+    nn::{BuildOnDevice, DeviceLinear, ModuleMut, ReLU, Tanh},
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
     shapes::Rank2,
     tensor::{AsArray, Cpu, SampleTensor, Tensor},
@@ -11,9 +11,9 @@ use dfdx::{
 
 // first let's declare our neural network to optimze
 type Mlp = (
-    (Linear<5, 32>, ReLU),
-    (Linear<32, 32>, ReLU),
-    (Linear<32, 2>, Tanh),
+    (DeviceLinear<5, 32>, ReLU),
+    (DeviceLinear<32, 32>, ReLU),
+    (DeviceLinear<32, 2>, Tanh),
 );
 
 fn main() {

@@ -46,12 +46,13 @@ pub struct TransformerEncoderBlock<
     D: Device<f32> = Cpu,
 > {
     pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
-    pub norm1: LayerNorm1D<MODEL_DIM, D>,
+    pub norm1: DeviceLayerNorm1D<MODEL_DIM, D>,
     pub ff: FF<MODEL_DIM, FF_DIM, D>,
-    pub norm2: LayerNorm1D<MODEL_DIM, D>,
+    pub norm2: DeviceLayerNorm1D<MODEL_DIM, D>,
 }
 
-type FF<const M: usize, const F: usize, D> = Residual<(Linear<M, F, D>, ReLU, Linear<F, M, D>)>;
+type FF<const M: usize, const F: usize, D> =
+    Residual<(DeviceLinear<M, F, D>, ReLU, DeviceLinear<F, M, D>)>;
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
     for TransformerEncoderBlock<M, H, F, D>
@@ -112,7 +113,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, Src> Module
 where
     Src: SplitTape + std::ops::Add<Src::NoTape, Output = Src>,
     MultiHeadAttention<M, H, M, M, D>: Module<Src, Output = Src>,
-    LayerNorm1D<M, D>: Module<Src, Output = Src>,
+    DeviceLayerNorm1D<M, D>: Module<Src, Output = Src>,
     FF<M, F, D>: Module<Src, Output = Src>,
 {
     type Output = Src;

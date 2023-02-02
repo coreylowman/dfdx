@@ -110,7 +110,7 @@ mod tests {
     fn test_default_and_reset() {
         let dev: TestDevice = Default::default();
 
-        let m: Repeated<(Linear<3, 3, _>, ReLU), 5> = BuildModule::build(&dev);
+        let m: Repeated<(DeviceLinear<3, 3, _>, ReLU), 5> = BuildModule::build(&dev);
 
         for i in 0..5 {
             assert_ne!(m.modules[i].0.weight.array(), [[0.0; 3]; 3]);
@@ -122,7 +122,7 @@ mod tests {
     fn test_forward() {
         let dev: TestDevice = Default::default();
 
-        let mut m: Repeated<(Linear<3, 3, _>, ReLU), 5> = BuildModule::build(&dev);
+        let mut m: Repeated<(DeviceLinear<3, 3, _>, ReLU), 5> = BuildModule::build(&dev);
 
         let x = dev.zeros::<Rank1<3>>();
         let x = m.modules[0].forward(x);
@@ -138,7 +138,7 @@ mod tests {
     fn test_repeated_missing_gradients() {
         let dev: TestDevice = Default::default();
 
-        let mut model: Repeated<Linear<5, 5, _>, 3> = BuildModule::build(&dev);
+        let mut model: Repeated<DeviceLinear<5, 5, _>, 3> = BuildModule::build(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present
