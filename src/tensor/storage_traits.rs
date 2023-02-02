@@ -264,17 +264,10 @@ where
 /// Construct tensors from rust vectors. This trait should not be used directly, use TensorFrom
 /// instead.
 pub trait TensorFromVec<E: Unit>: DeviceStorage {
-    /// Create a tensor with a dynamic shape from a rust vector
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let _ = dev.tensor_from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]);
-    /// ```
     fn tensor_from_vec<S: Shape>(&self, src: Vec<E>, shape: S) -> Tensor<S, E, Self> {
         self.try_tensor_from_vec::<S>(src, shape).unwrap()
     }
 
-    /// Fallible version of [TensorFromVec::dynamic_tensor_from_vec]
     fn try_tensor_from_vec<S: Shape>(
         &self,
         src: Vec<E>,
@@ -283,17 +276,21 @@ pub trait TensorFromVec<E: Unit>: DeviceStorage {
 }
 
 /// Construct tensors from rust data
-pub trait TensorFrom<Src, S: Shape, E: Unit>: DeviceStorage + TensorFromVec<E> {
-    /// Create a tensor from a rust array
+pub trait TensorFrom<Src, S: Shape, E: Unit>: DeviceStorage {
+    /// Create a tensor from rust data
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let _: Tensor<Rank2<2, 3>> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+    /// let _: Tensor<Rank2<2, 3>> = dev.tensor(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    /// // Note: arguments are in a tuple, and this syntax should only be used when creating
+    /// // tensors with a dynamic shape
+    /// let _ = dev.tensor((vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]));
     /// ```
     fn tensor(&self, src: Src) -> Tensor<S, E, Self> {
         self.try_tensor(src).unwrap()
     }
-    /// Fallible version of [TensorFromArray::tensor]
+    /// Fallible version of [TensorFrom::tensor]
     fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
 }
 
