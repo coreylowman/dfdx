@@ -1,6 +1,7 @@
 use super::{
     npz::{LoadFromNpz, SaveToNpz},
     *,
+    modules::*,
 };
 use crate::{
     shapes::Dtype,
@@ -16,9 +17,7 @@ use zip::{result::ZipResult, ZipArchive, ZipWriter};
 impl<T: ZeroSizedModule> SaveToNpz for T {}
 impl<T: ZeroSizedModule> LoadFromNpz for T {}
 
-impl<const C: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> SaveToNpz
-    for DeviceBatchNorm2D<C, E, D>
-{
+impl<const C: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> SaveToNpz for BatchNorm2D<C, E, D> {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut zip::ZipWriter<W>) -> ZipResult<()> {
         self.scale.write_to_npz(w, format!("{p}scale.npy"))?;
         self.bias.write_to_npz(w, format!("{p}bias.npy"))?;
@@ -30,9 +29,7 @@ impl<const C: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> SaveToNpz
     }
 }
 
-impl<const C: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> LoadFromNpz
-    for DeviceBatchNorm2D<C, E, D>
-{
+impl<const C: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> LoadFromNpz for BatchNorm2D<C, E, D> {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.scale.read_from_npz(r, format!("{p}scale.npy"))?;
         self.bias.read_from_npz(r, format!("{p}bias.npy"))?;
@@ -53,7 +50,7 @@ impl<
         const P: usize,
         E: Dtype + NumpyDtype,
         D: CopySlice<E>,
-    > SaveToNpz for DeviceConv2D<I, O, K, S, P, E, D>
+    > SaveToNpz for Conv2D<I, O, K, S, P, E, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.weight.write_to_npz(w, format!("{p}weight.npy"))?;
@@ -71,7 +68,7 @@ impl<
         const P: usize,
         E: Dtype + NumpyDtype,
         D: CopySlice<E>,
-    > LoadFromNpz for DeviceConv2D<I, O, K, S, P, E, D>
+    > LoadFromNpz for Conv2D<I, O, K, S, P, E, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.weight.read_from_npz(r, format!("{p}weight.npy"))?;
@@ -94,9 +91,7 @@ impl<F: LoadFromNpz, R: LoadFromNpz> LoadFromNpz for GeneralizedResidual<F, R> {
     }
 }
 
-impl<const M: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> SaveToNpz
-    for DeviceLayerNorm1D<M, E, D>
-{
+impl<const M: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> SaveToNpz for LayerNorm1D<M, E, D> {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.gamma.write_to_npz(w, format!("{p}gamma.npy"))?;
         self.beta.write_to_npz(w, format!("{p}beta.npy"))?;
@@ -104,9 +99,7 @@ impl<const M: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> SaveToNpz
     }
 }
 
-impl<const M: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> LoadFromNpz
-    for DeviceLayerNorm1D<M, E, D>
-{
+impl<const M: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> LoadFromNpz for LayerNorm1D<M, E, D> {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.gamma.read_from_npz(r, format!("{p}gamma.npy"))?;
         self.beta.read_from_npz(r, format!("{p}beta.npy"))?;
@@ -115,7 +108,7 @@ impl<const M: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> LoadFromNpz
 }
 
 impl<const I: usize, const O: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> SaveToNpz
-    for DeviceLinear<I, O, E, D>
+    for Linear<I, O, E, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.weight.write_to_npz(w, format!("{p}weight.npy"))?;
@@ -125,7 +118,7 @@ impl<const I: usize, const O: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> Sav
 }
 
 impl<const I: usize, const O: usize, E: Dtype + NumpyDtype, D: CopySlice<E>> LoadFromNpz
-    for DeviceLinear<I, O, E, D>
+    for Linear<I, O, E, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.weight.read_from_npz(r, format!("{p}weight.npy"))?;
@@ -214,7 +207,7 @@ impl<T: LoadFromNpz> LoadFromNpz for AddInto<T> {
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: CopySlice<f32>> SaveToNpz
-    for DeviceDecoder<M, H, F, L, f32, D>
+    for TransformerDecoder<M, H, F, L, f32, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.0.write(&format!("{p}.0"), w)
@@ -223,7 +216,7 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: CopySlic
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> SaveToNpz
-    for DeviceDecoderBlock<M, H, F, f32, D>
+    for TransformerDecoderBlock<M, H, F, f32, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.self_attn.write(&format!("{p}self_attn."), w)?;
@@ -239,7 +232,7 @@ impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> SaveToNp
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> LoadFromNpz
-    for DeviceDecoderBlock<M, H, F, f32, D>
+    for TransformerDecoderBlock<M, H, F, f32, D>
 {
     fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.self_attn.read(&format!("{pre}self_attn."), r)?;
@@ -255,7 +248,7 @@ impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> LoadFrom
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: CopySlice<f32>> LoadFromNpz
-    for DeviceDecoder<M, H, F, L, f32, D>
+    for TransformerDecoder<M, H, F, L, f32, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.0.read(&format!("{p}.0"), r)
@@ -264,7 +257,7 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: CopySlic
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> SaveToNpz
-    for DeviceEncoderBlock<M, H, F, f32, D>
+    for TransformerEncoderBlock<M, H, F, f32, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.self_attn.write(&format!("{p}self_attn."), w)?;
@@ -278,7 +271,7 @@ impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> SaveToNp
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> LoadFromNpz
-    for DeviceEncoderBlock<M, H, F, f32, D>
+    for TransformerEncoderBlock<M, H, F, f32, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.self_attn.read(&format!("{p}self_attn."), r)?;
@@ -292,7 +285,7 @@ impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> LoadFrom
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: CopySlice<f32>> SaveToNpz
-    for DeviceMHA<M, H, K, V, f32, D>
+    for MultiHeadAttention<M, H, K, V, f32, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.w_q.write(&format!("{p}w_q."), w)?;
@@ -305,7 +298,7 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: CopySlic
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: CopySlice<f32>> LoadFromNpz
-    for DeviceMHA<M, H, K, V, f32, D>
+    for MultiHeadAttention<M, H, K, V, f32, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.w_q.read(&format!("{p}w_q."), r)?;
@@ -324,7 +317,7 @@ impl<
         const D: usize,
         const F: usize,
         Dev: CopySlice<f32>,
-    > SaveToNpz for DeviceTransformer<M, H, E, D, F, f32, Dev>
+    > SaveToNpz for Transformer<M, H, E, D, F, f32, Dev>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.encoder.write(&format!("{p}encoder."), w)?;
@@ -341,7 +334,7 @@ impl<
         const D: usize,
         const F: usize,
         Dev: CopySlice<f32>,
-    > LoadFromNpz for DeviceTransformer<M, H, E, D, F, f32, Dev>
+    > LoadFromNpz for Transformer<M, H, E, D, F, f32, Dev>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.encoder.read(&format!("{p}encoder."), r)?;
@@ -353,13 +346,12 @@ impl<
 #[cfg(test)]
 mod tests {
     use crate::{
+        nn::{*, builders::*},
         shapes::*,
-        tensor::{AsArray, SampleTensor, Tensor},
+        tensor::{numpy::NumpyDtype, AsArray, SampleTensor, Tensor},
         tensor_ops::Device,
         tests::TestDevice,
     };
-
-    use super::*;
     use rand_distr::{Distribution, Standard, StandardNormal};
     use tempfile::NamedTempFile;
 

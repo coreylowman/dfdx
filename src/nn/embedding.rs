@@ -2,16 +2,17 @@ use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::module::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 
-#[derive(Debug)]
-pub struct Embedding<const VOCAB: usize, const DIM: usize>;
+pub mod builder {
+    #[derive(Debug)]
+    pub struct Embedding<const VOCAB: usize, const DIM: usize>;
+}
 
-impl<const V: usize, const M: usize, D: Device<f32>> BuildModule<D, f32> for Embedding<V, M> {
-    type Built = DeviceEmbedding<V, M, f32, D>;
+impl<const V: usize, const M: usize, D: Device<f32>> BuildModule<D, f32>
+    for builder::Embedding<V, M>
+{
+    type Built = Embedding<V, M, f32, D>;
     fn try_build(device: &D) -> Result<Self::Built, D::Err> {
-        let bound: f32 = 1.0 / (V as f32).sqrt();
-        let distr = rand_distr::Uniform::new(-bound, bound);
-        let weight = device.try_sample(distr)?;
-        Ok(Self::Built { weight })
+        Self::Built::try_build(device)
     }
 }
 
@@ -40,13 +41,13 @@ impl<const V: usize, const M: usize, D: Device<f32>> BuildModule<D, f32> for Emb
 /// let _: Tensor<(Const<10>, Const<5>, Const<2>), f32, _> = model.forward(inputs);
 /// ```
 #[derive(Debug, Clone)]
-pub struct DeviceEmbedding<const VOCAB: usize, const DIM: usize, E: Dtype, D: DeviceStorage> {
+pub struct Embedding<const VOCAB: usize, const DIM: usize, E: Dtype, D: DeviceStorage> {
     /// Transposed weight matrix, shape (I, O)
     pub weight: Tensor<Rank2<VOCAB, DIM>, E, D>,
 }
 
 impl<const VOCAB: usize, const DIM: usize, const SEQ: usize, D: Device<f32>, T: Tape<D>>
-    Module<Tensor<Rank1<SEQ>, usize, D, T>> for DeviceEmbedding<VOCAB, DIM, f32, D>
+    Module<Tensor<Rank1<SEQ>, usize, D, T>> for Embedding<VOCAB, DIM, f32, D>
 {
     type Output = Tensor<Rank2<SEQ, DIM>, f32, D, T>;
     fn forward(&self, input: Tensor<Rank1<SEQ>, usize, D, T>) -> Self::Output {
@@ -62,7 +63,7 @@ impl<
         const BATCH: usize,
         D: Device<f32>,
         T: Tape<D>,
-    > Module<Tensor<Rank2<BATCH, SEQ>, usize, D, T>> for DeviceEmbedding<VOCAB, DIM, f32, D>
+    > Module<Tensor<Rank2<BATCH, SEQ>, usize, D, T>> for Embedding<VOCAB, DIM, f32, D>
 {
     type Output = Tensor<Rank3<BATCH, SEQ, DIM>, f32, D, T>;
     fn forward(&self, input: Tensor<Rank2<BATCH, SEQ>, usize, D, T>) -> Self::Output {
@@ -72,7 +73,7 @@ impl<
 }
 
 impl<T, const VOCAB: usize, const DIM: usize, D: Device<f32>> ModuleMut<T>
-    for DeviceEmbedding<VOCAB, DIM, f32, D>
+    for Embedding<VOCAB, DIM, f32, D>
 where
     Self: Module<T>,
 {
@@ -83,7 +84,7 @@ where
 }
 
 impl<const VOCAB: usize, const DIM: usize, D: Device<f32>> GradientUpdate<D, f32>
-    for DeviceEmbedding<VOCAB, DIM, f32, D>
+    for Embedding<VOCAB, DIM, f32, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
     where
@@ -94,8 +95,20 @@ impl<const VOCAB: usize, const DIM: usize, D: Device<f32>> GradientUpdate<D, f32
     }
 }
 
+impl<const V: usize, const M: usize, D: Device<f32>> BuildModule<D, f32>
+    for Embedding<V, M, f32, D>
+{
+    type Built = Self;
+    fn try_build(device: &D) -> Result<Self::Built, D::Err> {
+        let bound: f32 = 1.0 / (V as f32).sqrt();
+        let distr = rand_distr::Uniform::new(-bound, bound);
+        let weight = device.try_sample(distr)?;
+        Ok(Self::Built { weight })
+    }
+}
+
 impl<const VOCAB: usize, const DIM: usize, D: Device<f32>> ResetParams<D, f32>
-    for DeviceEmbedding<VOCAB, DIM, f32, D>
+    for Embedding<VOCAB, DIM, f32, D>
 {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         let bound: f32 = 1.0 / (VOCAB as f32).sqrt();
@@ -106,11 +119,11 @@ impl<const VOCAB: usize, const DIM: usize, D: Device<f32>> ResetParams<D, f32>
 }
 
 impl<const VOCAB: usize, const DIM: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2>
-    for DeviceEmbedding<VOCAB, DIM, f32, D1>
+    for Embedding<VOCAB, DIM, f32, D1>
 {
-    type Output = DeviceEmbedding<VOCAB, DIM, f32, D2>;
+    type Output = Embedding<VOCAB, DIM, f32, D2>;
     fn to_device(&self, device: &D2) -> Self::Output {
-        DeviceEmbedding {
+        Embedding {
             weight: self.weight.to_device(device),
         }
     }
@@ -133,7 +146,7 @@ mod tests {
     #[test]
     fn test_embedding_initialize() {
         let dev: TestDevice = Default::default();
-        let m = Embedding::<2000, 1>::build(&dev);
+        let m = builder::Embedding::<2000, 1>::build(&dev);
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);
@@ -144,7 +157,7 @@ mod tests {
     fn embedding_forward_1d() {
         let dev: TestDevice = Default::default();
 
-        let model = DeviceEmbedding {
+        let model = Embedding {
             weight: dev.tensor(W),
         };
 
@@ -185,7 +198,7 @@ mod tests {
     fn test_forward_2d() {
         let dev: TestDevice = Default::default();
 
-        let model = DeviceEmbedding {
+        let model = Embedding {
             weight: dev.tensor(W),
         };
 
@@ -231,7 +244,7 @@ mod tests {
     fn test_embedding_missing_gradients() {
         let dev: TestDevice = Default::default();
 
-        let mut model = Embedding::<5, 3>::build(&dev);
+        let mut model = builder::Embedding::<5, 3>::build(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

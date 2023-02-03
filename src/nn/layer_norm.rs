@@ -2,6 +2,17 @@ use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 
+pub mod builder {
+    #[derive(Debug)]
+    pub struct LayerNorm1D<const M: usize>;
+}
+impl<const M: usize, D: Device<f32>> BuildModule<D, f32> for builder::LayerNorm1D<M> {
+    type Built = LayerNorm1D<M, f32, D>;
+    fn try_build(device: &D) -> Result<Self::Built, D::Err> {
+        Self::Built::try_build(device)
+    }
+}
+
 /// Implements layer normalization as described in [Layer Normalization](https://arxiv.org/abs/1607.06450).
 ///
 /// This calls [normalize()] on the last axis of the input to normalize to 0 mean and unit std dev, and then does an element-wise
@@ -20,10 +31,16 @@ use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// let model = Model::build_on_device(&dev);
 /// let _: Tensor<Rank1<5>, f32, _> = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct LayerNorm1D<const M: usize>;
-impl<const M: usize, D: Device<f32>> BuildModule<D, f32> for LayerNorm1D<M> {
-    type Built = DeviceLayerNorm1D<M, f32, D>;
+
+#[derive(Debug, Clone)]
+pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
+    pub gamma: Tensor<Rank1<M>, E, D>,
+    pub beta: Tensor<Rank1<M>, E, D>,
+    pub epsilon: E,
+}
+
+impl<const M: usize, D: Device<f32>> BuildModule<D, f32> for LayerNorm1D<M, f32, D> {
+    type Built = Self;
     /// - Fills [DeviceLayerNorm1D::gamma] with 1s
     /// - Fills [DeviceLayerNorm1D::beta] with 0s
     /// - Sets [DeviceLayerNorm1D::epsilon] to `1e-5`.
@@ -36,16 +53,7 @@ impl<const M: usize, D: Device<f32>> BuildModule<D, f32> for LayerNorm1D<M> {
     }
 }
 
-/// [LayerNorm1D] with initialized parameters.
-
-#[derive(Debug, Clone)]
-pub struct DeviceLayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
-    pub gamma: Tensor<Rank1<M>, E, D>,
-    pub beta: Tensor<Rank1<M>, E, D>,
-    pub epsilon: E,
-}
-
-impl<const M: usize, D: Device<f32>> ResetParams<D, f32> for DeviceLayerNorm1D<M, f32, D> {
+impl<const M: usize, D: Device<f32>> ResetParams<D, f32> for LayerNorm1D<M, f32, D> {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.gamma.try_fill_with_ones()?;
         self.beta.try_fill_with_zeros()?;
@@ -53,13 +61,11 @@ impl<const M: usize, D: Device<f32>> ResetParams<D, f32> for DeviceLayerNorm1D<M
     }
 }
 
-impl<const M: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2>
-    for DeviceLayerNorm1D<M, f32, D1>
-{
-    type Output = DeviceLayerNorm1D<M, f32, D2>;
+impl<const M: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for LayerNorm1D<M, f32, D1> {
+    type Output = LayerNorm1D<M, f32, D2>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
-        DeviceLayerNorm1D {
+        LayerNorm1D {
             gamma: self.gamma.to_device(device),
             beta: self.beta.to_device(device),
             epsilon: self.epsilon,
@@ -67,7 +73,7 @@ impl<const M: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2>
     }
 }
 
-impl<const M: usize, D: Device<f32>> GradientUpdate<D, f32> for DeviceLayerNorm1D<M, f32, D> {
+impl<const M: usize, D: Device<f32>> GradientUpdate<D, f32> for LayerNorm1D<M, f32, D> {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
         U: ParamUpdater<D, f32>,
@@ -79,7 +85,7 @@ impl<const M: usize, D: Device<f32>> GradientUpdate<D, f32> for DeviceLayerNorm1
 }
 
 impl<const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<Rank1<M>, f32, D, T>>
-    for DeviceLayerNorm1D<M, f32, D>
+    for LayerNorm1D<M, f32, D>
 {
     type Output = Tensor<Rank1<M>, f32, D, T>;
     fn forward(&self, x: Tensor<Rank1<M>, f32, D, T>) -> Self::Output {
@@ -88,7 +94,7 @@ impl<const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<Rank1<M>, f32, D,
 }
 
 impl<B: Dim, const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<(B, Const<M>), f32, D, T>>
-    for DeviceLayerNorm1D<M, f32, D>
+    for LayerNorm1D<M, f32, D>
 {
     type Output = Tensor<(B, Const<M>), f32, D, T>;
     fn forward(&self, x: Tensor<(B, Const<M>), f32, D, T>) -> Self::Output {
@@ -99,7 +105,7 @@ impl<B: Dim, const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<(B, Const
 }
 
 impl<B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
-    Module<Tensor<(B, S, Const<M>), f32, D, T>> for DeviceLayerNorm1D<M, f32, D>
+    Module<Tensor<(B, S, Const<M>), f32, D, T>> for LayerNorm1D<M, f32, D>
 {
     type Output = Tensor<(B, S, Const<M>), f32, D, T>;
     fn forward(&self, x: Tensor<(B, S, Const<M>), f32, D, T>) -> Self::Output {
@@ -109,7 +115,7 @@ impl<B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
     }
 }
 
-impl<T, const M: usize, D: Device<f32>> ModuleMut<T> for DeviceLayerNorm1D<M, f32, D>
+impl<T, const M: usize, D: Device<f32>> ModuleMut<T> for LayerNorm1D<M, f32, D>
 where
     Self: Module<T>,
 {
@@ -130,7 +136,7 @@ mod tests {
     fn test_layer_norm_reset() {
         let dev: TestDevice = Default::default();
 
-        let mut m = LayerNorm1D::<5>::build(&dev);
+        let mut m = builder::LayerNorm1D::<5>::build(&dev);
         assert_eq!(m.gamma.array(), [1.0; 5]);
         assert_eq!(m.beta.array(), [0.0; 5]);
 
@@ -149,7 +155,7 @@ mod tests {
     #[test]
     fn test_layer_norm_1d_forward() {
         let dev: TestDevice = Default::default();
-        let mut m = LayerNorm1D::<5>::build(&dev);
+        let mut m = builder::LayerNorm1D::<5>::build(&dev);
         let x = dev.sample_normal::<Rank1<5>>();
         let r = m.forward_mut(x.trace());
         assert_close(
@@ -167,7 +173,7 @@ mod tests {
     #[test]
     fn test_layer_norm_2d_forward() {
         let dev: TestDevice = Default::default();
-        let m = LayerNorm1D::<5>::build(&dev);
+        let m = builder::LayerNorm1D::<5>::build(&dev);
         let x = dev.sample_normal::<Rank2<3, 5>>();
         let r = m.forward(x.trace());
         assert_close(
@@ -190,7 +196,7 @@ mod tests {
     fn test_layer_norm_missing_gradients() {
         let dev: TestDevice = Default::default();
 
-        let mut model = LayerNorm1D::<5>::build(&dev);
+        let mut model = builder::LayerNorm1D::<5>::build(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

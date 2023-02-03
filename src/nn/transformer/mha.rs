@@ -1,4 +1,4 @@
-use crate::{nn::*, optim::*, shapes::Dtype, tensor::*, tensor_ops::*};
+use crate::{nn::{*, modules::*}, optim::*, shapes::Dtype, tensor::*, tensor_ops::*};
 
 #[cfg(feature = "nightly")]
 use crate::{gradients::Tape, shapes::*, Assert, ConstTrue};
@@ -18,18 +18,44 @@ use crate::{gradients::Tape, shapes::*, Assert, ConstTrue};
 /// - `MultiHeadAttention<8, 2, 6, 4>` is an attention layer with the key and value dimension different
 ///   than the embed dimension
 /// TODO: Doctests fail for some reason
-#[derive(Debug, Clone)]
-pub struct MultiHeadAttention<
-    const EMBED_DIM: usize,
-    const NUM_HEADS: usize,
-    const K_DIM: usize = EMBED_DIM,
-    const V_DIM: usize = EMBED_DIM,
->;
+pub mod builder {
+    #[derive(Debug, Clone)]
+    pub struct MultiHeadAttention<
+        const EMBED_DIM: usize,
+        const NUM_HEADS: usize,
+        const K_DIM: usize = EMBED_DIM,
+        const V_DIM: usize = EMBED_DIM,
+    >;
+}
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    BuildModule<D, f32> for MultiHeadAttention<M, H, K, V>
+    BuildModule<D, f32> for builder::MultiHeadAttention<M, H, K, V>
 {
-    type Built = DeviceMHA<M, H, K, V, f32, D>;
+    type Built = MultiHeadAttention<M, H, K, V, f32, D>;
+    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
+        Self::Built::try_build(device)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct MultiHeadAttention<
+    const M: usize,
+    const H: usize,
+    const K: usize,
+    const V: usize,
+    E: Dtype,
+    D: DeviceStorage,
+> {
+    pub w_q: Linear<M, K, E, D>,
+    pub w_k: Linear<M, K, E, D>,
+    pub w_v: Linear<M, V, E, D>,
+    pub w_o: Linear<V, M, E, D>,
+}
+
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
+    BuildModule<D, f32> for MultiHeadAttention<M, H, K, V, f32, D>
+{
+    type Built = Self;
     fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
         Ok(Self::Built {
             w_q: Linear::try_build(device)?,
@@ -40,23 +66,8 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct DeviceMHA<
-    const M: usize,
-    const H: usize,
-    const K: usize,
-    const V: usize,
-    E: Dtype,
-    D: DeviceStorage,
-> {
-    pub w_q: DeviceLinear<M, K, E, D>,
-    pub w_k: DeviceLinear<M, K, E, D>,
-    pub w_v: DeviceLinear<M, V, E, D>,
-    pub w_o: DeviceLinear<V, M, E, D>,
-}
-
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    ResetParams<D, f32> for DeviceMHA<M, H, K, V, f32, D>
+    ResetParams<D, f32> for MultiHeadAttention<M, H, K, V, f32, D>
 {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.w_q.try_reset_params()?;
@@ -68,7 +79,7 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: DeviceStorage>
-    GradientUpdate<D, f32> for DeviceMHA<M, H, K, V, f32, D>
+    GradientUpdate<D, f32> for MultiHeadAttention<M, H, K, V, f32, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
@@ -83,15 +94,15 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: DeviceSt
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D1, D2> ToDevice<D2>
-    for DeviceMHA<M, H, K, V, f32, D1>
+    for MultiHeadAttention<M, H, K, V, f32, D1>
 where
     D1: Device<f32>,
     D2: Device<f32>,
 {
-    type Output = DeviceMHA<M, H, K, V, f32, D2>;
+    type Output = MultiHeadAttention<M, H, K, V, f32, D2>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
-        DeviceMHA {
+        MultiHeadAttention {
             w_q: self.w_q.to_device(device),
             w_k: self.w_k.to_device(device),
             w_v: self.w_v.to_device(device),
@@ -115,7 +126,7 @@ impl<
         Tensor<Rank2<S1, M>, f32, D, T>,
         Tensor<Rank2<S2, M>, f32, D>,
         Tensor<Rank2<S2, M>, f32, D>,
-    )> for DeviceMHA<M, H, K, V, f32, D>
+    )> for MultiHeadAttention<M, H, K, V, f32, D>
 where
     Assert<{ S1 * K == S1 * H * (K / H) }>: ConstTrue,
     Assert<{ S2 * K == S2 * H * (K / H) }>: ConstTrue,
@@ -175,7 +186,7 @@ impl<
         Tensor<Rank3<B, S1, M>, f32, D, T>,
         Tensor<Rank3<B, S2, M>, f32, D>,
         Tensor<Rank3<B, S2, M>, f32, D>,
-    )> for DeviceMHA<M, H, K, V, f32, D>
+    )> for MultiHeadAttention<M, H, K, V, f32, D>
 where
     Assert<{ B * S1 * K == B * S1 * H * (K / H) }>: ConstTrue,
     Assert<{ B * S2 * K == B * S2 * H * (K / H) }>: ConstTrue,
@@ -220,7 +231,7 @@ where
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D, Src> Module<Src>
-    for DeviceMHA<M, H, K, V, E, D>
+    for MultiHeadAttention<M, H, K, V, E, D>
 where
     E: Dtype,
     D: Device<E>,
@@ -235,7 +246,7 @@ where
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, E: Dtype, D: Device<E>, T>
-    ModuleMut<T> for DeviceMHA<M, H, K, V, E, D>
+    ModuleMut<T> for MultiHeadAttention<M, H, K, V, E, D>
 where
     Self: Module<T>,
 {
@@ -264,7 +275,7 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha = MultiHeadAttention::<M, NUM_HEADS>::build(&dev);
+        let mha = builder::MultiHeadAttention::<M, NUM_HEADS>::build(&dev);
 
         let q = dev.sample_normal::<Rank2<S1, M>>();
         let k = dev.sample_normal::<Rank2<S2, M>>();
@@ -298,7 +309,7 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha = MultiHeadAttention::<M, NUM_HEADS>::build(&dev);
+        let mha = builder::MultiHeadAttention::<M, NUM_HEADS>::build(&dev);
 
         let q = dev.sample_normal::<Rank3<BATCH, S1, M>>();
         let k = dev.sample_normal::<Rank3<BATCH, S2, M>>();
@@ -348,7 +359,7 @@ mod tests {
     fn test_backward_updates_all() {
         let dev: TestDevice = Default::default();
 
-        let mut mha = MultiHeadAttention::<12, 4>::build(&dev);
+        let mut mha = builder::MultiHeadAttention::<12, 4>::build(&dev);
 
         let q = dev.sample_normal::<Rank3<2, 3, 12>>();
         let k = dev.sample_normal::<Rank3<2, 4, 12>>();

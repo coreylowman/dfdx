@@ -104,8 +104,8 @@ impl<Input, T: ModuleMut<Input, Output = Input>, const N: usize> ModuleMut<Input
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{nn::builders::*, shapes::*, tensor::*, unique_id::HasUniqueId};
     use crate::{nn::tests::SimpleUpdater, tests::TestDevice};
-    use crate::{nn::*, shapes::*, tensor::*, unique_id::HasUniqueId};
 
     #[test]
     fn test_default_and_reset() {

@@ -120,29 +120,57 @@ mod residual;
 mod split_into;
 mod transformer;
 
-pub use activations::*;
-pub use add_into::*;
-pub use batchnorm2d::*;
-pub use dropout::*;
-pub use embedding::*;
-pub use generalized_residual::*;
-pub use impl_module_for_tuples::*;
-pub use layer_norm::*;
-pub use linear::*;
 pub use module::*;
-pub use pool_global::*;
-pub use repeated::*;
-pub use residual::*;
-pub use split_into::*;
 
-#[cfg(feature = "nightly")]
-pub use conv::*;
-#[cfg(feature = "nightly")]
-pub use flatten::*;
-#[cfg(feature = "nightly")]
-pub use pool2d::*;
-#[cfg(feature = "nightly")]
-pub use transformer::*;
+pub mod modules {
+    /// Actual modules. See [builders] for helpful utilities in creating these
+    /// in a device/dtype agnostic way.
+    pub use super::activations::*;
+    pub use super::add_into::AddInto;
+    pub use super::batchnorm2d::BatchNorm2D;
+    #[cfg(feature = "nightly")]
+    pub use super::conv::Conv2D;
+    pub use super::dropout::{Dropout, DropoutOneIn};
+    pub use super::embedding::Embedding;
+    #[cfg(feature = "nightly")]
+    pub use super::flatten::Flatten2D;
+    pub use super::generalized_residual::GeneralizedResidual;
+    pub use super::layer_norm::LayerNorm1D;
+    pub use super::linear::Linear;
+    #[cfg(feature = "nightly")]
+    pub use super::pool2d::{AvgPool2D, MaxPool2D, MinPool2D};
+    pub use super::pool_global::{AvgPoolGlobal, MaxPoolGlobal, MinPoolGlobal};
+    pub use super::repeated::Repeated;
+    pub use super::residual::Residual;
+    pub use super::split_into::SplitInto;
+    #[cfg(feature = "nightly")]
+    pub use super::transformer::*;
+}
+
+pub mod builders {
+    /// Utilities for simple specification of network structure, without
+    /// worrying about device or dtype.
+    pub use super::activations::*;
+    pub use super::add_into::AddInto;
+    pub use super::batchnorm2d::builder::BatchNorm2D;
+    #[cfg(feature = "nightly")]
+    pub use super::conv::builder::Conv2D;
+    pub use super::dropout::{Dropout, DropoutOneIn};
+    pub use super::embedding::builder::Embedding;
+    #[cfg(feature = "nightly")]
+    pub use super::flatten::Flatten2D;
+    pub use super::generalized_residual::GeneralizedResidual;
+    pub use super::layer_norm::builder::LayerNorm1D;
+    pub use super::linear::builder::Linear;
+    #[cfg(feature = "nightly")]
+    pub use super::pool2d::{AvgPool2D, MaxPool2D, MinPool2D};
+    pub use super::pool_global::{AvgPoolGlobal, MaxPoolGlobal, MinPoolGlobal};
+    pub use super::repeated::Repeated;
+    pub use super::residual::Residual;
+    pub use super::split_into::SplitInto;
+    #[cfg(feature = "nightly")]
+    pub use super::transformer::builder::*;
+}
 
 #[cfg(feature = "numpy")]
 mod npz;

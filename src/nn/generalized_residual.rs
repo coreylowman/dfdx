@@ -95,7 +95,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::Linear;
+    use crate::nn::builders::Linear;
     use crate::tests::{assert_close, TestDevice};
 
     #[test]

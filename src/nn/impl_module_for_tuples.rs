@@ -106,7 +106,7 @@ mod tests {
     use super::*;
     use crate::nn::tests::SimpleUpdater;
     use crate::unique_id::HasUniqueId;
-    use crate::{nn::*, tensor::*, tests::TestDevice};
+    use crate::{nn::{*, builders::*}, tensor::*, tests::TestDevice};
 
     #[test]
     fn test_2_tuple() {

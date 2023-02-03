@@ -99,7 +99,7 @@ mod tests {
     use super::*;
     use crate::{
         gradients::OwnedTape,
-        nn::{tests::SimpleUpdater, Linear, ReLU},
+        nn::{builders::*, tests::SimpleUpdater},
         shapes::*,
         tensor::*,
         tests::TestDevice,

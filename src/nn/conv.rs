@@ -2,27 +2,25 @@ use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 
-pub struct Conv2D<
-    const IN_CHAN: usize,
-    const OUT_CHAN: usize,
-    const KERNEL_SIZE: usize,
-    const STRIDE: usize = 1,
-    const PADDING: usize = 0,
->;
+pub mod builder {
+    #[derive(Debug)]
+    pub struct Conv2D<
+        const IN_CHAN: usize,
+        const OUT_CHAN: usize,
+        const KERNEL_SIZE: usize,
+        const STRIDE: usize = 1,
+        const PADDING: usize = 0,
+    >;
+}
+
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
-    BuildModule<D, f32> for Conv2D<I, O, K, S, P>
+    BuildModule<D, f32> for builder::Conv2D<I, O, K, S, P>
 where
     D: Device<f32>,
 {
-    type Built = DeviceConv2D<I, O, K, S, P, f32, D>;
+    type Built = Conv2D<I, O, K, S, P, f32, D>;
     fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
-        let k = (I * K * K) as f32;
-        let bound = 1.0 / k.sqrt();
-        let distr = rand_distr::Uniform::new(-bound, bound);
-        Ok(Self::Built {
-            weight: device.try_sample(distr)?,
-            bias: device.try_sample(distr)?,
-        })
+        Self::Built::try_build(device)
     }
 }
 
@@ -37,7 +35,7 @@ where
 /// - `STRIDE`: How far to move the kernel each step. Defaults to `1`
 /// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
 #[derive(Debug, Clone)]
-pub struct DeviceConv2D<
+pub struct Conv2D<
     const I: usize,
     const O: usize,
     const K: usize,
@@ -51,7 +49,7 @@ pub struct DeviceConv2D<
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
-    GradientUpdate<D, f32> for DeviceConv2D<I, O, K, S, P, f32, D>
+    GradientUpdate<D, f32> for Conv2D<I, O, K, S, P, f32, D>
 where
     D: Device<f32>,
 {
@@ -66,7 +64,24 @@ where
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
-    ResetParams<D, f32> for DeviceConv2D<I, O, K, S, P, f32, D>
+    BuildModule<D, f32> for Conv2D<I, O, K, S, P, f32, D>
+where
+    D: Device<f32>,
+{
+    type Built = Self;
+    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
+        let k = (I * K * K) as f32;
+        let bound = 1.0 / k.sqrt();
+        let distr = rand_distr::Uniform::new(-bound, bound);
+        Ok(Self::Built {
+            weight: device.try_sample(distr)?,
+            bias: device.try_sample(distr)?,
+        })
+    }
+}
+
+impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
+    ResetParams<D, f32> for Conv2D<I, O, K, S, P, f32, D>
 where
     D: Device<f32>,
 {
@@ -81,15 +96,15 @@ where
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D1, D2>
-    ToDevice<D2> for DeviceConv2D<I, O, K, S, P, f32, D1>
+    ToDevice<D2> for Conv2D<I, O, K, S, P, f32, D1>
 where
     D1: Device<f32>,
     D2: Device<f32>,
 {
-    type Output = DeviceConv2D<I, O, K, S, P, f32, D2>;
+    type Output = Conv2D<I, O, K, S, P, f32, D2>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
-        DeviceConv2D {
+        Conv2D {
             weight: self.weight.to_device(device),
             bias: self.bias.to_device(device),
         }
@@ -98,7 +113,7 @@ where
 
 #[cfg(feature = "nightly")]
 impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: usize, D, Img>
-    Module<Img> for DeviceConv2D<C, O, K, S, P, f32, D>
+    Module<Img> for Conv2D<C, O, K, S, P, f32, D>
 where
     D: Device<f32>,
     Img: TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P>,
@@ -111,7 +126,7 @@ where
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D, Img>
-    ModuleMut<Img> for DeviceConv2D<I, O, K, S, P, f32, D>
+    ModuleMut<Img> for Conv2D<I, O, K, S, P, f32, D>
 where
     D: Device<f32>,
     Self: Module<Img>,
@@ -153,7 +168,7 @@ mod tests {
         tests::*,
     };
 
-    use super::*;
+    use super::{*, builder::Conv2D as Conv2D};
 
     #[rustfmt::skip]
     #[test]

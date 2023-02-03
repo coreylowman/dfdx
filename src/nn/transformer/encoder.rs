@@ -1,12 +1,12 @@
 use crate::{
-    nn::*,
+    nn::{*, modules::*},
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     shapes::Dtype,
     tensor::{PutTape, SplitTape},
     tensor_ops::Device,
 };
 
-use super::{mha::DeviceMHA, MultiHeadAttention};
+use super::mha::MultiHeadAttention;
 
 /// **Requires Nightly** A transformer encoder.
 ///
@@ -17,11 +17,38 @@ use super::{mha::DeviceMHA, MultiHeadAttention};
 ///   the feedforward network in [TransformerEncoderBlock].
 /// - `NUM_LAYERS`: The number of [TransformerEncoderBlock] to use.
 /// TODO: Doctests
-pub type TransformerEncoder<const M: usize, const H: usize, const F: usize, const L: usize> =
-    Repeated<TransformerEncoderBlock<M, H, F>, L>;
+pub type TransformerEncoder<const M: usize, const H: usize, const F: usize, const L: usize, E, D> =
+    Repeated<TransformerEncoderBlock<M, H, F, E, D>, L>;
 
-pub type DeviceEncoder<const M: usize, const H: usize, const F: usize, const L: usize, E, D> =
-    Repeated<DeviceEncoderBlock<M, H, F, E, D>, L>;
+pub mod builder {
+    #[derive(Debug)]
+    pub struct TransformerEncoder<const M: usize, const H: usize, const F: usize, const L: usize>;
+
+    #[derive(Debug)]
+    pub struct TransformerEncoderBlock<
+        const MODEL_DIM: usize,
+        const NUM_HEADS: usize,
+        const FF_DIM: usize,
+    >;
+}
+
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
+    BuildModule<D, f32> for builder::TransformerEncoder<M, H, F, L>
+{
+    type Built = TransformerEncoder<M, H, F, L, f32, D>;
+    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
+        Self::Built::try_build(device)
+    }
+}
+
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
+    for builder::TransformerEncoderBlock<M, H, F>
+{
+    type Built = TransformerEncoderBlock<M, H, F, f32, D>;
+    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
+        Self::Built::try_build(device)
+    }
+}
 
 /// **Requires Nightly** A single transformer encoder block
 ///
@@ -37,16 +64,27 @@ pub type DeviceEncoder<const M: usize, const H: usize, const F: usize, const L: 
 /// )
 /// ```
 /// TODO: Doctests
+#[derive(Clone, Debug)]
 pub struct TransformerEncoderBlock<
-    const MODEL_DIM: usize,
-    const NUM_HEADS: usize,
-    const FF_DIM: usize,
->;
+    const M: usize,
+    const H: usize,
+    const F: usize,
+    E: Dtype,
+    D: DeviceStorage,
+> {
+    pub self_attn: MultiHeadAttention<M, H, M, M, E, D>,
+    pub norm1: LayerNorm1D<M, E, D>,
+    pub ff: FF<M, F, E, D>,
+    pub norm2: LayerNorm1D<M, E, D>,
+}
+
+type FF<const M: usize, const F: usize, E, D> =
+    Residual<(Linear<M, F, E, D>, ReLU, Linear<F, M, E, D>)>;
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
-    for TransformerEncoderBlock<M, H, F>
+    for TransformerEncoderBlock<M, H, F, f32, D>
 {
-    type Built = DeviceEncoderBlock<M, H, F, f32, D>;
+    type Built = Self;
     fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
         Ok(Self::Built {
             self_attn: MultiHeadAttention::try_build(device)?,
@@ -57,27 +95,8 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule
     }
 }
 
-type FF<const M: usize, const F: usize> = Residual<(Linear<M, F>, ReLU, Linear<F, M>)>;
-
-type DeviceFF<const M: usize, const F: usize, E, D> =
-    Residual<(DeviceLinear<M, F, E, D>, ReLU, DeviceLinear<F, M, E, D>)>;
-
-#[derive(Clone, Debug)]
-pub struct DeviceEncoderBlock<
-    const M: usize,
-    const H: usize,
-    const F: usize,
-    E: Dtype,
-    D: DeviceStorage,
-> {
-    pub self_attn: DeviceMHA<M, H, M, M, E, D>,
-    pub norm1: DeviceLayerNorm1D<M, E, D>,
-    pub ff: DeviceFF<M, F, E, D>,
-    pub norm2: DeviceLayerNorm1D<M, E, D>,
-}
-
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
-    for DeviceEncoderBlock<M, H, F, f32, D>
+    for TransformerEncoderBlock<M, H, F, f32, D>
 {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.self_attn.try_reset_params()?;
@@ -89,7 +108,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpdate<D, f32>
-    for DeviceEncoderBlock<M, H, F, f32, D>
+    for TransformerEncoderBlock<M, H, F, f32, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
@@ -104,11 +123,11 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpd
 }
 
 impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2>
-    for DeviceEncoderBlock<M, H, F, f32, D1>
+    for TransformerEncoderBlock<M, H, F, f32, D1>
 {
-    type Output = DeviceEncoderBlock<M, H, F, f32, D2>;
+    type Output = TransformerEncoderBlock<M, H, F, f32, D2>;
     fn to_device(&self, device: &D2) -> Self::Output {
-        DeviceEncoderBlock {
+        TransformerEncoderBlock {
             self_attn: self.self_attn.to_device(device),
             norm1: self.norm1.to_device(device),
             ff: self.ff.to_device(device),
@@ -118,12 +137,12 @@ impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, Src> Module<Src>
-    for DeviceEncoderBlock<M, H, F, f32, D>
+    for TransformerEncoderBlock<M, H, F, f32, D>
 where
     Src: SplitTape + std::ops::Add<Src::NoTape, Output = Src>,
-    DeviceMHA<M, H, M, M, f32, D>: Module<Src, Output = Src>,
-    DeviceLayerNorm1D<M, f32, D>: Module<Src, Output = Src>,
-    DeviceFF<M, F, f32, D>: Module<Src, Output = Src>,
+    MultiHeadAttention<M, H, M, M, f32, D>: Module<Src, Output = Src>,
+    LayerNorm1D<M, f32, D>: Module<Src, Output = Src>,
+    FF<M, F, f32, D>: Module<Src, Output = Src>,
 {
     type Output = Src;
 
@@ -138,7 +157,7 @@ where
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, T> ModuleMut<T>
-    for DeviceEncoderBlock<M, H, F, f32, D>
+    for TransformerEncoderBlock<M, H, F, f32, D>
 where
     Self: Module<T>,
 {
@@ -169,7 +188,7 @@ mod tests {
         const NUM_HEADS: usize = 3;
         const FF_DIM: usize = 16;
 
-        let encoder = TransformerEncoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build(&dev);
+        let encoder = builder::TransformerEncoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build(&dev);
 
         let x = dev.sample_normal::<Rank3<BATCH, SEQ_LEN, EMBED_DIM>>();
         let y = encoder.forward(x);

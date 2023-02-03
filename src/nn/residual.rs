@@ -70,7 +70,7 @@ impl<T: SplitTape + Add<T, Output = T>, F: ModuleMut<T, Output = T>> ModuleMut<T
 mod tests {
     use super::*;
     use crate::tests::{assert_close, TestDevice};
-    use crate::{nn::Linear, tensor::*, tensor_ops::*};
+    use crate::{nn::builders::Linear, tensor::*, tensor_ops::*};
 
     #[test]
     fn test_residual_reset() {

@@ -115,7 +115,7 @@ mod tests {
     use super::*;
     use crate::{gradients::*, shapes::*, tensor_ops::*};
     use crate::{
-        nn::{tests::SimpleUpdater, Linear},
+        nn::{builders::Linear, tests::SimpleUpdater},
         tests::TestDevice,
         unique_id::HasUniqueId,
     };
