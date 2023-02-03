@@ -17,6 +17,9 @@ use super::{mha::DeviceMHA, MultiHeadAttention};
 ///   the feedforward network in [TransformerEncoderBlock].
 /// - `NUM_LAYERS`: The number of [TransformerEncoderBlock] to use.
 /// TODO: Doctests
+pub type TransformerEncoder<const M: usize, const H: usize, const F: usize, const L: usize> =
+    Repeated<TransformerEncoderBlock<M, H, F>, L>;
+
 pub type DeviceEncoder<const M: usize, const H: usize, const F: usize, const L: usize, E, D> =
     Repeated<DeviceEncoderBlock<M, H, F, E, D>, L>;
 
@@ -166,8 +169,7 @@ mod tests {
         const NUM_HEADS: usize = 3;
         const FF_DIM: usize = 16;
 
-        let encoder =
-            TransformerEncoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build_on_device(&dev);
+        let encoder = TransformerEncoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build(&dev);
 
         let x = dev.sample_normal::<Rank3<BATCH, SEQ_LEN, EMBED_DIM>>();
         let y = encoder.forward(x);

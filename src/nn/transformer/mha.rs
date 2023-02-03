@@ -264,7 +264,7 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha = MultiHeadAttention::<M, NUM_HEADS>::build_on_device(&dev);
+        let mha = MultiHeadAttention::<M, NUM_HEADS>::build(&dev);
 
         let q = dev.sample_normal::<Rank2<S1, M>>();
         let k = dev.sample_normal::<Rank2<S2, M>>();
@@ -298,7 +298,7 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha = MultiHeadAttention::<M, NUM_HEADS>::build_on_device(&dev);
+        let mha = MultiHeadAttention::<M, NUM_HEADS>::build(&dev);
 
         let q = dev.sample_normal::<Rank3<BATCH, S1, M>>();
         let k = dev.sample_normal::<Rank3<BATCH, S2, M>>();
@@ -348,7 +348,7 @@ mod tests {
     fn test_backward_updates_all() {
         let dev: TestDevice = Default::default();
 
-        let mut mha = MultiHeadAttention::<12, 4>::build_on_device(&dev);
+        let mut mha = MultiHeadAttention::<12, 4>::build(&dev);
 
         let q = dev.sample_normal::<Rank3<2, 3, 12>>();
         let k = dev.sample_normal::<Rank3<2, 4, 12>>();

@@ -102,7 +102,7 @@ impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: us
 where
     D: Device<f32>,
     Img: TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P>,
-    for<'a> Bias2D<'a, O, D>: Module<Img::Output, Output = Img::Output>,
+    for<'a> Bias2D<'a, O, f32, D>: Module<Img::Output, Output = Img::Output>,
 {
     type Output = Img::Output;
     fn forward(&self, x: Img) -> Self::Output {
@@ -149,7 +149,6 @@ impl<'a, B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
 #[cfg(test)]
 mod tests {
     use crate::{
-        nn::BuildOnDevice,
         tensor::{AsArray, SampleTensor, ZerosTensor},
         tests::*,
     };

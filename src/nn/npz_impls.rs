@@ -6,8 +6,9 @@ use crate::{
     shapes::Dtype,
     tensor::{
         numpy::{NpzError, NumpyDtype},
-        CopySlice, DeviceStorage,
+        CopySlice,
     },
+    tensor_ops::Device,
 };
 use std::format;
 use std::io::{Read, Seek, Write};
@@ -214,7 +215,7 @@ impl<T: LoadFromNpz> LoadFromNpz for AddInto<T> {
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>> SaveToNpz
-    for TransformerDecoder<M, H, F, L, D>
+    for DeviceDecoder<M, H, F, L, f32, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.0.write(&format!("{p}.0"), w)
@@ -223,7 +224,7 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> SaveToNpz
-    for TransformerDecoderBlock<M, H, F, D>
+    for DeviceDecoderBlock<M, H, F, f32, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.self_attn.write(&format!("{p}self_attn."), w)?;
@@ -239,7 +240,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> SaveToNpz
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> LoadFromNpz
-    for TransformerDecoderBlock<M, H, F, D>
+    for DeviceDecoderBlock<M, H, F, f32, D>
 {
     fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.self_attn.read(&format!("{pre}self_attn."), r)?;
@@ -255,7 +256,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> LoadFromNpz
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>> LoadFromNpz
-    for TransformerDecoder<M, H, F, L, D>
+    for DeviceDecoder<M, H, F, L, f32, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.0.read(&format!("{p}.0"), r)
@@ -264,7 +265,7 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> SaveToNpz
-    for TransformerEncoderBlock<M, H, F, D>
+    for DeviceEncoderBlock<M, H, F, f32, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.self_attn.write(&format!("{p}self_attn."), w)?;
@@ -278,7 +279,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> SaveToNpz
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> LoadFromNpz
-    for TransformerEncoderBlock<M, H, F, D>
+    for DeviceEncoderBlock<M, H, F, f32, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.self_attn.read(&format!("{p}self_attn."), r)?;
@@ -292,7 +293,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> LoadFromNpz
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>> SaveToNpz
-    for MultiHeadAttention<M, H, K, V, D>
+    for DeviceMHA<M, H, K, V, f32, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.w_q.write(&format!("{p}w_q."), w)?;
@@ -305,7 +306,7 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
 
 #[cfg(feature = "nightly")]
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>> LoadFromNpz
-    for MultiHeadAttention<M, H, K, V, D>
+    for DeviceMHA<M, H, K, V, f32, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.w_q.read(&format!("{p}w_q."), r)?;
@@ -324,7 +325,7 @@ impl<
         const D: usize,
         const F: usize,
         Dev: Device<f32>,
-    > SaveToNpz for Transformer<M, H, E, D, F, Dev>
+    > SaveToNpz for DeviceTransformer<M, H, E, D, F, f32, Dev>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.encoder.write(&format!("{p}encoder."), w)?;
@@ -341,7 +342,7 @@ impl<
         const D: usize,
         const F: usize,
         Dev: Device<f32>,
-    > LoadFromNpz for Transformer<M, H, E, D, F, Dev>
+    > LoadFromNpz for DeviceTransformer<M, H, E, D, F, f32, Dev>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.encoder.read(&format!("{p}encoder."), r)?;
@@ -490,12 +491,12 @@ mod tests {
         let dev: TestDevice = Default::default();
         type Model = MultiHeadAttention<12, 4>;
 
-        let saved = Model::build_on_device(&dev);
+        let saved = Model::build(&dev);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         saved.save(file.path()).expect("");
 
-        let mut loaded = Model::build_on_device(&dev);
+        let mut loaded = Model::build(&dev);
 
         let q = dev.sample_normal::<Rank3<2, 3, 12>>();
         let k = dev.sample_normal::<Rank3<2, 4, 12>>();
@@ -517,12 +518,12 @@ mod tests {
         let dev: TestDevice = Default::default();
         type Model = Transformer<16, 4, 3, 4, 8>;
 
-        let mut saved = Model::build_on_device(&dev);
+        let mut saved = Model::build(&dev);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         saved.save(file.path()).expect("");
 
-        let mut loaded = Model::build_on_device(&dev);
+        let mut loaded = Model::build(&dev);
 
         let src = dev.sample_normal::<Rank3<4, 12, 16>>();
         let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();
