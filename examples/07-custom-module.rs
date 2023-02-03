@@ -2,7 +2,11 @@
 
 use dfdx::{
     gradients::Tape,
-    nn::{self, BuildModule, Module},
+    nn::{
+        self,
+        modules::{Linear, ReLU},
+        BuildModule, Module,
+    },
     shapes::{Rank1, Rank2},
     tensor::{Cpu, HasErr, SampleTensor, Tensor},
 };
@@ -11,9 +15,9 @@ use dfdx::{
 /// This case is trivial and should be done with a tuple of linears and relus,
 /// but it demonstrates how to build models with custom behavior
 struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
-    l1: nn::DeviceLinear<IN, INNER, f32, Cpu>,
-    l2: nn::DeviceLinear<INNER, OUT, f32, Cpu>,
-    relu: nn::ReLU,
+    l1: Linear<IN, INNER, f32, Cpu>,
+    l2: Linear<INNER, OUT, f32, Cpu>,
+    relu: ReLU,
 }
 
 // BuildModule lets you randomize a model's parameters
@@ -23,9 +27,9 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> nn::BuildModule<Cpu,
     type Built = Self;
     fn try_build(device: &Cpu) -> Result<Self, <Cpu as HasErr>::Err> {
         Ok(Self {
-            l1: nn::Linear::try_build(device)?,
-            l2: nn::Linear::try_build(device)?,
-            relu: nn::ReLU,
+            l1: Linear::try_build(device)?,
+            l2: Linear::try_build(device)?,
+            relu: ReLU,
         })
     }
 }

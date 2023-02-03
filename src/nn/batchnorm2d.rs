@@ -222,7 +222,7 @@ impl<const C: usize, D: Device<f32>> GradientUpdate<D, f32> for BatchNorm2D<C, f
 #[cfg(test)]
 mod tests {
     use super::builder::BatchNorm2D;
-    use crate::{tensor::*, nn::*, tests::*, shapes::*, tensor_ops::*};
+    use crate::{nn::*, shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_batchnorm2d_3d_forward_mut() {

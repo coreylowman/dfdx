@@ -1,7 +1,7 @@
 use super::{
+    modules::*,
     npz::{LoadFromNpz, SaveToNpz},
     *,
-    modules::*,
 };
 use crate::{
     shapes::Dtype,
@@ -346,7 +346,7 @@ impl<
 #[cfg(test)]
 mod tests {
     use crate::{
-        nn::{*, builders::*},
+        nn::{builders::*, *},
         shapes::*,
         tensor::{numpy::NumpyDtype, AsArray, SampleTensor, Tensor},
         tensor_ops::Device,

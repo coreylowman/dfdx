@@ -1,5 +1,5 @@
 use crate::{
-    nn::{*, modules::*},
+    nn::{modules::*, *},
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     shapes::Dtype,
     tensor::{PutTape, SplitTape},

@@ -1,4 +1,10 @@
-use crate::{nn::{*, modules::*}, optim::*, shapes::Dtype, tensor::*, tensor_ops::*};
+use crate::{
+    nn::{modules::*, *},
+    optim::*,
+    shapes::Dtype,
+    tensor::*,
+    tensor_ops::*,
+};
 
 #[cfg(feature = "nightly")]
 use crate::{gradients::Tape, shapes::*, Assert, ConstTrue};

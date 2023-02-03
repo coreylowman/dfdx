@@ -168,7 +168,7 @@ mod tests {
         tests::*,
     };
 
-    use super::{*, builder::Conv2D as Conv2D};
+    use super::{builder::Conv2D, *};
 
     #[rustfmt::skip]
     #[test]
