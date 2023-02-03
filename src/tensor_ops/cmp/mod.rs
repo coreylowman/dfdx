@@ -1,6 +1,6 @@
 use crate::{
     gradients::{NoneTape, Tape},
-    shapes::{Shape, Unit},
+    shapes::{HasShape, Shape, Unit},
     tensor::{DeviceStorage, Tensor},
 };
 
@@ -20,6 +20,7 @@ fn try_cmp_op<Op, S: Shape, E: Unit, D: CmpKernel<Op, E>, T: Tape<D>>(
     lhs: &Tensor<S, E, D, T>,
     rhs: &Tensor<S, E, D, T>,
 ) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
+    assert_eq!(lhs.shape(), rhs.shape());
     let storage = lhs.device.forward(&lhs.storage, &rhs.storage)?;
     let out = lhs.device.upgrade(storage);
     Ok(out)
