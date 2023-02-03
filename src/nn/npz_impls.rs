@@ -8,7 +8,6 @@ use crate::{
         numpy::{NpzError, NumpyDtype},
         CopySlice,
     },
-    tensor_ops::Device,
 };
 use std::format;
 use std::io::{Read, Seek, Write};
@@ -214,7 +213,7 @@ impl<T: LoadFromNpz> LoadFromNpz for AddInto<T> {
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>> SaveToNpz
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D: CopySlice<f32>> SaveToNpz
     for DeviceDecoder<M, H, F, L, f32, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
@@ -223,7 +222,7 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> SaveToNpz
+impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> SaveToNpz
     for DeviceDecoderBlock<M, H, F, f32, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
@@ -239,7 +238,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> SaveToNpz
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> LoadFromNpz
+impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> LoadFromNpz
     for DeviceDecoderBlock<M, H, F, f32, D>
 {
     fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
@@ -255,7 +254,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> LoadFromNpz
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>> LoadFromNpz
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D: CopySlice<f32>> LoadFromNpz
     for DeviceDecoder<M, H, F, L, f32, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
@@ -264,7 +263,7 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> SaveToNpz
+impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> SaveToNpz
     for DeviceEncoderBlock<M, H, F, f32, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
@@ -278,7 +277,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> SaveToNpz
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> LoadFromNpz
+impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> LoadFromNpz
     for DeviceEncoderBlock<M, H, F, f32, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
@@ -292,7 +291,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> LoadFromNpz
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>> SaveToNpz
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D: CopySlice<f32>> SaveToNpz
     for DeviceMHA<M, H, K, V, f32, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
@@ -305,7 +304,7 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>> LoadFromNpz
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D: CopySlice<f32>> LoadFromNpz
     for DeviceMHA<M, H, K, V, f32, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
@@ -324,7 +323,7 @@ impl<
         const E: usize,
         const D: usize,
         const F: usize,
-        Dev: Device<f32>,
+        Dev: CopySlice<f32>,
     > SaveToNpz for DeviceTransformer<M, H, E, D, F, f32, Dev>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
@@ -341,7 +340,7 @@ impl<
         const E: usize,
         const D: usize,
         const F: usize,
-        Dev: Device<f32>,
+        Dev: CopySlice<f32>,
     > LoadFromNpz for DeviceTransformer<M, H, E, D, F, f32, Dev>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {

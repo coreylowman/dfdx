@@ -2,8 +2,7 @@
 
 use dfdx::{
     gradients::Tape,
-    nn::{self, Module},
-    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
+    nn::{self, BuildModule, Module},
     shapes::{Rank1, Rank2},
     tensor::{Cpu, HasErr, SampleTensor, Tensor},
 };
@@ -12,8 +11,8 @@ use dfdx::{
 /// This case is trivial and should be done with a tuple of linears and relus,
 /// but it demonstrates how to build models with custom behavior
 struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
-    l1: nn::DeviceLinear<IN, INNER>,
-    l2: nn::DeviceLinear<INNER, OUT>,
+    l1: nn::DeviceLinear<IN, INNER, f32, Cpu>,
+    l2: nn::DeviceLinear<INNER, OUT, f32, Cpu>,
     relu: nn::ReLU,
 }
 
@@ -21,30 +20,13 @@ struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
 impl<const IN: usize, const INNER: usize, const OUT: usize> nn::BuildModule<Cpu, f32>
     for Mlp<IN, INNER, OUT>
 {
+    type Built = Self;
     fn try_build(device: &Cpu) -> Result<Self, <Cpu as HasErr>::Err> {
         Ok(Self {
-            l1: nn::BuildModule::try_build(device)?,
-            l2: nn::BuildModule::try_build(device)?,
+            l1: nn::Linear::try_build(device)?,
+            l2: nn::Linear::try_build(device)?,
             relu: nn::ReLU,
         })
-    }
-}
-
-// GradientUpdate lets you update a model's parameters using gradients
-impl<const IN: usize, const INNER: usize, const OUT: usize> GradientUpdate<Cpu, f32>
-    for Mlp<IN, INNER, OUT>
-{
-    fn update<U>(
-        &mut self,
-        updater: &mut U,
-        unused: &mut UnusedTensors,
-    ) -> Result<(), <Cpu as HasErr>::Err>
-    where
-        U: ParamUpdater<Cpu, f32>,
-    {
-        self.l1.update(updater, unused)?;
-        self.l2.update(updater, unused)?;
-        Ok(())
     }
 }
 
@@ -79,7 +61,7 @@ fn main() {
     let dev: Cpu = Default::default();
 
     // Construct model
-    let model: Mlp<10, 512, 20> = nn::BuildModule::build(&dev);
+    let model = Mlp::<10, 512, 20>::build(&dev);
 
     // Forward pass with a single sample
     let item: Tensor<Rank1<10>, f32, _> = dev.sample_normal();

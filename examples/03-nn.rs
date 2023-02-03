@@ -1,7 +1,7 @@
 //! Intro to dfdx::nn
 
 use dfdx::{
-    nn::{BuildOnDevice, DeviceLinear, Module, ModuleMut, ReLU, ResetParams},
+    nn::{BuildModule, DeviceLinear, Linear, Module, ModuleMut, ReLU, ResetParams},
     shapes::{Const, Rank1, Rank2},
     tensor::{AsArray, Cpu, SampleTensor, Tensor, ZerosTensor},
 };
@@ -10,10 +10,11 @@ fn main() {
     let dev: Cpu = Default::default();
 
     // nn exposes many different neural network types, like the Linear layer!
-    // you can use Build::build to construct an initialized model
-    let mut m = DeviceLinear::<4, 2>::build_on_device(&dev);
+    // you can use BuildModule::build to construct an initialized model
+    type Model = Linear<4, 2>;
+    let mut m: DeviceLinear<4, 2, f32, Cpu> = Model::build(&dev);
 
-    // Build::reset_params also allows you to re-randomize the weights
+    // ResetParams::reset_params also allows you to re-randomize the weights
     m.reset_params();
 
     // Modules act on tensors using either:
@@ -34,8 +35,8 @@ fn main() {
     let _: Tensor<(usize, Const<2>), f32, _> = m.forward(dev.zeros_like(&(batch_size, Const)));
 
     // you can also combine multiple modules with tuples
-    type Mlp = (DeviceLinear<4, 2>, ReLU, DeviceLinear<2, 1>);
-    let mlp = Mlp::build_on_device(&dev);
+    type Mlp = (Linear<4, 2>, ReLU, Linear<2, 1>);
+    let mlp = Mlp::build(&dev);
 
     // and of course forward passes the input through each module sequentially:
     let x: Tensor<Rank1<4>, f32, _> = dev.sample_normal();

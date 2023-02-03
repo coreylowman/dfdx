@@ -2,7 +2,7 @@
 
 use dfdx::{
     losses::mse_loss,
-    nn::{BuildOnDevice, DeviceLinear, ModuleMut, ReLU, Tanh},
+    nn::{BuildModule, Linear, ModuleMut, ReLU, Tanh},
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
     shapes::Rank2,
     tensor::{AsArray, Cpu, SampleTensor, Tensor},
@@ -11,16 +11,16 @@ use dfdx::{
 
 // first let's declare our neural network to optimze
 type Mlp = (
-    (DeviceLinear<5, 32>, ReLU),
-    (DeviceLinear<32, 32>, ReLU),
-    (DeviceLinear<32, 2>, Tanh),
+    (Linear<5, 32>, ReLU),
+    (Linear<32, 32>, ReLU),
+    (Linear<32, 2>, Tanh),
 );
 
 fn main() {
     let dev: Cpu = Default::default();
 
     // First randomly initialize our model
-    let mut mlp = Mlp::build_on_device(&dev);
+    let mut mlp = Mlp::build(&dev);
 
     // Here we construct a stochastic gradient descent optimizer
     // for our Mlp.

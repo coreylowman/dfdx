@@ -11,9 +11,9 @@ const STATE: usize = 4;
 const ACTION: usize = 2;
 
 type PolicyNetwork = (
-    (DeviceLinear<STATE, 32>, ReLU),
-    (DeviceLinear<32, 32>, ReLU),
-    DeviceLinear<32, ACTION>,
+    (Linear<STATE, 32>, ReLU),
+    (Linear<32, 32>, ReLU),
+    Linear<32, ACTION>,
 );
 
 fn main() {
@@ -28,7 +28,7 @@ fn main() {
     let advantage = dev.sample_normal::<Rank1<BATCH>>();
 
     // initiliaze model - all weights are 0s
-    let mut pi_net = PolicyNetwork::build_on_device(&dev);
+    let mut pi_net = PolicyNetwork::build(&dev);
     let target_pi_net = pi_net.clone();
 
     let mut sgd = Sgd::new(

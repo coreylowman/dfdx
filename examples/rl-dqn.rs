@@ -13,9 +13,9 @@ const ACTION: usize = 2;
 
 // our simple 2 layer feedforward network with ReLU activations
 type QNetwork = (
-    (DeviceLinear<STATE, 32>, ReLU),
-    (DeviceLinear<32, 32>, ReLU),
-    DeviceLinear<32, ACTION>,
+    (Linear<STATE, 32>, ReLU),
+    (Linear<32, 32>, ReLU),
+    Linear<32, ACTION>,
 );
 
 fn main() {
@@ -32,7 +32,7 @@ fn main() {
     let next_state = dev.sample_normal::<Rank2<BATCH, STATE>>();
 
     // initiliaze model
-    let mut q_net = QNetwork::build_on_device(&dev);
+    let mut q_net = QNetwork::build(&dev);
     let target_q_net = q_net.clone();
 
     let mut sgd = Sgd::new(
