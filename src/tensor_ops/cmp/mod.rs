@@ -287,6 +287,7 @@ mod tests {
         );
     }
 
+    // TODO Remove this attribute once Cuda supports integers
     #[cfg(not(feature = "cuda"))]
     #[test]
     fn test_eq_not_dtype() {
@@ -317,6 +318,7 @@ mod tests {
         );
     }
 
+    // TODO Remove this attribute once Cuda supports integers
     #[cfg(not(feature = "cuda"))]
     #[test]
     fn test_ne_not_dtype() {
@@ -347,6 +349,7 @@ mod tests {
         );
     }
 
+    // TODO Remove this attribute once Cuda supports integers
     #[cfg(not(feature = "cuda"))]
     #[test]
     fn test_gt_not_dtype() {
@@ -377,6 +380,7 @@ mod tests {
         );
     }
 
+    // TODO Remove this attribute once Cuda supports integers
     #[cfg(not(feature = "cuda"))]
     #[test]
     fn test_ge_not_dtype() {
@@ -407,6 +411,7 @@ mod tests {
         );
     }
 
+    // TODO Remove this attribute once Cuda supports integers
     #[cfg(not(feature = "cuda"))]
     #[test]
     fn test_lt_not_dtype() {
@@ -437,6 +442,7 @@ mod tests {
         );
     }
 
+    // TODO Remove this attribute once Cuda supports integers
     #[cfg(not(feature = "cuda"))]
     #[test]
     fn test_le_not_dtype() {
