@@ -261,8 +261,7 @@ where
     }
 }
 
-/// Construct tensors from rust vectors. This trait should not be used directly, use TensorFrom
-/// instead.
+/// Construct tensors from rust vectors. This trait is only used to implement TensorFrom.
 pub trait TensorFromVec<E: Unit>: DeviceStorage {
     fn tensor_from_vec<S: Shape>(&self, src: Vec<E>, shape: S) -> Tensor<S, E, Self> {
         self.try_tensor_from_vec::<S>(src, shape).unwrap()

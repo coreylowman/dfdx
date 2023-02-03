@@ -1,13 +1,14 @@
 use super::super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     shapes::Dtype,
-    tensor::{CopySlice, DeviceStorage, TensorFromVec},
+    tensor::{CopySlice, DeviceStorage},
 };
 
 /// A [DeviceStorage] that requires all the tensor ops implementations
 pub trait Device<E: Dtype>:
     DeviceStorage
     + CopySlice<E>
+    + crate::tensor::storage_traits::TensorFromVec<E>
 
     // allocation
     + crate::tensor::ZerosTensor<E>
@@ -76,8 +77,6 @@ pub trait Device<E: Dtype>:
     + BinaryKernel<super::super::huber_error::HuberErrorKernelOp<E>, E>
     + BinaryKernel<super::super::maximum::MaximumKernelOp, E>
     + BinaryKernel<super::super::minimum::MinimumKernelOp, E>
-where
-    Self: TensorFromVec<E>
 {
 }
 
