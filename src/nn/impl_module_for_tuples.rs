@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::*, tensor_ops::*};
 
-use super::module::{Module, ModuleMut, OnDevice, ResetParams, ToDevice};
+use super::module::{BuildModule, Module, ModuleMut, OnDevice, ResetParams, ToDevice};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
@@ -14,13 +14,16 @@ macro_rules! tuple_impls {
             }
         }
 
-        #[allow(non_snake_case)]
-        impl<D: Device<E>, E: Dtype, $($name: ResetParams<D, E>),+> ResetParams<D, E> for ($($name,)+) {
+        impl<D: Device<E>, E: Dtype, $($name: BuildModule<D, E>),+> BuildModule<D, E> for ($($name,)+) {
+            #[allow(non_snake_case)]
             fn try_build(device: &D) -> Result<Self, D::Err> {
-                $(let $name = ResetParams::try_build(device)?;)*
+                $(let $name = BuildModule::try_build(device)?;)*
                 Ok(($($name, )*))
             }
+        }
 
+        impl<D: Device<E>, E: Dtype, $($name: ResetParams<D, E>),+> ResetParams<D, E> for ($($name,)+) {
+            #[allow(non_snake_case)]
             fn try_reset_params(&mut self) -> Result<(), D::Err> {
                 $(self.$idx.try_reset_params()?;)+
                 Ok(())
@@ -29,7 +32,6 @@ macro_rules! tuple_impls {
 
         impl<$($name: ToDevice<D>,)+ D> ToDevice<D> for ($($name,)+) {
             type Output = ($(OnDevice<$name, D>,)+);
-
             fn to_device(&self, device: &D) -> Self::Output {
                 ($(self.$idx.to_device(device)),+)
             }
@@ -119,7 +121,7 @@ mod tests {
     #[test]
     fn test_2_tuple_update() {
         let dev: TestDevice = Default::default();
-        let mut model: (Linear<2, 3, _>, Linear<3, 4, _>) = dev.build_module();
+        let mut model: (Linear<2, 3, _>, Linear<3, 4, _>) = BuildModule::build(&dev);
         assert_ne!(model.0.weight.array(), [[0.0; 2]; 3]);
         assert_ne!(model.0.bias.array(), [0.0; 3]);
         assert_ne!(model.1.weight.array(), [[0.0; 3]; 4]);
@@ -136,11 +138,14 @@ mod tests {
         assert_ne!(g.get(&model.1.weight).array(), [[0.0; 3]; 4]);
         assert_ne!(g.get(&model.1.bias).array(), [0.0; 4]);
 
-        let mut sgd = Sgd::new(SgdConfig {
-            lr: 1.0,
-            momentum: None,
-            weight_decay: None,
-        });
+        let mut sgd = Sgd::new(
+            &model,
+            SgdConfig {
+                lr: 1.0,
+                momentum: None,
+                weight_decay: None,
+            },
+        );
         sgd.update(&mut model, g).unwrap();
 
         assert_ne!(model.0.weight.array(), m0.0.weight.array());
@@ -246,7 +251,8 @@ mod tests {
     #[test]
     fn test_tuple_missing_gradients() {
         let dev: TestDevice = Default::default();
-        let mut model: (Linear<5, 3, _>, Linear<5, 3, _>, Linear<5, 3, _>) = dev.build_module();
+        type Model = (Linear<5, 3>, Linear<5, 3>, Linear<5, 3>);
+        let mut model = Model::build_on_device(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

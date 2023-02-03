@@ -15,9 +15,9 @@
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();
 //! let x = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-//! let y: Tensor<Rank2<2, 3>> = dev.ones();
+//! let y: Tensor<Rank2<2, 3>, f32, Cpu> = dev.ones();
 //! // Runtime shape
-//! let z: Tensor<(usize, Const<3>)> = dev.ones_like(&(10, Const));
+//! let z: Tensor<(usize, Const<3>), f32, _> = dev.ones_like(&(10, Const));
 //! ```
 //!
 //! 2. Neural networks are built with types. Tuples are sequential models. See [crate::nn].
@@ -30,19 +30,20 @@
 //! );
 //! ```
 //!
-//! 3. Instantiate models with [crate::nn::ResetParams] and [crate::nn::ModuleBuilder]
+//! 3. Instantiate models with [crate::nn::BuildOnDevice]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();
-//! let mlp: (Linear<5, 2>, ReLU) = dev.build_module();
+//! type Model = (Linear<5, 2>, ReLU);
+//! let mlp = Model::build_on_device(&dev);
 //! ```
 //!
 //! 4. Pass data through networks with [crate::nn::Module]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let mlp: Linear<5, 2> = dev.build_module();
-//! let x: Tensor<Rank1<5>> = dev.zeros();
+//! # let mlp: Linear<5, 2> = BuildModule::build(&dev);
+//! let x: Tensor<Rank1<5>, f32, _> = dev.zeros();
 //! let y = mlp.forward(x); // compiler infers that `y` must be `Tensor<Rank1<2>>`
 //! ```
 //!
@@ -50,8 +51,8 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! # let model: Linear<10, 5> = dev.build_module();
-//! # let y_true: Tensor<Rank1<5>> = dev.sample_normal().softmax();
+//! # let model: Linear<10, 5> = BuildModule::build(&dev);
+//! # let y_true: Tensor<Rank1<5>, f32, _> = dev.sample_normal().softmax();
 //! // tensors default to not having a tape
 //! let x: Tensor<Rank1<10>, f32, Cpu, NoneTape> = dev.zeros();
 //!
@@ -67,7 +68,7 @@
 //! ```rust
 //! # use dfdx::{prelude::*, gradients::Gradients};
 //! # let dev: Cpu = Default::default();
-//! # let model: Linear<10, 5> = dev.build_module();
+//! # let model: Linear<10, 5> = BuildModule::build(&dev);
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
 //! # let y = model.forward(dev.zeros::<Rank1<10>>().trace());
 //! // compute cross entropy loss
@@ -80,13 +81,13 @@
 //! ```rust
 //! # use dfdx::{prelude::*, gradients::Gradients, optim::*};
 //! # let dev: Cpu = Default::default();
-//! # let mut model: Linear<10, 5> = dev.build_module();
+//! # let mut model: Linear<10, 5> = BuildModule::build(&dev);
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
 //! # let y = model.forward(dev.zeros::<Rank1<10>>().trace());
 //! # let loss = cross_entropy_with_logits_loss(y, y_true);
 //! # let gradients: Gradients = loss.backward();
 //! // Use stochastic gradient descent (Sgd), with a learning rate of 1e-2, and 0.9 momentum.
-//! let mut opt = Sgd::new(SgdConfig {
+//! let mut opt = Sgd::new(&model, SgdConfig {
 //!     lr: 1e-2,
 //!     momentum: Some(Momentum::Classic(0.9)),
 //!     weight_decay: None,

@@ -1,5 +1,6 @@
 # dfdx: shape checked deep learning in rust
 
+[![CUDA](https://badgen.net/badge/CUDA/passing/green)](#)
 [![crates.io](https://img.shields.io/crates/v/dfdx.svg)](https://crates.io/crates/dfdx)
 [![docs.rs](https://img.shields.io/docsrs/dfdx)](https://docs.rs/dfdx)
 [![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/AtUhGqBDP5)
@@ -9,14 +10,12 @@ Ergonomics & safety focused deep learning in Rust.
 **Still in pre-alpha state. The next few releases are planned to be breaking releases.**
 
 Features at a glance:
-1. Tensor library with shapes up to 6d!
+1. :fire: GPU accelerated tensor library with shapes up to 6d!
 2. Shapes with both compile and runtime sized dimensions. (e.g. `Tensor<(usize, Const<10>)>` and `Tensor<Rank2<5, 10>>`)
 3. A large library of tensor operations (including `matmul`, `conv2d`, and much more).
     1. All tensor operations shape and type checked at compile time!!
 4. Ergonomic neural network building blocks (like `Linear`, `Conv2D`, and `Transformer`).
 5. Standard deep learning optimizers such as `Sgd`, `Adam`, `AdamW`, `RMSprop`, and more.
-6. Reverse mode auto differentiation[1] implementation.
-7. Serialization to/from `.npy` and `.npz` for transferring models to/from python.
 
 `dfdx` is on [crates.io](https://crates.io/crates/dfdx)! Use by adding this to your `Cargo.toml`:
 
@@ -41,6 +40,10 @@ See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
 [2] The only things that use `Arc` are tensors to store their data. `Arc` is used instead of `Box` to reduce
 allocations when tensors are cloned.
 
+## GPU acceleration with CUDA
+
+Enable the `cuda` feature to start using the `Cuda` device! Requires the installation of nvidia's cuda toolkit. See [feature flags docs](https://docs.rs/dfdx/latest/dfdx/feature_flags/index.html) for more info.
+
 ## BLAS libraries
 
 The [matrixmultiply crate](https://crates.io/crates/matrixmultiply) is the default BLAS library. **You don't need
@@ -63,9 +66,10 @@ type Mlp = (
 
 fn main() {
     let dev: Cpu = Default::default();
-    let mlp: Mlp = dev.build_module();
-    let x: Tensor<Rank1<10>> = dev.zeros();
-    let y /*: Tensor<Rank1<2>>*/ = mlp.forward(x);
+    // OR `let dev: Cuda = Default::default();`
+    let mlp = Mlp::build_on_device(&dev);
+    let x: Tensor<Rank1<10>, f32, Cpu> = dev.zeros();
+    let y /*: Tensor<Rank1<2>, f32, Cpu>*/ = mlp.forward(x);
     println!("{:?}", y);
     mlp.save("checkpoint.npz")?;
 }
@@ -75,7 +79,7 @@ fn main() {
 
 ```rust
 let mut model: Model = ...
-let mut sgd = Sgd::new(SgdConfig {
+let mut sgd = Sgd::new(&model, SgdConfig {
     lr: 1e-2,
     momentum: Some(Momentum::Nesterov(0.9))
 });
@@ -89,13 +93,13 @@ sgd.update(&mut model, gradients);
 
 3. 💡 Tensors can be converted to and from normal rust arrays
 ```rust
-let t0: Tensor<Rank0> = dev.tensor(0.0);
+let t0: Tensor<Rank0, f32, _> = dev.tensor(0.0);
 assert_eq!(t0.array(), &0.0);
 
-let t1 /*: Tensor<Rank1<3>>*/ = dev.tensor([1.0, 2.0, 3.0]);
+let t1 /*: Tensor<Rank1<3>, f32, _>*/ = dev.tensor([1.0, 2.0, 3.0]);
 assert_eq!(t1.array(), [1.0, 2.0, 3.0]);
 
-let t2: Tensor<Rank2<2, 3>> = dev.sample_normal();
+let t2: Tensor<Rank2<2, 3>, f32, _> = dev.sample_normal();
 assert_ne!(t2.array(), [[0.0; 3]; 2]);
 ```
 
@@ -122,11 +126,13 @@ for sequentially executing modules.
 
 ```rust
 // no idea why you would do this, but you could!
-let model: (ReLU, Sigmoid, Tanh) = dev.build_module();
+type Model = (ReLU, Sigmoid, Tanh);
+let model = Model::build_on_device(&dev);
 ```
 
 ```rust
-let model: (Linear<10, 5>, Tanh) = dev.build_module();
+type Model = (Linear<10, 5>, Tanh)
+let model = Model::build_on_device(&dev);
 ```
 
 How implementing Module for a 2-tuple looks:

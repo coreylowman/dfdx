@@ -13,22 +13,32 @@ pub trait Unit:
     + Sync
     + std::marker::Unpin
 {
+    const ONE: Self;
 }
-impl Unit for f32 {}
-impl Unit for f64 {}
-impl Unit for usize {}
-impl Unit for u8 {}
-impl Unit for u16 {}
-impl Unit for u32 {}
-impl Unit for u64 {}
-impl Unit for u128 {}
-impl Unit for isize {}
-impl Unit for i8 {}
-impl Unit for i16 {}
-impl Unit for i32 {}
-impl Unit for i64 {}
-impl Unit for i128 {}
-impl Unit for bool {}
+
+macro_rules! unit {
+    ($type:ty, $one:expr) => {
+        impl Unit for $type {
+            const ONE: Self = $one;
+        }
+    };
+}
+
+unit!(f32, 1.0);
+unit!(f64, 1.0);
+unit!(usize, 1);
+unit!(isize, 1);
+unit!(u8, 1);
+unit!(i8, 1);
+unit!(u16, 1);
+unit!(i16, 1);
+unit!(u32, 1);
+unit!(i32, 1);
+unit!(u64, 1);
+unit!(i64, 1);
+unit!(u128, 1);
+unit!(i128, 1);
+unit!(bool, true);
 
 /// Represents something that has a [Unit].
 pub trait HasUnitType {

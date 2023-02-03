@@ -6,10 +6,11 @@ fn main() {
     use dfdx::prelude::*;
 
     let dev: Cpu = Default::default();
-    let t: Transformer<16, 4, 3, 3, 8> = dev.build_module();
+    type Model = Transformer<16, 4, 3, 3, 8>;
+    let t = Model::build_on_device(&dev);
 
-    let src: Tensor<Rank3<4, 12, 16>> = dev.sample_normal();
-    let tgt: Tensor<Rank3<4, 6, 16>> = dev.sample_normal();
+    let src: Tensor<Rank3<4, 12, 16>, f32, _> = dev.sample_normal();
+    let tgt: Tensor<Rank3<4, 6, 16>, f32, _> = dev.sample_normal();
     let _: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward((src.trace(), tgt));
 }
 

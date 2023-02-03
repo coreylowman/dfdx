@@ -95,18 +95,12 @@ impl Default for SgdConfig<f32> {
 ///
 /// # Example Usage
 ///
-/// Constructing using default:
 /// ```rust
 /// # use dfdx::{prelude::*, optim::*};
-/// # type Model = Tensor<Rank0>;
-/// let mut opt: Sgd<Model> = Default::default();
-/// ```
-///
-/// Constructing using new:
-/// ```rust
-/// # use dfdx::{prelude::*, optim::*};
-/// # type Model = Tensor<Rank0>;
-/// let mut opt: Sgd<Model> = Sgd::new(SgdConfig {
+/// # let dev: Cpu = Default::default();
+/// # type Model = Tensor<Rank0, f32, Cpu>;
+/// # let mut model: Model = dev.zeros();
+/// let mut opt: Sgd<Model> = Sgd::new(&model, SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: Some(Momentum::Classic(0.5)),
 ///     weight_decay: Some(WeightDecay::L2(0.01)),
@@ -125,19 +119,9 @@ pub struct Sgd<M, E: Dtype = f32> {
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype> Default for Sgd<M, E>
-where
-    SgdConfig<E>: Default,
-{
-    /// See [SgdConfig]
-    fn default() -> Self {
-        Self::new(Default::default())
-    }
-}
-
 impl<M, E: Dtype> Sgd<M, E> {
     /// Constructs using hyperparameters from `cfg`
-    pub fn new(cfg: SgdConfig<E>) -> Self {
+    pub fn new(_model: &M, cfg: SgdConfig<E>) -> Self {
         Self {
             cfg,
             velocity: Default::default(),
@@ -202,13 +186,16 @@ mod tests {
     #[test]
     fn test_perfect_sgd() {
         let dev: TestDevice = Default::default();
-        let mut sgd = Sgd::new(SgdConfig {
-            lr: 1.0,
-            momentum: None,
-            weight_decay: None,
-        });
-
         let mut pred: Tensor<Rank1<5>, f32, _> = dev.zeros();
+        let mut sgd = Sgd::new(
+            &pred,
+            SgdConfig {
+                lr: 1.0,
+                momentum: None,
+                weight_decay: None,
+            },
+        );
+
         let targ: Tensor<Rank1<5>, f32, _> = dev.ones();
         for _ in 0..5 {
             let loss = (pred.trace() - targ.clone()).abs().mean();
@@ -222,9 +209,9 @@ mod tests {
     #[test]
     fn test_sgd_no_momentum() {
         let dev: TestDevice = Default::default();
-        let mut sgd = Sgd::new(Default::default());
-
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut sgd = Sgd::new(&t, Default::default());
+
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9998, 0.998, 0.996, 0.98, 0.8],
@@ -245,13 +232,16 @@ mod tests {
     fn test_sgd_classic_momentum() {
         let dev: TestDevice = Default::default();
 
-        let mut sgd = Sgd::new(SgdConfig {
-            lr: 1e-2,
-            momentum: Some(Momentum::Classic(0.5)),
-            weight_decay: None,
-        });
-
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut sgd = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: Some(Momentum::Classic(0.5)),
+                weight_decay: None,
+            },
+        );
+
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9998, 0.998, 0.996, 0.98, 0.8],
@@ -272,13 +262,16 @@ mod tests {
     fn test_sgd_nesterov_momentum() {
         let dev: TestDevice = Default::default();
 
-        let mut sgd = Sgd::new(SgdConfig {
-            lr: 1e-2,
-            momentum: Some(Momentum::Nesterov(0.5)),
-            weight_decay: None,
-        });
-
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut sgd = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: Some(Momentum::Nesterov(0.5)),
+                weight_decay: None,
+            },
+        );
+
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9997, 0.997, 0.994, 0.97, 0.70000005],
@@ -300,18 +293,24 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         // With no momentum, both versions should be the same
-        let mut sgd_l2 = Sgd::new(SgdConfig {
-            lr: 1e-2,
-            momentum: None,
-            weight_decay: Some(WeightDecay::L2(1e-1)),
-        });
-        let mut sgd_decoupled = Sgd::new(SgdConfig {
-            lr: 1e-2,
-            momentum: None,
-            weight_decay: Some(WeightDecay::Decoupled(1e-1)),
-        });
-
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut sgd_l2 = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: None,
+                weight_decay: Some(WeightDecay::L2(1e-1)),
+            },
+        );
+        let mut sgd_decoupled = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: None,
+                weight_decay: Some(WeightDecay::Decoupled(1e-1)),
+            },
+        );
+
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9988, 0.997, 0.995, 0.979, 0.799],
@@ -337,13 +336,16 @@ mod tests {
     fn test_sgd_decoupled_weight_decay_classic_momentum() {
         let dev: TestDevice = Default::default();
 
-        let mut sgd = Sgd::new(SgdConfig {
-            lr: 1e-2,
-            momentum: Some(Momentum::Classic(0.5)),
-            weight_decay: Some(WeightDecay::Decoupled(1e-1)),
-        });
-
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut sgd = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: Some(Momentum::Classic(0.5)),
+                weight_decay: Some(WeightDecay::Decoupled(1e-1)),
+            },
+        );
+
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9988, 0.997, 0.995, 0.979, 0.799],
@@ -365,18 +367,24 @@ mod tests {
 
         // adding l2_weight_decay should be equivalent to adding an L2 term to the loss
         let weight_decay = 1e-1;
-        let mut sgd_l2 = Sgd::new(SgdConfig {
-            lr: 1e-2,
-            momentum: Some(Momentum::Classic(0.5)),
-            weight_decay: Some(WeightDecay::L2(weight_decay)),
-        });
-        let mut sgd = Sgd::new(SgdConfig {
-            lr: 1e-2,
-            momentum: Some(Momentum::Classic(0.5)),
-            weight_decay: None,
-        });
-
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut sgd_l2 = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: Some(Momentum::Classic(0.5)),
+                weight_decay: Some(WeightDecay::L2(weight_decay)),
+            },
+        );
+        let mut sgd = Sgd::new(
+            &t,
+            SgdConfig {
+                lr: 1e-2,
+                momentum: Some(Momentum::Classic(0.5)),
+                weight_decay: None,
+            },
+        );
+
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let expected = [
             [0.9988, 0.997, 0.995, 0.979, 0.799],
@@ -403,41 +411,4 @@ mod tests {
             assert_close(&t.array(), e);
         }
     }
-
-    // #[test]
-    // fn test_sgd_changes_all_params() {
-    //     type Model = (Linear<5, 16>, ReLU, Linear<16, 16>, ReLU, Linear<16, 10>);
-    //     let mut rng = StdRng::seed_from_u64(0);
-    //     let mut model: Model = Default::default();
-    //     model.reset_params(&mut rng);
-    //     let model_0 = model.clone();
-
-    //     let x: Tensor2D<16, 5> = Tensor2D::rand(&mut rng);
-    //     let y: Tensor2D<16, 10> = Tensor2D::rand(&mut rng);
-    //     let mut opt: Sgd<Model> = Default::default();
-
-    //     let py = model.forward(x.trace());
-    //     let loss = (py - y).square().mean();
-    //     let gradients = backward(loss);
-    //     opt.update(&mut model, gradients).expect("");
-
-    //     let model_1 = model.clone();
-
-    //     assert!(model_0.0.weight.data() != model_1.0.weight.data());
-    //     assert!(model_0.0.bias.data() != model_1.0.bias.data());
-    //     assert!(model_0.2.weight.data() != model_1.2.weight.data());
-    //     assert!(model_0.2.bias.data() != model_1.2.bias.data());
-    //     assert!(model_0.4.weight.data() != model_1.4.weight.data());
-    //     assert!(model_0.4.bias.data() != model_1.4.bias.data());
-    // }
-
-    // #[test]
-    // fn test_sgd_unused_params() {
-    //     type Model = (Linear<5, 16>, Linear<16, 10>);
-    //     let mut model: Model = Default::default();
-    //     let mut opt: Sgd<Model> = Default::default();
-    //     let y = model.1.forward(Tensor2D::<8, 16>::zeros().trace());
-    //     let g = backward(y.mean());
-    //     opt.update(&mut model, g).expect_err("");
-    // }
 }

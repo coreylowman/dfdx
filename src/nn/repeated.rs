@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
 
-use super::{Module, ModuleMut, OnDevice, ResetParams, ToDevice};
+use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///
@@ -12,30 +12,48 @@ use super::{Module, ModuleMut, OnDevice, ResetParams, ToDevice};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let model: Repeated<(Linear<10, 10>, ReLU), 5> = dev.build_module();
-/// let out: Tensor<Rank1<10>> = model.forward(dev.zeros());
+/// type Model = Repeated<(Linear<10, 10>, ReLU), 5>;
+/// let model = Model::build_on_device(&dev);
+/// let out: Tensor<Rank1<10>, f32, _> = model.forward(dev.zeros());
 /// ```
 #[derive(Debug, Clone)]
 pub struct Repeated<T, const N: usize> {
     pub modules: std::vec::Vec<T>,
 }
 
-impl<D: Device<E>, E: Dtype, T: ResetParams<D, E>, const N: usize> ResetParams<D, E>
+impl<D: Device<E>, E: Dtype, T: BuildModule<D, E>, const N: usize> BuildModule<D, E>
     for Repeated<T, N>
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         let mut modules = std::vec::Vec::with_capacity(N);
         for _ in 0..N {
-            modules.push(ResetParams::try_build(device)?);
+            modules.push(BuildModule::try_build(device)?);
         }
         Ok(Self { modules })
     }
+}
 
+impl<D: Device<E>, E: Dtype, T: ResetParams<D, E>, const N: usize> ResetParams<D, E>
+    for Repeated<T, N>
+{
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         for m in self.modules.iter_mut() {
             m.try_reset_params()?;
         }
         Ok(())
+    }
+}
+
+impl<T: ToDevice<D>, const N: usize, D> ToDevice<D> for Repeated<T, N> {
+    type Output = Repeated<T::Output, N>;
+    fn to_device(&self, device: &D) -> Self::Output {
+        Repeated {
+            modules: self
+                .modules
+                .iter()
+                .map(|module| module.to_device(device))
+                .collect(),
+        }
     }
 }
 
@@ -57,20 +75,6 @@ impl<D: Device<E>, E: Dtype, T: GradientUpdate<D, E>, const N: usize> GradientUp
             m.update(updater, unused)?;
         }
         Ok(())
-    }
-}
-
-impl<T: ToDevice<D>, const N: usize, D> ToDevice<D> for Repeated<T, N> {
-    type Output = Repeated<OnDevice<T, D>, N>;
-
-    fn to_device(&self, device: &D) -> Self::Output {
-        Repeated {
-            modules: self
-                .modules
-                .iter()
-                .map(|module| module.to_device(device))
-                .collect(),
-        }
     }
 }
 
@@ -106,7 +110,7 @@ mod tests {
     fn test_default_and_reset() {
         let dev: TestDevice = Default::default();
 
-        let m: Repeated<(Linear<3, 3, _>, ReLU), 5> = dev.build_module();
+        let m: Repeated<(Linear<3, 3, _>, ReLU), 5> = BuildModule::build(&dev);
 
         for i in 0..5 {
             assert_ne!(m.modules[i].0.weight.array(), [[0.0; 3]; 3]);
@@ -118,7 +122,7 @@ mod tests {
     fn test_forward() {
         let dev: TestDevice = Default::default();
 
-        let mut m: Repeated<(Linear<3, 3, _>, ReLU), 5> = dev.build_module();
+        let mut m: Repeated<(Linear<3, 3, _>, ReLU), 5> = BuildModule::build(&dev);
 
         let x = dev.zeros::<Rank1<3>>();
         let x = m.modules[0].forward(x);
@@ -134,7 +138,7 @@ mod tests {
     fn test_repeated_missing_gradients() {
         let dev: TestDevice = Default::default();
 
-        let mut model: Repeated<Linear<5, 5, _>, 3> = dev.build_module();
+        let mut model: Repeated<Linear<5, 5, _>, 3> = BuildModule::build(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

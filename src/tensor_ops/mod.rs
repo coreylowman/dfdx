@@ -38,11 +38,13 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let t: Tensor<Rank3<2, 4, 6>> = dev.zeros();
+//! let t: Tensor<Rank3<2, 4, 6>, f32, _> = dev.zeros();
 //! // shape version
-//! let _: Tensor<Rank1<4>> = t.clone().sum::<Rank1<4>, _>();
+//! let _ = t.clone().sum::<Rank1<4>, _>();
 //! // axes version
-//! let _: Tensor<Rank1<2>> = t.clone().sum::<_, Axes2<1, 2>>();
+//! let _ = t.clone().sum::<_, Axes2<0, 2>>();
+//! // typed version
+//! let _: Tensor<Rank1<4>, _, _> = t.clone().sum();
 //! ```
 //!
 //! Complete list of reductions:
@@ -67,17 +69,19 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let t: Tensor<Rank1<4>> = dev.zeros();
+//! let t: Tensor<Rank1<4>, f32, _> = dev.zeros();
 //! // shape version
-//! let _: Tensor<Rank3<2, 4, 6>> = t.clone().broadcast::<Rank3<2, 4, 6>, _>();
+//! let _ = t.clone().broadcast::<Rank3<2, 4, 6>, _>();
+//! // typed version
+//! let _: Tensor<Rank3<2, 4, 6>, _, _> = t.clone().broadcast();
 //! ```
 //!
 //! Rust can also infer the output type if you use it in another operation:
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let big: Tensor<Rank2<2, 5>> = dev.zeros();
-//! let small: Tensor<Rank1<5>> = dev.zeros();
+//! let big: Tensor<Rank2<2, 5>, f32, _> = dev.zeros();
+//! let small: Tensor<Rank1<5>, f32, _> = dev.zeros();
 //! let _ = big + small.broadcast();
 //! ```
 //!
@@ -87,7 +91,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let t: Tensor<Rank3<2, 3, 4>> = dev.zeros();
+//! let t: Tensor<Rank3<2, 3, 4>, f32, _> = dev.zeros();
 //! // shape version
 //! let _ = t.clone().permute::<Rank3<3, 4, 2>, _>();
 //! // axes version
@@ -105,7 +109,7 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-//! let r: Tensor<Rank1<3>> = t.select(dev.tensor(1));
+//! let r: Tensor<Rank1<3>, f32, _> = t.select(dev.tensor(1));
 //! assert_eq!(r.array(), [4.0, 5.0, 6.0]);
 //! ```
 //!
@@ -114,7 +118,7 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-//! let r: Tensor<Rank2<3, 3>> = t.gather(dev.tensor([1, 1, 0]));
+//! let r: Tensor<Rank2<3, 3>, f32, _> = t.gather(dev.tensor([1, 1, 0]));
 //! assert_eq!(r.array(), [
 //!     [4.0, 5.0, 6.0],
 //!     [4.0, 5.0, 6.0],
@@ -138,11 +142,12 @@
 mod utilities;
 pub use utilities::*;
 
-// mod impl_mask;
 mod abs;
 mod add;
 mod bce;
+mod boolean;
 mod broadcast_to;
+mod choose;
 mod clamp;
 mod cmp;
 mod cos;
@@ -183,7 +188,9 @@ mod var_to;
 pub use abs::abs;
 pub use add::{add, TryAdd};
 pub use bce::bce_with_logits;
+pub use boolean::{bool_and, bool_not, bool_or, bool_xor};
 pub use broadcast_to::BroadcastTo;
+pub use choose::ChooseFrom;
 pub use clamp::clamp;
 pub use cmp::{eq, ge, gt, le, lt, ne};
 pub use cos::cos;
@@ -220,7 +227,6 @@ pub use sub::{sub, TrySub};
 pub use sum_to::SumTo;
 pub use tanh::tanh;
 pub use var_to::VarTo;
-// pub use impl_mask::*;
 
 #[cfg(feature = "nightly")]
 mod conv2d;

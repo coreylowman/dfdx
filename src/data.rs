@@ -47,7 +47,7 @@ impl<D: DeviceStorage + ZerosTensor<f32> + CopySlice<f32>> Arange for D {}
 /// let dev: Cpu = Default::default();
 /// let class_labels = [0, 1, 2, 1, 1];
 /// // NOTE: 5 is the batch size, 3 is the number of classes
-/// let probs: Tensor<(usize, Const<3>), f32> = dev.one_hot_encode::<3>(&class_labels);
+/// let probs: Tensor<(usize, Const<3>), f32, _> = dev.one_hot_encode::<3>(&class_labels);
 /// assert_eq!(&probs.as_vec(), &[
 ///     1.0, 0.0, 0.0,
 ///     0.0, 1.0, 0.0,

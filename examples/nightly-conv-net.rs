@@ -15,15 +15,15 @@ fn main() {
     );
 
     let dev: Cpu = Default::default();
-    let m: Model = dev.build_module();
+    let m = Model::build_on_device(&dev);
 
     // single image forward
-    let x: Tensor<Rank3<3, 28, 28>> = dev.sample_normal();
-    let _: Tensor<Rank1<10>> = m.forward(x);
+    let x: Tensor<Rank3<3, 28, 28>, f32, _> = dev.sample_normal();
+    let _: Tensor<Rank1<10>, f32, _> = m.forward(x);
 
     // batched image forward
-    let x: Tensor<Rank4<32, 3, 28, 28>> = dev.sample_normal();
-    let _: Tensor<Rank2<32, 10>> = m.forward(x);
+    let x: Tensor<Rank4<32, 3, 28, 28>, f32, _> = dev.sample_normal();
+    let _: Tensor<Rank2<32, 10>, f32, _> = m.forward(x);
 }
 
 #[cfg(not(feature = "nightly"))]

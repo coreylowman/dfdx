@@ -1,5 +1,5 @@
 use crate::{
-    nn::{LayerNorm1D, Linear, Module, ModuleMut, ReLU, Repeated, ResetParams, Residual, ToDevice},
+    nn::*,
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     tensor::{Cpu, PutTape, SplitTape},
     tensor_ops::Device,
@@ -26,11 +26,16 @@ pub struct TransformerDecoder<
 >(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, D>, NUM_LAYERS>);
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
-    ResetParams<D, f32> for TransformerDecoder<M, H, F, L, D>
+    BuildModule<D, f32> for TransformerDecoder<M, H, F, L, D>
 {
     fn try_build(device: &D) -> Result<Self, D::Err> {
-        Ok(Self(ResetParams::try_build(device)?))
+        Ok(Self(BuildModule::try_build(device)?))
     }
+}
+
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
+    ResetParams<D, f32> for TransformerDecoder<M, H, F, L, D>
+{
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.0.try_reset_params()
     }
@@ -110,7 +115,7 @@ pub struct TransformerDecoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
     const FF_DIM: usize,
-    D: Device<f32>,
+    D: Device<f32> = Cpu,
 > {
     pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
     pub norm1: LayerNorm1D<MODEL_DIM, D>,
@@ -122,19 +127,24 @@ pub struct TransformerDecoderBlock<
 
 type FF<const M: usize, const F: usize, D> = Residual<(Linear<M, F, D>, ReLU, Linear<F, M, D>)>;
 
-impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
+impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
     for TransformerDecoderBlock<M, N, F, D>
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            self_attn: ResetParams::try_build(device)?,
-            norm1: ResetParams::try_build(device)?,
-            mh_attn: ResetParams::try_build(device)?,
-            norm2: ResetParams::try_build(device)?,
-            ff: ResetParams::try_build(device)?,
-            norm3: ResetParams::try_build(device)?,
+            self_attn: BuildModule::try_build(device)?,
+            norm1: BuildModule::try_build(device)?,
+            mh_attn: BuildModule::try_build(device)?,
+            norm2: BuildModule::try_build(device)?,
+            ff: BuildModule::try_build(device)?,
+            norm3: BuildModule::try_build(device)?,
         })
     }
+}
+
+impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
+    for TransformerDecoderBlock<M, N, F, D>
+{
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.self_attn.try_reset_params()?;
         self.norm1.try_reset_params()?;
@@ -213,10 +223,9 @@ where
 mod tests {
     use super::*;
     use crate::{
-        nn::ModuleBuilder,
         shapes::Rank3,
         tensor::{AsArray, SampleTensor},
-        tests::{assert_close, TestDevice},
+        tests::*,
     };
 
     #[test]
@@ -230,7 +239,8 @@ mod tests {
         const NUM_HEADS: usize = 6;
         const FF_DIM: usize = 2;
 
-        let decoder: TransformerDecoderBlock<EMBED_DIM, NUM_HEADS, FF_DIM, _> = dev.build_module();
+        let decoder =
+            TransformerDecoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build_on_device(&dev);
 
         let tgt = dev.sample_normal::<Rank3<BATCH, S1, EMBED_DIM>>();
         let mem = dev.sample_normal::<Rank3<BATCH, S2, EMBED_DIM>>();

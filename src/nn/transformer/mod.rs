@@ -12,7 +12,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 
 /// **Requires Nightly** Transformer architecture as described in
 /// [Attention is all you need](https://arxiv.org/abs/1706.03762).
@@ -50,21 +50,24 @@ pub struct Transformer<
     pub decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS, D>,
 }
 
-impl<
-        const M: usize,
-        const H: usize,
-        const EL: usize,
-        const DL: usize,
-        const F: usize,
-        D: Device<f32>,
-    > ResetParams<D, f32> for Transformer<M, H, EL, DL, F, D>
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
+    BuildModule<D, f32> for Transformer<M, H, A, B, F, D>
+where
+    D: Device<f32>,
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
-            encoder: ResetParams::try_build(device)?,
-            decoder: ResetParams::try_build(device)?,
+            encoder: BuildModule::try_build(device)?,
+            decoder: BuildModule::try_build(device)?,
         })
     }
+}
+
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
+    ResetParams<D, f32> for Transformer<M, H, A, B, F, D>
+where
+    D: Device<f32>,
+{
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.encoder.try_reset_params()?;
         self.decoder.try_reset_params()?;
@@ -72,14 +75,10 @@ impl<
     }
 }
 
-impl<
-        const M: usize,
-        const H: usize,
-        const EL: usize,
-        const DL: usize,
-        const F: usize,
-        D: Device<f32>,
-    > GradientUpdate<D, f32> for Transformer<M, H, EL, DL, F, D>
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
+    GradientUpdate<D, f32> for Transformer<M, H, A, B, F, D>
+where
+    D: Device<f32>,
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
@@ -91,17 +90,13 @@ impl<
     }
 }
 
-impl<
-        const M: usize,
-        const H: usize,
-        const EL: usize,
-        const DL: usize,
-        const F: usize,
-        D1: Device<f32>,
-        D2: Device<f32>,
-    > ToDevice<D2> for Transformer<M, H, EL, DL, F, D1>
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D1, D2>
+    ToDevice<D2> for Transformer<M, H, A, B, F, D1>
+where
+    D1: Device<f32>,
+    D2: Device<f32>,
 {
-    type Output = Transformer<M, H, EL, DL, F, D2>;
+    type Output = Transformer<M, H, A, B, F, D2>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
         Transformer {
@@ -136,8 +131,8 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const I: usize, const J: usize, const F: usize, D, T>
-    ModuleMut<T> for Transformer<M, H, I, J, F, D>
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D, T>
+    ModuleMut<T> for Transformer<M, H, A, B, F, D>
 where
     D: Device<f32>,
     Self: Module<T>,
@@ -152,18 +147,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        nn::{tests::SimpleUpdater, ModuleBuilder},
-        shapes::*,
-        tensor::*,
-        tensor_ops::*,
-        tests::TestDevice,
-    };
+    use crate::{nn::tests::SimpleUpdater, shapes::*, tensor::*, tensor_ops::*, tests::TestDevice};
 
     #[test]
     fn test_forward() {
         let dev = TestDevice::seed_from_u64(0);
-        let mut t: Transformer<16, 4, 3, 3, 8, _> = dev.build_module();
+        let mut t: Transformer<16, 4, 3, 3, 8, _> = BuildModule::build(&dev);
 
         // unbatched
         let src = dev.sample_normal::<Rank2<7, 16>>();
@@ -179,7 +168,7 @@ mod tests {
     #[test]
     fn test_backward() {
         let dev = TestDevice::seed_from_u64(0);
-        let mut t: Transformer<16, 4, 3, 3, 8, _> = dev.build_module();
+        let mut t: Transformer<16, 4, 3, 3, 8, _> = BuildModule::build(&dev);
 
         let src = dev.sample_normal::<Rank3<4, 12, 16>>();
         let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();
