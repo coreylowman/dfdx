@@ -4,6 +4,8 @@
 __device__ double atomicAdd(double* a, double b) { return b; }
 #endif
 
+#include "cuda_fp16.h"
+
 __device__ unsigned int get_strided_index(
     unsigned int idx,
     const size_t num_dims,
