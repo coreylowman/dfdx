@@ -30,7 +30,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! type Model = Linear<5, 2>;
+//! type Model = Linear<5, 2, Cpu>;
 //! let model = Model::build_on_device(&dev);
 //! ```
 //!
@@ -56,7 +56,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let mut model: Linear<5, 2> = BuildModule::build(&dev);
+//! let mut model: Linear<5, 2, Cpu> = BuildModule::build(&dev);
 //! model.reset_params();
 //! ```
 //!
@@ -67,22 +67,22 @@
 //! Here's a single layer MLP:
 //! ```rust
 //! # use dfdx::prelude::*;
-//! type Mlp = (Linear<5, 3>, ReLU, Linear<3, 2>);
+//! type Mlp = (Linear<5, 3, Cpu>, ReLU, Linear<3, 2, Cpu>);
 //! ```
 //!
 //! Here's a more complex feedforward network that takes vectors of 5 elements and maps them to 2 elements.
 //! ```rust
 //! # use dfdx::prelude::*;
 //! type ComplexNetwork = (
-//!     DropoutOneIn<2>, // 1. dropout 50% of input
-//!     Linear<5, 3>,    // 2. pass into a linear layer
-//!     LayerNorm1D<3>,  // 3. normalize elements
-//!     ReLU,            // 4. activate with relu
-//!     Residual<(       // 5. residual connection that adds input to the result of it's sub layers
-//!         Linear<3, 3>,// 5.a. Apply linear layer
-//!         ReLU,        // 5.b. Apply Relu
-//!     )>,              // 5.c. the input to the residual is added back in after the sub layers
-//!     Linear<3, 2>,    // 6. Apply another linear layer
+//!     DropoutOneIn<2>,       // 1. dropout 50% of input
+//!     Linear<5, 3, Cpu>,     // 2. pass into a linear layer
+//!     LayerNorm1D<3>,        // 3. normalize elements
+//!     ReLU,                  // 4. activate with relu
+//!     Residual<(             // 5. residual connection that adds input to the result of it's sub layers
+//!         Linear<3, 3, Cpu>, // 5.a. Apply linear layer
+//!         ReLU,              // 5.b. Apply Relu
+//!     )>,                    // 5.c. the input to the residual is added back in after the sub layers
+//!     Linear<3, 2, Cpu>,     // 6. Apply another linear layer
 //! );
 //! ```
 //!

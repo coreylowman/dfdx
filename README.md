@@ -58,10 +58,12 @@ Check [examples/](examples/) for more details.
 1. 👌 Simple Neural Networks API, completely shape checked at compile time.
 
 ```rust
+use dfdx::prelude::*;
+
 type Mlp = (
-    (Linear<10, 32>, ReLU),
-    (Linear<32, 32>, ReLU),
-    (Linear<32, 2>, Tanh),
+    (Linear<10, 32, Cpu>, ReLU),
+    (Linear<32, 32, Cpu>, ReLU),
+    (Linear<32, 2, Cpu>, Tanh),
 );
 
 fn main() {
@@ -131,7 +133,7 @@ let model = Model::build_on_device(&dev);
 ```
 
 ```rust
-type Model = (Linear<10, 5>, Tanh)
+type Model = (Linear<10, 5, Cpu>, Tanh)
 let model = Model::build_on_device(&dev);
 ```
 

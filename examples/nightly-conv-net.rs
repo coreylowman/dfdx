@@ -11,7 +11,7 @@ fn main() {
         (Conv2D<4, 8, 3>, ReLU),
         (Conv2D<8, 16, 3>, ReLU),
         Flatten2D,
-        Linear<7744, 10>,
+        Linear<7744, 10, Cpu>,
     );
 
     let dev: Cpu = Default::default();

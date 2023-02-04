@@ -11,9 +11,9 @@ const STATE: usize = 4;
 const ACTION: usize = 2;
 
 type PolicyNetwork = (
-    (Linear<STATE, 32>, ReLU),
-    (Linear<32, 32>, ReLU),
-    Linear<32, ACTION>,
+    (Linear<STATE, 32, Cpu>, ReLU),
+    (Linear<32, 32, Cpu>, ReLU),
+    Linear<32, ACTION, Cpu>,
 );
 
 fn main() {

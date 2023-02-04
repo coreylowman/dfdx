@@ -13,7 +13,7 @@ fn main() {
     // SplitInto accepts a tuple of modules. Each one of the items in the
     // tuple must accept the same type of input.
     // Note that here, both of the linears have the same size input (1)
-    type Model = SplitInto<(Linear<1, 3>, Linear<1, 5>)>;
+    type Model = SplitInto<(Linear<1, 3, Cpu>, Linear<1, 5, Cpu>)>;
     let m = Model::build_on_device(&dev);
 
     // when we forward data through, we get a tuple back!

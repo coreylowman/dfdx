@@ -11,9 +11,9 @@ use dfdx::{
 
 // first let's declare our neural network to optimze
 type Mlp = (
-    (Linear<5, 32>, ReLU),
-    (Linear<32, 32>, ReLU),
-    (Linear<32, 2>, Tanh),
+    (Linear<5, 32, Cpu>, ReLU),
+    (Linear<32, 32, Cpu>, ReLU),
+    (Linear<32, 2, Cpu>, Tanh),
 );
 
 fn main() {

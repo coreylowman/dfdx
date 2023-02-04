@@ -11,7 +11,7 @@ fn main() {
 
     // nn exposes many different neural network types, like the Linear layer!
     // you can use Build::build to construct an initialized model
-    let mut m = Linear::<4, 2>::build_on_device(&dev);
+    let mut m = Linear::<4, 2, Cpu>::build_on_device(&dev);
 
     // Build::reset_params also allows you to re-randomize the weights
     m.reset_params();
@@ -34,7 +34,7 @@ fn main() {
     let _: Tensor<(usize, Const<2>), f32, _> = m.forward(dev.zeros_like(&(batch_size, Const)));
 
     // you can also combine multiple modules with tuples
-    type Mlp = (Linear<4, 2>, ReLU, Linear<2, 1>);
+    type Mlp = (Linear<4, 2, Cpu>, ReLU, Linear<2, 1, Cpu>);
     let mlp = Mlp::build_on_device(&dev);
 
     // and of course forward passes the input through each module sequentially:

@@ -17,7 +17,7 @@ use super::module::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// type Model = Linear<5, 2>;
+/// type Model = Linear<5, 2, Cpu>;
 /// let model = Model::build_on_device(&dev);
 /// // single item forward
 /// let _: Tensor<Rank1<2>, f32, _> = model.forward(dev.zeros::<Rank1<5>>());
@@ -25,7 +25,7 @@ use super::module::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// let _: Tensor<Rank2<10, 2>, f32, _> = model.forward(dev.zeros::<Rank2<10, 5>>());
 /// ```
 #[derive(Debug, Clone)]
-pub struct Linear<const I: usize, const O: usize, D: Device<f32> = Cpu> {
+pub struct Linear<const I: usize, const O: usize, D: Device<f32>> {
     /// Transposed weight matrix, shape (I, O)
     pub weight: Tensor<Rank2<O, I>, f32, D>,
 
@@ -151,19 +151,19 @@ mod tests {
         use super::super::module::OnDevice;
 
         let cuda: Cuda = Default::default();
-        let _: Linear<1, 1, _> = BuildModule::build(&cuda);
-        let _: OnDevice<Linear<1, 1>, Cuda> = BuildModule::build(&cuda);
-        let _: OnDevice<(Linear<1, 2>, Linear<2, 1>), Cuda> = BuildModule::build(&cuda);
+        let _: Linear<1, 1, Cuda> = BuildModule::build(&cuda);
+        let _: OnDevice<Linear<1, 1, Cuda>, Cuda> = BuildModule::build(&cuda);
+        let _: OnDevice<(Linear<1, 2, Cuda>, Linear<2, 1, Cuda>), Cuda> = BuildModule::build(&cuda);
 
-        let _: Linear<1, 1, Cuda> = Linear::<1, 1>::build_on_device(&cuda);
-        let _: Linear<1, 1, _> = Linear::<1, 1>::build_on_device(&cuda);
-        let _ = Linear::<1, 1>::build_on_device(&cuda);
+        let _: Linear<1, 1, Cuda> = Linear::<1, 1, Cuda>::build_on_device(&cuda);
+        let _: Linear<1, 1, Cuda> = Linear::<1, 1, Cuda>::build_on_device(&cuda);
+        let _ = Linear::<1, 1, Cuda>::build_on_device(&cuda);
     }
 
     #[test]
     fn test_linear_initialize() {
         let dev: TestDevice = Default::default();
-        let m = Linear::<2000, 1>::build_on_device(&dev);
+        let m = Linear::<2000, 1, Cpu>::build_on_device(&dev);
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);

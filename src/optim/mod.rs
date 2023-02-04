@@ -15,7 +15,7 @@
 //!
 //! ```rust
 //! # use dfdx::{prelude::*, optim::*, losses, gradients::Gradients};
-//! # type MyModel = Linear<5, 2>;
+//! # type MyModel = Linear<5, 2, Cpu>;
 //! # let dev: Cpu = Default::default();
 //! let mut model = MyModel::build_on_device(&dev);
 //! let mut opt = Sgd::new(&model, Default::default());

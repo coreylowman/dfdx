@@ -14,7 +14,7 @@ use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// ```rust
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// type Model = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
+/// type Model = AddInto<(Linear<2, 5, Cpu>, Linear<3, 5, Cpu>)>;
 /// let model = Model::build_on_device(&dev);
 /// let a: Tensor<Rank1<2>, f32, _> = dev.zeros();
 /// let b: Tensor<Rank1<3>, f32, _> = dev.zeros();
@@ -105,7 +105,7 @@ mod tests {
         unique_id::HasUniqueId,
     };
 
-    type TestAddIntoCpu = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
+    type TestAddIntoCpu = AddInto<(Linear<2, 5, Cpu>, Linear<3, 5, Cpu>)>;
     #[allow(unused)]
     type TestAddInto<D> = OnDevice<TestAddIntoCpu, D>;
 
@@ -143,7 +143,12 @@ mod tests {
     #[test]
     fn test_add_into_4() {
         let dev: TestDevice = Default::default();
-        type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>, Linear<5, 5>)>;
+        type Model = AddInto<(
+            Linear<2, 5, Cpu>,
+            Linear<3, 5, Cpu>,
+            Linear<4, 5, Cpu>,
+            Linear<5, 5, Cpu>,
+        )>;
         let m = Model::build_on_device(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
@@ -163,11 +168,11 @@ mod tests {
     fn test_add_into_5() {
         let dev: TestDevice = Default::default();
         type Model = AddInto<(
-            Linear<2, 5>,
-            Linear<3, 5>,
-            Linear<4, 5>,
-            Linear<5, 5>,
-            Linear<6, 5>,
+            Linear<2, 5, Cpu>,
+            Linear<3, 5, Cpu>,
+            Linear<4, 5, Cpu>,
+            Linear<5, 5, Cpu>,
+            Linear<6, 5, Cpu>,
         )>;
         let m = Model::build_on_device(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
@@ -249,7 +254,11 @@ mod tests {
     fn longer_network() {
         let dev: TestDevice = Default::default();
         // check if it works in a longer neural net
-        type Model = (AddInto<(Linear<5, 3>, Linear<5, 3>)>, ReLU, Linear<3, 1>);
+        type Model = (
+            AddInto<(Linear<5, 3, Cpu>, Linear<5, 3, Cpu>)>,
+            ReLU,
+            Linear<3, 1, Cpu>,
+        );
         let mut model = Model::build_on_device(&dev);
         let _: Tensor<Rank1<1>, _, _, OwnedTape<_>> = model.forward((
             dev.zeros::<Rank1<5>>().traced(),

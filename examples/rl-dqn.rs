@@ -13,9 +13,9 @@ const ACTION: usize = 2;
 
 // our simple 2 layer feedforward network with ReLU activations
 type QNetwork = (
-    (Linear<STATE, 32>, ReLU),
-    (Linear<32, 32>, ReLU),
-    Linear<32, ACTION>,
+    (Linear<STATE, 32, Cpu>, ReLU),
+    (Linear<32, 32, Cpu>, ReLU),
+    Linear<32, ACTION, Cpu>,
 );
 
 fn main() {

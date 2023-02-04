@@ -37,7 +37,7 @@ fn main() {
         (Downsample<64, 128>, ReLU, BasicBlock<128>, ReLU),
         (Downsample<128, 256>, ReLU, BasicBlock<256>, ReLU),
         (Downsample<256, 512>, ReLU, BasicBlock<512>, ReLU),
-        (AvgPoolGlobal, Linear<512, NUM_CLASSES>),
+        (AvgPoolGlobal, Linear<512, NUM_CLASSES, Cpu>),
     );
 
     let dev: Cpu = Default::default();

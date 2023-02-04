@@ -12,8 +12,8 @@ use dfdx::{
 /// This case is trivial and should be done with a tuple of linears and relus,
 /// but it demonstrates how to build models with custom behavior
 struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
-    l1: nn::Linear<IN, INNER>,
-    l2: nn::Linear<INNER, OUT>,
+    l1: nn::Linear<IN, INNER, Cpu>,
+    l2: nn::Linear<INNER, OUT, Cpu>,
     relu: nn::ReLU,
 }
 

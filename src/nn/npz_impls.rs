@@ -333,6 +333,7 @@ impl<
 #[cfg(test)]
 mod tests {
     use crate::{
+        prelude::Cpu,
         shapes::*,
         tensor::{AsArray, SampleTensor, Tensor},
         tensor_ops::Device,
@@ -401,7 +402,7 @@ mod tests {
     #[test]
     fn test_save_load_generalized_residual() {
         let dev: TestDevice = Default::default();
-        type T = GeneralizedResidual<Linear<5, 5>, Linear<5, 5>>;
+        type T = GeneralizedResidual<Linear<5, 5, Cpu>, Linear<5, 5, Cpu>>;
         test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
         test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
     }
@@ -409,7 +410,7 @@ mod tests {
     #[test]
     fn test_save_load_linear() {
         let dev: TestDevice = Default::default();
-        type T = Linear<5, 5>;
+        type T = Linear<5, 5, Cpu>;
         test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
         test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
     }
@@ -418,8 +419,8 @@ mod tests {
     fn test_save_load_tuple() {
         let dev: TestDevice = Default::default();
         type T = (
-            (Linear<1, 2>, ReLU, Linear<2, 3>),
-            (Dropout, Linear<3, 3>, Linear<3, 4>),
+            (Linear<1, 2, Cpu>, ReLU, Linear<2, 3, Cpu>),
+            (Dropout, Linear<3, 3, Cpu>, Linear<3, 4, Cpu>),
         );
         test_save_load::<Rank1<1>, f32, TestDevice, T>(&dev);
     }
@@ -449,7 +450,7 @@ mod tests {
 
     #[test]
     fn test_save_load_repeated() {
-        type T = Repeated<Linear<3, 3>, 4>;
+        type T = Repeated<Linear<3, 3, Cpu>, 4>;
         let dev: TestDevice = Default::default();
         test_save_load::<Rank1<3>, f32, TestDevice, T>(&dev);
         test_save_load::<Rank1<3>, f32, TestDevice, (T, T)>(&dev);
@@ -457,7 +458,7 @@ mod tests {
 
     #[test]
     fn test_save_load_residual() {
-        type T = Residual<Linear<5, 5>>;
+        type T = Residual<Linear<5, 5, Cpu>>;
         let dev: TestDevice = Default::default();
         test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
         test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);

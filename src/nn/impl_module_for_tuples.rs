@@ -251,7 +251,7 @@ mod tests {
     #[test]
     fn test_tuple_missing_gradients() {
         let dev: TestDevice = Default::default();
-        type Model = (Linear<5, 3>, Linear<5, 3>, Linear<5, 3>);
+        type Model = (Linear<5, 3, Cpu>, Linear<5, 3, Cpu>, Linear<5, 3, Cpu>);
         let mut model = Model::build_on_device(&dev);
         let mut g: SimpleUpdater = Default::default();
 

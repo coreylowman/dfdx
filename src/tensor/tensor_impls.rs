@@ -229,13 +229,14 @@ pub trait ToDevice<D> {
 /// Examples:
 /// ```rust
 /// # use dfdx::nn::*;
-/// type MLP<D> = OnDevice<(Linear<5, 10>, ReLU, Linear<10, 1>), D>;
+/// # use dfdx::prelude::*;
+/// type MLP<D> = OnDevice<(Linear<5, 10, Cpu>, ReLU, Linear<10, 1, Cpu>), D>;
 /// ```
 ///
 /// ```rust
 /// # use dfdx::prelude::*;
 /// // All modules exist on the cpu by default
-/// type CpuMLP = (Linear<5, 10>, ReLU, Linear<10, 1>);
+/// type CpuMLP = (Linear<5, 10, Cpu>, ReLU, Linear<10, 1, Cpu>);
 /// type MLP<D> = OnDevice<CpuMLP, D>;
 /// # #[cfg(feature = "cuda")]
 /// type CudaMLP = OnDevice<CpuMLP, Cuda>;
