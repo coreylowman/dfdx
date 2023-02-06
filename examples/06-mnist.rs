@@ -98,7 +98,7 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     // initialize model and optimizer
-    let mut model = Mlp::build(&dev);
+    let mut model = Mlp::build_on_device(&dev);
     let mut opt = Adam::new(&model, Default::default());
 
     // initialize dataset

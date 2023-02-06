@@ -42,7 +42,6 @@ macro_rules! impl_pools {
         impl<const K: usize, const S: usize, const P: usize> NonMutableModule for $PoolTy<K, S, P> {}
 
         impl<const K: usize, const S: usize, const P: usize, D: Device<E>, E: Dtype> BuildModule<D, E> for $PoolTy<K, S, P> {
-            type Built = Self;
             fn try_build(_: &D) -> Result<Self, <D>::Err> {
                 Ok(Default::default())
             }

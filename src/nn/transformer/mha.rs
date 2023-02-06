@@ -20,10 +20,10 @@ pub mod builder {
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    BuildModule<D, f32> for builder::MultiHeadAttention<M, H, K, V>
+    BuildOnDevice<D, f32> for builder::MultiHeadAttention<M, H, K, V>
 {
     type Built = MultiHeadAttention<M, H, K, V, f32, D>;
-    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
         Self::Built::try_build(device)
     }
 }
@@ -61,13 +61,12 @@ pub struct MultiHeadAttention<
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
     BuildModule<D, f32> for MultiHeadAttention<M, H, K, V, f32, D>
 {
-    type Built = Self;
-    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
-        Ok(Self::Built {
-            w_q: Linear::try_build(device)?,
-            w_k: Linear::try_build(device)?,
-            w_v: Linear::try_build(device)?,
-            w_o: Linear::try_build(device)?,
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self {
+            w_q: BuildModule::try_build(device)?,
+            w_k: BuildModule::try_build(device)?,
+            w_v: BuildModule::try_build(device)?,
+            w_o: BuildModule::try_build(device)?,
         })
     }
 }
@@ -281,7 +280,7 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha = builder::MultiHeadAttention::<M, NUM_HEADS>::build(&dev);
+        let mha = builder::MultiHeadAttention::<M, NUM_HEADS>::build_on_device(&dev);
 
         let q = dev.sample_normal::<Rank2<S1, M>>();
         let k = dev.sample_normal::<Rank2<S2, M>>();
@@ -315,7 +314,7 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha = builder::MultiHeadAttention::<M, NUM_HEADS>::build(&dev);
+        let mha = builder::MultiHeadAttention::<M, NUM_HEADS>::build_on_device(&dev);
 
         let q = dev.sample_normal::<Rank3<BATCH, S1, M>>();
         let k = dev.sample_normal::<Rank3<BATCH, S2, M>>();
@@ -365,7 +364,7 @@ mod tests {
     fn test_backward_updates_all() {
         let dev: TestDevice = Default::default();
 
-        let mut mha = builder::MultiHeadAttention::<12, 4>::build(&dev);
+        let mut mha = builder::MultiHeadAttention::<12, 4>::build_on_device(&dev);
 
         let q = dev.sample_normal::<Rank3<2, 3, 12>>();
         let k = dev.sample_normal::<Rank3<2, 4, 12>>();

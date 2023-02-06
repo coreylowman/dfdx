@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::*, tensor::SplitTape, tensor_ops::Device};
 
-use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
 
 use std::ops::Add;
 
@@ -32,10 +32,13 @@ impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>> GradientUpdate<D, E> for R
     }
 }
 
-impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Residual<F> {
+impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>> BuildOnDevice<D, E> for Residual<F> {
     type Built = Residual<F::Built>;
-    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
-        Ok(Residual(F::try_build(device)?))
+}
+
+impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Residual<F> {
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self(BuildModule::try_build(device)?))
     }
 }
 
@@ -75,7 +78,7 @@ mod tests {
     #[test]
     fn test_residual_reset() {
         let dev: TestDevice = Default::default();
-        let model = <Residual<Linear<2, 5>>>::build(&dev);
+        let model = <Residual<Linear<2, 5>>>::build_on_device(&dev);
         assert_ne!(model.0.weight.array(), [[0.0; 2]; 5]);
         assert_ne!(model.0.bias.array(), [0.0; 5]);
     }
@@ -84,7 +87,7 @@ mod tests {
     fn test_residual_gradients() {
         let dev: TestDevice = Default::default();
 
-        let model = <Residual<Linear<2, 2>>>::build(&dev);
+        let model = <Residual<Linear<2, 2>>>::build_on_device(&dev);
 
         let x = dev.sample_normal::<Rank2<4, 2>>();
         let y = model.forward(x.trace());

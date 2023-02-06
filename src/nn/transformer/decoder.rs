@@ -26,19 +26,19 @@ pub mod builder {
 }
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
-    BuildModule<D, f32> for builder::TransformerDecoder<M, H, F, L>
+    BuildOnDevice<D, f32> for builder::TransformerDecoder<M, H, F, L>
 {
     type Built = TransformerDecoder<M, H, F, L, f32, D>;
-    fn try_build(device: &D) -> Result<Self::Built, D::Err> {
+    fn try_build_on_device(device: &D) -> Result<Self::Built, D::Err> {
         Self::Built::try_build(device)
     }
 }
 
-impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
+impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildOnDevice<D, f32>
     for builder::TransformerDecoderBlock<M, N, F>
 {
     type Built = TransformerDecoderBlock<M, N, F, f32, D>;
-    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
         Self::Built::try_build(device)
     }
 }
@@ -65,11 +65,8 @@ pub struct TransformerDecoder<
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
     BuildModule<D, f32> for TransformerDecoder<M, H, F, L, f32, D>
 {
-    type Built = Self;
-    fn try_build(device: &D) -> Result<Self::Built, D::Err> {
-        Ok(Self(
-            <Repeated<TransformerDecoderBlock<M, H, F, f32, D>, L>>::try_build(device)?,
-        ))
+    fn try_build(device: &D) -> Result<Self, D::Err> {
+        Ok(Self(BuildModule::try_build(device)?))
     }
 }
 
@@ -172,15 +169,14 @@ type FF<const M: usize, const F: usize, E, D> =
 impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
     for TransformerDecoderBlock<M, N, F, f32, D>
 {
-    type Built = Self;
-    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
-        Ok(Self::Built {
-            self_attn: MultiHeadAttention::try_build(device)?,
-            norm1: LayerNorm1D::try_build(device)?,
-            mh_attn: MultiHeadAttention::try_build(device)?,
-            norm2: LayerNorm1D::try_build(device)?,
-            ff: FF::try_build(device)?,
-            norm3: LayerNorm1D::try_build(device)?,
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self {
+            self_attn: BuildModule::try_build(device)?,
+            norm1: BuildModule::try_build(device)?,
+            mh_attn: BuildModule::try_build(device)?,
+            norm2: BuildModule::try_build(device)?,
+            ff: BuildModule::try_build(device)?,
+            norm3: BuildModule::try_build(device)?,
         })
     }
 }
@@ -282,7 +278,7 @@ mod tests {
         const NUM_HEADS: usize = 6;
         const FF_DIM: usize = 2;
 
-        let decoder = builder::TransformerDecoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build(&dev);
+        let decoder = builder::TransformerDecoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build_on_device(&dev);
 
         let tgt = dev.sample_normal::<Rank3<BATCH, S1, EMBED_DIM>>();
         let mem = dev.sample_normal::<Rank3<BATCH, S2, EMBED_DIM>>();

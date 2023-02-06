@@ -1,7 +1,7 @@
 //! Intro to dfdx::nn
 
 use dfdx::{
-    nn::{builders::*, modules, BuildModule, Module, ModuleMut, ResetParams},
+    nn::{builders::*, modules, BuildOnDevice, Module, ModuleMut, ResetParams},
     shapes::{Const, Rank1, Rank2},
     tensor::{AsArray, Cpu, SampleTensor, Tensor, ZerosTensor},
 };
@@ -12,7 +12,7 @@ fn main() {
     // nn exposes many different neural network types, like the Linear layer!
     // you can use BuildModule::build to construct an initialized model
     type Model = Linear<4, 2>;
-    let mut m: modules::Linear<4, 2, f32, Cpu> = Model::build(&dev);
+    let mut m: modules::Linear<4, 2, f32, Cpu> = Model::build_on_device(&dev);
 
     // ResetParams::reset_params also allows you to re-randomize the weights
     m.reset_params();
@@ -36,7 +36,7 @@ fn main() {
 
     // you can also combine multiple modules with tuples
     type Mlp = (Linear<4, 2>, ReLU, Linear<2, 1>);
-    let mlp = Mlp::build(&dev);
+    let mlp = Mlp::build_on_device(&dev);
 
     // and of course forward passes the input through each module sequentially:
     let x: Tensor<Rank1<4>, f32, _> = dev.sample_normal();

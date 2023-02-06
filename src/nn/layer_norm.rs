@@ -1,14 +1,14 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
 
 pub mod builder {
     #[derive(Debug)]
     pub struct LayerNorm1D<const M: usize>;
 }
-impl<const M: usize, D: Device<f32>> BuildModule<D, f32> for builder::LayerNorm1D<M> {
+impl<const M: usize, D: Device<f32>> BuildOnDevice<D, f32> for builder::LayerNorm1D<M> {
     type Built = LayerNorm1D<M, f32, D>;
-    fn try_build(device: &D) -> Result<Self::Built, D::Err> {
+    fn try_build_on_device(device: &D) -> Result<Self::Built, D::Err> {
         Self::Built::try_build(device)
     }
 }
@@ -40,10 +40,9 @@ pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
 }
 
 impl<const M: usize, D: Device<f32>> BuildModule<D, f32> for LayerNorm1D<M, f32, D> {
-    type Built = Self;
     /// Fills [Self::gamma] with 1s and [Self::beta] with 0s and sets [Self::epsilon] to `1e-5`.
-    fn try_build(device: &D) -> Result<Self::Built, D::Err> {
-        Ok(Self::Built {
+    fn try_build(device: &D) -> Result<Self, D::Err> {
+        Ok(Self {
             gamma: device.try_ones()?,
             beta: device.try_zeros()?,
             epsilon: 1e-5,
@@ -134,7 +133,7 @@ mod tests {
     fn test_layer_norm_reset() {
         let dev: TestDevice = Default::default();
 
-        let mut m = builder::LayerNorm1D::<5>::build(&dev);
+        let mut m = builder::LayerNorm1D::<5>::build_on_device(&dev);
         assert_eq!(m.gamma.array(), [1.0; 5]);
         assert_eq!(m.beta.array(), [0.0; 5]);
 
@@ -153,7 +152,7 @@ mod tests {
     #[test]
     fn test_layer_norm_1d_forward() {
         let dev: TestDevice = Default::default();
-        let mut m = builder::LayerNorm1D::<5>::build(&dev);
+        let mut m = builder::LayerNorm1D::<5>::build_on_device(&dev);
         let x = dev.sample_normal::<Rank1<5>>();
         let r = m.forward_mut(x.trace());
         assert_close(
@@ -171,7 +170,7 @@ mod tests {
     #[test]
     fn test_layer_norm_2d_forward() {
         let dev: TestDevice = Default::default();
-        let m = builder::LayerNorm1D::<5>::build(&dev);
+        let m = builder::LayerNorm1D::<5>::build_on_device(&dev);
         let x = dev.sample_normal::<Rank2<3, 5>>();
         let r = m.forward(x.trace());
         assert_close(
@@ -194,7 +193,7 @@ mod tests {
     fn test_layer_norm_missing_gradients() {
         let dev: TestDevice = Default::default();
 
-        let mut model = builder::LayerNorm1D::<5>::build(&dev);
+        let mut model = builder::LayerNorm1D::<5>::build_on_device(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

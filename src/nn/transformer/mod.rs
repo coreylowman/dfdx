@@ -13,7 +13,7 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
 
 pub mod builder {
     #[derive(Debug, Clone)]
@@ -31,12 +31,12 @@ pub mod builder {
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
-    BuildModule<D, f32> for builder::Transformer<M, H, A, B, F>
+    BuildOnDevice<D, f32> for builder::Transformer<M, H, A, B, F>
 where
     D: Device<f32>,
 {
     type Built = Transformer<M, H, A, B, F, f32, D>;
-    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
         Self::Built::try_build(device)
     }
 }
@@ -83,11 +83,10 @@ impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: us
 where
     D: Device<f32>,
 {
-    type Built = Self;
-    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
-        Ok(Self::Built {
-            encoder: TransformerEncoder::try_build(device)?,
-            decoder: TransformerDecoder::try_build(device)?,
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self {
+            encoder: BuildModule::try_build(device)?,
+            decoder: BuildModule::try_build(device)?,
         })
     }
 }
@@ -182,7 +181,7 @@ mod tests {
     fn test_forward() {
         let dev = TestDevice::seed_from_u64(0);
         type Model = builder::Transformer<16, 4, 3, 3, 8>;
-        let mut t = Model::build(&dev);
+        let mut t = Model::build_on_device(&dev);
 
         // unbatched
         let src = dev.sample_normal::<Rank2<7, 16>>();
@@ -199,7 +198,7 @@ mod tests {
     fn test_backward() {
         let dev = TestDevice::seed_from_u64(0);
         type Model = builder::Transformer<16, 4, 3, 3, 8>;
-        let mut t = Model::build(&dev);
+        let mut t = Model::build_on_device(&dev);
 
         let src = dev.sample_normal::<Rank3<4, 12, 16>>();
         let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();

@@ -1,17 +1,17 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
 
 pub mod builder {
     #[derive(Debug)]
     pub struct Embedding<const VOCAB: usize, const DIM: usize>;
 }
 
-impl<const V: usize, const M: usize, D: Device<f32>> BuildModule<D, f32>
+impl<const V: usize, const M: usize, D: Device<f32>> BuildOnDevice<D, f32>
     for builder::Embedding<V, M>
 {
     type Built = Embedding<V, M, f32, D>;
-    fn try_build(device: &D) -> Result<Self::Built, D::Err> {
+    fn try_build_on_device(device: &D) -> Result<Self::Built, D::Err> {
         Self::Built::try_build(device)
     }
 }
@@ -98,12 +98,11 @@ impl<const VOCAB: usize, const DIM: usize, D: Device<f32>> GradientUpdate<D, f32
 impl<const V: usize, const M: usize, D: Device<f32>> BuildModule<D, f32>
     for Embedding<V, M, f32, D>
 {
-    type Built = Self;
-    fn try_build(device: &D) -> Result<Self::Built, D::Err> {
+    fn try_build(device: &D) -> Result<Self, D::Err> {
         let bound: f32 = 1.0 / (V as f32).sqrt();
         let distr = rand_distr::Uniform::new(-bound, bound);
         let weight = device.try_sample(distr)?;
-        Ok(Self::Built { weight })
+        Ok(Self { weight })
     }
 }
 
@@ -133,7 +132,7 @@ impl<const VOCAB: usize, const DIM: usize, D1: Device<f32>, D2: Device<f32>> ToD
 mod tests {
     use super::*;
     use crate::{
-        nn::{tests::SimpleUpdater, BuildModule},
+        nn::{tests::SimpleUpdater},
         tests::{assert_close, TestDevice},
         unique_id::HasUniqueId,
     };
@@ -146,7 +145,7 @@ mod tests {
     #[test]
     fn test_embedding_initialize() {
         let dev: TestDevice = Default::default();
-        let m = builder::Embedding::<2000, 1>::build(&dev);
+        let m = builder::Embedding::<2000, 1>::build_on_device(&dev);
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);
@@ -244,7 +243,7 @@ mod tests {
     fn test_embedding_missing_gradients() {
         let dev: TestDevice = Default::default();
 
-        let mut model = builder::Embedding::<5, 3>::build(&dev);
+        let mut model = builder::Embedding::<5, 3>::build_on_device(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

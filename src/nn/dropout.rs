@@ -45,7 +45,6 @@ pub struct DropoutOneIn<const N: usize>;
 impl<const N: usize> ZeroSizedModule for DropoutOneIn<N> {}
 
 impl<const N: usize, D: Device<E>, E: Dtype> BuildModule<D, E> for DropoutOneIn<N> {
-    type Built = Self;
     fn try_build(_: &D) -> Result<Self, <D>::Err> {
         Ok(Default::default())
     }
@@ -123,7 +122,6 @@ impl Default for Dropout {
 impl ZeroSizedModule for Dropout {}
 
 impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Dropout {
-    type Built = Self;
     fn try_build(_: &D) -> Result<Self, <D>::Err> {
         Ok(Default::default())
     }

@@ -12,7 +12,6 @@ impl ZeroSizedModule for Flatten2D {}
 impl NonMutableModule for Flatten2D {}
 
 impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Flatten2D {
-    type Built = Self;
     fn try_build(_: &D) -> Result<Self, <D>::Err> {
         Ok(Default::default())
     }

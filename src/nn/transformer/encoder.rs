@@ -44,19 +44,19 @@ pub mod builder {
 }
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
-    BuildModule<D, f32> for builder::TransformerEncoder<M, H, F, L>
+    BuildOnDevice<D, f32> for builder::TransformerEncoder<M, H, F, L>
 {
     type Built = TransformerEncoder<M, H, F, L, f32, D>;
-    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
         Self::Built::try_build(device)
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildOnDevice<D, f32>
     for builder::TransformerEncoderBlock<M, H, F>
 {
     type Built = TransformerEncoderBlock<M, H, F, f32, D>;
-    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
         Self::Built::try_build(device)
     }
 }
@@ -95,13 +95,12 @@ type FF<const M: usize, const F: usize, E, D> =
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
     for TransformerEncoderBlock<M, H, F, f32, D>
 {
-    type Built = Self;
-    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
-        Ok(Self::Built {
-            self_attn: MultiHeadAttention::try_build(device)?,
-            norm1: LayerNorm1D::try_build(device)?,
-            ff: FF::try_build(device)?,
-            norm2: LayerNorm1D::try_build(device)?,
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self {
+            self_attn: BuildModule::try_build(device)?,
+            norm1: BuildModule::try_build(device)?,
+            ff: BuildModule::try_build(device)?,
+            norm2: BuildModule::try_build(device)?,
         })
     }
 }
@@ -199,7 +198,7 @@ mod tests {
         const NUM_HEADS: usize = 3;
         const FF_DIM: usize = 16;
 
-        let encoder = builder::TransformerEncoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build(&dev);
+        let encoder = builder::TransformerEncoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build_on_device(&dev);
 
         let x = dev.sample_normal::<Rank3<BATCH, SEQ_LEN, EMBED_DIM>>();
         let y = encoder.forward(x);

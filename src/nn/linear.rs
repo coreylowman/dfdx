@@ -1,15 +1,17 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
 
 pub mod builder {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     pub struct Linear<const I: usize, const O: usize>;
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>> BuildModule<D, f32> for builder::Linear<I, O> {
+impl<const I: usize, const O: usize, D: Device<f32>> BuildOnDevice<D, f32>
+    for builder::Linear<I, O>
+{
     type Built = Linear<I, O, f32, D>;
-    fn try_build(device: &D) -> Result<Self::Built, D::Err> {
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
         Self::Built::try_build(device)
     }
 }
@@ -59,13 +61,12 @@ impl<const I: usize, const O: usize, D: DeviceStorage> GradientUpdate<D, f32>
 }
 
 impl<const I: usize, const O: usize, D: Device<f32>> BuildModule<D, f32> for Linear<I, O, f32, D> {
-    type Built = Self;
-    fn try_build(device: &D) -> Result<Self::Built, D::Err> {
+    fn try_build(device: &D) -> Result<Self, D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
         let distr = rand_distr::Uniform::new(-bound, bound);
         let weight = device.try_sample(distr)?;
         let bias = device.try_sample(distr)?;
-        Ok(Self::Built { weight, bias })
+        Ok(Self { weight, bias })
     }
 }
 
@@ -179,7 +180,7 @@ mod tests {
     #[test]
     fn test_linear_initialize() {
         let dev: TestDevice = Default::default();
-        let m = builder::Linear::<2000, 1>::build(&dev);
+        let m = builder::Linear::<2000, 1>::build_on_device(&dev);
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);
@@ -292,7 +293,7 @@ mod tests {
     fn test_linear_missing_gradients() {
         let dev: TestDevice = Default::default();
 
-        let mut model = builder::Linear::<5, 3>::build(&dev);
+        let mut model = builder::Linear::<5, 3>::build_on_device(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

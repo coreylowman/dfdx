@@ -1,15 +1,15 @@
 use crate::{gradients::*, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
 
 pub mod builder {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     pub struct BatchNorm2D<const C: usize>;
 }
 
-impl<const C: usize, D: Device<f32>> BuildModule<D, f32> for builder::BatchNorm2D<C> {
+impl<const C: usize, D: Device<f32>> BuildOnDevice<D, f32> for builder::BatchNorm2D<C> {
     type Built = BatchNorm2D<C, f32, D>;
-    fn try_build(device: &D) -> Result<Self::Built, D::Err> {
+    fn try_build_on_device(device: &D) -> Result<Self::Built, D::Err> {
         Self::Built::try_build(device)
     }
 }
@@ -171,9 +171,8 @@ impl<B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>>
 }
 
 impl<const C: usize, D: Device<f32>> BuildModule<D, f32> for BatchNorm2D<C, f32, D> {
-    type Built = Self;
-    fn try_build(device: &D) -> Result<Self::Built, D::Err> {
-        Ok(Self::Built {
+    fn try_build(device: &D) -> Result<Self, D::Err> {
+        Ok(Self {
             scale: device.try_ones()?,
             bias: device.try_zeros()?,
             running_mean: device.try_zeros()?,
@@ -229,7 +228,7 @@ mod tests {
         let dev = TestDevice::seed_from_u64(0);
 
         let x1: Tensor<Rank3<3, 2, 2>, f32, _> = dev.sample(rand_distr::StandardNormal);
-        let mut bn = BatchNorm2D::<3>::build(&dev);
+        let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
         let y1 = bn.forward_mut(x1.trace());
         assert_close(
@@ -264,7 +263,7 @@ mod tests {
         let dev = TestDevice::seed_from_u64(2);
 
         let x1 = dev.sample_normal::<Rank4<2, 2, 2, 3>>();
-        let mut bn = BatchNorm2D::<2>::build(&dev);
+        let mut bn = BatchNorm2D::<2>::build_on_device(&dev);
 
         let y1 = bn.forward_mut(x1.trace());
         #[rustfmt::skip]
@@ -296,7 +295,7 @@ mod tests {
         let dev = TestDevice::seed_from_u64(12);
 
         let x1 = dev.sample_normal::<Rank3<3, 4, 5>>();
-        let mut bn = BatchNorm2D::<3>::build(&dev);
+        let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
         let _ = bn.forward_mut(x1.trace());
         assert_close(

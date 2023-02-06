@@ -355,7 +355,7 @@ mod tests {
     use rand_distr::{Distribution, Standard, StandardNormal};
     use tempfile::NamedTempFile;
 
-    fn test_save_load<S: ConstShape, E: Dtype + NumpyDtype, D: Device<E>, M: BuildModule<D, E>>(
+    fn test_save_load<S: ConstShape, E: Dtype + NumpyDtype, D: Device<E>, M: BuildOnDevice<D, E>>(
         dev: &D,
     ) where
         M::Built: Module<Tensor<S, E, D>> + SaveToNpz + LoadFromNpz,
@@ -365,8 +365,8 @@ mod tests {
         let x = dev.sample_normal();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let saved: M::Built = M::build(dev);
-        let mut loaded: M::Built = M::build(dev);
+        let saved: M::Built = M::build_on_device(dev);
+        let mut loaded: M::Built = M::build_on_device(dev);
 
         let y = saved.forward(x.clone());
 
@@ -386,8 +386,8 @@ mod tests {
         let x = dev.sample_normal::<Rank3<3, 4, 5>>();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let mut saved = Model::build(&dev);
-        let mut loaded = Model::build(&dev);
+        let mut saved = Model::build_on_device(&dev);
+        let mut loaded = Model::build_on_device(&dev);
 
         saved.running_mean.fill_with_distr(Standard);
         saved.running_var.fill_with_distr(Standard);
@@ -445,8 +445,8 @@ mod tests {
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
-        let mut saved = M::build(&dev);
-        let mut loaded = M::build(&dev);
+        let mut saved = M::build_on_device(&dev);
+        let mut loaded = M::build_on_device(&dev);
 
         saved.gamma.fill_with_distr(Standard);
         saved.beta.fill_with_distr(Standard);
@@ -482,12 +482,12 @@ mod tests {
         let dev: TestDevice = Default::default();
         type Model = MultiHeadAttention<12, 4>;
 
-        let saved = Model::build(&dev);
+        let saved = Model::build_on_device(&dev);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         saved.save(file.path()).expect("");
 
-        let mut loaded = Model::build(&dev);
+        let mut loaded = Model::build_on_device(&dev);
 
         let q = dev.sample_normal::<Rank3<2, 3, 12>>();
         let k = dev.sample_normal::<Rank3<2, 4, 12>>();
@@ -509,12 +509,12 @@ mod tests {
         let dev: TestDevice = Default::default();
         type Model = Transformer<16, 4, 3, 4, 8>;
 
-        let mut saved = Model::build(&dev);
+        let mut saved = Model::build_on_device(&dev);
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
         saved.save(file.path()).expect("");
 
-        let mut loaded = Model::build(&dev);
+        let mut loaded = Model::build_on_device(&dev);
 
         let src = dev.sample_normal::<Rank3<4, 12, 16>>();
         let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();

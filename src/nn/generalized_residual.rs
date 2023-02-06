@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice, BuildOnDevice};
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -38,14 +38,19 @@ impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>, R: GradientUpdate<D, E>> G
     }
 }
 
+impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>, R: BuildOnDevice<D, E>> BuildOnDevice<D, E>
+    for GeneralizedResidual<F, R> {
+type Built = GeneralizedResidual<F::Built, R::Built>;
+
+    }
+
 impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>, R: BuildModule<D, E>> BuildModule<D, E>
     for GeneralizedResidual<F, R>
 {
-    type Built = GeneralizedResidual<F::Built, R::Built>;
-    fn try_build(device: &D) -> Result<Self::Built, <D>::Err> {
-        Ok(Self::Built {
-            f: F::try_build(device)?,
-            r: R::try_build(device)?,
+    fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        Ok(Self {
+            f: BuildModule::try_build(device)?,
+            r: BuildModule::try_build(device)?,
         })
     }
 }
@@ -103,7 +108,7 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         type Model = GeneralizedResidual<Linear<2, 5>, Linear<2, 5>>;
-        let model = Model::build(&dev);
+        let model = Model::build_on_device(&dev);
         assert_ne!(model.f.weight.array(), [[0.0; 2]; 5]);
         assert_ne!(model.f.bias.array(), [0.0; 5]);
         assert_ne!(model.r.weight.array(), [[0.0; 2]; 5]);
@@ -115,7 +120,7 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         type Model = GeneralizedResidual<Linear<2, 2>, Linear<2, 2>>;
-        let model = Model::build(&dev);
+        let model = Model::build_on_device(&dev);
 
         let x = dev.sample_normal::<Rank2<4, 2>>();
         let y = model.forward(x.trace());

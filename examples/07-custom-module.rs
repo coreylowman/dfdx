@@ -24,11 +24,10 @@ struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
 impl<const IN: usize, const INNER: usize, const OUT: usize> nn::BuildModule<Cpu, f32>
     for Mlp<IN, INNER, OUT>
 {
-    type Built = Self;
     fn try_build(device: &Cpu) -> Result<Self, <Cpu as HasErr>::Err> {
         Ok(Self {
-            l1: Linear::try_build(device)?,
-            l2: Linear::try_build(device)?,
+            l1: BuildModule::try_build(device)?,
+            l2: BuildModule::try_build(device)?,
             relu: ReLU,
         })
     }
