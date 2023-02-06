@@ -66,16 +66,16 @@ where
 /// ```
 #[derive(Debug, Clone)]
 pub struct Transformer<
-    const M: usize,
-    const H: usize,
-    const EL: usize,
-    const DL: usize,
-    const F: usize,
+    const MODEL_DIM: usize,
+    const NUM_HEADS: usize,
+    const NUM_ENCODER_LAYERS: usize,
+    const NUM_DECODER_LAYERS: usize,
+    const FF_DIM: usize,
     E: Dtype,
     D: DeviceStorage,
 > {
-    pub encoder: TransformerEncoder<M, H, F, EL, E, D>,
-    pub decoder: TransformerDecoder<M, H, F, DL, E, D>,
+    pub encoder: TransformerEncoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_ENCODER_LAYERS, E, D>,
+    pub decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS, E, D>,
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>

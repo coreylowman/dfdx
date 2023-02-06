@@ -17,12 +17,23 @@ use super::mha::MultiHeadAttention;
 ///   the feedforward network in [TransformerEncoderBlock].
 /// - `NUM_LAYERS`: The number of [TransformerEncoderBlock] to use.
 /// TODO: Doctests
-pub type TransformerEncoder<const M: usize, const H: usize, const F: usize, const L: usize, E, D> =
-    Repeated<TransformerEncoderBlock<M, H, F, E, D>, L>;
+pub type TransformerEncoder<
+    const MODEL_DIM: usize,
+    const NUM_HEADS: usize,
+    const FF_DIM: usize,
+    const NUM_LAYERS: usize,
+    E,
+    D,
+> = Repeated<TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>, NUM_LAYERS>;
 
 pub mod builder {
     #[derive(Debug)]
-    pub struct TransformerEncoder<const M: usize, const H: usize, const F: usize, const L: usize>;
+    pub struct TransformerEncoder<
+        const MODEL_DIM: usize,
+        const NUM_HEADS: usize,
+        const FF_DIM: usize,
+        const NUM_LAYERS: usize,
+    >;
 
     #[derive(Debug)]
     pub struct TransformerEncoderBlock<
@@ -66,16 +77,16 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule
 /// TODO: Doctests
 #[derive(Clone, Debug)]
 pub struct TransformerEncoderBlock<
-    const M: usize,
-    const H: usize,
-    const F: usize,
+    const MODEL_DIM: usize,
+    const NUM_HEADS: usize,
+    const FF_DIM: usize,
     E: Dtype,
     D: DeviceStorage,
 > {
-    pub self_attn: MultiHeadAttention<M, H, M, M, E, D>,
-    pub norm1: LayerNorm1D<M, E, D>,
-    pub ff: FF<M, F, E, D>,
-    pub norm2: LayerNorm1D<M, E, D>,
+    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, E, D>,
+    pub norm1: LayerNorm1D<MODEL_DIM, E, D>,
+    pub ff: FF<MODEL_DIM, FF_DIM, E, D>,
+    pub norm2: LayerNorm1D<MODEL_DIM, E, D>,
 }
 
 type FF<const M: usize, const F: usize, E, D> =

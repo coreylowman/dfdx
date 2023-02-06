@@ -9,21 +9,6 @@ use crate::{
 #[cfg(feature = "nightly")]
 use crate::{gradients::Tape, shapes::*, Assert, ConstTrue};
 
-/// **Requires Nightly** A multi-head attention layer.
-///
-/// Generics:
-/// - `EMBED_DIM`: The size of query vectors.
-/// - `NUM_HEADS` The number of heads to split query/key/value into.
-/// - *Optional* `K_DIM`: The size of key vectors. Defaults to `EMBED_DIM`
-/// - *Optional* `V_DIM` The size of value vectors. Defaults to `EMBED_DIM`
-///
-/// **Pytorch equivalent**: `torch.nn.MultiheadAttention(EMBED_DIM, NUM_HEADS, batch_first=True)`
-///
-/// Examples
-/// - `MultiHeadAttention<8, 2>` is an attention layer with 2 heads and 8 token, key and value dims.
-/// - `MultiHeadAttention<8, 2, 6, 4>` is an attention layer with the key and value dimension different
-///   than the embed dimension
-/// TODO: Doctests fail for some reason
 pub mod builder {
     #[derive(Debug, Clone)]
     pub struct MultiHeadAttention<
@@ -43,19 +28,34 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
     }
 }
 
+/// **Requires Nightly** A multi-head attention layer.
+///
+/// Generics:
+/// - `EMBED_DIM`: The size of query vectors.
+/// - `NUM_HEADS` The number of heads to split query/key/value into.
+/// - *Optional* `K_DIM`: The size of key vectors. Defaults to `EMBED_DIM`
+/// - *Optional* `V_DIM` The size of value vectors. Defaults to `EMBED_DIM`
+///
+/// **Pytorch equivalent**: `torch.nn.MultiheadAttention(EMBED_DIM, NUM_HEADS, batch_first=True)`
+///
+/// Examples
+/// - `MultiHeadAttention<8, 2>` is an attention layer with 2 heads and 8 token, key and value dims.
+/// - `MultiHeadAttention<8, 2, 6, 4>` is an attention layer with the key and value dimension different
+///   than the embed dimension
+/// TODO: Doctests fail for some reason
 #[derive(Debug, Clone)]
 pub struct MultiHeadAttention<
-    const M: usize,
-    const H: usize,
-    const K: usize,
-    const V: usize,
+    const EMBED_DIM: usize,
+    const NUM_HEADS: usize,
+    const K_DIM: usize,
+    const V_DIM: usize,
     E: Dtype,
     D: DeviceStorage,
 > {
-    pub w_q: Linear<M, K, E, D>,
-    pub w_k: Linear<M, K, E, D>,
-    pub w_v: Linear<M, V, E, D>,
-    pub w_o: Linear<V, M, E, D>,
+    pub w_q: Linear<EMBED_DIM, K_DIM, E, D>,
+    pub w_k: Linear<EMBED_DIM, K_DIM, E, D>,
+    pub w_v: Linear<EMBED_DIM, V_DIM, E, D>,
+    pub w_o: Linear<V_DIM, EMBED_DIM, E, D>,
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>

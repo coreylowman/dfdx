@@ -36,16 +36,16 @@ where
 /// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
 #[derive(Debug, Clone)]
 pub struct Conv2D<
-    const I: usize,
-    const O: usize,
-    const K: usize,
-    const S: usize,
-    const P: usize,
+    const IN_CHAN: usize,
+    const OUT_CHAN: usize,
+    const KERNEL_SIZE: usize,
+    const STRIDE: usize,
+    const PADDING: usize,
     E: Dtype,
     D: DeviceStorage,
 > {
-    pub weight: Tensor<Rank4<O, I, K, K>, E, D>,
-    pub bias: Tensor<Rank1<O>, E, D>,
+    pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>, E, D>,
+    pub bias: Tensor<Rank1<OUT_CHAN>, E, D>,
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>

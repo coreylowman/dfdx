@@ -113,6 +113,10 @@ mod impl_module_for_tuples;
 mod layer_norm;
 mod linear;
 mod module;
+#[cfg(feature = "numpy")]
+mod npz;
+#[cfg(feature = "numpy")]
+mod npz_impls;
 mod pool2d;
 mod pool_global;
 mod repeated;
@@ -122,8 +126,12 @@ mod transformer;
 
 pub use module::*;
 
+#[cfg(feature = "numpy")]
+pub use npz::*;
+
 pub mod modules {
-    /// Actual modules. See [builders] for helpful utilities in creating these
+    /// Structs containing initialized Tensors & impls for [super::Module]. See
+    /// [super::builders] for helpful utilities in creating these
     /// in a device/dtype agnostic way.
     pub use super::activations::*;
     pub use super::add_into::AddInto;
@@ -148,7 +156,7 @@ pub mod modules {
 }
 
 pub mod builders {
-    /// Utilities for simple specification of network structure, without
+    /// Simple specification of network structure, without
     /// worrying about device or dtype.
     pub use super::activations::*;
     pub use super::add_into::AddInto;
@@ -171,15 +179,6 @@ pub mod builders {
     #[cfg(feature = "nightly")]
     pub use super::transformer::builder::*;
 }
-
-#[cfg(feature = "numpy")]
-mod npz;
-
-#[cfg(feature = "numpy")]
-pub use npz::*;
-
-#[cfg(feature = "numpy")]
-mod npz_impls;
 
 #[cfg(test)]
 mod tests {

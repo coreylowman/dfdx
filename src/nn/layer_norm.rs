@@ -41,9 +41,7 @@ pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
 
 impl<const M: usize, D: Device<f32>> BuildModule<D, f32> for LayerNorm1D<M, f32, D> {
     type Built = Self;
-    /// - Fills [DeviceLayerNorm1D::gamma] with 1s
-    /// - Fills [DeviceLayerNorm1D::beta] with 0s
-    /// - Sets [DeviceLayerNorm1D::epsilon] to `1e-5`.
+    /// Fills [Self::gamma] with 1s and [Self::beta] with 0s and sets [Self::epsilon] to `1e-5`.
     fn try_build(device: &D) -> Result<Self::Built, D::Err> {
         Ok(Self::Built {
             gamma: device.try_ones()?,
