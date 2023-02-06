@@ -1,10 +1,8 @@
 use rand::distributions::Distribution;
 use rand_distr::{Standard, StandardNormal};
+use std::vec::Vec;
 
-use crate::{
-    shapes::{ConstShape, Dtype, HasShape, HasUnitType, Shape, Unit},
-    unique_id::unique_id,
-};
+use crate::{shapes::*, unique_id::unique_id};
 
 use super::Tensor;
 
@@ -234,21 +232,6 @@ pub trait SampleTensor<E: Unit>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-/// Construct tensors from rust arrays
-pub trait TensorFromArray<Src, S: Shape, E: Unit>: DeviceStorage {
-    /// Create a tensor from a rust array
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let _: Tensor<Rank2<2, 3>, f32, _> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-    /// ```
-    fn tensor(&self, src: Src) -> Tensor<S, E, Self> {
-        self.try_tensor(src).unwrap()
-    }
-    /// Fallible version of [TensorFromArray::tensor]
-    fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
-}
-
 /// Convert tensors to rust arrays
 pub trait AsArray {
     type Array: std::fmt::Debug + PartialEq;
@@ -275,5 +258,121 @@ where
 {
     fn as_vec(&self) -> std::vec::Vec<E> {
         self.storage.as_vec()
+    }
+}
+
+/// Construct tensors from rust vectors. This trait is only used to implement TensorFrom.
+pub trait TensorFromVec<E: Unit>: DeviceStorage {
+    fn tensor_from_vec<S: Shape>(&self, src: Vec<E>, shape: S) -> Tensor<S, E, Self> {
+        self.try_tensor_from_vec::<S>(src, shape).unwrap()
+    }
+
+    fn try_tensor_from_vec<S: Shape>(
+        &self,
+        src: Vec<E>,
+        shape: S,
+    ) -> Result<Tensor<S, E, Self>, Self::Err>;
+}
+
+/// Construct tensors from rust data
+pub trait TensorFrom<Src, S: Shape, E: Unit>: DeviceStorage {
+    /// Create a tensor from rust data
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let _: Tensor<Rank2<2, 3>, f32, Cpu> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+    /// let _: Tensor<Rank2<2, 3>, f32, Cpu> = dev.tensor(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    /// // Note: arguments are in a tuple, and this syntax should only be used when creating
+    /// // tensors with a dynamic shape
+    /// let _ = dev.tensor((vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [2, 3]));
+    /// ```
+    fn tensor(&self, src: Src) -> Tensor<S, E, Self> {
+        self.try_tensor(src).unwrap()
+    }
+    /// Fallible version of [TensorFrom::tensor]
+    fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
+}
+
+impl<E: Unit, D: DeviceStorage + TensorFromVec<E>> TensorFrom<E, Rank0, E> for D {
+    fn try_tensor(&self, src: E) -> Result<Tensor<Rank0, E, Self>, Self::Err> {
+        self.try_tensor_from_vec(std::vec![src], ())
+    }
+}
+
+impl<E: Unit, const M: usize, D: DeviceStorage + TensorFromVec<E>> TensorFrom<[E; M], Rank1<M>, E>
+    for D
+{
+    fn try_tensor(&self, src: [E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
+        self.try_tensor(&src)
+    }
+}
+
+impl<E: Unit, const M: usize, D: DeviceStorage + TensorFromVec<E>> TensorFrom<&[E; M], Rank1<M>, E>
+    for D
+{
+    fn try_tensor(&self, src: &[E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
+        self.try_tensor_from_vec(src.to_vec(), (Const::<M>,))
+    }
+}
+
+impl<E: Unit, const M: usize, const N: usize, D> TensorFrom<[[E; N]; M], Rank2<M, N>, E> for D
+where
+    D: DeviceStorage + TensorFromVec<E>,
+{
+    fn try_tensor(&self, src: [[E; N]; M]) -> Result<Tensor<Rank2<M, N>, E, Self>, Self::Err> {
+        let vec: Vec<E> = src.iter().flat_map(|v| v.iter().copied()).collect();
+
+        self.try_tensor_from_vec(vec, (Const::<M>, Const::<N>))
+    }
+}
+
+impl<E: Unit, const M: usize, const N: usize, const O: usize, D>
+    TensorFrom<[[[E; O]; N]; M], Rank3<M, N, O>, E> for D
+where
+    D: DeviceStorage + TensorFromVec<E>,
+{
+    fn try_tensor(
+        &self,
+        src: [[[E; O]; N]; M],
+    ) -> Result<Tensor<Rank3<M, N, O>, E, Self>, Self::Err> {
+        let vec: Vec<E> = src
+            .iter()
+            .flat_map(|v| v.iter())
+            .flat_map(|v| v.iter().copied())
+            .collect();
+
+        self.try_tensor_from_vec(vec, (Const::<M>, Const::<N>, Const::<O>))
+    }
+}
+
+impl<E: Unit, const M: usize, const N: usize, const O: usize, const P: usize, D>
+    TensorFrom<[[[[E; P]; O]; N]; M], Rank4<M, N, O, P>, E> for D
+where
+    D: DeviceStorage + TensorFromVec<E>,
+{
+    fn try_tensor(
+        &self,
+        src: [[[[E; P]; O]; N]; M],
+    ) -> Result<Tensor<Rank4<M, N, O, P>, E, Self>, Self::Err> {
+        let vec: Vec<E> = src
+            .iter()
+            .flat_map(|v| v.iter())
+            .flat_map(|v| v.iter())
+            .flat_map(|v| v.iter().copied())
+            .collect();
+
+        self.try_tensor_from_vec(vec, (Const::<M>, Const::<N>, Const::<O>, Const::<P>))
+    }
+}
+
+impl<E: Unit, S: ConstShape, D: DeviceStorage + TensorFromVec<E>> TensorFrom<Vec<E>, S, E> for D {
+    fn try_tensor(&self, src: Vec<E>) -> Result<Tensor<S, E, Self>, Self::Err> {
+        self.try_tensor_from_vec(src, S::default())
+    }
+}
+
+impl<E: Unit, S: Shape, D: DeviceStorage + TensorFromVec<E>> TensorFrom<(Vec<E>, S), S, E> for D {
+    fn try_tensor(&self, (src, shape): (Vec<E>, S)) -> Result<Tensor<S, E, Self>, Self::Err> {
+        self.try_tensor_from_vec(src, shape)
     }
 }

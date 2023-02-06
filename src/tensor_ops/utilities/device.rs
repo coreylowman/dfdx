@@ -8,6 +8,7 @@ use crate::{
 pub trait Device<E: Dtype>:
     DeviceStorage
     + CopySlice<E>
+    + crate::tensor::storage_traits::TensorFromVec<E>
 
     // allocation
     + crate::tensor::ZerosTensor<E>

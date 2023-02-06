@@ -361,7 +361,7 @@ impl From<std::io::Error> for NpzError {
 #[cfg(test)]
 mod tests {
     use crate::{
-        tensor::{AsArray, TensorFromArray},
+        tensor::{AsArray, TensorFrom},
         tests::TestDevice,
     };
 
