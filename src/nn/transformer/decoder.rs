@@ -52,7 +52,6 @@ impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildModule
 ///   the feedforward network in [TransformerDecoderBlock].
 /// - `NUM_LAYERS`: The number of [TransformerDecoderBlock] to use.
 /// TODO: Doctests
-
 #[derive(Clone, Debug)]
 pub struct TransformerDecoder<
     const MODEL_DIM: usize,
@@ -136,9 +135,6 @@ where
     }
 }
 
-type FF<const M: usize, const F: usize, E, D> =
-    Residual<(Linear<M, F, E, D>, ReLU, Linear<F, M, E, D>)>;
-
 /// **Requires Nightly** A transformer decoder block. Different than the normal transformer block
 /// as this self attention accepts an additional sequence from the encoder.
 ///
@@ -169,6 +165,9 @@ pub struct TransformerDecoderBlock<
     pub ff: FF<MODEL_DIM, FF_DIM, E, D>,
     pub norm3: LayerNorm1D<MODEL_DIM, E, D>,
 }
+
+type FF<const M: usize, const F: usize, E, D> =
+    Residual<(Linear<M, F, E, D>, ReLU, Linear<F, M, E, D>)>;
 
 impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
     for TransformerDecoderBlock<M, N, F, f32, D>
