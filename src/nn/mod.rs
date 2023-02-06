@@ -1,4 +1,4 @@
-//! High level neural network building blocks such as [Linear], activations, and tuples as [Module]s.
+//! High level neural network building blocks such as [modules::Linear], activations, and tuples as [Module]s.
 //! Also includes `.save()` & `.load()` for all [Module]s.
 //!
 //! # Mutable vs Immutable forwards
@@ -19,9 +19,9 @@
 //! Here is a list of existing modules that have different behavior in these
 //! two functions:
 //!
-//! - [BatchNorm2D]
-//! - [DropoutOneIn]
-//! - [Dropout]
+//! - [modules::BatchNorm2D]
+//! - [modules::DropoutOneIn]
+//! - [modules::Dropout]
 //!
 //! # Initializing
 //!
@@ -36,16 +36,17 @@
 //!
 //! Here, the return type of [BuildOnDevice] depends on the device you pass in.
 //!
-//! For example, when using device [Cpu], the type is `Linear<5, 2, Cpu>`, or when using
+//! For example, when using device [crate::tensor::Cpu], the type is `Linear<5, 2, Cpu>`, or when using
 //! a `Cuda` device, the type is `Linear<5, 2, Cuda>`.
 //!
 //! Alternatively, you can use [BuildModule], which requires device specific model definitions:
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
+//! use dfdx::nn::modules::Linear;
 //! type Dev = Cpu;
 //! let dev: Dev = Default::default();
-//! let model: Linear<5, 2, Dev> = BuildModule::build(&dev);
+//! let model: Linear<5, 2, f32, Dev> = BuildModule::build(&dev);
 //! ```
 //!
 //! # Resetting parameters
@@ -56,7 +57,8 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let mut model: Linear<5, 2> = BuildModule::build(&dev);
+//! type Model = Linear<5, 2>;
+//! let mut model = Model::build_on_device(&dev);
 //! model.reset_params();
 //! ```
 //!

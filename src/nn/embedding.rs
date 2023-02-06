@@ -32,7 +32,8 @@ impl<const V: usize, const M: usize, D: Device<f32>> BuildOnDevice<D, f32>
 ///
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
-/// let mut model: Embedding<7, 2> = BuildModule::build(&dev);
+/// type Model = Embedding<7, 2>;
+/// let mut model = Model::build_on_device(&dev);
 /// // single sequence of ids
 /// let inputs: Tensor<Rank1<5>, usize, _> = dev.zeros();
 /// let _: Tensor<(Const<5>, Const<2>,), f32, _> = model.forward(inputs);
