@@ -132,7 +132,7 @@ impl<const VOCAB: usize, const DIM: usize, D1: Device<f32>, D2: Device<f32>> ToD
 mod tests {
     use super::*;
     use crate::{
-        nn::{tests::SimpleUpdater},
+        nn::tests::SimpleUpdater,
         tests::{assert_close, TestDevice},
         unique_id::HasUniqueId,
     };

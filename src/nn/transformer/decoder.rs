@@ -278,7 +278,8 @@ mod tests {
         const NUM_HEADS: usize = 6;
         const FF_DIM: usize = 2;
 
-        let decoder = builder::TransformerDecoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build_on_device(&dev);
+        let decoder =
+            builder::TransformerDecoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build_on_device(&dev);
 
         let tgt = dev.sample_normal::<Rank3<BATCH, S1, EMBED_DIM>>();
         let mem = dev.sample_normal::<Rank3<BATCH, S2, EMBED_DIM>>();
