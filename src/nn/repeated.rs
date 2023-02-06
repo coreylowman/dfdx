@@ -33,7 +33,7 @@ impl<D: Device<E>, E: Dtype, T: BuildModule<D, E>, const N: usize> BuildModule<D
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         let mut modules = std::vec::Vec::with_capacity(N);
         for _ in 0..N {
-            modules.push(T::try_build(device)?);
+            modules.push(BuildModule::try_build(device)?);
         }
         Ok(Self { modules })
     }
