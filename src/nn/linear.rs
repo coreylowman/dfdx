@@ -162,19 +162,13 @@ mod tests {
     ];
     const B: [f32; 2] = [0.3765365, -0.290717];
 
-    #[cfg(feature = "cuda")]
     #[test]
     fn test_linear_ondevice() {
-        use super::super::module::OnDevice;
-
-        let cuda: Cuda = Default::default();
-        let _: Linear<1, 1, _> = BuildModule::build(&cuda);
-        let _: OnDevice<Linear<1, 1>, Cuda> = BuildModule::build(&cuda);
-        let _: OnDevice<(Linear<1, 2>, Linear<2, 1>), Cuda> = BuildModule::build(&cuda);
-
-        let _: Linear<1, 1, Cuda> = Linear::<1, 1>::build_on_device(&cuda);
-        let _: Linear<1, 1, _> = Linear::<1, 1>::build_on_device(&cuda);
-        let _ = Linear::<1, 1>::build_on_device(&cuda);
+        let dev: TestDevice = Default::default();
+        let _: Linear<1, 1, _, _> = BuildModule::build(&dev);
+        let _: Linear<1, 1, f32, TestDevice> = builder::Linear::<1, 1>::build_on_device(&dev);
+        let _: Linear<1, 1, _, _> = builder::Linear::<1, 1>::build_on_device(&dev);
+        let _ = builder::Linear::<1, 1>::build_on_device(&dev);
     }
 
     #[test]
