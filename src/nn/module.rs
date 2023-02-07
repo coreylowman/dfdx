@@ -1,8 +1,8 @@
-use crate::{optim::GradientUpdate, shapes::Dtype, tensor_ops::Device};
+use crate::{optim::GradientUpdate, shapes::Dtype};
 
 #[cfg(feature = "cuda")]
 pub use crate::tensor::OnCuda;
-pub use crate::tensor::{OnCpu, OnDevice, ToDevice};
+pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
@@ -29,7 +29,7 @@ pub trait ModuleMut<Input> {
 }
 
 /// Something that can be built. Related to [BuildOnDevice]
-pub trait BuildModule<D: Device<E>, E: Dtype>: Sized {
+pub trait BuildModule<D: DeviceStorage, E: Dtype>: Sized {
     /// Construct it on the device
     fn build(device: &D) -> Self {
         Self::try_build(device).unwrap()
@@ -42,24 +42,18 @@ pub trait BuildModule<D: Device<E>, E: Dtype>: Sized {
 /// than it is on. Builds [ToDevice::Output].
 ///
 /// Related to [BuildModule]
-pub trait BuildOnDevice<D: Device<E>, E: Dtype>: ToDevice<D>
-where
-    Self::Output: BuildModule<D, E>,
-{
-    fn build_on_device(device: &D) -> Self::Output {
-        BuildModule::build(device)
+pub trait BuildOnDevice<D: DeviceStorage, E: Dtype> {
+    type Built: BuildModule<D, E>;
+    fn build_on_device(device: &D) -> Self::Built {
+        Self::try_build_on_device(device).unwrap()
     }
-    fn try_build_on_device(device: &D) -> Result<Self::Output, D::Err> {
-        BuildModule::try_build(device)
+    fn try_build_on_device(device: &D) -> Result<Self::Built, D::Err> {
+        Self::Built::try_build(device)
     }
-}
-impl<T: ToDevice<D>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for T where
-    T::Output: BuildModule<D, E>
-{
 }
 
 /// Something that can reset it's parameters.
-pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
+pub trait ResetParams<D: DeviceStorage, E: Dtype>: Sized {
     /// Mutates parameters. Each implementor
     /// of this trait decides how the parameters are initialized. In
     /// fact, some impls may not even use randomness.
@@ -75,7 +69,11 @@ pub trait ResetParams<D: Device<E>, E: Dtype>: Sized {
 /// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]
 pub trait ZeroSizedModule: Default {}
 
-impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> ResetParams<D, E> for T {
+impl<T: ZeroSizedModule + BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for T {
+    type Built = T;
+}
+
+impl<T: ZeroSizedModule, D: DeviceStorage, E: Dtype> ResetParams<D, E> for T {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         Ok(())
     }
@@ -88,7 +86,7 @@ impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {
     }
 }
 
-impl<T: ZeroSizedModule, D: Device<E>, E: Dtype> GradientUpdate<D, E> for T {
+impl<T: ZeroSizedModule, D: DeviceStorage, E: Dtype> GradientUpdate<D, E> for T {
     fn update<U>(&mut self, _: &mut U, _: &mut crate::optim::UnusedTensors) -> Result<(), <D>::Err>
     where
         U: crate::optim::ParamUpdater<D, E>,

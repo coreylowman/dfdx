@@ -2,7 +2,7 @@
 
 use dfdx::{
     losses::mse_loss,
-    nn::{BuildOnDevice, Linear, ModuleMut, ReLU, Tanh},
+    nn::{builders::*, BuildOnDevice, ModuleMut},
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
     shapes::Rank2,
     tensor::{AsArray, Cpu, SampleTensor, Tensor},

@@ -1,7 +1,7 @@
 //! Intro to dfdx::nn
 
 use dfdx::{
-    nn::{BuildOnDevice, Linear, Module, ModuleMut, ReLU, ResetParams},
+    nn::{builders::*, modules, BuildOnDevice, Module, ModuleMut, ResetParams},
     shapes::{Const, Rank1, Rank2},
     tensor::{AsArray, Cpu, SampleTensor, Tensor, ZerosTensor},
 };
@@ -10,10 +10,11 @@ fn main() {
     let dev: Cpu = Default::default();
 
     // nn exposes many different neural network types, like the Linear layer!
-    // you can use Build::build to construct an initialized model
-    let mut m = Linear::<4, 2>::build_on_device(&dev);
+    // you can use BuildModule::build to construct an initialized model
+    type Model = Linear<4, 2>;
+    let mut m: modules::Linear<4, 2, f32, Cpu> = Model::build_on_device(&dev);
 
-    // Build::reset_params also allows you to re-randomize the weights
+    // ResetParams::reset_params also allows you to re-randomize the weights
     m.reset_params();
 
     // Modules act on tensors using either:

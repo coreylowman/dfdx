@@ -198,12 +198,12 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
 ///
 /// Here's an example of how this can be implemented for a custom struct:
 /// ```rust
-/// use dfdx::prelude::*;
+/// use dfdx::{prelude::*, nn::modules::Linear};
 ///
 /// struct MLP<D: Device<f32>> {
-///     l1: Linear<5, 10, D>,
+///     l1: Linear<5, 10, f32, D>,
 ///     a1: ReLU,
-///     l2: Linear<10, 1, D>,
+///     l2: Linear<10, 1, f32, D>,
 /// }
 ///
 /// // Need two device types to allow converting from one device to another
@@ -226,21 +226,6 @@ pub trait ToDevice<D> {
 
 /// A type alias that yields the type of a module `M` as it would exist on device `D`. This can be
 /// useful when creating sequential networks that need to be parameterized by a device.
-///
-/// Examples:
-/// ```rust
-/// # use dfdx::nn::*;
-/// type MLP<D> = OnDevice<(Linear<5, 10>, ReLU, Linear<10, 1>), D>;
-/// ```
-///
-/// ```rust
-/// # use dfdx::prelude::*;
-/// // All modules exist on the cpu by default
-/// type CpuMLP = (Linear<5, 10>, ReLU, Linear<10, 1>);
-/// type MLP<D> = OnDevice<CpuMLP, D>;
-/// # #[cfg(feature = "cuda")]
-/// type CudaMLP = OnDevice<CpuMLP, Cuda>;
-/// ```
 pub type OnDevice<M, D> = <M as ToDevice<D>>::Output;
 
 /// Equivalent to `OnDevice<M, Cuda>`

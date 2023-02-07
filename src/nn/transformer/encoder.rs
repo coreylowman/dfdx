@@ -1,7 +1,8 @@
 use crate::{
-    nn::*,
+    nn::{modules::*, *},
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
-    tensor::{Cpu, PutTape, SplitTape},
+    shapes::Dtype,
+    tensor::{PutTape, SplitTape},
     tensor_ops::Device,
 };
 
@@ -21,8 +22,44 @@ pub type TransformerEncoder<
     const NUM_HEADS: usize,
     const FF_DIM: usize,
     const NUM_LAYERS: usize,
-    D = Cpu,
-> = Repeated<TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, D>, NUM_LAYERS>;
+    E,
+    D,
+> = Repeated<TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>, NUM_LAYERS>;
+
+pub mod builder {
+    #[derive(Debug)]
+    pub struct TransformerEncoder<
+        const MODEL_DIM: usize,
+        const NUM_HEADS: usize,
+        const FF_DIM: usize,
+        const NUM_LAYERS: usize,
+    >;
+
+    #[derive(Debug)]
+    pub struct TransformerEncoderBlock<
+        const MODEL_DIM: usize,
+        const NUM_HEADS: usize,
+        const FF_DIM: usize,
+    >;
+}
+
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
+    BuildOnDevice<D, f32> for builder::TransformerEncoder<M, H, F, L>
+{
+    type Built = TransformerEncoder<M, H, F, L, f32, D>;
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
+        Self::Built::try_build(device)
+    }
+}
+
+impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildOnDevice<D, f32>
+    for builder::TransformerEncoderBlock<M, H, F>
+{
+    type Built = TransformerEncoderBlock<M, H, F, f32, D>;
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
+        Self::Built::try_build(device)
+    }
+}
 
 /// **Requires Nightly** A single transformer encoder block
 ///
@@ -43,18 +80,20 @@ pub struct TransformerEncoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
     const FF_DIM: usize,
-    D: Device<f32> = Cpu,
+    E: Dtype,
+    D: DeviceStorage,
 > {
-    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
-    pub norm1: LayerNorm1D<MODEL_DIM, D>,
-    pub ff: FF<MODEL_DIM, FF_DIM, D>,
-    pub norm2: LayerNorm1D<MODEL_DIM, D>,
+    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, E, D>,
+    pub norm1: LayerNorm1D<MODEL_DIM, E, D>,
+    pub ff: FF<MODEL_DIM, FF_DIM, E, D>,
+    pub norm2: LayerNorm1D<MODEL_DIM, E, D>,
 }
 
-type FF<const M: usize, const F: usize, D> = Residual<(Linear<M, F, D>, ReLU, Linear<F, M, D>)>;
+type FF<const M: usize, const F: usize, E, D> =
+    Residual<(Linear<M, F, E, D>, ReLU, Linear<F, M, E, D>)>;
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
-    for TransformerEncoderBlock<M, H, F, D>
+    for TransformerEncoderBlock<M, H, F, f32, D>
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
@@ -67,7 +106,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> BuildModule
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
-    for TransformerEncoderBlock<M, H, F, D>
+    for TransformerEncoderBlock<M, H, F, f32, D>
 {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.self_attn.try_reset_params()?;
@@ -79,7 +118,7 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> ResetParams
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpdate<D, f32>
-    for TransformerEncoderBlock<M, H, F, D>
+    for TransformerEncoderBlock<M, H, F, f32, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
@@ -94,9 +133,9 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpd
 }
 
 impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2>
-    for TransformerEncoderBlock<M, H, F, D1>
+    for TransformerEncoderBlock<M, H, F, f32, D1>
 {
-    type Output = TransformerEncoderBlock<M, H, F, D2>;
+    type Output = TransformerEncoderBlock<M, H, F, f32, D2>;
     fn to_device(&self, device: &D2) -> Self::Output {
         TransformerEncoderBlock {
             self_attn: self.self_attn.to_device(device),
@@ -108,12 +147,12 @@ impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, Src> Module<Src>
-    for TransformerEncoderBlock<M, H, F, D>
+    for TransformerEncoderBlock<M, H, F, f32, D>
 where
     Src: SplitTape + std::ops::Add<Src::NoTape, Output = Src>,
-    MultiHeadAttention<M, H, M, M, D>: Module<Src, Output = Src>,
-    LayerNorm1D<M, D>: Module<Src, Output = Src>,
-    FF<M, F, D>: Module<Src, Output = Src>,
+    MultiHeadAttention<M, H, M, M, f32, D>: Module<Src, Output = Src>,
+    LayerNorm1D<M, f32, D>: Module<Src, Output = Src>,
+    FF<M, F, f32, D>: Module<Src, Output = Src>,
 {
     type Output = Src;
 
@@ -128,7 +167,7 @@ where
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, T> ModuleMut<T>
-    for TransformerEncoderBlock<M, H, F, D>
+    for TransformerEncoderBlock<M, H, F, f32, D>
 where
     Self: Module<T>,
 {
@@ -160,7 +199,7 @@ mod tests {
         const FF_DIM: usize = 16;
 
         let encoder =
-            TransformerEncoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build_on_device(&dev);
+            builder::TransformerEncoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build_on_device(&dev);
 
         let x = dev.sample_normal::<Rank3<BATCH, SEQ_LEN, EMBED_DIM>>();
         let y = encoder.forward(x);
