@@ -98,6 +98,7 @@ impl<const BATCH: usize, const IN: usize, const INNER: usize, const OUT: usize, 
     }
 }
 
+// Hyperparameters stolen from https://github.com/seungeunrho/minimalRL/blob/master/ppo-continuous.py for now
 const LEARNING_RATE: f32 = 0.0003;
 const GAMMA: f32 = 0.9;
 const LAMBDA: f32 = 0.9;
@@ -133,8 +134,8 @@ fn main() {
         // <calc advantage>
         let (new_state, reward, done) = step_simulation(action);
 
-        let td_target = reward + GAMMA * net.value.forward(net.l1.forward(new_state)) * done;
-        let delta = td_taget - net.value.forward(net.l1.forward(state));
+        let td_target = reward + net.value.forward(net.l1.forward(new_state)) * done * GAMMA;
+        let delta = td_target - net.value.forward(net.l1.forward(state));
         let delta = delta.array();
 
         let mut advantage = 0.0;
@@ -186,6 +187,14 @@ fn init_state() -> Tensor1D<STATE_SIZE> {
     todo!()
 }
 
-fn step_simulation(action: &Tensor1D<ACTION_SIZE>) -> (Tensor1D<STATE_SIZE>, f32, bool) {
+fn step_simulation(old_state: Tensor1D<STATE_SIZE>, action: &Tensor1D<ACTION_SIZE>) -> (Tensor1D<STATE_SIZE>, f32, bool) {
+    let new_state = todo!();
+    let reward = calculate_reward(&new_state);
+    let is_done = todo!();
+
+    (new_state, reward, is_done)
+}
+
+fn calculate_reward(state: &Tensor1D<STATE_SIZE>) -> f32 {
     todo!()
 }
