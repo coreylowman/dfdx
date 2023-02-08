@@ -1,22 +1,31 @@
 //! Implements the reinforcement learning algorithm Proximal Policy Optimization (PPO) on random data.
 
 use dfdx::{
+    gradients::Tape,
+    nn::{
+        self,
+        modules::{Linear, ReLU, Tanh},
+        BuildModule, Module,
+    },
     optim::{Adam, AdamConfig},
-    prelude::*, nn, gradients::Tape,
+    prelude::{smooth_l1_loss, GradientUpdate, ParamUpdater, UnusedTensors},
+    tensor::{AsArray, Cpu, HasErr, SplitTape, Tensor1D, Tensor2D},
+    tensor_ops::MeanTo,
 };
 use std::time::Instant;
 
-const BATCH: usize = 64;
-const STATE: usize = 4;
-const ACTION: usize = 2;
+const BATCH_SIZE: usize = 64;
+const STATE_SIZE: usize = 4;
+const INNER_SIZE: usize = 128;
+const ACTION_SIZE: usize = 2;
 
 /// Custom model struct
 #[derive(Clone)]
 struct Network<const IN: usize, const INNER: usize, const OUT: usize> {
-    l1: (nn::Linear<IN, INNER>, ReLU),
-    mu: (nn::Linear<INNER, OUT>, Tanh),
-    std: (nn::Linear<INNER, OUT>, ReLU),// TODO: should this be SoftPlus?
-    value: nn::Linear<INNER, OUT>,
+    l1: (Linear<IN, INNER, f32, Cpu>, ReLU),
+    mu: (Linear<INNER, OUT, f32, Cpu>, Tanh),
+    std: (Linear<INNER, OUT, f32, Cpu>, ReLU), // TODO: should this be SoftPlus?
+    value: Linear<INNER, OUT, f32, Cpu>,
 }
 
 // BuildModule lets you randomize a model's parameters
@@ -25,10 +34,10 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> nn::BuildModule<Cpu,
 {
     fn try_build(device: &Cpu) -> Result<Self, <Cpu as HasErr>::Err> {
         Ok(Self {
-            l1: nn::BuildModule::try_build(device)?,
-            mu: nn::BuildModule::try_build(device)?,
-            std: nn::BuildModule::try_build(device)?,
-            value: nn::BuildModule::try_build(device)?,
+            l1: BuildModule::try_build(device)?,
+            mu: BuildModule::try_build(device)?,
+            std: BuildModule::try_build(device)?,
+            value: BuildModule::try_build(device)?,
         })
     }
 }
@@ -54,12 +63,12 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> GradientUpdate<Cpu, 
 }
 
 // impl Module for single item
-impl<const IN: usize, const INNER: usize, const OUT: usize> nn::Module<Tensor<Rank1<IN>, f32, Cpu>>
+impl<const IN: usize, const INNER: usize, const OUT: usize> nn::Module<Tensor1D<IN>>
     for Network<IN, INNER, OUT>
 {
     type Output = (Tensor1D<OUT>, Tensor1D<OUT>, Tensor1D<OUT>);
 
-    fn forward(&self, x: Tensor<Rank1<IN>, f32, Cpu>) -> Self::Output {
+    fn forward(&self, x: Tensor1D<IN>) -> Self::Output {
         let x = self.l1.forward(x);
         (
             self.mu.forward(x),
@@ -71,9 +80,13 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> nn::Module<Tensor<Ra
 
 // impl Module for batch of items
 impl<const BATCH: usize, const IN: usize, const INNER: usize, const OUT: usize, T: Tape<Cpu>>
-    nn::Module<Tensor<Rank2<BATCH, IN>, f32, Cpu, T>> for Network<IN, INNER, OUT>
+    nn::Module<Tensor2D<BATCH, IN, T>> for Network<IN, INNER, OUT>
 {
-    type Output = (Tensor2D<BATCH, OUT, T>, Tensor2D<BATCH, OUT, T>, Tensor2D<BATCH, OUT, T>);
+    type Output = (
+        Tensor2D<BATCH, OUT, T>,
+        Tensor2D<BATCH, OUT, T>,
+        Tensor2D<BATCH, OUT, T>,
+    );
 
     fn forward(&self, x: Tensor2D<BATCH, IN, T>) -> Self::Output {
         let x = self.l1.forward(x);
@@ -85,20 +98,20 @@ impl<const BATCH: usize, const IN: usize, const INNER: usize, const OUT: usize, 
     }
 }
 
-const LEARNING_RATE: f32    = 0.0003;
-const GAMMA: f32            = 0.9;
-const LAMBDA: f32           = 0.9;
-const EPS_CLIP: f32         = 0.2;
-const K_EPOCH: usize        = 10;
+const LEARNING_RATE: f32 = 0.0003;
+const GAMMA: f32 = 0.9;
+const LAMBDA: f32 = 0.9;
+const EPS_CLIP: f32 = 0.2;
+const K_EPOCH: usize = 10;
 const ROLLOUT_LENGTH: usize = 3;
-const BUFFER_SIZE: usize    = 30;
+const BUFFER_SIZE: usize = 30;
 const MINIBATCH_SIZE: usize = 32;
 
 fn main() {
     let dev: Cpu = Default::default();
 
     // initiliaze model - all weights are 0s
-    let mut net: Network<STATE, 128, ACTION> = nn::BuildModule::build(&dev);
+    let mut net: Network<STATE_SIZE, INNER_SIZE, ACTION_SIZE> = nn::BuildModule::build(&dev);
     let target_net = net.clone();
 
     let mut optimizer = Adam::new(
@@ -111,12 +124,11 @@ fn main() {
         },
     );
 
-    let mut state: Tensor1D<STATE> = todo!();
+    let mut state: Tensor1D<STATE_SIZE> = init_state();
 
     // run through training data
     for _i_epoch in 0..15 {
         let start = Instant::now();
-
 
         // <calc advantage>
         let (new_state, reward, done) = step_simulation(action);
@@ -135,7 +147,7 @@ fn main() {
         let (mu, std, v) = net.forward(state);
         //let dist = mu.array().into_iter().zip(std.array()).map(|(mu, std)| Normal::new(mu, std)).collect(); // TODO: is this correct? How should this be done in a more "Tensor"y way?
 
-        let log_prob: Tensor<Rank1<128>, f32, Cpu> = todo!();
+        let log_prob: Tensor1D<INNER_SIZE> = todo!();
 
         // ratio = P(action | state, pi_net) / P(action | state, target_pi_net)
         // but compute in log space and then do .exp() to bring it back out of log space
@@ -156,18 +168,24 @@ fn main() {
         let gradients = loss.backward();
 
         // update weights with optimizer
-        optimizer.update(&mut net, gradients).expect("Unused params");
+        optimizer
+            .update(&mut net, gradients)
+            .expect("Unused params");
 
         println!("loss={:#} in {:?}", loss_v, start.elapsed());
     }
 }
 
 struct Transition {
-    state: Tensor1D<STATE>,
-    last_action: Tensor1D<ACTION>,
+    state: Tensor1D<STATE_SIZE>,
+    last_action: Tensor1D<ACTION_SIZE>,
     reward: f32,
 }
 
-fn step_simulation(action: &Tensor1D<ACTION>) -> (Tensor1D<STATE>, f32, bool) {
+fn init_state() -> Tensor1D<STATE_SIZE> {
+    todo!()
+}
+
+fn step_simulation(action: &Tensor1D<ACTION_SIZE>) -> (Tensor1D<STATE_SIZE>, f32, bool) {
     todo!()
 }
