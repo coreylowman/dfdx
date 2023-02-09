@@ -164,7 +164,7 @@ impl super::VecVecKernel<f32> for Cuda {
         let k = Const::<1>;
         let shape = (m, n);
         let strides = shape.strides();
-        let mut storage = self.dev.alloc_zeros_async::<f32>(shape.num_elements())?;
+        let mut storage = unsafe { self.dev.alloc_async::<f32>(shape.num_elements()) }?;
 
         unsafe {
             sgemm(
@@ -239,7 +239,7 @@ impl super::VecMatKernel<f32> for Cuda {
         let (k, n) = rhs.shape;
         let shape = (n,);
         let strides = shape.strides();
-        let mut storage = self.dev.alloc_zeros_async::<f32>(shape.num_elements())?;
+        let mut storage = unsafe { self.dev.alloc_async::<f32>(shape.num_elements()) }?;
 
         unsafe {
             sgemm(
@@ -312,7 +312,7 @@ impl super::MatMatKernel<f32> for Cuda {
         let (k, n) = rhs.shape;
         let shape = (m, n);
         let strides = shape.strides();
-        let mut storage = self.dev.alloc_zeros_async::<f32>(shape.num_elements())?;
+        let mut storage = unsafe { self.dev.alloc_async::<f32>(shape.num_elements()) }?;
 
         unsafe {
             sgemm(
@@ -386,7 +386,7 @@ impl super::MatMatBrKernel<f32> for Cuda {
         let (k, n) = rhs.shape;
         let shape = (batch, m, n);
         let strides = shape.strides();
-        let mut storage = self.dev.alloc_zeros_async::<f32>(shape.num_elements())?;
+        let mut storage = unsafe { self.dev.alloc_async::<f32>(shape.num_elements()) }?;
 
         unsafe {
             sgemm_batch(
@@ -465,7 +465,7 @@ impl super::MatMatBatch3Kernel<f32> for Cuda {
         let (_, k, n) = rhs.shape;
         let shape = (batch, m, n);
         let strides = shape.strides();
-        let mut storage = self.dev.alloc_zeros_async::<f32>(shape.num_elements())?;
+        let mut storage = unsafe { self.dev.alloc_async::<f32>(shape.num_elements()) }?;
 
         unsafe {
             sgemm_batch(
@@ -539,7 +539,7 @@ impl super::MatMatBatch4Kernel<f32> for Cuda {
         let (_, _, k, n) = rhs.shape;
         let shape = (batch, seq, m, n);
         let strides = shape.strides();
-        let mut storage = self.dev.alloc_zeros_async::<f32>(shape.num_elements())?;
+        let mut storage = unsafe { self.dev.alloc_async::<f32>(shape.num_elements()) }?;
 
         for b in 0..batch.size() {
             // TODO: use separate streams

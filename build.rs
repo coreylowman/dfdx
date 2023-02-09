@@ -18,7 +18,6 @@ fn main() {
 #[cfg(feature = "cuda")]
 mod cuda {
     pub fn build_ptx() {
-        // TODO build ptx file in source tree and don't call nvcc if so
         let out_dir = std::env::var("OUT_DIR").unwrap();
         let kernel_paths: Vec<std::path::PathBuf> = glob::glob("src/**/*.cu")
             .unwrap()

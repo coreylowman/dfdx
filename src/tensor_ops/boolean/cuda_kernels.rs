@@ -1,6 +1,6 @@
 use super::BooleanKernel;
 use crate::prelude::{cuda::CudaArray, *};
-use cudarc::prelude::*;
+use cudarc::driver::*;
 
 use std::sync::Arc;
 
@@ -24,10 +24,8 @@ impl Cuda {
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = self.dev.take_async(std::vec![false; numel])?;
+        let mut storage = unsafe { self.dev.alloc_async(numel) }?;
 
-        // TODO: modify this to be `self.dev.alloc_zeros_async(numel)?` once cudarc implements
-        // ValidAsZeroBits for bool
         let dims: CudaSlice<usize> = self.dev.take_async(shape.concrete().into())?;
         let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
         let rhs_strides: CudaSlice<usize> = self.dev.take_async(rhs.strides.into())?;
@@ -64,9 +62,7 @@ impl BooleanKernel for Cuda {
         }
 
         let numel = inp.data.len();
-        // TODO: modify this to be `self.dev.alloc_zeros_async(numel)?` once cudarc implements
-        // ValidAsZeroBits for bool
-        let mut storage = self.dev.take_async(std::vec![false; numel])?;
+        let mut storage = unsafe { self.dev.alloc_async(numel) }?;
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, "boolean_not").unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);

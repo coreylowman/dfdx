@@ -34,7 +34,7 @@ impl<K: UnaryOpCudaKernel + AsKernelParam> UnaryKernel<K, f32> for Cuda {
         }
 
         let numel = inp.data.len();
-        let mut storage = self.dev.alloc_zeros_async::<f32>(numel)?;
+        let mut storage = unsafe { self.dev.alloc_async::<f32>(numel) }?;
 
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -107,7 +107,7 @@ impl<K: BinaryOpCudaKernel + AsKernelParam> BinaryKernel<K, f32> for Cuda {
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = self.dev.alloc_zeros_async::<f32>(numel)?;
+        let mut storage = unsafe { self.dev.alloc_async::<f32>(numel) }?;
 
         let dims: CudaSlice<usize> = self.dev.take_async(shape.concrete().into())?;
         let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
