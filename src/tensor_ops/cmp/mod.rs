@@ -467,8 +467,8 @@ mod tests {
     #[should_panic]
     fn test_cmp_shape_mismatch() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<(usize, usize, usize), u32, TestDevice> = dev.zeros_like(&(1, 2, 3));
-        let b: Tensor<(usize, usize, usize), u32, TestDevice> = dev.ones_like(&(2, 3, 4));
+        let a: Tensor<(usize, usize, usize), f32, TestDevice> = dev.zeros_like(&(1, 2, 3));
+        let b: Tensor<(usize, usize, usize), f32, TestDevice> = dev.ones_like(&(2, 3, 4));
         a.eq(&b);
     }
 }
