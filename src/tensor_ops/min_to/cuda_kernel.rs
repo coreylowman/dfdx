@@ -28,14 +28,15 @@ impl super::MinReduceKernel<f32> for Cuda {
                 .load_ptx(PTX_SRC.into(), MODULE_NAME, &ALL_FN_NAMES)?;
         }
 
-        let mut storage = self.dev.alloc_zeros_async::<f32>(dst.num_elements())?;
         let fill_fn = self.dev.get_func(MODULE_NAME, "fill_with").unwrap();
-        unsafe {
+        let mut storage = unsafe {
+            let mut storage = self.dev.alloc_async::<f32>(dst.num_elements())?;
             fill_fn.launch_async(
                 LaunchConfig::for_num_elems(dst.num_elements() as u32),
                 (&mut storage, f32::INFINITY, dst.num_elements()),
-            )
-        }?;
+            )?;
+            storage
+        };
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
 

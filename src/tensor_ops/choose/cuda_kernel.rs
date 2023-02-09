@@ -28,7 +28,7 @@ impl ChooseKernel<f32> for Cuda {
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = self.dev.alloc_zeros_async::<f32>(numel)?;
+        let mut storage = unsafe { self.dev.alloc_async::<f32>(numel) }?;
 
         let dims: CudaSlice<usize> = self.dev.take_async(shape.concrete().into())?;
         let cond_strides: CudaSlice<usize> = self.dev.take_async(cond.strides.into())?;

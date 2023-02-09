@@ -36,7 +36,7 @@ impl UnaryKernel<super::DropoutKernelOp, f32> for Cuda {
         }
 
         let numel = inp.data.len();
-        let mut storage = self.dev.alloc_zeros_async::<f32>(numel)?;
+        let mut storage = unsafe { self.dev.alloc_async::<f32>(numel) }?;
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
