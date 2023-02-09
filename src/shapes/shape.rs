@@ -2,22 +2,43 @@ use super::{axes::*, ReduceShapeTo};
 
 /// Represents a unit type, but no arithmetic.
 pub trait Unit:
-    'static + Copy + Clone + Default + std::fmt::Debug + PartialOrd + Send + Sync + std::marker::Unpin
+    'static
+    + Copy
+    + Clone
+    + Default
+    + std::fmt::Debug
+    + PartialEq
+    + PartialOrd
+    + Send
+    + Sync
+    + std::marker::Unpin
 {
     const ONE: Self;
 }
-impl Unit for f32 {
-    const ONE: Self = 1.0;
+
+macro_rules! unit {
+    ($type:ty, $one:expr) => {
+        impl Unit for $type {
+            const ONE: Self = $one;
+        }
+    };
 }
-impl Unit for f64 {
-    const ONE: Self = 1.0;
-}
-impl Unit for usize {
-    const ONE: Self = 1;
-}
-impl Unit for bool {
-    const ONE: Self = true;
-}
+
+unit!(f32, 1.0);
+unit!(f64, 1.0);
+unit!(usize, 1);
+unit!(isize, 1);
+unit!(u8, 1);
+unit!(i8, 1);
+unit!(u16, 1);
+unit!(i16, 1);
+unit!(u32, 1);
+unit!(i32, 1);
+unit!(u64, 1);
+unit!(i64, 1);
+unit!(u128, 1);
+unit!(i128, 1);
+unit!(bool, true);
 
 /// Represents something that has a [Unit].
 pub trait HasUnitType {
