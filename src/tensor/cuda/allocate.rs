@@ -3,7 +3,7 @@
 use crate::{
     shapes::*,
     tensor::{
-        cpu::{Cpu, StridedArray},
+        cpu::{Cpu, CpuError, StridedArray},
         storage_traits::*,
         Tensor,
     },
@@ -131,12 +131,25 @@ impl<S: Shape, E: Unit> AsVec for CudaArray<S, E> {
     }
 }
 
-impl<Src, S: Shape, E: Unit> TensorFromArray<Src, S, E> for Cuda
-where
-    Cpu: TensorFromArray<Src, S, E>,
-{
-    fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.take_cpu_tensor(self.cpu.try_tensor(src)?)
+impl<E: Unit> TensorFromVec<E> for Cuda {
+    fn try_tensor_from_vec<S: Shape>(
+        &self,
+        src: Vec<E>,
+        shape: S,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        let num_elements = shape.num_elements();
+
+        if src.len() != num_elements {
+            Err(CudaError::Cpu(CpuError::WrongNumElements))
+        } else {
+            let array = CudaArray {
+                data: Arc::new(self.dev.take_async(src)?),
+                shape,
+                strides: shape.strides(),
+            };
+
+            Ok(self.upgrade(array))
+        }
     }
 }
 

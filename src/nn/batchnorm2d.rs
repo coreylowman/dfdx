@@ -1,6 +1,18 @@
 use crate::{gradients::*, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+
+pub mod builder {
+    #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct BatchNorm2D<const C: usize>;
+}
+
+impl<const C: usize, D: Device<f32>> BuildOnDevice<D, f32> for builder::BatchNorm2D<C> {
+    type Built = BatchNorm2D<C, f32, D>;
+    fn try_build_on_device(device: &D) -> Result<Self::Built, D::Err> {
+        Self::Built::try_build(device)
+    }
+}
 
 /// Batch normalization for images as described in
 /// [Batch Normalization: Accelerating Deep Network Training
@@ -37,24 +49,24 @@ use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// - Running statistics: **not** updated
 /// - Normalization: calculated using running stats
 #[derive(Clone, Debug)]
-pub struct BatchNorm2D<const C: usize, D: Device<f32> = Cpu> {
+pub struct BatchNorm2D<const C: usize, E: Dtype, D: DeviceStorage> {
     /// Scale for affine transform. Defaults to 1.0
-    pub scale: Tensor<Rank1<C>, f32, D>,
+    pub scale: Tensor<Rank1<C>, E, D>,
     /// Bias for affine transform. Defaults to 0.0
-    pub bias: Tensor<Rank1<C>, f32, D>,
+    pub bias: Tensor<Rank1<C>, E, D>,
     /// Spatial mean that is updated during training. Defaults to 0.0
-    pub running_mean: Tensor<Rank1<C>, f32, D>,
+    pub running_mean: Tensor<Rank1<C>, E, D>,
     /// Spatial variance that is updated during training. Defaults to 1.0
-    pub running_var: Tensor<Rank1<C>, f32, D>,
+    pub running_var: Tensor<Rank1<C>, E, D>,
     /// Added to variance before taking sqrt for numerical stability. Defaults to 1e-5
-    pub epsilon: f32,
+    pub epsilon: E,
     /// Controls exponential moving average of running stats.Defaults to 0.1
     ///
     /// `running_stat * (1.0 - momentum) + stat * momentum`.
-    pub momentum: f32,
+    pub momentum: E,
 }
 
-impl<const C: usize, D: Device<f32>> BatchNorm2D<C, D> {
+impl<const C: usize, D: Device<f32>> BatchNorm2D<C, f32, D> {
     /// generic forward for inference
     fn infer_fwd<S: Shape, Ax: Axes>(&self, x: Tensor<S, f32, D>) -> Tensor<S, f32, D>
     where
@@ -112,7 +124,7 @@ impl<const C: usize, D: Device<f32>> BatchNorm2D<C, D> {
 }
 
 impl<const C: usize, H: Dim, W: Dim, D: Device<f32>>
-    Module<Tensor<(Const<C>, H, W), f32, D, NoneTape>> for BatchNorm2D<C, D>
+    Module<Tensor<(Const<C>, H, W), f32, D, NoneTape>> for BatchNorm2D<C, f32, D>
 {
     type Output = Tensor<(Const<C>, H, W), f32, D, NoneTape>;
 
@@ -123,7 +135,7 @@ impl<const C: usize, H: Dim, W: Dim, D: Device<f32>>
 }
 
 impl<B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>>
-    Module<Tensor<(B, Const<C>, H, W), f32, D, NoneTape>> for BatchNorm2D<C, D>
+    Module<Tensor<(B, Const<C>, H, W), f32, D, NoneTape>> for BatchNorm2D<C, f32, D>
 {
     type Output = Tensor<(B, Const<C>, H, W), f32, D, NoneTape>;
 
@@ -134,7 +146,7 @@ impl<B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>>
 }
 
 impl<const C: usize, H: Dim, W: Dim, D: Device<f32>>
-    ModuleMut<Tensor<(Const<C>, H, W), f32, D, OwnedTape<D>>> for BatchNorm2D<C, D>
+    ModuleMut<Tensor<(Const<C>, H, W), f32, D, OwnedTape<D>>> for BatchNorm2D<C, f32, D>
 {
     type Output = Tensor<(Const<C>, H, W), f32, D, OwnedTape<D>>;
 
@@ -145,7 +157,7 @@ impl<const C: usize, H: Dim, W: Dim, D: Device<f32>>
 }
 
 impl<B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>>
-    ModuleMut<Tensor<(B, Const<C>, H, W), f32, D, OwnedTape<D>>> for BatchNorm2D<C, D>
+    ModuleMut<Tensor<(B, Const<C>, H, W), f32, D, OwnedTape<D>>> for BatchNorm2D<C, f32, D>
 {
     type Output = Tensor<(B, Const<C>, H, W), f32, D, OwnedTape<D>>;
 
@@ -158,7 +170,7 @@ impl<B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>>
     }
 }
 
-impl<const C: usize, D: Device<f32>> BuildModule<D, f32> for BatchNorm2D<C, D> {
+impl<const C: usize, D: Device<f32>> BuildModule<D, f32> for BatchNorm2D<C, f32, D> {
     fn try_build(device: &D) -> Result<Self, D::Err> {
         Ok(Self {
             scale: device.try_ones()?,
@@ -171,7 +183,7 @@ impl<const C: usize, D: Device<f32>> BuildModule<D, f32> for BatchNorm2D<C, D> {
     }
 }
 
-impl<const C: usize, D: Device<f32>> ResetParams<D, f32> for BatchNorm2D<C, D> {
+impl<const C: usize, D: Device<f32>> ResetParams<D, f32> for BatchNorm2D<C, f32, D> {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.scale.try_fill_with_ones()?;
         self.bias.try_fill_with_zeros()?;
@@ -181,8 +193,8 @@ impl<const C: usize, D: Device<f32>> ResetParams<D, f32> for BatchNorm2D<C, D> {
     }
 }
 
-impl<const C: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for BatchNorm2D<C, D1> {
-    type Output = BatchNorm2D<C, D2>;
+impl<const C: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for BatchNorm2D<C, f32, D1> {
+    type Output = BatchNorm2D<C, f32, D2>;
     fn to_device(&self, device: &D2) -> Self::Output {
         BatchNorm2D {
             scale: self.scale.to_device(device),
@@ -195,7 +207,7 @@ impl<const C: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for BatchNor
     }
 }
 
-impl<const C: usize, D: Device<f32>> GradientUpdate<D, f32> for BatchNorm2D<C, D> {
+impl<const C: usize, D: Device<f32>> GradientUpdate<D, f32> for BatchNorm2D<C, f32, D> {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
         U: ParamUpdater<D, f32>,
@@ -208,15 +220,15 @@ impl<const C: usize, D: Device<f32>> GradientUpdate<D, f32> for BatchNorm2D<C, D
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::tests::*;
+    use super::builder::BatchNorm2D;
+    use crate::{nn::*, shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_batchnorm2d_3d_forward_mut() {
         let dev = TestDevice::seed_from_u64(0);
 
-        let x1: Tensor<Rank3<3, 2, 2>, f32, _> = dev.sample_normal();
-        let mut bn: BatchNorm2D<3, _> = BuildModule::build(&dev);
+        let x1: Tensor<Rank3<3, 2, 2>, f32, _> = dev.sample(rand_distr::StandardNormal);
+        let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
         let y1 = bn.forward_mut(x1.trace());
         assert_close(
@@ -251,7 +263,7 @@ mod tests {
         let dev = TestDevice::seed_from_u64(2);
 
         let x1 = dev.sample_normal::<Rank4<2, 2, 2, 3>>();
-        let mut bn: BatchNorm2D<2, _> = BuildModule::build(&dev);
+        let mut bn = BatchNorm2D::<2>::build_on_device(&dev);
 
         let y1 = bn.forward_mut(x1.trace());
         #[rustfmt::skip]
@@ -283,7 +295,7 @@ mod tests {
         let dev = TestDevice::seed_from_u64(12);
 
         let x1 = dev.sample_normal::<Rank3<3, 4, 5>>();
-        let mut bn: BatchNorm2D<3, _> = BuildModule::build(&dev);
+        let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
         let _ = bn.forward_mut(x1.trace());
         assert_close(

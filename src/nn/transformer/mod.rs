@@ -8,11 +8,38 @@ pub use mha::*;
 
 use crate::{
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
-    tensor::{Cpu, PutTape, SplitTape},
+    shapes::Dtype,
+    tensor::{DeviceStorage, PutTape, SplitTape},
     tensor_ops::Device,
 };
 
-use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+
+pub mod builder {
+    #[derive(Debug, Clone)]
+    pub struct Transformer<
+        const MODEL_DIM: usize,
+        const NUM_HEADS: usize,
+        const NUM_ENCODER_LAYERS: usize,
+        const NUM_DECODER_LAYERS: usize,
+        const FF_DIM: usize,
+    >;
+
+    pub use super::decoder::builder::*;
+    pub use super::encoder::builder::*;
+    pub use super::mha::builder::MultiHeadAttention;
+}
+
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
+    BuildOnDevice<D, f32> for builder::Transformer<M, H, A, B, F>
+where
+    D: Device<f32>,
+{
+    type Built = Transformer<M, H, A, B, F, f32, D>;
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
+        Self::Built::try_build(device)
+    }
+}
 
 /// **Requires Nightly** Transformer architecture as described in
 /// [Attention is all you need](https://arxiv.org/abs/1706.03762).
@@ -44,14 +71,15 @@ pub struct Transformer<
     const NUM_ENCODER_LAYERS: usize,
     const NUM_DECODER_LAYERS: usize,
     const FF_DIM: usize,
-    D: Device<f32> = Cpu,
+    E: Dtype,
+    D: DeviceStorage,
 > {
-    pub encoder: TransformerEncoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_ENCODER_LAYERS, D>,
-    pub decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS, D>,
+    pub encoder: TransformerEncoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_ENCODER_LAYERS, E, D>,
+    pub decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS, E, D>,
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
-    BuildModule<D, f32> for Transformer<M, H, A, B, F, D>
+    BuildModule<D, f32> for Transformer<M, H, A, B, F, f32, D>
 where
     D: Device<f32>,
 {
@@ -64,7 +92,7 @@ where
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
-    ResetParams<D, f32> for Transformer<M, H, A, B, F, D>
+    ResetParams<D, f32> for Transformer<M, H, A, B, F, f32, D>
 where
     D: Device<f32>,
 {
@@ -76,7 +104,7 @@ where
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D>
-    GradientUpdate<D, f32> for Transformer<M, H, A, B, F, D>
+    GradientUpdate<D, f32> for Transformer<M, H, A, B, F, f32, D>
 where
     D: Device<f32>,
 {
@@ -91,12 +119,12 @@ where
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D1, D2>
-    ToDevice<D2> for Transformer<M, H, A, B, F, D1>
+    ToDevice<D2> for Transformer<M, H, A, B, F, f32, D1>
 where
     D1: Device<f32>,
     D2: Device<f32>,
 {
-    type Output = Transformer<M, H, A, B, F, D2>;
+    type Output = Transformer<M, H, A, B, F, f32, D2>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
         Transformer {
@@ -115,10 +143,10 @@ impl<
         D: Device<f32>,
         Src: SplitTape,
         Tgt: PutTape<Src::Tape>,
-    > Module<(Src, Tgt)> for Transformer<M, H, EL, DL, F, D>
+    > Module<(Src, Tgt)> for Transformer<M, H, EL, DL, F, f32, D>
 where
-    TransformerEncoder<M, H, F, EL, D>: Module<Src, Output = Src>,
-    TransformerDecoder<M, H, F, DL, D>: Module<
+    TransformerEncoder<M, H, F, EL, f32, D>: Module<Src, Output = Src>,
+    TransformerDecoder<M, H, F, DL, f32, D>: Module<
         (<Tgt as PutTape<Src::Tape>>::Output, Src::NoTape),
         Output = <Tgt as PutTape<Src::Tape>>::Output,
     >,
@@ -132,7 +160,7 @@ where
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, D, T>
-    ModuleMut<T> for Transformer<M, H, A, B, F, D>
+    ModuleMut<T> for Transformer<M, H, A, B, F, f32, D>
 where
     D: Device<f32>,
     Self: Module<T>,
@@ -152,7 +180,8 @@ mod tests {
     #[test]
     fn test_forward() {
         let dev = TestDevice::seed_from_u64(0);
-        let mut t: Transformer<16, 4, 3, 3, 8, _> = BuildModule::build(&dev);
+        type Model = builder::Transformer<16, 4, 3, 3, 8>;
+        let mut t = Model::build_on_device(&dev);
 
         // unbatched
         let src = dev.sample_normal::<Rank2<7, 16>>();
@@ -168,7 +197,8 @@ mod tests {
     #[test]
     fn test_backward() {
         let dev = TestDevice::seed_from_u64(0);
-        let mut t: Transformer<16, 4, 3, 3, 8, _> = BuildModule::build(&dev);
+        type Model = builder::Transformer<16, 4, 3, 3, 8>;
+        let mut t = Model::build_on_device(&dev);
 
         let src = dev.sample_normal::<Rank3<4, 12, 16>>();
         let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();

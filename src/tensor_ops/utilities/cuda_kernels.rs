@@ -22,7 +22,7 @@ pub trait UnaryOpCudaKernel<E> {
     const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
 }
 
-impl<E: Dtype + ValidAsZeroBits, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryKernel<K, E>
+impl<E: Dtype, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryKernel<K, E>
     for Cuda
 {
     fn forward<S: Shape>(
@@ -36,7 +36,7 @@ impl<E: Dtype + ValidAsZeroBits, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryK
         }
 
         let numel = inp.data.len();
-        let mut storage = self.dev.alloc_zeros_async::<E>(numel)?;
+        let mut storage = unsafe { self.dev.alloc_async::<E>(numel) }?;
 
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -93,7 +93,7 @@ pub trait BinaryOpCudaKernel<E> {
     const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
 }
 
-impl<E: Dtype + ValidAsZeroBits, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E>
+impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E>
     for Cuda
 {
     fn forward<S: Shape>(
@@ -111,7 +111,7 @@ impl<E: Dtype + ValidAsZeroBits, K: BinaryOpCudaKernel<E> + AsKernelParam> Binar
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = self.dev.alloc_zeros_async::<E>(numel)?;
+        let mut storage = unsafe { self.dev.alloc_async::<E>(numel) }?;
 
         let dims: CudaSlice<usize> = self.dev.take_async(shape.concrete().into())?;
         let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;

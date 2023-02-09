@@ -90,7 +90,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{shapes::Rank3, tensor::*, tensor_ops::*, tests::*};
+    use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_add_0d() {

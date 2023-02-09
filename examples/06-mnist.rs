@@ -64,11 +64,7 @@ impl MnistDataset {
             choices[self.lbl[img_idx]] = 1.0;
             lbl_data.extend(choices);
         }
-        let mut img = dev.zeros();
-        img.copy_from(&img_data);
-        let mut lbl = dev.zeros();
-        lbl.copy_from(&lbl_data);
-        (img, lbl)
+        (dev.tensor(img_data), dev.tensor(lbl_data))
     }
 }
 
@@ -99,7 +95,7 @@ fn main() {
 
     // initialize model and optimizer
     let mut model = Mlp::build_on_device(&dev);
-    let mut opt = Adam::default();
+    let mut opt = Adam::new(&model, Default::default());
 
     // initialize dataset
     let dataset = MnistDataset::train(&mnist_path);

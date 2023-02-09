@@ -1,4 +1,4 @@
-//! High level neural network building blocks such as [Linear], activations, and tuples as [Module]s.
+//! High level neural network building blocks such as [modules::Linear], activations, and tuples as [Module]s.
 //! Also includes `.save()` & `.load()` for all [Module]s.
 //!
 //! # Mutable vs Immutable forwards
@@ -19,9 +19,9 @@
 //! Here is a list of existing modules that have different behavior in these
 //! two functions:
 //!
-//! - [BatchNorm2D]
-//! - [DropoutOneIn]
-//! - [Dropout]
+//! - [modules::BatchNorm2D]
+//! - [modules::DropoutOneIn]
+//! - [modules::Dropout]
 //!
 //! # Initializing
 //!
@@ -36,16 +36,17 @@
 //!
 //! Here, the return type of [BuildOnDevice] depends on the device you pass in.
 //!
-//! For example, when using device [Cpu], the type is `Linear<5, 2, Cpu>`, or when using
+//! For example, when using device [crate::tensor::Cpu], the type is `Linear<5, 2, Cpu>`, or when using
 //! a `Cuda` device, the type is `Linear<5, 2, Cuda>`.
 //!
 //! Alternatively, you can use [BuildModule], which requires device specific model definitions:
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
+//! use dfdx::nn::modules::Linear;
 //! type Dev = Cpu;
 //! let dev: Dev = Default::default();
-//! let model: Linear<5, 2, Dev> = BuildModule::build(&dev);
+//! let model: Linear<5, 2, f32, Dev> = BuildModule::build(&dev);
 //! ```
 //!
 //! # Resetting parameters
@@ -56,7 +57,8 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let mut model: Linear<5, 2> = BuildModule::build(&dev);
+//! type Model = Linear<5, 2>;
+//! let mut model = Model::build_on_device(&dev);
 //! model.reset_params();
 //! ```
 //!
@@ -113,6 +115,10 @@ mod impl_module_for_tuples;
 mod layer_norm;
 mod linear;
 mod module;
+#[cfg(feature = "numpy")]
+mod npz;
+#[cfg(feature = "numpy")]
+mod npz_impls;
 mod pool2d;
 mod pool_global;
 mod repeated;
@@ -120,38 +126,61 @@ mod residual;
 mod split_into;
 mod transformer;
 
-pub use activations::*;
-pub use add_into::*;
-pub use batchnorm2d::*;
-pub use dropout::*;
-pub use embedding::*;
-pub use generalized_residual::*;
-pub use impl_module_for_tuples::*;
-pub use layer_norm::*;
-pub use linear::*;
 pub use module::*;
-pub use pool_global::*;
-pub use repeated::*;
-pub use residual::*;
-pub use split_into::*;
-
-#[cfg(feature = "nightly")]
-pub use conv::*;
-#[cfg(feature = "nightly")]
-pub use flatten::*;
-#[cfg(feature = "nightly")]
-pub use pool2d::*;
-#[cfg(feature = "nightly")]
-pub use transformer::*;
-
-#[cfg(feature = "numpy")]
-mod npz;
 
 #[cfg(feature = "numpy")]
 pub use npz::*;
 
-#[cfg(feature = "numpy")]
-mod npz_impls;
+pub mod modules {
+    /// Structs containing initialized Tensors & impls for [super::Module]. See
+    /// [super::builders] for helpful utilities in creating these
+    /// in a device/dtype agnostic way.
+    pub use super::activations::*;
+    pub use super::add_into::AddInto;
+    pub use super::batchnorm2d::BatchNorm2D;
+    #[cfg(feature = "nightly")]
+    pub use super::conv::Conv2D;
+    pub use super::dropout::{Dropout, DropoutOneIn};
+    pub use super::embedding::Embedding;
+    #[cfg(feature = "nightly")]
+    pub use super::flatten::Flatten2D;
+    pub use super::generalized_residual::GeneralizedResidual;
+    pub use super::layer_norm::LayerNorm1D;
+    pub use super::linear::Linear;
+    #[cfg(feature = "nightly")]
+    pub use super::pool2d::{AvgPool2D, MaxPool2D, MinPool2D};
+    pub use super::pool_global::{AvgPoolGlobal, MaxPoolGlobal, MinPoolGlobal};
+    pub use super::repeated::Repeated;
+    pub use super::residual::Residual;
+    pub use super::split_into::SplitInto;
+    #[cfg(feature = "nightly")]
+    pub use super::transformer::*;
+}
+
+pub mod builders {
+    /// Simple specification of network structure, without
+    /// worrying about device or dtype.
+    pub use super::activations::*;
+    pub use super::add_into::AddInto;
+    pub use super::batchnorm2d::builder::BatchNorm2D;
+    #[cfg(feature = "nightly")]
+    pub use super::conv::builder::Conv2D;
+    pub use super::dropout::{Dropout, DropoutOneIn};
+    pub use super::embedding::builder::Embedding;
+    #[cfg(feature = "nightly")]
+    pub use super::flatten::Flatten2D;
+    pub use super::generalized_residual::GeneralizedResidual;
+    pub use super::layer_norm::builder::LayerNorm1D;
+    pub use super::linear::builder::Linear;
+    #[cfg(feature = "nightly")]
+    pub use super::pool2d::{AvgPool2D, MaxPool2D, MinPool2D};
+    pub use super::pool_global::{AvgPoolGlobal, MaxPoolGlobal, MinPoolGlobal};
+    pub use super::repeated::Repeated;
+    pub use super::residual::Residual;
+    pub use super::split_into::SplitInto;
+    #[cfg(feature = "nightly")]
+    pub use super::transformer::builder::*;
+}
 
 #[cfg(test)]
 mod tests {

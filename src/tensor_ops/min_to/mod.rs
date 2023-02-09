@@ -35,7 +35,7 @@ pub trait MinTo: HasErr + HasShape {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let t: Tensor<Rank2<2, 3>, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+    /// let t: Tensor<Rank2<2, 3>, f32, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
     /// let r = t.min::<Rank1<2>, _>(); // or `min::<_, Axis<1>>()`
     /// assert_eq!(r.array(), [1.0, -3.0]);
     /// ```

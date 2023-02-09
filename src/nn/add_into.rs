@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
 
-use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
 
 /// Add inputs together into a single tensor. `T` should be a tuple
 //// where every element of the tuple has the same output type
@@ -16,9 +16,9 @@ use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// # let dev: Cpu = Default::default();
 /// type Model = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
 /// let model = Model::build_on_device(&dev);
-/// let a = dev.zeros::<Rank1<2>>();
-/// let b = dev.zeros::<Rank1<3>>();
-/// let _: Tensor<Rank1<5>> = model.forward((a, b));
+/// let a: Tensor<Rank1<2>, f32, _> = dev.zeros();
+/// let b: Tensor<Rank1<3>, f32, _> = dev.zeros();
+/// let _: Tensor<Rank1<5>, f32, _> = model.forward((a, b));
 /// ```
 #[derive(Debug, Default, Clone)]
 pub struct AddInto<T>(pub T);
@@ -30,6 +30,10 @@ impl<T: GradientUpdate<D, E>, D: Device<E>, E: Dtype> GradientUpdate<D, E> for A
     {
         self.0.update(updater, unused)
     }
+}
+
+impl<T: BuildOnDevice<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for AddInto<T> {
+    type Built = AddInto<T::Built>;
 }
 
 impl<T: BuildModule<D, E>, D: Device<E>, E: Dtype> BuildModule<D, E> for AddInto<T> {
@@ -98,7 +102,7 @@ mod tests {
     use super::*;
     use crate::{
         gradients::OwnedTape,
-        nn::{tests::SimpleUpdater, BuildOnDevice, Linear, ReLU},
+        nn::{builders::*, tests::SimpleUpdater},
         shapes::*,
         tensor::*,
         tests::TestDevice,
@@ -112,7 +116,8 @@ mod tests {
     #[test]
     fn test_add_into_2() {
         let dev: TestDevice = Default::default();
-        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>)> = BuildModule::build(&dev);
+        type Model = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
+        let m = Model::build_on_device(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -126,8 +131,8 @@ mod tests {
     #[test]
     fn test_add_into_3() {
         let dev: TestDevice = Default::default();
-        let m: AddInto<(Linear<2, 5, _>, Linear<3, 5, _>, Linear<4, 5, _>)> =
-            BuildModule::build(&dev);
+        type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>)>;
+        let m = Model::build_on_device(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -189,14 +194,15 @@ mod tests {
     #[test]
     fn test_add_into_6() {
         let dev: TestDevice = Default::default();
-        let m: AddInto<(
-            Linear<2, 5, _>,
-            Linear<3, 5, _>,
-            Linear<4, 5, _>,
-            Linear<5, 5, _>,
-            Linear<6, 5, _>,
-            Linear<7, 5, _>,
-        )> = BuildModule::build(&dev);
+        type Model = AddInto<(
+            Linear<2, 5>,
+            Linear<3, 5>,
+            Linear<4, 5>,
+            Linear<5, 5>,
+            Linear<6, 5>,
+            Linear<7, 5>,
+        )>;
+        let m = Model::build_on_device(&dev);
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -218,7 +224,8 @@ mod tests {
     #[test]
     fn test_missing_gradients() {
         let dev: TestDevice = Default::default();
-        let mut model: AddInto<(Linear<5, 3, _>, Linear<5, 3, _>)> = BuildModule::build(&dev);
+        type Model = AddInto<(Linear<5, 3>, Linear<5, 3>)>;
+        let mut model = Model::build_on_device(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

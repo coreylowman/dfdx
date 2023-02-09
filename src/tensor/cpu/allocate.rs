@@ -122,77 +122,25 @@ impl<E: Unit> CopySlice<E> for Cpu {
     }
 }
 
-impl<E: Unit> TensorFromArray<E, Rank0, E> for Cpu {
-    fn try_tensor(&self, src: E) -> Result<Tensor<Rank0, E, Self>, Self::Err> {
-        let mut storage: StridedArray<_, E> = StridedArray::new(Default::default())?;
-        storage[[]].clone_from(&src);
-        Ok(self.upgrade(storage))
-    }
-}
-
-impl<E: Unit, const M: usize> TensorFromArray<[E; M], Rank1<M>, E> for Cpu {
-    fn try_tensor(&self, src: [E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
-        let mut storage: StridedArray<Rank1<M>, E> = StridedArray::new(Default::default())?;
-        let mut iter = storage.iter_mut_with_index();
-        while let Some((v, [m])) = iter.next() {
-            v.clone_from(&src[m]);
-        }
-        Ok(self.upgrade(storage))
-    }
-}
-
-impl<E: Unit, const M: usize> TensorFromArray<&[E; M], Rank1<M>, E> for Cpu {
-    fn try_tensor(&self, src: &[E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
-        let mut storage: StridedArray<Rank1<M>, E> = StridedArray::new(Default::default())?;
-        let mut iter = storage.iter_mut_with_index();
-        while let Some((v, [m])) = iter.next() {
-            v.clone_from(&src[m]);
-        }
-        Ok(self.upgrade(storage))
-    }
-}
-
-impl<E: Unit, const M: usize, const N: usize> TensorFromArray<[[E; N]; M], Rank2<M, N>, E> for Cpu {
-    fn try_tensor(&self, src: [[E; N]; M]) -> Result<Tensor<Rank2<M, N>, E, Self>, Self::Err> {
-        let mut storage: StridedArray<Rank2<M, N>, E> = StridedArray::new(Default::default())?;
-        let mut iter = storage.iter_mut_with_index();
-        while let Some((v, [m, n])) = iter.next() {
-            v.clone_from(&src[m][n]);
-        }
-        Ok(self.upgrade(storage))
-    }
-}
-
-impl<E: Unit, const M: usize, const N: usize, const O: usize>
-    TensorFromArray<[[[E; O]; N]; M], Rank3<M, N, O>, E> for Cpu
-{
-    fn try_tensor(
+impl<E: Unit> TensorFromVec<E> for Cpu {
+    fn try_tensor_from_vec<S: Shape>(
         &self,
-        src: [[[E; O]; N]; M],
-    ) -> Result<Tensor<Rank3<M, N, O>, E, Self>, Self::Err> {
-        let mut storage: StridedArray<Rank3<M, N, O>, E> = StridedArray::new(Default::default())?;
-        let mut iter = storage.iter_mut_with_index();
-        while let Some((v, [m, n, o])) = iter.next() {
-            v.clone_from(&src[m][n][o]);
-        }
-        Ok(self.upgrade(storage))
-    }
-}
+        src: Vec<E>,
+        shape: S,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        let num_elements = shape.num_elements();
 
-impl<E: Unit, const M: usize, const N: usize, const O: usize, const P: usize>
-    TensorFromArray<[[[[E; P]; O]; N]; M], Rank4<M, N, O, P>, E> for Cpu
-{
-    fn try_tensor(
-        &self,
-        src: [[[[E; P]; O]; N]; M],
-    ) -> Result<Tensor<Rank4<M, N, O, P>, E, Self>, Self::Err> {
-        let mut storage: StridedArray<Rank4<M, N, O, P>, E> =
-            StridedArray::new(Default::default())?;
-        let mut iter = storage.iter_mut_with_index();
-        while let Some((v, [m, n, o, p])) = iter.next() {
-            v.clone_from(&src[m][n][o][p]);
+        if src.len() != num_elements {
+            Err(CpuError::WrongNumElements)
+        } else {
+            let array = StridedArray {
+                data: Arc::new(src),
+                shape,
+                strides: shape.strides(),
+            };
+
+            Ok(self.upgrade(array))
         }
-        Ok(self.upgrade(storage))
     }
 }
 

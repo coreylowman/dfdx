@@ -2,7 +2,7 @@
 
 use dfdx::{
     shapes::{Const, HasShape, Rank1, Rank2, Rank3},
-    tensor::{AsArray, Cpu, OnesTensor, SampleTensor, Tensor, TensorFromArray, ZerosTensor},
+    tensor::{AsArray, Cpu, OnesTensor, SampleTensor, Tensor, TensorFrom, ZerosTensor},
 };
 
 fn main() {
@@ -16,32 +16,40 @@ fn main() {
     // 2. Data type (in this case the default of `f32`)
     // 3. The device they are stored on (in this case the default of `Cpu`)
     // 4. A tape - see examples/04-gradients.rs
-    let _: Tensor<Rank1<5>> = dev.tensor([1.0, 2.0, 3.0, 4.0, 5.0]);
+    let _: Tensor<Rank1<5>, f32, Cpu> = dev.tensor([1.0, 2.0, 3.0, 4.0, 5.0]);
 
     // You can also use [ZerosTensor::zeros] and [OnesTensor::ones] to create tensors
     // filled with the corresponding values.
-    let _: Tensor<Rank2<2, 3>> = dev.zeros();
-    let _: Tensor<Rank3<1, 2, 3>> = dev.ones();
+    let _: Tensor<Rank2<2, 3>, f32, Cpu> = dev.zeros();
+    let _: Tensor<Rank3<1, 2, 3>, f32, Cpu> = dev.ones();
 
     // Dynamic size
-    let dynamic: Tensor<(usize, Const<3>, Const<4>)> = dev.zeros_like(&(5, Const, Const));
+    let dynamic: Tensor<(usize, Const<3>, Const<4>), f32, Cpu> = dev.zeros_like(&(5, Const, Const));
     println!("Dynamic shape={:?}", dynamic.shape());
 
     // each of the creation methods also supports specifying the shape on the function
     // note to change the dtype we specify the dtype as the 2nd generic parameter
+<<<<<<< HEAD
     let _: Tensor<Rank2<2, 3>, f64> = dev.zeros();
     let _: Tensor<Rank2<2, 3>, f64> = dev.ones();
+=======
+    let _: Tensor<Rank2<2, 3>, f64, Cpu> = dev.zeros();
+    let _: Tensor<Rank2<2, 3>, f32, Cpu> = dev.ones();
+>>>>>>> main
 
     // we can also create tensors filled with random values
     // from a normal distribution
-    let _: Tensor<Rank3<2, 3, 4>> = dev.sample(rand_distr::StandardNormal);
+    let _: Tensor<Rank3<2, 3, 4>, f32, Cpu> = dev.sample_normal();
 
     // or a uniform distribution
-    let a: Tensor<Rank3<2, 3, 4>> = dev.sample(rand_distr::Uniform::new(0.0f32, 1.0));
+    let _: Tensor<Rank3<2, 3, 4>, f32, Cpu> = dev.sample_uniform();
+
+    // or whatever distributino you want to use!
+    let a: Tensor<Rank3<2, 3, 4>, f32, Cpu> = dev.sample(rand_distr::Uniform::new(-1.0, 1.0));
 
     // use `AsArray::as_array` to get acces to the data as an array
     let a_data: [[[f32; 4]; 3]; 2] = a.array();
-    println!("a={:?}", a_data);
+    println!("a={a_data:?}");
 
     // you can clone() a tensor:
     let a_copy = a.clone();

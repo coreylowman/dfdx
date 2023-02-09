@@ -25,7 +25,7 @@ macro_rules! impl_reshape {
                 }
         
                 let numel = inp.data.len();
-                let mut storage = self.dev.alloc_zeros_async::<$TypeName>(numel)?;
+                let mut storage = unsafe { self.dev.alloc_async::<$TypeName>(numel) }?;
         
                 let inp_dims: CudaSlice<usize> = self.dev.take_async(inp.shape.concrete().into())?;
                 let dst_dims: CudaSlice<usize> = self.dev.take_async(dst.concrete().into())?;

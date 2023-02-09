@@ -1,6 +1,20 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+
+pub mod builder {
+    #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct Linear<const I: usize, const O: usize>;
+}
+
+impl<const I: usize, const O: usize, D: Device<f32>> BuildOnDevice<D, f32>
+    for builder::Linear<I, O>
+{
+    type Built = Linear<I, O, f32, D>;
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
+        Self::Built::try_build(device)
+    }
+}
 
 /// A linear transformation of the form `weight * x + bias`, where `weight` is a matrix, `x` is a vector or matrix,
 /// and `bias` is a vector.
@@ -20,20 +34,22 @@ use super::module::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// type Model = Linear<5, 2>;
 /// let model = Model::build_on_device(&dev);
 /// // single item forward
-/// let _: Tensor<Rank1<2>> = model.forward(dev.zeros::<Rank1<5>>());
+/// let _: Tensor<Rank1<2>, f32, _> = model.forward(dev.zeros::<Rank1<5>>());
 /// // batched forward
-/// let _: Tensor<Rank2<10, 2>> = model.forward(dev.zeros::<Rank2<10, 5>>());
+/// let _: Tensor<Rank2<10, 2>, f32, _> = model.forward(dev.zeros::<Rank2<10, 5>>());
 /// ```
 #[derive(Debug, Clone)]
-pub struct Linear<const I: usize, const O: usize, D: Device<f32> = Cpu> {
+pub struct Linear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> {
     /// Transposed weight matrix, shape (I, O)
-    pub weight: Tensor<Rank2<O, I>, f32, D>,
+    pub weight: Tensor<Rank2<O, I>, E, D>,
 
     /// Bias vector, shape (O, )
-    pub bias: Tensor<Rank1<O>, f32, D>,
+    pub bias: Tensor<Rank1<O>, E, D>,
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>> GradientUpdate<D, f32> for Linear<I, O, D> {
+impl<const I: usize, const O: usize, D: DeviceStorage> GradientUpdate<D, f32>
+    for Linear<I, O, f32, D>
+{
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
     where
         U: ParamUpdater<D, f32>,
@@ -44,7 +60,7 @@ impl<const I: usize, const O: usize, D: Device<f32>> GradientUpdate<D, f32> for 
     }
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>> BuildModule<D, f32> for Linear<I, O, D> {
+impl<const I: usize, const O: usize, D: Device<f32>> BuildModule<D, f32> for Linear<I, O, f32, D> {
     fn try_build(device: &D) -> Result<Self, D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
         let distr = rand_distr::Uniform::new(-bound, bound);
@@ -54,7 +70,9 @@ impl<const I: usize, const O: usize, D: Device<f32>> BuildModule<D, f32> for Lin
     }
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>> ResetParams<D, f32> for Linear<I, O, D> {
+impl<const I: usize, const O: usize, D: SampleTensor<f32>> ResetParams<D, f32>
+    for Linear<I, O, f32, D>
+{
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         let bound: f32 = 1.0 / (I as f32).sqrt();
         let distr = rand_distr::Uniform::new(-bound, bound);
@@ -65,9 +83,9 @@ impl<const I: usize, const O: usize, D: Device<f32>> ResetParams<D, f32> for Lin
 }
 
 impl<const I: usize, const O: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2>
-    for Linear<I, O, D1>
+    for Linear<I, O, f32, D1>
 {
-    type Output = Linear<I, O, D2>;
+    type Output = Linear<I, O, f32, D2>;
     fn to_device(&self, device: &D2) -> Self::Output {
         Linear {
             weight: self.weight.to_device(device),
@@ -76,11 +94,11 @@ impl<const I: usize, const O: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<
     }
 }
 
-impl<const I: usize, const O: usize, D: Device<f32>, T> Module<T> for Linear<I, O, D>
+impl<const I: usize, const O: usize, D: Device<f32>, T> Module<T> for Linear<I, O, f32, D>
 where
     T: SplitTape + TryMatMul<Tensor<Rank2<I, O>, f32, D, T::Tape>>,
     T::Tape: Tape<D>,
-    for<'a> Bias1D<'a, O, D>: Module<T::Output, Output = T::Output>,
+    for<'a> Bias1D<'a, O, f32, D>: Module<T::Output, Output = T::Output>,
 {
     type Output = T::Output;
 
@@ -91,7 +109,7 @@ where
     }
 }
 
-impl<T, const I: usize, const O: usize, D: Device<f32>> ModuleMut<T> for Linear<I, O, D>
+impl<T, const I: usize, const O: usize, D: Device<f32>> ModuleMut<T> for Linear<I, O, f32, D>
 where
     Self: Module<T>,
 {
@@ -102,12 +120,12 @@ where
 }
 
 #[derive(Clone, Debug)]
-struct Bias1D<'a, const M: usize, D: Device<f32> = Cpu> {
-    beta: &'a Tensor<Rank1<M>, f32, D>,
+struct Bias1D<'a, const M: usize, E: Dtype, D: DeviceStorage> {
+    beta: &'a Tensor<Rank1<M>, E, D>,
 }
 
 impl<'a, const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<Rank1<M>, f32, D, T>>
-    for Bias1D<'a, M, D>
+    for Bias1D<'a, M, f32, D>
 {
     type Output = Tensor<Rank1<M>, f32, D, T>;
     fn forward(&self, input: Tensor<Rank1<M>, f32, D, T>) -> Self::Output {
@@ -116,7 +134,7 @@ impl<'a, const M: usize, D: Device<f32>, T: Tape<D>> Module<Tensor<Rank1<M>, f32
 }
 
 impl<'a, B: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
-    Module<Tensor<(B, Const<M>), f32, D, T>> for Bias1D<'a, M, D>
+    Module<Tensor<(B, Const<M>), f32, D, T>> for Bias1D<'a, M, f32, D>
 {
     type Output = Tensor<(B, Const<M>), f32, D, T>;
     fn forward(&self, input: Tensor<(B, Const<M>), f32, D, T>) -> Self::Output {
@@ -125,7 +143,7 @@ impl<'a, B: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
 }
 
 impl<'a, B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
-    Module<Tensor<(B, S, Const<M>), f32, D, T>> for Bias1D<'a, M, D>
+    Module<Tensor<(B, S, Const<M>), f32, D, T>> for Bias1D<'a, M, f32, D>
 {
     type Output = Tensor<(B, S, Const<M>), f32, D, T>;
     fn forward(&self, input: Tensor<(B, S, Const<M>), f32, D, T>) -> Self::Output {
@@ -136,7 +154,6 @@ impl<'a, B: Dim, S: Dim, const M: usize, D: Device<f32>, T: Tape<D>>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::BuildOnDevice;
     use crate::{nn::tests::SimpleUpdater, tests::*, unique_id::HasUniqueId};
 
     const W: [[f32; 5]; 2] = [
@@ -145,25 +162,19 @@ mod tests {
     ];
     const B: [f32; 2] = [0.3765365, -0.290717];
 
-    #[cfg(feature = "cuda")]
     #[test]
     fn test_linear_ondevice() {
-        use super::super::module::OnDevice;
-
-        let cuda: Cuda = Default::default();
-        let _: Linear<1, 1, _> = BuildModule::build(&cuda);
-        let _: OnDevice<Linear<1, 1>, Cuda> = BuildModule::build(&cuda);
-        let _: OnDevice<(Linear<1, 2>, Linear<2, 1>), Cuda> = BuildModule::build(&cuda);
-
-        let _: Linear<1, 1, Cuda> = Linear::<1, 1>::build_on_device(&cuda);
-        let _: Linear<1, 1, _> = Linear::<1, 1>::build_on_device(&cuda);
-        let _ = Linear::<1, 1>::build_on_device(&cuda);
+        let dev: TestDevice = Default::default();
+        let _: Linear<1, 1, _, _> = BuildModule::build(&dev);
+        let _: Linear<1, 1, f32, TestDevice> = builder::Linear::<1, 1>::build_on_device(&dev);
+        let _: Linear<1, 1, _, _> = builder::Linear::<1, 1>::build_on_device(&dev);
+        let _ = builder::Linear::<1, 1>::build_on_device(&dev);
     }
 
     #[test]
     fn test_linear_initialize() {
         let dev: TestDevice = Default::default();
-        let m = Linear::<2000, 1>::build_on_device(&dev);
+        let m = builder::Linear::<2000, 1>::build_on_device(&dev);
         let bound = 1.0 / 2000.0f32.sqrt();
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);
@@ -276,7 +287,7 @@ mod tests {
     fn test_linear_missing_gradients() {
         let dev: TestDevice = Default::default();
 
-        let mut model: Linear<5, 3, _> = BuildModule::build(&dev);
+        let mut model = builder::Linear::<5, 3>::build_on_device(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

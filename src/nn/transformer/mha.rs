@@ -1,7 +1,32 @@
-use crate::{nn::*, optim::*, tensor::*, tensor_ops::*};
+use crate::{
+    nn::{modules::*, *},
+    optim::*,
+    shapes::Dtype,
+    tensor::*,
+    tensor_ops::*,
+};
 
 #[cfg(feature = "nightly")]
 use crate::{gradients::Tape, shapes::*, Assert, ConstTrue};
+
+pub mod builder {
+    #[derive(Debug, Clone)]
+    pub struct MultiHeadAttention<
+        const EMBED_DIM: usize,
+        const NUM_HEADS: usize,
+        const K_DIM: usize = EMBED_DIM,
+        const V_DIM: usize = EMBED_DIM,
+    >;
+}
+
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
+    BuildOnDevice<D, f32> for builder::MultiHeadAttention<M, H, K, V>
+{
+    type Built = MultiHeadAttention<M, H, K, V, f32, D>;
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
+        Self::Built::try_build(device)
+    }
+}
 
 /// **Requires Nightly** A multi-head attention layer.
 ///
@@ -22,18 +47,19 @@ use crate::{gradients::Tape, shapes::*, Assert, ConstTrue};
 pub struct MultiHeadAttention<
     const EMBED_DIM: usize,
     const NUM_HEADS: usize,
-    const K_DIM: usize = EMBED_DIM,
-    const V_DIM: usize = EMBED_DIM,
-    D: Device<f32> = Cpu,
+    const K_DIM: usize,
+    const V_DIM: usize,
+    E: Dtype,
+    D: DeviceStorage,
 > {
-    pub w_q: Linear<EMBED_DIM, K_DIM, D>,
-    pub w_k: Linear<EMBED_DIM, K_DIM, D>,
-    pub w_v: Linear<EMBED_DIM, V_DIM, D>,
-    pub w_o: Linear<V_DIM, EMBED_DIM, D>,
+    pub w_q: Linear<EMBED_DIM, K_DIM, E, D>,
+    pub w_k: Linear<EMBED_DIM, K_DIM, E, D>,
+    pub w_v: Linear<EMBED_DIM, V_DIM, E, D>,
+    pub w_o: Linear<V_DIM, EMBED_DIM, E, D>,
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    BuildModule<D, f32> for MultiHeadAttention<M, H, K, V, D>
+    BuildModule<D, f32> for MultiHeadAttention<M, H, K, V, f32, D>
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
@@ -46,7 +72,7 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    ResetParams<D, f32> for MultiHeadAttention<M, H, K, V, D>
+    ResetParams<D, f32> for MultiHeadAttention<M, H, K, V, f32, D>
 {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.w_q.try_reset_params()?;
@@ -57,8 +83,8 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    GradientUpdate<D, f32> for MultiHeadAttention<M, H, K, V, D>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, D: DeviceStorage>
+    GradientUpdate<D, f32> for MultiHeadAttention<M, H, K, V, f32, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
@@ -73,12 +99,12 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, D1, D2> ToDevice<D2>
-    for MultiHeadAttention<M, H, K, V, D1>
+    for MultiHeadAttention<M, H, K, V, f32, D1>
 where
     D1: Device<f32>,
     D2: Device<f32>,
 {
-    type Output = MultiHeadAttention<M, H, K, V, D2>;
+    type Output = MultiHeadAttention<M, H, K, V, f32, D2>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
         MultiHeadAttention {
@@ -105,7 +131,7 @@ impl<
         Tensor<Rank2<S1, M>, f32, D, T>,
         Tensor<Rank2<S2, M>, f32, D>,
         Tensor<Rank2<S2, M>, f32, D>,
-    )> for MultiHeadAttention<M, H, K, V, D>
+    )> for MultiHeadAttention<M, H, K, V, f32, D>
 where
     Assert<{ S1 * K == S1 * H * (K / H) }>: ConstTrue,
     Assert<{ S2 * K == S2 * H * (K / H) }>: ConstTrue,
@@ -165,7 +191,7 @@ impl<
         Tensor<Rank3<B, S1, M>, f32, D, T>,
         Tensor<Rank3<B, S2, M>, f32, D>,
         Tensor<Rank3<B, S2, M>, f32, D>,
-    )> for MultiHeadAttention<M, H, K, V, D>
+    )> for MultiHeadAttention<M, H, K, V, f32, D>
 where
     Assert<{ B * S1 * K == B * S1 * H * (K / H) }>: ConstTrue,
     Assert<{ B * S2 * K == B * S2 * H * (K / H) }>: ConstTrue,
@@ -209,10 +235,11 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D, Src> Module<Src>
-    for MultiHeadAttention<M, H, K, V, D>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D, Src> Module<Src>
+    for MultiHeadAttention<M, H, K, V, E, D>
 where
-    D: Device<f32>,
+    E: Dtype,
+    D: Device<E>,
     Src: SplitTape,
     Self: Module<(Src, Src::NoTape, Src::NoTape), Output = Src>,
 {
@@ -223,8 +250,8 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>, T> ModuleMut<T>
-    for MultiHeadAttention<M, H, K, V, D>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E: Dtype, D: Device<E>, T>
+    ModuleMut<T> for MultiHeadAttention<M, H, K, V, E, D>
 where
     Self: Module<T>,
 {
@@ -253,7 +280,7 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha = MultiHeadAttention::<M, NUM_HEADS>::build_on_device(&dev);
+        let mha = builder::MultiHeadAttention::<M, NUM_HEADS>::build_on_device(&dev);
 
         let q = dev.sample_normal::<Rank2<S1, M>>();
         let k = dev.sample_normal::<Rank2<S2, M>>();
@@ -287,7 +314,7 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha = MultiHeadAttention::<M, NUM_HEADS>::build_on_device(&dev);
+        let mha = builder::MultiHeadAttention::<M, NUM_HEADS>::build_on_device(&dev);
 
         let q = dev.sample_normal::<Rank3<BATCH, S1, M>>();
         let k = dev.sample_normal::<Rank3<BATCH, S2, M>>();
@@ -337,7 +364,7 @@ mod tests {
     fn test_backward_updates_all() {
         let dev: TestDevice = Default::default();
 
-        let mut mha = MultiHeadAttention::<12, 4>::build_on_device(&dev);
+        let mut mha = builder::MultiHeadAttention::<12, 4>::build_on_device(&dev);
 
         let q = dev.sample_normal::<Rank3<2, 3, 12>>();
         let k = dev.sample_normal::<Rank3<2, 4, 12>>();

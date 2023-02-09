@@ -27,9 +27,9 @@ pub trait PermuteTo: HasErr + HasShape {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank3<1, 2, 3>, f32> = dev.zeros();
-    /// let _ = a.clone().permute::<Rank3<3, 2, 1>, _>(); // or `permute::<_, Axes<2, 1, 0>>()`
-    /// let _ = a.clone().permute::<Rank3<2, 1, 3>, _>(); // or `permute::<_, Axes<1, 0, 2>>()`
+    /// let a: Tensor<Rank3<1, 2, 3>, f32, _> = dev.zeros();
+    /// let _ = a.clone().permute::<Rank3<3, 2, 1>, _>();
+    /// let _ = a.clone().permute::<_, Axes3<2, 1, 0>>();
     /// ```
     fn permute<Dst: Shape, Ax: Axes>(self) -> Self::WithShape<Dst>
     where

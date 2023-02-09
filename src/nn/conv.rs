@@ -1,6 +1,28 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+
+pub mod builder {
+    #[derive(Debug)]
+    pub struct Conv2D<
+        const IN_CHAN: usize,
+        const OUT_CHAN: usize,
+        const KERNEL_SIZE: usize,
+        const STRIDE: usize = 1,
+        const PADDING: usize = 0,
+    >;
+}
+
+impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
+    BuildOnDevice<D, f32> for builder::Conv2D<I, O, K, S, P>
+where
+    D: Device<f32>,
+{
+    type Built = Conv2D<I, O, K, S, P, f32, D>;
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
+        Self::Built::try_build(device)
+    }
+}
 
 /// **Requires Nightly** Performs 2d convolutions on 3d and 4d images.
 ///
@@ -17,16 +39,17 @@ pub struct Conv2D<
     const IN_CHAN: usize,
     const OUT_CHAN: usize,
     const KERNEL_SIZE: usize,
-    const STRIDE: usize = 1,
-    const PADDING: usize = 0,
-    D: Device<f32> = Cpu,
+    const STRIDE: usize,
+    const PADDING: usize,
+    E: Dtype,
+    D: DeviceStorage,
 > {
-    pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>, f32, D>,
-    pub bias: Tensor<Rank1<OUT_CHAN>, f32, D>,
+    pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>, E, D>,
+    pub bias: Tensor<Rank1<OUT_CHAN>, E, D>,
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
-    GradientUpdate<D, f32> for Conv2D<I, O, K, S, P, D>
+    GradientUpdate<D, f32> for Conv2D<I, O, K, S, P, f32, D>
 where
     D: Device<f32>,
 {
@@ -41,7 +64,7 @@ where
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
-    BuildModule<D, f32> for Conv2D<I, O, K, S, P, D>
+    BuildModule<D, f32> for Conv2D<I, O, K, S, P, f32, D>
 where
     D: Device<f32>,
 {
@@ -57,7 +80,7 @@ where
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D>
-    ResetParams<D, f32> for Conv2D<I, O, K, S, P, D>
+    ResetParams<D, f32> for Conv2D<I, O, K, S, P, f32, D>
 where
     D: Device<f32>,
 {
@@ -72,12 +95,12 @@ where
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D1, D2>
-    ToDevice<D2> for Conv2D<I, O, K, S, P, D1>
+    ToDevice<D2> for Conv2D<I, O, K, S, P, f32, D1>
 where
     D1: Device<f32>,
     D2: Device<f32>,
 {
-    type Output = Conv2D<I, O, K, S, P, D2>;
+    type Output = Conv2D<I, O, K, S, P, f32, D2>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
         Conv2D {
@@ -89,11 +112,11 @@ where
 
 #[cfg(feature = "nightly")]
 impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: usize, D, Img>
-    Module<Img> for Conv2D<C, O, K, S, P, D>
+    Module<Img> for Conv2D<C, O, K, S, P, f32, D>
 where
     D: Device<f32>,
     Img: TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P>,
-    for<'a> Bias2D<'a, O, D>: Module<Img::Output, Output = Img::Output>,
+    for<'a> Bias2D<'a, O, f32, D>: Module<Img::Output, Output = Img::Output>,
 {
     type Output = Img::Output;
     fn forward(&self, x: Img) -> Self::Output {
@@ -102,7 +125,7 @@ where
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, D, Img>
-    ModuleMut<Img> for Conv2D<I, O, K, S, P, D>
+    ModuleMut<Img> for Conv2D<I, O, K, S, P, f32, D>
 where
     D: Device<f32>,
     Self: Module<Img>,
@@ -114,12 +137,12 @@ where
 }
 
 #[derive(Clone, Debug)]
-struct Bias2D<'a, const C: usize, D: Device<f32> = Cpu> {
-    beta: &'a Tensor<Rank1<C>, f32, D>,
+struct Bias2D<'a, const C: usize, E: Dtype, D: DeviceStorage> {
+    beta: &'a Tensor<Rank1<C>, E, D>,
 }
 
 impl<'a, const C: usize, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
-    Module<Tensor<(Const<C>, H, W), f32, D, T>> for Bias2D<'a, C, D>
+    Module<Tensor<(Const<C>, H, W), f32, D, T>> for Bias2D<'a, C, f32, D>
 {
     type Output = Tensor<(Const<C>, H, W), f32, D, T>;
     fn forward(&self, input: Tensor<(Const<C>, H, W), f32, D, T>) -> Self::Output {
@@ -128,7 +151,7 @@ impl<'a, const C: usize, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
 }
 
 impl<'a, B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
-    Module<Tensor<(B, Const<C>, H, W), f32, D, T>> for Bias2D<'a, C, D>
+    Module<Tensor<(B, Const<C>, H, W), f32, D, T>> for Bias2D<'a, C, f32, D>
 {
     type Output = Tensor<(B, Const<C>, H, W), f32, D, T>;
     fn forward(&self, input: Tensor<(B, Const<C>, H, W), f32, D, T>) -> Self::Output {
@@ -140,12 +163,11 @@ impl<'a, B: Dim, const C: usize, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
 #[cfg(test)]
 mod tests {
     use crate::{
-        nn::BuildOnDevice,
         tensor::{AsArray, SampleTensor, ZerosTensor},
         tests::*,
     };
 
-    use super::*;
+    use super::{builder::Conv2D, *};
 
     #[rustfmt::skip]
     #[test]
@@ -208,7 +230,7 @@ mod tests {
         let weight_init = m.weight.clone();
         let bias_init = m.bias.clone();
 
-        let mut opt: Sgd<_, _> = Default::default();
+        let mut opt = Sgd::new(&m, Default::default());
         let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().trace());
         let g = out.square().mean().backward();
 

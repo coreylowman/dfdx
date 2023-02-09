@@ -45,12 +45,15 @@ pub struct StridedArray<S: Shape, E> {
 pub enum CpuError {
     /// Device is out of memory
     OutOfMemory,
+    /// Not enough elements were provided when creating a tensor
+    WrongNumElements,
 }
 
 impl std::fmt::Display for CpuError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::OutOfMemory => f.write_str("CpuError::OutOfMemory"),
+            Self::WrongNumElements => f.write_str("CpuError::WrongNumElements"),
         }
     }
 }

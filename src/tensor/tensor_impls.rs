@@ -1,7 +1,8 @@
 use rand::distributions::Distribution;
 
-use super::storage_traits::{CopySlice, DeviceStorage, HasErr, ZerosTensor};
+use super::storage_traits::{CopySlice, DeviceStorage, HasErr, TensorFromVec};
 use super::{Cpu, OneFillStorage, SampleTensor, ZeroFillStorage};
+use crate::prelude::TensorFrom;
 use crate::{
     gradients::{NoneTape, OwnedTape, Tape},
     shapes::*,
@@ -26,20 +27,20 @@ use crate::{
 /// type A = Tensor<Rank1<1000>, f32, Cpu>;
 ///
 /// // A 2d tensor with bool elements, stored on the Cpu
-/// type B = Tensor<Rank2<2, 3>, bool>;
+/// type B = Tensor<Rank2<2, 3>, bool, Cpu>;
 ///
 /// // A 3d tensor with usize elements, stored on the Cpu, without any tape
 /// type C = Tensor<Rank3<4, 2, 3>, usize, Cpu, NoneTape>;
 /// ```
 #[derive(Debug, Clone)]
-pub struct Tensor<S: Shape, E: Unit = f32, D: DeviceStorage = Cpu, T = NoneTape> {
+pub struct Tensor<S: Shape, E: Unit, D: DeviceStorage, T = NoneTape> {
     pub(crate) id: UniqueId,
     pub(crate) storage: D::Storage<S, E>,
     pub(crate) device: D,
     pub(crate) tape: T,
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
     type WithShape<New: Shape> = Tensor<New, E, D, T>;
     type Shape = S;
     fn shape(&self) -> &Self::Shape {
@@ -61,7 +62,7 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasUniqueId for Tensor<S, E, D, T>
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
     type Err = D::Err;
 }
 
@@ -89,14 +90,14 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
 }
 
 /// Put a tape of type `T` into the tensor
-/// ```rust
-/// # use dfdx::prelude::*;
-/// # let dev: Cpu = Default::default();
-/// let a: Tensor<Rank2<2, 3>> = dev.zeros();
-/// let a: Tensor<Rank2<2, 3>, f32, _, OwnedTape<Cpu>> = a.put_tape(Default::default());
-/// ```
 pub trait PutTape<T> {
     type Output;
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let a: Tensor<Rank2<2, 3>, f32, _, NoneTape> = dev.zeros();
+    /// let a: Tensor<Rank2<2, 3>, f32, _, OwnedTape<Cpu>> = a.put_tape(Default::default());
+    /// ```
     fn put_tape(self, tape: T) -> Self::Output;
 }
 
@@ -113,18 +114,18 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T> PutTape<T> for Tensor<S, E, D> {
 }
 
 /// Remove the tape from a tensor
-///
-/// ```rust
-/// # use dfdx::prelude::*;
-/// # let dev: Cpu = Default::default();
-/// let a: Tensor<Rank1<5>, f32, _, OwnedTape<Cpu>> = dev.zeros().traced();
-/// let (a, tape): (Tensor<Rank1<5>, f32>, OwnedTape<Cpu>) = a.split_tape();
 pub trait SplitTape {
     /// The type of tape the tensor has now
     type Tape: Default;
     // The type of Self without the tape.
     type NoTape: Clone + PutTape<Self::Tape, Output = Self>;
     /// Splits tape off of self
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let a: Tensor<Rank1<5>, f32, _, OwnedTape<_>> = dev.zeros().traced();
+    /// let (a, tape): (Tensor<_, _, _, NoneTape>, OwnedTape<_>) = a.split_tape();
+    /// ```
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
     /// Clones self and inserts a new empty tape into the clone
     fn with_empty_tape(&self) -> Self;
@@ -192,17 +193,17 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
     }
 }
 
-/// Something that can be copied to another [Device] and can be used with the [OnDevice] type
+/// Something that can be copied to another `Device` and can be used with the [OnDevice] type
 /// alias.
 ///
 /// Here's an example of how this can be implemented for a custom struct:
 /// ```rust
-/// use dfdx::prelude::*;
+/// use dfdx::{prelude::*, nn::modules::Linear};
 ///
 /// struct MLP<D: Device<f32>> {
-///     l1: Linear<5, 10, D>,
+///     l1: Linear<5, 10, f32, D>,
 ///     a1: ReLU,
-///     l2: Linear<10, 1, D>,
+///     l2: Linear<10, 1, f32, D>,
 /// }
 ///
 /// // Need two device types to allow converting from one device to another
@@ -225,22 +226,6 @@ pub trait ToDevice<D> {
 
 /// A type alias that yields the type of a module `M` as it would exist on device `D`. This can be
 /// useful when creating sequential networks that need to be parameterized by a device.
-///
-/// Examples:
-/// ```rust
-/// # use dfdx::nn::*;
-/// type MLP<D> = OnDevice<(Linear<5, 10>, ReLU, Linear<10, 1>), D>;
-/// ```
-///
-/// ```rust
-/// # use dfdx::prelude::*;
-/// #
-/// // All modules exist on the cpu by default
-/// type CpuMLP = (Linear<5, 10>, ReLU, Linear<10, 1>);
-/// type MLP<D> = OnDevice<CpuMLP, D>;
-/// # #[cfg(feature = "cuda")]
-/// type CudaMLP = OnDevice<CpuMLP, Cuda>;
-/// ```
 pub type OnDevice<M, D> = <M as ToDevice<D>>::Output;
 
 /// Equivalent to `OnDevice<M, Cuda>`
@@ -254,18 +239,16 @@ impl<
         S: Shape,
         E: Dtype + Unit,
         T,
-        D1: DeviceStorage + ZerosTensor<E> + CopySlice<E>,
-        D2: DeviceStorage + ZerosTensor<E> + CopySlice<E>,
+        D1: DeviceStorage + CopySlice<E>,
+        D2: DeviceStorage + TensorFromVec<E>,
     > ToDevice<D2> for Tensor<S, E, D1, T>
 {
     type Output = Tensor<S, E, D2, NoneTape>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
         let mut buf = std::vec![E::default(); self.shape().num_elements()];
-        let mut out: Self::Output = device.zeros_like(self);
         self.copy_into(&mut buf);
-        out.copy_from(&buf);
-        out
+        device.tensor((buf, *self.shape()))
     }
 }
 
@@ -273,8 +256,8 @@ pub type Tensor0D<Tape = NoneTape> = Tensor<Rank0, f32, Cpu, Tape>;
 pub type Tensor1D<const M: usize, Tape = NoneTape> = Tensor<Rank1<M>, f32, Cpu, Tape>;
 pub type Tensor2D<const M: usize, const N: usize, Tape = NoneTape> =
     Tensor<Rank2<M, N>, f32, Cpu, Tape>;
-pub type Tensor3D<const M: usize, const N: usize, const O: usize, D, Tape = NoneTape> =
-    Tensor<Rank3<M, N, O>, f32, D, Tape>;
+pub type Tensor3D<const M: usize, const N: usize, const O: usize, Tape = NoneTape> =
+    Tensor<Rank3<M, N, O>, f32, Cpu, Tape>;
 pub type Tensor4D<const M: usize, const N: usize, const O: usize, const P: usize, Tape = NoneTape> =
     Tensor<Rank4<M, N, O, P>, f32, Cpu, Tape>;
 pub type Tensor5D<

@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -36,6 +36,12 @@ impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>, R: GradientUpdate<D, E>> G
         self.r.update(updater, unused)?;
         Ok(())
     }
+}
+
+impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>, R: BuildOnDevice<D, E>> BuildOnDevice<D, E>
+    for GeneralizedResidual<F, R>
+{
+    type Built = GeneralizedResidual<F::Built, R::Built>;
 }
 
 impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>, R: BuildModule<D, E>> BuildModule<D, E>
@@ -94,14 +100,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::Linear;
+    use crate::nn::builders::Linear;
     use crate::tests::{assert_close, TestDevice};
 
     #[test]
     fn test_reset_generalized_residual() {
         let dev: TestDevice = Default::default();
 
-        let model: GeneralizedResidual<Linear<2, 5, _>, Linear<2, 5, _>> = BuildModule::build(&dev);
+        type Model = GeneralizedResidual<Linear<2, 5>, Linear<2, 5>>;
+        let model = Model::build_on_device(&dev);
         assert_ne!(model.f.weight.array(), [[0.0; 2]; 5]);
         assert_ne!(model.f.bias.array(), [0.0; 5]);
         assert_ne!(model.r.weight.array(), [[0.0; 2]; 5]);
@@ -112,7 +119,8 @@ mod tests {
     fn test_generalized_residual_gradients() {
         let dev: TestDevice = Default::default();
 
-        let model: GeneralizedResidual<Linear<2, 2, _>, Linear<2, 2, _>> = BuildModule::build(&dev);
+        type Model = GeneralizedResidual<Linear<2, 2>, Linear<2, 2>>;
+        let model = Model::build_on_device(&dev);
 
         let x = dev.sample_normal::<Rank2<4, 2>>();
         let y = model.forward(x.trace());

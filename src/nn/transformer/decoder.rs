@@ -1,11 +1,47 @@
 use crate::{
-    nn::*,
+    nn::{modules::*, *},
     optim::{GradientUpdate, ParamUpdater, UnusedTensors},
-    tensor::{Cpu, PutTape, SplitTape},
+    shapes::Dtype,
+    tensor::{PutTape, SplitTape},
     tensor_ops::Device,
 };
 
 use super::mha::MultiHeadAttention;
+
+pub mod builder {
+    #[derive(Clone, Debug)]
+    pub struct TransformerDecoder<
+        const MODEL_DIM: usize,
+        const NUM_HEADS: usize,
+        const FF_DIM: usize,
+        const NUM_LAYERS: usize,
+    >;
+
+    #[derive(Clone, Debug)]
+    pub struct TransformerDecoderBlock<
+        const MODEL_DIM: usize,
+        const NUM_HEADS: usize,
+        const FF_DIM: usize,
+    >;
+}
+
+impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
+    BuildOnDevice<D, f32> for builder::TransformerDecoder<M, H, F, L>
+{
+    type Built = TransformerDecoder<M, H, F, L, f32, D>;
+    fn try_build_on_device(device: &D) -> Result<Self::Built, D::Err> {
+        Self::Built::try_build(device)
+    }
+}
+
+impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildOnDevice<D, f32>
+    for builder::TransformerDecoderBlock<M, N, F>
+{
+    type Built = TransformerDecoderBlock<M, N, F, f32, D>;
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
+        Self::Built::try_build(device)
+    }
+}
 
 /// **Requires Nightly** A transformer decoder.
 ///
@@ -22,11 +58,12 @@ pub struct TransformerDecoder<
     const NUM_HEADS: usize,
     const FF_DIM: usize,
     const NUM_LAYERS: usize,
-    D: Device<f32> = Cpu,
->(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, D>, NUM_LAYERS>);
+    E: Dtype,
+    D: DeviceStorage,
+>(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>, NUM_LAYERS>);
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
-    BuildModule<D, f32> for TransformerDecoder<M, H, F, L, D>
+    BuildModule<D, f32> for TransformerDecoder<M, H, F, L, f32, D>
 {
     fn try_build(device: &D) -> Result<Self, D::Err> {
         Ok(Self(BuildModule::try_build(device)?))
@@ -34,7 +71,7 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f
 }
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
-    ResetParams<D, f32> for TransformerDecoder<M, H, F, L, D>
+    ResetParams<D, f32> for TransformerDecoder<M, H, F, L, f32, D>
 {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.0.try_reset_params()
@@ -42,7 +79,7 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f
 }
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>>
-    GradientUpdate<D, f32> for TransformerDecoder<M, H, F, L, D>
+    GradientUpdate<D, f32> for TransformerDecoder<M, H, F, L, f32, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
     where
@@ -59,9 +96,9 @@ impl<
         const L: usize,
         D1: Device<f32>,
         D2: Device<f32>,
-    > ToDevice<D2> for TransformerDecoder<M, H, F, L, D1>
+    > ToDevice<D2> for TransformerDecoder<M, H, F, L, f32, D1>
 {
-    type Output = TransformerDecoder<M, H, F, L, D2>;
+    type Output = TransformerDecoder<M, H, F, L, f32, D2>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
         TransformerDecoder(self.0.to_device(device))
@@ -69,10 +106,10 @@ impl<
 }
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D, Tgt, Mem: Clone>
-    Module<(Tgt, Mem)> for TransformerDecoder<M, H, F, L, D>
+    Module<(Tgt, Mem)> for TransformerDecoder<M, H, F, L, f32, D>
 where
     D: Device<f32>,
-    TransformerDecoderBlock<M, H, F, D>: Module<(Tgt, Mem), Output = Tgt>,
+    TransformerDecoderBlock<M, H, F, f32, D>: Module<(Tgt, Mem), Output = Tgt>,
 {
     type Output = Tgt;
     fn forward(&self, (mut tgt, mem): (Tgt, Mem)) -> Self::Output {
@@ -84,7 +121,7 @@ where
 }
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, D: Device<f32>, T> ModuleMut<T>
-    for TransformerDecoder<M, H, F, L, D>
+    for TransformerDecoder<M, H, F, L, f32, D>
 where
     Self: Module<T>,
 {
@@ -115,20 +152,22 @@ pub struct TransformerDecoderBlock<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
     const FF_DIM: usize,
-    D: Device<f32> = Cpu,
+    E: Dtype,
+    D: DeviceStorage,
 > {
-    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
-    pub norm1: LayerNorm1D<MODEL_DIM, D>,
-    pub mh_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, D>,
-    pub norm2: LayerNorm1D<MODEL_DIM, D>,
-    pub ff: FF<MODEL_DIM, FF_DIM, D>,
-    pub norm3: LayerNorm1D<MODEL_DIM, D>,
+    pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, E, D>,
+    pub norm1: LayerNorm1D<MODEL_DIM, E, D>,
+    pub mh_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, E, D>,
+    pub norm2: LayerNorm1D<MODEL_DIM, E, D>,
+    pub ff: FF<MODEL_DIM, FF_DIM, E, D>,
+    pub norm3: LayerNorm1D<MODEL_DIM, E, D>,
 }
 
-type FF<const M: usize, const F: usize, D> = Residual<(Linear<M, F, D>, ReLU, Linear<F, M, D>)>;
+type FF<const M: usize, const F: usize, E, D> =
+    Residual<(Linear<M, F, E, D>, ReLU, Linear<F, M, E, D>)>;
 
 impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildModule<D, f32>
-    for TransformerDecoderBlock<M, N, F, D>
+    for TransformerDecoderBlock<M, N, F, f32, D>
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
@@ -143,7 +182,7 @@ impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> BuildModule
 }
 
 impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> ResetParams<D, f32>
-    for TransformerDecoderBlock<M, N, F, D>
+    for TransformerDecoderBlock<M, N, F, f32, D>
 {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.self_attn.try_reset_params()?;
@@ -157,7 +196,7 @@ impl<const M: usize, const N: usize, const F: usize, D: Device<f32>> ResetParams
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpdate<D, f32>
-    for TransformerDecoderBlock<M, H, F, D>
+    for TransformerDecoderBlock<M, H, F, f32, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
@@ -174,9 +213,9 @@ impl<const M: usize, const H: usize, const F: usize, D: Device<f32>> GradientUpd
 }
 
 impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2>
-    for TransformerDecoderBlock<M, H, F, D1>
+    for TransformerDecoderBlock<M, H, F, f32, D1>
 {
-    type Output = TransformerDecoderBlock<M, H, F, D2>;
+    type Output = TransformerDecoderBlock<M, H, F, f32, D2>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
         TransformerDecoderBlock {
@@ -191,14 +230,14 @@ impl<const M: usize, const H: usize, const F: usize, D1: Device<f32>, D2: Device
 }
 
 impl<const M: usize, const H: usize, const F: usize, D: Device<f32>, Tgt, Mem> Module<(Tgt, Mem)>
-    for TransformerDecoderBlock<M, H, F, D>
+    for TransformerDecoderBlock<M, H, F, f32, D>
 where
     Tgt: SplitTape + std::ops::Add<Tgt::NoTape, Output = Tgt>,
     Mem: Clone,
-    MultiHeadAttention<M, H, M, M, D>:
+    MultiHeadAttention<M, H, M, M, f32, D>:
         Module<Tgt, Output = Tgt> + Module<(Tgt, Mem, Mem), Output = Tgt>,
-    LayerNorm1D<M, D>: Module<Tgt, Output = Tgt>,
-    FF<M, F, D>: Module<Tgt, Output = Tgt>,
+    LayerNorm1D<M, f32, D>: Module<Tgt, Output = Tgt>,
+    FF<M, F, f32, D>: Module<Tgt, Output = Tgt>,
 {
     type Output = Tgt;
 
@@ -240,7 +279,7 @@ mod tests {
         const FF_DIM: usize = 2;
 
         let decoder =
-            TransformerDecoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build_on_device(&dev);
+            builder::TransformerDecoderBlock::<EMBED_DIM, NUM_HEADS, FF_DIM>::build_on_device(&dev);
 
         let tgt = dev.sample_normal::<Rank3<BATCH, S1, EMBED_DIM>>();
         let mem = dev.sample_normal::<Rank3<BATCH, S2, EMBED_DIM>>();

@@ -9,10 +9,12 @@ use dfdx::{
 fn main() {
     let dev: Cpu = Default::default();
 
-    let a = dev.sample_normal::<Rank2<2, 3>>();
+    let a: Tensor<Rank2<2, 3>, f32, _> = dev.sample_normal();
     dbg!(a.array());
 
-    let b = dev.sample_normal::<Rank2<2, 3>>();
+    // rust can infer the shape & dtype here because we add this
+    // to a below!
+    let b = dev.sample_normal();
     dbg!(b.array());
 
     // we can do binary operations like add two tensors together

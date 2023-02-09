@@ -27,15 +27,16 @@ macro_rules! impl_min_reduce {
                     self.dev
                         .load_ptx(PTX_SRC.into(), MODULE_NAME, &[$Fwd, $Bwd, $Fill])?;
                 }
-        
-                let mut storage = self.dev.alloc_zeros_async::<$TypeName>(dst.num_elements())?;
-                let fill_fn = self.dev.get_func(MODULE_NAME, $Fill).unwrap();
-                unsafe {
+
+                let fill_fn = self.dev.get_func(MODULE_NAME, "fill_with").unwrap();
+                let mut storage = unsafe {
+                    let mut storage = self.dev.alloc_async::<$TypeName>(dst.num_elements())?;
                     fill_fn.launch_async(
                         LaunchConfig::for_num_elems(dst.num_elements() as u32),
                         (&mut storage, $TypeName::INFINITY, dst.num_elements()),
-                    )
-                }?;
+                    )?;
+                    storage
+                };
         
                 let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
         

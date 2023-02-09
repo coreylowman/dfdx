@@ -1,6 +1,6 @@
 use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
 
-use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///
@@ -14,11 +14,17 @@ use super::{BuildModule, Module, ModuleMut, ResetParams, ToDevice};
 /// # let dev: Cpu = Default::default();
 /// type Model = Repeated<(Linear<10, 10>, ReLU), 5>;
 /// let model = Model::build_on_device(&dev);
-/// let out: Tensor<Rank1<10>> = model.forward(dev.zeros());
+/// let out: Tensor<Rank1<10>, f32, _> = model.forward(dev.zeros());
 /// ```
 #[derive(Debug, Clone)]
 pub struct Repeated<T, const N: usize> {
     pub modules: std::vec::Vec<T>,
+}
+
+impl<D: Device<E>, E: Dtype, T: BuildOnDevice<D, E>, const N: usize> BuildOnDevice<D, E>
+    for Repeated<T, N>
+{
+    type Built = Repeated<T::Built, N>;
 }
 
 impl<D: Device<E>, E: Dtype, T: BuildModule<D, E>, const N: usize> BuildModule<D, E>
@@ -103,14 +109,15 @@ impl<Input, T: ModuleMut<Input, Output = Input>, const N: usize> ModuleMut<Input
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{nn::builders::*, shapes::*, tensor::*, unique_id::HasUniqueId};
     use crate::{nn::tests::SimpleUpdater, tests::TestDevice};
-    use crate::{nn::*, shapes::*, tensor::*, unique_id::HasUniqueId};
 
     #[test]
     fn test_default_and_reset() {
         let dev: TestDevice = Default::default();
 
-        let m: Repeated<(Linear<3, 3, _>, ReLU), 5> = BuildModule::build(&dev);
+        type Model = Repeated<(Linear<3, 3>, ReLU), 5>;
+        let m = Model::build_on_device(&dev);
 
         for i in 0..5 {
             assert_ne!(m.modules[i].0.weight.array(), [[0.0; 3]; 3]);
@@ -122,7 +129,8 @@ mod tests {
     fn test_forward() {
         let dev: TestDevice = Default::default();
 
-        let mut m: Repeated<(Linear<3, 3, _>, ReLU), 5> = BuildModule::build(&dev);
+        type Model = Repeated<(Linear<3, 3>, ReLU), 5>;
+        let mut m = Model::build_on_device(&dev);
 
         let x = dev.zeros::<Rank1<3>>();
         let x = m.modules[0].forward(x);
@@ -138,7 +146,8 @@ mod tests {
     fn test_repeated_missing_gradients() {
         let dev: TestDevice = Default::default();
 
-        let mut model: Repeated<Linear<5, 5, _>, 3> = BuildModule::build(&dev);
+        type Model = Repeated<Linear<5, 5>, 3>;
+        let mut model = Model::build_on_device(&dev);
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

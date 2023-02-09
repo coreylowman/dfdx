@@ -34,7 +34,7 @@ macro_rules! impl_dropout {
                 }
 
                 let numel = inp.data.len();
-                let mut storage = self.dev.alloc_zeros_async::<$TypeName>(numel)?;
+                let mut storage = unsafe { self.dev.alloc_async::<$TypeName>(numel) }?;
 
                 let fwd_fn = self.dev.get_func(MODULE_NAME, $ForwardFn).unwrap();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);

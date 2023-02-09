@@ -1,6 +1,6 @@
 use crate::{
     gradients::{Merge, Tape},
-    shapes::{Dtype, Shape},
+    shapes::{Dtype, HasShape, Shape},
     tensor::{DeviceStorage, PutTape, SplitTape, Tensor},
 };
 
@@ -74,6 +74,7 @@ pub(crate) fn try_binary_op<
     lhs: Tensor<S, E, D, LhsTape>,
     rhs: Tensor<S, E, D, RhsTape>,
 ) -> Result<Tensor<S, E, D, LhsTape>, D::Err> {
+    assert_eq!(lhs.shape(), rhs.shape());
     let (lhs, ltape) = lhs.split_tape();
     let (rhs, rtape) = rhs.split_tape();
     let mut tape = ltape.merge(rtape);

@@ -64,18 +64,13 @@ impl Default for RMSpropConfig<f32> {
 ///
 /// # Example Usage
 ///
-/// Constructing using default:
-/// ```rust
-/// # use dfdx::{prelude::*, optim::*};
-/// # type Model = Tensor<Rank0>;
-/// let mut opt: RMSprop<Model> = Default::default();
-/// ```
-///
 /// Constructing using new:
 /// ```rust
 /// # use dfdx::{prelude::*, optim::*};
-/// # type Model = Tensor<Rank0>;
-/// let rmsprop: RMSprop<Model> = RMSprop::new(RMSpropConfig {
+/// # type Model = Tensor<Rank0, f32, Cpu>;
+/// # let dev: Cpu = Default::default();
+/// # let model: Model = dev.zeros();
+/// let rmsprop: RMSprop<Model> = RMSprop::new(&model, RMSpropConfig {
 ///     lr: 1e-3,
 ///     alpha: 0.5,
 ///     eps: 1e-8,
@@ -83,9 +78,6 @@ impl Default for RMSpropConfig<f32> {
 ///     centered: false,
 ///     weight_decay: Some(WeightDecay::Decoupled(1e-1)),
 /// });
-/// ```
-///
-/// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
 pub struct RMSprop<M, E: Dtype = f32> {
     /// Hyperparameter configuration
@@ -100,19 +92,9 @@ pub struct RMSprop<M, E: Dtype = f32> {
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype> Default for RMSprop<M, E>
-where
-    RMSpropConfig<E>: Default,
-{
-    /// See [RMSpropConfig]
-    fn default() -> Self {
-        Self::new(Default::default())
-    }
-}
-
 impl<M, E: Dtype> RMSprop<M, E> {
     /// Constructs using hyperparameters from `cfg`.
-    pub fn new(cfg: RMSpropConfig<E>) -> Self {
+    pub fn new(_model: &M, cfg: RMSpropConfig<E>) -> Self {
         Self {
             cfg,
             step: 0,
@@ -192,7 +174,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
         let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
-        let mut opt = RMSprop::new(cfg);
+        let mut opt = RMSprop::new(&t, cfg);
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).square().sum().backward();
             opt.update(&mut t, gradients).expect("");
@@ -332,14 +314,4 @@ mod tests {
         ];
         test_matches_expected(cfg, EXPECTED);
     }
-
-    // #[test]
-    // fn test_rmsprop_unused_params() {
-    //     type Model = (Linear<5, 16>, Linear<16, 10>);
-    //     let mut model: Model = Default::default();
-    //     let mut opt: RMSprop<Model> = Default::default();
-    //     let y = model.1.forward(Tensor2D::<8, 16>::zeros().trace());
-    //     let g = backward(y.mean());
-    //     opt.update(&mut model, g).expect_err("");
-    // }
 }

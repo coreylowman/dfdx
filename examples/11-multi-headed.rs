@@ -2,9 +2,10 @@
 //! outputs using `SplitInto`.
 
 use dfdx::{
-    nn::{BuildOnDevice, Linear, Module, SplitInto},
+    nn::builders::{Linear, SplitInto},
+    nn::{BuildOnDevice, Module},
     shapes::Rank1,
-    tensor::{Cpu, Tensor, TensorFromArray},
+    tensor::{Cpu, Tensor, TensorFrom},
 };
 
 fn main() {
@@ -17,5 +18,5 @@ fn main() {
     let m = Model::build_on_device(&dev);
 
     // when we forward data through, we get a tuple back!
-    let _: (Tensor<Rank1<3>>, Tensor<Rank1<5>>) = m.forward(dev.tensor([1.0]));
+    let _: (Tensor<Rank1<3>, f32, _>, Tensor<Rank1<5>, f32, _>) = m.forward(dev.tensor([1.0]));
 }
