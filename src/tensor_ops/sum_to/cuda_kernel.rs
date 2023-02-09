@@ -26,22 +26,25 @@ macro_rules! impl_sum {
                     self.dev
                         .load_ptx(PTX_SRC.into(), MODULE_NAME, &[$Fwd, $Bwd])?;
                 }
-        
+
                 let fwd_fn = self.dev.get_func(MODULE_NAME, $Fwd).unwrap();
-        
-                let (dims, strides) = permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
+
+                let (dims, strides) =
+                    permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
                 let num_dims = dims.len();
                 let dims: CudaSlice<usize> = self.dev.take_async(dims)?;
                 let strides: CudaSlice<usize> = self.dev.take_async(strides)?;
-        
-                let mut storage = self.dev.alloc_zeros_async::<$TypeName>(dst.num_elements())?;
-        
+
+                let mut storage = self
+                    .dev
+                    .alloc_zeros_async::<$TypeName>(dst.num_elements())?;
+
                 let physical_numel = inp.data.len();
                 let virtual_numel = inp.shape.num_elements();
                 let elems_per_thread = (virtual_numel / physical_numel) as $TypeName;
-        
+
                 let chunk_len = physical_numel / dst.num_elements();
-        
+
                 let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
                 let params = (
                     physical_numel,    // const size_t numel,
@@ -60,7 +63,7 @@ macro_rules! impl_sum {
                     strides: dst.strides(),
                 })
             }
-        
+
             fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
                 &self,
                 grad_inp: &mut Self::Storage<Src, $TypeName>,
@@ -70,17 +73,20 @@ macro_rules! impl_sum {
                 Src: ReduceShapeTo<Dst, Ax>,
             {
                 let bwd_fn = self.dev.get_func(MODULE_NAME, $Bwd).unwrap();
-        
-                let dims: CudaSlice<usize> = self.dev.take_async(grad_inp.shape.concrete().into())?;
+
+                let dims: CudaSlice<usize> =
+                    self.dev.take_async(grad_inp.shape.concrete().into())?;
                 let inp_strides: CudaSlice<usize> = self.dev.take_async(grad_inp.strides.into())?;
-                let out_strides: Src::Concrete =
-                    BroadcastStridesTo::<Src, Ax>::broadcast_strides(&grad_out.shape, grad_out.strides);
+                let out_strides: Src::Concrete = BroadcastStridesTo::<Src, Ax>::broadcast_strides(
+                    &grad_out.shape,
+                    grad_out.strides,
+                );
                 let out_strides: CudaSlice<usize> = self.dev.take_async(out_strides.into())?;
-        
+
                 let physical_numel = grad_inp.data.len();
                 let virtual_numel = grad_inp.shape.num_elements();
                 let elems_per_thread = (virtual_numel / physical_numel) as $TypeName;
-        
+
                 let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
                 let params = (
                     physical_numel,                    // const size_t numel,
@@ -98,7 +104,6 @@ macro_rules! impl_sum {
         }
     };
 }
-
 
 impl_sum!(f32, "sum_to_forward_f32", "sum_to_backward_f32");
 impl_sum!(f64, "sum_to_forward_f64", "sum_to_backward_f64");

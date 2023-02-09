@@ -23,15 +23,16 @@ macro_rules! impl_reshape {
                     self.dev
                         .load_ptx(PTX_SRC.into(), MODULE_NAME, &[$Fwd, $Bwd])?;
                 }
-        
+
                 let numel = inp.data.len();
                 let mut storage = unsafe { self.dev.alloc_async::<$TypeName>(numel) }?;
-        
-                let inp_dims: CudaSlice<usize> = self.dev.take_async(inp.shape.concrete().into())?;
+
+                let inp_dims: CudaSlice<usize> =
+                    self.dev.take_async(inp.shape.concrete().into())?;
                 let dst_dims: CudaSlice<usize> = self.dev.take_async(dst.concrete().into())?;
                 let inp_strides: CudaSlice<usize> = self.dev.take_async(inp.strides.into())?;
                 let dst_strides: CudaSlice<usize> = self.dev.take_async(dst.strides().into())?;
-        
+
                 let fwd_fn = self.dev.get_func(MODULE_NAME, $Fwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
@@ -46,14 +47,14 @@ macro_rules! impl_reshape {
                     &dst_strides,      // const size_t *out_strides,
                 );
                 unsafe { fwd_fn.launch_async(cfg, params) }?;
-        
+
                 Ok(CudaArray {
                     data: Arc::new(storage),
                     shape: dst,
                     strides: dst.strides(),
                 })
             }
-        
+
             fn backward<Src: Shape, Dst: Shape>(
                 &self,
                 grad_inp: &mut Self::Storage<Src, $TypeName>,
@@ -64,12 +65,14 @@ macro_rules! impl_reshape {
             {
                 let bwd_fn = self.dev.get_func(MODULE_NAME, $Bwd).unwrap();
                 let numel = grad_inp.data.len();
-        
-                let inp_dims: CudaSlice<usize> = self.dev.take_async(grad_inp.shape.concrete().into())?;
-                let out_dims: CudaSlice<usize> = self.dev.take_async(grad_out.shape.concrete().into())?;
+
+                let inp_dims: CudaSlice<usize> =
+                    self.dev.take_async(grad_inp.shape.concrete().into())?;
+                let out_dims: CudaSlice<usize> =
+                    self.dev.take_async(grad_out.shape.concrete().into())?;
                 let inp_strides: CudaSlice<usize> = self.dev.take_async(grad_inp.strides.into())?;
                 let out_strides: CudaSlice<usize> = self.dev.take_async(grad_out.strides.into())?;
-        
+
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
                     numel,                             // const size_t numel,
@@ -85,7 +88,7 @@ macro_rules! impl_reshape {
                 unsafe { bwd_fn.launch_async(cfg, params) }?;
                 Ok(())
             }
-        }        
+        }
     };
 }
 

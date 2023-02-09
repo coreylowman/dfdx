@@ -22,9 +22,7 @@ pub trait UnaryOpCudaKernel<E> {
     const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
 }
 
-impl<E: Dtype, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryKernel<K, E>
-    for Cuda
-{
+impl<E: Dtype, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryKernel<K, E> for Cuda {
     fn forward<S: Shape>(
         &self,
         op: K,
@@ -93,9 +91,7 @@ pub trait BinaryOpCudaKernel<E> {
     const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
 }
 
-impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E>
-    for Cuda
-{
+impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for Cuda {
     fn forward<S: Shape>(
         &self,
         op: K,

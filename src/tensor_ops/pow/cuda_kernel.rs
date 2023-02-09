@@ -41,7 +41,6 @@ impl UnaryKernel<super::PowiKernelOp, f32> for Cuda {
     }
 }
 
-
 impl UnaryKernel<super::PowiKernelOp, f64> for Cuda {
     fn forward<S: Shape>(
         &self,

@@ -60,10 +60,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        tensor::*,
-        tests::*,
-    };
+    use crate::{tensor::*, tests::*};
 
     #[test]
     fn test_huber_error() {

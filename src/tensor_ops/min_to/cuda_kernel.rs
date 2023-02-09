@@ -11,7 +11,6 @@ use std::sync::Arc;
 const MODULE_NAME: &str = "min_to";
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/min_to.ptx"));
 
-
 macro_rules! impl_min_reduce {
     ($TypeName:ty, $Fwd:tt, $Bwd:tt, $Fill:tt) => {
         impl super::MinReduceKernel<$TypeName> for Cuda {
@@ -37,16 +36,17 @@ macro_rules! impl_min_reduce {
                     )?;
                     storage
                 };
-        
+
                 let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
-        
-                let (dims, strides) = permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
+
+                let (dims, strides) =
+                    permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
                 let dims: CudaSlice<usize> = self.dev.take_async(dims)?;
                 let strides: CudaSlice<usize> = self.dev.take_async(strides)?;
-        
+
                 let physical_numel = inp.data.len();
                 let chunk_len = physical_numel / dst.num_elements();
-        
+
                 let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
                 let params = (
                     physical_numel,    // const size_t numel,
@@ -64,7 +64,7 @@ macro_rules! impl_min_reduce {
                     strides: dst.strides(),
                 })
             }
-        
+
             fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
                 &self,
                 inp: &Self::Storage<Src, $TypeName>,
@@ -76,17 +76,20 @@ macro_rules! impl_min_reduce {
                 Src: ReduceShapeTo<Dst, Ax>,
             {
                 let bwd_fn = self.dev.get_func(MODULE_NAME, $Bwd).unwrap();
-        
-                let dims: CudaSlice<usize> = self.dev.take_async(grad_inp.shape.concrete().into())?;
+
+                let dims: CudaSlice<usize> =
+                    self.dev.take_async(grad_inp.shape.concrete().into())?;
                 let inp_strides: CudaSlice<usize> = self.dev.take_async(grad_inp.strides.into())?;
-                let out_strides: Src::Concrete =
-                    BroadcastStridesTo::<Src, Ax>::broadcast_strides(&grad_out.shape, grad_out.strides);
+                let out_strides: Src::Concrete = BroadcastStridesTo::<Src, Ax>::broadcast_strides(
+                    &grad_out.shape,
+                    grad_out.strides,
+                );
                 let out_strides: CudaSlice<usize> = self.dev.take_async(out_strides.into())?;
-        
+
                 let physical_numel = grad_inp.data.len();
                 let virtual_numel = grad_inp.shape.num_elements();
                 let elems_per_thread = (virtual_numel / physical_numel) as $TypeName;
-        
+
                 let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
                 let params = (
                     physical_numel,                    // const size_t numel,
@@ -104,6 +107,5 @@ macro_rules! impl_min_reduce {
                 Ok(())
             }
         }
-                
     };
 }

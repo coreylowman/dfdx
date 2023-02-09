@@ -1,3 +1,4 @@
+#include "cuda_fp16.h"
 #include "cuda_utils.cuh"
 
 // atomicMax is not implemented for floats,

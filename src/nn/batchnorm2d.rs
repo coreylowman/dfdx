@@ -227,7 +227,7 @@ mod tests {
     fn test_batchnorm2d_3d_forward_mut() {
         let dev = TestDevice::seed_from_u64(0);
 
-        let x1: Tensor<Rank3<3, 2, 2>, f32, _> = dev.sample(rand_distr::StandardNormal);
+        let x1: Tensor<Rank3<3, 2, 2>, TestDtype, _> = dev.sample(rand_distr::StandardNormal);
         let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
         let y1 = bn.forward_mut(x1.trace());
@@ -262,7 +262,7 @@ mod tests {
     fn test_batchnorm2d_4d_forward_mut() {
         let dev = TestDevice::seed_from_u64(2);
 
-        let x1 = dev.sample_normal::<Rank4<2, 2, 2, 3>>();
+        let x1: Tensor<Rank4<2, 2, 2, 3>, TestDtype, _> = dev.sample_normal();
         let mut bn = BatchNorm2D::<2>::build_on_device(&dev);
 
         let y1 = bn.forward_mut(x1.trace());
@@ -294,7 +294,7 @@ mod tests {
     fn test_batchform2d_3d_repeated_forward_mut() {
         let dev = TestDevice::seed_from_u64(12);
 
-        let x1 = dev.sample_normal::<Rank3<3, 4, 5>>();
+        let x1: Tensor<Rank3<3, 4, 5>, TestDtype, _> = dev.sample_normal();
         let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
         let _ = bn.forward_mut(x1.trace());
