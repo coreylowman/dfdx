@@ -70,6 +70,20 @@ impl Cuda {
         let blas = Arc::new(CudaBlas::new(dev.clone())?);
         Ok(Self { cpu, dev, blas })
     }
+
+    /// Block until kernels finish processing. Useful for benchmarking.
+    ///
+    /// Examples:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// let dev: Cuda = Default::default();
+    /// let a = dev.tensor([1., 2., 3.]);
+    /// let _b = a.square();
+    /// dev.synchronize().unwrap(); // blocks until square kernel finishes.
+    /// ```
+    pub fn synchronize(&self) -> Result<(), CudaError> {
+        self.dev.synchronize().map_err(CudaError::from)
+    }
 }
 
 #[derive(Debug, Clone)]
