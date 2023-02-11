@@ -12,7 +12,7 @@ use dfdx::{
     tensor::{
         AsArray, Cpu, HasErr, SampleTensor, SplitTape, Tensor0D, Tensor1D, Tensor2D, TensorFrom,
     },
-    tensor_ops::{Backward, MeanTo},
+    tensor_ops::{Backward, BroadcastTo, MeanTo},
 };
 use std::f32;
 use std::time::Instant;
@@ -72,11 +72,10 @@ impl<const IN: usize, const INNER: usize, const OUT: usize, T: Tape<Cpu>>
 
     fn forward(&self, x: Tensor1D<IN, T>) -> Self::Output {
         let x = self.l1.forward(x);
-        (
-            self.mu.forward(x.retaped()),
-            self.std.forward(x.retaped()),
-            self.value.forward(x),
-        )
+
+        let std = self.std.forward(x.retaped());
+        let value = self.value.forward(x.retaped());
+        (self.mu.forward(x), std, value)
     }
 }
 
@@ -92,11 +91,10 @@ impl<const BATCH: usize, const IN: usize, const INNER: usize, const OUT: usize, 
 
     fn forward(&self, x: Tensor2D<BATCH, IN, T>) -> Self::Output {
         let x = self.l1.forward(x);
-        (
-            self.mu.forward(x.retaped()),
-            self.std.forward(x.retaped()),
-            self.value.forward(x),
-        )
+
+        let std = self.std.forward(x.retaped());
+        let value = self.value.forward(x.retaped());
+        (self.mu.forward(x), std, value)
     }
 }
 
@@ -185,9 +183,9 @@ fn main() {
         let surr1: Tensor1D<ACTION_SIZE, OwnedTape<Cpu>> =
             ratio.with_empty_tape() * advantage.clone();
         let surr2: Tensor1D<ACTION_SIZE, OwnedTape<Cpu>> =
-            ratio.clamp(1.0 - EPS_CLIP, 1.0 + EPS_CLIP) * advantage.clone();
+            ratio.clamp(1.0 - EPS_CLIP, 1.0 + EPS_CLIP) * advantage;
 
-        let loss = -surr2.minimum(surr1) + smooth_l1_loss(value, td_target, 1.0).array();
+        let loss = -surr2.minimum(surr1) + smooth_l1_loss(value, td_target, 1.0).broadcast();
         let loss: Tensor0D<OwnedTape<Cpu>> = loss.mean();
 
         let loss_v = loss.array();
