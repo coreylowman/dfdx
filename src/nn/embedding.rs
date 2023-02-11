@@ -5,12 +5,24 @@ use super::module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, 
 pub mod builder {
     #[derive(Debug)]
     pub struct Embedding<const VOCAB: usize, const DIM: usize>;
+
+    #[derive(Debug)]
+    pub struct LearnedPositionalEmbedding<const MAX_LEN: usize, const DIM: usize>;
 }
 
 impl<const V: usize, const M: usize, D: Device<f32>> BuildOnDevice<D, f32>
     for builder::Embedding<V, M>
 {
     type Built = Embedding<V, M, f32, D>;
+    fn try_build_on_device(device: &D) -> Result<Self::Built, D::Err> {
+        Self::Built::try_build(device)
+    }
+}
+
+impl<const V: usize, const M: usize, D: Device<f32>> BuildOnDevice<D, f32>
+    for builder::LearnedPositionalEmbedding<V, M>
+{
+    type Built = LearnedPositionalEmbedding<V, M, f32, D>;
     fn try_build_on_device(device: &D) -> Result<Self::Built, D::Err> {
         Self::Built::try_build(device)
     }
@@ -130,8 +142,31 @@ impl<const VOCAB: usize, const DIM: usize, D1: Device<f32>, D2: Device<f32>> ToD
 }
 
 
-
-
+/// A learned positional embedding
+/// Initializes [Self::weight] from a Uniform distribution
+/// between [-1 / sqrt(I), 1 / sqrt(I)].
+///
+/// # Generics
+/// - `MAX_LEN` The maximum length of the input sequences. This determines how many positional embeddings to train.
+/// - `DIM` The "output" size of vectors & matrices which are the vectors being selected.
+///
+/// # Examples
+/// `LearnedPositionalEmbedding<5, 2>` can act on vectors with SEQ x DIM elements (pre-embedded), 
+/// resulting in output vectors of the same size with positional embeddings added.
+/// 
+/// ```rust
+///
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// type Model = (Embedding<7, 2>, LearnedPositionalEmbedding<20, 2>);
+/// let mut model = Model::build_on_device(&dev);
+/// // single sequence of ids
+/// let inputs: Tensor<Rank1<5>, usize, _> = dev.zeros();
+/// let _: Tensor<(Const<5>, Const<2>,), f32, _> = model.forward(inputs);
+/// // batched sequence of ids
+/// let inputs: Tensor<Rank2<10, 5>, usize, _> = dev.zeros();
+/// let _: Tensor<(Const<10>, Const<5>, Const<2>), f32, _> = model.forward(inputs);
+/// ```
 #[derive(Debug, Clone)]
 pub struct LearnedPositionalEmbedding<const MAX_LEN: usize, const DIM: usize, E: Dtype, D: DeviceStorage> {
     /// Learned positonal embeddings
@@ -163,12 +198,12 @@ impl<
         T: Tape<D>,
     > Module<Tensor<(BATCH, SEQ, Const<DIM>), f32, D, T>> for LearnedPositionalEmbedding<MAX_LEN, DIM, f32, D>
 where
-    D: TensorFrom<std::vec::Vec<std::vec::Vec<usize>>, (BATCH, SEQ,), usize>
+    D: TensorFrom<std::vec::Vec<usize>, (BATCH, SEQ,), usize>
 {
     type Output = Tensor<(BATCH, SEQ, Const<DIM>), f32, D, T>;
     fn forward(&self, input: Tensor<(BATCH, SEQ, Const<DIM>), f32, D, T>) -> Self::Output {
         let (input, tape) = input.split_tape();
-        let positions: Tensor<(BATCH, SEQ,), usize, D> = self.device.tensor(std::vec![(0..input.shape().1.size()).collect::<std::vec::Vec<_>>(); input.shape().0.size()]);
+        let positions: Tensor<(BATCH, SEQ,), usize, D> = self.device.tensor((0..input.shape().1.size()).cycle().take(input.shape().1.size() * input.shape().0.size()).collect::<std::vec::Vec<_>>());
         let position_embeddings = self.embed.forward(positions.put_tape(tape));
         position_embeddings + input
     }

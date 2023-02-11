@@ -166,7 +166,7 @@ pub mod builders {
     #[cfg(feature = "nightly")]
     pub use super::conv::builder::Conv2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
-    pub use super::embedding::builder::Embedding;
+    pub use super::embedding::builder::{Embedding, LearnedPositionalEmbedding};
     #[cfg(feature = "nightly")]
     pub use super::flatten::Flatten2D;
     pub use super::generalized_residual::GeneralizedResidual;
