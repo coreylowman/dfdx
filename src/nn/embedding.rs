@@ -129,6 +129,95 @@ impl<const VOCAB: usize, const DIM: usize, D1: Device<f32>, D2: Device<f32>> ToD
     }
 }
 
+
+
+
+#[derive(Debug, Clone)]
+pub struct LearnedPositionalEmbedding<const MAX_LEN: usize, const DIM: usize, E: Dtype, D: DeviceStorage> {
+    /// Learned positonal embeddings
+    embed: Embedding<MAX_LEN, DIM, E, D>,
+    device: D,
+}
+
+/// Pass in an unbatched pre-embedded sequence, add positional embeddings in
+impl<const MAX_LEN: usize, const DIM: usize, SEQ: Dim, D: Device<f32>, T: Tape<D>>
+    Module<Tensor<(SEQ, Const<DIM>), f32, D, T>> for LearnedPositionalEmbedding<MAX_LEN, DIM, f32, D>
+{
+    type Output = Tensor<(SEQ, Const<DIM>), f32, D, T>;
+    fn forward(&self, input: Tensor<(SEQ, Const<DIM>), f32, D, T>) -> Self::Output {
+        let (input, tape) = input.split_tape();
+        let vec: std::vec::Vec<usize> = (0..input.shape().0.size()).collect::<std::vec::Vec<usize>>();
+        let positions: Tensor<(Const<12>,), usize, D> = self.device.try_tensor_from_vec(vec, (Const::<12>,)).unwrap();
+        input.put_tape(tape)
+    }
+}
+
+impl<
+        const MAX_LEN: usize,
+        const DIM: usize,
+        SEQ: Dim,
+        BATCH: Dim,
+        D: Device<f32>,
+        T: Tape<D>,
+    > Module<Tensor<(BATCH, SEQ), usize, D, T>> for LearnedPositionalEmbedding<MAX_LEN, DIM, f32, D>
+{
+    type Output = Tensor<(BATCH, SEQ, Const<DIM>), f32, D, T>;
+    fn forward(&self, input: Tensor<(BATCH, SEQ), usize, D, T>) -> Self::Output {
+        let (input, tape) = input.split_tape();
+        self.weight.clone().put_tape(tape).gather(input)
+    }
+}
+
+impl<T, const MAX_LEN: usize, const DIM: usize, D: Device<f32>> ModuleMut<T>
+    for LearnedPositionalEmbedding<MAX_LEN, DIM, f32, D>
+where
+    Self: Module<T>,
+{
+    type Output = <Self as Module<T>>::Output;
+    fn forward_mut(&mut self, input: T) -> Self::Output {
+        self.forward(input)
+    }
+}
+
+impl<const MAX_LEN: usize, const DIM: usize, D: Device<f32>> GradientUpdate<D, f32>
+    for LearnedPositionalEmbedding<MAX_LEN, DIM, f32, D>
+{
+    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
+    where
+        U: ParamUpdater<D, f32>,
+    {
+        self.embed.update(updater, unused)
+    }
+}
+
+impl<const MAX_LEN: usize, const DIM: usize, D: Device<f32>> BuildModule<D, f32>
+    for LearnedPositionalEmbedding<MAX_LEN, DIM, f32, D>
+{
+    fn try_build(device: &D) -> Result<Self, D::Err> {
+        Ok(Self {embed: Embedding::try_build(device)?, device: device.clone()})
+    }
+}
+
+impl<const MAX_LEN: usize, const DIM: usize, D: Device<f32>> ResetParams<D, f32>
+    for LearnedPositionalEmbedding<MAX_LEN, DIM, f32, D>
+{
+    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+        self.embed.try_reset_params()
+    }
+}
+
+impl<const MAX_LEN: usize, const DIM: usize, D1: Device<f32>, D2: Device<f32>> ToDevice<D2>
+    for LearnedPositionalEmbedding<MAX_LEN, DIM, f32, D1>
+{
+    type Output = LearnedPositionalEmbedding<MAX_LEN, DIM, f32, D2>;
+    fn to_device(&self, device: &D2) -> Self::Output {
+        LearnedPositionalEmbedding {
+            embed: self.embed.to_device(device),
+            device: device.clone(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
