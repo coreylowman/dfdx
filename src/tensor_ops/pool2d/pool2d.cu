@@ -106,6 +106,14 @@ __device__ void avg_pool2d_backward(
     grad_inp[i] += tmp / static_cast<T>(op.kernel * op.kernel);
 }
 
+__device__ __forceinline__ float maxNonAtomic(float a, float b) {
+    return fmaxf(a, b);
+}
+
+__device__ __forceinline__ double maxNonAtomic(double a, double b) {
+    return fmax(a, b);
+}
+
 template<typename T>
 __device__ void max_pool2d_forward(
     const Pool2dOp op,
@@ -143,7 +151,7 @@ __device__ void max_pool2d_forward(
             if (x >= op.w_in) { continue; }
 
             auto inp_i = b * inp_strides[0] + c * inp_strides[1] + y * inp_strides[2] + x * inp_strides[3];
-            tmp = fmaxf(tmp, inp[inp_i]);
+            tmp = maxNonAtomic(tmp, inp[inp_i]);
         }
     }
 
@@ -206,6 +214,14 @@ __device__ void max_pool2d_backward(
     grad_inp[i] += tmp;
 }
 
+__device__ __forceinline__ float minNonAtomic(float a, float b) {
+    return fminf(a, b);
+}
+
+__device__ __forceinline__ double minNonAtomic(double a, double b) {
+    return fmin(a, b);
+}
+
 template<typename T>
 __device__ void min_pool2d_forward(
     const Pool2dOp op,
@@ -243,7 +259,7 @@ __device__ void min_pool2d_forward(
             if (x >= op.w_in) { continue; }
 
             auto inp_i = b * inp_strides[0] + c * inp_strides[1] + y * inp_strides[2] + x * inp_strides[3];
-            tmp = fminf(tmp, inp[inp_i]);
+            tmp = minNonAtomic(tmp, inp[inp_i]);
         }
     }
 

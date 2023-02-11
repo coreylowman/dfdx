@@ -2,7 +2,7 @@ use crate::{
     shapes::{HasSameNumelAs, Shape},
     tensor::cuda::{Cuda, CudaArray},
 };
-use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/reshape.ptx"));
@@ -25,11 +25,10 @@ macro_rules! impl_reshape {
                 let numel = inp.data.len();
                 let mut storage = unsafe { self.dev.alloc_async::<$TypeName>(numel) }?;
 
-                let inp_dims: CudaSlice<usize> =
-                    self.dev.take_async(inp.shape.concrete().into())?;
-                let dst_dims: CudaSlice<usize> = self.dev.take_async(dst.concrete().into())?;
-                let inp_strides: CudaSlice<usize> = self.dev.take_async(inp.strides.into())?;
-                let dst_strides: CudaSlice<usize> = self.dev.take_async(dst.strides().into())?;
+                let inp_dims = self.dev.take_async(inp.shape.concrete().into())?;
+                let dst_dims = self.dev.take_async(dst.concrete().into())?;
+                let inp_strides = self.dev.take_async(inp.strides.into())?;
+                let dst_strides = self.dev.take_async(dst.strides().into())?;
 
                 let fwd_fn = self.dev.get_func($Mod, $Fwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -64,12 +63,10 @@ macro_rules! impl_reshape {
                 let bwd_fn = self.dev.get_func($Mod, $Bwd).unwrap();
                 let numel = grad_inp.data.len();
 
-                let inp_dims: CudaSlice<usize> =
-                    self.dev.take_async(grad_inp.shape.concrete().into())?;
-                let out_dims: CudaSlice<usize> =
-                    self.dev.take_async(grad_out.shape.concrete().into())?;
-                let inp_strides: CudaSlice<usize> = self.dev.take_async(grad_inp.strides.into())?;
-                let out_strides: CudaSlice<usize> = self.dev.take_async(grad_out.strides.into())?;
+                let inp_dims = self.dev.take_async(grad_inp.shape.concrete().into())?;
+                let out_dims = self.dev.take_async(grad_out.shape.concrete().into())?;
+                let inp_strides = self.dev.take_async(grad_inp.strides.into())?;
+                let out_strides = self.dev.take_async(grad_out.strides.into())?;
 
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
@@ -93,12 +90,12 @@ macro_rules! impl_reshape {
 impl_reshape!(
     f32,
     "reshape_f32",
-    "reshape_to_forward_f32",
-    "reshape_to_backward_f32"
+    "reshape_forward_f32",
+    "reshape_backward_f32"
 );
 impl_reshape!(
     f64,
     "reshape_f64",
-    "reshape_to_forward_f64",
-    "reshape_to_backward_f64"
+    "reshape_forward_f64",
+    "reshape_backward_f64"
 );
