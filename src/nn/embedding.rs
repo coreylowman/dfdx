@@ -60,14 +60,14 @@ impl<const VOCAB: usize, const DIM: usize, const SEQ: usize, D: Device<f32>, T: 
 impl<
         const VOCAB: usize,
         const DIM: usize,
-        const SEQ: usize,
-        const BATCH: usize,
+        SEQ: Dim,
+        BATCH: Dim,
         D: Device<f32>,
         T: Tape<D>,
-    > Module<Tensor<Rank2<BATCH, SEQ>, usize, D, T>> for Embedding<VOCAB, DIM, f32, D>
+    > Module<Tensor<(BATCH, SEQ), usize, D, T>> for Embedding<VOCAB, DIM, f32, D>
 {
-    type Output = Tensor<Rank3<BATCH, SEQ, DIM>, f32, D, T>;
-    fn forward(&self, input: Tensor<Rank2<BATCH, SEQ>, usize, D, T>) -> Self::Output {
+    type Output = Tensor<(BATCH, SEQ, Const<DIM>), f32, D, T>;
+    fn forward(&self, input: Tensor<(BATCH, SEQ), usize, D, T>) -> Self::Output {
         let (input, tape) = input.split_tape();
         self.weight.clone().put_tape(tape).gather(input)
     }
