@@ -13,7 +13,7 @@ use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = Repeated<(Linear<10, 10>, ReLU), 5>;
-/// let model = Model::build_on_device(&dev);
+/// let model = dev.build_module::<Model, TestDtype>();
 /// let out: Tensor<Rank1<10>, f32, _> = model.forward(dev.zeros());
 /// ```
 #[derive(Debug, Clone)]
@@ -109,6 +109,8 @@ impl<Input, T: ModuleMut<Input, Output = Input>, const N: usize> ModuleMut<Input
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nn::DeviceBuildExt;
+    use crate::tests::TestDtype;
     use crate::{nn::builders::*, shapes::*, tensor::*, unique_id::HasUniqueId};
     use crate::{nn::tests::SimpleUpdater, tests::TestDevice};
 
@@ -117,7 +119,7 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         type Model = Repeated<(Linear<3, 3>, ReLU), 5>;
-        let m = Model::build_on_device(&dev);
+        let m = dev.build_module::<Model, TestDtype>();
 
         for i in 0..5 {
             assert_ne!(m.modules[i].0.weight.array(), [[0.0; 3]; 3]);
@@ -130,7 +132,7 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         type Model = Repeated<(Linear<3, 3>, ReLU), 5>;
-        let mut m = Model::build_on_device(&dev);
+        let mut m = dev.build_module::<Model, TestDtype>();
 
         let x = dev.zeros::<Rank1<3>>();
         let x = m.modules[0].forward(x);
@@ -147,7 +149,7 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         type Model = Repeated<Linear<5, 5>, 3>;
-        let mut model = Model::build_on_device(&dev);
+        let mut model = dev.build_module::<Model, TestDtype>();
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

@@ -72,13 +72,14 @@ impl<T: SplitTape + Add<T, Output = T>, F: ModuleMut<T, Output = T>> ModuleMut<T
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::{assert_close, TestDevice};
+    use crate::nn::DeviceBuildExt;
+    use crate::tests::*;
     use crate::{nn::builders::Linear, tensor::*, tensor_ops::*};
 
     #[test]
     fn test_residual_reset() {
         let dev: TestDevice = Default::default();
-        let model = <Residual<Linear<2, 5>>>::build_on_device(&dev);
+        let model = dev.build_module::<Residual<Linear<2, 5>>, TestDtype>();
         assert_ne!(model.0.weight.array(), [[0.0; 2]; 5]);
         assert_ne!(model.0.bias.array(), [0.0; 5]);
     }
@@ -89,7 +90,7 @@ mod tests {
 
         let model = <Residual<Linear<2, 2>>>::build_on_device(&dev);
 
-        let x = dev.sample_normal::<Rank2<4, 2>>();
+        let x: Tensor<Rank2<4, 2>, TestDtype, TestDevice> = dev.sample_normal();
         let y = model.forward(x.trace());
 
         #[rustfmt::skip]

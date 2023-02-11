@@ -16,7 +16,7 @@ use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = SplitInto<(Linear<5, 3>, Linear<5, 7>)>;
-/// let model = Model::build_on_device(&dev);
+/// let model = dev.build_module::<Model, TestDtype>();
 /// let _: (Tensor<Rank1<3>, f32, _>, Tensor<Rank1<7>, f32, _>) = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(Debug, Default, Clone)]
@@ -116,10 +116,11 @@ mod tests {
     #![allow(clippy::type_complexity)]
 
     use super::*;
+    use crate::nn::DeviceBuildExt;
     use crate::{gradients::*, shapes::*, tensor_ops::*};
     use crate::{
         nn::{builders::Linear, tests::SimpleUpdater},
-        tests::TestDevice,
+        tests::*,
         unique_id::HasUniqueId,
     };
 
@@ -127,7 +128,7 @@ mod tests {
     fn test_unused() {
         let dev: TestDevice = Default::default();
         type Model = SplitInto<(Linear<1, 1>, Linear<1, 1>)>;
-        let m = Model::build_on_device(&dev);
+        let m = dev.build_module::<Model, TestDtype>();
         let (left, right) = m.forward(dev.sample_normal::<Rank1<1>>().trace());
         let r = right.retaped::<NoneTape>();
         let g = right.mean().backward();
@@ -139,7 +140,7 @@ mod tests {
     fn test_split_into_2() {
         let dev: TestDevice = Default::default();
         type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>)>;
-        let m = Model::build_on_device(&dev);
+        let m = dev.build_module::<Model, TestDtype>();
         let _: (Tensor<Rank1<1>, _, _>, Tensor<Rank1<2>, _, _, OwnedTape<_>>) =
             m.forward(dev.zeros::<Rank1<5>>().traced());
         let _: (
@@ -152,7 +153,7 @@ mod tests {
     fn test_split_into_3() {
         let dev: TestDevice = Default::default();
         type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>, Linear<5, 3>)>;
-        let m = Model::build_on_device(&dev);
+        let m = dev.build_module::<Model, TestDtype>();
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
@@ -169,7 +170,7 @@ mod tests {
     fn test_split_into_4() {
         let dev: TestDevice = Default::default();
         type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>, Linear<5, 3>, Linear<5, 4>)>;
-        let m = Model::build_on_device(&dev);
+        let m = dev.build_module::<Model, TestDtype>();
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
@@ -194,7 +195,7 @@ mod tests {
             Linear<5, 4>,
             Linear<5, 5>,
         )>;
-        let m = Model::build_on_device(&dev);
+        let m = dev.build_module::<Model, TestDtype>();
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
@@ -222,7 +223,7 @@ mod tests {
             Linear<5, 5>,
             Linear<5, 6>,
         )>;
-        let m = Model::build_on_device(&dev);
+        let m = dev.build_module::<Model, TestDtype>();
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
@@ -245,7 +246,7 @@ mod tests {
     fn test_missing_gradients() {
         let dev: TestDevice = Default::default();
         type Model = SplitInto<(Linear<5, 3>, Linear<5, 3>)>;
-        let mut model = Model::build_on_device(&dev);
+        let mut model = dev.build_module::<Model, TestDtype>();
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

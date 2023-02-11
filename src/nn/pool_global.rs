@@ -67,20 +67,20 @@ macro_rules! impl_pools {
             }
         }
 
-        impl<C: Dim, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
-            Module<Tensor<(C, H, W), f32, D, T>> for $PoolTy
+        impl<C: Dim, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<D>>
+            Module<Tensor<(C, H, W), E, D, T>> for $PoolTy
         {
-            type Output = Tensor<(C,), f32, D, T>;
-            fn forward(&self, input: Tensor<(C, H, W), f32, D, T>) -> Self::Output {
+            type Output = Tensor<(C,), E, D, T>;
+            fn forward(&self, input: Tensor<(C, H, W), E, D, T>) -> Self::Output {
                 input.min()
             }
         }
 
-        impl<B: Dim, C: Dim, H: Dim, W: Dim, D: Device<f32>, T: Tape<D>>
-            Module<Tensor<(B, C, H, W), f32, D, T>> for $PoolTy
+        impl<B: Dim, C: Dim, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<D>>
+            Module<Tensor<(B, C, H, W), E, D, T>> for $PoolTy
         {
-            type Output = Tensor<(B, C), f32, D, T>;
-            fn forward(&self, input: Tensor<(B, C, H, W), f32, D, T>) -> Self::Output {
+            type Output = Tensor<(B, C), E, D, T>;
+            fn forward(&self, input: Tensor<(B, C, H, W), E, D, T>) -> Self::Output {
                 input.$Method()
             }
         }
