@@ -9,9 +9,8 @@ use dfdx::{
     },
     optim::{Adam, AdamConfig},
     prelude::{smooth_l1_loss, GradientUpdate, Optimizer, OwnedTape, ParamUpdater, UnusedTensors},
-    shapes::Shape,
     tensor::{
-        AsArray, Cpu, HasErr, SampleTensor, SplitTape, Tensor, Tensor0D, Tensor1D, Tensor2D,
+        AsArray, Cpu, HasErr, SampleTensor, SplitTape, Tensor0D, Tensor1D, Tensor2D,
         TensorFrom,
     },
     tensor_ops::{Backward, MeanTo},
@@ -19,7 +18,6 @@ use dfdx::{
 use std::f32;
 use std::time::Instant;
 
-const BATCH_SIZE: usize = 64;
 const STATE_SIZE: usize = 4;
 const INNER_SIZE: usize = 128;
 const ACTION_SIZE: usize = 2;
@@ -108,17 +106,12 @@ const LEARNING_RATE: f32 = 0.0003;
 const GAMMA: f32 = 0.9;
 const LAMBDA: f32 = 0.9;
 const EPS_CLIP: f32 = 0.2;
-const K_EPOCH: usize = 10;
-const ROLLOUT_LENGTH: usize = 3;
-const BUFFER_SIZE: usize = 30;
-const MINIBATCH_SIZE: usize = 32;
 
 fn main() {
     let dev: Cpu = Default::default();
 
     // initiliaze model - all weights are 0s
     let mut net: Network<STATE_SIZE, INNER_SIZE, ACTION_SIZE> = nn::BuildModule::build(&dev);
-    let target_net = net.clone();
 
     let mut optimizer = Adam::new(
         &net,
@@ -138,44 +131,50 @@ fn main() {
 
         // <>
         let (old_log_prob, action) = {
-            // TODO: Should we avoid calculating _v?
-            let (mu, std, _v)= net.forward(state);
-            let action: Tensor1D<ACTION_SIZE> = dev.sample_normal() * std + mu;
+            // TODO: Should we avoid calculating _v? _v is the one with the original tape if that matters?
+            let (mu, std, _v) = net.forward(state.retaped());
+            let action: Tensor1D<ACTION_SIZE> = dev.sample_normal() * std.clone() + mu.clone();
             let log_prob = {
-                let variance = std.powi(2);
-                -(action - mu).powi(2) / (variance * 2.0)
+                let variance = std.clone().powi(2);
+                -(action.clone() - mu).powi(2) / (variance * 2.0)
                     - std.ln()
                     - (2.0f32 * f32::consts::PI).sqrt().ln()
             };
             (log_prob /*(std, mu, action)*/, action)
         };
 
-        let (new_state, reward, done) = step_simulation(state, &action);
+        let (new_state, reward, done) = step_simulation(state.clone(), &action);
 
         // <calc advantage>
         let td_target: Tensor1D<ACTION_SIZE> =
-            net.value.forward(net.l1.forward(new_state)) * f32::from(done as u8) * GAMMA + reward;
-        let delta = td_target.trace() - net.value.forward(net.l1.forward(state.trace()));
+            net.value.forward(net.l1.forward(new_state.clone())) * f32::from(done as u8) * GAMMA + reward;
+        let delta: Tensor1D<ACTION_SIZE> = td_target.clone() - net.value.forward(net.l1.forward(state.clone()));
         let delta = delta.array();
 
         let mut advantage = 0.0;
         let advantage: Tensor1D<ACTION_SIZE, _> = dev.tensor(
-            TryInto::<[_; ACTION_SIZE]>::try_into(delta
-                .into_iter()
-                .take(delta.len() - 1)
-                .map(|delta| {
-                    advantage = GAMMA * LAMBDA * advantage + delta;
-                    advantage
-                })
-                .collect::<Vec<f32>>()
-                .as_slice())
-                .unwrap(),
+            TryInto::<[_; ACTION_SIZE]>::try_into(
+                delta
+                    .into_iter()
+                    .take(delta.len() - 1)
+                    .map(|delta| {
+                        advantage = GAMMA * LAMBDA * advantage + delta;
+                        advantage
+                    })
+                    .collect::<Vec<f32>>()
+                    .as_slice(),
+            )
+            .unwrap(),
         );
         // </calc advantage>
 
-        let (mu, std, value): (Tensor1D<ACTION_SIZE, OwnedTape<Cpu>>, Tensor1D<ACTION_SIZE, OwnedTape<Cpu>>, Tensor1D<ACTION_SIZE, OwnedTape<Cpu>>) = net.forward(state.trace());
+        let (mu, std, value): (
+            Tensor1D<ACTION_SIZE, OwnedTape<Cpu>>,
+            Tensor1D<ACTION_SIZE, OwnedTape<Cpu>>,
+            Tensor1D<ACTION_SIZE, OwnedTape<Cpu>>,
+        ) = net.forward(state.trace());
         let log_prob: Tensor1D<ACTION_SIZE, OwnedTape<Cpu>> = {
-            let variance = std.powi(2);
+            let variance = std.retaped::<OwnedTape<Cpu>>().powi(2);
             -(action.trace() - mu).powi(2) / (variance * 2.0) - std.ln() - (2.0f32 * f32::consts::PI).sqrt().ln()
         }/*log_prob(std, mu, action)*/;
 
@@ -184,8 +183,10 @@ fn main() {
         let ratio = (log_prob - old_log_prob).exp();
 
         // because we need to re-use `ratio` a 2nd time, we need to do some tape manipulation here.
-        let surr1: Tensor1D<ACTION_SIZE, OwnedTape<Cpu>> = ratio.with_empty_tape() * advantage.clone();
-        let surr2: Tensor1D<ACTION_SIZE, OwnedTape<Cpu>> = ratio.clamp(1.0 - EPS_CLIP, 1.0 + EPS_CLIP) * advantage.clone();
+        let surr1: Tensor1D<ACTION_SIZE, OwnedTape<Cpu>> =
+            ratio.with_empty_tape() * advantage.clone();
+        let surr2: Tensor1D<ACTION_SIZE, OwnedTape<Cpu>> =
+            ratio.clamp(1.0 - EPS_CLIP, 1.0 + EPS_CLIP) * advantage.clone();
 
         let loss = -surr2.minimum(surr1) + smooth_l1_loss(value, td_target, 1.0).array();
         let loss: Tensor0D<OwnedTape<Cpu>> = loss.mean();
@@ -207,31 +208,25 @@ fn main() {
     }
 }
 
-struct Transition {
-    state: Tensor1D<STATE_SIZE>,
-    last_action: Tensor1D<ACTION_SIZE>,
-    reward: f32,
-}
-
 fn init_state() -> Tensor1D<STATE_SIZE> {
     todo!()
 }
 
 fn step_simulation<T: Tape<Cpu>>(
-    old_state: Tensor1D<STATE_SIZE, T>,
-    action: &Tensor1D<ACTION_SIZE, T>,
+    _old_state: Tensor1D<STATE_SIZE, T>,
+    _action: &Tensor1D<ACTION_SIZE, T>,
 ) -> (Tensor1D<STATE_SIZE>, f32, bool) {
-    let new_state = todo!();
-    let reward = calculate_reward(&new_state);
-    let is_done = todo!();
+    let _new_state = todo!();
+    let _reward = calculate_reward(&_new_state);
+    let _is_done = todo!();
 
-    (new_state, reward, is_done)
+    (_new_state, _reward, _is_done)
 }
 
-fn calculate_reward(state: &Tensor1D<STATE_SIZE>) -> f32 {
+fn calculate_reward(_state: &Tensor1D<STATE_SIZE>) -> f32 {
     todo!()
 }
-
+/*
 fn log_prob<S: Shape>(
     std: Tensor<S, f32, Cpu>,
     mu: Tensor<S, f32, Cpu>,
@@ -240,3 +235,4 @@ fn log_prob<S: Shape>(
     let variance = std.powi(2);
     -(value - mu).powi(2) / (variance * 2.0) - std.ln() - (2.0f32 * f32::consts::PI).sqrt().ln()
 }
+*/
