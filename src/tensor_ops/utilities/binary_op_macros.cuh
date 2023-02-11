@@ -54,9 +54,9 @@ extern "C" __global__ void BACKWARD( \
     unsigned int rhs_i = get_strided_index(i, num_dims, dims, rhs_strides); \
     unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides); \
 \
-    auto x = lhs[lhs_i]; \
-    auto y = rhs[rhs_i]; \
-    auto go = grad_out[out_i]; \
+    TYPENAME x = lhs[lhs_i]; \
+    TYPENAME y = rhs[rhs_i]; \
+    TYPENAME go = grad_out[out_i]; \
 \
     TYPENAME dfdx, dfdy; \
     DERIVATIVES \

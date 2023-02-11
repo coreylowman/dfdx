@@ -466,9 +466,9 @@ mod tests {
             let sub_a = dev.tensor(a_array[i]);
             let sub_b = dev.tensor(b_array[i]);
             let sub_c = sub_a.trace().matmul(sub_b.clone());
-            assert_eq!(sub_c.array(), c_array[i]);
+            assert_close(&sub_c.array(), &c_array[i]);
             let sub_g = sub_c.exp().sum().backward();
-            assert_eq!(sub_g.get(&sub_a).array(), g_a[i]);
+            assert_close(&sub_g.get(&sub_a).array(), &g_a[i]);
             sub_g.get(&sub_b).array().assert_close(&g_b[i], 1e-5);
         }
     }
@@ -493,9 +493,9 @@ mod tests {
                 let sub_a = dev.tensor(a_array[i][j]);
                 let sub_b = dev.tensor(b_array[i][j]);
                 let sub_c = sub_a.trace().matmul(sub_b.clone());
-                assert_eq!(sub_c.array(), c_array[i][j]);
+                assert_close(&sub_c.array(), &c_array[i][j]);
                 let sub_g = sub_c.exp().sum().backward();
-                assert_eq!(sub_g.get(&sub_a).array(), g_a[i][j]);
+                assert_close(&sub_g.get(&sub_a).array(), &g_a[i][j]);
                 sub_g.get(&sub_b).array().assert_close(&g_b[i][j], 1e-5);
             }
         }

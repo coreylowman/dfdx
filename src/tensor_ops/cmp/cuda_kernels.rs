@@ -11,6 +11,8 @@ use super::{
     ScalarCmpKernel,
 };
 
+const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+
 trait CmpOpCudaKernel<E: Unit> {
     /// Compiled by build.rs
     const PTX_SRC: &'static str;
@@ -120,73 +122,73 @@ impl<Op: ScalarCmpOpCudaKernel<f32>> ScalarCmpKernel<Op, f32> for Cuda {
 }
 
 impl CmpOpCudaKernel<f32> for EqKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const PTX_SRC: &'static str = PTX_SRC;
     const MODULE_NAME: &'static str = "eq";
     const FWD_FN_NAME: &'static str = "eq_forward";
 }
 
 impl ScalarCmpOpCudaKernel<f32> for EqKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const PTX_SRC: &'static str = PTX_SRC;
     const MODULE_NAME: &'static str = "scalar_eq";
     const FWD_FN_NAME: &'static str = "scalar_eq_forward";
 }
 
 impl CmpOpCudaKernel<f32> for NeKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const PTX_SRC: &'static str = PTX_SRC;
     const MODULE_NAME: &'static str = "ne";
     const FWD_FN_NAME: &'static str = "ne_forward";
 }
 
 impl ScalarCmpOpCudaKernel<f32> for NeKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const PTX_SRC: &'static str = PTX_SRC;
     const MODULE_NAME: &'static str = "scalar_ne";
     const FWD_FN_NAME: &'static str = "scalar_ne_forward";
 }
 
 impl CmpOpCudaKernel<f32> for GtKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const PTX_SRC: &'static str = PTX_SRC;
     const MODULE_NAME: &'static str = "gt";
     const FWD_FN_NAME: &'static str = "gt_forward";
 }
 
 impl ScalarCmpOpCudaKernel<f32> for GtKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const PTX_SRC: &'static str = PTX_SRC;
     const MODULE_NAME: &'static str = "scalar_gt";
     const FWD_FN_NAME: &'static str = "scalar_gt_forward";
 }
 
 impl CmpOpCudaKernel<f32> for GeKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const PTX_SRC: &'static str = PTX_SRC;
     const MODULE_NAME: &'static str = "ge";
     const FWD_FN_NAME: &'static str = "ge_forward";
 }
 
 impl ScalarCmpOpCudaKernel<f32> for GeKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const PTX_SRC: &'static str = PTX_SRC;
     const MODULE_NAME: &'static str = "scalar_ge";
     const FWD_FN_NAME: &'static str = "scalar_ge_forward";
 }
 
 impl CmpOpCudaKernel<f32> for LtKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const PTX_SRC: &'static str = PTX_SRC;
     const MODULE_NAME: &'static str = "lt";
     const FWD_FN_NAME: &'static str = "lt_forward";
 }
 
 impl ScalarCmpOpCudaKernel<f32> for LtKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const PTX_SRC: &'static str = PTX_SRC;
     const MODULE_NAME: &'static str = "scalar_lt";
     const FWD_FN_NAME: &'static str = "scalar_lt_forward";
 }
 
 impl CmpOpCudaKernel<f32> for LeKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const PTX_SRC: &'static str = PTX_SRC;
     const MODULE_NAME: &'static str = "le";
     const FWD_FN_NAME: &'static str = "le_forward";
 }
 
 impl ScalarCmpOpCudaKernel<f32> for LeKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cmp.ptx"));
+    const PTX_SRC: &'static str = PTX_SRC;
     const MODULE_NAME: &'static str = "scalar_le";
     const FWD_FN_NAME: &'static str = "scalar_le_forward";
 }

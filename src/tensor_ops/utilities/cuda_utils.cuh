@@ -1,9 +1,3 @@
-// See https://stackoverflow.com/a/37569519
-#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
-#else
-__device__ double atomicAdd(double* a, double b) { return b; }
-#endif
-
 #include "cuda_fp16.h"
 
 __device__ unsigned int get_strided_index(

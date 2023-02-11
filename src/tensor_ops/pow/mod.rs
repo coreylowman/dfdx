@@ -127,9 +127,9 @@ mod tests {
         let r = t.trace().powi(-3);
         assert_eq!(r.array(), [-0.125, -1.0, TestDtype::INFINITY, 1.0, 0.125]);
         let g = r.sum().backward();
-        assert_eq!(
-            g.get(&t).array(),
-            [-0.1875, -3., TestDtype::NEG_INFINITY, -3., -0.1875]
+        assert_close(
+            &g.get(&t).array(),
+            &[-0.1875, -3., TestDtype::NEG_INFINITY, -3., -0.1875],
         );
     }
 }

@@ -6,10 +6,9 @@ use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/reshape.ptx"));
-const MODULE_NAME: &str = "reshape";
 
 macro_rules! impl_reshape {
-    ($TypeName:ty, $Fwd:tt, $Bwd:tt) => {
+    ($TypeName:ty, $Mod:tt, $Fwd:tt, $Bwd:tt) => {
         impl super::ReshapeKernel<$TypeName> for Cuda {
             fn forward<Src: Shape, Dst: Shape>(
                 &self,
@@ -19,9 +18,8 @@ macro_rules! impl_reshape {
             where
                 Src: HasSameNumelAs<Dst>,
             {
-                if !self.dev.has_func(MODULE_NAME, $Fwd) {
-                    self.dev
-                        .load_ptx(PTX_SRC.into(), MODULE_NAME, &[$Fwd, $Bwd])?;
+                if !self.dev.has_func($Mod, $Fwd) {
+                    self.dev.load_ptx(PTX_SRC.into(), $Mod, &[$Fwd, $Bwd])?;
                 }
 
                 let numel = inp.data.len();
@@ -33,7 +31,7 @@ macro_rules! impl_reshape {
                 let inp_strides: CudaSlice<usize> = self.dev.take_async(inp.strides.into())?;
                 let dst_strides: CudaSlice<usize> = self.dev.take_async(dst.strides().into())?;
 
-                let fwd_fn = self.dev.get_func(MODULE_NAME, $Fwd).unwrap();
+                let fwd_fn = self.dev.get_func($Mod, $Fwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
                     numel,             // const size_t numel,
@@ -63,7 +61,7 @@ macro_rules! impl_reshape {
             where
                 Src: HasSameNumelAs<Dst>,
             {
-                let bwd_fn = self.dev.get_func(MODULE_NAME, $Bwd).unwrap();
+                let bwd_fn = self.dev.get_func($Mod, $Bwd).unwrap();
                 let numel = grad_inp.data.len();
 
                 let inp_dims: CudaSlice<usize> =
@@ -92,5 +90,15 @@ macro_rules! impl_reshape {
     };
 }
 
-impl_reshape!(f32, "reshape_to_forward_f32", "reshape_to_backward_f32");
-impl_reshape!(f64, "reshape_to_forward_f64", "reshape_to_backward_f64");
+impl_reshape!(
+    f32,
+    "reshape_f32",
+    "reshape_to_forward_f32",
+    "reshape_to_backward_f32"
+);
+impl_reshape!(
+    f64,
+    "reshape_f64",
+    "reshape_to_forward_f64",
+    "reshape_to_backward_f64"
+);

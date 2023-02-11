@@ -6,13 +6,10 @@ use cudarc::driver::{LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 const GATHER_PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/gather.ptx"));
-const GATHER_MODULE_NAME: &str = "gather";
-
 const SELECT_PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/select.ptx"));
-const SELECT_MODULE_NAME: &str = "select";
 
 macro_rules! impl_cuda_kernels {
-    ($TypeName:ty, $GatherFwd:tt, $GatherBwd:tt, $SelectFwd:tt, $SelectBwd:tt) => {
+    ($TypeName:ty, $GatherMod:tt, $GatherFwd:tt, $GatherBwd:tt, $SelectMod:tt, $SelectFwd:tt, $SelectBwd:tt) => {
         impl super::ReplaceDimKernel<$TypeName> for Cuda {
             fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
                 &self,
@@ -22,10 +19,10 @@ macro_rules! impl_cuda_kernels {
             where
                 Src: ReplaceDimTo<Dst, Idx>,
             {
-                if !self.dev.has_func(GATHER_MODULE_NAME, $GatherFwd) {
+                if !self.dev.has_func($GatherMod, $GatherFwd) {
                     self.dev.load_ptx(
                         GATHER_PTX_SRC.into(),
-                        GATHER_MODULE_NAME,
+                        $GatherMod,
                         &[$GatherFwd, $GatherBwd],
                     )?;
                 }
@@ -39,7 +36,7 @@ macro_rules! impl_cuda_kernels {
                 let inp_strides = self.dev.take_async(inp.strides.into())?;
                 let idx_strides = self.dev.take_async(idx.strides.into())?;
 
-                let fwd_fn = self.dev.get_func(GATHER_MODULE_NAME, $GatherFwd).unwrap();
+                let fwd_fn = self.dev.get_func($GatherMod, $GatherFwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
                     numel,             // const size_t numel,
@@ -72,7 +69,7 @@ macro_rules! impl_cuda_kernels {
             where
                 Src: ReplaceDimTo<Dst, Idx>,
             {
-                let bwd_fn = self.dev.get_func(GATHER_MODULE_NAME, $GatherBwd).unwrap();
+                let bwd_fn = self.dev.get_func($GatherMod, $GatherBwd).unwrap();
                 let numel = grad_out.data.len();
 
                 let inp_dims = self.dev.take_async(grad_inp.shape.concrete().into())?;
@@ -108,10 +105,10 @@ macro_rules! impl_cuda_kernels {
             where
                 Src: RemoveDimTo<Dst, Idx>,
             {
-                if !self.dev.has_func(SELECT_MODULE_NAME, $SelectFwd) {
+                if !self.dev.has_func($SelectMod, $SelectFwd) {
                     self.dev.load_ptx(
                         SELECT_PTX_SRC.into(),
-                        SELECT_MODULE_NAME,
+                        $SelectMod,
                         &[$SelectFwd, $SelectBwd],
                     )?;
                 }
@@ -127,7 +124,7 @@ macro_rules! impl_cuda_kernels {
                 let idx_strides = self.dev.take_async(idx.strides.into())?;
                 let dst_strides = self.dev.take_async(dst.strides().into())?;
 
-                let fwd_fn = self.dev.get_func(SELECT_MODULE_NAME, $SelectFwd).unwrap();
+                let fwd_fn = self.dev.get_func($SelectMod, $SelectFwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
                     numel,             // const size_t numel,
@@ -161,7 +158,7 @@ macro_rules! impl_cuda_kernels {
             where
                 Src: RemoveDimTo<Dst, Idx>,
             {
-                let bwd_fn = self.dev.get_func(SELECT_MODULE_NAME, $SelectBwd).unwrap();
+                let bwd_fn = self.dev.get_func($SelectMod, $SelectBwd).unwrap();
                 let numel = grad_out.data.len();
 
                 let inp_dims = self.dev.take_async(grad_inp.shape.concrete().into())?;
@@ -195,15 +192,19 @@ macro_rules! impl_cuda_kernels {
 
 impl_cuda_kernels!(
     f32,
+    "gather_f32",
     "gather_forward_f32",
     "gather_backward_f32",
+    "select_f32",
     "select_forward_f32",
     "select_backward_f32"
 );
 impl_cuda_kernels!(
     f64,
+    "gather_f64",
     "gather_forward_f64",
     "gather_backward_f64",
+    "select_f64",
     "select_forward_f64",
     "select_backward_f64"
 );

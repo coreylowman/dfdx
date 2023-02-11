@@ -7,7 +7,7 @@ use std::sync::Arc;
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/permute_to.ptx"));
 
 macro_rules! impl_permute {
-    ($TypeName:ty, $SumFn:tt) => {
+    ($TypeName:ty, $Mod:tt, $SumFn:tt) => {
         impl super::PermuteKernel<$TypeName> for Cuda {
             fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
                 &self,
@@ -30,11 +30,11 @@ macro_rules! impl_permute {
             where
                 Src: PermuteShapeTo<Dst, Ax>,
             {
-                if !self.dev.has_func("permute_to", $SumFn) {
-                    self.dev.load_ptx(PTX_SRC.into(), "permute_to", &[$SumFn])?;
+                if !self.dev.has_func($Mod, $SumFn) {
+                    self.dev.load_ptx(PTX_SRC.into(), $Mod, &[$SumFn])?;
                 }
 
-                let f = self.dev.get_func("permute_to", $SumFn).unwrap();
+                let f = self.dev.get_func($Mod, $SumFn).unwrap();
 
                 let numel = grad_inp.data.len();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -50,5 +50,5 @@ macro_rules! impl_permute {
     };
 }
 
-impl_permute!(f32, "sum_f32");
-impl_permute!(f64, "sum_f64");
+impl_permute!(f32, "permute_f32", "sum_f32");
+impl_permute!(f64, "permute_f64", "sum_f64");

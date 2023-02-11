@@ -31,7 +31,7 @@ __device__ unsigned int get_selected_index(
 template<typename T>
 __device__ void select_forward(
     const size_t numel,
-    const float *inp,
+    const T *inp,
     const size_t inp_num_dims,
     const size_t *inp_dims,
     const size_t *inp_strides,
@@ -118,7 +118,7 @@ extern "C" __global__ void select_backward_f32(
 
 extern "C" __global__ void select_forward_f64(
     const size_t numel,
-    const float *inp,
+    const double *inp,
     const size_t inp_num_dims,
     const size_t *inp_dims,
     const size_t *inp_strides,

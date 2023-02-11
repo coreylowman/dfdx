@@ -7,7 +7,7 @@ use std::sync::Arc;
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/broadcast_to.ptx"));
 
 macro_rules! impl_broadcast {
-    ($TypeName:tt, $SumFn:tt) => {
+    ($TypeName:tt, $Mod:tt, $SumFn:tt) => {
         impl super::BroadcastKernel<$TypeName> for Cuda {
             fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
                 &self,
@@ -31,11 +31,10 @@ macro_rules! impl_broadcast {
             where
                 Src: BroadcastShapeTo<Dst, Ax>,
             {
-                if !self.dev.has_func("broadcast_to", $SumFn) {
-                    self.dev
-                        .load_ptx(PTX_SRC.into(), "broadcast_to", &[$SumFn])?;
+                if !self.dev.has_func($Mod, $SumFn) {
+                    self.dev.load_ptx(PTX_SRC.into(), $Mod, &[$SumFn])?;
                 }
-                let f = self.dev.get_func("broadcast_to", $SumFn).unwrap();
+                let f = self.dev.get_func($Mod, $SumFn).unwrap();
                 let numel = grad_inp.data.len();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
@@ -50,5 +49,5 @@ macro_rules! impl_broadcast {
     };
 }
 
-impl_broadcast!(f32, "sum_f32");
-impl_broadcast!(f64, "sum_f64");
+impl_broadcast!(f32, "broadcast_f32", "sum_f32");
+impl_broadcast!(f64, "broadcast_f32", "sum_f64");

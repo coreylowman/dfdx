@@ -8,11 +8,10 @@ use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 
 use std::sync::Arc;
 
-const MODULE_NAME: &str = "min_to";
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/min_to.ptx"));
 
 macro_rules! impl_min_reduce {
-    ($TypeName:ty, $Fwd:tt, $Bwd:tt) => {
+    ($TypeName:ty, $Mod:tt, $Fwd:tt, $Bwd:tt, $Fill:tt) => {
         impl super::MinReduceKernel<$TypeName> for Cuda {
             fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
                 &self,
@@ -22,12 +21,12 @@ macro_rules! impl_min_reduce {
             where
                 Src: ReduceShapeTo<Dst, Ax>,
             {
-                if !self.dev.has_func(MODULE_NAME, $Fwd) {
+                if !self.dev.has_func($Mod, $Fwd) {
                     self.dev
-                        .load_ptx(PTX_SRC.into(), MODULE_NAME, &[$Fwd, $Bwd, "fill_with"])?;
+                        .load_ptx(PTX_SRC.into(), $Mod, &[$Fwd, $Bwd, $Fill])?;
                 }
 
-                let fill_fn = self.dev.get_func(MODULE_NAME, "fill_with").unwrap();
+                let fill_fn = self.dev.get_func($Mod, $Fill).unwrap();
                 let mut storage = unsafe {
                     let mut storage = self.dev.alloc_async::<$TypeName>(dst.num_elements())?;
                     fill_fn.launch_async(
@@ -37,7 +36,7 @@ macro_rules! impl_min_reduce {
                     storage
                 };
 
-                let fwd_fn = self.dev.get_func(MODULE_NAME, $Fwd).unwrap();
+                let fwd_fn = self.dev.get_func($Mod, $Fwd).unwrap();
 
                 let (dims, strides) =
                     permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
@@ -75,7 +74,7 @@ macro_rules! impl_min_reduce {
             where
                 Src: ReduceShapeTo<Dst, Ax>,
             {
-                let bwd_fn = self.dev.get_func(MODULE_NAME, $Bwd).unwrap();
+                let bwd_fn = self.dev.get_func($Mod, $Bwd).unwrap();
 
                 let dims: CudaSlice<usize> =
                     self.dev.take_async(grad_inp.shape.concrete().into())?;
@@ -110,5 +109,17 @@ macro_rules! impl_min_reduce {
     };
 }
 
-impl_min_reduce!(f32, "min_to_forward_f32", "min_to_backward_f32");
-impl_min_reduce!(f64, "min_to_forward_f64", "min_to_backward_f64");
+impl_min_reduce!(
+    f32,
+    "min_f32",
+    "min_to_forward_f32",
+    "min_to_backward_f32",
+    "fill_with_f32"
+);
+impl_min_reduce!(
+    f64,
+    "min_f64",
+    "min_to_forward_f64",
+    "min_to_backward_f64",
+    "fill_with_f64"
+);

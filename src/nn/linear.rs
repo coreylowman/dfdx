@@ -186,7 +186,7 @@ mod tests {
     fn test_linear_initialize() {
         let dev: TestDevice = Default::default();
         let m = dev.build_module::<builder::Linear<2000, 1>, TestDtype>();
-        let bound: TestDtype = (1.0 / 2000.0).into();
+        let bound: TestDtype = 1.0 / 2000.0;
         let bound = bound.sqrt();
         for v in m.weight.as_vec() {
             assert!(-bound <= v && v <= bound && v != 0.0);

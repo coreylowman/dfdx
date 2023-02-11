@@ -7,10 +7,9 @@ use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/choose.ptx"));
-const MODULE_NAME: &str = "choose";
 
 macro_rules! impl_choose {
-    ($TypeName:ty, $Fwd:tt, $Bwd:tt) => {
+    ($TypeName:ty, $Mod:tt, $Fwd:tt, $Bwd:tt) => {
         impl ChooseKernel<$TypeName> for Cuda {
             fn forward<S: Shape>(
                 &self,
@@ -18,9 +17,8 @@ macro_rules! impl_choose {
                 lhs: &Self::Storage<S, $TypeName>,
                 rhs: &Self::Storage<S, $TypeName>,
             ) -> Result<Self::Storage<S, $TypeName>, Self::Err> {
-                if !self.dev.has_func(MODULE_NAME, $Fwd) {
-                    self.dev
-                        .load_ptx(PTX_SRC.into(), MODULE_NAME, &[$Fwd, $Bwd])?;
+                if !self.dev.has_func($Mod, $Fwd) {
+                    self.dev.load_ptx(PTX_SRC.into(), $Mod, &[$Fwd, $Bwd])?;
                 }
 
                 let shape = lhs.shape;
@@ -34,7 +32,7 @@ macro_rules! impl_choose {
                 let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
                 let rhs_strides: CudaSlice<usize> = self.dev.take_async(rhs.strides.into())?;
 
-                let fwd_fn = self.dev.get_func(MODULE_NAME, $Fwd).unwrap();
+                let fwd_fn = self.dev.get_func($Mod, $Fwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
                     numel,              // const size_t numel,
@@ -63,7 +61,7 @@ macro_rules! impl_choose {
                 grad_rhs: &mut Self::Storage<S, $TypeName>,
                 grad_out: &Self::Storage<S, $TypeName>,
             ) -> Result<(), Self::Err> {
-                let bwd_fn = self.dev.get_func(MODULE_NAME, $Bwd).unwrap();
+                let bwd_fn = self.dev.get_func($Mod, $Bwd).unwrap();
                 let numel = cond.shape.num_elements();
 
                 let dims: CudaSlice<usize> = self.dev.take_async(cond.shape.concrete().into())?;
@@ -91,5 +89,15 @@ macro_rules! impl_choose {
     };
 }
 
-impl_choose!(f32, "choose_forward_f32", "choose_backward_f32");
-impl_choose!(f64, "choose_forward_f64", "choose_backward_f64");
+impl_choose!(
+    f32,
+    "choose_f32",
+    "choose_forward_f32",
+    "choose_backward_f32"
+);
+impl_choose!(
+    f64,
+    "choose_f64",
+    "choose_forward_f64",
+    "choose_backward_f64"
+);

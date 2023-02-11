@@ -10,11 +10,10 @@ use cudarc::driver::{LaunchAsync, LaunchConfig};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::Standard;
 
-const MODULE_NAME: &str = "dropout";
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/dropout.ptx"));
 
 macro_rules! impl_dropout {
-    ($TypeName:ty, $ForwardFn:tt, $BackwardFn:tt) => {
+    ($TypeName:ty, $Mod:tt, $Fwd:tt, $Bwd:tt) => {
         impl super::DropoutKernel<$TypeName> for Cuda {
             fn forward<S: Shape>(
                 &self,
@@ -28,15 +27,14 @@ macro_rules! impl_dropout {
                     self.dev.take_async(noise)
                 }?;
 
-                if !self.dev.has_func(MODULE_NAME, $ForwardFn) {
-                    self.dev
-                        .load_ptx(PTX_SRC.into(), MODULE_NAME, &[$ForwardFn, $BackwardFn])?;
+                if !self.dev.has_func($Mod, $Fwd) {
+                    self.dev.load_ptx(PTX_SRC.into(), $Mod, &[$Fwd, $Bwd])?;
                 }
 
                 let numel = inp.data.len();
                 let mut storage = unsafe { self.dev.alloc_async::<$TypeName>(numel) }?;
 
-                let fwd_fn = self.dev.get_func(MODULE_NAME, $ForwardFn).unwrap();
+                let fwd_fn = self.dev.get_func($Mod, $Fwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
                     op.prob,           // const float prob,
@@ -65,7 +63,7 @@ macro_rules! impl_dropout {
                     noise.resize_with(inp.data.len(), || rng.sample(Standard));
                     self.dev.take_async(noise)
                 }?;
-                let bwd_fn = self.dev.get_func(MODULE_NAME, $BackwardFn).unwrap();
+                let bwd_fn = self.dev.get_func($Mod, $Bwd).unwrap();
                 let numel = inp.data.len();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
@@ -82,5 +80,15 @@ macro_rules! impl_dropout {
     };
 }
 
-impl_dropout!(f32, "dropout_forward_f32", "dropout_backward_f32");
-impl_dropout!(f64, "dropout_forward_f64", "dropout_backward_f64");
+impl_dropout!(
+    f32,
+    "dropout_f32",
+    "dropout_forward_f32",
+    "dropout_backward_f32"
+);
+impl_dropout!(
+    f64,
+    "dropout_f64",
+    "dropout_forward_f64",
+    "dropout_backward_f64"
+);
