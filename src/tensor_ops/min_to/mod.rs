@@ -93,9 +93,9 @@ mod tests {
         let r = t.trace().min::<Rank1<3>, _>();
         assert_eq!(r.array(), [1.0, -2.0, 2.0]);
         let g = r.exp().mean().backward();
-        assert_eq!(
-            g.get(&t).array(),
-            [[0.90609396, 0.0, 2.463019], [0.0, 0.04511176, 2.463019]]
+        assert_close(
+            &g.get(&t).array(),
+            &[[0.90609396, 0.0, 2.463019], [0.0, 0.04511176, 2.463019]],
         );
     }
 

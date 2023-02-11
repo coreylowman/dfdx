@@ -59,7 +59,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, 0.0, 5.0]);
         let r = a.trace().normalize(1e-5);
-        assert_eq!(r.array(), [-1.0190487, -0.3396829, 1.3587316]);
+        assert_close(&r.array(), &[-1.0190487, -0.3396829, 1.3587316]);
         // NOTE: .exp() so we can make sure normalize is using result grad properly
         let g = r.exp().mean().backward();
         assert_close(&g.get(&a).array(), &[0.033410847, -0.04677555, 0.013364702]);
@@ -70,12 +70,12 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
         let r = a.trace().normalize::<Axis<1>>(1e-5);
-        assert_eq!(
-            r.array(),
-            [
+        assert_close(
+            &r.array(),
+            &[
                 [-1.0190487, -0.3396829, 1.3587316],
-                [-1.2247356, 0.0, 1.2247356]
-            ]
+                [-1.2247356, 0.0, 1.2247356],
+            ],
         );
         let g = r.exp().mean().backward();
         assert_close(

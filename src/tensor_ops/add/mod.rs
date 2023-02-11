@@ -198,7 +198,7 @@ mod tests {
         let r = x.trace() + 0.5;
         assert_eq!(r.array(), [0.5, 1.5, 2.5]);
         let g = r.exp().sum().backward();
-        assert_eq!(g.get(&x).array(), [1.6487212, 4.481689, 12.182494]);
+        assert_close(&g.get(&x).array(), &[1.6487212, 4.481689, 12.182494]);
     }
 
     #[test]
@@ -208,6 +208,6 @@ mod tests {
         let r = x.trace() + 0.5;
         assert_eq!(r.array(), [[0.5; 2]; 3]);
         let g = r.exp().sum().backward();
-        assert_eq!(g.get(&x).array(), [[1.6487212; 2]; 3]);
+        assert_close(&g.get(&x).array(), &[[1.6487212; 2]; 3]);
     }
 }

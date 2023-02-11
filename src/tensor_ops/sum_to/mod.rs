@@ -85,10 +85,11 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
         let r = t.trace().sum::<Rank0, _>();
-        assert_eq!(r.array(), 6.0);
+        let e = 6.0;
+        assert_eq!(r.array(), e);
         // NOTE: .exp() to make sure its using result grad properly
         let g = r.exp().backward();
-        assert_eq!(g.get(&t).array(), [403.4288; 3]);
+        assert_eq!(g.get(&t).array(), [e.exp(); 3]);
     }
 
     #[test]
@@ -96,12 +97,10 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
         let r = t.trace().sum::<Rank1<3>, _>();
-        assert_eq!(r.array(), [-1.0, 6.0, -3.0]);
+        let e = [-1.0, 6.0, -3.0];
+        assert_eq!(r.array(), e);
         let g = r.exp().mean().backward();
-        assert_close(
-            &g.get(&t).array(),
-            &[[0.12262648, 134.47627, 0.01659569]; 2],
-        );
+        assert_close(&g.get(&t).array(), &[e.map(|x| x.exp() / 3.0); 2]);
     }
 
     #[test]
@@ -109,9 +108,13 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
         let r = t.trace().sum::<Rank1<2>, _>();
-        assert_eq!(r.array(), [6.0, -4.0]);
+        let e = [6.0, -4.0];
+        assert_eq!(r.array(), e);
         let g = r.exp().mean().backward();
-        assert_close(&g.get(&t).array(), &[[201.7144; 3], [0.00915782; 3]]);
+        assert_close(
+            &g.get(&t).array(),
+            &[[e[0].exp() / 2.0; 3], [e[1].exp() / 2.0; 3]],
+        );
     }
 
     #[test]

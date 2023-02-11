@@ -94,8 +94,8 @@ mod tests {
         let r = b.trace() / a.clone();
         assert_eq!(r.array(), 2.0);
         let g = r.backward();
-        assert_eq!(g.get(&a).array(), -1.0);
-        assert_eq!(g.get(&b).array(), 0.5);
+        assert_close(&g.get(&a).array(), &-1.0);
+        assert_close(&g.get(&b).array(), &0.5);
     }
 
     #[test]
@@ -107,8 +107,8 @@ mod tests {
         let r = b.trace() / a.clone();
         assert_eq!(r.array(), [1.0, -0.5, 0.0]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&a).array(), [-1.0 / 3.0, 1.0 / 12.0, 0.0]);
-        assert_eq!(g.get(&b).array(), [1.0 / 3.0, 1.0 / 6.0, 0.11111112]);
+        assert_close(&g.get(&a).array(), &[-1.0 / 3.0, 1.0 / 12.0, 0.0]);
+        assert_close(&g.get(&b).array(), &[1.0 / 3.0, 1.0 / 6.0, 0.11111112]);
     }
 
     #[test]
@@ -120,27 +120,27 @@ mod tests {
             dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
         let r = b.trace() / a.clone();
-        assert_eq!(
-            r.array(),
-            [
+        assert_close(
+            &r.array(),
+            &[
                 [0.79132426, 2.2505856, 2.5059998],
-                [1.4597031, 0.52524966, 0.046511628]
-            ]
+                [1.4597031, 0.52524966, 0.046511628],
+            ],
         );
         let g = r.mean().backward();
-        assert_eq!(
-            g.get(&a).array(),
-            [
+        assert_close(
+            &g.get(&a).array(),
+            &[
                 [-0.20074181, -2.1961217, -2.7844446],
-                [-0.42998204, -0.12488105, -0.009292662]
-            ]
+                [-0.42998204, -0.12488105, -0.009292662],
+            ],
         );
-        assert_eq!(
-            g.get(&b).array(),
-            [
+        assert_close(
+            &g.get(&b).array(),
+            &[
                 [0.25367835, 0.97580016, 1.1111112],
-                [0.29456818, 0.2377556, 0.1997922]
-            ]
+                [0.29456818, 0.2377556, 0.1997922],
+            ],
         );
     }
 
@@ -151,7 +151,7 @@ mod tests {
         let r = x.trace() / 2.0;
         assert_eq!(r.array(), 0.5);
         let g = r.exp().backward();
-        assert_eq!(g.get(&x).array(), 0.8243606);
+        assert_close(&g.get(&x).array(), &0.8243606);
     }
 
     #[test]
@@ -161,7 +161,7 @@ mod tests {
         let r = x.trace() / 2.0;
         assert_eq!(r.array(), [0.0, 0.5, 1.0]);
         let g = r.exp().sum().backward();
-        assert_eq!(g.get(&x).array(), [0.5, 0.8243606, 1.3591409]);
+        assert_close(&g.get(&x).array(), &[0.5, 0.8243606, 1.3591409]);
     }
 
     #[test]
@@ -171,6 +171,6 @@ mod tests {
         let r = x.trace() / 2.0;
         assert_eq!(r.array(), [[0.5; 2]; 3]);
         let g = r.exp().sum().backward();
-        assert_eq!(g.get(&x).array(), [[0.8243606; 2]; 3]);
+        assert_close(&g.get(&x).array(), &[[0.8243606; 2]; 3]);
     }
 }

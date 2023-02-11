@@ -179,10 +179,9 @@ pub(crate) mod tests {
     #[cfg(feature = "test-f64")]
     pub type TestDtype = f64;
 
-    const TOLERANCE: TestDtype = 1e-6;
-
     pub trait AssertClose {
         type Elem: std::fmt::Display + std::fmt::Debug + Copy;
+        const DEFAULT_TOLERANCE: Self::Elem;
         fn get_far_pair(
             &self,
             rhs: &Self,
@@ -200,6 +199,7 @@ pub(crate) mod tests {
 
     impl AssertClose for f32 {
         type Elem = f32;
+        const DEFAULT_TOLERANCE: Self::Elem = 1e-6;
         fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)> {
             if (self - rhs).abs() > tolerance {
                 Some((*self, *rhs))
@@ -211,6 +211,7 @@ pub(crate) mod tests {
 
     impl AssertClose for f64 {
         type Elem = f64;
+        const DEFAULT_TOLERANCE: Self::Elem = 1e-6;
         fn get_far_pair(&self, rhs: &Self, tolerance: f64) -> Option<(f64, f64)> {
             if (self - rhs).abs() > tolerance {
                 Some((*self, *rhs))
@@ -222,6 +223,7 @@ pub(crate) mod tests {
 
     impl<T: AssertClose, const M: usize> AssertClose for [T; M] {
         type Elem = T::Elem;
+        const DEFAULT_TOLERANCE: Self::Elem = T::DEFAULT_TOLERANCE;
         fn get_far_pair(
             &self,
             rhs: &Self,
@@ -236,8 +238,8 @@ pub(crate) mod tests {
         }
     }
 
-    pub fn assert_close<T: AssertClose<Elem = TestDtype> + std::fmt::Debug>(a: &T, b: &T) {
-        a.assert_close(b, TOLERANCE);
+    pub fn assert_close<T: AssertClose + std::fmt::Debug>(a: &T, b: &T) {
+        a.assert_close(b, T::DEFAULT_TOLERANCE);
     }
 
     pub fn assert_close_with_tolerance<T: AssertClose + std::fmt::Debug>(

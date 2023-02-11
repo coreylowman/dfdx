@@ -93,9 +93,9 @@ mod tests {
         let r = t.trace().max::<_, Axis<0>>();
         assert_eq!(r.array(), [3.0, 2.0, 2.0]);
         let g = r.exp().mean().backward();
-        assert_eq!(
-            g.get(&t).array(),
-            [[0.0, 2.463019, 2.463019], [6.695179, 0.0, 2.463019]]
+        assert_close(
+            &g.get(&t).array(),
+            &[[0.0, 2.463019, 2.463019], [6.695179, 0.0, 2.463019]],
         );
     }
 

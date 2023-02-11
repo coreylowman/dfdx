@@ -109,7 +109,7 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         type Model = GeneralizedResidual<Linear<2, 5>, Linear<2, 5>>;
-        let model = dev.build_module::<Model, TestDtype>();
+        let model = dev.build_module::<Model, f32>();
         assert_ne!(model.f.weight.array(), [[0.0; 2]; 5]);
         assert_ne!(model.f.bias.array(), [0.0; 5]);
         assert_ne!(model.r.weight.array(), [[0.0; 2]; 5]);
@@ -121,7 +121,7 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         type Model = GeneralizedResidual<Linear<2, 2>, Linear<2, 2>>;
-        let model = dev.build_module::<Model, TestDtype>();
+        let model = dev.build_module::<Model, f32>();
 
         let x = dev.sample_normal::<Rank2<4, 2>>();
         let y = model.forward(x.trace());

@@ -583,8 +583,8 @@ mod tests {
         let c = a.trace().matmul(b.clone());
         assert_eq!(c.array(), [[1.0]]);
         let g = c.exp().sum().backward();
-        assert_eq!(g.get(&a).array(), [5.4365635]);
-        assert_eq!(g.get(&b).array(), [1.3591409]);
+        assert_close(&g.get(&a).array(), &[5.4365635]);
+        assert_close(&g.get(&b).array(), &[1.3591409]);
     }
 
     #[test]
@@ -597,33 +597,34 @@ mod tests {
         let c = a.trace().matmul(b.clone());
         assert_eq!(c.array(), [1.0]);
         let g = c.exp().sum().backward();
-        assert_eq!(g.get(&a).array(), [5.4365635]);
-        assert_eq!(g.get(&b).array(), [[1.3591409]]);
+        assert_close(&g.get(&a).array(), &[5.4365635]);
+        assert_close(&g.get(&b).array(), &[[1.3591409]]);
 
         // 1 * 1x1 (permuted)
         let c = a.trace().matmul(b.trace().permute());
         assert_eq!(c.array(), [1.0]);
         let g = c.exp().sum().backward();
-        assert_eq!(g.get(&a).array(), [5.4365635]);
-        assert_eq!(g.get(&b).array(), [[1.3591409]]);
+        assert_close(&g.get(&a).array(), &[5.4365635]);
+        assert_close(&g.get(&b).array(), &[[1.3591409]]);
 
         // 1 * 1x2
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0, 4.0]]);
         let c = a.trace().matmul(b.clone());
-        assert_eq!(c.array(), [1.0, 2.0]);
+        let e = [1.0, 2.0];
+        assert_eq!(c.array(), e);
         let g = c.exp().sum().backward();
-        assert_eq!(g.get(&a).array(), [34.99279]);
-        assert_eq!(g.get(&b).array(), [[1.3591409, 3.694528]]);
+        assert_close(&g.get(&a).array(), &[e[0].exp() * 2.0 + e[1].exp() * 4.0]);
+        assert_close(&g.get(&b).array(), &[[1.3591409, 3.694528]]);
 
         // 1 * 1x2 (permuted)
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0], [4.0]]);
         let c = a.trace().matmul(b.trace().permute());
-        assert_eq!(c.array(), [1.0, 2.0]);
+        assert_eq!(c.array(), e);
         let g = c.exp().sum().backward();
-        assert_eq!(g.get(&a).array(), [34.99279]);
-        assert_eq!(g.get(&b).array(), [[1.3591409], [3.694528]]);
+        assert_close(&g.get(&a).array(), &[e[0].exp() * 2.0 + e[1].exp() * 4.0]);
+        assert_close(&g.get(&b).array(), &[[1.3591409], [3.694528]]);
     }
 
     #[test]
@@ -637,8 +638,8 @@ mod tests {
             let c = a.trace().matmul(b.clone());
             assert_eq!(c.array(), [[1.0]]);
             let g = c.exp().sum().backward();
-            assert_eq!(g.get(&a).array(), [[5.4365635]]);
-            assert_eq!(g.get(&b).array(), [[1.3591409]]);
+            assert_close(&g.get(&a).array(), &[[5.4365635]]);
+            assert_close(&g.get(&b).array(), &[[1.3591409]]);
         }
 
         {

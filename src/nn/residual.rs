@@ -90,7 +90,7 @@ mod tests {
 
         let model = <Residual<Linear<2, 2>>>::build_on_device(&dev);
 
-        let x: Tensor<Rank2<4, 2>, TestDtype, TestDevice> = dev.sample_normal();
+        let x: Tensor<Rank2<4, 2>, f32, TestDevice> = dev.sample_normal();
         let y = model.forward(x.trace());
 
         #[rustfmt::skip]

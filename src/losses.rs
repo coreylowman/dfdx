@@ -182,11 +182,11 @@ mod tests {
         let y: Tensor<_, TestDtype, _> =
             dev.tensor([-0.90954804, -1.0193185, -0.39221755, 2.2524886, 1.3035554]);
         let loss = mse_loss(x.trace(), y);
-        assert_eq!(loss.array(), 1.0846305);
+        assert_close(&loss.array(), &1.0846305);
         let g = loss.backward();
-        assert_eq!(
-            g.get(&x).array(),
-            [0.7128116, 0.31071725, -0.24555098, -0.43896183, 0.10037976]
+        assert_close(
+            &g.get(&x).array(),
+            &[0.7128116, 0.31071725, -0.24555098, -0.43896183, 0.10037976],
         );
     }
 
@@ -244,7 +244,7 @@ mod tests {
             targ[i] = 1.0;
             let y = dev.tensor(targ);
             let loss = cross_entropy_with_logits_loss(x.trace(), y.clone());
-            assert_eq!(loss.array(), losses[i]);
+            assert_close(&loss.array(), &losses[i]);
         }
     }
 
@@ -266,7 +266,7 @@ mod tests {
             [0.0166, 0.8512, 0.1322],
         ]);
         let loss = kl_div_with_logits_loss(logits.trace(), targ);
-        assert_eq!(loss.array(), 0.40656143);
+        assert_close(&loss.array(), &0.40656143);
         let g = loss.backward();
         assert_close(
             &g.get(&logits).array(),
@@ -325,7 +325,7 @@ mod tests {
         let targ: Tensor<_, TestDtype, _> = dev.tensor([[0.0, 0.5, 1.0]; 3]);
 
         let loss = binary_cross_entropy_with_logits_loss(logit.trace(), targ.clone());
-        assert_eq!(loss.array(), 33.479965);
+        assert_close(&loss.array(), &33.479964);
 
         let g = loss.backward();
 
@@ -363,24 +363,24 @@ mod tests {
         ]);
 
         let loss = huber_loss(x.trace(), y.clone(), 0.5);
-        assert_eq!(loss.array(), 0.24506615);
+        assert_close(&loss.array(), &0.24506615);
 
         let g = loss.backward();
-        assert_eq!(
-            g.get(&x).array(),
-            [
+        assert_close(
+            &g.get(&x).array(),
+            &[
                 [-0.016490579, 0.014802615, -0.033333335, -0.012523981, 0.0],
                 [0.033333335, -0.0099870805, -0.033333335, 0.033333335, 0.0],
-                [0.033333335, -0.033333335, -0.02631244, 0.033333335, 0.0]
-            ]
+                [0.033333335, -0.033333335, -0.02631244, 0.033333335, 0.0],
+            ],
         );
-        assert_eq!(
-            g.get(&y).array(),
-            [
+        assert_close(
+            &g.get(&y).array(),
+            &[
                 [0.016490579, -0.014802615, 0.033333335, 0.012523981, 0.0],
                 [-0.033333335, 0.0099870805, 0.033333335, -0.033333335, 0.0],
-                [-0.033333335, 0.033333335, 0.02631244, -0.033333335, 0.0]
-            ]
+                [-0.033333335, 0.033333335, 0.02631244, -0.033333335, 0.0],
+            ],
         );
     }
 
@@ -399,24 +399,24 @@ mod tests {
         ]);
 
         let loss = smooth_l1_loss(x.trace(), y.clone(), 0.5);
-        assert_eq!(loss.array(), 0.4901323);
+        assert_close(&loss.array(), &0.4901323);
 
         let g = loss.backward();
-        assert_eq!(
-            g.get(&x).array(),
-            [
+        assert_close(
+            &g.get(&x).array(),
+            &[
                 [-0.032981157, 0.02960523, -0.06666667, -0.025047962, 0.0],
                 [0.06666667, -0.019974161, -0.06666667, 0.06666667, 0.0],
-                [0.06666667, -0.06666667, -0.05262488, 0.06666667, 0.0]
-            ]
+                [0.06666667, -0.06666667, -0.05262488, 0.06666667, 0.0],
+            ],
         );
-        assert_eq!(
-            g.get(&y).array(),
-            [
+        assert_close(
+            &g.get(&y).array(),
+            &[
                 [0.032981157, -0.02960523, 0.06666667, 0.025047962, 0.0],
                 [-0.06666667, 0.019974161, 0.06666667, -0.06666667, 0.0],
-                [-0.06666667, 0.06666667, 0.05262488, -0.06666667, 0.0]
-            ]
+                [-0.06666667, 0.06666667, 0.05262488, -0.06666667, 0.0],
+            ],
         );
     }
 }
