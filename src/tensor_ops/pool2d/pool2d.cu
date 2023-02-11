@@ -10,12 +10,13 @@ struct Pool2dOp {
     size_t w_out;
 };
 
-extern "C" __global__ void avg_pool2d_forward(
+template<typename T>
+__device__ void avg_pool2d_forward(
     const Pool2dOp op,
     const size_t *inp_strides,
     const size_t *out_strides,
-    const float *inp, // 4d (Batch, Channels, Height, Width)
-    float *out // 4d (Batch, Channels, HeightOut, WidthOut)
+    const T *inp, // 4d (Batch, Channels, Height, Width)
+    T *out // 4d (Batch, Channels, HeightOut, WidthOut)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     const size_t numel = op.batch * op.chan * op.h_out * op.w_out;
@@ -33,7 +34,7 @@ extern "C" __global__ void avg_pool2d_forward(
     const size_t b = idx % op.batch;
     idx /= op.batch;
     
-    float tmp = 0.0;
+    T tmp = 0.0;
     for(size_t k1 = 0; k1 < op.kernel; k1++) {
         for (size_t k2 = 0; k2 < op.kernel; k2++) {
             const size_t y_plus_p = oh * op.stride + k1;
@@ -50,18 +51,19 @@ extern "C" __global__ void avg_pool2d_forward(
         }
     }
 
-    tmp /= static_cast<float>(op.kernel * op.kernel);
+    tmp /= static_cast<T>(op.kernel * op.kernel);
     out[i] = tmp;
 }
 
-extern "C" __global__ void avg_pool2d_backward(
+template<typename T>
+__device__ void avg_pool2d_backward(
     const Pool2dOp op,
     const size_t *inp_strides,
     const size_t *out_strides,
-    const float *inp, // 4d (Batch, Channels, Height, Width)
-    float *grad_inp,
-    const float *out, // 4d (Batch, Channels, HeightOut, WidthOut)
-    const float *grad_out
+    const T *inp, // 4d (Batch, Channels, Height, Width)
+    T *grad_inp,
+    const T *out, // 4d (Batch, Channels, HeightOut, WidthOut)
+    const T *grad_out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     const size_t numel = op.batch * op.chan * op.h_in * op.w_in;
@@ -79,7 +81,7 @@ extern "C" __global__ void avg_pool2d_backward(
     const size_t b = idx % op.batch;
     idx /= op.batch;
 
-    float tmp = 0.0;
+    T tmp = 0.0;
     for(size_t k1 = 0; k1 < op.kernel; k1++) {
         for (size_t k2 = 0; k2 < op.kernel; k2++) {
             size_t oh = y + op.padding;
@@ -101,15 +103,16 @@ extern "C" __global__ void avg_pool2d_backward(
         }
     }
 
-    grad_inp[i] += tmp / static_cast<float>(op.kernel * op.kernel);
+    grad_inp[i] += tmp / static_cast<T>(op.kernel * op.kernel);
 }
 
-extern "C" __global__ void max_pool2d_forward(
+template<typename T>
+__device__ void max_pool2d_forward(
     const Pool2dOp op,
     const size_t *inp_strides,
     const size_t *out_strides,
-    const float *inp, // 4d (Batch, Channels, Height, Width)
-    float *out // 4d (Batch, Channels, HeightOut, WidthOut)
+    const T *inp, // 4d (Batch, Channels, Height, Width)
+    T *out // 4d (Batch, Channels, HeightOut, WidthOut)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     const size_t numel = op.batch * op.chan * op.h_out * op.w_out;
@@ -127,7 +130,7 @@ extern "C" __global__ void max_pool2d_forward(
     const size_t b = idx % op.batch;
     idx /= op.batch;
 
-    float tmp = -INFINITY;
+    T tmp = -INFINITY;
     for(size_t k1 = 0; k1 < op.kernel; k1++) {
         for (size_t k2 = 0; k2 < op.kernel; k2++) {
             const size_t y_plus_p = oh * op.stride + k1;
@@ -147,14 +150,15 @@ extern "C" __global__ void max_pool2d_forward(
     out[i] = tmp;
 }
 
-extern "C" __global__ void max_pool2d_backward(
+template<typename T>
+__device__ void max_pool2d_backward(
     const Pool2dOp op,
     const size_t *inp_strides,
     const size_t *out_strides,
-    const float *inp, // 4d (Batch, Channels, Height, Width)
-    float *grad_inp,
-    const float *out, // 4d (Batch, Channels, HeightOut, WidthOut)
-    const float *grad_out
+    const T *inp, // 4d (Batch, Channels, Height, Width)
+    T *grad_inp,
+    const T *out, // 4d (Batch, Channels, HeightOut, WidthOut)
+    const T *grad_out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     const size_t numel = op.batch * op.chan * op.h_in * op.w_in;
@@ -172,9 +176,9 @@ extern "C" __global__ void max_pool2d_backward(
     const size_t b = idx % op.batch;
     idx /= op.batch;
 
-    const float inp_v = inp[i];
+    const T inp_v = inp[i];
 
-    float tmp = 0.0;
+    T tmp = 0.0;
     for(size_t k1 = 0; k1 < op.kernel; k1++) {
         for (size_t k2 = 0; k2 < op.kernel; k2++) {
             size_t oh = y + op.padding;
@@ -202,13 +206,13 @@ extern "C" __global__ void max_pool2d_backward(
     grad_inp[i] += tmp;
 }
 
-
-extern "C" __global__ void min_pool2d_forward(
+template<typename T>
+__device__ void min_pool2d_forward(
     const Pool2dOp op,
     const size_t *inp_strides,
     const size_t *out_strides,
-    const float *inp, // 4d (Batch, Channels, Height, Width)
-    float *out // 4d (Batch, Channels, HeightOut, WidthOut)
+    const T *inp, // 4d (Batch, Channels, Height, Width)
+    T *out // 4d (Batch, Channels, HeightOut, WidthOut)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     const size_t numel = op.batch * op.chan * op.h_out * op.w_out;
@@ -226,7 +230,7 @@ extern "C" __global__ void min_pool2d_forward(
     const size_t b = idx % op.batch;
     idx /= op.batch;
 
-    float tmp = INFINITY;
+    T tmp = INFINITY;
     for(size_t k1 = 0; k1 < op.kernel; k1++) {
         for (size_t k2 = 0; k2 < op.kernel; k2++) {
             const size_t y_plus_p = oh * op.stride + k1;
@@ -246,14 +250,15 @@ extern "C" __global__ void min_pool2d_forward(
     out[i] = tmp;
 }
 
-extern "C" __global__ void min_pool2d_backward(
+template<typename T>
+__device__ void min_pool2d_backward(
     const Pool2dOp op,
     const size_t *inp_strides,
     const size_t *out_strides,
-    const float *inp, // 4d (Batch, Channels, Height, Width)
-    float *grad_inp,
-    const float *out, // 4d (Batch, Channels, HeightOut, WidthOut)
-    const float *grad_out
+    const T *inp, // 4d (Batch, Channels, Height, Width)
+    T *grad_inp,
+    const T *out, // 4d (Batch, Channels, HeightOut, WidthOut)
+    const T *grad_out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     const size_t numel = op.batch * op.chan * op.h_in * op.w_in;
@@ -271,9 +276,9 @@ extern "C" __global__ void min_pool2d_backward(
     const size_t b = idx % op.batch;
     idx /= op.batch;
 
-    const float inp_v = inp[i];
+    const T inp_v = inp[i];
 
-    float tmp = 0.0;
+    T tmp = 0.0;
     for(size_t k1 = 0; k1 < op.kernel; k1++) {
         for (size_t k2 = 0; k2 < op.kernel; k2++) {
             size_t oh = y + op.padding;
@@ -300,3 +305,57 @@ extern "C" __global__ void min_pool2d_backward(
 
     grad_inp[i] += tmp;
 }
+
+#define POOL_OP(TYPENAME, FORWARD, BACKWARD, FORWARD_FN, BACKWARD_FN) \
+extern "C" __global__ void FORWARD( \
+    const Pool2dOp op, \
+    const size_t *inp_strides, \
+    const size_t *out_strides, \
+    const TYPENAME *inp, \
+    TYPENAME *out \
+) { \
+    FORWARD_FN(op, inp_strides, out_strides, inp, out); \
+} \
+extern "C" __global__ void BACKWARD( \
+    const Pool2dOp op, \
+    const size_t *inp_strides, \
+    const size_t *out_strides, \
+    const TYPENAME *inp, \
+    TYPENAME *grad_inp, \
+    const TYPENAME *out, \
+    const TYPENAME *grad_out \
+) { \
+    BACKWARD_FN(op, inp_strides, out_strides, inp, grad_inp, out, grad_out); \
+}
+
+POOL_OP(
+    float,
+    avg_pool2d_forward_f32, avg_pool2d_backward_f32,
+    avg_pool2d_forward, avg_pool2d_backward
+);
+POOL_OP(
+    float,
+    min_pool2d_forward_f32, min_pool2d_backward_f32,
+    min_pool2d_forward, min_pool2d_backward
+);
+POOL_OP(
+    float,
+    max_pool2d_forward_f32, max_pool2d_backward_f32,
+    max_pool2d_forward, max_pool2d_backward
+);
+
+POOL_OP(
+    double,
+    avg_pool2d_forward_f64, avg_pool2d_backward_f64,
+    avg_pool2d_forward, avg_pool2d_backward
+);
+POOL_OP(
+    double,
+    min_pool2d_forward_f64, min_pool2d_backward_f64,
+    min_pool2d_forward, min_pool2d_backward
+);
+POOL_OP(
+    double,
+    max_pool2d_forward_f64, max_pool2d_backward_f64,
+    max_pool2d_forward, max_pool2d_backward
+);
