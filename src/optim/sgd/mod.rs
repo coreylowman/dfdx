@@ -74,10 +74,10 @@ pub struct SgdConfig<E> {
     pub weight_decay: Option<WeightDecay<E>>,
 }
 
-impl Default for SgdConfig<f32> {
+impl<F: From<f32>> Default for SgdConfig<F> {
     fn default() -> Self {
         Self {
-            lr: 1e-2,
+            lr: (1e-2).into(),
             momentum: None,
             weight_decay: None,
         }
@@ -109,7 +109,7 @@ impl Default for SgdConfig<f32> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Sgd<M, E: Dtype = f32> {
+pub struct Sgd<M, E: Dtype> {
     /// Hyperparameter configuration
     pub cfg: SgdConfig<E>,
 

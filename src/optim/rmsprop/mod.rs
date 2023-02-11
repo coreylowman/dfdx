@@ -38,12 +38,12 @@ pub struct RMSpropConfig<E> {
     pub weight_decay: Option<WeightDecay<E>>,
 }
 
-impl Default for RMSpropConfig<f32> {
+impl<F: From<f32>> Default for RMSpropConfig<F> {
     fn default() -> Self {
         Self {
-            lr: 1e-2,
-            alpha: 0.9,
-            eps: 1e-8,
+            lr: (1e-2).into(),
+            alpha: (0.9).into(),
+            eps: (1e-8).into(),
             momentum: None,
             centered: false,
             weight_decay: None,
@@ -79,7 +79,7 @@ impl Default for RMSpropConfig<f32> {
 ///     weight_decay: Some(WeightDecay::Decoupled(1e-1)),
 /// });
 #[derive(Debug)]
-pub struct RMSprop<M, E: Dtype = f32> {
+pub struct RMSprop<M, E: Dtype> {
     /// Hyperparameter configuration
     pub cfg: RMSpropConfig<E>,
 
@@ -119,10 +119,10 @@ pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, D: RMSpropKernel<f32> + OneFillStorage<f32>> ParamUpdater<D, f32> for RMSprop<M, f32> {
+impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> ParamUpdater<D, E> for RMSprop<M, E> {
     fn update_param<S: Shape>(
         &mut self,
-        p: &mut Tensor<S, f32, D>,
+        p: &mut Tensor<S, E, D>,
         unused: &mut UnusedTensors,
     ) -> Result<(), <D>::Err> {
         let g = self.gradients.remove(p);
