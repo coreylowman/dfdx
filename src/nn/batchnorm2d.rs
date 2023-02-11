@@ -170,17 +170,15 @@ impl<B: Dim, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>>
     }
 }
 
-impl<const C: usize, E: Dtype + From<f32>, D: Device<E>> BuildModule<D, E>
-    for BatchNorm2D<C, E, D>
-{
+impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for BatchNorm2D<C, E, D> {
     fn try_build(device: &D) -> Result<Self, D::Err> {
         Ok(Self {
             scale: device.try_ones()?,
             bias: device.try_zeros()?,
             running_mean: device.try_zeros()?,
             running_var: device.try_ones()?,
-            epsilon: 1e-5.into(),
-            momentum: 0.1.into(),
+            epsilon: E::from_f32(1e-5).unwrap(),
+            momentum: E::from_f32(0.1).unwrap(),
         })
     }
 }

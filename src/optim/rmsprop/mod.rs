@@ -38,12 +38,12 @@ pub struct RMSpropConfig<E> {
     pub weight_decay: Option<WeightDecay<E>>,
 }
 
-impl<F: From<f32>> Default for RMSpropConfig<F> {
+impl<E: Dtype> Default for RMSpropConfig<E> {
     fn default() -> Self {
         Self {
-            lr: (1e-2).into(),
-            alpha: (0.9).into(),
-            eps: (1e-8).into(),
+            lr: E::from_f32(1e-2).unwrap(),
+            alpha: E::from_f32(0.9).unwrap(),
+            eps: E::from_f32(1e-8).unwrap(),
             momentum: None,
             centered: false,
             weight_decay: None,

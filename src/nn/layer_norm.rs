@@ -42,15 +42,13 @@ pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
     pub epsilon: E,
 }
 
-impl<const M: usize, E: Dtype + From<f32>, D: Device<E>> BuildModule<D, E>
-    for LayerNorm1D<M, E, D>
-{
+impl<const M: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for LayerNorm1D<M, E, D> {
     /// Fills [Self::gamma] with 1s and [Self::beta] with 0s and sets [Self::epsilon] to `1e-5`.
     fn try_build(device: &D) -> Result<Self, D::Err> {
         Ok(Self {
             gamma: device.try_ones()?,
             beta: device.try_zeros()?,
-            epsilon: 1e-5.into(),
+            epsilon: E::from_f32(1e-5).unwrap(),
         })
     }
 }

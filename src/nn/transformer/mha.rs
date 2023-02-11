@@ -1,3 +1,6 @@
+use num_traits::Float;
+use rand_distr::uniform::SampleUniform;
+
 use crate::{
     nn::{modules::*, *},
     optim::*,
@@ -19,10 +22,12 @@ pub mod builder {
     >;
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    BuildOnDevice<D, f32> for builder::MultiHeadAttention<M, H, K, V>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E: Dtype, D: Device<E>>
+    BuildOnDevice<D, E> for builder::MultiHeadAttention<M, H, K, V>
+where
+    MultiHeadAttention<M, H, K, V, E, D>: BuildModule<D, E>,
 {
-    type Built = MultiHeadAttention<M, H, K, V, f32, D>;
+    type Built = MultiHeadAttention<M, H, K, V, E, D>;
     fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
         Self::Built::try_build(device)
     }
@@ -58,8 +63,10 @@ pub struct MultiHeadAttention<
     pub w_o: Linear<V_DIM, EMBED_DIM, E, D>,
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    BuildModule<D, f32> for MultiHeadAttention<M, H, K, V, f32, D>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: Device<E>>
+    BuildModule<D, E> for MultiHeadAttention<M, H, K, V, E, D>
+where
+    E: Dtype + Float + SampleUniform,
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self {
@@ -71,8 +78,10 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f32>>
-    ResetParams<D, f32> for MultiHeadAttention<M, H, K, V, f32, D>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: Device<E>>
+    ResetParams<D, E> for MultiHeadAttention<M, H, K, V, E, D>
+where
+    E: Dtype + Float + SampleUniform,
 {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         self.w_q.try_reset_params()?;
@@ -83,12 +92,18 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: Device<f
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D: DeviceStorage>
-    GradientUpdate<D, f32> for MultiHeadAttention<M, H, K, V, f32, D>
+impl<
+        const M: usize,
+        const H: usize,
+        const K: usize,
+        const V: usize,
+        E: Dtype,
+        D: DeviceStorage,
+    > GradientUpdate<D, E> for MultiHeadAttention<M, H, K, V, E, D>
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where
-        U: ParamUpdater<D, f32>,
+        U: ParamUpdater<D, E>,
     {
         self.w_q.update(updater, unused)?;
         self.w_k.update(updater, unused)?;
@@ -98,13 +113,14 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: DeviceSt
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D1, D2> ToDevice<D2>
-    for MultiHeadAttention<M, H, K, V, f32, D1>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D1, D2> ToDevice<D2>
+    for MultiHeadAttention<M, H, K, V, E, D1>
 where
-    D1: Device<f32>,
-    D2: Device<f32>,
+    E: Dtype,
+    D1: Device<E>,
+    D2: Device<E>,
 {
-    type Output = MultiHeadAttention<M, H, K, V, f32, D2>;
+    type Output = MultiHeadAttention<M, H, K, V, E, D2>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
         MultiHeadAttention {
@@ -122,31 +138,32 @@ impl<
         const H: usize,
         const K: usize,
         const V: usize,
-        D: Device<f32>,
+        E: Dtype + Float,
+        D: Device<E>,
         const S1: usize,
         const S2: usize,
         T: Tape<D>,
     >
     Module<(
-        Tensor<Rank2<S1, M>, f32, D, T>,
-        Tensor<Rank2<S2, M>, f32, D>,
-        Tensor<Rank2<S2, M>, f32, D>,
-    )> for MultiHeadAttention<M, H, K, V, f32, D>
+        Tensor<Rank2<S1, M>, E, D, T>,
+        Tensor<Rank2<S2, M>, E, D>,
+        Tensor<Rank2<S2, M>, E, D>,
+    )> for MultiHeadAttention<M, H, K, V, E, D>
 where
     Assert<{ S1 * K == S1 * H * (K / H) }>: ConstTrue,
     Assert<{ S2 * K == S2 * H * (K / H) }>: ConstTrue,
     Assert<{ S2 * V == S2 * H * (V / H) }>: ConstTrue,
     Assert<{ S1 * H * (V / H) == S1 * V }>: ConstTrue,
 {
-    type Output = Tensor<Rank2<S1, M>, f32, D, T>;
+    type Output = Tensor<Rank2<S1, M>, E, D, T>;
 
     /// Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
     fn forward(
         &self,
         (q, k, v): (
-            Tensor<Rank2<S1, M>, f32, D, T>,
-            Tensor<Rank2<S2, M>, f32, D>,
-            Tensor<Rank2<S2, M>, f32, D>,
+            Tensor<Rank2<S1, M>, E, D, T>,
+            Tensor<Rank2<S2, M>, E, D>,
+            Tensor<Rank2<S2, M>, E, D>,
         ),
     ) -> Self::Output {
         let v: Tensor<Rank2<S2, V>, _, _, _> = self.w_v.forward(v.retaped::<T>());
@@ -162,7 +179,7 @@ where
         let q = q.permute::<Rank3<H, S1, { K / H }>, _>();
 
         // Get weights
-        let scalar: f32 = 1.0 / ((K / H) as f32).sqrt();
+        let scalar: E = E::ONE / E::from_usize(K / H).unwrap().sqrt();
         let weights: Tensor<Rank3<H, S1, S2>, _, _, _> = q.matmul(k) * scalar;
         let weights = weights.softmax::<Axis<2>>();
 
@@ -181,32 +198,33 @@ impl<
         const H: usize,
         const K: usize,
         const V: usize,
-        D: Device<f32>,
+        E: Dtype + Float,
+        D: Device<E>,
         const B: usize,
         const S1: usize,
         const S2: usize,
         T: Tape<D>,
     >
     Module<(
-        Tensor<Rank3<B, S1, M>, f32, D, T>,
-        Tensor<Rank3<B, S2, M>, f32, D>,
-        Tensor<Rank3<B, S2, M>, f32, D>,
-    )> for MultiHeadAttention<M, H, K, V, f32, D>
+        Tensor<Rank3<B, S1, M>, E, D, T>,
+        Tensor<Rank3<B, S2, M>, E, D>,
+        Tensor<Rank3<B, S2, M>, E, D>,
+    )> for MultiHeadAttention<M, H, K, V, E, D>
 where
     Assert<{ B * S1 * K == B * S1 * H * (K / H) }>: ConstTrue,
     Assert<{ B * S2 * K == B * S2 * H * (K / H) }>: ConstTrue,
     Assert<{ B * S2 * V == B * S2 * H * (V / H) }>: ConstTrue,
     Assert<{ B * S1 * H * (V / H) == B * S1 * V }>: ConstTrue,
 {
-    type Output = Tensor<Rank3<B, S1, M>, f32, D, T>;
+    type Output = Tensor<Rank3<B, S1, M>, E, D, T>;
 
     /// Batched Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
     fn forward(
         &self,
         (q, k, v): (
-            Tensor<Rank3<B, S1, M>, f32, D, T>,
-            Tensor<Rank3<B, S2, M>, f32, D>,
-            Tensor<Rank3<B, S2, M>, f32, D>,
+            Tensor<Rank3<B, S1, M>, E, D, T>,
+            Tensor<Rank3<B, S2, M>, E, D>,
+            Tensor<Rank3<B, S2, M>, E, D>,
         ),
     ) -> Self::Output {
         let v: Tensor<Rank3<B, S2, V>, _, _, _> = self.w_v.forward(v.retaped::<T>());
@@ -222,7 +240,7 @@ where
         let q = q.permute::<Rank4<B, H, S1, { K / H }>, _>();
 
         // Get weights
-        let scalar: f32 = 1.0 / ((K / H) as f32).sqrt();
+        let scalar: E = E::ONE / E::from_usize(K / H).unwrap().sqrt();
         let weights: Tensor<Rank4<B, H, S1, S2>, _, _, _> = q.matmul(k) * scalar;
         let weights = weights.softmax::<Axis<3>>();
 
@@ -266,10 +284,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        nn::tests::SimpleUpdater,
-        tests::{assert_close, TestDevice},
-    };
+    use crate::{nn::tests::SimpleUpdater, tests::*};
 
     #[test]
     fn test_mha_unbatched() {
@@ -280,11 +295,13 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha = builder::MultiHeadAttention::<M, NUM_HEADS>::build_on_device(&dev);
+        type Dtype = f32;
 
-        let q = dev.sample_normal::<Rank2<S1, M>>();
-        let k = dev.sample_normal::<Rank2<S2, M>>();
-        let v = dev.sample_normal::<Rank2<S2, M>>();
+        let mha = dev.build_module::<builder::MultiHeadAttention<M, NUM_HEADS>, Dtype>();
+
+        let q: Tensor<Rank2<S1, M>, Dtype, _> = dev.sample_normal();
+        let k: Tensor<Rank2<S2, M>, Dtype, _> = dev.sample_normal();
+        let v: Tensor<Rank2<S2, M>, Dtype, _> = dev.sample_normal();
 
         let y = mha.forward((q, k, v));
 
@@ -314,11 +331,13 @@ mod tests {
         const S1: usize = 3;
         const S2: usize = 4;
 
-        let mha = builder::MultiHeadAttention::<M, NUM_HEADS>::build_on_device(&dev);
+        type Dtype = f32;
 
-        let q = dev.sample_normal::<Rank3<BATCH, S1, M>>();
-        let k = dev.sample_normal::<Rank3<BATCH, S2, M>>();
-        let v = dev.sample_normal::<Rank3<BATCH, S2, M>>();
+        let mha = dev.build_module::<builder::MultiHeadAttention<M, NUM_HEADS>, Dtype>();
+
+        let q: Tensor<Rank3<BATCH, S1, M>, Dtype, _> = dev.sample_normal();
+        let k: Tensor<Rank3<BATCH, S2, M>, Dtype, _> = dev.sample_normal();
+        let v: Tensor<Rank3<BATCH, S2, M>, Dtype, _> = dev.sample_normal();
 
         let y = mha.forward((q, k, v));
 
@@ -364,11 +383,11 @@ mod tests {
     fn test_backward_updates_all() {
         let dev: TestDevice = Default::default();
 
-        let mut mha = builder::MultiHeadAttention::<12, 4>::build_on_device(&dev);
+        let mut mha = dev.build_module::<builder::MultiHeadAttention<12, 4>, TestDtype>();
 
-        let q = dev.sample_normal::<Rank3<2, 3, 12>>();
-        let k = dev.sample_normal::<Rank3<2, 4, 12>>();
-        let v = dev.sample_normal::<Rank3<2, 4, 12>>();
+        let q: Tensor<Rank3<2, 3, 12>, TestDtype, _> = dev.sample_normal();
+        let k: Tensor<Rank3<2, 4, 12>, TestDtype, _> = dev.sample_normal();
+        let v: Tensor<Rank3<2, 4, 12>, TestDtype, _> = dev.sample_normal();
         let y = mha.forward((q.trace(), k, v));
 
         let mut g = SimpleUpdater(y.mean().backward());

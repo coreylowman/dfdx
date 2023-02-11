@@ -63,7 +63,7 @@ pub trait DeviceBuildExt: DeviceStorage {
 impl<D: DeviceStorage> DeviceBuildExt for D {}
 
 /// Something that can reset it's parameters.
-pub trait ResetParams<D: DeviceStorage, E: Dtype>: Sized {
+pub trait ResetParams<D: DeviceStorage, E: Dtype> {
     /// Mutates parameters. Each implementor
     /// of this trait decides how the parameters are initialized. In
     /// fact, some impls may not even use randomness.

@@ -40,12 +40,12 @@ pub struct AdamConfig<E> {
     pub weight_decay: Option<WeightDecay<E>>,
 }
 
-impl<F: From<f32>> Default for AdamConfig<F> {
+impl<E: Dtype> Default for AdamConfig<E> {
     fn default() -> Self {
         Self {
-            lr: 1e-3.into(),
-            betas: [0.9.into(), 0.999.into()],
-            eps: 1e-8.into(),
+            lr: E::from_f32(1e-3).unwrap(),
+            betas: [E::from_f32(0.9).unwrap(), E::from_f32(0.999).unwrap()],
+            eps: E::from_f32(1e-8).unwrap(),
             weight_decay: None,
         }
     }

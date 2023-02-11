@@ -123,9 +123,10 @@ impl<
         const K: usize,
         const S: usize,
         const P: usize,
-        D: Conv2DKernel<f32> + ZerosTensor<f32>,
+        E: Dtype,
+        D: Conv2DKernel<E> + ZerosTensor<E>,
         T: 'static + Tape<D>,
-    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P> for Tensor<Rank3<C, H, W>, f32, D, T>
+    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> for Tensor<Rank3<C, H, W>, E, D, T>
 where
     Const<H>: ConvAlgebra<K, S, P>,
     Const<W>: ConvAlgebra<K, S, P>,
@@ -136,14 +137,14 @@ where
             <Const<H> as ConvAlgebra<K, S, P>>::Convolved,
             <Const<W> as ConvAlgebra<K, S, P>>::Convolved,
         ),
-        f32,
+        E,
         D,
         T,
     >;
 
     fn try_conv2d_to(
         self,
-        filters: Tensor<Rank4<O, C, K, K>, f32, D>,
+        filters: Tensor<Rank4<O, C, K, K>, E, D>,
     ) -> Result<Self::Output, Self::Err> {
         let op = Conv2DOp::new(S, P, K, [1, C, H, W], O);
         let (lhs, ltape) = self.split_tape();
@@ -174,10 +175,11 @@ impl<
         const K: usize,
         const S: usize,
         const P: usize,
-        D: Conv2DKernel<f32> + ZerosTensor<f32>,
+        E: Dtype,
+        D: Conv2DKernel<E> + ZerosTensor<E>,
         T: 'static + Tape<D>,
-    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P>
-    for Tensor<(B, Const<C>, Const<H>, Const<W>), f32, D, T>
+    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P>
+    for Tensor<(B, Const<C>, Const<H>, Const<W>), E, D, T>
 where
     Const<H>: ConvAlgebra<K, S, P>,
     Const<W>: ConvAlgebra<K, S, P>,
@@ -189,13 +191,13 @@ where
             <Const<H> as ConvAlgebra<K, S, P>>::Convolved,
             <Const<W> as ConvAlgebra<K, S, P>>::Convolved,
         ),
-        f32,
+        E,
         D,
         T,
     >;
     fn try_conv2d_to(
         self,
-        filters: Tensor<Rank4<O, C, K, K>, f32, D>,
+        filters: Tensor<Rank4<O, C, K, K>, E, D>,
     ) -> Result<Self::Output, Self::Err> {
         let batch = self.shape().0;
         let op = Conv2DOp::new(S, P, K, [batch.size(), C, H, W], O);

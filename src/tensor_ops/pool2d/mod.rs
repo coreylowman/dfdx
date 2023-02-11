@@ -88,12 +88,13 @@ macro_rules! pool2d {
                 C: Dim,
                 const H: usize,
                 const W: usize,
-                D: $Kernel<f32> + ZerosTensor<f32>,
+                E: Dtype,
+                D: $Kernel<E> + ZerosTensor<E>,
                 T: 'static + Tape<D>,
                 const K: usize,
                 const S: usize,
                 const P: usize,
-            > $ConstTrait<K, S, P> for Tensor<(C, Const<H>, Const<W>), f32, D, T>
+            > $ConstTrait<K, S, P> for Tensor<(C, Const<H>, Const<W>), E, D, T>
         where
             Const<H>: ConvAlgebra<K, S, P>,
             Const<W>: ConvAlgebra<K, S, P>,
@@ -104,7 +105,7 @@ macro_rules! pool2d {
                     <Const<H> as ConvAlgebra<K, S, P>>::Convolved,
                     <Const<W> as ConvAlgebra<K, S, P>>::Convolved,
                 ),
-                f32,
+                E,
                 D,
                 T,
             >;
@@ -134,12 +135,13 @@ macro_rules! pool2d {
                 C: Dim,
                 const H: usize,
                 const W: usize,
-                D: $Kernel<f32> + ZerosTensor<f32>,
+                E: Dtype,
+                D: $Kernel<E> + ZerosTensor<E>,
                 T: 'static + Tape<D>,
                 const K: usize,
                 const S: usize,
                 const P: usize,
-            > $ConstTrait<K, S, P> for Tensor<(B, C, Const<H>, Const<W>), f32, D, T>
+            > $ConstTrait<K, S, P> for Tensor<(B, C, Const<H>, Const<W>), E, D, T>
         where
             Const<H>: ConvAlgebra<K, S, P>,
             Const<W>: ConvAlgebra<K, S, P>,
@@ -151,7 +153,7 @@ macro_rules! pool2d {
                     <Const<H> as ConvAlgebra<K, S, P>>::Convolved,
                     <Const<W> as ConvAlgebra<K, S, P>>::Convolved,
                 ),
-                f32,
+                E,
                 D,
                 T,
             >;

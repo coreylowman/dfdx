@@ -74,10 +74,10 @@ pub struct SgdConfig<E> {
     pub weight_decay: Option<WeightDecay<E>>,
 }
 
-impl<F: From<f32>> Default for SgdConfig<F> {
+impl<E: Dtype> Default for SgdConfig<E> {
     fn default() -> Self {
         Self {
-            lr: (1e-2).into(),
+            lr: E::from_f32(1e-2).unwrap(),
             momentum: None,
             weight_decay: None,
         }
