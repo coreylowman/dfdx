@@ -10,17 +10,16 @@ use dfdx::{
     optim::{Adam, AdamConfig},
     prelude::{smooth_l1_loss, GradientUpdate, Optimizer, OwnedTape, ParamUpdater, UnusedTensors},
     tensor::{
-        AsArray, Cpu, HasErr, SampleTensor, SplitTape, Tensor0D, Tensor1D, Tensor2D,
-        TensorFrom,
+        AsArray, Cpu, HasErr, SampleTensor, SplitTape, Tensor0D, Tensor1D, Tensor2D, TensorFrom,
     },
     tensor_ops::{Backward, MeanTo},
 };
 use std::f32;
 use std::time::Instant;
 
-const STATE_SIZE: usize = 4;
+const STATE_SIZE: usize = 2;
 const INNER_SIZE: usize = 128;
-const ACTION_SIZE: usize = 2;
+const ACTION_SIZE: usize = 1;
 
 /// Custom model struct
 #[derive(Clone)]
@@ -123,7 +122,7 @@ fn main() {
         },
     );
 
-    let mut state = init_state();
+    let mut state = init_state(&dev);
 
     // run through training data
     for _i_epoch in 0..15 {
@@ -143,36 +142,36 @@ fn main() {
             (log_prob /*(std, mu, action)*/, action)
         };
 
-        let (new_state, reward, done) = step_simulation(state.clone(), &action);
+        let (new_state, reward, done) = step_simulation(&dev, state.clone(), &action);
 
         // <calc advantage>
         let td_target: Tensor1D<ACTION_SIZE> =
-            net.value.forward(net.l1.forward(new_state.clone())) * f32::from(done as u8) * GAMMA + reward;
-        let delta: Tensor1D<ACTION_SIZE> = td_target.clone() - net.value.forward(net.l1.forward(state.clone()));
+            net.value.forward(net.l1.forward(new_state.clone())) * f32::from(done as u8) * GAMMA
+                + reward;
+        let delta: Tensor1D<ACTION_SIZE> =
+            td_target.clone() - net.value.forward(net.l1.forward(state.clone()));
         let delta = delta.array();
 
         let mut advantage = 0.0;
-        let advantage: Tensor1D<ACTION_SIZE, _> = dev.tensor(
-            TryInto::<[_; ACTION_SIZE]>::try_into(
-                delta
-                    .into_iter()
-                    .take(delta.len() - 1)
-                    .map(|delta| {
-                        advantage = GAMMA * LAMBDA * advantage + delta;
-                        advantage
-                    })
-                    .collect::<Vec<f32>>()
-                    .as_slice(),
-            )
-            .unwrap(),
-        );
+        let advantage: Tensor1D<ACTION_SIZE, _> = {
+            let mut data = delta
+                .into_iter()
+                .rev()
+                .map(|delta| {
+                    advantage = GAMMA * LAMBDA * advantage + delta;
+                    advantage
+                })
+                .collect::<Vec<f32>>();
+            data.reverse();
+            dev.tensor(TryInto::<[_; ACTION_SIZE]>::try_into(data.as_slice()).unwrap())
+        };
         // </calc advantage>
 
-        let (mu, std, value): (
+        let (mu, std, value)/* (
             Tensor1D<ACTION_SIZE, OwnedTape<Cpu>>,
             Tensor1D<ACTION_SIZE, OwnedTape<Cpu>>,
             Tensor1D<ACTION_SIZE, OwnedTape<Cpu>>,
-        ) = net.forward(state.trace());
+        )*/ = net.forward(state.trace());
         let log_prob: Tensor1D<ACTION_SIZE, OwnedTape<Cpu>> = {
             let variance = std.retaped::<OwnedTape<Cpu>>().powi(2);
             -(action.trace() - mu).powi(2) / (variance * 2.0) - std.ln() - (2.0f32 * f32::consts::PI).sqrt().ln()
@@ -208,24 +207,59 @@ fn main() {
     }
 }
 
-fn init_state() -> Tensor1D<STATE_SIZE> {
-    todo!()
+fn init_state(dev: &Cpu) -> Tensor1D<STATE_SIZE> {
+    let initial_temp = rand::random::<f32>() * 40.0;
+    let initial_heater_power = 0.0;
+
+    println!("Initial state created:");
+    println!("  temp: {initial_temp}");
+    println!("  power: {initial_heater_power}");
+
+    tensor_from_state(dev, initial_temp, initial_heater_power)
 }
 
 fn step_simulation<T: Tape<Cpu>>(
-    _old_state: Tensor1D<STATE_SIZE, T>,
-    _action: &Tensor1D<ACTION_SIZE, T>,
+    dev: &Cpu,
+    old_state: Tensor1D<STATE_SIZE, T>,
+    action: &Tensor1D<ACTION_SIZE, T>,
 ) -> (Tensor1D<STATE_SIZE>, f32, bool) {
-    let _new_state = todo!();
-    let _reward = calculate_reward(&_new_state);
-    let _is_done = todo!();
+    let new_heater_pwer = action.array()[0];
+    let new_state = {
+        let (last_temp, last_heater_power) = tensor_to_state(&old_state);
+        tensor_from_state(dev, last_temp + last_heater_power, new_heater_pwer)
+    };
+    let reward = calculate_reward(&new_state, action);
+    let is_done = reward > 19.9 || new_heater_pwer > 1.0; // Don't allow too high heater power
 
-    (_new_state, _reward, _is_done)
+    (new_state, reward, is_done)
 }
 
-fn calculate_reward(_state: &Tensor1D<STATE_SIZE>) -> f32 {
-    todo!()
+fn calculate_reward<T: Tape<Cpu>>(
+    state: &Tensor1D<STATE_SIZE>,
+    action: &Tensor1D<ACTION_SIZE, T>,
+) -> f32 {
+    let new_heater_power = action.array()[0];
+    let (temperature, _) = tensor_to_state(state);
+
+    // Don't allow too high heater power
+    if new_heater_power > 1.0 {
+        return 0.0;
+    }
+
+    20.0 - (temperature - 20.0).abs() // Highest reward at 20 degrees, lower the further away
 }
+
+fn tensor_to_state<T: Tape<Cpu>>(state: &Tensor1D<STATE_SIZE, T>) -> (f32, f32) {
+    let [temperature_factor, last_heater_power] = state.array();
+
+    // Rescale temperature to (most often) be within 0..1
+    (temperature_factor * 40.0, last_heater_power)
+}
+
+fn tensor_from_state(dev: &Cpu, temperature: f32, last_heater_power: f32) -> Tensor1D<STATE_SIZE> {
+    dev.tensor([temperature / 40.0, last_heater_power])
+}
+
 /*
 fn log_prob<S: Shape>(
     std: Tensor<S, f32, Cpu>,
