@@ -47,6 +47,56 @@ __device__ void chunk_sum(
 
 // strides and dims specify how to index inp to put all summed elements next to
 // each other, and chunk_len is len(inp) / len(out)
+template<typename T>
+__device__ void sum_to_forward(
+    const size_t numel,
+    const size_t num_dims,
+    const T elems_per_thread,
+    const size_t chunk_len,
+    const T *inp,
+    const size_t *dims,
+    const size_t *strides,
+    T *out
+) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (i >= numel) {
+        return;
+    }
+
+    unsigned int inp_i = get_strided_index(i, num_dims, dims, strides);
+    chunk_sum(numel, chunk_len, inp[inp_i] * elems_per_thread, out);
+}
+
+// Accepts pre-broadcasted strides for both input & output.
+// So both inp & out are expected to be broadcasted to the same size.
+template<typename T>
+__device__ void sum_to_backward(
+    const size_t numel,
+    const size_t num_dims,
+    const T elems_per_thread,
+    const size_t *dims,
+    T *grad_inp,
+    const size_t *inp_strides,
+    const T *grad_out,
+    const size_t *out_strides
+) {
+    unsigned int inp_i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (inp_i >= numel) {
+        return;
+    }
+
+    unsigned int i = get_unstrided_index(inp_i, num_dims, dims, inp_strides);
+    unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
+    auto tmp = grad_out[out_i];
+
+    // NOTE: since size of output is less than input, only 1 thread will be writing to inp
+    // at a time. this means we don't have to worry about multiple concurrent writes
+    // like we do with forward.
+    grad_inp[inp_i] += tmp * elems_per_thread;
+}
+
 extern "C" __global__ void sum_to_forward_f32(
     const size_t numel,
     const size_t num_dims,
@@ -57,18 +107,9 @@ extern "C" __global__ void sum_to_forward_f32(
     const size_t *strides,
     float *out
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (i >= numel) {
-        return;
-    }
-
-    unsigned int inp_i = get_strided_index(i, num_dims, dims, strides);
-    chunk_sum(numel, chunk_len, inp[inp_i] * elems_per_thread, out);
+    sum_to_forward(numel, num_dims, elems_per_thread, chunk_len, inp, dims, strides, out);
 }
 
-// Accepts pre-broadcasted strides for both input & output.
-// So both inp & out are expected to be broadcasted to the same size.
 extern "C" __global__ void sum_to_backward_f32(
     const size_t numel,
     const size_t num_dims,
@@ -79,24 +120,9 @@ extern "C" __global__ void sum_to_backward_f32(
     const float *grad_out,
     const size_t *out_strides
 ) {
-    unsigned int inp_i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (inp_i >= numel) {
-        return;
-    }
-
-    unsigned int i = get_unstrided_index(inp_i, num_dims, dims, inp_strides);
-    unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
-    auto tmp = grad_out[out_i];
-
-    // NOTE: since size of output is less than input, only 1 thread will be writing to inp
-    // at a time. this means we don't have to worry about multiple concurrent writes
-    // like we do with forward.
-    grad_inp[inp_i] += tmp * elems_per_thread;
+    sum_to_backward(numel, num_dims, elems_per_thread, dims, grad_inp, inp_strides, grad_out, out_strides);
 }
 
-// strides and dims specify how to index inp to put all summed elements next to
-// each other, and chunk_len is len(inp) / len(out)
 extern "C" __global__ void sum_to_forward_f64(
     const size_t numel,
     const size_t num_dims,
@@ -107,18 +133,9 @@ extern "C" __global__ void sum_to_forward_f64(
     const size_t *strides,
     double *out
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (i >= numel) {
-        return;
-    }
-
-    unsigned int inp_i = get_strided_index(i, num_dims, dims, strides);
-    chunk_sum(numel, chunk_len, inp[inp_i] * elems_per_thread, out);
+    sum_to_forward(numel, num_dims, elems_per_thread, chunk_len, inp, dims, strides, out);
 }
 
-// Accepts pre-broadcasted strides for both input & output.
-// So both inp & out are expected to be broadcasted to the same size.
 extern "C" __global__ void sum_to_backward_f64(
     const size_t numel,
     const size_t num_dims,
@@ -129,18 +146,5 @@ extern "C" __global__ void sum_to_backward_f64(
     const double *grad_out,
     const size_t *out_strides
 ) {
-    unsigned int inp_i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (inp_i >= numel) {
-        return;
-    }
-
-    unsigned int i = get_unstrided_index(inp_i, num_dims, dims, inp_strides);
-    unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
-    auto tmp = grad_out[out_i];
-
-    // NOTE: since size of output is less than input, only 1 thread will be writing to inp
-    // at a time. this means we don't have to worry about multiple concurrent writes
-    // like we do with forward.
-    grad_inp[inp_i] += tmp * elems_per_thread;
+    sum_to_backward(numel, num_dims, elems_per_thread, dims, grad_inp, inp_strides, grad_out, out_strides);
 }

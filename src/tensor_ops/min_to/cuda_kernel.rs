@@ -12,7 +12,7 @@ const MODULE_NAME: &str = "min_to";
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/min_to.ptx"));
 
 macro_rules! impl_min_reduce {
-    ($TypeName:ty, $Fwd:tt, $Bwd:tt, $Fill:tt) => {
+    ($TypeName:ty, $Fwd:tt, $Bwd:tt) => {
         impl super::MinReduceKernel<$TypeName> for Cuda {
             fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
                 &self,
@@ -24,7 +24,7 @@ macro_rules! impl_min_reduce {
             {
                 if !self.dev.has_func(MODULE_NAME, $Fwd) {
                     self.dev
-                        .load_ptx(PTX_SRC.into(), MODULE_NAME, &[$Fwd, $Bwd, $Fill])?;
+                        .load_ptx(PTX_SRC.into(), MODULE_NAME, &[$Fwd, $Bwd, "fill_with"])?;
                 }
 
                 let fill_fn = self.dev.get_func(MODULE_NAME, "fill_with").unwrap();
@@ -32,12 +32,12 @@ macro_rules! impl_min_reduce {
                     let mut storage = self.dev.alloc_async::<$TypeName>(dst.num_elements())?;
                     fill_fn.launch_async(
                         LaunchConfig::for_num_elems(dst.num_elements() as u32),
-                        (&mut storage, $TypeName::INFINITY, dst.num_elements()),
+                        (&mut storage, <$TypeName>::INFINITY, dst.num_elements()),
                     )?;
                     storage
                 };
 
-                let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
+                let fwd_fn = self.dev.get_func(MODULE_NAME, $Fwd).unwrap();
 
                 let (dims, strides) =
                     permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
@@ -109,3 +109,6 @@ macro_rules! impl_min_reduce {
         }
     };
 }
+
+impl_min_reduce!(f32, "min_to_forward_f32", "min_to_backward_f32");
+impl_min_reduce!(f64, "min_to_forward_f64", "min_to_backward_f64");

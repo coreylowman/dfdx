@@ -26,10 +26,6 @@ __device__ __forceinline__ double fminNonAtomic(double a, double b) {
     return fmin(a, b);
 }
 
-__device__ __forceinline__ __half fminNonAtomic(__half a, __half b) {
-    return __hmin(a, b);
-}
-
 // Efficiently computes the min of each chunk in "data" of size chunk_len, and
 // stores the minimums in out[i / chunk_len]
 template<typename T>
@@ -77,14 +73,15 @@ __device__ void chunk_min(
 
 // strides and dims specify how to index inp to put all summed elements next to
 // each other, and chunk_len is len(inp) / len(out)
-extern "C" __global__ void min_to_forward_f32(
+template<typename T>
+__device__ void min_to_forward(
     const size_t numel,
     const size_t num_dims,
     const size_t chunk_len,
-    const float *inp,
+    const T *inp,
     const size_t *dims,
     const size_t *strides,
-    float *out
+    T *out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -98,6 +95,44 @@ extern "C" __global__ void min_to_forward_f32(
 
 // Accepts pre-broadcasted strides for both input & output.
 // So both inp & out are expected to be broadcasted to the same size.
+template<typename T>
+__device__ void min_to_backward(
+    const size_t numel,
+    const size_t num_dims,
+    const T elems_per_thread,
+    const size_t *dims,
+    const T *inp,
+    T *grad_inp,
+    const size_t *inp_strides,
+    const T *out,
+    const T *grad_out,
+    const size_t *out_strides
+) {
+    unsigned int inp_i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (inp_i >= numel) {
+        return;
+    }
+
+    unsigned int i = get_unstrided_index(inp_i, num_dims, dims, inp_strides);
+    unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
+
+    auto tmp = inp[inp_i] == out[out_i] ? grad_out[out_i] : 0.0;
+    grad_inp[inp_i] += tmp * elems_per_thread;
+}
+
+extern "C" __global__ void min_to_forward_f32(
+    const size_t numel,
+    const size_t num_dims,
+    const size_t chunk_len,
+    const float *inp,
+    const size_t *dims,
+    const size_t *strides,
+    float *out
+) {
+    min_to_forward(numel, num_dims, chunk_len, inp, dims, strides, out);
+}
+
 extern "C" __global__ void min_to_backward_f32(
     const size_t numel,
     const size_t num_dims,
@@ -110,21 +145,9 @@ extern "C" __global__ void min_to_backward_f32(
     const float *grad_out,
     const size_t *out_strides
 ) {
-    unsigned int inp_i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (inp_i >= numel) {
-        return;
-    }
-
-    unsigned int i = get_unstrided_index(inp_i, num_dims, dims, inp_strides);
-    unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
-
-    auto tmp = inp[inp_i] == out[out_i] ? grad_out[out_i] : 0.0;
-    grad_inp[inp_i] += tmp * elems_per_thread;
+    min_to_backward(numel, num_dims, elems_per_thread, dims, inp, grad_inp, inp_strides, out, grad_out, out_strides);
 }
 
-// strides and dims specify how to index inp to put all summed elements next to
-// each other, and chunk_len is len(inp) / len(out)
 extern "C" __global__ void min_to_forward_f64(
     const size_t numel,
     const size_t num_dims,
@@ -134,18 +157,9 @@ extern "C" __global__ void min_to_forward_f64(
     const size_t *strides,
     double *out
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (i >= numel) {
-        return;
-    }
-
-    unsigned int inp_i = get_strided_index(i, num_dims, dims, strides);
-    chunk_min(numel, chunk_len, inp[inp_i], out);
+    min_to_forward(numel, num_dims, chunk_len, inp, dims, strides, out);
 }
 
-// Accepts pre-broadcasted strides for both input & output.
-// So both inp & out are expected to be broadcasted to the same size.
 extern "C" __global__ void min_to_backward_f64(
     const size_t numel,
     const size_t num_dims,
@@ -158,15 +172,5 @@ extern "C" __global__ void min_to_backward_f64(
     const double *grad_out,
     const size_t *out_strides
 ) {
-    unsigned int inp_i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (inp_i >= numel) {
-        return;
-    }
-
-    unsigned int i = get_unstrided_index(inp_i, num_dims, dims, inp_strides);
-    unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
-
-    auto tmp = inp[inp_i] == out[out_i] ? grad_out[out_i] : 0.0;
-    grad_inp[inp_i] += tmp * elems_per_thread;
+    min_to_backward(numel, num_dims, elems_per_thread, dims, inp, grad_inp, inp_strides, out, grad_out, out_strides);
 }

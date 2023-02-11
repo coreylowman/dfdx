@@ -5,7 +5,7 @@ use cudarc::driver::*;
 use std::sync::Arc;
 
 const MODULE_NAME: &str = "boolean";
-const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/boolean.ptx"));
+const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/boolean.ptx"));
 const ALL_FN_NAMES: [&str; 4] = ["boolean_not", "boolean_and", "boolean_or", "boolean_xor"];
 
 impl Cuda {
