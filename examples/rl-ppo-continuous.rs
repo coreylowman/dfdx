@@ -18,11 +18,11 @@ use std::f32;
 use std::time::Instant;
 
 const STATE_SIZE: usize = 2;
-const INNER_SIZE: usize = 128;
+const INNER_SIZE: usize = 3;
 const ACTION_SIZE: usize = 1;
 
 /// Custom model struct
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Network<const IN: usize, const INNER: usize, const OUT: usize> {
     l1: (Linear<IN, INNER, f32, Cpu>, ReLU),
     mu: (Linear<INNER, OUT, f32, Cpu>, Tanh),
@@ -127,13 +127,14 @@ fn main() {
     let mut state = init_state(&dev);
 
     // run through training data
-    for _i_epoch in 0..15 {
+    for _i_epoch in 0..15000 {
         let start = Instant::now();
 
         // <>
         let (old_log_prob, action) = {
             // TODO: Should we avoid calculating _v? _v is the one with the original tape if that matters?
             let (mu, std, _v) = net.forward(state.retaped());
+
             let action: Tensor1D<ACTION_SIZE> = dev.sample_normal() * std.clone() + mu.clone();
             let log_prob = {
                 let variance = std.clone().powi(2);
@@ -204,14 +205,14 @@ fn main() {
             .update(&mut net, gradients)
             .expect("Failed to update");
 
-        state = new_state;
+        state = if done { init_state(&dev) } else { new_state };
         println!("loss={:#?} in {:?}", loss_v, start.elapsed());
     }
 }
 
 fn init_state(dev: &Cpu) -> Tensor1D<STATE_SIZE> {
     let initial_temp = rand::random::<f32>() * 40.0;
-    let initial_heater_power = 0.0;
+    let initial_heater_power = 0.1;
 
     println!("Initial state created:");
     println!("  temp: {initial_temp}");
@@ -228,6 +229,11 @@ fn step_simulation<T: Tape<Cpu>>(
     let new_heater_pwer = action.array()[0];
     let new_state = {
         let (last_temp, last_heater_power) = tensor_to_state(&old_state);
+        println!(
+            "State: temp={}, power={}",
+            last_temp + last_heater_power,
+            new_heater_pwer
+        );
         tensor_from_state(dev, last_temp + last_heater_power, new_heater_pwer)
     };
     let reward = calculate_reward(&new_state, action);
