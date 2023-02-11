@@ -252,8 +252,11 @@ where
         let x = self.mh_attn.forward((x.put_tape(tape), mem.clone(), mem));
         let x = x + x_residual;
         let x = self.norm2.forward(x);
-        let x = self.ff.forward(x);
-        self.norm3.forward(x)
+
+        let (x, tape) = x.split_tape();
+        let x_residual = x.clone();
+        let x = self.ff.forward(x.put_tape(tape));
+        self.norm3.forward(x + x_residual)
     }
 }
 

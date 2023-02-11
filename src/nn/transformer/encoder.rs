@@ -161,8 +161,10 @@ where
         let x = self.self_attn.forward(src.clone().put_tape(tape));
         let x = x + src;
         let x = self.norm1.forward(x);
-        let x = self.ff.forward(x);
-        self.norm2.forward(x)
+        let (x, tape) = x.split_tape();
+        let x_residual = x.clone();
+        let x = self.ff.forward(x.put_tape(tape));
+        self.norm2.forward(x + x_residual)
     }
 }
 
