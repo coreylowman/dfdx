@@ -142,13 +142,15 @@ pub struct LearnedPositionalEmbedding<const MAX_LEN: usize, const DIM: usize, E:
 /// Pass in an unbatched pre-embedded sequence, add positional embeddings in
 impl<const MAX_LEN: usize, const DIM: usize, SEQ: Dim, D: Device<f32>, T: Tape<D>>
     Module<Tensor<(SEQ, Const<DIM>), f32, D, T>> for LearnedPositionalEmbedding<MAX_LEN, DIM, f32, D>
+where
+    D: TensorFrom<std::vec::Vec<usize>, (SEQ,), usize>
 {
     type Output = Tensor<(SEQ, Const<DIM>), f32, D, T>;
     fn forward(&self, input: Tensor<(SEQ, Const<DIM>), f32, D, T>) -> Self::Output {
         let (input, tape) = input.split_tape();
-        let vec: std::vec::Vec<usize> = (0..input.shape().0.size()).collect::<std::vec::Vec<usize>>();
-        let positions: Tensor<(Const<12>,), usize, D> = self.device.try_tensor_from_vec(vec, (Const::<12>,)).unwrap();
-        input.put_tape(tape)
+        let positions: Tensor<(SEQ,), usize, D> = self.device.tensor((0..input.shape().0.size()).collect::<std::vec::Vec<_>>());
+        let position_embeddings = self.embed.forward(positions.put_tape(tape));
+        position_embeddings + input
     }
 }
 
@@ -159,12 +161,16 @@ impl<
         BATCH: Dim,
         D: Device<f32>,
         T: Tape<D>,
-    > Module<Tensor<(BATCH, SEQ), usize, D, T>> for LearnedPositionalEmbedding<MAX_LEN, DIM, f32, D>
+    > Module<Tensor<(BATCH, SEQ, Const<DIM>), f32, D, T>> for LearnedPositionalEmbedding<MAX_LEN, DIM, f32, D>
+where
+    D: TensorFrom<std::vec::Vec<std::vec::Vec<usize>>, (BATCH, SEQ,), usize>
 {
     type Output = Tensor<(BATCH, SEQ, Const<DIM>), f32, D, T>;
-    fn forward(&self, input: Tensor<(BATCH, SEQ), usize, D, T>) -> Self::Output {
+    fn forward(&self, input: Tensor<(BATCH, SEQ, Const<DIM>), f32, D, T>) -> Self::Output {
         let (input, tape) = input.split_tape();
-        self.weight.clone().put_tape(tape).gather(input)
+        let positions: Tensor<(BATCH, SEQ,), usize, D> = self.device.tensor(std::vec![(0..input.shape().1.size()).collect::<std::vec::Vec<_>>(); input.shape().0.size()]);
+        let position_embeddings = self.embed.forward(positions.put_tape(tape));
+        position_embeddings + input
     }
 }
 
