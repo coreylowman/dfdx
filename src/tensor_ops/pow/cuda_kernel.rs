@@ -7,7 +7,7 @@ use crate::{
 unsafe impl cudarc::driver::AsKernelParam for super::PowfKernelOp<f32> {}
 unsafe impl cudarc::driver::AsKernelParam for super::PowfKernelOp<f64> {}
 
-const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/pow.ptx"));
+const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/pow.ptx"));
 
 impl UnaryOpCudaKernel<f32> for super::PowfKernelOp<f32> {
     const PTX_SRC: &'static str = PTX_SRC;

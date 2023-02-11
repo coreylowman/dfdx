@@ -2,7 +2,7 @@ use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
 
 unsafe impl cudarc::driver::AsKernelParam for super::GeLUKernelOp {}
 
-const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/gelu.ptx"));
+const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/gelu.ptx"));
 
 impl UnaryOpCudaKernel<f32> for super::GeLUKernelOp {
     const PTX_SRC: &'static str = PTX_SRC;

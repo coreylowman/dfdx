@@ -82,9 +82,6 @@ mod tests {
                 [0.16297975, 0.003332735, 0.79848814],
             ],
         );
-        assert_close(
-            &r2.array(),
-            &((a.clone() - b.clone()).square() / 2.0).array(),
-        );
+        assert_close(&r2.array(), &((a - b).square() / 2.0).array());
     }
 }

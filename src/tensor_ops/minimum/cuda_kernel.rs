@@ -2,7 +2,7 @@ use crate::tensor_ops::cuda_kernels::BinaryOpCudaKernel;
 
 unsafe impl cudarc::driver::AsKernelParam for super::MinimumKernelOp {}
 
-const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/minimum.ptx"));
+const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/minimum.ptx"));
 
 impl BinaryOpCudaKernel<f32> for super::MinimumKernelOp {
     const PTX_SRC: &'static str = PTX_SRC;

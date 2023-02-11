@@ -3,7 +3,7 @@ use crate::tensor_ops::cuda_kernels::BinaryOpCudaKernel;
 unsafe impl cudarc::driver::AsKernelParam for super::HuberErrorKernelOp<f32> {}
 unsafe impl cudarc::driver::AsKernelParam for super::HuberErrorKernelOp<f64> {}
 
-const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/huber_error.ptx"));
+const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/huber_error.ptx"));
 
 impl BinaryOpCudaKernel<f32> for super::HuberErrorKernelOp<f32> {
     const PTX_SRC: &'static str = PTX_SRC;

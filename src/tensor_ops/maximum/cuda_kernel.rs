@@ -2,7 +2,7 @@ use crate::tensor_ops::cuda_kernels::BinaryOpCudaKernel;
 
 unsafe impl cudarc::driver::AsKernelParam for super::MaximumKernelOp {}
 
-const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/maximum.ptx"));
+const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/maximum.ptx"));
 
 impl BinaryOpCudaKernel<f32> for super::MaximumKernelOp {
     const PTX_SRC: &'static str = PTX_SRC;

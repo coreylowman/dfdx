@@ -4,8 +4,8 @@ unsafe impl cudarc::driver::AsKernelParam for super::ScalarMulKernelOp<f32> {}
 unsafe impl cudarc::driver::AsKernelParam for super::ScalarMulKernelOp<f64> {}
 unsafe impl cudarc::driver::AsKernelParam for super::BinaryMulKernelOp {}
 
-const SCALAR_PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/scalar_mul.ptx"));
-const BINARY_PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/binary_mul.ptx"));
+const SCALAR_PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/scalar_mul.ptx"));
+const BINARY_PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/binary_mul.ptx"));
 
 impl UnaryOpCudaKernel<f32> for super::ScalarMulKernelOp<f32> {
     const PTX_SRC: &'static str = SCALAR_PTX_SRC;
