@@ -8,12 +8,13 @@ use dfdx::{
         BuildModule, Module,
     },
     optim::{Adam, AdamConfig},
-    prelude::{smooth_l1_loss, GradientUpdate, ParamUpdater, UnusedTensors, Optimizer, OwnedTape},
+    prelude::{smooth_l1_loss, GradientUpdate, Optimizer, OwnedTape, ParamUpdater, UnusedTensors},
     shapes::Shape,
     tensor::{
-        AsArray, Cpu, HasErr, SampleTensor, SplitTape, Tensor, Tensor1D, Tensor2D, TensorFrom, Tensor0D,
+        AsArray, Cpu, HasErr, SampleTensor, SplitTape, Tensor, Tensor0D, Tensor1D, Tensor2D,
+        TensorFrom,
     },
-    tensor_ops::{MeanTo, TryDiv, Backward},
+    tensor_ops::{Backward, MeanTo},
 };
 use std::f32;
 use std::time::Instant;
@@ -67,16 +68,16 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> GradientUpdate<Cpu, 
 }
 
 // impl Module for single item
-impl<const IN: usize, const INNER: usize, const OUT: usize, T: Tape<Cpu>> nn::Module<Tensor1D<IN, T>>
-    for Network<IN, INNER, OUT>
+impl<const IN: usize, const INNER: usize, const OUT: usize, T: Tape<Cpu>>
+    nn::Module<Tensor1D<IN, T>> for Network<IN, INNER, OUT>
 {
     type Output = (Tensor1D<OUT, T>, Tensor1D<OUT, T>, Tensor1D<OUT, T>);
 
     fn forward(&self, x: Tensor1D<IN, T>) -> Self::Output {
         let x = self.l1.forward(x);
         (
-            self.mu.forward(x),
-            self.std.forward(x),
+            self.mu.forward(x.retaped()),
+            self.std.forward(x.retaped()),
             self.value.forward(x),
         )
     }
@@ -95,8 +96,8 @@ impl<const BATCH: usize, const IN: usize, const INNER: usize, const OUT: usize, 
     fn forward(&self, x: Tensor2D<BATCH, IN, T>) -> Self::Output {
         let x = self.l1.forward(x);
         (
-            self.mu.forward(x),
-            self.std.forward(x),
+            self.mu.forward(x.retaped()),
+            self.std.forward(x.retaped()),
             self.value.forward(x),
         )
     }
