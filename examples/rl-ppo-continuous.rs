@@ -73,9 +73,11 @@ impl<const IN: usize, const INNER: usize, const OUT: usize, T: Tape<Cpu>>
     fn forward(&self, x: Tensor1D<IN, T>) -> Self::Output {
         let x = self.l1.forward(x);
 
-        let std = self.std.forward(x.retaped());
-        let value = self.value.forward(x.retaped());
-        (self.mu.forward(x), std, value)
+        (
+            self.mu.forward(x.retaped()),
+            self.std.forward(x.retaped()),
+            self.value.forward(x),
+        )
     }
 }
 
@@ -92,9 +94,11 @@ impl<const BATCH: usize, const IN: usize, const INNER: usize, const OUT: usize, 
     fn forward(&self, x: Tensor2D<BATCH, IN, T>) -> Self::Output {
         let x = self.l1.forward(x);
 
-        let std = self.std.forward(x.retaped());
-        let value = self.value.forward(x.retaped());
-        (self.mu.forward(x), std, value)
+        (
+            self.mu.forward(x.retaped()),
+            self.std.forward(x.retaped()),
+            self.value.forward(x),
+        )
     }
 }
 
