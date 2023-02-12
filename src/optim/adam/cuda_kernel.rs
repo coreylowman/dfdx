@@ -27,7 +27,6 @@ fn adam_config_to_cuda<E: Default + Copy>(config: &super::AdamConfig<E>) -> Cuda
     }
 }
 
-const MODULE_NAME: &str = "adam";
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/adam.ptx"));
 
 trait HasCudaKernel<E> {
@@ -59,8 +58,7 @@ where
         grad: Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FWD) {
-            self.dev
-                .load_ptx(PTX_SRC.into(), MODULE_NAME, &[Self::FWD])?;
+            self.dev.load_ptx(PTX_SRC.into(), Self::MOD, &[Self::FWD])?;
         }
 
         let adam_cfg = adam_config_to_cuda(cfg);
