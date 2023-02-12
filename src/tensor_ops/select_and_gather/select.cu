@@ -82,70 +82,39 @@ __device__ void select_backward(
     atomicAdd(grad_inp + inp_i, grad_out[out_i]);
 }
 
-extern "C" __global__ void select_forward_f32(
-    const size_t numel,
-    const float *inp,
-    const size_t inp_num_dims,
-    const size_t *inp_dims,
-    const size_t *inp_strides,
-    const size_t *idx,
-    const size_t idx_num_dims,
-    const size_t *idx_dims,
-    const size_t *idx_strides,
-    float *out,
-    const size_t *out_dims,
-    const size_t *out_strides
-) {
-    select_forward(numel, inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out, out_dims, out_strides);
+#define SELECT(TYPENAME, FWD, BWD) \
+extern "C" __global__ void FWD( \
+    const size_t numel, \
+    const TYPENAME *inp, \
+    const size_t inp_num_dims, \
+    const size_t *inp_dims, \
+    const size_t *inp_strides, \
+    const size_t *idx, \
+    const size_t idx_num_dims, \
+    const size_t *idx_dims, \
+    const size_t *idx_strides, \
+    TYPENAME *out, \
+    const size_t *out_dims, \
+    const size_t *out_strides \
+) { \
+    select_forward(numel, inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out, out_dims, out_strides); \
+} \
+extern "C" __global__ void BWD( \
+    const size_t numel, \
+    TYPENAME *grad_inp, \
+    const size_t inp_num_dims, \
+    const size_t *inp_dims, \
+    const size_t *inp_strides, \
+    const size_t *idx, \
+    const size_t idx_num_dims, \
+    const size_t *idx_dims, \
+    const size_t *idx_strides, \
+    const TYPENAME *grad_out, \
+    const size_t *out_dims, \
+    const size_t *out_strides \
+) { \
+    select_backward(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, grad_out, out_dims, out_strides); \
 }
 
-extern "C" __global__ void select_backward_f32(
-    const size_t numel,
-    float *grad_inp,
-    const size_t inp_num_dims,
-    const size_t *inp_dims,
-    const size_t *inp_strides,
-    const size_t *idx,
-    const size_t idx_num_dims,
-    const size_t *idx_dims,
-    const size_t *idx_strides,
-    const float *grad_out,
-    const size_t *out_dims,
-    const size_t *out_strides
-) {
-    select_backward(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, grad_out, out_dims, out_strides);
-}
-
-extern "C" __global__ void select_forward_f64(
-    const size_t numel,
-    const double *inp,
-    const size_t inp_num_dims,
-    const size_t *inp_dims,
-    const size_t *inp_strides,
-    const size_t *idx,
-    const size_t idx_num_dims,
-    const size_t *idx_dims,
-    const size_t *idx_strides,
-    double *out,
-    const size_t *out_dims,
-    const size_t *out_strides
-) {
-    select_forward(numel, inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out, out_dims, out_strides);
-}
-
-extern "C" __global__ void select_backward_f64(
-    const size_t numel,
-    double *grad_inp,
-    const size_t inp_num_dims,
-    const size_t *inp_dims,
-    const size_t *inp_strides,
-    const size_t *idx,
-    const size_t idx_num_dims,
-    const size_t *idx_dims,
-    const size_t *idx_strides,
-    const double *grad_out,
-    const size_t *out_dims,
-    const size_t *out_strides
-) {
-    select_backward(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, grad_out, out_dims, out_strides);
-}
+SELECT(float, select_forward_f32, select_backward_f32);
+SELECT(double, select_forward_f64, select_backward_f64)

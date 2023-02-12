@@ -51,14 +51,10 @@ pub trait TryAdd<Rhs = Self>: HasErr {
     fn try_add(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<
-        S: Shape,
-        E: Dtype,
-        D: BinaryKernel<BinaryAddKernelOp, E>,
-        LhsTape: Tape<D>,
-        RhsTape: Tape<D>,
-    > TryAdd<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
+impl<S: Shape, E: Dtype, D, LhsTape: Tape<D>, RhsTape: Tape<D>> TryAdd<Tensor<S, E, D, RhsTape>>
+    for Tensor<S, E, D, LhsTape>
 where
+    D: BinaryKernel<BinaryAddKernelOp, E>,
     LhsTape: Merge<RhsTape>,
 {
     /// See [add]

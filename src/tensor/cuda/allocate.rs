@@ -14,8 +14,6 @@ use super::{Cuda, CudaArray, CudaError};
 use rand::Rng;
 use std::{sync::Arc, vec::Vec};
 
-use num_traits::One;
-
 impl Cuda {
     #[inline(always)]
     pub(crate) fn take_cpu_tensor<S: Shape, E: Unit>(
@@ -70,13 +68,13 @@ where
     }
 }
 
-impl<E: Unit + One> OneFillStorage<E> for Cuda {
+impl<E: Unit> OneFillStorage<E> for Cuda {
     fn try_fill_with_ones<S: Shape>(
         &self,
         storage: &mut Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
         self.dev.copy_into_async(
-            std::vec![One::one(); storage.data.len()],
+            std::vec![E::ONE; storage.data.len()],
             Arc::make_mut(&mut storage.data),
         )?;
         Ok(())

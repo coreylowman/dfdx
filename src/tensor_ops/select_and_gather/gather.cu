@@ -92,66 +92,37 @@ __device__ void gather_backward(
     atomicAdd(grad_inp + inp_i, grad_out[out_i]);
 }
 
-extern "C" __global__ void gather_forward_f32(
-    const size_t numel,
-    const float *inp,
-    const size_t inp_num_dims,
-    const size_t *inp_dims,
-    const size_t *inp_strides,
-    const size_t *idx,
-    const size_t idx_num_dims,
-    const size_t *idx_dims,
-    const size_t *idx_strides,
-    float *out,
-    const size_t out_num_dims
-) {
-    gather_forward(numel, inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out, out_num_dims);
+#define GATHER(TYPENAME, FWD, BWD) \
+extern "C" __global__ void FWD( \
+    const size_t numel, \
+    const TYPENAME *inp, \
+    const size_t inp_num_dims, \
+    const size_t *inp_dims, \
+    const size_t *inp_strides, \
+    const size_t *idx, \
+    const size_t idx_num_dims, \
+    const size_t *idx_dims, \
+    const size_t *idx_strides, \
+    TYPENAME *out, \
+    const size_t out_num_dims \
+) { \
+    gather_forward(numel, inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out, out_num_dims); \
+} \
+extern "C" __global__ void BWD( \
+    const size_t numel, \
+    TYPENAME *grad_inp, \
+    const size_t inp_num_dims, \
+    const size_t *inp_dims, \
+    const size_t *inp_strides, \
+    const size_t *idx, \
+    const size_t idx_num_dims, \
+    const size_t *idx_dims, \
+    const size_t *idx_strides, \
+    const TYPENAME *grad_out, \
+    const size_t out_num_dims \
+) { \
+    gather_backward(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, grad_out, out_num_dims); \
 }
 
-extern "C" __global__ void gather_backward_f32(
-    const size_t numel,
-    float *grad_inp,
-    const size_t inp_num_dims,
-    const size_t *inp_dims,
-    const size_t *inp_strides,
-    const size_t *idx,
-    const size_t idx_num_dims,
-    const size_t *idx_dims,
-    const size_t *idx_strides,
-    const float *grad_out,
-    const size_t out_num_dims
-) {
-    gather_backward(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, grad_out, out_num_dims);
-}
-
-extern "C" __global__ void gather_forward_f64(
-    const size_t numel,
-    const double *inp,
-    const size_t inp_num_dims,
-    const size_t *inp_dims,
-    const size_t *inp_strides,
-    const size_t *idx,
-    const size_t idx_num_dims,
-    const size_t *idx_dims,
-    const size_t *idx_strides,
-    double *out,
-    const size_t out_num_dims
-) {
-    gather_forward(numel, inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out, out_num_dims);
-}
-
-extern "C" __global__ void gather_backward_f64(
-    const size_t numel,
-    double *grad_inp,
-    const size_t inp_num_dims,
-    const size_t *inp_dims,
-    const size_t *inp_strides,
-    const size_t *idx,
-    const size_t idx_num_dims,
-    const size_t *idx_dims,
-    const size_t *idx_strides,
-    const double *grad_out,
-    const size_t out_num_dims
-) {
-    gather_backward(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, grad_out, out_num_dims);
-}
+GATHER(float, gather_forward_f32, gather_backward_f32);
+GATHER(double, gather_forward_f64, gather_backward_f64);

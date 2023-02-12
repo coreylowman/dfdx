@@ -2,38 +2,29 @@
 
 struct MaximumKernalOp {};
 
-LONG_BINARY_OP(float, maximum_forward_f32, maximum_backward_f32, MaximumKernalOp,
-    {
-        fx = fmaxf(x, y);
-    },
-    {
-        if (x > y) {
-            dfdx = 1.0;
-            dfdy = 0.0;
-        } else if (x < y) {
-            dfdx = 0.0;
-            dfdy = 1.0;
-        } else {
-            dfdx = 0.5;
-            dfdy = 0.5;
-        }
-    }
+template<typename T>
+__device__ T op_f(T x, T y) {
+    return maxg(x, y);
+}
+
+template<typename T>
+__device__ T op_dfdx(T x, T y) {
+    return (x > y) ? 1.0 : ((x < y) ? 0.0 : 0.5);
+}
+
+template<typename T>
+__device__ T op_dfdy(T x, T y) {
+    return (x > y) ? 0.0 : ((x < y) ? 1.0 : 0.5);
+}
+
+BINARY_OP(float, maximum_forward_f32, maximum_backward_f32, MaximumKernalOp,
+    op_f(x, y),
+    op_dfdx(x, y),
+    op_dfdy(x, y)
 )
 
-LONG_BINARY_OP(double, maximum_forward_f64, maximum_backward_f64, MaximumKernalOp,
-    {
-        fx = fmax(x, y);
-    },
-    {
-        if (x > y) {
-            dfdx = 1.0;
-            dfdy = 0.0;
-        } else if (x < y) {
-            dfdx = 0.0;
-            dfdy = 1.0;
-        } else {
-            dfdx = 0.5;
-            dfdy = 0.5;
-        }
-    }
+BINARY_OP(double, maximum_forward_f64, maximum_backward_f64, MaximumKernalOp,
+    op_f(x, y),
+    op_dfdx(x, y),
+    op_dfdy(x, y)
 )

@@ -54,7 +54,7 @@ macro_rules! impl_conv {
                         [0, k, 1],
                         &patches,
                         [k * n, n, 1],
-                        0.0,
+                        Default::default(),
                         Arc::make_mut(&mut out.data),
                         [m * n, n, 1],
                     )
@@ -112,7 +112,7 @@ macro_rules! impl_conv {
                             [m * k, k, 1],
                             &patches,
                             [k * n, n, 1],
-                            1.0,
+                            <$TypeName>::ONE,
                             Arc::make_mut(&mut grad_lhs.data),
                             [m * n, n, 1],
                         )
@@ -134,7 +134,7 @@ macro_rules! impl_conv {
                             [m * k, k, 1],
                             &patches,
                             [k * n, 1, k],
-                            1.0,
+                            <$TypeName>::ONE,
                             &mut grad_f_b1023,
                             [m * n, n, 1],
                         )

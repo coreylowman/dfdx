@@ -18,14 +18,6 @@ __device__ __forceinline__ double atomicMaxf(double * addr, double value) {
     }
 }
 
-__device__ __forceinline__ float fmaxNonAtomic(float a, float b) {
-    return fmaxf(a, b);
-}
-
-__device__ __forceinline__ double fmaxNonAtomic(double a, double b) {
-    return fmax(a, b);
-}
-
 // Efficiently computes the max of each chunk in "data" of size chunk_len, and
 // stores the maximums in out[i / chunk_len]
 template<typename T>
@@ -60,7 +52,7 @@ __device__ void chunk_max(
         if (block_i_2 < chunk_end && chunk_i < incr) {
             // This is sound because __syncthreads and the conditions above
             // ensure that no data races occur
-            buf[block_i] = fmaxNonAtomic(buf[block_i], buf[block_i_2]);
+            buf[block_i] = maxg(buf[block_i], buf[block_i_2]);
         }
 
         __syncthreads();
@@ -121,56 +113,32 @@ __device__ void max_to_backward(
     grad_inp[inp_i] += tmp * elems_per_thread;
 }
 
-extern "C" __global__ void max_to_forward_f32(
-    const size_t numel,
-    const size_t num_dims,
-    const size_t chunk_len,
-    const float *inp,
-    const size_t *dims,
-    const size_t *strides,
-    float *out
-) {
-    max_to_forward(numel, num_dims, chunk_len, inp, dims, strides, out);
+#define MAX(TYPENAME, FWD, BWD) \
+extern "C" __global__ void FWD( \
+    const size_t numel, \
+    const size_t num_dims, \
+    const size_t chunk_len, \
+    const TYPENAME *inp, \
+    const size_t *dims, \
+    const size_t *strides, \
+    TYPENAME *out \
+) { \
+    max_to_forward(numel, num_dims, chunk_len, inp, dims, strides, out); \
+} \
+extern "C" __global__ void BWD( \
+    const size_t numel, \
+    const size_t num_dims, \
+    const TYPENAME elems_per_thread, \
+    const size_t *dims, \
+    const TYPENAME *inp, \
+    TYPENAME *grad_inp, \
+    const size_t *inp_strides, \
+    const TYPENAME *out, \
+    const TYPENAME *grad_out, \
+    const size_t *out_strides \
+) { \
+    max_to_backward(numel, num_dims, elems_per_thread, dims, inp, grad_inp, inp_strides, out, grad_out, out_strides); \
 }
 
-extern "C" __global__ void max_to_backward_f32(
-    const size_t numel,
-    const size_t num_dims,
-    const float elems_per_thread,
-    const size_t *dims,
-    const float *inp,
-    float *grad_inp,
-    const size_t *inp_strides,
-    const float *out,
-    const float *grad_out,
-    const size_t *out_strides
-) {
-    max_to_backward(numel, num_dims, elems_per_thread, dims, inp, grad_inp, inp_strides, out, grad_out, out_strides);
-}
-
-extern "C" __global__ void max_to_forward_f64(
-    const size_t numel,
-    const size_t num_dims,
-    const size_t chunk_len,
-    const double *inp,
-    const size_t *dims,
-    const size_t *strides,
-    double *out
-) {
-    max_to_forward(numel, num_dims, chunk_len, inp, dims, strides, out);
-}
-
-extern "C" __global__ void max_to_backward_f64(
-    const size_t numel,
-    const size_t num_dims,
-    const double elems_per_thread,
-    const size_t *dims,
-    const double *inp,
-    double *grad_inp,
-    const size_t *inp_strides,
-    const double *out,
-    const double *grad_out,
-    const size_t *out_strides
-) {
-    max_to_backward(numel, num_dims, elems_per_thread, dims, inp, grad_inp, inp_strides, out, grad_out, out_strides);
-}
+MAX(float, max_to_forward_f32, max_to_backward_f32);
+MAX(double, max_to_forward_f64, max_to_backward_f64);

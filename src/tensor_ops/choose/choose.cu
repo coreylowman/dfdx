@@ -53,62 +53,35 @@ __device__ void choose_backward(
     atomicAdd(out_loc, go);
 }
 
-extern "C" __global__ void choose_forward_f32(
-    const size_t numel,
-    const size_t num_dims,
-    const size_t *dims,
-    const bool *cond,
-    const size_t *cond_strides,
-    const float *lhs,
-    const size_t *lhs_strides,
-    const float *rhs,
-    const size_t *rhs_strides,
-    float *out
-) {
-    choose_forward(numel, num_dims, dims, cond, cond_strides, lhs, lhs_strides, rhs, rhs_strides, out);
+#define CHOOSE(TYPENAME, FWD, BWD) \
+extern "C" __global__ void FWD( \
+    const size_t numel, \
+    const size_t num_dims, \
+    const size_t *dims, \
+    const bool *cond, \
+    const size_t *cond_strides, \
+    const TYPENAME *lhs, \
+    const size_t *lhs_strides, \
+    const TYPENAME *rhs, \
+    const size_t *rhs_strides, \
+    TYPENAME *out \
+) { \
+    choose_forward(numel, num_dims, dims, cond, cond_strides, lhs, lhs_strides, rhs, rhs_strides, out); \
+} \
+extern "C" __global__ void BWD( \
+    const size_t numel, \
+    const size_t num_dims, \
+    const size_t *dims, \
+    const bool *cond, \
+    const size_t *cond_strides, \
+    TYPENAME *grad_lhs, \
+    const size_t *lhs_strides, \
+    TYPENAME *grad_rhs, \
+    const size_t *rhs_strides, \
+    const TYPENAME *grad_out \
+) { \
+    choose_backward(numel, num_dims, dims, cond, cond_strides, grad_lhs, lhs_strides, grad_rhs, rhs_strides, grad_out); \
 }
 
-extern "C" __global__ void choose_backward_f32(
-    const size_t numel,
-    const size_t num_dims,
-    const size_t *dims,
-    const bool *cond,
-    const size_t *cond_strides,
-    float *grad_lhs,
-    const size_t *lhs_strides,
-    float *grad_rhs,
-    const size_t *rhs_strides,
-    const float *grad_out
-) {
-    choose_backward(numel, num_dims, dims, cond, cond_strides, grad_lhs, lhs_strides, grad_rhs, rhs_strides, grad_out);
-}
-
-extern "C" __global__ void choose_forward_f64(
-    const size_t numel,
-    const size_t num_dims,
-    const size_t *dims,
-    const bool *cond,
-    const size_t *cond_strides,
-    const double *lhs,
-    const size_t *lhs_strides,
-    const double *rhs,
-    const size_t *rhs_strides,
-    double *out
-) {
-    choose_forward(numel, num_dims, dims, cond, cond_strides, lhs, lhs_strides, rhs, rhs_strides, out);
-}
-
-extern "C" __global__ void choose_backward_f64(
-    const size_t numel,
-    const size_t num_dims,
-    const size_t *dims,
-    const bool *cond,
-    const size_t *cond_strides,
-    double *grad_lhs,
-    const size_t *lhs_strides,
-    double *grad_rhs,
-    const size_t *rhs_strides,
-    const double *grad_out
-) {
-    choose_backward(numel, num_dims, dims, cond, cond_strides, grad_lhs, lhs_strides, grad_rhs, rhs_strides, grad_out);
-}
+CHOOSE(float, choose_forward_f32, choose_backward_f32);
+CHOOSE(double, choose_forward_f64, choose_backward_f64);

@@ -97,54 +97,31 @@ __device__ void sum_to_backward(
     grad_inp[inp_i] += tmp * elems_per_thread;
 }
 
-extern "C" __global__ void sum_to_forward_f32(
-    const size_t numel,
-    const size_t num_dims,
-    const float elems_per_thread,
-    const size_t chunk_len,
-    const float *inp,
-    const size_t *dims,
-    const size_t *strides,
-    float *out
-) {
-    sum_to_forward(numel, num_dims, elems_per_thread, chunk_len, inp, dims, strides, out);
+#define SUM(TYPENAME, FWD, BWD) \
+extern "C" __global__ void FWD( \
+    const size_t numel, \
+    const size_t num_dims, \
+    const TYPENAME elems_per_thread, \
+    const size_t chunk_len, \
+    const TYPENAME *inp, \
+    const size_t *dims, \
+    const size_t *strides, \
+    TYPENAME *out \
+) { \
+    sum_to_forward(numel, num_dims, elems_per_thread, chunk_len, inp, dims, strides, out); \
+} \
+extern "C" __global__ void BWD( \
+    const size_t numel, \
+    const size_t num_dims, \
+    const TYPENAME elems_per_thread, \
+    const size_t *dims, \
+    TYPENAME *grad_inp, \
+    const size_t *inp_strides, \
+    const TYPENAME *grad_out, \
+    const size_t *out_strides \
+) { \
+    sum_to_backward(numel, num_dims, elems_per_thread, dims, grad_inp, inp_strides, grad_out, out_strides); \
 }
 
-extern "C" __global__ void sum_to_backward_f32(
-    const size_t numel,
-    const size_t num_dims,
-    const float elems_per_thread,
-    const size_t *dims,
-    float *grad_inp,
-    const size_t *inp_strides,
-    const float *grad_out,
-    const size_t *out_strides
-) {
-    sum_to_backward(numel, num_dims, elems_per_thread, dims, grad_inp, inp_strides, grad_out, out_strides);
-}
-
-extern "C" __global__ void sum_to_forward_f64(
-    const size_t numel,
-    const size_t num_dims,
-    const double elems_per_thread,
-    const size_t chunk_len,
-    const double *inp,
-    const size_t *dims,
-    const size_t *strides,
-    double *out
-) {
-    sum_to_forward(numel, num_dims, elems_per_thread, chunk_len, inp, dims, strides, out);
-}
-
-extern "C" __global__ void sum_to_backward_f64(
-    const size_t numel,
-    const size_t num_dims,
-    const double elems_per_thread,
-    const size_t *dims,
-    double *grad_inp,
-    const size_t *inp_strides,
-    const double *grad_out,
-    const size_t *out_strides
-) {
-    sum_to_backward(numel, num_dims, elems_per_thread, dims, grad_inp, inp_strides, grad_out, out_strides);
-}
+SUM(float, sum_to_forward_f32, sum_to_backward_f32);
+SUM(double, sum_to_forward_f64, sum_to_backward_f64);
