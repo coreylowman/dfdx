@@ -53,10 +53,6 @@ macro_rules! impl_rmsprop {
                 grad_avg: &mut Self::Storage<S, $TypeName>,
                 grad: Self::Storage<S, $TypeName>,
             ) -> Result<(), Self::Err> {
-                debug_assert_eq!(param.data.len(), grad.data.len());
-                debug_assert_eq!(param.shape, grad.shape);
-                debug_assert_eq!(param.strides, grad.strides);
-
                 if !self.dev.has_func(MODULE_NAME, $Fwd) {
                     self.dev.load_ptx(PTX_SRC.into(), MODULE_NAME, &[$Fwd])?;
                 }

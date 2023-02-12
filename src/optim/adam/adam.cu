@@ -1,3 +1,5 @@
+#include "cuda_utils.cuh"
+
 enum WeightDecayType {
     None,
     L2,
@@ -41,9 +43,9 @@ __device__ void adam_update(
 
     m = m * cfg.beta1 + g * (1.0 - cfg.beta1);
     v = v * cfg.beta2 + g * g * (1.0 - cfg.beta2);
-    T m_hat = m * 1.0 / (1.0 - powf(cfg.beta1, t));
-    T v_hat = v * 1.0 / (1.0 - powf(cfg.beta2, t));
-    g = cfg.lr * m_hat / (sqrtf(v_hat) + cfg.eps);
+    T m_hat = m * 1.0 / (1.0 - powg(cfg.beta1, t));
+    T v_hat = v * 1.0 / (1.0 - powg(cfg.beta2, t));
+    g = cfg.lr * m_hat / (sqrtg(v_hat) + cfg.eps);
 
     if (cfg.weight_decay_type == Decoupled) {
         g += cfg.weight_decay * cfg.lr * p;
@@ -54,26 +56,18 @@ __device__ void adam_update(
     param[i] -= g;
 }
 
-extern "C" __global__ void adam_update_f32(
-    const AdamConfig<float> cfg,
-    const size_t numel,
-    const float t,
-    float* param,
-    float* moment1,
-    float* moment2,
-    const float* grad
-) {
-    adam_update(cfg, numel, t, param, moment1, moment2, grad);
+#define ADAM(TYPENAME, FN) \
+extern "C" __global__ void FN( \
+    const AdamConfig<TYPENAME> cfg, \
+    const size_t numel, \
+    const TYPENAME t, \
+    TYPENAME* param, \
+    TYPENAME* moment1, \
+    TYPENAME* moment2, \
+    const TYPENAME* grad \
+) { \
+    adam_update(cfg, numel, t, param, moment1, moment2, grad); \
 }
 
-extern "C" __global__ void adam_update_f64(
-    const AdamConfig<double> cfg,
-    const size_t numel,
-    const double t,
-    double* param,
-    double* moment1,
-    double* moment2,
-    const double* grad
-) {
-    adam_update(cfg, numel, t, param, moment1, moment2, grad);
-}
+ADAM(float, adam_update_f32);
+ADAM(double, adam_update_f64);

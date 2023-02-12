@@ -1,7 +1,6 @@
-use super::AdamConfig;
-use crate::optim::optimizer::*;
-use crate::{shapes::Shape, tensor::Cuda};
+use crate::{optim::optimizer::*, shapes::Shape, tensor::Cuda};
 use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
+use num_traits::FromPrimitive;
 use std::sync::Arc;
 
 #[repr(C)]
@@ -16,7 +15,7 @@ struct CudaAdamConfig<E> {
 
 unsafe impl<E> AsKernelParam for CudaAdamConfig<E> {}
 
-fn adam_config_to_cuda<E: Default + Copy>(config: &AdamConfig<E>) -> CudaAdamConfig<E> {
+fn adam_config_to_cuda<E: Default + Copy>(config: &super::AdamConfig<E>) -> CudaAdamConfig<E> {
     let (weight_decay_type, weight_decay) = weight_decay_to_cuda(config.weight_decay);
 
     CudaAdamConfig {
@@ -38,16 +37,12 @@ macro_rules! impl_adam {
             fn update<S: Shape>(
                 &self,
                 t: i32,
-                cfg: &AdamConfig<$TypeName>,
+                cfg: &super::AdamConfig<$TypeName>,
                 param: &mut Self::Storage<S, $TypeName>,
                 moment1: &mut Self::Storage<S, $TypeName>,
                 moment2: &mut Self::Storage<S, $TypeName>,
                 grad: Self::Storage<S, $TypeName>,
             ) -> Result<(), Self::Err> {
-                debug_assert_eq!(param.data.len(), grad.data.len());
-                debug_assert_eq!(param.shape, grad.shape);
-                debug_assert_eq!(param.strides, grad.strides);
-
                 if !self.dev.has_func(MODULE_NAME, $Fwd) {
                     self.dev.load_ptx(PTX_SRC.into(), MODULE_NAME, &[$Fwd])?;
                 }
@@ -58,13 +53,13 @@ macro_rules! impl_adam {
                 let func = self.dev.get_func(MODULE_NAME, $Fwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
-                    adam_cfg,                         // const AdamConfig cfg,
-                    numel,                            // const size_t numel,
-                    t as f32,                         // const float t,
-                    Arc::make_mut(&mut param.data),   // float* param,
-                    Arc::make_mut(&mut moment1.data), // float* moment1,
-                    Arc::make_mut(&mut moment2.data), // float* moment2,
-                    grad.data.as_ref(),               // const float* grad
+                    adam_cfg,                          // const AdamConfig cfg,
+                    numel,                             // const size_t numel,
+                    <$TypeName>::from_i32(t).unwrap(), // const float t,
+                    Arc::make_mut(&mut param.data),    // float* param,
+                    Arc::make_mut(&mut moment1.data),  // float* moment1,
+                    Arc::make_mut(&mut moment2.data),  // float* moment2,
+                    grad.data.as_ref(),                // const float* grad
                 );
                 unsafe { func.launch_async(cfg, params) }?;
                 Ok(())

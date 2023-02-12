@@ -1,3 +1,5 @@
+#include "cuda_utils.cuh"
+
 enum WeightDecayType {
     WdNone,
     L2,
@@ -49,9 +51,9 @@ __device__ void rmsprop_update(
     if (cfg.centered) {
         // ga = a * ga + (1 - a) * g
         g_avg += (1.0 - cfg.alpha) * (g - g_avg);
-        avg = sqrtf(s_avg - g_avg * g_avg + cfg.eps);
+        avg = sqrtg(s_avg - g_avg * g_avg + cfg.eps);
     } else {
-        avg = sqrtf(s_avg + cfg.eps);
+        avg = sqrtg(s_avg + cfg.eps);
     };
 
     g /= avg;
@@ -73,26 +75,18 @@ __device__ void rmsprop_update(
     param[i] -= g;
 }
 
-extern "C" __global__ void rmsprop_update_f32(
-    const RMSpropConfig<float> cfg,
-    const size_t numel,
-    float* param,
-    float* momentum,
-    float* square_avg,
-    float* grad_avg,
-    const float* grad
-) {
-    rmsprop_update(cfg, numel, param, momentum, square_avg, grad_avg, grad);
+#define RMSPROP(TYPENAME, FN) \
+extern "C" __global__ void FN( \
+    const RMSpropConfig<TYPENAME> cfg, \
+    const size_t numel, \
+    TYPENAME* param, \
+    TYPENAME* momentum, \
+    TYPENAME* square_avg, \
+    TYPENAME* grad_avg, \
+    const TYPENAME* grad \
+) { \
+    rmsprop_update(cfg, numel, param, momentum, square_avg, grad_avg, grad); \
 }
 
-extern "C" __global__ void rmsprop_update_f64(
-    const RMSpropConfig<double> cfg,
-    const size_t numel,
-    double* param,
-    double* momentum,
-    double* square_avg,
-    double* grad_avg,
-    const double* grad
-) {
-    rmsprop_update(cfg, numel, param, momentum, square_avg, grad_avg, grad);
-}
+RMSPROP(float, rmsprop_update_f32);
+RMSPROP(double, rmsprop_update_f64);

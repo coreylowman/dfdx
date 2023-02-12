@@ -15,10 +15,6 @@ impl<F: num_traits::Float + Dtype> AdamKernel<F> for Cpu {
         moment2: &mut Self::Storage<S, F>,
         grad: Self::Storage<S, F>,
     ) -> Result<(), Self::Err> {
-        debug_assert_eq!(param.data.len(), grad.data.len());
-        debug_assert_eq!(param.shape, grad.shape);
-        debug_assert_eq!(param.strides, grad.strides);
-
         for ((p, mut g), (m, v)) in param
             .buf_iter_mut()
             .zip(grad.buf_iter().cloned())

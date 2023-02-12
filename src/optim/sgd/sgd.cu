@@ -59,22 +59,16 @@ __device__ void sgd_update(
     param[i] -= g;
 }
 
-extern "C" __global__ void sgd_update_f32(
-    const SgdConfig<float> cfg,
-    const size_t numel,
-    float* param,
-    float* velocity,
-    const float* grad
-) {
-    sgd_update(cfg, numel, param, velocity, grad);
+#define SGD(TYPENAME, FN) \
+extern "C" __global__ void FN( \
+    const SgdConfig<TYPENAME> cfg, \
+    const size_t numel, \
+    TYPENAME* param, \
+    TYPENAME* velocity, \
+    const TYPENAME* grad \
+) { \
+    sgd_update(cfg, numel, param, velocity, grad); \
 }
 
-extern "C" __global__ void sgd_update_f64(
-    const SgdConfig<double> cfg,
-    const size_t numel,
-    double* param,
-    double* velocity,
-    const double* grad
-) {
-    sgd_update(cfg, numel, param, velocity, grad);
-}
+SGD(float, sgd_update_f32);
+SGD(double, sgd_update_f64);

@@ -56,3 +56,19 @@ extern "C" __global__ void fill_with_f64(double *buf, double value, const size_t
     }
     buf[i] = value;
 }
+
+__device__ float sqrtg(float a) {
+    return sqrtf(a);
+}
+
+__device__ double sqrtg(double a) {
+    return sqrt(a);
+}
+
+__device__ float powg(float a, float b) {
+    return powf(a, b);
+}
+
+__device__ double powg(double a, double b) {
+    return pow(a, b);
+}
