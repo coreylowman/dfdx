@@ -1,6 +1,5 @@
-use crate::{optim::optimizer::*, shapes::Shape, tensor::Cuda};
+use crate::{optim::optimizer::*, shapes::*, tensor::Cuda};
 use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
-use num_traits::FromPrimitive;
 use std::sync::Arc;
 
 #[repr(C)]
@@ -31,42 +30,54 @@ fn adam_config_to_cuda<E: Default + Copy>(config: &super::AdamConfig<E>) -> Cuda
 const MODULE_NAME: &str = "adam";
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/adam.ptx"));
 
-macro_rules! impl_adam {
-    ($TypeName:ty, $Fwd:tt) => {
-        impl super::AdamKernel<$TypeName> for Cuda {
-            fn update<S: Shape>(
-                &self,
-                t: i32,
-                cfg: &super::AdamConfig<$TypeName>,
-                param: &mut Self::Storage<S, $TypeName>,
-                moment1: &mut Self::Storage<S, $TypeName>,
-                moment2: &mut Self::Storage<S, $TypeName>,
-                grad: Self::Storage<S, $TypeName>,
-            ) -> Result<(), Self::Err> {
-                if !self.dev.has_func(MODULE_NAME, $Fwd) {
-                    self.dev.load_ptx(PTX_SRC.into(), MODULE_NAME, &[$Fwd])?;
-                }
-
-                let adam_cfg = adam_config_to_cuda(cfg);
-                let numel = param.shape.num_elements();
-
-                let func = self.dev.get_func(MODULE_NAME, $Fwd).unwrap();
-                let cfg = LaunchConfig::for_num_elems(numel as u32);
-                let params = (
-                    adam_cfg,                          // const AdamConfig cfg,
-                    numel,                             // const size_t numel,
-                    <$TypeName>::from_i32(t).unwrap(), // const float t,
-                    Arc::make_mut(&mut param.data),    // float* param,
-                    Arc::make_mut(&mut moment1.data),  // float* moment1,
-                    Arc::make_mut(&mut moment2.data),  // float* moment2,
-                    grad.data.as_ref(),                // const float* grad
-                );
-                unsafe { func.launch_async(cfg, params) }?;
-                Ok(())
-            }
-        }
-    };
+trait HasCudaKernel<E> {
+    const MOD: &'static str;
+    const FWD: &'static str;
 }
 
-impl_adam!(f32, "adam_update_f32");
-impl_adam!(f64, "adam_update_f64");
+impl HasCudaKernel<f32> for Cuda {
+    const MOD: &'static str = "adam_f32";
+    const FWD: &'static str = "adam_update_f32";
+}
+
+impl HasCudaKernel<f64> for Cuda {
+    const MOD: &'static str = "adam_f64";
+    const FWD: &'static str = "adam_update_f64";
+}
+
+impl<E: Dtype + AsKernelParam> super::AdamKernel<E> for Cuda
+where
+    Self: HasCudaKernel<E>,
+{
+    fn update<S: Shape>(
+        &self,
+        t: i32,
+        cfg: &super::AdamConfig<E>,
+        param: &mut Self::Storage<S, E>,
+        moment1: &mut Self::Storage<S, E>,
+        moment2: &mut Self::Storage<S, E>,
+        grad: Self::Storage<S, E>,
+    ) -> Result<(), Self::Err> {
+        if !self.dev.has_func(Self::MOD, Self::FWD) {
+            self.dev
+                .load_ptx(PTX_SRC.into(), MODULE_NAME, &[Self::FWD])?;
+        }
+
+        let adam_cfg = adam_config_to_cuda(cfg);
+        let numel = param.shape.num_elements();
+
+        let func = self.dev.get_func(Self::MOD, Self::FWD).unwrap();
+        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let params = (
+            adam_cfg,                         // const AdamConfig cfg,
+            numel,                            // const size_t numel,
+            <E>::from_i32(t).unwrap(),        // const float t,
+            Arc::make_mut(&mut param.data),   // float* param,
+            Arc::make_mut(&mut moment1.data), // float* moment1,
+            Arc::make_mut(&mut moment2.data), // float* moment2,
+            grad.data.as_ref(),               // const float* grad
+        );
+        unsafe { func.launch_async(cfg, params) }?;
+        Ok(())
+    }
+}
