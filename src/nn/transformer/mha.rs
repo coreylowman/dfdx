@@ -92,14 +92,11 @@ where
     }
 }
 
-impl<
-        const M: usize,
-        const H: usize,
-        const K: usize,
-        const V: usize,
-        E: Dtype,
-        D: DeviceStorage,
-    > GradientUpdate<D, E> for MultiHeadAttention<M, H, K, V, E, D>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D> GradientUpdate<D, E>
+    for MultiHeadAttention<M, H, K, V, E, D>
+where
+    E: Dtype,
+    D: DeviceStorage,
 {
     fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
     where

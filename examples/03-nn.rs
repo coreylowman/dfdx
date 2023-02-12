@@ -1,7 +1,7 @@
 //! Intro to dfdx::nn
 
 use dfdx::{
-    nn::{builders::*, modules, BuildOnDevice, Module, ModuleMut, ResetParams},
+    nn::{builders::*, BuildOnDevice, DeviceBuildExt, Module, ModuleMut, ResetParams},
     shapes::{Const, Rank1, Rank2},
     tensor::{AsArray, Cpu, SampleTensor, Tensor, ZerosTensor},
 };
@@ -9,12 +9,14 @@ use dfdx::{
 fn main() {
     let dev: Cpu = Default::default();
 
-    // nn exposes many different neural network types, like the Linear layer!
-    // you can use BuildModule::build to construct an initialized model
+    // `nn::builders` exposes many different neural network types, like the Linear layer!
     type Model = Linear<4, 2>;
-    let mut m: modules::Linear<4, 2, f32, Cpu> = Model::build_on_device(&dev);
 
-    // ResetParams::reset_params also allows you to re-randomize the weights
+    // you can use DeviceBuildExt::build_module to construct an initialized model.
+    // the type of this is actually one of the structures under `nn::modules`.
+    let mut m = dev.build_module::<Model, f32>();
+
+    // `ResetParams::reset_params` also allows you to re-randomize the weights
     m.reset_params();
 
     // Modules act on tensors using either:
@@ -26,8 +28,7 @@ fn main() {
 
     // most of them can also act on many different shapes of tensors
     // here we see that Linear can also accept batches of inputs
-    // Note: the Rank2 with a batch size of 10 in the input
-    //       AND the output
+    // Note: the Rank2 with a batch size of 10 in the input AND the output
     let _: Tensor<Rank2<10, 2>, f32, _> = m.forward(dev.zeros::<Rank2<10, 4>>());
 
     // Even dynamic size is supported;
@@ -43,4 +44,23 @@ fn main() {
     let a = mlp.forward(x.clone());
     let b = mlp.2.forward(mlp.1.forward(mlp.0.forward(x)));
     assert_eq!(a.array(), b.array());
+
+    // There are actually two ways to specify nn types, depending on whether
+    // you want device/dtype agnostic types, or not.
+
+    // For device agnostic structure, you can use the `nn::builders` api
+    {
+        use dfdx::nn::builders::*;
+        type Model = (Linear<5, 2>, ReLU, Tanh, Linear<2, 3>);
+        let _ = dev.build_module::<Model, f32>();
+    }
+
+    // The other way is to specify modules with device & dtype generics
+    // using `nn::modules`. The structures in modules are actually
+    // what the nn::builders turn into!
+    {
+        use dfdx::nn::{modules::*, BuildModule};
+        type Model<E, D> = (Linear<5, 2, E, D>, ReLU, Tanh, Linear<2, 3, E, D>);
+        let _: Model<f32, _> = BuildModule::build(&dev);
+    }
 }

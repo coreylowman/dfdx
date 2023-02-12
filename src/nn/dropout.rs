@@ -108,28 +108,26 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D,
 /// assert_eq!(r.array(), [[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug)]
-pub struct Dropout<E> {
-    pub p: E,
+pub struct Dropout {
+    pub p: f32,
 }
 
-impl<E: Dtype> Default for Dropout<E> {
+impl Default for Dropout {
     /// Sets `self.p` to `0.5`
     fn default() -> Self {
-        Self {
-            p: E::from_f32(0.5).unwrap(),
-        }
+        Self { p: 0.5 }
     }
 }
 
-impl<E: Dtype> ZeroSizedModule for Dropout<E> {}
+impl ZeroSizedModule for Dropout {}
 
-impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Dropout<E> {
+impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Dropout {
     fn try_build(_: &D) -> Result<Self, <D>::Err> {
         Ok(Default::default())
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>> for Dropout<E> {
+impl<S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>> for Dropout {
     type Output = Tensor<S, E, D, NoneTape>;
     /// Does nothing.
     fn forward(&self, input: Tensor<S, E, D, NoneTape>) -> Self::Output {
@@ -137,11 +135,11 @@ impl<S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>> for Dro
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<D>>> for Dropout<E> {
+impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<D>>> for Dropout {
     type Output = Tensor<S, E, D, OwnedTape<D>>;
     /// Calls [dropout()]
     fn forward_mut(&mut self, input: Tensor<S, E, D, OwnedTape<D>>) -> Self::Output {
-        dropout(input, self.p)
+        dropout(input, E::from_f32(self.p).unwrap())
     }
 }
 
@@ -160,7 +158,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut d1 = Dropout { p: 0.5 };
         let mut d2 = Dropout { p: 0.5 };
-        let t = dev.ones::<Rank1<100>>();
+        let t: Tensor<Rank1<100>, TestDtype, _> = dev.ones();
         let r1 = d1.forward_mut(t.trace());
         let r2 = d2.forward_mut(t.trace());
         let r1_2 = d1.forward_mut(t.trace());
@@ -181,7 +179,7 @@ mod tests {
     fn test_dropout_tape() {
         let dev: TestDevice = Default::default();
         let mut dropout = Dropout { p: 0.5 };
-        let t = dev.ones::<Rank1<100>>();
+        let t: Tensor<Rank1<100>, TestDtype, _> = dev.ones();
         let r = dropout.forward_mut(t.trace());
         assert_ne!(t.array(), r.array());
     }

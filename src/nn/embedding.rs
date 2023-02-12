@@ -52,17 +52,11 @@ pub struct Embedding<const VOCAB: usize, const DIM: usize, E: Dtype, D: DeviceSt
     pub weight: Tensor<Rank2<VOCAB, DIM>, E, D>,
 }
 
-impl<
-        const VOCAB: usize,
-        const DIM: usize,
-        const SEQ: usize,
-        E: Dtype,
-        D: Device<E>,
-        T: Tape<D>,
-    > Module<Tensor<Rank1<SEQ>, usize, D, T>> for Embedding<VOCAB, DIM, E, D>
+impl<const V: usize, const M: usize, const S: usize, E: Dtype, D: Device<E>, T: Tape<D>>
+    Module<Tensor<Rank1<S>, usize, D, T>> for Embedding<V, M, E, D>
 {
-    type Output = Tensor<Rank2<SEQ, DIM>, E, D, T>;
-    fn forward(&self, input: Tensor<Rank1<SEQ>, usize, D, T>) -> Self::Output {
+    type Output = Tensor<Rank2<S, M>, E, D, T>;
+    fn forward(&self, input: Tensor<Rank1<S>, usize, D, T>) -> Self::Output {
         let (input, tape) = input.split_tape();
         self.weight.clone().put_tape(tape).gather(input)
     }
@@ -150,7 +144,7 @@ mod tests {
         unique_id::HasUniqueId,
     };
 
-    const W: [[f32; 5]; 2] = [
+    const W: [[TestDtype; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
         [0.11733949, 0.14059687, -0.10670426, -0.09373143, 0.18974298],
     ];
@@ -170,7 +164,7 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let model = Embedding {
-            weight: dev.tensor(W.map(|row| row.map(TestDtype::from))),
+            weight: dev.tensor(W),
         };
 
         let x = dev.tensor([0, 0, 1]);
@@ -211,7 +205,7 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let model = Embedding {
-            weight: dev.tensor(W.map(|row| row.map(TestDtype::from))),
+            weight: dev.tensor(W),
         };
 
         let x = dev.tensor([[0, 0], [0, 1]]);

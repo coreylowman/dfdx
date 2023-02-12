@@ -3,7 +3,7 @@ use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 use super::module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
 
 use num_traits::Float;
-use rand_distr::uniform::SampleUniform;
+use rand_distr::{uniform::SampleUniform, Uniform};
 
 pub mod builder {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -69,9 +69,9 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device
     BuildModule<D, E> for Linear<I, O, E, D>
 {
     fn try_build(device: &D) -> Result<Self, D::Err> {
-        let bound: E = E::ONE / E::from_usize(I).unwrap().sqrt();
-        let weight = device.try_sample(rand_distr::Uniform::new(-bound, bound))?;
-        let bias = device.try_sample(rand_distr::Uniform::new(-bound, bound))?;
+        let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
+        let weight = device.try_sample(Uniform::new(-b, b))?;
+        let bias = device.try_sample(Uniform::new(-b, b))?;
         Ok(Self { weight, bias })
     }
 }
@@ -80,11 +80,9 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Sample
     ResetParams<D, E> for Linear<I, O, E, D>
 {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        let bound: E = E::ONE / E::from_usize(I).unwrap().sqrt();
-        self.weight
-            .try_fill_with_distr(rand_distr::Uniform::new(-bound, bound))?;
-        self.bias
-            .try_fill_with_distr(rand_distr::Uniform::new(-bound, bound))?;
+        let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
+        self.weight.try_fill_with_distr(Uniform::new(-b, b))?;
+        self.bias.try_fill_with_distr(Uniform::new(-b, b))?;
         Ok(())
     }
 }
@@ -167,11 +165,11 @@ mod tests {
         unique_id::HasUniqueId,
     };
 
-    const W: [[f32; 5]; 2] = [
+    const W: [[TestDtype; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
         [0.11733949, 0.14059687, -0.10670426, -0.09373143, 0.18974298],
     ];
-    const B: [f32; 2] = [0.3765365, -0.290717];
+    const B: [TestDtype; 2] = [0.3765365, -0.290717];
 
     #[test]
     fn test_linear_ondevice() {
@@ -201,8 +199,8 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let model = Linear {
-            weight: dev.tensor(W.map(|row| row.map(TestDtype::from))),
-            bias: dev.tensor(B.map(TestDtype::from)),
+            weight: dev.tensor(W),
+            bias: dev.tensor(B),
         };
 
         let x = dev.tensor([-0.8808001, 2.4185333, 2.2478335, 0.0565211, 2.031299]);
@@ -225,8 +223,8 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let model = Linear {
-            weight: dev.tensor(W.map(|row| row.map(TestDtype::from))),
-            bias: dev.tensor(B.map(TestDtype::from)),
+            weight: dev.tensor(W),
+            bias: dev.tensor(B),
         };
 
         let x = dev.tensor([
@@ -260,8 +258,8 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let model = Linear {
-            weight: dev.tensor(W.map(|row| row.map(TestDtype::from))),
-            bias: dev.tensor(B.map(TestDtype::from)),
+            weight: dev.tensor(W),
+            bias: dev.tensor(B),
         };
 
         #[rustfmt::skip]

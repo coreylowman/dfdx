@@ -100,15 +100,12 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D
     }
 }
 
-impl<
-        const M: usize,
-        const H: usize,
-        const F: usize,
-        const L: usize,
-        E: Dtype,
-        D1: Device<E>,
-        D2: Device<E>,
-    > ToDevice<D2> for TransformerDecoder<M, H, F, L, E, D1>
+impl<const M: usize, const H: usize, const F: usize, const L: usize, E, D1, D2> ToDevice<D2>
+    for TransformerDecoder<M, H, F, L, E, D1>
+where
+    E: Dtype,
+    D1: Device<E>,
+    D2: Device<E>,
 {
     type Output = TransformerDecoder<M, H, F, L, E, D2>;
 

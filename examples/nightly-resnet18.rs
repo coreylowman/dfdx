@@ -42,7 +42,7 @@ fn main() {
 
     let dev: Cpu = Default::default();
     let x: Tensor<Rank3<3, 224, 224>, f32, _> = dev.sample_normal();
-    let m = Resnet18::<1000>::build_on_device(&dev);
+    let m = dev.build_module::<Resnet18<1000>, f32>();
     for _ in 0.. {
         let start = Instant::now();
         let _ = m.forward(x.clone());

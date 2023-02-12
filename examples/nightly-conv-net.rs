@@ -15,7 +15,7 @@ fn main() {
     );
 
     let dev: Cpu = Default::default();
-    let m = Model::build_on_device(&dev);
+    let m = dev.build_module::<Model, f32>();
 
     // single image forward
     let x: Tensor<Rank3<3, 28, 28>, f32, _> = dev.sample_normal();

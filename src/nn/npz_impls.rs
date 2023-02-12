@@ -206,14 +206,10 @@ impl<T: LoadFromNpz> LoadFromNpz for AddInto<T> {
 }
 
 #[cfg(feature = "nightly")]
-impl<
-        const M: usize,
-        const H: usize,
-        const F: usize,
-        const L: usize,
-        E: Dtype + NumpyDtype,
-        D: CopySlice<E>,
-    > SaveToNpz for TransformerDecoder<M, H, F, L, E, D>
+impl<const M: usize, const H: usize, const F: usize, const L: usize, E, D: CopySlice<E>> SaveToNpz
+    for TransformerDecoder<M, H, F, L, E, D>
+where
+    E: Dtype + NumpyDtype,
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.0.write(&format!("{p}.0"), w)
@@ -253,14 +249,10 @@ impl<const M: usize, const H: usize, const F: usize, E: Dtype + NumpyDtype, D: C
 }
 
 #[cfg(feature = "nightly")]
-impl<
-        const M: usize,
-        const H: usize,
-        const F: usize,
-        const L: usize,
-        E: Dtype + NumpyDtype,
-        D: CopySlice<E>,
-    > LoadFromNpz for TransformerDecoder<M, H, F, L, E, D>
+impl<const M: usize, const H: usize, const F: usize, const L: usize, E, D: CopySlice<E>> LoadFromNpz
+    for TransformerDecoder<M, H, F, L, E, D>
+where
+    E: Dtype + NumpyDtype,
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.0.read(&format!("{p}.0"), r)
@@ -296,14 +288,10 @@ impl<const M: usize, const H: usize, const F: usize, E: Dtype + NumpyDtype, D: C
 }
 
 #[cfg(feature = "nightly")]
-impl<
-        const M: usize,
-        const H: usize,
-        const K: usize,
-        const V: usize,
-        E: Dtype + NumpyDtype,
-        D: CopySlice<E>,
-    > SaveToNpz for MultiHeadAttention<M, H, K, V, E, D>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: CopySlice<E>> SaveToNpz
+    for MultiHeadAttention<M, H, K, V, E, D>
+where
+    E: Dtype + NumpyDtype,
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.w_q.write(&format!("{p}w_q."), w)?;
@@ -315,14 +303,10 @@ impl<
 }
 
 #[cfg(feature = "nightly")]
-impl<
-        const M: usize,
-        const H: usize,
-        const K: usize,
-        const V: usize,
-        E: Dtype + NumpyDtype,
-        D: CopySlice<E>,
-    > LoadFromNpz for MultiHeadAttention<M, H, K, V, E, D>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: CopySlice<E>> LoadFromNpz
+    for MultiHeadAttention<M, H, K, V, E, D>
+where
+    E: Dtype + NumpyDtype,
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.w_q.read(&format!("{p}w_q."), r)?;
@@ -334,15 +318,11 @@ impl<
 }
 
 #[cfg(feature = "nightly")]
-impl<
-        const M: usize,
-        const H: usize,
-        const A: usize,
-        const B: usize,
-        const F: usize,
-        E: Dtype + NumpyDtype,
-        D: CopySlice<E>,
-    > SaveToNpz for Transformer<M, H, A, B, F, E, D>
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D> SaveToNpz
+    for Transformer<M, H, A, B, F, E, D>
+where
+    E: Dtype + NumpyDtype,
+    D: CopySlice<E>,
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.encoder.write(&format!("{p}encoder."), w)?;
@@ -352,15 +332,11 @@ impl<
 }
 
 #[cfg(feature = "nightly")]
-impl<
-        const M: usize,
-        const H: usize,
-        const A: usize,
-        const B: usize,
-        const F: usize,
-        E: Dtype + NumpyDtype,
-        D: CopySlice<E>,
-    > LoadFromNpz for Transformer<M, H, A, B, F, E, D>
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>
+    LoadFromNpz for Transformer<M, H, A, B, F, E, D>
+where
+    E: Dtype + NumpyDtype,
+    D: CopySlice<E>,
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.encoder.read(&format!("{p}encoder."), r)?;

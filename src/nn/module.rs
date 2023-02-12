@@ -52,6 +52,8 @@ pub trait BuildOnDevice<D: DeviceStorage, E: Dtype> {
     }
 }
 
+/// An extension trait that allows you to build a module with a device
+/// method. Also allows easy specification of Dtype.
 pub trait DeviceBuildExt: DeviceStorage {
     fn build_module<M: BuildOnDevice<Self, E>, E: Dtype>(&self) -> M::Built {
         M::build_on_device(self)
