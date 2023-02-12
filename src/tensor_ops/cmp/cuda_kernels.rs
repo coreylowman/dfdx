@@ -3,7 +3,7 @@ use crate::{
     tensor::cuda::Cuda,
     tensor::cuda::CudaArray,
 };
-use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 use super::{
@@ -35,11 +35,11 @@ trait ScalarCmpOpCudaKernel<E: Unit> {
     const FWD_FN_NAME: &'static str;
 }
 
-impl<Op: CmpOpCudaKernel<f32>> CmpKernel<Op, f32> for Cuda {
+impl<E: Unit, Op: CmpOpCudaKernel<E>> CmpKernel<Op, E> for Cuda {
     fn forward<S: Shape>(
         &self,
-        lhs: &Self::Storage<S, f32>,
-        rhs: &Self::Storage<S, f32>,
+        lhs: &Self::Storage<S, E>,
+        rhs: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, bool>, Self::Err> {
         if !self.dev.has_func(Op::MODULE_NAME, Op::FWD_FN_NAME) {
             self.dev
@@ -79,11 +79,11 @@ impl<Op: CmpOpCudaKernel<f32>> CmpKernel<Op, f32> for Cuda {
     }
 }
 
-impl<Op: ScalarCmpOpCudaKernel<f32>> ScalarCmpKernel<Op, f32> for Cuda {
+impl<E: Unit + AsKernelParam, Op: ScalarCmpOpCudaKernel<E>> ScalarCmpKernel<Op, E> for Cuda {
     fn forward<S: Shape>(
         &self,
-        lhs: &Self::Storage<S, f32>,
-        scalar: f32,
+        lhs: &Self::Storage<S, E>,
+        scalar: E,
     ) -> Result<Self::Storage<S, bool>, Self::Err> {
         if !self.dev.has_func(Op::MODULE_NAME, Op::FWD_FN_NAME) {
             self.dev
@@ -121,74 +121,31 @@ impl<Op: ScalarCmpOpCudaKernel<f32>> ScalarCmpKernel<Op, f32> for Cuda {
     }
 }
 
-impl CmpOpCudaKernel<f32> for EqKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "eq";
-    const FWD_FN_NAME: &'static str = "eq_forward";
+macro_rules! cmps {
+    ($Op:ty, $TypeName:ty, $Fwd:tt, $ScalarFwd:tt) => {
+        impl CmpOpCudaKernel<$TypeName> for $Op {
+            const PTX_SRC: &'static str = PTX_SRC;
+            const MODULE_NAME: &'static str = $Fwd;
+            const FWD_FN_NAME: &'static str = $Fwd;
+        }
+        impl ScalarCmpOpCudaKernel<$TypeName> for $Op {
+            const PTX_SRC: &'static str = PTX_SRC;
+            const MODULE_NAME: &'static str = $ScalarFwd;
+            const FWD_FN_NAME: &'static str = $ScalarFwd;
+        }
+    };
 }
 
-impl ScalarCmpOpCudaKernel<f32> for EqKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "scalar_eq";
-    const FWD_FN_NAME: &'static str = "scalar_eq_forward";
-}
+cmps!(EqKernelOp, f32, "eq_forward_f32", "scalar_eq_forward_f32");
+cmps!(NeKernelOp, f32, "ne_forward_f32", "scalar_ne_forward_f32");
+cmps!(GtKernelOp, f32, "gt_forward_f32", "scalar_gt_forward_f32");
+cmps!(GeKernelOp, f32, "ge_forward_f32", "scalar_ge_forward_f32");
+cmps!(LtKernelOp, f32, "lt_forward_f32", "scalar_lt_forward_f32");
+cmps!(LeKernelOp, f32, "le_forward_f32", "scalar_le_forward_f32");
 
-impl CmpOpCudaKernel<f32> for NeKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "ne";
-    const FWD_FN_NAME: &'static str = "ne_forward";
-}
-
-impl ScalarCmpOpCudaKernel<f32> for NeKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "scalar_ne";
-    const FWD_FN_NAME: &'static str = "scalar_ne_forward";
-}
-
-impl CmpOpCudaKernel<f32> for GtKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "gt";
-    const FWD_FN_NAME: &'static str = "gt_forward";
-}
-
-impl ScalarCmpOpCudaKernel<f32> for GtKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "scalar_gt";
-    const FWD_FN_NAME: &'static str = "scalar_gt_forward";
-}
-
-impl CmpOpCudaKernel<f32> for GeKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "ge";
-    const FWD_FN_NAME: &'static str = "ge_forward";
-}
-
-impl ScalarCmpOpCudaKernel<f32> for GeKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "scalar_ge";
-    const FWD_FN_NAME: &'static str = "scalar_ge_forward";
-}
-
-impl CmpOpCudaKernel<f32> for LtKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "lt";
-    const FWD_FN_NAME: &'static str = "lt_forward";
-}
-
-impl ScalarCmpOpCudaKernel<f32> for LtKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "scalar_lt";
-    const FWD_FN_NAME: &'static str = "scalar_lt_forward";
-}
-
-impl CmpOpCudaKernel<f32> for LeKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "le";
-    const FWD_FN_NAME: &'static str = "le_forward";
-}
-
-impl ScalarCmpOpCudaKernel<f32> for LeKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "scalar_le";
-    const FWD_FN_NAME: &'static str = "scalar_le_forward";
-}
+cmps!(EqKernelOp, f64, "eq_forward_f64", "scalar_eq_forward_f64");
+cmps!(NeKernelOp, f64, "ne_forward_f64", "scalar_ne_forward_f64");
+cmps!(GtKernelOp, f64, "gt_forward_f64", "scalar_gt_forward_f64");
+cmps!(GeKernelOp, f64, "ge_forward_f64", "scalar_ge_forward_f64");
+cmps!(LtKernelOp, f64, "lt_forward_f64", "scalar_lt_forward_f64");
+cmps!(LeKernelOp, f64, "le_forward_f64", "scalar_le_forward_f64");
