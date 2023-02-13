@@ -179,6 +179,7 @@ mod sin;
 mod softmax;
 mod sqrt;
 mod square;
+mod stack;
 mod stddev_to;
 mod sub;
 mod sum_to;
