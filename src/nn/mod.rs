@@ -126,6 +126,7 @@ mod repeated;
 mod residual;
 mod split_into;
 mod transformer;
+mod tuple_lists;
 
 pub use module::*;
 
