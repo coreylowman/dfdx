@@ -14,12 +14,12 @@ trait HasCudaKernel<E> {
 
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "reshape_f32";
-    const FNS: &'static [&'static str] = &["reshape_forward_f32", "reshape_backward_f32"];
+    const FNS: &'static [&'static str] = &["reshape_fwd_f32", "reshape_bwd_f32"];
 }
 
 impl HasCudaKernel<f64> for Cuda {
     const MOD: &'static str = "reshape_f64";
-    const FNS: &'static [&'static str] = &["reshape_forward_f64", "reshape_backward_f64"];
+    const FNS: &'static [&'static str] = &["reshape_fwd_f64", "reshape_bwd_f64"];
 }
 
 impl<E: Dtype> super::ReshapeKernel<E> for Cuda

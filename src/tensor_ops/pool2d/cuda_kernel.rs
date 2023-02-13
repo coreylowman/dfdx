@@ -17,7 +17,7 @@ fn make_4d<S: Shape>(strides: S::Concrete) -> [usize; 4] {
 }
 
 macro_rules! pool_impl {
-    ($Trait:tt<$TypeName:ty>, $Mod:tt, $Fwd:tt, $Bwd:tt) => {
+    ($Trait:tt<$TypeName:ty>, $Fwd:tt, $Bwd:tt) => {
         impl super::$Trait<$TypeName> for Cuda {
             fn forward<I: Shape, O: Shape>(
                 &self,
@@ -25,13 +25,13 @@ macro_rules! pool_impl {
                 inp: &Self::Storage<I, $TypeName>,
                 out: &mut Self::Storage<O, $TypeName>,
             ) -> Result<(), Self::Err> {
-                if !self.dev.has_func($Mod, $Fwd) {
-                    self.dev.load_ptx(PTX_SRC.into(), $Mod, &[$Fwd, $Bwd])?;
+                if !self.dev.has_func($Fwd, $Fwd) {
+                    self.dev.load_ptx(PTX_SRC.into(), $Fwd, &[$Fwd, $Bwd])?;
                 }
 
                 let inp_strides = self.dev.take_async(make_4d::<I>(inp.strides).into())?;
                 let out_strides = self.dev.take_async(make_4d::<O>(out.strides).into())?;
-                let fwd_fn = self.dev.get_func($Mod, $Fwd).unwrap();
+                let fwd_fn = self.dev.get_func($Fwd, $Fwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(out.shape().num_elements() as u32);
                 let params = (
                     op,                           // const Pool2dOp op,
@@ -53,7 +53,7 @@ macro_rules! pool_impl {
             ) -> Result<(), Self::Err> {
                 let inp_strides = self.dev.take_async(make_4d::<I>(inp.strides).into())?;
                 let out_strides = self.dev.take_async(make_4d::<O>(out.strides).into())?;
-                let bwd_fn = self.dev.get_func($Mod, $Bwd).unwrap();
+                let bwd_fn = self.dev.get_func($Fwd, $Bwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(grad_inp.shape().num_elements() as u32);
                 let params = (
                     op,                                // const Pool2dOp op,
@@ -73,38 +73,32 @@ macro_rules! pool_impl {
 
 pool_impl!(
     AvgPool2DKernel<f32>,
-    "avg_pool2d_f32",
-    "avg_pool2d_forward_f32",
-    "avg_pool2d_backward_f32"
+    "avg_pool2d_fwd_f32",
+    "avg_pool2d_bwd_f32"
 );
 pool_impl!(
     MaxPool2DKernel<f32>,
-    "max_pool2d_f32",
-    "max_pool2d_forward_f32",
-    "max_pool2d_backward_f32"
+    "max_pool2d_fwd_f32",
+    "max_pool2d_bwd_f32"
 );
 pool_impl!(
     MinPool2DKernel<f32>,
-    "min_pool2d_f32",
-    "min_pool2d_forward_f32",
-    "min_pool2d_backward_f32"
+    "min_pool2d_fwd_f32",
+    "min_pool2d_bwd_f32"
 );
 
 pool_impl!(
     AvgPool2DKernel<f64>,
-    "avg_pool2d_f64",
-    "avg_pool2d_forward_f64",
-    "avg_pool2d_backward_f64"
+    "avg_pool2d_fwd_f64",
+    "avg_pool2d_bwd_f64"
 );
 pool_impl!(
     MaxPool2DKernel<f64>,
-    "max_pool2d_f64",
-    "max_pool2d_forward_f64",
-    "max_pool2d_backward_f64"
+    "max_pool2d_fwd_f64",
+    "max_pool2d_bwd_f64"
 );
 pool_impl!(
     MinPool2DKernel<f64>,
-    "min_pool2d_f64",
-    "min_pool2d_forward_f64",
-    "min_pool2d_backward_f64"
+    "min_pool2d_fwd_f64",
+    "min_pool2d_bwd_f64"
 );

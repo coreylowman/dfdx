@@ -1,7 +1,7 @@
 #include "cuda_utils.cuh"
 
 template<typename T>
-__device__ void reshape_forward(
+__device__ void reshape_fwd(
     const size_t numel,
     const T *inp,
     const size_t inp_num_dims,
@@ -24,7 +24,7 @@ __device__ void reshape_forward(
 }
 
 template<typename T>
-__device__ void reshape_backward(
+__device__ void reshape_bwd(
     const size_t numel,
     T *grad_inp,
     const size_t inp_num_dims,
@@ -58,7 +58,7 @@ extern "C" __global__ void FWD( \
     const size_t *out_dims, \
     const size_t *out_strides \
 ) { \
-    reshape_forward(numel, inp, inp_num_dims, inp_dims, inp_strides, out, out_num_dims, out_dims, out_strides); \
+    reshape_fwd(numel, inp, inp_num_dims, inp_dims, inp_strides, out, out_num_dims, out_dims, out_strides); \
 } \
 extern "C" __global__ void BWD( \
     const size_t numel, \
@@ -71,8 +71,8 @@ extern "C" __global__ void BWD( \
     const size_t *out_dims, \
     const size_t *out_strides \
 ) { \
-    reshape_backward(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, grad_out, out_num_dims, out_dims, out_strides); \
+    reshape_bwd(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, grad_out, out_num_dims, out_dims, out_strides); \
 }
 
-RESHAPE(float, reshape_forward_f32, reshape_backward_f32);
-RESHAPE(double, reshape_forward_f64, reshape_backward_f64);
+RESHAPE(float, reshape_fwd_f32, reshape_bwd_f32);
+RESHAPE(double, reshape_fwd_f64, reshape_bwd_f64);

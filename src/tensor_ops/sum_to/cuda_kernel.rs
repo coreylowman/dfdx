@@ -17,12 +17,12 @@ trait HasCudaKernel<E> {
 
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "sum_f32";
-    const FNS: &'static [&'static str] = &["sum_to_forward_f32", "sum_to_backward_f32"];
+    const FNS: &'static [&'static str] = &["sum_to_fwd_f32", "sum_to_bwd_f32"];
 }
 
 impl HasCudaKernel<f64> for Cuda {
     const MOD: &'static str = "sum_f64";
-    const FNS: &'static [&'static str] = &["sum_to_forward_f64", "sum_to_backward_f64"];
+    const FNS: &'static [&'static str] = &["sum_to_fwd_f64", "sum_to_bwd_f64"];
 }
 
 impl<E: Dtype + ValidAsZeroBits + AsKernelParam> super::SumKernel<E> for Cuda

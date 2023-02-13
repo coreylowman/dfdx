@@ -32,13 +32,13 @@ __device__ T op_dfdy(HuberErrorOp<T> op, T x, T y) {
     return -op_dfdx(op, x, y);
 }
 
-BINARY_OP(float, huber_error_forward_f32, huber_error_backward_f32, HuberErrorOp<float>,
+BINARY_OP(float, huber_fwd_f32, huber_bwd_f32, HuberErrorOp<float>,
     op_f(op, x, y),
     op_dfdx(op, x, y),
     op_dfdy(op, x, y)
 )
 
-BINARY_OP(double, huber_error_forward_f64, huber_error_backward_f64, HuberErrorOp<double>,
+BINARY_OP(double, huber_fwd_f64, huber_bwd_f64, HuberErrorOp<double>,
     op_f(op, x, y),
     op_dfdx(op, x, y),
     op_dfdy(op, x, y)

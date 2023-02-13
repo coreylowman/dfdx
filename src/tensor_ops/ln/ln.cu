@@ -2,11 +2,11 @@
 
 struct LnKernelOp {};
 
-UNARY_OP(float, ln_forward_f32, ln_backward_f32, LnKernelOp,
+UNARY_OP(float, ln_fwd_f32, ln_bwd_f32, LnKernelOp,
         logf(x),
         1.0 / x)
 
-UNARY_OP(double, ln_forward_f64, ln_backward_f64, LnKernelOp,
+UNARY_OP(double, ln_fwd_f64, ln_bwd_f64, LnKernelOp,
         log(x),
         1.0 / x)
         

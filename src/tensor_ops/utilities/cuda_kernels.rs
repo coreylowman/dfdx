@@ -22,6 +22,19 @@ pub trait UnaryOpCudaKernel<E> {
     const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
 }
 
+macro_rules! cuda_unary {
+    ($Op:path, $TypeName:ty, $Ptx:tt, $Fwd:tt, $Bwd:tt) => {
+        impl crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel<$TypeName> for $Op {
+            const PTX_SRC: &'static str = $Ptx;
+            const MODULE_NAME: &'static str = $Fwd;
+            const FWD_FN_NAME: &'static str = $Fwd;
+            const BWD_FN_NAME: &'static str = $Bwd;
+        }
+    };
+}
+
+pub(crate) use cuda_unary;
+
 impl<E: Dtype, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryKernel<K, E> for Cuda {
     fn forward<S: Shape>(
         &self,
@@ -90,6 +103,19 @@ pub trait BinaryOpCudaKernel<E> {
 
     const ALL_FN_NAMES: [&'static str; 2] = [Self::FWD_FN_NAME, Self::BWD_FN_NAME];
 }
+
+macro_rules! cuda_binary {
+    ($Op:path, $TypeName:ty, $Ptx:tt, $Fwd:tt, $Bwd:tt) => {
+        impl crate::tensor_ops::cuda_kernels::BinaryOpCudaKernel<$TypeName> for $Op {
+            const PTX_SRC: &'static str = $Ptx;
+            const MODULE_NAME: &'static str = $Fwd;
+            const FWD_FN_NAME: &'static str = $Fwd;
+            const BWD_FN_NAME: &'static str = $Bwd;
+        }
+    };
+}
+
+pub(crate) use cuda_binary;
 
 impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for Cuda {
     fn forward<S: Shape>(

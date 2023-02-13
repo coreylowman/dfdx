@@ -29,7 +29,7 @@ __device__ unsigned int get_selected_index(
 }
 
 template<typename T>
-__device__ void select_forward(
+__device__ void select_fwd(
     const size_t numel,
     const T *inp,
     const size_t inp_num_dims,
@@ -56,7 +56,7 @@ __device__ void select_forward(
 }
 
 template<typename T>
-__device__ void select_backward(
+__device__ void select_bwd(
     const size_t numel,
     T *grad_inp,
     const size_t inp_num_dims,
@@ -97,7 +97,7 @@ extern "C" __global__ void FWD( \
     const size_t *out_dims, \
     const size_t *out_strides \
 ) { \
-    select_forward(numel, inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out, out_dims, out_strides); \
+    select_fwd(numel, inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out, out_dims, out_strides); \
 } \
 extern "C" __global__ void BWD( \
     const size_t numel, \
@@ -113,8 +113,8 @@ extern "C" __global__ void BWD( \
     const size_t *out_dims, \
     const size_t *out_strides \
 ) { \
-    select_backward(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, grad_out, out_dims, out_strides); \
+    select_bwd(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, grad_out, out_dims, out_strides); \
 }
 
-SELECT(float, select_forward_f32, select_backward_f32);
-SELECT(double, select_forward_f64, select_backward_f64)
+SELECT(float, select_fwd_f32, select_bwd_f32);
+SELECT(double, select_fwd_f64, select_bwd_f64)

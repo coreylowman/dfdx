@@ -41,7 +41,7 @@ __device__ unsigned int get_gathered_index(
 }
 
 template<typename T>
-__device__ void gather_forward(
+__device__ void gather_fwd(
     const size_t numel,
     const T *inp,
     const size_t inp_num_dims,
@@ -67,7 +67,7 @@ __device__ void gather_forward(
 }
 
 template<typename T>
-__device__ void gather_backward(
+__device__ void gather_bwd(
     const size_t numel,
     T *grad_inp,
     const size_t inp_num_dims,
@@ -106,7 +106,7 @@ extern "C" __global__ void FWD( \
     TYPENAME *out, \
     const size_t out_num_dims \
 ) { \
-    gather_forward(numel, inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out, out_num_dims); \
+    gather_fwd(numel, inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, out, out_num_dims); \
 } \
 extern "C" __global__ void BWD( \
     const size_t numel, \
@@ -121,8 +121,8 @@ extern "C" __global__ void BWD( \
     const TYPENAME *grad_out, \
     const size_t out_num_dims \
 ) { \
-    gather_backward(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, grad_out, out_num_dims); \
+    gather_bwd(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, idx, idx_num_dims, idx_dims, idx_strides, grad_out, out_num_dims); \
 }
 
-GATHER(float, gather_forward_f32, gather_backward_f32);
-GATHER(double, gather_forward_f64, gather_backward_f64);
+GATHER(float, gather_fwd_f32, gather_bwd_f32);
+GATHER(double, gather_fwd_f64, gather_bwd_f64);

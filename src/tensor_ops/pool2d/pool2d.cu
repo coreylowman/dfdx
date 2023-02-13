@@ -13,7 +13,7 @@ struct Pool2dOp {
 };
 
 template<typename T>
-__device__ void avg_pool2d_forward(
+__device__ void avg_pool2d_fwd(
     const Pool2dOp op,
     const size_t *inp_strides,
     const size_t *out_strides,
@@ -58,7 +58,7 @@ __device__ void avg_pool2d_forward(
 }
 
 template<typename T>
-__device__ void avg_pool2d_backward(
+__device__ void avg_pool2d_bwd(
     const Pool2dOp op,
     const size_t *inp_strides,
     const size_t *out_strides,
@@ -109,7 +109,7 @@ __device__ void avg_pool2d_backward(
 }
 
 template<typename T>
-__device__ void max_pool2d_forward(
+__device__ void max_pool2d_fwd(
     const Pool2dOp op,
     const size_t *inp_strides,
     const size_t *out_strides,
@@ -153,7 +153,7 @@ __device__ void max_pool2d_forward(
 }
 
 template<typename T>
-__device__ void max_pool2d_backward(
+__device__ void max_pool2d_bwd(
     const Pool2dOp op,
     const size_t *inp_strides,
     const size_t *out_strides,
@@ -209,7 +209,7 @@ __device__ void max_pool2d_backward(
 }
 
 template<typename T>
-__device__ void min_pool2d_forward(
+__device__ void min_pool2d_fwd(
     const Pool2dOp op,
     const size_t *inp_strides,
     const size_t *out_strides,
@@ -253,7 +253,7 @@ __device__ void min_pool2d_forward(
 }
 
 template<typename T>
-__device__ void min_pool2d_backward(
+__device__ void min_pool2d_bwd(
     const Pool2dOp op,
     const size_t *inp_strides,
     const size_t *out_strides,
@@ -308,17 +308,17 @@ __device__ void min_pool2d_backward(
     grad_inp[i] += tmp;
 }
 
-#define POOL_OP(TYPENAME, FORWARD, BACKWARD, FORWARD_FN, BACKWARD_FN) \
-extern "C" __global__ void FORWARD( \
+#define POOL_OP(TYPENAME, fwd, bwd, fwd_FN, bwd_FN) \
+extern "C" __global__ void fwd( \
     const Pool2dOp op, \
     const size_t *inp_strides, \
     const size_t *out_strides, \
     const TYPENAME *inp, \
     TYPENAME *out \
 ) { \
-    FORWARD_FN(op, inp_strides, out_strides, inp, out); \
+    fwd_FN(op, inp_strides, out_strides, inp, out); \
 } \
-extern "C" __global__ void BACKWARD( \
+extern "C" __global__ void bwd( \
     const Pool2dOp op, \
     const size_t *inp_strides, \
     const size_t *out_strides, \
@@ -327,37 +327,37 @@ extern "C" __global__ void BACKWARD( \
     const TYPENAME *out, \
     const TYPENAME *grad_out \
 ) { \
-    BACKWARD_FN(op, inp_strides, out_strides, inp, grad_inp, out, grad_out); \
+    bwd_FN(op, inp_strides, out_strides, inp, grad_inp, out, grad_out); \
 }
 
 POOL_OP(
     float,
-    avg_pool2d_forward_f32, avg_pool2d_backward_f32,
-    avg_pool2d_forward, avg_pool2d_backward
+    avg_pool2d_fwd_f32, avg_pool2d_bwd_f32,
+    avg_pool2d_fwd, avg_pool2d_bwd
 );
 POOL_OP(
     float,
-    min_pool2d_forward_f32, min_pool2d_backward_f32,
-    min_pool2d_forward, min_pool2d_backward
+    min_pool2d_fwd_f32, min_pool2d_bwd_f32,
+    min_pool2d_fwd, min_pool2d_bwd
 );
 POOL_OP(
     float,
-    max_pool2d_forward_f32, max_pool2d_backward_f32,
-    max_pool2d_forward, max_pool2d_backward
+    max_pool2d_fwd_f32, max_pool2d_bwd_f32,
+    max_pool2d_fwd, max_pool2d_bwd
 );
 
 POOL_OP(
     double,
-    avg_pool2d_forward_f64, avg_pool2d_backward_f64,
-    avg_pool2d_forward, avg_pool2d_backward
+    avg_pool2d_fwd_f64, avg_pool2d_bwd_f64,
+    avg_pool2d_fwd, avg_pool2d_bwd
 );
 POOL_OP(
     double,
-    min_pool2d_forward_f64, min_pool2d_backward_f64,
-    min_pool2d_forward, min_pool2d_backward
+    min_pool2d_fwd_f64, min_pool2d_bwd_f64,
+    min_pool2d_fwd, min_pool2d_bwd
 );
 POOL_OP(
     double,
-    max_pool2d_forward_f64, max_pool2d_backward_f64,
-    max_pool2d_forward, max_pool2d_backward
+    max_pool2d_fwd_f64, max_pool2d_bwd_f64,
+    max_pool2d_fwd, max_pool2d_bwd
 );

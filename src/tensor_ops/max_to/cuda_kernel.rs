@@ -19,15 +19,13 @@ trait HasCudaKernel<E> {
 impl HasCudaKernel<f32> for Cuda {
     const INIT: f32 = f32::NEG_INFINITY;
     const MOD: &'static str = "max_f32";
-    const FNS: &'static [&'static str] =
-        &["max_to_forward_f32", "max_to_backward_f32", "fill_with_f32"];
+    const FNS: &'static [&'static str] = &["max_to_fwd_f32", "max_to_bwd_f32", "fill_with_f32"];
 }
 
 impl HasCudaKernel<f64> for Cuda {
     const INIT: f64 = f64::NEG_INFINITY;
     const MOD: &'static str = "max_f64";
-    const FNS: &'static [&'static str] =
-        &["max_to_forward_f64", "max_to_backward_f64", "fill_with_f64"];
+    const FNS: &'static [&'static str] = &["max_to_fwd_f64", "max_to_bwd_f64", "fill_with_f64"];
 }
 
 impl<E: Dtype + AsKernelParam> super::MaxReduceKernel<E> for Cuda

@@ -66,7 +66,7 @@ __device__ void chunk_max(
 // strides and dims specify how to index inp to put all summed elements next to
 // each other, and chunk_len is len(inp) / len(out)
 template<typename T>
-__device__ void max_to_forward(
+__device__ void max_to_fwd(
     const size_t numel,
     const size_t num_dims,
     const size_t chunk_len,
@@ -88,7 +88,7 @@ __device__ void max_to_forward(
 // Accepts pre-broadcasted strides for both input & output.
 // So both inp & out are expected to be broadcasted to the same size.
 template<typename T>
-__device__ void max_to_backward(
+__device__ void max_to_bwd(
     const size_t numel,
     const size_t num_dims,
     const T elems_per_thread,
@@ -123,7 +123,7 @@ extern "C" __global__ void FWD( \
     const size_t *strides, \
     TYPENAME *out \
 ) { \
-    max_to_forward(numel, num_dims, chunk_len, inp, dims, strides, out); \
+    max_to_fwd(numel, num_dims, chunk_len, inp, dims, strides, out); \
 } \
 extern "C" __global__ void BWD( \
     const size_t numel, \
@@ -137,8 +137,8 @@ extern "C" __global__ void BWD( \
     const TYPENAME *grad_out, \
     const size_t *out_strides \
 ) { \
-    max_to_backward(numel, num_dims, elems_per_thread, dims, inp, grad_inp, inp_strides, out, grad_out, out_strides); \
+    max_to_bwd(numel, num_dims, elems_per_thread, dims, inp, grad_inp, inp_strides, out, grad_out, out_strides); \
 }
 
-MAX(float, max_to_forward_f32, max_to_backward_f32);
-MAX(double, max_to_forward_f64, max_to_backward_f64);
+MAX(float, max_to_fwd_f32, max_to_bwd_f32);
+MAX(double, max_to_fwd_f64, max_to_bwd_f64);

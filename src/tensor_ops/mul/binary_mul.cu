@@ -2,12 +2,12 @@
 
 struct BinaryMulKernalOp {};
 
-BINARY_OP(float, binary_mul_forward_f32, binary_mul_backward_f32, BinaryMulKernalOp,
+BINARY_OP(float, bmul_fwd_f32, bmul_bwd_f32, BinaryMulKernalOp,
     x * y,
     y,
     x)
 
-BINARY_OP(double, binary_mul_forward_f64, binary_mul_backward_f64, BinaryMulKernalOp,
+BINARY_OP(double, bmul_fwd_f64, bmul_bwd_f64, BinaryMulKernalOp,
     x * y,
     y,
     x)

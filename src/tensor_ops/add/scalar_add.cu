@@ -5,11 +5,11 @@ struct ScalarAddKernelOp {
     F scalar;
 };
 
-UNARY_OP(float, scalar_add_forward_f32, scalar_add_backward_f32, ScalarAddKernelOp<float>,
+UNARY_OP(float, sadd_fwd_f32, sadd_bwd_f32, ScalarAddKernelOp<float>,
     x + op.scalar,
     1.0);
 
-UNARY_OP(double, scalar_add_forward_f64, scalar_add_backward_f64, ScalarAddKernelOp<double>,
+UNARY_OP(double, sadd_fwd_f64, sadd_bwd_f64, ScalarAddKernelOp<double>,
     x + op.scalar,
     1.0);
     

@@ -2,11 +2,11 @@
 
 struct ExpKernelOp {};
 
-UNARY_OP(float, exp_forward_f32, exp_backward_f32, ExpKernelOp,
+UNARY_OP(float, exp_fwd_f32, exp_bwd_f32, ExpKernelOp,
         expf(x),
         expf(x))
 
-UNARY_OP(double, exp_forward_f64, exp_backward_f64, ExpKernelOp,
+UNARY_OP(double, exp_fwd_f64, exp_bwd_f64, ExpKernelOp,
         exp(x),
         exp(x))
         

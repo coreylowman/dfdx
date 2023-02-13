@@ -1,19 +1,9 @@
-use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
+use super::SquareKernelOp;
+use crate::tensor_ops::cuda_kernels::cuda_unary;
 
-unsafe impl cudarc::driver::AsKernelParam for super::SquareKernelOp {}
+unsafe impl cudarc::driver::AsKernelParam for SquareKernelOp {}
 
-const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/square.ptx"));
+const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/square.ptx"));
 
-impl UnaryOpCudaKernel<f32> for super::SquareKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "square_f32";
-    const FWD_FN_NAME: &'static str = "square_forward_f32";
-    const BWD_FN_NAME: &'static str = "square_backward_f32";
-}
-
-impl UnaryOpCudaKernel<f64> for super::SquareKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "square_f64";
-    const FWD_FN_NAME: &'static str = "square_forward_f64";
-    const BWD_FN_NAME: &'static str = "square_backward_f64";
-}
+cuda_unary!(SquareKernelOp, f32, PTX, "square_fwd_f32", "square_bwd_f32");
+cuda_unary!(SquareKernelOp, f64, PTX, "square_fwd_f64", "square_bwd_f64");

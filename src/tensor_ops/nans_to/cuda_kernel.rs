@@ -1,20 +1,10 @@
-use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
+use super::NansToKernelOp as NansTo;
+use crate::tensor_ops::cuda_kernels::cuda_unary;
 
-unsafe impl cudarc::driver::AsKernelParam for super::NansToKernelOp<f32> {}
-unsafe impl cudarc::driver::AsKernelParam for super::NansToKernelOp<f64> {}
+unsafe impl cudarc::driver::AsKernelParam for NansTo<f32> {}
+unsafe impl cudarc::driver::AsKernelParam for NansTo<f64> {}
 
-const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/nans_to.ptx"));
+const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/nans_to.ptx"));
 
-impl UnaryOpCudaKernel<f32> for super::NansToKernelOp<f32> {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "nans_to_f32";
-    const FWD_FN_NAME: &'static str = "nans_to_forward_f32";
-    const BWD_FN_NAME: &'static str = "nans_to_backward_f32";
-}
-
-impl UnaryOpCudaKernel<f64> for super::NansToKernelOp<f64> {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "nans_to_f64";
-    const FWD_FN_NAME: &'static str = "nans_to_forward_f64";
-    const BWD_FN_NAME: &'static str = "nans_to_backward_f64";
-}
+cuda_unary!(NansTo<f32>, f32, PTX, "nans_to_fwd_f32", "nans_to_bwd_f32");
+cuda_unary!(NansTo<f64>, f64, PTX, "nans_to_fwd_f64", "nans_to_bwd_f64");

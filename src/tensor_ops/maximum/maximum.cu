@@ -17,13 +17,13 @@ __device__ T op_dfdy(T x, T y) {
     return (x > y) ? 0.0 : ((x < y) ? 1.0 : 0.5);
 }
 
-BINARY_OP(float, maximum_forward_f32, maximum_backward_f32, MaximumKernalOp,
+BINARY_OP(float, maximum_fwd_f32, maximum_bwd_f32, MaximumKernalOp,
     op_f(x, y),
     op_dfdx(x, y),
     op_dfdy(x, y)
 )
 
-BINARY_OP(double, maximum_forward_f64, maximum_backward_f64, MaximumKernalOp,
+BINARY_OP(double, maximum_fwd_f64, maximum_bwd_f64, MaximumKernalOp,
     op_f(x, y),
     op_dfdx(x, y),
     op_dfdy(x, y)

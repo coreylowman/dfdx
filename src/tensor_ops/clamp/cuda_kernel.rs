@@ -1,20 +1,10 @@
-use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
+use super::ClampKernelOp;
+use crate::tensor_ops::cuda_kernels::cuda_unary;
 
-unsafe impl cudarc::driver::AsKernelParam for super::ClampKernelOp<f32> {}
-unsafe impl cudarc::driver::AsKernelParam for super::ClampKernelOp<f64> {}
+unsafe impl cudarc::driver::AsKernelParam for ClampKernelOp<f32> {}
+unsafe impl cudarc::driver::AsKernelParam for ClampKernelOp<f64> {}
 
-const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/clamp.ptx"));
+const P: &str = include_str!(concat!(env!("OUT_DIR"), "/clamp.ptx"));
 
-impl UnaryOpCudaKernel<f32> for super::ClampKernelOp<f32> {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "clamp_f32";
-    const FWD_FN_NAME: &'static str = "clamp_forward_f32";
-    const BWD_FN_NAME: &'static str = "clamp_backward_f32";
-}
-
-impl UnaryOpCudaKernel<f64> for super::ClampKernelOp<f64> {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "clamp_f64";
-    const FWD_FN_NAME: &'static str = "clamp_forward_f64";
-    const BWD_FN_NAME: &'static str = "clamp_backward_f64";
-}
+cuda_unary!(ClampKernelOp<f32>, f32, P, "clamp_fwd_f32", "clamp_bwd_f32");
+cuda_unary!(ClampKernelOp<f64>, f64, P, "clamp_fwd_f64", "clamp_bwd_f64");

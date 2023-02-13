@@ -1,64 +1,42 @@
+use super::PowfKernelOp;
 use crate::{
-    shapes::Shape,
+    shapes::*,
     tensor::cuda::Cuda,
-    tensor_ops::{cuda_kernels::UnaryOpCudaKernel, ops::UnaryKernel},
+    tensor_ops::{cuda_kernels::cuda_unary, ops::UnaryKernel},
 };
 
 unsafe impl cudarc::driver::AsKernelParam for super::PowfKernelOp<f32> {}
 unsafe impl cudarc::driver::AsKernelParam for super::PowfKernelOp<f64> {}
 
-const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/pow.ptx"));
+const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/pow.ptx"));
 
-impl UnaryOpCudaKernel<f32> for super::PowfKernelOp<f32> {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "pow_f32";
-    const FWD_FN_NAME: &'static str = "pow_forward_f32";
-    const BWD_FN_NAME: &'static str = "pow_backward_f32";
-}
+cuda_unary!(PowfKernelOp<f32>, f32, PTX, "pow_fwd_f32", "pow_bwd_f32");
+cuda_unary!(PowfKernelOp<f64>, f64, PTX, "pow_fwd_f64", "pow_bwd_f64");
 
-impl UnaryOpCudaKernel<f64> for super::PowfKernelOp<f64> {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "pow_f64";
-    const FWD_FN_NAME: &'static str = "pow_forward_f64";
-    const BWD_FN_NAME: &'static str = "pow_backward_f64";
-}
-
-impl UnaryKernel<super::PowiKernelOp, f32> for Cuda {
+impl<E: Dtype> UnaryKernel<super::PowiKernelOp, E> for Cuda
+where
+    Self: UnaryKernel<super::PowfKernelOp<E>, E>,
+{
     fn forward<S: Shape>(
         &self,
         op: super::PowiKernelOp,
-        inp: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
-        self.forward(super::PowfKernelOp(op.0 as f32), inp)
+        inp: &Self::Storage<S, E>,
+    ) -> Result<Self::Storage<S, E>, Self::Err> {
+        self.forward(super::PowfKernelOp(E::from_i32(op.0).unwrap()), inp)
     }
 
     fn backward<S: Shape>(
         &self,
         op: super::PowiKernelOp,
-        inp: &Self::Storage<S, f32>,
-        grad_inp: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
+        inp: &Self::Storage<S, E>,
+        grad_inp: &mut Self::Storage<S, E>,
+        grad_out: &Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
-        self.backward(super::PowfKernelOp(op.0 as f32), inp, grad_inp, grad_out)
-    }
-}
-
-impl UnaryKernel<super::PowiKernelOp, f64> for Cuda {
-    fn forward<S: Shape>(
-        &self,
-        op: super::PowiKernelOp,
-        inp: &Self::Storage<S, f64>,
-    ) -> Result<Self::Storage<S, f64>, Self::Err> {
-        self.forward(super::PowfKernelOp(op.0 as f64), inp)
-    }
-
-    fn backward<S: Shape>(
-        &self,
-        op: super::PowiKernelOp,
-        inp: &Self::Storage<S, f64>,
-        grad_inp: &mut Self::Storage<S, f64>,
-        grad_out: &Self::Storage<S, f64>,
-    ) -> Result<(), Self::Err> {
-        self.backward(super::PowfKernelOp(op.0 as f64), inp, grad_inp, grad_out)
+        self.backward(
+            super::PowfKernelOp(E::from_i32(op.0).unwrap()),
+            inp,
+            grad_inp,
+            grad_out,
+        )
     }
 }

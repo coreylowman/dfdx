@@ -1,19 +1,9 @@
-use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
+use super::ReLUKernelOp;
+use crate::tensor_ops::cuda_kernels::cuda_unary;
 
-unsafe impl cudarc::driver::AsKernelParam for super::ReLUKernelOp {}
+unsafe impl cudarc::driver::AsKernelParam for ReLUKernelOp {}
 
-const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/relu.ptx"));
+const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/relu.ptx"));
 
-impl UnaryOpCudaKernel<f32> for super::ReLUKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "relu_f32";
-    const FWD_FN_NAME: &'static str = "relu_forward_f32";
-    const BWD_FN_NAME: &'static str = "relu_backward_f32";
-}
-
-impl UnaryOpCudaKernel<f64> for super::ReLUKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "relu_f64";
-    const FWD_FN_NAME: &'static str = "relu_forward_f64";
-    const BWD_FN_NAME: &'static str = "relu_backward_f64";
-}
+cuda_unary!(ReLUKernelOp, f32, PTX, "relu_fwd_f32", "relu_bwd_f32");
+cuda_unary!(ReLUKernelOp, f64, PTX, "relu_fwd_f64", "relu_bwd_f64");

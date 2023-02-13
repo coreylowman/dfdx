@@ -1,19 +1,9 @@
-use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
+use super::NegateKernelOp;
+use crate::tensor_ops::cuda_kernels::cuda_unary;
 
-unsafe impl cudarc::driver::AsKernelParam for super::NegateKernelOp {}
+unsafe impl cudarc::driver::AsKernelParam for NegateKernelOp {}
 
-const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/negate.ptx"));
+const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/negate.ptx"));
 
-impl UnaryOpCudaKernel<f32> for super::NegateKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "negate_f32";
-    const FWD_FN_NAME: &'static str = "negate_forward_f32";
-    const BWD_FN_NAME: &'static str = "negate_backward_f32";
-}
-
-impl UnaryOpCudaKernel<f64> for super::NegateKernelOp {
-    const PTX_SRC: &'static str = PTX_SRC;
-    const MODULE_NAME: &'static str = "negate_f64";
-    const FWD_FN_NAME: &'static str = "negate_forward_f64";
-    const BWD_FN_NAME: &'static str = "negate_backward_f64";
-}
+cuda_unary!(NegateKernelOp, f32, PTX, "negate_fwd_f32", "negate_bwd_f32");
+cuda_unary!(NegateKernelOp, f64, PTX, "negate_fwd_f64", "negate_bwd_f64");

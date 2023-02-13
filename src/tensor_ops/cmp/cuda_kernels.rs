@@ -136,16 +136,16 @@ macro_rules! cmps {
     };
 }
 
-cmps!(EqKernelOp, f32, "eq_forward_f32", "scalar_eq_forward_f32");
-cmps!(NeKernelOp, f32, "ne_forward_f32", "scalar_ne_forward_f32");
-cmps!(GtKernelOp, f32, "gt_forward_f32", "scalar_gt_forward_f32");
-cmps!(GeKernelOp, f32, "ge_forward_f32", "scalar_ge_forward_f32");
-cmps!(LtKernelOp, f32, "lt_forward_f32", "scalar_lt_forward_f32");
-cmps!(LeKernelOp, f32, "le_forward_f32", "scalar_le_forward_f32");
+cmps!(EqKernelOp, f32, "eq_fwd_f32", "scalar_eq_fwd_f32");
+cmps!(NeKernelOp, f32, "ne_fwd_f32", "scalar_ne_fwd_f32");
+cmps!(GtKernelOp, f32, "gt_fwd_f32", "scalar_gt_fwd_f32");
+cmps!(GeKernelOp, f32, "ge_fwd_f32", "scalar_ge_fwd_f32");
+cmps!(LtKernelOp, f32, "lt_fwd_f32", "scalar_lt_fwd_f32");
+cmps!(LeKernelOp, f32, "le_fwd_f32", "scalar_le_fwd_f32");
 
-cmps!(EqKernelOp, f64, "eq_forward_f64", "scalar_eq_forward_f64");
-cmps!(NeKernelOp, f64, "ne_forward_f64", "scalar_ne_forward_f64");
-cmps!(GtKernelOp, f64, "gt_forward_f64", "scalar_gt_forward_f64");
-cmps!(GeKernelOp, f64, "ge_forward_f64", "scalar_ge_forward_f64");
-cmps!(LtKernelOp, f64, "lt_forward_f64", "scalar_lt_forward_f64");
-cmps!(LeKernelOp, f64, "le_forward_f64", "scalar_le_forward_f64");
+cmps!(EqKernelOp, f64, "eq_fwd_f64", "scalar_eq_fwd_f64");
+cmps!(NeKernelOp, f64, "ne_fwd_f64", "scalar_ne_fwd_f64");
+cmps!(GtKernelOp, f64, "gt_fwd_f64", "scalar_gt_fwd_f64");
+cmps!(GeKernelOp, f64, "ge_fwd_f64", "scalar_ge_fwd_f64");
+cmps!(LtKernelOp, f64, "lt_fwd_f64", "scalar_lt_fwd_f64");
+cmps!(LeKernelOp, f64, "le_fwd_f64", "scalar_le_fwd_f64");

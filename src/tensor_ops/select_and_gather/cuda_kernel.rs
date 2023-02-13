@@ -193,18 +193,18 @@ macro_rules! impl_cuda_kernels {
 impl_cuda_kernels!(
     f32,
     "gather_f32",
-    "gather_forward_f32",
-    "gather_backward_f32",
+    "gather_fwd_f32",
+    "gather_bwd_f32",
     "select_f32",
-    "select_forward_f32",
-    "select_backward_f32"
+    "select_fwd_f32",
+    "select_bwd_f32"
 );
 impl_cuda_kernels!(
     f64,
     "gather_f64",
-    "gather_forward_f64",
-    "gather_backward_f64",
+    "gather_fwd_f64",
+    "gather_bwd_f64",
     "select_f64",
-    "select_forward_f64",
-    "select_backward_f64"
+    "select_fwd_f64",
+    "select_bwd_f64"
 );

@@ -15,12 +15,12 @@ pub(crate) trait HasCudaKernel<E> {
 
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "choose_f32";
-    const FNS: &'static [&'static str] = &["choose_forward_f32", "choose_backward_f32"];
+    const FNS: &'static [&'static str] = &["choose_fwd_f32", "choose_bwd_f32"];
 }
 
 impl HasCudaKernel<f64> for Cuda {
     const MOD: &'static str = "choose_f64";
-    const FNS: &'static [&'static str] = &["choose_forward_f64", "choose_backward_f64"];
+    const FNS: &'static [&'static str] = &["choose_fwd_f64", "choose_bwd_f64"];
 }
 
 impl<E: Dtype + AsKernelParam> ChooseKernel<E> for Cuda

@@ -48,7 +48,7 @@ __device__ void chunk_sum(
 // strides and dims specify how to index inp to put all summed elements next to
 // each other, and chunk_len is len(inp) / len(out)
 template<typename T>
-__device__ void sum_to_forward(
+__device__ void sum_to_fwd(
     const size_t numel,
     const size_t num_dims,
     const T elems_per_thread,
@@ -71,7 +71,7 @@ __device__ void sum_to_forward(
 // Accepts pre-broadcasted strides for both input & output.
 // So both inp & out are expected to be broadcasted to the same size.
 template<typename T>
-__device__ void sum_to_backward(
+__device__ void sum_to_bwd(
     const size_t numel,
     const size_t num_dims,
     const T elems_per_thread,
@@ -93,7 +93,7 @@ __device__ void sum_to_backward(
 
     // NOTE: since size of output is less than input, only 1 thread will be writing to inp
     // at a time. this means we don't have to worry about multiple concurrent writes
-    // like we do with forward.
+    // like we do with fwd.
     grad_inp[inp_i] += tmp * elems_per_thread;
 }
 
@@ -108,7 +108,7 @@ extern "C" __global__ void FWD( \
     const size_t *strides, \
     TYPENAME *out \
 ) { \
-    sum_to_forward(numel, num_dims, elems_per_thread, chunk_len, inp, dims, strides, out); \
+    sum_to_fwd(numel, num_dims, elems_per_thread, chunk_len, inp, dims, strides, out); \
 } \
 extern "C" __global__ void BWD( \
     const size_t numel, \
@@ -120,8 +120,8 @@ extern "C" __global__ void BWD( \
     const TYPENAME *grad_out, \
     const size_t *out_strides \
 ) { \
-    sum_to_backward(numel, num_dims, elems_per_thread, dims, grad_inp, inp_strides, grad_out, out_strides); \
+    sum_to_bwd(numel, num_dims, elems_per_thread, dims, grad_inp, inp_strides, grad_out, out_strides); \
 }
 
-SUM(float, sum_to_forward_f32, sum_to_backward_f32);
-SUM(double, sum_to_forward_f64, sum_to_backward_f64);
+SUM(float, sum_to_fwd_f32, sum_to_bwd_f32);
+SUM(double, sum_to_fwd_f64, sum_to_bwd_f64);

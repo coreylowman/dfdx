@@ -1,7 +1,7 @@
 #include "cuda_utils.cuh"
 
 template<typename T>
-__device__ void choose_forward(
+__device__ void choose_fwd(
     const size_t numel,
     const size_t num_dims,
     const size_t *dims,
@@ -26,7 +26,7 @@ __device__ void choose_forward(
 }
 
 template<typename T>
-__device__ void choose_backward(
+__device__ void choose_bwd(
     const size_t numel,
     const size_t num_dims,
     const size_t *dims,
@@ -66,7 +66,7 @@ extern "C" __global__ void FWD( \
     const size_t *rhs_strides, \
     TYPENAME *out \
 ) { \
-    choose_forward(numel, num_dims, dims, cond, cond_strides, lhs, lhs_strides, rhs, rhs_strides, out); \
+    choose_fwd(numel, num_dims, dims, cond, cond_strides, lhs, lhs_strides, rhs, rhs_strides, out); \
 } \
 extern "C" __global__ void BWD( \
     const size_t numel, \
@@ -80,8 +80,8 @@ extern "C" __global__ void BWD( \
     const size_t *rhs_strides, \
     const TYPENAME *grad_out \
 ) { \
-    choose_backward(numel, num_dims, dims, cond, cond_strides, grad_lhs, lhs_strides, grad_rhs, rhs_strides, grad_out); \
+    choose_bwd(numel, num_dims, dims, cond, cond_strides, grad_lhs, lhs_strides, grad_rhs, rhs_strides, grad_out); \
 }
 
-CHOOSE(float, choose_forward_f32, choose_backward_f32);
-CHOOSE(double, choose_forward_f64, choose_backward_f64);
+CHOOSE(float, choose_fwd_f32, choose_bwd_f32);
+CHOOSE(double, choose_fwd_f64, choose_bwd_f64);

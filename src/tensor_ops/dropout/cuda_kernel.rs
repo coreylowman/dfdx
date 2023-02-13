@@ -19,12 +19,12 @@ trait HasCudaKernel<E> {
 
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "dropout_f32";
-    const FNS: &'static [&'static str] = &["dropout_forward_f32", "dropout_backward_f32"];
+    const FNS: &'static [&'static str] = &["dropout_fwd_f32", "dropout_bwd_f32"];
 }
 
 impl HasCudaKernel<f64> for Cuda {
     const MOD: &'static str = "dropout_f64";
-    const FNS: &'static [&'static str] = &["dropout_forward_f64", "dropout_backward_f64"];
+    const FNS: &'static [&'static str] = &["dropout_fwd_f64", "dropout_bwd_f64"];
 }
 
 impl<E: Dtype + AsKernelParam> super::DropoutKernel<E> for Cuda
