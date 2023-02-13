@@ -1,32 +1,63 @@
 use crate::{
     shapes::*,
-    tensor::{
-        cpu::{Cpu, StridedArray},
-        Tensor,
-    },
+    tensor::cpu::{Cpu, StridedArray},
 };
 
-impl<E: Dtype> super::TryStackKernel<E> for Cpu {
+use std::vec::Vec;
+
+impl<E: Dtype> super::StackKernel<E> for Cpu {
     fn forward<S: Shape, Num: Dim>(
         &self,
         num: Num,
-        inp: &[Self::Storage<S, E>],
+        inp: Vec<&Self::Storage<S, E>>,
     ) -> Result<Self::Storage<S::Larger, E>, Self::Err>
     where
         S: super::AddDim<Num>,
     {
-        todo!()
+        debug_assert_eq!(inp.len(), num.size());
+
+        // check that all the strides are the same
+        let item_strides = inp[0].strides;
+        for i in inp.iter() {
+            assert_eq!(i.strides, item_strides);
+        }
+        let shape: S::Larger = inp[0].shape().add(num);
+
+        // build the new strides
+        let mut strides = shape.strides();
+        strides[0] = inp[0].data.len();
+        for d in 1..<S::Larger as Shape>::NUM_DIMS {
+            strides[d] = item_strides[d - 1];
+        }
+
+        // copy the data
+        let numel = shape.num_elements();
+        let mut data: std::vec::Vec<E> = std::vec::Vec::with_capacity(numel);
+        for i in inp {
+            data.extend_from_slice(i.data.as_ref());
+        }
+
+        Ok(StridedArray {
+            data: std::sync::Arc::new(data),
+            shape,
+            strides,
+        })
     }
     fn backward<S: Shape, New: Dim>(
         &self,
-        num: New,
-        inp: &[Self::Storage<S, E>],
-        grad_inp: &mut [Self::Storage<S, E>],
-        grad_out: &[Self::Storage<S::Larger, E>],
+        mut grad_inp: Vec<&mut Self::Storage<S, E>>,
+        grad_out: &Self::Storage<S::Larger, E>,
     ) -> Result<(), Self::Err>
     where
         S: super::AddDim<New>,
     {
-        todo!()
+        let grad_out_buf = grad_out.data.as_ref();
+        for (i, item) in grad_inp.drain(..).enumerate() {
+            let num = item.shape().num_elements();
+            for (j, gi) in item.buf_iter_mut().enumerate() {
+                *gi += grad_out_buf[i * num + j];
+            }
+        }
+        Ok(())
     }
 }
