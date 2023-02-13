@@ -1,18 +1,14 @@
-use crate::tensor_ops::cuda_kernels::{BinaryOpCudaKernel, UnaryOpCudaKernel};
+use super::{BinarySubKernelOp as Binary, ScalarSubKernelOp as Scalar};
+use crate::tensor_ops::cuda_kernels::{cuda_binary, cuda_unary};
 
-unsafe impl cudarc::driver::AsKernelParam for super::ScalarSubKernelOp<f32> {}
-unsafe impl cudarc::driver::AsKernelParam for super::BinarySubKernelOp {}
+unsafe impl cudarc::driver::AsKernelParam for Scalar<f32> {}
+unsafe impl cudarc::driver::AsKernelParam for Scalar<f64> {}
+unsafe impl cudarc::driver::AsKernelParam for Binary {}
 
-impl UnaryOpCudaKernel for super::ScalarSubKernelOp<f32> {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/scalar_sub.ptx"));
-    const MODULE_NAME: &'static str = "scalar_sub";
-    const FWD_FN_NAME: &'static str = "scalar_sub_forward";
-    const BWD_FN_NAME: &'static str = "scalar_sub_backward";
-}
+const SCALAR_PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/scalar_sub.ptx"));
+const BINARY_PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/binary_sub.ptx"));
 
-impl BinaryOpCudaKernel for super::BinarySubKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/binary_sub.ptx"));
-    const MODULE_NAME: &'static str = "binary_sub";
-    const FWD_FN_NAME: &'static str = "binary_sub_forward";
-    const BWD_FN_NAME: &'static str = "binary_sub_backward";
-}
+cuda_unary!(Scalar<f32>, f32, SCALAR_PTX, "ssub_fwd_f32", "ssub_bwd_f32");
+cuda_unary!(Scalar<f64>, f64, SCALAR_PTX, "ssub_fwd_f64", "ssub_bwd_f64");
+cuda_binary!(Binary, f32, BINARY_PTX, "bsub_fwd_f32", "bsub_bwd_f32");
+cuda_binary!(Binary, f64, BINARY_PTX, "bsub_fwd_f64", "bsub_bwd_f64");

@@ -1,36 +1,45 @@
 #include "unary_op_macros.cuh"
+#include "cuda_utils.cuh"
 #define _USE_MATH_DEFINES
 #include <math.h>
 
 struct GeLUKernelOp {};
 
-LONG_UNARY_OP(gelu_forward, gelu_backward, GeLUKernelOp,
-    {
-        constexpr float fastCoeff = 0.044715;
-        float x_sq = x * x;
-        float x_cube = x_sq * x;
+template<typename T>
+__device__ T gelu_fwd(T x) {
+    constexpr T fastCoeff = 0.044715;
+    T x_sq = x * x;
+    T x_cube = x_sq * x;
+    T alpha = x + fastCoeff * x_cube;
+    return 0.5 * x * (1.0 + tanhg(M_2_SQRTPI * M_SQRT1_2 * alpha));
+}
 
-        float alpha = x + fastCoeff * x_cube;
+template<typename T>
+__device__ T gelu_bwd(T x) {
+    constexpr T kBeta = M_2_SQRTPI * M_SQRT2 * 0.5;                       
+    constexpr T fastCoeff = 0.044715;
+    T x_sq = x * x;
+    T x_cube = x_sq * x;
+    T inner = kBeta * (x + fastCoeff * x_cube);
+    T tanh_inner = tanhg(inner);
 
-        float y = 0.5 * x * (1.0 + tanhf(M_2_SQRTPI * M_SQRT1_2 * alpha));
-        out[i] = y;
-    },
-    {
-        constexpr float kBeta = M_2_SQRTPI * M_SQRT2 * 0.5;                       
-        constexpr float fastCoeff = 0.044715;
-        float x_sq = x * x;
-        float x_cube = x_sq * x;
-        float inner = kBeta * (x + fastCoeff * x_cube);
-        float tanh_inner = tanhf(inner);
+    T left = 0.5 * x;
+    T right = 1.0 + tanh_inner;
+    
+    T left_derivative = 0.5 * right;
 
-        float left = 0.5 * x;
-        float right = 1.0 + tanh_inner;
-        
-        float left_derivative = 0.5 * right;
+    T tanh_derivative = 1.0 - tanh_inner * tanh_inner;
+    T inner_derivative = kBeta * (1.0 + 3.0 * fastCoeff * x_sq);
+    T right_derivative = left * tanh_derivative * inner_derivative;
+    return left_derivative + right_derivative;
+}
 
-        float tanh_derivative = 1.0 - tanh_inner * tanh_inner;
-        float inner_derivative = kBeta * (1.0 + 3.0 * fastCoeff * x_sq);
-        float right_derivative = left * tanh_derivative * inner_derivative;
-        dx = left_derivative + right_derivative;
-    }
+UNARY_OP(float, gelu_fwd_f32, gelu_bwd_f32, GeLUKernelOp,
+    gelu_fwd(x),
+    gelu_bwd(x)
+)
+
+UNARY_OP(double, gelu_fwd_f64, gelu_bwd_f64, GeLUKernelOp,
+    gelu_fwd(x),
+    gelu_bwd(x)
 )

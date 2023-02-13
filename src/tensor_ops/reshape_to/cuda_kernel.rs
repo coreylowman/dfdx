@@ -1,39 +1,52 @@
 use crate::{
-    shapes::{HasSameNumelAs, Shape},
+    shapes::*,
     tensor::cuda::{Cuda, CudaArray},
 };
-use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/reshape.ptx"));
-const MODULE_NAME: &str = "reshape";
-const FWD_FN_NAME: &str = "reshape_forward";
-const BWD_FN_NAME: &str = "reshape_backward";
-const ALL_FN_NAMES: [&str; 2] = [FWD_FN_NAME, BWD_FN_NAME];
 
-impl super::ReshapeKernel<f32> for Cuda {
+trait HasCudaKernel<E> {
+    const MOD: &'static str;
+    const FNS: &'static [&'static str];
+}
+
+impl HasCudaKernel<f32> for Cuda {
+    const MOD: &'static str = "reshape_f32";
+    const FNS: &'static [&'static str] = &["reshape_fwd_f32", "reshape_bwd_f32"];
+}
+
+impl HasCudaKernel<f64> for Cuda {
+    const MOD: &'static str = "reshape_f64";
+    const FNS: &'static [&'static str] = &["reshape_fwd_f64", "reshape_bwd_f64"];
+}
+
+impl<E: Dtype> super::ReshapeKernel<E> for Cuda
+where
+    Self: HasCudaKernel<E>,
+{
     fn forward<Src: Shape, Dst: Shape>(
         &self,
         dst: Dst,
-        inp: &Self::Storage<Src, f32>,
-    ) -> Result<Self::Storage<Dst, f32>, Self::Err>
+        inp: &Self::Storage<Src, E>,
+    ) -> Result<Self::Storage<Dst, E>, Self::Err>
     where
         Src: HasSameNumelAs<Dst>,
     {
-        if !self.dev.has_func(MODULE_NAME, FWD_FN_NAME) {
-            self.dev
-                .load_ptx(PTX_SRC.into(), MODULE_NAME, &ALL_FN_NAMES)?;
+        if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
+            self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
 
         let numel = inp.data.len();
-        let mut storage = unsafe { self.dev.alloc_async::<f32>(numel) }?;
+        let mut storage = unsafe { self.dev.alloc_async::<E>(numel) }?;
 
-        let inp_dims: CudaSlice<usize> = self.dev.take_async(inp.shape.concrete().into())?;
-        let dst_dims: CudaSlice<usize> = self.dev.take_async(dst.concrete().into())?;
-        let inp_strides: CudaSlice<usize> = self.dev.take_async(inp.strides.into())?;
-        let dst_strides: CudaSlice<usize> = self.dev.take_async(dst.strides().into())?;
+        let inp_dims = self.dev.take_async(inp.shape.concrete().into())?;
+        let dst_dims = self.dev.take_async(dst.concrete().into())?;
+        let inp_strides = self.dev.take_async(inp.strides.into())?;
+        let dst_strides = self.dev.take_async(dst.strides().into())?;
 
-        let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
+        let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (
             numel,             // const size_t numel,
@@ -57,19 +70,19 @@ impl super::ReshapeKernel<f32> for Cuda {
 
     fn backward<Src: Shape, Dst: Shape>(
         &self,
-        grad_inp: &mut Self::Storage<Src, f32>,
-        grad_out: &Self::Storage<Dst, f32>,
+        grad_inp: &mut Self::Storage<Src, E>,
+        grad_out: &Self::Storage<Dst, E>,
     ) -> Result<(), Self::Err>
     where
         Src: HasSameNumelAs<Dst>,
     {
-        let bwd_fn = self.dev.get_func(MODULE_NAME, BWD_FN_NAME).unwrap();
+        let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
         let numel = grad_inp.data.len();
 
-        let inp_dims: CudaSlice<usize> = self.dev.take_async(grad_inp.shape.concrete().into())?;
-        let out_dims: CudaSlice<usize> = self.dev.take_async(grad_out.shape.concrete().into())?;
-        let inp_strides: CudaSlice<usize> = self.dev.take_async(grad_inp.strides.into())?;
-        let out_strides: CudaSlice<usize> = self.dev.take_async(grad_out.strides.into())?;
+        let inp_dims = self.dev.take_async(grad_inp.shape.concrete().into())?;
+        let out_dims = self.dev.take_async(grad_out.shape.concrete().into())?;
+        let inp_strides = self.dev.take_async(grad_inp.strides.into())?;
+        let out_strides = self.dev.take_async(grad_out.strides.into())?;
 
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (

@@ -68,13 +68,13 @@ where
     }
 }
 
-impl OneFillStorage<f32> for Cuda {
+impl<E: Unit> OneFillStorage<E> for Cuda {
     fn try_fill_with_ones<S: Shape>(
         &self,
-        storage: &mut Self::Storage<S, f32>,
+        storage: &mut Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
         self.dev.copy_into_async(
-            std::vec![1.0; storage.data.len()],
+            std::vec![E::ONE; storage.data.len()],
             Arc::make_mut(&mut storage.data),
         )?;
         Ok(())

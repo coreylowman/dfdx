@@ -1,12 +1,12 @@
 use crate::tensor_ops::cpu_kernels::UnaryDerivative;
 
-impl UnaryDerivative<f32> for super::NegateKernelOp {
+impl<F: num_traits::Float> UnaryDerivative<F> for super::NegateKernelOp {
     #[inline(always)]
-    fn f(&self, x: &f32) -> f32 {
-        -x
+    fn f(&self, x: &F) -> F {
+        x.neg()
     }
     #[inline(always)]
-    fn df(&self, _: &f32) -> f32 {
-        -1.0
+    fn df(&self, _: &F) -> F {
+        F::one().neg()
     }
 }

@@ -1,12 +1,13 @@
 #include "cuda_utils.cuh"
 
-extern "C" __global__ void reshape_forward(
+template<typename T>
+__device__ void reshape_fwd(
     const size_t numel,
-    const float *inp,
+    const T *inp,
     const size_t inp_num_dims,
     const size_t *inp_dims,
     const size_t *inp_strides,
-    float *out,
+    T *out,
     const size_t out_num_dims,
     const size_t *out_dims,
     const size_t *out_strides
@@ -22,13 +23,14 @@ extern "C" __global__ void reshape_forward(
     out[out_i] = inp[inp_i];
 }
 
-extern "C" __global__ void reshape_backward(
+template<typename T>
+__device__ void reshape_bwd(
     const size_t numel,
-    float *grad_inp,
+    T *grad_inp,
     const size_t inp_num_dims,
     const size_t *inp_dims,
     const size_t *inp_strides,
-    const float *grad_out,
+    const T *grad_out,
     const size_t out_num_dims,
     const size_t *out_dims,
     const size_t *out_strides
@@ -43,3 +45,34 @@ extern "C" __global__ void reshape_backward(
 
     atomicAdd(grad_inp + inp_i, grad_out[out_i]);
 }
+
+#define RESHAPE(TYPENAME, FWD, BWD) \
+extern "C" __global__ void FWD( \
+    const size_t numel, \
+    const TYPENAME *inp, \
+    const size_t inp_num_dims, \
+    const size_t *inp_dims, \
+    const size_t *inp_strides, \
+    TYPENAME *out, \
+    const size_t out_num_dims, \
+    const size_t *out_dims, \
+    const size_t *out_strides \
+) { \
+    reshape_fwd(numel, inp, inp_num_dims, inp_dims, inp_strides, out, out_num_dims, out_dims, out_strides); \
+} \
+extern "C" __global__ void BWD( \
+    const size_t numel, \
+    TYPENAME *grad_inp, \
+    const size_t inp_num_dims, \
+    const size_t *inp_dims, \
+    const size_t *inp_strides, \
+    const TYPENAME *grad_out, \
+    const size_t out_num_dims, \
+    const size_t *out_dims, \
+    const size_t *out_strides \
+) { \
+    reshape_bwd(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, grad_out, out_num_dims, out_dims, out_strides); \
+}
+
+RESHAPE(float, reshape_fwd_f32, reshape_bwd_f32);
+RESHAPE(double, reshape_fwd_f64, reshape_bwd_f64);

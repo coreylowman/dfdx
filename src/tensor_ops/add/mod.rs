@@ -7,7 +7,7 @@ use super::{ops::*, Device};
 use crate::{
     gradients::*,
     shapes::*,
-    tensor::{HasErr, Tensor},
+    tensor::{DeviceStorage, HasErr, Tensor},
 };
 
 #[repr(C)]
@@ -51,9 +51,10 @@ pub trait TryAdd<Rhs = Self>: HasErr {
     fn try_add(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, RhsTape: Tape<D>>
-    TryAdd<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
+impl<S: Shape, E: Dtype, D, LhsTape: Tape<D>, RhsTape: Tape<D>> TryAdd<Tensor<S, E, D, RhsTape>>
+    for Tensor<S, E, D, LhsTape>
 where
+    D: BinaryKernel<BinaryAddKernelOp, E>,
     LhsTape: Merge<RhsTape>,
 {
     /// See [add]
@@ -62,14 +63,16 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryAdd<E> for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarAddKernelOp<E>, E>, T: Tape<D>> TryAdd<E>
+    for Tensor<S, E, D, T>
+{
     /// See [add]
     fn try_add(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarAddKernelOp { scalar: rhs }, self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, Rhs> std::ops::Add<Rhs>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, Rhs> std::ops::Add<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryAdd<Rhs>,
@@ -88,8 +91,8 @@ mod tests {
     #[test]
     fn test_add_0d() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor(1.0);
-        let b = dev.tensor(1.0);
+        let a: Tensor<_, TestDtype, _> = dev.tensor(1.0);
+        let b: Tensor<_, TestDtype, _> = dev.tensor(1.0);
 
         let r = a.trace() + b.clone();
         assert_eq!(r.array(), 2.0);
@@ -101,8 +104,8 @@ mod tests {
     #[test]
     fn test_add_1d() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([1.0, 2.0, 3.0]);
-        let b = dev.tensor([1.0, -1.0, 0.0]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
+        let b: Tensor<_, TestDtype, _> = dev.tensor([1.0, -1.0, 0.0]);
 
         let r = a.trace() + b.clone();
         assert_eq!(r.array(), [2.0, 1.0, 3.0]);
@@ -114,8 +117,10 @@ mod tests {
     #[test]
     fn test_add_2d() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b = dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+        let a: Tensor<_, TestDtype, _> =
+            dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b: Tensor<_, TestDtype, _> =
+            dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
         let r = a.trace() + b.clone();
         assert_eq!(
@@ -130,17 +135,19 @@ mod tests {
     #[test]
     fn test_add_broadcast_bottom() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b = dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+        let a: Tensor<_, TestDtype, _> =
+            dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b: Tensor<_, TestDtype, _> =
+            dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
-        let a2: Tensor<Rank3<2, 3, 4>, f32, TestDevice> = a.broadcast();
-        let b2: Tensor<Rank3<2, 3, 4>, f32, TestDevice> = b.broadcast();
+        let a2 = a.broadcast::<Rank3<2, 3, 4>, _>();
+        let b2 = b.broadcast::<Rank3<2, 3, 4>, _>();
 
         let r = a2.trace() + b2.clone();
         assert_eq!(
             r.array(),
             [
-                [[1.1769f32; 4], [0.5552; 4], [0.5259; 4]],
+                [[1.1769; 4], [0.5552; 4], [0.5259; 4]],
                 [[1.3917; 4], [1.0692; 4], [0.873; 4]]
             ]
         );
@@ -152,16 +159,18 @@ mod tests {
     #[test]
     fn test_add_broadcast_top() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b = dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+        let a: Tensor<_, TestDtype, _> =
+            dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
+        let b: Tensor<_, TestDtype, _> =
+            dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
-        let a2: Tensor<Rank3<4, 2, 3>, f32, TestDevice> = a.broadcast();
-        let b2: Tensor<Rank3<4, 2, 3>, f32, TestDevice> = b.broadcast();
+        let a2 = a.broadcast::<Rank3<4, 2, 3>, _>();
+        let b2 = b.broadcast::<Rank3<4, 2, 3>, _>();
 
         let r = a2.trace() + b2.clone();
         assert_eq!(
             r.array(),
-            [[[1.1769f32, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]; 4]
+            [[[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]; 4]
         );
         let g = r.mean().backward();
         assert_eq!(g.get(&a2).array(), [[[1.0 / 6.0; 3]; 2]; 4]);
@@ -171,30 +180,30 @@ mod tests {
     #[test]
     fn test_scalar_add_0d() {
         let dev: TestDevice = Default::default();
-        let x = dev.tensor(0.0);
+        let x: Tensor<_, TestDtype, _> = dev.tensor(0.0);
         let r = x.trace() + 1.0;
         assert_eq!(r.array(), 1.0);
         let g = r.exp().backward();
-        assert_eq!(g.get(&x).array(), 1.0f32.exp());
+        assert_eq!(g.get(&x).array(), TestDtype::exp(1.0));
     }
 
     #[test]
     fn test_scalar_add_1d() {
         let dev: TestDevice = Default::default();
-        let x = dev.tensor([0.0, 1.0, 2.0]);
+        let x: Tensor<_, TestDtype, _> = dev.tensor([0.0, 1.0, 2.0]);
         let r = x.trace() + 0.5;
         assert_eq!(r.array(), [0.5, 1.5, 2.5]);
         let g = r.exp().sum().backward();
-        assert_eq!(g.get(&x).array(), [1.6487212, 4.481689, 12.182494]);
+        assert_close(&g.get(&x).array(), &[1.6487212, 4.481689, 12.182494]);
     }
 
     #[test]
     fn test_scalar_add_2d() {
         let dev: TestDevice = Default::default();
-        let x = dev.tensor([[0.0; 2]; 3]);
+        let x: Tensor<_, TestDtype, _> = dev.tensor([[0.0; 2]; 3]);
         let r = x.trace() + 0.5;
         assert_eq!(r.array(), [[0.5; 2]; 3]);
         let g = r.exp().sum().backward();
-        assert_eq!(g.get(&x).array(), [[1.6487212; 2]; 3]);
+        assert_close(&g.get(&x).array(), &[[1.6487212; 2]; 3]);
     }
 }

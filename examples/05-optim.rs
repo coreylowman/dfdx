@@ -2,7 +2,7 @@
 
 use dfdx::{
     losses::mse_loss,
-    nn::{builders::*, BuildOnDevice, ModuleMut},
+    nn::{builders::*, DeviceBuildExt, ModuleMut},
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
     shapes::Rank2,
     tensor::{AsArray, Cpu, SampleTensor, Tensor},
@@ -20,7 +20,7 @@ fn main() {
     let dev: Cpu = Default::default();
 
     // First randomly initialize our model
-    let mut mlp = Mlp::build_on_device(&dev);
+    let mut mlp = dev.build_module::<Mlp, f32>();
 
     // Here we construct a stochastic gradient descent optimizer
     // for our Mlp.

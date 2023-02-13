@@ -1,32 +1,51 @@
-use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
+use cudarc::cublas::{CudaBlas, Gemm};
+use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig, ValidAsZeroBits};
 
 use crate::tensor_ops::matmul::cuda_kernel::sgemm_batch;
 use crate::{shapes::*, tensor::cuda::Cuda};
 
 use std::sync::Arc;
 
-const MODULE_NAME: &str = "conv2d";
-const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/conv2d.ptx"));
-const UNFOLD_INPUT_FN: &str = "unfold_input_into_patches";
-const UNFOLD_OUTPUT_FN: &str = "unfold_output_into_patches";
-const BR_TR_FILTERS_FN: &str = "transpose_and_broadcast_filters";
-const COLLECT_GRADS_FN: &str = "sum_transposed_filters";
-const ALL_FN_NAMES: [&str; 4] = [
-    UNFOLD_INPUT_FN,
-    UNFOLD_OUTPUT_FN,
-    BR_TR_FILTERS_FN,
-    COLLECT_GRADS_FN,
-];
-
 unsafe impl AsKernelParam for super::Conv2DOp {}
 
-impl super::Conv2DKernel<f32> for Cuda {
+const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/conv2d.ptx"));
+
+trait HasCudaKernel<E> {
+    const MOD: &'static str;
+    const FNS: &'static [&'static str];
+}
+
+impl HasCudaKernel<f32> for Cuda {
+    const MOD: &'static str = "conv2d_f32";
+    const FNS: &'static [&'static str] = &[
+        "unfold_input_into_patches_f32",
+        "unfold_output_into_patches_f32",
+        "transpose_and_broadcast_filters_f32",
+        "sum_transposed_filters_f32",
+    ];
+}
+
+impl HasCudaKernel<f64> for Cuda {
+    const MOD: &'static str = "conv2d_f64";
+    const FNS: &'static [&'static str] = &[
+        "unfold_input_into_patches_f64",
+        "unfold_output_into_patches_f64",
+        "transpose_and_broadcast_filters_f64",
+        "sum_transposed_filters_f64",
+    ];
+}
+
+impl<E: Dtype + ValidAsZeroBits> super::Conv2DKernel<E> for Cuda
+where
+    Self: HasCudaKernel<E>,
+    CudaBlas: Gemm<E>,
+{
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: super::Conv2DOp,
-        lhs: &Self::Storage<L, f32>,
-        rhs: &Self::Storage<R, f32>,
-        out: &mut Self::Storage<O, f32>,
+        lhs: &Self::Storage<L, E>,
+        rhs: &Self::Storage<R, E>,
+        out: &mut Self::Storage<O, E>,
     ) -> Result<(), Self::Err> {
         assert_eq!(
             lhs.shape().strides(),
@@ -34,15 +53,14 @@ impl super::Conv2DKernel<f32> for Cuda {
             "Only works with contiguous image strides"
         );
 
-        if !self.dev.has_func(MODULE_NAME, ALL_FN_NAMES[0]) {
-            self.dev
-                .load_ptx(PTX_SRC.into(), MODULE_NAME, &ALL_FN_NAMES)?;
+        if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
+            self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
 
         let patches_numel = op.batch * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
-        let mut patches = self.dev.alloc_zeros_async::<f32>(patches_numel)?;
+        let mut patches = self.dev.alloc_zeros_async::<E>(patches_numel)?;
 
-        let unfold_fn = self.dev.get_func(MODULE_NAME, UNFOLD_INPUT_FN).unwrap();
+        let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = LaunchConfig::for_num_elems(patches.len() as u32);
         let params = (op, lhs.data.as_ref(), &mut patches);
         unsafe { unfold_fn.launch_async(cfg, params) }?;
@@ -59,7 +77,7 @@ impl super::Conv2DKernel<f32> for Cuda {
                 [0, k, 1],
                 &patches,
                 [k * n, n, 1],
-                0.0,
+                Default::default(),
                 Arc::make_mut(&mut out.data),
                 [m * n, n, 1],
             )
@@ -72,31 +90,31 @@ impl super::Conv2DKernel<f32> for Cuda {
     fn backward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: super::Conv2DOp,
-        lhs: &Self::Storage<L, f32>,
-        grad_lhs: &mut Self::Storage<L, f32>,
-        rhs: &Self::Storage<R, f32>,
-        grad_rhs: &mut Self::Storage<R, f32>,
-        grad_out: &Self::Storage<O, f32>,
+        lhs: &Self::Storage<L, E>,
+        grad_lhs: &mut Self::Storage<L, E>,
+        rhs: &Self::Storage<R, E>,
+        grad_rhs: &mut Self::Storage<R, E>,
+        grad_out: &Self::Storage<O, E>,
     ) -> Result<(), Self::Err> {
         let patches_numel = op.batch * op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
-        let mut patches = self.dev.alloc_zeros_async::<f32>(patches_numel)?;
+        let mut patches = self.dev.alloc_zeros_async::<E>(patches_numel)?;
 
         {
             // unfold grad_out into patches
-            let unfold_fn = self.dev.get_func(MODULE_NAME, UNFOLD_OUTPUT_FN).unwrap();
+            let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
             let cfg = LaunchConfig::for_num_elems(patches_numel as u32);
             let params = (op, grad_out.data.as_ref(), &mut patches);
             unsafe { unfold_fn.launch_async(cfg, params) }?;
         }
 
         let filters_numel = op.batch * op.chan_in * op.chan_out * op.kernel * op.kernel;
-        let mut f_b1023 = self.dev.alloc_zeros_async::<f32>(filters_numel)?;
-        let mut grad_f_b1023 = self.dev.alloc_zeros_async::<f32>(filters_numel)?;
+        let mut f_b1023 = self.dev.alloc_zeros_async::<E>(filters_numel)?;
+        let mut grad_f_b1023 = self.dev.alloc_zeros_async::<E>(filters_numel)?;
 
         {
             // prepare filters for backward operations by
             // swapping dims 0 and 1 and adding a batch dimension
-            let tr_fn = self.dev.get_func(MODULE_NAME, BR_TR_FILTERS_FN).unwrap();
+            let tr_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
             let cfg = LaunchConfig::for_num_elems(rhs.shape.num_elements() as u32);
             let params = (op, rhs.data.as_ref(), &mut f_b1023);
             unsafe { tr_fn.launch_async(cfg, params) }?;
@@ -116,7 +134,7 @@ impl super::Conv2DKernel<f32> for Cuda {
                     [m * k, k, 1],
                     &patches,
                     [k * n, n, 1],
-                    1.0,
+                    <E>::ONE,
                     Arc::make_mut(&mut grad_lhs.data),
                     [m * n, n, 1],
                 )
@@ -138,7 +156,7 @@ impl super::Conv2DKernel<f32> for Cuda {
                     [m * k, k, 1],
                     &patches,
                     [k * n, 1, k],
-                    1.0,
+                    <E>::ONE,
                     &mut grad_f_b1023,
                     [m * n, n, 1],
                 )
@@ -147,7 +165,7 @@ impl super::Conv2DKernel<f32> for Cuda {
 
             // sum all the gradients collected in our broadcasted grad_f
             // into grad_rhs
-            let sum_fn = self.dev.get_func(MODULE_NAME, COLLECT_GRADS_FN).unwrap();
+            let sum_fn = self.dev.get_func(Self::MOD, Self::FNS[3]).unwrap();
             let cfg = LaunchConfig::for_num_elems(rhs.shape.num_elements() as u32);
             let params = (op, &grad_f_b1023, Arc::make_mut(&mut grad_rhs.data));
             unsafe { sum_fn.launch_async(cfg, params) }?;

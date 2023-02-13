@@ -1,6 +1,6 @@
 use crate::{
     gradients::Tape,
-    shapes::{Axes, HasShape, ReduceShape, Shape},
+    shapes::{Axes, Dtype, HasShape, ReduceShape, Shape},
     tensor::{HasErr, Tensor},
 };
 
@@ -16,16 +16,16 @@ use super::{BroadcastTo, Device, MeanTo, StddevTo, TryDiv, TrySub};
 /// let t: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
 /// let _ = t.normalize::<Axis<1>>(1e-5);
 /// ```
-pub fn normalize<Ax: Axes, S: Shape + ReduceShape<Ax>, D: Device<f32>, T: Tape<D>>(
-    t: Tensor<S, f32, D, T>,
-    epsilon: f32,
-) -> Tensor<S, f32, D, T> {
+pub fn normalize<Ax: Axes, S: Shape + ReduceShape<Ax>, E: Dtype, D: Device<E>, T: Tape<D>>(
+    t: Tensor<S, E, D, T>,
+    epsilon: E,
+) -> Tensor<S, E, D, T> {
     t.normalize::<Ax>(epsilon)
 }
 
-impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
     /// See [normalize]
-    pub fn normalize<Ax: Axes>(self, epsilon: f32) -> Self
+    pub fn normalize<Ax: Axes>(self, epsilon: E) -> Self
     where
         S: ReduceShape<Ax>,
     {
@@ -33,7 +33,7 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
     }
 
     /// See [normalize]
-    pub fn try_normalize<Ax: Axes>(self, epsilon: f32) -> Result<Self, <Self as HasErr>::Err>
+    pub fn try_normalize<Ax: Axes>(self, epsilon: E) -> Result<Self, <Self as HasErr>::Err>
     where
         S: ReduceShape<Ax>,
     {
@@ -51,15 +51,15 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> Tensor<S, f32, D, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::{assert_close, TestDevice};
+    use crate::tests::*;
     use crate::{shapes::*, tensor::*, tensor_ops::*};
 
     #[test]
     fn test_1d_normalize_axis_last() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([-2.0, 0.0, 5.0]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, 0.0, 5.0]);
         let r = a.trace().normalize(1e-5);
-        assert_eq!(r.array(), [-1.0190487, -0.3396829, 1.3587316]);
+        assert_close(&r.array(), &[-1.0190487, -0.3396829, 1.3587316]);
         // NOTE: .exp() so we can make sure normalize is using result grad properly
         let g = r.exp().mean().backward();
         assert_close(&g.get(&a).array(), &[0.033410847, -0.04677555, 0.013364702]);
@@ -68,14 +68,14 @@ mod tests {
     #[test]
     fn test_2d_normalize_axis_last() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
         let r = a.trace().normalize::<Axis<1>>(1e-5);
-        assert_eq!(
-            r.array(),
-            [
+        assert_close(
+            &r.array(),
+            &[
                 [-1.0190487, -0.3396829, 1.3587316],
-                [-1.2247356, 0.0, 1.2247356]
-            ]
+                [-1.2247356, 0.0, 1.2247356],
+            ],
         );
         let g = r.exp().mean().backward();
         assert_close(
@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn test_2d_normalize_axis_first() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([[-2.0, 0.0], [1.0, 2.0], [4.0, 5.0]]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, 0.0], [1.0, 2.0], [4.0, 5.0]]);
         let r = a.trace().normalize::<Axis<0>>(1e-5);
         assert_close(
             &r.array(),
@@ -114,7 +114,7 @@ mod tests {
     #[test]
     fn test_3d_normalize_axis_last() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<Rank3<4, 2, 3>, f32, _> = dev.ones();
+        let a: Tensor<Rank3<4, 2, 3>, TestDtype, _> = dev.ones();
         let r = a.trace().normalize::<Axis<2>>(1e-5);
         assert_eq!(r.array(), [[[0.0; 3]; 2]; 4]);
         let g = r.exp().mean().backward();

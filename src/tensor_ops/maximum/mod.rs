@@ -49,13 +49,13 @@ impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{tensor::*, tensor_ops::*, tests::TestDevice};
+    use crate::{tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_maximum() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]]);
-        let b = dev.tensor([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]]);
+        let b: Tensor<_, TestDtype, _> = dev.tensor([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
 
         let result = a.trace().maximum(b.clone());
         assert_eq!(result.array(), [[0.0, 0.0, 1.0], [3.0, 4.0, 5.0]]);

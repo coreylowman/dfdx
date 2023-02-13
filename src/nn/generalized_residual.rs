@@ -14,7 +14,7 @@ use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = GeneralizedResidual<ReLU, Square>;
-/// let model = Model::build_on_device(&dev);
+/// let model = dev.build_module::<Model, f32>();
 /// let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
 /// let y = model.forward(x);
 /// assert_eq!(y.array(), [4.0, 1.0, 0.0, 2.0, 6.0]);
@@ -101,14 +101,15 @@ where
 mod tests {
     use super::*;
     use crate::nn::builders::Linear;
-    use crate::tests::{assert_close, TestDevice};
+    use crate::nn::DeviceBuildExt;
+    use crate::tests::*;
 
     #[test]
     fn test_reset_generalized_residual() {
         let dev: TestDevice = Default::default();
 
         type Model = GeneralizedResidual<Linear<2, 5>, Linear<2, 5>>;
-        let model = Model::build_on_device(&dev);
+        let model = dev.build_module::<Model, f32>();
         assert_ne!(model.f.weight.array(), [[0.0; 2]; 5]);
         assert_ne!(model.f.bias.array(), [0.0; 5]);
         assert_ne!(model.r.weight.array(), [[0.0; 2]; 5]);
@@ -120,7 +121,7 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         type Model = GeneralizedResidual<Linear<2, 2>, Linear<2, 2>>;
-        let model = Model::build_on_device(&dev);
+        let model = dev.build_module::<Model, f32>();
 
         let x = dev.sample_normal::<Rank2<4, 2>>();
         let y = model.forward(x.trace());

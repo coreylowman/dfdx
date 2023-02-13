@@ -45,7 +45,7 @@ mod tests {
     #[test]
     fn test_sigmoid() {
         let dev: TestDevice = Default::default();
-        let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().sigmoid();
         assert_close(
             &r.array(),

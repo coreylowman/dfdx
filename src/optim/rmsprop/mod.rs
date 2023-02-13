@@ -38,12 +38,12 @@ pub struct RMSpropConfig<E> {
     pub weight_decay: Option<WeightDecay<E>>,
 }
 
-impl Default for RMSpropConfig<f32> {
+impl<E: Dtype> Default for RMSpropConfig<E> {
     fn default() -> Self {
         Self {
-            lr: 1e-2,
-            alpha: 0.9,
-            eps: 1e-8,
+            lr: E::from_f32(1e-2).unwrap(),
+            alpha: E::from_f32(0.9).unwrap(),
+            eps: E::from_f32(1e-8).unwrap(),
             momentum: None,
             centered: false,
             weight_decay: None,
@@ -70,7 +70,7 @@ impl Default for RMSpropConfig<f32> {
 /// # type Model = Tensor<Rank0, f32, Cpu>;
 /// # let dev: Cpu = Default::default();
 /// # let model: Model = dev.zeros();
-/// let rmsprop: RMSprop<Model> = RMSprop::new(&model, RMSpropConfig {
+/// let rmsprop = RMSprop::new(&model, RMSpropConfig {
 ///     lr: 1e-3,
 ///     alpha: 0.5,
 ///     eps: 1e-8,
@@ -79,7 +79,7 @@ impl Default for RMSpropConfig<f32> {
 ///     weight_decay: Some(WeightDecay::Decoupled(1e-1)),
 /// });
 #[derive(Debug)]
-pub struct RMSprop<M, E: Dtype = f32> {
+pub struct RMSprop<M, E: Dtype> {
     /// Hyperparameter configuration
     pub cfg: RMSpropConfig<E>,
 
@@ -119,10 +119,10 @@ pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, D: RMSpropKernel<f32> + OneFillStorage<f32>> ParamUpdater<D, f32> for RMSprop<M, f32> {
+impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> ParamUpdater<D, E> for RMSprop<M, E> {
     fn update_param<S: Shape>(
         &mut self,
-        p: &mut Tensor<S, f32, D>,
+        p: &mut Tensor<S, E, D>,
         unused: &mut UnusedTensors,
     ) -> Result<(), <D>::Err> {
         let g = self.gradients.remove(p);
@@ -167,13 +167,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::{assert_close, TestDevice};
-    use crate::{shapes::*, tensor::*, tensor_ops::*};
+    use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
 
-    fn test_matches_expected(cfg: RMSpropConfig<f32>, expected: [[f32; 5]; 5]) {
+    fn test_matches_expected(cfg: RMSpropConfig<TestDtype>, expected: [[TestDtype; 5]; 5]) {
         let dev: TestDevice = Default::default();
-        let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
-        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let rate: Tensor<_, TestDtype, _> = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut opt = RMSprop::new(&t, cfg);
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).square().sum().backward();
@@ -193,7 +192,7 @@ mod tests {
             centered: false,
             weight_decay: None,
         };
-        const EXPECTED: [[f32; 5]; 5] = [
+        const EXPECTED: [[TestDtype; 5]; 5] = [
             [0.9997892, 0.98245883, 0.9703907, 0.9683808, 0.96837723],
             [0.99956703, 0.96670717, 0.9485176, 0.9457928, 0.945788],
             [0.9993329, 0.9521923, 0.9301649, 0.9270585, 0.9270531],
@@ -213,7 +212,7 @@ mod tests {
             centered: false,
             weight_decay: None,
         };
-        const EXPECTED: [[f32; 5]; 5] = [
+        const EXPECTED: [[TestDtype; 5]; 5] = [
             [0.9997892, 0.98245883, 0.9703907, 0.9683808, 0.96837723],
             [0.9993773, 0.9509201, 0.9218692, 0.9173355, 0.9173275],
             [0.9987725, 0.9082085, 0.86019397, 0.8530321, 0.8530196],
@@ -233,7 +232,7 @@ mod tests {
             centered: false,
             weight_decay: None,
         };
-        const EXPECTED: [[f32; 5]; 5] = [
+        const EXPECTED: [[TestDtype; 5]; 5] = [
             [0.99971724, 0.9873509, 0.9859671, 0.985858, 0.98585784],
             [0.9993176, 0.9763115, 0.97450525, 0.97436625, 0.97436607],
             [0.9987531, 0.96588355, 0.9639029, 0.9637519, 0.96375173],
@@ -253,7 +252,7 @@ mod tests {
             centered: false,
             weight_decay: None,
         };
-        const EXPECTED: [[f32; 5]; 5] = [
+        const EXPECTED: [[TestDtype; 5]; 5] = [
             [0.9997904, 0.98252594, 0.97041094, 0.9683808, 0.96837723],
             [0.99956954, 0.9668238, 0.9485463, 0.94579285, 0.945788],
             [0.999337, 0.95234853, 0.93019867, 0.9270586, 0.9270531],
@@ -273,7 +272,7 @@ mod tests {
             centered: true,
             weight_decay: None,
         };
-        const EXPECTED: [[f32; 5]; 5] = [
+        const EXPECTED: [[TestDtype; 5]; 5] = [
             [0.9997892, 0.98218256, 0.96900064, 0.9666708, 0.9666667],
             [0.99956703, 0.965664, 0.9448974, 0.941596, 0.9415902],
             [0.9993329, 0.9498438, 0.9236177, 0.91970736, 0.91970056],
@@ -289,7 +288,7 @@ mod tests {
             weight_decay: Some(WeightDecay::L2(0.5)),
             ..Default::default()
         };
-        const EXPECTED: [[f32; 5]; 5] = [
+        const EXPECTED: [[TestDtype; 5]; 5] = [
             [0.9945992, 0.9797556, 0.97018003, 0.96838075, 0.96837723],
             [0.9890257, 0.96231526, 0.9482287, 0.94579273, 0.945788],
             [0.98328084, 0.94663495, 0.92983353, 0.92705846, 0.9270531],
@@ -305,7 +304,7 @@ mod tests {
             weight_decay: Some(WeightDecay::Decoupled(0.5)),
             ..Default::default()
         };
-        const EXPECTED: [[f32; 5]; 5] = [
+        const EXPECTED: [[TestDtype; 5]; 5] = [
             [0.9947892, 0.97745883, 0.9653907, 0.9633808, 0.96337724],
             [0.98959416, 0.9568803, 0.9387497, 0.93603325, 0.9360285],
             [0.9844144, 0.93768346, 0.91579914, 0.9127129, 0.9127075],

@@ -11,10 +11,11 @@ struct Conv2DOp {
     size_t w_out;
 };
 
-extern "C" __global__ void unfold_input_into_patches(
+template<typename T>
+__device__ void unfold_input_into_patches(
     const Conv2DOp op,
-    const float *image, // 4d (Batch, Channels, Height, Width)
-    float *patches // 6d (Batch, Channels, KernelSize, KernelSize, HeightOut, WidthOut)
+    const T *image, // 4d (Batch, Channels, Height, Width)
+    T *patches // 6d (Batch, Channels, KernelSize, KernelSize, HeightOut, WidthOut)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     const auto patches_numel = op.batch * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
@@ -59,10 +60,11 @@ extern "C" __global__ void unfold_input_into_patches(
     patches[i] = image[i_image];
 }
 
-extern "C" __global__ void unfold_output_into_patches(
+template<typename T>
+__device__ void unfold_output_into_patches(
     const Conv2DOp op,
-    const float *image_out, // 4d (Batch, ChanOut, HeightOut, WidthOut)
-    float *patches // 6d (Batch, ChanOut, KernelSize, KernelSize, HeightIn, WidthIn)
+    const T *image_out, // 4d (Batch, ChanOut, HeightOut, WidthOut)
+    T *patches // 6d (Batch, ChanOut, KernelSize, KernelSize, HeightIn, WidthIn)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     const auto patches_numel = op.batch * op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
@@ -114,10 +116,11 @@ extern "C" __global__ void unfold_output_into_patches(
     patches[i] = image_out[image_i];
 }
 
-extern "C" __global__ void transpose_and_broadcast_filters(
+template<typename T>
+__device__ void transpose_and_broadcast_filters(
     const Conv2DOp op,
-    const float *filters, // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
-    float *filters_tr // 5d (Batch, ChanIn, ChanOut, KernelSize, KernelSize)
+    const T *filters, // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
+    T *filters_tr // 5d (Batch, ChanIn, ChanOut, KernelSize, KernelSize)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     auto numel = op.chan_in * op.chan_out * op.kernel * op.kernel;
@@ -137,16 +140,17 @@ extern "C" __global__ void transpose_and_broadcast_filters(
 
     auto i_tr = c * (op.chan_out * op.kernel * op.kernel) + o * (op.kernel * op.kernel) + k1 * (op.kernel) + k2;
 
-    const float f = filters[i];
+    const T f = filters[i];
     for (auto b = 0; b < op.batch; b++) {
         filters_tr[b * numel + i_tr] = f;
     }
 }
 
-extern "C" __global__ void sum_transposed_filters(
+template<typename T>
+__device__ void sum_transposed_filters(
     const Conv2DOp op,
-    const float *filters_tr, // 5d (Batch, ChanIn, ChanOut, KernelSize, KernelSize)
-    float *filters // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
+    const T *filters_tr, // 5d (Batch, ChanIn, ChanOut, KernelSize, KernelSize)
+    T *filters // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     auto numel = op.chan_out * op.chan_in * op.kernel * op.kernel;
@@ -166,10 +170,55 @@ extern "C" __global__ void sum_transposed_filters(
 
     auto i_tr = c * (op.chan_out * op.kernel * op.kernel) + o * (op.kernel * op.kernel) + k1 * (op.kernel) + k2;
 
-    float tmp = 0.0;
+    T tmp = 0.0;
     for (auto b = 0; b < op.batch; b++) {
         tmp += filters_tr[b * numel + i_tr];
     }
 
     filters[i] += tmp;
 }
+
+#define CONV_OP(TYPENAME, UNFOLD_INPUT, UNFOLD_OUTPUT, TR_FILTERS, SUM_TR_FILTERS) \
+extern "C" __global__ void UNFOLD_INPUT( \
+    const Conv2DOp op, \
+    const TYPENAME *image, \
+    TYPENAME *patches \
+) { \
+    unfold_input_into_patches(op, image, patches); \
+} \
+extern "C" __global__ void UNFOLD_OUTPUT( \
+    const Conv2DOp op, \
+    const TYPENAME *image_out, \
+    TYPENAME *patches \
+) { \
+    unfold_output_into_patches(op, image_out, patches); \
+} \
+extern "C" __global__ void TR_FILTERS( \
+    const Conv2DOp op, \
+    const TYPENAME *filters, \
+    TYPENAME *filters_tr \
+) { \
+    transpose_and_broadcast_filters(op, filters, filters_tr); \
+} \
+extern "C" __global__ void SUM_TR_FILTERS( \
+    const Conv2DOp op, \
+    const TYPENAME *filters_tr, \
+    TYPENAME *filters \
+) { \
+    sum_transposed_filters(op, filters_tr, filters); \
+}
+
+CONV_OP(
+    float,
+    unfold_input_into_patches_f32,
+    unfold_output_into_patches_f32,
+    transpose_and_broadcast_filters_f32,
+    sum_transposed_filters_f32
+);
+CONV_OP(
+    double,
+    unfold_input_into_patches_f64,
+    unfold_output_into_patches_f64,
+    transpose_and_broadcast_filters_f64,
+    sum_transposed_filters_f64
+);

@@ -1,25 +1,26 @@
 use crate::tensor_ops::cpu_kernels::{BinaryDerivative, UnaryDerivative};
+use num_traits::Float;
 
-impl BinaryDerivative<f32> for super::BinaryAddKernelOp {
+impl<F: Float> BinaryDerivative<F> for super::BinaryAddKernelOp {
     #[inline(always)]
-    fn f(&self, x: &f32, y: &f32) -> f32 {
+    fn f(&self, &x: &F, &y: &F) -> F {
         x + y
     }
     #[inline(always)]
-    fn dfdx(&self, _: &f32, _: &f32) -> f32 {
-        1.0
+    fn dfdx(&self, _: &F, _: &F) -> F {
+        F::one()
     }
     #[inline(always)]
-    fn dfdy(&self, _: &f32, _: &f32) -> f32 {
-        1.0
+    fn dfdy(&self, _: &F, _: &F) -> F {
+        F::one()
     }
 }
 
-impl UnaryDerivative<f32> for super::ScalarAddKernelOp<f32> {
-    fn f(&self, x: &f32) -> f32 {
+impl<F: Float> UnaryDerivative<F> for super::ScalarAddKernelOp<F> {
+    fn f(&self, &x: &F) -> F {
         x + self.scalar
     }
-    fn df(&self, _: &f32) -> f32 {
-        1.0
+    fn df(&self, _: &F) -> F {
+        F::one()
     }
 }

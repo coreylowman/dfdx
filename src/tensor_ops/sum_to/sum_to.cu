@@ -2,13 +2,14 @@
 
 // Efficiently computes the sum of each chunk in "data" of size chunk_len, and
 // stores the sums in out[i / chunk_len]
+template<typename T>
 __device__ void chunk_sum(
     const size_t numel,
     const size_t chunk_len,
-    const float data,
-    float* out
+    const T data,
+    T* out
 ) {
-    __shared__ float buf[1024];
+    __shared__ T buf[1024];
     // assumes that threads where i >= numel have already exited
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int block_i = threadIdx.x;
@@ -46,15 +47,16 @@ __device__ void chunk_sum(
 
 // strides and dims specify how to index inp to put all summed elements next to
 // each other, and chunk_len is len(inp) / len(out)
-extern "C" __global__ void sum_to_forward(
+template<typename T>
+__device__ void sum_to_fwd(
     const size_t numel,
     const size_t num_dims,
-    const float elems_per_thread,
+    const T elems_per_thread,
     const size_t chunk_len,
-    const float *inp,
+    const T *inp,
     const size_t *dims,
     const size_t *strides,
-    float *out
+    T *out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -68,14 +70,15 @@ extern "C" __global__ void sum_to_forward(
 
 // Accepts pre-broadcasted strides for both input & output.
 // So both inp & out are expected to be broadcasted to the same size.
-extern "C" __global__ void sum_to_backward(
+template<typename T>
+__device__ void sum_to_bwd(
     const size_t numel,
     const size_t num_dims,
-    const float elems_per_thread,
+    const T elems_per_thread,
     const size_t *dims,
-    float *grad_inp,
+    T *grad_inp,
     const size_t *inp_strides,
-    const float *grad_out,
+    const T *grad_out,
     const size_t *out_strides
 ) {
     unsigned int inp_i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -90,6 +93,35 @@ extern "C" __global__ void sum_to_backward(
 
     // NOTE: since size of output is less than input, only 1 thread will be writing to inp
     // at a time. this means we don't have to worry about multiple concurrent writes
-    // like we do with forward.
+    // like we do with fwd.
     grad_inp[inp_i] += tmp * elems_per_thread;
 }
+
+#define SUM(TYPENAME, FWD, BWD) \
+extern "C" __global__ void FWD( \
+    const size_t numel, \
+    const size_t num_dims, \
+    const TYPENAME elems_per_thread, \
+    const size_t chunk_len, \
+    const TYPENAME *inp, \
+    const size_t *dims, \
+    const size_t *strides, \
+    TYPENAME *out \
+) { \
+    sum_to_fwd(numel, num_dims, elems_per_thread, chunk_len, inp, dims, strides, out); \
+} \
+extern "C" __global__ void BWD( \
+    const size_t numel, \
+    const size_t num_dims, \
+    const TYPENAME elems_per_thread, \
+    const size_t *dims, \
+    TYPENAME *grad_inp, \
+    const size_t *inp_strides, \
+    const TYPENAME *grad_out, \
+    const size_t *out_strides \
+) { \
+    sum_to_bwd(numel, num_dims, elems_per_thread, dims, grad_inp, inp_strides, grad_out, out_strides); \
+}
+
+SUM(float, sum_to_fwd_f32, sum_to_bwd_f32);
+SUM(double, sum_to_fwd_f64, sum_to_bwd_f64);

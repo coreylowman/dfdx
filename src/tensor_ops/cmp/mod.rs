@@ -241,11 +241,7 @@ impl_cmp_kernel_op!(LeKernelOp, try_le, le, try_scalar_le, scalar_le, "See [le]"
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        shapes::{Const, Unit},
-        tensor::*,
-        tests::TestDevice,
-    };
+    use crate::{shapes::*, tensor::*, tests::*};
 
     type TestTensor<const R: usize, const C: usize, E> =
         Tensor<(Const<R>, Const<C>), E, TestDevice>;
@@ -279,7 +275,7 @@ mod tests {
 
     #[test]
     fn test_eq() {
-        test_cmp(
+        test_cmp::<TestDtype, 2, 3, _>(
             [[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]],
             [[0.0, 2.0, -3.0], [4.0, 0.5, -0.0]],
             |a, b| a.eq(b).array(),
@@ -301,7 +297,7 @@ mod tests {
 
     #[test]
     fn test_scalar_eq() {
-        test_scalar_cmp(
+        test_scalar_cmp::<TestDtype, 2, 2, _>(
             [[0.0, 1.2], [3.4, -5.6]],
             |a| a.scalar_eq(1.2).array(),
             [[false, true], [false, false]],
@@ -310,7 +306,7 @@ mod tests {
 
     #[test]
     fn test_ne() {
-        test_cmp(
+        test_cmp::<TestDtype, 2, 3, _>(
             [[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]],
             [[0.0, 2.0, -3.0], [4.0, 0.5, -0.0]],
             |a, b| a.ne(b).array(),
@@ -332,7 +328,7 @@ mod tests {
 
     #[test]
     fn test_scalar_ne() {
-        test_scalar_cmp(
+        test_scalar_cmp::<TestDtype, 2, 2, _>(
             [[0.0, 1.2], [3.4, -5.6]],
             |a| a.scalar_ne(1.2).array(),
             [[true, false], [true, true]],
@@ -341,7 +337,7 @@ mod tests {
 
     #[test]
     fn test_gt() {
-        test_cmp(
+        test_cmp::<TestDtype, 2, 3, _>(
             [[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]],
             [[0.0, 2.0, 3.1], [-4.0, -5.5, -0.0]],
             |a, b| a.gt(b).array(),
@@ -363,7 +359,7 @@ mod tests {
 
     #[test]
     fn test_scalar_gt() {
-        test_scalar_cmp(
+        test_scalar_cmp::<TestDtype, 2, 2, _>(
             [[0.0, 1.2], [3.4, -5.6]],
             |a| a.scalar_gt(1.2).array(),
             [[false, false], [true, false]],
@@ -372,7 +368,7 @@ mod tests {
 
     #[test]
     fn test_ge() {
-        test_cmp(
+        test_cmp::<TestDtype, 2, 3, _>(
             [[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]],
             [[0.0, 2.0, 3.1], [-4.0, -5.5, -0.0]],
             |a, b| a.ge(b).array(),
@@ -394,7 +390,7 @@ mod tests {
 
     #[test]
     fn test_scalar_ge() {
-        test_scalar_cmp(
+        test_scalar_cmp::<TestDtype, 2, 2, _>(
             [[0.0, 1.2], [3.4, -5.6]],
             |a| a.scalar_ge(1.2).array(),
             [[false, true], [true, false]],
@@ -403,7 +399,7 @@ mod tests {
 
     #[test]
     fn test_lt() {
-        test_cmp(
+        test_cmp::<TestDtype, 2, 3, _>(
             [[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]],
             [[0.0, 2.0, 3.1], [-4.0, -5.5, -0.0]],
             |a, b| a.lt(b).array(),
@@ -425,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_scalar_lt() {
-        test_scalar_cmp(
+        test_scalar_cmp::<TestDtype, 2, 2, _>(
             [[0.0, 1.2], [3.4, -5.6]],
             |a| a.scalar_lt(1.2).array(),
             [[true, false], [false, true]],
@@ -434,7 +430,7 @@ mod tests {
 
     #[test]
     fn test_le() {
-        test_cmp(
+        test_cmp::<TestDtype, 2, 3, _>(
             [[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]],
             [[0.0, 2.0, 3.1], [-4.0, -5.5, -0.0]],
             |a, b| a.le(b).array(),
@@ -456,7 +452,7 @@ mod tests {
 
     #[test]
     fn test_scalar_le() {
-        test_scalar_cmp(
+        test_scalar_cmp::<TestDtype, 2, 2, _>(
             [[0.0, 1.2], [3.4, -5.6]],
             |a| a.scalar_le(1.2).array(),
             [[true, true], [false, true]],
@@ -467,8 +463,8 @@ mod tests {
     #[should_panic]
     fn test_cmp_shape_mismatch() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<(usize, usize, usize), f32, TestDevice> = dev.zeros_like(&(1, 2, 3));
-        let b: Tensor<(usize, usize, usize), f32, TestDevice> = dev.ones_like(&(2, 3, 4));
+        let a: Tensor<(usize, usize, usize), TestDtype, TestDevice> = dev.zeros_like(&(1, 2, 3));
+        let b: Tensor<(usize, usize, usize), TestDtype, TestDevice> = dev.ones_like(&(2, 3, 4));
         a.eq(&b);
     }
 }

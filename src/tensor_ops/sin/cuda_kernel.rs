@@ -1,10 +1,8 @@
-use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
+use crate::tensor_ops::cuda_kernels::cuda_unary;
 
 unsafe impl cudarc::driver::AsKernelParam for super::SinKernelOp {}
 
-impl UnaryOpCudaKernel for super::SinKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/sin.ptx"));
-    const MODULE_NAME: &'static str = "sin";
-    const FWD_FN_NAME: &'static str = "sin_forward";
-    const BWD_FN_NAME: &'static str = "sin_backward";
-}
+const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/sin.ptx"));
+
+cuda_unary!(super::SinKernelOp, f32, PTX, "sin_fwd_f32", "sin_bwd_f32");
+cuda_unary!(super::SinKernelOp, f64, PTX, "sin_fwd_f64", "sin_bwd_f64");

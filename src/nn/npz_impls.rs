@@ -206,8 +206,10 @@ impl<T: LoadFromNpz> LoadFromNpz for AddInto<T> {
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const F: usize, const L: usize, D: CopySlice<f32>> SaveToNpz
-    for TransformerDecoder<M, H, F, L, f32, D>
+impl<const M: usize, const H: usize, const F: usize, const L: usize, E, D: CopySlice<E>> SaveToNpz
+    for TransformerDecoder<M, H, F, L, E, D>
+where
+    E: Dtype + NumpyDtype,
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.0.write(&format!("{p}.0"), w)
@@ -215,8 +217,8 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: CopySlic
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> SaveToNpz
-    for TransformerDecoderBlock<M, H, F, f32, D>
+impl<const M: usize, const H: usize, const F: usize, E: Dtype + NumpyDtype, D: CopySlice<E>>
+    SaveToNpz for TransformerDecoderBlock<M, H, F, E, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.self_attn.write(&format!("{p}self_attn."), w)?;
@@ -231,8 +233,8 @@ impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> SaveToNp
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> LoadFromNpz
-    for TransformerDecoderBlock<M, H, F, f32, D>
+impl<const M: usize, const H: usize, const F: usize, E: Dtype + NumpyDtype, D: CopySlice<E>>
+    LoadFromNpz for TransformerDecoderBlock<M, H, F, E, D>
 {
     fn read<R: Read + Seek>(&mut self, pre: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.self_attn.read(&format!("{pre}self_attn."), r)?;
@@ -247,8 +249,10 @@ impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> LoadFrom
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const F: usize, const L: usize, D: CopySlice<f32>> LoadFromNpz
-    for TransformerDecoder<M, H, F, L, f32, D>
+impl<const M: usize, const H: usize, const F: usize, const L: usize, E, D: CopySlice<E>> LoadFromNpz
+    for TransformerDecoder<M, H, F, L, E, D>
+where
+    E: Dtype + NumpyDtype,
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.0.read(&format!("{p}.0"), r)
@@ -256,8 +260,8 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, D: CopySlic
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> SaveToNpz
-    for TransformerEncoderBlock<M, H, F, f32, D>
+impl<const M: usize, const H: usize, const F: usize, E: Dtype + NumpyDtype, D: CopySlice<E>>
+    SaveToNpz for TransformerEncoderBlock<M, H, F, E, D>
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.self_attn.write(&format!("{p}self_attn."), w)?;
@@ -270,8 +274,8 @@ impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> SaveToNp
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> LoadFromNpz
-    for TransformerEncoderBlock<M, H, F, f32, D>
+impl<const M: usize, const H: usize, const F: usize, E: Dtype + NumpyDtype, D: CopySlice<E>>
+    LoadFromNpz for TransformerEncoderBlock<M, H, F, E, D>
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.self_attn.read(&format!("{p}self_attn."), r)?;
@@ -284,8 +288,10 @@ impl<const M: usize, const H: usize, const F: usize, D: CopySlice<f32>> LoadFrom
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D: CopySlice<f32>> SaveToNpz
-    for MultiHeadAttention<M, H, K, V, f32, D>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: CopySlice<E>> SaveToNpz
+    for MultiHeadAttention<M, H, K, V, E, D>
+where
+    E: Dtype + NumpyDtype,
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.w_q.write(&format!("{p}w_q."), w)?;
@@ -297,8 +303,10 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: CopySlic
 }
 
 #[cfg(feature = "nightly")]
-impl<const M: usize, const H: usize, const K: usize, const V: usize, D: CopySlice<f32>> LoadFromNpz
-    for MultiHeadAttention<M, H, K, V, f32, D>
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: CopySlice<E>> LoadFromNpz
+    for MultiHeadAttention<M, H, K, V, E, D>
+where
+    E: Dtype + NumpyDtype,
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.w_q.read(&format!("{p}w_q."), r)?;
@@ -310,14 +318,11 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, D: CopySlic
 }
 
 #[cfg(feature = "nightly")]
-impl<
-        const M: usize,
-        const H: usize,
-        const E: usize,
-        const D: usize,
-        const F: usize,
-        Dev: CopySlice<f32>,
-    > SaveToNpz for Transformer<M, H, E, D, F, f32, Dev>
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D> SaveToNpz
+    for Transformer<M, H, A, B, F, E, D>
+where
+    E: Dtype + NumpyDtype,
+    D: CopySlice<E>,
 {
     fn write<W: Write + Seek>(&self, p: &str, w: &mut ZipWriter<W>) -> ZipResult<()> {
         self.encoder.write(&format!("{p}encoder."), w)?;
@@ -327,14 +332,11 @@ impl<
 }
 
 #[cfg(feature = "nightly")]
-impl<
-        const M: usize,
-        const H: usize,
-        const E: usize,
-        const D: usize,
-        const F: usize,
-        Dev: CopySlice<f32>,
-    > LoadFromNpz for Transformer<M, H, E, D, F, f32, Dev>
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>
+    LoadFromNpz for Transformer<M, H, A, B, F, E, D>
+where
+    E: Dtype + NumpyDtype,
+    D: CopySlice<E>,
 {
     fn read<R: Read + Seek>(&mut self, p: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError> {
         self.encoder.read(&format!("{p}encoder."), r)?;
@@ -350,7 +352,7 @@ mod tests {
         shapes::*,
         tensor::{numpy::NumpyDtype, AsArray, SampleTensor, Tensor},
         tensor_ops::Device,
-        tests::TestDevice,
+        tests::{TestDevice, TestDtype},
     };
     use rand_distr::{Distribution, Standard, StandardNormal};
     use tempfile::NamedTempFile;
@@ -383,7 +385,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         type Model = BatchNorm2D<3>;
 
-        let x = dev.sample_normal::<Rank3<3, 4, 5>>();
+        let x: Tensor<Rank3<3, 4, 5>, TestDtype, _> = dev.sample_normal();
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
         let mut saved = Model::build_on_device(&dev);
@@ -408,23 +410,23 @@ mod tests {
     fn test_save_load_conv() {
         type T = Conv2D<2, 4, 3>;
         let dev: TestDevice = Default::default();
-        test_save_load::<Rank3<2, 8, 8>, f32, TestDevice, T>(&dev);
+        test_save_load::<Rank3<2, 8, 8>, TestDtype, TestDevice, T>(&dev);
     }
 
     #[test]
     fn test_save_load_generalized_residual() {
         let dev: TestDevice = Default::default();
         type T = GeneralizedResidual<Linear<5, 5>, Linear<5, 5>>;
-        test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
-        test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
+        test_save_load::<Rank1<5>, TestDtype, TestDevice, T>(&dev);
+        test_save_load::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev);
     }
 
     #[test]
     fn test_save_load_linear() {
         let dev: TestDevice = Default::default();
         type T = Linear<5, 5>;
-        test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
-        test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
+        test_save_load::<Rank1<5>, TestDtype, TestDevice, T>(&dev);
+        test_save_load::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev);
     }
 
     #[test]
@@ -434,14 +436,14 @@ mod tests {
             (Linear<1, 2>, ReLU, Linear<2, 3>),
             (Dropout, Linear<3, 3>, Linear<3, 4>),
         );
-        test_save_load::<Rank1<1>, f32, TestDevice, T>(&dev);
+        test_save_load::<Rank1<1>, TestDtype, TestDevice, T>(&dev);
     }
 
     #[test]
     fn test_save_load_layer_norm() {
         type M = LayerNorm1D<3>;
         let dev: TestDevice = Default::default();
-        let x = dev.sample_normal::<Rank1<3>>();
+        let x: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
 
         let file = NamedTempFile::new().expect("failed to create tempfile");
 
@@ -464,16 +466,16 @@ mod tests {
     fn test_save_load_repeated() {
         type T = Repeated<Linear<3, 3>, 4>;
         let dev: TestDevice = Default::default();
-        test_save_load::<Rank1<3>, f32, TestDevice, T>(&dev);
-        test_save_load::<Rank1<3>, f32, TestDevice, (T, T)>(&dev);
+        test_save_load::<Rank1<3>, TestDtype, TestDevice, T>(&dev);
+        test_save_load::<Rank1<3>, TestDtype, TestDevice, (T, T)>(&dev);
     }
 
     #[test]
     fn test_save_load_residual() {
         type T = Residual<Linear<5, 5>>;
         let dev: TestDevice = Default::default();
-        test_save_load::<Rank1<5>, f32, TestDevice, T>(&dev);
-        test_save_load::<Rank1<5>, f32, TestDevice, (T, T)>(&dev);
+        test_save_load::<Rank1<5>, TestDtype, TestDevice, T>(&dev);
+        test_save_load::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev);
     }
 
     #[cfg(feature = "nightly")]
@@ -489,9 +491,9 @@ mod tests {
 
         let mut loaded = Model::build_on_device(&dev);
 
-        let q = dev.sample_normal::<Rank3<2, 3, 12>>();
-        let k = dev.sample_normal::<Rank3<2, 4, 12>>();
-        let v = dev.sample_normal::<Rank3<2, 4, 12>>();
+        let q: Tensor<Rank3<2, 3, 12>, TestDtype, _> = dev.sample_normal();
+        let k: Tensor<Rank3<2, 4, 12>, TestDtype, _> = dev.sample_normal();
+        let v: Tensor<Rank3<2, 4, 12>, TestDtype, _> = dev.sample_normal();
         let y1 = saved.forward((q.clone(), k.clone(), v.clone()));
 
         let y2 = loaded.forward((q.clone(), k.clone(), v.clone()));
@@ -516,8 +518,8 @@ mod tests {
 
         let mut loaded = Model::build_on_device(&dev);
 
-        let src = dev.sample_normal::<Rank3<4, 12, 16>>();
-        let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();
+        let src: Tensor<Rank3<4, 12, 16>, TestDtype, _> = dev.sample_normal();
+        let tgt: Tensor<Rank3<4, 6, 16>, TestDtype, _> = dev.sample_normal();
         let y1 = saved.forward_mut((src.clone(), tgt.clone()));
 
         let y2 = loaded.forward_mut((src.clone(), tgt.clone()));

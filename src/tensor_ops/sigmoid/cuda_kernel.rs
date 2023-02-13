@@ -1,10 +1,9 @@
-use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
+use super::SigmoidKernelOp as Sigmoid;
+use crate::tensor_ops::cuda_kernels::cuda_unary;
 
-unsafe impl cudarc::driver::AsKernelParam for super::SigmoidKernelOp {}
+unsafe impl cudarc::driver::AsKernelParam for Sigmoid {}
 
-impl UnaryOpCudaKernel for super::SigmoidKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/sigmoid.ptx"));
-    const MODULE_NAME: &'static str = "sigmoid";
-    const FWD_FN_NAME: &'static str = "sigmoid_forward";
-    const BWD_FN_NAME: &'static str = "sigmoid_backward";
-}
+const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/sigmoid.ptx"));
+
+cuda_unary!(Sigmoid, f32, PTX, "sigmoid_fwd_f32", "sigmoid_bwd_f32");
+cuda_unary!(Sigmoid, f64, PTX, "sigmoid_fwd_f64", "sigmoid_bwd_f64");

@@ -15,7 +15,7 @@ use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
-/// let model = Model::build_on_device(&dev);
+/// let model = dev.build_module::<Model, f32>();
 /// let a: Tensor<Rank1<2>, f32, _> = dev.zeros();
 /// let b: Tensor<Rank1<3>, f32, _> = dev.zeros();
 /// let _: Tensor<Rank1<5>, f32, _> = model.forward((a, b));
@@ -102,10 +102,10 @@ mod tests {
     use super::*;
     use crate::{
         gradients::OwnedTape,
-        nn::{builders::*, tests::SimpleUpdater},
+        nn::{builders::*, tests::SimpleUpdater, DeviceBuildExt},
         shapes::*,
         tensor::*,
-        tests::TestDevice,
+        tests::{TestDevice, TestDtype},
         unique_id::HasUniqueId,
     };
 
@@ -117,7 +117,7 @@ mod tests {
     fn test_add_into_2() {
         let dev: TestDevice = Default::default();
         type Model = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
-        let m = Model::build_on_device(&dev);
+        let m = dev.build_module::<Model, TestDtype>();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -132,7 +132,7 @@ mod tests {
     fn test_add_into_3() {
         let dev: TestDevice = Default::default();
         type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>)>;
-        let m = Model::build_on_device(&dev);
+        let m = dev.build_module::<Model, TestDtype>();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -149,7 +149,7 @@ mod tests {
     fn test_add_into_4() {
         let dev: TestDevice = Default::default();
         type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>, Linear<5, 5>)>;
-        let m = Model::build_on_device(&dev);
+        let m = dev.build_module::<Model, TestDtype>();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -174,7 +174,7 @@ mod tests {
             Linear<5, 5>,
             Linear<6, 5>,
         )>;
-        let m = Model::build_on_device(&dev);
+        let m = dev.build_module::<Model, TestDtype>();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -202,7 +202,7 @@ mod tests {
             Linear<6, 5>,
             Linear<7, 5>,
         )>;
-        let m = Model::build_on_device(&dev);
+        let m = dev.build_module::<Model, TestDtype>();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_>> = m.forward((
             dev.zeros::<Rank1<2>>().traced(),
             dev.zeros::<Rank1<3>>().traced(),
@@ -225,7 +225,7 @@ mod tests {
     fn test_missing_gradients() {
         let dev: TestDevice = Default::default();
         type Model = AddInto<(Linear<5, 3>, Linear<5, 3>)>;
-        let mut model = Model::build_on_device(&dev);
+        let mut model = dev.build_module::<Model, TestDtype>();
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present
@@ -257,7 +257,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         // check if it works in a longer neural net
         type Model = (AddInto<(Linear<5, 3>, Linear<5, 3>)>, ReLU, Linear<3, 1>);
-        let mut model = Model::build_on_device(&dev);
+        let mut model = dev.build_module::<Model, TestDtype>();
         let _: Tensor<Rank1<1>, _, _, OwnedTape<_>> = model.forward((
             dev.zeros::<Rank1<5>>().traced(),
             dev.zeros::<Rank1<5>>().traced(),

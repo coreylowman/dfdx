@@ -6,7 +6,25 @@ use std::sync::Arc;
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/broadcast_to.ptx"));
 
-impl<E: Dtype> super::BroadcastKernel<E> for Cuda {
+trait HasCudaKernel<E> {
+    const MOD: &'static str;
+    const FNS: &'static [&'static str];
+}
+
+impl HasCudaKernel<f32> for Cuda {
+    const MOD: &'static str = "broadcast_f32";
+    const FNS: &'static [&'static str] = &["sum_f32"];
+}
+
+impl HasCudaKernel<f64> for Cuda {
+    const MOD: &'static str = "broadcast_f64";
+    const FNS: &'static [&'static str] = &["sum_f64"];
+}
+
+impl<E: Dtype> super::BroadcastKernel<E> for Cuda
+where
+    Self: HasCudaKernel<E>,
+{
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
@@ -29,13 +47,10 @@ impl<E: Dtype> super::BroadcastKernel<E> for Cuda {
     where
         Src: BroadcastShapeTo<Dst, Ax>,
     {
-        if !self.dev.has_func("broadcast_to", "sum") {
-            self.dev
-                .load_ptx(PTX_SRC.into(), "broadcast_to", &["sum"])?;
+        if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
+            self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
-
-        let f = self.dev.get_func("broadcast_to", "sum").unwrap();
-
+        let f = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let numel = grad_inp.data.len();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (

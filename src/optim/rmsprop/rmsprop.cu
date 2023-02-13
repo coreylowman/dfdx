@@ -1,29 +1,32 @@
+#include "cuda_utils.cuh"
+
 enum WeightDecayType {
     WdNone,
     L2,
     Decoupled
 };
 
-
+template<typename T>
 struct RMSpropConfig {
-    float lr;
-    float alpha;
-    float eps;
+    T lr;
+    T alpha;
+    T eps;
     bool centered;
     bool has_momentum;
-    float momentum;
+    T momentum;
     WeightDecayType weight_decay_type;
-    float weight_decay;
+    T weight_decay;
 };
 
-extern "C" __global__ void rmsprop_update(
-    const RMSpropConfig cfg,
+template<typename T>
+__device__ void rmsprop_update(
+    const RMSpropConfig<T> cfg,
     const size_t numel,
-    float* param,
-    float* momentum,
-    float* square_avg,
-    float* grad_avg,
-    const float* grad
+    T* param,
+    T* momentum,
+    T* square_avg,
+    T* grad_avg,
+    const T* grad
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -31,11 +34,11 @@ extern "C" __global__ void rmsprop_update(
         return;
     }
 
-    float p = param[i];
-    float g = grad[i];
-    float s_avg = square_avg[i];
-    float g_avg = grad_avg[i];
-    float m = momentum[i];
+    T p = param[i];
+    T g = grad[i];
+    T s_avg = square_avg[i];
+    T g_avg = grad_avg[i];
+    T m = momentum[i];
 
     if (cfg.weight_decay_type == L2) {
         g += cfg.weight_decay * p;
@@ -43,14 +46,14 @@ extern "C" __global__ void rmsprop_update(
 
     s_avg += (1.0 - cfg.alpha) * (g * g - s_avg);
 
-    float avg;
+    T avg;
 
     if (cfg.centered) {
         // ga = a * ga + (1 - a) * g
         g_avg += (1.0 - cfg.alpha) * (g - g_avg);
-        avg = sqrtf(s_avg - g_avg * g_avg + cfg.eps);
+        avg = sqrtg(s_avg - g_avg * g_avg + cfg.eps);
     } else {
-        avg = sqrtf(s_avg + cfg.eps);
+        avg = sqrtg(s_avg + cfg.eps);
     };
 
     g /= avg;
@@ -71,3 +74,19 @@ extern "C" __global__ void rmsprop_update(
     momentum[i] = m;
     param[i] -= g;
 }
+
+#define RMSPROP(TYPENAME, FN) \
+extern "C" __global__ void FN( \
+    const RMSpropConfig<TYPENAME> cfg, \
+    const size_t numel, \
+    TYPENAME* param, \
+    TYPENAME* momentum, \
+    TYPENAME* square_avg, \
+    TYPENAME* grad_avg, \
+    const TYPENAME* grad \
+) { \
+    rmsprop_update(cfg, numel, param, momentum, square_avg, grad_avg, grad); \
+}
+
+RMSPROP(float, rmsprop_update_f32);
+RMSPROP(double, rmsprop_update_f64);

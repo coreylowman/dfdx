@@ -74,10 +74,10 @@ pub struct SgdConfig<E> {
     pub weight_decay: Option<WeightDecay<E>>,
 }
 
-impl Default for SgdConfig<f32> {
+impl<E: Dtype> Default for SgdConfig<E> {
     fn default() -> Self {
         Self {
-            lr: 1e-2,
+            lr: E::from_f32(1e-2).unwrap(),
             momentum: None,
             weight_decay: None,
         }
@@ -100,7 +100,7 @@ impl Default for SgdConfig<f32> {
 /// # let dev: Cpu = Default::default();
 /// # type Model = Tensor<Rank0, f32, Cpu>;
 /// # let mut model: Model = dev.zeros();
-/// let mut opt: Sgd<Model> = Sgd::new(&model, SgdConfig {
+/// let mut opt = Sgd::new(&model, SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: Some(Momentum::Classic(0.5)),
 ///     weight_decay: Some(WeightDecay::L2(0.01)),
@@ -109,7 +109,7 @@ impl Default for SgdConfig<f32> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Sgd<M, E: Dtype = f32> {
+pub struct Sgd<M, E: Dtype> {
     /// Hyperparameter configuration
     pub cfg: SgdConfig<E>,
 
@@ -180,13 +180,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::{assert_close, TestDevice};
-    use crate::{shapes::*, tensor::*, tensor_ops::*};
+    use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_perfect_sgd() {
         let dev: TestDevice = Default::default();
-        let mut pred: Tensor<Rank1<5>, f32, _> = dev.zeros();
+        let mut pred: Tensor<Rank1<5>, TestDtype, _> = dev.zeros();
         let mut sgd = Sgd::new(
             &pred,
             SgdConfig {
@@ -196,7 +195,7 @@ mod tests {
             },
         );
 
-        let targ: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let targ: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         for _ in 0..5 {
             let loss = (pred.trace() - targ.clone()).abs().mean();
             let gradients = loss.backward();
@@ -209,7 +208,7 @@ mod tests {
     #[test]
     fn test_sgd_no_momentum() {
         let dev: TestDevice = Default::default();
-        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut sgd = Sgd::new(&t, Default::default());
 
         let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
@@ -232,7 +231,7 @@ mod tests {
     fn test_sgd_classic_momentum() {
         let dev: TestDevice = Default::default();
 
-        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut sgd = Sgd::new(
             &t,
             SgdConfig {
@@ -262,7 +261,7 @@ mod tests {
     fn test_sgd_nesterov_momentum() {
         let dev: TestDevice = Default::default();
 
-        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut sgd = Sgd::new(
             &t,
             SgdConfig {
@@ -293,7 +292,7 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         // With no momentum, both versions should be the same
-        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut sgd_l2 = Sgd::new(
             &t,
             SgdConfig {
@@ -336,7 +335,7 @@ mod tests {
     fn test_sgd_decoupled_weight_decay_classic_momentum() {
         let dev: TestDevice = Default::default();
 
-        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut sgd = Sgd::new(
             &t,
             SgdConfig {
@@ -367,7 +366,7 @@ mod tests {
 
         // adding l2_weight_decay should be equivalent to adding an L2 term to the loss
         let weight_decay = 1e-1;
-        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut sgd_l2 = Sgd::new(
             &t,
             SgdConfig {

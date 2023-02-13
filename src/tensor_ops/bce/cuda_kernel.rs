@@ -1,10 +1,9 @@
-use crate::tensor_ops::cuda_kernels::BinaryOpCudaKernel;
+use super::BCEKernelOp;
+use crate::tensor_ops::cuda_kernels::cuda_binary;
 
-unsafe impl cudarc::driver::AsKernelParam for super::BCEKernelOp {}
+unsafe impl cudarc::driver::AsKernelParam for BCEKernelOp {}
 
-impl BinaryOpCudaKernel for super::BCEKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/bce.ptx"));
-    const MODULE_NAME: &'static str = "bce";
-    const FWD_FN_NAME: &'static str = "bce_forward";
-    const BWD_FN_NAME: &'static str = "bce_backward";
-}
+const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/bce.ptx"));
+
+cuda_binary!(BCEKernelOp, f32, PTX, "bce_fwd_f32", "bce_bwd_f32");
+cuda_binary!(BCEKernelOp, f64, PTX, "bce_fwd_f64", "bce_bwd_f64");

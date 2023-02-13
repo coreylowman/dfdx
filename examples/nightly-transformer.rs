@@ -7,7 +7,7 @@ fn main() {
 
     let dev: Cpu = Default::default();
     type Model = Transformer<16, 4, 3, 3, 8>;
-    let t = Model::build_on_device(&dev);
+    let t = dev.build_module::<Model, f32>();
 
     let src: Tensor<Rank3<4, 12, 16>, f32, _> = dev.sample_normal();
     let tgt: Tensor<Rank3<4, 6, 16>, f32, _> = dev.sample_normal();

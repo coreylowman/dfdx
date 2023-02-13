@@ -2,7 +2,12 @@
 
 struct BinaryAddOp {};
 
-BINARY_OP(binary_add_forward, binary_add_backward, BinaryAddOp,
-        x + y,
-        1.0,
-        1.0)
+BINARY_OP(float, badd_fwd_f32, badd_bwd_f32, BinaryAddOp,
+    x + y,
+    1.0,
+    1.0)
+
+BINARY_OP(double, badd_fwd_f64, badd_bwd_f64, BinaryAddOp,
+    x + y,
+    1.0,
+    1.0)

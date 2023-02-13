@@ -11,7 +11,7 @@ pub trait VarTo: HasErr + HasShape {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let t = dev.tensor([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
+    /// let t = dev.tensor([[2.0f32, 3.0, 4.0], [3.0, 6.0, 9.0]]);
     /// let r = t.var::<Rank1<2>, _>(); // or `var::<_, Axis<1>>()`
     /// assert_eq!(r.array(), [0.6666667, 6.0]);
     /// ```
@@ -27,7 +27,7 @@ pub trait VarTo: HasErr + HasShape {
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, D: Device<f32>, T: Tape<D>> VarTo for Tensor<S, f32, D, T> {
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> VarTo for Tensor<S, E, D, T> {
     fn try_var<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
@@ -43,12 +43,12 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> VarTo for Tensor<S, f32, D, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::TestDevice;
+    use crate::tests::*;
 
     #[test]
     fn test_var_axis_0_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r = t.trace().var::<Rank1<4>, _>();
         assert_eq!(r.array(), [0.25, 0.0, 1.0, 9.0]);
         let g = r.mean().backward();
@@ -61,7 +61,7 @@ mod tests {
     #[test]
     fn test_var_axis_1_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r = t.trace().var::<Rank1<2>, _>();
         assert_eq!(r.array(), [1.25, 14.1875]);
         let g = r.mean().backward();

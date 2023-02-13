@@ -47,6 +47,7 @@ mod cuda {
         for kernel_path in kernel_paths {
             println!("cargo:rerun-if-changed={}", kernel_path.display());
             let output = std::process::Command::new("nvcc")
+                .args(["--gpu-architecture", "compute_60"])
                 .arg("--ptx")
                 .args(["--output-directory", &out_dir])
                 .args(&include_options)

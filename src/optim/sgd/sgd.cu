@@ -10,20 +10,22 @@ enum WeightDecayType {
     Decoupled
 };
 
+template<typename T>
 struct SgdConfig {
-    float lr;
+    T lr;
     MomentumType momentum_type;
-    float momentum;
+    T momentum;
     WeightDecayType weight_decay_type;
-    float weight_decay;
+    T weight_decay;
 };
 
-extern "C" __global__ void sgd_update(
-    const SgdConfig cfg,
+template<typename T>
+__device__ void sgd_update(
+    const SgdConfig<T> cfg,
     const size_t numel,
-    float* param,
-    float* velocity,
-    const float* grad
+    T* param,
+    T* velocity,
+    const T* grad
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -31,9 +33,9 @@ extern "C" __global__ void sgd_update(
         return;
     }
 
-    float p = param[i];
-    float g = grad[i];
-    float v = velocity[i];
+    T p = param[i];
+    T g = grad[i];
+    T v = velocity[i];
 
     if (cfg.weight_decay_type == L2) {
         g += cfg.weight_decay * p;
@@ -56,3 +58,17 @@ extern "C" __global__ void sgd_update(
     velocity[i] = v;
     param[i] -= g;
 }
+
+#define SGD(TYPENAME, FN) \
+extern "C" __global__ void FN( \
+    const SgdConfig<TYPENAME> cfg, \
+    const size_t numel, \
+    TYPENAME* param, \
+    TYPENAME* velocity, \
+    const TYPENAME* grad \
+) { \
+    sgd_update(cfg, numel, param, velocity, grad); \
+}
+
+SGD(float, sgd_update_f32);
+SGD(double, sgd_update_f64);

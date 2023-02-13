@@ -1,10 +1,9 @@
-use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
+use super::TanhKernelOp;
+use crate::tensor_ops::cuda_kernels::cuda_unary;
 
-unsafe impl cudarc::driver::AsKernelParam for super::TanhKernelOp {}
+unsafe impl cudarc::driver::AsKernelParam for TanhKernelOp {}
 
-impl UnaryOpCudaKernel for super::TanhKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/tanh.ptx"));
-    const MODULE_NAME: &'static str = "tanh";
-    const FWD_FN_NAME: &'static str = "tanh_forward";
-    const BWD_FN_NAME: &'static str = "tanh_backward";
-}
+const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/tanh.ptx"));
+
+cuda_unary!(TanhKernelOp, f32, PTX, "tanh_fwd_f32", "tanh_bwd_f32");
+cuda_unary!(TanhKernelOp, f64, PTX, "tanh_fwd_f64", "tanh_bwd_f64");

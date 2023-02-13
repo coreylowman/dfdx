@@ -54,19 +54,16 @@ impl<S: Shape, E: Dtype, D: BinaryKernel<BCEKernelOp, E>, LTape: Tape<D>> Tensor
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        tensor::*,
-        tests::{assert_close, TestDevice},
-    };
+    use crate::{tensor::*, tests::*};
 
     #[test]
     fn test_bce() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([
+        let a: Tensor<_, TestDtype, _> = dev.tensor([
             [-0.84240317, 0.63094819, 1.04164326],
             [1.32522500, 0.58402753, 1.91676331],
         ]);
-        let b = dev.tensor([
+        let b: Tensor<_, TestDtype, _> = dev.tensor([
             [0.52022195, 0.57880402, 0.17535722],
             [0.75429636, 0.66566986, 0.61827511],
         ]);

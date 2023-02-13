@@ -1,22 +1,29 @@
-use crate::{shapes::Shape, tensor::Cpu, tensor_ops::ops::UnaryKernel};
+use crate::{
+    shapes::{Dtype, Shape},
+    tensor::Cpu,
+};
 
+use num_traits::Float;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use rand_distr::Standard;
+use rand_distr::{Distribution, Standard};
 
-impl UnaryKernel<super::DropoutKernelOp, f32> for Cpu {
+impl<F: Float + Dtype> super::DropoutKernel<F> for Cpu
+where
+    Standard: Distribution<F>,
+{
     fn forward<S: Shape>(
         &self,
-        op: super::DropoutKernelOp,
-        inp: &Self::Storage<S, f32>,
-    ) -> Result<Self::Storage<S, f32>, Self::Err> {
+        op: super::DropoutKernelOp<F>,
+        inp: &Self::Storage<S, F>,
+    ) -> Result<Self::Storage<S, F>, Self::Err> {
         let mut rng = StdRng::seed_from_u64(op.seed);
-        let mut out: Self::Storage<S, f32> = inp.clone();
+        let mut out: Self::Storage<S, F> = inp.clone();
         for x in out.buf_iter_mut() {
-            let val: f32 = rng.sample(Standard);
+            let val: F = rng.sample(Standard);
             *x = if val < op.prob {
-                0.0
+                F::zero()
             } else {
-                *x / (1.0 - op.prob)
+                *x / (F::one() - op.prob)
             };
         }
         Ok(out)
@@ -24,20 +31,20 @@ impl UnaryKernel<super::DropoutKernelOp, f32> for Cpu {
 
     fn backward<S: Shape>(
         &self,
-        op: super::DropoutKernelOp,
-        inp: &Self::Storage<S, f32>,
-        grad_inp: &mut Self::Storage<S, f32>,
-        grad_out: &Self::Storage<S, f32>,
+        op: super::DropoutKernelOp<F>,
+        inp: &Self::Storage<S, F>,
+        grad_inp: &mut Self::Storage<S, F>,
+        grad_out: &Self::Storage<S, F>,
     ) -> Result<(), Self::Err> {
         let mut rng = StdRng::seed_from_u64(op.seed);
         debug_assert_eq!(grad_inp.data.len(), grad_out.data.len());
         debug_assert_eq!(inp.data.len(), grad_out.data.len());
         for (i, data_i) in grad_inp.buf_iter_mut().enumerate() {
-            let val: f32 = rng.sample(Standard);
+            let val: F = rng.sample(Standard);
             *data_i += if val < op.prob {
-                0.0
+                F::zero()
             } else {
-                1.0 / (1.0 - op.prob)
+                (F::one() - op.prob).recip()
             } * grad_out.data[i];
         }
         Ok(())

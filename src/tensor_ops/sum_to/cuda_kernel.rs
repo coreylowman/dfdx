@@ -1,45 +1,58 @@
-use crate::tensor_ops::internal_reshapes::permute_for_reductions;
 use crate::{
-    shapes::{Axes, BroadcastStridesTo, ReduceShapeTo, Shape},
+    shapes::*,
     tensor::cuda::{Cuda, CudaArray},
+    tensor_ops::internal_reshapes::permute_for_reductions,
 };
 
-use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig, ValidAsZeroBits};
 
 use std::sync::Arc;
 
-const MODULE_NAME: &str = "sum_to";
-const FWD_FN_NAME: &str = "sum_to_forward";
-const BWD_FN_NAME: &str = "sum_to_backward";
-const ALL_FN_NAMES: [&str; 2] = [FWD_FN_NAME, BWD_FN_NAME];
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/sum_to.ptx"));
 
-impl super::SumKernel<f32> for Cuda {
+trait HasCudaKernel<E> {
+    const MOD: &'static str;
+    const FNS: &'static [&'static str];
+}
+
+impl HasCudaKernel<f32> for Cuda {
+    const MOD: &'static str = "sum_f32";
+    const FNS: &'static [&'static str] = &["sum_to_fwd_f32", "sum_to_bwd_f32"];
+}
+
+impl HasCudaKernel<f64> for Cuda {
+    const MOD: &'static str = "sum_f64";
+    const FNS: &'static [&'static str] = &["sum_to_fwd_f64", "sum_to_bwd_f64"];
+}
+
+impl<E: Dtype + ValidAsZeroBits + AsKernelParam> super::SumKernel<E> for Cuda
+where
+    Self: HasCudaKernel<E>,
+{
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
-        inp: &Self::Storage<Src, f32>,
-    ) -> Result<Self::Storage<Dst, f32>, Self::Err>
+        inp: &Self::Storage<Src, E>,
+    ) -> Result<Self::Storage<Dst, E>, Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
-        if !self.dev.has_func(MODULE_NAME, FWD_FN_NAME) {
-            self.dev
-                .load_ptx(PTX_SRC.into(), MODULE_NAME, &ALL_FN_NAMES)?;
+        if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
+            self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
 
-        let fwd_fn = self.dev.get_func(MODULE_NAME, FWD_FN_NAME).unwrap();
+        let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
 
         let (dims, strides) = permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
         let num_dims = dims.len();
         let dims: CudaSlice<usize> = self.dev.take_async(dims)?;
         let strides: CudaSlice<usize> = self.dev.take_async(strides)?;
 
-        let mut storage = self.dev.alloc_zeros_async::<f32>(dst.num_elements())?;
+        let mut storage = self.dev.alloc_zeros_async::<E>(dst.num_elements())?;
 
         let physical_numel = inp.data.len();
         let virtual_numel = inp.shape.num_elements();
-        let elems_per_thread = (virtual_numel / physical_numel) as f32;
+        let elems_per_thread = E::from_usize(virtual_numel / physical_numel).unwrap();
 
         let chunk_len = physical_numel / dst.num_elements();
 
@@ -64,13 +77,13 @@ impl super::SumKernel<f32> for Cuda {
 
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        grad_inp: &mut Self::Storage<Src, f32>,
-        grad_out: &Self::Storage<Dst, f32>,
+        grad_inp: &mut Self::Storage<Src, E>,
+        grad_out: &Self::Storage<Dst, E>,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
-        let bwd_fn = self.dev.get_func(MODULE_NAME, BWD_FN_NAME).unwrap();
+        let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
 
         let dims: CudaSlice<usize> = self.dev.take_async(grad_inp.shape.concrete().into())?;
         let inp_strides: CudaSlice<usize> = self.dev.take_async(grad_inp.strides.into())?;
@@ -80,7 +93,7 @@ impl super::SumKernel<f32> for Cuda {
 
         let physical_numel = grad_inp.data.len();
         let virtual_numel = grad_inp.shape.num_elements();
-        let elems_per_thread = (virtual_numel / physical_numel) as f32;
+        let elems_per_thread = E::from_usize(virtual_numel / physical_numel).unwrap();
 
         let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
         let params = (

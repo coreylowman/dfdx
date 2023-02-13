@@ -10,15 +10,24 @@ __device__ __forceinline__ float atomicMaxf(float * addr, float value) {
     }
 }
 
+__device__ __forceinline__ double atomicMaxf(double * addr, double value) {
+    if (signbit(value)) {
+        return __longlong_as_double(atomicMin((unsigned long long int *)addr, __double_as_longlong(value)));
+    } else {
+        return __longlong_as_double(atomicMax((long long int *)addr, __double_as_longlong(value)));
+    }
+}
+
 // Efficiently computes the max of each chunk in "data" of size chunk_len, and
 // stores the maximums in out[i / chunk_len]
+template<typename T>
 __device__ void chunk_max(
     const size_t numel,
     const size_t chunk_len,
-    const float data,
-    float* out
+    const T data,
+    T* out
 ) {
-    __shared__ float buf[1024];
+    __shared__ T buf[1024];
     // assumes that threads where i >= numel have already exited
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int block_i = threadIdx.x;
@@ -43,7 +52,7 @@ __device__ void chunk_max(
         if (block_i_2 < chunk_end && chunk_i < incr) {
             // This is sound because __syncthreads and the conditions above
             // ensure that no data races occur
-            buf[block_i] = fmaxf(buf[block_i], buf[block_i_2]);
+            buf[block_i] = maxg(buf[block_i], buf[block_i_2]);
         }
 
         __syncthreads();
@@ -56,14 +65,15 @@ __device__ void chunk_max(
 
 // strides and dims specify how to index inp to put all summed elements next to
 // each other, and chunk_len is len(inp) / len(out)
-extern "C" __global__ void max_to_forward(
+template<typename T>
+__device__ void max_to_fwd(
     const size_t numel,
     const size_t num_dims,
     const size_t chunk_len,
-    const float *inp,
+    const T *inp,
     const size_t *dims,
     const size_t *strides,
-    float *out
+    T *out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -77,16 +87,17 @@ extern "C" __global__ void max_to_forward(
 
 // Accepts pre-broadcasted strides for both input & output.
 // So both inp & out are expected to be broadcasted to the same size.
-extern "C" __global__ void max_to_backward(
+template<typename T>
+__device__ void max_to_bwd(
     const size_t numel,
     const size_t num_dims,
-    const float elems_per_thread,
+    const T elems_per_thread,
     const size_t *dims,
-    const float *inp,
-    float *grad_inp,
+    const T *inp,
+    T *grad_inp,
     const size_t *inp_strides,
-    const float *out,
-    const float *grad_out,
+    const T *out,
+    const T *grad_out,
     const size_t *out_strides
 ) {
     unsigned int inp_i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -101,3 +112,33 @@ extern "C" __global__ void max_to_backward(
     auto tmp = inp[inp_i] == out[out_i] ? grad_out[out_i] : 0.0;
     grad_inp[inp_i] += tmp * elems_per_thread;
 }
+
+#define MAX(TYPENAME, FWD, BWD) \
+extern "C" __global__ void FWD( \
+    const size_t numel, \
+    const size_t num_dims, \
+    const size_t chunk_len, \
+    const TYPENAME *inp, \
+    const size_t *dims, \
+    const size_t *strides, \
+    TYPENAME *out \
+) { \
+    max_to_fwd(numel, num_dims, chunk_len, inp, dims, strides, out); \
+} \
+extern "C" __global__ void BWD( \
+    const size_t numel, \
+    const size_t num_dims, \
+    const TYPENAME elems_per_thread, \
+    const size_t *dims, \
+    const TYPENAME *inp, \
+    TYPENAME *grad_inp, \
+    const size_t *inp_strides, \
+    const TYPENAME *out, \
+    const TYPENAME *grad_out, \
+    const size_t *out_strides \
+) { \
+    max_to_bwd(numel, num_dims, elems_per_thread, dims, inp, grad_inp, inp_strides, out, grad_out, out_strides); \
+}
+
+MAX(float, max_to_fwd_f32, max_to_bwd_f32);
+MAX(double, max_to_fwd_f64, max_to_bwd_f64);

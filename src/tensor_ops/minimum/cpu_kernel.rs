@@ -1,29 +1,31 @@
 use crate::tensor_ops::cpu_kernels::BinaryDerivative;
 
-impl BinaryDerivative<f32> for super::MinimumKernelOp {
+use num_traits::Float;
+
+impl<F: Float> BinaryDerivative<F> for super::MinimumKernelOp {
     #[inline(always)]
-    fn f(&self, x: &f32, y: &f32) -> f32 {
-        x.min(*y)
+    fn f(&self, x: &F, &y: &F) -> F {
+        x.min(y)
     }
     #[inline(always)]
-    fn dfdx(&self, x: &f32, y: &f32) -> f32 {
+    fn dfdx(&self, x: &F, y: &F) -> F {
         if x < y {
-            1.0
+            F::one()
         } else if x > y {
-            0.0
+            F::zero()
         } else {
-            0.5
+            F::from(0.5).unwrap()
         }
     }
 
     #[inline(always)]
-    fn dfdy(&self, x: &f32, y: &f32) -> f32 {
+    fn dfdy(&self, x: &F, y: &F) -> F {
         if y < x {
-            1.0
+            F::one()
         } else if y > x {
-            0.0
+            F::zero()
         } else {
-            0.5
+            F::from(0.5).unwrap()
         }
     }
 }

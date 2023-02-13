@@ -1,12 +1,13 @@
 use crate::tensor_ops::cpu_kernels::UnaryDerivative;
+use num_traits::Float;
 
-impl UnaryDerivative<f32> for super::LnKernelOp {
+impl<F: Float> UnaryDerivative<F> for super::LnKernelOp {
     #[inline(always)]
-    fn f(&self, x: &f32) -> f32 {
+    fn f(&self, x: &F) -> F {
         x.ln()
     }
     #[inline(always)]
-    fn df(&self, x: &f32) -> f32 {
-        1.0 / x
+    fn df(&self, x: &F) -> F {
+        x.recip()
     }
 }

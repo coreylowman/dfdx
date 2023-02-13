@@ -2,7 +2,7 @@ use super::*;
 use crate::{gradients::Tape, shapes::*, tensor::*};
 
 /// Reduction along multiple axes using standard deviation.
-pub trait StddevTo: HasErr + HasShape {
+pub trait StddevTo<E: Dtype>: HasErr + HasShape {
     /// Standard deviation reduction.
     ///
     /// **Pytorch equivalent**: `t.std(Axes, unbiased=False)`
@@ -15,7 +15,7 @@ pub trait StddevTo: HasErr + HasShape {
     /// let r = t.stddev::<Rank1<2>, _>(0.0); // or `stddev::<_, Axis<1>>(0.0)`
     /// assert_eq!(r.array(), [0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
     /// ```
-    fn stddev<Dst: Shape, Ax: Axes>(self, epsilon: f32) -> Self::WithShape<Dst>
+    fn stddev<Dst: Shape, Ax: Axes>(self, epsilon: E) -> Self::WithShape<Dst>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {
@@ -24,17 +24,14 @@ pub trait StddevTo: HasErr + HasShape {
     /// Fallible version of [StddevTo::stddev]
     fn try_stddev<Dst: Shape, Ax: Axes>(
         self,
-        epsilon: f32,
+        epsilon: E,
     ) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, D: Device<f32>, T: Tape<D>> StddevTo for Tensor<S, f32, D, T> {
-    fn try_stddev<Dst: Shape, Ax: Axes>(
-        self,
-        epsilon: f32,
-    ) -> Result<Self::WithShape<Dst>, Self::Err>
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> StddevTo<E> for Tensor<S, E, D, T> {
+    fn try_stddev<Dst: Shape, Ax: Axes>(self, epsilon: E) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {
@@ -45,34 +42,34 @@ impl<S: Shape, D: Device<f32>, T: Tape<D>> StddevTo for Tensor<S, f32, D, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::TestDevice;
+    use crate::tests::*;
 
     #[test]
     fn test_std_axis_0_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r = t.trace().stddev::<Rank1<4>, _>(1e-8);
-        assert_eq!(r.array(), [0.5, 0.0001, 1.0, 3.0]);
+        assert_close(&r.array(), &[0.5, 0.0001, 1.0, 3.0]);
         let g = r.mean().backward();
-        assert_eq!(
-            g.get(&t).array(),
-            [[0.125, 0.0, -0.125, -0.125], [-0.125, 0.0, 0.125, 0.125]]
+        assert_close(
+            &g.get(&t).array(),
+            &[[0.125, 0.0, -0.125, -0.125], [-0.125, 0.0, 0.125, 0.125]],
         );
     }
 
     #[test]
     fn test_std_axis_1_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r = t.trace().stddev::<Rank1<2>, _>(0.0);
-        assert_eq!(r.array(), [1.118034, 3.7666297]);
+        assert_close(&r.array(), &[1.118034, 3.7666297]);
         let g = r.mean().backward();
-        assert_eq!(
-            g.get(&t).array(),
-            [
+        assert_close(
+            &g.get(&t).array(),
+            &[
                 [-0.16770509, -0.0559017, 0.0559017, 0.16770509],
-                [-0.14104122, -0.07466887, 0.024889633, 0.19082046]
-            ]
+                [-0.14104122, -0.07466887, 0.024889633, 0.19082046],
+            ],
         );
     }
 }

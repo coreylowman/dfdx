@@ -1,10 +1,9 @@
-use crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel;
+use super::AbsKernelOp;
+use crate::tensor_ops::cuda_kernels::cuda_unary;
 
-unsafe impl cudarc::driver::AsKernelParam for super::AbsKernelOp {}
+unsafe impl cudarc::driver::AsKernelParam for AbsKernelOp {}
 
-impl UnaryOpCudaKernel for super::AbsKernelOp {
-    const PTX_SRC: &'static str = include_str!(concat!(env!("OUT_DIR"), "/abs.ptx"));
-    const MODULE_NAME: &'static str = "abs";
-    const FWD_FN_NAME: &'static str = "abs_forward";
-    const BWD_FN_NAME: &'static str = "abs_backward";
-}
+const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/abs.ptx"));
+
+cuda_unary!(AbsKernelOp, f32, PTX, "abs_fwd_f32", "abs_bwd_f32");
+cuda_unary!(AbsKernelOp, f64, PTX, "abs_fwd_f64", "abs_bwd_f64");

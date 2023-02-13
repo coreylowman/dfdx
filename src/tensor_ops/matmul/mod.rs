@@ -307,33 +307,33 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         {
-            let a: Tensor<Rank1<3>, f32, _> = dev.zeros();
-            let b: Tensor<Rank2<3, 2>, f32, _> = dev.zeros();
-            let _: Tensor<Rank1<2>, f32, _> = a.matmul(b);
+            let a: Tensor<Rank1<3>, TestDtype, _> = dev.zeros();
+            let b: Tensor<Rank2<3, 2>, TestDtype, _> = dev.zeros();
+            let _: Tensor<Rank1<2>, TestDtype, _> = a.matmul(b);
         }
 
         {
-            let a: Tensor<Rank2<5, 3>, f32, _> = dev.zeros();
-            let b: Tensor<Rank2<3, 2>, f32, _> = dev.zeros();
-            let _: Tensor<Rank2<5, 2>, f32, _> = a.matmul(b);
+            let a: Tensor<Rank2<5, 3>, TestDtype, _> = dev.zeros();
+            let b: Tensor<Rank2<3, 2>, TestDtype, _> = dev.zeros();
+            let _: Tensor<Rank2<5, 2>, TestDtype, _> = a.matmul(b);
         }
 
         {
-            let a: Tensor<Rank3<10, 5, 3>, f32, _> = dev.zeros();
-            let b: Tensor<Rank2<3, 2>, f32, _> = dev.zeros();
-            let _: Tensor<Rank3<10, 5, 2>, f32, _> = a.matmul(b);
+            let a: Tensor<Rank3<10, 5, 3>, TestDtype, _> = dev.zeros();
+            let b: Tensor<Rank2<3, 2>, TestDtype, _> = dev.zeros();
+            let _: Tensor<Rank3<10, 5, 2>, TestDtype, _> = a.matmul(b);
         }
 
         {
-            let a: Tensor<Rank3<10, 5, 3>, f32, _> = dev.zeros();
-            let b: Tensor<Rank3<10, 3, 2>, f32, _> = dev.zeros();
-            let _: Tensor<Rank3<10, 5, 2>, f32, _> = a.matmul(b);
+            let a: Tensor<Rank3<10, 5, 3>, TestDtype, _> = dev.zeros();
+            let b: Tensor<Rank3<10, 3, 2>, TestDtype, _> = dev.zeros();
+            let _: Tensor<Rank3<10, 5, 2>, TestDtype, _> = a.matmul(b);
         }
 
         {
-            let a: Tensor<Rank4<10, 20, 5, 3>, f32, _> = dev.zeros();
-            let b: Tensor<Rank4<10, 20, 3, 2>, f32, _> = dev.zeros();
-            let _: Tensor<Rank4<10, 20, 5, 2>, f32, _> = a.matmul(b);
+            let a: Tensor<Rank4<10, 20, 5, 3>, TestDtype, _> = dev.zeros();
+            let b: Tensor<Rank4<10, 20, 3, 2>, TestDtype, _> = dev.zeros();
+            let _: Tensor<Rank4<10, 20, 5, 2>, TestDtype, _> = a.matmul(b);
         }
     }
 
@@ -341,13 +341,14 @@ mod tests {
     fn test_matmul_normal() {
         let dev: TestDevice = Default::default();
 
-        let a = dev.tensor([
+        let a: Tensor<_, TestDtype, _> = dev.tensor([
             [0.5086, 0.5234, 0.2684],
             [0.8075, 0.8437, 0.9951],
             [0.0774, 0.7539, 0.8894],
             [0.8119, 0.2693, 0.7249],
         ]);
-        let b = dev.tensor([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
+        let b: Tensor<_, TestDtype, _> =
+            dev.tensor([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
         let r = a.trace().matmul(b.clone());
         assert_close(
             &r.array(),
@@ -381,8 +382,8 @@ mod tests {
     #[test]
     fn test_matmul_transpose() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<Rank2<4, 3>, f32, _> = dev.sample_normal();
-        let b: Tensor<Rank2<3, 2>, f32, _> = dev.sample_normal();
+        let a: Tensor<Rank2<4, 3>, TestDtype, _> = dev.sample_normal();
+        let b: Tensor<Rank2<3, 2>, TestDtype, _> = dev.sample_normal();
 
         let c = a.trace().matmul(b.clone());
         let g1 = c.exp().mean().backward();
@@ -398,9 +399,9 @@ mod tests {
     fn test_matmul_broadcast() {
         const N: usize = 5;
         let dev: TestDevice = Default::default();
-        let a: Tensor<Rank3<N, 4, 3>, f32, _> = dev.sample_normal();
+        let a: Tensor<Rank3<N, 4, 3>, TestDtype, _> = dev.sample_normal();
         let a_array = a.array();
-        let b: Tensor<Rank2<3, 2>, f32, _> = dev.sample_normal();
+        let b: Tensor<Rank2<3, 2>, TestDtype, _> = dev.sample_normal();
         let r = a.trace().matmul(b.clone());
         let r_array = r.array();
         for i in 0..N {
@@ -429,8 +430,8 @@ mod tests {
     fn test_matmul_broadcast_actual() {
         const N: usize = 5;
         let dev: TestDevice = Default::default();
-        let a = dev.sample_normal::<Rank3<N, 4, 3>>();
-        let b = dev.sample_normal::<Rank2<3, 2>>();
+        let a: Tensor<Rank3<N, 4, 3>, TestDtype, _> = dev.sample_normal();
+        let b: Tensor<Rank2<3, 2>, TestDtype, _> = dev.sample_normal();
         let b_up = dev.tensor([b.array(); N]);
         let r1 = a.trace().matmul(b_up.clone());
         let r2 = a.trace().matmul(b.clone());
@@ -450,9 +451,9 @@ mod tests {
     fn test_matmul_batched_3d() {
         let dev: TestDevice = Default::default();
 
-        let a: Tensor<Rank3<5, 3, 2>, f32, _> = dev.sample_normal();
+        let a: Tensor<Rank3<5, 3, 2>, TestDtype, _> = dev.sample_normal();
         let a_array = a.array();
-        let b: Tensor<Rank3<5, 2, 4>, f32, _> = dev.sample_normal();
+        let b: Tensor<Rank3<5, 2, 4>, TestDtype, _> = dev.sample_normal();
         let b_array = b.array();
         let c = a.trace().matmul(b.clone());
         let c_array = c.array();
@@ -465,9 +466,9 @@ mod tests {
             let sub_a = dev.tensor(a_array[i]);
             let sub_b = dev.tensor(b_array[i]);
             let sub_c = sub_a.trace().matmul(sub_b.clone());
-            assert_eq!(sub_c.array(), c_array[i]);
+            assert_close(&sub_c.array(), &c_array[i]);
             let sub_g = sub_c.exp().sum().backward();
-            assert_eq!(sub_g.get(&sub_a).array(), g_a[i]);
+            assert_close(&sub_g.get(&sub_a).array(), &g_a[i]);
             sub_g.get(&sub_b).array().assert_close(&g_b[i], 1e-5);
         }
     }
@@ -476,9 +477,9 @@ mod tests {
     fn test_matmul_batched_4d() {
         let dev: TestDevice = Default::default();
 
-        let a: Tensor<Rank4<7, 5, 3, 2>, f32, _> = dev.sample_normal();
+        let a: Tensor<Rank4<7, 5, 3, 2>, TestDtype, _> = dev.sample_normal();
         let a_array = a.array();
-        let b: Tensor<Rank4<7, 5, 2, 4>, f32, _> = dev.sample_normal();
+        let b: Tensor<Rank4<7, 5, 2, 4>, TestDtype, _> = dev.sample_normal();
         let b_array = b.array();
         let c = a.trace().matmul(b.clone());
         let c_array = c.array();
@@ -492,9 +493,9 @@ mod tests {
                 let sub_a = dev.tensor(a_array[i][j]);
                 let sub_b = dev.tensor(b_array[i][j]);
                 let sub_c = sub_a.trace().matmul(sub_b.clone());
-                assert_eq!(sub_c.array(), c_array[i][j]);
+                assert_close(&sub_c.array(), &c_array[i][j]);
                 let sub_g = sub_c.exp().sum().backward();
-                assert_eq!(sub_g.get(&sub_a).array(), g_a[i][j]);
+                assert_close(&sub_g.get(&sub_a).array(), &g_a[i][j]);
                 sub_g.get(&sub_b).array().assert_close(&g_b[i][j], 1e-5);
             }
         }
@@ -504,8 +505,9 @@ mod tests {
     fn test_matmul_vec_normal() {
         let dev: TestDevice = Default::default();
 
-        let a = dev.tensor([0.7296, 0.3974, 0.9487]);
-        let b = dev.tensor([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([0.7296, 0.3974, 0.9487]);
+        let b: Tensor<_, TestDtype, _> =
+            dev.tensor([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
         let r = a.trace().matmul(b.clone());
         assert_close(&r.array(), &[1.261436, 1.5543157]);
         let g = r.exp().mean().backward();
@@ -523,8 +525,9 @@ mod tests {
     #[test]
     fn test_matmul_vec_transpose() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([0.7296, 0.3974, 0.9487]);
-        let b = dev.tensor([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([0.7296, 0.3974, 0.9487]);
+        let b: Tensor<_, TestDtype, _> =
+            dev.tensor([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
         let r = a.trace().matmul(b.trace().permute());
         assert_close(&r.array(), &[1.261436, 1.5543157]);
         let g = r.exp().mean().backward();
@@ -541,8 +544,9 @@ mod tests {
     #[test]
     fn test_vecvec() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([-1.5333828, 0.6136148, -0.77502704, -1.0014728, -2.0131118]);
-        let b = dev.tensor([0.43068963, -0.9757187, -0.50650096]);
+        let a: Tensor<_, TestDtype, _> =
+            dev.tensor([-1.5333828, 0.6136148, -0.77502704, -1.0014728, -2.0131118]);
+        let b: Tensor<_, TestDtype, _> = dev.tensor([0.43068963, -0.9757187, -0.50650096]);
         let c = a.trace().matmul(b.clone());
         let c_t = b.trace().matmul(a.clone()).permute();
         assert_eq!(c.array(), c_t.array());
@@ -574,13 +578,13 @@ mod tests {
     #[test]
     fn test_small_matmul_vv() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([0.5f32]);
-        let b = dev.tensor([2.0f32]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
+        let b: Tensor<_, TestDtype, _> = dev.tensor([2.0]);
         let c = a.trace().matmul(b.clone());
         assert_eq!(c.array(), [[1.0]]);
         let g = c.exp().sum().backward();
-        assert_eq!(g.get(&a).array(), [5.4365635]);
-        assert_eq!(g.get(&b).array(), [1.3591409]);
+        assert_close(&g.get(&a).array(), &[5.4365635]);
+        assert_close(&g.get(&b).array(), &[1.3591409]);
     }
 
     #[test]
@@ -588,38 +592,39 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         // 1 * 1x1
-        let a = dev.tensor([0.5f32]);
-        let b = dev.tensor([[2.0f32]]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
+        let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0]]);
         let c = a.trace().matmul(b.clone());
         assert_eq!(c.array(), [1.0]);
         let g = c.exp().sum().backward();
-        assert_eq!(g.get(&a).array(), [5.4365635]);
-        assert_eq!(g.get(&b).array(), [[1.3591409]]);
+        assert_close(&g.get(&a).array(), &[5.4365635]);
+        assert_close(&g.get(&b).array(), &[[1.3591409]]);
 
         // 1 * 1x1 (permuted)
         let c = a.trace().matmul(b.trace().permute());
         assert_eq!(c.array(), [1.0]);
         let g = c.exp().sum().backward();
-        assert_eq!(g.get(&a).array(), [5.4365635]);
-        assert_eq!(g.get(&b).array(), [[1.3591409]]);
+        assert_close(&g.get(&a).array(), &[5.4365635]);
+        assert_close(&g.get(&b).array(), &[[1.3591409]]);
 
         // 1 * 1x2
-        let a = dev.tensor([0.5f32]);
-        let b = dev.tensor([[2.0f32, 4.0]]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
+        let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0, 4.0]]);
         let c = a.trace().matmul(b.clone());
-        assert_eq!(c.array(), [1.0, 2.0]);
+        let e = [1.0, 2.0];
+        assert_eq!(c.array(), e);
         let g = c.exp().sum().backward();
-        assert_eq!(g.get(&a).array(), [34.99279]);
-        assert_eq!(g.get(&b).array(), [[1.3591409, 3.694528]]);
+        assert_close(&g.get(&a).array(), &[e[0].exp() * 2.0 + e[1].exp() * 4.0]);
+        assert_close(&g.get(&b).array(), &[[1.3591409, 3.694528]]);
 
         // 1 * 1x2 (permuted)
-        let a = dev.tensor([0.5f32]);
-        let b = dev.tensor([[2.0f32], [4.0]]);
+        let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
+        let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0], [4.0]]);
         let c = a.trace().matmul(b.trace().permute());
-        assert_eq!(c.array(), [1.0, 2.0]);
+        assert_eq!(c.array(), e);
         let g = c.exp().sum().backward();
-        assert_eq!(g.get(&a).array(), [34.99279]);
-        assert_eq!(g.get(&b).array(), [[1.3591409], [3.694528]]);
+        assert_close(&g.get(&a).array(), &[e[0].exp() * 2.0 + e[1].exp() * 4.0]);
+        assert_close(&g.get(&b).array(), &[[1.3591409], [3.694528]]);
     }
 
     #[test]
@@ -628,19 +633,19 @@ mod tests {
 
         {
             // 1x1 * 1x1
-            let a = dev.tensor([[0.5f32]]);
-            let b = dev.tensor([[2.0f32]]);
+            let a: Tensor<_, TestDtype, _> = dev.tensor([[0.5]]);
+            let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0]]);
             let c = a.trace().matmul(b.clone());
             assert_eq!(c.array(), [[1.0]]);
             let g = c.exp().sum().backward();
-            assert_eq!(g.get(&a).array(), [[5.4365635]]);
-            assert_eq!(g.get(&b).array(), [[1.3591409]]);
+            assert_close(&g.get(&a).array(), &[[5.4365635]]);
+            assert_close(&g.get(&b).array(), &[[1.3591409]]);
         }
 
         {
             // 1x2 * 2x1
-            let a = dev.tensor([[0.5f32, 0.1]]);
-            let b = dev.tensor([[2.0f32], [4.0]]);
+            let a: Tensor<_, TestDtype, _> = dev.tensor([[0.5, 0.1]]);
+            let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0], [4.0]]);
             let c = a.trace().matmul(b.clone());
             assert_eq!(c.array(), [[1.4]]);
             let g = c.exp().sum().backward();
@@ -652,8 +657,8 @@ mod tests {
 
         {
             // 1x2 (permuted) * 2x1
-            let a = dev.tensor([[0.5f32], [0.1]]);
-            let b = dev.tensor([[2.0f32], [4.0]]);
+            let a: Tensor<_, TestDtype, _> = dev.tensor([[0.5], [0.1]]);
+            let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0], [4.0]]);
             let c = a.trace().permute().matmul(b.clone());
             assert_eq!(c.array(), [[1.4]]);
             let g = c.exp().sum().backward();
@@ -665,8 +670,8 @@ mod tests {
 
         {
             // 1x2 * 2x1 (permuted)
-            let a = dev.tensor([[0.5f32, 0.1]]);
-            let b = dev.tensor([[2.0f32, 4.0]]);
+            let a: Tensor<_, TestDtype, _> = dev.tensor([[0.5, 0.1]]);
+            let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0, 4.0]]);
             let c = a.trace().matmul(b.trace().permute());
             assert_eq!(c.array(), [[1.4]]);
             let g = c.exp().sum().backward();

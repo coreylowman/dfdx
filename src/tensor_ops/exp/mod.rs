@@ -45,11 +45,11 @@ mod tests {
     #[test]
     fn test_exp() {
         let dev: TestDevice = Default::default();
-        let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.trace().exp();
         assert_close(
             &r.array(),
-            &[0.13533528, 0.36787945, 1.0, std::f32::consts::E, 7.389056],
+            &[0.13533528, 0.36787945, 1.0, TestDtype::exp(1.0), 7.389056],
         );
         let g = r.mean().backward();
         assert_close(

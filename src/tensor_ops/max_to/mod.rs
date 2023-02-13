@@ -84,40 +84,25 @@ impl<S: Shape, E: Dtype, D: MaxReduceKernel<E>, T: Tape<D>> MaxTo for Tensor<S, 
 mod tests {
     use super::*;
     use crate::tensor_ops::*;
-    use crate::tests::{assert_close, TestDevice};
-
-    #[test]
-    fn test_max_valid_axes() {
-        let dev: TestDevice = Default::default();
-        let _ = dev.zeros::<Rank1<5>>().max::<Rank0, _>();
-        let _ = dev.zeros::<Rank2<5, 3>>().max::<Rank1<3>, _>();
-        let _ = dev.zeros::<Rank2<5, 3>>().max::<Rank1<5>, _>();
-        let _ = dev.zeros::<Rank3<7, 5, 3>>().max::<Rank2<5, 3>, _>();
-        let _ = dev.zeros::<Rank3<7, 5, 3>>().max::<Rank2<7, 3>, _>();
-        let _ = dev.zeros::<Rank3<7, 5, 3>>().max::<Rank2<7, 5>, _>();
-        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().max::<Rank3<7, 5, 3>, _>();
-        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().max::<Rank3<9, 5, 3>, _>();
-        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().max::<Rank3<9, 7, 3>, _>();
-        let _ = dev.zeros::<Rank4<9, 7, 5, 3>>().max::<Rank3<9, 7, 5>, _>();
-    }
+    use crate::tests::*;
 
     #[test]
     fn test_max_axis_0_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
         let r = t.trace().max::<_, Axis<0>>();
         assert_eq!(r.array(), [3.0, 2.0, 2.0]);
         let g = r.exp().mean().backward();
-        assert_eq!(
-            g.get(&t).array(),
-            [[0.0, 2.463019, 2.463019], [6.695179, 0.0, 2.463019]]
+        assert_close(
+            &g.get(&t).array(),
+            &[[0.0, 2.463019, 2.463019], [6.695179, 0.0, 2.463019]],
         );
     }
 
     #[test]
     fn test_max_axis_1_2d() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
         let r = t.trace().max::<_, Axis<1>>();
         assert_eq!(r.array(), [2.0, 3.0]);
         let g = r.sum().backward();
@@ -127,7 +112,7 @@ mod tests {
     #[test]
     fn test_max_axes_3d_to_1d() {
         let dev: TestDevice = Default::default();
-        let t = dev.sample_normal::<Rank3<2, 3, 4>>();
+        let t: Tensor<_, TestDtype, _> = dev.sample_normal::<Rank3<2, 3, 4>>();
         let r = t.trace().max::<Rank1<4>, _>();
         let r2 = t.trace().max::<_, Axis<0>>().max::<_, Axis<0>>();
         assert_close(&r.array(), &r2.array());
@@ -139,7 +124,8 @@ mod tests {
     #[test]
     fn test_max_negative_zero() {
         let dev: TestDevice = Default::default();
-        let t = dev.tensor([[-0.0, 0.0], [0.0, -0.0], [-1.0, -0.0], [-1.0, 0.0]]);
+        let t: Tensor<_, TestDtype, _> =
+            dev.tensor([[-0.0, 0.0], [0.0, -0.0], [-1.0, -0.0], [-1.0, 0.0]]);
         let r = t.trace().max::<_, Axis<1>>();
         assert_eq!(r.array(), [0.0, 0.0, -0.0, 0.0]);
         let g = r.sum().backward();

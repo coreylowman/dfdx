@@ -3,7 +3,7 @@
 
 use dfdx::{
     nn::builders::{Linear, SplitInto},
-    nn::{BuildOnDevice, Module},
+    nn::{DeviceBuildExt, Module},
     shapes::Rank1,
     tensor::{Cpu, Tensor, TensorFrom},
 };
@@ -15,7 +15,7 @@ fn main() {
     // tuple must accept the same type of input.
     // Note that here, both of the linears have the same size input (1)
     type Model = SplitInto<(Linear<1, 3>, Linear<1, 5>)>;
-    let m = Model::build_on_device(&dev);
+    let m = dev.build_module::<Model, f32>();
 
     // when we forward data through, we get a tuple back!
     let _: (Tensor<Rank1<3>, f32, _>, Tensor<Rank1<5>, f32, _>) = m.forward(dev.tensor([1.0]));

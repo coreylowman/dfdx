@@ -30,19 +30,19 @@
 //! );
 //! ```
 //!
-//! 3. Instantiate models with [crate::nn::BuildOnDevice]
+//! 3. Instantiate models with [crate::nn::DeviceBuildExt]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();
 //! type Model = (Linear<5, 2>, ReLU);
-//! let mlp = Model::build_on_device(&dev);
+//! let mlp = dev.build_module::<Model, f32>();
 //! ```
 //!
 //! 4. Pass data through networks with [crate::nn::Module]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! # let mlp = <Linear<5, 2>>::build_on_device(&dev);
+//! # let mlp = dev.build_module::<Linear<5, 2>, f32>();
 //! let x: Tensor<Rank1<5>, f32, _> = dev.zeros();
 //! let y = mlp.forward(x); // compiler infers that `y` must be `Tensor<Rank1<2>>`
 //! ```
@@ -51,7 +51,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! # let model = <Linear<10, 5>>::build_on_device(&dev);
+//! # let model = dev.build_module::<Linear<10, 5>, f32>();
 //! # let y_true: Tensor<Rank1<5>, f32, _> = dev.sample_normal().softmax();
 //! // tensors default to not having a tape
 //! let x: Tensor<Rank1<10>, f32, Cpu, NoneTape> = dev.zeros();
@@ -68,7 +68,7 @@
 //! ```rust
 //! # use dfdx::{prelude::*, gradients::Gradients};
 //! # let dev: Cpu = Default::default();
-//! # let model = <Linear<10, 5>>::build_on_device(&dev);
+//! # let model = dev.build_module::<Linear<10, 5>, f32>();
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
 //! # let y = model.forward(dev.zeros::<Rank1<10>>().trace());
 //! // compute cross entropy loss
@@ -81,7 +81,7 @@
 //! ```rust
 //! # use dfdx::{prelude::*, gradients::Gradients, optim::*};
 //! # let dev: Cpu = Default::default();
-//! # let mut model = <Linear<10, 5>>::build_on_device(&dev);
+//! # let mut model = dev.build_module::<Linear<10, 5>, f32>();
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
 //! # let y = model.forward(dev.zeros::<Rank1<10>>().trace());
 //! # let loss = cross_entropy_with_logits_loss(y, y_true);
@@ -166,7 +166,6 @@ pub fn keep_denormals() {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    const TOLERANCE: f32 = 1e-6;
 
     #[cfg(not(feature = "test-cuda"))]
     pub type TestDevice = crate::tensor::Cpu;
@@ -174,9 +173,21 @@ pub(crate) mod tests {
     #[cfg(feature = "test-cuda")]
     pub type TestDevice = crate::tensor::Cuda;
 
+    #[cfg(not(feature = "test-f64"))]
+    pub type TestDtype = f32;
+
+    #[cfg(feature = "test-f64")]
+    pub type TestDtype = f64;
+
     pub trait AssertClose {
-        fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)>;
-        fn assert_close(&self, rhs: &Self, tolerance: f32)
+        type Elem: std::fmt::Display + std::fmt::Debug + Copy;
+        const DEFAULT_TOLERANCE: Self::Elem;
+        fn get_far_pair(
+            &self,
+            rhs: &Self,
+            tolerance: Self::Elem,
+        ) -> Option<(Self::Elem, Self::Elem)>;
+        fn assert_close(&self, rhs: &Self, tolerance: Self::Elem)
         where
             Self: std::fmt::Debug,
         {
@@ -187,6 +198,8 @@ pub(crate) mod tests {
     }
 
     impl AssertClose for f32 {
+        type Elem = f32;
+        const DEFAULT_TOLERANCE: Self::Elem = 1e-6;
         fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)> {
             if (self - rhs).abs() > tolerance {
                 Some((*self, *rhs))
@@ -196,8 +209,26 @@ pub(crate) mod tests {
         }
     }
 
+    impl AssertClose for f64 {
+        type Elem = f64;
+        const DEFAULT_TOLERANCE: Self::Elem = 1e-6;
+        fn get_far_pair(&self, rhs: &Self, tolerance: f64) -> Option<(f64, f64)> {
+            if (self - rhs).abs() > tolerance {
+                Some((*self, *rhs))
+            } else {
+                None
+            }
+        }
+    }
+
     impl<T: AssertClose, const M: usize> AssertClose for [T; M] {
-        fn get_far_pair(&self, rhs: &Self, tolerance: f32) -> Option<(f32, f32)> {
+        type Elem = T::Elem;
+        const DEFAULT_TOLERANCE: Self::Elem = T::DEFAULT_TOLERANCE;
+        fn get_far_pair(
+            &self,
+            rhs: &Self,
+            tolerance: Self::Elem,
+        ) -> Option<(Self::Elem, Self::Elem)> {
             for (l, r) in self.iter().zip(rhs.iter()) {
                 if let Some(pair) = l.get_far_pair(r, tolerance) {
                     return Some(pair);
@@ -208,13 +239,13 @@ pub(crate) mod tests {
     }
 
     pub fn assert_close<T: AssertClose + std::fmt::Debug>(a: &T, b: &T) {
-        a.assert_close(b, TOLERANCE);
+        a.assert_close(b, T::DEFAULT_TOLERANCE);
     }
 
     pub fn assert_close_with_tolerance<T: AssertClose + std::fmt::Debug>(
         a: &T,
         b: &T,
-        tolerance: f32,
+        tolerance: T::Elem,
     ) {
         a.assert_close(b, tolerance);
     }

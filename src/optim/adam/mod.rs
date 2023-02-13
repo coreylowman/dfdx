@@ -40,12 +40,12 @@ pub struct AdamConfig<E> {
     pub weight_decay: Option<WeightDecay<E>>,
 }
 
-impl Default for AdamConfig<f32> {
+impl<E: Dtype> Default for AdamConfig<E> {
     fn default() -> Self {
         Self {
-            lr: 1e-3,
-            betas: [0.9, 0.999],
-            eps: 1e-8,
+            lr: E::from_f32(1e-3).unwrap(),
+            betas: [E::from_f32(0.9).unwrap(), E::from_f32(0.999).unwrap()],
+            eps: E::from_f32(1e-8).unwrap(),
             weight_decay: None,
         }
     }
@@ -150,13 +150,12 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::{assert_close, TestDevice};
-    use crate::{shapes::*, tensor::*, tensor_ops::*};
+    use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_default_adam_params() {
         let dev: TestDevice = Default::default();
-        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut opt = Adam::new(&t, Default::default());
         let rate = dev.tensor([1e-6, 1e-5, 1e-4, 1e-3, 1e-2]);
         let expected = [
@@ -182,7 +181,7 @@ mod tests {
     #[test]
     fn test_custom_adam_one_params() {
         let dev: TestDevice = Default::default();
-        let mut t: Tensor<Rank1<5>, f32, _> = dev.ones();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut opt = Adam::new(
             &t,
             AdamConfig {
@@ -216,7 +215,7 @@ mod tests {
     #[test]
     fn test_adam_l2_decay() {
         let dev: TestDevice = Default::default();
-        let mut t: Tensor<Rank1<5>, f32, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
         let mut opt = Adam::new(
             &t,
             AdamConfig {
@@ -249,7 +248,7 @@ mod tests {
     #[test]
     fn test_adam_decoupled_decay() {
         let dev: TestDevice = Default::default();
-        let mut t: Tensor<Rank1<5>, f32, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
         let mut opt = Adam::new(
             &t,
             AdamConfig {

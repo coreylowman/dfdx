@@ -25,19 +25,20 @@
 //!
 //! # Initializing
 //!
-//! Use [BuildOnDevice] for device agnostic module creation/randomization:
+//! Use [DeviceBuildExt] for device agnostic module creation/randomization:
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! type Model = Linear<5, 2>;
-//! let model = Model::build_on_device(&dev);
+//! let model = dev.build_module::<Model, f32>();
 //! ```
 //!
-//! Here, the return type of [BuildOnDevice] depends on the device you pass in.
+//! Here, the return type depends on the device and dtype you are using.
 //!
-//! For example, when using device [crate::tensor::Cpu], the type is `Linear<5, 2, Cpu>`, or when using
-//! a `Cuda` device, the type is `Linear<5, 2, Cuda>`.
+//! For example, when using device [crate::tensor::Cpu] and `f32`, the type
+//! is `Linear<5, 2, f32, Cpu>`. When using
+//! a `Cuda` device and `f64`, the type is `Linear<5, 2, f64, Cuda>`.
 //!
 //! Alternatively, you can use [BuildModule], which requires device specific model definitions:
 //!
@@ -58,7 +59,7 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! type Model = Linear<5, 2>;
-//! let mut model = Model::build_on_device(&dev);
+//! let mut model = dev.build_module::<Model, f32>();
 //! model.reset_params();
 //! ```
 //!

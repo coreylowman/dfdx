@@ -4,10 +4,11 @@ use crate::{
     shapes::*,
     tensor::{storage_traits::*, Tensor},
 };
-use rand::{distributions::Distribution, Rng};
-use std::{sync::Arc, vec::Vec};
 
 use super::{Cpu, CpuError, LendingIterator, StridedArray};
+
+use rand::{distributions::Distribution, Rng};
+use std::{sync::Arc, vec::Vec};
 
 impl<S: Shape, E: Default + Clone> StridedArray<S, E> {
     #[inline]

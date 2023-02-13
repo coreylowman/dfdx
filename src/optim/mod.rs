@@ -19,7 +19,8 @@
 //! # let dev: Cpu = Default::default();
 //! let mut model = MyModel::build_on_device(&dev);
 //! let mut opt = Sgd::new(&model, Default::default());
-//! # let y = model.forward(dev.zeros::<Rank1<5>>().traced());
+//! # let x: Tensor<Rank1<5>, f32, _> = dev.zeros();
+//! # let y = model.forward(x.traced());
 //! # let loss = losses::mse_loss(y, dev.zeros());
 //! // -- snip loss computation --
 //!

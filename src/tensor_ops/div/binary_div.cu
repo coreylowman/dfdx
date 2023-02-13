@@ -2,7 +2,13 @@
 
 struct BinaryDivOp {};
 
-BINARY_OP(binary_div_forward, binary_div_backward, BinaryDivOp,
-         x / y,
-         1.0 / y,
-         -x / (y * y))
+BINARY_OP(float, bdiv_fwd_f32, bdiv_bwd_f32, BinaryDivOp,
+    x / y,
+    1.0 / y,
+    -x / (y * y))
+
+BINARY_OP(double, bdiv_fwd_f64, bdiv_bwd_f64, BinaryDivOp,
+    x / y,
+    1.0 / y,
+    -x / (y * y))
+   

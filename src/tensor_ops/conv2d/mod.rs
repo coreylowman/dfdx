@@ -123,9 +123,10 @@ impl<
         const K: usize,
         const S: usize,
         const P: usize,
-        D: Conv2DKernel<f32> + ZerosTensor<f32>,
+        E: Dtype,
+        D: Conv2DKernel<E> + ZerosTensor<E>,
         T: 'static + Tape<D>,
-    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P> for Tensor<Rank3<C, H, W>, f32, D, T>
+    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> for Tensor<Rank3<C, H, W>, E, D, T>
 where
     Const<H>: ConvAlgebra<K, S, P>,
     Const<W>: ConvAlgebra<K, S, P>,
@@ -136,14 +137,14 @@ where
             <Const<H> as ConvAlgebra<K, S, P>>::Convolved,
             <Const<W> as ConvAlgebra<K, S, P>>::Convolved,
         ),
-        f32,
+        E,
         D,
         T,
     >;
 
     fn try_conv2d_to(
         self,
-        filters: Tensor<Rank4<O, C, K, K>, f32, D>,
+        filters: Tensor<Rank4<O, C, K, K>, E, D>,
     ) -> Result<Self::Output, Self::Err> {
         let op = Conv2DOp::new(S, P, K, [1, C, H, W], O);
         let (lhs, ltape) = self.split_tape();
@@ -174,10 +175,11 @@ impl<
         const K: usize,
         const S: usize,
         const P: usize,
-        D: Conv2DKernel<f32> + ZerosTensor<f32>,
+        E: Dtype,
+        D: Conv2DKernel<E> + ZerosTensor<E>,
         T: 'static + Tape<D>,
-    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, f32, D>, S, P>
-    for Tensor<(B, Const<C>, Const<H>, Const<W>), f32, D, T>
+    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P>
+    for Tensor<(B, Const<C>, Const<H>, Const<W>), E, D, T>
 where
     Const<H>: ConvAlgebra<K, S, P>,
     Const<W>: ConvAlgebra<K, S, P>,
@@ -189,13 +191,13 @@ where
             <Const<H> as ConvAlgebra<K, S, P>>::Convolved,
             <Const<W> as ConvAlgebra<K, S, P>>::Convolved,
         ),
-        f32,
+        E,
         D,
         T,
     >;
     fn try_conv2d_to(
         self,
-        filters: Tensor<Rank4<O, C, K, K>, f32, D>,
+        filters: Tensor<Rank4<O, C, K, K>, E, D>,
     ) -> Result<Self::Output, Self::Err> {
         let batch = self.shape().0;
         let op = Conv2DOp::new(S, P, K, [batch.size(), C, H, W], O);
@@ -235,12 +237,12 @@ mod tests {
     /// ```
     fn test_conv2d_default_stride_and_padding() {
         let dev: TestDevice = Default::default();
-        let weight = dev.tensor([
+        let weight: Tensor<_, TestDtype, _> = dev.tensor([
             [[[-0.04958433, -0.43007267], [0.01935136, 0.09778714]]],
             [[[0.44083858, -0.20507240], [-0.30017477, -0.10937047]]],
         ]);
-        let bias = dev.tensor([0.36406237, -0.30981010]);
-        let x = dev.tensor([[
+        let bias: Tensor<_, TestDtype, _> = dev.tensor([0.36406237, -0.30981010]);
+        let x: Tensor<_, TestDtype, _> = dev.tensor([[
             [-0.86713916, 0.52773184, -0.95238322],
             [-0.64531374, 0.77809018, -0.49099201],
         ]]);
@@ -277,14 +279,12 @@ mod tests {
     /// ```
     fn test_conv2d_stride_2() {
         let dev: TestDevice = Default::default();
-        let weight = dev.tensor([
+        let weight: Tensor<_, TestDtype, _> = dev.tensor([
             [[[0.44704646, -0.29563826], [0.29228759, -0.16575140]]],
             [[[-0.30488998, 0.25222939], [0.13279295, 0.38153177]]],
         ]);
-
-        let bias = dev.tensor([-0.44699109, 0.38371694]);
-
-        let x = dev.tensor([[
+        let bias: Tensor<_, TestDtype, _> = dev.tensor([-0.44699109, 0.38371694]);
+        let x: Tensor<_, TestDtype, _> = dev.tensor([[
             [0.37100124, -0.59504986, -1.19781005],
             [-0.31547278, 0.58071911, 0.86612970],
         ]]);
@@ -315,15 +315,14 @@ mod tests {
     fn test_conv2d_padding_1() {
         let dev: TestDevice = Default::default();
         #[rustfmt::skip]
-        let weight = dev.tensor([
+        let weight: Tensor<_, TestDtype, _> = dev.tensor([
             [[[0.10215953, 0.06263646], [-0.04124039, -0.09729567]], [[-0.32656857, 0.24254093], [-0.27209827, 0.15361503]]],
             [[[0.03449896, 0.22931078], [-0.17652659, 0.08222872]],[[-0.06016779, 0.29082409], [-0.19154115, 0.13483226]]],
             [[[-0.14262493, 0.19654515], [0.15921101, 0.01759464]],[[0.16749159, 0.33096817], [0.28376505, -0.05524009]]],
         ]);
-
-        let bias = dev.tensor([-0.22854491, 0.28763595, 0.20709404]);
-
-        let x = dev.tensor([[[-0.32224107, -0.32800716]], [[-1.13570976, 0.93713200]]]);
+        let bias: Tensor<_, TestDtype, _> = dev.tensor([-0.22854491, 0.28763595, 0.20709404]);
+        let x: Tensor<_, TestDtype, _> =
+            dev.tensor([[[-0.32224107, -0.32800716]], [[-1.13570976, 0.93713200]]]);
 
         let result =
             x.trace().conv2d::<1, 1>(weight.clone()) + bias.trace().broadcast::<_, Axes2<1, 2>>();
@@ -362,15 +361,13 @@ mod tests {
     fn test_conv2d_stride_3_padding_4() {
         let dev: TestDevice = Default::default();
         #[rustfmt::skip]
-        let weight = dev.tensor([
+        let weight: Tensor<_, TestDtype, _> = dev.tensor([
             [[[-0.10252278, -0.14387409, -0.14627469],[0.28396228, -0.14590892, 0.29269591],[0.01090384, 0.14785287, 0.29242596]]],
             [[[-0.31163597, 0.13224581, -0.20954299],[0.27902845, -0.14735751, 0.14001134],[-0.05224654, 0.16499066, -0.13981307]]],
         ]);
-
-        let bias = dev.tensor([-0.07123789, -0.17244765]);
-
+        let bias: Tensor<_, TestDtype, _> = dev.tensor([-0.07123789, -0.17244765]);
         #[rustfmt::skip]
-        let x = dev.tensor([[[0.69103152, 0.25624934],[-0.38448590, 0.03110456],[0.83753252, 0.53786588],[1.15540242, -0.54148245]]]);
+        let x: Tensor<_, TestDtype, _> = dev.tensor([[[0.69103152, 0.25624934],[-0.38448590, 0.03110456],[0.83753252, 0.53786588],[1.15540242, -0.54148245]]]);
 
         let result =
             x.trace().conv2d::<3, 4>(weight.clone()) + bias.trace().broadcast::<_, Axes2<1, 2>>();
@@ -407,16 +404,14 @@ mod tests {
     #[test]
     fn test_batched_conv2d() {
         let dev: TestDevice = Default::default();
-        let weight = dev.tensor([
+        let weight: Tensor<_, TestDtype, _> = dev.tensor([
             [[[0.05998272]], [[-0.07759511]]],
             [[[0.68307382]], [[-0.56570816]]],
             [[[0.31137520]], [[0.41600472]]],
         ]);
-
-        let bias = dev.tensor([0.49647599, 0.15591705, -0.12342280]);
-
+        let bias: Tensor<_, TestDtype, _> = dev.tensor([0.49647599, 0.15591705, -0.12342280]);
         #[rustfmt::skip]
-        let x = dev.tensor([
+        let x: Tensor<_, TestDtype, _> = dev.tensor([
             [[[-0.5396145, -2.43986344], [-0.01883135, -1.19915044]],[[-1.30589044, 2.05276346], [-0.20004864, 0.19919693]]],
             [[[-0.22305037, 0.63030297], [0.65323567, -0.68972057]],[[-0.50617385, -0.87281805], [0.30253950, -1.75082350]]],
             [[[1.65487242, 0.44441956], [-0.45107457, 1.41857898]],[[1.00477660, -0.16381662], [0.40009478, -0.57880658]]],
@@ -458,9 +453,9 @@ mod tests {
     fn test_conv2d_s4p3k2() {
         let dev = TestDevice::seed_from_u64(432);
 
-        let weight = dev.sample_normal::<Rank4<3, 5, 2, 2>>();
-        let bias = dev.sample_normal::<Rank1<3>>();
-        let x = dev.sample_normal::<Rank3<5, 7, 6>>();
+        let weight: Tensor<Rank4<3, 5, 2, 2>, TestDtype, _> = dev.sample_normal();
+        let bias: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
+        let x: Tensor<Rank3<5, 7, 6>, TestDtype, _> = dev.sample_normal();
 
         let out = x.conv2d::<4, 3>(weight);
         let out = out + bias.broadcast::<_, Axes2<1, 2>>();

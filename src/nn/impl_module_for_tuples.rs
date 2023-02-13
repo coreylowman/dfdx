@@ -110,6 +110,7 @@ tuple_impls!([M1, M2, M3, M4, M5, M6] [0, 1, 2, 3, 4, 5], M6, [M5, M4, M3, M2, M
 mod tests {
     use super::*;
     use crate::nn::tests::SimpleUpdater;
+    use crate::tests::TestDtype;
     use crate::unique_id::HasUniqueId;
     use crate::{
         nn::{builders::*, *},
@@ -263,7 +264,7 @@ mod tests {
     fn test_tuple_missing_gradients() {
         let dev: TestDevice = Default::default();
         type Model = (Linear<5, 3>, Linear<5, 3>, Linear<5, 3>);
-        let mut model = Model::build_on_device(&dev);
+        let mut model = dev.build_module::<Model, TestDtype>();
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present

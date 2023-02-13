@@ -2,19 +2,29 @@
 
 struct BCEKernelOp {};
 
-LONG_BINARY_OP(bce_forward, bce_backward, BCEKernelOp,
-    {
-        float logit = lhs[lhs_i];
-        float prob = rhs[rhs_i];
+template<typename T>
+__device__ T op_f(T logit, T prob) {
+    return maxg(logit, 0.0) - logit * prob + logg(1.0 + expg(-absg(logit)));
+}
 
-        fx = fmaxf(logit, 0.0) - logit * prob + logf(1.0 + expf(-fabsf(logit)));
-    },
-    {
-        auto logit = lhs[lhs_i];
-        auto prob = rhs[rhs_i];
-        auto go = grad_out[out_i];
+template<typename T>
+__device__ T op_dfdx(T logit, T prob) {
+    return 1.0 - prob - 1 / (1.0 + expg(logit));
+}
 
-        dfdx = 1.0 - prob - 1 / (1.0 + expf(logit));
-        dfdy = -logit;
-    }
+template<typename T>
+__device__ T op_dfdy(T logit, T prob) {
+    return -logit;
+}
+
+BINARY_OP(float, bce_fwd_f32, bce_bwd_f32, BCEKernelOp,
+    op_f(x, y),
+    op_dfdx(x, y),
+    op_dfdy(x, y)
+)
+
+BINARY_OP(double, bce_fwd_f64, bce_bwd_f64, BCEKernelOp,
+    op_f(x, y),
+    op_dfdx(x, y),
+    op_dfdy(x, y)
 )
