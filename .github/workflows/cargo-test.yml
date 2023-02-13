@@ -22,6 +22,12 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.toolchain }}
           override: true
-      - uses: actions-rs/cargo@v1
+      - name: test CPU f32
+        uses: actions-rs/cargo@v1
         with:
           command: test
+      - name: test CPU f64
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --features test-f64
