@@ -30,19 +30,19 @@
 //! );
 //! ```
 //!
-//! 3. Instantiate models with [crate::nn::BuildOnDevice]
+//! 3. Instantiate models with [crate::nn::DeviceBuildExt]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();
 //! type Model = (Linear<5, 2>, ReLU);
-//! let mlp = Model::build_on_device(&dev);
+//! let mlp = dev.build_module::<Model, f32>();
 //! ```
 //!
 //! 4. Pass data through networks with [crate::nn::Module]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! # let mlp = <Linear<5, 2>>::build_on_device(&dev);
+//! # let mlp = dev.build_module::<Linear<5, 2>, f32>();
 //! let x: Tensor<Rank1<5>, f32, _> = dev.zeros();
 //! let y = mlp.forward(x); // compiler infers that `y` must be `Tensor<Rank1<2>>`
 //! ```
@@ -51,7 +51,7 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! # let model = <Linear<10, 5>>::build_on_device(&dev);
+//! # let model = dev.build_module::<Linear<10, 5>, f32>();
 //! # let y_true: Tensor<Rank1<5>, f32, _> = dev.sample_normal().softmax();
 //! // tensors default to not having a tape
 //! let x: Tensor<Rank1<10>, f32, Cpu, NoneTape> = dev.zeros();
@@ -68,7 +68,7 @@
 //! ```rust
 //! # use dfdx::{prelude::*, gradients::Gradients};
 //! # let dev: Cpu = Default::default();
-//! # let model = <Linear<10, 5>>::build_on_device(&dev);
+//! # let model = dev.build_module::<Linear<10, 5>, f32>();
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
 //! # let y = model.forward(dev.zeros::<Rank1<10>>().trace());
 //! // compute cross entropy loss
@@ -81,7 +81,7 @@
 //! ```rust
 //! # use dfdx::{prelude::*, gradients::Gradients, optim::*};
 //! # let dev: Cpu = Default::default();
-//! # let mut model = <Linear<10, 5>>::build_on_device(&dev);
+//! # let mut model = dev.build_module::<Linear<10, 5>, f32>();
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
 //! # let y = model.forward(dev.zeros::<Rank1<10>>().trace());
 //! # let loss = cross_entropy_with_logits_loss(y, y_true);

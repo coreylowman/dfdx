@@ -11,7 +11,7 @@ pub trait VarTo: HasErr + HasShape {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let t = dev.tensor([[2.0, 3.0, 4.0], [3.0, 6.0, 9.0]]);
+    /// let t = dev.tensor([[2.0f32, 3.0, 4.0], [3.0, 6.0, 9.0]]);
     /// let r = t.var::<Rank1<2>, _>(); // or `var::<_, Axis<1>>()`
     /// assert_eq!(r.array(), [0.6666667, 6.0]);
     /// ```

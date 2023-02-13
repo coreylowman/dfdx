@@ -37,7 +37,7 @@ where
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = Linear<5, 2>;
-/// let model = Model::build_on_device(&dev);
+/// let model = dev.build_module::<Model, f32>();
 /// // single item forward
 /// let _: Tensor<Rank1<2>, f32, _> = model.forward(dev.zeros::<Rank1<5>>());
 /// // batched forward

@@ -31,7 +31,7 @@ where
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = LayerNorm1D<5>;
-/// let model = Model::build_on_device(&dev);
+/// let model = dev.build_module::<Model, f32>();
 /// let _: Tensor<Rank1<5>, f32, _> = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 

@@ -36,7 +36,8 @@ use super::{BuildModule, Module, ModuleMut, ZeroSizedModule};
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let mut dropout: DropoutOneIn<2> = Default::default();
-/// let r = dropout.forward_mut(dev.ones::<Rank2<2, 5>>().trace());
+/// let x: Tensor<Rank2<2, 5>, f32, _> = dev.ones();
+/// let r = dropout.forward_mut(x.trace());
 /// assert_eq!(r.array(), [[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug, Default)]
@@ -104,7 +105,8 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D,
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let mut dropout = Dropout { p: 0.5 };
-/// let r = dropout.forward_mut(dev.ones::<Rank2<2, 5>>().trace());
+/// let x: Tensor<Rank2<2, 5>, f32, _> = dev.ones();
+/// let r = dropout.forward_mut(x.trace());
 /// assert_eq!(r.array(), [[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug)]

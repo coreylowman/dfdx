@@ -16,7 +16,7 @@ use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = SplitInto<(Linear<5, 3>, Linear<5, 7>)>;
-/// let model = dev.build_module::<Model, TestDtype>();
+/// let model = dev.build_module::<Model, f32>();
 /// let _: (Tensor<Rank1<3>, f32, _>, Tensor<Rank1<7>, f32, _>) = model.forward(dev.zeros::<Rank1<5>>());
 /// ```
 #[derive(Debug, Default, Clone)]

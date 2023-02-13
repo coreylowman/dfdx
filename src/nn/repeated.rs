@@ -13,7 +13,7 @@ use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = Repeated<(Linear<10, 10>, ReLU), 5>;
-/// let model = dev.build_module::<Model, TestDtype>();
+/// let model = dev.build_module::<Model, f32>();
 /// let out: Tensor<Rank1<10>, f32, _> = model.forward(dev.zeros());
 /// ```
 #[derive(Debug, Clone)]

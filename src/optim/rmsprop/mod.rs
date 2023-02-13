@@ -70,7 +70,7 @@ impl<E: Dtype> Default for RMSpropConfig<E> {
 /// # type Model = Tensor<Rank0, f32, Cpu>;
 /// # let dev: Cpu = Default::default();
 /// # let model: Model = dev.zeros();
-/// let rmsprop: RMSprop<Model> = RMSprop::new(&model, RMSpropConfig {
+/// let rmsprop = RMSprop::new(&model, RMSpropConfig {
 ///     lr: 1e-3,
 ///     alpha: 0.5,
 ///     eps: 1e-8,

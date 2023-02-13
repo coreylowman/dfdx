@@ -15,7 +15,7 @@ use std::ops::Add;
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = Residual<ReLU>;
-/// let model = Model::build_on_device(&dev);
+/// let model = dev.build_module::<Model, f32>();
 /// let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
 /// let y = model.forward(x);
 /// assert_eq!(y.array(), [-2.0, -1.0, 0.0, 2.0, 4.0]);

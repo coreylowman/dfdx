@@ -39,7 +39,7 @@ where
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// type Model = BatchNorm2D<3>;
-/// let bn = Model::build_on_device(&dev);
+/// let bn = dev.build_module::<Model, f32>();
 /// let _ = bn.forward(dev.zeros::<Rank3<3, 2, 2>>());
 /// let _ = bn.forward(dev.zeros::<Rank4<4, 3, 2, 2>>());
 /// ```
