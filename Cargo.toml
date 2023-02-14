@@ -44,7 +44,7 @@ intel-mkl = ["cblas"]
 cuda = ["dep:cudarc"]
 test-cuda = ["cuda"]
 test-f64 = []
-ci-check = []
+ci-check = ["cudarc?/ci-check"]
 
 [dev-dependencies]
 rand = "0.8.5"
