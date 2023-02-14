@@ -13,6 +13,12 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@v1
+      - name: Check CPU
+        uses: actions-rs/cargo@v1
         with:
           command: check
+      - name: Check CUDA
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --features test-cuda,ci-check

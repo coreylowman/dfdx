@@ -19,7 +19,7 @@ fn main() {
 mod cuda {
     pub fn build_ptx() {
         let out_dir = std::env::var("OUT_DIR").unwrap();
-        let kernel_paths: Vec<std::path::PathBuf> = glob::glob("src/**/*.cu")
+        let mut kernel_paths: Vec<std::path::PathBuf> = glob::glob("src/**/*.cu")
             .unwrap()
             .map(|p| p.unwrap())
             .collect();
@@ -44,8 +44,19 @@ mod cuda {
             .map(|s| "-I".to_string() + &s.into_os_string().into_string().unwrap())
             .collect::<Vec<_>>();
 
-        for kernel_path in kernel_paths {
+        #[cfg(feature = "ci-check")]
+        for mut kernel_path in kernel_paths.drain(..) {
+            kernel_path.set_extension("ptx");
+
+            let mut ptx_path: std::path::PathBuf = out_dir.clone().into();
+            ptx_path.push(kernel_path.as_path().file_name().unwrap());
+            std::fs::File::create(ptx_path).unwrap();
+        }
+
+        #[cfg(not(feature = "ci-check"))]
+        for kernel_path in kernel_paths.drain(..) {
             println!("cargo:rerun-if-changed={}", kernel_path.display());
+
             let output = std::process::Command::new("nvcc")
                 .args(["--gpu-architecture", "compute_60"])
                 .arg("--ptx")
