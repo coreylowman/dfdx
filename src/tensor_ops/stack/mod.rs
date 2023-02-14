@@ -229,10 +229,14 @@ mod tests {
         let x: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
         let y: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
         let r = dev.stack([
-            x.clone().broadcast::<Rank2<4, 3>, _>(),
-            y.clone().broadcast(),
+            x.trace().broadcast::<Rank2<4, 3>, _>(),
+            y.trace().broadcast(),
         ]);
         assert_eq!(r.array(), [[x.array(); 4], [y.array(); 4]]);
+        let g = r.exp().mean().backward();
+        let g1 = dev.stack([x.trace(), y.trace()]).exp().mean().backward();
+        assert_eq!(g.get(&x).array(), g1.get(&x).array());
+        assert_eq!(g.get(&y).array(), g1.get(&y).array());
     }
 
     #[test]

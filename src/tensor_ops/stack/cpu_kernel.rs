@@ -52,10 +52,11 @@ impl<E: Dtype> super::StackKernel<E> for Cpu {
         S: super::AddDim<New>,
     {
         let grad_out_buf = grad_out.data.as_ref();
-        for (i, item) in grad_inp.drain(..).enumerate() {
-            let num = item.shape().num_elements();
-            for (j, gi) in item.buf_iter_mut().enumerate() {
-                *gi += grad_out_buf[i * num + j];
+        let mut offset = 0;
+        for item in grad_inp.drain(..) {
+            for gi in item.buf_iter_mut() {
+                *gi += grad_out_buf[offset];
+                offset += 1;
             }
         }
         Ok(())
