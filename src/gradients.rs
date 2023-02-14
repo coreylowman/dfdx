@@ -132,6 +132,34 @@ impl Gradients {
         let r_ref = unsafe { &*r_ptr };
         (l1_ref, l2_ref, r_ref)
     }
+
+    #[inline]
+    pub(crate) fn many_and_ref<L, R>(
+        &mut self,
+        ls: &Vec<L>,
+        r: &R,
+    ) -> (Vec<&mut L::Gradient>, &R::Gradient)
+    where
+        L: HasUniqueId + AllocGrad,
+        R: HasUniqueId + AllocGrad,
+    {
+        for i in 0..ls.len() {
+            assert_ne!(ls[i].id(), r.id());
+            for j in (i + 1)..ls.len() {
+                assert_ne!(ls[i].id(), ls[j].id());
+            }
+        }
+        let l_refs: Vec<&mut L::Gradient> = ls
+            .iter()
+            .map(|l| {
+                let l_ptr = self.get_mut(l) as *mut L::Gradient;
+                unsafe { &mut *l_ptr }
+            })
+            .collect();
+        let r_ptr = self.get(r) as *const _;
+        let r_ref = unsafe { &*r_ptr };
+        (l_refs, r_ref)
+    }
 }
 
 /// Records gradient computations to execute later.

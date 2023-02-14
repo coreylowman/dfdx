@@ -153,4 +153,17 @@ mod tests {
         g.get(&a).array().assert_close(&a_grad.array(), 1e-4);
         g.get(&b).array().assert_close(&b_grad.array(), 1e-4);
     }
+
+    #[test]
+    fn test_broadcast_summed() {
+        let dev: TestDevice = Default::default();
+        let a: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
+        let g = a
+            .trace()
+            .broadcast::<Rank2<4, 3>, _>()
+            .exp()
+            .mean()
+            .backward();
+        assert_close(&g.get(&a).array(), &a.array().map(|x| x.exp() / 3.0));
+    }
 }

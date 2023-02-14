@@ -126,7 +126,7 @@ impl DeviceStorage for Cuda {
         &self,
         storage: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err> {
-        let numel = storage.shape.num_elements();
+        let numel = storage.data.len();
         let strides: S::Concrete = storage.strides;
         Ok(Self::Storage {
             data: Arc::new(self.dev.take_async(std::vec![Default::default(); numel])?),
