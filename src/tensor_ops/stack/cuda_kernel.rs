@@ -2,7 +2,6 @@ use crate::{
     shapes::*,
     tensor::cuda::{Cuda, CudaArray},
 };
-use cudarc::driver::{result::memcpy_dtod_async, DevicePtr, DevicePtrMut};
 use cudarc::driver::{LaunchAsync, LaunchConfig};
 use std::{sync::Arc, vec::Vec};
 
@@ -30,51 +29,45 @@ where
     fn forward<S: Shape, Num: Dim>(
         &self,
         num: Num,
-        inp: Vec<&Self::Storage<S, E>>,
+        inps: Vec<&Self::Storage<S, E>>,
     ) -> Result<Self::Storage<S::Larger, E>, Self::Err>
     where
         S: super::AddDim<Num>,
     {
-        debug_assert_eq!(inp.len(), num.size());
+        debug_assert_eq!(inps.len(), num.size());
 
         // check that all the strides are the same
-        let item_strides = inp[0].strides;
-        for i in inp.iter() {
+        let item_strides = inps[0].strides;
+        for i in inps.iter() {
             assert_eq!(i.strides, item_strides);
         }
-        let shape: S::Larger = inp[0].shape().add(num);
+        let shape: S::Larger = inps[0].shape().add(num);
 
         // build the new strides
         let mut strides = shape.strides();
-        strides[0] = inp[0].data.len();
+        strides[0] = inps[0].data.len();
         for d in 1..<S::Larger as Shape>::NUM_DIMS {
             strides[d] = item_strides[d - 1];
         }
 
         // copy the data
-        let numel = strides[0];
-        let mut data = unsafe { self.dev.alloc_async::<E>(numel) }?;
+        let item_numel = strides[0];
+        let mut data = unsafe { self.dev.alloc_async::<E>(num.size() * item_numel) }?;
         let mut offset = 0;
-        for i in inp {
-            let num = i.data.len();
-            let num_bytes = num * std::mem::size_of::<E>();
-            let s = data.try_slice_mut(offset..offset + num).unwrap();
-            // unsafe {
-            //     memcpy_dtod_async(
-            //         *s.device_ptr_mut(),
-            //         *i.data.device_ptr(),
-            //         num_bytes,
-            //         self.dev.stream,
-            // }?;
-            offset += num;
+        for item in inps {
+            debug_assert_eq!(item.data.len(), item_numel);
+            self.dev.device_copy_async(
+                item.data.as_ref(),
+                &mut data.try_slice_mut(offset..offset + item_numel).unwrap(),
+            )?;
+            offset += item_numel;
         }
-        todo!()
-
-        // Ok(StridedArray {
-        //     data: std::sync::Arc::new(data),
-        //     shape,
-        //     strides,
-        // })
+        debug_assert_eq!(offset, data.len());
+        Ok(CudaArray {
+            data: std::sync::Arc::new(data),
+            shape,
+            strides,
+        })
     }
     fn backward<S: Shape, New: Dim>(
         &self,
@@ -93,14 +86,12 @@ where
             let f = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
             let numel: usize = item.data.len();
             let cfg = LaunchConfig::for_num_elems(numel as u32);
-            let params = (
-                numel,
-                &grad_out_buf.try_slice(offset..offset + numel).unwrap(),
-                Arc::make_mut(&mut item.data),
-            );
+            let sub = grad_out_buf.try_slice(offset..offset + numel).unwrap();
+            let params = (numel, &sub, Arc::make_mut(&mut item.data));
             unsafe { f.launch_async(cfg, params) }?;
             offset += numel;
         }
+        debug_assert_eq!(offset, grad_out_buf.len());
         Ok(())
     }
 }
