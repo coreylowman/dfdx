@@ -31,7 +31,7 @@ impl<E: Dtype> super::StackKernel<E> for Cpu {
         }
 
         // copy the data
-        let numel = shape.num_elements();
+        let numel = strides[0];
         let mut data: std::vec::Vec<E> = std::vec::Vec::with_capacity(numel);
         for i in inp {
             data.extend_from_slice(i.data.as_ref());
