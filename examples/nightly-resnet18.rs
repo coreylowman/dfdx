@@ -1,9 +1,17 @@
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
+const PROBES: u32 = 10;
+
 #[cfg(feature = "nightly")]
 fn main() {
     use dfdx::prelude::*;
     use std::time::Instant;
+
+    #[cfg(not(feature = "cuda"))]
+    type Device = Cpu;
+
+    #[cfg(feature = "cuda")]
+    type Device = Cuda;
 
     type BasicBlock<const C: usize> = Residual<(
         Conv2D<C, C, 3, 1, 1>,
@@ -40,14 +48,25 @@ fn main() {
         (AvgPoolGlobal, Linear<512, NUM_CLASSES>),
     );
 
-    let dev: Cpu = Default::default();
-    let x: Tensor<Rank3<3, 224, 224>, f32, _> = dev.sample_normal();
+    let dev = Device::default();
     let m = dev.build_module::<Resnet18<1000>, f32>();
-    for _ in 0.. {
-        let start = Instant::now();
-        let _ = m.forward(x.clone());
-        println!("{:?}", start.elapsed());
+
+    let x: Tensor<Rank3<3, 224, 224>, f32, _> = dev.sample_normal();
+    let start = Instant::now();
+    for _ in 0..PROBES {
+        let _y = m.forward(x.clone());
     }
+    println!("Average unbatched forward: {:?}", start.elapsed() / PROBES);
+
+    let x: Tensor<Rank4<16, 3, 224, 224>, f32, _> = dev.sample_normal();
+    let start = Instant::now();
+    for _ in 0..PROBES {
+        let _y = m.forward(x.clone());
+    }
+    println!(
+        "Average batched (16) forward: {:?}",
+        start.elapsed() / PROBES
+    );
 }
 
 #[cfg(not(feature = "nightly"))]

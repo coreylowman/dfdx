@@ -3,11 +3,17 @@
 use dfdx::{
     nn::{builders::*, BuildOnDevice, DeviceBuildExt, Module, ModuleMut, ResetParams},
     shapes::{Const, Rank1, Rank2},
-    tensor::{AsArray, Cpu, SampleTensor, Tensor, ZerosTensor},
+    tensor::{AsArray, SampleTensor, Tensor, ZerosTensor},
 };
 
+#[cfg(not(feature = "cuda"))]
+type Device = dfdx::tensor::Cpu;
+
+#[cfg(feature = "cuda")]
+type Device = dfdx::tensor::Cuda;
+
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev = Device::default();
 
     // `nn::builders` exposes many different neural network types, like the Linear layer!
     type Model = Linear<4, 2>;

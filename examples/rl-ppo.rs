@@ -1,10 +1,17 @@
 //! Implements the reinforcement learning algorithm Proximal Policy Optimization (PPO) on random data.
 
+use std::time::Instant;
+
 use dfdx::{
     optim::{Momentum, Sgd, SgdConfig},
     prelude::*,
 };
-use std::time::Instant;
+
+#[cfg(not(feature = "cuda"))]
+type Device = Cpu;
+
+#[cfg(feature = "cuda")]
+type Device = Cuda;
 
 const BATCH: usize = 64;
 const STATE: usize = 4;
@@ -17,7 +24,20 @@ type PolicyNetwork = (
 );
 
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev = Device::default();
+
+    // initiliaze model - all weights are 0s
+    let mut pi_net = dev.build_module::<PolicyNetwork, f32>();
+    let mut target_pi_net = pi_net.clone();
+
+    let mut sgd = Sgd::new(
+        &pi_net,
+        SgdConfig {
+            lr: 1e-2,
+            momentum: Some(Momentum::Nesterov(0.9)),
+            weight_decay: None,
+        },
+    );
 
     let state = dev.sample_normal::<Rank2<BATCH, STATE>>();
     let mut i = 0;
@@ -27,49 +47,45 @@ fn main() {
     }));
     let advantage = dev.sample_normal::<Rank1<BATCH>>();
 
-    // initiliaze model - all weights are 0s
-    let mut pi_net = dev.build_module::<PolicyNetwork, f32>();
-    let target_pi_net = pi_net.clone();
-
-    let mut sgd = Sgd::new(
-        &pi_net,
-        SgdConfig {
-            lr: 1e-1,
-            momentum: Some(Momentum::Nesterov(0.9)),
-            weight_decay: None,
-        },
-    );
-
     // run through training data
-    for _i_epoch in 0..15 {
+    for epoch in 0..10 {
         let start = Instant::now();
+        let mut total_loss = 0f32;
 
-        // old_log_prob_a = log(P(action | state, target_pi_net))
-        let old_logits = target_pi_net.forward(state.clone());
-        let old_log_prob_a = old_logits.log_softmax::<Axis<1>>().select(action.clone());
+        for _step in 0..20 {
+            // old_log_prob_a = log(P(action | state, target_pi_net))
+            let old_logits = target_pi_net.forward(state.clone());
+            let old_log_prob_a = old_logits.log_softmax::<Axis<1>>().select(action.clone());
 
-        // log_prob_a = log(P(action | state, pi_net))
-        let logits = pi_net.forward(state.trace());
-        let log_prob_a = logits.log_softmax::<Axis<1>>().select(action.clone());
+            // log_prob_a = log(P(action | state, pi_net))
+            let logits = pi_net.forward(state.trace());
+            let log_prob_a = logits.log_softmax::<Axis<1>>().select(action.clone());
 
-        // ratio = P(action | state, pi_net) / P(action | state, target_pi_net)
-        // but compute in log space and then do .exp() to bring it back out of log space
-        let ratio = (log_prob_a - old_log_prob_a).exp();
+            // ratio = P(action | state, pi_net) / P(action | state, target_pi_net)
+            // but compute in log space and then do .exp() to bring it back out of log space
+            let ratio = (log_prob_a - old_log_prob_a).exp();
 
-        // because we need to re-use `ratio` a 2nd time, we need to do some tape manipulation here.
-        let surr1 = ratio.with_empty_tape() * advantage.clone();
-        let surr2 = ratio.clamp(0.8, 1.2) * advantage.clone();
+            // because we need to re-use `ratio` a 2nd time, we need to do some tape manipulation here.
+            let surr1 = ratio.with_empty_tape() * advantage.clone();
+            let surr2 = ratio.clamp(0.8, 1.2) * advantage.clone();
 
-        let ppo_loss = -(surr2.minimum(surr1).mean());
+            let ppo_loss = -(surr2.minimum(surr1).mean());
 
-        let loss_v = ppo_loss.array();
+            total_loss += ppo_loss.array();
 
-        // run backprop
-        let gradients = ppo_loss.backward();
+            // run backprop
+            let gradients = ppo_loss.backward();
 
-        // update weights with optimizer
-        sgd.update(&mut pi_net, gradients).expect("Unused params");
+            // update weights with optimizer
+            sgd.update(&mut pi_net, gradients).expect("Unused params");
+        }
+        target_pi_net.clone_from(&pi_net);
 
-        println!("loss={:#} in {:?}", loss_v, start.elapsed());
+        println!(
+            "Epoch {} in {:?}: loss={:#.3}",
+            epoch + 1,
+            start.elapsed(),
+            total_loss / 20.0
+        );
     }
 }

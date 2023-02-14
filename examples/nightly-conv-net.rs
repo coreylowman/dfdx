@@ -6,6 +6,12 @@
 fn main() {
     use dfdx::prelude::*;
 
+    #[cfg(not(feature = "cuda"))]
+    type Device = dfdx::tensor::Cpu;
+
+    #[cfg(feature = "cuda")]
+    type Device = dfdx::tensor::Cuda;
+
     type Model = (
         (Conv2D<3, 4, 3>, ReLU),
         (Conv2D<4, 8, 3>, ReLU),
@@ -14,16 +20,16 @@ fn main() {
         Linear<7744, 10>,
     );
 
-    let dev: Cpu = Default::default();
+    let dev = Device::default();
     let m = dev.build_module::<Model, f32>();
 
     // single image forward
     let x: Tensor<Rank3<3, 28, 28>, f32, _> = dev.sample_normal();
-    let _: Tensor<Rank1<10>, f32, _> = m.forward(x);
+    let _y: Tensor<Rank1<10>, f32, _> = m.forward(x);
 
     // batched image forward
     let x: Tensor<Rank4<32, 3, 28, 28>, f32, _> = dev.sample_normal();
-    let _: Tensor<Rank2<32, 10>, f32, _> = m.forward(x);
+    let _y: Tensor<Rank2<32, 10>, f32, _> = m.forward(x);
 }
 
 #[cfg(not(feature = "nightly"))]

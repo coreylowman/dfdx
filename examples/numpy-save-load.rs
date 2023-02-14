@@ -4,10 +4,16 @@
 fn main() {
     use dfdx::{
         shapes::{Rank0, Rank1, Rank2},
-        tensor::{AsArray, Cpu, Tensor, TensorFrom, ZerosTensor},
+        tensor::{AsArray, Tensor, TensorFrom, ZerosTensor},
     };
 
-    let dev: Cpu = Default::default();
+    #[cfg(not(feature = "cuda"))]
+    type Device = dfdx::tensor::Cpu;
+
+    #[cfg(feature = "cuda")]
+    type Device = dfdx::tensor::Cuda;
+
+    let dev = Device::default();
 
     dev.tensor(1.234f32)
         .save_to_npy("0d-rs.npy")
@@ -32,6 +38,8 @@ fn main() {
     let mut c: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
     c.load_from_npy("2d-rs.npy").expect("Loading failed");
     assert_eq!(c.array(), [[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+
+    println!("Tensors were stored and loaded successfully");
 }
 
 #[cfg(not(feature = "numpy"))]

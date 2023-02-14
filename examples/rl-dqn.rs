@@ -1,11 +1,18 @@
 //! Implements Deep Q Learning on random data.
 
+use std::time::Instant;
+
 use dfdx::{
-    losses::mse_loss,
+    losses::huber_loss,
     optim::{Momentum, Sgd, SgdConfig},
     prelude::*,
 };
-use std::time::Instant;
+
+#[cfg(not(feature = "cuda"))]
+type Device = Cpu;
+
+#[cfg(feature = "cuda")]
+type Device = Cuda;
 
 const BATCH: usize = 64;
 const STATE: usize = 4;
@@ -19,7 +26,19 @@ type QNetwork = (
 );
 
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev = Device::default();
+    // initialize model
+    let mut q_net = dev.build_module::<QNetwork, f32>();
+    let mut target_q_net = q_net.clone();
+
+    let mut sgd = Sgd::new(
+        &q_net,
+        SgdConfig {
+            lr: 1e-1,
+            momentum: Some(Momentum::Nesterov(0.9)),
+            weight_decay: None,
+        },
+    );
 
     let state = dev.sample_normal::<Rank2<BATCH, STATE>>();
     let mut i = 0;
@@ -31,44 +50,39 @@ fn main() {
     let done = dev.zeros::<Rank1<BATCH>>();
     let next_state = dev.sample_normal::<Rank2<BATCH, STATE>>();
 
-    // initiliaze model
-    let mut q_net = dev.build_module::<QNetwork, f32>();
-    let target_q_net = q_net.clone();
-
-    let mut sgd = Sgd::new(
-        &q_net,
-        SgdConfig {
-            lr: 1e-1,
-            momentum: Some(Momentum::Nesterov(0.9)),
-            weight_decay: None,
-        },
-    );
-
     // run through training data
-    for _i_epoch in 0..15 {
+    for epoch in 0..10 {
         let start = Instant::now();
+        let mut total_loss = 0f32;
 
-        // targ_q = R + discount * max(Q(S'))
-        // curr_q = Q(S)[A]
-        // loss = mse(curr_q, targ_q)
-        let next_q_values = target_q_net.forward(next_state.clone());
-        let max_next_q = next_q_values.max::<Rank1<BATCH>, _>();
+        for _step in 0..20 {
+            // forward through model, computing gradients
+            let q_values = q_net.forward(state.trace());
+            let action_qs = q_values.select(action.clone());
 
-        let target_q = (max_next_q * (-done.clone() + 1.0)) * 0.99 + reward.clone();
+            // targ_q = R + discount * max(Q(S'))
+            // curr_q = Q(S)[A]
+            // loss = huber(curr_q, targ_q, 1)
+            let next_q_values = target_q_net.forward(next_state.clone());
+            let max_next_q = next_q_values.max::<Rank1<BATCH>, _>();
+            let target_q = (max_next_q * (-done.clone() + 1.0)) * 0.99 + reward.clone();
 
-        // forward through model, computing gradients
-        let q_values = q_net.forward(state.trace());
-        let action_qs = q_values.select(action.clone());
+            let loss = huber_loss(action_qs, target_q, 1.0);
+            total_loss += loss.array();
 
-        let loss = mse_loss(action_qs, target_q);
-        let loss_v = loss.array();
+            // run backprop
+            let gradients = loss.backward();
 
-        // run backprop
-        let gradients = loss.backward();
+            // update weights with optimizer
+            sgd.update(&mut q_net, gradients).expect("Unused params");
+        }
+        target_q_net.clone_from(&q_net);
 
-        // update weights with optimizer
-        sgd.update(&mut q_net, gradients).expect("Unused params");
-
-        println!("q loss={:#.3} in {:?}", loss_v, start.elapsed());
+        println!(
+            "Epoch {} in {:?}: q loss={:#.3}",
+            epoch + 1,
+            start.elapsed(),
+            total_loss / 20.0
+        );
     }
 }

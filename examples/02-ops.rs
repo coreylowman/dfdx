@@ -2,12 +2,18 @@
 
 use dfdx::{
     shapes::{Rank0, Rank1, Rank2},
-    tensor::{AsArray, Cpu, SampleTensor, Tensor},
+    tensor::{AsArray, Cpu, SampleTensor, Tensor, ToDevice},
     tensor_ops::{MeanTo, TryMatMul},
 };
 
+#[cfg(not(feature = "cuda"))]
+type Device = Cpu;
+
+#[cfg(feature = "cuda")]
+type Device = dfdx::tensor::Cuda;
+
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev = Device::default();
 
     let a: Tensor<Rank2<2, 3>, f32, _> = dev.sample_normal();
     dbg!(a.array());
@@ -53,4 +59,16 @@ fn main() {
     let b: Tensor<Rank1<7>, f32, _> = dev.sample_normal();
     let c = a.matmul(b);
     dbg!(c.array());
+
+    // these operations are equal across devices
+    #[cfg(feature = "cuda")]
+    {
+        let cpu = Cpu::default();
+
+        let a: Tensor<Rank1<3>, f32, _> = dev.sample_normal();
+        let b: Tensor<Rank1<7>, f32, _> = dev.sample_normal();
+        let a_cpu = a.to_device(&cpu);
+        let b_cpu = b.to_device(&cpu);
+        assert_eq!(a_cpu.matmul(b_cpu).array(), a.matmul(b).array());
+    }
 }
