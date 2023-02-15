@@ -1,7 +1,7 @@
 use crate::{
     shapes::*,
     tensor::cuda::{Cuda, CudaArray},
-    tensor_ops::internal_reshapes::permute_for_reductions,
+    tensor_ops::reduction_utils::*,
 };
 
 use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig, ValidAsZeroBits};
@@ -50,11 +50,16 @@ where
 
         let mut storage = self.dev.alloc_zeros_async::<E>(dst.num_elements())?;
 
-        let physical_numel = inp.data.len();
-        let virtual_numel = inp.shape.num_elements();
-        let elems_per_thread = E::from_usize(virtual_numel / physical_numel).unwrap();
+        let elems_per_thread = E::from_usize(reduction_elems_per_thread::<Ax, Src>(
+            inp.shape.concrete(),
+            inp.strides,
+        ))
+        .unwrap();
 
-        let chunk_len = physical_numel / dst.num_elements();
+        let physical_numel = inp.data.len();
+        let (dst_physical_numel, dst_strides) =
+            reduction_output_strides::<Ax, Src, Dst>(inp.strides, dst);
+        let chunk_len = physical_numel / dst_physical_numel;
 
         let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
         let params = (
@@ -71,7 +76,7 @@ where
         Ok(CudaArray {
             data: Arc::new(storage),
             shape: dst,
-            strides: dst.strides(),
+            strides: dst_strides,
         })
     }
 
@@ -92,8 +97,11 @@ where
         let out_strides: CudaSlice<usize> = self.dev.take_async(out_strides.into())?;
 
         let physical_numel = grad_inp.data.len();
-        let virtual_numel = grad_inp.shape.num_elements();
-        let elems_per_thread = E::from_usize(virtual_numel / physical_numel).unwrap();
+        let elems_per_thread = E::from_usize(reduction_elems_per_thread::<Ax, Src>(
+            grad_inp.shape.concrete(),
+            grad_inp.strides,
+        ))
+        .unwrap();
 
         let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
         let params = (

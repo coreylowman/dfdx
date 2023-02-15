@@ -150,4 +150,13 @@ mod tests {
         let g = r.sum().backward();
         assert_close(&g.get(&t).array(), &t.array());
     }
+
+    #[test]
+    fn test_sum_reduce_to_more_than_physical_elements() {
+        let dev: TestDevice = Default::default();
+        let a: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
+        let b = a.broadcast::<Rank3<4, 3, 2>, _>();
+        let c = b.sum::<Rank2<4, 3>, _>();
+        assert_eq!(c.array(), [[2.0, 4.0, 6.0]; 4]);
+    }
 }
