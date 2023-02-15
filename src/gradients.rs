@@ -24,6 +24,23 @@ use crate::unique_id::{HasUniqueId, UniqueId};
 #[derive(Debug, Default)]
 pub struct Gradients {
     gradient_by_id: HashMap<UniqueId, Box<dyn std::any::Any>>,
+    accum: Vec<HashMap<UniqueId, Box<dyn std::any::Any>>>,
+}
+
+impl std::ops::Add<Self> for Gradients {
+    type Output = Self;
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self += rhs;
+        self
+    }
+}
+
+impl std::ops::AddAssign for Gradients {
+    fn add_assign(&mut self, rhs: Self) {
+        // TODO strip out non-shared keys
+        self.accum.push(rhs.gradient_by_id);
+        self.accum.extend(rhs.accum);
+    }
 }
 
 impl Gradients {
@@ -54,10 +71,22 @@ impl Gradients {
     pub(crate) fn remove<T>(&mut self, t: &T) -> Option<T::Gradient>
     where
         T: HasUniqueId + AllocGrad,
+        T::Gradient: std::ops::AddAssign,
     {
-        self.gradient_by_id
+        let item = self
+            .gradient_by_id
             .remove_entry(t.id())
-            .map(|e| *e.1.downcast().unwrap())
+            .map(|e| *e.1.downcast().unwrap());
+        if let Some(mut item) = item {
+            for accum in self.accum.iter_mut() {
+                if let Some(a) = accum.remove_entry(t.id()).map(|e| *e.1.downcast().unwrap()) {
+                    item += a;
+                }
+            }
+            Some(item)
+        } else {
+            None
+        }
     }
 
     /// Returns a mutable reference to the data associated with `t`.

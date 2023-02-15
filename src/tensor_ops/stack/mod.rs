@@ -165,8 +165,11 @@ impl<E: Dtype, D: StackKernel<E>> TryStack<E> for D {
         }
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
-            let (grad_inp, grad_out) = grads.many_and_ref(&tensors, &phantom_out);
-            device.backward(grad_inp, grad_out)?;
+            let (mut grad_inp, grad_out) = grads.many_and_ref(&tensors, &phantom_out);
+            device.backward(
+                grad_inp.drain(..).map(|x| &mut x.storage).collect(),
+                &grad_out.storage,
+            )?;
             Ok(())
         });
         Ok(out.put_tape(tape))

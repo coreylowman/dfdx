@@ -74,7 +74,8 @@ impl<S: Shape, E: Dtype, D: DropoutKernel<E>, T: Tape<D>> Tensor<S, E, D, T> {
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward(op, &inp.storage, grad_inp, grad_out)?;
+            inp.device
+                .backward(op, &inp.storage, &mut grad_inp.storage, &grad_out.storage)?;
             Ok(())
         });
         Ok(out.put_tape(tape))

@@ -1,5 +1,5 @@
 use crate::shapes::{Dtype, HasDtype, HasShape, HasUnitType, Shape, Unit};
-use crate::tensor::storage_traits::*;
+use crate::tensor::{storage_traits::*, Tensor};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{
     sync::{Arc, Mutex},
@@ -93,5 +93,18 @@ impl DeviceStorage for Cpu {
 
     fn random_u64(&self) -> u64 {
         self.rng.lock().unwrap().gen()
+    }
+
+    fn accumulate<S: Shape, E: Dtype>(
+        &self,
+        accum: &mut Tensor<S, E, Self>,
+        item: Tensor<S, E, Self>,
+    ) -> Result<(), Self::Err> {
+        assert_eq!(accum.storage.shape, item.storage.shape);
+        assert_eq!(accum.storage.strides, item.storage.strides);
+        for (a, i) in accum.storage.buf_iter_mut().zip(item.storage.buf_iter()) {
+            a.add_assign(*i);
+        }
+        Ok(())
     }
 }

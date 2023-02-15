@@ -134,10 +134,17 @@ impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> ParamUpdater<D, E> fo
                 let ga = self.grad_avg.get_or_alloc_mut(p)?;
 
                 if self.step == 0 {
-                    p.device.try_fill_with_ones(sa)?;
+                    sa.try_fill_with_ones()?;
                 }
 
-                p.device.update(&self.cfg, &mut p.storage, m, sa, ga, g)?;
+                p.device.update(
+                    &self.cfg,
+                    &mut p.storage,
+                    &mut m.storage,
+                    &mut sa.storage,
+                    &mut ga.storage,
+                    g.storage,
+                )?;
             }
         }
         Ok(())

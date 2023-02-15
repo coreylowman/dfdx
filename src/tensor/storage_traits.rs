@@ -39,6 +39,12 @@ pub trait DeviceStorage: 'static + Default + Clone + HasErr {
             tape: Default::default(),
         }
     }
+
+    fn accumulate<S: Shape, E: Dtype>(
+        &self,
+        accum: &mut Tensor<S, E, Self>,
+        item: Tensor<S, E, Self>,
+    ) -> Result<(), Self::Err>;
 }
 
 /// Internal trait - Represents something that can allocate its own gradient.
@@ -48,9 +54,17 @@ pub trait AllocGrad: HasErr {
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage, T> AllocGrad for Tensor<S, E, D, T> {
-    type Gradient = D::Storage<S, E>;
+    type Gradient = Tensor<S, E, D>;
     fn try_alloc_grad(&self) -> Result<Self::Gradient, D::Err> {
-        self.device.try_alloc_grad(&self.storage)
+        let storage = self.device.try_alloc_grad(&self.storage)?;
+        Ok(self.device.upgrade(storage))
+    }
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage> std::ops::AddAssign for Tensor<S, E, D> {
+    fn add_assign(&mut self, rhs: Self) {
+        let dev = self.device.clone();
+        dev.accumulate(self, rhs).unwrap();
     }
 }
 

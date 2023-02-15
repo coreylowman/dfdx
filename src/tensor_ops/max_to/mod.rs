@@ -73,8 +73,12 @@ impl<S: Shape, E: Dtype, D: MaxReduceKernel<E>, T: Tape<D>> MaxTo for Tensor<S, 
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device
-                .backward(&inp.storage, grad_inp, &phantom_out.storage, grad_out)
+            inp.device.backward(
+                &inp.storage,
+                &mut grad_inp.storage,
+                &phantom_out.storage,
+                &grad_out.storage,
+            )
         });
         Ok(out.put_tape(tape))
     }

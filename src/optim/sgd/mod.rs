@@ -152,7 +152,8 @@ impl<M, D: SgdKernel<E>, E: Dtype> ParamUpdater<D, E> for Sgd<M, E> {
             None => unused.add(p),
             Some(g) => {
                 let v = self.velocity.get_or_alloc_mut(p)?;
-                p.device.update(&self.cfg, &mut p.storage, v, g)?;
+                p.device
+                    .update(&self.cfg, &mut p.storage, &mut v.storage, g.storage)?;
             }
         }
         Ok(())

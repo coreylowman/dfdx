@@ -101,7 +101,7 @@ fn try_binary_op<
     tape.try_alloc_grad(&out)?;
     tape.add_backward_op(move |grads| {
         let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
-        bwd(&lhs.device, &lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)
+        bwd(&lhs.device, &lhs.storage, &mut grad_lhs.storage, &rhs.storage, &mut grad_rhs.storage, &grad_out.storage)
     });
     Ok(out.put_tape(tape))
 }

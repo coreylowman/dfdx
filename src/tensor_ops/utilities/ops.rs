@@ -56,7 +56,8 @@ pub(crate) fn try_unary_op<
     tape.try_alloc_grad(&out)?;
     tape.add_backward_op(move |grads| {
         let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-        inp.device.backward(op, &inp.storage, grad_inp, grad_out)?;
+        inp.device
+            .backward(op, &inp.storage, &mut grad_inp.storage, &grad_out.storage)?;
         Ok(())
     });
     Ok(out.put_tape(tape))
@@ -86,8 +87,14 @@ pub(crate) fn try_binary_op<
     tape.try_alloc_grad(&out)?;
     tape.add_backward_op(move |grads| {
         let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
-        lhs.device
-            .backward(op, &lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)?;
+        lhs.device.backward(
+            op,
+            &lhs.storage,
+            &mut grad_lhs.storage,
+            &rhs.storage,
+            &mut grad_rhs.storage,
+            &grad_out.storage,
+        )?;
         Ok(())
     });
     Ok(out.put_tape(tape))

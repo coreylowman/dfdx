@@ -104,7 +104,8 @@ impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<D>> SelectTo<D> for Te
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward(grad_inp, &idx.storage, grad_out)
+            inp.device
+                .backward(&mut grad_inp.storage, &idx.storage, &grad_out.storage)
         });
         Ok(out.put_tape(tape))
     }
@@ -174,7 +175,8 @@ impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<D>> GatherTo<D>
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward(grad_inp, &idx.storage, grad_out)
+            inp.device
+                .backward(&mut grad_inp.storage, &idx.storage, &grad_out.storage)
         });
         Ok(out.put_tape(tape))
     }
