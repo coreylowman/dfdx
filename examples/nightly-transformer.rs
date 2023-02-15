@@ -5,7 +5,13 @@
 fn main() {
     use dfdx::prelude::*;
 
-    let dev: Cpu = Default::default();
+    #[cfg(not(feature = "cuda"))]
+    type Device = Cpu;
+
+    #[cfg(feature = "cuda")]
+    type Device = Cuda;
+
+    let dev = Device::default();
     type Model = Transformer<16, 4, 3, 3, 8>;
     let t = dev.build_module::<Model, f32>();
 

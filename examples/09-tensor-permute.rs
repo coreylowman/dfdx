@@ -1,11 +1,19 @@
 //! Demonstrates how to re-order (permute/transpose) the axes of a tensor
 
-use dfdx::shapes::{Axes3, Rank3};
-use dfdx::tensor::{Cpu, Tensor, ZerosTensor};
-use dfdx::tensor_ops::PermuteTo;
+use dfdx::{
+    shapes::{Axes3, Rank3},
+    tensor::{Tensor, ZerosTensor},
+    tensor_ops::PermuteTo,
+};
+
+#[cfg(not(feature = "cuda"))]
+type Device = dfdx::tensor::Cpu;
+
+#[cfg(feature = "cuda")]
+type Device = dfdx::tensor::Cuda;
 
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev = Device::default();
 
     let a: Tensor<Rank3<3, 5, 7>, f32, _> = dev.zeros();
 

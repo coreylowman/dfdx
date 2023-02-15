@@ -5,11 +5,17 @@ use dfdx::{
     nn::builders::{Linear, SplitInto},
     nn::{DeviceBuildExt, Module},
     shapes::Rank1,
-    tensor::{Cpu, Tensor, TensorFrom},
+    tensor::{AsArray, Tensor, TensorFrom},
 };
 
+#[cfg(not(feature = "cuda"))]
+type Device = dfdx::tensor::Cpu;
+
+#[cfg(feature = "cuda")]
+type Device = dfdx::tensor::Cuda;
+
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev = Device::default();
 
     // SplitInto accepts a tuple of modules. Each one of the items in the
     // tuple must accept the same type of input.
@@ -18,5 +24,7 @@ fn main() {
     let m = dev.build_module::<Model, f32>();
 
     // when we forward data through, we get a tuple back!
-    let _: (Tensor<Rank1<3>, f32, _>, Tensor<Rank1<5>, f32, _>) = m.forward(dev.tensor([1.0]));
+    let (y1, y2): (Tensor<Rank1<3>, f32, _>, Tensor<Rank1<5>, f32, _>) =
+        m.forward(dev.tensor([1.0]));
+    println!("Split 1: {:?}, Split 2: {:?}", y1.array(), y2.array());
 }

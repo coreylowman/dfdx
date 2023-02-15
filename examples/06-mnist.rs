@@ -17,17 +17,19 @@
 //! cargo run --example 06-mnist -- tmp/
 //! ```
 
-use dfdx::{data::SubsetIterator, losses::cross_entropy_with_logits_loss, optim::Adam, prelude::*};
+use std::time::Instant;
+
 use indicatif::ProgressBar;
 use mnist::*;
 use rand::prelude::{SeedableRng, StdRng};
-use std::time::Instant;
 
-#[cfg(feature = "cuda")]
-type Dev = Cuda;
+use dfdx::{data::SubsetIterator, losses::cross_entropy_with_logits_loss, optim::Adam, prelude::*};
 
 #[cfg(not(feature = "cuda"))]
 type Dev = Cpu;
+
+#[cfg(feature = "cuda")]
+type Dev = Cuda;
 
 struct MnistDataset {
     img: Vec<f32>,
