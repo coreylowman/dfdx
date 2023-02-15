@@ -8,7 +8,7 @@ pub trait RemoveDimTo<Dst: Shape, Idx: Shape>: Shape {
     type Ax: Axes<Array = [isize; 1]>;
 
     /// All dimensions of idx should be the same as the dimensions of Self
-    #[inline]
+    #[inline(always)]
     fn check(&self, idx: &Idx) {
         assert!(Idx::NUM_DIMS <= Self::NUM_DIMS);
         let src_dims = self.concrete();
@@ -41,7 +41,7 @@ pub trait ReplaceDimTo<Dst: Shape, Idx: Shape>: Shape {
 
     /// All dimensions of idx *up to last dimension* (which is new)
     /// should be the same as the dimensions of Self
-    #[inline]
+    #[inline(always)]
     fn check(&self, idx: &Idx) {
         if Self::NUM_DIMS == Dst::NUM_DIMS {
             // replace 1 dim case
