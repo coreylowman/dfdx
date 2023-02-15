@@ -95,6 +95,7 @@ impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<D>> SelectTo<D> for Te
     where
         Self::Shape: RemoveDimTo<Dst, Idx>,
     {
+        self.shape().check(idx.shape());
         let (inp, mut tape) = self.split_tape();
         let storage = inp.device.forward(&inp.storage, &idx.storage)?;
         let out = inp.device.upgrade(storage);
@@ -164,6 +165,7 @@ impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<D>> GatherTo<D>
     where
         Self::Shape: ReplaceDimTo<Dst, Idx>,
     {
+        self.shape().check(idx.shape());
         let (inp, mut tape) = self.split_tape();
         let storage = inp.device.forward(&inp.storage, &idx.storage)?;
         let out = inp.device.upgrade(storage);
@@ -183,6 +185,57 @@ mod tests {
     use super::*;
     use crate::tensor_ops::*;
     use crate::tests::*;
+
+    #[test]
+    #[should_panic]
+    fn test_remove_wrong_index_shape_2d() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<_, TestDtype, _> = dev.sample_like(&(5, 3), rand_distr::StandardNormal);
+        // here we are selecting from axis 1, so the 7 should actually be a 5
+        let _ = t.trace().select(dev.zeros_like(&(7,)));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_remove_wrong_index_shape_3d() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<_, TestDtype, _> = dev.sample_like(&(7, 5, 3), rand_distr::StandardNormal);
+        let _ = t.trace().select(dev.zeros_like(&(7, 4)));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_remove_index_out_of_bounds() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
+        let _ = t.trace().select(dev.tensor(7));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_replace_wrong_index_shape_3d1() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<_, TestDtype, _> = dev.sample_like(&(5, 3, 1), rand_distr::StandardNormal);
+        let r = t.trace().gather(dev.zeros_like(&(7,)));
+        assert_eq!(r.shape(), &(7, 3, 1));
+        let _ = t.trace().gather(dev.zeros_like(&(7, 4)));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_replace_wrong_index_shape_3d2() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<_, TestDtype, _> = dev.sample_like(&(5, 3, 1), rand_distr::StandardNormal);
+        let _ = t.trace().gather(dev.zeros_like(&(5, 4, 2)));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_replace_index_out_of_bounds() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
+        let _ = t.trace().gather(dev.tensor([7, 6, 1, 2]));
+    }
 
     #[test]
     fn test_remove_1d_backward() {

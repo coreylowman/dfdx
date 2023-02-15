@@ -7,6 +7,17 @@ use super::{
 pub trait RemoveDimTo<Dst: Shape, Idx: Shape>: Shape {
     type Ax: Axes<Array = [isize; 1]>;
 
+    /// All dimensions of idx should be the same as the dimensions of Self
+    #[inline]
+    fn check(&self, idx: &Idx) {
+        assert!(Idx::NUM_DIMS <= Self::NUM_DIMS);
+        let src_dims = self.concrete();
+        let idx_dims = idx.concrete();
+        for i in 0..Idx::NUM_DIMS {
+            assert_eq!(src_dims[i], idx_dims[i]);
+        }
+    }
+
     #[inline]
     fn remove(&self, _: Idx) -> Dst {
         let ax = Self::Ax::as_array()[0] as usize;
@@ -27,6 +38,24 @@ pub trait RemoveDimTo<Dst: Shape, Idx: Shape>: Shape {
 /// Marker for shapes that can be indexed and have a dimension replaced with a new one
 pub trait ReplaceDimTo<Dst: Shape, Idx: Shape>: Shape {
     type Ax: Axes<Array = [isize; 1]>;
+
+    /// All dimensions of idx *up to last dimension* (which is new)
+    /// should be the same as the dimensions of Self
+    #[inline]
+    fn check(&self, idx: &Idx) {
+        if Self::NUM_DIMS == Dst::NUM_DIMS {
+            // replace 1 dim case
+            assert!(Idx::NUM_DIMS <= Self::NUM_DIMS);
+            let src_dims = self.concrete();
+            let idx_dims = idx.concrete();
+            for i in 0..Idx::NUM_DIMS - 1 {
+                assert_eq!(src_dims[i], idx_dims[i]);
+            }
+        } else {
+            // batch replace case - we actually don't need to check this case
+            // at all
+        }
+    }
 
     #[inline]
     fn replace(&self, idx: Idx) -> Dst {
