@@ -1,4 +1,4 @@
-use crate::shapes::{Dtype, HasSameNumelAs, Shape};
+use crate::shapes::{Dtype, Shape};
 use crate::tensor::cpu::{Cpu, LendingIterator, StridedArray};
 
 impl<E: Dtype> super::ReshapeKernel<E> for Cpu {
@@ -6,10 +6,7 @@ impl<E: Dtype> super::ReshapeKernel<E> for Cpu {
         &self,
         dst: Dst,
         inp: &Self::Storage<Src, E>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
-    where
-        Src: HasSameNumelAs<Dst>,
-    {
+    ) -> Result<Self::Storage<Dst, E>, Self::Err> {
         let mut out = StridedArray::new(dst)?;
         let mut inp_iter = inp.iter();
         let mut out_iter = out.iter_mut();
@@ -23,10 +20,7 @@ impl<E: Dtype> super::ReshapeKernel<E> for Cpu {
         &self,
         grad_inp: &mut Self::Storage<Src, E>,
         grad_out: &Self::Storage<Dst, E>,
-    ) -> Result<(), Self::Err>
-    where
-        Src: HasSameNumelAs<Dst>,
-    {
+    ) -> Result<(), Self::Err> {
         let mut inp_iter = grad_inp.iter_mut();
         let mut out_iter = grad_out.iter();
         while let Some((i, o)) = inp_iter.next().zip(out_iter.next()) {

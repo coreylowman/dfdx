@@ -10,16 +10,12 @@ pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
         &self,
         dst: Dst,
         inp: &Self::Storage<Src, E>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
-    where
-        Src: HasSameNumelAs<Dst>;
+    ) -> Result<Self::Storage<Dst, E>, Self::Err>;
     fn backward<Src: Shape, Dst: Shape>(
         &self,
         grad_inp: &mut Self::Storage<Src, E>,
         grad_out: &Self::Storage<Dst, E>,
-    ) -> Result<(), Self::Err>
-    where
-        Src: HasSameNumelAs<Dst>;
+    ) -> Result<(), Self::Err>;
 }
 
 /// **Requires Nightly** Change the shape of a tensor moving data around.
@@ -32,17 +28,21 @@ pub trait ReshapeTo: HasErr + HasShape {
     }
     fn try_reshape<Dst: ConstShape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
-        Self::Shape: HasSameNumelAs<Dst>;
+        Self::Shape: HasSameNumelAs<Dst>,
+    {
+        self.try_reshape_like::<Dst>(&Default::default())
+    }
+    fn reshape_like<Dst: Shape>(self, dst: &Dst) -> Self::WithShape<Dst> {
+        self.try_reshape_like(dst).unwrap()
+    }
+    fn try_reshape_like<Dst: Shape>(self, dst: &Dst) -> Result<Self::WithShape<Dst>, Self::Err>;
 }
 
 impl<S: Shape, E: Dtype, D: ReshapeKernel<E>, T: Tape<D>> ReshapeTo for Tensor<S, E, D, T> {
-    fn try_reshape<Dst: ConstShape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
-    where
-        Self::Shape: HasSameNumelAs<Dst>,
-    {
-        let dst: Dst = Default::default();
+    fn try_reshape_like<Dst: Shape>(self, dst: &Dst) -> Result<Self::WithShape<Dst>, Self::Err> {
+        assert_eq!(self.shape().num_elements(), dst.shape().num_elements());
         let (inp, mut tape) = self.split_tape();
-        let out = inp.device.upgrade(inp.device.forward(dst, &inp.storage)?);
+        let out = inp.device.upgrade(inp.device.forward(*dst, &inp.storage)?);
         let phantom_out = out.clone();
         tape.try_alloc_grad(&inp)?;
         tape.try_alloc_grad(&out)?;
@@ -62,6 +62,14 @@ mod tests {
     use crate::tests::*;
 
     use super::*;
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_reshape() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<(usize,), TestDtype, _> = dev.zeros_like(&(5,));
+        let _ = t.reshape_like(&(7,));
+    }
 
     #[test]
     fn test_valid_reshapes() {
