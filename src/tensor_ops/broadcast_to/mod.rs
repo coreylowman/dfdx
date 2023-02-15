@@ -36,16 +36,14 @@ pub trait BroadcastTo: HasErr + HasShape {
     /// // broadcast axis 0 and axis 2
     /// let _ = a.clone().broadcast::<Rank4<1, 3, 5, 7>, _>();
     /// ```
-    fn broadcast<Dst: Shape + Default, Ax: Axes>(self) -> Self::WithShape<Dst>
+    fn broadcast<Dst: ConstShape, Ax: Axes>(self) -> Self::WithShape<Dst>
     where
         Self::Shape: BroadcastShapeTo<Dst, Ax>,
     {
         self.try_broadcast_like(&Default::default()).unwrap()
     }
     /// Fallible version of [BroadcastTo::broadcast]
-    fn try_broadcast<Dst: Shape + Default, Ax: Axes>(
-        self,
-    ) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_broadcast<Dst: ConstShape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: BroadcastShapeTo<Dst, Ax>,
     {
@@ -76,6 +74,7 @@ impl<S: Shape, E: Dtype, D: BroadcastKernel<E>, T: Tape<D>> BroadcastTo for Tens
         Self::Shape: BroadcastShapeTo<Dst, Ax>,
     {
         let (inp, mut tape) = self.split_tape();
+        inp.shape().check(dst);
         let out = inp.device.upgrade(inp.device.forward(*dst, &inp.storage)?);
         let phantom_out = out.clone();
         tape.try_alloc_grad(&inp)?;
@@ -93,6 +92,14 @@ mod tests {
     use super::*;
     use crate::tensor_ops::*;
     use crate::tests::*;
+
+    #[test]
+    #[should_panic]
+    fn test_broadcast_incorrect_dims() {
+        let dev: TestDevice = Default::default();
+        let a: Tensor<(usize,), TestDtype, _> = dev.zeros_like(&(5,));
+        let _: Tensor<(Const<3>, usize), TestDtype, _> = a.broadcast_like(&(Const, 7));
+    }
 
     #[test]
     fn test_valid_1d_broadcasts() {
