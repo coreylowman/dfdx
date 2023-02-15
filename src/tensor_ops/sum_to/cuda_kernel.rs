@@ -57,7 +57,8 @@ where
         .unwrap();
 
         let physical_numel = inp.data.len();
-        let (dst_physical_numel, dst_strides) = reduction_output_strides::<Ax, Src, Dst>(inp.strides, dst);
+        let (dst_physical_numel, dst_strides) =
+            reduction_output_strides::<Ax, Src, Dst>(inp.strides, dst);
         let chunk_len = physical_numel / dst_physical_numel;
 
         let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
