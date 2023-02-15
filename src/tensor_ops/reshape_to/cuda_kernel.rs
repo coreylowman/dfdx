@@ -30,10 +30,7 @@ where
         &self,
         dst: Dst,
         inp: &Self::Storage<Src, E>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
-    where
-        Src: HasSameNumelAs<Dst>,
-    {
+    ) -> Result<Self::Storage<Dst, E>, Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
@@ -72,10 +69,7 @@ where
         &self,
         grad_inp: &mut Self::Storage<Src, E>,
         grad_out: &Self::Storage<Dst, E>,
-    ) -> Result<(), Self::Err>
-    where
-        Src: HasSameNumelAs<Dst>,
-    {
+    ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
         let numel = grad_inp.data.len();
 
