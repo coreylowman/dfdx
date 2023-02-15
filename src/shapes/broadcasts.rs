@@ -76,6 +76,7 @@ broadcast_to!(3, (N, O, P), 4, (M, N, O, P), Axis<0>);
 
 /// Internal implementation for broadcasting strides
 pub trait BroadcastStridesTo<S: Shape, Ax>: Shape + BroadcastShapeTo<S, Ax> {
+    fn check(&self, dst: &S);
     fn broadcast_strides(&self, strides: Self::Concrete) -> S::Concrete;
 }
 
@@ -83,6 +84,19 @@ impl<Src: Shape, Dst: Shape, Ax: Axes> BroadcastStridesTo<Dst, Ax> for Src
 where
     Self: BroadcastShapeTo<Dst, Ax>,
 {
+    #[inline(always)]
+    fn check(&self, dst: &Dst) {
+        let src_dims = self.concrete();
+        let dst_dims = dst.concrete();
+        let mut j = 0;
+        for i in 0..Dst::NUM_DIMS {
+            if !Ax::as_array().into_iter().any(|x| x == i as isize) {
+                assert_eq!(dst_dims[i], src_dims[j]);
+                j += 1;
+            }
+        }
+    }
+
     #[inline(always)]
     fn broadcast_strides(&self, strides: Self::Concrete) -> Dst::Concrete {
         let mut new_strides: Dst::Concrete = Default::default();
@@ -124,6 +138,17 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_check() {
+        BroadcastStridesTo::<(usize, usize), Axis<1>>::check(&(1,), &(1, 2));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_check_failures() {
+        BroadcastStridesTo::<(usize, usize), Axis<1>>::check(&(1,), &(2, 2));
+    }
 
     #[test]
     fn test_no_conflict_reductions() {

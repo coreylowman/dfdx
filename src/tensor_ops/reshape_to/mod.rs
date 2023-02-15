@@ -24,19 +24,19 @@ pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
 
 /// **Requires Nightly** Change the shape of a tensor moving data around.
 pub trait ReshapeTo: HasErr + HasShape {
-    fn reshape<Dst: Shape + Default>(self) -> Self::WithShape<Dst>
+    fn reshape<Dst: ConstShape>(self) -> Self::WithShape<Dst>
     where
         Self::Shape: HasSameNumelAs<Dst>,
     {
         self.try_reshape().unwrap()
     }
-    fn try_reshape<Dst: Shape + Default>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_reshape<Dst: ConstShape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasSameNumelAs<Dst>;
 }
 
 impl<S: Shape, E: Dtype, D: ReshapeKernel<E>, T: Tape<D>> ReshapeTo for Tensor<S, E, D, T> {
-    fn try_reshape<Dst: Shape + Default>(self) -> Result<Self::WithShape<Dst>, Self::Err>
+    fn try_reshape<Dst: ConstShape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasSameNumelAs<Dst>,
     {
