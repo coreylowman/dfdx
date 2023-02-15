@@ -188,30 +188,50 @@ pub trait OneFillStorage<E: Unit>: DeviceStorage {
 
 /// Constructs tensors filled with random values from a given distribution.
 pub trait SampleTensor<E: Unit>: DeviceStorage {
+    /// Samples a const tensor from a uniform distribution
     fn sample_uniform<S: ConstShape>(&self) -> Tensor<S, E, Self>
     where
         Standard: Distribution<E>,
     {
         self.sample::<S, _>(Standard)
     }
+    /// Samples a tensor with a given shape from a uniform distribution
+    fn sample_uniform_like<S: HasShape>(&self, src: &S) -> Tensor<S::Shape, E, Self>
+    where
+        Standard: Distribution<E>,
+    {
+        self.sample_like::<S, _>(src, Standard)
+    }
 
+    /// Samples a const tensor from a normal distribution
     fn sample_normal<S: ConstShape>(&self) -> Tensor<S, E, Self>
     where
         StandardNormal: Distribution<E>,
     {
         self.sample::<S, _>(StandardNormal)
     }
+    /// Samples a tensor with a given shape from a normal distribution
+    fn sample_normal_like<S: HasShape>(&self, src: &S) -> Tensor<S::Shape, E, Self>
+    where
+        StandardNormal: Distribution<E>,
+    {
+        self.sample_like::<S, _>(src, StandardNormal)
+    }
 
+    /// Samples a const tensor from a given distribution.
     fn sample<S: ConstShape, D: Distribution<E>>(&self, distr: D) -> Tensor<S, E, Self> {
         self.try_sample_like::<S, D>(&Default::default(), distr)
             .unwrap()
     }
+    /// Fallibly samples a const tensor from a given distribution.
     fn try_sample<S: ConstShape, D: Distribution<E>>(
         &self,
         distr: D,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
         self.try_sample_like::<S, D>(&Default::default(), distr)
     }
+
+    /// Samples a tensor with a given shape from a given distribution.
     fn sample_like<S: HasShape, D: Distribution<E>>(
         &self,
         src: &S,
@@ -219,12 +239,14 @@ pub trait SampleTensor<E: Unit>: DeviceStorage {
     ) -> Tensor<S::Shape, E, Self> {
         self.try_sample_like(src, distr).unwrap()
     }
+    /// Fallibly samples a tensor with a given shape from a given distribution.
     fn try_sample_like<S: HasShape, D: Distribution<E>>(
         &self,
         src: &S,
         distr: D,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 
+    /// Fills tensor storage with data from a given distribution
     fn try_fill_with_distr<S: Shape, D: Distribution<E>>(
         &self,
         storage: &mut Self::Storage<S, E>,
