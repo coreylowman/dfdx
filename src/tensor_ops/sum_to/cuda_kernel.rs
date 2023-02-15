@@ -60,12 +60,6 @@ where
         let (dst_physical_numel, dst_strides) = reduction_output_strides::<Ax, Src, Dst>(inp.strides, dst);
         let chunk_len = physical_numel / dst_physical_numel;
 
-        std::println!("{:?} {:?} {:?}", inp.shape.concrete(), inp.shape.strides(), inp.strides);
-        std::println!("{:?} {:?} {:?}", dst.concrete(), dst.strides(), dst_strides);
-        std::println!("{:?}", Ax::as_array().into_iter().collect::<std::vec::Vec<_>>());
-        std::println!("{:?} {:?}", chunk_len, elems_per_thread);
-        std::println!("{:?} {:?}", physical_numel, dst_physical_numel);
-
         let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
         let params = (
             physical_numel,    // const size_t numel,
