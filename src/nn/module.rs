@@ -4,6 +4,8 @@ use crate::{optim::GradientUpdate, shapes::Dtype};
 pub use crate::tensor::OnCuda;
 pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
 
+use super::{ModuleGroup, TensorVisitor, VisitTensorGroups};
+
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
 pub trait Module<Input> {
@@ -80,6 +82,17 @@ pub trait ResetParams<D: DeviceStorage, E: Dtype> {
 /// Marker trait for modules with no updatable parameters. These have
 /// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]
 pub trait ZeroSizedModule: Default {}
+
+impl<const N: usize, const M: usize, E: Dtype, D: DeviceStorage, T: ZeroSizedModule>
+    VisitTensorGroups<N, M, E, D> for T
+{
+    fn visit_groups<Func: TensorVisitor<N, M, E, D>>(
+        _self_refs: ModuleGroup<N, M, Self>,
+        _func: &mut Func,
+    ) -> Result<(), D::Err> {
+        Ok(())
+    }
+}
 
 impl<T: ZeroSizedModule + BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for T {
     type Built = T;

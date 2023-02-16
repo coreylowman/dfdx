@@ -99,6 +99,29 @@ pub struct TransformerEncoderBlock<
 type FF<const M: usize, const F: usize, E, D> =
     Residual<(Linear<M, F, E, D>, ReLU, Linear<F, M, E, D>)>;
 
+impl<
+        const N: usize,
+        const M: usize,
+        const MODEL_DIM: usize,
+        const NUM_HEADS: usize,
+        const FF_DIM: usize,
+        E: Dtype,
+        D: DeviceStorage,
+    > VisitTensorGroups<N, M, E, D>
+    for TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>
+{
+    #[rustfmt::skip]
+    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
+        mut self_refs: ModuleGroup<N, M, Self>,
+        func: &mut F,
+    ) -> Result<(), D::Err> {
+        self_refs.map(|s| &s.self_attn, |s| &mut s.self_attn, "self_attn.").visit(func)?;
+        self_refs.map(|s| &s.norm1, |s| &mut s.norm1, "norm1.").visit(func)?;
+        self_refs.map(|s| &s.ff, |s| &mut s.ff, "ff.").visit(func)?;
+        self_refs.map(|s| &s.norm2, |s| &mut s.norm2, "norm2.").visit(func)
+    }
+}
+
 impl<const M: usize, const H: usize, const F: usize, E, D: Device<E>> BuildModule<D, E>
     for TransformerEncoderBlock<M, H, F, E, D>
 where

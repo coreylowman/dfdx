@@ -3,7 +3,10 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{
+    BuildModule, BuildOnDevice, Module, ModuleGroup, ModuleMut, ResetParams, TensorVisitor,
+    ToDevice, VisitTensorGroups,
+};
 
 pub mod builder {
     #[derive(Debug)]
@@ -51,6 +54,28 @@ pub struct Conv2D<
 > {
     pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>, E, D>,
     pub bias: Tensor<Rank1<OUT_CHAN>, E, D>,
+}
+
+// TODO: custom behavior for ResetParams
+impl<
+        const N: usize,
+        const M: usize,
+        const I: usize,
+        const O: usize,
+        const K: usize,
+        const S: usize,
+        const P: usize,
+        E: Dtype,
+        D: DeviceStorage,
+    > VisitTensorGroups<N, M, E, D> for Conv2D<I, O, K, S, P, E, D>
+{
+    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
+        mut self_refs: ModuleGroup<N, M, Self>,
+        func: &mut F,
+    ) -> Result<(), D::Err> {
+        func.call(self_refs.map(|s| &s.weight, |s| &mut s.weight, "weight"))?;
+        func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"))
+    }
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>

@@ -3,7 +3,10 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{
+    module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice},
+    ModuleGroup, TensorVisitor, VisitTensorGroups,
+};
 
 pub mod builder {
     #[derive(Debug)]
@@ -50,6 +53,24 @@ where
 pub struct Embedding<const VOCAB: usize, const DIM: usize, E: Dtype, D: DeviceStorage> {
     /// Transposed weight matrix, shape (I, O)
     pub weight: Tensor<Rank2<VOCAB, DIM>, E, D>,
+}
+
+// TODO: custom behavior for ResetParams
+impl<
+        const N: usize,
+        const M: usize,
+        const V: usize,
+        const I: usize,
+        E: Dtype,
+        D: DeviceStorage,
+    > VisitTensorGroups<N, M, E, D> for Embedding<V, I, E, D>
+{
+    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
+        mut self_refs: ModuleGroup<N, M, Self>,
+        func: &mut F,
+    ) -> Result<(), D::Err> {
+        func.call(self_refs.map(|s| &s.weight, |s| &mut s.weight, "weight"))
+    }
 }
 
 impl<const V: usize, const M: usize, const S: usize, E: Dtype, D: Device<E>, T: Tape<D>>

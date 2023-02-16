@@ -19,8 +19,8 @@ fn map_mut<'a, A: 'a + Debug, B: 'a + Debug, const N: usize, F: FnMut(&'a mut A)
     vec.try_into().unwrap()
 }
 
-impl<'a, const N: usize, const M: usize, T1: Debug> ModuleGroup<'a, N, M, T1> {
-    pub fn new(refs: [&'a T1; N], refs_mut: [&'a mut T1; M], name: Option<String>) -> Self {
+impl<'a, const N: usize, const M: usize, T: Debug> ModuleGroup<'a, N, M, T> {
+    pub fn new(refs: [&'a T; N], refs_mut: [&'a mut T; M], name: Option<String>) -> Self {
         Self {
             refs,
             refs_mut,
@@ -28,7 +28,7 @@ impl<'a, const N: usize, const M: usize, T1: Debug> ModuleGroup<'a, N, M, T1> {
         }
     }
 
-    pub fn map<T2: Debug, F1: FnMut(&T1) -> &T2, F2: FnMut(&mut T1) -> &mut T2>(
+    pub fn map<T2: Debug, F1: FnMut(&T) -> &T2, F2: FnMut(&mut T) -> &mut T2>(
         &mut self,
         func1: F1,
         mut func2: F2,
@@ -42,6 +42,16 @@ impl<'a, const N: usize, const M: usize, T1: Debug> ModuleGroup<'a, N, M, T1> {
                 .as_ref()
                 .map(|prefix| std::format!("{prefix}{name}")),
         }
+    }
+
+    pub fn visit<E: Dtype, D: DeviceStorage, F: TensorVisitor<N, M, E, D>>(
+        self,
+        func: &mut F,
+    ) -> Result<(), D::Err>
+    where
+        T: VisitTensorGroups<N, M, E, D>,
+    {
+        VisitTensorGroups::visit_groups(self, func)
     }
 }
 
@@ -114,25 +124,6 @@ pub trait CountParams<E: Dtype, D: DeviceStorage>: VisitTensors<E, D> {
 }
 
 impl<E: Dtype, D: DeviceStorage, T: VisitTensors<E, D>> CountParams<E, D> for T {}
-
-// TODO: remove this example code
-impl<
-        const N: usize,
-        const M: usize,
-        const I: usize,
-        const O: usize,
-        E: Dtype,
-        D: DeviceStorage + Debug,
-    > VisitTensorGroups<N, M, E, D> for crate::nn::modules::Linear<I, O, E, D>
-{
-    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
-        mut self_refs: ModuleGroup<N, M, Self>,
-        func: &mut F,
-    ) -> Result<(), D::Err> {
-        func.call(self_refs.map(|s| &s.weight, |s| &mut s.weight, "weight"))?;
-        func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"))
-    }
-}
 
 #[cfg(test)]
 mod tests {

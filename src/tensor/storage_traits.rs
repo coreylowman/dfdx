@@ -12,7 +12,7 @@ pub trait HasErr: Sized {
 }
 
 /// Something that can store nd arrays for a given [Shape] and [Dtype]
-pub trait DeviceStorage: 'static + Default + Clone + HasErr {
+pub trait DeviceStorage: 'static + Default + std::fmt::Debug + Clone + HasErr {
     /// Generic storage type
     type Storage<S: Shape, E: Unit>: 'static
         + std::fmt::Debug

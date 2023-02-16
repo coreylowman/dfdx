@@ -1,6 +1,9 @@
 use crate::{optim::*, shapes::*, tensor::SplitTape, tensor_ops::Device};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{
+    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleGroup, ModuleMut, ResetParams,
+    TensorVisitor, ToDevice, VisitTensorGroups,
+};
 
 use std::ops::Add;
 
@@ -29,6 +32,22 @@ impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>> GradientUpdate<D, E> for R
         U: ParamUpdater<D, E>,
     {
         self.0.update(updater, unused)
+    }
+}
+
+impl<
+        const N: usize,
+        const M: usize,
+        F: VisitTensorGroups<N, M, E, D> + std::fmt::Debug,
+        E: Dtype,
+        D: DeviceStorage,
+    > VisitTensorGroups<N, M, E, D> for Residual<F>
+{
+    fn visit_groups<Func: TensorVisitor<N, M, E, D>>(
+        mut self_refs: ModuleGroup<N, M, Self>,
+        func: &mut Func,
+    ) -> Result<(), D::Err> {
+        self_refs.map(|s| &s.0, |s| &mut s.0, "0.").visit(func)
     }
 }
 

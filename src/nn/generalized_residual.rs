@@ -1,6 +1,9 @@
 use crate::{optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{
+    BuildModule, BuildOnDevice, Module, ModuleGroup, ModuleMut, ResetParams, TensorVisitor,
+    ToDevice, VisitTensorGroups,
+};
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -23,6 +26,24 @@ use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice
 pub struct GeneralizedResidual<F, R> {
     pub f: F,
     pub r: R,
+}
+
+impl<
+        const N: usize,
+        const M: usize,
+        F: VisitTensorGroups<N, M, E, D> + std::fmt::Debug,
+        R: VisitTensorGroups<N, M, E, D> + std::fmt::Debug,
+        E: Dtype,
+        D: DeviceStorage,
+    > VisitTensorGroups<N, M, E, D> for GeneralizedResidual<F, R>
+{
+    fn visit_groups<Func: TensorVisitor<N, M, E, D>>(
+        mut self_refs: ModuleGroup<N, M, Self>,
+        func: &mut Func,
+    ) -> Result<(), D::Err> {
+        self_refs.map(|s| &s.f, |s| &mut s.f, "f.").visit(func)?;
+        self_refs.map(|s| &s.r, |s| &mut s.r, "r.").visit(func)
+    }
 }
 
 impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>, R: GradientUpdate<D, E>> GradientUpdate<D, E>

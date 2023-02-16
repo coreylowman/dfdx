@@ -63,6 +63,30 @@ pub struct MultiHeadAttention<
     pub w_o: Linear<V_DIM, EMBED_DIM, E, D>,
 }
 
+impl<
+        const N: usize,
+        const M: usize,
+        const EMBED_DIM: usize,
+        const NUM_HEADS: usize,
+        const K_DIM: usize,
+        const V_DIM: usize,
+        E: Dtype,
+        D: DeviceStorage,
+    > VisitTensorGroups<N, M, E, D>
+    for MultiHeadAttention<EMBED_DIM, NUM_HEADS, K_DIM, V_DIM, E, D>
+{
+    #[rustfmt::skip]
+    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
+        mut self_refs: ModuleGroup<N, M, Self>,
+        func: &mut F,
+    ) -> Result<(), D::Err> {
+        self_refs.map(|s| &s.w_q, |s| &mut s.w_q, "w_q.").visit(func)?;
+        self_refs.map(|s| &s.w_k, |s| &mut s.w_k, "w_k.").visit(func)?;
+        self_refs.map(|s| &s.w_v, |s| &mut s.w_v, "w_v.").visit(func)?;
+        self_refs.map(|s| &s.w_v, |s| &mut s.w_v, "w_v.").visit(func)
+    }
+}
+
 impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: Device<E>>
     BuildModule<D, E> for MultiHeadAttention<M, H, K, V, E, D>
 where

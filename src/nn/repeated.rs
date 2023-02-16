@@ -1,6 +1,9 @@
 use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{
+    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleGroup, ModuleMut, ResetParams,
+    TensorVisitor, ToDevice, VisitTensorGroups,
+};
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///
@@ -19,6 +22,32 @@ use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice
 #[derive(Debug, Clone)]
 pub struct Repeated<T, const N: usize> {
     pub modules: std::vec::Vec<T>,
+}
+
+impl<
+        const N: usize,
+        const M: usize,
+        const L: usize,
+        T: VisitTensorGroups<N, M, E, D> + std::fmt::Debug,
+        E: Dtype,
+        D: DeviceStorage,
+    > VisitTensorGroups<N, M, E, D> for Repeated<T, L>
+{
+    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
+        mut self_refs: ModuleGroup<N, M, Self>,
+        func: &mut F,
+    ) -> Result<(), D::Err> {
+        for i in 0..N {
+            self_refs
+                .map(
+                    |s| &s.modules[i],
+                    |s| &mut s.modules[i],
+                    &std::format!("{i}."),
+                )
+                .visit(func)?;
+        }
+        Ok(())
+    }
 }
 
 impl<D: Device<E>, E: Dtype, T: BuildOnDevice<D, E>, const N: usize> BuildOnDevice<D, E>

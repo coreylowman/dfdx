@@ -15,7 +15,10 @@ use crate::{
     tensor_ops::Device,
 };
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{
+    BuildModule, BuildOnDevice, Module, ModuleGroup, ModuleMut, ResetParams, TensorVisitor,
+    ToDevice, VisitTensorGroups,
+};
 
 pub mod builder {
     #[derive(Debug, Clone)]
@@ -80,6 +83,32 @@ pub struct Transformer<
 > {
     pub encoder: TransformerEncoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_ENCODER_LAYERS, E, D>,
     pub decoder: TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_DECODER_LAYERS, E, D>,
+}
+
+impl<
+        const N: usize,
+        const M: usize,
+        const MODEL_DIM: usize,
+        const NUM_HEADS: usize,
+        const NUM_ENCODER_LAYERS: usize,
+        const NUM_DECODER_LAYERS: usize,
+        const FF_DIM: usize,
+        E: Dtype,
+        D: DeviceStorage,
+    > VisitTensorGroups<N, M, E, D>
+    for Transformer<MODEL_DIM, NUM_HEADS, NUM_ENCODER_LAYERS, NUM_DECODER_LAYERS, FF_DIM, E, D>
+{
+    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
+        mut self_refs: ModuleGroup<N, M, Self>,
+        func: &mut F,
+    ) -> Result<(), D::Err> {
+        self_refs
+            .map(|s| &s.encoder, |s| &mut s.encoder, "encoder.")
+            .visit(func)?;
+        self_refs
+            .map(|s| &s.decoder, |s| &mut s.decoder, "decoder.")
+            .visit(func)
+    }
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>

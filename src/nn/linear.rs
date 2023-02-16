@@ -1,6 +1,9 @@
 use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{
+    module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice},
+    ModuleGroup, TensorVisitor, VisitTensorGroups,
+};
 
 use num_traits::Float;
 use rand_distr::{uniform::SampleUniform, Uniform};
@@ -50,6 +53,25 @@ pub struct Linear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> {
 
     /// Bias vector, shape (O, )
     pub bias: Tensor<Rank1<O>, E, D>,
+}
+
+// TODO: custom behavior for ResetParams
+impl<
+        const N: usize,
+        const M: usize,
+        const I: usize,
+        const O: usize,
+        E: Dtype,
+        D: DeviceStorage,
+    > VisitTensorGroups<N, M, E, D> for Linear<I, O, E, D>
+{
+    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
+        mut self_refs: ModuleGroup<N, M, Self>,
+        func: &mut F,
+    ) -> Result<(), D::Err> {
+        func.call(self_refs.map(|s| &s.weight, |s| &mut s.weight, "weight"))?;
+        func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"))
+    }
 }
 
 impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> GradientUpdate<D, E>

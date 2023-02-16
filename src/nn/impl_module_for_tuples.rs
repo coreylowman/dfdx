@@ -1,11 +1,30 @@
 use crate::{optim::*, shapes::*, tensor_ops::*};
 
 use super::module::{
-    BuildModule, BuildOnDevice, Module, ModuleMut, OnDevice, ResetParams, ToDevice,
+    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, OnDevice, ResetParams,
 };
+
+use super::{ModuleGroup, TensorVisitor, ToDevice, VisitTensorGroups};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
+        impl<
+            const N: usize,
+            const M: usize,
+            $($name: VisitTensorGroups<N, M, E, D> + std::fmt::Debug,)+
+            E: Dtype,
+            D: DeviceStorage,
+        > VisitTensorGroups<N, M, E, D> for ($($name,)+)
+        {
+            fn visit_groups<Func: TensorVisitor<N, M, E, D>>(
+                mut self_refs: ModuleGroup<N, M, Self>,
+                func: &mut Func,
+            ) -> Result<(), D::Err> {
+                $(self_refs.map(|s| &s.$idx, |s| &mut s.$idx, &std::format!("{}.", $idx)).visit(func)?;)+
+                Ok(())
+            }
+        }
+
         impl<D: Device<E>, E: Dtype, $($name: GradientUpdate<D, E>),+> GradientUpdate<D, E> for ($($name,)+) {
             fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
             where
