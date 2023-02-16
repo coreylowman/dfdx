@@ -1,7 +1,10 @@
 use crate::shapes::Dtype;
 
 use crate::prelude::*;
-use std::{fmt::Debug, string::{String, ToString}};
+use std::{
+    fmt::Debug,
+    string::{String, ToString},
+};
 
 pub struct ModuleGroup<'a, const N: usize, const M: usize, T> {
     pub refs: [&'a T; N],
@@ -64,8 +67,10 @@ pub enum TensorVisitorOption {
 pub trait TensorVisitor<const N: usize, const M: usize, E: Dtype, D: DeviceStorage> {
     type Err: std::fmt::Display + Debug;
 
-    fn call<S: Shape>(&mut self, tensors: ModuleGroup<N, M, Tensor<S, E, D>>)
-        -> Result<(), Self::Err>;
+    fn call<S: Shape>(
+        &mut self,
+        tensors: ModuleGroup<N, M, Tensor<S, E, D>>,
+    ) -> Result<(), Self::Err>;
     fn set_option(&mut self, _option: TensorVisitorOption) {}
 }
 
@@ -94,7 +99,11 @@ pub trait VisitTensors<E: Dtype, D: DeviceStorage>: VisitTensorGroups<1, 0, E, D
         VisitTensorGroups::visit_groups(ModuleGroup::new([self], [], None), func)
     }
 
-    fn visit_with_name<F: TensorVisitor<1, 0, E, D>>(&self, name: &str, func: &mut F) -> Result<(), F::Err> {
+    fn visit_with_name<F: TensorVisitor<1, 0, E, D>>(
+        &self,
+        name: &str,
+        func: &mut F,
+    ) -> Result<(), F::Err> {
         VisitTensorGroups::visit_groups(ModuleGroup::new([self], [], Some(name.to_string())), func)
     }
 }
@@ -111,7 +120,11 @@ pub trait VisitTensorsMut<E: Dtype, D: DeviceStorage>:
         VisitTensorGroups::visit_groups(ModuleGroup::new([], [self], None), func)
     }
 
-    fn visit_mut_with_name<F: TensorVisitor<0, 1, E, D>>(&mut self, name: &str, func: &mut F) -> Result<(), F::Err> {
+    fn visit_mut_with_name<F: TensorVisitor<0, 1, E, D>>(
+        &mut self,
+        name: &str,
+        func: &mut F,
+    ) -> Result<(), F::Err> {
         VisitTensorGroups::visit_groups(ModuleGroup::new([], [self], Some(name.to_string())), func)
     }
 }
