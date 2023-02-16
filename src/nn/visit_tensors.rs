@@ -55,7 +55,7 @@ pub trait TensorVisitor<const N: usize, const M: usize, E: Dtype, D: DeviceStora
     fn set_option(&mut self, _option: TensorVisitorOption) {}
 }
 
-pub trait VisitTensorsZipped<const N: usize, const M: usize, E: Dtype, D: DeviceStorage>:
+pub trait VisitZippedTensors<const N: usize, const M: usize, E: Dtype, D: DeviceStorage>:
     Sized
 {
     fn visit_zipped<F: TensorVisitor<N, M, E, D>>(
@@ -64,27 +64,27 @@ pub trait VisitTensorsZipped<const N: usize, const M: usize, E: Dtype, D: Device
     ) -> Result<(), D::Err>;
 }
 
-pub trait VisitTensors<E: Dtype, D: DeviceStorage>: VisitTensorsZipped<1, 0, E, D> + Debug {
+pub trait VisitTensors<E: Dtype, D: DeviceStorage>: VisitZippedTensors<1, 0, E, D> + Debug {
     fn visit<F: TensorVisitor<1, 0, E, D>>(&self, func: &mut F) -> Result<(), D::Err> {
-        VisitTensorsZipped::visit_zipped(ModuleRefs::new([self], [], None), func)
+        VisitZippedTensors::visit_zipped(ModuleRefs::new([self], [], None), func)
     }
 }
 
 impl<E: Dtype, D: DeviceStorage, T> VisitTensors<E, D> for T where
-    T: VisitTensorsZipped<1, 0, E, D> + Debug
+    T: VisitZippedTensors<1, 0, E, D> + Debug
 {
 }
 
 pub trait VisitTensorsMut<E: Dtype, D: DeviceStorage>:
-    VisitTensorsZipped<0, 1, E, D> + Debug
+    VisitZippedTensors<0, 1, E, D> + Debug
 {
     fn visit_mut<F: TensorVisitor<0, 1, E, D>>(&mut self, func: &mut F) -> Result<(), D::Err> {
-        VisitTensorsZipped::visit_zipped(ModuleRefs::new([], [self], None), func)
+        VisitZippedTensors::visit_zipped(ModuleRefs::new([], [self], None), func)
     }
 }
 
 impl<E: Dtype, D: DeviceStorage, T> VisitTensorsMut<E, D> for T where
-    T: VisitTensorsZipped<0, 1, E, D> + Debug
+    T: VisitZippedTensors<0, 1, E, D> + Debug
 {
 }
 
@@ -116,7 +116,7 @@ impl<
         const O: usize,
         E: Dtype,
         D: DeviceStorage + Debug,
-    > VisitTensorsZipped<N, M, E, D> for crate::nn::modules::Linear<I, O, E, D>
+    > VisitZippedTensors<N, M, E, D> for crate::nn::modules::Linear<I, O, E, D>
 {
     fn visit_zipped<F: TensorVisitor<N, M, E, D>>(
         mut self_refs: ModuleRefs<N, M, Self>,
