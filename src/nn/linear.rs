@@ -1,4 +1,4 @@
-use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice},
@@ -71,19 +71,6 @@ impl<
     ) -> Result<(), D::Err> {
         func.call(self_refs.map(|s| &s.weight, |s| &mut s.weight, "weight"))?;
         func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"))
-    }
-}
-
-impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> GradientUpdate<D, E>
-    for Linear<I, O, E, D>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.weight.update(updater, unused)?;
-        self.bias.update(updater, unused)?;
-        Ok(())
     }
 }
 
@@ -183,6 +170,7 @@ mod tests {
     use super::*;
     use crate::{
         nn::{tests::SimpleUpdater, DeviceBuildExt},
+        optim::GradientUpdate,
         tests::*,
         unique_id::HasUniqueId,
     };

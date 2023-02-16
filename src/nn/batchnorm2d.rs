@@ -1,4 +1,4 @@
-use crate::{gradients::*, optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     BuildModule, BuildOnDevice, Module, ModuleGroup, ModuleMut, ResetParams, TensorVisitor,
@@ -227,17 +227,6 @@ impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
             epsilon: self.epsilon,
             momentum: self.momentum,
         }
-    }
-}
-
-impl<const C: usize, E: Dtype, D: Device<E>> GradientUpdate<D, E> for BatchNorm2D<C, E, D> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.scale.update(updater, unused)?;
-        self.bias.update(updater, unused)?;
-        Ok(())
     }
 }
 

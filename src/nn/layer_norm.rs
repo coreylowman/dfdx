@@ -1,4 +1,4 @@
-use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     BuildModule, BuildOnDevice, Module, ModuleGroup, ModuleMut, ResetParams, TensorVisitor,
@@ -90,17 +90,6 @@ impl<const M: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
     }
 }
 
-impl<const M: usize, E: Dtype, D: Device<E>> GradientUpdate<D, E> for LayerNorm1D<M, E, D> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.gamma.update(updater, unused)?;
-        self.beta.update(updater, unused)?;
-        Ok(())
-    }
-}
-
 impl<const M: usize, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<Rank1<M>, E, D, T>>
     for LayerNorm1D<M, E, D>
 {
@@ -149,6 +138,7 @@ mod tests {
     use crate::nn::DeviceBuildExt;
     use crate::tests::{assert_close, TestDevice, TestDtype};
     use crate::unique_id::HasUniqueId;
+    use crate::optim::GradientUpdate;
 
     #[test]
     fn test_layer_norm_reset() {

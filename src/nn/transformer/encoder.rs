@@ -3,7 +3,6 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{
     nn::{modules::*, *},
-    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     shapes::Dtype,
     tensor::{PutTape, SplitTape},
     tensor_ops::Device,
@@ -147,21 +146,6 @@ where
         self.norm1.try_reset_params()?;
         self.ff.try_reset_params()?;
         self.norm2.try_reset_params()?;
-        Ok(())
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>> GradientUpdate<D, E>
-    for TransformerEncoderBlock<M, H, F, E, D>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.self_attn.update(updater, unused)?;
-        self.norm1.update(updater, unused)?;
-        self.ff.update(updater, unused)?;
-        self.norm2.update(updater, unused)?;
         Ok(())
     }
 }

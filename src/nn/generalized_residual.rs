@@ -1,4 +1,4 @@
-use crate::{optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     BuildModule, BuildOnDevice, Module, ModuleGroup, ModuleMut, ResetParams, TensorVisitor,
@@ -43,19 +43,6 @@ impl<
     ) -> Result<(), D::Err> {
         self_refs.map(|s| &s.f, |s| &mut s.f, "f.").visit(func)?;
         self_refs.map(|s| &s.r, |s| &mut s.r, "r.").visit(func)
-    }
-}
-
-impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>, R: GradientUpdate<D, E>> GradientUpdate<D, E>
-    for GeneralizedResidual<F, R>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.f.update(updater, unused)?;
-        self.r.update(updater, unused)?;
-        Ok(())
     }
 }
 

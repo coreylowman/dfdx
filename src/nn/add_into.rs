@@ -1,4 +1,4 @@
-use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
+use crate::{shapes::Dtype, tensor_ops::Device};
 
 use super::{
     BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleGroup, ModuleMut, ResetParams,
@@ -39,15 +39,6 @@ impl<
         func: &mut F,
     ) -> Result<(), D::Err> {
         self_refs.map(|s| &s.0, |s| &mut s.0, "0.").visit(func)
-    }
-}
-
-impl<T: GradientUpdate<D, E>, D: Device<E>, E: Dtype> GradientUpdate<D, E> for AddInto<T> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.0.update(updater, unused)
     }
 }
 
@@ -122,6 +113,7 @@ mod tests {
     use crate::{
         gradients::OwnedTape,
         nn::{builders::*, tests::SimpleUpdater, DeviceBuildExt},
+        optim::GradientUpdate,
         shapes::*,
         tensor::*,
         tests::{TestDevice, TestDtype},

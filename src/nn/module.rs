@@ -1,4 +1,4 @@
-use crate::{optim::GradientUpdate, shapes::Dtype};
+use crate::shapes::Dtype;
 
 #[cfg(feature = "cuda")]
 pub use crate::tensor::OnCuda;
@@ -108,15 +108,6 @@ impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {
     type Output = T;
     fn to_device(&self, _device: &D) -> Self {
         self.clone()
-    }
-}
-
-impl<T: ZeroSizedModule, D: DeviceStorage, E: Dtype> GradientUpdate<D, E> for T {
-    fn update<U>(&mut self, _: &mut U, _: &mut crate::optim::UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: crate::optim::ParamUpdater<D, E>,
-    {
-        Ok(())
     }
 }
 

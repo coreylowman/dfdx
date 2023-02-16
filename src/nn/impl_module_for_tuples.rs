@@ -1,4 +1,4 @@
-use crate::{optim::*, shapes::*, tensor_ops::*};
+use crate::{shapes::*, tensor_ops::*};
 
 use super::module::{
     BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, OnDevice, ResetParams,
@@ -21,16 +21,6 @@ macro_rules! tuple_impls {
                 func: &mut Func,
             ) -> Result<(), D::Err> {
                 $(self_refs.map(|s| &s.$idx, |s| &mut s.$idx, &std::format!("{}.", $idx)).visit(func)?;)+
-                Ok(())
-            }
-        }
-
-        impl<D: Device<E>, E: Dtype, $($name: GradientUpdate<D, E>),+> GradientUpdate<D, E> for ($($name,)+) {
-            fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-            where
-                U: ParamUpdater<D, E>
-            {
-                $(self.$idx.update(updater, unused)?;)+
                 Ok(())
             }
         }
@@ -133,6 +123,7 @@ mod tests {
     use crate::unique_id::HasUniqueId;
     use crate::{
         nn::{builders::*, *},
+        optim::*,
         tensor::*,
         tests::TestDevice,
     };

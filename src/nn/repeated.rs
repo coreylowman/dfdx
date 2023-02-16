@@ -1,4 +1,4 @@
-use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
+use crate::{shapes::Dtype, tensor_ops::Device};
 
 use super::{
     BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleGroup, ModuleMut, ResetParams,
@@ -37,7 +37,7 @@ impl<
         mut self_refs: ModuleGroup<N, M, Self>,
         func: &mut F,
     ) -> Result<(), D::Err> {
-        for i in 0..N {
+        for i in 0..L {
             self_refs
                 .map(
                     |s| &s.modules[i],
@@ -99,20 +99,6 @@ impl<T, const N: usize> std::ops::Index<usize> for Repeated<T, N> {
     }
 }
 
-impl<D: Device<E>, E: Dtype, T: GradientUpdate<D, E>, const N: usize> GradientUpdate<D, E>
-    for Repeated<T, N>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        for m in self.modules.iter_mut() {
-            m.update(updater, unused)?;
-        }
-        Ok(())
-    }
-}
-
 impl<Input, T: Module<Input, Output = Input>, const N: usize> Module<Input> for Repeated<T, N> {
     type Output = T::Output;
     fn forward(&self, mut x: Input) -> Self::Output {
@@ -141,7 +127,7 @@ mod tests {
     use crate::nn::DeviceBuildExt;
     use crate::tests::TestDtype;
     use crate::{nn::builders::*, shapes::*, tensor::*, unique_id::HasUniqueId};
-    use crate::{nn::tests::SimpleUpdater, tests::TestDevice};
+    use crate::{nn::tests::SimpleUpdater, tests::TestDevice, optim::GradientUpdate};
 
     #[test]
     fn test_default_and_reset() {

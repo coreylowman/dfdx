@@ -1,7 +1,7 @@
 use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
-use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     BuildModule, BuildOnDevice, Module, ModuleGroup, ModuleMut, ResetParams, TensorVisitor,
@@ -75,22 +75,6 @@ impl<
     ) -> Result<(), D::Err> {
         func.call(self_refs.map(|s| &s.weight, |s| &mut s.weight, "weight"))?;
         func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"))
-    }
-}
-
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
-    GradientUpdate<D, E> for Conv2D<I, O, K, S, P, E, D>
-where
-    E: Dtype,
-    D: Device<E>,
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.weight.update(updater, unused)?;
-        self.bias.update(updater, unused)?;
-        Ok(())
     }
 }
 
@@ -201,6 +185,7 @@ mod tests {
     use crate::{
         nn::DeviceBuildExt,
         tensor::{AsArray, SampleTensor, ZerosTensor},
+        optim::{Sgd, Optimizer},
         tests::*,
     };
 

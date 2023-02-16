@@ -3,7 +3,6 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{
     nn::{modules::*, *},
-    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     shapes::Dtype,
     tensor::{PutTape, SplitTape},
     tensor_ops::Device,
@@ -106,17 +105,6 @@ where
 {
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         self.0.try_reset_params()
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D: Device<E>>
-    GradientUpdate<D, E> for TransformerDecoder<M, H, F, L, E, D>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.0.update(updater, unused)
     }
 }
 
@@ -250,23 +238,6 @@ where
         self.norm2.try_reset_params()?;
         self.ff.try_reset_params()?;
         self.norm3.try_reset_params()?;
-        Ok(())
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>> GradientUpdate<D, E>
-    for TransformerDecoderBlock<M, H, F, E, D>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.self_attn.update(updater, unused)?;
-        self.norm1.update(updater, unused)?;
-        self.mh_attn.update(updater, unused)?;
-        self.norm2.update(updater, unused)?;
-        self.ff.update(updater, unused)?;
-        self.norm3.update(updater, unused)?;
         Ok(())
     }
 }

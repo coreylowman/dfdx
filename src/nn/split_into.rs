@@ -1,4 +1,4 @@
-use crate::{optim::*, shapes::Dtype, tensor::*, tensor_ops::Device};
+use crate::{shapes::Dtype, tensor::*, tensor_ops::Device};
 
 use super::{
     BuildModule, BuildOnDevice, Module, ModuleGroup, ModuleMut, ResetParams, TensorVisitor,
@@ -38,15 +38,6 @@ impl<
         func: &mut F,
     ) -> Result<(), D::Err> {
         self_refs.map(|s| &s.0, |s| &mut s.0, "0.").visit(func)
-    }
-}
-
-impl<T: GradientUpdate<D, E>, D: Device<E>, E: Dtype> GradientUpdate<D, E> for SplitInto<T> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.0.update(updater, unused)
     }
 }
 
@@ -138,6 +129,7 @@ mod tests {
     use crate::nn::DeviceBuildExt;
     use crate::{gradients::*, shapes::*, tensor_ops::*};
     use crate::{
+        optim::GradientUpdate,
         nn::{builders::Linear, tests::SimpleUpdater},
         tests::*,
         unique_id::HasUniqueId,

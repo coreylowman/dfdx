@@ -3,7 +3,6 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{
     nn::{modules::*, *},
-    optim::*,
     shapes::Dtype,
     tensor::*,
     tensor_ops::*,
@@ -83,7 +82,7 @@ impl<
         self_refs.map(|s| &s.w_q, |s| &mut s.w_q, "w_q.").visit(func)?;
         self_refs.map(|s| &s.w_k, |s| &mut s.w_k, "w_k.").visit(func)?;
         self_refs.map(|s| &s.w_v, |s| &mut s.w_v, "w_v.").visit(func)?;
-        self_refs.map(|s| &s.w_v, |s| &mut s.w_v, "w_v.").visit(func)
+        self_refs.map(|s| &s.w_o, |s| &mut s.w_o, "w_o.").visit(func)
     }
 }
 
@@ -112,24 +111,6 @@ where
         self.w_k.try_reset_params()?;
         self.w_v.try_reset_params()?;
         self.w_o.try_reset_params()?;
-        Ok(())
-    }
-}
-
-impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D> GradientUpdate<D, E>
-    for MultiHeadAttention<M, H, K, V, E, D>
-where
-    E: Dtype,
-    D: DeviceStorage,
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.w_q.update(updater, unused)?;
-        self.w_k.update(updater, unused)?;
-        self.w_v.update(updater, unused)?;
-        self.w_o.update(updater, unused)?;
         Ok(())
     }
 }
@@ -305,7 +286,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::tests::SimpleUpdater, tests::*};
+    use crate::{nn::tests::SimpleUpdater, tests::*, optim::GradientUpdate};
 
     #[test]
     fn test_mha_unbatched() {

@@ -1,7 +1,7 @@
 use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
-use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice},
@@ -111,18 +111,6 @@ where
     }
 }
 
-impl<const VOCAB: usize, const DIM: usize, E: Dtype, D: Device<E>> GradientUpdate<D, E>
-    for Embedding<VOCAB, DIM, E, D>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.weight.update(updater, unused)?;
-        Ok(())
-    }
-}
-
 impl<const V: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
     BuildModule<D, E> for Embedding<V, M, E, D>
 {
@@ -161,6 +149,7 @@ mod tests {
     use super::*;
     use crate::{
         nn::{tests::SimpleUpdater, DeviceBuildExt},
+        optim::GradientUpdate,
         tests::*,
         unique_id::HasUniqueId,
     };

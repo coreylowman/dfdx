@@ -4,9 +4,9 @@ use crate::prelude::*;
 use std::{fmt::Debug, string::String};
 
 pub struct ModuleGroup<'a, const N: usize, const M: usize, T> {
-    refs: [&'a T; N],
-    refs_mut: [&'a mut T; M],
-    name: Option<String>,
+    pub refs: [&'a T; N],
+    pub refs_mut: [&'a mut T; M],
+    pub name: Option<String>,
 }
 
 // TODO? : Prevent heap allocation using unsafe or ArrayVec
@@ -73,6 +73,17 @@ pub trait VisitTensorGroups<const N: usize, const M: usize, E: Dtype, D: DeviceS
         self_refs: ModuleGroup<N, M, Self>,
         func: &mut F,
     ) -> Result<(), D::Err>;
+}
+
+impl<const N: usize, const M: usize, S: Shape, E: Dtype, D: DeviceStorage>
+    VisitTensorGroups<N, M, E, D> for Tensor<S, E, D>
+{
+    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
+        self_refs: ModuleGroup<N, M, Self>,
+        func: &mut F,
+    ) -> Result<(), D::Err> {
+        func.call(self_refs)
+    }
 }
 
 pub trait VisitTensors<E: Dtype, D: DeviceStorage>: VisitTensorGroups<1, 0, E, D> + Debug {

@@ -9,7 +9,6 @@ use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
 use crate::{
-    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     shapes::Dtype,
     tensor::{DeviceStorage, PutTape, SplitTape},
     tensor_ops::Device,
@@ -138,22 +137,6 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>
-    GradientUpdate<D, E> for Transformer<M, H, A, B, F, E, D>
-where
-    E: Dtype,
-    D: Device<E>,
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.encoder.update(updater, unused)?;
-        self.decoder.update(updater, unused)?;
-        Ok(())
-    }
-}
-
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D1, D2>
     ToDevice<D2> for Transformer<M, H, A, B, F, E, D1>
 where
@@ -215,6 +198,7 @@ where
 mod tests {
     use super::*;
     use crate::{
+        optim::{GradientUpdate, UnusedTensors},
         nn::{tests::SimpleUpdater, DeviceBuildExt},
         shapes::*,
         tensor::*,

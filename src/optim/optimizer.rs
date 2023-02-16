@@ -1,8 +1,8 @@
 use crate::{
     gradients::Gradients,
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, HasErr, Tensor},
-    unique_id::{HasUniqueId, UniqueId},
+    tensor::{DeviceStorage, Tensor},
+    unique_id::{HasUniqueId, UniqueId}, nn::{TensorVisitor, ModuleGroup, TensorVisitorOption, VisitTensorsMut},
 };
 
 /// L2 and decoupled regularization methods
@@ -91,25 +91,44 @@ pub trait Optimizer<M, D: DeviceStorage, E: Dtype> {
     ) -> Result<(), OptimizerUpdateError<D>>;
 }
 
+struct GradientUpdateVisitor<'a, U> {
+    updater: &'a mut U,
+    unused: &'a mut UnusedTensors,
+    run: bool
+}
+
+impl<U: ParamUpdater<D, E>, E: Dtype, D: DeviceStorage> TensorVisitor<0, 1, E, D> for GradientUpdateVisitor<'_, U> {
+    fn call<S: Shape>(&mut self, tensors: ModuleGroup<0, 1, Tensor<S, E, D>>)
+        -> Result<(), D::Err>
+    {
+        if self.run {
+            self.updater.update_param(tensors.refs_mut[0], self.unused)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn set_option(&mut self, option: TensorVisitorOption) {
+        if let TensorVisitorOption::DoGradientUpdate(run) = option {
+            self.run = run;
+        }
+    }
+}
+
 /// Represents something that can be updated with a [ParamUpdater].
-pub trait GradientUpdate<D: DeviceStorage, E: Dtype> {
+pub trait GradientUpdate<D: DeviceStorage, E: Dtype>: VisitTensorsMut<E, D> {
     /// Updates self given the [ParamUpdater].
     fn update<U: ParamUpdater<D, E>>(
         &mut self,
         updater: &mut U,
         unused: &mut UnusedTensors,
-    ) -> Result<(), D::Err>;
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage> GradientUpdate<D, E> for Tensor<S, E, D> {
-    fn update<U: ParamUpdater<D, E>>(
-        &mut self,
-        updater: &mut U,
-        unused: &mut UnusedTensors,
-    ) -> Result<(), <Self as HasErr>::Err> {
-        updater.update_param(self, unused)
+    ) -> Result<(), D::Err> {
+        let mut visitor = GradientUpdateVisitor { updater, unused, run: true };
+        self.visit_mut(&mut visitor)
     }
 }
+
+impl<E: Dtype, D: DeviceStorage, T: VisitTensorsMut<E, D>> GradientUpdate<D, E> for T {}
 
 /// Represents something that can update a tensor.
 ///

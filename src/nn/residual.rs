@@ -1,4 +1,4 @@
-use crate::{optim::*, shapes::*, tensor::SplitTape, tensor_ops::Device};
+use crate::{shapes::*, tensor::SplitTape, tensor_ops::Device};
 
 use super::{
     BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleGroup, ModuleMut, ResetParams,
@@ -25,15 +25,6 @@ use std::ops::Add;
 /// ```
 #[derive(Debug, Clone, Default)]
 pub struct Residual<F>(pub F);
-
-impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>> GradientUpdate<D, E> for Residual<F> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.0.update(updater, unused)
-    }
-}
 
 impl<
         const N: usize,
