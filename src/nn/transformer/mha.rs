@@ -286,7 +286,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::tests::SimpleUpdater, tests::*, optim::GradientUpdate};
+    use crate::{nn::tests::SimpleUpdater, optim::GradientUpdate, tests::*};
 
     #[test]
     fn test_mha_unbatched() {

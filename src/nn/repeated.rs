@@ -127,7 +127,7 @@ mod tests {
     use crate::nn::DeviceBuildExt;
     use crate::tests::TestDtype;
     use crate::{nn::builders::*, shapes::*, tensor::*, unique_id::HasUniqueId};
-    use crate::{nn::tests::SimpleUpdater, tests::TestDevice, optim::GradientUpdate};
+    use crate::{nn::tests::SimpleUpdater, optim::GradientUpdate, tests::TestDevice};
 
     #[test]
     fn test_default_and_reset() {

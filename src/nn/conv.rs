@@ -184,8 +184,8 @@ impl<'a, B: Dim, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape
 mod tests {
     use crate::{
         nn::DeviceBuildExt,
+        optim::{Optimizer, Sgd},
         tensor::{AsArray, SampleTensor, ZerosTensor},
-        optim::{Sgd, Optimizer},
         tests::*,
     };
 

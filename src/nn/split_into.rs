@@ -129,8 +129,8 @@ mod tests {
     use crate::nn::DeviceBuildExt;
     use crate::{gradients::*, shapes::*, tensor_ops::*};
     use crate::{
-        optim::GradientUpdate,
         nn::{builders::Linear, tests::SimpleUpdater},
+        optim::GradientUpdate,
         tests::*,
         unique_id::HasUniqueId,
     };

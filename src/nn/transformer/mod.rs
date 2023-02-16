@@ -198,8 +198,8 @@ where
 mod tests {
     use super::*;
     use crate::{
-        optim::{GradientUpdate, UnusedTensors},
         nn::{tests::SimpleUpdater, DeviceBuildExt},
+        optim::{GradientUpdate, UnusedTensors},
         shapes::*,
         tensor::*,
         tensor_ops::*,

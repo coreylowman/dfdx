@@ -1,8 +1,9 @@
 use crate::{
     gradients::Gradients,
+    nn::{ModuleGroup, TensorVisitor, TensorVisitorOption, VisitTensorsMut},
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Tensor},
-    unique_id::{HasUniqueId, UniqueId}, nn::{TensorVisitor, ModuleGroup, TensorVisitorOption, VisitTensorsMut},
+    unique_id::{HasUniqueId, UniqueId},
 };
 
 /// L2 and decoupled regularization methods
@@ -94,13 +95,16 @@ pub trait Optimizer<M, D: DeviceStorage, E: Dtype> {
 struct GradientUpdateVisitor<'a, U> {
     updater: &'a mut U,
     unused: &'a mut UnusedTensors,
-    run: bool
+    run: bool,
 }
 
-impl<U: ParamUpdater<D, E>, E: Dtype, D: DeviceStorage> TensorVisitor<0, 1, E, D> for GradientUpdateVisitor<'_, U> {
-    fn call<S: Shape>(&mut self, tensors: ModuleGroup<0, 1, Tensor<S, E, D>>)
-        -> Result<(), D::Err>
-    {
+impl<U: ParamUpdater<D, E>, E: Dtype, D: DeviceStorage> TensorVisitor<0, 1, E, D>
+    for GradientUpdateVisitor<'_, U>
+{
+    fn call<S: Shape>(
+        &mut self,
+        tensors: ModuleGroup<0, 1, Tensor<S, E, D>>,
+    ) -> Result<(), D::Err> {
         if self.run {
             self.updater.update_param(tensors.refs_mut[0], self.unused)
         } else {
@@ -123,7 +127,11 @@ pub trait GradientUpdate<D: DeviceStorage, E: Dtype>: VisitTensorsMut<E, D> {
         updater: &mut U,
         unused: &mut UnusedTensors,
     ) -> Result<(), D::Err> {
-        let mut visitor = GradientUpdateVisitor { updater, unused, run: true };
+        let mut visitor = GradientUpdateVisitor {
+            updater,
+            unused,
+            run: true,
+        };
         self.visit_mut(&mut visitor)
     }
 }

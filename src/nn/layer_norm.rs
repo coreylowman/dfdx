@@ -136,9 +136,9 @@ mod tests {
     use super::*;
     use crate::nn::tests::SimpleUpdater;
     use crate::nn::DeviceBuildExt;
+    use crate::optim::GradientUpdate;
     use crate::tests::{assert_close, TestDevice, TestDtype};
     use crate::unique_id::HasUniqueId;
-    use crate::optim::GradientUpdate;
 
     #[test]
     fn test_layer_norm_reset() {
