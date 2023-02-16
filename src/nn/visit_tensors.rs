@@ -51,7 +51,8 @@ pub enum TensorVisitorOption {
 }
 
 pub trait TensorVisitor<const N: usize, const M: usize, E: Dtype, D: DeviceStorage> {
-    fn call<S: Shape>(&mut self, tensors: ModuleGroup<N, M, Tensor<S, E, D>>) -> Result<(), D::Err>;
+    fn call<S: Shape>(&mut self, tensors: ModuleGroup<N, M, Tensor<S, E, D>>)
+        -> Result<(), D::Err>;
     fn set_option(&mut self, _option: TensorVisitorOption) {}
 }
 
@@ -88,27 +89,33 @@ impl<E: Dtype, D: DeviceStorage, T> VisitTensorsMut<E, D> for T where
 {
 }
 
-// TODO: remove this example code
-struct CountParams(usize);
+struct CountParamsVisitor(usize);
 
-impl<const N: usize, const M: usize, E: Dtype, D: DeviceStorage> TensorVisitor<N, M, E, D>
-    for CountParams
-{
-    fn call<S: Shape>(&mut self, tensors: ModuleGroup<N, M, Tensor<S, E, D>>) -> Result<(), D::Err> {
-        self.0 += tensors
-            .refs
-            .iter()
-            .map(|t| t.shape().num_elements())
-            .sum::<usize>();
-        self.0 += tensors
-            .refs_mut
-            .iter()
-            .map(|t| t.shape().num_elements())
-            .sum::<usize>();
+impl<E: Dtype, D: DeviceStorage> TensorVisitor<1, 0, E, D> for CountParamsVisitor {
+    fn call<S: Shape>(
+        &mut self,
+        tensors: ModuleGroup<1, 0, Tensor<S, E, D>>,
+    ) -> Result<(), D::Err> {
+        self.0 += tensors.refs[0].shape().num_elements();
         Ok(())
     }
 }
 
+pub trait CountParams<E: Dtype, D: DeviceStorage>: VisitTensors<E, D> {
+    fn try_param_count(&self) -> Result<usize, D::Err> {
+        let mut visitor = CountParamsVisitor(0);
+        self.visit(&mut visitor)?;
+        Ok(visitor.0)
+    }
+
+    fn param_count(&self) -> usize {
+        self.try_param_count().unwrap()
+    }
+}
+
+impl<E: Dtype, D: DeviceStorage, T: VisitTensors<E, D>> CountParams<E, D> for T {}
+
+// TODO: remove this example code
 impl<
         const N: usize,
         const M: usize,
@@ -136,10 +143,7 @@ mod tests {
     fn test_linear_count_params() {
         let dev: TestDevice = Default::default();
         let linear: crate::nn::modules::Linear<2, 3, TestDtype, _> = BuildModule::build(&dev);
-        let mut visitor = CountParams(0);
 
-        linear.visit(&mut visitor).unwrap();
-
-        assert_eq!(visitor.0, 9);
+        assert_eq!(linear.param_count(), 9);
     }
 }
