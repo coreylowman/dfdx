@@ -1,7 +1,7 @@
 use crate::shapes::Dtype;
 
 use crate::prelude::*;
-use std::{fmt::Debug, string::String};
+use std::{fmt::Debug, string::{String, ToString}};
 
 pub struct ModuleGroup<'a, const N: usize, const M: usize, T> {
     pub refs: [&'a T; N],
@@ -47,7 +47,7 @@ impl<'a, const N: usize, const M: usize, T: Debug> ModuleGroup<'a, N, M, T> {
     pub fn visit<E: Dtype, D: DeviceStorage, F: TensorVisitor<N, M, E, D>>(
         self,
         func: &mut F,
-    ) -> Result<(), D::Err>
+    ) -> Result<(), F::Err>
     where
         T: VisitTensorGroups<N, M, E, D>,
     {
@@ -62,8 +62,10 @@ pub enum TensorVisitorOption {
 }
 
 pub trait TensorVisitor<const N: usize, const M: usize, E: Dtype, D: DeviceStorage> {
+    type Err: std::fmt::Display + Debug;
+
     fn call<S: Shape>(&mut self, tensors: ModuleGroup<N, M, Tensor<S, E, D>>)
-        -> Result<(), D::Err>;
+        -> Result<(), Self::Err>;
     fn set_option(&mut self, _option: TensorVisitorOption) {}
 }
 
@@ -73,7 +75,7 @@ pub trait VisitTensorGroups<const N: usize, const M: usize, E: Dtype, D: DeviceS
     fn visit_groups<F: TensorVisitor<N, M, E, D>>(
         self_refs: ModuleGroup<N, M, Self>,
         func: &mut F,
-    ) -> Result<(), D::Err>;
+    ) -> Result<(), F::Err>;
 }
 
 impl<const N: usize, const M: usize, S: Shape, E: Dtype, D: DeviceStorage>
@@ -82,14 +84,18 @@ impl<const N: usize, const M: usize, S: Shape, E: Dtype, D: DeviceStorage>
     fn visit_groups<F: TensorVisitor<N, M, E, D>>(
         self_refs: ModuleGroup<N, M, Self>,
         func: &mut F,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), F::Err> {
         func.call(self_refs)
     }
 }
 
 pub trait VisitTensors<E: Dtype, D: DeviceStorage>: VisitTensorGroups<1, 0, E, D> + Debug {
-    fn visit<F: TensorVisitor<1, 0, E, D>>(&self, func: &mut F) -> Result<(), D::Err> {
+    fn visit<F: TensorVisitor<1, 0, E, D>>(&self, func: &mut F) -> Result<(), F::Err> {
         VisitTensorGroups::visit_groups(ModuleGroup::new([self], [], None), func)
+    }
+
+    fn visit_with_name<F: TensorVisitor<1, 0, E, D>>(&self, name: &str, func: &mut F) -> Result<(), F::Err> {
+        VisitTensorGroups::visit_groups(ModuleGroup::new([self], [], Some(name.to_string())), func)
     }
 }
 
@@ -101,8 +107,12 @@ impl<E: Dtype, D: DeviceStorage, T> VisitTensors<E, D> for T where
 pub trait VisitTensorsMut<E: Dtype, D: DeviceStorage>:
     VisitTensorGroups<0, 1, E, D> + Debug
 {
-    fn visit_mut<F: TensorVisitor<0, 1, E, D>>(&mut self, func: &mut F) -> Result<(), D::Err> {
+    fn visit_mut<F: TensorVisitor<0, 1, E, D>>(&mut self, func: &mut F) -> Result<(), F::Err> {
         VisitTensorGroups::visit_groups(ModuleGroup::new([], [self], None), func)
+    }
+
+    fn visit_mut_with_name<F: TensorVisitor<0, 1, E, D>>(&mut self, name: &str, func: &mut F) -> Result<(), F::Err> {
+        VisitTensorGroups::visit_groups(ModuleGroup::new([], [self], Some(name.to_string())), func)
     }
 }
 
@@ -114,17 +124,19 @@ impl<E: Dtype, D: DeviceStorage, T> VisitTensorsMut<E, D> for T where
 struct CountParamsVisitor(usize);
 
 impl<E: Dtype, D: DeviceStorage> TensorVisitor<1, 0, E, D> for CountParamsVisitor {
+    type Err = String;
+
     fn call<S: Shape>(
         &mut self,
         tensors: ModuleGroup<1, 0, Tensor<S, E, D>>,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), Self::Err> {
         self.0 += tensors.refs[0].shape().num_elements();
         Ok(())
     }
 }
 
 pub trait CountParams<E: Dtype, D: DeviceStorage>: VisitTensors<E, D> {
-    fn try_param_count(&self) -> Result<usize, D::Err> {
+    fn try_param_count(&self) -> Result<usize, String> {
         let mut visitor = CountParamsVisitor(0);
         self.visit(&mut visitor)?;
         Ok(visitor.0)

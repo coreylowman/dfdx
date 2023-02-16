@@ -101,10 +101,12 @@ struct GradientUpdateVisitor<'a, U> {
 impl<U: ParamUpdater<D, E>, E: Dtype, D: DeviceStorage> TensorVisitor<0, 1, E, D>
     for GradientUpdateVisitor<'_, U>
 {
+    type Err = D::Err;
+
     fn call<S: Shape>(
         &mut self,
         tensors: ModuleGroup<0, 1, Tensor<S, E, D>>,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), Self::Err> {
         if self.run {
             self.updater.update_param(tensors.refs_mut[0], self.unused)
         } else {

@@ -19,7 +19,7 @@ macro_rules! tuple_impls {
             fn visit_groups<Func: TensorVisitor<N, M, E, D>>(
                 mut self_refs: ModuleGroup<N, M, Self>,
                 func: &mut Func,
-            ) -> Result<(), D::Err> {
+            ) -> Result<(), Func::Err> {
                 $(self_refs.map(|s| &s.$idx, |s| &mut s.$idx, &std::format!("{}.", $idx)).visit(func)?;)+
                 Ok(())
             }

@@ -72,7 +72,7 @@ impl<
     fn visit_groups<F: TensorVisitor<N, M, E, D>>(
         mut self_refs: ModuleGroup<N, M, Self>,
         func: &mut F,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), F::Err> {
         func.call(self_refs.map(|s| &s.weight, |s| &mut s.weight, "weight"))?;
         func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"))
     }

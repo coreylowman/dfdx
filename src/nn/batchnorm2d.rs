@@ -78,7 +78,7 @@ impl<const N: usize, const M: usize, const C: usize, E: Dtype, D: DeviceStorage>
     fn visit_groups<F: TensorVisitor<N, M, E, D>>(
         mut self_refs: ModuleGroup<N, M, Self>,
         func: &mut F,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), F::Err> {
         func.call(self_refs.map(|s| &s.scale, |s| &mut s.scale, "scale"))?;
         func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"))?;
 

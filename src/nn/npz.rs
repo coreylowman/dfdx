@@ -1,14 +1,30 @@
-use crate::tensor::numpy::NpzError;
+use crate::{tensor::numpy::NpzError, shapes::{Dtype, Shape}, prelude::{Tensor, CopySlice, numpy::NumpyDtype}};
 use std::{
     io::{BufReader, BufWriter, Read, Seek, Write},
     path::Path,
 };
-use zip::{result::ZipResult, ZipArchive, ZipWriter};
+use zip::{result::{ZipResult, ZipError}, ZipArchive, ZipWriter};
+
+use super::{VisitTensors, DeviceStorage, TensorVisitor, ModuleGroup, VisitTensorsMut};
+
+struct SaveToNpzVisitor<'a, W: Write + Seek> {
+    writer: &'a mut ZipWriter<W>
+}
+
+impl<W: Write + Seek, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>> TensorVisitor<1, 0, E, D> for SaveToNpzVisitor<'_, W> {
+    type Err = ZipError;
+
+    fn call<S: Shape>(&mut self, tensors: ModuleGroup<1, 0, Tensor<S, E, D>>)
+        -> Result<(), Self::Err>
+    {
+        tensors.refs[0].write_to_npz(self.writer, std::format!("{}.npz", tensors.name.unwrap()))
+    }
+}
 
 /// Something that can be saved to a `.npz` (which is a `.zip`).
 ///
 /// All [super::Module]s in nn implement SaveToNpz, and the zips are formatted in a `.npz` fashion.
-pub trait SaveToNpz {
+pub trait SaveToNpz<E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>>: VisitTensors<E, D> {
     /// Save this object into the `.npz` file determined located at `path`.
     ///
     /// Example:
@@ -41,18 +57,35 @@ pub trait SaveToNpz {
     /// - `0.bias.npy`
     /// - `1.weight.npy`
     /// - `1.bias.npy`
-    fn write<W>(&self, _filename_prefix: &str, _w: &mut ZipWriter<W>) -> ZipResult<()>
+    fn write<W>(&self, filename_prefix: &str, w: &mut ZipWriter<W>) -> ZipResult<()>
     where
         W: Write + Seek,
     {
-        Ok(())
+        let mut visitor = SaveToNpzVisitor { writer: w };
+        self.visit_with_name(filename_prefix, &mut visitor)
+    }
+}
+
+impl<E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>, T: VisitTensors<E, D>> SaveToNpz<E, D> for T {}
+
+struct LoadFromNpzVisitor<'a, R: Read + Seek> {
+    reader: &'a mut ZipArchive<R>
+}
+
+impl<R: Read + Seek, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>> TensorVisitor<0, 1, E, D> for LoadFromNpzVisitor<'_, R> {
+    type Err = NpzError;
+
+    fn call<S: Shape>(&mut self, tensors: ModuleGroup<0, 1, Tensor<S, E, D>>)
+        -> Result<(), Self::Err>
+    {
+        tensors.refs_mut[0].read_from_npz(self.reader, std::format!("{}.npz", tensors.name.unwrap()))
     }
 }
 
 /// Something that can be loaded from a `.npz` file (which is a `zip` file).
 ///
 /// All [super::Module]s in nn implement LoadFromNpz, and the zips are formatted in a `.npz` fashion.
-pub trait LoadFromNpz {
+pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>>: VisitTensorsMut<E, D> {
     /// Loads data from a `.npz` zip archive at the specified `path`.
     ///
     /// Example:
@@ -81,10 +114,11 @@ pub trait LoadFromNpz {
     /// Will try to read data from the following files:
     /// - `0.weight.npy`
     /// - `0.bias.npy`
-    fn read<R>(&mut self, _filename_prefix: &str, _r: &mut ZipArchive<R>) -> Result<(), NpzError>
+    fn read<R>(&mut self, filename_prefix: &str, r: &mut ZipArchive<R>) -> Result<(), NpzError>
     where
         R: Read + Seek,
     {
-        Ok(())
+        let mut visitor = LoadFromNpzVisitor { reader: r };
+        self.visit_mut_with_name(filename_prefix, &mut visitor)
     }
 }

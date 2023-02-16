@@ -37,7 +37,7 @@ impl<
     fn visit_groups<Func: TensorVisitor<N, M, E, D>>(
         mut self_refs: ModuleGroup<N, M, Self>,
         func: &mut Func,
-    ) -> Result<(), D::Err> {
+    ) -> Result<(), Func::Err> {
         self_refs.map(|s| &s.0, |s| &mut s.0, "0.").visit(func)
     }
 }

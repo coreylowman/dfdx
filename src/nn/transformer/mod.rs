@@ -97,16 +97,13 @@ impl<
     > VisitTensorGroups<N, M, E, D>
     for Transformer<MODEL_DIM, NUM_HEADS, NUM_ENCODER_LAYERS, NUM_DECODER_LAYERS, FF_DIM, E, D>
 {
+    #[rustfmt::skip]
     fn visit_groups<F: TensorVisitor<N, M, E, D>>(
         mut self_refs: ModuleGroup<N, M, Self>,
         func: &mut F,
-    ) -> Result<(), D::Err> {
-        self_refs
-            .map(|s| &s.encoder, |s| &mut s.encoder, "encoder.")
-            .visit(func)?;
-        self_refs
-            .map(|s| &s.decoder, |s| &mut s.decoder, "decoder.")
-            .visit(func)
+    ) -> Result<(), F::Err> {
+        self_refs.map(|s| &s.encoder, |s| &mut s.encoder, "encoder.").visit(func)?;
+        self_refs.map(|s| &s.decoder, |s| &mut s.decoder, "decoder.").visit(func)
     }
 }
 

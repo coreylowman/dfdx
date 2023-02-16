@@ -86,10 +86,10 @@ pub trait ZeroSizedModule: Default {}
 impl<const N: usize, const M: usize, E: Dtype, D: DeviceStorage, T: ZeroSizedModule>
     VisitTensorGroups<N, M, E, D> for T
 {
-    fn visit_groups<Func: TensorVisitor<N, M, E, D>>(
+    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
         _self_refs: ModuleGroup<N, M, Self>,
-        _func: &mut Func,
-    ) -> Result<(), D::Err> {
+        _func: &mut F,
+    ) -> Result<(), F::Err> {
         Ok(())
     }
 }
