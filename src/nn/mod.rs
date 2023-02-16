@@ -126,8 +126,10 @@ mod repeated;
 mod residual;
 mod split_into;
 mod transformer;
+mod visit_tensors;
 
 pub use module::*;
+pub use visit_tensors::*;
 
 #[cfg(feature = "numpy")]
 pub use npz::*;

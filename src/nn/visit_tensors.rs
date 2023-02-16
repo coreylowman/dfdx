@@ -1,0 +1,145 @@
+use crate::shapes::Dtype;
+
+use crate::prelude::*;
+use std::{fmt::Debug, string::String};
+
+pub struct ModuleRefs<'a, const N: usize, const M: usize, T> {
+    refs: [&'a T; N],
+    refs_mut: [&'a mut T; M],
+    name: Option<String>,
+}
+
+// TODO? : Prevent heap allocation using unsafe or ArrayVec
+fn map_mut<'a, A: 'a + Debug, B: 'a + Debug, const N: usize, F: FnMut(&'a mut A) -> &'a mut B>(
+    arr: &'a mut [A; N],
+    func: F,
+) -> [&'a mut B; N] {
+    let vec: std::vec::Vec<_> = arr.iter_mut().map(func).collect();
+
+    vec.try_into().unwrap()
+}
+
+impl<'a, const N: usize, const M: usize, T1: Debug> ModuleRefs<'a, N, M, T1> {
+    pub fn new(refs: [&'a T1; N], refs_mut: [&'a mut T1; M], name: Option<String>) -> Self {
+        Self {
+            refs,
+            refs_mut,
+            name,
+        }
+    }
+
+    pub fn map<T2: Debug, F1: FnMut(&T1) -> &T2, F2: FnMut(&mut T1) -> &mut T2>(
+        &mut self,
+        func1: F1,
+        mut func2: F2,
+        name: &str,
+    ) -> ModuleRefs<N, M, T2> {
+        ModuleRefs {
+            refs: self.refs.map(func1),
+            refs_mut: map_mut(&mut self.refs_mut, |x| func2(*x)),
+            name: self
+                .name
+                .as_ref()
+                .map(|prefix| std::format!("{prefix}{name}")),
+        }
+    }
+}
+
+#[non_exhaustive]
+pub enum TensorVisitorOption {
+    DoGradientUpdate(bool),
+}
+
+pub trait TensorVisitor<const N: usize, const M: usize, E: Dtype, D: DeviceStorage> {
+    fn call<S: Shape>(&mut self, tensors: ModuleRefs<N, M, Tensor<S, E, D>>) -> Result<(), D::Err>;
+    fn set_option(&mut self, _option: TensorVisitorOption) {}
+}
+
+pub trait VisitTensorsZipped<const N: usize, const M: usize, E: Dtype, D: DeviceStorage>:
+    Sized
+{
+    fn visit_zipped<F: TensorVisitor<N, M, E, D>>(
+        self_refs: ModuleRefs<N, M, Self>,
+        func: &mut F,
+    ) -> Result<(), D::Err>;
+}
+
+pub trait VisitTensors<E: Dtype, D: DeviceStorage>: VisitTensorsZipped<1, 0, E, D> + Debug {
+    fn visit<F: TensorVisitor<1, 0, E, D>>(&self, func: &mut F) -> Result<(), D::Err> {
+        VisitTensorsZipped::visit_zipped(ModuleRefs::new([self], [], None), func)
+    }
+}
+
+impl<E: Dtype, D: DeviceStorage, T> VisitTensors<E, D> for T where
+    T: VisitTensorsZipped<1, 0, E, D> + Debug
+{
+}
+
+pub trait VisitTensorsMut<E: Dtype, D: DeviceStorage>:
+    VisitTensorsZipped<0, 1, E, D> + Debug
+{
+    fn visit_mut<F: TensorVisitor<0, 1, E, D>>(&mut self, func: &mut F) -> Result<(), D::Err> {
+        VisitTensorsZipped::visit_zipped(ModuleRefs::new([], [self], None), func)
+    }
+}
+
+impl<E: Dtype, D: DeviceStorage, T> VisitTensorsMut<E, D> for T where
+    T: VisitTensorsZipped<0, 1, E, D> + Debug
+{
+}
+
+// TODO: remove example code here
+struct CountParams(usize);
+
+impl<const N: usize, const M: usize, E: Dtype, D: DeviceStorage> TensorVisitor<N, M, E, D>
+    for CountParams
+{
+    fn call<S: Shape>(&mut self, tensors: ModuleRefs<N, M, Tensor<S, E, D>>) -> Result<(), D::Err> {
+        self.0 += tensors
+            .refs
+            .iter()
+            .map(|t| t.shape().num_elements())
+            .sum::<usize>();
+        self.0 += tensors
+            .refs_mut
+            .iter()
+            .map(|t| t.shape().num_elements())
+            .sum::<usize>();
+        Ok(())
+    }
+}
+
+impl<
+        const N: usize,
+        const M: usize,
+        const I: usize,
+        const O: usize,
+        E: Dtype,
+        D: DeviceStorage + Debug,
+    > VisitTensorsZipped<N, M, E, D> for crate::nn::modules::Linear<I, O, E, D>
+{
+    fn visit_zipped<F: TensorVisitor<N, M, E, D>>(
+        mut self_refs: ModuleRefs<N, M, Self>,
+        func: &mut F,
+    ) -> Result<(), D::Err> {
+        func.call(self_refs.map(|s| &s.weight, |s| &mut s.weight, "weight"))?;
+        func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::*;
+
+    #[test]
+    fn test_linear_count_params() {
+        let dev: TestDevice = Default::default();
+        let linear: crate::nn::modules::Linear<2, 3, TestDtype, _> = BuildModule::build(&dev);
+        let mut visitor = CountParams(0);
+
+        linear.visit(&mut visitor).unwrap();
+
+        assert_eq!(visitor.0, 9);
+    }
+}
