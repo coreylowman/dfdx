@@ -82,11 +82,10 @@ impl<const N: usize, const M: usize, const C: usize, E: Dtype, D: DeviceStorage>
         func.call(self_refs.map(|s| &s.scale, |s| &mut s.scale, "scale"))?;
         func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"))?;
 
-        func.set_option(TensorVisitorOption::DoGradientUpdate(false));
+        func.set_option(TensorVisitorOption::DisableGradientUpdate);
         func.call(self_refs.map(|s| &s.running_mean, |s| &mut s.running_mean, "running_mean"))?;
-        func.call(self_refs.map(|s| &s.running_var, |s| &mut s.running_var, "running_var"))?;
-        func.set_option(TensorVisitorOption::DoGradientUpdate(true));
-        Ok(())
+        func.set_option(TensorVisitorOption::DisableGradientUpdate);
+        func.call(self_refs.map(|s| &s.running_var, |s| &mut s.running_var, "running_var"))
     }
 }
 

@@ -56,8 +56,9 @@ impl<'a, const N: usize, const M: usize, T: Debug> ModuleGroup<'a, N, M, T> {
 }
 
 #[non_exhaustive]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TensorVisitorOption {
-    DoGradientUpdate(bool),
+    DisableGradientUpdate,
 }
 
 pub trait TensorVisitor<const N: usize, const M: usize, E: Dtype, D: DeviceStorage> {

@@ -108,13 +108,14 @@ impl<U: ParamUpdater<D, E>, E: Dtype, D: DeviceStorage> TensorVisitor<0, 1, E, D
         if self.run {
             self.updater.update_param(tensors.refs_mut[0], self.unused)
         } else {
+            self.run = true;
             Ok(())
         }
     }
 
     fn set_option(&mut self, option: TensorVisitorOption) {
-        if let TensorVisitorOption::DoGradientUpdate(run) = option {
-            self.run = run;
+        if option == TensorVisitorOption::DisableGradientUpdate {
+            self.run = false;
         }
     }
 }
