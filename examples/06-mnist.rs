@@ -99,7 +99,7 @@ fn main() {
             .batch(Const::<BATCH_SIZE>)
             .collate()
         {
-            let img = dev.stack(img.map(|x| dev.tensor((x, (Const,)))));
+            let img = dev.stack(img.map(|x| dev.tensor((x, (Const::<784>,)))));
             let lbl = dev.one_hot_encode(Const::<10>, lbl);
 
             let logits = model.forward_mut(img.traced());
