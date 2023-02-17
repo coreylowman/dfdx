@@ -59,18 +59,28 @@ impl<'a, const N: usize, const M: usize, T: Debug, F> TensorVisitor<'a, N, M, T,
     }
 
     pub fn visit<E: Dtype, D: DeviceStorage>(self) -> Result<(), F::Err>
-        where F: TensorFunction<N, M, E, D>, T: VisitTensorGroups<N, M, E, D>
+    where
+        F: TensorFunction<N, M, E, D>,
+        T: VisitTensorGroups<N, M, E, D>,
     {
         VisitTensorGroups::visit_groups(self)
     }
 
-    pub fn visit_field<E: Dtype, D: DeviceStorage, T2: Debug, F1: FnMut(&T) -> &T2, F2: FnMut(&mut T) -> &mut T2>(
+    pub fn visit_field<
+        E: Dtype,
+        D: DeviceStorage,
+        T2: Debug,
+        F1: FnMut(&T) -> &T2,
+        F2: FnMut(&mut T) -> &mut T2,
+    >(
         &mut self,
         func1: F1,
         func2: F2,
         name: &str,
     ) -> Result<(), F::Err>
-        where F: TensorFunction<N, M, E, D>, T2: VisitTensorGroups<N, M, E, D>
+    where
+        F: TensorFunction<N, M, E, D>,
+        T2: VisitTensorGroups<N, M, E, D>,
     {
         self.map(func1, func2, name).visit()
     }
@@ -88,7 +98,9 @@ impl<'a, const N: usize, const M: usize, T: Debug, F> TensorVisitor<'a, N, M, T,
         name: &str,
         options: &[TensorVisitorOption],
     ) -> Result<(), F::Err>
-        where F: TensorFunction<N, M, E, D>, T2: VisitTensorGroups<N, M, E, D>
+    where
+        F: TensorFunction<N, M, E, D>,
+        T2: VisitTensorGroups<N, M, E, D>,
     {
         let mut field_visitor = self.map(func1, func2, name);
 

@@ -37,12 +37,11 @@ impl<
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         for i in 0..L {
-            visitor
-                .visit_field(
-                    |s| &s.modules[i],
-                    |s| &mut s.modules[i],
-                    &std::format!("{i}."),
-                )?;
+            visitor.visit_field(
+                |s| &s.modules[i],
+                |s| &mut s.modules[i],
+                &std::format!("{i}."),
+            )?;
         }
         Ok(())
     }

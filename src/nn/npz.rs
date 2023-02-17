@@ -12,10 +12,7 @@ use zip::{
     ZipArchive, ZipWriter,
 };
 
-use super::{
-    DeviceStorage, TensorFunction, TensorVisitorOption, VisitTensors,
-    VisitTensorsMut,
-};
+use super::{DeviceStorage, TensorFunction, TensorVisitorOption, VisitTensors, VisitTensorsMut};
 
 struct SaveToNpzVisitor<'a, W: Write + Seek> {
     writer: &'a mut ZipWriter<W>,
