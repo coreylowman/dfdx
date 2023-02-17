@@ -11,6 +11,7 @@ pub trait OneHotEncode<E: Dtype>: DeviceStorage + ZerosTensor<E> + CopySlice<E> 
     /// One hot encodes an array or vec into a tensor.
     ///
     /// Arguments:
+    /// - `n` - the numnber of classes to use to encode, can be `Const` or `usize`
     /// - `class_labels` - either an array [usize; N], or Vec<usize>
     ///
     /// Const class labels and const n:
