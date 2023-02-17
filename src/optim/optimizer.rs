@@ -105,7 +105,7 @@ impl<U: ParamUpdater<D, E>, E: Dtype, D: DeviceStorage> TensorVisitor<0, 1, E, D
     fn call<S: Shape>(
         &mut self,
         tensors: ModuleGroup<0, 1, Tensor<S, E, D>>,
-        options: &[TensorVisitorOption]
+        options: &[TensorVisitorOption],
     ) -> Result<(), Self::Err> {
         if options.contains(&TensorVisitorOption::DisableGradientUpdate) {
             Ok(())
@@ -123,10 +123,7 @@ pub trait GradientUpdate<D: DeviceStorage, E: Dtype>: VisitTensorsMut<E, D> {
         updater: &mut U,
         unused: &mut UnusedTensors,
     ) -> Result<(), D::Err> {
-        let mut visitor = GradientUpdateVisitor {
-            updater,
-            unused,
-        };
+        let mut visitor = GradientUpdateVisitor { updater, unused };
         self.visit_mut(&mut visitor)
     }
 }
