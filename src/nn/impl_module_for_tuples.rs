@@ -4,7 +4,7 @@ use super::module::{
     BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, OnDevice, ResetParams,
 };
 
-use super::{ModuleGroup, TensorVisitor, ToDevice, VisitTensorGroups};
+use super::{TensorFunction, TensorVisitor, ToDevice, VisitTensorGroups};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
@@ -16,11 +16,10 @@ macro_rules! tuple_impls {
             D: DeviceStorage,
         > VisitTensorGroups<N, M, E, D> for ($($name,)+)
         {
-            fn visit_groups<Func: TensorVisitor<N, M, E, D>>(
-                mut self_refs: ModuleGroup<N, M, Self>,
-                func: &mut Func,
+            fn visit_groups<Func: TensorFunction<N, M, E, D>>(
+                mut visitor: TensorVisitor<N, M, Self, Func>,
             ) -> Result<(), Func::Err> {
-                $(self_refs.map(|s| &s.$idx, |s| &mut s.$idx, &std::format!("{}.", $idx)).visit(func)?;)+
+                $(visitor.visit_field(|s| &s.$idx, |s| &mut s.$idx, &std::format!("{}.", $idx))?;)+
                 Ok(())
             }
         }

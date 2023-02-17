@@ -1,6 +1,6 @@
 use crate::{
     gradients::Gradients,
-    nn::{ModuleGroup, TensorVisitor, TensorVisitorOption, VisitTensorsMut},
+    nn::{TensorFunction, TensorVisitorOption, VisitTensorsMut},
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Tensor},
     unique_id::{HasUniqueId, UniqueId},
@@ -97,20 +97,22 @@ struct GradientUpdateVisitor<'a, U> {
     unused: &'a mut UnusedTensors,
 }
 
-impl<U: ParamUpdater<D, E>, E: Dtype, D: DeviceStorage> TensorVisitor<0, 1, E, D>
+impl<U: ParamUpdater<D, E>, E: Dtype, D: DeviceStorage> TensorFunction<0, 1, E, D>
     for GradientUpdateVisitor<'_, U>
 {
     type Err = D::Err;
 
     fn call<S: Shape>(
         &mut self,
-        tensors: ModuleGroup<0, 1, Tensor<S, E, D>>,
+        _refs: [&Tensor<S, E, D>; 0],
+        refs_mut: [&mut Tensor<S, E, D>; 1],
+        _name: Option<std::string::String>,
         options: &[TensorVisitorOption],
     ) -> Result<(), Self::Err> {
         if options.contains(&TensorVisitorOption::DisableGradientUpdate) {
             Ok(())
         } else {
-            self.updater.update_param(tensors.refs_mut[0], self.unused)
+            self.updater.update_param(refs_mut[0], self.unused)
         }
     }
 }

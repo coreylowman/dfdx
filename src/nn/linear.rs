@@ -2,7 +2,7 @@ use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice},
-    ModuleGroup, TensorVisitor, VisitTensorGroups,
+    TensorFunction, TensorVisitor, VisitTensorGroups,
 };
 
 use num_traits::Float;
@@ -65,15 +65,11 @@ impl<
         D: DeviceStorage,
     > VisitTensorGroups<N, M, E, D> for Linear<I, O, E, D>
 {
-    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
-        mut self_refs: ModuleGroup<N, M, Self>,
-        func: &mut F,
+    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+        mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        func.call(
-            self_refs.map(|s| &s.weight, |s| &mut s.weight, "weight"),
-            &[],
-        )?;
-        func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"), &[])
+        visitor.visit_field(|s| &s.weight, |s| &mut s.weight, "weight")?;
+        visitor.visit_field(|s| &s.bias, |s| &mut s.bias, "bias")
     }
 }
 

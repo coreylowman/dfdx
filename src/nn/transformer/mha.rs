@@ -75,14 +75,13 @@ impl<
     for MultiHeadAttention<EMBED_DIM, NUM_HEADS, K_DIM, V_DIM, E, D>
 {
     #[rustfmt::skip]
-    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
-        mut self_refs: ModuleGroup<N, M, Self>,
-        func: &mut F,
+    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+        mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        self_refs.map(|s| &s.w_q, |s| &mut s.w_q, "w_q.").visit(func)?;
-        self_refs.map(|s| &s.w_k, |s| &mut s.w_k, "w_k.").visit(func)?;
-        self_refs.map(|s| &s.w_v, |s| &mut s.w_v, "w_v.").visit(func)?;
-        self_refs.map(|s| &s.w_o, |s| &mut s.w_o, "w_o.").visit(func)
+        visitor.visit_field(|s| &s.w_q, |s| &mut s.w_q, "w_q.")?;
+        visitor.visit_field(|s| &s.w_k, |s| &mut s.w_k, "w_k.")?;
+        visitor.visit_field(|s| &s.w_v, |s| &mut s.w_v, "w_v.")?;
+        visitor.visit_field(|s| &s.w_o, |s| &mut s.w_o, "w_o.")
     }
 }
 

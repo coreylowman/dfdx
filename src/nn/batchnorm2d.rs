@@ -1,7 +1,7 @@
 use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
-    BuildModule, BuildOnDevice, Module, ModuleGroup, ModuleMut, ResetParams, TensorVisitor,
+    BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, TensorFunction, TensorVisitor,
     TensorVisitorOption, ToDevice, VisitTensorGroups,
 };
 
@@ -75,19 +75,22 @@ pub struct BatchNorm2D<const C: usize, E: Dtype, D: DeviceStorage> {
 impl<const N: usize, const M: usize, const C: usize, E: Dtype, D: DeviceStorage>
     VisitTensorGroups<N, M, E, D> for BatchNorm2D<C, E, D>
 {
-    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
-        mut self_refs: ModuleGroup<N, M, Self>,
-        func: &mut F,
+    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+        mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        func.call(self_refs.map(|s| &s.scale, |s| &mut s.scale, "scale"), &[])?;
-        func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"), &[])?;
+        visitor.visit_field(|s| &s.scale, |s| &mut s.scale, "scale")?;
+        visitor.visit_field(|s| &s.bias, |s| &mut s.bias, "bias")?;
 
-        func.call(
-            self_refs.map(|s| &s.running_mean, |s| &mut s.running_mean, "running_mean"),
+        visitor.visit_field_with_options(
+            |s| &s.running_mean,
+            |s| &mut s.running_mean,
+            "running_mean",
             &[TensorVisitorOption::DisableGradientUpdate],
         )?;
-        func.call(
-            self_refs.map(|s| &s.running_var, |s| &mut s.running_var, "running_var"),
+        visitor.visit_field_with_options(
+            |s| &s.running_var,
+            |s| &mut s.running_var,
+            "running_var",
             &[TensorVisitorOption::DisableGradientUpdate],
         )
     }

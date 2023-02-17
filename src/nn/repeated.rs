@@ -1,7 +1,7 @@
 use crate::{shapes::Dtype, tensor_ops::Device};
 
 use super::{
-    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleGroup, ModuleMut, ResetParams,
+    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, ResetParams, TensorFunction,
     TensorVisitor, ToDevice, VisitTensorGroups,
 };
 
@@ -33,18 +33,16 @@ impl<
         D: DeviceStorage,
     > VisitTensorGroups<N, M, E, D> for Repeated<T, L>
 {
-    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
-        mut self_refs: ModuleGroup<N, M, Self>,
-        func: &mut F,
+    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+        mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         for i in 0..L {
-            self_refs
-                .map(
+            visitor
+                .visit_field(
                     |s| &s.modules[i],
                     |s| &mut s.modules[i],
                     &std::format!("{i}."),
-                )
-                .visit(func)?;
+                )?;
         }
         Ok(())
     }

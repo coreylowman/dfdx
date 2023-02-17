@@ -1,7 +1,7 @@
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
-    BuildModule, BuildOnDevice, Module, ModuleGroup, ModuleMut, ResetParams, TensorVisitor,
+    BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, TensorFunction, TensorVisitor,
     ToDevice, VisitTensorGroups,
 };
 
@@ -48,12 +48,11 @@ pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
 impl<const N: usize, const M: usize, const L: usize, E: Dtype, D: DeviceStorage>
     VisitTensorGroups<N, M, E, D> for LayerNorm1D<L, E, D>
 {
-    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
-        mut self_refs: ModuleGroup<N, M, Self>,
-        func: &mut F,
+    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+        mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        func.call(self_refs.map(|s| &s.gamma, |s| &mut s.gamma, "gamma"), &[])?;
-        func.call(self_refs.map(|s| &s.beta, |s| &mut s.beta, "beta"), &[])
+        visitor.visit_field(|s| &s.gamma, |s| &mut s.gamma, "gamma")?;
+        visitor.visit_field(|s| &s.beta, |s| &mut s.beta, "beta")
     }
 }
 

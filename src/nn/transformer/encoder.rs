@@ -110,14 +110,13 @@ impl<
     for TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>
 {
     #[rustfmt::skip]
-    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
-        mut self_refs: ModuleGroup<N, M, Self>,
-        func: &mut F,
+    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+        mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        self_refs.map(|s| &s.self_attn, |s| &mut s.self_attn, "self_attn.").visit(func)?;
-        self_refs.map(|s| &s.norm1, |s| &mut s.norm1, "norm1.").visit(func)?;
-        self_refs.map(|s| &s.ff, |s| &mut s.ff, "ff.").visit(func)?;
-        self_refs.map(|s| &s.norm2, |s| &mut s.norm2, "norm2.").visit(func)
+        visitor.visit_field(|s| &s.self_attn, |s| &mut s.self_attn, "self_attn.")?;
+        visitor.visit_field(|s| &s.norm1, |s| &mut s.norm1, "norm1.")?;
+        visitor.visit_field(|s| &s.ff, |s| &mut s.ff, "ff.")?;
+        visitor.visit_field(|s| &s.norm2, |s| &mut s.norm2, "norm2.")
     }
 }
 

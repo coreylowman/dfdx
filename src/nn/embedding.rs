@@ -5,7 +5,7 @@ use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice},
-    ModuleGroup, TensorVisitor, VisitTensorGroups,
+    TensorFunction, TensorVisitor, VisitTensorGroups,
 };
 
 pub mod builder {
@@ -55,7 +55,6 @@ pub struct Embedding<const VOCAB: usize, const DIM: usize, E: Dtype, D: DeviceSt
     pub weight: Tensor<Rank2<VOCAB, DIM>, E, D>,
 }
 
-// TODO: custom behavior for ResetParams
 impl<
         const N: usize,
         const M: usize,
@@ -65,14 +64,10 @@ impl<
         D: DeviceStorage,
     > VisitTensorGroups<N, M, E, D> for Embedding<V, I, E, D>
 {
-    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
-        mut self_refs: ModuleGroup<N, M, Self>,
-        func: &mut F,
+    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+        mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        func.call(
-            self_refs.map(|s| &s.weight, |s| &mut s.weight, "weight"),
-            &[],
-        )
+        visitor.visit_field(|s| &s.weight, |s| &mut s.weight, "weight")
     }
 }
 

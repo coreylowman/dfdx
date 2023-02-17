@@ -1,7 +1,7 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
-    BuildModule, BuildOnDevice, Module, ModuleGroup, ModuleMut, ResetParams, TensorVisitor,
+    BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, TensorFunction, TensorVisitor,
     ToDevice, VisitTensorGroups,
 };
 
@@ -37,12 +37,11 @@ impl<
         D: DeviceStorage,
     > VisitTensorGroups<N, M, E, D> for GeneralizedResidual<F, R>
 {
-    fn visit_groups<Func: TensorVisitor<N, M, E, D>>(
-        mut self_refs: ModuleGroup<N, M, Self>,
-        func: &mut Func,
+    fn visit_groups<Func: TensorFunction<N, M, E, D>>(
+        mut visitor: TensorVisitor<N, M, Self, Func>,
     ) -> Result<(), Func::Err> {
-        self_refs.map(|s| &s.f, |s| &mut s.f, "f.").visit(func)?;
-        self_refs.map(|s| &s.r, |s| &mut s.r, "r.").visit(func)
+        visitor.visit_field(|s| &s.f, |s| &mut s.f, "f.")?;
+        visitor.visit_field(|s| &s.r, |s| &mut s.r, "r.")
     }
 }
 

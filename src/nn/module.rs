@@ -4,7 +4,7 @@ use crate::shapes::Dtype;
 pub use crate::tensor::OnCuda;
 pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
 
-use super::{ModuleGroup, TensorVisitor, VisitTensorGroups};
+use super::{TensorFunction, TensorVisitor, VisitTensorGroups};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
@@ -86,9 +86,8 @@ pub trait ZeroSizedModule: Default {}
 impl<const N: usize, const M: usize, E: Dtype, D: DeviceStorage, T: ZeroSizedModule>
     VisitTensorGroups<N, M, E, D> for T
 {
-    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
-        _self_refs: ModuleGroup<N, M, Self>,
-        _func: &mut F,
+    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+        _visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         Ok(())
     }

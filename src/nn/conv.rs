@@ -4,7 +4,7 @@ use rand_distr::uniform::SampleUniform;
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
-    BuildModule, BuildOnDevice, Module, ModuleGroup, ModuleMut, ResetParams, TensorVisitor,
+    BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, TensorFunction, TensorVisitor,
     ToDevice, VisitTensorGroups,
 };
 
@@ -69,15 +69,11 @@ impl<
         D: DeviceStorage,
     > VisitTensorGroups<N, M, E, D> for Conv2D<I, O, K, S, P, E, D>
 {
-    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
-        mut self_refs: ModuleGroup<N, M, Self>,
-        func: &mut F,
+    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+        mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        func.call(
-            self_refs.map(|s| &s.weight, |s| &mut s.weight, "weight"),
-            &[],
-        )?;
-        func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"), &[])
+        visitor.visit_field(|s| &s.weight, |s| &mut s.weight, "weight")?;
+        visitor.visit_field(|s| &s.bias, |s| &mut s.bias, "bias")
     }
 }
 

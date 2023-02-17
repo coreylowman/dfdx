@@ -80,11 +80,10 @@ impl<
     > VisitTensorGroups<N, M, E, D>
     for TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_LAYERS, E, D>
 {
-    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
-        mut self_refs: ModuleGroup<N, M, Self>,
-        func: &mut F,
+    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+        mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        self_refs.map(|s| &s.0, |s| &mut s.0, "0.").visit(func)
+        visitor.visit_field(|s| &s.0, |s| &mut s.0, "0.")
     }
 }
 
@@ -196,16 +195,15 @@ impl<
     for TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>
 {
     #[rustfmt::skip]
-    fn visit_groups<F: TensorVisitor<N, M, E, D>>(
-        mut self_refs: ModuleGroup<N, M, Self>,
-        func: &mut F,
+    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+        mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        self_refs.map(|s| &s.self_attn, |s| &mut s.self_attn, "self_attn.").visit(func)?;
-        self_refs.map(|s| &s.norm1, |s| &mut s.norm1, "norm1.").visit(func)?;
-        self_refs.map(|s| &s.mh_attn, |s| &mut s.mh_attn, "mh_attn.").visit(func)?;
-        self_refs.map(|s| &s.norm2, |s| &mut s.norm2, "norm2.").visit(func)?;
-        self_refs.map(|s| &s.ff, |s| &mut s.ff, "ff.").visit(func)?;
-        self_refs.map(|s| &s.norm3, |s| &mut s.norm3, "norm3.").visit(func)
+        visitor.visit_field(|s| &s.self_attn, |s| &mut s.self_attn, "self_attn.")?;
+        visitor.visit_field(|s| &s.norm1, |s| &mut s.norm1, "norm1.")?;
+        visitor.visit_field(|s| &s.mh_attn, |s| &mut s.mh_attn, "mh_attn.")?;
+        visitor.visit_field(|s| &s.norm2, |s| &mut s.norm2, "norm2.")?;
+        visitor.visit_field(|s| &s.ff, |s| &mut s.ff, "ff.")?;
+        visitor.visit_field(|s| &s.norm3, |s| &mut s.norm3, "norm3.")
     }
 }
 

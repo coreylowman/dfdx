@@ -1,7 +1,7 @@
 use crate::{shapes::*, tensor::SplitTape, tensor_ops::Device};
 
 use super::{
-    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleGroup, ModuleMut, ResetParams,
+    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, ResetParams, TensorFunction,
     TensorVisitor, ToDevice, VisitTensorGroups,
 };
 
@@ -34,11 +34,10 @@ impl<
         D: DeviceStorage,
     > VisitTensorGroups<N, M, E, D> for Residual<F>
 {
-    fn visit_groups<Func: TensorVisitor<N, M, E, D>>(
-        mut self_refs: ModuleGroup<N, M, Self>,
-        func: &mut Func,
+    fn visit_groups<Func: TensorFunction<N, M, E, D>>(
+        mut visitor: TensorVisitor<N, M, Self, Func>,
     ) -> Result<(), Func::Err> {
-        self_refs.map(|s| &s.0, |s| &mut s.0, "0.").visit(func)
+        visitor.visit_field(|s| &s.0, |s| &mut s.0, "0.")
     }
 }
 

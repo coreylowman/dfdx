@@ -13,7 +13,8 @@ use zip::{
 };
 
 use super::{
-    DeviceStorage, ModuleGroup, TensorVisitor, TensorVisitorOption, VisitTensors, VisitTensorsMut,
+    DeviceStorage, TensorFunction, TensorVisitorOption, VisitTensors,
+    VisitTensorsMut,
 };
 
 struct SaveToNpzVisitor<'a, W: Write + Seek> {
@@ -21,16 +22,18 @@ struct SaveToNpzVisitor<'a, W: Write + Seek> {
 }
 
 impl<W: Write + Seek, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>>
-    TensorVisitor<1, 0, E, D> for SaveToNpzVisitor<'_, W>
+    TensorFunction<1, 0, E, D> for SaveToNpzVisitor<'_, W>
 {
     type Err = ZipError;
 
     fn call<S: Shape>(
         &mut self,
-        tensors: ModuleGroup<1, 0, Tensor<S, E, D>>,
+        refs: [&Tensor<S, E, D>; 1],
+        _refs_mut: [&mut Tensor<S, E, D>; 0],
+        name: Option<std::string::String>,
         _options: &[TensorVisitorOption],
     ) -> Result<(), Self::Err> {
-        tensors.refs[0].write_to_npz(self.writer, std::format!("{}.npz", tensors.name.unwrap()))
+        refs[0].write_to_npz(self.writer, std::format!("{}.npz", name.unwrap()))
     }
 }
 
@@ -91,17 +94,18 @@ struct LoadFromNpzVisitor<'a, R: Read + Seek> {
 }
 
 impl<R: Read + Seek, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>>
-    TensorVisitor<0, 1, E, D> for LoadFromNpzVisitor<'_, R>
+    TensorFunction<0, 1, E, D> for LoadFromNpzVisitor<'_, R>
 {
     type Err = NpzError;
 
     fn call<S: Shape>(
         &mut self,
-        tensors: ModuleGroup<0, 1, Tensor<S, E, D>>,
+        _refs: [&Tensor<S, E, D>; 0],
+        refs_mut: [&mut Tensor<S, E, D>; 1],
+        name: Option<std::string::String>,
         _options: &[TensorVisitorOption],
     ) -> Result<(), Self::Err> {
-        tensors.refs_mut[0]
-            .read_from_npz(self.reader, std::format!("{}.npz", tensors.name.unwrap()))
+        refs_mut[0].read_from_npz(self.reader, std::format!("{}.npz", name.unwrap()))
     }
 }
 
