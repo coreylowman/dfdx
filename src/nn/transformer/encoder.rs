@@ -135,20 +135,6 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, E, D: Device<E>> ResetParams<D, E>
-    for TransformerEncoderBlock<M, H, F, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-{
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.self_attn.try_reset_params()?;
-        self.norm1.try_reset_params()?;
-        self.ff.try_reset_params()?;
-        self.norm2.try_reset_params()?;
-        Ok(())
-    }
-}
-
 impl<const M: usize, const H: usize, const F: usize, E: Dtype, D1: Device<E>, D2: Device<E>>
     ToDevice<D2> for TransformerEncoderBlock<M, H, F, E, D1>
 {

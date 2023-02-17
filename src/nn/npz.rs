@@ -12,7 +12,7 @@ use zip::{
     ZipArchive, ZipWriter,
 };
 
-use super::{DeviceStorage, TensorFunction, TensorVisitorOption, VisitTensors, VisitTensorsMut};
+use super::{DeviceStorage, TensorFunction, TensorFunctionOption, VisitTensors, VisitTensorsMut};
 
 struct SaveToNpzVisitor<'a, W: Write + Seek> {
     writer: &'a mut ZipWriter<W>,
@@ -28,7 +28,7 @@ impl<W: Write + Seek, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>>
         refs: [&Tensor<S, E, D>; 1],
         _refs_mut: [&mut Tensor<S, E, D>; 0],
         name: Option<std::string::String>,
-        _options: &[TensorVisitorOption],
+        _options: &[TensorFunctionOption],
     ) -> Result<(), Self::Err> {
         refs[0].write_to_npz(self.writer, std::format!("{}.npz", name.unwrap()))
     }
@@ -100,7 +100,7 @@ impl<R: Read + Seek, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>>
         _refs: [&Tensor<S, E, D>; 0],
         refs_mut: [&mut Tensor<S, E, D>; 1],
         name: Option<std::string::String>,
-        _options: &[TensorVisitorOption],
+        _options: &[TensorFunctionOption],
     ) -> Result<(), Self::Err> {
         refs_mut[0].read_from_npz(self.reader, std::format!("{}.npz", name.unwrap()))
     }

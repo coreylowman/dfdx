@@ -1,8 +1,6 @@
 use crate::{shapes::*, tensor_ops::*};
 
-use super::module::{
-    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, OnDevice, ResetParams,
-};
+use super::module::{BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, OnDevice};
 
 use super::{TensorFunction, TensorVisitor, ToDevice, VisitTensorGroups};
 
@@ -33,14 +31,6 @@ macro_rules! tuple_impls {
             fn try_build(device: &D) -> Result<Self, D::Err> {
                 $(let $name = BuildModule::try_build(device)?;)*
                 Ok(($($name, )*))
-            }
-        }
-
-        impl<D: Device<E>, E: Dtype, $($name: ResetParams<D, E>),+> ResetParams<D, E> for ($($name,)+) {
-            #[allow(non_snake_case)]
-            fn try_reset_params(&mut self) -> Result<(), D::Err> {
-                $(self.$idx.try_reset_params()?;)+
-                Ok(())
             }
         }
 

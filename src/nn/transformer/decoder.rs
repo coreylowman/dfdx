@@ -97,16 +97,6 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D: Device<E>>
-    ResetParams<D, E> for TransformerDecoder<M, H, F, L, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-{
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        self.0.try_reset_params()
-    }
-}
-
 impl<const M: usize, const H: usize, const F: usize, const L: usize, E, D1, D2> ToDevice<D2>
     for TransformerDecoder<M, H, F, L, E, D1>
 where
@@ -221,22 +211,6 @@ where
             ff: BuildModule::try_build(device)?,
             norm3: BuildModule::try_build(device)?,
         })
-    }
-}
-
-impl<const M: usize, const N: usize, const F: usize, E, D: Device<E>> ResetParams<D, E>
-    for TransformerDecoderBlock<M, N, F, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-{
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        self.self_attn.try_reset_params()?;
-        self.norm1.try_reset_params()?;
-        self.mh_attn.try_reset_params()?;
-        self.norm2.try_reset_params()?;
-        self.ff.try_reset_params()?;
-        self.norm3.try_reset_params()?;
-        Ok(())
     }
 }
 

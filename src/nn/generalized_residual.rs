@@ -1,8 +1,8 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
-    BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, TensorFunction, TensorVisitor,
-    ToDevice, VisitTensorGroups,
+    BuildModule, BuildOnDevice, Module, ModuleMut, TensorFunction, TensorVisitor, ToDevice,
+    VisitTensorGroups,
 };
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
@@ -59,16 +59,6 @@ impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>, R: BuildModule<D, E>> BuildMo
             f: BuildModule::try_build(device)?,
             r: BuildModule::try_build(device)?,
         })
-    }
-}
-
-impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>, R: ResetParams<D, E>> ResetParams<D, E>
-    for GeneralizedResidual<F, R>
-{
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.f.try_reset_params()?;
-        self.r.try_reset_params()?;
-        Ok(())
     }
 }
 

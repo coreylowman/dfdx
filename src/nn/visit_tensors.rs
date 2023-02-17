@@ -11,7 +11,7 @@ pub struct TensorVisitor<'a, const N: usize, const M: usize, T, F> {
     refs_mut: [&'a mut T; M],
     name: Option<String>,
     func: &'a mut F,
-    options: &'a [TensorVisitorOption],
+    options: &'a [TensorFunctionOption],
 }
 
 // TODO? : Prevent heap allocation using unsafe or ArrayVec
@@ -96,7 +96,7 @@ impl<'a, const N: usize, const M: usize, T: Debug, F> TensorVisitor<'a, N, M, T,
         func1: F1,
         func2: F2,
         name: &str,
-        options: &[TensorVisitorOption],
+        options: &[TensorFunctionOption],
     ) -> Result<(), F::Err>
     where
         F: TensorFunction<N, M, E, D>,
@@ -113,9 +113,11 @@ impl<'a, const N: usize, const M: usize, T: Debug, F> TensorVisitor<'a, N, M, T,
 }
 
 #[non_exhaustive]
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TensorVisitorOption {
+#[derive(Clone, Debug, PartialEq)]
+pub enum TensorFunctionOption {
     DisableGradientUpdate,
+    ResetParamsDistribution(f64, f64),
+    ResetParamsOnes,
 }
 
 pub trait TensorFunction<const N: usize, const M: usize, E: Dtype, D: DeviceStorage> {
@@ -126,7 +128,7 @@ pub trait TensorFunction<const N: usize, const M: usize, E: Dtype, D: DeviceStor
         refs: [&Tensor<S, E, D>; N],
         refs_mut: [&mut Tensor<S, E, D>; M],
         name: Option<String>,
-        options: &[TensorVisitorOption],
+        options: &[TensorFunctionOption],
     ) -> Result<(), Self::Err>;
 }
 
@@ -203,7 +205,7 @@ impl<E: Dtype, D: DeviceStorage> TensorFunction<1, 0, E, D> for CountParamsVisit
         refs: [&Tensor<S, E, D>; 1],
         _refs_mut: [&mut Tensor<S, E, D>; 0],
         _name: Option<String>,
-        _options: &[TensorVisitorOption],
+        _options: &[TensorFunctionOption],
     ) -> Result<(), Self::Err> {
         self.0 += refs[0].shape().num_elements();
         Ok(())

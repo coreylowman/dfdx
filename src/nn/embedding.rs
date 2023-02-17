@@ -4,8 +4,8 @@ use rand_distr::uniform::SampleUniform;
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
-    module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice},
-    TensorFunction, TensorVisitor, VisitTensorGroups,
+    module::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice},
+    TensorFunction, TensorFunctionOption, TensorVisitor, VisitTensorGroups,
 };
 
 pub mod builder {
@@ -67,7 +67,10 @@ impl<
     fn visit_groups<F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        visitor.visit_field(|s| &s.weight, |s| &mut s.weight, "weight")
+        let bound = 1. / (V as f64).sqrt();
+        let options = [TensorFunctionOption::ResetParamsDistribution(-bound, bound)];
+
+        visitor.visit_field_with_options(|s| &s.weight, |s| &mut s.weight, "weight", &options)
     }
 }
 
@@ -117,17 +120,6 @@ impl<const V: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Device
         let distr = rand_distr::Uniform::new(-bound, bound);
         let weight = device.try_sample(distr)?;
         Ok(Self { weight })
-    }
-}
-
-impl<const VOCAB: usize, const DIM: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
-    ResetParams<D, E> for Embedding<VOCAB, DIM, E, D>
-{
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        let bound = E::ONE / E::from_usize(VOCAB).unwrap().sqrt();
-        let distr = rand_distr::Uniform::new(-bound, bound);
-        self.weight.try_fill_with_distr(distr)?;
-        Ok(())
     }
 }
 

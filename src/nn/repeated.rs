@@ -1,8 +1,8 @@
 use crate::{shapes::Dtype, tensor_ops::Device};
 
 use super::{
-    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, ResetParams, TensorFunction,
-    TensorVisitor, ToDevice, VisitTensorGroups,
+    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, TensorFunction, TensorVisitor,
+    ToDevice, VisitTensorGroups,
 };
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
@@ -62,17 +62,6 @@ impl<D: Device<E>, E: Dtype, T: BuildModule<D, E>, const N: usize> BuildModule<D
             modules.push(BuildModule::try_build(device)?);
         }
         Ok(Self { modules })
-    }
-}
-
-impl<D: Device<E>, E: Dtype, T: ResetParams<D, E>, const N: usize> ResetParams<D, E>
-    for Repeated<T, N>
-{
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        for m in self.modules.iter_mut() {
-            m.try_reset_params()?;
-        }
-        Ok(())
     }
 }
 

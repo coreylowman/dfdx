@@ -100,20 +100,6 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: Device<E>>
-    ResetParams<D, E> for MultiHeadAttention<M, H, K, V, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-{
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.w_q.try_reset_params()?;
-        self.w_k.try_reset_params()?;
-        self.w_v.try_reset_params()?;
-        self.w_o.try_reset_params()?;
-        Ok(())
-    }
-}
-
 impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D1, D2> ToDevice<D2>
     for MultiHeadAttention<M, H, K, V, E, D1>
 where

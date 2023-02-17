@@ -4,8 +4,8 @@ use rand_distr::uniform::SampleUniform;
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
-    BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, TensorFunction, TensorVisitor,
-    ToDevice, VisitTensorGroups,
+    BuildModule, BuildOnDevice, Module, ModuleMut, TensorFunction, TensorFunctionOption,
+    TensorVisitor, ToDevice, VisitTensorGroups,
 };
 
 pub mod builder {
@@ -56,7 +56,6 @@ pub struct Conv2D<
     pub bias: Tensor<Rank1<OUT_CHAN>, E, D>,
 }
 
-// TODO: custom behavior for ResetParams
 impl<
         const N: usize,
         const M: usize,
@@ -72,8 +71,12 @@ impl<
     fn visit_groups<F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        visitor.visit_field(|s| &s.weight, |s| &mut s.weight, "weight")?;
-        visitor.visit_field(|s| &s.bias, |s| &mut s.bias, "bias")
+        let k = (I * K * K) as f64;
+        let bound = 1. / k.sqrt();
+        let options = [TensorFunctionOption::ResetParamsDistribution(-bound, bound)];
+
+        visitor.visit_field_with_options(|s| &s.weight, |s| &mut s.weight, "weight", &options)?;
+        visitor.visit_field_with_options(|s| &s.bias, |s| &mut s.bias, "bias", &options)
     }
 }
 
@@ -90,23 +93,6 @@ where
             weight: device.try_sample(rand_distr::Uniform::new(-bound, bound))?,
             bias: device.try_sample(rand_distr::Uniform::new(-bound, bound))?,
         })
-    }
-}
-
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
-    ResetParams<D, E> for Conv2D<I, O, K, S, P, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-    D: Device<E>,
-{
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        let k = E::from_usize(I * K * K).unwrap();
-        let bound = E::ONE / k.sqrt();
-        self.weight
-            .try_fill_with_distr(rand_distr::Uniform::new(-bound, bound))?;
-        self.bias
-            .try_fill_with_distr(rand_distr::Uniform::new(-bound, bound))?;
-        Ok(())
     }
 }
 

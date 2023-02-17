@@ -1,10 +1,17 @@
-use crate::shapes::Dtype;
+use rand_distr::{uniform::SampleUniform, Uniform};
+
+use crate::{
+    prelude::Tensor,
+    shapes::{Dtype, Shape}, tensor_ops::Device,
+};
 
 #[cfg(feature = "cuda")]
 pub use crate::tensor::OnCuda;
 pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
 
-use super::{TensorFunction, TensorVisitor, VisitTensorGroups};
+use super::{
+    TensorFunction, TensorFunctionOption, TensorVisitor, VisitTensorGroups, VisitTensorsMut,
+};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
@@ -66,8 +73,43 @@ pub trait DeviceBuildExt: DeviceStorage {
 }
 impl<D: DeviceStorage> DeviceBuildExt for D {}
 
+struct ResetParamsFunction {}
+
+impl<E: Dtype + SampleUniform, D: Device<E>>
+    TensorFunction<0, 1, E, D> for ResetParamsFunction
+{
+    type Err = D::Err;
+
+    fn call<S: Shape>(
+        &mut self,
+        _refs: [&Tensor<S, E, D>; 0],
+        refs_mut: [&mut Tensor<S, E, D>; 1],
+        _name: Option<std::string::String>,
+        options: &[TensorFunctionOption],
+    ) -> Result<(), Self::Err> {
+        for o in options.iter().rev() {
+            match o {
+                TensorFunctionOption::ResetParamsDistribution(a, b) => {
+                    let distr = Uniform::new(E::from_f64(*a).unwrap(), E::from_f64(*b).unwrap());
+                    return refs_mut[0].try_fill_with_distr(distr);
+                }
+                TensorFunctionOption::ResetParamsOnes => {
+                    return refs_mut[0].try_fill_with_ones();
+                }
+                _ => {}
+            }
+        }
+
+        refs_mut[0].try_fill_with_zeros()
+    }
+}
+
 /// Something that can reset it's parameters.
-pub trait ResetParams<D: DeviceStorage, E: Dtype> {
+pub trait ResetParams<
+    D: Device<E>,
+    E: Dtype + SampleUniform,
+>: VisitTensorsMut<E, D>
+{
     /// Mutates parameters. Each implementor
     /// of this trait decides how the parameters are initialized. In
     /// fact, some impls may not even use randomness.
@@ -76,7 +118,17 @@ pub trait ResetParams<D: DeviceStorage, E: Dtype> {
     }
 
     /// Fallible version of [ResetParams::reset_params].
-    fn try_reset_params(&mut self) -> Result<(), D::Err>;
+    fn try_reset_params(&mut self) -> Result<(), D::Err> {
+        self.visit_mut(&mut ResetParamsFunction {})
+    }
+}
+
+impl<
+        D: Device<E>,
+        E: Dtype + SampleUniform,
+        T: VisitTensorsMut<E, D>,
+    > ResetParams<D, E> for T
+{
 }
 
 /// Marker trait for modules with no updatable parameters. These have
@@ -95,12 +147,6 @@ impl<const N: usize, const M: usize, E: Dtype, D: DeviceStorage, T: ZeroSizedMod
 
 impl<T: ZeroSizedModule + BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for T {
     type Built = T;
-}
-
-impl<T: ZeroSizedModule, D: DeviceStorage, E: Dtype> ResetParams<D, E> for T {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        Ok(())
-    }
 }
 
 impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {

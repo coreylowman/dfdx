@@ -1,8 +1,8 @@
 use crate::{shapes::*, tensor::SplitTape, tensor_ops::Device};
 
 use super::{
-    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, ResetParams, TensorFunction,
-    TensorVisitor, ToDevice, VisitTensorGroups,
+    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, TensorFunction, TensorVisitor,
+    ToDevice, VisitTensorGroups,
 };
 
 use std::ops::Add;
@@ -48,12 +48,6 @@ impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>> BuildOnDevice<D, E> for Res
 impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Residual<F> {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self(BuildModule::try_build(device)?))
-    }
-}
-
-impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>> ResetParams<D, E> for Residual<F> {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.0.try_reset_params()
     }
 }
 

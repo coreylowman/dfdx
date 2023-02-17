@@ -1,8 +1,8 @@
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
-    BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, TensorFunction, TensorVisitor,
-    ToDevice, VisitTensorGroups,
+    BuildModule, BuildOnDevice, Module, ModuleMut, TensorFunction, TensorFunctionOption,
+    TensorVisitor, ToDevice, VisitTensorGroups,
 };
 
 pub mod builder {
@@ -51,7 +51,9 @@ impl<const N: usize, const M: usize, const L: usize, E: Dtype, D: DeviceStorage>
     fn visit_groups<F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        visitor.visit_field(|s| &s.gamma, |s| &mut s.gamma, "gamma")?;
+        let options = [TensorFunctionOption::ResetParamsOnes];
+
+        visitor.visit_field_with_options(|s| &s.gamma, |s| &mut s.gamma, "gamma", &options)?;
         visitor.visit_field(|s| &s.beta, |s| &mut s.beta, "beta")
     }
 }
@@ -64,14 +66,6 @@ impl<const M: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for LayerNorm1D<M
             beta: device.try_zeros()?,
             epsilon: E::from_f32(1e-5).unwrap(),
         })
-    }
-}
-
-impl<const M: usize, E: Dtype, D: Device<E>> ResetParams<D, E> for LayerNorm1D<M, E, D> {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        self.gamma.try_fill_with_ones()?;
-        self.beta.try_fill_with_zeros()?;
-        Ok(())
     }
 }
 
@@ -134,7 +128,7 @@ where
 mod tests {
     use super::*;
     use crate::nn::tests::SimpleUpdater;
-    use crate::nn::DeviceBuildExt;
+    use crate::nn::{DeviceBuildExt, ResetParams};
     use crate::optim::GradientUpdate;
     use crate::tests::{assert_close, TestDevice, TestDtype};
     use crate::unique_id::HasUniqueId;

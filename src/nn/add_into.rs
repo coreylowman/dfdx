@@ -1,8 +1,8 @@
 use crate::{shapes::Dtype, tensor_ops::Device};
 
 use super::{
-    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, ResetParams, TensorFunction,
-    TensorVisitor, ToDevice, VisitTensorGroups,
+    BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, TensorFunction, TensorVisitor,
+    ToDevice, VisitTensorGroups,
 };
 
 /// Add inputs together into a single tensor. `T` should be a tuple
@@ -48,12 +48,6 @@ impl<T: BuildOnDevice<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for Add
 impl<T: BuildModule<D, E>, D: Device<E>, E: Dtype> BuildModule<D, E> for AddInto<T> {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self(BuildModule::try_build(device)?))
-    }
-}
-
-impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for AddInto<T> {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.0.try_reset_params()
     }
 }
 

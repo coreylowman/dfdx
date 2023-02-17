@@ -15,8 +15,8 @@ use crate::{
 };
 
 use super::{
-    BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, TensorFunction, TensorVisitor,
-    ToDevice, VisitTensorGroups,
+    BuildModule, BuildOnDevice, Module, ModuleMut, TensorFunction, TensorVisitor, ToDevice,
+    VisitTensorGroups,
 };
 
 pub mod builder {
@@ -117,19 +117,6 @@ where
             encoder: BuildModule::try_build(device)?,
             decoder: BuildModule::try_build(device)?,
         })
-    }
-}
-
-impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>
-    ResetParams<D, E> for Transformer<M, H, A, B, F, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-    D: Device<E>,
-{
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.encoder.try_reset_params()?;
-        self.decoder.try_reset_params()?;
-        Ok(())
     }
 }
 

@@ -1,8 +1,8 @@
 use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
-    BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, TensorFunction, TensorVisitor,
-    TensorVisitorOption, ToDevice, VisitTensorGroups,
+    BuildModule, BuildOnDevice, Module, ModuleMut, TensorFunction, TensorFunctionOption,
+    TensorVisitor, ToDevice, VisitTensorGroups,
 };
 
 pub mod builder {
@@ -78,20 +78,27 @@ impl<const N: usize, const M: usize, const C: usize, E: Dtype, D: DeviceStorage>
     fn visit_groups<F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        visitor.visit_field(|s| &s.scale, |s| &mut s.scale, "scale")?;
+        use TensorFunctionOption::*;
+
+        visitor.visit_field_with_options(
+            |s| &s.scale,
+            |s| &mut s.scale,
+            "scale",
+            &[ResetParamsOnes],
+        )?;
         visitor.visit_field(|s| &s.bias, |s| &mut s.bias, "bias")?;
 
         visitor.visit_field_with_options(
             |s| &s.running_mean,
             |s| &mut s.running_mean,
             "running_mean",
-            &[TensorVisitorOption::DisableGradientUpdate],
+            &[DisableGradientUpdate],
         )?;
         visitor.visit_field_with_options(
             |s| &s.running_var,
             |s| &mut s.running_var,
             "running_var",
-            &[TensorVisitorOption::DisableGradientUpdate],
+            &[DisableGradientUpdate, ResetParamsOnes],
         )
     }
 }
@@ -207,16 +214,6 @@ impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for BatchNorm2D<C
             epsilon: E::from_f32(1e-5).unwrap(),
             momentum: E::from_f32(0.1).unwrap(),
         })
-    }
-}
-
-impl<const C: usize, E: Dtype, D: Device<E>> ResetParams<D, E> for BatchNorm2D<C, E, D> {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        self.scale.try_fill_with_ones()?;
-        self.bias.try_fill_with_zeros()?;
-        self.running_mean.try_fill_with_zeros()?;
-        self.running_var.try_fill_with_ones()?;
-        Ok(())
     }
 }
 

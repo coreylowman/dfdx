@@ -1,8 +1,8 @@
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
-    module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice},
-    TensorFunction, TensorVisitor, VisitTensorGroups,
+    module::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice},
+    TensorFunction, TensorFunctionOption, TensorVisitor, VisitTensorGroups,
 };
 
 use num_traits::Float;
@@ -55,7 +55,6 @@ pub struct Linear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> {
     pub bias: Tensor<Rank1<O>, E, D>,
 }
 
-// TODO: custom behavior for ResetParams
 impl<
         const N: usize,
         const M: usize,
@@ -68,8 +67,11 @@ impl<
     fn visit_groups<F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
-        visitor.visit_field(|s| &s.weight, |s| &mut s.weight, "weight")?;
-        visitor.visit_field(|s| &s.bias, |s| &mut s.bias, "bias")
+        let b = 1. / (I as f64).sqrt();
+        let options = [TensorFunctionOption::ResetParamsDistribution(-b, b)];
+
+        visitor.visit_field_with_options(|s| &s.weight, |s| &mut s.weight, "weight", &options)?;
+        visitor.visit_field_with_options(|s| &s.bias, |s| &mut s.bias, "bias", &options)
     }
 }
 
@@ -81,17 +83,6 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device
         let weight = device.try_sample(Uniform::new(-b, b))?;
         let bias = device.try_sample(Uniform::new(-b, b))?;
         Ok(Self { weight, bias })
-    }
-}
-
-impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: SampleTensor<E>>
-    ResetParams<D, E> for Linear<I, O, E, D>
-{
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
-        self.weight.try_fill_with_distr(Uniform::new(-b, b))?;
-        self.bias.try_fill_with_distr(Uniform::new(-b, b))?;
-        Ok(())
     }
 }
 

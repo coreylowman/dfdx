@@ -1,6 +1,6 @@
 use crate::{
     gradients::Gradients,
-    nn::{TensorFunction, TensorVisitorOption, VisitTensorsMut},
+    nn::{TensorFunction, TensorFunctionOption, VisitTensorsMut},
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Tensor},
     unique_id::{HasUniqueId, UniqueId},
@@ -107,9 +107,9 @@ impl<U: ParamUpdater<D, E>, E: Dtype, D: DeviceStorage> TensorFunction<0, 1, E, 
         _refs: [&Tensor<S, E, D>; 0],
         refs_mut: [&mut Tensor<S, E, D>; 1],
         _name: Option<std::string::String>,
-        options: &[TensorVisitorOption],
+        options: &[TensorFunctionOption],
     ) -> Result<(), Self::Err> {
-        if options.contains(&TensorVisitorOption::DisableGradientUpdate) {
+        if options.contains(&TensorFunctionOption::DisableGradientUpdate) {
             Ok(())
         } else {
             self.updater.update_param(refs_mut[0], self.unused)
