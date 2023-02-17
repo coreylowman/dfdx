@@ -69,7 +69,10 @@ impl<
         mut self_refs: ModuleGroup<N, M, Self>,
         func: &mut F,
     ) -> Result<(), F::Err> {
-        func.call(self_refs.map(|s| &s.weight, |s| &mut s.weight, "weight"))
+        func.call(
+            self_refs.map(|s| &s.weight, |s| &mut s.weight, "weight"),
+            &[],
+        )
     }
 }
 

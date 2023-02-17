@@ -79,13 +79,17 @@ impl<const N: usize, const M: usize, const C: usize, E: Dtype, D: DeviceStorage>
         mut self_refs: ModuleGroup<N, M, Self>,
         func: &mut F,
     ) -> Result<(), F::Err> {
-        func.call(self_refs.map(|s| &s.scale, |s| &mut s.scale, "scale"))?;
-        func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"))?;
+        func.call(self_refs.map(|s| &s.scale, |s| &mut s.scale, "scale"), &[])?;
+        func.call(self_refs.map(|s| &s.bias, |s| &mut s.bias, "bias"), &[])?;
 
-        func.set_option(TensorVisitorOption::DisableGradientUpdate);
-        func.call(self_refs.map(|s| &s.running_mean, |s| &mut s.running_mean, "running_mean"))?;
-        func.set_option(TensorVisitorOption::DisableGradientUpdate);
-        func.call(self_refs.map(|s| &s.running_var, |s| &mut s.running_var, "running_var"))
+        func.call(
+            self_refs.map(|s| &s.running_mean, |s| &mut s.running_mean, "running_mean"),
+            &[TensorVisitorOption::DisableGradientUpdate],
+        )?;
+        func.call(
+            self_refs.map(|s| &s.running_var, |s| &mut s.running_var, "running_var"),
+            &[TensorVisitorOption::DisableGradientUpdate],
+        )
     }
 }
 

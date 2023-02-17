@@ -70,8 +70,8 @@ pub trait TensorVisitor<const N: usize, const M: usize, E: Dtype, D: DeviceStora
     fn call<S: Shape>(
         &mut self,
         tensors: ModuleGroup<N, M, Tensor<S, E, D>>,
+        option: &[TensorVisitorOption],
     ) -> Result<(), Self::Err>;
-    fn set_option(&mut self, _option: TensorVisitorOption) {}
 }
 
 pub trait VisitTensorGroups<const N: usize, const M: usize, E: Dtype, D: DeviceStorage>:
@@ -90,7 +90,7 @@ impl<const N: usize, const M: usize, S: Shape, E: Dtype, D: DeviceStorage>
         self_refs: ModuleGroup<N, M, Self>,
         func: &mut F,
     ) -> Result<(), F::Err> {
-        func.call(self_refs)
+        func.call(self_refs, &[])
     }
 }
 
@@ -142,6 +142,7 @@ impl<E: Dtype, D: DeviceStorage> TensorVisitor<1, 0, E, D> for CountParamsVisito
     fn call<S: Shape>(
         &mut self,
         tensors: ModuleGroup<1, 0, Tensor<S, E, D>>,
+        _options: &[TensorVisitorOption],
     ) -> Result<(), Self::Err> {
         self.0 += tensors.refs[0].shape().num_elements();
         Ok(())

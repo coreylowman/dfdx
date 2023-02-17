@@ -95,7 +95,6 @@ pub trait Optimizer<M, D: DeviceStorage, E: Dtype> {
 struct GradientUpdateVisitor<'a, U> {
     updater: &'a mut U,
     unused: &'a mut UnusedTensors,
-    run: bool,
 }
 
 impl<U: ParamUpdater<D, E>, E: Dtype, D: DeviceStorage> TensorVisitor<0, 1, E, D>
@@ -106,18 +105,12 @@ impl<U: ParamUpdater<D, E>, E: Dtype, D: DeviceStorage> TensorVisitor<0, 1, E, D
     fn call<S: Shape>(
         &mut self,
         tensors: ModuleGroup<0, 1, Tensor<S, E, D>>,
+        options: &[TensorVisitorOption]
     ) -> Result<(), Self::Err> {
-        if self.run {
-            self.updater.update_param(tensors.refs_mut[0], self.unused)
-        } else {
-            self.run = true;
+        if options.contains(&TensorVisitorOption::DisableGradientUpdate) {
             Ok(())
-        }
-    }
-
-    fn set_option(&mut self, option: TensorVisitorOption) {
-        if option == TensorVisitorOption::DisableGradientUpdate {
-            self.run = false;
+        } else {
+            self.updater.update_param(tensors.refs_mut[0], self.unused)
         }
     }
 }
@@ -133,7 +126,6 @@ pub trait GradientUpdate<D: DeviceStorage, E: Dtype>: VisitTensorsMut<E, D> {
         let mut visitor = GradientUpdateVisitor {
             updater,
             unused,
-            run: true,
         };
         self.visit_mut(&mut visitor)
     }

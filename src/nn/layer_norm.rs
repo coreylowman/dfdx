@@ -52,8 +52,8 @@ impl<const N: usize, const M: usize, const L: usize, E: Dtype, D: DeviceStorage>
         mut self_refs: ModuleGroup<N, M, Self>,
         func: &mut F,
     ) -> Result<(), F::Err> {
-        func.call(self_refs.map(|s| &s.gamma, |s| &mut s.gamma, "gamma"))?;
-        func.call(self_refs.map(|s| &s.beta, |s| &mut s.beta, "beta"))
+        func.call(self_refs.map(|s| &s.gamma, |s| &mut s.gamma, "gamma"), &[])?;
+        func.call(self_refs.map(|s| &s.beta, |s| &mut s.beta, "beta"), &[])
     }
 }
 
