@@ -2,7 +2,8 @@ use rand_distr::{uniform::SampleUniform, Uniform};
 
 use crate::{
     prelude::Tensor,
-    shapes::{Dtype, Shape}, tensor_ops::Device,
+    shapes::{Dtype, Shape},
+    tensor_ops::Device,
 };
 
 #[cfg(feature = "cuda")]
@@ -75,9 +76,7 @@ impl<D: DeviceStorage> DeviceBuildExt for D {}
 
 struct ResetParamsFunction {}
 
-impl<E: Dtype + SampleUniform, D: Device<E>>
-    TensorFunction<0, 1, E, D> for ResetParamsFunction
-{
+impl<E: Dtype + SampleUniform, D: Device<E>> TensorFunction<0, 1, E, D> for ResetParamsFunction {
     type Err = D::Err;
 
     fn call<S: Shape>(
@@ -105,11 +104,7 @@ impl<E: Dtype + SampleUniform, D: Device<E>>
 }
 
 /// Something that can reset it's parameters.
-pub trait ResetParams<
-    D: Device<E>,
-    E: Dtype + SampleUniform,
->: VisitTensorsMut<E, D>
-{
+pub trait ResetParams<D: Device<E>, E: Dtype + SampleUniform>: VisitTensorsMut<E, D> {
     /// Mutates parameters. Each implementor
     /// of this trait decides how the parameters are initialized. In
     /// fact, some impls may not even use randomness.
@@ -123,13 +118,7 @@ pub trait ResetParams<
     }
 }
 
-impl<
-        D: Device<E>,
-        E: Dtype + SampleUniform,
-        T: VisitTensorsMut<E, D>,
-    > ResetParams<D, E> for T
-{
-}
+impl<D: Device<E>, E: Dtype + SampleUniform, T: VisitTensorsMut<E, D>> ResetParams<D, E> for T {}
 
 /// Marker trait for modules with no updatable parameters. These have
 /// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]
