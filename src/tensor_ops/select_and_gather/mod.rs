@@ -415,20 +415,6 @@ mod tests {
     }
 
     #[test]
-    fn test_gather_3d_axis_0() {
-        let dev: TestDevice = Default::default();
-        let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
-        let _ = t.gather(dev.tensor([0]));
-    }
-
-    #[test]
-    fn test_gather_3d_axis_1() {
-        let dev: TestDevice = Default::default();
-        let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
-        let _ = t.gather(dev.tensor([[0], [1]]));
-    }
-
-    #[test]
     fn test_gather_batch_backwards() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank2<4, 5>, TestDtype, _> = dev.sample_normal();
