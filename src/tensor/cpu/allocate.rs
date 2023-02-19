@@ -143,7 +143,7 @@ impl<E: Unit> TensorFromVec<E> for Cpu {
     }
 }
 
-impl<S: Shape, E: Unit> AsVec for StridedArray<S, E> {
+impl<S: Shape, E: Unit> AsVec<E> for StridedArray<S, E> {
     fn as_vec(&self) -> Vec<E> {
         let mut out = Vec::with_capacity(self.shape.num_elements());
         let mut iter = self.iter();
