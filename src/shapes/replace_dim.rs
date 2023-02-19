@@ -14,7 +14,7 @@ pub trait RemoveDimTo<Dst: Shape, Idx: Shape>: Shape {
         let src_dims = self.concrete();
         let idx_dims = idx.concrete();
         for i in 0..Idx::NUM_DIMS {
-            assert_eq!(src_dims[i], idx_dims[i]);
+            assert_eq!(src_dims[i], idx_dims[i], "dimension {i} not the same");
         }
     }
 
@@ -49,7 +49,7 @@ pub trait ReplaceDimTo<Dst: Shape, Idx: Shape>: Shape {
             let src_dims = self.concrete();
             let idx_dims = idx.concrete();
             for i in 0..Idx::NUM_DIMS - 1 {
-                assert_eq!(src_dims[i], idx_dims[i]);
+                assert_eq!(src_dims[i], idx_dims[i], "dimension {i} not the same");
             }
         } else {
             // batch replace case - we actually don't need to check this case
