@@ -109,6 +109,24 @@ impl<const M: usize> Dim for Const<M> {
 
 impl<const M: usize> ConstDim for Const<M> {}
 
+/// Represents either `[T; N]` or `Vec<T>`
+pub trait Array<T>: IntoIterator<Item = T> {
+    type Dim: Dim;
+    fn dim(&self) -> Self::Dim;
+}
+impl<T, const N: usize> Array<T> for [T; N] {
+    type Dim = Const<N>;
+    fn dim(&self) -> Self::Dim {
+        Const
+    }
+}
+impl<T> Array<T> for std::vec::Vec<T> {
+    type Dim = usize;
+    fn dim(&self) -> Self::Dim {
+        self.len()
+    }
+}
+
 /// A collection of dimensions ([Dim]) that change how a multi-dimensional
 /// array is interacted with.
 pub trait Shape:

@@ -38,7 +38,7 @@ pub trait TryStack<E: Dtype>: DeviceStorage {
     /// ```
     fn stack<S: Shape, T, Items>(&self, items: Items) -> Tensor<S::Larger, E, Self, T>
     where
-        Items: Stackable<Tensor<S, E, Self, T>>,
+        Items: Array<Tensor<S, E, Self, T>>,
         S: AddDim<Items::Dim>,
         T: Tape<Self> + Merge<T>,
     {
@@ -51,26 +51,9 @@ pub trait TryStack<E: Dtype>: DeviceStorage {
         items: Items,
     ) -> Result<Tensor<S::Larger, E, Self, T>, Self::Err>
     where
-        Items: Stackable<Tensor<S, E, Self, T>>,
+        Items: Array<Tensor<S, E, Self, T>>,
         S: AddDim<Items::Dim>,
         T: Tape<Self> + Merge<T>;
-}
-
-pub trait Stackable<T>: IntoIterator<Item = T> {
-    type Dim: Dim;
-    fn dim(&self) -> Self::Dim;
-}
-impl<T, const N: usize> Stackable<T> for [T; N] {
-    type Dim = Const<N>;
-    fn dim(&self) -> Self::Dim {
-        Const
-    }
-}
-impl<T> Stackable<T> for Vec<T> {
-    type Dim = usize;
-    fn dim(&self) -> Self::Dim {
-        self.len()
-    }
 }
 
 pub trait AddDim<D: Dim>: Shape {
@@ -132,7 +115,7 @@ impl<E: Dtype, D: StackKernel<E>> TryStack<E> for D {
         items: Items,
     ) -> Result<Tensor<S::Larger, E, Self, T>, Self::Err>
     where
-        Items: Stackable<Tensor<S, E, Self, T>>,
+        Items: Array<Tensor<S, E, Self, T>>,
         S: AddDim<Items::Dim>,
         T: Tape<Self> + Merge<T>,
     {

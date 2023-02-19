@@ -23,7 +23,7 @@ use indicatif::ProgressBar;
 use mnist::*;
 use rand::prelude::{SeedableRng, StdRng};
 
-use dfdx::{data::SubsetIterator, losses::cross_entropy_with_logits_loss, optim::Adam, prelude::*};
+use dfdx::{data::*, optim::Adam, prelude::*};
 
 #[cfg(not(feature = "cuda"))]
 type Dev = Cpu;
@@ -31,42 +31,28 @@ type Dev = Cpu;
 #[cfg(feature = "cuda")]
 type Dev = Cuda;
 
-struct MnistDataset {
-    img: Vec<f32>,
-    lbl: Vec<usize>,
+struct MnistTrainSet(Mnist);
+
+impl MnistTrainSet {
+    fn new(path: &str) -> Self {
+        Self(MnistBuilder::new().base_path(path).finalize())
+    }
 }
 
-impl MnistDataset {
-    fn train(path: &str) -> Self {
-        let mnist: Mnist = MnistBuilder::new().base_path(path).finalize();
-        Self {
-            img: mnist.trn_img.iter().map(|&v| v as f32 / 255.0).collect(),
-            lbl: mnist.trn_lbl.iter().map(|&v| v as usize).collect(),
-        }
+impl ExactSizeDataset for MnistTrainSet {
+    type Item = (Vec<f32>, usize);
+    fn get(&self, index: usize) -> Self::Item {
+        let mut img_data: Vec<f32> = Vec::with_capacity(784);
+        let start = 784 * index;
+        img_data.extend(
+            self.0.trn_img[start..start + 784]
+                .iter()
+                .map(|x| *x as f32 / 255.0),
+        );
+        (img_data, self.0.trn_lbl[index] as usize)
     }
-
     fn len(&self) -> usize {
-        self.lbl.len()
-    }
-
-    pub fn get_batch<const B: usize>(
-        &self,
-        dev: &Dev,
-        idxs: [usize; B],
-    ) -> (
-        Tensor<Rank2<B, 784>, f32, Dev>,
-        Tensor<Rank2<B, 10>, f32, Dev>,
-    ) {
-        let mut img_data: Vec<f32> = Vec::with_capacity(B * 784);
-        let mut lbl_data: Vec<f32> = Vec::with_capacity(B * 10);
-        for (_batch_i, &img_idx) in idxs.iter().enumerate() {
-            let start = 784 * img_idx;
-            img_data.extend(&self.img[start..start + 784]);
-            let mut choices = [0.0; 10];
-            choices[self.lbl[img_idx]] = 1.0;
-            lbl_data.extend(choices);
-        }
-        (dev.tensor(img_data), dev.tensor(lbl_data))
+        self.0.trn_lbl.len()
     }
 }
 
@@ -100,7 +86,7 @@ fn main() {
     let mut opt = Adam::new(&model, Default::default());
 
     // initialize dataset
-    let dataset = MnistDataset::train(&mnist_path);
+    let dataset = MnistTrainSet::new(&mnist_path);
     println!("Found {:?} training images", dataset.len());
 
     for i_epoch in 0..10 {
@@ -108,9 +94,14 @@ fn main() {
         let mut num_batches = 0;
         let start = Instant::now();
         let bar = ProgressBar::new(dataset.len() as u64);
-        for (img, lbl) in SubsetIterator::<BATCH_SIZE>::shuffled(dataset.len(), &mut rng)
-            .map(|i| dataset.get_batch(&dev, i))
+        for (img, lbl) in dataset
+            .shuffled(&mut rng)
+            .batch(Const::<BATCH_SIZE>)
+            .collate()
         {
+            let img = dev.stack(img.map(|x| dev.tensor((x, (Const::<784>,)))));
+            let lbl = dev.one_hot_encode(Const::<10>, lbl);
+
             let logits = model.forward_mut(img.traced());
             let loss = cross_entropy_with_logits_loss(logits, lbl);
 
