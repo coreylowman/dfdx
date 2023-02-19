@@ -1,8 +1,7 @@
 use rand::distributions::Distribution;
 
-use super::storage_traits::{CopySlice, DeviceStorage, HasErr, TensorFromVec};
+use super::storage_traits::{AsVec, DeviceStorage, HasErr, TensorFromVec};
 use super::{Cpu, OneFillStorage, SampleTensor, ZeroFillStorage};
-use crate::prelude::TensorFrom;
 use crate::{
     gradients::{NoneTape, OwnedTape, Tape},
     shapes::*,
@@ -66,7 +65,7 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
     type Err = D::Err;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
+impl<S: Shape, E: Unit, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
     /// Clone and put a [OwnedTape] into the tensor
     pub fn trace(&self) -> Tensor<S, E, D, OwnedTape<D>> {
         self.clone().traced()
@@ -77,7 +76,7 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceStorage, T> Tensor<S, E, D, T> {
     /// Clone and insert a new tape of type `New` into the tensor
     pub fn retaped<New: Tape<D>>(&self) -> Tensor<S, E, D, New> {
         Tensor {
@@ -101,7 +100,7 @@ pub trait PutTape<T> {
     fn put_tape(self, tape: T) -> Self::Output;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> PutTape<T> for Tensor<S, E, D> {
+impl<S: Shape, E: Unit, D: DeviceStorage, T> PutTape<T> for Tensor<S, E, D> {
     type Output = Tensor<S, E, D, T>;
     fn put_tape(self, tape: T) -> Self::Output {
         Tensor {
@@ -235,20 +234,14 @@ pub type OnCuda<M> = OnDevice<M, crate::prelude::Cuda>;
 /// Equivalent to `OnDevice<M, Cpu>`
 pub type OnCpu<M> = OnDevice<M, Cpu>;
 
-impl<
-        S: Shape,
-        E: Dtype + Unit,
-        T,
-        D1: DeviceStorage + CopySlice<E>,
-        D2: DeviceStorage + TensorFromVec<E>,
-    > ToDevice<D2> for Tensor<S, E, D1, T>
+impl<S: Shape, E: Dtype + Unit, T, D1: DeviceStorage, D2: TensorFromVec<E>> ToDevice<D2>
+    for Tensor<S, E, D1, T>
 {
     type Output = Tensor<S, E, D2, NoneTape>;
 
     fn to_device(&self, device: &D2) -> Self::Output {
-        let mut buf = std::vec![E::default(); self.shape().num_elements()];
-        self.copy_into(&mut buf);
-        device.tensor((buf, *self.shape()))
+        let buf = self.as_vec();
+        device.tensor_from_vec(buf, *self.shape())
     }
 }
 

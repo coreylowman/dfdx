@@ -110,12 +110,22 @@ where
 
 impl<E: Unit> CopySlice<E> for Cuda {
     fn copy_from<S: Shape, T>(dst: &mut Tensor<S, E, Self, T>, src: &[E]) {
+        assert_eq!(
+            dst.storage.data.len(),
+            src.len(),
+            "Slices must have same number of elements as *physical* storage of tensors."
+        );
         dst.device
             .dev
             .sync_copy_into(src, Arc::make_mut(&mut dst.storage.data))
             .unwrap();
     }
     fn copy_into<S: Shape, T>(src: &Tensor<S, E, Self, T>, dst: &mut [E]) {
+        assert_eq!(
+            src.storage.data.len(),
+            dst.len(),
+            "Slices must have same number of elements as *physical* storage of tensors."
+        );
         src.device
             .dev
             .sync_copy_from(src.storage.data.as_ref(), dst)
@@ -123,9 +133,15 @@ impl<E: Unit> CopySlice<E> for Cuda {
     }
 }
 
-impl<S: Shape, E: Unit> AsVec for CudaArray<S, E> {
+impl<S: Shape, E: Unit> AsVec<E> for CudaArray<S, E> {
     fn as_vec(&self) -> Vec<E> {
-        self.data.clone_async().unwrap().try_into().unwrap()
+        let buf = self.data.clone_async().unwrap().try_into().unwrap();
+        let a = StridedArray {
+            data: Arc::new(buf),
+            shape: self.shape,
+            strides: self.strides,
+        };
+        a.as_vec()
     }
 }
 
@@ -157,8 +173,9 @@ where
 {
     type Array = <StridedArray<S, E> as AsArray>::Array;
     fn array(&self) -> Self::Array {
+        let buf = self.data.clone_async().unwrap().try_into().unwrap();
         let a = StridedArray {
-            data: Arc::new(self.as_vec()),
+            data: Arc::new(buf),
             shape: self.shape,
             strides: self.strides,
         };

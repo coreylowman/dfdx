@@ -11,6 +11,11 @@ pub trait HasErr: Sized {
     type Err: std::fmt::Debug + std::fmt::Display;
 }
 
+/// Convert tensors to [std::vec::Vec]
+pub trait AsVec<E> {
+    fn as_vec(&self) -> std::vec::Vec<E>;
+}
+
 /// Something that can store nd arrays for a given [Shape] and [Dtype]
 pub trait DeviceStorage: 'static + Default + Clone + HasErr {
     /// Generic storage type
@@ -19,7 +24,8 @@ pub trait DeviceStorage: 'static + Default + Clone + HasErr {
         + Clone
         + Send
         + Sync
-        + HasShape<Shape = S>;
+        + HasShape<Shape = S>
+        + AsVec<E>;
 
     /// Generates a random u64 number
     fn random_u64(&self) -> u64;
@@ -61,7 +67,7 @@ pub trait CopySlice<E: Unit>: DeviceStorage {
 }
 
 impl<S: Shape, E: Unit, D: CopySlice<E>, T> Tensor<S, E, D, T> {
-    /// Copy data from a slice - **panics** if there are not enough elements in the slice.
+    /// Copy *physical* data from a slice - **panics** if there are not enough elements in the slice.
     ///
     /// ```rust
     /// # use dfdx::prelude::*;
@@ -75,7 +81,7 @@ impl<S: Shape, E: Unit, D: CopySlice<E>, T> Tensor<S, E, D, T> {
         D::copy_from(self, src);
     }
 
-    /// Copy data into a slice - **panics** if there are not enough elements in the tensor.
+    /// Copy *physical* data into a slice - **panics** if there are not enough elements in the tensor.
     ///
     /// ```rust
     /// # use dfdx::prelude::*;
@@ -269,15 +275,7 @@ where
     }
 }
 
-/// Convert tensors to [std::vec::Vec]
-pub trait AsVec: HasUnitType {
-    fn as_vec(&self) -> std::vec::Vec<Self::Unit>;
-}
-
-impl<S: Shape, E: Unit, D: DeviceStorage, T> AsVec for Tensor<S, E, D, T>
-where
-    D::Storage<S, E>: HasUnitType<Unit = E> + AsVec,
-{
+impl<S: Shape, E: Unit, D: DeviceStorage, T> AsVec<E> for Tensor<S, E, D, T> {
     fn as_vec(&self) -> std::vec::Vec<E> {
         self.storage.as_vec()
     }
