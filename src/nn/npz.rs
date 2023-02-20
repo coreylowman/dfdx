@@ -6,6 +6,7 @@ use crate::{
 use std::{
     io::{BufReader, BufWriter, Read, Seek, Write},
     path::Path,
+    string::ToString,
 };
 use zip::{
     result::{ZipError, ZipResult},
@@ -77,7 +78,7 @@ pub trait SaveToNpz<E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>>:
         W: Write + Seek,
     {
         let mut visitor = SaveToNpzVisitor { writer: w };
-        self.visit_with_name(filename_prefix, &mut visitor)
+        self.visit_with_name(filename_prefix.to_string(), &mut visitor)
     }
 }
 
@@ -145,6 +146,6 @@ pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>>:
         R: Read + Seek,
     {
         let mut visitor = LoadFromNpzVisitor { reader: r };
-        self.visit_mut_with_name(filename_prefix, &mut visitor)
+        self.visit_mut_with_name(filename_prefix.to_string(), &mut visitor)
     }
 }

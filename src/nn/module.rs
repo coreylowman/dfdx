@@ -1,4 +1,5 @@
 use rand_distr::{uniform::SampleUniform, Uniform};
+use std::string::String;
 
 use crate::{
     prelude::Tensor,
@@ -11,7 +12,8 @@ pub use crate::tensor::OnCuda;
 pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
 
 use super::{
-    TensorFunction, TensorFunctionOption, TensorVisitor, VisitTensorGroups, VisitTensorsMut,
+    visit_tensors::VisitTensors, TensorFunction, TensorFunctionOption, TensorVisitor,
+    VisitTensorGroups, VisitTensorsMut,
 };
 
 /// Immutable forward of `Input` that produces [Module::Output].
@@ -88,7 +90,7 @@ impl<E: Dtype + SampleUniform, D: Device<E>> TensorFunction<0, 1, E, D> for Rese
     ) -> Result<(), Self::Err> {
         for o in options.iter().rev() {
             match o {
-                TensorFunctionOption::ResetParamsDistribution(a, b) => {
+                TensorFunctionOption::ResetParamsUniform(a, b) => {
                     let distr = Uniform::new(E::from_f64(*a).unwrap(), E::from_f64(*b).unwrap());
                     return refs_mut[0].try_fill_with_distr(distr);
                 }
@@ -119,6 +121,45 @@ pub trait ResetParams<D: Device<E>, E: Dtype + SampleUniform>: VisitTensorsMut<E
 }
 
 impl<D: Device<E>, E: Dtype + SampleUniform, T: VisitTensorsMut<E, D>> ResetParams<D, E> for T {}
+
+struct CountParamsFunction(usize);
+
+impl<E: Dtype, D: DeviceStorage> TensorFunction<1, 0, E, D> for CountParamsFunction {
+    type Err = String;
+
+    fn call<S: Shape>(
+        &mut self,
+        refs: [&Tensor<S, E, D>; 1],
+        _refs_mut: [&mut Tensor<S, E, D>; 0],
+        _name: Option<String>,
+        _options: &[TensorFunctionOption],
+    ) -> Result<(), Self::Err> {
+        self.0 += refs[0].shape().num_elements();
+        Ok(())
+    }
+}
+
+/// Computes the number of parameters present in a module
+pub trait CountParams<E: Dtype, D: DeviceStorage>: VisitTensors<E, D> {
+    /// Returns the total size of all tensors in self. This does not distinguish trainable
+    /// parameters from non-trainable parameters.
+    ///
+    /// Example:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let model = dev.build_module::<Linear<5, 2>, f32>();
+    /// assert_eq!(model.param_count(), 12); // 10 in weight, 2 in bias
+    /// ```
+    fn param_count(&self) -> usize {
+        let mut visitor = CountParamsFunction(0);
+        // CountParamsVisitor::call never returns Err
+        self.visit(&mut visitor).unwrap();
+        visitor.0
+    }
+}
+
+impl<E: Dtype, D: DeviceStorage, T: VisitTensors<E, D>> CountParams<E, D> for T {}
 
 /// Marker trait for modules with no updatable parameters. These have
 /// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]

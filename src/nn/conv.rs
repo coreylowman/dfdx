@@ -73,7 +73,7 @@ impl<
     ) -> Result<(), F::Err> {
         let k = (I * K * K) as f64;
         let bound = 1. / k.sqrt();
-        let options = [TensorFunctionOption::ResetParamsDistribution(-bound, bound)];
+        let options = [TensorFunctionOption::ResetParamsUniform(-bound, bound)];
 
         visitor.visit_field_with_options(|s| &s.weight, |s| &mut s.weight, "weight", &options)?;
         visitor.visit_field_with_options(|s| &s.bias, |s| &mut s.bias, "bias", &options)

@@ -1,6 +1,6 @@
 use crate::{
     gradients::Gradients,
-    nn::{TensorFunction, TensorFunctionOption, VisitTensorsMut},
+    nn::visit_tensors::{TensorFunction, TensorFunctionOption, VisitTensorsMut},
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Tensor},
     unique_id::{HasUniqueId, UniqueId},

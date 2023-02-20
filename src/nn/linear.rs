@@ -68,7 +68,7 @@ impl<
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         let b = 1. / (I as f64).sqrt();
-        let options = [TensorFunctionOption::ResetParamsDistribution(-b, b)];
+        let options = [TensorFunctionOption::ResetParamsUniform(-b, b)];
 
         visitor.visit_field_with_options(|s| &s.weight, |s| &mut s.weight, "weight", &options)?;
         visitor.visit_field_with_options(|s| &s.bias, |s| &mut s.bias, "bias", &options)
