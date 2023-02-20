@@ -37,64 +37,25 @@ pub trait ExtendDim<Rhs: Shape>: Shape {
     fn extend(&self, rhs: &Rhs) -> Self::Extended;
 }
 
-#[rustfmt::skip]
-impl ExtendDim<(usize,)> for (usize,) {
-    type Extended = (usize,);
-    fn extend(&self, rhs: &(usize,)) -> Self::Extended {
-        let s = self.shape();
-        (s.0.size() + rhs.0.size(),)
-    }
+macro_rules! extend {
+    ($($dn:ident),*) => {
+        impl<$($dn: Dim),*> ExtendDim<(usize, $($dn),*)> for (usize, $($dn),*) {
+            type Extended = (usize, $($dn),*);
+
+            fn extend(&self, rhs: &(usize, $($dn),*)) -> Self::Extended {
+                let mut shape = *self.shape();
+                shape.0 += rhs.0.size();
+                shape
+            }
+        }
+    };
 }
-#[rustfmt::skip]
-impl<D2: Dim>
-    ExtendDim<(usize, D2)> for (usize, D2)
-{
-    type Extended = (usize, D2);
-    fn extend(&self, rhs: &(usize, D2)) -> Self::Extended {
-        let s = self.shape();
-        (s.0.size() + rhs.0.size(), s.1)
-    }
-}
-#[rustfmt::skip]
-impl<D2: Dim, D3: Dim>
-    ExtendDim<(usize, D2, D3)> for (usize, D2, D3)
-{
-    type Extended = (usize, D2, D3);
-    fn extend(&self, rhs: &(usize, D2, D3)) -> Self::Extended {
-        let s = self.shape();
-        (s.0.size() + rhs.0.size(), s.1, s.2)
-    }
-}
-#[rustfmt::skip]
-impl<D2: Dim, D3: Dim, D4: Dim>
-    ExtendDim<(usize, D2, D3, D4)> for (usize, D2, D3, D4)
-{
-    type Extended = (usize, D2, D3, D4);
-    fn extend(&self, rhs: &(usize, D2, D3, D4)) -> Self::Extended {
-        let s = self.shape();
-        (s.0.size() + rhs.0.size(), s.1, s.2, s.3)
-    }
-}
-#[rustfmt::skip]
-impl<D2: Dim, D3: Dim, D4: Dim, D5: Dim>
-    ExtendDim<(usize, D2, D3, D4, D5)> for (usize, D2, D3, D4, D5)
-{
-    type Extended = (usize, D2, D3, D4, D5);
-    fn extend(&self, rhs: &(usize, D2, D3, D4, D5)) -> Self::Extended {
-        let s = self.shape();
-        (s.0.size() + rhs.0.size(), s.1, s.2, s.3, s.4)
-    }
-}
-#[rustfmt::skip]
-impl<D2: Dim, D3: Dim, D4: Dim, D5: Dim, D6: Dim>
-    ExtendDim<(usize, D2, D3, D4, D5, D6)> for (usize, D2, D3, D4, D5, D6)
-{
-    type Extended = (usize, D2, D3, D4, D5, D6);
-    fn extend(&self, rhs: &(usize, D2, D3, D4, D5, D6)) -> Self::Extended {
-        let s = self.shape();
-        (s.0.size() + rhs.0.size(), s.1, s.2, s.3, s.4, s.5)
-    }
-}
+extend!();
+extend!(D2);
+extend!(D2, D3);
+extend!(D2, D3, D4);
+extend!(D2, D3, D4, D5);
+extend!(D2, D3, D4, D5, D6);
 
 #[rustfmt::skip]
 #[cfg(feature = "nightly")]
