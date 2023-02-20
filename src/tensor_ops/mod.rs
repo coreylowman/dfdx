@@ -147,6 +147,7 @@ mod add;
 mod bce;
 mod boolean;
 mod broadcast_to;
+mod cat;
 mod choose;
 mod clamp;
 mod cmp;
