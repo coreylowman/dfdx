@@ -63,19 +63,17 @@ pub struct MultiHeadAttention<
 }
 
 impl<
-        const N: usize,
-        const M: usize,
         const EMBED_DIM: usize,
         const NUM_HEADS: usize,
         const K_DIM: usize,
         const V_DIM: usize,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensorGroups<N, M, E, D>
+    > VisitTensors<E, D>
     for MultiHeadAttention<EMBED_DIM, NUM_HEADS, K_DIM, V_DIM, E, D>
 {
     #[rustfmt::skip]
-    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         visitor.visit_field(|s| &s.w_q, |s| &mut s.w_q, "w_q.")?;

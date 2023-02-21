@@ -5,7 +5,7 @@ use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     BuildModule, BuildOnDevice, Module, ModuleMut, TensorFunction, TensorFunctionOption,
-    TensorVisitor, ToDevice, VisitTensorGroups,
+    TensorVisitor, ToDevice, VisitTensors,
 };
 
 pub mod builder {
@@ -57,8 +57,6 @@ pub struct Conv2D<
 }
 
 impl<
-        const N: usize,
-        const M: usize,
         const I: usize,
         const O: usize,
         const K: usize,
@@ -66,9 +64,9 @@ impl<
         const P: usize,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensorGroups<N, M, E, D> for Conv2D<I, O, K, S, P, E, D>
+    > VisitTensors<E, D> for Conv2D<I, O, K, S, P, E, D>
 {
-    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         let k = (I * K * K) as f64;

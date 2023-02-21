@@ -2,7 +2,7 @@ use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     BuildModule, BuildOnDevice, Module, ModuleMut, TensorFunction, TensorFunctionOption,
-    TensorVisitor, ToDevice, VisitTensorGroups,
+    TensorVisitor, ToDevice, VisitTensors,
 };
 
 pub mod builder {
@@ -45,10 +45,10 @@ pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
     pub epsilon: E,
 }
 
-impl<const N: usize, const M: usize, const L: usize, E: Dtype, D: DeviceStorage>
-    VisitTensorGroups<N, M, E, D> for LayerNorm1D<L, E, D>
+impl<const L: usize, E: Dtype, D: DeviceStorage>
+    VisitTensors<E, D> for LayerNorm1D<L, E, D>
 {
-    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         let options = [TensorFunctionOption::ResetParamsOnes];

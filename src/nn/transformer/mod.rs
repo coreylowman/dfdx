@@ -16,7 +16,7 @@ use crate::{
 
 use super::{
     BuildModule, BuildOnDevice, Module, ModuleMut, TensorFunction, TensorVisitor, ToDevice,
-    VisitTensorGroups,
+    VisitTensors,
 };
 
 pub mod builder {
@@ -85,8 +85,6 @@ pub struct Transformer<
 }
 
 impl<
-        const N: usize,
-        const M: usize,
         const MODEL_DIM: usize,
         const NUM_HEADS: usize,
         const NUM_ENCODER_LAYERS: usize,
@@ -94,11 +92,11 @@ impl<
         const FF_DIM: usize,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensorGroups<N, M, E, D>
+    > VisitTensors<E, D>
     for Transformer<MODEL_DIM, NUM_HEADS, NUM_ENCODER_LAYERS, NUM_DECODER_LAYERS, FF_DIM, E, D>
 {
     #[rustfmt::skip]
-    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         visitor.visit_field(|s| &s.encoder, |s| &mut s.encoder, "encoder.")?;

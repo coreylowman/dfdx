@@ -2,7 +2,7 @@ use crate::{shapes::Dtype, tensor_ops::Device};
 
 use super::{
     BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, TensorFunction, TensorVisitor,
-    ToDevice, VisitTensorGroups,
+    ToDevice, VisitTensors,
 };
 
 /// Add inputs together into a single tensor. `T` should be a tuple
@@ -27,14 +27,12 @@ use super::{
 pub struct AddInto<T>(pub T);
 
 impl<
-        const N: usize,
-        const M: usize,
-        T: VisitTensorGroups<N, M, E, D> + std::fmt::Debug,
+        T: VisitTensors<E, D> + std::fmt::Debug,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensorGroups<N, M, E, D> for AddInto<T>
+    > VisitTensors<E, D> for AddInto<T>
 {
-    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         visitor.visit_field(|s| &s.0, |s| &mut s.0, "0.")

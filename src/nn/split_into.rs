@@ -2,7 +2,7 @@ use crate::{shapes::Dtype, tensor::*, tensor_ops::Device};
 
 use super::{
     BuildModule, BuildOnDevice, Module, ModuleMut, TensorFunction, TensorVisitor, ToDevice,
-    VisitTensorGroups,
+    VisitTensors,
 };
 
 /// Splits input into multiple heads. `T` should be a tuple,
@@ -26,14 +26,12 @@ use super::{
 pub struct SplitInto<T>(pub T);
 
 impl<
-        const N: usize,
-        const M: usize,
-        T: VisitTensorGroups<N, M, E, D> + std::fmt::Debug,
+        T: VisitTensors<E, D> + std::fmt::Debug,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensorGroups<N, M, E, D> for SplitInto<T>
+    > VisitTensors<E, D> for SplitInto<T>
 {
-    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         visitor.visit_field(|s| &s.0, |s| &mut s.0, "0.")

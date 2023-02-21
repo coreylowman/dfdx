@@ -2,19 +2,17 @@ use crate::{shapes::*, tensor_ops::*};
 
 use super::module::{BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, OnDevice};
 
-use super::{TensorFunction, TensorVisitor, ToDevice, VisitTensorGroups};
+use super::{TensorFunction, TensorVisitor, ToDevice, VisitTensors};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
         impl<
-            const N: usize,
-            const M: usize,
-            $($name: VisitTensorGroups<N, M, E, D> + std::fmt::Debug,)+
+            $($name: VisitTensors<E, D> + std::fmt::Debug,)+
             E: Dtype,
             D: DeviceStorage,
-        > VisitTensorGroups<N, M, E, D> for ($($name,)+)
+        > VisitTensors<E, D> for ($($name,)+)
         {
-            fn visit_groups<Func: TensorFunction<N, M, E, D>>(
+            fn visit_groups<const N: usize, const M: usize, Func: TensorFunction<N, M, E, D>>(
                 mut visitor: TensorVisitor<N, M, Self, Func>,
             ) -> Result<(), Func::Err> {
                 $(visitor.visit_field(|s| &s.$idx, |s| &mut s.$idx, &std::format!("{}.", $idx))?;)+

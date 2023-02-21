@@ -2,7 +2,7 @@ use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     BuildModule, BuildOnDevice, Module, ModuleMut, TensorFunction, TensorVisitor, ToDevice,
-    VisitTensorGroups,
+    VisitTensors,
 };
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
@@ -29,15 +29,13 @@ pub struct GeneralizedResidual<F, R> {
 }
 
 impl<
-        const N: usize,
-        const M: usize,
-        F: VisitTensorGroups<N, M, E, D> + std::fmt::Debug,
-        R: VisitTensorGroups<N, M, E, D> + std::fmt::Debug,
+        F: VisitTensors<E, D> + std::fmt::Debug,
+        R: VisitTensors<E, D> + std::fmt::Debug,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensorGroups<N, M, E, D> for GeneralizedResidual<F, R>
+    > VisitTensors<E, D> for GeneralizedResidual<F, R>
 {
-    fn visit_groups<Func: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, Func: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, Func>,
     ) -> Result<(), Func::Err> {
         visitor.visit_field(|s| &s.f, |s| &mut s.f, "f.")?;

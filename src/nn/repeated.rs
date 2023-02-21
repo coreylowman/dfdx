@@ -2,7 +2,7 @@ use crate::{shapes::Dtype, tensor_ops::Device};
 
 use super::{
     BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, TensorFunction, TensorVisitor,
-    ToDevice, VisitTensorGroups,
+    ToDevice, VisitTensors,
 };
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
@@ -25,15 +25,13 @@ pub struct Repeated<T, const N: usize> {
 }
 
 impl<
-        const N: usize,
-        const M: usize,
         const L: usize,
-        T: VisitTensorGroups<N, M, E, D> + std::fmt::Debug,
+        T: VisitTensors<E, D> + std::fmt::Debug,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensorGroups<N, M, E, D> for Repeated<T, L>
+    > VisitTensors<E, D> for Repeated<T, L>
 {
-    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         for i in 0..L {

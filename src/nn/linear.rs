@@ -2,7 +2,7 @@ use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     module::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice},
-    TensorFunction, TensorFunctionOption, TensorVisitor, VisitTensorGroups,
+    TensorFunction, TensorFunctionOption, TensorVisitor, VisitTensors,
 };
 
 use num_traits::Float;
@@ -56,15 +56,13 @@ pub struct Linear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> {
 }
 
 impl<
-        const N: usize,
-        const M: usize,
         const I: usize,
         const O: usize,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensorGroups<N, M, E, D> for Linear<I, O, E, D>
+    > VisitTensors<E, D> for Linear<I, O, E, D>
 {
-    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         let b = 1. / (I as f64).sqrt();

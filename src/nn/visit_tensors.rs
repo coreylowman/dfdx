@@ -77,9 +77,9 @@ impl<'a, const N: usize, const M: usize, T: Debug, F> TensorVisitor<'a, N, M, T,
     pub fn visit<E: Dtype, D: DeviceStorage>(self) -> Result<(), F::Err>
     where
         F: TensorFunction<N, M, E, D>,
-        T: VisitTensorGroups<N, M, E, D>,
+        T: VisitTensors<E, D>,
     {
-        VisitTensorGroups::visit_groups(self)
+        VisitTensors::visit_groups(self)
     }
 
     /// Creates a new TensorVisitor that holds references to a particular field of each module in
@@ -106,7 +106,7 @@ impl<'a, const N: usize, const M: usize, T: Debug, F> TensorVisitor<'a, N, M, T,
     ) -> Result<(), F::Err>
     where
         F: TensorFunction<N, M, E, D>,
-        T2: VisitTensorGroups<N, M, E, D>,
+        T2: VisitTensors<E, D>,
     {
         self.map(imm_func, mut_func, name).visit()
     }
@@ -128,7 +128,7 @@ impl<'a, const N: usize, const M: usize, T: Debug, F> TensorVisitor<'a, N, M, T,
     ) -> Result<(), F::Err>
     where
         F: TensorFunction<N, M, E, D>,
-        T2: VisitTensorGroups<N, M, E, D>,
+        T2: VisitTensors<E, D>,
     {
         let mut field_visitor = self.map(func1, func2, name);
 
@@ -171,31 +171,13 @@ pub trait TensorFunction<const N: usize, const M: usize, E: Dtype, D: DeviceStor
 ///
 /// Implementing this automatically implements [ResetParams], [GradientUpdate], [SaveToNpz],
 /// [LoadFromNpz], and [CountParams].
-pub trait VisitTensorGroups<const N: usize, const M: usize, E: Dtype, D: DeviceStorage>:
-    Sized
+pub trait VisitTensors<E: Dtype, D: DeviceStorage>:
+    Sized + Debug
 {
-    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err>;
-}
 
-impl<const N: usize, const M: usize, S: Shape, E: Dtype, D: DeviceStorage>
-    VisitTensorGroups<N, M, E, D> for Tensor<S, E, D>
-{
-    fn visit_groups<F: TensorFunction<N, M, E, D>>(
-        visitor: TensorVisitor<N, M, Self, F>,
-    ) -> Result<(), F::Err> {
-        visitor.func.call(
-            visitor.refs,
-            visitor.refs_mut,
-            visitor.name,
-            visitor.options,
-        )
-    }
-}
-
-/// Alias trait for VisitTensorGroups<1, 0, E, D>
-pub trait VisitTensors<E: Dtype, D: DeviceStorage>: VisitTensorGroups<1, 0, E, D> + Debug {
     /// Calls `func` on immutable references to all tensors in `self`.
     fn visit<F: TensorFunction<1, 0, E, D>>(&self, func: &mut F) -> Result<(), F::Err> {
         TensorVisitor::new([self], [], None, func).visit()
@@ -210,20 +192,10 @@ pub trait VisitTensors<E: Dtype, D: DeviceStorage>: VisitTensorGroups<1, 0, E, D
     ) -> Result<(), F::Err> {
         TensorVisitor::new([self], [], Some(name), func).visit()
     }
-}
 
-impl<E: Dtype, D: DeviceStorage, T> VisitTensors<E, D> for T where
-    T: VisitTensorGroups<1, 0, E, D> + Debug
-{
-}
-
-/// Alias trait for VisitTensorGroups<0, 1, E, D>
-pub trait VisitTensorsMut<E: Dtype, D: DeviceStorage>:
-    VisitTensorGroups<0, 1, E, D> + Debug
-{
     /// Call `func` on mutable references to all tensors in `self`.
     fn visit_mut<F: TensorFunction<0, 1, E, D>>(&mut self, func: &mut F) -> Result<(), F::Err> {
-        VisitTensorGroups::visit_groups(TensorVisitor::new([], [self], None, func))
+        VisitTensors::visit_groups(TensorVisitor::new([], [self], None, func))
     }
 
     /// Call `func` on mutable references to all tensors in `self`, passing each tensor's name
@@ -237,9 +209,19 @@ pub trait VisitTensorsMut<E: Dtype, D: DeviceStorage>:
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, T> VisitTensorsMut<E, D> for T where
-    T: VisitTensorGroups<0, 1, E, D> + Debug
+impl<S: Shape, E: Dtype, D: DeviceStorage>
+    VisitTensors<E, D> for Tensor<S, E, D>
 {
+    fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
+        visitor: TensorVisitor<N, M, Self, F>,
+    ) -> Result<(), F::Err> {
+        visitor.func.call(
+            visitor.refs,
+            visitor.refs_mut,
+            visitor.name,
+            visitor.options,
+        )
+    }
 }
 
 #[cfg(test)]

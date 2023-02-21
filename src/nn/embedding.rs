@@ -5,7 +5,7 @@ use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     module::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice},
-    TensorFunction, TensorFunctionOption, TensorVisitor, VisitTensorGroups,
+    TensorFunction, TensorFunctionOption, TensorVisitor, VisitTensors,
 };
 
 pub mod builder {
@@ -56,15 +56,13 @@ pub struct Embedding<const VOCAB: usize, const DIM: usize, E: Dtype, D: DeviceSt
 }
 
 impl<
-        const N: usize,
-        const M: usize,
         const V: usize,
         const I: usize,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensorGroups<N, M, E, D> for Embedding<V, I, E, D>
+    > VisitTensors<E, D> for Embedding<V, I, E, D>
 {
-    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         let bound = 1. / (V as f64).sqrt();

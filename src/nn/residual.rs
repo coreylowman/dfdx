@@ -2,7 +2,7 @@ use crate::{shapes::*, tensor::SplitTape, tensor_ops::Device};
 
 use super::{
     BuildModule, BuildOnDevice, DeviceStorage, Module, ModuleMut, TensorFunction, TensorVisitor,
-    ToDevice, VisitTensorGroups,
+    ToDevice, VisitTensors,
 };
 
 use std::ops::Add;
@@ -27,14 +27,12 @@ use std::ops::Add;
 pub struct Residual<F>(pub F);
 
 impl<
-        const N: usize,
-        const M: usize,
-        F: VisitTensorGroups<N, M, E, D> + std::fmt::Debug,
+        F: VisitTensors<E, D> + std::fmt::Debug,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensorGroups<N, M, E, D> for Residual<F>
+    > VisitTensors<E, D> for Residual<F>
 {
-    fn visit_groups<Func: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, Func: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, Func>,
     ) -> Result<(), Func::Err> {
         visitor.visit_field(|s| &s.0, |s| &mut s.0, "0.")

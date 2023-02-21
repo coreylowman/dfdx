@@ -2,7 +2,7 @@ use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     BuildModule, BuildOnDevice, Module, ModuleMut, TensorFunction, TensorFunctionOption,
-    TensorVisitor, ToDevice, VisitTensorGroups,
+    TensorVisitor, ToDevice, VisitTensors,
 };
 
 pub mod builder {
@@ -72,10 +72,10 @@ pub struct BatchNorm2D<const C: usize, E: Dtype, D: DeviceStorage> {
     pub momentum: E,
 }
 
-impl<const N: usize, const M: usize, const C: usize, E: Dtype, D: DeviceStorage>
-    VisitTensorGroups<N, M, E, D> for BatchNorm2D<C, E, D>
+impl<const C: usize, E: Dtype, D: DeviceStorage>
+    VisitTensors<E, D> for BatchNorm2D<C, E, D>
 {
-    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         use TensorFunctionOption::*;

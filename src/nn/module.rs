@@ -3,7 +3,7 @@ use std::string::String;
 
 use crate::{
     prelude::Tensor,
-    shapes::{Dtype, Shape},
+    shapes::{Dtype, Shape, HasShape},
     tensor_ops::Device,
 };
 
@@ -11,10 +11,7 @@ use crate::{
 pub use crate::tensor::OnCuda;
 pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
 
-use super::{
-    visit_tensors::VisitTensors, TensorFunction, TensorFunctionOption, TensorVisitor,
-    VisitTensorGroups, VisitTensorsMut,
-};
+use super::visit_tensors::{VisitTensors, TensorFunction, TensorFunctionOption, TensorVisitor};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
@@ -106,7 +103,7 @@ impl<E: Dtype + SampleUniform, D: Device<E>> TensorFunction<0, 1, E, D> for Rese
 }
 
 /// Something that can reset it's parameters.
-pub trait ResetParams<D: Device<E>, E: Dtype + SampleUniform>: VisitTensorsMut<E, D> {
+pub trait ResetParams<D: Device<E>, E: Dtype + SampleUniform>: VisitTensors<E, D> {
     /// Mutates parameters. Each implementor
     /// of this trait decides how the parameters are initialized. In
     /// fact, some impls may not even use randomness.
@@ -120,7 +117,7 @@ pub trait ResetParams<D: Device<E>, E: Dtype + SampleUniform>: VisitTensorsMut<E
     }
 }
 
-impl<D: Device<E>, E: Dtype + SampleUniform, T: VisitTensorsMut<E, D>> ResetParams<D, E> for T {}
+impl<D: Device<E>, E: Dtype + SampleUniform, T: VisitTensors<E, D>> ResetParams<D, E> for T {}
 
 struct CountParamsFunction(usize);
 
@@ -165,10 +162,10 @@ impl<E: Dtype, D: DeviceStorage, T: VisitTensors<E, D>> CountParams<E, D> for T 
 /// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]
 pub trait ZeroSizedModule: Default {}
 
-impl<const N: usize, const M: usize, E: Dtype, D: DeviceStorage, T: ZeroSizedModule>
-    VisitTensorGroups<N, M, E, D> for T
+impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule + std::fmt::Debug>
+    VisitTensors<E, D> for T
 {
-    fn visit_groups<F: TensorFunction<N, M, E, D>>(
+    fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         _visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {
         Ok(())

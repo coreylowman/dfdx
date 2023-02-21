@@ -13,7 +13,7 @@ use zip::{
     ZipArchive, ZipWriter,
 };
 
-use super::{DeviceStorage, TensorFunction, TensorFunctionOption, VisitTensors, VisitTensorsMut};
+use super::{DeviceStorage, TensorFunction, TensorFunctionOption, VisitTensors};
 
 struct SaveToNpzVisitor<'a, W: Write + Seek> {
     writer: &'a mut ZipWriter<W>,
@@ -111,7 +111,7 @@ impl<R: Read + Seek, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>>
 ///
 /// All [super::Module]s in nn implement LoadFromNpz, and the zips are formatted in a `.npz` fashion.
 pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>>:
-    VisitTensorsMut<E, D>
+    VisitTensors<E, D>
 {
     /// Loads data from a `.npz` zip archive at the specified `path`.
     ///

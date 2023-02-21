@@ -1,6 +1,6 @@
 use crate::{
     gradients::Gradients,
-    nn::visit_tensors::{TensorFunction, TensorFunctionOption, VisitTensorsMut},
+    nn::visit_tensors::{TensorFunction, TensorFunctionOption, VisitTensors},
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Tensor},
     unique_id::{HasUniqueId, UniqueId},
@@ -118,7 +118,7 @@ impl<U: ParamUpdater<D, E>, E: Dtype, D: DeviceStorage> TensorFunction<0, 1, E, 
 }
 
 /// Represents something that can be updated with a [ParamUpdater].
-pub trait GradientUpdate<D: DeviceStorage, E: Dtype>: VisitTensorsMut<E, D> {
+pub trait GradientUpdate<D: DeviceStorage, E: Dtype>: VisitTensors<E, D> {
     /// Updates self given the [ParamUpdater].
     fn update<U: ParamUpdater<D, E>>(
         &mut self,
@@ -130,7 +130,7 @@ pub trait GradientUpdate<D: DeviceStorage, E: Dtype>: VisitTensorsMut<E, D> {
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, T: VisitTensorsMut<E, D>> GradientUpdate<D, E> for T {}
+impl<E: Dtype, D: DeviceStorage, T: VisitTensors<E, D>> GradientUpdate<D, E> for T {}
 
 /// Represents something that can update a tensor.
 ///
