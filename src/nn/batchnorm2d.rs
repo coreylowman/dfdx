@@ -1,6 +1,6 @@
-use crate::{gradients::*, optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{gradients::*, shapes::*, tensor::visitors::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 pub mod builder {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -183,13 +183,28 @@ impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for BatchNorm2D<C
     }
 }
 
-impl<const C: usize, E: Dtype, D: Device<E>> ResetParams<D, E> for BatchNorm2D<C, E, D> {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        self.scale.try_fill_with_ones()?;
-        self.bias.try_fill_with_zeros()?;
-        self.running_mean.try_fill_with_zeros()?;
-        self.running_var.try_fill_with_ones()?;
-        Ok(())
+impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNorm2D<C, E, D> {
+    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), D::Err> {
+        visitor.visit_tensor(
+            |s| &s.scale,
+            |s| &mut s.scale,
+            TensorOptions::named("scale", |t| t.try_fill_with_ones()),
+        )?;
+        visitor.visit_tensor(
+            |s| &s.bias,
+            |s| &mut s.bias,
+            TensorOptions::named("bias", |t| t.try_fill_with_zeros()),
+        )?;
+        visitor.visit_tensor(
+            |s| &s.running_mean,
+            |s| &mut s.running_mean,
+            TensorOptions::no_grad("running_mean", |t| t.try_fill_with_zeros()),
+        )?;
+        visitor.visit_tensor(
+            |s| &s.running_var,
+            |s| &mut s.running_var,
+            TensorOptions::no_grad("running_var", |t| t.try_fill_with_ones()),
+        )
     }
 }
 
@@ -206,17 +221,6 @@ impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
             epsilon: self.epsilon,
             momentum: self.momentum,
         }
-    }
-}
-
-impl<const C: usize, E: Dtype, D: Device<E>> GradientUpdate<D, E> for BatchNorm2D<C, E, D> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.scale.update(updater, unused)?;
-        self.bias.update(updater, unused)?;
-        Ok(())
     }
 }
 

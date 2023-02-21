@@ -111,15 +111,13 @@
 //! zip archives.
 
 pub(crate) mod cpu;
-mod tensor_impls;
-
 #[cfg(feature = "cuda")]
 pub(crate) mod cuda;
-
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
-
 pub(crate) mod storage_traits;
+mod tensor_impls;
+pub(crate) mod visitors; // TODO pub?
 
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 
@@ -136,6 +134,8 @@ pub use storage_traits::{OnesTensor, SampleTensor, ZerosTensor};
 pub use tensor_impls::OnCuda;
 pub use tensor_impls::{OnCpu, OnDevice, PutTape, SplitTape, Tensor, ToDevice};
 pub use tensor_impls::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
+
+pub use visitors::{NumParams, ResetParams};
 
 #[cfg(test)]
 mod tests {

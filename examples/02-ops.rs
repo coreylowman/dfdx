@@ -2,7 +2,7 @@
 
 use dfdx::{
     shapes::{Rank0, Rank1, Rank2},
-    tensor::{AsArray, Cpu, SampleTensor, Tensor, ToDevice},
+    tensor::{AsArray, Cpu, SampleTensor, Tensor},
     tensor_ops::{MeanTo, TryMatMul},
 };
 
@@ -63,6 +63,8 @@ fn main() {
     // these operations are equal across devices
     #[cfg(feature = "cuda")]
     {
+        use dfdx::tensor::ToDevice;
+
         let cpu = Cpu::default();
 
         let a: Tensor<Rank1<3>, f32, _> = dev.sample_normal();

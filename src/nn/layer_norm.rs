@@ -1,6 +1,6 @@
-use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{gradients::Tape, shapes::*, tensor::visitors::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, NonMutableModule, ToDevice};
 
 pub mod builder {
     #[derive(Debug)]
@@ -42,6 +42,8 @@ pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
     pub epsilon: E,
 }
 
+impl<const M: usize, E: Dtype, D: DeviceStorage> NonMutableModule for LayerNorm1D<M, E, D> {}
+
 impl<const M: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for LayerNorm1D<M, E, D> {
     /// Fills [Self::gamma] with 1s and [Self::beta] with 0s and sets [Self::epsilon] to `1e-5`.
     fn try_build(device: &D) -> Result<Self, D::Err> {
@@ -53,11 +55,18 @@ impl<const M: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for LayerNorm1D<M
     }
 }
 
-impl<const M: usize, E: Dtype, D: Device<E>> ResetParams<D, E> for LayerNorm1D<M, E, D> {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        self.gamma.try_fill_with_ones()?;
-        self.beta.try_fill_with_zeros()?;
-        Ok(())
+impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNorm1D<M, E, D> {
+    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), D::Err> {
+        visitor.visit_tensor(
+            |s| &s.gamma,
+            |s| &mut s.gamma,
+            TensorOptions::named("gamma", |t| t.try_fill_with_ones()),
+        )?;
+        visitor.visit_tensor(
+            |s| &s.beta,
+            |s| &mut s.beta,
+            TensorOptions::named("beta", |t| t.try_fill_with_zeros()),
+        )
     }
 }
 
@@ -72,17 +81,6 @@ impl<const M: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
             beta: self.beta.to_device(device),
             epsilon: self.epsilon,
         }
-    }
-}
-
-impl<const M: usize, E: Dtype, D: Device<E>> GradientUpdate<D, E> for LayerNorm1D<M, E, D> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.gamma.update(updater, unused)?;
-        self.beta.update(updater, unused)?;
-        Ok(())
     }
 }
 
@@ -117,23 +115,12 @@ impl<B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
     }
 }
 
-impl<T, const M: usize, E: Dtype, D: Device<E>> ModuleMut<T> for LayerNorm1D<M, E, D>
-where
-    Self: Module<T>,
-{
-    type Output = <Self as Module<T>>::Output;
-    fn forward_mut(&mut self, input: T) -> Self::Output {
-        self.forward(input)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::nn::tests::SimpleUpdater;
-    use crate::nn::DeviceBuildExt;
-    use crate::tests::{assert_close, TestDevice, TestDtype};
-    use crate::unique_id::HasUniqueId;
+    use crate::nn::{DeviceBuildExt, ModuleMut};
+    use crate::{optim::*, tests::*, unique_id::HasUniqueId};
 
     #[test]
     fn test_layer_norm_reset() {
@@ -203,23 +190,20 @@ mod tests {
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert_eq!(&unused.ids, &[*model.gamma.id(), *model.beta.id()]);
-
-        g.0.try_alloc_for(&model.gamma).unwrap();
+        model.update(&mut g).unwrap();
+        assert_eq!(&g.unused.ids, &[*model.gamma.id(), *model.beta.id()]);
 
         // weight gradient is present
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert_eq!(&unused.ids, &[*model.beta.id()]);
-
-        g.0.try_alloc_for(&model.gamma).unwrap();
-        g.0.try_alloc_for(&model.beta).unwrap();
+        g.grads.try_alloc_for(&model.gamma).unwrap();
+        g.clear_unused();
+        model.update(&mut g).unwrap();
+        assert_eq!(&g.unused.ids, &[*model.beta.id()]);
 
         // all gradients present
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert!(unused.is_empty());
+        g.grads.try_alloc_for(&model.gamma).unwrap();
+        g.grads.try_alloc_for(&model.beta).unwrap();
+        g.clear_unused();
+        model.update(&mut g).unwrap();
+        assert!(g.unused.is_empty());
     }
 }

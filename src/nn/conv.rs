@@ -1,9 +1,9 @@
 use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
-use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{gradients::Tape, shapes::*, tensor::visitors::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 pub mod builder {
     #[derive(Debug)]
@@ -54,18 +54,28 @@ pub struct Conv2D<
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
-    GradientUpdate<D, E> for Conv2D<I, O, K, S, P, E, D>
+    TensorCollection<E, D> for Conv2D<I, O, K, S, P, E, D>
 where
-    E: Dtype,
+    E: Dtype + Float + SampleUniform,
     D: Device<E>,
 {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.weight.update(updater, unused)?;
-        self.bias.update(updater, unused)?;
-        Ok(())
+    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), D::Err> {
+        visitor.visit_tensor(
+            |s| &s.weight,
+            |s| &mut s.weight,
+            TensorOptions::named("weight", |t| {
+                let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
+                t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
+            }),
+        )?;
+        visitor.visit_tensor(
+            |s| &s.bias,
+            |s| &mut s.bias,
+            TensorOptions::named("bias", |t| {
+                let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
+                t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
+            }),
+        )
     }
 }
 
@@ -82,23 +92,6 @@ where
             weight: device.try_sample(rand_distr::Uniform::new(-bound, bound))?,
             bias: device.try_sample(rand_distr::Uniform::new(-bound, bound))?,
         })
-    }
-}
-
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
-    ResetParams<D, E> for Conv2D<I, O, K, S, P, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-    D: Device<E>,
-{
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        let k = E::from_usize(I * K * K).unwrap();
-        let bound = E::ONE / k.sqrt();
-        self.weight
-            .try_fill_with_distr(rand_distr::Uniform::new(-bound, bound))?;
-        self.bias
-            .try_fill_with_distr(rand_distr::Uniform::new(-bound, bound))?;
-        Ok(())
     }
 }
 
@@ -175,6 +168,7 @@ impl<'a, B: Dim, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape
 mod tests {
     use crate::{
         nn::DeviceBuildExt,
+        optim::*,
         tensor::{AsArray, SampleTensor, ZerosTensor},
         tests::*,
     };

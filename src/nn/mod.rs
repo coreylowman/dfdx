@@ -185,19 +185,32 @@ pub mod builders {
 
 #[cfg(test)]
 mod tests {
-    use crate::{gradients::Gradients, optim::ParamUpdater, shapes::Dtype, tensor::DeviceStorage};
+    use crate::{
+        gradients::Gradients, optim::UnusedTensors, shapes::Dtype, tensor::visitors::*,
+        tensor::DeviceStorage,
+    };
 
     #[derive(Default)]
-    pub struct SimpleUpdater(pub Gradients);
+    pub struct SimpleUpdater {
+        pub grads: Gradients,
+        pub unused: UnusedTensors,
+    }
 
-    impl<D: DeviceStorage, E: Dtype> ParamUpdater<D, E> for SimpleUpdater {
-        fn update_param<S: crate::shapes::Shape>(
+    impl SimpleUpdater {
+        pub(crate) fn clear_unused(&mut self) {
+            self.unused.clear();
+        }
+    }
+
+    impl<D: DeviceStorage, E: Dtype> VisitTensorMut<E, D> for SimpleUpdater {
+        fn visit<S: crate::shapes::Shape>(
             &mut self,
-            p: &mut crate::tensor::Tensor<S, E, D>,
-            unused: &mut crate::optim::UnusedTensors,
+            _: alloc::string::String,
+            _: TensorOptions<S, E, D>,
+            p: &mut crate::prelude::Tensor<S, E, D>,
         ) -> Result<(), <D>::Err> {
-            if self.0.remove(p).is_none() {
-                unused.add(p);
+            if self.grads.remove(p).is_none() {
+                self.unused.add(p);
             }
             Ok(())
         }

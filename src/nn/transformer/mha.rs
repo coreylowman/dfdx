@@ -3,8 +3,8 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{
     nn::{modules::*, *},
-    optim::*,
     shapes::Dtype,
+    tensor::visitors::*,
     tensor::*,
     tensor_ops::*,
 };
@@ -79,34 +79,15 @@ where
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: Device<E>>
-    ResetParams<D, E> for MultiHeadAttention<M, H, K, V, E, D>
+    TensorCollection<E, D> for MultiHeadAttention<M, H, K, V, E, D>
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.w_q.try_reset_params()?;
-        self.w_k.try_reset_params()?;
-        self.w_v.try_reset_params()?;
-        self.w_o.try_reset_params()?;
-        Ok(())
-    }
-}
-
-impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D> GradientUpdate<D, E>
-    for MultiHeadAttention<M, H, K, V, E, D>
-where
-    E: Dtype,
-    D: DeviceStorage,
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.w_q.update(updater, unused)?;
-        self.w_k.update(updater, unused)?;
-        self.w_v.update(updater, unused)?;
-        self.w_o.update(updater, unused)?;
-        Ok(())
+    fn iter_tensors<W: ModuleWalker<Self, E, D>>(visitor: &mut W) -> Result<(), <D>::Err> {
+        visitor.visit_module(|s| &s.w_q, |s| &mut s.w_q, "w_q")?;
+        visitor.visit_module(|s| &s.w_k, |s| &mut s.w_k, "w_k")?;
+        visitor.visit_module(|s| &s.w_v, |s| &mut s.w_v, "w_v")?;
+        visitor.visit_module(|s| &s.w_o, |s| &mut s.w_o, "w_o")
     }
 }
 
@@ -281,7 +262,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::tests::SimpleUpdater, tests::*};
+    use crate::{nn::tests::SimpleUpdater, optim::*, tests::*};
 
     #[test]
     fn test_mha_unbatched() {
@@ -387,9 +368,11 @@ mod tests {
         let v: Tensor<Rank3<2, 4, 12>, TestDtype, _> = dev.sample_normal();
         let y = mha.forward((q.trace(), k, v));
 
-        let mut g = SimpleUpdater(y.mean().backward());
-        let mut unused = Default::default();
-        mha.update(&mut g, &mut unused).unwrap();
-        assert!(unused.is_empty());
+        let mut g = SimpleUpdater {
+            grads: y.mean().backward(),
+            unused: Default::default(),
+        };
+        mha.update(&mut g).unwrap();
+        assert!(g.unused.is_empty());
     }
 }

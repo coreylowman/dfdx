@@ -1,17 +1,12 @@
-use crate::{optim::*, shapes::*, tensor_ops::*};
+use crate::{shapes::*, tensor::visitors::*, tensor::*, tensor_ops::*};
 
-use super::module::{
-    BuildModule, BuildOnDevice, Module, ModuleMut, OnDevice, ResetParams, ToDevice,
-};
+use super::module::{BuildModule, BuildOnDevice, Module, ModuleMut, OnDevice, ToDevice};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
-        impl<D: Device<E>, E: Dtype, $($name: GradientUpdate<D, E>),+> GradientUpdate<D, E> for ($($name,)+) {
-            fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-            where
-                U: ParamUpdater<D, E>
-            {
-                $(self.$idx.update(updater, unused)?;)+
+        impl<E: Dtype, D: DeviceStorage, $($name: TensorCollection<E, D>),+> TensorCollection<E, D> for ($($name,)+) {
+            fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), D::Err> {
+                $(visitor.visit_module(|s| &s.$idx, |s| &mut s.$idx, &std::format!("{}", $idx))?;)+
                 Ok(())
             }
         }
@@ -25,14 +20,6 @@ macro_rules! tuple_impls {
             fn try_build(device: &D) -> Result<Self, D::Err> {
                 $(let $name = BuildModule::try_build(device)?;)*
                 Ok(($($name, )*))
-            }
-        }
-
-        impl<D: Device<E>, E: Dtype, $($name: ResetParams<D, E>),+> ResetParams<D, E> for ($($name,)+) {
-            #[allow(non_snake_case)]
-            fn try_reset_params(&mut self) -> Result<(), D::Err> {
-                $(self.$idx.try_reset_params()?;)+
-                Ok(())
             }
         }
 
@@ -110,12 +97,11 @@ tuple_impls!([M1, M2, M3, M4, M5, M6] [0, 1, 2, 3, 4, 5], M6, [M5, M4, M3, M2, M
 mod tests {
     use super::*;
     use crate::nn::tests::SimpleUpdater;
-    use crate::tests::TestDtype;
     use crate::unique_id::HasUniqueId;
     use crate::{
         nn::{builders::*, *},
-        tensor::*,
-        tests::TestDevice,
+        optim::*,
+        tests::*,
     };
 
     #[test]
@@ -268,10 +254,9 @@ mod tests {
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present
-        let mut unused: UnusedTensors = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
+        model.update(&mut g).unwrap();
         assert_eq!(
-            &unused.ids,
+            &g.unused.ids,
             &[
                 *model.0.weight.id(),
                 *model.0.bias.id(),
@@ -283,26 +268,24 @@ mod tests {
         );
 
         // weight gradient is present
-        g.0.try_alloc_for(&model.0.weight).unwrap();
-        g.0.try_alloc_for(&model.1.weight).unwrap();
-        g.0.try_alloc_for(&model.2.weight).unwrap();
-
-        let mut unused: UnusedTensors = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
+        g.grads.try_alloc_for(&model.0.weight).unwrap();
+        g.grads.try_alloc_for(&model.1.weight).unwrap();
+        g.grads.try_alloc_for(&model.2.weight).unwrap();
+        g.clear_unused();
+        model.update(&mut g).unwrap();
         assert_eq!(
-            &unused.ids,
+            &g.unused.ids,
             &[*model.0.bias.id(), *model.1.bias.id(), *model.2.bias.id(),]
         );
 
-        g.0.try_alloc_for(&model.0.weight).unwrap();
-        g.0.try_alloc_for(&model.0.bias).unwrap();
-        g.0.try_alloc_for(&model.1.weight).unwrap();
-        g.0.try_alloc_for(&model.1.bias).unwrap();
-        g.0.try_alloc_for(&model.2.weight).unwrap();
-        g.0.try_alloc_for(&model.2.bias).unwrap();
-
-        let mut unused: UnusedTensors = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert!(unused.is_empty());
+        g.grads.try_alloc_for(&model.0.weight).unwrap();
+        g.grads.try_alloc_for(&model.0.bias).unwrap();
+        g.grads.try_alloc_for(&model.1.weight).unwrap();
+        g.grads.try_alloc_for(&model.1.bias).unwrap();
+        g.grads.try_alloc_for(&model.2.weight).unwrap();
+        g.grads.try_alloc_for(&model.2.bias).unwrap();
+        g.clear_unused();
+        model.update(&mut g).unwrap();
+        assert!(g.unused.is_empty());
     }
 }

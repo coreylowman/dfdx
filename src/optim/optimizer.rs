@@ -1,7 +1,8 @@
 use crate::{
     gradients::Gradients,
-    shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, HasErr, Tensor},
+    shapes::Dtype,
+    tensor::visitors::{RecursiveWalker, TensorCollection, VisitTensorMut},
+    tensor::DeviceStorage,
     unique_id::{HasUniqueId, UniqueId},
 };
 
@@ -92,38 +93,17 @@ pub trait Optimizer<M, D: DeviceStorage, E: Dtype> {
 }
 
 /// Represents something that can be updated with a [ParamUpdater].
-pub trait GradientUpdate<D: DeviceStorage, E: Dtype> {
+pub trait GradientUpdate<E: Dtype, D: DeviceStorage>: TensorCollection<E, D> {
     /// Updates self given the [ParamUpdater].
-    fn update<U: ParamUpdater<D, E>>(
-        &mut self,
-        updater: &mut U,
-        unused: &mut UnusedTensors,
-    ) -> Result<(), D::Err>;
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage> GradientUpdate<D, E> for Tensor<S, E, D> {
-    fn update<U: ParamUpdater<D, E>>(
-        &mut self,
-        updater: &mut U,
-        unused: &mut UnusedTensors,
-    ) -> Result<(), <Self as HasErr>::Err> {
-        updater.update_param(self, unused)
+    fn update<V: VisitTensorMut<E, D>>(&mut self, updater: &mut V) -> Result<(), D::Err> {
+        Self::iter_tensors(&mut RecursiveWalker {
+            m: self,
+            f: updater,
+            path: &mut std::vec::Vec::new(),
+        })
     }
 }
-
-/// Represents something that can update a tensor.
-///
-/// See [crate::optim::Sgd] and [crate::optim::Adam] for examples on implementing this.
-pub trait ParamUpdater<D: DeviceStorage, E: Dtype> {
-    /// Retrieves the data associated with `p` if there is any.
-    /// This can modify `self`, for instance if velocities are calculated
-    /// based on the associated data!
-    fn update_param<S: Shape>(
-        &mut self,
-        p: &mut Tensor<S, E, D>,
-        unused: &mut UnusedTensors,
-    ) -> Result<(), D::Err>;
-}
+impl<E: Dtype, D: DeviceStorage, M: TensorCollection<E, D>> GradientUpdate<E, D> for M {}
 
 /// Holds [UniqueId] of tensors that were missing gradients during
 /// [GradientUpdate::update()], and therefore are unused
@@ -141,6 +121,10 @@ impl UnusedTensors {
     /// Returns `true` if there are no missing gradients present
     pub fn is_empty(&self) -> bool {
         self.ids.is_empty()
+    }
+
+    pub fn clear(&mut self) {
+        self.ids.clear();
     }
 }
 

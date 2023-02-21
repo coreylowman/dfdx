@@ -1,9 +1,9 @@
 //! Intro to dfdx::nn
 
 use dfdx::{
-    nn::{builders::*, BuildOnDevice, DeviceBuildExt, Module, ModuleMut, ResetParams},
+    nn::{builders::*, BuildOnDevice, DeviceBuildExt, Module, ModuleMut},
     shapes::{Const, Rank1, Rank2},
-    tensor::{AsArray, SampleTensor, Tensor, ZerosTensor},
+    tensor::{AsArray, ResetParams, SampleTensor, Tensor, ZerosTensor},
 };
 
 #[cfg(not(feature = "cuda"))]

@@ -3,8 +3,8 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{
     nn::{modules::*, *},
-    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     shapes::Dtype,
+    tensor::visitors::*,
     tensor::{PutTape, SplitTape},
     tensor_ops::Device,
 };
@@ -114,32 +114,16 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, E, D: Device<E>> ResetParams<D, E>
+impl<const M: usize, const H: usize, const F: usize, E, D: Device<E>> TensorCollection<E, D>
     for TransformerEncoderBlock<M, H, F, E, D>
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.self_attn.try_reset_params()?;
-        self.norm1.try_reset_params()?;
-        self.ff.try_reset_params()?;
-        self.norm2.try_reset_params()?;
-        Ok(())
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>> GradientUpdate<D, E>
-    for TransformerEncoderBlock<M, H, F, E, D>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.self_attn.update(updater, unused)?;
-        self.norm1.update(updater, unused)?;
-        self.ff.update(updater, unused)?;
-        self.norm2.update(updater, unused)?;
-        Ok(())
+    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), <D>::Err> {
+        visitor.visit_module(|s| &s.self_attn, |s| &mut s.self_attn, "self_attn")?;
+        visitor.visit_module(|s| &s.norm1, |s| &mut s.norm1, "norm1")?;
+        visitor.visit_module(|s| &s.ff, |s| &mut s.ff, "ff")?;
+        visitor.visit_module(|s| &s.norm2, |s| &mut s.norm2, "norm2")
     }
 }
 

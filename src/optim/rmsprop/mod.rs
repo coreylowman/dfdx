@@ -8,12 +8,11 @@ use std::marker::PhantomData;
 use crate::{
     gradients::Gradients,
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, OneFillStorage, Tensor},
+    tensor::visitors::*,
+    tensor::*,
 };
 
-use super::{
-    GradientUpdate, Optimizer, OptimizerUpdateError, ParamUpdater, UnusedTensors, WeightDecay,
-};
+use super::{GradientUpdate, Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
 
 /// Configuration of hyperparameters for [RMSprop].
 #[derive(Debug, Clone, Copy)]
@@ -89,6 +88,8 @@ pub struct RMSprop<M, E: Dtype> {
     grad_avg: Gradients,
     gradients: Gradients,
 
+    unused: UnusedTensors,
+
     marker: PhantomData<*const M>,
 }
 
@@ -102,6 +103,7 @@ impl<M, E: Dtype> RMSprop<M, E> {
             square_avg: Default::default(),
             grad_avg: Default::default(),
             gradients: Default::default(),
+            unused: Default::default(),
             marker: PhantomData,
         }
     }
@@ -119,15 +121,16 @@ pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> ParamUpdater<D, E> for RMSprop<M, E> {
-    fn update_param<S: Shape>(
+impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> VisitTensorMut<E, D> for RMSprop<M, E> {
+    fn visit<S: Shape>(
         &mut self,
+        _: alloc::string::String,
+        _: TensorOptions<S, E, D>,
         p: &mut Tensor<S, E, D>,
-        unused: &mut UnusedTensors,
     ) -> Result<(), <D>::Err> {
         let g = self.gradients.remove(p);
         match g {
-            None => unused.add(p),
+            None => self.unused.add(p),
             Some(g) => {
                 let m = self.momentums.get_or_alloc_mut(p)?;
                 let sa = self.square_avg.get_or_alloc_mut(p)?;
@@ -144,9 +147,8 @@ impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> ParamUpdater<D, E> fo
     }
 }
 
-impl<M: GradientUpdate<D, E>, D: RMSpropKernel<E>, E: Dtype> Optimizer<M, D, E> for RMSprop<M, E>
-where
-    Self: ParamUpdater<D, E>,
+impl<M: TensorCollection<E, D>, D: RMSpropKernel<E> + OneFillStorage<E>, E: Dtype>
+    Optimizer<M, D, E> for RMSprop<M, E>
 {
     fn update(
         &mut self,
@@ -154,8 +156,9 @@ where
         gradients: Gradients,
     ) -> Result<(), OptimizerUpdateError<D>> {
         self.gradients = gradients;
-        let mut unused = Default::default();
-        let r = match module.update(self, &mut unused) {
+        let result = module.update(self);
+        let unused = std::mem::take(&mut self.unused);
+        let r = match result {
             Ok(_) => unused.into(),
             Err(e) => Err(OptimizerUpdateError::DeviceError(e)),
         };
@@ -167,7 +170,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
+    use crate::{shapes::*, tensor_ops::*, tests::*};
 
     fn test_matches_expected(cfg: RMSpropConfig<TestDtype>, expected: [[TestDtype; 5]; 5]) {
         let dev: TestDevice = Default::default();

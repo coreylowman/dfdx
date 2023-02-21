@@ -9,13 +9,13 @@ use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
 use crate::{
-    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
     shapes::Dtype,
+    tensor::visitors::*,
     tensor::{DeviceStorage, PutTape, SplitTape},
     tensor_ops::Device,
 };
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 pub mod builder {
     #[derive(Debug, Clone)]
@@ -97,31 +97,14 @@ where
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>
-    ResetParams<D, E> for Transformer<M, H, A, B, F, E, D>
+    TensorCollection<E, D> for Transformer<M, H, A, B, F, E, D>
 where
     E: Dtype + Float + SampleUniform,
     D: Device<E>,
 {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.encoder.try_reset_params()?;
-        self.decoder.try_reset_params()?;
-        Ok(())
-    }
-}
-
-impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>
-    GradientUpdate<D, E> for Transformer<M, H, A, B, F, E, D>
-where
-    E: Dtype,
-    D: Device<E>,
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.encoder.update(updater, unused)?;
-        self.decoder.update(updater, unused)?;
-        Ok(())
+    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), <D>::Err> {
+        visitor.visit_module(|s| &s.encoder, |s| &mut s.encoder, "encoder")?;
+        visitor.visit_module(|s| &s.decoder, |s| &mut s.decoder, "decoder")
     }
 }
 
@@ -187,6 +170,7 @@ mod tests {
     use super::*;
     use crate::{
         nn::{tests::SimpleUpdater, DeviceBuildExt},
+        optim::*,
         shapes::*,
         tensor::*,
         tensor_ops::*,
@@ -221,9 +205,11 @@ mod tests {
         let out: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward_mut((src.trace(), tgt));
         let g = out.mean().backward();
 
-        let mut gs = SimpleUpdater(g);
-        let mut unused: UnusedTensors = Default::default();
-        t.update(&mut gs, &mut unused).unwrap();
-        assert!(unused.is_empty());
+        let mut gs = SimpleUpdater {
+            grads: g,
+            unused: Default::default(),
+        };
+        t.update(&mut gs).unwrap();
+        assert!(gs.unused.is_empty());
     }
 }

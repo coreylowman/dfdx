@@ -1,6 +1,6 @@
-use crate::{optim::*, shapes::Dtype, tensor::*, tensor_ops::Device};
+use crate::{shapes::Dtype, tensor::visitors::*, tensor::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 /// Splits input into multiple heads. `T` should be a tuple,
 /// where every element of the tuple accepts the same input type.
@@ -22,28 +22,21 @@ use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice
 #[derive(Debug, Default, Clone)]
 pub struct SplitInto<T>(pub T);
 
-impl<T: GradientUpdate<D, E>, D: Device<E>, E: Dtype> GradientUpdate<D, E> for SplitInto<T> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.0.update(updater, unused)
-    }
-}
-
-impl<T: BuildOnDevice<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for SplitInto<T> {
+impl<T: BuildOnDevice<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for SplitInto<T> {
     type Built = SplitInto<T::Built>;
 }
 
-impl<T: BuildModule<D, E>, D: Device<E>, E: Dtype> BuildModule<D, E> for SplitInto<T> {
+impl<T: BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildModule<D, E> for SplitInto<T> {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self(BuildModule::try_build(device)?))
     }
 }
 
-impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for SplitInto<T> {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.0.try_reset_params()
+impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>> TensorCollection<E, D>
+    for SplitInto<T>
+{
+    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), D::Err> {
+        visitor.visit_module(|s| &s.0, |s| &mut s.0, "0")
     }
 }
 
@@ -117,7 +110,7 @@ mod tests {
 
     use super::*;
     use crate::nn::DeviceBuildExt;
-    use crate::{gradients::*, shapes::*, tensor_ops::*};
+    use crate::{gradients::*, optim::*, shapes::*, tensor_ops::*};
     use crate::{
         nn::{builders::Linear, tests::SimpleUpdater},
         tests::*,
@@ -250,10 +243,9 @@ mod tests {
         let mut g: SimpleUpdater = Default::default();
 
         // no gradients present
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
+        model.update(&mut g).unwrap();
         assert_eq!(
-            &unused.ids,
+            &g.unused.ids,
             &[
                 *model.0 .0.weight.id(),
                 *model.0 .0.bias.id(),
@@ -263,13 +255,12 @@ mod tests {
         );
 
         // weight gradient is present
-        g.0.try_alloc_for(&model.0 .0.weight).unwrap();
-        g.0.try_alloc_for(&model.0 .0.bias).unwrap();
-        g.0.try_alloc_for(&model.0 .1.weight).unwrap();
-        g.0.try_alloc_for(&model.0 .1.bias).unwrap();
-
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert!(unused.is_empty());
+        g.grads.try_alloc_for(&model.0 .0.weight).unwrap();
+        g.grads.try_alloc_for(&model.0 .0.bias).unwrap();
+        g.grads.try_alloc_for(&model.0 .1.weight).unwrap();
+        g.grads.try_alloc_for(&model.0 .1.bias).unwrap();
+        g.clear_unused();
+        model.update(&mut g).unwrap();
+        assert!(g.unused.is_empty());
     }
 }
