@@ -85,6 +85,12 @@ impl<T: ZeroSizedModule + BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildOn
     type Built = T;
 }
 
+impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule> BuildModule<D, E> for T {
+    fn try_build(_: &D) -> Result<Self, <D>::Err> {
+        Ok(Default::default())
+    }
+}
+
 impl<T: ZeroSizedModule, D: DeviceStorage, E: Dtype> ResetParams<D, E> for T {
     fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
         Ok(())
