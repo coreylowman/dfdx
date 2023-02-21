@@ -6,7 +6,7 @@ use matrixmultiply::{dgemm, sgemm};
 
 #[cfg(feature = "cblas")]
 use cblas_sys::{
-    cblas_sgemm as sgemm, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
+    cblas_dgemm as dgemm, cblas_sgemm as sgemm, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
     CblasRowMajor as RowMajor, CblasTrans as Tr,
 };
 
