@@ -2,35 +2,43 @@
 
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, Tensor},
+    tensor::{DeviceStorage, OneFillStorage, Tensor, ZeroFillStorage},
 };
 
 use std::{string::String, vec::Vec};
 
 pub struct TensorOptions<S: Shape, E: Dtype, D: DeviceStorage> {
-    pub name: &'static str,
     pub update: bool,
     pub reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>,
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage> TensorOptions<S, E, D> {
-    pub fn named(
-        name: &'static str,
-        reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>,
-    ) -> Self {
-        Self {
-            name,
+    pub fn zeros() -> Self
+    where
+        D: ZeroFillStorage<E>,
+    {
+        TensorOptions {
+            update: true,
+            reset: |t| t.try_fill_with_zeros(),
+        }
+    }
+    pub fn ones() -> Self
+    where
+        D: OneFillStorage<E>,
+    {
+        TensorOptions {
+            update: true,
+            reset: |t| t.try_fill_with_ones(),
+        }
+    }
+    pub fn requires_grad(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self {
+        TensorOptions {
             update: true,
             reset,
         }
     }
-
-    pub fn no_grad(
-        name: &'static str,
-        reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>,
-    ) -> Self {
-        Self {
-            name,
+    pub fn no_grad(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self {
+        TensorOptions {
             update: false,
             reset,
         }
@@ -76,8 +84,8 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> TensorCollection<E, D> for Tensor<S, 
         visitor.visit_tensor(
             |s| s,
             |s| s,
+            "",
             TensorOptions {
-                name: "",
                 update: true,
                 reset: |_| Ok(()),
             },
@@ -102,6 +110,7 @@ pub trait TensorVisitor<T, E: Dtype, D: DeviceStorage>: Sized {
         &mut self,
         get_refs: GetRef,
         get_muts: GetMut,
+        name: &str,
         opts: TensorOptions<S, E, D>,
     ) -> Result<(), Self::Err>
     where
@@ -144,13 +153,14 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorRef<E, D>> TensorVisitor<M
         &mut self,
         mut get_refs: GetRef,
         _: GetMut,
+        name: &str,
         opts: TensorOptions<S, E, D>,
     ) -> Result<(), F::Err>
     where
         GetRef: FnMut(&M) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,
     {
-        self.path.push(opts.name.into());
+        self.path.push(name.into());
         self.f.visit(self.path.join("."), opts, get_refs(self.m))?;
         self.path.pop();
         Ok(())
@@ -186,13 +196,14 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMut<E, D>> TensorVisitor<M
         &mut self,
         _: GetRef,
         mut get_muts: GetMut,
+        name: &str,
         opts: TensorOptions<S, E, D>,
     ) -> Result<(), F::Err>
     where
         GetRef: FnMut(&M) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,
     {
-        self.path.push(opts.name.into());
+        self.path.push(name.into());
         self.f.visit(self.path.join("."), opts, get_muts(self.m))?;
         self.path.pop();
         Ok(())
@@ -228,13 +239,14 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMutRef<E, D>> TensorVisito
         &mut self,
         mut get_refs: GetRef,
         mut get_muts: GetMut,
+        name: &str,
         opts: TensorOptions<S, E, D>,
     ) -> Result<(), F::Err>
     where
         GetRef: FnMut(&M) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,
     {
-        self.path.push(opts.name.into());
+        self.path.push(name.into());
         let tensors = (get_muts(self.m.0), get_refs(self.m.1));
         self.f.visit(self.path.join("."), opts, tensors)?;
         self.path.pop();

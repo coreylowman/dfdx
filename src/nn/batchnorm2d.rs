@@ -188,22 +188,21 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNor
         visitor.visit_tensor(
             |s| &s.scale,
             |s| &mut s.scale,
-            TensorOptions::named("scale", |t| t.try_fill_with_ones()),
+            "scale",
+            TensorOptions::ones(),
         )?;
-        visitor.visit_tensor(
-            |s| &s.bias,
-            |s| &mut s.bias,
-            TensorOptions::named("bias", |t| t.try_fill_with_zeros()),
-        )?;
+        visitor.visit_tensor(|s| &s.bias, |s| &mut s.bias, "bias", TensorOptions::zeros())?;
         visitor.visit_tensor(
             |s| &s.running_mean,
             |s| &mut s.running_mean,
-            TensorOptions::no_grad("running_mean", |t| t.try_fill_with_zeros()),
+            "running_mean",
+            TensorOptions::no_grad(|t| t.try_fill_with_zeros()),
         )?;
         visitor.visit_tensor(
             |s| &s.running_var,
             |s| &mut s.running_var,
-            TensorOptions::no_grad("running_var", |t| t.try_fill_with_ones()),
+            "running_var",
+            TensorOptions::no_grad(|t| t.try_fill_with_ones()),
         )
     }
 }
@@ -227,7 +226,7 @@ impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
 #[cfg(test)]
 mod tests {
     use super::builder::BatchNorm2D;
-    use crate::{nn::*, shapes::*, tensor::*, tensor_ops::*, tests::*};
+    use crate::{nn::*, optim::*, shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_batchnorm2d_3d_forward_mut() {
@@ -347,5 +346,18 @@ mod tests {
                 [[0.73018146, 0.3243845], [-1.1041277, 0.38778353]],
             ],
         );
+    }
+
+    #[test]
+    fn test_batchnorm2d_update() {
+        let dev: TestDevice = Default::default();
+
+        let x1: Tensor<Rank3<3, 4, 5>, TestDtype, _> = dev.sample_normal();
+        let mut bn = dev.build_module::<BatchNorm2D<3>, TestDtype>();
+        let y = bn.forward_mut(x1.trace());
+        let g = y.square().mean().backward();
+
+        let mut opt = Sgd::new(&bn, Default::default());
+        opt.update(&mut bn, g).expect("");
     }
 }

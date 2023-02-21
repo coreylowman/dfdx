@@ -75,7 +75,8 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Sample
         visitor.visit_tensor(
             |s| &s.weight,
             |s| &mut s.weight,
-            TensorOptions::named("weight", |t| {
+            "weight",
+            TensorOptions::requires_grad(|t| {
                 let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
                 t.try_fill_with_distr(Uniform::new(-b, b))
             }),
@@ -83,7 +84,8 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Sample
         visitor.visit_tensor(
             |s| &s.bias,
             |s| &mut s.bias,
-            TensorOptions::named("bias", |t| {
+            "bias",
+            TensorOptions::requires_grad(|t| {
                 let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
                 t.try_fill_with_distr(Uniform::new(-b, b))
             }),

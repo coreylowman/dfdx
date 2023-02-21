@@ -126,9 +126,12 @@ impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> VisitTensorMut<E, D> 
     fn visit<S: Shape>(
         &mut self,
         _: alloc::string::String,
-        _: TensorOptions<S, E, D>,
+        opts: TensorOptions<S, E, D>,
         p: &mut Tensor<S, E, D>,
     ) -> Result<(), <D>::Err> {
+        if !opts.update {
+            return Ok(());
+        }
         let g = self.gradients.remove(p);
         match g {
             None => self.unused.add(p),

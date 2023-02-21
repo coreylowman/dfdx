@@ -63,7 +63,8 @@ where
         visitor.visit_tensor(
             |s| &s.weight,
             |s| &mut s.weight,
-            TensorOptions::named("weight", |t| {
+            "weight",
+            TensorOptions::requires_grad(|t| {
                 let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
                 t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
             }),
@@ -71,7 +72,8 @@ where
         visitor.visit_tensor(
             |s| &s.bias,
             |s| &mut s.bias,
-            TensorOptions::named("bias", |t| {
+            "bias",
+            TensorOptions::requires_grad(|t| {
                 let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
                 t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
             }),

@@ -60,13 +60,10 @@ impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNor
         visitor.visit_tensor(
             |s| &s.gamma,
             |s| &mut s.gamma,
-            TensorOptions::named("gamma", |t| t.try_fill_with_ones()),
+            "gamma",
+            TensorOptions::ones(),
         )?;
-        visitor.visit_tensor(
-            |s| &s.beta,
-            |s| &mut s.beta,
-            TensorOptions::named("beta", |t| t.try_fill_with_zeros()),
-        )
+        visitor.visit_tensor(|s| &s.beta, |s| &mut s.beta, "beta", TensorOptions::zeros())
     }
 }
 
