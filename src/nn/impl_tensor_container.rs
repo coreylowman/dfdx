@@ -52,7 +52,7 @@ macro_rules! tuple_impls {
     }
 }
 
-tuple_impls!([M1] [0]);
+tuple_impls!([M1][0]);
 tuple_impls!([M1, M2] [0, 1]);
 tuple_impls!([M1, M2, M3] [0, 1, 2]);
 tuple_impls!([M1, M2, M3, M4] [0, 1, 2, 3]);
@@ -71,7 +71,10 @@ impl<T: TensorContainer> TensorContainer for std::vec::Vec<T> {
         GetRef: FnMut(&Mod) -> &Field,
         GetMut: FnMut(&mut Mod) -> &mut Field,
     {
-        module.iter_mut().map(|x| T::get_field(x, get_ref, get_mut)).collect()
+        module
+            .iter_mut()
+            .map(|x| T::get_field(x, get_ref, get_mut))
+            .collect()
     }
 }
 
