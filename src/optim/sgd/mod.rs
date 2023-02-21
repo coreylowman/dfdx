@@ -172,7 +172,11 @@ impl<M: TensorCollection<E, D>, D: SgdKernel<E>, E: Dtype> Optimizer<M, D, E> fo
         gradients: Gradients,
     ) -> Result<(), OptimizerUpdateError<D>> {
         self.gradients = gradients;
-        let result = module.update(self);
+        let result = M::iter_tensors(&mut RecursiveWalker {
+            m: module,
+            f: self,
+            path: &mut std::vec::Vec::new(),
+        });
         let unused = std::mem::take(&mut self.unused);
         match result {
             Ok(_) => unused.into(),
@@ -413,5 +417,13 @@ mod tests {
             sgd.update(&mut t, gradients).expect("");
             assert_close(&t.array(), e);
         }
+    }
+
+    #[test]
+    fn test_unused_tensors() {
+        let dev: TestDevice = Default::default();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
+        let mut opt = Sgd::new(&t, Default::default());
+        opt.update(&mut t, Default::default()).expect_err("");
     }
 }

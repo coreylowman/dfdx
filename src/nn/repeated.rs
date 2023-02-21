@@ -100,9 +100,9 @@ impl<Input, T: ModuleMut<Input, Output = Input>, const N: usize> ModuleMut<Input
 mod tests {
     use super::*;
     use crate::nn::DeviceBuildExt;
+    use crate::tests::TestDevice;
     use crate::tests::TestDtype;
-    use crate::{nn::builders::*, optim::*, shapes::*, unique_id::HasUniqueId};
-    use crate::{nn::tests::SimpleUpdater, tests::TestDevice};
+    use crate::{nn::builders::*, shapes::*};
 
     #[test]
     fn test_default_and_reset() {
@@ -132,53 +132,5 @@ mod tests {
         let x = m.modules[4].forward(x);
 
         assert_eq!(x.array(), m.forward_mut(dev.zeros::<Rank1<3>>()).array());
-    }
-
-    #[test]
-    fn test_repeated_missing_gradients() {
-        let dev: TestDevice = Default::default();
-
-        type Model = Repeated<Linear<5, 5>, 3>;
-        let mut model = dev.build_module::<Model, TestDtype>();
-        let mut g: SimpleUpdater = Default::default();
-
-        // no gradients present
-        model.update(&mut g).unwrap();
-        assert_eq!(
-            &g.unused.ids,
-            &[
-                *model[0].weight.id(),
-                *model[0].bias.id(),
-                *model[1].weight.id(),
-                *model[1].bias.id(),
-                *model[2].weight.id(),
-                *model[2].bias.id(),
-            ]
-        );
-
-        // weight gradient is present
-        for i in 0..3 {
-            g.grads.try_alloc_for(&model[i].weight).unwrap();
-        }
-
-        g.clear_unused();
-        model.update(&mut g).unwrap();
-        assert_eq!(
-            &g.unused.ids,
-            &[
-                *model[0].bias.id(),
-                *model[1].bias.id(),
-                *model[2].bias.id()
-            ]
-        );
-
-        // all gradients present
-        for i in 0..3 {
-            g.grads.try_alloc_for(&model[i].weight).unwrap();
-            g.grads.try_alloc_for(&model[i].bias).unwrap();
-        }
-        g.clear_unused();
-        model.update(&mut g).unwrap();
-        assert!(g.unused.is_empty());
     }
 }

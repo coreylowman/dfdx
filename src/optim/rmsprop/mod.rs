@@ -12,7 +12,7 @@ use crate::{
     tensor::*,
 };
 
-use super::{GradientUpdate, Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
+use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
 
 /// Configuration of hyperparameters for [RMSprop].
 #[derive(Debug, Clone, Copy)]
@@ -157,7 +157,11 @@ impl<M: TensorCollection<E, D>, D: RMSpropKernel<E> + OneFillStorage<E>, E: Dtyp
         gradients: Gradients,
     ) -> Result<(), OptimizerUpdateError<D>> {
         self.gradients = gradients;
-        let result = module.update(self);
+        let result = M::iter_tensors(&mut RecursiveWalker {
+            m: module,
+            f: self,
+            path: &mut std::vec::Vec::new(),
+        });
         let unused = std::mem::take(&mut self.unused);
         let r = match result {
             Ok(_) => unused.into(),
@@ -316,5 +320,13 @@ mod tests {
             [0.9740982, 0.90218556, 0.8758817, 0.8724158, 0.87240976],
         ];
         test_matches_expected(cfg, EXPECTED);
+    }
+
+    #[test]
+    fn test_unused_tensors() {
+        let dev: TestDevice = Default::default();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
+        let mut opt = RMSprop::new(&t, Default::default());
+        opt.update(&mut t, Default::default()).expect_err("");
     }
 }

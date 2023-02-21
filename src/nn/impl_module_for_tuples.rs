@@ -96,8 +96,6 @@ tuple_impls!([M1, M2, M3, M4, M5, M6] [0, 1, 2, 3, 4, 5], M6, [M5, M4, M3, M2, M
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::tests::SimpleUpdater;
-    use crate::unique_id::HasUniqueId;
     use crate::{
         nn::{builders::*, *},
         optim::*,
@@ -244,48 +242,5 @@ mod tests {
         ) = Default::default();
         let y = model.forward(dev.zeros());
         assert_eq!(y.array(), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
-    }
-
-    #[test]
-    fn test_tuple_missing_gradients() {
-        let dev: TestDevice = Default::default();
-        type Model = (Linear<5, 3>, Linear<5, 3>, Linear<5, 3>);
-        let mut model = dev.build_module::<Model, TestDtype>();
-        let mut g: SimpleUpdater = Default::default();
-
-        // no gradients present
-        model.update(&mut g).unwrap();
-        assert_eq!(
-            &g.unused.ids,
-            &[
-                *model.0.weight.id(),
-                *model.0.bias.id(),
-                *model.1.weight.id(),
-                *model.1.bias.id(),
-                *model.2.weight.id(),
-                *model.2.bias.id(),
-            ]
-        );
-
-        // weight gradient is present
-        g.grads.try_alloc_for(&model.0.weight).unwrap();
-        g.grads.try_alloc_for(&model.1.weight).unwrap();
-        g.grads.try_alloc_for(&model.2.weight).unwrap();
-        g.clear_unused();
-        model.update(&mut g).unwrap();
-        assert_eq!(
-            &g.unused.ids,
-            &[*model.0.bias.id(), *model.1.bias.id(), *model.2.bias.id(),]
-        );
-
-        g.grads.try_alloc_for(&model.0.weight).unwrap();
-        g.grads.try_alloc_for(&model.0.bias).unwrap();
-        g.grads.try_alloc_for(&model.1.weight).unwrap();
-        g.grads.try_alloc_for(&model.1.bias).unwrap();
-        g.grads.try_alloc_for(&model.2.weight).unwrap();
-        g.grads.try_alloc_for(&model.2.bias).unwrap();
-        g.clear_unused();
-        model.update(&mut g).unwrap();
-        assert!(g.unused.is_empty());
     }
 }

@@ -110,12 +110,8 @@ mod tests {
 
     use super::*;
     use crate::nn::DeviceBuildExt;
-    use crate::{gradients::*, optim::*, shapes::*, tensor_ops::*};
-    use crate::{
-        nn::{builders::Linear, tests::SimpleUpdater},
-        tests::*,
-        unique_id::HasUniqueId,
-    };
+    use crate::{gradients::*, shapes::*, tensor_ops::*};
+    use crate::{nn::builders::Linear, tests::*};
 
     #[test]
     fn test_unused() {
@@ -233,34 +229,5 @@ mod tests {
             Tensor<Rank2<3, 5>, _, _>,
             Tensor<Rank2<3, 6>, _, _, OwnedTape<_>>,
         ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
-    }
-
-    #[test]
-    fn test_missing_gradients() {
-        let dev: TestDevice = Default::default();
-        type Model = SplitInto<(Linear<5, 3>, Linear<5, 3>)>;
-        let mut model = dev.build_module::<Model, TestDtype>();
-        let mut g: SimpleUpdater = Default::default();
-
-        // no gradients present
-        model.update(&mut g).unwrap();
-        assert_eq!(
-            &g.unused.ids,
-            &[
-                *model.0 .0.weight.id(),
-                *model.0 .0.bias.id(),
-                *model.0 .1.weight.id(),
-                *model.0 .1.bias.id()
-            ]
-        );
-
-        // weight gradient is present
-        g.grads.try_alloc_for(&model.0 .0.weight).unwrap();
-        g.grads.try_alloc_for(&model.0 .0.bias).unwrap();
-        g.grads.try_alloc_for(&model.0 .1.weight).unwrap();
-        g.grads.try_alloc_for(&model.0 .1.bias).unwrap();
-        g.clear_unused();
-        model.update(&mut g).unwrap();
-        assert!(g.unused.is_empty());
     }
 }

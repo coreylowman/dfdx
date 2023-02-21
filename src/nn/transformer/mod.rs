@@ -169,7 +169,7 @@ where
 mod tests {
     use super::*;
     use crate::{
-        nn::{tests::SimpleUpdater, DeviceBuildExt},
+        nn::{DeviceBuildExt},
         optim::*,
         shapes::*,
         tensor::*,
@@ -205,11 +205,7 @@ mod tests {
         let out: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward_mut((src.trace(), tgt));
         let g = out.mean().backward();
 
-        let mut gs = SimpleUpdater {
-            grads: g,
-            unused: Default::default(),
-        };
-        t.update(&mut gs).unwrap();
-        assert!(gs.unused.is_empty());
+        let mut opt = Sgd::new(&t, Default::default());
+        opt.update(&mut t, g).expect("");
     }
 }

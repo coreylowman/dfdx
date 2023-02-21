@@ -118,9 +118,8 @@ impl<B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::tests::SimpleUpdater;
     use crate::nn::{DeviceBuildExt, ModuleMut};
-    use crate::{optim::*, tests::*, unique_id::HasUniqueId};
+    use crate::tests::*;
 
     #[test]
     fn test_layer_norm_reset() {
@@ -180,30 +179,5 @@ mod tests {
             &[0.1713974, -0.16086, -0.1304687, 0.109183, 0.0107483],
         );
         assert_close(&g.get(&m.beta).array(), &[0.2; 5]);
-    }
-
-    #[test]
-    fn test_layer_norm_missing_gradients() {
-        let dev: TestDevice = Default::default();
-
-        let mut model = dev.build_module::<builder::LayerNorm1D<5>, TestDtype>();
-        let mut g: SimpleUpdater = Default::default();
-
-        // no gradients present
-        model.update(&mut g).unwrap();
-        assert_eq!(&g.unused.ids, &[*model.gamma.id(), *model.beta.id()]);
-
-        // weight gradient is present
-        g.grads.try_alloc_for(&model.gamma).unwrap();
-        g.clear_unused();
-        model.update(&mut g).unwrap();
-        assert_eq!(&g.unused.ids, &[*model.beta.id()]);
-
-        // all gradients present
-        g.grads.try_alloc_for(&model.gamma).unwrap();
-        g.grads.try_alloc_for(&model.beta).unwrap();
-        g.clear_unused();
-        model.update(&mut g).unwrap();
-        assert!(g.unused.is_empty());
     }
 }

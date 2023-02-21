@@ -262,7 +262,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::tests::SimpleUpdater, optim::*, tests::*};
+    use crate::{optim::*, tests::*};
 
     #[test]
     fn test_mha_unbatched() {
@@ -367,12 +367,9 @@ mod tests {
         let k: Tensor<Rank3<2, 4, 12>, TestDtype, _> = dev.sample_normal();
         let v: Tensor<Rank3<2, 4, 12>, TestDtype, _> = dev.sample_normal();
         let y = mha.forward((q.trace(), k, v));
+        let g = y.square().mean().backward();
 
-        let mut g = SimpleUpdater {
-            grads: y.mean().backward(),
-            unused: Default::default(),
-        };
-        mha.update(&mut g).unwrap();
-        assert!(g.unused.is_empty());
+        let mut opt = Sgd::new(&mha, Default::default());
+        opt.update(&mut mha, g).expect("");
     }
 }

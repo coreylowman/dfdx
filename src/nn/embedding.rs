@@ -123,12 +123,7 @@ impl<const VOCAB: usize, const DIM: usize, E: Dtype, D1: Device<E>, D2: Device<E
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        nn::{tests::SimpleUpdater, DeviceBuildExt},
-        optim::*,
-        tests::*,
-        unique_id::HasUniqueId,
-    };
+    use crate::{nn::DeviceBuildExt, tests::*};
 
     const W: [[TestDtype; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
@@ -230,23 +225,5 @@ mod tests {
                 ],
             ],
         );
-    }
-
-    #[test]
-    fn test_embedding_missing_gradients() {
-        let dev: TestDevice = Default::default();
-
-        let mut model = dev.build_module::<builder::Embedding<5, 3>, TestDtype>();
-        let mut g: SimpleUpdater = Default::default();
-
-        // no gradients present
-        model.update(&mut g).unwrap();
-        assert_eq!(&g.unused.ids, &[*model.weight.id()]);
-
-        // weight gradient is present
-        g.grads.try_alloc_for(&model.weight).unwrap();
-        g.clear_unused();
-        model.update(&mut g).unwrap();
-        assert!(g.unused.is_empty());
     }
 }

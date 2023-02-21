@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use crate::{
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Tensor},
@@ -8,8 +10,6 @@ use std::{string::String, vec::Vec};
 pub struct TensorOptions<S: Shape, E: Dtype, D: DeviceStorage> {
     pub name: &'static str,
     pub update: bool,
-
-    #[allow(clippy::type_complexity)]
     pub reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>,
 }
 

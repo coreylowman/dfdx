@@ -180,38 +180,3 @@ pub mod builders {
     #[cfg(feature = "nightly")]
     pub use super::transformer::builder::*;
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        gradients::Gradients, optim::UnusedTensors, shapes::Dtype, tensor::visitors::*,
-        tensor::DeviceStorage,
-    };
-
-    #[derive(Default)]
-    pub struct SimpleUpdater {
-        pub grads: Gradients,
-        pub unused: UnusedTensors,
-    }
-
-    impl SimpleUpdater {
-        pub(crate) fn clear_unused(&mut self) {
-            self.unused.clear();
-        }
-    }
-
-    impl<D: DeviceStorage, E: Dtype> VisitTensorMut<E, D> for SimpleUpdater {
-        type Err = D::Err;
-        fn visit<S: crate::shapes::Shape>(
-            &mut self,
-            _: alloc::string::String,
-            _: TensorOptions<S, E, D>,
-            p: &mut crate::prelude::Tensor<S, E, D>,
-        ) -> Result<(), <D>::Err> {
-            if self.grads.remove(p).is_none() {
-                self.unused.add(p);
-            }
-            Ok(())
-        }
-    }
-}

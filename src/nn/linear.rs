@@ -153,12 +153,7 @@ impl<'a, B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        nn::{tests::SimpleUpdater, DeviceBuildExt},
-        optim::*,
-        tests::*,
-        unique_id::HasUniqueId,
-    };
+    use crate::{nn::DeviceBuildExt, tests::*};
 
     const W: [[TestDtype; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
@@ -286,30 +281,5 @@ mod tests {
             &[[-0.16088384, 0.10978711, -0.9008978, 0.59211355, -0.029177088], [0.35563633, -0.38838047, -0.17600831, -0.2034213, 0.31128058]],
         );
         assert_close(&g.get(&model.bias).array(), &[0.40265593, -0.2874091]);
-    }
-
-    #[test]
-    fn test_linear_missing_gradients() {
-        let dev: TestDevice = Default::default();
-
-        let mut model = dev.build_module::<builder::Linear<5, 3>, TestDtype>();
-        let mut g: SimpleUpdater = Default::default();
-
-        // no gradients present
-        model.update(&mut g).unwrap();
-        assert_eq!(&g.unused.ids, &[*model.weight.id(), *model.bias.id()]);
-
-        // weight gradient is present
-        g.grads.try_alloc_for(&model.weight).unwrap();
-        g.clear_unused();
-        model.update(&mut g).unwrap();
-        assert_eq!(&g.unused.ids, &[*model.bias.id()]);
-
-        // both gradients present
-        g.grads.try_alloc_for(&model.weight).unwrap();
-        g.grads.try_alloc_for(&model.bias).unwrap();
-        g.clear_unused();
-        model.update(&mut g).unwrap();
-        assert!(g.unused.is_empty());
     }
 }

@@ -93,11 +93,9 @@ mod tests {
     use super::*;
     use crate::{
         gradients::OwnedTape,
-        nn::{builders::*, tests::SimpleUpdater, DeviceBuildExt},
-        optim::*,
+        nn::{builders::*, DeviceBuildExt},
         shapes::*,
         tests::{TestDevice, TestDtype},
-        unique_id::HasUniqueId,
     };
 
     type TestAddIntoCpu = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
@@ -210,35 +208,6 @@ mod tests {
             dev.zeros::<Rank2<3, 6>>().traced(),
             dev.zeros::<Rank2<3, 7>>().traced(),
         ));
-    }
-
-    #[test]
-    fn test_missing_gradients() {
-        let dev: TestDevice = Default::default();
-        type Model = AddInto<(Linear<5, 3>, Linear<5, 3>)>;
-        let mut model = dev.build_module::<Model, TestDtype>();
-        let mut g: SimpleUpdater = Default::default();
-
-        // no gradients present
-        model.update(&mut g).unwrap();
-        assert_eq!(
-            &g.unused.ids,
-            &[
-                *model.0 .0.weight.id(),
-                *model.0 .0.bias.id(),
-                *model.0 .1.weight.id(),
-                *model.0 .1.bias.id()
-            ]
-        );
-
-        // weight gradient is present
-        g.grads.try_alloc_for(&model.0 .0.weight).unwrap();
-        g.grads.try_alloc_for(&model.0 .0.bias).unwrap();
-        g.grads.try_alloc_for(&model.0 .1.weight).unwrap();
-        g.grads.try_alloc_for(&model.0 .1.bias).unwrap();
-        g.clear_unused();
-        model.update(&mut g).unwrap();
-        assert!(g.unused.is_empty());
     }
 
     #[test]

@@ -12,7 +12,7 @@ use crate::{
     tensor::DeviceStorage,
 };
 
-use super::{GradientUpdate, Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
+use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
 
 /// Configuration of hyperparameters for [Adam].
 ///
@@ -142,7 +142,11 @@ impl<M: TensorCollection<E, D>, D: AdamKernel<E>, E: Dtype> Optimizer<M, D, E> f
     ) -> Result<(), OptimizerUpdateError<D>> {
         self.t = self.t.checked_add(1).unwrap();
         self.gradients = gradients;
-        let result = module.update(self);
+        let result = M::iter_tensors(&mut RecursiveWalker {
+            m: module,
+            f: self,
+            path: &mut std::vec::Vec::new(),
+        });
         let unused = std::mem::take(&mut self.unused);
         match result {
             Ok(_) => unused.into(),
@@ -280,5 +284,13 @@ mod tests {
             opt.update(&mut t, gradients).expect("");
             assert_close(&t.array(), e);
         }
+    }
+
+    #[test]
+    fn test_unused_tensors() {
+        let dev: TestDevice = Default::default();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
+        let mut opt = Adam::new(&t, Default::default());
+        opt.update(&mut t, Default::default()).expect_err("");
     }
 }

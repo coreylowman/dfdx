@@ -1,7 +1,6 @@
 use crate::{
     gradients::Gradients,
     shapes::Dtype,
-    tensor::visitors::{RecursiveWalker, TensorCollection, VisitTensorMut},
     tensor::DeviceStorage,
     unique_id::{HasUniqueId, UniqueId},
 };
@@ -91,19 +90,6 @@ pub trait Optimizer<M, D: DeviceStorage, E: Dtype> {
         gradients: Gradients,
     ) -> Result<(), OptimizerUpdateError<D>>;
 }
-
-/// Represents something that can be updated with a [ParamUpdater].
-pub trait GradientUpdate<E: Dtype, D: DeviceStorage>: TensorCollection<E, D> {
-    /// Updates self given the [ParamUpdater].
-    fn update<V: VisitTensorMut<E, D>>(&mut self, updater: &mut V) -> Result<(), V::Err> {
-        Self::iter_tensors(&mut RecursiveWalker {
-            m: self,
-            f: updater,
-            path: &mut std::vec::Vec::new(),
-        })
-    }
-}
-impl<E: Dtype, D: DeviceStorage, M: TensorCollection<E, D>> GradientUpdate<E, D> for M {}
 
 /// Holds [UniqueId] of tensors that were missing gradients during
 /// [GradientUpdate::update()], and therefore are unused
