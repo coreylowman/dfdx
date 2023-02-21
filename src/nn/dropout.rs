@@ -1,6 +1,6 @@
 use crate::{gradients::*, shapes::*, tensor::Tensor, tensor_ops::*};
 
-use super::{BuildModule, Module, ModuleMut, ZeroSizedModule};
+use super::{Module, ModuleMut, ZeroSizedModule};
 
 /// Does nothing as a [Module], and calls [dropout()] as [ModuleMut] with probability `1.0 / N`.
 ///
@@ -44,12 +44,6 @@ use super::{BuildModule, Module, ModuleMut, ZeroSizedModule};
 pub struct DropoutOneIn<const N: usize>;
 
 impl<const N: usize> ZeroSizedModule for DropoutOneIn<N> {}
-
-impl<const N: usize, D: Device<E>, E: Dtype> BuildModule<D, E> for DropoutOneIn<N> {
-    fn try_build(_: &D) -> Result<Self, <D>::Err> {
-        Ok(Default::default())
-    }
-}
 
 impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>>
     for DropoutOneIn<N>
@@ -122,12 +116,6 @@ impl Default for Dropout {
 }
 
 impl ZeroSizedModule for Dropout {}
-
-impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Dropout {
-    fn try_build(_: &D) -> Result<Self, <D>::Err> {
-        Ok(Default::default())
-    }
-}
 
 impl<S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>> for Dropout {
     type Output = Tensor<S, E, D, NoneTape>;
