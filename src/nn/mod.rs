@@ -104,6 +104,10 @@
 //! mlp.load_state_dict(state_dict)
 //! ```
 
+mod num_params;
+mod reset_params;
+pub mod visitors;
+
 mod activations;
 mod add_into;
 mod batchnorm2d;
@@ -128,7 +132,9 @@ mod transformer;
 pub use module::*;
 
 #[cfg(feature = "numpy")]
-pub use npz::*;
+pub use npz::{LoadFromNpz, SaveToNpz};
+pub use num_params::NumParams;
+pub use reset_params::ResetParams;
 
 pub mod modules {
     /// Structs containing initialized Tensors & impls for [super::Module]. See

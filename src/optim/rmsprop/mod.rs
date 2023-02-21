@@ -7,8 +7,8 @@ use std::marker::PhantomData;
 
 use crate::{
     gradients::Gradients,
+    nn::visitors::*,
     shapes::{Dtype, Shape},
-    tensor::visitors::*,
     tensor::*,
 };
 

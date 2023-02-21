@@ -1,10 +1,9 @@
+use crate::shapes::Dtype;
 #[cfg(feature = "cuda")]
 pub use crate::tensor::OnCuda;
 pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
-use crate::{
-    shapes::Dtype,
-    tensor::visitors::{TensorCollection, TensorVisitor},
-};
+
+use super::visitors::{TensorCollection, TensorVisitor};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
@@ -72,6 +71,12 @@ pub trait ZeroSizedModule: Default {}
 
 impl<T: ZeroSizedModule + BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for T {
     type Built = T;
+}
+
+impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule> BuildModule<D, E> for T {
+    fn try_build(_: &D) -> Result<Self, <D>::Err> {
+        Ok(Default::default())
+    }
 }
 
 impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule> TensorCollection<E, D> for T {

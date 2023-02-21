@@ -1,6 +1,6 @@
-use crate::{shapes::Dtype, tensor::visitors::*, tensor::*};
+use crate::{shapes::Dtype, tensor::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::{visitors::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 /// Splits input into multiple heads. `T` should be a tuple,
 /// where every element of the tuple accepts the same input type.

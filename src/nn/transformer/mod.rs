@@ -5,17 +5,13 @@ mod mha;
 pub use decoder::*;
 pub use encoder::*;
 pub use mha::*;
+
 use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
-use crate::{
-    shapes::Dtype,
-    tensor::visitors::*,
-    tensor::{DeviceStorage, PutTape, SplitTape},
-    tensor_ops::Device,
-};
+use crate::{shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::{visitors::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 pub mod builder {
     #[derive(Debug, Clone)]
@@ -168,7 +164,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::DeviceBuildExt, optim::*, shapes::*, tensor::*, tensor_ops::*, tests::*};
+    use crate::{nn::DeviceBuildExt, optim::*, tests::*};
 
     #[test]
     fn test_forward() {

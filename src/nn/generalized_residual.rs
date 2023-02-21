@@ -1,6 +1,6 @@
-use crate::{shapes::*, tensor::visitors::*, tensor::*};
+use crate::{shapes::*, tensor::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::{visitors::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
