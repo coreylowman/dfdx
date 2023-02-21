@@ -168,14 +168,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        nn::{DeviceBuildExt},
-        optim::*,
-        shapes::*,
-        tensor::*,
-        tensor_ops::*,
-        tests::*,
-    };
+    use crate::{nn::DeviceBuildExt, optim::*, shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_forward() {
