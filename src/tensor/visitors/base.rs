@@ -38,38 +38,41 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> TensorOptions<S, E, D> {
 }
 
 pub trait VisitTensorRef<E: Dtype, D: DeviceStorage> {
+    type Err;
     fn visit<S: Shape>(
         &mut self,
         full_path: String,
         opts: TensorOptions<S, E, D>,
         t: &Tensor<S, E, D>,
-    ) -> Result<(), D::Err>;
+    ) -> Result<(), Self::Err>;
 }
 
 pub trait VisitTensorMut<E: Dtype, D: DeviceStorage> {
+    type Err;
     fn visit<S: Shape>(
         &mut self,
         full_path: String,
         opts: TensorOptions<S, E, D>,
         t: &mut Tensor<S, E, D>,
-    ) -> Result<(), D::Err>;
+    ) -> Result<(), Self::Err>;
 }
 
 pub trait VisitTensorMutRef<E: Dtype, D: DeviceStorage> {
+    type Err;
     fn visit<S: Shape>(
         &mut self,
         full_path: String,
         opts: TensorOptions<S, E, D>,
         ts: (&mut Tensor<S, E, D>, &Tensor<S, E, D>),
-    ) -> Result<(), D::Err>;
+    ) -> Result<(), Self::Err>;
 }
 
 pub trait TensorCollection<E: Dtype, D: DeviceStorage>: Sized {
-    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), D::Err>;
+    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err>;
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage> TensorCollection<E, D> for Tensor<S, E, D> {
-    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), D::Err> {
+    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_tensor(
             |s| s,
             |s| s,
@@ -83,12 +86,13 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> TensorCollection<E, D> for Tensor<S, 
 }
 
 pub trait ModuleWalker<T, E: Dtype, D: DeviceStorage>: Sized {
+    type Err;
     fn visit_module<Field, GetRef, GetMut>(
         &mut self,
         get_refs: GetRef,
         get_muts: GetMut,
         name: &str,
-    ) -> Result<(), D::Err>
+    ) -> Result<(), Self::Err>
     where
         GetRef: FnMut(&T) -> &Field,
         GetMut: FnMut(&mut T) -> &mut Field,
@@ -99,7 +103,7 @@ pub trait ModuleWalker<T, E: Dtype, D: DeviceStorage>: Sized {
         get_refs: GetRef,
         get_muts: GetMut,
         opts: TensorOptions<S, E, D>,
-    ) -> Result<(), D::Err>
+    ) -> Result<(), Self::Err>
     where
         GetRef: FnMut(&T) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut T) -> &mut Tensor<S, E, D>;
@@ -114,12 +118,13 @@ pub(crate) struct RecursiveWalker<'a, M, F> {
 impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorRef<E, D>> ModuleWalker<M, E, D>
     for RecursiveWalker<'a, &'a M, F>
 {
+    type Err = F::Err;
     fn visit_module<Field, GetRef, GetMut>(
         &mut self,
         mut get_refs: GetRef,
         _: GetMut,
         name: &str,
-    ) -> Result<(), D::Err>
+    ) -> Result<(), Self::Err>
     where
         GetRef: FnMut(&M) -> &Field,
         GetMut: FnMut(&mut M) -> &mut Field,
@@ -140,7 +145,7 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorRef<E, D>> ModuleWalker<M,
         mut get_refs: GetRef,
         _: GetMut,
         opts: TensorOptions<S, E, D>,
-    ) -> Result<(), D::Err>
+    ) -> Result<(), F::Err>
     where
         GetRef: FnMut(&M) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,
@@ -155,12 +160,13 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorRef<E, D>> ModuleWalker<M,
 impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMut<E, D>> ModuleWalker<M, E, D>
     for RecursiveWalker<'a, &'a mut M, F>
 {
+    type Err = F::Err;
     fn visit_module<Field, GetRef, GetMut>(
         &mut self,
         _: GetRef,
         mut get_muts: GetMut,
         name: &str,
-    ) -> Result<(), D::Err>
+    ) -> Result<(), F::Err>
     where
         GetRef: FnMut(&M) -> &Field,
         GetMut: FnMut(&mut M) -> &mut Field,
@@ -181,7 +187,7 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMut<E, D>> ModuleWalker<M,
         _: GetRef,
         mut get_muts: GetMut,
         opts: TensorOptions<S, E, D>,
-    ) -> Result<(), D::Err>
+    ) -> Result<(), F::Err>
     where
         GetRef: FnMut(&M) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,
@@ -196,12 +202,13 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMut<E, D>> ModuleWalker<M,
 impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMutRef<E, D>> ModuleWalker<M, E, D>
     for RecursiveWalker<'a, (&'a mut M, &'a M), F>
 {
+    type Err = F::Err;
     fn visit_module<Field, GetRef, GetMut>(
         &mut self,
         mut get_refs: GetRef,
         mut get_muts: GetMut,
         name: &str,
-    ) -> Result<(), D::Err>
+    ) -> Result<(), F::Err>
     where
         GetRef: FnMut(&M) -> &Field,
         GetMut: FnMut(&mut M) -> &mut Field,
@@ -222,7 +229,7 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMutRef<E, D>> ModuleWalker
         mut get_refs: GetRef,
         mut get_muts: GetMut,
         opts: TensorOptions<S, E, D>,
-    ) -> Result<(), D::Err>
+    ) -> Result<(), F::Err>
     where
         GetRef: FnMut(&M) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,

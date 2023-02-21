@@ -122,6 +122,7 @@ pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
 }
 
 impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> VisitTensorMut<E, D> for RMSprop<M, E> {
+    type Err = D::Err;
     fn visit<S: Shape>(
         &mut self,
         _: alloc::string::String,

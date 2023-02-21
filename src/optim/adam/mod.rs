@@ -113,6 +113,7 @@ pub(super) trait AdamKernel<E: Dtype>: DeviceStorage {
 }
 
 impl<M, D: AdamKernel<E>, E: Dtype> VisitTensorMut<E, D> for Adam<M, E> {
+    type Err = D::Err;
     fn visit<S: Shape>(
         &mut self,
         _: alloc::string::String,

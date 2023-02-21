@@ -6,6 +6,7 @@ use std::{string::String, vec::Vec};
 
 struct Resetter;
 impl<E: Dtype, D: DeviceStorage> VisitTensorMut<E, D> for Resetter {
+    type Err = D::Err;
     fn visit<S: Shape>(
         &mut self,
         _: String,

@@ -75,7 +75,7 @@ impl<T: ZeroSizedModule + BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildOn
 }
 
 impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule> TensorCollection<E, D> for T {
-    fn iter_tensors<V: ModuleWalker<Self, E, D>>(_: &mut V) -> Result<(), <D>::Err> {
+    fn iter_tensors<V: ModuleWalker<Self, E, D>>(_: &mut V) -> Result<(), V::Err> {
         Ok(())
     }
 }

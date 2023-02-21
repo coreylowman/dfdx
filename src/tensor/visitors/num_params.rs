@@ -6,6 +6,7 @@ use std::{string::String, vec::Vec};
 
 struct Counter(usize);
 impl<E: Dtype, D: DeviceStorage> VisitTensorRef<E, D> for Counter {
+    type Err = D::Err;
     fn visit<S: Shape>(
         &mut self,
         _: String,

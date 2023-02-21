@@ -119,7 +119,7 @@ impl<const M: usize, const H: usize, const F: usize, E, D: Device<E>> TensorColl
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), <D>::Err> {
+    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_module(|s| &s.self_attn, |s| &mut s.self_attn, "self_attn")?;
         visitor.visit_module(|s| &s.norm1, |s| &mut s.norm1, "norm1")?;
         visitor.visit_module(|s| &s.ff, |s| &mut s.ff, "ff")?;

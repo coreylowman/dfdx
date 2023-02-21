@@ -118,8 +118,6 @@ mod linear;
 mod module;
 #[cfg(feature = "numpy")]
 mod npz;
-#[cfg(feature = "numpy")]
-mod npz_impls;
 mod pool2d;
 mod pool_global;
 mod repeated;
@@ -203,6 +201,7 @@ mod tests {
     }
 
     impl<D: DeviceStorage, E: Dtype> VisitTensorMut<E, D> for SimpleUpdater {
+        type Err = D::Err;
         fn visit<S: crate::shapes::Shape>(
             &mut self,
             _: alloc::string::String,

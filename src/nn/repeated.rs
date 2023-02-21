@@ -42,7 +42,7 @@ impl<D: DeviceStorage, E: Dtype, T: BuildModule<D, E>, const N: usize> BuildModu
 impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>, const N: usize> TensorCollection<E, D>
     for Repeated<T, N>
 {
-    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), D::Err> {
+    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         for i in 0..N {
             visitor.visit_module(
                 |s| &s.modules[i],

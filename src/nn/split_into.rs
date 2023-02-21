@@ -35,7 +35,7 @@ impl<T: BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildModule<D, E> for Spl
 impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>> TensorCollection<E, D>
     for SplitInto<T>
 {
-    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), D::Err> {
+    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_module(|s| &s.0, |s| &mut s.0, "0")
     }
 }
