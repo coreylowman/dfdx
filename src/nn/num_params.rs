@@ -1,4 +1,4 @@
-use super::base::{RecursiveWalker, TensorCollection, TensorOptions, VisitTensorRef};
+use super::visitors::{RecursiveWalker, TensorCollection, TensorOptions, VisitTensorRef};
 
 use crate::{shapes::*, tensor::*};
 

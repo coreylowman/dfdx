@@ -1,10 +1,9 @@
+use crate::shapes::Dtype;
 #[cfg(feature = "cuda")]
 pub use crate::tensor::OnCuda;
 pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
-use crate::{
-    shapes::Dtype,
-    tensor::visitors::{TensorCollection, TensorVisitor},
-};
+
+use super::visitors::{TensorCollection, TensorVisitor};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.

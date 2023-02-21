@@ -1,9 +1,9 @@
 use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
-use crate::{gradients::Tape, shapes::*, tensor::visitors::*, tensor::*, tensor_ops::*};
+use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::{visitors::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 pub mod builder {
     #[derive(Debug)]

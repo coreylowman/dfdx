@@ -1,6 +1,6 @@
-use crate::{shapes::*, tensor::visitors::*, tensor::*};
+use crate::{shapes::*, tensor::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::{visitors::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 use std::ops::Add;
 

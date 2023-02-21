@@ -1,6 +1,6 @@
-use crate::{shapes::Dtype, tensor::visitors::*, tensor::*};
+use crate::{shapes::Dtype, tensor::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::{visitors::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///

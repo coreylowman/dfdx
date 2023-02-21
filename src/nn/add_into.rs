@@ -1,6 +1,6 @@
-use crate::{shapes::Dtype, tensor::visitors::*, tensor::*};
+use crate::{shapes::Dtype, tensor::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::{visitors::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 /// Add inputs together into a single tensor. `T` should be a tuple
 //// where every element of the tuple has the same output type

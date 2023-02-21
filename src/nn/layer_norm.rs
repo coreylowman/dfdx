@@ -1,6 +1,6 @@
-use crate::{gradients::Tape, shapes::*, tensor::visitors::*, tensor::*, tensor_ops::*};
+use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, BuildOnDevice, Module, NonMutableModule, ToDevice};
+use super::{visitors::*, BuildModule, BuildOnDevice, Module, NonMutableModule, ToDevice};
 
 pub mod builder {
     #[derive(Debug)]
@@ -120,7 +120,7 @@ impl<B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::{DeviceBuildExt, ModuleMut};
+    use crate::nn::{DeviceBuildExt, ModuleMut, ResetParams};
     use crate::tests::*;
 
     #[test]

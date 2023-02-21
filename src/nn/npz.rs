@@ -1,11 +1,13 @@
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::visitors::*,
     tensor::{
         numpy::{NpzError, NumpyDtype},
         CopySlice, Tensor,
     },
 };
+
+use super::visitors::*;
+
 use std::{
     io::{BufReader, BufWriter, Read, Seek, Write},
     path::Path,
