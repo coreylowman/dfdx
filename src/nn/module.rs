@@ -67,7 +67,7 @@ pub trait DeviceBuildExt: DeviceStorage {
 impl<D: DeviceStorage> DeviceBuildExt for D {}
 
 /// Marker trait for modules with no updatable parameters. These have
-/// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]
+/// blanket impls for, and [ModuleMut]
 pub trait ZeroSizedModule: Default {}
 
 impl<T: ZeroSizedModule + BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for T {
