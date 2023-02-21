@@ -58,36 +58,36 @@ pub trait TryStack<E: Dtype>: DeviceStorage {
 
 pub trait AddDim<D: Dim>: Shape {
     type Larger: Shape;
-    fn add(&self, dim: D) -> Self::Larger;
+    fn add_dim(&self, dim: D) -> Self::Larger;
 }
 
 impl<New: Dim> AddDim<New> for () {
     type Larger = (New,);
-    fn add(&self, dim: New) -> Self::Larger {
+    fn add_dim(&self, dim: New) -> Self::Larger {
         (dim,)
     }
 }
 impl<D1: Dim, New: Dim> AddDim<New> for (D1,) {
     type Larger = (New, D1);
-    fn add(&self, dim: New) -> Self::Larger {
+    fn add_dim(&self, dim: New) -> Self::Larger {
         (dim, self.0)
     }
 }
 impl<D1: Dim, D2: Dim, New: Dim> AddDim<New> for (D1, D2) {
     type Larger = (New, D1, D2);
-    fn add(&self, dim: New) -> Self::Larger {
+    fn add_dim(&self, dim: New) -> Self::Larger {
         (dim, self.0, self.1)
     }
 }
 impl<D1: Dim, D2: Dim, D3: Dim, New: Dim> AddDim<New> for (D1, D2, D3) {
     type Larger = (New, D1, D2, D3);
-    fn add(&self, dim: New) -> Self::Larger {
+    fn add_dim(&self, dim: New) -> Self::Larger {
         (dim, self.0, self.1, self.2)
     }
 }
 impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, New: Dim> AddDim<New> for (D1, D2, D3, D4) {
     type Larger = (New, D1, D2, D3, D4);
-    fn add(&self, dim: New) -> Self::Larger {
+    fn add_dim(&self, dim: New) -> Self::Larger {
         (dim, self.0, self.1, self.2, self.3)
     }
 }
