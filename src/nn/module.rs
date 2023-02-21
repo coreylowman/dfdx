@@ -74,6 +74,12 @@ impl<T: ZeroSizedModule + BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildOn
     type Built = T;
 }
 
+impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule> BuildModule<D, E> for T {
+    fn try_build(_: &D) -> Result<Self, <D>::Err> {
+        Ok(Default::default())
+    }
+}
+
 impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule> TensorCollection<E, D> for T {
     fn iter_tensors<V: TensorVisitor<Self, E, D>>(_: &mut V) -> Result<(), V::Err> {
         Ok(())

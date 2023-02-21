@@ -21,7 +21,7 @@ impl<E: Dtype> super::StackKernel<E> for Cpu {
         for i in inp.iter() {
             assert_eq!(i.strides, item_strides);
         }
-        let shape: S::Larger = inp[0].shape().add(num);
+        let shape: S::Larger = inp[0].shape().add_dim(num);
 
         // build the new strides
         let mut strides = shape.strides();
