@@ -110,10 +110,12 @@ pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<
 }
 impl<E: Dtype + NumpyDtype, D: CopySlice<E>, T: TensorCollection<E, D>> LoadFromNpz<E, D> for T {}
 
-impl<W: Write + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> VisitTensorRef<E, D>
+impl<W: Write + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> VisitTensors<E, D>
     for zip::ZipWriter<W>
 {
+    type Container = &'static ();
     type Err = ZipError;
+
     fn visit<S: Shape>(
         &mut self,
         full_path: String,
@@ -124,10 +126,12 @@ impl<W: Write + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> VisitTensorRef<E, 
     }
 }
 
-impl<R: Read + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> VisitTensorMut<E, D>
+impl<R: Read + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> VisitTensors<E, D>
     for zip::ZipArchive<R>
 {
+    type Container = &'static mut ();
     type Err = NpzError;
+
     fn visit<S: Shape>(
         &mut self,
         full_path: String,
