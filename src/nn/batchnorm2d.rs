@@ -184,7 +184,7 @@ impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for BatchNorm2D<C
 }
 
 impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNorm2D<C, E, D> {
-    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+    fn iter_tensors<V: TensorVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_tensor(
             |s| &s.scale,
             |s| &mut s.scale,

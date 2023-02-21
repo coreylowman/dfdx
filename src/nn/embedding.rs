@@ -70,7 +70,7 @@ impl<const V: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Device
 impl<const C: usize, const M: usize, E: Dtype + Float + SampleUniform, D: SampleTensor<E>>
     TensorCollection<E, D> for Embedding<C, M, E, D>
 {
-    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+    fn iter_tensors<V: TensorVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_tensor(
             |s| &s.weight,
             |s| &mut s.weight,

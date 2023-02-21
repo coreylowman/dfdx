@@ -56,7 +56,7 @@ impl<const M: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for LayerNorm1D<M
 }
 
 impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNorm1D<M, E, D> {
-    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+    fn iter_tensors<V: TensorVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_tensor(
             |s| &s.gamma,
             |s| &mut s.gamma,

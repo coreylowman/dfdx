@@ -45,7 +45,7 @@ impl<D: DeviceStorage, E: Dtype, F: BuildModule<D, E>, R: BuildModule<D, E>> Bui
 impl<E: Dtype, D: DeviceStorage, F: TensorCollection<E, D>, R: TensorCollection<E, D>>
     TensorCollection<E, D> for GeneralizedResidual<F, R>
 {
-    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+    fn iter_tensors<V: TensorVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_module(|s| &s.f, |s| &mut s.f, "f")?;
         visitor.visit_module(|s| &s.r, |s| &mut s.r, "r")
     }

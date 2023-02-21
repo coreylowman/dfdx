@@ -3,7 +3,7 @@ pub use crate::tensor::OnCuda;
 pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
 use crate::{
     shapes::Dtype,
-    tensor::visitors::{ModuleWalker, TensorCollection},
+    tensor::visitors::{TensorCollection, TensorVisitor},
 };
 
 /// Immutable forward of `Input` that produces [Module::Output].
@@ -75,7 +75,7 @@ impl<T: ZeroSizedModule + BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildOn
 }
 
 impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule> TensorCollection<E, D> for T {
-    fn iter_tensors<V: ModuleWalker<Self, E, D>>(_: &mut V) -> Result<(), V::Err> {
+    fn iter_tensors<V: TensorVisitor<Self, E, D>>(_: &mut V) -> Result<(), V::Err> {
         Ok(())
     }
 }

@@ -68,11 +68,11 @@ pub trait VisitTensorMutRef<E: Dtype, D: DeviceStorage> {
 }
 
 pub trait TensorCollection<E: Dtype, D: DeviceStorage>: Sized {
-    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err>;
+    fn iter_tensors<V: TensorVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err>;
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage> TensorCollection<E, D> for Tensor<S, E, D> {
-    fn iter_tensors<V: ModuleWalker<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+    fn iter_tensors<V: TensorVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_tensor(
             |s| s,
             |s| s,
@@ -85,7 +85,7 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> TensorCollection<E, D> for Tensor<S, 
     }
 }
 
-pub trait ModuleWalker<T, E: Dtype, D: DeviceStorage>: Sized {
+pub trait TensorVisitor<T, E: Dtype, D: DeviceStorage>: Sized {
     type Err;
     fn visit_module<Field, GetRef, GetMut>(
         &mut self,
@@ -115,7 +115,7 @@ pub(crate) struct RecursiveWalker<'a, M, F> {
     pub(crate) path: &'a mut Vec<String>,
 }
 
-impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorRef<E, D>> ModuleWalker<M, E, D>
+impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorRef<E, D>> TensorVisitor<M, E, D>
     for RecursiveWalker<'a, &'a M, F>
 {
     type Err = F::Err;
@@ -157,7 +157,7 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorRef<E, D>> ModuleWalker<M,
     }
 }
 
-impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMut<E, D>> ModuleWalker<M, E, D>
+impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMut<E, D>> TensorVisitor<M, E, D>
     for RecursiveWalker<'a, &'a mut M, F>
 {
     type Err = F::Err;
@@ -199,7 +199,7 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMut<E, D>> ModuleWalker<M,
     }
 }
 
-impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMutRef<E, D>> ModuleWalker<M, E, D>
+impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMutRef<E, D>> TensorVisitor<M, E, D>
     for RecursiveWalker<'a, (&'a mut M, &'a M), F>
 {
     type Err = F::Err;
