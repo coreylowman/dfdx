@@ -64,7 +64,7 @@ where
             |s| &s.weight,
             |s| &mut s.weight,
             "weight",
-            TensorOptions::requires_grad(|t| {
+            TensorOptions::reset_with(|t| {
                 let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
                 t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
             }),
@@ -73,7 +73,7 @@ where
             |s| &s.bias,
             |s| &mut s.bias,
             "bias",
-            TensorOptions::requires_grad(|t| {
+            TensorOptions::reset_with(|t| {
                 let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
                 t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
             }),

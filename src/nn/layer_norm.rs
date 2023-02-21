@@ -61,9 +61,14 @@ impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNor
             |s| &s.gamma,
             |s| &mut s.gamma,
             "gamma",
-            TensorOptions::ones(),
+            TensorOptions::reset_to_ones(),
         )?;
-        visitor.visit_tensor(|s| &s.beta, |s| &mut s.beta, "beta", TensorOptions::zeros())
+        visitor.visit_tensor(
+            |s| &s.beta,
+            |s| &mut s.beta,
+            "beta",
+            TensorOptions::reset_to_zeros(),
+        )
     }
 }
 

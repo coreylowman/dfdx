@@ -75,7 +75,7 @@ impl<const C: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Sample
             |s| &s.weight,
             |s| &mut s.weight,
             "weight",
-            TensorOptions::requires_grad(|t| {
+            TensorOptions::reset_with(|t| {
                 let b: E = E::ONE / E::from_usize(C).unwrap().sqrt();
                 t.try_fill_with_distr(Uniform::new(-b, b))
             }),

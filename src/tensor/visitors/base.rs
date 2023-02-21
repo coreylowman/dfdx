@@ -13,7 +13,7 @@ pub struct TensorOptions<S: Shape, E: Dtype, D: DeviceStorage> {
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage> TensorOptions<S, E, D> {
-    pub fn zeros() -> Self
+    pub fn reset_to_zeros() -> Self
     where
         D: ZeroFillStorage<E>,
     {
@@ -22,7 +22,7 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> TensorOptions<S, E, D> {
             reset: |t| t.try_fill_with_zeros(),
         }
     }
-    pub fn ones() -> Self
+    pub fn reset_to_ones() -> Self
     where
         D: OneFillStorage<E>,
     {
@@ -31,13 +31,13 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> TensorOptions<S, E, D> {
             reset: |t| t.try_fill_with_ones(),
         }
     }
-    pub fn requires_grad(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self {
+    pub fn reset_with(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self {
         TensorOptions {
             update: true,
             reset,
         }
     }
-    pub fn no_grad(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self {
+    pub fn detached(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self {
         TensorOptions {
             update: false,
             reset,

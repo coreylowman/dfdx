@@ -189,20 +189,25 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNor
             |s| &s.scale,
             |s| &mut s.scale,
             "scale",
-            TensorOptions::ones(),
+            TensorOptions::reset_to_ones(),
         )?;
-        visitor.visit_tensor(|s| &s.bias, |s| &mut s.bias, "bias", TensorOptions::zeros())?;
+        visitor.visit_tensor(
+            |s| &s.bias,
+            |s| &mut s.bias,
+            "bias",
+            TensorOptions::reset_to_zeros(),
+        )?;
         visitor.visit_tensor(
             |s| &s.running_mean,
             |s| &mut s.running_mean,
             "running_mean",
-            TensorOptions::no_grad(|t| t.try_fill_with_zeros()),
+            TensorOptions::detached(|t| t.try_fill_with_zeros()),
         )?;
         visitor.visit_tensor(
             |s| &s.running_var,
             |s| &mut s.running_var,
             "running_var",
-            TensorOptions::no_grad(|t| t.try_fill_with_ones()),
+            TensorOptions::detached(|t| t.try_fill_with_ones()),
         )
     }
 }
