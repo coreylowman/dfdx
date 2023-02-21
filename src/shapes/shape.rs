@@ -75,10 +75,12 @@ pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync + Eq + Par
 }
 
 /// Represents a single dimension where all
-/// instances are guarunteed to be the same size at compile time.
+/// instances are guaranteed to be the same size at compile time.
 pub trait ConstDim: Default + Dim {}
 
-impl Dim for usize {
+/// Represents a [Dim] with size known at runtime
+pub type Dyn = usize;
+impl Dim for Dyn {
     #[inline(always)]
     fn size(&self) -> usize {
         *self
@@ -108,6 +110,28 @@ impl<const M: usize> Dim for Const<M> {
 }
 
 impl<const M: usize> ConstDim for Const<M> {}
+
+impl<const N: usize> core::ops::Add<Const<N>> for Dyn {
+    type Output = Dyn;
+    fn add(self, rhs: Const<N>) -> Self::Output {
+        self.size() + rhs.size()
+    }
+}
+impl<const N: usize> core::ops::Add<Dyn> for Const<N> {
+    type Output = Dyn;
+    fn add(self, rhs: Dyn) -> Self::Output {
+        self.size() + rhs.size()
+    }
+}
+impl<const N: usize, const M: usize> core::ops::Add<Const<N>> for Const<M>
+where
+    Const<{ N + M }>: Sized,
+{
+    type Output = Const<{ N + M }>;
+    fn add(self, rhs: Const<N>) -> Self::Output {
+        Const
+    }
+}
 
 /// A collection of dimensions ([Dim]) that change how a multi-dimensional
 /// array is interacted with.
