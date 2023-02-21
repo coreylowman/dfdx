@@ -41,7 +41,7 @@ where
         for i in inps.iter() {
             assert_eq!(i.strides, item_strides);
         }
-        let shape: S::Larger = inps[0].shape().add(num);
+        let shape: S::Larger = inps[0].shape().add_dim(num);
 
         // build the new strides
         let mut strides = shape.strides();
