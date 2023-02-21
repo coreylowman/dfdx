@@ -104,8 +104,7 @@ impl<
         const FF_DIM: usize,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensors<E, D>
-    for TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>
+    > VisitTensors<E, D> for TransformerEncoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>
 {
     #[rustfmt::skip]
     fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(

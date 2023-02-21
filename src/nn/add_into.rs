@@ -26,11 +26,8 @@ use super::{
 #[derive(Debug, Default, Clone)]
 pub struct AddInto<T>(pub T);
 
-impl<
-        T: VisitTensors<E, D> + std::fmt::Debug,
-        E: Dtype,
-        D: DeviceStorage,
-    > VisitTensors<E, D> for AddInto<T>
+impl<T: VisitTensors<E, D> + std::fmt::Debug, E: Dtype, D: DeviceStorage> VisitTensors<E, D>
+    for AddInto<T>
 {
     fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,

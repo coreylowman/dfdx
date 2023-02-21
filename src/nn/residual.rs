@@ -26,11 +26,8 @@ use std::ops::Add;
 #[derive(Debug, Clone, Default)]
 pub struct Residual<F>(pub F);
 
-impl<
-        F: VisitTensors<E, D> + std::fmt::Debug,
-        E: Dtype,
-        D: DeviceStorage,
-    > VisitTensors<E, D> for Residual<F>
+impl<F: VisitTensors<E, D> + std::fmt::Debug, E: Dtype, D: DeviceStorage> VisitTensors<E, D>
+    for Residual<F>
 {
     fn visit_groups<const N: usize, const M: usize, Func: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, Func>,

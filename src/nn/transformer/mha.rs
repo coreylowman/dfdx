@@ -69,8 +69,7 @@ impl<
         const V_DIM: usize,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensors<E, D>
-    for MultiHeadAttention<EMBED_DIM, NUM_HEADS, K_DIM, V_DIM, E, D>
+    > VisitTensors<E, D> for MultiHeadAttention<EMBED_DIM, NUM_HEADS, K_DIM, V_DIM, E, D>
 {
     #[rustfmt::skip]
     fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(

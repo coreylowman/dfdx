@@ -3,7 +3,7 @@ use std::string::String;
 
 use crate::{
     prelude::Tensor,
-    shapes::{Dtype, Shape, HasShape},
+    shapes::{Dtype, HasShape, Shape},
     tensor_ops::Device,
 };
 
@@ -11,7 +11,7 @@ use crate::{
 pub use crate::tensor::OnCuda;
 pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
 
-use super::visit_tensors::{VisitTensors, TensorFunction, TensorFunctionOption, TensorVisitor};
+use super::visit_tensors::{TensorFunction, TensorFunctionOption, TensorVisitor, VisitTensors};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
@@ -162,9 +162,7 @@ impl<E: Dtype, D: DeviceStorage, T: VisitTensors<E, D>> CountParams<E, D> for T 
 /// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]
 pub trait ZeroSizedModule: Default {}
 
-impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule + std::fmt::Debug>
-    VisitTensors<E, D> for T
-{
+impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule + std::fmt::Debug> VisitTensors<E, D> for T {
     fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         _visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {

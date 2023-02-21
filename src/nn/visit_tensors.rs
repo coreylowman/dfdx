@@ -171,9 +171,7 @@ pub trait TensorFunction<const N: usize, const M: usize, E: Dtype, D: DeviceStor
 ///
 /// Implementing this automatically implements [ResetParams], [GradientUpdate], [SaveToNpz],
 /// [LoadFromNpz], and [CountParams].
-pub trait VisitTensors<E: Dtype, D: DeviceStorage>:
-    Sized + Debug
-{
+pub trait VisitTensors<E: Dtype, D: DeviceStorage>: Sized + Debug {
     fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err>;
@@ -209,9 +207,7 @@ pub trait VisitTensors<E: Dtype, D: DeviceStorage>:
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage>
-    VisitTensors<E, D> for Tensor<S, E, D>
-{
+impl<S: Shape, E: Dtype, D: DeviceStorage> VisitTensors<E, D> for Tensor<S, E, D> {
     fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {

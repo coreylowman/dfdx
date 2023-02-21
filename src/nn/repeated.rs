@@ -24,12 +24,8 @@ pub struct Repeated<T, const N: usize> {
     pub modules: std::vec::Vec<T>,
 }
 
-impl<
-        const L: usize,
-        T: VisitTensors<E, D> + std::fmt::Debug,
-        E: Dtype,
-        D: DeviceStorage,
-    > VisitTensors<E, D> for Repeated<T, L>
+impl<const L: usize, T: VisitTensors<E, D> + std::fmt::Debug, E: Dtype, D: DeviceStorage>
+    VisitTensors<E, D> for Repeated<T, L>
 {
     fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,

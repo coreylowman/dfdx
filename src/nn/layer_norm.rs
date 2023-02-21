@@ -45,9 +45,7 @@ pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
     pub epsilon: E,
 }
 
-impl<const L: usize, E: Dtype, D: DeviceStorage>
-    VisitTensors<E, D> for LayerNorm1D<L, E, D>
-{
+impl<const L: usize, E: Dtype, D: DeviceStorage> VisitTensors<E, D> for LayerNorm1D<L, E, D> {
     fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
     ) -> Result<(), F::Err> {

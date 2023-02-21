@@ -75,8 +75,7 @@ impl<
         const NUM_LAYERS: usize,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensors<E, D>
-    for TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_LAYERS, E, D>
+    > VisitTensors<E, D> for TransformerDecoder<MODEL_DIM, NUM_HEADS, FF_DIM, NUM_LAYERS, E, D>
 {
     fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
@@ -177,8 +176,7 @@ impl<
         const FF_DIM: usize,
         E: Dtype,
         D: DeviceStorage,
-    > VisitTensors<E, D>
-    for TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>
+    > VisitTensors<E, D> for TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>
 {
     #[rustfmt::skip]
     fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(

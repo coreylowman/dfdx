@@ -55,12 +55,8 @@ pub struct Linear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> {
     pub bias: Tensor<Rank1<O>, E, D>,
 }
 
-impl<
-        const I: usize,
-        const O: usize,
-        E: Dtype,
-        D: DeviceStorage,
-    > VisitTensors<E, D> for Linear<I, O, E, D>
+impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> VisitTensors<E, D>
+    for Linear<I, O, E, D>
 {
     fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,

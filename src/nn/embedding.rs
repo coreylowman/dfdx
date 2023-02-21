@@ -55,12 +55,8 @@ pub struct Embedding<const VOCAB: usize, const DIM: usize, E: Dtype, D: DeviceSt
     pub weight: Tensor<Rank2<VOCAB, DIM>, E, D>,
 }
 
-impl<
-        const V: usize,
-        const I: usize,
-        E: Dtype,
-        D: DeviceStorage,
-    > VisitTensors<E, D> for Embedding<V, I, E, D>
+impl<const V: usize, const I: usize, E: Dtype, D: DeviceStorage> VisitTensors<E, D>
+    for Embedding<V, I, E, D>
 {
     fn visit_groups<const N: usize, const M: usize, F: TensorFunction<N, M, E, D>>(
         mut visitor: TensorVisitor<N, M, Self, F>,
