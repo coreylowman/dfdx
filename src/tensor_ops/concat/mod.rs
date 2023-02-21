@@ -34,104 +34,85 @@ pub trait TryConcat<E: Dtype>: DeviceStorage {
 
 pub trait ExtendDim<Rhs: Shape>: Shape {
     type Extended: Shape;
-    fn extend(&self, rhs: &Rhs) -> Self::Extended;
+    fn extend_dim(&self, rhs: &Rhs) -> Self::Extended;
 }
 
-macro_rules! extend {
-    ($($dn:ident),*) => {
-        impl<$($dn: Dim),*> ExtendDim<(usize, $($dn),*)> for (usize, $($dn),*) {
-            type Extended = (usize, $($dn),*);
+#[rustfmt::skip]
+impl<A: Dim, B: Dim>
+    ExtendDim<(A,)> for (B,)
+where
+    A: std::ops::Add<B>,
+    <A as std::ops::Add<B>>::Output: Dim,
+{
+    type Extended = (<A as std::ops::Add<B>>::Output,);
 
-            fn extend(&self, rhs: &(usize, $($dn),*)) -> Self::Extended {
-                let mut shape = *self.shape();
-                shape.0 += rhs.0.size();
-                shape
-            }
-        }
-    };
+    fn extend_dim(&self, rhs: &(A,)) -> Self::Extended {
+        (rhs.0 + self.0,)
+    }
 }
-extend!();
-extend!(D2);
-extend!(D2, D3);
-extend!(D2, D3, D4);
-extend!(D2, D3, D4, D5);
-extend!(D2, D3, D4, D5, D6);
+#[rustfmt::skip]
+impl<A: Dim, B: Dim, D2: Dim>
+    ExtendDim<(A, D2)> for (B, D2)
+where
+    A: std::ops::Add<B>,
+    <A as std::ops::Add<B>>::Output: Dim,
+{
+    type Extended = (<A as std::ops::Add<B>>::Output, D2);
 
-#[rustfmt::skip]
-#[cfg(feature = "nightly")]
-impl<const D: usize, const D1: usize>
-    ExtendDim<(Const<D1>,)> for (Const<D>,)
-where
-    Const<{ D + D1 }>: Sized,
-{
-    type Extended = (Const<{ D + D1 }>,);
-    fn extend(&self, _rhs: &(Const<D1>,)) -> Self::Extended {
-        (Const,)
+    fn extend_dim(&self, rhs: &(A, D2)) -> Self::Extended {
+        (rhs.0 + self.0, self.1)
     }
 }
 #[rustfmt::skip]
-#[cfg(feature = "nightly")]
-impl<const D: usize, const D1: usize, D2: Dim>
-    ExtendDim<(Const<D1>, D2)> for (Const<D>, D2)
+impl<A: Dim, B: Dim, D2: Dim, D3: Dim>
+    ExtendDim<(A, D2, D3)> for (B, D2, D3)
 where
-    Const<{ D + D1 }>: Sized,
+    A: std::ops::Add<B>,
+    <A as std::ops::Add<B>>::Output: Dim,
 {
-    type Extended = (Const<{ D + D1 }>, D2);
-    fn extend(&self, _rhs: &(Const<D1>, D2)) -> Self::Extended {
-        let s = self.shape();
-        (Const, s.1)
+    type Extended = (<A as std::ops::Add<B>>::Output, D2, D3);
+
+    fn extend_dim(&self, rhs: &(A, D2, D3)) -> Self::Extended {
+        (rhs.0 + self.0, self.1, self.2)
     }
 }
 #[rustfmt::skip]
-#[cfg(feature = "nightly")]
-impl<const D: usize, const D1: usize, D2: Dim, D3: Dim>
-    ExtendDim<(Const<D1>, D2, D3)> for (Const<D>, D2, D3)
+impl<A: Dim, B: Dim, D2: Dim, D3: Dim, D4: Dim>
+    ExtendDim<(A, D2, D3, D4)> for (B, D2, D3, D4)
 where
-    Const<{ D + D1 }>: Sized,
+    A: std::ops::Add<B>,
+    <A as std::ops::Add<B>>::Output: Dim,
 {
-    type Extended = (Const<{ D + D1 }>, D2, D3);
-    fn extend(&self, _rhs: &(Const<D1>, D2, D3)) -> Self::Extended {
-        let s = self.shape();
-        (Const, s.1, s.2)
+    type Extended = (<A as std::ops::Add<B>>::Output, D2, D3, D4);
+
+    fn extend_dim(&self, rhs: &(A, D2, D3, D4)) -> Self::Extended {
+        (rhs.0 + self.0, self.1, self.2, self.3)
     }
 }
 #[rustfmt::skip]
-#[cfg(feature = "nightly")]
-impl<const D: usize, const D1: usize, D2: Dim, D3: Dim, D4: Dim>
-    ExtendDim<(Const<D1>, D2, D3, D4)> for (Const<D>, D2, D3, D4)
+impl<A: Dim, B: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim>
+    ExtendDim<(A, D2, D3, D4, D5)> for (B, D2, D3, D4, D5)
 where
-    Const<{ D + D1 }>: Sized,
+    A: std::ops::Add<B>,
+    <A as std::ops::Add<B>>::Output: Dim,
 {
-    type Extended = (Const<{ D + D1 }>, D2, D3, D4);
-    fn extend(&self, _rhs: &(Const<D1>, D2, D3, D4)) -> Self::Extended {
-        let s = self.shape();
-        (Const, s.1, s.2, s.3)
+    type Extended = (<A as std::ops::Add<B>>::Output, D2, D3, D4, D5);
+
+    fn extend_dim(&self, rhs: &(A, D2, D3, D4, D5)) -> Self::Extended {
+        (rhs.0 + self.0, self.1, self.2, self.3, self.4)
     }
 }
 #[rustfmt::skip]
-#[cfg(feature = "nightly")]
-impl<const D: usize, const D1: usize, D2: Dim, D3: Dim, D4: Dim, D5: Dim>
-    ExtendDim<(Const<D1>, D2, D3, D4, D5)> for (Const<D>, D2, D3, D4, D5)
+impl<A: Dim, B: Dim, D2: Dim, D3: Dim, D4: Dim, D5: Dim, D6: Dim>
+    ExtendDim<(A, D2, D3, D4, D5, D6)> for (B, D2, D3, D4, D5, D6)
 where
-    Const<{ D + D1 }>: Sized,
+    A: std::ops::Add<B>,
+    <A as std::ops::Add<B>>::Output: Dim,
 {
-    type Extended = (Const<{ D + D1 }>, D2, D3, D4, D5);
-    fn extend(&self, _rhs: &(Const<D1>, D2, D3, D4, D5)) -> Self::Extended {
-        let s = self.shape();
-        (Const, s.1, s.2, s.3, s.4)
-    }
-}
-#[rustfmt::skip]
-#[cfg(feature = "nightly")]
-impl<const D: usize, const D1: usize, D2: Dim, D3: Dim, D4: Dim, D5: Dim, D6: Dim>
-    ExtendDim<(Const<D1>, D2, D3, D4, D5, D6)> for (Const<D>, D2, D3, D4, D5, D6)
-where
-    Const<{ D + D1 }>: Sized,
-{
-    type Extended = (Const<{ D + D1 }>, D2, D3, D4, D5, D6);
-    fn extend(&self, _rhs: &(Const<D1>, D2, D3, D4, D5, D6)) -> Self::Extended {
-        let s = self.shape();
-        (Const, s.1, s.2, s.3, s.4, s.5)
+    type Extended = (<A as std::ops::Add<B>>::Output, D2, D3, D4, D5, D6);
+
+    fn extend_dim(&self, rhs: &(A, D2, D3, D4, D5, D6)) -> Self::Extended {
+        (rhs.0 + self.0, self.1, self.2, self.3, self.4, self.5)
     }
 }
 
@@ -147,7 +128,7 @@ mod tests {
         let a: Tensor<(usize, Const<2>), TestDtype, _> = dev.zeros_like(&(3, Const));
         let b: Tensor<(usize, Const<2>), TestDtype, _> = dev.zeros_like(&(5, Const));
 
-        a.shape().extend(b.shape());
+        a.shape().extend_dim(b.shape());
         todo!()
     }
 }
