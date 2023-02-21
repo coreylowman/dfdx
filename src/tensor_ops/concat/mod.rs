@@ -60,6 +60,8 @@ where
     type Extended = (<A as std::ops::Add<B>>::Output, D2);
 
     fn extend_dim(&self, rhs: &(A, D2)) -> Self::Extended {
+        assert_eq!(self.1, rhs.1);
+
         (rhs.0 + self.0, self.1)
     }
 }
@@ -73,6 +75,9 @@ where
     type Extended = (<A as std::ops::Add<B>>::Output, D2, D3);
 
     fn extend_dim(&self, rhs: &(A, D2, D3)) -> Self::Extended {
+        assert_eq!(self.1, rhs.1);
+        assert_eq!(self.2, rhs.2);
+        
         (rhs.0 + self.0, self.1, self.2)
     }
 }
@@ -86,6 +91,10 @@ where
     type Extended = (<A as std::ops::Add<B>>::Output, D2, D3, D4);
 
     fn extend_dim(&self, rhs: &(A, D2, D3, D4)) -> Self::Extended {
+        assert_eq!(self.1, rhs.1);
+        assert_eq!(self.2, rhs.2);
+        assert_eq!(self.3, rhs.3);
+
         (rhs.0 + self.0, self.1, self.2, self.3)
     }
 }
@@ -99,6 +108,11 @@ where
     type Extended = (<A as std::ops::Add<B>>::Output, D2, D3, D4, D5);
 
     fn extend_dim(&self, rhs: &(A, D2, D3, D4, D5)) -> Self::Extended {
+        assert_eq!(self.1, rhs.1);
+        assert_eq!(self.2, rhs.2);
+        assert_eq!(self.3, rhs.3);
+        assert_eq!(self.4, rhs.4);
+
         (rhs.0 + self.0, self.1, self.2, self.3, self.4)
     }
 }
@@ -112,6 +126,11 @@ where
     type Extended = (<A as std::ops::Add<B>>::Output, D2, D3, D4, D5, D6);
 
     fn extend_dim(&self, rhs: &(A, D2, D3, D4, D5, D6)) -> Self::Extended {
+        assert_eq!(self.1, rhs.1);
+        assert_eq!(self.2, rhs.2);
+        assert_eq!(self.3, rhs.3);
+        assert_eq!(self.4, rhs.4);
+
         (rhs.0 + self.0, self.1, self.2, self.3, self.4, self.5)
     }
 }
