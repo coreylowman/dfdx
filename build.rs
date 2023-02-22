@@ -37,6 +37,7 @@ mod cuda {
         include_directories.sort();
         include_directories.dedup();
 
+        #[allow(unused)]
         let include_options: Vec<String> = include_directories
             .into_iter()
             .map(|s| "-I".to_string() + &s.into_os_string().into_string().unwrap())
