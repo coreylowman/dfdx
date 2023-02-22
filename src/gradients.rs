@@ -14,13 +14,6 @@ use crate::unique_id::{HasUniqueId, UniqueId};
 /// 2. Remove entries
 /// 3. Access references to arrays
 /// 4. Access mutable references to arrays
-///
-/// This structure is similar to a HashMap, where all the methods require a key
-/// implementing [UniqueId], [AllocGrad].
-///
-/// Under the hood, it actually is a HashMap, and stores values as Box<dyn Any>. The
-/// important part of key's implementing [HasShape], and [HasDtype] is that the associated type
-/// of that trait is used to downcast the box to the expected value.
 #[derive(Debug, Default)]
 pub struct Gradients {
     gradient_by_id: HashMap<UniqueId, Box<dyn std::any::Any>>,
