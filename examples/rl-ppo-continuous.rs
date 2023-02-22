@@ -24,7 +24,7 @@ type Network<const IN: usize, const INNER: usize, const OUT: usize> = (
     SplitInto<(
         (Linear<INNER, OUT, f32, Cpu>, Tanh), // 1.0.0: mu
         (Linear<INNER, OUT, f32, Cpu>, ReLU), // 1.0.1: std // TODO: should this be SoftPlus?
-        Linear<INNER, 1, f32, Cpu>,           // 1.0.2: value
+        Linear<INNER, OUT, f32, Cpu>,         // 1.0.2: value
     )>,
 );
 
