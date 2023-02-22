@@ -1,4 +1,4 @@
-use super::visitors::{RecursiveWalker, TensorCollection, TensorOptions, VisitTensors};
+use super::visitors::{RecursiveWalker, TensorCollection, TensorOptions, TensorRef, VisitTensors};
 
 use crate::{shapes::*, tensor::*};
 
@@ -6,7 +6,7 @@ use std::{string::String, vec::Vec};
 
 struct Counter(usize);
 impl<E: Dtype, D: DeviceStorage> VisitTensors<E, D> for Counter {
-    type Container = &'static ();
+    type Container = TensorRef;
     type Err = D::Err;
 
     fn visit<S: Shape>(

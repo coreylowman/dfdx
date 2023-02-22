@@ -117,7 +117,6 @@ mod embedding;
 mod flatten;
 mod generalized_residual;
 mod impl_module_for_tuples;
-mod impl_tensor_container;
 mod layer_norm;
 mod linear;
 mod module;

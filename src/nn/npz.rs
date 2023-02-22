@@ -115,7 +115,7 @@ impl<E: Dtype + NumpyDtype, D: CopySlice<E>, T: TensorCollection<E, D>> LoadFrom
 impl<W: Write + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> VisitTensors<E, D>
     for zip::ZipWriter<W>
 {
-    type Container = &'static ();
+    type Container = TensorRef;
     type Err = ZipError;
 
     fn visit<S: Shape>(
@@ -131,7 +131,7 @@ impl<W: Write + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> VisitTensors<E, D>
 impl<R: Read + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> VisitTensors<E, D>
     for zip::ZipArchive<R>
 {
-    type Container = &'static mut ();
+    type Container = TensorMut;
     type Err = NpzError;
 
     fn visit<S: Shape>(

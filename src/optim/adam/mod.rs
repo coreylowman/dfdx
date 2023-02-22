@@ -113,7 +113,7 @@ pub(super) trait AdamKernel<E: Dtype>: DeviceStorage {
 }
 
 impl<M, D: AdamKernel<E>, E: Dtype> VisitTensors<E, D> for Adam<M, E> {
-    type Container = &'static mut ();
+    type Container = TensorMut;
     type Err = D::Err;
 
     fn visit<S: Shape>(

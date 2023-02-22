@@ -148,7 +148,7 @@ pub(super) trait SgdKernel<E: Dtype>: DeviceStorage {
 }
 
 impl<E: Dtype, D: SgdKernel<E>, M> VisitTensors<E, D> for Sgd<M, E> {
-    type Container = &'static mut ();
+    type Container = TensorMut;
     type Err = D::Err;
 
     fn visit<S: Shape>(
