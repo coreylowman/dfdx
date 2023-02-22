@@ -58,15 +58,15 @@ impl<const M: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for LayerNorm1D<M
 impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNorm1D<M, E, D> {
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_tensor(
+            "gamma",
             |s| &s.gamma,
             |s| &mut s.gamma,
-            "gamma",
             TensorOptions::reset_to_ones(),
         )?;
         visitor.visit_tensor(
+            "beta",
             |s| &s.beta,
             |s| &mut s.beta,
-            "beta",
             TensorOptions::reset_to_zeros(),
         )
     }

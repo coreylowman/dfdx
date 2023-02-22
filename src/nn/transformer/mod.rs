@@ -99,8 +99,8 @@ where
     D: Device<E>,
 {
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module(|s| &s.encoder, |s| &mut s.encoder, "encoder")?;
-        visitor.visit_module(|s| &s.decoder, |s| &mut s.decoder, "decoder")
+        visitor.visit_module("encoder", |s| &s.encoder, |s| &mut s.encoder)?;
+        visitor.visit_module("decoder", |s| &s.decoder, |s| &mut s.decoder)
     }
 }
 

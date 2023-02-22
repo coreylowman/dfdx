@@ -46,8 +46,8 @@ impl<E: Dtype, D: DeviceStorage, F: TensorCollection<E, D>, R: TensorCollection<
     TensorCollection<E, D> for GeneralizedResidual<F, R>
 {
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module(|s| &s.f, |s| &mut s.f, "f")?;
-        visitor.visit_module(|s| &s.r, |s| &mut s.r, "r")
+        visitor.visit_module("f", |s| &s.f, |s| &mut s.f)?;
+        visitor.visit_module("r", |s| &s.r, |s| &mut s.r)
     }
 }
 

@@ -45,9 +45,9 @@ impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>, const N: usize> Tens
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         for i in 0..N {
             visitor.visit_module(
+                &std::format!("{i}"),
                 |s| &s.modules[i],
                 |s| &mut s.modules[i],
-                &std::format!("{i}"),
             )?;
         }
         Ok(())

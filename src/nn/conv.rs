@@ -61,18 +61,18 @@ where
 {
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_tensor(
+            "weight",
             |s| &s.weight,
             |s| &mut s.weight,
-            "weight",
             TensorOptions::reset_with(|t| {
                 let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
                 t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
             }),
         )?;
         visitor.visit_tensor(
+            "bias",
             |s| &s.bias,
             |s| &mut s.bias,
-            "bias",
             TensorOptions::reset_with(|t| {
                 let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
                 t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))

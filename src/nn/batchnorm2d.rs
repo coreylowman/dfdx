@@ -186,27 +186,27 @@ impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for BatchNorm2D<C
 impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNorm2D<C, E, D> {
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_tensor(
+            "scale",
             |s| &s.scale,
             |s| &mut s.scale,
-            "scale",
             TensorOptions::reset_to_ones(),
         )?;
         visitor.visit_tensor(
+            "bias",
             |s| &s.bias,
             |s| &mut s.bias,
-            "bias",
             TensorOptions::reset_to_zeros(),
         )?;
         visitor.visit_tensor(
+            "running_mean",
             |s| &s.running_mean,
             |s| &mut s.running_mean,
-            "running_mean",
             TensorOptions::detached(|t| t.try_fill_with_zeros()),
         )?;
         visitor.visit_tensor(
+            "running_var",
             |s| &s.running_var,
             |s| &mut s.running_var,
-            "running_var",
             TensorOptions::detached(|t| t.try_fill_with_ones()),
         )
     }

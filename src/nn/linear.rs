@@ -73,18 +73,18 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Sample
 {
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_tensor(
+            "weight",
             |s| &s.weight,
             |s| &mut s.weight,
-            "weight",
             TensorOptions::reset_with(|t| {
                 let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
                 t.try_fill_with_distr(Uniform::new(-b, b))
             }),
         )?;
         visitor.visit_tensor(
+            "bias",
             |s| &s.bias,
             |s| &mut s.bias,
-            "bias",
             TensorOptions::reset_with(|t| {
                 let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
                 t.try_fill_with_distr(Uniform::new(-b, b))

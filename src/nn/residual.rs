@@ -35,7 +35,7 @@ impl<D: DeviceStorage, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Res
 
 impl<E: Dtype, D: DeviceStorage, F: TensorCollection<E, D>> TensorCollection<E, D> for Residual<F> {
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module(|s| &s.0, |s| &mut s.0, "0")
+        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
     }
 }
 

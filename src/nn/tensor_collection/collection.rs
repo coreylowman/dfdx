@@ -4,7 +4,8 @@ use crate::{
 };
 
 /// A collection of named tensors. Implementing this trait will enable anything
-/// that operates
+/// that operates on tensors, like resetting, EMA, counting number of params,
+/// gradient updates, etc.
 pub trait TensorCollection<E: Dtype, D: DeviceStorage>: Sized {
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err>;
 }
@@ -16,9 +17,9 @@ pub trait ModuleVisitor<T, E: Dtype, D: DeviceStorage>: Sized {
     /// Visit a [TensorCollection]
     fn visit_module<Field, GetRef, GetMut>(
         &mut self,
+        name: &str,
         get_refs: GetRef,
         get_muts: GetMut,
-        name: &str,
     ) -> Result<(), Self::Err>
     where
         GetRef: FnMut(&T) -> &Field,
@@ -28,9 +29,9 @@ pub trait ModuleVisitor<T, E: Dtype, D: DeviceStorage>: Sized {
     /// Visits an actual named [Tensor]
     fn visit_tensor<S: Shape, GetRef, GetMut>(
         &mut self,
+        name: &str,
         get_refs: GetRef,
         get_muts: GetMut,
-        name: &str,
         opts: TensorOptions<S, E, D>,
     ) -> Result<(), Self::Err>
     where
@@ -41,9 +42,9 @@ pub trait ModuleVisitor<T, E: Dtype, D: DeviceStorage>: Sized {
 impl<S: Shape, E: Dtype, D: DeviceStorage> TensorCollection<E, D> for Tensor<S, E, D> {
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_tensor(
-            |s| s,
-            |s| s,
             "",
+            |s| s,
+            |s| s,
             TensorOptions {
                 do_gradient_update: true,
                 reset: |_| Ok(()),

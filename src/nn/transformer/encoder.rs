@@ -119,10 +119,10 @@ where
     E: Dtype + Float + SampleUniform,
 {
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module(|s| &s.self_attn, |s| &mut s.self_attn, "self_attn")?;
-        visitor.visit_module(|s| &s.norm1, |s| &mut s.norm1, "norm1")?;
-        visitor.visit_module(|s| &s.ff, |s| &mut s.ff, "ff")?;
-        visitor.visit_module(|s| &s.norm2, |s| &mut s.norm2, "norm2")
+        visitor.visit_module("self_attn", |s| &s.self_attn, |s| &mut s.self_attn)?;
+        visitor.visit_module("norm1", |s| &s.norm1, |s| &mut s.norm1)?;
+        visitor.visit_module("ff", |s| &s.ff, |s| &mut s.ff)?;
+        visitor.visit_module("norm2", |s| &s.norm2, |s| &mut s.norm2)
     }
 }
 

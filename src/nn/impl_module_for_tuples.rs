@@ -6,7 +6,7 @@ macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
         impl<E: Dtype, D: DeviceStorage, $($name: TensorCollection<E, D>),+> TensorCollection<E, D> for ($($name,)+) {
             fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-                $(visitor.visit_module(|s| &s.$idx, |s| &mut s.$idx, &std::format!("{}", $idx))?;)+
+                $(visitor.visit_module(&std::format!("{}", $idx), |s| &s.$idx, |s| &mut s.$idx)?;)+
                 Ok(())
             }
         }

@@ -60,9 +60,9 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: TensorVisitor<E, D>> ModuleVisitor<M,
 
     fn visit_module<Field, GetRef, GetMut>(
         &mut self,
+        name: &str,
         mut get_refs: GetRef,
         mut get_muts: GetMut,
-        name: &str,
     ) -> Result<(), Self::Err>
     where
         GetRef: FnMut(&M) -> &Field,
@@ -83,9 +83,9 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: TensorVisitor<E, D>> ModuleVisitor<M,
 
     fn visit_tensor<S: Shape, GetRef, GetMut>(
         &mut self,
+        name: &str,
         mut get_refs: GetRef,
         mut get_muts: GetMut,
-        name: &str,
         opts: TensorOptions<S, E, D>,
     ) -> Result<(), Self::Err>
     where

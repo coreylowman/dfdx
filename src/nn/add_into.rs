@@ -35,7 +35,7 @@ impl<T: BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildModule<D, E> for Add
 
 impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>> TensorCollection<E, D> for AddInto<T> {
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module(|s| &s.0, |s| &mut s.0, "0")
+        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
     }
 }
 
