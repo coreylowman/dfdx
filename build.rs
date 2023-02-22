@@ -44,7 +44,7 @@ mod cuda {
             .collect::<Vec<_>>();
 
         #[cfg(feature = "ci-check")]
-        for mut kernel_path in kernel_paths.drain(..) {
+        for mut kernel_path in kernel_paths.into_iter() {
             kernel_path.set_extension("ptx");
 
             let mut ptx_path: std::path::PathBuf = out_dir.clone().into();
