@@ -45,34 +45,33 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> TensorOptions<S, E, D> {
     }
 }
 
-pub trait VisitTensorRef<E: Dtype, D: DeviceStorage> {
+pub trait VisitTensors<E: Dtype, D: DeviceStorage> {
+    type Container: TensorContainer;
     type Err;
+
     fn visit<S: Shape>(
         &mut self,
         full_path: String,
         opts: TensorOptions<S, E, D>,
-        t: &Tensor<S, E, D>,
+        t: <Self::Container as TensorContainer>::WithModule<'_, Tensor<S, E, D>>,
     ) -> Result<(), Self::Err>;
 }
 
-pub trait VisitTensorMut<E: Dtype, D: DeviceStorage> {
-    type Err;
-    fn visit<S: Shape>(
-        &mut self,
-        full_path: String,
-        opts: TensorOptions<S, E, D>,
-        t: &mut Tensor<S, E, D>,
-    ) -> Result<(), Self::Err>;
-}
+type ContainerWithModule<'a, C, M> = <C as TensorContainer>::WithModule<'a, M>;
 
-pub trait VisitTensorMutRef<E: Dtype, D: DeviceStorage> {
-    type Err;
-    fn visit<S: Shape>(
-        &mut self,
-        full_path: String,
-        opts: TensorOptions<S, E, D>,
-        ts: (&mut Tensor<S, E, D>, &Tensor<S, E, D>),
-    ) -> Result<(), Self::Err>;
+pub trait TensorContainer: 'static {
+    type WithModule<'a, Mod: 'a>
+    where
+        Self: 'a;
+
+    fn get_field<'a, Mod, Field, GetRef, GetMut>(
+        module: &'a mut Self::WithModule<'_, Mod>,
+        get_ref: &mut GetRef,
+        get_mut: &mut GetMut,
+    ) -> Self::WithModule<'a, Field>
+    where
+        GetRef: FnMut(&Mod) -> &Field,
+        GetMut: FnMut(&mut Mod) -> &mut Field;
 }
 
 pub trait TensorCollection<E: Dtype, D: DeviceStorage>: Sized {
@@ -124,14 +123,15 @@ pub(crate) struct RecursiveWalker<'a, M, F> {
     pub(crate) path: &'a mut Vec<String>,
 }
 
-impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorRef<E, D>> TensorVisitor<M, E, D>
-    for RecursiveWalker<'a, &'a M, F>
+impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensors<E, D>> TensorVisitor<M, E, D>
+    for RecursiveWalker<'a, ContainerWithModule<'a, F::Container, M>, F>
 {
     type Err = F::Err;
+
     fn visit_module<Field, GetRef, GetMut>(
         &mut self,
         mut get_refs: GetRef,
-        _: GetMut,
+        mut get_muts: GetMut,
         name: &str,
     ) -> Result<(), Self::Err>
     where
@@ -141,114 +141,33 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorRef<E, D>> TensorVisitor<M
     {
         self.path.push(name.into());
         let mut walker = RecursiveWalker {
-            m: get_refs(self.m),
+            m: F::Container::get_field(&mut self.m, &mut get_refs, &mut get_muts),
             f: self.f,
             path: self.path,
         };
         Field::iter_tensors(&mut walker)?;
+        std::mem::drop(walker);
         self.path.pop();
         Ok(())
     }
-    fn visit_tensor<S: Shape, GetRef, GetMut>(
-        &mut self,
-        mut get_refs: GetRef,
-        _: GetMut,
-        name: &str,
-        opts: TensorOptions<S, E, D>,
-    ) -> Result<(), F::Err>
-    where
-        GetRef: FnMut(&M) -> &Tensor<S, E, D>,
-        GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,
-    {
-        self.path.push(name.into());
-        self.f.visit(self.path.join("."), opts, get_refs(self.m))?;
-        self.path.pop();
-        Ok(())
-    }
-}
 
-impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMut<E, D>> TensorVisitor<M, E, D>
-    for RecursiveWalker<'a, &'a mut M, F>
-{
-    type Err = F::Err;
-    fn visit_module<Field, GetRef, GetMut>(
-        &mut self,
-        _: GetRef,
-        mut get_muts: GetMut,
-        name: &str,
-    ) -> Result<(), F::Err>
-    where
-        GetRef: FnMut(&M) -> &Field,
-        GetMut: FnMut(&mut M) -> &mut Field,
-        Field: TensorCollection<E, D>,
-    {
-        self.path.push(name.into());
-        let mut walker = RecursiveWalker {
-            m: get_muts(self.m),
-            f: self.f,
-            path: self.path,
-        };
-        Field::iter_tensors(&mut walker)?;
-        self.path.pop();
-        Ok(())
-    }
-    fn visit_tensor<S: Shape, GetRef, GetMut>(
-        &mut self,
-        _: GetRef,
-        mut get_muts: GetMut,
-        name: &str,
-        opts: TensorOptions<S, E, D>,
-    ) -> Result<(), F::Err>
-    where
-        GetRef: FnMut(&M) -> &Tensor<S, E, D>,
-        GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,
-    {
-        self.path.push(name.into());
-        self.f.visit(self.path.join("."), opts, get_muts(self.m))?;
-        self.path.pop();
-        Ok(())
-    }
-}
-
-impl<'a, M, E: Dtype, D: DeviceStorage, F: VisitTensorMutRef<E, D>> TensorVisitor<M, E, D>
-    for RecursiveWalker<'a, (&'a mut M, &'a M), F>
-{
-    type Err = F::Err;
-    fn visit_module<Field, GetRef, GetMut>(
-        &mut self,
-        mut get_refs: GetRef,
-        mut get_muts: GetMut,
-        name: &str,
-    ) -> Result<(), F::Err>
-    where
-        GetRef: FnMut(&M) -> &Field,
-        GetMut: FnMut(&mut M) -> &mut Field,
-        Field: TensorCollection<E, D>,
-    {
-        self.path.push(name.into());
-        let mut walker = RecursiveWalker {
-            m: (get_muts(self.m.0), get_refs(self.m.1)),
-            f: self.f,
-            path: self.path,
-        };
-        Field::iter_tensors(&mut walker)?;
-        self.path.pop();
-        Ok(())
-    }
     fn visit_tensor<S: Shape, GetRef, GetMut>(
         &mut self,
         mut get_refs: GetRef,
         mut get_muts: GetMut,
         name: &str,
         opts: TensorOptions<S, E, D>,
-    ) -> Result<(), F::Err>
+    ) -> Result<(), Self::Err>
     where
         GetRef: FnMut(&M) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,
     {
         self.path.push(name.into());
-        let tensors = (get_muts(self.m.0), get_refs(self.m.1));
-        self.f.visit(self.path.join("."), opts, tensors)?;
+        self.f.visit(
+            self.path.join("."),
+            opts,
+            F::Container::get_field(&mut self.m, &mut get_refs, &mut get_muts),
+        )?;
         self.path.pop();
         Ok(())
     }
