@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use crate::{
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, OneFillStorage, Tensor, ZeroFillStorage},
