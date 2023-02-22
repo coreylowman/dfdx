@@ -8,7 +8,7 @@ use dfdx::{
         BuildModule, Module,
     },
     optim::{Adam, AdamConfig},
-    prelude::{smooth_l1_loss, GradientUpdate, Optimizer, OwnedTape, ParamUpdater, UnusedTensors},
+    prelude::{smooth_l1_loss, tensor_collection::TensorCollection, Optimizer, OwnedTape},
     tensor::{
         AsArray, Cpu, HasErr, SampleTensor, SplitTape, Tensor0D, Tensor1D, Tensor2D, TensorFrom,
     },
@@ -44,23 +44,17 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> nn::BuildModule<Cpu,
     }
 }
 
-// GradientUpdate lets you update a model's parameters using gradients
-impl<const IN: usize, const INNER: usize, const OUT: usize> GradientUpdate<Cpu, f32>
+impl<const IN: usize, const INNER: usize, const OUT: usize> TensorCollection<f32, Cpu>
     for Network<IN, INNER, OUT>
 {
-    fn update<U>(
-        &mut self,
-        updater: &mut U,
-        unused: &mut UnusedTensors,
-    ) -> Result<(), <Cpu as HasErr>::Err>
-    where
-        U: ParamUpdater<Cpu, f32>,
-    {
-        self.l1.update(updater, unused)?;
-        self.mu.update(updater, unused)?;
-        self.std.update(updater, unused)?;
-        self.value.update(updater, unused)?;
-        Ok(())
+    fn iter_tensors<V: dfdx::prelude::tensor_collection::ModuleVisitor<Self, f32, Cpu>>(
+        visitor: &mut V,
+    ) -> Result<(), V::Err> {
+        visitor.visit_module("l1", |n| &n.l1, |n| &mut n.l1)?;
+
+        visitor.visit_module("mu", |n| &n.mu, |n| &mut n.mu)?;
+        visitor.visit_module("std", |n| &n.std, |n| &mut n.std)?;
+        visitor.visit_module("value", |n| &n.value, |n| &mut n.value)
     }
 }
 
@@ -127,7 +121,7 @@ fn main() {
     let mut state = init_state(&dev);
 
     // run through training data
-    for _i_epoch in 0..15000 {
+    for _i_epoch in 0..1500 {
         let start = Instant::now();
 
         // <>
