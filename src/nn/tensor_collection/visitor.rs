@@ -9,6 +9,7 @@ use std::{string::String, vec::Vec};
 
 /// A standard [ModuleVisitor] that executes `F` on every [Tensor] encountered.
 /// `F` must implement [TensorVisitor]
+#[derive(Debug)]
 pub struct RecursiveWalker<'a, M, F> {
     pub m: M,
     pub f: &'a mut F,
@@ -48,9 +49,11 @@ pub trait TensorViewer: 'static {
 }
 
 /// A [TensorViewer] that represents a `&Tensor`
+#[derive(Debug)]
 pub enum ViewTensorRef {}
 
 /// A [TensorViewer] that represents a `&mut Tensor`
+#[derive(Debug)]
 pub enum ViewTensorMut {}
 
 impl<'a, M, E: Dtype, D: DeviceStorage, F: TensorVisitor<E, D>> ModuleVisitor<M, E, D>
@@ -71,7 +74,7 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: TensorVisitor<E, D>> ModuleVisitor<M,
     {
         self.path.push(name.into());
         let mut walker = RecursiveWalker {
-            m: F::Viewer::view(&mut self.m, &mut get_refs, &mut get_muts),
+            m: F::Viewer::view_field(&mut self.m, &mut get_refs, &mut get_muts),
             f: self.f,
             path: self.path,
         };
@@ -96,7 +99,7 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: TensorVisitor<E, D>> ModuleVisitor<M,
         self.f.visit(
             self.path.join("."),
             opts,
-            F::Viewer::view(&mut self.m, &mut get_refs, &mut get_muts),
+            F::Viewer::view_field(&mut self.m, &mut get_refs, &mut get_muts),
         )?;
         self.path.pop();
         Ok(())
@@ -106,7 +109,7 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: TensorVisitor<E, D>> ModuleVisitor<M,
 impl TensorViewer for ViewTensorRef {
     type View<'a, Mod: 'a> = &'a Mod;
 
-    fn view<'a, Mod, Field, GetRef, GetMut>(
+    fn view_field<'a, Mod, Field, GetRef, GetMut>(
         module: &'a mut Self::View<'_, Mod>,
         get_ref: &mut GetRef,
         _get_mut: &mut GetMut,
@@ -122,7 +125,7 @@ impl TensorViewer for ViewTensorRef {
 impl TensorViewer for ViewTensorMut {
     type View<'a, Mod: 'a> = &'a mut Mod;
 
-    fn view<'a, Mod, Field, GetRef, GetMut>(
+    fn view_field<'a, Mod, Field, GetRef, GetMut>(
         module: &'a mut Self::View<'_, Mod>,
         _get_ref: &mut GetRef,
         get_mut: &mut GetMut,
@@ -140,7 +143,7 @@ macro_rules! tuple_impls {
         impl<$($name: TensorViewer),+> TensorViewer for ($($name,)+) {
             type View<'a, Mod: 'a> = ($($name::View<'a, Mod>,)+);
 
-            fn view<'a, Mod, Field, GetRef, GetMut>(
+            fn view_field<'a, Mod, Field, GetRef, GetMut>(
                 module: &'a mut Self::View<'_, Mod>,
                 get_ref: &mut GetRef,
                 get_mut: &mut GetMut,
@@ -149,7 +152,7 @@ macro_rules! tuple_impls {
                 GetRef: FnMut(&Mod) -> &Field,
                 GetMut: FnMut(&mut Mod) -> &mut Field,
             {
-                ($($name::view(&mut module.$idx, get_ref, get_mut),)+)
+                ($($name::view_field(&mut module.$idx, get_ref, get_mut),)+)
             }
         }
     }
@@ -165,7 +168,7 @@ tuple_impls!([M1, M2, M3, M4, M5, M6] [0, 1, 2, 3, 4, 5]);
 impl<T: TensorViewer> TensorViewer for std::vec::Vec<T> {
     type View<'a, Mod: 'a> = std::vec::Vec<T::View<'a, Mod>>;
 
-    fn view<'a, Mod, Field, GetRef, GetMut>(
+    fn view_field<'a, Mod, Field, GetRef, GetMut>(
         module: &'a mut Self::View<'_, Mod>,
         get_ref: &mut GetRef,
         get_mut: &mut GetMut,
@@ -176,7 +179,7 @@ impl<T: TensorViewer> TensorViewer for std::vec::Vec<T> {
     {
         module
             .iter_mut()
-            .map(|x| T::view(x, get_ref, get_mut))
+            .map(|x| T::view_field(x, get_ref, get_mut))
             .collect()
     }
 }
@@ -184,7 +187,7 @@ impl<T: TensorViewer> TensorViewer for std::vec::Vec<T> {
 impl<T: TensorViewer> TensorViewer for Option<T> {
     type View<'a, Mod: 'a> = Option<T::View<'a, Mod>>;
 
-    fn view<'a, Mod, Field, GetRef, GetMut>(
+    fn view_field<'a, Mod, Field, GetRef, GetMut>(
         module: &'a mut Self::View<'_, Mod>,
         get_ref: &mut GetRef,
         get_mut: &mut GetMut,
@@ -193,6 +196,6 @@ impl<T: TensorViewer> TensorViewer for Option<T> {
         GetRef: FnMut(&Mod) -> &Field,
         GetMut: FnMut(&mut Mod) -> &mut Field,
     {
-        module.as_mut().map(|x| T::view(x, get_ref, get_mut))
+        module.as_mut().map(|x| T::view_field(x, get_ref, get_mut))
     }
 }

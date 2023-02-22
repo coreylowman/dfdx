@@ -56,13 +56,17 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> TensorCollection<E, D> for Tensor<S, 
 }
 
 /// Options to change behavior of [TensorVisitor]
+#[non_exhaustive]
 pub struct TensorOptions<S: Shape, E: Dtype, D: DeviceStorage> {
     /// Whether the tensor should be updated with gradients
     pub do_gradient_update: bool,
-    pub reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>,
+
+    /// How to reset the tensor in the future.
+    pub reset: fn(&'_ mut Tensor<S, E, D>) -> Result<(), D::Err>,
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage> TensorOptions<S, E, D> {
+    /// A tensor that should be updated with gradients & reset to 0
     pub fn reset_to_zeros() -> Self
     where
         D: ZeroFillStorage<E>,
@@ -72,6 +76,8 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> TensorOptions<S, E, D> {
             reset: |t| t.try_fill_with_zeros(),
         }
     }
+
+    /// A tensor that should be updated with gradients & reset to 1
     pub fn reset_to_ones() -> Self
     where
         D: OneFillStorage<E>,
@@ -81,12 +87,16 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> TensorOptions<S, E, D> {
             reset: |t| t.try_fill_with_ones(),
         }
     }
+
+    /// A tensor that should be updated with gradients & reset with the fn passed in
     pub fn reset_with(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self {
         TensorOptions {
             do_gradient_update: true,
             reset,
         }
     }
+
+    /// A tensor that should **NOT** be updated with gradients & reset with the fn passed in
     pub fn detached(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self {
         TensorOptions {
             do_gradient_update: false,
