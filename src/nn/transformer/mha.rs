@@ -2,7 +2,7 @@ use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
 use crate::{
-    nn::{modules::*, visitors::*, *},
+    nn::{modules::*, tensor_collection::*, *},
     shapes::Dtype,
     tensor::*,
     tensor_ops::*,

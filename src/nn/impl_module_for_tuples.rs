@@ -1,6 +1,6 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
 
-use super::{visitors::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {

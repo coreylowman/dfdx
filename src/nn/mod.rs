@@ -106,7 +106,7 @@
 
 mod num_params;
 mod reset_params;
-pub mod visitors;
+pub mod tensor_collection;
 
 mod activations;
 mod add_into;

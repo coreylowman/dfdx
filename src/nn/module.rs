@@ -3,7 +3,7 @@ use crate::shapes::Dtype;
 pub use crate::tensor::OnCuda;
 pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
 
-use super::visitors::{TensorCollection, TensorVisitor};
+use super::tensor_collection::{TensorCollection, TensorVisitor};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.

@@ -6,7 +6,7 @@ use crate::{
     },
 };
 
-use super::visitors::*;
+use super::tensor_collection::*;
 
 use std::{
     io::{BufReader, BufWriter, Read, Seek, Write},

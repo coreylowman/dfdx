@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{visitors::*, BuildModule, BuildOnDevice, Module, NonMutableModule, ToDevice};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, NonMutableModule, ToDevice};
 
 pub mod builder {
     #[derive(Debug)]
