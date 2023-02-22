@@ -36,8 +36,8 @@ pub trait TensorViewer: 'static {
     where
         Self: 'a;
 
-    /// Return the view of the tensor
-    fn view<'a, Mod, Field, GetRef, GetMut>(
+    /// Given a view of a module, returns a view of one of that module's fields
+    fn view_field<'a, Mod, Field, GetRef, GetMut>(
         module: &'a mut Self::View<'_, Mod>,
         get_ref: &mut GetRef,
         get_mut: &mut GetMut,
