@@ -112,8 +112,8 @@ pub(super) trait AdamKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, D: AdamKernel<E>, E: Dtype> VisitTensors<E, D> for Adam<M, E> {
-    type Container = TensorMut;
+impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D> for Adam<M, E> {
+    type Viewer = ViewTensorMut;
     type Err = D::Err;
 
     fn visit<S: Shape>(
@@ -122,7 +122,7 @@ impl<M, D: AdamKernel<E>, E: Dtype> VisitTensors<E, D> for Adam<M, E> {
         opts: TensorOptions<S, E, D>,
         p: &mut crate::prelude::Tensor<S, E, D>,
     ) -> Result<(), <D>::Err> {
-        if !opts.update {
+        if !opts.do_gradient_update {
             return Ok(());
         }
         let g = self.gradients.remove(p);

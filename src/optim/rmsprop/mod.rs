@@ -121,8 +121,8 @@ pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> VisitTensors<E, D> for RMSprop<M, E> {
-    type Container = TensorMut;
+impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D> for RMSprop<M, E> {
+    type Viewer = ViewTensorMut;
     type Err = D::Err;
 
     fn visit<S: Shape>(
@@ -131,7 +131,7 @@ impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> VisitTensors<E, D> fo
         opts: TensorOptions<S, E, D>,
         p: &mut Tensor<S, E, D>,
     ) -> Result<(), <D>::Err> {
-        if !opts.update {
+        if !opts.do_gradient_update {
             return Ok(());
         }
         let g = self.gradients.remove(p);

@@ -59,7 +59,7 @@ where
     E: Dtype + Float + SampleUniform,
     D: Device<E>,
 {
-    fn iter_tensors<V: TensorVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_tensor(
             |s| &s.weight,
             |s| &mut s.weight,

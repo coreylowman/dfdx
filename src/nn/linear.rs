@@ -71,7 +71,7 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device
 impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: SampleTensor<E>>
     TensorCollection<E, D> for Linear<I, O, E, D>
 {
-    fn iter_tensors<V: TensorVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_tensor(
             |s| &s.weight,
             |s| &mut s.weight,

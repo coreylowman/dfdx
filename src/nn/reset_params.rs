@@ -1,5 +1,5 @@
 use super::tensor_collection::{
-    RecursiveWalker, TensorCollection, TensorMut, TensorOptions, VisitTensors,
+    RecursiveWalker, TensorCollection, TensorOptions, TensorVisitor, ViewTensorMut,
 };
 
 use crate::{shapes::*, tensor::*};
@@ -7,8 +7,8 @@ use crate::{shapes::*, tensor::*};
 use std::{string::String, vec::Vec};
 
 struct Resetter;
-impl<E: Dtype, D: DeviceStorage> VisitTensors<E, D> for Resetter {
-    type Container = TensorMut;
+impl<E: Dtype, D: DeviceStorage> TensorVisitor<E, D> for Resetter {
+    type Viewer = ViewTensorMut;
     type Err = D::Err;
 
     fn visit<S: Shape>(

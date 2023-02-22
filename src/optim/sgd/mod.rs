@@ -147,8 +147,8 @@ pub(super) trait SgdKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<E: Dtype, D: SgdKernel<E>, M> VisitTensors<E, D> for Sgd<M, E> {
-    type Container = TensorMut;
+impl<E: Dtype, D: SgdKernel<E>, M> TensorVisitor<E, D> for Sgd<M, E> {
+    type Viewer = ViewTensorMut;
     type Err = D::Err;
 
     fn visit<S: Shape>(
@@ -157,7 +157,7 @@ impl<E: Dtype, D: SgdKernel<E>, M> VisitTensors<E, D> for Sgd<M, E> {
         opts: TensorOptions<S, E, D>,
         p: &mut Tensor<S, E, D>,
     ) -> Result<(), D::Err> {
-        if !opts.update {
+        if !opts.do_gradient_update {
             return Ok(());
         }
         let g = self.gradients.remove(p);

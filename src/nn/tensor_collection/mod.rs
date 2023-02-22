@@ -1,5 +1,8 @@
+//! Traits to define a [TensorCollection] and how to iterate them using [ModuleVisitor].
+//! Use [RecursiveWalker] to do the iteration.
+
 mod collection;
 mod visitor;
 
-pub use collection::{TensorCollection, TensorOptions, TensorVisitor};
-pub use visitor::{RecursiveWalker, TensorContainer, TensorMut, TensorRef, VisitTensors};
+pub use collection::{ModuleVisitor, TensorCollection, TensorOptions};
+pub use visitor::{RecursiveWalker, TensorViewer, TensorVisitor, ViewTensorMut, ViewTensorRef};

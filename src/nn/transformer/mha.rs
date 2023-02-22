@@ -82,7 +82,7 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: Devic
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn iter_tensors<W: TensorVisitor<Self, E, D>>(visitor: &mut W) -> Result<(), W::Err> {
+    fn iter_tensors<W: ModuleVisitor<Self, E, D>>(visitor: &mut W) -> Result<(), W::Err> {
         visitor.visit_module(|s| &s.w_q, |s| &mut s.w_q, "w_q")?;
         visitor.visit_module(|s| &s.w_k, |s| &mut s.w_k, "w_k")?;
         visitor.visit_module(|s| &s.w_v, |s| &mut s.w_v, "w_v")?;

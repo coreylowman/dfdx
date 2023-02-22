@@ -1,5 +1,5 @@
 use super::tensor_collection::{
-    RecursiveWalker, TensorCollection, TensorOptions, TensorRef, VisitTensors,
+    RecursiveWalker, TensorCollection, TensorOptions, TensorVisitor, ViewTensorRef,
 };
 
 use crate::{shapes::*, tensor::*};
@@ -7,8 +7,8 @@ use crate::{shapes::*, tensor::*};
 use std::{string::String, vec::Vec};
 
 struct Counter(usize);
-impl<E: Dtype, D: DeviceStorage> VisitTensors<E, D> for Counter {
-    type Container = TensorRef;
+impl<E: Dtype, D: DeviceStorage> TensorVisitor<E, D> for Counter {
+    type Viewer = ViewTensorRef;
     type Err = D::Err;
 
     fn visit<S: Shape>(
@@ -17,7 +17,7 @@ impl<E: Dtype, D: DeviceStorage> VisitTensors<E, D> for Counter {
         opts: TensorOptions<S, E, D>,
         t: &Tensor<S, E, D>,
     ) -> Result<(), D::Err> {
-        if opts.update {
+        if opts.do_gradient_update {
             self.0 += t.shape().num_elements();
         }
         Ok(())

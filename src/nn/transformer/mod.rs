@@ -98,7 +98,7 @@ where
     E: Dtype + Float + SampleUniform,
     D: Device<E>,
 {
-    fn iter_tensors<V: TensorVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         visitor.visit_module(|s| &s.encoder, |s| &mut s.encoder, "encoder")?;
         visitor.visit_module(|s| &s.decoder, |s| &mut s.decoder, "decoder")
     }
