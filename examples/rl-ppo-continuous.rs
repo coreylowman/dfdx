@@ -5,13 +5,11 @@ use dfdx::{
     nn::{
         self,
         modules::{Linear, ReLU, Tanh},
-        BuildModule, Module,
+        Module,
     },
     optim::{Adam, AdamConfig},
-    prelude::{smooth_l1_loss, tensor_collection::TensorCollection, Optimizer, OwnedTape},
-    tensor::{
-        AsArray, Cpu, HasErr, SampleTensor, SplitTape, Tensor0D, Tensor1D, Tensor2D, TensorFrom,
-    },
+    prelude::{smooth_l1_loss, Optimizer, OwnedTape, SplitInto},
+    tensor::{AsArray, Cpu, SampleTensor, SplitTape, Tensor0D, Tensor1D, TensorFrom},
     tensor_ops::{Backward, BroadcastTo, MeanTo},
 };
 use std::f32;
@@ -21,80 +19,14 @@ const STATE_SIZE: usize = 2;
 const INNER_SIZE: usize = 3;
 const ACTION_SIZE: usize = 1;
 
-/// Custom model struct
-#[derive(Clone, Debug)]
-struct Network<const IN: usize, const INNER: usize, const OUT: usize> {
-    l1: (Linear<IN, INNER, f32, Cpu>, ReLU),
-    mu: (Linear<INNER, OUT, f32, Cpu>, Tanh),
-    std: (Linear<INNER, OUT, f32, Cpu>, ReLU), // TODO: should this be SoftPlus?
-    value: Linear<INNER, OUT, f32, Cpu>,
-}
-
-// BuildModule lets you randomize a model's parameters
-impl<const IN: usize, const INNER: usize, const OUT: usize> nn::BuildModule<Cpu, f32>
-    for Network<IN, INNER, OUT>
-{
-    fn try_build(device: &Cpu) -> Result<Self, <Cpu as HasErr>::Err> {
-        Ok(Self {
-            l1: BuildModule::try_build(device)?,
-            mu: BuildModule::try_build(device)?,
-            std: BuildModule::try_build(device)?,
-            value: BuildModule::try_build(device)?,
-        })
-    }
-}
-
-impl<const IN: usize, const INNER: usize, const OUT: usize> TensorCollection<f32, Cpu>
-    for Network<IN, INNER, OUT>
-{
-    fn iter_tensors<V: dfdx::prelude::tensor_collection::ModuleVisitor<Self, f32, Cpu>>(
-        visitor: &mut V,
-    ) -> Result<(), V::Err> {
-        visitor.visit_module("l1", |n| &n.l1, |n| &mut n.l1)?;
-
-        visitor.visit_module("mu", |n| &n.mu, |n| &mut n.mu)?;
-        visitor.visit_module("std", |n| &n.std, |n| &mut n.std)?;
-        visitor.visit_module("value", |n| &n.value, |n| &mut n.value)
-    }
-}
-
-// impl Module for single item
-impl<const IN: usize, const INNER: usize, const OUT: usize, T: Tape<Cpu>>
-    nn::Module<Tensor1D<IN, T>> for Network<IN, INNER, OUT>
-{
-    type Output = (Tensor1D<OUT, T>, Tensor1D<OUT, T>, Tensor1D<OUT, T>);
-
-    fn forward(&self, x: Tensor1D<IN, T>) -> Self::Output {
-        let x = self.l1.forward(x);
-
-        (
-            self.mu.forward(x.retaped()),
-            self.std.forward(x.retaped()),
-            self.value.forward(x),
-        )
-    }
-}
-
-// impl Module for batch of items
-impl<const BATCH: usize, const IN: usize, const INNER: usize, const OUT: usize, T: Tape<Cpu>>
-    nn::Module<Tensor2D<BATCH, IN, T>> for Network<IN, INNER, OUT>
-{
-    type Output = (
-        Tensor2D<BATCH, OUT, T>,
-        Tensor2D<BATCH, OUT, T>,
-        Tensor2D<BATCH, OUT, T>,
-    );
-
-    fn forward(&self, x: Tensor2D<BATCH, IN, T>) -> Self::Output {
-        let x = self.l1.forward(x);
-
-        (
-            self.mu.forward(x.retaped()),
-            self.std.forward(x.retaped()),
-            self.value.forward(x),
-        )
-    }
-}
+type Network<const IN: usize, const INNER: usize, const OUT: usize> = (
+    (Linear<IN, INNER, f32, Cpu>, ReLU), // 0: l1
+    SplitInto<(
+        (Linear<INNER, OUT, f32, Cpu>, Tanh), // 1.0.0: mu
+        (Linear<INNER, OUT, f32, Cpu>, ReLU), // 1.0.1: std // TODO: should this be SoftPlus?
+        Linear<INNER, 1, f32, Cpu>,           // 1.0.2: value
+    )>,
+);
 
 // Hyperparameters stolen from https://github.com/seungeunrho/minimalRL/blob/master/ppo-continuous.py for now
 const LEARNING_RATE: f32 = 0.0003;
@@ -118,7 +50,7 @@ fn main() {
         },
     );
 
-    let mut state = init_state(&dev);
+    let mut state: Tensor1D<STATE_SIZE> = init_state(&dev);
 
     // run through training data
     for _i_epoch in 0..1500 {
@@ -127,7 +59,7 @@ fn main() {
         // <>
         let (old_log_prob, action) = {
             // TODO: Should we avoid calculating _v? _v is the one with the original tape if that matters?
-            let (mu, std, _v) = net.forward(state.retaped());
+            let (mu, std, _v) = net.forward(state.retaped::<OwnedTape<Cpu>>());
 
             let action: Tensor1D<ACTION_SIZE> = dev.sample_normal() * std.clone() + mu.clone();
             let log_prob = {
@@ -143,10 +75,10 @@ fn main() {
 
         // <calc advantage>
         let td_target: Tensor1D<ACTION_SIZE> =
-            net.value.forward(net.l1.forward(new_state.clone())) * f32::from(done as u8) * GAMMA
+            net.1 .0 .2.forward(net.0.forward(new_state.clone())) * f32::from(done as u8) * GAMMA
                 + reward;
         let delta: Tensor1D<ACTION_SIZE> =
-            td_target.clone() - net.value.forward(net.l1.forward(state.clone()));
+            td_target.clone() - net.1 .0 .2.forward(net.0.forward(state.clone()));
         let delta = delta.array();
 
         let mut advantage = 0.0;
