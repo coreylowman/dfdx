@@ -39,6 +39,7 @@ mod cuda {
         println!("cargo:warning=Found kernels {kernel_paths:?}");
         println!("cargo:warning=Found include directories {include_directories:?}");
 
+        #[allow(unused)]
         let include_options: Vec<String> = include_directories
             .into_iter()
             .map(|s| "-I".to_string() + &s.into_os_string().into_string().unwrap())
