@@ -1,6 +1,6 @@
-use crate::{optim::*, shapes::*, tensor::SplitTape, tensor_ops::Device};
+use crate::{shapes::*, tensor::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 use std::ops::Add;
 
@@ -23,28 +23,19 @@ use std::ops::Add;
 #[derive(Debug, Clone, Default)]
 pub struct Residual<F>(pub F);
 
-impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>> GradientUpdate<D, E> for Residual<F> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.0.update(updater, unused)
-    }
-}
-
-impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>> BuildOnDevice<D, E> for Residual<F> {
+impl<D: DeviceStorage, E: Dtype, F: BuildOnDevice<D, E>> BuildOnDevice<D, E> for Residual<F> {
     type Built = Residual<F::Built>;
 }
 
-impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Residual<F> {
+impl<D: DeviceStorage, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Residual<F> {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self(BuildModule::try_build(device)?))
     }
 }
 
-impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>> ResetParams<D, E> for Residual<F> {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.0.try_reset_params()
+impl<E: Dtype, D: DeviceStorage, F: TensorCollection<E, D>> TensorCollection<E, D> for Residual<F> {
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
     }
 }
 
@@ -74,7 +65,7 @@ mod tests {
     use super::*;
     use crate::nn::DeviceBuildExt;
     use crate::tests::*;
-    use crate::{nn::builders::Linear, tensor::*, tensor_ops::*};
+    use crate::{nn::builders::Linear, tensor_ops::*};
 
     #[test]
     fn test_residual_reset() {

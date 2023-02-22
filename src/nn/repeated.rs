@@ -1,6 +1,6 @@
-use crate::{optim::*, shapes::Dtype, tensor_ops::Device};
+use crate::{shapes::Dtype, tensor::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///
@@ -21,13 +21,13 @@ pub struct Repeated<T, const N: usize> {
     pub modules: std::vec::Vec<T>,
 }
 
-impl<D: Device<E>, E: Dtype, T: BuildOnDevice<D, E>, const N: usize> BuildOnDevice<D, E>
+impl<D: DeviceStorage, E: Dtype, T: BuildOnDevice<D, E>, const N: usize> BuildOnDevice<D, E>
     for Repeated<T, N>
 {
     type Built = Repeated<T::Built, N>;
 }
 
-impl<D: Device<E>, E: Dtype, T: BuildModule<D, E>, const N: usize> BuildModule<D, E>
+impl<D: DeviceStorage, E: Dtype, T: BuildModule<D, E>, const N: usize> BuildModule<D, E>
     for Repeated<T, N>
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
@@ -39,12 +39,16 @@ impl<D: Device<E>, E: Dtype, T: BuildModule<D, E>, const N: usize> BuildModule<D
     }
 }
 
-impl<D: Device<E>, E: Dtype, T: ResetParams<D, E>, const N: usize> ResetParams<D, E>
+impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>, const N: usize> TensorCollection<E, D>
     for Repeated<T, N>
 {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        for m in self.modules.iter_mut() {
-            m.try_reset_params()?;
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+        for i in 0..N {
+            visitor.visit_module(
+                &std::format!("{i}"),
+                |s| &s.modules[i],
+                |s| &mut s.modules[i],
+            )?;
         }
         Ok(())
     }
@@ -67,20 +71,6 @@ impl<T, const N: usize> std::ops::Index<usize> for Repeated<T, N> {
     type Output = T;
     fn index(&self, index: usize) -> &Self::Output {
         &self.modules[index]
-    }
-}
-
-impl<D: Device<E>, E: Dtype, T: GradientUpdate<D, E>, const N: usize> GradientUpdate<D, E>
-    for Repeated<T, N>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        for m in self.modules.iter_mut() {
-            m.update(updater, unused)?;
-        }
-        Ok(())
     }
 }
 
@@ -110,9 +100,9 @@ impl<Input, T: ModuleMut<Input, Output = Input>, const N: usize> ModuleMut<Input
 mod tests {
     use super::*;
     use crate::nn::DeviceBuildExt;
+    use crate::tests::TestDevice;
     use crate::tests::TestDtype;
-    use crate::{nn::builders::*, shapes::*, tensor::*, unique_id::HasUniqueId};
-    use crate::{nn::tests::SimpleUpdater, tests::TestDevice};
+    use crate::{nn::builders::*, shapes::*};
 
     #[test]
     fn test_default_and_reset() {
@@ -142,55 +132,5 @@ mod tests {
         let x = m.modules[4].forward(x);
 
         assert_eq!(x.array(), m.forward_mut(dev.zeros::<Rank1<3>>()).array());
-    }
-
-    #[test]
-    fn test_repeated_missing_gradients() {
-        let dev: TestDevice = Default::default();
-
-        type Model = Repeated<Linear<5, 5>, 3>;
-        let mut model = dev.build_module::<Model, TestDtype>();
-        let mut g: SimpleUpdater = Default::default();
-
-        // no gradients present
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert_eq!(
-            &unused.ids,
-            &[
-                *model[0].weight.id(),
-                *model[0].bias.id(),
-                *model[1].weight.id(),
-                *model[1].bias.id(),
-                *model[2].weight.id(),
-                *model[2].bias.id(),
-            ]
-        );
-
-        // weight gradient is present
-        for i in 0..3 {
-            g.0.try_alloc_for(&model[i].weight).unwrap();
-        }
-
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert_eq!(
-            &unused.ids,
-            &[
-                *model[0].bias.id(),
-                *model[1].bias.id(),
-                *model[2].bias.id()
-            ]
-        );
-
-        // all gradients present
-        for i in 0..3 {
-            g.0.try_alloc_for(&model[i].weight).unwrap();
-            g.0.try_alloc_for(&model[i].bias).unwrap();
-        }
-
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert!(unused.is_empty());
     }
 }

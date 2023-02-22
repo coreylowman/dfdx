@@ -1,8 +1,9 @@
-use crate::{optim::GradientUpdate, shapes::Dtype};
-
+use crate::shapes::Dtype;
 #[cfg(feature = "cuda")]
 pub use crate::tensor::OnCuda;
 pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
+
+use super::tensor_collection::{ModuleVisitor, TensorCollection};
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
@@ -64,21 +65,8 @@ pub trait DeviceBuildExt: DeviceStorage {
 }
 impl<D: DeviceStorage> DeviceBuildExt for D {}
 
-/// Something that can reset it's parameters.
-pub trait ResetParams<D: DeviceStorage, E: Dtype> {
-    /// Mutates parameters. Each implementor
-    /// of this trait decides how the parameters are initialized. In
-    /// fact, some impls may not even use randomness.
-    fn reset_params(&mut self) {
-        self.try_reset_params().unwrap();
-    }
-
-    /// Fallible version of [ResetParams::reset_params].
-    fn try_reset_params(&mut self) -> Result<(), D::Err>;
-}
-
 /// Marker trait for modules with no updatable parameters. These have
-/// blanket impls for [ResetParams], [GradientUpdate], and [ModuleMut]
+/// blanket impls for, and [ModuleMut]
 pub trait ZeroSizedModule: Default {}
 
 impl<T: ZeroSizedModule + BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for T {
@@ -91,8 +79,8 @@ impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule> BuildModule<D, E> for T {
     }
 }
 
-impl<T: ZeroSizedModule, D: DeviceStorage, E: Dtype> ResetParams<D, E> for T {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
+impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule> TensorCollection<E, D> for T {
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(_: &mut V) -> Result<(), V::Err> {
         Ok(())
     }
 }
@@ -101,15 +89,6 @@ impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {
     type Output = T;
     fn to_device(&self, _device: &D) -> Self {
         self.clone()
-    }
-}
-
-impl<T: ZeroSizedModule, D: DeviceStorage, E: Dtype> GradientUpdate<D, E> for T {
-    fn update<U>(&mut self, _: &mut U, _: &mut crate::optim::UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: crate::optim::ParamUpdater<D, E>,
-    {
-        Ok(())
     }
 }
 

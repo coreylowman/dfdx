@@ -1,6 +1,6 @@
-use crate::{gradients::*, optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 pub mod builder {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -183,13 +183,32 @@ impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for BatchNorm2D<C
     }
 }
 
-impl<const C: usize, E: Dtype, D: Device<E>> ResetParams<D, E> for BatchNorm2D<C, E, D> {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        self.scale.try_fill_with_ones()?;
-        self.bias.try_fill_with_zeros()?;
-        self.running_mean.try_fill_with_zeros()?;
-        self.running_var.try_fill_with_ones()?;
-        Ok(())
+impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNorm2D<C, E, D> {
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+        visitor.visit_tensor(
+            "scale",
+            |s| &s.scale,
+            |s| &mut s.scale,
+            TensorOptions::reset_to_ones(),
+        )?;
+        visitor.visit_tensor(
+            "bias",
+            |s| &s.bias,
+            |s| &mut s.bias,
+            TensorOptions::reset_to_zeros(),
+        )?;
+        visitor.visit_tensor(
+            "running_mean",
+            |s| &s.running_mean,
+            |s| &mut s.running_mean,
+            TensorOptions::detached(|t| t.try_fill_with_zeros()),
+        )?;
+        visitor.visit_tensor(
+            "running_var",
+            |s| &s.running_var,
+            |s| &mut s.running_var,
+            TensorOptions::detached(|t| t.try_fill_with_ones()),
+        )
     }
 }
 
@@ -209,21 +228,10 @@ impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
     }
 }
 
-impl<const C: usize, E: Dtype, D: Device<E>> GradientUpdate<D, E> for BatchNorm2D<C, E, D> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.scale.update(updater, unused)?;
-        self.bias.update(updater, unused)?;
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::builder::BatchNorm2D;
-    use crate::{nn::*, shapes::*, tensor::*, tensor_ops::*, tests::*};
+    use crate::{nn::*, optim::*, shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_batchnorm2d_3d_forward_mut() {
@@ -343,5 +351,18 @@ mod tests {
                 [[0.73018146, 0.3243845], [-1.1041277, 0.38778353]],
             ],
         );
+    }
+
+    #[test]
+    fn test_batchnorm2d_update() {
+        let dev: TestDevice = Default::default();
+
+        let x1: Tensor<Rank3<3, 4, 5>, TestDtype, _> = dev.sample_normal();
+        let mut bn = dev.build_module::<BatchNorm2D<3>, TestDtype>();
+        let y = bn.forward_mut(x1.trace());
+        let g = y.square().mean().backward();
+
+        let mut opt = Sgd::new(&bn, Default::default());
+        opt.update(&mut bn, g).expect("");
     }
 }

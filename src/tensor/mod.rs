@@ -111,15 +111,12 @@
 //! zip archives.
 
 pub(crate) mod cpu;
-mod tensor_impls;
-
 #[cfg(feature = "cuda")]
 pub(crate) mod cuda;
-
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
-
 pub(crate) mod storage_traits;
+mod tensor_impls;
 
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 

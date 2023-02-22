@@ -104,6 +104,10 @@
 //! mlp.load_state_dict(state_dict)
 //! ```
 
+mod num_params;
+mod reset_params;
+pub mod tensor_collection;
+
 mod activations;
 mod add_into;
 mod batchnorm2d;
@@ -118,8 +122,6 @@ mod linear;
 mod module;
 #[cfg(feature = "numpy")]
 mod npz;
-#[cfg(feature = "numpy")]
-mod npz_impls;
 mod pool2d;
 mod pool_global;
 mod repeated;
@@ -130,7 +132,9 @@ mod transformer;
 pub use module::*;
 
 #[cfg(feature = "numpy")]
-pub use npz::*;
+pub use npz::{LoadFromNpz, SaveToNpz};
+pub use num_params::NumParams;
+pub use reset_params::ResetParams;
 
 pub mod modules {
     /// Structs containing initialized Tensors & impls for [super::Module]. See
@@ -181,25 +185,4 @@ pub mod builders {
     pub use super::split_into::SplitInto;
     #[cfg(feature = "nightly")]
     pub use super::transformer::builder::*;
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{gradients::Gradients, optim::ParamUpdater, shapes::Dtype, tensor::DeviceStorage};
-
-    #[derive(Default)]
-    pub struct SimpleUpdater(pub Gradients);
-
-    impl<D: DeviceStorage, E: Dtype> ParamUpdater<D, E> for SimpleUpdater {
-        fn update_param<S: crate::shapes::Shape>(
-            &mut self,
-            p: &mut crate::tensor::Tensor<S, E, D>,
-            unused: &mut crate::optim::UnusedTensors,
-        ) -> Result<(), <D>::Err> {
-            if self.0.remove(p).is_none() {
-                unused.add(p);
-            }
-            Ok(())
-        }
-    }
 }

@@ -5,9 +5,12 @@ mod cuda_kernel;
 
 use std::marker::PhantomData;
 
-use crate::gradients::Gradients;
-use crate::shapes::{Dtype, Shape};
-use crate::tensor::{DeviceStorage, Tensor};
+use crate::{
+    gradients::Gradients,
+    nn::tensor_collection::*,
+    shapes::{Dtype, Shape},
+    tensor::{DeviceStorage, Tensor},
+};
 
 use super::optimizer::*;
 
@@ -116,6 +119,8 @@ pub struct Sgd<M, E: Dtype> {
     velocity: Gradients,
     gradients: Gradients,
 
+    unused: UnusedTensors,
+
     marker: PhantomData<*const M>,
 }
 
@@ -126,6 +131,7 @@ impl<M, E: Dtype> Sgd<M, E> {
             cfg,
             velocity: Default::default(),
             gradients: Default::default(),
+            unused: Default::default(),
             marker: PhantomData,
         }
     }
@@ -141,15 +147,22 @@ pub(super) trait SgdKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, D: SgdKernel<E>, E: Dtype> ParamUpdater<D, E> for Sgd<M, E> {
-    fn update_param<S: Shape>(
+impl<E: Dtype, D: SgdKernel<E>, M> TensorVisitor<E, D> for Sgd<M, E> {
+    type Viewer = ViewTensorMut;
+    type Err = D::Err;
+
+    fn visit<S: Shape>(
         &mut self,
+        _: alloc::string::String,
+        opts: TensorOptions<S, E, D>,
         p: &mut Tensor<S, E, D>,
-        unused: &mut UnusedTensors,
     ) -> Result<(), D::Err> {
+        if !opts.do_gradient_update {
+            return Ok(());
+        }
         let g = self.gradients.remove(p);
         match g {
-            None => unused.add(p),
+            None => self.unused.add(p),
             Some(g) => {
                 let v = self.velocity.get_or_alloc_mut(p)?;
                 p.device.update(&self.cfg, &mut p.storage, v, g)?;
@@ -159,18 +172,20 @@ impl<M, D: SgdKernel<E>, E: Dtype> ParamUpdater<D, E> for Sgd<M, E> {
     }
 }
 
-impl<M: GradientUpdate<D, E>, D: SgdKernel<E>, E: Dtype> Optimizer<M, D, E> for Sgd<M, E>
-where
-    Self: ParamUpdater<D, E>,
-{
+impl<M: TensorCollection<E, D>, D: SgdKernel<E>, E: Dtype> Optimizer<M, D, E> for Sgd<M, E> {
     fn update(
         &mut self,
         module: &mut M,
         gradients: Gradients,
     ) -> Result<(), OptimizerUpdateError<D>> {
         self.gradients = gradients;
-        let mut unused = Default::default();
-        match module.update(self, &mut unused) {
+        let result = M::iter_tensors(&mut RecursiveWalker {
+            m: module,
+            f: self,
+            path: &mut std::vec::Vec::new(),
+        });
+        let unused = std::mem::take(&mut self.unused);
+        match result {
             Ok(_) => unused.into(),
             Err(e) => Err(OptimizerUpdateError::DeviceError(e)),
         }
@@ -409,5 +424,13 @@ mod tests {
             sgd.update(&mut t, gradients).expect("");
             assert_close(&t.array(), e);
         }
+    }
+
+    #[test]
+    fn test_unused_tensors() {
+        let dev: TestDevice = Default::default();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
+        let mut opt = Sgd::new(&t, Default::default());
+        opt.update(&mut t, Default::default()).expect_err("");
     }
 }

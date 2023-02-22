@@ -1,9 +1,9 @@
 use num_traits::Float;
-use rand_distr::uniform::SampleUniform;
+use rand_distr::{uniform::SampleUniform, Uniform};
 
-use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, NonMutableModule, ToDevice};
 
 pub mod builder {
     #[derive(Debug)]
@@ -52,6 +52,37 @@ pub struct Embedding<const VOCAB: usize, const DIM: usize, E: Dtype, D: DeviceSt
     pub weight: Tensor<Rank2<VOCAB, DIM>, E, D>,
 }
 
+impl<const V: usize, const M: usize, E: Dtype, D: DeviceStorage> NonMutableModule
+    for Embedding<V, M, E, D>
+{
+}
+
+impl<const V: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
+    BuildModule<D, E> for Embedding<V, M, E, D>
+{
+    fn try_build(device: &D) -> Result<Self, D::Err> {
+        let bound = E::ONE / E::from_usize(V).unwrap().sqrt();
+        let weight = device.try_sample(Uniform::new(-bound, bound))?;
+        Ok(Self { weight })
+    }
+}
+
+impl<const C: usize, const M: usize, E: Dtype + Float + SampleUniform, D: SampleTensor<E>>
+    TensorCollection<E, D> for Embedding<C, M, E, D>
+{
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+        visitor.visit_tensor(
+            "weight",
+            |s| &s.weight,
+            |s| &mut s.weight,
+            TensorOptions::reset_with(|t| {
+                let b: E = E::ONE / E::from_usize(C).unwrap().sqrt();
+                t.try_fill_with_distr(Uniform::new(-b, b))
+            }),
+        )
+    }
+}
+
 impl<const V: usize, const M: usize, const S: usize, E: Dtype, D: Device<E>, T: Tape<D>>
     Module<Tensor<Rank1<S>, usize, D, T>> for Embedding<V, M, E, D>
 {
@@ -79,51 +110,6 @@ impl<
     }
 }
 
-impl<T, const VOCAB: usize, const DIM: usize, E: Dtype, D: Device<E>> ModuleMut<T>
-    for Embedding<VOCAB, DIM, E, D>
-where
-    Self: Module<T>,
-{
-    type Output = <Self as Module<T>>::Output;
-    fn forward_mut(&mut self, input: T) -> Self::Output {
-        self.forward(input)
-    }
-}
-
-impl<const VOCAB: usize, const DIM: usize, E: Dtype, D: Device<E>> GradientUpdate<D, E>
-    for Embedding<VOCAB, DIM, E, D>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.weight.update(updater, unused)?;
-        Ok(())
-    }
-}
-
-impl<const V: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
-    BuildModule<D, E> for Embedding<V, M, E, D>
-{
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        let bound = E::ONE / E::from_usize(V).unwrap().sqrt();
-        let distr = rand_distr::Uniform::new(-bound, bound);
-        let weight = device.try_sample(distr)?;
-        Ok(Self { weight })
-    }
-}
-
-impl<const VOCAB: usize, const DIM: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
-    ResetParams<D, E> for Embedding<VOCAB, DIM, E, D>
-{
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        let bound = E::ONE / E::from_usize(VOCAB).unwrap().sqrt();
-        let distr = rand_distr::Uniform::new(-bound, bound);
-        self.weight.try_fill_with_distr(distr)?;
-        Ok(())
-    }
-}
-
 impl<const VOCAB: usize, const DIM: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
     for Embedding<VOCAB, DIM, E, D1>
 {
@@ -138,11 +124,7 @@ impl<const VOCAB: usize, const DIM: usize, E: Dtype, D1: Device<E>, D2: Device<E
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        nn::{tests::SimpleUpdater, DeviceBuildExt},
-        tests::*,
-        unique_id::HasUniqueId,
-    };
+    use crate::{nn::DeviceBuildExt, tests::*};
 
     const W: [[TestDtype; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
@@ -244,25 +226,5 @@ mod tests {
                 ],
             ],
         );
-    }
-
-    #[test]
-    fn test_embedding_missing_gradients() {
-        let dev: TestDevice = Default::default();
-
-        let mut model = dev.build_module::<builder::Embedding<5, 3>, TestDtype>();
-        let mut g: SimpleUpdater = Default::default();
-
-        // no gradients present
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert_eq!(&unused.ids, &[*model.weight.id()]);
-
-        g.0.try_alloc_for(&model.weight).unwrap();
-
-        // weight gradient is present
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert!(unused.is_empty());
     }
 }
