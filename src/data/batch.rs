@@ -33,7 +33,7 @@ impl<I: Iterator> Iterator for Batcher<usize, I> {
 /// Create batches of items from an [Iterator]
 pub trait IteratorBatchExt: Iterator {
     /// Return an [Iterator] where the items are either:
-    /// - `[Self::Item; N]`, if `Size` is [Const<N>]
+    /// - `[Self::Item; N]`, if `Size` is [`Const<N>`]
     /// - `Vec<Self::Item>`, if `Size` is [usize].
     ///
     /// **Drop last is not supported - always returns exact batches**

@@ -18,7 +18,7 @@ pub struct RecursiveWalker<'a, M, F> {
 
 /// Something that can visit [Tensor]s. Used in conjunction with [RecursiveWalker].
 pub trait TensorVisitor<E: Dtype, D: DeviceStorage> {
-    /// The type of tensor this struct uses. E.g. [TensorMut], or [TensorRef]
+    /// The type of tensor this struct uses. E.g. [ViewTensorMut], or [ViewTensorRef]
     type Viewer: TensorViewer;
     type Err;
 

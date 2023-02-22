@@ -12,7 +12,7 @@ pub trait OneHotEncode<E: Dtype>: DeviceStorage + ZerosTensor<E> + CopySlice<E> 
     ///
     /// Arguments:
     /// - `n` - the numnber of classes to use to encode, can be `Const` or `usize`
-    /// - `class_labels` - either an array [usize; N], or Vec<usize>
+    /// - `class_labels` - either an array `[usize; N]`, or `Vec<usize>`
     ///
     /// Const class labels and const n:
     /// ```rust

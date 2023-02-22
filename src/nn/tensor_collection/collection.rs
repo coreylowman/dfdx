@@ -55,7 +55,7 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> TensorCollection<E, D> for Tensor<S, 
     }
 }
 
-/// Options to change behavior of [TensorVisitor]
+/// Options to change behavior of [ModuleVisitor]
 #[non_exhaustive]
 pub struct TensorOptions<S: Shape, E: Dtype, D: DeviceStorage> {
     /// Whether the tensor should be updated with gradients
