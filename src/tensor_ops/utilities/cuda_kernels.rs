@@ -138,7 +138,6 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for 
         let dims: CudaSlice<usize> = self.dev.take_async(shape.concrete().into())?;
         let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
         let rhs_strides: CudaSlice<usize> = self.dev.take_async(rhs.strides.into())?;
-        let out_strides: CudaSlice<usize> = self.dev.take_async(strides.into())?;
 
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -152,7 +151,6 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for 
             rhs.data.as_ref(), // const float *rhs,
             &rhs_strides,      // const size_t *rhs_strides,
             &mut storage,      // float *out,
-            &out_strides,      // const size_t *out_strides
         );
         unsafe { fwd_fn.launch_async(cfg, params) }?;
         Ok(CudaArray {
@@ -177,7 +175,6 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for 
         let dims: CudaSlice<usize> = self.dev.take_async(lhs.shape.concrete().into())?;
         let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
         let rhs_strides: CudaSlice<usize> = self.dev.take_async(rhs.strides.into())?;
-        let out_strides: CudaSlice<usize> = self.dev.take_async(grad_out.strides.into())?;
 
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (
@@ -192,7 +189,6 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for 
             Arc::make_mut(&mut grad_rhs.data), // float *grad_rhs,
             &rhs_strides,                      // const size_t *rhs_strides,
             grad_out.data.as_ref(),            // const float *grad_out,
-            &out_strides,                      // const size_t *out_strides
         );
         unsafe { bwd_fn.launch_async(cfg, params) }?;
         Ok(())
