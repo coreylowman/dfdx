@@ -3,33 +3,50 @@ use crate::shapes::{BroadcastStridesTo, Shape};
 use std::sync::Arc;
 use std::vec::Vec;
 
-struct NdIndex<S: Shape> {
+pub(crate) struct NdIndex<S: Shape> {
     indices: S::Concrete,
     shape: S::Concrete,
     strides: S::Concrete,
     next: Option<usize>,
+    contiguous: Option<usize>,
 }
 
 impl<S: Shape> NdIndex<S> {
-    fn new(shape: S, strides: S::Concrete) -> Self {
-        let indices: S::Concrete = Default::default();
-        let i: usize = strides
-            .into_iter()
-            .zip(indices.into_iter())
-            .map(|(a, b)| a * b)
-            .sum();
+    #[inline]
+    pub(crate) fn new(shape: S, strides: S::Concrete) -> Self {
         Self {
-            indices,
+            indices: Default::default(),
             shape: shape.concrete(),
             strides,
-            next: Some(i),
+            next: Some(0),
+            contiguous: (strides == shape.strides()).then(|| shape.num_elements()),
         }
     }
 }
 
 impl<S: Shape> NdIndex<S> {
     #[inline(always)]
-    fn get_with_idx(&mut self) -> Option<(usize, S::Concrete)> {
+    pub(crate) fn next(&mut self) -> Option<usize> {
+        match self.contiguous {
+            Some(numel) => match self.next.as_mut() {
+                Some(i) => {
+                    let idx = *i;
+                    let next = idx + 1;
+                    if next >= numel {
+                        self.next = None;
+                    } else {
+                        *i = next;
+                    }
+                    Some(idx)
+                }
+                None => None,
+            },
+            None => self.next_with_idx().map(|(i, _)| i),
+        }
+    }
+
+    #[inline(always)]
+    fn next_with_idx(&mut self) -> Option<(usize, S::Concrete)> {
         match (S::NUM_DIMS, self.next.as_mut()) {
             (_, None) => None,
             (0, Some(i)) => {
@@ -85,14 +102,17 @@ pub(crate) struct StridedMutIndexIter<'a, S: Shape, E> {
 }
 
 impl<S: Shape, E: Clone> StridedArray<S, E> {
+    #[inline]
     pub(crate) fn buf_iter(&self) -> std::slice::Iter<'_, E> {
         self.data.iter()
     }
 
+    #[inline]
     pub(crate) fn buf_iter_mut(&mut self) -> std::slice::IterMut<'_, E> {
         std::sync::Arc::make_mut(&mut self.data).iter_mut()
     }
 
+    #[inline]
     pub(crate) fn iter(&self) -> StridedRefIter<S, E> {
         StridedRefIter {
             data: self.data.as_ref(),
@@ -100,6 +120,7 @@ impl<S: Shape, E: Clone> StridedArray<S, E> {
         }
     }
 
+    #[inline]
     pub(crate) fn iter_mut(&mut self) -> StridedMutIter<S, E> {
         StridedMutIter {
             data: std::sync::Arc::make_mut(&mut self.data),
@@ -107,6 +128,7 @@ impl<S: Shape, E: Clone> StridedArray<S, E> {
         }
     }
 
+    #[inline]
     pub(crate) fn iter_with_index(&self) -> StridedRefIndexIter<S, E> {
         StridedRefIndexIter {
             data: self.data.as_ref(),
@@ -114,6 +136,7 @@ impl<S: Shape, E: Clone> StridedArray<S, E> {
         }
     }
 
+    #[inline]
     pub(crate) fn iter_mut_with_index(&mut self) -> StridedMutIndexIter<S, E> {
         StridedMutIndexIter {
             data: std::sync::Arc::make_mut(&mut self.data),
@@ -123,6 +146,7 @@ impl<S: Shape, E: Clone> StridedArray<S, E> {
 }
 
 impl<S: Shape, E: Clone> StridedArray<S, E> {
+    #[inline]
     pub(crate) fn iter_as<Axes, Dst: Shape>(&self, dst: &Dst) -> StridedRefIter<Dst, E>
     where
         S: BroadcastStridesTo<Dst, Axes>,
@@ -133,6 +157,7 @@ impl<S: Shape, E: Clone> StridedArray<S, E> {
         }
     }
 
+    #[inline]
     pub(crate) fn iter_mut_as<Axes, Dst: Shape>(&mut self, dst: &Dst) -> StridedMutIter<Dst, E>
     where
         S: BroadcastStridesTo<Dst, Axes>,
@@ -155,7 +180,7 @@ impl<'q, S: Shape, E> LendingIterator for StridedRefIter<'q, S, E> {
     type Item<'a> = &'a E where Self: 'a;
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
-        self.index.get_with_idx().map(|(i, _)| &self.data[i])
+        self.index.next().map(|i| &self.data[i])
     }
 }
 
@@ -163,7 +188,7 @@ impl<'q, S: Shape, E> LendingIterator for StridedMutIter<'q, S, E> {
     type Item<'a> = &'a mut E where Self: 'a;
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
-        self.index.get_with_idx().map(|(i, _)| &mut self.data[i])
+        self.index.next().map(|i| &mut self.data[i])
     }
 }
 
@@ -172,7 +197,7 @@ impl<'q, S: Shape, E> LendingIterator for StridedRefIndexIter<'q, S, E> {
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
         self.index
-            .get_with_idx()
+            .next_with_idx()
             .map(|(i, idx)| (&self.data[i], idx))
     }
 }
@@ -182,7 +207,7 @@ impl<'q, S: Shape, E> LendingIterator for StridedMutIndexIter<'q, S, E> {
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
         self.index
-            .get_with_idx()
+            .next_with_idx()
             .map(|(i, idx)| (&mut self.data[i], idx))
     }
 }

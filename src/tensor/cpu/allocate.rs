@@ -20,9 +20,18 @@ impl<S: Shape, E: Default + Clone> StridedArray<S, E> {
     pub(crate) fn try_new_with(shape: S, elem: E) -> Result<Self, CpuError> {
         let numel = shape.num_elements();
         let strides: S::Concrete = shape.strides();
-        let mut data: Vec<E> = Vec::new();
-        data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
-        data.resize(numel, elem);
+
+        #[cfg(feature = "fast_alloc")]
+        let data = std::vec![elem; numel];
+
+        #[cfg(not(feature = "fast_alloc"))]
+        let data = {
+            let mut data: Vec<E> = Vec::new();
+            data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
+            data.resize(numel, elem);
+            data
+        };
+
         let data = Arc::new(data);
         Ok(StridedArray {
             data,
@@ -32,13 +41,22 @@ impl<S: Shape, E: Default + Clone> StridedArray<S, E> {
     }
 
     #[inline]
-    pub(crate) fn try_new_like(other: &Self, elem: E) -> Result<Self, CpuError> {
+    pub(crate) fn try_new_like(other: &Self) -> Result<Self, CpuError> {
         let numel = other.data.len();
         let shape = other.shape;
         let strides = other.strides;
-        let mut data: Vec<E> = Vec::new();
-        data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
-        data.resize(numel, elem);
+
+        #[cfg(feature = "fast_alloc")]
+        let data = std::vec![Default::default(); numel];
+
+        #[cfg(not(feature = "fast_alloc"))]
+        let data = {
+            let mut data: Vec<E> = Vec::new();
+            data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
+            data.resize(numel, Default::default());
+            data
+        };
+
         let data = Arc::new(data);
         Ok(StridedArray {
             data,
@@ -88,7 +106,7 @@ impl<E: Unit> SampleTensor<E> for Cpu {
         src: &S,
         distr: D,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
-        let mut storage = StridedArray::try_new_with(*src.shape(), Default::default())?;
+        let mut storage = StridedArray::new(*src.shape())?;
         {
             let mut rng = self.rng.lock().unwrap();
             for v in storage.buf_iter_mut() {

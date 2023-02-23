@@ -88,7 +88,7 @@ impl DeviceStorage for Cpu {
         &self,
         storage: &Self::Storage<S, E>,
     ) -> Result<Self::Storage<S, E>, Self::Err> {
-        StridedArray::try_new_like(storage, Default::default())
+        StridedArray::try_new_like(storage)
     }
 
     fn random_u64(&self) -> u64 {
