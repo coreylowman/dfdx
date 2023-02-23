@@ -4,7 +4,8 @@ struct BCEKernelOp {};
 
 template<typename T>
 __device__ T op_f(T logit, T prob) {
-    return maxg(logit, 0.0) - logit * prob + logg(1.0 + expg(-absg(logit)));
+    T zero = 0.0;
+    return maxg(logit, zero) - logit * prob + logg(1.0 + expg(-absg(logit)));
 }
 
 template<typename T>
