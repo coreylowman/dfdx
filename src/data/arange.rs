@@ -1,12 +1,12 @@
 use crate::{
     shapes::*,
-    tensor::{CopySlice, DeviceStorage, Tensor, ZerosTensor},
+    tensor::{DeviceStorage, Tensor, TensorFromVec, ZerosTensor},
 };
 
 use std::vec::Vec;
 
 /// Generates a tensor with ordered data from 0 to `N`.
-pub trait Arange<E: Dtype>: DeviceStorage + ZerosTensor<E> + CopySlice<E> {
+pub trait Arange<E: Dtype>: DeviceStorage + ZerosTensor<E> + TensorFromVec<E> {
     /// Generates a tensor with ordered data from 0 to `N`.
     ///
     /// Const sized tensor:
@@ -29,9 +29,7 @@ pub trait Arange<E: Dtype>: DeviceStorage + ZerosTensor<E> + CopySlice<E> {
         for i in 0..n.size() {
             data.push(E::from_usize(i).unwrap());
         }
-        let mut t = self.zeros_like(&(n,));
-        t.copy_from(&data);
-        t
+        self.tensor_from_vec(data, (n,))
     }
 }
-impl<E: Dtype, D: ZerosTensor<E> + CopySlice<E>> Arange<E> for D {}
+impl<E: Dtype, D: ZerosTensor<E> + TensorFromVec<E>> Arange<E> for D {}
