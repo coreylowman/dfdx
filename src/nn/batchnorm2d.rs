@@ -105,8 +105,7 @@ impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
         self.running_mean = self.running_mean.clone() * (E::ONE - self.momentum)
             + mean_chan.retaped::<NoneTape>() * self.momentum;
 
-        let mean = mean_chan.broadcast_like(&shape);
-        let centered = x - mean;
+        let centered = x - mean_chan.broadcast_like(&shape);
 
         let var_chan = centered.retaped::<T>().square().mean::<Rank1<C>, _>();
 
@@ -115,14 +114,14 @@ impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
             + var_chan.retaped::<NoneTape>() * (self.momentum * n / (n - E::ONE));
 
         // statistics for normalizing - on tape
-        let std = (var_chan + self.epsilon).sqrt().broadcast_like(&shape);
+        let std = (var_chan + self.epsilon).sqrt();
 
         // record broadcast of scale & bias - on tape
-        let scale = self.scale.retaped::<T>().broadcast_like(&shape);
+        let scale = (self.scale.retaped::<T>() / std).broadcast_like(&shape);
         let bias = self.bias.retaped::<T>().broadcast_like(&shape);
 
         // normalize & affine - on tape
-        (centered / std) * scale + bias
+        centered * scale + bias
     }
 }
 
