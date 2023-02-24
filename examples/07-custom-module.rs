@@ -66,7 +66,10 @@ impl<
     type Output = Tensor<Rank2<BATCH, OUT>, f32, Device, T>;
     type Error = Err;
 
-    fn try_forward(&self, x: Tensor<Rank2<BATCH, IN>, f32, Device, T>) -> Result<Self::Output, Err> {
+    fn try_forward(
+        &self,
+        x: Tensor<Rank2<BATCH, IN>, f32, Device, T>,
+    ) -> Result<Self::Output, Err> {
         let x = self.l1.try_forward(x)?;
         let x = self.relu.try_forward(x)?;
         self.l2.try_forward(x)

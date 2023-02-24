@@ -34,7 +34,10 @@ where
     type Output = Tensor<Rank2<B, { C * H * W }>, E, D, T>;
     type Error = D::Err;
 
-    fn try_forward(&self, input: Tensor<Rank4<B, C, H, W>, E, D, T>) -> Result<Self::Output, D::Err> {
+    fn try_forward(
+        &self,
+        input: Tensor<Rank4<B, C, H, W>, E, D, T>,
+    ) -> Result<Self::Output, D::Err> {
         input.try_reshape()
     }
 }

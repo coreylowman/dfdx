@@ -3,9 +3,10 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{
     nn::{modules::*, tensor_collection::*, *},
+    prelude::storage_traits::HasErr,
     shapes::Dtype,
     tensor::{PutTape, SplitTape},
-    tensor_ops::{Device, TryAdd}, prelude::storage_traits::HasErr,
+    tensor_ops::{Device, TryAdd},
 };
 
 use super::mha::MultiHeadAttention;
@@ -222,8 +223,8 @@ impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>, Tgt
 where
     Tgt: SplitTape + TryAdd<Tgt::NoTape> + HasErr<Err = D::Err>,
     Mem: Clone,
-    MultiHeadAttention<M, H, M, M, E, D>:
-        Module<Tgt, Output = Tgt, Error = D::Err> + Module<(Tgt, Mem, Mem), Output = Tgt, Error = D::Err>,
+    MultiHeadAttention<M, H, M, M, E, D>: Module<Tgt, Output = Tgt, Error = D::Err>
+        + Module<(Tgt, Mem, Mem), Output = Tgt, Error = D::Err>,
     LayerNorm1D<M, E, D>: Module<Tgt, Output = Tgt, Error = D::Err>,
     FF<M, F, E, D>: Module<Tgt, Output = Tgt, Error = D::Err>,
 {
@@ -238,7 +239,9 @@ where
 
         let (x, tape) = x.split_tape();
         let x_residual = x.clone();
-        let x = self.mh_attn.try_forward((x.put_tape(tape), mem.clone(), mem))?;
+        let x = self
+            .mh_attn
+            .try_forward((x.put_tape(tape), mem.clone(), mem))?;
         let x = x.try_add(x_residual)?;
         let x = self.norm2.try_forward(x)?;
         let x = self.ff.try_forward(x)?;

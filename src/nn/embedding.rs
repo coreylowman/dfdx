@@ -108,7 +108,10 @@ impl<
     type Output = Tensor<Rank3<BATCH, SEQ, DIM>, E, D, T>;
     type Error = D::Err;
 
-    fn try_forward(&self, input: Tensor<Rank2<BATCH, SEQ>, usize, D, T>) -> Result<Self::Output, D::Err> {
+    fn try_forward(
+        &self,
+        input: Tensor<Rank2<BATCH, SEQ>, usize, D, T>,
+    ) -> Result<Self::Output, D::Err> {
         let (input, tape) = input.split_tape();
         self.weight.clone().put_tape(tape).try_gather(input)
     }

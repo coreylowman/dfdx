@@ -161,7 +161,10 @@ mod tests {
         type Output = Tensor<Rank1<N>, f32, Cpu>;
         type Error = <Cpu as HasErr>::Err;
 
-        fn try_forward(&self, mut input: Tensor<Rank1<N>, f32, Cpu>) -> Result<Self::Output, Self::Error> {
+        fn try_forward(
+            &self,
+            mut input: Tensor<Rank1<N>, f32, Cpu>,
+        ) -> Result<Self::Output, Self::Error> {
             std::sync::Arc::make_mut(&mut input.storage.data)[I] = 1.0;
             Ok(input)
         }

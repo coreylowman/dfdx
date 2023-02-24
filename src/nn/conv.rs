@@ -3,7 +3,7 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ToDevice, ModuleMut};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 pub mod builder {
     #[derive(Debug)]
@@ -157,8 +157,14 @@ impl<'a, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<D>>
     type Output = Tensor<(Const<C>, H, W), E, D, T>;
     type Error = D::Err;
 
-    fn try_forward(&self, input: Tensor<(Const<C>, H, W), E, D, T>) -> Result<Self::Output, D::Err> {
-        self.beta.retaped::<T>().try_broadcast_like(input.shape())?.try_add(input)
+    fn try_forward(
+        &self,
+        input: Tensor<(Const<C>, H, W), E, D, T>,
+    ) -> Result<Self::Output, D::Err> {
+        self.beta
+            .retaped::<T>()
+            .try_broadcast_like(input.shape())?
+            .try_add(input)
     }
 }
 
@@ -168,8 +174,14 @@ impl<'a, B: Dim, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape
     type Output = Tensor<(B, Const<C>, H, W), E, D, T>;
     type Error = D::Err;
 
-    fn try_forward(&self, input: Tensor<(B, Const<C>, H, W), E, D, T>) -> Result<Self::Output, D::Err> {
-        self.beta.retaped::<T>().try_broadcast_like(input.shape())?.try_add(input)
+    fn try_forward(
+        &self,
+        input: Tensor<(B, Const<C>, H, W), E, D, T>,
+    ) -> Result<Self::Output, D::Err> {
+        self.beta
+            .retaped::<T>()
+            .try_broadcast_like(input.shape())?
+            .try_add(input)
     }
 }
 

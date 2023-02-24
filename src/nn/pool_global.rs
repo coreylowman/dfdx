@@ -67,7 +67,10 @@ macro_rules! impl_pools {
             type Output = Tensor<(C,), E, D, T>;
             type Error = D::Err;
 
-            fn try_forward(&self, input: Tensor<(C, H, W), E, D, T>) -> Result<Self::Output, D::Err> {
+            fn try_forward(
+                &self,
+                input: Tensor<(C, H, W), E, D, T>,
+            ) -> Result<Self::Output, D::Err> {
                 input.try_min()
             }
         }
@@ -78,7 +81,10 @@ macro_rules! impl_pools {
             type Output = Tensor<(B, C), E, D, T>;
             type Error = D::Err;
 
-            fn try_forward(&self, input: Tensor<(B, C, H, W), E, D, T>) -> Result<Self::Output, D::Err> {
+            fn try_forward(
+                &self,
+                input: Tensor<(B, C, H, W), E, D, T>,
+            ) -> Result<Self::Output, D::Err> {
                 input.$Method()
             }
         }

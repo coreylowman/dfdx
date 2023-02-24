@@ -53,7 +53,9 @@ impl<T: SplitTape + TryAdd<T>, F: Module<T, Output = T, Error = T::Err>> Module<
     }
 }
 
-impl<T: SplitTape + TryAdd<T>, F: ModuleMut<T, Output = T, Error = T::Err>> ModuleMut<T> for Residual<F> {
+impl<T: SplitTape + TryAdd<T>, F: ModuleMut<T, Output = T, Error = T::Err>> ModuleMut<T>
+    for Residual<F>
+{
     type Output = T;
     type Error = F::Error;
 

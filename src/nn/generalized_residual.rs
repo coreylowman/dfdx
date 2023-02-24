@@ -70,12 +70,14 @@ where
     type Error = F::Error;
 
     fn try_forward(&self, x: T) -> Result<Self::Output, F::Error> {
-        self.f.try_forward(x.with_empty_tape())?.try_add(self.r.try_forward(x)?)
+        self.f
+            .try_forward(x.with_empty_tape())?
+            .try_add(self.r.try_forward(x)?)
     }
 }
 
-impl<T: SplitTape, F: ModuleMut<T>, R: ModuleMut<T, Output = F::Output, Error = F::Error>> ModuleMut<T>
-    for GeneralizedResidual<F, R>
+impl<T: SplitTape, F: ModuleMut<T>, R: ModuleMut<T, Output = F::Output, Error = F::Error>>
+    ModuleMut<T> for GeneralizedResidual<F, R>
 where
     F::Output: TryAdd<F::Output> + HasErr<Err = F::Error>,
 {
@@ -83,7 +85,9 @@ where
     type Error = F::Error;
 
     fn try_forward_mut(&mut self, x: T) -> Result<Self::Output, F::Error> {
-        self.f.try_forward_mut(x.with_empty_tape())?.try_add(self.r.try_forward_mut(x)?)
+        self.f
+            .try_forward_mut(x.with_empty_tape())?
+            .try_add(self.r.try_forward_mut(x)?)
     }
 }
 
