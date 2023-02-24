@@ -190,6 +190,7 @@ impl<'q, S: Shape, E> LendingIterator for StridedMutIndexIter<'q, S, E> {
 #[cfg(test)]
 mod tests {
     use crate::shapes::{Rank0, Rank1, Rank2, Rank3};
+    use std::sync::Arc;
 
     use super::*;
 
