@@ -159,4 +159,15 @@ mod tests {
         let c = b.sum::<Rank2<4, 3>, _>();
         assert_eq!(c.array(), [[2.0, 4.0, 6.0]; 4]);
     }
+
+    #[test]
+    fn test_sum_reduce_to_0d_from_broadcasted() {
+        let dev: TestDevice = Default::default();
+        let a: Tensor<Rank1<3>, TestDtype, _> = dev.ones();
+        let b = a.trace().broadcast::<Rank3<4, 3, 2>, _>();
+        let c = b.sum();
+        assert_eq!(c.array(), 24.0);
+        let g = c.backward();
+        assert_eq!(g.get(&a).array(), [8.0; 3]);
+    }
 }
