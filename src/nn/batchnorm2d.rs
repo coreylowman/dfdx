@@ -82,9 +82,9 @@ impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
         let mean = self.running_mean.clone();
 
         // normalize & affine
-        let x = x.try_sub(mean.broadcast_like(&shape))?;
-        let x = x.try_div(std.broadcast_like(&shape))?;
-        let x = x.try_mul(self.scale.clone().broadcast_like(&shape))?;
+        let x = x.try_sub(mean.try_broadcast_like(&shape))?;
+        let x = x.try_div(std.try_broadcast_like(&shape))?;
+        let x = x.try_mul(self.scale.clone().try_broadcast_like(&shape))?;
         x.try_add(self.bias.clone().try_broadcast_like(&shape)?)
     }
 
