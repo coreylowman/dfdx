@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Axes, Dtype, HasAxes, ReduceShapeTo, Shape},
-    tensor::cpu::{Cpu, LendingIterator, StridedArray},
+    tensor::cpu::{Cpu, StridedArray},
     tensor_ops::utilities::reduction_utils::index_for_reductions,
 };
 
@@ -19,8 +19,7 @@ impl<E: Dtype + Float> super::MaxReduceKernel<E> for Cpu {
         if Dst::NUM_DIMS == 0 {
             debug_assert_eq!(out.data.len(), 1);
             let mut tmp: E = E::neg_infinity();
-            let mut inp_iter = inp.iter();
-            while let Some(i) = inp_iter.next() {
+            for i in inp.buf_iter() {
                 tmp = i.max(tmp);
             }
             std::sync::Arc::get_mut(&mut out.data).unwrap()[0] = tmp;

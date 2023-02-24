@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Axes, Dtype, HasAxes, ReduceShapeTo, Shape},
-    tensor::cpu::{Cpu, LendingIterator, StridedArray},
+    tensor::cpu::{Cpu, StridedArray},
     tensor_ops::utilities::reduction_utils::index_for_reductions,
 };
 
@@ -16,12 +16,12 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
         let mut out: StridedArray<Dst, E> = StridedArray::new(dst)?;
         if Dst::NUM_DIMS == 0 {
             debug_assert_eq!(out.data.len(), 1);
+            let scale = E::from_usize(inp.shape.num_elements() / inp.data.len()).unwrap();
             let mut tmp: E = Default::default();
-            let mut inp_iter = inp.iter();
-            while let Some(i) = inp_iter.next() {
-                tmp += *i;
+            for v in inp.buf_iter() {
+                tmp += *v;
             }
-            std::sync::Arc::get_mut(&mut out.data).unwrap()[0] = tmp;
+            std::sync::Arc::get_mut(&mut out.data).unwrap()[0] = tmp * scale;
         } else {
             let num_elems_reduced = <Src as HasAxes<Ax>>::size(&inp.shape);
             let inp_buf = inp.data.as_ref();
