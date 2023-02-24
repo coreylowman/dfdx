@@ -58,30 +58,32 @@ macro_rules! tuple_impls {
         impl<
             Input,
             $last:
-            $(Module::<$rev_tail ::Output>, $rev_tail: )+
+            $(Module::<$rev_tail ::Output, Error=$rev_tail::Error>, $rev_tail: )+
             Module<Input>
         > Module<Input> for ($($name,)+) {
             type Output = $last ::Output;
+            type Error = $last ::Error;
 
             /// Calls forward sequentially on each module in the tuple.
-            fn forward(&self, x: Input) -> Self::Output {
-                $(let x = self.$idx.forward(x);)+
-                x
+            fn try_forward(&self, x: Input) -> Result<Self::Output, Self::Error> {
+                $(let x = self.$idx.try_forward(x)?;)+
+                Ok(x)
             }
         }
 
         impl<
             Input,
             $last:
-            $(ModuleMut::<$rev_tail ::Output>, $rev_tail: )+
+            $(ModuleMut::<$rev_tail ::Output, Error=$rev_tail::Error>, $rev_tail: )+
             ModuleMut<Input>
         > ModuleMut<Input> for ($($name,)+) {
             type Output = $last ::Output;
+            type Error = $last ::Error;
 
             /// Calls forward sequentially on each module in the tuple.
-            fn forward_mut(&mut self, x: Input) -> Self::Output {
-                $(let x = self.$idx.forward_mut(x);)+
-                x
+            fn try_forward_mut(&mut self, x: Input) -> Result<Self::Output, Self::Error> {
+                $(let x = self.$idx.try_forward_mut(x)?;)+
+                Ok(x)
             }
         }
     };
@@ -154,11 +156,17 @@ mod tests {
     #[derive(Debug, Default, Clone)]
     struct SetTo1<const I: usize, const N: usize>;
     impl<const I: usize, const N: usize> ZeroSizedModule for SetTo1<I, N> {}
+
     impl<const I: usize, const N: usize> Module<Tensor<Rank1<N>, f32, Cpu>> for SetTo1<I, N> {
         type Output = Tensor<Rank1<N>, f32, Cpu>;
-        fn forward(&self, mut input: Tensor<Rank1<N>, f32, Cpu>) -> Self::Output {
+        type Error = <Cpu as HasErr>::Err;
+
+        fn try_forward(
+            &self,
+            mut input: Tensor<Rank1<N>, f32, Cpu>,
+        ) -> Result<Self::Output, Self::Error> {
             std::sync::Arc::make_mut(&mut input.storage.data)[I] = 1.0;
-            input
+            Ok(input)
         }
     }
 

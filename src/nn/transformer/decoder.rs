@@ -3,9 +3,10 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{
     nn::{modules::*, tensor_collection::*, *},
+    prelude::storage_traits::HasErr,
     shapes::Dtype,
     tensor::{PutTape, SplitTape},
-    tensor_ops::Device,
+    tensor_ops::{Device, TryAdd},
 };
 
 use super::mha::MultiHeadAttention;
@@ -107,26 +108,30 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, E, D, Tgt, 
 where
     E: Dtype,
     D: Device<E>,
-    TransformerDecoderBlock<M, H, F, E, D>: Module<(Tgt, Mem), Output = Tgt>,
+    TransformerDecoderBlock<M, H, F, E, D>: Module<(Tgt, Mem), Output = Tgt, Error = D::Err>,
 {
     type Output = Tgt;
-    fn forward(&self, (mut tgt, mem): (Tgt, Mem)) -> Self::Output {
+    type Error = D::Err;
+
+    fn try_forward(&self, (mut tgt, mem): (Tgt, Mem)) -> Result<Self::Output, D::Err> {
         for block in self.0.modules.iter() {
-            tgt = block.forward((tgt, mem.clone()));
+            tgt = block.try_forward((tgt, mem.clone()))?;
         }
-        tgt
+        Ok(tgt)
     }
 }
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D: Device<E>, T>
     ModuleMut<T> for TransformerDecoder<M, H, F, L, E, D>
 where
-    Self: Module<T>,
+    Self: Module<T, Error = D::Err>,
 {
     type Output = <Self as Module<T>>::Output;
 
-    fn forward_mut(&mut self, t: T) -> Self::Output {
-        self.forward(t)
+    type Error = D::Err;
+
+    fn try_forward_mut(&mut self, t: T) -> Result<Self::Output, D::Err> {
+        self.try_forward(t)
     }
 }
 
@@ -216,28 +221,31 @@ impl<const M: usize, const H: usize, const F: usize, E: Dtype, D1: Device<E>, D2
 impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>, Tgt, Mem>
     Module<(Tgt, Mem)> for TransformerDecoderBlock<M, H, F, E, D>
 where
-    Tgt: SplitTape + std::ops::Add<Tgt::NoTape, Output = Tgt>,
+    Tgt: SplitTape + TryAdd<Tgt::NoTape> + HasErr<Err = D::Err>,
     Mem: Clone,
-    MultiHeadAttention<M, H, M, M, E, D>:
-        Module<Tgt, Output = Tgt> + Module<(Tgt, Mem, Mem), Output = Tgt>,
-    LayerNorm1D<M, E, D>: Module<Tgt, Output = Tgt>,
-    FF<M, F, E, D>: Module<Tgt, Output = Tgt>,
+    MultiHeadAttention<M, H, M, M, E, D>: Module<Tgt, Output = Tgt, Error = D::Err>
+        + Module<(Tgt, Mem, Mem), Output = Tgt, Error = D::Err>,
+    LayerNorm1D<M, E, D>: Module<Tgt, Output = Tgt, Error = D::Err>,
+    FF<M, F, E, D>: Module<Tgt, Output = Tgt, Error = D::Err>,
 {
     type Output = Tgt;
+    type Error = D::Err;
 
-    fn forward(&self, (tgt, mem): (Tgt, Mem)) -> Self::Output {
+    fn try_forward(&self, (tgt, mem): (Tgt, Mem)) -> Result<Self::Output, D::Err> {
         let (tgt, tape) = tgt.split_tape();
-        let x = self.self_attn.forward(tgt.clone().put_tape(tape));
-        let x = x + tgt;
-        let x = self.norm1.forward(x);
+        let x = self.self_attn.try_forward(tgt.clone().put_tape(tape))?;
+        let x = x.try_add(tgt)?;
+        let x = self.norm1.try_forward(x)?;
 
         let (x, tape) = x.split_tape();
         let x_residual = x.clone();
-        let x = self.mh_attn.forward((x.put_tape(tape), mem.clone(), mem));
-        let x = x + x_residual;
-        let x = self.norm2.forward(x);
-        let x = self.ff.forward(x);
-        self.norm3.forward(x)
+        let x = self
+            .mh_attn
+            .try_forward((x.put_tape(tape), mem.clone(), mem))?;
+        let x = x.try_add(x_residual)?;
+        let x = self.norm2.try_forward(x)?;
+        let x = self.ff.try_forward(x)?;
+        self.norm3.try_forward(x)
     }
 }
 

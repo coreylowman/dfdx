@@ -90,8 +90,12 @@ impl<const M: usize, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<Rank1<M>,
     for LayerNorm1D<M, E, D>
 {
     type Output = Tensor<Rank1<M>, E, D, T>;
-    fn forward(&self, x: Tensor<Rank1<M>, E, D, T>) -> Self::Output {
-        x.normalize(self.epsilon) * self.gamma.clone() + self.beta.clone()
+    type Error = D::Err;
+
+    fn try_forward(&self, x: Tensor<Rank1<M>, E, D, T>) -> Result<Self::Output, D::Err> {
+        x.try_normalize(self.epsilon)?
+            .try_mul(self.gamma.clone())?
+            .try_add(self.beta.clone())
     }
 }
 
@@ -99,10 +103,13 @@ impl<B: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
     Module<Tensor<(B, Const<M>), E, D, T>> for LayerNorm1D<M, E, D>
 {
     type Output = Tensor<(B, Const<M>), E, D, T>;
-    fn forward(&self, x: Tensor<(B, Const<M>), E, D, T>) -> Self::Output {
+    type Error = D::Err;
+
+    fn try_forward(&self, x: Tensor<(B, Const<M>), E, D, T>) -> Result<Self::Output, D::Err> {
         let shape = *x.shape();
-        x.normalize::<Axis<1>>(self.epsilon) * self.gamma.retaped::<T>().broadcast_like(&shape)
-            + self.beta.retaped::<T>().broadcast_like(&shape)
+        x.try_normalize::<Axis<1>>(self.epsilon)?
+            .try_mul(self.gamma.retaped::<T>().try_broadcast_like(&shape)?)?
+            .try_add(self.beta.retaped::<T>().try_broadcast_like(&shape)?)
     }
 }
 
@@ -110,10 +117,13 @@ impl<B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
     Module<Tensor<(B, S, Const<M>), E, D, T>> for LayerNorm1D<M, E, D>
 {
     type Output = Tensor<(B, S, Const<M>), E, D, T>;
-    fn forward(&self, x: Tensor<(B, S, Const<M>), E, D, T>) -> Self::Output {
+    type Error = D::Err;
+
+    fn try_forward(&self, x: Tensor<(B, S, Const<M>), E, D, T>) -> Result<Self::Output, D::Err> {
         let shape = *x.shape();
-        x.normalize::<Axis<2>>(self.epsilon) * self.gamma.retaped::<T>().broadcast_like(&shape)
-            + self.beta.retaped::<T>().broadcast_like(&shape)
+        x.try_normalize::<Axis<2>>(self.epsilon)?
+            .try_mul(self.gamma.retaped::<T>().try_broadcast_like(&shape)?)?
+            .try_add(self.beta.retaped::<T>().try_broadcast_like(&shape)?)
     }
 }
 

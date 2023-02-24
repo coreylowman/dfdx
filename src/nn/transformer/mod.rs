@@ -133,17 +133,19 @@ impl<
         Tgt: PutTape<Src::Tape>,
     > Module<(Src, Tgt)> for Transformer<M, H, EL, DL, F, E, D>
 where
-    TransformerEncoder<M, H, F, EL, E, D>: Module<Src, Output = Src>,
+    TransformerEncoder<M, H, F, EL, E, D>: Module<Src, Output = Src, Error = D::Err>,
     TransformerDecoder<M, H, F, DL, E, D>: Module<
         (<Tgt as PutTape<Src::Tape>>::Output, Src::NoTape),
         Output = <Tgt as PutTape<Src::Tape>>::Output,
+        Error = D::Err,
     >,
 {
     type Output = <Tgt as PutTape<Src::Tape>>::Output;
+    type Error = D::Err;
 
-    fn forward(&self, (src, tgt): (Src, Tgt)) -> Self::Output {
-        let (mem, tape) = self.encoder.forward(src).split_tape();
-        self.decoder.forward((tgt.put_tape(tape), mem))
+    fn try_forward(&self, (src, tgt): (Src, Tgt)) -> Result<Self::Output, D::Err> {
+        let (mem, tape) = self.encoder.try_forward(src)?.split_tape();
+        self.decoder.try_forward((tgt.put_tape(tape), mem))
     }
 }
 
@@ -152,11 +154,13 @@ impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: us
 where
     E: Dtype,
     D: Device<E>,
-    Self: Module<T>,
+    Self: Module<T, Error = D::Err>,
 {
     type Output = <Self as Module<T>>::Output;
-    fn forward_mut(&mut self, t: T) -> Self::Output {
-        self.forward(t)
+    type Error = D::Err;
+
+    fn try_forward_mut(&mut self, t: T) -> Result<Self::Output, D::Err> {
+        self.try_forward(t)
     }
 }
 

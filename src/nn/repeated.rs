@@ -76,11 +76,13 @@ impl<T, const N: usize> std::ops::Index<usize> for Repeated<T, N> {
 
 impl<Input, T: Module<Input, Output = Input>, const N: usize> Module<Input> for Repeated<T, N> {
     type Output = T::Output;
-    fn forward(&self, mut x: Input) -> Self::Output {
+    type Error = T::Error;
+
+    fn try_forward(&self, mut x: Input) -> Result<Self::Output, T::Error> {
         for i in 0..N {
-            x = self.modules[i].forward(x);
+            x = self.modules[i].try_forward(x)?;
         }
-        x
+        Ok(x)
     }
 }
 
@@ -88,11 +90,13 @@ impl<Input, T: ModuleMut<Input, Output = Input>, const N: usize> ModuleMut<Input
     for Repeated<T, N>
 {
     type Output = T::Output;
-    fn forward_mut(&mut self, mut x: Input) -> Self::Output {
+    type Error = T::Error;
+
+    fn try_forward_mut(&mut self, mut x: Input) -> Result<Self::Output, T::Error> {
         for i in 0..N {
-            x = self.modules[i].forward_mut(x);
+            x = self.modules[i].try_forward_mut(x)?;
         }
-        x
+        Ok(x)
     }
 }
 

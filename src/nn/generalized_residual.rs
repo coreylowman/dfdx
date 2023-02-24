@@ -1,4 +1,4 @@
-use crate::{shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*, tensor_ops::TryAdd};
 
 use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
@@ -61,25 +61,33 @@ impl<D, F: ToDevice<D>, R: ToDevice<D>> ToDevice<D> for GeneralizedResidual<F, R
     }
 }
 
-impl<T: SplitTape, F: Module<T>, R: Module<T, Output = F::Output>> Module<T>
+impl<T: SplitTape, F: Module<T>, R: Module<T, Output = F::Output, Error = F::Error>> Module<T>
     for GeneralizedResidual<F, R>
 where
-    F::Output: std::ops::Add<F::Output>,
+    F::Output: TryAdd<F::Output> + HasErr<Err = F::Error>,
 {
-    type Output = <F::Output as std::ops::Add<F::Output>>::Output;
-    fn forward(&self, x: T) -> Self::Output {
-        self.f.forward(x.with_empty_tape()) + self.r.forward(x)
+    type Output = F::Output;
+    type Error = F::Error;
+
+    fn try_forward(&self, x: T) -> Result<Self::Output, F::Error> {
+        self.f
+            .try_forward(x.with_empty_tape())?
+            .try_add(self.r.try_forward(x)?)
     }
 }
 
-impl<T: SplitTape, F: ModuleMut<T>, R: ModuleMut<T, Output = F::Output>> ModuleMut<T>
-    for GeneralizedResidual<F, R>
+impl<T: SplitTape, F: ModuleMut<T>, R: ModuleMut<T, Output = F::Output, Error = F::Error>>
+    ModuleMut<T> for GeneralizedResidual<F, R>
 where
-    F::Output: std::ops::Add<F::Output>,
+    F::Output: TryAdd<F::Output> + HasErr<Err = F::Error>,
 {
-    type Output = <F::Output as std::ops::Add<F::Output>>::Output;
-    fn forward_mut(&mut self, x: T) -> Self::Output {
-        self.f.forward_mut(x.with_empty_tape()) + self.r.forward_mut(x)
+    type Output = F::Output;
+    type Error = F::Error;
+
+    fn try_forward_mut(&mut self, x: T) -> Result<Self::Output, F::Error> {
+        self.f
+            .try_forward_mut(x.with_empty_tape())?
+            .try_add(self.r.try_forward_mut(x)?)
     }
 }
 

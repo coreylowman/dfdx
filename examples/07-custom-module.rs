@@ -16,6 +16,8 @@ type Device = dfdx::tensor::Cpu;
 #[cfg(feature = "cuda")]
 type Device = dfdx::tensor::Cuda;
 
+type Err = <Device as HasErr>::Err;
+
 /// Custom model struct
 /// This case is trivial and should be done with a tuple of linears and relus,
 /// but it demonstrates how to build models with custom behavior
@@ -29,7 +31,7 @@ struct Mlp<const IN: usize, const INNER: usize, const OUT: usize> {
 impl<const IN: usize, const INNER: usize, const OUT: usize> BuildModule<Device, f32>
     for Mlp<IN, INNER, OUT>
 {
-    fn try_build(device: &Device) -> Result<Self, <Device as HasErr>::Err> {
+    fn try_build(device: &Device) -> Result<Self, Err> {
         Ok(Self {
             l1: BuildModule::try_build(device)?,
             l2: BuildModule::try_build(device)?,
@@ -43,11 +45,12 @@ impl<const IN: usize, const INNER: usize, const OUT: usize> Module<Tensor<Rank1<
     for Mlp<IN, INNER, OUT>
 {
     type Output = Tensor<Rank1<OUT>, f32, Device>;
+    type Error = Err;
 
-    fn forward(&self, x: Tensor<Rank1<IN>, f32, Device>) -> Self::Output {
-        let x = self.l1.forward(x);
-        let x = self.relu.forward(x);
-        self.l2.forward(x)
+    fn try_forward(&self, x: Tensor<Rank1<IN>, f32, Device>) -> Result<Self::Output, Err> {
+        let x = self.l1.try_forward(x)?;
+        let x = self.relu.try_forward(x)?;
+        self.l2.try_forward(x)
     }
 }
 
@@ -61,11 +64,15 @@ impl<
     > Module<Tensor<Rank2<BATCH, IN>, f32, Device, T>> for Mlp<IN, INNER, OUT>
 {
     type Output = Tensor<Rank2<BATCH, OUT>, f32, Device, T>;
+    type Error = Err;
 
-    fn forward(&self, x: Tensor<Rank2<BATCH, IN>, f32, Device, T>) -> Self::Output {
-        let x = self.l1.forward(x);
-        let x = self.relu.forward(x);
-        self.l2.forward(x)
+    fn try_forward(
+        &self,
+        x: Tensor<Rank2<BATCH, IN>, f32, Device, T>,
+    ) -> Result<Self::Output, Err> {
+        let x = self.l1.try_forward(x)?;
+        let x = self.relu.try_forward(x)?;
+        self.l2.try_forward(x)
     }
 }
 
