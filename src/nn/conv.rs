@@ -3,7 +3,7 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ToDevice, ModuleMut};
 
 pub mod builder {
     #[derive(Debug)]
@@ -120,12 +120,14 @@ impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: us
 where
     E: Dtype,
     D: Device<E>,
-    Img: TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P>,
-    for<'a> Bias2D<'a, O, E, D>: Module<Img::Output, Output = Img::Output>,
+    Img: TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> + HasErr<Err = D::Err>,
+    for<'a> Bias2D<'a, O, E, D>: Module<Img::Output, Output = Img::Output, Error = D::Err>,
 {
     type Output = Img::Output;
-    fn forward(&self, x: Img) -> Self::Output {
-        Bias2D { beta: &self.bias }.forward(x.conv2d_to(self.weight.clone()))
+    type Error = D::Err;
+
+    fn try_forward(&self, x: Img) -> Result<Self::Output, D::Err> {
+        Bias2D { beta: &self.bias }.try_forward(x.try_conv2d_to(self.weight.clone())?)
     }
 }
 
@@ -134,11 +136,13 @@ impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: us
 where
     E: Dtype,
     D: Device<E>,
-    Self: Module<Img>,
+    Self: Module<Img, Error = D::Err>,
 {
     type Output = <Self as Module<Img>>::Output;
-    fn forward_mut(&mut self, input: Img) -> Self::Output {
-        self.forward(input)
+    type Error = D::Err;
+
+    fn try_forward_mut(&mut self, input: Img) -> Result<Self::Output, D::Err> {
+        self.try_forward(input)
     }
 }
 
@@ -151,8 +155,10 @@ impl<'a, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<D>>
     Module<Tensor<(Const<C>, H, W), E, D, T>> for Bias2D<'a, C, E, D>
 {
     type Output = Tensor<(Const<C>, H, W), E, D, T>;
-    fn forward(&self, input: Tensor<(Const<C>, H, W), E, D, T>) -> Self::Output {
-        self.beta.retaped::<T>().broadcast_like(input.shape()) + input
+    type Error = D::Err;
+
+    fn try_forward(&self, input: Tensor<(Const<C>, H, W), E, D, T>) -> Result<Self::Output, D::Err> {
+        self.beta.retaped::<T>().try_broadcast_like(input.shape())?.try_add(input)
     }
 }
 
@@ -160,8 +166,10 @@ impl<'a, B: Dim, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape
     Module<Tensor<(B, Const<C>, H, W), E, D, T>> for Bias2D<'a, C, E, D>
 {
     type Output = Tensor<(B, Const<C>, H, W), E, D, T>;
-    fn forward(&self, input: Tensor<(B, Const<C>, H, W), E, D, T>) -> Self::Output {
-        self.beta.retaped::<T>().broadcast_like(input.shape()) + input
+    type Error = D::Err;
+
+    fn try_forward(&self, input: Tensor<(B, Const<C>, H, W), E, D, T>) -> Result<Self::Output, D::Err> {
+        self.beta.retaped::<T>().try_broadcast_like(input.shape())?.try_add(input)
     }
 }
 

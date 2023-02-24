@@ -87,9 +87,11 @@ impl<const V: usize, const M: usize, const S: usize, E: Dtype, D: Device<E>, T: 
     Module<Tensor<Rank1<S>, usize, D, T>> for Embedding<V, M, E, D>
 {
     type Output = Tensor<Rank2<S, M>, E, D, T>;
-    fn forward(&self, input: Tensor<Rank1<S>, usize, D, T>) -> Self::Output {
+    type Error = D::Err;
+
+    fn try_forward(&self, input: Tensor<Rank1<S>, usize, D, T>) -> Result<Self::Output, D::Err> {
         let (input, tape) = input.split_tape();
-        self.weight.clone().put_tape(tape).gather(input)
+        self.weight.clone().put_tape(tape).try_gather(input)
     }
 }
 
@@ -104,9 +106,11 @@ impl<
     > Module<Tensor<Rank2<BATCH, SEQ>, usize, D, T>> for Embedding<VOCAB, DIM, E, D>
 {
     type Output = Tensor<Rank3<BATCH, SEQ, DIM>, E, D, T>;
-    fn forward(&self, input: Tensor<Rank2<BATCH, SEQ>, usize, D, T>) -> Self::Output {
+    type Error = D::Err;
+
+    fn try_forward(&self, input: Tensor<Rank2<BATCH, SEQ>, usize, D, T>) -> Result<Self::Output, D::Err> {
         let (input, tape) = input.split_tape();
-        self.weight.clone().put_tape(tape).gather(input)
+        self.weight.clone().put_tape(tape).try_gather(input)
     }
 }
 

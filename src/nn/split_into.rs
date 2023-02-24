@@ -52,7 +52,7 @@ macro_rules! tuple_impls {
     ([$($heads:ident),+] $tail:ident) => {
 impl<
     Input: SplitTape,
-    $($heads : Module<Input>,)+
+    $($heads : Module<Input, Error = $tail::Error>,)+
     $tail: Module<Input>
 > Module<Input> for SplitInto<($($heads,)+ $tail)>
 where
@@ -62,20 +62,21 @@ where
         $(<$heads::Output as SplitTape>::NoTape, )+
         $tail::Output
     );
+    type Error = $tail::Error;
 
     #[allow(non_snake_case)]
-    fn forward(&self, x: Input) -> Self::Output {
+    fn try_forward(&self, x: Input) -> Result<Self::Output, $tail::Error> {
         let (x, tape) = x.split_tape();
         let ($($heads, )+ $tail) = &self.0;
-        $(let ($heads, tape) = $heads.forward(x.clone().put_tape(tape)).split_tape();)+
-        let $tail = $tail.forward(x.put_tape(tape));
-        ($($heads,)+ $tail)
+        $(let ($heads, tape) = $heads.try_forward(x.clone().put_tape(tape))?.split_tape();)+
+        let $tail = $tail.try_forward(x.put_tape(tape))?;
+        Ok(($($heads,)+ $tail))
     }
 }
 
 impl<
     Input: SplitTape,
-    $($heads : ModuleMut<Input>,)+
+    $($heads : ModuleMut<Input, Error = $tail::Error>,)+
     $tail: ModuleMut<Input>
 > ModuleMut<Input> for SplitInto<($($heads,)+ $tail)>
 where
@@ -85,14 +86,15 @@ where
         $(<$heads::Output as SplitTape>::NoTape, )+
         $tail::Output
     );
+    type Error = $tail::Error;
 
     #[allow(non_snake_case)]
-    fn forward_mut(&mut self, x: Input) -> Self::Output {
+    fn try_forward_mut(&mut self, x: Input) -> Result<Self::Output, $tail::Error> {
         let (x, tape) = x.split_tape();
         let ($($heads, )+ $tail) = &mut self.0;
-        $(let ($heads, tape) = $heads.forward_mut(x.clone().put_tape(tape)).split_tape();)+
-        let $tail = $tail.forward_mut(x.put_tape(tape));
-        ($($heads,)+ $tail)
+        $(let ($heads, tape) = $heads.try_forward_mut(x.clone().put_tape(tape))?.split_tape();)+
+        let $tail = $tail.try_forward_mut(x.put_tape(tape))?;
+        Ok(($($heads,)+ $tail))
     }
 }
 }

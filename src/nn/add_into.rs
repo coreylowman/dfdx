@@ -55,38 +55,48 @@ macro_rules! add_into_impls {
     ($([$Mod:tt $ModVar:tt $Inp:tt $InpVar:tt]),+) => {
         impl<
             Out: std::ops::Add<Out, Output = Out>,
-            $($Inp, )+
-            $($Mod: Module<$Inp, Output = Out>, )+
-        > Module<($($Inp, )+)> for AddInto<($($Mod, )+)> {
+            Ai, $($Inp, )+
+            A: Module<Ai, Output = Out>,
+            $($Mod: Module<$Inp, Output = Out, Error = A::Error>, )+
+        > Module<(Ai, $($Inp, )+)> for AddInto<(A, $($Mod, )+)>
+        {
             type Output = Out;
-            fn forward(&self, x: ($($Inp, )+)) -> Self::Output {
-                let ($($ModVar, )+) = &self.0;
-                let ($($InpVar, )+) = x;
-                $(let $InpVar = $ModVar.forward($InpVar);)+
-                sum!($($InpVar),*)
+            type Error = A::Error;
+
+            fn try_forward(&self, x: (Ai, $($Inp, )+)) -> Result<Self::Output, Self::Error> {
+                let (a, $($ModVar, )+) = &self.0;
+                let (a_i, $($InpVar, )+) = x;
+                let a_i = a.try_forward(a_i)?;
+                $(let $InpVar = $ModVar.try_forward($InpVar)?;)+
+                Ok(sum!(a_i, $($InpVar),*))
             }
         }
         impl<
             Out: std::ops::Add<Out, Output = Out>,
-            $($Inp, )+
-            $($Mod: ModuleMut<$Inp, Output = Out>, )+
-        > ModuleMut<($($Inp, )+)> for AddInto<($($Mod, )+)> {
+            Ai, $($Inp, )+
+            A: ModuleMut<Ai, Output = Out>,
+            $($Mod: ModuleMut<$Inp, Output = Out, Error = A::Error>, )+
+        > ModuleMut<(Ai, $($Inp, )+)> for AddInto<(A, $($Mod, )+)>
+        {
             type Output = Out;
-            fn forward_mut(&mut self, x: ($($Inp, )+)) -> Self::Output {
-                let ($($ModVar, )+) = &mut self.0;
-                let ($($InpVar, )+) = x;
-                $(let $InpVar = $ModVar.forward_mut($InpVar);)+
-                sum!($($InpVar),*)
+            type Error = A::Error;
+
+            fn try_forward_mut(&mut self, x: (Ai, $($Inp, )+)) -> Result<Self::Output, Self::Error> {
+                let (a, $($ModVar, )+) = &mut self.0;
+                let (a_i, $($InpVar, )+) = x;
+                let a_i = a.try_forward_mut(a_i)?;
+                $(let $InpVar = $ModVar.try_forward_mut($InpVar)?;)+
+                Ok(sum!(a_i, $($InpVar),*))
             }
         }
     };
 }
 
-add_into_impls!([A a Ai a_i], [B b Bi b_i]);
-add_into_impls!([A a Ai a_i], [B b Bi b_i], [C c Ci c_i]);
-add_into_impls!([A a Ai a_i], [B b Bi b_i], [C c Ci c_i], [D d Di d_i]);
-add_into_impls!([A a Ai a_i], [B b Bi b_i], [C c Ci c_i], [D d Di d_i], [E e Ei e_i]);
-add_into_impls!([A a Ai a_i], [B b Bi b_i], [C c Ci c_i], [D d Di d_i], [E e Ei e_i], [F f Fi f_i]);
+add_into_impls!([B b Bi b_i]);
+add_into_impls!([B b Bi b_i], [C c Ci c_i]);
+add_into_impls!([B b Bi b_i], [C c Ci c_i], [D d Di d_i]);
+add_into_impls!([B b Bi b_i], [C c Ci c_i], [D d Di d_i], [E e Ei e_i]);
+add_into_impls!([B b Bi b_i], [C c Ci c_i], [D d Di d_i], [E e Ei e_i], [F f Fi f_i]);
 
 #[cfg(test)]
 mod tests {

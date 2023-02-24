@@ -65,8 +65,10 @@ macro_rules! impl_pools {
             Module<Tensor<(C, H, W), E, D, T>> for $PoolTy
         {
             type Output = Tensor<(C,), E, D, T>;
-            fn forward(&self, input: Tensor<(C, H, W), E, D, T>) -> Self::Output {
-                input.min()
+            type Error = D::Err;
+
+            fn try_forward(&self, input: Tensor<(C, H, W), E, D, T>) -> Result<Self::Output, D::Err> {
+                input.try_min()
             }
         }
 
@@ -74,13 +76,15 @@ macro_rules! impl_pools {
             Module<Tensor<(B, C, H, W), E, D, T>> for $PoolTy
         {
             type Output = Tensor<(B, C), E, D, T>;
-            fn forward(&self, input: Tensor<(B, C, H, W), E, D, T>) -> Self::Output {
+            type Error = D::Err;
+
+            fn try_forward(&self, input: Tensor<(B, C, H, W), E, D, T>) -> Result<Self::Output, D::Err> {
                 input.$Method()
             }
         }
     };
 }
 
-impl_pools!(AvgPoolGlobal, mean);
-impl_pools!(MaxPoolGlobal, max);
-impl_pools!(MinPoolGlobal, min);
+impl_pools!(AvgPoolGlobal, try_mean);
+impl_pools!(MaxPoolGlobal, try_max);
+impl_pools!(MinPoolGlobal, try_min);

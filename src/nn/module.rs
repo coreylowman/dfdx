@@ -10,11 +10,16 @@ use super::tensor_collection::{ModuleVisitor, TensorCollection};
 pub trait Module<Input> {
     /// The type that this unit produces given `Input`.
     type Output;
+    type Error: core::fmt::Debug;
+
+    fn try_forward(&self, input: Input) -> Result<Self::Output, Self::Error>;
 
     /// Forward `Input` through the module and produce [Module::Output].
     ///
     /// **See [ModuleMut::forward_mut()] for version that can mutate `self`.**
-    fn forward(&self, input: Input) -> Self::Output;
+    fn forward(&self, input: Input) -> Self::Output {
+        self.try_forward(input).unwrap()
+    }
 }
 
 /// Mutable forward of `Input` that produces [ModuleMut::Output].
@@ -22,11 +27,16 @@ pub trait Module<Input> {
 pub trait ModuleMut<Input> {
     /// The type that this unit produces given `Input`.
     type Output;
+    type Error: core::fmt::Debug;
+
+    fn try_forward_mut(&mut self, input: Input) -> Result<Self::Output, Self::Error>;
 
     /// Forward `Input` through the module and produce [ModuleMut::Output].
     ///
     /// **See [Module::forward()] for immutable version**
-    fn forward_mut(&mut self, input: Input) -> Self::Output;
+    fn forward_mut(&mut self, input: Input) -> Self::Output {
+        self.try_forward_mut(input).unwrap()
+    }
 }
 
 /// Something that can be built. Related to [BuildOnDevice]
@@ -101,7 +111,9 @@ where
     Self: Module<T>,
 {
     type Output = <Self as Module<T>>::Output;
-    fn forward_mut(&mut self, input: T) -> Self::Output {
-        self.forward(input)
+    type Error = <Self as Module<T>>::Error;
+
+    fn try_forward_mut(&mut self, input: T) -> Result<Self::Output, Self::Error> {
+        self.try_forward(input)
     }
 }

@@ -44,8 +44,10 @@ macro_rules! impl_pools {
             for $PoolTy<K, S, P>
         {
             type Output = Img::Output;
-            fn forward(&self, x: Img) -> Self::Output {
-                x.try_pool2d().unwrap()
+            type Error = Img::Err;
+
+            fn try_forward(&self, x: Img) -> Result<Self::Output, Img::Err> {
+                x.try_pool2d()
             }
         }
     };

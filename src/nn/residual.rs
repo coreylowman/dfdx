@@ -1,8 +1,6 @@
-use crate::{shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*, tensor_ops::TryAdd};
 
 use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
-
-use std::ops::Add;
 
 /// A residual connection around `F`: `F(x) + x`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -46,17 +44,21 @@ impl<F: ToDevice<D>, D> ToDevice<D> for Residual<F> {
     }
 }
 
-impl<T: SplitTape + Add<T, Output = T>, F: Module<T, Output = T>> Module<T> for Residual<F> {
+impl<T: SplitTape + TryAdd<T>, F: Module<T, Output = T, Error = T::Err>> Module<T> for Residual<F> {
     type Output = T;
-    fn forward(&self, x: T) -> Self::Output {
-        self.0.forward(x.with_empty_tape()) + x
+    type Error = F::Error;
+
+    fn try_forward(&self, x: T) -> Result<Self::Output, F::Error> {
+        self.0.try_forward(x.with_empty_tape())?.try_add(x)
     }
 }
 
-impl<T: SplitTape + Add<T, Output = T>, F: ModuleMut<T, Output = T>> ModuleMut<T> for Residual<F> {
+impl<T: SplitTape + TryAdd<T>, F: ModuleMut<T, Output = T, Error = T::Err>> ModuleMut<T> for Residual<F> {
     type Output = T;
-    fn forward_mut(&mut self, x: T) -> Self::Output {
-        self.0.forward_mut(x.with_empty_tape()) + x
+    type Error = F::Error;
+
+    fn try_forward_mut(&mut self, x: T) -> Result<Self::Output, F::Error> {
+        self.0.try_forward_mut(x.with_empty_tape())?.try_add(x)
     }
 }
 

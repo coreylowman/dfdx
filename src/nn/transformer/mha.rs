@@ -133,39 +133,40 @@ where
     Assert<{ S1 * H * (V / H) == S1 * V }>: ConstTrue,
 {
     type Output = Tensor<Rank2<S1, M>, E, D, T>;
+    type Error = D::Err;
 
     /// Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
-    fn forward(
+    fn try_forward(
         &self,
         (q, k, v): (
             Tensor<Rank2<S1, M>, E, D, T>,
             Tensor<Rank2<S2, M>, E, D>,
             Tensor<Rank2<S2, M>, E, D>,
         ),
-    ) -> Self::Output {
-        let v: Tensor<Rank2<S2, V>, _, _, _> = self.w_v.forward(v.retaped::<T>());
-        let v = v.reshape::<Rank3<S2, H, { V / H }>>();
-        let v = v.permute::<Rank3<H, S2, { V / H }>, _>();
+    ) -> Result<Self::Output, D::Err> {
+        let v: Tensor<Rank2<S2, V>, _, _, _> = self.w_v.try_forward(v.retaped::<T>())?;
+        let v = v.try_reshape::<Rank3<S2, H, { V / H }>>()?;
+        let v = v.try_permute::<Rank3<H, S2, { V / H }>, _>()?;
 
-        let k: Tensor<Rank2<S2, K>, _, _, _> = self.w_k.forward(k.retaped::<T>());
-        let k = k.reshape::<Rank3<S2, H, { K / H }>>();
-        let k = k.permute::<Rank3<H, { K / H }, S2>, _>();
+        let k: Tensor<Rank2<S2, K>, _, _, _> = self.w_k.try_forward(k.retaped::<T>())?;
+        let k = k.try_reshape::<Rank3<S2, H, { K / H }>>()?;
+        let k = k.try_permute::<Rank3<H, { K / H }, S2>, _>()?;
 
-        let q: Tensor<Rank2<S1, K>, _, _, _> = self.w_q.forward(q);
-        let q = q.reshape::<Rank3<S1, H, { K / H }>>();
-        let q = q.permute::<Rank3<H, S1, { K / H }>, _>();
+        let q: Tensor<Rank2<S1, K>, _, _, _> = self.w_q.try_forward(q)?;
+        let q = q.try_reshape::<Rank3<S1, H, { K / H }>>()?;
+        let q = q.try_permute::<Rank3<H, S1, { K / H }>, _>()?;
 
         // Get weights
         let scalar: E = E::ONE / E::from_usize(K / H).unwrap().sqrt();
-        let weights: Tensor<Rank3<H, S1, S2>, _, _, _> = q.matmul(k) * scalar;
-        let weights = weights.softmax::<Axis<2>>();
+        let weights: Tensor<Rank3<H, S1, S2>, _, _, _> = q.try_matmul(k)?.try_mul(scalar)?;
+        let weights = weights.try_softmax::<Axis<2>>()?;
 
         // Get new tokens
-        let tokens: Tensor<Rank3<H, S1, { V / H }>, _, _, _> = weights.matmul(v);
-        let tokens = tokens.permute::<Rank3<S1, H, { V / H }>, _>();
-        let tokens = tokens.reshape::<Rank2<S1, V>>();
+        let tokens: Tensor<Rank3<H, S1, { V / H }>, _, _, _> = weights.try_matmul(v)?;
+        let tokens = tokens.try_permute::<Rank3<S1, H, { V / H }>, _>()?;
+        let tokens = tokens.try_reshape::<Rank2<S1, V>>()?;
 
-        self.w_o.forward(tokens)
+        self.w_o.try_forward(tokens)
     }
 }
 
@@ -194,39 +195,40 @@ where
     Assert<{ B * S1 * H * (V / H) == B * S1 * V }>: ConstTrue,
 {
     type Output = Tensor<Rank3<B, S1, M>, E, D, T>;
+    type Error = D::Err;
 
     /// Batched Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
-    fn forward(
+    fn try_forward(
         &self,
         (q, k, v): (
             Tensor<Rank3<B, S1, M>, E, D, T>,
             Tensor<Rank3<B, S2, M>, E, D>,
             Tensor<Rank3<B, S2, M>, E, D>,
         ),
-    ) -> Self::Output {
-        let v: Tensor<Rank3<B, S2, V>, _, _, _> = self.w_v.forward(v.retaped::<T>());
-        let v = v.reshape::<Rank4<B, S2, H, { V / H }>>();
-        let v = v.permute::<Rank4<B, H, S2, { V / H }>, _>();
+    ) -> Result<Self::Output, D::Err> {
+        let v: Tensor<Rank3<B, S2, V>, _, _, _> = self.w_v.try_forward(v.retaped::<T>())?;
+        let v = v.try_reshape::<Rank4<B, S2, H, { V / H }>>()?;
+        let v = v.try_permute::<Rank4<B, H, S2, { V / H }>, _>()?;
 
-        let k: Tensor<Rank3<B, S2, K>, _, _, _> = self.w_k.forward(k.retaped::<T>());
-        let k = k.reshape::<Rank4<B, S2, H, { K / H }>>();
-        let k = k.permute::<Rank4<B, H, { K / H }, S2>, _>();
+        let k: Tensor<Rank3<B, S2, K>, _, _, _> = self.w_k.try_forward(k.retaped::<T>())?;
+        let k = k.try_reshape::<Rank4<B, S2, H, { K / H }>>()?;
+        let k = k.try_permute::<Rank4<B, H, { K / H }, S2>, _>()?;
 
-        let q: Tensor<Rank3<B, S1, K>, _, _, _> = self.w_q.forward(q);
-        let q = q.reshape::<Rank4<B, S1, H, { K / H }>>();
-        let q = q.permute::<Rank4<B, H, S1, { K / H }>, _>();
+        let q: Tensor<Rank3<B, S1, K>, _, _, _> = self.w_q.try_forward(q)?;
+        let q = q.try_reshape::<Rank4<B, S1, H, { K / H }>>()?;
+        let q = q.try_permute::<Rank4<B, H, S1, { K / H }>, _>()?;
 
         // Get weights
         let scalar: E = E::ONE / E::from_usize(K / H).unwrap().sqrt();
-        let weights: Tensor<Rank4<B, H, S1, S2>, _, _, _> = q.matmul(k) * scalar;
-        let weights = weights.softmax::<Axis<3>>();
+        let weights: Tensor<Rank4<B, H, S1, S2>, _, _, _> = q.try_matmul(k)?.try_mul(scalar)?;
+        let weights = weights.try_softmax::<Axis<3>>()?;
 
         // Get new tokens
-        let tokens: Tensor<Rank4<B, H, S1, { V / H }>, _, _, _> = weights.matmul(v);
-        let tokens = tokens.permute::<Rank4<B, S1, H, { V / H }>, _>();
-        let tokens = tokens.reshape::<Rank3<B, S1, V>>();
+        let tokens: Tensor<Rank4<B, H, S1, { V / H }>, _, _, _> = weights.try_matmul(v)?;
+        let tokens = tokens.try_permute::<Rank4<B, S1, H, { V / H }>, _>()?;
+        let tokens = tokens.try_reshape::<Rank3<B, S1, V>>()?;
 
-        self.w_o.forward(tokens)
+        self.w_o.try_forward(tokens)
     }
 }
 
@@ -236,24 +238,27 @@ where
     E: Dtype,
     D: Device<E>,
     Src: SplitTape,
-    Self: Module<(Src, Src::NoTape, Src::NoTape), Output = Src>,
+    Self: Module<(Src, Src::NoTape, Src::NoTape), Output = Src, Error = D::Err>,
 {
     type Output = Src;
-    fn forward(&self, src: Src) -> Self::Output {
+    type Error = D::Err;
+
+    fn try_forward(&self, src: Src) -> Result<Self::Output, D::Err> {
         let (src, tape) = src.split_tape();
-        self.forward((src.clone().put_tape(tape), src.clone(), src))
+        self.try_forward((src.clone().put_tape(tape), src.clone(), src))
     }
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, E: Dtype, D: Device<E>, T>
     ModuleMut<T> for MultiHeadAttention<M, H, K, V, E, D>
 where
-    Self: Module<T>,
+    Self: Module<T, Error = D::Err>,
 {
     type Output = <Self as Module<T>>::Output;
+    type Error = D::Err;
 
-    fn forward_mut(&mut self, t: T) -> Self::Output {
-        self.forward(t)
+    fn try_forward_mut(&mut self, t: T) -> Result<Self::Output, D::Err> {
+        self.try_forward(t)
     }
 }
 

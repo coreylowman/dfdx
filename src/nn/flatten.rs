@@ -17,8 +17,10 @@ where
     Rank3<C, H, W>: HasSameNumelAs<Rank1<{ C * H * W }>>,
 {
     type Output = Tensor<Rank1<{ C * H * W }>, E, D, T>;
-    fn forward(&self, input: Tensor<Rank3<C, H, W>, E, D, T>) -> Self::Output {
-        input.reshape()
+    type Error = D::Err;
+
+    fn try_forward(&self, input: Tensor<Rank3<C, H, W>, E, D, T>) -> Result<Self::Output, D::Err> {
+        input.try_reshape()
     }
 }
 
@@ -30,8 +32,10 @@ where
     Rank4<B, C, H, W>: HasSameNumelAs<Rank2<B, { C * H * W }>>,
 {
     type Output = Tensor<Rank2<B, { C * H * W }>, E, D, T>;
-    fn forward(&self, input: Tensor<Rank4<B, C, H, W>, E, D, T>) -> Self::Output {
-        input.reshape()
+    type Error = D::Err;
+
+    fn try_forward(&self, input: Tensor<Rank4<B, C, H, W>, E, D, T>) -> Result<Self::Output, D::Err> {
+        input.try_reshape()
     }
 }
 
