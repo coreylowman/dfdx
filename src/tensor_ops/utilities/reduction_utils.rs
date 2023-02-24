@@ -114,3 +114,81 @@ pub(crate) fn reduction_elems_per_thread<Ax: Axes, S: Shape>(
         })
         .product()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::shapes::*;
+
+    #[test]
+    fn test_index_for_1d_reductions() {
+        let shape: Rank3<2, 3, 4> = Default::default();
+        let strides = shape.strides();
+
+        let idx = index_for_reductions::<_, Axis<2>>(shape, strides);
+        assert_eq!(
+            idx,
+            NdIndex {
+                indices: [0, 0, 0],
+                shape: [2, 3, 4],
+                strides: [12, 4, 1],
+                next: Some(0),
+                contiguous: Some(24),
+            }
+        );
+
+        let idx = index_for_reductions::<_, Axis<1>>(shape, strides);
+        assert_eq!(
+            idx,
+            NdIndex {
+                indices: [0, 0, 0],
+                shape: [2, 4, 3],
+                strides: [12, 1, 4],
+                next: Some(0),
+                contiguous: None,
+            }
+        );
+
+        let idx = index_for_reductions::<_, Axis<0>>(shape, strides);
+        assert_eq!(
+            idx,
+            NdIndex {
+                indices: [0, 0, 0],
+                shape: [3, 4, 2],
+                strides: [4, 1, 12],
+                next: Some(0),
+                contiguous: None,
+            }
+        );
+    }
+
+    #[test]
+    fn test_index_for_2d_reductions() {
+        let shape: Rank3<2, 3, 4> = Default::default();
+        let strides = shape.strides();
+
+        let idx = index_for_reductions::<_, Axes2<1, 2>>(shape, strides);
+        assert_eq!(
+            idx,
+            NdIndex {
+                indices: [0, 0, 0],
+                shape: [2, 3, 4],
+                strides: [12, 4, 1],
+                next: Some(0),
+                contiguous: Some(24),
+            }
+        );
+
+        let idx = index_for_reductions::<_, Axes2<0, 2>>(shape, strides);
+        assert_eq!(
+            idx,
+            NdIndex {
+                indices: [0, 0, 0],
+                shape: [3, 2, 4],
+                strides: [4, 12, 1],
+                next: Some(0),
+                contiguous: None,
+            }
+        );
+    }
+}

@@ -2,6 +2,7 @@ use super::device::StridedArray;
 use crate::shapes::Shape;
 use std::vec::Vec;
 
+#[derive(Debug, Eq, PartialEq)]
 pub(crate) struct NdIndex<S: Shape> {
     pub(crate) indices: S::Concrete,
     pub(crate) shape: S::Concrete,
