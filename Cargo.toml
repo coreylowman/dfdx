@@ -56,3 +56,15 @@ indicatif = "0.16.2"
 [build-dependencies]
 rustc_version = "0.4.0"
 glob = "0.3.0"
+
+[[bench]]
+name = "batchnorm2d"
+harness = false
+
+[[bench]]
+name = "conv2d"
+harness = false
+
+[[bench]]
+name = "sum"
+harness = false
