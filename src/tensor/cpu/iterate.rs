@@ -1,14 +1,14 @@
 use super::device::StridedArray;
-use crate::shapes::{BroadcastStridesTo, Shape};
-use std::sync::Arc;
+use crate::shapes::Shape;
 use std::vec::Vec;
 
+#[derive(Debug, Eq, PartialEq)]
 pub(crate) struct NdIndex<S: Shape> {
-    indices: S::Concrete,
-    shape: S::Concrete,
-    strides: S::Concrete,
-    next: Option<usize>,
-    contiguous: Option<usize>,
+    pub(crate) indices: S::Concrete,
+    pub(crate) shape: S::Concrete,
+    pub(crate) strides: S::Concrete,
+    pub(crate) next: Option<usize>,
+    pub(crate) contiguous: Option<usize>,
 }
 
 impl<S: Shape> NdIndex<S> {
@@ -145,30 +145,6 @@ impl<S: Shape, E: Clone> StridedArray<S, E> {
     }
 }
 
-impl<S: Shape, E: Clone> StridedArray<S, E> {
-    #[inline]
-    pub(crate) fn iter_as<Axes, Dst: Shape>(&self, dst: &Dst) -> StridedRefIter<Dst, E>
-    where
-        S: BroadcastStridesTo<Dst, Axes>,
-    {
-        StridedRefIter {
-            data: self.data.as_ref(),
-            index: NdIndex::new(*dst, self.shape.broadcast_strides(self.strides)),
-        }
-    }
-
-    #[inline]
-    pub(crate) fn iter_mut_as<Axes, Dst: Shape>(&mut self, dst: &Dst) -> StridedMutIter<Dst, E>
-    where
-        S: BroadcastStridesTo<Dst, Axes>,
-    {
-        StridedMutIter {
-            data: Arc::make_mut(&mut self.data),
-            index: NdIndex::new(*dst, self.shape.broadcast_strides(self.strides)),
-        }
-    }
-}
-
 pub(crate) trait LendingIterator {
     type Item<'a>
     where
@@ -215,6 +191,7 @@ impl<'q, S: Shape, E> LendingIterator for StridedMutIndexIter<'q, S, E> {
 #[cfg(test)]
 mod tests {
     use crate::shapes::{Rank0, Rank1, Rank2, Rank3};
+    use std::sync::Arc;
 
     use super::*;
 

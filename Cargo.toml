@@ -68,3 +68,7 @@ harness = false
 [[bench]]
 name = "sum"
 harness = false
+
+[[bench]]
+name = "softmax"
+harness = false
