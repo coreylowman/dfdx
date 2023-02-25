@@ -129,7 +129,7 @@ impl DeviceStorage for Cuda {
         let numel = storage.data.len();
         let strides: S::Concrete = storage.strides;
         Ok(Self::Storage {
-            data: Arc::new(self.dev.take_async(std::vec![Default::default(); numel])?),
+            data: Arc::new(self.dev.alloc_zeros_async(numel)?),
             shape: storage.shape,
             strides,
         })

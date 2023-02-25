@@ -37,12 +37,17 @@ impl Cuda {
     }
 }
 
-impl<E: Unit> ZerosTensor<E> for Cuda
-where
-    Cpu: ZerosTensor<E>,
-{
+impl<E: Unit> ZerosTensor<E> for Cuda {
     fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
-        self.take_cpu_tensor(self.cpu.try_zeros_like(src)?)
+        let shape = *src.shape();
+        let strides = shape.strides();
+        let data = self.dev.alloc_zeros_async(shape.num_elements())?;
+        let storage = CudaArray {
+            data: Arc::new(data),
+            shape,
+            strides,
+        };
+        Ok(self.upgrade(storage))
     }
 }
 
@@ -51,10 +56,8 @@ impl<E: Unit> ZeroFillStorage<E> for Cuda {
         &self,
         storage: &mut Self::Storage<S, E>,
     ) -> Result<(), Self::Err> {
-        self.dev.copy_into_async(
-            std::vec![Default::default(); storage.data.len()],
-            Arc::make_mut(&mut storage.data),
-        )?;
+        self.dev
+            .memset_zeros_async(Arc::make_mut(&mut storage.data))?;
         Ok(())
     }
 }
