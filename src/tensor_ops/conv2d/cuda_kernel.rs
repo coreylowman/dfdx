@@ -35,6 +35,14 @@ impl HasCudaKernel<f64> for Cuda {
     ];
 }
 
+fn make_4d<S: Shape>(strides: S::Concrete) -> [usize; 4] {
+    match S::NUM_DIMS {
+        3 => [0, strides[0], strides[1], strides[2]],
+        4 => [strides[0], strides[1], strides[2], strides[3]],
+        _ => unreachable!("Only implemented for 3d & 4d arrays"),
+    }
+}
+
 impl<E: Dtype + ValidAsZeroBits> super::Conv2DKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
@@ -47,22 +55,16 @@ where
         rhs: &Self::Storage<R, E>,
         out: &mut Self::Storage<O, E>,
     ) -> Result<(), Self::Err> {
-        assert_eq!(
-            lhs.shape().strides(),
-            lhs.strides,
-            "Only works with contiguous image strides"
-        );
-
         if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
 
         let patches_numel = op.batch * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
         let mut patches = self.dev.alloc_zeros_async::<E>(patches_numel)?;
-
+        let img_strides = self.dev.take_async(make_4d::<L>(lhs.strides).into())?;
         let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = LaunchConfig::for_num_elems(patches.len() as u32);
-        let params = (op, lhs.data.as_ref(), &mut patches);
+        let params = (op, lhs.data.as_ref(), &img_strides, &mut patches);
         unsafe { unfold_fn.launch_async(cfg, params) }?;
 
         // (O, C * K * K) * (B, C * K * K, OH * OW) = (B, O, OH * OW)
@@ -110,13 +112,14 @@ where
         let filters_numel = op.batch * op.chan_in * op.chan_out * op.kernel * op.kernel;
         let mut f_b1023 = self.dev.alloc_zeros_async::<E>(filters_numel)?;
         let mut grad_f_b1023 = self.dev.alloc_zeros_async::<E>(filters_numel)?;
+        let f_strides = self.dev.take_async(rhs.strides.into())?;
 
         {
             // prepare filters for backward operations by
             // swapping dims 0 and 1 and adding a batch dimension
             let tr_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
             let cfg = LaunchConfig::for_num_elems(rhs.shape.num_elements() as u32);
-            let params = (op, rhs.data.as_ref(), &mut f_b1023);
+            let params = (op, rhs.data.as_ref(), &f_strides, &mut f_b1023);
             unsafe { tr_fn.launch_async(cfg, params) }?;
         }
 
@@ -167,7 +170,12 @@ where
             // into grad_rhs
             let sum_fn = self.dev.get_func(Self::MOD, Self::FNS[3]).unwrap();
             let cfg = LaunchConfig::for_num_elems(rhs.shape.num_elements() as u32);
-            let params = (op, &grad_f_b1023, Arc::make_mut(&mut grad_rhs.data));
+            let params = (
+                op,
+                &grad_f_b1023,
+                Arc::make_mut(&mut grad_rhs.data),
+                &f_strides,
+            );
             unsafe { sum_fn.launch_async(cfg, params) }?;
         }
 
