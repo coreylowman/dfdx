@@ -111,6 +111,7 @@ pub mod tensor_collection;
 mod activations;
 mod add_into;
 mod batchnorm2d;
+mod bias2d;
 mod conv;
 mod dropout;
 mod embedding;
@@ -143,6 +144,7 @@ pub mod modules {
     pub use super::activations::*;
     pub use super::add_into::AddInto;
     pub use super::batchnorm2d::BatchNorm2D;
+    pub use super::bias2d::Bias2D;
     #[cfg(feature = "nightly")]
     pub use super::conv::Conv2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
@@ -168,6 +170,7 @@ pub mod builders {
     pub use super::activations::*;
     pub use super::add_into::AddInto;
     pub use super::batchnorm2d::builder::BatchNorm2D;
+    pub use super::bias2d::builder::Bias2D;
     #[cfg(feature = "nightly")]
     pub use super::conv::builder::Conv2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
