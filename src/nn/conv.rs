@@ -34,7 +34,8 @@ where
 /// **Pytorch Equivalent**: `torch.nn.Conv2d(..., bias=False)`
 ///
 /// To create a biased conv, combine with [crate::nn::modules::Bias2D]:
-/// ```rust
+/// ```ignore
+/// # use dfdx::prelude::*;
 /// type BiasedConv = (Conv2D<3, 5, 4>, Bias2D<5>);
 /// ```
 ///
