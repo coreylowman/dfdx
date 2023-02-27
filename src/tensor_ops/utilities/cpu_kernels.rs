@@ -79,22 +79,24 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
         let grad_lhs_buf = std::sync::Arc::make_mut(&mut grad_lhs.data);
         let grad_rhs_buf = std::sync::Arc::make_mut(&mut grad_rhs.data);
         let out_buf = grad_out.data.as_ref();
+        let numel = lhs.shape.num_elements();
 
         if lhs.strides == rhs.strides && lhs.strides == grad_out.strides {
             // contiguous case
-            for (i, &go) in out_buf.iter().enumerate() {
+            for i in 0..numel {
                 let l = &lhs_buf[i];
                 let r = &rhs_buf[i];
+                let go = out_buf[i];
                 grad_lhs_buf[i] += op.dfdx(l, r) * go;
                 grad_rhs_buf[i] += op.dfdy(l, r) * go;
             }
         } else {
-            let lhs_num_br = lhs.shape.num_elements() / lhs.data.len();
-            let rhs_num_br = rhs.shape.num_elements() / rhs.data.len();
+            let lhs_num_br = numel / lhs.data.len();
+            let rhs_num_br = numel / rhs.data.len();
 
             if lhs_num_br > rhs_num_br {
-                // lhs has more broadcasted - permute both shapes
-                let [mut lhs_idx, mut rhs_idx, mut out_idx] =
+                // lhs has less data - iterate lhs in logical order
+                let [_, mut rhs_idx, mut out_idx] =
                     index_for_binop(lhs.shape, lhs.strides, rhs.strides);
                 for (l, gl) in lhs_buf.iter().zip(grad_lhs_buf.iter_mut()) {
                     let mut tmp = Default::default();
@@ -102,14 +104,15 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
                         let i_rhs = rhs_idx.next().unwrap();
                         let i_out = out_idx.next().unwrap();
                         let r = &rhs_buf[i_rhs];
-                        tmp += op.dfdx(l, r) * out_buf[i_out];
-                        grad_rhs_buf[i_rhs] += op.dfdy(l, r) * out_buf[i_out];
+                        let go = out_buf[i_out];
+                        tmp += op.dfdx(l, r) * go;
+                        grad_rhs_buf[i_rhs] += op.dfdy(l, r) * go;
                     }
                     *gl += tmp;
                 }
             } else {
-                // rhs has more broadcasted - permute
-                let [mut rhs_idx, mut lhs_idx, mut out_idx] =
+                // rhs has less data - iterate rhs in logical order
+                let [_, mut lhs_idx, mut out_idx] =
                     index_for_binop(rhs.shape, rhs.strides, lhs.strides);
                 for (r, gr) in rhs_buf.iter().zip(grad_rhs_buf.iter_mut()) {
                     let mut tmp = Default::default();
@@ -117,8 +120,9 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
                         let i_lhs = lhs_idx.next().unwrap();
                         let i_out = out_idx.next().unwrap();
                         let l = &lhs_buf[i_lhs];
-                        tmp += op.dfdy(l, r) * out_buf[i_out];
-                        grad_lhs_buf[i_lhs] += op.dfdx(l, r) * out_buf[i_out];
+                        let go = out_buf[i_out];
+                        tmp += op.dfdy(l, r) * go;
+                        grad_lhs_buf[i_lhs] += op.dfdx(l, r) * go;
                     }
                     *gr += tmp;
                 }
