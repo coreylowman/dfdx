@@ -2,17 +2,17 @@ use super::*;
 use crate::{gradients::NoneTape, tensor::cpu::Cpu};
 use std::vec;
 
-impl super::AttentionReshapeKernel<f32> for Cpu {
+impl<E: Dtype> super::AttentionReshapeKernel<E> for Cpu {
     fn forward<const THREE_HIDDEN_DIM: usize, const NUM_HEADS: usize, const HEAD_DIM: usize>(
         &self,
-        qkv: &Tensor<(usize, Const<THREE_HIDDEN_DIM>), f32, Self>,
-        past_key: &Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), f32, Self>,
-        past_value: &Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), f32, Self>,
+        qkv: &Tensor<(usize, Const<THREE_HIDDEN_DIM>), E, Self>,
+        past_key: &Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), E, Self>,
+        past_value: &Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), E, Self>,
     ) -> Result<
         (
-            Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), f32, Self>,
-            Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), f32, Self>,
-            Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), f32, Self>,
+            Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), E, Self>,
+            Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), E, Self>,
+            Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), E, Self>,
         ),
         Self::Err,
     > {
@@ -21,18 +21,18 @@ impl super::AttentionReshapeKernel<f32> for Cpu {
         let total_length = sequence_length.size() + past_sequence_length.size();
         let dev = qkv.device.clone();
 
-        let mut q: Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), f32, Self, NoneTape> =
+        let mut q: Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), E, Self, NoneTape> =
             dev.zeros_like(&(Const, sequence_length, Const));
-        let mut k: Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), f32, Self, NoneTape> =
+        let mut k: Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), E, Self, NoneTape> =
             dev.zeros_like(&(Const, Const, total_length));
-        let mut v: Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), f32, Self, NoneTape> =
+        let mut v: Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), E, Self, NoneTape> =
             dev.zeros_like(&(Const, total_length, Const));
-        let mut q_vec = vec![0.0; q.shape().num_elements()];
-        let mut k_vec = vec![0.0; k.shape().num_elements()];
-        let mut v_vec = vec![0.0; v.shape().num_elements()];
-        let mut past_key_vec = vec![0.0; past_key.shape().num_elements()];
-        let mut past_value_vec = vec![0.0; past_value.shape().num_elements()];
-        let mut qkv_vec = vec![0.0; qkv.shape().num_elements()];
+        let mut q_vec = vec![E::default(); q.shape().num_elements()];
+        let mut k_vec = vec![E::default(); k.shape().num_elements()];
+        let mut v_vec = vec![E::default(); v.shape().num_elements()];
+        let mut past_key_vec = vec![E::default(); past_key.shape().num_elements()];
+        let mut past_value_vec = vec![E::default(); past_value.shape().num_elements()];
+        let mut qkv_vec = vec![E::default(); qkv.shape().num_elements()];
         past_key.copy_into(past_key_vec.as_mut_slice());
         past_value.copy_into(&mut past_value_vec);
         qkv.copy_into(&mut qkv_vec);
