@@ -1,6 +1,7 @@
 use crate::{
     shapes::*,
-    tensor::cuda::{Cuda, CudaArray},
+    tensor::cpu::CpuError,
+    tensor::cuda::{Cuda, CudaArray, CudaError},
 };
 
 use cudarc::{
@@ -479,13 +480,16 @@ impl<E: Dtype> super::MatMatBatch3Kernel<E> for Cuda
 where
     CudaBlas: Gemm<E>,
 {
-    fn forward<const B: usize, M: Dim, const K: usize, N: Dim>(
+    fn forward<const B: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<B>, Const<K>, N), E>,
+        lhs: &Self::Storage<(Const<B>, M, K), E>,
+        rhs: &Self::Storage<(Const<B>, K, N), E>,
     ) -> Result<Self::Storage<(Const<B>, M, N), E>, Self::Err> {
-        let (batch, m, _) = lhs.shape;
-        let (_, k, n) = rhs.shape;
+        let (batch, m, k) = lhs.shape;
+        let (_, k2, n) = rhs.shape;
+        if k != k2 {
+            return Err(CudaError::Cpu(CpuError::WrongNumElements));
+        }
         let shape = (batch, m, n);
         let strides = shape.strides();
         let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
@@ -509,12 +513,12 @@ where
             strides,
         })
     }
-    fn backward<const B: usize, M: Dim, const K: usize, N: Dim>(
+    fn backward<const B: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, M, Const<K>), E>,
-        grad_lhs: &mut Self::Storage<(Const<B>, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<B>, Const<K>, N), E>,
-        grad_rhs: &mut Self::Storage<(Const<B>, Const<K>, N), E>,
+        lhs: &Self::Storage<(Const<B>, M, K), E>,
+        grad_lhs: &mut Self::Storage<(Const<B>, M, K), E>,
+        rhs: &Self::Storage<(Const<B>, K, N), E>,
+        grad_rhs: &mut Self::Storage<(Const<B>, K, N), E>,
         grad_out: &Self::Storage<(Const<B>, M, N), E>,
     ) -> Result<(), Self::Err> {
         assert_ne!(grad_lhs.strides[0], 0);

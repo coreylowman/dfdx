@@ -217,34 +217,31 @@ where
 }
 
 pub trait MatMatBatch3Kernel<E: Dtype>: DeviceStorage {
-    fn forward<const B: usize, M: Dim, const K: usize, N: Dim>(
+    fn forward<const B: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<B>, Const<K>, N), E>,
+        lhs: &Self::Storage<(Const<B>, M, K), E>,
+        rhs: &Self::Storage<(Const<B>, K, N), E>,
     ) -> Result<Self::Storage<(Const<B>, M, N), E>, Self::Err>;
 
-    fn backward<const B: usize, M: Dim, const K: usize, N: Dim>(
+    fn backward<const B: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, M, Const<K>), E>,
-        grad_lhs: &mut Self::Storage<(Const<B>, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<B>, Const<K>, N), E>,
-        grad_rhs: &mut Self::Storage<(Const<B>, Const<K>, N), E>,
+        lhs: &Self::Storage<(Const<B>, M, K), E>,
+        grad_lhs: &mut Self::Storage<(Const<B>, M, K), E>,
+        rhs: &Self::Storage<(Const<B>, K, N), E>,
+        grad_rhs: &mut Self::Storage<(Const<B>, K, N), E>,
         grad_out: &Self::Storage<(Const<B>, M, N), E>,
     ) -> Result<(), Self::Err>;
 }
 
-impl<const B: usize, M: Dim, const K: usize, N: Dim, E: Dtype, D, T, R>
-    TryMatMul<Tensor<(Const<B>, Const<K>, N), E, D, R>> for Tensor<(Const<B>, M, Const<K>), E, D, T>
+impl<const B: usize, M: Dim, K: Dim, N: Dim, E: Dtype, D, T, R>
+    TryMatMul<Tensor<(Const<B>, K, N), E, D, R>> for Tensor<(Const<B>, M, K), E, D, T>
 where
     D: MatMatBatch3Kernel<E>,
     T: Tape<D> + Merge<R>,
     R: Tape<D>,
 {
     type Output = Tensor<(Const<B>, M, N), E, D, T>;
-    fn try_matmul(
-        self,
-        rhs: Tensor<(Const<B>, Const<K>, N), E, D, R>,
-    ) -> Result<Self::Output, Self::Err> {
+    fn try_matmul(self, rhs: Tensor<(Const<B>, K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
         try_binary_op(self, rhs, D::forward, D::backward)
     }
 }

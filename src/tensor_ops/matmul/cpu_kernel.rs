@@ -1,5 +1,5 @@
 use crate::shapes::*;
-use crate::tensor::cpu::{Cpu, StridedArray, View, ViewMut};
+use crate::tensor::cpu::{Cpu, CpuError, StridedArray, View, ViewMut};
 
 #[cfg(not(feature = "cblas"))]
 use matrixmultiply::{dgemm, sgemm};
@@ -235,13 +235,19 @@ impl<F: Dtype> super::MatMatBatch3Kernel<F> for Cpu
 where
     Self: MatMulImpl<F>,
 {
-    fn forward<const B: usize, M: Dim, const K: usize, N: Dim>(
+    fn forward<const B: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, M, Const<K>), F>,
-        rhs: &Self::Storage<(Const<B>, Const<K>, N), F>,
+        lhs: &Self::Storage<(Const<B>, M, K), F>,
+        rhs: &Self::Storage<(Const<B>, K, N), F>,
     ) -> Result<Self::Storage<(Const<B>, M, N), F>, Self::Err> {
         let m: M = lhs.shape().1;
         let n: N = rhs.shape().2;
+
+        let k: K = lhs.shape().2;
+        let k2: K = rhs.shape().1;
+        if k != k2 {
+            return Err(CpuError::WrongNumElements);
+        }
         let mut out = StridedArray::new((Const, m, n))?;
         let a = lhs.view();
         let b = rhs.view();
@@ -251,12 +257,12 @@ where
         }
         Ok(out)
     }
-    fn backward<const B: usize, M: Dim, const K: usize, N: Dim>(
+    fn backward<const B: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, M, Const<K>), F>,
-        grad_lhs: &mut Self::Storage<(Const<B>, M, Const<K>), F>,
-        rhs: &Self::Storage<(Const<B>, Const<K>, N), F>,
-        grad_rhs: &mut Self::Storage<(Const<B>, Const<K>, N), F>,
+        lhs: &Self::Storage<(Const<B>, M, K), F>,
+        grad_lhs: &mut Self::Storage<(Const<B>, M, K), F>,
+        rhs: &Self::Storage<(Const<B>, K, N), F>,
+        grad_rhs: &mut Self::Storage<(Const<B>, K, N), F>,
         grad_out: &Self::Storage<(Const<B>, M, N), F>,
     ) -> Result<(), Self::Err> {
         let lhs = lhs.view();
