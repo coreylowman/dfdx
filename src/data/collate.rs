@@ -48,6 +48,15 @@ where
     }
 }
 
+impl<I: ExactSizeIterator> ExactSizeIterator for Collator<I>
+where
+    Self: Iterator,
+{
+    fn len(&self) -> usize {
+        self.iter.len()
+    }
+}
+
 /// Collate an [Iterator] where Self::Item impls [Collate].
 pub trait IteratorCollateExt: Iterator {
     /// Collates items - depends on implementation of [Collate] by the items.
