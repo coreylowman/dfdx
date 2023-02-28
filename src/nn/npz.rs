@@ -39,29 +39,52 @@ pub trait SaveToNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<E,
         Ok(())
     }
 
-    /// Write this object into [ZipWriter] `w` with a base filename of `filename_prefix`.
+    /// Write this object into [ZipWriter] `w`.
     ///
     /// Example:
     /// ```ignore
     /// # use dfdx::prelude::*;
     /// let model: Linear<5, 10> = Default::default();
     /// let mut zip = ZipWriter::new(...);
-    /// model.write("0.", &mut zip)?;
-    /// model.write("1.", &mut zip)?;
+    /// model.write(&mut zip)?;
     /// ```
     /// Will save a zip file with the following files in it:
-    /// - `0.weight.npy`
-    /// - `0.bias.npy`
-    /// - `1.weight.npy`
-    /// - `1.bias.npy`
+    /// - `weight.npy`
+    /// - `bias.npy`
     fn write<W>(&self, w: &mut ZipWriter<W>) -> ZipResult<()>
-    where
-        W: Write + Seek,
+        where
+            W: Write + Seek,
     {
         Self::iter_tensors(&mut RecursiveWalker {
             m: self,
             f: w,
             path: &mut std::vec::Vec::new(),
+        })
+    }
+
+    /// Write this object into [ZipWriter] `w` with a base filename of `basename`.
+    ///
+    /// Example:
+    /// ```ignore
+    /// # use dfdx::prelude::*;
+    /// let model: Linear<5, 10> = Default::default();
+    /// let mut zip = ZipWriter::new(...);
+    /// model.write_base("main", &mut zip)?;
+    /// model.write_base("target", &mut zip)?;
+    /// ```
+    /// Will save a zip file with the following files in it:
+    /// - `main.weight.npy`
+    /// - `main.bias.npy`
+    /// - `target.weight.npy`
+    /// - `target.bias.npy`
+    fn write_base<W>(&self, w: &mut ZipWriter<W>, basename: String) -> ZipResult<()>
+        where
+            W: Write + Seek,
+    {
+        Self::iter_tensors(&mut RecursiveWalker {
+            m: self,
+            f: w,
+            path: &mut std::vec![basename],
         })
     }
 }
@@ -87,26 +110,49 @@ pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<
         Ok(())
     }
 
-    /// Reads this object from a [ZipArchive]. `r` with a base filename of `filename_prefix`.
+    /// Reads this object from a [ZipArchive]. `r`.
     ///
     /// Example:
     /// ```ignore
     /// # use dfdx::prelude::*;
     /// let mut model: Linear<5, 10> = Default::default();
     /// let mut zip = ZipArchive::new(...);
-    /// model.read("0.", &mut zip)?;
+    /// model.read(&mut zip)?;
     /// ```
     /// Will try to read data from the following files:
-    /// - `0.weight.npy`
-    /// - `0.bias.npy`
+    /// - `weight.npy`
+    /// - `bias.npy`
     fn read<R>(&mut self, r: &mut ZipArchive<R>) -> Result<(), NpzError>
-    where
-        R: Read + Seek,
+        where
+            R: Read + Seek,
     {
         Self::iter_tensors(&mut RecursiveWalker {
             m: self,
             f: r,
             path: &mut std::vec::Vec::new(),
+        })
+    }
+
+    /// Reads this object from a [ZipArchive]. `r` with a base filename of `basename`.
+    ///
+    /// Example:
+    /// ```ignore
+    /// # use dfdx::prelude::*;
+    /// let mut model: Linear<5, 10> = Default::default();
+    /// let mut zip = ZipArchive::new(...);
+    /// model.read("target", &mut zip)?;
+    /// ```
+    /// Will try to read data from the following files:
+    /// - `target.weight.npy`
+    /// - `target.bias.npy`
+    fn read_base<R>(&mut self, r: &mut ZipArchive<R>, basename: String) -> Result<(), NpzError>
+        where
+            R: Read + Seek,
+    {
+        Self::iter_tensors(&mut RecursiveWalker {
+            m: self,
+            f: r,
+            path: &mut std::vec![basename],
         })
     }
 }
@@ -124,7 +170,7 @@ impl<W: Write + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D
         _: TensorOptions<S, E, D>,
         t: &Tensor<S, E, D>,
     ) -> Result<(), Self::Err> {
-        t.write_to_npz(self, full_path)
+        t.write_path(self, full_path)
     }
 }
 
@@ -140,7 +186,7 @@ impl<R: Read + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D>
         _: TensorOptions<S, E, D>,
         t: &mut Tensor<S, E, D>,
     ) -> Result<(), Self::Err> {
-        t.read_from_npz(self, full_path)
+        t.read_path(self, full_path)
     }
 }
 
@@ -156,6 +202,7 @@ mod tests {
     use rand_distr::{Distribution, Standard, StandardNormal};
     use tempfile::NamedTempFile;
 
+    // TODO: Add npz tests here
     fn test_save_load<S: ConstShape, E: Dtype + NumpyDtype, D: Device<E>, M: BuildOnDevice<D, E>>(
         dev: &D,
     ) where

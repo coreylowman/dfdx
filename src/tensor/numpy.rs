@@ -17,7 +17,7 @@ const VERSION: &[u8] = &[1, 0];
 
 impl<S: Shape, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>, T> Tensor<S, E, D, T> {
     /// Writes `data` to a new file in a zip archive named `filename`.
-    pub fn write_to_npz<W: Write + Seek>(
+    pub fn write_path<W: Write + Seek>(
         &self,
         w: &mut zip::ZipWriter<W>,
         filename: String,
@@ -28,7 +28,7 @@ impl<S: Shape, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>, T> Tensor
     }
 
     /// Reads `data` from a file already in a zip archive named `filename`.
-    pub fn read_from_npz<R: Read + Seek>(
+    pub fn read_path<R: Read + Seek>(
         &mut self,
         r: &mut zip::ZipArchive<R>,
         filename: String,
@@ -38,7 +38,7 @@ impl<S: Shape, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>, T> Tensor
         Ok(())
     }
 
-    /// Attemps to load the data from a `.npy` file at `path`
+    /// Attempts to load the data from a `.npy` file at `path`
     pub fn load_from_npy<P: AsRef<Path>>(&mut self, path: P) -> Result<(), NpyError> {
         let mut f = BufReader::new(File::open(path)?);
         self.read_from(&mut f)
