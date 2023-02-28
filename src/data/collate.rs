@@ -27,10 +27,35 @@ impl<A, B, const N: usize> Collate for [(A, B); N] {
     }
 }
 
+impl<'a, A, B, const N: usize> Collate for [&'a (A, B); N] {
+    type Collated = ([&'a A; N], [&'a B; N]);
+    fn collated(self) -> Self::Collated {
+        let mut a_n = [(); N].map(|_| MaybeUninit::uninit());
+        let mut b_n = [(); N].map(|_| MaybeUninit::uninit());
+
+        for (i, (a, b)) in self.into_iter().enumerate() {
+            a_n[i].write(a);
+            b_n[i].write(b);
+        }
+
+        let a_n = unsafe { a_n.map(|a| a.assume_init()) };
+        let b_n = unsafe { b_n.map(|b| b.assume_init()) };
+
+        (a_n, b_n)
+    }
+}
+
 impl<A, B> Collate for Vec<(A, B)> {
     type Collated = (Vec<A>, Vec<B>);
     fn collated(self) -> Self::Collated {
         self.into_iter().unzip()
+    }
+}
+
+impl<'a, A, B> Collate for Vec<&'a (A, B)> {
+    type Collated = (Vec<&'a A>, Vec<&'a B>);
+    fn collated(self) -> Self::Collated {
+        self.into_iter().map(|(a, b)| (a, b)).unzip()
     }
 }
 
@@ -93,13 +118,21 @@ mod test {
     fn test_collate_array() {
         let items = [(1, 2), (3, 4), (5, 6)];
         assert_eq!(items.collated(), ([1, 3, 5], [2, 4, 6]));
+
+        let items = [&(1, 2), &(3, 4), &(5, 6)];
+        assert_eq!(items.collated(), ([&1, &3, &5], [&2, &4, &6]));
     }
 
     #[test]
     fn test_collate_vec() {
         let items = std::vec![(1, 2), (3, 4), (5, 6)];
         let (a, b): (Vec<i32>, Vec<i32>) = items.collated();
-        assert_eq!(&a, &[1, 3, 5]);
-        assert_eq!(&b, &[2, 4, 6]);
+        assert_eq!(a, [1, 3, 5]);
+        assert_eq!(b, [2, 4, 6]);
+
+        let items = std::vec![&(1, 2), &(3, 4), &(5, 6)];
+        let (a, b): (Vec<&i32>, Vec<&i32>) = items.collated();
+        assert_eq!(a, [&1, &3, &5]);
+        assert_eq!(b, [&2, &4, &6]);
     }
 }
