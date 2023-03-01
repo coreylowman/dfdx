@@ -95,7 +95,6 @@ impl<const I: usize, const O: usize, E: Dtype, D: Device<E>, T> Module<T>
 where
     T: SplitTape + TryMatMul<Tensor<Rank2<I, O>, E, D, T::Tape>> + HasErr<Err = D::Err>,
     T::Tape: Tape<D>,
-    for<'a> Bias1D<'a, O, E, D>: Module<T::Output, Output = T::Output, Error = D::Err>,
 {
     type Output = T::Output;
     type Error = D::Err;
@@ -103,53 +102,6 @@ where
     /// 1d forward using [matmul()] and [add()].
     fn try_forward(&self, x: T) -> Result<Self::Output, D::Err> {
         x.try_matmul(self.weight.retaped::<T::Tape>().try_permute()?)
-    }
-}
-
-#[derive(Clone, Debug)]
-struct Bias1D<'a, const M: usize, E: Dtype, D: DeviceStorage> {
-    beta: &'a Tensor<Rank1<M>, E, D>,
-}
-
-impl<'a, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<Rank1<M>, E, D, T>>
-    for Bias1D<'a, M, E, D>
-{
-    type Output = Tensor<Rank1<M>, E, D, T>;
-    type Error = D::Err;
-
-    fn try_forward(&self, input: Tensor<Rank1<M>, E, D, T>) -> Result<Self::Output, D::Err> {
-        input.try_add(self.beta.clone())
-    }
-}
-
-impl<'a, B: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
-    Module<Tensor<(B, Const<M>), E, D, T>> for Bias1D<'a, M, E, D>
-{
-    type Output = Tensor<(B, Const<M>), E, D, T>;
-    type Error = D::Err;
-
-    fn try_forward(&self, input: Tensor<(B, Const<M>), E, D, T>) -> Result<Self::Output, D::Err> {
-        self.beta
-            .retaped::<T>()
-            .try_broadcast_like(input.shape())?
-            .try_add(input)
-    }
-}
-
-impl<'a, B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
-    Module<Tensor<(B, S, Const<M>), E, D, T>> for Bias1D<'a, M, E, D>
-{
-    type Output = Tensor<(B, S, Const<M>), E, D, T>;
-    type Error = D::Err;
-
-    fn try_forward(
-        &self,
-        input: Tensor<(B, S, Const<M>), E, D, T>,
-    ) -> Result<Self::Output, D::Err> {
-        self.beta
-            .retaped::<T>()
-            .try_broadcast_like(input.shape())?
-            .try_add(input)
     }
 }
 
