@@ -180,7 +180,10 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
 /// This would not be possible if these chain rule operations were inside of GradientTape!
 #[allow(clippy::type_complexity)]
 pub struct GradientTape<E: Unit, D: DeviceStorage> {
-    operations: Vec<Box<dyn FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>>>,
+    operations: Vec<(
+        UniqueId,
+        Box<dyn FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>>,
+    )>,
     gradients: Gradients<E, D>,
 }
 
@@ -215,14 +218,15 @@ impl<E: Unit, D: DeviceStorage> GradientTape<E, D> {
         &mut self,
         operation: F,
     ) {
-        self.operations.push(Box::new(operation));
+        self.operations.push((unique_id(), Box::new(operation)));
     }
 
     /// Compute the [Gradients]! This just runs all the operations on a new [Gradients] struct.
     ///
     /// Note that this method takes ownership of self, so it can't be called twice!
     pub(crate) fn execute(mut self) -> Result<Gradients<E, D>, D::Err> {
-        for operation in self.operations.drain(..).rev() {
+        self.operations.sort_by_key(|(k, _)| *k);
+        for (_, operation) in self.operations.drain(..).rev() {
             (operation)(&mut self.gradients)?;
         }
         Ok(self.gradients)
