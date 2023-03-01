@@ -86,7 +86,7 @@ impl<const C: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Sample
     }
 }
 
-impl<const V: usize, const M: usize, SEQ: Dim, E: Dtype, D: Device<E>, T: Tape<D>>
+impl<const V: usize, const M: usize, SEQ: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<(SEQ,), usize, D, T>> for Embedding<V, M, E, D>
 {
     type Output = Tensor<(SEQ, Const<M>), E, D, T>;
@@ -105,7 +105,7 @@ impl<
         SEQ: Dim,
         E: Dtype,
         D: Device<E>,
-        T: Tape<D>,
+        T: Tape<E, D>,
     > Module<Tensor<(BATCH, SEQ), usize, D, T>> for Embedding<VOCAB, DIM, E, D>
 {
     type Output = Tensor<(BATCH, SEQ, Const<DIM>), E, D, T>;

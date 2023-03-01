@@ -1,7 +1,8 @@
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::cuda::{Cuda, CudaArray},
+    tensor::{cuda::Cuda, Tensor},
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
+    unique_id::unique_id,
 };
 use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
@@ -39,8 +40,8 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryKernel<K, E> for Cu
     fn forward<S: Shape>(
         &self,
         op: K,
-        inp: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, E>, Self::Err> {
+        inp: &Tensor<S, E, Self>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
         if !self.dev.has_func(K::MODULE_NAME, K::FWD_FN_NAME) {
             self.dev
                 .load_ptx(K::PTX_SRC.into(), K::MODULE_NAME, &K::ALL_FN_NAMES)?;
@@ -51,38 +52,30 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryKernel<K, E> for Cu
 
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
-        let params = (
-            op,
-            numel,             // const size_t numel,
-            inp.data.as_ref(), // const float *inp,
-            &mut storage,      // float *out
-        );
+        let params = (op, numel, inp.data.as_ref(), &mut storage);
         unsafe { fwd_fn.launch_async(cfg, params) }?;
 
-        Ok(CudaArray {
+        Ok(Tensor {
+            id: unique_id(),
             data: Arc::new(storage),
             shape: inp.shape,
             strides: inp.strides,
+            device: self.clone(),
+            tape: Default::default(),
         })
     }
 
     fn backward<S: Shape>(
         &self,
         op: K,
-        inp: &Self::Storage<S, E>,
-        grad_inp: &mut Self::Storage<S, E>,
-        grad_out: &Self::Storage<S, E>,
+        inp: &Tensor<S, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
         let numel = inp.data.len();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
-        let params = (
-            op,
-            numel,                             // const size_t numel,
-            inp.data.as_ref(),                 // const float *inp,
-            Arc::make_mut(&mut grad_inp.data), // float *grad_inp,
-            grad_out.data.as_ref(),            // const float *grad_out
-        );
+        let params = (op, numel, inp.data.as_ref(), grad_inp, grad_out);
         unsafe { bwd_fn.launch_async(cfg, params) }?;
         Ok(())
     }
@@ -121,9 +114,9 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for 
     fn forward<S: Shape>(
         &self,
         op: K,
-        lhs: &Self::Storage<S, E>,
-        rhs: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, E>, Self::Err> {
+        lhs: &Tensor<S, E, Self>,
+        rhs: &Tensor<S, E, Self>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
         if !self.dev.has_func(K::MODULE_NAME, K::FWD_FN_NAME) {
             self.dev
                 .load_ptx(K::PTX_SRC.into(), K::MODULE_NAME, &K::ALL_FN_NAMES)?;
@@ -153,21 +146,24 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for 
             &mut storage,      // float *out,
         );
         unsafe { fwd_fn.launch_async(cfg, params) }?;
-        Ok(CudaArray {
+        Ok(Tensor {
+            id: unique_id(),
             data: Arc::new(storage),
             shape,
             strides,
+            device: self.clone(),
+            tape: Default::default(),
         })
     }
 
     fn backward<S: Shape>(
         &self,
         op: K,
-        lhs: &Self::Storage<S, E>,
-        grad_lhs: &mut Self::Storage<S, E>,
-        rhs: &Self::Storage<S, E>,
-        grad_rhs: &mut Self::Storage<S, E>,
-        grad_out: &Self::Storage<S, E>,
+        lhs: &Tensor<S, E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<S, E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
         let numel = lhs.shape.num_elements();
@@ -179,16 +175,16 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for 
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (
             op,
-            numel,                             // const size_t numel,
-            S::NUM_DIMS,                       // const size_t num_dims,
-            &dims,                             // const size_t *dims,
-            lhs.data.as_ref(),                 // const float *lhs,
-            Arc::make_mut(&mut grad_lhs.data), // float *grad_lhs,
-            &lhs_strides,                      // const size_t *lhs_strides,
-            rhs.data.as_ref(),                 // const float *rhs,
-            Arc::make_mut(&mut grad_rhs.data), // float *grad_rhs,
-            &rhs_strides,                      // const size_t *rhs_strides,
-            grad_out.data.as_ref(),            // const float *grad_out,
+            numel,             // const size_t numel,
+            S::NUM_DIMS,       // const size_t num_dims,
+            &dims,             // const size_t *dims,
+            lhs.data.as_ref(), // const float *lhs,
+            grad_lhs,          // float *grad_lhs,
+            &lhs_strides,      // const size_t *lhs_strides,
+            rhs.data.as_ref(), // const float *rhs,
+            grad_rhs,          // float *grad_rhs,
+            &rhs_strides,      // const size_t *rhs_strides,
+            grad_out,          // const float *grad_out,
         );
         unsafe { bwd_fn.launch_async(cfg, params) }?;
         Ok(())

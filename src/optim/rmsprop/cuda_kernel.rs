@@ -1,7 +1,6 @@
 use super::RMSpropConfig;
 use crate::{optim::optimizer::*, shapes::*, tensor::Cuda};
 use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
-use std::sync::Arc;
 
 #[repr(C)]
 struct CudaRMSpropConfig<E> {
@@ -58,33 +57,24 @@ impl<E: Dtype + AsKernelParam> super::RMSpropKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
-    fn update<S: Shape>(
+    fn update(
         &self,
         cfg: &RMSpropConfig<E>,
-        param: &mut Self::Storage<S, E>,
-        momentum: &mut Self::Storage<S, E>,
-        square_avg: &mut Self::Storage<S, E>,
-        grad_avg: &mut Self::Storage<S, E>,
-        grad: Self::Storage<S, E>,
+        param: &mut Self::Vec<E>,
+        momentum: &mut Self::Vec<E>,
+        square_avg: &mut Self::Vec<E>,
+        grad_avg: &mut Self::Vec<E>,
+        grad: Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FWD) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, &[Self::FWD])?;
         }
 
-        let rmsprop_cfg = rmsprop_config_to_cuda(cfg);
-        let numel = param.shape.num_elements();
-
+        let opt_cfg = rmsprop_config_to_cuda(cfg);
+        let numel = param.len();
         let func = self.dev.get_func(Self::MOD, Self::FWD).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
-        let params = (
-            rmsprop_cfg,                         // const RMSpropConfig cfg,
-            numel,                               // const size_t numel,
-            Arc::make_mut(&mut param.data),      // float* param,
-            Arc::make_mut(&mut momentum.data),   // float* momentum,
-            Arc::make_mut(&mut square_avg.data), // float* square_avg,
-            Arc::make_mut(&mut grad_avg.data),   // float* grad_avg,
-            grad.data.as_ref(),                  // const float* grad
-        );
+        let params = (opt_cfg, numel, param, momentum, square_avg, grad_avg, &grad);
         unsafe { func.launch_async(cfg, params) }?;
         Ok(())
     }

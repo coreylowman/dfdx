@@ -22,14 +22,14 @@ pub struct NansToKernelOp<E>(E);
 /// let r = t.nans_to(0.0);
 /// assert_eq!(r.array(), [1.0, 0.0, 0.0, 4.0]);
 /// ```
-pub fn nans_to<S: Shape, E: Dtype, D: UnaryKernel<NansToKernelOp<E>, E>, T: Tape<D>>(
+pub fn nans_to<S: Shape, E: Dtype, D: UnaryKernel<NansToKernelOp<E>, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
     value: E,
 ) -> Tensor<S, E, D, T> {
     t.nans_to(value)
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<NansToKernelOp<E>, E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<NansToKernelOp<E>, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [nans_to]
     pub fn nans_to(self, value: E) -> Self {
         self.try_nans_to(value).unwrap()

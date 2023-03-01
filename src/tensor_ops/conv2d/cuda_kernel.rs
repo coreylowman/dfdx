@@ -2,7 +2,10 @@ use cudarc::cublas::{CudaBlas, Gemm};
 use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig, ValidAsZeroBits};
 
 use crate::tensor_ops::matmul::cuda_kernel::sgemm_batch;
-use crate::{shapes::*, tensor::cuda::Cuda};
+use crate::{
+    shapes::*,
+    tensor::{Cuda, Tensor},
+};
 
 use std::sync::Arc;
 
@@ -51,9 +54,9 @@ where
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: super::Conv2DOp,
-        lhs: &Self::Storage<L, E>,
-        rhs: &Self::Storage<R, E>,
-        out: &mut Self::Storage<O, E>,
+        lhs: &Tensor<L, E, Self>,
+        rhs: &Tensor<R, E, Self>,
+        out: &mut Tensor<O, E, Self>,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
@@ -92,11 +95,12 @@ where
     fn backward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: super::Conv2DOp,
-        lhs: &Self::Storage<L, E>,
-        grad_lhs: &mut Self::Storage<L, E>,
-        rhs: &Self::Storage<R, E>,
-        grad_rhs: &mut Self::Storage<R, E>,
-        grad_out: &Self::Storage<O, E>,
+        lhs: &Tensor<L, E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<R, E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        _: &Tensor<O, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let patches_numel = op.batch * op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
         let mut patches = self.dev.alloc_zeros_async::<E>(patches_numel)?;
@@ -105,8 +109,7 @@ where
             // unfold grad_out into patches
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
             let cfg = LaunchConfig::for_num_elems(patches_numel as u32);
-            let params = (op, grad_out.data.as_ref(), &mut patches);
-            unsafe { unfold_fn.launch_async(cfg, params) }?;
+            unsafe { unfold_fn.launch_async(cfg, (op, grad_out, &mut patches)) }?;
         }
 
         let filters_numel = op.batch * op.chan_in * op.chan_out * op.kernel * op.kernel;
@@ -119,8 +122,7 @@ where
             // swapping dims 0 and 1 and adding a batch dimension
             let tr_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
             let cfg = LaunchConfig::for_num_elems(rhs.shape.num_elements() as u32);
-            let params = (op, rhs.data.as_ref(), &f_strides, &mut f_b1023);
-            unsafe { tr_fn.launch_async(cfg, params) }?;
+            unsafe { tr_fn.launch_async(cfg, (op, rhs.data.as_ref(), &f_strides, &mut f_b1023)) }?;
         }
 
         {
@@ -138,7 +140,7 @@ where
                     &patches,
                     [k * n, n, 1],
                     <E>::ONE,
-                    Arc::make_mut(&mut grad_lhs.data),
+                    grad_lhs,
                     [m * n, n, 1],
                 )
                 .unwrap();
@@ -170,13 +172,7 @@ where
             // into grad_rhs
             let sum_fn = self.dev.get_func(Self::MOD, Self::FNS[3]).unwrap();
             let cfg = LaunchConfig::for_num_elems(rhs.shape.num_elements() as u32);
-            let params = (
-                op,
-                &grad_f_b1023,
-                Arc::make_mut(&mut grad_rhs.data),
-                &f_strides,
-            );
-            unsafe { sum_fn.launch_async(cfg, params) }?;
+            unsafe { sum_fn.launch_async(cfg, (op, &grad_f_b1023, grad_rhs, &f_strides)) }?;
         }
 
         Ok(())

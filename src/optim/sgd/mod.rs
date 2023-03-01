@@ -103,7 +103,7 @@ impl<E: Dtype> Default for SgdConfig<E> {
 /// # let dev: Cpu = Default::default();
 /// # type Model = Tensor<Rank0, f32, Cpu>;
 /// # let mut model: Model = dev.zeros();
-/// let mut opt = Sgd::new(&model, SgdConfig {
+/// let mut opt: Sgd<Model, f32, Cpu> = Sgd::new(&model, SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: Some(Momentum::Classic(0.5)),
 ///     weight_decay: Some(WeightDecay::L2(0.01)),
@@ -112,19 +112,19 @@ impl<E: Dtype> Default for SgdConfig<E> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Sgd<M, E: Dtype> {
+pub struct Sgd<M, E: Dtype, D: DeviceStorage> {
     /// Hyperparameter configuration
     pub cfg: SgdConfig<E>,
 
-    velocity: Gradients,
-    gradients: Gradients,
+    velocity: Gradients<E, D>,
+    gradients: Gradients<E, D>,
 
     unused: UnusedTensors,
 
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype> Sgd<M, E> {
+impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
     /// Constructs using hyperparameters from `cfg`
     pub fn new(_model: &M, cfg: SgdConfig<E>) -> Self {
         Self {
@@ -138,16 +138,16 @@ impl<M, E: Dtype> Sgd<M, E> {
 }
 
 pub(super) trait SgdKernel<E: Dtype>: DeviceStorage {
-    fn update<S: Shape>(
+    fn update(
         &self,
         cfg: &SgdConfig<E>,
-        param: &mut Self::Storage<S, E>,
-        velocity: &mut Self::Storage<S, E>,
-        grad: Self::Storage<S, E>,
+        param: &mut Self::Vec<E>,
+        velocity: &mut Self::Vec<E>,
+        grad: Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
 
-impl<E: Dtype, D: SgdKernel<E>, M> TensorVisitor<E, D> for Sgd<M, E> {
+impl<E: Dtype, D: SgdKernel<E>, M> TensorVisitor<E, D> for Sgd<M, E, D> {
     type Viewer = ViewTensorMut;
     type Err = D::Err;
 
@@ -165,18 +165,19 @@ impl<E: Dtype, D: SgdKernel<E>, M> TensorVisitor<E, D> for Sgd<M, E> {
             None => self.unused.add(p),
             Some(g) => {
                 let v = self.velocity.get_or_alloc_mut(p)?;
-                p.device.update(&self.cfg, &mut p.storage, v, g)?;
+                p.device
+                    .update(&self.cfg, std::sync::Arc::make_mut(&mut p.data), v, g)?;
             }
         }
         Ok(())
     }
 }
 
-impl<M: TensorCollection<E, D>, D: SgdKernel<E>, E: Dtype> Optimizer<M, D, E> for Sgd<M, E> {
+impl<M: TensorCollection<E, D>, D: SgdKernel<E>, E: Dtype> Optimizer<M, D, E> for Sgd<M, E, D> {
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients,
+        gradients: Gradients<E, D>,
     ) -> Result<(), OptimizerUpdateError<D>> {
         self.gradients = gradients;
         let result = M::iter_tensors(&mut RecursiveWalker {

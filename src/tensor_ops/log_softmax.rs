@@ -20,7 +20,7 @@ use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 /// # let t: Tensor<Rank3<2, 3, 5>, f32, _> = dev.zeros();
 /// let _ = t.log_softmax::<Axes2<0, 2>>();
 /// ```
-pub fn log_softmax<Ax: Axes, S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn log_softmax<Ax: Axes, S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T>
 where
@@ -29,7 +29,7 @@ where
     t.log_softmax::<Ax>()
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [log_softmax]
     pub fn log_softmax<Ax: Axes>(self) -> Self
     where

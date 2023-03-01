@@ -12,17 +12,19 @@ use crate::{
 pub trait ChooseKernel<E: Dtype>: DeviceStorage {
     fn forward<S: Shape>(
         &self,
-        cond: &Self::Storage<S, bool>,
-        lhs: &Self::Storage<S, E>,
-        rhs: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, E>, Self::Err>;
+        cond: &Tensor<S, bool, Self>,
+        lhs: &Tensor<S, E, Self>,
+        rhs: &Tensor<S, E, Self>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err>;
 
     fn backward<S: Shape>(
         &self,
-        cond: &Self::Storage<S, bool>,
-        grad_lhs: &mut Self::Storage<S, E>,
-        grad_rhs: &mut Self::Storage<S, E>,
-        grad_out: &Self::Storage<S, E>,
+        cond: &Tensor<S, bool, Self>,
+        lhs: &Tensor<S, E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<S, E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
 
@@ -44,8 +46,8 @@ impl<
         S: Shape,
         E: Dtype,
         D: ChooseKernel<E>,
-        LhsTape: Tape<D> + Merge<RhsTape>,
-        RhsTape: Tape<D>,
+        LhsTape: Tape<E, D> + Merge<RhsTape>,
+        RhsTape: Tape<E, D>,
     > ChooseFrom<Tensor<S, E, D, LhsTape>, Tensor<S, E, D, RhsTape>> for Tensor<S, bool, D>
 {
     type Output = Tensor<S, E, D, LhsTape>;
@@ -61,10 +63,7 @@ impl<
         let (lhs, tape) = lhs.split_tape();
         let (rhs, rhs_tape) = rhs.split_tape();
 
-        let storage = lhs
-            .device
-            .forward(&self.storage, &lhs.storage, &rhs.storage)?;
-        let out = lhs.device.upgrade(storage);
+        let out = lhs.device.forward(&self, &lhs, &rhs)?;
         let phantom_out = out.clone();
 
         let mut tape = tape.merge(rhs_tape);
@@ -74,7 +73,7 @@ impl<
         tape.add_backward_op(move |grads| {
             let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
             lhs.device
-                .backward(&self.storage, grad_lhs, grad_rhs, grad_out)
+                .backward(&self, &lhs, grad_lhs, &rhs, grad_rhs, grad_out)
         });
 
         Ok(out.put_tape(tape))

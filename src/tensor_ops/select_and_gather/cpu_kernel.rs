@@ -1,14 +1,17 @@
 #![allow(clippy::needless_range_loop)]
 
 use crate::shapes::{Axes, Dtype, RemoveDimTo, ReplaceDimTo, Shape};
-use crate::tensor::cpu::{Cpu, LendingIterator, StridedArray};
+use crate::tensor::{
+    cpu::{index_to_i, LendingIterator, NdIndex},
+    Cpu, Tensor, ZerosTensor,
+};
 
 impl<E: Dtype> super::ReplaceDimKernel<E> for Cpu {
     fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
-        inp: &Self::Storage<Src, E>,
-        idx: &Self::Storage<Idx, usize>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+        idx: &Tensor<Idx, usize, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: ReplaceDimTo<Dst, Idx>,
     {
@@ -17,7 +20,7 @@ impl<E: Dtype> super::ReplaceDimKernel<E> for Cpu {
 
         let offset = <Idx as Shape>::NUM_DIMS - ax;
 
-        let mut out = StridedArray::new(inp.shape.replace(idx.shape))?;
+        let mut out = self.try_zeros_like(&inp.shape.replace(idx.shape))?;
         let mut out_iter = out.iter_mut_with_index();
         while let Some((x, i_replaced)) = out_iter.next() {
             let mut i_idx: <Idx as Shape>::Concrete = Default::default();
@@ -45,9 +48,11 @@ impl<E: Dtype> super::ReplaceDimKernel<E> for Cpu {
 
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
-        grad_inp: &mut Self::Storage<Src, E>,
-        idx: &Self::Storage<Idx, usize>,
-        grad_out: &Self::Storage<Dst, E>,
+        inp: &Tensor<Src, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        idx: &Tensor<Idx, usize, Self>,
+        out: &Tensor<Dst, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where
         Src: ReplaceDimTo<Dst, Idx>,
@@ -57,8 +62,8 @@ impl<E: Dtype> super::ReplaceDimKernel<E> for Cpu {
         // NOTE: this is the same exact indexing logic as forward
         let offset = <Idx as Shape>::NUM_DIMS - ax;
 
-        let mut out_iter = grad_out.iter_with_index();
-        while let Some((x, i_replaced)) = out_iter.next() {
+        let mut out_idx = NdIndex::new(out.shape, out.strides);
+        while let Some((i_out, i_replaced)) = out_idx.next_with_idx() {
             let mut i_idx: <Idx as Shape>::Concrete = Default::default();
             let mut i_inp: Src::Concrete = Default::default();
             for j in 0..<Idx as Shape>::NUM_DIMS {
@@ -71,7 +76,7 @@ impl<E: Dtype> super::ReplaceDimKernel<E> for Cpu {
                     std::cmp::Ordering::Greater => i_replaced[j - 1 + offset],
                 };
             }
-            grad_inp[i_inp] += *x;
+            grad_inp[index_to_i(&inp.shape, &inp.strides, i_inp)] += grad_out[i_out];
         }
         Ok(())
     }
@@ -80,15 +85,15 @@ impl<E: Dtype> super::ReplaceDimKernel<E> for Cpu {
 impl<E: Dtype> super::RemoveDimKernel<E> for Cpu {
     fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
-        inp: &Self::Storage<Src, E>,
-        idx: &Self::Storage<Idx, usize>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+        idx: &Tensor<Idx, usize, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: RemoveDimTo<Dst, Idx>,
     {
         let ax = Src::Ax::as_array()[0] as usize;
 
-        let mut out = StridedArray::new(inp.shape.remove(idx.shape))?;
+        let mut out = self.try_zeros_like(&inp.shape.remove(idx.shape))?;
         let mut out_iter = out.iter_mut_with_index();
         while let Some((x, i_replaced)) = out_iter.next() {
             let mut i_idx: <Idx as Shape>::Concrete = Default::default();
@@ -116,17 +121,19 @@ impl<E: Dtype> super::RemoveDimKernel<E> for Cpu {
 
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
-        grad_inp: &mut Self::Storage<Src, E>,
-        idx: &Self::Storage<Idx, usize>,
-        grad_out: &Self::Storage<Dst, E>,
+        inp: &Tensor<Src, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        idx: &Tensor<Idx, usize, Self>,
+        out: &Tensor<Dst, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where
         Src: RemoveDimTo<Dst, Idx>,
     {
         let ax = Src::Ax::as_array()[0] as usize;
 
-        let mut out_iter = grad_out.iter_with_index();
-        while let Some((x, i_replaced)) = out_iter.next() {
+        let mut out_idx = NdIndex::new(out.shape, out.strides);
+        while let Some((i_out, i_replaced)) = out_idx.next_with_idx() {
             let mut i_idx: <Idx as Shape>::Concrete = Default::default();
             let mut i_inp: Src::Concrete = Default::default();
             for j in 0..<Idx as Shape>::NUM_DIMS {
@@ -139,7 +146,7 @@ impl<E: Dtype> super::RemoveDimKernel<E> for Cpu {
                     std::cmp::Ordering::Greater => i_replaced[j - 1],
                 };
             }
-            grad_inp[i_inp] += *x;
+            grad_inp[index_to_i(&inp.shape, &inp.strides, i_inp)] += grad_out[i_out];
         }
         Ok(())
     }

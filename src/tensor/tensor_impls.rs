@@ -1,12 +1,14 @@
 use rand::distributions::Distribution;
 
-use super::storage_traits::{AsVec, DeviceStorage, HasErr, TensorFromVec};
+use super::storage_traits::{DeviceStorage, HasErr, TensorFromVec};
 use super::{Cpu, OneFillStorage, SampleTensor, ZeroFillStorage};
 use crate::{
     gradients::{NoneTape, OwnedTape, Tape},
     shapes::*,
     unique_id::{HasUniqueId, UniqueId},
 };
+
+use std::sync::Arc;
 
 /// The single tensor struct that stores nd arrays and tapes.
 ///
@@ -34,7 +36,9 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Tensor<S: Shape, E: Unit, D: DeviceStorage, T = NoneTape> {
     pub(crate) id: UniqueId,
-    pub(crate) storage: D::Storage<S, E>,
+    pub(crate) data: Arc<D::Vec<E>>,
+    pub(crate) shape: S,
+    pub(crate) strides: S::Concrete,
     pub(crate) device: D,
     pub(crate) tape: T,
 }
@@ -43,7 +47,7 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> HasShape for Tensor<S, E, D, T> {
     type WithShape<New: Shape> = Tensor<New, E, D, T>;
     type Shape = S;
     fn shape(&self) -> &Self::Shape {
-        self.storage.shape()
+        &self.shape
     }
 }
 
@@ -67,21 +71,23 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
 
 impl<S: Shape, E: Unit, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
     /// Clone and put a [OwnedTape] into the tensor
-    pub fn trace(&self) -> Tensor<S, E, D, OwnedTape<D>> {
+    pub fn trace<F: Unit>(&self) -> Tensor<S, E, D, OwnedTape<F, D>> {
         self.clone().traced()
     }
     /// Put a [OwnedTape] into the tensor
-    pub fn traced(self) -> Tensor<S, E, D, OwnedTape<D>> {
+    pub fn traced<F: Unit>(self) -> Tensor<S, E, D, OwnedTape<F, D>> {
         self.put_tape(Default::default())
     }
 }
 
 impl<S: Shape, E: Unit, D: DeviceStorage, T> Tensor<S, E, D, T> {
     /// Clone and insert a new tape of type `New` into the tensor
-    pub fn retaped<New: Tape<D>>(&self) -> Tensor<S, E, D, New> {
+    pub fn retaped<New: Tape<E, D>>(&self) -> Tensor<S, E, D, New> {
         Tensor {
             id: self.id,
-            storage: self.storage.clone(),
+            data: self.data.clone(),
+            shape: self.shape,
+            strides: self.strides,
             device: self.device.clone(),
             tape: Default::default(),
         }
@@ -95,7 +101,7 @@ pub trait PutTape<T> {
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<2, 3>, f32, _, NoneTape> = dev.zeros();
-    /// let a: Tensor<Rank2<2, 3>, f32, _, OwnedTape<Cpu>> = a.put_tape(Default::default());
+    /// let a: Tensor<Rank2<2, 3>, f32, _, OwnedTape<f32, Cpu>> = a.put_tape(Default::default());
     /// ```
     fn put_tape(self, tape: T) -> Self::Output;
 }
@@ -105,7 +111,9 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> PutTape<T> for Tensor<S, E, D> {
     fn put_tape(self, tape: T) -> Self::Output {
         Tensor {
             id: self.id,
-            storage: self.storage,
+            data: self.data,
+            shape: self.shape,
+            strides: self.strides,
             device: self.device,
             tape,
         }
@@ -122,8 +130,8 @@ pub trait SplitTape {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank1<5>, f32, _, OwnedTape<_>> = dev.zeros().traced();
-    /// let (a, tape): (Tensor<_, _, _, NoneTape>, OwnedTape<_>) = a.split_tape();
+    /// let a: Tensor<Rank1<5>, f32, _, OwnedTape<f32, _>> = dev.zeros().traced();
+    /// let (a, tape): (Tensor<_, _, _, NoneTape>, OwnedTape<f32, _>) = a.split_tape();
     /// ```
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
     /// Clones self and inserts a new empty tape into the clone
@@ -137,7 +145,9 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T: Default> SplitTape for Tensor<S, E
         (
             Tensor {
                 id: self.id,
-                storage: self.storage,
+                data: self.data,
+                shape: self.shape,
+                strides: self.strides,
                 device: self.device,
                 tape: NoneTape,
             },
@@ -148,7 +158,9 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T: Default> SplitTape for Tensor<S, E
     fn with_empty_tape(&self) -> Self {
         Self {
             id: self.id,
-            storage: self.storage.clone(),
+            data: self.data.clone(),
+            shape: self.shape,
+            strides: self.strides,
             device: self.device.clone(),
             tape: Default::default(),
         }
@@ -162,7 +174,8 @@ impl<S: Shape, E: Dtype, D: ZeroFillStorage<E>, T> Tensor<S, E, D, T> {
     }
     /// Fallible version of [Tensor::fill_with_zeros]
     pub fn try_fill_with_zeros(&mut self) -> Result<(), D::Err> {
-        self.device.try_fill_with_zeros(&mut self.storage)
+        self.device
+            .try_fill_with_zeros(Arc::make_mut(&mut self.data))
     }
 }
 
@@ -173,7 +186,8 @@ impl<S: Shape, E: Dtype, D: OneFillStorage<E>, T> Tensor<S, E, D, T> {
     }
     /// Fallible version of [Tensor::fill_with_ones]
     pub fn try_fill_with_ones(&mut self) -> Result<(), D::Err> {
-        self.device.try_fill_with_ones(&mut self.storage)
+        self.device
+            .try_fill_with_ones(Arc::make_mut(&mut self.data))
     }
 }
 
@@ -188,7 +202,8 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
         &mut self,
         distr: Distr,
     ) -> Result<(), D::Err> {
-        self.device.try_fill_with_distr(&mut self.storage, distr)
+        self.device
+            .try_fill_with_distr(Arc::make_mut(&mut self.data), distr)
     }
 }
 

@@ -1,9 +1,8 @@
 use crate::{
     shapes::{RemoveDimTo, ReplaceDimTo, Shape},
-    tensor::cuda::{Cuda, CudaArray},
+    tensor::{Cuda, Tensor},
 };
 use cudarc::driver::{LaunchAsync, LaunchConfig};
-use std::sync::Arc;
 
 const GATHER_PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/gather.ptx"));
 const SELECT_PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/select.ptx"));
@@ -13,9 +12,9 @@ macro_rules! impl_cuda_kernels {
         impl super::ReplaceDimKernel<$TypeName> for Cuda {
             fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
                 &self,
-                inp: &Self::Storage<Src, $TypeName>,
-                idx: &Self::Storage<Idx, usize>,
-            ) -> Result<Self::Storage<Dst, $TypeName>, Self::Err>
+                inp: &Tensor<Src, $TypeName, Self>,
+                idx: &Tensor<Idx, usize, Self>,
+            ) -> Result<Tensor<Dst, $TypeName, Self>, Self::Err>
             where
                 Src: ReplaceDimTo<Dst, Idx>,
             {
@@ -53,43 +52,41 @@ macro_rules! impl_cuda_kernels {
                 );
                 unsafe { fwd_fn.launch_async(cfg, params) }?;
 
-                Ok(CudaArray {
-                    data: Arc::new(storage),
-                    shape: dst,
-                    strides: dst.strides(),
-                })
+                Ok(self.build_tensor(dst, dst.strides(), storage))
             }
 
             fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
                 &self,
-                grad_inp: &mut Self::Storage<Src, $TypeName>,
-                idx: &Self::Storage<Idx, usize>,
-                grad_out: &Self::Storage<Dst, $TypeName>,
+                inp: &Tensor<Src, $TypeName, Self>,
+                grad_inp: &mut Self::Vec<$TypeName>,
+                idx: &Tensor<Idx, usize, Self>,
+                _: &Tensor<Dst, $TypeName, Self>,
+                grad_out: &Self::Vec<$TypeName>,
             ) -> Result<(), Self::Err>
             where
                 Src: ReplaceDimTo<Dst, Idx>,
             {
                 let bwd_fn = self.dev.get_func($GatherMod, $GatherBwd).unwrap();
-                let numel = grad_out.data.len();
+                let numel = grad_out.len();
 
-                let inp_dims = self.dev.take_async(grad_inp.shape.concrete().into())?;
+                let inp_dims = self.dev.take_async(inp.shape.concrete().into())?;
                 let idx_dims = self.dev.take_async(idx.shape.concrete().into())?;
-                let inp_strides = self.dev.take_async(grad_inp.strides.into())?;
+                let inp_strides = self.dev.take_async(inp.strides.into())?;
                 let idx_strides = self.dev.take_async(idx.strides.into())?;
 
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
-                    numel,                             // const size_t numel,
-                    Arc::make_mut(&mut grad_inp.data), // float *grad_inp,
-                    Src::NUM_DIMS,                     // const size_t inp_num_dims,
-                    &inp_dims,                         // const size_t *inp_dims,
-                    &inp_strides,                      // const size_t *inp_strides,
-                    idx.data.as_ref(),                 // const float *idx,
-                    Idx::NUM_DIMS,                     // const size_t idx_num_dims,
-                    &idx_dims,                         // const size_t *idx_dims,
-                    &idx_strides,                      // const size_t *idx_strides,
-                    grad_out.data.as_ref(),            // const float *grad_out,
-                    Dst::NUM_DIMS,                     // const size_t out_num_dims,
+                    numel,             // const size_t numel,
+                    grad_inp,          // float *grad_inp,
+                    Src::NUM_DIMS,     // const size_t inp_num_dims,
+                    &inp_dims,         // const size_t *inp_dims,
+                    &inp_strides,      // const size_t *inp_strides,
+                    idx.data.as_ref(), // const float *idx,
+                    Idx::NUM_DIMS,     // const size_t idx_num_dims,
+                    &idx_dims,         // const size_t *idx_dims,
+                    &idx_strides,      // const size_t *idx_strides,
+                    grad_out,          // const float *grad_out,
+                    Dst::NUM_DIMS,     // const size_t out_num_dims,
                 );
                 unsafe { bwd_fn.launch_async(cfg, params) }?;
                 Ok(())
@@ -99,9 +96,9 @@ macro_rules! impl_cuda_kernels {
         impl super::RemoveDimKernel<$TypeName> for Cuda {
             fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
                 &self,
-                inp: &Self::Storage<Src, $TypeName>,
-                idx: &Self::Storage<Idx, usize>,
-            ) -> Result<Self::Storage<Dst, $TypeName>, Self::Err>
+                inp: &Tensor<Src, $TypeName, Self>,
+                idx: &Tensor<Idx, usize, Self>,
+            ) -> Result<Tensor<Dst, $TypeName, Self>, Self::Err>
             where
                 Src: RemoveDimTo<Dst, Idx>,
             {
@@ -142,46 +139,44 @@ macro_rules! impl_cuda_kernels {
                 );
                 unsafe { fwd_fn.launch_async(cfg, params) }?;
 
-                Ok(CudaArray {
-                    data: Arc::new(storage),
-                    shape: dst,
-                    strides: dst.strides(),
-                })
+                Ok(self.build_tensor(dst, dst.strides(), storage))
             }
 
             fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
                 &self,
-                grad_inp: &mut Self::Storage<Src, $TypeName>,
-                idx: &Self::Storage<Idx, usize>,
-                grad_out: &Self::Storage<Dst, $TypeName>,
+                inp: &Tensor<Src, $TypeName, Self>,
+                grad_inp: &mut Self::Vec<$TypeName>,
+                idx: &Tensor<Idx, usize, Self>,
+                out: &Tensor<Dst, $TypeName, Self>,
+                grad_out: &Self::Vec<$TypeName>,
             ) -> Result<(), Self::Err>
             where
                 Src: RemoveDimTo<Dst, Idx>,
             {
                 let bwd_fn = self.dev.get_func($SelectMod, $SelectBwd).unwrap();
-                let numel = grad_out.data.len();
+                let numel = grad_out.len();
 
-                let inp_dims = self.dev.take_async(grad_inp.shape.concrete().into())?;
+                let inp_dims = self.dev.take_async(inp.shape.concrete().into())?;
                 let idx_dims = self.dev.take_async(idx.shape.concrete().into())?;
-                let out_dims = self.dev.take_async(grad_out.shape.concrete().into())?;
-                let inp_strides = self.dev.take_async(grad_inp.strides.into())?;
+                let out_dims = self.dev.take_async(out.shape.concrete().into())?;
+                let inp_strides = self.dev.take_async(inp.strides.into())?;
                 let idx_strides = self.dev.take_async(idx.strides.into())?;
-                let out_strides = self.dev.take_async(grad_out.strides.into())?;
+                let out_strides = self.dev.take_async(out.strides.into())?;
 
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
-                    numel,                             // const size_t numel,
-                    Arc::make_mut(&mut grad_inp.data), // float *grad_inp,
-                    Src::NUM_DIMS,                     // const size_t inp_num_dims,
-                    &inp_dims,                         // const size_t *inp_dims,
-                    &inp_strides,                      // const size_t *inp_strides,
-                    idx.data.as_ref(),                 // const float *idx,
-                    Idx::NUM_DIMS,                     // const size_t idx_num_dims,
-                    &idx_dims,                         // const size_t *idx_dims,
-                    &idx_strides,                      // const size_t *idx_strides,
-                    grad_out.data.as_ref(),            // const float *grad_out,
-                    &out_dims,                         // const size_t *out_dims,
-                    &out_strides,                      // const size_t *out_strides
+                    numel,             // const size_t numel,
+                    grad_inp,          // float *grad_inp,
+                    Src::NUM_DIMS,     // const size_t inp_num_dims,
+                    &inp_dims,         // const size_t *inp_dims,
+                    &inp_strides,      // const size_t *inp_strides,
+                    idx.data.as_ref(), // const float *idx,
+                    Idx::NUM_DIMS,     // const size_t idx_num_dims,
+                    &idx_dims,         // const size_t *idx_dims,
+                    &idx_strides,      // const size_t *idx_strides,
+                    grad_out,          // const float *grad_out,
+                    &out_dims,         // const size_t *out_dims,
+                    &out_strides,      // const size_t *out_strides
                 );
                 unsafe { bwd_fn.launch_async(cfg, params) }?;
                 Ok(())

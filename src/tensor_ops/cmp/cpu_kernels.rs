@@ -1,6 +1,9 @@
 use crate::{
     shapes::{Shape, Unit},
-    tensor::cpu::{Cpu, LendingIterator, StridedArray},
+    tensor::{
+        cpu::{Cpu, LendingIterator},
+        Tensor, ZerosTensor,
+    },
 };
 
 use super::{
@@ -13,12 +16,12 @@ trait CmpOpCpuKernel<E: Unit> {
 }
 
 impl<Op: CmpOpCpuKernel<E>, E: Unit> CmpKernel<Op, E> for Cpu {
-    fn forward<S: Shape>(
+    fn forward<S: Shape, T>(
         &self,
-        lhs: &Self::Storage<S, E>,
-        rhs: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err> {
-        let mut out: Self::Storage<S, bool> = StridedArray::new(lhs.shape)?;
+        lhs: &Tensor<S, E, Self, T>,
+        rhs: &Tensor<S, E, Self, T>,
+    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+        let mut out: Tensor<S, bool, Self> = self.try_zeros_like(&lhs.shape)?;
         let mut lhs_iter = lhs.iter();
         let mut rhs_iter = rhs.iter();
         let mut out_iter = out.iter_mut();
@@ -30,12 +33,12 @@ impl<Op: CmpOpCpuKernel<E>, E: Unit> CmpKernel<Op, E> for Cpu {
 }
 
 impl<Op: CmpOpCpuKernel<E>, E: Unit> ScalarCmpKernel<Op, E> for Cpu {
-    fn forward<S: Shape>(
+    fn forward<S: Shape, T>(
         &self,
-        lhs: &Self::Storage<S, E>,
+        lhs: &Tensor<S, E, Self, T>,
         scalar: E,
-    ) -> Result<Self::Storage<S, bool>, Self::Err> {
-        let mut out: Self::Storage<S, bool> = StridedArray::new(lhs.shape)?;
+    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
+        let mut out: Tensor<S, bool, Self> = self.try_zeros_like(&lhs.shape)?;
         let mut lhs_iter = lhs.iter();
         let mut out_iter = out.iter_mut();
         while let Some((o, l)) = out_iter.next().zip(lhs_iter.next()) {

@@ -1,8 +1,8 @@
 use crate::shapes::*;
-use crate::tensor::cuda::{Cuda, CudaArray};
+use crate::tensor::{Cuda, Tensor};
+use crate::unique_id::unique_id;
 
 use cudarc::driver::{LaunchAsync, LaunchConfig};
-use std::sync::Arc;
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/permute_to.ptx"));
 
@@ -27,39 +27,32 @@ where
 {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        inp: &Self::Storage<Src, E>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: PermuteShapeTo<Dst, Ax>,
     {
-        Ok(CudaArray {
+        Ok(Tensor {
+            id: unique_id(),
             data: inp.data.clone(),
             shape: inp.shape.permuted(),
             strides: inp.shape.permute_strides(inp.strides),
+            device: self.clone(),
+            tape: Default::default(),
         })
     }
-    fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
+    fn backward(
         &self,
-        grad_inp: &mut Self::Storage<Src, E>,
-        grad_out: &Self::Storage<Dst, E>,
-    ) -> Result<(), Self::Err>
-    where
-        Src: PermuteShapeTo<Dst, Ax>,
-    {
+        grad_inp: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
-
         let f = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-
-        let numel = grad_inp.data.len();
+        let numel = grad_inp.len();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
-        let params = (
-            numel,                             // const size_t numel,
-            grad_out.data.as_ref(),            // const float *inp,
-            Arc::make_mut(&mut grad_inp.data), // float *out
-        );
-        unsafe { f.launch_async(cfg, params) }?;
+        unsafe { f.launch_async(cfg, (numel, grad_out, grad_inp)) }?;
         Ok(())
     }
 }

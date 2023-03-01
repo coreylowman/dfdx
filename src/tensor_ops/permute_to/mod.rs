@@ -8,17 +8,15 @@ use crate::{gradients::Tape, shapes::*, tensor::*};
 pub trait PermuteKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        inp: &Self::Storage<Src, E>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: PermuteShapeTo<Dst, Ax>;
-    fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
+    fn backward(
         &self,
-        grad_inp: &mut Self::Storage<Src, E>,
-        grad_out: &Self::Storage<Dst, E>,
-    ) -> Result<(), Self::Err>
-    where
-        Src: PermuteShapeTo<Dst, Ax>;
+        grad_inp: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err>;
 }
 
 /// Changes order of dimensions/axes
@@ -43,13 +41,13 @@ pub trait PermuteTo: HasErr + HasShape {
         Self::Shape: PermuteShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: PermuteKernel<E>, T: Tape<D>> PermuteTo for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: PermuteKernel<E>, T: Tape<E, D>> PermuteTo for Tensor<S, E, D, T> {
     fn try_permute<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: PermuteShapeTo<Dst, Ax>,
     {
         let (inp, mut tape) = self.split_tape();
-        let out = inp.device.upgrade(inp.device.forward(&inp.storage)?);
+        let out = inp.device.forward(&inp)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&inp)?;
         tape.try_alloc_grad(&out)?;

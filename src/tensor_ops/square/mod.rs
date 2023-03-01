@@ -21,13 +21,13 @@ pub struct SquareKernelOp;
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.square();
 /// ```
-pub fn square<S: Shape, E: Dtype, D: UnaryKernel<SquareKernelOp, E>, T: Tape<D>>(
+pub fn square<S: Shape, E: Dtype, D: UnaryKernel<SquareKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.square()
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<SquareKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<SquareKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [square]
     pub fn square(self) -> Self {
         self.try_square().unwrap()

@@ -1,5 +1,5 @@
 use crate::shapes::{Dtype, Shape};
-use crate::tensor::cpu::*;
+use crate::tensor::{cpu::*, Tensor};
 use crate::tensor_ops::matmul::cpu_kernel::MatMulImpl;
 
 use super::{Conv2DKernel, Conv2DOp};
@@ -41,19 +41,18 @@ impl Conv2DOp {
 
 impl Cpu {
     #[inline]
-    fn conv2d_forward<E: Dtype, P: Shape<Concrete = [usize; 5]>>(
+    fn conv2d_forward<E: Dtype>(
         &self,
         op: &Conv2DOp,
         img: &[E],
         filters: &[E],
         out: &mut [E],
-        inp_patches_buf: &mut StridedArray<P, E>,
+        buf: &mut [E],
     ) -> Result<(), CpuError>
     where
         Self: MatMulImpl<E>,
     {
         {
-            let buf = Arc::make_mut(&mut inp_patches_buf.data);
             let mut i = 0;
             for c in 0..op.chan_in {
                 for k1 in 0..op.kernel {
@@ -78,16 +77,20 @@ impl Cpu {
         let k = op.chan_in * op.kernel * op.kernel;
         let n = op.w_out * op.h_out;
         Self::matmul(
-            View::new(filters, (m, k)),
-            View::new(inp_patches_buf.view().data, (k, n)),
-            &mut ViewMut::new(out, (m, n)),
+            (m, k, n),
+            filters.as_ptr(),
+            [k, 1],
+            buf.as_ptr(),
+            [n, 1],
+            out.as_mut_ptr(),
+            [n, 1],
         );
         Ok(())
     }
 
     #[inline]
     #[allow(clippy::too_many_arguments)]
-    fn conv2d_backward<E: Dtype, P: Shape<Concrete = [usize; 5]>>(
+    fn conv2d_backward<E: Dtype>(
         &self,
         op: &Conv2DOp,
         img: &[E],
@@ -95,14 +98,13 @@ impl Cpu {
         filters_tr: &[E],
         grad_filters_tr: &mut [E],
         grad_out: &[E],
-        out_patches_buf: &mut StridedArray<P, E>,
+        buf: &mut [E],
     ) -> Result<(), CpuError>
     where
         Self: MatMulImpl<E>,
     {
         {
             let mut i = 0;
-            let buf = Arc::make_mut(&mut out_patches_buf.data);
             for o in 0..op.chan_out {
                 for k1 in 0..op.kernel {
                     for k2 in 0..op.kernel {
@@ -127,9 +129,13 @@ impl Cpu {
             let k = op.chan_out * op.kernel * op.kernel;
             let n = op.h_in * op.w_in;
             Self::matmul(
-                View::new(filters_tr, (m, k)),
-                View::new(out_patches_buf.view().data, (k, n)),
-                &mut ViewMut::new(grad_img, (m, n)),
+                (m, k, n),
+                filters_tr.as_ptr(),
+                [k, 1],
+                buf.as_ptr(),
+                [n, 1],
+                grad_img.as_mut_ptr(),
+                [n, 1],
             );
         }
 
@@ -140,9 +146,13 @@ impl Cpu {
             let k = op.h_in * op.w_in;
             let n = op.chan_out * op.kernel * op.kernel;
             Self::matmul(
-                View::new(img, (m, k)),
-                View::new(out_patches_buf.view().data, (n, k)).tr(),
-                &mut ViewMut::new(grad_filters_tr, (m, n)),
+                (m, k, n),
+                img.as_ptr(),
+                [k, 1],
+                buf.as_ptr(),
+                [1, k],
+                grad_filters_tr.as_mut_ptr(),
+                [n, 1],
             );
         }
         Ok(())
@@ -156,11 +166,11 @@ where
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: Conv2DOp,
-        lhs: &Self::Storage<L, E>,
-        rhs: &Self::Storage<R, E>,
-        out: &mut Self::Storage<O, E>,
+        lhs: &Tensor<L, E, Self>,
+        rhs: &Tensor<R, E, Self>,
+        out: &mut Tensor<O, E, Self>,
     ) -> Result<(), Self::Err> {
-        let mut patches: StridedArray<_, E> = StridedArray::new(op.inp_patches_shape())?;
+        let mut patches = self.try_alloc_zeros::<E>(op.inp_patches_shape().num_elements())?;
         let [lstride, ostride] = match L::NUM_DIMS {
             3 => [0; 2],
             4 => [lhs.strides[0], out.strides[0]],
@@ -184,47 +194,45 @@ where
     fn backward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: Conv2DOp,
-        lhs: &Self::Storage<L, E>,
-        grad_lhs: &mut Self::Storage<L, E>,
-        rhs: &Self::Storage<R, E>,
-        grad_rhs: &mut Self::Storage<R, E>,
-        grad_out: &Self::Storage<O, E>,
+        lhs: &Tensor<L, E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<R, E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        out: &Tensor<O, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        let mut patches: StridedArray<_, E> = StridedArray::new(op.out_patches_shape())?;
-        let mut f1023: StridedArray<_, E> = StridedArray::new(op.filters_tr_shape())?;
-        let mut grad_f1023: StridedArray<_, E> = StridedArray::new(op.filters_tr_shape())?;
+        let f_tr_shape = op.filters_tr_shape();
+        let mut patches = self.try_alloc_zeros::<E>(op.out_patches_shape().num_elements())?;
+        let mut f1023 = self.try_alloc_zeros::<E>(f_tr_shape.num_elements())?;
+        let mut grad_f1023 = self.try_alloc_zeros::<E>(f_tr_shape.num_elements())?;
 
         {
             // transpose filters in f1023
             let buf = rhs.data.as_ref();
-            let mut f_iter = f1023.iter_mut_with_index();
-            while let Some((f, [c, o, k1, k2])) = f_iter.next() {
+            let mut f_idx = NdIndex::new(f_tr_shape, f_tr_shape.strides());
+            while let Some((i, [c, o, k1, k2])) = f_idx.next_with_idx() {
                 let idx = o * rhs.strides[0]
                     + c * rhs.strides[1]
                     + k1 * rhs.strides[2]
                     + k2 * rhs.strides[3];
-                *f = buf[idx];
+                f1023[i] = buf[idx];
             }
         }
 
         let [lstride, ostride] = match L::NUM_DIMS {
             3 => [0; 2],
-            4 => [lhs.strides[0], grad_out.strides[0]],
+            4 => [lhs.strides[0], out.strides[0]],
             _ => unreachable!(),
         };
         let lhs = lhs.data.as_ref();
-        let grad_lhs = Arc::make_mut(&mut grad_lhs.data);
-        let f = f1023.data.as_ref();
-        let grad_f = Arc::make_mut(&mut grad_f1023.data);
-        let grad_out = grad_out.data.as_ref();
 
         for i_batch in 0..op.batch {
             self.conv2d_backward(
                 &op,
                 &lhs[i_batch * lstride..],
                 &mut grad_lhs[i_batch * lstride..],
-                f,
-                grad_f,
+                &f1023,
+                &mut grad_f1023,
                 &grad_out[i_batch * ostride..],
                 &mut patches,
             )?;
@@ -232,14 +240,13 @@ where
 
         {
             // untranspose filters
-            let buf = Arc::make_mut(&mut grad_rhs.data);
-            let mut f_iter = grad_f1023.iter_with_index();
-            while let Some((f, [c, o, k1, k2])) = f_iter.next() {
+            let mut f_idx = NdIndex::new(f_tr_shape, f_tr_shape.strides());
+            while let Some((i, [c, o, k1, k2])) = f_idx.next_with_idx() {
                 let idx = o * rhs.strides[0]
                     + c * rhs.strides[1]
                     + k1 * rhs.strides[2]
                     + k2 * rhs.strides[3];
-                buf[idx] += *f;
+                grad_rhs[idx] += grad_f1023[i];
             }
         }
 

@@ -30,7 +30,7 @@ pub trait StddevTo<E: Dtype>: HasErr + HasShape {
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> StddevTo<E> for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> StddevTo<E> for Tensor<S, E, D, T> {
     fn try_stddev<Dst: Shape, Ax: Axes>(self, epsilon: E) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,

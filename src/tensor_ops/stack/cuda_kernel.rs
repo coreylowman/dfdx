@@ -1,9 +1,9 @@
 use crate::{
     shapes::*,
-    tensor::cuda::{Cuda, CudaArray},
+    tensor::{Cuda, Tensor},
 };
 use cudarc::driver::{LaunchAsync, LaunchConfig};
-use std::{sync::Arc, vec::Vec};
+use std::vec::Vec;
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/stack.ptx"));
 
@@ -29,8 +29,8 @@ where
     fn forward<S: Shape, Num: Dim>(
         &self,
         num: Num,
-        inps: Vec<&Self::Storage<S, E>>,
-    ) -> Result<Self::Storage<S::Larger, E>, Self::Err>
+        inps: &[Tensor<S, E, Self>],
+    ) -> Result<Tensor<S::Larger, E, Self>, Self::Err>
     where
         S: super::AddDim<Num>,
     {
@@ -63,35 +63,27 @@ where
             offset += item_numel;
         }
         debug_assert_eq!(offset, data.len());
-        Ok(CudaArray {
-            data: std::sync::Arc::new(data),
-            shape,
-            strides,
-        })
+        Ok(self.build_tensor(shape, strides, data))
     }
-    fn backward<S: Shape, New: Dim>(
+
+    fn backward(
         &self,
-        mut grad_inp: Vec<&mut Self::Storage<S, E>>,
-        grad_out: &Self::Storage<S::Larger, E>,
-    ) -> Result<(), Self::Err>
-    where
-        S: super::AddDim<New>,
-    {
+        mut grad_inp: Vec<&mut Self::Vec<E>>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
             self.dev.load_ptx(PTX.into(), Self::MOD, Self::FNS)?;
         }
-        let grad_out_buf = grad_out.data.as_ref();
         let mut offset = 0;
         for item in grad_inp.drain(..) {
             let f = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-            let numel: usize = item.data.len();
+            let numel: usize = item.len();
             let cfg = LaunchConfig::for_num_elems(numel as u32);
-            let sub = grad_out_buf.try_slice(offset..offset + numel).unwrap();
-            let params = (numel, &sub, Arc::make_mut(&mut item.data));
-            unsafe { f.launch_async(cfg, params) }?;
+            let sub = grad_out.try_slice(offset..offset + numel).unwrap();
+            unsafe { f.launch_async(cfg, (numel, &sub, item)) }?;
             offset += numel;
         }
-        debug_assert_eq!(offset, grad_out_buf.len());
+        debug_assert_eq!(offset, grad_out.len());
         Ok(())
     }
 }

@@ -165,7 +165,7 @@ mod tests {
             &self,
             mut input: Tensor<Rank1<N>, f32, Cpu>,
         ) -> Result<Self::Output, Self::Error> {
-            std::sync::Arc::make_mut(&mut input.storage.data)[I] = 1.0;
+            std::sync::Arc::make_mut(&mut input.data)[I] = 1.0;
             Ok(input)
         }
     }

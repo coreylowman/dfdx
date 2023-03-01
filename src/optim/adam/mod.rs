@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 
 use crate::{
     gradients::Gradients,
@@ -61,7 +61,7 @@ impl<E: Dtype> Default for AdamConfig<E> {
 /// # type Model = Tensor<Rank0, f32, Cpu>;
 /// # let dev: Cpu = Default::default();
 /// # let model: Model = dev.zeros();
-/// let mut opt: Adam<Model> = Adam::new(&model, AdamConfig {
+/// let mut opt: Adam<Model, f32, Cpu> = Adam::new(&model, AdamConfig {
 ///     lr: 1e-2,
 ///     betas: [0.5, 0.25],
 ///     eps: 1e-6,
@@ -71,21 +71,21 @@ impl<E: Dtype> Default for AdamConfig<E> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Adam<M, E: Dtype = f32> {
+pub struct Adam<M, E: Dtype, D: DeviceStorage> {
     /// Hyperparameter configuration
     pub cfg: AdamConfig<E>,
 
     t: i32,
-    gradients: Gradients,
-    moment1: Gradients,
-    moment2: Gradients,
+    gradients: Gradients<E, D>,
+    moment1: Gradients<E, D>,
+    moment2: Gradients<E, D>,
 
     unused: UnusedTensors,
 
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype> Adam<M, E> {
+impl<M, E: Dtype, D: DeviceStorage> Adam<M, E, D> {
     /// Constructs using hyperparameters from `cfg`.
     pub fn new(_model: &M, cfg: AdamConfig<E>) -> Self {
         Self {
@@ -101,18 +101,18 @@ impl<M, E: Dtype> Adam<M, E> {
 }
 
 pub(super) trait AdamKernel<E: Dtype>: DeviceStorage {
-    fn update<S: Shape>(
+    fn update(
         &self,
         t: i32,
         cfg: &AdamConfig<E>,
-        param: &mut Self::Storage<S, E>,
-        moment1: &mut Self::Storage<S, E>,
-        moment2: &mut Self::Storage<S, E>,
-        grad: Self::Storage<S, E>,
+        param: &mut Self::Vec<E>,
+        moment1: &mut Self::Vec<E>,
+        moment2: &mut Self::Vec<E>,
+        grad: Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D> for Adam<M, E> {
+impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D> for Adam<M, E, D> {
     type Viewer = ViewTensorMut;
     type Err = D::Err;
 
@@ -132,18 +132,18 @@ impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D> for Adam<M, E> {
                 let m_t = self.moment1.get_or_alloc_mut(p)?;
                 let v_t = self.moment2.get_or_alloc_mut(p)?;
                 p.device
-                    .update(self.t, &self.cfg, &mut p.storage, m_t, v_t, g)?;
+                    .update(self.t, &self.cfg, Arc::make_mut(&mut p.data), m_t, v_t, g)?;
             }
         }
         Ok(())
     }
 }
 
-impl<M: TensorCollection<E, D>, D: AdamKernel<E>, E: Dtype> Optimizer<M, D, E> for Adam<M, E> {
+impl<M: TensorCollection<E, D>, D: AdamKernel<E>, E: Dtype> Optimizer<M, D, E> for Adam<M, E, D> {
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients,
+        gradients: Gradients<E, D>,
     ) -> Result<(), OptimizerUpdateError<D>> {
         self.t = self.t.checked_add(1).unwrap();
         self.gradients = gradients;

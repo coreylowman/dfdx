@@ -21,13 +21,13 @@ pub struct SqrtKernelOp;
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.sqrt();
 /// ```
-pub fn sqrt<S: Shape, E: Dtype, D: UnaryKernel<SqrtKernelOp, E>, T: Tape<D>>(
+pub fn sqrt<S: Shape, E: Dtype, D: UnaryKernel<SqrtKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.sqrt()
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<SqrtKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<SqrtKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [sqrt]
     pub fn sqrt(self) -> Self {
         self.try_sqrt().unwrap()

@@ -70,7 +70,7 @@ pub trait AttentionReshapeKernel<E: Dtype>: DeviceStorage {
 }
 
 impl<E: Dtype, D: AttentionReshapeKernel<E>> TryAttentionReshape<E> for D {
-    /// Fallible version of [TryAttentionReshape::cat]
+    /// Fallible version of [TryAttentionReshape::attention_reshape]
     fn try_attention_reshape<
         const THREE_HIDDEN_DIM: usize,
         const NUM_HEADS: usize,

@@ -1,7 +1,11 @@
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::cpu::{Cpu, LendingIterator, NdIndex, StridedArray},
+    tensor::{
+        cpu::{Cpu, LendingIterator, NdIndex},
+        Tensor, ZerosTensor,
+    },
+    unique_id::unique_id,
 };
 
 pub trait UnaryDerivative<E> {
@@ -19,9 +23,16 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
     fn forward<S: Shape>(
         &self,
         op: Op,
-        inp: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, E>, Self::Err> {
-        let mut out: Self::Storage<S, E> = inp.clone();
+        inp: &Tensor<S, E, Self>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        let mut out = Tensor {
+            id: unique_id(),
+            data: inp.data.clone(),
+            shape: inp.shape,
+            strides: inp.strides,
+            device: self.clone(),
+            tape: Default::default(),
+        };
         // NOTE: we can iterate over buf here because we know inp & out
         // have exact same strides due to clone.
         for x in out.buf_iter_mut() {
@@ -33,14 +44,14 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
     fn backward<S: Shape>(
         &self,
         op: Op,
-        inp: &Self::Storage<S, E>,
-        grad_inp: &mut Self::Storage<S, E>,
-        grad_out: &Self::Storage<S, E>,
+        inp: &Tensor<S, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        debug_assert_eq!(grad_inp.data.len(), grad_out.data.len());
-        debug_assert_eq!(inp.data.len(), grad_out.data.len());
-        for (i, x) in grad_inp.buf_iter_mut().enumerate() {
-            *x += op.df(&inp.data[i]) * grad_out.data[i];
+        debug_assert_eq!(grad_inp.len(), grad_out.len());
+        debug_assert_eq!(inp.data.len(), grad_out.len());
+        for (i, x) in grad_inp.iter_mut().enumerate() {
+            *x += op.df(&inp.data[i]) * grad_out[i];
         }
         Ok(())
     }
@@ -50,10 +61,10 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
     fn forward<S: Shape>(
         &self,
         op: Op,
-        lhs: &Self::Storage<S, E>,
-        rhs: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, E>, Self::Err> {
-        let mut out: Self::Storage<S, E> = StridedArray::new(lhs.shape)?;
+        lhs: &Tensor<S, E, Self>,
+        rhs: &Tensor<S, E, Self>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        let mut out = self.try_zeros_like(&lhs.shape)?;
 
         let mut lhs_iter = lhs.iter();
         let mut rhs_iter = rhs.iter();
@@ -68,27 +79,25 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
     fn backward<S: Shape>(
         &self,
         op: Op,
-        lhs: &Self::Storage<S, E>,
-        grad_lhs: &mut Self::Storage<S, E>,
-        rhs: &Self::Storage<S, E>,
-        grad_rhs: &mut Self::Storage<S, E>,
-        grad_out: &Self::Storage<S, E>,
+        lhs: &Tensor<S, E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<S, E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
         let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
         let lhs_buf = lhs.data.as_ref();
         let rhs_buf = rhs.data.as_ref();
-        let grad_lhs_buf = std::sync::Arc::make_mut(&mut grad_lhs.data);
-        let grad_rhs_buf = std::sync::Arc::make_mut(&mut grad_rhs.data);
         // NOTE: we can use .buf_iter() here because we know the outcome of this op is
         // contiguous from forward
-        for &go in grad_out.buf_iter() {
+        for &go in grad_out.iter() {
             let lhs_i = lhs_idx.next().unwrap();
             let rhs_i = rhs_idx.next().unwrap();
             let l = &lhs_buf[lhs_i];
             let r = &rhs_buf[rhs_i];
-            grad_lhs_buf[lhs_i] += op.dfdx(l, r) * go;
-            grad_rhs_buf[rhs_i] += op.dfdy(l, r) * go;
+            grad_lhs[lhs_i] += op.dfdx(l, r) * go;
+            grad_rhs[rhs_i] += op.dfdy(l, r) * go;
         }
         Ok(())
     }

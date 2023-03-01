@@ -60,7 +60,7 @@ impl<
         const IN: usize,
         const INNER: usize,
         const OUT: usize,
-        T: Tape<Device>,
+        T: Tape<f32, Device>,
     > Module<Tensor<Rank2<BATCH, IN>, f32, Device, T>> for Mlp<IN, INNER, OUT>
 {
     type Output = Tensor<Rank2<BATCH, OUT>, f32, Device, T>;

@@ -1,30 +1,53 @@
 use super::*;
-use crate::tensor::cuda::{Cuda, CudaArray};
-use cudarc::driver::{LaunchAsync, LaunchConfig};
-use std::sync::Arc;
+use crate::tensor::cuda::Cuda;
+use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/attention_reshape.ptx"));
 
-impl super::AttentionReshapeKernel<f32> for Cuda {
+#[repr(C)]
+struct AttentionReshapeOp {
+    numel: usize,
+    num_heads: usize,
+    head_dim: usize,
+    sequence_length: usize,
+    past_length: usize,
+}
+
+unsafe impl AsKernelParam for AttentionReshapeOp {}
+
+trait HasCudaKernel<E: Unit> {
+    const FN: &'static str;
+}
+
+impl HasCudaKernel<f32> for Cuda {
+    const FN: &'static str = "attention_reshape_f32";
+}
+
+impl HasCudaKernel<f64> for Cuda {
+    const FN: &'static str = "attention_reshape_f64";
+}
+
+impl<E: Dtype> super::AttentionReshapeKernel<E> for Cuda
+where
+    Self: HasCudaKernel<E>,
+{
     fn forward<const THREE_HIDDEN_DIM: usize, const NUM_HEADS: usize, const HEAD_DIM: usize>(
         &self,
-        qkv: &Tensor<(usize, Const<THREE_HIDDEN_DIM>), f32, Self>,
-        past_key: &Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), f32, Self>,
-        past_value: &Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), f32, Self>,
+        qkv: &Tensor<(usize, Const<THREE_HIDDEN_DIM>), E, Self>,
+        past_key: &Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), E, Self>,
+        past_value: &Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), E, Self>,
     ) -> Result<
         (
-            Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), f32, Self>,
-            Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), f32, Self>,
-            Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), f32, Self>,
+            Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), E, Self>,
+            Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), E, Self>,
+            Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), E, Self>,
         ),
         Self::Err,
     > {
-        let mod_ = "attention_reshape_f32";
-        let fns = "attention_reshape_f32";
-        if !self.dev.has_func(mod_, fns) {
-            self.dev.load_ptx(PTX.into(), mod_, &[fns])?;
+        if !self.dev.has_func(Self::FN, Self::FN) {
+            self.dev.load_ptx(PTX.into(), Self::FN, &[Self::FN])?;
         }
-        let f = self.dev.get_func(mod_, fns).unwrap();
+        let f = self.dev.get_func(Self::FN, Self::FN).unwrap();
         let seq = qkv.shape().0;
         let sequence_length = seq.size();
         let past_length = past_key.shape().2;
@@ -33,50 +56,37 @@ impl super::AttentionReshapeKernel<f32> for Cuda {
         let num_heads = NUM_HEADS;
 
         let q_shape = (Const, seq, Const);
-        let mut q_storage = self.dev.alloc_zeros_async::<f32>(q_shape.num_elements())?;
+        let mut q_storage = self.dev.alloc_zeros_async::<E>(q_shape.num_elements())?;
 
         let k_shape = (Const, Const, total_length);
-        let mut k_storage = self.dev.alloc_zeros_async::<f32>(k_shape.num_elements())?;
+        let mut k_storage = self.dev.alloc_zeros_async::<E>(k_shape.num_elements())?;
 
         let v_shape = (Const, total_length, Const);
-        let mut v_storage = self.dev.alloc_zeros_async::<f32>(v_shape.num_elements())?;
+        let mut v_storage = self.dev.alloc_zeros_async::<E>(v_shape.num_elements())?;
 
         let numel = q_shape.num_elements() + k_shape.num_elements() + v_shape.num_elements();
+        let op = AttentionReshapeOp {
+            numel,
+            num_heads,
+            head_dim,
+            sequence_length,
+            past_length,
+        };
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (
-            numel,                            // const size_t numel,
-            num_heads,                        // const size_t num_heads,
-            head_dim,                         // const size_t head_dim,
-            sequence_length,                  // const size_t sequence_length,
-            past_length,                      // const size_t past_length,
-            qkv.storage.data.as_ref(),        // const float *qkv,
-            past_key.storage.data.as_ref(),   // const float *past_key,
-            past_value.storage.data.as_ref(), // const float *past_value,
-            &mut q_storage,                   // float *q,
-            &mut k_storage,                   // float *k,
-            &mut v_storage,                   // float *v
+            op,
+            qkv.data.as_ref(),
+            past_key.data.as_ref(),
+            past_value.data.as_ref(),
+            &mut q_storage,
+            &mut k_storage,
+            &mut v_storage,
         );
 
         unsafe { f.launch_async(cfg, params) }?;
-        let device = qkv.device.clone();
-        let q: Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), f32, Self> =
-            device.upgrade(CudaArray {
-                data: Arc::new(q_storage),
-                shape: q_shape,
-                strides: q_shape.strides(),
-            });
-        let k: Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), f32, Self> =
-            device.upgrade(CudaArray {
-                data: Arc::new(k_storage),
-                shape: k_shape,
-                strides: k_shape.strides(),
-            });
-        let v: Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), f32, Self> =
-            device.upgrade(CudaArray {
-                data: Arc::new(v_storage),
-                shape: v_shape,
-                strides: v_shape.strides(),
-            });
+        let q = self.build_tensor(q_shape, q_shape.strides(), q_storage);
+        let k = self.build_tensor(k_shape, k_shape.strides(), k_storage);
+        let v = self.build_tensor(v_shape, v_shape.strides(), v_storage);
         Ok((q, k, v))
     }
 }
