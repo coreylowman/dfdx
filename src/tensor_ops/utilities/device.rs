@@ -10,6 +10,8 @@ pub trait Device<E: Dtype>:
     + CopySlice<E>
     + crate::tensor::TensorFromVec<E>
 
+    + crate::tensor_ops::stack::StackKernel<E>
+
     // allocation
     + crate::tensor::ZerosTensor<E>
     + crate::tensor::OnesTensor<E>

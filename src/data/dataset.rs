@@ -4,8 +4,11 @@ use std::vec::Vec;
 /// A dataset with a known size that can be iterated over
 /// in order or in shuffled order.
 pub trait ExactSizeDataset {
-    type Item;
-    fn get(&self, index: usize) -> Self::Item;
+    type Item<'a>
+    where
+        Self: 'a;
+
+    fn get(&self, index: usize) -> Self::Item<'_>;
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool {
         self.len() == 0
@@ -38,7 +41,7 @@ pub struct Shuffled<'a, D> {
 }
 
 impl<'a, D: ExactSizeDataset> Iterator for Shuffled<'a, D> {
-    type Item = D::Item;
+    type Item = D::Item<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         self.indices.pop().map(|i| self.data.get(i))
     }

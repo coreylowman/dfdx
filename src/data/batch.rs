@@ -30,6 +30,15 @@ impl<I: Iterator> Iterator for Batcher<usize, I> {
     }
 }
 
+impl<Batch: Dim, I: ExactSizeIterator> ExactSizeIterator for Batcher<Batch, I>
+where
+    Self: Iterator,
+{
+    fn len(&self) -> usize {
+        self.iter.len() / self.size.size()
+    }
+}
+
 /// Create batches of items from an [Iterator]
 pub trait IteratorBatchExt: Iterator {
     /// Return an [Iterator] where the items are either:

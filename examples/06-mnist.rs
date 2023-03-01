@@ -19,7 +19,7 @@
 
 use std::time::Instant;
 
-use indicatif::ProgressBar;
+use indicatif::ProgressIterator;
 use mnist::*;
 use rand::prelude::{SeedableRng, StdRng};
 
@@ -40,8 +40,8 @@ impl MnistTrainSet {
 }
 
 impl ExactSizeDataset for MnistTrainSet {
-    type Item = (Vec<f32>, usize);
-    fn get(&self, index: usize) -> Self::Item {
+    type Item<'a> = (Vec<f32>, usize) where Self: 'a;
+    fn get(&self, index: usize) -> Self::Item<'_> {
         let mut img_data: Vec<f32> = Vec::with_capacity(784);
         let start = 784 * index;
         img_data.extend(
@@ -93,11 +93,11 @@ fn main() {
         let mut total_epoch_loss = 0.0;
         let mut num_batches = 0;
         let start = Instant::now();
-        let bar = ProgressBar::new(dataset.len() as u64);
         for (img, lbl) in dataset
             .shuffled(&mut rng)
             .batch(Const::<BATCH_SIZE>)
             .collate()
+            .progress()
         {
             let img = dev.stack(img.map(|x| dev.tensor((x, (Const::<784>,)))));
             let lbl = dev.one_hot_encode(Const::<10>, lbl);
@@ -107,13 +107,11 @@ fn main() {
 
             total_epoch_loss += loss.array();
             num_batches += 1;
-            bar.inc(BATCH_SIZE as u64);
 
             let gradients = loss.backward();
             opt.update(&mut model, gradients).unwrap();
         }
         let dur = Instant::now() - start;
-        bar.finish_and_clear();
 
         println!(
             "Epoch {i_epoch} in {:?} ({:.3} batches/s): avg sample loss {:.5}",
