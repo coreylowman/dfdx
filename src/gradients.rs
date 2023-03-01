@@ -178,14 +178,14 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
 /// 2. We can combine computing the derivative and multiplying by the `gradient(result)` by just setting `t` to `-gradient(result)`
 ///
 /// This would not be possible if these chain rule operations were inside of GradientTape!
-#[allow(clippy::type_complexity)]
 pub struct GradientTape<E: Unit, D: DeviceStorage> {
-    operations: Vec<(
-        UniqueId,
-        Box<dyn FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>>,
-    )>,
+    /// A list of (Time, BackwardOp) pairs. The Time is used to ensure operations
+    /// from merged tapes are executed in the correct order.
+    operations: Vec<(UniqueId, BackwardOp<E, D, D::Err>)>,
     gradients: Gradients<E, D>,
 }
+
+type BackwardOp<E, D, Err> = Box<dyn FnOnce(&mut Gradients<E, D>) -> Result<(), Err>>;
 
 impl<E: Unit, D: DeviceStorage> Default for GradientTape<E, D> {
     fn default() -> Self {
@@ -212,12 +212,10 @@ impl<E: Unit, D: DeviceStorage> GradientTape<E, D> {
     /// * `operation` - A FnOnce that acts on [Gradients].
     ///
     /// See src/tensor_ops for implementation examples.
-    pub(crate) fn add_backward_op<
+    pub(crate) fn add_backward_op<F>(&mut self, operation: F)
+    where
         F: 'static + FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>,
-    >(
-        &mut self,
-        operation: F,
-    ) {
+    {
         self.operations.push((unique_id(), Box::new(operation)));
     }
 
@@ -225,6 +223,9 @@ impl<E: Unit, D: DeviceStorage> GradientTape<E, D> {
     ///
     /// Note that this method takes ownership of self, so it can't be called twice!
     pub(crate) fn execute(mut self) -> Result<Gradients<E, D>, D::Err> {
+        // We must ensure that the operations are sorted in execution time order.
+        // Otherwise an backward operation may not be executed in the right order
+        // if multiple tapes were merged together.
         self.operations.sort_by_key(|(k, _)| *k);
         for (_, operation) in self.operations.drain(..).rev() {
             (operation)(&mut self.gradients)?;
@@ -254,19 +255,18 @@ pub struct NoneTape;
 pub trait Tape<E: Unit, D: DeviceStorage>: Default + Merge<Self> + Merge<NoneTape> {
     /// Whether this object currently owns the [GradientTape]. This is known at compile time.
     const OWNS_TAPE: bool;
-    fn add_backward_op<F: 'static + FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>>(
-        &mut self,
-        operation: F,
-    );
+    fn add_backward_op<F>(&mut self, operation: F)
+    where
+        F: 'static + FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>;
     fn try_alloc_grad<S: Shape>(&mut self, t: &Tensor<S, E, D>) -> Result<(), D::Err>;
 }
 
 impl<E: Unit, D: DeviceStorage> Tape<E, D> for OwnedTape<E, D> {
     const OWNS_TAPE: bool = true;
-    fn add_backward_op<F: 'static + FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>>(
-        &mut self,
-        operation: F,
-    ) {
+    fn add_backward_op<F>(&mut self, operation: F)
+    where
+        F: 'static + FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>,
+    {
         self.0.add_backward_op(operation)
     }
     fn try_alloc_grad<S: Shape>(&mut self, t: &Tensor<S, E, D>) -> Result<(), D::Err> {
@@ -276,10 +276,10 @@ impl<E: Unit, D: DeviceStorage> Tape<E, D> for OwnedTape<E, D> {
 
 impl<E: Unit, D: DeviceStorage> Tape<E, D> for NoneTape {
     const OWNS_TAPE: bool = false;
-    fn add_backward_op<F: 'static + FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>>(
-        &mut self,
-        _: F,
-    ) {
+    fn add_backward_op<F>(&mut self, _: F)
+    where
+        F: 'static + FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>,
+    {
     }
     fn try_alloc_grad<S: Shape>(&mut self, _: &Tensor<S, E, D>) -> Result<(), D::Err> {
         Ok(())
