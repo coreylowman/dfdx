@@ -22,16 +22,7 @@ impl Cuda {
         shape: S,
         buf: Vec<E>,
     ) -> Result<Tensor<S, E, Self>, CudaError> {
-        let strides = shape.strides();
-        let data = self.dev.take_async(buf)?;
-        Ok(Tensor {
-            id: unique_id(),
-            data: Arc::new(data),
-            shape,
-            strides,
-            device: self.clone(),
-            tape: Default::default(),
-        })
+        Ok(self.build_tensor(shape, shape.strides(), self.dev.take_async(buf)?))
     }
 
     pub(crate) fn build_tensor<S: Shape, E: Unit>(
@@ -56,14 +47,7 @@ impl<E: Unit> ZerosTensor<E> for Cuda {
         let shape = *src.shape();
         let strides = shape.strides();
         let data = self.dev.alloc_zeros_async(shape.num_elements())?;
-        Ok(Tensor {
-            id: unique_id(),
-            data: Arc::new(data),
-            shape,
-            strides,
-            device: self.clone(),
-            tape: Default::default(),
-        })
+        Ok(self.build_tensor(shape, strides, data))
     }
 }
 

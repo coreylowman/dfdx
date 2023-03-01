@@ -43,13 +43,9 @@ pub struct Softmax;
 impl ZeroSizedModule for Softmax {}
 impl NonMutableModule for Softmax {}
 
-impl<
-        Ax: Axes,
-        S: Shape<LastAxis = Ax> + ReduceShape<Ax>,
-        E: Dtype,
-        D: Device<E>,
-        T: Tape<E, D>,
-    > Module<Tensor<S, E, D, T>> for Softmax
+impl<Ax: Axes, S, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Softmax
+where
+    S: Shape<LastAxis = Ax> + ReduceShape<Ax>,
 {
     type Output = Tensor<S, E, D, T>;
     type Error = D::Err;

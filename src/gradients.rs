@@ -70,10 +70,9 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
         self.gradient_by_id.get(&t.id).unwrap()
     }
 
-    /// Returns a reference to the gradient associated with `t`.
+    /// Clones the gradient and transforms it into a tensor.
     ///
     /// # Panics
-    ///
     /// If no data is associated with `t` yet, this will panic due to an unwrap()
     /// on a .get() to the underlying hashmap.
     pub fn get<S: Shape, T>(&self, t: &Tensor<S, E, D, T>) -> Tensor<S, E, D> {

@@ -149,14 +149,10 @@ pub trait VecMatKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<
-        const K: usize,
-        N: Dim,
-        E: Dtype,
-        D: VecMatKernel<E>,
-        T: Tape<E, D> + Merge<R>,
-        R: Tape<E, D>,
-    > TryMatMul<Tensor<(Const<K>, N), E, D, R>> for Tensor<(Const<K>,), E, D, T>
+impl<const K: usize, N: Dim, E: Dtype, D: VecMatKernel<E>, T: Tape<E, D> + Merge<R>, R>
+    TryMatMul<Tensor<(Const<K>, N), E, D, R>> for Tensor<(Const<K>,), E, D, T>
+where
+    R: Tape<E, D>,
 {
     type Output = Tensor<(N,), E, D, T>;
     fn try_matmul(self, rhs: Tensor<(Const<K>, N), E, D, R>) -> Result<Self::Output, Self::Err> {

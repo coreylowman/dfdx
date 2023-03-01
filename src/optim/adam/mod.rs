@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 
 use crate::{
     gradients::Gradients,
@@ -131,14 +131,8 @@ impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D> for Adam<M, E, D> {
             Some(g) => {
                 let m_t = self.moment1.get_or_alloc_mut(p)?;
                 let v_t = self.moment2.get_or_alloc_mut(p)?;
-                p.device.update(
-                    self.t,
-                    &self.cfg,
-                    std::sync::Arc::make_mut(&mut p.data),
-                    m_t,
-                    v_t,
-                    g,
-                )?;
+                p.device
+                    .update(self.t, &self.cfg, Arc::make_mut(&mut p.data), m_t, v_t, g)?;
             }
         }
         Ok(())

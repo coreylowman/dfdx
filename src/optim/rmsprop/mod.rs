@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 
 use crate::{
     gradients::Gradients,
@@ -148,14 +148,8 @@ impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D>
                     p.device.try_fill_with_ones(sa)?;
                 }
 
-                p.device.update(
-                    &self.cfg,
-                    std::sync::Arc::make_mut(&mut p.data),
-                    m,
-                    sa,
-                    ga,
-                    g,
-                )?;
+                p.device
+                    .update(&self.cfg, Arc::make_mut(&mut p.data), m, sa, ga, g)?;
             }
         }
         Ok(())
