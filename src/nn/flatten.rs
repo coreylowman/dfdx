@@ -25,17 +25,11 @@ where
 }
 
 #[cfg(feature = "nightly")]
-impl<
-        const B: usize,
-        const C: usize,
-        const H: usize,
-        const W: usize,
-        D,
-        E: Dtype,
-        T: Tape<E, D>,
-    > super::Module<Tensor<Rank4<B, C, H, W>, E, D, T>> for Flatten2D
+impl<const B: usize, const C: usize, const H: usize, const W: usize, D, E: Dtype, T>
+    super::Module<Tensor<Rank4<B, C, H, W>, E, D, T>> for Flatten2D
 where
     D: Device<E>,
+    T: Tape<E, D>,
     Rank4<B, C, H, W>: HasSameNumelAs<Rank2<B, { C * H * W }>>,
 {
     type Output = Tensor<Rank2<B, { C * H * W }>, E, D, T>;
