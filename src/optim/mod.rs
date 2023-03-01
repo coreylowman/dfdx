@@ -24,7 +24,7 @@
 //! # let loss = losses::mse_loss(y, dev.zeros());
 //! // -- snip loss computation --
 //!
-//! let gradients: Gradients = loss.backward();
+//! let gradients: Gradients<f32, Cpu> = loss.backward();
 //! opt.update(&mut model, gradients);
 //! ```
 

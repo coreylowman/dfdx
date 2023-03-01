@@ -103,7 +103,7 @@ impl<E: Dtype> Default for SgdConfig<E> {
 /// # let dev: Cpu = Default::default();
 /// # type Model = Tensor<Rank0, f32, Cpu>;
 /// # let mut model: Model = dev.zeros();
-/// let mut opt = Sgd::new(&model, SgdConfig {
+/// let mut opt: Sgd<Model, f32, Cpu> = Sgd::new(&model, SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: Some(Momentum::Classic(0.5)),
 ///     weight_decay: Some(WeightDecay::L2(0.01)),

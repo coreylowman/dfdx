@@ -17,7 +17,7 @@ where
     }
 }
 
-/// Adds a learnable 1d bias to 3d and 4d inputs. Can be used with [crate::nn::modules::Conv2D]
+/// Adds a learnable 1d bias to 3d and 4d inputs. Can be used with `crate::nn::modules::Conv2D`
 /// to create a Biased conv.
 ///
 /// Example:

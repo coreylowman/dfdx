@@ -101,7 +101,7 @@ pub trait PutTape<T> {
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<2, 3>, f32, _, NoneTape> = dev.zeros();
-    /// let a: Tensor<Rank2<2, 3>, f32, _, OwnedTape<Cpu>> = a.put_tape(Default::default());
+    /// let a: Tensor<Rank2<2, 3>, f32, _, OwnedTape<f32, Cpu>> = a.put_tape(Default::default());
     /// ```
     fn put_tape(self, tape: T) -> Self::Output;
 }
@@ -130,8 +130,8 @@ pub trait SplitTape {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank1<5>, f32, _, OwnedTape<_, _>> = dev.zeros().traced();
-    /// let (a, tape): (Tensor<_, _, _, NoneTape>, OwnedTape<_, _>) = a.split_tape();
+    /// let a: Tensor<Rank1<5>, f32, _, OwnedTape<f32, _>> = dev.zeros().traced();
+    /// let (a, tape): (Tensor<_, _, _, NoneTape>, OwnedTape<f32, _>) = a.split_tape();
     /// ```
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
     /// Clones self and inserts a new empty tape into the clone
