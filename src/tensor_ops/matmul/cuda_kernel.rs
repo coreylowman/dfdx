@@ -245,10 +245,10 @@ impl<E: Dtype> super::VecMatKernel<E> for Cuda
 where
     CudaBlas: Gemm<E>,
 {
-    fn forward<const K: usize, N: Dim>(
+    fn forward<K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<K>,), E>,
-        rhs: &Self::Storage<(Const<K>, N), E>,
+        lhs: &Self::Storage<(K,), E>,
+        rhs: &Self::Storage<(K, N), E>,
     ) -> Result<Self::Storage<(N,), E>, Self::Err> {
         let m = Const::<1>;
         let (k, n) = rhs.shape;
@@ -276,12 +276,12 @@ where
             strides: shape.strides(),
         })
     }
-    fn backward<const K: usize, N: Dim>(
+    fn backward<K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<K>,), E>,
-        grad_lhs: &mut Self::Storage<(Const<K>,), E>,
-        rhs: &Self::Storage<(Const<K>, N), E>,
-        grad_rhs: &mut Self::Storage<(Const<K>, N), E>,
+        lhs: &Self::Storage<(K,), E>,
+        grad_lhs: &mut Self::Storage<(K,), E>,
+        rhs: &Self::Storage<(K, N), E>,
+        grad_rhs: &mut Self::Storage<(K, N), E>,
         grad_out: &Self::Storage<(N,), E>,
     ) -> Result<(), Self::Err> {
         let m = Const::<1>;
@@ -321,10 +321,10 @@ impl<E: Dtype> super::MatMatKernel<E> for Cuda
 where
     CudaBlas: Gemm<E>,
 {
-    fn forward<M: Dim, const K: usize, N: Dim>(
+    fn forward<M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<K>, N), E>,
+        lhs: &Self::Storage<(M, K), E>,
+        rhs: &Self::Storage<(K, N), E>,
     ) -> Result<Self::Storage<(M, N), E>, Self::Err> {
         let (m, _) = lhs.shape;
         let (k, n) = rhs.shape;
@@ -353,12 +353,12 @@ where
         })
     }
 
-    fn backward<M: Dim, const K: usize, N: Dim>(
+    fn backward<M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(M, Const<K>), E>,
-        grad_lhs: &mut Self::Storage<(M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<K>, N), E>,
-        grad_rhs: &mut Self::Storage<(Const<K>, N), E>,
+        lhs: &Self::Storage<(M, K), E>,
+        grad_lhs: &mut Self::Storage<(M, K), E>,
+        rhs: &Self::Storage<(K, N), E>,
+        grad_rhs: &mut Self::Storage<(K, N), E>,
         grad_out: &Self::Storage<(M, N), E>,
     ) -> Result<(), Self::Err> {
         let (m, _) = lhs.shape;
@@ -398,10 +398,10 @@ impl<E: Dtype> super::MatMatBrKernel<E> for Cuda
 where
     CudaBlas: Gemm<E>,
 {
-    fn forward<B: Dim, M: Dim, const K: usize, N: Dim>(
+    fn forward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(B, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<K>, N), E>,
+        lhs: &Self::Storage<(B, M, K), E>,
+        rhs: &Self::Storage<(K, N), E>,
     ) -> Result<Self::Storage<(B, M, N), E>, Self::Err> {
         let (batch, m, _) = lhs.shape;
         let (k, n) = rhs.shape;
@@ -428,12 +428,12 @@ where
             strides,
         })
     }
-    fn backward<B: Dim, M: Dim, const K: usize, N: Dim>(
+    fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(B, M, Const<K>), E>,
-        grad_lhs: &mut Self::Storage<(B, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<K>, N), E>,
-        grad_rhs: &mut Self::Storage<(Const<K>, N), E>,
+        lhs: &Self::Storage<(B, M, K), E>,
+        grad_lhs: &mut Self::Storage<(B, M, K), E>,
+        rhs: &Self::Storage<(K, N), E>,
+        grad_rhs: &mut Self::Storage<(K, N), E>,
         grad_out: &Self::Storage<(B, M, N), E>,
     ) -> Result<(), Self::Err> {
         assert_ne!(grad_lhs.strides[0], 0);
@@ -560,10 +560,10 @@ impl<E: Dtype> super::MatMatBatch4Kernel<E> for Cuda
 where
     CudaBlas: Gemm<E>,
 {
-    fn forward<const B: usize, const S: usize, M: Dim, const K: usize, N: Dim>(
+    fn forward<const B: usize, const S: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, Const<S>, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<B>, Const<S>, Const<K>, N), E>,
+        lhs: &Self::Storage<(Const<B>, Const<S>, M, K), E>,
+        rhs: &Self::Storage<(Const<B>, Const<S>, K, N), E>,
     ) -> Result<Self::Storage<(Const<B>, Const<S>, M, N), E>, Self::Err> {
         let (batch, seq, m, _) = lhs.shape;
         let (_, _, k, n) = rhs.shape;
@@ -594,12 +594,12 @@ where
         })
     }
 
-    fn backward<const B: usize, const S: usize, M: Dim, const K: usize, N: Dim>(
+    fn backward<const B: usize, const S: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, Const<S>, M, Const<K>), E>,
-        gl: &mut Self::Storage<(Const<B>, Const<S>, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<B>, Const<S>, Const<K>, N), E>,
-        gr: &mut Self::Storage<(Const<B>, Const<S>, Const<K>, N), E>,
+        lhs: &Self::Storage<(Const<B>, Const<S>, M, K), E>,
+        gl: &mut Self::Storage<(Const<B>, Const<S>, M, K), E>,
+        rhs: &Self::Storage<(Const<B>, Const<S>, K, N), E>,
+        gr: &mut Self::Storage<(Const<B>, Const<S>, K, N), E>,
         go: &Self::Storage<(Const<B>, Const<S>, M, N), E>,
     ) -> Result<(), Self::Err> {
         assert_ne!(gl.strides[0], 0);
