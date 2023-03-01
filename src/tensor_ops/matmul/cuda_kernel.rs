@@ -326,8 +326,11 @@ where
         lhs: &Self::Storage<(M, K), E>,
         rhs: &Self::Storage<(K, N), E>,
     ) -> Result<Self::Storage<(M, N), E>, Self::Err> {
-        let (m, _) = lhs.shape;
-        let (k, n) = rhs.shape;
+        let (m, k) = lhs.shape;
+        let (k2, n) = rhs.shape;
+        if k != k2 {
+            return Err(CudaError::Cpu(CpuError::WrongNumElements));
+        }
         let shape = (m, n);
         let strides = shape.strides();
         let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
@@ -361,8 +364,11 @@ where
         grad_rhs: &mut Self::Storage<(K, N), E>,
         grad_out: &Self::Storage<(M, N), E>,
     ) -> Result<(), Self::Err> {
-        let (m, _) = lhs.shape;
-        let (k, n) = rhs.shape;
+        let (m, k) = lhs.shape;
+        let (k2, n) = rhs.shape;
+        if k != k2 {
+            return Err(CudaError::Cpu(CpuError::WrongNumElements));
+        }
         unsafe {
             // grad_lhs += grad_out * rhs^T
             sgemm(
@@ -403,8 +409,11 @@ where
         lhs: &Self::Storage<(B, M, K), E>,
         rhs: &Self::Storage<(K, N), E>,
     ) -> Result<Self::Storage<(B, M, N), E>, Self::Err> {
-        let (batch, m, _) = lhs.shape;
-        let (k, n) = rhs.shape;
+        let (batch, m, k) = lhs.shape;
+        let (k2, n) = rhs.shape;
+        if k != k2 {
+            return Err(CudaError::Cpu(CpuError::WrongNumElements));
+        }
         let shape = (batch, m, n);
         let strides = shape.strides();
         let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
@@ -437,8 +446,11 @@ where
         grad_out: &Self::Storage<(B, M, N), E>,
     ) -> Result<(), Self::Err> {
         assert_ne!(grad_lhs.strides[0], 0);
-        let (batch, m, _) = lhs.shape;
-        let (k, n) = rhs.shape;
+        let (batch, m, k) = lhs.shape;
+        let (k2, n) = rhs.shape;
+        if k != k2 {
+            return Err(CudaError::Cpu(CpuError::WrongNumElements));
+        }
         unsafe {
             // grad_lhs += grad_out * rhs^T
             sgemm_batch(
@@ -565,8 +577,11 @@ where
         lhs: &Self::Storage<(Const<B>, Const<S>, M, K), E>,
         rhs: &Self::Storage<(Const<B>, Const<S>, K, N), E>,
     ) -> Result<Self::Storage<(Const<B>, Const<S>, M, N), E>, Self::Err> {
-        let (batch, seq, m, _) = lhs.shape;
-        let (_, _, k, n) = rhs.shape;
+        let (batch, seq, m, k) = lhs.shape;
+        let (_, _, k2, n) = rhs.shape;
+        if k != k2 {
+            return Err(CudaError::Cpu(CpuError::WrongNumElements));
+        }
         let shape = (batch, seq, m, n);
         let strides = shape.strides();
         let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
@@ -607,8 +622,11 @@ where
         assert_ne!(gl.strides[1], 0);
         assert_ne!(gr.strides[1], 0);
 
-        let (batch, seq, m, _) = lhs.shape;
-        let (_, _, k, n) = rhs.shape;
+        let (batch, seq, m, k) = lhs.shape;
+        let (_, _, k2, n) = rhs.shape;
+        if k != k2 {
+            return Err(CudaError::Cpu(CpuError::WrongNumElements));
+        }
         // TODO use streams
         let gl_buf = Arc::make_mut(&mut gl.data);
         let gr_buf = Arc::make_mut(&mut gr.data);

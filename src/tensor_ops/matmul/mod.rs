@@ -59,14 +59,6 @@ use crate::{
 /// let _: Tensor<Rank3<10, 3, 4>, f32, _> = x.matmul(y);
 /// ```
 ///
-/// 6. Compile time guarantee
-/// ```no_compile
-/// # use dfdx::prelude::*;
-/// # let dev: Cpu = Default::default();
-/// let x: Tensor<Rank3<10, 3, 2>, f32, _> = dev.zeros();
-/// let y: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
-/// let _: Tensor<Rank3<10, 3, 4>, f32, _> = x.matmul(y);
-/// ```
 pub fn matmul<Lhs, Rhs>(lhs: Lhs, rhs: Rhs) -> Lhs::Output
 where
     Lhs: TryMatMul<Rhs>,
@@ -191,6 +183,13 @@ where
     R: Tape<D>,
 {
     type Output = Tensor<(M, N), E, D, T>;
+    /// ```no_compile
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let x: Tensor<Rank2<3, 2>, f32, _> = dev.zeros();
+    /// let y: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
+    /// let _: Tensor<Rank2<3, 4>, f32, _> = x.try_matmul(y);
+    /// ```
     fn try_matmul(self, rhs: Tensor<(K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
         try_binary_op(self, rhs, D::forward, D::backward)
     }
@@ -220,6 +219,13 @@ where
     R: Tape<D>,
 {
     type Output = Tensor<(B, M, N), E, D, T>;
+    /// ```no_compile
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let x: Tensor<Rank3<1, 3, 2>, f32, _> = dev.zeros();
+    /// let y: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
+    /// let _: Tensor<Rank3<1, 3, 4>, f32, _> = x.try_matmul(y);
+    /// ```
     fn try_matmul(self, rhs: Tensor<(K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
         try_binary_op(self, rhs, D::forward, D::backward)
     }
@@ -250,6 +256,13 @@ where
     R: Tape<D>,
 {
     type Output = Tensor<(Const<B>, M, N), E, D, T>;
+    /// ```no_compile
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let x: Tensor<Rank3<1, 3, 2>, f32, _> = dev.zeros();
+    /// let y: Tensor<Rank3<1, 3, 4>, f32, _> = dev.zeros();
+    /// let _: Tensor<Rank3<1, 3, 4>, f32, _> = x.try_matmul(y);
+    /// ```
     fn try_matmul(self, rhs: Tensor<(Const<B>, K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
         try_binary_op(self, rhs, D::forward, D::backward)
     }
@@ -281,6 +294,13 @@ where
     R: Tape<D>,
 {
     type Output = Tensor<(Const<B>, Const<S>, M, N), E, D, T>;
+    /// ```no_compile
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let x: Tensor<Rank4<1, 5, 3, 2>, f32, _> = dev.zeros();
+    /// let y: Tensor<Rank4<1, 5, 3, 4>, f32, _> = dev.zeros();
+    /// let _: Tensor<Rank3<1, 5, 3, 4>, f32, _> = x.try_matmul(y);
+    /// ```
     fn try_matmul(
         self,
         rhs: Tensor<(Const<B>, Const<S>, K, N), E, D, R>,
@@ -686,5 +706,43 @@ mod tests {
                 .array()
                 .assert_close(&[[2.0276, 0.40552002]], 1e-5);
         }
+    }
+
+    #[test]
+    #[should_panic = "WrongNumElements"]
+    fn test_dynamic_matmul_matmat_fail() {
+        let dev: TestDevice = Default::default();
+        let x: Tensor<(Const<3>, usize), f32, _> = dev.zeros_like(&(Const, 3));
+        let y: Tensor<(usize, Const<4>), f32, _> = dev.zeros_like(&(4, Const));
+        let _: Tensor<(Const<3>, Const<4>), f32, _> = x.matmul(y);
+    }
+
+    #[test]
+    #[should_panic = "WrongNumElements"]
+    fn test_dynamic_matmul_matmatbr_fail() {
+        let dev: TestDevice = Default::default();
+        let x: Tensor<(Const<1>, Const<3>, usize), f32, _> = dev.zeros_like(&(Const, Const, 3));
+        let y: Tensor<(usize, Const<4>), f32, _> = dev.zeros_like(&(4, Const));
+        let _: Tensor<(Const<1>, Const<3>, Const<4>), f32, _> = x.matmul(y);
+    }
+
+    #[test]
+    #[should_panic = "WrongNumElements"]
+    fn test_dynamic_matmul_matmat_batch_fail() {
+        let dev: TestDevice = Default::default();
+        let x: Tensor<(Const<1>, Const<3>, usize), f32, _> = dev.zeros_like(&(Const, Const, 3));
+        let y: Tensor<(Const<1>, usize, Const<4>), f32, _> = dev.zeros_like(&(Const, 4, Const));
+        let _: Tensor<(Const<1>, Const<3>, Const<4>), f32, _> = x.matmul(y);
+    }
+
+    #[test]
+    #[should_panic = "WrongNumElements"]
+    fn test_dynamic_matmul_matmat_4d_fail() {
+        let dev: TestDevice = Default::default();
+        let x: Tensor<(Const<1>, Const<5>, Const<3>, usize), f32, _> =
+            dev.zeros_like(&(Const, Const, Const, 3));
+        let y: Tensor<(Const<1>, Const<5>, usize, Const<4>), f32, _> =
+            dev.zeros_like(&(Const, Const, 4, Const));
+        let _: Tensor<(Const<1>, Const<5>, Const<3>, Const<4>), f32, _> = x.matmul(y);
     }
 }

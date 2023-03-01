@@ -170,6 +170,11 @@ where
         rhs: &Self::Storage<(K, N), F>,
     ) -> Result<Self::Storage<(M, N), F>, Self::Err> {
         let mut out = StridedArray::new((lhs.shape.0, rhs.shape.1))?;
+        let k = lhs.shape().1;
+        let k2 = rhs.shape().0;
+        if k != k2 {
+            return Err(CpuError::WrongNumElements);
+        }
         Self::matmul(lhs.view(), rhs.view(), &mut out.view_mut());
         Ok(out)
     }
@@ -197,8 +202,11 @@ where
         lhs: &Self::Storage<(B, M, K), F>,
         rhs: &Self::Storage<(K, N), F>,
     ) -> Result<Self::Storage<(B, M, N), F>, Self::Err> {
-        let (batch, seq, _) = *lhs.shape();
-        let (_, n) = *rhs.shape();
+        let (batch, seq, k) = *lhs.shape();
+        let (k2, n) = *rhs.shape();
+        if k != k2 {
+            return Err(CpuError::WrongNumElements);
+        }
         let mut out = StridedArray::new((batch, seq, n))?;
         let a = lhs.view();
         let b = rhs.view();
@@ -290,6 +298,11 @@ where
     ) -> Result<Self::Storage<(Const<B>, Const<S>, M, N), F>, Self::Err> {
         let m: M = lhs.shape.2;
         let n: N = rhs.shape.3;
+        let k = lhs.shape().3;
+        let k2 = rhs.shape().2;
+        if k != k2 {
+            return Err(CpuError::WrongNumElements);
+        }
         let mut out = StridedArray::new((Const, Const, m, n))?;
         let lhs = lhs.view();
         let rhs = rhs.view();
