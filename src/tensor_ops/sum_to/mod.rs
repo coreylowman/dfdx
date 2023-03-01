@@ -17,6 +17,7 @@ pub trait SumKernel<E: Dtype>: DeviceStorage {
         &self,
         inp: &Tensor<Src, E, Self>,
         grad_inp: &mut Self::Vec<E>,
+        out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where
@@ -69,7 +70,7 @@ impl<S: Shape, E: Dtype, D: SumKernel<E>, T: Tape<E, D>> SumTo for Tensor<S, E, 
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward::<S, Dst, Ax>(&inp, grad_inp, grad_out)
+            inp.device.backward(&inp, grad_inp, &phantom_out, grad_out)
         });
         Ok(out.put_tape(tape))
     }

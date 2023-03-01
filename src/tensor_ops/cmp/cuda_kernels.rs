@@ -1,10 +1,8 @@
 use crate::{
     shapes::{Shape, Unit},
-    tensor::cuda::Cuda,
-    tensor::cuda::CudaArray,
+    tensor::{Cuda, Tensor},
 };
 use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
-use std::sync::Arc;
 
 use super::{
     CmpKernel, EqKernelOp, GeKernelOp, GtKernelOp, LeKernelOp, LtKernelOp, NeKernelOp,
@@ -36,11 +34,11 @@ trait ScalarCmpOpCudaKernel<E: Unit> {
 }
 
 impl<E: Unit, Op: CmpOpCudaKernel<E>> CmpKernel<Op, E> for Cuda {
-    fn forward<S: Shape>(
+    fn forward<S: Shape, T>(
         &self,
-        lhs: &Self::Storage<S, E>,
-        rhs: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err> {
+        lhs: &Tensor<S, E, Self, T>,
+        rhs: &Tensor<S, E, Self, T>,
+    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
         if !self.dev.has_func(Op::MODULE_NAME, Op::FWD_FN_NAME) {
             self.dev
                 .load_ptx(Op::PTX_SRC.into(), Op::MODULE_NAME, &[Op::FWD_FN_NAME])?;
@@ -71,20 +69,16 @@ impl<E: Unit, Op: CmpOpCudaKernel<E>> CmpKernel<Op, E> for Cuda {
             &out_strides,      // const size_t *out_strides
         );
         unsafe { fwd_fn.launch_async(cfg, params) }?;
-        Ok(CudaArray {
-            data: Arc::new(storage),
-            shape,
-            strides,
-        })
+        Ok(self.build_tensor(shape, strides, storage))
     }
 }
 
 impl<E: Unit + AsKernelParam, Op: ScalarCmpOpCudaKernel<E>> ScalarCmpKernel<Op, E> for Cuda {
-    fn forward<S: Shape>(
+    fn forward<S: Shape, T>(
         &self,
-        lhs: &Self::Storage<S, E>,
+        lhs: &Tensor<S, E, Self, T>,
         scalar: E,
-    ) -> Result<Self::Storage<S, bool>, Self::Err> {
+    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
         if !self.dev.has_func(Op::MODULE_NAME, Op::FWD_FN_NAME) {
             self.dev
                 .load_ptx(Op::PTX_SRC.into(), Op::MODULE_NAME, &[Op::FWD_FN_NAME])?;
@@ -113,11 +107,7 @@ impl<E: Unit + AsKernelParam, Op: ScalarCmpOpCudaKernel<E>> ScalarCmpKernel<Op, 
             &out_strides,      // const size_t *out_strides
         );
         unsafe { fwd_fn.launch_async(cfg, params) }?;
-        Ok(CudaArray {
-            data: Arc::new(storage),
-            shape,
-            strides,
-        })
+        Ok(self.build_tensor(shape, strides, storage))
     }
 }
 

@@ -40,6 +40,7 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
         &self,
         inp: &Tensor<Src, E, Self>,
         grad_inp: &mut Self::Vec<E>,
+        _: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where

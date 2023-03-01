@@ -1,7 +1,6 @@
 use super::SgdConfig;
 use crate::{optim::optimizer::*, shapes::*, tensor::Cuda};
 use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
-use std::sync::Arc;
 
 #[repr(C)]
 struct CudaSgdConfig<E> {
@@ -48,29 +47,22 @@ impl<E: Dtype + AsKernelParam> super::SgdKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
-    fn update<S: Shape>(
+    fn update(
         &self,
         cfg: &SgdConfig<E>,
-        param: &mut Self::Storage<S, E>,
-        velocity: &mut Self::Storage<S, E>,
-        grad: Self::Storage<S, E>,
+        param: &mut Self::Vec<E>,
+        velocity: &mut Self::Vec<E>,
+        grad: Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FWD) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, &[Self::FWD])?;
         }
 
-        let sgd_cfg = sgd_config_to_cuda(cfg);
-        let numel = param.shape.num_elements();
-
+        let opt_cfg = sgd_config_to_cuda(cfg);
+        let numel = param.len();
         let func = self.dev.get_func(Self::MOD, Self::FWD).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
-        let params = (
-            sgd_cfg,                           // const SgdConfig cfg,
-            numel,                             // const size_t numel,
-            Arc::make_mut(&mut param.data),    // float* param,
-            Arc::make_mut(&mut velocity.data), // float* velocity,
-            grad.data.as_ref(),                // const float* grad
-        );
+        let params = (opt_cfg, numel, param, velocity, &grad);
         unsafe { func.launch_async(cfg, params) }?;
         Ok(())
     }
