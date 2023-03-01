@@ -33,19 +33,16 @@ impl<E: Unit, D: DeviceStorage> Default for Gradients<E, D> {
 
 impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     /// Retrieves mutable gradient for `t`, allocating one if it isn't present.
-    pub(crate) fn get_or_alloc_mut<S: Shape, T>(
+    pub(crate) fn get_or_alloc_mut<S: Shape>(
         &mut self,
-        t: &Tensor<S, E, D, T>,
+        t: &Tensor<S, E, D>,
     ) -> Result<&mut D::Vec<E>, D::Err> {
         self.try_alloc_for(t)?;
         Ok(self.get_mut(t))
     }
 
     /// Inserts a gradient for `t`
-    pub(crate) fn try_alloc_for<S: Shape, T>(
-        &mut self,
-        t: &Tensor<S, E, D, T>,
-    ) -> Result<(), D::Err> {
+    pub(crate) fn try_alloc_for<S: Shape>(&mut self, t: &Tensor<S, E, D>) -> Result<(), D::Err> {
         if let std::collections::hash_map::Entry::Vacant(e) = self.gradient_by_id.entry(t.id) {
             e.insert(t.try_alloc_grad()?);
         }
@@ -258,7 +255,7 @@ pub trait Tape<E: Unit, D: DeviceStorage>: Default + Merge<Self> + Merge<NoneTap
         &mut self,
         operation: F,
     );
-    fn try_alloc_grad<S: Shape, T>(&mut self, t: &Tensor<S, E, D, T>) -> Result<(), D::Err>;
+    fn try_alloc_grad<S: Shape>(&mut self, t: &Tensor<S, E, D>) -> Result<(), D::Err>;
 }
 
 impl<E: Unit, D: DeviceStorage> Tape<E, D> for OwnedTape<E, D> {
@@ -269,7 +266,7 @@ impl<E: Unit, D: DeviceStorage> Tape<E, D> for OwnedTape<E, D> {
     ) {
         self.0.add_backward_op(operation)
     }
-    fn try_alloc_grad<S: Shape, T>(&mut self, t: &Tensor<S, E, D, T>) -> Result<(), D::Err> {
+    fn try_alloc_grad<S: Shape>(&mut self, t: &Tensor<S, E, D>) -> Result<(), D::Err> {
         self.0.gradients.try_alloc_for(t)
     }
 }
@@ -281,7 +278,7 @@ impl<E: Unit, D: DeviceStorage> Tape<E, D> for NoneTape {
         _: F,
     ) {
     }
-    fn try_alloc_grad<S: Shape, T>(&mut self, _: &Tensor<S, E, D, T>) -> Result<(), D::Err> {
+    fn try_alloc_grad<S: Shape>(&mut self, _: &Tensor<S, E, D>) -> Result<(), D::Err> {
         Ok(())
     }
 }

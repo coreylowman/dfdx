@@ -152,7 +152,7 @@ mod tests {
     fn embedding_forward_1d() {
         let dev: TestDevice = Default::default();
 
-        let model: Embedding<2, 5, f32, Cpu> = Embedding {
+        let model = Embedding {
             weight: dev.tensor(W),
         };
 
