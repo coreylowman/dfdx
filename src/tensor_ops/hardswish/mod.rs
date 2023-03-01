@@ -10,9 +10,15 @@ use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 #[derive(Debug, Default, Copy, Clone)]
 pub struct HardswishKernelOp;
 
-/// [Hard Swish](https://paperswithcode.com/method/hard-swish). `h-swish(x)=x*(ReLU`
+/// [Hard Swish](https://paperswithcode.com/method/hard-swish). `h-swish(x)=x*(ReLU6(x+3)/6)`
 ///
-///
+/// Examples:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
+/// let r = t.hardswish();
+/// ```
 
 pub fn hardswish<S: Shape, E: Dtype, D: UnaryKernel<HardswishKernelOp, E>, T: Tape<D>>(
     t: Tensor<S, E, D, T>,
