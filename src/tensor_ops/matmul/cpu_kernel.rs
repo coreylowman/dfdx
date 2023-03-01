@@ -165,15 +165,15 @@ impl<E: Dtype> super::VecMatKernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
-    fn forward<const K: usize, N: Dim>(
+    fn forward<K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<K>,), E, Self>,
-        rhs: &Tensor<(Const<K>, N), E, Self>,
+        lhs: &Tensor<(K,), E, Self>,
+        rhs: &Tensor<(K, N), E, Self>,
     ) -> Result<Tensor<(N,), E, Self>, Self::Err> {
-        let n = rhs.shape.1;
+        let (k, n) = rhs.shape;
         let mut out = self.try_zeros_like(&(n,))?;
         Self::matmul(
-            (Const::<1>, Const::<K>, n),
+            (Const::<1>, k, n),
             lhs.data.as_ptr(),
             [0, lhs.strides[0]],
             rhs.data.as_ptr(),
@@ -183,17 +183,16 @@ where
         );
         Ok(out)
     }
-    fn backward<const K: usize, N: Dim>(
+    fn backward<K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<K>,), E, Self>,
+        lhs: &Tensor<(K,), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(Const<K>, N), E, Self>,
+        rhs: &Tensor<(K, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let m = Const::<1>;
-        let k = Const::<K>;
-        let n = rhs.shape.1;
+        let (k, n) = rhs.shape;
         Self::matmul(
             (m, n, k),
             grad_out.as_ptr(),
@@ -220,10 +219,10 @@ impl<E: Dtype> super::MatMatKernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
-    fn forward<M: Dim, const K: usize, N: Dim>(
+    fn forward<M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(M, Const<K>), E, Self>,
-        rhs: &Tensor<(Const<K>, N), E, Self>,
+        lhs: &Tensor<(M, K), E, Self>,
+        rhs: &Tensor<(K, N), E, Self>,
     ) -> Result<Tensor<(M, N), E, Self>, Self::Err> {
         let (m, k) = lhs.shape;
         let n = rhs.shape.1;
@@ -239,11 +238,11 @@ where
         );
         Ok(out)
     }
-    fn backward<M: Dim, const K: usize, N: Dim>(
+    fn backward<M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(M, Const<K>), E, Self>,
+        lhs: &Tensor<(M, K), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(Const<K>, N), E, Self>,
+        rhs: &Tensor<(K, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
@@ -276,10 +275,10 @@ impl<E: Dtype> super::MatMatBrKernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
-    fn forward<B: Dim, M: Dim, const K: usize, N: Dim>(
+    fn forward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(B, M, Const<K>), E, Self>,
-        rhs: &Tensor<(Const<K>, N), E, Self>,
+        lhs: &Tensor<(B, M, K), E, Self>,
+        rhs: &Tensor<(K, N), E, Self>,
     ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err> {
         let (batch, m, k) = lhs.shape;
         let n = rhs.shape.1;
@@ -298,11 +297,11 @@ where
         }
         Ok(out)
     }
-    fn backward<B: Dim, M: Dim, const K: usize, N: Dim>(
+    fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(B, M, Const<K>), E, Self>,
+        lhs: &Tensor<(B, M, K), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(Const<K>, N), E, Self>,
+        rhs: &Tensor<(K, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
@@ -337,10 +336,10 @@ impl<E: Dtype> super::MatMatBatch3Kernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
-    fn forward<const B: usize, M: Dim, const K: usize, N: Dim>(
+    fn forward<const B: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<B>, M, Const<K>), E, Self>,
-        rhs: &Tensor<(Const<B>, Const<K>, N), E, Self>,
+        lhs: &Tensor<(Const<B>, M, K), E, Self>,
+        rhs: &Tensor<(Const<B>, K, N), E, Self>,
     ) -> Result<Tensor<(Const<B>, M, N), E, Self>, Self::Err> {
         let (b, m, k) = lhs.shape;
         let n = rhs.shape.2;
@@ -361,11 +360,11 @@ where
         }
         Ok(out)
     }
-    fn backward<const B: usize, M: Dim, const K: usize, N: Dim>(
+    fn backward<const B: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<B>, M, Const<K>), E, Self>,
+        lhs: &Tensor<(Const<B>, M, K), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(Const<B>, Const<K>, N), E, Self>,
+        rhs: &Tensor<(Const<B>, K, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
@@ -400,10 +399,10 @@ impl<E: Dtype> super::MatMatBatch4Kernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
-    fn forward<const B: usize, const S: usize, M: Dim, const K: usize, N: Dim>(
+    fn forward<const B: usize, const S: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<B>, Const<S>, M, Const<K>), E, Self>,
-        rhs: &Tensor<(Const<B>, Const<S>, Const<K>, N), E, Self>,
+        lhs: &Tensor<(Const<B>, Const<S>, M, K), E, Self>,
+        rhs: &Tensor<(Const<B>, Const<S>, K, N), E, Self>,
     ) -> Result<Tensor<(Const<B>, Const<S>, M, N), E, Self>, Self::Err> {
         let (b, s, m, k) = lhs.shape;
         let n = rhs.shape.3;
@@ -424,11 +423,11 @@ where
         }
         Ok(out)
     }
-    fn backward<const B: usize, const S: usize, M: Dim, const K: usize, N: Dim>(
+    fn backward<const B: usize, const S: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<B>, Const<S>, M, Const<K>), E, Self>,
+        lhs: &Tensor<(Const<B>, Const<S>, M, K), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(Const<B>, Const<S>, Const<K>, N), E, Self>,
+        rhs: &Tensor<(Const<B>, Const<S>, K, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
