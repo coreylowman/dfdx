@@ -1,27 +1,23 @@
 use crate::{
     optim::optimizer::{Momentum, WeightDecay},
-    shapes::{Dtype, Shape},
+    shapes::Dtype,
     tensor::cpu::*,
 };
 
 use super::{SgdConfig, SgdKernel};
 
 impl<E: Dtype> SgdKernel<E> for Cpu {
-    fn update<S: Shape>(
+    fn update(
         &self,
         cfg: &SgdConfig<E>,
-        param: &mut StridedArray<S, E>,
-        velocity: &mut StridedArray<S, E>,
-        grad: StridedArray<S, E>,
+        param: &mut Self::Vec<E>,
+        velocity: &mut Self::Vec<E>,
+        grad: Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        debug_assert_eq!(param.data.len(), grad.data.len());
-        debug_assert_eq!(param.shape, grad.shape);
-        debug_assert_eq!(param.strides, grad.strides);
-
         for ((p, mut g), v) in param
-            .buf_iter_mut()
-            .zip(grad.buf_iter().cloned())
-            .zip(velocity.buf_iter_mut())
+            .iter_mut()
+            .zip(grad.iter().cloned())
+            .zip(velocity.iter_mut())
         {
             if let Some(WeightDecay::L2(wd)) = cfg.weight_decay {
                 g += wd * *p;

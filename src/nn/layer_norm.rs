@@ -86,7 +86,7 @@ impl<const M: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
     }
 }
 
-impl<const M: usize, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<Rank1<M>, E, D, T>>
+impl<const M: usize, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<Rank1<M>, E, D, T>>
     for LayerNorm1D<M, E, D>
 {
     type Output = Tensor<Rank1<M>, E, D, T>;
@@ -99,7 +99,7 @@ impl<const M: usize, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<Rank1<M>,
     }
 }
 
-impl<B: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
+impl<B: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<(B, Const<M>), E, D, T>> for LayerNorm1D<M, E, D>
 {
     type Output = Tensor<(B, Const<M>), E, D, T>;
@@ -113,7 +113,7 @@ impl<B: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
     }
 }
 
-impl<B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
+impl<B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<(B, S, Const<M>), E, D, T>> for LayerNorm1D<M, E, D>
 {
     type Output = Tensor<(B, S, Const<M>), E, D, T>;

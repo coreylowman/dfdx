@@ -78,22 +78,22 @@ impl<E: Dtype> Default for RMSpropConfig<E> {
 ///     weight_decay: Some(WeightDecay::Decoupled(1e-1)),
 /// });
 #[derive(Debug)]
-pub struct RMSprop<M, E: Dtype> {
+pub struct RMSprop<M, E: Dtype, D: DeviceStorage> {
     /// Hyperparameter configuration
     pub cfg: RMSpropConfig<E>,
 
     step: usize,
-    momentums: Gradients,
-    square_avg: Gradients,
-    grad_avg: Gradients,
-    gradients: Gradients,
+    momentums: Gradients<E, D>,
+    square_avg: Gradients<E, D>,
+    grad_avg: Gradients<E, D>,
+    gradients: Gradients<E, D>,
 
     unused: UnusedTensors,
 
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype> RMSprop<M, E> {
+impl<M, E: Dtype, D: DeviceStorage> RMSprop<M, E, D> {
     /// Constructs using hyperparameters from `cfg`.
     pub fn new(_model: &M, cfg: RMSpropConfig<E>) -> Self {
         Self {
@@ -110,18 +110,20 @@ impl<M, E: Dtype> RMSprop<M, E> {
 }
 
 pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
-    fn update<S: Shape>(
+    fn update(
         &self,
         cfg: &RMSpropConfig<E>,
-        param: &mut Self::Storage<S, E>,
-        momentum: &mut Self::Storage<S, E>,
-        square_avg: &mut Self::Storage<S, E>,
-        grad_avg: &mut Self::Storage<S, E>,
-        grad: Self::Storage<S, E>,
+        param: &mut Self::Vec<E>,
+        momentum: &mut Self::Vec<E>,
+        square_avg: &mut Self::Vec<E>,
+        grad_avg: &mut Self::Vec<E>,
+        grad: Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D> for RMSprop<M, E> {
+impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D>
+    for RMSprop<M, E, D>
+{
     type Viewer = ViewTensorMut;
     type Err = D::Err;
 
@@ -146,7 +148,14 @@ impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D> f
                     p.device.try_fill_with_ones(sa)?;
                 }
 
-                p.device.update(&self.cfg, &mut p.storage, m, sa, ga, g)?;
+                p.device.update(
+                    &self.cfg,
+                    std::sync::Arc::make_mut(&mut p.data),
+                    m,
+                    sa,
+                    ga,
+                    g,
+                )?;
             }
         }
         Ok(())
@@ -154,12 +163,12 @@ impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D> f
 }
 
 impl<M: TensorCollection<E, D>, D: RMSpropKernel<E> + OneFillStorage<E>, E: Dtype>
-    Optimizer<M, D, E> for RMSprop<M, E>
+    Optimizer<M, D, E> for RMSprop<M, E, D>
 {
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients,
+        gradients: Gradients<E, D>,
     ) -> Result<(), OptimizerUpdateError<D>> {
         self.gradients = gradients;
         let result = M::iter_tensors(&mut RecursiveWalker {

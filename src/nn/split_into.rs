@@ -132,11 +132,13 @@ mod tests {
         let dev: TestDevice = Default::default();
         type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>)>;
         let m = dev.build_module::<Model, TestDtype>();
-        let _: (Tensor<Rank1<1>, _, _>, Tensor<Rank1<2>, _, _, OwnedTape<_>>) =
-            m.forward(dev.zeros::<Rank1<5>>().traced());
+        let _: (
+            Tensor<Rank1<1>, _, _>,
+            Tensor<Rank1<2>, _, _, OwnedTape<_, _>>,
+        ) = m.forward(dev.zeros::<Rank1<5>>().traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
-            Tensor<Rank2<3, 2>, _, _, OwnedTape<_>>,
+            Tensor<Rank2<3, 2>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
     }
 
@@ -148,12 +150,12 @@ mod tests {
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
-            Tensor<Rank1<3>, _, _, OwnedTape<_>>,
+            Tensor<Rank1<3>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank1<5>>().traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
             Tensor<Rank2<3, 2>, _, _>,
-            Tensor<Rank2<3, 3>, _, _, OwnedTape<_>>,
+            Tensor<Rank2<3, 3>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
     }
 
@@ -166,13 +168,13 @@ mod tests {
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
             Tensor<Rank1<3>, _, _>,
-            Tensor<Rank1<4>, _, _, OwnedTape<_>>,
+            Tensor<Rank1<4>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank1<5>>().traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
             Tensor<Rank2<3, 2>, _, _>,
             Tensor<Rank2<3, 3>, _, _>,
-            Tensor<Rank2<3, 4>, _, _, OwnedTape<_>>,
+            Tensor<Rank2<3, 4>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
     }
 
@@ -192,14 +194,14 @@ mod tests {
             Tensor<Rank1<2>, _, _>,
             Tensor<Rank1<3>, _, _>,
             Tensor<Rank1<4>, _, _>,
-            Tensor<Rank1<5>, _, _, OwnedTape<_>>,
+            Tensor<Rank1<5>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank1<5>>().traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
             Tensor<Rank2<3, 2>, _, _>,
             Tensor<Rank2<3, 3>, _, _>,
             Tensor<Rank2<3, 4>, _, _>,
-            Tensor<Rank2<3, 5>, _, _, OwnedTape<_>>,
+            Tensor<Rank2<3, 5>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
     }
 
@@ -221,7 +223,7 @@ mod tests {
             Tensor<Rank1<3>, _, _>,
             Tensor<Rank1<4>, _, _>,
             Tensor<Rank1<5>, _, _>,
-            Tensor<Rank1<6>, _, _, OwnedTape<_>>,
+            Tensor<Rank1<6>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank1<5>>().traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
@@ -229,7 +231,7 @@ mod tests {
             Tensor<Rank2<3, 3>, _, _>,
             Tensor<Rank2<3, 4>, _, _>,
             Tensor<Rank2<3, 5>, _, _>,
-            Tensor<Rank2<3, 6>, _, _, OwnedTape<_>>,
+            Tensor<Rank2<3, 6>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
     }
 }

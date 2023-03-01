@@ -9,17 +9,15 @@ pub trait BroadcastKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
-        inp: &Self::Storage<Src, E>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: BroadcastShapeTo<Dst, Ax>;
-    fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
+    fn backward(
         &self,
-        grad_inp: &mut Self::Storage<Src, E>,
-        grad_out: &Self::Storage<Dst, E>,
-    ) -> Result<(), Self::Err>
-    where
-        Src: BroadcastShapeTo<Dst, Ax>;
+        grad_inp: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err>;
 }
 
 /// Broadcast self into a new shape.
@@ -65,7 +63,7 @@ pub trait BroadcastTo: HasErr + HasShape {
         Self::Shape: BroadcastShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: BroadcastKernel<E>, T: Tape<D>> BroadcastTo for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: BroadcastKernel<E>, T: Tape<E, D>> BroadcastTo for Tensor<S, E, D, T> {
     fn try_broadcast_like<Dst: Shape, Ax: Axes>(
         self,
         dst: &Dst,
@@ -75,7 +73,7 @@ impl<S: Shape, E: Dtype, D: BroadcastKernel<E>, T: Tape<D>> BroadcastTo for Tens
     {
         let (inp, mut tape) = self.split_tape();
         inp.shape().check(dst);
-        let out = inp.device.upgrade(inp.device.forward(*dst, &inp.storage)?);
+        let out = inp.device.forward(*dst, &inp)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&inp)?;
         tape.try_alloc_grad(&out)?;

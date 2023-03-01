@@ -1,20 +1,19 @@
-use super::ChooseKernel;
 use crate::{
-    prelude::{
-        cpu::{LendingIterator, StridedArray},
-        Cpu, Dtype,
+    shapes::{Dtype, Shape},
+    tensor::{
+        cpu::{LendingIterator, NdIndex},
+        Cpu, Tensor, ZerosTensor,
     },
-    shapes::Shape,
 };
 
-impl<E: Dtype> ChooseKernel<E> for Cpu {
+impl<E: Dtype> super::ChooseKernel<E> for Cpu {
     fn forward<S: Shape>(
         &self,
-        cond: &Self::Storage<S, bool>,
-        lhs: &Self::Storage<S, E>,
-        rhs: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, E>, Self::Err> {
-        let mut out: Self::Storage<S, E> = StridedArray::new(lhs.shape)?;
+        cond: &Tensor<S, bool, Self>,
+        lhs: &Tensor<S, E, Self>,
+        rhs: &Tensor<S, E, Self>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        let mut out = self.try_zeros_like(&lhs.shape)?;
         let mut cond_iter = cond.iter();
         let mut lhs_iter = lhs.iter();
         let mut rhs_iter = rhs.iter();
@@ -31,24 +30,26 @@ impl<E: Dtype> ChooseKernel<E> for Cpu {
 
     fn backward<S: Shape>(
         &self,
-        cond: &Self::Storage<S, bool>,
-        grad_lhs: &mut Self::Storage<S, E>,
-        grad_rhs: &mut Self::Storage<S, E>,
-        grad_out: &Self::Storage<S, E>,
+        cond: &Tensor<S, bool, Self>,
+        lhs: &Tensor<S, E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<S, E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
+        let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
+        let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
+        let mut out_idx = NdIndex::new(lhs.shape, lhs.shape.strides());
         let mut cond_iter = cond.iter();
-        let mut lhs_iter = grad_lhs.iter_mut();
-        let mut rhs_iter = grad_rhs.iter_mut();
-        let mut out_iter = grad_out.iter();
-        while let Some(((l, r), (o, c))) = lhs_iter
+        while let Some(((l, r), (o, c))) = lhs_idx
             .next()
-            .zip(rhs_iter.next())
-            .zip(out_iter.next().zip(cond_iter.next()))
+            .zip(rhs_idx.next())
+            .zip(out_idx.next().zip(cond_iter.next()))
         {
             if *c {
-                *l += *o;
+                grad_lhs[l] += grad_out[o];
             } else {
-                *r += *o;
+                grad_rhs[r] += grad_out[o];
             }
         }
         Ok(())

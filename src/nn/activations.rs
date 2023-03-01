@@ -11,7 +11,7 @@ macro_rules! activation_impls {
         impl ZeroSizedModule for $struct_name {}
         impl NonMutableModule for $struct_name {}
 
-        impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<S, E, D, T>>
+        impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
             for $struct_name
         {
             type Output = Tensor<S, E, D, T>;
@@ -43,8 +43,13 @@ pub struct Softmax;
 impl ZeroSizedModule for Softmax {}
 impl NonMutableModule for Softmax {}
 
-impl<Ax: Axes, S: Shape<LastAxis = Ax> + ReduceShape<Ax>, E: Dtype, D: Device<E>, T: Tape<D>>
-    Module<Tensor<S, E, D, T>> for Softmax
+impl<
+        Ax: Axes,
+        S: Shape<LastAxis = Ax> + ReduceShape<Ax>,
+        E: Dtype,
+        D: Device<E>,
+        T: Tape<E, D>,
+    > Module<Tensor<S, E, D, T>> for Softmax
 {
     type Output = Tensor<S, E, D, T>;
     type Error = D::Err;

@@ -1,6 +1,7 @@
 use crate::shapes::*;
-use crate::tensor::cpu::{Cpu, StridedArray, View, ViewMut};
+use crate::tensor::{Cpu, Tensor, ZerosTensor};
 
+use alloc::sync::Arc;
 #[cfg(not(feature = "cblas"))]
 use matrixmultiply::{dgemm, sgemm};
 
@@ -10,41 +11,43 @@ use cblas_sys::{
     CblasRowMajor as RowMajor, CblasTrans as Tr,
 };
 
-pub(crate) trait MatMulImpl<F> {
+pub(crate) trait MatMulImpl<E> {
     fn matmul<M: Dim, K: Dim, N: Dim>(
-        a: View<(M, K), F>,
-        b: View<(K, N), F>,
-        c: &mut ViewMut<(M, N), F>,
+        dims: (M, K, N),
+        ap: *const E,
+        a_strides: [usize; 2],
+        bp: *const E,
+        b_strides: [usize; 2],
+        cp: *mut E,
+        c_strides: [usize; 2],
     );
 }
 
 impl MatMulImpl<f32> for Cpu {
     #[inline]
     fn matmul<M: Dim, K: Dim, N: Dim>(
-        a: View<(M, K), f32>,
-        b: View<(K, N), f32>,
-        c: &mut ViewMut<(M, N), f32>,
+        (m, k, n): (M, K, N),
+        ap: *const f32,
+        a_strides: [usize; 2],
+        bp: *const f32,
+        b_strides: [usize; 2],
+        cp: *mut f32,
+        c_strides: [usize; 2],
     ) {
-        let [m, k] = a.shape.concrete();
-        let n = b.shape.1.size();
-
-        let ap = a.ptr();
-        let bp = b.ptr();
-        let cp = c.ptr_mut();
-
+        let (m, k, n) = (m.size(), k.size(), n.size());
         #[cfg(not(feature = "cblas"))]
         unsafe {
-            let [ar, ac] = a.strides.map(|x| x as isize);
-            let [br, bc] = b.strides.map(|x| x as isize);
-            let [cr, cc] = c.strides.map(|x| x as isize);
+            let [ar, ac] = a_strides.map(|x| x as isize);
+            let [br, bc] = b_strides.map(|x| x as isize);
+            let [cr, cc] = c_strides.map(|x| x as isize);
             sgemm(m, k, n, 1.0, ap, ar, ac, bp, br, bc, 1.0, cp, cr, cc);
         }
 
         #[cfg(feature = "cblas")]
         unsafe {
-            let (lda, a_tr) = super::matrix_strides((m, k), a.strides);
-            let (ldb, b_tr) = super::matrix_strides((k, n), b.strides);
-            let (ldc, c_tr) = super::matrix_strides((m, n), c.strides);
+            let (lda, a_tr) = super::matrix_strides((m, k), a_strides);
+            let (ldb, b_tr) = super::matrix_strides((k, n), b_strides);
+            let (ldc, c_tr) = super::matrix_strides((m, n), c_strides);
             let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
             let layout = if c_tr { ColMajor } else { RowMajor };
             let (a_tr, b_tr) = if c_tr {
@@ -63,30 +66,29 @@ impl MatMulImpl<f32> for Cpu {
 impl MatMulImpl<f64> for Cpu {
     #[inline]
     fn matmul<M: Dim, K: Dim, N: Dim>(
-        a: View<(M, K), f64>,
-        b: View<(K, N), f64>,
-        c: &mut ViewMut<(M, N), f64>,
+        (m, k, n): (M, K, N),
+        ap: *const f64,
+        a_strides: [usize; 2],
+        bp: *const f64,
+        b_strides: [usize; 2],
+        cp: *mut f64,
+        c_strides: [usize; 2],
     ) {
-        let [m, k] = a.shape.concrete();
-        let n = b.shape.1.size();
-
-        let ap = a.ptr();
-        let bp = b.ptr();
-        let cp = c.ptr_mut();
+        let (m, k, n) = (m.size(), k.size(), n.size());
 
         #[cfg(not(feature = "cblas"))]
         unsafe {
-            let [ar, ac] = a.strides.map(|x| x as isize);
-            let [br, bc] = b.strides.map(|x| x as isize);
-            let [cr, cc] = c.strides.map(|x| x as isize);
+            let [ar, ac] = a_strides.map(|x| x as isize);
+            let [br, bc] = b_strides.map(|x| x as isize);
+            let [cr, cc] = c_strides.map(|x| x as isize);
             dgemm(m, k, n, 1.0, ap, ar, ac, bp, br, bc, 1.0, cp, cr, cc);
         }
 
         #[cfg(feature = "cblas")]
         unsafe {
-            let (lda, a_tr) = super::matrix_strides((m, k), a.strides);
-            let (ldb, b_tr) = super::matrix_strides((k, n), b.strides);
-            let (ldc, c_tr) = super::matrix_strides((m, n), c.strides);
+            let (lda, a_tr) = super::matrix_strides((m, k), a_strides);
+            let (ldb, b_tr) = super::matrix_strides((k, n), b_strides);
+            let (ldc, c_tr) = super::matrix_strides((m, n), c_strides);
             let (m, n, k) = (m as libc::c_int, n as libc::c_int, k as libc::c_int);
             let layout = if c_tr { ColMajor } else { RowMajor };
             let (a_tr, b_tr) = if c_tr {
@@ -102,224 +104,357 @@ impl MatMulImpl<f64> for Cpu {
     }
 }
 
-impl<F: Dtype> super::VecVecKernel<F> for Cpu
+impl<E: Dtype> super::VecVecKernel<E> for Cpu
 where
-    Self: MatMulImpl<F>,
+    Self: MatMulImpl<E>,
 {
     fn forward<M: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(M,), F>,
-        rhs: &Self::Storage<(N,), F>,
-    ) -> Result<Self::Storage<(M, N), F>, Self::Err> {
-        let mut out = StridedArray::new((lhs.shape().0, rhs.shape().0))?;
-        Self::matmul(lhs.view().br1(), rhs.view().br0(), &mut out.view_mut());
+        lhs: &Tensor<(M,), E, Self>,
+        rhs: &Tensor<(N,), E, Self>,
+    ) -> Result<Tensor<(M, N), E, Self>, Self::Err> {
+        let m = lhs.shape.0;
+        let n = rhs.shape.0;
+        let mut out = self.try_zeros_like(&(m, n))?;
+        Self::matmul(
+            (m, Const::<1>, n),
+            lhs.data.as_ptr(),
+            [lhs.strides[0], 0],
+            rhs.data.as_ptr(),
+            [0, rhs.strides[0]],
+            Arc::get_mut(&mut out.data).unwrap().as_mut_ptr(),
+            out.strides,
+        );
         Ok(out)
     }
+
     fn backward<M: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(M,), F>,
-        grad_lhs: &mut Self::Storage<(M,), F>,
-        rhs: &Self::Storage<(N,), F>,
-        grad_rhs: &mut Self::Storage<(N,), F>,
-        grad_out: &Self::Storage<(M, N), F>,
+        lhs: &Tensor<(M,), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(N,), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        let grad_out = grad_out.view();
-        let lhs = lhs.view().br1().tr();
-        let rhs = rhs.view().br0().tr();
-        Self::matmul(grad_out, rhs, &mut grad_lhs.view_mut().br1());
-        Self::matmul(lhs, grad_out, &mut grad_rhs.view_mut().br0());
+        let m = lhs.shape.0;
+        let k = Const::<1>;
+        let n = rhs.shape.0;
+        Self::matmul(
+            (m, n, k),
+            grad_out.as_ptr(),
+            [n.size(), 1],
+            rhs.data.as_ptr(),
+            [rhs.strides[0], 0],
+            grad_lhs.as_mut_ptr(),
+            [lhs.strides[0], 0],
+        );
+        Self::matmul(
+            (k, m, n),
+            lhs.data.as_ptr(),
+            [0, lhs.strides[0]],
+            grad_out.as_ptr(),
+            [n.size(), 1],
+            grad_rhs.as_mut_ptr(),
+            [0, rhs.strides[0]],
+        );
         Ok(())
     }
 }
 
-impl<F: Dtype> super::VecMatKernel<F> for Cpu
+impl<E: Dtype> super::VecMatKernel<E> for Cpu
 where
-    Self: MatMulImpl<F>,
+    Self: MatMulImpl<E>,
 {
     fn forward<const K: usize, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<K>,), F>,
-        rhs: &Self::Storage<(Const<K>, N), F>,
-    ) -> Result<Self::Storage<(N,), F>, Self::Err> {
-        let mut out = StridedArray::new((rhs.shape.1,))?;
-        Self::matmul(lhs.view().br0(), rhs.view(), &mut out.view_mut().br0());
+        lhs: &Tensor<(Const<K>,), E, Self>,
+        rhs: &Tensor<(Const<K>, N), E, Self>,
+    ) -> Result<Tensor<(N,), E, Self>, Self::Err> {
+        let n = rhs.shape.1;
+        let mut out = self.try_zeros_like(&(n,))?;
+        Self::matmul(
+            (Const::<1>, Const::<K>, n),
+            lhs.data.as_ptr(),
+            [0, lhs.strides[0]],
+            rhs.data.as_ptr(),
+            rhs.strides,
+            Arc::get_mut(&mut out.data).unwrap().as_mut_ptr(),
+            [0, 1],
+        );
         Ok(out)
     }
     fn backward<const K: usize, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<K>,), F>,
-        grad_lhs: &mut Self::Storage<(Const<K>,), F>,
-        rhs: &Self::Storage<(Const<K>, N), F>,
-        grad_rhs: &mut Self::Storage<(Const<K>, N), F>,
-        grad_out: &Self::Storage<(N,), F>,
+        lhs: &Tensor<(Const<K>,), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(Const<K>, N), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        let grad_out = grad_out.view().br0();
-        Self::matmul(grad_out, rhs.view().tr(), &mut grad_lhs.view_mut().br0());
-        Self::matmul(lhs.view().br0().tr(), grad_out, &mut grad_rhs.view_mut());
+        let m = Const::<1>;
+        let k = Const::<K>;
+        let n = rhs.shape.1;
+        Self::matmul(
+            (m, n, k),
+            grad_out.as_ptr(),
+            [0, 1],
+            rhs.data.as_ptr(),
+            [rhs.strides[1], rhs.strides[0]],
+            grad_lhs.as_mut_ptr(),
+            [0, lhs.strides[0]],
+        );
+        Self::matmul(
+            (k, m, n),
+            lhs.data.as_ptr(),
+            [lhs.strides[0], 0],
+            grad_out.as_ptr(),
+            [0, 1],
+            grad_rhs.as_mut_ptr(),
+            rhs.strides,
+        );
         Ok(())
     }
 }
 
-impl<F: Dtype> super::MatMatKernel<F> for Cpu
+impl<E: Dtype> super::MatMatKernel<E> for Cpu
 where
-    Self: MatMulImpl<F>,
+    Self: MatMulImpl<E>,
 {
     fn forward<M: Dim, const K: usize, N: Dim>(
         &self,
-        lhs: &Self::Storage<(M, Const<K>), F>,
-        rhs: &Self::Storage<(Const<K>, N), F>,
-    ) -> Result<Self::Storage<(M, N), F>, Self::Err> {
-        let mut out = StridedArray::new((lhs.shape.0, rhs.shape.1))?;
-        Self::matmul(lhs.view(), rhs.view(), &mut out.view_mut());
+        lhs: &Tensor<(M, Const<K>), E, Self>,
+        rhs: &Tensor<(Const<K>, N), E, Self>,
+    ) -> Result<Tensor<(M, N), E, Self>, Self::Err> {
+        let (m, k) = lhs.shape;
+        let n = rhs.shape.1;
+        let mut out = self.try_zeros_like(&(m, n))?;
+        Self::matmul(
+            (m, k, n),
+            lhs.data.as_ptr(),
+            lhs.strides,
+            rhs.data.as_ptr(),
+            rhs.strides,
+            Arc::get_mut(&mut out.data).unwrap().as_mut_ptr(),
+            out.strides,
+        );
         Ok(out)
     }
     fn backward<M: Dim, const K: usize, N: Dim>(
         &self,
-        lhs: &Self::Storage<(M, Const<K>), F>,
-        grad_lhs: &mut Self::Storage<(M, Const<K>), F>,
-        rhs: &Self::Storage<(Const<K>, N), F>,
-        grad_rhs: &mut Self::Storage<(Const<K>, N), F>,
-        grad_out: &Self::Storage<(M, N), F>,
+        lhs: &Tensor<(M, Const<K>), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(Const<K>, N), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        let grad_out = grad_out.view();
-        Self::matmul(grad_out, rhs.view().tr(), &mut grad_lhs.view_mut());
-        Self::matmul(lhs.view().tr(), grad_out, &mut grad_rhs.view_mut());
+        let (m, k) = lhs.shape;
+        let n = rhs.shape.1;
+        let strides = (m, n).strides();
+        Self::matmul(
+            (m, n, k),
+            grad_out.as_ptr(),
+            strides,
+            rhs.data.as_ptr(),
+            [rhs.strides[1], rhs.strides[0]],
+            grad_lhs.as_mut_ptr(),
+            lhs.strides,
+        );
+        Self::matmul(
+            (k, m, n),
+            lhs.data.as_ptr(),
+            [lhs.strides[1], lhs.strides[0]],
+            grad_out.as_ptr(),
+            strides,
+            grad_rhs.as_mut_ptr(),
+            rhs.strides,
+        );
         Ok(())
     }
 }
 
-impl<F: Dtype> super::MatMatBrKernel<F> for Cpu
+impl<E: Dtype> super::MatMatBrKernel<E> for Cpu
 where
-    Self: MatMulImpl<F>,
+    Self: MatMulImpl<E>,
 {
     fn forward<B: Dim, M: Dim, const K: usize, N: Dim>(
         &self,
-        lhs: &Self::Storage<(B, M, Const<K>), F>,
-        rhs: &Self::Storage<(Const<K>, N), F>,
-    ) -> Result<Self::Storage<(B, M, N), F>, Self::Err> {
-        let (batch, seq, _) = *lhs.shape();
-        let (_, n) = *rhs.shape();
-        let mut out = StridedArray::new((batch, seq, n))?;
-        let a = lhs.view();
-        let b = rhs.view();
-        let mut c = out.view_mut();
-        for batch in 0..batch.size() {
-            Self::matmul(a.idx(batch), b, &mut c.idx_mut(batch));
+        lhs: &Tensor<(B, M, Const<K>), E, Self>,
+        rhs: &Tensor<(Const<K>, N), E, Self>,
+    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err> {
+        let (batch, m, k) = lhs.shape;
+        let n = rhs.shape.1;
+        let mut out = self.try_zeros_like(&(batch, m, n))?;
+        let cp = Arc::get_mut(&mut out.data).unwrap();
+        for i in 0..batch.size() {
+            Self::matmul(
+                (m, k, n),
+                lhs.data[i * lhs.strides[0]..].as_ptr(),
+                [lhs.strides[1], lhs.strides[2]],
+                rhs.data.as_ptr(),
+                rhs.strides,
+                cp[i * out.strides[0]..].as_mut_ptr(),
+                [out.strides[1], out.strides[2]],
+            );
         }
         Ok(out)
     }
     fn backward<B: Dim, M: Dim, const K: usize, N: Dim>(
         &self,
-        lhs: &Self::Storage<(B, M, Const<K>), F>,
-        grad_lhs: &mut Self::Storage<(B, M, Const<K>), F>,
-        rhs: &Self::Storage<(Const<K>, N), F>,
-        grad_rhs: &mut Self::Storage<(Const<K>, N), F>,
-        grad_out: &Self::Storage<(B, M, N), F>,
+        lhs: &Tensor<(B, M, Const<K>), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(Const<K>, N), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        let batch_size = lhs.shape().0.size();
-        let lhs = lhs.view();
-        let mut grad_lhs = grad_lhs.view_mut();
-        let rhs = rhs.view().tr();
-        let mut grad_rhs = grad_rhs.view_mut();
-        let grad_out = grad_out.view();
-        for b in 0..batch_size {
-            let go = grad_out.idx(b);
-            Self::matmul(go, rhs, &mut grad_lhs.idx_mut(b));
-            Self::matmul(lhs.idx(b).tr(), go, &mut grad_rhs);
+        let (batch, m, k) = lhs.shape;
+        let n = rhs.shape.1;
+        let strides = (batch, m, n).strides();
+        for i in 0..batch.size() {
+            Self::matmul(
+                (m, n, k),
+                grad_out[i * strides[0]..].as_ptr(),
+                [strides[1], strides[2]],
+                rhs.data.as_ptr(),
+                [rhs.strides[1], rhs.strides[0]],
+                grad_lhs[i * lhs.strides[0]..].as_mut_ptr(),
+                [lhs.strides[1], lhs.strides[2]],
+            );
+            Self::matmul(
+                (k, m, n),
+                lhs.data[i * lhs.strides[0]..].as_ptr(),
+                [lhs.strides[2], lhs.strides[1]],
+                grad_out[i * strides[0]..].as_ptr(),
+                [strides[1], strides[2]],
+                grad_rhs.as_mut_ptr(),
+                rhs.strides,
+            );
         }
         Ok(())
     }
 }
 
-impl<F: Dtype> super::MatMatBatch3Kernel<F> for Cpu
+impl<E: Dtype> super::MatMatBatch3Kernel<E> for Cpu
 where
-    Self: MatMulImpl<F>,
+    Self: MatMulImpl<E>,
 {
     fn forward<const B: usize, M: Dim, const K: usize, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, M, Const<K>), F>,
-        rhs: &Self::Storage<(Const<B>, Const<K>, N), F>,
-    ) -> Result<Self::Storage<(Const<B>, M, N), F>, Self::Err> {
-        let m: M = lhs.shape().1;
-        let n: N = rhs.shape().2;
-        let mut out = StridedArray::new((Const, m, n))?;
-        let a = lhs.view();
-        let b = rhs.view();
-        let mut c = out.view_mut();
-        for batch in 0..B {
-            Self::matmul(a.idx(batch), b.idx(batch), &mut c.idx_mut(batch));
+        lhs: &Tensor<(Const<B>, M, Const<K>), E, Self>,
+        rhs: &Tensor<(Const<B>, Const<K>, N), E, Self>,
+    ) -> Result<Tensor<(Const<B>, M, N), E, Self>, Self::Err> {
+        let (b, m, k) = lhs.shape;
+        let n = rhs.shape.2;
+        let mut out = self.try_zeros_like(&(b, m, n))?;
+        let ap = lhs.data.as_ref();
+        let bp = rhs.data.as_ref();
+        let cp = Arc::get_mut(&mut out.data).unwrap();
+        for i in 0..B {
+            Self::matmul(
+                (m, k, n),
+                ap[i * lhs.strides[0]..].as_ptr(),
+                [lhs.strides[1], lhs.strides[2]],
+                bp[i * rhs.strides[0]..].as_ptr(),
+                [rhs.strides[1], rhs.strides[2]],
+                cp[i * out.strides[0]..].as_mut_ptr(),
+                [out.strides[1], out.strides[2]],
+            )
         }
         Ok(out)
     }
     fn backward<const B: usize, M: Dim, const K: usize, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, M, Const<K>), F>,
-        grad_lhs: &mut Self::Storage<(Const<B>, M, Const<K>), F>,
-        rhs: &Self::Storage<(Const<B>, Const<K>, N), F>,
-        grad_rhs: &mut Self::Storage<(Const<B>, Const<K>, N), F>,
-        grad_out: &Self::Storage<(Const<B>, M, N), F>,
+        lhs: &Tensor<(Const<B>, M, Const<K>), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(Const<B>, Const<K>, N), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        let lhs = lhs.view();
-        let mut grad_lhs = grad_lhs.view_mut();
-        let rhs = rhs.view();
-        let mut grad_rhs = grad_rhs.view_mut();
-        let grad_out = grad_out.view();
-        for b in 0..B {
-            let go = grad_out.idx(b);
-            Self::matmul(go, rhs.idx(b).tr(), &mut grad_lhs.idx_mut(b));
-            Self::matmul(lhs.idx(b).tr(), go, &mut grad_rhs.idx_mut(b));
+        let (b, m, k) = lhs.shape;
+        let n = rhs.shape.2;
+        let strides = (b, m, n).strides();
+        for i in 0..B {
+            Self::matmul(
+                (m, n, k),
+                grad_out[i * strides[0]..].as_ptr(),
+                [strides[1], strides[2]],
+                rhs.data[i * rhs.strides[0]..].as_ptr(),
+                [rhs.strides[2], rhs.strides[1]],
+                grad_lhs[i * lhs.strides[0]..].as_mut_ptr(),
+                [lhs.strides[1], lhs.strides[2]],
+            );
+            Self::matmul(
+                (k, m, n),
+                lhs.data[i * lhs.strides[0]..].as_ptr(),
+                [lhs.strides[2], lhs.strides[1]],
+                grad_out[i * strides[0]..].as_ptr(),
+                [strides[1], strides[2]],
+                grad_rhs[i * rhs.strides[0]..].as_mut_ptr(),
+                [rhs.strides[1], rhs.strides[2]],
+            );
         }
         Ok(())
     }
 }
 
-impl<F: Dtype> super::MatMatBatch4Kernel<F> for Cpu
+impl<E: Dtype> super::MatMatBatch4Kernel<E> for Cpu
 where
-    Self: MatMulImpl<F>,
+    Self: MatMulImpl<E>,
 {
     fn forward<const B: usize, const S: usize, M: Dim, const K: usize, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, Const<S>, M, Const<K>), F>,
-        rhs: &Self::Storage<(Const<B>, Const<S>, Const<K>, N), F>,
-    ) -> Result<Self::Storage<(Const<B>, Const<S>, M, N), F>, Self::Err> {
-        let m: M = lhs.shape.2;
-        let n: N = rhs.shape.3;
-        let mut out = StridedArray::new((Const, Const, m, n))?;
-        let lhs = lhs.view();
-        let rhs = rhs.view();
-        let mut out_view = out.view_mut();
-        for b in 0..B {
-            let l_b = lhs.idx(b);
-            let r_b = rhs.idx(b);
-            let mut o_b = out_view.idx_mut(b);
-            for s in 0..S {
-                Self::matmul(l_b.idx(s), r_b.idx(s), &mut o_b.idx_mut(s));
+        lhs: &Tensor<(Const<B>, Const<S>, M, Const<K>), E, Self>,
+        rhs: &Tensor<(Const<B>, Const<S>, Const<K>, N), E, Self>,
+    ) -> Result<Tensor<(Const<B>, Const<S>, M, N), E, Self>, Self::Err> {
+        let (b, s, m, k) = lhs.shape;
+        let n = rhs.shape.3;
+        let mut out = self.try_zeros_like(&(b, s, m, n))?;
+        let cp = Arc::get_mut(&mut out.data).unwrap();
+        for i in 0..B {
+            for j in 0..S {
+                Self::matmul(
+                    (m, k, n),
+                    lhs.data[i * lhs.strides[0] + j * lhs.strides[1]..].as_ptr(),
+                    [lhs.strides[2], lhs.strides[3]],
+                    rhs.data[i * rhs.strides[0] + j * rhs.strides[1]..].as_ptr(),
+                    [rhs.strides[2], rhs.strides[3]],
+                    cp[i * out.strides[0] + j * out.strides[1]..].as_mut_ptr(),
+                    [out.strides[2], out.strides[3]],
+                );
             }
         }
         Ok(out)
     }
     fn backward<const B: usize, const S: usize, M: Dim, const K: usize, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, Const<S>, M, Const<K>), F>,
-        grad_lhs: &mut Self::Storage<(Const<B>, Const<S>, M, Const<K>), F>,
-        rhs: &Self::Storage<(Const<B>, Const<S>, Const<K>, N), F>,
-        grad_rhs: &mut Self::Storage<(Const<B>, Const<S>, Const<K>, N), F>,
-        grad_out: &Self::Storage<(Const<B>, Const<S>, M, N), F>,
+        lhs: &Tensor<(Const<B>, Const<S>, M, Const<K>), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(Const<B>, Const<S>, Const<K>, N), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        let lhs = lhs.view();
-        let mut grad_lhs = grad_lhs.view_mut();
-        let rhs = rhs.view();
-        let mut grad_rhs = grad_rhs.view_mut();
-        let grad_out = grad_out.view();
-        for b in 0..B {
-            let l_b = lhs.idx(b);
-            let mut gl_b = grad_lhs.idx_mut(b);
-            let r_b = rhs.idx(b);
-            let mut gr_b = grad_rhs.idx_mut(b);
-            let go_b = grad_out.idx(b);
-            for s in 0..S {
-                Self::matmul(go_b.idx(s), r_b.idx(s).tr(), &mut gl_b.idx_mut(s));
-                Self::matmul(l_b.idx(s).tr(), go_b.idx(s), &mut gr_b.idx_mut(s));
+        let (b, s, m, k) = lhs.shape;
+        let n = rhs.shape.3;
+        let strides = (b, s, m, n).strides();
+        for i in 0..B {
+            for j in 0..S {
+                Self::matmul(
+                    (m, n, k),
+                    grad_out[i * strides[0] + j * strides[1]..].as_ptr(),
+                    [strides[2], strides[3]],
+                    rhs.data[i * rhs.strides[0] + j * rhs.strides[1]..].as_ptr(),
+                    [rhs.strides[3], rhs.strides[2]],
+                    grad_lhs[i * lhs.strides[0] + j * lhs.strides[1]..].as_mut_ptr(),
+                    [lhs.strides[2], lhs.strides[3]],
+                );
+                Self::matmul(
+                    (k, m, n),
+                    lhs.data[i * lhs.strides[0] + j * lhs.strides[1]..].as_ptr(),
+                    [lhs.strides[3], lhs.strides[2]],
+                    grad_out[i * strides[0] + j * strides[1]..].as_ptr(),
+                    [strides[2], strides[3]],
+                    grad_rhs[i * rhs.strides[0] + j * rhs.strides[1]..].as_mut_ptr(),
+                    [rhs.strides[2], rhs.strides[3]],
+                );
             }
         }
         Ok(())

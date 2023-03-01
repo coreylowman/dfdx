@@ -39,7 +39,13 @@ pub struct ScalarAddKernelOp<E> {
 /// let r = a + 1.0;
 /// assert_eq!(r.array(), [[2.0, 3.0, 4.0], [0.0, -1.0, -2.0]]);
 /// ```
-pub fn add<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
+pub fn add<
+    S: Shape,
+    E: Dtype,
+    D: Device<E>,
+    T: Tape<E, D> + Merge<RhsTape>,
+    RhsTape: Tape<E, D>,
+>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, RhsTape>,
 ) -> Tensor<S, E, D, T> {
@@ -51,8 +57,8 @@ pub trait TryAdd<Rhs = Self>: HasErr {
     fn try_add(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D, LhsTape: Tape<D>, RhsTape: Tape<D>> TryAdd<Tensor<S, E, D, RhsTape>>
-    for Tensor<S, E, D, LhsTape>
+impl<S: Shape, E: Dtype, D, LhsTape: Tape<E, D>, RhsTape: Tape<E, D>>
+    TryAdd<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
     D: BinaryKernel<BinaryAddKernelOp, E>,
     LhsTape: Merge<RhsTape>,
@@ -63,7 +69,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarAddKernelOp<E>, E>, T: Tape<D>> TryAdd<E>
+impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarAddKernelOp<E>, E>, T: Tape<E, D>> TryAdd<E>
     for Tensor<S, E, D, T>
 {
     /// See [add]
@@ -72,7 +78,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarAddKernelOp<E>, E>, T: Tape<D>> Tr
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<D>, Rhs> std::ops::Add<Rhs>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<E, D>, Rhs> std::ops::Add<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryAdd<Rhs>,

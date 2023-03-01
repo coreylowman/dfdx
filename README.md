@@ -84,7 +84,7 @@ let mut sgd = Sgd::new(&model, SgdConfig {
     momentum: Some(Momentum::Nesterov(0.9))
 });
 
-let loss: Tensor<Rank0, _, _, OwnedTape<_>> = ...
+let loss: Tensor<Rank0, _, _, OwnedTape<_, _>> = ...
 
 // run backprop to get the gradients
 let gradients = loss.backward();

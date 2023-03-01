@@ -125,7 +125,7 @@ impl<
         const P: usize,
         E: Dtype,
         D: Conv2DKernel<E> + ZerosTensor<E>,
-        T: 'static + Tape<D>,
+        T: 'static + Tape<E, D>,
     > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> for Tensor<Rank3<C, H, W>, E, D, T>
 where
     Const<H>: ConvAlgebra<K, S, P>,
@@ -177,7 +177,7 @@ impl<
         const P: usize,
         E: Dtype,
         D: Conv2DKernel<E> + ZerosTensor<E>,
-        T: 'static + Tape<D>,
+        T: 'static + Tape<E, D>,
     > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P>
     for Tensor<(B, Const<C>, Const<H>, Const<W>), E, D, T>
 where

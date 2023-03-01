@@ -36,7 +36,13 @@ pub struct BinaryDivKernelOp;
 /// let r = a / 2.0;
 /// assert_eq!(r.array(), [[0.5, 1.0, 1.5], [-0.5, -1.0, -1.5]]);
 /// ```
-pub fn div<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
+pub fn div<
+    S: Shape,
+    E: Dtype,
+    D: Device<E>,
+    T: Tape<E, D> + Merge<RhsTape>,
+    RhsTape: Tape<E, D>,
+>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, RhsTape>,
 ) -> Tensor<S, E, D, T> {
@@ -48,7 +54,7 @@ pub trait TryDiv<Rhs = Self>: HasErr {
     fn try_div(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, RhsTape: Tape<D>>
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<E, D>, RhsTape: Tape<E, D>>
     TryDiv<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
     LhsTape: Merge<RhsTape>,
@@ -59,14 +65,14 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryDiv<E> for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> TryDiv<E> for Tensor<S, E, D, T> {
     /// See [div]
     fn try_div(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarDivKernelOp { scalar: rhs }, self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, Rhs> std::ops::Div<Rhs>
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<E, D>, Rhs> std::ops::Div<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryDiv<Rhs>,

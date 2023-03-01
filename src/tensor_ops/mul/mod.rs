@@ -35,7 +35,13 @@ pub struct ScalarMulKernelOp<E> {
 /// let r = a * 2.0;
 /// assert_eq!(r.array(), [[2.0, 4.0, 6.0], [-2.0, -4.0, -6.0]]);
 /// ```
-pub fn mul<S: Shape, E: Dtype, D: Device<E>, T: Tape<D> + Merge<RhsTape>, RhsTape: Tape<D>>(
+pub fn mul<
+    S: Shape,
+    E: Dtype,
+    D: Device<E>,
+    T: Tape<E, D> + Merge<RhsTape>,
+    RhsTape: Tape<E, D>,
+>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, RhsTape>,
 ) -> Tensor<S, E, D, T> {
@@ -45,7 +51,7 @@ pub trait TryMul<Rhs = Self>: HasErr {
     fn try_mul(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, RhsTape: Tape<D>>
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<E, D>, RhsTape: Tape<E, D>>
     TryMul<Tensor<S, E, D, RhsTape>> for Tensor<S, E, D, LhsTape>
 where
     LhsTape: Merge<RhsTape>,
@@ -55,13 +61,13 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> TryMul<E> for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> TryMul<E> for Tensor<S, E, D, T> {
     fn try_mul(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarMulKernelOp { scalar: rhs }, self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<D>, Rhs> std::ops::Mul<Rhs>
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<E, D>, Rhs> std::ops::Mul<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryMul<Rhs>,

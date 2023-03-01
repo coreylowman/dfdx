@@ -119,7 +119,7 @@ impl<
         D: Device<E>,
         const S1: usize,
         const S2: usize,
-        T: Tape<D>,
+        T: Tape<E, D>,
     >
     Module<(
         Tensor<Rank2<S1, M>, E, D, T>,
@@ -181,7 +181,7 @@ impl<
         const B: usize,
         const S1: usize,
         const S2: usize,
-        T: Tape<D>,
+        T: Tape<E, D>,
     >
     Module<(
         Tensor<Rank3<B, S1, M>, E, D, T>,

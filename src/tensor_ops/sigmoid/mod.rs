@@ -21,13 +21,13 @@ pub struct SigmoidKernelOp;
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.sigmoid();
 /// ```
-pub fn sigmoid<S: Shape, E: Dtype, D: UnaryKernel<SigmoidKernelOp, E>, T: Tape<D>>(
+pub fn sigmoid<S: Shape, E: Dtype, D: UnaryKernel<SigmoidKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.sigmoid()
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<SigmoidKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<SigmoidKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [sigmoid]
     pub fn sigmoid(self) -> Self {
         self.try_sigmoid().unwrap()

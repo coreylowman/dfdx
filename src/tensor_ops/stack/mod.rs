@@ -40,7 +40,7 @@ pub trait TryStack<E: Dtype>: DeviceStorage {
     where
         Items: Array<Tensor<S, E, Self, T>>,
         S: AddDim<Items::Dim>,
-        T: Tape<Self> + Merge<T>,
+        T: Tape<E, Self> + Merge<T>,
     {
         self.try_stack(items).unwrap()
     }
@@ -53,7 +53,7 @@ pub trait TryStack<E: Dtype>: DeviceStorage {
     where
         Items: Array<Tensor<S, E, Self, T>>,
         S: AddDim<Items::Dim>,
-        T: Tape<Self> + Merge<T>;
+        T: Tape<E, Self> + Merge<T>;
 }
 
 pub trait AddDim<D: Dim>: Shape {
@@ -96,17 +96,15 @@ pub trait StackKernel<E: Dtype>: DeviceStorage {
     fn forward<S: Shape, Num: Dim>(
         &self,
         num: Num,
-        inp: Vec<&Self::Storage<S, E>>,
-    ) -> Result<Self::Storage<S::Larger, E>, Self::Err>
+        inp: &[Tensor<S, E, Self>],
+    ) -> Result<Tensor<S::Larger, E, Self>, Self::Err>
     where
         S: AddDim<Num>;
-    fn backward<S: Shape, New: Dim>(
+    fn backward(
         &self,
-        grad_inp: Vec<&mut Self::Storage<S, E>>,
-        grad_out: &Self::Storage<S::Larger, E>,
-    ) -> Result<(), Self::Err>
-    where
-        S: AddDim<New>;
+        grad_inp: Vec<&mut Self::Vec<E>>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err>;
 }
 
 impl<E: Dtype, D: StackKernel<E>> TryStack<E> for D {
@@ -117,7 +115,7 @@ impl<E: Dtype, D: StackKernel<E>> TryStack<E> for D {
     where
         Items: Array<Tensor<S, E, Self, T>>,
         S: AddDim<Items::Dim>,
-        T: Tape<Self> + Merge<T>,
+        T: Tape<E, Self> + Merge<T>,
     {
         let new_dim = items.dim();
         assert!(new_dim.size() > 0);
@@ -136,16 +134,13 @@ impl<E: Dtype, D: StackKernel<E>> TryStack<E> for D {
         let shape = *tensors[0].shape();
         for t in tensors.iter() {
             assert_eq!(t.shape(), &shape);
+            tape.try_alloc_grad(t)?;
         }
 
         // we map to storage refs so kernels don't have to know about tensors
-        let storages: Vec<&D::Storage<S, E>> = tensors.iter().map(|t| &t.storage).collect();
-        let out = device.upgrade(device.forward(new_dim, storages)?);
+        let out = device.forward(new_dim, &tensors)?;
 
         let phantom_out = out.clone();
-        for inp in tensors.iter() {
-            tape.try_alloc_grad(inp)?;
-        }
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.many_and_ref(&tensors, &phantom_out);

@@ -10,16 +10,18 @@ use crate::{gradients::Tape, shapes::*, tensor::*};
 pub trait ReplaceDimKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
-        inp: &Self::Storage<Src, E>,
-        idx: &Self::Storage<Idx, usize>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+        idx: &Tensor<Idx, usize, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: ReplaceDimTo<Dst, Idx>;
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
-        grad_inp: &mut Self::Storage<Src, E>,
-        idx: &Self::Storage<Idx, usize>,
-        grad_out: &Self::Storage<Dst, E>,
+        inp: &Tensor<Src, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        idx: &Tensor<Idx, usize, Self>,
+        out: &Tensor<Dst, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where
         Src: ReplaceDimTo<Dst, Idx>;
@@ -28,16 +30,18 @@ pub trait ReplaceDimKernel<E: Dtype>: DeviceStorage {
 pub trait RemoveDimKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
-        inp: &Self::Storage<Src, E>,
-        idx: &Self::Storage<Idx, usize>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+        idx: &Tensor<Idx, usize, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: RemoveDimTo<Dst, Idx>;
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
-        grad_inp: &mut Self::Storage<Src, E>,
-        idx: &Self::Storage<Idx, usize>,
-        grad_out: &Self::Storage<Dst, E>,
+        inp: &Tensor<Src, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        idx: &Tensor<Idx, usize, Self>,
+        out: &Tensor<Dst, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where
         Src: RemoveDimTo<Dst, Idx>;
@@ -87,7 +91,9 @@ pub trait SelectTo<D: DeviceStorage>: HasErr + HasShape {
         Self::Shape: RemoveDimTo<Dst, Idx>;
 }
 
-impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<D>> SelectTo<D> for Tensor<Src, E, D, T> {
+impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<D>
+    for Tensor<Src, E, D, T>
+{
     fn try_select<Dst: Shape, Idx: Shape>(
         self,
         idx: Tensor<Idx, usize, D>,
@@ -97,14 +103,14 @@ impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<D>> SelectTo<D> for Te
     {
         self.shape().check(idx.shape());
         let (inp, mut tape) = self.split_tape();
-        let storage = inp.device.forward(&inp.storage, &idx.storage)?;
-        let out = inp.device.upgrade(storage);
+        let out = inp.device.forward(&inp, &idx)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&inp)?;
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward(grad_inp, &idx.storage, grad_out)
+            inp.device
+                .backward(&inp, grad_inp, &idx, &phantom_out, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -155,7 +161,7 @@ pub trait GatherTo<D: DeviceStorage>: HasErr + HasShape {
         Self::Shape: ReplaceDimTo<Dst, Idx>;
 }
 
-impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<D>> GatherTo<D>
+impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<E, D>> GatherTo<D>
     for Tensor<Src, E, D, T>
 {
     fn try_gather<Dst: Shape, Idx: Shape>(
@@ -167,14 +173,14 @@ impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<D>> GatherTo<D>
     {
         self.shape().check(idx.shape());
         let (inp, mut tape) = self.split_tape();
-        let storage = inp.device.forward(&inp.storage, &idx.storage)?;
-        let out = inp.device.upgrade(storage);
+        let out = inp.device.forward(&inp, &idx)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&inp)?;
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward(grad_inp, &idx.storage, grad_out)
+            inp.device
+                .backward(&inp, grad_inp, &idx, &phantom_out, grad_out)
         });
         Ok(out.put_tape(tape))
     }

@@ -1,30 +1,31 @@
 use crate::shapes::*;
-use crate::tensor::cpu::{Cpu, StridedArray};
+use crate::tensor::{cpu::Cpu, Tensor};
+use crate::unique_id::unique_id;
 
 impl<E: Dtype> super::PermuteKernel<E> for Cpu {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        inp: &Self::Storage<Src, E>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: PermuteShapeTo<Dst, Ax>,
     {
-        Ok(StridedArray {
+        Ok(Tensor {
+            id: unique_id(),
             data: inp.data.clone(),
             shape: inp.shape.permuted(),
             strides: inp.shape.permute_strides(inp.strides),
+            device: self.clone(),
+            tape: Default::default(),
         })
     }
-    fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
+    fn backward(
         &self,
-        grad_inp: &mut Self::Storage<Src, E>,
-        grad_out: &Self::Storage<Dst, E>,
-    ) -> Result<(), Self::Err>
-    where
-        Src: PermuteShapeTo<Dst, Ax>,
-    {
-        debug_assert_eq!(grad_inp.data.len(), grad_out.data.len());
-        for (i, o) in grad_inp.buf_iter_mut().zip(grad_out.buf_iter()) {
+        grad_inp: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err> {
+        debug_assert_eq!(grad_inp.len(), grad_out.len());
+        for (i, o) in grad_inp.iter_mut().zip(grad_out.iter()) {
             *i += *o;
         }
         Ok(())

@@ -22,16 +22,22 @@ pub struct MinimumKernelOp;
 /// let b = dev.tensor([[1.0, 0.5, 1.0], [-2.0, 2.0, -3.5]]);
 /// let r = a.minimum(b);
 /// assert_eq!(r.array(), [[1.0, 0.5, 1.0], [-2.0, -2.0, -3.5]]);
-pub fn minimum<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D> + Merge<RTape>, RTape: Tape<D>>(
+pub fn minimum<
+    S: Shape,
+    E: Dtype,
+    D: Device<E>,
+    LTape: Tape<E, D> + Merge<RTape>,
+    RTape: Tape<E, D>,
+>(
     lhs: Tensor<S, E, D, LTape>,
     rhs: Tensor<S, E, D, RTape>,
 ) -> Tensor<S, E, D, LTape> {
     lhs.minimum(rhs)
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
+impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<E, D>> Tensor<S, E, D, LTape> {
     /// See [minimum]
-    pub fn minimum<RTape: Tape<D>>(self, rhs: Tensor<S, E, D, RTape>) -> Self
+    pub fn minimum<RTape: Tape<E, D>>(self, rhs: Tensor<S, E, D, RTape>) -> Self
     where
         LTape: Merge<RTape>,
     {
@@ -39,7 +45,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
     }
 
     /// See [minimum]
-    pub fn try_minimum<RTape: Tape<D>>(self, rhs: Tensor<S, E, D, RTape>) -> Result<Self, D::Err>
+    pub fn try_minimum<RTape: Tape<E, D>>(self, rhs: Tensor<S, E, D, RTape>) -> Result<Self, D::Err>
     where
         LTape: Merge<RTape>,
     {

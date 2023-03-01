@@ -72,7 +72,7 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for Bias2D<C
     }
 }
 
-impl<const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<D>>
+impl<const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<(Const<C>, H, W), E, D, T>> for Bias2D<C, E, D>
 {
     type Output = Tensor<(Const<C>, H, W), E, D, T>;
@@ -87,7 +87,7 @@ impl<const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<D>>
     }
 }
 
-impl<B: Dim, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<D>>
+impl<B: Dim, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<(B, Const<C>, H, W), E, D, T>> for Bias2D<C, E, D>
 {
     type Output = Tensor<(B, Const<C>, H, W), E, D, T>;

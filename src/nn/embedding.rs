@@ -83,7 +83,7 @@ impl<const C: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Sample
     }
 }
 
-impl<const V: usize, const M: usize, const S: usize, E: Dtype, D: Device<E>, T: Tape<D>>
+impl<const V: usize, const M: usize, const S: usize, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<Rank1<S>, usize, D, T>> for Embedding<V, M, E, D>
 {
     type Output = Tensor<Rank2<S, M>, E, D, T>;
@@ -102,7 +102,7 @@ impl<
         const BATCH: usize,
         E: Dtype,
         D: Device<E>,
-        T: Tape<D>,
+        T: Tape<E, D>,
     > Module<Tensor<Rank2<BATCH, SEQ>, usize, D, T>> for Embedding<VOCAB, DIM, E, D>
 {
     type Output = Tensor<Rank3<BATCH, SEQ, DIM>, E, D, T>;
@@ -152,7 +152,7 @@ mod tests {
     fn embedding_forward_1d() {
         let dev: TestDevice = Default::default();
 
-        let model = Embedding {
+        let model: Embedding<2, 5, f32, Cpu> = Embedding {
             weight: dev.tensor(W),
         };
 

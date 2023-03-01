@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Axes, Dtype, HasAxes, ReduceShapeTo, Shape},
-    tensor::cpu::{Cpu, StridedArray},
+    tensor::{Cpu, Tensor, ZerosTensor},
     tensor_ops::utilities::reduction_utils::index_for_reductions,
 };
 
@@ -10,12 +10,12 @@ impl<E: Dtype + Float> super::MinReduceKernel<E> for Cpu {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
-        inp: &Self::Storage<Src, E>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
-        let mut out: StridedArray<Dst, E> = StridedArray::new(dst)?;
+        let mut out = self.try_zeros_like(&dst)?;
         if Dst::NUM_DIMS == 0 {
             debug_assert_eq!(out.data.len(), 1);
             let mut tmp: E = E::infinity();
@@ -40,21 +40,20 @@ impl<E: Dtype + Float> super::MinReduceKernel<E> for Cpu {
 
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        inp: &Self::Storage<Src, E>,
-        grad_inp: &mut Self::Storage<Src, E>,
-        out: &Self::Storage<Dst, E>,
-        grad_out: &Self::Storage<Dst, E>,
+        inp: &Tensor<Src, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        out: &Tensor<Dst, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
-        let num_elems_reduced = <Src as HasAxes<Ax>>::size(&grad_inp.shape);
+        let num_elems_reduced = <Src as HasAxes<Ax>>::size(&inp.shape);
 
-        let grad_inp_buf = std::sync::Arc::make_mut(&mut grad_inp.data);
         let inp_buf = inp.data.as_ref();
-        let mut inp_idx = index_for_reductions::<Src, Ax>(grad_inp.shape, grad_inp.strides);
+        let mut inp_idx = index_for_reductions::<Src, Ax>(inp.shape, inp.strides);
 
-        for (&o, &go) in out.buf_iter().zip(grad_out.buf_iter()) {
+        for (&o, &go) in out.buf_iter().zip(grad_out.iter()) {
             for _ in 0..num_elems_reduced {
                 let inp_i = inp_idx.next().unwrap();
                 let d = if o == inp_buf[inp_i] {
@@ -62,7 +61,7 @@ impl<E: Dtype + Float> super::MinReduceKernel<E> for Cpu {
                 } else {
                     E::zero()
                 };
-                grad_inp_buf[inp_i] += go * d;
+                grad_inp[inp_i] += go * d;
             }
         }
         Ok(())

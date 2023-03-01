@@ -9,38 +9,34 @@ mod cpu_kernels;
 mod cuda_kernels;
 
 pub trait CmpKernel<Op, E: Unit>: DeviceStorage {
-    fn forward<S: Shape>(
+    fn forward<S: Shape, T>(
         &self,
-        lhs: &Self::Storage<S, E>,
-        rhs: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>;
+        lhs: &Tensor<S, E, Self, T>,
+        rhs: &Tensor<S, E, Self, T>,
+    ) -> Result<Tensor<S, bool, Self>, Self::Err>;
 }
 
-fn try_cmp_op<Op, S: Shape, E: Unit, D: CmpKernel<Op, E>, T: Tape<D>>(
+fn try_cmp_op<Op, S: Shape, E: Unit, D: CmpKernel<Op, E>, T: Tape<E, D>>(
     lhs: &Tensor<S, E, D, T>,
     rhs: &Tensor<S, E, D, T>,
 ) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
     assert_eq!(lhs.shape(), rhs.shape());
-    let storage = lhs.device.forward(&lhs.storage, &rhs.storage)?;
-    let out = lhs.device.upgrade(storage);
-    Ok(out)
+    lhs.device.forward(lhs, rhs)
 }
 
 pub trait ScalarCmpKernel<Op, E: Unit>: DeviceStorage {
-    fn forward<S: Shape>(
+    fn forward<S: Shape, T>(
         &self,
-        tensor: &Self::Storage<S, E>,
+        tensor: &Tensor<S, E, Self, T>,
         scalar: E,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>;
+    ) -> Result<Tensor<S, bool, Self>, Self::Err>;
 }
 
-fn try_scalar_cmp_op<Op, S: Shape, E: Unit, D: ScalarCmpKernel<Op, E>, T: Tape<D>>(
+fn try_scalar_cmp_op<Op, S: Shape, E: Unit, D: ScalarCmpKernel<Op, E>, T: Tape<E, D>>(
     tensor: &Tensor<S, E, D, T>,
     scalar: E,
 ) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
-    let storage = tensor.device.forward(&tensor.storage, scalar)?;
-    let out = tensor.device.upgrade(storage);
-    Ok(out)
+    tensor.device.forward(tensor, scalar)
 }
 
 pub enum EqKernelOp {}
@@ -68,7 +64,7 @@ pub enum LeKernelOp {}
 /// let r = a.scalar_eq(1);
 /// assert_eq!(r.array(), [false, false, false, true, false]);
 /// ```
-pub fn eq<S: Shape, E: Unit, D: CmpKernel<EqKernelOp, E>, T: Tape<D>>(
+pub fn eq<S: Shape, E: Unit, D: CmpKernel<EqKernelOp, E>, T: Tape<E, D>>(
     lhs: &Tensor<S, E, D, T>,
     rhs: &Tensor<S, E, D, T>,
 ) -> Tensor<S, bool, D, NoneTape> {
@@ -93,7 +89,7 @@ pub fn eq<S: Shape, E: Unit, D: CmpKernel<EqKernelOp, E>, T: Tape<D>>(
 /// let r = a.scalar_ne(1);
 /// assert_eq!(r.array(), [true, true, true, false, true]);
 /// ```
-pub fn ne<S: Shape, E: Unit, D: CmpKernel<NeKernelOp, E>, T: Tape<D>>(
+pub fn ne<S: Shape, E: Unit, D: CmpKernel<NeKernelOp, E>, T: Tape<E, D>>(
     lhs: &Tensor<S, E, D, T>,
     rhs: &Tensor<S, E, D, T>,
 ) -> Tensor<S, bool, D, NoneTape> {
@@ -118,7 +114,7 @@ pub fn ne<S: Shape, E: Unit, D: CmpKernel<NeKernelOp, E>, T: Tape<D>>(
 /// let r = a.scalar_gt(-1);
 /// assert_eq!(r.array(), [false, false, true, true, true]);
 /// ```
-pub fn gt<S: Shape, E: Unit, D: CmpKernel<GtKernelOp, E>, T: Tape<D>>(
+pub fn gt<S: Shape, E: Unit, D: CmpKernel<GtKernelOp, E>, T: Tape<E, D>>(
     lhs: &Tensor<S, E, D, T>,
     rhs: &Tensor<S, E, D, T>,
 ) -> Tensor<S, bool, D, NoneTape> {
@@ -143,7 +139,7 @@ pub fn gt<S: Shape, E: Unit, D: CmpKernel<GtKernelOp, E>, T: Tape<D>>(
 /// let r = a.scalar_ge(-1);
 /// assert_eq!(r.array(), [false, true, true, true, true]);
 /// ```
-pub fn ge<S: Shape, E: Unit, D: CmpKernel<GeKernelOp, E>, T: Tape<D>>(
+pub fn ge<S: Shape, E: Unit, D: CmpKernel<GeKernelOp, E>, T: Tape<E, D>>(
     lhs: &Tensor<S, E, D, T>,
     rhs: &Tensor<S, E, D, T>,
 ) -> Tensor<S, bool, D, NoneTape> {
@@ -168,7 +164,7 @@ pub fn ge<S: Shape, E: Unit, D: CmpKernel<GeKernelOp, E>, T: Tape<D>>(
 /// let r = a.scalar_lt(1);
 /// assert_eq!(r.array(), [true, true, true, false, false]);
 /// ```
-pub fn lt<S: Shape, E: Unit, D: CmpKernel<LtKernelOp, E>, T: Tape<D>>(
+pub fn lt<S: Shape, E: Unit, D: CmpKernel<LtKernelOp, E>, T: Tape<E, D>>(
     lhs: &Tensor<S, E, D, T>,
     rhs: &Tensor<S, E, D, T>,
 ) -> Tensor<S, bool, D, NoneTape> {
@@ -193,7 +189,7 @@ pub fn lt<S: Shape, E: Unit, D: CmpKernel<LtKernelOp, E>, T: Tape<D>>(
 /// let r = a.scalar_le(1);
 /// assert_eq!(r.array(), [true, true, true, true, false]);
 /// ```
-pub fn le<S: Shape, E: Unit, D: CmpKernel<LeKernelOp, E>, T: Tape<D>>(
+pub fn le<S: Shape, E: Unit, D: CmpKernel<LeKernelOp, E>, T: Tape<E, D>>(
     lhs: &Tensor<S, E, D, T>,
     rhs: &Tensor<S, E, D, T>,
 ) -> Tensor<S, bool, D, NoneTape> {
@@ -203,7 +199,7 @@ pub fn le<S: Shape, E: Unit, D: CmpKernel<LeKernelOp, E>, T: Tape<D>>(
 // Macro to reduce boilerplate of implementing comparison methods on Tensor.
 macro_rules! impl_cmp_kernel_op {
     ($kernel_op:ty, $try_op:ident, $op:ident, $try_scalar_op:ident, $scalar_op:ident, $doc:expr) => {
-        impl<S: Shape, E: Unit, D: CmpKernel<$kernel_op, E>, T: Tape<D>> Tensor<S, E, D, T> {
+        impl<S: Shape, E: Unit, D: CmpKernel<$kernel_op, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
             #[doc = $doc]
             pub fn $try_op(&self, other: &Self) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
                 try_cmp_op(self, other)
@@ -215,7 +211,9 @@ macro_rules! impl_cmp_kernel_op {
             }
         }
 
-        impl<S: Shape, E: Unit, D: ScalarCmpKernel<$kernel_op, E>, T: Tape<D>> Tensor<S, E, D, T> {
+        impl<S: Shape, E: Unit, D: ScalarCmpKernel<$kernel_op, E>, T: Tape<E, D>>
+            Tensor<S, E, D, T>
+        {
             #[doc = $doc]
             pub fn $try_scalar_op(
                 &self,

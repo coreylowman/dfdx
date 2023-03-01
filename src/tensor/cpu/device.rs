@@ -1,5 +1,5 @@
-use crate::shapes::{Dtype, HasDtype, HasShape, HasUnitType, Shape, Unit};
-use crate::tensor::storage_traits::*;
+use crate::shapes::{Shape, Unit};
+use crate::tensor::{cpu::LendingIterator, storage_traits::*, Tensor};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{
     sync::{Arc, Mutex},
@@ -33,14 +33,6 @@ impl Cpu {
     }
 }
 
-/// The storage for the cpu device
-#[derive(Debug, Clone)]
-pub struct StridedArray<S: Shape, E> {
-    pub(crate) data: Arc<Vec<E>>,
-    pub(crate) shape: S,
-    pub(crate) strides: S::Concrete,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum CpuError {
     /// Device is out of memory
@@ -61,37 +53,26 @@ impl std::fmt::Display for CpuError {
 #[cfg(feature = "std")]
 impl std::error::Error for CpuError {}
 
-impl<S: Shape, E> HasShape for StridedArray<S, E> {
-    type WithShape<New: Shape> = StridedArray<New, S>;
-    type Shape = S;
-    fn shape(&self) -> &S {
-        &self.shape
-    }
-}
-
-impl<S: Shape, E: Unit> HasUnitType for StridedArray<S, E> {
-    type Unit = E;
-}
-
-impl<S: Shape, E: Dtype> HasDtype for StridedArray<S, E> {
-    type Dtype = E;
-}
-
 impl HasErr for Cpu {
     type Err = CpuError;
 }
 
 impl DeviceStorage for Cpu {
-    type Storage<S: Shape, E: Unit> = StridedArray<S, E>;
+    type Vec<E: Unit> = Vec<E>;
 
-    fn try_alloc_grad<S: Shape, E: Dtype>(
-        &self,
-        storage: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, E>, Self::Err> {
-        StridedArray::try_new_like(storage)
+    fn try_alloc_grad<E: Unit>(&self, other: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err> {
+        self.try_alloc_zeros(other.len())
     }
 
     fn random_u64(&self) -> u64 {
         self.rng.lock().unwrap().gen()
+    }
+    fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
+        let mut buf = Vec::with_capacity(tensor.shape.num_elements());
+        let mut iter = tensor.iter();
+        while let Some(v) = iter.next() {
+            buf.push(*v);
+        }
+        buf
     }
 }
