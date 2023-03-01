@@ -42,6 +42,9 @@ where
 /// // single sequence of ids
 /// let inputs: Tensor<Rank1<5>, usize, _> = dev.zeros();
 /// let _: Tensor<(Const<5>, Const<2>,), f32, _> = model.forward(inputs);
+/// // Dynamic sequence of ids
+/// let inputs: Tensor<(usize, ), usize, _> = dev.zeros_like(&(5, ));
+/// let _: Tensor<(usize, Const<2>,), f32, _> = model.forward(inputs);
 /// // batched sequence of ids
 /// let inputs: Tensor<Rank2<10, 5>, usize, _> = dev.zeros();
 /// let _: Tensor<(Const<10>, Const<5>, Const<2>), f32, _> = model.forward(inputs);
@@ -83,13 +86,13 @@ impl<const C: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Sample
     }
 }
 
-impl<const V: usize, const M: usize, const S: usize, E: Dtype, D: Device<E>, T: Tape<D>>
-    Module<Tensor<Rank1<S>, usize, D, T>> for Embedding<V, M, E, D>
+impl<const V: usize, const M: usize, SEQ: Dim, E: Dtype, D: Device<E>, T: Tape<D>>
+    Module<Tensor<(SEQ,), usize, D, T>> for Embedding<V, M, E, D>
 {
-    type Output = Tensor<Rank2<S, M>, E, D, T>;
+    type Output = Tensor<(SEQ, Const<M>), E, D, T>;
     type Error = D::Err;
 
-    fn try_forward(&self, input: Tensor<Rank1<S>, usize, D, T>) -> Result<Self::Output, D::Err> {
+    fn try_forward(&self, input: Tensor<(SEQ,), usize, D, T>) -> Result<Self::Output, D::Err> {
         let (input, tape) = input.split_tape();
         self.weight.clone().put_tape(tape).try_gather(input)
     }
@@ -98,19 +101,19 @@ impl<const V: usize, const M: usize, const S: usize, E: Dtype, D: Device<E>, T: 
 impl<
         const VOCAB: usize,
         const DIM: usize,
-        const SEQ: usize,
-        const BATCH: usize,
+        BATCH: Dim,
+        SEQ: Dim,
         E: Dtype,
         D: Device<E>,
         T: Tape<D>,
-    > Module<Tensor<Rank2<BATCH, SEQ>, usize, D, T>> for Embedding<VOCAB, DIM, E, D>
+    > Module<Tensor<(BATCH, SEQ), usize, D, T>> for Embedding<VOCAB, DIM, E, D>
 {
-    type Output = Tensor<Rank3<BATCH, SEQ, DIM>, E, D, T>;
+    type Output = Tensor<(BATCH, SEQ, Const<DIM>), E, D, T>;
     type Error = D::Err;
 
     fn try_forward(
         &self,
-        input: Tensor<Rank2<BATCH, SEQ>, usize, D, T>,
+        input: Tensor<(BATCH, SEQ), usize, D, T>,
     ) -> Result<Self::Output, D::Err> {
         let (input, tape) = input.split_tape();
         self.weight.clone().put_tape(tape).try_gather(input)
