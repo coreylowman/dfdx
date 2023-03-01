@@ -47,17 +47,17 @@ macro_rules! pool2d {
             fn forward<I: Shape, O: Shape>(
                 &self,
                 op: Pool2DOp,
-                inp: &Self::Storage<I, E>,
-                out: &mut Self::Storage<O, E>,
+                inp: &Tensor<I, E, Self>,
+                out: &mut Tensor<O, E, Self>,
             ) -> Result<(), Self::Err>;
 
             fn backward<I: Shape, O: Shape>(
                 &self,
                 op: Pool2DOp,
-                inp: &Self::Storage<I, E>,
-                grad_inp: &mut Self::Storage<I, E>,
-                out: &Self::Storage<O, E>,
-                grad_out: &Self::Storage<O, E>,
+                inp: &Tensor<I, E, Self>,
+                grad_inp: &mut Self::Vec<E>,
+                out: &Tensor<O, E, Self>,
+                grad_out: &Self::Vec<E>,
             ) -> Result<(), Self::Err>;
         }
 
@@ -117,14 +117,14 @@ macro_rules! pool2d {
                 let mut out =
                     inp.device
                         .try_zeros_like(&(chan, Default::default(), Default::default()))?;
-                inp.device.forward(op, &inp.storage, &mut out.storage)?;
+                inp.device.forward(op, &inp, &mut out)?;
                 let phantom_out = out.clone();
                 tape.try_alloc_grad(&inp)?;
                 tape.try_alloc_grad(&out)?;
                 tape.add_backward_op(move |grads| {
                     let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
                     inp.device
-                        .backward(op, &inp.storage, grad_inp, &phantom_out.storage, grad_out)
+                        .backward(op, &inp, grad_inp, &phantom_out, grad_out)
                 });
                 Ok(out.put_tape(tape))
             }
@@ -168,14 +168,14 @@ macro_rules! pool2d {
                     Default::default(),
                     Default::default(),
                 ))?;
-                inp.device.forward(op, &inp.storage, &mut out.storage)?;
+                inp.device.forward(op, &inp, &mut out)?;
                 let phantom_out = out.clone();
                 tape.try_alloc_grad(&inp)?;
                 tape.try_alloc_grad(&out)?;
                 tape.add_backward_op(move |grads| {
                     let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
                     inp.device
-                        .backward(op, &inp.storage, grad_inp, &phantom_out.storage, grad_out)
+                        .backward(op, &inp, grad_inp, &phantom_out, grad_out)
                 });
                 Ok(out.put_tape(tape))
             }

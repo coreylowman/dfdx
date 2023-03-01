@@ -59,19 +59,20 @@ pub(super) trait Conv2DKernel<E: Dtype>: DeviceStorage {
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: Conv2DOp,
-        lhs: &Self::Storage<L, E>,
-        rhs: &Self::Storage<R, E>,
-        out: &mut Self::Storage<O, E>,
+        lhs: &Tensor<L, E, Self>,
+        rhs: &Tensor<R, E, Self>,
+        out: &mut Tensor<O, E, Self>,
     ) -> Result<(), Self::Err>;
 
     fn backward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: Conv2DOp,
-        lhs: &Self::Storage<L, E>,
-        grad_lhs: &mut Self::Storage<L, E>,
-        rhs: &Self::Storage<R, E>,
-        grad_rhs: &mut Self::Storage<R, E>,
-        grad_out: &Self::Storage<O, E>,
+        lhs: &Tensor<L, E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<R, E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        out: &Tensor<O, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
 
@@ -151,8 +152,7 @@ where
         let (rhs, rtape) = filters.split_tape();
         let mut tape = ltape.merge(rtape);
         let mut out = lhs.device.try_zeros()?;
-        lhs.device
-            .forward(op, &lhs.storage, &rhs.storage, &mut out.storage)?;
+        lhs.device.forward(op, &lhs, &rhs, &mut out)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&lhs)?;
         tape.try_alloc_grad(&rhs)?;
@@ -160,7 +160,7 @@ where
         tape.add_backward_op(move |grads| {
             let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
             lhs.device
-                .backward(op, &lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)
+                .backward(op, &lhs, grad_lhs, &rhs, grad_rhs, &phantom_out, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -207,8 +207,7 @@ where
             lhs.device
                 .try_zeros_like(&(batch, Const, Default::default(), Default::default()))?;
         let mut tape = ltape.merge(rtape);
-        lhs.device
-            .forward(op, &lhs.storage, &rhs.storage, &mut out.storage)?;
+        lhs.device.forward(op, &lhs, &rhs, &mut out)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&lhs)?;
         tape.try_alloc_grad(&rhs)?;
@@ -216,7 +215,7 @@ where
         tape.add_backward_op(move |grads| {
             let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
             lhs.device
-                .backward(op, &lhs.storage, grad_lhs, &rhs.storage, grad_rhs, grad_out)?;
+                .backward(op, &lhs, grad_lhs, &rhs, grad_rhs, &phantom_out, grad_out)?;
             Ok(())
         });
         Ok(out.put_tape(tape))
