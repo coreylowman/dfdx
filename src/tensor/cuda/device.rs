@@ -4,7 +4,7 @@ use crate::tensor::{DeviceStorage, HasErr, Tensor};
 
 use cudarc::{
     cublas::{result::CublasError, CudaBlas},
-    driver::{result::DriverError, BuildError, CudaDevice, CudaDeviceBuilder, CudaSlice},
+    driver::{BuildError, CudaDevice, CudaDeviceBuilder, CudaSlice, DeviceSlice, DriverError},
 };
 use std::{sync::Arc, vec::Vec};
 
@@ -100,7 +100,7 @@ impl DeviceStorage for Cuda {
     type Vec<E: Unit> = CudaSlice<E>;
 
     fn try_alloc_grad<E: Unit>(&self, other: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err> {
-        let grad = self.dev.alloc_zeros_async(other.len())?;
+        let grad = self.dev.alloc_zeros(other.len())?;
         Ok(grad)
     }
 
@@ -109,7 +109,7 @@ impl DeviceStorage for Cuda {
     }
 
     fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
-        let buf: Vec<E> = tensor.data.clone_async().unwrap().try_into().unwrap();
+        let buf: Vec<E> = tensor.data.try_clone().unwrap().try_into().unwrap();
         debug_assert_eq!(buf.len(), tensor.data.len());
         let mut idx = NdIndex::new(tensor.shape, tensor.strides);
         let mut contiguous = Vec::with_capacity(tensor.shape.num_elements());

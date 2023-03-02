@@ -1,6 +1,6 @@
 use super::SgdConfig;
 use crate::{optim::optimizer::*, shapes::*, tensor::Cuda};
-use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig};
 
 #[repr(C)]
 struct CudaSgdConfig<E> {
@@ -11,7 +11,7 @@ struct CudaSgdConfig<E> {
     weight_decay: E,
 }
 
-unsafe impl<E> AsKernelParam for CudaSgdConfig<E> {}
+unsafe impl<E> DeviceRepr for CudaSgdConfig<E> {}
 
 fn sgd_config_to_cuda<E: Default + Copy>(config: &SgdConfig<E>) -> CudaSgdConfig<E> {
     let (momentum_type, momentum) = momentum_to_cuda(config.momentum);
@@ -43,7 +43,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FWD: &'static str = "sgd_update_f64";
 }
 
-impl<E: Dtype + AsKernelParam> super::SgdKernel<E> for Cuda
+impl<E: Dtype + DeviceRepr> super::SgdKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
@@ -63,7 +63,7 @@ where
         let func = self.dev.get_func(Self::MOD, Self::FWD).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (opt_cfg, numel, param, velocity, &grad);
-        unsafe { func.launch_async(cfg, params) }?;
+        unsafe { func.launch(cfg, params) }?;
         Ok(())
     }
 }

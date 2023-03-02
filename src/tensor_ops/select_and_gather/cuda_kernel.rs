@@ -2,7 +2,7 @@ use crate::{
     shapes::{RemoveDimTo, ReplaceDimTo, Shape},
     tensor::{Cuda, Tensor},
 };
-use cudarc::driver::{LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
 
 const GATHER_PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/gather.ptx"));
 const SELECT_PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/select.ptx"));
@@ -28,12 +28,12 @@ macro_rules! impl_cuda_kernels {
 
                 let dst = inp.shape.replace(idx.shape);
                 let numel = dst.num_elements();
-                let mut storage = self.dev.alloc_zeros_async::<$TypeName>(numel)?;
+                let mut storage = self.dev.alloc_zeros::<$TypeName>(numel)?;
 
-                let inp_dims = self.dev.take_async(inp.shape.concrete().into())?;
-                let idx_dims = self.dev.take_async(idx.shape.concrete().into())?;
-                let inp_strides = self.dev.take_async(inp.strides.into())?;
-                let idx_strides = self.dev.take_async(idx.strides.into())?;
+                let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
+                let idx_dims = self.dev.htod_copy(idx.shape.concrete().into())?;
+                let inp_strides = self.dev.htod_copy(inp.strides.into())?;
+                let idx_strides = self.dev.htod_copy(idx.strides.into())?;
 
                 let fwd_fn = self.dev.get_func($GatherMod, $GatherFwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -50,7 +50,7 @@ macro_rules! impl_cuda_kernels {
                     &mut storage,      // float *out,
                     Dst::NUM_DIMS,     // const size_t out_num_dims,
                 );
-                unsafe { fwd_fn.launch_async(cfg, params) }?;
+                unsafe { fwd_fn.launch(cfg, params) }?;
 
                 Ok(self.build_tensor(dst, dst.strides(), storage))
             }
@@ -69,10 +69,10 @@ macro_rules! impl_cuda_kernels {
                 let bwd_fn = self.dev.get_func($GatherMod, $GatherBwd).unwrap();
                 let numel = grad_out.len();
 
-                let inp_dims = self.dev.take_async(inp.shape.concrete().into())?;
-                let idx_dims = self.dev.take_async(idx.shape.concrete().into())?;
-                let inp_strides = self.dev.take_async(inp.strides.into())?;
-                let idx_strides = self.dev.take_async(idx.strides.into())?;
+                let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
+                let idx_dims = self.dev.htod_copy(idx.shape.concrete().into())?;
+                let inp_strides = self.dev.htod_copy(inp.strides.into())?;
+                let idx_strides = self.dev.htod_copy(idx.strides.into())?;
 
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
@@ -88,7 +88,7 @@ macro_rules! impl_cuda_kernels {
                     grad_out,          // const float *grad_out,
                     Dst::NUM_DIMS,     // const size_t out_num_dims,
                 );
-                unsafe { bwd_fn.launch_async(cfg, params) }?;
+                unsafe { bwd_fn.launch(cfg, params) }?;
                 Ok(())
             }
         }
@@ -112,14 +112,14 @@ macro_rules! impl_cuda_kernels {
 
                 let dst = inp.shape.remove(idx.shape);
                 let numel = dst.num_elements();
-                let mut storage = self.dev.alloc_zeros_async::<$TypeName>(numel)?;
+                let mut storage = self.dev.alloc_zeros::<$TypeName>(numel)?;
 
-                let inp_dims = self.dev.take_async(inp.shape.concrete().into())?;
-                let idx_dims = self.dev.take_async(idx.shape.concrete().into())?;
-                let dst_dims = self.dev.take_async(dst.concrete().into())?;
-                let inp_strides = self.dev.take_async(inp.strides.into())?;
-                let idx_strides = self.dev.take_async(idx.strides.into())?;
-                let dst_strides = self.dev.take_async(dst.strides().into())?;
+                let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
+                let idx_dims = self.dev.htod_copy(idx.shape.concrete().into())?;
+                let dst_dims = self.dev.htod_copy(dst.concrete().into())?;
+                let inp_strides = self.dev.htod_copy(inp.strides.into())?;
+                let idx_strides = self.dev.htod_copy(idx.strides.into())?;
+                let dst_strides = self.dev.htod_copy(dst.strides().into())?;
 
                 let fwd_fn = self.dev.get_func($SelectMod, $SelectFwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -137,7 +137,7 @@ macro_rules! impl_cuda_kernels {
                     &dst_dims,         // const size_t *out_dims,
                     &dst_strides,      // const size_t *out_strides
                 );
-                unsafe { fwd_fn.launch_async(cfg, params) }?;
+                unsafe { fwd_fn.launch(cfg, params) }?;
 
                 Ok(self.build_tensor(dst, dst.strides(), storage))
             }
@@ -156,12 +156,12 @@ macro_rules! impl_cuda_kernels {
                 let bwd_fn = self.dev.get_func($SelectMod, $SelectBwd).unwrap();
                 let numel = grad_out.len();
 
-                let inp_dims = self.dev.take_async(inp.shape.concrete().into())?;
-                let idx_dims = self.dev.take_async(idx.shape.concrete().into())?;
-                let out_dims = self.dev.take_async(out.shape.concrete().into())?;
-                let inp_strides = self.dev.take_async(inp.strides.into())?;
-                let idx_strides = self.dev.take_async(idx.strides.into())?;
-                let out_strides = self.dev.take_async(out.strides.into())?;
+                let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
+                let idx_dims = self.dev.htod_copy(idx.shape.concrete().into())?;
+                let out_dims = self.dev.htod_copy(out.shape.concrete().into())?;
+                let inp_strides = self.dev.htod_copy(inp.strides.into())?;
+                let idx_strides = self.dev.htod_copy(idx.strides.into())?;
+                let out_strides = self.dev.htod_copy(out.strides.into())?;
 
                 let cfg = LaunchConfig::for_num_elems(numel as u32);
                 let params = (
@@ -178,7 +178,7 @@ macro_rules! impl_cuda_kernels {
                     &out_dims,         // const size_t *out_dims,
                     &out_strides,      // const size_t *out_strides
                 );
-                unsafe { bwd_fn.launch_async(cfg, params) }?;
+                unsafe { bwd_fn.launch(cfg, params) }?;
                 Ok(())
             }
         }

@@ -4,7 +4,7 @@ use crate::{
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
     unique_id::unique_id,
 };
-use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{CudaSlice, DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig};
 use std::sync::Arc;
 
 pub trait UnaryOpCudaKernel<E> {
@@ -36,7 +36,7 @@ macro_rules! cuda_unary {
 
 pub(crate) use cuda_unary;
 
-impl<E: Dtype, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryKernel<K, E> for Cuda {
+impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda {
     fn forward<S: Shape>(
         &self,
         op: K,
@@ -48,12 +48,12 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryKernel<K, E> for Cu
         }
 
         let numel = inp.data.len();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(numel) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (op, numel, inp.data.as_ref(), &mut storage);
-        unsafe { fwd_fn.launch_async(cfg, params) }?;
+        unsafe { fwd_fn.launch(cfg, params) }?;
 
         Ok(Tensor {
             id: unique_id(),
@@ -76,7 +76,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + AsKernelParam> UnaryKernel<K, E> for Cu
         let numel = inp.data.len();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (op, numel, inp.data.as_ref(), grad_inp, grad_out);
-        unsafe { bwd_fn.launch_async(cfg, params) }?;
+        unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())
     }
 }
@@ -110,7 +110,7 @@ macro_rules! cuda_binary {
 
 pub(crate) use cuda_binary;
 
-impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for Cuda {
+impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr> BinaryKernel<K, E> for Cuda {
     fn forward<S: Shape>(
         &self,
         op: K,
@@ -126,11 +126,11 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for 
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = unsafe { self.dev.alloc_async::<E>(numel) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
-        let dims: CudaSlice<usize> = self.dev.take_async(shape.concrete().into())?;
-        let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
-        let rhs_strides: CudaSlice<usize> = self.dev.take_async(rhs.strides.into())?;
+        let dims: CudaSlice<usize> = self.dev.htod_copy(shape.concrete().into())?;
+        let lhs_strides: CudaSlice<usize> = self.dev.htod_copy(lhs.strides.into())?;
+        let rhs_strides: CudaSlice<usize> = self.dev.htod_copy(rhs.strides.into())?;
 
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -145,7 +145,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for 
             &rhs_strides,      // const size_t *rhs_strides,
             &mut storage,      // float *out,
         );
-        unsafe { fwd_fn.launch_async(cfg, params) }?;
+        unsafe { fwd_fn.launch(cfg, params) }?;
         Ok(Tensor {
             id: unique_id(),
             data: Arc::new(storage),
@@ -168,9 +168,9 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for 
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
         let numel = lhs.shape.num_elements();
 
-        let dims: CudaSlice<usize> = self.dev.take_async(lhs.shape.concrete().into())?;
-        let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
-        let rhs_strides: CudaSlice<usize> = self.dev.take_async(rhs.strides.into())?;
+        let dims: CudaSlice<usize> = self.dev.htod_copy(lhs.shape.concrete().into())?;
+        let lhs_strides: CudaSlice<usize> = self.dev.htod_copy(lhs.strides.into())?;
+        let rhs_strides: CudaSlice<usize> = self.dev.htod_copy(rhs.strides.into())?;
 
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (
@@ -186,7 +186,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam> BinaryKernel<K, E> for 
             &rhs_strides,      // const size_t *rhs_strides,
             grad_out,          // const float *grad_out,
         );
-        unsafe { bwd_fn.launch_async(cfg, params) }?;
+        unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())
     }
 }
