@@ -446,9 +446,9 @@ where
                 sgemm(
                     self.blas.as_ref(),
                     (k, m, n),
-                    &lhs.data.try_slice(i * lhs.strides[0]..).unwrap(),
+                    &lhs.data.slice(i * lhs.strides[0]..),
                     [lhs.strides[2], lhs.strides[1]],
-                    &grad_out.try_slice(i * strides[0]..).unwrap(),
+                    &grad_out.slice(i * strides[0]..),
                     [strides[1], strides[2]],
                     E::ONE,
                     grad_rhs,
@@ -558,12 +558,12 @@ where
                 sgemm_batch(
                     self.blas.as_ref(),
                     (seq, m, k, n),
-                    &lhs.data.try_slice(b * lhs.strides[0]..).unwrap(),
+                    &lhs.data.slice(b * lhs.strides[0]..),
                     [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
-                    &rhs.data.try_slice(b * rhs.strides[0]..).unwrap(),
+                    &rhs.data.slice(b * rhs.strides[0]..),
                     [rhs.strides[1], rhs.strides[2], rhs.strides[3]],
                     Default::default(),
-                    &mut storage.try_slice_mut(b * strides[0]..).unwrap(),
+                    &mut storage.slice_mut(b * strides[0]..),
                     [strides[1], strides[2], strides[3]],
                 )?;
             }
@@ -589,12 +589,12 @@ where
                 sgemm_batch(
                     self.blas.as_ref(),
                     (seq, m, n, k),
-                    &grad_out.try_slice(i * strides[0]..).unwrap(),
+                    &grad_out.slice(i * strides[0]..),
                     [strides[1], strides[2], strides[3]],
-                    &rhs.data.try_slice(i * rhs.strides[0]..).unwrap(),
+                    &rhs.data.slice(i * rhs.strides[0]..),
                     [rhs.strides[1], rhs.strides[3], rhs.strides[2]],
                     E::ONE,
-                    &mut grad_lhs.try_slice_mut(i * lhs.strides[0]..).unwrap(),
+                    &mut grad_lhs.slice_mut(i * lhs.strides[0]..),
                     [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
                 )?;
 
@@ -602,12 +602,12 @@ where
                 sgemm_batch(
                     self.blas.as_ref(),
                     (seq, k, m, n),
-                    &lhs.data.try_slice(i * lhs.strides[0]..).unwrap(),
+                    &lhs.data.slice(i * lhs.strides[0]..),
                     [lhs.strides[1], lhs.strides[3], lhs.strides[2]],
-                    &grad_out.try_slice(i * strides[0]..).unwrap(),
+                    &grad_out.slice(i * strides[0]..),
                     [strides[1], strides[2], strides[3]],
                     E::ONE,
-                    &mut grad_rhs.try_slice_mut(i * rhs.strides[0]..).unwrap(),
+                    &mut grad_rhs.slice_mut(i * rhs.strides[0]..),
                     [rhs.strides[1], rhs.strides[2], rhs.strides[3]],
                 )?;
             }
