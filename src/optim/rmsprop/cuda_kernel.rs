@@ -14,7 +14,7 @@ struct CudaRMSpropConfig<E> {
     weight_decay: E,
 }
 
-unsafe impl<E> DeviceRepr for CudaRMSpropConfig<E> {}
+unsafe impl<E: DeviceRepr> DeviceRepr for CudaRMSpropConfig<E> {}
 
 fn rmsprop_config_to_cuda<E: Default + Copy>(config: &RMSpropConfig<E>) -> CudaRMSpropConfig<E> {
     let (weight_decay_type, weight_decay) = weight_decay_to_cuda(config.weight_decay);

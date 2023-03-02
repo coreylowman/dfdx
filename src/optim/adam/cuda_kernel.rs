@@ -11,7 +11,7 @@ struct CudaAdamConfig<E> {
     weight_decay: E,
 }
 
-unsafe impl<E> DeviceRepr for CudaAdamConfig<E> {}
+unsafe impl<E: DeviceRepr> DeviceRepr for CudaAdamConfig<E> {}
 
 fn adam_config_to_cuda<E: Default + Copy>(config: &super::AdamConfig<E>) -> CudaAdamConfig<E> {
     let (weight_decay_type, weight_decay) = weight_decay_to_cuda(config.weight_decay);

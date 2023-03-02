@@ -2,7 +2,7 @@ use crate::{
     shapes::{Shape, Unit},
     tensor::{Cuda, Tensor},
 };
-use cudarc::driver::{CudaSlice, DeviceRepr, LaunchAsync, LaunchConfig};
+use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 
 use super::{
     CmpKernel, EqKernelOp, GeKernelOp, GtKernelOp, LeKernelOp, LtKernelOp, NeKernelOp,
@@ -73,7 +73,7 @@ impl<E: Unit, Op: CmpOpCudaKernel<E>> CmpKernel<Op, E> for Cuda {
     }
 }
 
-impl<E: Unit + DeviceRepr, Op: ScalarCmpOpCudaKernel<E>> ScalarCmpKernel<Op, E> for Cuda {
+impl<E: Unit, Op: ScalarCmpOpCudaKernel<E>> ScalarCmpKernel<Op, E> for Cuda {
     fn forward<S: Shape, T>(
         &self,
         lhs: &Tensor<S, E, Self, T>,

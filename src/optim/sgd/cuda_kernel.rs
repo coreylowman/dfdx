@@ -11,7 +11,7 @@ struct CudaSgdConfig<E> {
     weight_decay: E,
 }
 
-unsafe impl<E> DeviceRepr for CudaSgdConfig<E> {}
+unsafe impl<E: DeviceRepr> DeviceRepr for CudaSgdConfig<E> {}
 
 fn sgd_config_to_cuda<E: Default + Copy>(config: &SgdConfig<E>) -> CudaSgdConfig<E> {
     let (momentum_type, momentum) = momentum_to_cuda(config.momentum);
