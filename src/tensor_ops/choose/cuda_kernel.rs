@@ -2,7 +2,7 @@ use crate::{
     shapes::*,
     tensor::{Cuda, Tensor},
 };
-use cudarc::driver::{CudaSlice, DeviceRepr, LaunchAsync, LaunchConfig};
+use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/choose.ptx"));
 
@@ -21,7 +21,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FNS: &'static [&'static str] = &["choose_fwd_f64", "choose_bwd_f64"];
 }
 
-impl<E: Dtype + DeviceRepr> super::ChooseKernel<E> for Cuda
+impl<E: Dtype> super::ChooseKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {

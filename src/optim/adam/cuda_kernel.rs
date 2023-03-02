@@ -43,7 +43,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FWD: &'static str = "adam_update_f64";
 }
 
-impl<E: Dtype + DeviceRepr> super::AdamKernel<E> for Cuda
+impl<E: Dtype> super::AdamKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {

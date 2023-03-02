@@ -53,7 +53,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FWD: &'static str = "rmsprop_update_f64";
 }
 
-impl<E: Dtype + DeviceRepr> super::RMSpropKernel<E> for Cuda
+impl<E: Dtype> super::RMSpropKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {

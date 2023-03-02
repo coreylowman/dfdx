@@ -4,7 +4,7 @@ use crate::{
     tensor_ops::reduction_utils::*,
 };
 
-use cudarc::driver::{CudaSlice, DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{CudaSlice, DeviceSlice, LaunchAsync, LaunchConfig};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/min_to.ptx"));
 
@@ -26,7 +26,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FNS: &'static [&'static str] = &["min_to_fwd_f64", "min_to_bwd_f64", "fill_with_f64"];
 }
 
-impl<E: Dtype + DeviceRepr> super::MinReduceKernel<E> for Cuda
+impl<E: Dtype> super::MinReduceKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {

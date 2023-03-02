@@ -5,7 +5,7 @@ use crate::{
 
 use std::vec::Vec;
 
-use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
 
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::{Distribution, Standard};
@@ -27,7 +27,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FNS: &'static [&'static str] = &["dropout_fwd_f64", "dropout_bwd_f64"];
 }
 
-impl<E: Dtype + DeviceRepr> super::DropoutKernel<E> for Cuda
+impl<E: Dtype> super::DropoutKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
     Standard: Distribution<E>,
