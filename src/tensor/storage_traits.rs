@@ -17,7 +17,7 @@ pub trait AsVec<E> {
 }
 
 /// Something that can store nd arrays for a given [Shape] and [Dtype]
-pub trait DeviceStorage: 'static + Default + Clone + HasErr {
+pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
     /// Generic storage type
     type Vec<E: Unit>: 'static + std::fmt::Debug + Clone + Send + Sync;
 
