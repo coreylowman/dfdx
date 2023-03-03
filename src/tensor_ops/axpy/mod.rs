@@ -26,12 +26,12 @@ where
 
 impl<S: Shape, E: Unit, D: AxpyKernel<E>> Tensor<S, E, D> {
     /// Updates self with elementwise function `self = self * alpha + b * beta`.
-    pub fn axpy(&mut self, alpha: E, b: &Tensor<S, E, D>, beta: E) {
+    pub fn axpy<T>(&mut self, alpha: E, b: &Tensor<S, E, D, T>, beta: E) {
         self.try_axpy(alpha, b, beta).unwrap()
     }
 
     /// Updates self with elementwise function `self = self * alpha + b * beta`.
-    pub fn try_axpy(&mut self, alpha: E, b: &Tensor<S, E, D>, beta: E) -> Result<(), D::Err> {
+    pub fn try_axpy<T>(&mut self, alpha: E, b: &Tensor<S, E, D, T>, beta: E) -> Result<(), D::Err> {
         assert_eq!(self.shape, b.shape);
         assert_eq!(self.strides, b.strides, "Strides must be equal for axpy");
         self.device.clone().forward(

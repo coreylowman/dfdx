@@ -103,7 +103,7 @@ impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
 
         // update statistics since we are training - off tape
         self.running_mean
-            .try_axpy(E::ONE - self.momentum, &mean_chan.retaped(), self.momentum)?;
+            .try_axpy(E::ONE - self.momentum, &mean_chan, self.momentum)?;
 
         let centered = x - mean_chan.try_broadcast_like(&shape)?;
 
@@ -112,7 +112,7 @@ impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
         // NOTE: uses unbiased variance in running estimate
         self.running_var.try_axpy(
             E::ONE - self.momentum,
-            &var_chan.retaped(),
+            &var_chan,
             self.momentum * n / (n - E::ONE),
         )?;
 
