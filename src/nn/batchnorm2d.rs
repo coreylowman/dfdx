@@ -102,26 +102,19 @@ impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
         let mean_chan = x.retaped::<T>().try_mean::<Rank1<C>, _>()?;
 
         // update statistics since we are training - off tape
-        self.running_mean = self
-            .running_mean
-            .clone()
-            .try_mul(E::ONE - self.momentum)?
-            .try_add(mean_chan.retaped::<NoneTape>().try_mul(self.momentum)?)?;
+        self.running_mean
+            .try_axpy(E::ONE - self.momentum, &mean_chan, self.momentum)?;
 
         let centered = x - mean_chan.try_broadcast_like(&shape)?;
 
         let var_chan = centered.retaped::<T>().square().mean::<Rank1<C>, _>();
 
         // NOTE: uses unbiased variance in running estimate
-        self.running_var = self
-            .running_var
-            .clone()
-            .try_mul(E::ONE - self.momentum)?
-            .try_add(
-                var_chan
-                    .retaped::<NoneTape>()
-                    .try_mul(self.momentum * n / (n - E::ONE))?,
-            )?;
+        self.running_var.try_axpy(
+            E::ONE - self.momentum,
+            &var_chan,
+            self.momentum * n / (n - E::ONE),
+        )?;
 
         // statistics for normalizing - on tape
         let std = (var_chan + self.epsilon).try_sqrt()?;

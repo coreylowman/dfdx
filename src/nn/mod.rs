@@ -114,6 +114,7 @@ mod batchnorm2d;
 mod bias2d;
 mod conv;
 mod dropout;
+mod ema;
 mod embedding;
 mod flatten;
 mod generalized_residual;
@@ -133,6 +134,7 @@ mod unbiased_linear;
 
 pub use module::*;
 
+pub use ema::ModelEMA;
 #[cfg(feature = "numpy")]
 pub use npz::{LoadFromNpz, SaveToNpz};
 pub use num_params::NumParams;
