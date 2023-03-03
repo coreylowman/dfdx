@@ -2,14 +2,14 @@ use super::tensor_collection::{
     RecursiveWalker, TensorCollection, TensorOptions, TensorVisitor, ViewTensorMut, ViewTensorRef,
 };
 
-use crate::{shapes::*, tensor::*, tensor_ops::ema::EmaKernel};
+use crate::{shapes::*, tensor::*, tensor_ops::axpy::AxpyKernel};
 
 use std::{string::String, vec::Vec};
 
 struct ModelEMAOp<E> {
     decay: E,
 }
-impl<E: Dtype, D: EmaKernel<E>> TensorVisitor<E, D> for ModelEMAOp<E> {
+impl<E: Dtype, D: AxpyKernel<E>> TensorVisitor<E, D> for ModelEMAOp<E> {
     type Viewer = (ViewTensorMut, ViewTensorRef);
     type Err = D::Err;
 
@@ -20,24 +20,24 @@ impl<E: Dtype, D: EmaKernel<E>> TensorVisitor<E, D> for ModelEMAOp<E> {
         (dst, src): (&mut Tensor<S, E, D>, &Tensor<S, E, D>),
     ) -> Result<(), Self::Err> {
         if opts.do_gradient_update {
-            dst.try_ema_assign(src, self.decay)?;
+            dst.try_axpy(self.decay, src, E::ONE - self.decay)?;
         }
         Ok(())
     }
 }
 
 /// Performs model exponential moving average on two modules.
-pub trait ModelEMA<E: Dtype, D: EmaKernel<E>>: TensorCollection<E, D> {
+pub trait ModelEMA<E: Dtype, D: AxpyKernel<E>>: TensorCollection<E, D> {
     /// Does `self = self * decay + other * (1 - decay), using
-    /// [crate::tensor_ops::ema] on parameters.
+    /// [crate::tensor_ops::axpy] on parameters.
     ///
     /// **Only updates trainable parameters**. For example, batch normalization
     /// running parameters are not updated.
-    fn ema_assign(&mut self, other: &Self, decay: E) {
-        self.try_ema_assign(other, decay).unwrap();
+    fn ema(&mut self, other: &Self, decay: E) {
+        self.try_ema(other, decay).unwrap();
     }
 
-    fn try_ema_assign(&mut self, other: &Self, decay: E) -> Result<(), D::Err> {
+    fn try_ema(&mut self, other: &Self, decay: E) -> Result<(), D::Err> {
         let mut op = ModelEMAOp { decay };
         Self::iter_tensors(&mut RecursiveWalker {
             m: (self, other),
@@ -46,13 +46,14 @@ pub trait ModelEMA<E: Dtype, D: EmaKernel<E>>: TensorCollection<E, D> {
         })
     }
 }
-impl<E: Dtype, D: EmaKernel<E>, M: TensorCollection<E, D>> ModelEMA<E, D> for M {}
+impl<E: Dtype, D: AxpyKernel<E>, M: TensorCollection<E, D>> ModelEMA<E, D> for M {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
         nn::{builders::*, DeviceBuildExt},
+        tensor_ops::axpy,
         tests::*,
     };
 
@@ -71,7 +72,7 @@ mod tests {
 
         let decay: TestDtype = 0.5;
 
-        ema1.ema_assign(&model, decay);
+        ema1.ema(&model, decay);
         // check that batchnorm running params aren't updated
         {
             assert_eq!(
@@ -83,33 +84,33 @@ mod tests {
 
         {
             assert_eq!(
-                ema0.0.weight.ema(&model.0.weight, decay).array(),
+                axpy(&ema0.0.weight, decay, &model.0.weight, 1.0 - decay).array(),
                 ema1.0.weight.array()
             );
             assert_eq!(
-                ema0.0.bias.ema(&model.0.bias, decay).array(),
+                axpy(&ema0.0.bias, decay, &model.0.bias, 1.0 - decay).array(),
                 ema1.0.bias.array()
             );
         }
 
         {
             assert_eq!(
-                ema0.1 .0.weight.ema(&model.1 .0.weight, decay).array(),
+                axpy(&ema0.1 .0.weight, decay, &model.1 .0.weight, 1.0 - decay).array(),
                 ema1.1 .0.weight.array()
             );
             assert_eq!(
-                ema0.1 .0.bias.ema(&model.1 .0.bias, decay).array(),
+                axpy(&ema0.1 .0.bias, decay, &model.1 .0.bias, 1.0 - decay).array(),
                 ema1.1 .0.bias.array()
             );
         }
 
         {
             assert_eq!(
-                ema0.1 .1.scale.ema(&model.1 .1.scale, decay).array(),
+                axpy(&ema0.1 .1.scale, decay, &model.1 .1.scale, 1.0 - decay).array(),
                 ema1.1 .1.scale.array()
             );
             assert_eq!(
-                ema0.1 .1.bias.ema(&model.1 .1.bias, decay).array(),
+                axpy(&ema0.1 .1.bias, decay, &model.1 .1.bias, 1.0 - decay).array(),
                 ema1.1 .1.bias.array()
             );
         }
