@@ -50,8 +50,8 @@ where
 /// # let dev: Cpu = Default::default();
 /// type Model = BatchNorm1D<3>;
 /// let bn = dev.build_module::<Model, f32>();
-/// let _ = bn.forward(dev.zeros::<Rank1<4, 3>>());
-/// let _ = bn.forward(dev.zeros::<Rank2<4, 3, 2>>());
+/// let _ = bn.forward(dev.zeros::<Rank2<4, 3>>());
+/// let _ = bn.forward(dev.zeros::<Rank3<4, 3, 2>>());
 /// ```
 ///
 /// ### Training
