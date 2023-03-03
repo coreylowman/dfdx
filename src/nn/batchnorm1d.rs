@@ -98,7 +98,7 @@ impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm1D<C, E, D> {
         x.try_add(self.bias.clone().try_broadcast_like(&shape)?)
     }
 
-    fn train_fwd<S: Shape, T: Tape<D>, Ax: Axes>(
+    fn train_fwd<S: Shape, T: Tape<E, D>, Ax: Axes>(
         &mut self,
         x: Tensor<S, E, D, T>,
     ) -> Result<Tensor<S, E, D, T>, D::Err>
@@ -176,30 +176,30 @@ impl<B: Dim, const C: usize, L: Dim, E: Dtype, D: Device<E>>
 }
 
 impl<B: Dim, const C: usize, L: Dim, E: Dtype, D: Device<E>>
-    ModuleMut<Tensor<(B, Const<C>, L), E, D, OwnedTape<D>>> for BatchNorm1D<C, E, D>
+    ModuleMut<Tensor<(B, Const<C>, L), E, D, OwnedTape<E, D>>> for BatchNorm1D<C, E, D>
 {
-    type Output = Tensor<(B, Const<C>, L), E, D, OwnedTape<D>>;
+    type Output = Tensor<(B, Const<C>, L), E, D, OwnedTape<E, D>>;
     type Error = D::Err;
 
     /// Training 1d forward - updates [Self::running_mean] and [Self::running_var]
     fn try_forward_mut(
         &mut self,
-        x: Tensor<(B, Const<C>, L), E, D, OwnedTape<D>>,
+        x: Tensor<(B, Const<C>, L), E, D, OwnedTape<E, D>>,
     ) -> Result<Self::Output, D::Err> {
         self.train_fwd(x)
     }
 }
 
 impl<B: Dim, const C: usize, E: Dtype, D: Device<E>>
-    ModuleMut<Tensor<(B, Const<C>), E, D, OwnedTape<D>>> for BatchNorm1D<C, E, D>
+    ModuleMut<Tensor<(B, Const<C>), E, D, OwnedTape<E, D>>> for BatchNorm1D<C, E, D>
 {
-    type Output = Tensor<(B, Const<C>), E, D, OwnedTape<D>>;
+    type Output = Tensor<(B, Const<C>), E, D, OwnedTape<E, D>>;
     type Error = D::Err;
 
     /// Training 2d forward - updates [Self::running_mean] and [Self::running_var]
     fn try_forward_mut(
         &mut self,
-        x: Tensor<(B, Const<C>), E, D, OwnedTape<D>>,
+        x: Tensor<(B, Const<C>), E, D, OwnedTape<E, D>>,
     ) -> Result<Self::Output, D::Err> {
         self.train_fwd(x)
     }
