@@ -3,9 +3,7 @@ use crate::{
     tensor::{cuda::Cuda, Tensor},
 };
 
-use std::sync::Arc;
-
-use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/ema.ptx"));
 
@@ -19,7 +17,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FN: &'static str = "ema_f64";
 }
 
-impl<E: Dtype + AsKernelParam> super::EmaKernel<E> for Cuda
+impl<E: Dtype> super::EmaKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
@@ -38,10 +36,10 @@ where
         let params = (
             numel,
             src.data.as_ref(),
-            Arc::make_mut(&mut dst.data),
+            std::sync::Arc::make_mut(&mut dst.data),
             decay,
         );
-        unsafe { fwd_fn.launch_async(cfg, params) }?;
+        unsafe { fwd_fn.launch(cfg, params) }?;
         Ok(())
     }
 }
