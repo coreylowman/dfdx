@@ -5,7 +5,7 @@ use crate::{
 
 use std::vec::Vec;
 
-use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
 
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::{Distribution, Standard};
@@ -27,7 +27,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FNS: &'static [&'static str] = &["dropout_fwd_f64", "dropout_bwd_f64"];
 }
 
-impl<E: Dtype + AsKernelParam> super::DropoutKernel<E> for Cuda
+impl<E: Dtype> super::DropoutKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
     Standard: Distribution<E>,
@@ -41,7 +41,7 @@ where
             let mut rng = StdRng::seed_from_u64(op.seed);
             let mut noise: Vec<E> = Vec::with_capacity(inp.data.len());
             noise.resize_with(inp.data.len(), || rng.sample(Standard));
-            self.dev.take_async(noise)
+            self.dev.htod_copy(noise)
         }?;
 
         if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
@@ -49,12 +49,12 @@ where
         }
 
         let numel = inp.data.len();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(numel) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (op.prob, numel, inp.data.as_ref(), &noise, &mut storage);
-        unsafe { fwd_fn.launch_async(cfg, params) }?;
+        unsafe { fwd_fn.launch(cfg, params) }?;
         Ok(self.build_tensor(inp.shape, inp.strides, storage))
     }
     fn backward<S: Shape>(
@@ -68,13 +68,13 @@ where
             let mut rng = StdRng::seed_from_u64(op.seed);
             let mut noise: Vec<E> = Vec::with_capacity(inp.data.len());
             noise.resize_with(inp.data.len(), || rng.sample(Standard));
-            self.dev.take_async(noise)
+            self.dev.htod_copy(noise)
         }?;
         let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
         let numel = inp.data.len();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (op.prob, numel, &noise, grad_inp, grad_out);
-        unsafe { bwd_fn.launch_async(cfg, params) }?;
+        unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())
     }
 }

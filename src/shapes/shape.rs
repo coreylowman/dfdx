@@ -4,7 +4,7 @@ use super::{axes::*, ReduceShapeTo};
 pub trait SafeZeros {}
 
 #[cfg(feature = "cuda")]
-pub trait SafeZeros: cudarc::driver::ValidAsZeroBits {}
+pub trait SafeZeros: cudarc::driver::ValidAsZeroBits + cudarc::driver::DeviceRepr {}
 
 /// Represents a unit type, but no arithmetic.
 pub trait Unit:

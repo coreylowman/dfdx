@@ -2,7 +2,7 @@ use crate::{
     shapes::*,
     tensor::{Cuda, Tensor},
 };
-use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/choose.ptx"));
 
@@ -21,7 +21,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FNS: &'static [&'static str] = &["choose_fwd_f64", "choose_bwd_f64"];
 }
 
-impl<E: Dtype + AsKernelParam> super::ChooseKernel<E> for Cuda
+impl<E: Dtype> super::ChooseKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
@@ -39,12 +39,12 @@ where
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = unsafe { self.dev.alloc_async::<E>(numel) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
-        let dims: CudaSlice<usize> = self.dev.take_async(shape.concrete().into())?;
-        let cond_strides: CudaSlice<usize> = self.dev.take_async(cond.strides.into())?;
-        let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
-        let rhs_strides: CudaSlice<usize> = self.dev.take_async(rhs.strides.into())?;
+        let dims: CudaSlice<usize> = self.dev.htod_copy(shape.concrete().into())?;
+        let cond_strides: CudaSlice<usize> = self.dev.htod_copy(cond.strides.into())?;
+        let lhs_strides: CudaSlice<usize> = self.dev.htod_copy(lhs.strides.into())?;
+        let rhs_strides: CudaSlice<usize> = self.dev.htod_copy(rhs.strides.into())?;
 
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -60,7 +60,7 @@ where
             &rhs_strides,       // const size_t *rhs_strides,
             &mut storage,       // float *out,
         );
-        unsafe { fwd_fn.launch_async(cfg, params) }?;
+        unsafe { fwd_fn.launch(cfg, params) }?;
         Ok(self.build_tensor(shape, strides, storage))
     }
 
@@ -76,10 +76,10 @@ where
         let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
         let numel = cond.shape.num_elements();
 
-        let dims: CudaSlice<usize> = self.dev.take_async(cond.shape.concrete().into())?;
-        let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
-        let cond_strides: CudaSlice<usize> = self.dev.take_async(cond.strides.into())?;
-        let rhs_strides: CudaSlice<usize> = self.dev.take_async(rhs.strides.into())?;
+        let dims: CudaSlice<usize> = self.dev.htod_copy(cond.shape.concrete().into())?;
+        let lhs_strides: CudaSlice<usize> = self.dev.htod_copy(lhs.strides.into())?;
+        let cond_strides: CudaSlice<usize> = self.dev.htod_copy(cond.strides.into())?;
+        let rhs_strides: CudaSlice<usize> = self.dev.htod_copy(rhs.strides.into())?;
 
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (
@@ -94,7 +94,7 @@ where
             &rhs_strides,       // const size_t *rhs_strides,
             grad_out,           // const float *grad_out,
         );
-        unsafe { bwd_fn.launch_async(cfg, params) }?;
+        unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())
     }
 }

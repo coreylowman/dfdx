@@ -1,7 +1,7 @@
 use super::MaximumKernelOp as Max;
 use crate::tensor_ops::cuda_kernels::cuda_binary;
 
-unsafe impl cudarc::driver::AsKernelParam for Max {}
+unsafe impl cudarc::driver::DeviceRepr for Max {}
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/maximum.ptx"));
 

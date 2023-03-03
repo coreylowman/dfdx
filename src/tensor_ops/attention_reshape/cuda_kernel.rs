@@ -1,6 +1,6 @@
 use super::*;
 use crate::tensor::cuda::Cuda;
-use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceRepr, LaunchAsync, LaunchConfig};
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/attention_reshape.ptx"));
 
@@ -13,7 +13,7 @@ struct AttentionReshapeOp {
     past_length: usize,
 }
 
-unsafe impl AsKernelParam for AttentionReshapeOp {}
+unsafe impl DeviceRepr for AttentionReshapeOp {}
 
 trait HasCudaKernel<E: Unit> {
     const FN: &'static str;
@@ -56,13 +56,13 @@ where
         let num_heads = NUM_HEADS;
 
         let q_shape = (Const, seq, Const);
-        let mut q_storage = self.dev.alloc_zeros_async::<E>(q_shape.num_elements())?;
+        let mut q_storage = self.dev.alloc_zeros::<E>(q_shape.num_elements())?;
 
         let k_shape = (Const, Const, total_length);
-        let mut k_storage = self.dev.alloc_zeros_async::<E>(k_shape.num_elements())?;
+        let mut k_storage = self.dev.alloc_zeros::<E>(k_shape.num_elements())?;
 
         let v_shape = (Const, total_length, Const);
-        let mut v_storage = self.dev.alloc_zeros_async::<E>(v_shape.num_elements())?;
+        let mut v_storage = self.dev.alloc_zeros::<E>(v_shape.num_elements())?;
 
         let numel = q_shape.num_elements() + k_shape.num_elements() + v_shape.num_elements();
         let op = AttentionReshapeOp {
@@ -83,7 +83,7 @@ where
             &mut v_storage,
         );
 
-        unsafe { f.launch_async(cfg, params) }?;
+        unsafe { f.launch(cfg, params) }?;
         let q = self.build_tensor(q_shape, q_shape.strides(), q_storage);
         let k = self.build_tensor(k_shape, k_shape.strides(), k_storage);
         let v = self.build_tensor(v_shape, v_shape.strides(), v_storage);

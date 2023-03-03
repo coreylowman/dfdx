@@ -4,7 +4,9 @@ use crate::{
     tensor_ops::reduction_utils::*,
 };
 
-use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig, ValidAsZeroBits};
+use cudarc::driver::{
+    CudaSlice, DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig, ValidAsZeroBits,
+};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/sum_to.ptx"));
 
@@ -23,7 +25,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FNS: &'static [&'static str] = &["sum_to_fwd_f64", "sum_to_bwd_f64"];
 }
 
-impl<E: Dtype + ValidAsZeroBits + AsKernelParam> super::SumKernel<E> for Cuda
+impl<E: Dtype + ValidAsZeroBits + DeviceRepr> super::SumKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
@@ -43,10 +45,10 @@ where
 
         let (dims, strides) = permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
         let num_dims = dims.len();
-        let dims: CudaSlice<usize> = self.dev.take_async(dims)?;
-        let strides: CudaSlice<usize> = self.dev.take_async(strides)?;
+        let dims: CudaSlice<usize> = self.dev.htod_copy(dims)?;
+        let strides: CudaSlice<usize> = self.dev.htod_copy(strides)?;
 
-        let mut storage = self.dev.alloc_zeros_async::<E>(dst.num_elements())?;
+        let mut storage = self.dev.alloc_zeros::<E>(dst.num_elements())?;
 
         let elems_per_thread = E::from_usize(reduction_elems_per_thread::<Ax, Src>(
             inp.shape.concrete(),
@@ -70,7 +72,7 @@ where
             &strides,          // const size_t *strides,
             &mut storage,      // float *out
         );
-        unsafe { fwd_fn.launch_async(cfg, params) }?;
+        unsafe { fwd_fn.launch(cfg, params) }?;
         Ok(self.build_tensor(dst, dst_strides, storage))
     }
 
@@ -86,11 +88,11 @@ where
     {
         let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
 
-        let dims: CudaSlice<usize> = self.dev.take_async(inp.shape.concrete().into())?;
-        let inp_strides: CudaSlice<usize> = self.dev.take_async(inp.strides.into())?;
+        let dims: CudaSlice<usize> = self.dev.htod_copy(inp.shape.concrete().into())?;
+        let inp_strides: CudaSlice<usize> = self.dev.htod_copy(inp.strides.into())?;
         let out_strides: Src::Concrete =
             BroadcastStridesTo::<Src, Ax>::broadcast_strides(&out.shape, out.strides);
-        let out_strides: CudaSlice<usize> = self.dev.take_async(out_strides.into())?;
+        let out_strides: CudaSlice<usize> = self.dev.htod_copy(out_strides.into())?;
 
         let physical_numel = inp.data.len();
         let elems_per_thread = E::from_usize(reduction_elems_per_thread::<Ax, Src>(
@@ -110,7 +112,7 @@ where
             grad_out,         // const float *grad_out,
             &out_strides,     // const size_t *out_strides
         );
-        unsafe { bwd_fn.launch_async(cfg, params) }?;
+        unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())
     }
 }

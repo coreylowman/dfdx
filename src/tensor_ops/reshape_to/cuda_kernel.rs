@@ -2,7 +2,7 @@ use crate::{
     shapes::*,
     tensor::{Cuda, Tensor},
 };
-use cudarc::driver::{LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/reshape.ptx"));
 
@@ -35,12 +35,12 @@ where
         }
 
         let numel = inp.data.len();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(numel) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
-        let inp_dims = self.dev.take_async(inp.shape.concrete().into())?;
-        let dst_dims = self.dev.take_async(dst.concrete().into())?;
-        let inp_strides = self.dev.take_async(inp.strides.into())?;
-        let dst_strides = self.dev.take_async(dst.strides().into())?;
+        let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
+        let dst_dims = self.dev.htod_copy(dst.concrete().into())?;
+        let inp_strides = self.dev.htod_copy(inp.strides.into())?;
+        let dst_strides = self.dev.htod_copy(dst.strides().into())?;
 
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -55,7 +55,7 @@ where
             &dst_dims,         // const size_t *out_dims,
             &dst_strides,      // const size_t *out_strides,
         );
-        unsafe { fwd_fn.launch_async(cfg, params) }?;
+        unsafe { fwd_fn.launch(cfg, params) }?;
 
         Ok(self.build_tensor(*dst, dst.strides(), storage))
     }
@@ -70,10 +70,10 @@ where
         let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
         let numel = grad_inp.len();
 
-        let inp_dims = self.dev.take_async(inp.shape.concrete().into())?;
-        let out_dims = self.dev.take_async(out.shape.concrete().into())?;
-        let inp_strides = self.dev.take_async(inp.strides.into())?;
-        let out_strides = self.dev.take_async(out.strides.into())?;
+        let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
+        let out_dims = self.dev.htod_copy(out.shape.concrete().into())?;
+        let inp_strides = self.dev.htod_copy(inp.strides.into())?;
+        let out_strides = self.dev.htod_copy(out.strides.into())?;
 
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (
@@ -87,7 +87,7 @@ where
             &out_dims,     // const size_t *out_dims,
             &out_strides,  // const size_t *out_strides
         );
-        unsafe { bwd_fn.launch_async(cfg, params) }?;
+        unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())
     }
 }

@@ -1,8 +1,8 @@
 use super::ClampKernelOp;
 use crate::tensor_ops::cuda_kernels::cuda_unary;
 
-unsafe impl cudarc::driver::AsKernelParam for ClampKernelOp<f32> {}
-unsafe impl cudarc::driver::AsKernelParam for ClampKernelOp<f64> {}
+unsafe impl cudarc::driver::DeviceRepr for ClampKernelOp<f32> {}
+unsafe impl cudarc::driver::DeviceRepr for ClampKernelOp<f64> {}
 
 const P: &str = include_str!(concat!(env!("OUT_DIR"), "/clamp.ptx"));
 

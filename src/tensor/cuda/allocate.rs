@@ -12,7 +12,7 @@ use crate::{
 
 use super::{Cuda, CudaError};
 
-use cudarc::driver::CudaSlice;
+use cudarc::driver::{CudaSlice, DeviceSlice};
 use rand::Rng;
 use std::{sync::Arc, vec::Vec};
 
@@ -22,7 +22,7 @@ impl Cuda {
         shape: S,
         buf: Vec<E>,
     ) -> Result<Tensor<S, E, Self>, CudaError> {
-        Ok(self.build_tensor(shape, shape.strides(), self.dev.take_async(buf)?))
+        Ok(self.build_tensor(shape, shape.strides(), self.dev.htod_copy(buf)?))
     }
 
     pub(crate) fn build_tensor<S: Shape, E: Unit>(
@@ -46,14 +46,14 @@ impl<E: Unit> ZerosTensor<E> for Cuda {
     fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
         let strides = shape.strides();
-        let data = self.dev.alloc_zeros_async(shape.num_elements())?;
+        let data = self.dev.alloc_zeros(shape.num_elements())?;
         Ok(self.build_tensor(shape, strides, data))
     }
 }
 
 impl<E: Unit> ZeroFillStorage<E> for Cuda {
     fn try_fill_with_zeros(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err> {
-        self.dev.memset_zeros_async(storage)?;
+        self.dev.memset_zeros(storage)?;
         Ok(())
     }
 }
@@ -72,7 +72,7 @@ where
 impl<E: Unit> OneFillStorage<E> for Cuda {
     fn try_fill_with_ones(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err> {
         self.dev
-            .copy_into_async(std::vec![E::ONE; storage.len()], storage)?;
+            .htod_copy_into(std::vec![E::ONE; storage.len()], storage)?;
         Ok(())
     }
 }
@@ -104,7 +104,7 @@ where
             let mut rng = self.cpu.rng.lock().unwrap();
             buf.resize_with(storage.len(), || rng.sample(&distr));
         }
-        self.dev.copy_into_async(buf, storage)?;
+        self.dev.htod_copy_into(buf, storage)?;
         Ok(())
     }
 }
@@ -118,7 +118,7 @@ impl<E: Unit> CopySlice<E> for Cuda {
         );
         dst.device
             .dev
-            .sync_copy_into(src, Arc::make_mut(&mut dst.data))
+            .htod_sync_copy_into(src, Arc::make_mut(&mut dst.data))
             .unwrap();
     }
     fn copy_into<S: Shape, T>(src: &Tensor<S, E, Self, T>, dst: &mut [E]) {
@@ -129,7 +129,7 @@ impl<E: Unit> CopySlice<E> for Cuda {
         );
         src.device
             .dev
-            .sync_copy_from(src.data.as_ref(), dst)
+            .dtoh_sync_copy_into(src.data.as_ref(), dst)
             .unwrap();
     }
 }
@@ -156,7 +156,7 @@ where
 {
     type Array = <Cpu as TensorToArray<S, E>>::Array;
     fn tensor_to_array<T>(&self, tensor: &Tensor<S, E, Self, T>) -> Self::Array {
-        let buf = tensor.data.clone_async().unwrap().try_into().unwrap();
+        let buf = tensor.data.try_clone().unwrap().try_into().unwrap();
         self.cpu
             .tensor_to_array::<crate::gradients::NoneTape>(&Tensor {
                 id: tensor.id,
