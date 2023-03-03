@@ -4,7 +4,7 @@ use crate::tensor::{DeviceStorage, HasErr, Tensor};
 
 use cudarc::{
     cublas::{result::CublasError, CudaBlas},
-    driver::{BuildError, CudaDevice, CudaDeviceBuilder, CudaSlice, DeviceSlice, DriverError},
+    driver::{CudaDevice, CudaSlice, DeviceSlice, DriverError},
 };
 use std::{sync::Arc, vec::Vec};
 
@@ -17,7 +17,6 @@ pub struct Cuda {
 
 #[derive(Debug)]
 pub enum CudaError {
-    Build(BuildError),
     Blas(CublasError),
     Driver(DriverError),
     Cpu(CpuError),
@@ -26,12 +25,6 @@ pub enum CudaError {
 impl From<CpuError> for CudaError {
     fn from(value: CpuError) -> Self {
         Self::Cpu(value)
-    }
-}
-
-impl From<BuildError> for CudaError {
-    fn from(value: BuildError) -> Self {
-        Self::Build(value)
     }
 }
 
@@ -66,7 +59,7 @@ impl Cuda {
 
     pub fn try_build(ordinal: usize, seed: u64) -> Result<Self, CudaError> {
         let cpu = Cpu::seed_from_u64(seed);
-        let dev = CudaDeviceBuilder::new(ordinal).build()?;
+        let dev = CudaDevice::new(ordinal)?;
         let blas = Arc::new(CudaBlas::new(dev.clone())?);
         Ok(Self { cpu, dev, blas })
     }
