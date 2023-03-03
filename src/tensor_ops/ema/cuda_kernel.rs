@@ -1,7 +1,4 @@
-use crate::{
-    shapes::*,
-    tensor::{cuda::Cuda, Tensor},
-};
+use crate::{shapes::*, tensor::Cuda};
 
 use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
 
@@ -21,25 +18,19 @@ impl<E: Dtype> super::EmaKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
-    fn forward<S: Shape>(
+    fn forward(
         &self,
-        dst: &mut Tensor<S, E, Self>,
-        src: &Tensor<S, E, Self>,
+        dst: &mut Self::Vec<E>,
+        src: &Self::Vec<E>,
         decay: E,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::FN, Self::FN) {
             self.dev.load_ptx(PTX_SRC.into(), Self::FN, &[Self::FN])?;
         }
-        let numel = src.data.len();
+        let numel = src.len();
         let fwd_fn = self.dev.get_func(Self::FN, Self::FN).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
-        let params = (
-            numel,
-            src.data.as_ref(),
-            std::sync::Arc::make_mut(&mut dst.data),
-            decay,
-        );
-        unsafe { fwd_fn.launch(cfg, params) }?;
+        unsafe { fwd_fn.launch(cfg, (numel, src, dst, decay)) }?;
         Ok(())
     }
 }

@@ -28,15 +28,19 @@ impl<S: Shape, E: Unit, D: EmaKernel<E>> Tensor<S, E, D> {
             self.strides, src.strides,
             "Strides must be equal for in place op EMA"
         );
-        self.device.clone().forward(self, src, decay)
+        self.device.clone().forward(
+            std::sync::Arc::make_mut(&mut self.data),
+            src.data.as_ref(),
+            decay,
+        )
     }
 }
 
 pub trait EmaKernel<E: Unit>: DeviceStorage {
-    fn forward<S: Shape>(
+    fn forward(
         &self,
-        dst: &mut Tensor<S, E, Self>,
-        src: &Tensor<S, E, Self>,
+        dst: &mut Self::Vec<E>,
+        src: &Self::Vec<E>,
         decay: E,
     ) -> Result<(), Self::Err>;
 }

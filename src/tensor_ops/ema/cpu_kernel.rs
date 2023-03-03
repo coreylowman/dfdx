@@ -1,18 +1,13 @@
-use crate::{
-    shapes::{Dtype, Shape},
-    tensor::{cpu::LendingIterator, Cpu, Tensor},
-};
+use crate::{shapes::Dtype, tensor::Cpu};
 
 impl<E: Dtype> super::EmaKernel<E> for Cpu {
-    fn forward<S: Shape>(
+    fn forward(
         &self,
-        dst: &mut Tensor<S, E, Self>,
-        src: &Tensor<S, E, Self>,
+        dst: &mut Self::Vec<E>,
+        src: &Self::Vec<E>,
         decay: E,
     ) -> Result<(), Self::Err> {
-        let mut dst_iter = dst.iter_mut();
-        let mut src_iter = src.iter();
-        while let Some((d, s)) = dst_iter.next().zip(src_iter.next()) {
+        for (d, s) in dst.iter_mut().zip(src.iter()) {
             *d = *d * decay + *s * (E::ONE - decay);
         }
         Ok(())
