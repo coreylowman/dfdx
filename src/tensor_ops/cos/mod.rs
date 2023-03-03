@@ -21,13 +21,13 @@ pub struct CosKernelOp;
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.cos();
 /// ```
-pub fn cos<S: Shape, E: Dtype, D: UnaryKernel<CosKernelOp, E>, T: Tape<D>>(
+pub fn cos<S: Shape, E: Dtype, D: UnaryKernel<CosKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.cos()
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<CosKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<CosKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [cos]
     pub fn cos(self) -> Self {
         self.try_cos().unwrap()

@@ -1,49 +1,68 @@
 use crate::{
-    shapes::{Axes, Dtype, ReduceShapeTo, Shape},
-    tensor::cpu::{Cpu, LendingIterator, StridedArray},
+    shapes::{Axes, Dtype, HasAxes, ReduceShapeTo, Shape},
+    tensor::{Cpu, Tensor, ZerosTensor},
+    tensor_ops::utilities::reduction_utils::index_for_reductions,
 };
 
 use num_traits::Float;
 
-impl<F: Float + Dtype> super::MinReduceKernel<F> for Cpu {
+impl<E: Dtype + Float> super::MinReduceKernel<E> for Cpu {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
-        inp: &Self::Storage<Src, F>,
-    ) -> Result<Self::Storage<Dst, F>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
-        let mut out: StridedArray<Dst, F> = StridedArray::try_new_with(dst, F::infinity())?;
-        let mut out_iter = out.iter_mut_as(&inp.shape);
-        let mut inp_iter = inp.iter();
-        while let Some((out_i, inp_i)) = out_iter.next().zip(inp_iter.next()) {
-            *out_i = F::min(*out_i, *inp_i);
+        let mut out = self.try_zeros_like(&dst)?;
+        if Dst::NUM_DIMS == 0 {
+            debug_assert_eq!(out.data.len(), 1);
+            let mut tmp: E = E::infinity();
+            for i in inp.buf_iter() {
+                tmp = i.min(tmp);
+            }
+            std::sync::Arc::get_mut(&mut out.data).unwrap()[0] = tmp;
+        } else {
+            let num_elems_reduced = <Src as HasAxes<Ax>>::size(&inp.shape);
+            let inp_buf = inp.data.as_ref();
+            let mut idx = index_for_reductions::<Src, Ax>(inp.shape, inp.strides);
+            for o in out.buf_iter_mut() {
+                let mut tmp: E = E::infinity();
+                for _ in 0..num_elems_reduced {
+                    tmp = tmp.min(inp_buf[idx.next().unwrap()]);
+                }
+                *o = tmp;
+            }
         }
         Ok(out)
     }
 
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        inp: &Self::Storage<Src, F>,
-        grad_inp: &mut Self::Storage<Src, F>,
-        out: &Self::Storage<Dst, F>,
-        grad_out: &Self::Storage<Dst, F>,
+        inp: &Tensor<Src, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        out: &Tensor<Dst, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
-        let mut inp_iter = inp.iter();
-        let mut grad_inp_itr = grad_inp.iter_mut();
-        let mut out_iter = out.iter_as(&inp.shape);
-        let mut grad_out_iter = grad_out.iter_as(&inp.shape);
-        for _ in 0..inp.shape.num_elements() {
-            let d = if out_iter.next().unwrap() == inp_iter.next().unwrap() {
-                F::one()
-            } else {
-                F::zero()
-            };
-            *grad_inp_itr.next().unwrap() += *grad_out_iter.next().unwrap() * d;
+        let num_elems_reduced = <Src as HasAxes<Ax>>::size(&inp.shape);
+
+        let inp_buf = inp.data.as_ref();
+        let mut inp_idx = index_for_reductions::<Src, Ax>(inp.shape, inp.strides);
+
+        for (&o, &go) in out.buf_iter().zip(grad_out.iter()) {
+            for _ in 0..num_elems_reduced {
+                let inp_i = inp_idx.next().unwrap();
+                let d = if o == inp_buf[inp_i] {
+                    E::one()
+                } else {
+                    E::zero()
+                };
+                grad_inp[inp_i] += go * d;
+            }
         }
         Ok(())
     }

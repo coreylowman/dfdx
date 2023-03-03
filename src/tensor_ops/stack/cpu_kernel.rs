@@ -1,6 +1,7 @@
 use crate::{
     shapes::*,
-    tensor::cpu::{Cpu, StridedArray},
+    tensor::{Cpu, Tensor},
+    unique_id::unique_id,
 };
 
 use std::vec::Vec;
@@ -9,8 +10,8 @@ impl<E: Dtype> super::StackKernel<E> for Cpu {
     fn forward<S: Shape, Num: Dim>(
         &self,
         num: Num,
-        inp: Vec<&Self::Storage<S, E>>,
-    ) -> Result<Self::Storage<S::Larger, E>, Self::Err>
+        inp: &[Tensor<S, E, Self>],
+    ) -> Result<Tensor<S::Larger, E, Self>, Self::Err>
     where
         S: super::AddDim<Num>,
     {
@@ -37,25 +38,24 @@ impl<E: Dtype> super::StackKernel<E> for Cpu {
             data.extend_from_slice(i.data.as_ref());
         }
 
-        Ok(StridedArray {
+        Ok(Tensor {
+            id: unique_id(),
             data: std::sync::Arc::new(data),
             shape,
             strides,
+            device: self.clone(),
+            tape: Default::default(),
         })
     }
-    fn backward<S: Shape, New: Dim>(
+    fn backward(
         &self,
-        mut grad_inp: Vec<&mut Self::Storage<S, E>>,
-        grad_out: &Self::Storage<S::Larger, E>,
-    ) -> Result<(), Self::Err>
-    where
-        S: super::AddDim<New>,
-    {
-        let grad_out_buf = grad_out.data.as_ref();
+        mut grad_inp: Vec<&mut Self::Vec<E>>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err> {
         let mut offset = 0;
         for item in grad_inp.drain(..) {
-            for gi in item.buf_iter_mut() {
-                *gi += grad_out_buf[offset];
+            for gi in item.iter_mut() {
+                *gi += grad_out[offset];
                 offset += 1;
             }
         }

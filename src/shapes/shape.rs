@@ -1,5 +1,11 @@
 use super::{axes::*, ReduceShapeTo};
 
+#[cfg(not(feature = "cuda"))]
+pub trait SafeZeros {}
+
+#[cfg(feature = "cuda")]
+pub trait SafeZeros: cudarc::driver::ValidAsZeroBits + cudarc::driver::DeviceRepr {}
+
 /// Represents a unit type, but no arithmetic.
 pub trait Unit:
     'static
@@ -12,12 +18,14 @@ pub trait Unit:
     + Send
     + Sync
     + std::marker::Unpin
+    + SafeZeros
 {
     const ONE: Self;
 }
 
 macro_rules! unit {
     ($type:ty, $one:expr) => {
+        impl SafeZeros for $type {}
         impl Unit for $type {
             const ONE: Self = $one;
         }

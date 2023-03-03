@@ -1,9 +1,9 @@
 use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
-use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
+use crate::{shapes::*, tensor::*, tensor_ops::*};
 
-use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, NonMutableModule, ToDevice};
 
 pub mod builder {
     #[derive(Debug)]
@@ -29,9 +29,15 @@ where
     }
 }
 
-/// **Requires Nightly** Performs 2d convolutions on 3d and 4d images.
+/// **Requires Nightly** Performs *unbiased* 2d convolutions on 3d and 4d images.
 ///
-/// **Pytorch Equivalent**: `torch.nn.Conv2d`
+/// **Pytorch Equivalent**: `torch.nn.Conv2d(..., bias=False)`
+///
+/// To create a biased conv, combine with [crate::nn::modules::Bias2D]:
+/// ```ignore
+/// # use dfdx::prelude::*;
+/// type BiasedConv = (Conv2D<3, 5, 4>, Bias2D<5>);
+/// ```
 ///
 /// Generics:
 /// - `IN_CHAN`: The number of input channels in an image.
@@ -50,7 +56,6 @@ pub struct Conv2D<
     D: DeviceStorage,
 > {
     pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>, E, D>,
-    pub bias: Tensor<Rank1<OUT_CHAN>, E, D>,
 }
 
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
@@ -64,15 +69,6 @@ where
             "weight",
             |s| &s.weight,
             |s| &mut s.weight,
-            TensorOptions::reset_with(|t| {
-                let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
-                t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
-            }),
-        )?;
-        visitor.visit_tensor(
-            "bias",
-            |s| &s.bias,
-            |s| &mut s.bias,
             TensorOptions::reset_with(|t| {
                 let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
                 t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
@@ -92,7 +88,6 @@ where
         let bound = E::ONE / k.sqrt();
         Ok(Self {
             weight: device.try_sample(rand_distr::Uniform::new(-bound, bound))?,
-            bias: device.try_sample(rand_distr::Uniform::new(-bound, bound))?,
         })
     }
 }
@@ -109,87 +104,39 @@ where
     fn to_device(&self, device: &D2) -> Self::Output {
         Conv2D {
             weight: self.weight.to_device(device),
-            bias: self.bias.to_device(device),
         }
     }
 }
 
 #[cfg(feature = "nightly")]
 impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D, Img>
-    Module<Img> for Conv2D<C, O, K, S, P, E, D>
+    super::Module<Img> for Conv2D<C, O, K, S, P, E, D>
 where
     E: Dtype,
     D: Device<E>,
     Img: TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> + HasErr<Err = D::Err>,
-    for<'a> Bias2D<'a, O, E, D>: Module<Img::Output, Output = Img::Output, Error = D::Err>,
 {
     type Output = Img::Output;
     type Error = D::Err;
 
     fn try_forward(&self, x: Img) -> Result<Self::Output, D::Err> {
-        Bias2D { beta: &self.bias }.try_forward(x.try_conv2d_to(self.weight.clone())?)
+        x.try_conv2d_to(self.weight.clone())
     }
 }
 
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D, Img>
-    ModuleMut<Img> for Conv2D<I, O, K, S, P, E, D>
+impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
+    NonMutableModule for Conv2D<I, O, K, S, P, E, D>
 where
     E: Dtype,
-    D: Device<E>,
-    Self: Module<Img, Error = D::Err>,
+    D: DeviceStorage,
 {
-    type Output = <Self as Module<Img>>::Output;
-    type Error = D::Err;
-
-    fn try_forward_mut(&mut self, input: Img) -> Result<Self::Output, D::Err> {
-        self.try_forward(input)
-    }
-}
-
-#[derive(Clone, Debug)]
-struct Bias2D<'a, const C: usize, E: Dtype, D: DeviceStorage> {
-    beta: &'a Tensor<Rank1<C>, E, D>,
-}
-
-impl<'a, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<D>>
-    Module<Tensor<(Const<C>, H, W), E, D, T>> for Bias2D<'a, C, E, D>
-{
-    type Output = Tensor<(Const<C>, H, W), E, D, T>;
-    type Error = D::Err;
-
-    fn try_forward(
-        &self,
-        input: Tensor<(Const<C>, H, W), E, D, T>,
-    ) -> Result<Self::Output, D::Err> {
-        self.beta
-            .retaped::<T>()
-            .try_broadcast_like(input.shape())?
-            .try_add(input)
-    }
-}
-
-impl<'a, B: Dim, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<D>>
-    Module<Tensor<(B, Const<C>, H, W), E, D, T>> for Bias2D<'a, C, E, D>
-{
-    type Output = Tensor<(B, Const<C>, H, W), E, D, T>;
-    type Error = D::Err;
-
-    fn try_forward(
-        &self,
-        input: Tensor<(B, Const<C>, H, W), E, D, T>,
-    ) -> Result<Self::Output, D::Err> {
-        self.beta
-            .retaped::<T>()
-            .try_broadcast_like(input.shape())?
-            .try_add(input)
-    }
 }
 
 #[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
     use crate::{
-        nn::DeviceBuildExt,
+        nn::{DeviceBuildExt, Module, ModuleMut},
         optim::*,
         tensor::{AsArray, SampleTensor, ZerosTensor},
         tests::*,
@@ -258,18 +205,15 @@ mod tests {
         let mut m = dev.build_module::<Conv2D<2, 4, 3>, TestDtype>();
 
         let weight_init = m.weight.clone();
-        let bias_init = m.bias.clone();
 
         let mut opt = Sgd::new(&m, Default::default());
-        let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().trace());
+        let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().traced());
         let g = out.square().mean().backward();
 
         assert_ne!(g.get(&m.weight).array(), [[[[0.0; 3]; 3]; 2]; 4]);
-        assert_ne!(g.get(&m.bias).array(), [0.0; 4]);
 
         opt.update(&mut m, g).expect("unused params");
 
         assert_ne!(weight_init.array(), m.weight.array());
-        assert_ne!(bias_init.array(), m.bias.array());
     }
 }

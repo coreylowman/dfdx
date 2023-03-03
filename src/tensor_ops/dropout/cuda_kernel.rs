@@ -1,11 +1,11 @@
 use crate::{
     shapes::*,
-    tensor::cuda::{Cuda, CudaArray},
+    tensor::{cuda::Cuda, Tensor},
 };
 
-use std::{sync::Arc, vec::Vec};
+use std::vec::Vec;
 
-use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
 
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::{Distribution, Standard};
@@ -27,7 +27,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FNS: &'static [&'static str] = &["dropout_fwd_f64", "dropout_bwd_f64"];
 }
 
-impl<E: Dtype + AsKernelParam> super::DropoutKernel<E> for Cuda
+impl<E: Dtype> super::DropoutKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
     Standard: Distribution<E>,
@@ -35,13 +35,13 @@ where
     fn forward<S: Shape>(
         &self,
         op: super::DropoutKernelOp<E>,
-        inp: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, E>, Self::Err> {
+        inp: &Tensor<S, E, Self>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
         let noise = {
             let mut rng = StdRng::seed_from_u64(op.seed);
             let mut noise: Vec<E> = Vec::with_capacity(inp.data.len());
             noise.resize_with(inp.data.len(), || rng.sample(Standard));
-            self.dev.take_async(noise)
+            self.dev.htod_copy(noise)
         }?;
 
         if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
@@ -49,48 +49,32 @@ where
         }
 
         let numel = inp.data.len();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(numel) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
-        let params = (
-            op.prob,           // const float prob,
-            numel,             // const size_t numel,
-            inp.data.as_ref(), // const float *inp,
-            &noise,            // const float *noise,
-            &mut storage,      // float *out
-        );
-        unsafe { fwd_fn.launch_async(cfg, params) }?;
-        Ok(CudaArray {
-            data: Arc::new(storage),
-            shape: inp.shape,
-            strides: inp.strides,
-        })
+        let params = (op.prob, numel, inp.data.as_ref(), &noise, &mut storage);
+        unsafe { fwd_fn.launch(cfg, params) }?;
+        Ok(self.build_tensor(inp.shape, inp.strides, storage))
     }
     fn backward<S: Shape>(
         &self,
         op: super::DropoutKernelOp<E>,
-        inp: &Self::Storage<S, E>,
-        grad_inp: &mut Self::Storage<S, E>,
-        grad_out: &Self::Storage<S, E>,
+        inp: &Tensor<S, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let noise = {
             let mut rng = StdRng::seed_from_u64(op.seed);
             let mut noise: Vec<E> = Vec::with_capacity(inp.data.len());
             noise.resize_with(inp.data.len(), || rng.sample(Standard));
-            self.dev.take_async(noise)
+            self.dev.htod_copy(noise)
         }?;
         let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
         let numel = inp.data.len();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
-        let params = (
-            op.prob,                           // const float prob,
-            numel,                             // const size_t numel,
-            &noise,                            // const float *noise,
-            Arc::make_mut(&mut grad_inp.data), // float *grad_inp,
-            grad_out.data.as_ref(),            // const float *grad_out
-        );
-        unsafe { bwd_fn.launch_async(cfg, params) }?;
+        let params = (op.prob, numel, &noise, grad_inp, grad_out);
+        unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())
     }
 }

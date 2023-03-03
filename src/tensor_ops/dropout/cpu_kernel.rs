@@ -1,29 +1,37 @@
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::Cpu,
+    tensor::{Cpu, Tensor},
+    unique_id::unique_id,
 };
 
 use num_traits::Float;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::{Distribution, Standard};
 
-impl<F: Float + Dtype> super::DropoutKernel<F> for Cpu
+impl<E: Float + Dtype> super::DropoutKernel<E> for Cpu
 where
-    Standard: Distribution<F>,
+    Standard: Distribution<E>,
 {
     fn forward<S: Shape>(
         &self,
-        op: super::DropoutKernelOp<F>,
-        inp: &Self::Storage<S, F>,
-    ) -> Result<Self::Storage<S, F>, Self::Err> {
+        op: super::DropoutKernelOp<E>,
+        inp: &Tensor<S, E, Self>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
         let mut rng = StdRng::seed_from_u64(op.seed);
-        let mut out: Self::Storage<S, F> = inp.clone();
+        let mut out = Tensor {
+            id: unique_id(),
+            data: inp.data.clone(),
+            shape: inp.shape,
+            strides: inp.strides,
+            device: self.clone(),
+            tape: Default::default(),
+        };
         for x in out.buf_iter_mut() {
-            let val: F = rng.sample(Standard);
+            let val: E = rng.sample(Standard);
             *x = if val < op.prob {
-                F::zero()
+                E::zero()
             } else {
-                *x / (F::one() - op.prob)
+                *x / (E::one() - op.prob)
             };
         }
         Ok(out)
@@ -31,21 +39,21 @@ where
 
     fn backward<S: Shape>(
         &self,
-        op: super::DropoutKernelOp<F>,
-        inp: &Self::Storage<S, F>,
-        grad_inp: &mut Self::Storage<S, F>,
-        grad_out: &Self::Storage<S, F>,
+        op: super::DropoutKernelOp<E>,
+        inp: &Tensor<S, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let mut rng = StdRng::seed_from_u64(op.seed);
-        debug_assert_eq!(grad_inp.data.len(), grad_out.data.len());
-        debug_assert_eq!(inp.data.len(), grad_out.data.len());
-        for (i, data_i) in grad_inp.buf_iter_mut().enumerate() {
-            let val: F = rng.sample(Standard);
+        debug_assert_eq!(grad_inp.len(), grad_out.len());
+        debug_assert_eq!(inp.data.len(), grad_out.len());
+        for (i, data_i) in grad_inp.iter_mut().enumerate() {
+            let val: E = rng.sample(Standard);
             *data_i += if val < op.prob {
-                F::zero()
+                E::zero()
             } else {
-                (F::one() - op.prob).recip()
-            } * grad_out.data[i];
+                (E::one() - op.prob).recip()
+            } * grad_out[i];
         }
         Ok(())
     }

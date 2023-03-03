@@ -108,7 +108,7 @@ impl<const I: usize, const O: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToD
 impl<const I: usize, const O: usize, E: Dtype, D: Device<E>, T> Module<T> for Linear<I, O, E, D>
 where
     T: SplitTape + TryMatMul<Tensor<Rank2<I, O>, E, D, T::Tape>> + HasErr<Err = D::Err>,
-    T::Tape: Tape<D>,
+    T::Tape: Tape<E, D>,
     for<'a> Bias1D<'a, O, E, D>: Module<T::Output, Output = T::Output, Error = D::Err>,
 {
     type Output = T::Output;
@@ -126,7 +126,7 @@ struct Bias1D<'a, const M: usize, E: Dtype, D: DeviceStorage> {
     beta: &'a Tensor<Rank1<M>, E, D>,
 }
 
-impl<'a, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<Rank1<M>, E, D, T>>
+impl<'a, const M: usize, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<Rank1<M>, E, D, T>>
     for Bias1D<'a, M, E, D>
 {
     type Output = Tensor<Rank1<M>, E, D, T>;
@@ -137,7 +137,7 @@ impl<'a, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<Rank1
     }
 }
 
-impl<'a, B: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
+impl<'a, B: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<(B, Const<M>), E, D, T>> for Bias1D<'a, M, E, D>
 {
     type Output = Tensor<(B, Const<M>), E, D, T>;
@@ -151,7 +151,7 @@ impl<'a, B: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
     }
 }
 
-impl<'a, B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
+impl<'a, B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<(B, S, Const<M>), E, D, T>> for Bias1D<'a, M, E, D>
 {
     type Output = Tensor<(B, S, Const<M>), E, D, T>;

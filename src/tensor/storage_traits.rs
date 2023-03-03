@@ -2,7 +2,7 @@ use rand::distributions::Distribution;
 use rand_distr::{Standard, StandardNormal};
 use std::vec::Vec;
 
-use crate::{shapes::*, unique_id::unique_id};
+use crate::shapes::*;
 
 use super::Tensor;
 
@@ -19,32 +19,15 @@ pub trait AsVec<E> {
 /// Something that can store nd arrays for a given [Shape] and [Dtype]
 pub trait DeviceStorage: 'static + Default + Clone + HasErr {
     /// Generic storage type
-    type Storage<S: Shape, E: Unit>: 'static
-        + std::fmt::Debug
-        + Clone
-        + Send
-        + Sync
-        + HasShape<Shape = S>
-        + AsVec<E>;
+    type Vec<E: Unit>: 'static + std::fmt::Debug + Clone + Send + Sync;
 
     /// Generates a random u64 number
     fn random_u64(&self) -> u64;
 
     /// Allocates a gradient for the given nd array
-    fn try_alloc_grad<S: Shape, E: Dtype>(
-        &self,
-        storage: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, E>, Self::Err>;
+    fn try_alloc_grad<E: Unit>(&self, storage: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err>;
 
-    /// Upgrades the device storage into a tensor
-    fn upgrade<S: Shape, E: Unit>(&self, storage: Self::Storage<S, E>) -> Tensor<S, E, Self> {
-        Tensor {
-            id: unique_id(),
-            storage,
-            device: self.clone(),
-            tape: Default::default(),
-        }
-    }
+    fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E>;
 }
 
 /// Internal trait - Represents something that can allocate its own gradient.
@@ -53,10 +36,10 @@ pub trait AllocGrad: HasErr {
     fn try_alloc_grad(&self) -> Result<Self::Gradient, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> AllocGrad for Tensor<S, E, D, T> {
-    type Gradient = D::Storage<S, E>;
+impl<S: Shape, E: Unit, D: DeviceStorage, T> AllocGrad for Tensor<S, E, D, T> {
+    type Gradient = D::Vec<E>;
     fn try_alloc_grad(&self) -> Result<Self::Gradient, D::Err> {
-        self.device.try_alloc_grad(&self.storage)
+        self.device.try_alloc_grad(self.data.as_ref())
     }
 }
 
@@ -138,10 +121,7 @@ pub trait ZerosTensor<E: Unit>: DeviceStorage {
 }
 
 pub trait ZeroFillStorage<E: Unit>: DeviceStorage {
-    fn try_fill_with_zeros<S: Shape>(
-        &self,
-        storage: &mut Self::Storage<S, E>,
-    ) -> Result<(), Self::Err>;
+    fn try_fill_with_zeros(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err>;
 }
 
 /// Construct tensors filled with ones.
@@ -186,10 +166,7 @@ pub trait OnesTensor<E: Unit>: DeviceStorage {
 }
 
 pub trait OneFillStorage<E: Unit>: DeviceStorage {
-    fn try_fill_with_ones<S: Shape>(
-        &self,
-        storage: &mut Self::Storage<S, E>,
-    ) -> Result<(), Self::Err>;
+    fn try_fill_with_ones(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err>;
 }
 
 /// Constructs tensors filled with random values from a given distribution.
@@ -253,31 +230,34 @@ pub trait SampleTensor<E: Unit>: DeviceStorage {
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 
     /// Fills tensor storage with data from a given distribution
-    fn try_fill_with_distr<S: Shape, D: Distribution<E>>(
+    fn try_fill_with_distr<D: Distribution<E>>(
         &self,
-        storage: &mut Self::Storage<S, E>,
+        storage: &mut Self::Vec<E>,
         distr: D,
     ) -> Result<(), Self::Err>;
 }
 
-/// Convert tensors to rust arrays
+pub trait TensorToArray<S: Shape, E: Unit>: DeviceStorage {
+    type Array: std::fmt::Debug + PartialEq;
+    fn tensor_to_array<T>(&self, tensor: &Tensor<S, E, Self, T>) -> Self::Array;
+}
+
 pub trait AsArray {
     type Array: std::fmt::Debug + PartialEq;
     fn array(&self) -> Self::Array;
 }
-impl<S: Shape, E: Unit, D: DeviceStorage, T> AsArray for Tensor<S, E, D, T>
-where
-    D::Storage<S, E>: AsArray,
-{
-    type Array = <D::Storage<S, E> as AsArray>::Array;
+
+impl<S: Shape, E: Unit, D: TensorToArray<S, E>, T> AsArray for Tensor<S, E, D, T> {
+    type Array = D::Array;
+    /// Convert tensors to rust arrays
     fn array(&self) -> Self::Array {
-        self.storage.array()
+        self.device.tensor_to_array(self)
     }
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage, T> AsVec<E> for Tensor<S, E, D, T> {
-    fn as_vec(&self) -> std::vec::Vec<E> {
-        self.storage.as_vec()
+impl<S: Shape, E: Unit, D: DeviceStorage, T> Tensor<S, E, D, T> {
+    pub fn as_vec(&self) -> std::vec::Vec<E> {
+        self.device.tensor_to_vec(self)
     }
 }
 

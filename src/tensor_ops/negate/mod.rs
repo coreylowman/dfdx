@@ -20,13 +20,13 @@ pub struct NegateKernelOp;
 /// let r = -a;
 /// assert_eq!(r.array(), [2.0, 0.0, -5.0]);
 /// ```
-pub fn negate<S: Shape, E: Dtype, D: UnaryKernel<NegateKernelOp, E>, T: Tape<D>>(
+pub fn negate<S: Shape, E: Dtype, D: UnaryKernel<NegateKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.negate()
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<NegateKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<NegateKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     pub fn negate(self) -> Self {
         self.try_negate().unwrap()
     }
@@ -35,7 +35,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<NegateKernelOp, E>, T: Tape<D>> Tensor<S
     }
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<NegateKernelOp, E>, T: Tape<D>> std::ops::Neg
+impl<S: Shape, E: Dtype, D: UnaryKernel<NegateKernelOp, E>, T: Tape<E, D>> std::ops::Neg
     for Tensor<S, E, D, T>
 {
     type Output = Self;

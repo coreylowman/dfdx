@@ -1,6 +1,5 @@
 use crate::{optim::optimizer::*, shapes::*, tensor::Cuda};
-use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
-use std::sync::Arc;
+use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig};
 
 #[repr(C)]
 struct CudaAdamConfig<E> {
@@ -12,7 +11,7 @@ struct CudaAdamConfig<E> {
     weight_decay: E,
 }
 
-unsafe impl<E> AsKernelParam for CudaAdamConfig<E> {}
+unsafe impl<E: DeviceRepr> DeviceRepr for CudaAdamConfig<E> {}
 
 fn adam_config_to_cuda<E: Default + Copy>(config: &super::AdamConfig<E>) -> CudaAdamConfig<E> {
     let (weight_decay_type, weight_decay) = weight_decay_to_cuda(config.weight_decay);
@@ -44,38 +43,30 @@ impl HasCudaKernel<f64> for Cuda {
     const FWD: &'static str = "adam_update_f64";
 }
 
-impl<E: Dtype + AsKernelParam> super::AdamKernel<E> for Cuda
+impl<E: Dtype> super::AdamKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
-    fn update<S: Shape>(
+    fn update(
         &self,
         t: i32,
         cfg: &super::AdamConfig<E>,
-        param: &mut Self::Storage<S, E>,
-        moment1: &mut Self::Storage<S, E>,
-        moment2: &mut Self::Storage<S, E>,
-        grad: Self::Storage<S, E>,
+        param: &mut Self::Vec<E>,
+        moment1: &mut Self::Vec<E>,
+        moment2: &mut Self::Vec<E>,
+        grad: Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FWD) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, &[Self::FWD])?;
         }
 
-        let adam_cfg = adam_config_to_cuda(cfg);
-        let numel = param.shape.num_elements();
-
+        let opt_cfg = adam_config_to_cuda(cfg);
+        let numel = param.len();
         let func = self.dev.get_func(Self::MOD, Self::FWD).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
-        let params = (
-            adam_cfg,                         // const AdamConfig cfg,
-            numel,                            // const size_t numel,
-            <E>::from_i32(t).unwrap(),        // const float t,
-            Arc::make_mut(&mut param.data),   // float* param,
-            Arc::make_mut(&mut moment1.data), // float* moment1,
-            Arc::make_mut(&mut moment2.data), // float* moment2,
-            grad.data.as_ref(),               // const float* grad
-        );
-        unsafe { func.launch_async(cfg, params) }?;
+        let t = <E>::from_i32(t).unwrap();
+        let params = (opt_cfg, numel, t, param, moment1, moment2, &grad);
+        unsafe { func.launch(cfg, params) }?;
         Ok(())
     }
 }

@@ -21,13 +21,13 @@ pub struct SinKernelOp;
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.sin();
 /// ```
-pub fn sin<S: Shape, E: Dtype, D: UnaryKernel<SinKernelOp, E>, T: Tape<D>>(
+pub fn sin<S: Shape, E: Dtype, D: UnaryKernel<SinKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.sin()
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<SinKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<SinKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [sin]
     pub fn sin(self) -> Self {
         self.try_sin().unwrap()

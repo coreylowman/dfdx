@@ -99,8 +99,8 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t: Tensor<Rank1<5>,f32, _> = dev.zeros();
-//! let t_clone: Tensor<Rank1<5>, _, _, OwnedTape<_>> = t.trace(); // copies t
-//! let t = t.traced(); // takes ownership of t
+//! let t_clone: Tensor<Rank1<5>, f32, _, OwnedTape<f32, Cpu>> = t.trace(); // copies t
+//! let t = t.traced::<f32>(); // takes ownership of t
 //! ```
 //!
 //! # Serialization using numpy
@@ -125,7 +125,7 @@ pub use cpu::{Cpu, CpuError};
 #[cfg(feature = "cuda")]
 pub use cuda::{Cuda, CudaError};
 
-pub use storage_traits::{AsArray, AsVec, CopySlice, TensorFrom, TensorFromVec};
+pub use storage_traits::{AsArray, CopySlice, TensorFrom, TensorFromVec};
 pub use storage_traits::{DeviceStorage, HasErr};
 pub use storage_traits::{OnesTensor, SampleTensor, ZerosTensor};
 

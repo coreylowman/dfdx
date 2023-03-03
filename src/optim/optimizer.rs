@@ -82,7 +82,7 @@ pub trait Optimizer<M, D: DeviceStorage, E: Dtype> {
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients,
+        gradients: Gradients<E, D>,
     ) -> Result<(), OptimizerUpdateError<D>>;
 }
 

@@ -1,7 +1,5 @@
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
-const PROBES: u32 = 10;
-
 #[cfg(feature = "nightly")]
 fn main() {
     use dfdx::prelude::*;
@@ -52,6 +50,9 @@ fn main() {
     let m = dev.build_module::<Resnet18<1000>, f32>();
 
     let x: Tensor<Rank3<3, 224, 224>, f32, _> = dev.sample_normal();
+
+    const PROBES: u32 = 10;
+
     let start = Instant::now();
     for _ in 0..PROBES {
         let _y = m.forward(x.clone());

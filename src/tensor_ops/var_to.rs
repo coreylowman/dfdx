@@ -27,7 +27,7 @@ pub trait VarTo: HasErr + HasShape {
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> VarTo for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> VarTo for Tensor<S, E, D, T> {
     fn try_var<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,

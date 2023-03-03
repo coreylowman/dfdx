@@ -1,10 +1,8 @@
 use crate::{
     shapes::{Shape, Unit},
-    tensor::cuda::Cuda,
-    tensor::cuda::CudaArray,
+    tensor::{Cuda, Tensor},
 };
-use cudarc::driver::{AsKernelParam, CudaSlice, LaunchAsync, LaunchConfig};
-use std::sync::Arc;
+use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
 
 use super::{
     CmpKernel, EqKernelOp, GeKernelOp, GtKernelOp, LeKernelOp, LtKernelOp, NeKernelOp,
@@ -36,11 +34,11 @@ trait ScalarCmpOpCudaKernel<E: Unit> {
 }
 
 impl<E: Unit, Op: CmpOpCudaKernel<E>> CmpKernel<Op, E> for Cuda {
-    fn forward<S: Shape>(
+    fn forward<S: Shape, T>(
         &self,
-        lhs: &Self::Storage<S, E>,
-        rhs: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err> {
+        lhs: &Tensor<S, E, Self, T>,
+        rhs: &Tensor<S, E, Self, T>,
+    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
         if !self.dev.has_func(Op::MODULE_NAME, Op::FWD_FN_NAME) {
             self.dev
                 .load_ptx(Op::PTX_SRC.into(), Op::MODULE_NAME, &[Op::FWD_FN_NAME])?;
@@ -50,12 +48,12 @@ impl<E: Unit, Op: CmpOpCudaKernel<E>> CmpKernel<Op, E> for Cuda {
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = self.dev.alloc_zeros_async::<bool>(numel)?;
+        let mut storage = self.dev.alloc_zeros::<bool>(numel)?;
 
-        let dims: CudaSlice<usize> = self.dev.take_async(shape.concrete().into())?;
-        let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
-        let rhs_strides: CudaSlice<usize> = self.dev.take_async(rhs.strides.into())?;
-        let out_strides: CudaSlice<usize> = self.dev.take_async(strides.into())?;
+        let dims: CudaSlice<usize> = self.dev.htod_copy(shape.concrete().into())?;
+        let lhs_strides: CudaSlice<usize> = self.dev.htod_copy(lhs.strides.into())?;
+        let rhs_strides: CudaSlice<usize> = self.dev.htod_copy(rhs.strides.into())?;
+        let out_strides: CudaSlice<usize> = self.dev.htod_copy(strides.into())?;
 
         let fwd_fn = self.dev.get_func(Op::MODULE_NAME, Op::FWD_FN_NAME).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -70,21 +68,17 @@ impl<E: Unit, Op: CmpOpCudaKernel<E>> CmpKernel<Op, E> for Cuda {
             &mut storage,      // bool *out,
             &out_strides,      // const size_t *out_strides
         );
-        unsafe { fwd_fn.launch_async(cfg, params) }?;
-        Ok(CudaArray {
-            data: Arc::new(storage),
-            shape,
-            strides,
-        })
+        unsafe { fwd_fn.launch(cfg, params) }?;
+        Ok(self.build_tensor(shape, strides, storage))
     }
 }
 
-impl<E: Unit + AsKernelParam, Op: ScalarCmpOpCudaKernel<E>> ScalarCmpKernel<Op, E> for Cuda {
-    fn forward<S: Shape>(
+impl<E: Unit, Op: ScalarCmpOpCudaKernel<E>> ScalarCmpKernel<Op, E> for Cuda {
+    fn forward<S: Shape, T>(
         &self,
-        lhs: &Self::Storage<S, E>,
+        lhs: &Tensor<S, E, Self, T>,
         scalar: E,
-    ) -> Result<Self::Storage<S, bool>, Self::Err> {
+    ) -> Result<Tensor<S, bool, Self>, Self::Err> {
         if !self.dev.has_func(Op::MODULE_NAME, Op::FWD_FN_NAME) {
             self.dev
                 .load_ptx(Op::PTX_SRC.into(), Op::MODULE_NAME, &[Op::FWD_FN_NAME])?;
@@ -94,11 +88,11 @@ impl<E: Unit + AsKernelParam, Op: ScalarCmpOpCudaKernel<E>> ScalarCmpKernel<Op, 
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = self.dev.alloc_zeros_async::<bool>(numel)?;
+        let mut storage = self.dev.alloc_zeros::<bool>(numel)?;
 
-        let dims: CudaSlice<usize> = self.dev.take_async(shape.concrete().into())?;
-        let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
-        let out_strides: CudaSlice<usize> = self.dev.take_async(strides.into())?;
+        let dims: CudaSlice<usize> = self.dev.htod_copy(shape.concrete().into())?;
+        let lhs_strides: CudaSlice<usize> = self.dev.htod_copy(lhs.strides.into())?;
+        let out_strides: CudaSlice<usize> = self.dev.htod_copy(strides.into())?;
 
         let fwd_fn = self.dev.get_func(Op::MODULE_NAME, Op::FWD_FN_NAME).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -112,12 +106,8 @@ impl<E: Unit + AsKernelParam, Op: ScalarCmpOpCudaKernel<E>> ScalarCmpKernel<Op, 
             &mut storage,      // bool *out,
             &out_strides,      // const size_t *out_strides
         );
-        unsafe { fwd_fn.launch_async(cfg, params) }?;
-        Ok(CudaArray {
-            data: Arc::new(storage),
-            shape,
-            strides,
-        })
+        unsafe { fwd_fn.launch(cfg, params) }?;
+        Ok(self.build_tensor(shape, strides, storage))
     }
 }
 

@@ -113,6 +113,7 @@ mod activations;
 mod add_into;
 mod batchnorm1d;
 mod batchnorm2d;
+mod bias2d;
 mod conv;
 mod dropout;
 mod embedding;
@@ -130,6 +131,7 @@ mod repeated;
 mod residual;
 mod split_into;
 mod transformer;
+mod unbiased_linear;
 
 pub use module::*;
 
@@ -146,6 +148,7 @@ pub mod modules {
     pub use super::add_into::AddInto;
     pub use super::batchnorm1d::BatchNorm1D;
     pub use super::batchnorm2d::BatchNorm2D;
+    pub use super::bias2d::Bias2D;
     #[cfg(feature = "nightly")]
     pub use super::conv::Conv2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
@@ -163,6 +166,7 @@ pub mod modules {
     pub use super::split_into::SplitInto;
     #[cfg(feature = "nightly")]
     pub use super::transformer::*;
+    pub use super::unbiased_linear::UnbiasedLinear;
 }
 
 pub mod builders {
@@ -172,6 +176,7 @@ pub mod builders {
     pub use super::add_into::AddInto;
     pub use super::batchnorm1d::builder::BatchNorm1D;
     pub use super::batchnorm2d::builder::BatchNorm2D;
+    pub use super::bias2d::builder::Bias2D;
     #[cfg(feature = "nightly")]
     pub use super::conv::builder::Conv2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
@@ -189,4 +194,5 @@ pub mod builders {
     pub use super::split_into::SplitInto;
     #[cfg(feature = "nightly")]
     pub use super::transformer::builder::*;
+    pub use super::unbiased_linear::builder::UnbiasedLinear;
 }

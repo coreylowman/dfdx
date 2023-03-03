@@ -1,7 +1,7 @@
 use super::SqrtKernelOp;
 use crate::tensor_ops::cuda_kernels::cuda_unary;
 
-unsafe impl cudarc::driver::AsKernelParam for SqrtKernelOp {}
+unsafe impl cudarc::driver::DeviceRepr for SqrtKernelOp {}
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/sqrt.ptx"));
 
