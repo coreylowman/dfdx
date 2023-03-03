@@ -57,7 +57,7 @@ fn main() {
     // the final step is to use our optimizer to update our model
     // given the gradients we've calculated.
     // This will modify our model!
-    sgd.update(&mut mlp, gradients)
+    sgd.update(&mut mlp, &gradients)
         .expect("Oops, there were some unused params");
 
     // let's do this a couple times to make sure the loss decreases!
@@ -66,7 +66,7 @@ fn main() {
         let loss = mse_loss(prediction, y.clone());
         println!("Loss after update {i}: {:?}", loss.array());
         let gradients = loss.backward();
-        sgd.update(&mut mlp, gradients)
+        sgd.update(&mut mlp, &gradients)
             .expect("Oops, there were some unused params");
     }
 }

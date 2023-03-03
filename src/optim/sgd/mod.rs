@@ -117,9 +117,6 @@ pub struct Sgd<M, E: Dtype, D: DeviceStorage> {
     pub cfg: SgdConfig<E>,
 
     velocity: Gradients<E, D>,
-    gradients: Gradients<E, D>,
-
-    unused: UnusedTensors,
 
     marker: PhantomData<*const M>,
 }
@@ -130,8 +127,6 @@ impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
         Self {
             cfg,
             velocity: Default::default(),
-            gradients: Default::default(),
-            unused: Default::default(),
             marker: PhantomData,
         }
     }
@@ -143,11 +138,13 @@ pub(super) trait SgdKernel<E: Dtype>: DeviceStorage {
         cfg: &SgdConfig<E>,
         param: &mut Self::Vec<E>,
         velocity: &mut Self::Vec<E>,
-        grad: Self::Vec<E>,
+        grad: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
 
-impl<E: Dtype, D: SgdKernel<E>, M> TensorVisitor<E, D> for Sgd<M, E, D> {
+impl<E: Dtype, D: SgdKernel<E>, M> TensorVisitor<E, D>
+    for (&mut Sgd<M, E, D>, &Gradients<E, D>, UnusedTensors)
+{
     type Viewer = ViewTensorMut;
     type Err = D::Err;
 
@@ -160,13 +157,13 @@ impl<E: Dtype, D: SgdKernel<E>, M> TensorVisitor<E, D> for Sgd<M, E, D> {
         if !opts.do_gradient_update {
             return Ok(());
         }
-        let g = self.gradients.remove(p);
+        let g = self.1.get_ref_checked(p);
         match g {
-            None => self.unused.add(p),
+            None => self.2.add(p),
             Some(g) => {
-                let v = self.velocity.get_or_alloc_mut(p)?;
+                let v = self.0.velocity.get_or_alloc_mut(p)?;
                 p.device
-                    .update(&self.cfg, std::sync::Arc::make_mut(&mut p.data), v, g)?;
+                    .update(&self.0.cfg, std::sync::Arc::make_mut(&mut p.data), v, g)?;
             }
         }
         Ok(())
@@ -177,17 +174,16 @@ impl<M: TensorCollection<E, D>, D: SgdKernel<E>, E: Dtype> Optimizer<M, D, E> fo
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients<E, D>,
+        gradients: &Gradients<E, D>,
     ) -> Result<(), OptimizerUpdateError<D>> {
-        self.gradients = gradients;
+        let mut op = (self, gradients, Default::default());
         let result = M::iter_tensors(&mut RecursiveWalker {
             m: module,
-            f: self,
+            f: &mut op,
             path: &mut std::vec::Vec::new(),
         });
-        let unused = std::mem::take(&mut self.unused);
         match result {
-            Ok(_) => unused.into(),
+            Ok(_) => op.2.into(),
             Err(e) => Err(OptimizerUpdateError::DeviceError(e)),
         }
     }
@@ -215,7 +211,7 @@ mod tests {
         for _ in 0..5 {
             let loss = (pred.trace() - targ.clone()).abs().mean();
             let gradients = loss.backward();
-            sgd.update(&mut pred, gradients).expect("");
+            sgd.update(&mut pred, &gradients).expect("");
         }
         assert_close(&pred.array(), &[1.0; 5]);
         assert_close(&targ.array(), &[1.0; 5]);
@@ -238,7 +234,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd.update(&mut t, gradients).expect("");
+            sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -268,7 +264,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd.update(&mut t, gradients).expect("");
+            sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -298,7 +294,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd.update(&mut t, gradients).expect("");
+            sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -336,13 +332,13 @@ mod tests {
         ];
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd_l2.update(&mut t, gradients).expect("");
+            sgd_l2.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
         t = dev.ones();
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd_decoupled.update(&mut t, gradients).expect("");
+            sgd_decoupled.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -371,7 +367,7 @@ mod tests {
         ];
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd.update(&mut t, gradients).expect("");
+            sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -410,7 +406,7 @@ mod tests {
         ];
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd_l2.update(&mut t, gradients).expect("");
+            sgd_l2.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
 
@@ -422,7 +418,7 @@ mod tests {
             let loss = l2_loss + normal_loss;
 
             let gradients = loss.backward();
-            sgd.update(&mut t, gradients).expect("");
+            sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -432,6 +428,6 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let mut opt = Sgd::new(&t, Default::default());
-        opt.update(&mut t, Default::default()).expect_err("");
+        opt.update(&mut t, &Default::default()).expect_err("");
     }
 }

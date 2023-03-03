@@ -74,7 +74,7 @@ fn main() {
             let gradients = loss.backward();
 
             // update weights with optimizer
-            sgd.update(&mut q_net, gradients).expect("Unused params");
+            sgd.update(&mut q_net, &gradients).expect("Unused params");
         }
         target_q_net.clone_from(&q_net);
 

@@ -53,8 +53,11 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     /// Removes and returns the data associated with `t.id()`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
-    pub(crate) fn remove<S: Shape, T>(&mut self, t: &Tensor<S, E, D, T>) -> Option<D::Vec<E>> {
-        self.gradient_by_id.remove_entry(&t.id).map(|(_, v)| v)
+    pub(crate) fn get_ref_checked<S: Shape, T>(
+        &self,
+        t: &Tensor<S, E, D, T>,
+    ) -> Option<&D::Vec<E>> {
+        self.gradient_by_id.get(&t.id)
     }
 
     /// Returns a mutable reference to the data associated with `t`.
