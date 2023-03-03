@@ -2,7 +2,7 @@ use crate::{
     shapes::*,
     tensor::{Cuda, Tensor},
 };
-use cudarc::driver::{LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
 use std::vec::Vec;
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/stack.ptx"));
@@ -52,13 +52,13 @@ where
 
         // copy the data
         let item_numel = strides[0];
-        let mut data = unsafe { self.dev.alloc_async::<E>(num.size() * item_numel) }?;
+        let mut data = unsafe { self.dev.alloc::<E>(num.size() * item_numel) }?;
         let mut offset = 0;
         for item in inps {
             debug_assert_eq!(item.data.len(), item_numel);
-            self.dev.device_copy_async(
+            self.dev.dtod_copy(
                 item.data.as_ref(),
-                &mut data.try_slice_mut(offset..offset + item_numel).unwrap(),
+                &mut data.slice_mut(offset..offset + item_numel),
             )?;
             offset += item_numel;
         }
@@ -79,8 +79,8 @@ where
             let f = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
             let numel: usize = item.len();
             let cfg = LaunchConfig::for_num_elems(numel as u32);
-            let sub = grad_out.try_slice(offset..offset + numel).unwrap();
-            unsafe { f.launch_async(cfg, (numel, &sub, item)) }?;
+            let sub = grad_out.slice(offset..offset + numel);
+            unsafe { f.launch(cfg, (numel, &sub, item)) }?;
             offset += numel;
         }
         debug_assert_eq!(offset, grad_out.len());

@@ -1,5 +1,5 @@
 use cudarc::cublas::{CudaBlas, Gemm};
-use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig, ValidAsZeroBits};
+use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig, ValidAsZeroBits};
 
 use crate::tensor_ops::matmul::cuda_kernel::sgemm_batch;
 use crate::{
@@ -9,7 +9,7 @@ use crate::{
 
 use std::sync::Arc;
 
-unsafe impl AsKernelParam for super::Conv2DOp {}
+unsafe impl DeviceRepr for super::Conv2DOp {}
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/conv2d.ptx"));
 
@@ -63,12 +63,12 @@ where
         }
 
         let patches_numel = op.batch * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
-        let mut patches = self.dev.alloc_zeros_async::<E>(patches_numel)?;
-        let img_strides = self.dev.take_async(make_4d::<L>(lhs.strides).into())?;
+        let mut patches = self.dev.alloc_zeros::<E>(patches_numel)?;
+        let img_strides = self.dev.htod_copy(make_4d::<L>(lhs.strides).into())?;
         let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = LaunchConfig::for_num_elems(patches.len() as u32);
         let params = (op, lhs.data.as_ref(), &img_strides, &mut patches);
-        unsafe { unfold_fn.launch_async(cfg, params) }?;
+        unsafe { unfold_fn.launch(cfg, params) }?;
 
         // (O, C * K * K) * (B, C * K * K, OH * OW) = (B, O, OH * OW)
         let m = op.chan_out;
@@ -103,26 +103,26 @@ where
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let patches_numel = op.batch * op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
-        let mut patches = self.dev.alloc_zeros_async::<E>(patches_numel)?;
+        let mut patches = self.dev.alloc_zeros::<E>(patches_numel)?;
 
         {
             // unfold grad_out into patches
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
             let cfg = LaunchConfig::for_num_elems(patches_numel as u32);
-            unsafe { unfold_fn.launch_async(cfg, (op, grad_out, &mut patches)) }?;
+            unsafe { unfold_fn.launch(cfg, (op, grad_out, &mut patches)) }?;
         }
 
         let filters_numel = op.batch * op.chan_in * op.chan_out * op.kernel * op.kernel;
-        let mut f_b1023 = self.dev.alloc_zeros_async::<E>(filters_numel)?;
-        let mut grad_f_b1023 = self.dev.alloc_zeros_async::<E>(filters_numel)?;
-        let f_strides = self.dev.take_async(rhs.strides.into())?;
+        let mut f_b1023 = self.dev.alloc_zeros::<E>(filters_numel)?;
+        let mut grad_f_b1023 = self.dev.alloc_zeros::<E>(filters_numel)?;
+        let f_strides = self.dev.htod_copy(rhs.strides.into())?;
 
         {
             // prepare filters for backward operations by
             // swapping dims 0 and 1 and adding a batch dimension
             let tr_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
             let cfg = LaunchConfig::for_num_elems(rhs.shape.num_elements() as u32);
-            unsafe { tr_fn.launch_async(cfg, (op, rhs.data.as_ref(), &f_strides, &mut f_b1023)) }?;
+            unsafe { tr_fn.launch(cfg, (op, rhs.data.as_ref(), &f_strides, &mut f_b1023)) }?;
         }
 
         {
@@ -172,7 +172,7 @@ where
             // into grad_rhs
             let sum_fn = self.dev.get_func(Self::MOD, Self::FNS[3]).unwrap();
             let cfg = LaunchConfig::for_num_elems(rhs.shape.num_elements() as u32);
-            unsafe { sum_fn.launch_async(cfg, (op, &grad_f_b1023, grad_rhs, &f_strides)) }?;
+            unsafe { sum_fn.launch(cfg, (op, &grad_f_b1023, grad_rhs, &f_strides)) }?;
         }
 
         Ok(())

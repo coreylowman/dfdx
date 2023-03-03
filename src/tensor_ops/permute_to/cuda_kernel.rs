@@ -2,7 +2,7 @@ use crate::shapes::*;
 use crate::tensor::{Cuda, Tensor};
 use crate::unique_id::unique_id;
 
-use cudarc::driver::{LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/permute_to.ptx"));
 
@@ -52,7 +52,7 @@ where
         let f = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let numel = grad_inp.len();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
-        unsafe { f.launch_async(cfg, (numel, grad_out, grad_inp)) }?;
+        unsafe { f.launch(cfg, (numel, grad_out, grad_inp)) }?;
         Ok(())
     }
 }

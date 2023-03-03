@@ -1,9 +1,9 @@
 use super::{BinaryAddKernelOp as Binary, ScalarAddKernelOp as Scalar};
 use crate::tensor_ops::cuda_kernels::{cuda_binary, cuda_unary};
 
-unsafe impl cudarc::driver::AsKernelParam for Scalar<f32> {}
-unsafe impl cudarc::driver::AsKernelParam for Scalar<f64> {}
-unsafe impl cudarc::driver::AsKernelParam for Binary {}
+unsafe impl cudarc::driver::DeviceRepr for Scalar<f32> {}
+unsafe impl cudarc::driver::DeviceRepr for Scalar<f64> {}
+unsafe impl cudarc::driver::DeviceRepr for Binary {}
 
 const SCALAR_PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/scalar_add.ptx"));
 const BINARY_PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/binary_add.ptx"));

@@ -5,8 +5,8 @@ use crate::{
     tensor_ops::{cuda_kernels::cuda_unary, ops::UnaryKernel},
 };
 
-unsafe impl cudarc::driver::AsKernelParam for super::PowfKernelOp<f32> {}
-unsafe impl cudarc::driver::AsKernelParam for super::PowfKernelOp<f64> {}
+unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<f32> {}
+unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<f64> {}
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/pow.ptx"));
 

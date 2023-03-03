@@ -98,9 +98,9 @@ where
     let (cfg, swap_ops) = sgemm_config((m, k, n), lhs_strides, rhs_strides, beta, out_strides);
 
     if !swap_ops {
-        blas.gemm_async(cfg, lhs, rhs, out)
+        blas.gemm(cfg, lhs, rhs, out)
     } else {
-        blas.gemm_async(cfg, rhs, lhs, out)
+        blas.gemm(cfg, rhs, lhs, out)
     }
 }
 
@@ -147,7 +147,7 @@ where
             stride_c: out_strides[0] as i64,
             batch_size: batch.size() as i32,
         };
-        blas.gemm_strided_batched_async(cfg, lhs, rhs, out)
+        blas.gemm_strided_batched(cfg, lhs, rhs, out)
     } else {
         let cfg = StridedBatchedConfig {
             gemm,
@@ -156,7 +156,7 @@ where
             stride_c: out_strides[0] as i64,
             batch_size: batch.size() as i32,
         };
-        blas.gemm_strided_batched_async(cfg, rhs, lhs, out)
+        blas.gemm_strided_batched(cfg, rhs, lhs, out)
     }
 }
 
@@ -174,7 +174,7 @@ where
         let k = Const::<1>;
         let shape = (m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
 
         unsafe {
             sgemm(
@@ -250,7 +250,7 @@ where
         let (k, n) = rhs.shape;
         let shape = (n,);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
 
         unsafe {
             sgemm(
@@ -322,7 +322,7 @@ where
         let (k, n) = rhs.shape;
         let shape = (m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
 
         unsafe {
             sgemm(
@@ -397,7 +397,7 @@ where
         let (k, n) = rhs.shape;
         let shape = (batch, m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
         unsafe {
             sgemm_batch(
                 self.blas.as_ref(),
@@ -446,9 +446,9 @@ where
                 sgemm(
                     self.blas.as_ref(),
                     (k, m, n),
-                    &lhs.data.try_slice(i * lhs.strides[0]..).unwrap(),
+                    &lhs.data.slice(i * lhs.strides[0]..),
                     [lhs.strides[2], lhs.strides[1]],
-                    &grad_out.try_slice(i * strides[0]..).unwrap(),
+                    &grad_out.slice(i * strides[0]..),
                     [strides[1], strides[2]],
                     E::ONE,
                     grad_rhs,
@@ -475,7 +475,7 @@ where
         let (_, k, n) = rhs.shape;
         let shape = (batch, m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
         unsafe {
             sgemm_batch(
                 self.blas.as_ref(),
@@ -550,7 +550,7 @@ where
         let (_, _, k, n) = rhs.shape;
         let shape = (batch, seq, m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
 
         for b in 0..batch.size() {
             // TODO: use separate streams
@@ -558,12 +558,12 @@ where
                 sgemm_batch(
                     self.blas.as_ref(),
                     (seq, m, k, n),
-                    &lhs.data.try_slice(b * lhs.strides[0]..).unwrap(),
+                    &lhs.data.slice(b * lhs.strides[0]..),
                     [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
-                    &rhs.data.try_slice(b * rhs.strides[0]..).unwrap(),
+                    &rhs.data.slice(b * rhs.strides[0]..),
                     [rhs.strides[1], rhs.strides[2], rhs.strides[3]],
                     Default::default(),
-                    &mut storage.try_slice_mut(b * strides[0]..).unwrap(),
+                    &mut storage.slice_mut(b * strides[0]..),
                     [strides[1], strides[2], strides[3]],
                 )?;
             }
@@ -589,12 +589,12 @@ where
                 sgemm_batch(
                     self.blas.as_ref(),
                     (seq, m, n, k),
-                    &grad_out.try_slice(i * strides[0]..).unwrap(),
+                    &grad_out.slice(i * strides[0]..),
                     [strides[1], strides[2], strides[3]],
-                    &rhs.data.try_slice(i * rhs.strides[0]..).unwrap(),
+                    &rhs.data.slice(i * rhs.strides[0]..),
                     [rhs.strides[1], rhs.strides[3], rhs.strides[2]],
                     E::ONE,
-                    &mut grad_lhs.try_slice_mut(i * lhs.strides[0]..).unwrap(),
+                    &mut grad_lhs.slice_mut(i * lhs.strides[0]..),
                     [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
                 )?;
 
@@ -602,12 +602,12 @@ where
                 sgemm_batch(
                     self.blas.as_ref(),
                     (seq, k, m, n),
-                    &lhs.data.try_slice(i * lhs.strides[0]..).unwrap(),
+                    &lhs.data.slice(i * lhs.strides[0]..),
                     [lhs.strides[1], lhs.strides[3], lhs.strides[2]],
-                    &grad_out.try_slice(i * strides[0]..).unwrap(),
+                    &grad_out.slice(i * strides[0]..),
                     [strides[1], strides[2], strides[3]],
                     E::ONE,
-                    &mut grad_rhs.try_slice_mut(i * rhs.strides[0]..).unwrap(),
+                    &mut grad_rhs.slice_mut(i * rhs.strides[0]..),
                     [rhs.strides[1], rhs.strides[2], rhs.strides[3]],
                 )?;
             }
