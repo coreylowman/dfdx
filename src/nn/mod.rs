@@ -131,7 +131,7 @@ mod residual;
 mod split_into;
 mod transformer;
 mod unbiased_linear;
-mod zero_grad;
+mod zero_grads;
 
 pub use module::*;
 
@@ -140,7 +140,7 @@ pub use ema::ModelEMA;
 pub use npz::{LoadFromNpz, SaveToNpz};
 pub use num_params::NumParams;
 pub use reset_params::ResetParams;
-pub use zero_grad::ZeroGrad;
+pub use zero_grads::ZeroGrads;
 
 pub mod modules {
     /// Structs containing initialized Tensors & impls for [super::Module]. See

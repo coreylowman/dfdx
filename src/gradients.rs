@@ -50,9 +50,12 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
         Ok(())
     }
 
+    /// Drops all gradients except for the ids specified in the parameter.
+    pub fn retain(&mut self, ids: &[UniqueId]) {
+        self.gradient_by_id.retain(|k, _| ids.contains(k));
+    }
+
     /// Removes and returns the data associated with `t.id()`.
-    ///
-    /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
     pub(crate) fn remove<S: Shape, T>(&mut self, t: &Tensor<S, E, D, T>) -> Option<D::Vec<E>> {
         self.gradient_by_id.remove_entry(&t.id).map(|(_, v)| v)
     }
