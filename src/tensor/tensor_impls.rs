@@ -3,7 +3,7 @@ use rand::distributions::Distribution;
 use super::storage_traits::{DeviceStorage, HasErr, TensorFromVec};
 use super::{Cpu, OneFillStorage, SampleTensor, ZeroFillStorage};
 use crate::{
-    gradients::{NoneTape, OwnedTape, Tape, Gradients},
+    gradients::{Gradients, NoneTape, OwnedTape, Tape},
     shapes::*,
     unique_id::{HasUniqueId, UniqueId},
 };
