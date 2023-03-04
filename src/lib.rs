@@ -94,7 +94,7 @@
 //! });
 //!
 //! // pass the gradients & the model into the optimizer's update method
-//! opt.update(&mut model, gradients);
+//! opt.update(&mut model, &gradients);
 //! ```
 
 #![no_std]

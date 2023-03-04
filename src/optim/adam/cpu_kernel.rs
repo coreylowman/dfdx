@@ -9,7 +9,7 @@ impl<E: num_traits::Float + Dtype> AdamKernel<E> for Cpu {
         param: &mut Self::Vec<E>,
         moment1: &mut Self::Vec<E>,
         moment2: &mut Self::Vec<E>,
-        grad: Self::Vec<E>,
+        grad: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         for ((p, mut g), (m, v)) in param
             .iter_mut()

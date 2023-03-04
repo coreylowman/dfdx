@@ -109,7 +109,7 @@ fn main() {
             num_batches += 1;
 
             let gradients = loss.backward();
-            opt.update(&mut model, gradients).unwrap();
+            opt.update(&mut model, &gradients).unwrap();
         }
         let dur = Instant::now() - start;
 

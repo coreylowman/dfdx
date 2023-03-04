@@ -29,7 +29,7 @@ impl<E: Dtype, D: AxpyKernel<E>> TensorVisitor<E, D> for ModelEMAOp<E> {
 /// Performs model exponential moving average on two modules.
 pub trait ModelEMA<E: Dtype, D: AxpyKernel<E>>: TensorCollection<E, D> {
     /// Does `self = self * decay + other * (1 - decay), using
-    /// [crate::tensor_ops::axpy] on parameters.
+    /// [crate::tensor_ops::axpy()] on parameters.
     ///
     /// **Only updates trainable parameters**. For example, batch normalization
     /// running parameters are not updated.

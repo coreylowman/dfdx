@@ -10,7 +10,7 @@ impl<E: num_traits::Float + Dtype> RMSpropKernel<E> for Cpu {
         momentum: &mut Self::Vec<E>,
         square_avg: &mut Self::Vec<E>,
         grad_avg: &mut Self::Vec<E>,
-        grad: Self::Vec<E>,
+        grad: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         for ((p, mut g), (s_avg, (g_avg, m))) in param.iter_mut().zip(grad.iter().cloned()).zip(
             square_avg
