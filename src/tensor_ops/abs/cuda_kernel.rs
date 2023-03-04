@@ -1,7 +1,7 @@
 use super::AbsKernelOp;
 use crate::tensor_ops::cuda_kernels::cuda_unary;
 
-unsafe impl cudarc::driver::AsKernelParam for AbsKernelOp {}
+unsafe impl cudarc::driver::DeviceRepr for AbsKernelOp {}
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/abs.ptx"));
 

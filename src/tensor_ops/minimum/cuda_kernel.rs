@@ -1,7 +1,7 @@
 use super::MinimumKernelOp as Min;
 use crate::tensor_ops::cuda_kernels::cuda_binary;
 
-unsafe impl cudarc::driver::AsKernelParam for super::MinimumKernelOp {}
+unsafe impl cudarc::driver::DeviceRepr for super::MinimumKernelOp {}
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/minimum.ptx"));
 

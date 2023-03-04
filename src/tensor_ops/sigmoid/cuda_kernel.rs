@@ -1,7 +1,7 @@
 use super::SigmoidKernelOp as Sigmoid;
 use crate::tensor_ops::cuda_kernels::cuda_unary;
 
-unsafe impl cudarc::driver::AsKernelParam for Sigmoid {}
+unsafe impl cudarc::driver::DeviceRepr for Sigmoid {}
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/sigmoid.ptx"));
 

@@ -1,5 +1,5 @@
 use crate::{optim::optimizer::*, shapes::*, tensor::Cuda};
-use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig};
 
 #[repr(C)]
 struct CudaAdamConfig<E> {
@@ -11,7 +11,7 @@ struct CudaAdamConfig<E> {
     weight_decay: E,
 }
 
-unsafe impl<E> AsKernelParam for CudaAdamConfig<E> {}
+unsafe impl<E: DeviceRepr> DeviceRepr for CudaAdamConfig<E> {}
 
 fn adam_config_to_cuda<E: Default + Copy>(config: &super::AdamConfig<E>) -> CudaAdamConfig<E> {
     let (weight_decay_type, weight_decay) = weight_decay_to_cuda(config.weight_decay);
@@ -43,7 +43,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FWD: &'static str = "adam_update_f64";
 }
 
-impl<E: Dtype + AsKernelParam> super::AdamKernel<E> for Cuda
+impl<E: Dtype> super::AdamKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
@@ -54,7 +54,7 @@ where
         param: &mut Self::Vec<E>,
         moment1: &mut Self::Vec<E>,
         moment2: &mut Self::Vec<E>,
-        grad: Self::Vec<E>,
+        grad: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FWD) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, &[Self::FWD])?;
@@ -65,8 +65,8 @@ where
         let func = self.dev.get_func(Self::MOD, Self::FWD).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let t = <E>::from_i32(t).unwrap();
-        let params = (opt_cfg, numel, t, param, moment1, moment2, &grad);
-        unsafe { func.launch_async(cfg, params) }?;
+        let params = (opt_cfg, numel, t, param, moment1, moment2, grad);
+        unsafe { func.launch(cfg, params) }?;
         Ok(())
     }
 }

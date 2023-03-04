@@ -79,6 +79,7 @@ pub trait Device<E: Dtype>:
     + BinaryKernel<super::super::huber_error::HuberErrorKernelOp<E>, E>
     + BinaryKernel<super::super::maximum::MaximumKernelOp, E>
     + BinaryKernel<super::super::minimum::MinimumKernelOp, E>
+    + crate::tensor_ops::axpy::AxpyKernel<E>
 {
 }
 

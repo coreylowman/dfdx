@@ -1,7 +1,7 @@
 use super::BCEKernelOp;
 use crate::tensor_ops::cuda_kernels::cuda_binary;
 
-unsafe impl cudarc::driver::AsKernelParam for BCEKernelOp {}
+unsafe impl cudarc::driver::DeviceRepr for BCEKernelOp {}
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/bce.ptx"));
 

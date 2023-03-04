@@ -28,11 +28,11 @@ impl Cuda {
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = unsafe { self.dev.alloc_async(numel) }?;
+        let mut storage = unsafe { self.dev.alloc(numel) }?;
 
-        let dims: CudaSlice<usize> = self.dev.take_async(shape.concrete().into())?;
-        let lhs_strides: CudaSlice<usize> = self.dev.take_async(lhs.strides.into())?;
-        let rhs_strides: CudaSlice<usize> = self.dev.take_async(rhs.strides.into())?;
+        let dims: CudaSlice<usize> = self.dev.htod_copy(shape.concrete().into())?;
+        let lhs_strides: CudaSlice<usize> = self.dev.htod_copy(lhs.strides.into())?;
+        let rhs_strides: CudaSlice<usize> = self.dev.htod_copy(rhs.strides.into())?;
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, fn_name).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -46,7 +46,7 @@ impl Cuda {
             &rhs_strides,      // const size_t *rhs_strides,
             &mut storage,      // bool *out,
         );
-        unsafe { fwd_fn.launch_async(cfg, params) }?;
+        unsafe { fwd_fn.launch(cfg, params) }?;
         Ok(self.build_tensor(shape, strides, storage))
     }
 }
@@ -62,7 +62,7 @@ impl BooleanKernel for Cuda {
         }
 
         let numel = inp.data.len();
-        let mut storage = unsafe { self.dev.alloc_async(numel) }?;
+        let mut storage = unsafe { self.dev.alloc(numel) }?;
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, "boolean_not").unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -71,7 +71,7 @@ impl BooleanKernel for Cuda {
             inp.data.as_ref(), // const bool *inp,
             &mut storage,      // bool *out
         );
-        unsafe { fwd_fn.launch_async(cfg, params) }?;
+        unsafe { fwd_fn.launch(cfg, params) }?;
 
         Ok(self.build_tensor(inp.shape, inp.strides, storage))
     }

@@ -4,7 +4,7 @@ use crate::tensor::{DeviceStorage, HasErr, Tensor};
 
 use cudarc::{
     cublas::{result::CublasError, CudaBlas},
-    driver::{result::DriverError, BuildError, CudaDevice, CudaDeviceBuilder, CudaSlice},
+    driver::{CudaDevice, CudaSlice, DeviceSlice, DriverError},
 };
 use std::{sync::Arc, vec::Vec};
 
@@ -17,7 +17,6 @@ pub struct Cuda {
 
 #[derive(Debug)]
 pub enum CudaError {
-    Build(BuildError),
     Blas(CublasError),
     Driver(DriverError),
     Cpu(CpuError),
@@ -26,12 +25,6 @@ pub enum CudaError {
 impl From<CpuError> for CudaError {
     fn from(value: CpuError) -> Self {
         Self::Cpu(value)
-    }
-}
-
-impl From<BuildError> for CudaError {
-    fn from(value: BuildError) -> Self {
-        Self::Build(value)
     }
 }
 
@@ -66,7 +59,7 @@ impl Cuda {
 
     pub fn try_build(ordinal: usize, seed: u64) -> Result<Self, CudaError> {
         let cpu = Cpu::seed_from_u64(seed);
-        let dev = CudaDeviceBuilder::new(ordinal).build()?;
+        let dev = CudaDevice::new(ordinal)?;
         let blas = Arc::new(CudaBlas::new(dev.clone())?);
         Ok(Self { cpu, dev, blas })
     }
@@ -100,7 +93,7 @@ impl DeviceStorage for Cuda {
     type Vec<E: Unit> = CudaSlice<E>;
 
     fn try_alloc_grad<E: Unit>(&self, other: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err> {
-        let grad = self.dev.alloc_zeros_async(other.len())?;
+        let grad = self.dev.alloc_zeros(other.len())?;
         Ok(grad)
     }
 
@@ -109,7 +102,7 @@ impl DeviceStorage for Cuda {
     }
 
     fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
-        let buf: Vec<E> = tensor.data.clone_async().unwrap().try_into().unwrap();
+        let buf: Vec<E> = tensor.data.try_clone().unwrap().try_into().unwrap();
         debug_assert_eq!(buf.len(), tensor.data.len());
         let mut idx = NdIndex::new(tensor.shape, tensor.strides);
         let mut contiguous = Vec::with_capacity(tensor.shape.num_elements());

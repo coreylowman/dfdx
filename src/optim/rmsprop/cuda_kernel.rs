@@ -1,6 +1,6 @@
 use super::RMSpropConfig;
 use crate::{optim::optimizer::*, shapes::*, tensor::Cuda};
-use cudarc::driver::{AsKernelParam, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig};
 
 #[repr(C)]
 struct CudaRMSpropConfig<E> {
@@ -14,7 +14,7 @@ struct CudaRMSpropConfig<E> {
     weight_decay: E,
 }
 
-unsafe impl<E> AsKernelParam for CudaRMSpropConfig<E> {}
+unsafe impl<E: DeviceRepr> DeviceRepr for CudaRMSpropConfig<E> {}
 
 fn rmsprop_config_to_cuda<E: Default + Copy>(config: &RMSpropConfig<E>) -> CudaRMSpropConfig<E> {
     let (weight_decay_type, weight_decay) = weight_decay_to_cuda(config.weight_decay);
@@ -53,7 +53,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FWD: &'static str = "rmsprop_update_f64";
 }
 
-impl<E: Dtype + AsKernelParam> super::RMSpropKernel<E> for Cuda
+impl<E: Dtype> super::RMSpropKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
 {
@@ -64,7 +64,7 @@ where
         momentum: &mut Self::Vec<E>,
         square_avg: &mut Self::Vec<E>,
         grad_avg: &mut Self::Vec<E>,
-        grad: Self::Vec<E>,
+        grad: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FWD) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, &[Self::FWD])?;
@@ -74,8 +74,8 @@ where
         let numel = param.len();
         let func = self.dev.get_func(Self::MOD, Self::FWD).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
-        let params = (opt_cfg, numel, param, momentum, square_avg, grad_avg, &grad);
-        unsafe { func.launch_async(cfg, params) }?;
+        let params = (opt_cfg, numel, param, momentum, square_avg, grad_avg, grad);
+        unsafe { func.launch(cfg, params) }?;
         Ok(())
     }
 }

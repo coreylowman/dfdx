@@ -1,8 +1,8 @@
 use super::HuberErrorKernelOp as HuberError;
 use crate::tensor_ops::cuda_kernels::cuda_binary;
 
-unsafe impl cudarc::driver::AsKernelParam for HuberError<f32> {}
-unsafe impl cudarc::driver::AsKernelParam for HuberError<f64> {}
+unsafe impl cudarc::driver::DeviceRepr for HuberError<f32> {}
+unsafe impl cudarc::driver::DeviceRepr for HuberError<f64> {}
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/huber_error.ptx"));
 
