@@ -4,7 +4,6 @@ use crate::{
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
     unique_id::unique_id,
 };
-
 use cudarc::driver::{CudaSlice, DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig};
 use std::{sync::Arc, vec::Vec};
 
