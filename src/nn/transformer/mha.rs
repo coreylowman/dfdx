@@ -374,6 +374,6 @@ mod tests {
         let g = y.square().mean().backward();
 
         let mut opt = Sgd::new(&mha, Default::default());
-        opt.update(&mut mha, g).expect("");
+        opt.update(&mut mha, &g).expect("");
     }
 }

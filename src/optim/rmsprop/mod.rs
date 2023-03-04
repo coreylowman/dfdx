@@ -86,9 +86,6 @@ pub struct RMSprop<M, E: Dtype, D: DeviceStorage> {
     momentums: Gradients<E, D>,
     square_avg: Gradients<E, D>,
     grad_avg: Gradients<E, D>,
-    gradients: Gradients<E, D>,
-
-    unused: UnusedTensors,
 
     marker: PhantomData<*const M>,
 }
@@ -102,8 +99,6 @@ impl<M, E: Dtype, D: DeviceStorage> RMSprop<M, E, D> {
             momentums: Default::default(),
             square_avg: Default::default(),
             grad_avg: Default::default(),
-            gradients: Default::default(),
-            unused: Default::default(),
             marker: PhantomData,
         }
     }
@@ -117,12 +112,12 @@ pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
         momentum: &mut Self::Vec<E>,
         square_avg: &mut Self::Vec<E>,
         grad_avg: &mut Self::Vec<E>,
-        grad: Self::Vec<E>,
+        grad: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
 
 impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D>
-    for RMSprop<M, E, D>
+    for (&mut RMSprop<M, E, D>, &Gradients<E, D>, UnusedTensors)
 {
     type Viewer = ViewTensorMut;
     type Err = D::Err;
@@ -136,20 +131,20 @@ impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D>
         if !opts.do_gradient_update {
             return Ok(());
         }
-        let g = self.gradients.remove(p);
+        let g = self.1.get_ref_checked(p);
         match g {
-            None => self.unused.add(p),
+            None => self.2.add(p),
             Some(g) => {
-                let m = self.momentums.get_or_alloc_mut(p)?;
-                let sa = self.square_avg.get_or_alloc_mut(p)?;
-                let ga = self.grad_avg.get_or_alloc_mut(p)?;
+                let m = self.0.momentums.get_or_alloc_mut(p)?;
+                let sa = self.0.square_avg.get_or_alloc_mut(p)?;
+                let ga = self.0.grad_avg.get_or_alloc_mut(p)?;
 
-                if self.step == 0 {
+                if self.0.step == 0 {
                     p.device.try_fill_with_ones(sa)?;
                 }
 
                 p.device
-                    .update(&self.cfg, Arc::make_mut(&mut p.data), m, sa, ga, g)?;
+                    .update(&self.0.cfg, Arc::make_mut(&mut p.data), m, sa, ga, g)?;
             }
         }
         Ok(())
@@ -162,20 +157,19 @@ impl<M: TensorCollection<E, D>, D: RMSpropKernel<E> + OneFillStorage<E>, E: Dtyp
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients<E, D>,
+        gradients: &Gradients<E, D>,
     ) -> Result<(), OptimizerUpdateError<D>> {
-        self.gradients = gradients;
+        let mut op = (self, gradients, Default::default());
         let result = M::iter_tensors(&mut RecursiveWalker {
             m: module,
-            f: self,
+            f: &mut op,
             path: &mut std::vec::Vec::new(),
         });
-        let unused = std::mem::take(&mut self.unused);
         let r = match result {
-            Ok(_) => unused.into(),
+            Ok(_) => op.2.into(),
             Err(e) => Err(OptimizerUpdateError::DeviceError(e)),
         };
-        self.step += 1;
+        op.0.step += 1;
         r
     }
 }
@@ -192,7 +186,7 @@ mod tests {
         let mut opt = RMSprop::new(&t, cfg);
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).square().sum().backward();
-            opt.update(&mut t, gradients).expect("");
+            opt.update(&mut t, &gradients).expect("");
             std::println!("{:?}", t.array());
             assert_close(&t.array(), e);
         }
@@ -335,6 +329,6 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let mut opt = RMSprop::new(&t, Default::default());
-        opt.update(&mut t, Default::default()).expect_err("");
+        opt.update(&mut t, &Default::default()).expect_err("");
     }
 }

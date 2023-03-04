@@ -199,6 +199,6 @@ mod tests {
         let g = out.mean().backward();
 
         let mut opt = Sgd::new(&t, Default::default());
-        opt.update(&mut t, g).expect("");
+        opt.update(&mut t, &g).expect("");
     }
 }

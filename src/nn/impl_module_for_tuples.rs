@@ -144,7 +144,7 @@ mod tests {
                 weight_decay: None,
             },
         );
-        sgd.update(&mut model, g).unwrap();
+        sgd.update(&mut model, &g).unwrap();
 
         assert_ne!(model.0.weight.array(), m0.0.weight.array());
         assert_ne!(model.0.bias.array(), m0.0.bias.array());
