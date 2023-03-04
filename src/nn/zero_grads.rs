@@ -77,12 +77,22 @@ mod tests {
         let dev: TestDevice = Default::default();
         type Model = (Linear<2, 5>, BatchNorm2D<3>);
         let model = dev.build_module::<Model, TestDtype>();
-        let mut grads = Default::default();
+        let mut grads: Gradients<TestDtype, TestDevice> = Default::default();
+
+        let tmp1: Tensor<Rank1<5>, TestDtype, _> = dev.zeros();
+        grads.get_or_alloc_mut(&tmp1).unwrap();
+
+        let tmp2: Tensor<Rank1<5>, TestDtype, _> = dev.zeros();
+        grads.get_or_alloc_mut(&tmp2).unwrap();
+
         model.zero_grads(&mut grads);
         assert_eq!(grads.get(&model.0.weight).array(), [[0.0; 2]; 5]);
         assert_eq!(grads.get(&model.0.bias).array(), [0.0; 5]);
         assert_eq!(grads.get(&model.1.scale).array(), [0.0; 3]);
         assert_eq!(grads.get(&model.1.bias).array(), [0.0; 3]);
-        // assert!(grads.g)
+        assert!(grads.get_ref_checked(&model.1.running_mean).is_none());
+        assert!(grads.get_ref_checked(&model.1.running_var).is_none());
+        assert!(grads.get_ref_checked(&tmp1).is_none());
+        assert!(grads.get_ref_checked(&tmp2).is_none());
     }
 }
