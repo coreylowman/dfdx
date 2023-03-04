@@ -87,7 +87,7 @@ let loss = ...
 
 // run backprop to get the gradients
 let gradients = loss.backward();
-sgd.update(&mut model, gradients);
+sgd.update(&mut model, &gradients);
 ```
 
 3. 💡 Tensors can be converted to and from normal rust arrays
