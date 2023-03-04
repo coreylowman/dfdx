@@ -277,7 +277,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam + Clone> BinaryKernel<K,
             rhs.data.as_ref(), // const TYPENAME *rhs,
             grad_rhs,          // TYPENAME *grad_rhs,
             chunk_len2,        // const size_t chunk_len,
-            grad_out           // const TYPENAME *grad_out
+            grad_out,          // const TYPENAME *grad_out
         );
 
         let cfg = LaunchConfig::for_num_elems(numel as u32);
