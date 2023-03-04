@@ -242,14 +242,6 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam + Clone> BinaryKernel<K,
             rhs.strides,
         );
 
-        std::println!("{:?}", lhs.strides);
-        std::println!("{:?}", rhs.strides);
-        std::println!();
-        std::println!("{:?} {:?}", lhs.shape.concrete(), out_dims1);
-        std::println!("{:?}", out_strides1);
-        std::println!("{:?} {:?}", rhs.strides, rhs_strides1);
-        std::println!("{:?}", self.dev.sync_copy_into_vec(grad_out));
-
         let out_dims1 = self.dev.take_async(out_dims1)?;
         let out_strides1 = self.dev.take_async(out_strides1)?;
         let rhs_strides1 = self.dev.take_async(rhs_strides1)?;
@@ -259,8 +251,6 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + AsKernelParam + Clone> BinaryKernel<K,
 
         let chunk_len1 = numel / physical_numel(lhs.shape.concrete(), lhs.strides);
         let chunk_len2 = numel / physical_numel(rhs.shape.concrete(), rhs.strides);
-
-        std::println!("{:?}", chunk_len1);
 
         let params1 = (
             op.clone(),        // const OP_STRUCT op,
