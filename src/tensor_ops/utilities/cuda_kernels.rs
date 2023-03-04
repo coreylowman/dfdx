@@ -204,6 +204,8 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         })
     }
 
+    // NOTE: if it becomes possible for grad_out to be broadcasted, (i.e. if #366 is resolved), we
+    // need to pass an elems_per_thread argument to the backward cuda kernels, as we do in sum_to.
     fn backward<S: Shape>(
         &self,
         op: K,
@@ -249,7 +251,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         let chunk_len1 = numel / physical_numel(lhs.shape.concrete(), lhs.strides);
         let chunk_len2 = numel / physical_numel(rhs.shape.concrete(), rhs.strides);
 
-        let params1 = (
+        let params_lhs = (
             op.clone(),        // const OP_STRUCT op,
             numel,             // const size_t numel,
             S::NUM_DIMS,       // const size_t num_dims,
@@ -263,7 +265,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
             grad_out,          // const TYPENAME *grad_out
         );
 
-        let params2 = (
+        let params_rhs = (
             op,                // const OP_STRUCT op,
             numel,             // const size_t numel,
             S::NUM_DIMS,       // const size_t num_dims,
@@ -280,8 +282,8 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let stream = self.dev.fork_default_stream()?;
 
-        unsafe { bwd_lhs_fn.launch(cfg, params1) }?;
-        unsafe { bwd_rhs_fn.launch_on_stream(&stream, cfg, params2) }?;
+        unsafe { bwd_lhs_fn.launch(cfg, params_lhs) }?;
+        unsafe { bwd_rhs_fn.launch_on_stream(&stream, cfg, params_rhs) }?;
         Ok(())
     }
 }
