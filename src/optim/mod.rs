@@ -25,7 +25,7 @@
 //! // -- snip loss computation --
 //!
 //! let gradients: Gradients<f32, Cpu> = loss.backward();
-//! opt.update(&mut model, gradients);
+//! opt.update(&mut model, &gradients);
 //! ```
 
 mod adam;

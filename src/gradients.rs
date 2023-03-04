@@ -1,4 +1,4 @@
-//! Implementations of [GradientTape] and generic Nd array containers via [Gradients].
+//! Implementations of [OwnedTape], [NoneTape], and generic Nd array containers via [Gradients].
 #![allow(clippy::type_complexity)]
 
 use std::collections::HashMap;
@@ -200,9 +200,9 @@ type BackwardOp<E, D, Err> = Box<dyn FnOnce(&mut Gradients<E, D>) -> Result<(), 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct NoneTape;
 
-/// Something that can add a gradient operation to [GradientTape].
+/// Something that can track backward operations.
 pub trait Tape<E: Unit, D: DeviceStorage>: Default + Merge<Self> + Merge<NoneTape> {
-    /// Whether this object currently owns the [GradientTape]. This is known at compile time.
+    /// Whether this object is currently tracking gradients. This is known at compile time.
     const OWNS_TAPE: bool;
     fn add_backward_op<F>(&mut self, operation: F)
     where
