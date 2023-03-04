@@ -122,17 +122,16 @@ macro_rules! cuda_binary {
 fn permute_for_binary_backward<I>(
     out_dims: I,
     out_strides: I,
-    arg1_dims: I,
     arg1_strides: I,
     arg2_strides: I,
-) -> ((Vec<usize>, Vec<usize>), (Vec<usize>, Vec<usize>))
+) -> ((Vec<usize>, Vec<usize>), Vec<usize>)
 where
     I: IntoIterator<Item = usize>,
 {
     let mut tmp: Vec<_> = out_dims
         .into_iter()
         .zip(out_strides.into_iter())
-        .zip(arg1_dims.into_iter().zip(arg1_strides.into_iter()))
+        .zip(arg1_strides.into_iter())
         .zip(arg2_strides.into_iter())
         .map(|(x, out_stride)| {
             let ord = if out_stride == 0 {
@@ -226,18 +225,16 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
 
         let numel = lhs.shape.num_elements();
 
-        let ((out_dims1, out_strides1), (_rhs_dims1, rhs_strides1)) = permute_for_binary_backward(
+        let ((out_dims1, out_strides1), rhs_strides1) = permute_for_binary_backward(
             lhs.shape.concrete(),
             lhs.shape.strides(),
-            rhs.shape.concrete(),
             rhs.strides,
             lhs.strides,
         );
 
-        let ((out_dims2, out_strides2), (_lhs_dims2, lhs_strides2)) = permute_for_binary_backward(
+        let ((out_dims2, out_strides2), lhs_strides2) = permute_for_binary_backward(
             lhs.shape.concrete(),
             lhs.shape.strides(),
-            lhs.shape.concrete(),
             lhs.strides,
             rhs.strides,
         );
@@ -281,8 +278,10 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         );
 
         let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let stream = self.dev.fork_default_stream()?;
+
         unsafe { bwd_lhs_fn.launch(cfg, params1) }?;
-        unsafe { bwd_rhs_fn.launch(cfg, params2) }?;
+        unsafe { bwd_rhs_fn.launch_on_stream(&stream, cfg, params2) }?;
         Ok(())
     }
 }
