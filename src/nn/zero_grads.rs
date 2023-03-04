@@ -9,7 +9,7 @@ pub trait ZeroGrads<E: Dtype, D: ZeroFillStorage<E>>: TensorCollection<E, D> {
     /// Zero's any gradients associated with `self`.
     ///
     /// ```rust
-    /// # use dfdx::prelude::*;
+    /// # use dfdx::{prelude::*, gradients::Gradients};
     /// # let dev: Cpu = Default::default();
     /// let model = dev.build_module::<Linear<2, 5>, f32>();
     /// let mut grads: Gradients<f32, _> = Default::default();
