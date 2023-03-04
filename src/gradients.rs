@@ -50,9 +50,12 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
         Ok(())
     }
 
-    /// Removes and returns the data associated with `t.id()`.
-    ///
-    /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
+    /// Drops all gradients except for the ids specified in the parameter.
+    pub fn retain(&mut self, ids: &[UniqueId]) {
+        self.gradient_by_id.retain(|k, _| ids.contains(k));
+    }
+
+    /// Returns a reference to the underlying gradient if found.
     pub(crate) fn get_ref_checked<S: Shape, T>(
         &self,
         t: &Tensor<S, E, D, T>,
