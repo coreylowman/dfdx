@@ -156,8 +156,8 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
 pub struct OwnedTape<E: Unit, D: DeviceStorage> {
     /// A list of (Time, BackwardOp) pairs. The Time is used to ensure operations
     /// from merged tapes are executed in the correct order.
-    operations: Vec<(UniqueId, BackwardOp<E, D, D::Err>)>,
-    gradients: Gradients<E, D>,
+    pub(crate) operations: Vec<(UniqueId, BackwardOp<E, D, D::Err>)>,
+    pub(crate) gradients: Gradients<E, D>,
 }
 
 impl<E: Unit, D: DeviceStorage> Default for OwnedTape<E, D> {
