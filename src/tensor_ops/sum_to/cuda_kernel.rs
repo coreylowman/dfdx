@@ -48,9 +48,10 @@ where
 
         let mut storage = self.dev.alloc_zeros_async::<E>(dst.num_elements())?;
 
-        let elems_per_thread = E::from_usize(reduction_elems_per_thread::<Ax, Src>(
+        let elems_per_thread = E::from_usize(reduction_elems_per_thread::<_, Src>(
             inp.shape.concrete(),
             inp.strides,
+            Ax::as_array(),
         ))
         .unwrap();
 
@@ -93,9 +94,10 @@ where
         let out_strides: CudaSlice<usize> = self.dev.take_async(out_strides.into())?;
 
         let physical_numel = inp.data.len();
-        let elems_per_thread = E::from_usize(reduction_elems_per_thread::<Ax, Src>(
+        let elems_per_thread = E::from_usize(reduction_elems_per_thread::<_, Src>(
             inp.shape.concrete(),
             inp.strides,
+            Ax::as_array(),
         ))
         .unwrap();
 

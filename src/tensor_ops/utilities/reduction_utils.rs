@@ -51,22 +51,24 @@ pub(crate) fn permute_for_reductions<I, Ax: Axes>(dims: I, strides: I) -> (Vec<u
 where
     I: IntoIterator<Item = usize>,
 {
-    let mut tmp = dims
+    let mut tmp: Vec<(bool, (usize, usize))> = dims
         .into_iter()
         .zip(strides.into_iter())
-        .map(|x| (false, x))
-        .collect::<Vec<_>>();
+        .map(|(dims, strides)| (false, (dims, strides)))
+        .collect();
 
     for i in Ax::as_array().into_iter() {
         tmp[i as usize].0 = true;
     }
 
     // requires stable sorting to keep non-summed axes in the correct order
-    tmp.sort_by_key(|x| x.0);
+    tmp.sort_by_key(|(is_summed, (_dim, stride))| {
+        (*is_summed, if *is_summed { -(*stride as isize) } else { 0 })
+    });
 
     tmp.into_iter()
-        .map(|(_, x)| x)
-        .filter(|(_, stride)| *stride != 0)
+        .map(|(_is_summed, x)| x)
+        .filter(|(_dim, stride)| *stride != 0)
         .unzip()
 }
 
@@ -99,12 +101,12 @@ pub(crate) fn reduction_output_strides<Ax: Axes, Src: Shape, Dst: Shape>(
 
 /// Gives the product of all dimensions that are being reduced and are broadcasted.
 #[cfg(feature = "cuda")]
-pub(crate) fn reduction_elems_per_thread<Ax: Axes, S: Shape>(
+pub(crate) fn reduction_elems_per_thread<Ax: IntoIterator<Item = isize>, S: Shape>(
     dims: S::Concrete,
     strides: S::Concrete,
+    axes: Ax,
 ) -> usize {
-    Ax::as_array()
-        .into_iter()
+    axes.into_iter()
         .map(|ax| {
             if strides[ax as usize] == 0 {
                 dims[ax as usize]

@@ -18,13 +18,13 @@ __device__ T op_dfdy(T logit, T prob) {
     return -logit;
 }
 
-BINARY_OP(float, bce_fwd_f32, bce_bwd_f32, BCEKernelOp,
+BINARY_OP(float, bce_fwd_f32, bce_bwd_lhs_f32, bce_bwd_rhs_f32, BCEKernelOp,
     op_f(x, y),
     op_dfdx(x, y),
     op_dfdy(x, y)
 )
 
-BINARY_OP(double, bce_fwd_f64, bce_bwd_f64, BCEKernelOp,
+BINARY_OP(double, bce_fwd_f64, bce_bwd_lhs_f64, bce_bwd_rhs_f64, BCEKernelOp,
     op_f(x, y),
     op_dfdx(x, y),
     op_dfdy(x, y)
