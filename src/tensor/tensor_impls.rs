@@ -70,25 +70,23 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
 }
 
 impl<S: Shape, E: Unit, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
-    /// Clone and put a [OwnedTape] into the tensor
+    /// Start tracking gradients, clones self.
     pub fn trace<F: Unit>(&self) -> Tensor<S, E, D, OwnedTape<F, D>> {
         self.clone().traced()
     }
-    /// Put a [OwnedTape] into the tensor
+    /// Start tracking gradients.
     pub fn traced<F: Unit>(self) -> Tensor<S, E, D, OwnedTape<F, D>> {
         self.put_tape(Default::default())
     }
-    /// Clone and put a [OwnedTape] into the tensor with an existing [Gradients]
-    /// object. Enables gradient accumuluation!
-    pub fn trace_with<F: Unit>(
+    /// Accumulate gradients into `gradients`, clones self.
+    pub fn trace_into<F: Unit>(
         &self,
         gradients: Gradients<F, D>,
     ) -> Tensor<S, E, D, OwnedTape<F, D>> {
-        self.clone().traced_with(gradients)
+        self.clone().traced_into(gradients)
     }
-    /// Put a [OwnedTape] into the tensor with an existing [Gradients] object.
-    /// Enables gradient accumuluation!
-    pub fn traced_with<F: Unit>(
+    /// Accumulate gradients into `gradients`.
+    pub fn traced_into<F: Unit>(
         self,
         gradients: Gradients<F, D>,
     ) -> Tensor<S, E, D, OwnedTape<F, D>> {
