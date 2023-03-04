@@ -3,7 +3,7 @@ use rand::distributions::Distribution;
 use super::storage_traits::{DeviceStorage, HasErr, TensorFromVec};
 use super::{Cpu, OneFillStorage, SampleTensor, ZeroFillStorage};
 use crate::{
-    gradients::{NoneTape, OwnedTape, Tape},
+    gradients::{NoneTape, OwnedTape, Tape, Gradients},
     shapes::*,
     unique_id::{HasUniqueId, UniqueId},
 };
@@ -77,6 +77,25 @@ impl<S: Shape, E: Unit, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
     /// Put a [OwnedTape] into the tensor
     pub fn traced<F: Unit>(self) -> Tensor<S, E, D, OwnedTape<F, D>> {
         self.put_tape(Default::default())
+    }
+    /// Clone and put a [OwnedTape] into the tensor with an existing [Gradients]
+    /// object. Enables gradient accumuluation!
+    pub fn trace_with<F: Unit>(
+        &self,
+        gradients: Gradients<F, D>,
+    ) -> Tensor<S, E, D, OwnedTape<F, D>> {
+        self.clone().traced_with(gradients)
+    }
+    /// Put a [OwnedTape] into the tensor with an existing [Gradients] object.
+    /// Enables gradient accumuluation!
+    pub fn traced_with<F: Unit>(
+        self,
+        gradients: Gradients<F, D>,
+    ) -> Tensor<S, E, D, OwnedTape<F, D>> {
+        self.put_tape(OwnedTape {
+            gradients,
+            operations: std::vec::Vec::new(),
+        })
     }
 }
 
