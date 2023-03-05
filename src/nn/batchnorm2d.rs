@@ -18,10 +18,10 @@ where
 }
 
 /// generic batchnorm forward for training
-pub fn train_fwd<'a, const C: usize, S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>, Ax: Axes>(
+pub fn train_fwd<const C: usize, S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>, Ax: Axes>(
     x: Tensor<S, E, D, T>,
     var: &mut Tensor<Rank1<C>, E, D>,
-    mean: &'a mut Tensor<Rank1<C>, E, D>,
+    mean: &mut Tensor<Rank1<C>, E, D>,
     scale: &Tensor<Rank1<C>, E, D>,
     bias: &Tensor<Rank1<C>, E, D>,
     epsilon: E,
