@@ -117,8 +117,8 @@ macro_rules! cuda_binary {
 }
 
 /// Similar to [permute_for_reductions], but defines the summed axes as the broadcasted axes in
-/// out_strides, and orders non-summed axes so that the output of chunk_sum can be read using
-/// out_strides
+/// arg2_strides, and orders non-summed axes so that the output of chunk_sum can be read correctly
+/// using arg2_strides.
 fn permute_for_binary_backward<I>(
     out_dims: I,
     out_strides: I,
