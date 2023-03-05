@@ -52,8 +52,8 @@ pub trait SaveToNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<E,
     /// - `weight.npy`
     /// - `bias.npy`
     fn write<W>(&self, w: &mut ZipWriter<W>) -> ZipResult<()>
-        where
-            W: Write + Seek,
+    where
+        W: Write + Seek,
     {
         Self::iter_tensors(&mut RecursiveWalker {
             m: self,
@@ -78,8 +78,8 @@ pub trait SaveToNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<E,
     /// - `target.weight.npy`
     /// - `target.bias.npy`
     fn write_base<W>(&self, w: &mut ZipWriter<W>, basename: String) -> ZipResult<()>
-        where
-            W: Write + Seek,
+    where
+        W: Write + Seek,
     {
         Self::iter_tensors(&mut RecursiveWalker {
             m: self,
@@ -123,8 +123,8 @@ pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<
     /// - `weight.npy`
     /// - `bias.npy`
     fn read<R>(&mut self, r: &mut ZipArchive<R>) -> Result<(), NpzError>
-        where
-            R: Read + Seek,
+    where
+        R: Read + Seek,
     {
         Self::iter_tensors(&mut RecursiveWalker {
             m: self,
@@ -146,8 +146,8 @@ pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<
     /// - `target.weight.npy`
     /// - `target.bias.npy`
     fn read_base<R>(&mut self, r: &mut ZipArchive<R>, basename: String) -> Result<(), NpzError>
-        where
-            R: Read + Seek,
+    where
+        R: Read + Seek,
     {
         Self::iter_tensors(&mut RecursiveWalker {
             m: self,
@@ -192,6 +192,8 @@ impl<R: Read + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D>
 
 #[cfg(test)]
 mod tests {
+    use std::{io::{BufReader, BufWriter}, fs::File};
+
     use crate::{
         nn::{builders::*, *},
         shapes::*,
@@ -201,8 +203,8 @@ mod tests {
     };
     use rand_distr::{Distribution, Standard, StandardNormal};
     use tempfile::NamedTempFile;
+    use zip::{ZipArchive, ZipWriter};
 
-    // TODO: Add npz tests here
     fn test_save_load<S: ConstShape, E: Dtype + NumpyDtype, D: Device<E>, M: BuildOnDevice<D, E>>(
         dev: &D,
     ) where
@@ -223,6 +225,45 @@ mod tests {
         saved.save(file.path()).expect("");
         loaded.load(file.path()).expect("");
 
+        assert_eq!(loaded.forward(x).array(), y.array());
+    }
+    
+    fn test_write_read<S: ConstShape, E: Dtype + NumpyDtype, D: Device<E>, M: BuildOnDevice<D, E>>(
+        dev: &D,
+        basename: Option<&str>
+    ) where
+        M::Built: Module<Tensor<S, E, D>> + SaveToNpz<E, D> + LoadFromNpz<E, D>,
+        <M::Built as Module<Tensor<S, E, D>>>::Output: AsArray,
+        StandardNormal: Distribution<E>,
+    {
+        let x = dev.sample_normal();
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+        
+
+        let saved: M::Built = M::build_on_device(dev);
+        let mut loaded: M::Built = M::build_on_device(dev);
+        
+        let y = saved.forward(x.clone());
+        
+        assert_ne!(loaded.forward(x.clone()).array(), y.array());
+        
+        let mut zip_writer = ZipWriter::new(BufWriter::new(
+        File::create(file.path()).expect("")));
+        if let Some(base) = basename {
+            saved.write_base(&mut zip_writer, base.into()).expect("");
+        } else {
+            saved.write(&mut zip_writer).expect("");
+        }
+        zip_writer.finish().expect("");
+        
+        let mut zip_reader = ZipArchive::new(BufReader::new(
+            File::open(file.path()).expect(""))).expect("failed to create zip reader");
+        if let Some(base) = basename {
+            loaded.read_base(&mut zip_reader, base.into()).expect("");
+        } else {
+            loaded.read(&mut zip_reader).expect("");            
+        }
+        
         assert_eq!(loaded.forward(x).array(), y.array());
     }
 
@@ -257,6 +298,8 @@ mod tests {
         type T = Conv2D<2, 4, 3>;
         let dev: TestDevice = Default::default();
         test_save_load::<Rank3<2, 8, 8>, TestDtype, TestDevice, T>(&dev);
+        test_write_read::<Rank3<2, 8, 8>, TestDtype, TestDevice, T>(&dev, None);
+        test_write_read::<Rank3<2, 8, 8>, TestDtype, TestDevice, T>(&dev, Some("root"));
     }
 
     #[test]
@@ -265,6 +308,8 @@ mod tests {
         type T = GeneralizedResidual<Linear<5, 5>, Linear<5, 5>>;
         test_save_load::<Rank1<5>, TestDtype, TestDevice, T>(&dev);
         test_save_load::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev);
+        test_write_read::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev, None);
+        test_write_read::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev, Some("root"));
     }
 
     #[test]
@@ -273,6 +318,8 @@ mod tests {
         type T = Linear<5, 5>;
         test_save_load::<Rank1<5>, TestDtype, TestDevice, T>(&dev);
         test_save_load::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev);
+        test_write_read::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev, None);
+        test_write_read::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev, Some("root"));
     }
 
     #[test]
@@ -283,6 +330,8 @@ mod tests {
             (Dropout, Linear<3, 3>, Linear<3, 4>),
         );
         test_save_load::<Rank1<1>, TestDtype, TestDevice, T>(&dev);
+        test_write_read::<Rank1<1>, TestDtype, TestDevice, T,>(&dev, None);
+        test_write_read::<Rank1<1>, TestDtype, TestDevice, T>(&dev, Some("root"));
     }
 
     #[test]
@@ -314,6 +363,8 @@ mod tests {
         let dev: TestDevice = Default::default();
         test_save_load::<Rank1<3>, TestDtype, TestDevice, T>(&dev);
         test_save_load::<Rank1<3>, TestDtype, TestDevice, (T, T)>(&dev);
+        test_write_read::<Rank1<3>, TestDtype, TestDevice, (T, T)>(&dev, None);
+        test_write_read::<Rank1<3>, TestDtype, TestDevice, (T, T)>(&dev, Some("root"));
     }
 
     #[test]
@@ -322,6 +373,8 @@ mod tests {
         let dev: TestDevice = Default::default();
         test_save_load::<Rank1<5>, TestDtype, TestDevice, T>(&dev);
         test_save_load::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev);
+        test_write_read::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev, None);
+        test_write_read::<Rank1<5>, TestDtype, TestDevice, (T, T)>(&dev, Some("root"));
     }
 
     #[cfg(feature = "nightly")]
