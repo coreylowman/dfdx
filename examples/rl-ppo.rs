@@ -77,7 +77,7 @@ fn main() {
             let gradients = ppo_loss.backward();
 
             // update weights with optimizer
-            sgd.update(&mut pi_net, gradients).expect("Unused params");
+            sgd.update(&mut pi_net, &gradients).expect("Unused params");
         }
         target_pi_net.clone_from(&pi_net);
 

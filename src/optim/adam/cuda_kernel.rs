@@ -54,7 +54,7 @@ where
         param: &mut Self::Vec<E>,
         moment1: &mut Self::Vec<E>,
         moment2: &mut Self::Vec<E>,
-        grad: Self::Vec<E>,
+        grad: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FWD) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, &[Self::FWD])?;
@@ -65,7 +65,7 @@ where
         let func = self.dev.get_func(Self::MOD, Self::FWD).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let t = <E>::from_i32(t).unwrap();
-        let params = (opt_cfg, numel, t, param, moment1, moment2, &grad);
+        let params = (opt_cfg, numel, t, param, moment1, moment2, grad);
         unsafe { func.launch(cfg, params) }?;
         Ok(())
     }

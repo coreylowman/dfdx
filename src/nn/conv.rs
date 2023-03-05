@@ -212,7 +212,7 @@ mod tests {
 
         assert_ne!(g.get(&m.weight).array(), [[[[0.0; 3]; 3]; 2]; 4]);
 
-        opt.update(&mut m, g).expect("unused params");
+        opt.update(&mut m, &g).expect("unused params");
 
         assert_ne!(weight_init.array(), m.weight.array());
     }

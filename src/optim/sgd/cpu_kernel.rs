@@ -12,7 +12,7 @@ impl<E: Dtype> SgdKernel<E> for Cpu {
         cfg: &SgdConfig<E>,
         param: &mut Self::Vec<E>,
         velocity: &mut Self::Vec<E>,
-        grad: Self::Vec<E>,
+        grad: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         for ((p, mut g), v) in param
             .iter_mut()
