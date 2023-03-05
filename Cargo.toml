@@ -33,7 +33,7 @@ cblas-sys = { version = "0.1.4", default-features = false, optional = true }
 libc = { version = "0.2", default-features = false, optional = true }
 cudarc = { version = "0.8.0", default-features = false, optional = true }
 num-traits = { version = "0.2.15", default-features = false }
-safetensors = { version = "0.2", default-features = false, optional = true }
+safetensors = { version = "0.3", default-features = false, optional = true }
 
 [dev-dependencies]
 tempfile = "3.3.0"
