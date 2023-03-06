@@ -317,14 +317,17 @@ mod tests {
         saved.running_var.fill_with_distr(Standard);
         saved.scale.fill_with_distr(Standard);
         saved.bias.fill_with_distr(Standard);
+        saved.epsilon.fill_with_distr(Standard);
         let y = saved.forward(x.clone());
 
         assert_ne!(loaded.forward(x.clone()).array(), y.array());
+        assert_ne!(saved.epsilon.array(), loaded.epsilon.array());
 
         saved.save(file.path()).expect("");
         loaded.load(file.path()).expect("");
 
         assert_eq!(loaded.forward(x).array(), y.array());
+        assert_eq!(saved.epsilon.array(), loaded.epsilon.array());
     }
 
     #[cfg(feature = "nightly")]

@@ -62,11 +62,11 @@ pub struct BatchNorm2D<const C: usize, E: Dtype, D: DeviceStorage> {
     /// Spatial variance that is updated during training. Defaults to 1.0
     pub running_var: Tensor<Rank1<C>, E, D>,
     /// Added to variance before taking sqrt for numerical stability. Defaults to 1e-5
-    pub epsilon: E,
+    pub epsilon: Tensor<Rank0, E, D>,
     /// Controls exponential moving average of running stats.Defaults to 0.1
     ///
     /// `running_stat * (1.0 - momentum) + stat * momentum`.
-    pub momentum: E,
+    pub momentum: Tensor<Rank0, E, D>,
 }
 
 impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
@@ -78,7 +78,7 @@ impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
         let shape = *x.shape();
 
         // statistics for normalizing
-        let std = (self.running_var.clone() + self.epsilon).try_sqrt()?;
+        let std = (self.running_var.clone() + self.epsilon.clone().broadcast()).try_sqrt()?;
         let mean = self.running_mean.clone();
 
         // normalize & affine
@@ -105,8 +105,8 @@ impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
         self.running_mean = self
             .running_mean
             .clone()
-            .try_mul(E::ONE - self.momentum)?
-            .try_add(mean_chan.retaped::<NoneTape>().try_mul(self.momentum)?)?;
+            .try_mul((-self.momentum.clone() + E::ONE).broadcast())?
+            .try_add(mean_chan.retaped::<NoneTape>().try_mul(self.momentum.clone().broadcast())?)?;
 
         let centered = x - mean_chan.try_broadcast_like(&shape)?;
 
@@ -116,15 +116,15 @@ impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
         self.running_var = self
             .running_var
             .clone()
-            .try_mul(E::ONE - self.momentum)?
+            .try_mul((-self.momentum.clone() + E::ONE).broadcast())?
             .try_add(
                 var_chan
                     .retaped::<NoneTape>()
-                    .try_mul(self.momentum * n / (n - E::ONE))?,
+                    .try_mul((self.momentum.clone() * n / (n - E::ONE)).broadcast())?,
             )?;
 
         // statistics for normalizing - on tape
-        let std = (var_chan + self.epsilon).try_sqrt()?;
+        let std = (var_chan + self.epsilon.clone().broadcast()).try_sqrt()?;
 
         // record broadcast of scale & bias - on tape
         let scale = (self.scale.retaped::<T>() / std).try_broadcast_like(&shape)?;
@@ -202,8 +202,8 @@ impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for BatchNorm2D<C
             bias: device.try_zeros()?,
             running_mean: device.try_zeros()?,
             running_var: device.try_ones()?,
-            epsilon: E::from_f32(1e-5).unwrap(),
-            momentum: E::from_f32(0.1).unwrap(),
+            epsilon: device.tensor(E::from_f32(1e-5).unwrap()),
+            momentum: device.tensor(E::from_f32(0.1).unwrap()),
         })
     }
 }
@@ -233,6 +233,18 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNor
             |s| &s.running_var,
             |s| &mut s.running_var,
             TensorOptions::detached(|t| t.try_fill_with_ones()),
+        )?;
+        visitor.visit_tensor(
+            "epsilon",
+            |s| &s.epsilon,
+            |s| &mut s.epsilon,
+            TensorOptions::detached(|_| Ok(())),
+        )?;
+        visitor.visit_tensor(
+            "momentum",
+            |s| &s.momentum,
+            |s| &mut s.momentum,
+            TensorOptions::detached(|_| Ok(())),
         )
     }
 }
@@ -247,8 +259,8 @@ impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
             bias: self.bias.to_device(device),
             running_mean: self.running_mean.to_device(device),
             running_var: self.running_var.to_device(device),
-            epsilon: self.epsilon,
-            momentum: self.momentum,
+            epsilon: self.epsilon.to_device(device),
+            momentum: self.momentum.to_device(device),
         }
     }
 }
