@@ -49,6 +49,7 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> TensorCollection<E, D> for Tensor<S, 
             |s| s,
             TensorOptions {
                 do_gradient_update: true,
+                savable: true,
                 reset: |_| Ok(()),
             },
         )
@@ -60,46 +61,62 @@ impl<S: Shape, E: Dtype, D: DeviceStorage> TensorCollection<E, D> for Tensor<S, 
 pub struct TensorOptions<S: Shape, E: Dtype, D: DeviceStorage> {
     /// Whether the tensor should be updated with gradients
     pub do_gradient_update: bool,
+    
+    /// Whether the tensor should be stored to and restorable from files
+    pub savable: bool,
 
     /// How to reset the tensor in the future.
     pub reset: fn(&'_ mut Tensor<S, E, D>) -> Result<(), D::Err>,
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage> TensorOptions<S, E, D> {
-    /// A tensor that should be updated with gradients & reset to 0
+    /// A tensor that should be updated with gradients, is savable and reset to 0
     pub fn reset_to_zeros() -> Self
     where
         D: ZeroFillStorage<E>,
     {
         TensorOptions {
             do_gradient_update: true,
+            savable: true,
             reset: |t| t.try_fill_with_zeros(),
         }
     }
 
-    /// A tensor that should be updated with gradients & reset to 1
+    /// A tensor that should be updated with gradients, is saveable and reset to 1
     pub fn reset_to_ones() -> Self
     where
         D: OneFillStorage<E>,
     {
         TensorOptions {
             do_gradient_update: true,
+            savable: true,
             reset: |t| t.try_fill_with_ones(),
         }
     }
 
-    /// A tensor that should be updated with gradients & reset with the fn passed in
+    /// A tensor that should be updated with gradients, is savable and reset with the fn passed in
     pub fn reset_with(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self {
         TensorOptions {
             do_gradient_update: true,
+            savable: true,
             reset,
         }
     }
 
-    /// A tensor that should **NOT** be updated with gradients & reset with the fn passed in
+    /// A tensor that should **NOT** be updated with gradients, but is savable and reset with the fn passed in
     pub fn detached(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self {
         TensorOptions {
             do_gradient_update: false,
+            savable: true,
+            reset,
+        }
+    }
+    
+    /// A tensor that should be updated with gradients, is reset with the fn passed in, but is **NOT** saved into files
+    pub fn unsaved(gradient_update: bool, reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self {
+        TensorOptions {
+            do_gradient_update: gradient_update,
+            savable: false,
             reset,
         }
     }

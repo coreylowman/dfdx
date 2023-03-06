@@ -167,9 +167,13 @@ impl<W: Write + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D
     fn visit<S: Shape>(
         &mut self,
         full_path: String,
-        _: TensorOptions<S, E, D>,
+        options: TensorOptions<S, E, D>,
         t: &Tensor<S, E, D>,
     ) -> Result<(), Self::Err> {
+        if !options.savable {
+            return Ok(())
+        }
+        
         t.write_path(self, full_path)
     }
 }
@@ -183,9 +187,13 @@ impl<R: Read + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D>
     fn visit<S: Shape>(
         &mut self,
         full_path: String,
-        _: TensorOptions<S, E, D>,
+        options: TensorOptions<S, E, D>,
         t: &mut Tensor<S, E, D>,
     ) -> Result<(), Self::Err> {
+        if !options.savable {
+            return Ok(())
+        }
+        
         t.read_path(self, full_path)
     }
 }
@@ -195,16 +203,43 @@ mod tests {
     use std::{io::{BufReader, BufWriter}, fs::File};
 
     use crate::{
-        nn::{builders::*, *},
+        nn::{builders::*, *, tensor_collection::{TensorCollection, ModuleVisitor, TensorOptions}},
         shapes::*,
         tensor::{numpy::NumpyDtype, AsArray, SampleTensor, Tensor},
-        tensor_ops::Device,
-        tests::{TestDevice, TestDtype},
+        tensor_ops::{Device, TryMatMul},
+        tests::{TestDevice, TestDtype}, prelude::ZerosTensor,
     };
-    use rand_distr::{Distribution, Standard, StandardNormal};
+    use rand_distr::{Distribution, Standard, StandardNormal, Uniform};
     use tempfile::NamedTempFile;
     use zip::{ZipArchive, ZipWriter};
 
+    struct PartialModule {
+        saved: Tensor<Rank2<5, 4>, TestDtype, TestDevice>,
+        volatile: Tensor<Rank2<5, 4>, TestDtype, TestDevice>,
+    }
+    
+    impl TensorCollection<TestDtype, TestDevice> for PartialModule
+    {
+        fn iter_tensors<V: ModuleVisitor<Self, TestDtype, TestDevice>>(visitor: &mut V) -> Result<(), V::Err> {
+            visitor.visit_tensor(
+                "in_file",
+                |s| &s.saved,
+                |s| &mut s.saved,
+                TensorOptions::detached(|t| {
+                    t.try_fill_with_distr(Uniform::new(-TestDtype::ONE, TestDtype::ONE))
+                }),
+            )?;
+            visitor.visit_tensor(
+                "not_file",
+                |s| &s.volatile,
+                |s| &mut s.volatile,
+                TensorOptions::unsaved(false, |t| {
+                    t.try_fill_with_distr(Uniform::new(-TestDtype::ONE, TestDtype::ONE))
+                }),
+            )
+        }
+    }
+    
     fn test_save_load<S: ConstShape, E: Dtype + NumpyDtype, D: Device<E>, M: BuildOnDevice<D, E>>(
         dev: &D,
     ) where
@@ -428,5 +463,37 @@ mod tests {
 
         let y2 = loaded.forward_mut((src.clone(), tgt.clone()));
         assert_eq!(y1.array(), y2.array());
+    }
+    
+    #[test]
+    fn test_not_saved_tensor() {
+        let dev: TestDevice = Default::default();
+        
+        let mut initial_model = PartialModule {
+            saved: dev.zeros(),
+            volatile: dev.zeros()  
+        };
+        
+        let mut restored_model = PartialModule {
+            saved: dev.zeros(),
+            volatile: dev.zeros()  
+        };
+        
+        assert_eq!(restored_model.saved.array(), initial_model.saved.array());
+        assert_eq!(restored_model.volatile.array(), initial_model.volatile.array());
+        
+        initial_model.reset_params();
+        restored_model.reset_params();
+        
+        let file = NamedTempFile::new().expect("failed to create tempfile");
+        initial_model.save(file.path()).expect("");
+        
+        assert_ne!(restored_model.saved.array(), initial_model.saved.array());
+        assert_ne!(restored_model.volatile.array(), initial_model.volatile.array());
+        
+        restored_model.load(file.path()).expect("");
+        
+        assert_eq!(restored_model.saved.array(), initial_model.saved.array());
+        assert_ne!(restored_model.volatile.array(), initial_model.volatile.array());
     }
 }
