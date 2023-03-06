@@ -1,24 +1,4 @@
-mod cpu_kernel;
-
-#[cfg(feature = "cuda")]
-mod cuda_kernel;
-
 use crate::{gradients::Tape, shapes::*, tensor::*};
-
-pub trait BroadcastKernel<E: Dtype>: DeviceStorage {
-    fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
-        &self,
-        dst: Dst,
-        inp: &Tensor<Src, E, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
-    where
-        Src: BroadcastShapeTo<Dst, Ax>;
-    fn backward(
-        &self,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>;
-}
 
 /// Broadcast self into a new shape.
 pub trait BroadcastTo: HasErr + HasShape {
@@ -63,7 +43,7 @@ pub trait BroadcastTo: HasErr + HasShape {
         Self::Shape: BroadcastShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: BroadcastKernel<E>, T: Tape<E, D>> BroadcastTo for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<E, D>> BroadcastTo for Tensor<S, E, D, T> {
     fn try_broadcast_like<Dst: Shape, Ax: Axes>(
         self,
         dst: &Dst,
@@ -71,17 +51,16 @@ impl<S: Shape, E: Dtype, D: BroadcastKernel<E>, T: Tape<E, D>> BroadcastTo for T
     where
         Self::Shape: BroadcastShapeTo<Dst, Ax>,
     {
-        let (inp, mut tape) = self.split_tape();
-        inp.shape().check(dst);
-        let out = inp.device.forward(*dst, &inp)?;
-        let phantom_out = out.clone();
-        tape.try_alloc_grad(&inp)?;
-        tape.try_alloc_grad(&out)?;
-        tape.add_backward_op(move |grads| {
-            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward(grad_inp, grad_out)
-        });
-        Ok(out.put_tape(tape))
+        self.shape().check(dst);
+
+        Ok(Tensor {
+            id: self.id,
+            data: self.data,
+            shape: *dst,
+            strides: self.shape.broadcast_strides(self.strides),
+            device: self.device,
+            tape: self.tape,
+        })
     }
 }
 
