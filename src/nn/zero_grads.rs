@@ -6,6 +6,29 @@ use std::{string::String, vec::Vec};
 
 /// Zero's any gradients associated with `self`.
 pub trait ZeroGrads<E: Dtype, D: ZeroFillStorage<E>>: TensorCollection<E, D> {
+    /// Allocates gradients for this tensor collection. **This marks all other
+    /// gradients as temporary, so they are dropped after .backward()**
+    fn alloc_grads(&self) -> Gradients<E, D> {
+        self.try_alloc_grads().unwrap()
+    }
+
+    /// Allocates gradients for this tensor collection. **This marks all other
+    /// gradients as temporary, so they are dropped after .backward()**
+    fn try_alloc_grads(&self) -> Result<Gradients<E, D>, D::Err> {
+        let mut grads = Default::default();
+        let mut op = ZeroGradOp {
+            updated: Vec::new(),
+            gradients: &mut grads,
+        };
+        Self::iter_tensors(&mut RecursiveWalker {
+            m: self,
+            f: &mut op,
+            path: &mut Vec::new(),
+        })?;
+        op.gradients.retain(&op.updated);
+        Ok(grads)
+    }
+
     /// Zero's any gradients associated with `self`.
     ///
     /// ```rust

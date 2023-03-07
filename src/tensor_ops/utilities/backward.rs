@@ -18,6 +18,8 @@ impl<E: Dtype, D: OneFillStorage<E>> Backward<E, D> for Tensor<Rank0, E, D, Owne
     fn try_backward(self) -> Result<Gradients<E, D>, Self::Err> {
         let (t, mut tape) = self.split_tape();
         tape.add_backward_op(move |grads| t.device.try_fill_with_ones(grads.get_mut(&t)));
-        tape.execute()
+        let mut grads = tape.execute()?;
+        grads.drop_temporaries();
+        Ok(grads)
     }
 }
