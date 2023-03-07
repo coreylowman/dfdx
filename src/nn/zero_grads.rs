@@ -5,6 +5,14 @@ use crate::{gradients::Gradients, shapes::*, tensor::*, unique_id::UniqueId};
 use std::{string::String, vec::Vec};
 
 /// Zero's any gradients associated with `self`.
+///
+/// ```rust
+/// # use dfdx::{prelude::*, gradients::Gradients};
+/// # let dev: Cpu = Default::default();
+/// let model = dev.build_module::<Linear<2, 5>, f32>();
+/// let mut grads: Gradients<f32, _> = model.alloc_grads();
+/// model.zero_grads(&mut grads);
+/// ```
 pub trait ZeroGrads<E: Dtype, D: ZeroFillStorage<E>>: TensorCollection<E, D> {
     /// Allocates gradients for this tensor collection. **This marks all other
     /// gradients as temporary, so they are dropped after .backward()**
@@ -16,28 +24,11 @@ pub trait ZeroGrads<E: Dtype, D: ZeroFillStorage<E>>: TensorCollection<E, D> {
     /// gradients as temporary, so they are dropped after .backward()**
     fn try_alloc_grads(&self) -> Result<Gradients<E, D>, D::Err> {
         let mut grads = Default::default();
-        let mut op = ZeroGradOp {
-            updated: Vec::new(),
-            gradients: &mut grads,
-        };
-        Self::iter_tensors(&mut RecursiveWalker {
-            m: self,
-            f: &mut op,
-            path: &mut Vec::new(),
-        })?;
-        op.gradients.retain(&op.updated);
+        self.try_zero_grads(&mut grads)?;
         Ok(grads)
     }
 
     /// Zero's any gradients associated with `self`.
-    ///
-    /// ```rust
-    /// # use dfdx::{prelude::*, gradients::Gradients};
-    /// # let dev: Cpu = Default::default();
-    /// let model = dev.build_module::<Linear<2, 5>, f32>();
-    /// let mut grads: Gradients<f32, _> = Default::default();
-    /// model.zero_grads(&mut grads);
-    /// ```
     fn zero_grads(&self, gradients: &mut Gradients<E, D>) {
         self.try_zero_grads(gradients).unwrap();
     }
