@@ -37,23 +37,14 @@ where
     let mean_chan = x.retaped::<T>().try_mean::<Rank1<C>, _>()?;
 
     // update statistics since we are training - off tape
-    let temp_mean = &mut mean
-        .clone()
-        .try_mul(E::ONE - momentum)?
-        .try_add(mean_chan.retaped::<NoneTape>().try_mul(momentum)?)?;
-    mean.data = temp_mean.data.clone();
+    mean.try_axpy(E::ONE - momentum, &mean_chan, momentum)?;
 
     let centered = x - mean_chan.try_broadcast_like(&shape)?;
 
     let var_chan = centered.retaped::<T>().square().mean::<Rank1<C>, _>();
 
     // NOTE: uses unbiased variance in running estimate
-    let temp_var = &mut var.clone().try_mul(E::ONE - momentum)?.try_add(
-        var_chan
-            .retaped::<NoneTape>()
-            .try_mul(momentum * n / (n - E::ONE))?,
-    )?;
-    var.data = temp_var.data.clone();
+    var.try_axpy(E::ONE - momentum, &var_chan, momentum * n / (n - E::ONE))?;
 
     // statistics for normalizing - on tape
     let std = (var_chan + epsilon).try_sqrt()?;
