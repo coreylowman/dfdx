@@ -96,9 +96,10 @@ where
         let out_strides: CudaSlice<usize> = self.dev.htod_copy(out_strides.into())?;
 
         let physical_numel = grad_inp.len();
-        let elems_per_thread = E::from_usize(reduction_elems_per_thread::<Ax, Src>(
+        let elems_per_thread = E::from_usize(reduction_elems_per_thread::<_, Src>(
             inp.shape.concrete(),
             inp.strides,
+            Ax::as_array(),
         ))
         .unwrap();
 
