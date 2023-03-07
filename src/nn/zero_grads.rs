@@ -23,7 +23,8 @@ pub trait ZeroGrads<E: Dtype, D: ZeroFillStorage<E>>: TensorCollection<E, D> {
     /// Allocates gradients for this tensor collection. **This marks all other
     /// gradients as temporary, so they are dropped after .backward()**
     fn try_alloc_grads(&self) -> Result<Gradients<E, D>, D::Err> {
-        let mut grads = Default::default();
+        // NOTE: try_zero_grads will add the leafs!
+        let mut grads = Gradients::without_leafs();
         self.try_zero_grads(&mut grads)?;
         Ok(grads)
     }
@@ -91,7 +92,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         type Model = (Linear<2, 5>, BatchNorm2D<3>);
         let model = dev.build_module::<Model, TestDtype>();
-        let mut grads: Gradients<TestDtype, TestDevice> = Default::default();
+        let mut grads: Gradients<TestDtype, TestDevice> = model.alloc_grads();
 
         let tmp1: Tensor<Rank1<5>, TestDtype, _> = dev.zeros();
         grads.get_or_alloc_mut(&tmp1).unwrap();
