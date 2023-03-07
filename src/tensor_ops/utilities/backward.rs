@@ -19,7 +19,7 @@ impl<E: Dtype, D: OneFillStorage<E>> Backward<E, D> for Tensor<Rank0, E, D, Owne
         let (t, mut tape) = self.split_tape();
         tape.add_backward_op(move |grads| t.device.try_fill_with_ones(grads.get_mut(&t)));
         let mut grads = tape.execute()?;
-        grads.drop_temporaries();
+        grads.drop_non_leafs();
         Ok(grads)
     }
 }

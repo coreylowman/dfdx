@@ -53,16 +53,16 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     }
 
     /// Drops all gradients except for the ids specified in the parameter.
-    pub fn retain(&mut self, ids: &[UniqueId]) {
+    pub fn retain_leafs(&mut self, ids: &[UniqueId]) {
         self.leaf_tensors
             .get_or_insert_with(Default::default)
             .extend(ids);
-        self.drop_temporaries();
+        self.drop_non_leafs();
     }
 
     /// Keeps all gradients marked previously by [Gradients::retain], and drops all
     /// others.
-    pub fn drop_temporaries(&mut self) {
+    pub fn drop_non_leafs(&mut self) {
         if let Some(leafs) = &self.leaf_tensors {
             self.gradient_by_id.retain(|k, _| leafs.contains(k));
         }

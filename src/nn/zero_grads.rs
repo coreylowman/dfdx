@@ -44,7 +44,7 @@ pub trait ZeroGrads<E: Dtype, D: ZeroFillStorage<E>>: TensorCollection<E, D> {
             f: &mut op,
             path: &mut Vec::new(),
         })?;
-        op.gradients.retain(&op.updated);
+        op.gradients.retain_leafs(&op.updated);
         Ok(())
     }
 }
