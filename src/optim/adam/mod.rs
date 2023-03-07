@@ -115,7 +115,7 @@ impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D>
 
     fn visit<S: Shape>(
         &mut self,
-        _: alloc::string::String,
+        _: std::string::String,
         opts: TensorOptions<S, E, D>,
         p: &mut crate::prelude::Tensor<S, E, D>,
     ) -> Result<(), <D>::Err> {

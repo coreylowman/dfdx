@@ -1,9 +1,9 @@
 use crate::shapes::*;
 use crate::tensor::{Cpu, Tensor, ZerosTensor};
 
-use alloc::sync::Arc;
 #[cfg(not(feature = "cblas"))]
 use matrixmultiply::{dgemm, sgemm};
+use std::sync::Arc;
 
 #[cfg(feature = "cblas")]
 use cblas_sys::{
