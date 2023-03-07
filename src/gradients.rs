@@ -1,7 +1,7 @@
 //! Implementations of [OwnedTape], [NoneTape], and generic Nd array containers via [Gradients].
 #![allow(clippy::type_complexity)]
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::{boxed::Box, vec::Vec};
 
 use crate::shapes::{Shape, Unit};
@@ -22,14 +22,14 @@ use crate::unique_id::{unique_id, UniqueId};
 #[derive(Clone, Debug)]
 pub struct Gradients<E: Unit, D: DeviceStorage> {
     gradient_by_id: HashMap<UniqueId, D::Vec<E>>,
-    non_temporary: Vec<UniqueId>,
+    leaf_tensors: Option<HashSet<UniqueId>>,
 }
 
 impl<E: Unit, D: DeviceStorage> Default for Gradients<E, D> {
     fn default() -> Self {
         Self {
             gradient_by_id: Default::default(),
-            non_temporary: Default::default(),
+            leaf_tensors: None,
         }
     }
 }
@@ -54,15 +54,18 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
 
     /// Drops all gradients except for the ids specified in the parameter.
     pub fn retain(&mut self, ids: &[UniqueId]) {
-        self.non_temporary.extend(ids);
+        self.leaf_tensors
+            .get_or_insert_with(Default::default)
+            .extend(ids);
         self.drop_temporaries();
     }
 
     /// Keeps all gradients marked previously by [Gradients::retain], and drops all
     /// others.
     pub fn drop_temporaries(&mut self) {
-        self.gradient_by_id
-            .retain(|k, _| self.non_temporary.contains(k));
+        if let Some(leafs) = &self.leaf_tensors {
+            self.gradient_by_id.retain(|k, _| leafs.contains(k));
+        }
     }
 
     /// Returns a reference to the underlying gradient if found.
