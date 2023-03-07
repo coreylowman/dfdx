@@ -280,6 +280,12 @@ impl<E: Unit, D: DeviceStorage> Merge<OwnedTape<E, D>> for OwnedTape<E, D> {
         self.gradients
             .gradient_by_id
             .extend(other.gradients.gradient_by_id.drain());
+        if let Some(leafs) = other.gradients.leaf_ids {
+            self.gradients
+                .leaf_ids
+                .get_or_insert_with(Default::default)
+                .extend(leafs);
+        }
         self.operations.append(&mut other.operations);
         self
     }
