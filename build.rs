@@ -1,18 +1,26 @@
-use rustc_version::{version_meta, Channel};
-
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
 
     // If on nightly, enable "nightly" feature
-    if version_meta().unwrap().channel == Channel::Nightly {
-        println!("cargo:rustc-cfg=feature=\"nightly\"");
-    }
+    maybe_enable_nightly();
 
     #[cfg(feature = "cuda")]
     cuda::build_ptx();
 
     #[cfg(feature = "intel-mkl")]
     intel_mkl::link().unwrap();
+}
+
+fn maybe_enable_nightly() {
+    let cmd = std::env::var_os("RUSTC").unwrap_or_else(|| std::ffi::OsString::from("rustc"));
+    let out = std::process::Command::new(cmd).arg("-vV").output().unwrap();
+    assert!(out.status.success());
+    if std::str::from_utf8(&out.stdout)
+        .unwrap()
+        .contains("nightly")
+    {
+        println!("cargo:rustc-cfg=feature=\"nightly\"");
+    }
 }
 
 #[cfg(feature = "cuda")]

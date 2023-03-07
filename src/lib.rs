@@ -97,12 +97,8 @@
 //! opt.update(&mut model, &gradients);
 //! ```
 
-#![no_std]
 #![allow(incomplete_features)]
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
-
-extern crate alloc;
-extern crate no_std_compat as std;
 
 pub mod data;
 pub mod feature_flags;

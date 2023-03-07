@@ -124,7 +124,7 @@ impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D>
 
     fn visit<S: Shape>(
         &mut self,
-        _: alloc::string::String,
+        _: std::string::String,
         opts: TensorOptions<S, E, D>,
         p: &mut Tensor<S, E, D>,
     ) -> Result<(), <D>::Err> {
