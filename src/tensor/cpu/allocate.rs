@@ -23,12 +23,12 @@ impl Cpu {
         numel: usize,
         elem: E,
     ) -> Result<Vec<E>, CpuError> {
-        #[cfg(feature = "fast_alloc")]
+        #[cfg(feature = "fast-alloc")]
         {
             Ok(std::vec![elem; numel])
         }
 
-        #[cfg(not(feature = "fast_alloc"))]
+        #[cfg(not(feature = "fast-alloc"))]
         {
             let mut data: Vec<E> = Vec::new();
             data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;

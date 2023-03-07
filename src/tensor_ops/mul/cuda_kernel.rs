@@ -10,5 +10,19 @@ const BINARY_PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/binary_mul.ptx"
 
 cuda_unary!(Scalar<f32>, f32, SCALAR_PTX, "smul_fwd_f32", "smul_bwd_f32");
 cuda_unary!(Scalar<f64>, f64, SCALAR_PTX, "smul_fwd_f64", "smul_bwd_f64");
-cuda_binary!(Binary, f32, BINARY_PTX, "bmul_fwd_f32", "bmul_bwd_f32");
-cuda_binary!(Binary, f64, BINARY_PTX, "bmul_fwd_f64", "bmul_bwd_f64");
+cuda_binary!(
+    Binary,
+    f32,
+    BINARY_PTX,
+    "bmul_fwd_f32",
+    "bmul_bwd_lhs_f32",
+    "bmul_bwd_rhs_f32"
+);
+cuda_binary!(
+    Binary,
+    f64,
+    BINARY_PTX,
+    "bmul_fwd_f64",
+    "bmul_bwd_lhs_f64",
+    "bmul_bwd_rhs_f64"
+);
