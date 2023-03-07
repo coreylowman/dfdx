@@ -81,8 +81,9 @@ fn main() {
     let dev: Dev = Default::default();
     let mut rng = StdRng::seed_from_u64(0);
 
-    // initialize model and optimizer
+    // initialize model, gradients, and optimizer
     let mut model = dev.build_module::<Mlp, f32>();
+    let mut grads = model.alloc_grads();
     let mut opt = Adam::new(&model, Default::default());
 
     // initialize dataset
@@ -102,14 +103,15 @@ fn main() {
             let img = dev.stack(img.map(|x| dev.tensor((x, (Const::<784>,)))));
             let lbl = dev.one_hot_encode(Const::<10>, lbl);
 
-            let logits = model.forward_mut(img.traced());
+            let logits = model.forward_mut(img.traced_into(grads));
             let loss = cross_entropy_with_logits_loss(logits, lbl);
 
             total_epoch_loss += loss.array();
             num_batches += 1;
 
-            let gradients = loss.backward();
-            opt.update(&mut model, &gradients).unwrap();
+            grads = loss.backward();
+            opt.update(&mut model, &grads).unwrap();
+            model.zero_grads(&mut grads);
         }
         let dur = Instant::now() - start;
 
