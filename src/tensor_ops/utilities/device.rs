@@ -20,11 +20,9 @@ pub trait Device<E: Dtype>:
     + crate::tensor::ZeroFillStorage<E>
 
     // broadcast & reduces
-    + super::super::broadcast_to::BroadcastKernel<E>
     + super::super::sum_to::SumKernel<E>
     + super::super::max_to::MaxReduceKernel<E>
     + super::super::min_to::MinReduceKernel<E>
-    + super::super::permute_to::PermuteKernel<E>
     + super::super::reshape_to::ReshapeKernel<E>
 
     // indexing

@@ -1,23 +1,4 @@
-mod cpu_kernel;
-
-#[cfg(feature = "cuda")]
-mod cuda_kernel;
-
 use crate::{gradients::Tape, shapes::*, tensor::*};
-
-pub trait PermuteKernel<E: Dtype>: DeviceStorage {
-    fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
-        &self,
-        inp: &Tensor<Src, E, Self>,
-    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
-    where
-        Src: PermuteShapeTo<Dst, Ax>;
-    fn backward(
-        &self,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>;
-}
 
 /// Changes order of dimensions/axes
 pub trait PermuteTo: HasErr + HasShape {
@@ -41,21 +22,19 @@ pub trait PermuteTo: HasErr + HasShape {
         Self::Shape: PermuteShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: PermuteKernel<E>, T: Tape<E, D>> PermuteTo for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<E, D>> PermuteTo for Tensor<S, E, D, T> {
     fn try_permute<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: PermuteShapeTo<Dst, Ax>,
     {
-        let (inp, mut tape) = self.split_tape();
-        let out = inp.device.forward(&inp)?;
-        let phantom_out = out.clone();
-        tape.try_alloc_grad(&inp)?;
-        tape.try_alloc_grad(&out)?;
-        tape.add_backward_op(move |grads| {
-            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward(grad_inp, grad_out)
-        });
-        Ok(out.put_tape(tape))
+        Ok(Tensor {
+            id: self.id,
+            data: self.data,
+            shape: self.shape.permuted(),
+            strides: self.shape.permute_strides(self.strides),
+            device: self.device,
+            tape: self.tape,
+        })
     }
 }
 
