@@ -98,7 +98,6 @@ impl Dim for usize {
     }
 }
 
-/// Represents a [Dim] with size known at compile time
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Const<const M: usize>;
 impl<const M: usize> Dim for Const<M> {
