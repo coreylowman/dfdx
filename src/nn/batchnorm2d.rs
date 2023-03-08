@@ -17,6 +17,71 @@ where
     }
 }
 
+/// generic batchnorm forward for training
+pub fn train_fwd<const C: usize, S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>, Ax: Axes>(
+    x: Tensor<S, E, D, T>,
+    var: &mut Tensor<Rank1<C>, E, D>,
+    mean: &mut Tensor<Rank1<C>, E, D>,
+    scale: &Tensor<Rank1<C>, E, D>,
+    bias: &Tensor<Rank1<C>, E, D>,
+    epsilon: E,
+    momentum: E,
+) -> Result<Tensor<S, E, D, T>, D::Err>
+where
+    S: HasAxes<Ax> + ReduceShapeTo<Rank1<C>, Ax>,
+{
+    let n = E::from_usize(<S as HasAxes<Ax>>::size(x.shape())).unwrap();
+    let shape = *x.shape();
+
+    // compute statistics for updating running stats later - on tape
+    let mean_chan = x.retaped::<T>().try_mean::<Rank1<C>, _>()?;
+
+    // update statistics since we are training - off tape
+    mean.try_axpy(E::ONE - momentum, &mean_chan, momentum)?;
+
+    let centered = x - mean_chan.try_broadcast_like(&shape)?;
+
+    let var_chan = centered.retaped::<T>().square().mean::<Rank1<C>, _>();
+
+    // NOTE: uses unbiased variance in running estimate
+    var.try_axpy(E::ONE - momentum, &var_chan, momentum * n / (n - E::ONE))?;
+
+    // statistics for normalizing - on tape
+    let std = (var_chan + epsilon).try_sqrt()?;
+
+    // record broadcast of scale & bias - on tape
+    let scale = (scale.retaped::<T>() / std).try_broadcast_like(&shape)?;
+    let bias = bias.retaped::<T>().try_broadcast_like(&shape)?;
+
+    // normalize & affine - on tape
+    centered.try_mul(scale)?.try_add(bias)
+}
+
+/// generic batchnorm forward for inference
+pub fn infer_fwd<const C: usize, S: Shape, E: Dtype, D: Device<E>, Ax: Axes>(
+    x: Tensor<S, E, D>,
+    var: &Tensor<Rank1<C>, E, D>,
+    mean: &Tensor<Rank1<C>, E, D>,
+    scale: &Tensor<Rank1<C>, E, D>,
+    bias: &Tensor<Rank1<C>, E, D>,
+    epsilon: E,
+) -> Result<Tensor<S, E, D>, D::Err>
+where
+    Rank1<C>: BroadcastShapeTo<S, Ax>,
+{
+    let shape = *x.shape();
+
+    // statistics for normalizing
+    let std = (var.clone() + epsilon).try_sqrt()?;
+    let mean = mean.clone();
+
+    // normalize & affine
+    let x = x.try_sub(mean.try_broadcast_like(&shape)?)?;
+    let x = x.try_div(std.try_broadcast_like(&shape)?)?;
+    let x = x.try_mul(scale.clone().try_broadcast_like(&shape)?)?;
+    x.try_add(bias.clone().try_broadcast_like(&shape)?)
+}
+
 /// Batch normalization for images as described in
 /// [Batch Normalization: Accelerating Deep Network Training
 /// by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167)
@@ -70,22 +135,18 @@ pub struct BatchNorm2D<const C: usize, E: Dtype, D: DeviceStorage> {
 }
 
 impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
-    /// generic forward for inference
     fn infer_fwd<S: Shape, Ax: Axes>(&self, x: Tensor<S, E, D>) -> Result<Tensor<S, E, D>, D::Err>
     where
         Rank1<C>: BroadcastShapeTo<S, Ax>,
     {
-        let shape = *x.shape();
-
-        // statistics for normalizing
-        let std = (self.running_var.clone() + self.epsilon).try_sqrt()?;
-        let mean = self.running_mean.clone();
-
-        // normalize & affine
-        let x = x.try_sub(mean.try_broadcast_like(&shape)?)?;
-        let x = x.try_div(std.try_broadcast_like(&shape)?)?;
-        let x = x.try_mul(self.scale.clone().try_broadcast_like(&shape)?)?;
-        x.try_add(self.bias.clone().try_broadcast_like(&shape)?)
+        infer_fwd(
+            x,
+            &self.running_var,
+            &self.running_mean,
+            &self.scale,
+            &self.bias,
+            self.epsilon,
+        )
     }
 
     fn train_fwd<S: Shape, T: Tape<E, D>, Ax: Axes>(
@@ -95,36 +156,15 @@ impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
     where
         S: HasAxes<Ax> + ReduceShapeTo<Rank1<C>, Ax>,
     {
-        let n = E::from_usize(<S as HasAxes<Ax>>::size(x.shape())).unwrap();
-        let shape = *x.shape();
-
-        // compute statistics for updating running stats later - on tape
-        let mean_chan = x.retaped::<T>().try_mean::<Rank1<C>, _>()?;
-
-        // update statistics since we are training - off tape
-        self.running_mean
-            .try_axpy(E::ONE - self.momentum, &mean_chan, self.momentum)?;
-
-        let centered = x - mean_chan.try_broadcast_like(&shape)?;
-
-        let var_chan = centered.retaped::<T>().square().mean::<Rank1<C>, _>();
-
-        // NOTE: uses unbiased variance in running estimate
-        self.running_var.try_axpy(
-            E::ONE - self.momentum,
-            &var_chan,
-            self.momentum * n / (n - E::ONE),
-        )?;
-
-        // statistics for normalizing - on tape
-        let std = (var_chan + self.epsilon).try_sqrt()?;
-
-        // record broadcast of scale & bias - on tape
-        let scale = (self.scale.retaped::<T>() / std).try_broadcast_like(&shape)?;
-        let bias = self.bias.retaped::<T>().try_broadcast_like(&shape)?;
-
-        // normalize & affine - on tape
-        centered.try_mul(scale)?.try_add(bias)
+        train_fwd(
+            x,
+            &mut self.running_var,
+            &mut self.running_mean,
+            &self.scale,
+            &self.bias,
+            self.epsilon,
+            self.momentum,
+        )
     }
 }
 

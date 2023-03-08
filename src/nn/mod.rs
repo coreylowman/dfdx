@@ -19,6 +19,7 @@
 //! Here is a list of existing modules that have different behavior in these
 //! two functions:
 //!
+//! - [modules::BatchNorm1D]
 //! - [modules::BatchNorm2D]
 //! - [modules::DropoutOneIn]
 //! - [modules::Dropout]
@@ -110,6 +111,7 @@ pub mod tensor_collection;
 
 mod activations;
 mod add_into;
+mod batchnorm1d;
 mod batchnorm2d;
 mod bias2d;
 mod conv;
@@ -148,6 +150,7 @@ pub mod modules {
     /// in a device/dtype agnostic way.
     pub use super::activations::*;
     pub use super::add_into::AddInto;
+    pub use super::batchnorm1d::BatchNorm1D;
     pub use super::batchnorm2d::BatchNorm2D;
     pub use super::bias2d::Bias2D;
     #[cfg(feature = "nightly")]
@@ -175,6 +178,7 @@ pub mod builders {
     /// worrying about device or dtype.
     pub use super::activations::*;
     pub use super::add_into::AddInto;
+    pub use super::batchnorm1d::builder::BatchNorm1D;
     pub use super::batchnorm2d::builder::BatchNorm2D;
     pub use super::bias2d::builder::Bias2D;
     #[cfg(feature = "nightly")]
