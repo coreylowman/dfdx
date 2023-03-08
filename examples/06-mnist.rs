@@ -108,7 +108,7 @@ fn main() {
             .map(preprocess)
             .batch(Const::<BATCH_SIZE>)
             .collate()
-            .map(|(img, lbl)| (img.stack(), lbl.stack()))
+            .stack()
             .progress()
         {
             let logits = model.forward_mut(img.traced_into(grads));

@@ -70,6 +70,14 @@ where
     }
 }
 
+impl<A: TryStack, B: TryStack<Err = A::Err>> TryStack for (A, B) {
+    type Stacked = (A::Stacked, B::Stacked);
+    type Err = A::Err;
+    fn try_stack(self) -> Result<Self::Stacked, Self::Err> {
+        Ok((self.0.try_stack()?, self.1.try_stack()?))
+    }
+}
+
 pub trait AddDim<D: Dim>: Shape {
     type Larger: Shape;
     fn add_dim(&self, dim: D) -> Self::Larger;
