@@ -29,7 +29,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     where
         S: ReduceShape<Ax>,
     {
-        self.try_normalize(epsilon).unwrap()
+        self.try_normalize::<Ax>(epsilon).unwrap()
     }
 
     /// See [normalize]
