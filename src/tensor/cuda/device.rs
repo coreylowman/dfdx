@@ -1,16 +1,22 @@
-use crate::shapes::{Dtype, HasDtype, HasShape, HasUnitType, Shape, Unit};
-use crate::tensor::cpu::{Cpu, CpuError};
-use crate::tensor::storage_traits::{DeviceStorage, HasErr};
+use crate::shapes::{Shape, Unit};
+use crate::tensor::cpu::{Cpu, CpuError, NdIndex};
+use crate::tensor::{DeviceStorage, HasErr, Tensor};
 
 use cudarc::{
     cublas::{result::CublasError, CudaBlas},
-    driver::{result::DriverError, BuildError, CudaDevice, CudaDeviceBuilder, CudaSlice},
+    driver::{CudaDevice, CudaSlice, DeviceSlice, DriverError},
 };
-use std::sync::Arc;
+use std::{sync::Arc, vec::Vec};
+
+#[derive(Clone, Debug)]
+pub struct Cuda {
+    pub(crate) cpu: Cpu,
+    pub(crate) dev: Arc<CudaDevice>,
+    pub(crate) blas: Arc<CudaBlas>,
+}
 
 #[derive(Debug)]
 pub enum CudaError {
-    Build(BuildError),
     Blas(CublasError),
     Driver(DriverError),
     Cpu(CpuError),
@@ -19,12 +25,6 @@ pub enum CudaError {
 impl From<CpuError> for CudaError {
     fn from(value: CpuError) -> Self {
         Self::Cpu(value)
-    }
-}
-
-impl From<BuildError> for CudaError {
-    fn from(value: BuildError) -> Self {
-        Self::Build(value)
     }
 }
 
@@ -38,13 +38,6 @@ impl From<DriverError> for CudaError {
     fn from(value: DriverError) -> Self {
         Self::Driver(value)
     }
-}
-
-#[derive(Clone, Debug)]
-pub struct Cuda {
-    pub(crate) cpu: Cpu,
-    pub(crate) dev: Arc<CudaDevice>,
-    pub(crate) blas: Arc<CudaBlas>,
 }
 
 impl Default for Cuda {
@@ -66,7 +59,7 @@ impl Cuda {
 
     pub fn try_build(ordinal: usize, seed: u64) -> Result<Self, CudaError> {
         let cpu = Cpu::seed_from_u64(seed);
-        let dev = CudaDeviceBuilder::new(ordinal).build()?;
+        let dev = CudaDevice::new(ordinal)?;
         let blas = Arc::new(CudaBlas::new(dev.clone())?);
         Ok(Self { cpu, dev, blas })
     }
@@ -86,29 +79,6 @@ impl Cuda {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct CudaArray<S: Shape, E> {
-    pub(crate) data: Arc<CudaSlice<E>>,
-    pub(crate) shape: S,
-    pub(crate) strides: S::Concrete,
-}
-
-impl<S: Shape, E> HasShape for CudaArray<S, E> {
-    type WithShape<New: Shape> = CudaArray<New, S>;
-    type Shape = S;
-    fn shape(&self) -> &S {
-        &self.shape
-    }
-}
-
-impl<S: Shape, E: Unit> HasUnitType for CudaArray<S, E> {
-    type Unit = E;
-}
-
-impl<S: Shape, E: Dtype> HasDtype for CudaArray<S, E> {
-    type Dtype = E;
-}
-
 impl std::fmt::Display for CudaError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{self:?}")
@@ -120,22 +90,25 @@ impl HasErr for Cuda {
 }
 
 impl DeviceStorage for Cuda {
-    type Storage<S: Shape, E: Unit> = CudaArray<S, E>;
+    type Vec<E: Unit> = CudaSlice<E>;
 
-    fn try_alloc_grad<S: Shape, E: Dtype>(
-        &self,
-        storage: &Self::Storage<S, E>,
-    ) -> Result<Self::Storage<S, E>, Self::Err> {
-        let numel = storage.data.len();
-        let strides: S::Concrete = storage.strides;
-        Ok(Self::Storage {
-            data: Arc::new(self.dev.take_async(std::vec![Default::default(); numel])?),
-            shape: storage.shape,
-            strides,
-        })
+    fn try_alloc_grad<E: Unit>(&self, other: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err> {
+        let grad = self.dev.alloc_zeros(other.len())?;
+        Ok(grad)
     }
 
     fn random_u64(&self) -> u64 {
         self.cpu.random_u64()
+    }
+
+    fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
+        let buf: Vec<E> = tensor.data.try_clone().unwrap().try_into().unwrap();
+        debug_assert_eq!(buf.len(), tensor.data.len());
+        let mut idx = NdIndex::new(tensor.shape, tensor.strides);
+        let mut contiguous = Vec::with_capacity(tensor.shape.num_elements());
+        while let Some(i) = idx.next() {
+            contiguous.push(buf[i]);
+        }
+        contiguous
     }
 }

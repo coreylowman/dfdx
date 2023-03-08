@@ -30,4 +30,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --features test-f64
+          args: --features test-f64,safetensors

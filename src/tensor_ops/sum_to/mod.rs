@@ -9,14 +9,16 @@ pub trait SumKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
-        inp: &Self::Storage<Src, E>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>;
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        grad_inp: &mut Self::Storage<Src, E>,
-        grad_out: &Self::Storage<Dst, E>,
+        inp: &Tensor<Src, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        out: &Tensor<Dst, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>;
@@ -55,20 +57,20 @@ pub trait SumTo: HasErr + HasShape {
         Self::Shape: ReduceShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: SumKernel<E>, T: Tape<D>> SumTo for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: SumKernel<E>, T: Tape<E, D>> SumTo for Tensor<S, E, D, T> {
     fn try_sum<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>,
     {
         let dst: Dst = self.shape().reduced();
         let (inp, mut tape) = self.split_tape();
-        let out = inp.device.upgrade(inp.device.forward(dst, &inp.storage)?);
+        let out = inp.device.forward(dst, &inp)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&inp)?;
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward(grad_inp, grad_out)
+            inp.device.backward(&inp, grad_inp, &phantom_out, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -158,5 +160,16 @@ mod tests {
         let b = a.broadcast::<Rank3<4, 3, 2>, _>();
         let c = b.sum::<Rank2<4, 3>, _>();
         assert_eq!(c.array(), [[2.0, 4.0, 6.0]; 4]);
+    }
+
+    #[test]
+    fn test_sum_reduce_to_0d_from_broadcasted() {
+        let dev: TestDevice = Default::default();
+        let a: Tensor<Rank1<3>, TestDtype, _> = dev.ones();
+        let b = a.trace().broadcast::<Rank3<4, 3, 2>, _>();
+        let c = b.sum();
+        assert_eq!(c.array(), 24.0);
+        let g = c.backward();
+        assert_eq!(g.get(&a).array(), [8.0; 3]);
     }
 }

@@ -1,8 +1,6 @@
-use crate::{optim::*, shapes::*, tensor::SplitTape, tensor_ops::Device};
+use crate::{shapes::*, tensor::*, tensor_ops::TryAdd};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
-
-use std::ops::Add;
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 /// A residual connection around `F`: `F(x) + x`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -23,28 +21,19 @@ use std::ops::Add;
 #[derive(Debug, Clone, Default)]
 pub struct Residual<F>(pub F);
 
-impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>> GradientUpdate<D, E> for Residual<F> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.0.update(updater, unused)
-    }
-}
-
-impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>> BuildOnDevice<D, E> for Residual<F> {
+impl<D: DeviceStorage, E: Dtype, F: BuildOnDevice<D, E>> BuildOnDevice<D, E> for Residual<F> {
     type Built = Residual<F::Built>;
 }
 
-impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Residual<F> {
+impl<D: DeviceStorage, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Residual<F> {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self(BuildModule::try_build(device)?))
     }
 }
 
-impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>> ResetParams<D, E> for Residual<F> {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.0.try_reset_params()
+impl<E: Dtype, D: DeviceStorage, F: TensorCollection<E, D>> TensorCollection<E, D> for Residual<F> {
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
     }
 }
 
@@ -55,17 +44,23 @@ impl<F: ToDevice<D>, D> ToDevice<D> for Residual<F> {
     }
 }
 
-impl<T: SplitTape + Add<T, Output = T>, F: Module<T, Output = T>> Module<T> for Residual<F> {
+impl<T: SplitTape + TryAdd<T>, F: Module<T, Output = T, Error = T::Err>> Module<T> for Residual<F> {
     type Output = T;
-    fn forward(&self, x: T) -> Self::Output {
-        self.0.forward(x.with_empty_tape()) + x
+    type Error = F::Error;
+
+    fn try_forward(&self, x: T) -> Result<Self::Output, F::Error> {
+        self.0.try_forward(x.with_empty_tape())?.try_add(x)
     }
 }
 
-impl<T: SplitTape + Add<T, Output = T>, F: ModuleMut<T, Output = T>> ModuleMut<T> for Residual<F> {
+impl<T: SplitTape + TryAdd<T>, F: ModuleMut<T, Output = T, Error = T::Err>> ModuleMut<T>
+    for Residual<F>
+{
     type Output = T;
-    fn forward_mut(&mut self, x: T) -> Self::Output {
-        self.0.forward_mut(x.with_empty_tape()) + x
+    type Error = F::Error;
+
+    fn try_forward_mut(&mut self, x: T) -> Result<Self::Output, F::Error> {
+        self.0.try_forward_mut(x.with_empty_tape())?.try_add(x)
     }
 }
 
@@ -74,7 +69,7 @@ mod tests {
     use super::*;
     use crate::nn::DeviceBuildExt;
     use crate::tests::*;
-    use crate::{nn::builders::Linear, tensor::*, tensor_ops::*};
+    use crate::{nn::builders::Linear, tensor_ops::*};
 
     #[test]
     fn test_residual_reset() {

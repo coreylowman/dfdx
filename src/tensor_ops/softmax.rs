@@ -15,7 +15,7 @@ use crate::{gradients::Tape, shapes::*, tensor::Tensor};
 /// let t: Tensor<Rank3<2, 3, 5>, f32, _> = dev.zeros();
 /// let _ = t.softmax::<Axis<2>>();
 /// ```
-pub fn softmax<Ax: Axes, S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn softmax<Ax: Axes, S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T>
 where
@@ -24,7 +24,7 @@ where
     t.softmax::<Ax>()
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [softmax]
     pub fn softmax<Ax: Axes>(self) -> Self
     where

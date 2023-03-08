@@ -1,6 +1,6 @@
-use crate::{optim::*, shapes::Dtype, tensor::*, tensor_ops::Device};
+use crate::{shapes::Dtype, tensor::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 /// Splits input into multiple heads. `T` should be a tuple,
 /// where every element of the tuple accepts the same input type.
@@ -22,28 +22,21 @@ use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice
 #[derive(Debug, Default, Clone)]
 pub struct SplitInto<T>(pub T);
 
-impl<T: GradientUpdate<D, E>, D: Device<E>, E: Dtype> GradientUpdate<D, E> for SplitInto<T> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.0.update(updater, unused)
-    }
-}
-
-impl<T: BuildOnDevice<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for SplitInto<T> {
+impl<T: BuildOnDevice<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for SplitInto<T> {
     type Built = SplitInto<T::Built>;
 }
 
-impl<T: BuildModule<D, E>, D: Device<E>, E: Dtype> BuildModule<D, E> for SplitInto<T> {
+impl<T: BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildModule<D, E> for SplitInto<T> {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
         Ok(Self(BuildModule::try_build(device)?))
     }
 }
 
-impl<T: ResetParams<D, E>, D: Device<E>, E: Dtype> ResetParams<D, E> for SplitInto<T> {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.0.try_reset_params()
+impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>> TensorCollection<E, D>
+    for SplitInto<T>
+{
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
     }
 }
 
@@ -59,7 +52,7 @@ macro_rules! tuple_impls {
     ([$($heads:ident),+] $tail:ident) => {
 impl<
     Input: SplitTape,
-    $($heads : Module<Input>,)+
+    $($heads : Module<Input, Error = $tail::Error>,)+
     $tail: Module<Input>
 > Module<Input> for SplitInto<($($heads,)+ $tail)>
 where
@@ -69,20 +62,21 @@ where
         $(<$heads::Output as SplitTape>::NoTape, )+
         $tail::Output
     );
+    type Error = $tail::Error;
 
     #[allow(non_snake_case)]
-    fn forward(&self, x: Input) -> Self::Output {
+    fn try_forward(&self, x: Input) -> Result<Self::Output, $tail::Error> {
         let (x, tape) = x.split_tape();
         let ($($heads, )+ $tail) = &self.0;
-        $(let ($heads, tape) = $heads.forward(x.clone().put_tape(tape)).split_tape();)+
-        let $tail = $tail.forward(x.put_tape(tape));
-        ($($heads,)+ $tail)
+        $(let ($heads, tape) = $heads.try_forward(x.clone().put_tape(tape))?.split_tape();)+
+        let $tail = $tail.try_forward(x.put_tape(tape))?;
+        Ok(($($heads,)+ $tail))
     }
 }
 
 impl<
     Input: SplitTape,
-    $($heads : ModuleMut<Input>,)+
+    $($heads : ModuleMut<Input, Error = $tail::Error>,)+
     $tail: ModuleMut<Input>
 > ModuleMut<Input> for SplitInto<($($heads,)+ $tail)>
 where
@@ -92,14 +86,15 @@ where
         $(<$heads::Output as SplitTape>::NoTape, )+
         $tail::Output
     );
+    type Error = $tail::Error;
 
     #[allow(non_snake_case)]
-    fn forward_mut(&mut self, x: Input) -> Self::Output {
+    fn try_forward_mut(&mut self, x: Input) -> Result<Self::Output, $tail::Error> {
         let (x, tape) = x.split_tape();
         let ($($heads, )+ $tail) = &mut self.0;
-        $(let ($heads, tape) = $heads.forward_mut(x.clone().put_tape(tape)).split_tape();)+
-        let $tail = $tail.forward_mut(x.put_tape(tape));
-        ($($heads,)+ $tail)
+        $(let ($heads, tape) = $heads.try_forward_mut(x.clone().put_tape(tape))?.split_tape();)+
+        let $tail = $tail.try_forward_mut(x.put_tape(tape))?;
+        Ok(($($heads,)+ $tail))
     }
 }
 }
@@ -118,11 +113,7 @@ mod tests {
     use super::*;
     use crate::nn::DeviceBuildExt;
     use crate::{gradients::*, shapes::*, tensor_ops::*};
-    use crate::{
-        nn::{builders::Linear, tests::SimpleUpdater},
-        tests::*,
-        unique_id::HasUniqueId,
-    };
+    use crate::{nn::builders::Linear, tests::*};
 
     #[test]
     fn test_unused() {
@@ -141,11 +132,13 @@ mod tests {
         let dev: TestDevice = Default::default();
         type Model = SplitInto<(Linear<5, 1>, Linear<5, 2>)>;
         let m = dev.build_module::<Model, TestDtype>();
-        let _: (Tensor<Rank1<1>, _, _>, Tensor<Rank1<2>, _, _, OwnedTape<_>>) =
-            m.forward(dev.zeros::<Rank1<5>>().traced());
+        let _: (
+            Tensor<Rank1<1>, _, _>,
+            Tensor<Rank1<2>, _, _, OwnedTape<_, _>>,
+        ) = m.forward(dev.zeros::<Rank1<5>>().traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
-            Tensor<Rank2<3, 2>, _, _, OwnedTape<_>>,
+            Tensor<Rank2<3, 2>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
     }
 
@@ -157,12 +150,12 @@ mod tests {
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
-            Tensor<Rank1<3>, _, _, OwnedTape<_>>,
+            Tensor<Rank1<3>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank1<5>>().traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
             Tensor<Rank2<3, 2>, _, _>,
-            Tensor<Rank2<3, 3>, _, _, OwnedTape<_>>,
+            Tensor<Rank2<3, 3>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
     }
 
@@ -175,13 +168,13 @@ mod tests {
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
             Tensor<Rank1<3>, _, _>,
-            Tensor<Rank1<4>, _, _, OwnedTape<_>>,
+            Tensor<Rank1<4>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank1<5>>().traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
             Tensor<Rank2<3, 2>, _, _>,
             Tensor<Rank2<3, 3>, _, _>,
-            Tensor<Rank2<3, 4>, _, _, OwnedTape<_>>,
+            Tensor<Rank2<3, 4>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
     }
 
@@ -201,14 +194,14 @@ mod tests {
             Tensor<Rank1<2>, _, _>,
             Tensor<Rank1<3>, _, _>,
             Tensor<Rank1<4>, _, _>,
-            Tensor<Rank1<5>, _, _, OwnedTape<_>>,
+            Tensor<Rank1<5>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank1<5>>().traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
             Tensor<Rank2<3, 2>, _, _>,
             Tensor<Rank2<3, 3>, _, _>,
             Tensor<Rank2<3, 4>, _, _>,
-            Tensor<Rank2<3, 5>, _, _, OwnedTape<_>>,
+            Tensor<Rank2<3, 5>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
     }
 
@@ -230,7 +223,7 @@ mod tests {
             Tensor<Rank1<3>, _, _>,
             Tensor<Rank1<4>, _, _>,
             Tensor<Rank1<5>, _, _>,
-            Tensor<Rank1<6>, _, _, OwnedTape<_>>,
+            Tensor<Rank1<6>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank1<5>>().traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
@@ -238,38 +231,7 @@ mod tests {
             Tensor<Rank2<3, 3>, _, _>,
             Tensor<Rank2<3, 4>, _, _>,
             Tensor<Rank2<3, 5>, _, _>,
-            Tensor<Rank2<3, 6>, _, _, OwnedTape<_>>,
+            Tensor<Rank2<3, 6>, _, _, OwnedTape<_, _>>,
         ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
-    }
-
-    #[test]
-    fn test_missing_gradients() {
-        let dev: TestDevice = Default::default();
-        type Model = SplitInto<(Linear<5, 3>, Linear<5, 3>)>;
-        let mut model = dev.build_module::<Model, TestDtype>();
-        let mut g: SimpleUpdater = Default::default();
-
-        // no gradients present
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert_eq!(
-            &unused.ids,
-            &[
-                *model.0 .0.weight.id(),
-                *model.0 .0.bias.id(),
-                *model.0 .1.weight.id(),
-                *model.0 .1.bias.id()
-            ]
-        );
-
-        // weight gradient is present
-        g.0.try_alloc_for(&model.0 .0.weight).unwrap();
-        g.0.try_alloc_for(&model.0 .0.bias).unwrap();
-        g.0.try_alloc_for(&model.0 .1.weight).unwrap();
-        g.0.try_alloc_for(&model.0 .1.bias).unwrap();
-
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert!(unused.is_empty());
     }
 }

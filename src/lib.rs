@@ -57,11 +57,11 @@
 //! let x: Tensor<Rank1<10>, f32, Cpu, NoneTape> = dev.zeros();
 //!
 //! // `.trace()` clones `x` and inserts a gradient tape.
-//! let x_traced: Tensor<Rank1<10>, f32, Cpu, OwnedTape<Cpu>> = x.trace();
+//! let x_traced: Tensor<Rank1<10>, f32, Cpu, OwnedTape<f32, Cpu>> = x.trace();
 //!
 //! // The tape from the input is moved through the network during .forward().
 //! let y: Tensor<Rank1<5>, f32, Cpu, NoneTape> = model.forward(x);
-//! let y_traced: Tensor<Rank1<5>, f32, Cpu, OwnedTape<Cpu>> = model.forward(x_traced);
+//! let y_traced: Tensor<Rank1<5>, f32, Cpu, OwnedTape<f32, Cpu>> = model.forward(x_traced);
 //! ```
 //!
 //! 6. Compute gradients with [crate::tensor_ops::Backward]. See [crate::tensor_ops].
@@ -75,7 +75,7 @@
 //! let loss = cross_entropy_with_logits_loss(y, y_true);
 //!
 //! // call `backward()` to compute gradients. The tensor *must* have `OwnedTape`!
-//! let gradients: Gradients = loss.backward();
+//! let gradients: Gradients<f32, Cpu> = loss.backward();
 //! ```
 //! 7. Use an optimizer from [crate::optim] to optimize your network!
 //! ```rust
@@ -85,7 +85,7 @@
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
 //! # let y = model.forward(dev.zeros::<Rank1<10>>().trace());
 //! # let loss = cross_entropy_with_logits_loss(y, y_true);
-//! # let gradients: Gradients = loss.backward();
+//! # let gradients: Gradients<f32, Cpu> = loss.backward();
 //! // Use stochastic gradient descent (Sgd), with a learning rate of 1e-2, and 0.9 momentum.
 //! let mut opt = Sgd::new(&model, SgdConfig {
 //!     lr: 1e-2,
@@ -94,15 +94,20 @@
 //! });
 //!
 //! // pass the gradients & the model into the optimizer's update method
-//! opt.update(&mut model, gradients);
+//! opt.update(&mut model, &gradients);
 //! ```
 
-#![no_std]
+#![cfg_attr(feature = "no-std", no_std)]
 #![allow(incomplete_features)]
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
+#[cfg(feature = "no-std")]
 extern crate alloc;
+#[cfg(feature = "no-std")]
 extern crate no_std_compat as std;
+
+#[cfg(all(feature = "std", feature = "no-std"))]
+compile_error!("Can't enable both std and no-std. Set default-features = false to disable std");
 
 pub mod data;
 pub mod feature_flags;

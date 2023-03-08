@@ -22,13 +22,13 @@ pub struct ReLUKernelOp;
 /// let r = t.relu();
 /// assert_eq!(r.array(), [0.0, 0.0, 1.0, 2.0]);
 /// ```
-pub fn relu<S: Shape, E: Dtype, D: UnaryKernel<ReLUKernelOp, E>, T: Tape<D>>(
+pub fn relu<S: Shape, E: Dtype, D: UnaryKernel<ReLUKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.relu()
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<ReLUKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<ReLUKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [relu]
     pub fn relu(self) -> Self {
         self.try_relu().unwrap()

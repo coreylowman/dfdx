@@ -1,9 +1,8 @@
 use crate::{
     shapes::*,
-    tensor::cuda::{Cuda, CudaArray},
+    tensor::{Cuda, Tensor},
 };
-use cudarc::driver::{LaunchAsync, LaunchConfig};
-use std::sync::Arc;
+use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/reshape.ptx"));
 
@@ -28,20 +27,20 @@ where
 {
     fn forward<Src: Shape, Dst: Shape>(
         &self,
-        dst: Dst,
-        inp: &Self::Storage<Src, E>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err> {
+        dst: &Dst,
+        inp: &Tensor<Src, E, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
 
         let numel = inp.data.len();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(numel) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
-        let inp_dims = self.dev.take_async(inp.shape.concrete().into())?;
-        let dst_dims = self.dev.take_async(dst.concrete().into())?;
-        let inp_strides = self.dev.take_async(inp.strides.into())?;
-        let dst_strides = self.dev.take_async(dst.strides().into())?;
+        let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
+        let dst_dims = self.dev.htod_copy(dst.concrete().into())?;
+        let inp_strides = self.dev.htod_copy(inp.strides.into())?;
+        let dst_strides = self.dev.htod_copy(dst.strides().into())?;
 
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = LaunchConfig::for_num_elems(numel as u32);
@@ -56,41 +55,39 @@ where
             &dst_dims,         // const size_t *out_dims,
             &dst_strides,      // const size_t *out_strides,
         );
-        unsafe { fwd_fn.launch_async(cfg, params) }?;
+        unsafe { fwd_fn.launch(cfg, params) }?;
 
-        Ok(CudaArray {
-            data: Arc::new(storage),
-            shape: dst,
-            strides: dst.strides(),
-        })
+        Ok(self.build_tensor(*dst, dst.strides(), storage))
     }
 
     fn backward<Src: Shape, Dst: Shape>(
         &self,
-        grad_inp: &mut Self::Storage<Src, E>,
-        grad_out: &Self::Storage<Dst, E>,
+        inp: &Tensor<Src, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        out: &Tensor<Dst, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
-        let numel = grad_inp.data.len();
+        let numel = grad_inp.len();
 
-        let inp_dims = self.dev.take_async(grad_inp.shape.concrete().into())?;
-        let out_dims = self.dev.take_async(grad_out.shape.concrete().into())?;
-        let inp_strides = self.dev.take_async(grad_inp.strides.into())?;
-        let out_strides = self.dev.take_async(grad_out.strides.into())?;
+        let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
+        let out_dims = self.dev.htod_copy(out.shape.concrete().into())?;
+        let inp_strides = self.dev.htod_copy(inp.strides.into())?;
+        let out_strides = self.dev.htod_copy(out.strides.into())?;
 
         let cfg = LaunchConfig::for_num_elems(numel as u32);
         let params = (
-            numel,                             // const size_t numel,
-            Arc::make_mut(&mut grad_inp.data), // float *grad_inp,
-            Src::NUM_DIMS,                     // const size_t inp_num_dims,
-            &inp_dims,                         // const size_t *inp_dims,
-            &inp_strides,                      // const size_t *inp_strides,
-            grad_out.data.as_ref(),            // const float *grad_out,
-            Dst::NUM_DIMS,                     // const size_t out_num_dims,
-            &out_dims,                         // const size_t *out_dims,
-            &out_strides,                      // const size_t *out_strides
+            numel,         // const size_t numel,
+            grad_inp,      // float *grad_inp,
+            Src::NUM_DIMS, // const size_t inp_num_dims,
+            &inp_dims,     // const size_t *inp_dims,
+            &inp_strides,  // const size_t *inp_strides,
+            grad_out,      // const float *grad_out,
+            Dst::NUM_DIMS, // const size_t out_num_dims,
+            &out_dims,     // const size_t *out_dims,
+            &out_strides,  // const size_t *out_strides
         );
-        unsafe { bwd_fn.launch_async(cfg, params) }?;
+        unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())
     }
 }

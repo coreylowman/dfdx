@@ -1,6 +1,6 @@
 use crate::{
     shapes::*,
-    tensor::cuda::{Cuda, CudaArray},
+    tensor::{cuda::Cuda, Tensor},
 };
 
 use cudarc::{
@@ -10,7 +10,6 @@ use cudarc::{
     },
     driver::{DevicePtr, DevicePtrMut},
 };
-use std::sync::Arc;
 
 const TRANS: cublasOperation_t = cublasOperation_t::CUBLAS_OP_T;
 const NO_TRANS: cublasOperation_t = cublasOperation_t::CUBLAS_OP_N;
@@ -99,9 +98,9 @@ where
     let (cfg, swap_ops) = sgemm_config((m, k, n), lhs_strides, rhs_strides, beta, out_strides);
 
     if !swap_ops {
-        blas.gemm_async(cfg, lhs, rhs, out)
+        blas.gemm(cfg, lhs, rhs, out)
     } else {
-        blas.gemm_async(cfg, rhs, lhs, out)
+        blas.gemm(cfg, rhs, lhs, out)
     }
 }
 
@@ -148,7 +147,7 @@ where
             stride_c: out_strides[0] as i64,
             batch_size: batch.size() as i32,
         };
-        blas.gemm_strided_batched_async(cfg, lhs, rhs, out)
+        blas.gemm_strided_batched(cfg, lhs, rhs, out)
     } else {
         let cfg = StridedBatchedConfig {
             gemm,
@@ -157,7 +156,7 @@ where
             stride_c: out_strides[0] as i64,
             batch_size: batch.size() as i32,
         };
-        blas.gemm_strided_batched_async(cfg, rhs, lhs, out)
+        blas.gemm_strided_batched(cfg, rhs, lhs, out)
     }
 }
 
@@ -167,15 +166,15 @@ where
 {
     fn forward<M: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(M,), E>,
-        rhs: &Self::Storage<(N,), E>,
-    ) -> Result<Self::Storage<(M, N), E>, Self::Err> {
+        lhs: &Tensor<(M,), E, Self>,
+        rhs: &Tensor<(N,), E, Self>,
+    ) -> Result<Tensor<(M, N), E, Self>, Self::Err> {
         let (m,) = lhs.shape;
         let (n,) = rhs.shape;
         let k = Const::<1>;
         let shape = (m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
 
         unsafe {
             sgemm(
@@ -191,35 +190,33 @@ where
             )?;
         }
 
-        Ok(CudaArray {
-            data: Arc::new(storage),
-            shape,
-            strides: shape.strides(),
-        })
+        Ok(self.build_tensor(shape, shape.strides(), storage))
     }
 
     fn backward<M: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(M,), E>,
-        grad_lhs: &mut Self::Storage<(M,), E>,
-        rhs: &Self::Storage<(N,), E>,
-        grad_rhs: &mut Self::Storage<(N,), E>,
-        grad_out: &Self::Storage<(M, N), E>,
+        lhs: &Tensor<(M,), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(N,), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        let (m, n) = grad_out.shape;
+        let m = lhs.shape.0;
         let k = Const::<1>;
+        let n = rhs.shape.0;
+        let strides = (m, n).strides();
         unsafe {
             // grad_lhs += grad_out * rhs^T
             sgemm(
                 self.blas.as_ref(),
                 (m, n, k),
-                grad_out.data.as_ref(),
-                grad_out.strides,
+                grad_out,
+                strides,
                 rhs.data.as_ref(),
                 [rhs.strides[0], 0],
                 E::ONE,
-                Arc::make_mut(&mut grad_lhs.data),
-                [grad_lhs.strides[0], 0],
+                grad_lhs,
+                [lhs.strides[0], 0],
             )?;
         }
         unsafe {
@@ -229,11 +226,11 @@ where
                 (k, m, n),
                 lhs.data.as_ref(),
                 [0, lhs.strides[0]],
-                grad_out.data.as_ref(),
-                grad_out.strides,
+                grad_out,
+                strides,
                 E::ONE,
-                Arc::make_mut(&mut grad_rhs.data),
-                [0, grad_rhs.strides[0]],
+                grad_rhs,
+                [0, rhs.strides[0]],
             )?;
         }
         Ok(())
@@ -244,16 +241,16 @@ impl<E: Dtype> super::VecMatKernel<E> for Cuda
 where
     CudaBlas: Gemm<E>,
 {
-    fn forward<const K: usize, N: Dim>(
+    fn forward<K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<K>,), E>,
-        rhs: &Self::Storage<(Const<K>, N), E>,
-    ) -> Result<Self::Storage<(N,), E>, Self::Err> {
+        lhs: &Tensor<(K,), E, Self>,
+        rhs: &Tensor<(K, N), E, Self>,
+    ) -> Result<Tensor<(N,), E, Self>, Self::Err> {
         let m = Const::<1>;
         let (k, n) = rhs.shape;
         let shape = (n,);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
 
         unsafe {
             sgemm(
@@ -269,19 +266,15 @@ where
             )?;
         }
 
-        Ok(CudaArray {
-            data: Arc::new(storage),
-            shape,
-            strides: shape.strides(),
-        })
+        Ok(self.build_tensor(shape, shape.strides(), storage))
     }
-    fn backward<const K: usize, N: Dim>(
+    fn backward<K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<K>,), E>,
-        grad_lhs: &mut Self::Storage<(Const<K>,), E>,
-        rhs: &Self::Storage<(Const<K>, N), E>,
-        grad_rhs: &mut Self::Storage<(Const<K>, N), E>,
-        grad_out: &Self::Storage<(N,), E>,
+        lhs: &Tensor<(K,), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(K, N), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let m = Const::<1>;
         let (k, n) = rhs.shape;
@@ -290,13 +283,13 @@ where
             sgemm(
                 self.blas.as_ref(),
                 (m, n, k),
-                grad_out.data.as_ref(),
-                [0, grad_out.strides[0]],
+                grad_out,
+                [0, 1],
                 rhs.data.as_ref(),
                 [rhs.strides[1], rhs.strides[0]],
                 E::ONE,
-                Arc::make_mut(&mut grad_lhs.data),
-                [0, grad_lhs.strides[0]],
+                grad_lhs,
+                [0, lhs.strides[0]],
             )?;
 
             // grad_rhs += lhs^T * grad_out
@@ -305,11 +298,11 @@ where
                 (k, m, n),
                 lhs.data.as_ref(),
                 [lhs.strides[0], 0],
-                grad_out.data.as_ref(),
-                [0, grad_out.strides[0]],
+                grad_out,
+                [0, 1],
                 E::ONE,
-                Arc::make_mut(&mut grad_rhs.data),
-                grad_rhs.strides,
+                grad_rhs,
+                rhs.strides,
             )?;
         }
         Ok(())
@@ -320,16 +313,16 @@ impl<E: Dtype> super::MatMatKernel<E> for Cuda
 where
     CudaBlas: Gemm<E>,
 {
-    fn forward<M: Dim, const K: usize, N: Dim>(
+    fn forward<M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<K>, N), E>,
-    ) -> Result<Self::Storage<(M, N), E>, Self::Err> {
+        lhs: &Tensor<(M, K), E, Self>,
+        rhs: &Tensor<(K, N), E, Self>,
+    ) -> Result<Tensor<(M, N), E, Self>, Self::Err> {
         let (m, _) = lhs.shape;
         let (k, n) = rhs.shape;
         let shape = (m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
 
         unsafe {
             sgemm(
@@ -345,35 +338,32 @@ where
             )
         }?;
 
-        Ok(CudaArray {
-            data: Arc::new(storage),
-            shape,
-            strides: shape.strides(),
-        })
+        Ok(self.build_tensor(shape, shape.strides(), storage))
     }
 
-    fn backward<M: Dim, const K: usize, N: Dim>(
+    fn backward<M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(M, Const<K>), E>,
-        grad_lhs: &mut Self::Storage<(M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<K>, N), E>,
-        grad_rhs: &mut Self::Storage<(Const<K>, N), E>,
-        grad_out: &Self::Storage<(M, N), E>,
+        lhs: &Tensor<(M, K), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(K, N), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let (m, _) = lhs.shape;
         let (k, n) = rhs.shape;
+        let strides = (m, n).strides();
         unsafe {
             // grad_lhs += grad_out * rhs^T
             sgemm(
                 self.blas.as_ref(),
                 (m, n, k),
-                grad_out.data.as_ref(),
-                grad_out.strides,
+                grad_out,
+                strides,
                 rhs.data.as_ref(),
                 [rhs.strides[1], rhs.strides[0]],
                 E::ONE,
-                Arc::make_mut(&mut grad_lhs.data),
-                grad_lhs.strides,
+                grad_lhs,
+                lhs.strides,
             )?;
 
             // grad_rhs += lhs^T * grad_out
@@ -382,11 +372,11 @@ where
                 (k, m, n),
                 lhs.data.as_ref(),
                 [lhs.strides[1], lhs.strides[0]],
-                grad_out.data.as_ref(),
-                grad_out.strides,
+                grad_out,
+                strides,
                 E::ONE,
-                Arc::make_mut(&mut grad_rhs.data),
-                grad_rhs.strides,
+                grad_rhs,
+                rhs.strides,
             )?;
         }
         Ok(())
@@ -397,17 +387,17 @@ impl<E: Dtype> super::MatMatBrKernel<E> for Cuda
 where
     CudaBlas: Gemm<E>,
 {
-    fn forward<B: Dim, M: Dim, const K: usize, N: Dim>(
+    fn forward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(B, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<K>, N), E>,
-    ) -> Result<Self::Storage<(B, M, N), E>, Self::Err> {
+        lhs: &Tensor<(B, M, K), E, Self>,
+        rhs: &Tensor<(K, N), E, Self>,
+    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err> {
+        assert_ne!(lhs.strides[0], 0);
         let (batch, m, _) = lhs.shape;
         let (k, n) = rhs.shape;
         let shape = (batch, m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
-
+        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
         unsafe {
             sgemm_batch(
                 self.blas.as_ref(),
@@ -421,39 +411,34 @@ where
                 strides,
             )?;
         }
-        Ok(CudaArray {
-            data: Arc::new(storage),
-            shape,
-            strides,
-        })
+        Ok(self.build_tensor(shape, shape.strides(), storage))
     }
-    fn backward<B: Dim, M: Dim, const K: usize, N: Dim>(
+    fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(B, M, Const<K>), E>,
-        grad_lhs: &mut Self::Storage<(B, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<K>, N), E>,
-        grad_rhs: &mut Self::Storage<(Const<K>, N), E>,
-        grad_out: &Self::Storage<(B, M, N), E>,
+        lhs: &Tensor<(B, M, K), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(K, N), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        assert_ne!(grad_lhs.strides[0], 0);
         let (batch, m, _) = lhs.shape;
         let (k, n) = rhs.shape;
+        let strides = (batch, m, n).strides();
         unsafe {
             // grad_lhs += grad_out * rhs^T
             sgemm_batch(
                 self.blas.as_ref(),
                 (batch, m, n, k),
-                grad_out.data.as_ref(),
-                grad_out.strides,
+                grad_out,
+                strides,
                 rhs.data.as_ref(),
                 [0, rhs.strides[1], rhs.strides[0]],
                 E::ONE,
-                Arc::make_mut(&mut grad_lhs.data),
-                grad_lhs.strides,
+                grad_lhs,
+                lhs.strides,
             )?;
         }
-        let grad_rhs_buf = Arc::make_mut(&mut grad_rhs.data);
-        for b in 0..batch.size() {
+        for i in 0..batch.size() {
             // NOTE: these have to be sequential since grad_rhs is broadcasted and cublas doesn't support
             // 0 strides with atomicAdd
             unsafe {
@@ -461,13 +446,13 @@ where
                 sgemm(
                     self.blas.as_ref(),
                     (k, m, n),
-                    &lhs.data.try_slice(b * lhs.strides[0]..).unwrap(),
+                    &lhs.data.slice(i * lhs.strides[0]..),
                     [lhs.strides[2], lhs.strides[1]],
-                    &grad_out.data.try_slice(b * grad_out.strides[0]..).unwrap(),
-                    [grad_out.strides[1], grad_out.strides[2]],
+                    &grad_out.slice(i * strides[0]..),
+                    [strides[1], strides[2]],
                     E::ONE,
-                    grad_rhs_buf,
-                    grad_rhs.strides,
+                    grad_rhs,
+                    rhs.strides,
                 )?;
             }
         }
@@ -479,17 +464,18 @@ impl<E: Dtype> super::MatMatBatch3Kernel<E> for Cuda
 where
     CudaBlas: Gemm<E>,
 {
-    fn forward<const B: usize, M: Dim, const K: usize, N: Dim>(
+    fn forward<const B: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<B>, Const<K>, N), E>,
-    ) -> Result<Self::Storage<(Const<B>, M, N), E>, Self::Err> {
+        lhs: &Tensor<(Const<B>, M, K), E, Self>,
+        rhs: &Tensor<(Const<B>, K, N), E, Self>,
+    ) -> Result<Tensor<(Const<B>, M, N), E, Self>, Self::Err> {
+        assert_ne!(lhs.strides[0], 0);
+        assert_ne!(rhs.strides[0], 0);
         let (batch, m, _) = lhs.shape;
         let (_, k, n) = rhs.shape;
         let shape = (batch, m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
-
+        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
         unsafe {
             sgemm_batch(
                 self.blas.as_ref(),
@@ -503,36 +489,31 @@ where
                 strides,
             )?;
         }
-        Ok(CudaArray {
-            data: Arc::new(storage),
-            shape,
-            strides,
-        })
+        Ok(self.build_tensor(shape, shape.strides(), storage))
     }
-    fn backward<const B: usize, M: Dim, const K: usize, N: Dim>(
+    fn backward<const B: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, M, Const<K>), E>,
-        grad_lhs: &mut Self::Storage<(Const<B>, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<B>, Const<K>, N), E>,
-        grad_rhs: &mut Self::Storage<(Const<B>, Const<K>, N), E>,
-        grad_out: &Self::Storage<(Const<B>, M, N), E>,
+        lhs: &Tensor<(Const<B>, M, K), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(Const<B>, K, N), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        assert_ne!(grad_lhs.strides[0], 0);
-        assert_ne!(grad_rhs.strides[0], 0);
         let (batch, m, _) = lhs.shape;
         let (_, k, n) = rhs.shape;
+        let strides = (batch, m, n).strides();
         unsafe {
             // grad_lhs += grad_out * rhs^T
             sgemm_batch(
                 self.blas.as_ref(),
                 (batch, m, n, k),
-                grad_out.data.as_ref(),
-                grad_out.strides,
+                grad_out,
+                strides,
                 rhs.data.as_ref(),
                 [rhs.strides[0], rhs.strides[2], rhs.strides[1]],
                 E::ONE,
-                Arc::make_mut(&mut grad_lhs.data),
-                grad_lhs.strides,
+                grad_lhs,
+                lhs.strides,
             )?;
 
             // grad_rhs += lhs^T * grad_out
@@ -541,11 +522,11 @@ where
                 (batch, k, m, n),
                 lhs.data.as_ref(),
                 [lhs.strides[0], lhs.strides[2], lhs.strides[1]],
-                grad_out.data.as_ref(),
-                grad_out.strides,
+                grad_out,
+                strides,
                 E::ONE,
-                Arc::make_mut(&mut grad_rhs.data),
-                grad_rhs.strides,
+                grad_rhs,
+                rhs.strides,
             )?;
         }
         Ok(())
@@ -556,16 +537,20 @@ impl<E: Dtype> super::MatMatBatch4Kernel<E> for Cuda
 where
     CudaBlas: Gemm<E>,
 {
-    fn forward<const B: usize, const S: usize, M: Dim, const K: usize, N: Dim>(
+    fn forward<const B: usize, const S: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, Const<S>, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<B>, Const<S>, Const<K>, N), E>,
-    ) -> Result<Self::Storage<(Const<B>, Const<S>, M, N), E>, Self::Err> {
+        lhs: &Tensor<(Const<B>, Const<S>, M, K), E, Self>,
+        rhs: &Tensor<(Const<B>, Const<S>, K, N), E, Self>,
+    ) -> Result<Tensor<(Const<B>, Const<S>, M, N), E, Self>, Self::Err> {
+        assert_ne!(lhs.strides[0], 0);
+        assert_ne!(rhs.strides[0], 0);
+        assert_ne!(lhs.strides[1], 0);
+        assert_ne!(rhs.strides[1], 0);
         let (batch, seq, m, _) = lhs.shape;
         let (_, _, k, n) = rhs.shape;
         let shape = (batch, seq, m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc_async::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
 
         for b in 0..batch.size() {
             // TODO: use separate streams
@@ -573,68 +558,57 @@ where
                 sgemm_batch(
                     self.blas.as_ref(),
                     (seq, m, k, n),
-                    &lhs.data.try_slice(b * lhs.strides[0]..).unwrap(),
+                    &lhs.data.slice(b * lhs.strides[0]..),
                     [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
-                    &rhs.data.try_slice(b * rhs.strides[0]..).unwrap(),
+                    &rhs.data.slice(b * rhs.strides[0]..),
                     [rhs.strides[1], rhs.strides[2], rhs.strides[3]],
                     Default::default(),
-                    &mut storage.try_slice_mut(b * strides[0]..).unwrap(),
+                    &mut storage.slice_mut(b * strides[0]..),
                     [strides[1], strides[2], strides[3]],
                 )?;
             }
         }
-        Ok(CudaArray {
-            data: Arc::new(storage),
-            shape,
-            strides,
-        })
+        Ok(self.build_tensor(shape, shape.strides(), storage))
     }
 
-    fn backward<const B: usize, const S: usize, M: Dim, const K: usize, N: Dim>(
+    fn backward<const B: usize, const S: usize, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Self::Storage<(Const<B>, Const<S>, M, Const<K>), E>,
-        gl: &mut Self::Storage<(Const<B>, Const<S>, M, Const<K>), E>,
-        rhs: &Self::Storage<(Const<B>, Const<S>, Const<K>, N), E>,
-        gr: &mut Self::Storage<(Const<B>, Const<S>, Const<K>, N), E>,
-        go: &Self::Storage<(Const<B>, Const<S>, M, N), E>,
+        lhs: &Tensor<(Const<B>, Const<S>, M, K), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(Const<B>, Const<S>, K, N), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        assert_ne!(gl.strides[0], 0);
-        assert_ne!(gr.strides[0], 0);
-        assert_ne!(gl.strides[1], 0);
-        assert_ne!(gr.strides[1], 0);
-
         let (batch, seq, m, _) = lhs.shape;
         let (_, _, k, n) = rhs.shape;
+        let strides = (batch, seq, m, n).strides();
         // TODO use streams
-        let gl_buf = Arc::make_mut(&mut gl.data);
-        let gr_buf = Arc::make_mut(&mut gr.data);
-
-        for b in 0..batch.size() {
+        for i in 0..batch.size() {
             unsafe {
                 // gl += go * rhs^T
                 sgemm_batch(
                     self.blas.as_ref(),
                     (seq, m, n, k),
-                    &go.data.try_slice(b * go.strides[0]..).unwrap(),
-                    [go.strides[1], go.strides[2], go.strides[3]],
-                    &rhs.data.try_slice(b * rhs.strides[0]..).unwrap(),
+                    &grad_out.slice(i * strides[0]..),
+                    [strides[1], strides[2], strides[3]],
+                    &rhs.data.slice(i * rhs.strides[0]..),
                     [rhs.strides[1], rhs.strides[3], rhs.strides[2]],
                     E::ONE,
-                    &mut gl_buf.try_slice_mut(b * gl.strides[0]..).unwrap(),
-                    [gl.strides[1], gl.strides[2], gl.strides[3]],
+                    &mut grad_lhs.slice_mut(i * lhs.strides[0]..),
+                    [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
                 )?;
 
                 // gr += lhs^T * go
                 sgemm_batch(
                     self.blas.as_ref(),
                     (seq, k, m, n),
-                    &lhs.data.try_slice(b * lhs.strides[0]..).unwrap(),
+                    &lhs.data.slice(i * lhs.strides[0]..),
                     [lhs.strides[1], lhs.strides[3], lhs.strides[2]],
-                    &go.data.try_slice(b * go.strides[0]..).unwrap(),
-                    [go.strides[1], go.strides[2], go.strides[3]],
+                    &grad_out.slice(i * strides[0]..),
+                    [strides[1], strides[2], strides[3]],
                     E::ONE,
-                    &mut gr_buf.try_slice_mut(b * gr.strides[0]..).unwrap(),
-                    [gr.strides[1], gr.strides[2], gr.strides[3]],
+                    &mut grad_rhs.slice_mut(i * rhs.strides[0]..),
+                    [rhs.strides[1], rhs.strides[2], rhs.strides[3]],
                 )?;
             }
         }

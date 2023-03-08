@@ -2,11 +2,11 @@ use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
 use crate::{
-    nn::{modules::*, *},
-    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
+    nn::{modules::*, tensor_collection::*, *},
+    prelude::storage_traits::HasErr,
     shapes::Dtype,
     tensor::{PutTape, SplitTape},
-    tensor_ops::Device,
+    tensor_ops::{Device, TryAdd},
 };
 
 use super::mha::MultiHeadAttention;
@@ -80,23 +80,12 @@ where
 }
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D: Device<E>>
-    ResetParams<D, E> for TransformerDecoder<M, H, F, L, E, D>
+    TensorCollection<E, D> for TransformerDecoder<M, H, F, L, E, D>
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        self.0.try_reset_params()
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D: Device<E>>
-    GradientUpdate<D, E> for TransformerDecoder<M, H, F, L, E, D>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.0.update(updater, unused)
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
     }
 }
 
@@ -119,26 +108,30 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, E, D, Tgt, 
 where
     E: Dtype,
     D: Device<E>,
-    TransformerDecoderBlock<M, H, F, E, D>: Module<(Tgt, Mem), Output = Tgt>,
+    TransformerDecoderBlock<M, H, F, E, D>: Module<(Tgt, Mem), Output = Tgt, Error = D::Err>,
 {
     type Output = Tgt;
-    fn forward(&self, (mut tgt, mem): (Tgt, Mem)) -> Self::Output {
+    type Error = D::Err;
+
+    fn try_forward(&self, (mut tgt, mem): (Tgt, Mem)) -> Result<Self::Output, D::Err> {
         for block in self.0.modules.iter() {
-            tgt = block.forward((tgt, mem.clone()));
+            tgt = block.try_forward((tgt, mem.clone()))?;
         }
-        tgt
+        Ok(tgt)
     }
 }
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D: Device<E>, T>
     ModuleMut<T> for TransformerDecoder<M, H, F, L, E, D>
 where
-    Self: Module<T>,
+    Self: Module<T, Error = D::Err>,
 {
     type Output = <Self as Module<T>>::Output;
 
-    fn forward_mut(&mut self, t: T) -> Self::Output {
-        self.forward(t)
+    type Error = D::Err;
+
+    fn try_forward_mut(&mut self, t: T) -> Result<Self::Output, D::Err> {
+        self.try_forward(t)
     }
 }
 
@@ -193,36 +186,18 @@ where
     }
 }
 
-impl<const M: usize, const N: usize, const F: usize, E, D: Device<E>> ResetParams<D, E>
+impl<const M: usize, const N: usize, const F: usize, E, D: Device<E>> TensorCollection<E, D>
     for TransformerDecoderBlock<M, N, F, E, D>
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        self.self_attn.try_reset_params()?;
-        self.norm1.try_reset_params()?;
-        self.mh_attn.try_reset_params()?;
-        self.norm2.try_reset_params()?;
-        self.ff.try_reset_params()?;
-        self.norm3.try_reset_params()?;
-        Ok(())
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>> GradientUpdate<D, E>
-    for TransformerDecoderBlock<M, H, F, E, D>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.self_attn.update(updater, unused)?;
-        self.norm1.update(updater, unused)?;
-        self.mh_attn.update(updater, unused)?;
-        self.norm2.update(updater, unused)?;
-        self.ff.update(updater, unused)?;
-        self.norm3.update(updater, unused)?;
-        Ok(())
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+        visitor.visit_module("self_attn", |s| &s.self_attn, |s| &mut s.self_attn)?;
+        visitor.visit_module("norm1", |s| &s.norm1, |s| &mut s.norm1)?;
+        visitor.visit_module("mh_attn", |s| &s.mh_attn, |s| &mut s.mh_attn)?;
+        visitor.visit_module("norm2", |s| &s.norm2, |s| &mut s.norm2)?;
+        visitor.visit_module("ff", |s| &s.ff, |s| &mut s.ff)?;
+        visitor.visit_module("norm", |s| &s.norm3, |s| &mut s.norm3)
     }
 }
 
@@ -246,28 +221,31 @@ impl<const M: usize, const H: usize, const F: usize, E: Dtype, D1: Device<E>, D2
 impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>, Tgt, Mem>
     Module<(Tgt, Mem)> for TransformerDecoderBlock<M, H, F, E, D>
 where
-    Tgt: SplitTape + std::ops::Add<Tgt::NoTape, Output = Tgt>,
+    Tgt: SplitTape + TryAdd<Tgt::NoTape> + HasErr<Err = D::Err>,
     Mem: Clone,
-    MultiHeadAttention<M, H, M, M, E, D>:
-        Module<Tgt, Output = Tgt> + Module<(Tgt, Mem, Mem), Output = Tgt>,
-    LayerNorm1D<M, E, D>: Module<Tgt, Output = Tgt>,
-    FF<M, F, E, D>: Module<Tgt, Output = Tgt>,
+    MultiHeadAttention<M, H, M, M, E, D>: Module<Tgt, Output = Tgt, Error = D::Err>
+        + Module<(Tgt, Mem, Mem), Output = Tgt, Error = D::Err>,
+    LayerNorm1D<M, E, D>: Module<Tgt, Output = Tgt, Error = D::Err>,
+    FF<M, F, E, D>: Module<Tgt, Output = Tgt, Error = D::Err>,
 {
     type Output = Tgt;
+    type Error = D::Err;
 
-    fn forward(&self, (tgt, mem): (Tgt, Mem)) -> Self::Output {
+    fn try_forward(&self, (tgt, mem): (Tgt, Mem)) -> Result<Self::Output, D::Err> {
         let (tgt, tape) = tgt.split_tape();
-        let x = self.self_attn.forward(tgt.clone().put_tape(tape));
-        let x = x + tgt;
-        let x = self.norm1.forward(x);
+        let x = self.self_attn.try_forward(tgt.clone().put_tape(tape))?;
+        let x = x.try_add(tgt)?;
+        let x = self.norm1.try_forward(x)?;
 
         let (x, tape) = x.split_tape();
         let x_residual = x.clone();
-        let x = self.mh_attn.forward((x.put_tape(tape), mem.clone(), mem));
-        let x = x + x_residual;
-        let x = self.norm2.forward(x);
-        let x = self.ff.forward(x);
-        self.norm3.forward(x)
+        let x = self
+            .mh_attn
+            .try_forward((x.put_tape(tape), mem.clone(), mem))?;
+        let x = x.try_add(x_residual)?;
+        let x = self.norm2.try_forward(x)?;
+        let x = self.ff.try_forward(x)?;
+        self.norm3.try_forward(x)
     }
 }
 

@@ -2,10 +2,8 @@ mod allocate;
 mod device;
 mod index;
 mod iterate;
-mod views;
 
-pub(crate) use device::StridedArray;
-pub(crate) use iterate::LendingIterator;
-pub(crate) use views::{View, ViewMut};
+pub(crate) use index::index_to_i;
+pub(crate) use iterate::{LendingIterator, NdIndex};
 
 pub use device::{Cpu, CpuError};

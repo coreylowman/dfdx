@@ -1,12 +1,8 @@
-use rustc_version::{version_meta, Channel};
-
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
 
     // If on nightly, enable "nightly" feature
-    if version_meta().unwrap().channel == Channel::Nightly {
-        println!("cargo:rustc-cfg=feature=\"nightly\"");
-    }
+    maybe_enable_nightly();
 
     #[cfg(feature = "cuda")]
     cuda::build_ptx();
@@ -15,11 +11,23 @@ fn main() {
     intel_mkl::link().unwrap();
 }
 
+fn maybe_enable_nightly() {
+    let cmd = std::env::var_os("RUSTC").unwrap_or_else(|| std::ffi::OsString::from("rustc"));
+    let out = std::process::Command::new(cmd).arg("-vV").output().unwrap();
+    assert!(out.status.success());
+    if std::str::from_utf8(&out.stdout)
+        .unwrap()
+        .contains("nightly")
+    {
+        println!("cargo:rustc-cfg=feature=\"nightly\"");
+    }
+}
+
 #[cfg(feature = "cuda")]
 mod cuda {
     pub fn build_ptx() {
         let out_dir = std::env::var("OUT_DIR").unwrap();
-        let mut kernel_paths: Vec<std::path::PathBuf> = glob::glob("src/**/*.cu")
+        let kernel_paths: Vec<std::path::PathBuf> = glob::glob("src/**/*.cu")
             .unwrap()
             .map(|p| p.unwrap())
             .collect();
@@ -30,22 +38,21 @@ mod cuda {
 
         for path in &mut include_directories {
             println!("cargo:rerun-if-changed={}", path.display());
+            // remove the filename from the path so it's just the directory
             path.pop();
         }
 
         include_directories.sort();
         include_directories.dedup();
 
-        println!("cargo:warning=Found kernels {kernel_paths:?}");
-        println!("cargo:warning=Found include directories {include_directories:?}");
-
+        #[allow(unused)]
         let include_options: Vec<String> = include_directories
             .into_iter()
             .map(|s| "-I".to_string() + &s.into_os_string().into_string().unwrap())
             .collect::<Vec<_>>();
 
         #[cfg(feature = "ci-check")]
-        for mut kernel_path in kernel_paths.drain(..) {
+        for mut kernel_path in kernel_paths.into_iter() {
             kernel_path.set_extension("ptx");
 
             let mut ptx_path: std::path::PathBuf = out_dir.clone().into();
@@ -54,21 +61,40 @@ mod cuda {
         }
 
         #[cfg(not(feature = "ci-check"))]
-        for kernel_path in kernel_paths.drain(..) {
-            println!("cargo:rerun-if-changed={}", kernel_path.display());
+        {
+            let start = std::time::Instant::now();
 
-            let output = std::process::Command::new("nvcc")
-                .args(["--gpu-architecture", "compute_60"])
-                .arg("--ptx")
-                .args(["--output-directory", &out_dir])
-                .args(&include_options)
-                .arg(&kernel_path)
-                .output()
-                .unwrap();
+            kernel_paths
+                .iter()
+                .for_each(|p| println!("cargo:rerun-if-changed={}", p.display()));
 
-            assert!(
-                output.status.success(),
-                "nvcc error while compiling {kernel_path:?}: {output:?}",
+            let children = kernel_paths
+                .iter()
+                .map(|p| {
+                    std::process::Command::new("nvcc")
+                        .args(["--gpu-architecture", "native"])
+                        .arg("--ptx")
+                        .args(["--default-stream", "per-thread"])
+                        .args(["--output-directory", &out_dir])
+                        .args(&include_options)
+                        .arg(p)
+                        .spawn()
+                        .unwrap()
+                })
+                .collect::<Vec<_>>();
+
+            for (kernel_path, child) in kernel_paths.iter().zip(children.into_iter()) {
+                let output = child.wait_with_output().unwrap();
+                assert!(
+                    output.status.success(),
+                    "nvcc error while compiling {kernel_path:?}: {output:?}",
+                );
+            }
+
+            println!(
+                "cargo:warning=Compiled {:?} cuda kernels in {:?}",
+                kernel_paths.len(),
+                start.elapsed()
             );
         }
     }

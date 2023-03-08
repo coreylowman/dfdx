@@ -20,6 +20,6 @@ impl<F: num_traits::Float> BinaryDerivative<F> for super::BinarySubKernelOp {
     }
     #[inline(always)]
     fn dfdy(&self, _: &F, _: &F) -> F {
-        F::one().neg()
+        -F::one()
     }
 }

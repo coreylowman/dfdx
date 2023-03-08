@@ -1,7 +1,7 @@
 use super::TanhKernelOp;
 use crate::tensor_ops::cuda_kernels::cuda_unary;
 
-unsafe impl cudarc::driver::AsKernelParam for TanhKernelOp {}
+unsafe impl cudarc::driver::DeviceRepr for TanhKernelOp {}
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/tanh.ptx"));
 

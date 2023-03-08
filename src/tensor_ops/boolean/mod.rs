@@ -16,26 +16,26 @@ use super::Device;
 pub trait BooleanKernel: DeviceStorage + OnesTensor<bool> + ZerosTensor<bool> {
     fn not<S: Shape>(
         &self,
-        inp: &Self::Storage<S, bool>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>;
+        inp: &Tensor<S, bool, Self>,
+    ) -> Result<Tensor<S, bool, Self>, Self::Err>;
 
     fn and<S: Shape>(
         &self,
-        lhs: &Self::Storage<S, bool>,
-        rhs: &Self::Storage<S, bool>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>;
+        lhs: &Tensor<S, bool, Self>,
+        rhs: &Tensor<S, bool, Self>,
+    ) -> Result<Tensor<S, bool, Self>, Self::Err>;
 
     fn or<S: Shape>(
         &self,
-        lhs: &Self::Storage<S, bool>,
-        rhs: &Self::Storage<S, bool>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>;
+        lhs: &Tensor<S, bool, Self>,
+        rhs: &Tensor<S, bool, Self>,
+    ) -> Result<Tensor<S, bool, Self>, Self::Err>;
 
     fn xor<S: Shape>(
         &self,
-        lhs: &Self::Storage<S, bool>,
-        rhs: &Self::Storage<S, bool>,
-    ) -> Result<Self::Storage<S, bool>, Self::Err>;
+        lhs: &Tensor<S, bool, Self>,
+        rhs: &Tensor<S, bool, Self>,
+    ) -> Result<Tensor<S, bool, Self>, Self::Err>;
 }
 
 fn scalar_and<D: BooleanKernel, S: Shape>(
@@ -65,7 +65,7 @@ fn scalar_xor<D: BooleanKernel, S: Shape>(
     rhs: bool,
 ) -> Result<Tensor<S, bool, D>, D::Err> {
     if rhs {
-        Ok(lhs.device.upgrade(lhs.device.not(&lhs.storage)?))
+        Ok(lhs.device.not(lhs)?)
     } else {
         Ok(lhs.clone())
     }
@@ -83,7 +83,7 @@ impl<S: Shape, D: BooleanKernel> Not for &Tensor<S, bool, D> {
     type Output = Tensor<S, bool, D>;
 
     fn not(self) -> Self::Output {
-        self.device.upgrade(self.device.not(&self.storage).unwrap())
+        self.device.not(self).unwrap()
     }
 }
 
@@ -94,11 +94,7 @@ macro_rules! boolean_op_impl {
 
             fn $op_method(self, rhs: Self) -> Self {
                 assert_eq!(self.shape(), rhs.shape());
-                self.device.upgrade(
-                    self.device
-                        .$binary_kernel_method(&self.storage, &rhs.storage)
-                        .unwrap(),
-                )
+                self.device.$binary_kernel_method(&self, &rhs).unwrap()
             }
         }
 
@@ -107,11 +103,7 @@ macro_rules! boolean_op_impl {
 
             fn $op_method(self, rhs: Self) -> Self::Output {
                 assert_eq!(self.shape(), rhs.shape());
-                self.device.upgrade(
-                    self.device
-                        .$binary_kernel_method(&self.storage, &rhs.storage)
-                        .unwrap(),
-                )
+                self.device.$binary_kernel_method(&self, &rhs).unwrap()
             }
         }
 
@@ -290,7 +282,7 @@ mod tests {
         let r3 = &a & false;
         assert_eq!(r1.array(), [[false, false, false, true]; 2]);
         assert_eq!(r2.array(), a.array());
-        assert_eq!(r3.array(), dev.zeros_like(&a).array());
+        assert_eq!(r3.array(), [[false; 4]; 2]);
     }
 
     #[test]
@@ -303,7 +295,7 @@ mod tests {
         let r2 = &a | true;
         let r3 = &a | false;
         assert_eq!(r1.array(), [[false, true, true, true]; 2]);
-        assert_eq!(r2.array(), dev.ones_like(&a).array());
+        assert_eq!(r2.array(), [[true; 4]; 2]);
         assert_eq!(r3.array(), a.array());
     }
 

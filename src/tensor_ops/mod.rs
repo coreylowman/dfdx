@@ -144,6 +144,8 @@ pub use utilities::*;
 
 mod abs;
 mod add;
+mod attention_reshape;
+pub(crate) mod axpy;
 mod bce;
 mod boolean;
 mod broadcast_to;
@@ -189,6 +191,8 @@ mod var_to;
 
 pub use abs::abs;
 pub use add::{add, TryAdd};
+pub use attention_reshape::TryAttentionReshape;
+pub use axpy::axpy;
 pub use bce::bce_with_logits;
 pub use boolean::{bool_and, bool_not, bool_or, bool_xor};
 pub use broadcast_to::BroadcastTo;

@@ -21,6 +21,7 @@ __device__ unsigned int get_selected_index(
     // indices for dimensions before, at, and after the indexed dimension
     unsigned int idx_before = index / elem_size;
     unsigned int idx_mid = idx[get_strided_index(idx_before, idx_num_dims, idx_dims, idx_strides)];
+    assert(idx_mid < inp_dims[idx_num_dims]);
     unsigned int idx_after = index % elem_size;
 
     // recombine

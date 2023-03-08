@@ -1,6 +1,6 @@
-use crate::{optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{shapes::*, tensor::*, tensor_ops::TryAdd};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -25,26 +25,13 @@ pub struct GeneralizedResidual<F, R> {
     pub r: R,
 }
 
-impl<D: Device<E>, E: Dtype, F: GradientUpdate<D, E>, R: GradientUpdate<D, E>> GradientUpdate<D, E>
-    for GeneralizedResidual<F, R>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.f.update(updater, unused)?;
-        self.r.update(updater, unused)?;
-        Ok(())
-    }
-}
-
-impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>, R: BuildOnDevice<D, E>> BuildOnDevice<D, E>
+impl<D: DeviceStorage, E: Dtype, F: BuildOnDevice<D, E>, R: BuildOnDevice<D, E>> BuildOnDevice<D, E>
     for GeneralizedResidual<F, R>
 {
     type Built = GeneralizedResidual<F::Built, R::Built>;
 }
 
-impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>, R: BuildModule<D, E>> BuildModule<D, E>
+impl<D: DeviceStorage, E: Dtype, F: BuildModule<D, E>, R: BuildModule<D, E>> BuildModule<D, E>
     for GeneralizedResidual<F, R>
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
@@ -55,13 +42,12 @@ impl<D: Device<E>, E: Dtype, F: BuildModule<D, E>, R: BuildModule<D, E>> BuildMo
     }
 }
 
-impl<D: Device<E>, E: Dtype, F: ResetParams<D, E>, R: ResetParams<D, E>> ResetParams<D, E>
-    for GeneralizedResidual<F, R>
+impl<E: Dtype, D: DeviceStorage, F: TensorCollection<E, D>, R: TensorCollection<E, D>>
+    TensorCollection<E, D> for GeneralizedResidual<F, R>
 {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.f.try_reset_params()?;
-        self.r.try_reset_params()?;
-        Ok(())
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+        visitor.visit_module("f", |s| &s.f, |s| &mut s.f)?;
+        visitor.visit_module("r", |s| &s.r, |s| &mut s.r)
     }
 }
 
@@ -75,25 +61,33 @@ impl<D, F: ToDevice<D>, R: ToDevice<D>> ToDevice<D> for GeneralizedResidual<F, R
     }
 }
 
-impl<T: SplitTape, F: Module<T>, R: Module<T, Output = F::Output>> Module<T>
+impl<T: SplitTape, F: Module<T>, R: Module<T, Output = F::Output, Error = F::Error>> Module<T>
     for GeneralizedResidual<F, R>
 where
-    F::Output: std::ops::Add<F::Output>,
+    F::Output: TryAdd<F::Output> + HasErr<Err = F::Error>,
 {
-    type Output = <F::Output as std::ops::Add<F::Output>>::Output;
-    fn forward(&self, x: T) -> Self::Output {
-        self.f.forward(x.with_empty_tape()) + self.r.forward(x)
+    type Output = F::Output;
+    type Error = F::Error;
+
+    fn try_forward(&self, x: T) -> Result<Self::Output, F::Error> {
+        self.f
+            .try_forward(x.with_empty_tape())?
+            .try_add(self.r.try_forward(x)?)
     }
 }
 
-impl<T: SplitTape, F: ModuleMut<T>, R: ModuleMut<T, Output = F::Output>> ModuleMut<T>
-    for GeneralizedResidual<F, R>
+impl<T: SplitTape, F: ModuleMut<T>, R: ModuleMut<T, Output = F::Output, Error = F::Error>>
+    ModuleMut<T> for GeneralizedResidual<F, R>
 where
-    F::Output: std::ops::Add<F::Output>,
+    F::Output: TryAdd<F::Output> + HasErr<Err = F::Error>,
 {
-    type Output = <F::Output as std::ops::Add<F::Output>>::Output;
-    fn forward_mut(&mut self, x: T) -> Self::Output {
-        self.f.forward_mut(x.with_empty_tape()) + self.r.forward_mut(x)
+    type Output = F::Output;
+    type Error = F::Error;
+
+    fn try_forward_mut(&mut self, x: T) -> Result<Self::Output, F::Error> {
+        self.f
+            .try_forward_mut(x.with_empty_tape())?
+            .try_add(self.r.try_forward_mut(x)?)
     }
 }
 
@@ -102,7 +96,7 @@ mod tests {
     use super::*;
     use crate::nn::builders::Linear;
     use crate::nn::DeviceBuildExt;
-    use crate::tests::*;
+    use crate::{tensor_ops::*, tests::*};
 
     #[test]
     fn test_reset_generalized_residual() {

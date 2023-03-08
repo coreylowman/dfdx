@@ -9,16 +9,16 @@ pub trait MaxReduceKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
-        inp: &Self::Storage<Src, E>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>;
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        inp: &Self::Storage<Src, E>,
-        grad_inp: &mut Self::Storage<Src, E>,
-        out: &Self::Storage<Dst, E>,
-        grad_out: &Self::Storage<Dst, E>,
+        inp: &Tensor<Src, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        out: &Tensor<Dst, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>;
@@ -60,21 +60,20 @@ pub trait MaxTo: HasErr + HasShape {
         Self::Shape: ReduceShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: MaxReduceKernel<E>, T: Tape<D>> MaxTo for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: MaxReduceKernel<E>, T: Tape<E, D>> MaxTo for Tensor<S, E, D, T> {
     fn try_max<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: ReduceShapeTo<Dst, Ax>,
     {
         let dst: Dst = self.shape().reduced();
         let (inp, mut tape) = self.split_tape();
-        let out = inp.device.upgrade(inp.device.forward(dst, &inp.storage)?);
+        let out = inp.device.forward(dst, &inp)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&inp)?;
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device
-                .backward(&inp.storage, grad_inp, &phantom_out.storage, grad_out)
+            inp.device.backward(&inp, grad_inp, &phantom_out, grad_out)
         });
         Ok(out.put_tape(tape))
     }

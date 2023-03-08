@@ -33,6 +33,7 @@ __device__ unsigned int get_gathered_index(
     // indices for dimensions before, at, and after the indexed dimension
     unsigned int idx_before = index / (elem_size * row_len);
     unsigned int idx_mid = idx[idx_idx];
+    assert(idx_mid < inp_dims[ax]);
     unsigned int idx_after = index % elem_size;
 
     // recombine

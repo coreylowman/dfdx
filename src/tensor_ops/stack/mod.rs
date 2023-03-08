@@ -38,9 +38,9 @@ pub trait TryStack<E: Dtype>: DeviceStorage {
     /// ```
     fn stack<S: Shape, T, Items>(&self, items: Items) -> Tensor<S::Larger, E, Self, T>
     where
-        Items: Stackable<Tensor<S, E, Self, T>>,
+        Items: Array<Tensor<S, E, Self, T>>,
         S: AddDim<Items::Dim>,
-        T: Tape<Self> + Merge<T>,
+        T: Tape<E, Self> + Merge<T>,
     {
         self.try_stack(items).unwrap()
     }
@@ -51,60 +51,43 @@ pub trait TryStack<E: Dtype>: DeviceStorage {
         items: Items,
     ) -> Result<Tensor<S::Larger, E, Self, T>, Self::Err>
     where
-        Items: Stackable<Tensor<S, E, Self, T>>,
+        Items: Array<Tensor<S, E, Self, T>>,
         S: AddDim<Items::Dim>,
-        T: Tape<Self> + Merge<T>;
-}
-
-pub trait Stackable<T>: IntoIterator<Item = T> {
-    type Dim: Dim;
-    fn dim(&self) -> Self::Dim;
-}
-impl<T, const N: usize> Stackable<T> for [T; N] {
-    type Dim = Const<N>;
-    fn dim(&self) -> Self::Dim {
-        Const
-    }
-}
-impl<T> Stackable<T> for Vec<T> {
-    type Dim = usize;
-    fn dim(&self) -> Self::Dim {
-        self.len()
-    }
+        T: Tape<E, Self> + Merge<T>;
 }
 
 pub trait AddDim<D: Dim>: Shape {
     type Larger: Shape;
-    fn add(&self, dim: D) -> Self::Larger;
+    fn add_dim(&self, dim: D) -> Self::Larger;
 }
 
 impl<New: Dim> AddDim<New> for () {
     type Larger = (New,);
-    fn add(&self, dim: New) -> Self::Larger {
+    fn add_dim(&self, dim: New) -> Self::Larger {
         (dim,)
     }
 }
 impl<D1: Dim, New: Dim> AddDim<New> for (D1,) {
     type Larger = (New, D1);
-    fn add(&self, dim: New) -> Self::Larger {
+    fn add_dim(&self, dim: New) -> Self::Larger {
         (dim, self.0)
     }
 }
 impl<D1: Dim, D2: Dim, New: Dim> AddDim<New> for (D1, D2) {
     type Larger = (New, D1, D2);
-    fn add(&self, dim: New) -> Self::Larger {
+    fn add_dim(&self, dim: New) -> Self::Larger {
         (dim, self.0, self.1)
     }
 }
 impl<D1: Dim, D2: Dim, D3: Dim, New: Dim> AddDim<New> for (D1, D2, D3) {
     type Larger = (New, D1, D2, D3);
-    fn add(&self, dim: New) -> Self::Larger {
+    fn add_dim(&self, dim: New) -> Self::Larger {
         (dim, self.0, self.1, self.2)
     }
 }
 impl<D1: Dim, D2: Dim, D3: Dim, D4: Dim, New: Dim> AddDim<New> for (D1, D2, D3, D4) {
     type Larger = (New, D1, D2, D3, D4);
-    fn add(&self, dim: New) -> Self::Larger {
+    fn add_dim(&self, dim: New) -> Self::Larger {
         (dim, self.0, self.1, self.2, self.3)
     }
 }
@@ -113,17 +96,15 @@ pub trait StackKernel<E: Dtype>: DeviceStorage {
     fn forward<S: Shape, Num: Dim>(
         &self,
         num: Num,
-        inp: Vec<&Self::Storage<S, E>>,
-    ) -> Result<Self::Storage<S::Larger, E>, Self::Err>
+        inp: &[Tensor<S, E, Self>],
+    ) -> Result<Tensor<S::Larger, E, Self>, Self::Err>
     where
         S: AddDim<Num>;
-    fn backward<S: Shape, New: Dim>(
+    fn backward(
         &self,
-        grad_inp: Vec<&mut Self::Storage<S, E>>,
-        grad_out: &Self::Storage<S::Larger, E>,
-    ) -> Result<(), Self::Err>
-    where
-        S: AddDim<New>;
+        grad_inp: Vec<&mut Self::Vec<E>>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err>;
 }
 
 impl<E: Dtype, D: StackKernel<E>> TryStack<E> for D {
@@ -132,9 +113,9 @@ impl<E: Dtype, D: StackKernel<E>> TryStack<E> for D {
         items: Items,
     ) -> Result<Tensor<S::Larger, E, Self, T>, Self::Err>
     where
-        Items: Stackable<Tensor<S, E, Self, T>>,
+        Items: Array<Tensor<S, E, Self, T>>,
         S: AddDim<Items::Dim>,
-        T: Tape<Self> + Merge<T>,
+        T: Tape<E, Self> + Merge<T>,
     {
         let new_dim = items.dim();
         assert!(new_dim.size() > 0);
@@ -153,16 +134,13 @@ impl<E: Dtype, D: StackKernel<E>> TryStack<E> for D {
         let shape = *tensors[0].shape();
         for t in tensors.iter() {
             assert_eq!(t.shape(), &shape);
+            tape.try_alloc_grad(t)?;
         }
 
         // we map to storage refs so kernels don't have to know about tensors
-        let storages: Vec<&D::Storage<S, E>> = tensors.iter().map(|t| &t.storage).collect();
-        let out = device.upgrade(device.forward(new_dim, storages)?);
+        let out = device.forward(new_dim, &tensors)?;
 
         let phantom_out = out.clone();
-        for inp in tensors.iter() {
-            tape.try_alloc_grad(inp)?;
-        }
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.many_and_ref(&tensors, &phantom_out);

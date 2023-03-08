@@ -5,17 +5,13 @@ mod mha;
 pub use decoder::*;
 pub use encoder::*;
 pub use mha::*;
+
 use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
-use crate::{
-    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
-    shapes::Dtype,
-    tensor::{DeviceStorage, PutTape, SplitTape},
-    tensor_ops::Device,
-};
+use crate::{shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 pub mod builder {
     #[derive(Debug, Clone)]
@@ -97,31 +93,14 @@ where
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>
-    ResetParams<D, E> for Transformer<M, H, A, B, F, E, D>
+    TensorCollection<E, D> for Transformer<M, H, A, B, F, E, D>
 where
     E: Dtype + Float + SampleUniform,
     D: Device<E>,
 {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.encoder.try_reset_params()?;
-        self.decoder.try_reset_params()?;
-        Ok(())
-    }
-}
-
-impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>
-    GradientUpdate<D, E> for Transformer<M, H, A, B, F, E, D>
-where
-    E: Dtype,
-    D: Device<E>,
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.encoder.update(updater, unused)?;
-        self.decoder.update(updater, unused)?;
-        Ok(())
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+        visitor.visit_module("encoder", |s| &s.encoder, |s| &mut s.encoder)?;
+        visitor.visit_module("decoder", |s| &s.decoder, |s| &mut s.decoder)
     }
 }
 
@@ -154,17 +133,19 @@ impl<
         Tgt: PutTape<Src::Tape>,
     > Module<(Src, Tgt)> for Transformer<M, H, EL, DL, F, E, D>
 where
-    TransformerEncoder<M, H, F, EL, E, D>: Module<Src, Output = Src>,
+    TransformerEncoder<M, H, F, EL, E, D>: Module<Src, Output = Src, Error = D::Err>,
     TransformerDecoder<M, H, F, DL, E, D>: Module<
         (<Tgt as PutTape<Src::Tape>>::Output, Src::NoTape),
         Output = <Tgt as PutTape<Src::Tape>>::Output,
+        Error = D::Err,
     >,
 {
     type Output = <Tgt as PutTape<Src::Tape>>::Output;
+    type Error = D::Err;
 
-    fn forward(&self, (src, tgt): (Src, Tgt)) -> Self::Output {
-        let (mem, tape) = self.encoder.forward(src).split_tape();
-        self.decoder.forward((tgt.put_tape(tape), mem))
+    fn try_forward(&self, (src, tgt): (Src, Tgt)) -> Result<Self::Output, D::Err> {
+        let (mem, tape) = self.encoder.try_forward(src)?.split_tape();
+        self.decoder.try_forward((tgt.put_tape(tape), mem))
     }
 }
 
@@ -173,11 +154,13 @@ impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: us
 where
     E: Dtype,
     D: Device<E>,
-    Self: Module<T>,
+    Self: Module<T, Error = D::Err>,
 {
     type Output = <Self as Module<T>>::Output;
-    fn forward_mut(&mut self, t: T) -> Self::Output {
-        self.forward(t)
+    type Error = D::Err;
+
+    fn try_forward_mut(&mut self, t: T) -> Result<Self::Output, D::Err> {
+        self.try_forward(t)
     }
 }
 
@@ -185,13 +168,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        nn::{tests::SimpleUpdater, DeviceBuildExt},
-        shapes::*,
-        tensor::*,
-        tensor_ops::*,
-        tests::*,
-    };
+    use crate::{nn::DeviceBuildExt, optim::*, tests::*};
 
     #[test]
     fn test_forward() {
@@ -221,9 +198,7 @@ mod tests {
         let out: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward_mut((src.trace(), tgt));
         let g = out.mean().backward();
 
-        let mut gs = SimpleUpdater(g);
-        let mut unused: UnusedTensors = Default::default();
-        t.update(&mut gs, &mut unused).unwrap();
-        assert!(unused.is_empty());
+        let mut opt = Sgd::new(&t, Default::default());
+        opt.update(&mut t, &g).expect("");
     }
 }

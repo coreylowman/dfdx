@@ -1,6 +1,6 @@
 use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
+use super::{Module, NonMutableModule, ZeroSizedModule};
 
 /// Applies average pooling over an entire image, fully reducing the height and width
 /// dimensions:
@@ -61,32 +61,36 @@ macro_rules! impl_pools {
         impl ZeroSizedModule for $PoolTy {}
         impl NonMutableModule for $PoolTy {}
 
-        impl<D: Device<E>, E: Dtype> BuildModule<D, E> for $PoolTy {
-            fn try_build(_: &D) -> Result<Self, <D>::Err> {
-                Ok(Default::default())
-            }
-        }
-
-        impl<C: Dim, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<D>>
+        impl<C: Dim, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
             Module<Tensor<(C, H, W), E, D, T>> for $PoolTy
         {
             type Output = Tensor<(C,), E, D, T>;
-            fn forward(&self, input: Tensor<(C, H, W), E, D, T>) -> Self::Output {
-                input.min()
+            type Error = D::Err;
+
+            fn try_forward(
+                &self,
+                input: Tensor<(C, H, W), E, D, T>,
+            ) -> Result<Self::Output, D::Err> {
+                input.try_min()
             }
         }
 
-        impl<B: Dim, C: Dim, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<D>>
+        impl<B: Dim, C: Dim, H: Dim, W: Dim, E: Dtype, D: Device<E>, T: Tape<E, D>>
             Module<Tensor<(B, C, H, W), E, D, T>> for $PoolTy
         {
             type Output = Tensor<(B, C), E, D, T>;
-            fn forward(&self, input: Tensor<(B, C, H, W), E, D, T>) -> Self::Output {
+            type Error = D::Err;
+
+            fn try_forward(
+                &self,
+                input: Tensor<(B, C, H, W), E, D, T>,
+            ) -> Result<Self::Output, D::Err> {
                 input.$Method()
             }
         }
     };
 }
 
-impl_pools!(AvgPoolGlobal, mean);
-impl_pools!(MaxPoolGlobal, max);
-impl_pools!(MinPoolGlobal, min);
+impl_pools!(AvgPoolGlobal, try_mean);
+impl_pools!(MaxPoolGlobal, try_max);
+impl_pools!(MinPoolGlobal, try_min);

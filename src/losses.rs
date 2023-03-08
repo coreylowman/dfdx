@@ -6,7 +6,7 @@ use crate::{gradients::Tape, shapes::*, tensor::Tensor, tensor_ops::*};
 /// This computes `(pred - targ).square().mean()`.
 ///
 /// See [MeanTo], [square()], and [sub()].
-pub fn mse_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn mse_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T> {
@@ -17,7 +17,7 @@ pub fn mse_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
 /// This computes `(pred - targ).square().mean().sqrt()`
 ///
 /// See [mse_loss()] and [sqrt()]
-pub fn rmse_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn rmse_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T> {
@@ -28,7 +28,7 @@ pub fn rmse_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
 /// This computes `(pred - targ).abs().mean()`
 ///
 /// See [MeanTo], [abs()], and [sub()]
-pub fn mae_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn mae_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T> {
@@ -49,7 +49,7 @@ pub fn mae_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
 /// let y = dev.tensor([0.5, 0.5]);
 /// let loss = huber_loss(x.traced(), y, 1.0);
 /// ```
-pub fn huber_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn huber_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
     delta: E,
@@ -73,7 +73,7 @@ pub fn huber_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
 /// let y = dev.tensor([0.5, 0.5]);
 /// let loss = smooth_l1_loss(x.traced(), y, 1.0);
 /// ```
-pub fn smooth_l1_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn smooth_l1_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
     delta: E,
@@ -100,7 +100,7 @@ pub fn smooth_l1_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
 /// let target_probs = dev.tensor([0.5, 0.5]);
 /// let loss = cross_entropy_with_logits_loss(logits.traced(), target_probs);
 /// ```
-pub fn cross_entropy_with_logits_loss<Ax: Axes, S, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn cross_entropy_with_logits_loss<Ax: Axes, S, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     logits: Tensor<S, E, D, T>,
     target_probs: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T>
@@ -130,7 +130,7 @@ where
 /// let target_probs = dev.tensor([0.5, 0.5]);
 /// let loss = kl_div_with_logits_loss(logits.traced(), target_probs);
 /// ```
-pub fn kl_div_with_logits_loss<Ax: Axes, S, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn kl_div_with_logits_loss<Ax: Axes, S, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     logits: Tensor<S, E, D, T>,
     target_probs: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T>
@@ -162,7 +162,7 @@ where
 /// let target_probs = dev.tensor([1.0, 0.25]);
 /// let loss = binary_cross_entropy_with_logits_loss(logits.traced(), target_probs);
 /// ```
-pub fn binary_cross_entropy_with_logits_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>>(
+pub fn binary_cross_entropy_with_logits_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     logits: Tensor<S, E, D, T>,
     target_probs: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T> {

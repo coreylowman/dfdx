@@ -1,6 +1,6 @@
 use crate::{gradients::*, shapes::*, tensor::Tensor, tensor_ops::*};
 
-use super::{BuildModule, Module, ModuleMut, ZeroSizedModule};
+use super::{Module, ModuleMut, ZeroSizedModule};
 
 /// Does nothing as a [Module], and calls [dropout()] as [ModuleMut] with probability `1.0 / N`.
 ///
@@ -45,29 +45,30 @@ pub struct DropoutOneIn<const N: usize>;
 
 impl<const N: usize> ZeroSizedModule for DropoutOneIn<N> {}
 
-impl<const N: usize, D: Device<E>, E: Dtype> BuildModule<D, E> for DropoutOneIn<N> {
-    fn try_build(_: &D) -> Result<Self, <D>::Err> {
-        Ok(Default::default())
-    }
-}
-
 impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>>
     for DropoutOneIn<N>
 {
     type Output = Tensor<S, E, D, NoneTape>;
     /// Does nothing
-    fn forward(&self, input: Tensor<S, E, D, NoneTape>) -> Self::Output {
-        input
+    type Error = D::Err;
+
+    fn try_forward(&self, input: Tensor<S, E, D, NoneTape>) -> Result<Self::Output, D::Err> {
+        Ok(input)
     }
 }
 
-impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<D>>>
+impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<E, D>>>
     for DropoutOneIn<N>
 {
-    type Output = Tensor<S, E, D, OwnedTape<D>>;
+    type Output = Tensor<S, E, D, OwnedTape<E, D>>;
+    type Error = D::Err;
+
     /// Calls [dropout()] with `p=1/N` using `self.rng`.
-    fn forward_mut(&mut self, input: Tensor<S, E, D, OwnedTape<D>>) -> Self::Output {
-        dropout(input, E::ONE / E::from_usize(N).unwrap())
+    fn try_forward_mut(
+        &mut self,
+        input: Tensor<S, E, D, OwnedTape<E, D>>,
+    ) -> Result<Self::Output, D::Err> {
+        input.try_dropout(E::ONE / E::from_usize(N).unwrap())
     }
 }
 
@@ -123,25 +124,26 @@ impl Default for Dropout {
 
 impl ZeroSizedModule for Dropout {}
 
-impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Dropout {
-    fn try_build(_: &D) -> Result<Self, <D>::Err> {
-        Ok(Default::default())
-    }
-}
-
 impl<S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>> for Dropout {
     type Output = Tensor<S, E, D, NoneTape>;
+    type Error = D::Err;
+
     /// Does nothing.
-    fn forward(&self, input: Tensor<S, E, D, NoneTape>) -> Self::Output {
-        input
+    fn try_forward(&self, input: Tensor<S, E, D, NoneTape>) -> Result<Self::Output, D::Err> {
+        Ok(input)
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<D>>> for Dropout {
-    type Output = Tensor<S, E, D, OwnedTape<D>>;
+impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<E, D>>> for Dropout {
+    type Output = Tensor<S, E, D, OwnedTape<E, D>>;
+    type Error = D::Err;
+
     /// Calls [dropout()]
-    fn forward_mut(&mut self, input: Tensor<S, E, D, OwnedTape<D>>) -> Self::Output {
-        dropout(input, E::from_f32(self.p).unwrap())
+    fn try_forward_mut(
+        &mut self,
+        input: Tensor<S, E, D, OwnedTape<E, D>>,
+    ) -> Result<Self::Output, D::Err> {
+        input.try_dropout(E::from_f32(self.p).unwrap())
     }
 }
 

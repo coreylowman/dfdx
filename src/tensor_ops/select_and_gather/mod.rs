@@ -10,16 +10,18 @@ use crate::{gradients::Tape, shapes::*, tensor::*};
 pub trait ReplaceDimKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
-        inp: &Self::Storage<Src, E>,
-        idx: &Self::Storage<Idx, usize>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+        idx: &Tensor<Idx, usize, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: ReplaceDimTo<Dst, Idx>;
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
-        grad_inp: &mut Self::Storage<Src, E>,
-        idx: &Self::Storage<Idx, usize>,
-        grad_out: &Self::Storage<Dst, E>,
+        inp: &Tensor<Src, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        idx: &Tensor<Idx, usize, Self>,
+        out: &Tensor<Dst, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where
         Src: ReplaceDimTo<Dst, Idx>;
@@ -28,16 +30,18 @@ pub trait ReplaceDimKernel<E: Dtype>: DeviceStorage {
 pub trait RemoveDimKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
-        inp: &Self::Storage<Src, E>,
-        idx: &Self::Storage<Idx, usize>,
-    ) -> Result<Self::Storage<Dst, E>, Self::Err>
+        inp: &Tensor<Src, E, Self>,
+        idx: &Tensor<Idx, usize, Self>,
+    ) -> Result<Tensor<Dst, E, Self>, Self::Err>
     where
         Src: RemoveDimTo<Dst, Idx>;
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
-        grad_inp: &mut Self::Storage<Src, E>,
-        idx: &Self::Storage<Idx, usize>,
-        grad_out: &Self::Storage<Dst, E>,
+        inp: &Tensor<Src, E, Self>,
+        grad_inp: &mut Self::Vec<E>,
+        idx: &Tensor<Idx, usize, Self>,
+        out: &Tensor<Dst, E, Self>,
+        grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where
         Src: RemoveDimTo<Dst, Idx>;
@@ -87,7 +91,9 @@ pub trait SelectTo<D: DeviceStorage>: HasErr + HasShape {
         Self::Shape: RemoveDimTo<Dst, Idx>;
 }
 
-impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<D>> SelectTo<D> for Tensor<Src, E, D, T> {
+impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<D>
+    for Tensor<Src, E, D, T>
+{
     fn try_select<Dst: Shape, Idx: Shape>(
         self,
         idx: Tensor<Idx, usize, D>,
@@ -97,14 +103,14 @@ impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<D>> SelectTo<D> for Te
     {
         self.shape().check(idx.shape());
         let (inp, mut tape) = self.split_tape();
-        let storage = inp.device.forward(&inp.storage, &idx.storage)?;
-        let out = inp.device.upgrade(storage);
+        let out = inp.device.forward(&inp, &idx)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&inp)?;
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward(grad_inp, &idx.storage, grad_out)
+            inp.device
+                .backward(&inp, grad_inp, &idx, &phantom_out, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -155,7 +161,7 @@ pub trait GatherTo<D: DeviceStorage>: HasErr + HasShape {
         Self::Shape: ReplaceDimTo<Dst, Idx>;
 }
 
-impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<D>> GatherTo<D>
+impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<E, D>> GatherTo<D>
     for Tensor<Src, E, D, T>
 {
     fn try_gather<Dst: Shape, Idx: Shape>(
@@ -167,14 +173,14 @@ impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<D>> GatherTo<D>
     {
         self.shape().check(idx.shape());
         let (inp, mut tape) = self.split_tape();
-        let storage = inp.device.forward(&inp.storage, &idx.storage)?;
-        let out = inp.device.upgrade(storage);
+        let out = inp.device.forward(&inp, &idx)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&inp)?;
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward(grad_inp, &idx.storage, grad_out)
+            inp.device
+                .backward(&inp, grad_inp, &idx, &phantom_out, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -187,8 +193,8 @@ mod tests {
     use crate::tests::*;
 
     #[test]
-    #[should_panic]
-    fn test_remove_wrong_index_shape_2d() {
+    #[should_panic = "dimension 0 not the same"]
+    fn test_select_wrong_index_shape_2d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.sample_like(&(5, 3), rand_distr::StandardNormal);
         // here we are selecting from axis 1, so the 7 should actually be a 5
@@ -196,24 +202,25 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn test_remove_wrong_index_shape_3d() {
+    #[should_panic = "dimension 1 not the same"]
+    fn test_select_wrong_index_shape_3d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.sample_like(&(7, 5, 3), rand_distr::StandardNormal);
         let _ = t.trace().select(dev.zeros_like(&(7, 4)));
     }
 
+    #[cfg(not(feature = "test-cuda"))]
     #[test]
-    #[should_panic]
-    fn test_remove_index_out_of_bounds() {
+    #[should_panic = "Index out of bounds: index=[7]"]
+    fn test_select_index_out_of_bounds() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let _ = t.trace().select(dev.tensor(7));
     }
 
     #[test]
-    #[should_panic]
-    fn test_replace_wrong_index_shape_3d1() {
+    #[should_panic = "dimension 0 not the same"]
+    fn test_gather_wrong_index_shape_3d1() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.sample_like(&(5, 3, 1), rand_distr::StandardNormal);
         let r = t.trace().gather(dev.zeros_like(&(7,)));
@@ -222,23 +229,33 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn test_replace_wrong_index_shape_3d2() {
+    #[should_panic = "dimension 1 not the same"]
+    fn test_gather_wrong_index_shape_3d2() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.sample_like(&(5, 3, 1), rand_distr::StandardNormal);
         let _ = t.trace().gather(dev.zeros_like(&(5, 4, 2)));
     }
 
+    #[cfg(not(feature = "test-cuda"))]
     #[test]
-    #[should_panic]
-    fn test_replace_index_out_of_bounds() {
+    #[should_panic = "Index out of bounds: index=[7]"]
+    fn test_gather_index_out_of_bounds() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let _ = t.trace().gather(dev.tensor([7, 6, 1, 2]));
     }
 
+    #[cfg(not(feature = "test-cuda"))]
     #[test]
-    fn test_remove_1d_backward() {
+    #[should_panic = "Index out of bounds: index=[5, 0]"]
+    fn test_gather_batch_out_of_bounds() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank2<4, 5>, TestDtype, _> = dev.sample_normal();
+        let _ = t.trace().try_gather(dev.tensor([[5, 0, 0], [0, 0, 0]]));
+    }
+
+    #[test]
+    fn test_select_1d_backward() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let r = t.trace().select(dev.tensor(0));
@@ -249,7 +266,7 @@ mod tests {
     }
 
     #[test]
-    fn test_replace_1d_backward() {
+    fn test_gather_1d_backward() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let r = t.trace().gather(dev.tensor([0, 1, 1, 3]));
@@ -269,7 +286,7 @@ mod tests {
     }
 
     #[test]
-    fn test_replace_1d_less_backward() {
+    fn test_gather_1d_less_backward() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let t_array = t.array();
@@ -280,17 +297,7 @@ mod tests {
     }
 
     #[test]
-    fn test_select_last_2d() {
-        let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-        let r = t.trace().select(dev.tensor([1, 1]));
-        assert_eq!(r.array(), [2.0, -2.0]);
-        let g = r.mean().backward();
-        assert_eq!(g.get(&t).array(), [[0.0, 0.5, 0.0], [0.0, 0.5, 0.0]]);
-    }
-
-    #[test]
-    fn test_replace_1d_more_backward() {
+    fn test_gather_1d_more_backward() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let _t = t.array();
@@ -307,7 +314,51 @@ mod tests {
     }
 
     #[test]
-    fn test_remove_3d_axis_0_backward() {
+    fn test_select_2d_axis_0() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+        let r = t.trace().select(dev.tensor(0));
+        assert_eq!(r.array(), [1.0, 2.0, 3.0]);
+        let g = r.mean().backward();
+        assert_eq!(g.get(&t).array(), [[1.0 / 3.0; 3], [0.0; 3]]);
+    }
+
+    #[test]
+    fn test_select_2d_axis_1() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+        let r = t.trace().select(dev.tensor([1, 1]));
+        assert_eq!(r.array(), [2.0, -2.0]);
+        let g = r.mean().backward();
+        assert_eq!(g.get(&t).array(), [[0.0, 0.5, 0.0], [0.0, 0.5, 0.0]]);
+    }
+
+    #[test]
+    fn test_select_2d_broadcasted() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
+        let r = t
+            .trace()
+            .broadcast::<Rank2<2, 3>, _>()
+            .select(dev.tensor([0, 1]));
+        assert_eq!(r.array(), [1.0, 2.0]);
+        let g = r.mean().backward();
+        assert_eq!(g.get(&t).array(), [0.5, 0.5, 0.0]);
+    }
+
+    #[test]
+    fn test_gather_2d_broadcasted() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
+        let idx: Tensor<Rank2<2, 2>, usize, _> = dev.tensor([[0, 1], [1, 2]]);
+        let r: Tensor<Rank2<2, 2>, _, _, _> = t.trace().broadcast::<Rank2<2, 3>, _>().gather(idx);
+        assert_eq!(r.array(), [[1.0, 2.0], [2.0, 3.0]]);
+        let g = r.mean().backward();
+        assert_eq!(g.get(&t).array(), [0.25, 0.5, 0.25]);
+    }
+
+    #[test]
+    fn test_select_3d_axis_0_backward() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let t_array = t.array();
@@ -319,7 +370,7 @@ mod tests {
     }
 
     #[test]
-    fn test_remove_3d_axis_1_backward() {
+    fn test_select_3d_axis_1_backward() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let t_array = t.array();
@@ -339,7 +390,7 @@ mod tests {
     }
 
     #[test]
-    fn test_remove_3d_axis_2_backward() {
+    fn test_select_3d_axis_2_backward() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let t_array = t.array();
@@ -370,7 +421,7 @@ mod tests {
     }
 
     #[test]
-    fn test_select_batch_backwards() {
+    fn test_gather_batch_backwards() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank2<4, 5>, TestDtype, _> = dev.sample_normal();
         let t_array = t.array();

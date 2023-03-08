@@ -1,6 +1,6 @@
-use crate::{gradients::Tape, optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, NonMutableModule, ToDevice};
 
 use num_traits::Float;
 use rand_distr::{uniform::SampleUniform, Uniform};
@@ -52,17 +52,9 @@ pub struct Linear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> {
     pub bias: Tensor<Rank1<O>, E, D>,
 }
 
-impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> GradientUpdate<D, E>
+impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> NonMutableModule
     for Linear<I, O, E, D>
 {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.weight.update(updater, unused)?;
-        self.bias.update(updater, unused)?;
-        Ok(())
-    }
 }
 
 impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
@@ -77,13 +69,27 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device
 }
 
 impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: SampleTensor<E>>
-    ResetParams<D, E> for Linear<I, O, E, D>
+    TensorCollection<E, D> for Linear<I, O, E, D>
 {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
-        self.weight.try_fill_with_distr(Uniform::new(-b, b))?;
-        self.bias.try_fill_with_distr(Uniform::new(-b, b))?;
-        Ok(())
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+        visitor.visit_tensor(
+            "weight",
+            |s| &s.weight,
+            |s| &mut s.weight,
+            TensorOptions::reset_with(|t| {
+                let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
+                t.try_fill_with_distr(Uniform::new(-b, b))
+            }),
+        )?;
+        visitor.visit_tensor(
+            "bias",
+            |s| &s.bias,
+            |s| &mut s.bias,
+            TensorOptions::reset_with(|t| {
+                let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
+                t.try_fill_with_distr(Uniform::new(-b, b))
+            }),
+        )
     }
 }
 
@@ -101,26 +107,17 @@ impl<const I: usize, const O: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToD
 
 impl<const I: usize, const O: usize, E: Dtype, D: Device<E>, T> Module<T> for Linear<I, O, E, D>
 where
-    T: SplitTape + TryMatMul<Tensor<Rank2<I, O>, E, D, T::Tape>>,
-    T::Tape: Tape<D>,
-    for<'a> Bias1D<'a, O, E, D>: Module<T::Output, Output = T::Output>,
+    T: SplitTape + TryMatMul<Tensor<Rank2<I, O>, E, D, T::Tape>> + HasErr<Err = D::Err>,
+    T::Tape: Tape<E, D>,
+    for<'a> Bias1D<'a, O, E, D>: Module<T::Output, Output = T::Output, Error = D::Err>,
 {
     type Output = T::Output;
+    type Error = D::Err;
 
     /// 1d forward using [matmul()] and [add()].
-    fn forward(&self, x: T) -> Self::Output {
-        let o = x.matmul(self.weight.retaped::<T::Tape>().permute());
-        Bias1D { beta: &self.bias }.forward(o)
-    }
-}
-
-impl<T, const I: usize, const O: usize, E: Dtype, D: Device<E>> ModuleMut<T> for Linear<I, O, E, D>
-where
-    Self: Module<T>,
-{
-    type Output = <Self as Module<T>>::Output;
-    fn forward_mut(&mut self, input: T) -> Self::Output {
-        self.forward(input)
+    fn try_forward(&self, x: T) -> Result<Self::Output, D::Err> {
+        let o = x.try_matmul(self.weight.retaped::<T::Tape>().try_permute()?)?;
+        Bias1D { beta: &self.bias }.try_forward(o)
     }
 }
 
@@ -129,41 +126,52 @@ struct Bias1D<'a, const M: usize, E: Dtype, D: DeviceStorage> {
     beta: &'a Tensor<Rank1<M>, E, D>,
 }
 
-impl<'a, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<Rank1<M>, E, D, T>>
+impl<'a, const M: usize, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<Rank1<M>, E, D, T>>
     for Bias1D<'a, M, E, D>
 {
     type Output = Tensor<Rank1<M>, E, D, T>;
-    fn forward(&self, input: Tensor<Rank1<M>, E, D, T>) -> Self::Output {
-        input + self.beta.clone()
+    type Error = D::Err;
+
+    fn try_forward(&self, input: Tensor<Rank1<M>, E, D, T>) -> Result<Self::Output, D::Err> {
+        input.try_add(self.beta.clone())
     }
 }
 
-impl<'a, B: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
+impl<'a, B: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<(B, Const<M>), E, D, T>> for Bias1D<'a, M, E, D>
 {
     type Output = Tensor<(B, Const<M>), E, D, T>;
-    fn forward(&self, input: Tensor<(B, Const<M>), E, D, T>) -> Self::Output {
-        self.beta.retaped::<T>().broadcast_like(input.shape()) + input
+    type Error = D::Err;
+
+    fn try_forward(&self, input: Tensor<(B, Const<M>), E, D, T>) -> Result<Self::Output, D::Err> {
+        self.beta
+            .retaped::<T>()
+            .try_broadcast_like(input.shape())?
+            .try_add(input)
     }
 }
 
-impl<'a, B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<D>>
+impl<'a, B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<E, D>>
     Module<Tensor<(B, S, Const<M>), E, D, T>> for Bias1D<'a, M, E, D>
 {
     type Output = Tensor<(B, S, Const<M>), E, D, T>;
-    fn forward(&self, input: Tensor<(B, S, Const<M>), E, D, T>) -> Self::Output {
-        self.beta.retaped::<T>().broadcast_like(input.shape()) + input
+    type Error = D::Err;
+
+    fn try_forward(
+        &self,
+        input: Tensor<(B, S, Const<M>), E, D, T>,
+    ) -> Result<Self::Output, D::Err> {
+        self.beta
+            .retaped::<T>()
+            .try_broadcast_like(input.shape())?
+            .try_add(input)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        nn::{tests::SimpleUpdater, DeviceBuildExt},
-        tests::*,
-        unique_id::HasUniqueId,
-    };
+    use crate::{nn::DeviceBuildExt, tests::*};
 
     const W: [[TestDtype; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
@@ -291,33 +299,5 @@ mod tests {
             &[[-0.16088384, 0.10978711, -0.9008978, 0.59211355, -0.029177088], [0.35563633, -0.38838047, -0.17600831, -0.2034213, 0.31128058]],
         );
         assert_close(&g.get(&model.bias).array(), &[0.40265593, -0.2874091]);
-    }
-
-    #[test]
-    fn test_linear_missing_gradients() {
-        let dev: TestDevice = Default::default();
-
-        let mut model = dev.build_module::<builder::Linear<5, 3>, TestDtype>();
-        let mut g: SimpleUpdater = Default::default();
-
-        // no gradients present
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert_eq!(&unused.ids, &[*model.weight.id(), *model.bias.id()]);
-
-        g.0.try_alloc_for(&model.weight).unwrap();
-
-        // weight gradient is present
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert_eq!(&unused.ids, &[*model.bias.id()]);
-
-        g.0.try_alloc_for(&model.weight).unwrap();
-        g.0.try_alloc_for(&model.bias).unwrap();
-
-        // both gradients present
-        let mut unused = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert!(unused.is_empty());
     }
 }

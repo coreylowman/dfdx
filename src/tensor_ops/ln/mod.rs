@@ -21,13 +21,13 @@ pub struct LnKernelOp;
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.ln();
 /// ```
-pub fn ln<S: Shape, E: Dtype, D: UnaryKernel<LnKernelOp, E>, T: Tape<D>>(
+pub fn ln<S: Shape, E: Dtype, D: UnaryKernel<LnKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.ln()
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<LnKernelOp, E>, T: Tape<D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<LnKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [ln]
     pub fn ln(self) -> Self {
         self.try_ln().unwrap()

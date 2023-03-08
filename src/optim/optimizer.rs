@@ -1,7 +1,7 @@
 use crate::{
     gradients::Gradients,
-    shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, HasErr, Tensor},
+    shapes::Dtype,
+    tensor::DeviceStorage,
     unique_id::{HasUniqueId, UniqueId},
 };
 
@@ -64,15 +64,10 @@ pub(super) fn momentum_to_cuda<E: Default>(wd: Option<Momentum<E>>) -> (Momentum
     }
 }
 
-/// All optimizers must implement the update function, which takes an object
-/// that implements [GradientUpdate], and calls [GradientUpdate::update].
+/// All optimizers must implement the update function, which takes a `M`
+/// and updates all of its parameters.
 ///
 /// # Notes
-///
-/// 1. [GradientUpdate] requires an object that implements [crate::optim::ParamUpdater].
-/// A common implementation involves implementing both [Optimizer] and [crate::optim::ParamUpdater]
-/// on one struct, and passing self to [GradientUpdate::update]. See [super::Sgd] for an example
-/// of implementing this trait.
 ///
 /// 2. Update takes ownership of [Gradients], so update cannot be called
 /// with the same gradients object.
@@ -87,46 +82,12 @@ pub trait Optimizer<M, D: DeviceStorage, E: Dtype> {
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients,
+        gradients: &Gradients<E, D>,
     ) -> Result<(), OptimizerUpdateError<D>>;
 }
 
-/// Represents something that can be updated with a [ParamUpdater].
-pub trait GradientUpdate<D: DeviceStorage, E: Dtype> {
-    /// Updates self given the [ParamUpdater].
-    fn update<U: ParamUpdater<D, E>>(
-        &mut self,
-        updater: &mut U,
-        unused: &mut UnusedTensors,
-    ) -> Result<(), D::Err>;
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage> GradientUpdate<D, E> for Tensor<S, E, D> {
-    fn update<U: ParamUpdater<D, E>>(
-        &mut self,
-        updater: &mut U,
-        unused: &mut UnusedTensors,
-    ) -> Result<(), <Self as HasErr>::Err> {
-        updater.update_param(self, unused)
-    }
-}
-
-/// Represents something that can update a tensor.
-///
-/// See [crate::optim::Sgd] and [crate::optim::Adam] for examples on implementing this.
-pub trait ParamUpdater<D: DeviceStorage, E: Dtype> {
-    /// Retrieves the data associated with `p` if there is any.
-    /// This can modify `self`, for instance if velocities are calculated
-    /// based on the associated data!
-    fn update_param<S: Shape>(
-        &mut self,
-        p: &mut Tensor<S, E, D>,
-        unused: &mut UnusedTensors,
-    ) -> Result<(), D::Err>;
-}
-
 /// Holds [UniqueId] of tensors that were missing gradients during
-/// [GradientUpdate::update()], and therefore are unused
+/// update, and therefore are unused
 #[derive(Debug, Default)]
 pub struct UnusedTensors {
     pub ids: std::vec::Vec<UniqueId>,
@@ -142,11 +103,15 @@ impl UnusedTensors {
     pub fn is_empty(&self) -> bool {
         self.ids.is_empty()
     }
+
+    pub fn clear(&mut self) {
+        self.ids.clear();
+    }
 }
 
 /// An error indicating that a parameter was not used in gradient
 /// computation, and was therefore not present in [Gradients]
-/// while a [GradientUpdate] was trying to update it.
+/// during an update.
 #[derive(Debug)]
 pub enum OptimizerUpdateError<D: DeviceStorage> {
     UnusedParams(UnusedTensors),

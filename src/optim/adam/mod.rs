@@ -3,15 +3,16 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 
 use crate::{
     gradients::Gradients,
+    nn::tensor_collection::*,
     shapes::{Dtype, Shape},
     tensor::DeviceStorage,
 };
 
-use super::{GradientUpdate, Optimizer, OptimizerUpdateError, ParamUpdater, WeightDecay};
+use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
 
 /// Configuration of hyperparameters for [Adam].
 ///
@@ -60,7 +61,7 @@ impl<E: Dtype> Default for AdamConfig<E> {
 /// # type Model = Tensor<Rank0, f32, Cpu>;
 /// # let dev: Cpu = Default::default();
 /// # let model: Model = dev.zeros();
-/// let mut opt: Adam<Model> = Adam::new(&model, AdamConfig {
+/// let mut opt: Adam<Model, f32, Cpu> = Adam::new(&model, AdamConfig {
 ///     lr: 1e-2,
 ///     betas: [0.5, 0.25],
 ///     eps: 1e-6,
@@ -70,78 +71,92 @@ impl<E: Dtype> Default for AdamConfig<E> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Adam<M, E: Dtype = f32> {
+pub struct Adam<M, E: Dtype, D: DeviceStorage> {
     /// Hyperparameter configuration
     pub cfg: AdamConfig<E>,
 
     t: i32,
-    gradients: Gradients,
-    moment1: Gradients,
-    moment2: Gradients,
+    moment1: Gradients<E, D>,
+    moment2: Gradients<E, D>,
 
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype> Adam<M, E> {
+impl<M, E: Dtype, D: DeviceStorage> Adam<M, E, D> {
     /// Constructs using hyperparameters from `cfg`.
     pub fn new(_model: &M, cfg: AdamConfig<E>) -> Self {
         Self {
             cfg,
             t: 0,
-            gradients: Default::default(),
-            moment1: Default::default(),
-            moment2: Default::default(),
+            moment1: Gradients::without_leafs(),
+            moment2: Gradients::without_leafs(),
             marker: PhantomData,
         }
     }
 }
 
 pub(super) trait AdamKernel<E: Dtype>: DeviceStorage {
-    fn update<S: Shape>(
+    fn update(
         &self,
         t: i32,
         cfg: &AdamConfig<E>,
-        param: &mut Self::Storage<S, E>,
-        moment1: &mut Self::Storage<S, E>,
-        moment2: &mut Self::Storage<S, E>,
-        grad: Self::Storage<S, E>,
+        param: &mut Self::Vec<E>,
+        moment1: &mut Self::Vec<E>,
+        moment2: &mut Self::Vec<E>,
+        grad: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, D: DeviceStorage + AdamKernel<E>, E: Dtype> ParamUpdater<D, E> for Adam<M, E> {
-    fn update_param<S: Shape>(
+impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D>
+    for (&mut Adam<M, E, D>, &Gradients<E, D>, UnusedTensors)
+{
+    type Viewer = ViewTensorMut;
+    type Err = D::Err;
+
+    fn visit<S: Shape>(
         &mut self,
-        p: &mut crate::tensor::Tensor<S, E, D>,
-        unused: &mut super::UnusedTensors,
+        _: std::string::String,
+        opts: TensorOptions<S, E, D>,
+        p: &mut crate::prelude::Tensor<S, E, D>,
     ) -> Result<(), <D>::Err> {
-        let g = self.gradients.remove(p);
+        if !opts.do_gradient_update {
+            return Ok(());
+        }
+        let g = self.1.get_ref_checked(p);
         match g {
-            None => unused.add(p),
+            None => self.2.add(p),
             Some(g) => {
-                let m_t = self.moment1.get_or_alloc_mut(p)?;
-                let v_t = self.moment2.get_or_alloc_mut(p)?;
-                p.device
-                    .update(self.t, &self.cfg, &mut p.storage, m_t, v_t, g)?;
+                let m_t = self.0.moment1.get_or_alloc_mut(p)?;
+                let v_t = self.0.moment2.get_or_alloc_mut(p)?;
+                p.device.update(
+                    self.0.t,
+                    &self.0.cfg,
+                    Arc::make_mut(&mut p.data),
+                    m_t,
+                    v_t,
+                    g,
+                )?;
             }
         }
         Ok(())
     }
 }
 
-impl<M: GradientUpdate<D, E>, D: AdamKernel<E>, E: Dtype> Optimizer<M, D, E> for Adam<M, E>
-where
-    Self: ParamUpdater<D, E>,
-{
+impl<M: TensorCollection<E, D>, D: AdamKernel<E>, E: Dtype> Optimizer<M, D, E> for Adam<M, E, D> {
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients,
+        gradients: &Gradients<E, D>,
     ) -> Result<(), OptimizerUpdateError<D>> {
         self.t = self.t.checked_add(1).unwrap();
-        self.gradients = gradients;
-        let mut unused = Default::default();
-        match module.update(self, &mut unused) {
-            Ok(_) => unused.into(),
+        let mut op = (self, gradients, Default::default());
+        let result = M::iter_tensors(&mut RecursiveWalker {
+            m: module,
+            f: &mut op,
+            path: &mut std::vec::Vec::new(),
+        });
+        match result {
+            Ok(_) => op.2.into(),
             Err(e) => Err(OptimizerUpdateError::DeviceError(e)),
         }
     }
@@ -173,7 +188,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).square().mean().backward();
-            opt.update(&mut t, gradients).expect("");
+            opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -207,7 +222,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).square().mean().backward();
-            opt.update(&mut t, gradients).expect("");
+            opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -240,7 +255,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = t.trace().exp().square().mean().backward();
-            opt.update(&mut t, gradients).expect("");
+            opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -273,8 +288,17 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = t.trace().exp().square().mean().backward();
-            opt.update(&mut t, gradients).expect("");
+            opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
+    }
+
+    #[test]
+    fn test_unused_tensors() {
+        let dev: TestDevice = Default::default();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
+        let mut opt = Adam::new(&t, Default::default());
+        opt.update(&mut t, &Gradients::without_leafs())
+            .expect_err("");
     }
 }

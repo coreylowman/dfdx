@@ -1,35 +1,52 @@
-use super::device::StridedArray;
-use crate::shapes::{BroadcastStridesTo, Shape};
-use std::sync::Arc;
+use super::{super::Tensor, Cpu};
+use crate::shapes::{Shape, Unit};
 use std::vec::Vec;
 
-struct NdIndex<S: Shape> {
-    indices: S::Concrete,
-    shape: S::Concrete,
-    strides: S::Concrete,
-    next: Option<usize>,
+#[derive(Debug, Eq, PartialEq)]
+pub(crate) struct NdIndex<S: Shape> {
+    pub(crate) indices: S::Concrete,
+    pub(crate) shape: S::Concrete,
+    pub(crate) strides: S::Concrete,
+    pub(crate) next: Option<usize>,
+    pub(crate) contiguous: Option<usize>,
 }
 
 impl<S: Shape> NdIndex<S> {
-    fn new(shape: S, strides: S::Concrete) -> Self {
-        let indices: S::Concrete = Default::default();
-        let i: usize = strides
-            .into_iter()
-            .zip(indices.into_iter())
-            .map(|(a, b)| a * b)
-            .sum();
+    #[inline]
+    pub(crate) fn new(shape: S, strides: S::Concrete) -> Self {
         Self {
-            indices,
+            indices: Default::default(),
             shape: shape.concrete(),
             strides,
-            next: Some(i),
+            next: Some(0),
+            contiguous: (strides == shape.strides()).then(|| shape.num_elements()),
         }
     }
 }
 
 impl<S: Shape> NdIndex<S> {
     #[inline(always)]
-    fn get_with_idx(&mut self) -> Option<(usize, S::Concrete)> {
+    pub(crate) fn next(&mut self) -> Option<usize> {
+        match self.contiguous {
+            Some(numel) => match self.next.as_mut() {
+                Some(i) => {
+                    let idx = *i;
+                    let next = idx + 1;
+                    if next >= numel {
+                        self.next = None;
+                    } else {
+                        *i = next;
+                    }
+                    Some(idx)
+                }
+                None => None,
+            },
+            None => self.next_with_idx().map(|(i, _)| i),
+        }
+    }
+
+    #[inline(always)]
+    pub(crate) fn next_with_idx(&mut self) -> Option<(usize, S::Concrete)> {
         match (S::NUM_DIMS, self.next.as_mut()) {
             (_, None) => None,
             (0, Some(i)) => {
@@ -84,15 +101,18 @@ pub(crate) struct StridedMutIndexIter<'a, S: Shape, E> {
     index: NdIndex<S>,
 }
 
-impl<S: Shape, E: Clone> StridedArray<S, E> {
+impl<S: Shape, E: Unit, T> Tensor<S, E, Cpu, T> {
+    #[inline]
     pub(crate) fn buf_iter(&self) -> std::slice::Iter<'_, E> {
         self.data.iter()
     }
 
+    #[inline]
     pub(crate) fn buf_iter_mut(&mut self) -> std::slice::IterMut<'_, E> {
         std::sync::Arc::make_mut(&mut self.data).iter_mut()
     }
 
+    #[inline]
     pub(crate) fn iter(&self) -> StridedRefIter<S, E> {
         StridedRefIter {
             data: self.data.as_ref(),
@@ -100,6 +120,7 @@ impl<S: Shape, E: Clone> StridedArray<S, E> {
         }
     }
 
+    #[inline]
     pub(crate) fn iter_mut(&mut self) -> StridedMutIter<S, E> {
         StridedMutIter {
             data: std::sync::Arc::make_mut(&mut self.data),
@@ -107,6 +128,7 @@ impl<S: Shape, E: Clone> StridedArray<S, E> {
         }
     }
 
+    #[inline]
     pub(crate) fn iter_with_index(&self) -> StridedRefIndexIter<S, E> {
         StridedRefIndexIter {
             data: self.data.as_ref(),
@@ -114,32 +136,11 @@ impl<S: Shape, E: Clone> StridedArray<S, E> {
         }
     }
 
+    #[inline]
     pub(crate) fn iter_mut_with_index(&mut self) -> StridedMutIndexIter<S, E> {
         StridedMutIndexIter {
             data: std::sync::Arc::make_mut(&mut self.data),
             index: NdIndex::new(self.shape, self.strides),
-        }
-    }
-}
-
-impl<S: Shape, E: Clone> StridedArray<S, E> {
-    pub(crate) fn iter_as<Axes, Dst: Shape>(&self, dst: &Dst) -> StridedRefIter<Dst, E>
-    where
-        S: BroadcastStridesTo<Dst, Axes>,
-    {
-        StridedRefIter {
-            data: self.data.as_ref(),
-            index: NdIndex::new(*dst, self.shape.broadcast_strides(self.strides)),
-        }
-    }
-
-    pub(crate) fn iter_mut_as<Axes, Dst: Shape>(&mut self, dst: &Dst) -> StridedMutIter<Dst, E>
-    where
-        S: BroadcastStridesTo<Dst, Axes>,
-    {
-        StridedMutIter {
-            data: Arc::make_mut(&mut self.data),
-            index: NdIndex::new(*dst, self.shape.broadcast_strides(self.strides)),
         }
     }
 }
@@ -155,7 +156,7 @@ impl<'q, S: Shape, E> LendingIterator for StridedRefIter<'q, S, E> {
     type Item<'a> = &'a E where Self: 'a;
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
-        self.index.get_with_idx().map(|(i, _)| &self.data[i])
+        self.index.next().map(|i| &self.data[i])
     }
 }
 
@@ -163,7 +164,7 @@ impl<'q, S: Shape, E> LendingIterator for StridedMutIter<'q, S, E> {
     type Item<'a> = &'a mut E where Self: 'a;
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
-        self.index.get_with_idx().map(|(i, _)| &mut self.data[i])
+        self.index.next().map(|i| &mut self.data[i])
     }
 }
 
@@ -172,7 +173,7 @@ impl<'q, S: Shape, E> LendingIterator for StridedRefIndexIter<'q, S, E> {
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
         self.index
-            .get_with_idx()
+            .next_with_idx()
             .map(|(i, idx)| (&self.data[i], idx))
     }
 }
@@ -182,127 +183,96 @@ impl<'q, S: Shape, E> LendingIterator for StridedMutIndexIter<'q, S, E> {
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
         self.index
-            .get_with_idx()
+            .next_with_idx()
             .map(|(i, idx)| (&mut self.data[i], idx))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::shapes::{Rank0, Rank1, Rank2, Rank3};
+    use crate::shapes::{Rank1, Rank2, Rank3};
 
     use super::*;
 
     #[test]
     fn test_0d_contiguous_iter() {
-        let s: StridedArray<Rank0, f32> = StridedArray {
-            data: Arc::new([0.0].to_vec()),
-            shape: (),
-            strides: ().strides(),
-        };
-        let mut i = s.iter();
-        assert_eq!(i.next(), Some(&0.0));
+        let mut i = NdIndex::new((), ().strides());
+        assert_eq!(i.next(), Some(0));
         assert!(i.next().is_none());
     }
 
     #[test]
     fn test_1d_contiguous_iter() {
-        let shape = Default::default();
-        let s: StridedArray<Rank1<3>, f32> = StridedArray {
-            data: Arc::new([0.0, 1.0, 2.0].to_vec()),
-            shape,
-            strides: shape.strides(),
-        };
-        let mut i = s.iter();
-        assert_eq!(i.next(), Some(&0.0));
-        assert_eq!(i.next(), Some(&1.0));
-        assert_eq!(i.next(), Some(&2.0));
+        let shape: Rank1<3> = Default::default();
+        let mut i = NdIndex::new(shape, shape.strides());
+        assert_eq!(i.next(), Some(0));
+        assert_eq!(i.next(), Some(1));
+        assert_eq!(i.next(), Some(2));
         assert!(i.next().is_none());
     }
 
     #[test]
     fn test_2d_contiguous_iter() {
-        let shape = Default::default();
-        let s: StridedArray<Rank2<2, 3>, f32> = StridedArray {
-            data: Arc::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0].to_vec()),
-            shape,
-            strides: shape.strides(),
-        };
-        let mut i = s.iter();
-        assert_eq!(i.next(), Some(&1.0));
-        assert_eq!(i.next(), Some(&2.0));
-        assert_eq!(i.next(), Some(&3.0));
-        assert_eq!(i.next(), Some(&4.0));
-        assert_eq!(i.next(), Some(&5.0));
-        assert_eq!(i.next(), Some(&6.0));
+        let shape: Rank2<2, 3> = Default::default();
+        let mut i = NdIndex::new(shape, shape.strides());
+        assert_eq!(i.next(), Some(0));
+        assert_eq!(i.next(), Some(1));
+        assert_eq!(i.next(), Some(2));
+        assert_eq!(i.next(), Some(3));
+        assert_eq!(i.next(), Some(4));
+        assert_eq!(i.next(), Some(5));
         assert!(i.next().is_none());
     }
 
     #[test]
     fn test_2d_broadcasted_0_iter() {
-        let s: StridedArray<Rank2<2, 3>, f32> = StridedArray {
-            data: Arc::new([1.0, 0.0, -1.0].to_vec()),
-            shape: Default::default(),
-            strides: [0, 1],
-        };
-        let mut i = s.iter();
-        assert_eq!(i.next(), Some(&1.0));
-        assert_eq!(i.next(), Some(&0.0));
-        assert_eq!(i.next(), Some(&-1.0));
-        assert_eq!(i.next(), Some(&1.0));
-        assert_eq!(i.next(), Some(&0.0));
-        assert_eq!(i.next(), Some(&-1.0));
+        let shape: Rank2<2, 3> = Default::default();
+        let mut i = NdIndex::new(shape, [0, 1]);
+        assert_eq!(i.next(), Some(0));
+        assert_eq!(i.next(), Some(1));
+        assert_eq!(i.next(), Some(2));
+        assert_eq!(i.next(), Some(0));
+        assert_eq!(i.next(), Some(1));
+        assert_eq!(i.next(), Some(2));
         assert!(i.next().is_none());
     }
 
     #[test]
     fn test_2d_broadcasted_1_iter() {
-        let s: StridedArray<Rank2<2, 3>, f32> = StridedArray {
-            data: Arc::new([1.0, -1.0].to_vec()),
-            shape: Default::default(),
-            strides: [1, 0],
-        };
-        let mut i = s.iter();
-        assert_eq!(i.next(), Some(&1.0));
-        assert_eq!(i.next(), Some(&1.0));
-        assert_eq!(i.next(), Some(&1.0));
-        assert_eq!(i.next(), Some(&-1.0));
-        assert_eq!(i.next(), Some(&-1.0));
-        assert_eq!(i.next(), Some(&-1.0));
+        let shape: Rank2<2, 3> = Default::default();
+        let mut i = NdIndex::new(shape, [1, 0]);
+        assert_eq!(i.next(), Some(0));
+        assert_eq!(i.next(), Some(0));
+        assert_eq!(i.next(), Some(0));
+        assert_eq!(i.next(), Some(1));
+        assert_eq!(i.next(), Some(1));
+        assert_eq!(i.next(), Some(1));
         assert!(i.next().is_none());
     }
 
     #[test]
     fn test_2d_permuted_iter() {
-        let s: StridedArray<Rank2<3, 2>, f32> = StridedArray {
-            data: Arc::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0].to_vec()),
-            shape: Default::default(),
-            strides: [1, 3],
-        };
-        let mut i = s.iter();
-        assert_eq!(i.next(), Some(&1.0));
-        assert_eq!(i.next(), Some(&4.0));
-        assert_eq!(i.next(), Some(&2.0));
-        assert_eq!(i.next(), Some(&5.0));
-        assert_eq!(i.next(), Some(&3.0));
-        assert_eq!(i.next(), Some(&6.0));
+        let shape: Rank2<3, 2> = Default::default();
+        let mut i = NdIndex::new(shape, [1, 3]);
+        assert_eq!(i.next(), Some(0));
+        assert_eq!(i.next(), Some(3));
+        assert_eq!(i.next(), Some(1));
+        assert_eq!(i.next(), Some(4));
+        assert_eq!(i.next(), Some(2));
+        assert_eq!(i.next(), Some(5));
         assert!(i.next().is_none());
     }
 
     #[test]
     fn test_3d_broadcasted_iter() {
-        let s: StridedArray<Rank3<3, 1, 2>, f32> = StridedArray {
-            data: Arc::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0].to_vec()),
-            shape: Default::default(),
-            strides: [2, 0, 1],
-        };
-        let mut i = s.iter();
-        assert_eq!(i.next(), Some(&1.0));
-        assert_eq!(i.next(), Some(&2.0));
-        assert_eq!(i.next(), Some(&3.0));
-        assert_eq!(i.next(), Some(&4.0));
-        assert_eq!(i.next(), Some(&5.0));
-        assert_eq!(i.next(), Some(&6.0));
+        let shape: Rank3<3, 1, 2> = Default::default();
+        let mut i = NdIndex::new(shape, [2, 0, 1]);
+        assert_eq!(i.next(), Some(0));
+        assert_eq!(i.next(), Some(1));
+        assert_eq!(i.next(), Some(2));
+        assert_eq!(i.next(), Some(3));
+        assert_eq!(i.next(), Some(4));
+        assert_eq!(i.next(), Some(5));
         assert!(i.next().is_none());
     }
 }

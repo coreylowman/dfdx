@@ -8,7 +8,9 @@ use crate::{
 pub trait Device<E: Dtype>:
     DeviceStorage
     + CopySlice<E>
-    + crate::tensor::storage_traits::TensorFromVec<E>
+    + crate::tensor::TensorFromVec<E>
+
+    + crate::tensor_ops::stack::StackKernel<E>
 
     // allocation
     + crate::tensor::ZerosTensor<E>
@@ -18,11 +20,9 @@ pub trait Device<E: Dtype>:
     + crate::tensor::ZeroFillStorage<E>
 
     // broadcast & reduces
-    + super::super::broadcast_to::BroadcastKernel<E>
     + super::super::sum_to::SumKernel<E>
     + super::super::max_to::MaxReduceKernel<E>
     + super::super::min_to::MinReduceKernel<E>
-    + super::super::permute_to::PermuteKernel<E>
     + super::super::reshape_to::ReshapeKernel<E>
 
     // indexing
@@ -77,6 +77,7 @@ pub trait Device<E: Dtype>:
     + BinaryKernel<super::super::huber_error::HuberErrorKernelOp<E>, E>
     + BinaryKernel<super::super::maximum::MaximumKernelOp, E>
     + BinaryKernel<super::super::minimum::MinimumKernelOp, E>
+    + crate::tensor_ops::axpy::AxpyKernel<E>
 {
 }
 

@@ -1,5 +1,11 @@
 use super::{axes::*, ReduceShapeTo};
 
+#[cfg(not(feature = "cuda"))]
+pub trait SafeZeros {}
+
+#[cfg(feature = "cuda")]
+pub trait SafeZeros: cudarc::driver::ValidAsZeroBits + cudarc::driver::DeviceRepr {}
+
 /// Represents a unit type, but no arithmetic.
 pub trait Unit:
     'static
@@ -12,12 +18,14 @@ pub trait Unit:
     + Send
     + Sync
     + std::marker::Unpin
+    + SafeZeros
 {
     const ONE: Self;
 }
 
 macro_rules! unit {
     ($type:ty, $one:expr) => {
+        impl SafeZeros for $type {}
         impl Unit for $type {
             const ONE: Self = $one;
         }
@@ -130,6 +138,24 @@ where
     type Output = Const<{ N + M }>;
     fn add(self, rhs: Const<N>) -> Self::Output {
         Const
+    }
+}
+
+/// Represents either `[T; N]` or `Vec<T>`
+pub trait Array<T>: IntoIterator<Item = T> {
+    type Dim: Dim;
+    fn dim(&self) -> Self::Dim;
+}
+impl<T, const N: usize> Array<T> for [T; N] {
+    type Dim = Const<N>;
+    fn dim(&self) -> Self::Dim {
+        Const
+    }
+}
+impl<T> Array<T> for std::vec::Vec<T> {
+    type Dim = usize;
+    fn dim(&self) -> Self::Dim {
+        self.len()
     }
 }
 

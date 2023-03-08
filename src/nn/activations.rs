@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
+use super::module::{Module, NonMutableModule, ZeroSizedModule};
 
 macro_rules! activation_impls {
     ($struct_name:ident, $func_name:ident, #[$docstring:meta]) => {
@@ -11,34 +11,30 @@ macro_rules! activation_impls {
         impl ZeroSizedModule for $struct_name {}
         impl NonMutableModule for $struct_name {}
 
-        impl<D: Device<E>, E: Dtype> BuildModule<D, E> for $struct_name {
-            fn try_build(_: &D) -> Result<Self, <D>::Err> {
-                Ok(Default::default())
-            }
-        }
-
-        impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<D>> Module<Tensor<S, E, D, T>>
+        impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
             for $struct_name
         {
             type Output = Tensor<S, E, D, T>;
-            fn forward(&self, input: Tensor<S, E, D, T>) -> Self::Output {
-                $func_name(input)
+            type Error = D::Err;
+
+            fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
+                input.$func_name()
             }
         }
     };
 }
 
-activation_impls!(ReLU, relu, #[doc="Unit struct that impls [Module] as calling [relu()] on `input`."]);
-activation_impls!(GeLU, gelu, #[doc="Unit struct that impls [Module] as calling [gelu()] on `input`."]);
-activation_impls!(Sin, sin, #[doc="Unit struct that impls [Module] as calling [sin()] on `input`."]);
-activation_impls!(Cos, cos, #[doc="Unit struct that impls [Module] as calling [cos()] on `input`."]);
-activation_impls!(Ln, ln, #[doc="Unit struct that impls [Module] as calling [ln()] on `input`."]);
-activation_impls!(Exp, exp, #[doc="Unit struct that impls [Module] as calling [exp()] on `input`."]);
-activation_impls!(Sigmoid, sigmoid, #[doc="Unit struct that impls [Module] as calling [sigmoid()] on `input`."]);
-activation_impls!(Tanh, tanh, #[doc="Unit struct that impls [Module] as calling [tanh()] on `input`."]);
-activation_impls!(Square, square, #[doc="Unit struct that impls [Module] as calling [square()] on `input`."]);
-activation_impls!(Sqrt, sqrt, #[doc="Unit struct that impls [Module] as calling [sqrt()] on `input`."]);
-activation_impls!(Abs, abs, #[doc="Unit struct that impls [Module] as calling [abs()] on `input`."]);
+activation_impls!(ReLU, try_relu, #[doc="Unit struct that impls [Module] as calling [relu()] on `input`."]);
+activation_impls!(GeLU, try_gelu, #[doc="Unit struct that impls [Module] as calling [gelu()] on `input`."]);
+activation_impls!(Sin, try_sin, #[doc="Unit struct that impls [Module] as calling [sin()] on `input`."]);
+activation_impls!(Cos, try_cos, #[doc="Unit struct that impls [Module] as calling [cos()] on `input`."]);
+activation_impls!(Ln, try_ln, #[doc="Unit struct that impls [Module] as calling [ln()] on `input`."]);
+activation_impls!(Exp, try_exp, #[doc="Unit struct that impls [Module] as calling [exp()] on `input`."]);
+activation_impls!(Sigmoid, try_sigmoid, #[doc="Unit struct that impls [Module] as calling [sigmoid()] on `input`."]);
+activation_impls!(Tanh, try_tanh, #[doc="Unit struct that impls [Module] as calling [tanh()] on `input`."]);
+activation_impls!(Square, try_square, #[doc="Unit struct that impls [Module] as calling [square()] on `input`."]);
+activation_impls!(Sqrt, try_sqrt, #[doc="Unit struct that impls [Module] as calling [sqrt()] on `input`."]);
+activation_impls!(Abs, try_abs, #[doc="Unit struct that impls [Module] as calling [abs()] on `input`."]);
 
 /// Unit struct that impls [Module] as calling [softmax()] on `input`."
 #[derive(Default, Debug, Clone, Copy)]
@@ -47,18 +43,15 @@ pub struct Softmax;
 impl ZeroSizedModule for Softmax {}
 impl NonMutableModule for Softmax {}
 
-impl<D: Device<E>, E: Dtype> BuildModule<D, E> for Softmax {
-    fn try_build(_: &D) -> Result<Self, <D>::Err> {
-        Ok(Default::default())
-    }
-}
-
-impl<Ax: Axes, S: Shape<LastAxis = Ax> + ReduceShape<Ax>, E: Dtype, D: Device<E>, T: Tape<D>>
-    Module<Tensor<S, E, D, T>> for Softmax
+impl<Ax: Axes, S, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Softmax
+where
+    S: Shape<LastAxis = Ax> + ReduceShape<Ax>,
 {
     type Output = Tensor<S, E, D, T>;
-    fn forward(&self, input: Tensor<S, E, D, T>) -> Self::Output {
-        input.softmax::<Ax>()
+    type Error = D::Err;
+
+    fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
+        input.try_softmax::<Ax>()
     }
 }
 

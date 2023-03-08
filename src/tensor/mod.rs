@@ -99,8 +99,8 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t: Tensor<Rank1<5>,f32, _> = dev.zeros();
-//! let t_clone: Tensor<Rank1<5>, _, _, OwnedTape<_>> = t.trace(); // copies t
-//! let t = t.traced(); // takes ownership of t
+//! let t_clone: Tensor<Rank1<5>, f32, _, OwnedTape<f32, Cpu>> = t.trace(); // copies t
+//! let t = t.traced::<f32>(); // takes ownership of t
 //! ```
 //!
 //! # Serialization using numpy
@@ -111,15 +111,15 @@
 //! zip archives.
 
 pub(crate) mod cpu;
-mod tensor_impls;
-
 #[cfg(feature = "cuda")]
 pub(crate) mod cuda;
-
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
+#[cfg(feature = "safetensors")]
+pub mod safetensors;
 
 pub(crate) mod storage_traits;
+mod tensor_impls;
 
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 
@@ -128,7 +128,7 @@ pub use cpu::{Cpu, CpuError};
 #[cfg(feature = "cuda")]
 pub use cuda::{Cuda, CudaError};
 
-pub use storage_traits::{AsArray, AsVec, CopySlice, TensorFrom};
+pub use storage_traits::{AsArray, CopySlice, TensorFrom, TensorFromVec};
 pub use storage_traits::{DeviceStorage, HasErr};
 pub use storage_traits::{OnesTensor, SampleTensor, ZerosTensor};
 

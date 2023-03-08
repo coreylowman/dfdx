@@ -1,6 +1,6 @@
-use crate::{gradients::*, optim::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{BuildModule, BuildOnDevice, Module, ModuleMut, ResetParams, ToDevice};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 pub mod builder {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -15,6 +15,71 @@ where
     fn try_build_on_device(device: &D) -> Result<Self::Built, D::Err> {
         Self::Built::try_build(device)
     }
+}
+
+/// generic batchnorm forward for training
+pub fn train_fwd<const C: usize, S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>, Ax: Axes>(
+    x: Tensor<S, E, D, T>,
+    var: &mut Tensor<Rank1<C>, E, D>,
+    mean: &mut Tensor<Rank1<C>, E, D>,
+    scale: &Tensor<Rank1<C>, E, D>,
+    bias: &Tensor<Rank1<C>, E, D>,
+    epsilon: E,
+    momentum: E,
+) -> Result<Tensor<S, E, D, T>, D::Err>
+where
+    S: HasAxes<Ax> + ReduceShapeTo<Rank1<C>, Ax>,
+{
+    let n = E::from_usize(<S as HasAxes<Ax>>::size(x.shape())).unwrap();
+    let shape = *x.shape();
+
+    // compute statistics for updating running stats later - on tape
+    let mean_chan = x.retaped::<T>().try_mean::<Rank1<C>, _>()?;
+
+    // update statistics since we are training - off tape
+    mean.try_axpy(E::ONE - momentum, &mean_chan, momentum)?;
+
+    let centered = x - mean_chan.try_broadcast_like(&shape)?;
+
+    let var_chan = centered.retaped::<T>().square().mean::<Rank1<C>, _>();
+
+    // NOTE: uses unbiased variance in running estimate
+    var.try_axpy(E::ONE - momentum, &var_chan, momentum * n / (n - E::ONE))?;
+
+    // statistics for normalizing - on tape
+    let std = (var_chan + epsilon).try_sqrt()?;
+
+    // record broadcast of scale & bias - on tape
+    let scale = (scale.retaped::<T>() / std).try_broadcast_like(&shape)?;
+    let bias = bias.retaped::<T>().try_broadcast_like(&shape)?;
+
+    // normalize & affine - on tape
+    centered.try_mul(scale)?.try_add(bias)
+}
+
+/// generic batchnorm forward for inference
+pub fn infer_fwd<const C: usize, S: Shape, E: Dtype, D: Device<E>, Ax: Axes>(
+    x: Tensor<S, E, D>,
+    var: &Tensor<Rank1<C>, E, D>,
+    mean: &Tensor<Rank1<C>, E, D>,
+    scale: &Tensor<Rank1<C>, E, D>,
+    bias: &Tensor<Rank1<C>, E, D>,
+    epsilon: E,
+) -> Result<Tensor<S, E, D>, D::Err>
+where
+    Rank1<C>: BroadcastShapeTo<S, Ax>,
+{
+    let shape = *x.shape();
+
+    // statistics for normalizing
+    let std = (var.clone() + epsilon).try_sqrt()?;
+    let mean = mean.clone();
+
+    // normalize & affine
+    let x = x.try_sub(mean.try_broadcast_like(&shape)?)?;
+    let x = x.try_div(std.try_broadcast_like(&shape)?)?;
+    let x = x.try_mul(scale.clone().try_broadcast_like(&shape)?)?;
+    x.try_add(bias.clone().try_broadcast_like(&shape)?)
 }
 
 /// Batch normalization for images as described in
@@ -70,59 +135,36 @@ pub struct BatchNorm2D<const C: usize, E: Dtype, D: DeviceStorage> {
 }
 
 impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
-    /// generic forward for inference
-    fn infer_fwd<S: Shape, Ax: Axes>(&self, x: Tensor<S, E, D>) -> Tensor<S, E, D>
+    fn infer_fwd<S: Shape, Ax: Axes>(&self, x: Tensor<S, E, D>) -> Result<Tensor<S, E, D>, D::Err>
     where
         Rank1<C>: BroadcastShapeTo<S, Ax>,
     {
-        let shape = *x.shape();
-
-        // statistics for normalizing
-        let std = (self.running_var.clone() + self.epsilon).sqrt();
-        let mean = self.running_mean.clone();
-
-        // normalize & affine
-        let x = sub(x, mean.broadcast_like(&shape));
-        let x = div(x, std.broadcast_like(&shape));
-        let x = mul(x, self.scale.clone().broadcast_like(&shape));
-        add(x, self.bias.clone().broadcast_like(&shape))
+        infer_fwd(
+            x,
+            &self.running_var,
+            &self.running_mean,
+            &self.scale,
+            &self.bias,
+            self.epsilon,
+        )
     }
 
-    fn train_fwd<S: Shape, T: Tape<D>, Ax: Axes>(
+    fn train_fwd<S: Shape, T: Tape<E, D>, Ax: Axes>(
         &mut self,
         x: Tensor<S, E, D, T>,
-    ) -> Tensor<S, E, D, T>
+    ) -> Result<Tensor<S, E, D, T>, D::Err>
     where
         S: HasAxes<Ax> + ReduceShapeTo<Rank1<C>, Ax>,
     {
-        let n = E::from_usize(<S as HasAxes<Ax>>::size(x.shape())).unwrap();
-        let shape = *x.shape();
-
-        // compute statistics for updating running stats later - on tape
-        let mean_chan = x.retaped::<T>().mean::<Rank1<C>, _>();
-
-        // update statistics since we are training - off tape
-        self.running_mean = self.running_mean.clone() * (E::ONE - self.momentum)
-            + mean_chan.retaped::<NoneTape>() * self.momentum;
-
-        let mean = mean_chan.broadcast_like(&shape);
-        let centered = x - mean;
-
-        let var_chan = centered.retaped::<T>().square().mean::<Rank1<C>, _>();
-
-        // NOTE: uses unbiased variance in running estimate
-        self.running_var = self.running_var.clone() * (E::ONE - self.momentum)
-            + var_chan.retaped::<NoneTape>() * (self.momentum * n / (n - E::ONE));
-
-        // statistics for normalizing - on tape
-        let std = (var_chan + self.epsilon).sqrt().broadcast_like(&shape);
-
-        // record broadcast of scale & bias - on tape
-        let scale = self.scale.retaped::<T>().broadcast_like(&shape);
-        let bias = self.bias.retaped::<T>().broadcast_like(&shape);
-
-        // normalize & affine - on tape
-        (centered / std) * scale + bias
+        train_fwd(
+            x,
+            &mut self.running_var,
+            &mut self.running_mean,
+            &self.scale,
+            &self.bias,
+            self.epsilon,
+            self.momentum,
+        )
     }
 }
 
@@ -130,9 +172,13 @@ impl<const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>>
     Module<Tensor<(Const<C>, H, W), E, D, NoneTape>> for BatchNorm2D<C, E, D>
 {
     type Output = Tensor<(Const<C>, H, W), E, D, NoneTape>;
+    type Error = D::Err;
 
     /// Inference 3d forward - does **not** update [Self::running_mean] and [Self::running_var]
-    fn forward(&self, x: Tensor<(Const<C>, H, W), E, D, NoneTape>) -> Self::Output {
+    fn try_forward(
+        &self,
+        x: Tensor<(Const<C>, H, W), E, D, NoneTape>,
+    ) -> Result<Self::Output, D::Err> {
         self.infer_fwd(x)
     }
 }
@@ -141,31 +187,43 @@ impl<B: Dim, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>>
     Module<Tensor<(B, Const<C>, H, W), E, D, NoneTape>> for BatchNorm2D<C, E, D>
 {
     type Output = Tensor<(B, Const<C>, H, W), E, D, NoneTape>;
+    type Error = D::Err;
 
     /// Inference 4d forward - does **not** update [Self::running_mean] and [Self::running_var]
-    fn forward(&self, x: Tensor<(B, Const<C>, H, W), E, D, NoneTape>) -> Self::Output {
+    fn try_forward(
+        &self,
+        x: Tensor<(B, Const<C>, H, W), E, D, NoneTape>,
+    ) -> Result<Self::Output, D::Err> {
         self.infer_fwd(x)
     }
 }
 
 impl<const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>>
-    ModuleMut<Tensor<(Const<C>, H, W), E, D, OwnedTape<D>>> for BatchNorm2D<C, E, D>
+    ModuleMut<Tensor<(Const<C>, H, W), E, D, OwnedTape<E, D>>> for BatchNorm2D<C, E, D>
 {
-    type Output = Tensor<(Const<C>, H, W), E, D, OwnedTape<D>>;
+    type Output = Tensor<(Const<C>, H, W), E, D, OwnedTape<E, D>>;
+    type Error = D::Err;
 
     /// Training 3d forward - updates [Self::running_mean] and [Self::running_var]
-    fn forward_mut(&mut self, x: Tensor<(Const<C>, H, W), E, D, OwnedTape<D>>) -> Self::Output {
+    fn try_forward_mut(
+        &mut self,
+        x: Tensor<(Const<C>, H, W), E, D, OwnedTape<E, D>>,
+    ) -> Result<Self::Output, D::Err> {
         self.train_fwd(x)
     }
 }
 
 impl<B: Dim, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>>
-    ModuleMut<Tensor<(B, Const<C>, H, W), E, D, OwnedTape<D>>> for BatchNorm2D<C, E, D>
+    ModuleMut<Tensor<(B, Const<C>, H, W), E, D, OwnedTape<E, D>>> for BatchNorm2D<C, E, D>
 {
-    type Output = Tensor<(B, Const<C>, H, W), E, D, OwnedTape<D>>;
+    type Output = Tensor<(B, Const<C>, H, W), E, D, OwnedTape<E, D>>;
+    type Error = D::Err;
 
     /// Training 4d forward - updates [Self::running_mean] and [Self::running_var]
-    fn forward_mut(&mut self, x: Tensor<(B, Const<C>, H, W), E, D, OwnedTape<D>>) -> Self::Output {
+    fn try_forward_mut(
+        &mut self,
+        x: Tensor<(B, Const<C>, H, W), E, D, OwnedTape<E, D>>,
+    ) -> Result<Self::Output, D::Err> {
         self.train_fwd(x)
     }
 }
@@ -183,13 +241,32 @@ impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for BatchNorm2D<C
     }
 }
 
-impl<const C: usize, E: Dtype, D: Device<E>> ResetParams<D, E> for BatchNorm2D<C, E, D> {
-    fn try_reset_params(&mut self) -> Result<(), D::Err> {
-        self.scale.try_fill_with_ones()?;
-        self.bias.try_fill_with_zeros()?;
-        self.running_mean.try_fill_with_zeros()?;
-        self.running_var.try_fill_with_ones()?;
-        Ok(())
+impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNorm2D<C, E, D> {
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+        visitor.visit_tensor(
+            "scale",
+            |s| &s.scale,
+            |s| &mut s.scale,
+            TensorOptions::reset_to_ones(),
+        )?;
+        visitor.visit_tensor(
+            "bias",
+            |s| &s.bias,
+            |s| &mut s.bias,
+            TensorOptions::reset_to_zeros(),
+        )?;
+        visitor.visit_tensor(
+            "running_mean",
+            |s| &s.running_mean,
+            |s| &mut s.running_mean,
+            TensorOptions::detached(|t| t.try_fill_with_zeros()),
+        )?;
+        visitor.visit_tensor(
+            "running_var",
+            |s| &s.running_var,
+            |s| &mut s.running_var,
+            TensorOptions::detached(|t| t.try_fill_with_ones()),
+        )
     }
 }
 
@@ -209,21 +286,10 @@ impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
     }
 }
 
-impl<const C: usize, E: Dtype, D: Device<E>> GradientUpdate<D, E> for BatchNorm2D<C, E, D> {
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.scale.update(updater, unused)?;
-        self.bias.update(updater, unused)?;
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::builder::BatchNorm2D;
-    use crate::{nn::*, shapes::*, tensor::*, tensor_ops::*, tests::*};
+    use crate::{nn::*, optim::*, shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_batchnorm2d_3d_forward_mut() {
@@ -293,7 +359,7 @@ mod tests {
     }
 
     #[test]
-    fn test_batchform2d_3d_repeated_forward_mut() {
+    fn test_batchnorm2d_3d_repeated_forward_mut() {
         let dev = TestDevice::seed_from_u64(12);
 
         let x1: Tensor<Rank3<3, 4, 5>, TestDtype, _> = dev.sample_normal();
@@ -343,5 +409,18 @@ mod tests {
                 [[0.73018146, 0.3243845], [-1.1041277, 0.38778353]],
             ],
         );
+    }
+
+    #[test]
+    fn test_batchnorm2d_update() {
+        let dev: TestDevice = Default::default();
+
+        let x1: Tensor<Rank3<3, 4, 5>, TestDtype, _> = dev.sample_normal();
+        let mut bn = dev.build_module::<BatchNorm2D<3>, TestDtype>();
+        let y = bn.forward_mut(x1.trace());
+        let g = y.square().mean().backward();
+
+        let mut opt = Sgd::new(&bn, Default::default());
+        opt.update(&mut bn, &g).expect("");
     }
 }

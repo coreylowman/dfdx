@@ -2,8 +2,7 @@ use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
 use crate::{
-    nn::{modules::*, *},
-    optim::{GradientUpdate, ParamUpdater, UnusedTensors},
+    nn::{modules::*, tensor_collection::*, *},
     shapes::Dtype,
     tensor::{PutTape, SplitTape},
     tensor_ops::Device,
@@ -114,32 +113,16 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, E, D: Device<E>> ResetParams<D, E>
+impl<const M: usize, const H: usize, const F: usize, E, D: Device<E>> TensorCollection<E, D>
     for TransformerEncoderBlock<M, H, F, E, D>
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn try_reset_params(&mut self) -> Result<(), <D>::Err> {
-        self.self_attn.try_reset_params()?;
-        self.norm1.try_reset_params()?;
-        self.ff.try_reset_params()?;
-        self.norm2.try_reset_params()?;
-        Ok(())
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>> GradientUpdate<D, E>
-    for TransformerEncoderBlock<M, H, F, E, D>
-{
-    fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), <D>::Err>
-    where
-        U: ParamUpdater<D, E>,
-    {
-        self.self_attn.update(updater, unused)?;
-        self.norm1.update(updater, unused)?;
-        self.ff.update(updater, unused)?;
-        self.norm2.update(updater, unused)?;
-        Ok(())
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+        visitor.visit_module("self_attn", |s| &s.self_attn, |s| &mut s.self_attn)?;
+        visitor.visit_module("norm1", |s| &s.norm1, |s| &mut s.norm1)?;
+        visitor.visit_module("ff", |s| &s.ff, |s| &mut s.ff)?;
+        visitor.visit_module("norm2", |s| &s.norm2, |s| &mut s.norm2)
     }
 }
 
@@ -161,31 +144,33 @@ impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>, Src
     for TransformerEncoderBlock<M, H, F, E, D>
 where
     Src: SplitTape + std::ops::Add<Src::NoTape, Output = Src>,
-    MultiHeadAttention<M, H, M, M, E, D>: Module<Src, Output = Src>,
-    LayerNorm1D<M, E, D>: Module<Src, Output = Src>,
-    FF<M, F, E, D>: Module<Src, Output = Src>,
+    MultiHeadAttention<M, H, M, M, E, D>: Module<Src, Output = Src, Error = D::Err>,
+    LayerNorm1D<M, E, D>: Module<Src, Output = Src, Error = D::Err>,
+    FF<M, F, E, D>: Module<Src, Output = Src, Error = D::Err>,
 {
     type Output = Src;
+    type Error = D::Err;
 
-    fn forward(&self, src: Src) -> Self::Output {
+    fn try_forward(&self, src: Src) -> Result<Self::Output, D::Err> {
         let (src, tape) = src.split_tape();
-        let x = self.self_attn.forward(src.clone().put_tape(tape));
+        let x = self.self_attn.try_forward(src.clone().put_tape(tape))?;
         let x = x + src;
-        let x = self.norm1.forward(x);
-        let x = self.ff.forward(x);
-        self.norm2.forward(x)
+        let x = self.norm1.try_forward(x)?;
+        let x = self.ff.try_forward(x)?;
+        self.norm2.try_forward(x)
     }
 }
 
 impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>, T> ModuleMut<T>
     for TransformerEncoderBlock<M, H, F, E, D>
 where
-    Self: Module<T>,
+    Self: Module<T, Error = D::Err>,
 {
     type Output = <Self as Module<T>>::Output;
+    type Error = D::Err;
 
-    fn forward_mut(&mut self, t: T) -> Self::Output {
-        self.forward(t)
+    fn try_forward_mut(&mut self, t: T) -> Result<Self::Output, D::Err> {
+        self.try_forward(t)
     }
 }
 

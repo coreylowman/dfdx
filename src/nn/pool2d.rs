@@ -1,8 +1,6 @@
 #[cfg(feature = "nightly")]
 use crate::tensor_ops::{ConstAvgPool2D, ConstMaxPool2D, ConstMinPool2D};
 
-use crate::{shapes::Dtype, tensor_ops::Device};
-
 #[allow(unused)]
 use super::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
 
@@ -41,19 +39,15 @@ macro_rules! impl_pools {
         impl<const K: usize, const S: usize, const P: usize> ZeroSizedModule for $PoolTy<K, S, P> {}
         impl<const K: usize, const S: usize, const P: usize> NonMutableModule for $PoolTy<K, S, P> {}
 
-        impl<const K: usize, const S: usize, const P: usize, D: Device<E>, E: Dtype> BuildModule<D, E> for $PoolTy<K, S, P> {
-            fn try_build(_: &D) -> Result<Self, <D>::Err> {
-                Ok(Default::default())
-            }
-        }
-
         #[cfg(feature = "nightly")]
         impl<const K: usize, const S: usize, const P: usize, Img: $Trait<K, S, P>> Module<Img>
             for $PoolTy<K, S, P>
         {
             type Output = Img::Output;
-            fn forward(&self, x: Img) -> Self::Output {
-                x.try_pool2d().unwrap()
+            type Error = Img::Err;
+
+            fn try_forward(&self, x: Img) -> Result<Self::Output, Img::Err> {
+                x.try_pool2d()
             }
         }
     };

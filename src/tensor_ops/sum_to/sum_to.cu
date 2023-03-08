@@ -1,50 +1,5 @@
 #include "cuda_utils.cuh"
 
-// Efficiently computes the sum of each chunk in "data" of size chunk_len, and
-// stores the sums in out[i / chunk_len]
-template<typename T>
-__device__ void chunk_sum(
-    const size_t numel,
-    const size_t chunk_len,
-    const T data,
-    T* out
-) {
-    __shared__ T buf[1024];
-    // assumes that threads where i >= numel have already exited
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned int block_i = threadIdx.x;
-    buf[block_i] = data;
-
-    unsigned int chunk_i = i % chunk_len;
-    unsigned int chunk_start = max((int)(block_i - chunk_i), 0);
-    unsigned int chunk_end = min((unsigned int)(block_i + chunk_len - chunk_i), blockDim.x);
-
-    chunk_i = block_i - chunk_start;
-
-    size_t max_chunk_len = min(chunk_end - chunk_start, blockDim.x);
-    size_t incr = next_power_of_two(max_chunk_len) >> 1;
-
-    __syncthreads();
-
-    // Uses sequential addressing as discussed in
-    // https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf
-    for (; incr > 0; incr >>= 1) {
-        unsigned int block_i_2 = block_i + incr;
-
-        if (block_i_2 < chunk_end && chunk_i < incr) {
-            // This is sound because __syncthreads and the conditions above
-            // ensure that no data races occur
-            buf[block_i] += buf[block_i_2];
-        }
-
-        __syncthreads();
-    }
-
-    if (block_i == chunk_start) {
-        atomicAdd(out + i / chunk_len, buf[block_i]);
-    }
-}
-
 // strides and dims specify how to index inp to put all summed elements next to
 // each other, and chunk_len is len(inp) / len(out)
 template<typename T>
@@ -65,7 +20,7 @@ __device__ void sum_to_fwd(
     }
 
     unsigned int inp_i = get_strided_index(i, num_dims, dims, strides);
-    chunk_sum(numel, chunk_len, inp[inp_i] * elems_per_thread, out);
+    chunk_sum(chunk_len, inp[inp_i] * elems_per_thread, out);
 }
 
 // Accepts pre-broadcasted strides for both input & output.

@@ -1,7 +1,7 @@
 use super::*;
 
 /// Marker for shapes that can be reduced to [Shape] `S` along [Axes] `Ax`.
-pub trait ReduceShapeTo<S, Ax>: Sized {}
+pub trait ReduceShapeTo<S, Ax>: HasAxes<Ax> + Sized {}
 
 /// Marker for shapes that can be broadcasted to [Shape] `S` along [Axes] `Ax`.
 pub trait BroadcastShapeTo<S, Ax>: Sized {}

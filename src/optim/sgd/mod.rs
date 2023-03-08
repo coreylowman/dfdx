@@ -5,9 +5,12 @@ mod cuda_kernel;
 
 use std::marker::PhantomData;
 
-use crate::gradients::Gradients;
-use crate::shapes::{Dtype, Shape};
-use crate::tensor::{DeviceStorage, Tensor};
+use crate::{
+    gradients::Gradients,
+    nn::tensor_collection::*,
+    shapes::{Dtype, Shape},
+    tensor::{DeviceStorage, Tensor},
+};
 
 use super::optimizer::*;
 
@@ -100,7 +103,7 @@ impl<E: Dtype> Default for SgdConfig<E> {
 /// # let dev: Cpu = Default::default();
 /// # type Model = Tensor<Rank0, f32, Cpu>;
 /// # let mut model: Model = dev.zeros();
-/// let mut opt = Sgd::new(&model, SgdConfig {
+/// let mut opt: Sgd<Model, f32, Cpu> = Sgd::new(&model, SgdConfig {
 ///     lr: 1e-3,
 ///     momentum: Some(Momentum::Classic(0.5)),
 ///     weight_decay: Some(WeightDecay::L2(0.01)),
@@ -109,69 +112,78 @@ impl<E: Dtype> Default for SgdConfig<E> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Sgd<M, E: Dtype> {
+pub struct Sgd<M, E: Dtype, D: DeviceStorage> {
     /// Hyperparameter configuration
     pub cfg: SgdConfig<E>,
 
-    velocity: Gradients,
-    gradients: Gradients,
+    velocity: Gradients<E, D>,
 
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype> Sgd<M, E> {
+impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
     /// Constructs using hyperparameters from `cfg`
     pub fn new(_model: &M, cfg: SgdConfig<E>) -> Self {
         Self {
             cfg,
-            velocity: Default::default(),
-            gradients: Default::default(),
+            velocity: Gradients::without_leafs(),
             marker: PhantomData,
         }
     }
 }
 
 pub(super) trait SgdKernel<E: Dtype>: DeviceStorage {
-    fn update<S: Shape>(
+    fn update(
         &self,
         cfg: &SgdConfig<E>,
-        param: &mut Self::Storage<S, E>,
-        velocity: &mut Self::Storage<S, E>,
-        grad: Self::Storage<S, E>,
+        param: &mut Self::Vec<E>,
+        velocity: &mut Self::Vec<E>,
+        grad: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, D: SgdKernel<E>, E: Dtype> ParamUpdater<D, E> for Sgd<M, E> {
-    fn update_param<S: Shape>(
+impl<E: Dtype, D: SgdKernel<E>, M> TensorVisitor<E, D>
+    for (&mut Sgd<M, E, D>, &Gradients<E, D>, UnusedTensors)
+{
+    type Viewer = ViewTensorMut;
+    type Err = D::Err;
+
+    fn visit<S: Shape>(
         &mut self,
+        _: std::string::String,
+        opts: TensorOptions<S, E, D>,
         p: &mut Tensor<S, E, D>,
-        unused: &mut UnusedTensors,
     ) -> Result<(), D::Err> {
-        let g = self.gradients.remove(p);
+        if !opts.do_gradient_update {
+            return Ok(());
+        }
+        let g = self.1.get_ref_checked(p);
         match g {
-            None => unused.add(p),
+            None => self.2.add(p),
             Some(g) => {
-                let v = self.velocity.get_or_alloc_mut(p)?;
-                p.device.update(&self.cfg, &mut p.storage, v, g)?;
+                let v = self.0.velocity.get_or_alloc_mut(p)?;
+                p.device
+                    .update(&self.0.cfg, std::sync::Arc::make_mut(&mut p.data), v, g)?;
             }
         }
         Ok(())
     }
 }
 
-impl<M: GradientUpdate<D, E>, D: SgdKernel<E>, E: Dtype> Optimizer<M, D, E> for Sgd<M, E>
-where
-    Self: ParamUpdater<D, E>,
-{
+impl<M: TensorCollection<E, D>, D: SgdKernel<E>, E: Dtype> Optimizer<M, D, E> for Sgd<M, E, D> {
     fn update(
         &mut self,
         module: &mut M,
-        gradients: Gradients,
+        gradients: &Gradients<E, D>,
     ) -> Result<(), OptimizerUpdateError<D>> {
-        self.gradients = gradients;
-        let mut unused = Default::default();
-        match module.update(self, &mut unused) {
-            Ok(_) => unused.into(),
+        let mut op = (self, gradients, Default::default());
+        let result = M::iter_tensors(&mut RecursiveWalker {
+            m: module,
+            f: &mut op,
+            path: &mut std::vec::Vec::new(),
+        });
+        match result {
+            Ok(_) => op.2.into(),
             Err(e) => Err(OptimizerUpdateError::DeviceError(e)),
         }
     }
@@ -199,7 +211,7 @@ mod tests {
         for _ in 0..5 {
             let loss = (pred.trace() - targ.clone()).abs().mean();
             let gradients = loss.backward();
-            sgd.update(&mut pred, gradients).expect("");
+            sgd.update(&mut pred, &gradients).expect("");
         }
         assert_close(&pred.array(), &[1.0; 5]);
         assert_close(&targ.array(), &[1.0; 5]);
@@ -222,7 +234,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd.update(&mut t, gradients).expect("");
+            sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -252,7 +264,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd.update(&mut t, gradients).expect("");
+            sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -282,7 +294,7 @@ mod tests {
 
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd.update(&mut t, gradients).expect("");
+            sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -320,13 +332,13 @@ mod tests {
         ];
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd_l2.update(&mut t, gradients).expect("");
+            sgd_l2.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
         t = dev.ones();
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd_decoupled.update(&mut t, gradients).expect("");
+            sgd_decoupled.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -355,7 +367,7 @@ mod tests {
         ];
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd.update(&mut t, gradients).expect("");
+            sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
     }
@@ -394,7 +406,7 @@ mod tests {
         ];
         for e in expected.iter() {
             let gradients = (t.trace() * rate.clone()).mean().backward();
-            sgd_l2.update(&mut t, gradients).expect("");
+            sgd_l2.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
 
@@ -406,8 +418,17 @@ mod tests {
             let loss = l2_loss + normal_loss;
 
             let gradients = loss.backward();
-            sgd.update(&mut t, gradients).expect("");
+            sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
+    }
+
+    #[test]
+    fn test_unused_tensors() {
+        let dev: TestDevice = Default::default();
+        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
+        let mut opt = Sgd::new(&t, Default::default());
+        opt.update(&mut t, &Gradients::without_leafs())
+            .expect_err("");
     }
 }

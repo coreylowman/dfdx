@@ -28,15 +28,17 @@ pub fn bce_with_logits<S: Shape, E: Dtype, D: BinaryKernel<BCEKernelOp, E>, LTap
     probs: Tensor<S, E, D, RTape>,
 ) -> Tensor<S, E, D, LTape>
 where
-    LTape: Tape<D> + Merge<RTape>,
-    RTape: Tape<D>,
+    LTape: Tape<E, D> + Merge<RTape>,
+    RTape: Tape<E, D>,
 {
     logits.bce_with_logits(probs)
 }
 
-impl<S: Shape, E: Dtype, D: BinaryKernel<BCEKernelOp, E>, LTape: Tape<D>> Tensor<S, E, D, LTape> {
+impl<S: Shape, E: Dtype, D: BinaryKernel<BCEKernelOp, E>, LTape: Tape<E, D>>
+    Tensor<S, E, D, LTape>
+{
     /// See [bce_with_logits]
-    pub fn bce_with_logits<RTape: Tape<D>>(self, prob: Tensor<S, E, D, RTape>) -> Self
+    pub fn bce_with_logits<RTape: Tape<E, D>>(self, prob: Tensor<S, E, D, RTape>) -> Self
     where
         LTape: Merge<RTape>,
     {
@@ -45,7 +47,7 @@ impl<S: Shape, E: Dtype, D: BinaryKernel<BCEKernelOp, E>, LTape: Tape<D>> Tensor
     /// See [bce_with_logits]
     pub fn try_bce_with_logits<RTape>(self, prob: Tensor<S, E, D, RTape>) -> Result<Self, D::Err>
     where
-        RTape: Tape<D>,
+        RTape: Tape<E, D>,
         LTape: Merge<RTape>,
     {
         try_binary_op(BCEKernelOp, self, prob)

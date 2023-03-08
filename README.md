@@ -83,12 +83,11 @@ let mut sgd = Sgd::new(&model, SgdConfig {
     lr: 1e-2,
     momentum: Some(Momentum::Nesterov(0.9))
 });
-
-let loss: Tensor<Rank0, _, _, OwnedTape<_>> = ...
+let loss = ...
 
 // run backprop to get the gradients
 let gradients = loss.backward();
-sgd.update(&mut model, gradients);
+sgd.update(&mut model, &gradients);
 ```
 
 3. 💡 Tensors can be converted to and from normal rust arrays

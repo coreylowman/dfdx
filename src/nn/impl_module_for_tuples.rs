@@ -1,17 +1,12 @@
-use crate::{optim::*, shapes::*, tensor_ops::*};
+use crate::{shapes::*, tensor::*, tensor_ops::*};
 
-use super::module::{
-    BuildModule, BuildOnDevice, Module, ModuleMut, OnDevice, ResetParams, ToDevice,
-};
+use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
-        impl<D: Device<E>, E: Dtype, $($name: GradientUpdate<D, E>),+> GradientUpdate<D, E> for ($($name,)+) {
-            fn update<U>(&mut self, updater: &mut U, unused: &mut UnusedTensors) -> Result<(), D::Err>
-            where
-                U: ParamUpdater<D, E>
-            {
-                $(self.$idx.update(updater, unused)?;)+
+        impl<E: Dtype, D: DeviceStorage, $($name: TensorCollection<E, D>),+> TensorCollection<E, D> for ($($name,)+) {
+            fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+                $(visitor.visit_module(&std::format!("{}", $idx), |s| &s.$idx, |s| &mut s.$idx)?;)+
                 Ok(())
             }
         }
@@ -28,16 +23,8 @@ macro_rules! tuple_impls {
             }
         }
 
-        impl<D: Device<E>, E: Dtype, $($name: ResetParams<D, E>),+> ResetParams<D, E> for ($($name,)+) {
-            #[allow(non_snake_case)]
-            fn try_reset_params(&mut self) -> Result<(), D::Err> {
-                $(self.$idx.try_reset_params()?;)+
-                Ok(())
-            }
-        }
-
         impl<$($name: ToDevice<D>,)+ D> ToDevice<D> for ($($name,)+) {
-            type Output = ($(OnDevice<$name, D>,)+);
+            type Output = ($(<$name as ToDevice<D>>::Output,)+);
             fn to_device(&self, device: &D) -> Self::Output {
                 ($(self.$idx.to_device(device)),+)
             }
@@ -71,30 +58,32 @@ macro_rules! tuple_impls {
         impl<
             Input,
             $last:
-            $(Module::<$rev_tail ::Output>, $rev_tail: )+
+            $(Module::<$rev_tail ::Output, Error=$rev_tail::Error>, $rev_tail: )+
             Module<Input>
         > Module<Input> for ($($name,)+) {
             type Output = $last ::Output;
+            type Error = $last ::Error;
 
             /// Calls forward sequentially on each module in the tuple.
-            fn forward(&self, x: Input) -> Self::Output {
-                $(let x = self.$idx.forward(x);)+
-                x
+            fn try_forward(&self, x: Input) -> Result<Self::Output, Self::Error> {
+                $(let x = self.$idx.try_forward(x)?;)+
+                Ok(x)
             }
         }
 
         impl<
             Input,
             $last:
-            $(ModuleMut::<$rev_tail ::Output>, $rev_tail: )+
+            $(ModuleMut::<$rev_tail ::Output, Error=$rev_tail::Error>, $rev_tail: )+
             ModuleMut<Input>
         > ModuleMut<Input> for ($($name,)+) {
             type Output = $last ::Output;
+            type Error = $last ::Error;
 
             /// Calls forward sequentially on each module in the tuple.
-            fn forward_mut(&mut self, x: Input) -> Self::Output {
-                $(let x = self.$idx.forward_mut(x);)+
-                x
+            fn try_forward_mut(&mut self, x: Input) -> Result<Self::Output, Self::Error> {
+                $(let x = self.$idx.try_forward_mut(x)?;)+
+                Ok(x)
             }
         }
     };
@@ -109,13 +98,10 @@ tuple_impls!([M1, M2, M3, M4, M5, M6] [0, 1, 2, 3, 4, 5], M6, [M5, M4, M3, M2, M
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::tests::SimpleUpdater;
-    use crate::tests::TestDtype;
-    use crate::unique_id::HasUniqueId;
     use crate::{
         nn::{builders::*, *},
-        tensor::*,
-        tests::TestDevice,
+        optim::*,
+        tests::*,
     };
 
     #[test]
@@ -158,7 +144,7 @@ mod tests {
                 weight_decay: None,
             },
         );
-        sgd.update(&mut model, g).unwrap();
+        sgd.update(&mut model, &g).unwrap();
 
         assert_ne!(model.0.weight.array(), m0.0.weight.array());
         assert_ne!(model.0.bias.array(), m0.0.bias.array());
@@ -170,11 +156,17 @@ mod tests {
     #[derive(Debug, Default, Clone)]
     struct SetTo1<const I: usize, const N: usize>;
     impl<const I: usize, const N: usize> ZeroSizedModule for SetTo1<I, N> {}
+
     impl<const I: usize, const N: usize> Module<Tensor<Rank1<N>, f32, Cpu>> for SetTo1<I, N> {
         type Output = Tensor<Rank1<N>, f32, Cpu>;
-        fn forward(&self, mut input: Tensor<Rank1<N>, f32, Cpu>) -> Self::Output {
-            std::sync::Arc::make_mut(&mut input.storage.data)[I] = 1.0;
-            input
+        type Error = <Cpu as HasErr>::Err;
+
+        fn try_forward(
+            &self,
+            mut input: Tensor<Rank1<N>, f32, Cpu>,
+        ) -> Result<Self::Output, Self::Error> {
+            std::sync::Arc::make_mut(&mut input.data)[I] = 1.0;
+            Ok(input)
         }
     }
 
@@ -258,51 +250,5 @@ mod tests {
         ) = Default::default();
         let y = model.forward(dev.zeros());
         assert_eq!(y.array(), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
-    }
-
-    #[test]
-    fn test_tuple_missing_gradients() {
-        let dev: TestDevice = Default::default();
-        type Model = (Linear<5, 3>, Linear<5, 3>, Linear<5, 3>);
-        let mut model = dev.build_module::<Model, TestDtype>();
-        let mut g: SimpleUpdater = Default::default();
-
-        // no gradients present
-        let mut unused: UnusedTensors = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert_eq!(
-            &unused.ids,
-            &[
-                *model.0.weight.id(),
-                *model.0.bias.id(),
-                *model.1.weight.id(),
-                *model.1.bias.id(),
-                *model.2.weight.id(),
-                *model.2.bias.id(),
-            ]
-        );
-
-        // weight gradient is present
-        g.0.try_alloc_for(&model.0.weight).unwrap();
-        g.0.try_alloc_for(&model.1.weight).unwrap();
-        g.0.try_alloc_for(&model.2.weight).unwrap();
-
-        let mut unused: UnusedTensors = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert_eq!(
-            &unused.ids,
-            &[*model.0.bias.id(), *model.1.bias.id(), *model.2.bias.id(),]
-        );
-
-        g.0.try_alloc_for(&model.0.weight).unwrap();
-        g.0.try_alloc_for(&model.0.bias).unwrap();
-        g.0.try_alloc_for(&model.1.weight).unwrap();
-        g.0.try_alloc_for(&model.1.bias).unwrap();
-        g.0.try_alloc_for(&model.2.weight).unwrap();
-        g.0.try_alloc_for(&model.2.bias).unwrap();
-
-        let mut unused: UnusedTensors = Default::default();
-        model.update(&mut g, &mut unused).unwrap();
-        assert!(unused.is_empty());
     }
 }
