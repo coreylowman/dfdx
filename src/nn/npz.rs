@@ -59,9 +59,8 @@ pub trait SaveToNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<E,
         W: Write + Seek,
     {
         Self::iter_tensors(&mut RecursiveWalker {
-            m: self,
+            m: (self, String::new()),
             f: w,
-            path: &mut std::vec::Vec::new(),
         })
     }
 }
@@ -104,9 +103,8 @@ pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<
         R: Read + Seek,
     {
         Self::iter_tensors(&mut RecursiveWalker {
-            m: self,
+            m: (self, String::new()),
             f: r,
-            path: &mut std::vec::Vec::new(),
         })
     }
 }
@@ -115,14 +113,13 @@ impl<E: Dtype + NumpyDtype, D: CopySlice<E>, T: TensorCollection<E, D>> LoadFrom
 impl<W: Write + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D>
     for zip::ZipWriter<W>
 {
-    type Viewer = ViewTensorRef;
+    type Viewer = (ViewTensorRef, ViewTensorName);
     type Err = ZipError;
 
     fn visit<S: Shape>(
         &mut self,
-        full_path: String,
         _: TensorOptions<S, E, D>,
-        t: &Tensor<S, E, D>,
+        (t, full_path): (&Tensor<S, E, D>, String),
     ) -> Result<(), Self::Err> {
         t.write_to_npz(self, full_path)
     }
@@ -131,14 +128,13 @@ impl<W: Write + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D
 impl<R: Read + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D>
     for zip::ZipArchive<R>
 {
-    type Viewer = ViewTensorMut;
+    type Viewer = (ViewTensorMut, ViewTensorName);
     type Err = NpzError;
 
     fn visit<S: Shape>(
         &mut self,
-        full_path: String,
         _: TensorOptions<S, E, D>,
-        t: &mut Tensor<S, E, D>,
+        (t, full_path): (&mut Tensor<S, E, D>, String),
     ) -> Result<(), Self::Err> {
         t.read_from_npz(self, full_path)
     }
