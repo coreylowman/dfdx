@@ -100,7 +100,7 @@ fn main() {
             .collate()
             .progress()
         {
-            let img = dev.stack(img.map(|x| dev.tensor((x, (Const::<784>,)))));
+            let img = img.map(|x| dev.tensor((x, (Const::<784>,)))).stack();
             let lbl = dev.one_hot_encode(Const::<10>, lbl);
 
             let logits = model.forward_mut(img.traced_into(grads));
