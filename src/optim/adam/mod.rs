@@ -88,8 +88,8 @@ impl<M, E: Dtype, D: DeviceStorage> Adam<M, E, D> {
         Self {
             cfg,
             t: 0,
-            moment1: Default::default(),
-            moment2: Default::default(),
+            moment1: Gradients::without_leafs(),
+            moment2: Gradients::without_leafs(),
             marker: PhantomData,
         }
     }
@@ -296,6 +296,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let mut opt = Adam::new(&t, Default::default());
-        opt.update(&mut t, &Default::default()).expect_err("");
+        opt.update(&mut t, &Gradients::without_leafs())
+            .expect_err("");
     }
 }

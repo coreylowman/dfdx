@@ -14,7 +14,10 @@ fn main() {
 
     let x: Tensor<Rank2<10, 2>, f32, _> = dev.sample_normal();
 
-    let mut grads: Gradients<f32, _> = Default::default();
+    // first we call .alloc_grads, which both pre-allocates gradients
+    // and also marks non-parameter gradients as temporary.
+    // this allows .backward() to drop temporary gradients.
+    let mut grads: Gradients<f32, _> = model.alloc_grads();
 
     // using x.trace_into() instead of trace() allows us to
     // accumulate Gradients

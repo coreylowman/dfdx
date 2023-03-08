@@ -83,7 +83,7 @@ pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync + Eq + Par
 }
 
 /// Represents a single dimension where all
-/// instances are guarunteed to be the same size at compile time.
+/// instances are guaranteed to be the same size at compile time.
 pub trait ConstDim: Default + Dim {}
 
 impl Dim for usize {
@@ -116,6 +116,30 @@ impl<const M: usize> Dim for Const<M> {
 }
 
 impl<const M: usize> ConstDim for Const<M> {}
+
+impl<const N: usize> core::ops::Add<Const<N>> for usize {
+    type Output = usize;
+    fn add(self, rhs: Const<N>) -> Self::Output {
+        self.size() + rhs.size()
+    }
+}
+impl<const N: usize> core::ops::Add<usize> for Const<N> {
+    type Output = usize;
+    fn add(self, rhs: usize) -> Self::Output {
+        self.size() + rhs.size()
+    }
+}
+
+#[cfg(feature = "nightly")]
+impl<const N: usize, const M: usize> core::ops::Add<Const<N>> for Const<M>
+where
+    Const<{ N + M }>: Sized,
+{
+    type Output = Const<{ N + M }>;
+    fn add(self, _: Const<N>) -> Self::Output {
+        Const
+    }
+}
 
 /// Represents either `[T; N]` or `Vec<T>`
 pub trait Array<T>: IntoIterator<Item = T> {

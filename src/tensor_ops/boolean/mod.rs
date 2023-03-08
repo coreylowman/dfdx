@@ -282,7 +282,7 @@ mod tests {
         let r3 = &a & false;
         assert_eq!(r1.array(), [[false, false, false, true]; 2]);
         assert_eq!(r2.array(), a.array());
-        assert_eq!(r3.array(), dev.zeros_like(&a).array());
+        assert_eq!(r3.array(), [[false; 4]; 2]);
     }
 
     #[test]
@@ -295,7 +295,7 @@ mod tests {
         let r2 = &a | true;
         let r3 = &a | false;
         assert_eq!(r1.array(), [[false, true, true, true]; 2]);
-        assert_eq!(r2.array(), dev.ones_like(&a).array());
+        assert_eq!(r2.array(), [[true; 4]; 2]);
         assert_eq!(r3.array(), a.array());
     }
 

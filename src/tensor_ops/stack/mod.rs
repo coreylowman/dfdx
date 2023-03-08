@@ -11,7 +11,10 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 /// Stack an array or vec of tensors together along a new dimension.
-pub trait TryStack<E: Dtype>: DeviceStorage {
+pub trait TryStack: Sized {
+    type Stacked;
+    type Err: std::fmt::Debug;
+
     /// Stack an array or vec of tensors together along a new dimension.
     ///
     /// An array of tensors will be turned into a [Const] dim, and
@@ -25,7 +28,7 @@ pub trait TryStack<E: Dtype>: DeviceStorage {
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
     /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
-    /// let _: Tensor<Rank3<2, 3, 4>, f32, _> = dev.stack([a, b]);
+    /// let _: Tensor<Rank3<2, 3, 4>, f32, _> = [a, b].stack();
     /// ```
     ///
     /// Stacking with a vec:
@@ -34,26 +37,45 @@ pub trait TryStack<E: Dtype>: DeviceStorage {
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
     /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
-    /// let _: Tensor<(usize, Const<3>, Const<4>), f32, _> = dev.stack(vec![a, b]);
+    /// let _: Tensor<(usize, Const<3>, Const<4>), f32, _> = vec![a, b].stack();
     /// ```
-    fn stack<S: Shape, T, Items>(&self, items: Items) -> Tensor<S::Larger, E, Self, T>
-    where
-        Items: Array<Tensor<S, E, Self, T>>,
-        S: AddDim<Items::Dim>,
-        T: Tape<E, Self> + Merge<T>,
-    {
-        self.try_stack(items).unwrap()
+    fn stack(self) -> Self::Stacked {
+        self.try_stack().unwrap()
     }
-
     /// Fallible version of [TryStack::stack]
-    fn try_stack<S: Shape, T, Items>(
-        &self,
-        items: Items,
-    ) -> Result<Tensor<S::Larger, E, Self, T>, Self::Err>
-    where
-        Items: Array<Tensor<S, E, Self, T>>,
-        S: AddDim<Items::Dim>,
-        T: Tape<E, Self> + Merge<T>;
+    fn try_stack(self) -> Result<Self::Stacked, Self::Err>;
+}
+
+impl<S: Shape, E: Dtype, D: StackKernel<E>, T, const N: usize> TryStack for [Tensor<S, E, D, T>; N]
+where
+    S: AddDim<Const<N>>,
+    T: Tape<E, D>,
+{
+    type Stacked = Tensor<S::Larger, E, D, T>;
+    type Err = D::Err;
+    fn try_stack(self) -> Result<Self::Stacked, Self::Err> {
+        try_stack(self)
+    }
+}
+
+impl<S: Shape, E: Dtype, D: StackKernel<E>, T> TryStack for std::vec::Vec<Tensor<S, E, D, T>>
+where
+    S: AddDim<usize>,
+    T: Tape<E, D>,
+{
+    type Stacked = Tensor<S::Larger, E, D, T>;
+    type Err = D::Err;
+    fn try_stack(self) -> Result<Self::Stacked, Self::Err> {
+        try_stack(self)
+    }
+}
+
+impl<A: TryStack, B: TryStack<Err = A::Err>> TryStack for (A, B) {
+    type Stacked = (A::Stacked, B::Stacked);
+    type Err = A::Err;
+    fn try_stack(self) -> Result<Self::Stacked, Self::Err> {
+        Ok((self.0.try_stack()?, self.1.try_stack()?))
+    }
 }
 
 pub trait AddDim<D: Dim>: Shape {
@@ -107,48 +129,45 @@ pub trait StackKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<E: Dtype, D: StackKernel<E>> TryStack<E> for D {
-    fn try_stack<S: Shape, T, Items>(
-        &self,
-        items: Items,
-    ) -> Result<Tensor<S::Larger, E, Self, T>, Self::Err>
-    where
-        Items: Array<Tensor<S, E, Self, T>>,
-        S: AddDim<Items::Dim>,
-        T: Tape<E, Self> + Merge<T>,
-    {
-        let new_dim = items.dim();
-        assert!(new_dim.size() > 0);
+fn try_stack<S: Shape, E: Dtype, D: StackKernel<E>, T, Items>(
+    items: Items,
+) -> Result<Tensor<S::Larger, E, D, T>, D::Err>
+where
+    Items: Array<Tensor<S, E, D, T>>,
+    S: AddDim<Items::Dim>,
+    T: Tape<E, D> + Merge<T>,
+{
+    let new_dim = items.dim();
+    assert!(new_dim.size() > 0);
 
-        // need to split tape and transform into Vec for ease of implementation
-        let mut tensors = Vec::with_capacity(new_dim.size());
-        let mut tape: T = Default::default();
-        for item in items.into_iter() {
-            let (item, rhs): (Tensor<S, E, Self>, T) = item.split_tape();
-            tape = tape.merge(rhs);
-            tensors.push(item);
-        }
-
-        // check that all the shapes are equal
-        let device = tensors[0].device.clone();
-        let shape = *tensors[0].shape();
-        for t in tensors.iter() {
-            assert_eq!(t.shape(), &shape);
-            tape.try_alloc_grad(t)?;
-        }
-
-        // we map to storage refs so kernels don't have to know about tensors
-        let out = device.forward(new_dim, &tensors)?;
-
-        let phantom_out = out.clone();
-        tape.try_alloc_grad(&out)?;
-        tape.add_backward_op(move |grads| {
-            let (grad_inp, grad_out) = grads.many_and_ref(&tensors, &phantom_out);
-            device.backward(grad_inp, grad_out)?;
-            Ok(())
-        });
-        Ok(out.put_tape(tape))
+    // need to split tape and transform into Vec for ease of implementation
+    let mut tensors = Vec::with_capacity(new_dim.size());
+    let mut tape: T = Default::default();
+    for item in items.into_iter() {
+        let (item, rhs): (Tensor<S, E, D>, T) = item.split_tape();
+        tape = tape.merge(rhs);
+        tensors.push(item);
     }
+
+    // check that all the shapes are equal
+    let device = tensors[0].device.clone();
+    let shape = *tensors[0].shape();
+    for t in tensors.iter() {
+        assert_eq!(t.shape(), &shape);
+        tape.try_alloc_grad(t)?;
+    }
+
+    // we map to storage refs so kernels don't have to know about tensors
+    let out = device.forward(new_dim, &tensors)?;
+
+    let phantom_out = out.clone();
+    tape.try_alloc_grad(&out)?;
+    tape.add_backward_op(move |grads| {
+        let (grad_inp, grad_out) = grads.many_and_ref(&tensors, &phantom_out);
+        device.backward(grad_inp, grad_out)?;
+        Ok(())
+    });
+    Ok(out.put_tape(tape))
 }
 
 #[cfg(test)]
@@ -163,22 +182,21 @@ mod tests {
         {
             let x: Tensor<(), TestDtype, _> = dev.sample_normal();
             let y: Tensor<(), TestDtype, _> = dev.sample_normal();
-            let _: Tensor<Rank1<2>, TestDtype, _> = dev.stack([x, y]);
+            let _: Tensor<Rank1<2>, TestDtype, _> = [x, y].stack();
         }
 
         {
             let x: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
             let y: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
             let z: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
-            let _: Tensor<Rank2<3, 3>, TestDtype, _> = dev.stack([x, y, z]);
+            let _: Tensor<Rank2<3, 3>, TestDtype, _> = [x, y, z].stack();
         }
 
         {
             let x: Tensor<Rank2<2, 3>, TestDtype, _> = dev.sample_normal();
             let y: Tensor<Rank2<2, 3>, TestDtype, _> = dev.sample_normal();
             let z: Tensor<Rank2<2, 3>, TestDtype, _> = dev.sample_normal();
-            let r: Tensor<(usize, Const<2>, Const<3>), TestDtype, _> =
-                dev.stack(std::vec![x, y, z]);
+            let r: Tensor<(usize, Const<2>, Const<3>), TestDtype, _> = std::vec![x, y, z].stack();
             assert_eq!(r.shape().0, 3);
         }
     }
@@ -189,7 +207,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.sample_like(&(2, 3), rand_distr::StandardNormal);
         let y: Tensor<_, TestDtype, _> = dev.sample_like(&(3, 4), rand_distr::StandardNormal);
-        let _ = dev.stack([x, y]);
+        let _ = [x, y].stack();
     }
 
     #[test]
@@ -198,7 +216,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<Rank2<2, 3>, TestDtype, _> = dev.sample_normal();
         let y: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
-        let _ = dev.stack([x, y.broadcast()]);
+        let _ = [x, y.broadcast()].stack();
     }
 
     #[test]
@@ -206,13 +224,14 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
         let y: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
-        let r = dev.stack([
+        let r = [
             x.trace().broadcast::<Rank2<4, 3>, _>(),
             y.trace().broadcast(),
-        ]);
+        ]
+        .stack();
         assert_eq!(r.array(), [[x.array(); 4], [y.array(); 4]]);
         let g = r.exp().mean().backward();
-        let g1 = dev.stack([x.trace(), y.trace()]).exp().mean().backward();
+        let g1 = [x.trace(), y.trace()].stack().exp().mean().backward();
         assert_eq!(g.get(&x).array(), g1.get(&x).array());
         assert_eq!(g.get(&y).array(), g1.get(&y).array());
     }
@@ -224,7 +243,7 @@ mod tests {
         let x: Tensor<Rank2<2, 3>, TestDtype, _> = dev.sample_normal();
         let y: Tensor<Rank2<2, 3>, TestDtype, _> = dev.sample_normal();
         let z: Tensor<Rank2<2, 3>, TestDtype, _> = dev.sample_normal();
-        let r = dev.stack([x.trace(), y.trace(), z.trace()]);
+        let r = [x.trace(), y.trace(), z.trace()].stack();
         assert_eq!(r.array(), [x.array(), y.array(), z.array()]);
         let r1 = r.retaped::<NoneTape>();
         let g1 = r1.trace().exp().mean().backward();

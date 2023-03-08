@@ -96,9 +96,9 @@ impl<M, E: Dtype, D: DeviceStorage> RMSprop<M, E, D> {
         Self {
             cfg,
             step: 0,
-            momentums: Default::default(),
-            square_avg: Default::default(),
-            grad_avg: Default::default(),
+            momentums: Gradients::without_leafs(),
+            square_avg: Gradients::without_leafs(),
+            grad_avg: Gradients::without_leafs(),
             marker: PhantomData,
         }
     }
@@ -327,6 +327,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let mut opt = RMSprop::new(&t, Default::default());
-        opt.update(&mut t, &Default::default()).expect_err("");
+        opt.update(&mut t, &Gradients::without_leafs())
+            .expect_err("");
     }
 }

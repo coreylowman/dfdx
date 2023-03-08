@@ -126,7 +126,7 @@ impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
     pub fn new(_model: &M, cfg: SgdConfig<E>) -> Self {
         Self {
             cfg,
-            velocity: Default::default(),
+            velocity: Gradients::without_leafs(),
             marker: PhantomData,
         }
     }
@@ -426,6 +426,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let mut opt = Sgd::new(&t, Default::default());
-        opt.update(&mut t, &Default::default()).expect_err("");
+        opt.update(&mut t, &Gradients::without_leafs())
+            .expect_err("");
     }
 }
