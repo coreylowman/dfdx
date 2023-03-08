@@ -86,7 +86,6 @@ pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync + Eq + Par
 /// instances are guaranteed to be the same size at compile time.
 pub trait ConstDim: Default + Dim {}
 
-/// Represents a [Dim] with size known at runtime
 impl Dim for usize {
     #[inline(always)]
     fn size(&self) -> usize {
@@ -98,6 +97,7 @@ impl Dim for usize {
     }
 }
 
+/// Represents a [Dim] with size known at compile time
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Const<const M: usize>;
 impl<const M: usize> Dim for Const<M> {
