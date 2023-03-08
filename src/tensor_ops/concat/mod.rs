@@ -4,33 +4,117 @@ use crate::{
     tensor::*,
 };
 
-// / Concatenate two tensors along the first dimension.
-// pub trait TryConcat<E: Dtype>: DeviceStorage {
-//     /// Concatenate two tensors along the first dimension.
-//     ///
-//     /// TODO
-//     fn concat<A: Shape, B: Shape, T>(
-//         &self,
-//         a: Tensor<A, E, Self, T>,
-//         b: Tensor<B, E, Self, T>,
-//     ) -> Tensor<A::Extended, E, Self, T>
-//     where
-//         A: ConcatShape<B>,
-//         T: Tape<Self> + Merge<T>,
-//     {
-//         self.try_concat(a, b).unwrap()
-//     }
+mod cpu_kernel;
+#[cfg(feature = "cuda")]
+mod cuda_kernel;
 
-//     /// Fallible version of [TryConcat::concat].
-//     fn try_concat<A: Shape, B: Shape, T>(
-//         &self,
-//         a: Tensor<A, E, Self, T>,
-//         b: Tensor<B, E, Self, T>,
-//     ) -> Result<Tensor<A::Extended, E, Self, T>, Self::Err>
-//     where
-//         A: ConcatShape<B>,
-//         T: Tape<Self> + Merge<T>;
-// }
+/// Concatenate two tensors along the first dimension.
+pub trait TryConcat<E: Dtype>: DeviceStorage {
+    /// Concatenate two tensors along the first dimension.
+    ///
+    /// **Pytorch equivalent** `torch.concat`.
+    ///
+    /// Stacking with const dims **requires nightly**:
+    /// ```ignore
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
+    /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
+    /// let _: Tensor<Rank2<6, 4>, f32, _> = dev.concat(a, b);
+    /// ```
+    ///
+    /// Stacking with usize dims:
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let a: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(2, Const));
+    /// let b: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(4, Const));
+    /// let c: Tensor<(usize, Const<3>), f32, _> = dev.concat(a, b);
+    /// assert_eq!(c.shape().0, 6);
+    /// ```
+    fn concat<A: Shape, B: Shape, T, R>(
+        &self,
+        a: Tensor<A, E, Self, T>,
+        b: Tensor<B, E, Self, R>,
+    ) -> Tensor<A::Catted, E, Self, T>
+    where
+        A: ConcatShape<B>,
+        T: Tape<E, Self> + Merge<R>,
+        R: Tape<E, Self>,
+    {
+        self.try_concat(a, b).unwrap()
+    }
+
+    /// Fallible version of [TryConcat::concat].
+    fn try_concat<A: Shape, B: Shape, T, R>(
+        &self,
+        a: Tensor<A, E, Self, T>,
+        b: Tensor<B, E, Self, R>,
+    ) -> Result<Tensor<A::Catted, E, Self, T>, Self::Err>
+    where
+        A: ConcatShape<B>,
+        T: Tape<E, Self> + Merge<R>,
+        R: Tape<E, Self>;
+}
+
+impl<E: Dtype, D: ConcatKernel<E>> TryConcat<E> for D {
+    fn try_concat<A: Shape, B: Shape, T, R>(
+        &self,
+        a: Tensor<A, E, Self, T>,
+        b: Tensor<B, E, Self, R>,
+    ) -> Result<Tensor<A::Catted, E, Self, T>, Self::Err>
+    where
+        A: ConcatShape<B>,
+        T: Tape<E, Self> + Merge<R>,
+        R: Tape<E, Self>,
+    {
+        assert_eq!(
+            a.strides,
+            a.shape.strides(),
+            "Concat requires contiguous tensors"
+        );
+        assert_eq!(
+            b.strides,
+            b.shape.strides(),
+            "Concat requires contiguous tensors"
+        );
+        let (a, a_tape) = a.split_tape();
+        let (b, b_tape) = b.split_tape();
+        let mut tape = a_tape.merge(b_tape);
+        let device = a.device.clone();
+        let out = self.forward(&a, &b)?;
+        let phantom_out = out.clone();
+        tape.try_alloc_grad(&a)?;
+        tape.try_alloc_grad(&b)?;
+        tape.try_alloc_grad(&out)?;
+        tape.add_backward_op(move |grads| {
+            let (grad_a, grad_b, grad_out) = grads.muts_and_ref(&a, &b, &phantom_out);
+            device.backward(&a, grad_a, &b, grad_b, &phantom_out, grad_out)
+        });
+        Ok(out.put_tape(tape))
+    }
+}
+
+pub trait ConcatKernel<E: Dtype>: DeviceStorage {
+    fn forward<A: Shape, B: Shape>(
+        &self,
+        a: &Tensor<A, E, Self>,
+        b: &Tensor<B, E, Self>,
+    ) -> Result<Tensor<A::Catted, E, Self>, Self::Err>
+    where
+        A: ConcatShape<B>;
+    fn backward<A: Shape, B: Shape>(
+        &self,
+        a: &Tensor<A, E, Self>,
+        grad_a: &mut Self::Vec<E>,
+        b: &Tensor<B, E, Self>,
+        grad_b: &mut Self::Vec<E>,
+        out: &Tensor<A::Catted, E, Self>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err>
+    where
+        A: ConcatShape<B>;
+}
 
 pub trait ConcatShape<Rhs: Shape>: Shape {
     type Catted: Shape;
@@ -70,7 +154,26 @@ impl_concat!([D1 1, D2 2, D3 3, D4 4, D5 5]);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::*;
+    use crate::{tensor_ops::*, tests::*};
+
+    #[test]
+    fn test_concat() {
+        let dev: TestDevice = Default::default();
+        let a: Tensor<(usize, Const<5>, Const<3>), TestDtype, _> =
+            dev.sample_normal_like(&(3, Const, Const));
+        let b: Tensor<(usize, Const<5>, Const<3>), TestDtype, _> =
+            dev.sample_normal_like(&(2, Const, Const));
+        let c = dev.concat(a.trace(), b.clone());
+        assert_eq!(c.shape, (5, Const::<5>, Const::<3>));
+        let c_vec = c.as_vec();
+        assert_eq!(c_vec[..a.shape.num_elements()], a.as_vec());
+        assert_eq!(c_vec[a.shape.num_elements()..], b.as_vec());
+        let concat_grads = c.exp().sum().backward();
+        let a_grads = a.trace().exp().sum().backward();
+        let b_grads = b.trace().exp().sum().backward();
+        assert_eq!(concat_grads.get(&a).as_vec(), a_grads.get(&a).as_vec());
+        assert_eq!(concat_grads.get(&b).as_vec(), b_grads.get(&b).as_vec());
+    }
 
     #[test]
     fn test_concat_shape() {
@@ -92,5 +195,11 @@ mod tests {
             let b: (Const<3>, Const<5>) = (Const, Const);
             assert_eq!(a.concat_shape(&b), (Const::<8>, Const::<5>));
         }
+    }
+
+    #[test]
+    #[should_panic = "left: `10`,\n right: `7`"]
+    fn test_concat_shape_fails() {
+        (5, 10).concat_shape(&(3, 7));
     }
 }
