@@ -11,8 +11,9 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 /// Stack an array or vec of tensors together along a new dimension.
-pub trait TryStack<E: Dtype, D: DeviceStorage>: Sized {
+pub trait TryStack: Sized {
     type Stacked;
+    type Err: std::fmt::Debug;
 
     /// Stack an array or vec of tensors together along a new dimension.
     ///
@@ -42,29 +43,38 @@ pub trait TryStack<E: Dtype, D: DeviceStorage>: Sized {
         self.try_stack().unwrap()
     }
     /// Fallible version of [TryStack::stack]
-    fn try_stack(self) -> Result<Self::Stacked, D::Err>;
+    fn try_stack(self) -> Result<Self::Stacked, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: StackKernel<E>, T, const N: usize> TryStack<E, D>
-    for [Tensor<S, E, D, T>; N]
+impl<S: Shape, E: Dtype, D: StackKernel<E>, T, const N: usize> TryStack for [Tensor<S, E, D, T>; N]
 where
     S: AddDim<Const<N>>,
     T: Tape<E, D>,
 {
     type Stacked = Tensor<S::Larger, E, D, T>;
-    fn try_stack(self) -> Result<Self::Stacked, D::Err> {
+    type Err = D::Err;
+    fn try_stack(self) -> Result<Self::Stacked, Self::Err> {
         try_stack(self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: StackKernel<E>, T> TryStack<E, D> for std::vec::Vec<Tensor<S, E, D, T>>
+impl<S: Shape, E: Dtype, D: StackKernel<E>, T> TryStack for std::vec::Vec<Tensor<S, E, D, T>>
 where
     S: AddDim<usize>,
     T: Tape<E, D>,
 {
     type Stacked = Tensor<S::Larger, E, D, T>;
-    fn try_stack(self) -> Result<Self::Stacked, D::Err> {
+    type Err = D::Err;
+    fn try_stack(self) -> Result<Self::Stacked, Self::Err> {
         try_stack(self)
+    }
+}
+
+impl<A: TryStack, B: TryStack<Err = A::Err>> TryStack for (A, B) {
+    type Stacked = (A::Stacked, B::Stacked);
+    type Err = A::Err;
+    fn try_stack(self) -> Result<Self::Stacked, Self::Err> {
+        Ok((self.0.try_stack()?, self.1.try_stack()?))
     }
 }
 

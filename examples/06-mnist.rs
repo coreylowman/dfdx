@@ -90,19 +90,27 @@ fn main() {
     let dataset = MnistTrainSet::new(&mnist_path);
     println!("Found {:?} training images", dataset.len());
 
+    let preprocess = |(img, lbl): <MnistTrainSet as ExactSizeDataset>::Item<'_>| {
+        let mut one_hotted = [0.0; 10];
+        one_hotted[lbl] = 1.0;
+        (
+            dev.tensor_from_vec(img, (Const::<784>,)),
+            dev.tensor(one_hotted),
+        )
+    };
+
     for i_epoch in 0..10 {
         let mut total_epoch_loss = 0.0;
         let mut num_batches = 0;
         let start = Instant::now();
         for (img, lbl) in dataset
             .shuffled(&mut rng)
+            .map(preprocess)
             .batch(Const::<BATCH_SIZE>)
             .collate()
+            .stack()
             .progress()
         {
-            let img = img.map(|x| dev.tensor((x, (Const::<784>,)))).stack();
-            let lbl = dev.one_hot_encode(Const::<10>, lbl);
-
             let logits = model.forward_mut(img.traced_into(grads));
             let loss = cross_entropy_with_logits_loss(logits, lbl);
 

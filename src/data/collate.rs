@@ -84,22 +84,22 @@ where
 
 /// Collate an [Iterator] where Self::Item impls [Collate].
 pub trait IteratorCollateExt: Iterator {
-    /// Collates items - depends on implementation of [Collate] by the items.
+    /// Collates (unzips) items - very similar to [std::iter::Iterator::unzip],
+    /// but works on items that are Vecs or arrays
+    ///
+    /// For example:
+    /// - An item of `Vec<(usize, usize)>` becomes `(Vec<usize>, Vec<usize>)`
+    /// - An item of `[(usize, usize); N]` becomes `([usize; N], [usize; N]`
     ///
     /// Example implementations:
     /// ```rust
     /// # use dfdx::data::IteratorCollateExt;
-    /// // batches of data where the items in the batch are (i32, i32):
-    /// let data = [[(1, 2), (3, 4), (5, 6)], [(7, 8), (9, 10), (11, 12)]];
+    /// let data = [[('a', 'b'); 10], [('c', 'd'); 10], [('e', 'f'); 10]];
     /// // we use collate to transform each batch:
-    /// let batches: Vec<([i32; 3], [i32; 3])> = data.into_iter().collate().collect();
-    /// assert_eq!(
-    ///     &batches,
-    ///     &[
-    ///         ([1, 3, 5], [2, 4, 6]),
-    ///         ([7, 9, 11], [8, 10, 12]),
-    ///     ],
-    /// );
+    /// let mut iter = data.into_iter().collate();
+    /// assert_eq!(iter.next().unwrap(), (['a'; 10], ['b'; 10]));
+    /// assert_eq!(iter.next().unwrap(), (['c'; 10], ['d'; 10]));
+    /// assert_eq!(iter.next().unwrap(), (['e'; 10], ['f'; 10]));
     /// ```
     fn collate(self) -> Collator<Self>
     where
