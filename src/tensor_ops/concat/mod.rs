@@ -121,11 +121,6 @@ pub trait ConcatShape<Rhs: Shape>: Shape {
     fn concat_shape(&self, rhs: &Rhs) -> Self::Catted;
 }
 
-impl ConcatShape<()> for () {
-    type Catted = ();
-    fn concat_shape(&self, _: &()) -> Self::Catted {}
-}
-
 macro_rules! impl_concat {
     ([$($Dims:tt $Idx:tt),*]) => {
 impl<A: Dim, B: Dim, $($Dims: Dim, )*> ConcatShape<(A, $($Dims, )*)>

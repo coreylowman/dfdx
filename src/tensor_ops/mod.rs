@@ -199,6 +199,7 @@ pub use broadcast_to::BroadcastTo;
 pub use choose::ChooseFrom;
 pub use clamp::clamp;
 pub use cmp::{eq, ge, gt, le, lt, ne};
+pub use concat::TryConcat;
 pub use cos::cos;
 pub use div::{div, TryDiv};
 pub use dropout::dropout;

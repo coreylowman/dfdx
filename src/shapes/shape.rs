@@ -87,8 +87,7 @@ pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync + Eq + Par
 pub trait ConstDim: Default + Dim {}
 
 /// Represents a [Dim] with size known at runtime
-pub type Dyn = usize;
-impl Dim for Dyn {
+impl Dim for usize {
     #[inline(always)]
     fn size(&self) -> usize {
         *self
@@ -119,15 +118,15 @@ impl<const M: usize> Dim for Const<M> {
 
 impl<const M: usize> ConstDim for Const<M> {}
 
-impl<const N: usize> core::ops::Add<Const<N>> for Dyn {
-    type Output = Dyn;
+impl<const N: usize> core::ops::Add<Const<N>> for usize {
+    type Output = usize;
     fn add(self, rhs: Const<N>) -> Self::Output {
         self.size() + rhs.size()
     }
 }
-impl<const N: usize> core::ops::Add<Dyn> for Const<N> {
-    type Output = Dyn;
-    fn add(self, rhs: Dyn) -> Self::Output {
+impl<const N: usize> core::ops::Add<usize> for Const<N> {
+    type Output = usize;
+    fn add(self, rhs: usize) -> Self::Output {
         self.size() + rhs.size()
     }
 }
@@ -138,7 +137,7 @@ where
     Const<{ N + M }>: Sized,
 {
     type Output = Const<{ N + M }>;
-    fn add(self, rhs: Const<N>) -> Self::Output {
+    fn add(self, _: Const<N>) -> Self::Output {
         Const
     }
 }
