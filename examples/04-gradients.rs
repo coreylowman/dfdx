@@ -3,7 +3,7 @@
 use dfdx::{
     gradients::{Gradients, NoneTape, OwnedTape},
     shapes::{Rank0, Rank2},
-    tensor::{AsArray, SampleTensor, Tensor},
+    tensor::{AsArray, SampleTensor, Tensor, Trace},
     tensor_ops::{Backward, MeanTo, TryMatMul},
 };
 

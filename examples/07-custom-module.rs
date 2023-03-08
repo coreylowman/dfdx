@@ -7,7 +7,7 @@ use dfdx::{
         BuildModule, Module,
     },
     shapes::{Rank1, Rank2},
-    tensor::{HasErr, SampleTensor, Tensor},
+    tensor::{HasErr, SampleTensor, Tensor, Trace},
 };
 
 #[cfg(not(feature = "cuda"))]

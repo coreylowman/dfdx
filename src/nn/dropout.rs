@@ -149,11 +149,7 @@ impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<E, D>
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        shapes::Rank1,
-        tensor::{AsArray, OnesTensor},
-        tests::*,
-    };
+    use crate::{shapes::Rank1, tensor::*, tests::*};
 
     use super::*;
 
