@@ -2,41 +2,40 @@
 
 #[cfg(feature = "safetensors")]
 fn main() {
+    use ::safetensors::SafeTensors;
     use dfdx::{
-        shapes::{Rank0, Rank1, Rank2},
-        tensor::safetensors::Writer,
-        tensor::{AsArray, Cpu, Tensor, TensorFromArray, ZerosTensor},
+        prelude::*,
+        tensor::{AsArray, Cpu},
     };
-    use safetensors::tensor::SafeTensors;
+    use memmap2::MmapOptions;
     let dev: Cpu = Default::default();
 
-    let a = dev.tensor(1.234f32);
-    let b = dev.tensor([1.0f32, 2.0, 3.0]);
-    let c = dev.tensor([[1.0f32, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+    type Model = (Linear<5, 10>, Linear<10, 5>);
+    let model = dev.build_module::<Model, f32>();
+    model
+        .save_safetensors("model.safetensors")
+        .expect("Failed to save model");
 
-    let path = std::path::Path::new("out.safetensors");
+    let mut model2 = dev.build_module::<Model, f32>();
+    model2
+        .load_safetensors("model.safetensors")
+        .expect("Failed to load model");
 
-    Writer::new()
-        .add("a".to_string(), a)
-        .add("b".to_string(), b)
-        .add("c".to_string(), c)
-        .save(path)
-        .unwrap();
+    assert_eq!(model.0.weight.array(), model2.0.weight.array());
 
-    let mut a: Tensor<Rank0, f32, _> = dev.zeros();
-    let mut b: Tensor<Rank1<3>, f32, _> = dev.zeros();
-    let mut c: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
+    //  ADVANCED USAGE to load pre-existing models
 
-    let filename = "out.safetensors";
-    let buffer = std::fs::read(filename).expect("Couldn't read file");
+    // wget -O gpt2.safetensors https://huggingface.co/gpt2/resolve/main/model.safetensors
+
+    let mut gpt2 = dev.build_module::<Linear<728, 50257>, f32>();
+    let filename = "gpt2.safetensors";
+    let f = std::fs::File::open(filename).expect("Couldn't read file, have you downloaded gpt2 ? `wget -O gpt2.safetensors https://huggingface.co/gpt2/resolve/main/model.safetensors`");
+    let buffer = unsafe { MmapOptions::new().map(&f).expect("Could not mmap") };
     let tensors = SafeTensors::deserialize(&buffer).expect("Couldn't read safetensors file");
-    a.load(&tensors, "a").expect("Loading a failed");
-    b.load(&tensors, "b").expect("Loading b failed");
-    c.load(&tensors, "c").expect("Loading c failed");
 
-    assert_eq!(a.array(), 1.234);
-    assert_eq!(b.array(), [1.0, 2.0, 3.0]);
-    assert_eq!(c.array(), [[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+    gpt2.weight
+        .load_safetensor(&tensors, "wte.weight")
+        .expect("Could not load tensor");
 }
 
 #[cfg(not(feature = "safetensors"))]

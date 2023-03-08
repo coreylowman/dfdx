@@ -1,57 +1,7 @@
 use super::{CopySlice, DeviceStorage, Tensor};
-use crate::{
-    shapes::{Dtype, HasShape, Shape},
-    tensor::AsVec,
-};
-use no_std_compat::{collections::BTreeMap, path::Path, string::String, vec::Vec};
-use safetensors::tensor::{
-    serialize_to_file, Dtype as SDtype, SafeTensorError, SafeTensors, TensorView,
-};
-
-struct TensorData {
-    dtype: SDtype,
-    shape: Vec<usize>,
-    data: Vec<u8>,
-}
-
-pub struct Writer {
-    tensors: BTreeMap<String, TensorData>,
-}
-
-impl Writer {
-    pub fn new() -> Self {
-        let tensors = BTreeMap::new();
-        Self { tensors }
-    }
-
-    pub fn add<S, T, E: Dtype + SafeDtype>(mut self, key: String, tensor: Tensor<S, E>) -> Self
-    where
-        T: Into<Vec<usize>>,
-        S: Shape<Concrete = T>,
-    {
-        let dtype = E::safe_dtype();
-        let shape = tensor.shape().concrete().into();
-        let data = tensor.as_vec();
-        let data: Vec<u8> = data.iter().flat_map(|f| f.to_le_bytes()).collect();
-        let tdata = TensorData { dtype, shape, data };
-        self.tensors.insert(key, tdata);
-        self
-    }
-
-    pub fn save(&self, path: &Path) -> Result<(), SafeTensorError> {
-        let views: BTreeMap<String, TensorView> = self
-            .tensors
-            .iter()
-            .map(|(k, tensor)| {
-                (
-                    k.clone(),
-                    TensorView::new(tensor.dtype, tensor.shape.clone(), &tensor.data),
-                )
-            })
-            .collect();
-        serialize_to_file(&views, &None, path)
-    }
-}
+use crate::shapes::{Dtype, Shape};
+use safetensors::tensor::{Dtype as SDtype, SafeTensorError, SafeTensors};
+use std::vec::Vec;
 
 pub trait SafeDtype: Sized {
     type Array: IntoIterator<Item = u8>;
@@ -106,11 +56,7 @@ impl SafeDtype for f64 {
 }
 
 impl<S: Shape, E: Dtype + SafeDtype, D: DeviceStorage + CopySlice<E>, T> Tensor<S, E, D, T> {
-    pub fn safetensors_writer() -> Writer {
-        Writer::new()
-    }
-
-    pub fn load<'a>(
+    pub fn load_safetensor<'a>(
         &mut self,
         tensors: &SafeTensors<'a>,
         key: &str,
