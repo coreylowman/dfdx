@@ -1,7 +1,10 @@
 use crate::{
     prelude::DeviceStorage,
     shapes::{Dtype, HasShape, Shape},
-    tensor::{safetensors::SafeDtype, CopySlice, Tensor},
+    tensor::{
+        safetensors::{Error, SafeDtype},
+        CopySlice, Tensor,
+    },
 };
 use memmap2::MmapOptions;
 use safetensors::{
@@ -118,7 +121,7 @@ pub trait LoadFromSafetensors<E: Dtype + SafeDtype, D: CopySlice<E>>:
     /// let mut model = dev.build_module::<Linear<15, 5>, f32>();
     /// model.load_safetensors("model.safetensors").unwrap();
     /// ```
-    fn load_safetensors<P: AsRef<Path>>(&mut self, path: P) -> Result<(), SafeTensorError> {
+    fn load_safetensors<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
         let f = std::fs::File::open(path)?;
         let buffer = unsafe { MmapOptions::new().map(&f)? };
         let mut tensors = SafeTensors::deserialize(&buffer)?;
@@ -139,7 +142,7 @@ impl<E: Dtype + SafeDtype, D: CopySlice<E>, T: TensorCollection<E, D>> LoadFromS
 
 impl<'data, E: Dtype + SafeDtype, D: CopySlice<E>> TensorVisitor<E, D> for SafeTensors<'data> {
     type Viewer = ViewTensorMut;
-    type Err = SafeTensorError;
+    type Err = Error;
 
     fn visit<S: Shape>(
         &mut self,
