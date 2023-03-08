@@ -104,6 +104,23 @@
 //! state_dict = {k: torch.from_numpy(v) for k, v in np.load("dfdx-model.npz").items()}
 //! mlp.load_state_dict(state_dict)
 //! ```
+//!
+//! The feature `safetensors` allows to do the same with
+//! [https://github.com/huggingface/safetensors]()
+//! Call [SaveToSafetensors::save()] and [LoadFromSafetensors::load()] traits. All modules provided here implement it,
+//! including tuples. These all save to/from `.safetensors` files, which are flat layout with JSON
+//! header, allowing for super fast loads (with memory mapping).
+//!
+//! This is implemented to be fairly portable. For example you can use
+//! [https://github.com/huggingface/transformers]()
+//!
+//! ```python
+//! from transformers import pipeline
+//!
+//! pipe = pipeline(model="gpt2")
+//! pipe.save_pretrained("my_local", safe_serialization=True)
+//! # This created `my_local/model.safetensors` file which can now be used.
+//! ```
 
 mod num_params;
 mod reset_params;
@@ -130,6 +147,8 @@ mod pool2d;
 mod pool_global;
 mod repeated;
 mod residual;
+#[cfg(feature = "safetensors")]
+mod safetensors;
 mod split_into;
 mod transformer;
 mod unbiased_linear;
@@ -137,6 +156,8 @@ mod zero_grads;
 
 pub use module::*;
 
+#[cfg(feature = "safetensors")]
+pub use crate::nn::safetensors::{LoadFromSafetensors, SaveToSafetensors};
 pub use ema::ModelEMA;
 #[cfg(feature = "numpy")]
 pub use npz::{LoadFromNpz, SaveToNpz};
