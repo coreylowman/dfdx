@@ -9,7 +9,9 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 /// Concatenate two tensors along the first dimension.
-pub trait TryConcat<E: Dtype>: DeviceStorage {
+pub trait TryConcat<Rhs>: HasErr {
+    type Output;
+
     /// Concatenate two tensors along the first dimension.
     ///
     /// **Pytorch equivalent** `torch.concat`.
@@ -20,7 +22,7 @@ pub trait TryConcat<E: Dtype>: DeviceStorage {
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
     /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
-    /// let _: Tensor<Rank2<6, 4>, f32, _> = dev.concat(a, b);
+    /// let _: Tensor<Rank2<6, 4>, f32, _> = a.concat(b);
     /// ```
     ///
     /// Stacking with usize dims:
@@ -29,67 +31,48 @@ pub trait TryConcat<E: Dtype>: DeviceStorage {
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(2, Const));
     /// let b: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(4, Const));
-    /// let c: Tensor<(usize, Const<3>), f32, _> = dev.concat(a, b);
+    /// let c: Tensor<(usize, Const<3>), f32, _> = a.concat(b);
     /// assert_eq!(c.shape().0, 6);
     /// ```
-    fn concat<A: Shape, B: Shape, T, R>(
-        &self,
-        a: Tensor<A, E, Self, T>,
-        b: Tensor<B, E, Self, R>,
-    ) -> Tensor<A::Catted, E, Self, T>
-    where
-        A: ConcatShape<B>,
-        T: Tape<E, Self> + Merge<R>,
-        R: Tape<E, Self>,
-    {
-        self.try_concat(a, b).unwrap()
+    fn concat(self, rhs: Rhs) -> Self::Output {
+        self.try_concat(rhs).unwrap()
     }
 
     /// Fallible version of [TryConcat::concat].
-    fn try_concat<A: Shape, B: Shape, T, R>(
-        &self,
-        a: Tensor<A, E, Self, T>,
-        b: Tensor<B, E, Self, R>,
-    ) -> Result<Tensor<A::Catted, E, Self, T>, Self::Err>
-    where
-        A: ConcatShape<B>,
-        T: Tape<E, Self> + Merge<R>,
-        R: Tape<E, Self>;
+    fn try_concat(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
 }
 
-impl<E: Dtype, D: ConcatKernel<E>> TryConcat<E> for D {
-    fn try_concat<A: Shape, B: Shape, T, R>(
-        &self,
-        a: Tensor<A, E, Self, T>,
-        b: Tensor<B, E, Self, R>,
-    ) -> Result<Tensor<A::Catted, E, Self, T>, Self::Err>
-    where
-        A: ConcatShape<B>,
-        T: Tape<E, Self> + Merge<R>,
-        R: Tape<E, Self>,
-    {
+impl<A: Shape, B: Shape, T, R, E: Dtype, D: ConcatKernel<E>> TryConcat<Tensor<B, E, D, R>>
+    for Tensor<A, E, D, T>
+where
+    A: ConcatShape<B>,
+    T: Tape<E, D> + Merge<R>,
+    R: Tape<E, D>,
+{
+    type Output = Tensor<A::Catted, E, D, T>;
+    fn try_concat(self, rhs: Tensor<B, E, D, R>) -> Result<Self::Output, Self::Err> {
         assert_eq!(
-            a.strides,
-            a.shape.strides(),
+            self.strides,
+            self.shape.strides(),
             "Concat requires contiguous tensors"
         );
         assert_eq!(
-            b.strides,
-            b.shape.strides(),
+            rhs.strides,
+            rhs.shape.strides(),
             "Concat requires contiguous tensors"
         );
-        let (a, a_tape) = a.split_tape();
-        let (b, b_tape) = b.split_tape();
+        let (lhs, a_tape) = self.split_tape();
+        let (rhs, b_tape) = rhs.split_tape();
         let mut tape = a_tape.merge(b_tape);
-        let device = a.device.clone();
-        let out = self.forward(&a, &b)?;
+        let device = lhs.device.clone();
+        let out = device.forward(&lhs, &rhs)?;
         let phantom_out = out.clone();
-        tape.try_alloc_grad(&a)?;
-        tape.try_alloc_grad(&b)?;
+        tape.try_alloc_grad(&lhs)?;
+        tape.try_alloc_grad(&rhs)?;
         tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
-            let (grad_a, grad_b, grad_out) = grads.muts_and_ref(&a, &b, &phantom_out);
-            device.backward(&a, grad_a, &b, grad_b, &phantom_out, grad_out)
+            let (grad_a, grad_b, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
+            device.backward(&lhs, grad_a, &rhs, grad_b, &phantom_out, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -158,7 +141,7 @@ mod tests {
             dev.sample_normal_like(&(3, Const, Const));
         let b: Tensor<(usize, Const<5>, Const<3>), TestDtype, _> =
             dev.sample_normal_like(&(2, Const, Const));
-        let c = dev.concat(a.trace(), b.clone());
+        let c = a.trace().concat(b.clone());
         assert_eq!(c.shape, (5, Const::<5>, Const::<3>));
         let c_vec = c.as_vec();
         assert_eq!(c_vec[..a.shape.num_elements()], a.as_vec());
