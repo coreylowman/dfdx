@@ -51,7 +51,7 @@ pub trait Device<E: Dtype>:
     + BinaryKernel<super::super::div::BinaryDivKernelOp, E>
 
     // boolean operations
-    // + super::super::boolean::BooleanKernel
+    + super::super::boolean::BooleanKernel
 
     // unary
     + UnaryKernel<super::super::abs::AbsKernelOp, E>
