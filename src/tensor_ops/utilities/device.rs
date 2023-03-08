@@ -9,6 +9,7 @@ pub trait Device<E: Dtype>:
     DeviceStorage
     + CopySlice<E>
     + crate::tensor::TensorFromVec<E>
+    + crate::tensor::TensorFromVec<usize>
 
     + crate::tensor_ops::stack::StackKernel<E>
 
