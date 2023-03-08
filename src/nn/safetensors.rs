@@ -38,7 +38,7 @@ impl Writer {
         &mut self,
         key: String,
         tensor: &Tensor<S, E, D>,
-    ) -> () {
+    ) {
         let dtype = E::safe_dtype();
         let shape = tensor.shape().concrete().into();
         let data = tensor.as_vec();
@@ -63,14 +63,13 @@ impl Writer {
 }
 
 impl<E: Dtype + SafeDtype, D: CopySlice<E>> TensorVisitor<E, D> for Writer {
-    type Viewer = ViewTensorRef;
+    type Viewer = (ViewTensorRef, ViewTensorName);
     type Err = SafeTensorError;
 
     fn visit<S: Shape>(
         &mut self,
-        full_path: String,
         _: TensorOptions<S, E, D>,
-        t: &Tensor<S, E, D>,
+        (t, full_path): (&Tensor<S, E, D>, String),
     ) -> Result<(), Self::Err> {
         self.add(full_path, t);
         Ok(())
@@ -93,9 +92,8 @@ pub trait SaveToSafetensors<E: Dtype + SafeDtype, D: CopySlice<E>>: TensorCollec
     fn save_safetensors<P: AsRef<Path>>(&self, path: P) -> Result<(), SafeTensorError> {
         let mut w = Writer::new();
         Self::iter_tensors(&mut RecursiveWalker {
-            m: self,
+            m: (self, String::new()),
             f: &mut w,
-            path: &mut std::vec::Vec::new(),
         })?;
         w.save(path.as_ref())?;
         Ok(())
@@ -127,9 +125,8 @@ pub trait LoadFromSafetensors<E: Dtype + SafeDtype, D: CopySlice<E>>:
         let mut tensors = SafeTensors::deserialize(&buffer)?;
 
         Self::iter_tensors(&mut RecursiveWalker {
-            m: self,
+            m: (self, String::new()),
             f: &mut tensors,
-            path: &mut std::vec::Vec::new(),
         })?;
         Ok(())
     }
@@ -141,14 +138,13 @@ impl<E: Dtype + SafeDtype, D: CopySlice<E>, T: TensorCollection<E, D>> LoadFromS
 }
 
 impl<'data, E: Dtype + SafeDtype, D: CopySlice<E>> TensorVisitor<E, D> for SafeTensors<'data> {
-    type Viewer = ViewTensorMut;
+    type Viewer = (ViewTensorMut, ViewTensorName);
     type Err = Error;
 
     fn visit<S: Shape>(
         &mut self,
-        full_path: String,
         _: TensorOptions<S, E, D>,
-        t: &mut Tensor<S, E, D>,
+        (t, full_path): (&mut Tensor<S, E, D>, String),
     ) -> Result<(), Self::Err> {
         t.load_safetensor(self, &full_path)
     }

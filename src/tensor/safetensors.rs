@@ -74,11 +74,7 @@ impl From<std::io::Error> for Error {
 }
 
 impl<S: Shape, E: Dtype + SafeDtype, D: DeviceStorage + CopySlice<E>, T> Tensor<S, E, D, T> {
-    pub fn load_safetensor<'a>(
-        &mut self,
-        tensors: &SafeTensors<'a>,
-        key: &str,
-    ) -> Result<(), Error> {
+    pub fn load_safetensor(&mut self, tensors: &SafeTensors, key: &str) -> Result<(), Error> {
         let tensor = tensors.tensor(key)?;
         let v = tensor.data();
         let num_bytes = std::mem::size_of::<E>();
@@ -93,7 +89,7 @@ impl<S: Shape, E: Dtype + SafeDtype, D: DeviceStorage + CopySlice<E>, T> Tensor<
             // was correctly aligned.
             let data: &[E] =
                 unsafe { std::slice::from_raw_parts(v.as_ptr() as *const E, v.len() / num_bytes) };
-            self.copy_from(&data);
+            self.copy_from(data);
         } else {
             let mut c = Vec::with_capacity(v.len() / num_bytes);
             let mut i = 0;
