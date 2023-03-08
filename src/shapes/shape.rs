@@ -131,6 +131,8 @@ impl<const N: usize> core::ops::Add<Dyn> for Const<N> {
         self.size() + rhs.size()
     }
 }
+
+#[cfg(feature = "nightly")]
 impl<const N: usize, const M: usize> core::ops::Add<Const<N>> for Const<M>
 where
     Const<{ N + M }>: Sized,
