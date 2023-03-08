@@ -1,7 +1,7 @@
 //! Implementations of [OwnedTape], [NoneTape], and generic Nd array containers via [Gradients].
 #![allow(clippy::type_complexity)]
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::{boxed::Box, vec::Vec};
 
 use crate::shapes::{Shape, Unit};
@@ -22,12 +22,20 @@ use crate::unique_id::{unique_id, UniqueId};
 #[derive(Clone, Debug)]
 pub struct Gradients<E: Unit, D: DeviceStorage> {
     gradient_by_id: HashMap<UniqueId, D::Vec<E>>,
+    leaf_ids: Option<HashSet<UniqueId>>,
 }
 
-impl<E: Unit, D: DeviceStorage> Default for Gradients<E, D> {
-    fn default() -> Self {
+impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
+    /// Creates a [Gradients] object without any leaf tensor ids.
+    /// This means that all tensors are considered leafs, and
+    /// [Gradients::drop_non_leafs] will do nothing.
+    ///
+    /// For Gradient accumulation, you should use [crate::nn::ZeroGrads::alloc_grads],
+    /// which will ensure non-leaf gradients are freed after backwards.
+    pub fn without_leafs() -> Self {
         Self {
             gradient_by_id: Default::default(),
+            leaf_ids: None,
         }
     }
 }
@@ -51,8 +59,19 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     }
 
     /// Drops all gradients except for the ids specified in the parameter.
-    pub fn retain(&mut self, ids: &[UniqueId]) {
-        self.gradient_by_id.retain(|k, _| ids.contains(k));
+    pub fn retain_leafs(&mut self, ids: &[UniqueId]) {
+        self.leaf_ids
+            .get_or_insert_with(Default::default)
+            .extend(ids);
+        self.drop_non_leafs();
+    }
+
+    /// Keeps all gradients marked previously by [Gradients::retain_leafs], and drops all
+    /// others.
+    pub fn drop_non_leafs(&mut self) {
+        if let Some(leafs) = &self.leaf_ids {
+            self.gradient_by_id.retain(|k, _| leafs.contains(k));
+        }
     }
 
     /// Returns a reference to the underlying gradient if found.
@@ -167,7 +186,7 @@ impl<E: Unit, D: DeviceStorage> Default for OwnedTape<E, D> {
     fn default() -> Self {
         Self {
             operations: Default::default(),
-            gradients: Default::default(),
+            gradients: Gradients::without_leafs(),
         }
     }
 }
@@ -261,6 +280,12 @@ impl<E: Unit, D: DeviceStorage> Merge<OwnedTape<E, D>> for OwnedTape<E, D> {
         self.gradients
             .gradient_by_id
             .extend(other.gradients.gradient_by_id.drain());
+        if let Some(leafs) = other.gradients.leaf_ids {
+            self.gradients
+                .leaf_ids
+                .get_or_insert_with(Default::default)
+                .extend(leafs);
+        }
         self.operations.append(&mut other.operations);
         self
     }

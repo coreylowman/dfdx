@@ -5,16 +5,31 @@ use crate::{gradients::Gradients, shapes::*, tensor::*, unique_id::UniqueId};
 use std::{string::String, vec::Vec};
 
 /// Zero's any gradients associated with `self`.
+///
+/// ```rust
+/// # use dfdx::{prelude::*, gradients::Gradients};
+/// # let dev: Cpu = Default::default();
+/// let model = dev.build_module::<Linear<2, 5>, f32>();
+/// let mut grads: Gradients<f32, _> = model.alloc_grads();
+/// model.zero_grads(&mut grads);
+/// ```
 pub trait ZeroGrads<E: Dtype, D: ZeroFillStorage<E>>: TensorCollection<E, D> {
+    /// Allocates gradients for this tensor collection. **This marks all other
+    /// gradients as temporary, so they are dropped after .backward()**
+    fn alloc_grads(&self) -> Gradients<E, D> {
+        self.try_alloc_grads().unwrap()
+    }
+
+    /// Allocates gradients for this tensor collection. **This marks all other
+    /// gradients as temporary, so they are dropped after .backward()**
+    fn try_alloc_grads(&self) -> Result<Gradients<E, D>, D::Err> {
+        // NOTE: try_zero_grads will add the leafs!
+        let mut grads = Gradients::without_leafs();
+        self.try_zero_grads(&mut grads)?;
+        Ok(grads)
+    }
+
     /// Zero's any gradients associated with `self`.
-    ///
-    /// ```rust
-    /// # use dfdx::{prelude::*, gradients::Gradients};
-    /// # let dev: Cpu = Default::default();
-    /// let model = dev.build_module::<Linear<2, 5>, f32>();
-    /// let mut grads: Gradients<f32, _> = Default::default();
-    /// model.zero_grads(&mut grads);
-    /// ```
     fn zero_grads(&self, gradients: &mut Gradients<E, D>) {
         self.try_zero_grads(gradients).unwrap();
     }
@@ -30,7 +45,7 @@ pub trait ZeroGrads<E: Dtype, D: ZeroFillStorage<E>>: TensorCollection<E, D> {
             f: &mut op,
             path: &mut Vec::new(),
         })?;
-        op.gradients.retain(&op.updated);
+        op.gradients.retain_leafs(&op.updated);
         Ok(())
     }
 }
@@ -77,7 +92,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         type Model = (Linear<2, 5>, BatchNorm2D<3>);
         let model = dev.build_module::<Model, TestDtype>();
-        let mut grads: Gradients<TestDtype, TestDevice> = Default::default();
+        let mut grads: Gradients<TestDtype, TestDevice> = model.alloc_grads();
 
         let tmp1: Tensor<Rank1<5>, TestDtype, _> = dev.zeros();
         grads.get_or_alloc_mut(&tmp1).unwrap();
