@@ -46,8 +46,8 @@ pub trait SaveToNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<E,
     /// # use dfdx::prelude::*;
     /// let model: Linear<5, 10> = Default::default();
     /// let mut zip = ZipWriter::new(...);
-    /// model.write("0.", &mut zip)?;
-    /// model.write("1.", &mut zip)?;
+    /// model.write("0", &mut zip)?;
+    /// model.write("1", &mut zip)?;
     /// ```
     /// Will save a zip file with the following files in it:
     /// - `0.weight.npy`
@@ -93,7 +93,7 @@ pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<
     /// # use dfdx::prelude::*;
     /// let mut model: Linear<5, 10> = Default::default();
     /// let mut zip = ZipArchive::new(...);
-    /// model.read("0.", &mut zip)?;
+    /// model.read("0", &mut zip)?;
     /// ```
     /// Will try to read data from the following files:
     /// - `0.weight.npy`
