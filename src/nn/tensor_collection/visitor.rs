@@ -139,8 +139,8 @@ impl TensorViewer for ViewTensorMut {
 impl TensorViewer for ViewTensorName {
     type View<'a, Mod: 'a> = String;
 
-    fn view_field<'a, Mod, Field, GetRef, GetMut>(
-        module: &'a mut String,
+    fn view_field<Mod, Field, GetRef, GetMut>(
+        module: &mut String,
         name: &str,
         _get_ref: &mut GetRef,
         _get_mut: &mut GetMut,
@@ -218,6 +218,8 @@ impl<T: TensorViewer> TensorViewer for Option<T> {
         GetRef: FnMut(&Mod) -> &Field,
         GetMut: FnMut(&mut Mod) -> &mut Field,
     {
-        module.as_mut().map(|x| T::view_field(x, name, get_ref, get_mut))
+        module
+            .as_mut()
+            .map(|x| T::view_field(x, name, get_ref, get_mut))
     }
 }
