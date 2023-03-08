@@ -27,7 +27,7 @@ fn main() {
 
     // wget -O gpt2.safetensors https://huggingface.co/gpt2/resolve/main/model.safetensors
 
-    let mut gpt2 = dev.build_module::<Linear<728, 50257>, f32>();
+    let mut gpt2 = dev.build_module::<Linear<768, 50257>, f32>();
     let filename = "gpt2.safetensors";
     let f = std::fs::File::open(filename).expect("Couldn't read file, have you downloaded gpt2 ? `wget -O gpt2.safetensors https://huggingface.co/gpt2/resolve/main/model.safetensors`");
     let buffer = unsafe { MmapOptions::new().map(&f).expect("Could not mmap") };

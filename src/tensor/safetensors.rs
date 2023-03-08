@@ -55,15 +55,39 @@ impl SafeDtype for f64 {
     }
 }
 
+#[derive(Debug)]
+pub enum Error {
+    SafeTensorError(SafeTensorError),
+    MismatchedDimension((Vec<usize>, Vec<usize>)),
+    IoError(std::io::Error),
+}
+
+impl From<SafeTensorError> for Error {
+    fn from(safe_error: SafeTensorError) -> Error {
+        Error::SafeTensorError(safe_error)
+    }
+}
+impl From<std::io::Error> for Error {
+    fn from(io_error: std::io::Error) -> Error {
+        Error::IoError(io_error)
+    }
+}
+
 impl<S: Shape, E: Dtype + SafeDtype, D: DeviceStorage + CopySlice<E>, T> Tensor<S, E, D, T> {
     pub fn load_safetensor<'a>(
         &mut self,
         tensors: &SafeTensors<'a>,
         key: &str,
-    ) -> Result<(), SafeTensorError> {
+    ) -> Result<(), Error> {
         let tensor = tensors.tensor(key)?;
         let v = tensor.data();
         let num_bytes = std::mem::size_of::<E>();
+        if tensor.shape() != self.shape.concrete().into() {
+            return Err(Error::MismatchedDimension((
+                tensor.shape().to_vec(),
+                self.shape.concrete().into(),
+            )));
+        }
         if (v.as_ptr() as usize) % num_bytes == 0 {
             // SAFETY This is safe because we just checked that this
             // was correctly aligned.
