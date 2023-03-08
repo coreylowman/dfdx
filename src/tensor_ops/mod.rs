@@ -152,6 +152,7 @@ mod broadcast_to;
 mod choose;
 mod clamp;
 mod cmp;
+mod concat;
 mod cos;
 mod div;
 mod dropout;
