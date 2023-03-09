@@ -124,7 +124,7 @@ pub mod unique_id;
 pub mod prelude {
     pub use crate::gradients::{NoneTape, OwnedTape};
     pub use crate::losses::*;
-    pub use crate::nn::{builders::*, *};
+    pub use crate::nn::builders::*;
     pub use crate::optim::prelude::*;
     pub use crate::shapes::*;
     pub use crate::tensor::*;
