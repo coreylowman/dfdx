@@ -1,8 +1,7 @@
 use crate::{
     gradients::Gradients,
-    shapes::{Dtype, Unit, Shape},
-    tensor::{Tensor, DeviceStorage},
-    unique_id::{UniqueId},
+    shapes::{Dtype, Shape, Unit},
+    tensor::{DeviceStorage, Tensor, UniqueId},
 };
 
 /// L2 and decoupled regularization methods

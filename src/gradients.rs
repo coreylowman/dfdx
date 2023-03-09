@@ -7,9 +7,8 @@ use std::{boxed::Box, vec::Vec};
 use crate::shapes::{Shape, Unit};
 use crate::tensor::{
     storage_traits::{AllocGrad, DeviceStorage},
-    Tensor,
+    unique_id, Tensor, UniqueId,
 };
-use crate::unique_id::{unique_id, UniqueId};
 
 /// A generic container for keeping gradients of tensors keyed by the
 /// tensor's [UniqueId].

@@ -90,7 +90,7 @@
 //! # Tracking gradients
 //!
 //! Use the [Tensor::trace] or [Tensor::traced] methods to add [crate::gradients::OwnedTape] to the [Tensor].
-//! `.trace()` will clone the [crate::unique_id::UniqueId] & data, while `.traced()` will take ownership of
+//! `.trace()` will clone the data, while `.traced()` will take ownership of
 //! the tensor and return a version with an [crate::gradients::OwnedTape].
 //!
 //! Note that these two methods are only present for tensors without a tape already.
@@ -117,6 +117,7 @@ pub(crate) mod cuda;
 pub(crate) mod numpy;
 #[cfg(feature = "safetensors")]
 pub mod safetensors;
+mod unique_id;
 
 pub(crate) mod storage_traits;
 mod tensor_impls;
@@ -137,12 +138,14 @@ pub use tensor_impls::OnCuda;
 pub use tensor_impls::{OnCpu, OnDevice, PutTape, SplitTape, Tensor, ToDevice};
 pub use tensor_impls::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
 
+pub(crate) use unique_id::unique_id;
+pub use unique_id::UniqueId;
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::shapes::*;
     use crate::tests::TestDevice;
-    use crate::unique_id::{unique_id, UniqueId};
     use std::collections::HashSet;
 
     #[test]

@@ -5,9 +5,8 @@ use crate::{
     tensor::{
         cpu::{Cpu, CpuError},
         storage_traits::*,
-        Tensor,
+        unique_id, Tensor,
     },
-    unique_id::unique_id,
 };
 
 use super::{Cuda, CudaError};

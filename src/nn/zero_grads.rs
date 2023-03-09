@@ -1,6 +1,6 @@
 use super::tensor_collection::*;
 
-use crate::{gradients::Gradients, shapes::*, tensor::*, unique_id::UniqueId};
+use crate::{gradients::Gradients, shapes::*, tensor::*};
 
 use std::vec::Vec;
 

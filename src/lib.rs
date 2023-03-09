@@ -118,7 +118,6 @@ pub mod optim;
 pub mod shapes;
 pub mod tensor;
 pub mod tensor_ops;
-pub mod unique_id;
 
 /// Contains subset of all public exports.
 pub mod prelude {
