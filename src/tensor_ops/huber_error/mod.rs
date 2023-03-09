@@ -4,10 +4,7 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 use super::{ops::try_binary_op, Device};
-use crate::{
-    shapes::*,
-    tensor::{Merge, Tape, Tensor},
-};
+use crate::{shapes::*, tensor::*};
 
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
