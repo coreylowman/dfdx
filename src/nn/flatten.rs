@@ -14,7 +14,7 @@ impl NonMutableModule for Flatten2D {}
 impl<const C: usize, const H: usize, const W: usize, D: Device<E>, E: Dtype, T: Tape<E, D>>
     super::Module<Tensor<Rank3<C, H, W>, E, D, T>> for Flatten2D
 where
-    Rank3<C, H, W>: HasSameNumelAs<Rank1<{ C * H * W }>>,
+    Rank1<{ C * H * W }>: Sized,
 {
     type Output = Tensor<Rank1<{ C * H * W }>, E, D, T>;
     type Error = D::Err;
@@ -30,7 +30,7 @@ impl<const B: usize, const C: usize, const H: usize, const W: usize, D, E: Dtype
 where
     D: Device<E>,
     T: Tape<E, D>,
-    Rank4<B, C, H, W>: HasSameNumelAs<Rank2<B, { C * H * W }>>,
+    Rank2<B, { C * H * W }>: Sized,
 {
     type Output = Tensor<Rank2<B, { C * H * W }>, E, D, T>;
     type Error = D::Err;

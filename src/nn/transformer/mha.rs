@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[cfg(feature = "nightly")]
-use crate::{gradients::Tape, shapes::*, Assert, ConstTrue};
+use crate::{gradients::Tape, shapes::*};
 
 pub mod builder {
     #[derive(Debug, Clone)]
@@ -139,10 +139,7 @@ impl<
         Tensor<Rank2<S2, M>, E, D>,
     )> for MultiHeadAttention<M, H, K, V, E, D>
 where
-    Assert<{ S1 * K == S1 * H * (K / H) }>: ConstTrue,
-    Assert<{ S2 * K == S2 * H * (K / H) }>: ConstTrue,
-    Assert<{ S2 * V == S2 * H * (V / H) }>: ConstTrue,
-    Assert<{ S1 * H * (V / H) == S1 * V }>: ConstTrue,
+    [[(); V / H]; K / H]: Sized,
 {
     type Output = Tensor<Rank2<S1, M>, E, D, T>;
     type Error = D::Err;
@@ -201,10 +198,7 @@ impl<
         Tensor<Rank3<B, S2, M>, E, D>,
     )> for MultiHeadAttention<M, H, K, V, E, D>
 where
-    Assert<{ B * S1 * K == B * S1 * H * (K / H) }>: ConstTrue,
-    Assert<{ B * S2 * K == B * S2 * H * (K / H) }>: ConstTrue,
-    Assert<{ B * S2 * V == B * S2 * H * (V / H) }>: ConstTrue,
-    Assert<{ B * S1 * H * (V / H) == B * S1 * V }>: ConstTrue,
+    [[(); V / H]; K / H]: Sized,
 {
     type Output = Tensor<Rank3<B, S1, M>, E, D, T>;
     type Error = D::Err;

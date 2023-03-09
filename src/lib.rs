@@ -255,8 +255,3 @@ pub(crate) mod tests {
         a.assert_close(b, tolerance);
     }
 }
-
-/// Used to assert things about const generics
-pub struct Assert<const C: bool>;
-pub trait ConstTrue {}
-impl ConstTrue for Assert<true> {}
