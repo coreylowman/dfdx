@@ -1,9 +1,8 @@
 use crate::{
-    prelude::DeviceStorage,
     shapes::{Dtype, HasShape, Shape},
     tensor::{
         safetensors::{Error, SafeDtype},
-        CopySlice, Tensor,
+        CopySlice, DeviceStorage, Tensor,
     },
 };
 use memmap2::MmapOptions;

@@ -1,6 +1,6 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
 
-use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::traits::*;
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
@@ -98,11 +98,7 @@ tuple_impls!([M1, M2, M3, M4, M5, M6] [0, 1, 2, 3, 4, 5], M6, [M5, M4, M3, M2, M
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        nn::{builders::*, *},
-        optim::*,
-        tests::*,
-    };
+    use crate::{nn::builders::*, optim::*, tests::*};
 
     #[test]
     fn test_2_tuple() {

@@ -1,20 +1,20 @@
-//! High level neural network building blocks such as [modules::Linear], activations, and tuples as [Module]s.
-//! Also includes `.save()` & `.load()` for all [Module]s.
+//! High level neural network building blocks such as [modules::Linear], activations, and tuples as [traits::Module]s.
+//! Also includes `.save()` & `.load()` for all [traits::Module]s.
 //!
 //! # Mutable vs Immutable forwards
 //!
 //! This is provided as two separate traits
 //!
-//! 1. [ModuleMut::forward_mut()] which receives `&mut self`.
-//! 2. [Module::forward()] which receives `&self`.
+//! 1. [traits::ModuleMut::forward_mut()] which receives `&mut self`.
+//! 2. [traits::Module::forward()] which receives `&self`.
 //!
 //! **This has nothing to do with whether gradients are being tracked or not**.
 //! It only controls whether the module itself can be modified. Both OwnedTape
 //! and NoneTape can still be passed to both, and all modules should conform
 //! to this expected behavior.
 //!
-//! In general, [ModuleMut::forward_mut()] should be used during training,
-//! and [Module::forward()] during evaluation/testing/inference/validation.
+//! In general, [traits::ModuleMut::forward_mut()] should be used during training,
+//! and [traits::Module::forward()] during evaluation/testing/inference/validation.
 //!
 //! Here is a list of existing modules that have different behavior in these
 //! two functions:
@@ -26,7 +26,7 @@
 //!
 //! # Initializing
 //!
-//! Use [DeviceBuildExt] for device agnostic module creation/randomization:
+//! Use [traits::DeviceBuildExt] for device agnostic module creation/randomization:
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
@@ -41,7 +41,7 @@
 //! is `Linear<5, 2, f32, Cpu>`. When using
 //! a `Cuda` device and `f64`, the type is `Linear<5, 2, f64, Cuda>`.
 //!
-//! Alternatively, you can use [BuildModule], which requires device specific model definitions:
+//! Alternatively, you can use [traits::BuildModule], which requires device specific model definitions:
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
@@ -53,7 +53,7 @@
 //!
 //! # Resetting parameters
 //!
-//! All modules implement [ResetParams], which allows you to reset a module back to a randomized
+//! All modules implement [traits::ResetParams], which allows you to reset a module back to a randomized
 //! state:
 //!
 //! ```rust
@@ -66,7 +66,7 @@
 //!
 //! # Sequential models
 //!
-//! Tuple's implement [Module], so you can string multiple module's together.
+//! Tuple's implement [traits::Module], so you can string multiple module's together.
 //!
 //! Here's a single layer MLP:
 //! ```rust
@@ -154,16 +154,23 @@ mod transformer;
 mod unbiased_linear;
 mod zero_grads;
 
-pub use module::*;
+pub mod traits {
+    pub use super::module::{
+        BuildModule, BuildOnDevice, DeviceBuildExt, Module, ModuleMut, NonMutableModule,
+        ZeroSizedModule,
+    };
 
-#[cfg(feature = "safetensors")]
-pub use crate::nn::safetensors::{LoadFromSafetensors, SaveToSafetensors};
-pub use ema::ModelEMA;
-#[cfg(feature = "numpy")]
-pub use npz::{LoadFromNpz, SaveToNpz};
-pub use num_params::NumParams;
-pub use reset_params::ResetParams;
-pub use zero_grads::ZeroGrads;
+    pub use super::tensor_collection::*;
+
+    pub use super::ema::ModelEMA;
+    #[cfg(feature = "numpy")]
+    pub use super::npz::{LoadFromNpz, SaveToNpz};
+    pub use super::num_params::NumParams;
+    pub use super::reset_params::ResetParams;
+    #[cfg(feature = "safetensors")]
+    pub use super::safetensors::{LoadFromSafetensors, SaveToSafetensors};
+    pub use super::zero_grads::ZeroGrads;
+}
 
 pub mod modules {
     /// Structs containing initialized Tensors & impls for [super::Module]. See
@@ -189,6 +196,7 @@ pub mod modules {
     pub use super::repeated::Repeated;
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
+    pub use super::traits::*;
     #[cfg(feature = "nightly")]
     pub use super::transformer::*;
     pub use super::unbiased_linear::UnbiasedLinear;
@@ -217,6 +225,7 @@ pub mod builders {
     pub use super::repeated::Repeated;
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
+    pub use super::traits::*;
     #[cfg(feature = "nightly")]
     pub use super::transformer::builder::*;
     pub use super::unbiased_linear::builder::UnbiasedLinear;

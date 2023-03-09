@@ -1,7 +1,7 @@
 //! Intro to dfdx::nn
 
 use dfdx::{
-    nn::{builders::*, BuildOnDevice, DeviceBuildExt, Module, ModuleMut, ResetParams},
+    nn::builders::*,
     shapes::{Const, Rank1, Rank2},
     tensor::{AsArray, SampleTensor, Tensor, ZerosTensor},
 };
@@ -65,7 +65,7 @@ fn main() {
     // using `nn::modules`. The structures in modules are actually
     // what the nn::builders turn into!
     {
-        use dfdx::nn::{modules::*, BuildModule};
+        use dfdx::nn::modules::*;
         type Model<E, D> = (Linear<5, 2, E, D>, ReLU, Tanh, Linear<2, 3, E, D>);
         let _: Model<f32, _> = BuildModule::build(&dev);
     }

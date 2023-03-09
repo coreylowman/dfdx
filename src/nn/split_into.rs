@@ -1,6 +1,6 @@
 use crate::{shapes::Dtype, tensor::*};
 
-use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::traits::*;
 
 /// Splits input into multiple heads. `T` should be a tuple,
 /// where every element of the tuple accepts the same input type.
@@ -111,7 +111,6 @@ mod tests {
     #![allow(clippy::type_complexity)]
 
     use super::*;
-    use crate::nn::DeviceBuildExt;
     use crate::{gradients::*, shapes::*, tensor_ops::*};
     use crate::{nn::builders::Linear, tests::*};
 

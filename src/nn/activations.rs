@@ -57,7 +57,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{nn::ModuleMut, tests::TestDevice};
+    use crate::{nn::traits::*, tests::TestDevice};
 
     use super::*;
 

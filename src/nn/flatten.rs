@@ -1,7 +1,7 @@
 #[allow(unused)]
 use crate::{gradients::Tape, shapes::*, tensor::Tensor, tensor_ops::*};
 
-use super::{NonMutableModule, ZeroSizedModule};
+use super::traits::*;
 
 /// **Requires Nightly** Flattens 3d tensors to 1d, and 4d tensors to 2d.
 #[derive(Default, Clone, Copy)]
@@ -12,7 +12,7 @@ impl NonMutableModule for Flatten2D {}
 
 #[cfg(feature = "nightly")]
 impl<const C: usize, const H: usize, const W: usize, D: Device<E>, E: Dtype, T: Tape<E, D>>
-    super::Module<Tensor<Rank3<C, H, W>, E, D, T>> for Flatten2D
+    Module<Tensor<Rank3<C, H, W>, E, D, T>> for Flatten2D
 where
     Rank1<{ C * H * W }>: Sized,
 {
@@ -26,7 +26,7 @@ where
 
 #[cfg(feature = "nightly")]
 impl<const B: usize, const C: usize, const H: usize, const W: usize, D, E: Dtype, T>
-    super::Module<Tensor<Rank4<B, C, H, W>, E, D, T>> for Flatten2D
+    Module<Tensor<Rank4<B, C, H, W>, E, D, T>> for Flatten2D
 where
     D: Device<E>,
     T: Tape<E, D>,
@@ -47,7 +47,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::ModuleMut, tensor::ZerosTensor, tests::*};
+    use crate::{tensor::ZerosTensor, tests::*};
 
     #[test]
     fn test_flattens() {

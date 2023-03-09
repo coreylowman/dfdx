@@ -2,10 +2,7 @@
 
 use dfdx::{
     gradients::Tape,
-    nn::{
-        modules::{Linear, ReLU},
-        BuildModule, Module,
-    },
+    nn::modules::{BuildModule, Linear, Module, ReLU},
     shapes::{Rank1, Rank2},
     tensor::{HasErr, SampleTensor, Tensor},
 };

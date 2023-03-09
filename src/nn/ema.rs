@@ -47,11 +47,7 @@ impl<E: Dtype, D: AxpyKernel<E>, M: TensorCollection<E, D>> ModelEMA<E, D> for M
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        nn::{builders::*, DeviceBuildExt},
-        tensor_ops::axpy,
-        tests::*,
-    };
+    use crate::{nn::builders::*, tensor_ops::axpy, tests::*};
 
     #[test]
     fn test_model_ema() {

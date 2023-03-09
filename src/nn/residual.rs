@@ -1,6 +1,6 @@
 use crate::{shapes::*, tensor::*, tensor_ops::TryAdd};
 
-use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::traits::*;
 
 /// A residual connection around `F`: `F(x) + x`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -67,7 +67,6 @@ impl<T: SplitTape + TryAdd<T>, F: ModuleMut<T, Output = T, Error = T::Err>> Modu
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::DeviceBuildExt;
     use crate::tests::*;
     use crate::{nn::builders::Linear, tensor_ops::*};
 

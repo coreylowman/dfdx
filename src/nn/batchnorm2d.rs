@@ -1,6 +1,6 @@
 use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::traits::*;
 
 pub mod builder {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -289,7 +289,7 @@ impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
 #[cfg(test)]
 mod tests {
     use super::builder::BatchNorm2D;
-    use crate::{nn::*, optim::*, shapes::*, tensor::*, tensor_ops::*, tests::*};
+    use crate::{nn::builders::*, optim::*, shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_batchnorm2d_3d_forward_mut() {

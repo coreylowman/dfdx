@@ -2,9 +2,9 @@ use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
 use crate::{
-    nn::{modules::*, tensor_collection::*, *},
+    nn::modules::*,
     shapes::Dtype,
-    tensor::{PutTape, SplitTape},
+    tensor::{DeviceStorage, PutTape, SplitTape, ToDevice},
     tensor_ops::Device,
 };
 

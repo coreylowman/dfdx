@@ -2,8 +2,7 @@
 //! outputs using `SplitInto`.
 
 use dfdx::{
-    nn::builders::{Linear, SplitInto},
-    nn::{DeviceBuildExt, Module},
+    nn::builders::{DeviceBuildExt, Linear, Module, SplitInto},
     shapes::Rank1,
     tensor::{AsArray, Tensor, TensorFrom},
 };

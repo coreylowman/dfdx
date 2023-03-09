@@ -11,7 +11,7 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{shapes::*, tensor::*, tensor_ops::*};
 
-use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::traits::*;
 
 pub mod builder {
     #[derive(Debug, Clone)]
@@ -168,7 +168,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::DeviceBuildExt, optim::*, tests::*};
+    use crate::{optim::*, tests::*};
 
     #[test]
     fn test_forward() {

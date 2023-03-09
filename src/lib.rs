@@ -30,7 +30,7 @@
 //! );
 //! ```
 //!
-//! 3. Instantiate models with [crate::nn::DeviceBuildExt]
+//! 3. Instantiate models with [crate::nn::traits::DeviceBuildExt]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();
@@ -38,7 +38,7 @@
 //! let mlp = dev.build_module::<Model, f32>();
 //! ```
 //!
-//! 4. Pass data through networks with [crate::nn::Module]
+//! 4. Pass data through networks with [crate::nn::traits::Module]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
@@ -124,7 +124,7 @@ pub mod unique_id;
 pub mod prelude {
     pub use crate::gradients::{NoneTape, OwnedTape};
     pub use crate::losses::*;
-    pub use crate::nn::{builders::*, *};
+    pub use crate::nn::builders::*;
     pub use crate::optim::prelude::*;
     pub use crate::shapes::*;
     pub use crate::tensor::*;

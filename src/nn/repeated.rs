@@ -1,6 +1,6 @@
 use crate::{shapes::Dtype, tensor::*};
 
-use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::traits::*;
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///
@@ -103,9 +103,7 @@ impl<Input, T: ModuleMut<Input, Output = Input>, const N: usize> ModuleMut<Input
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::DeviceBuildExt;
-    use crate::tests::TestDevice;
-    use crate::tests::TestDtype;
+    use crate::tests::*;
     use crate::{nn::builders::*, shapes::*};
 
     #[test]

@@ -76,10 +76,7 @@ impl<'a, E: Dtype, D: ZeroFillStorage<E>> TensorVisitor<E, D> for ZeroGradOp<'a,
 #[cfg(test)]
 mod tests {
     use crate::{
-        nn::{
-            builders::{BatchNorm2D, Linear},
-            DeviceBuildExt,
-        },
+        nn::builders::{BatchNorm2D, DeviceBuildExt, Linear},
         tests::*,
     };
 
