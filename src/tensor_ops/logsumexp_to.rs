@@ -1,5 +1,5 @@
 use super::*;
-use crate::{gradients::Tape, shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*};
 
 /// Reduction along multiple axes using [LogSumExp](https://en.wikipedia.org/wiki/LogSumExp).
 pub trait LogSumExpTo: HasErr + HasShape {

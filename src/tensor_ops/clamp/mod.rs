@@ -4,7 +4,10 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 use super::ops::{try_unary_op, UnaryKernel};
-use crate::{gradients::Tape, shapes::*, tensor::Tensor};
+use crate::{
+    shapes::*,
+    tensor::{Tape, Tensor},
+};
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]

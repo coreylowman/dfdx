@@ -6,9 +6,8 @@ pub(super) mod cpu_kernel;
 pub(super) mod cuda_kernel;
 
 use crate::{
-    gradients::{Merge, Tape},
     shapes::{Const, Dim, Dtype, Shape},
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor},
+    tensor::{DeviceStorage, HasErr, Merge, PutTape, SplitTape, Tape, Tensor},
 };
 
 /// Matrix * Matrix, Vector * Matrix, Vector * Vector, and broadcasted/batched versions.

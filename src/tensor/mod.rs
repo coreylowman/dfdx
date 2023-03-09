@@ -5,8 +5,8 @@
 //! 1. The [crate::shapes::Shape] of the array it stores
 //! 2. The [crate::shapes::Dtype] of the elements of the array
 //! 3. The [DeviceStorage] (e.g. [Cpu]) that it uses to store the nd array
-//! 4. A [crate::gradients::Tape], which can either actually be a tape ([crate::gradients::OwnedTape])
-//!    or be empty ([crate::gradients::NoneTape]).
+//! 4. A [Tape], which can either actually be a tape ([OwnedTape])
+//!    or be empty ([NoneTape]).
 //!
 //! Which are all generic parameters of [Tensor]. See the type's docstring for more info
 //!
@@ -89,9 +89,9 @@
 //!
 //! # Tracking gradients
 //!
-//! Use the [Tensor::trace] or [Tensor::traced] methods to add [crate::gradients::OwnedTape] to the [Tensor].
+//! Use the [Tensor::trace] or [Tensor::traced] methods to add [OwnedTape] to the [Tensor].
 //! `.trace()` will clone the data, while `.traced()` will take ownership of
-//! the tensor and return a version with an [crate::gradients::OwnedTape].
+//! the tensor and return a version with an [OwnedTape].
 //!
 //! Note that these two methods are only present for tensors without a tape already.
 //!
@@ -113,6 +113,7 @@
 pub(crate) mod cpu;
 #[cfg(feature = "cuda")]
 pub(crate) mod cuda;
+mod gradients;
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
 #[cfg(feature = "safetensors")]
@@ -140,6 +141,8 @@ pub use tensor_impls::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5
 
 pub(crate) use unique_id::unique_id;
 pub use unique_id::UniqueId;
+
+pub use gradients::{Gradients, Merge, NoneTape, OwnedTape, Tape};
 
 #[cfg(test)]
 mod tests {

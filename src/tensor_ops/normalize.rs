@@ -1,7 +1,6 @@
 use crate::{
-    gradients::Tape,
     shapes::{Axes, Dtype, HasShape, ReduceShape, Shape},
-    tensor::{HasErr, Tensor},
+    tensor::{HasErr, Tape, Tensor},
 };
 
 use super::{BroadcastTo, Device, MeanTo, StddevTo, TryDiv, TrySub};

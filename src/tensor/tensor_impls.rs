@@ -1,11 +1,7 @@
 use rand::distributions::Distribution;
 
-use super::storage_traits::{DeviceStorage, HasErr, TensorFromVec};
-use super::{Cpu, OneFillStorage, SampleTensor, UniqueId, ZeroFillStorage};
-use crate::{
-    gradients::{Gradients, NoneTape, OwnedTape, Tape},
-    shapes::*,
-};
+use super::*;
+use crate::shapes::*;
 
 use std::sync::Arc;
 

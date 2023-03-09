@@ -1,13 +1,13 @@
 use super::tensor_collection::*;
 
-use crate::{gradients::Gradients, shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*};
 
 use std::vec::Vec;
 
 /// Zero's any gradients associated with `self`.
 ///
 /// ```rust
-/// # use dfdx::{prelude::*, gradients::Gradients};
+/// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let model = dev.build_module::<Linear<2, 5>, f32>();
 /// let mut grads: Gradients<f32, _> = model.alloc_grads();

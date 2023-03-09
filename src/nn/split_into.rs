@@ -111,8 +111,8 @@ mod tests {
     #![allow(clippy::type_complexity)]
 
     use super::*;
-    use crate::{gradients::*, shapes::*, tensor_ops::*};
     use crate::{nn::builders::Linear, tests::*};
+    use crate::{shapes::*, tensor_ops::*};
 
     #[test]
     fn test_unused() {

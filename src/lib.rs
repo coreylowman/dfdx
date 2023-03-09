@@ -66,7 +66,7 @@
 //!
 //! 6. Compute gradients with [crate::tensor_ops::Backward]. See [crate::tensor_ops].
 //! ```rust
-//! # use dfdx::{prelude::*, gradients::Gradients};
+//! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! # let model = dev.build_module::<Linear<10, 5>, f32>();
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
@@ -79,7 +79,7 @@
 //! ```
 //! 7. Use an optimizer from [crate::optim] to optimize your network!
 //! ```rust
-//! # use dfdx::{prelude::*, gradients::Gradients, optim::*};
+//! # use dfdx::{prelude::*, optim::*};
 //! # let dev: Cpu = Default::default();
 //! # let mut model = dev.build_module::<Linear<10, 5>, f32>();
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
@@ -111,7 +111,6 @@ compile_error!("Can't enable both std and no-std. Set default-features = false t
 
 pub mod data;
 pub mod feature_flags;
-pub mod gradients;
 pub mod losses;
 pub mod nn;
 pub mod optim;
@@ -121,7 +120,6 @@ pub mod tensor_ops;
 
 /// Contains subset of all public exports.
 pub mod prelude {
-    pub use crate::gradients::{NoneTape, OwnedTape};
     pub use crate::losses::*;
     pub use crate::nn::builders::*;
     pub use crate::optim::prelude::*;

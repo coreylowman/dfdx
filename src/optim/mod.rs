@@ -11,10 +11,10 @@
 //! # Updating network parameters
 //!
 //! This is done via [Optimizer::update()], where you pass in a mutable [crate::nn::traits::Module], and
-//! the [crate::gradients::Gradients]:
+//! the [crate::tensor::Gradients]:
 //!
 //! ```rust
-//! # use dfdx::{prelude::*, optim::*, losses, gradients::Gradients};
+//! # use dfdx::{prelude::*, optim::*, losses};
 //! # type MyModel = Linear<5, 2>;
 //! # let dev: Cpu = Default::default();
 //! let mut model = MyModel::build_on_device(&dev);

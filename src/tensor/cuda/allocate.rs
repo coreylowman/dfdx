@@ -156,14 +156,13 @@ where
     type Array = <Cpu as TensorToArray<S, E>>::Array;
     fn tensor_to_array<T>(&self, tensor: &Tensor<S, E, Self, T>) -> Self::Array {
         let buf = tensor.data.try_clone().unwrap().try_into().unwrap();
-        self.cpu
-            .tensor_to_array::<crate::gradients::NoneTape>(&Tensor {
-                id: tensor.id,
-                data: Arc::new(buf),
-                shape: tensor.shape,
-                strides: tensor.strides,
-                device: self.cpu.clone(),
-                tape: Default::default(),
-            })
+        self.cpu.tensor_to_array::<NoneTape>(&Tensor {
+            id: tensor.id,
+            data: Arc::new(buf),
+            shape: tensor.shape,
+            strides: tensor.strides,
+            device: self.cpu.clone(),
+            tape: Default::default(),
+        })
     }
 }

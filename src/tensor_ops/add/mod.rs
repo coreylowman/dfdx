@@ -5,9 +5,8 @@ mod cuda_kernel;
 
 use super::{ops::*, Device};
 use crate::{
-    gradients::*,
     shapes::*,
-    tensor::{DeviceStorage, HasErr, Tensor},
+    tensor::{DeviceStorage, HasErr, Merge, Tape, Tensor},
 };
 
 #[repr(C)]

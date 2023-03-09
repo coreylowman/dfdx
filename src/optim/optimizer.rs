@@ -1,7 +1,6 @@
 use crate::{
-    gradients::Gradients,
     shapes::{Dtype, Shape, Unit},
-    tensor::{DeviceStorage, Tensor, UniqueId},
+    tensor::{DeviceStorage, Gradients, Tensor, UniqueId},
 };
 
 /// L2 and decoupled regularization methods
