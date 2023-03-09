@@ -30,7 +30,7 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     /// This means that all tensors are considered leafs, and
     /// [Gradients::drop_non_leafs] will do nothing.
     ///
-    /// For Gradient accumulation, you should use [crate::nn::ZeroGrads::alloc_grads],
+    /// For Gradient accumulation, you should use [crate::nn::traits::ZeroGrads::alloc_grads],
     /// which will ensure non-leaf gradients are freed after backwards.
     pub fn without_leafs() -> Self {
         Self {

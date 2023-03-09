@@ -10,7 +10,7 @@
 //!
 //! # Updating network parameters
 //!
-//! This is done via [Optimizer::update()], where you pass in a mutable [crate::nn::Module], and
+//! This is done via [Optimizer::update()], where you pass in a mutable [crate::nn::traits::Module], and
 //! the [crate::gradients::Gradients]:
 //!
 //! ```rust
