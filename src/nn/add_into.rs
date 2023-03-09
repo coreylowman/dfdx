@@ -1,6 +1,6 @@
 use crate::{shapes::Dtype, tensor::*};
 
-use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::traits::*;
 
 /// Add inputs together into a single tensor. `T` should be a tuple
 //// where every element of the tuple has the same output type
@@ -103,14 +103,10 @@ mod tests {
     use super::*;
     use crate::{
         gradients::OwnedTape,
-        nn::{builders::*, DeviceBuildExt},
+        nn::builders::*,
         shapes::*,
         tests::{TestDevice, TestDtype},
     };
-
-    type TestAddIntoCpu = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
-    #[allow(unused)]
-    type TestAddInto<D> = OnDevice<TestAddIntoCpu, D>;
 
     #[test]
     fn test_add_into_2() {

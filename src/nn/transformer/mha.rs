@@ -1,12 +1,7 @@
 use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
-use crate::{
-    nn::{modules::*, tensor_collection::*, *},
-    shapes::Dtype,
-    tensor::*,
-    tensor_ops::*,
-};
+use crate::{nn::modules::*, shapes::Dtype, tensor::*, tensor_ops::*};
 
 #[cfg(feature = "nightly")]
 use crate::{gradients::Tape, shapes::*, Assert, ConstTrue};

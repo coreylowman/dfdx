@@ -3,7 +3,7 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{shapes::*, tensor::*, tensor_ops::*};
 
-use super::{tensor_collection::*, BuildModule, BuildOnDevice, NonMutableModule, ToDevice};
+use super::traits::*;
 
 pub mod builder {
     #[derive(Debug)]
@@ -110,7 +110,7 @@ where
 
 #[cfg(feature = "nightly")]
 impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D, Img>
-    super::Module<Img> for Conv2D<C, O, K, S, P, E, D>
+    Module<Img> for Conv2D<C, O, K, S, P, E, D>
 where
     E: Dtype,
     D: Device<E>,
@@ -136,7 +136,6 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        nn::{DeviceBuildExt, Module, ModuleMut},
         optim::*,
         tensor::{AsArray, SampleTensor, ZerosTensor},
         tests::*,

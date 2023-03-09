@@ -1,6 +1,6 @@
 use crate::{shapes::*, tensor::*, tensor_ops::TryAdd};
 
-use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, ModuleMut, ToDevice};
+use super::traits::*;
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).
@@ -94,8 +94,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nn::builders::Linear;
-    use crate::nn::DeviceBuildExt;
+    use crate::nn::builders::{DeviceBuildExt, Linear};
     use crate::{tensor_ops::*, tests::*};
 
     #[test]

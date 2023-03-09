@@ -154,16 +154,23 @@ mod transformer;
 mod unbiased_linear;
 mod zero_grads;
 
-pub use module::*;
+pub mod traits {
+    pub use super::module::{
+        BuildModule, BuildOnDevice, DeviceBuildExt, Module, ModuleMut, NonMutableModule,
+        ZeroSizedModule,
+    };
 
-#[cfg(feature = "safetensors")]
-pub use crate::nn::safetensors::{LoadFromSafetensors, SaveToSafetensors};
-pub use ema::ModelEMA;
-#[cfg(feature = "numpy")]
-pub use npz::{LoadFromNpz, SaveToNpz};
-pub use num_params::NumParams;
-pub use reset_params::ResetParams;
-pub use zero_grads::ZeroGrads;
+    pub use super::tensor_collection::*;
+
+    pub use super::ema::ModelEMA;
+    #[cfg(feature = "numpy")]
+    pub use super::npz::{LoadFromNpz, SaveToNpz};
+    pub use super::num_params::NumParams;
+    pub use super::reset_params::ResetParams;
+    #[cfg(feature = "safetensors")]
+    pub use super::safetensors::{LoadFromSafetensors, SaveToSafetensors};
+    pub use super::zero_grads::ZeroGrads;
+}
 
 pub mod modules {
     /// Structs containing initialized Tensors & impls for [super::Module]. See
@@ -189,6 +196,7 @@ pub mod modules {
     pub use super::repeated::Repeated;
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
+    pub use super::traits::*;
     #[cfg(feature = "nightly")]
     pub use super::transformer::*;
     pub use super::unbiased_linear::UnbiasedLinear;
@@ -217,6 +225,7 @@ pub mod builders {
     pub use super::repeated::Repeated;
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
+    pub use super::traits::*;
     #[cfg(feature = "nightly")]
     pub use super::transformer::builder::*;
     pub use super::unbiased_linear::builder::UnbiasedLinear;

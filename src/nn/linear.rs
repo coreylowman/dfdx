@@ -1,6 +1,6 @@
 use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
-use super::{tensor_collection::*, BuildModule, BuildOnDevice, Module, NonMutableModule, ToDevice};
+use super::traits::*;
 
 use num_traits::Float;
 use rand_distr::{uniform::SampleUniform, Uniform};
@@ -171,7 +171,7 @@ impl<'a, B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<E, D>>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::DeviceBuildExt, tests::*};
+    use crate::tests::*;
 
     const W: [[TestDtype; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],

@@ -1,6 +1,4 @@
-use super::tensor_collection::{
-    RecursiveWalker, TensorCollection, TensorOptions, TensorVisitor, ViewTensorRef,
-};
+use super::tensor_collection::*;
 
 use crate::{shapes::*, tensor::*};
 

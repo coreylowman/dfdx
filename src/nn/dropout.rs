@@ -1,6 +1,6 @@
 use crate::{gradients::*, shapes::*, tensor::Tensor, tensor_ops::*};
 
-use super::{Module, ModuleMut, ZeroSizedModule};
+use super::traits::*;
 
 /// Does nothing as a [Module], and calls [dropout()] as [ModuleMut] with probability `1.0 / N`.
 ///

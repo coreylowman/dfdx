@@ -2,7 +2,7 @@
 use crate::tensor_ops::{ConstAvgPool2D, ConstMaxPool2D, ConstMinPool2D};
 
 #[allow(unused)]
-use super::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
+use super::traits::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
 
 /// Average pool with 2d kernel that operates on images (3d) and batches of images (4d).
 /// Each patch reduces to the average of the values in the patch.
