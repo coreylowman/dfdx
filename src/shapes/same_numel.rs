@@ -1,32 +1,14 @@
-#![allow(unused_imports)]
-
-use crate::shapes::Const;
-use crate::{Assert, ConstTrue};
+use crate::shapes::ConstShape;
 
 /// Marker for shapes that have the same number of elements as `Dst`
-pub trait HasSameNumelAs<Dst> {}
-
-macro_rules! impl_same_num_elements {
-    ([$($SrcVs:tt),*], $SrcNumEl:tt, [$($DstVs:tt),*], $DstNumEl:tt) => {
-        #[cfg(feature = "nightly")]
-        impl<$(const $SrcVs: usize, )* $(const $DstVs: usize, )*> HasSameNumelAs<($(Const<$SrcVs>, )*)> for ($(Const<$DstVs>, )*)
-        where
-            Assert<{ $DstNumEl == $SrcNumEl }>: ConstTrue {}
-    };
+pub trait AssertSameNumel<Dst: ConstShape>: ConstShape {
+    const TYPE_CHECK: ();
+    fn assert_same_numel() {
+        #[allow(clippy::let_unit_value)]
+        let _ = <Self as AssertSameNumel<Dst>>::TYPE_CHECK;
+    }
 }
 
-macro_rules! impl_for {
-    ([$($SrcVs:tt),*], $SrcNumEl:tt) => {
-        impl_same_num_elements!([$($SrcVs),*], $SrcNumEl, [], (1));
-        impl_same_num_elements!([$($SrcVs),*], $SrcNumEl, [M], (M));
-        impl_same_num_elements!([$($SrcVs),*], $SrcNumEl, [M, N], (M * N));
-        impl_same_num_elements!([$($SrcVs),*], $SrcNumEl, [M, N, O], (M * N * O));
-        impl_same_num_elements!([$($SrcVs),*], $SrcNumEl, [M, N, O, P], (M * N * O * P));
-    };
+impl<Src: ConstShape, Dst: ConstShape> AssertSameNumel<Dst> for Src {
+    const TYPE_CHECK: () = assert!(Src::NUMEL == Dst::NUMEL);
 }
-
-impl_for!([], (1));
-impl_for!([S], (S));
-impl_for!([S, T], (S * T));
-impl_for!([S, T, U], (S * T * U));
-impl_for!([S, T, U, V], (S * T * U * V));

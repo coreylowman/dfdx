@@ -24,35 +24,44 @@ pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
 pub trait ReshapeTo: HasErr + HasShape {
     fn reshape<Dst: ConstShape>(self) -> Self::WithShape<Dst>
     where
-        Self::Shape: HasSameNumelAs<Dst>,
+        Self::Shape: ConstShape,
     {
+        <Self::Shape as AssertSameNumel<Dst>>::assert_same_numel();
         self.try_reshape().unwrap()
     }
     fn try_reshape<Dst: ConstShape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
-        Self::Shape: HasSameNumelAs<Dst>,
+        Self::Shape: ConstShape,
     {
-        self.try_reshape_like::<Dst>(&Default::default())
+        <Self::Shape as AssertSameNumel<Dst>>::assert_same_numel();
+        self.try_reshape_like::<Dst>(&Default::default()).unwrap()
     }
-    fn reshape_like<Dst: Shape>(self, dst: &Dst) -> Self::WithShape<Dst> {
-        self.try_reshape_like(dst).unwrap()
+    fn reshape_like<Dst: Shape>(self, dst: &Dst) -> Option<Self::WithShape<Dst>> {
+        self.try_reshape_like(dst).map(Result::unwrap)
     }
-    fn try_reshape_like<Dst: Shape>(self, dst: &Dst) -> Result<Self::WithShape<Dst>, Self::Err>;
+    fn try_reshape_like<Dst: Shape>(
+        self,
+        dst: &Dst,
+    ) -> Option<Result<Self::WithShape<Dst>, Self::Err>>;
 }
 
 impl<S: Shape, E: Dtype, D: ReshapeKernel<E>, T: Tape<E, D>> ReshapeTo for Tensor<S, E, D, T> {
-    fn try_reshape_like<Dst: Shape>(self, dst: &Dst) -> Result<Self::WithShape<Dst>, Self::Err> {
-        assert_eq!(self.shape().num_elements(), dst.shape().num_elements());
-        let (inp, mut tape) = self.split_tape();
-        let out = inp.device.forward(dst, &inp)?;
-        let phantom_out = out.clone();
-        tape.try_alloc_grad(&inp)?;
-        tape.try_alloc_grad(&out)?;
-        tape.add_backward_op(move |grads| {
-            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward(&inp, grad_inp, &phantom_out, grad_out)
-        });
-        Ok(out.put_tape(tape))
+    fn try_reshape_like<Dst: Shape>(
+        self,
+        dst: &Dst,
+    ) -> Option<Result<Self::WithShape<Dst>, Self::Err>> {
+        (self.shape().num_elements() == dst.shape().num_elements()).then(|| {
+            let (inp, mut tape) = self.split_tape();
+            let out = inp.device.forward(dst, &inp)?;
+            let phantom_out = out.clone();
+            tape.try_alloc_grad(&inp)?;
+            tape.try_alloc_grad(&out)?;
+            tape.add_backward_op(move |grads| {
+                let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
+                inp.device.backward(&inp, grad_inp, &phantom_out, grad_out)
+            });
+            Ok(out.put_tape(tape))
+        })
     }
 }
 
@@ -66,11 +75,10 @@ mod tests {
     use super::*;
 
     #[test]
-    #[should_panic]
     fn test_invalid_reshape() {
         let dev: TestDevice = Default::default();
         let t: Tensor<(usize,), TestDtype, _> = dev.zeros_like(&(5,));
-        let _ = t.reshape_like(&(7,));
+        assert!(t.reshape_like(&(7,)).is_none());
     }
 
     #[test]

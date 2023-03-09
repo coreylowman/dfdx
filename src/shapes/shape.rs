@@ -84,7 +84,9 @@ pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync + Eq + Par
 
 /// Represents a single dimension where all
 /// instances are guaranteed to be the same size at compile time.
-pub trait ConstDim: Default + Dim {}
+pub trait ConstDim: Default + Dim {
+    const SIZE: usize;
+}
 
 impl Dim for usize {
     #[inline(always)]
@@ -115,7 +117,9 @@ impl<const M: usize> Dim for Const<M> {
     }
 }
 
-impl<const M: usize> ConstDim for Const<M> {}
+impl<const M: usize> ConstDim for Const<M> {
+    const SIZE: usize = M;
+}
 
 impl<const N: usize> core::ops::Add<Const<N>> for usize {
     type Output = usize;
@@ -220,7 +224,9 @@ pub trait Shape:
 }
 
 /// Represents a [Shape] that has all [ConstDim]s
-pub trait ConstShape: Default + Shape {}
+pub trait ConstShape: Default + Shape {
+    const NUMEL: usize;
+}
 
 /// Represents something that has a [Shape].
 pub trait HasShape {
@@ -272,7 +278,9 @@ macro_rules! shape {
                 Some(($(Dim::from_size(concrete[$Idx])?, )*))
             }
         }
-        impl<$($D: ConstDim, )*> ConstShape for ($($D, )*) { }
+        impl<$($D: ConstDim, )*> ConstShape for ($($D, )*) {
+            const NUMEL: usize = $($D::SIZE * )* 1;
+         }
 
         impl Shape for [usize; $Num] {
             const NUM_DIMS: usize = $Num;
@@ -309,7 +317,9 @@ impl Shape for () {
         Some(())
     }
 }
-impl ConstShape for () {}
+impl ConstShape for () {
+    const NUMEL: usize = 1;
+}
 
 shape!((D1 0), rank=1, all=Axis);
 shape!((D1 0, D2 1), rank=2, all=Axes2);
