@@ -5,7 +5,7 @@ use crate::{
 
 use super::collection::{ModuleVisitor, TensorCollection, TensorOptions};
 
-use std::{string::String, vec::Vec};
+use std::string::String;
 
 /// A standard [ModuleVisitor] that executes `F` on every [Tensor] encountered.
 /// `F` must implement [TensorVisitor]
@@ -13,7 +13,6 @@ use std::{string::String, vec::Vec};
 pub struct RecursiveWalker<'a, M, F> {
     pub m: M,
     pub f: &'a mut F,
-    pub path: &'a mut Vec<String>,
 }
 
 /// Something that can visit [Tensor]s. Used in conjunction with [RecursiveWalker].
@@ -24,7 +23,6 @@ pub trait TensorVisitor<E: Dtype, D: DeviceStorage> {
 
     fn visit<S: Shape>(
         &mut self,
-        full_path: String,
         opts: TensorOptions<S, E, D>,
         t: <Self::Viewer as TensorViewer>::View<'_, Tensor<S, E, D>>,
     ) -> Result<(), Self::Err>;
@@ -40,6 +38,7 @@ pub trait TensorViewer: 'static {
     /// Given a view of a module, returns a view of one of that module's fields
     fn view_field<'a, Mod, Field, GetRef, GetMut>(
         module: &'a mut Self::View<'_, Mod>,
+        name: &str,
         get_ref: &mut GetRef,
         get_mut: &mut GetMut,
     ) -> Self::View<'a, Field>
@@ -55,6 +54,10 @@ pub enum ViewTensorRef {}
 /// A [TensorViewer] that represents a `&mut Tensor`
 #[derive(Debug)]
 pub enum ViewTensorMut {}
+
+/// A [TensorViewer] that represents a Tensor's name as a `String`
+#[derive(Debug)]
+pub enum ViewTensorName {}
 
 impl<'a, M, E: Dtype, D: DeviceStorage, F: TensorVisitor<E, D>> ModuleVisitor<M, E, D>
     for RecursiveWalker<'a, <F::Viewer as TensorViewer>::View<'a, M>, F>
@@ -72,15 +75,11 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: TensorVisitor<E, D>> ModuleVisitor<M,
         GetMut: FnMut(&mut M) -> &mut Field,
         Field: TensorCollection<E, D>,
     {
-        self.path.push(name.into());
         let mut walker = RecursiveWalker {
-            m: F::Viewer::view_field(&mut self.m, &mut get_refs, &mut get_muts),
+            m: F::Viewer::view_field(&mut self.m, name, &mut get_refs, &mut get_muts),
             f: self.f,
-            path: self.path,
         };
         Field::iter_tensors(&mut walker)?;
-        std::mem::drop(walker);
-        self.path.pop();
         Ok(())
     }
 
@@ -95,13 +94,10 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: TensorVisitor<E, D>> ModuleVisitor<M,
         GetRef: FnMut(&M) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,
     {
-        self.path.push(name.into());
         self.f.visit(
-            self.path.join("."),
             opts,
-            F::Viewer::view_field(&mut self.m, &mut get_refs, &mut get_muts),
+            F::Viewer::view_field(&mut self.m, name, &mut get_refs, &mut get_muts),
         )?;
-        self.path.pop();
         Ok(())
     }
 }
@@ -110,10 +106,11 @@ impl TensorViewer for ViewTensorRef {
     type View<'a, Mod: 'a> = &'a Mod;
 
     fn view_field<'a, Mod, Field, GetRef, GetMut>(
-        module: &'a mut Self::View<'_, Mod>,
+        module: &'a mut &Mod,
+        _name: &str,
         get_ref: &mut GetRef,
         _get_mut: &mut GetMut,
-    ) -> Self::View<'a, Field>
+    ) -> &'a Field
     where
         GetRef: FnMut(&Mod) -> &Field,
         GetMut: FnMut(&mut Mod) -> &mut Field,
@@ -126,15 +123,37 @@ impl TensorViewer for ViewTensorMut {
     type View<'a, Mod: 'a> = &'a mut Mod;
 
     fn view_field<'a, Mod, Field, GetRef, GetMut>(
-        module: &'a mut Self::View<'_, Mod>,
+        module: &'a mut &mut Mod,
+        _name: &str,
         _get_ref: &mut GetRef,
         get_mut: &mut GetMut,
-    ) -> Self::View<'a, Field>
+    ) -> &'a mut Field
     where
         GetRef: FnMut(&Mod) -> &Field,
         GetMut: FnMut(&mut Mod) -> &mut Field,
     {
         get_mut(module)
+    }
+}
+
+impl TensorViewer for ViewTensorName {
+    type View<'a, Mod: 'a> = String;
+
+    fn view_field<Mod, Field, GetRef, GetMut>(
+        module: &mut String,
+        name: &str,
+        _get_ref: &mut GetRef,
+        _get_mut: &mut GetMut,
+    ) -> String
+    where
+        GetRef: FnMut(&Mod) -> &Field,
+        GetMut: FnMut(&mut Mod) -> &mut Field,
+    {
+        if !module.is_empty() {
+            std::format!("{module}.{name}")
+        } else {
+            name.to_string()
+        }
     }
 }
 
@@ -145,6 +164,7 @@ macro_rules! tuple_impls {
 
             fn view_field<'a, Mod, Field, GetRef, GetMut>(
                 module: &'a mut Self::View<'_, Mod>,
+                name: &str,
                 get_ref: &mut GetRef,
                 get_mut: &mut GetMut,
             ) -> Self::View<'a, Field>
@@ -152,7 +172,7 @@ macro_rules! tuple_impls {
                 GetRef: FnMut(&Mod) -> &Field,
                 GetMut: FnMut(&mut Mod) -> &mut Field,
             {
-                ($($name::view_field(&mut module.$idx, get_ref, get_mut),)+)
+                ($($name::view_field(&mut module.$idx, name, get_ref, get_mut),)+)
             }
         }
     }
@@ -170,6 +190,7 @@ impl<T: TensorViewer> TensorViewer for std::vec::Vec<T> {
 
     fn view_field<'a, Mod, Field, GetRef, GetMut>(
         module: &'a mut Self::View<'_, Mod>,
+        name: &str,
         get_ref: &mut GetRef,
         get_mut: &mut GetMut,
     ) -> Self::View<'a, Field>
@@ -179,7 +200,7 @@ impl<T: TensorViewer> TensorViewer for std::vec::Vec<T> {
     {
         module
             .iter_mut()
-            .map(|x| T::view_field(x, get_ref, get_mut))
+            .map(|x| T::view_field(x, name, get_ref, get_mut))
             .collect()
     }
 }
@@ -189,6 +210,7 @@ impl<T: TensorViewer> TensorViewer for Option<T> {
 
     fn view_field<'a, Mod, Field, GetRef, GetMut>(
         module: &'a mut Self::View<'_, Mod>,
+        name: &str,
         get_ref: &mut GetRef,
         get_mut: &mut GetMut,
     ) -> Self::View<'a, Field>
@@ -196,6 +218,8 @@ impl<T: TensorViewer> TensorViewer for Option<T> {
         GetRef: FnMut(&Mod) -> &Field,
         GetMut: FnMut(&mut Mod) -> &mut Field,
     {
-        module.as_mut().map(|x| T::view_field(x, get_ref, get_mut))
+        module
+            .as_mut()
+            .map(|x| T::view_field(x, name, get_ref, get_mut))
     }
 }

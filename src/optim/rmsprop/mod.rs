@@ -124,7 +124,6 @@ impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D>
 
     fn visit<S: Shape>(
         &mut self,
-        _: std::string::String,
         opts: TensorOptions<S, E, D>,
         p: &mut Tensor<S, E, D>,
     ) -> Result<(), <D>::Err> {
@@ -163,7 +162,6 @@ impl<M: TensorCollection<E, D>, D: RMSpropKernel<E> + OneFillStorage<E>, E: Dtyp
         let result = M::iter_tensors(&mut RecursiveWalker {
             m: module,
             f: &mut op,
-            path: &mut std::vec::Vec::new(),
         });
         let r = match result {
             Ok(_) => op.2.into(),

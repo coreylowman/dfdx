@@ -4,8 +4,6 @@ use super::tensor_collection::{
 
 use crate::{shapes::*, tensor::*};
 
-use std::{string::String, vec::Vec};
-
 struct Counter(usize);
 impl<E: Dtype, D: DeviceStorage> TensorVisitor<E, D> for Counter {
     type Viewer = ViewTensorRef;
@@ -13,7 +11,6 @@ impl<E: Dtype, D: DeviceStorage> TensorVisitor<E, D> for Counter {
 
     fn visit<S: Shape>(
         &mut self,
-        _: String,
         opts: TensorOptions<S, E, D>,
         t: &Tensor<S, E, D>,
     ) -> Result<(), D::Err> {
@@ -29,7 +26,6 @@ pub trait NumParams<E: Dtype, D: DeviceStorage>: TensorCollection<E, D> {
         Self::iter_tensors(&mut RecursiveWalker {
             m: self,
             f: &mut op,
-            path: &mut Vec::new(),
         })
         .unwrap();
         op.0

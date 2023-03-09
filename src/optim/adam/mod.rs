@@ -115,7 +115,6 @@ impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D>
 
     fn visit<S: Shape>(
         &mut self,
-        _: std::string::String,
         opts: TensorOptions<S, E, D>,
         p: &mut crate::prelude::Tensor<S, E, D>,
     ) -> Result<(), <D>::Err> {
@@ -153,7 +152,6 @@ impl<M: TensorCollection<E, D>, D: AdamKernel<E>, E: Dtype> Optimizer<M, D, E> f
         let result = M::iter_tensors(&mut RecursiveWalker {
             m: module,
             f: &mut op,
-            path: &mut std::vec::Vec::new(),
         });
         match result {
             Ok(_) => op.2.into(),

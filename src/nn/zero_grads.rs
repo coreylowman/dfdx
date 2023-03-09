@@ -2,7 +2,7 @@ use super::tensor_collection::*;
 
 use crate::{gradients::Gradients, shapes::*, tensor::*, unique_id::UniqueId};
 
-use std::{string::String, vec::Vec};
+use std::vec::Vec;
 
 /// Zero's any gradients associated with `self`.
 ///
@@ -43,7 +43,6 @@ pub trait ZeroGrads<E: Dtype, D: ZeroFillStorage<E>>: TensorCollection<E, D> {
         Self::iter_tensors(&mut RecursiveWalker {
             m: self,
             f: &mut op,
-            path: &mut Vec::new(),
         })?;
         op.gradients.retain_leafs(&op.updated);
         Ok(())
@@ -62,7 +61,6 @@ impl<'a, E: Dtype, D: ZeroFillStorage<E>> TensorVisitor<E, D> for ZeroGradOp<'a,
 
     fn visit<S: Shape>(
         &mut self,
-        _: String,
         opts: TensorOptions<S, E, D>,
         t: &Tensor<S, E, D>,
     ) -> Result<(), Self::Err> {

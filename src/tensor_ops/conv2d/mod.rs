@@ -64,6 +64,7 @@ pub(super) trait Conv2DKernel<E: Dtype>: DeviceStorage {
         out: &mut Tensor<O, E, Self>,
     ) -> Result<(), Self::Err>;
 
+    #[allow(clippy::too_many_arguments)]
     fn backward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: Conv2DOp,

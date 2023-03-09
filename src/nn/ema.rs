@@ -4,8 +4,6 @@ use super::tensor_collection::{
 
 use crate::{shapes::*, tensor::*, tensor_ops::axpy::AxpyKernel};
 
-use std::{string::String, vec::Vec};
-
 struct ModelEMAOp<E> {
     decay: E,
 }
@@ -15,7 +13,6 @@ impl<E: Dtype, D: AxpyKernel<E>> TensorVisitor<E, D> for ModelEMAOp<E> {
 
     fn visit<S: Shape>(
         &mut self,
-        _: String,
         opts: TensorOptions<S, E, D>,
         (dst, src): (&mut Tensor<S, E, D>, &Tensor<S, E, D>),
     ) -> Result<(), Self::Err> {
@@ -42,7 +39,6 @@ pub trait ModelEMA<E: Dtype, D: AxpyKernel<E>>: TensorCollection<E, D> {
         Self::iter_tensors(&mut RecursiveWalker {
             m: (self, other),
             f: &mut op,
-            path: &mut Vec::new(),
         })
     }
 }

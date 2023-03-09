@@ -46,8 +46,8 @@ pub trait SaveToNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<E,
     /// # use dfdx::prelude::*;
     /// let model: Linear<5, 10> = Default::default();
     /// let mut zip = ZipWriter::new(...);
-    /// model.write("0.", &mut zip)?;
-    /// model.write("1.", &mut zip)?;
+    /// model.write("0", &mut zip)?;
+    /// model.write("1", &mut zip)?;
     /// ```
     /// Will save a zip file with the following files in it:
     /// - `0.weight.npy`
@@ -59,9 +59,8 @@ pub trait SaveToNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<E,
         W: Write + Seek,
     {
         Self::iter_tensors(&mut RecursiveWalker {
-            m: self,
+            m: (self, String::new()),
             f: w,
-            path: &mut std::vec::Vec::new(),
         })
     }
 }
@@ -94,7 +93,7 @@ pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<
     /// # use dfdx::prelude::*;
     /// let mut model: Linear<5, 10> = Default::default();
     /// let mut zip = ZipArchive::new(...);
-    /// model.read("0.", &mut zip)?;
+    /// model.read("0", &mut zip)?;
     /// ```
     /// Will try to read data from the following files:
     /// - `0.weight.npy`
@@ -104,9 +103,8 @@ pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<
         R: Read + Seek,
     {
         Self::iter_tensors(&mut RecursiveWalker {
-            m: self,
+            m: (self, String::new()),
             f: r,
-            path: &mut std::vec::Vec::new(),
         })
     }
 }
@@ -115,14 +113,13 @@ impl<E: Dtype + NumpyDtype, D: CopySlice<E>, T: TensorCollection<E, D>> LoadFrom
 impl<W: Write + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D>
     for zip::ZipWriter<W>
 {
-    type Viewer = ViewTensorRef;
+    type Viewer = (ViewTensorRef, ViewTensorName);
     type Err = ZipError;
 
     fn visit<S: Shape>(
         &mut self,
-        full_path: String,
         _: TensorOptions<S, E, D>,
-        t: &Tensor<S, E, D>,
+        (t, full_path): (&Tensor<S, E, D>, String),
     ) -> Result<(), Self::Err> {
         t.write_to_npz(self, full_path)
     }
@@ -131,14 +128,13 @@ impl<W: Write + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D
 impl<R: Read + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D>
     for zip::ZipArchive<R>
 {
-    type Viewer = ViewTensorMut;
+    type Viewer = (ViewTensorMut, ViewTensorName);
     type Err = NpzError;
 
     fn visit<S: Shape>(
         &mut self,
-        full_path: String,
         _: TensorOptions<S, E, D>,
-        t: &mut Tensor<S, E, D>,
+        (t, full_path): (&mut Tensor<S, E, D>, String),
     ) -> Result<(), Self::Err> {
         t.read_from_npz(self, full_path)
     }
