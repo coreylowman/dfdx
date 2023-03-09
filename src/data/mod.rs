@@ -1,3 +1,5 @@
+//! A collection of useful data utilities such as [ExactSizeDataset], [OneHotEncode], [Arange],
+//! and iterator extension traits!
 mod arange;
 mod batch;
 mod collate;

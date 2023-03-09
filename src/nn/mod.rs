@@ -173,9 +173,9 @@ pub mod traits {
 }
 
 pub mod modules {
-    /// Structs containing initialized Tensors & impls for [super::Module]. See
-    /// [super::builders] for helpful utilities in creating these
-    /// in a device/dtype agnostic way.
+    //! Structs containing initialized Tensors & impls for [super::traits::Module]. See
+    //! [super::builders] for helpful utilities in creating these
+    //! in a device/dtype agnostic way.
     pub use super::activations::*;
     pub use super::add_into::AddInto;
     pub use super::batchnorm1d::BatchNorm1D;
@@ -203,8 +203,8 @@ pub mod modules {
 }
 
 pub mod builders {
-    /// Simple specification of network structure, without
-    /// worrying about device or dtype.
+    //! Simple specification of network structure, without
+    //! worrying about device or dtype.
     pub use super::activations::*;
     pub use super::add_into::AddInto;
     pub use super::batchnorm1d::builder::BatchNorm1D;

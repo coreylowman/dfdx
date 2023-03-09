@@ -1,10 +1,10 @@
-//! The [Tensor] struct, [Cpu] device, and
+//! The [Tensor] struct, [Cpu] & [Cuda] devices, and
 //! traits like [ZerosTensor], [OnesTensor], [SampleTensor].
 //!
 //! At a high level a tensor is made up of:
 //! 1. The [crate::shapes::Shape] of the array it stores
 //! 2. The [crate::shapes::Dtype] of the elements of the array
-//! 3. The [DeviceStorage] (e.g. [Cpu]) that it uses to store the nd array
+//! 3. The [DeviceStorage] (e.g. [Cpu] or [Cuda]) that it uses to store the nd array
 //! 4. A [crate::gradients::Tape], which can either actually be a tape ([crate::gradients::OwnedTape])
 //!    or be empty ([crate::gradients::NoneTape]).
 //!
@@ -17,18 +17,27 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();
+//! let dev: Cpu = Cpu::seed_from_u64(0);
+//! ```
+//! 
+//! ```no_run
+//! # use dfdx::prelude::*;
+//! let dev: Cuda = Default::default();
+//! let dev: Cuda = Cuda::seed_from_u64(1234);
+//! let dev: Cuda = Cuda::try_build(0, 1234).unwrap();
 //! ```
 //!
 //! # Creating tensors
 //!
-//! ### From arrays
+//! ### From arrays/vecs
 //!
-//! See [TensorFrom].
+//! See [TensorFrom] & [TensorFromVec].
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let t = dev.tensor([1.0, 2.0, 3.0]);
+//! let _ = dev.tensor([1.0, 2.0, 3.0]);
+//! let _ = dev.tensor_from_vec(vec![1.0, 2.0, 3.0], (3, ));
 //! ```
 //!
 //! ### Filled with 0s or 1s
@@ -87,7 +96,7 @@
 //! let t: [[f32; 3]; 2] = t.array();
 //! ```
 //!
-//! # Tracking gradients
+//! # Tracing gradients
 //!
 //! Use the [Tensor::trace] or [Tensor::traced] methods to add [crate::gradients::OwnedTape] to the [Tensor].
 //! `.trace()` will clone the [crate::unique_id::UniqueId] & data, while `.traced()` will take ownership of

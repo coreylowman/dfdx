@@ -1,4 +1,13 @@
-/// Shape related traits/structes like [Shape], [Dtype], [Dim], [Axes]
+//! Shape related traits/structes like [Shape], [Dtype], [Dim], [Axis], and [Const]
+//! 
+//! Example shapes:
+//! ```rust
+//! let _: Rank3<2, 3, 4> = Default::default();
+//! let _: (Const<2>, Const<3>) = Default::default();
+//! let _: (usize, Const<4>) = (3, Const);
+//! let _ = (Const::<5>, 4, Const::<3>, 2);
+//! ```
+
 mod axes;
 mod broadcasts;
 mod permutes;
