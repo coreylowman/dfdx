@@ -19,6 +19,14 @@ pub mod builder {
         const K_DIM: usize = EMBED_DIM,
         const V_DIM: usize = EMBED_DIM,
     >;
+    impl<const M: usize, const H: usize, const K: usize, const V: usize>
+        MultiHeadAttention<M, H, K, V>
+    {
+        pub const TYPE_CHECK: () = assert!(
+            K % H == 0 && V % H == 0,
+            "NUM_HEADS must divide K_DIM & V_DIM evenly! If you haven't specified K_DIM & V_DIM, they default to EMBED_DIM, which means NUM_HEADS must divide EMBED_DIM evenly."
+        );
+    }
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, E: Dtype, D: Device<E>>
@@ -28,6 +36,8 @@ where
 {
     type Built = MultiHeadAttention<M, H, K, V, E, D>;
     fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
+        #[allow(clippy::let_unit_value)]
+        let _ = Self::TYPE_CHECK;
         Self::Built::try_build(device)
     }
 }
@@ -68,6 +78,8 @@ where
     E: Dtype + Float + SampleUniform,
 {
     fn try_build(device: &D) -> Result<Self, <D>::Err> {
+        #[allow(clippy::let_unit_value)]
+        let _ = builder::MultiHeadAttention::<M, H, K, V>::TYPE_CHECK;
         Ok(Self {
             w_q: BuildModule::try_build(device)?,
             w_k: BuildModule::try_build(device)?,
