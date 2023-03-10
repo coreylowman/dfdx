@@ -4,7 +4,7 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 use super::{ops::*, Device};
-use crate::{gradients::*, shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*};
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
@@ -43,7 +43,7 @@ pub fn div<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R: Defaul
     lhs / rhs
 }
 
-/// Fallible version of std::ops::Div
+/// Fallible version of [std::ops::Div]. See [div]
 pub trait TryDiv<Rhs = Self>: HasErr {
     fn try_div(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }

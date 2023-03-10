@@ -1,4 +1,4 @@
-use super::{CopySlice, DeviceStorage, Tensor};
+use super::{CopySlice, Tensor};
 use crate::shapes::{Dtype, Shape};
 use safetensors::tensor::{Dtype as SDtype, SafeTensorError, SafeTensors};
 use std::vec::Vec;
@@ -73,7 +73,8 @@ impl From<std::io::Error> for Error {
     }
 }
 
-impl<S: Shape, E: Dtype + SafeDtype, D: DeviceStorage + CopySlice<E>, T> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype + SafeDtype, D: CopySlice<E>, T> Tensor<S, E, D, T> {
+    /// Loads data from the [SafeTensors] storage with the given `key`
     pub fn load_safetensor(&mut self, tensors: &SafeTensors, key: &str) -> Result<(), Error> {
         let tensor = tensors.tensor(key)?;
         let v = tensor.data();

@@ -1,8 +1,8 @@
-use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     batchnorm2d::{infer_fwd, train_fwd},
-    traits::*,
+    *,
 };
 
 use num_traits::FromPrimitive;

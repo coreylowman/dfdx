@@ -1,39 +1,35 @@
-use crate::{
-    gradients::{Merge, Tape},
-    shapes::*,
-    tensor::*,
-};
+use crate::{shapes::*, tensor::*};
 
 mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
 /// Concatenate two tensors along the first dimension.
+///
+/// **Pytorch equivalent** `torch.concat`.
+///
+/// Stacking with const dims **requires nightly**:
+/// ```ignore
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
+/// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
+/// let _: Tensor<Rank2<6, 4>, f32, _> = a.concat(b);
+/// ```
+///
+/// Stacking with usize dims:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(2, Const));
+/// let b: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(4, Const));
+/// let c: Tensor<(usize, Const<3>), f32, _> = a.concat(b);
+/// assert_eq!(c.shape().0, 6);
+/// ```
 pub trait TryConcat<Rhs>: HasErr {
     type Output;
 
     /// Concatenate two tensors along the first dimension.
-    ///
-    /// **Pytorch equivalent** `torch.concat`.
-    ///
-    /// Stacking with const dims **requires nightly**:
-    /// ```ignore
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
-    /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
-    /// let _: Tensor<Rank2<6, 4>, f32, _> = a.concat(b);
-    /// ```
-    ///
-    /// Stacking with usize dims:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(2, Const));
-    /// let b: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(4, Const));
-    /// let c: Tensor<(usize, Const<3>), f32, _> = a.concat(b);
-    /// assert_eq!(c.shape().0, 6);
-    /// ```
     fn concat(self, rhs: Rhs) -> Self::Output {
         self.try_concat(rhs).unwrap()
     }

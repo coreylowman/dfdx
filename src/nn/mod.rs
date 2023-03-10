@@ -1,20 +1,20 @@
-//! High level neural network building blocks such as [modules::Linear], activations, and tuples as [traits::Module]s.
-//! Also includes `.save()` & `.load()` for all [traits::Module]s.
+//! High level neural network building blocks such as [modules::Linear], activations, and tuples as [Module]s.
+//! Also includes `.save()` & `.load()` for all [Module]s.
 //!
 //! # Mutable vs Immutable forwards
 //!
 //! This is provided as two separate traits
 //!
-//! 1. [traits::ModuleMut::forward_mut()] which receives `&mut self`.
-//! 2. [traits::Module::forward()] which receives `&self`.
+//! 1. [ModuleMut::forward_mut()] which receives `&mut self`.
+//! 2. [Module::forward()] which receives `&self`.
 //!
 //! **This has nothing to do with whether gradients are being tracked or not**.
 //! It only controls whether the module itself can be modified. Both OwnedTape
 //! and NoneTape can still be passed to both, and all modules should conform
 //! to this expected behavior.
 //!
-//! In general, [traits::ModuleMut::forward_mut()] should be used during training,
-//! and [traits::Module::forward()] during evaluation/testing/inference/validation.
+//! In general, [ModuleMut::forward_mut()] should be used during training,
+//! and [Module::forward()] during evaluation/testing/inference/validation.
 //!
 //! Here is a list of existing modules that have different behavior in these
 //! two functions:
@@ -24,13 +24,22 @@
 //! - [modules::DropoutOneIn]
 //! - [modules::Dropout]
 //!
+//! # Fallible forwards
+//!
+//! You can also get a result from Module by using [ModuleMut::try_forward_mut],
+//! and [Module::try_forward].
+//!
+//! Similar to fallible tensor_ops, the main purpose of this is to handle out of memory
+//! errors at the device level.
+//!
 //! # Initializing
 //!
-//! Use [traits::DeviceBuildExt] for device agnostic module creation/randomization:
+//! Use [DeviceBuildExt] for device agnostic module creation/randomization:
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
+//! use dfdx::nn::builders::{Linear, DeviceBuildExt};
 //! type Model = Linear<5, 2>;
 //! let model = dev.build_module::<Model, f32>();
 //! ```
@@ -41,19 +50,50 @@
 //! is `Linear<5, 2, f32, Cpu>`. When using
 //! a `Cuda` device and `f64`, the type is `Linear<5, 2, f64, Cuda>`.
 //!
-//! Alternatively, you can use [traits::BuildModule], which requires device specific model definitions:
+//! Alternatively, you can use [BuildModule], which requires device specific model definitions:
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
-//! use dfdx::nn::modules::Linear;
+//! use dfdx::nn::modules::{Linear, BuildModule};
 //! type Dev = Cpu;
 //! let dev: Dev = Default::default();
 //! let model: Linear<5, 2, f32, Dev> = BuildModule::build(&dev);
 //! ```
 //!
+//! # Allocating & zeroing gradients
+//!
+//! Use [ZeroGrads::alloc_grads()] and [ZeroGrads::zero_grads()] to reduce allocations,
+//! and enable gradient accumulation!
+//! This is the equivalent of pytorch's `Optimizer.zero_grad`
+//!
+//! ```rust
+//! # use dfdx::prelude::*;
+//! # let dev: Cpu = Default::default();
+//! # type Model = Linear<5, 2>;
+//! use dfdx::nn::ZeroGrads;
+//! let model = dev.build_module::<Model, f32>();
+//! let mut grads: Gradients<f32, _> = model.alloc_grads();
+//! model.zero_grads(&mut grads);
+//! ```
+//!
+//! # Exponential Moving Average (EMA)
+//!
+//! All models implement [ModelEMA::ema()] to keep track of an exponential moving average
+//! of an entire model.
+//!
+//! ```rust
+//! # use dfdx::prelude::*;
+//! # let dev: Cpu = Default::default();
+//! # type Model = Linear<5, 2>;
+//! use dfdx::nn::ModelEMA;
+//! let model = dev.build_module::<Model, f32>();
+//! let mut ema_model = dev.build_module::<Model, f32>();
+//! ema_model.ema(&model, 0.001);
+//! ```
+//!
 //! # Resetting parameters
 //!
-//! All modules implement [traits::ResetParams], which allows you to reset a module back to a randomized
+//! All modules implement [ResetParams], which allows you to reset a module back to a randomized
 //! state:
 //!
 //! ```rust
@@ -66,7 +106,7 @@
 //!
 //! # Sequential models
 //!
-//! Tuple's implement [traits::Module], so you can string multiple module's together.
+//! Tuple's implement [Module], so you can string multiple module's together.
 //!
 //! Here's a single layer MLP:
 //! ```rust
@@ -92,7 +132,11 @@
 //!
 //! # Saving and Loading
 //!
-//! Call [SaveToNpz::save()] and [LoadFromNpz::load()] traits. All modules provided here implement it,
+//! # numpy
+//!
+//! Enable with the `"numpy"` feature.
+//!
+//! Call [SaveToNpz::save()] and [LoadFromNpz::load()] methods. All modules provided here implement it,
 //! including tuples. These all save to/from `.npz` files, which are basically zip files with multiple `.npy`
 //!  files.
 //!
@@ -105,10 +149,17 @@
 //! mlp.load_state_dict(state_dict)
 //! ```
 //!
+//! # safetensors
+//!
+//! Enable with the `"safetensors"` feature.
+//!
 //! The feature `safetensors` allows to do the same with
-//! [https://github.com/huggingface/safetensors]()
-//! Call [SaveToSafetensors::save()] and [LoadFromSafetensors::load()] traits. All modules provided here implement it,
-//! including tuples. These all save to/from `.safetensors` files, which are flat layout with JSON
+//! [https://github.com/huggingface/safetensors]().
+//!
+//! Call [SaveToSafetensors::save_safetensors()] and [LoadFromSafetensors::load_safetensors()] funcs.
+//! All modules provided here implement it, including tuples.
+//!
+//! These all save to/from `.safetensors` files, which are flat layout with JSON
 //! header, allowing for super fast loads (with memory mapping).
 //!
 //! This is implemented to be fairly portable. For example you can use
@@ -154,28 +205,26 @@ mod transformer;
 mod unbiased_linear;
 mod zero_grads;
 
-pub mod traits {
-    pub use super::module::{
-        BuildModule, BuildOnDevice, DeviceBuildExt, Module, ModuleMut, NonMutableModule,
-        ZeroSizedModule,
-    };
+pub use module::{
+    BuildModule, BuildOnDevice, DeviceBuildExt, Module, ModuleMut, NonMutableModule,
+    ZeroSizedModule,
+};
 
-    pub use super::tensor_collection::*;
+pub use tensor_collection::*;
 
-    pub use super::ema::ModelEMA;
-    #[cfg(feature = "numpy")]
-    pub use super::npz::{LoadFromNpz, SaveToNpz};
-    pub use super::num_params::NumParams;
-    pub use super::reset_params::ResetParams;
-    #[cfg(feature = "safetensors")]
-    pub use super::safetensors::{LoadFromSafetensors, SaveToSafetensors};
-    pub use super::zero_grads::ZeroGrads;
-}
+#[cfg(feature = "safetensors")]
+pub use self::safetensors::{LoadFromSafetensors, SaveToSafetensors};
+pub use ema::ModelEMA;
+#[cfg(feature = "numpy")]
+pub use npz::{LoadFromNpz, SaveToNpz};
+pub use num_params::NumParams;
+pub use reset_params::ResetParams;
+pub use zero_grads::ZeroGrads;
 
 pub mod modules {
-    /// Structs containing initialized Tensors & impls for [super::Module]. See
-    /// [super::builders] for helpful utilities in creating these
-    /// in a device/dtype agnostic way.
+    //! Structs containing initialized Tensors & impls for [super::Module]. See
+    //! [super::builders] for helpful utilities in creating these
+    //! in a device/dtype agnostic way.
     pub use super::activations::*;
     pub use super::add_into::AddInto;
     pub use super::batchnorm1d::BatchNorm1D;
@@ -196,15 +245,18 @@ pub mod modules {
     pub use super::repeated::Repeated;
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
-    pub use super::traits::*;
     #[cfg(feature = "nightly")]
-    pub use super::transformer::*;
+    pub use super::transformer::{
+        MultiHeadAttention, Transformer, TransformerDecoder, TransformerDecoderBlock,
+        TransformerEncoder, TransformerEncoderBlock,
+    };
     pub use super::unbiased_linear::UnbiasedLinear;
+    pub use super::*;
 }
 
 pub mod builders {
-    /// Simple specification of network structure, without
-    /// worrying about device or dtype.
+    //! Simple specification of network structure, without
+    //! worrying about device or dtype.
     pub use super::activations::*;
     pub use super::add_into::AddInto;
     pub use super::batchnorm1d::builder::BatchNorm1D;
@@ -225,8 +277,11 @@ pub mod builders {
     pub use super::repeated::Repeated;
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
-    pub use super::traits::*;
     #[cfg(feature = "nightly")]
-    pub use super::transformer::builder::*;
+    pub use super::transformer::builder::{
+        MultiHeadAttention, Transformer, TransformerDecoder, TransformerDecoderBlock,
+        TransformerEncoder, TransformerEncoderBlock,
+    };
     pub use super::unbiased_linear::builder::UnbiasedLinear;
+    pub use super::*;
 }

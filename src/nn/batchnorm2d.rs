@@ -1,6 +1,6 @@
-use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
+use crate::{shapes::*, tensor::*, tensor_ops::*};
 
-use super::traits::*;
+use super::*;
 
 use num_traits::FromPrimitive;
 

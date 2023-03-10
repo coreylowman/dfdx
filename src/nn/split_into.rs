@@ -1,6 +1,6 @@
 use crate::{prelude::Device, shapes::Dtype, tensor::*};
 
-use super::traits::*;
+use super::*;
 
 /// Splits input into multiple heads. `T` should be a tuple,
 /// where every element of the tuple accepts the same input type.
@@ -117,8 +117,8 @@ mod tests {
     #![allow(clippy::type_complexity)]
 
     use super::*;
-    use crate::{gradients::*, shapes::*, tensor_ops::*};
     use crate::{nn::builders::Linear, tests::*};
+    use crate::{shapes::*, tensor_ops::*};
 
     #[test]
     fn test_unused() {

@@ -4,7 +4,7 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 use super::{ops::*, Device};
-use crate::{gradients::*, shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*};
 
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
@@ -41,6 +41,8 @@ pub fn mul<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R: Defaul
 ) -> Tensor<S, E, D, T> {
     lhs * rhs
 }
+
+/// Fallible version of [std::ops::Mul]. See [mul].
 pub trait TryMul<Rhs = Self>: HasErr {
     fn try_mul(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }

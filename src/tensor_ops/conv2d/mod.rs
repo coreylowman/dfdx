@@ -4,9 +4,8 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 use crate::{
-    gradients::Tape,
     shapes::*,
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor, ZerosTensor},
+    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tape, Tensor, ZerosTensor},
 };
 
 #[repr(C)]

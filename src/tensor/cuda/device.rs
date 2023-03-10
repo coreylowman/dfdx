@@ -8,6 +8,8 @@ use cudarc::{
 };
 use std::{sync::Arc, vec::Vec};
 
+/// A Cuda device that enables constructing tensors on GPUs
+/// & running GPU kernels.
 #[derive(Clone, Debug)]
 pub struct Cuda {
     pub(crate) cpu: Cpu,
@@ -57,6 +59,7 @@ impl Cuda {
         Self::try_build(0, seed)
     }
 
+    /// Constructs with the given seed & device ordinal
     pub fn try_build(ordinal: usize, seed: u64) -> Result<Self, CudaError> {
         let cpu = Cpu::seed_from_u64(seed);
         let dev = CudaDevice::new(ordinal)?;

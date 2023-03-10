@@ -1,7 +1,11 @@
 #[allow(unused)]
-use crate::{gradients::Tape, shapes::*, tensor::Tensor, tensor_ops::*};
+use crate::{
+    shapes::*,
+    tensor::{Tape, Tensor},
+    tensor_ops::*,
+};
 
-use super::traits::*;
+use super::*;
 
 /// **Requires Nightly** Flattens 3d tensors to 1d, and 4d tensors to 2d.
 #[derive(Default, Clone, Copy)]

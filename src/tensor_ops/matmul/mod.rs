@@ -6,9 +6,8 @@ pub(super) mod cpu_kernel;
 pub(super) mod cuda_kernel;
 
 use crate::{
-    gradients::{Merge, Tape},
     shapes::{Const, Dim, Dtype, Shape},
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor},
+    tensor::{DeviceStorage, HasErr, Merge, PutTape, SplitTape, Tape, Tensor},
 };
 
 /// Matrix * Matrix, Vector * Matrix, Vector * Vector, and broadcasted/batched versions.
@@ -184,7 +183,7 @@ where
     R: Tape<E, D>,
 {
     type Output = Tensor<(M, N), E, D, T>;
-    /// ```no_compile
+    /// ```compile_fail
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let x: Tensor<Rank2<3, 2>, f32, _> = dev.zeros();
@@ -221,7 +220,7 @@ where
     R: Tape<E, D>,
 {
     type Output = Tensor<(B, M, N), E, D, T>;
-    /// ```no_compile
+    /// ```compile_fail
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let x: Tensor<Rank3<1, 3, 2>, f32, _> = dev.zeros();
@@ -259,7 +258,7 @@ where
     R: Tape<E, D>,
 {
     type Output = Tensor<(Const<B>, M, N), E, D, T>;
-    /// ```no_compile
+    /// ```compile_fail
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let x: Tensor<Rank3<1, 3, 2>, f32, _> = dev.zeros();
@@ -298,7 +297,7 @@ where
     R: Tape<E, D>,
 {
     type Output = Tensor<(Const<B>, Const<S>, M, N), E, D, T>;
-    /// ```no_compile
+    /// ```compile_fail
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let x: Tensor<Rank4<1, 5, 3, 2>, f32, _> = dev.zeros();

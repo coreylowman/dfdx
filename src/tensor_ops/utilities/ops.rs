@@ -1,7 +1,6 @@
 use crate::{
-    gradients::{Merge, Tape},
     shapes::{Dtype, HasShape, Shape},
-    tensor::{DeviceStorage, PutTape, SplitTape, Tensor},
+    tensor::{DeviceStorage, Merge, PutTape, SplitTape, Tape, Tensor},
 };
 
 pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {

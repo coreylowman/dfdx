@@ -4,12 +4,11 @@
 use std::collections::{HashMap, HashSet};
 use std::{boxed::Box, vec::Vec};
 
-use crate::shapes::{Shape, Unit};
-use crate::tensor::{
+use super::{
     storage_traits::{AllocGrad, DeviceStorage},
-    Tensor,
+    unique_id, Tensor, UniqueId,
 };
-use crate::unique_id::{unique_id, UniqueId};
+use crate::shapes::{Shape, Unit};
 
 /// A generic container for keeping gradients of tensors keyed by the
 /// tensor's [UniqueId].
@@ -30,7 +29,7 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     /// This means that all tensors are considered leafs, and
     /// [Gradients::drop_non_leafs] will do nothing.
     ///
-    /// For Gradient accumulation, you should use [crate::nn::traits::ZeroGrads::alloc_grads],
+    /// For Gradient accumulation, you should use [crate::nn::ZeroGrads::alloc_grads],
     /// which will ensure non-leaf gradients are freed after backwards.
     pub fn without_leafs() -> Self {
         Self {

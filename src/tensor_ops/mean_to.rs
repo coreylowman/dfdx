@@ -1,5 +1,5 @@
 use super::*;
-use crate::{gradients::Tape, shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*};
 
 /// Reduction along multiple axes using `mean`.
 pub trait MeanTo: HasErr + HasShape {

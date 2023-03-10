@@ -1,6 +1,6 @@
 use crate::{prelude::Device, shapes::Dtype, tensor::*};
 
-use super::traits::*;
+use super::*;
 
 /// Add inputs together into a single tensor. `T` should be a tuple
 //// where every element of the tuple has the same output type
@@ -110,7 +110,6 @@ add_into_impls!([B b Bi b_i], [C c Ci c_i], [D d Di d_i], [E e Ei e_i], [F f Fi 
 mod tests {
     use super::*;
     use crate::{
-        gradients::OwnedTape,
         nn::builders::*,
         shapes::*,
         tests::{TestDevice, TestDtype},

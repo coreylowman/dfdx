@@ -83,7 +83,7 @@ pub trait SaveToSafetensors<E: Dtype + SafeDtype, D: Device<E>>: TensorCollectio
     /// Save this object into the `.safetensors` file determined located at `path`.
     ///
     /// Example:
-    /// ```no_run
+    /// ```ignore
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let model = dev.build_module::<Linear<15, 5>, f32>();
@@ -108,7 +108,7 @@ pub trait LoadFromSafetensors<E: Dtype + SafeDtype, D: Device<E>>: TensorCollect
     /// Loads data from a `.safetensors` at the specified `path`.
     ///
     /// Example:
-    /// ```no_run
+    /// ```ignore
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let mut model = dev.build_module::<Linear<15, 5>, f32>();

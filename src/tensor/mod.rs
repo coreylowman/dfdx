@@ -1,12 +1,12 @@
-//! The [Tensor] struct, [Cpu] device, and
+//! The [Tensor] struct, [Cpu] & [Cuda] devices, and
 //! traits like [ZerosTensor], [OnesTensor], [SampleTensor].
 //!
 //! At a high level a tensor is made up of:
 //! 1. The [crate::shapes::Shape] of the array it stores
 //! 2. The [crate::shapes::Dtype] of the elements of the array
-//! 3. The [DeviceStorage] (e.g. [Cpu]) that it uses to store the nd array
-//! 4. A [crate::gradients::Tape], which can either actually be a tape ([crate::gradients::OwnedTape])
-//!    or be empty ([crate::gradients::NoneTape]).
+//! 3. The [DeviceStorage] (e.g. [Cpu] or [Cuda]) that it uses to store the nd array
+//! 4. A [Tape], which can either actually be a tape ([OwnedTape])
+//!    or be empty ([NoneTape]).
 //!
 //! Which are all generic parameters of [Tensor]. See the type's docstring for more info
 //!
@@ -17,18 +17,27 @@
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();
+//! let dev: Cpu = Cpu::seed_from_u64(0);
+//! ```
+//!
+//! ```ignore
+//! # use dfdx::prelude::*;
+//! let dev: Cuda = Default::default();
+//! let dev: Cuda = Cuda::seed_from_u64(1234);
+//! let dev: Cuda = Cuda::try_build(0, 1234).unwrap();
 //! ```
 //!
 //! # Creating tensors
 //!
-//! ### From arrays
+//! ### From arrays/vecs
 //!
-//! See [TensorFrom].
+//! See [TensorFrom] & [TensorFromVec].
 //!
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! let t = dev.tensor([1.0, 2.0, 3.0]);
+//! let _ = dev.tensor([1.0, 2.0, 3.0]);
+//! let _ = dev.tensor_from_vec(vec![1.0, 2.0, 3.0], (3, ));
 //! ```
 //!
 //! ### Filled with 0s or 1s
@@ -87,11 +96,11 @@
 //! let t: [[f32; 3]; 2] = t.array();
 //! ```
 //!
-//! # Tracking gradients
+//! # Tracing gradients
 //!
-//! Use the [Tensor::trace] or [Tensor::traced] methods to add [crate::gradients::OwnedTape] to the [Tensor].
-//! `.trace()` will clone the [crate::unique_id::UniqueId] & data, while `.traced()` will take ownership of
-//! the tensor and return a version with an [crate::gradients::OwnedTape].
+//! Use the [Tensor::trace] or [Tensor::traced] methods to add [OwnedTape] to the [Tensor].
+//! `.trace()` will clone the data, while `.traced()` will take ownership of
+//! the tensor and return a version with an [OwnedTape].
 //!
 //! Note that these two methods are only present for tensors without a tape already.
 //!
@@ -103,6 +112,11 @@
 //! let t = t.traced::<f32>(); // takes ownership of t
 //! ```
 //!
+//! ## Gradient Accumulation
+//!
+//! You can use [Tensor::trace_into] and [Tensor::traced_into] to do this, which take
+//! a [Gradients] object.
+//!
 //! # Serialization using numpy
 //!
 //! See [Tensor::save_to_npy] and [Tensor::load_from_npy].
@@ -113,10 +127,12 @@
 pub(crate) mod cpu;
 #[cfg(feature = "cuda")]
 pub(crate) mod cuda;
+mod gradients;
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
 #[cfg(feature = "safetensors")]
 pub mod safetensors;
+mod unique_id;
 
 pub(crate) mod storage_traits;
 mod tensor_impls;
@@ -137,12 +153,16 @@ pub use tensor_impls::OnCuda;
 pub use tensor_impls::{OnCpu, OnDevice, PutTape, SplitTape, Tensor, ToDevice};
 pub use tensor_impls::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
 
+pub(crate) use unique_id::unique_id;
+pub use unique_id::UniqueId;
+
+pub use gradients::{Gradients, Merge, NoneTape, OwnedTape, Tape};
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::shapes::*;
     use crate::tests::TestDevice;
-    use crate::unique_id::{unique_id, UniqueId};
     use std::collections::HashSet;
 
     #[test]

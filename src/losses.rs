@@ -1,6 +1,10 @@
 //! Standard loss functions such as [mse_loss()], [cross_entropy_with_logits_loss()], and more.
 
-use crate::{gradients::Tape, shapes::*, tensor::Tensor, tensor_ops::*};
+use crate::{
+    shapes::*,
+    tensor::{Tape, Tensor},
+    tensor_ops::*,
+};
 
 /// [Mean Squared Error](https://en.wikipedia.org/wiki/Mean_squared_error).
 /// This computes `(pred - targ).square().mean()`.

@@ -1,6 +1,6 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
 
-use super::traits::*;
+use super::*;
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {

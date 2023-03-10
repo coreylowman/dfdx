@@ -1,8 +1,7 @@
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{cuda::Cuda, Tensor},
+    tensor::{cuda::Cuda, unique_id, Tensor},
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
-    unique_id::unique_id,
 };
 use cudarc::driver::{CudaSlice, DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig};
 use std::{sync::Arc, vec::Vec};

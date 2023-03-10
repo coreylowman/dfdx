@@ -1,4 +1,4 @@
-use dfdx::{gradients::Gradients, nn::traits::ZeroGrads, prelude::*};
+use dfdx::{nn::ZeroGrads, prelude::*, tensor::Gradients};
 
 #[cfg(not(feature = "cuda"))]
 type Device = dfdx::tensor::Cpu;

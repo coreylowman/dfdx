@@ -1,6 +1,6 @@
 use crate::{prelude::Device, shapes::*, tensor::*, tensor_ops::TryAdd};
 
-use super::traits::*;
+use super::*;
 
 /// A residual connection `R` around `F`: `F(x) + R(x)`,
 /// as introduced in [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385).

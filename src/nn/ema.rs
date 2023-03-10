@@ -24,6 +24,18 @@ impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for ModelEMAOp<E> {
 }
 
 /// Performs model exponential moving average on two modules.
+///
+/// **Only updates trainable parameters**. For example, batch normalization
+/// running parameters are not updated.
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// type Model = Linear<2, 5>;
+/// let model = dev.build_module::<Model, f32>();
+/// let mut model_ema = model.clone();
+/// model_ema.ema(&model, 0.001);
+/// ```
 pub trait ModelEMA<E: Dtype, D: Device<E>>: TensorCollection<E, D> {
     /// Does `self = self * decay + other * (1 - decay), using
     /// [crate::tensor_ops::axpy()] on parameters.

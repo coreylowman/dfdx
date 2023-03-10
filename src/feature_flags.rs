@@ -2,7 +2,7 @@
 //!
 //! Default features:
 //! - "std"
-//! - "numpy"
+//! - "fast-alloc"
 //!
 //! # "std"
 //!
@@ -20,6 +20,36 @@
 //! ```toml
 //! no-std-compat = { version = "0.4.1", features = [ "alloc", "compat_hash" ] }
 //! ```
+//!
+//! # "fast-alloc"
+//!
+//! **Enabled by default**
+//!
+//! Turns off fallible allocations for Cpu, which is substantially faster.
+//!
+//! # "no-std"
+//!
+//! Used to enable "no-std-compat" and turn on `![no_std]`.
+//!
+//! Example:
+//! ```toml
+//! dfdx = { version = "...", default-features = false, features = ["no-std"] }
+//! ```
+//!
+//! # "cuda"
+//!
+//! Enables the `Cuda` device and other goodies. Must have the cuda toolkit and
+//! `nvcc` installed on your system.
+//!
+//! Example:
+//! ```toml
+//! dfdx = { version = "...", features = ["cuda"] }
+//! ```
+//!
+//! # "threaded-cpu"
+//!
+//! Used to enable the threading feature of `matrixmultiply`. This makes matmuls
+//! substantially faster!
 //!
 //! # "intel-mkl"
 //!
@@ -47,13 +77,20 @@
 //!
 //! # "numpy"
 //!
-//! **Enabled by default**
-//!
 //! Enables saving and loading arrays to .npy files, and saving and loading nn to .npz files.
 //!
 //! Example:
 //! ```toml
 //! dfdx = { version = "...", features = ["numpy"] }
+//! ```
+//!
+//! # "safetensors"
+//!
+//! Enables saving and loading tensors/nn to .safetensors files.
+//!
+//! Example:
+//! ```toml
+//! dfdx = { version = "...", features = ["safetensors"] }
 //! ```
 //!
 //! # "nightly"
