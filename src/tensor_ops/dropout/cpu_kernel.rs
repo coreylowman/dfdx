@@ -1,7 +1,6 @@
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{Cpu, Tensor},
-    unique_id::unique_id,
+    tensor::{unique_id, Cpu, Tensor},
 };
 
 use num_traits::Float;

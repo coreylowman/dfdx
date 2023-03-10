@@ -4,7 +4,7 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 use super::ops::{try_unary_op, UnaryKernel};
-use crate::{gradients::Tape, shapes::*, tensor::Tensor};
+use crate::{shapes::*, tensor::*};
 
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
@@ -19,7 +19,7 @@ pub struct TanhKernelOp;
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
-/// let r = t.tanh();;
+/// let r = t.tanh();
 /// ```
 pub fn tanh<S: Shape, E: Dtype, D: UnaryKernel<TanhKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,

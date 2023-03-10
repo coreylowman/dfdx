@@ -1,5 +1,5 @@
 use super::*;
-use crate::{gradients::NoneTape, tensor::cpu::Cpu};
+use crate::tensor::{Cpu, NoneTape};
 use std::vec;
 
 impl<E: Dtype> super::AttentionReshapeKernel<E> for Cpu {

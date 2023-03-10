@@ -1,10 +1,9 @@
 //! Demonstrates how to build a custom [nn::Module] without using tuples
 
 use dfdx::{
-    gradients::Tape,
     nn::modules::{BuildModule, Linear, Module, ReLU},
     shapes::{Rank1, Rank2},
-    tensor::{HasErr, SampleTensor, Tensor},
+    tensor::{HasErr, SampleTensor, Tape, Tensor},
 };
 
 #[cfg(not(feature = "cuda"))]

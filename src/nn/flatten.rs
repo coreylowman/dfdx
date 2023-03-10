@@ -1,5 +1,9 @@
 #[allow(unused)]
-use crate::{gradients::Tape, shapes::*, tensor::Tensor, tensor_ops::*};
+use crate::{
+    shapes::*,
+    tensor::{Tape, Tensor},
+    tensor_ops::*,
+};
 
 use super::traits::*;
 

@@ -1,8 +1,4 @@
-use crate::{
-    gradients::{Merge, Tape},
-    shapes::*,
-    tensor::*,
-};
+use crate::{shapes::*, tensor::*};
 
 mod cpu_kernel;
 #[cfg(feature = "cuda")]

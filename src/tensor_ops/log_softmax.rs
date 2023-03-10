@@ -1,5 +1,5 @@
 use super::{BroadcastTo, Device, LogSumExpTo, TrySub};
-use crate::{gradients::Tape, shapes::*, tensor::Tensor};
+use crate::{shapes::*, tensor::*};
 
 /// `log(softmax(t))` in numerically stable way across `Ax`. Does `t - logsumexp(t)` under the hood.
 ///

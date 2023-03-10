@@ -1,8 +1,4 @@
-use crate::{
-    gradients::{Merge, Tape},
-    shapes::*,
-    tensor::*,
-};
+use crate::{shapes::*, tensor::*};
 
 use std::vec::Vec;
 
@@ -173,7 +169,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{gradients::NoneTape, tensor_ops::*, tests::*};
+    use crate::{tensor_ops::*, tests::*};
 
     #[test]
     fn test_valid_stacks() {

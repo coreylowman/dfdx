@@ -3,9 +3,8 @@ use crate::{
     shapes::{Dtype, Shape},
     tensor::{
         cpu::{Cpu, LendingIterator, NdIndex},
-        Tensor, ZerosTensor,
+        unique_id, Tensor, ZerosTensor,
     },
-    unique_id::unique_id,
 };
 
 pub trait UnaryDerivative<E> {

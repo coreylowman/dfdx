@@ -1,4 +1,4 @@
-use crate::{gradients::Tape, shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*};
 
 /// Changes order of dimensions/axes
 pub trait PermuteTo: HasErr + HasShape {

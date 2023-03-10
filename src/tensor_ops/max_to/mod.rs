@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use crate::{gradients::Tape, shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*};
 
 pub trait MaxReduceKernel<E: Dtype>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape, Ax: Axes>(

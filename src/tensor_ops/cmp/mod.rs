@@ -1,7 +1,6 @@
 use crate::{
-    gradients::{NoneTape, Tape},
     shapes::{HasShape, Shape, Unit},
-    tensor::{DeviceStorage, Tensor},
+    tensor::{DeviceStorage, NoneTape, Tape, Tensor},
 };
 
 mod cpu_kernels;

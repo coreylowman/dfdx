@@ -6,10 +6,9 @@ mod cuda_kernel;
 use std::marker::PhantomData;
 
 use crate::{
-    gradients::Gradients,
     nn::tensor_collection::*,
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, Tensor},
+    tensor::{DeviceStorage, Gradients, Tensor},
 };
 
 use super::optimizer::*;

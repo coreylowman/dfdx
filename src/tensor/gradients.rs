@@ -4,12 +4,11 @@
 use std::collections::{HashMap, HashSet};
 use std::{boxed::Box, vec::Vec};
 
-use crate::shapes::{Shape, Unit};
-use crate::tensor::{
+use super::{
     storage_traits::{AllocGrad, DeviceStorage},
-    Tensor,
+    unique_id, Tensor, UniqueId,
 };
-use crate::unique_id::{unique_id, UniqueId};
+use crate::shapes::{Shape, Unit};
 
 /// A generic container for keeping gradients of tensors keyed by the
 /// tensor's [UniqueId].
