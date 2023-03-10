@@ -8,6 +8,13 @@
 //!
 //! The functions are all just pass throughs to the tensor methods.
 //!
+//! # Fallibility
+//! 
+//! All tensor methods also have a `try_*` variant, like [crate::tensor::Tensor::relu()] and [crate::tensor::Tensor::try_relu()].
+//! 
+//! These methods return a [Result], where the error in most cases indicates an allocation
+//! error.
+//! 
 //! # Axes/Dimensions for broadcasting/reductions/selecting
 //!
 //! For the following sections, some traits/functions utilizing const `isize` to determine
