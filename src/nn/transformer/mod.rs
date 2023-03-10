@@ -11,7 +11,7 @@ use rand_distr::uniform::SampleUniform;
 
 use crate::{shapes::*, tensor::*, tensor_ops::*};
 
-use super::traits::*;
+use super::*;
 
 pub mod builder {
     #[derive(Debug, Clone)]
@@ -23,8 +23,8 @@ pub mod builder {
         const FF_DIM: usize,
     >;
 
-    pub use super::decoder::builder::*;
-    pub use super::encoder::builder::*;
+    pub use super::decoder::builder::{TransformerDecoder, TransformerDecoderBlock};
+    pub use super::encoder::builder::{TransformerEncoder, TransformerEncoderBlock};
     pub use super::mha::builder::MultiHeadAttention;
 }
 

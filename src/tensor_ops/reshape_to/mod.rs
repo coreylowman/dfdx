@@ -20,8 +20,33 @@ pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-/// **Requires Nightly** Change the shape of a tensor moving data around.
+/// Change the shape of a tensor moving data around.
+///
+/// Compile time reshapes:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let t: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
+/// let t: Tensor<Rank1<8>, f32, _> = t.reshape();
+/// ```
+///
+/// Compile time failure:
+/// ```compile_fail
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let t: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
+/// let t: Tensor<Rank1<7>, f32, _> = t.reshape();
+/// ```
+///
+/// Runtime reshapes:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let t: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
+/// let t: Tensor<(usize, ), f32, _> = t.reshape_like(&(8, )).unwrap();
+/// ```
 pub trait ReshapeTo: HasErr + HasShape {
+    /// Reshapes a tensor to a different compile time shape.
     fn reshape<Dst: ConstShape>(self) -> Self::WithShape<Dst>
     where
         Self::Shape: ConstShape,
@@ -29,6 +54,7 @@ pub trait ReshapeTo: HasErr + HasShape {
         <Self::Shape as AssertSameNumel<Dst>>::assert_same_numel();
         self.try_reshape().unwrap()
     }
+    /// Reshapes a tensor to a different compile time shape.
     fn try_reshape<Dst: ConstShape>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: ConstShape,
@@ -36,9 +62,11 @@ pub trait ReshapeTo: HasErr + HasShape {
         <Self::Shape as AssertSameNumel<Dst>>::assert_same_numel();
         self.try_reshape_like::<Dst>(&Default::default()).unwrap()
     }
+    /// Reshapes a tensor to a different runtime shape.
     fn reshape_like<Dst: Shape>(self, dst: &Dst) -> Option<Self::WithShape<Dst>> {
         self.try_reshape_like(dst).map(Result::unwrap)
     }
+    /// Reshapes a tensor to a different runtime shape.
     fn try_reshape_like<Dst: Shape>(
         self,
         dst: &Dst,
@@ -65,7 +93,6 @@ impl<S: Shape, E: Dtype, D: ReshapeKernel<E>, T: Tape<E, D>> ReshapeTo for Tenso
     }
 }
 
-#[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
     use crate::tensor::*;
@@ -89,31 +116,31 @@ mod tests {
         let _: Tensor<Rank1<1>, TestDtype, _> = t.clone().reshape();
         let _: Tensor<Rank2<1, 1>, TestDtype, _> = t.clone().reshape();
         let _: Tensor<Rank3<1, 1, 1>, TestDtype, _> = t.clone().reshape();
-        let _: Tensor<Rank4<1, 1, 1, 1>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank4<1, 1, 1, 1>, TestDtype, _> = t.reshape();
 
         let t: Tensor<Rank1<16>, TestDtype, _> = dev.zeros();
         let _: Tensor<Rank1<16>, TestDtype, _> = t.clone().reshape();
         let _: Tensor<Rank2<2, 8>, TestDtype, _> = t.clone().reshape();
         let _: Tensor<Rank3<2, 2, 4>, TestDtype, _> = t.clone().reshape();
-        let _: Tensor<Rank4<2, 2, 2, 2>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank4<2, 2, 2, 2>, TestDtype, _> = t.reshape();
 
         let t: Tensor<Rank2<2, 8>, TestDtype, _> = dev.zeros();
         let _: Tensor<Rank1<16>, TestDtype, _> = t.clone().reshape();
         let _: Tensor<Rank2<8, 2>, TestDtype, _> = t.clone().reshape();
         let _: Tensor<Rank3<2, 2, 4>, TestDtype, _> = t.clone().reshape();
-        let _: Tensor<Rank4<2, 2, 2, 2>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank4<2, 2, 2, 2>, TestDtype, _> = t.reshape();
 
         let t: Tensor<Rank3<2, 2, 4>, TestDtype, _> = dev.zeros();
         let _: Tensor<Rank1<16>, TestDtype, _> = t.clone().reshape();
         let _: Tensor<Rank2<2, 8>, TestDtype, _> = t.clone().reshape();
         let _: Tensor<Rank3<4, 2, 2>, TestDtype, _> = t.clone().reshape();
-        let _: Tensor<Rank4<2, 2, 2, 2>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank4<2, 2, 2, 2>, TestDtype, _> = t.reshape();
 
         let t: Tensor<Rank4<2, 2, 2, 2>, TestDtype, _> = dev.zeros();
         let _: Tensor<Rank1<16>, TestDtype, _> = t.clone().reshape();
         let _: Tensor<Rank2<2, 8>, TestDtype, _> = t.clone().reshape();
         let _: Tensor<Rank3<2, 2, 4>, TestDtype, _> = t.clone().reshape();
-        let _: Tensor<Rank4<4, 1, 2, 2>, TestDtype, _> = t.clone().reshape();
+        let _: Tensor<Rank4<4, 1, 2, 2>, TestDtype, _> = t.reshape();
     }
 
     #[test]

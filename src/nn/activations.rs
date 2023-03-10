@@ -24,19 +24,19 @@ macro_rules! activation_impls {
     };
 }
 
-activation_impls!(ReLU, try_relu, #[doc="Unit struct that impls [Module] as calling [relu()] on `input`."]);
-activation_impls!(GeLU, try_gelu, #[doc="Unit struct that impls [Module] as calling [gelu()] on `input`."]);
-activation_impls!(Sin, try_sin, #[doc="Unit struct that impls [Module] as calling [sin()] on `input`."]);
-activation_impls!(Cos, try_cos, #[doc="Unit struct that impls [Module] as calling [cos()] on `input`."]);
-activation_impls!(Ln, try_ln, #[doc="Unit struct that impls [Module] as calling [ln()] on `input`."]);
-activation_impls!(Exp, try_exp, #[doc="Unit struct that impls [Module] as calling [exp()] on `input`."]);
-activation_impls!(Sigmoid, try_sigmoid, #[doc="Unit struct that impls [Module] as calling [sigmoid()] on `input`."]);
-activation_impls!(Tanh, try_tanh, #[doc="Unit struct that impls [Module] as calling [tanh()] on `input`."]);
-activation_impls!(Square, try_square, #[doc="Unit struct that impls [Module] as calling [square()] on `input`."]);
-activation_impls!(Sqrt, try_sqrt, #[doc="Unit struct that impls [Module] as calling [sqrt()] on `input`."]);
-activation_impls!(Abs, try_abs, #[doc="Unit struct that impls [Module] as calling [abs()] on `input`."]);
+activation_impls!(ReLU, try_relu, #[doc="Calls [relu()]."]);
+activation_impls!(GeLU, try_gelu, #[doc="Calls [gelu()]."]);
+activation_impls!(Sin, try_sin, #[doc="Calls [sin()]."]);
+activation_impls!(Cos, try_cos, #[doc="Calls [cos()]."]);
+activation_impls!(Ln, try_ln, #[doc="Calls [ln()]."]);
+activation_impls!(Exp, try_exp, #[doc="Calls [exp()]."]);
+activation_impls!(Sigmoid, try_sigmoid, #[doc="Calls [sigmoid()]."]);
+activation_impls!(Tanh, try_tanh, #[doc="Calls [tanh()]."]);
+activation_impls!(Square, try_square, #[doc="Calls [square()]."]);
+activation_impls!(Sqrt, try_sqrt, #[doc="Calls [sqrt()]."]);
+activation_impls!(Abs, try_abs, #[doc="Calls [abs()]."]);
 
-/// Unit struct that impls [Module] as calling [softmax()] on `input`."
+/// Calls [softmax()].
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Softmax;
 
@@ -57,7 +57,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{nn::traits::*, tests::TestDevice};
+    use crate::{nn::*, tests::TestDevice};
 
     use super::*;
 

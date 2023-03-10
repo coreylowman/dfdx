@@ -18,7 +18,18 @@ impl<E: Dtype, D: DeviceStorage> TensorVisitor<E, D> for Counter {
         Ok(())
     }
 }
+
+/// Get the number of trainable parameters in a model.
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// type Model = Linear<2, 5>;
+/// let model = dev.build_module::<Model, f32>();
+/// assert_eq!(model.num_trainable_params(), 2 * 5 + 5);
+/// ```
 pub trait NumParams<E: Dtype, D: DeviceStorage>: TensorCollection<E, D> {
+    /// Returns the number of trainable params in any model.
     fn num_trainable_params(&self) -> usize {
         let mut op = Counter(0);
         Self::iter_tensors(&mut RecursiveWalker {

@@ -7,34 +7,34 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 /// Stack an array or vec of tensors together along a new dimension.
+///
+/// An array of tensors will be turned into a [Const] dim, and
+/// a `Vec` of tensors will be turned into a [usize] dim.
+///
+/// **Pytorch equivalent** `torch.stack`.
+///
+/// Stacking with an array:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
+/// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
+/// let _: Tensor<Rank3<2, 3, 4>, f32, _> = [a, b].stack();
+/// ```
+///
+/// Stacking with a vec:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
+/// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
+/// let _: Tensor<(usize, Const<3>, Const<4>), f32, _> = vec![a, b].stack();
+/// ```
 pub trait TryStack: Sized {
     type Stacked;
     type Err: std::fmt::Debug;
 
     /// Stack an array or vec of tensors together along a new dimension.
-    ///
-    /// An array of tensors will be turned into a [Const] dim, and
-    /// a `Vec` of tensors will be turned into a [usize] dim.
-    ///
-    /// **Pytorch equivalent** `torch.stack`.
-    ///
-    /// Stacking with an array:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
-    /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
-    /// let _: Tensor<Rank3<2, 3, 4>, f32, _> = [a, b].stack();
-    /// ```
-    ///
-    /// Stacking with a vec:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
-    /// let b: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
-    /// let _: Tensor<(usize, Const<3>, Const<4>), f32, _> = vec![a, b].stack();
-    /// ```
     fn stack(self) -> Self::Stacked {
         self.try_stack().unwrap()
     }

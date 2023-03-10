@@ -21,7 +21,7 @@ keywords = [
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [package.metadata.docs.rs]
-features = ["nightly", "numpy"]
+features = ["nightly", "numpy", "safetensors", "cuda", "ci-check"]
 
 [dependencies]
 no-std-compat = { version = "0.4.1", default-features = false, features = [ "alloc", "compat_hash" ], optional = true }

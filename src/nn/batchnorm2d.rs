@@ -1,6 +1,6 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
 
-use super::traits::*;
+use super::*;
 
 pub mod builder {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]

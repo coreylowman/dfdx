@@ -43,7 +43,7 @@ pub fn div<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R: Defaul
     lhs / rhs
 }
 
-/// Fallible version of std::ops::Div
+/// Fallible version of [std::ops::Div]. See [div]
 pub trait TryDiv<Rhs = Self>: HasErr {
     fn try_div(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
