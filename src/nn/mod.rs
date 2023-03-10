@@ -61,7 +61,7 @@
 //! ```
 //!
 //! # Allocating & zeroing gradients
-//! 
+//!
 //! Use [ZeroGrads::alloc_grads()] and [ZeroGrads::zero_grads()] to reduce allocations,
 //! and enable gradient accumulation!
 //! This is the equivalent of pytorch's `Optimizer.zero_grad`
@@ -77,10 +77,10 @@
 //! ```
 //!
 //! # Exponential Moving Average (EMA)
-//! 
+//!
 //! All models implement [ModelEMA::ema()] to keep track of an exponential moving average
 //! of an entire model.
-//! 
+//!
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
@@ -133,9 +133,9 @@
 //! # Saving and Loading
 //!
 //! # numpy
-//! 
+//!
 //! Enable with the `"numpy"` feature.
-//! 
+//!
 //! Call [SaveToNpz::save()] and [LoadFromNpz::load()] methods. All modules provided here implement it,
 //! including tuples. These all save to/from `.npz` files, which are basically zip files with multiple `.npy`
 //!  files.
@@ -148,17 +148,17 @@
 //! state_dict = {k: torch.from_numpy(v) for k, v in np.load("dfdx-model.npz").items()}
 //! mlp.load_state_dict(state_dict)
 //! ```
-//! 
+//!
 //! # safetensors
-//! 
+//!
 //! Enable with the `"safetensors"` feature.
 //!
 //! The feature `safetensors` allows to do the same with
 //! [https://github.com/huggingface/safetensors]().
-//! 
+//!
 //! Call [SaveToSafetensors::save_safetensors()] and [LoadFromSafetensors::load_safetensors()] funcs.
-//! All modules provided here implement it, including tuples. 
-//! 
+//! All modules provided here implement it, including tuples.
+//!
 //! These all save to/from `.safetensors` files, which are flat layout with JSON
 //! header, allowing for super fast loads (with memory mapping).
 //!
@@ -246,7 +246,10 @@ pub mod modules {
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
     #[cfg(feature = "nightly")]
-    pub use super::transformer::*;
+    pub use super::transformer::{
+        MultiHeadAttention, Transformer, TransformerDecoder, TransformerDecoderBlock,
+        TransformerEncoder, TransformerEncoderBlock,
+    };
     pub use super::unbiased_linear::UnbiasedLinear;
     pub use super::*;
 }
@@ -275,7 +278,10 @@ pub mod builders {
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
     #[cfg(feature = "nightly")]
-    pub use super::transformer::builder::*;
+    pub use super::transformer::builder::{
+        MultiHeadAttention, Transformer, TransformerDecoder, TransformerDecoderBlock,
+        TransformerEncoder, TransformerEncoderBlock,
+    };
     pub use super::unbiased_linear::builder::UnbiasedLinear;
     pub use super::*;
 }

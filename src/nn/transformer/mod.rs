@@ -23,8 +23,8 @@ pub mod builder {
         const FF_DIM: usize,
     >;
 
-    pub use super::decoder::builder::*;
-    pub use super::encoder::builder::*;
+    pub use super::decoder::builder::{TransformerDecoder, TransformerDecoderBlock};
+    pub use super::encoder::builder::{TransformerEncoder, TransformerEncoderBlock};
     pub use super::mha::builder::MultiHeadAttention;
 }
 

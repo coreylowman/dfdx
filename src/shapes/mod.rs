@@ -2,6 +2,7 @@
 //!
 //! Example shapes:
 //! ```rust
+//! # use dfdx::shapes::*;
 //! let _: Rank3<2, 3, 4> = Default::default();
 //! let _: (Const<2>, Const<3>) = Default::default();
 //! let _: (usize, Const<4>) = (3, Const);

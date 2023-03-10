@@ -20,7 +20,7 @@
 //! let dev: Cpu = Cpu::seed_from_u64(0);
 //! ```
 //!
-//! ```no_run
+//! ```ignore
 //! # use dfdx::prelude::*;
 //! let dev: Cuda = Default::default();
 //! let dev: Cuda = Cuda::seed_from_u64(1234);
