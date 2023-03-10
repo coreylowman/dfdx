@@ -4,7 +4,7 @@ use crate::tensor::{DeviceStorage, HasErr, Tensor};
 
 use cudarc::{
     cublas::{result::CublasError, CudaBlas},
-    driver::{CudaDevice, CudaSlice, DeviceSlice, DriverError},
+    driver::{CudaDevice, CudaSlice, CudaStream, DeviceSlice, DriverError},
 };
 use std::{sync::Arc, vec::Vec};
 
@@ -15,6 +15,8 @@ pub struct Cuda {
     pub(crate) cpu: Cpu,
     pub(crate) dev: Arc<CudaDevice>,
     pub(crate) blas: Arc<CudaBlas>,
+    /// A second stream for kernels to optionally execute on.
+    pub(crate) par_stream: Arc<CudaStream>,
 }
 
 #[derive(Debug)]
@@ -64,7 +66,13 @@ impl Cuda {
         let cpu = Cpu::seed_from_u64(seed);
         let dev = CudaDevice::new(ordinal)?;
         let blas = Arc::new(CudaBlas::new(dev.clone())?);
-        Ok(Self { cpu, dev, blas })
+        let par_stream = Arc::new(dev.fork_default_stream()?);
+        Ok(Self {
+            cpu,
+            dev,
+            blas,
+            par_stream,
+        })
     }
 
     /// Block until kernels finish processing. Useful for benchmarking.
