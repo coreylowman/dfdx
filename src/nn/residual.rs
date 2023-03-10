@@ -1,4 +1,4 @@
-use crate::{shapes::*, tensor::*, tensor_ops::TryAdd};
+use crate::{prelude::Device, shapes::*, tensor::*, tensor_ops::TryAdd};
 
 use super::traits::*;
 
@@ -31,9 +31,17 @@ impl<D: DeviceStorage, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Res
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, F: TensorCollection<E, D>> TensorCollection<E, D> for Residual<F> {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
+impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>> TensorCollection<E, D> for Residual<F> {
+    type Output<E2: Dtype, D2: Device<E2>> = Residual<F::Output<E2, D2>>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        Ok(Some(Residual(crate::try_option!(visitor.visit_module(
+            "0",
+            |s| &s.0,
+            |s| &mut s.0
+        )?))))
     }
 }
 

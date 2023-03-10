@@ -118,11 +118,23 @@ impl<const M: usize, const H: usize, const F: usize, E, D: Device<E>> TensorColl
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("self_attn", |s| &s.self_attn, |s| &mut s.self_attn)?;
-        visitor.visit_module("norm1", |s| &s.norm1, |s| &mut s.norm1)?;
-        visitor.visit_module("ff", |s| &s.ff, |s| &mut s.ff)?;
-        visitor.visit_module("norm2", |s| &s.norm2, |s| &mut s.norm2)
+    type Output<E2: Dtype, D2: Device<E2>> = TransformerEncoderBlock<M, H, F, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        let self_attn =
+            visitor.visit_module("self_attn", |s| &s.self_attn, |s| &mut s.self_attn)?;
+        let norm1 = visitor.visit_module("norm1", |s| &s.norm1, |s| &mut s.norm1)?;
+        let ff = visitor.visit_module("ff", |s| &s.ff, |s| &mut s.ff)?;
+        let norm2 = visitor.visit_module("norm2", |s| &s.norm2, |s| &mut s.norm2)?;
+
+        Ok(Some(TransformerEncoderBlock {
+            self_attn: crate::try_option!(self_attn),
+            norm1: crate::try_option!(norm1),
+            ff: crate::try_option!(ff),
+            norm2: crate::try_option!(norm2),
+        }))
     }
 }
 

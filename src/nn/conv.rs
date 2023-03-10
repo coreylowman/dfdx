@@ -64,8 +64,12 @@ where
     E: Dtype + Float + SampleUniform,
     D: Device<E>,
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
+    type Output<E2: Dtype, D2: Device<E2>> = Conv2D<I, O, K, S, P, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        let weight = visitor.visit_tensor(
             "weight",
             |s| &s.weight,
             |s| &mut s.weight,
@@ -73,7 +77,11 @@ where
                 let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
                 t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
             }),
-        )
+        )?;
+
+        Ok(Some(Conv2D {
+            weight: crate::try_option!(weight),
+        }))
     }
 }
 

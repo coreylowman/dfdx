@@ -2,6 +2,8 @@ use crate::{gradients::*, shapes::*, tensor::*, tensor_ops::*};
 
 use super::traits::*;
 
+use num_traits::FromPrimitive;
+
 pub mod builder {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     pub struct BatchNorm2D<const C: usize>;
@@ -242,31 +244,44 @@ impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for BatchNorm2D<C
 }
 
 impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNorm2D<C, E, D> {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
+    type Output<E2: Dtype, D2: Device<E2>> = BatchNorm2D<C, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        let scale = visitor.visit_tensor(
             "scale",
             |s| &s.scale,
             |s| &mut s.scale,
             TensorOptions::reset_to_ones(),
         )?;
-        visitor.visit_tensor(
+        let bias = visitor.visit_tensor(
             "bias",
             |s| &s.bias,
             |s| &mut s.bias,
             TensorOptions::reset_to_zeros(),
         )?;
-        visitor.visit_tensor(
+        let running_mean = visitor.visit_tensor(
             "running_mean",
             |s| &s.running_mean,
             |s| &mut s.running_mean,
             TensorOptions::detached(|t| t.try_fill_with_zeros()),
         )?;
-        visitor.visit_tensor(
+        let running_var = visitor.visit_tensor(
             "running_var",
             |s| &s.running_var,
             |s| &mut s.running_var,
             TensorOptions::detached(|t| t.try_fill_with_ones()),
-        )
+        )?;
+
+        Ok(Some(BatchNorm2D {
+            scale: crate::try_option!(scale),
+            bias: crate::try_option!(bias),
+            running_mean: crate::try_option!(running_mean),
+            running_var: crate::try_option!(running_var),
+            epsilon: <V::Func as TensorFunction<E, D>>::OutE::from_f32(1e-5).unwrap(),
+            momentum: <V::Func as TensorFunction<E, D>>::OutE::from_f32(0.1).unwrap(),
+        }))
     }
 }
 

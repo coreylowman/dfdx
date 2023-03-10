@@ -2,6 +2,8 @@ use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
 
 use super::traits::*;
 
+use num_traits::FromPrimitive;
+
 pub mod builder {
     #[derive(Debug)]
     pub struct LayerNorm1D<const M: usize>;
@@ -56,19 +58,29 @@ impl<const M: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for LayerNorm1D<M
 }
 
 impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNorm1D<M, E, D> {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
+    type Output<E2: Dtype, D2: Device<E2>> = LayerNorm1D<M, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        let gamma = visitor.visit_tensor(
             "gamma",
             |s| &s.gamma,
             |s| &mut s.gamma,
             TensorOptions::reset_to_ones(),
         )?;
-        visitor.visit_tensor(
+        let beta = visitor.visit_tensor(
             "beta",
             |s| &s.beta,
             |s| &mut s.beta,
             TensorOptions::reset_to_zeros(),
-        )
+        )?;
+
+        Ok(Some(LayerNorm1D {
+            gamma: crate::try_option!(gamma),
+            beta: crate::try_option!(beta),
+            epsilon: <V::Func as TensorFunction<E, D>>::OutE::from_f32(1e-5).unwrap(),
+        }))
     }
 }
 

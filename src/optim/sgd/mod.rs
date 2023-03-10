@@ -8,6 +8,7 @@ use std::marker::PhantomData;
 use crate::{
     gradients::Gradients,
     nn::tensor_collection::*,
+    prelude::Device,
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Tensor},
 };
@@ -132,7 +133,7 @@ impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
     }
 }
 
-pub(super) trait SgdKernel<E: Dtype>: DeviceStorage {
+pub trait SgdKernel<E: Dtype>: DeviceStorage {
     fn update(
         &self,
         cfg: &SgdConfig<E>,
@@ -142,7 +143,7 @@ pub(super) trait SgdKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<E: Dtype, D: SgdKernel<E>, M> TensorVisitor<E, D>
+impl<E: Dtype, D: Device<E>, M> TensorVisitor<E, D>
     for (&mut Sgd<M, E, D>, &Gradients<E, D>, UnusedTensors)
 {
     type Viewer = ViewTensorMut;
@@ -161,15 +162,20 @@ impl<E: Dtype, D: SgdKernel<E>, M> TensorVisitor<E, D>
             None => self.2.add(p),
             Some(g) => {
                 let v = self.0.velocity.get_or_alloc_mut(p)?;
-                p.device
-                    .update(&self.0.cfg, std::sync::Arc::make_mut(&mut p.data), v, g)?;
+                SgdKernel::update(
+                    &p.device,
+                    &self.0.cfg,
+                    std::sync::Arc::make_mut(&mut p.data),
+                    v,
+                    g,
+                )?;
             }
         }
         Ok(())
     }
 }
 
-impl<M: TensorCollection<E, D>, D: SgdKernel<E>, E: Dtype> Optimizer<M, D, E> for Sgd<M, E, D> {
+impl<M: TensorCollection<E, D>, D: Device<E>, E: Dtype> Optimizer<M, D, E> for Sgd<M, E, D> {
     fn update(
         &mut self,
         module: &mut M,

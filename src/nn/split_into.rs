@@ -1,4 +1,4 @@
-use crate::{shapes::Dtype, tensor::*};
+use crate::{prelude::Device, shapes::Dtype, tensor::*};
 
 use super::traits::*;
 
@@ -32,11 +32,17 @@ impl<T: BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildModule<D, E> for Spl
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>> TensorCollection<E, D>
-    for SplitInto<T>
-{
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
+impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> TensorCollection<E, D> for SplitInto<T> {
+    type Output<E2: Dtype, D2: Device<E2>> = SplitInto<T::Output<E2, D2>>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        Ok(Some(SplitInto(crate::try_option!(visitor.visit_module(
+            "0",
+            |s| &s.0,
+            |s| &mut s.0
+        )?))))
     }
 }
 

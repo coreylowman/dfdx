@@ -70,11 +70,15 @@ impl<const V: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Device
     }
 }
 
-impl<const C: usize, const M: usize, E: Dtype + Float + SampleUniform, D: SampleTensor<E>>
+impl<const C: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
     TensorCollection<E, D> for Embedding<C, M, E, D>
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
+    type Output<E2: Dtype, D2: Device<E2>> = Embedding<C, M, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        let weight = visitor.visit_tensor(
             "weight",
             |s| &s.weight,
             |s| &mut s.weight,
@@ -82,7 +86,11 @@ impl<const C: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Sample
                 let b: E = E::ONE / E::from_usize(C).unwrap().sqrt();
                 t.try_fill_with_distr(Uniform::new(-b, b))
             }),
-        )
+        )?;
+
+        Ok(Some(Embedding {
+            weight: crate::try_option!(weight),
+        }))
     }
 }
 

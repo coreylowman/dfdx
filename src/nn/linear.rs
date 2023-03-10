@@ -68,11 +68,15 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device
     }
 }
 
-impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: SampleTensor<E>>
-    TensorCollection<E, D> for Linear<I, O, E, D>
+impl<const I: usize, const O: usize, E: Dtype, D: Device<E>> TensorCollection<E, D>
+    for Linear<I, O, E, D>
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
+    type Output<E2: Dtype, D2: Device<E2>> = Linear<I, O, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        let weight = visitor.visit_tensor(
             "weight",
             |s| &s.weight,
             |s| &mut s.weight,
@@ -81,7 +85,7 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Sample
                 t.try_fill_with_distr(Uniform::new(-b, b))
             }),
         )?;
-        visitor.visit_tensor(
+        let bias = visitor.visit_tensor(
             "bias",
             |s| &s.bias,
             |s| &mut s.bias,
@@ -89,7 +93,12 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Sample
                 let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
                 t.try_fill_with_distr(Uniform::new(-b, b))
             }),
-        )
+        )?;
+
+        Ok(Some(Linear {
+            weight: crate::try_option!(weight),
+            bias: crate::try_option!(bias),
+        }))
     }
 }
 

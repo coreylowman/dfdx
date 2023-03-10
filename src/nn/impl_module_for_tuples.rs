@@ -4,10 +4,13 @@ use super::traits::*;
 
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
-        impl<E: Dtype, D: DeviceStorage, $($name: TensorCollection<E, D>),+> TensorCollection<E, D> for ($($name,)+) {
-            fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-                $(visitor.visit_module(&std::format!("{}", $idx), |s| &s.$idx, |s| &mut s.$idx)?;)+
-                Ok(())
+        impl<E: Dtype, D: Device<E>, $($name: TensorCollection<E, D>),+> TensorCollection<E, D> for ($($name,)+) {
+            type Output<E2: Dtype, D2: Device<E2>> = ($($name::Output<E2, D2>,)+);
+
+            #[allow(non_snake_case)]
+            fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+                $(let $name = visitor.visit_module(&std::format!("{}", $idx), |s| &s.$idx, |s| &mut s.$idx)?;)+
+                Ok(Some(($(crate::try_option!($name),)+)))
             }
         }
 

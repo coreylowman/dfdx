@@ -1,9 +1,9 @@
 use super::tensor_collection::*;
 
-use crate::{shapes::*, tensor::*};
+use crate::{prelude::Device, shapes::*, tensor::*};
 
 struct Counter(usize);
-impl<E: Dtype, D: DeviceStorage> TensorVisitor<E, D> for Counter {
+impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for Counter {
     type Viewer = ViewTensorRef;
     type Err = D::Err;
 
@@ -18,7 +18,7 @@ impl<E: Dtype, D: DeviceStorage> TensorVisitor<E, D> for Counter {
         Ok(())
     }
 }
-pub trait NumParams<E: Dtype, D: DeviceStorage>: TensorCollection<E, D> {
+pub trait NumParams<E: Dtype, D: Device<E>>: TensorCollection<E, D> {
     fn num_trainable_params(&self) -> usize {
         let mut op = Counter(0);
         Self::iter_tensors(&mut RecursiveWalker {
@@ -29,4 +29,4 @@ pub trait NumParams<E: Dtype, D: DeviceStorage>: TensorCollection<E, D> {
         op.0
     }
 }
-impl<E: Dtype, D: DeviceStorage, M: TensorCollection<E, D>> NumParams<E, D> for M {}
+impl<E: Dtype, D: Device<E>, M: TensorCollection<E, D>> NumParams<E, D> for M {}

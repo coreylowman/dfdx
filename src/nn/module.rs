@@ -1,9 +1,9 @@
-use crate::shapes::Dtype;
 #[cfg(feature = "cuda")]
 pub use crate::tensor::OnCuda;
 pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
+use crate::{prelude::Device, shapes::Dtype};
 
-use super::tensor_collection::{ModuleVisitor, TensorCollection};
+use super::tensor_collection::*;
 
 /// Immutable forward of `Input` that produces [Module::Output].
 /// See [ModuleMut] for mutable forward.
@@ -89,9 +89,13 @@ impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule> BuildModule<D, E> for T {
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule> TensorCollection<E, D> for T {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(_: &mut V) -> Result<(), V::Err> {
-        Ok(())
+impl<E: Dtype, D: Device<E>, T: ZeroSizedModule> TensorCollection<E, D> for T {
+    type Output<E2: Dtype, D2: Device<E2>> = T;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        _visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        Ok(Some(Default::default()))
     }
 }
 

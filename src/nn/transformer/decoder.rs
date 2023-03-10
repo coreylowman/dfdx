@@ -83,8 +83,14 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
+    type Output<E2: Dtype, D2: Device<E2>> = TransformerDecoder<M, H, F, L, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        Ok(Some(TransformerDecoder(crate::try_option!(
+            visitor.visit_module("0", |s| &s.0, |s| &mut s.0)?
+        ))))
     }
 }
 
@@ -190,13 +196,27 @@ impl<const M: usize, const N: usize, const F: usize, E, D: Device<E>> TensorColl
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("self_attn", |s| &s.self_attn, |s| &mut s.self_attn)?;
-        visitor.visit_module("norm1", |s| &s.norm1, |s| &mut s.norm1)?;
-        visitor.visit_module("mh_attn", |s| &s.mh_attn, |s| &mut s.mh_attn)?;
-        visitor.visit_module("norm2", |s| &s.norm2, |s| &mut s.norm2)?;
-        visitor.visit_module("ff", |s| &s.ff, |s| &mut s.ff)?;
-        visitor.visit_module("norm", |s| &s.norm3, |s| &mut s.norm3)
+    type Output<E2: Dtype, D2: Device<E2>> = TransformerDecoderBlock<M, N, F, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        let self_attn =
+            visitor.visit_module("self_attn", |s| &s.self_attn, |s| &mut s.self_attn)?;
+        let norm1 = visitor.visit_module("norm1", |s| &s.norm1, |s| &mut s.norm1)?;
+        let mh_attn = visitor.visit_module("mh_attn", |s| &s.mh_attn, |s| &mut s.mh_attn)?;
+        let norm2 = visitor.visit_module("norm2", |s| &s.norm2, |s| &mut s.norm2)?;
+        let ff = visitor.visit_module("ff", |s| &s.ff, |s| &mut s.ff)?;
+        let norm3 = visitor.visit_module("norm3", |s| &s.norm3, |s| &mut s.norm3)?;
+
+        Ok(Some(TransformerDecoderBlock {
+            self_attn: crate::try_option!(self_attn),
+            norm1: crate::try_option!(norm1),
+            mh_attn: crate::try_option!(mh_attn),
+            norm2: crate::try_option!(norm2),
+            ff: crate::try_option!(ff),
+            norm3: crate::try_option!(norm3),
+        }))
     }
 }
 

@@ -1,9 +1,13 @@
 use crate::{
+    prelude::{Cpu, Device},
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, Tensor},
+    tensor::Tensor,
 };
 
-use super::collection::{ModuleVisitor, TensorCollection, TensorOptions};
+use super::{
+    collection::{ModuleVisitor, TensorCollection, TensorOptions},
+    ModuleVisitorOutput, TensorFunctionOutput,
+};
 
 use std::string::String;
 
@@ -15,8 +19,24 @@ pub struct RecursiveWalker<'a, M, F> {
     pub f: &'a mut F,
 }
 
+// TODO: Documentation
 /// Something that can visit [Tensor]s. Used in conjunction with [RecursiveWalker].
-pub trait TensorVisitor<E: Dtype, D: DeviceStorage> {
+pub trait TensorFunction<E: Dtype, D: Device<E>> {
+    /// The type of tensor this struct uses. E.g. [ViewTensorMut], or [ViewTensorRef]
+    type Viewer: TensorViewer;
+    type Err;
+    type OutE: Dtype;
+    type OutD: Device<Self::OutE>;
+
+    fn apply<S: Shape>(
+        &mut self,
+        opts: TensorOptions<S, E, D>,
+        t: <Self::Viewer as TensorViewer>::View<'_, Tensor<S, E, D>>,
+    ) -> TensorFunctionOutput<Self, S, E, D>;
+}
+
+/// Something that can visit [Tensor]s. Used in conjunction with [RecursiveWalker].
+pub trait TensorVisitor<E: Dtype, D: Device<E>> {
     /// The type of tensor this struct uses. E.g. [ViewTensorMut], or [ViewTensorRef]
     type Viewer: TensorViewer;
     type Err;
@@ -26,6 +46,22 @@ pub trait TensorVisitor<E: Dtype, D: DeviceStorage> {
         opts: TensorOptions<S, E, D>,
         t: <Self::Viewer as TensorViewer>::View<'_, Tensor<S, E, D>>,
     ) -> Result<(), Self::Err>;
+}
+
+impl<E: Dtype, D: Device<E>, T: TensorVisitor<E, D>> TensorFunction<E, D> for T {
+    type Viewer = T::Viewer;
+    type Err = T::Err;
+    type OutE = f32;
+    type OutD = Cpu;
+
+    fn apply<S: Shape>(
+        &mut self,
+        opts: TensorOptions<S, E, D>,
+        t: <Self::Viewer as TensorViewer>::View<'_, Tensor<S, E, D>>,
+    ) -> Result<Option<Tensor<S, f32, Cpu>>, Self::Err> {
+        self.visit(opts, t)?;
+        Ok(None)
+    }
 }
 
 /// Something that can view [Tensor]s in different ways. For example
@@ -59,17 +95,18 @@ pub enum ViewTensorMut {}
 #[derive(Debug)]
 pub enum ViewTensorName {}
 
-impl<'a, M, E: Dtype, D: DeviceStorage, F: TensorVisitor<E, D>> ModuleVisitor<M, E, D>
-    for RecursiveWalker<'a, <F::Viewer as TensorViewer>::View<'a, M>, F>
+impl<'a, M: TensorCollection<E, D>, E: Dtype, D: Device<E>, F: TensorFunction<E, D>>
+    ModuleVisitor<M, E, D> for RecursiveWalker<'a, <F::Viewer as TensorViewer>::View<'a, M>, F>
 {
     type Err = F::Err;
+    type Func = F;
 
     fn visit_module<Field, GetRef, GetMut>(
         &mut self,
         name: &str,
         mut get_refs: GetRef,
         mut get_muts: GetMut,
-    ) -> Result<(), Self::Err>
+    ) -> ModuleVisitorOutput<F, Field, E, D>
     where
         GetRef: FnMut(&M) -> &Field,
         GetMut: FnMut(&mut M) -> &mut Field,
@@ -79,8 +116,7 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: TensorVisitor<E, D>> ModuleVisitor<M,
             m: F::Viewer::view_field(&mut self.m, name, &mut get_refs, &mut get_muts),
             f: self.f,
         };
-        Field::iter_tensors(&mut walker)?;
-        Ok(())
+        Field::iter_tensors(&mut walker)
     }
 
     fn visit_tensor<S: Shape, GetRef, GetMut>(
@@ -89,16 +125,15 @@ impl<'a, M, E: Dtype, D: DeviceStorage, F: TensorVisitor<E, D>> ModuleVisitor<M,
         mut get_refs: GetRef,
         mut get_muts: GetMut,
         opts: TensorOptions<S, E, D>,
-    ) -> Result<(), Self::Err>
+    ) -> TensorFunctionOutput<F, S, E, D>
     where
         GetRef: FnMut(&M) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,
     {
-        self.f.visit(
+        self.f.apply(
             opts,
             F::Viewer::view_field(&mut self.m, name, &mut get_refs, &mut get_muts),
-        )?;
-        Ok(())
+        )
     }
 }
 

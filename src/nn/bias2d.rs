@@ -62,13 +62,21 @@ impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2> for Bi
 }
 
 impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for Bias2D<C, E, D> {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
-            "beta",
+    type Output<E2: Dtype, D2: Device<E2>> = Bias2D<C, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        let bias = visitor.visit_tensor(
+            "bias",
             |s| &s.bias,
             |s| &mut s.bias,
             TensorOptions::reset_to_zeros(),
-        )
+        )?;
+
+        Ok(Some(Bias2D {
+            bias: crate::try_option!(bias),
+        }))
     }
 }
 

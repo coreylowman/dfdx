@@ -1,8 +1,9 @@
 use crate::{
+    prelude::Device,
     shapes::{Dtype, Shape},
     tensor::{
         numpy::{NpzError, NumpyDtype},
-        CopySlice, Tensor,
+        Tensor,
     },
 };
 
@@ -21,7 +22,7 @@ use zip::{
 /// Something that can be saved to a `.npz` (which is a `.zip`).
 ///
 /// All [super::Module]s in nn implement SaveToNpz, and the zips are formatted in a `.npz` fashion.
-pub trait SaveToNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<E, D> {
+pub trait SaveToNpz<E: Dtype + NumpyDtype, D: Device<E>>: TensorCollection<E, D> {
     /// Save this object into the `.npz` file determined located at `path`.
     ///
     /// Example:
@@ -61,15 +62,16 @@ pub trait SaveToNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<E,
         Self::iter_tensors(&mut RecursiveWalker {
             m: (self, String::new()),
             f: w,
-        })
+        })?;
+        Ok(())
     }
 }
-impl<E: Dtype + NumpyDtype, D: CopySlice<E>, T: TensorCollection<E, D>> SaveToNpz<E, D> for T {}
+impl<E: Dtype + NumpyDtype, D: Device<E>, T: TensorCollection<E, D>> SaveToNpz<E, D> for T {}
 
 /// Something that can be loaded from a `.npz` file (which is a `zip` file).
 ///
 /// All [super::Module]s in nn implement LoadFromNpz, and the zips are formatted in a `.npz` fashion.
-pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<E, D> {
+pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: Device<E>>: TensorCollection<E, D> {
     /// Loads data from a `.npz` zip archive at the specified `path`.
     ///
     /// Example:
@@ -105,12 +107,13 @@ pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: CopySlice<E>>: TensorCollection<
         Self::iter_tensors(&mut RecursiveWalker {
             m: (self, String::new()),
             f: r,
-        })
+        })?;
+        Ok(())
     }
 }
-impl<E: Dtype + NumpyDtype, D: CopySlice<E>, T: TensorCollection<E, D>> LoadFromNpz<E, D> for T {}
+impl<E: Dtype + NumpyDtype, D: Device<E>, T: TensorCollection<E, D>> LoadFromNpz<E, D> for T {}
 
-impl<W: Write + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D>
+impl<W: Write + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D>
     for zip::ZipWriter<W>
 {
     type Viewer = (ViewTensorRef, ViewTensorName);
@@ -125,7 +128,7 @@ impl<W: Write + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D
     }
 }
 
-impl<R: Read + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D>
+impl<R: Read + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D>
     for zip::ZipArchive<R>
 {
     type Viewer = (ViewTensorMut, ViewTensorName);
@@ -143,7 +146,7 @@ impl<R: Read + Seek, E: Dtype + NumpyDtype, D: CopySlice<E>> TensorVisitor<E, D>
 #[cfg(test)]
 mod tests {
     use crate::{
-        nn::{builders::*, *},
+        nn::builders::*,
         shapes::*,
         tensor::{numpy::NumpyDtype, AsArray, SampleTensor, Tensor},
         tensor_ops::Device,

@@ -63,11 +63,15 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device
     }
 }
 
-impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: SampleTensor<E>>
+impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
     TensorCollection<E, D> for UnbiasedLinear<I, O, E, D>
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
+    type Output<E2: Dtype, D2: Device<E2>> = UnbiasedLinear<I, O, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        let weight = visitor.visit_tensor(
             "weight",
             |s| &s.weight,
             |s| &mut s.weight,
@@ -75,7 +79,11 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Sample
                 let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
                 t.try_fill_with_distr(Uniform::new(-b, b))
             }),
-        )
+        )?;
+
+        Ok(Some(UnbiasedLinear {
+            weight: crate::try_option!(weight),
+        }))
     }
 }
 

@@ -2,12 +2,12 @@ use super::tensor_collection::{
     RecursiveWalker, TensorCollection, TensorOptions, TensorVisitor, ViewTensorMut, ViewTensorRef,
 };
 
-use crate::{shapes::*, tensor::*, tensor_ops::axpy::AxpyKernel};
+use crate::{prelude::Device, shapes::*, tensor::*};
 
 struct ModelEMAOp<E> {
     decay: E,
 }
-impl<E: Dtype, D: AxpyKernel<E>> TensorVisitor<E, D> for ModelEMAOp<E> {
+impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for ModelEMAOp<E> {
     type Viewer = (ViewTensorMut, ViewTensorRef);
     type Err = D::Err;
 
@@ -24,7 +24,7 @@ impl<E: Dtype, D: AxpyKernel<E>> TensorVisitor<E, D> for ModelEMAOp<E> {
 }
 
 /// Performs model exponential moving average on two modules.
-pub trait ModelEMA<E: Dtype, D: AxpyKernel<E>>: TensorCollection<E, D> {
+pub trait ModelEMA<E: Dtype, D: Device<E>>: TensorCollection<E, D> {
     /// Does `self = self * decay + other * (1 - decay), using
     /// [crate::tensor_ops::axpy()] on parameters.
     ///
@@ -39,10 +39,11 @@ pub trait ModelEMA<E: Dtype, D: AxpyKernel<E>>: TensorCollection<E, D> {
         Self::iter_tensors(&mut RecursiveWalker {
             m: (self, other),
             f: &mut op,
-        })
+        })?;
+        Ok(())
     }
 }
-impl<E: Dtype, D: AxpyKernel<E>, M: TensorCollection<E, D>> ModelEMA<E, D> for M {}
+impl<E: Dtype, D: Device<E>, M: TensorCollection<E, D>> ModelEMA<E, D> for M {}
 
 #[cfg(test)]
 mod tests {

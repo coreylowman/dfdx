@@ -8,6 +8,7 @@ use std::{marker::PhantomData, sync::Arc};
 use crate::{
     gradients::Gradients,
     nn::tensor_collection::*,
+    prelude::Device,
     shapes::{Dtype, Shape},
     tensor::DeviceStorage,
 };
@@ -95,7 +96,7 @@ impl<M, E: Dtype, D: DeviceStorage> Adam<M, E, D> {
     }
 }
 
-pub(super) trait AdamKernel<E: Dtype>: DeviceStorage {
+pub trait AdamKernel<E: Dtype>: DeviceStorage {
     fn update(
         &self,
         t: i32,
@@ -107,7 +108,7 @@ pub(super) trait AdamKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D>
+impl<M, D: Device<E>, E: Dtype> TensorVisitor<E, D>
     for (&mut Adam<M, E, D>, &Gradients<E, D>, UnusedTensors)
 {
     type Viewer = ViewTensorMut;
@@ -127,7 +128,8 @@ impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D>
             Some(g) => {
                 let m_t = self.0.moment1.get_or_alloc_mut(p)?;
                 let v_t = self.0.moment2.get_or_alloc_mut(p)?;
-                p.device.update(
+                AdamKernel::update(
+                    &p.device,
                     self.0.t,
                     &self.0.cfg,
                     Arc::make_mut(&mut p.data),
@@ -141,7 +143,7 @@ impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D>
     }
 }
 
-impl<M: TensorCollection<E, D>, D: AdamKernel<E>, E: Dtype> Optimizer<M, D, E> for Adam<M, E, D> {
+impl<M: TensorCollection<E, D>, D: Device<E>, E: Dtype> Optimizer<M, D, E> for Adam<M, E, D> {
     fn update(
         &mut self,
         module: &mut M,

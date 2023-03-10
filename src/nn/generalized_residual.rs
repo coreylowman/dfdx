@@ -1,4 +1,4 @@
-use crate::{shapes::*, tensor::*, tensor_ops::TryAdd};
+use crate::{prelude::Device, shapes::*, tensor::*, tensor_ops::TryAdd};
 
 use super::traits::*;
 
@@ -42,12 +42,22 @@ impl<D: DeviceStorage, E: Dtype, F: BuildModule<D, E>, R: BuildModule<D, E>> Bui
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, F: TensorCollection<E, D>, R: TensorCollection<E, D>>
+impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>, R: TensorCollection<E, D>>
     TensorCollection<E, D> for GeneralizedResidual<F, R>
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("f", |s| &s.f, |s| &mut s.f)?;
-        visitor.visit_module("r", |s| &s.r, |s| &mut s.r)
+    type Output<E2: Dtype, D2: Device<E2>> =
+        GeneralizedResidual<F::Output<E2, D2>, R::Output<E2, D2>>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        let f = visitor.visit_module("f", |s| &s.f, |s| &mut s.f)?;
+        let r = visitor.visit_module("r", |s| &s.r, |s| &mut s.r)?;
+
+        Ok(Some(GeneralizedResidual {
+            f: crate::try_option!(f),
+            r: crate::try_option!(r),
+        }))
     }
 }
 

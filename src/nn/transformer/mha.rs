@@ -89,11 +89,22 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: Devic
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn iter_tensors<W: ModuleVisitor<Self, E, D>>(visitor: &mut W) -> Result<(), W::Err> {
-        visitor.visit_module("w_q", |s| &s.w_q, |s| &mut s.w_q)?;
-        visitor.visit_module("w_k", |s| &s.w_k, |s| &mut s.w_k)?;
-        visitor.visit_module("w_v", |s| &s.w_v, |s| &mut s.w_v)?;
-        visitor.visit_module("w_o", |s| &s.w_o, |s| &mut s.w_o)
+    type Output<E2: Dtype, D2: Device<E2>> = MultiHeadAttention<M, H, K, V, E2, D2>;
+
+    fn iter_tensors<Vi: ModuleVisitor<Self, E, D>>(
+        visitor: &mut Vi,
+    ) -> ModuleVisitorOutput<Vi::Func, Self, E, D> {
+        let w_q = visitor.visit_module("w_q", |s| &s.w_q, |s| &mut s.w_q)?;
+        let w_k = visitor.visit_module("w_k", |s| &s.w_k, |s| &mut s.w_k)?;
+        let w_v = visitor.visit_module("w_v", |s| &s.w_v, |s| &mut s.w_v)?;
+        let w_o = visitor.visit_module("w_o", |s| &s.w_o, |s| &mut s.w_o)?;
+
+        Ok(Some(MultiHeadAttention {
+            w_q: crate::try_option!(w_q),
+            w_k: crate::try_option!(w_k),
+            w_v: crate::try_option!(w_v),
+            w_o: crate::try_option!(w_o),
+        }))
     }
 }
 

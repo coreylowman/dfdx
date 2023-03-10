@@ -155,7 +155,7 @@ pub trait SplitTape {
     fn with_empty_tape(&self) -> Self;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Default> SplitTape for Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceStorage, T: Default> SplitTape for Tensor<S, E, D, T> {
     type Tape = T;
     type NoTape = Tensor<S, E, D>;
     fn split_tape(self) -> (Self::NoTape, Self::Tape) {

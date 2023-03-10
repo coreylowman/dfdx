@@ -1,4 +1,4 @@
-use crate::{shapes::Dtype, tensor::*};
+use crate::{prelude::Device, shapes::Dtype, tensor::*};
 
 use super::traits::*;
 
@@ -39,18 +39,35 @@ impl<D: DeviceStorage, E: Dtype, T: BuildModule<D, E>, const N: usize> BuildModu
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>, const N: usize> TensorCollection<E, D>
+impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>, const N: usize> TensorCollection<E, D>
     for Repeated<T, N>
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
+    type Output<E2: Dtype, D2: Device<E2>> = Repeated<T::Output<E2, D2>, N>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        let mut tmp = Vec::new();
+
         for i in 0..N {
-            visitor.visit_module(
+            tmp.push(visitor.visit_module(
                 &std::format!("{i}"),
                 |s| &s.modules[i],
                 |s| &mut s.modules[i],
-            )?;
+            )?);
         }
-        Ok(())
+
+        let mut modules = Vec::new();
+
+        for x in tmp {
+            if let Some(x) = x {
+                modules.push(x);
+            } else {
+                return Ok(None);
+            }
+        }
+
+        Ok(Some(Repeated { modules }))
     }
 }
 

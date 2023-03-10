@@ -98,9 +98,18 @@ where
     E: Dtype + Float + SampleUniform,
     D: Device<E>,
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("encoder", |s| &s.encoder, |s| &mut s.encoder)?;
-        visitor.visit_module("decoder", |s| &s.decoder, |s| &mut s.decoder)
+    type Output<E2: Dtype, D2: Device<E2>> = Transformer<M, H, A, B, F, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+        let encoder = visitor.visit_module("encoder", |s| &s.encoder, |s| &mut s.encoder)?;
+        let decoder = visitor.visit_module("decoder", |s| &s.decoder, |s| &mut s.decoder)?;
+
+        Ok(Some(Transformer {
+            encoder: crate::try_option!(encoder),
+            decoder: crate::try_option!(decoder),
+        }))
     }
 }
 
