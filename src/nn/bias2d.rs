@@ -74,9 +74,7 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for Bias2D<C
             TensorOptions::reset_to_zeros(),
         )?;
 
-        Ok(crate::try_some!(Bias2D {
-            bias: bias?,
-        }))
+        Ok(crate::try_some!(Bias2D { bias: bias? }))
     }
 }
 

@@ -38,11 +38,7 @@ impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> TensorCollection<E, D> f
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
     ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
-        let x = visitor.visit_module(
-            "0",
-            |s| &s.0,
-            |s| &mut s.0
-        )?;
+        let x = visitor.visit_module("0", |s| &s.0, |s| &mut s.0)?;
         Ok(crate::try_some!(SplitInto(x?)))
     }
 }

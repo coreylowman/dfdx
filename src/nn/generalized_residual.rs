@@ -54,10 +54,7 @@ impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>, R: TensorCollection<E, D
         let f = visitor.visit_module("f", |s| &s.f, |s| &mut s.f)?;
         let r = visitor.visit_module("r", |s| &s.r, |s| &mut s.r)?;
 
-        Ok(crate::try_some!(GeneralizedResidual {
-            f: f?,
-            r: r?,
-        }))
+        Ok(crate::try_some!(GeneralizedResidual { f: f?, r: r? }))
     }
 }
 

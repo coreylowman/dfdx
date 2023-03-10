@@ -79,9 +79,7 @@ where
             }),
         )?;
 
-        Ok(crate::try_some!(Conv2D {
-            weight: weight?,
-        }))
+        Ok(crate::try_some!(Conv2D { weight: weight? }))
     }
 }
 
