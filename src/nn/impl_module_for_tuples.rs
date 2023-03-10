@@ -10,7 +10,7 @@ macro_rules! tuple_impls {
             #[allow(non_snake_case)]
             fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> ModuleVisitorOutput<V::Func, Self, E, D> {
                 $(let $name = visitor.visit_module(&std::format!("{}", $idx), |s| &s.$idx, |s| &mut s.$idx)?;)+
-                Ok(Some(($(crate::try_option!($name),)+)))
+                Ok(crate::try_some!(($($name?,)+)))
             }
         }
 

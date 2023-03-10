@@ -79,8 +79,8 @@ where
             }),
         )?;
 
-        Ok(Some(Conv2D {
-            weight: crate::try_option!(weight),
+        Ok(crate::try_some!(Conv2D {
+            weight: weight?,
         }))
     }
 }

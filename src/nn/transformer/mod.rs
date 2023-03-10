@@ -106,9 +106,9 @@ where
         let encoder = visitor.visit_module("encoder", |s| &s.encoder, |s| &mut s.encoder)?;
         let decoder = visitor.visit_module("decoder", |s| &s.decoder, |s| &mut s.decoder)?;
 
-        Ok(Some(Transformer {
-            encoder: crate::try_option!(encoder),
-            decoder: crate::try_option!(decoder),
+        Ok(crate::try_some!(Transformer {
+            encoder: encoder?,
+            decoder: decoder?,
         }))
     }
 }

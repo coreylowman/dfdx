@@ -76,9 +76,9 @@ impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNor
             TensorOptions::reset_to_zeros(),
         )?;
 
-        Ok(Some(LayerNorm1D {
-            gamma: crate::try_option!(gamma),
-            beta: crate::try_option!(beta),
+        Ok(crate::try_some!(LayerNorm1D {
+            gamma: gamma?,
+            beta: beta?,
             epsilon: <V::Func as TensorFunction<E, D>>::OutE::from_f32(1e-5).unwrap(),
         }))
     }

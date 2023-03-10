@@ -99,11 +99,11 @@ where
         let w_v = visitor.visit_module("w_v", |s| &s.w_v, |s| &mut s.w_v)?;
         let w_o = visitor.visit_module("w_o", |s| &s.w_o, |s| &mut s.w_o)?;
 
-        Ok(Some(MultiHeadAttention {
-            w_q: crate::try_option!(w_q),
-            w_k: crate::try_option!(w_k),
-            w_v: crate::try_option!(w_v),
-            w_o: crate::try_option!(w_o),
+        Ok(crate::try_some!(MultiHeadAttention {
+            w_q: w_q?,
+            w_k: w_k?,
+            w_v: w_v?,
+            w_o: w_o?,
         }))
     }
 }

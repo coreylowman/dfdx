@@ -88,8 +88,8 @@ impl<const C: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Device
             }),
         )?;
 
-        Ok(Some(Embedding {
-            weight: crate::try_option!(weight),
+        Ok(crate::try_some!(Embedding {
+            weight: weight?,
         }))
     }
 }

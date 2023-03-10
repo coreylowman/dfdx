@@ -129,11 +129,11 @@ where
         let ff = visitor.visit_module("ff", |s| &s.ff, |s| &mut s.ff)?;
         let norm2 = visitor.visit_module("norm2", |s| &s.norm2, |s| &mut s.norm2)?;
 
-        Ok(Some(TransformerEncoderBlock {
-            self_attn: crate::try_option!(self_attn),
-            norm1: crate::try_option!(norm1),
-            ff: crate::try_option!(ff),
-            norm2: crate::try_option!(norm2),
+        Ok(crate::try_some!(TransformerEncoderBlock {
+            self_attn: self_attn?,
+            norm1: norm1?,
+            ff: ff?,
+            norm2: norm2?,
         }))
     }
 }

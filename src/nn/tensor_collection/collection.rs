@@ -9,14 +9,11 @@ use crate::{
 use super::visitor::TensorFunction;
 
 #[macro_export]
-macro_rules! try_option {
-    ($e:expr) => {
-        if let Some(x) = $e {
-            x
-        } else {
-            return Ok(None);
-        }
-    };
+macro_rules! try_some {
+    {$e:expr} => {{
+        let f = move || {Some($e)};
+        f()
+    }};
 }
 
 pub type ModuleVisitorOutput<F, M, E, D> = Result<

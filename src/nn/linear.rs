@@ -95,9 +95,9 @@ impl<const I: usize, const O: usize, E: Dtype, D: Device<E>> TensorCollection<E,
             }),
         )?;
 
-        Ok(Some(Linear {
-            weight: crate::try_option!(weight),
-            bias: crate::try_option!(bias),
+        Ok(crate::try_some!(Linear {
+            weight: weight?,
+            bias: bias?,
         }))
     }
 }

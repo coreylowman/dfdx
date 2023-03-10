@@ -213,11 +213,11 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNor
             TensorOptions::detached(|t| t.try_fill_with_ones()),
         )?;
 
-        Ok(Some(BatchNorm1D {
-            scale: crate::try_option!(scale),
-            bias: crate::try_option!(bias),
-            running_mean: crate::try_option!(running_mean),
-            running_var: crate::try_option!(running_var),
+        Ok(crate::try_some!(BatchNorm1D {
+            scale: scale?,
+            bias: bias?,
+            running_mean: running_mean?,
+            running_var: running_var?,
             epsilon: <V::Func as TensorFunction<E, D>>::OutE::from_f32(1e-5).unwrap(),
             momentum: <V::Func as TensorFunction<E, D>>::OutE::from_f32(0.1).unwrap(),
         }))

@@ -95,7 +95,7 @@ impl<E: Dtype, D: Device<E>, T: ZeroSizedModule> TensorCollection<E, D> for T {
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
         _visitor: &mut V,
     ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
-        Ok(Some(Default::default()))
+        Ok(crate::try_some!(Default::default()))
     }
 }
 

@@ -81,8 +81,8 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device
             }),
         )?;
 
-        Ok(Some(UnbiasedLinear {
-            weight: crate::try_option!(weight),
+        Ok(crate::try_some!(UnbiasedLinear {
+            weight: weight?,
         }))
     }
 }

@@ -88,9 +88,8 @@ where
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
     ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
-        Ok(Some(TransformerDecoder(crate::try_option!(
-            visitor.visit_module("0", |s| &s.0, |s| &mut s.0)?
-        ))))
+        let x = visitor.visit_module("0", |s| &s.0, |s| &mut s.0)?;
+        Ok(crate::try_some!(TransformerDecoder(x?)))
     }
 }
 
@@ -209,13 +208,13 @@ where
         let ff = visitor.visit_module("ff", |s| &s.ff, |s| &mut s.ff)?;
         let norm3 = visitor.visit_module("norm3", |s| &s.norm3, |s| &mut s.norm3)?;
 
-        Ok(Some(TransformerDecoderBlock {
-            self_attn: crate::try_option!(self_attn),
-            norm1: crate::try_option!(norm1),
-            mh_attn: crate::try_option!(mh_attn),
-            norm2: crate::try_option!(norm2),
-            ff: crate::try_option!(ff),
-            norm3: crate::try_option!(norm3),
+        Ok(crate::try_some!(TransformerDecoderBlock {
+            self_attn: self_attn?,
+            norm1: norm1?,
+            mh_attn: mh_attn?,
+            norm2: norm2?,
+            ff: ff?,
+            norm3: norm3?,
         }))
     }
 }
