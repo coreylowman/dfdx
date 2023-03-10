@@ -60,16 +60,35 @@
 //! let model: Linear<5, 2, f32, Dev> = BuildModule::build(&dev);
 //! ```
 //!
-//! # Allocating & zeroing gradients with [ZeroGrads]
+//! # Allocating & zeroing gradients
+//! 
+//! Use [ZeroGrads::alloc_grads()] and [ZeroGrads::zero_grads()] to reduce allocations,
+//! and enable gradient accumulation!
+//! This is the equivalent of pytorch's `Optimizer.zero_grad`
 //!
 //! ```rust
-//! todo!()
+//! # use dfdx::prelude::*;
+//! # let dev: Cpu = Default::default();
+//! # type Model = Linear<5, 2>;
+//! use dfdx::nn::ZeroGrads;
+//! let model = dev.build_module::<Model, f32>();
+//! let mut grads: Gradients<f32, _> = model.alloc_grads();
+//! model.zero_grads(&mut grads);
 //! ```
 //!
-//! # Exponential Moving Average (EMA) with [ModelEMA]
-//!
+//! # Exponential Moving Average (EMA)
+//! 
+//! All models implement [ModelEMA::ema()] to keep track of an exponential moving average
+//! of an entire model.
+//! 
 //! ```rust
-//! todo!()
+//! # use dfdx::prelude::*;
+//! # let dev: Cpu = Default::default();
+//! # type Model = Linear<5, 2>;
+//! use dfdx::nn::ModelEMA;
+//! let model = dev.build_module::<Model, f32>();
+//! let mut ema_model = dev.build_module::<Model, f32>();
+//! ema_model.ema(&model, 0.001);
 //! ```
 //!
 //! # Resetting parameters
@@ -113,7 +132,11 @@
 //!
 //! # Saving and Loading
 //!
-//! Call [SaveToNpz::save()] and [LoadFromNpz::load()] traits. All modules provided here implement it,
+//! # numpy
+//! 
+//! Enable with the `"numpy"` feature.
+//! 
+//! Call [SaveToNpz::save()] and [LoadFromNpz::load()] methods. All modules provided here implement it,
 //! including tuples. These all save to/from `.npz` files, which are basically zip files with multiple `.npy`
 //!  files.
 //!
@@ -125,11 +148,18 @@
 //! state_dict = {k: torch.from_numpy(v) for k, v in np.load("dfdx-model.npz").items()}
 //! mlp.load_state_dict(state_dict)
 //! ```
+//! 
+//! # safetensors
+//! 
+//! Enable with the `"safetensors"` feature.
 //!
 //! The feature `safetensors` allows to do the same with
-//! [https://github.com/huggingface/safetensors]()
-//! Call [SaveToSafetensors::save()] and [LoadFromSafetensors::load()] traits. All modules provided here implement it,
-//! including tuples. These all save to/from `.safetensors` files, which are flat layout with JSON
+//! [https://github.com/huggingface/safetensors]().
+//! 
+//! Call [SaveToSafetensors::save_safetensors()] and [LoadFromSafetensors::load_safetensors()] funcs.
+//! All modules provided here implement it, including tuples. 
+//! 
+//! These all save to/from `.safetensors` files, which are flat layout with JSON
 //! header, allowing for super fast loads (with memory mapping).
 //!
 //! This is implemented to be fairly portable. For example you can use
