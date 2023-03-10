@@ -1,6 +1,6 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
 
-use super::traits::*;
+use super::*;
 
 use num_traits::Float;
 use rand_distr::{uniform::SampleUniform, Uniform};

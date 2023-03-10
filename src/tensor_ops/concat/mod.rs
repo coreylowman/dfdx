@@ -5,7 +5,7 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 /// Concatenate two tensors along the first dimension.
-/// 
+///
 /// **Pytorch equivalent** `torch.concat`.
 ///
 /// Stacking with const dims **requires nightly**:

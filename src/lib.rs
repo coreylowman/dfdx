@@ -30,7 +30,7 @@
 //! );
 //! ```
 //!
-//! 3. Instantiate models with [crate::nn::traits::DeviceBuildExt]
+//! 3. Instantiate models with [crate::nn::DeviceBuildExt]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! let dev: Cpu = Default::default();
@@ -38,7 +38,7 @@
 //! let mlp = dev.build_module::<Model, f32>();
 //! ```
 //!
-//! 4. Pass data through networks with [crate::nn::traits::Module]
+//! 4. Pass data through networks with [crate::nn::Module]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();

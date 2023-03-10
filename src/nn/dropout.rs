@@ -4,7 +4,7 @@ use crate::{
     tensor_ops::*,
 };
 
-use super::traits::*;
+use super::*;
 
 /// Does nothing as a [Module], and calls [dropout()] as [ModuleMut] with probability `1.0 / N`.
 ///

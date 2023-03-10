@@ -15,10 +15,22 @@ impl<E: Dtype, D: DeviceStorage> TensorVisitor<E, D> for Resetter {
         (opts.reset)(t)
     }
 }
+
+/// Reset a module's parameters with their default reset function:
+///
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// type Model = Linear<2, 5>;
+/// let mut model = dev.build_module::<Model, f32>();
+/// model.reset_params();
+/// ```
 pub trait ResetParams<E: Dtype, D: DeviceStorage>: TensorCollection<E, D> {
+    /// Reset all a model's parameters.
     fn reset_params(&mut self) {
         self.try_reset_params().unwrap();
     }
+    /// Reset all a model's parameters.
     fn try_reset_params(&mut self) -> Result<(), D::Err> {
         Self::iter_tensors(&mut RecursiveWalker {
             m: self,

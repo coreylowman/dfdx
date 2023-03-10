@@ -1,6 +1,6 @@
 use crate::{shapes::Dtype, tensor::*};
 
-use super::traits::*;
+use super::*;
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///

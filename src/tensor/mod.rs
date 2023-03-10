@@ -19,7 +19,7 @@
 //! let dev: Cpu = Default::default();
 //! let dev: Cpu = Cpu::seed_from_u64(0);
 //! ```
-//! 
+//!
 //! ```no_run
 //! # use dfdx::prelude::*;
 //! let dev: Cuda = Default::default();
@@ -111,6 +111,11 @@
 //! let t_clone: Tensor<Rank1<5>, f32, _, OwnedTape<f32, Cpu>> = t.trace(); // copies t
 //! let t = t.traced::<f32>(); // takes ownership of t
 //! ```
+//!
+//! ## Gradient Accumulation
+//!
+//! You can use [Tensor::trace_into] and [Tensor::traced_into] to do this, which take
+//! a [Gradients] object.
 //!
 //! # Serialization using numpy
 //!

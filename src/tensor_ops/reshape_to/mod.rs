@@ -21,7 +21,7 @@ pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
 }
 
 /// Change the shape of a tensor moving data around.
-/// 
+///
 /// Compile time reshapes:
 /// ```rust
 /// # use dfdx::prelude::*;
@@ -29,7 +29,7 @@ pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
 /// let t: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
 /// let t: Tensor<Rank1<8>, f32, _> = t.reshape();
 /// ```
-/// 
+///
 /// Compile time failure:
 /// ```compile_fail
 /// # use dfdx::prelude::*;
@@ -37,7 +37,7 @@ pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
 /// let t: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
 /// let t: Tensor<Rank1<7>, f32, _> = t.reshape();
 /// ```
-/// 
+///
 /// Runtime reshapes:
 /// ```rust
 /// # use dfdx::prelude::*;

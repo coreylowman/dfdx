@@ -1,6 +1,6 @@
 use crate::{shapes::Dtype, tensor::*};
 
-use super::traits::*;
+use super::*;
 
 /// Add inputs together into a single tensor. `T` should be a tuple
 //// where every element of the tuple has the same output type

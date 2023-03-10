@@ -1,5 +1,5 @@
 //! Shape related traits/structes like [Shape], [Dtype], [Dim], [Axis], and [Const]
-//! 
+//!
 //! Example shapes:
 //! ```rust
 //! let _: Rank3<2, 3, 4> = Default::default();

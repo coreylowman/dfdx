@@ -2,7 +2,7 @@ use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::{
     batchnorm2d::{infer_fwd, train_fwd},
-    traits::*,
+    *,
 };
 
 pub mod builder {
