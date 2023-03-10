@@ -4,9 +4,8 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 use crate::{
-    gradients::{Merge, Tape},
-    prelude::{DeviceStorage, HasErr, PutTape, SplitTape, Tensor},
     shapes::{Dtype, HasShape, Shape},
+    tensor::{DeviceStorage, HasErr, Merge, PutTape, SplitTape, Tape, Tensor},
 };
 
 pub trait ChooseKernel<E: Dtype>: DeviceStorage {

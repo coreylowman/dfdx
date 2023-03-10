@@ -1,4 +1,4 @@
-use crate::{gradients::Tape, shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*};
 
 /// Broadcast self into a new shape.
 pub trait BroadcastTo: HasErr + HasShape {

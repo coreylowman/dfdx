@@ -6,7 +6,6 @@ mod cuda_kernel;
 use std::{marker::PhantomData, sync::Arc};
 
 use crate::{
-    gradients::Gradients,
     nn::tensor_collection::*,
     shapes::{Dtype, Shape},
     tensor::*,

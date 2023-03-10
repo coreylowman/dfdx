@@ -1,4 +1,8 @@
-use crate::{gradients::*, shapes::*, tensor::Tensor, tensor_ops::*};
+use crate::{
+    shapes::*,
+    tensor::{NoneTape, OwnedTape, Tensor},
+    tensor_ops::*,
+};
 
 use super::traits::*;
 

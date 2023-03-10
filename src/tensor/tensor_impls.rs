@@ -1,12 +1,7 @@
 use rand::distributions::Distribution;
 
-use super::storage_traits::{DeviceStorage, HasErr, TensorFromVec};
-use super::{Cpu, OneFillStorage, SampleTensor, ZeroFillStorage};
-use crate::{
-    gradients::{Gradients, NoneTape, OwnedTape, Tape},
-    shapes::*,
-    unique_id::{HasUniqueId, UniqueId},
-};
+use super::*;
+use crate::shapes::*;
 
 use std::sync::Arc;
 
@@ -57,12 +52,6 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> HasUnitType for Tensor<S, E, D, T> 
 
 impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasDtype for Tensor<S, E, D, T> {
     type Dtype = E;
-}
-
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> HasUniqueId for Tensor<S, E, D, T> {
-    fn id(&self) -> &UniqueId {
-        &self.id
-    }
 }
 
 impl<S: Shape, E: Unit, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {

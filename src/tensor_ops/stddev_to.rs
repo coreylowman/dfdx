@@ -1,5 +1,5 @@
 use super::*;
-use crate::{gradients::Tape, shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*};
 
 /// Reduction along multiple axes using standard deviation.
 pub trait StddevTo<E: Dtype>: HasErr + HasShape {

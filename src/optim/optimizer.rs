@@ -1,8 +1,6 @@
 use crate::{
-    gradients::Gradients,
-    shapes::Dtype,
-    tensor::DeviceStorage,
-    unique_id::{HasUniqueId, UniqueId},
+    shapes::{Dtype, Shape, Unit},
+    tensor::{DeviceStorage, Gradients, Tensor, UniqueId},
 };
 
 /// L2 and decoupled regularization methods
@@ -95,8 +93,8 @@ pub struct UnusedTensors {
 
 impl UnusedTensors {
     /// Adds a single unnammed parameter
-    pub fn add<T: HasUniqueId>(&mut self, t: &T) {
-        self.ids.push(*t.id());
+    pub fn add<S: Shape, E: Unit, D: DeviceStorage, T>(&mut self, t: &Tensor<S, E, D, T>) {
+        self.ids.push(t.id);
     }
 
     /// Returns `true` if there are no missing gradients present

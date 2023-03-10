@@ -1,5 +1,5 @@
 use super::Device;
-use crate::{gradients::Tape, shapes::*, tensor::Tensor};
+use crate::{shapes::*, tensor::*};
 
 /// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function) across
 /// `Ax`.

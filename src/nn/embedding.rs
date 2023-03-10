@@ -1,7 +1,7 @@
 use num_traits::Float;
 use rand_distr::{uniform::SampleUniform, Uniform};
 
-use crate::{gradients::Tape, shapes::*, tensor::*, tensor_ops::*};
+use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::traits::*;
 

@@ -102,7 +102,6 @@ add_into_impls!([B b Bi b_i], [C c Ci c_i], [D d Di d_i], [E e Ei e_i], [F f Fi 
 mod tests {
     use super::*;
     use crate::{
-        gradients::OwnedTape,
         nn::builders::*,
         shapes::*,
         tests::{TestDevice, TestDtype},

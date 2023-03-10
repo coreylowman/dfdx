@@ -1,7 +1,6 @@
 use crate::{
     shapes::*,
-    tensor::{Cuda, Tensor},
-    unique_id::unique_id,
+    tensor::{unique_id, Cuda, Tensor},
 };
 use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
 

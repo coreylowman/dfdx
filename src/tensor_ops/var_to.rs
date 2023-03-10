@@ -1,5 +1,5 @@
 use super::*;
-use crate::{gradients::Tape, shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*};
 
 /// Reduction alogn multiple axes using variance
 pub trait VarTo: HasErr + HasShape {

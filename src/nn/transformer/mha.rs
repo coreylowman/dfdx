@@ -4,7 +4,7 @@ use rand_distr::uniform::SampleUniform;
 use crate::{nn::modules::*, shapes::Dtype, tensor::*, tensor_ops::*};
 
 #[cfg(feature = "nightly")]
-use crate::{gradients::Tape, shapes::*};
+use crate::shapes::*;
 
 pub mod builder {
     #[derive(Debug, Clone)]

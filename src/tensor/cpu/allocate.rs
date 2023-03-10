@@ -2,8 +2,7 @@
 
 use crate::{
     shapes::*,
-    tensor::{storage_traits::*, Tensor},
-    unique_id::unique_id,
+    tensor::{storage_traits::*, unique_id, Tensor},
 };
 
 use super::{Cpu, CpuError, LendingIterator};
