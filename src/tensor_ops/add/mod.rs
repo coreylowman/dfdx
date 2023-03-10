@@ -45,7 +45,7 @@ pub fn add<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R: Defaul
     lhs + rhs
 }
 
-/// Fallible version of std::ops::Add
+/// Fallible version of [std::ops::Add]. See [add]
 pub trait TryAdd<Rhs = Self>: HasErr {
     fn try_add(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
