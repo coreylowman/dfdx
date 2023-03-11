@@ -8,7 +8,7 @@ pub trait BroadcastShapeTo<S, Ax>: Sized {}
 
 /// Marker for shapes that can have their [Axes] `Ax` reduced. See Self::Reduced
 /// for the resulting type.
-pub trait ReduceShape<Ax>: Sized + Shape + HasAxes<Ax> + ReduceShapeTo<Self::Reduced, Ax> {
+pub trait ReduceShape<Ax>: Sized + HasAxes<Ax> + ReduceShapeTo<Self::Reduced, Ax> {
     type Reduced: Shape + BroadcastShapeTo<Self, Ax>;
 }
 
@@ -73,6 +73,19 @@ broadcast_to!(3, (M, N, O), 4, (M, N, O, P), Axis<3>);
 broadcast_to!(3, (M, N, P), 4, (M, N, O, P), Axis<2>);
 broadcast_to!(3, (M, O, P), 4, (M, N, O, P), Axis<1>);
 broadcast_to!(3, (N, O, P), 4, (M, N, O, P), Axis<0>);
+
+broadcast_to!(4, (M, N, O, P), 5, (M, N, O, P, Q), Axis<4>);
+broadcast_to!(4, (M, N, O, Q), 5, (M, N, O, P, Q), Axis<3>);
+broadcast_to!(4, (M, N, P, Q), 5, (M, N, O, P, Q), Axis<2>);
+broadcast_to!(4, (M, O, P, Q), 5, (M, N, O, P, Q), Axis<1>);
+broadcast_to!(4, (N, O, P, Q), 5, (M, N, O, P, Q), Axis<0>);
+
+broadcast_to!(5, (M, N, O, P, Q), 6, (M, N, O, P, Q, R), Axis<5>);
+broadcast_to!(5, (M, N, O, P, R), 6, (M, N, O, P, Q, R), Axis<4>);
+broadcast_to!(5, (M, N, O, Q, R), 6, (M, N, O, P, Q, R), Axis<3>);
+broadcast_to!(5, (M, N, P, Q, R), 6, (M, N, O, P, Q, R), Axis<2>);
+broadcast_to!(5, (M, O, P, Q, R), 6, (M, N, O, P, Q, R), Axis<1>);
+broadcast_to!(5, (N, O, P, Q, R), 6, (M, N, O, P, Q, R), Axis<0>);
 
 /// Internal implementation for broadcasting strides
 pub trait BroadcastStridesTo<S: Shape, Ax>: Shape + BroadcastShapeTo<S, Ax> {
