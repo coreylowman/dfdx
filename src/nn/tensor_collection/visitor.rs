@@ -91,8 +91,16 @@ pub enum ViewTensorMut {}
 #[derive(Debug)]
 pub enum ViewTensorName {}
 
-impl<'a, M: TensorCollection<E, D>, E: Dtype, D: Device<E>, E2: Dtype, D2: Device<E2>, F: TensorFunction<E, D, E2, D2>>
-    ModuleVisitor<M, E, D, E2, D2> for RecursiveWalker<'a, <F::Viewer as TensorViewer>::View<'a, M>, F>
+impl<
+        'a,
+        M: TensorCollection<E, D>,
+        E: Dtype,
+        D: Device<E>,
+        E2: Dtype,
+        D2: Device<E2>,
+        F: TensorFunction<E, D, E2, D2>,
+    > ModuleVisitor<M, E, D, E2, D2>
+    for RecursiveWalker<'a, <F::Viewer as TensorViewer>::View<'a, M>, F>
 {
     type Err = F::Err;
     type Func = F;
