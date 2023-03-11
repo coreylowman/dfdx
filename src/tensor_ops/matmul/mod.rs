@@ -6,7 +6,7 @@ pub(super) mod cpu_kernel;
 pub(super) mod cuda_kernel;
 
 use crate::{
-    shapes::{Const, Dim, Dtype, Shape},
+    shapes::{Dim, Dtype, Shape},
     tensor::{DeviceStorage, HasErr, Merge, PutTape, SplitTape, Tape, Tensor},
 };
 
@@ -234,30 +234,30 @@ where
 }
 
 pub trait MatMatBatch3Kernel<E: Dtype>: DeviceStorage {
-    fn forward<const B: usize, M: Dim, K: Dim, N: Dim>(
+    fn forward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<B>, M, K), E, Self>,
-        rhs: &Tensor<(Const<B>, K, N), E, Self>,
-    ) -> Result<Tensor<(Const<B>, M, N), E, Self>, Self::Err>;
+        lhs: &Tensor<(B, M, K), E, Self>,
+        rhs: &Tensor<(B, K, N), E, Self>,
+    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err>;
 
-    fn backward<const B: usize, M: Dim, K: Dim, N: Dim>(
+    fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<B>, M, K), E, Self>,
+        lhs: &Tensor<(B, M, K), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(Const<B>, K, N), E, Self>,
+        rhs: &Tensor<(B, K, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
 
-impl<const B: usize, M: Dim, K: Dim, N: Dim, E: Dtype, D, T, R>
-    TryMatMul<Tensor<(Const<B>, K, N), E, D, R>> for Tensor<(Const<B>, M, K), E, D, T>
+impl<B: Dim, M: Dim, K: Dim, N: Dim, E: Dtype, D, T, R> TryMatMul<Tensor<(B, K, N), E, D, R>>
+    for Tensor<(B, M, K), E, D, T>
 where
     D: MatMatBatch3Kernel<E>,
     T: Tape<E, D> + Merge<R>,
     R: Tape<E, D>,
 {
-    type Output = Tensor<(Const<B>, M, N), E, D, T>;
+    type Output = Tensor<(B, M, N), E, D, T>;
     /// ```compile_fail
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
@@ -265,38 +265,38 @@ where
     /// let y: Tensor<Rank3<1, 3, 4>, f32, _> = dev.zeros();
     /// let _: Tensor<Rank3<1, 3, 4>, f32, _> = x.try_matmul(y);
     /// ```
-    fn try_matmul(self, rhs: Tensor<(Const<B>, K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
+    fn try_matmul(self, rhs: Tensor<(B, K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
+        assert_eq!(self.shape.0, rhs.shape.0);
         assert_eq!(self.shape.2, rhs.shape.1);
         try_binary_op(self, rhs, D::forward, D::backward)
     }
 }
 
 pub trait MatMatBatch4Kernel<E: Dtype>: DeviceStorage {
-    fn forward<const B: usize, const S: usize, M: Dim, K: Dim, N: Dim>(
+    fn forward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<B>, Const<S>, M, K), E, Self>,
-        rhs: &Tensor<(Const<B>, Const<S>, K, N), E, Self>,
-    ) -> Result<Tensor<(Const<B>, Const<S>, M, N), E, Self>, Self::Err>;
+        lhs: &Tensor<(B, S, M, K), E, Self>,
+        rhs: &Tensor<(B, S, K, N), E, Self>,
+    ) -> Result<Tensor<(B, S, M, N), E, Self>, Self::Err>;
 
-    fn backward<const B: usize, const S: usize, M: Dim, K: Dim, N: Dim>(
+    fn backward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<B>, Const<S>, M, K), E, Self>,
+        lhs: &Tensor<(B, S, M, K), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(Const<B>, Const<S>, K, N), E, Self>,
+        rhs: &Tensor<(B, S, K, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
 
-impl<const B: usize, const S: usize, M: Dim, K: Dim, N: Dim, E: Dtype, D, T, R>
-    TryMatMul<Tensor<(Const<B>, Const<S>, K, N), E, D, R>>
-    for Tensor<(Const<B>, Const<S>, M, K), E, D, T>
+impl<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim, E: Dtype, D, T, R>
+    TryMatMul<Tensor<(B, S, K, N), E, D, R>> for Tensor<(B, S, M, K), E, D, T>
 where
     D: MatMatBatch4Kernel<E>,
     T: Tape<E, D> + Merge<R>,
     R: Tape<E, D>,
 {
-    type Output = Tensor<(Const<B>, Const<S>, M, N), E, D, T>;
+    type Output = Tensor<(B, S, M, N), E, D, T>;
     /// ```compile_fail
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
@@ -304,10 +304,9 @@ where
     /// let y: Tensor<Rank4<1, 5, 3, 4>, f32, _> = dev.zeros();
     /// let _: Tensor<Rank3<1, 5, 3, 4>, f32, _> = x.try_matmul(y);
     /// ```
-    fn try_matmul(
-        self,
-        rhs: Tensor<(Const<B>, Const<S>, K, N), E, D, R>,
-    ) -> Result<Self::Output, Self::Err> {
+    fn try_matmul(self, rhs: Tensor<(B, S, K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
+        assert_eq!(self.shape.0, rhs.shape.0);
+        assert_eq!(self.shape.1, rhs.shape.1);
         assert_eq!(self.shape.3, rhs.shape.2);
         try_binary_op(self, rhs, D::forward, D::backward)
     }
@@ -748,5 +747,32 @@ mod tests {
         let y: Tensor<(Const<1>, Const<5>, usize, Const<4>), f32, _> =
             dev.zeros_like(&(Const, Const, 4, Const));
         let _: Tensor<(Const<1>, Const<5>, Const<3>, Const<4>), f32, _> = x.matmul(y);
+    }
+
+    #[test]
+    #[should_panic = "left: `1`,\n right: `2`"]
+    fn test_dynamic_batch_batch3_fail() {
+        let dev: TestDevice = Default::default();
+        let x: Tensor<_, TestDtype, _> = dev.zeros_like(&(1, 2, 3));
+        let y = dev.zeros_like(&(2, 3, 4));
+        let _ = x.matmul(y);
+    }
+
+    #[test]
+    #[should_panic = "left: `1`,\n right: `2`"]
+    fn test_dynamic_batch_batch4_fail() {
+        let dev: TestDevice = Default::default();
+        let x: Tensor<_, TestDtype, _> = dev.zeros_like(&(1, 1, 2, 3));
+        let y = dev.zeros_like(&(2, 1, 3, 4));
+        let _ = x.matmul(y);
+    }
+
+    #[test]
+    #[should_panic = "left: `1`,\n right: `2`"]
+    fn test_dynamic_seq_batch4_fail() {
+        let dev: TestDevice = Default::default();
+        let x: Tensor<_, TestDtype, _> = dev.zeros_like(&(1, 1, 2, 3));
+        let y = dev.zeros_like(&(1, 2, 3, 4));
+        let _ = x.matmul(y);
     }
 }
