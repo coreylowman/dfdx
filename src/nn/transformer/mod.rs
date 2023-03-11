@@ -41,7 +41,7 @@ where
     }
 }
 
-/// **Requires Nightly** Transformer architecture as described in
+/// Transformer architecture as described in
 /// [Attention is all you need](https://arxiv.org/abs/1706.03762).
 ///
 /// This is comprised of a [TransformerEncoder] and a [TransformerDecoder].
@@ -149,22 +149,14 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D, T>
-    ModuleMut<T> for Transformer<M, H, A, B, F, E, D>
+impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>
+    NonMutableModule for Transformer<M, H, A, B, F, E, D>
 where
     E: Dtype,
     D: Device<E>,
-    Self: Module<T, Error = D::Err>,
 {
-    type Output = <Self as Module<T>>::Output;
-    type Error = D::Err;
-
-    fn try_forward_mut(&mut self, t: T) -> Result<Self::Output, D::Err> {
-        self.try_forward(t)
-    }
 }
 
-#[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -245,7 +245,6 @@ pub mod modules {
     pub use super::repeated::Repeated;
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
-    #[cfg(feature = "nightly")]
     pub use super::transformer::{
         MultiHeadAttention, Transformer, TransformerDecoder, TransformerDecoderBlock,
         TransformerEncoder, TransformerEncoderBlock,
@@ -277,7 +276,6 @@ pub mod builders {
     pub use super::repeated::Repeated;
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
-    #[cfg(feature = "nightly")]
     pub use super::transformer::builder::{
         MultiHeadAttention, Transformer, TransformerDecoder, TransformerDecoderBlock,
         TransformerEncoder, TransformerEncoderBlock,
