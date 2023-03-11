@@ -1,11 +1,11 @@
 use crate::shapes::*;
 use crate::tensor::{Cpu, Tensor, ZerosTensor};
 
-#[cfg(not(feature = "cblas"))]
+#[cfg(not(feature = "intel-mkl"))]
 use matrixmultiply::{dgemm, sgemm};
 use std::sync::Arc;
 
-#[cfg(feature = "cblas")]
+#[cfg(feature = "intel-mkl")]
 use cblas_sys::{
     cblas_dgemm as dgemm, cblas_sgemm as sgemm, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
     CblasRowMajor as RowMajor, CblasTrans as Tr,
@@ -35,7 +35,7 @@ impl MatMulImpl<f32> for Cpu {
         c_strides: [usize; 2],
     ) {
         let (m, k, n) = (m.size(), k.size(), n.size());
-        #[cfg(not(feature = "cblas"))]
+        #[cfg(not(feature = "intel-mkl"))]
         unsafe {
             let [ar, ac] = a_strides.map(|x| x as isize);
             let [br, bc] = b_strides.map(|x| x as isize);
@@ -43,7 +43,7 @@ impl MatMulImpl<f32> for Cpu {
             sgemm(m, k, n, 1.0, ap, ar, ac, bp, br, bc, 1.0, cp, cr, cc);
         }
 
-        #[cfg(feature = "cblas")]
+        #[cfg(feature = "intel-mkl")]
         unsafe {
             let (lda, a_tr) = super::matrix_strides((m, k), a_strides);
             let (ldb, b_tr) = super::matrix_strides((k, n), b_strides);
@@ -76,7 +76,7 @@ impl MatMulImpl<f64> for Cpu {
     ) {
         let (m, k, n) = (m.size(), k.size(), n.size());
 
-        #[cfg(not(feature = "cblas"))]
+        #[cfg(not(feature = "intel-mkl"))]
         unsafe {
             let [ar, ac] = a_strides.map(|x| x as isize);
             let [br, bc] = b_strides.map(|x| x as isize);
@@ -84,7 +84,7 @@ impl MatMulImpl<f64> for Cpu {
             dgemm(m, k, n, 1.0, ap, ar, ac, bp, br, bc, 1.0, cp, cr, cc);
         }
 
-        #[cfg(feature = "cblas")]
+        #[cfg(feature = "intel-mkl")]
         unsafe {
             let (lda, a_tr) = super::matrix_strides((m, k), a_strides);
             let (ldb, b_tr) = super::matrix_strides((k, n), b_strides);
