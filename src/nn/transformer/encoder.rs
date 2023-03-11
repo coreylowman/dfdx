@@ -10,7 +10,7 @@ use crate::{
 
 use super::mha::MultiHeadAttention;
 
-/// **Requires Nightly** A transformer encoder.
+/// A transformer encoder.
 ///
 /// Generics
 /// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
@@ -18,7 +18,6 @@ use super::mha::MultiHeadAttention;
 /// - `FF_DIM`: The size of the hidden layer in
 ///   the feedforward network in [TransformerEncoderBlock].
 /// - `NUM_LAYERS`: The number of [TransformerEncoderBlock] to use.
-/// TODO: Doctests
 pub type TransformerEncoder<
     const MODEL_DIM: usize,
     const NUM_HEADS: usize,
@@ -67,7 +66,7 @@ where
     }
 }
 
-/// **Requires Nightly** A single transformer encoder block
+/// A single transformer encoder block
 ///
 /// Generics
 /// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
@@ -80,7 +79,6 @@ where
 ///    EMBED_DIM, NUM_HEADS, dim_feedforward=FF_DIM, batch_first=True, dropout=0.0
 /// )
 /// ```
-/// TODO: Doctests
 #[derive(Clone, Debug)]
 pub struct TransformerEncoderBlock<
     const MODEL_DIM: usize,
@@ -161,20 +159,11 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>, T> ModuleMut<T>
+impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>> NonMutableModule
     for TransformerEncoderBlock<M, H, F, E, D>
-where
-    Self: Module<T, Error = D::Err>,
 {
-    type Output = <Self as Module<T>>::Output;
-    type Error = D::Err;
-
-    fn try_forward_mut(&mut self, t: T) -> Result<Self::Output, D::Err> {
-        self.try_forward(t)
-    }
 }
 
-#[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
     use super::*;
