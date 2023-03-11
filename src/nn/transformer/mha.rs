@@ -91,9 +91,9 @@ where
 {
     type Output<E2: Dtype, D2: Device<E2>> = MultiHeadAttention<M, H, K, V, E2, D2>;
 
-    fn iter_tensors<Vi: ModuleVisitor<Self, E, D>>(
+    fn iter_tensors<E2: Dtype, D2: Device<E2>, Vi: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut Vi,
-    ) -> ModuleVisitorOutput<Vi::Func, Self, E, D> {
+    ) -> ModuleVisitorOutput<Vi::Func, Self, E, D, E2, D2> {
         let w_q = visitor.visit_module("w_q", |s| &s.w_q, |s| &mut s.w_q)?;
         let w_k = visitor.visit_module("w_k", |s| &s.w_k, |s| &mut s.w_k)?;
         let w_v = visitor.visit_module("w_v", |s| &s.w_v, |s| &mut s.w_v)?;

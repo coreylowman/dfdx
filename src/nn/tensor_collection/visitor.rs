@@ -21,18 +21,16 @@ pub struct RecursiveWalker<'a, M, F> {
 
 // TODO: Documentation
 /// Something that can visit [Tensor]s. Used in conjunction with [RecursiveWalker].
-pub trait TensorFunction<E: Dtype, D: Device<E>> {
+pub trait TensorFunction<E: Dtype, D: Device<E>, E2: Dtype, D2: Device<E2>> {
     /// The type of tensor this struct uses. E.g. [ViewTensorMut], or [ViewTensorRef]
     type Viewer: TensorViewer;
     type Err;
-    type OutE: Dtype;
-    type OutD: Device<Self::OutE>;
 
     fn apply<S: Shape>(
         &mut self,
         opts: TensorOptions<S, E, D>,
         t: <Self::Viewer as TensorViewer>::View<'_, Tensor<S, E, D>>,
-    ) -> TensorFunctionOutput<Self, S, E, D>;
+    ) -> TensorFunctionOutput<Self, S, E, D, E2, D2>;
 }
 
 /// Something that can visit [Tensor]s. Used in conjunction with [RecursiveWalker].
@@ -48,11 +46,9 @@ pub trait TensorVisitor<E: Dtype, D: Device<E>> {
     ) -> Result<(), Self::Err>;
 }
 
-impl<E: Dtype, D: Device<E>, T: TensorVisitor<E, D>> TensorFunction<E, D> for T {
+impl<E: Dtype, D: Device<E>, T: TensorVisitor<E, D>> TensorFunction<E, D, f32, Cpu> for T {
     type Viewer = T::Viewer;
     type Err = T::Err;
-    type OutE = f32;
-    type OutD = Cpu;
 
     fn apply<S: Shape>(
         &mut self,
@@ -95,8 +91,8 @@ pub enum ViewTensorMut {}
 #[derive(Debug)]
 pub enum ViewTensorName {}
 
-impl<'a, M: TensorCollection<E, D>, E: Dtype, D: Device<E>, F: TensorFunction<E, D>>
-    ModuleVisitor<M, E, D> for RecursiveWalker<'a, <F::Viewer as TensorViewer>::View<'a, M>, F>
+impl<'a, M: TensorCollection<E, D>, E: Dtype, D: Device<E>, E2: Dtype, D2: Device<E2>, F: TensorFunction<E, D, E2, D2>>
+    ModuleVisitor<M, E, D, E2, D2> for RecursiveWalker<'a, <F::Viewer as TensorViewer>::View<'a, M>, F>
 {
     type Err = F::Err;
     type Func = F;
@@ -106,7 +102,7 @@ impl<'a, M: TensorCollection<E, D>, E: Dtype, D: Device<E>, F: TensorFunction<E,
         name: &str,
         mut get_refs: GetRef,
         mut get_muts: GetMut,
-    ) -> ModuleVisitorOutput<F, Field, E, D>
+    ) -> ModuleVisitorOutput<F, Field, E, D, E2, D2>
     where
         GetRef: FnMut(&M) -> &Field,
         GetMut: FnMut(&mut M) -> &mut Field,
@@ -125,7 +121,7 @@ impl<'a, M: TensorCollection<E, D>, E: Dtype, D: Device<E>, F: TensorFunction<E,
         mut get_refs: GetRef,
         mut get_muts: GetMut,
         opts: TensorOptions<S, E, D>,
-    ) -> TensorFunctionOutput<F, S, E, D>
+    ) -> TensorFunctionOutput<F, S, E, D, E2, D2>
     where
         GetRef: FnMut(&M) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,

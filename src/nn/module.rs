@@ -92,9 +92,9 @@ impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule> BuildModule<D, E> for T {
 impl<E: Dtype, D: Device<E>, T: ZeroSizedModule> TensorCollection<E, D> for T {
     type Output<E2: Dtype, D2: Device<E2>> = T;
 
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         _visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
         Ok(crate::try_some!(Default::default()))
     }
 }

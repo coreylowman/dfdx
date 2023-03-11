@@ -8,7 +8,9 @@ macro_rules! tuple_impls {
             type Output<E2: Dtype, D2: Device<E2>> = ($($name::Output<E2, D2>,)+);
 
             #[allow(non_snake_case)]
-            fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+            fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
+                visitor: &mut V
+            ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
                 $(let $name = visitor.visit_module(&std::format!("{}", $idx), |s| &s.$idx, |s| &mut s.$idx)?;)+
                 Ok(crate::try_some!(($($name?,)+)))
             }

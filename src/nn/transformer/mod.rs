@@ -100,9 +100,9 @@ where
 {
     type Output<E2: Dtype, D2: Device<E2>> = Transformer<M, H, A, B, F, E2, D2>;
 
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
         let encoder = visitor.visit_module("encoder", |s| &s.encoder, |s| &mut s.encoder)?;
         let decoder = visitor.visit_module("decoder", |s| &s.decoder, |s| &mut s.decoder)?;
 

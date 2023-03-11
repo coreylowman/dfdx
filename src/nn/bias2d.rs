@@ -64,9 +64,9 @@ impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2> for Bi
 impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for Bias2D<C, E, D> {
     type Output<E2: Dtype, D2: Device<E2>> = Bias2D<C, E2, D2>;
 
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
         let bias = visitor.visit_tensor(
             "bias",
             |s| &s.bias,

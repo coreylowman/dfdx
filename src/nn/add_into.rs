@@ -36,9 +36,9 @@ impl<T: BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildModule<D, E> for Add
 impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> TensorCollection<E, D> for AddInto<T> {
     type Output<E2: Dtype, D2: Device<E2>> = AddInto<T::Output<E2, D2>>;
 
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
         let t = visitor.visit_module("0", |s| &s.0, |s| &mut s.0)?;
         Ok(crate::try_some!(AddInto(t?)))
     }

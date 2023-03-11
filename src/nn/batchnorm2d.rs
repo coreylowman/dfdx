@@ -2,8 +2,6 @@ use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::*;
 
-use num_traits::FromPrimitive;
-
 pub mod builder {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     pub struct BatchNorm2D<const C: usize>;
@@ -246,9 +244,9 @@ impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for BatchNorm2D<C
 impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNorm2D<C, E, D> {
     type Output<E2: Dtype, D2: Device<E2>> = BatchNorm2D<C, E2, D2>;
 
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
         let scale = visitor.visit_tensor(
             "scale",
             |s| &s.scale,
@@ -279,8 +277,8 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNor
             bias: bias?,
             running_mean: running_mean?,
             running_var: running_var?,
-            epsilon: <V::Func as TensorFunction<E, D>>::OutE::from_f32(1e-5).unwrap(),
-            momentum: <V::Func as TensorFunction<E, D>>::OutE::from_f32(0.1).unwrap(),
+            epsilon: E2::from_f32(1e-5).unwrap(),
+            momentum: E2::from_f32(0.1).unwrap(),
         }))
     }
 }

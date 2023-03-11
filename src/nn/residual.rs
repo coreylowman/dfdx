@@ -34,9 +34,9 @@ impl<D: DeviceStorage, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Res
 impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>> TensorCollection<E, D> for Residual<F> {
     type Output<E2: Dtype, D2: Device<E2>> = Residual<F::Output<E2, D2>>;
 
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
         let f = visitor.visit_module("0", |s| &s.0, |s| &mut s.0)?;
         Ok(crate::try_some!(Residual(f?)))
     }

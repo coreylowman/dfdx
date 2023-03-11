@@ -16,20 +16,13 @@ macro_rules! try_some {
     }};
 }
 
-pub type ModuleVisitorOutput<F, M, E, D> = Result<
-    Option<
-        <M as TensorCollection<E, D>>::Output<
-            <F as TensorFunction<E, D>>::OutE,
-            <F as TensorFunction<E, D>>::OutD,
-        >,
-    >,
-    <F as TensorFunction<E, D>>::Err,
+pub type ModuleVisitorOutput<Func, Mod, E, D, E2, D2> = Result<
+    Option<<Mod as TensorCollection<E, D>>::Output<E2, D2>>,
+    <Func as TensorFunction<E, D, E2, D2>>::Err,
 >;
 
-pub type TensorFunctionOutput<F, S, E, D> = Result<
-    Option<Tensor<S, <F as TensorFunction<E, D>>::OutE, <F as TensorFunction<E, D>>::OutD>>,
-    <F as TensorFunction<E, D>>::Err,
->;
+pub type TensorFunctionOutput<F, S, E, D, E2, D2> =
+    Result<Option<Tensor<S, E2, D2>>, <F as TensorFunction<E, D, E2, D2>>::Err>;
 
 /// A collection of named tensors. Implementing this trait will enable anything
 /// that operates on tensors, like resetting, EMA, counting number of params,
@@ -37,15 +30,22 @@ pub type TensorFunctionOutput<F, S, E, D> = Result<
 pub trait TensorCollection<E: Dtype, D: Device<E>>: Sized {
     type Output<E2: Dtype, D2: Device<E2>>;
 
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D>;
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2>;
 }
 
 /// An object that can visit [TensorCollection]s and [Tensor]s recursively.
-pub trait ModuleVisitor<T: TensorCollection<E, D>, E: Dtype, D: Device<E>>: Sized {
+pub trait ModuleVisitor<
+    T: TensorCollection<E, D>,
+    E: Dtype,
+    D: Device<E>,
+    E2: Dtype,
+    D2: Device<E2>,
+>: Sized
+{
     type Err;
-    type Func: TensorFunction<E, D>;
+    type Func: TensorFunction<E, D, E2, D2>;
 
     /// Visit a [TensorCollection]
     fn visit_module<Field, GetRef, GetMut>(
@@ -53,7 +53,7 @@ pub trait ModuleVisitor<T: TensorCollection<E, D>, E: Dtype, D: Device<E>>: Size
         name: &str,
         get_refs: GetRef,
         get_muts: GetMut,
-    ) -> ModuleVisitorOutput<Self::Func, Field, E, D>
+    ) -> ModuleVisitorOutput<Self::Func, Field, E, D, E2, D2>
     where
         GetRef: FnMut(&T) -> &Field,
         GetMut: FnMut(&mut T) -> &mut Field,
@@ -66,7 +66,7 @@ pub trait ModuleVisitor<T: TensorCollection<E, D>, E: Dtype, D: Device<E>>: Size
         get_refs: GetRef,
         get_muts: GetMut,
         opts: TensorOptions<S, E, D>,
-    ) -> TensorFunctionOutput<Self::Func, S, E, D>
+    ) -> TensorFunctionOutput<Self::Func, S, E, D, E2, D2>
     where
         GetRef: FnMut(&T) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut T) -> &mut Tensor<S, E, D>;
@@ -75,9 +75,9 @@ pub trait ModuleVisitor<T: TensorCollection<E, D>, E: Dtype, D: Device<E>>: Size
 impl<S: Shape, E: Dtype, D: Device<E>> TensorCollection<E, D> for Tensor<S, E, D> {
     type Output<E2: Dtype, D2: Device<E2>> = Tensor<S, E2, D2>;
 
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
         visitor.visit_tensor(
             "",
             |s| s,

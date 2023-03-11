@@ -44,9 +44,9 @@ impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>, const N: usize> TensorCo
 {
     type Output<E2: Dtype, D2: Device<E2>> = Repeated<T::Output<E2, D2>, N>;
 
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
         let mut tmp = Vec::new();
 
         for i in 0..N {

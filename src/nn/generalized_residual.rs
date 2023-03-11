@@ -48,9 +48,9 @@ impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>, R: TensorCollection<E, D
     type Output<E2: Dtype, D2: Device<E2>> =
         GeneralizedResidual<F::Output<E2, D2>, R::Output<E2, D2>>;
 
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D> {
+    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
         let f = visitor.visit_module("f", |s| &s.f, |s| &mut s.f)?;
         let r = visitor.visit_module("r", |s| &s.r, |s| &mut s.r)?;
 
