@@ -1,4 +1,4 @@
-use super::{axes::*, ReduceShapeTo};
+use super::{axes::*, ReduceShape, ReduceShapeTo};
 
 #[cfg(not(feature = "cuda"))]
 pub trait SafeZeros {}
@@ -177,6 +177,7 @@ pub trait Shape:
     + HasAxes<Self::AllAxes>
     + HasAxes<Self::LastAxis>
     + ReduceShapeTo<(), Self::AllAxes>
+    + ReduceShape<Self::LastAxis>
 {
     /// The number of dimensions the shape has
     const NUM_DIMS: usize;

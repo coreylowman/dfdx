@@ -104,15 +104,13 @@ pub fn smooth_l1_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
 /// let target_probs = dev.tensor([0.5, 0.5]);
 /// let loss = cross_entropy_with_logits_loss(logits.traced(), target_probs);
 /// ```
-pub fn cross_entropy_with_logits_loss<Ax: Axes, S, E: Dtype, D: Device<E>, T: Tape<E, D>>(
+pub fn cross_entropy_with_logits_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     logits: Tensor<S, E, D, T>,
     target_probs: Tensor<S, E, D>,
-) -> Tensor<Rank0, E, D, T>
-where
-    S: Shape<LastAxis = Ax> + ReduceShape<Ax>,
-{
-    let last_axis_numel = E::from_usize(<S as HasAxes<Ax>>::size(logits.shape())).unwrap();
-    (logits.log_softmax::<Ax>() * target_probs).mean().negate() * last_axis_numel
+) -> Tensor<Rank0, E, D, T> {
+    let last_axis_numel = E::from_usize(<S as HasAxes<S::LastAxis>>::size(logits.shape())).unwrap();
+    let probs = logits.log_softmax::<S::LastAxis>();
+    (probs * target_probs).mean().negate() * last_axis_numel
 }
 
 /// [KL Divergence loss](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence).
@@ -134,15 +132,12 @@ where
 /// let target_probs = dev.tensor([0.5, 0.5]);
 /// let loss = kl_div_with_logits_loss(logits.traced(), target_probs);
 /// ```
-pub fn kl_div_with_logits_loss<Ax: Axes, S, E: Dtype, D: Device<E>, T: Tape<E, D>>(
+pub fn kl_div_with_logits_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     logits: Tensor<S, E, D, T>,
     target_probs: Tensor<S, E, D>,
-) -> Tensor<Rank0, E, D, T>
-where
-    S: Shape<LastAxis = Ax> + ReduceShape<Ax>,
-{
-    let last_axis_numel = E::from_usize(<S as HasAxes<Ax>>::size(logits.shape())).unwrap();
-    let probs = logits.log_softmax::<Ax>();
+) -> Tensor<Rank0, E, D, T> {
+    let last_axis_numel = E::from_usize(<S as HasAxes<S::LastAxis>>::size(logits.shape())).unwrap();
+    let probs = logits.log_softmax::<S::LastAxis>();
     ((probs - target_probs.clone().ln()) * target_probs)
         .mean()
         .negate()
