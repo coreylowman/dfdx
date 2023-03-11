@@ -464,11 +464,11 @@ impl<E: Dtype> super::MatMatBatch3Kernel<E> for Cuda
 where
     CudaBlas: Gemm<E>,
 {
-    fn forward<const B: usize, M: Dim, K: Dim, N: Dim>(
+    fn forward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<B>, M, K), E, Self>,
-        rhs: &Tensor<(Const<B>, K, N), E, Self>,
-    ) -> Result<Tensor<(Const<B>, M, N), E, Self>, Self::Err> {
+        lhs: &Tensor<(B, M, K), E, Self>,
+        rhs: &Tensor<(B, K, N), E, Self>,
+    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err> {
         assert_ne!(lhs.strides[0], 0);
         assert_ne!(rhs.strides[0], 0);
         let (batch, m, _) = lhs.shape;
@@ -491,11 +491,11 @@ where
         }
         Ok(self.build_tensor(shape, shape.strides(), storage))
     }
-    fn backward<const B: usize, M: Dim, K: Dim, N: Dim>(
+    fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<B>, M, K), E, Self>,
+        lhs: &Tensor<(B, M, K), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(Const<B>, K, N), E, Self>,
+        rhs: &Tensor<(B, K, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
@@ -537,11 +537,11 @@ impl<E: Dtype> super::MatMatBatch4Kernel<E> for Cuda
 where
     CudaBlas: Gemm<E>,
 {
-    fn forward<const B: usize, const S: usize, M: Dim, K: Dim, N: Dim>(
+    fn forward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<B>, Const<S>, M, K), E, Self>,
-        rhs: &Tensor<(Const<B>, Const<S>, K, N), E, Self>,
-    ) -> Result<Tensor<(Const<B>, Const<S>, M, N), E, Self>, Self::Err> {
+        lhs: &Tensor<(B, S, M, K), E, Self>,
+        rhs: &Tensor<(B, S, K, N), E, Self>,
+    ) -> Result<Tensor<(B, S, M, N), E, Self>, Self::Err> {
         assert_ne!(lhs.strides[0], 0);
         assert_ne!(rhs.strides[0], 0);
         assert_ne!(lhs.strides[1], 0);
@@ -571,11 +571,11 @@ where
         Ok(self.build_tensor(shape, shape.strides(), storage))
     }
 
-    fn backward<const B: usize, const S: usize, M: Dim, K: Dim, N: Dim>(
+    fn backward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(Const<B>, Const<S>, M, K), E, Self>,
+        lhs: &Tensor<(B, S, M, K), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(Const<B>, Const<S>, K, N), E, Self>,
+        rhs: &Tensor<(B, S, K, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
