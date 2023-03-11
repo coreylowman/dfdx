@@ -68,16 +68,6 @@ pub struct TransformerDecoder<
     D: DeviceStorage,
 >(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>, NUM_LAYERS>);
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize, E, D: Device<E>>
-    BuildModule<D, E> for TransformerDecoder<M, H, F, L, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-{
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        Ok(Self(BuildModule::try_build(device)?))
-    }
-}
-
 impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D: Device<E>>
     TensorCollection<E, D> for TransformerDecoder<M, H, F, L, E, D>
 where
@@ -172,23 +162,6 @@ pub struct TransformerDecoderBlock<
 
 type FF<const M: usize, const F: usize, E, D> =
     Residual<(Linear<M, F, E, D>, ReLU, Linear<F, M, E, D>)>;
-
-impl<const M: usize, const N: usize, const F: usize, E, D: Device<E>> BuildModule<D, E>
-    for TransformerDecoderBlock<M, N, F, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-{
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self {
-            self_attn: BuildModule::try_build(device)?,
-            norm1: BuildModule::try_build(device)?,
-            mh_attn: BuildModule::try_build(device)?,
-            norm2: BuildModule::try_build(device)?,
-            ff: BuildModule::try_build(device)?,
-            norm3: BuildModule::try_build(device)?,
-        })
-    }
-}
 
 impl<const M: usize, const N: usize, const F: usize, E, D: Device<E>> TensorCollection<E, D>
     for TransformerDecoderBlock<M, N, F, E, D>

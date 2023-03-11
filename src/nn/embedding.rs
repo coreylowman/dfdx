@@ -60,16 +60,6 @@ impl<const V: usize, const M: usize, E: Dtype, D: DeviceStorage> NonMutableModul
 {
 }
 
-impl<const V: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
-    BuildModule<D, E> for Embedding<V, M, E, D>
-{
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        let bound = E::ONE / E::from_usize(V).unwrap().sqrt();
-        let weight = device.try_sample(Uniform::new(-bound, bound))?;
-        Ok(Self { weight })
-    }
-}
-
 impl<const C: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
     TensorCollection<E, D> for Embedding<C, M, E, D>
 {

@@ -21,22 +21,10 @@ pub struct Repeated<T, const N: usize> {
     pub modules: std::vec::Vec<T>,
 }
 
-impl<D: DeviceStorage, E: Dtype, T: BuildOnDevice<D, E>, const N: usize> BuildOnDevice<D, E>
+impl<D: Device<E>, E: Dtype, T: BuildOnDevice<D, E>, const N: usize> BuildOnDevice<D, E>
     for Repeated<T, N>
 {
     type Built = Repeated<T::Built, N>;
-}
-
-impl<D: DeviceStorage, E: Dtype, T: BuildModule<D, E>, const N: usize> BuildModule<D, E>
-    for Repeated<T, N>
-{
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        let mut modules = std::vec::Vec::with_capacity(N);
-        for _ in 0..N {
-            modules.push(BuildModule::try_build(device)?);
-        }
-        Ok(Self { modules })
-    }
 }
 
 impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>, const N: usize> TensorCollection<E, D>

@@ -23,14 +23,8 @@ use super::*;
 #[derive(Debug, Default, Clone)]
 pub struct AddInto<T>(pub T);
 
-impl<T: BuildOnDevice<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for AddInto<T> {
+impl<T: BuildOnDevice<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for AddInto<T> {
     type Built = AddInto<T::Built>;
-}
-
-impl<T: BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildModule<D, E> for AddInto<T> {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self(BuildModule::try_build(device)?))
-    }
 }
 
 impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> TensorCollection<E, D> for AddInto<T> {

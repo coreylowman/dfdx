@@ -41,14 +41,6 @@ pub struct Bias2D<const C: usize, E: Dtype, D: DeviceStorage> {
     pub bias: Tensor<Rank1<C>, E, D>,
 }
 
-impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for Bias2D<C, E, D> {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self {
-            bias: device.try_zeros()?,
-        })
-    }
-}
-
 impl<const C: usize, E: Dtype, D: DeviceStorage> NonMutableModule for Bias2D<C, E, D> {}
 
 impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2> for Bias2D<C, E, D1> {

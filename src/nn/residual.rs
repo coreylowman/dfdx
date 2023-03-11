@@ -21,14 +21,8 @@ use super::*;
 #[derive(Debug, Clone, Default)]
 pub struct Residual<F>(pub F);
 
-impl<D: DeviceStorage, E: Dtype, F: BuildOnDevice<D, E>> BuildOnDevice<D, E> for Residual<F> {
+impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>> BuildOnDevice<D, E> for Residual<F> {
     type Built = Residual<F::Built>;
-}
-
-impl<D: DeviceStorage, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Residual<F> {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self(BuildModule::try_build(device)?))
-    }
 }
 
 impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>> TensorCollection<E, D> for Residual<F> {

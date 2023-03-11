@@ -141,6 +141,21 @@ impl<
     }
 }
 
+impl TensorViewer for () {
+    type View<'a, Mod: 'a> = ();
+
+    fn view_field<'a, Mod, Field, GetRef, GetMut>(
+        _module: &mut (),
+        _name: &str,
+        _get_ref: &mut GetRef,
+        _get_mut: &mut GetMut,
+    ) where
+        GetRef: FnMut(&Mod) -> &Field,
+        GetMut: FnMut(&mut Mod) -> &mut Field,
+    {
+    }
+}
+
 impl TensorViewer for ViewTensorRef {
     type View<'a, Mod: 'a> = &'a Mod;
 

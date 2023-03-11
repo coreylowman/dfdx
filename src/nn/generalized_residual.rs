@@ -25,21 +25,10 @@ pub struct GeneralizedResidual<F, R> {
     pub r: R,
 }
 
-impl<D: DeviceStorage, E: Dtype, F: BuildOnDevice<D, E>, R: BuildOnDevice<D, E>> BuildOnDevice<D, E>
+impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>, R: BuildOnDevice<D, E>> BuildOnDevice<D, E>
     for GeneralizedResidual<F, R>
 {
     type Built = GeneralizedResidual<F::Built, R::Built>;
-}
-
-impl<D: DeviceStorage, E: Dtype, F: BuildModule<D, E>, R: BuildModule<D, E>> BuildModule<D, E>
-    for GeneralizedResidual<F, R>
-{
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self {
-            f: BuildModule::try_build(device)?,
-            r: BuildModule::try_build(device)?,
-        })
-    }
 }
 
 impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>, R: TensorCollection<E, D>>

@@ -78,7 +78,9 @@ pub trait HasDtype {
 }
 
 /// Represents a single dimension of a multi dimensional [Shape]
-pub trait Dim: 'static + Copy + Clone + std::fmt::Debug + Send + Sync + Eq + PartialEq {
+pub trait Dim:
+    'static + Copy + Clone + std::fmt::Debug + Send + Sync + Eq + PartialEq + Default
+{
     fn size(&self) -> usize;
     fn from_size(size: usize) -> Option<Self>;
 }
@@ -170,6 +172,7 @@ pub trait Shape:
     'static
     + std::fmt::Debug
     + Clone
+    + Default
     + Copy
     + Send
     + Sync

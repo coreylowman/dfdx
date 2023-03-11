@@ -2,8 +2,7 @@ use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::*;
 
-use num_traits::Float;
-use rand_distr::{uniform::SampleUniform, Uniform};
+use rand_distr::Uniform;
 
 pub mod builder {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -55,17 +54,6 @@ pub struct Linear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> {
 impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> NonMutableModule
     for Linear<I, O, E, D>
 {
-}
-
-impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
-    BuildModule<D, E> for Linear<I, O, E, D>
-{
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
-        let weight = device.try_sample(Uniform::new(-b, b))?;
-        let bias = device.try_sample(Uniform::new(-b, b))?;
-        Ok(Self { weight, bias })
-    }
 }
 
 impl<const I: usize, const O: usize, E: Dtype, D: Device<E>> TensorCollection<E, D>

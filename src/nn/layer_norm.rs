@@ -44,17 +44,6 @@ pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
 
 impl<const M: usize, E: Dtype, D: DeviceStorage> NonMutableModule for LayerNorm1D<M, E, D> {}
 
-impl<const M: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for LayerNorm1D<M, E, D> {
-    /// Fills [Self::gamma] with 1s and [Self::beta] with 0s and sets [Self::epsilon] to `1e-5`.
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        Ok(Self {
-            gamma: device.try_ones()?,
-            beta: device.try_zeros()?,
-            epsilon: E::from_f32(1e-5).unwrap(),
-        })
-    }
-}
-
 impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNorm1D<M, E, D> {
     type Output<E2: Dtype, D2: Device<E2>> = LayerNorm1D<M, E2, D2>;
 

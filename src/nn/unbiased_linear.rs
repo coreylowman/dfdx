@@ -54,16 +54,6 @@ impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> NonMutableModul
 }
 
 impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
-    BuildModule<D, E> for UnbiasedLinear<I, O, E, D>
-{
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
-        let weight = device.try_sample(Uniform::new(-b, b))?;
-        Ok(Self { weight })
-    }
-}
-
-impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
     TensorCollection<E, D> for UnbiasedLinear<I, O, E, D>
 {
     type Output<E2: Dtype, D2: Device<E2>> = UnbiasedLinear<I, O, E2, D2>;

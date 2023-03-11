@@ -98,21 +98,6 @@ pub struct TransformerEncoderBlock<
 type FF<const M: usize, const F: usize, E, D> =
     Residual<(Linear<M, F, E, D>, ReLU, Linear<F, M, E, D>)>;
 
-impl<const M: usize, const H: usize, const F: usize, E, D: Device<E>> BuildModule<D, E>
-    for TransformerEncoderBlock<M, H, F, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-{
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self {
-            self_attn: BuildModule::try_build(device)?,
-            norm1: BuildModule::try_build(device)?,
-            ff: BuildModule::try_build(device)?,
-            norm2: BuildModule::try_build(device)?,
-        })
-    }
-}
-
 impl<const M: usize, const H: usize, const F: usize, E, D: Device<E>> TensorCollection<E, D>
     for TransformerEncoderBlock<M, H, F, E, D>
 where

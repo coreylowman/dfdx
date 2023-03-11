@@ -68,23 +68,6 @@ pub struct MultiHeadAttention<
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: Device<E>>
-    BuildModule<D, E> for MultiHeadAttention<M, H, K, V, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-{
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        #[allow(clippy::let_unit_value)]
-        let _ = builder::MultiHeadAttention::<M, H, K, V>::TYPE_CHECK;
-        Ok(Self {
-            w_q: BuildModule::try_build(device)?,
-            w_k: BuildModule::try_build(device)?,
-            w_v: BuildModule::try_build(device)?,
-            w_o: BuildModule::try_build(device)?,
-        })
-    }
-}
-
-impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: Device<E>>
     TensorCollection<E, D> for MultiHeadAttention<M, H, K, V, E, D>
 where
     E: Dtype + Float + SampleUniform,

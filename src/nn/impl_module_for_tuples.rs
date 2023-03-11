@@ -20,14 +20,6 @@ macro_rules! tuple_impls {
             type Built = ($($name::Built, )+);
         }
 
-        impl<D: Device<E>, E: Dtype, $($name: BuildModule<D, E>),+> BuildModule<D, E> for ($($name,)+) {
-            #[allow(non_snake_case)]
-            fn try_build(device: &D) -> Result<Self, D::Err> {
-                $(let $name = BuildModule::try_build(device)?;)*
-                Ok(($($name, )*))
-            }
-        }
-
         impl<$($name: ToDevice<D>,)+ D> ToDevice<D> for ($($name,)+) {
             type Output = ($(<$name as ToDevice<D>>::Output,)+);
             fn to_device(&self, device: &D) -> Self::Output {

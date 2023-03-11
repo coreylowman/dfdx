@@ -79,20 +79,6 @@ pub struct Transformer<
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>
-    BuildModule<D, E> for Transformer<M, H, A, B, F, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-    D: Device<E>,
-{
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self {
-            encoder: BuildModule::try_build(device)?,
-            decoder: BuildModule::try_build(device)?,
-        })
-    }
-}
-
-impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>
     TensorCollection<E, D> for Transformer<M, H, A, B, F, E, D>
 where
     E: Dtype + Float + SampleUniform,

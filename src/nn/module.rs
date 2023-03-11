@@ -1,3 +1,4 @@
+pub use super::build_module::BuildModule;
 #[cfg(feature = "cuda")]
 pub use crate::tensor::OnCuda;
 pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
@@ -39,21 +40,11 @@ pub trait ModuleMut<Input> {
     }
 }
 
-/// Something that can be built. Related to [BuildOnDevice]
-pub trait BuildModule<D: DeviceStorage, E: Dtype>: Sized {
-    /// Construct it on the device
-    fn build(device: &D) -> Self {
-        Self::try_build(device).unwrap()
-    }
-    /// Fallible version of [BuildModule::build]
-    fn try_build(device: &D) -> Result<Self, D::Err>;
-}
-
 /// Something that can be built on a different device
 /// than it is on. Builds [ToDevice::Output].
 ///
 /// Related to [BuildModule]
-pub trait BuildOnDevice<D: DeviceStorage, E: Dtype> {
+pub trait BuildOnDevice<D: Device<E>, E: Dtype> {
     type Built: BuildModule<D, E>;
     fn build_on_device(device: &D) -> Self::Built {
         Self::try_build_on_device(device).unwrap()
@@ -66,10 +57,16 @@ pub trait BuildOnDevice<D: DeviceStorage, E: Dtype> {
 /// An extension trait that allows you to build a module with a device
 /// method. Also allows easy specification of Dtype.
 pub trait DeviceBuildExt: DeviceStorage {
-    fn build_module<M: BuildOnDevice<Self, E>, E: Dtype>(&self) -> M::Built {
+    fn build_module<M: BuildOnDevice<Self, E>, E: Dtype>(&self) -> M::Built
+    where
+        Self: Device<E>,
+    {
         M::build_on_device(self)
     }
-    fn try_build_module<M: BuildOnDevice<Self, E>, E: Dtype>(&self) -> Result<M::Built, Self::Err> {
+    fn try_build_module<M: BuildOnDevice<Self, E>, E: Dtype>(&self) -> Result<M::Built, Self::Err>
+    where
+        Self: Device<E>,
+    {
         M::try_build_on_device(self)
     }
 }
@@ -79,14 +76,8 @@ impl<D: DeviceStorage> DeviceBuildExt for D {}
 /// blanket impls for, and [ModuleMut]
 pub trait ZeroSizedModule: Default {}
 
-impl<T: ZeroSizedModule + BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for T {
+impl<T: ZeroSizedModule + BuildModule<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for T {
     type Built = T;
-}
-
-impl<E: Dtype, D: DeviceStorage, T: ZeroSizedModule> BuildModule<D, E> for T {
-    fn try_build(_: &D) -> Result<Self, <D>::Err> {
-        Ok(Default::default())
-    }
 }
 
 impl<E: Dtype, D: Device<E>, T: ZeroSizedModule> TensorCollection<E, D> for T {

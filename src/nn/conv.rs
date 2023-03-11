@@ -83,21 +83,6 @@ where
     }
 }
 
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
-    BuildModule<D, E> for Conv2D<I, O, K, S, P, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-    D: Device<E>,
-{
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        let k = E::from_usize(I * K * K).unwrap();
-        let bound = E::ONE / k.sqrt();
-        Ok(Self {
-            weight: device.try_sample(rand_distr::Uniform::new(-bound, bound))?,
-        })
-    }
-}
-
 impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D1, D2>
     ToDevice<D2> for Conv2D<I, O, K, S, P, E, D1>
 where
