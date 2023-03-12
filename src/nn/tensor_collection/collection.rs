@@ -35,10 +35,10 @@ pub type ModuleVisitorOutput<Func, Mod, E, D, E2, D2> = Result<
 ///     l2: Linear<10, 2, E, D>,
 ///     relu: ReLU,
 /// }
-/// 
+///
 /// impl<E: Dtype, D: Device<E>> TensorCollection<E, D> for Mlp<E, D> {
 ///     type Output<E2: Dtype, D2: Device<E2>> = Mlp<E2, D2>;
-/// 
+///
 ///     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
 ///         visitor: &mut V,
 ///     ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
@@ -48,7 +48,7 @@ pub type ModuleVisitorOutput<Func, Mod, E, D, E2, D2> = Result<
 ///         // not be handled until we construct the output Mlp, because a value of None is not an error.
 ///         let l1 = visitor.visit_module("l1", |s| &s.l1, |s| &mut s.l1)?;
 ///         let l2 = visitor.visit_module("l2", |s| &s.l2, |s| &mut s.l2)?;
-/// 
+///
 ///         // Specify how to construct Mlp given optional values for its fields.
 ///         Ok(dfdx::try_some!(Mlp {
 ///             l1: l1?,
