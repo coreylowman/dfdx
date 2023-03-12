@@ -20,7 +20,7 @@ impl<'a, E: Dtype, D: Device<E>, D2: Device<E>> TensorVisitor<E, D, E, D2> for C
 
 /// Something that can be copied to another `Device`.
 pub trait ToDevice<E: Dtype, D1: Device<E>, D2: Device<E>>: TensorCollection<E, D1> {
-    /// Fallible version of [to_device]
+    /// Fallible version of [ToDevice::to_device]
     fn try_to_device(&self, device: &D2) -> Result<Self::Output<E, D2>, D2::Err> {
         let out = Self::iter_tensors(&mut RecursiveWalker {
             m: self,

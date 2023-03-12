@@ -42,7 +42,7 @@ impl<const IN: usize, const INNER: usize, const OUT: usize, E: Dtype, D: Device<
         let l1 = visitor.visit_module("l1", |s| &s.l1, |s| &mut s.l1)?;
         let l2 = visitor.visit_module("l2", |s| &s.l2, |s| &mut s.l2)?;
 
-        // Specify how to construct Mlp given optional values for its fields. Note that
+        // Specify how to construct Mlp given optional values for its fields.
         Ok(dfdx::try_some!(Mlp {
             l1: l1?,
             l2: l2?,

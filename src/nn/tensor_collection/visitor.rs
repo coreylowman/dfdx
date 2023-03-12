@@ -19,13 +19,14 @@ pub struct RecursiveWalker<'a, M, F> {
     pub f: &'a mut F,
 }
 
-// TODO: Documentation
 /// Something that can visit [Tensor]s. Used in conjunction with [RecursiveWalker].
 pub trait TensorVisitor<E: Dtype, D: Device<E>, E2: Dtype, D2: Device<E2>> {
     /// The type of tensor this struct uses. E.g. [ViewTensorMut], or [ViewTensorRef]
     type Viewer: TensorViewer;
     type Err;
 
+    /// What to do when visiting each Tensor. Return `Ok(None)` if this visitor should not
+    /// construct a new module each time it is used, and `Ok(Some(_))` if it should.
     fn visit<S: Shape>(
         &mut self,
         opts: TensorOptions<S, E, D>,

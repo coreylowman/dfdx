@@ -17,7 +17,7 @@ impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D, E, D> for Builder<'a, D> {
     }
 }
 
-/// Something that can be built. Related to [BuildOnDevice]
+/// Something that can be built. Related to [super::BuildOnDevice]
 pub trait BuildModule<D: Device<E>, E: Dtype>:
     Sized + TensorCollection<E, D, Output<E, D> = Self>
 {

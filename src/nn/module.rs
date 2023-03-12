@@ -40,7 +40,7 @@ pub trait ModuleMut<Input> {
 }
 
 /// Something that can be built on a different device
-/// than it is on. Builds [ToDevice::Output].
+/// than it is on.
 ///
 /// Related to [BuildModule]
 pub trait BuildOnDevice<D: Device<E>, E: Dtype> {
