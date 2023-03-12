@@ -13,7 +13,7 @@ impl<E: Dtype, D: Device<E>> TensorVisitor<E, D, f32, Cpu> for ModelEMAOp<E> {
         &mut self,
         opts: TensorOptions<S, E, D>,
         (dst, src): (&mut Tensor<S, E, D>, &Tensor<S, E, D>),
-    ) -> TensorVisitorOutput<Self, S, E, D, f32, Cpu> {
+    ) -> Result<Option<Tensor<S, f32, Cpu>>, Self::Err> {
         if opts.do_gradient_update {
             dst.try_axpy(self.decay, src, E::ONE - self.decay)?;
         }

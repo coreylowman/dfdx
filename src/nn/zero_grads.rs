@@ -63,7 +63,7 @@ impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D, f32, Cpu> for ZeroGradOp<'a
         &mut self,
         opts: TensorOptions<S, E, D>,
         t: &Tensor<S, E, D>,
-    ) -> TensorVisitorOutput<Self, S, E, D, f32, Cpu> {
+    ) -> Result<Option<Tensor<S, f32, Cpu>>, Self::Err> {
         if opts.do_gradient_update {
             let grad = self.gradients.get_or_alloc_mut(t)?;
             t.device.try_fill_with_zeros(grad)?;

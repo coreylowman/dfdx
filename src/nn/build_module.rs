@@ -10,7 +10,7 @@ impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D, E, D> for Builder<'a, D> {
         &mut self,
         opts: TensorOptions<S, E, D>,
         _t: (),
-    ) -> TensorVisitorOutput<Self, S, E, D, E, D> {
+    ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         let mut tensor: Tensor<S, E, D> = self.0.try_zeros_like(&opts.shape)?;
         (opts.reset)(&mut tensor)?;
         Ok(Some(tensor))

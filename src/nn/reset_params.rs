@@ -11,7 +11,7 @@ impl<E: Dtype, D: Device<E>> TensorVisitor<E, D, f32, Cpu> for Resetter {
         &mut self,
         opts: TensorOptions<S, E, D>,
         t: &mut Tensor<S, E, D>,
-    ) -> TensorVisitorOutput<Self, S, E, D, f32, Cpu> {
+    ) -> Result<Option<Tensor<S, f32, Cpu>>, Self::Err> {
         (opts.reset)(t)?;
         Ok(None)
     }

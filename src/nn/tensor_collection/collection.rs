@@ -21,9 +21,6 @@ pub type ModuleVisitorOutput<Func, Mod, E, D, E2, D2> = Result<
     <Func as TensorVisitor<E, D, E2, D2>>::Err,
 >;
 
-pub type TensorVisitorOutput<F, S, E, D, E2, D2> =
-    Result<Option<Tensor<S, E2, D2>>, <F as TensorVisitor<E, D, E2, D2>>::Err>;
-
 /// A collection of named tensors. Implementing this trait will enable anything
 /// that operates on tensors, like resetting, EMA, counting number of params,
 /// gradient updates, etc.
@@ -66,7 +63,7 @@ pub trait ModuleVisitor<
         get_refs: GetRef,
         get_muts: GetMut,
         opts: TensorOptions<S, E, D>,
-    ) -> TensorVisitorOutput<Self::Func, S, E, D, E2, D2>
+    ) -> Result<Option<Tensor<S, E2, D2>>, <Self::Func as TensorVisitor<E, D, E2, D2>>::Err>
     where
         GetRef: FnMut(&T) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut T) -> &mut Tensor<S, E, D>;

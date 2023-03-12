@@ -1,5 +1,5 @@
 use crate::{
-    prelude::{Device, Cpu},
+    prelude::{Cpu, Device},
     shapes::{Dtype, Shape},
     tensor::{
         numpy::{NpzError, NumpyDtype},
@@ -123,7 +123,7 @@ impl<W: Write + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D, f
         &mut self,
         _: TensorOptions<S, E, D>,
         (t, full_path): (&Tensor<S, E, D>, String),
-    ) -> TensorVisitorOutput<Self, S, E, D, f32, Cpu> {
+    ) -> Result<Option<Tensor<S, f32, Cpu>>, Self::Err> {
         t.write_to_npz(self, full_path)?;
         Ok(None)
     }
@@ -139,7 +139,7 @@ impl<R: Read + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D, f3
         &mut self,
         _: TensorOptions<S, E, D>,
         (t, full_path): (&mut Tensor<S, E, D>, String),
-    ) -> TensorVisitorOutput<Self, S, E, D, f32, Cpu> {
+    ) -> Result<Option<Tensor<S, f32, Cpu>>, Self::Err> {
         t.read_from_npz(self, full_path)?;
         Ok(None)
     }

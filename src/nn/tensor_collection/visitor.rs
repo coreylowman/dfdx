@@ -6,7 +6,7 @@ use crate::{
 
 use super::{
     collection::{ModuleVisitor, TensorCollection, TensorOptions},
-    ModuleVisitorOutput, TensorVisitorOutput,
+    ModuleVisitorOutput,
 };
 
 use std::string::String;
@@ -30,7 +30,7 @@ pub trait TensorVisitor<E: Dtype, D: Device<E>, E2: Dtype, D2: Device<E2>> {
         &mut self,
         opts: TensorOptions<S, E, D>,
         t: <Self::Viewer as TensorViewer>::View<'_, Tensor<S, E, D>>,
-    ) -> TensorVisitorOutput<Self, S, E, D, E2, D2>;
+    ) -> Result<Option<Tensor<S, E2, D2>>, Self::Err>;
 }
 
 /// Something that can view [Tensor]s in different ways. For example
@@ -102,7 +102,7 @@ impl<
         mut get_refs: GetRef,
         mut get_muts: GetMut,
         opts: TensorOptions<S, E, D>,
-    ) -> TensorVisitorOutput<F, S, E, D, E2, D2>
+    ) -> Result<Option<Tensor<S, E2, D2>>, F::Err>
     where
         GetRef: FnMut(&M) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,

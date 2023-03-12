@@ -4,10 +4,7 @@
 mod collection;
 mod visitor;
 
-pub use collection::{
-    ModuleVisitor, ModuleVisitorOutput, TensorCollection, TensorVisitorOutput, TensorOptions,
-};
+pub use collection::{ModuleVisitor, ModuleVisitorOutput, TensorCollection, TensorOptions};
 pub use visitor::{
-    RecursiveWalker, TensorVisitor, TensorViewer, ViewTensorMut, ViewTensorName,
-    ViewTensorRef,
+    RecursiveWalker, TensorViewer, TensorVisitor, ViewTensorMut, ViewTensorName, ViewTensorRef,
 };

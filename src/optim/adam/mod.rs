@@ -7,7 +7,7 @@ use std::{marker::PhantomData, sync::Arc};
 
 use crate::{
     nn::tensor_collection::*,
-    prelude::{Device, Cpu},
+    prelude::{Cpu, Device, Tensor},
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Gradients},
 };
@@ -117,7 +117,7 @@ impl<M, D: Device<E>, E: Dtype> TensorVisitor<E, D, f32, Cpu>
         &mut self,
         opts: TensorOptions<S, E, D>,
         p: &mut crate::prelude::Tensor<S, E, D>,
-    ) -> TensorVisitorOutput<Self, S, E, D, f32, Cpu> {
+    ) -> Result<Option<Tensor<S, f32, Cpu>>, Self::Err> {
         if !opts.do_gradient_update {
             return Ok(None);
         }
