@@ -96,7 +96,7 @@ impl<Input, T: ModuleMut<Input, Output = Input>, const N: usize> ModuleMut<Input
 mod tests {
     use super::*;
     use crate::tests::*;
-    use crate::{nn::builders::*, shapes::*};
+    use crate::{nn::builders::*, prelude::*, shapes::*};
 
     #[test]
     fn test_default_and_reset() {

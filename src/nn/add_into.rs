@@ -95,6 +95,7 @@ mod tests {
     use super::*;
     use crate::{
         nn::builders::*,
+        prelude::{OwnedTape, Tensor, ZerosTensor},
         shapes::*,
         tests::{TestDevice, TestDtype},
     };

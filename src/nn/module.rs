@@ -89,13 +89,6 @@ impl<E: Dtype, D: Device<E>, T: ZeroSizedModule> TensorCollection<E, D> for T {
     }
 }
 
-impl<T: ZeroSizedModule + Clone, D> ToDevice<D> for T {
-    type Output = T;
-    fn to_device(&self, _device: &D) -> Self {
-        self.clone()
-    }
-}
-
 /// Marker trait for modules that don't have different behavior between
 /// mutable forwards and non-mutable forwards
 pub trait NonMutableModule {}

@@ -222,9 +222,7 @@ pub use ema::ModelEMA;
 pub use npz::{LoadFromNpz, SaveToNpz};
 pub use num_params::NumParams;
 pub use reset_params::ResetParams;
-#[cfg(feature = "cuda")]
-pub use to_device::OnCuda;
-pub use to_device::{OnCpu, OnDevice, ToDevice};
+pub use to_device::ToDevice;
 pub use zero_grads::ZeroGrads;
 
 pub mod modules {
