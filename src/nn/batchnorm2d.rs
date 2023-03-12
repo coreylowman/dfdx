@@ -39,7 +39,7 @@ where
     // update statistics since we are training - off tape
     mean.try_axpy(E::ONE - momentum, &mean_chan, momentum)?;
 
-    let centered = x - mean_chan.try_broadcast_like(&shape)?;
+    let centered = x.try_sub(mean_chan.try_broadcast_like(&shape)?)?;
 
     let var_chan = centered.retaped::<T>().square().mean::<Rank1<C>, _>();
 
@@ -47,10 +47,13 @@ where
     var.try_axpy(E::ONE - momentum, &var_chan, momentum * n / (n - E::ONE))?;
 
     // statistics for normalizing - on tape
-    let std = (var_chan + epsilon).try_sqrt()?;
+    let std = var_chan.try_add(epsilon)?.try_sqrt()?;
 
     // record broadcast of scale & bias - on tape
-    let scale = (scale.retaped::<T>() / std).try_broadcast_like(&shape)?;
+    let scale = scale
+        .retaped::<T>()
+        .try_div(std)?
+        .try_broadcast_like(&shape)?;
     let bias = bias.retaped::<T>().try_broadcast_like(&shape)?;
 
     // normalize & affine - on tape

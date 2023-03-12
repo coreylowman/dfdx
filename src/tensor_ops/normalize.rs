@@ -1,9 +1,9 @@
 use crate::{
-    shapes::{Axes, Dtype, HasShape, ReduceShape, Shape},
+    shapes::{Axes, Dtype, ReduceShape, Shape},
     tensor::{HasErr, Tape, Tensor},
 };
 
-use super::{BroadcastTo, Device, MeanTo, StddevTo, TryDiv, TrySub};
+use super::{BroadcastTo, Device, MeanTo, TryAdd, TryDiv, TrySub};
 
 /// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Ax`. `epsilon` is used during stddev.
 /// Computes `(t - t.mean(Ax)) / t.std(Ax, epsilon)`.
@@ -36,15 +36,16 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     where
         S: ReduceShape<Ax>,
     {
-        let mean = self
+        let shape = self.shape;
+        let mean = self.retaped::<T>().try_mean::<_, Ax>()?;
+        let centered = self.try_sub(mean.try_broadcast_like(&shape)?)?;
+        let std = centered
             .retaped::<T>()
+            .try_square()?
             .try_mean::<_, Ax>()?
-            .try_broadcast_like(self.shape())?;
-        let std = self
-            .retaped::<T>()
-            .try_stddev::<_, Ax>(epsilon)?
-            .try_broadcast_like(self.shape())?;
-        self.try_sub(mean)?.try_div(std)
+            .try_add(epsilon)?
+            .try_sqrt()?;
+        centered.try_div(std.try_broadcast_like(&shape)?)
     }
 }
 
