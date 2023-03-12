@@ -43,16 +43,6 @@ pub struct Bias2D<const C: usize, E: Dtype, D: DeviceStorage> {
 
 impl<const C: usize, E: Dtype, D: DeviceStorage> NonMutableModule for Bias2D<C, E, D> {}
 
-impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2> for Bias2D<C, E, D1> {
-    type Output = Bias2D<C, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        Bias2D {
-            bias: self.bias.to_device(device),
-        }
-    }
-}
-
 impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for Bias2D<C, E, D> {
     type Output<E2: Dtype, D2: Device<E2>> = Bias2D<C, E2, D2>;
 

@@ -75,17 +75,6 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device
     }
 }
 
-impl<const I: usize, const O: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
-    for UnbiasedLinear<I, O, E, D1>
-{
-    type Output = UnbiasedLinear<I, O, E, D2>;
-    fn to_device(&self, device: &D2) -> Self::Output {
-        UnbiasedLinear {
-            weight: self.weight.to_device(device),
-        }
-    }
-}
-
 impl<const I: usize, const O: usize, E: Dtype, D: Device<E>, T> Module<T>
     for UnbiasedLinear<I, O, E, D>
 where

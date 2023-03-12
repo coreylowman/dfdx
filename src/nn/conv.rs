@@ -83,22 +83,6 @@ where
     }
 }
 
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D1, D2>
-    ToDevice<D2> for Conv2D<I, O, K, S, P, E, D1>
-where
-    E: Dtype,
-    D1: Device<E>,
-    D2: Device<E>,
-{
-    type Output = Conv2D<I, O, K, S, P, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        Conv2D {
-            weight: self.weight.to_device(device),
-        }
-    }
-}
-
 #[cfg(feature = "nightly")]
 impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D, Img>
     Module<Img> for Conv2D<C, O, K, S, P, E, D>

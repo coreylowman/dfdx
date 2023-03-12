@@ -2,15 +2,15 @@ use super::tensor_collection::*;
 use crate::prelude::{Device, DeviceStorage, Dtype, Shape, Tensor};
 
 struct Builder<'a, D: DeviceStorage>(&'a D);
-impl<'a, E: Dtype, D: Device<E>> TensorFunction<E, D, E, D> for Builder<'a, D> {
+impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D, E, D> for Builder<'a, D> {
     type Viewer = ();
     type Err = D::Err;
 
-    fn apply<S: Shape>(
+    fn visit<S: Shape>(
         &mut self,
         opts: TensorOptions<S, E, D>,
         _t: (),
-    ) -> TensorFunctionOutput<Self, S, E, D, E, D> {
+    ) -> TensorVisitorOutput<Self, S, E, D, E, D> {
         let mut tensor: Tensor<S, E, D> = self.0.try_zeros_like(&opts.shape)?;
         (opts.reset)(&mut tensor)?;
         Ok(Some(tensor))

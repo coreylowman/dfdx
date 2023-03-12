@@ -177,6 +177,7 @@ mod build_module;
 mod num_params;
 mod reset_params;
 pub mod tensor_collection;
+mod to_device;
 mod zero_grads;
 
 mod module;
@@ -219,6 +220,9 @@ pub use self::safetensors::{LoadFromSafetensors, SaveToSafetensors};
 pub use ema::ModelEMA;
 #[cfg(feature = "numpy")]
 pub use npz::{LoadFromNpz, SaveToNpz};
+pub use to_device::{ToDevice, OnDevice, OnCpu};
+#[cfg(feature = "cuda")]
+pub use to_device::OnCuda;
 pub use num_params::NumParams;
 pub use reset_params::ResetParams;
 pub use zero_grads::ZeroGrads;

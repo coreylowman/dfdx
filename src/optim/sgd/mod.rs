@@ -7,7 +7,7 @@ use std::marker::PhantomData;
 
 use crate::{
     nn::tensor_collection::*,
-    prelude::Device,
+    prelude::{Device, Cpu},
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Gradients, Tensor},
 };
@@ -142,7 +142,7 @@ pub trait SgdKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<E: Dtype, D: Device<E>, M> TensorVisitor<E, D>
+impl<E: Dtype, D: Device<E>, M> TensorVisitor<E, D, f32, Cpu>
     for (&mut Sgd<M, E, D>, &Gradients<E, D>, UnusedTensors)
 {
     type Viewer = ViewTensorMut;
@@ -152,9 +152,9 @@ impl<E: Dtype, D: Device<E>, M> TensorVisitor<E, D>
         &mut self,
         opts: TensorOptions<S, E, D>,
         p: &mut Tensor<S, E, D>,
-    ) -> Result<(), D::Err> {
+    ) -> TensorVisitorOutput<Self, S, E, D, f32, Cpu> {
         if !opts.do_gradient_update {
-            return Ok(());
+            return Ok(None);
         }
         let g = self.1.get_ref_checked(p);
         match g {
@@ -170,7 +170,7 @@ impl<E: Dtype, D: Device<E>, M> TensorVisitor<E, D>
                 )?;
             }
         }
-        Ok(())
+        Ok(None)
     }
 }
 

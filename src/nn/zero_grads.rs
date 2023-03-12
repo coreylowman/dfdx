@@ -55,7 +55,7 @@ struct ZeroGradOp<'a, E: Unit, D: DeviceStorage> {
     gradients: &'a mut Gradients<E, D>,
 }
 
-impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D> for ZeroGradOp<'a, E, D> {
+impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D, f32, Cpu> for ZeroGradOp<'a, E, D> {
     type Viewer = ViewTensorRef;
     type Err = D::Err;
 
@@ -63,13 +63,13 @@ impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D> for ZeroGradOp<'a, E, D> {
         &mut self,
         opts: TensorOptions<S, E, D>,
         t: &Tensor<S, E, D>,
-    ) -> Result<(), Self::Err> {
+    ) -> TensorVisitorOutput<Self, S, E, D, f32, Cpu> {
         if opts.do_gradient_update {
             let grad = self.gradients.get_or_alloc_mut(t)?;
             t.device.try_fill_with_zeros(grad)?;
             self.updated.push(t.id);
         }
-        Ok(())
+        Ok(None)
     }
 }
 

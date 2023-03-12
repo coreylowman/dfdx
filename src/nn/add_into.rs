@@ -1,4 +1,4 @@
-use crate::{prelude::Device, shapes::Dtype, tensor::*};
+use crate::{prelude::Device, shapes::Dtype};
 
 use super::*;
 
@@ -35,13 +35,6 @@ impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> TensorCollection<E, D> f
     ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
         let t = visitor.visit_module("0", |s| &s.0, |s| &mut s.0)?;
         Ok(crate::try_some!(AddInto(t?)))
-    }
-}
-
-impl<T: ToDevice<D>, D> ToDevice<D> for AddInto<T> {
-    type Output = AddInto<T::Output>;
-    fn to_device(&self, device: &D) -> Self::Output {
-        AddInto(self.0.to_device(device))
     }
 }
 

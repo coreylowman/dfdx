@@ -47,16 +47,6 @@ impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>, R: TensorCollection<E, D
     }
 }
 
-impl<D, F: ToDevice<D>, R: ToDevice<D>> ToDevice<D> for GeneralizedResidual<F, R> {
-    type Output = GeneralizedResidual<F::Output, R::Output>;
-    fn to_device(&self, device: &D) -> Self::Output {
-        GeneralizedResidual {
-            f: self.f.to_device(device),
-            r: self.r.to_device(device),
-        }
-    }
-}
-
 impl<T: SplitTape, F: Module<T>, R: Module<T, Output = F::Output, Error = F::Error>> Module<T>
     for GeneralizedResidual<F, R>
 where

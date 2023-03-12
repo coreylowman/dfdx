@@ -99,23 +99,6 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D1, D2>
-    ToDevice<D2> for Transformer<M, H, A, B, F, E, D1>
-where
-    E: Dtype,
-    D1: Device<E>,
-    D2: Device<E>,
-{
-    type Output = Transformer<M, H, A, B, F, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        Transformer {
-            encoder: self.encoder.to_device(device),
-            decoder: self.decoder.to_device(device),
-        }
-    }
-}
-
 impl<
         const M: usize,
         const H: usize,

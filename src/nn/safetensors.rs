@@ -1,5 +1,5 @@
 use crate::{
-    prelude::Device,
+    prelude::{Device, Cpu},
     shapes::{Dtype, HasShape, Shape},
     tensor::{
         safetensors::{Error, SafeDtype},
@@ -62,7 +62,7 @@ impl Writer {
     }
 }
 
-impl<E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for Writer {
+impl<E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D, f32, Cpu> for Writer {
     type Viewer = (ViewTensorRef, ViewTensorName);
     type Err = SafeTensorError;
 
@@ -70,9 +70,9 @@ impl<E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for Writer {
         &mut self,
         _: TensorOptions<S, E, D>,
         (t, full_path): (&Tensor<S, E, D>, String),
-    ) -> Result<(), Self::Err> {
+    ) -> TensorVisitorOutput<Self, S, E, D, f32, Cpu> {
         self.add(full_path, t);
-        Ok(())
+        Ok(None)
     }
 }
 
@@ -132,7 +132,7 @@ impl<E: Dtype + SafeDtype, D: Device<E>, T: TensorCollection<E, D>> LoadFromSafe
 {
 }
 
-impl<'data, E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for SafeTensors<'data> {
+impl<'data, E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D, f32, Cpu> for SafeTensors<'data> {
     type Viewer = (ViewTensorMut, ViewTensorName);
     type Err = Error;
 
@@ -140,8 +140,9 @@ impl<'data, E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for SafeTens
         &mut self,
         _: TensorOptions<S, E, D>,
         (t, full_path): (&mut Tensor<S, E, D>, String),
-    ) -> Result<(), Self::Err> {
-        t.load_safetensor(self, &full_path)
+    ) -> TensorVisitorOutput<Self, S, E, D, f32, Cpu> {
+        t.load_safetensor(self, &full_path)?;
+        Ok(None)
     }
 }
 

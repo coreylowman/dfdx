@@ -3,7 +3,7 @@ use super::tensor_collection::*;
 use crate::{prelude::Device, shapes::*, tensor::*};
 
 struct Counter(usize);
-impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for Counter {
+impl<E: Dtype, D: Device<E>> TensorVisitor<E, D, f32, Cpu> for Counter {
     type Viewer = ViewTensorRef;
     type Err = D::Err;
 
@@ -11,11 +11,11 @@ impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for Counter {
         &mut self,
         opts: TensorOptions<S, E, D>,
         t: &Tensor<S, E, D>,
-    ) -> Result<(), D::Err> {
+    ) -> TensorVisitorOutput<Self, S, E, D, f32, Cpu> {
         if opts.do_gradient_update {
             self.0 += t.shape().num_elements();
         }
-        Ok(())
+        Ok(None)
     }
 }
 

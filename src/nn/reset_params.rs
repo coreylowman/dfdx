@@ -3,7 +3,7 @@ use super::tensor_collection::*;
 use crate::{prelude::Device, shapes::*, tensor::*};
 
 struct Resetter;
-impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for Resetter {
+impl<E: Dtype, D: Device<E>> TensorVisitor<E, D, f32, Cpu> for Resetter {
     type Viewer = ViewTensorMut;
     type Err = D::Err;
 
@@ -11,8 +11,9 @@ impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for Resetter {
         &mut self,
         opts: TensorOptions<S, E, D>,
         t: &mut Tensor<S, E, D>,
-    ) -> Result<(), D::Err> {
-        (opts.reset)(t)
+    ) -> TensorVisitorOutput<Self, S, E, D, f32, Cpu> {
+        (opts.reset)(t)?;
+        Ok(None)
     }
 }
 

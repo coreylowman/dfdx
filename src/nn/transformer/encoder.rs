@@ -4,7 +4,7 @@ use rand_distr::uniform::SampleUniform;
 use crate::{
     nn::modules::*,
     shapes::Dtype,
-    tensor::{DeviceStorage, PutTape, SplitTape, ToDevice},
+    tensor::{DeviceStorage, PutTape, SplitTape},
     tensor_ops::Device,
 };
 
@@ -120,20 +120,6 @@ where
             ff: ff?,
             norm2: norm2?,
         }))
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, E: Dtype, D1: Device<E>, D2: Device<E>>
-    ToDevice<D2> for TransformerEncoderBlock<M, H, F, E, D1>
-{
-    type Output = TransformerEncoderBlock<M, H, F, E, D2>;
-    fn to_device(&self, device: &D2) -> Self::Output {
-        TransformerEncoderBlock {
-            self_attn: self.self_attn.to_device(device),
-            norm1: self.norm1.to_device(device),
-            ff: self.ff.to_device(device),
-            norm2: self.norm2.to_device(device),
-        }
     }
 }
 

@@ -91,25 +91,6 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D1, D2> ToDevice<D2>
-    for MultiHeadAttention<M, H, K, V, E, D1>
-where
-    E: Dtype,
-    D1: Device<E>,
-    D2: Device<E>,
-{
-    type Output = MultiHeadAttention<M, H, K, V, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        MultiHeadAttention {
-            w_q: self.w_q.to_device(device),
-            w_k: self.w_k.to_device(device),
-            w_v: self.w_v.to_device(device),
-            w_o: self.w_o.to_device(device),
-        }
-    }
-}
-
 #[cfg(feature = "nightly")]
 impl<
         const M: usize,

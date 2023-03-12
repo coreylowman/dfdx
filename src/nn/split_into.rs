@@ -37,14 +37,6 @@ impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> TensorCollection<E, D> f
     }
 }
 
-impl<T: ToDevice<D>, D> ToDevice<D> for SplitInto<T> {
-    type Output = SplitInto<T::Output>;
-
-    fn to_device(&self, device: &D) -> Self::Output {
-        SplitInto(self.0.to_device(device))
-    }
-}
-
 macro_rules! tuple_impls {
     ([$($heads:ident),+] $tail:ident) => {
 impl<

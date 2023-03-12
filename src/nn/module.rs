@@ -1,7 +1,6 @@
 pub use super::build_module::BuildModule;
-#[cfg(feature = "cuda")]
-pub use crate::tensor::OnCuda;
-pub use crate::tensor::{DeviceStorage, OnCpu, OnDevice, ToDevice};
+pub use super::to_device::*;
+pub use crate::tensor::DeviceStorage;
 use crate::{prelude::Device, shapes::Dtype};
 
 use super::tensor_collection::*;

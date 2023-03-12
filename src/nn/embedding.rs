@@ -116,17 +116,6 @@ impl<
     }
 }
 
-impl<const VOCAB: usize, const DIM: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
-    for Embedding<VOCAB, DIM, E, D1>
-{
-    type Output = Embedding<VOCAB, DIM, E, D2>;
-    fn to_device(&self, device: &D2) -> Self::Output {
-        Embedding {
-            weight: self.weight.to_device(device),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

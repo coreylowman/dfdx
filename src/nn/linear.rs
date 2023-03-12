@@ -90,18 +90,6 @@ impl<const I: usize, const O: usize, E: Dtype, D: Device<E>> TensorCollection<E,
     }
 }
 
-impl<const I: usize, const O: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
-    for Linear<I, O, E, D1>
-{
-    type Output = Linear<I, O, E, D2>;
-    fn to_device(&self, device: &D2) -> Self::Output {
-        Linear {
-            weight: self.weight.to_device(device),
-            bias: self.bias.to_device(device),
-        }
-    }
-}
-
 impl<const I: usize, const O: usize, E: Dtype, D: Device<E>, T> Module<T> for Linear<I, O, E, D>
 where
     T: SplitTape + TryMatMul<Tensor<Rank2<I, O>, E, D, T::Tape>> + HasErr<Err = D::Err>,

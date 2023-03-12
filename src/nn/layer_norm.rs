@@ -71,20 +71,6 @@ impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNor
     }
 }
 
-impl<const M: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
-    for LayerNorm1D<M, E, D1>
-{
-    type Output = LayerNorm1D<M, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        LayerNorm1D {
-            gamma: self.gamma.to_device(device),
-            beta: self.beta.to_device(device),
-            epsilon: self.epsilon,
-        }
-    }
-}
-
 impl<const M: usize, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<Rank1<M>, E, D, T>>
     for LayerNorm1D<M, E, D>
 {

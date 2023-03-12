@@ -1,4 +1,4 @@
-use crate::{prelude::Device, shapes::Dtype, tensor::*};
+use crate::{prelude::Device, shapes::Dtype};
 
 use super::*;
 
@@ -56,19 +56,6 @@ impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>, const N: usize> TensorCo
         }
 
         Ok(Some(Repeated { modules }))
-    }
-}
-
-impl<T: ToDevice<D>, const N: usize, D> ToDevice<D> for Repeated<T, N> {
-    type Output = Repeated<T::Output, N>;
-    fn to_device(&self, device: &D) -> Self::Output {
-        Repeated {
-            modules: self
-                .modules
-                .iter()
-                .map(|module| module.to_device(device))
-                .collect(),
-        }
     }
 }
 

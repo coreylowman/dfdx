@@ -4,7 +4,7 @@ use rand_distr::uniform::SampleUniform;
 use crate::{
     nn::modules::*,
     shapes::Dtype,
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, ToDevice},
+    tensor::{DeviceStorage, HasErr, PutTape, SplitTape},
     tensor_ops::{Device, TryAdd},
 };
 
@@ -80,20 +80,6 @@ where
     ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
         let x = visitor.visit_module("0", |s| &s.0, |s| &mut s.0)?;
         Ok(crate::try_some!(TransformerDecoder(x?)))
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, const L: usize, E, D1, D2> ToDevice<D2>
-    for TransformerDecoder<M, H, F, L, E, D1>
-where
-    E: Dtype,
-    D1: Device<E>,
-    D2: Device<E>,
-{
-    type Output = TransformerDecoder<M, H, F, L, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        TransformerDecoder(self.0.to_device(device))
     }
 }
 
@@ -189,23 +175,6 @@ where
             ff: ff?,
             norm3: norm3?,
         }))
-    }
-}
-
-impl<const M: usize, const H: usize, const F: usize, E: Dtype, D1: Device<E>, D2: Device<E>>
-    ToDevice<D2> for TransformerDecoderBlock<M, H, F, E, D1>
-{
-    type Output = TransformerDecoderBlock<M, H, F, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        TransformerDecoderBlock {
-            self_attn: self.self_attn.to_device(device),
-            norm1: self.norm1.to_device(device),
-            mh_attn: self.mh_attn.to_device(device),
-            norm2: self.norm2.to_device(device),
-            ff: self.ff.to_device(device),
-            norm3: self.norm3.to_device(device),
-        }
     }
 }
 

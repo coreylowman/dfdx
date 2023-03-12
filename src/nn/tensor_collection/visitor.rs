@@ -1,12 +1,12 @@
 use crate::{
-    prelude::{Cpu, Device},
+    prelude::Device,
     shapes::{Dtype, Shape},
     tensor::Tensor,
 };
 
 use super::{
     collection::{ModuleVisitor, TensorCollection, TensorOptions},
-    ModuleVisitorOutput, TensorFunctionOutput,
+    ModuleVisitorOutput, TensorVisitorOutput,
 };
 
 use std::string::String;
@@ -21,20 +21,7 @@ pub struct RecursiveWalker<'a, M, F> {
 
 // TODO: Documentation
 /// Something that can visit [Tensor]s. Used in conjunction with [RecursiveWalker].
-pub trait TensorFunction<E: Dtype, D: Device<E>, E2: Dtype, D2: Device<E2>> {
-    /// The type of tensor this struct uses. E.g. [ViewTensorMut], or [ViewTensorRef]
-    type Viewer: TensorViewer;
-    type Err;
-
-    fn apply<S: Shape>(
-        &mut self,
-        opts: TensorOptions<S, E, D>,
-        t: <Self::Viewer as TensorViewer>::View<'_, Tensor<S, E, D>>,
-    ) -> TensorFunctionOutput<Self, S, E, D, E2, D2>;
-}
-
-/// Something that can visit [Tensor]s. Used in conjunction with [RecursiveWalker].
-pub trait TensorVisitor<E: Dtype, D: Device<E>> {
+pub trait TensorVisitor<E: Dtype, D: Device<E>, E2: Dtype, D2: Device<E2>> {
     /// The type of tensor this struct uses. E.g. [ViewTensorMut], or [ViewTensorRef]
     type Viewer: TensorViewer;
     type Err;
@@ -43,21 +30,7 @@ pub trait TensorVisitor<E: Dtype, D: Device<E>> {
         &mut self,
         opts: TensorOptions<S, E, D>,
         t: <Self::Viewer as TensorViewer>::View<'_, Tensor<S, E, D>>,
-    ) -> Result<(), Self::Err>;
-}
-
-impl<E: Dtype, D: Device<E>, T: TensorVisitor<E, D>> TensorFunction<E, D, f32, Cpu> for T {
-    type Viewer = T::Viewer;
-    type Err = T::Err;
-
-    fn apply<S: Shape>(
-        &mut self,
-        opts: TensorOptions<S, E, D>,
-        t: <Self::Viewer as TensorViewer>::View<'_, Tensor<S, E, D>>,
-    ) -> Result<Option<Tensor<S, f32, Cpu>>, Self::Err> {
-        self.visit(opts, t)?;
-        Ok(None)
-    }
+    ) -> TensorVisitorOutput<Self, S, E, D, E2, D2>;
 }
 
 /// Something that can view [Tensor]s in different ways. For example
@@ -98,7 +71,7 @@ impl<
         D: Device<E>,
         E2: Dtype,
         D2: Device<E2>,
-        F: TensorFunction<E, D, E2, D2>,
+        F: TensorVisitor<E, D, E2, D2>,
     > ModuleVisitor<M, E, D, E2, D2>
     for RecursiveWalker<'a, <F::Viewer as TensorViewer>::View<'a, M>, F>
 {
@@ -129,12 +102,12 @@ impl<
         mut get_refs: GetRef,
         mut get_muts: GetMut,
         opts: TensorOptions<S, E, D>,
-    ) -> TensorFunctionOutput<F, S, E, D, E2, D2>
+    ) -> TensorVisitorOutput<F, S, E, D, E2, D2>
     where
         GetRef: FnMut(&M) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,
     {
-        self.f.apply(
+        self.f.visit(
             opts,
             F::Viewer::view_field(&mut self.m, name, &mut get_refs, &mut get_muts),
         )

@@ -36,13 +36,6 @@ impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>> TensorCollection<E, D> f
     }
 }
 
-impl<F: ToDevice<D>, D> ToDevice<D> for Residual<F> {
-    type Output = Residual<F::Output>;
-    fn to_device(&self, device: &D) -> Self::Output {
-        Residual(self.0.to_device(device))
-    }
-}
-
 impl<T: SplitTape + TryAdd<T>, F: Module<T, Output = T, Error = T::Err>> Module<T> for Residual<F> {
     type Output = T;
     type Error = F::Error;

@@ -6,7 +6,7 @@ use crate::{
     tensor::{OneFillStorage, Tensor, ZeroFillStorage},
 };
 
-use super::visitor::TensorFunction;
+use super::visitor::TensorVisitor;
 
 #[macro_export]
 macro_rules! try_some {
@@ -18,11 +18,11 @@ macro_rules! try_some {
 
 pub type ModuleVisitorOutput<Func, Mod, E, D, E2, D2> = Result<
     Option<<Mod as TensorCollection<E, D>>::Output<E2, D2>>,
-    <Func as TensorFunction<E, D, E2, D2>>::Err,
+    <Func as TensorVisitor<E, D, E2, D2>>::Err,
 >;
 
-pub type TensorFunctionOutput<F, S, E, D, E2, D2> =
-    Result<Option<Tensor<S, E2, D2>>, <F as TensorFunction<E, D, E2, D2>>::Err>;
+pub type TensorVisitorOutput<F, S, E, D, E2, D2> =
+    Result<Option<Tensor<S, E2, D2>>, <F as TensorVisitor<E, D, E2, D2>>::Err>;
 
 /// A collection of named tensors. Implementing this trait will enable anything
 /// that operates on tensors, like resetting, EMA, counting number of params,
@@ -45,7 +45,7 @@ pub trait ModuleVisitor<
 >: Sized
 {
     type Err;
-    type Func: TensorFunction<E, D, E2, D2>;
+    type Func: TensorVisitor<E, D, E2, D2>;
 
     /// Visit a [TensorCollection]
     fn visit_module<Field, GetRef, GetMut>(
@@ -66,7 +66,7 @@ pub trait ModuleVisitor<
         get_refs: GetRef,
         get_muts: GetMut,
         opts: TensorOptions<S, E, D>,
-    ) -> TensorFunctionOutput<Self::Func, S, E, D, E2, D2>
+    ) -> TensorVisitorOutput<Self::Func, S, E, D, E2, D2>
     where
         GetRef: FnMut(&T) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut T) -> &mut Tensor<S, E, D>;

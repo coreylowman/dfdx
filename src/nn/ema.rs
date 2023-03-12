@@ -1,13 +1,11 @@
-use super::tensor_collection::{
-    RecursiveWalker, TensorCollection, TensorOptions, TensorVisitor, ViewTensorMut, ViewTensorRef,
-};
+use super::tensor_collection::*;
 
 use crate::{prelude::Device, shapes::*, tensor::*};
 
 struct ModelEMAOp<E> {
     decay: E,
 }
-impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for ModelEMAOp<E> {
+impl<E: Dtype, D: Device<E>> TensorVisitor<E, D, f32, Cpu> for ModelEMAOp<E> {
     type Viewer = (ViewTensorMut, ViewTensorRef);
     type Err = D::Err;
 
@@ -15,11 +13,11 @@ impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for ModelEMAOp<E> {
         &mut self,
         opts: TensorOptions<S, E, D>,
         (dst, src): (&mut Tensor<S, E, D>, &Tensor<S, E, D>),
-    ) -> Result<(), Self::Err> {
+    ) -> TensorVisitorOutput<Self, S, E, D, f32, Cpu> {
         if opts.do_gradient_update {
             dst.try_axpy(self.decay, src, E::ONE - self.decay)?;
         }
-        Ok(())
+        Ok(None)
     }
 }
 
