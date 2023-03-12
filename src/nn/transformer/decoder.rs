@@ -49,7 +49,7 @@ where
     }
 }
 
-/// **Requires Nightly** A transformer decoder.
+/// A transformer decoder.
 ///
 /// Generics
 /// - `MODEL_DIM`: The size of query/key/value tensors. Given to [MultiHeadAttention].
@@ -57,7 +57,6 @@ where
 /// - `FF_DIM`: The size of the hidden layer in
 ///   the feedforward network in [TransformerDecoderBlock].
 /// - `NUM_LAYERS`: The number of [TransformerDecoderBlock] to use.
-/// TODO: Doctests
 #[derive(Clone, Debug)]
 pub struct TransformerDecoder<
     const MODEL_DIM: usize,
@@ -101,21 +100,12 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D: Device<E>, T>
-    ModuleMut<T> for TransformerDecoder<M, H, F, L, E, D>
-where
-    Self: Module<T, Error = D::Err>,
+impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D: Device<E>>
+    NonMutableModule for TransformerDecoder<M, H, F, L, E, D>
 {
-    type Output = <Self as Module<T>>::Output;
-
-    type Error = D::Err;
-
-    fn try_forward_mut(&mut self, t: T) -> Result<Self::Output, D::Err> {
-        self.try_forward(t)
-    }
 }
 
-/// **Requires Nightly** A transformer decoder block. Different than the normal transformer block
+/// A transformer decoder block. Different than the normal transformer block
 /// as this self attention accepts an additional sequence from the encoder.
 ///
 /// Generics
@@ -129,7 +119,6 @@ where
 ///    EMBED_DIM, NUM_HEADS, dim_feedforward=FF_DIM, batch_first=True, dropout=0.0
 /// )
 /// ```
-/// TODO: Doctests
 #[derive(Clone, Debug)]
 pub struct TransformerDecoderBlock<
     const MODEL_DIM: usize,
@@ -209,7 +198,11 @@ where
     }
 }
 
-#[cfg(feature = "nightly")]
+impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>> NonMutableModule
+    for TransformerDecoderBlock<M, H, F, E, D>
+{
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

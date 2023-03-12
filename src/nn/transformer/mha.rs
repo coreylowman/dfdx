@@ -1,10 +1,7 @@
 use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
-use crate::{nn::modules::*, shapes::Dtype, tensor::*, tensor_ops::*};
-
-#[cfg(feature = "nightly")]
-use crate::shapes::*;
+use crate::{nn::modules::*, shapes::*, tensor::*, tensor_ops::*};
 
 pub mod builder {
     #[derive(Debug, Clone)]
@@ -37,7 +34,7 @@ where
     }
 }
 
-/// **Requires Nightly** A multi-head attention layer.
+/// A multi-head attention layer.
 ///
 /// Generics:
 /// - `EMBED_DIM`: The size of query vectors.
@@ -51,7 +48,6 @@ where
 /// - `MultiHeadAttention<8, 2>` is an attention layer with 2 heads and 8 token, key and value dims.
 /// - `MultiHeadAttention<8, 2, 6, 4>` is an attention layer with the key and value dimension different
 ///   than the embed dimension
-/// TODO: Doctests fail for some reason
 #[derive(Debug, Clone)]
 pub struct MultiHeadAttention<
     const EMBED_DIM: usize,
@@ -91,118 +87,115 @@ where
     }
 }
 
-#[cfg(feature = "nightly")]
-impl<
-        const M: usize,
-        const H: usize,
-        const K: usize,
-        const V: usize,
-        E: Dtype + Float,
-        D: Device<E>,
-        const S1: usize,
-        const S2: usize,
-        T: Tape<E, D>,
-    >
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D, S1, S2, T>
     Module<(
-        Tensor<Rank2<S1, M>, E, D, T>,
-        Tensor<Rank2<S2, M>, E, D>,
-        Tensor<Rank2<S2, M>, E, D>,
+        Tensor<(S1, Const<M>), E, D, T>,
+        Tensor<(S2, Const<M>), E, D>,
+        Tensor<(S2, Const<M>), E, D>,
     )> for MultiHeadAttention<M, H, K, V, E, D>
 where
-    [[(); V / H]; K / H]: Sized,
+    E: Dtype + Float,
+    D: Device<E>,
+    S1: Dim,
+    S2: Dim,
+    T: Tape<E, D>,
 {
-    type Output = Tensor<Rank2<S1, M>, E, D, T>;
+    type Output = Tensor<(S1, Const<M>), E, D, T>;
     type Error = D::Err;
 
     /// Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
     fn try_forward(
         &self,
         (q, k, v): (
-            Tensor<Rank2<S1, M>, E, D, T>,
-            Tensor<Rank2<S2, M>, E, D>,
-            Tensor<Rank2<S2, M>, E, D>,
+            Tensor<(S1, Const<M>), E, D, T>,
+            Tensor<(S2, Const<M>), E, D>,
+            Tensor<(S2, Const<M>), E, D>,
         ),
     ) -> Result<Self::Output, D::Err> {
-        let v: Tensor<Rank2<S2, V>, _, _, _> = self.w_v.try_forward(v.retaped::<T>())?;
-        let v = v.try_reshape::<Rank3<S2, H, { V / H }>>()?;
-        let v = v.try_permute::<Rank3<H, S2, { V / H }>, _>()?;
+        assert_eq!(k.shape.0, v.shape.0);
+        let s1 = q.shape.0;
+        let s2 = k.shape.0;
+        let v = self.w_v.try_forward(v.retaped::<T>())?;
+        let v = v.try_reshape_like(&(s2, H, V / H)).unwrap()?;
+        let v = v.try_permute::<_, Axes3<1, 0, 2>>()?;
 
-        let k: Tensor<Rank2<S2, K>, _, _, _> = self.w_k.try_forward(k.retaped::<T>())?;
-        let k = k.try_reshape::<Rank3<S2, H, { K / H }>>()?;
-        let k = k.try_permute::<Rank3<H, { K / H }, S2>, _>()?;
+        let k = self.w_k.try_forward(k.retaped::<T>())?;
+        let k = k.try_reshape_like(&(s2, H, K / H)).unwrap()?;
+        let k = k.try_permute::<_, Axes3<1, 2, 0>>()?;
 
-        let q: Tensor<Rank2<S1, K>, _, _, _> = self.w_q.try_forward(q)?;
-        let q = q.try_reshape::<Rank3<S1, H, { K / H }>>()?;
-        let q = q.try_permute::<Rank3<H, S1, { K / H }>, _>()?;
+        let q = self.w_q.try_forward(q)?;
+        let q = q.try_reshape_like(&(s1, H, K / H)).unwrap()?;
+        let q = q.try_permute::<_, Axes3<1, 0, 2>>()?;
 
         // Get weights
         let scalar: E = E::ONE / E::from_usize(K / H).unwrap().sqrt();
-        let weights: Tensor<Rank3<H, S1, S2>, _, _, _> = q.try_matmul(k)?.try_mul(scalar)?;
+        let weights = q.try_matmul(k)?.try_mul(scalar)?;
         let weights = weights.try_softmax::<Axis<2>>()?;
 
         // Get new tokens
-        let tokens: Tensor<Rank3<H, S1, { V / H }>, _, _, _> = weights.try_matmul(v)?;
-        let tokens = tokens.try_permute::<Rank3<S1, H, { V / H }>, _>()?;
-        let tokens = tokens.try_reshape::<Rank2<S1, V>>()?;
+        let tokens = weights.try_matmul(v)?;
+        let tokens = tokens.try_permute::<_, Axes3<1, 0, 2>>()?;
+        let tokens = tokens.try_reshape_like(&(s1, Const::<V>)).unwrap()?;
 
         self.w_o.try_forward(tokens)
     }
 }
 
-#[cfg(feature = "nightly")]
-impl<
-        const M: usize,
-        const H: usize,
-        const K: usize,
-        const V: usize,
-        E: Dtype + Float,
-        D: Device<E>,
-        const B: usize,
-        const S1: usize,
-        const S2: usize,
-        T: Tape<E, D>,
-    >
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D, B, S1, S2, T>
     Module<(
-        Tensor<Rank3<B, S1, M>, E, D, T>,
-        Tensor<Rank3<B, S2, M>, E, D>,
-        Tensor<Rank3<B, S2, M>, E, D>,
+        Tensor<(B, S1, Const<M>), E, D, T>,
+        Tensor<(B, S2, Const<M>), E, D>,
+        Tensor<(B, S2, Const<M>), E, D>,
     )> for MultiHeadAttention<M, H, K, V, E, D>
 where
-    [[(); V / H]; K / H]: Sized,
+    E: Dtype + Float,
+    D: Device<E>,
+    B: Dim,
+    S1: Dim,
+    S2: Dim,
+    T: Tape<E, D>,
 {
-    type Output = Tensor<Rank3<B, S1, M>, E, D, T>;
+    type Output = Tensor<(B, S1, Const<M>), E, D, T>;
     type Error = D::Err;
 
     /// Batched Encoder-Decoder style self attention where one set of tensors is used for values and keys, and another is used for queries
     fn try_forward(
         &self,
         (q, k, v): (
-            Tensor<Rank3<B, S1, M>, E, D, T>,
-            Tensor<Rank3<B, S2, M>, E, D>,
-            Tensor<Rank3<B, S2, M>, E, D>,
+            Tensor<(B, S1, Const<M>), E, D, T>,
+            Tensor<(B, S2, Const<M>), E, D>,
+            Tensor<(B, S2, Const<M>), E, D>,
         ),
     ) -> Result<Self::Output, D::Err> {
-        let v: Tensor<Rank3<B, S2, V>, _, _, _> = self.w_v.try_forward(v.retaped::<T>())?;
-        let v = v.try_reshape::<Rank4<B, S2, H, { V / H }>>()?;
-        let v = v.try_permute::<Rank4<B, H, S2, { V / H }>, _>()?;
+        assert_eq!(q.shape.0, k.shape.0);
+        assert_eq!(q.shape.0, v.shape.0);
+        assert_eq!(k.shape.1, v.shape.1);
 
-        let k: Tensor<Rank3<B, S2, K>, _, _, _> = self.w_k.try_forward(k.retaped::<T>())?;
-        let k = k.try_reshape::<Rank4<B, S2, H, { K / H }>>()?;
-        let k = k.try_permute::<Rank4<B, H, { K / H }, S2>, _>()?;
+        let b = q.shape.0;
+        let s1 = q.shape.1;
+        let s2 = v.shape.1;
 
-        let q: Tensor<Rank3<B, S1, K>, _, _, _> = self.w_q.try_forward(q)?;
-        let q = q.try_reshape::<Rank4<B, S1, H, { K / H }>>()?;
-        let q = q.try_permute::<Rank4<B, H, S1, { K / H }>, _>()?;
+        let v = self.w_v.try_forward(v.retaped::<T>())?;
+        let v = v.try_reshape_like(&(b, s2, H, V / H)).unwrap()?;
+        let v = v.try_permute::<_, Axes4<0, 2, 1, 3>>()?;
+
+        let k = self.w_k.try_forward(k.retaped::<T>())?;
+        let k = k.try_reshape_like(&(b, s2, H, K / H)).unwrap()?;
+        let k = k.try_permute::<_, Axes4<0, 2, 3, 1>>()?;
+
+        let q = self.w_q.try_forward(q)?;
+        let q = q.try_reshape_like(&(b, s1, H, K / H)).unwrap()?;
+        let q = q.try_permute::<_, Axes4<0, 2, 1, 3>>()?;
 
         // Get weights
         let scalar: E = E::ONE / E::from_usize(K / H).unwrap().sqrt();
-        let weights: Tensor<Rank4<B, H, S1, S2>, _, _, _> = q.try_matmul(k)?.try_mul(scalar)?;
+        let weights = q.try_matmul(k)?.try_mul(scalar)?;
         let weights = weights.try_softmax::<Axis<3>>()?;
 
         // Get new tokens
-        let tokens: Tensor<Rank4<B, H, S1, { V / H }>, _, _, _> = weights.try_matmul(v)?;
-        let tokens = tokens.try_permute::<Rank4<B, S1, H, { V / H }>, _>()?;
-        let tokens = tokens.try_reshape::<Rank3<B, S1, V>>()?;
+        let tokens = weights.try_matmul(v)?;
+        let tokens = tokens.try_permute::<_, Axes4<0, 2, 1, 3>>()?;
+        let tokens = tokens.try_reshape_like(&(b, s1, Const::<V>)).unwrap()?;
 
         self.w_o.try_forward(tokens)
     }
@@ -225,20 +218,11 @@ where
     }
 }
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, E: Dtype, D: Device<E>, T>
-    ModuleMut<T> for MultiHeadAttention<M, H, K, V, E, D>
-where
-    Self: Module<T, Error = D::Err>,
+impl<const M: usize, const H: usize, const K: usize, const V: usize, E: Dtype, D: Device<E>>
+    NonMutableModule for MultiHeadAttention<M, H, K, V, E, D>
 {
-    type Output = <Self as Module<T>>::Output;
-    type Error = D::Err;
-
-    fn try_forward_mut(&mut self, t: T) -> Result<Self::Output, D::Err> {
-        self.try_forward(t)
-    }
 }
 
-#[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
     use super::*;
