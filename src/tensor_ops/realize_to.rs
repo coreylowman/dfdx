@@ -11,8 +11,8 @@ pub trait RealizeTo: HasErr + HasShape {
     /// let a = a.realize::<(usize, usize)>().unwrap();
     /// let mut a = a.realize::<Rank2<2, 3>>().unwrap();
     /// match a.realize::<(usize, Const<4>)>() {
-    ///     Ok(new) => handle_realized(new),
-    ///     Err(old) => handle_failure(old),
+    ///     Ok(new) => println!("Shape was properly realized, returned new tensor"),
+    ///     Err(old) => println!("Shape could not be realized, returned the original tensor"),
     /// }
     /// ```
     fn realize<Dst: Shape<Concrete = <<Self as HasShape>::Shape as Shape>::Concrete>>(
