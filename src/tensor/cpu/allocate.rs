@@ -87,7 +87,7 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
         let strides = shape.strides();
-        let mut data = self.try_alloc_zeros::<E>(shape.num_elements())?;
+        let mut data = self.try_alloc_elem::<E>(shape.num_elements(), val)?;
         // Get the shape of the last two axes.
         let [num_rows, num_cols] = [
             (S::Shape::NUM_DIMS > 1)
@@ -102,9 +102,9 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
 
         // Get the first 2D matrix in this data. This will be copied to each subsequent matrix.
         let (mut mat2d, mut rest) = data.as_mut_slice().split_at_mut(mat_size);
-        for r in 0..num_rows {
-            for c in (r as isize + offset).max(0) as usize..num_cols {
-                mat2d[r * num_cols + c] = val;
+        for r in (-offset).max(0) as usize..num_rows {
+            for c in 0..((r as isize + offset).max(0) as usize).min(num_cols) {
+                mat2d[r * num_cols + c] = E::default();
             }
         }
         while !rest.is_empty() {
@@ -130,7 +130,7 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
         let strides = shape.strides();
-        let mut data = self.try_alloc_zeros::<E>(shape.num_elements())?;
+        let mut data = self.try_alloc_elem::<E>(shape.num_elements(), val)?;
         // Get the shape of the last two axes.
         let [num_rows, num_cols] = [
             (S::Shape::NUM_DIMS > 1)
@@ -145,9 +145,9 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
 
         // Get the first 2D matrix in this data. This will be copied to each subsequent matrix.
         let (mut mat2d, mut rest) = data.as_mut_slice().split_at_mut(mat_size);
-        for r in (-offset).max(0) as usize..num_rows {
-            for c in 0..((r as isize + offset + 1).max(0) as usize).min(num_cols) {
-                mat2d[r * num_cols + c] = val;
+        for r in 0..num_rows {
+            for c in (r as isize + offset + 1).max(0) as usize..num_cols {
+                mat2d[r * num_cols + c] = E::default();
             }
         }
         while !rest.is_empty() {
