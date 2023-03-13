@@ -31,7 +31,7 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<E, D>> RealizeTo for Tensor<S
         Ok(self.shape.realized().map(|dst_shape| Tensor {
             id: self.id,
             data: self.data,
-            strides: dst_shape.strides(),
+            strides: self.strides,
             shape: dst_shape,
             device: self.device,
             tape: self.tape,
