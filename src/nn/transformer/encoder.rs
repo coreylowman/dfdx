@@ -165,6 +165,7 @@ impl<const M: usize, const H: usize, const F: usize, E: Dtype, D: Device<E>> Non
 }
 
 #[cfg(test)]
+#[allow(clippy::excessive_precision)]
 mod tests {
     use super::*;
     use crate::{shapes::Rank3, tensor::*, tests::*};

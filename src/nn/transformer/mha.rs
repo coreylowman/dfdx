@@ -249,6 +249,7 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, E: Dtype, D
 }
 
 #[cfg(test)]
+#[allow(clippy::excessive_precision)]
 mod tests {
     use super::*;
     use crate::{optim::*, tests::*};
