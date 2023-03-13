@@ -102,10 +102,6 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
 
         // Get the first 2D matrix in this data. This will be copied to each subsequent matrix.
         let (mut mat2d, mut rest) = data.as_mut_slice().split_at_mut(mat_size);
-        // [0., 0., vl, vl, vl],
-        // [0., 0., 0., vl, vl],
-        // [0., 0., 0., 0., vl],
-        // [0., 0., 0., 0., 0.],
         for r in 0..num_rows {
             for c in (r as isize + offset).max(0) as usize..num_cols {
                 mat2d[r * num_cols + c] = val;
