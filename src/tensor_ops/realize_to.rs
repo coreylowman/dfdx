@@ -2,40 +2,43 @@ use crate::{shapes::*, tensor::*};
 
 /// Changes order of dimensions/axes
 pub trait RealizeTo: HasErr + HasShape {
-    /// Realizes the concrete shape of the tensor as another compatable shape:
+    /// Realizes the concrete shape of the tensor as another compatable shape,
+    /// or returns the original tensor if the new shape's dimensions are incompatable.
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
     /// let a: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
     /// let a = a.realize::<(usize, usize)>().unwrap();
-    /// let a = a.realize::<Rank2<2, 3>>().unwrap();
+    /// let mut a = a.realize::<Rank2<2, 3>>().unwrap();
+    /// match a.realize::<(usize, Const<4>)>() {
+    ///     Ok(new) => handle_realized(new),
+    ///     Err(old) => handle_failure(old),
+    /// }
     /// ```
-    fn realize<Dst: Shape>(self) -> Option<Self::WithShape<Dst>>
-    where
-        Self::Shape: RealizeShapeTo<Dst>,
-    {
-        self.try_realize().unwrap()
-    }
-
-    /// Fallible version of [RealizeTo::realize].
-    fn try_realize<Dst: Shape>(self) -> Result<Option<Self::WithShape<Dst>>, Self::Err>
+    fn realize<Dst: Shape<Concrete = <<Self as HasShape>::Shape as Shape>::Concrete>>(
+        self,
+    ) -> Result<Self::WithShape<Dst>, Self>
     where
         Self::Shape: RealizeShapeTo<Dst>;
 }
 
 impl<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<E, D>> RealizeTo for Tensor<S, E, D, T> {
-    fn try_realize<Dst: Shape>(self) -> Result<Option<Self::WithShape<Dst>>, Self::Err>
+    fn realize<Dst: Shape<Concrete = S::Concrete>>(self) -> Result<Self::WithShape<Dst>, Self>
     where
         Self::Shape: RealizeShapeTo<Dst>,
     {
-        Ok(self.shape.realized().map(|dst_shape| Tensor {
-            id: self.id,
-            data: self.data,
-            strides: self.strides,
-            shape: dst_shape,
-            device: self.device,
-            tape: self.tape,
-        }))
+        if let Some(dst_shape) = self.shape.realized() {
+            Ok(Tensor {
+                id: self.id,
+                data: self.data,
+                strides: self.strides,
+                shape: dst_shape,
+                device: self.device,
+                tape: self.tape,
+            })
+        } else {
+            Err(self)
+        }
     }
 }
 
@@ -55,14 +58,15 @@ mod tests {
         let dst: Tensor<(usize, Const<3>), TestDtype, _> =
             src.clone().realize::<(usize, Const<3>)>().unwrap();
         assert_eq!(src.as_vec(), dst.as_vec());
-        let src = dst;
+        let mut src = dst;
         let dst: Tensor<(usize, usize), TestDtype, _> =
             src.clone().realize::<(usize, usize)>().unwrap();
         assert_eq!(src.as_vec(), dst.as_vec());
-        assert!(src.clone().realize::<(usize, Const<4>)>().is_none());
-        assert!(src.clone().realize::<(Const<1>, usize)>().is_none());
-        assert!(src.clone().realize::<(Const<2>, Const<4>)>().is_none());
-        assert!(src.clone().realize::<(Const<3>, Const<2>)>().is_none());
+        src = src.realize::<(usize, Const<4>)>().unwrap_err();
+        src = src.realize::<(Const<1>, usize)>().unwrap_err();
+        src = src.realize::<(Const<2>, Const<4>)>().unwrap_err();
+        src = src.realize::<(Const<3>, Const<2>)>().unwrap_err();
+        assert_eq!(src.as_vec(), dst.as_vec());
     }
 
     #[test]
@@ -78,16 +82,15 @@ mod tests {
         let dst: Tensor<(usize, Const<5>, usize), TestDtype, _> =
             src.clone().realize::<(usize, Const<5>, usize)>().unwrap();
         assert_eq!(src.as_vec(), dst.as_vec());
-        let src = dst;
+        let mut src = dst;
         let dst: Tensor<(usize, usize, usize), TestDtype, _> =
             src.clone().realize::<(usize, usize, usize)>().unwrap();
         assert_eq!(src.as_vec(), dst.as_vec());
-        assert!(src.clone().realize::<(usize, Const<2>, usize)>().is_none());
-        assert!(src
-            .clone()
-            .realize::<(Const<3>, Const<1>, Const<7>)>()
-            .is_none());
-        assert!(src.clone().realize::<(usize, usize, Const<3>)>().is_none());
+        // Ensure we get back the original tensor on error
+        src = src.realize::<(usize, Const<2>, usize)>().unwrap_err();
+        src = src.realize::<(Const<3>, Const<1>, Const<7>)>().unwrap_err();
+        src = src.realize::<(usize, usize, Const<3>)>().unwrap_err();
+        assert_eq!(src.as_vec(), dst.as_vec());
     }
 
     #[test]
@@ -105,24 +108,22 @@ mod tests {
             .realize::<(usize, usize, usize, usize)>()
             .unwrap();
         assert_eq!(src.as_vec(), dst.as_vec());
-        let src = dst;
+        let mut src = dst;
         let dst: Tensor<(usize, Const<5>, Const<7>, Const<9>), TestDtype, _> = src
             .clone()
             .realize::<(usize, Const<5>, Const<7>, Const<9>)>()
             .unwrap();
         assert_eq!(src.as_vec(), dst.as_vec());
-        assert!(src
-            .clone()
+        src = src
             .realize::<(usize, Const<2>, usize, Const<9>)>()
-            .is_none());
-        assert!(src
-            .clone()
+            .unwrap_err();
+        src = src
             .realize::<(Const<3>, Const<1>, Const<7>, Const<9>)>()
-            .is_none());
-        assert!(src
-            .clone()
+            .unwrap_err();
+        src = src
             .realize::<(usize, usize, Const<3>, usize)>()
-            .is_none());
+            .unwrap_err();
+        assert_eq!(src.as_vec(), dst.as_vec());
     }
 
     #[test]
