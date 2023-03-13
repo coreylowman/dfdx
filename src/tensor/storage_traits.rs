@@ -169,6 +169,72 @@ pub trait OneFillStorage<E: Unit>: DeviceStorage {
     fn try_fill_with_ones(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err>;
 }
 
+pub trait TriangleTensor<E: Unit>: DeviceStorage {
+    fn triu<S: ConstShape>(&self, val: E, dim: impl Into<Option<isize>>) -> Tensor<S, E, Self> {
+        self.try_triu_like::<S>(&Default::default(), val, dim)
+            .unwrap()
+    }
+
+    /// Fallible version of [TriangleTensor::triu]
+    fn try_triu<S: ConstShape>(
+        &self,
+        val: E,
+        dim: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        self.try_triu_like::<S>(&Default::default(), val, dim)
+    }
+
+    /// Build an upper triangular tensor with the given shape.
+    fn triu_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        dim: impl Into<Option<isize>>,
+    ) -> Tensor<S::Shape, E, Self> {
+        self.try_triu_like(src, val, dim).unwrap()
+    }
+
+    /// Fallible version of [TriangleTensor::triu_like]
+    fn try_triu_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        dim: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
+
+    fn tril<S: ConstShape>(&self, val: E, dim: impl Into<Option<isize>>) -> Tensor<S, E, Self> {
+        self.try_tril_like::<S>(&Default::default(), val, dim)
+            .unwrap()
+    }
+
+    /// Fallible version of [TriangleTensor::tril]
+    fn try_tril<S: ConstShape>(
+        &self,
+        val: E,
+        dim: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        self.try_tril_like::<S>(&Default::default(), val, dim)
+    }
+
+    /// Build a lower triangular tensor with the given shape.
+    fn tril_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        dim: impl Into<Option<isize>>,
+    ) -> Tensor<S::Shape, E, Self> {
+        self.try_tril_like(src, val, dim).unwrap()
+    }
+
+    /// Fallible version of [TriangleTensor::tril_like]
+    fn try_tril_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        dim: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
+}
+
 /// Constructs tensors filled with random values from a given distribution.
 pub trait SampleTensor<E: Unit>: DeviceStorage {
     /// Samples a const tensor from a uniform distribution

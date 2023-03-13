@@ -146,7 +146,7 @@ pub use cuda::{Cuda, CudaError};
 
 pub use storage_traits::{AsArray, CopySlice, TensorFrom, TensorFromVec};
 pub use storage_traits::{DeviceStorage, HasErr};
-pub use storage_traits::{OnesTensor, SampleTensor, ZerosTensor};
+pub use storage_traits::{OnesTensor, SampleTensor, TriangleTensor, ZerosTensor};
 
 #[cfg(feature = "cuda")]
 pub use tensor_impls::OnCuda;
@@ -256,5 +256,131 @@ mod tests {
     fn test_sample_normal() {
         let dev: TestDevice = Default::default();
         let _: Tensor<Rank1<1000>, f32, _> = dev.sample_normal();
+    }
+
+    #[test]
+    fn test_triu() {
+        let dev: TestDevice = Default::default();
+        let vl = 42.0;
+
+        assert_eq!(
+            dev.triu::<Rank2<3, 4>>(vl, None).array(),
+            [[vl, vl, vl, vl], [0., vl, vl, vl], [0., 0., vl, vl]]
+        );
+        assert_eq!(
+            dev.triu::<Rank2<4, 4>>(vl, -1).array(),
+            [
+                [vl, vl, vl, vl],
+                [vl, vl, vl, vl],
+                [0., vl, vl, vl],
+                [0., 0., vl, vl]
+            ]
+        );
+        assert_eq!(
+            dev.triu::<Rank2<4, 4>>(vl, -2).array(),
+            [
+                [vl, vl, vl, vl],
+                [vl, vl, vl, vl],
+                [vl, vl, vl, vl],
+                [0., vl, vl, vl]
+            ]
+        );
+        assert_eq!(
+            dev.triu::<Rank2<4, 3>>(vl, 1).array(),
+            [[0., vl, vl], [0., 0., vl], [0., 0., 0.], [0., 0., 0.]]
+        );
+        assert_eq!(
+            dev.triu::<Rank3<2, 5, 5>>(vl, None).array(),
+            [[
+                [vl, vl, vl, vl, vl],
+                [0., vl, vl, vl, vl],
+                [0., 0., vl, vl, vl],
+                [0., 0., 0., vl, vl],
+                [0., 0., 0., 0., vl]
+            ]; 2]
+        );
+        assert_eq!(
+            dev.triu::<Rank3<4, 5, 5>>(vl, 2).array(),
+            [[
+                [0., 0., vl, vl, vl],
+                [0., 0., 0., vl, vl],
+                [0., 0., 0., 0., vl],
+                [0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0.]
+            ]; 4]
+        );
+        assert_eq!(
+            dev.triu::<Rank4<3, 4, 5, 6>>(vl, None).array(),
+            [[[
+                [vl, vl, vl, vl, vl, vl],
+                [0., vl, vl, vl, vl, vl],
+                [0., 0., vl, vl, vl, vl],
+                [0., 0., 0., vl, vl, vl],
+                [0., 0., 0., 0., vl, vl]
+            ]; 4]; 3]
+        );
+    }
+
+    #[test]
+    fn test_tril() {
+        let dev: TestDevice = Default::default();
+        let vl = 42.0;
+
+        assert_eq!(
+            dev.tril::<Rank2<3, 4>>(vl, None).array(),
+            [[vl, 0., 0., 0.], [vl, vl, 0., 0.], [vl, vl, vl, 0.]]
+        );
+        assert_eq!(
+            dev.tril::<Rank2<4, 4>>(vl, -1).array(),
+            [
+                [0., 0., 0., 0.],
+                [vl, 0., 0., 0.],
+                [vl, vl, 0., 0.],
+                [vl, vl, vl, 0.]
+            ]
+        );
+        assert_eq!(
+            dev.tril::<Rank2<4, 4>>(vl, -2).array(),
+            [
+                [0., 0., 0., 0.],
+                [0., 0., 0., 0.],
+                [vl, 0., 0., 0.],
+                [vl, vl, 0., 0.]
+            ]
+        );
+        assert_eq!(
+            dev.tril::<Rank2<4, 3>>(vl, 1).array(),
+            [[vl, vl, 0.], [vl, vl, vl], [vl, vl, vl], [vl, vl, vl]]
+        );
+        assert_eq!(
+            dev.tril::<Rank3<2, 5, 5>>(vl, None).array(),
+            [[
+                [vl, 0., 0., 0., 0.],
+                [vl, vl, 0., 0., 0.],
+                [vl, vl, vl, 0., 0.],
+                [vl, vl, vl, vl, 0.],
+                [vl, vl, vl, vl, vl]
+            ]; 2]
+        );
+        assert_eq!(
+            dev.tril::<Rank3<4, 5, 5>>(vl, 2).array(),
+            [[
+                [vl, vl, vl, 0., 0.],
+                [vl, vl, vl, vl, 0.],
+                [vl, vl, vl, vl, vl],
+                [vl, vl, vl, vl, vl],
+                [vl, vl, vl, vl, vl]
+            ]; 4]
+        );
+        assert_eq!(
+            dev.tril::<Rank4<3, 4, 5, 6>>(vl, None).array(),
+            [[[
+                [vl, 0., 0., 0., 0., 0.],
+                [vl, vl, 0., 0., 0., 0.],
+                [vl, vl, vl, 0., 0., 0.],
+                [vl, vl, vl, vl, 0., 0.],
+                [vl, vl, vl, vl, vl, 0.]
+            ]; 4]; 3]
+        );
     }
 }

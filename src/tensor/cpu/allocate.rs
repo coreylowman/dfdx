@@ -78,6 +78,78 @@ impl<E: Unit> OnesTensor<E> for Cpu {
     }
 }
 
+impl<E: Unit> TriangleTensor<E> for Cpu {
+    fn try_triu_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        dim: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+        let shape = *src.shape();
+        let strides = shape.strides();
+        let mut data = self.try_alloc_zeros::<E>(shape.num_elements())?;
+        // Get the shape of the last two axes.
+        let [num_rows, num_cols] = [
+            shape.concrete()[S::Shape::NUM_DIMS - 2],
+            shape.concrete()[S::Shape::NUM_DIMS - 1],
+        ];
+        let dim = dim.into().unwrap_or(0);
+        for (d, (row, col)) in data.iter_mut().zip(
+            (0..num_rows * num_cols)
+                .map(|i| (i / num_cols, i % num_cols))
+                .cycle(),
+        ) {
+            if col as isize >= row as isize + dim {
+                *d = val;
+            }
+        }
+        let data = Arc::new(data);
+        Ok(Tensor {
+            id: unique_id(),
+            data,
+            shape,
+            strides,
+            device: self.clone(),
+            tape: Default::default(),
+        })
+    }
+
+    fn try_tril_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        dim: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+        let shape = *src.shape();
+        let strides = shape.strides();
+        let mut data = self.try_alloc_zeros::<E>(shape.num_elements())?;
+        // Get the shape of the last two axes.
+        let [num_rows, num_cols] = [
+            shape.concrete()[S::Shape::NUM_DIMS - 2],
+            shape.concrete()[S::Shape::NUM_DIMS - 1],
+        ];
+        let dim = dim.into().unwrap_or(0);
+        for (d, (row, col)) in data.iter_mut().zip(
+            (0..num_rows * num_cols)
+                .map(|i| (i / num_cols, i % num_cols))
+                .cycle(),
+        ) {
+            if col as isize <= row as isize + dim {
+                *d = val;
+            }
+        }
+        let data = Arc::new(data);
+        Ok(Tensor {
+            id: unique_id(),
+            data,
+            shape,
+            strides,
+            device: self.clone(),
+            tape: Default::default(),
+        })
+    }
+}
+
 impl<E: Unit> OneFillStorage<E> for Cpu {
     fn try_fill_with_ones(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err> {
         storage.fill(E::ONE);
