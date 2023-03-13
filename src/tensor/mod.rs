@@ -263,9 +263,27 @@ mod tests {
         let dev: TestDevice = Default::default();
         let vl = 42.0;
 
+        assert_eq!(dev.upper_tri::<Rank0>(vl, None).array(), vl);
+        assert_eq!(dev.upper_tri::<Rank0>(vl, 1).array(), 0.);
+
+        assert_eq!(dev.upper_tri::<Rank1<3>>(vl, None).array(), [vl, vl, vl]);
+        assert_eq!(dev.upper_tri::<Rank1<3>>(vl, 1).array(), [0., vl, vl]);
+
         assert_eq!(
             dev.upper_tri::<Rank2<3, 4>>(vl, None).array(),
             [[vl, vl, vl, vl], [0., vl, vl, vl], [0., 0., vl, vl]]
+        );
+        assert_eq!(
+            dev.upper_tri::<Rank2<3, 1>>(vl, None).array(),
+            [[vl], [0.], [0.]]
+        );
+        assert_eq!(
+            dev.upper_tri::<Rank2<3, 1>>(vl, 1).array(),
+            [[0.], [0.], [0.]]
+        );
+        assert_eq!(
+            dev.upper_tri::<Rank2<3, 1>>(vl, -1).array(),
+            [[vl], [vl], [0.]]
         );
         assert_eq!(
             dev.upper_tri::<Rank2<4, 4>>(vl, -1).array(),
@@ -326,9 +344,27 @@ mod tests {
         let dev: TestDevice = Default::default();
         let vl = 42.0;
 
+        assert_eq!(dev.lower_tri::<Rank0>(vl, None).array(), vl);
+        assert_eq!(dev.lower_tri::<Rank0>(vl, -1).array(), 0.);
+
+        assert_eq!(dev.lower_tri::<Rank1<3>>(vl, None).array(), [vl, 0., 0.]);
+        assert_eq!(dev.lower_tri::<Rank1<3>>(vl, 1).array(), [vl, vl, 0.]);
+
         assert_eq!(
             dev.lower_tri::<Rank2<3, 4>>(vl, None).array(),
             [[vl, 0., 0., 0.], [vl, vl, 0., 0.], [vl, vl, vl, 0.]]
+        );
+        assert_eq!(
+            dev.lower_tri::<Rank2<3, 1>>(vl, None).array(),
+            [[vl], [vl], [vl]]
+        );
+        assert_eq!(
+            dev.lower_tri::<Rank2<3, 1>>(vl, 1).array(),
+            [[vl], [vl], [vl]]
+        );
+        assert_eq!(
+            dev.lower_tri::<Rank2<3, 1>>(vl, -1).array(),
+            [[0.], [vl], [vl]]
         );
         assert_eq!(
             dev.lower_tri::<Rank2<4, 4>>(vl, -1).array(),

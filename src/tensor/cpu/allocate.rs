@@ -87,34 +87,33 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
         let strides = shape.strides();
-        let num_elems = shape.num_elements();
-        let mut data = self.try_alloc_zeros::<E>(num_elems)?;
+        let mut data = self.try_alloc_zeros::<E>(shape.num_elements())?;
         // Get the shape of the last two axes.
         let [num_rows, num_cols] = [
-            if S::Shape::NUM_DIMS > 1 {
-                shape.concrete()[S::Shape::NUM_DIMS - 2]
-            } else {
-                1
-            },
-            if S::Shape::NUM_DIMS > 0 {
-                shape.concrete()[S::Shape::NUM_DIMS - 1]
-            } else {
-                1
-            },
+            (S::Shape::NUM_DIMS > 1)
+                .then(|| shape.concrete()[S::Shape::NUM_DIMS - 2])
+                .unwrap_or(1),
+            (S::Shape::NUM_DIMS > 0)
+                .then(|| shape.concrete()[S::Shape::NUM_DIMS - 1])
+                .unwrap_or(1),
         ];
         let mat_size = num_rows * num_cols;
         let offset = diagonal.into().unwrap_or(0);
 
         // Get the first 2D matrix in this data. This will be copied to each subsequent matrix.
-        let (mat2d, rest) = data.as_mut_slice().split_at_mut(mat_size);
-        for r in 0..num_rows - (offset.max(0) as usize).min(num_rows) {
+        let (mut mat2d, mut rest) = data.as_mut_slice().split_at_mut(mat_size);
+        // [0., 0., vl, vl, vl],
+        // [0., 0., 0., vl, vl],
+        // [0., 0., 0., 0., vl],
+        // [0., 0., 0., 0., 0.],
+        for r in 0..num_rows {
             for c in (r as isize + offset).max(0) as usize..num_cols {
                 mat2d[r * num_cols + c] = val;
             }
         }
-
-        for rep in 0..(num_elems / mat_size) - 1 {
-            rest[rep * mat_size..][..mat_size].copy_from_slice(mat2d);
+        while !rest.is_empty() {
+            rest[..mat_size].copy_from_slice(mat2d);
+            (mat2d, rest) = rest.split_at_mut(mat_size);
         }
         let data = Arc::new(data);
         Ok(Tensor {
@@ -135,34 +134,29 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
         let strides = shape.strides();
-        let num_elems = shape.num_elements();
-        let mut data = self.try_alloc_zeros::<E>(num_elems)?;
+        let mut data = self.try_alloc_zeros::<E>(shape.num_elements())?;
         // Get the shape of the last two axes.
         let [num_rows, num_cols] = [
-            if S::Shape::NUM_DIMS > 1 {
-                shape.concrete()[S::Shape::NUM_DIMS - 2]
-            } else {
-                1
-            },
-            if S::Shape::NUM_DIMS > 0 {
-                shape.concrete()[S::Shape::NUM_DIMS - 1]
-            } else {
-                1
-            },
+            (S::Shape::NUM_DIMS > 1)
+                .then(|| shape.concrete()[S::Shape::NUM_DIMS - 2])
+                .unwrap_or(1),
+            (S::Shape::NUM_DIMS > 0)
+                .then(|| shape.concrete()[S::Shape::NUM_DIMS - 1])
+                .unwrap_or(1),
         ];
         let mat_size = num_rows * num_cols;
         let offset = diagonal.into().unwrap_or(0);
 
         // Get the first 2D matrix in this data. This will be copied to each subsequent matrix.
-        let (mat2d, rest) = data.as_mut_slice().split_at_mut(mat_size);
+        let (mut mat2d, mut rest) = data.as_mut_slice().split_at_mut(mat_size);
         for r in (-offset).max(0) as usize..num_rows {
             for c in 0..((r as isize + offset + 1).max(0) as usize).min(num_cols) {
                 mat2d[r * num_cols + c] = val;
             }
         }
-
-        for rep in 0..(num_elems / mat_size) - 1 {
-            rest[rep * mat_size..][..mat_size].copy_from_slice(mat2d);
+        while !rest.is_empty() {
+            rest[..mat_size].copy_from_slice(mat2d);
+            (mat2d, rest) = rest.split_at_mut(mat_size);
         }
         let data = Arc::new(data);
         Ok(Tensor {
