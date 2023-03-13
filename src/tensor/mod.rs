@@ -259,7 +259,7 @@ mod tests {
     }
 
     #[test]
-    fn test_triu() {
+    fn test_upper_tri() {
         let dev: TestDevice = Default::default();
         let vl = 42.0;
 
@@ -322,7 +322,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tril() {
+    fn test_lower_tri() {
         let dev: TestDevice = Default::default();
         let vl = 42.0;
 

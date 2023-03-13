@@ -83,25 +83,38 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
         &self,
         src: &S,
         val: E,
-        dim: impl Into<Option<isize>>,
+        diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
         let strides = shape.strides();
-        let mut data = self.try_alloc_zeros::<E>(shape.num_elements())?;
+        let num_elems = shape.num_elements();
+        let mut data = self.try_alloc_zeros::<E>(num_elems)?;
         // Get the shape of the last two axes.
         let [num_rows, num_cols] = [
-            shape.concrete()[S::Shape::NUM_DIMS - 2],
-            shape.concrete()[S::Shape::NUM_DIMS - 1],
+            if S::Shape::NUM_DIMS > 1 {
+                shape.concrete()[S::Shape::NUM_DIMS - 2]
+            } else {
+                1
+            },
+            if S::Shape::NUM_DIMS > 0 {
+                shape.concrete()[S::Shape::NUM_DIMS - 1]
+            } else {
+                1
+            },
         ];
-        let dim = dim.into().unwrap_or(0);
-        for (d, (row, col)) in data.iter_mut().zip(
-            (0..num_rows * num_cols)
-                .map(|i| (i / num_cols, i % num_cols))
-                .cycle(),
-        ) {
-            if col as isize >= row as isize + dim {
-                *d = val;
+        let mat_size = num_rows * num_cols;
+        let offset = diagonal.into().unwrap_or(0);
+
+        // Get the first 2D matrix in this data. This will be copied to each subsequent matrix.
+        let (mat2d, rest) = data.as_mut_slice().split_at_mut(mat_size);
+        for r in 0..num_rows - (offset.max(0) as usize).min(num_rows) {
+            for c in (r as isize + offset).max(0) as usize..num_cols {
+                mat2d[r * num_cols + c] = val;
             }
+        }
+
+        for rep in 0..(num_elems / mat_size) - 1 {
+            rest[rep * mat_size..][..mat_size].copy_from_slice(mat2d);
         }
         let data = Arc::new(data);
         Ok(Tensor {
@@ -118,25 +131,38 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
         &self,
         src: &S,
         val: E,
-        dim: impl Into<Option<isize>>,
+        diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
         let strides = shape.strides();
-        let mut data = self.try_alloc_zeros::<E>(shape.num_elements())?;
+        let num_elems = shape.num_elements();
+        let mut data = self.try_alloc_zeros::<E>(num_elems)?;
         // Get the shape of the last two axes.
         let [num_rows, num_cols] = [
-            shape.concrete()[S::Shape::NUM_DIMS - 2],
-            shape.concrete()[S::Shape::NUM_DIMS - 1],
+            if S::Shape::NUM_DIMS > 1 {
+                shape.concrete()[S::Shape::NUM_DIMS - 2]
+            } else {
+                1
+            },
+            if S::Shape::NUM_DIMS > 0 {
+                shape.concrete()[S::Shape::NUM_DIMS - 1]
+            } else {
+                1
+            },
         ];
-        let dim = dim.into().unwrap_or(0);
-        for (d, (row, col)) in data.iter_mut().zip(
-            (0..num_rows * num_cols)
-                .map(|i| (i / num_cols, i % num_cols))
-                .cycle(),
-        ) {
-            if col as isize <= row as isize + dim {
-                *d = val;
+        let mat_size = num_rows * num_cols;
+        let offset = diagonal.into().unwrap_or(0);
+
+        // Get the first 2D matrix in this data. This will be copied to each subsequent matrix.
+        let (mat2d, rest) = data.as_mut_slice().split_at_mut(mat_size);
+        for r in (-offset).max(0) as usize..num_rows {
+            for c in 0..((r as isize + offset + 1).max(0) as usize).min(num_cols) {
+                mat2d[r * num_cols + c] = val;
             }
+        }
+
+        for rep in 0..(num_elems / mat_size) - 1 {
+            rest[rep * mat_size..][..mat_size].copy_from_slice(mat2d);
         }
         let data = Arc::new(data);
         Ok(Tensor {

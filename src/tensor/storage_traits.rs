@@ -173,9 +173,9 @@ pub trait TriangleTensor<E: Unit>: DeviceStorage {
     fn upper_tri<S: ConstShape>(
         &self,
         val: E,
-        dim: impl Into<Option<isize>>,
+        diagonal: impl Into<Option<isize>>,
     ) -> Tensor<S, E, Self> {
-        self.try_upper_tri_like::<S>(&Default::default(), val, dim)
+        self.try_upper_tri_like::<S>(&Default::default(), val, diagonal)
             .unwrap()
     }
 
@@ -183,9 +183,9 @@ pub trait TriangleTensor<E: Unit>: DeviceStorage {
     fn try_upper_tri<S: ConstShape>(
         &self,
         val: E,
-        dim: impl Into<Option<isize>>,
+        diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.try_upper_tri_like::<S>(&Default::default(), val, dim)
+        self.try_upper_tri_like::<S>(&Default::default(), val, diagonal)
     }
 
     /// Build an upper triangular tensor with the given shape.
@@ -193,9 +193,9 @@ pub trait TriangleTensor<E: Unit>: DeviceStorage {
         &self,
         src: &S,
         val: E,
-        dim: impl Into<Option<isize>>,
+        diagonal: impl Into<Option<isize>>,
     ) -> Tensor<S::Shape, E, Self> {
-        self.try_upper_tri_like(src, val, dim).unwrap()
+        self.try_upper_tri_like(src, val, diagonal).unwrap()
     }
 
     /// Fallible version of [TriangleTensor::upper_tri_like]
@@ -203,15 +203,15 @@ pub trait TriangleTensor<E: Unit>: DeviceStorage {
         &self,
         src: &S,
         val: E,
-        dim: impl Into<Option<isize>>,
+        diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 
     fn lower_tri<S: ConstShape>(
         &self,
         val: E,
-        dim: impl Into<Option<isize>>,
+        diagonal: impl Into<Option<isize>>,
     ) -> Tensor<S, E, Self> {
-        self.try_lower_tri_like::<S>(&Default::default(), val, dim)
+        self.try_lower_tri_like::<S>(&Default::default(), val, diagonal)
             .unwrap()
     }
 
@@ -219,9 +219,9 @@ pub trait TriangleTensor<E: Unit>: DeviceStorage {
     fn try_lower_tri<S: ConstShape>(
         &self,
         val: E,
-        dim: impl Into<Option<isize>>,
+        diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.try_lower_tri_like::<S>(&Default::default(), val, dim)
+        self.try_lower_tri_like::<S>(&Default::default(), val, diagonal)
     }
 
     /// Build a lower triangular tensor with the given shape.
@@ -229,9 +229,9 @@ pub trait TriangleTensor<E: Unit>: DeviceStorage {
         &self,
         src: &S,
         val: E,
-        dim: impl Into<Option<isize>>,
+        diagonal: impl Into<Option<isize>>,
     ) -> Tensor<S::Shape, E, Self> {
-        self.try_lower_tri_like(src, val, dim).unwrap()
+        self.try_lower_tri_like(src, val, diagonal).unwrap()
     }
 
     /// Fallible version of [TriangleTensor::lower_tri_like]
@@ -239,7 +239,7 @@ pub trait TriangleTensor<E: Unit>: DeviceStorage {
         &self,
         src: &S,
         val: E,
-        dim: impl Into<Option<isize>>,
+        diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 }
 
