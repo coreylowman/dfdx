@@ -85,7 +85,7 @@ mod tests {
         let model = <Residual<Linear<2, 2>>>::build_on_device(&dev);
 
         let x: Tensor<Rank2<4, 2>, f32, TestDevice> = dev.sample_normal();
-        let y = model.forward(x.trace());
+        let y = model.forward(x.trace_all());
 
         #[rustfmt::skip]
         assert_close(&y.array(), &[[0.25372928, -2.4258814],[1.7892148, -2.6242268],[1.5131638, 0.23407778],[3.4201493, 1.597525]]);

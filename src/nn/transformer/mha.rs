@@ -356,7 +356,7 @@ mod tests {
         let q: Tensor<Rank3<2, 3, 12>, TestDtype, _> = dev.sample_normal();
         let k: Tensor<Rank3<2, 4, 12>, TestDtype, _> = dev.sample_normal();
         let v: Tensor<Rank3<2, 4, 12>, TestDtype, _> = dev.sample_normal();
-        let y = mha.forward((q.trace(), k, v));
+        let y = mha.forward((q.trace_all(), k, v));
         let g = y.square().mean().backward();
 
         let mut opt = Sgd::new(&mha, Default::default());

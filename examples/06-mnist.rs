@@ -111,7 +111,7 @@ fn main() {
             .stack()
             .progress()
         {
-            let logits = model.forward_mut(img.traced_into(grads));
+            let logits = model.forward_mut(img.traced(grads));
             let loss = cross_entropy_with_logits_loss(logits, lbl);
 
             total_epoch_loss += loss.array();

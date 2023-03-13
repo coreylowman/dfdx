@@ -57,7 +57,7 @@ mod tests {
         let a: Tensor<_, TestDtype, _> = dev.tensor([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
 
-        let result = a.trace().maximum(b.clone());
+        let result = a.trace_all().maximum(b.clone());
         assert_eq!(result.array(), [[0.0, 0.0, 1.0], [3.0, 4.0, 5.0]]);
 
         let g = result.sum().backward();

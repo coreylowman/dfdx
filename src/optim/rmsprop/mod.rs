@@ -182,7 +182,7 @@ mod tests {
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut opt = RMSprop::new(&t, cfg);
         for e in expected.iter() {
-            let gradients = (t.trace() * rate.clone()).square().sum().backward();
+            let gradients = (t.trace_all() * rate.clone()).square().sum().backward();
             opt.update(&mut t, &gradients).expect("");
             std::println!("{:?}", t.array());
             assert_close(&t.array(), e);

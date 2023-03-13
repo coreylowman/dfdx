@@ -52,7 +52,7 @@ mod tests {
     fn test_1d_neg() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, 0.0, 5.0]);
-        let r = -(a.trace());
+        let r = -(a.trace_all());
         assert_close(&r.array(), &[2.0, 0.0, -5.0]);
         // NOTE: .exp() so we can make sure neg is using result grad properly
         let g = r.exp().mean().backward();

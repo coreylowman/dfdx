@@ -215,7 +215,7 @@ mod tests {
     fn test_pool2d_3d_max2d_eq_grads() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([[[1.0, 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]]);
-        let r = x.trace().max_pool2d::<2, 1, 0>();
+        let r = x.trace_all().max_pool2d::<2, 1, 0>();
         assert_close(&r.array(), &[[[1., 1., 1.2]]]);
         let g = r.sum().backward();
         assert_close(&g.get(&x).array(), &[[[1., 2., 0., 0.], [0., 0., 0., 1.]]]);
@@ -225,7 +225,7 @@ mod tests {
     fn test_pool2d_3d_min2d_eq_grads() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([[[1., 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]]);
-        let r = x.trace().min_pool2d::<2, 1, 0>();
+        let r = x.trace_all().min_pool2d::<2, 1, 0>();
         assert_close(&r.array(), &[[[0.2, 0.2, 0.2]]]);
         let g = r.sum().backward();
         assert_close(&g.get(&x).array(), &[[[0., 0., 0., 1.], [1., 2., 0., 0.]]]);
@@ -235,7 +235,7 @@ mod tests {
     fn test_pool2d_3d_max2d() {
         let dev = TestDevice::seed_from_u64(234);
         let x: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
-        let r = x.trace().max_pool2d::<2, 2, 0>();
+        let r = x.trace_all().max_pool2d::<2, 2, 0>();
         assert_close(
             &r.array(),
             &[[[1.79155397, 1.10126066]], [[1.14464748, 2.26301837]]],
@@ -255,7 +255,7 @@ mod tests {
     fn test_pool2d_3d_min2d() {
         let dev = TestDevice::seed_from_u64(234);
         let x: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
-        let r = x.trace().min_pool2d::<2, 2, 0>();
+        let r = x.trace_all().min_pool2d::<2, 2, 0>();
         assert_close(
             &r.array(),
             &[[[-1.09635627, -1.07717276]], [[-0.01996479, -1.82562149]]],
@@ -275,7 +275,7 @@ mod tests {
     fn test_pool2d_3d_avg2d() {
         let dev = TestDevice::seed_from_u64(234);
         let x: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
-        let r = x.trace().avg_pool2d::<2, 2, 0>();
+        let r = x.trace_all().avg_pool2d::<2, 2, 0>();
         assert_close(
             &r.array(),
             &[[[0.03031558, -0.25052455]], [[0.39499030, 0.04878314]]],
@@ -295,7 +295,7 @@ mod tests {
     fn test_pool2d_4d_avg2d() {
         let dev = TestDevice::seed_from_u64(234);
         let x: Tensor<Rank4<2, 4, 2, 2>, TestDtype, _> = dev.sample_normal();
-        let r = x.trace().avg_pool2d::<1, 2, 0>();
+        let r = x.trace_all().avg_pool2d::<1, 2, 0>();
         assert_close(
             &r.array(),
             &[

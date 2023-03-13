@@ -44,7 +44,7 @@ mod tests {
     fn test_gelu() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = x.trace().gelu();
+        let r = x.trace_all().gelu();
         assert_close(
             &r.array(),
             &[-0.04540229, -0.158808, 0.0, 0.841192, 1.9545977],

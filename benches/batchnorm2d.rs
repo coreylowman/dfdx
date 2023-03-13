@@ -24,9 +24,10 @@ fn main() {
 
     loop {
         let img: Tensor<InputShape, Dtype, _> = dev.sample_normal();
+        let grads = m.alloc_grads();
 
         let start = Instant::now();
-        let out = m.forward_mut(img.traced());
+        let out = m.forward_mut(img.traced(grads));
         let loss = out.square().mean();
         let fwd_dur = start.elapsed();
 

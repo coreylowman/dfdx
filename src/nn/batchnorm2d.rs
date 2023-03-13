@@ -301,7 +301,7 @@ mod tests {
         let x1: Tensor<Rank3<3, 2, 2>, TestDtype, _> = dev.sample(rand_distr::StandardNormal);
         let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
-        let y1 = bn.forward_mut(x1.trace());
+        let y1 = bn.forward_mut(x1.trace_all());
         assert_close(
             &y1.array(),
             &[
@@ -336,7 +336,7 @@ mod tests {
         let x1: Tensor<Rank4<2, 2, 2, 3>, TestDtype, _> = dev.sample_normal();
         let mut bn = BatchNorm2D::<2>::build_on_device(&dev);
 
-        let y1 = bn.forward_mut(x1.trace());
+        let y1 = bn.forward_mut(x1.trace_all());
         #[rustfmt::skip]
         assert_close(
             &y1.array(),
@@ -368,28 +368,28 @@ mod tests {
         let x1: Tensor<Rank3<3, 4, 5>, TestDtype, _> = dev.sample_normal();
         let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
-        let _ = bn.forward_mut(x1.trace());
+        let _ = bn.forward_mut(x1.trace_all());
         assert_close(
             &bn.running_mean.array(),
             &[0.0083191, -0.0370511, -0.0079481],
         );
         assert_close(&bn.running_var.array(), &[1.0344709, 0.9340682, 1.0266376]);
 
-        let _ = bn.forward_mut(x1.trace());
+        let _ = bn.forward_mut(x1.trace_all());
         assert_close(
             &bn.running_mean.array(),
             &[0.0158063, -0.0703971, -0.0151013],
         );
         assert_close(&bn.running_var.array(), &[1.0654946, 0.87472963, 1.0506116]);
 
-        let _ = bn.forward_mut(x1.trace());
+        let _ = bn.forward_mut(x1.trace_all());
         assert_close(
             &bn.running_mean.array(),
             &[0.0225448, -0.1004085, -0.0215393],
         );
         assert_close(&bn.running_var.array(), &[1.093416, 0.8213248, 1.0721881]);
 
-        let _ = bn.forward_mut(x1.trace());
+        let _ = bn.forward_mut(x1.trace_all());
         assert_close(
             &bn.running_mean.array(),
             &[0.0286095, -0.1274188, -0.0273335],
@@ -420,7 +420,7 @@ mod tests {
 
         let x1: Tensor<Rank3<3, 4, 5>, TestDtype, _> = dev.sample_normal();
         let mut bn = dev.build_module::<BatchNorm2D<3>, TestDtype>();
-        let y = bn.forward_mut(x1.trace());
+        let y = bn.forward_mut(x1.trace_all());
         let g = y.square().mean().backward();
 
         let mut opt = Sgd::new(&bn, Default::default());
