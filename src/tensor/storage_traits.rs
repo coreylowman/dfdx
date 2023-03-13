@@ -170,64 +170,72 @@ pub trait OneFillStorage<E: Unit>: DeviceStorage {
 }
 
 pub trait TriangleTensor<E: Unit>: DeviceStorage {
-    fn triu<S: ConstShape>(&self, val: E, dim: impl Into<Option<isize>>) -> Tensor<S, E, Self> {
-        self.try_triu_like::<S>(&Default::default(), val, dim)
+    fn upper_tri<S: ConstShape>(
+        &self,
+        val: E,
+        dim: impl Into<Option<isize>>,
+    ) -> Tensor<S, E, Self> {
+        self.try_upper_tri_like::<S>(&Default::default(), val, dim)
             .unwrap()
     }
 
-    /// Fallible version of [TriangleTensor::triu]
-    fn try_triu<S: ConstShape>(
+    /// Fallible version of [TriangleTensor::upper_tri]
+    fn try_upper_tri<S: ConstShape>(
         &self,
         val: E,
         dim: impl Into<Option<isize>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.try_triu_like::<S>(&Default::default(), val, dim)
+        self.try_upper_tri_like::<S>(&Default::default(), val, dim)
     }
 
     /// Build an upper triangular tensor with the given shape.
-    fn triu_like<S: HasShape>(
+    fn upper_tri_like<S: HasShape>(
         &self,
         src: &S,
         val: E,
         dim: impl Into<Option<isize>>,
     ) -> Tensor<S::Shape, E, Self> {
-        self.try_triu_like(src, val, dim).unwrap()
+        self.try_upper_tri_like(src, val, dim).unwrap()
     }
 
-    /// Fallible version of [TriangleTensor::triu_like]
-    fn try_triu_like<S: HasShape>(
+    /// Fallible version of [TriangleTensor::upper_tri_like]
+    fn try_upper_tri_like<S: HasShape>(
         &self,
         src: &S,
         val: E,
         dim: impl Into<Option<isize>>,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 
-    fn tril<S: ConstShape>(&self, val: E, dim: impl Into<Option<isize>>) -> Tensor<S, E, Self> {
-        self.try_tril_like::<S>(&Default::default(), val, dim)
+    fn lower_tri<S: ConstShape>(
+        &self,
+        val: E,
+        dim: impl Into<Option<isize>>,
+    ) -> Tensor<S, E, Self> {
+        self.try_lower_tri_like::<S>(&Default::default(), val, dim)
             .unwrap()
     }
 
-    /// Fallible version of [TriangleTensor::tril]
-    fn try_tril<S: ConstShape>(
+    /// Fallible version of [TriangleTensor::lower_tri]
+    fn try_lower_tri<S: ConstShape>(
         &self,
         val: E,
         dim: impl Into<Option<isize>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
-        self.try_tril_like::<S>(&Default::default(), val, dim)
+        self.try_lower_tri_like::<S>(&Default::default(), val, dim)
     }
 
     /// Build a lower triangular tensor with the given shape.
-    fn tril_like<S: HasShape>(
+    fn lower_tri_like<S: HasShape>(
         &self,
         src: &S,
         val: E,
         dim: impl Into<Option<isize>>,
     ) -> Tensor<S::Shape, E, Self> {
-        self.try_tril_like(src, val, dim).unwrap()
+        self.try_lower_tri_like(src, val, dim).unwrap()
     }
 
-    /// Fallible version of [TriangleTensor::tril_like]
-    fn try_tril_like<S: HasShape>(
+    /// Fallible version of [TriangleTensor::lower_tri_like]
+    fn try_lower_tri_like<S: HasShape>(
         &self,
         src: &S,
         val: E,

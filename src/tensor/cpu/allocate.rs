@@ -79,7 +79,7 @@ impl<E: Unit> OnesTensor<E> for Cpu {
 }
 
 impl<E: Unit> TriangleTensor<E> for Cpu {
-    fn try_triu_like<S: HasShape>(
+    fn try_upper_tri_like<S: HasShape>(
         &self,
         src: &S,
         val: E,
@@ -114,7 +114,7 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
         })
     }
 
-    fn try_tril_like<S: HasShape>(
+    fn try_lower_tri_like<S: HasShape>(
         &self,
         src: &S,
         val: E,

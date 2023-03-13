@@ -264,11 +264,11 @@ mod tests {
         let vl = 42.0;
 
         assert_eq!(
-            dev.triu::<Rank2<3, 4>>(vl, None).array(),
+            dev.upper_tri::<Rank2<3, 4>>(vl, None).array(),
             [[vl, vl, vl, vl], [0., vl, vl, vl], [0., 0., vl, vl]]
         );
         assert_eq!(
-            dev.triu::<Rank2<4, 4>>(vl, -1).array(),
+            dev.upper_tri::<Rank2<4, 4>>(vl, -1).array(),
             [
                 [vl, vl, vl, vl],
                 [vl, vl, vl, vl],
@@ -277,7 +277,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            dev.triu::<Rank2<4, 4>>(vl, -2).array(),
+            dev.upper_tri::<Rank2<4, 4>>(vl, -2).array(),
             [
                 [vl, vl, vl, vl],
                 [vl, vl, vl, vl],
@@ -286,11 +286,11 @@ mod tests {
             ]
         );
         assert_eq!(
-            dev.triu::<Rank2<4, 3>>(vl, 1).array(),
+            dev.upper_tri::<Rank2<4, 3>>(vl, 1).array(),
             [[0., vl, vl], [0., 0., vl], [0., 0., 0.], [0., 0., 0.]]
         );
         assert_eq!(
-            dev.triu::<Rank3<2, 5, 5>>(vl, None).array(),
+            dev.upper_tri::<Rank3<2, 5, 5>>(vl, None).array(),
             [[
                 [vl, vl, vl, vl, vl],
                 [0., vl, vl, vl, vl],
@@ -300,7 +300,7 @@ mod tests {
             ]; 2]
         );
         assert_eq!(
-            dev.triu::<Rank3<4, 5, 5>>(vl, 2).array(),
+            dev.upper_tri::<Rank3<4, 5, 5>>(vl, 2).array(),
             [[
                 [0., 0., vl, vl, vl],
                 [0., 0., 0., vl, vl],
@@ -310,7 +310,7 @@ mod tests {
             ]; 4]
         );
         assert_eq!(
-            dev.triu::<Rank4<3, 4, 5, 6>>(vl, None).array(),
+            dev.upper_tri::<Rank4<3, 4, 5, 6>>(vl, None).array(),
             [[[
                 [vl, vl, vl, vl, vl, vl],
                 [0., vl, vl, vl, vl, vl],
@@ -327,11 +327,11 @@ mod tests {
         let vl = 42.0;
 
         assert_eq!(
-            dev.tril::<Rank2<3, 4>>(vl, None).array(),
+            dev.lower_tri::<Rank2<3, 4>>(vl, None).array(),
             [[vl, 0., 0., 0.], [vl, vl, 0., 0.], [vl, vl, vl, 0.]]
         );
         assert_eq!(
-            dev.tril::<Rank2<4, 4>>(vl, -1).array(),
+            dev.lower_tri::<Rank2<4, 4>>(vl, -1).array(),
             [
                 [0., 0., 0., 0.],
                 [vl, 0., 0., 0.],
@@ -340,7 +340,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            dev.tril::<Rank2<4, 4>>(vl, -2).array(),
+            dev.lower_tri::<Rank2<4, 4>>(vl, -2).array(),
             [
                 [0., 0., 0., 0.],
                 [0., 0., 0., 0.],
@@ -349,11 +349,11 @@ mod tests {
             ]
         );
         assert_eq!(
-            dev.tril::<Rank2<4, 3>>(vl, 1).array(),
+            dev.lower_tri::<Rank2<4, 3>>(vl, 1).array(),
             [[vl, vl, 0.], [vl, vl, vl], [vl, vl, vl], [vl, vl, vl]]
         );
         assert_eq!(
-            dev.tril::<Rank3<2, 5, 5>>(vl, None).array(),
+            dev.lower_tri::<Rank3<2, 5, 5>>(vl, None).array(),
             [[
                 [vl, 0., 0., 0., 0.],
                 [vl, vl, 0., 0., 0.],
@@ -363,7 +363,7 @@ mod tests {
             ]; 2]
         );
         assert_eq!(
-            dev.tril::<Rank3<4, 5, 5>>(vl, 2).array(),
+            dev.lower_tri::<Rank3<4, 5, 5>>(vl, 2).array(),
             [[
                 [vl, vl, vl, 0., 0.],
                 [vl, vl, vl, vl, 0.],
@@ -373,7 +373,7 @@ mod tests {
             ]; 4]
         );
         assert_eq!(
-            dev.tril::<Rank4<3, 4, 5, 6>>(vl, None).array(),
+            dev.lower_tri::<Rank4<3, 4, 5, 6>>(vl, None).array(),
             [[[
                 [vl, 0., 0., 0., 0., 0.],
                 [vl, vl, 0., 0., 0., 0.],
