@@ -48,20 +48,28 @@ pub trait TensorViewer: 'static {
         GetMut: FnMut(&mut Mod) -> &mut Field;
 }
 
+/// A list of a Module's fields,
 pub trait ModuleFields<M: TensorCollection<E, D>, E: Dtype, D: Device<E>> {
+    /// A list of optional instances of each field,
     type Options<E2: Dtype, D2: Device<E2>>;
+
+    /// A list of instances of each field,
     type Output<E2: Dtype, D2: Device<E2>>;
 
+    /// Calls [ModuleVisitor::visit_module] or [ModuleVisitor::visit_tensor] for each field,
+    /// and returns optionally constructed fields
     fn visit_fields<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<M, E, D, E2, D2>>(
         self,
         module: &mut V,
     ) -> Result<Self::Options<E2, D2>, V::Err>;
 
+    /// If any optional fields are None, returns None. Otherwise returns instances of all fields.
     fn handle_options<E2: Dtype, D2: Device<E2>>(
         options: Self::Options<E2, D2>,
     ) -> Option<Self::Output<E2, D2>>;
 }
 
+/// A [ModuleFields] that represents a field that contains one or more Tensors.
 pub struct ModuleField<'a, F1, F2, Mod, Field>
 where
     F1: FnMut(&Mod) -> &Field,
@@ -74,6 +82,7 @@ where
     f: std::marker::PhantomData<Field>,
 }
 
+/// A [ModuleFields] that represents a field that contains a single Tensor.
 pub struct TensorField<'a, F1, F2, Mod, S: Shape, E: Dtype, D: Device<E>>
 where
     F1: FnMut(&Mod) -> &Tensor<S, E, D>,
