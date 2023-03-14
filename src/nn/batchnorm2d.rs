@@ -233,40 +233,43 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNor
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
-        let scale = visitor.visit_tensor(
-            "scale",
-            |s| &s.scale,
-            |s| &mut s.scale,
-            TensorOptions::reset_to_ones(),
-        )?;
-        let bias = visitor.visit_tensor(
-            "bias",
-            |s| &s.bias,
-            |s| &mut s.bias,
-            TensorOptions::reset_to_zeros(),
-        )?;
-        let running_mean = visitor.visit_tensor(
-            "running_mean",
-            |s| &s.running_mean,
-            |s| &mut s.running_mean,
-            TensorOptions::detached(|t| t.try_fill_with_zeros()),
-        )?;
-        let running_var = visitor.visit_tensor(
-            "running_var",
-            |s| &s.running_var,
-            |s| &mut s.running_var,
-            TensorOptions::detached(|t| t.try_fill_with_ones()),
-        )?;
-
-        Ok(crate::try_some!(BatchNorm2D {
-            scale: scale?,
-            bias: bias?,
-            running_mean: running_mean?,
-            running_var: running_var?,
-            epsilon: E2::from_f32(1e-5).unwrap(),
-            momentum: E2::from_f32(0.1).unwrap(),
-        }))
+    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                TensorField::new(
+                    "scale",
+                    |s: &Self| &s.scale,
+                    |s| &mut s.scale,
+                    TensorOptions::reset_to_ones(),
+                ),
+                TensorField::new(
+                    "bias",
+                    |s: &Self| &s.bias,
+                    |s| &mut s.bias,
+                    TensorOptions::reset_to_ones(),
+                ),
+                TensorField::new(
+                    "running_mean",
+                    |s: &Self| &s.running_mean,
+                    |s| &mut s.running_mean,
+                    TensorOptions::detached(|t| t.try_fill_with_zeros()),
+                ),
+                TensorField::new(
+                    "running_var",
+                    |s: &Self| &s.running_var,
+                    |s| &mut s.running_var,
+                    TensorOptions::detached(|t| t.try_fill_with_ones()),
+                ),
+            ),
+            |(scale, bias, running_mean, running_var)| BatchNorm2D {
+                scale,
+                bias,
+                running_mean,
+                running_var,
+                epsilon: E2::from_f32(1e-5).unwrap(),
+                momentum: E2::from_f32(0.1).unwrap(),
+            },
+        )
     }
 }
 

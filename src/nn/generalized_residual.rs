@@ -39,11 +39,14 @@ impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>, R: TensorCollection<E, D
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
-        let f = visitor.visit_module("f", |s| &s.f, |s| &mut s.f)?;
-        let r = visitor.visit_module("r", |s| &s.r, |s| &mut s.r)?;
-
-        Ok(crate::try_some!(GeneralizedResidual { f: f?, r: r? }))
+    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                ModuleField::new("f", |s: &Self| &s.f, |s| &mut s.f),
+                ModuleField::new("r", |s: &Self| &s.r, |s| &mut s.r),
+            ),
+            |(f, r)| GeneralizedResidual { f, r },
+        )
     }
 }
 

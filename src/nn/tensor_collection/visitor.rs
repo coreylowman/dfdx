@@ -4,12 +4,7 @@ use crate::{
     tensor::Tensor,
 };
 
-use super::{
-    collection::{ModuleVisitor, TensorCollection, TensorOptions},
-    ModuleVisitorOutput,
-};
-
-use std::string::String;
+use super::{ModuleVisitor, TensorCollection, TensorOptions};
 
 /// A standard [ModuleVisitor] that executes `F` on every [Tensor] encountered.
 /// `F` must implement [TensorVisitor]
@@ -53,6 +48,76 @@ pub trait TensorViewer: 'static {
         GetMut: FnMut(&mut Mod) -> &mut Field;
 }
 
+pub trait ModuleFields<M: TensorCollection<E, D>, E: Dtype, D: Device<E>> {
+    type Options<E2: Dtype, D2: Device<E2>>;
+    type Output<E2: Dtype, D2: Device<E2>>;
+
+    fn visit_fields<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<M, E, D, E2, D2>>(
+        self,
+        module: &mut V,
+    ) -> Result<Self::Options<E2, D2>, V::Err>;
+
+    fn handle_options<E2: Dtype, D2: Device<E2>>(
+        options: Self::Options<E2, D2>,
+    ) -> Option<Self::Output<E2, D2>>;
+}
+
+pub struct ModuleField<'a, F1, F2, Mod, Field>
+where
+    F1: FnMut(&Mod) -> &Field,
+    F2: FnMut(&mut Mod) -> &mut Field,
+{
+    pub(super) name: &'a str,
+    pub(super) get_ref: F1,
+    pub(super) get_mut: F2,
+    m: std::marker::PhantomData<Mod>,
+    f: std::marker::PhantomData<Field>,
+}
+
+pub struct TensorField<'a, F1, F2, Mod, S: Shape, E: Dtype, D: Device<E>>
+where
+    F1: FnMut(&Mod) -> &Tensor<S, E, D>,
+    F2: FnMut(&mut Mod) -> &mut Tensor<S, E, D>,
+{
+    pub(super) name: &'a str,
+    pub(super) get_ref: F1,
+    pub(super) get_mut: F2,
+    pub(super) options: TensorOptions<S, E, D>,
+    m: std::marker::PhantomData<Mod>,
+}
+
+impl<'a, F1, F2, Mod, Field> ModuleField<'a, F1, F2, Mod, Field>
+where
+    F1: FnMut(&Mod) -> &Field,
+    F2: FnMut(&mut Mod) -> &mut Field,
+{
+    pub fn new(name: &'a str, get_ref: F1, get_mut: F2) -> Self {
+        Self {
+            name,
+            get_ref,
+            get_mut,
+            m: Default::default(),
+            f: Default::default(),
+        }
+    }
+}
+
+impl<'a, F1, F2, Mod, S: Shape, E: Dtype, D: Device<E>> TensorField<'a, F1, F2, Mod, S, E, D>
+where
+    F1: FnMut(&Mod) -> &Tensor<S, E, D>,
+    F2: FnMut(&mut Mod) -> &mut Tensor<S, E, D>,
+{
+    pub fn new(name: &'a str, get_ref: F1, get_mut: F2, options: TensorOptions<S, E, D>) -> Self {
+        Self {
+            name,
+            get_ref,
+            get_mut,
+            options,
+            m: Default::default(),
+        }
+    }
+}
+
 /// A [TensorViewer] that represents a `&Tensor`
 #[derive(Debug)]
 pub enum ViewTensorRef {}
@@ -64,190 +129,3 @@ pub enum ViewTensorMut {}
 /// A [TensorViewer] that represents a Tensor's name as a `String`
 #[derive(Debug)]
 pub enum ViewTensorName {}
-
-impl<
-        'a,
-        M: TensorCollection<E, D>,
-        E: Dtype,
-        D: Device<E>,
-        E2: Dtype,
-        D2: Device<E2>,
-        F: TensorVisitor<E, D, E2, D2>,
-    > ModuleVisitor<M, E, D, E2, D2>
-    for RecursiveWalker<'a, <F::Viewer as TensorViewer>::View<'a, M>, F>
-{
-    type Err = F::Err;
-    type Func = F;
-
-    fn visit_module<Field, GetRef, GetMut>(
-        &mut self,
-        name: &str,
-        mut get_refs: GetRef,
-        mut get_muts: GetMut,
-    ) -> ModuleVisitorOutput<F, Field, E, D, E2, D2>
-    where
-        GetRef: FnMut(&M) -> &Field,
-        GetMut: FnMut(&mut M) -> &mut Field,
-        Field: TensorCollection<E, D>,
-    {
-        let mut walker = RecursiveWalker {
-            m: F::Viewer::view_field(&mut self.m, name, &mut get_refs, &mut get_muts),
-            f: self.f,
-        };
-        Field::iter_tensors(&mut walker)
-    }
-
-    fn visit_tensor<S: Shape, GetRef, GetMut>(
-        &mut self,
-        name: &str,
-        mut get_refs: GetRef,
-        mut get_muts: GetMut,
-        opts: TensorOptions<S, E, D>,
-    ) -> Result<Option<Tensor<S, E2, D2>>, F::Err>
-    where
-        GetRef: FnMut(&M) -> &Tensor<S, E, D>,
-        GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,
-    {
-        self.f.visit(
-            opts,
-            F::Viewer::view_field(&mut self.m, name, &mut get_refs, &mut get_muts),
-        )
-    }
-}
-
-impl TensorViewer for () {
-    type View<'a, Mod: 'a> = ();
-
-    fn view_field<'a, Mod, Field, GetRef, GetMut>(
-        _module: &mut (),
-        _name: &str,
-        _get_ref: &mut GetRef,
-        _get_mut: &mut GetMut,
-    ) where
-        GetRef: FnMut(&Mod) -> &Field,
-        GetMut: FnMut(&mut Mod) -> &mut Field,
-    {
-    }
-}
-
-impl TensorViewer for ViewTensorRef {
-    type View<'a, Mod: 'a> = &'a Mod;
-
-    fn view_field<'a, Mod, Field, GetRef, GetMut>(
-        module: &'a mut &Mod,
-        _name: &str,
-        get_ref: &mut GetRef,
-        _get_mut: &mut GetMut,
-    ) -> &'a Field
-    where
-        GetRef: FnMut(&Mod) -> &Field,
-        GetMut: FnMut(&mut Mod) -> &mut Field,
-    {
-        get_ref(module)
-    }
-}
-
-impl TensorViewer for ViewTensorMut {
-    type View<'a, Mod: 'a> = &'a mut Mod;
-
-    fn view_field<'a, Mod, Field, GetRef, GetMut>(
-        module: &'a mut &mut Mod,
-        _name: &str,
-        _get_ref: &mut GetRef,
-        get_mut: &mut GetMut,
-    ) -> &'a mut Field
-    where
-        GetRef: FnMut(&Mod) -> &Field,
-        GetMut: FnMut(&mut Mod) -> &mut Field,
-    {
-        get_mut(module)
-    }
-}
-
-impl TensorViewer for ViewTensorName {
-    type View<'a, Mod: 'a> = String;
-
-    fn view_field<Mod, Field, GetRef, GetMut>(
-        module: &mut String,
-        name: &str,
-        _get_ref: &mut GetRef,
-        _get_mut: &mut GetMut,
-    ) -> String
-    where
-        GetRef: FnMut(&Mod) -> &Field,
-        GetMut: FnMut(&mut Mod) -> &mut Field,
-    {
-        if !module.is_empty() {
-            std::format!("{module}.{name}")
-        } else {
-            name.to_string()
-        }
-    }
-}
-
-macro_rules! tuple_impls {
-    ([$($name:ident),+] [$($idx:tt),+]) => {
-        impl<$($name: TensorViewer),+> TensorViewer for ($($name,)+) {
-            type View<'a, Mod: 'a> = ($($name::View<'a, Mod>,)+);
-
-            fn view_field<'a, Mod, Field, GetRef, GetMut>(
-                module: &'a mut Self::View<'_, Mod>,
-                name: &str,
-                get_ref: &mut GetRef,
-                get_mut: &mut GetMut,
-            ) -> Self::View<'a, Field>
-            where
-                GetRef: FnMut(&Mod) -> &Field,
-                GetMut: FnMut(&mut Mod) -> &mut Field,
-            {
-                ($($name::view_field(&mut module.$idx, name, get_ref, get_mut),)+)
-            }
-        }
-    }
-}
-
-tuple_impls!([M1][0]);
-tuple_impls!([M1, M2] [0, 1]);
-tuple_impls!([M1, M2, M3] [0, 1, 2]);
-tuple_impls!([M1, M2, M3, M4] [0, 1, 2, 3]);
-tuple_impls!([M1, M2, M3, M4, M5] [0, 1, 2, 3, 4]);
-tuple_impls!([M1, M2, M3, M4, M5, M6] [0, 1, 2, 3, 4, 5]);
-
-impl<T: TensorViewer> TensorViewer for std::vec::Vec<T> {
-    type View<'a, Mod: 'a> = std::vec::Vec<T::View<'a, Mod>>;
-
-    fn view_field<'a, Mod, Field, GetRef, GetMut>(
-        module: &'a mut Self::View<'_, Mod>,
-        name: &str,
-        get_ref: &mut GetRef,
-        get_mut: &mut GetMut,
-    ) -> Self::View<'a, Field>
-    where
-        GetRef: FnMut(&Mod) -> &Field,
-        GetMut: FnMut(&mut Mod) -> &mut Field,
-    {
-        module
-            .iter_mut()
-            .map(|x| T::view_field(x, name, get_ref, get_mut))
-            .collect()
-    }
-}
-
-impl<T: TensorViewer> TensorViewer for Option<T> {
-    type View<'a, Mod: 'a> = Option<T::View<'a, Mod>>;
-
-    fn view_field<'a, Mod, Field, GetRef, GetMut>(
-        module: &'a mut Self::View<'_, Mod>,
-        name: &str,
-        get_ref: &mut GetRef,
-        get_mut: &mut GetMut,
-    ) -> Self::View<'a, Field>
-    where
-        GetRef: FnMut(&Mod) -> &Field,
-        GetMut: FnMut(&mut Mod) -> &mut Field,
-    {
-        module
-            .as_mut()
-            .map(|x| T::view_field(x, name, get_ref, get_mut))
-    }
-}

@@ -88,14 +88,14 @@ where
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
-        let encoder = visitor.visit_module("encoder", |s| &s.encoder, |s| &mut s.encoder)?;
-        let decoder = visitor.visit_module("decoder", |s| &s.decoder, |s| &mut s.decoder)?;
-
-        Ok(crate::try_some!(Transformer {
-            encoder: encoder?,
-            decoder: decoder?,
-        }))
+    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                ModuleField::new("encoder", |s: &Self| &s.encoder, |s| &mut s.encoder),
+                ModuleField::new("decoder", |s: &Self| &s.decoder, |s| &mut s.decoder),
+            ),
+            |(encoder, decoder)| Transformer { encoder, decoder },
+        )
     }
 }
 

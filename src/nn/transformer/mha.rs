@@ -72,18 +72,16 @@ where
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, Vi: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut Vi,
-    ) -> ModuleVisitorOutput<Vi::Func, Self, E, D, E2, D2> {
-        let w_q = visitor.visit_module("w_q", |s| &s.w_q, |s| &mut s.w_q)?;
-        let w_k = visitor.visit_module("w_k", |s| &s.w_k, |s| &mut s.w_k)?;
-        let w_v = visitor.visit_module("w_v", |s| &s.w_v, |s| &mut s.w_v)?;
-        let w_o = visitor.visit_module("w_o", |s| &s.w_o, |s| &mut s.w_o)?;
-
-        Ok(crate::try_some!(MultiHeadAttention {
-            w_q: w_q?,
-            w_k: w_k?,
-            w_v: w_v?,
-            w_o: w_o?,
-        }))
+    ) -> Result<Option<Self::Output<E2, D2>>, Vi::Err> {
+        visitor.visit_fields(
+            (
+                ModuleField::new("w_q", |s: &Self| &s.w_q, |s| &mut s.w_q),
+                ModuleField::new("w_k", |s: &Self| &s.w_k, |s| &mut s.w_k),
+                ModuleField::new("w_v", |s: &Self| &s.w_v, |s| &mut s.w_v),
+                ModuleField::new("w_o", |s: &Self| &s.w_o, |s| &mut s.w_o),
+            ),
+            |(w_q, w_k, w_v, w_o)| MultiHeadAttention { w_q, w_k, w_v, w_o },
+        )
     }
 }
 

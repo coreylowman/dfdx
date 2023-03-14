@@ -34,28 +34,22 @@ impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>, const N: usize> TensorCo
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
-        let mut tmp = Vec::new();
+    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+        let names: Vec<String> = (0..N).map(|i| std::format!("{i}")).collect();
 
-        for i in 0..N {
-            tmp.push(visitor.visit_module(
-                &std::format!("{i}"),
-                |s| &s.modules[i],
-                |s| &mut s.modules[i],
-            )?);
-        }
-
-        let mut modules = Vec::new();
-
-        for x in tmp {
-            if let Some(x) = x {
-                modules.push(x);
-            } else {
-                return Ok(None);
-            }
-        }
-
-        Ok(Some(Repeated { modules }))
+        visitor.visit_fields(
+            (0..N)
+                .zip(names.iter())
+                .map(|(i, name)| {
+                    ModuleField::new(
+                        name,
+                        move |s: &Self| &s.modules[i],
+                        move |s| &mut s.modules[i],
+                    )
+                })
+                .collect::<Vec<_>>(),
+            |modules| Repeated { modules },
+        )
     }
 }
 

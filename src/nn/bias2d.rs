@@ -48,15 +48,16 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for Bias2D<C
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
-        let bias = visitor.visit_tensor(
-            "bias",
-            |s| &s.bias,
-            |s| &mut s.bias,
-            TensorOptions::reset_to_zeros(),
-        )?;
-
-        Ok(crate::try_some!(Bias2D { bias: bias? }))
+    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+        visitor.visit_fields(
+            TensorField::new(
+                "bias",
+                |s: &Self| &s.bias,
+                |s| &mut s.bias,
+                TensorOptions::reset_to_zeros(),
+            ),
+            |bias| Bias2D { bias },
+        )
     }
 }
 

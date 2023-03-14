@@ -31,9 +31,11 @@ impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> TensorCollection<E, D> f
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
-        let x = visitor.visit_module("0", |s| &s.0, |s| &mut s.0)?;
-        Ok(crate::try_some!(SplitInto(x?)))
+    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+        visitor.visit_fields(
+            ModuleField::new("0", |s: &Self| &s.0, |s| &mut s.0),
+            SplitInto,
+        )
     }
 }
 

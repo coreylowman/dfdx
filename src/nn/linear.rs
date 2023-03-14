@@ -63,30 +63,30 @@ impl<const I: usize, const O: usize, E: Dtype, D: Device<E>> TensorCollection<E,
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
-        let weight = visitor.visit_tensor(
-            "weight",
-            |s| &s.weight,
-            |s| &mut s.weight,
-            TensorOptions::reset_with(|t| {
-                let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
-                t.try_fill_with_distr(Uniform::new(-b, b))
-            }),
-        )?;
-        let bias = visitor.visit_tensor(
-            "bias",
-            |s| &s.bias,
-            |s| &mut s.bias,
-            TensorOptions::reset_with(|t| {
-                let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
-                t.try_fill_with_distr(Uniform::new(-b, b))
-            }),
-        )?;
-
-        Ok(crate::try_some!(Linear {
-            weight: weight?,
-            bias: bias?,
-        }))
+    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                TensorField::new(
+                    "weight",
+                    |s: &Self| &s.weight,
+                    |s| &mut s.weight,
+                    TensorOptions::reset_with(|t| {
+                        let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
+                        t.try_fill_with_distr(Uniform::new(-b, b))
+                    }),
+                ),
+                TensorField::new(
+                    "bias",
+                    |s: &Self| &s.bias,
+                    |s| &mut s.bias,
+                    TensorOptions::reset_with(|t| {
+                        let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
+                        t.try_fill_with_distr(Uniform::new(-b, b))
+                    }),
+                ),
+            ),
+            |(weight, bias)| Linear { weight, bias },
+        )
     }
 }
 

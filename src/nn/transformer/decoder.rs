@@ -76,9 +76,11 @@ where
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
-        let x = visitor.visit_module("0", |s| &s.0, |s| &mut s.0)?;
-        Ok(crate::try_some!(TransformerDecoder(x?)))
+    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+        visitor.visit_fields(
+            ModuleField::new("0", |s: &Self| &s.0, |s| &mut s.0),
+            TransformerDecoder,
+        )
     }
 }
 
@@ -147,23 +149,25 @@ where
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
-        let self_attn =
-            visitor.visit_module("self_attn", |s| &s.self_attn, |s| &mut s.self_attn)?;
-        let norm1 = visitor.visit_module("norm1", |s| &s.norm1, |s| &mut s.norm1)?;
-        let mh_attn = visitor.visit_module("mh_attn", |s| &s.mh_attn, |s| &mut s.mh_attn)?;
-        let norm2 = visitor.visit_module("norm2", |s| &s.norm2, |s| &mut s.norm2)?;
-        let ff = visitor.visit_module("ff", |s| &s.ff, |s| &mut s.ff)?;
-        let norm3 = visitor.visit_module("norm3", |s| &s.norm3, |s| &mut s.norm3)?;
-
-        Ok(crate::try_some!(TransformerDecoderBlock {
-            self_attn: self_attn?,
-            norm1: norm1?,
-            mh_attn: mh_attn?,
-            norm2: norm2?,
-            ff: ff?,
-            norm3: norm3?,
-        }))
+    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                ModuleField::new("self_attn", |s: &Self| &s.self_attn, |s| &mut s.self_attn),
+                ModuleField::new("norm1", |s: &Self| &s.norm1, |s| &mut s.norm1),
+                ModuleField::new("mh_attn", |s: &Self| &s.mh_attn, |s| &mut s.mh_attn),
+                ModuleField::new("norm2", |s: &Self| &s.norm2, |s| &mut s.norm2),
+                ModuleField::new("ff", |s: &Self| &s.ff, |s| &mut s.ff),
+                ModuleField::new("norm3", |s: &Self| &s.norm3, |s| &mut s.norm3),
+            ),
+            |(self_attn, norm1, mh_attn, norm2, ff, norm3)| TransformerDecoderBlock {
+                self_attn,
+                norm1,
+                mh_attn,
+                norm2,
+                ff,
+                norm3,
+            },
+        )
     }
 }
 

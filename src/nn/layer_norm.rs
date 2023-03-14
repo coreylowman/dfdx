@@ -49,25 +49,28 @@ impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNor
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
-        let gamma = visitor.visit_tensor(
-            "gamma",
-            |s| &s.gamma,
-            |s| &mut s.gamma,
-            TensorOptions::reset_to_ones(),
-        )?;
-        let beta = visitor.visit_tensor(
-            "beta",
-            |s| &s.beta,
-            |s| &mut s.beta,
-            TensorOptions::reset_to_zeros(),
-        )?;
-
-        Ok(crate::try_some!(LayerNorm1D {
-            gamma: gamma?,
-            beta: beta?,
-            epsilon: E2::from_f32(1e-5).unwrap(),
-        }))
+    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                TensorField::new(
+                    "gamma",
+                    |s: &Self| &s.gamma,
+                    |s| &mut s.gamma,
+                    TensorOptions::reset_to_ones(),
+                ),
+                TensorField::new(
+                    "beta",
+                    |s: &Self| &s.beta,
+                    |s| &mut s.beta,
+                    TensorOptions::reset_to_ones(),
+                ),
+            ),
+            |(gamma, beta)| LayerNorm1D {
+                gamma,
+                beta,
+                epsilon: E2::from_f32(1e-5).unwrap(),
+            },
+        )
     }
 }
 
