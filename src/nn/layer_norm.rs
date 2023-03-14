@@ -62,7 +62,7 @@ impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNor
                     "beta",
                     |s: &Self| &s.beta,
                     |s| &mut s.beta,
-                    TensorOptions::reset_to_ones(),
+                    TensorOptions::reset_to_zeros(),
                 ),
             ),
             |(gamma, beta)| LayerNorm1D {

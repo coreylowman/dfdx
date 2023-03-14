@@ -36,20 +36,18 @@ macro_rules! try_some {
 ///
 ///     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
 ///         visitor: &mut V,
-///     ) -> ModuleVisitorOutput<V::Func, Self, E, D, E2, D2> {
-///         // Specify the name of each field and how to access it immutably and mutably.
-///         //
-///         // Note that 'l1' and 'l2' are of type 'Option<Linear<...>>', and that these options should
-///         // not be handled until we construct the output Mlp, because a value of None is not an error.
-///         let l1 = visitor.visit_module("l1", |s| &s.l1, |s| &mut s.l1)?;
-///         let l2 = visitor.visit_module("l2", |s| &s.l2, |s| &mut s.l2)?;
-///
-///         // Specify how to construct Mlp given optional values for its fields.
-///         Ok(dfdx::try_some!(Mlp {
-///             l1: l1?,
-///             l2: l2?,
-///             relu: Default::default(),
-///         }))
+///     ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+///         visitor.visit_fields(
+///             (
+///                 // Define name of each field and how to access it, using ModuleField for Modules,
+///                 // and TensorField for Tensors.
+///                 ModuleField::new("l1", |s: &Self| &s.l1, |s| &mut s.l1),
+///                 ModuleField::new("l2", |s: &Self| &s.l2, |s| &mut s.l2),
+///             ),
+///             // Define how to construct the collection given its fields in the order they are given
+///             // above. This conversion is done using the ModuleFields trait.
+///             |(l1, l2)| Mlp { l1, l2, relu: Default::default() }
+///         )
 ///     }
 /// }
 ///
@@ -84,7 +82,7 @@ pub trait ModuleVisitor<
     type Err;
     type Func: TensorVisitor<E, D, E2, D2>;
 
-    /// Visit a [TensorCollection]
+    /// Visit a [TensorCollection]. Do not use this; use visit_fields instead.
     fn visit_module<Field, GetRef, GetMut>(
         &mut self,
         name: &str,
@@ -96,7 +94,7 @@ pub trait ModuleVisitor<
         GetMut: FnMut(&mut T) -> &mut Field,
         Field: TensorCollection<E, D>;
 
-    /// Visits an actual named [Tensor]
+    /// Visits an actual named [Tensor]. Do not use this; use visit_fields instead.
     fn visit_tensor<S: Shape, GetRef, GetMut>(
         &mut self,
         name: &str,
@@ -108,6 +106,8 @@ pub trait ModuleVisitor<
         GetRef: FnMut(&T) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut T) -> &mut Tensor<S, E, D>;
 
+    /// Takes something that implements [ModuleFields] and function that takes
+    /// [ModuleFields::Output] and returns an instance of T.
     fn visit_fields<M: ModuleFields<T, E, D>>(
         &mut self,
         fields: M,

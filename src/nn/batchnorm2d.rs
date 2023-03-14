@@ -246,7 +246,7 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNor
                     "bias",
                     |s: &Self| &s.bias,
                     |s| &mut s.bias,
-                    TensorOptions::reset_to_ones(),
+                    TensorOptions::reset_to_zeros(),
                 ),
                 TensorField::new(
                     "running_mean",
