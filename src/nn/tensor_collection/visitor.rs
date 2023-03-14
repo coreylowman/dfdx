@@ -100,6 +100,8 @@ where
     F1: FnMut(&Mod) -> &Field,
     F2: FnMut(&mut Mod) -> &mut Field,
 {
+    /// Constructs a new MouleField given the field's name, a function which accesses the field
+    /// immutably, and a function that accesses the field mutably.
     pub fn new(name: &'a str, get_ref: F1, get_mut: F2) -> Self {
         Self {
             name,
@@ -116,6 +118,8 @@ where
     F1: FnMut(&Mod) -> &Tensor<S, E, D>,
     F2: FnMut(&mut Mod) -> &mut Tensor<S, E, D>,
 {
+    /// Constructs a new MouleField given the field's name, a function which accesses the field
+    /// immutably, a function that accesses the field mutably, and [TensorOptions].
     pub fn new(name: &'a str, get_ref: F1, get_mut: F2, options: TensorOptions<S, E, D>) -> Self {
         Self {
             name,

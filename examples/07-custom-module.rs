@@ -1,7 +1,7 @@
 //! Demonstrates how to build a custom [nn::Module] without using tuples
 
 use dfdx::{
-    nn::modules::{Linear, Module, ModuleVisitor, ModuleField, ReLU, TensorCollection},
+    nn::modules::{Linear, Module, ModuleField, ModuleVisitor, ReLU, TensorCollection},
     prelude::BuildModule,
     shapes::{Dtype, Rank1, Rank2},
     tensor::{SampleTensor, Tape, Tensor},
@@ -44,7 +44,11 @@ impl<const IN: usize, const INNER: usize, const OUT: usize, E: Dtype, D: Device<
             ),
             // Define how to construct the collection given its fields in the order they are given
             // above. This conversion is done using the ModuleFields trait.
-            |(l1, l2)| Mlp { l1, l2, relu: Default::default() }
+            |(l1, l2)| Mlp {
+                l1,
+                l2,
+                relu: Default::default(),
+            },
         )
     }
 }
