@@ -1,5 +1,5 @@
 use crate::{
-    prelude::{Device},
+    prelude::Device,
     shapes::{Dtype, HasShape, Shape},
     tensor::{
         safetensors::{Error, SafeDtype},
@@ -134,9 +134,7 @@ impl<E: Dtype + SafeDtype, D: Device<E>, T: TensorCollection<E, D>> LoadFromSafe
 {
 }
 
-impl<'data, E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D>
-    for SafeTensors<'data>
-{
+impl<'data, E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for SafeTensors<'data> {
     type Viewer = (ViewTensorMut, ViewTensorName);
     type Err = Error;
     type E2 = E;

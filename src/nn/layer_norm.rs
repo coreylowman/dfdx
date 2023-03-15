@@ -1,5 +1,5 @@
-use num_traits::FromPrimitive;
 use crate::{shapes::*, tensor::*, tensor_ops::*};
+use num_traits::FromPrimitive;
 
 use super::*;
 

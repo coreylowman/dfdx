@@ -102,12 +102,7 @@ pub trait TensorCollection<E: Dtype, D: Device<E>>: Sized {
 }
 
 /// An object that can visit [TensorCollection]s and [Tensor]s recursively.
-pub trait ModuleVisitor<
-    T: TensorCollection<E, D>,
-    E: Dtype,
-    D: Device<E>,
->: Sized
-{
+pub trait ModuleVisitor<T: TensorCollection<E, D>, E: Dtype, D: Device<E>>: Sized {
     type Err;
     type E2: Dtype;
     type D2: Device<Self::E2>;

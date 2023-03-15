@@ -8,14 +8,8 @@ use crate::{
 
 use super::*;
 
-impl<
-        'a,
-        T: TensorCollection<E, D>,
-        E: Dtype,
-        D: Device<E>,
-        F: TensorVisitor<E, D>,
-    > ModuleVisitor<T, E, D>
-    for RecursiveWalker<'a, <F::Viewer as TensorViewer>::View<'a, T>, F>
+impl<'a, T: TensorCollection<E, D>, E: Dtype, D: Device<E>, F: TensorVisitor<E, D>>
+    ModuleVisitor<T, E, D> for RecursiveWalker<'a, <F::Viewer as TensorViewer>::View<'a, T>, F>
 {
     type Err = F::Err;
     type E2 = F::E2;
@@ -258,10 +252,7 @@ impl<Mod: TensorCollection<E, D>, E: Dtype, D: Device<E>> ModuleFields<Mod, E, D
     type Options<E2: Dtype, D2: Device<E2>> = ();
     type Output<E2: Dtype, D2: Device<E2>> = ();
 
-    fn visit_fields<V: ModuleVisitor<Mod, E, D>>(
-        self,
-        _module: &mut V,
-    ) -> Result<(), V::Err> {
+    fn visit_fields<V: ModuleVisitor<Mod, E, D>>(self, _module: &mut V) -> Result<(), V::Err> {
         Ok(())
     }
 

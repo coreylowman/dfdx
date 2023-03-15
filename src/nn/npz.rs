@@ -1,5 +1,5 @@
 use crate::{
-    prelude::{Device},
+    prelude::Device,
     shapes::{Dtype, Shape},
     tensor::{
         numpy::{NpzError, NumpyDtype},

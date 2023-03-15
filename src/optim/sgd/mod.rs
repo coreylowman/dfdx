@@ -7,7 +7,7 @@ use std::marker::PhantomData;
 
 use crate::{
     nn::tensor_collection::*,
-    prelude::{Device},
+    prelude::Device,
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Gradients, Tensor},
 };
