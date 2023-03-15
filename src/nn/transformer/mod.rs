@@ -165,7 +165,7 @@ mod tests {
 
         let src = dev.sample_normal::<Rank3<4, 12, 16>>();
         let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();
-        let out: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward_mut((src.trace(), tgt));
+        let out: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward_mut((src.leaky_trace(), tgt));
         let g = out.mean().backward();
 
         let mut opt = Sgd::new(&t, Default::default());

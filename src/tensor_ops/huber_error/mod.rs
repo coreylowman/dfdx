@@ -66,15 +66,15 @@ mod tests {
     fn test_huber_error() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([
-            [-0.84240317, 0.63094819, 1.04164326],
-            [1.32522500, 0.58402753, 1.91676331],
+            [-0.8424031, 0.6309481, 1.0416432],
+            [1.325225, 0.5840275, 1.9167633],
         ]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([
-            [0.52022195, 0.57880402, 0.17535722],
-            [0.75429636, 0.66566986, 0.61827511],
+            [0.52022195, 0.578804, 0.17535722],
+            [0.75429636, 0.66566986, 0.6182751],
         ]);
-        let r1 = a.trace().huber_error(b.trace(), 1.0);
-        let r2 = a.trace().huber_error(b.trace(), 100.0);
+        let r1 = a.leaky_trace().huber_error(b.leaky_trace(), 1.0);
+        let r2 = a.leaky_trace().huber_error(b.leaky_trace(), 100.0);
         assert_close(
             &r1.array(),
             &[

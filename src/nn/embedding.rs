@@ -146,7 +146,7 @@ mod tests {
         };
 
         let x = dev.tensor([0, 0, 1]);
-        let y = model.forward(x.trace());
+        let y = model.forward(x.leaky_trace());
         assert_close(
             &y.array(),
             &[
@@ -187,7 +187,7 @@ mod tests {
         };
 
         let x = dev.tensor([[0, 0], [0, 1]]);
-        let y = model.forward(x.trace());
+        let y = model.forward(x.leaky_trace());
         assert_close(
             &y.array(),
             &[

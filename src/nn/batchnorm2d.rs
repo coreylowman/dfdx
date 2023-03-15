@@ -39,7 +39,7 @@ where
     // update statistics since we are training - off tape
     mean.try_axpy(E::ONE - momentum, &mean_chan, momentum)?;
 
-    let centered = x - mean_chan.try_broadcast_like(&shape)?;
+    let centered = x.try_sub(mean_chan.try_broadcast_like(&shape)?)?;
 
     let var_chan = centered.retaped::<T>().square().mean::<Rank1<C>, _>();
 
@@ -47,10 +47,13 @@ where
     var.try_axpy(E::ONE - momentum, &var_chan, momentum * n / (n - E::ONE))?;
 
     // statistics for normalizing - on tape
-    let std = (var_chan + epsilon).try_sqrt()?;
+    let std = var_chan.try_add(epsilon)?.try_sqrt()?;
 
     // record broadcast of scale & bias - on tape
-    let scale = (scale.retaped::<T>() / std).try_broadcast_like(&shape)?;
+    let scale = scale
+        .retaped::<T>()
+        .try_div(std)?
+        .try_broadcast_like(&shape)?;
     let bias = bias.retaped::<T>().try_broadcast_like(&shape)?;
 
     // normalize & affine - on tape
@@ -285,7 +288,7 @@ mod tests {
         let x1: Tensor<Rank3<3, 2, 2>, TestDtype, _> = dev.sample(rand_distr::StandardNormal);
         let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
-        let y1 = bn.forward_mut(x1.trace());
+        let y1 = bn.forward_mut(x1.leaky_trace());
         assert_close(
             &y1.array(),
             &[
@@ -320,7 +323,7 @@ mod tests {
         let x1: Tensor<Rank4<2, 2, 2, 3>, TestDtype, _> = dev.sample_normal();
         let mut bn = BatchNorm2D::<2>::build_on_device(&dev);
 
-        let y1 = bn.forward_mut(x1.trace());
+        let y1 = bn.forward_mut(x1.leaky_trace());
         #[rustfmt::skip]
         assert_close(
             &y1.array(),
@@ -352,28 +355,28 @@ mod tests {
         let x1: Tensor<Rank3<3, 4, 5>, TestDtype, _> = dev.sample_normal();
         let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
-        let _ = bn.forward_mut(x1.trace());
+        let _ = bn.forward_mut(x1.leaky_trace());
         assert_close(
             &bn.running_mean.array(),
             &[0.0083191, -0.0370511, -0.0079481],
         );
         assert_close(&bn.running_var.array(), &[1.0344709, 0.9340682, 1.0266376]);
 
-        let _ = bn.forward_mut(x1.trace());
+        let _ = bn.forward_mut(x1.leaky_trace());
         assert_close(
             &bn.running_mean.array(),
             &[0.0158063, -0.0703971, -0.0151013],
         );
         assert_close(&bn.running_var.array(), &[1.0654946, 0.87472963, 1.0506116]);
 
-        let _ = bn.forward_mut(x1.trace());
+        let _ = bn.forward_mut(x1.leaky_trace());
         assert_close(
             &bn.running_mean.array(),
             &[0.0225448, -0.1004085, -0.0215393],
         );
         assert_close(&bn.running_var.array(), &[1.093416, 0.8213248, 1.0721881]);
 
-        let _ = bn.forward_mut(x1.trace());
+        let _ = bn.forward_mut(x1.leaky_trace());
         assert_close(
             &bn.running_mean.array(),
             &[0.0286095, -0.1274188, -0.0273335],
@@ -404,7 +407,7 @@ mod tests {
 
         let x1: Tensor<Rank3<3, 4, 5>, TestDtype, _> = dev.sample_normal();
         let mut bn = dev.build_module::<BatchNorm2D<3>, TestDtype>();
-        let y = bn.forward_mut(x1.trace());
+        let y = bn.forward_mut(x1.leaky_trace());
         let g = y.square().mean().backward();
 
         let mut opt = Sgd::new(&bn, Default::default());

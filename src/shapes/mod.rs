@@ -12,6 +12,7 @@
 mod axes;
 mod broadcasts;
 mod permutes;
+mod realize;
 mod replace_dim;
 mod same_numel;
 mod shape;
@@ -21,6 +22,7 @@ pub(crate) use broadcasts::{
     BroadcastShapeTo, BroadcastStridesTo, ReduceShape, ReduceShapeTo, ReduceStridesTo,
 };
 pub(crate) use permutes::{PermuteShapeTo, PermuteStridesTo};
+pub(crate) use realize::RealizeShapeTo;
 pub(crate) use replace_dim::{RemoveDimTo, ReplaceDimTo};
 
 pub(crate) use same_numel::AssertSameNumel;

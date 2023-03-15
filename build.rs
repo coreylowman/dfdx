@@ -64,6 +64,18 @@ mod cuda {
         {
             let start = std::time::Instant::now();
 
+            let compute_cap = {
+                let out = std::process::Command::new("nvidia-smi")
+                    .arg("--query-gpu=compute_cap")
+                    .arg("--format=csv")
+                    .output()
+                    .unwrap();
+                let out = std::str::from_utf8(&out.stdout).unwrap();
+                let mut lines = out.lines();
+                assert_eq!(lines.next().unwrap(), "compute_cap");
+                lines.next().unwrap().replace('.', "")
+            };
+
             kernel_paths
                 .iter()
                 .for_each(|p| println!("cargo:rerun-if-changed={}", p.display()));
@@ -72,7 +84,7 @@ mod cuda {
                 .iter()
                 .map(|p| {
                     std::process::Command::new("nvcc")
-                        .args(["--gpu-architecture", "native"])
+                        .arg(format!("--gpu-architecture=sm_{compute_cap}"))
                         .arg("--ptx")
                         .args(["--default-stream", "per-thread"])
                         .args(["--output-directory", &out_dir])

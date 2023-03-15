@@ -79,16 +79,27 @@ impl<S: Shape, E: Dtype, D: ReshapeKernel<E>, T: Tape<E, D>> ReshapeTo for Tenso
         dst: &Dst,
     ) -> Option<Result<Self::WithShape<Dst>, Self::Err>> {
         (self.shape().num_elements() == dst.shape().num_elements()).then(|| {
-            let (inp, mut tape) = self.split_tape();
-            let out = inp.device.forward(dst, &inp)?;
-            let phantom_out = out.clone();
-            tape.try_alloc_grad(&inp)?;
-            tape.try_alloc_grad(&out)?;
-            tape.add_backward_op(move |grads| {
-                let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-                inp.device.backward(&inp, grad_inp, &phantom_out, grad_out)
-            });
-            Ok(out.put_tape(tape))
+            if self.shape.strides() == self.strides {
+                Ok(Tensor {
+                    id: self.id,
+                    data: self.data,
+                    shape: *dst,
+                    strides: dst.strides(),
+                    device: self.device,
+                    tape: self.tape,
+                })
+            } else {
+                let (inp, mut tape) = self.split_tape();
+                let out = inp.device.forward(dst, &inp)?;
+                let phantom_out = out.clone();
+                tape.try_alloc_grad(&inp)?;
+                tape.try_alloc_grad(&out)?;
+                tape.add_backward_op(move |grads| {
+                    let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
+                    inp.device.backward(&inp, grad_inp, &phantom_out, grad_out)
+                });
+                Ok(out.put_tape(tape))
+            }
         })
     }
 }
@@ -147,13 +158,32 @@ mod tests {
     fn test_1d_reshape() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]);
-        let b = a.trace().reshape::<Rank2<2, 3>>();
+        let b = a.leaky_trace().reshape::<Rank2<2, 3>>();
         assert_eq!(b.array(), [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
         let g = b.exp().mean().backward();
         assert_close(
             &g.get(&a).array(),
             &[
                 0.18419516, 0.20356713, 0.22497648, 0.24863747, 0.2747869, 0.3036865,
+            ],
+        )
+    }
+
+    #[test]
+    fn test_1d_reshape_non_contiguous() {
+        let dev: TestDevice = Default::default();
+        let a: Tensor<_, TestDtype, _> = dev.tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
+        let b = a
+            .leaky_trace()
+            .permute::<Rank2<3, 2>, _>()
+            .reshape::<Rank1<6>>();
+        assert_eq!(b.array(), [0.1, 0.4, 0.2, 0.5, 0.3, 0.6]);
+        let g = b.exp().mean().backward();
+        assert_close(
+            &g.get(&a).array(),
+            &[
+                [0.18419516, 0.20356713, 0.22497648],
+                [0.24863747, 0.2747869, 0.3036865],
             ],
         )
     }

@@ -1,9 +1,9 @@
 use crate::{
-    shapes::{Axes, Dtype, HasShape, ReduceShape, Shape},
+    shapes::{Axes, Dtype, ReduceShape, Shape},
     tensor::{HasErr, Tape, Tensor},
 };
 
-use super::{BroadcastTo, Device, MeanTo, StddevTo, TryDiv, TrySub};
+use super::{BroadcastTo, Device, MeanTo, TryAdd, TryDiv, TrySub};
 
 /// Normalizes `t` to have mean `0.0` and stddev `1.0` along `Ax`. `epsilon` is used during stddev.
 /// Computes `(t - t.mean(Ax)) / t.std(Ax, epsilon)`.
@@ -36,15 +36,16 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     where
         S: ReduceShape<Ax>,
     {
-        let mean = self
+        let shape = self.shape;
+        let mean = self.retaped::<T>().try_mean::<_, Ax>()?;
+        let centered = self.try_sub(mean.try_broadcast_like(&shape)?)?;
+        let std = centered
             .retaped::<T>()
+            .try_square()?
             .try_mean::<_, Ax>()?
-            .try_broadcast_like(self.shape())?;
-        let std = self
-            .retaped::<T>()
-            .try_stddev::<_, Ax>(epsilon)?
-            .try_broadcast_like(self.shape())?;
-        self.try_sub(mean)?.try_div(std)
+            .try_add(epsilon)?
+            .try_sqrt()?;
+        centered.try_div(std.try_broadcast_like(&shape)?)
     }
 }
 
@@ -57,7 +58,7 @@ mod tests {
     fn test_1d_normalize_axis_last() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, 0.0, 5.0]);
-        let r = a.trace().normalize(1e-5);
+        let r = a.leaky_trace().normalize(1e-5);
         assert_close(&r.array(), &[-1.0190487, -0.3396829, 1.3587316]);
         // NOTE: .exp() so we can make sure normalize is using result grad properly
         let g = r.exp().mean().backward();
@@ -68,7 +69,7 @@ mod tests {
     fn test_2d_normalize_axis_last() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
-        let r = a.trace().normalize::<Axis<1>>(1e-5);
+        let r = a.leaky_trace().normalize::<Axis<1>>(1e-5);
         assert_close(
             &r.array(),
             &[
@@ -90,7 +91,7 @@ mod tests {
     fn test_2d_normalize_axis_first() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, 0.0], [1.0, 2.0], [4.0, 5.0]]);
-        let r = a.trace().normalize::<Axis<0>>(1e-5);
+        let r = a.leaky_trace().normalize::<Axis<0>>(1e-5);
         assert_close(
             &r.array(),
             &[
@@ -114,7 +115,7 @@ mod tests {
     fn test_3d_normalize_axis_last() {
         let dev: TestDevice = Default::default();
         let a: Tensor<Rank3<4, 2, 3>, TestDtype, _> = dev.ones();
-        let r = a.trace().normalize::<Axis<2>>(1e-5);
+        let r = a.leaky_trace().normalize::<Axis<2>>(1e-5);
         assert_eq!(r.array(), [[[0.0; 3]; 2]; 4]);
         let g = r.exp().mean().backward();
         assert_eq!(g.get(&a).array(), [[[0.0; 3]; 2]; 4]);

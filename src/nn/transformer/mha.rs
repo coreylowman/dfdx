@@ -222,6 +222,7 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, E: Dtype, D
 }
 
 #[cfg(test)]
+#[allow(clippy::excessive_precision)]
 mod tests {
     use super::*;
     use crate::{optim::*, tests::*};
@@ -328,7 +329,7 @@ mod tests {
         let q: Tensor<Rank3<2, 3, 12>, TestDtype, _> = dev.sample_normal();
         let k: Tensor<Rank3<2, 4, 12>, TestDtype, _> = dev.sample_normal();
         let v: Tensor<Rank3<2, 4, 12>, TestDtype, _> = dev.sample_normal();
-        let y = mha.forward((q.trace(), k, v));
+        let y = mha.forward((q.leaky_trace(), k, v));
         let g = y.square().mean().backward();
 
         let mut opt = Sgd::new(&mha, Default::default());

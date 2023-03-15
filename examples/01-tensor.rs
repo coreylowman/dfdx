@@ -1,7 +1,7 @@
 //! Intro to dfdx::arrays and dfdx::tensor
 
 use dfdx::{
-    shapes::{Const, HasShape, Rank1, Rank2, Rank3},
+    shapes::{Const, Rank1, Rank2, Rank3},
     tensor::{AsArray, OnesTensor, SampleTensor, Tensor, TensorFrom, ZerosTensor},
 };
 
@@ -13,8 +13,7 @@ type Device = dfdx::tensor::Cuda;
 
 fn main() {
     // a device is required to create & modify tensors.
-    // we will use the Cpu device here for simplicity
-    let dev = Device::default();
+    let dev: Device = Device::default();
 
     // easily create tensors using the `TensorFromArray::tensor` method of devices
     // tensors are generic over the:
@@ -26,17 +25,21 @@ fn main() {
 
     // You can also use [ZerosTensor::zeros] and [OnesTensor::ones] to create tensors
     // filled with the corresponding values.
-    let _: Tensor<Rank2<2, 3>, f32, Device> = dev.zeros();
-    let _: Tensor<Rank3<1, 2, 3>, f32, Device> = dev.ones();
+    let _: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
+    let _: Tensor<Rank3<1, 2, 3>, f32, _> = dev.ones();
 
-    // Dynamic size
-    let dynamic: Tensor<(usize, Const<3>, Const<4>), f32, _> = dev.zeros_like(&(5, Const, Const));
-    println!("Dynamic shape={:?}", dynamic.shape());
+    // Use zeros_like & ones_like variants to create runtime sized tensors
+    let _: Tensor<Rank2<2, 3>, f32, _> = dev.zeros_like(&(Const::<2>, Const::<3>));
+    let _: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(2, Const::<3>));
+    let _: Tensor<(usize, usize), f32, _> = dev.zeros_like(&(2, 4));
+    let _: Tensor<(usize, usize, usize), f32, _> = dev.ones_like(&(3, 4, 5));
+    let _: Tensor<(usize, usize, Const<5>), f32, _> = dev.ones_like(&(3, 4, Const));
 
     // each of the creation methods also supports specifying the shape on the function
     // note to change the dtype we specify the dtype as the 2nd generic parameter
-    let _: Tensor<Rank2<2, 3>, f64, Device> = dev.zeros();
-    let _: Tensor<Rank2<2, 3>, f32, Device> = dev.ones();
+    let _: Tensor<Rank2<2, 3>, f64, _> = dev.zeros();
+    let _: Tensor<Rank2<2, 3>, usize, _> = dev.zeros();
+    let _: Tensor<Rank2<2, 3>, i16, _> = dev.zeros();
 
     // we can also create tensors filled with random values
     // from a normal distribution
@@ -48,8 +51,22 @@ fn main() {
     // or whatever distribution you want to use!
     let a: Tensor<Rank3<2, 3, 4>, f32, Device> = dev.sample(rand_distr::Uniform::new(-1.0, 1.0));
 
+    // the random methods also have _like variants
+    let _: Tensor<(usize, usize), f32, _> = dev.sample_uniform_like(&(1, 2));
+    let _: Tensor<(usize, usize, usize), f32, _> = dev.sample_normal_like(&(1, 2, 3));
+    let _: Tensor<(usize, usize, usize, usize), u64, _> =
+        dev.sample_like(&(1, 2, 3, 4), rand_distr::StandardGeometric);
+
+    // a more advanced use case involves creating a tensor from a vec
+    let _: Tensor<Rank3<1, 2, 3>, f32, _> = dev.tensor(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    let _: Tensor<(usize,), f32, _> = dev.tensor((vec![1.0, 2.0], (2,)));
+
     // use `AsArray::as_array` to get access to the data as an array
     let a_data: [[[f32; 4]; 3]; 2] = a.array();
+    println!("a={a_data:?}");
+
+    // or as_vec to get a contiguous vec
+    let a_data: Vec<f32> = a.as_vec();
     println!("a={a_data:?}");
 
     // you can clone() a tensor:
