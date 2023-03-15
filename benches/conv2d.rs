@@ -29,7 +29,7 @@ fn main() {
         let img: Tensor<InputShape, Dtype, _> = dev.sample_normal();
 
         let start = Instant::now();
-        let out = m.forward_mut(img.traced_all());
+        let out = m.forward_mut(img.leaky_traced());
         let loss = out.square().mean();
         let fwd_dur = start.elapsed();
 
