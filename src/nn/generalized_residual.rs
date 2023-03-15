@@ -61,7 +61,7 @@ impl<D, F: ToDevice<D>, R: ToDevice<D>> ToDevice<D> for GeneralizedResidual<F, R
     }
 }
 
-impl<T: SplitTape, F: Module<T>, R: Module<T, Output = F::Output, Error = F::Error>> Module<T>
+impl<T: WithEmptyTape, F: Module<T>, R: Module<T, Output = F::Output, Error = F::Error>> Module<T>
     for GeneralizedResidual<F, R>
 where
     F::Output: TryAdd<F::Output> + HasErr<Err = F::Error>,
@@ -76,7 +76,7 @@ where
     }
 }
 
-impl<T: SplitTape, F: ModuleMut<T>, R: ModuleMut<T, Output = F::Output, Error = F::Error>>
+impl<T: WithEmptyTape, F: ModuleMut<T>, R: ModuleMut<T, Output = F::Output, Error = F::Error>>
     ModuleMut<T> for GeneralizedResidual<F, R>
 where
     F::Output: TryAdd<F::Output> + HasErr<Err = F::Error>,
@@ -117,7 +117,7 @@ mod tests {
         let model = dev.build_module::<Model, f32>();
 
         let x = dev.sample_normal::<Rank2<4, 2>>();
-        let y = model.forward(x.trace());
+        let y = model.forward(x.leaky_trace());
 
         #[rustfmt::skip]
         assert_close(&y.array(), &[[-0.81360567, -1.1473482], [1.0925694, 0.17383915], [-0.32519114, 0.49806428], [0.08259219, -0.7277866]]);

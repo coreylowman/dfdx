@@ -172,7 +172,7 @@ tl;dr: If you forget to include a call to `trace()` or `traced()`, the program w
 
 ```diff
 -let pred = module.forward(x);
-+let pred = module.forward(x.traced());
++let pred = module.forward(x.traced(grads));
 let loss = (y - pred).square().mean();
 let gradients = loss.backward();
 ```

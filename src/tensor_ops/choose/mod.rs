@@ -93,7 +93,7 @@ mod tests {
         let cond = dev.tensor([false, true, false, true, false]);
         let a: Tensor<Rank1<5>, f32, _> = dev.sample_normal();
         let b: Tensor<Rank1<5>, f32, _> = dev.sample_normal();
-        let r = cond.choose(a.trace(), b.trace());
+        let r = cond.choose(a.leaky_trace(), b.leaky_trace());
 
         let a_array = a.array();
         let b_array = b.array();
@@ -124,7 +124,7 @@ mod tests {
         let cond = dev.tensor([[false, true], [true, false]]);
         let a: Tensor<_, f32, _> = dev.sample_normal();
         let b: Tensor<_, f32, _> = dev.sample_normal();
-        let r = cond.choose(a.trace(), b.trace());
+        let r = cond.choose(a.leaky_trace(), b.leaky_trace());
 
         let a_array = a.array();
         let b_array = b.array();

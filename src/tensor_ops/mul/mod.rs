@@ -47,7 +47,7 @@ pub trait TryMul<Rhs = Self>: HasErr {
     fn try_mul(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<E, D>, R: Default> TryMul<Tensor<S, E, D, R>>
+impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<E, D>, R> TryMul<Tensor<S, E, D, R>>
     for Tensor<S, E, D, LhsTape>
 where
     LhsTape: Merge<R>,
@@ -83,7 +83,7 @@ mod tests {
         let a: Tensor<_, TestDtype, _> = dev.tensor(2.0);
         let b: Tensor<_, TestDtype, _> = dev.tensor(3.0);
 
-        let r = a.trace() * b.clone();
+        let r = a.leaky_trace() * b.clone();
         assert_close(&r.array(), &6.0);
         let g = r.backward();
         assert_close(&g.get(&a).array(), &3.0);
@@ -96,7 +96,7 @@ mod tests {
         let a: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([1.0, -1.0, 0.0]);
 
-        let r = a.trace() * b.clone();
+        let r = a.leaky_trace() * b.clone();
         assert_close(&r.array(), &[1.0, -2.0, 0.0]);
         let g = r.mean().backward();
         assert_close(&g.get(&a).array(), &[1.0 / 3.0, -1.0 / 3.0, 0.0]);
@@ -111,7 +111,7 @@ mod tests {
         let b: Tensor<_, TestDtype, _> =
             dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
-        let r = a.trace() * b.clone();
+        let r = a.leaky_trace() * b.clone();
         assert_close(
             &r.array(),
             &[
@@ -140,7 +140,7 @@ mod tests {
     fn test_scalar_mul_0d() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor(1.0);
-        let r = x.trace() * 0.5;
+        let r = x.leaky_trace() * 0.5;
         assert_close(&r.array(), &0.5);
         let g = r.exp().backward();
         assert_close(&g.get(&x).array(), &0.8243606);
@@ -150,7 +150,7 @@ mod tests {
     fn test_scalar_mul_1d() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([0.0, 1.0, 2.0]);
-        let r = x.trace() * 0.5;
+        let r = x.leaky_trace() * 0.5;
         assert_close(&r.array(), &[0.0, 0.5, 1.0]);
         let g = r.exp().sum().backward();
         assert_close(&g.get(&x).array(), &[0.5, 0.8243606, 1.3591409]);
@@ -160,7 +160,7 @@ mod tests {
     fn test_scalar_mul_2d() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([[1.0; 2]; 3]);
-        let r = x.trace() * 0.5;
+        let r = x.leaky_trace() * 0.5;
         assert_close(&r.array(), &[[0.5; 2]; 3]);
         let g = r.exp().sum().backward();
         assert_close(&g.get(&x).array(), &[[0.8243606; 2]; 3]);

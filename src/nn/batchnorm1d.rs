@@ -237,7 +237,7 @@ mod tests {
         let x1: Tensor<Rank2<3, 2>, TestDtype, _> = dev.sample(rand_distr::StandardNormal);
         let mut bn = BatchNorm1D::<2>::build_on_device(&dev);
 
-        let y1 = bn.forward_mut(x1.trace());
+        let y1 = bn.forward_mut(x1.leaky_trace());
         assert_close(
             &y1.array(),
             &[
@@ -273,7 +273,7 @@ mod tests {
             dev.sample(rand_distr::StandardNormal);
         let mut bn = BatchNorm1D::<DIMENSION>::build_on_device(&dev);
 
-        let y1 = bn.forward_mut(x1.trace());
+        let y1 = bn.forward_mut(x1.leaky_trace());
         assert_close(
             &y1.array(),
             &[
@@ -306,7 +306,7 @@ mod tests {
 
         let x1: Tensor<Rank2<BATCH_SIZE, DIMENSION>, TestDtype, _> = dev.sample_normal();
         let mut bn = dev.build_module::<BatchNorm1D<DIMENSION>, TestDtype>();
-        let y = bn.forward_mut(x1.trace());
+        let y = bn.forward_mut(x1.leaky_trace());
         let g = y.square().mean().backward();
 
         let mut opt = Sgd::new(&bn, Default::default());

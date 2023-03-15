@@ -125,7 +125,7 @@ mod tests {
 
         let m0 = model.clone();
 
-        let x = dev.sample_normal::<Rank1<2>>().traced();
+        let x = dev.sample_normal::<Rank1<2>>().leaky_traced();
         let loss = model.forward_mut(x).square().mean();
         let g = loss.backward();
 

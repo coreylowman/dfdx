@@ -124,7 +124,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
         let b: Tensor<Rank2<5, 3>, TestDtype, _> = dev.sample_normal();
-        let a_up = a.trace().broadcast::<Rank2<5, 3>, _>();
+        let a_up = a.leaky_trace().broadcast::<Rank2<5, 3>, _>();
         a_up.array().assert_close(&[a.array(); 5], 1e-4);
         let r = a_up * b.clone();
         let g = r.exp().mean().backward();
@@ -143,7 +143,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
         let g = a
-            .trace()
+            .leaky_trace()
             .broadcast::<Rank2<4, 3>, _>()
             .exp()
             .mean()

@@ -125,7 +125,7 @@ impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
     pub fn new(_model: &M, cfg: SgdConfig<E>) -> Self {
         Self {
             cfg,
-            velocity: Gradients::without_leafs(),
+            velocity: Gradients::leaky(),
             marker: PhantomData,
         }
     }
@@ -206,7 +206,7 @@ mod tests {
 
         let targ: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         for _ in 0..5 {
-            let loss = (pred.trace() - targ.clone()).abs().mean();
+            let loss = (pred.leaky_trace() - targ.clone()).abs().mean();
             let gradients = loss.backward();
             sgd.update(&mut pred, &gradients).expect("");
         }
@@ -230,7 +230,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = (t.trace() * rate.clone()).mean().backward();
+            let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -260,7 +260,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = (t.trace() * rate.clone()).mean().backward();
+            let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -290,7 +290,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = (t.trace() * rate.clone()).mean().backward();
+            let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -328,13 +328,13 @@ mod tests {
             [0.994012, 0.98502994, 0.97505, 0.8952098, -0.00299193],
         ];
         for e in expected.iter() {
-            let gradients = (t.trace() * rate.clone()).mean().backward();
+            let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd_l2.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
         t = dev.ones();
         for e in expected.iter() {
-            let gradients = (t.trace() * rate.clone()).mean().backward();
+            let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd_decoupled.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -363,7 +363,7 @@ mod tests {
             [0.9934003, 0.978913, 0.962815, 0.834037, -0.614717],
         ];
         for e in expected.iter() {
-            let gradients = (t.trace() * rate.clone()).mean().backward();
+            let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -402,7 +402,7 @@ mod tests {
             [0.99034745, 0.9758687, 0.9597812, 0.83108085, -0.6167973],
         ];
         for e in expected.iter() {
-            let gradients = (t.trace() * rate.clone()).mean().backward();
+            let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd_l2.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -410,8 +410,8 @@ mod tests {
         // Should be equivalent to l2 regularization, even with momentum
         t = dev.ones();
         for e in expected.iter() {
-            let normal_loss = (t.trace() * rate.clone()).mean();
-            let l2_loss = t.trace().powi(2).sum() * (weight_decay / (2.0));
+            let normal_loss = (t.leaky_trace() * rate.clone()).mean();
+            let l2_loss = t.leaky_trace().powi(2).sum() * (weight_decay / (2.0));
             let loss = l2_loss + normal_loss;
 
             let gradients = loss.backward();
@@ -425,7 +425,6 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let mut opt = Sgd::new(&t, Default::default());
-        opt.update(&mut t, &Gradients::without_leafs())
-            .expect_err("");
+        opt.update(&mut t, &Gradients::leaky()).expect_err("");
     }
 }

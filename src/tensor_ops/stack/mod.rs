@@ -221,13 +221,17 @@ mod tests {
         let x: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
         let y: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
         let r = [
-            x.trace().broadcast::<Rank2<4, 3>, _>(),
-            y.trace().broadcast(),
+            x.leaky_trace().broadcast::<Rank2<4, 3>, _>(),
+            y.leaky_trace().broadcast(),
         ]
         .stack();
         assert_eq!(r.array(), [[x.array(); 4], [y.array(); 4]]);
         let g = r.exp().mean().backward();
-        let g1 = [x.trace(), y.trace()].stack().exp().mean().backward();
+        let g1 = [x.leaky_trace(), y.leaky_trace()]
+            .stack()
+            .exp()
+            .mean()
+            .backward();
         assert_eq!(g.get(&x).array(), g1.get(&x).array());
         assert_eq!(g.get(&y).array(), g1.get(&y).array());
     }
@@ -239,10 +243,10 @@ mod tests {
         let x: Tensor<Rank2<2, 3>, TestDtype, _> = dev.sample_normal();
         let y: Tensor<Rank2<2, 3>, TestDtype, _> = dev.sample_normal();
         let z: Tensor<Rank2<2, 3>, TestDtype, _> = dev.sample_normal();
-        let r = [x.trace(), y.trace(), z.trace()].stack();
+        let r = [x.leaky_trace(), y.leaky_trace(), z.leaky_trace()].stack();
         assert_eq!(r.array(), [x.array(), y.array(), z.array()]);
         let r1 = r.retaped::<NoneTape>();
-        let g1 = r1.trace().exp().mean().backward();
+        let g1 = r1.leaky_trace().exp().mean().backward();
         let g = r.exp().mean().backward();
         let r_grad = g1.get(&r1).array();
         assert_eq!(r_grad[0], g.get(&x).array());

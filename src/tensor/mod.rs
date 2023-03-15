@@ -108,14 +108,14 @@
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
 //! let t: Tensor<Rank1<5>,f32, _> = dev.zeros();
-//! let t_clone: Tensor<Rank1<5>, f32, _, OwnedTape<f32, Cpu>> = t.trace(); // copies t
-//! let t = t.traced::<f32>(); // takes ownership of t
+//! let mut grads = t.alloc_grads();
+//! let t_clone: Tensor<Rank1<5>, f32, _, OwnedTape<f32, Cpu>> = t.trace(grads);
 //! ```
 //!
 //! ## Gradient Accumulation
 //!
-//! You can use [Tensor::trace_into] and [Tensor::traced_into] to do this, which take
-//! a [Gradients] object.
+//! If you re-use the same gradients object without zero-ing out the gradients, you can
+//! implement gradient accumulation!
 //!
 //! # Serialization using numpy
 //!
@@ -150,7 +150,7 @@ pub use storage_traits::{OnesTensor, SampleTensor, ZerosTensor};
 
 #[cfg(feature = "cuda")]
 pub use tensor_impls::OnCuda;
-pub use tensor_impls::{OnCpu, OnDevice, PutTape, SplitTape, Tensor, ToDevice};
+pub use tensor_impls::{OnCpu, OnDevice, PutTape, SplitTape, Tensor, ToDevice, WithEmptyTape};
 pub use tensor_impls::{Tensor0D, Tensor1D, Tensor2D, Tensor3D, Tensor4D, Tensor5D, Tensor6D};
 
 pub(crate) use unique_id::unique_id;

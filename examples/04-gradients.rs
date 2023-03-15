@@ -1,6 +1,7 @@
 //! Intro to Gradients and Tapes
 
 use dfdx::{
+    nn::ZeroGrads,
     shapes::{Rank0, Rank2},
     tensor::{AsArray, Gradients, NoneTape, OwnedTape, SampleTensor, Tensor},
     tensor_ops::{Backward, MeanTo, TryMatMul},
@@ -21,10 +22,13 @@ fn main() {
     let weight: Tensor<Rank2<4, 2>, f32, _, NoneTape> = dev.sample_normal();
     let a: Tensor<Rank2<3, 4>, f32, _, NoneTape> = dev.sample_normal();
 
-    // the first step to tracing is to call .trace()
-    // this sticks a gradient tape into the input tensor!
+    // the first step to tracing is to allocate some gradients
+    // for the tensors we want to track
+    let grads = a.alloc_grads();
+
+    // then we pass these gradients into the tensor with .trace().
     // NOTE: the tape has changed from a `NoneTape` to an `OwnedTape`.
-    let b: Tensor<Rank2<3, 4>, _, _, OwnedTape<f32, Device>> = a.trace();
+    let b: Tensor<Rank2<3, 4>, _, _, OwnedTape<f32, Device>> = a.trace(grads);
 
     // the tape will **automatically** be moved around as you perform ops
     // ie. the tapes on inputs to operations are moved to the output

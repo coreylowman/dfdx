@@ -28,12 +28,15 @@ pub struct Gradients<E: Unit, D: DeviceStorage> {
 
 impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     /// Creates a [Gradients] object without any leaf tensor ids.
-    /// This means that all tensors are considered leafs, and
-    /// [Gradients::drop_non_leafs] will do nothing.
+    /// **This will never drop gradients for temporary tensors**.
     ///
-    /// For Gradient accumulation, you should use [crate::nn::ZeroGrads::alloc_grads],
+    /// This is why this method is called `leaky`, because
+    /// it will keep gradients from previous passes if it is
+    /// used consecutively.
+    ///
+    /// **You should use [crate::nn::ZeroGrads::alloc_grads]**,
     /// which will ensure non-leaf gradients are freed after backwards.
-    pub fn without_leafs() -> Self {
+    pub fn leaky() -> Self {
         Self {
             gradient_by_id: Default::default(),
             leaf_ids: None,
@@ -187,7 +190,7 @@ impl<E: Unit, D: DeviceStorage> Default for OwnedTape<E, D> {
     fn default() -> Self {
         Self {
             operations: Default::default(),
-            gradients: Gradients::without_leafs(),
+            gradients: Gradients::leaky(),
         }
     }
 }

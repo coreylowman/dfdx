@@ -31,6 +31,8 @@ fn main() {
     let mut q_net = dev.build_module::<QNetwork, f32>();
     let mut target_q_net = q_net.clone();
 
+    let mut grads = q_net.alloc_grads();
+
     let mut sgd = Sgd::new(
         &q_net,
         SgdConfig {
@@ -57,7 +59,7 @@ fn main() {
 
         for _step in 0..20 {
             // forward through model, computing gradients
-            let q_values = q_net.forward(state.trace());
+            let q_values = q_net.forward(state.trace(grads));
             let action_qs = q_values.select(action.clone());
 
             // targ_q = R + discount * max(Q(S'))
@@ -71,10 +73,11 @@ fn main() {
             total_loss += loss.array();
 
             // run backprop
-            let gradients = loss.backward();
+            grads = loss.backward();
 
             // update weights with optimizer
-            sgd.update(&mut q_net, &gradients).expect("Unused params");
+            sgd.update(&mut q_net, &grads).expect("Unused params");
+            q_net.zero_grads(&mut grads);
         }
         target_q_net.clone_from(&q_net);
 
