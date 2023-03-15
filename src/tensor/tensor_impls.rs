@@ -60,20 +60,28 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
 
 impl<S: Shape, E: Unit, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
     /// Start tracking gradients, clones self. The gradients will never free
-    /// temporary gradients - See [Gradients::leaky] for more info.
+    /// temporary gradients - See [Gradients::leaky()] for more info.
+    ///
+    /// Prefer to use [Tensor::trace()] with gradients allocated
+    /// with [crate::nn::ZeroGrads::alloc_grads()].
     pub fn leaky_trace<F: Unit>(&self) -> Tensor<S, E, D, OwnedTape<F, D>> {
         self.clone().leaky_traced()
     }
     /// Start tracking gradients. The gradients will never free
-    /// temporary gradients - See [Gradients::leaky] for more info.
+    /// temporary gradients - See [Gradients::leaky()] for more info.
+    ///
+    /// Prefer to use [Tensor::traced()] with gradients allocated
+    /// with [crate::nn::ZeroGrads::alloc_grads()].
     pub fn leaky_traced<F: Unit>(self) -> Tensor<S, E, D, OwnedTape<F, D>> {
         self.put_tape(Default::default())
     }
-    /// Accumulate gradients into `gradients`, clones self.
+    /// Accumulates gradients into `gradients`, clones self. Use [crate::nn::ZeroGrads::alloc_grads()]
+    /// to create gradients.
     pub fn trace<F: Unit>(&self, gradients: Gradients<F, D>) -> Tensor<S, E, D, OwnedTape<F, D>> {
         self.clone().traced(gradients)
     }
-    /// Accumulate gradients into `gradients`.
+    /// Accumulates gradients into `gradients`. Use [crate::nn::ZeroGrads::alloc_grads()]
+    /// to create gradients.
     pub fn traced<F: Unit>(self, gradients: Gradients<F, D>) -> Tensor<S, E, D, OwnedTape<F, D>> {
         self.put_tape(OwnedTape {
             gradients,
