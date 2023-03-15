@@ -66,7 +66,7 @@ mod tests {
     fn test_huber_error() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([
-            [-0.8424031, 0.6309481, 1.04164326],
+            [-0.8424031, 0.6309481, 1.0416432],
             [1.325225, 0.5840275, 1.9167633],
         ]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([

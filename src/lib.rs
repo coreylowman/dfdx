@@ -102,6 +102,7 @@
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
 #[cfg(feature = "no-std")]
+#[macro_use]
 extern crate alloc;
 #[cfg(feature = "no-std")]
 extern crate no_std_compat as std;

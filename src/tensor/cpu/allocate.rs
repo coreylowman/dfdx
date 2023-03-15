@@ -93,7 +93,10 @@ impl<E: Unit> SampleTensor<E> for Cpu {
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let mut tensor = self.try_zeros_like(src)?;
         {
+            #[cfg(not(feature = "no-std"))]
             let mut rng = self.rng.lock().unwrap();
+            #[cfg(feature = "no-std")]
+            let mut rng = self.rng.lock();
             for v in Arc::get_mut(&mut tensor.data).unwrap().iter_mut() {
                 *v = rng.sample(&distr);
             }
@@ -106,7 +109,10 @@ impl<E: Unit> SampleTensor<E> for Cpu {
         distr: D,
     ) -> Result<(), Self::Err> {
         {
+            #[cfg(not(feature = "no-std"))]
             let mut rng = self.rng.lock().unwrap();
+            #[cfg(feature = "no-std")]
+            let mut rng = self.rng.lock();
             for v in storage.iter_mut() {
                 *v = rng.sample(&distr);
             }

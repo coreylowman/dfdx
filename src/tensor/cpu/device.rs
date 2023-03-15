@@ -1,10 +1,13 @@
 use crate::shapes::{Shape, Unit};
 use crate::tensor::{cpu::LendingIterator, storage_traits::*, Tensor};
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::{
-    sync::{Arc, Mutex},
-    vec::Vec,
-};
+use std::{sync::Arc, vec::Vec};
+
+#[cfg(feature = "no-std")]
+use spin::Mutex;
+
+#[cfg(not(feature = "no-std"))]
+use std::sync::Mutex;
 
 /// A device that stores data on the heap.
 ///
@@ -65,8 +68,16 @@ impl DeviceStorage for Cpu {
     }
 
     fn random_u64(&self) -> u64 {
-        self.rng.lock().unwrap().gen()
+        #[cfg(not(feature = "no-std"))]
+        {
+            self.rng.lock().unwrap().gen()
+        }
+        #[cfg(feature = "no-std")]
+        {
+            self.rng.lock().gen()
+        }
     }
+
     fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
         let mut buf = Vec::with_capacity(tensor.shape.num_elements());
         let mut iter = tensor.iter();

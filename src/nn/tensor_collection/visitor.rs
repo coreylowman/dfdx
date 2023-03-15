@@ -150,9 +150,9 @@ impl TensorViewer for ViewTensorName {
         GetMut: FnMut(&mut Mod) -> &mut Field,
     {
         if !module.is_empty() {
-            std::format!("{module}.{name}")
+            std::fmt::format(format_args!("{module}.{name}"))
         } else {
-            name.to_string()
+            name.into()
         }
     }
 }

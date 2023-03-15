@@ -2,6 +2,8 @@ use crate::{shapes::Dtype, tensor::*};
 
 use super::*;
 
+use std::string::ToString;
+
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///
 /// # Generics
@@ -44,11 +46,7 @@ impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>, const N: usize> Tens
 {
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
         for i in 0..N {
-            visitor.visit_module(
-                &std::format!("{i}"),
-                |s| &s.modules[i],
-                |s| &mut s.modules[i],
-            )?;
+            visitor.visit_module(&i.to_string(), |s| &s.modules[i], |s| &mut s.modules[i])?;
         }
         Ok(())
     }
