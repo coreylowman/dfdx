@@ -137,14 +137,14 @@ mod tests {
             dev.sample_normal_like(&(3, Const, Const));
         let b: Tensor<(usize, Const<5>, Const<3>), TestDtype, _> =
             dev.sample_normal_like(&(2, Const, Const));
-        let c = a.leaking_trace().concat(b.clone());
+        let c = a.leaky_trace().concat(b.clone());
         assert_eq!(c.shape, (5, Const::<5>, Const::<3>));
         let c_vec = c.as_vec();
         assert_eq!(c_vec[..a.shape.num_elements()], a.as_vec());
         assert_eq!(c_vec[a.shape.num_elements()..], b.as_vec());
         let concat_grads = c.exp().sum().backward();
-        let a_grads = a.leaking_trace().exp().sum().backward();
-        let b_grads = b.leaking_trace().exp().sum().backward();
+        let a_grads = a.leaky_trace().exp().sum().backward();
+        let b_grads = b.leaky_trace().exp().sum().backward();
         assert_eq!(concat_grads.get(&a).as_vec(), a_grads.get(&a).as_vec());
         assert_eq!(concat_grads.get(&b).as_vec(), b_grads.get(&b).as_vec());
     }

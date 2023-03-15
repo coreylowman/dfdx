@@ -117,7 +117,7 @@ mod tests {
         let model = dev.build_module::<Model, f32>();
 
         let x = dev.sample_normal::<Rank2<4, 2>>();
-        let y = model.forward(x.leaking_trace());
+        let y = model.forward(x.leaky_trace());
 
         #[rustfmt::skip]
         assert_close(&y.array(), &[[-0.81360567, -1.1473482], [1.0925694, 0.17383915], [-0.32519114, 0.49806428], [0.08259219, -0.7277866]]);

@@ -47,7 +47,7 @@ mod tests {
     fn test_sin() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = x.leaking_trace().sin();
+        let r = x.leaky_trace().sin();
         assert_close(
             &r.array(),
             &[-0.9092974, -0.84147096, 0.0, 0.84147096, 0.9092974],

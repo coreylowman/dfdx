@@ -29,13 +29,13 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     /// **This will hold all gradients of all temporary tensors,
     /// and never drop them**.
     ///
-    /// This is why this method is called `leaking`, because
+    /// This is why this method is called `leaky`, because
     /// it will keep gradients from previous passes if it is
     /// used consecutively.
     ///
     /// **You should use [crate::nn::ZeroGrads::alloc_grads],
     /// which will ensure non-leaf gradients are freed after backwards.**
-    pub fn leaking() -> Self {
+    pub fn leaky() -> Self {
         Self {
             gradient_by_id: Default::default(),
             leaf_ids: None,
@@ -189,7 +189,7 @@ impl<E: Unit, D: DeviceStorage> Default for OwnedTape<E, D> {
     fn default() -> Self {
         Self {
             operations: Default::default(),
-            gradients: Gradients::leaking(),
+            gradients: Gradients::leaky(),
         }
     }
 }

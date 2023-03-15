@@ -72,7 +72,7 @@ mod tests {
     fn test_mean_1d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
-        let r = t.leaking_trace().mean();
+        let r = t.leaky_trace().mean();
         assert_eq!(r.array(), 2.0);
         // NOTE: .exp() so we cover the case where .mean() has to use result grad.
         let g = r.exp().backward();
@@ -83,7 +83,7 @@ mod tests {
     fn test_mean_2d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-        let r = t.leaking_trace().mean();
+        let r = t.leaky_trace().mean();
         assert_eq!(r.array(), 3.5);
         let g = r.backward();
         assert_eq!(g.get(&t).array(), [[1.0 / 6.0; 3]; 2]);
@@ -93,7 +93,7 @@ mod tests {
     fn test_mean_3d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.ones::<Rank3<4, 2, 3>>();
-        let r = t.leaking_trace().mean();
+        let r = t.leaky_trace().mean();
         assert_eq!(r.array(), 1.0);
         let g = r.backward();
         assert_eq!(g.get(&t).array(), [[[1.0 / 24.0; 3]; 2]; 4]);
@@ -103,7 +103,7 @@ mod tests {
     fn test_mean_axis_0_2d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
-        let r = t.leaking_trace().mean::<Rank1<3>, _>();
+        let r = t.leaky_trace().mean::<Rank1<3>, _>();
         assert_eq!(r.array(), [-0.5, 3.0, -1.5]);
         let g = r.exp().mean().backward();
         assert_close(
@@ -116,7 +116,7 @@ mod tests {
     fn test_mean_axis_1_2d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
-        let r = t.leaking_trace().mean::<Rank1<2>, _>();
+        let r = t.leaky_trace().mean::<Rank1<2>, _>();
         assert_eq!(r.array(), [2.0, -4.0 / 3.0]);
         let g = r.exp().mean().backward();
         assert_close(&g.get(&t).array(), &[[1.2315094; 3], [0.043932855; 3]]);
@@ -126,8 +126,8 @@ mod tests {
     fn test_mean_axes_3d_to_1d_02() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
-        let r = t.leaking_trace().mean::<Rank1<3>, _>();
-        let r2 = t.leaking_trace().sum::<_, Axis<0>>().sum::<_, Axis<1>>() / 8.0;
+        let r = t.leaky_trace().mean::<Rank1<3>, _>();
+        let r2 = t.leaky_trace().sum::<_, Axis<0>>().sum::<_, Axis<1>>() / 8.0;
         assert_close(&r.array(), &r2.array());
         let g = r.mean().backward();
         let g2 = r2.mean().backward();
@@ -139,7 +139,7 @@ mod tests {
     fn test_mean_axes_3d_to_1d_01() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
-        let r = t.leaking_trace().mean::<Rank1<4>, _>();
+        let r = t.leaky_trace().mean::<Rank1<4>, _>();
         let r2 = t.sum::<_, Axis<0>>().sum::<_, Axis<0>>() / 6.0;
         assert_close(&r.array(), &r2.array());
     }

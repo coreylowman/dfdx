@@ -60,13 +60,13 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
 
 impl<S: Shape, E: Unit, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
     /// Start tracking gradients, clones self. The gradients will never free
-    /// temporary gradients - See [Gradients::leaking] for more info.
-    pub fn leaking_trace<F: Unit>(&self) -> Tensor<S, E, D, OwnedTape<F, D>> {
-        self.clone().leaking_traced()
+    /// temporary gradients - See [Gradients::leaky] for more info.
+    pub fn leaky_trace<F: Unit>(&self) -> Tensor<S, E, D, OwnedTape<F, D>> {
+        self.clone().leaky_traced()
     }
     /// Start tracking gradients. The gradients will never free
-    /// temporary gradients - See [Gradients::leaking] for more info.
-    pub fn leaking_traced<F: Unit>(self) -> Tensor<S, E, D, OwnedTape<F, D>> {
+    /// temporary gradients - See [Gradients::leaky] for more info.
+    pub fn leaky_traced<F: Unit>(self) -> Tensor<S, E, D, OwnedTape<F, D>> {
         self.put_tape(Default::default())
     }
     /// Accumulate gradients into `gradients`, clones self.
@@ -132,7 +132,7 @@ pub trait SplitTape {
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// # let grads = Gradients::leaking();
+    /// # let grads = Gradients::leaky();
     /// let a: Tensor<Rank1<5>, f32, _, OwnedTape<f32, _>> = dev.zeros().traced(grads);
     /// let (a, tape): (Tensor<_, _, _, NoneTape>, OwnedTape<f32, _>) = a.split_tape();
     /// ```

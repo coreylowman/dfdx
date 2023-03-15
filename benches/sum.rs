@@ -22,7 +22,7 @@ fn main() {
 
     loop {
         let img: Tensor<InputShape, Dtype, _> = dev.sample_normal();
-        let grads = Gradients::leaking();
+        let grads = Gradients::leaky();
 
         let start = Instant::now();
         let y = img.traced(grads).sum();

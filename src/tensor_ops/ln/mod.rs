@@ -46,7 +46,7 @@ mod tests {
     fn test_ln() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = x.leaking_trace().ln();
+        let r = x.leaky_trace().ln();
         let r_array = r.array();
         assert!(r_array[0].is_nan());
         assert!(r_array[1].is_nan());

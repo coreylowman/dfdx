@@ -135,7 +135,7 @@ mod tests {
             dev.tensor([0.87248087, -0.24252531, -1.0060949, 1.155084, 1.5545048]);
         let y: Tensor<_, TestDtype, _> =
             dev.tensor([-0.90954804, -1.0193185, -0.39221755, 2.2524886, 1.3035554]);
-        let loss = mse_loss(x.leaking_trace(), y);
+        let loss = mse_loss(x.leaky_trace(), y);
         assert_close(&loss.array(), &1.0846305);
         let g = loss.backward();
         assert_close(
@@ -151,7 +151,7 @@ mod tests {
             dev.tensor([0.87248087, -0.24252531, -1.0060949, 1.155084, 1.5545048]);
         let y: Tensor<_, TestDtype, _> =
             dev.tensor([-0.90954804, -1.0193186, -0.39221755, 2.2524886, 1.3035554]);
-        let loss = mae_loss(x.leaking_trace(), y);
+        let loss = mae_loss(x.leaky_trace(), y);
         assert_close(&loss.array(), &0.9042107);
         let g = loss.backward();
         assert_eq!(g.get(&x).array(), [0.2, 0.2, -0.2, -0.2, 0.2]);
@@ -168,7 +168,7 @@ mod tests {
             [0.3180433, 0.15164024, 0.2352255, 0.08821669, 0.20687431],
             [0.15627657, 0.29779273, 0.10897867, 0.2879545, 0.14899758],
         ]);
-        let loss = cross_entropy_with_logits_loss(x.leaking_trace(), y.clone());
+        let loss = cross_entropy_with_logits_loss(x.leaky_trace(), y.clone());
         assert_close(&loss.array(), &1.9889611);
         let g = loss.backward();
         assert_close(
@@ -197,7 +197,7 @@ mod tests {
             let mut targ = [0.0; 5];
             targ[i] = 1.0;
             let y = dev.tensor(targ);
-            let loss = cross_entropy_with_logits_loss(x.leaking_trace(), y.clone());
+            let loss = cross_entropy_with_logits_loss(x.leaky_trace(), y.clone());
             assert_close(&loss.array(), &losses[i]);
         }
     }
@@ -219,7 +219,7 @@ mod tests {
             [0.5809, 0.3623, 0.0568],
             [0.0166, 0.8512, 0.1322],
         ]);
-        let loss = kl_div_with_logits_loss(logits.leaking_trace(), targ);
+        let loss = kl_div_with_logits_loss(logits.leaky_trace(), targ);
         assert_close(&loss.array(), &0.40656143);
         let g = loss.backward();
         assert_close(
@@ -247,7 +247,7 @@ mod tests {
             [0.168392, 0.7987092, 0.1177533],
             [0.7026833, 0.5563793, 0.6429267],
         ]);
-        let loss = binary_cross_entropy_with_logits_loss(logit.leaking_trace(), prob.clone());
+        let loss = binary_cross_entropy_with_logits_loss(logit.leaky_trace(), prob.clone());
         assert_close(&loss.array(), &0.7045728);
 
         let g = loss.backward();
@@ -278,7 +278,7 @@ mod tests {
             dev.tensor([[100.0; 3], [-100.0; 3], [-1.0, 0.0, 1.0]]);
         let targ: Tensor<_, TestDtype, _> = dev.tensor([[0.0, 0.5, 1.0]; 3]);
 
-        let loss = binary_cross_entropy_with_logits_loss(logit.leaking_trace(), targ.clone());
+        let loss = binary_cross_entropy_with_logits_loss(logit.leaky_trace(), targ.clone());
         assert_close(&loss.array(), &33.479964);
 
         let g = loss.backward();
@@ -316,7 +316,7 @@ mod tests {
             [-2.0449343, 1.8117315, 1.7505344, -1.2522424, 1.0921133],
         ]);
 
-        let loss = huber_loss(x.leaking_trace(), y.clone(), 0.5);
+        let loss = huber_loss(x.leaky_trace(), y.clone(), 0.5);
         assert_close(&loss.array(), &0.24506615);
 
         let g = loss.backward();
@@ -352,7 +352,7 @@ mod tests {
             [-2.0449343, 1.8117315, 1.7505344, -1.2522424, 1.0921133],
         ]);
 
-        let loss = smooth_l1_loss(x.leaking_trace(), y.clone(), 0.5);
+        let loss = smooth_l1_loss(x.leaky_trace(), y.clone(), 0.5);
         assert_close(&loss.array(), &0.4901323);
 
         let g = loss.backward();

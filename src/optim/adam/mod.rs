@@ -87,8 +87,8 @@ impl<M, E: Dtype, D: DeviceStorage> Adam<M, E, D> {
         Self {
             cfg,
             t: 0,
-            moment1: Gradients::leaking(),
-            moment2: Gradients::leaking(),
+            moment1: Gradients::leaky(),
+            moment2: Gradients::leaky(),
             marker: PhantomData,
         }
     }
@@ -184,10 +184,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = (t.leaking_trace() * rate.clone())
-                .square()
-                .mean()
-                .backward();
+            let gradients = (t.leaky_trace() * rate.clone()).square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -221,10 +218,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = (t.leaking_trace() * rate.clone())
-                .square()
-                .mean()
-                .backward();
+            let gradients = (t.leaky_trace() * rate.clone()).square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -257,7 +251,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = t.leaking_trace().exp().square().mean().backward();
+            let gradients = t.leaky_trace().exp().square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -290,7 +284,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = t.leaking_trace().exp().square().mean().backward();
+            let gradients = t.leaky_trace().exp().square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -301,6 +295,6 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let mut opt = Adam::new(&t, Default::default());
-        opt.update(&mut t, &Gradients::leaking()).expect_err("");
+        opt.update(&mut t, &Gradients::leaky()).expect_err("");
     }
 }

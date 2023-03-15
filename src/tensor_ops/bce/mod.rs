@@ -69,7 +69,7 @@ mod tests {
             [0.52022195, 0.578804, 0.17535722],
             [0.75429636, 0.66566986, 0.6182751],
         ]);
-        let r = a.leaking_trace().bce_with_logits(b);
+        let r = a.leaky_trace().bce_with_logits(b);
         assert_close(
             &r.array(),
             &[

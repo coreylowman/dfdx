@@ -73,8 +73,8 @@ mod tests {
             [0.52022195, 0.578804, 0.17535722],
             [0.75429636, 0.66566986, 0.6182751],
         ]);
-        let r1 = a.leaking_trace().huber_error(b.leaking_trace(), 1.0);
-        let r2 = a.leaking_trace().huber_error(b.leaking_trace(), 100.0);
+        let r1 = a.leaky_trace().huber_error(b.leaky_trace(), 1.0);
+        let r2 = a.leaky_trace().huber_error(b.leaky_trace(), 100.0);
         assert_close(
             &r1.array(),
             &[

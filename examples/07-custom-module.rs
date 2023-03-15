@@ -85,5 +85,5 @@ fn main() {
 
     // Forward pass with a batch of samples
     let batch: Tensor<Rank2<32, 10>, f32, _> = dev.sample_normal();
-    let _: Tensor<Rank2<32, 20>, f32, _, _> = model.forward(batch.leaking_trace());
+    let _: Tensor<Rank2<32, 20>, f32, _, _> = model.forward(batch.leaky_trace());
 }

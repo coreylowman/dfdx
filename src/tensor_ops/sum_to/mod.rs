@@ -86,7 +86,7 @@ mod tests {
     fn test_sum_1d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
-        let r = t.leaking_trace().sum::<Rank0, _>();
+        let r = t.leaky_trace().sum::<Rank0, _>();
         let e = 6.0;
         assert_eq!(r.array(), e);
         // NOTE: .exp() to make sure its using result grad properly
@@ -98,7 +98,7 @@ mod tests {
     fn test_sum_axis_0_2d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
-        let r = t.leaking_trace().sum::<Rank1<3>, _>();
+        let r = t.leaky_trace().sum::<Rank1<3>, _>();
         let e = [-1.0, 6.0, -3.0];
         assert_eq!(r.array(), e);
         let g = r.exp().mean().backward();
@@ -109,7 +109,7 @@ mod tests {
     fn test_sum_axis_1_2d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
-        let r = t.leaking_trace().sum::<Rank1<2>, _>();
+        let r = t.leaky_trace().sum::<Rank1<2>, _>();
         let e = [6.0, -4.0];
         assert_eq!(r.array(), e);
         let g = r.exp().mean().backward();
@@ -123,11 +123,8 @@ mod tests {
     fn test_sum_axes_3d_to_1d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
-        let r = t.leaking_trace().sum::<Rank1<3>, _>();
-        let r2 = t
-            .leaking_trace()
-            .sum::<Rank2<3, 4>, _>()
-            .sum::<Rank1<3>, _>();
+        let r = t.leaky_trace().sum::<Rank1<3>, _>();
+        let r2 = t.leaky_trace().sum::<Rank2<3, 4>, _>().sum::<Rank1<3>, _>();
         assert_close(&r.array(), &r2.array());
         let g = r.sum().backward();
         let g2 = r2.sum().backward();
@@ -139,8 +136,8 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t1: Tensor<Rank2<4, 3>, TestDtype, _> = dev.sample_normal();
         let t2 = t1.clone().broadcast::<Rank3<4, 3, 5>, _>();
-        let r1 = t1.leaking_trace().sum::<Rank1<4>, _>() * 5.0;
-        let r2 = t2.leaking_trace().sum::<Rank1<4>, _>();
+        let r1 = t1.leaky_trace().sum::<Rank1<4>, _>() * 5.0;
+        let r2 = t2.leaky_trace().sum::<Rank1<4>, _>();
         assert_close_with_tolerance(&r1.array(), &r2.array(), 3e-6);
         let g = r1.sum().backward();
         assert_close(&g.get(&t1).array(), &[[5.0; 3]; 4]);
@@ -150,7 +147,7 @@ mod tests {
     fn test_sum_chunking() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0; 100]; 60]);
-        let r = t.leaking_trace().sum::<Rank1<60>, _>();
+        let r = t.leaky_trace().sum::<Rank1<60>, _>();
         assert_eq!(r.array(), [100.0; 60]);
         let g = r.sum().backward();
         assert_close(&g.get(&t).array(), &t.array());
@@ -169,7 +166,7 @@ mod tests {
     fn test_sum_reduce_to_0d_from_broadcasted() {
         let dev: TestDevice = Default::default();
         let a: Tensor<Rank1<3>, TestDtype, _> = dev.ones();
-        let b = a.leaking_trace().broadcast::<Rank3<4, 3, 2>, _>();
+        let b = a.leaky_trace().broadcast::<Rank3<4, 3, 2>, _>();
         let c = b.sum();
         assert_eq!(c.array(), 24.0);
         let g = c.backward();

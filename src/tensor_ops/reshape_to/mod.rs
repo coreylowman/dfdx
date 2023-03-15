@@ -158,7 +158,7 @@ mod tests {
     fn test_1d_reshape() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]);
-        let b = a.leaking_trace().reshape::<Rank2<2, 3>>();
+        let b = a.leaky_trace().reshape::<Rank2<2, 3>>();
         assert_eq!(b.array(), [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
         let g = b.exp().mean().backward();
         assert_close(
@@ -174,7 +174,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
         let b = a
-            .leaking_trace()
+            .leaky_trace()
             .permute::<Rank2<3, 2>, _>()
             .reshape::<Rank1<6>>();
         assert_eq!(b.array(), [0.1, 0.4, 0.2, 0.5, 0.3, 0.6]);

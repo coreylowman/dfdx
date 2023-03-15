@@ -24,7 +24,7 @@ pub trait ZeroGrads<E: Dtype, D: ZeroFillStorage<E>>: TensorCollection<E, D> {
     /// gradients as temporary, so they are dropped after .backward()**
     fn try_alloc_grads(&self) -> Result<Gradients<E, D>, D::Err> {
         // NOTE: try_zero_grads will add the leafs!
-        let mut grads = Gradients::leaking();
+        let mut grads = Gradients::leaky();
         self.try_zero_grads(&mut grads)?;
         Ok(grads)
     }
