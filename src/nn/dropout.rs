@@ -158,7 +158,7 @@ impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<E, D>
 mod tests {
     use crate::{
         shapes::Rank1,
-        tensor::{AsArray, OnesTensor},
+        tensor::{AsArray, OnesTensor, Trace},
         tests::*,
     };
 

@@ -3,7 +3,7 @@
 use dfdx::{
     nn::modules::{BuildModule, Linear, Module, ReLU},
     shapes::{Rank1, Rank2},
-    tensor::{HasErr, SampleTensor, Tape, Tensor},
+    tensor::{HasErr, SampleTensor, Tape, Tensor, Trace},
 };
 
 #[cfg(not(feature = "cuda"))]
