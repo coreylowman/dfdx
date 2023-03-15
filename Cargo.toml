@@ -25,6 +25,7 @@ features = ["nightly", "numpy", "safetensors", "cuda", "ci-check"]
 
 [dependencies]
 no-std-compat = { version = "0.4.1", default-features = false, features = [ "alloc", "compat_hash" ], optional = true }
+spin = { version = "0.9.6", default-features = false, features = ["spin_mutex"], optional = true }
 rand = { version = "0.8.5", default-features = false, features = ["std_rng"] }
 rand_distr = { version = "0.4.3", default-features = false, features = ["std_math"] }
 matrixmultiply = { version = "0.3.2", default-features = false }
@@ -46,7 +47,7 @@ glob = { version = "0.3.1", optional = true }
 
 [features]
 default = ["std", "fast-alloc"]
-no-std = ["no-std-compat"]
+no-std = ["no-std-compat", "dep:spin", "cudarc?/no-std"]
 std = ["cudarc?/std"]
 threaded-cpu = ["std", "matrixmultiply/threading"]
 fast-alloc = ["std"]

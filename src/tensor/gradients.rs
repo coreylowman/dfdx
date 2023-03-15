@@ -1,7 +1,7 @@
 //! Implementations of [OwnedTape], [NoneTape], and generic Nd array containers via [Gradients].
 #![allow(clippy::type_complexity)]
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::{boxed::Box, vec::Vec};
 
 use super::{
@@ -20,8 +20,10 @@ use crate::shapes::{Shape, Unit};
 /// 4. Access mutable references to arrays
 #[derive(Clone, Debug)]
 pub struct Gradients<E: Unit, D: DeviceStorage> {
-    gradient_by_id: HashMap<UniqueId, D::Vec<E>>,
-    leaf_ids: Option<HashSet<UniqueId>>,
+    /// Using BTreeMap for no-std support
+    gradient_by_id: BTreeMap<UniqueId, D::Vec<E>>,
+    /// Using BTreeSet for no-std support
+    leaf_ids: Option<BTreeSet<UniqueId>>,
 }
 
 impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
@@ -51,7 +53,7 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
 
     /// Inserts a gradient for `t`
     pub(crate) fn try_alloc_for<S: Shape>(&mut self, t: &Tensor<S, E, D>) -> Result<(), D::Err> {
-        if let std::collections::hash_map::Entry::Vacant(e) = self.gradient_by_id.entry(t.id) {
+        if let std::collections::btree_map::Entry::Vacant(e) = self.gradient_by_id.entry(t.id) {
             e.insert(t.try_alloc_grad()?);
         }
         Ok(())
@@ -278,7 +280,7 @@ impl<E: Unit, D: DeviceStorage> Merge<OwnedTape<E, D>> for OwnedTape<E, D> {
     fn merge(mut self, mut other: Self) -> Self {
         self.gradients
             .gradient_by_id
-            .extend(other.gradients.gradient_by_id.drain());
+            .extend(other.gradients.gradient_by_id);
         if let Some(leafs) = other.gradients.leaf_ids {
             self.gradients
                 .leaf_ids
