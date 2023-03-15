@@ -15,11 +15,58 @@ pub struct RecursiveWalker<'a, M, F> {
 }
 
 /// Something that can visit [Tensor]s. Used in conjunction with [RecursiveWalker].
+///
+/// Example implementation to add two Modules together:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// // A TensorVisitor that will add two Modules together, returning the resulting module.
+/// struct Adder;
+///
+/// impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for Adder {
+///     // Take a tuple of references to tensors
+///     type Viewer = (ViewTensorRef, ViewTensorRef);
+///     type Err = D::Err;
+///
+///     // Output with the device and dtype that are given
+///     type E2 = E;
+///     type D2 = D;
+///
+///     fn visit<S: Shape>(
+///         &mut self,
+///         opts: TensorOptions<S, E, D>,
+///         (a, b): (&Tensor<S, E, D>, &Tensor<S, E, D>),
+///     ) -> Result<Option<Tensor<S, Self::E2, Self::D2>>, Self::Err> {
+///         // Returns Ok(Some(_)) to construct an output module. Return Ok(None) to not construct
+///         // an output
+///         Ok(Some(a.clone().try_add(b.clone())?))
+///     }
+/// }
+///
+/// type Model = Linear<2, 5>;
+/// let model1 = dev.build_module::<Model, f32>();
+/// let model2 = dev.build_module::<Model, f32>();
+/// let model3 = TensorCollection::iter_tensors(&mut RecursiveWalker {
+///     m: (&model1, &model2),
+///     f: &mut Adder,
+/// }).unwrap().unwrap();
+///
+/// assert_eq!(
+///     (model1.weight.clone() + model2.weight.clone()).array(),
+///     model3.weight.array()
+/// );
+/// assert_eq!(
+///     (model1.bias.clone() + model2.bias.clone()).array(),
+///     model3.bias.array()
+/// );
+/// ```
 pub trait TensorVisitor<E: Dtype, D: Device<E>> {
     /// The type of tensor this struct uses. E.g. [ViewTensorMut], or [ViewTensorRef]
     type Viewer: TensorViewer;
     type Err;
+    /// The dtype to output with
     type E2: Dtype;
+    /// The device to output with
     type D2: Device<Self::E2>;
 
     /// What to do when visiting each Tensor. Return `Ok(None)` if this visitor should not
@@ -51,7 +98,7 @@ pub trait TensorViewer: 'static {
         GetMut: FnMut(&mut Mod) -> &mut Field;
 }
 
-/// A list of a Module's fields,
+/// A list of a Module's fields. Used in [ModuleVisitor::visit_fields].
 pub trait ModuleFields<M: TensorCollection<E, D>, E: Dtype, D: Device<E>> {
     /// A list of optional instances of each field,
     type Options<E2: Dtype, D2: Device<E2>>;

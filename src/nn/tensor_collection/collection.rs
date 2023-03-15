@@ -61,6 +61,9 @@ pub trait TensorCollection<E: Dtype, D: Device<E>>: Sized {
         visitor: &mut V,
     ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err>;
 
+    /// Creates a [ModuleFields] that represents a field that may contain one or more tensors.
+    ///
+    /// See also: [ModuleField], [TensorCollection].
     fn module<F1, F2, Field>(
         name: &str,
         get_ref: F1,
@@ -80,6 +83,9 @@ pub trait TensorCollection<E: Dtype, D: Device<E>>: Sized {
         }
     }
 
+    /// Creates a [ModuleFields] that represents a tensor field.
+    ///
+    /// See also: [TensorField], [TensorCollection], [TensorOptions].
     fn tensor<F1, F2, S>(
         name: &str,
         get_ref: F1,
