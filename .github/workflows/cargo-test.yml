@@ -26,8 +26,9 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
+          args: --features safetensors,numpy
       - name: test CPU f64
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --features test-f64,safetensors
+          args: --features test-f64,safetensors,numpy
