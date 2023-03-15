@@ -69,17 +69,18 @@ where
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
     ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
-        let weight = visitor.visit_tensor(
-            "weight",
-            |s| &s.weight,
-            |s| &mut s.weight,
-            TensorOptions::reset_with(|t| {
-                let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
-                t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
-            }),
-        )?;
-
-        Ok(crate::try_some!(Conv2D { weight: weight? }))
+        visitor.visit_fields(
+            TensorField::new(
+                "weight",
+                |s: &Self| &s.weight,
+                |s| &mut s.weight,
+                TensorOptions::reset_with(|t| {
+                    let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
+                    t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
+                }),
+            ),
+            |weight| Conv2D { weight }
+        )
     }
 }
 

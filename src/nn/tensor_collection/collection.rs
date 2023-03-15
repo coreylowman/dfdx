@@ -8,14 +8,6 @@ use crate::{
 
 use super::{visitor::TensorVisitor, ModuleFields};
 
-#[macro_export]
-macro_rules! try_some {
-    {$e:expr} => {{
-        let f = move || {Some($e)};
-        f()
-    }};
-}
-
 /// A collection of named tensors. Implementing this trait will enable anything
 /// that operates on tensors, including resetting, counting number of params, updating gradients,
 /// building model, and converting models between devices or dtypes.
