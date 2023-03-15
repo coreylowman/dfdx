@@ -41,11 +41,7 @@ impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>, const N: usize> TensorCo
             (0..N)
                 .zip(names.iter())
                 .map(|(i, name)| {
-                    Self::module(
-                        name,
-                        move |s| &s.modules[i],
-                        move |s| &mut s.modules[i],
-                    )
+                    Self::module(name, move |s| &s.modules[i], move |s| &mut s.modules[i])
                 })
                 .collect::<Vec<_>>(),
             |modules| Repeated { modules },
