@@ -169,7 +169,7 @@ pub struct TensorOptions<S: Shape, E: Dtype, D: Device<E>> {
     pub reset: fn(&'_ mut Tensor<S, E, D>) -> Result<(), D::Err>,
 
     /// The [Shape] that BuildModule uses to construct the tensor
-    pub shape: S,
+    pub shape: Option<S>,
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>> TensorOptions<S, E, D> {
@@ -181,7 +181,7 @@ impl<S: Shape, E: Dtype, D: Device<E>> TensorOptions<S, E, D> {
         TensorOptions {
             do_gradient_update: true,
             reset: |t| t.try_fill_with_zeros(),
-            shape: Default::default(),
+            shape: S::const_default(),
         }
     }
 
@@ -193,7 +193,7 @@ impl<S: Shape, E: Dtype, D: Device<E>> TensorOptions<S, E, D> {
         TensorOptions {
             do_gradient_update: true,
             reset: |t| t.try_fill_with_ones(),
-            shape: Default::default(),
+            shape: S::const_default(),
         }
     }
 
@@ -202,7 +202,7 @@ impl<S: Shape, E: Dtype, D: Device<E>> TensorOptions<S, E, D> {
         TensorOptions {
             do_gradient_update: true,
             reset,
-            shape: Default::default(),
+            shape: S::const_default(),
         }
     }
 
@@ -211,13 +211,13 @@ impl<S: Shape, E: Dtype, D: Device<E>> TensorOptions<S, E, D> {
         TensorOptions {
             do_gradient_update: false,
             reset,
-            shape: Default::default(),
+            shape: S::const_default(),
         }
     }
 
     /// Sets `self.shape` to `shape`
     pub fn with_shape(mut self, shape: S) -> Self {
-        self.shape = shape;
+        self.shape = Some(shape);
         self
     }
 }

@@ -81,6 +81,7 @@ pub trait HasDtype {
 pub trait Dim:
     'static + Copy + Clone + std::fmt::Debug + Send + Sync + Eq + PartialEq + Default
 {
+    const IS_CONST: bool;
     fn size(&self) -> usize;
     fn from_size(size: usize) -> Option<Self>;
 }
@@ -92,6 +93,8 @@ pub trait ConstDim: Default + Dim {
 }
 
 impl Dim for usize {
+    const IS_CONST: bool = false;
+
     #[inline(always)]
     fn size(&self) -> usize {
         *self
@@ -106,6 +109,8 @@ impl Dim for usize {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Const<const M: usize>;
 impl<const M: usize> Dim for Const<M> {
+    const IS_CONST: bool = true;
+
     #[inline(always)]
     fn size(&self) -> usize {
         M
@@ -186,6 +191,8 @@ pub trait Shape:
     /// The number of dimensions the shape has
     const NUM_DIMS: usize;
 
+    const IS_CONST: bool;
+
     /// Is `[usize; Self::NUM_DIMS]`, but that is not usable yet.
     type Concrete: std::fmt::Debug
         + Clone
@@ -225,6 +232,11 @@ pub trait Shape:
             strides[i] = strides[i + 1] * sizes[i + 1];
         }
         strides
+    }
+
+    /// Returns `Some(Self::default())` if this shape is constant, otherwise returns None.
+    fn const_default() -> Option<Self> {
+        Self::IS_CONST.then(Self::default)
     }
 }
 
@@ -271,6 +283,7 @@ macro_rules! shape {
     (($($D:tt $Idx:tt),*), rank=$Num:expr, all=$All:tt) => {
         impl<$($D: Dim, )*> Shape for ($($D, )*) {
             const NUM_DIMS: usize = $Num;
+            const IS_CONST: bool = $($D::IS_CONST &&)+ true;
             type Concrete = [usize; $Num];
             type AllAxes = $All<$($Idx,)*>;
             type LastAxis = Axis<{$Num - 1}>;
@@ -289,6 +302,7 @@ macro_rules! shape {
 
         impl Shape for [usize; $Num] {
             const NUM_DIMS: usize = $Num;
+            const IS_CONST: bool = false;
             type Concrete = Self;
             type AllAxes = $All<$($Idx,)*>;
             type LastAxis = Axis<{$Num - 1}>;
@@ -306,6 +320,7 @@ macro_rules! shape {
 
 impl Shape for () {
     const NUM_DIMS: usize = 0;
+    const IS_CONST: bool = true;
     type Concrete = [usize; 0];
     type AllAxes = Axis<0>;
     type LastAxis = Axis<0>;
