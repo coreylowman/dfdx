@@ -15,18 +15,21 @@ pub struct RecursiveWalker<'a, M, F> {
 }
 
 /// Something that can visit [Tensor]s. Used in conjunction with [RecursiveWalker].
-pub trait TensorVisitor<E: Dtype, D: Device<E>, E2: Dtype, D2: Device<E2>> {
+pub trait TensorVisitor<E: Dtype, D: Device<E>> {
     /// The type of tensor this struct uses. E.g. [ViewTensorMut], or [ViewTensorRef]
     type Viewer: TensorViewer;
     type Err;
+    type E2: Dtype;
+    type D2: Device<Self::E2>;
 
     /// What to do when visiting each Tensor. Return `Ok(None)` if this visitor should not
     /// construct a new module each time it is used, and `Ok(Some(_))` if it should.
+    #[allow(clippy::type_complexity)]
     fn visit<S: Shape>(
         &mut self,
         opts: TensorOptions<S, E, D>,
         t: <Self::Viewer as TensorViewer>::View<'_, Tensor<S, E, D>>,
-    ) -> Result<Option<Tensor<S, E2, D2>>, Self::Err>;
+    ) -> Result<Option<Tensor<S, Self::E2, Self::D2>>, Self::Err>;
 }
 
 /// Something that can view [Tensor]s in different ways. For example
@@ -58,10 +61,10 @@ pub trait ModuleFields<M: TensorCollection<E, D>, E: Dtype, D: Device<E>> {
 
     /// Calls [ModuleVisitor::visit_module] or [ModuleVisitor::visit_tensor] for each field,
     /// and returns optionally constructed fields
-    fn visit_fields<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<M, E, D, E2, D2>>(
+    fn visit_fields<V: ModuleVisitor<M, E, D>>(
         self,
         module: &mut V,
-    ) -> Result<Self::Options<E2, D2>, V::Err>;
+    ) -> Result<Self::Options<V::E2, V::D2>, V::Err>;
 
     /// If any optional fields are None, returns None. Otherwise returns instances of all fields.
     fn handle_options<E2: Dtype, D2: Device<E2>>(

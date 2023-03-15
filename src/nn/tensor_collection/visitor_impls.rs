@@ -10,27 +10,26 @@ use super::*;
 
 impl<
         'a,
-        M: TensorCollection<E, D>,
+        T: TensorCollection<E, D>,
         E: Dtype,
         D: Device<E>,
-        E2: Dtype,
-        D2: Device<E2>,
-        F: TensorVisitor<E, D, E2, D2>,
-    > ModuleVisitor<M, E, D, E2, D2>
-    for RecursiveWalker<'a, <F::Viewer as TensorViewer>::View<'a, M>, F>
+        F: TensorVisitor<E, D>,
+    > ModuleVisitor<T, E, D>
+    for RecursiveWalker<'a, <F::Viewer as TensorViewer>::View<'a, T>, F>
 {
     type Err = F::Err;
-    type Func = F;
+    type E2 = F::E2;
+    type D2 = F::D2;
 
     fn visit_module<Field, GetRef, GetMut>(
         &mut self,
         name: &str,
         mut get_refs: GetRef,
         mut get_muts: GetMut,
-    ) -> Result<Option<Field::To<E2, D2>>, Self::Err>
+    ) -> Result<Option<Field::To<Self::E2, Self::D2>>, Self::Err>
     where
-        GetRef: FnMut(&M) -> &Field,
-        GetMut: FnMut(&mut M) -> &mut Field,
+        GetRef: FnMut(&T) -> &Field,
+        GetMut: FnMut(&mut T) -> &mut Field,
         Field: TensorCollection<E, D>,
     {
         let mut walker = RecursiveWalker {
@@ -46,15 +45,24 @@ impl<
         mut get_refs: GetRef,
         mut get_muts: GetMut,
         opts: TensorOptions<S, E, D>,
-    ) -> Result<Option<Tensor<S, E2, D2>>, F::Err>
+    ) -> Result<Option<Tensor<S, Self::E2, Self::D2>>, Self::Err>
     where
-        GetRef: FnMut(&M) -> &Tensor<S, E, D>,
-        GetMut: FnMut(&mut M) -> &mut Tensor<S, E, D>,
+        GetRef: FnMut(&T) -> &Tensor<S, E, D>,
+        GetMut: FnMut(&mut T) -> &mut Tensor<S, E, D>,
     {
         self.f.visit(
             opts,
             F::Viewer::view_field(&mut self.m, name, &mut get_refs, &mut get_muts),
         )
+    }
+
+    fn visit_fields<M: ModuleFields<T, E, D>>(
+        &mut self,
+        fields: M,
+        builder: impl FnOnce(M::Output<Self::E2, Self::D2>) -> T::To<Self::E2, Self::D2>,
+    ) -> Result<Option<T::To<Self::E2, Self::D2>>, Self::Err> {
+        let options = fields.visit_fields(self)?;
+        Ok(M::handle_options(options).map(builder))
     }
 }
 
@@ -177,10 +185,10 @@ where
     type Options<E2: Dtype, D2: Device<E2>> = Option<Field::To<E2, D2>>;
     type Output<E2: Dtype, D2: Device<E2>> = Field::To<E2, D2>;
 
-    fn visit_fields<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Mod, E, D, E2, D2>>(
+    fn visit_fields<V: ModuleVisitor<Mod, E, D>>(
         self,
         visitor: &mut V,
-    ) -> Result<Self::Options<E2, D2>, V::Err> {
+    ) -> Result<Self::Options<V::E2, V::D2>, V::Err> {
         visitor.visit_module(self.name, self.get_ref, self.get_mut)
     }
 
@@ -200,10 +208,10 @@ where
     type Options<E2: Dtype, D2: Device<E2>> = Option<Tensor<S, E2, D2>>;
     type Output<E2: Dtype, D2: Device<E2>> = Tensor<S, E2, D2>;
 
-    fn visit_fields<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Mod, E, D, E2, D2>>(
+    fn visit_fields<V: ModuleVisitor<Mod, E, D>>(
         self,
         visitor: &mut V,
-    ) -> Result<Self::Options<E2, D2>, V::Err> {
+    ) -> Result<Self::Options<V::E2, V::D2>, V::Err> {
         visitor.visit_tensor(self.name, self.get_ref, self.get_mut, self.options)
     }
 
@@ -220,10 +228,10 @@ impl<T: ModuleFields<Mod, E, D>, Mod: TensorCollection<E, D>, E: Dtype, D: Devic
     type Options<E2: Dtype, D2: Device<E2>> = Vec<T::Options<E2, D2>>;
     type Output<E2: Dtype, D2: Device<E2>> = Vec<T::Output<E2, D2>>;
 
-    fn visit_fields<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Mod, E, D, E2, D2>>(
+    fn visit_fields<V: ModuleVisitor<Mod, E, D>>(
         self,
         module: &mut V,
-    ) -> Result<Self::Options<E2, D2>, V::Err> {
+    ) -> Result<Self::Options<V::E2, V::D2>, V::Err> {
         let mut out = Vec::with_capacity(self.len());
 
         for x in self {
@@ -250,7 +258,7 @@ impl<Mod: TensorCollection<E, D>, E: Dtype, D: Device<E>> ModuleFields<Mod, E, D
     type Options<E2: Dtype, D2: Device<E2>> = ();
     type Output<E2: Dtype, D2: Device<E2>> = ();
 
-    fn visit_fields<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Mod, E, D, E2, D2>>(
+    fn visit_fields<V: ModuleVisitor<Mod, E, D>>(
         self,
         _module: &mut V,
     ) -> Result<(), V::Err> {
@@ -287,10 +295,10 @@ macro_rules! tuple_impls {
             type Options<E2: Dtype, D2: Device<E2>> = ($($name::Options<E2, D2>,)+);
             type Output<E2: Dtype, D2: Device<E2>> = ($($name::Output<E2, D2>,)+);
 
-            fn visit_fields<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Mod, E, D, E2, D2>>(
+            fn visit_fields<V: ModuleVisitor<Mod, E, D>>(
                 self,
                 visitor: &mut V,
-            ) -> Result<Self::Options<E2, D2>, V::Err> {
+            ) -> Result<Self::Options<V::E2, V::D2>, V::Err> {
                 Ok(($(self.$idx.visit_fields(visitor)?,)+))
             }
 

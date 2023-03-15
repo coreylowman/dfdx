@@ -116,17 +116,19 @@ pub trait RMSpropKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, E: Dtype, D: Device<E>> TensorVisitor<E, D, f32, Cpu>
+impl<M, E: Dtype, D: Device<E>> TensorVisitor<E, D>
     for (&mut RMSprop<M, E, D>, &Gradients<E, D>, UnusedTensors)
 {
     type Viewer = ViewTensorMut;
     type Err = D::Err;
+    type E2 = E;
+    type D2 = D;
 
     fn visit<S: Shape>(
         &mut self,
         opts: TensorOptions<S, E, D>,
         p: &mut Tensor<S, E, D>,
-    ) -> Result<Option<Tensor<S, f32, Cpu>>, Self::Err> {
+    ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         if !opts.do_gradient_update {
             return Ok(None);
         }

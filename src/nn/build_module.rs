@@ -2,9 +2,11 @@ use super::tensor_collection::*;
 use crate::prelude::{Device, DeviceStorage, Dtype, Shape, Tensor};
 
 struct Builder<'a, D: DeviceStorage>(&'a D);
-impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D, E, D> for Builder<'a, D> {
+impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D> for Builder<'a, D> {
     type Viewer = ();
     type Err = D::Err;
+    type E2 = E;
+    type D2 = D;
 
     fn visit<S: Shape>(
         &mut self,

@@ -4,9 +4,11 @@ use crate::prelude::{Device, Dtype, HasShape, Shape, Tensor};
 struct Converter<'a, D> {
     dev: &'a D,
 }
-impl<'a, E: Dtype, D: Device<E>, D2: Device<E>> TensorVisitor<E, D, E, D2> for Converter<'a, D2> {
+impl<'a, E: Dtype, D: Device<E>, D2: Device<E>> TensorVisitor<E, D> for Converter<'a, D2> {
     type Viewer = ViewTensorRef;
     type Err = D2::Err;
+    type E2 = E;
+    type D2 = D2;
 
     fn visit<S: Shape>(
         &mut self,

@@ -70,9 +70,9 @@ where
 {
     type To<E2: Dtype, D2: Device<E2>> = MultiHeadAttention<M, H, K, V, E2, D2>;
 
-    fn iter_tensors<E2: Dtype, D2: Device<E2>, Vi: ModuleVisitor<Self, E, D, E2, D2>>(
+    fn iter_tensors<Vi: ModuleVisitor<Self, E, D>>(
         visitor: &mut Vi,
-    ) -> Result<Option<Self::To<E2, D2>>, Vi::Err> {
+    ) -> Result<Option<Self::To<Vi::E2, Vi::D2>>, Vi::Err> {
         visitor.visit_fields(
             (
                 Self::module("w_q", |s| &s.w_q, |s| &mut s.w_q),

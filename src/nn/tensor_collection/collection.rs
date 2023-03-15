@@ -6,7 +6,7 @@ use crate::{
     tensor::{OneFillStorage, Tensor, ZeroFillStorage},
 };
 
-use super::{visitor::TensorVisitor, ModuleField, ModuleFields, TensorField};
+use super::{ModuleField, ModuleFields, TensorField};
 
 /// A collection of named tensors. Implementing this trait will enable anything
 /// that operates on tensors, including resetting, counting number of params, updating gradients,
@@ -26,9 +26,9 @@ use super::{visitor::TensorVisitor, ModuleField, ModuleFields, TensorField};
 /// impl<E: Dtype, D: Device<E>> TensorCollection<E, D> for Mlp<E, D> {
 ///     type To<E2: Dtype, D2: Device<E2>> = Mlp<E2, D2>;
 ///
-///     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
+///     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
 ///         visitor: &mut V,
-///     ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
+///     ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
 ///         visitor.visit_fields(
 ///             (
 ///                 // Define name of each field and how to access it, using ModuleField for Modules,
@@ -57,9 +57,9 @@ pub trait TensorCollection<E: Dtype, D: Device<E>>: Sized {
     /// to contruct this module given values for its fields. Returns `Err(_)` to indicate an error,
     /// `Ok(None)` to indicate that there is no error and a module has not been built, and
     /// `Ok(Some(_))` contains `Self::Output<E2, D2>`
-    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::To<E2, D2>>, V::Err>;
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err>;
 
     fn module<F1, F2, Field>(
         name: &str,
@@ -106,12 +106,11 @@ pub trait ModuleVisitor<
     T: TensorCollection<E, D>,
     E: Dtype,
     D: Device<E>,
-    E2: Dtype,
-    D2: Device<E2>,
 >: Sized
 {
     type Err;
-    type Func: TensorVisitor<E, D, E2, D2>;
+    type E2: Dtype;
+    type D2: Device<Self::E2>;
 
     /// Visit a [TensorCollection]. Do not use this; use visit_fields instead.
     fn visit_module<Field, GetRef, GetMut>(
@@ -119,7 +118,7 @@ pub trait ModuleVisitor<
         name: &str,
         get_refs: GetRef,
         get_muts: GetMut,
-    ) -> Result<Option<Field::To<E2, D2>>, Self::Err>
+    ) -> Result<Option<Field::To<Self::E2, Self::D2>>, Self::Err>
     where
         GetRef: FnMut(&T) -> &Field,
         GetMut: FnMut(&mut T) -> &mut Field,
@@ -132,7 +131,7 @@ pub trait ModuleVisitor<
         get_refs: GetRef,
         get_muts: GetMut,
         opts: TensorOptions<S, E, D>,
-    ) -> Result<Option<Tensor<S, E2, D2>>, Self::Err>
+    ) -> Result<Option<Tensor<S, Self::E2, Self::D2>>, Self::Err>
     where
         GetRef: FnMut(&T) -> &Tensor<S, E, D>,
         GetMut: FnMut(&mut T) -> &mut Tensor<S, E, D>;
@@ -142,19 +141,16 @@ pub trait ModuleVisitor<
     fn visit_fields<M: ModuleFields<T, E, D>>(
         &mut self,
         fields: M,
-        builder: impl FnOnce(M::Output<E2, D2>) -> T::To<E2, D2>,
-    ) -> Result<Option<T::To<E2, D2>>, Self::Err> {
-        let options = fields.visit_fields(self)?;
-        Ok(M::handle_options(options).map(builder))
-    }
+        builder: impl FnOnce(M::Output<Self::E2, Self::D2>) -> T::To<Self::E2, Self::D2>,
+    ) -> Result<Option<T::To<Self::E2, Self::D2>>, Self::Err>;
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>> TensorCollection<E, D> for Tensor<S, E, D> {
     type To<E2: Dtype, D2: Device<E2>> = Tensor<S, E2, D2>;
 
-    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
         visitor.visit_tensor(
             "",
             |s| s,

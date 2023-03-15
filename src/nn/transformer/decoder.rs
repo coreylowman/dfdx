@@ -74,9 +74,9 @@ where
 {
     type To<E2: Dtype, D2: Device<E2>> = TransformerDecoder<M, H, F, L, E2, D2>;
 
-    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
         visitor.visit_fields(
             Self::module("0", |s| &s.0, |s| &mut s.0),
             TransformerDecoder,
@@ -147,9 +147,9 @@ where
 {
     type To<E2: Dtype, D2: Device<E2>> = TransformerDecoderBlock<M, N, F, E2, D2>;
 
-    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
         visitor.visit_fields(
             (
                 Self::module("self_attn", |s| &s.self_attn, |s| &mut s.self_attn),

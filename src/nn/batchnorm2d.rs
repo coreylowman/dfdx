@@ -1,3 +1,4 @@
+use num_traits::FromPrimitive;
 use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::*;
@@ -234,9 +235,9 @@ impl<B: Dim, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>>
 impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNorm2D<C, E, D> {
     type To<E2: Dtype, D2: Device<E2>> = BatchNorm2D<C, E2, D2>;
 
-    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
         visitor.visit_fields(
             (
                 Self::tensor(
@@ -269,8 +270,8 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNor
                 bias,
                 running_mean,
                 running_var,
-                epsilon: E2::from_f32(1e-5).unwrap(),
-                momentum: E2::from_f32(0.1).unwrap(),
+                epsilon: V::E2::from_f32(1e-5).unwrap(),
+                momentum: V::E2::from_f32(0.1).unwrap(),
             },
         )
     }

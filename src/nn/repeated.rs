@@ -32,9 +32,9 @@ impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>, const N: usize> TensorCo
 {
     type To<E2: Dtype, D2: Device<E2>> = Repeated<T::To<E2, D2>, N>;
 
-    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
         let names: Vec<String> = (0..N).map(|i| std::format!("{i}")).collect();
 
         visitor.visit_fields(

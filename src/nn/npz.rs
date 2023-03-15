@@ -1,5 +1,5 @@
 use crate::{
-    prelude::{Cpu, Device},
+    prelude::{Device},
     shapes::{Dtype, Shape},
     tensor::{
         numpy::{NpzError, NumpyDtype},
@@ -113,33 +113,37 @@ pub trait LoadFromNpz<E: Dtype + NumpyDtype, D: Device<E>>: TensorCollection<E, 
 }
 impl<E: Dtype + NumpyDtype, D: Device<E>, T: TensorCollection<E, D>> LoadFromNpz<E, D> for T {}
 
-impl<W: Write + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D, f32, Cpu>
+impl<W: Write + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D>
     for zip::ZipWriter<W>
 {
     type Viewer = (ViewTensorRef, ViewTensorName);
     type Err = ZipError;
+    type E2 = E;
+    type D2 = D;
 
     fn visit<S: Shape>(
         &mut self,
         _: TensorOptions<S, E, D>,
         (t, full_path): (&Tensor<S, E, D>, String),
-    ) -> Result<Option<Tensor<S, f32, Cpu>>, Self::Err> {
+    ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         t.write_to_npz(self, full_path)?;
         Ok(None)
     }
 }
 
-impl<R: Read + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D, f32, Cpu>
+impl<R: Read + Seek, E: Dtype + NumpyDtype, D: Device<E>> TensorVisitor<E, D>
     for zip::ZipArchive<R>
 {
     type Viewer = (ViewTensorMut, ViewTensorName);
     type Err = NpzError;
+    type E2 = E;
+    type D2 = D;
 
     fn visit<S: Shape>(
         &mut self,
         _: TensorOptions<S, E, D>,
         (t, full_path): (&mut Tensor<S, E, D>, String),
-    ) -> Result<Option<Tensor<S, f32, Cpu>>, Self::Err> {
+    ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         t.read_from_npz(self, full_path)?;
         Ok(None)
     }

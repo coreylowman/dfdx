@@ -1,3 +1,4 @@
+use num_traits::FromPrimitive;
 use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::*;
@@ -47,9 +48,9 @@ impl<const M: usize, E: Dtype, D: DeviceStorage> NonMutableModule for LayerNorm1
 impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNorm1D<M, E, D> {
     type To<E2: Dtype, D2: Device<E2>> = LayerNorm1D<M, E2, D2>;
 
-    fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
         visitor.visit_fields(
             (
                 Self::tensor(
@@ -68,7 +69,7 @@ impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNor
             |(gamma, beta)| LayerNorm1D {
                 gamma,
                 beta,
-                epsilon: E2::from_f32(1e-5).unwrap(),
+                epsilon: V::E2::from_f32(1e-5).unwrap(),
             },
         )
     }
