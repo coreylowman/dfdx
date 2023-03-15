@@ -28,11 +28,11 @@ impl<T: BuildOnDevice<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for Add
 }
 
 impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> TensorCollection<E, D> for AddInto<T> {
-    type Output<E2: Dtype, D2: Device<E2>> = AddInto<T::Output<E2, D2>>;
+    type To<E2: Dtype, D2: Device<E2>> = AddInto<T::To<E2, D2>>;
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             ModuleField::new("0", |s: &Self| &s.0, |s| &mut s.0),
             AddInto,

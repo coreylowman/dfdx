@@ -168,11 +168,11 @@ impl<B: Dim, const C: usize, E: Dtype, D: Device<E>>
 }
 
 impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNorm1D<C, E, D> {
-    type Output<E2: Dtype, D2: Device<E2>> = BatchNorm1D<C, E2, D2>;
+    type To<E2: Dtype, D2: Device<E2>> = BatchNorm1D<C, E2, D2>;
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             (
                 TensorField::new(

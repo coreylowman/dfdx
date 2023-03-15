@@ -80,11 +80,11 @@ impl<T: ZeroSizedModule + BuildModule<D, E>, D: Device<E>, E: Dtype> BuildOnDevi
 }
 
 impl<E: Dtype, D: Device<E>, T: ZeroSizedModule> TensorCollection<E, D> for T {
-    type Output<E2: Dtype, D2: Device<E2>> = T;
+    type To<E2: Dtype, D2: Device<E2>> = T;
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         _visitor: &mut V,
-    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         Ok(Some(Default::default()))
     }
 }

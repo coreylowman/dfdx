@@ -72,11 +72,11 @@ impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D
 where
     E: Dtype + Float + SampleUniform,
 {
-    type Output<E2: Dtype, D2: Device<E2>> = TransformerDecoder<M, H, F, L, E2, D2>;
+    type To<E2: Dtype, D2: Device<E2>> = TransformerDecoder<M, H, F, L, E2, D2>;
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             ModuleField::new("0", |s: &Self| &s.0, |s| &mut s.0),
             TransformerDecoder,
@@ -145,11 +145,11 @@ impl<const M: usize, const N: usize, const F: usize, E, D: Device<E>> TensorColl
 where
     E: Dtype + Float + SampleUniform,
 {
-    type Output<E2: Dtype, D2: Device<E2>> = TransformerDecoderBlock<M, N, F, E2, D2>;
+    type To<E2: Dtype, D2: Device<E2>> = TransformerDecoderBlock<M, N, F, E2, D2>;
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             (
                 ModuleField::new("self_attn", |s: &Self| &s.self_attn, |s| &mut s.self_attn),

@@ -27,7 +27,7 @@ impl<
         name: &str,
         mut get_refs: GetRef,
         mut get_muts: GetMut,
-    ) -> Result<Option<Field::Output<E2, D2>>, Self::Err>
+    ) -> Result<Option<Field::To<E2, D2>>, Self::Err>
     where
         GetRef: FnMut(&M) -> &Field,
         GetMut: FnMut(&mut M) -> &mut Field,
@@ -174,8 +174,8 @@ where
     F2: FnMut(&mut Mod) -> &mut Field,
     Field: TensorCollection<E, D>,
 {
-    type Options<E2: Dtype, D2: Device<E2>> = Option<Field::Output<E2, D2>>;
-    type Output<E2: Dtype, D2: Device<E2>> = Field::Output<E2, D2>;
+    type Options<E2: Dtype, D2: Device<E2>> = Option<Field::To<E2, D2>>;
+    type Output<E2: Dtype, D2: Device<E2>> = Field::To<E2, D2>;
 
     fn visit_fields<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Mod, E, D, E2, D2>>(
         self,

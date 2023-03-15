@@ -5,12 +5,12 @@ use super::*;
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
         impl<E: Dtype, D: Device<E>, $($name: TensorCollection<E, D>),+> TensorCollection<E, D> for ($($name,)+) {
-            type Output<E2: Dtype, D2: Device<E2>> = ($($name::Output<E2, D2>,)+);
+            type To<E2: Dtype, D2: Device<E2>> = ($($name::To<E2, D2>,)+);
 
             #[allow(non_snake_case)]
             fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
                 visitor: &mut V
-            ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+            ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
                 visitor.visit_fields(
                     ($(ModuleField::new(&std::format!("{}", $idx), |s: &Self| &s.$idx, |s| &mut s.$idx),)+),
                     |x| x

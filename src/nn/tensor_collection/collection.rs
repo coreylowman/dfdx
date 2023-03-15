@@ -24,11 +24,11 @@ use super::{visitor::TensorVisitor, ModuleFields};
 /// }
 ///
 /// impl<E: Dtype, D: Device<E>> TensorCollection<E, D> for Mlp<E, D> {
-///     type Output<E2: Dtype, D2: Device<E2>> = Mlp<E2, D2>;
+///     type To<E2: Dtype, D2: Device<E2>> = Mlp<E2, D2>;
 ///
 ///     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
 ///         visitor: &mut V,
-///     ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+///     ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
 ///         visitor.visit_fields(
 ///             (
 ///                 // Define name of each field and how to access it, using ModuleField for Modules,
@@ -51,7 +51,7 @@ use super::{visitor::TensorVisitor, ModuleFields};
 pub trait TensorCollection<E: Dtype, D: Device<E>>: Sized {
     /// Type alias that specifies the how a module's type changes when using a different dtype and/or
     /// device.
-    type Output<E2: Dtype, D2: Device<E2>>;
+    type To<E2: Dtype, D2: Device<E2>>;
 
     /// Specifies how to iterate through tensors or modules containted within this module, and how
     /// to contruct this module given values for its fields. Returns `Err(_)` to indicate an error,
@@ -59,7 +59,7 @@ pub trait TensorCollection<E: Dtype, D: Device<E>>: Sized {
     /// `Ok(Some(_))` contains `Self::Output<E2, D2>`
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::Output<E2, D2>>, V::Err>;
+    ) -> Result<Option<Self::To<E2, D2>>, V::Err>;
 }
 
 /// An object that can visit [TensorCollection]s and [Tensor]s recursively.
@@ -80,7 +80,7 @@ pub trait ModuleVisitor<
         name: &str,
         get_refs: GetRef,
         get_muts: GetMut,
-    ) -> Result<Option<Field::Output<E2, D2>>, Self::Err>
+    ) -> Result<Option<Field::To<E2, D2>>, Self::Err>
     where
         GetRef: FnMut(&T) -> &Field,
         GetMut: FnMut(&mut T) -> &mut Field,
@@ -103,19 +103,19 @@ pub trait ModuleVisitor<
     fn visit_fields<M: ModuleFields<T, E, D>>(
         &mut self,
         fields: M,
-        builder: impl FnOnce(M::Output<E2, D2>) -> T::Output<E2, D2>,
-    ) -> Result<Option<T::Output<E2, D2>>, Self::Err> {
+        builder: impl FnOnce(M::Output<E2, D2>) -> T::To<E2, D2>,
+    ) -> Result<Option<T::To<E2, D2>>, Self::Err> {
         let options = fields.visit_fields(self)?;
         Ok(M::handle_options(options).map(builder))
     }
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>> TensorCollection<E, D> for Tensor<S, E, D> {
-    type Output<E2: Dtype, D2: Device<E2>> = Tensor<S, E2, D2>;
+    type To<E2: Dtype, D2: Device<E2>> = Tensor<S, E2, D2>;
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_tensor(
             "",
             |s| s,

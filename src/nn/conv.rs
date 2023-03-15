@@ -64,11 +64,11 @@ where
     E: Dtype + Float + SampleUniform,
     D: Device<E>,
 {
-    type Output<E2: Dtype, D2: Device<E2>> = Conv2D<I, O, K, S, P, E2, D2>;
+    type To<E2: Dtype, D2: Device<E2>> = Conv2D<I, O, K, S, P, E2, D2>;
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             TensorField::new(
                 "weight",

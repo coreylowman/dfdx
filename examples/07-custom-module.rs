@@ -30,11 +30,11 @@ impl<const IN: usize, const INNER: usize, const OUT: usize, E: Dtype, D: Device<
 {
     // Type alias that specifies the how Mlp's type changes when using a different dtype and/or
     // device.
-    type Output<E2: Dtype, D2: Device<E2>> = Mlp<IN, INNER, OUT, E2, D2>;
+    type To<E2: Dtype, D2: Device<E2>> = Mlp<IN, INNER, OUT, E2, D2>;
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             (
                 // Define name of each field and how to access it, using ModuleField for Modules,

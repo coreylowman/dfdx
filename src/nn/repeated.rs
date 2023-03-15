@@ -30,11 +30,11 @@ impl<D: Device<E>, E: Dtype, T: BuildOnDevice<D, E>, const N: usize> BuildOnDevi
 impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>, const N: usize> TensorCollection<E, D>
     for Repeated<T, N>
 {
-    type Output<E2: Dtype, D2: Device<E2>> = Repeated<T::Output<E2, D2>, N>;
+    type To<E2: Dtype, D2: Device<E2>> = Repeated<T::To<E2, D2>, N>;
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         let names: Vec<String> = (0..N).map(|i| std::format!("{i}")).collect();
 
         visitor.visit_fields(

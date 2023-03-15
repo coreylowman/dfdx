@@ -19,7 +19,7 @@ impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D, E, D> for Builder<'a, D> {
 
 /// Something that can be built. Related to [super::BuildOnDevice]
 pub trait BuildModule<D: Device<E>, E: Dtype>:
-    Sized + TensorCollection<E, D, Output<E, D> = Self>
+    Sized + TensorCollection<E, D, To<E, D> = Self>
 {
     /// Construct it on the device
     fn build(device: &D) -> Self {
@@ -37,7 +37,7 @@ pub trait BuildModule<D: Device<E>, E: Dtype>:
     }
 }
 
-impl<D: Device<E>, E: Dtype, M: Sized + TensorCollection<E, D, Output<E, D> = Self>>
+impl<D: Device<E>, E: Dtype, M: Sized + TensorCollection<E, D, To<E, D> = Self>>
     BuildModule<D, E> for M
 {
 }

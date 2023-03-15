@@ -68,11 +68,11 @@ impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: Devic
 where
     E: Dtype + Float + SampleUniform,
 {
-    type Output<E2: Dtype, D2: Device<E2>> = MultiHeadAttention<M, H, K, V, E2, D2>;
+    type To<E2: Dtype, D2: Device<E2>> = MultiHeadAttention<M, H, K, V, E2, D2>;
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, Vi: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut Vi,
-    ) -> Result<Option<Self::Output<E2, D2>>, Vi::Err> {
+    ) -> Result<Option<Self::To<E2, D2>>, Vi::Err> {
         visitor.visit_fields(
             (
                 ModuleField::new("w_q", |s: &Self| &s.w_q, |s| &mut s.w_q),

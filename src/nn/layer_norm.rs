@@ -45,11 +45,11 @@ pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
 impl<const M: usize, E: Dtype, D: DeviceStorage> NonMutableModule for LayerNorm1D<M, E, D> {}
 
 impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNorm1D<M, E, D> {
-    type Output<E2: Dtype, D2: Device<E2>> = LayerNorm1D<M, E2, D2>;
+    type To<E2: Dtype, D2: Device<E2>> = LayerNorm1D<M, E2, D2>;
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             (
                 TensorField::new(

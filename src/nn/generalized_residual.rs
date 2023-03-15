@@ -34,12 +34,12 @@ impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>, R: BuildOnDevice<D, E>> Bui
 impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>, R: TensorCollection<E, D>>
     TensorCollection<E, D> for GeneralizedResidual<F, R>
 {
-    type Output<E2: Dtype, D2: Device<E2>> =
-        GeneralizedResidual<F::Output<E2, D2>, R::Output<E2, D2>>;
+    type To<E2: Dtype, D2: Device<E2>> =
+        GeneralizedResidual<F::To<E2, D2>, R::To<E2, D2>>;
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
-    ) -> Result<Option<Self::Output<E2, D2>>, V::Err> {
+    ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             (
                 ModuleField::new("f", |s: &Self| &s.f, |s| &mut s.f),
