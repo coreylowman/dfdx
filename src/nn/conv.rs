@@ -206,7 +206,7 @@ mod tests {
         let weight_init = m.weight.clone();
 
         let mut opt = Sgd::new(&m, Default::default());
-        let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().traced_all());
+        let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().leaking_trace());
         let g = out.square().mean().backward();
 
         assert_ne!(g.get(&m.weight).array(), [[[[0.0; 3]; 3]; 2]; 4]);

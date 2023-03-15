@@ -93,7 +93,7 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D,
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let dropout: Dropout = Default::default();
-/// dropout.forward(dev.zeros::<Rank1<5>>().trace_all());
+/// dropout.forward(dev.zeros::<Rank1<5>>().leaking_trace());
 /// ```
 ///
 /// 2. Using [ModuleMut] with [NoneTape] **fails to compile**
