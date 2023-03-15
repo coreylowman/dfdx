@@ -41,8 +41,8 @@ impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>, R: TensorCollection<E, D
     ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             (
-                ModuleField::new("f", |s: &Self| &s.f, |s| &mut s.f),
-                ModuleField::new("r", |s: &Self| &s.r, |s| &mut s.r),
+                Self::module("f", |s| &s.f, |s| &mut s.f),
+                Self::module("r", |s| &s.r, |s| &mut s.r),
             ),
             |(f, r)| GeneralizedResidual { f, r },
         )

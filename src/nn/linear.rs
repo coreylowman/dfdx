@@ -66,18 +66,18 @@ impl<const I: usize, const O: usize, E: Dtype, D: Device<E>> TensorCollection<E,
     ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             (
-                TensorField::new(
+                Self::tensor(
                     "weight",
-                    |s: &Self| &s.weight,
+                    |s| &s.weight,
                     |s| &mut s.weight,
                     TensorOptions::reset_with(|t| {
                         let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
                         t.try_fill_with_distr(Uniform::new(-b, b))
                     }),
                 ),
-                TensorField::new(
+                Self::tensor(
                     "bias",
-                    |s: &Self| &s.bias,
+                    |s| &s.bias,
                     |s| &mut s.bias,
                     TensorOptions::reset_with(|t| {
                         let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();

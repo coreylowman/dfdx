@@ -108,10 +108,10 @@ where
     ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             (
-                ModuleField::new("self_attn", |s: &Self| &s.self_attn, |s| &mut s.self_attn),
-                ModuleField::new("norm1", |s: &Self| &s.norm1, |s| &mut s.norm1),
-                ModuleField::new("ff", |s: &Self| &s.ff, |s| &mut s.ff),
-                ModuleField::new("norm2", |s: &Self| &s.norm2, |s| &mut s.norm2),
+                Self::module("self_attn", |s| &s.self_attn, |s| &mut s.self_attn),
+                Self::module("norm1", |s| &s.norm1, |s| &mut s.norm1),
+                Self::module("ff", |s| &s.ff, |s| &mut s.ff),
+                Self::module("norm2", |s| &s.norm2, |s| &mut s.norm2),
             ),
             |(self_attn, norm1, ff, norm2)| TransformerEncoderBlock {
                 self_attn,

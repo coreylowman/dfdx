@@ -12,7 +12,7 @@ macro_rules! tuple_impls {
                 visitor: &mut V
             ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
                 visitor.visit_fields(
-                    ($(ModuleField::new(&std::format!("{}", $idx), |s: &Self| &s.$idx, |s| &mut s.$idx),)+),
+                    ($(Self::module(&std::format!("{}", $idx), |s| &s.$idx, |s| &mut s.$idx),)+),
                     |x| x
                 )
             }

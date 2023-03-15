@@ -50,9 +50,9 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for Bias2D<C
         visitor: &mut V,
     ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
-            TensorField::new(
+            Self::tensor(
                 "bias",
-                |s: &Self| &s.bias,
+                |s| &s.bias,
                 |s| &mut s.bias,
                 TensorOptions::reset_to_zeros(),
             ),

@@ -78,7 +78,7 @@ where
         visitor: &mut V,
     ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
-            ModuleField::new("0", |s: &Self| &s.0, |s| &mut s.0),
+            Self::module("0", |s| &s.0, |s| &mut s.0),
             TransformerDecoder,
         )
     }
@@ -152,12 +152,12 @@ where
     ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             (
-                ModuleField::new("self_attn", |s: &Self| &s.self_attn, |s| &mut s.self_attn),
-                ModuleField::new("norm1", |s: &Self| &s.norm1, |s| &mut s.norm1),
-                ModuleField::new("mh_attn", |s: &Self| &s.mh_attn, |s| &mut s.mh_attn),
-                ModuleField::new("norm2", |s: &Self| &s.norm2, |s| &mut s.norm2),
-                ModuleField::new("ff", |s: &Self| &s.ff, |s| &mut s.ff),
-                ModuleField::new("norm3", |s: &Self| &s.norm3, |s| &mut s.norm3),
+                Self::module("self_attn", |s| &s.self_attn, |s| &mut s.self_attn),
+                Self::module("norm1", |s| &s.norm1, |s| &mut s.norm1),
+                Self::module("mh_attn", |s| &s.mh_attn, |s| &mut s.mh_attn),
+                Self::module("norm2", |s| &s.norm2, |s| &mut s.norm2),
+                Self::module("ff", |s| &s.ff, |s| &mut s.ff),
+                Self::module("norm3", |s| &s.norm3, |s| &mut s.norm3),
             ),
             |(self_attn, norm1, mh_attn, norm2, ff, norm3)| TransformerDecoderBlock {
                 self_attn,

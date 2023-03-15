@@ -91,8 +91,8 @@ where
     ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             (
-                ModuleField::new("encoder", |s: &Self| &s.encoder, |s| &mut s.encoder),
-                ModuleField::new("decoder", |s: &Self| &s.decoder, |s| &mut s.decoder),
+                Self::module("encoder", |s| &s.encoder, |s| &mut s.encoder),
+                Self::module("decoder", |s| &s.decoder, |s| &mut s.decoder),
             ),
             |(encoder, decoder)| Transformer { encoder, decoder },
         )

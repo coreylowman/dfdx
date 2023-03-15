@@ -32,7 +32,7 @@ impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>> TensorCollection<E, D> f
         visitor: &mut V,
     ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
-            ModuleField::new("0", |s: &Self| &s.0, |s| &mut s.0),
+            Self::module("0", |s| &s.0, |s| &mut s.0),
             Residual,
         )
     }

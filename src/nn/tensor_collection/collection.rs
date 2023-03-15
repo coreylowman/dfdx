@@ -6,7 +6,7 @@ use crate::{
     tensor::{OneFillStorage, Tensor, ZeroFillStorage},
 };
 
-use super::{visitor::TensorVisitor, ModuleFields};
+use super::{visitor::TensorVisitor, ModuleField, ModuleFields, TensorField};
 
 /// A collection of named tensors. Implementing this trait will enable anything
 /// that operates on tensors, including resetting, counting number of params, updating gradients,
@@ -33,8 +33,8 @@ use super::{visitor::TensorVisitor, ModuleFields};
 ///             (
 ///                 // Define name of each field and how to access it, using ModuleField for Modules,
 ///                 // and TensorField for Tensors.
-///                 ModuleField::new("l1", |s: &Self| &s.l1, |s| &mut s.l1),
-///                 ModuleField::new("l2", |s: &Self| &s.l2, |s| &mut s.l2),
+///                 Self::module("l1", |s| &s.l1, |s| &mut s.l1),
+///                 Self::module("l2", |s| &s.l2, |s| &mut s.l2),
 ///             ),
 ///             // Define how to construct the collection given its fields in the order they are given
 ///             // above. This conversion is done using the ModuleFields trait.
@@ -60,6 +60,45 @@ pub trait TensorCollection<E: Dtype, D: Device<E>>: Sized {
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
     ) -> Result<Option<Self::To<E2, D2>>, V::Err>;
+
+    fn module<F1, F2, Field>(
+        name: &str,
+        get_ref: F1,
+        get_mut: F2,
+    ) -> ModuleField<F1, F2, Self, Field>
+    where
+        F1: FnMut(&Self) -> &Field,
+        F2: FnMut(&mut Self) -> &mut Field,
+        Field: TensorCollection<E, D>,
+    {
+        ModuleField {
+            name,
+            get_ref,
+            get_mut,
+            m: Default::default(),
+            f: Default::default(),
+        }
+    }
+
+    fn tensor<F1, F2, S>(
+        name: &str,
+        get_ref: F1,
+        get_mut: F2,
+        options: TensorOptions<S, E, D>,
+    ) -> TensorField<F1, F2, Self, S, E, D>
+    where
+        F1: FnMut(&Self) -> &Tensor<S, E, D>,
+        F2: FnMut(&mut Self) -> &mut Tensor<S, E, D>,
+        S: Shape,
+    {
+        TensorField {
+            name,
+            get_ref,
+            get_mut,
+            options,
+            m: Default::default(),
+        }
+    }
 }
 
 /// An object that can visit [TensorCollection]s and [Tensor]s recursively.

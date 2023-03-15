@@ -175,27 +175,27 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNor
     ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             (
-                TensorField::new(
+                Self::tensor(
                     "scale",
-                    |s: &Self| &s.scale,
+                    |s| &s.scale,
                     |s| &mut s.scale,
                     TensorOptions::reset_to_ones(),
                 ),
-                TensorField::new(
+                Self::tensor(
                     "bias",
-                    |s: &Self| &s.bias,
+                    |s| &s.bias,
                     |s| &mut s.bias,
                     TensorOptions::reset_to_zeros(),
                 ),
-                TensorField::new(
+                Self::tensor(
                     "running_mean",
-                    |s: &Self| &s.running_mean,
+                    |s| &s.running_mean,
                     |s| &mut s.running_mean,
                     TensorOptions::detached(|t| t.try_fill_with_zeros()),
                 ),
-                TensorField::new(
+                Self::tensor(
                     "running_var",
-                    |s: &Self| &s.running_var,
+                    |s| &s.running_var,
                     |s| &mut s.running_var,
                     TensorOptions::detached(|t| t.try_fill_with_ones()),
                 ),

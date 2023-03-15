@@ -78,8 +78,8 @@ where
     pub(super) name: &'a str,
     pub(super) get_ref: F1,
     pub(super) get_mut: F2,
-    m: std::marker::PhantomData<Mod>,
-    f: std::marker::PhantomData<Field>,
+    pub(super) m: std::marker::PhantomData<Mod>,
+    pub(super) f: std::marker::PhantomData<Field>,
 }
 
 /// A [ModuleFields] that represents a field that contains a single Tensor.
@@ -92,43 +92,7 @@ where
     pub(super) get_ref: F1,
     pub(super) get_mut: F2,
     pub(super) options: TensorOptions<S, E, D>,
-    m: std::marker::PhantomData<Mod>,
-}
-
-impl<'a, F1, F2, Mod, Field> ModuleField<'a, F1, F2, Mod, Field>
-where
-    F1: FnMut(&Mod) -> &Field,
-    F2: FnMut(&mut Mod) -> &mut Field,
-{
-    /// Constructs a new MouleField given the field's name, a function which accesses the field
-    /// immutably, and a function that accesses the field mutably.
-    pub fn new(name: &'a str, get_ref: F1, get_mut: F2) -> Self {
-        Self {
-            name,
-            get_ref,
-            get_mut,
-            m: Default::default(),
-            f: Default::default(),
-        }
-    }
-}
-
-impl<'a, F1, F2, Mod, S: Shape, E: Dtype, D: Device<E>> TensorField<'a, F1, F2, Mod, S, E, D>
-where
-    F1: FnMut(&Mod) -> &Tensor<S, E, D>,
-    F2: FnMut(&mut Mod) -> &mut Tensor<S, E, D>,
-{
-    /// Constructs a new MouleField given the field's name, a function which accesses the field
-    /// immutably, a function that accesses the field mutably, and [TensorOptions].
-    pub fn new(name: &'a str, get_ref: F1, get_mut: F2, options: TensorOptions<S, E, D>) -> Self {
-        Self {
-            name,
-            get_ref,
-            get_mut,
-            options,
-            m: Default::default(),
-        }
-    }
+    pub(super) m: std::marker::PhantomData<Mod>,
 }
 
 /// A [TensorViewer] that represents a `&Tensor`

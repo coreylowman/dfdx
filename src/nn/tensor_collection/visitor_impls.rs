@@ -246,6 +246,22 @@ impl<T: ModuleFields<Mod, E, D>, Mod: TensorCollection<E, D>, E: Dtype, D: Devic
     }
 }
 
+impl<Mod: TensorCollection<E, D>, E: Dtype, D: Device<E>> ModuleFields<Mod, E, D> for () {
+    type Options<E2: Dtype, D2: Device<E2>> = ();
+    type Output<E2: Dtype, D2: Device<E2>> = ();
+
+    fn visit_fields<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Mod, E, D, E2, D2>>(
+        self,
+        _module: &mut V,
+    ) -> Result<(), V::Err> {
+        Ok(())
+    }
+
+    fn handle_options<E2: Dtype, D2: Device<E2>>(_options: ()) -> Option<()> {
+        Some(())
+    }
+}
+
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+]) => {
         impl<$($name: TensorViewer),+> TensorViewer for ($($name,)+) {

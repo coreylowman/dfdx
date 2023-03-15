@@ -75,10 +75,10 @@ where
     ) -> Result<Option<Self::To<E2, D2>>, Vi::Err> {
         visitor.visit_fields(
             (
-                ModuleField::new("w_q", |s: &Self| &s.w_q, |s| &mut s.w_q),
-                ModuleField::new("w_k", |s: &Self| &s.w_k, |s| &mut s.w_k),
-                ModuleField::new("w_v", |s: &Self| &s.w_v, |s| &mut s.w_v),
-                ModuleField::new("w_o", |s: &Self| &s.w_o, |s| &mut s.w_o),
+                Self::module("w_q", |s| &s.w_q, |s| &mut s.w_q),
+                Self::module("w_k", |s| &s.w_k, |s| &mut s.w_k),
+                Self::module("w_v", |s| &s.w_v, |s| &mut s.w_v),
+                Self::module("w_o", |s| &s.w_o, |s| &mut s.w_o),
             ),
             |(w_q, w_k, w_v, w_o)| MultiHeadAttention { w_q, w_k, w_v, w_o },
         )

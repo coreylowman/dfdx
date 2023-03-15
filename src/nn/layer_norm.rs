@@ -52,15 +52,15 @@ impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNor
     ) -> Result<Option<Self::To<E2, D2>>, V::Err> {
         visitor.visit_fields(
             (
-                TensorField::new(
+                Self::tensor(
                     "gamma",
-                    |s: &Self| &s.gamma,
+                    |s| &s.gamma,
                     |s| &mut s.gamma,
                     TensorOptions::reset_to_ones(),
                 ),
-                TensorField::new(
+                Self::tensor(
                     "beta",
-                    |s: &Self| &s.beta,
+                    |s| &s.beta,
                     |s| &mut s.beta,
                     TensorOptions::reset_to_zeros(),
                 ),
