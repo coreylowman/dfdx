@@ -15,4 +15,4 @@ jobs:
           override: true
       - uses: actions-rs/cargo@v1
         with:
-          command: doc
+          command: doc -F ci-check,numpy,safetensors
