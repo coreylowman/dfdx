@@ -58,13 +58,15 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
     type Err = D::Err;
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
+/// Something that can trace gradients
+pub trait Trace<E: Unit, D: DeviceStorage>: Clone {
+    type Traced;
     /// Start tracking gradients, clones self. The gradients will never free
     /// temporary gradients - See [Gradients::leaky()] for more info.
     ///
     /// Prefer to use [Tensor::trace()] with gradients allocated
     /// with [crate::nn::ZeroGrads::alloc_grads()].
-    pub fn leaky_trace<F: Unit>(&self) -> Tensor<S, E, D, OwnedTape<F, D>> {
+    fn leaky_trace(&self) -> Self::Traced {
         self.clone().leaky_traced()
     }
     /// Start tracking gradients. The gradients will never free
@@ -72,17 +74,24 @@ impl<S: Shape, E: Unit, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
     ///
     /// Prefer to use [Tensor::traced()] with gradients allocated
     /// with [crate::nn::ZeroGrads::alloc_grads()].
-    pub fn leaky_traced<F: Unit>(self) -> Tensor<S, E, D, OwnedTape<F, D>> {
-        self.put_tape(Default::default())
-    }
+    fn leaky_traced(self) -> Self::Traced;
+
     /// Accumulates gradients into `gradients`, clones self. Use [crate::nn::ZeroGrads::alloc_grads()]
     /// to create gradients.
-    pub fn trace<F: Unit>(&self, gradients: Gradients<F, D>) -> Tensor<S, E, D, OwnedTape<F, D>> {
+    fn trace(&self, gradients: Gradients<E, D>) -> Self::Traced {
         self.clone().traced(gradients)
     }
     /// Accumulates gradients into `gradients`. Use [crate::nn::ZeroGrads::alloc_grads()]
     /// to create gradients.
-    pub fn traced<F: Unit>(self, gradients: Gradients<F, D>) -> Tensor<S, E, D, OwnedTape<F, D>> {
+    fn traced(self, gradients: Gradients<E, D>) -> Self::Traced;
+}
+
+impl<S: Shape, E: Unit, F: Unit, D: DeviceStorage> Trace<E, D> for Tensor<S, F, D, NoneTape> {
+    type Traced = Tensor<S, F, D, OwnedTape<E, D>>;
+    fn leaky_traced(self) -> Self::Traced {
+        self.put_tape(Default::default())
+    }
+    fn traced(self, gradients: Gradients<E, D>) -> Self::Traced {
         self.put_tape(OwnedTape {
             gradients,
             operations: std::vec::Vec::new(),

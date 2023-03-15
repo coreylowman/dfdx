@@ -5,7 +5,7 @@ use dfdx::{
     nn::builders::*,
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
     shapes::Rank2,
-    tensor::{AsArray, SampleTensor, Tensor},
+    tensor::{AsArray, SampleTensor, Tensor, Trace},
     tensor_ops::Backward,
 };
 

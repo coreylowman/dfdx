@@ -4,7 +4,7 @@ use dfdx::{
     nn::modules::{Linear, Module, ModuleVisitor, ReLU, TensorCollection},
     prelude::BuildModule,
     shapes::{Dtype, Rank1, Rank2},
-    tensor::{SampleTensor, Tape, Tensor},
+    tensor::{SampleTensor, Tape, Tensor, Trace},
     tensor_ops::Device,
 };
 
