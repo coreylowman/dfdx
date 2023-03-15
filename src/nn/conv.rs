@@ -79,7 +79,7 @@ where
                     t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
                 }),
             ),
-            |weight| Conv2D { weight }
+            |weight| Conv2D { weight },
         )
     }
 }

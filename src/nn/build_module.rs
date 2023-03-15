@@ -37,7 +37,7 @@ pub trait BuildModule<D: Device<E>, E: Dtype>:
     }
 }
 
-impl<D: Device<E>, E: Dtype, M: Sized + TensorCollection<E, D, To<E, D> = Self>>
-    BuildModule<D, E> for M
+impl<D: Device<E>, E: Dtype, M: Sized + TensorCollection<E, D, To<E, D> = Self>> BuildModule<D, E>
+    for M
 {
 }

@@ -34,8 +34,7 @@ impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>, R: BuildOnDevice<D, E>> Bui
 impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>, R: TensorCollection<E, D>>
     TensorCollection<E, D> for GeneralizedResidual<F, R>
 {
-    type To<E2: Dtype, D2: Device<E2>> =
-        GeneralizedResidual<F::To<E2, D2>, R::To<E2, D2>>;
+    type To<E2: Dtype, D2: Device<E2>> = GeneralizedResidual<F::To<E2, D2>, R::To<E2, D2>>;
 
     fn iter_tensors<E2: Dtype, D2: Device<E2>, V: ModuleVisitor<Self, E, D, E2, D2>>(
         visitor: &mut V,
