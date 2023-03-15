@@ -56,7 +56,7 @@ mod tests {
     fn test_log_softmax_1d() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = a.trace_all().log_softmax();
+        let r = a.leaking_trace().log_softmax();
         assert_close(
             &r.array(),
             &[-4.4519143, -3.4519143, -2.4519143, -1.4519143, -0.4519143],
@@ -78,7 +78,7 @@ mod tests {
     fn test_log_softmax_2d() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r = a.trace_all().log_softmax::<Axis<1>>();
+        let r = a.leaking_trace().log_softmax::<Axis<1>>();
         assert_close(
             &r.array(),
             &[

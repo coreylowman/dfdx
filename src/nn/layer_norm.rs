@@ -157,7 +157,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut m = dev.build_module::<builder::LayerNorm1D<5>, TestDtype>();
         let x = dev.sample_normal::<Rank1<5>>();
-        let r = m.forward_mut(x.trace_all());
+        let r = m.forward_mut(x.leaking_trace());
         assert_close(
             &r.array(),
             &[0.873304, 0.9879816, -1.6083492, 0.44028836, -0.6932247],
@@ -175,7 +175,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let m = dev.build_module::<builder::LayerNorm1D<5>, TestDtype>();
         let x = dev.sample_normal::<Rank2<3, 5>>();
-        let r = m.forward(x.trace_all());
+        let r = m.forward(x.leaking_trace());
         assert_close(
             &r.array(),
             &[

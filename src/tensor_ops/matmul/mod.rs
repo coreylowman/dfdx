@@ -378,7 +378,7 @@ mod tests {
         ]);
         let b: Tensor<_, TestDtype, _> =
             dev.tensor([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
-        let r = a.trace_all().matmul(b.clone());
+        let r = a.leaking_trace().matmul(b.clone());
         assert_close(
             &r.array(),
             &[
@@ -414,10 +414,13 @@ mod tests {
         let a: Tensor<Rank2<4, 3>, TestDtype, _> = dev.sample_normal();
         let b: Tensor<Rank2<3, 2>, TestDtype, _> = dev.sample_normal();
 
-        let c = a.trace_all().matmul(b.clone());
+        let c = a.leaking_trace().matmul(b.clone());
         let g1 = c.exp().mean().backward();
 
-        let c2 = b.trace_all().permute().matmul(a.trace_all().permute());
+        let c2 = b
+            .leaking_trace()
+            .permute()
+            .matmul(a.leaking_trace().permute());
         let g2 = c2.exp().mean().backward();
 
         assert_close(&g1.get(&a).array(), &g2.get(&a).array());
@@ -431,7 +434,7 @@ mod tests {
         let a: Tensor<Rank3<N, 4, 3>, TestDtype, _> = dev.sample_normal();
         let a_array = a.array();
         let b: Tensor<Rank2<3, 2>, TestDtype, _> = dev.sample_normal();
-        let r = a.trace_all().matmul(b.clone());
+        let r = a.leaking_trace().matmul(b.clone());
         let r_array = r.array();
         for i in 0..N {
             let sub_a = dev.tensor(a_array[i]);
@@ -443,7 +446,7 @@ mod tests {
         let mut sub_bs_summed = [[0.0; 2]; 3];
         for i in 0..N {
             let sub_a = dev.tensor(a_array[i]);
-            let sub_gs = sub_a.trace_all().matmul(b.clone()).sum().backward();
+            let sub_gs = sub_a.leaking_trace().matmul(b.clone()).sum().backward();
             assert_close(&a_grad[i], &sub_gs.get(&sub_a).array());
             let sub_b_grad = sub_gs.get(&b).array();
             for x in 0..3 {
@@ -462,8 +465,8 @@ mod tests {
         let a: Tensor<Rank3<N, 4, 3>, TestDtype, _> = dev.sample_normal();
         let b: Tensor<Rank2<3, 2>, TestDtype, _> = dev.sample_normal();
         let b_up = dev.tensor([b.array(); N]);
-        let r1 = a.trace_all().matmul(b_up.clone());
-        let r2 = a.trace_all().matmul(b.clone());
+        let r1 = a.leaking_trace().matmul(b_up.clone());
+        let r2 = a.leaking_trace().matmul(b.clone());
         assert_eq!(r1.array(), r2.array());
         let g1 = r1.exp().mean().backward();
         let g2 = r2.exp().mean().backward();
@@ -484,7 +487,7 @@ mod tests {
         let a_array = a.array();
         let b: Tensor<Rank3<5, 2, 4>, TestDtype, _> = dev.sample_normal();
         let b_array = b.array();
-        let c = a.trace_all().matmul(b.clone());
+        let c = a.leaking_trace().matmul(b.clone());
         let c_array = c.array();
         let g = c.exp().sum().backward();
 
@@ -494,7 +497,7 @@ mod tests {
         for i in 0..5 {
             let sub_a = dev.tensor(a_array[i]);
             let sub_b = dev.tensor(b_array[i]);
-            let sub_c = sub_a.trace_all().matmul(sub_b.clone());
+            let sub_c = sub_a.leaking_trace().matmul(sub_b.clone());
             assert_close(&sub_c.array(), &c_array[i]);
             let sub_g = sub_c.exp().sum().backward();
             assert_close(&sub_g.get(&sub_a).array(), &g_a[i]);
@@ -510,7 +513,7 @@ mod tests {
         let a_array = a.array();
         let b: Tensor<Rank4<7, 5, 2, 4>, TestDtype, _> = dev.sample_normal();
         let b_array = b.array();
-        let c = a.trace_all().matmul(b.clone());
+        let c = a.leaking_trace().matmul(b.clone());
         let c_array = c.array();
         let g = c.exp().sum().backward();
 
@@ -521,7 +524,7 @@ mod tests {
             for j in 0..5 {
                 let sub_a = dev.tensor(a_array[i][j]);
                 let sub_b = dev.tensor(b_array[i][j]);
-                let sub_c = sub_a.trace_all().matmul(sub_b.clone());
+                let sub_c = sub_a.leaking_trace().matmul(sub_b.clone());
                 assert_close(&sub_c.array(), &c_array[i][j]);
                 let sub_g = sub_c.exp().sum().backward();
                 assert_close(&sub_g.get(&sub_a).array(), &g_a[i][j]);
@@ -537,7 +540,7 @@ mod tests {
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.7296, 0.3974, 0.9487]);
         let b: Tensor<_, TestDtype, _> =
             dev.tensor([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
-        let r = a.trace_all().matmul(b.clone());
+        let r = a.leaking_trace().matmul(b.clone());
         assert_close(&r.array(), &[1.261436, 1.5543157]);
         let g = r.exp().mean().backward();
         assert_close(&g.get(&a).array(), &[2.6883178, 2.9369607, 2.9256766]);
@@ -557,7 +560,7 @@ mod tests {
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.7296, 0.3974, 0.9487]);
         let b: Tensor<_, TestDtype, _> =
             dev.tensor([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
-        let r = a.trace_all().matmul(b.trace_all().permute());
+        let r = a.leaking_trace().matmul(b.leaking_trace().permute());
         assert_close(&r.array(), &[1.261436, 1.5543157]);
         let g = r.exp().mean().backward();
         assert_close(&g.get(&a).array(), &[2.6883178, 2.9369607, 2.9256766]);
@@ -576,8 +579,8 @@ mod tests {
         let a: Tensor<_, TestDtype, _> =
             dev.tensor([-1.5333828, 0.6136148, -0.77502704, -1.0014728, -2.0131118]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([0.43068963, -0.9757187, -0.50650096]);
-        let c = a.trace_all().matmul(b.clone());
-        let c_t = b.trace_all().matmul(a.clone()).permute();
+        let c = a.leaking_trace().matmul(b.clone());
+        let c_t = b.leaking_trace().matmul(a.clone()).permute();
         assert_eq!(c.array(), c_t.array());
         assert_close(
             &c.array(),
@@ -609,7 +612,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([2.0]);
-        let c = a.trace_all().matmul(b.clone());
+        let c = a.leaking_trace().matmul(b.clone());
         assert_eq!(c.array(), [[1.0]]);
         let g = c.exp().sum().backward();
         assert_close(&g.get(&a).array(), &[5.4365635]);
@@ -623,14 +626,14 @@ mod tests {
         // 1 * 1x1
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0]]);
-        let c = a.trace_all().matmul(b.clone());
+        let c = a.leaking_trace().matmul(b.clone());
         assert_eq!(c.array(), [1.0]);
         let g = c.exp().sum().backward();
         assert_close(&g.get(&a).array(), &[5.4365635]);
         assert_close(&g.get(&b).array(), &[[1.3591409]]);
 
         // 1 * 1x1 (permuted)
-        let c = a.trace_all().matmul(b.trace_all().permute());
+        let c = a.leaking_trace().matmul(b.leaking_trace().permute());
         assert_eq!(c.array(), [1.0]);
         let g = c.exp().sum().backward();
         assert_close(&g.get(&a).array(), &[5.4365635]);
@@ -639,7 +642,7 @@ mod tests {
         // 1 * 1x2
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0, 4.0]]);
-        let c = a.trace_all().matmul(b.clone());
+        let c = a.leaking_trace().matmul(b.clone());
         let e = [1.0, 2.0];
         assert_eq!(c.array(), e);
         let g = c.exp().sum().backward();
@@ -649,7 +652,7 @@ mod tests {
         // 1 * 1x2 (permuted)
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0], [4.0]]);
-        let c = a.trace_all().matmul(b.trace_all().permute());
+        let c = a.leaking_trace().matmul(b.leaking_trace().permute());
         assert_eq!(c.array(), e);
         let g = c.exp().sum().backward();
         assert_close(&g.get(&a).array(), &[e[0].exp() * 2.0 + e[1].exp() * 4.0]);
@@ -664,7 +667,7 @@ mod tests {
             // 1x1 * 1x1
             let a: Tensor<_, TestDtype, _> = dev.tensor([[0.5]]);
             let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0]]);
-            let c = a.trace_all().matmul(b.clone());
+            let c = a.leaking_trace().matmul(b.clone());
             assert_eq!(c.array(), [[1.0]]);
             let g = c.exp().sum().backward();
             assert_close(&g.get(&a).array(), &[[5.4365635]]);
@@ -675,7 +678,7 @@ mod tests {
             // 1x2 * 2x1
             let a: Tensor<_, TestDtype, _> = dev.tensor([[0.5, 0.1]]);
             let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0], [4.0]]);
-            let c = a.trace_all().matmul(b.clone());
+            let c = a.leaking_trace().matmul(b.clone());
             assert_eq!(c.array(), [[1.4]]);
             let g = c.exp().sum().backward();
             g.get(&a).array().assert_close(&[[8.1104, 16.2208]], 1e-5);
@@ -688,7 +691,7 @@ mod tests {
             // 1x2 (permuted) * 2x1
             let a: Tensor<_, TestDtype, _> = dev.tensor([[0.5], [0.1]]);
             let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0], [4.0]]);
-            let c = a.trace_all().permute().matmul(b.clone());
+            let c = a.leaking_trace().permute().matmul(b.clone());
             assert_eq!(c.array(), [[1.4]]);
             let g = c.exp().sum().backward();
             g.get(&a).array().assert_close(&[[8.1104], [16.2208]], 1e-5);
@@ -701,7 +704,7 @@ mod tests {
             // 1x2 * 2x1 (permuted)
             let a: Tensor<_, TestDtype, _> = dev.tensor([[0.5, 0.1]]);
             let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0, 4.0]]);
-            let c = a.trace_all().matmul(b.trace_all().permute());
+            let c = a.leaking_trace().matmul(b.leaking_trace().permute());
             assert_eq!(c.array(), [[1.4]]);
             let g = c.exp().sum().backward();
             g.get(&a).array().assert_close(&[[8.1104, 16.2208]], 1e-5);

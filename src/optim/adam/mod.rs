@@ -87,8 +87,8 @@ impl<M, E: Dtype, D: DeviceStorage> Adam<M, E, D> {
         Self {
             cfg,
             t: 0,
-            moment1: Gradients::without_leafs(),
-            moment2: Gradients::without_leafs(),
+            moment1: Gradients::leaking(),
+            moment2: Gradients::leaking(),
             marker: PhantomData,
         }
     }
@@ -184,7 +184,10 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = (t.trace_all() * rate.clone()).square().mean().backward();
+            let gradients = (t.leaking_trace() * rate.clone())
+                .square()
+                .mean()
+                .backward();
             opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -218,7 +221,10 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = (t.trace_all() * rate.clone()).square().mean().backward();
+            let gradients = (t.leaking_trace() * rate.clone())
+                .square()
+                .mean()
+                .backward();
             opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -251,7 +257,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = t.trace_all().exp().square().mean().backward();
+            let gradients = t.leaking_trace().exp().square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -284,7 +290,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = t.trace_all().exp().square().mean().backward();
+            let gradients = t.leaking_trace().exp().square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -295,7 +301,6 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let mut opt = Adam::new(&t, Default::default());
-        opt.update(&mut t, &Gradients::without_leafs())
-            .expect_err("");
+        opt.update(&mut t, &Gradients::leaking()).expect_err("");
     }
 }

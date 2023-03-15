@@ -49,7 +49,7 @@ mod tests {
     fn test_softmax_1d() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = a.trace_all().softmax();
+        let r = a.leaking_trace().softmax();
         assert_close(
             &r.array(),
             &[0.011656232, 0.031684924, 0.086128555, 0.23412168, 0.6364087],
@@ -73,7 +73,7 @@ mod tests {
     fn test_softmax_2d() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r = a.trace_all().softmax::<Axis<1>>();
+        let r = a.leaking_trace().softmax::<Axis<1>>();
         assert_close(
             &r.array(),
             &[
@@ -100,7 +100,7 @@ mod tests {
     fn test_softmax_2d_0th_axis() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r = a.trace_all().softmax::<Axis<0>>();
+        let r = a.leaking_trace().softmax::<Axis<0>>();
         assert_close(
             &r.array(),
             &[
@@ -127,7 +127,7 @@ mod tests {
     fn test_softmax_3d_to_1d_12() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
-        let r = t.trace_all().softmax::<Axes2<1, 2>>();
+        let r = t.leaking_trace().softmax::<Axes2<1, 2>>();
         #[rustfmt::skip]
         assert_close(
             &r.array(),

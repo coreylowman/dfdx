@@ -49,7 +49,7 @@ mod tests {
     fn test_var_axis_0_2d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
-        let r = t.trace_all().var::<Rank1<4>, _>();
+        let r = t.leaking_trace().var::<Rank1<4>, _>();
         assert_eq!(r.array(), [0.25, 0.0, 1.0, 9.0]);
         let g = r.mean().backward();
         assert_eq!(
@@ -62,7 +62,7 @@ mod tests {
     fn test_var_axis_1_2d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
-        let r = t.trace_all().var::<Rank1<2>, _>();
+        let r = t.leaking_trace().var::<Rank1<2>, _>();
         assert_eq!(r.array(), [1.25, 14.1875]);
         let g = r.mean().backward();
         assert_eq!(

@@ -50,7 +50,7 @@ mod tests {
     fn test_clamp() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[-1.0, 0.0, 1.0], [-2.0, 2.0, 1.1]]);
-        let r = t.trace_all().clamp(-1.0, 1.0);
+        let r = t.leaking_trace().clamp(-1.0, 1.0);
         assert_close(&r.array(), &[[-1.0, 0.0, 1.0], [-1.0, 1.0, 1.0]]);
         let g = r.exp().mean().backward();
         assert_close(

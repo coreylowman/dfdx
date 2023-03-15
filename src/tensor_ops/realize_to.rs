@@ -130,9 +130,9 @@ mod tests {
     fn test_realize_2d_backwards() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank2<3, 5>, TestDtype, _> = dev.sample_normal();
-        let g1 = t.trace_all().exp().sum().backward();
+        let g1 = t.leaking_trace().exp().sum().backward();
         let g2 = t
-            .trace_all()
+            .leaking_trace()
             .realize::<(usize, usize)>()
             .unwrap()
             .exp()
@@ -145,9 +145,9 @@ mod tests {
     fn test_realize_3d_backwards() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank3<3, 6, 9>, TestDtype, _> = dev.sample_normal();
-        let g1 = t.trace_all().exp().sum().backward();
+        let g1 = t.leaking_trace().exp().sum().backward();
         let g2 = t
-            .trace_all()
+            .leaking_trace()
             .realize::<(usize, usize, usize)>()
             .unwrap()
             .exp()
@@ -160,9 +160,9 @@ mod tests {
     fn test_realize_4d_backwards() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank4<3, 6, 9, 11>, TestDtype, _> = dev.sample_normal();
-        let g1 = t.trace_all().exp().sum().backward();
+        let g1 = t.leaking_trace().exp().sum().backward();
         let g2 = t
-            .trace_all()
+            .leaking_trace()
             .realize::<(usize, usize, usize, usize)>()
             .unwrap()
             .exp()

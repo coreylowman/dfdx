@@ -46,7 +46,7 @@ mod tests {
     fn test_exp() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = x.trace_all().exp();
+        let r = x.leaking_trace().exp();
         assert_close(
             &r.array(),
             &[0.13533528, 0.36787945, 1.0, TestDtype::exp(1.0), 7.389056],

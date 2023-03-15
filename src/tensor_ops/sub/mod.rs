@@ -36,7 +36,7 @@ pub struct ScalarSubKernelOp<E> {
 /// let r = a - 1.0;
 /// assert_eq!(r.array(), [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
 /// ```
-pub fn sub<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R: Default>(
+pub fn sub<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, R>,
 ) -> Tensor<S, E, D, T> {
@@ -48,7 +48,7 @@ pub trait TrySub<Rhs = Self>: HasErr {
     fn try_sub(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<E, D>, R: Default> TrySub<Tensor<S, E, D, R>>
+impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<E, D>, R> TrySub<Tensor<S, E, D, R>>
     for Tensor<S, E, D, LTape>
 where
     LTape: Merge<R>,
@@ -88,7 +88,7 @@ mod tests {
         let a: Tensor<_, TestDtype, _> = dev.tensor(1.0);
         let b: Tensor<_, TestDtype, _> = dev.tensor(1.0);
 
-        let r = b.trace_all() - a.clone();
+        let r = b.leaking_trace() - a.clone();
         assert_eq!(r.array(), 0.0);
         let g = r.backward();
         assert_eq!(g.get(&a).array(), -1.0);
@@ -101,7 +101,7 @@ mod tests {
         let a: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([1.0, -1.0, 0.0]);
 
-        let r = b.trace_all() - a.clone();
+        let r = b.leaking_trace() - a.clone();
         assert_eq!(r.array(), [0.0, -3.0, -3.0]);
         let g = r.mean().backward();
         assert_eq!(g.get(&a).array(), [-1.0 / 3.0; 3]);
@@ -116,7 +116,7 @@ mod tests {
         let b: Tensor<_, TestDtype, _> =
             dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
-        let r = b.trace_all() - a.clone();
+        let r = b.leaking_trace() - a.clone();
         assert_close(
             &r.array(),
             &[
@@ -133,7 +133,7 @@ mod tests {
     fn test_scalar_sub_0d() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor(0.0);
-        let r = x.trace_all() - 1.0;
+        let r = x.leaking_trace() - 1.0;
         assert_eq!(r.array(), -1.0);
         let g = r.exp().backward();
         assert_close(&[g.get(&x).array()], &[TestDtype::exp(-1.0)]);
@@ -143,7 +143,7 @@ mod tests {
     fn test_scalar_sub_1d() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([0.0, 1.0, 2.0]);
-        let r = x.trace_all() - 1.0;
+        let r = x.leaking_trace() - 1.0;
         assert_eq!(&r.array(), &[-1.0, 0.0, 1.0]);
         let g = r.exp().sum().backward();
         assert_close(&g.get(&x).array(), &[0.36787945, 1.0, 2.7182817]);
@@ -153,7 +153,7 @@ mod tests {
     fn test_scalar_sub_2d() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([[0.0; 2]; 3]);
-        let r = x.trace_all() - 1.0;
+        let r = x.leaking_trace() - 1.0;
         assert_eq!(r.array(), [[-1.0; 2]; 3]);
         let g = r.exp().sum().backward();
         assert_close(&g.get(&x).array(), &[[0.36787945; 2]; 3]);

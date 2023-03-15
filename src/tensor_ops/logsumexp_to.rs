@@ -57,7 +57,7 @@ mod tests {
     fn test_logsumexp_1d() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = a.trace_all().logsumexp();
+        let r = a.leaking_trace().logsumexp();
         assert_close(&r.array(), &2.4519143);
         let g = r.backward();
         assert_close(
@@ -70,7 +70,7 @@ mod tests {
     fn test_logsumexp_2d() {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
-        let r = a.trace_all().logsumexp::<Rank1<2>, _>();
+        let r = a.leaking_trace().logsumexp::<Rank1<2>, _>();
         assert_close(&r.array(), &[0.40760595, 7.0509458]);
         let g = r.mean().backward();
         assert_close(

@@ -170,9 +170,9 @@ mod tests {
         let mut d1 = Dropout { p: 0.5 };
         let mut d2 = Dropout { p: 0.5 };
         let t: Tensor<Rank1<100>, TestDtype, _> = dev.ones();
-        let r1 = d1.forward_mut(t.trace_all());
-        let r2 = d2.forward_mut(t.trace_all());
-        let r1_2 = d1.forward_mut(t.trace_all());
+        let r1 = d1.forward_mut(t.leaking_trace());
+        let r2 = d2.forward_mut(t.leaking_trace());
+        let r1_2 = d1.forward_mut(t.leaking_trace());
         assert_ne!(r1.array(), r2.array());
         assert_ne!(r1.array(), r1_2.array());
     }
@@ -191,7 +191,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut dropout = Dropout { p: 0.5 };
         let t: Tensor<Rank1<100>, TestDtype, _> = dev.ones();
-        let r = dropout.forward_mut(t.trace_all());
+        let r = dropout.forward_mut(t.leaking_trace());
         assert_ne!(t.array(), r.array());
     }
 }

@@ -198,7 +198,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.sample_like(&(5, 3), rand_distr::StandardNormal);
         // here we are selecting from axis 1, so the 7 should actually be a 5
-        let _ = t.trace_all().select(dev.zeros_like(&(7,)));
+        let _ = t.leaking_trace().select(dev.zeros_like(&(7,)));
     }
 
     #[test]
@@ -206,7 +206,7 @@ mod tests {
     fn test_select_wrong_index_shape_3d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.sample_like(&(7, 5, 3), rand_distr::StandardNormal);
-        let _ = t.trace_all().select(dev.zeros_like(&(7, 4)));
+        let _ = t.leaking_trace().select(dev.zeros_like(&(7, 4)));
     }
 
     #[cfg(not(feature = "test-cuda"))]
@@ -215,7 +215,7 @@ mod tests {
     fn test_select_index_out_of_bounds() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
-        let _ = t.trace_all().select(dev.tensor(7));
+        let _ = t.leaking_trace().select(dev.tensor(7));
     }
 
     #[test]
@@ -223,9 +223,9 @@ mod tests {
     fn test_gather_wrong_index_shape_3d1() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.sample_like(&(5, 3, 1), rand_distr::StandardNormal);
-        let r = t.trace_all().gather(dev.zeros_like(&(7,)));
+        let r = t.leaking_trace().gather(dev.zeros_like(&(7,)));
         assert_eq!(r.shape(), &(7, 3, 1));
-        let _ = t.trace_all().gather(dev.zeros_like(&(7, 4)));
+        let _ = t.leaking_trace().gather(dev.zeros_like(&(7, 4)));
     }
 
     #[test]
@@ -233,7 +233,7 @@ mod tests {
     fn test_gather_wrong_index_shape_3d2() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.sample_like(&(5, 3, 1), rand_distr::StandardNormal);
-        let _ = t.trace_all().gather(dev.zeros_like(&(5, 4, 2)));
+        let _ = t.leaking_trace().gather(dev.zeros_like(&(5, 4, 2)));
     }
 
     #[cfg(not(feature = "test-cuda"))]
@@ -242,7 +242,7 @@ mod tests {
     fn test_gather_index_out_of_bounds() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
-        let _ = t.trace_all().gather(dev.tensor([7, 6, 1, 2]));
+        let _ = t.leaking_trace().gather(dev.tensor([7, 6, 1, 2]));
     }
 
     #[cfg(not(feature = "test-cuda"))]
@@ -251,14 +251,16 @@ mod tests {
     fn test_gather_batch_out_of_bounds() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank2<4, 5>, TestDtype, _> = dev.sample_normal();
-        let _ = t.trace_all().try_gather(dev.tensor([[5, 0, 0], [0, 0, 0]]));
+        let _ = t
+            .leaking_trace()
+            .try_gather(dev.tensor([[5, 0, 0], [0, 0, 0]]));
     }
 
     #[test]
     fn test_select_1d_backward() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
-        let r = t.trace_all().select(dev.tensor(0));
+        let r = t.leaking_trace().select(dev.tensor(0));
         let t_array = t.array();
         assert_eq!(r.array(), t_array[0]);
         let g = r.exp().backward();
@@ -269,7 +271,7 @@ mod tests {
     fn test_gather_1d_backward() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
-        let r = t.trace_all().gather(dev.tensor([0, 1, 1, 3]));
+        let r = t.leaking_trace().gather(dev.tensor([0, 1, 1, 3]));
         let t_array = t.array();
         assert_eq!(r.array(), [t_array[0], t_array[1], t_array[1], t_array[3]]);
         let g = r.exp().sum().backward();
@@ -290,7 +292,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let t_array = t.array();
-        let r = t.trace_all().gather(dev.tensor([0, 3]));
+        let r = t.leaking_trace().gather(dev.tensor([0, 3]));
         assert_eq!(r.array(), [t_array[0], t_array[3]]);
         let g = r.mean().backward();
         assert_eq!(g.get(&t).array(), [0.5, 0.0, 0.0, 0.5, 0.0]);
@@ -301,7 +303,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let _t = t.array();
-        let r = t.trace_all().gather(dev.tensor([0, 1, 2, 3, 4, 2, 4, 4]));
+        let r = t
+            .leaking_trace()
+            .gather(dev.tensor([0, 1, 2, 3, 4, 2, 4, 4]));
         assert_eq!(
             r.array(),
             [_t[0], _t[1], _t[2], _t[3], _t[4], _t[2], _t[4], _t[4]]
@@ -317,7 +321,7 @@ mod tests {
     fn test_select_2d_axis_0() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-        let r = t.trace_all().select(dev.tensor(0));
+        let r = t.leaking_trace().select(dev.tensor(0));
         assert_eq!(r.array(), [1.0, 2.0, 3.0]);
         let g = r.mean().backward();
         assert_eq!(g.get(&t).array(), [[1.0 / 3.0; 3], [0.0; 3]]);
@@ -327,7 +331,7 @@ mod tests {
     fn test_select_2d_axis_1() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
-        let r = t.trace_all().select(dev.tensor([1, 1]));
+        let r = t.leaking_trace().select(dev.tensor([1, 1]));
         assert_eq!(r.array(), [2.0, -2.0]);
         let g = r.mean().backward();
         assert_eq!(g.get(&t).array(), [[0.0, 0.5, 0.0], [0.0, 0.5, 0.0]]);
@@ -338,7 +342,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
         let r = t
-            .trace_all()
+            .leaking_trace()
             .broadcast::<Rank2<2, 3>, _>()
             .select(dev.tensor([0, 1]));
         assert_eq!(r.array(), [1.0, 2.0]);
@@ -352,7 +356,7 @@ mod tests {
         let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
         let idx: Tensor<Rank2<2, 2>, usize, _> = dev.tensor([[0, 1], [1, 2]]);
         let r: Tensor<Rank2<2, 2>, _, _, _> =
-            t.trace_all().broadcast::<Rank2<2, 3>, _>().gather(idx);
+            t.leaking_trace().broadcast::<Rank2<2, 3>, _>().gather(idx);
         assert_eq!(r.array(), [[1.0, 2.0], [2.0, 3.0]]);
         let g = r.mean().backward();
         assert_eq!(g.get(&t).array(), [0.25, 0.5, 0.25]);
@@ -363,7 +367,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let t_array = t.array();
-        let r = t.trace_all().select(dev.tensor(0));
+        let r = t.leaking_trace().select(dev.tensor(0));
         assert_eq!(r.array(), t_array[0]);
         let g = r.exp().mean().backward();
         let sub_g = dev.tensor(t_array[0]).exp() / 12.0;
@@ -375,7 +379,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let t_array = t.array();
-        let r = t.trace_all().select(dev.tensor([1, 2]));
+        let r = t.leaking_trace().select(dev.tensor([1, 2]));
         let sub_t = [t_array[0][1], t_array[1][2]];
         assert_eq!(r.array(), sub_t);
         let g = r.exp().mean().backward();
@@ -395,7 +399,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let t_array = t.array();
-        let r = t.trace_all().select(dev.tensor([[2, 3, 2], [1, 1, 0]]));
+        let r = t.leaking_trace().select(dev.tensor([[2, 3, 2], [1, 1, 0]]));
         let sub_t = [
             [t_array[0][0][2], t_array[0][1][3], t_array[0][2][2]],
             [t_array[1][0][1], t_array[1][1][1], t_array[1][2][0]],
@@ -426,7 +430,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank2<4, 5>, TestDtype, _> = dev.sample_normal();
         let t_array = t.array();
-        let r = t.trace_all().gather(dev.tensor([[2, 0, 3], [0, 0, 3]]));
+        let r = t.leaking_trace().gather(dev.tensor([[2, 0, 3], [0, 0, 3]]));
         let r_array = r.array();
         assert_eq!(r_array[0], [t_array[2], t_array[0], t_array[3]]);
         assert_eq!(r_array[1], [t_array[0], t_array[0], t_array[3]]);

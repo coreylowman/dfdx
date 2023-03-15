@@ -97,8 +97,8 @@ mod tests {
     fn test_permute_2d_backwards() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank2<3, 5>, TestDtype, _> = dev.sample_normal();
-        let g1 = t.trace_all().exp().sum().backward();
-        let g2 = t.trace_all().permute().exp().sum().backward();
+        let g1 = t.leaking_trace().exp().sum().backward();
+        let g2 = t.leaking_trace().permute().exp().sum().backward();
         assert_eq!(g1.get(&t).array(), g2.get(&t).array());
     }
 
@@ -106,9 +106,9 @@ mod tests {
     fn test_permute_3d_backwards() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank3<3, 6, 9>, TestDtype, _> = dev.sample_normal();
-        let g1 = t.trace_all().exp().sum().backward();
+        let g1 = t.leaking_trace().exp().sum().backward();
         let g2 = t
-            .trace_all()
+            .leaking_trace()
             .permute::<Rank3<6, 3, 9>, _>()
             .exp()
             .sum()
@@ -120,9 +120,9 @@ mod tests {
     fn test_permute_4d_backwards() {
         let dev: TestDevice = Default::default();
         let t: Tensor<Rank4<3, 6, 9, 11>, TestDtype, _> = dev.sample_normal();
-        let g1 = t.trace_all().exp().sum().backward();
+        let g1 = t.leaking_trace().exp().sum().backward();
         let g2 = t
-            .trace_all()
+            .leaking_trace()
             .permute::<Rank4<6, 3, 11, 9>, _>()
             .exp()
             .sum()

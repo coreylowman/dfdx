@@ -73,7 +73,7 @@
 //! # let dev: Cpu = Default::default();
 //! # let mlp = dev.build_module::<Linear<10, 5>, f32>();
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
-//! # let y = mlp.forward(dev.zeros::<Rank1<10>>().trace(Gradients::without_leafs()));
+//! # let y = mlp.forward(dev.zeros::<Rank1<10>>().trace(Gradients::leaking()));
 //! // compute cross entropy loss
 //! let loss = cross_entropy_with_logits_loss(y, y_true);
 //!
@@ -86,7 +86,7 @@
 //! # let dev: Cpu = Default::default();
 //! # let mut mlp = dev.build_module::<Linear<10, 5>, f32>();
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
-//! # let y = mlp.forward(dev.zeros::<Rank1<10>>().trace(Gradients::without_leafs()));
+//! # let y = mlp.forward(dev.zeros::<Rank1<10>>().trace(Gradients::leaking()));
 //! # let loss = cross_entropy_with_logits_loss(y, y_true);
 //! # let mut gradients: Gradients<f32, Cpu> = loss.backward();
 //! // Use stochastic gradient descent (Sgd), with a learning rate of 1e-2, and 0.9 momentum.

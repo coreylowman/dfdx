@@ -3,7 +3,7 @@
 use dfdx::{
     nn::modules::{BuildModule, Linear, Module, ReLU},
     shapes::{Rank1, Rank2},
-    tensor::{Gradients, HasErr, SampleTensor, Tape, Tensor},
+    tensor::{HasErr, SampleTensor, Tape, Tensor},
 };
 
 #[cfg(not(feature = "cuda"))]
@@ -84,7 +84,6 @@ fn main() {
     let _: Tensor<Rank1<20>, f32, _> = model.forward(item);
 
     // Forward pass with a batch of samples
-    let grads = Gradients::without_leafs();
     let batch: Tensor<Rank2<32, 10>, f32, _> = dev.sample_normal();
-    let _: Tensor<Rank2<32, 20>, f32, _, _> = model.forward(batch.trace(grads));
+    let _: Tensor<Rank2<32, 20>, f32, _, _> = model.forward(batch.leaking_trace());
 }

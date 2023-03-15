@@ -59,14 +59,14 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
 }
 
 impl<S: Shape, E: Unit, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
-    /// Start tracking gradients, clones self.
-    #[allow(unused)]
-    pub(crate) fn trace_all<F: Unit>(&self) -> Tensor<S, E, D, OwnedTape<F, D>> {
-        self.clone().traced_all()
+    /// Start tracking gradients, clones self. The gradients will never free
+    /// temporary gradients - See [Gradients::leaking] for more info.
+    pub fn leaking_trace<F: Unit>(&self) -> Tensor<S, E, D, OwnedTape<F, D>> {
+        self.clone().leaking_traced()
     }
-    /// Start tracking gradients.
-    #[allow(unused)]
-    pub(crate) fn traced_all<F: Unit>(self) -> Tensor<S, E, D, OwnedTape<F, D>> {
+    /// Start tracking gradients. The gradients will never free
+    /// temporary gradients - See [Gradients::leaking] for more info.
+    pub fn leaking_traced<F: Unit>(self) -> Tensor<S, E, D, OwnedTape<F, D>> {
         self.put_tape(Default::default())
     }
     /// Accumulate gradients into `gradients`, clones self.
@@ -125,23 +125,21 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> PutTape<T> for Tensor<S, E, D> {
 /// Remove the tape from a tensor
 pub trait SplitTape {
     /// The type of tape the tensor has now
-    type Tape: Default;
+    type Tape;
     // The type of Self without the tape.
     type NoTape: Clone + PutTape<Self::Tape, Output = Self>;
     /// Splits tape off of self
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// # let grads = Gradients::without_leafs();
+    /// # let grads = Gradients::leaking();
     /// let a: Tensor<Rank1<5>, f32, _, OwnedTape<f32, _>> = dev.zeros().traced(grads);
     /// let (a, tape): (Tensor<_, _, _, NoneTape>, OwnedTape<f32, _>) = a.split_tape();
     /// ```
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
-    /// Clones self and inserts a new empty tape into the clone
-    fn with_empty_tape(&self) -> Self;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Default> SplitTape for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> SplitTape for Tensor<S, E, D, T> {
     type Tape = T;
     type NoTape = Tensor<S, E, D>;
     fn split_tape(self) -> (Self::NoTape, Self::Tape) {
@@ -157,9 +155,17 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T: Default> SplitTape for Tensor<S, E
             self.tape,
         )
     }
+}
 
+/// Clones self and inserts a new empty tape into the clone
+pub trait WithEmptyTape {
+    /// Clones self and inserts a new empty tape into the clone
+    fn with_empty_tape(&self) -> Self;
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Default> WithEmptyTape for Tensor<S, E, D, T> {
     fn with_empty_tape(&self) -> Self {
-        Self {
+        Tensor {
             id: self.id,
             data: self.data.clone(),
             shape: self.shape,

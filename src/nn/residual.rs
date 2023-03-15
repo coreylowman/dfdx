@@ -44,7 +44,9 @@ impl<F: ToDevice<D>, D> ToDevice<D> for Residual<F> {
     }
 }
 
-impl<T: SplitTape + TryAdd<T>, F: Module<T, Output = T, Error = T::Err>> Module<T> for Residual<F> {
+impl<T: WithEmptyTape + TryAdd<T>, F: Module<T, Output = T, Error = T::Err>> Module<T>
+    for Residual<F>
+{
     type Output = T;
     type Error = F::Error;
 
@@ -53,7 +55,7 @@ impl<T: SplitTape + TryAdd<T>, F: Module<T, Output = T, Error = T::Err>> Module<
     }
 }
 
-impl<T: SplitTape + TryAdd<T>, F: ModuleMut<T, Output = T, Error = T::Err>> ModuleMut<T>
+impl<T: WithEmptyTape + TryAdd<T>, F: ModuleMut<T, Output = T, Error = T::Err>> ModuleMut<T>
     for Residual<F>
 {
     type Output = T;
@@ -85,7 +87,7 @@ mod tests {
         let model = <Residual<Linear<2, 2>>>::build_on_device(&dev);
 
         let x: Tensor<Rank2<4, 2>, f32, TestDevice> = dev.sample_normal();
-        let y = model.forward(x.trace_all());
+        let y = model.forward(x.leaking_trace());
 
         #[rustfmt::skip]
         assert_close(&y.array(), &[[0.25372928, -2.4258814],[1.7892148, -2.6242268],[1.5131638, 0.23407778],[3.4201493, 1.597525]]);

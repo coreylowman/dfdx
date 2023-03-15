@@ -46,7 +46,7 @@ mod tests {
     fn test_tanh() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = x.trace_all().tanh();
+        let r = x.leaking_trace().tanh();
         assert_close(
             &r.array(),
             &[-0.9640276, -0.7615942, 0., 0.7615942, 0.9640276],

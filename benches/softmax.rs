@@ -23,7 +23,7 @@ fn main() {
 
     loop {
         let img: Tensor<InputShape, Dtype, _> = dev.sample_normal();
-        let grads = Gradients::without_leafs();
+        let grads = Gradients::leaking();
 
         let start = Instant::now();
         let y = img.traced(grads).softmax::<Ax>();

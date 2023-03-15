@@ -87,7 +87,7 @@ mod tests {
     fn test_dropout_all_0d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, f32, _> = dev.tensor(3.0);
-        let r = t.trace_all().dropout(1.0);
+        let r = t.leaking_trace().dropout(1.0);
         assert_eq!(r.array(), 0.0);
         let g = r.backward();
         assert_eq!(g.get(&t).array(), 0.0);
@@ -97,7 +97,7 @@ mod tests {
     fn test_dropout_none_0d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, f32, _> = dev.tensor(3.0);
-        let r = t.trace_all().dropout(0.0);
+        let r = t.leaking_trace().dropout(0.0);
         assert_eq!(r.array(), 3.0);
         let g = r.backward();
         assert_eq!(g.get(&t).array(), 1.0);
@@ -107,7 +107,7 @@ mod tests {
     fn test_dropout_1d_with_non_positive_values() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, f32, _> = dev.tensor([0.0, 2.0, -3.0, -4.0, 0.0]);
-        let r = t.trace_all().dropout(0.5);
+        let r = t.leaking_trace().dropout(0.5);
         assert_eq!(r.array(), [0.0, 4.0, -6.0, 0.0, 0.0]);
         let g = r.mean().backward();
         assert_eq!(g.get(&t).array(), [0.4, 0.4, 0.4, 0.0, 0.0]);
@@ -117,7 +117,7 @@ mod tests {
     fn test_dropout_2d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, f32, _> = dev.tensor([[0.05, 0.1, -0.2], [0.3, -0.4, 0.5]]);
-        let r = t.trace_all().dropout(0.6);
+        let r = t.leaking_trace().dropout(0.6);
         assert_close(&r.array(), &[[0.125, 0.25, -0.5], [0.0, 0.0, 1.25]]);
         // NOTE: .exp() so we ensure result grad is used properly
         let g = r.exp().mean().backward();
