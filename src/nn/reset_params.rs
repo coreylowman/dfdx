@@ -1,6 +1,6 @@
 use super::tensor_collection::*;
 
-use crate::{prelude::Device, shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*, tensor_ops::Device};
 
 struct Resetter;
 impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for Resetter {

@@ -1,7 +1,7 @@
 use crate::{
-    prelude::Device,
     shapes::{Dtype, Shape},
     tensor::Tensor,
+    tensor_ops::Device,
 };
 
 use super::{ModuleVisitor, TensorCollection, TensorOptions};

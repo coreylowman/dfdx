@@ -1,7 +1,7 @@
 pub use super::build_module::BuildModule;
 pub use super::to_device::*;
-pub use crate::tensor::DeviceStorage;
-use crate::{prelude::Device, shapes::Dtype};
+
+use crate::{shapes::Dtype, tensor::DeviceStorage, tensor_ops::Device};
 
 use super::tensor_collection::*;
 

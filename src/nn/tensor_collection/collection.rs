@@ -1,9 +1,9 @@
 #![allow(clippy::type_complexity)]
 
 use crate::{
-    prelude::{ConstShape, Device},
-    shapes::{Dtype, Shape},
+    shapes::{ConstShape, Dtype, Shape},
     tensor::{OneFillStorage, Tensor, ZeroFillStorage},
+    tensor_ops::Device,
 };
 
 use super::{ModuleField, ModuleFields, TensorField};

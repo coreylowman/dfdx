@@ -1,10 +1,10 @@
 use crate::{
-    prelude::Device,
     shapes::{Dtype, Shape},
     tensor::{
         numpy::{NpzError, NumpyDtype},
         Tensor,
     },
+    tensor_ops::Device,
 };
 
 use super::tensor_collection::*;

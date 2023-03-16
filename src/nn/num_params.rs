@@ -1,6 +1,6 @@
 use super::tensor_collection::*;
 
-use crate::{prelude::Device, shapes::*, tensor::*};
+use crate::{shapes::*, tensor::*, tensor_ops::Device};
 
 struct Counter(usize);
 impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for Counter {

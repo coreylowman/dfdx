@@ -1,4 +1,4 @@
-use crate::{prelude::Device, shapes::Dtype};
+use crate::{shapes::Dtype, tensor_ops::Device};
 
 use super::*;
 
@@ -85,8 +85,7 @@ impl<Input, T: ModuleMut<Input, Output = Input>, const N: usize> ModuleMut<Input
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::*;
-    use crate::{nn::builders::*, prelude::*, shapes::*};
+    use crate::{prelude::*, tests::*};
 
     #[test]
     fn test_default_and_reset() {

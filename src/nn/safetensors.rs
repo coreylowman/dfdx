@@ -1,10 +1,10 @@
 use crate::{
-    prelude::Device,
     shapes::{Dtype, HasShape, Shape},
     tensor::{
         safetensors::{Error, SafeDtype},
         CopySlice, DeviceStorage, Tensor,
     },
+    tensor_ops::Device,
 };
 use memmap2::MmapOptions;
 use safetensors::{
@@ -34,7 +34,7 @@ impl Writer {
         Self { tensors }
     }
 
-    pub fn add<S: Shape, E: Dtype + SafeDtype, D: DeviceStorage + CopySlice<E>>(
+    pub fn add<S: Shape, E: Dtype + SafeDtype, D: CopySlice<E>>(
         &mut self,
         key: String,
         tensor: &Tensor<S, E, D>,

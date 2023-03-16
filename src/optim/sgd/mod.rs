@@ -7,9 +7,9 @@ use std::marker::PhantomData;
 
 use crate::{
     nn::tensor_collection::*,
-    prelude::Device,
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Gradients, Tensor},
+    tensor_ops::Device,
 };
 
 use super::optimizer::*;

@@ -1,4 +1,4 @@
-use crate::{prelude::Device, shapes::Dtype};
+use crate::{shapes::Dtype, tensor_ops::Device};
 
 use super::*;
 
@@ -94,8 +94,8 @@ mod tests {
     use super::*;
     use crate::{
         nn::builders::*,
-        prelude::{OwnedTape, Tensor, Trace, ZerosTensor},
         shapes::*,
+        tensor::{OwnedTape, Tensor, Trace, ZerosTensor},
         tests::{TestDevice, TestDtype},
     };
 

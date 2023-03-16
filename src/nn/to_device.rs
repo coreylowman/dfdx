@@ -1,5 +1,9 @@
 use super::tensor_collection::*;
-use crate::prelude::{Device, Dtype, HasShape, Shape, Tensor};
+use crate::{
+    shapes::{Dtype, HasShape, Shape},
+    tensor::Tensor,
+    tensor_ops::Device,
+};
 
 struct Converter<'a, D> {
     dev: &'a D,

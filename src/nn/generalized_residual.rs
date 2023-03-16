@@ -1,4 +1,8 @@
-use crate::{prelude::Device, shapes::*, tensor::*, tensor_ops::TryAdd};
+use crate::{
+    shapes::*,
+    tensor::*,
+    tensor_ops::{Device, TryAdd},
+};
 
 use super::*;
 

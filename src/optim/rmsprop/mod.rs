@@ -7,9 +7,9 @@ use std::{marker::PhantomData, sync::Arc};
 
 use crate::{
     nn::tensor_collection::*,
-    prelude::Device,
     shapes::{Dtype, Shape},
     tensor::*,
+    tensor_ops::Device,
 };
 
 use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};

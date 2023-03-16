@@ -1,5 +1,9 @@
 use super::tensor_collection::*;
-use crate::prelude::{Device, DeviceStorage, Dtype, Shape, Tensor};
+use crate::{
+    shapes::{Dtype, Shape},
+    tensor::{DeviceStorage, Tensor},
+    tensor_ops::Device,
+};
 
 struct Builder<'a, D: DeviceStorage>(&'a D);
 impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D> for Builder<'a, D> {

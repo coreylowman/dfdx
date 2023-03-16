@@ -90,7 +90,7 @@ tuple_impls!([M1, M2, M3, M4, M5, M6] [0, 1, 2, 3, 4, 5], M6, [M5, M4, M3, M2, M
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::builders::*, optim::*, prelude::*, tests::*};
+    use crate::{optim::*, prelude::*, tests::*};
 
     #[test]
     fn test_2_tuple() {

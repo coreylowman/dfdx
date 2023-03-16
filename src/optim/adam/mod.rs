@@ -7,9 +7,9 @@ use std::{marker::PhantomData, sync::Arc};
 
 use crate::{
     nn::tensor_collection::*,
-    prelude::{Device, Tensor},
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, Gradients},
+    tensor::{DeviceStorage, Gradients, Tensor},
+    tensor_ops::Device,
 };
 
 use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
@@ -118,7 +118,7 @@ impl<M, D: Device<E>, E: Dtype> TensorVisitor<E, D>
     fn visit<S: Shape>(
         &mut self,
         opts: TensorOptions<S, E, D>,
-        p: &mut crate::prelude::Tensor<S, E, D>,
+        p: &mut Tensor<S, E, D>,
     ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         if !opts.do_gradient_update {
             return Ok(None);

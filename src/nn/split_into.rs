@@ -1,4 +1,4 @@
-use crate::{prelude::Device, shapes::Dtype, tensor::*};
+use crate::{shapes::Dtype, tensor::*, tensor_ops::Device};
 
 use super::*;
 
