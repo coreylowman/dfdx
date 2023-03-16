@@ -28,7 +28,7 @@ no-std-compat = { version = "0.4.1", default-features = false, features = [ "all
 spin = { version = "0.9.6", default-features = false, features = ["spin_mutex"], optional = true }
 rand = { version = "0.8.5", default-features = false, features = ["std_rng"] }
 rand_distr = { version = "0.4.3", default-features = false, features = ["std_math"] }
-matrixmultiply = { version = "0.3.2", default-features = false }
+matrixmultiply = { version = "0.3.2", default-features = false, optional = true }
 zip = { version = "0.6.2", default-features = false, optional = true }
 cblas-sys = { version = "0.1.4", default-features = false, optional = true }
 libc = { version = "0.2", default-features = false, optional = true }
@@ -46,16 +46,21 @@ indicatif = "0.17.3"
 glob = { version = "0.3.1", optional = true }
 
 [features]
-default = ["std", "fast-alloc"]
-no-std = ["no-std-compat", "dep:spin", "cudarc?/no-std"]
-std = ["cudarc?/std"]
-threaded-cpu = ["std", "matrixmultiply/threading"]
-fast-alloc = ["std"]
+default = ["std", "fast-alloc", "cpu-par-matmul"]
 nightly = []
+
+std = ["cudarc?/std"]
+fast-alloc = ["std"]
+no-std = ["no-std-compat", "dep:spin", "cudarc?/no-std"]
+
+cpu-seq-matmul = ["dep:matrixmultiply"]
+cpu-par-matmul = ["std", "dep:matrixmultiply", "matrixmultiply?/threading"]
+cpu-mkl-matmul = ["dep:cblas-sys", "dep:libc"]
+cuda = ["dep:cudarc", "dep:glob"]
+
 numpy = ["dep:zip", "std"]
 safetensors = ["dep:safetensors", "std", "dep:memmap2"]
-intel-mkl = ["dep:cblas-sys", "dep:libc"]
-cuda = ["dep:cudarc", "dep:glob"]
+
 test-cuda = ["cuda"]
 test-f64 = []
 ci-check = ["cudarc?/ci-check"]
