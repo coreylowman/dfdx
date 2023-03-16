@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 
 use crate::{
-    prelude::{Device, ConstShape},
+    prelude::{ConstShape, Device},
     shapes::{Dtype, Shape},
     tensor::{OneFillStorage, Tensor, ZeroFillStorage},
 };
@@ -208,7 +208,7 @@ impl<S: Shape, E: Dtype, D: Device<E>> TensorOptions<S, E, D> {
     /// A tensor that should be updated with gradients & reset with the fn passed in
     pub fn reset_with(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self
     where
-        S: ConstShape
+        S: ConstShape,
     {
         TensorOptions {
             do_gradient_update: true,
@@ -220,7 +220,7 @@ impl<S: Shape, E: Dtype, D: Device<E>> TensorOptions<S, E, D> {
     /// A tensor that should **NOT** be updated with gradients & reset with the fn passed in
     pub fn detached(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self
     where
-        S: ConstShape
+        S: ConstShape,
     {
         TensorOptions {
             do_gradient_update: false,
