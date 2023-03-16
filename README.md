@@ -49,7 +49,7 @@ Enable the `cuda` feature to start using the `Cuda` device! Requires the install
 The [matrixmultiply crate](https://crates.io/crates/matrixmultiply) is the default BLAS library. **You don't need
 to do download/install anything for this to work!**
 
-To link to the `Intel MKL` libraries (assuming you installed it already) use the `intel-mkl` feature. See [feature flags docs](https://docs.rs/dfdx/latest/dfdx/feature_flags/index.html) for more info.
+To link to the `Intel MKL` libraries (assuming you installed it already) use the `cpu-mkl-matmul` feature. See [feature flags docs](https://docs.rs/dfdx/latest/dfdx/feature_flags/index.html) for more info.
 
 ## API Preview
 

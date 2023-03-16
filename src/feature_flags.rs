@@ -3,6 +3,19 @@
 //! Default features:
 //! - "std"
 //! - "fast-alloc"
+//! - "cpu-par-matmul"
+//!
+//! # Quick start
+//!
+//! Cuda:
+//! ```toml
+//! dfdx = { version = "...", default-features = False, features = ["std", "cuda"]}
+//! ```
+//!
+//! Cpu:
+//! ```toml
+//! dfdx = { version = "...", default-features = False, features = ["std", "cpu-par-matmul"]}
+//! ```
 //!
 //! # "std"
 //!
@@ -46,12 +59,16 @@
 //! dfdx = { version = "...", features = ["cuda"] }
 //! ```
 //!
-//! # "threaded-cpu"
+//! # "cpu-seq-matmul"
+//!
+//! Used to enable using `matrixmultiply` for matmul operations.
+//!
+//! # "cpu-par-matmul"
 //!
 //! Used to enable the threading feature of `matrixmultiply`. This makes matmuls
 //! substantially faster!
 //!
-//! # "intel-mkl"
+//! # "cpu-mkl-matmul"
 //!
 //! Enables using the `Intel MKL` libraries (assuming you installed it already) for matrix multiplication.
 //!
@@ -63,7 +80,7 @@
 //!
 //! Example:
 //! ```toml
-//! dfdx = { version = "...", features = ["intel-mkl"] }
+//! dfdx = { version = "...", features = ["cpu-mkl-matmul"] }
 //! ```
 //!
 //! #### Installing Intel MKL libraries
@@ -101,11 +118,3 @@
 //! ```toml
 //! dfdx = { version = "...", features = ["nightly"] }
 //! ```
-
-#[cfg(not(feature = "intel-mkl"))]
-/// The library used for BLAS. Configure with crate features.
-pub const BLAS_LIB: &str = "matrix-multiply";
-
-#[cfg(feature = "intel-mkl")]
-/// The library used for BLAS. Configure with crate features.
-pub const BLAS_LIB: &str = "intel-mkl";

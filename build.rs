@@ -7,7 +7,7 @@ fn main() {
     #[cfg(feature = "cuda")]
     cuda::build_ptx();
 
-    #[cfg(feature = "intel-mkl")]
+    #[cfg(feature = "cpu-mkl-matmul")]
     intel_mkl::link().unwrap();
 }
 
@@ -112,9 +112,9 @@ mod cuda {
     }
 }
 
-#[cfg(feature = "intel-mkl")]
+#[cfg(feature = "cpu-mkl-matmul")]
 mod intel_mkl {
-    //! This script links to Intel MKL when the `intel-mkl` feature is enabled.
+    //! This script links to Intel MKL when the `cpu-mkl-matmul` feature is enabled.
     //! The dynamically linked and threaded implementation is chosen as
     //! a good default, because:
     //! 1. Dynamic compiles faster and makes smaller binaries
