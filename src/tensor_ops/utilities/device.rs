@@ -13,6 +13,11 @@ pub trait Device<E: Dtype>:
 
     + crate::tensor_ops::stack::StackKernel<E>
 
+    // optimizers
+    + crate::optim::AdamKernel<E>
+    + crate::optim::SgdKernel<E>
+    + crate::optim::RMSpropKernel<E>
+
     // allocation
     + crate::tensor::ZerosTensor<E>
     + crate::tensor::OnesTensor<E>

@@ -1,4 +1,4 @@
-use crate::{shapes::*, tensor::*, tensor_ops::TryAdd};
+use crate::{prelude::Device, shapes::*, tensor::*, tensor_ops::TryAdd};
 
 use super::*;
 
@@ -25,39 +25,27 @@ pub struct GeneralizedResidual<F, R> {
     pub r: R,
 }
 
-impl<D: DeviceStorage, E: Dtype, F: BuildOnDevice<D, E>, R: BuildOnDevice<D, E>> BuildOnDevice<D, E>
+impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>, R: BuildOnDevice<D, E>> BuildOnDevice<D, E>
     for GeneralizedResidual<F, R>
 {
     type Built = GeneralizedResidual<F::Built, R::Built>;
 }
 
-impl<D: DeviceStorage, E: Dtype, F: BuildModule<D, E>, R: BuildModule<D, E>> BuildModule<D, E>
-    for GeneralizedResidual<F, R>
-{
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self {
-            f: BuildModule::try_build(device)?,
-            r: BuildModule::try_build(device)?,
-        })
-    }
-}
-
-impl<E: Dtype, D: DeviceStorage, F: TensorCollection<E, D>, R: TensorCollection<E, D>>
+impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>, R: TensorCollection<E, D>>
     TensorCollection<E, D> for GeneralizedResidual<F, R>
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("f", |s| &s.f, |s| &mut s.f)?;
-        visitor.visit_module("r", |s| &s.r, |s| &mut s.r)
-    }
-}
+    type To<E2: Dtype, D2: Device<E2>> = GeneralizedResidual<F::To<E2, D2>, R::To<E2, D2>>;
 
-impl<D, F: ToDevice<D>, R: ToDevice<D>> ToDevice<D> for GeneralizedResidual<F, R> {
-    type Output = GeneralizedResidual<F::Output, R::Output>;
-    fn to_device(&self, device: &D) -> Self::Output {
-        GeneralizedResidual {
-            f: self.f.to_device(device),
-            r: self.r.to_device(device),
-        }
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                Self::module("f", |s| &s.f, |s| &mut s.f),
+                Self::module("r", |s| &s.r, |s| &mut s.r),
+            ),
+            |(f, r)| GeneralizedResidual { f, r },
+        )
     }
 }
 

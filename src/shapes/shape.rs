@@ -65,11 +65,12 @@ pub trait Dtype:
     + std::ops::MulAssign
     + std::ops::DivAssign
     + num_traits::FromPrimitive
+    + num_traits::Float
+    + rand_distr::uniform::SampleUniform
 {
 }
 impl Dtype for f32 {}
 impl Dtype for f64 {}
-impl Dtype for usize {}
 
 /// Represents something that has a [Dtype].
 pub trait HasDtype {

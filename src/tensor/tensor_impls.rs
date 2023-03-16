@@ -156,7 +156,7 @@ pub trait SplitTape {
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T> SplitTape for Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceStorage, T> SplitTape for Tensor<S, E, D, T> {
     type Tape = T;
     type NoTape = Tensor<S, E, D>;
     fn split_tape(self) -> (Self::NoTape, Self::Tape) {
@@ -230,59 +230,6 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
     ) -> Result<(), D::Err> {
         self.device
             .try_fill_with_distr(Arc::make_mut(&mut self.data), distr)
-    }
-}
-
-/// Something that can be copied to another `Device` and can be used with the [OnDevice] type
-/// alias.
-///
-/// Here's an example of how this can be implemented for a custom struct:
-/// ```rust
-/// use dfdx::{prelude::*, nn::modules::Linear};
-///
-/// struct MLP<D: Device<f32>> {
-///     l1: Linear<5, 10, f32, D>,
-///     a1: ReLU,
-///     l2: Linear<10, 1, f32, D>,
-/// }
-///
-/// // Need two device types to allow converting from one device to another
-/// impl<D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for MLP<D1> {
-///     type Output = MLP<D2>;
-///
-///     fn to_device(&self, device: &D2) -> Self::Output {
-///         MLP {
-///             l1: self.l1.to_device(device),
-///             a1: self.a1,
-///             l2: self.l2.to_device(device),
-///         }
-///     }
-/// }
-/// ````
-pub trait ToDevice<D> {
-    type Output;
-    fn to_device(&self, device: &D) -> Self::Output;
-}
-
-/// A type alias that yields the type of a module `M` as it would exist on device `D`. This can be
-/// useful when creating sequential networks that need to be parameterized by a device.
-pub type OnDevice<M, D> = <M as ToDevice<D>>::Output;
-
-/// Equivalent to `OnDevice<M, Cuda>`
-#[cfg(feature = "cuda")]
-pub type OnCuda<M> = OnDevice<M, crate::prelude::Cuda>;
-
-/// Equivalent to `OnDevice<M, Cpu>`
-pub type OnCpu<M> = OnDevice<M, Cpu>;
-
-impl<S: Shape, E: Dtype + Unit, T, D1: DeviceStorage, D2: TensorFromVec<E>> ToDevice<D2>
-    for Tensor<S, E, D1, T>
-{
-    type Output = Tensor<S, E, D2, NoneTape>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        let buf = self.as_vec();
-        device.tensor_from_vec(buf, *self.shape())
     }
 }
 

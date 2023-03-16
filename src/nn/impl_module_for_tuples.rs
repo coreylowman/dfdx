@@ -1,35 +1,25 @@
-use crate::{shapes::*, tensor::*, tensor_ops::*};
+use crate::{shapes::*, tensor_ops::*};
 
 use super::*;
 
-use std::string::ToString;
-
 macro_rules! tuple_impls {
     ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
-        impl<E: Dtype, D: DeviceStorage, $($name: TensorCollection<E, D>),+> TensorCollection<E, D> for ($($name,)+) {
-            fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-                $(visitor.visit_module(&usize::to_string(&$idx), |s| &s.$idx, |s| &mut s.$idx)?;)+
-                Ok(())
+        impl<E: Dtype, D: Device<E>, $($name: TensorCollection<E, D>),+> TensorCollection<E, D> for ($($name,)+) {
+            type To<E2: Dtype, D2: Device<E2>> = ($($name::To<E2, D2>,)+);
+
+            #[allow(non_snake_case)]
+            fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+                visitor: &mut V
+            ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+                visitor.visit_fields(
+                    ($(Self::module(&std::format!("{}", $idx), |s| &s.$idx, |s| &mut s.$idx),)+),
+                    |x| x
+                )
             }
         }
 
         impl<D: Device<E>, E: Dtype, $($name: BuildOnDevice<D, E>),+> BuildOnDevice<D, E> for ($($name,)+) {
             type Built = ($($name::Built, )+);
-        }
-
-        impl<D: Device<E>, E: Dtype, $($name: BuildModule<D, E>),+> BuildModule<D, E> for ($($name,)+) {
-            #[allow(non_snake_case)]
-            fn try_build(device: &D) -> Result<Self, D::Err> {
-                $(let $name = BuildModule::try_build(device)?;)*
-                Ok(($($name, )*))
-            }
-        }
-
-        impl<$($name: ToDevice<D>,)+ D> ToDevice<D> for ($($name,)+) {
-            type Output = ($(<$name as ToDevice<D>>::Output,)+);
-            fn to_device(&self, device: &D) -> Self::Output {
-                ($(self.$idx.to_device(device)),+)
-            }
         }
 
         /*This macro expands like this for a 4-tuple:
@@ -100,7 +90,7 @@ tuple_impls!([M1, M2, M3, M4, M5, M6] [0, 1, 2, 3, 4, 5], M6, [M5, M4, M3, M2, M
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{nn::builders::*, optim::*, tests::*};
+    use crate::{nn::builders::*, optim::*, prelude::*, tests::*};
 
     #[test]
     fn test_2_tuple() {

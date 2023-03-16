@@ -1,8 +1,6 @@
-use crate::{shapes::Dtype, tensor::*};
+use crate::{prelude::Device, shapes::Dtype};
 
 use super::*;
-
-use std::string::ToString;
 
 /// Repeats `T` `N` times. This requires that `T`'s input is the same as it's output.
 ///
@@ -23,45 +21,31 @@ pub struct Repeated<T, const N: usize> {
     pub modules: std::vec::Vec<T>,
 }
 
-impl<D: DeviceStorage, E: Dtype, T: BuildOnDevice<D, E>, const N: usize> BuildOnDevice<D, E>
+impl<D: Device<E>, E: Dtype, T: BuildOnDevice<D, E>, const N: usize> BuildOnDevice<D, E>
     for Repeated<T, N>
 {
     type Built = Repeated<T::Built, N>;
 }
 
-impl<D: DeviceStorage, E: Dtype, T: BuildModule<D, E>, const N: usize> BuildModule<D, E>
+impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>, const N: usize> TensorCollection<E, D>
     for Repeated<T, N>
 {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        let mut modules = std::vec::Vec::with_capacity(N);
-        for _ in 0..N {
-            modules.push(BuildModule::try_build(device)?);
-        }
-        Ok(Self { modules })
-    }
-}
+    type To<E2: Dtype, D2: Device<E2>> = Repeated<T::To<E2, D2>, N>;
 
-impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>, const N: usize> TensorCollection<E, D>
-    for Repeated<T, N>
-{
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        for i in 0..N {
-            visitor.visit_module(&i.to_string(), |s| &s.modules[i], |s| &mut s.modules[i])?;
-        }
-        Ok(())
-    }
-}
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        let names: Vec<String> = (0..N).map(|i| std::format!("{i}")).collect();
 
-impl<T: ToDevice<D>, const N: usize, D> ToDevice<D> for Repeated<T, N> {
-    type Output = Repeated<T::Output, N>;
-    fn to_device(&self, device: &D) -> Self::Output {
-        Repeated {
-            modules: self
-                .modules
-                .iter()
-                .map(|module| module.to_device(device))
-                .collect(),
-        }
+        visitor.visit_fields(
+            (0..N)
+                .zip(names.iter())
+                .map(|(i, name)| {
+                    Self::module(name, move |s| &s.modules[i], move |s| &mut s.modules[i])
+                })
+                .collect::<Vec<_>>(),
+            |modules| Repeated { modules },
+        )
     }
 }
 
@@ -102,7 +86,7 @@ impl<Input, T: ModuleMut<Input, Output = Input>, const N: usize> ModuleMut<Input
 mod tests {
     use super::*;
     use crate::tests::*;
-    use crate::{nn::builders::*, shapes::*};
+    use crate::{nn::builders::*, prelude::*, shapes::*};
 
     #[test]
     fn test_default_and_reset() {

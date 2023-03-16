@@ -1,4 +1,5 @@
 use crate::{
+    prelude::Device,
     shapes::{Dtype, HasShape, Shape},
     tensor::{
         safetensors::{Error, SafeDtype},
@@ -61,24 +62,26 @@ impl Writer {
     }
 }
 
-impl<E: Dtype + SafeDtype, D: CopySlice<E>> TensorVisitor<E, D> for Writer {
+impl<E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for Writer {
     type Viewer = (ViewTensorRef, ViewTensorName);
     type Err = SafeTensorError;
+    type E2 = E;
+    type D2 = D;
 
     fn visit<S: Shape>(
         &mut self,
         _: TensorOptions<S, E, D>,
         (t, full_path): (&Tensor<S, E, D>, String),
-    ) -> Result<(), Self::Err> {
+    ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         self.add(full_path, t);
-        Ok(())
+        Ok(None)
     }
 }
 
 /// Something that can be saved to a `.safetensors`.
 ///
 /// All [super::Module]s in nn implement SaveToSafetensors.
-pub trait SaveToSafetensors<E: Dtype + SafeDtype, D: CopySlice<E>>: TensorCollection<E, D> {
+pub trait SaveToSafetensors<E: Dtype + SafeDtype, D: Device<E>>: TensorCollection<E, D> {
     /// Save this object into the `.safetensors` file determined located at `path`.
     ///
     /// Example:
@@ -98,17 +101,12 @@ pub trait SaveToSafetensors<E: Dtype + SafeDtype, D: CopySlice<E>>: TensorCollec
         Ok(())
     }
 }
-impl<E: Dtype + SafeDtype, D: CopySlice<E>, T: TensorCollection<E, D>> SaveToSafetensors<E, D>
-    for T
-{
-}
+impl<E: Dtype + SafeDtype, D: Device<E>, T: TensorCollection<E, D>> SaveToSafetensors<E, D> for T {}
 
 /// Something that can be loaded from a `.safetensors` file.
 ///
 /// All [super::Module]s in nn implement LoadFromSafetensors.
-pub trait LoadFromSafetensors<E: Dtype + SafeDtype, D: CopySlice<E>>:
-    TensorCollection<E, D>
-{
+pub trait LoadFromSafetensors<E: Dtype + SafeDtype, D: Device<E>>: TensorCollection<E, D> {
     /// Loads data from a `.safetensors` at the specified `path`.
     ///
     /// Example:
@@ -131,28 +129,31 @@ pub trait LoadFromSafetensors<E: Dtype + SafeDtype, D: CopySlice<E>>:
     }
 }
 
-impl<E: Dtype + SafeDtype, D: CopySlice<E>, T: TensorCollection<E, D>> LoadFromSafetensors<E, D>
+impl<E: Dtype + SafeDtype, D: Device<E>, T: TensorCollection<E, D>> LoadFromSafetensors<E, D>
     for T
 {
 }
 
-impl<'data, E: Dtype + SafeDtype, D: CopySlice<E>> TensorVisitor<E, D> for SafeTensors<'data> {
+impl<'data, E: Dtype + SafeDtype, D: Device<E>> TensorVisitor<E, D> for SafeTensors<'data> {
     type Viewer = (ViewTensorMut, ViewTensorName);
     type Err = Error;
+    type E2 = E;
+    type D2 = D;
 
     fn visit<S: Shape>(
         &mut self,
         _: TensorOptions<S, E, D>,
         (t, full_path): (&mut Tensor<S, E, D>, String),
-    ) -> Result<(), Self::Err> {
-        t.load_safetensor(self, &full_path)
+    ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
+        t.load_safetensor(self, &full_path)?;
+        Ok(None)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        nn::{builders::*, *},
+        nn::builders::*,
         shapes::*,
         tensor::{safetensors::SafeDtype, AsArray, SampleTensor, Tensor},
         tensor_ops::Device,

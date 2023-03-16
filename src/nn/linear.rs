@@ -2,8 +2,7 @@ use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::*;
 
-use num_traits::Float;
-use rand_distr::{uniform::SampleUniform, Uniform};
+use rand_distr::Uniform;
 
 pub mod builder {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -57,51 +56,37 @@ impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> NonMutableModul
 {
 }
 
-impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
-    BuildModule<D, E> for Linear<I, O, E, D>
+impl<const I: usize, const O: usize, E: Dtype, D: Device<E>> TensorCollection<E, D>
+    for Linear<I, O, E, D>
 {
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
-        let weight = device.try_sample(Uniform::new(-b, b))?;
-        let bias = device.try_sample(Uniform::new(-b, b))?;
-        Ok(Self { weight, bias })
-    }
-}
+    type To<E2: Dtype, D2: Device<E2>> = Linear<I, O, E2, D2>;
 
-impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: SampleTensor<E>>
-    TensorCollection<E, D> for Linear<I, O, E, D>
-{
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
-            "weight",
-            |s| &s.weight,
-            |s| &mut s.weight,
-            TensorOptions::reset_with(|t| {
-                let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
-                t.try_fill_with_distr(Uniform::new(-b, b))
-            }),
-        )?;
-        visitor.visit_tensor(
-            "bias",
-            |s| &s.bias,
-            |s| &mut s.bias,
-            TensorOptions::reset_with(|t| {
-                let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
-                t.try_fill_with_distr(Uniform::new(-b, b))
-            }),
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                Self::tensor(
+                    "weight",
+                    |s| &s.weight,
+                    |s| &mut s.weight,
+                    TensorOptions::reset_with(|t| {
+                        let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
+                        t.try_fill_with_distr(Uniform::new(-b, b))
+                    }),
+                ),
+                Self::tensor(
+                    "bias",
+                    |s| &s.bias,
+                    |s| &mut s.bias,
+                    TensorOptions::reset_with(|t| {
+                        let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
+                        t.try_fill_with_distr(Uniform::new(-b, b))
+                    }),
+                ),
+            ),
+            |(weight, bias)| Linear { weight, bias },
         )
-    }
-}
-
-impl<const I: usize, const O: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
-    for Linear<I, O, E, D1>
-{
-    type Output = Linear<I, O, E, D2>;
-    fn to_device(&self, device: &D2) -> Self::Output {
-        Linear {
-            weight: self.weight.to_device(device),
-            bias: self.bias.to_device(device),
-        }
     }
 }
 

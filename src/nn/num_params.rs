@@ -1,21 +1,23 @@
 use super::tensor_collection::*;
 
-use crate::{shapes::*, tensor::*};
+use crate::{prelude::Device, shapes::*, tensor::*};
 
 struct Counter(usize);
-impl<E: Dtype, D: DeviceStorage> TensorVisitor<E, D> for Counter {
+impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for Counter {
     type Viewer = ViewTensorRef;
     type Err = D::Err;
+    type E2 = E;
+    type D2 = D;
 
     fn visit<S: Shape>(
         &mut self,
         opts: TensorOptions<S, E, D>,
         t: &Tensor<S, E, D>,
-    ) -> Result<(), D::Err> {
+    ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         if opts.do_gradient_update {
             self.0 += t.shape().num_elements();
         }
-        Ok(())
+        Ok(None)
     }
 }
 
@@ -28,7 +30,7 @@ impl<E: Dtype, D: DeviceStorage> TensorVisitor<E, D> for Counter {
 /// let model = dev.build_module::<Model, f32>();
 /// assert_eq!(model.num_trainable_params(), 2 * 5 + 5);
 /// ```
-pub trait NumParams<E: Dtype, D: DeviceStorage>: TensorCollection<E, D> {
+pub trait NumParams<E: Dtype, D: Device<E>>: TensorCollection<E, D> {
     /// Returns the number of trainable params in any model.
     fn num_trainable_params(&self) -> usize {
         let mut op = Counter(0);
@@ -40,4 +42,4 @@ pub trait NumParams<E: Dtype, D: DeviceStorage>: TensorCollection<E, D> {
         op.0
     }
 }
-impl<E: Dtype, D: DeviceStorage, M: TensorCollection<E, D>> NumParams<E, D> for M {}
+impl<E: Dtype, D: Device<E>, M: TensorCollection<E, D>> NumParams<E, D> for M {}

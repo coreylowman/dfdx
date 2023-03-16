@@ -1,4 +1,4 @@
-use crate::{shapes::Dtype, tensor::*};
+use crate::{prelude::Device, shapes::Dtype, tensor::*};
 
 use super::*;
 
@@ -22,29 +22,17 @@ use super::*;
 #[derive(Debug, Default, Clone)]
 pub struct SplitInto<T>(pub T);
 
-impl<T: BuildOnDevice<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for SplitInto<T> {
+impl<T: BuildOnDevice<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for SplitInto<T> {
     type Built = SplitInto<T::Built>;
 }
 
-impl<T: BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildModule<D, E> for SplitInto<T> {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self(BuildModule::try_build(device)?))
-    }
-}
+impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> TensorCollection<E, D> for SplitInto<T> {
+    type To<E2: Dtype, D2: Device<E2>> = SplitInto<T::To<E2, D2>>;
 
-impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>> TensorCollection<E, D>
-    for SplitInto<T>
-{
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
-    }
-}
-
-impl<T: ToDevice<D>, D> ToDevice<D> for SplitInto<T> {
-    type Output = SplitInto<T::Output>;
-
-    fn to_device(&self, device: &D) -> Self::Output {
-        SplitInto(self.0.to_device(device))
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(Self::module("0", |s| &s.0, |s| &mut s.0), SplitInto)
     }
 }
 

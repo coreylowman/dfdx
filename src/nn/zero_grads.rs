@@ -1,6 +1,6 @@
 use super::tensor_collection::*;
 
-use crate::{shapes::*, tensor::*};
+use crate::{prelude::Device, shapes::*, tensor::*};
 
 use std::vec::Vec;
 
@@ -13,7 +13,7 @@ use std::vec::Vec;
 /// let mut grads: Gradients<f32, _> = model.alloc_grads();
 /// model.zero_grads(&mut grads);
 /// ```
-pub trait ZeroGrads<E: Dtype, D: ZeroFillStorage<E>>: TensorCollection<E, D> {
+pub trait ZeroGrads<E: Dtype, D: Device<E>>: TensorCollection<E, D> {
     /// Allocates gradients for this tensor collection. **This marks all other
     /// gradients as temporary, so they are dropped after .backward()**
     fn alloc_grads(&self) -> Gradients<E, D> {
@@ -48,28 +48,30 @@ pub trait ZeroGrads<E: Dtype, D: ZeroFillStorage<E>>: TensorCollection<E, D> {
         Ok(())
     }
 }
-impl<E: Dtype, D: ZeroFillStorage<E>, M: TensorCollection<E, D>> ZeroGrads<E, D> for M {}
+impl<E: Dtype, D: Device<E>, M: TensorCollection<E, D>> ZeroGrads<E, D> for M {}
 
 struct ZeroGradOp<'a, E: Unit, D: DeviceStorage> {
     updated: Vec<UniqueId>,
     gradients: &'a mut Gradients<E, D>,
 }
 
-impl<'a, E: Dtype, D: ZeroFillStorage<E>> TensorVisitor<E, D> for ZeroGradOp<'a, E, D> {
+impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D> for ZeroGradOp<'a, E, D> {
     type Viewer = ViewTensorRef;
     type Err = D::Err;
+    type E2 = E;
+    type D2 = D;
 
     fn visit<S: Shape>(
         &mut self,
         opts: TensorOptions<S, E, D>,
         t: &Tensor<S, E, D>,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         if opts.do_gradient_update {
             let grad = self.gradients.get_or_alloc_mut(t)?;
             t.device.try_fill_with_zeros(grad)?;
             self.updated.push(t.id);
         }
-        Ok(())
+        Ok(None)
     }
 }
 

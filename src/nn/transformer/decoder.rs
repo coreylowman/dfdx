@@ -4,7 +4,7 @@ use rand_distr::uniform::SampleUniform;
 use crate::{
     nn::modules::*,
     shapes::Dtype,
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, ToDevice},
+    tensor::{DeviceStorage, HasErr, PutTape, SplitTape},
     tensor_ops::{Device, TryAdd},
 };
 
@@ -67,37 +67,20 @@ pub struct TransformerDecoder<
     D: DeviceStorage,
 >(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>, NUM_LAYERS>);
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize, E, D: Device<E>>
-    BuildModule<D, E> for TransformerDecoder<M, H, F, L, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-{
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        Ok(Self(BuildModule::try_build(device)?))
-    }
-}
-
 impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D: Device<E>>
     TensorCollection<E, D> for TransformerDecoder<M, H, F, L, E, D>
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
-    }
-}
+    type To<E2: Dtype, D2: Device<E2>> = TransformerDecoder<M, H, F, L, E2, D2>;
 
-impl<const M: usize, const H: usize, const F: usize, const L: usize, E, D1, D2> ToDevice<D2>
-    for TransformerDecoder<M, H, F, L, E, D1>
-where
-    E: Dtype,
-    D1: Device<E>,
-    D2: Device<E>,
-{
-    type Output = TransformerDecoder<M, H, F, L, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        TransformerDecoder(self.0.to_device(device))
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            Self::module("0", |s| &s.0, |s| &mut s.0),
+            TransformerDecoder,
+        )
     }
 }
 
@@ -157,52 +140,34 @@ pub struct TransformerDecoderBlock<
 type FF<const M: usize, const F: usize, E, D> =
     Residual<(Linear<M, F, E, D>, ReLU, Linear<F, M, E, D>)>;
 
-impl<const M: usize, const N: usize, const F: usize, E, D: Device<E>> BuildModule<D, E>
-    for TransformerDecoderBlock<M, N, F, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-{
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self {
-            self_attn: BuildModule::try_build(device)?,
-            norm1: BuildModule::try_build(device)?,
-            mh_attn: BuildModule::try_build(device)?,
-            norm2: BuildModule::try_build(device)?,
-            ff: BuildModule::try_build(device)?,
-            norm3: BuildModule::try_build(device)?,
-        })
-    }
-}
-
 impl<const M: usize, const N: usize, const F: usize, E, D: Device<E>> TensorCollection<E, D>
     for TransformerDecoderBlock<M, N, F, E, D>
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("self_attn", |s| &s.self_attn, |s| &mut s.self_attn)?;
-        visitor.visit_module("norm1", |s| &s.norm1, |s| &mut s.norm1)?;
-        visitor.visit_module("mh_attn", |s| &s.mh_attn, |s| &mut s.mh_attn)?;
-        visitor.visit_module("norm2", |s| &s.norm2, |s| &mut s.norm2)?;
-        visitor.visit_module("ff", |s| &s.ff, |s| &mut s.ff)?;
-        visitor.visit_module("norm", |s| &s.norm3, |s| &mut s.norm3)
-    }
-}
+    type To<E2: Dtype, D2: Device<E2>> = TransformerDecoderBlock<M, N, F, E2, D2>;
 
-impl<const M: usize, const H: usize, const F: usize, E: Dtype, D1: Device<E>, D2: Device<E>>
-    ToDevice<D2> for TransformerDecoderBlock<M, H, F, E, D1>
-{
-    type Output = TransformerDecoderBlock<M, H, F, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        TransformerDecoderBlock {
-            self_attn: self.self_attn.to_device(device),
-            norm1: self.norm1.to_device(device),
-            mh_attn: self.mh_attn.to_device(device),
-            norm2: self.norm2.to_device(device),
-            ff: self.ff.to_device(device),
-            norm3: self.norm3.to_device(device),
-        }
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                Self::module("self_attn", |s| &s.self_attn, |s| &mut s.self_attn),
+                Self::module("norm1", |s| &s.norm1, |s| &mut s.norm1),
+                Self::module("mh_attn", |s| &s.mh_attn, |s| &mut s.mh_attn),
+                Self::module("norm2", |s| &s.norm2, |s| &mut s.norm2),
+                Self::module("ff", |s| &s.ff, |s| &mut s.ff),
+                Self::module("norm3", |s| &s.norm3, |s| &mut s.norm3),
+            ),
+            |(self_attn, norm1, mh_attn, norm2, ff, norm3)| TransformerDecoderBlock {
+                self_attn,
+                norm1,
+                mh_attn,
+                norm2,
+                ff,
+                norm3,
+            },
+        )
     }
 }
 

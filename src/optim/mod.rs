@@ -35,11 +35,11 @@ mod optimizer;
 mod rmsprop;
 mod sgd;
 
-pub use adam::{Adam, AdamConfig};
+pub use adam::{Adam, AdamConfig, AdamKernel};
 pub use optimizer::{Momentum, WeightDecay};
 pub use optimizer::{Optimizer, OptimizerUpdateError, UnusedTensors};
-pub use rmsprop::{RMSprop, RMSpropConfig};
-pub use sgd::{Sgd, SgdConfig};
+pub use rmsprop::{RMSprop, RMSpropConfig, RMSpropKernel};
+pub use sgd::{Sgd, SgdConfig, SgdKernel};
 
 pub mod prelude {
     pub use super::{Optimizer, OptimizerUpdateError, UnusedTensors};

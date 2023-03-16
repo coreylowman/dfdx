@@ -1,18 +1,21 @@
 use super::tensor_collection::*;
 
-use crate::{shapes::*, tensor::*};
+use crate::{prelude::Device, shapes::*, tensor::*};
 
 struct Resetter;
-impl<E: Dtype, D: DeviceStorage> TensorVisitor<E, D> for Resetter {
+impl<E: Dtype, D: Device<E>> TensorVisitor<E, D> for Resetter {
     type Viewer = ViewTensorMut;
     type Err = D::Err;
+    type E2 = E;
+    type D2 = D;
 
     fn visit<S: Shape>(
         &mut self,
         opts: TensorOptions<S, E, D>,
         t: &mut Tensor<S, E, D>,
-    ) -> Result<(), D::Err> {
-        (opts.reset)(t)
+    ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
+        (opts.reset)(t)?;
+        Ok(None)
     }
 }
 
@@ -25,7 +28,7 @@ impl<E: Dtype, D: DeviceStorage> TensorVisitor<E, D> for Resetter {
 /// let mut model = dev.build_module::<Model, f32>();
 /// model.reset_params();
 /// ```
-pub trait ResetParams<E: Dtype, D: DeviceStorage>: TensorCollection<E, D> {
+pub trait ResetParams<E: Dtype, D: Device<E>>: TensorCollection<E, D> {
     /// Reset all a model's parameters.
     fn reset_params(&mut self) {
         self.try_reset_params().unwrap();
@@ -35,7 +38,8 @@ pub trait ResetParams<E: Dtype, D: DeviceStorage>: TensorCollection<E, D> {
         Self::iter_tensors(&mut RecursiveWalker {
             m: self,
             f: &mut Resetter,
-        })
+        })?;
+        Ok(())
     }
 }
-impl<E: Dtype, D: DeviceStorage, M: TensorCollection<E, D>> ResetParams<E, D> for M {}
+impl<E: Dtype, D: Device<E>, M: TensorCollection<E, D>> ResetParams<E, D> for M {}

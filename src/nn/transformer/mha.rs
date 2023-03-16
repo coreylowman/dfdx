@@ -64,51 +64,24 @@ pub struct MultiHeadAttention<
 }
 
 impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: Device<E>>
-    BuildModule<D, E> for MultiHeadAttention<M, H, K, V, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-{
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        #[allow(clippy::let_unit_value)]
-        let _ = builder::MultiHeadAttention::<M, H, K, V>::TYPE_CHECK;
-        Ok(Self {
-            w_q: BuildModule::try_build(device)?,
-            w_k: BuildModule::try_build(device)?,
-            w_v: BuildModule::try_build(device)?,
-            w_o: BuildModule::try_build(device)?,
-        })
-    }
-}
-
-impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D: Device<E>>
     TensorCollection<E, D> for MultiHeadAttention<M, H, K, V, E, D>
 where
     E: Dtype + Float + SampleUniform,
 {
-    fn iter_tensors<W: ModuleVisitor<Self, E, D>>(visitor: &mut W) -> Result<(), W::Err> {
-        visitor.visit_module("w_q", |s| &s.w_q, |s| &mut s.w_q)?;
-        visitor.visit_module("w_k", |s| &s.w_k, |s| &mut s.w_k)?;
-        visitor.visit_module("w_v", |s| &s.w_v, |s| &mut s.w_v)?;
-        visitor.visit_module("w_o", |s| &s.w_o, |s| &mut s.w_o)
-    }
-}
+    type To<E2: Dtype, D2: Device<E2>> = MultiHeadAttention<M, H, K, V, E2, D2>;
 
-impl<const M: usize, const H: usize, const K: usize, const V: usize, E, D1, D2> ToDevice<D2>
-    for MultiHeadAttention<M, H, K, V, E, D1>
-where
-    E: Dtype,
-    D1: Device<E>,
-    D2: Device<E>,
-{
-    type Output = MultiHeadAttention<M, H, K, V, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        MultiHeadAttention {
-            w_q: self.w_q.to_device(device),
-            w_k: self.w_k.to_device(device),
-            w_v: self.w_v.to_device(device),
-            w_o: self.w_o.to_device(device),
-        }
+    fn iter_tensors<Vi: ModuleVisitor<Self, E, D>>(
+        visitor: &mut Vi,
+    ) -> Result<Option<Self::To<Vi::E2, Vi::D2>>, Vi::Err> {
+        visitor.visit_fields(
+            (
+                Self::module("w_q", |s| &s.w_q, |s| &mut s.w_q),
+                Self::module("w_k", |s| &s.w_k, |s| &mut s.w_k),
+                Self::module("w_v", |s| &s.w_v, |s| &mut s.w_v),
+                Self::module("w_o", |s| &s.w_o, |s| &mut s.w_o),
+            ),
+            |(w_q, w_k, w_v, w_o)| MultiHeadAttention { w_q, w_k, w_v, w_o },
+        )
     }
 }
 

@@ -7,6 +7,7 @@ use std::{marker::PhantomData, sync::Arc};
 
 use crate::{
     nn::tensor_collection::*,
+    prelude::Device,
     shapes::{Dtype, Shape},
     tensor::*,
 };
@@ -103,7 +104,7 @@ impl<M, E: Dtype, D: DeviceStorage> RMSprop<M, E, D> {
     }
 }
 
-pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
+pub trait RMSpropKernel<E: Dtype>: DeviceStorage {
     fn update(
         &self,
         cfg: &RMSpropConfig<E>,
@@ -115,19 +116,21 @@ pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D>
+impl<M, E: Dtype, D: Device<E>> TensorVisitor<E, D>
     for (&mut RMSprop<M, E, D>, &Gradients<E, D>, UnusedTensors)
 {
     type Viewer = ViewTensorMut;
     type Err = D::Err;
+    type E2 = E;
+    type D2 = D;
 
     fn visit<S: Shape>(
         &mut self,
         opts: TensorOptions<S, E, D>,
         p: &mut Tensor<S, E, D>,
-    ) -> Result<(), <D>::Err> {
+    ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         if !opts.do_gradient_update {
-            return Ok(());
+            return Ok(None);
         }
         let g = self.1.get_ref_checked(p);
         match g {
@@ -141,16 +144,23 @@ impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D>
                     p.device.try_fill_with_ones(sa)?;
                 }
 
-                p.device
-                    .update(&self.0.cfg, Arc::make_mut(&mut p.data), m, sa, ga, g)?;
+                RMSpropKernel::update(
+                    &p.device,
+                    &self.0.cfg,
+                    Arc::make_mut(&mut p.data),
+                    m,
+                    sa,
+                    ga,
+                    g,
+                )?;
             }
         }
-        Ok(())
+        Ok(None)
     }
 }
 
-impl<M: TensorCollection<E, D>, D: RMSpropKernel<E> + OneFillStorage<E>, E: Dtype>
-    Optimizer<M, D, E> for RMSprop<M, E, D>
+impl<M: TensorCollection<E, D>, D: Device<E> + OneFillStorage<E>, E: Dtype> Optimizer<M, D, E>
+    for RMSprop<M, E, D>
 {
     fn update(
         &mut self,
