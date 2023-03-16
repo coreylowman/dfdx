@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 
 use crate::{
-    prelude::Device,
+    prelude::{Device, ConstShape},
     shapes::{Dtype, Shape},
     tensor::{OneFillStorage, Tensor, ZeroFillStorage},
 };
@@ -146,7 +146,7 @@ pub trait ModuleVisitor<T: TensorCollection<E, D>, E: Dtype, D: Device<E>>: Size
     ) -> Result<Option<T::To<Self::E2, Self::D2>>, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>> TensorCollection<E, D> for Tensor<S, E, D> {
+impl<S: ConstShape, E: Dtype, D: Device<E>> TensorCollection<E, D> for Tensor<S, E, D> {
     type To<E2: Dtype, D2: Device<E2>> = Tensor<S, E2, D2>;
 
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
@@ -175,7 +175,7 @@ pub struct TensorOptions<S: Shape, E: Dtype, D: Device<E>> {
     pub reset: fn(&'_ mut Tensor<S, E, D>) -> Result<(), D::Err>,
 
     /// The [Shape] that BuildModule uses to construct the tensor
-    pub shape: Option<S>,
+    pub shape: S,
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>> TensorOptions<S, E, D> {
@@ -183,11 +183,12 @@ impl<S: Shape, E: Dtype, D: Device<E>> TensorOptions<S, E, D> {
     pub fn reset_to_zeros() -> Self
     where
         D: ZeroFillStorage<E>,
+        S: ConstShape,
     {
         TensorOptions {
             do_gradient_update: true,
             reset: |t| t.try_fill_with_zeros(),
-            shape: S::const_default(),
+            shape: S::default(),
         }
     }
 
@@ -195,35 +196,36 @@ impl<S: Shape, E: Dtype, D: Device<E>> TensorOptions<S, E, D> {
     pub fn reset_to_ones() -> Self
     where
         D: OneFillStorage<E>,
+        S: ConstShape,
     {
         TensorOptions {
             do_gradient_update: true,
             reset: |t| t.try_fill_with_ones(),
-            shape: S::const_default(),
+            shape: S::default(),
         }
     }
 
     /// A tensor that should be updated with gradients & reset with the fn passed in
-    pub fn reset_with(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self {
+    pub fn reset_with(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self
+    where
+        S: ConstShape
+    {
         TensorOptions {
             do_gradient_update: true,
             reset,
-            shape: S::const_default(),
+            shape: S::default(),
         }
     }
 
     /// A tensor that should **NOT** be updated with gradients & reset with the fn passed in
-    pub fn detached(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self {
+    pub fn detached(reset: fn(&mut Tensor<S, E, D>) -> Result<(), D::Err>) -> Self
+    where
+        S: ConstShape
+    {
         TensorOptions {
             do_gradient_update: false,
             reset,
-            shape: S::const_default(),
+            shape: S::default(),
         }
-    }
-
-    /// Sets `self.shape` to `shape`
-    pub fn with_shape(mut self, shape: S) -> Self {
-        self.shape = Some(shape);
-        self
     }
 }
