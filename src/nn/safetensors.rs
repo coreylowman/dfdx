@@ -2,7 +2,7 @@ use crate::{
     shapes::{Dtype, HasShape, Shape},
     tensor::{
         safetensors::{Error, SafeDtype},
-        CopySlice, DeviceStorage, Tensor,
+        CopySlice, Tensor,
     },
     tensor_ops::Device,
 };
