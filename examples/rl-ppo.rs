@@ -5,13 +5,8 @@ use std::time::Instant;
 use dfdx::{
     optim::{Momentum, Sgd, SgdConfig},
     prelude::*,
+    tensor::AutoDevice,
 };
-
-#[cfg(not(feature = "cuda"))]
-type Device = Cpu;
-
-#[cfg(feature = "cuda")]
-type Device = Cuda;
 
 const BATCH: usize = 64;
 const STATE: usize = 4;
@@ -24,7 +19,7 @@ type PolicyNetwork = (
 );
 
 fn main() {
-    let dev = Device::default();
+    let dev = AutoDevice::default();
 
     // initiliaze model - all weights are 0s
     let mut pi_net = dev.build_module::<PolicyNetwork, f32>();

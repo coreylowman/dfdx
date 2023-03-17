@@ -140,9 +140,13 @@ mod tensor_impls;
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 
 pub use cpu::{Cpu, CpuError};
+#[cfg(not(feature = "cuda"))]
+pub type AutoDevice = Cpu;
 
 #[cfg(feature = "cuda")]
 pub use cuda::{Cuda, CudaError};
+#[cfg(feature = "cuda")]
+pub type AutoDevice = Cuda;
 
 pub use storage_traits::{AsArray, CopySlice, TensorFrom, TensorFromVec};
 pub use storage_traits::{DeviceStorage, HasErr};

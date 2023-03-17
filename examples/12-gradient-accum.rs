@@ -1,13 +1,11 @@
-use dfdx::{nn::ZeroGrads, prelude::*, tensor::Gradients};
-
-#[cfg(not(feature = "cuda"))]
-type Device = dfdx::tensor::Cpu;
-
-#[cfg(feature = "cuda")]
-type Device = dfdx::tensor::Cuda;
+use dfdx::{
+    nn::ZeroGrads,
+    prelude::*,
+    tensor::{AutoDevice, Gradients},
+};
 
 fn main() {
-    let dev: Device = Default::default();
+    let dev = AutoDevice::default();
 
     type Model = (Linear<2, 5>, ReLU, Linear<5, 10>, Tanh, Linear<10, 20>);
     let model = dev.build_module::<Model, f32>();

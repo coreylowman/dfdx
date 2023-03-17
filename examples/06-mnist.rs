@@ -23,13 +23,7 @@ use indicatif::ProgressIterator;
 use mnist::*;
 use rand::prelude::{SeedableRng, StdRng};
 
-use dfdx::{data::*, optim::Adam, prelude::*};
-
-#[cfg(not(feature = "cuda"))]
-type Dev = Cpu;
-
-#[cfg(feature = "cuda")]
-type Dev = Cuda;
+use dfdx::{data::*, optim::Adam, prelude::*, tensor::AutoDevice};
 
 struct MnistTrainSet(Mnist);
 
@@ -78,7 +72,7 @@ fn main() {
     println!("Loading mnist from args[1] = {mnist_path}");
     println!("Override mnist path with `cargo run --example 06-mnist -- <path to mnist>`");
 
-    let dev: Dev = Default::default();
+    let dev = AutoDevice::default();
     let mut rng = StdRng::seed_from_u64(0);
 
     // initialize model, gradients, and optimizer
