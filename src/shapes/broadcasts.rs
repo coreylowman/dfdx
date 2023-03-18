@@ -69,7 +69,7 @@ macro_rules! broadcast_to_all {
     ) => {
         broadcast_to!($len1, ($($s1),*), $len2, ($($s2),*), $axis<$($ax),*>);
 
-        // Add a broadcasted dimension to the end of s2 
+        // Add a broadcasted dimension to the end of s2
         broadcast_to_all!([$($s1)*] [$($s2)* $sh] [$($ax)* $len2] [$($shs)*] [$len1 $($lens1)*] [$($lens2)*] [$($axes)*]);
 
         // Add a dimension to both s1 and s2
