@@ -195,6 +195,7 @@ mod stddev_to;
 mod sub;
 mod sum_to;
 mod tanh;
+mod to_dtype;
 mod var_to;
 
 pub use abs::abs;
