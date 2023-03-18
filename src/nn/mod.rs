@@ -178,6 +178,7 @@ mod num_params;
 mod reset_params;
 pub mod tensor_collection;
 mod to_device;
+mod to_dtype;
 mod zero_grads;
 
 mod module;
@@ -223,6 +224,7 @@ pub use npz::{LoadFromNpz, SaveToNpz};
 pub use num_params::NumParams;
 pub use reset_params::ResetParams;
 pub use to_device::ToDevice;
+pub use to_dtype::ToDtype;
 pub use zero_grads::ZeroGrads;
 
 pub mod modules {

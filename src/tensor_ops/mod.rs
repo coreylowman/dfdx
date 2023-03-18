@@ -246,6 +246,8 @@ pub use sum_to::SumTo;
 pub use tanh::tanh;
 pub use var_to::VarTo;
 
+pub(crate) use to_dtype::ToDtypeKernel;
+
 #[cfg(feature = "nightly")]
 mod conv2d;
 #[cfg(feature = "nightly")]
