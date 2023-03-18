@@ -244,6 +244,7 @@ pub use stddev_to::StddevTo;
 pub use sub::{sub, TrySub};
 pub use sum_to::SumTo;
 pub use tanh::tanh;
+pub use to_dtype::to_dtype;
 pub use var_to::VarTo;
 
 pub(crate) use to_dtype::ToDtypeKernel;
