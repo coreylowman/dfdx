@@ -181,6 +181,7 @@ mod negate;
 mod normalize;
 mod permute_to;
 mod pow;
+mod prelu;
 mod realize_to;
 mod relu;
 mod reshape_to;
