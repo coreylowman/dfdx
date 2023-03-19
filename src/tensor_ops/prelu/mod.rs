@@ -12,7 +12,7 @@ use crate::{shapes::*, tensor::*};
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
-/// let r = t.prelu(0.05);
+/// let r = prelu(t, 0.05);
 /// assert_eq!(r.array(), [-0.05, 0.0, 1.0, 2.0]);
 /// ```
 pub fn prelu<S: Shape, E: Dtype, D: DeviceStorage, T: Tape<E, D>>(
@@ -42,7 +42,7 @@ mod tests {
         let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.leaky_trace().prelu(0.05);
         assert_eq!(r.array(), [-0.1, -0.05, 0.0, 1.0, 2.0]);
-        // NOTE: call .exp() to make sure we cover cases where .relu() uses the result's gradient
+        // NOTE: call .exp() to make sure we cover cases where .prelu() uses the result's gradient
         let g = r.exp().mean().backward();
         // TODO
         // assert_close(&g.get(&x).array(), &[0.0, 0.0, 0.0, 0.54365635, 1.4778112]);
