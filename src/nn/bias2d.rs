@@ -41,33 +41,22 @@ pub struct Bias2D<const C: usize, E: Dtype, D: DeviceStorage> {
     pub bias: Tensor<Rank1<C>, E, D>,
 }
 
-impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for Bias2D<C, E, D> {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self {
-            bias: device.try_zeros()?,
-        })
-    }
-}
-
 impl<const C: usize, E: Dtype, D: DeviceStorage> NonMutableModule for Bias2D<C, E, D> {}
 
-impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2> for Bias2D<C, E, D1> {
-    type Output = Bias2D<C, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        Bias2D {
-            bias: self.bias.to_device(device),
-        }
-    }
-}
-
 impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for Bias2D<C, E, D> {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
-            "beta",
-            |s| &s.bias,
-            |s| &mut s.bias,
-            TensorOptions::reset_to_zeros(),
+    type To<E2: Dtype, D2: Device<E2>> = Bias2D<C, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            Self::tensor(
+                "bias",
+                |s| &s.bias,
+                |s| &mut s.bias,
+                TensorOptions::reset_to_zeros(),
+            ),
+            |bias| Bias2D { bias },
         )
     }
 }

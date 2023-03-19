@@ -1,4 +1,4 @@
-use super::{CopySlice, DeviceStorage, Tensor};
+use super::{CopySlice, Tensor};
 use crate::shapes::{Dtype, Shape};
 use safetensors::tensor::{Dtype as SDtype, SafeTensorError, SafeTensors};
 use std::vec::Vec;

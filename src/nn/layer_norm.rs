@@ -1,4 +1,5 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
+use num_traits::FromPrimitive;
 
 use super::*;
 
@@ -44,45 +45,33 @@ pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
 
 impl<const M: usize, E: Dtype, D: DeviceStorage> NonMutableModule for LayerNorm1D<M, E, D> {}
 
-impl<const M: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for LayerNorm1D<M, E, D> {
-    /// Fills [Self::gamma] with 1s and [Self::beta] with 0s and sets [Self::epsilon] to `1e-5`.
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        Ok(Self {
-            gamma: device.try_ones()?,
-            beta: device.try_zeros()?,
-            epsilon: E::from_f32(1e-5).unwrap(),
-        })
-    }
-}
-
 impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNorm1D<M, E, D> {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
-            "gamma",
-            |s| &s.gamma,
-            |s| &mut s.gamma,
-            TensorOptions::reset_to_ones(),
-        )?;
-        visitor.visit_tensor(
-            "beta",
-            |s| &s.beta,
-            |s| &mut s.beta,
-            TensorOptions::reset_to_zeros(),
+    type To<E2: Dtype, D2: Device<E2>> = LayerNorm1D<M, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                Self::tensor(
+                    "gamma",
+                    |s| &s.gamma,
+                    |s| &mut s.gamma,
+                    TensorOptions::reset_to_ones(),
+                ),
+                Self::tensor(
+                    "beta",
+                    |s| &s.beta,
+                    |s| &mut s.beta,
+                    TensorOptions::reset_to_zeros(),
+                ),
+            ),
+            |(gamma, beta)| LayerNorm1D {
+                gamma,
+                beta,
+                epsilon: V::E2::from_f32(1e-5).unwrap(),
+            },
         )
-    }
-}
-
-impl<const M: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
-    for LayerNorm1D<M, E, D1>
-{
-    type Output = LayerNorm1D<M, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        LayerNorm1D {
-            gamma: self.gamma.to_device(device),
-            beta: self.beta.to_device(device),
-            epsilon: self.epsilon,
-        }
     }
 }
 
