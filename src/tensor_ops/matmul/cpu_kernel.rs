@@ -1,15 +1,49 @@
+#![allow(clippy::needless_return)]
+
 use crate::shapes::*;
 use crate::tensor::{Cpu, Tensor, ZerosTensor};
 
-#[cfg(not(feature = "intel-mkl"))]
-use matrixmultiply::{dgemm, sgemm};
 use std::sync::Arc;
 
-#[cfg(feature = "intel-mkl")]
+#[cfg(feature = "cpu-mkl-matmul")]
 use cblas_sys::{
     cblas_dgemm as dgemm, cblas_sgemm as sgemm, CblasColMajor as ColMajor, CblasNoTrans as NoTr,
     CblasRowMajor as RowMajor, CblasTrans as Tr,
 };
+
+#[cfg(all(
+    any(feature = "cpu-seq-matmul", feature = "cpu-par-matmul"),
+    not(feature = "cpu-mkl-matmul")
+))]
+use matrixmultiply::{dgemm, sgemm};
+
+#[cfg(not(any(
+    feature = "cpu-seq-matmul",
+    feature = "cpu-par-matmul",
+    feature = "cpu-mkl-matmul"
+)))]
+fn gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim>(
+    (m, k, n): (M, K, N),
+    ap: *const F,
+    a_strides: [usize; 2],
+    bp: *const F,
+    b_strides: [usize; 2],
+    cp: *mut F,
+    c_strides: [usize; 2],
+) {
+    for i_m in 0..m.size() {
+        for i_k in 0..k.size() {
+            for i_n in 0..n.size() {
+                unsafe {
+                    let a = *ap.add(a_strides[0] * i_m + a_strides[1] * i_k);
+                    let b = *bp.add(b_strides[0] * i_k + b_strides[1] * i_n);
+                    let c = cp.add(c_strides[0] * i_m + c_strides[1] * i_n);
+                    *c += a * b;
+                }
+            }
+        }
+    }
+}
 
 pub(crate) trait MatMulImpl<E> {
     fn matmul<M: Dim, K: Dim, N: Dim>(
@@ -35,15 +69,7 @@ impl MatMulImpl<f32> for Cpu {
         c_strides: [usize; 2],
     ) {
         let (m, k, n) = (m.size(), k.size(), n.size());
-        #[cfg(not(feature = "intel-mkl"))]
-        unsafe {
-            let [ar, ac] = a_strides.map(|x| x as isize);
-            let [br, bc] = b_strides.map(|x| x as isize);
-            let [cr, cc] = c_strides.map(|x| x as isize);
-            sgemm(m, k, n, 1.0, ap, ar, ac, bp, br, bc, 1.0, cp, cr, cc);
-        }
-
-        #[cfg(feature = "intel-mkl")]
+        #[cfg(feature = "cpu-mkl-matmul")]
         unsafe {
             let (lda, a_tr) = super::matrix_strides((m, k), a_strides);
             let (ldb, b_tr) = super::matrix_strides((k, n), b_strides);
@@ -58,8 +84,26 @@ impl MatMulImpl<f32> for Cpu {
             sgemm(
                 layout, a_tr, b_tr, m, n, k, 1.0, ap, lda as i32, bp, ldb as i32, 1.0, cp,
                 ldc as i32,
-            )
+            );
         }
+
+        #[cfg(all(
+            any(feature = "cpu-seq-matmul", feature = "cpu-par-matmul"),
+            not(feature = "cpu-mkl-matmul")
+        ))]
+        unsafe {
+            let [ar, ac] = a_strides.map(|x| x as isize);
+            let [br, bc] = b_strides.map(|x| x as isize);
+            let [cr, cc] = c_strides.map(|x| x as isize);
+            sgemm(m, k, n, 1.0, ap, ar, ac, bp, br, bc, 1.0, cp, cr, cc);
+        }
+
+        #[cfg(not(any(
+            feature = "cpu-seq-matmul",
+            feature = "cpu-par-matmul",
+            feature = "cpu-mkl-matmul"
+        )))]
+        gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
     }
 }
 
@@ -76,15 +120,7 @@ impl MatMulImpl<f64> for Cpu {
     ) {
         let (m, k, n) = (m.size(), k.size(), n.size());
 
-        #[cfg(not(feature = "intel-mkl"))]
-        unsafe {
-            let [ar, ac] = a_strides.map(|x| x as isize);
-            let [br, bc] = b_strides.map(|x| x as isize);
-            let [cr, cc] = c_strides.map(|x| x as isize);
-            dgemm(m, k, n, 1.0, ap, ar, ac, bp, br, bc, 1.0, cp, cr, cc);
-        }
-
-        #[cfg(feature = "intel-mkl")]
+        #[cfg(feature = "cpu-mkl-matmul")]
         unsafe {
             let (lda, a_tr) = super::matrix_strides((m, k), a_strides);
             let (ldb, b_tr) = super::matrix_strides((k, n), b_strides);
@@ -99,8 +135,28 @@ impl MatMulImpl<f64> for Cpu {
             dgemm(
                 layout, a_tr, b_tr, m, n, k, 1.0, ap, lda as i32, bp, ldb as i32, 1.0, cp,
                 ldc as i32,
-            )
+            );
+            return;
         }
+
+        #[cfg(all(
+            any(feature = "cpu-seq-matmul", feature = "cpu-par-matmul"),
+            not(feature = "cpu-mkl-matmul")
+        ))]
+        unsafe {
+            let [ar, ac] = a_strides.map(|x| x as isize);
+            let [br, bc] = b_strides.map(|x| x as isize);
+            let [cr, cc] = c_strides.map(|x| x as isize);
+            dgemm(m, k, n, 1.0, ap, ar, ac, bp, br, bc, 1.0, cp, cr, cc);
+            return;
+        }
+
+        #[cfg(not(any(
+            feature = "cpu-seq-matmul",
+            feature = "cpu-par-matmul",
+            feature = "cpu-mkl-matmul"
+        )))]
+        gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
     }
 }
 

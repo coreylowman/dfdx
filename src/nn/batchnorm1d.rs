@@ -1,4 +1,5 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
+use num_traits::FromPrimitive;
 
 use super::{
     batchnorm2d::{infer_fwd, train_fwd},
@@ -167,61 +168,48 @@ impl<B: Dim, const C: usize, E: Dtype, D: Device<E>>
     }
 }
 
-impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for BatchNorm1D<C, E, D> {
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        Ok(Self {
-            scale: device.try_ones()?,
-            bias: device.try_zeros()?,
-            running_mean: device.try_zeros()?,
-            running_var: device.try_ones()?,
-            epsilon: E::from_f32(1e-5).unwrap(),
-            momentum: E::from_f32(0.1).unwrap(),
-        })
-    }
-}
-
 impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNorm1D<C, E, D> {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
-            "scale",
-            |s| &s.scale,
-            |s| &mut s.scale,
-            TensorOptions::reset_to_ones(),
-        )?;
-        visitor.visit_tensor(
-            "bias",
-            |s| &s.bias,
-            |s| &mut s.bias,
-            TensorOptions::reset_to_zeros(),
-        )?;
-        visitor.visit_tensor(
-            "running_mean",
-            |s| &s.running_mean,
-            |s| &mut s.running_mean,
-            TensorOptions::detached(|t| t.try_fill_with_zeros()),
-        )?;
-        visitor.visit_tensor(
-            "running_var",
-            |s| &s.running_var,
-            |s| &mut s.running_var,
-            TensorOptions::detached(|t| t.try_fill_with_ones()),
-        )
-    }
-}
+    type To<E2: Dtype, D2: Device<E2>> = BatchNorm1D<C, E2, D2>;
 
-impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
-    for BatchNorm1D<C, E, D1>
-{
-    type Output = BatchNorm1D<C, E, D2>;
-    fn to_device(&self, device: &D2) -> Self::Output {
-        BatchNorm1D {
-            scale: self.scale.to_device(device),
-            bias: self.bias.to_device(device),
-            running_mean: self.running_mean.to_device(device),
-            running_var: self.running_var.to_device(device),
-            epsilon: self.epsilon,
-            momentum: self.momentum,
-        }
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                Self::tensor(
+                    "scale",
+                    |s| &s.scale,
+                    |s| &mut s.scale,
+                    TensorOptions::reset_to_ones(),
+                ),
+                Self::tensor(
+                    "bias",
+                    |s| &s.bias,
+                    |s| &mut s.bias,
+                    TensorOptions::reset_to_zeros(),
+                ),
+                Self::tensor(
+                    "running_mean",
+                    |s| &s.running_mean,
+                    |s| &mut s.running_mean,
+                    TensorOptions::detached(|t| t.try_fill_with_zeros()),
+                ),
+                Self::tensor(
+                    "running_var",
+                    |s| &s.running_var,
+                    |s| &mut s.running_var,
+                    TensorOptions::detached(|t| t.try_fill_with_ones()),
+                ),
+            ),
+            |(scale, bias, running_mean, running_var)| BatchNorm1D {
+                scale,
+                bias,
+                running_mean,
+                running_var,
+                epsilon: V::E2::from_f32(1e-5).unwrap(),
+                momentum: V::E2::from_f32(0.1).unwrap(),
+            },
+        )
     }
 }
 

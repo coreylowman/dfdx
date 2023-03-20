@@ -47,7 +47,7 @@
 //! let y = mlp.forward(x); // compiler infers that `y` must be `Tensor<Rank1<2>>`
 //! ```
 //!
-//! 5. Trace gradients using [crate::tensor::Tensor::trace()]
+//! 5. Trace gradients using [crate::tensor::Trace::trace()]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();

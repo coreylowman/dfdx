@@ -60,28 +60,25 @@ impl<const V: usize, const M: usize, E: Dtype, D: DeviceStorage> NonMutableModul
 {
 }
 
-impl<const V: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
-    BuildModule<D, E> for Embedding<V, M, E, D>
-{
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        let bound = E::ONE / E::from_usize(V).unwrap().sqrt();
-        let weight = device.try_sample(Uniform::new(-bound, bound))?;
-        Ok(Self { weight })
-    }
-}
-
-impl<const C: usize, const M: usize, E: Dtype + Float + SampleUniform, D: SampleTensor<E>>
+impl<const C: usize, const M: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
     TensorCollection<E, D> for Embedding<C, M, E, D>
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
-            "weight",
-            |s| &s.weight,
-            |s| &mut s.weight,
-            TensorOptions::reset_with(|t| {
-                let b: E = E::ONE / E::from_usize(C).unwrap().sqrt();
-                t.try_fill_with_distr(Uniform::new(-b, b))
-            }),
+    type To<E2: Dtype, D2: Device<E2>> = Embedding<C, M, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            Self::tensor(
+                "weight",
+                |s| &s.weight,
+                |s| &mut s.weight,
+                TensorOptions::reset_with(|t| {
+                    let b: E = E::ONE / E::from_usize(C).unwrap().sqrt();
+                    t.try_fill_with_distr(Uniform::new(-b, b))
+                }),
+            ),
+            |weight| Embedding { weight },
         )
     }
 }
@@ -117,17 +114,6 @@ impl<
     ) -> Result<Self::Output, D::Err> {
         let (input, tape) = input.split_tape();
         self.weight.clone().put_tape(tape).try_gather(input)
-    }
-}
-
-impl<const VOCAB: usize, const DIM: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
-    for Embedding<VOCAB, DIM, E, D1>
-{
-    type Output = Embedding<VOCAB, DIM, E, D2>;
-    fn to_device(&self, device: &D2) -> Self::Output {
-        Embedding {
-            weight: self.weight.to_device(device),
-        }
     }
 }
 
