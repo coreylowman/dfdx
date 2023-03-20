@@ -82,13 +82,11 @@ where
 }
 
 pub mod builder {
-    use crate::prelude::Dtype;
-
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-    pub struct PReLU<E: Dtype>(E);
+    pub struct PReLU;
 }
 
-impl<E: Dtype, D: Device<E>> BuildOnDevice<D, E> for builder::PReLU<E>
+impl<E: Dtype, D: Device<E>> BuildOnDevice<D, E> for builder::PReLU
 where
     PReLU<E, D>: BuildModule<D, E>,
 {

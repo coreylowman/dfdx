@@ -277,6 +277,7 @@ pub mod builders {
     #[cfg(feature = "nightly")]
     pub use super::pool2d::{AvgPool2D, MaxPool2D, MinPool2D};
     pub use super::pool_global::{AvgPoolGlobal, MaxPoolGlobal, MinPoolGlobal};
+    pub use super::activations::builder::PReLU;
     pub use super::repeated::Repeated;
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
