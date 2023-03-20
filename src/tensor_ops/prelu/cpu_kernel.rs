@@ -73,8 +73,8 @@ impl<S: Shape, E: Dtype + Float> PReLUKernel<Tensor<S, E, Cpu>, Tensor<(), E, Cp
         grad: &<Self as crate::prelude::storage_traits::DeviceStorage>::Vec<Self::Elem>,
     ) -> Result<(), <Self::Output as HasErr>::Err> {
         let op = PReLUKernelOp;
-        let rg = rhs_grad.get_mut(0).unwrap(); // TODO not unwrap
-        let r = *rhs.as_vec().get(0).unwrap();
+        let rg = rhs_grad.get_mut(0).expect("A must be a single value"); // TODO not expect
+        let r = *rhs.as_vec().get(0).expect("A must be a single value");
 
         // Should I do this?
         let scale = E::from_f32(1.0 / lhs_grad.len() as f32).unwrap();
