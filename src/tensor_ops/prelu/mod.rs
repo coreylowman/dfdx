@@ -25,7 +25,7 @@ struct PReLUKernelOp;
 /// ```
 
 // TODO remove debug
-pub fn prelu<S: Shape, E: Dtype, D: Device<E> + PReLUKernel<Tensor<S, E, D>, Tensor<(), E, D>, Output = Tensor<S, E, D>, Elem = E>, T: Tape<E, D> + Merge<R> + Debug, R: Default>(
+pub fn prelu<S: Shape, E: Dtype, D: Device<E> + PReLUKernel<Tensor<S, E, D>, Tensor<(), E, D>, Output = Tensor<S, E, D>, Elem = E>, T: Tape<E, D> + Merge<R>, R: Default>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<(), E, D, R>,
 ) -> Tensor<S, E, D, T> {
@@ -42,16 +42,16 @@ pub trait PReLUKernel<L, R>: DeviceStorage {
 }
 
 impl<S: Shape, E: Dtype, D: Device<E> , T: Tape<E, D>> Tensor<S, E, D, T> {
-    fn prelu<R: Default>(self, other: Tensor<(), E, D, R>) -> Self 
+    pub fn prelu<R: Default>(self, other: Tensor<(), E, D, R>) -> Self 
     where D: PReLUKernel<Tensor<S, E, D>, Tensor<(), E, D>, Output = Tensor<S, E, D>, Elem = E>,
-    T: Merge<R> + Debug
+    T: Merge<R> 
     {
         self.try_prelu(other).unwrap()
     }
 
-    fn try_prelu<R: Default>(self, other: Tensor<(), E, D, R>) -> Result<Self, <Self as HasErr>::Err> 
+    pub fn try_prelu<R: Default>(self, other: Tensor<(), E, D, R>) -> Result<Self, <Self as HasErr>::Err> 
     where D: PReLUKernel<Tensor<S, E, D>, Tensor<(), E, D>, Output = Tensor<S, E, D>, Elem = E>,
-    T: Merge<R> + Debug
+    T: Merge<R>
     {
         let device = D::default();
 
