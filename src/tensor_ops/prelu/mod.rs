@@ -20,12 +20,19 @@ struct PReLUKernelOp;
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
-/// let r = prelu(t, 0.05);
+/// let a = dev.tensor(0.05);
+/// let r = prelu(t, a);
 /// assert_eq!(r.array(), [-0.05, 0.0, 1.0, 2.0]);
 /// ```
 
 // TODO remove debug
-pub fn prelu<S: Shape, E: Dtype, D: Device<E> + PReLUKernel<Tensor<S, E, D>, Tensor<(), E, D>, Output = Tensor<S, E, D>, Elem = E>, T: Tape<E, D> + Merge<R>, R: Default>(
+pub fn prelu<
+    S: Shape,
+    E: Dtype,
+    D: Device<E> + PReLUKernel<Tensor<S, E, D>, Tensor<(), E, D>, Output = Tensor<S, E, D>, Elem = E>,
+    T: Tape<E, D> + Merge<R>,
+    R: Default,
+>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<(), E, D, R>,
 ) -> Tensor<S, E, D, T> {
@@ -38,20 +45,32 @@ pub trait PReLUKernel<L, R>: DeviceStorage {
 
     fn forward(&self, lhs: &L, rhs: &R) -> Result<Self::Output, <Self::Output as HasErr>::Err>;
 
-    fn backward(&self, lhs: &L, lhs_grad: &mut <Self as storage_traits::DeviceStorage>::Vec<Self::Elem>, rhs: &R, rhs: &mut <Self as storage_traits::DeviceStorage>::Vec<Self::Elem>, grad: &<Self as storage_traits::DeviceStorage>::Vec<Self::Elem>) -> Result<(), <Self::Output as HasErr>::Err>;
+    fn backward(
+        &self,
+        lhs: &L,
+        lhs_grad: &mut <Self as storage_traits::DeviceStorage>::Vec<Self::Elem>,
+        rhs: &R,
+        rhs: &mut <Self as storage_traits::DeviceStorage>::Vec<Self::Elem>,
+        grad: &<Self as storage_traits::DeviceStorage>::Vec<Self::Elem>,
+    ) -> Result<(), <Self::Output as HasErr>::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E> , T: Tape<E, D>> Tensor<S, E, D, T> {
-    pub fn prelu<R: Default>(self, other: Tensor<(), E, D, R>) -> Self 
-    where D: PReLUKernel<Tensor<S, E, D>, Tensor<(), E, D>, Output = Tensor<S, E, D>, Elem = E>,
-    T: Merge<R> 
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
+    pub fn prelu<R: Default>(self, other: Tensor<(), E, D, R>) -> Self
+    where
+        D: PReLUKernel<Tensor<S, E, D>, Tensor<(), E, D>, Output = Tensor<S, E, D>, Elem = E>,
+        T: Merge<R>,
     {
         self.try_prelu(other).unwrap()
     }
 
-    pub fn try_prelu<R: Default>(self, other: Tensor<(), E, D, R>) -> Result<Self, <Self as HasErr>::Err> 
-    where D: PReLUKernel<Tensor<S, E, D>, Tensor<(), E, D>, Output = Tensor<S, E, D>, Elem = E>,
-    T: Merge<R>
+    pub fn try_prelu<R: Default>(
+        self,
+        other: Tensor<(), E, D, R>,
+    ) -> Result<Self, <Self as HasErr>::Err>
+    where
+        D: PReLUKernel<Tensor<S, E, D>, Tensor<(), E, D>, Output = Tensor<S, E, D>, Elem = E>,
+        T: Merge<R>,
     {
         let device = D::default();
 
@@ -87,7 +106,10 @@ mod tests {
         assert_eq!(r.array(), [-0.1, -0.05, 0.0, 1.0, 2.0]);
         // NOTE: call .exp() to make sure we cover cases where .prelu() uses the result's gradient
         let g = r.exp().mean().backward();
-        assert_close(&g.get(&x).array(), &[0.00904837, 0.00951229, 0.01, 0.54365635, 1.4778112]);
+        assert_close(
+            &g.get(&x).array(),
+            &[0.00904837, 0.00951229, 0.01, 0.54365635, 1.4778112],
+        );
         // TODO: confirm this
         assert_close(&g.get(&y).array(), &-0.11043618);
     }

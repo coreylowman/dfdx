@@ -1,4 +1,9 @@
-use crate::{shapes::*, tensor::*, tensor_ops::*, prelude::{TensorCollection, TensorOptions, BuildOnDevice, BuildModule}};
+use crate::{
+    prelude::{BuildModule, BuildOnDevice, TensorCollection, TensorOptions},
+    shapes::*,
+    tensor::*,
+    tensor_ops::*,
+};
 
 use super::module::{Module, NonMutableModule, ZeroSizedModule};
 
@@ -83,8 +88,7 @@ pub mod builder {
     pub struct PReLU<E: Dtype>(E);
 }
 
-impl<E: Dtype, D: Device<E>> BuildOnDevice<D, E>
-    for builder::PReLU<E>
+impl<E: Dtype, D: Device<E>> BuildOnDevice<D, E> for builder::PReLU<E>
 where
     PReLU<E, D>: BuildModule<D, E>,
 {
@@ -96,21 +100,25 @@ where
 
 /// Calls [prelu()] with learnable value.
 #[derive(Debug, Clone)]
-pub struct PReLU<E: Dtype, D: Device<E>>{
-    a: Tensor<(), E, D>
+pub struct PReLU<E: Dtype, D: Device<E>> {
+    a: Tensor<(), E, D>,
 }
 
 impl<E: Dtype, D: Device<E>> Default for PReLU<E, D> {
     fn default() -> Self {
         let dev = D::default();
-        Self { a: dev.tensor(E::from_f32(0.05).unwrap())}
+        Self {
+            a: dev.tensor(E::from_f32(0.05).unwrap()),
+        }
     }
 }
 
 impl<E: Dtype, D: Device<E>> From<E> for PReLU<E, D> {
     fn from(value: E) -> Self {
         let dev = D::default();
-        Self {a: dev.tensor(value)}
+        Self {
+            a: dev.tensor(value),
+        }
     }
 }
 
@@ -135,14 +143,17 @@ impl<E: Dtype, D: Device<E>> TensorCollection<E, D> for PReLU<E, D> {
     fn iter_tensors<V: crate::prelude::ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
     ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
-        visitor.visit_tensor("a", |p| {&p.a}, |p| {&mut p.a}, TensorOptions::reset_to_zeros())?;
+        visitor.visit_tensor("a", |p| &p.a, |p| &mut p.a, TensorOptions::reset_to_zeros())?;
         Ok(None)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{nn::*, tests::{TestDevice, assert_close}};
+    use crate::{
+        nn::*,
+        tests::{assert_close, TestDevice},
+    };
 
     use super::*;
 
@@ -288,6 +299,9 @@ mod tests {
         let model = (Tanh, PReLU::from(0.05));
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let out = model.forward(t);
-        assert_close(&out.array(), &[-0.04820138, -0.03807970, 0.0, 0.76159415, 0.96402758])
+        assert_close(
+            &out.array(),
+            &[-0.04820138, -0.03807970, 0.0, 0.76159415, 0.96402758],
+        )
     }
 }
