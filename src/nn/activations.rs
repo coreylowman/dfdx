@@ -141,8 +141,9 @@ impl<E: Dtype, D: Device<E>> TensorCollection<E, D> for PReLU<E, D> {
     fn iter_tensors<V: crate::prelude::ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
     ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
-        visitor.visit_tensor("a", |p| &p.a, |p| &mut p.a, TensorOptions::reset_to_zeros())?;
-        Ok(None)
+        visitor.visit_fields(
+            Self::tensor("a", |p| &p.a, |p| &mut p.a, TensorOptions::reset_to_zeros()), 
+            |a| PReLU { a })
     }
 }
 

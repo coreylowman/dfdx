@@ -49,7 +49,7 @@ pub trait PReLUKernel<L, R>: DeviceStorage {
         lhs: &L,
         lhs_grad: &mut <Self as storage_traits::DeviceStorage>::Vec<Self::Elem>,
         rhs: &R,
-        rhs: &mut <Self as storage_traits::DeviceStorage>::Vec<Self::Elem>,
+        rhs_grad: &mut <Self as storage_traits::DeviceStorage>::Vec<Self::Elem>,
         grad: &<Self as storage_traits::DeviceStorage>::Vec<Self::Elem>,
     ) -> Result<(), <Self::Output as HasErr>::Err>;
 }
