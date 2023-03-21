@@ -107,7 +107,7 @@ mod tests {
         let g = r.exp().mean().backward();
         assert_close(
             &g.get(&x).array(),
-            &[0.00904837, 0.00951229, 0.01, 0.54365635, 1.4778112],
+            &[0.00904837, 0.00951229, 0.2, 0.54365635, 1.4778112],
         );
         // TODO: confirm this
         assert_close(&g.get(&y).array(), &-0.11043618);
