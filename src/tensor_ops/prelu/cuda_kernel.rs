@@ -1,9 +1,9 @@
 // TODO
 
-use cudarc::driver::{LaunchConfig, LaunchAsync};
+use cudarc::driver::{LaunchAsync, LaunchConfig};
 use num_traits::Float;
 
-use crate::prelude::{Cuda, Shape, Dtype, Tensor, Unit};
+use crate::prelude::{Cuda, Dtype, Shape, Tensor, Unit};
 
 use super::PReLUKernel;
 
@@ -25,13 +25,18 @@ impl HasCudaKernel<f32> for Cuda {
 // }
 
 impl<S: Shape, E: Dtype + Float> PReLUKernel<Tensor<S, E, Cuda>, Tensor<(), E, Cuda>> for Cuda
-where Self: HasCudaKernel<E>
- {
+where
+    Self: HasCudaKernel<E>,
+{
     type Output = Tensor<S, E, Cuda>;
 
     type Elem = E;
 
-    fn forward(&self, lhs: &Tensor<S, E, Cuda>, rhs: &Tensor<(), E, Cuda>) -> Result<Self::Output, <Self::Output as crate::prelude::HasErr>::Err> {
+    fn forward(
+        &self,
+        lhs: &Tensor<S, E, Cuda>,
+        rhs: &Tensor<(), E, Cuda>,
+    ) -> Result<Self::Output, <Self::Output as crate::prelude::HasErr>::Err> {
         if !self.dev.has_func(Self::FN, Self::FN) {
             self.dev.load_ptx(PTX.into(), Self::FN, &[Self::FN])?;
         }

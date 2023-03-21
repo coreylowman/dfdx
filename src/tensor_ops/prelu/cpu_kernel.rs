@@ -17,7 +17,7 @@ impl<E: Float> BinaryDerivative<E> for PReLUKernelOp {
     fn dfdx(&self, x: &E, y: &E) -> E {
         let zero = E::from(0.0).unwrap();
         let one = E::from(1.0).unwrap();
-        if x > &zero {
+        if x >= &zero {
             one
         } else {
             *y

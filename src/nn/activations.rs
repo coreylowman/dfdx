@@ -61,8 +61,14 @@ where
 }
 
 /// Calls [prelu()] with constant value.
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct LeakyReLU<E: Dtype>(E);
+
+impl<E: Dtype> Default for LeakyReLU<E> {
+    fn default() -> Self {
+        Self(E::from_f32(0.05).unwrap())
+    }
+}
 
 impl<E: Dtype> ZeroSizedModule for LeakyReLU<E> {}
 impl<E: Dtype> NonMutableModule for LeakyReLU<E> {}
@@ -106,7 +112,7 @@ impl<E: Dtype, D: Device<E>> Default for PReLU<E, D> {
     fn default() -> Self {
         let dev = D::default();
         Self {
-            a: dev.tensor(E::from_f32(0.05).unwrap()),
+            a: dev.tensor(E::from_f32(0.25).unwrap()),
         }
     }
 }
@@ -142,8 +148,9 @@ impl<E: Dtype, D: Device<E>> TensorCollection<E, D> for PReLU<E, D> {
         visitor: &mut V,
     ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
         visitor.visit_fields(
-            Self::tensor("a", |p| &p.a, |p| &mut p.a, TensorOptions::reset_to_zeros()), 
-            |a| PReLU { a })
+            Self::tensor("a", |p| &p.a, |p| &mut p.a, TensorOptions::reset_to_zeros()),
+            |a| PReLU { a },
+        )
     }
 }
 
