@@ -49,16 +49,12 @@ mod tests {
     use crate::{prelude::Rank1, tensor::*, tests::*};
 
     #[test]
-    fn test_to_dtype() {
+    fn test_to_dtype_unsigned() {
         let dev: TestDevice = Default::default();
         let a = dev.tensor_from_vec(
             (0..128).map(|x| x as f32).collect(),
             Rank1::<128>::default(),
         );
-        let b = a.clone().to_dtype::<f32>().to_dtype::<f32>();
-        assert_eq!(a.array(), b.array());
-        let b = a.clone().to_dtype::<f64>().to_dtype::<f32>();
-        assert_eq!(a.array(), b.array());
         let b = a.clone().to_dtype::<u8>().to_dtype::<f32>();
         assert_eq!(a.array(), b.array());
         let b = a.clone().to_dtype::<u16>().to_dtype::<f32>();
@@ -69,6 +65,19 @@ mod tests {
         assert_eq!(a.array(), b.array());
         let b = a.clone().to_dtype::<usize>().to_dtype::<f32>();
         assert_eq!(a.array(), b.array());
+
+        let a: Tensor<_, bool, _> = dev.tensor([true, true, false, true, false]);
+        let b = a.to_dtype::<usize>();
+        assert_eq!(b.array(), [1, 1, 0, 1, 0]);
+    }
+
+    #[test]
+    fn test_to_dtype_signed() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor_from_vec(
+            (0..128).map(|x| x as f32).collect(),
+            Rank1::<128>::default(),
+        );
         let b = a.clone().to_dtype::<i8>().to_dtype::<f32>();
         assert_eq!(a.array(), b.array());
         let b = a.clone().to_dtype::<i16>().to_dtype::<f32>();
@@ -78,6 +87,21 @@ mod tests {
         let b = a.clone().to_dtype::<i64>().to_dtype::<f32>();
         assert_eq!(a.array(), b.array());
         let b = a.clone().to_dtype::<isize>().to_dtype::<f32>();
+        assert_eq!(a.array(), b.array());
+
+        let a: Tensor<_, bool, _> = dev.tensor([true, true, false, true, false]);
+        let b = a.to_dtype::<usize>();
+        assert_eq!(b.array(), [1, 1, 0, 1, 0]);
+    }
+
+    #[test]
+    fn test_to_dtype_other() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor_from_vec(
+            (0..128).map(|x| x as f32).collect(),
+            Rank1::<128>::default(),
+        );
+        let b = a.clone().to_dtype::<f64>().to_dtype::<f32>();
         assert_eq!(a.array(), b.array());
 
         let a: Tensor<_, bool, _> = dev.tensor([true, true, false, true, false]);
