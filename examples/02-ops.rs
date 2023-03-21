@@ -2,18 +2,12 @@
 
 use dfdx::{
     shapes::{Rank0, Rank1, Rank2},
-    tensor::{AsArray, Cpu, SampleTensor, Tensor},
+    tensor::{AsArray, AutoDevice, SampleTensor, Tensor},
     tensor_ops::{MeanTo, TryMatMul},
 };
 
-#[cfg(not(feature = "cuda"))]
-type Device = Cpu;
-
-#[cfg(feature = "cuda")]
-type Device = dfdx::tensor::Cuda;
-
 fn main() {
-    let dev = Device::default();
+    let dev = AutoDevice::default();
 
     let a: Tensor<Rank2<2, 3>, f32, _> = dev.sample_normal();
     dbg!(a.array());

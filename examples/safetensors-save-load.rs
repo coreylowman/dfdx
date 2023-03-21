@@ -5,7 +5,7 @@ fn main() {
     use ::safetensors::SafeTensors;
     use dfdx::{
         prelude::*,
-        tensor::{AsArray, Cpu},
+        tensor::{AsArray, AutoDevice, Cpu},
     };
     use memmap2::MmapOptions;
     let dev: Cpu = Default::default();

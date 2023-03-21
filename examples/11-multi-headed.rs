@@ -4,17 +4,11 @@
 use dfdx::{
     nn::builders::{DeviceBuildExt, Linear, Module, SplitInto},
     shapes::Rank1,
-    tensor::{AsArray, Tensor, TensorFrom},
+    tensor::{AsArray, AutoDevice, Tensor, TensorFrom},
 };
 
-#[cfg(not(feature = "cuda"))]
-type Device = dfdx::tensor::Cpu;
-
-#[cfg(feature = "cuda")]
-type Device = dfdx::tensor::Cuda;
-
 fn main() {
-    let dev = Device::default();
+    let dev = AutoDevice::default();
 
     // SplitInto accepts a tuple of modules. Each one of the items in the
     // tuple must accept the same type of input.

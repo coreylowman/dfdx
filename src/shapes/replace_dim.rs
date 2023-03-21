@@ -105,34 +105,22 @@ impl<$($DimVars: Dim, )*> RemoveDimTo<$Dst, $Idx> for ($($DimVars, )*) {
     };
 }
 
-replace!((D1), Axis<0>, (New,), (New,));
-removed!((D1), Axis<0>, (), ());
+macro_rules! replace_and_remove_all {
+    ($(@ $x:tt)? [] $i:tt) => {
+    };
+    (@ [$($befores:ident)*] [$cur:ident $($afters:ident)*] [$idx:tt $($idxs:tt)*]) => {
+        replace!(($($befores,)* $cur $(,$afters)*), Axis<$idx>, ($($befores,)* New, $($afters),*), ($($befores,)* New,));
+        removed!(($($befores,)* $cur $(,$afters)*), Axis<$idx>, ($($befores,)* $($afters,)*), ($($befores,)*));
 
-replace!((D1, D2), Axis<0>, (New, D2), (New,));
-removed!((D1, D2), Axis<0>, (D2,), ());
-replace!((D1, D2), Axis<1>, (D1, New), (D1, New,));
-removed!((D1, D2), Axis<1>, (D1,), (D1,));
+        replace_and_remove_all!(@ [$($befores)* $cur] [$($afters)*] [$($idxs)*]);
+    };
+    ([$cur:ident $($afters:ident)*] [$($idxs:tt)*]) => {
+        replace_and_remove_all!(@ [] [$cur $($afters)*] [$($idxs)*]);
+        replace_and_remove_all!([$($afters)*] [$($idxs)*]);
+    }
+}
 
-replace!((D1, D2, D3), Axis<0>, (New, D2, D3), (New,));
-removed!((D1, D2, D3), Axis<0>, (D2, D3), ());
-replace!((D1, D2, D3), Axis<1>, (D1, New, D3), (D1, New,));
-removed!((D1, D2, D3), Axis<1>, (D1, D3), (D1,));
-replace!((D1, D2, D3), Axis<2>, (D1, D2, New), (D1, D2, New));
-removed!((D1, D2, D3), Axis<2>, (D1, D2,), (D1, D2));
-
-replace!((D1, D2, D3, D4), Axis<0>, (New, D2, D3, D4), (New,));
-removed!((D1, D2, D3, D4), Axis<0>, (D2, D3, D4), ());
-replace!((D1, D2, D3, D4), Axis<1>, (D1, New, D3, D4), (D1, New));
-removed!((D1, D2, D3, D4), Axis<1>, (D1, D3, D4), (D1,));
-replace!((D1, D2, D3, D4), Axis<2>, (D1, D2, New, D4), (D1, D2, New));
-removed!((D1, D2, D3, D4), Axis<2>, (D1, D2, D4), (D1, D2));
-replace!(
-    (D1, D2, D3, D4),
-    Axis<3>,
-    (D1, D2, D3, New),
-    (D1, D2, D3, New)
-);
-removed!((D1, D2, D3, D4), Axis<3>, (D1, D2, D3), (D1, D2, D3));
+replace_and_remove_all!([A B C D E F] [0 1 2 3 4 5]);
 
 // batched select
 impl<Batch: Dim, Seq: Dim, S1: Dim, S2: Dim> ReplaceDimTo<(Batch, Seq, S2), (Batch, Seq)>

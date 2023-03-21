@@ -1,6 +1,6 @@
 /// This advanced example shows how to work with dfdx in a generic
 /// training setting.
-use dfdx::{optim::Sgd, prelude::*};
+use dfdx::{optim::Sgd, prelude::*, tensor::AutoDevice};
 
 /// Our generic training function. Works with any model/optimizer/loss function!
 fn classification_train<
@@ -49,7 +49,7 @@ fn classification_train<
 }
 
 fn main() {
-    let dev: Cpu = Default::default();
+    let dev = AutoDevice::default();
 
     type Model = Linear<10, 2>;
     type Dtype = f32;
