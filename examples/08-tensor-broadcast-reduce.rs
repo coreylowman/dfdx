@@ -3,18 +3,12 @@
 
 use dfdx::{
     shapes::{Axis, Rank2, Rank4},
-    tensor::{AsArray, TensorFrom},
+    tensor::{AsArray, AutoDevice, TensorFrom},
     tensor_ops::{BroadcastTo, MeanTo},
 };
 
-#[cfg(not(feature = "cuda"))]
-type Device = dfdx::tensor::Cpu;
-
-#[cfg(feature = "cuda")]
-type Device = dfdx::tensor::Cuda;
-
 fn main() {
-    let dev = Device::default();
+    let dev = AutoDevice::default();
     let a = dev.tensor([1.0f32, 2.0, 3.0]);
     // NOTE: Cuda currently does not support broadcasting.
     // Its usage results in errors and wrong outputs.

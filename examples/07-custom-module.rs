@@ -4,15 +4,9 @@ use dfdx::{
     nn::modules::{Linear, Module, ModuleVisitor, ReLU, TensorCollection},
     prelude::BuildModule,
     shapes::{Dtype, Rank1, Rank2},
-    tensor::{SampleTensor, Tape, Tensor, Trace},
+    tensor::{AutoDevice, SampleTensor, Tape, Tensor, Trace},
     tensor_ops::Device,
 };
-
-#[cfg(not(feature = "cuda"))]
-type Dev = dfdx::tensor::Cpu;
-
-#[cfg(feature = "cuda")]
-type Dev = dfdx::tensor::Cuda;
 
 /// Custom model struct
 /// This case is trivial and should be done with a tuple of linears and relus,
@@ -90,10 +84,10 @@ impl<
 
 fn main() {
     // Rng for generating model's params
-    let dev = Dev::default();
+    let dev = AutoDevice::default();
 
     // Construct model
-    let model = Mlp::<10, 512, 20, f32, Dev>::build(&dev);
+    let model = Mlp::<10, 512, 20, f32, AutoDevice>::build(&dev);
 
     // Forward pass with a single sample
     let item: Tensor<Rank1<10>, f32, _> = dev.sample_normal();

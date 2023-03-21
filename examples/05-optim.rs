@@ -5,15 +5,9 @@ use dfdx::{
     nn::builders::*,
     optim::{Momentum, Optimizer, Sgd, SgdConfig},
     shapes::Rank2,
-    tensor::{AsArray, SampleTensor, Tensor, Trace},
+    tensor::{AsArray, AutoDevice, SampleTensor, Tensor, Trace},
     tensor_ops::Backward,
 };
-
-#[cfg(not(feature = "cuda"))]
-type Device = dfdx::tensor::Cpu;
-
-#[cfg(feature = "cuda")]
-type Device = dfdx::tensor::Cuda;
 
 // first let's declare our neural network to optimze
 type Mlp = (
@@ -23,7 +17,7 @@ type Mlp = (
 );
 
 fn main() {
-    let dev = Device::default();
+    let dev = AutoDevice::default();
 
     // First randomly initialize our model
     let mut mlp = dev.build_module::<Mlp, f32>();
