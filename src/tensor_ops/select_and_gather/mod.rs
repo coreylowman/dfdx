@@ -435,4 +435,15 @@ mod tests {
         let g = r.sum().backward();
         assert_eq!(g.get(&t).array(), [[3.; 5], [0.; 5], [1.; 5], [2.; 5]]);
     }
+
+    #[test]
+    fn test_gather_smaller_output_row() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank2<2, 3>, TestDtype, _> = dev.sample_normal();
+        let t_array = t.array();
+        let r: Tensor<Rank2<2, 2>, _, _> = t.gather(dev.tensor([[0, 1], [0, 1]]));
+        let r_array = r.array();
+        assert_eq!(r_array[0][..], t_array[0][..2]);
+        assert_eq!(r_array[1][..], t_array[1][..2]);
+    }
 }
