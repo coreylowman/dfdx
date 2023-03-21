@@ -58,27 +58,40 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> HasErr for Tensor<S, E, D, T> {
     type Err = D::Err;
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage> Tensor<S, E, D, NoneTape> {
-    /// Start tracking gradients, clones self.
-    pub fn trace<F: Unit>(&self) -> Tensor<S, E, D, OwnedTape<F, D>> {
-        self.clone().traced()
+/// Something that can trace gradients
+pub trait Trace<E: Unit, D: DeviceStorage>: Clone {
+    type Traced;
+    /// Start tracking gradients, clones self. The gradients will never free
+    /// temporary gradients - See [Gradients::leaky()] for more info.
+    ///
+    /// Prefer to use [Tensor::trace()] with gradients allocated
+    /// with [crate::nn::ZeroGrads::alloc_grads()].
+    fn leaky_trace(&self) -> Self::Traced {
+        self.clone().leaky_traced()
     }
-    /// Start tracking gradients.
-    pub fn traced<F: Unit>(self) -> Tensor<S, E, D, OwnedTape<F, D>> {
+    /// Start tracking gradients. The gradients will never free
+    /// temporary gradients - See [Gradients::leaky()] for more info.
+    ///
+    /// Prefer to use [Tensor::traced()] with gradients allocated
+    /// with [crate::nn::ZeroGrads::alloc_grads()].
+    fn leaky_traced(self) -> Self::Traced;
+
+    /// Accumulates gradients into `gradients`, clones self. Use [crate::nn::ZeroGrads::alloc_grads()]
+    /// to create gradients.
+    fn trace(&self, gradients: Gradients<E, D>) -> Self::Traced {
+        self.clone().traced(gradients)
+    }
+    /// Accumulates gradients into `gradients`. Use [crate::nn::ZeroGrads::alloc_grads()]
+    /// to create gradients.
+    fn traced(self, gradients: Gradients<E, D>) -> Self::Traced;
+}
+
+impl<S: Shape, E: Unit, F: Unit, D: DeviceStorage> Trace<E, D> for Tensor<S, F, D, NoneTape> {
+    type Traced = Tensor<S, F, D, OwnedTape<E, D>>;
+    fn leaky_traced(self) -> Self::Traced {
         self.put_tape(Default::default())
     }
-    /// Accumulate gradients into `gradients`, clones self.
-    pub fn trace_into<F: Unit>(
-        &self,
-        gradients: Gradients<F, D>,
-    ) -> Tensor<S, E, D, OwnedTape<F, D>> {
-        self.clone().traced_into(gradients)
-    }
-    /// Accumulate gradients into `gradients`.
-    pub fn traced_into<F: Unit>(
-        self,
-        gradients: Gradients<F, D>,
-    ) -> Tensor<S, E, D, OwnedTape<F, D>> {
+    fn traced(self, gradients: Gradients<E, D>) -> Self::Traced {
         self.put_tape(OwnedTape {
             gradients,
             operations: std::vec::Vec::new(),
@@ -129,22 +142,21 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> PutTape<T> for Tensor<S, E, D> {
 /// Remove the tape from a tensor
 pub trait SplitTape {
     /// The type of tape the tensor has now
-    type Tape: Default;
+    type Tape;
     // The type of Self without the tape.
     type NoTape: Clone + PutTape<Self::Tape, Output = Self>;
     /// Splits tape off of self
     /// ```rust
     /// # use dfdx::prelude::*;
     /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank1<5>, f32, _, OwnedTape<f32, _>> = dev.zeros().traced();
+    /// # let grads = Gradients::leaky();
+    /// let a: Tensor<Rank1<5>, f32, _, OwnedTape<f32, _>> = dev.zeros().traced(grads);
     /// let (a, tape): (Tensor<_, _, _, NoneTape>, OwnedTape<f32, _>) = a.split_tape();
     /// ```
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
-    /// Clones self and inserts a new empty tape into the clone
-    fn with_empty_tape(&self) -> Self;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage, T: Default> SplitTape for Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceStorage, T> SplitTape for Tensor<S, E, D, T> {
     type Tape = T;
     type NoTape = Tensor<S, E, D>;
     fn split_tape(self) -> (Self::NoTape, Self::Tape) {
@@ -160,9 +172,17 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T: Default> SplitTape for Tensor<S, E
             self.tape,
         )
     }
+}
 
+/// Clones self and inserts a new empty tape into the clone
+pub trait WithEmptyTape {
+    /// Clones self and inserts a new empty tape into the clone
+    fn with_empty_tape(&self) -> Self;
+}
+
+impl<S: Shape, E: Dtype, D: DeviceStorage, T: Default> WithEmptyTape for Tensor<S, E, D, T> {
     fn with_empty_tape(&self) -> Self {
-        Self {
+        Tensor {
             id: self.id,
             data: self.data.clone(),
             shape: self.shape,
@@ -210,59 +230,6 @@ impl<S: Shape, E: Unit, D: SampleTensor<E>, T> Tensor<S, E, D, T> {
     ) -> Result<(), D::Err> {
         self.device
             .try_fill_with_distr(Arc::make_mut(&mut self.data), distr)
-    }
-}
-
-/// Something that can be copied to another `Device` and can be used with the [OnDevice] type
-/// alias.
-///
-/// Here's an example of how this can be implemented for a custom struct:
-/// ```rust
-/// use dfdx::{prelude::*, nn::modules::Linear};
-///
-/// struct MLP<D: Device<f32>> {
-///     l1: Linear<5, 10, f32, D>,
-///     a1: ReLU,
-///     l2: Linear<10, 1, f32, D>,
-/// }
-///
-/// // Need two device types to allow converting from one device to another
-/// impl<D1: Device<f32>, D2: Device<f32>> ToDevice<D2> for MLP<D1> {
-///     type Output = MLP<D2>;
-///
-///     fn to_device(&self, device: &D2) -> Self::Output {
-///         MLP {
-///             l1: self.l1.to_device(device),
-///             a1: self.a1,
-///             l2: self.l2.to_device(device),
-///         }
-///     }
-/// }
-/// ````
-pub trait ToDevice<D> {
-    type Output;
-    fn to_device(&self, device: &D) -> Self::Output;
-}
-
-/// A type alias that yields the type of a module `M` as it would exist on device `D`. This can be
-/// useful when creating sequential networks that need to be parameterized by a device.
-pub type OnDevice<M, D> = <M as ToDevice<D>>::Output;
-
-/// Equivalent to `OnDevice<M, Cuda>`
-#[cfg(feature = "cuda")]
-pub type OnCuda<M> = OnDevice<M, crate::prelude::Cuda>;
-
-/// Equivalent to `OnDevice<M, Cpu>`
-pub type OnCpu<M> = OnDevice<M, Cpu>;
-
-impl<S: Shape, E: Dtype + Unit, T, D1: DeviceStorage, D2: TensorFromVec<E>> ToDevice<D2>
-    for Tensor<S, E, D1, T>
-{
-    type Output = Tensor<S, E, D2, NoneTape>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        let buf = self.as_vec();
-        device.tensor_from_vec(buf, *self.shape())
     }
 }
 

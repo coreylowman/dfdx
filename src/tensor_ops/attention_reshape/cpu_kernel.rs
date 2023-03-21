@@ -1,6 +1,5 @@
 use super::*;
 use crate::tensor::{Cpu, NoneTape};
-use std::vec;
 
 impl<E: Dtype> super::AttentionReshapeKernel<E> for Cpu {
     fn forward<const THREE_HIDDEN_DIM: usize, const NUM_HEADS: usize, const HEAD_DIM: usize>(

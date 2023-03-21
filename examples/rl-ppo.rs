@@ -5,13 +5,8 @@ use std::time::Instant;
 use dfdx::{
     optim::{Momentum, Sgd, SgdConfig},
     prelude::*,
+    tensor::AutoDevice,
 };
-
-#[cfg(not(feature = "cuda"))]
-type Device = Cpu;
-
-#[cfg(feature = "cuda")]
-type Device = Cuda;
 
 const BATCH: usize = 64;
 const STATE: usize = 4;
@@ -24,11 +19,13 @@ type PolicyNetwork = (
 );
 
 fn main() {
-    let dev = Device::default();
+    let dev = AutoDevice::default();
 
     // initiliaze model - all weights are 0s
     let mut pi_net = dev.build_module::<PolicyNetwork, f32>();
     let mut target_pi_net = pi_net.clone();
+
+    let mut grads = pi_net.alloc_grads();
 
     let mut sgd = Sgd::new(
         &pi_net,
@@ -58,7 +55,7 @@ fn main() {
             let old_log_prob_a = old_logits.log_softmax::<Axis<1>>().select(action.clone());
 
             // log_prob_a = log(P(action | state, pi_net))
-            let logits = pi_net.forward(state.trace());
+            let logits = pi_net.forward(state.trace(grads));
             let log_prob_a = logits.log_softmax::<Axis<1>>().select(action.clone());
 
             // ratio = P(action | state, pi_net) / P(action | state, target_pi_net)
@@ -74,10 +71,11 @@ fn main() {
             total_loss += ppo_loss.array();
 
             // run backprop
-            let gradients = ppo_loss.backward();
+            grads = ppo_loss.backward();
 
             // update weights with optimizer
-            sgd.update(&mut pi_net, &gradients).expect("Unused params");
+            sgd.update(&mut pi_net, &grads).expect("Unused params");
+            pi_net.zero_grads(&mut grads);
         }
         target_pi_net.clone_from(&pi_net);
 

@@ -173,9 +173,15 @@
 //! # This created `my_local/model.safetensors` file which can now be used.
 //! ```
 
+mod build_module;
 mod num_params;
 mod reset_params;
 pub mod tensor_collection;
+mod to_device;
+mod to_dtype;
+mod zero_grads;
+
+mod module;
 
 mod activations;
 mod add_into;
@@ -191,7 +197,6 @@ mod generalized_residual;
 mod impl_module_for_tuples;
 mod layer_norm;
 mod linear;
-mod module;
 #[cfg(feature = "numpy")]
 mod npz;
 mod pool2d;
@@ -203,7 +208,6 @@ mod safetensors;
 mod split_into;
 mod transformer;
 mod unbiased_linear;
-mod zero_grads;
 
 pub use module::{
     BuildModule, BuildOnDevice, DeviceBuildExt, Module, ModuleMut, NonMutableModule,
@@ -219,6 +223,8 @@ pub use ema::ModelEMA;
 pub use npz::{LoadFromNpz, SaveToNpz};
 pub use num_params::NumParams;
 pub use reset_params::ResetParams;
+pub use to_device::ToDevice;
+pub use to_dtype::ToDtype;
 pub use zero_grads::ZeroGrads;
 
 pub mod modules {

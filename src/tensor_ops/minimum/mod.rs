@@ -56,7 +56,7 @@ mod tests {
         let a: Tensor<_, TestDtype, _> = dev.tensor([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
 
-        let result = a.trace().minimum(b.clone());
+        let result = a.leaky_trace().minimum(b.clone());
         assert_eq!(result.array(), [[-1., 0., -1.], [3., -4., -5.]]);
 
         let g = result.sum().backward();

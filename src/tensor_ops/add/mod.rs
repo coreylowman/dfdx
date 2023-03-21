@@ -50,7 +50,7 @@ pub trait TryAdd<Rhs = Self>: HasErr {
     fn try_add(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D, LhsTape: Tape<E, D>, R: Default> TryAdd<Tensor<S, E, D, R>>
+impl<S: Shape, E: Dtype, D, LhsTape: Tape<E, D>, R> TryAdd<Tensor<S, E, D, R>>
     for Tensor<S, E, D, LhsTape>
 where
     D: BinaryKernel<BinaryAddKernelOp, E>,
@@ -93,7 +93,7 @@ mod tests {
         let a: Tensor<_, TestDtype, _> = dev.tensor(1.0);
         let b: Tensor<_, TestDtype, _> = dev.tensor(1.0);
 
-        let r = a.trace() + b.clone();
+        let r = a.leaky_trace() + b.clone();
         assert_eq!(r.array(), 2.0);
         let g = r.backward();
         assert_eq!(g.get(&a).array(), 1.0);
@@ -106,7 +106,7 @@ mod tests {
         let a: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([1.0, -1.0, 0.0]);
 
-        let r = a.trace() + b.clone();
+        let r = a.leaky_trace() + b.clone();
         assert_eq!(r.array(), [2.0, 1.0, 3.0]);
         let g = r.mean().backward();
         assert_eq!(g.get(&a).array(), [1.0 / 3.0; 3]);
@@ -121,7 +121,7 @@ mod tests {
         let b: Tensor<_, TestDtype, _> =
             dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
-        let r = a.trace() + b.clone();
+        let r = a.leaky_trace() + b.clone();
         assert_eq!(
             r.array(),
             [[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]
@@ -142,7 +142,7 @@ mod tests {
         let a2 = a.broadcast::<Rank3<2, 3, 4>, _>();
         let b2 = b.broadcast::<Rank3<2, 3, 4>, _>();
 
-        let r = a2.trace() + b2.clone();
+        let r = a2.leaky_trace() + b2.clone();
         assert_eq!(
             r.array(),
             [
@@ -166,7 +166,7 @@ mod tests {
         let a2 = a.broadcast::<Rank3<4, 2, 3>, _>();
         let b2 = b.broadcast::<Rank3<4, 2, 3>, _>();
 
-        let r = a2.trace() + b2.clone();
+        let r = a2.leaky_trace() + b2.clone();
         assert_eq!(
             r.array(),
             [[[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]; 4]
@@ -180,7 +180,7 @@ mod tests {
     fn test_scalar_add_0d() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor(0.0);
-        let r = x.trace() + 1.0;
+        let r = x.leaky_trace() + 1.0;
         assert_eq!(r.array(), 1.0);
         let g = r.exp().backward();
         assert_eq!(g.get(&x).array(), TestDtype::exp(1.0));
@@ -190,7 +190,7 @@ mod tests {
     fn test_scalar_add_1d() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([0.0, 1.0, 2.0]);
-        let r = x.trace() + 0.5;
+        let r = x.leaky_trace() + 0.5;
         assert_eq!(r.array(), [0.5, 1.5, 2.5]);
         let g = r.exp().sum().backward();
         assert_close(&g.get(&x).array(), &[1.6487212, 4.481689, 12.182494]);
@@ -200,7 +200,7 @@ mod tests {
     fn test_scalar_add_2d() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([[0.0; 2]; 3]);
-        let r = x.trace() + 0.5;
+        let r = x.leaky_trace() + 0.5;
         assert_eq!(r.array(), [[0.5; 2]; 3]);
         let g = r.exp().sum().backward();
         assert_close(&g.get(&x).array(), &[[1.6487212; 2]; 3]);

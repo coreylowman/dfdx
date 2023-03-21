@@ -89,7 +89,7 @@ mod tests {
     fn test_max_axis_0_2d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
-        let r = t.trace().max::<_, Axis<0>>();
+        let r = t.leaky_trace().max::<_, Axis<0>>();
         assert_eq!(r.array(), [3.0, 2.0, 2.0]);
         let g = r.exp().mean().backward();
         assert_close(
@@ -102,7 +102,7 @@ mod tests {
     fn test_max_axis_1_2d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
-        let r = t.trace().max::<_, Axis<1>>();
+        let r = t.leaky_trace().max::<_, Axis<1>>();
         assert_eq!(r.array(), [2.0, 3.0]);
         let g = r.sum().backward();
         assert_eq!(g.get(&t).array(), [[0.0, 1.0, 1.0], [1.0, 0.0, 0.0]]);
@@ -112,8 +112,8 @@ mod tests {
     fn test_max_axes_3d_to_1d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.sample_normal::<Rank3<2, 3, 4>>();
-        let r = t.trace().max::<Rank1<4>, _>();
-        let r2 = t.trace().max::<_, Axis<0>>().max::<_, Axis<0>>();
+        let r = t.leaky_trace().max::<Rank1<4>, _>();
+        let r2 = t.leaky_trace().max::<_, Axis<0>>().max::<_, Axis<0>>();
         assert_close(&r.array(), &r2.array());
         let g = r.mean().backward();
         let g2 = r2.mean().backward();
@@ -125,7 +125,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> =
             dev.tensor([[-0.0, 0.0], [0.0, -0.0], [-1.0, -0.0], [-1.0, 0.0]]);
-        let r = t.trace().max::<_, Axis<1>>();
+        let r = t.leaky_trace().max::<_, Axis<1>>();
         assert_eq!(r.array(), [0.0, 0.0, -0.0, 0.0]);
         let g = r.sum().backward();
         assert_eq!(

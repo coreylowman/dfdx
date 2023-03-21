@@ -1,4 +1,4 @@
-use crate::{shapes::Dtype, tensor::*};
+use crate::{shapes::Dtype, tensor_ops::Device};
 
 use super::*;
 
@@ -23,26 +23,17 @@ use super::*;
 #[derive(Debug, Default, Clone)]
 pub struct AddInto<T>(pub T);
 
-impl<T: BuildOnDevice<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for AddInto<T> {
+impl<T: BuildOnDevice<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for AddInto<T> {
     type Built = AddInto<T::Built>;
 }
 
-impl<T: BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildModule<D, E> for AddInto<T> {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self(BuildModule::try_build(device)?))
-    }
-}
+impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> TensorCollection<E, D> for AddInto<T> {
+    type To<E2: Dtype, D2: Device<E2>> = AddInto<T::To<E2, D2>>;
 
-impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>> TensorCollection<E, D> for AddInto<T> {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
-    }
-}
-
-impl<T: ToDevice<D>, D> ToDevice<D> for AddInto<T> {
-    type Output = AddInto<T::Output>;
-    fn to_device(&self, device: &D) -> Self::Output {
-        AddInto(self.0.to_device(device))
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(Self::module("0", |s| &s.0, |s| &mut s.0), AddInto)
     }
 }
 
@@ -104,6 +95,7 @@ mod tests {
     use crate::{
         nn::builders::*,
         shapes::*,
+        tensor::{OwnedTape, Tensor, Trace, ZerosTensor},
         tests::{TestDevice, TestDtype},
     };
 
@@ -113,12 +105,12 @@ mod tests {
         type Model = AddInto<(Linear<2, 5>, Linear<3, 5>)>;
         let m = dev.build_module::<Model, TestDtype>();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_, _>> = m.forward((
-            dev.zeros::<Rank1<2>>().traced(),
-            dev.zeros::<Rank1<3>>().traced(),
+            dev.zeros::<Rank1<2>>().leaky_traced(),
+            dev.zeros::<Rank1<3>>().leaky_traced(),
         ));
         let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_, _>> = m.forward((
-            dev.zeros::<Rank2<3, 2>>().traced(),
-            dev.zeros::<Rank2<3, 3>>().traced(),
+            dev.zeros::<Rank2<3, 2>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 3>>().leaky_traced(),
         ));
     }
 
@@ -128,14 +120,14 @@ mod tests {
         type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>)>;
         let m = dev.build_module::<Model, TestDtype>();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_, _>> = m.forward((
-            dev.zeros::<Rank1<2>>().traced(),
-            dev.zeros::<Rank1<3>>().traced(),
-            dev.zeros::<Rank1<4>>().traced(),
+            dev.zeros::<Rank1<2>>().leaky_traced(),
+            dev.zeros::<Rank1<3>>().leaky_traced(),
+            dev.zeros::<Rank1<4>>().leaky_traced(),
         ));
         let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_, _>> = m.forward((
-            dev.zeros::<Rank2<3, 2>>().traced(),
-            dev.zeros::<Rank2<3, 3>>().traced(),
-            dev.zeros::<Rank2<3, 4>>().traced(),
+            dev.zeros::<Rank2<3, 2>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 3>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 4>>().leaky_traced(),
         ));
     }
 
@@ -145,16 +137,16 @@ mod tests {
         type Model = AddInto<(Linear<2, 5>, Linear<3, 5>, Linear<4, 5>, Linear<5, 5>)>;
         let m = dev.build_module::<Model, TestDtype>();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_, _>> = m.forward((
-            dev.zeros::<Rank1<2>>().traced(),
-            dev.zeros::<Rank1<3>>().traced(),
-            dev.zeros::<Rank1<4>>().traced(),
-            dev.zeros::<Rank1<5>>().traced(),
+            dev.zeros::<Rank1<2>>().leaky_traced(),
+            dev.zeros::<Rank1<3>>().leaky_traced(),
+            dev.zeros::<Rank1<4>>().leaky_traced(),
+            dev.zeros::<Rank1<5>>().leaky_traced(),
         ));
         let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_, _>> = m.forward((
-            dev.zeros::<Rank2<3, 2>>().traced(),
-            dev.zeros::<Rank2<3, 3>>().traced(),
-            dev.zeros::<Rank2<3, 4>>().traced(),
-            dev.zeros::<Rank2<3, 5>>().traced(),
+            dev.zeros::<Rank2<3, 2>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 3>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 4>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 5>>().leaky_traced(),
         ));
     }
 
@@ -170,18 +162,18 @@ mod tests {
         )>;
         let m = dev.build_module::<Model, TestDtype>();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_, _>> = m.forward((
-            dev.zeros::<Rank1<2>>().traced(),
-            dev.zeros::<Rank1<3>>().traced(),
-            dev.zeros::<Rank1<4>>().traced(),
-            dev.zeros::<Rank1<5>>().traced(),
-            dev.zeros::<Rank1<6>>().traced(),
+            dev.zeros::<Rank1<2>>().leaky_traced(),
+            dev.zeros::<Rank1<3>>().leaky_traced(),
+            dev.zeros::<Rank1<4>>().leaky_traced(),
+            dev.zeros::<Rank1<5>>().leaky_traced(),
+            dev.zeros::<Rank1<6>>().leaky_traced(),
         ));
         let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_, _>> = m.forward((
-            dev.zeros::<Rank2<3, 2>>().traced(),
-            dev.zeros::<Rank2<3, 3>>().traced(),
-            dev.zeros::<Rank2<3, 4>>().traced(),
-            dev.zeros::<Rank2<3, 5>>().traced(),
-            dev.zeros::<Rank2<3, 6>>().traced(),
+            dev.zeros::<Rank2<3, 2>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 3>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 4>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 5>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 6>>().leaky_traced(),
         ));
     }
 
@@ -198,20 +190,20 @@ mod tests {
         )>;
         let m = dev.build_module::<Model, TestDtype>();
         let _: Tensor<Rank1<5>, _, _, OwnedTape<_, _>> = m.forward((
-            dev.zeros::<Rank1<2>>().traced(),
-            dev.zeros::<Rank1<3>>().traced(),
-            dev.zeros::<Rank1<4>>().traced(),
-            dev.zeros::<Rank1<5>>().traced(),
-            dev.zeros::<Rank1<6>>().traced(),
-            dev.zeros::<Rank1<7>>().traced(),
+            dev.zeros::<Rank1<2>>().leaky_traced(),
+            dev.zeros::<Rank1<3>>().leaky_traced(),
+            dev.zeros::<Rank1<4>>().leaky_traced(),
+            dev.zeros::<Rank1<5>>().leaky_traced(),
+            dev.zeros::<Rank1<6>>().leaky_traced(),
+            dev.zeros::<Rank1<7>>().leaky_traced(),
         ));
         let _: Tensor<Rank2<3, 5>, _, _, OwnedTape<_, _>> = m.forward((
-            dev.zeros::<Rank2<3, 2>>().traced(),
-            dev.zeros::<Rank2<3, 3>>().traced(),
-            dev.zeros::<Rank2<3, 4>>().traced(),
-            dev.zeros::<Rank2<3, 5>>().traced(),
-            dev.zeros::<Rank2<3, 6>>().traced(),
-            dev.zeros::<Rank2<3, 7>>().traced(),
+            dev.zeros::<Rank2<3, 2>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 3>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 4>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 5>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 6>>().leaky_traced(),
+            dev.zeros::<Rank2<3, 7>>().leaky_traced(),
         ));
     }
 
@@ -222,20 +214,20 @@ mod tests {
         type Model = (AddInto<(Linear<5, 3>, Linear<5, 3>)>, ReLU, Linear<3, 1>);
         let mut model = dev.build_module::<Model, TestDtype>();
         let _: Tensor<Rank1<1>, _, _, OwnedTape<_, _>> = model.forward((
-            dev.zeros::<Rank1<5>>().traced(),
-            dev.zeros::<Rank1<5>>().traced(),
+            dev.zeros::<Rank1<5>>().leaky_traced(),
+            dev.zeros::<Rank1<5>>().leaky_traced(),
         ));
         let _: Tensor<Rank2<5, 1>, _, _, OwnedTape<_, _>> = model.forward((
-            dev.zeros::<Rank2<5, 5>>().traced(),
-            dev.zeros::<Rank2<5, 5>>().traced(),
+            dev.zeros::<Rank2<5, 5>>().leaky_traced(),
+            dev.zeros::<Rank2<5, 5>>().leaky_traced(),
         ));
         let _: Tensor<Rank1<1>, _, _, OwnedTape<_, _>> = model.forward_mut((
-            dev.zeros::<Rank1<5>>().traced(),
-            dev.zeros::<Rank1<5>>().traced(),
+            dev.zeros::<Rank1<5>>().leaky_traced(),
+            dev.zeros::<Rank1<5>>().leaky_traced(),
         ));
         let _: Tensor<Rank2<5, 1>, _, _, OwnedTape<_, _>> = model.forward_mut((
-            dev.zeros::<Rank2<5, 5>>().traced(),
-            dev.zeros::<Rank2<5, 5>>().traced(),
+            dev.zeros::<Rank2<5, 5>>().leaky_traced(),
+            dev.zeros::<Rank2<5, 5>>().leaky_traced(),
         ));
     }
 }

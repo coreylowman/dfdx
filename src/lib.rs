@@ -47,30 +47,33 @@
 //! let y = mlp.forward(x); // compiler infers that `y` must be `Tensor<Rank1<2>>`
 //! ```
 //!
-//! 5. Trace gradients using [crate::tensor::Tensor::trace()]
+//! 5. Trace gradients using [crate::tensor::Trace::trace()]
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! # let model = dev.build_module::<Linear<10, 5>, f32>();
+//! # let mlp = dev.build_module::<Linear<10, 5>, f32>();
 //! # let y_true: Tensor<Rank1<5>, f32, _> = dev.sample_normal().softmax();
+//! // allocate gradients [ZeroGrads::alloc_grads]
+//! let grads = mlp.alloc_grads();
+//!
 //! // tensors default to not having a tape
 //! let x: Tensor<Rank1<10>, f32, Cpu, NoneTape> = dev.zeros();
 //!
 //! // `.trace()` clones `x` and inserts a gradient tape.
-//! let x_traced: Tensor<Rank1<10>, f32, Cpu, OwnedTape<f32, Cpu>> = x.trace();
+//! let x_traced: Tensor<Rank1<10>, f32, Cpu, OwnedTape<f32, Cpu>> = x.trace(grads);
 //!
 //! // The tape from the input is moved through the network during .forward().
-//! let y: Tensor<Rank1<5>, f32, Cpu, NoneTape> = model.forward(x);
-//! let y_traced: Tensor<Rank1<5>, f32, Cpu, OwnedTape<f32, Cpu>> = model.forward(x_traced);
+//! let y: Tensor<Rank1<5>, f32, Cpu, NoneTape> = mlp.forward(x);
+//! let y_traced: Tensor<Rank1<5>, f32, Cpu, OwnedTape<f32, Cpu>> = mlp.forward(x_traced);
 //! ```
 //!
 //! 6. Compute gradients with [crate::tensor_ops::Backward]. See [crate::tensor_ops].
 //! ```rust
 //! # use dfdx::prelude::*;
 //! # let dev: Cpu = Default::default();
-//! # let model = dev.build_module::<Linear<10, 5>, f32>();
+//! # let mlp = dev.build_module::<Linear<10, 5>, f32>();
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
-//! # let y = model.forward(dev.zeros::<Rank1<10>>().trace());
+//! # let y = mlp.forward(dev.zeros::<Rank1<10>>().trace(Gradients::leaky()));
 //! // compute cross entropy loss
 //! let loss = cross_entropy_with_logits_loss(y, y_true);
 //!
@@ -81,20 +84,21 @@
 //! ```rust
 //! # use dfdx::{prelude::*, optim::*};
 //! # let dev: Cpu = Default::default();
-//! # let mut model = dev.build_module::<Linear<10, 5>, f32>();
+//! # let mut mlp = dev.build_module::<Linear<10, 5>, f32>();
 //! # let y_true = dev.sample_normal::<Rank1<5>>().softmax();
-//! # let y = model.forward(dev.zeros::<Rank1<10>>().trace());
+//! # let y = mlp.forward(dev.zeros::<Rank1<10>>().trace(Gradients::leaky()));
 //! # let loss = cross_entropy_with_logits_loss(y, y_true);
-//! # let gradients: Gradients<f32, Cpu> = loss.backward();
+//! # let mut gradients: Gradients<f32, Cpu> = loss.backward();
 //! // Use stochastic gradient descent (Sgd), with a learning rate of 1e-2, and 0.9 momentum.
-//! let mut opt = Sgd::new(&model, SgdConfig {
+//! let mut opt = Sgd::new(&mlp, SgdConfig {
 //!     lr: 1e-2,
 //!     momentum: Some(Momentum::Classic(0.9)),
 //!     weight_decay: None,
 //! });
 //!
-//! // pass the gradients & the model into the optimizer's update method
-//! opt.update(&mut model, &gradients);
+//! // pass the gradients & the mlp into the optimizer's update method
+//! opt.update(&mut mlp, &gradients);
+//! mlp.zero_grads(&mut gradients);
 //! ```
 
 #![cfg_attr(feature = "no-std", no_std)]
@@ -102,6 +106,7 @@
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
 #[cfg(feature = "no-std")]
+#[macro_use]
 extern crate alloc;
 #[cfg(feature = "no-std")]
 extern crate no_std_compat as std;

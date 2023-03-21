@@ -79,45 +79,23 @@ pub struct Transformer<
 }
 
 impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>
-    BuildModule<D, E> for Transformer<M, H, A, B, F, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-    D: Device<E>,
-{
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self {
-            encoder: BuildModule::try_build(device)?,
-            decoder: BuildModule::try_build(device)?,
-        })
-    }
-}
-
-impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D>
     TensorCollection<E, D> for Transformer<M, H, A, B, F, E, D>
 where
     E: Dtype + Float + SampleUniform,
     D: Device<E>,
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("encoder", |s| &s.encoder, |s| &mut s.encoder)?;
-        visitor.visit_module("decoder", |s| &s.decoder, |s| &mut s.decoder)
-    }
-}
+    type To<E2: Dtype, D2: Device<E2>> = Transformer<M, H, A, B, F, E2, D2>;
 
-impl<const M: usize, const H: usize, const A: usize, const B: usize, const F: usize, E, D1, D2>
-    ToDevice<D2> for Transformer<M, H, A, B, F, E, D1>
-where
-    E: Dtype,
-    D1: Device<E>,
-    D2: Device<E>,
-{
-    type Output = Transformer<M, H, A, B, F, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        Transformer {
-            encoder: self.encoder.to_device(device),
-            decoder: self.decoder.to_device(device),
-        }
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                Self::module("encoder", |s| &s.encoder, |s| &mut s.encoder),
+                Self::module("decoder", |s| &s.decoder, |s| &mut s.decoder),
+            ),
+            |(encoder, decoder)| Transformer { encoder, decoder },
+        )
     }
 }
 
@@ -187,7 +165,7 @@ mod tests {
 
         let src = dev.sample_normal::<Rank3<4, 12, 16>>();
         let tgt = dev.sample_normal::<Rank3<4, 6, 16>>();
-        let out: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward_mut((src.trace(), tgt));
+        let out: Tensor<Rank3<4, 6, 16>, _, _, _> = t.forward_mut((src.leaky_trace(), tgt));
         let g = out.mean().backward();
 
         let mut opt = Sgd::new(&t, Default::default());

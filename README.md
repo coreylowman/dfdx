@@ -20,7 +20,7 @@ Features at a glance:
 `dfdx` is on [crates.io](https://crates.io/crates/dfdx)! Use by adding this to your `Cargo.toml`:
 
 ```toml
-dfdx = "0.10.0"
+dfdx = "0.11.0"
 ```
 
 See the documentation at [docs.rs/dfdx](https://docs.rs/dfdx).
@@ -49,7 +49,7 @@ Enable the `cuda` feature to start using the `Cuda` device! Requires the install
 The [matrixmultiply crate](https://crates.io/crates/matrixmultiply) is the default BLAS library. **You don't need
 to do download/install anything for this to work!**
 
-To link to the `Intel MKL` libraries (assuming you installed it already) use the `intel-mkl` feature. See [feature flags docs](https://docs.rs/dfdx/latest/dfdx/feature_flags/index.html) for more info.
+To link to the `Intel MKL` libraries (assuming you installed it already) use the `cpu-mkl-matmul` feature. See [feature flags docs](https://docs.rs/dfdx/latest/dfdx/feature_flags/index.html) for more info.
 
 ## API Preview
 
@@ -65,12 +65,10 @@ type Mlp = (
 );
 
 fn main() {
-    let dev: Cpu = Default::default();
-    // OR `let dev: Cuda = Default::default();`
+    let dev: Cuda = Default::default(); // or `Cpu`
     let mlp = dev.build_module::<Mlp, f32>();
     let x: Tensor<Rank1<10>, f32, Cpu> = dev.zeros();
-    let y /*: Tensor<Rank1<2>, f32, Cpu>*/ = mlp.forward(x);
-    println!("{:?}", y);
+    let y: Tensor<Rank1<2>, f32, Cpu> = mlp.forward(x);
     mlp.save("checkpoint.npz")?;
 }
 ```
@@ -78,19 +76,21 @@ fn main() {
 2. 📈 Ergonomic Optimizer API
 
 ```rust
-let mut model: Model = ...
+type Model = ...
+let mut model = dev.build_module::<Model, f32>();
+let mut grads = model.alloc_grads();
 let mut sgd = Sgd::new(&model, SgdConfig {
     lr: 1e-2,
     momentum: Some(Momentum::Nesterov(0.9))
 });
-let loss = ...
 
-// run backprop to get the gradients
-let gradients = loss.backward();
-sgd.update(&mut model, &gradients);
+let loss = ...
+grads = loss.backward();
+
+sgd.update(&mut model, &grads);
 ```
 
-3. 💡 Tensors can be converted to and from normal rust arrays
+3. 💡 Const tensors can be converted to and from normal rust arrays
 ```rust
 let t0: Tensor<Rank0, f32, _> = dev.tensor(0.0);
 assert_eq!(t0.array(), &0.0);
@@ -172,7 +172,7 @@ tl;dr: If you forget to include a call to `trace()` or `traced()`, the program w
 
 ```diff
 -let pred = module.forward(x);
-+let pred = module.forward(x.traced());
++let pred = module.forward(x.traced(grads));
 let loss = (y - pred).square().mean();
 let gradients = loss.backward();
 ```

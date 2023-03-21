@@ -21,7 +21,8 @@ use super::*;
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let dropout: DropoutOneIn<2> = BuildModule::build(&dev);
-/// dropout.forward(dev.zeros::<Rank1<5>>().trace());
+/// let grads = dropout.alloc_grads();
+/// dropout.forward(dev.zeros::<Rank1<5>>().trace(grads));
 /// ```
 ///
 /// 2. Using [ModuleMut] with [NoneTape] **fails to compile**
@@ -40,8 +41,9 @@ use super::*;
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let mut dropout: DropoutOneIn<2> = Default::default();
+/// let grads = dropout.alloc_grads();
 /// let x: Tensor<Rank2<2, 5>, f32, _> = dev.ones();
-/// let r = dropout.forward_mut(x.trace());
+/// let r = dropout.forward_mut(x.trace(grads));
 /// assert_eq!(r.array(), [[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug, Default)]
@@ -91,7 +93,7 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D,
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let dropout: Dropout = Default::default();
-/// dropout.forward(dev.zeros::<Rank1<5>>().trace());
+/// dropout.forward(dev.zeros::<Rank1<5>>().leaky_trace());
 /// ```
 ///
 /// 2. Using [ModuleMut] with [NoneTape] **fails to compile**
@@ -110,8 +112,9 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D,
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let mut dropout = Dropout { p: 0.5 };
+/// let grads = dropout.alloc_grads();
 /// let x: Tensor<Rank2<2, 5>, f32, _> = dev.ones();
-/// let r = dropout.forward_mut(x.trace());
+/// let r = dropout.forward_mut(x.trace(grads));
 /// assert_eq!(r.array(), [[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug)]
@@ -155,7 +158,7 @@ impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<E, D>
 mod tests {
     use crate::{
         shapes::Rank1,
-        tensor::{AsArray, OnesTensor},
+        tensor::{AsArray, OnesTensor, Trace},
         tests::*,
     };
 
@@ -167,9 +170,9 @@ mod tests {
         let mut d1 = Dropout { p: 0.5 };
         let mut d2 = Dropout { p: 0.5 };
         let t: Tensor<Rank1<100>, TestDtype, _> = dev.ones();
-        let r1 = d1.forward_mut(t.trace());
-        let r2 = d2.forward_mut(t.trace());
-        let r1_2 = d1.forward_mut(t.trace());
+        let r1 = d1.forward_mut(t.leaky_trace());
+        let r2 = d2.forward_mut(t.leaky_trace());
+        let r1_2 = d1.forward_mut(t.leaky_trace());
         assert_ne!(r1.array(), r2.array());
         assert_ne!(r1.array(), r1_2.array());
     }
@@ -188,7 +191,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut dropout = Dropout { p: 0.5 };
         let t: Tensor<Rank1<100>, TestDtype, _> = dev.ones();
-        let r = dropout.forward_mut(t.trace());
+        let r = dropout.forward_mut(t.leaky_trace());
         assert_ne!(t.array(), r.array());
     }
 }

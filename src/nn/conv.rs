@@ -64,47 +64,23 @@ where
     E: Dtype + Float + SampleUniform,
     D: Device<E>,
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
-            "weight",
-            |s| &s.weight,
-            |s| &mut s.weight,
-            TensorOptions::reset_with(|t| {
-                let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
-                t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
-            }),
+    type To<E2: Dtype, D2: Device<E2>> = Conv2D<I, O, K, S, P, E2, D2>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            Self::tensor(
+                "weight",
+                |s| &s.weight,
+                |s| &mut s.weight,
+                TensorOptions::reset_with(|t| {
+                    let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
+                    t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
+                }),
+            ),
+            |weight| Conv2D { weight },
         )
-    }
-}
-
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
-    BuildModule<D, E> for Conv2D<I, O, K, S, P, E, D>
-where
-    E: Dtype + Float + SampleUniform,
-    D: Device<E>,
-{
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        let k = E::from_usize(I * K * K).unwrap();
-        let bound = E::ONE / k.sqrt();
-        Ok(Self {
-            weight: device.try_sample(rand_distr::Uniform::new(-bound, bound))?,
-        })
-    }
-}
-
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D1, D2>
-    ToDevice<D2> for Conv2D<I, O, K, S, P, E, D1>
-where
-    E: Dtype,
-    D1: Device<E>,
-    D2: Device<E>,
-{
-    type Output = Conv2D<I, O, K, S, P, E, D2>;
-
-    fn to_device(&self, device: &D2) -> Self::Output {
-        Conv2D {
-            weight: self.weight.to_device(device),
-        }
     }
 }
 
@@ -206,7 +182,7 @@ mod tests {
         let weight_init = m.weight.clone();
 
         let mut opt = Sgd::new(&m, Default::default());
-        let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().traced());
+        let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().leaky_trace());
         let g = out.square().mean().backward();
 
         assert_ne!(g.get(&m.weight).array(), [[[[0.0; 3]; 3]; 2]; 4]);

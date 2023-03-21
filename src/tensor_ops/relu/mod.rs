@@ -47,7 +47,7 @@ mod tests {
     fn test_relu() {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r = x.trace().relu();
+        let r = x.leaky_trace().relu();
         assert_eq!(r.array(), [0.0, 0.0, 0.0, 1.0, 2.0]);
         // NOTE: call .exp() to make sure we cover cases where .relu() uses the result's gradient
         let g = r.exp().mean().backward();

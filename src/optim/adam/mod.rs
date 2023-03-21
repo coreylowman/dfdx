@@ -8,7 +8,8 @@ use std::{marker::PhantomData, sync::Arc};
 use crate::{
     nn::tensor_collection::*,
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, Gradients},
+    tensor::{DeviceStorage, Gradients, Tensor},
+    tensor_ops::Device,
 };
 
 use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
@@ -87,14 +88,14 @@ impl<M, E: Dtype, D: DeviceStorage> Adam<M, E, D> {
         Self {
             cfg,
             t: 0,
-            moment1: Gradients::without_leafs(),
-            moment2: Gradients::without_leafs(),
+            moment1: Gradients::leaky(),
+            moment2: Gradients::leaky(),
             marker: PhantomData,
         }
     }
 }
 
-pub(super) trait AdamKernel<E: Dtype>: DeviceStorage {
+pub trait AdamKernel<E: Dtype>: DeviceStorage {
     fn update(
         &self,
         t: i32,
@@ -106,19 +107,21 @@ pub(super) trait AdamKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D>
+impl<M, D: Device<E>, E: Dtype> TensorVisitor<E, D>
     for (&mut Adam<M, E, D>, &Gradients<E, D>, UnusedTensors)
 {
     type Viewer = ViewTensorMut;
     type Err = D::Err;
+    type E2 = E;
+    type D2 = D;
 
     fn visit<S: Shape>(
         &mut self,
         opts: TensorOptions<S, E, D>,
-        p: &mut crate::prelude::Tensor<S, E, D>,
-    ) -> Result<(), <D>::Err> {
+        p: &mut Tensor<S, E, D>,
+    ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         if !opts.do_gradient_update {
-            return Ok(());
+            return Ok(None);
         }
         let g = self.1.get_ref_checked(p);
         match g {
@@ -126,7 +129,8 @@ impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D>
             Some(g) => {
                 let m_t = self.0.moment1.get_or_alloc_mut(p)?;
                 let v_t = self.0.moment2.get_or_alloc_mut(p)?;
-                p.device.update(
+                AdamKernel::update(
+                    &p.device,
                     self.0.t,
                     &self.0.cfg,
                     Arc::make_mut(&mut p.data),
@@ -136,11 +140,11 @@ impl<M, D: AdamKernel<E>, E: Dtype> TensorVisitor<E, D>
                 )?;
             }
         }
-        Ok(())
+        Ok(None)
     }
 }
 
-impl<M: TensorCollection<E, D>, D: AdamKernel<E>, E: Dtype> Optimizer<M, D, E> for Adam<M, E, D> {
+impl<M: TensorCollection<E, D>, D: Device<E>, E: Dtype> Optimizer<M, D, E> for Adam<M, E, D> {
     fn update(
         &mut self,
         module: &mut M,
@@ -184,7 +188,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = (t.trace() * rate.clone()).square().mean().backward();
+            let gradients = (t.leaky_trace() * rate.clone()).square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -218,7 +222,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = (t.trace() * rate.clone()).square().mean().backward();
+            let gradients = (t.leaky_trace() * rate.clone()).square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -251,7 +255,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = t.trace().exp().square().mean().backward();
+            let gradients = t.leaky_trace().exp().square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -284,7 +288,7 @@ mod tests {
         ];
 
         for e in expected.iter() {
-            let gradients = t.trace().exp().square().mean().backward();
+            let gradients = t.leaky_trace().exp().square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
             assert_close(&t.array(), e);
         }
@@ -295,7 +299,6 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let mut opt = Adam::new(&t, Default::default());
-        opt.update(&mut t, &Gradients::without_leafs())
-            .expect_err("");
+        opt.update(&mut t, &Gradients::leaky()).expect_err("");
     }
 }

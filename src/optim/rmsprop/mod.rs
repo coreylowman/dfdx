@@ -9,6 +9,7 @@ use crate::{
     nn::tensor_collection::*,
     shapes::{Dtype, Shape},
     tensor::*,
+    tensor_ops::Device,
 };
 
 use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
@@ -95,15 +96,15 @@ impl<M, E: Dtype, D: DeviceStorage> RMSprop<M, E, D> {
         Self {
             cfg,
             step: 0,
-            momentums: Gradients::without_leafs(),
-            square_avg: Gradients::without_leafs(),
-            grad_avg: Gradients::without_leafs(),
+            momentums: Gradients::leaky(),
+            square_avg: Gradients::leaky(),
+            grad_avg: Gradients::leaky(),
             marker: PhantomData,
         }
     }
 }
 
-pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
+pub trait RMSpropKernel<E: Dtype>: DeviceStorage {
     fn update(
         &self,
         cfg: &RMSpropConfig<E>,
@@ -115,19 +116,21 @@ pub(super) trait RMSpropKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D>
+impl<M, E: Dtype, D: Device<E>> TensorVisitor<E, D>
     for (&mut RMSprop<M, E, D>, &Gradients<E, D>, UnusedTensors)
 {
     type Viewer = ViewTensorMut;
     type Err = D::Err;
+    type E2 = E;
+    type D2 = D;
 
     fn visit<S: Shape>(
         &mut self,
         opts: TensorOptions<S, E, D>,
         p: &mut Tensor<S, E, D>,
-    ) -> Result<(), <D>::Err> {
+    ) -> Result<Option<Tensor<S, E, D>>, Self::Err> {
         if !opts.do_gradient_update {
-            return Ok(());
+            return Ok(None);
         }
         let g = self.1.get_ref_checked(p);
         match g {
@@ -141,16 +144,23 @@ impl<M, E: Dtype, D: RMSpropKernel<E> + OneFillStorage<E>> TensorVisitor<E, D>
                     p.device.try_fill_with_ones(sa)?;
                 }
 
-                p.device
-                    .update(&self.0.cfg, Arc::make_mut(&mut p.data), m, sa, ga, g)?;
+                RMSpropKernel::update(
+                    &p.device,
+                    &self.0.cfg,
+                    Arc::make_mut(&mut p.data),
+                    m,
+                    sa,
+                    ga,
+                    g,
+                )?;
             }
         }
-        Ok(())
+        Ok(None)
     }
 }
 
-impl<M: TensorCollection<E, D>, D: RMSpropKernel<E> + OneFillStorage<E>, E: Dtype>
-    Optimizer<M, D, E> for RMSprop<M, E, D>
+impl<M: TensorCollection<E, D>, D: Device<E> + OneFillStorage<E>, E: Dtype> Optimizer<M, D, E>
+    for RMSprop<M, E, D>
 {
     fn update(
         &mut self,
@@ -182,7 +192,7 @@ mod tests {
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut opt = RMSprop::new(&t, cfg);
         for e in expected.iter() {
-            let gradients = (t.trace() * rate.clone()).square().sum().backward();
+            let gradients = (t.leaky_trace() * rate.clone()).square().sum().backward();
             opt.update(&mut t, &gradients).expect("");
             std::println!("{:?}", t.array());
             assert_close(&t.array(), e);
@@ -326,7 +336,6 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.sample_normal();
         let mut opt = RMSprop::new(&t, Default::default());
-        opt.update(&mut t, &Gradients::without_leafs())
-            .expect_err("");
+        opt.update(&mut t, &Gradients::leaky()).expect_err("");
     }
 }

@@ -429,7 +429,15 @@ pub trait TensorFrom<Src, S: Shape, E: Unit>: DeviceStorage {
 
 impl<E: Unit, D: DeviceStorage + TensorFromVec<E>> TensorFrom<E, Rank0, E> for D {
     fn try_tensor(&self, src: E) -> Result<Tensor<Rank0, E, Self>, Self::Err> {
-        self.try_tensor_from_vec(std::vec![src], ())
+        #[cfg(feature = "no-std")]
+        let buf = {
+            let mut buf = Vec::with_capacity(1);
+            buf.push(src);
+            buf
+        };
+        #[cfg(not(feature = "no-std"))]
+        let buf = vec![src];
+        self.try_tensor_from_vec(buf, ())
     }
 }
 

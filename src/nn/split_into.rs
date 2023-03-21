@@ -1,4 +1,4 @@
-use crate::{shapes::Dtype, tensor::*};
+use crate::{shapes::Dtype, tensor::*, tensor_ops::Device};
 
 use super::*;
 
@@ -22,29 +22,17 @@ use super::*;
 #[derive(Debug, Default, Clone)]
 pub struct SplitInto<T>(pub T);
 
-impl<T: BuildOnDevice<D, E>, D: DeviceStorage, E: Dtype> BuildOnDevice<D, E> for SplitInto<T> {
+impl<T: BuildOnDevice<D, E>, D: Device<E>, E: Dtype> BuildOnDevice<D, E> for SplitInto<T> {
     type Built = SplitInto<T::Built>;
 }
 
-impl<T: BuildModule<D, E>, D: DeviceStorage, E: Dtype> BuildModule<D, E> for SplitInto<T> {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self(BuildModule::try_build(device)?))
-    }
-}
+impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> TensorCollection<E, D> for SplitInto<T> {
+    type To<E2: Dtype, D2: Device<E2>> = SplitInto<T::To<E2, D2>>;
 
-impl<E: Dtype, D: DeviceStorage, T: TensorCollection<E, D>> TensorCollection<E, D>
-    for SplitInto<T>
-{
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
-    }
-}
-
-impl<T: ToDevice<D>, D> ToDevice<D> for SplitInto<T> {
-    type Output = SplitInto<T::Output>;
-
-    fn to_device(&self, device: &D) -> Self::Output {
-        SplitInto(self.0.to_device(device))
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(Self::module("0", |s| &s.0, |s| &mut s.0), SplitInto)
     }
 }
 
@@ -119,7 +107,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         type Model = SplitInto<(Linear<1, 1>, Linear<1, 1>)>;
         let m = dev.build_module::<Model, TestDtype>();
-        let (left, right) = m.forward(dev.sample_normal::<Rank1<1>>().trace());
+        let (left, right) = m.forward(dev.sample_normal::<Rank1<1>>().leaky_trace());
         let r = right.retaped::<NoneTape>();
         let g = right.mean().backward();
         assert_eq!(g.get(&left).array(), [0.0; 1]);
@@ -134,11 +122,11 @@ mod tests {
         let _: (
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _, OwnedTape<_, _>>,
-        ) = m.forward(dev.zeros::<Rank1<5>>().traced());
+        ) = m.forward(dev.zeros::<Rank1<5>>().leaky_traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
             Tensor<Rank2<3, 2>, _, _, OwnedTape<_, _>>,
-        ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
+        ) = m.forward(dev.zeros::<Rank2<3, 5>>().leaky_traced());
     }
 
     #[test]
@@ -150,12 +138,12 @@ mod tests {
             Tensor<Rank1<1>, _, _>,
             Tensor<Rank1<2>, _, _>,
             Tensor<Rank1<3>, _, _, OwnedTape<_, _>>,
-        ) = m.forward(dev.zeros::<Rank1<5>>().traced());
+        ) = m.forward(dev.zeros::<Rank1<5>>().leaky_traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
             Tensor<Rank2<3, 2>, _, _>,
             Tensor<Rank2<3, 3>, _, _, OwnedTape<_, _>>,
-        ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
+        ) = m.forward(dev.zeros::<Rank2<3, 5>>().leaky_traced());
     }
 
     #[test]
@@ -168,13 +156,13 @@ mod tests {
             Tensor<Rank1<2>, _, _>,
             Tensor<Rank1<3>, _, _>,
             Tensor<Rank1<4>, _, _, OwnedTape<_, _>>,
-        ) = m.forward(dev.zeros::<Rank1<5>>().traced());
+        ) = m.forward(dev.zeros::<Rank1<5>>().leaky_traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
             Tensor<Rank2<3, 2>, _, _>,
             Tensor<Rank2<3, 3>, _, _>,
             Tensor<Rank2<3, 4>, _, _, OwnedTape<_, _>>,
-        ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
+        ) = m.forward(dev.zeros::<Rank2<3, 5>>().leaky_traced());
     }
 
     #[test]
@@ -194,14 +182,14 @@ mod tests {
             Tensor<Rank1<3>, _, _>,
             Tensor<Rank1<4>, _, _>,
             Tensor<Rank1<5>, _, _, OwnedTape<_, _>>,
-        ) = m.forward(dev.zeros::<Rank1<5>>().traced());
+        ) = m.forward(dev.zeros::<Rank1<5>>().leaky_traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
             Tensor<Rank2<3, 2>, _, _>,
             Tensor<Rank2<3, 3>, _, _>,
             Tensor<Rank2<3, 4>, _, _>,
             Tensor<Rank2<3, 5>, _, _, OwnedTape<_, _>>,
-        ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
+        ) = m.forward(dev.zeros::<Rank2<3, 5>>().leaky_traced());
     }
 
     #[test]
@@ -223,7 +211,7 @@ mod tests {
             Tensor<Rank1<4>, _, _>,
             Tensor<Rank1<5>, _, _>,
             Tensor<Rank1<6>, _, _, OwnedTape<_, _>>,
-        ) = m.forward(dev.zeros::<Rank1<5>>().traced());
+        ) = m.forward(dev.zeros::<Rank1<5>>().leaky_traced());
         let _: (
             Tensor<Rank2<3, 1>, _, _>,
             Tensor<Rank2<3, 2>, _, _>,
@@ -231,6 +219,6 @@ mod tests {
             Tensor<Rank2<3, 4>, _, _>,
             Tensor<Rank2<3, 5>, _, _>,
             Tensor<Rank2<3, 6>, _, _, OwnedTape<_, _>>,
-        ) = m.forward(dev.zeros::<Rank2<3, 5>>().traced());
+        ) = m.forward(dev.zeros::<Rank2<3, 5>>().leaky_traced());
     }
 }

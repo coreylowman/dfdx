@@ -54,39 +54,25 @@ impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> NonMutableModul
 }
 
 impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device<E>>
-    BuildModule<D, E> for UnbiasedLinear<I, O, E, D>
-{
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
-        let weight = device.try_sample(Uniform::new(-b, b))?;
-        Ok(Self { weight })
-    }
-}
-
-impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: SampleTensor<E>>
     TensorCollection<E, D> for UnbiasedLinear<I, O, E, D>
 {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
-            "weight",
-            |s| &s.weight,
-            |s| &mut s.weight,
-            TensorOptions::reset_with(|t| {
-                let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
-                t.try_fill_with_distr(Uniform::new(-b, b))
-            }),
-        )
-    }
-}
+    type To<E2: Dtype, D2: Device<E2>> = UnbiasedLinear<I, O, E2, D2>;
 
-impl<const I: usize, const O: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
-    for UnbiasedLinear<I, O, E, D1>
-{
-    type Output = UnbiasedLinear<I, O, E, D2>;
-    fn to_device(&self, device: &D2) -> Self::Output {
-        UnbiasedLinear {
-            weight: self.weight.to_device(device),
-        }
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            Self::tensor(
+                "weight",
+                |s| &s.weight,
+                |s| &mut s.weight,
+                TensorOptions::reset_with(|t| {
+                    let b: E = E::ONE / E::from_usize(I).unwrap().sqrt();
+                    t.try_fill_with_distr(Uniform::new(-b, b))
+                }),
+            ),
+            |weight| UnbiasedLinear { weight },
+        )
     }
 }
 
@@ -146,7 +132,7 @@ mod tests {
         };
 
         let x = dev.tensor([-0.8808001, 2.4185333, 2.2478335, 0.0565211, 2.031299]);
-        let y = model.forward(x.trace());
+        let y = model.forward(x.leaky_trace());
         assert_close(&y.array(), &[-1.3108451, 0.37695912]);
 
         let g = y.square().mean().backward();
@@ -172,7 +158,7 @@ mod tests {
             [-1.3399831, 3.0510678, -0.17936817, -0.04943254, -0.8052705],
             [-0.8291412, 0.07691376, -0.26538327, 0.90017676, -1.8790455],
         ]);
-        let y = model.forward(x.trace());
+        let y = model.forward(x.leaky_trace());
         assert_close(
             &y.array(),
             &[
@@ -211,7 +197,7 @@ mod tests {
             [[-1.9468665, 1.4611785, -1.6698982, 1.408863, 1.3425643], [-1.3399831, 3.0510678, -0.17936817, -0.04943254, -0.8052705], [-0.8291412, 0.07691376, -0.26538327, 0.90017676, -1.8790455]],
             [[1.2879219, 0.70150787, -1.6746868, 1.7261779, -0.94021803], [-2.6883178, 2.9369607, 2.9256766, 0.27559614, -0.17530347], [0.17499207, -0.11440835, 0.16627812, -0.91773695, 1.1128315]],
         ]);
-        let y = model.forward(x.trace());
+        let y = model.forward(x.leaky_trace());
         assert_close(
             &y.array(),
             &[

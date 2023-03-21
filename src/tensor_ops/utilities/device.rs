@@ -13,6 +13,11 @@ pub trait Device<E: Dtype>:
 
     + crate::tensor_ops::stack::StackKernel<E>
 
+    // optimizers
+    + crate::optim::AdamKernel<E>
+    + crate::optim::SgdKernel<E>
+    + crate::optim::RMSpropKernel<E>
+
     // allocation
     + crate::tensor::ZerosTensor<E>
     + crate::tensor::OnesTensor<E>
@@ -72,6 +77,12 @@ pub trait Device<E: Dtype>:
     + UnaryKernel<super::super::tanh::TanhKernelOp, E>
     + UnaryKernel<super::super::pow::PowfKernelOp<E>, E>
     + UnaryKernel<super::super::pow::PowiKernelOp, E>
+
+    // to_dtype
+    + super::super::to_dtype::ToDtypeKernel<f32, E>
+    + super::super::to_dtype::ToDtypeKernel<f64, E>
+    + super::super::to_dtype::ToDtypeKernel<E, f32>
+    + super::super::to_dtype::ToDtypeKernel<E, f64>
 
     // binary
     + BinaryKernel<super::super::bce::BCEKernelOp, E>

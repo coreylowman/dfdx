@@ -1,4 +1,8 @@
-use crate::{shapes::*, tensor::*, tensor_ops::TryAdd};
+use crate::{
+    shapes::*,
+    tensor::*,
+    tensor_ops::{Device, TryAdd},
+};
 
 use super::*;
 
@@ -21,30 +25,23 @@ use super::*;
 #[derive(Debug, Clone, Default)]
 pub struct Residual<F>(pub F);
 
-impl<D: DeviceStorage, E: Dtype, F: BuildOnDevice<D, E>> BuildOnDevice<D, E> for Residual<F> {
+impl<D: Device<E>, E: Dtype, F: BuildOnDevice<D, E>> BuildOnDevice<D, E> for Residual<F> {
     type Built = Residual<F::Built>;
 }
 
-impl<D: DeviceStorage, E: Dtype, F: BuildModule<D, E>> BuildModule<D, E> for Residual<F> {
-    fn try_build(device: &D) -> Result<Self, <D>::Err> {
-        Ok(Self(BuildModule::try_build(device)?))
+impl<E: Dtype, D: Device<E>, F: TensorCollection<E, D>> TensorCollection<E, D> for Residual<F> {
+    type To<E2: Dtype, D2: Device<E2>> = Residual<F::To<E2, D2>>;
+
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(Self::module("0", |s| &s.0, |s| &mut s.0), Residual)
     }
 }
 
-impl<E: Dtype, D: DeviceStorage, F: TensorCollection<E, D>> TensorCollection<E, D> for Residual<F> {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_module("0", |s| &s.0, |s| &mut s.0)
-    }
-}
-
-impl<F: ToDevice<D>, D> ToDevice<D> for Residual<F> {
-    type Output = Residual<F::Output>;
-    fn to_device(&self, device: &D) -> Self::Output {
-        Residual(self.0.to_device(device))
-    }
-}
-
-impl<T: SplitTape + TryAdd<T>, F: Module<T, Output = T, Error = T::Err>> Module<T> for Residual<F> {
+impl<T: WithEmptyTape + TryAdd<T>, F: Module<T, Output = T, Error = T::Err>> Module<T>
+    for Residual<F>
+{
     type Output = T;
     type Error = F::Error;
 
@@ -53,7 +50,7 @@ impl<T: SplitTape + TryAdd<T>, F: Module<T, Output = T, Error = T::Err>> Module<
     }
 }
 
-impl<T: SplitTape + TryAdd<T>, F: ModuleMut<T, Output = T, Error = T::Err>> ModuleMut<T>
+impl<T: WithEmptyTape + TryAdd<T>, F: ModuleMut<T, Output = T, Error = T::Err>> ModuleMut<T>
     for Residual<F>
 {
     type Output = T;
@@ -85,7 +82,7 @@ mod tests {
         let model = <Residual<Linear<2, 2>>>::build_on_device(&dev);
 
         let x: Tensor<Rank2<4, 2>, f32, TestDevice> = dev.sample_normal();
-        let y = model.forward(x.trace());
+        let y = model.forward(x.leaky_trace());
 
         #[rustfmt::skip]
         assert_close(&y.array(), &[[0.25372928, -2.4258814],[1.7892148, -2.6242268],[1.5131638, 0.23407778],[3.4201493, 1.597525]]);

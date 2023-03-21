@@ -23,9 +23,10 @@ fn main() {
 
     loop {
         let img: Tensor<InputShape, Dtype, _> = dev.sample_normal();
+        let grads = Gradients::leaky();
 
         let start = Instant::now();
-        let y = img.traced().softmax::<Ax>();
+        let y = img.traced(grads).softmax::<Ax>();
         let fwd_dur = start.elapsed();
 
         let start = Instant::now();

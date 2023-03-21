@@ -2,18 +2,12 @@
 
 use dfdx::{
     shapes::Rank3,
-    tensor::{AsArray, Tensor, TensorFrom},
+    tensor::{AsArray, AutoDevice, Tensor, TensorFrom},
     tensor_ops::{GatherTo, SelectTo},
 };
 
-#[cfg(not(feature = "cuda"))]
-type Device = dfdx::tensor::Cpu;
-
-#[cfg(feature = "cuda")]
-type Device = dfdx::tensor::Cuda;
-
 fn main() {
-    let dev = Device::default();
+    let dev = AutoDevice::default();
 
     let a: Tensor<Rank3<4, 2, 3>, f32, _> = dev.tensor([
         [[0.00, 0.01, 0.02], [0.10, 0.11, 0.12]],

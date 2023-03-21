@@ -4,13 +4,7 @@
 
 #[cfg(feature = "nightly")]
 fn main() {
-    use dfdx::prelude::*;
-
-    #[cfg(not(feature = "cuda"))]
-    type Device = dfdx::tensor::Cpu;
-
-    #[cfg(feature = "cuda")]
-    type Device = dfdx::tensor::Cuda;
+    use dfdx::{prelude::*, tensor::AutoDevice};
 
     type Model = (
         (Conv2D<3, 4, 3>, ReLU),
@@ -20,7 +14,7 @@ fn main() {
         Linear<7744, 10>,
     );
 
-    let dev = Device::default();
+    let dev = AutoDevice::default();
     let m = dev.build_module::<Model, f32>();
 
     // single image forward

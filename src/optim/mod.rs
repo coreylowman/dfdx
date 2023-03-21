@@ -18,14 +18,16 @@
 //! # type MyModel = Linear<5, 2>;
 //! # let dev: Cpu = Default::default();
 //! let mut model = MyModel::build_on_device(&dev);
+//! let mut grads = model.alloc_grads();
 //! let mut opt = Sgd::new(&model, Default::default());
 //! # let x: Tensor<Rank1<5>, f32, _> = dev.zeros();
-//! # let y = model.forward(x.traced());
+//! # let y = model.forward(x.traced(grads));
 //! # let loss = losses::mse_loss(y, dev.zeros());
 //! // -- snip loss computation --
 //!
-//! let gradients: Gradients<f32, Cpu> = loss.backward();
-//! opt.update(&mut model, &gradients);
+//! grads = loss.backward();
+//! opt.update(&mut model, &grads);
+//! model.zero_grads(&mut grads);
 //! ```
 
 mod adam;
@@ -33,11 +35,11 @@ mod optimizer;
 mod rmsprop;
 mod sgd;
 
-pub use adam::{Adam, AdamConfig};
+pub use adam::{Adam, AdamConfig, AdamKernel};
 pub use optimizer::{Momentum, WeightDecay};
 pub use optimizer::{Optimizer, OptimizerUpdateError, UnusedTensors};
-pub use rmsprop::{RMSprop, RMSpropConfig};
-pub use sgd::{Sgd, SgdConfig};
+pub use rmsprop::{RMSprop, RMSpropConfig, RMSpropKernel};
+pub use sgd::{Sgd, SgdConfig, SgdKernel};
 
 pub mod prelude {
     pub use super::{Optimizer, OptimizerUpdateError, UnusedTensors};

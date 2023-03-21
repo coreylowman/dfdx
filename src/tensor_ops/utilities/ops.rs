@@ -65,7 +65,7 @@ pub(crate) fn try_binary_op<
     S: Shape,
     E: Dtype,
     D: BinaryKernel<Op, E>,
-    RhsTape: Default,
+    RhsTape,
     LhsTape: Tape<E, D> + Merge<RhsTape>,
 >(
     op: Op,

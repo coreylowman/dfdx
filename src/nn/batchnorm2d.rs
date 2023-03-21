@@ -1,4 +1,5 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
+use num_traits::FromPrimitive;
 
 use super::*;
 
@@ -231,61 +232,48 @@ impl<B: Dim, const C: usize, H: Dim, W: Dim, E: Dtype, D: Device<E>>
     }
 }
 
-impl<const C: usize, E: Dtype, D: Device<E>> BuildModule<D, E> for BatchNorm2D<C, E, D> {
-    fn try_build(device: &D) -> Result<Self, D::Err> {
-        Ok(Self {
-            scale: device.try_ones()?,
-            bias: device.try_zeros()?,
-            running_mean: device.try_zeros()?,
-            running_var: device.try_ones()?,
-            epsilon: E::from_f32(1e-5).unwrap(),
-            momentum: E::from_f32(0.1).unwrap(),
-        })
-    }
-}
-
 impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNorm2D<C, E, D> {
-    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(visitor: &mut V) -> Result<(), V::Err> {
-        visitor.visit_tensor(
-            "scale",
-            |s| &s.scale,
-            |s| &mut s.scale,
-            TensorOptions::reset_to_ones(),
-        )?;
-        visitor.visit_tensor(
-            "bias",
-            |s| &s.bias,
-            |s| &mut s.bias,
-            TensorOptions::reset_to_zeros(),
-        )?;
-        visitor.visit_tensor(
-            "running_mean",
-            |s| &s.running_mean,
-            |s| &mut s.running_mean,
-            TensorOptions::detached(|t| t.try_fill_with_zeros()),
-        )?;
-        visitor.visit_tensor(
-            "running_var",
-            |s| &s.running_var,
-            |s| &mut s.running_var,
-            TensorOptions::detached(|t| t.try_fill_with_ones()),
-        )
-    }
-}
+    type To<E2: Dtype, D2: Device<E2>> = BatchNorm2D<C, E2, D2>;
 
-impl<const C: usize, E: Dtype, D1: Device<E>, D2: Device<E>> ToDevice<D2>
-    for BatchNorm2D<C, E, D1>
-{
-    type Output = BatchNorm2D<C, E, D2>;
-    fn to_device(&self, device: &D2) -> Self::Output {
-        BatchNorm2D {
-            scale: self.scale.to_device(device),
-            bias: self.bias.to_device(device),
-            running_mean: self.running_mean.to_device(device),
-            running_var: self.running_var.to_device(device),
-            epsilon: self.epsilon,
-            momentum: self.momentum,
-        }
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            (
+                Self::tensor(
+                    "scale",
+                    |s| &s.scale,
+                    |s| &mut s.scale,
+                    TensorOptions::reset_to_ones(),
+                ),
+                Self::tensor(
+                    "bias",
+                    |s| &s.bias,
+                    |s| &mut s.bias,
+                    TensorOptions::reset_to_zeros(),
+                ),
+                Self::tensor(
+                    "running_mean",
+                    |s| &s.running_mean,
+                    |s| &mut s.running_mean,
+                    TensorOptions::detached(|t| t.try_fill_with_zeros()),
+                ),
+                Self::tensor(
+                    "running_var",
+                    |s| &s.running_var,
+                    |s| &mut s.running_var,
+                    TensorOptions::detached(|t| t.try_fill_with_ones()),
+                ),
+            ),
+            |(scale, bias, running_mean, running_var)| BatchNorm2D {
+                scale,
+                bias,
+                running_mean,
+                running_var,
+                epsilon: V::E2::from_f32(1e-5).unwrap(),
+                momentum: V::E2::from_f32(0.1).unwrap(),
+            },
+        )
     }
 }
 
@@ -301,7 +289,7 @@ mod tests {
         let x1: Tensor<Rank3<3, 2, 2>, TestDtype, _> = dev.sample(rand_distr::StandardNormal);
         let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
-        let y1 = bn.forward_mut(x1.trace());
+        let y1 = bn.forward_mut(x1.leaky_trace());
         assert_close(
             &y1.array(),
             &[
@@ -336,7 +324,7 @@ mod tests {
         let x1: Tensor<Rank4<2, 2, 2, 3>, TestDtype, _> = dev.sample_normal();
         let mut bn = BatchNorm2D::<2>::build_on_device(&dev);
 
-        let y1 = bn.forward_mut(x1.trace());
+        let y1 = bn.forward_mut(x1.leaky_trace());
         #[rustfmt::skip]
         assert_close(
             &y1.array(),
@@ -368,28 +356,28 @@ mod tests {
         let x1: Tensor<Rank3<3, 4, 5>, TestDtype, _> = dev.sample_normal();
         let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
-        let _ = bn.forward_mut(x1.trace());
+        let _ = bn.forward_mut(x1.leaky_trace());
         assert_close(
             &bn.running_mean.array(),
             &[0.0083191, -0.0370511, -0.0079481],
         );
         assert_close(&bn.running_var.array(), &[1.0344709, 0.9340682, 1.0266376]);
 
-        let _ = bn.forward_mut(x1.trace());
+        let _ = bn.forward_mut(x1.leaky_trace());
         assert_close(
             &bn.running_mean.array(),
             &[0.0158063, -0.0703971, -0.0151013],
         );
         assert_close(&bn.running_var.array(), &[1.0654946, 0.87472963, 1.0506116]);
 
-        let _ = bn.forward_mut(x1.trace());
+        let _ = bn.forward_mut(x1.leaky_trace());
         assert_close(
             &bn.running_mean.array(),
             &[0.0225448, -0.1004085, -0.0215393],
         );
         assert_close(&bn.running_var.array(), &[1.093416, 0.8213248, 1.0721881]);
 
-        let _ = bn.forward_mut(x1.trace());
+        let _ = bn.forward_mut(x1.leaky_trace());
         assert_close(
             &bn.running_mean.array(),
             &[0.0286095, -0.1274188, -0.0273335],
@@ -420,7 +408,7 @@ mod tests {
 
         let x1: Tensor<Rank3<3, 4, 5>, TestDtype, _> = dev.sample_normal();
         let mut bn = dev.build_module::<BatchNorm2D<3>, TestDtype>();
-        let y = bn.forward_mut(x1.trace());
+        let y = bn.forward_mut(x1.leaky_trace());
         let g = y.square().mean().backward();
 
         let mut opt = Sgd::new(&bn, Default::default());
