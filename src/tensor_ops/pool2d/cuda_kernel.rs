@@ -1,11 +1,11 @@
 use crate::{
     shapes::*,
-    tensor::{Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor},
 };
 
 use std::sync::Arc;
 
-use cudarc::driver::{DeviceRepr, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceRepr, LaunchAsync};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/pool2d.ptx"));
 
@@ -35,7 +35,7 @@ macro_rules! pool_impl {
                 let inp_strides = self.dev.htod_copy(make_4d::<I>(inp.strides).into())?;
                 let out_strides = self.dev.htod_copy(make_4d::<O>(out.strides).into())?;
                 let fwd_fn = self.dev.get_func($Fwd, $Fwd).unwrap();
-                let cfg = LaunchConfig::for_num_elems(out.shape().num_elements() as u32);
+                let cfg = launch_cfg(out.shape().num_elements() as u32);
                 let params = (
                     op,                           // const Pool2dOp op,
                     &inp_strides,                 // const size_t *inp_strides,
@@ -57,7 +57,7 @@ macro_rules! pool_impl {
                 let inp_strides = self.dev.htod_copy(make_4d::<I>(inp.strides).into())?;
                 let out_strides = self.dev.htod_copy(make_4d::<O>(out.strides).into())?;
                 let bwd_fn = self.dev.get_func($Fwd, $Bwd).unwrap();
-                let cfg = LaunchConfig::for_num_elems(inp.shape().num_elements() as u32);
+                let cfg = launch_cfg(inp.shape().num_elements() as u32);
                 let params = (
                     op,                // const Pool2dOp op,
                     &inp_strides,      // const size_t *inp_strides,

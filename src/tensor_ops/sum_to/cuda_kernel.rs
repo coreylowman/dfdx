@@ -1,12 +1,10 @@
 use crate::{
     shapes::*,
-    tensor::{Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor},
     tensor_ops::reduction_utils::*,
 };
 
-use cudarc::driver::{
-    CudaSlice, DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig, ValidAsZeroBits,
-};
+use cudarc::driver::{CudaSlice, DeviceRepr, DeviceSlice, LaunchAsync, ValidAsZeroBits};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/sum_to.ptx"));
 
@@ -62,7 +60,7 @@ where
             reduction_output_strides::<Ax, Src, Dst>(inp.strides, dst);
         let chunk_len = physical_numel / dst_physical_numel;
 
-        let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
+        let cfg = launch_cfg(physical_numel as u32);
         let params = (
             physical_numel,    // const size_t numel,
             num_dims,          // const size_t num_dims,
@@ -103,7 +101,7 @@ where
         ))
         .unwrap();
 
-        let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
+        let cfg = launch_cfg(physical_numel as u32);
         let params = (
             physical_numel,   // const size_t numel,
             Src::NUM_DIMS,    // const size_t num_dims,

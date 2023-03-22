@@ -1,10 +1,10 @@
 use cudarc::cublas::{CudaBlas, Gemm};
-use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig, ValidAsZeroBits};
+use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, ValidAsZeroBits};
 
 use crate::tensor_ops::matmul::cuda_kernel::sgemm_batch;
 use crate::{
     shapes::*,
-    tensor::{Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor},
 };
 
 use std::sync::Arc;
@@ -66,7 +66,7 @@ where
         let mut patches = self.dev.alloc_zeros::<E>(patches_numel)?;
         let img_strides = self.dev.htod_copy(make_4d::<L>(lhs.strides).into())?;
         let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let cfg = LaunchConfig::for_num_elems(patches.len() as u32);
+        let cfg = launch_cfg(patches.len() as u32);
         let params = (op, lhs.data.as_ref(), &img_strides, &mut patches);
         unsafe { unfold_fn.launch(cfg, params) }?;
 
@@ -108,7 +108,7 @@ where
         {
             // unfold grad_out into patches
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
-            let cfg = LaunchConfig::for_num_elems(patches_numel as u32);
+            let cfg = launch_cfg(patches_numel as u32);
             unsafe { unfold_fn.launch(cfg, (op, grad_out, &mut patches)) }?;
         }
 
@@ -121,7 +121,7 @@ where
             // prepare filters for backward operations by
             // swapping dims 0 and 1 and adding a batch dimension
             let tr_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
-            let cfg = LaunchConfig::for_num_elems(rhs.shape.num_elements() as u32);
+            let cfg = launch_cfg(rhs.shape.num_elements() as u32);
             unsafe { tr_fn.launch(cfg, (op, rhs.data.as_ref(), &f_strides, &mut f_b1023)) }?;
         }
 
@@ -171,7 +171,7 @@ where
             // sum all the gradients collected in our broadcasted grad_f
             // into grad_rhs
             let sum_fn = self.dev.get_func(Self::MOD, Self::FNS[3]).unwrap();
-            let cfg = LaunchConfig::for_num_elems(rhs.shape.num_elements() as u32);
+            let cfg = launch_cfg(rhs.shape.num_elements() as u32);
             unsafe { sum_fn.launch(cfg, (op, &grad_f_b1023, grad_rhs, &f_strides)) }?;
         }
 
