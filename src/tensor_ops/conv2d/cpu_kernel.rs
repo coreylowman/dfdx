@@ -111,8 +111,6 @@ impl Cpu {
                         for y in 0..op.h_in {
                             for x in 0..op.w_in {
                                 if let Some([oh, ow]) = op.unfold_idx([k1, k2, y, x]) {
-                                    //println!("did 0 {o} {k1} {k2} {oh} {ow}");
-                                    println!("did {i} {}", o * (op.h_out * op.w_out) + oh * op.w_out + ow);
                                     buf[i] =
                                         grad_out[o * (op.h_out * op.w_out) + oh * op.w_out + ow];
                                 }
