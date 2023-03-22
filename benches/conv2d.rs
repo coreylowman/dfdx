@@ -2,7 +2,7 @@
 
 #[cfg(feature = "nightly")]
 fn main() {
-    use std::time::{Instant, Duration};
+    use std::time::{Duration, Instant};
 
     use dfdx::prelude::*;
 
@@ -29,7 +29,7 @@ fn main() {
     let mut sum_s = (0.0, 0.0);
 
     let tests = 1000;
-    let tf = (tests-1) as f32;
+    let tf = (tests - 1) as f32;
 
     let true_s = Instant::now();
     for i in 0..tests {
@@ -62,8 +62,16 @@ fn main() {
     // 86.6 with new backward
 
     // println!("{sum:?} {sum_s:?} {}", (sum_s.0/100. - sum.0*sum.0/10_000.).sqrt());
-    println!("fwd_mean={:?} fwd_sd={:?}", Duration::from_secs_f32(sum.0/tf), Duration::from_secs_f32((sum_s.0/tf - sum.0*sum.0/tf/tf).sqrt()));
-    println!("bwd_mean={:?} bwd_sd={:?}", Duration::from_secs_f32(sum.1/tf), Duration::from_secs_f32((sum_s.1/tf - sum.1*sum.1/tf/tf).sqrt()));
+    println!(
+        "fwd_mean={:?} fwd_sd={:?}",
+        Duration::from_secs_f32(sum.0 / tf),
+        Duration::from_secs_f32((sum_s.0 / tf - sum.0 * sum.0 / tf / tf).sqrt())
+    );
+    println!(
+        "bwd_mean={:?} bwd_sd={:?}",
+        Duration::from_secs_f32(sum.1 / tf),
+        Duration::from_secs_f32((sum_s.1 / tf - sum.1 * sum.1 / tf / tf).sqrt())
+    );
 }
 
 #[cfg(not(feature = "nightly"))]
