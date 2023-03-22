@@ -69,7 +69,6 @@ __device__ void unfold_output_into_patches(
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     const auto image_numel = op.batch * op.chan_out * op.h_in * op.w_in;
-    const auto patches_numel = op.kernel * op.kernel * image_numel;
     if (i >= image_numel) {
         return;
     }
@@ -84,43 +83,43 @@ __device__ void unfold_output_into_patches(
     const size_t b = idx % op.batch;
     idx /= op.batch;
 
-    T img = image_out[i];
-
-    for (int k1=0; k1<op.kernel; k1++) {
-        for (int k2=0; k2<op.kernel; k2++) {
-            size_t oh = y + op.padding;
-            if (oh < k1) {
-                return;
-            }
-            oh -= k1;
-            if (oh % op.stride != 0) {
-                return;
-            }
-            oh /= op.stride;
-            if (oh >= op.h_out) {
-                return;
-            }
-            
+    size_t patch_off = b * (op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in) + 
+                             o * (op.kernel * op.kernel * op.h_in * op.w_in) + 
+                             y * (op.w_in) + 
+                             x;
+    for (size_t k1=0; k1<op.kernel; k1++) {
+        size_t oh = y + op.padding;
+        if (oh < k1) {
+            continue;
+        }
+        oh -= k1;
+        if (oh % op.stride != 0) {
+            continue;
+        }
+        oh /= op.stride;
+        if (oh >= op.h_out) {
+            continue;
+        }
+        for (size_t k2=0; k2<op.kernel; k2++) {
             size_t ow = x + op.padding;
             if (ow < k2) {
-                return;
+                continue;
             }
             ow -= k2;
             if (ow % op.stride != 0) {
-                return;
+                continue;
             }
             ow /= op.stride;
             if (ow >= op.w_out) {
-                return;
+                continue;
             }
 
-            size_t patch_i = b * (op.chan_out * op.kernel * op.kernel * op.h_out * op.w_out) + 
-                             o * (op.kernel * op.kernel * op.h_out * op.w_out) + 
-                             k1 * (op.kernel * op.h_out * op.w_out) +
-                             k2 * (op.h_out * op.w_out) +
-                             oh * (op.w_out) + 
-                             ow;
-            patches[patch_i] = img;
+            const size_t patch_i = patch_off + 
+                             k1 * (op.kernel * op.h_in * op.w_in) +
+                             k2 * (op.h_in * op.w_in);
+            const size_t image_i = b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out) + oh * op.w_out + ow;
+
+            patches[patch_i] = __ldg(&image_out[image_i]);
         }
     }
 }

@@ -252,6 +252,7 @@ mod tests {
             &[[[0.24369538, 0.71453357]], [[-0.69169492, -0.06172103]]],
         );
         let g = result.exp().mean().backward();
+        //assert_close(&g.get(&x).sum::<(),_>().array(), &-0.36341519);
         assert_close(
             &g.get(&x).array(),
             &[[

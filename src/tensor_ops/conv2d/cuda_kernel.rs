@@ -109,7 +109,7 @@ where
         {
             // unfold grad_out into patches
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
-            let cfg = LaunchConfig::for_num_elems(image_numel as u32);
+            let cfg = LaunchConfig{ grid_dim: ((image_numel as u32+32-1)/32, 1, 1), block_dim: (32,1,1), shared_mem_bytes: 0 };
             unsafe { unfold_fn.launch(cfg, (op, grad_out, &mut patches)) }?;
         }
 
