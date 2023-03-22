@@ -102,13 +102,14 @@ where
         _: &Tensor<O, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        let patches_numel = op.batch * op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
+        let image_numel = op.batch * op.chan_out * op.h_in * op.w_in;
+        let patches_numel = op.kernel * op.kernel * image_numel;
         let mut patches = self.dev.alloc_zeros::<E>(patches_numel)?;
 
         {
             // unfold grad_out into patches
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
-            let cfg = LaunchConfig::for_num_elems(patches_numel as u32);
+            let cfg = LaunchConfig::for_num_elems(image_numel as u32);
             unsafe { unfold_fn.launch(cfg, (op, grad_out, &mut patches)) }?;
         }
 

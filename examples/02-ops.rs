@@ -2,7 +2,7 @@
 
 use dfdx::{
     shapes::{Rank0, Rank1, Rank2},
-    tensor::{AsArray, AutoDevice, SampleTensor, Tensor},
+    tensor::{AsArray, AutoDevice, SampleTensor, Tensor, Cpu},
     tensor_ops::{MeanTo, TryMatMul},
 };
 
