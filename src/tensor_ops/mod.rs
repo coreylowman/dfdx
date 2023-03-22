@@ -252,6 +252,8 @@ pub(crate) use to_dtype::ToDtypeKernel;
 #[cfg(feature = "nightly")]
 mod conv2d;
 #[cfg(feature = "nightly")]
+mod convtrans2d;
+#[cfg(feature = "nightly")]
 pub use conv2d::TryConv2D;
 #[cfg(feature = "nightly")]
 pub(crate) use conv2d::TryConv2DTo;
