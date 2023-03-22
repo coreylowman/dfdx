@@ -63,7 +63,7 @@ where
         }
 
         let patches_numel = op.batch * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
-        let mut patches = self.dev.alloc_zeros::<E>(patches_numel)?;
+        let mut patches = unsafe { self.dev.alloc::<E>(patches_numel)? };
         let img_strides = self.dev.htod_copy(make_4d::<L>(lhs.strides).into())?;
         let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = LaunchConfig::for_num_elems(patches.len() as u32);
@@ -104,7 +104,7 @@ where
     ) -> Result<(), Self::Err> {
         let image_numel = op.batch * op.chan_out * op.h_in * op.w_in;
         let patches_numel = op.kernel * op.kernel * image_numel;
-        let mut patches = self.dev.alloc_zeros::<E>(patches_numel)?;
+        let mut patches = unsafe { self.dev.alloc::<E>(patches_numel)? };
 
         {
             // unfold grad_out into patches
@@ -114,7 +114,7 @@ where
         }
 
         let filters_numel = op.batch * op.chan_in * op.chan_out * op.kernel * op.kernel;
-        let mut f_b1023 = self.dev.alloc_zeros::<E>(filters_numel)?;
+        let mut f_b1023 = unsafe { self.dev.alloc::<E>(filters_numel)? };
         let mut grad_f_b1023 = self.dev.alloc_zeros::<E>(filters_numel)?;
         let f_strides = self.dev.htod_copy(rhs.strides.into())?;
 

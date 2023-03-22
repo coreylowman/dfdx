@@ -41,19 +41,23 @@ __device__ void unfold_input_into_patches(
 
     const size_t y_plus_p = oh * op.stride + k1;
     if (y_plus_p < op.padding) {
+        patches[i] = 0;
         return;
     }
     const size_t y = y_plus_p - op.padding;
     if (y >= op.h_in) {
+        patches[i] = 0;
         return;
     }
 
     const size_t x_plus_p = ow * op.stride + k2;
     if (x_plus_p < op.padding) {
+        patches[i] = 0;
         return;
     }
     const size_t x = x_plus_p - op.padding;
     if (x >= op.w_in) {
+        patches[i] = 0;
         return;
     }
 
@@ -90,33 +94,55 @@ __device__ void unfold_output_into_patches(
     for (size_t k1=0; k1<op.kernel; k1++) {
         size_t oh = y + op.padding;
         if (oh < k1) {
+            for (size_t k2=0; k2<op.kernel; k2++) {
+                const size_t patch_i = patch_off + 
+                             k1 * (op.kernel * op.h_in * op.w_in) +
+                             k2 * (op.h_in * op.w_in);
+                patches[patch_i] = 0.0f;
+            }
             continue;
         }
         oh -= k1;
         if (oh % op.stride != 0) {
+            for (size_t k2=0; k2<op.kernel; k2++) {
+                const size_t patch_i = patch_off + 
+                             k1 * (op.kernel * op.h_in * op.w_in) +
+                             k2 * (op.h_in * op.w_in);
+                patches[patch_i] = 0.0f;
+            }
             continue;
         }
         oh /= op.stride;
         if (oh >= op.h_out) {
+            for (size_t k2=0; k2<op.kernel; k2++) {
+                const size_t patch_i = patch_off + 
+                             k1 * (op.kernel * op.h_in * op.w_in) +
+                             k2 * (op.h_in * op.w_in);
+                patches[patch_i] = 0.0f;
+            }
             continue;
         }
         for (size_t k2=0; k2<op.kernel; k2++) {
+            const size_t patch_i = patch_off + 
+                             k1 * (op.kernel * op.h_in * op.w_in) +
+                             k2 * (op.h_in * op.w_in);
+
             size_t ow = x + op.padding;
             if (ow < k2) {
+                patches[patch_i] = 0.0f;
                 continue;
             }
             ow -= k2;
             if (ow % op.stride != 0) {
+                patches[patch_i] = 0.0f;
                 continue;
             }
             ow /= op.stride;
             if (ow >= op.w_out) {
+                patches[patch_i] = 0.0f;
                 continue;
             }
 
-            const size_t patch_i = patch_off + 
-                             k1 * (op.kernel * op.h_in * op.w_in) +
-                             k2 * (op.h_in * op.w_in);
             const size_t image_i = b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out) + oh * op.w_out + ow;
 
             patches[patch_i] = __ldg(&image_out[image_i]);
