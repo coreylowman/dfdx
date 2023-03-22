@@ -187,6 +187,7 @@ mod reshape_to;
 mod select_and_gather;
 mod sigmoid;
 mod sin;
+mod slice;
 mod softmax;
 mod sqrt;
 mod square;

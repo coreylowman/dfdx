@@ -25,6 +25,17 @@ impl<S: Shape> NdIndex<S> {
 }
 
 impl<S: Shape> NdIndex<S> {
+    pub(crate) fn get_strided_index(&self, mut idx: usize) -> usize {
+        let mut out = 0;
+
+        for (dim, stride) in self.shape.into_iter().zip(self.strides.into_iter()) {
+            out += (idx % dim) * stride;
+            idx /= dim;
+        }
+
+        out
+    }
+
     #[inline(always)]
     pub(crate) fn next(&mut self) -> Option<usize> {
         match self.contiguous {
