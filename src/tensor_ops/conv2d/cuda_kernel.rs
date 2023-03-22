@@ -63,7 +63,9 @@ where
         }
 
         let patches_numel = op.batch * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
-        let mut patches = self.dev.alloc_zeros::<E>(patches_numel)?;
+
+        let mut patches = self.get_workspace::<E>(patches_numel)?;
+        let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
         let img_strides = self.dev.htod_copy(make_4d::<L>(lhs.strides).into())?;
         let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = launch_cfg(patches.len() as u32);
@@ -103,8 +105,8 @@ where
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let patches_numel = op.batch * op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
-        let mut patches = self.dev.alloc_zeros::<E>(patches_numel)?;
-
+        let mut patches = self.get_workspace::<E>(patches_numel)?;
+        let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
         {
             // unfold grad_out into patches
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
