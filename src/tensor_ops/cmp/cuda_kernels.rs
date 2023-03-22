@@ -1,8 +1,8 @@
 use crate::{
     shapes::{Shape, Unit},
-    tensor::{Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor},
 };
-use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{CudaSlice, LaunchAsync};
 
 use super::{
     CmpKernel, EqKernelOp, GeKernelOp, GtKernelOp, LeKernelOp, LtKernelOp, NeKernelOp,
@@ -56,7 +56,7 @@ impl<E: Unit, Op: CmpOpCudaKernel<E>> CmpKernel<Op, E> for Cuda {
         let out_strides: CudaSlice<usize> = self.dev.htod_copy(strides.into())?;
 
         let fwd_fn = self.dev.get_func(Op::MODULE_NAME, Op::FWD_FN_NAME).unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (
             numel,             // const size_t numel,
             S::NUM_DIMS,       // const size_t num_dims,
@@ -95,7 +95,7 @@ impl<E: Unit, Op: ScalarCmpOpCudaKernel<E>> ScalarCmpKernel<Op, E> for Cuda {
         let out_strides: CudaSlice<usize> = self.dev.htod_copy(strides.into())?;
 
         let fwd_fn = self.dev.get_func(Op::MODULE_NAME, Op::FWD_FN_NAME).unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (
             numel,             // const size_t numel,
             S::NUM_DIMS,       // const size_t num_dims,

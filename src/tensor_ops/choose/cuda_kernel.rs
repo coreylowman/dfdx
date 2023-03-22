@@ -1,8 +1,8 @@
 use crate::{
     shapes::*,
-    tensor::{Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor},
 };
-use cudarc::driver::{CudaSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{CudaSlice, LaunchAsync};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/choose.ptx"));
 
@@ -47,7 +47,7 @@ where
         let rhs_strides: CudaSlice<usize> = self.dev.htod_copy(rhs.strides.into())?;
 
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (
             numel,              // const size_t numel,
             S::NUM_DIMS,        // const size_t num_dims,
@@ -81,7 +81,7 @@ where
         let cond_strides: CudaSlice<usize> = self.dev.htod_copy(cond.strides.into())?;
         let rhs_strides: CudaSlice<usize> = self.dev.htod_copy(rhs.strides.into())?;
 
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (
             numel,              // const size_t numel,
             S::NUM_DIMS,        // const size_t num_dims,

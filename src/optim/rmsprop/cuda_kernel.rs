@@ -1,6 +1,11 @@
 use super::RMSpropConfig;
-use crate::{optim::optimizer::*, shapes::*, tensor::Cuda};
-use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig};
+use crate::{
+    optim::optimizer::*,
+    shapes::*,
+    tensor::{launch_cfg, Cuda},
+};
+
+use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync};
 
 #[repr(C)]
 struct CudaRMSpropConfig<E> {
@@ -73,7 +78,7 @@ where
         let opt_cfg = rmsprop_config_to_cuda(cfg);
         let numel = param.len();
         let func = self.dev.get_func(Self::MOD, Self::FWD).unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (opt_cfg, numel, param, momentum, square_avg, grad_avg, grad);
         unsafe { func.launch(cfg, params) }?;
         Ok(())

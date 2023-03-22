@@ -1,11 +1,11 @@
 use crate::{
     shapes::*,
-    tensor::{cuda::Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor},
 };
 
 use std::vec::Vec;
 
-use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync};
 
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rand_distr::{Distribution, Standard};
@@ -52,7 +52,7 @@ where
         let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (op.prob, numel, inp.data.as_ref(), &noise, &mut storage);
         unsafe { fwd_fn.launch(cfg, params) }?;
         Ok(self.build_tensor(inp.shape, inp.strides, storage))
@@ -72,7 +72,7 @@ where
         }?;
         let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
         let numel = inp.data.len();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (op.prob, numel, &noise, grad_inp, grad_out);
         unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())
