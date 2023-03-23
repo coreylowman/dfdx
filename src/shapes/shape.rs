@@ -195,7 +195,8 @@ pub trait Shape:
         + Send
         + Sync
         + IntoIterator<Item = usize>
-        + Into<std::vec::Vec<usize>>;
+        + Into<std::vec::Vec<usize>>
+        + AsRef<[usize]>;
 
     /// All the axes of this shape
     type AllAxes: Axes;

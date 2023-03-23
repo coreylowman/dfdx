@@ -51,8 +51,6 @@ impl<S: Shape, E: Unit, D: SliceKernel<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shapes::*;
-    use crate::tensor::*;
     use crate::tensor_ops::*;
     use crate::tests::TestDevice;
 
@@ -71,5 +69,59 @@ mod tests {
 
         let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((1..3, 1..3)).realize().unwrap();
         assert_eq!(b.array(), [[6., 7.], [10., 11.]]);
+
+        let b: Tensor<Rank2<1, 3>, _, _> = a.clone().slice((..1, 1..4)).realize().unwrap();
+        assert_eq!(b.array(), [[2., 3., 4.]]);
+
+        let b: Tensor<Rank2<2, 3>, _, _> = a.clone().slice((1..3, ..3)).realize().unwrap();
+        assert_eq!(b.array(), [[5., 6., 7.], [9., 10., 11.]]);
+
+        let b: Tensor<Rank2<2, 3>, _, _> = a.clone().slice((1..=2, 1..=3)).realize().unwrap();
+        assert_eq!(b.array(), [[6., 7., 8.], [10., 11., 12.]]);
+
+        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((0..=1, 2..=3)).realize().unwrap();
+        assert_eq!(b.array(), [[3., 4.], [7., 8.]]);
+
+        let b: Tensor<Rank2<3, 2>, _, _> = a.clone().slice((1.., ..2)).realize().unwrap();
+        assert_eq!(b.array(), [[5., 6.], [9., 10.], [13., 14.]]);
+
+        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((..2, 2..)).realize().unwrap();
+        assert_eq!(b.array(), [[3., 4.], [7., 8.]]);
+    }
+
+    #[test]
+    fn test_slice_broadcast_top() {
+        let dev = TestDevice::default();
+        let a: Tensor<Rank2<5, 4>, _, _> = dev.tensor([1., 2., 3., 4.]).broadcast();
+
+        let b: Tensor<Rank2<3, 4>, _, _> = a.clone().slice((..3, ..)).realize().unwrap();
+        assert_eq!(b.array(), [[1., 2., 3., 4.], [1., 2., 3., 4.], [1., 2., 3., 4.]]);
+
+        let b: Tensor<Rank2<5, 2>, _, _> = a.clone().slice((.., 1..3)).realize().unwrap();
+        assert_eq!(b.array(), [[2., 3.], [2., 3.], [2., 3.], [2., 3.], [2., 3.]]);
+
+        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((1..3, 1..3)).realize().unwrap();
+        assert_eq!(b.array(), [[2., 3.], [2., 3.]]);
+
+        let b: Tensor<Rank2<3, 3>, _, _> = a.clone().slice((1..4, 1..4)).realize().unwrap();
+        assert_eq!(b.array(), [[2., 3., 4.], [2., 3., 4.], [2., 3., 4.]]);
+    }
+
+    #[test]
+    fn test_slice_broadcast_bottom() {
+        let dev = TestDevice::default();
+        let a: Tensor<Rank2<4, 5>, _, _> = dev.tensor([1., 2., 3., 4.]).broadcast();
+
+        let b: Tensor<Rank2<2, 5>, _, _> = a.clone().slice((1..3, ..)).realize().unwrap();
+        assert_eq!(b.array(), [[2., 2., 2., 2., 2.], [3., 3., 3., 3., 3.]]);
+
+        let b: Tensor<Rank2<4, 2>, _, _> = a.clone().slice((.., 1..3)).realize().unwrap();
+        assert_eq!(b.array(), [[1., 1.], [2., 2.], [3., 3.], [4., 4.]]);
+
+        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((1..3, 3..)).realize().unwrap();
+        assert_eq!(b.array(), [[2., 2.], [3., 3.]]);
+
+        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((..2, 1..3)).realize().unwrap();
+        assert_eq!(b.array(), [[1., 1.], [2., 2.]]);
     }
 }

@@ -28,7 +28,10 @@ impl<S: Shape> NdIndex<S> {
     pub(crate) fn get_strided_index(&self, mut idx: usize) -> usize {
         let mut out = 0;
 
-        for (dim, stride) in self.shape.into_iter().zip(self.strides.into_iter()) {
+        let shape = self.shape.as_ref();
+        let strides = self.strides.as_ref();
+
+        for (dim, stride) in shape.iter().zip(strides.iter()).rev() {
             out += (idx % dim) * stride;
             idx /= dim;
         }

@@ -18,6 +18,8 @@ impl<E: Unit> SliceKernel<E> for Cpu {
             .get_strided_index(inp.shape.first_idx_in_slice(slice));
         let view = &inp.data[start_idx..];
 
+        println!("{} {}", start_idx, inp.shape.first_idx_in_slice(slice));
+
         while let Some((inp_i, o)) = inp_idx.next().zip(out_iter.next()) {
             *o = view[inp_i];
         }
