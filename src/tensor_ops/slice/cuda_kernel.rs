@@ -12,6 +12,19 @@ pub(crate) trait HasCudaKernel<E> {
     const FNS: &'static [&'static str];
 }
 
+macro_rules! has_kernels {
+    ($($dtype:ty),*) => {
+        $(
+        impl HasCudaKernel<$dtype> for Cuda {
+            const MOD: &'static str = concat!("slice_", stringify!($dtype));
+            const FNS: &'static [&'static str] = &[concat!("slice_fwd_", stringify!($dtype))];
+        }
+        )*
+    }
+}
+
+has_kernels!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize, bool);
+
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "slice_f32";
     const FNS: &'static [&'static str] = &["slice_fwd_f32", "slice_bwd_f32"];
