@@ -27,8 +27,8 @@ pub trait SliceDim<R: RangeBounds<usize>>: Dim {
         let end_bound = get_end_bound(range.end_bound(), size);
 
         (end_bound <= size && start_bound <= end_bound)
-            .then(|| end_bound - start_bound)
-            .and_then(|size| Self::Sliced::from_size(size))
+            .then_some(end_bound - start_bound)
+            .and_then(Self::Sliced::from_size)
     }
 }
 
