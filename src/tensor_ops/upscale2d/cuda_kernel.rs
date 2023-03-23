@@ -7,6 +7,8 @@ use std::sync::Arc;
 
 use cudarc::driver::{DeviceRepr, LaunchAsync, LaunchConfig};
 
+use super::NearestNeighbor;
+
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/upscale2d.ptx"));
 
 unsafe impl DeviceRepr for super::Upscale2DOp {}
@@ -20,8 +22,8 @@ fn make_4d<S: Shape>(strides: S::Concrete) -> [usize; 4] {
 }
 
 macro_rules! pool_impl {
-    ($Trait:tt<$TypeName:ty>, $Fwd:tt, $Bwd:tt) => {
-        impl super::$Trait<$TypeName> for Cuda {
+    ($Trait:tt<$TypeName:ty, $UpscaleType:ty>, $Fwd:tt, $Bwd:tt) => {
+        impl super::$Trait<$TypeName, $UpscaleType> for Cuda {
             fn forward<I: Shape, O: Shape>(
                 &self,
                 op: super::Upscale2DOp,
@@ -75,7 +77,7 @@ macro_rules! pool_impl {
 }
 
 pool_impl!(
-    NearestUpscale2DKernel<f32>,
+    Upscale2DKernel<f32, NearestNeighbor>,
     "nearest_upscale2d_fwd_f32",
     "nearest_upscale2d_bwd_f32"
 );

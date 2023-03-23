@@ -5,6 +5,8 @@ use std::sync::Arc;
 
 use num_traits::Float;
 
+use super::NearestNeighbor;
+
 fn make_4d<S: Shape>(strides: S::Concrete) -> [usize; 4] {
     match S::NUM_DIMS {
         3 => [0, strides[0], strides[1], strides[2]],
@@ -13,8 +15,8 @@ fn make_4d<S: Shape>(strides: S::Concrete) -> [usize; 4] {
     }
 }
 
-impl<E: Float + Unit + std::ops::AddAssign + std::ops::DivAssign> super::NearestUpscale2DKernel<E>
-    for Cpu
+impl<E: Float + Unit + std::ops::AddAssign + std::ops::DivAssign>
+    super::Upscale2DKernel<E, NearestNeighbor> for Cpu
 {
     fn forward<I: Shape, O: Shape>(
         &self,
@@ -25,8 +27,8 @@ impl<E: Float + Unit + std::ops::AddAssign + std::ops::DivAssign> super::Nearest
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
 
-        let h_scale = ((istr[1]/istr[2]) as f32)/((ostr[1]/ostr[2]) as f32);
-        let w_scale = ((istr[2]/istr[3]) as f32)/((ostr[2]/ostr[3]) as f32);
+        let h_scale = ((istr[1] / istr[2]) as f32) / ((ostr[1] / ostr[2]) as f32);
+        let w_scale = ((istr[2] / istr[3]) as f32) / ((ostr[2] / ostr[3]) as f32);
 
         let buf = inp.data.as_ref();
         let out_buf = Arc::make_mut(&mut out.data);
@@ -36,7 +38,8 @@ impl<E: Float + Unit + std::ops::AddAssign + std::ops::DivAssign> super::Nearest
                     for ow in 0..op.w_out {
                         let ih = (h_scale * oh as f32) as usize;
                         let iw = (w_scale * ow as f32) as usize;
-                        out_buf[b * ostr[0] + c * ostr[1] + oh * ostr[2] + ow * ostr[3]] = buf[b * istr[0] + c * istr[1] + ih * istr[2] + iw * istr[3]];
+                        out_buf[b * ostr[0] + c * ostr[1] + oh * ostr[2] + ow * ostr[3]] =
+                            buf[b * istr[0] + c * istr[1] + ih * istr[2] + iw * istr[3]];
                     }
                 }
             }
@@ -55,8 +58,8 @@ impl<E: Float + Unit + std::ops::AddAssign + std::ops::DivAssign> super::Nearest
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
 
-        let h_scale = ((istr[1]/istr[2]) as f32)/((ostr[1]/ostr[2]) as f32);
-        let w_scale = ((istr[2]/istr[3]) as f32)/((ostr[2]/ostr[3]) as f32);
+        let h_scale = ((istr[1] / istr[2]) as f32) / ((ostr[1] / ostr[2]) as f32);
+        let w_scale = ((istr[2] / istr[3]) as f32) / ((ostr[2] / ostr[3]) as f32);
 
         println!("{grad_inp:?} {grad_out:?}");
 
@@ -66,7 +69,8 @@ impl<E: Float + Unit + std::ops::AddAssign + std::ops::DivAssign> super::Nearest
                     for ow in 0..op.w_out {
                         let ih = (h_scale * oh as f32) as usize;
                         let iw = (w_scale * ow as f32) as usize;
-                        grad_inp[b * istr[0] + c * istr[1] + ih * istr[2] + iw * istr[3]] += grad_out[b * ostr[0] + c * ostr[1] + oh * ostr[2] + ow * ostr[3]];
+                        grad_inp[b * istr[0] + c * istr[1] + ih * istr[2] + iw * istr[3]] +=
+                            grad_out[b * ostr[0] + c * ostr[1] + oh * ostr[2] + ow * ostr[3]];
                     }
                 }
             }

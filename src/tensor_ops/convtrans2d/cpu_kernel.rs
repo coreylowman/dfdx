@@ -4,7 +4,7 @@ use crate::tensor_ops::matmul::cpu_kernel::MatMulImpl;
 
 use std::sync::Arc;
 
-use super::{ConvTrans2DOp, ConvTrans2DKernel};
+use super::{ConvTrans2DKernel, ConvTrans2DOp};
 
 impl ConvTrans2DOp {
     #[inline(always)]

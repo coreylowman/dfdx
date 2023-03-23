@@ -33,9 +33,9 @@ impl ConvTrans2DOp {
             chan_in: c,
             chan_out: o,
             h_in,
-            h_out: (h_in - 1)*s - 2*p + k,
+            h_out: (h_in - 1) * s - 2 * p + k,
             w_in,
-            w_out: (w_in - 1)*s - 2*p + k,
+            w_out: (w_in - 1) * s - 2 * p + k,
         }
     }
 
@@ -85,7 +85,7 @@ impl<const D: usize, const K: usize, const S: usize, const P: usize> ConvTransAl
 where
     Const<{ D * S + K - S - 2 * P }>: Sized,
 {
-    type Convolved = Const<{ D * S + K - S - 2 * P  }>;
+    type Convolved = Const<{ D * S + K - S - 2 * P }>;
 }
 
 pub trait TryConvTrans2DTo<F, const S: usize, const P: usize>: HasErr {
@@ -235,9 +235,7 @@ mod tests {
     /// x = torch.sample_normal(1, 2, 3, requires_grad=True)
     /// q(x).exp().mean().backward()
     /// ```
-    fn test() {
-        
-    }
+    fn test() {}
     // fn test_convtrans2d_default_stride_and_padding() {
     //     let dev: TestDevice = Default::default();
     //     let weight: Tensor<_, TestDtype, _> = dev.tensor([
