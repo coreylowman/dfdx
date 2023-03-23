@@ -75,11 +75,10 @@ where
         diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
-        let strides = shape.strides();
         let mut data = std::vec![val; shape.num_elements()];
         let offset = diagonal.into().unwrap_or(0);
         triangle_mask(&mut data, &shape, false, offset);
-        Ok(self.build_tensor(shape, strides, data))
+        self.tensor_from_host_buf(shape, data)
     }
 
     fn try_lower_tri_like<S: HasShape>(
@@ -89,11 +88,10 @@ where
         diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
-        let strides = shape.strides();
         let mut data = std::vec![val; shape.num_elements()];
         let offset = diagonal.into().unwrap_or(0);
         triangle_mask(&mut data, &shape, false, offset);
-        Ok(self.build_tensor(shape, strides, data))
+        self.tensor_from_host_buf(shape, data)
     }
 }
 
