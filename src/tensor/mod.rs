@@ -128,6 +128,7 @@ pub(crate) mod cpu;
 #[cfg(feature = "cuda")]
 pub(crate) mod cuda;
 mod gradients;
+mod masks;
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
 #[cfg(feature = "safetensors")]

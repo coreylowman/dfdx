@@ -64,6 +64,39 @@ where
     }
 }
 
+impl<E: Unit> TriangleTensor<E> for Cuda
+where
+    Cpu: TriangleTensor<E>,
+{
+    fn try_upper_tri_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+        let shape = *src.shape();
+        let strides = shape.strides();
+        let mut data = std::vec![val; shape.num_elements()];
+        let offset = diagonal.into().unwrap_or(0);
+        triangle_mask(&mut data, &shape, false, offset);
+        Ok(self.build_tensor(shape, strides, data))
+    }
+
+    fn try_lower_tri_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+        let shape = *src.shape();
+        let strides = shape.strides();
+        let mut data = std::vec![val; shape.num_elements()];
+        let offset = diagonal.into().unwrap_or(0);
+        triangle_mask(&mut data, &shape, false, offset);
+        Ok(self.build_tensor(shape, strides, data))
+    }
+}
+
 impl<E: Unit> OneFillStorage<E> for Cuda {
     fn try_fill_with_ones(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err> {
         self.dev

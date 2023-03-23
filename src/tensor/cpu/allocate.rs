@@ -2,7 +2,7 @@
 
 use crate::{
     shapes::*,
-    tensor::{storage_traits::*, unique_id, Tensor},
+    tensor::{masks::triangle_mask, storage_traits::*, unique_id, Tensor},
 };
 
 use super::{Cpu, CpuError, LendingIterator};
@@ -88,29 +88,8 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
         let shape = *src.shape();
         let strides = shape.strides();
         let mut data = self.try_alloc_elem::<E>(shape.num_elements(), val)?;
-        // Get the shape of the last two axes.
-        let [num_rows, num_cols] = [
-            (S::Shape::NUM_DIMS > 1)
-                .then(|| shape.concrete()[S::Shape::NUM_DIMS - 2])
-                .unwrap_or(1),
-            (S::Shape::NUM_DIMS > 0)
-                .then(|| shape.concrete()[S::Shape::NUM_DIMS - 1])
-                .unwrap_or(1),
-        ];
-        let mat_size = num_rows * num_cols;
         let offset = diagonal.into().unwrap_or(0);
-
-        // Get the first 2D matrix in this data. This will be copied to each subsequent matrix.
-        let (mut mat2d, mut rest) = data.as_mut_slice().split_at_mut(mat_size);
-        for r in (-offset).max(0) as usize..num_rows {
-            for c in 0..((r as isize + offset).max(0) as usize).min(num_cols) {
-                mat2d[r * num_cols + c] = E::default();
-            }
-        }
-        while !rest.is_empty() {
-            rest[..mat_size].copy_from_slice(mat2d);
-            (mat2d, rest) = rest.split_at_mut(mat_size);
-        }
+        triangle_mask(&mut data, &shape, true, offset);
         let data = Arc::new(data);
         Ok(Tensor {
             id: unique_id(),
@@ -131,29 +110,8 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
         let shape = *src.shape();
         let strides = shape.strides();
         let mut data = self.try_alloc_elem::<E>(shape.num_elements(), val)?;
-        // Get the shape of the last two axes.
-        let [num_rows, num_cols] = [
-            (S::Shape::NUM_DIMS > 1)
-                .then(|| shape.concrete()[S::Shape::NUM_DIMS - 2])
-                .unwrap_or(1),
-            (S::Shape::NUM_DIMS > 0)
-                .then(|| shape.concrete()[S::Shape::NUM_DIMS - 1])
-                .unwrap_or(1),
-        ];
-        let mat_size = num_rows * num_cols;
         let offset = diagonal.into().unwrap_or(0);
-
-        // Get the first 2D matrix in this data. This will be copied to each subsequent matrix.
-        let (mut mat2d, mut rest) = data.as_mut_slice().split_at_mut(mat_size);
-        for r in 0..num_rows {
-            for c in (r as isize + offset + 1).max(0) as usize..num_cols {
-                mat2d[r * num_cols + c] = E::default();
-            }
-        }
-        while !rest.is_empty() {
-            rest[..mat_size].copy_from_slice(mat2d);
-            (mat2d, rest) = rest.split_at_mut(mat_size);
-        }
+        triangle_mask(&mut data, &shape, false, offset);
         let data = Arc::new(data);
         Ok(Tensor {
             id: unique_id(),
