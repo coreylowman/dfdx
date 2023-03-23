@@ -157,4 +157,20 @@ mod tests {
         let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((..2, 1..3)).realize().unwrap();
         assert_eq!(b.array(), [[1., 1.], [2., 2.]]);
     }
+
+    #[test]
+    fn test_slice_backward() {
+        let dev = TestDevice::default();
+        let a = dev.tensor([
+            [1., 2., 3., 4.],
+            [5., 6., 7., 8.],
+            [9., 10., 11., 12.],
+            [13., 14., 15., 16.],
+        ]);
+
+        let b: Tensor<Rank2<2, 2>, _, _, _> = a.leaky_trace().slice((2.., 2..)).realize().unwrap();
+        assert_eq!(b.array(), [[11., 12.], [15., 16.]]);
+        let g = b.square().sum().backward();
+        assert_eq!(g.get(&a).array(), [[0.; 4], [0.; 4], [0., 0., 22., 24.], [0., 0., 30., 32.]]);
+    }
 }
