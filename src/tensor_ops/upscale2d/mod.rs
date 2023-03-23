@@ -194,4 +194,17 @@ mod tests {
         let g = y.exp().mean().backward();
         assert_close(&g.get(&x).array(), &[[[0.679570457, 0.25], [1.847264025, 5.021384231]]]);
     }
+
+    #[test]
+    fn nearest_upscale2d_uneven() {
+        let dev = TestDevice::default();
+
+        let x = dev.tensor([[[1.0, 0.0, 2.0],[2.0, 3.0, 4.0]]]);
+        let y = x.leaky_trace().nearest_upscale2d::<2, 7>();
+        assert_close(&y.array(), &[[[1.0, 1.0, 1.0, 0.0, 0.0, 2.0, 2.0], [2.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0]]]);
+
+        let g = y.exp().mean().backward();
+        assert_close(&g.get(&x).array(), &[[[0.582488963, 0.142857143, 1.055579443], 
+                                                 [1.583369164, 2.869362418, 7.799735719]]]);
+    }
 }

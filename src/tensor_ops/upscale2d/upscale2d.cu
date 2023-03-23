@@ -60,8 +60,8 @@ __device__ void nearest_upscale2d_bwd(
         return;
     }
 
-    float h_scale = ((float)(out_strides[1]/out_strides[2]))/(inp_strides[1]/inp_strides[2]);
-    float w_scale = ((float)(out_strides[2]/out_strides[3]))/(inp_strides[2]/inp_strides[3]);
+    float h_scale = ((float)(inp_strides[1]/inp_strides[2]))/(out_strides[1]/out_strides[2]);
+    float w_scale = ((float)(inp_strides[2]/inp_strides[3]))/(out_strides[2]/out_strides[3]);
 
     unsigned int idx = i;
     const size_t x = idx % op.w_in;
@@ -73,15 +73,26 @@ __device__ void nearest_upscale2d_bwd(
     const size_t b = idx % op.batch;
     idx /= op.batch;
 
-    size_t oh_s = h_scale * y;
-    size_t ow_s = w_scale * x;
-    size_t oh_e = h_scale * (y+1);
-    size_t ow_e = w_scale * (x+1);
-    oh_e = min(oh_e, op.h_out);
-    ow_e = min(ow_e, op.w_out);
+    // Probably isn't efficient, but it works
+    size_t oh_s = 0;
+    size_t ow_s = 0;
+    size_t oh_e = op.h_out;
+    size_t ow_e = op.w_out;
+    while (oh_s*h_scale < y) {
+        oh_s++;
+    }
+    while (ow_s*w_scale < x) {
+        ow_s++;
+    }
+    while (oh_e*h_scale >= y+1) {
+        oh_e--;
+    }
+    while (ow_e*w_scale >= x+1) {
+        ow_e--;
+    }
 
-    for (int oh = oh_s; oh < oh_e; oh++) {
-        for (int ow = ow_s; ow < ow_e; ow++) {
+    for (int oh = oh_s; oh <= oh_e; oh++) {
+        for (int ow = ow_s; ow <= ow_e; ow++) {
             size_t out_i = b * out_strides[0] + c * out_strides[1] + oh * out_strides[2] + ow * out_strides[3];
             grad_inp[i] += grad_out[out_i];
         }
