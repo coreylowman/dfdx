@@ -39,20 +39,28 @@ __device__ void unfold_input_into_patches(
     const size_t b = idx % op.batch;
     idx /= op.batch;
 
-    const size_t y_plus_p = oh * op.stride + k1;
-    if (y_plus_p < op.padding) {
+    size_t y = oh + op.padding;
+    if (y < k1) {
         return;
     }
-    const size_t y = y_plus_p - op.padding;
+    y -= k1;
+    if (y % op.stride != 0) {
+        return;
+    }
+    y /= op.stride;
     if (y >= op.h_in) {
         return;
     }
-
-    const size_t x_plus_p = ow * op.stride + k2;
-    if (x_plus_p < op.padding) {
+    
+    size_t x = ow + op.padding;
+    if (x < k2) {
         return;
     }
-    const size_t x = x_plus_p - op.padding;
+    x -= k2;
+    if (x % op.stride != 0) {
+        return;
+    }
+    x /= op.stride;
     if (x >= op.w_in) {
         return;
     }
@@ -87,28 +95,20 @@ __device__ void unfold_output_into_patches(
     const size_t b = idx % op.batch;
     idx /= op.batch;
 
-    size_t oh = y + op.padding;
-    if (oh < k1) {
+    const size_t y_plus_p = y * op.stride + k1;
+    if (y_plus_p < op.padding) {
         return;
     }
-    oh -= k1;
-    if (oh % op.stride != 0) {
-        return;
-    }
-    oh /= op.stride;
+    const size_t oh = y_plus_p - op.padding;
     if (oh >= op.h_out) {
         return;
     }
-    
-    size_t ow = x + op.padding;
-    if (ow < k2) {
+
+    const size_t x_plus_p = x * op.stride + k2;
+    if (x_plus_p < op.padding) {
         return;
     }
-    ow -= k2;
-    if (ow % op.stride != 0) {
-        return;
-    }
-    ow /= op.stride;
+    const size_t ow = x_plus_p - op.padding;
     if (ow >= op.w_out) {
         return;
     }

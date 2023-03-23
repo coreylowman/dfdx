@@ -9,31 +9,13 @@ use super::{ConvTrans2DKernel, ConvTrans2DOp};
 impl ConvTrans2DOp {
     #[inline(always)]
     fn unfold_idx(&self, [k1, k2, y, x]: [usize; 4]) -> Option<[usize; 2]> {
-        let mut oh = y + self.padding;
-        if oh < k1 {
-            return None;
-        }
-        oh -= k1;
-        if oh % self.stride != 0 {
-            return None;
-        }
-        oh /= self.stride;
-        if oh >= self.h_out {
-            return None;
-        }
+        let mut oh = y * self.stride;
+        oh += k1;
+        oh -= self.padding;
 
-        let mut ow = x + self.padding;
-        if ow < k2 {
-            return None;
-        }
-        ow -= k2;
-        if ow % self.stride != 0 {
-            return None;
-        }
-        ow /= self.stride;
-        if ow >= self.w_out {
-            return None;
-        }
+        let mut ow = x * self.stride;
+        ow += k2;
+        ow -= self.padding;
 
         Some([oh, ow])
     }
@@ -59,12 +41,36 @@ impl Cpu {
                     for k2 in 0..op.kernel {
                         for oh in 0..op.h_out {
                             for ow in 0..op.w_out {
-                                let y = (oh * op.stride + k1).wrapping_sub(op.padding);
-                                let x = (ow * op.stride + k2).wrapping_sub(op.padding);
-                                if y < op.h_in && x < op.w_in {
-                                    buf[i] = img[c * (op.w_in * op.h_in) + y * op.w_in + x];
-                                }
                                 i += 1;
+                                let mut y = oh + op.padding;
+                                if y < k1 {
+                                    continue;
+                                }
+                                y -= k1;
+                                if y%op.stride != 0 {
+                                    continue;
+                                }
+                                y/= op.stride;
+                                if y >= op.h_in {
+                                    continue;
+                                }
+
+                                let mut x = ow + op.padding;
+                                if x < k2 {
+                                    continue;
+                                }
+                                x -= k2;
+                                if x%op.stride != 0 {
+                                    continue;
+                                }
+                                x/= op.stride;
+                                if x >= op.w_in {
+                                    continue;
+                                }
+
+                                if y < op.h_in && x < op.w_in {
+                                    buf[i-1] = img[c * (op.w_in * op.h_in) + y * op.w_in + x];
+                                }
                             }
                         }
                     }
@@ -111,6 +117,7 @@ impl Cpu {
                         for y in 0..op.h_in {
                             for x in 0..op.w_in {
                                 if let Some([oh, ow]) = op.unfold_idx([k1, k2, y, x]) {
+                                    println!("{k1} {k2} {y} {x} {oh} {ow}");
                                     buf[i] =
                                         grad_out[o * (op.h_out * op.w_out) + oh * op.w_out + ow];
                                 }
