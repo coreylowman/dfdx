@@ -1,8 +1,8 @@
 use crate::{
     shapes::{Shape, Unit},
-    tensor::{cuda::Cuda, unique_id, Tensor},
+    tensor::{cuda::Cuda, launch_cfg, unique_id, Tensor},
 };
-use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync};
 use std::{sync::Arc, vec::Vec};
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/to_dtype.ptx"));
@@ -36,7 +36,7 @@ where
         let mut out = unsafe { dev.alloc::<E2>(numel) }?;
 
         let fwd_fn = dev.get_func(MODULE_NAME, fn_name).unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (numel, inp.data.as_ref(), &mut out);
 
         unsafe { fwd_fn.launch(cfg, params) }?;

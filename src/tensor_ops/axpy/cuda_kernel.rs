@@ -1,6 +1,9 @@
-use crate::{shapes::*, tensor::Cuda};
+use crate::{
+    shapes::*,
+    tensor::{launch_cfg, Cuda},
+};
 
-use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/axpy.ptx"));
 
@@ -30,7 +33,7 @@ where
         }
         let numel = a.len();
         let fwd_fn = self.dev.get_func(Self::FN, Self::FN).unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         unsafe { fwd_fn.launch(cfg, (numel, a, alpha, b, beta)) }?;
         Ok(())
     }

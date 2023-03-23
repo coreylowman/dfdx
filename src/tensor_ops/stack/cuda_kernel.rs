@@ -1,8 +1,8 @@
 use crate::{
     shapes::*,
-    tensor::{Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor},
 };
-use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync};
 use std::vec::Vec;
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/stack.ptx"));
@@ -78,7 +78,7 @@ where
         for item in grad_inp.drain(..) {
             let f = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
             let numel: usize = item.len();
-            let cfg = LaunchConfig::for_num_elems(numel as u32);
+            let cfg = launch_cfg(numel as u32);
             let sub = grad_out.slice(offset..offset + numel);
             unsafe { f.launch(cfg, (numel, &sub, item)) }?;
             offset += numel;
