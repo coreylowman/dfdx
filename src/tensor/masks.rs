@@ -1,6 +1,8 @@
 use crate::prelude::{Shape, Unit};
 
-/// Create a 2D triangular mask with the given shape by setting excluded values to `E::default()`,
+/// Create a 2D triangular mask with the given shape by setting excluded values to `E::default()`.
+/// Shapes that are not 2D will be mapped onto a repeating 2D matrix: \[`<higher dims> x M x N`\] where
+/// M and N default to 1 for lower dimensional shapes.
 ///
 /// # Parameters
 /// - `shape`: The shape of the resulting mask
@@ -10,8 +12,8 @@ use crate::prelude::{Shape, Unit};
 ///     - Upper triangles will contain values at and above the offset diagonal and `E::default()` elsewhere
 ///     - Lower triangles will contain values at and below the offset diagonal and `E::default()` elsewhere
 /// - `offset`: The offset from the main diagonal
-///     - Positive values shift the values in the +M/-N direction
-///     - Negative values shift the values in the -M/+N direction
+///     - Positive values shift the diagonal in the `-M/+N` direction
+///     - Negative values shift the diagonal in the `+M/-N` direction
 pub fn triangle_mask<S: Shape, E: Unit>(data: &mut Vec<E>, shape: &S, upper: bool, offset: isize) {
     // Get the shape of the last two axes.
     let [num_rows, num_cols] = [
