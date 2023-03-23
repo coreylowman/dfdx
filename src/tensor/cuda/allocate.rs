@@ -2,7 +2,7 @@
 
 use crate::{
     shapes::*,
-    tensor::{storage_traits::*, unique_id, Cpu, CpuError, NoneTape, Tensor},
+    tensor::{masks::triangle_mask, storage_traits::*, unique_id, Cpu, CpuError, NoneTape, Tensor},
 };
 
 use super::{Cuda, CudaError};
