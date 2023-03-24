@@ -40,14 +40,14 @@ impl Upscale2DOp {
     }
 }
 
-pub trait UpscaleMethod {}
+pub trait UpscaleMethod : Default {}
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct NearestNeighbor;
 
 impl UpscaleMethod for NearestNeighbor {}
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Bilinear;
 
 impl UpscaleMethod for Bilinear {}

@@ -252,17 +252,17 @@ pub(crate) use to_dtype::ToDtypeKernel;
 #[cfg(feature = "nightly")]
 mod conv2d;
 #[cfg(feature = "nightly")]
-pub use conv2d::TryConv2D;
-#[cfg(feature = "nightly")]
-pub(crate) use conv2d::TryConv2DTo;
+pub use conv2d::{TryConv2D, TryConv2DTo};
 
 #[cfg(feature = "nightly")]
 mod convtrans2d;
 #[cfg(feature = "nightly")]
-pub use convtrans2d::ConvTransAlgebra;
+pub use convtrans2d::{TryConvTrans2D, TryConvTrans2DTo, ConvTransAlgebra};
 
 #[cfg(feature = "nightly")]
 mod upscale2d;
+#[cfg(feature = "nightly")]
+pub use upscale2d::{UpscaleMethod, TryUpscale2D, ConstUpscale2D, Upscale2DKernel, NearestNeighbor};
 
 #[cfg(feature = "nightly")]
 mod pool2d;
