@@ -170,10 +170,10 @@ impl<
 mod tests {
     use crate::{prelude::*, tests::*};
 
-    use super::{NearestNeighbor, TryUpscale2D};
+    use super::{Bilinear, NearestNeighbor, TryUpscale2D};
 
     #[test]
-    fn nearest_upscale2d() {
+    fn nearest_upscale2d_even() {
         let dev = TestDevice::default();
 
         let x = dev.tensor([[[1.0, 0.0], [2.0, 3.0]]]);
@@ -215,6 +215,58 @@ mod tests {
             &[[
                 [0.582488963, 0.142857143, 1.055579443],
                 [1.583369164, 2.869362418, 7.799735719],
+            ]],
+        );
+    }
+
+    // Use align_corners when comparing these
+    #[test]
+    fn bilinear_upscale2d_even() {
+        let dev = TestDevice::default();
+
+        let x = dev.tensor([[[1.0, 0.0], [2.0, 3.0]]]);
+        let y = x.leaky_trace().upscale_2d::<4, 4, Bilinear>();
+        assert_close(
+            &y.array(),
+            &[[
+                [1.0000000, 0.6666666, 0.3333333, 0.0000000],
+                [1.3333333, 1.2222222, 1.1111112, 1.0000000],
+                [1.6666667, 1.7777778, 1.8888890, 2.0000000],
+                [2.0000000, 2.3333333, 2.6666665, 3.0000000],
+            ]],
+        );
+
+        let g = y.exp().mean().backward();
+        assert_close(
+            &g.get(&x).array(),
+            &[[[0.8130764, 0.6928807], [1.8153939, 2.7659647]]],
+        );
+    }
+
+    #[test]
+    fn bilinear_upscale2d_uneven() {
+        let dev = TestDevice::default();
+
+        let x = dev.tensor([[[1.0, 0.0, 2.0], [2.0, 3.0, 4.0]]]);
+        let y = x.leaky_trace().upscale_2d::<2, 7, Bilinear>();
+        assert_close(
+            &y.array(),
+            &[[
+                [
+                    1.0000000, 0.6666666, 0.3333333, 0.0000000, 0.6666667, 1.3333335, 2.0000000,
+                ],
+                [
+                    2.0000000, 2.3333333, 2.6666665, 3.0000000, 3.3333335, 3.6666667, 4.0000000,
+                ],
+            ]],
+        );
+
+        let g = y.exp().mean().backward();
+        assert_close(
+            &g.get(&x).array(),
+            &[[
+                [0.3201411, 0.3673356, 0.7548153],
+                [1.3615142, 4.6318388, 6.4302063],
             ]],
         );
     }

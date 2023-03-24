@@ -86,7 +86,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{shapes::*, tensor::*, tests::*};
+    use crate::{prelude::Bilinear, shapes::*, tensor::*, tests::*};
 
     #[test]
     fn test_upscale2d() {
@@ -105,6 +105,6 @@ mod tests {
         let _: Tensor<Rank3<3, 8, 8>, _, _> = Upscale2DBy::<2>::default().forward(x.clone());
         let _: Tensor<Rank3<3, 8, 12>, _, _> = Upscale2DBy::<2, 3>::default().forward(x.clone());
         let _: Tensor<Rank3<3, 12, 12>, _, _> =
-            Upscale2DBy::<3, 3, NearestNeighbor>::default().forward(x.clone());
+            Upscale2DBy::<3, 3, Bilinear>::default().forward(x.clone());
     }
 }

@@ -76,8 +76,8 @@ __device__ void nearest_upscale2d_bwd(
     // Probably isn't efficient, but it works
     size_t oh_s = 0;
     size_t ow_s = 0;
-    size_t oh_e = op.h_out;
-    size_t ow_e = op.w_out;
+    size_t oh_e = op.h_out-1;
+    size_t ow_e = op.w_out-1;
     while (oh_s*h_scale < y) {
         oh_s++;
     }
@@ -95,6 +95,106 @@ __device__ void nearest_upscale2d_bwd(
         for (int ow = ow_s; ow <= ow_e; ow++) {
             size_t out_i = b * out_strides[0] + c * out_strides[1] + oh * out_strides[2] + ow * out_strides[3];
             grad_inp[i] += grad_out[out_i];
+        }
+    }
+}
+
+template<typename T>
+__device__ void bilinear_upscale2d_fwd(
+    const Upscale2dOp op,
+    const size_t *inp_strides,
+    const size_t *out_strides,
+    const T *inp, // 4d (Batch, Channels, Height, Width)
+    T *out // 4d (Batch, Channels, HeightOut, WidthOut)
+) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    const size_t numel = op.batch * op.chan * op.h_out * op.w_out;
+    if (i >= numel) {
+        return;
+    }
+
+    float h_scale = ((float)(inp_strides[1]/inp_strides[2]-1))/(out_strides[1]/out_strides[2]-1);
+    float w_scale = ((float)(inp_strides[2]/inp_strides[3]-1))/(out_strides[2]/out_strides[3]-1);
+
+    unsigned int idx = i;
+    const size_t ow = idx % op.w_out;
+    idx /= op.w_out;
+    const size_t oh = idx % op.h_out;
+    idx /= op.h_out;
+    const size_t c = idx % op.chan;
+    idx /= op.chan;
+    const size_t b = idx % op.batch;
+    idx /= op.batch;
+
+    size_t ih = h_scale * oh;
+    size_t iw = w_scale * ow;
+
+    T hs = h_scale * oh - ih;
+    T ws = w_scale * ow - iw;
+
+    T ll = inp[b * inp_strides[0] + c * inp_strides[1] + ih * inp_strides[2] + iw * inp_strides[3]] * (1-hs) * (1-ws);
+    T lh = ws != 0 ? inp[b * inp_strides[0] + c * inp_strides[1] + ih * inp_strides[2] + (iw+1) * inp_strides[3]] * (1-hs) * ws : 0;
+    T hl = hs != 0 ? inp[b * inp_strides[0] + c * inp_strides[1] + (ih+1) * inp_strides[2] + iw * inp_strides[3]] * hs * (1-ws) : 0;
+    T hh = hs != 0 && ws != 0 ? inp[b * inp_strides[0] + c * inp_strides[1] + (ih+1) * inp_strides[2] + (iw+1) * inp_strides[3]] * hs * ws : 0;
+
+    out[i] = ll + lh + hl + hh;
+}
+
+template<typename T>
+__device__ void bilinear_upscale2d_bwd(
+    const Upscale2dOp op,
+    const size_t *inp_strides,
+    const size_t *out_strides,
+    const T *inp, // 4d (Batch, Channels, Height, Width)
+    T *grad_inp,
+    const T *out, // 4d (Batch, Channels, HeightOut, WidthOut)
+    const T *grad_out
+) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    const size_t numel = op.batch * op.chan * op.h_in * op.w_in;
+    if (i >= numel) {
+        return;
+    }
+
+    float h_scale = ((float)(inp_strides[1]/inp_strides[2]-1))/(out_strides[1]/out_strides[2]-1);
+    float w_scale = ((float)(inp_strides[2]/inp_strides[3]-1))/(out_strides[2]/out_strides[3]-1);
+
+    unsigned int idx = i;
+    const size_t x = idx % op.w_in;
+    idx /= op.w_in;
+    const size_t y = idx % op.h_in;
+    idx /= op.h_in;
+    const size_t c = idx % op.chan;
+    idx /= op.chan;
+    const size_t b = idx % op.batch;
+    idx /= op.batch;
+
+    // Probably isn't efficient, but it works
+    size_t oh_s = 0;
+    size_t ow_s = 0;
+    size_t oh_e = op.h_out-1;
+    size_t ow_e = op.w_out-1;
+    while (ceil(oh_s*h_scale) < y) {
+        oh_s++;
+    }
+    while (ceil(ow_s*w_scale) < x) {
+        ow_s++;
+    }
+    while (floor(oh_e*h_scale) > y) {
+        oh_e--;
+    }
+    while (floor(ow_e*w_scale) > x) {
+        ow_e--;
+    }
+
+    for (int oh = oh_s; oh <= oh_e; oh++) {
+        for (int ow = ow_s; ow <= ow_e; ow++) {
+            size_t out_i = b * out_strides[0] + c * out_strides[1] + oh * out_strides[2] + ow * out_strides[3];
+
+            T hs = abs(h_scale * oh - y);
+            T ws = abs(w_scale * ow - x);
+
+            grad_inp[i] += grad_out[out_i] * (1-hs)*(1-ws);
         }
     }
 }
@@ -130,4 +230,14 @@ UPSCALE_OP(
     double,
     nearest_upscale2d_fwd_f64, nearest_upscale2d_bwd_f64,
     nearest_upscale2d_fwd, nearest_upscale2d_bwd
+);
+UPSCALE_OP(
+    float,
+    bilinear_upscale2d_fwd_f32, bilinear_upscale2d_bwd_f32,
+    bilinear_upscale2d_fwd, bilinear_upscale2d_bwd
+);
+UPSCALE_OP(
+    double,
+    bilinear_upscale2d_fwd_f64, bilinear_upscale2d_bwd_f64,
+    bilinear_upscale2d_fwd, bilinear_upscale2d_bwd
 );
