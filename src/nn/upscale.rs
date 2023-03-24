@@ -1,4 +1,5 @@
 use crate::prelude::{ConstUpscale2D, NearestNeighbor, UpscaleMethod};
+#[cfg(feature = "nightly")]
 use crate::prelude::{Dtype, HasErr, Rank3, Rank4, Tape, Tensor, Upscale2DKernel, ZerosTensor};
 
 #[allow(unused)]
