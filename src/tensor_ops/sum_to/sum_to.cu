@@ -30,17 +30,19 @@ __device__ void sum_to_bwd(
     const size_t numel,
     const size_t num_dims,
     const T elems_per_thread,
-    const size_t *dims,
+    const size_t *info,
     T *grad_inp,
-    const size_t *inp_strides,
-    const T *grad_out,
-    const size_t *out_strides
+    const T *grad_out
 ) {
     unsigned int inp_i = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (inp_i >= numel) {
         return;
     }
+
+    const size_t *dims = info;
+    const size_t *inp_strides = info + num_dims;
+    const size_t *out_strides = info + 2 * num_dims;
 
     unsigned int i = get_unstrided_index(inp_i, num_dims, dims, inp_strides);
     unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
@@ -69,13 +71,11 @@ extern "C" __global__ void BWD( \
     const size_t numel, \
     const size_t num_dims, \
     const TYPENAME elems_per_thread, \
-    const size_t *dims, \
+    const size_t *info, \
     TYPENAME *grad_inp, \
-    const size_t *inp_strides, \
-    const TYPENAME *grad_out, \
-    const size_t *out_strides \
+    const TYPENAME *grad_out \
 ) { \
-    sum_to_bwd(numel, num_dims, elems_per_thread, dims, grad_inp, inp_strides, grad_out, out_strides); \
+    sum_to_bwd(numel, num_dims, elems_per_thread, info, grad_inp, grad_out); \
 }
 
 SUM(float, sum_to_fwd_f32, sum_to_bwd_f32);

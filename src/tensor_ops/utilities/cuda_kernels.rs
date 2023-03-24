@@ -3,7 +3,7 @@ use crate::{
     tensor::{launch_cfg, unique_id, Cuda, Tensor},
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
-use cudarc::driver::{CudaSlice, DeviceRepr, DeviceSlice, LaunchAsync};
+use cudarc::driver::{CudaSlice, CudaStream, DeviceRepr, DeviceSlice, LaunchAsync};
 use std::{sync::Arc, vec::Vec};
 
 pub trait UnaryOpCudaKernel<E> {
@@ -173,23 +173,23 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
-
-        let dims: CudaSlice<usize> = self.dev.htod_copy(shape.concrete().into())?;
-        let lhs_strides: CudaSlice<usize> = self.dev.htod_copy(lhs.strides.into())?;
-        let rhs_strides: CudaSlice<usize> = self.dev.htod_copy(rhs.strides.into())?;
-
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
         let cfg = launch_cfg(numel as u32);
+
+        let mut info: Vec<usize> = Vec::with_capacity(3 * S::NUM_DIMS);
+        info.extend(shape.concrete());
+        info.extend(lhs.strides);
+        info.extend(rhs.strides);
+
+        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
+        let info: CudaSlice<usize> = self.dev.htod_copy(info)?;
         let params = (
             op,
             numel,             // const size_t numel,
             S::NUM_DIMS,       // const size_t num_dims,
-            &dims,             // const size_t *dims,
+            &info,             // const size_t *dims,
             lhs.data.as_ref(), // const float *lhs,
-            &lhs_strides,      // const size_t *lhs_strides,
             rhs.data.as_ref(), // const float *rhs,
-            &rhs_strides,      // const size_t *rhs_strides,
             &mut storage,      // float *out,
         );
         unsafe { fwd_fn.launch(cfg, params) }?;
@@ -241,45 +241,42 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
             rhs.strides,
         );
 
-        let out_dims1 = self.dev.htod_copy(out_dims1)?;
-        let out_strides1 = self.dev.htod_copy(out_strides1)?;
-        let rhs_strides1 = self.dev.htod_copy(rhs_strides1)?;
-        let out_dims2 = self.dev.htod_copy(out_dims2)?;
-        let out_strides2 = self.dev.htod_copy(out_strides2)?;
-        let lhs_strides2 = self.dev.htod_copy(lhs_strides2)?;
+        let mut info: Vec<usize> = Vec::with_capacity(6 * S::NUM_DIMS);
+        info.extend(out_dims1);
+        info.extend(out_strides1);
+        info.extend(rhs_strides1);
+        info.extend(out_dims2);
+        info.extend(out_strides2);
+        info.extend(lhs_strides2);
 
-        let chunk_len1 = numel / physical_numel(lhs.shape.concrete(), lhs.strides);
-        let chunk_len2 = numel / physical_numel(rhs.shape.concrete(), rhs.strides);
-
-        let params_lhs = (
-            op.clone(),        // const OP_STRUCT op,
-            numel,             // const size_t numel,
-            S::NUM_DIMS,       // const size_t num_dims,
-            &out_dims1,        // const size_t *dims,
-            &out_strides1,     // const size_t *out_strides,
-            lhs.data.as_ref(), // const TYPENAME *lhs,
-            grad_lhs,          // TYPENAME *grad_lhs,
-            chunk_len1,        // const size_t chunk_len,
-            rhs.data.as_ref(), // const TYPENAME *rhs,
-            &rhs_strides1,     // const size_t *rhs_strides,
-            grad_out,          // const TYPENAME *grad_out
-        );
+        let info = self.dev.htod_copy(info)?;
 
         self.par_stream.wait_for_default()?;
+
+        let params_lhs = (
+            op.clone(),  // const OP_STRUCT op,
+            numel,       // const size_t numel,
+            S::NUM_DIMS, // const size_t num_dims,
+            &info,
+            lhs.data.as_ref(),      // const TYPENAME *lhs,
+            grad_lhs,               // TYPENAME *grad_lhs,
+            numel / lhs.data.len(), // const size_t chunk_len,
+            rhs.data.as_ref(),      // const TYPENAME *rhs,
+            grad_out,               // const TYPENAME *grad_out
+        );
+
         unsafe { bwd_lhs_fn.launch_on_stream(&self.par_stream, cfg, params_lhs) }?;
 
         let params_rhs = (
-            op,                // const OP_STRUCT op,
-            numel,             // const size_t numel,
-            S::NUM_DIMS,       // const size_t num_dims,
-            &out_dims2,        // const size_t *dims,
-            &out_strides2,     // const size_t *out_strides,
-            lhs.data.as_ref(), // const TYPENAME *lhs,
-            &lhs_strides2,     // const size_t *lhs_strides,
-            rhs.data.as_ref(), // const TYPENAME *rhs,
-            grad_rhs,          // TYPENAME *grad_rhs,
-            chunk_len2,        // const size_t chunk_len,
-            grad_out,          // const TYPENAME *grad_out
+            op,          // const OP_STRUCT op,
+            numel,       // const size_t numel,
+            S::NUM_DIMS, // const size_t num_dims,
+            &info,
+            lhs.data.as_ref(),      // const TYPENAME *lhs,
+            rhs.data.as_ref(),      // const TYPENAME *rhs,
+            grad_rhs,               // TYPENAME *grad_rhs,
+            numel / rhs.data.len(), // const size_t chunk_len,
+            grad_out,               // const TYPENAME *grad_out
         );
 
         unsafe { bwd_rhs_fn.launch(cfg, params_rhs) }?;
