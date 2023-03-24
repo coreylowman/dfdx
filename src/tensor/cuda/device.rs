@@ -99,7 +99,7 @@ impl Cuda {
 }
 
 impl Cuda {
-    pub(crate) fn get_workspace<E>(
+    pub(crate) unsafe fn get_workspace<E>(
         &self,
         len: usize,
     ) -> Result<MutexGuard<CudaSlice<u8>>, CudaError> {
@@ -108,12 +108,10 @@ impl Cuda {
 
         // re-allocate a larger workspace
         if workspace.num_bytes() < num_bytes_required {
-            std::println!("Re-allocating");
             // we are about to memset this to zero, so this is still okay
             *workspace = unsafe { self.dev.alloc::<u8>(num_bytes_required) }?;
         }
-        self.dev
-            .memset_zeros(&mut workspace.slice_mut(..num_bytes_required))?;
+
         Ok(workspace)
     }
 }

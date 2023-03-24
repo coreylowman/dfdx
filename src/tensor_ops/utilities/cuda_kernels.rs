@@ -234,10 +234,22 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
             lhs.strides,
         );
 
+        let ((out_dims2, out_strides2), lhs_strides2) = permute_for_binary_backward(
+            lhs.shape.concrete(),
+            lhs.shape.strides(),
+            lhs.strides,
+            rhs.strides,
+        );
+
         let out_dims1 = self.dev.htod_copy(out_dims1)?;
         let out_strides1 = self.dev.htod_copy(out_strides1)?;
         let rhs_strides1 = self.dev.htod_copy(rhs_strides1)?;
+        let out_dims2 = self.dev.htod_copy(out_dims2)?;
+        let out_strides2 = self.dev.htod_copy(out_strides2)?;
+        let lhs_strides2 = self.dev.htod_copy(lhs_strides2)?;
+
         let chunk_len1 = numel / physical_numel(lhs.shape.concrete(), lhs.strides);
+        let chunk_len2 = numel / physical_numel(rhs.shape.concrete(), rhs.strides);
 
         let params_lhs = (
             op.clone(),        // const OP_STRUCT op,
@@ -255,18 +267,6 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
 
         self.par_stream.wait_for_default()?;
         unsafe { bwd_lhs_fn.launch_on_stream(&self.par_stream, cfg, params_lhs) }?;
-
-        let ((out_dims2, out_strides2), lhs_strides2) = permute_for_binary_backward(
-            lhs.shape.concrete(),
-            lhs.shape.strides(),
-            lhs.strides,
-            rhs.strides,
-        );
-
-        let out_dims2 = self.dev.htod_copy(out_dims2)?;
-        let out_strides2 = self.dev.htod_copy(out_strides2)?;
-        let lhs_strides2 = self.dev.htod_copy(lhs_strides2)?;
-        let chunk_len2 = numel / physical_numel(rhs.shape.concrete(), rhs.strides);
 
         let params_rhs = (
             op,                // const OP_STRUCT op,
