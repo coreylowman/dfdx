@@ -167,7 +167,7 @@ pub use gradients::{Gradients, Merge, NoneTape, OwnedTape, Tape};
 mod tests {
     use super::*;
     use crate::shapes::*;
-    use crate::tests::TestDevice;
+    use crate::tests::{TestDevice, TestDtype};
     use std::collections::HashSet;
 
     #[test]
@@ -266,7 +266,7 @@ mod tests {
     #[test]
     fn test_upper_tri() {
         let dev: TestDevice = Default::default();
-        let vl = 42.0;
+        let vl: TestDtype = 42.0;
 
         assert_eq!(dev.upper_tri::<Rank0>(vl, None).array(), vl);
         assert_eq!(dev.upper_tri::<Rank0>(vl, 1).array(), 0.);
@@ -347,7 +347,7 @@ mod tests {
     #[test]
     fn test_lower_tri() {
         let dev: TestDevice = Default::default();
-        let vl = 42.0;
+        let vl: TestDtype = 42.0;
 
         assert_eq!(dev.lower_tri::<Rank0>(vl, None).array(), vl);
         assert_eq!(dev.lower_tri::<Rank0>(vl, -1).array(), 0.);

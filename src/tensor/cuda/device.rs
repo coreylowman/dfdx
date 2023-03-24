@@ -99,6 +99,7 @@ impl Cuda {
 }
 
 impl Cuda {
+    #[allow(unused)]
     pub(crate) unsafe fn get_workspace<E>(
         &self,
         len: usize,

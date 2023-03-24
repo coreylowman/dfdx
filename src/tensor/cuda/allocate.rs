@@ -75,9 +75,9 @@ where
         diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
-        let mut data = std::vec![val; shape.num_elements()];
+        let mut data = self.cpu.try_alloc_elem::<E>(shape.num_elements(), val)?;
         let offset = diagonal.into().unwrap_or(0);
-        triangle_mask(&mut data, &shape, false, offset);
+        triangle_mask(&mut data, &shape, true, offset);
         self.tensor_from_host_buf(shape, data)
     }
 
@@ -88,7 +88,7 @@ where
         diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
-        let mut data = std::vec![val; shape.num_elements()];
+        let mut data = self.cpu.try_alloc_elem::<E>(shape.num_elements(), val)?;
         let offset = diagonal.into().unwrap_or(0);
         triangle_mask(&mut data, &shape, false, offset);
         self.tensor_from_host_buf(shape, data)
