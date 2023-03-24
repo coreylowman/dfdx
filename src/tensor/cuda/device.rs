@@ -6,7 +6,12 @@ use cudarc::{
     cublas::{result::CublasError, CudaBlas},
     driver::{CudaDevice, CudaSlice, CudaStream, DeviceSlice, DriverError},
 };
-use std::{sync::Arc, vec::Vec};
+
+use std::sync::MutexGuard;
+use std::{
+    sync::{Arc, Mutex},
+    vec::Vec,
+};
 
 /// A Cuda device that enables constructing tensors on GPUs
 /// & running GPU kernels.
@@ -17,6 +22,7 @@ pub struct Cuda {
     pub(crate) blas: Arc<CudaBlas>,
     /// A second stream for kernels to optionally execute on.
     pub(crate) par_stream: Arc<CudaStream>,
+    pub(crate) workspace: Arc<Mutex<CudaSlice<u8>>>,
 }
 
 #[derive(Debug)]
@@ -67,11 +73,13 @@ impl Cuda {
         let dev = CudaDevice::new(ordinal)?;
         let blas = Arc::new(CudaBlas::new(dev.clone())?);
         let par_stream = Arc::new(dev.fork_default_stream()?);
+        let workspace = Arc::new(Mutex::new(dev.alloc_zeros::<u8>(0)?));
         Ok(Self {
             cpu,
             dev,
             blas,
             par_stream,
+            workspace,
         })
     }
 
@@ -87,6 +95,26 @@ impl Cuda {
     /// ```
     pub fn synchronize(&self) -> Result<(), CudaError> {
         self.dev.synchronize().map_err(CudaError::from)
+    }
+}
+
+impl Cuda {
+    pub(crate) fn get_workspace<E>(
+        &self,
+        len: usize,
+    ) -> Result<MutexGuard<CudaSlice<u8>>, CudaError> {
+        let num_bytes_required = len * std::mem::size_of::<E>();
+        let mut workspace = self.workspace.as_ref().lock().unwrap();
+
+        // re-allocate a larger workspace
+        if workspace.num_bytes() < num_bytes_required {
+            std::println!("Re-allocating");
+            // we are about to memset this to zero, so this is still okay
+            *workspace = unsafe { self.dev.alloc::<u8>(num_bytes_required) }?;
+        }
+        self.dev
+            .memset_zeros(&mut workspace.slice_mut(..num_bytes_required))?;
+        Ok(workspace)
     }
 }
 
