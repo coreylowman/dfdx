@@ -2,7 +2,7 @@
 
 use crate::{
     shapes::*,
-    tensor::{storage_traits::*, unique_id, Tensor},
+    tensor::{masks::triangle_mask, storage_traits::*, unique_id, Tensor},
 };
 
 use super::{Cpu, CpuError, LendingIterator};
@@ -66,6 +66,52 @@ impl<E: Unit> OnesTensor<E> for Cpu {
         let shape = *src.shape();
         let strides = shape.strides();
         let data = self.try_alloc_elem::<E>(shape.num_elements(), E::ONE)?;
+        let data = Arc::new(data);
+        Ok(Tensor {
+            id: unique_id(),
+            data,
+            shape,
+            strides,
+            device: self.clone(),
+            tape: Default::default(),
+        })
+    }
+}
+
+impl<E: Unit> TriangleTensor<E> for Cpu {
+    fn try_upper_tri_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+        let shape = *src.shape();
+        let strides = shape.strides();
+        let mut data = self.try_alloc_elem::<E>(shape.num_elements(), val)?;
+        let offset = diagonal.into().unwrap_or(0);
+        triangle_mask(&mut data, &shape, true, offset);
+        let data = Arc::new(data);
+        Ok(Tensor {
+            id: unique_id(),
+            data,
+            shape,
+            strides,
+            device: self.clone(),
+            tape: Default::default(),
+        })
+    }
+
+    fn try_lower_tri_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+        let shape = *src.shape();
+        let strides = shape.strides();
+        let mut data = self.try_alloc_elem::<E>(shape.num_elements(), val)?;
+        let offset = diagonal.into().unwrap_or(0);
+        triangle_mask(&mut data, &shape, false, offset);
         let data = Arc::new(data);
         Ok(Tensor {
             id: unique_id(),

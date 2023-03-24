@@ -2,7 +2,7 @@
 
 use crate::{
     shapes::*,
-    tensor::{storage_traits::*, unique_id, Cpu, CpuError, NoneTape, Tensor},
+    tensor::{masks::triangle_mask, storage_traits::*, unique_id, Cpu, CpuError, NoneTape, Tensor},
 };
 
 use super::{Cuda, CudaError};
@@ -61,6 +61,37 @@ where
         let shape = *src.shape();
         let buf = std::vec![E::ONE; shape.num_elements()];
         self.tensor_from_host_buf(shape, buf)
+    }
+}
+
+impl<E: Unit> TriangleTensor<E> for Cuda
+where
+    Cpu: TriangleTensor<E>,
+{
+    fn try_upper_tri_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+        let shape = *src.shape();
+        let mut data = std::vec![val; shape.num_elements()];
+        let offset = diagonal.into().unwrap_or(0);
+        triangle_mask(&mut data, &shape, false, offset);
+        self.tensor_from_host_buf(shape, data)
+    }
+
+    fn try_lower_tri_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
+        let shape = *src.shape();
+        let mut data = std::vec![val; shape.num_elements()];
+        let offset = diagonal.into().unwrap_or(0);
+        triangle_mask(&mut data, &shape, false, offset);
+        self.tensor_from_host_buf(shape, data)
     }
 }
 

@@ -197,6 +197,7 @@ mod sub;
 mod sum_to;
 mod tanh;
 mod to_dtype;
+mod tri;
 mod var_to;
 
 pub use abs::abs;
@@ -247,6 +248,7 @@ pub use sub::{sub, TrySub};
 pub use sum_to::SumTo;
 pub use tanh::tanh;
 pub use to_dtype::to_dtype;
+pub use tri::{lower_tri, upper_tri};
 pub use var_to::VarTo;
 
 pub(crate) use to_dtype::ToDtypeKernel;

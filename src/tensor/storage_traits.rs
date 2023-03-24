@@ -169,6 +169,141 @@ pub trait OneFillStorage<E: Unit>: DeviceStorage {
     fn try_fill_with_ones(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err>;
 }
 
+/// Build upper & lower triangle tensors.
+pub trait TriangleTensor<E: Unit>: DeviceStorage {
+    /// Build a tensor containing the upper triangle part of each lowest 2D matrix
+    /// set to the given value, along the given diagonal. The other values will be `E::default()`.
+    ///
+    /// Given a 2D matrix `M x N`, diagonal values will shift the values in the
+    /// `-M/+N` direction.
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let a: Tensor<Rank2<3, 3>, f32, _> = dev.upper_tri(1.0, None);
+    /// assert_eq!(a.array(),
+    ///     [[1.0, 1.0, 1.0],
+    ///      [0.0, 1.0, 1.0],
+    ///      [0.0, 0.0, 1.0]]
+    /// );
+    /// let b: Tensor<_, f32, _> = dev.upper_tri_like(&a, 1.0, -1);
+    /// assert_eq!(b.array(),
+    ///     [[1.0, 1.0, 1.0],
+    ///      [1.0, 1.0, 1.0],
+    ///      [0.0, 1.0, 1.0]]
+    /// );
+    /// let c: Tensor<_, f32, _> = dev.upper_tri_like(&b, 1.0, 1);
+    /// assert_eq!(c.array(),
+    ///     [[0.0, 1.0, 1.0],
+    ///      [0.0, 0.0, 1.0],
+    ///      [0.0, 0.0, 0.0]]
+    /// );
+    /// ```
+    fn upper_tri<S: ConstShape>(
+        &self,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Tensor<S, E, Self> {
+        self.try_upper_tri_like::<S>(&Default::default(), val, diagonal)
+            .unwrap()
+    }
+
+    /// Fallible version of [TriangleTensor::upper_tri]
+    fn try_upper_tri<S: ConstShape>(
+        &self,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        self.try_upper_tri_like::<S>(&Default::default(), val, diagonal)
+    }
+
+    /// Build an upper triangular tensor with the given shape. See [TriangleTensor::upper_tri].
+    fn upper_tri_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Tensor<S::Shape, E, Self> {
+        self.try_upper_tri_like(src, val, diagonal).unwrap()
+    }
+
+    /// Fallible version of [TriangleTensor::upper_tri_like]
+    fn try_upper_tri_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
+
+    /// Build a tensor containing the lower triangle part of each lowest 2D matrix
+    /// set to the given value, along the given diagonal. The other values will be `E::default()`.
+    ///
+    /// Given a 2D matrix `M x N`, diagonal values will shift the values in the
+    /// `-M/+N` direction.
+    ///
+    /// ## Examples
+    ///
+    /// ```rust
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let a: Tensor<Rank2<3, 3>, f32, _> = dev.lower_tri(1.0, None);
+    /// assert_eq!(a.array(),
+    ///     [[1.0, 0.0, 0.0],
+    ///      [1.0, 1.0, 0.0],
+    ///      [1.0, 1.0, 1.0]]
+    /// );
+    /// let b: Tensor<_, f32, _> = dev.lower_tri_like(&a, 1.0, -1);
+    /// assert_eq!(b.array(),
+    ///     [[0.0, 0.0, 0.0],
+    ///      [1.0, 0.0, 0.0],
+    ///      [1.0, 1.0, 0.0]]
+    /// );
+    /// let c: Tensor<_, f32, _> = dev.lower_tri_like(&b, 1.0, 1);
+    /// assert_eq!(c.array(),
+    ///     [[1.0, 1.0, 0.0],
+    ///      [1.0, 1.0, 1.0],
+    ///      [1.0, 1.0, 1.0]]
+    /// );
+    /// ```
+    fn lower_tri<S: ConstShape>(
+        &self,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Tensor<S, E, Self> {
+        self.try_lower_tri_like::<S>(&Default::default(), val, diagonal)
+            .unwrap()
+    }
+
+    /// Fallible version of [TriangleTensor::lower_tri]
+    fn try_lower_tri<S: ConstShape>(
+        &self,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        self.try_lower_tri_like::<S>(&Default::default(), val, diagonal)
+    }
+
+    /// Build a lower triangular tensor with the given shape. See [TriangleTensor::lower_tri].
+    fn lower_tri_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Tensor<S::Shape, E, Self> {
+        self.try_lower_tri_like(src, val, diagonal).unwrap()
+    }
+
+    /// Fallible version of [TriangleTensor::lower_tri_like]
+    fn try_lower_tri_like<S: HasShape>(
+        &self,
+        src: &S,
+        val: E,
+        diagonal: impl Into<Option<isize>>,
+    ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
+}
+
 /// Constructs tensors filled with random values from a given distribution.
 pub trait SampleTensor<E: Unit>: DeviceStorage {
     /// Samples a const tensor from a uniform distribution
