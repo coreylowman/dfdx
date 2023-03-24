@@ -119,13 +119,13 @@ where
     ) -> Result<(), Self::Err> {
         let patches_item_numel = op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
         let patches_numel = op.batch * patches_item_numel;
-        let filters_numel = op.batch * op.chan_in * op.chan_out * op.kernel * op.kernel;
+        let filters_numel = op.chan_in * op.chan_out * op.kernel * op.kernel;
 
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
 
         let mut f_b1023 = unsafe { self.dev.alloc::<E>(filters_numel) }?;
-        let mut grad_f_b1023 = unsafe { self.dev.alloc::<E>(filters_numel) }?;
+        let mut grad_f_b1023 = unsafe { self.dev.alloc::<E>(op.batch * filters_numel) }?;
         let f_strides = self.dev.htod_copy(rhs.strides.into())?;
 
         self.par_stream.wait_for_default()?;
@@ -163,7 +163,7 @@ where
                     self.blas.as_ref(),
                     (op.batch, m, k, n),
                     &f_b1023,
-                    [m * k, k, 1],
+                    [0, k, 1],
                     &patches,
                     [k * n, n, 1],
                     <E>::ONE,

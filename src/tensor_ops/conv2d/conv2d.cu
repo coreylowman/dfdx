@@ -102,7 +102,7 @@ __device__ void transpose_and_broadcast_filters(
     const Conv2DOp op,
     const T *filters, // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
     const size_t *strides, // 4d filters strides
-    T *filters_tr // 5d (Batch, ChanIn, ChanOut, KernelSize, KernelSize)
+    T *filters_tr // 4d (ChanIn, ChanOut, KernelSize, KernelSize)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     auto numel = op.chan_in * op.chan_out * op.kernel * op.kernel;
@@ -122,10 +122,7 @@ __device__ void transpose_and_broadcast_filters(
     auto i_tr = c * (op.chan_out * op.kernel * op.kernel) + o * (op.kernel * op.kernel) + k1 * (op.kernel) + k2;
     auto i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
 
-    const T f = filters[i_no];
-    for (auto b = 0; b < op.batch; b++) {
-        filters_tr[b * numel + i_tr] = f;
-    }
+    filters_tr[i_tr] = filters[i_no];
 }
 
 template<typename T>
