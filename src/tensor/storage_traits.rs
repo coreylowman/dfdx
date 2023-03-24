@@ -169,9 +169,10 @@ pub trait OneFillStorage<E: Unit>: DeviceStorage {
     fn try_fill_with_ones(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err>;
 }
 
+/// Build upper & lower triangle tensors.
 pub trait TriangleTensor<E: Unit>: DeviceStorage {
     /// Build a tensor containing the upper triangle part of each lowest 2D matrix
-    /// set to the given value, along the given diagonal. The other values will be zero.
+    /// set to the given value, along the given diagonal. The other values will be `E::default()`.
     ///
     /// Given a 2D matrix `M x N`, diagonal values will shift the values in the
     /// `-M/+N` direction.
@@ -237,7 +238,7 @@ pub trait TriangleTensor<E: Unit>: DeviceStorage {
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 
     /// Build a tensor containing the lower triangle part of each lowest 2D matrix
-    /// set to the given value, along the given diagonal. The other values will be zero.
+    /// set to the given value, along the given diagonal. The other values will be `E::default()`.
     ///
     /// Given a 2D matrix `M x N`, diagonal values will shift the values in the
     /// `-M/+N` direction.

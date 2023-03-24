@@ -3,6 +3,9 @@ use crate::tensor::{HasErr, Tape, Tensor, TriangleTensor};
 
 use super::TryMul;
 
+/// Applies a 2D lower triangular mask by setting values above the diagonal to `E::default()`.
+///
+/// See [`TriangleTensor::lower_tri`].
 pub fn lower_tri<S: Shape, E: Dtype, D: TriangleTensor<E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
     diagonal: impl Into<Option<isize>>,
@@ -13,6 +16,9 @@ where
     t.lower_tri(diagonal)
 }
 
+/// Applies a 2D upper triangular mask by setting values below the diagonal to `E::default()`.
+///
+/// See [`TriangleTensor::upper_tri`].
 pub fn upper_tri<S: Shape, E: Dtype, D: TriangleTensor<E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
     diagonal: impl Into<Option<isize>>,
@@ -27,6 +33,7 @@ impl<S: Shape, E: Dtype, D: TriangleTensor<E>, T: Tape<E, D>> Tensor<S, E, D, T>
 where
     Self: TryMul<Tensor<S, E, D>> + HasErr<Err = D::Err>,
 {
+    /// See [lower_tri]
     pub fn try_lower_tri(
         self,
         diagonal: impl Into<Option<isize>>,
@@ -37,10 +44,12 @@ where
         self.try_mul(out)
     }
 
+    /// See [lower_tri]
     pub fn lower_tri(self, diagonal: impl Into<Option<isize>>) -> Self {
         self.try_lower_tri(diagonal).unwrap()
     }
 
+    /// See [upper_tri]
     pub fn try_upper_tri(
         self,
         diagonal: impl Into<Option<isize>>,
@@ -51,6 +60,7 @@ where
         self.try_mul(out)
     }
 
+    /// See [upper_tri]
     pub fn upper_tri(self, diagonal: impl Into<Option<isize>>) -> Self {
         self.try_upper_tri(diagonal).unwrap()
     }
