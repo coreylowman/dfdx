@@ -19,7 +19,7 @@ __device__ void unfold_input_into_patches(
     T *patches // 6d (Batch, Channels, KernelSize, KernelSize, HeightOut, WidthOut)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    size_t item_numel = op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
+    size_t item_numel = op.batch * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
     if (i >= item_numel) {
         return;
     }
@@ -35,6 +35,8 @@ __device__ void unfold_input_into_patches(
     const size_t k1 = idx % op.kernel;
     idx /= op.kernel;
     const size_t c = idx % op.chan_in;
+    idx /= op.chan_in;
+    const size_t b = idx % op.batch;
 
     const size_t y_plus_p = oh * op.stride + k1;
     const size_t y = y_plus_p - op.padding;
@@ -42,14 +44,10 @@ __device__ void unfold_input_into_patches(
     const size_t x = x_plus_p - op.padding;
 
     if (y >= op.h_in || x >= op.w_in) {
-        for (auto b = 0;b < op.batch;b++) {
-            patches[b * item_numel + i] = 0.0;
-        }
+        patches[i] = 0.0;
     } else {
-        for (auto b = 0;b < op.batch;b++) {
-            const size_t i_image = b * strides[0] + c * strides[1] + y * strides[2] + x * strides[3];
-            patches[b * item_numel + i] = image[i_image];
-        }
+        const size_t i_image = b * strides[0] + c * strides[1] + y * strides[2] + x * strides[3];
+        patches[i] = image[i_image];
     }
 }
 
