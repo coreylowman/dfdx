@@ -47,10 +47,10 @@ impl Cpu {
                                     continue;
                                 }
                                 y -= k1;
-                                if y%op.stride != 0 {
+                                if y % op.stride != 0 {
                                     continue;
                                 }
-                                y/= op.stride;
+                                y /= op.stride;
                                 if y >= op.h_in {
                                     continue;
                                 }
@@ -60,16 +60,16 @@ impl Cpu {
                                     continue;
                                 }
                                 x -= k2;
-                                if x%op.stride != 0 {
+                                if x % op.stride != 0 {
                                     continue;
                                 }
-                                x/= op.stride;
+                                x /= op.stride;
                                 if x >= op.w_in {
                                     continue;
                                 }
 
                                 if y < op.h_in && x < op.w_in {
-                                    buf[i-1] = img[c * (op.w_in * op.h_in) + y * op.w_in + x];
+                                    buf[i - 1] = img[c * (op.w_in * op.h_in) + y * op.w_in + x];
                                 }
                             }
                         }

@@ -40,7 +40,7 @@ impl Upscale2DOp {
     }
 }
 
-pub trait UpscaleMethod : Default {}
+pub trait UpscaleMethod: Default {}
 
 #[derive(Clone, Copy, Default)]
 pub struct NearestNeighbor;

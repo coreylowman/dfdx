@@ -189,6 +189,7 @@ mod batchnorm1d;
 mod batchnorm2d;
 mod bias2d;
 mod conv;
+mod convtrans;
 mod dropout;
 mod ema;
 mod embedding;
@@ -208,7 +209,6 @@ mod safetensors;
 mod split_into;
 mod transformer;
 mod unbiased_linear;
-mod convtrans;
 mod upscale;
 
 pub use module::{

@@ -257,12 +257,14 @@ pub use conv2d::{TryConv2D, TryConv2DTo};
 #[cfg(feature = "nightly")]
 mod convtrans2d;
 #[cfg(feature = "nightly")]
-pub use convtrans2d::{TryConvTrans2D, TryConvTrans2DTo, ConvTransAlgebra};
+pub use convtrans2d::{ConvTransAlgebra, TryConvTrans2D, TryConvTrans2DTo};
 
 #[cfg(feature = "nightly")]
 mod upscale2d;
 #[cfg(feature = "nightly")]
-pub use upscale2d::{UpscaleMethod, TryUpscale2D, ConstUpscale2D, Upscale2DKernel, NearestNeighbor};
+pub use upscale2d::{
+    ConstUpscale2D, NearestNeighbor, TryUpscale2D, Upscale2DKernel, UpscaleMethod,
+};
 
 #[cfg(feature = "nightly")]
 mod pool2d;
