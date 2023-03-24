@@ -1,5 +1,5 @@
 use crate::shapes::{Dtype, Shape};
-use crate::tensor::{cpu::*, Tensor};
+use crate::tensor::{cpu::*, Tensor, ZerosTensor};
 use crate::tensor_ops::matmul::cpu_kernel::MatMulImpl;
 
 use super::{Conv2DKernel, Conv2DOp};
@@ -163,6 +163,10 @@ impl<E: Dtype> Conv2DKernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
+    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+        self.try_zeros_like(&s)
+    }
+
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: Conv2DOp,

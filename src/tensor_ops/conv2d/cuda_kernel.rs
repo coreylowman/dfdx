@@ -4,7 +4,7 @@ use cudarc::driver::{DeviceRepr, LaunchAsync, ValidAsZeroBits};
 use crate::tensor_ops::matmul::cuda_kernel::sgemm_batch;
 use crate::{
     shapes::*,
-    tensor::{launch_cfg, Cuda, Tensor},
+    tensor::{launch_cfg, unique_id, Cuda, Tensor},
 };
 
 use std::sync::Arc;
@@ -51,6 +51,17 @@ where
     Self: HasCudaKernel<E>,
     CudaBlas: Gemm<E>,
 {
+    fn alloc<S: Shape>(&self, shape: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+        let data = Arc::new(unsafe { self.dev.alloc::<E>(shape.num_elements()) }?);
+        Ok(Tensor {
+            id: unique_id(),
+            data,
+            shape,
+            strides: shape.strides(),
+            device: self.clone(),
+            tape: Default::default(),
+        })
+    }
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: super::Conv2DOp,
