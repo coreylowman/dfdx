@@ -19,8 +19,8 @@ __device__ void unfold_input_into_patches(
     T *patches // 6d (Batch, Channels, KernelSize, KernelSize, HeightOut, WidthOut)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    const auto patches_numel = op.batch * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
-    if (i >= patches_numel) {
+    size_t item_numel = op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
+    if (i >= item_numel) {
         return;
     }
 
@@ -35,30 +35,22 @@ __device__ void unfold_input_into_patches(
     const size_t k1 = idx % op.kernel;
     idx /= op.kernel;
     const size_t c = idx % op.chan_in;
-    idx /= op.chan_in;
-    const size_t b = idx % op.batch;
-    idx /= op.batch;
 
     const size_t y_plus_p = oh * op.stride + k1;
-    if (y_plus_p < op.padding) {
-        return;
-    }
     const size_t y = y_plus_p - op.padding;
-    if (y >= op.h_in) {
-        return;
-    }
-
     const size_t x_plus_p = ow * op.stride + k2;
-    if (x_plus_p < op.padding) {
-        return;
-    }
     const size_t x = x_plus_p - op.padding;
-    if (x >= op.w_in) {
-        return;
-    }
 
-    const size_t i_image = b * strides[0] + c * strides[1] + y * strides[2] + x * strides[3];
-    patches[i] = image[i_image];
+    if (y >= op.h_in || x >= op.w_in) {
+        for (auto b = 0;b < op.batch;b++) {
+            patches[b * item_numel + i] = 0.0;
+        }
+    } else {
+        for (auto b = 0;b < op.batch;b++) {
+            const size_t i_image = b * strides[0] + c * strides[1] + y * strides[2] + x * strides[3];
+            patches[b * item_numel + i] = image[i_image];
+        }
+    }
 }
 
 template<typename T>
@@ -67,9 +59,9 @@ __device__ void unfold_output_into_patches(
     const T *image_out, // 4d (Batch, ChanOut, HeightOut, WidthOut)
     T *patches // 6d (Batch, ChanOut, KernelSize, KernelSize, HeightIn, WidthIn)
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    const auto patches_numel = op.batch * op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
-    if (i >= patches_numel) {
+    const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    const size_t item_numel = op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
+    if (i >= item_numel) {
         return;
     }
 
@@ -83,38 +75,28 @@ __device__ void unfold_output_into_patches(
     const size_t k1 = idx % op.kernel;
     idx /= op.kernel;
     const size_t o = idx % op.chan_out;
-    idx /= op.chan_out;
-    const size_t b = idx % op.batch;
-    idx /= op.batch;
 
-    size_t oh = y + op.padding;
-    if (oh < k1) {
-        return;
-    }
-    oh -= k1;
-    if (oh % op.stride != 0) {
-        return;
-    }
-    oh /= op.stride;
-    if (oh >= op.h_out) {
-        return;
-    }
-    
-    size_t ow = x + op.padding;
-    if (ow < k2) {
-        return;
-    }
-    ow -= k2;
-    if (ow % op.stride != 0) {
-        return;
-    }
-    ow /= op.stride;
-    if (ow >= op.w_out) {
+    const size_t oh_ks = y + op.padding;
+    const size_t oh_s = oh_ks - k1;
+    const size_t oh = oh_s / op.stride;
+    const size_t ow_ks = x + op.padding;
+    const size_t ow_s = ow_ks - k2;
+    const size_t ow = ow_s / op.stride;
+
+    if (
+        (oh_ks < k1 || oh_s % op.stride != 0 || oh >= op.h_out)
+        || (ow_ks < k2 || ow_s % op.stride != 0 || ow >= op.w_out)
+    ) {
+        for (auto b = 0; b < op.batch; b++) {
+            patches[b * item_numel + i] = 0.0;
+        }
         return;
     }
 
-    size_t image_i = b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out) + oh * (op.w_out)  + ow;
-    patches[i] = image_out[image_i];
+    for (auto b = 0; b < op.batch; b++) {
+        size_t image_i = b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out) + oh * (op.w_out)  + ow;
+        patches[b * item_numel + i] = image_out[image_i];
+    }
 }
 
 template<typename T>
@@ -138,7 +120,6 @@ __device__ void transpose_and_broadcast_filters(
     const size_t c = idx % op.chan_in;
     idx /= op.chan_in;
     const size_t o = idx % op.chan_out;
-    idx /= op.chan_out;
 
     auto i_tr = c * (op.chan_out * op.kernel * op.kernel) + o * (op.kernel * op.kernel) + k1 * (op.kernel) + k2;
     auto i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
