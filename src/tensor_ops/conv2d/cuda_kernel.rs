@@ -1,10 +1,10 @@
 use cudarc::cublas::{CudaBlas, Gemm};
-use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, ValidAsZeroBits};
+use cudarc::driver::{DeviceRepr, LaunchAsync, ValidAsZeroBits};
 
 use crate::tensor_ops::matmul::cuda_kernel::sgemm_batch;
 use crate::{
     shapes::*,
-    tensor::{launch_cfg, Cuda, Tensor},
+    tensor::{launch_cfg, unique_id, Cuda, Tensor},
 };
 
 use std::sync::Arc;
@@ -23,7 +23,7 @@ impl HasCudaKernel<f32> for Cuda {
     const FNS: &'static [&'static str] = &[
         "unfold_input_into_patches_f32",
         "unfold_output_into_patches_f32",
-        "transpose_and_broadcast_filters_f32",
+        "transpose_filters_f32",
         "sum_transposed_filters_f32",
     ];
 }
@@ -33,7 +33,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FNS: &'static [&'static str] = &[
         "unfold_input_into_patches_f64",
         "unfold_output_into_patches_f64",
-        "transpose_and_broadcast_filters_f64",
+        "transpose_filters_f64",
         "sum_transposed_filters_f64",
     ];
 }
@@ -51,6 +51,17 @@ where
     Self: HasCudaKernel<E>,
     CudaBlas: Gemm<E>,
 {
+    fn alloc<S: Shape>(&self, shape: S) -> Result<Tensor<S, E, Self>, Self::Err> {
+        let data = Arc::new(unsafe { self.dev.alloc::<E>(shape.num_elements()) }?);
+        Ok(Tensor {
+            id: unique_id(),
+            data,
+            shape,
+            strides: shape.strides(),
+            device: self.clone(),
+            tape: Default::default(),
+        })
+    }
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: super::Conv2DOp,
@@ -62,11 +73,15 @@ where
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
 
-        let patches_numel = op.batch * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
-        let mut patches = self.dev.alloc_zeros::<E>(patches_numel)?;
+        let patches_item_numel = op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
+        let patches_numel = op.batch * patches_item_numel;
+
+        let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
+        let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
+
         let img_strides = self.dev.htod_copy(make_4d::<L>(lhs.strides).into())?;
         let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let cfg = launch_cfg(patches.len() as u32);
+        let cfg = launch_cfg(patches_numel as u32);
         let params = (op, lhs.data.as_ref(), &img_strides, &mut patches);
         unsafe { unfold_fn.launch(cfg, params) }?;
 
@@ -83,7 +98,7 @@ where
                 &patches,
                 [k * n, n, 1],
                 Default::default(),
-                Arc::make_mut(&mut out.data),
+                Arc::get_mut(&mut out.data).unwrap(),
                 [m * n, n, 1],
             )
             .unwrap();
@@ -102,41 +117,53 @@ where
         _: &Tensor<O, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        let patches_numel = op.batch * op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
-        let mut patches = self.dev.alloc_zeros::<E>(patches_numel)?;
+        let patches_item_numel = op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
+        let patches_numel = op.batch * patches_item_numel;
+        let filters_numel = op.chan_in * op.chan_out * op.kernel * op.kernel;
+
+        let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
+        let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
+
+        let mut f_b1023 = unsafe { self.dev.alloc::<E>(filters_numel) }?;
+        let mut grad_f_b1023 = unsafe { self.dev.alloc::<E>(op.batch * filters_numel) }?;
+        let f_strides = self.dev.htod_copy(rhs.strides.into())?;
+
+        self.par_stream.wait_for_default()?;
 
         {
             // unfold grad_out into patches
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
-            let cfg = launch_cfg(patches_numel as u32);
+            let cfg = launch_cfg(patches_item_numel as u32);
             unsafe { unfold_fn.launch(cfg, (op, grad_out, &mut patches)) }?;
         }
 
-        let filters_numel = op.batch * op.chan_in * op.chan_out * op.kernel * op.kernel;
-        let mut f_b1023 = self.dev.alloc_zeros::<E>(filters_numel)?;
-        let mut grad_f_b1023 = self.dev.alloc_zeros::<E>(filters_numel)?;
-        let f_strides = self.dev.htod_copy(rhs.strides.into())?;
-
         {
             // prepare filters for backward operations by
-            // swapping dims 0 and 1 and adding a batch dimension
+            // swapping dims 0 and 1
             let tr_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
             let cfg = launch_cfg(rhs.shape.num_elements() as u32);
-            unsafe { tr_fn.launch(cfg, (op, rhs.data.as_ref(), &f_strides, &mut f_b1023)) }?;
-        }
+            unsafe {
+                tr_fn.launch_on_stream(
+                    self.par_stream.as_ref(),
+                    cfg,
+                    (op, rhs.data.as_ref(), &f_strides, &mut f_b1023),
+                )
+            }?;
 
-        {
+            self.par_stream.wait_for_default()?;
+
             // img_g += filters * patches
             // (B, C, H * W) += (B, C, O * K * K) * (B, O * K * K, H * W)
             let m = op.chan_in;
             let k = op.chan_out * op.kernel * op.kernel;
             let n = op.h_in * op.w_in;
             unsafe {
+                self.blas.set_stream(Some(self.par_stream.as_ref()))?;
                 sgemm_batch(
                     self.blas.as_ref(),
                     (op.batch, m, k, n),
                     &f_b1023,
-                    [m * k, k, 1],
+                    [0, k, 1],
                     &patches,
                     [k * n, n, 1],
                     <E>::ONE,
@@ -144,6 +171,7 @@ where
                     [m * n, n, 1],
                 )
                 .unwrap();
+                self.blas.set_stream(None)?;
             }
         }
 
@@ -161,7 +189,7 @@ where
                     [m * k, k, 1],
                     &patches,
                     [k * n, 1, k],
-                    <E>::ONE,
+                    Default::default(),
                     &mut grad_f_b1023,
                     [m * n, n, 1],
                 )
@@ -174,6 +202,8 @@ where
             let cfg = launch_cfg(rhs.shape.num_elements() as u32);
             unsafe { sum_fn.launch(cfg, (op, &grad_f_b1023, grad_rhs, &f_strides)) }?;
         }
+
+        self.dev.wait_for(self.par_stream.as_ref())?;
 
         Ok(())
     }

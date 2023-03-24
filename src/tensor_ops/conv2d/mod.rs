@@ -55,6 +55,8 @@ impl Conv2DOp {
 }
 
 pub(super) trait Conv2DKernel<E: Dtype>: DeviceStorage {
+    fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Self::Err>;
+
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: Conv2DOp,
@@ -151,7 +153,9 @@ where
         let (lhs, ltape) = self.split_tape();
         let (rhs, rtape) = filters.split_tape();
         let mut tape = ltape.merge(rtape);
-        let mut out = lhs.device.try_zeros()?;
+        let mut out = lhs
+            .device
+            .alloc((Const, Default::default(), Default::default()))?;
         lhs.device.forward(op, &lhs, &rhs, &mut out)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&lhs)?;
@@ -203,9 +207,9 @@ where
         let op = Conv2DOp::new(S, P, K, [batch.size(), C, H, W], O);
         let (lhs, ltape) = self.split_tape();
         let (rhs, rtape) = filters.split_tape();
-        let mut out =
-            lhs.device
-                .try_zeros_like(&(batch, Const, Default::default(), Default::default()))?;
+        let mut out = lhs
+            .device
+            .alloc((batch, Const, Default::default(), Default::default()))?;
         let mut tape = ltape.merge(rtape);
         lhs.device.forward(op, &lhs, &rhs, &mut out)?;
         let phantom_out = out.clone();
