@@ -90,18 +90,38 @@ mod tests {
     use crate::{shapes::*, tensor_ops::*, tests::*};
 
     #[test]
-    fn test_roll() {
+    fn test_roll_3d_axis_2() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<Rank1<5>, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0, 4.0, 5.0]);
+        let t: Tensor<Rank1<5>, TestDtype, _> = dev.tensor([-0.3, -0.15, 0.0, 0.15, 0.2]);
         let y = t
             .leaky_trace()
             .broadcast::<Rank3<2, 3, 5>, _>()
             .roll::<Axis<2>>(2);
-        assert_eq!(y.array(), [[[4.0, 5.0, 1.0, 2.0, 3.0]; 3]; 2]);
+        assert_eq!(y.array(), [[[0.15, 0.2, -0.3, -0.15, 0.0]; 3]; 2]);
         let grads = y.exp().mean().backward();
         assert_close(
             &grads.get(&t).array(),
-            &[0.5436563, 1.4778113, 4.0171075, 10.919631, 29.682634],
+            &[0.14816365, 0.1721416, 0.2, 0.23236685, 0.24428058],
         );
+    }
+
+    #[test]
+    fn test_roll_3d_first_two_axes() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank1<5>, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0, 4.0, 5.0]);
+        let y0 = t
+            .leaky_trace()
+            .broadcast::<Rank3<2, 3, 5>, _>()
+            .roll::<Axis<0>>(3);
+        assert_eq!(y0.array(), [[[1.0, 2.0, 3.0, 4.0, 5.0]; 3]; 2]);
+        let y1 = t
+            .leaky_trace()
+            .broadcast::<Rank3<2, 3, 5>, _>()
+            .roll::<Axis<1>>(3);
+        assert_eq!(y1.array(), [[[1.0, 2.0, 3.0, 4.0, 5.0]; 3]; 2]);
+
+        let g0 = y0.exp().mean().backward();
+        let g1 = y1.exp().mean().backward();
+        assert_eq!(g0.get(&t).array(), g1.get(&t).array());
     }
 }
