@@ -96,7 +96,7 @@ mod tests {
         let y = t
             .leaky_trace()
             .broadcast::<Rank3<2, 3, 5>, _>()
-            .roll::<2>(2);
+            .roll::<Axis<2>>(2);
         assert_eq!(y.array(), [[[4.0, 5.0, 1.0, 2.0, 3.0]; 3]; 2]);
         let grads = y.exp().mean().backward();
         assert_close(
