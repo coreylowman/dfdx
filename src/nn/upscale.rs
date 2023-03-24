@@ -1,4 +1,3 @@
-#[cfg(feature = "nightly")]
 use crate::prelude::{ConstUpscale2D, NearestNeighbor, UpscaleMethod};
 use crate::prelude::{Dtype, HasErr, Rank3, Rank4, Tape, Tensor, Upscale2DKernel, ZerosTensor};
 
@@ -11,7 +10,6 @@ pub struct Upscale2D<const OH: usize, const OW: usize = OH, M: UpscaleMethod = N
 impl<const OH: usize, const OW: usize, M: UpscaleMethod> ZeroSizedModule for Upscale2D<OH, OW, M> {}
 impl<const OH: usize, const OW: usize, M: UpscaleMethod> NonMutableModule for Upscale2D<OH, OW, M> {}
 
-#[cfg(feature = "nightly")]
 impl<const OH: usize, const OW: usize, M: UpscaleMethod, Img: ConstUpscale2D<M>> Module<Img>
     for Upscale2D<OH, OW, M>
 {
@@ -23,10 +21,13 @@ impl<const OH: usize, const OW: usize, M: UpscaleMethod, Img: ConstUpscale2D<M>>
     }
 }
 
+#[cfg(feature = "nightly")]
 #[derive(Debug, Default, Clone)]
 pub struct Upscale2DBy<const H: usize, const W: usize = H, M: UpscaleMethod = NearestNeighbor>(M);
 
+#[cfg(feature = "nightly")]
 impl<const H: usize, const W: usize, M: UpscaleMethod> ZeroSizedModule for Upscale2DBy<H, W, M> {}
+#[cfg(feature = "nightly")]
 impl<const H: usize, const W: usize, M: UpscaleMethod> NonMutableModule for Upscale2DBy<H, W, M> {}
 
 #[cfg(feature = "nightly")]
@@ -82,7 +83,6 @@ where
     }
 }
 
-#[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -98,6 +98,7 @@ mod tests {
             Upscale2D::<9, 9, NearestNeighbor>::default().forward(x.clone());
     }
 
+    #[cfg(feature = "nightly")]
     #[test]
     fn test_upscale2dby() {
         let dev: TestDevice = Default::default();
