@@ -98,7 +98,7 @@ __device__ void unfold_output_into_patches(
 }
 
 template<typename T>
-__device__ void transpose_and_broadcast_filters(
+__device__ void transpose_filters(
     const Conv2DOp op,
     const T *filters, // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
     const size_t *strides, // 4d filters strides
@@ -181,7 +181,7 @@ extern "C" __global__ void TR_FILTERS( \
     const size_t *strides, \
     TYPENAME *filters_tr \
 ) { \
-    transpose_and_broadcast_filters(op, filters, strides, filters_tr); \
+    transpose_filters(op, filters, strides, filters_tr); \
 } \
 extern "C" __global__ void SUM_TR_FILTERS( \
     const Conv2DOp op, \
@@ -196,13 +196,13 @@ CONV_OP(
     float,
     unfold_input_into_patches_f32,
     unfold_output_into_patches_f32,
-    transpose_and_broadcast_filters_f32,
+    transpose_filters_f32,
     sum_transposed_filters_f32
 );
 CONV_OP(
     double,
     unfold_input_into_patches_f64,
     unfold_output_into_patches_f64,
-    transpose_and_broadcast_filters_f64,
+    transpose_filters_f64,
     sum_transposed_filters_f64
 );

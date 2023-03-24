@@ -23,7 +23,7 @@ impl HasCudaKernel<f32> for Cuda {
     const FNS: &'static [&'static str] = &[
         "unfold_input_into_patches_f32",
         "unfold_output_into_patches_f32",
-        "transpose_and_broadcast_filters_f32",
+        "transpose_filters_f32",
         "sum_transposed_filters_f32",
     ];
 }
@@ -33,7 +33,7 @@ impl HasCudaKernel<f64> for Cuda {
     const FNS: &'static [&'static str] = &[
         "unfold_input_into_patches_f64",
         "unfold_output_into_patches_f64",
-        "transpose_and_broadcast_filters_f64",
+        "transpose_filters_f64",
         "sum_transposed_filters_f64",
     ];
 }
@@ -139,7 +139,7 @@ where
 
         {
             // prepare filters for backward operations by
-            // swapping dims 0 and 1 and adding a batch dimension
+            // swapping dims 0 and 1
             let tr_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
             let cfg = launch_cfg(rhs.shape.num_elements() as u32);
             unsafe {
