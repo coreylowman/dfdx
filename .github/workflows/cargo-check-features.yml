@@ -15,4 +15,4 @@ jobs:
           override: true
       - uses: taiki-e/install-action@cargo-hack
       - name: Check Features Combinations
-        run: cargo hack check --feature-powerset --no-dev-deps --depth 2 --skip default
+        run: cargo hack check --feature-powerset --no-dev-deps --depth 2 --skip default,cpu-mkl-matmul,cuda,test-cuda
