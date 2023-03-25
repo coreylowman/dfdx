@@ -9,8 +9,7 @@ __device__ void sum_to_fwd(
     const T elems_per_thread,
     const size_t chunk_len,
     const T *inp,
-    const size_t *dims,
-    const size_t *strides,
+    const size_t *info,
     T *out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -18,6 +17,9 @@ __device__ void sum_to_fwd(
     if (i >= numel) {
         return;
     }
+
+    const size_t *dims = info;
+    const size_t *strides = info + num_dims;
 
     unsigned int inp_i = get_strided_index(i, num_dims, dims, strides);
     chunk_sum(chunk_len, inp[inp_i] * elems_per_thread, out);
@@ -61,11 +63,10 @@ extern "C" __global__ void FWD( \
     const TYPENAME elems_per_thread, \
     const size_t chunk_len, \
     const TYPENAME *inp, \
-    const size_t *dims, \
-    const size_t *strides, \
+    const size_t *info, \
     TYPENAME *out \
 ) { \
-    sum_to_fwd(numel, num_dims, elems_per_thread, chunk_len, inp, dims, strides, out); \
+    sum_to_fwd(numel, num_dims, elems_per_thread, chunk_len, inp, info, out); \
 } \
 extern "C" __global__ void BWD( \
     const size_t numel, \

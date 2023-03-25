@@ -43,11 +43,9 @@ where
 
         let (dims, strides) = permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
         let num_dims = dims.len();
-        let dims: CudaSlice<usize> = self.dev.htod_copy(dims)?;
-        let strides: CudaSlice<usize> = self.dev.htod_copy(strides)?;
-
-        let mut storage = self.dev.alloc_zeros::<E>(dst.num_elements())?;
-
+        let mut info = Vec::with_capacity(num_dims * 2);
+        info.extend(dims);
+        info.extend(strides);
         let elems_per_thread = E::from_usize(reduction_elems_per_thread::<_, Src>(
             inp.shape.concrete(),
             inp.strides,
@@ -61,15 +59,17 @@ where
         let chunk_len = physical_numel / dst_physical_numel;
 
         let cfg = launch_cfg(physical_numel as u32);
+
+        let info: CudaSlice<usize> = self.dev.htod_copy(info)?;
+        let mut storage = self.dev.alloc_zeros::<E>(dst.num_elements())?;
         let params = (
             physical_numel,    // const size_t numel,
             num_dims,          // const size_t num_dims,
             elems_per_thread,  // const float elems_per_thread,
             chunk_len,         // const size_t chunk_len,
             inp.data.as_ref(), // const float *inp,
-            &dims,             // const size_t *dims,
-            &strides,          // const size_t *strides,
-            &mut storage,      // float *out
+            &info,
+            &mut storage, // float *out
         );
         unsafe { fwd_fn.launch(cfg, params) }?;
         Ok(self.build_tensor(dst, dst_strides, storage))

@@ -3,7 +3,7 @@ use crate::{
     tensor::{launch_cfg, unique_id, Cuda, Tensor},
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
-use cudarc::driver::{CudaSlice, CudaStream, DeviceRepr, DeviceSlice, LaunchAsync};
+use cudarc::driver::{CudaSlice, DeviceRepr, DeviceSlice, LaunchAsync};
 use std::{sync::Arc, vec::Vec};
 
 pub trait UnaryOpCudaKernel<E> {
@@ -146,13 +146,6 @@ where
     tmp.sort_unstable_by_key(|(ord, _)| *ord);
 
     tmp.into_iter().map(|(_ord, x)| x).unzip()
-}
-
-fn physical_numel<I: IntoIterator<Item = usize>>(dims: I, strides: I) -> usize {
-    dims.into_iter()
-        .zip(strides.into_iter())
-        .map(|(dim, stride)| if stride == 0 { 1 } else { dim })
-        .product()
 }
 
 pub(crate) use cuda_binary;
