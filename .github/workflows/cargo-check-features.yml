@@ -15,6 +15,4 @@ jobs:
           override: true
       - uses: taiki-e/install-action@cargo-hack
       - name: Check Features Combinations
-        uses: actions-rs/cargo@v1
-        with:
-          command: hack check --feature-powerset --no-dev-deps --depth 2 --skip default
+        run: cargo hack check --feature-powerset --no-dev-deps --depth 2 --skip default
