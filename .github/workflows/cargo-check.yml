@@ -22,3 +22,8 @@ jobs:
         with:
           command: check
           args: --features test-cuda,ci-check
+      - name: Check no-std support
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --all --no-default-features --features no-std

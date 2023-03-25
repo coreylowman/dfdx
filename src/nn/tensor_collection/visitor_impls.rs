@@ -1,4 +1,4 @@
-use std::vec::Vec;
+use std::{string::String, vec::Vec};
 
 use crate::{
     shapes::{Dtype, Shape},
@@ -122,10 +122,10 @@ impl TensorViewer for ViewTensorName {
         GetRef: FnMut(&Mod) -> &Field,
         GetMut: FnMut(&mut Mod) -> &mut Field,
     {
-        if !module.is_empty() {
-            std::format!("{module}.{name}")
+        if module.is_empty() {
+            format!("{name}")
         } else {
-            name.to_string()
+            format!("{module}.{name}")
         }
     }
 }
