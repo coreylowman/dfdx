@@ -1,14 +1,8 @@
-mod cpu_kernel;
-
-#[cfg(feature = "cuda")]
-mod cuda_kernel;
-
-use super::ops::{try_unary_op, UnaryKernel};
-use crate::{shapes::*, tensor::*};
-
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone)]
-pub struct SigmoidKernelOp;
+use crate::{
+    shapes::*,
+    tensor::*,
+    tensor_ops::{Device, TryAdd},
+};
 
 /// [Sigmoid](https://en.wikipedia.org/wiki/Sigmoid_function). `1 / (1 + exp(-t))`.
 ///
@@ -21,20 +15,20 @@ pub struct SigmoidKernelOp;
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.sigmoid();
 /// ```
-pub fn sigmoid<S: Shape, E: Dtype, D: UnaryKernel<SigmoidKernelOp, E>, T: Tape<E, D>>(
+pub fn sigmoid<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.sigmoid()
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<SigmoidKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [sigmoid]
     pub fn sigmoid(self) -> Self {
         self.try_sigmoid().unwrap()
     }
     /// See [sigmoid]
     pub fn try_sigmoid(self) -> Result<Self, D::Err> {
-        try_unary_op(SigmoidKernelOp, self)
+        self.try_negate()?.try_exp()?.try_add(E::ONE)?.try_recip()
     }
 }
 

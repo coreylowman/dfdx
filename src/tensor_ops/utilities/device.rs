@@ -72,13 +72,11 @@ pub trait Device<E: Dtype>:
     + UnaryKernel<super::super::negate::NegateKernelOp, E>
     + UnaryKernel<super::super::relu::ReLUKernelOp, E>
     + UnaryKernel<super::super::gelu::GeLUKernelOp, E>
-    + UnaryKernel<super::super::sigmoid::SigmoidKernelOp, E>
     + UnaryKernel<super::super::sin::SinKernelOp, E>
-    + UnaryKernel<super::super::sqrt::SqrtKernelOp, E>
-    + UnaryKernel<super::super::square::SquareKernelOp, E>
     + UnaryKernel<super::super::tanh::TanhKernelOp, E>
     + UnaryKernel<super::super::pow::PowfKernelOp<E>, E>
     + UnaryKernel<super::super::pow::PowiKernelOp, E>
+    + UnaryKernel<super::super::recip::RecipKernelOp, E>
 
     // to_dtype
     + super::super::to_dtype::ToDtypeKernel<f32, E>

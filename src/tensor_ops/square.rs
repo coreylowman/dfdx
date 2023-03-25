@@ -1,14 +1,5 @@
-mod cpu_kernel;
-
-#[cfg(feature = "cuda")]
-mod cuda_kernel;
-
-use super::ops::{try_unary_op, UnaryKernel};
+use super::{ops::UnaryKernel, pow::PowiKernelOp};
 use crate::{shapes::*, tensor::*};
-
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone)]
-pub struct SquareKernelOp;
 
 /// `t^2`
 ///
@@ -21,20 +12,20 @@ pub struct SquareKernelOp;
 /// let t = dev.tensor([-1.0, 0.0, 1.0, 2.0]);
 /// let r = t.square();
 /// ```
-pub fn square<S: Shape, E: Dtype, D: UnaryKernel<SquareKernelOp, E>, T: Tape<E, D>>(
+pub fn square<S: Shape, E: Dtype, D: UnaryKernel<PowiKernelOp, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
 ) -> Tensor<S, E, D, T> {
     t.square()
 }
 
-impl<S: Shape, E: Dtype, D: UnaryKernel<SquareKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<PowiKernelOp, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [square]
     pub fn square(self) -> Self {
         self.try_square().unwrap()
     }
     /// See [square]
     pub fn try_square(self) -> Result<Self, D::Err> {
-        try_unary_op(SquareKernelOp, self)
+        self.try_powi(2)
     }
 }
 
