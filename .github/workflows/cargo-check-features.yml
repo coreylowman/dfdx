@@ -1,18 +1,25 @@
 on: [pull_request]
 
 jobs:
-  cargo-check:
-    name: cargo-check
+  cargo-check-features:
+    name: cargo-check-features
 
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config:
+          - toolchain: stable
+            command: cargo hack check --feature-powerset --no-dev-deps --depth 2 --skip default,nightly,cpu-mkl-matmul,cuda,test-cuda
+          - toolchain: nightly
+            command: cargo hack check --each-feature --no-dev-deps --features nightly --skip default,cpu-mkl-matmul,cuda,test-cuda
 
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: ${{ matrix.config.toolchain }}
           override: true
       - uses: taiki-e/install-action@cargo-hack
       - name: Check Features Combinations
-        run: cargo hack check --feature-powerset --no-dev-deps --depth 2 --skip default,cpu-mkl-matmul,cuda,test-cuda
+        run: ${{ matrix.config.command }}
