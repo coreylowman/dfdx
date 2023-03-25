@@ -65,15 +65,23 @@ mod cuda {
             let start = std::time::Instant::now();
 
             let compute_cap = {
-                let out = std::process::Command::new("nvidia-smi")
-                    .arg("--query-gpu=compute_cap")
-                    .arg("--format=csv")
+                let out = std::process::Command::new("nvcc")
+                    .arg("--list-gpu-code")
                     .output()
                     .unwrap();
                 let out = std::str::from_utf8(&out.stdout).unwrap();
-                let mut lines = out.lines();
-                assert_eq!(lines.next().unwrap(), "compute_cap");
-                lines.next().unwrap().replace('.', "")
+                let out = out.split("\n").collect::<Vec<&str>>();
+                let mut codes = Vec::with_capacity(out.len());
+                for code in out {
+                    let code = code.split("_").collect::<Vec<&str>>();
+                    if code.len() != 0 && code.contains(&"sm") {
+                        if let Ok(num) = code[1].parse::<usize>() {
+                            codes.push(num);
+                        }
+                    }
+                }
+                codes.sort();
+                *codes.last().unwrap()
             };
 
             kernel_paths
