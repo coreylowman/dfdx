@@ -1,3 +1,5 @@
+use std::{string::String, vec::Vec};
+
 use crate::{shapes::Dtype, tensor_ops::Device};
 
 use super::*;
@@ -18,7 +20,7 @@ use super::*;
 /// ```
 #[derive(Debug, Clone)]
 pub struct Repeated<T, const N: usize> {
-    pub modules: std::vec::Vec<T>,
+    pub modules: Vec<T>,
 }
 
 impl<D: Device<E>, E: Dtype, T: BuildOnDevice<D, E>, const N: usize> BuildOnDevice<D, E>
@@ -35,7 +37,7 @@ impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>, const N: usize> TensorCo
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
     ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
-        let names: Vec<String> = (0..N).map(|i| std::format!("{i}")).collect();
+        let names: Vec<String> = (0..N).map(|i| format!("{i}")).collect();
 
         visitor.visit_fields(
             (0..N)

@@ -14,7 +14,7 @@ use crate::prelude::{Shape, Unit};
 /// - `offset`: The offset from the main diagonal
 ///     - Positive values shift the diagonal in the `-M/+N` direction
 ///     - Negative values shift the diagonal in the `+M/-N` direction
-pub fn triangle_mask<S: Shape, E: Unit>(data: &mut Vec<E>, shape: &S, upper: bool, offset: isize) {
+pub fn triangle_mask<S: Shape, E: Unit>(data: &mut [E], shape: &S, upper: bool, offset: isize) {
     // Get the shape of the last two axes.
     let [num_rows, num_cols] = [
         (S::NUM_DIMS > 1)
@@ -27,7 +27,7 @@ pub fn triangle_mask<S: Shape, E: Unit>(data: &mut Vec<E>, shape: &S, upper: boo
     let mat_size = num_rows * num_cols;
 
     // Get the first 2D matrix in this data. This will be copied to each subsequent matrix.
-    let (mut mat2d, mut rest) = data.as_mut_slice().split_at_mut(mat_size);
+    let (mut mat2d, mut rest) = data.split_at_mut(mat_size);
     if upper {
         for r in (-offset).max(0) as usize..num_rows {
             for c in 0..((r as isize + offset).max(0) as usize).min(num_cols) {
