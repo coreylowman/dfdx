@@ -13,12 +13,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - name: Check CPU
+      - uses: taiki-e/install-action@cargo-hack
+      - name: Check Features Combinations
         uses: actions-rs/cargo@v1
         with:
-          command: check
-      - name: Check CUDA
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --features test-cuda,ci-check
+          command: hack check --feature-powerset --no-dev-deps --depth 2 --skip default

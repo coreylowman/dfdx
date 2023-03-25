@@ -101,18 +101,15 @@
 //! mlp.zero_grads(&mut gradients);
 //! ```
 
-#![cfg_attr(feature = "no-std", no_std)]
+#![cfg_attr(all(feature = "no-std", not(feature = "std")), no_std)]
 #![allow(incomplete_features)]
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
 #[cfg(feature = "no-std")]
 #[macro_use]
 extern crate alloc;
-#[cfg(feature = "no-std")]
+#[cfg(all(feature = "no-std", not(feature = "std")))]
 extern crate no_std_compat as std;
-
-#[cfg(all(feature = "std", feature = "no-std"))]
-compile_error!("Can't enable both std and no-std. Set default-features = false to disable std");
 
 pub mod data;
 pub mod feature_flags;
