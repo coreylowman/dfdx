@@ -230,7 +230,7 @@ pub use negate::negate;
 pub use normalize::normalize;
 pub use permute_to::PermuteTo;
 pub use pow::{powf, powi};
-pub use prelu::{prelu, PReLUKernel};
+pub use prelu::{leakyrelu, prelu, LeakyReLUKernelOp, PReLUKernelOp, TryPReLU};
 pub use realize_to::RealizeTo;
 pub use relu::relu;
 pub use reshape_to::ReshapeTo;

@@ -1,5 +1,8 @@
 use crate::{
-    prelude::{BuildModule, BuildOnDevice, TensorCollection, TensorOptions},
+    prelude::{
+        ops::{BinaryKernel, UnaryKernel},
+        BuildModule, BuildOnDevice, TensorCollection, TensorOptions,
+    },
     shapes::*,
     tensor::*,
     tensor_ops::*,
@@ -73,17 +76,18 @@ impl<E: Dtype> Default for LeakyReLU<E> {
 impl<E: Dtype> ZeroSizedModule for LeakyReLU<E> {}
 impl<E: Dtype> NonMutableModule for LeakyReLU<E> {}
 
-impl<Ax: Axes, S, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for LeakyReLU<E>
-where
-    S: Shape<LastAxis = Ax> + ReduceShape<Ax>,
-    D: PReLUKernel<Tensor<S, E, D>, Tensor<(), E, D>, Output = Tensor<S, E, D>, Elem = E>,
+impl<
+        S: ConstShape,
+        E: Dtype,
+        D: Device<E> + UnaryKernel<LeakyReLUKernelOp<E>, E>,
+        T: Tape<E, D>,
+    > Module<Tensor<S, E, D, T>> for LeakyReLU<E>
 {
     type Output = Tensor<S, E, D, T>;
     type Error = D::Err;
 
     fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
-        let v = D::default().tensor_from_vec(vec![self.0], ());
-        input.try_prelu(v)
+        Ok(leakyrelu(input, self.0))
     }
 }
 
@@ -128,16 +132,14 @@ impl<E: Dtype, D: Device<E>> From<E> for PReLU<E, D> {
 
 impl<E: Dtype, D: Device<E>> NonMutableModule for PReLU<E, D> {}
 
-impl<Ax: Axes, S, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for PReLU<E, D>
-where
-    S: Shape<LastAxis = Ax> + ReduceShape<Ax>,
-    D: PReLUKernel<Tensor<S, E, D>, Tensor<(), E, D>, Output = Tensor<S, E, D>, Elem = E>,
+impl<S: ConstShape, E: Dtype, D: Device<E> + BinaryKernel<PReLUKernelOp, E>, T: Tape<E, D>>
+    Module<Tensor<S, E, D, T>> for PReLU<E, D>
 {
     type Output = Tensor<S, E, D, T>;
     type Error = D::Err;
 
     fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
-        input.try_prelu(self.a.clone())
+        input.try_prelu(self.a.clone().broadcast())
     }
 }
 
@@ -150,6 +152,76 @@ impl<E: Dtype, D: Device<E>> TensorCollection<E, D> for PReLU<E, D> {
         visitor.visit_fields(
             Self::tensor("a", |p| &p.a, |p| &mut p.a, TensorOptions::reset_to_zeros()),
             |a| PReLU { a },
+        )
+    }
+}
+
+/// Calls [prelu()] with learnable values along second dimension.
+#[derive(Debug, Clone)]
+pub struct PReLU1D<C: ConstDim, E: Dtype, D: Device<E>> {
+    a: Tensor<(C,), E, D>,
+}
+
+impl<C: ConstDim, E: Dtype, D: Device<E>> Default for PReLU1D<C, E, D> {
+    fn default() -> Self {
+        let dev = D::default();
+        Self {
+            a: dev
+                .tensor(E::from_f32(0.25).unwrap())
+                .broadcast()
+                .to_owned(),
+        }
+    }
+}
+
+impl<C: ConstDim, E: Dtype, D: Device<E>> From<Tensor<(C,), E, D>> for PReLU1D<C, E, D> {
+    fn from(value: Tensor<(C,), E, D>) -> Self {
+        Self { a: value }
+    }
+}
+
+impl<C: ConstDim, E: Dtype, D: Device<E>> NonMutableModule for PReLU1D<C, E, D> {}
+
+impl<C: ConstDim, E: Dtype, D: Device<E> + BinaryKernel<PReLUKernelOp, E>, T: Tape<E, D>>
+    Module<Tensor<(C,), E, D, T>> for PReLU1D<C, E, D>
+{
+    type Output = Tensor<(C,), E, D, T>;
+
+    type Error = D::Err;
+
+    fn try_forward(&self, input: Tensor<(C,), E, D, T>) -> Result<Self::Output, Self::Error> {
+        input.try_prelu(self.a.clone())
+    }
+}
+
+macro_rules! prelu1d {
+    (($($InDims:tt),*), $Axes:ty) => {
+        impl<E: Dtype, D: Device<E> + BinaryKernel<PReLUKernelOp, E>, T: Tape<E, D> + Merge<NoneTape>, $($InDims: ConstDim),*> Module<Tensor<($($InDims),*), E, D, T>> for PReLU1D<C,E, D>
+        where ($($InDims),*): ReduceShapeTo<(C,), $Axes>
+        {
+            type Output = Tensor<($($InDims),*), E, D, T>;
+            type Error = D::Err;
+
+            fn try_forward(&self, input: Tensor<($($InDims),*), E, D, T>) -> Result<Self::Output, D::Err> {
+                input.try_prelu(self.a.clone().broadcast())
+            }
+        }
+    };
+}
+
+prelu1d!((B, C), Axis<0>);
+prelu1d!((B, C, M), Axes2<0, 2>);
+prelu1d!((B, C, M, N), Axes3<0, 2, 3>);
+
+impl<C: ConstDim + ConstShape, E: Dtype, D: Device<E>> TensorCollection<E, D> for PReLU1D<C, E, D> {
+    type To<E2: Dtype, D2: Device<E2>> = PReLU1D<C, E2, D2>;
+
+    fn iter_tensors<V: crate::prelude::ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            Self::tensor("a", |p| &p.a, |p| &mut p.a, TensorOptions::reset_to_zeros()),
+            |a| PReLU1D { a },
         )
     }
 }
@@ -279,12 +351,12 @@ mod tests {
 
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = LeakyReLU(0.05).forward_mut(t.clone());
-        let r2 = t.prelu(dev.tensor(0.05));
+        let r2 = t.prelu(dev.tensor([0.05, 0.05, 0.05, 0.05, 0.05]));
         assert_eq!(r1.array(), r2.array());
 
         let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
         let r1 = LeakyReLU(0.05).forward_mut(t.clone());
-        let r2 = t.prelu(dev.tensor(0.05));
+        let r2 = t.prelu(dev.tensor([[0.05, 0.05, 0.05], [0.05, 0.05, 0.05]]));
         assert_eq!(r1.array(), r2.array());
     }
 
@@ -294,15 +366,41 @@ mod tests {
 
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r1 = PReLU::from(0.05).forward_mut(t.clone());
-        let r2 = t.prelu(dev.tensor(0.05));
+        let r2 = t.prelu(dev.tensor([0.05, 0.05, 0.05, 0.05, 0.05]));
         assert_eq!(r1.array(), r2.array());
 
         let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
         let r1 = PReLU::from(0.05).forward_mut(t.clone());
-        let r2 = t.prelu(dev.tensor(0.05));
+        let r2 = t.prelu(dev.tensor([[0.05, 0.05, 0.05], [0.05, 0.05, 0.05]]));
         assert_eq!(r1.array(), r2.array());
 
         let model = (Tanh, PReLU::from(0.05));
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let out = model.forward(t);
+        assert_close(
+            &out.array(),
+            &[-0.04820138, -0.03807970, 0.0, 0.76159415, 0.96402758],
+        )
+    }
+
+    #[test]
+    fn test_nn_activations_prelu_1d() {
+        let dev: TestDevice = Default::default();
+
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let r1 = PReLU1D::from(dev.tensor([0.05, 0.06, 0.07, 0.08, 0.09])).forward_mut(t.clone());
+        let r2 = t.prelu(dev.tensor([0.05, 0.06, 0.07, 0.08, 0.09]));
+        assert_eq!(r1.array(), r2.array());
+
+        let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
+        let r1 = PReLU1D::from(dev.tensor([0.05, 0.07, 0.09])).forward_mut(t.clone());
+        let r2 = t.prelu(dev.tensor([[0.05, 0.07, 0.09], [0.05, 0.07, 0.09]]));
+        assert_eq!(r1.array(), r2.array());
+
+        let model = (
+            Tanh,
+            PReLU1D::from(dev.tensor([0.05, 0.05, 0.05, 0.05, 0.05])),
+        );
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let out = model.forward(t);
         assert_close(

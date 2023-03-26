@@ -1,31 +1,27 @@
-extern "C" __global__ void prelu_fwd_f32(
-    const size_t size,
-    const float *lhs, // Any tensor
-    const float rhs, // A 0d tensor
-    float *out // same tensor
-) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    //printf("(%i %x %x)", i, lhs, out);
-    out[i] = fmaxf(lhs[i], 0.0) + fminf(lhs[i],0.0)*rhs;
-}
+#include "binary_op_macros.cuh"
+#include "unary_op_macros.cuh"
 
-extern "C" __global__ void prelu_bwd_f32(
-    const size_t size,
-    const float *lhs, // floats
-    float *lhs_grad,
-    const float rhs, // A 0d tensor
-    float *rhs_grad,
-    const float *out_grad // floats
-) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    float size_f = (float)size;
-    size_f = 1/size_f;
+struct PReLUOp {};
 
-    if (lhs[i] >= 0) {
-        lhs_grad[i] += out_grad[i];
-    }
-    else {
-        lhs_grad[i] += rhs * out_grad[i];
-        *rhs_grad += lhs[i] * size_f * out_grad[i];
-    }
-}
+template<typename F>
+struct LeakyReLUOp {
+    F slope;
+};
+
+UNARY_OP(float, lrelu_fwd_f32, lrelu_bwd_f32, LeakyReLUOp<float>,
+    max(x, 0.0) + min(x,0.0)*op.slope,
+    x >= 0 ? 1.0 : op.slope);
+
+UNARY_OP(double, lrelu_fwd_f64, lrelu_bwd_f64, LeakyReLUOp<double>,
+    max(x, 0.0) + min(x,0.0)*op.slope,
+    x >= 0 ? 1.0 : op.slope);
+
+BINARY_OP(float, prelu_fwd_f32, prelu_bwd_lhs_f32, prelu_bwd_rhs_f32, PReLUOp,
+    max(x, 0.0) + min(x,0.0)*y,
+    x >= 0 ? 1.0 : y,
+    x >= 0 ? 0.0 : x);
+
+BINARY_OP(double, prelu_fwd_f64, prelu_bwd_lhs_f64, prelu_bwd_rhs_f64, PReLUOp,
+    max(x, 0.0) + min(x,0.0)*y,
+    x >= 0 ? 1.0 : y,
+    x >= 0 ? 0.0 : x);
