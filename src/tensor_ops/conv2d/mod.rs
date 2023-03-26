@@ -100,7 +100,7 @@ impl<const K: usize, const S: usize, const P: usize> ConvAlgebra<K, S, P> for us
     type Convolved = usize;
 
     fn convolve_dim(&self) -> Self::Convolved {
-        (self.size() + 2 * P - K) / S + 1
+        (self.size() + 2 * P).checked_sub(K).unwrap() / S + 1
     }
 }
 
