@@ -11,7 +11,9 @@ pub trait Device<E: Dtype>:
     + crate::tensor::TensorFromVec<E>
     + crate::tensor::TensorFromVec<usize>
 
-    + crate::tensor_ops::stack::StackKernel<E>
+    // appends
+    + super::super::stack::StackKernel<E>
+    + super::super::concat::ConcatKernel<E>
 
     // optimizers
     + crate::optim::AdamKernel<E>
