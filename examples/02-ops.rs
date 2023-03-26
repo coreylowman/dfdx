@@ -57,7 +57,7 @@ fn main() {
     // these operations are equal across devices
     #[cfg(feature = "cuda")]
     {
-        use dfdx::nn::ToDevice;
+        use dfdx::{nn::ToDevice, tensor::Cpu};
 
         let cpu = Cpu::default();
 

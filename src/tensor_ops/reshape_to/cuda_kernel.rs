@@ -47,7 +47,7 @@ where
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
 
-        let numel = inp.data.len();
+        let numel = inp.shape.num_elements();
         let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
         let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
