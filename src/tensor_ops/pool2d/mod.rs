@@ -95,16 +95,7 @@ macro_rules! pool2d {
                 const P: usize,
             > $ConstTrait<K, S, P> for Tensor<(C, H, W), E, D, T>
         {
-            type Output = Tensor<
-                (
-                    C,
-                    H::Convolved,
-                    W::Convolved,
-                ),
-                E,
-                D,
-                T,
-            >;
+            type Output = Tensor<(C, H::Convolved, W::Convolved), E, D, T>;
 
             fn try_pool2d(self) -> Result<Self::Output, Self::Err> {
                 let h = self.shape.1;
@@ -142,17 +133,7 @@ macro_rules! pool2d {
                 const P: usize,
             > $ConstTrait<K, S, P> for Tensor<(B, C, H, W), E, D, T>
         {
-            type Output = Tensor<
-                (
-                    B,
-                    C,
-                    H::Convolved,
-                    W::Convolved,
-                ),
-                E,
-                D,
-                T,
-            >;
+            type Output = Tensor<(B, C, H::Convolved, W::Convolved), E, D, T>;
 
             fn try_pool2d(self) -> Result<Self::Output, Self::Err> {
                 let h = self.shape.2;

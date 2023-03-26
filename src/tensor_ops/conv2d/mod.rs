@@ -96,16 +96,13 @@ where
     }
 }
 
-impl<const K: usize, const S: usize, const P: usize> ConvAlgebra<K, S, P>
-    for usize
-{
+impl<const K: usize, const S: usize, const P: usize> ConvAlgebra<K, S, P> for usize {
     type Convolved = usize;
 
     fn convolve_dim(&self) -> Self::Convolved {
         (self.size() + 2 * P - K) / S + 1
     }
 }
-
 
 pub trait TryConv2DTo<F, const S: usize, const P: usize>: HasErr {
     type Output;
@@ -148,16 +145,7 @@ impl<
         T: 'static + Tape<E, D>,
     > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> for Tensor<(Const<C>, H, W), E, D, T>
 {
-    type Output = Tensor<
-        (
-            Const<O>,
-            H::Convolved,
-            W::Convolved,
-        ),
-        E,
-        D,
-        T,
-    >;
+    type Output = Tensor<(Const<O>, H::Convolved, W::Convolved), E, D, T>;
 
     fn try_conv2d_to(
         self,
@@ -199,20 +187,9 @@ impl<
         E: Dtype,
         D: Conv2DKernel<E> + ZerosTensor<E>,
         T: 'static + Tape<E, D>,
-    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P>
-    for Tensor<(B, Const<C>, H, W), E, D, T>
+    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> for Tensor<(B, Const<C>, H, W), E, D, T>
 {
-    type Output = Tensor<
-        (
-            B,
-            Const<O>,
-            H::Convolved,
-            W::Convolved,
-        ),
-        E,
-        D,
-        T,
-    >;
+    type Output = Tensor<(B, Const<O>, H::Convolved, W::Convolved), E, D, T>;
     fn try_conv2d_to(
         self,
         filters: Tensor<Rank4<O, C, K, K>, E, D>,
