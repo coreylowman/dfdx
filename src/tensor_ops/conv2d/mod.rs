@@ -78,8 +78,10 @@ pub(super) trait Conv2DKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-pub trait ConvAlgebra<const K: usize, const S: usize, const P: usize>: ConstDim {
-    type Convolved: ConstDim;
+pub trait ConvAlgebra<const K: usize, const S: usize, const P: usize>: Dim {
+    type Convolved: Dim;
+
+    fn convolve_dim(&self) -> Self::Convolved;
 }
 
 impl<const D: usize, const K: usize, const S: usize, const P: usize> ConvAlgebra<K, S, P>
@@ -88,7 +90,22 @@ where
     Const<{ (D + 2 * P - K) / S + 1 }>: Sized,
 {
     type Convolved = Const<{ (D + 2 * P - K) / S + 1 }>;
+
+    fn convolve_dim(&self) -> Self::Convolved {
+        Self::Convolved::default()
+    }
 }
+
+impl<const K: usize, const S: usize, const P: usize> ConvAlgebra<K, S, P>
+    for usize
+{
+    type Convolved = usize;
+
+    fn convolve_dim(&self) -> Self::Convolved {
+        (self.size() + 2 * P - K) / S + 1
+    }
+}
+
 
 pub trait TryConv2DTo<F, const S: usize, const P: usize>: HasErr {
     type Output;
@@ -120,8 +137,8 @@ impl<T, F> TryConv2D<F> for T {}
 
 impl<
         const C: usize,
-        const H: usize,
-        const W: usize,
+        H: Dim + ConvAlgebra<K, S, P>,
+        W: Dim + ConvAlgebra<K, S, P>,
         const O: usize,
         const K: usize,
         const S: usize,
@@ -129,16 +146,13 @@ impl<
         E: Dtype,
         D: Conv2DKernel<E> + ZerosTensor<E>,
         T: 'static + Tape<E, D>,
-    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> for Tensor<Rank3<C, H, W>, E, D, T>
-where
-    Const<H>: ConvAlgebra<K, S, P>,
-    Const<W>: ConvAlgebra<K, S, P>,
+    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> for Tensor<(Const<C>, H, W), E, D, T>
 {
     type Output = Tensor<
         (
             Const<O>,
-            <Const<H> as ConvAlgebra<K, S, P>>::Convolved,
-            <Const<W> as ConvAlgebra<K, S, P>>::Convolved,
+            H::Convolved,
+            W::Convolved,
         ),
         E,
         D,
@@ -149,13 +163,16 @@ where
         self,
         filters: Tensor<Rank4<O, C, K, K>, E, D>,
     ) -> Result<Self::Output, Self::Err> {
-        let op = Conv2DOp::new(S, P, K, [1, C, H, W], O);
+        let h = self.shape.1;
+        let w = self.shape.2;
+
+        let op = Conv2DOp::new(S, P, K, [1, C, h.size(), w.size()], O);
         let (lhs, ltape) = self.split_tape();
         let (rhs, rtape) = filters.split_tape();
         let mut tape = ltape.merge(rtape);
         let mut out = lhs
             .device
-            .alloc((Const, Default::default(), Default::default()))?;
+            .alloc((Const, h.convolve_dim(), w.convolve_dim()))?;
         lhs.device.forward(op, &lhs, &rhs, &mut out)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&lhs)?;
@@ -173,8 +190,8 @@ where
 impl<
         B: Dim,
         const C: usize,
-        const H: usize,
-        const W: usize,
+        H: Dim + ConvAlgebra<K, S, P>,
+        W: Dim + ConvAlgebra<K, S, P>,
         const O: usize,
         const K: usize,
         const S: usize,
@@ -183,17 +200,14 @@ impl<
         D: Conv2DKernel<E> + ZerosTensor<E>,
         T: 'static + Tape<E, D>,
     > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P>
-    for Tensor<(B, Const<C>, Const<H>, Const<W>), E, D, T>
-where
-    Const<H>: ConvAlgebra<K, S, P>,
-    Const<W>: ConvAlgebra<K, S, P>,
+    for Tensor<(B, Const<C>, H, W), E, D, T>
 {
     type Output = Tensor<
         (
             B,
             Const<O>,
-            <Const<H> as ConvAlgebra<K, S, P>>::Convolved,
-            <Const<W> as ConvAlgebra<K, S, P>>::Convolved,
+            H::Convolved,
+            W::Convolved,
         ),
         E,
         D,
@@ -204,12 +218,15 @@ where
         filters: Tensor<Rank4<O, C, K, K>, E, D>,
     ) -> Result<Self::Output, Self::Err> {
         let batch = self.shape().0;
-        let op = Conv2DOp::new(S, P, K, [batch.size(), C, H, W], O);
+        let h = self.shape().2;
+        let w = self.shape().3;
+
+        let op = Conv2DOp::new(S, P, K, [batch.size(), C, h.size(), w.size()], O);
         let (lhs, ltape) = self.split_tape();
         let (rhs, rtape) = filters.split_tape();
         let mut out = lhs
             .device
-            .alloc((batch, Const, Default::default(), Default::default()))?;
+            .alloc((batch, Const, h.convolve_dim(), w.convolve_dim()))?;
         let mut tape = ltape.merge(rtape);
         lhs.device.forward(op, &lhs, &rhs, &mut out)?;
         let phantom_out = out.clone();

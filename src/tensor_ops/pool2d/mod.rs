@@ -85,24 +85,21 @@ macro_rules! pool2d {
 
         impl<
                 C: Dim,
-                const H: usize,
-                const W: usize,
+                H: Dim + ConvAlgebra<K, S, P>,
+                W: Dim + ConvAlgebra<K, S, P>,
                 E: Dtype,
                 D: $Kernel<E> + ZerosTensor<E>,
                 T: 'static + Tape<E, D>,
                 const K: usize,
                 const S: usize,
                 const P: usize,
-            > $ConstTrait<K, S, P> for Tensor<(C, Const<H>, Const<W>), E, D, T>
-        where
-            Const<H>: ConvAlgebra<K, S, P>,
-            Const<W>: ConvAlgebra<K, S, P>,
+            > $ConstTrait<K, S, P> for Tensor<(C, H, W), E, D, T>
         {
             type Output = Tensor<
                 (
                     C,
-                    <Const<H> as ConvAlgebra<K, S, P>>::Convolved,
-                    <Const<W> as ConvAlgebra<K, S, P>>::Convolved,
+                    H::Convolved,
+                    W::Convolved,
                 ),
                 E,
                 D,
@@ -110,12 +107,15 @@ macro_rules! pool2d {
             >;
 
             fn try_pool2d(self) -> Result<Self::Output, Self::Err> {
+                let h = self.shape.1;
+                let w = self.shape.2;
+
                 let &(chan, _, _) = self.shape();
-                let op = Pool2DOp::new(K, S, P, [1, chan.size(), H, W]);
+                let op = Pool2DOp::new(K, S, P, [1, chan.size(), h.size(), w.size()]);
                 let (inp, mut tape) = self.split_tape();
                 let mut out =
                     inp.device
-                        .try_zeros_like(&(chan, Default::default(), Default::default()))?;
+                        .try_zeros_like(&(chan, h.convolve_dim(), w.convolve_dim()))?;
                 inp.device.forward(op, &inp, &mut out)?;
                 let phantom_out = out.clone();
                 tape.try_alloc_grad(&inp)?;
@@ -132,25 +132,22 @@ macro_rules! pool2d {
         impl<
                 B: Dim,
                 C: Dim,
-                const H: usize,
-                const W: usize,
+                H: Dim + ConvAlgebra<K, S, P>,
+                W: Dim + ConvAlgebra<K, S, P>,
                 E: Dtype,
                 D: $Kernel<E> + ZerosTensor<E>,
                 T: 'static + Tape<E, D>,
                 const K: usize,
                 const S: usize,
                 const P: usize,
-            > $ConstTrait<K, S, P> for Tensor<(B, C, Const<H>, Const<W>), E, D, T>
-        where
-            Const<H>: ConvAlgebra<K, S, P>,
-            Const<W>: ConvAlgebra<K, S, P>,
+            > $ConstTrait<K, S, P> for Tensor<(B, C, H, W), E, D, T>
         {
             type Output = Tensor<
                 (
                     B,
                     C,
-                    <Const<H> as ConvAlgebra<K, S, P>>::Convolved,
-                    <Const<W> as ConvAlgebra<K, S, P>>::Convolved,
+                    H::Convolved,
+                    W::Convolved,
                 ),
                 E,
                 D,
@@ -158,14 +155,17 @@ macro_rules! pool2d {
             >;
 
             fn try_pool2d(self) -> Result<Self::Output, Self::Err> {
+                let h = self.shape.2;
+                let w = self.shape.3;
+
                 let &(batch, chan, _, _) = self.shape();
-                let op = Pool2DOp::new(K, S, P, [batch.size(), chan.size(), H, W]);
+                let op = Pool2DOp::new(K, S, P, [batch.size(), chan.size(), h.size(), w.size()]);
                 let (inp, mut tape) = self.split_tape();
                 let mut out = inp.device.try_zeros_like(&(
                     batch,
                     chan,
-                    Default::default(),
-                    Default::default(),
+                    h.convolve_dim(),
+                    w.convolve_dim(),
                 ))?;
                 inp.device.forward(op, &inp, &mut out)?;
                 let phantom_out = out.clone();
