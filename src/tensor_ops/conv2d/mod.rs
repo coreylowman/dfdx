@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Hash)]
 pub(super) struct Conv2DOp {
     pub stride: usize,
     pub padding: usize,

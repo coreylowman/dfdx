@@ -1,11 +1,14 @@
 use cudarc::cublas::{CudaBlas, Gemm};
 use cudarc::driver::{DeviceRepr, LaunchAsync, ValidAsZeroBits};
+use cudarc::nvrtc::compile_ptx;
 
 use crate::{
     shapes::*,
     tensor::{launch_cfg, unique_id, Cuda, Tensor},
 };
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 unsafe impl DeviceRepr for super::Conv2DOp {}
@@ -13,28 +16,22 @@ unsafe impl DeviceRepr for super::Conv2DOp {}
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/conv2d.ptx"));
 
 trait HasCudaKernel<E> {
-    const MOD: &'static str;
-    const FNS: &'static [&'static str];
+    const TYPENAME: &'static str;
 }
 
 impl HasCudaKernel<f32> for Cuda {
-    const MOD: &'static str = "conv2d_f32";
-    const FNS: &'static [&'static str] = &[
-        "unfold_input_into_patches_f32",
-        "unfold_output_into_patches_f32",
-        "transpose_filters_f32",
-        "sum_transposed_filters_f32",
-    ];
+    const TYPENAME: &'static str = "float";
 }
 
 impl HasCudaKernel<f64> for Cuda {
-    const MOD: &'static str = "conv2d_f64";
-    const FNS: &'static [&'static str] = &[
-        "unfold_input_into_patches_f64",
-        "unfold_output_into_patches_f64",
-        "transpose_filters_f64",
-        "sum_transposed_filters_f64",
-    ];
+    const TYPENAME: &'static str = "double";
+}
+
+fn mod_name(op: &super::Conv2DOp) -> std::string::String {
+    let mut hasher = DefaultHasher::new();
+    op.hash(&mut hasher);
+    let hash = hasher.finish();
+    std::format!("conv2d_{hash}")
 }
 
 fn make_4d<S: Shape>(strides: S::Concrete) -> [usize; 4] {
@@ -68,8 +65,31 @@ where
         rhs: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
     ) -> Result<(), Self::Err> {
-        if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
-            self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
+        let name = mod_name(&op);
+        if !self.dev.has_func(&name, "unfold_input") {
+            let src = KERNEL_SRC;
+            let src = src.replace("op.stride", &op.stride.to_string());
+            let src = src.replace("op.padding", &op.padding.to_string());
+            let src = src.replace("op.kernel", &op.kernel.to_string());
+            let src = src.replace("op.batch", &op.batch.to_string());
+            let src = src.replace("op.chan_in", &op.chan_in.to_string());
+            let src = src.replace("op.chan_out", &op.chan_out.to_string());
+            let src = src.replace("op.h_in", &op.h_in.to_string());
+            let src = src.replace("op.h_out", &op.h_out.to_string());
+            let src = src.replace("op.w_in", &op.w_in.to_string());
+            let src = src.replace("op.w_out", &op.w_out.to_string());
+            let src = src.replace("$TY", Self::TYPENAME);
+            let ptx = compile_ptx(src).unwrap();
+            self.dev.load_ptx(
+                ptx,
+                &name,
+                &[
+                    "unfold_input",
+                    "unfold_output",
+                    "transpose_filters",
+                    "sum_transposed_filters",
+                ],
+            )?;
         }
 
         let patches_item_numel = op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
@@ -79,9 +99,9 @@ where
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
 
         let img_strides = self.dev.htod_copy(make_4d::<L>(lhs.strides).into())?;
-        let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
+        let unfold_fn = self.dev.get_func(&name, "unfold_input").unwrap();
         let cfg = launch_cfg(patches_numel as u32);
-        let params = (op, lhs.data.as_ref(), &img_strides, &mut patches);
+        let params = (lhs.data.as_ref(), &img_strides, &mut patches);
         unsafe { unfold_fn.launch(cfg, params) }?;
 
         // (O, C * K * K) * (B, C * K * K, OH * OW) = (B, O, OH * OW)
@@ -115,6 +135,7 @@ where
         _: &Tensor<O, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
+        let name = mod_name(&op);
         let patches_item_numel = op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
         let patches_numel = op.batch * patches_item_numel;
         let filters_numel = op.chan_in * op.chan_out * op.kernel * op.kernel;
@@ -130,21 +151,21 @@ where
 
         {
             // unfold grad_out into patches
-            let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
+            let unfold_fn = self.dev.get_func(&name, "unfold_output").unwrap();
             let cfg = launch_cfg(patches_item_numel as u32);
-            unsafe { unfold_fn.launch(cfg, (op, grad_out, &mut patches)) }?;
+            unsafe { unfold_fn.launch(cfg, (grad_out, &mut patches)) }?;
         }
 
         {
             // prepare filters for backward operations by
             // swapping dims 0 and 1
-            let tr_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
+            let tr_fn = self.dev.get_func(&name, "transpose_filters").unwrap();
             let cfg = launch_cfg(rhs.shape.num_elements() as u32);
             unsafe {
                 tr_fn.launch_on_stream(
                     self.par_stream.as_ref(),
                     cfg,
-                    (op, rhs.data.as_ref(), &f_strides, &mut f_b1023),
+                    (rhs.data.as_ref(), &f_strides, &mut f_b1023),
                 )
             }?;
 
@@ -194,9 +215,9 @@ where
 
             // sum all the gradients collected in our broadcasted grad_f
             // into grad_rhs
-            let sum_fn = self.dev.get_func(Self::MOD, Self::FNS[3]).unwrap();
+            let sum_fn = self.dev.get_func(&name, "sum_transposed_filters").unwrap();
             let cfg = launch_cfg(rhs.shape.num_elements() as u32);
-            unsafe { sum_fn.launch(cfg, (op, &grad_f_b1023, grad_rhs, &f_strides)) }?;
+            unsafe { sum_fn.launch(cfg, (&grad_f_b1023, grad_rhs, &f_strides)) }?;
         }
 
         self.dev.wait_for(self.par_stream.as_ref())?;
@@ -204,3 +225,143 @@ where
         Ok(())
     }
 }
+
+const KERNEL_SRC: &str = "
+extern \"C\" __global__ void unfold_input(
+    const $TY *image, // 4d (Batch, Channels, Height, Width)
+    const size_t *strides, // 4d image strides
+    $TY *patches // 6d (Batch, Channels, KernelSize, KernelSize, HeightOut, WidthOut)
+) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    size_t item_numel = op.batch * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
+    if (i >= item_numel) {
+        return;
+    }
+
+    // patches shape is (B, C, K, K, h_out, w_out)
+    unsigned int idx = i;
+    const size_t ow = idx % op.w_out;
+    idx /= op.w_out;
+    const size_t oh = idx % op.h_out;
+    idx /= op.h_out;
+    const size_t k2 = idx % op.kernel;
+    idx /= op.kernel;
+    const size_t k1 = idx % op.kernel;
+    idx /= op.kernel;
+    const size_t c = idx % op.chan_in;
+    idx /= op.chan_in;
+    const size_t b = idx % op.batch;
+
+    const size_t y_plus_p = oh * op.stride + k1;
+    const size_t y = y_plus_p - op.padding;
+    const size_t x_plus_p = ow * op.stride + k2;
+    const size_t x = x_plus_p - op.padding;
+
+    if (y >= op.h_in || x >= op.w_in) {
+        patches[i] = 0.0;
+    } else {
+        const size_t i_image = b * strides[0] + c * strides[1] + y * strides[2] + x * strides[3];
+        patches[i] = image[i_image];
+    }
+}
+
+extern \"C\" __global__ void unfold_output(
+    const $TY *image_out, // 4d (Batch, ChanOut, HeightOut, WidthOut)
+    $TY *patches // 6d (Batch, ChanOut, KernelSize, KernelSize, HeightIn, WidthIn)
+) {
+    const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    const size_t item_numel = op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
+    if (i >= item_numel) {
+        return;
+    }
+
+    unsigned int idx = i;
+    const size_t x = idx % op.w_in;
+    idx /= op.w_in;
+    const size_t y = idx % op.h_in;
+    idx /= op.h_in;
+    const size_t k2 = idx % op.kernel;
+    idx /= op.kernel;
+    const size_t k1 = idx % op.kernel;
+    idx /= op.kernel;
+    const size_t o = idx % op.chan_out;
+
+    const size_t oh_ks = y + op.padding;
+    const size_t oh_s = oh_ks - k1;
+    const size_t oh = oh_s / op.stride;
+    const size_t ow_ks = x + op.padding;
+    const size_t ow_s = ow_ks - k2;
+    const size_t ow = ow_s / op.stride;
+
+    if (
+        (oh_ks < k1 || oh_s % op.stride != 0 || oh >= op.h_out)
+        || (ow_ks < k2 || ow_s % op.stride != 0 || ow >= op.w_out)
+    ) {
+        for (int b = 0; b < op.batch; b++) {
+            patches[b * item_numel + i] = 0.0;
+        }
+    } else {
+        for (int b = 0; b < op.batch; b++) {
+            size_t image_i = b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out) + oh * (op.w_out)  + ow;
+            patches[b * item_numel + i] = image_out[image_i];
+        }
+    }
+}
+
+extern \"C\" __global__ void transpose_filters(
+    const $TY *filters, // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
+    const size_t *strides, // 4d filters strides
+    $TY *filters_tr // 4d (ChanIn, ChanOut, KernelSize, KernelSize)
+) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    size_t numel = op.chan_in * op.chan_out * op.kernel * op.kernel;
+    if (i >= numel) {
+        return;
+    }
+
+    unsigned int idx = i;
+    const size_t k2 = idx % op.kernel;
+    idx /= op.kernel;
+    const size_t k1 = idx % op.kernel;
+    idx /= op.kernel;
+    const size_t c = idx % op.chan_in;
+    idx /= op.chan_in;
+    const size_t o = idx % op.chan_out;
+
+    size_t i_tr = c * (op.chan_out * op.kernel * op.kernel) + o * (op.kernel * op.kernel) + k1 * (op.kernel) + k2;
+    size_t i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
+
+    filters_tr[i_tr] = filters[i_no];
+}
+
+extern \"C\" __global__ void sum_transposed_filters(
+    const $TY *filters_tr, // 5d (Batch, ChanIn, ChanOut, KernelSize, KernelSize)
+    $TY *filters, // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
+    const size_t *strides // 4d filter strides
+) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    size_t numel = op.chan_out * op.chan_in * op.kernel * op.kernel;
+    if (i >= numel) {
+        return;
+    }
+
+    unsigned int idx = i;
+    const size_t k2 = idx % op.kernel;
+    idx /= op.kernel;
+    const size_t k1 = idx % op.kernel;
+    idx /= op.kernel;
+    const size_t c = idx % op.chan_in;
+    idx /= op.chan_in;
+    const size_t o = idx % op.chan_out;
+
+    size_t i_tr = c * (op.chan_out * op.kernel * op.kernel) + o * (op.kernel * op.kernel) + k1 * (op.kernel) + k2;
+    size_t i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
+
+    $TY tmp = 0.0;
+    for (int b = 0; b < op.batch; b++) {
+        tmp += filters_tr[b * numel + i_tr];
+    }
+
+    filters[i_no] += tmp;
+}
+";

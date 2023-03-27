@@ -88,12 +88,11 @@ __device__ void unfold_output_into_patches(
         for (auto b = 0; b < op.batch; b++) {
             patches[b * item_numel + i] = 0.0;
         }
-        return;
-    }
-
-    for (auto b = 0; b < op.batch; b++) {
-        size_t image_i = b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out) + oh * (op.w_out)  + ow;
-        patches[b * item_numel + i] = image_out[image_i];
+    } else {
+        for (auto b = 0; b < op.batch; b++) {
+            size_t image_i = b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out) + oh * (op.w_out)  + ow;
+            patches[b * item_numel + i] = image_out[image_i];
+        }
     }
 }
 
@@ -146,7 +145,6 @@ __device__ void sum_transposed_filters(
     const size_t c = idx % op.chan_in;
     idx /= op.chan_in;
     const size_t o = idx % op.chan_out;
-    idx /= op.chan_out;
 
     auto i_tr = c * (op.chan_out * op.kernel * op.kernel) + o * (op.kernel * op.kernel) + k1 * (op.kernel) + k2;
     auto i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
