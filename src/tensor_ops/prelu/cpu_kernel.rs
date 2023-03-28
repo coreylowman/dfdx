@@ -1,5 +1,5 @@
 extern crate alloc;
-use alloc::sync::Arc;
+use alloc::{sync::Arc, vec::Vec};
 use num_traits::Float;
 
 use crate::prelude::{
