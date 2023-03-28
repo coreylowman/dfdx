@@ -50,23 +50,22 @@ where
         let numel = inp.shape.num_elements();
         let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
-        let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
-        let dst_dims = self.dev.htod_copy(dst.concrete().into())?;
-        let inp_strides = self.dev.htod_copy(inp.strides.into())?;
-        let dst_strides = self.dev.htod_copy(dst.strides().into())?;
+        let mut info = Vec::with_capacity(Src::NUM_DIMS * 2 + Dst::NUM_DIMS * 2);
+        info.extend(inp.shape.concrete());
+        info.extend(inp.strides);
+        info.extend(dst.concrete());
+        info.extend(dst.strides());
+        let info = self.dev.htod_copy(info)?;
 
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
         let cfg = launch_cfg(numel as u32);
         let params = (
             numel,             // const size_t numel,
-            inp.data.as_ref(), // const float *inp,
             Src::NUM_DIMS,     // const size_t inp_num_dims,
-            &inp_dims,         // const size_t *inp_dims,
-            &inp_strides,      // const size_t *inp_strides,
-            &mut storage,      // float *out
             Dst::NUM_DIMS,     // const size_t out_num_dims,
-            &dst_dims,         // const size_t *out_dims,
-            &dst_strides,      // const size_t *out_strides,
+            &info,             // const size_t *info,
+            inp.data.as_ref(), // const float *inp,
+            &mut storage,      // float *out
         );
         unsafe { fwd_fn.launch(cfg, params) }?;
 
@@ -83,22 +82,21 @@ where
         let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
         let numel = grad_inp.len();
 
-        let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
-        let out_dims = self.dev.htod_copy(out.shape.concrete().into())?;
-        let inp_strides = self.dev.htod_copy(inp.strides.into())?;
-        let out_strides = self.dev.htod_copy(out.strides.into())?;
+        let mut info = Vec::with_capacity(Src::NUM_DIMS * 2 + Dst::NUM_DIMS * 2);
+        info.extend(inp.shape.concrete());
+        info.extend(inp.strides);
+        info.extend(out.shape.concrete());
+        info.extend(out.strides);
+        let info = self.dev.htod_copy(info)?;
 
         let cfg = launch_cfg(numel as u32);
         let params = (
             numel,         // const size_t numel,
-            grad_inp,      // float *grad_inp,
             Src::NUM_DIMS, // const size_t inp_num_dims,
-            &inp_dims,     // const size_t *inp_dims,
-            &inp_strides,  // const size_t *inp_strides,
-            grad_out,      // const float *grad_out,
             Dst::NUM_DIMS, // const size_t out_num_dims,
-            &out_dims,     // const size_t *out_dims,
-            &out_strides,  // const size_t *out_strides
+            &info,         // const size_t *info,
+            grad_inp,      // float *grad_inp,
+            grad_out,      // const float *grad_out,
         );
         unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())
