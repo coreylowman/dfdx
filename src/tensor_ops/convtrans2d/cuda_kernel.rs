@@ -1,7 +1,6 @@
 use cudarc::cublas::{CudaBlas, Gemm};
 use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig, ValidAsZeroBits};
 
-use crate::tensor_ops::matmul::cuda_kernel::sgemm_batch;
 use crate::{
     shapes::*,
     tensor::{Cuda, Tensor},
@@ -131,8 +130,7 @@ where
             let k = op.chan_out * op.kernel * op.kernel;
             let n = op.h_in * op.w_in;
             unsafe {
-                sgemm_batch(
-                    self.blas.as_ref(),
+                self.gemm_batch(
                     (op.batch, m, k, n),
                     &f_b1023,
                     [m * k, k, 1],
@@ -153,8 +151,7 @@ where
             let k = op.h_in * op.w_in;
             let n = op.chan_out * op.kernel * op.kernel;
             unsafe {
-                sgemm_batch(
-                    self.blas.as_ref(),
+                self.gemm_batch(
                     (op.batch, m, k, n),
                     lhs.data.as_ref(),
                     [m * k, k, 1],
