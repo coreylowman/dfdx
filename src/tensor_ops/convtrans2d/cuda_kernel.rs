@@ -75,8 +75,7 @@ where
         let k = op.chan_in * op.kernel * op.kernel;
         let n = op.h_out * op.w_out;
         unsafe {
-            sgemm_batch(
-                self.blas.as_ref(),
+            self.gemm_batch(
                 (op.batch, m, k, n),
                 rhs.data.as_ref(),
                 [0, k, 1],
