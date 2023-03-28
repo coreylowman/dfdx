@@ -108,8 +108,8 @@ __device__ void min_to_bwd(
 
     unsigned int out_i = restrided(inp_i, num_dims, dims, inp_strides, out_strides);
 
-    auto tmp = inp[inp_i] == out[out_i] ? grad_out[out_i] : 0.0;
-    grad_inp[inp_i] += tmp * elems_per_thread;
+    const T mask = static_cast<T>(inp[inp_i] == out[out_i]);
+    grad_inp[inp_i] += mask * grad_out[out_i] * elems_per_thread;
 }
 
 #define MIN(TYPENAME, FWD, BWD) \
