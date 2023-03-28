@@ -14,7 +14,7 @@ use cudarc::{
 const TRANS: cublasOperation_t = cublasOperation_t::CUBLAS_OP_T;
 const NO_TRANS: cublasOperation_t = cublasOperation_t::CUBLAS_OP_N;
 
-fn sgemm_config<M: Dim, K: Dim, N: Dim, E: Dtype>(
+fn gemm_cfg<M: Dim, K: Dim, N: Dim, E: Dtype>(
     (m, k, n): (M, K, N),
     lhs_strides: [usize; 2],
     rhs_strides: [usize; 2],
@@ -58,105 +58,106 @@ fn sgemm_config<M: Dim, K: Dim, N: Dim, E: Dtype>(
     }
 }
 
-/// sgemm helper.
-///
-/// # case 1: c is not transposed
-/// note that lhs becomes b and rhs becomes a since cuda expects
-/// column major data, but dfdx uses row major. So this function actually
-/// calls the underlying cuda gemm call as `(N, K) * (K, M) = (N, M)`.
-///
-/// Since `(N, K)` in column major format is equal to (K, N) in row major format,
-/// we can just pass rhs normally. We can pass the row major format `out` directly
-/// in without transposing or anything because of this fact also.
-///
-/// # case 2: c is transposed
-///
-/// lhs is a and rhs is b, but we have to transpose them if they are not already
-#[allow(clippy::too_many_arguments)]
-pub(crate) unsafe fn sgemm<
-    E: Dtype,
-    M: Dim,
-    K: Dim,
-    N: Dim,
-    A: DevicePtr<E>,
-    B: DevicePtr<E>,
-    C: DevicePtrMut<E>,
->(
-    blas: &CudaBlas,
-    (m, k, n): (M, K, N),
-    lhs: &A,
-    lhs_strides: [usize; 2],
-    rhs: &B,
-    rhs_strides: [usize; 2],
-    beta: E,
-    out: &mut C,
-    out_strides: [usize; 2],
-) -> Result<(), CublasError>
-where
-    CudaBlas: Gemm<E>,
-{
-    let (cfg, swap_ops) = sgemm_config((m, k, n), lhs_strides, rhs_strides, beta, out_strides);
-
-    if !swap_ops {
-        blas.gemm(cfg, lhs, rhs, out)
-    } else {
-        blas.gemm(cfg, rhs, lhs, out)
+impl Cuda {
+    /// sgemm helper.
+    ///
+    /// # case 1: c is not transposed
+    /// note that lhs becomes b and rhs becomes a since cuda expects
+    /// column major data, but dfdx uses row major. So this function actually
+    /// calls the underlying cuda gemm call as `(N, K) * (K, M) = (N, M)`.
+    ///
+    /// Since `(N, K)` in column major format is equal to (K, N) in row major format,
+    /// we can just pass rhs normally. We can pass the row major format `out` directly
+    /// in without transposing or anything because of this fact also.
+    ///
+    /// # case 2: c is transposed
+    ///
+    /// lhs is a and rhs is b, but we have to transpose them if they are not already
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) unsafe fn gemm<
+        E: Dtype,
+        M: Dim,
+        K: Dim,
+        N: Dim,
+        A: DevicePtr<E>,
+        B: DevicePtr<E>,
+        C: DevicePtrMut<E>,
+    >(
+        &self,
+        (m, k, n): (M, K, N),
+        lhs: &A,
+        lhs_strides: [usize; 2],
+        rhs: &B,
+        rhs_strides: [usize; 2],
+        beta: E,
+        out: &mut C,
+        out_strides: [usize; 2],
+    ) -> Result<(), CublasError>
+    where
+        CudaBlas: Gemm<E>,
+    {
+        let (cfg, swap_ops) = gemm_cfg((m, k, n), lhs_strides, rhs_strides, beta, out_strides);
+        if !swap_ops {
+            self.blas.gemm(cfg, lhs, rhs, out)
+        } else {
+            self.blas.gemm(cfg, rhs, lhs, out)
+        }
     }
-}
 
-#[allow(clippy::too_many_arguments)]
-pub(crate) unsafe fn sgemm_batch<
-    E: Dtype,
-    Batch: Dim,
-    M: Dim,
-    K: Dim,
-    N: Dim,
-    A: DevicePtr<E>,
-    B: DevicePtr<E>,
-    C: DevicePtrMut<E>,
->(
-    blas: &CudaBlas,
-    (batch, m, k, n): (Batch, M, K, N),
-    lhs: &A,
-    lhs_strides: [usize; 3],
-    rhs: &B,
-    rhs_strides: [usize; 3],
-    beta: E,
-    out: &mut C,
-    out_strides: [usize; 3],
-) -> Result<(), CublasError>
-where
-    CudaBlas: Gemm<E>,
-{
-    // NOTE: lhs_strides[0] and rhs_strides[0] can be 0
-    assert_ne!(out_strides[0], 0);
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) unsafe fn gemm_batch<
+        E: Dtype,
+        Batch: Dim,
+        M: Dim,
+        K: Dim,
+        N: Dim,
+        A: DevicePtr<E>,
+        B: DevicePtr<E>,
+        C: DevicePtrMut<E>,
+    >(
+        &self,
+        (batch, m, k, n): (Batch, M, K, N),
+        lhs: &A,
+        lhs_strides: [usize; 3],
+        rhs: &B,
+        rhs_strides: [usize; 3],
+        beta: E,
+        out: &mut C,
+        out_strides: [usize; 3],
+    ) -> Result<(), CublasError>
+    where
+        CudaBlas: Gemm<E>,
+    {
+        // NOTE: lhs_strides[0] and rhs_strides[0] can be 0
+        assert_ne!(out_strides[0], 0);
 
-    let (gemm, swap_ops) = sgemm_config(
-        (m, k, n),
-        [lhs_strides[1], lhs_strides[2]],
-        [rhs_strides[1], rhs_strides[2]],
-        beta,
-        [out_strides[1], out_strides[2]],
-    );
+        let (gemm, swap_ops) = gemm_cfg(
+            (m, k, n),
+            [lhs_strides[1], lhs_strides[2]],
+            [rhs_strides[1], rhs_strides[2]],
+            beta,
+            [out_strides[1], out_strides[2]],
+        );
 
-    if !swap_ops {
-        let cfg = StridedBatchedConfig {
-            gemm,
-            stride_a: lhs_strides[0] as i64,
-            stride_b: rhs_strides[0] as i64,
-            stride_c: out_strides[0] as i64,
-            batch_size: batch.size() as i32,
-        };
-        blas.gemm_strided_batched(cfg, lhs, rhs, out)
-    } else {
-        let cfg = StridedBatchedConfig {
-            gemm,
-            stride_a: rhs_strides[0] as i64,
-            stride_b: lhs_strides[0] as i64,
-            stride_c: out_strides[0] as i64,
-            batch_size: batch.size() as i32,
-        };
-        blas.gemm_strided_batched(cfg, rhs, lhs, out)
+        if !swap_ops {
+            let cfg = StridedBatchedConfig {
+                gemm,
+                stride_a: lhs_strides[0] as i64,
+                stride_b: rhs_strides[0] as i64,
+                stride_c: out_strides[0] as i64,
+                batch_size: batch.size() as i32,
+            };
+            self.blas.gemm_strided_batched(cfg, lhs, rhs, out)
+        } else {
+            let cfg = StridedBatchedConfig {
+                gemm,
+                stride_a: rhs_strides[0] as i64,
+                stride_b: lhs_strides[0] as i64,
+                stride_c: out_strides[0] as i64,
+                batch_size: batch.size() as i32,
+            };
+            self.blas.gemm_strided_batched(cfg, rhs, lhs, out)
+        }
     }
 }
 
@@ -177,20 +178,19 @@ where
         let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
 
         unsafe {
-            sgemm(
-                self.blas.as_ref(),
+            self.gemm(
                 (m, k, n),
                 lhs.data.as_ref(),
                 [lhs.strides[0], 0],
                 rhs.data.as_ref(),
                 [0, rhs.strides[0]],
-                Default::default(),
+                E::zero(),
                 &mut storage,
                 strides,
-            )?;
-        }
+            )
+        }?;
 
-        Ok(self.build_tensor(shape, shape.strides(), storage))
+        Ok(self.build_tensor(shape, strides, storage))
     }
 
     fn backward<M: Dim, N: Dim>(
@@ -205,10 +205,11 @@ where
         let k = Const::<1>;
         let n = rhs.shape.0;
         let strides = (m, n).strides();
+        self.par_stream.wait_for_default()?;
         unsafe {
             // grad_lhs += grad_out * rhs^T
-            sgemm(
-                self.blas.as_ref(),
+            self.blas.set_stream(Some(self.par_stream.as_ref()))?;
+            self.gemm(
                 (m, n, k),
                 grad_out,
                 strides,
@@ -218,11 +219,10 @@ where
                 grad_lhs,
                 [lhs.strides[0], 0],
             )?;
-        }
-        unsafe {
+            self.blas.set_stream(None)?;
+
             // grad_rhs += lhs^T * grad_out
-            sgemm(
-                self.blas.as_ref(),
+            self.gemm(
                 (k, m, n),
                 lhs.data.as_ref(),
                 [0, lhs.strides[0]],
@@ -233,6 +233,7 @@ where
                 [0, rhs.strides[0]],
             )?;
         }
+        self.dev.wait_for(self.par_stream.as_ref())?;
         Ok(())
     }
 }
@@ -253,20 +254,19 @@ where
         let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
 
         unsafe {
-            sgemm(
-                self.blas.as_ref(),
+            self.gemm(
                 (m, k, n),
                 lhs.data.as_ref(),
                 [0, lhs.strides[0]],
                 rhs.data.as_ref(),
                 rhs.strides,
-                Default::default(),
+                E::zero(),
                 &mut storage,
                 [0, strides[0]],
             )?;
         }
 
-        Ok(self.build_tensor(shape, shape.strides(), storage))
+        Ok(self.build_tensor(shape, strides, storage))
     }
     fn backward<K: Dim, N: Dim>(
         &self,
@@ -278,10 +278,11 @@ where
     ) -> Result<(), Self::Err> {
         let m = Const::<1>;
         let (k, n) = rhs.shape;
+        self.par_stream.wait_for_default()?;
         unsafe {
             // grad_lhs += grad_out * rhs^T
-            sgemm(
-                self.blas.as_ref(),
+            self.blas.set_stream(Some(self.par_stream.as_ref()))?;
+            self.gemm(
                 (m, n, k),
                 grad_out,
                 [0, 1],
@@ -291,10 +292,10 @@ where
                 grad_lhs,
                 [0, lhs.strides[0]],
             )?;
+            self.blas.set_stream(None)?;
 
             // grad_rhs += lhs^T * grad_out
-            sgemm(
-                self.blas.as_ref(),
+            self.gemm(
                 (k, m, n),
                 lhs.data.as_ref(),
                 [lhs.strides[0], 0],
@@ -305,6 +306,7 @@ where
                 rhs.strides,
             )?;
         }
+        self.dev.wait_for(self.par_stream.as_ref())?;
         Ok(())
     }
 }
@@ -325,20 +327,19 @@ where
         let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
 
         unsafe {
-            sgemm(
-                self.blas.as_ref(),
+            self.gemm(
                 (m, k, n),
                 lhs.data.as_ref(),
                 lhs.strides,
                 rhs.data.as_ref(),
                 rhs.strides,
-                Default::default(),
+                E::zero(),
                 &mut storage,
                 strides,
             )
         }?;
 
-        Ok(self.build_tensor(shape, shape.strides(), storage))
+        Ok(self.build_tensor(shape, strides, storage))
     }
 
     fn backward<M: Dim, K: Dim, N: Dim>(
@@ -352,10 +353,11 @@ where
         let (m, _) = lhs.shape;
         let (k, n) = rhs.shape;
         let strides = (m, n).strides();
+        self.par_stream.wait_for_default()?;
         unsafe {
             // grad_lhs += grad_out * rhs^T
-            sgemm(
-                self.blas.as_ref(),
+            self.blas.set_stream(Some(self.par_stream.as_ref()))?;
+            self.gemm(
                 (m, n, k),
                 grad_out,
                 strides,
@@ -365,10 +367,10 @@ where
                 grad_lhs,
                 lhs.strides,
             )?;
+            self.blas.set_stream(None)?;
 
             // grad_rhs += lhs^T * grad_out
-            sgemm(
-                self.blas.as_ref(),
+            self.gemm(
                 (k, m, n),
                 lhs.data.as_ref(),
                 [lhs.strides[1], lhs.strides[0]],
@@ -379,6 +381,7 @@ where
                 rhs.strides,
             )?;
         }
+        self.dev.wait_for(self.par_stream.as_ref())?;
         Ok(())
     }
 }
@@ -399,19 +402,18 @@ where
         let strides = shape.strides();
         let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
         unsafe {
-            sgemm_batch(
-                self.blas.as_ref(),
+            self.gemm_batch(
                 (batch, m, k, n),
                 lhs.data.as_ref(),
                 lhs.strides,
                 rhs.data.as_ref(),
                 [0, rhs.strides[0], rhs.strides[1]],
-                Default::default(),
+                E::zero(),
                 &mut storage,
                 strides,
             )?;
         }
-        Ok(self.build_tensor(shape, shape.strides(), storage))
+        Ok(self.build_tensor(shape, strides, storage))
     }
     fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
@@ -424,27 +426,14 @@ where
         let (batch, m, _) = lhs.shape;
         let (k, n) = rhs.shape;
         let strides = (batch, m, n).strides();
+        self.par_stream.wait_for_default()?;
         unsafe {
-            // grad_lhs += grad_out * rhs^T
-            sgemm_batch(
-                self.blas.as_ref(),
-                (batch, m, n, k),
-                grad_out,
-                strides,
-                rhs.data.as_ref(),
-                [0, rhs.strides[1], rhs.strides[0]],
-                E::ONE,
-                grad_lhs,
-                lhs.strides,
-            )?;
-        }
-        for i in 0..batch.size() {
-            // NOTE: these have to be sequential since grad_rhs is broadcasted and cublas doesn't support
-            // 0 strides with atomicAdd
-            unsafe {
-                // grad_rhs += lhs^T * grad_out
-                sgemm(
-                    self.blas.as_ref(),
+            self.blas.set_stream(Some(self.par_stream.as_ref()))?;
+            // grad_rhs += lhs^T * grad_out
+            for i in 0..batch.size() {
+                // NOTE: these have to be sequential since grad_rhs is broadcasted and cublas doesn't support
+                // 0 stride
+                self.gemm(
                     (k, m, n),
                     &lhs.data.slice(i * lhs.strides[0]..),
                     [lhs.strides[2], lhs.strides[1]],
@@ -455,7 +444,21 @@ where
                     rhs.strides,
                 )?;
             }
+            self.blas.set_stream(None)?;
+
+            // grad_lhs += grad_out * rhs^T
+            self.gemm_batch(
+                (batch, m, n, k),
+                grad_out,
+                strides,
+                rhs.data.as_ref(),
+                [0, rhs.strides[1], rhs.strides[0]],
+                E::ONE,
+                grad_lhs,
+                lhs.strides,
+            )?;
         }
+        self.dev.wait_for(self.par_stream.as_ref())?;
         Ok(())
     }
 }
@@ -477,19 +480,18 @@ where
         let strides = shape.strides();
         let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
         unsafe {
-            sgemm_batch(
-                self.blas.as_ref(),
+            self.gemm_batch(
                 (batch, m, k, n),
                 lhs.data.as_ref(),
                 lhs.strides,
                 rhs.data.as_ref(),
                 rhs.strides,
-                Default::default(),
+                E::zero(),
                 &mut storage,
                 strides,
             )?;
         }
-        Ok(self.build_tensor(shape, shape.strides(), storage))
+        Ok(self.build_tensor(shape, strides, storage))
     }
     fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
@@ -502,10 +504,11 @@ where
         let (batch, m, _) = lhs.shape;
         let (_, k, n) = rhs.shape;
         let strides = (batch, m, n).strides();
+        self.par_stream.wait_for_default()?;
         unsafe {
             // grad_lhs += grad_out * rhs^T
-            sgemm_batch(
-                self.blas.as_ref(),
+            self.blas.set_stream(Some(self.par_stream.as_ref()))?;
+            self.gemm_batch(
                 (batch, m, n, k),
                 grad_out,
                 strides,
@@ -515,10 +518,10 @@ where
                 grad_lhs,
                 lhs.strides,
             )?;
+            self.blas.set_stream(None)?;
 
             // grad_rhs += lhs^T * grad_out
-            sgemm_batch(
-                self.blas.as_ref(),
+            self.gemm_batch(
                 (batch, k, m, n),
                 lhs.data.as_ref(),
                 [lhs.strides[0], lhs.strides[2], lhs.strides[1]],
@@ -529,6 +532,7 @@ where
                 rhs.strides,
             )?;
         }
+        self.dev.wait_for(self.par_stream.as_ref())?;
         Ok(())
     }
 }
@@ -546,29 +550,49 @@ where
         assert_ne!(rhs.strides[0], 0);
         assert_ne!(lhs.strides[1], 0);
         assert_ne!(rhs.strides[1], 0);
+
         let (batch, seq, m, _) = lhs.shape;
         let (_, _, k, n) = rhs.shape;
         let shape = (batch, seq, m, n);
         let strides = shape.strides();
         let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
 
-        for b in 0..batch.size() {
-            // TODO: use separate streams
-            unsafe {
-                sgemm_batch(
-                    self.blas.as_ref(),
+        let half_batch = batch.size() / 2;
+
+        self.par_stream.wait_for_default()?;
+
+        unsafe {
+            // split the batch onto separate streams
+            self.blas.set_stream(Some(self.par_stream.as_ref()))?;
+            for b in 0..half_batch {
+                self.gemm_batch(
                     (seq, m, k, n),
                     &lhs.data.slice(b * lhs.strides[0]..),
                     [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
                     &rhs.data.slice(b * rhs.strides[0]..),
                     [rhs.strides[1], rhs.strides[2], rhs.strides[3]],
-                    Default::default(),
+                    E::zero(),
+                    &mut storage.slice_mut(b * strides[0]..),
+                    [strides[1], strides[2], strides[3]],
+                )?;
+            }
+            self.blas.set_stream(None)?;
+
+            for b in half_batch..batch.size() {
+                self.gemm_batch(
+                    (seq, m, k, n),
+                    &lhs.data.slice(b * lhs.strides[0]..),
+                    [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
+                    &rhs.data.slice(b * rhs.strides[0]..),
+                    [rhs.strides[1], rhs.strides[2], rhs.strides[3]],
+                    E::zero(),
                     &mut storage.slice_mut(b * strides[0]..),
                     [strides[1], strides[2], strides[3]],
                 )?;
             }
         }
-        Ok(self.build_tensor(shape, shape.strides(), storage))
+        self.dev.wait_for(self.par_stream.as_ref())?;
+        Ok(self.build_tensor(shape, strides, storage))
     }
 
     fn backward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
@@ -582,12 +606,12 @@ where
         let (batch, seq, m, _) = lhs.shape;
         let (_, _, k, n) = rhs.shape;
         let strides = (batch, seq, m, n).strides();
-        // TODO use streams
-        for i in 0..batch.size() {
-            unsafe {
-                // gl += go * rhs^T
-                sgemm_batch(
-                    self.blas.as_ref(),
+        self.par_stream.wait_for_default()?;
+        unsafe {
+            // gl += go * rhs^T
+            self.blas.set_stream(Some(self.par_stream.as_ref()))?;
+            for i in 0..batch.size() {
+                self.gemm_batch(
                     (seq, m, n, k),
                     &grad_out.slice(i * strides[0]..),
                     [strides[1], strides[2], strides[3]],
@@ -597,10 +621,12 @@ where
                     &mut grad_lhs.slice_mut(i * lhs.strides[0]..),
                     [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
                 )?;
+            }
+            self.blas.set_stream(None)?;
 
-                // gr += lhs^T * go
-                sgemm_batch(
-                    self.blas.as_ref(),
+            // gr += lhs^T * go
+            for i in 0..batch.size() {
+                self.gemm_batch(
                     (seq, k, m, n),
                     &lhs.data.slice(i * lhs.strides[0]..),
                     [lhs.strides[1], lhs.strides[3], lhs.strides[2]],
@@ -612,6 +638,7 @@ where
                 )?;
             }
         }
+        self.dev.wait_for(self.par_stream.as_ref())?;
         Ok(())
     }
 }

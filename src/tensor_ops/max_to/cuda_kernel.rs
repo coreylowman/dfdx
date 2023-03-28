@@ -44,11 +44,14 @@ where
 
         let fill_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-
-        let physical_numel = inp.data.len();
-        let (dst_physical_numel, dst_strides) =
-            reduction_output_strides::<Ax, Src, Dst>(inp.strides, dst);
-        let chunk_len = physical_numel / dst_physical_numel;
+        let mut storage = unsafe {
+            let mut storage = self.dev.alloc::<E>(dst.num_elements())?;
+            fill_fn.launch(
+                launch_cfg(dst.num_elements() as u32),
+                (&mut storage, Self::INIT, dst.num_elements()),
+            )?;
+            storage
+        };
 
         let (dims, strides) = permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
         let num_dims = dims.len();
@@ -56,22 +59,18 @@ where
         info.extend(dims);
         info.extend(strides);
 
+        let physical_numel = inp.data.len();
+        let (dst_physical_numel, dst_strides) =
+            reduction_output_strides::<Ax, Src, Dst>(inp.strides, dst);
+        let chunk_len = physical_numel / dst_physical_numel;
+
         let cfg = launch_cfg(physical_numel as u32);
 
-        let info = self.dev.htod_copy(info)?;
-        let mut storage = unsafe { self.dev.alloc::<E>(dst.num_elements()) }?;
-        unsafe {
-            fill_fn.launch(
-                launch_cfg(dst.num_elements() as u32),
-                (&mut storage, Self::INIT, dst.num_elements()),
-            )
-        }?;
-
         let params = (
-            physical_numel, // const size_t numel,
-            num_dims,       // const size_t num_dims,
-            chunk_len,      // const size_t chunk_len,
-            &info,
+            physical_numel,    // const size_t numel,
+            num_dims,          // const size_t num_dims,
+            chunk_len,         // const size_t chunk_len,
+            &info,             // const size_t *info,
             inp.data.as_ref(), // const float *inp,
             &mut storage,      // float *out
         );
@@ -113,7 +112,7 @@ where
             physical_numel,    // const size_t numel,
             Src::NUM_DIMS,     // const size_t num_dims,
             elems_per_thread,  // const float elems_per_thread,
-            &info,             // const size_t *dims,
+            &info,             // const size_t *info,
             inp.data.as_ref(), // const float *inp,
             grad_inp,          // float *grad_inp,
             out.data.as_ref(), // const float *out,
