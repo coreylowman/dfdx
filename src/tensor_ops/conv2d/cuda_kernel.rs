@@ -246,8 +246,8 @@ extern \"C\" __global__ void unfold_input(
     idx /= op.chan_in;
     const size_t b = idx % op.batch;
 
-    T *patches_ptr = patches + b * (op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out) + c * (op.kernel * op.kernel * op.h_out * op.w_out) + oh * op.w_out + ow;
-    T *img_ptr = image + b * strides[0] + c * strides[1];
+    $TY *patches_ptr = patches + b * (op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out) + c * (op.kernel * op.kernel * op.h_out * op.w_out) + oh * op.w_out + ow;
+    const $TY *img_ptr = image + b * strides[0] + c * strides[1];
 
     for (int k1 = 0;k1 < op.kernel;k1++) {
         for (int k2 = 0;k2 < op.kernel;k2++) {
@@ -280,8 +280,8 @@ extern \"C\" __global__ void unfold_output(
     idx /= op.chan_out;
     const size_t b = idx % op.batch;
 
-    T *patches_ptr = patches + b * (op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in) + o * (op.kernel * op.kernel * op.h_in * op.w_in) + y * op.w_in + x;
-    T *img_ptr = image_out + b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out);
+    $TY *patches_ptr = patches + b * (op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in) + o * (op.kernel * op.kernel * op.h_in * op.w_in) + y * op.w_in + x;
+    const $TY *img_ptr = image_out + b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out);
 
     for (int k1 = 0;k1 < op.kernel;k1++) {
         for (int k2 = 0;k2 < op.kernel;k2++) {
@@ -295,8 +295,8 @@ extern \"C\" __global__ void unfold_output(
             const bool invalid = (oh_ks < k1 || oh_s % op.stride != 0 || oh >= op.h_out)
                 || (ow_ks < k2 || ow_s % op.stride != 0 || ow >= op.w_out);
 
-            *patches_ptr = invalid ? 0.0 : img_ptr[oh * (op.w_out)  + ow];
-            patches_ptr += op.h_out * op.w_out;
+            *patches_ptr = invalid ? 0.0 : img_ptr[oh * op.w_out  + ow];
+            patches_ptr += op.h_in * op.w_in;
         }
     }
 }
