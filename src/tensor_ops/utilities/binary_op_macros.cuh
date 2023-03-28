@@ -17,8 +17,15 @@ extern "C" __global__ void FORWARD( \
         return; \
     } \
 \
-    unsigned int lhs_i = get_strided_index(i, num_dims, dims, lhs_strides); \
-    unsigned int rhs_i = get_strided_index(i, num_dims, dims, rhs_strides); \
+    unsigned int tmp_i = i; \
+    unsigned int lhs_i = 0; \
+    unsigned int rhs_i = 0; \
+    for (int d = num_dims - 1; d >= 0; d--) { \
+        unsigned int i_dim = tmp_i % dims[d]; \
+        lhs_i += i_dim * lhs_strides[d]; \
+        rhs_i += i_dim * rhs_strides[d]; \
+        tmp_i /= dims[d]; \
+    } \
 \
     TYPENAME x = lhs[lhs_i]; \
     TYPENAME y = rhs[rhs_i]; \
@@ -47,11 +54,16 @@ extern "C" __global__ void BACKWARD_LHS( \
         return; \
     } \
 \
-    unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides); \
-\
+    unsigned int tmp_i = i; \
+    unsigned int out_i = 0; \
+    unsigned int rhs_i = 0; \
+    for (int d = num_dims - 1; d >= 0; d--) { \
+        unsigned int i_dim = tmp_i % dims[d]; \
+        out_i += i_dim * out_strides[d]; \
+        rhs_i += i_dim * rhs_strides[d]; \
+        tmp_i /= dims[d]; \
+    } \
     unsigned int lhs_i = i / chunk_len; \
-    unsigned int rhs_i = get_strided_index(i, num_dims, dims, rhs_strides); \
-\
     TYPENAME x = lhs[lhs_i]; \
     TYPENAME y = rhs[rhs_i]; \
     TYPENAME go = grad_out[out_i]; \
@@ -79,9 +91,15 @@ extern "C" __global__ void BACKWARD_RHS( \
         return; \
     } \
 \
-    unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides); \
-\
-    unsigned int lhs_i = get_strided_index(i, num_dims, dims, lhs_strides); \
+    unsigned int tmp_i = i; \
+    unsigned int lhs_i = 0; \
+    unsigned int out_i = 0; \
+    for (int d = num_dims - 1; d >= 0; d--) { \
+        unsigned int i_dim = tmp_i % dims[d]; \
+        lhs_i += i_dim * lhs_strides[d]; \
+        out_i += i_dim * out_strides[d]; \
+        tmp_i /= dims[d]; \
+    } \
     unsigned int rhs_i = i / chunk_len; \
 \
     TYPENAME x = lhs[lhs_i]; \
