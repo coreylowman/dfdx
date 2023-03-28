@@ -1,9 +1,9 @@
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{cuda::Cuda, unique_id, Tensor},
+    tensor::{launch_cfg, unique_id, Cuda, Tensor},
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
-use cudarc::driver::{CudaSlice, DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{CudaSlice, DeviceRepr, DeviceSlice, LaunchAsync};
 use std::{sync::Arc, vec::Vec};
 
 pub trait UnaryOpCudaKernel<E> {
@@ -50,7 +50,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
         let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (op, numel, inp.data.as_ref(), &mut storage);
         unsafe { fwd_fn.launch(cfg, params) }?;
 
@@ -73,7 +73,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
         let numel = inp.data.len();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (op, numel, inp.data.as_ref(), grad_inp, grad_out);
         unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())
@@ -180,7 +180,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         let rhs_strides: CudaSlice<usize> = self.dev.htod_copy(rhs.strides.into())?;
 
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (
             op,
             numel,             // const size_t numel,
@@ -225,7 +225,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
             .unwrap();
 
         let numel = lhs.shape.num_elements();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
 
         let ((out_dims1, out_strides1), rhs_strides1) = permute_for_binary_backward(
             lhs.shape.concrete(),
@@ -234,10 +234,22 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
             lhs.strides,
         );
 
+        let ((out_dims2, out_strides2), lhs_strides2) = permute_for_binary_backward(
+            lhs.shape.concrete(),
+            lhs.shape.strides(),
+            lhs.strides,
+            rhs.strides,
+        );
+
         let out_dims1 = self.dev.htod_copy(out_dims1)?;
         let out_strides1 = self.dev.htod_copy(out_strides1)?;
         let rhs_strides1 = self.dev.htod_copy(rhs_strides1)?;
+        let out_dims2 = self.dev.htod_copy(out_dims2)?;
+        let out_strides2 = self.dev.htod_copy(out_strides2)?;
+        let lhs_strides2 = self.dev.htod_copy(lhs_strides2)?;
+
         let chunk_len1 = numel / physical_numel(lhs.shape.concrete(), lhs.strides);
+        let chunk_len2 = numel / physical_numel(rhs.shape.concrete(), rhs.strides);
 
         let params_lhs = (
             op.clone(),        // const OP_STRUCT op,
@@ -255,18 +267,6 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
 
         self.par_stream.wait_for_default()?;
         unsafe { bwd_lhs_fn.launch_on_stream(&self.par_stream, cfg, params_lhs) }?;
-
-        let ((out_dims2, out_strides2), lhs_strides2) = permute_for_binary_backward(
-            lhs.shape.concrete(),
-            lhs.shape.strides(),
-            lhs.strides,
-            rhs.strides,
-        );
-
-        let out_dims2 = self.dev.htod_copy(out_dims2)?;
-        let out_strides2 = self.dev.htod_copy(out_strides2)?;
-        let lhs_strides2 = self.dev.htod_copy(lhs_strides2)?;
-        let chunk_len2 = numel / physical_numel(rhs.shape.concrete(), rhs.strides);
 
         let params_rhs = (
             op,                // const OP_STRUCT op,

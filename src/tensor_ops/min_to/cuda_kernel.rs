@@ -1,10 +1,10 @@
 use crate::{
     shapes::*,
-    tensor::{Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor},
     tensor_ops::reduction_utils::*,
 };
 
-use cudarc::driver::{CudaSlice, DeviceSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{CudaSlice, DeviceSlice, LaunchAsync};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/min_to.ptx"));
 
@@ -46,7 +46,7 @@ where
         let mut storage = unsafe {
             let mut storage = self.dev.alloc::<E>(dst.num_elements())?;
             fill_fn.launch(
-                LaunchConfig::for_num_elems(dst.num_elements() as u32),
+                launch_cfg(dst.num_elements() as u32),
                 (&mut storage, Self::INIT, dst.num_elements()),
             )?;
             storage
@@ -63,7 +63,7 @@ where
             reduction_output_strides::<Ax, Src, Dst>(inp.strides, dst);
         let chunk_len = physical_numel / dst_physical_numel;
 
-        let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
+        let cfg = launch_cfg(physical_numel as u32);
         let params = (
             physical_numel,    // const size_t numel,
             dims.len(),        // const size_t num_dims,
@@ -103,7 +103,7 @@ where
         ))
         .unwrap();
 
-        let cfg = LaunchConfig::for_num_elems(physical_numel as u32);
+        let cfg = launch_cfg(physical_numel as u32);
         let params = (
             physical_numel,    // const size_t numel,
             Src::NUM_DIMS,     // const size_t num_dims,

@@ -1,8 +1,8 @@
 use crate::{
     shapes::*,
-    tensor::{Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor},
 };
-use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/reshape.ptx"));
 
@@ -10,6 +10,19 @@ trait HasCudaKernel<E> {
     const MOD: &'static str;
     const FNS: &'static [&'static str];
 }
+
+macro_rules! has_kernels {
+    ($($dtype:ty),*) => {
+        $(
+        impl HasCudaKernel<$dtype> for Cuda {
+            const MOD: &'static str = concat!("slice_", stringify!($dtype));
+            const FNS: &'static [&'static str] = &[concat!("slice_fwd_", stringify!($dtype))];
+        }
+        )*
+    }
+}
+
+has_kernels!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize, bool);
 
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "reshape_f32";
@@ -34,7 +47,7 @@ where
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
         }
 
-        let numel = inp.data.len();
+        let numel = inp.shape.num_elements();
         let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
         let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
@@ -43,7 +56,7 @@ where
         let dst_strides = self.dev.htod_copy(dst.strides().into())?;
 
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (
             numel,             // const size_t numel,
             inp.data.as_ref(), // const float *inp,
@@ -75,7 +88,7 @@ where
         let inp_strides = self.dev.htod_copy(inp.strides.into())?;
         let out_strides = self.dev.htod_copy(out.strides.into())?;
 
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (
             numel,         // const size_t numel,
             grad_inp,      // float *grad_inp,

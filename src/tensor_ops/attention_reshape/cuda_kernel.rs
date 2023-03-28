@@ -1,6 +1,6 @@
 use super::*;
 use crate::tensor::cuda::Cuda;
-use cudarc::driver::{DeviceRepr, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceRepr, LaunchAsync};
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/attention_reshape.ptx"));
 
@@ -72,7 +72,7 @@ where
             sequence_length,
             past_length,
         };
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (
             op,
             qkv.data.as_ref(),

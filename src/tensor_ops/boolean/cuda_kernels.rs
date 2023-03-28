@@ -1,10 +1,7 @@
 use super::BooleanKernel;
 use crate::{
     shapes::Shape,
-    tensor::{
-        cuda::{Cuda, CudaError},
-        Tensor,
-    },
+    tensor::{launch_cfg, Cuda, CudaError, Tensor},
 };
 use cudarc::driver::*;
 
@@ -35,7 +32,7 @@ impl Cuda {
         let rhs_strides: CudaSlice<usize> = self.dev.htod_copy(rhs.strides.into())?;
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, fn_name).unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (
             numel,             // const size_t numel,
             S::NUM_DIMS,       // const size_t num_dims,
@@ -65,7 +62,7 @@ impl BooleanKernel for Cuda {
         let mut storage = unsafe { self.dev.alloc(numel) }?;
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, "boolean_not").unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (
             numel,             // const size_t numel,
             inp.data.as_ref(), // const bool *inp,

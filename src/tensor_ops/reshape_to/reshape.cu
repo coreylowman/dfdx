@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "cuda_utils.cuh"
 
 template<typename T>
@@ -46,8 +47,8 @@ __device__ void reshape_bwd(
     atomicAdd(grad_inp + inp_i, grad_out[out_i]);
 }
 
-#define RESHAPE(TYPENAME, FWD, BWD) \
-extern "C" __global__ void FWD( \
+#define RESHAPE_FWD(TYPENAME, FN) \
+extern "C" __global__ void FN( \
     const size_t numel, \
     const TYPENAME *inp, \
     const size_t inp_num_dims, \
@@ -59,7 +60,11 @@ extern "C" __global__ void FWD( \
     const size_t *out_strides \
 ) { \
     reshape_fwd(numel, inp, inp_num_dims, inp_dims, inp_strides, out, out_num_dims, out_dims, out_strides); \
-} \
+}
+
+#define RESHAPE(TYPENAME, FWD, BWD) \
+RESHAPE_FWD(TYPENAME, FWD) \
+\
 extern "C" __global__ void BWD( \
     const size_t numel, \
     TYPENAME *grad_inp, \
@@ -76,3 +81,14 @@ extern "C" __global__ void BWD( \
 
 RESHAPE(float, reshape_fwd_f32, reshape_bwd_f32);
 RESHAPE(double, reshape_fwd_f64, reshape_bwd_f64);
+RESHAPE_FWD(uint8_t, reshape_fwd_u8);
+RESHAPE_FWD(uint16_t, reshape_fwd_u16);
+RESHAPE_FWD(uint32_t, reshape_fwd_u32);
+RESHAPE_FWD(uint64_t, reshape_fwd_u64);
+RESHAPE_FWD(uintptr_t, reshape_fwd_usize);
+RESHAPE_FWD(int8_t, reshape_fwd_i8);
+RESHAPE_FWD(int16_t, reshape_fwd_i16);
+RESHAPE_FWD(int32_t, reshape_fwd_i32);
+RESHAPE_FWD(int64_t, reshape_fwd_i64);
+RESHAPE_FWD(intptr_t, reshape_fwd_isize);
+RESHAPE_FWD(bool, reshape_fwd_bool);

@@ -50,6 +50,8 @@ macro_rules! length {
     ($x:tt $($xs:tt)*) => {1 + length!($($xs)*)};
 }
 
+pub(crate) use length;
+
 // Defines all reduce/broadcast rules recursively
 macro_rules! broadcast_to_all {
     ([$($s1:ident)*] [$($s2:ident)*] [$($ax:tt)*] [] [$axis:tt $($axes:tt)*]) => {

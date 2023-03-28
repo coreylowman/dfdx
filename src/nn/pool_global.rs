@@ -71,7 +71,7 @@ macro_rules! impl_pools {
                 &self,
                 input: Tensor<(C, H, W), E, D, T>,
             ) -> Result<Self::Output, D::Err> {
-                input.try_min()
+                input.$Method()
             }
         }
 

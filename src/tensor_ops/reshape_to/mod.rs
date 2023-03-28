@@ -187,4 +187,18 @@ mod tests {
             ],
         )
     }
+
+    #[test]
+    fn test_reshape_broadcasted() {
+        let dev: TestDevice = Default::default();
+        let a: Tensor<Rank2<2, 3>, TestDtype, _> = dev.tensor([1., 2., 3.]).broadcast();
+        let b: Tensor<Rank2<3, 2>, TestDtype, _> = a.clone().reshape();
+
+        #[cfg(feature = "cuda")]
+        use cudarc::driver::DeviceSlice;
+
+        assert_eq!(b.data.len(), 6);
+        assert_eq!(a.as_vec(), b.as_vec());
+        assert_eq!(b.array(), [[1., 2.], [3., 1.], [2., 3.]]);
+    }
 }

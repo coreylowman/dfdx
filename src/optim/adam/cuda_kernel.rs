@@ -1,5 +1,10 @@
-use crate::{optim::optimizer::*, shapes::*, tensor::Cuda};
-use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, LaunchConfig};
+use crate::{
+    optim::optimizer::*,
+    shapes::*,
+    tensor::{launch_cfg, Cuda},
+};
+
+use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync};
 
 #[repr(C)]
 struct CudaAdamConfig<E> {
@@ -63,7 +68,7 @@ where
         let opt_cfg = adam_config_to_cuda(cfg);
         let numel = param.len();
         let func = self.dev.get_func(Self::MOD, Self::FWD).unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let t = <E>::from_i32(t).unwrap();
         let params = (opt_cfg, numel, t, param, moment1, moment2, grad);
         unsafe { func.launch(cfg, params) }?;
