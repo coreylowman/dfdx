@@ -80,7 +80,7 @@ where
 
         let img_strides = self.dev.htod_copy(make_4d::<L>(lhs.strides).into())?;
         let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let cfg = launch_cfg(patches_numel as u32);
+        let cfg = launch_cfg((op.batch * op.chan_in * op.h_out * op.w_out) as u32);
         let params = (op, lhs.data.as_ref(), &img_strides, &mut patches);
         unsafe { unfold_fn.launch(cfg, params) }?;
 
@@ -131,7 +131,7 @@ where
         {
             // unfold grad_out into patches
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
-            let cfg = launch_cfg(patches_item_numel as u32);
+            let cfg = launch_cfg((op.batch * op.chan_out * op.h_in * op.w_in) as u32);
             unsafe { unfold_fn.launch(cfg, (op, grad_out, &mut patches)) }?;
         }
 
