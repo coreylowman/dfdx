@@ -37,7 +37,7 @@ impl<
         const W: usize,
         const IH: usize,
         const IW: usize,
-        const C: usize,
+        C: Dim,
         E: Dtype,
         M: UpscaleMethod,
         D: Upscale2DKernel<E, M> + ZerosTensor<E>,
