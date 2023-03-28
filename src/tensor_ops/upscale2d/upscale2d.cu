@@ -13,7 +13,9 @@ template<typename T>
 __device__ void nearest_upscale2d_fwd(
     const Upscale2dOp op,
     const size_t *inp_strides,
+    const size_t *inp_sizes,
     const size_t *out_strides,
+    const size_t *out_sizes,
     const T *inp, // 4d (Batch, Channels, Height, Width)
     T *out // 4d (Batch, Channels, HeightOut, WidthOut)
 ) {
@@ -23,8 +25,8 @@ __device__ void nearest_upscale2d_fwd(
         return;
     }
 
-    float h_scale = ((float)(inp_strides[1]/inp_strides[2]))/(out_strides[1]/out_strides[2]);
-    float w_scale = ((float)(inp_strides[2]/inp_strides[3]))/(out_strides[2]/out_strides[3]);
+    float h_scale = ((float)inp_sizes[2])/out_sizes[2];
+    float w_scale = ((float)inp_sizes[3])/out_sizes[3];
 
     unsigned int idx = i;
     const size_t ow = idx % op.w_out;
@@ -48,7 +50,9 @@ template<typename T>
 __device__ void nearest_upscale2d_bwd(
     const Upscale2dOp op,
     const size_t *inp_strides,
+    const size_t *inp_sizes,
     const size_t *out_strides,
+    const size_t *out_sizes,
     const T *inp, // 4d (Batch, Channels, Height, Width)
     T *grad_inp,
     const T *out, // 4d (Batch, Channels, HeightOut, WidthOut)
@@ -60,8 +64,8 @@ __device__ void nearest_upscale2d_bwd(
         return;
     }
 
-    float h_scale = ((float)(inp_strides[1]/inp_strides[2]))/(out_strides[1]/out_strides[2]);
-    float w_scale = ((float)(inp_strides[2]/inp_strides[3]))/(out_strides[2]/out_strides[3]);
+    float h_scale = ((float)inp_sizes[2])/out_sizes[2];
+    float w_scale = ((float)inp_sizes[3])/out_sizes[3];
 
     unsigned int idx = i;
     const size_t x = idx % op.w_in;
@@ -103,7 +107,9 @@ template<typename T>
 __device__ void bilinear_upscale2d_fwd(
     const Upscale2dOp op,
     const size_t *inp_strides,
+    const size_t *inp_sizes,
     const size_t *out_strides,
+    const size_t *out_sizes,
     const T *inp, // 4d (Batch, Channels, Height, Width)
     T *out // 4d (Batch, Channels, HeightOut, WidthOut)
 ) {
@@ -113,8 +119,8 @@ __device__ void bilinear_upscale2d_fwd(
         return;
     }
 
-    float h_scale = ((float)(inp_strides[1]/inp_strides[2]-1))/(out_strides[1]/out_strides[2]-1);
-    float w_scale = ((float)(inp_strides[2]/inp_strides[3]-1))/(out_strides[2]/out_strides[3]-1);
+    float h_scale = ((float)inp_sizes[2]-1)/(out_sizes[2]-1);
+    float w_scale = ((float)inp_sizes[3]-1)/(out_sizes[3]-1);
 
     unsigned int idx = i;
     const size_t ow = idx % op.w_out;
@@ -144,7 +150,9 @@ template<typename T>
 __device__ void bilinear_upscale2d_bwd(
     const Upscale2dOp op,
     const size_t *inp_strides,
+    const size_t *inp_sizes,
     const size_t *out_strides,
+    const size_t *out_sizes,
     const T *inp, // 4d (Batch, Channels, Height, Width)
     T *grad_inp,
     const T *out, // 4d (Batch, Channels, HeightOut, WidthOut)
@@ -156,8 +164,8 @@ __device__ void bilinear_upscale2d_bwd(
         return;
     }
 
-    float h_scale = ((float)(inp_strides[1]/inp_strides[2]-1))/(out_strides[1]/out_strides[2]-1);
-    float w_scale = ((float)(inp_strides[2]/inp_strides[3]-1))/(out_strides[2]/out_strides[3]-1);
+    float h_scale = ((float)inp_sizes[2]-1)/(out_sizes[2]-1);
+    float w_scale = ((float)inp_sizes[3]-1)/(out_sizes[3]-1);
 
     unsigned int idx = i;
     const size_t x = idx % op.w_in;
@@ -203,22 +211,26 @@ __device__ void bilinear_upscale2d_bwd(
 extern "C" __global__ void fwd( \
     const Upscale2dOp op, \
     const size_t *inp_strides, \
+    const size_t *inp_sizes, \
     const size_t *out_strides, \
+    const size_t *out_sizes, \
     const TYPENAME *inp, \
     TYPENAME *out \
 ) { \
-    fwd_FN(op, inp_strides, out_strides, inp, out); \
+    fwd_FN(op, inp_strides, inp_sizes, out_strides, out_sizes, inp, out); \
 } \
 extern "C" __global__ void bwd( \
     const Upscale2dOp op, \
     const size_t *inp_strides, \
+    const size_t *inp_sizes, \
     const size_t *out_strides, \
+    const size_t *out_sizes, \
     const TYPENAME *inp, \
     TYPENAME *grad_inp, \
     const TYPENAME *out, \
     const TYPENAME *grad_out \
 ) { \
-    bwd_FN(op, inp_strides, out_strides, inp, grad_inp, out, grad_out); \
+    bwd_FN(op, inp_strides, inp_sizes, out_strides, out_sizes, inp, grad_inp, out, grad_out); \
 }
 
 UPSCALE_OP(

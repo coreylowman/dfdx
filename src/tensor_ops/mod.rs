@@ -263,6 +263,7 @@ mod upscale2d;
 pub use upscale2d::{
     Bilinear, ConstUpscale2D, NearestNeighbor, TryUpscale2D, UpscaleMethod,
 };
+pub(crate) use upscale2d::Upscale2DKernel;
 
 #[cfg(feature = "nightly")]
 mod pool2d;

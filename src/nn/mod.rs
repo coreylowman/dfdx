@@ -291,5 +291,6 @@ pub mod builders {
         TransformerEncoder, TransformerEncoderBlock,
     };
     pub use super::unbiased_linear::builder::UnbiasedLinear;
+    pub use super::convtrans::builder::ConvTrans2D;
     pub use super::*;
 }
