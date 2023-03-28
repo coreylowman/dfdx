@@ -13,8 +13,6 @@ use std::sync::Arc;
 
 unsafe impl DeviceRepr for super::Conv2DOp {}
 
-const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/conv2d.ptx"));
-
 trait HasCudaKernel<E> {
     const TYPENAME: &'static str;
 }
@@ -100,7 +98,7 @@ where
 
         let img_strides = self.dev.htod_copy(make_4d::<L>(lhs.strides).into())?;
         let unfold_fn = self.dev.get_func(&name, "unfold_input").unwrap();
-        let cfg = launch_cfg(patches_numel as u32);
+        let cfg = launch_cfg((op.batch * op.chan_in * op.h_out * op.w_out) as u32);
         let params = (lhs.data.as_ref(), &img_strides, &mut patches);
         unsafe { unfold_fn.launch(cfg, params) }?;
 
@@ -152,7 +150,7 @@ where
         {
             // unfold grad_out into patches
             let unfold_fn = self.dev.get_func(&name, "unfold_output").unwrap();
-            let cfg = launch_cfg(patches_item_numel as u32);
+            let cfg = launch_cfg((op.batch * op.chan_out * op.h_in * op.w_in) as u32);
             unsafe { unfold_fn.launch(cfg, (grad_out, &mut patches)) }?;
         }
 
@@ -233,7 +231,7 @@ extern \"C\" __global__ void unfold_input(
     $TY *patches // 6d (Batch, Channels, KernelSize, KernelSize, HeightOut, WidthOut)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    size_t item_numel = op.batch * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out;
+    size_t item_numel = op.batch * op.chan_in * op.h_out * op.w_out;
     if (i >= item_numel) {
         return;
     }
@@ -244,24 +242,22 @@ extern \"C\" __global__ void unfold_input(
     idx /= op.w_out;
     const size_t oh = idx % op.h_out;
     idx /= op.h_out;
-    const size_t k2 = idx % op.kernel;
-    idx /= op.kernel;
-    const size_t k1 = idx % op.kernel;
-    idx /= op.kernel;
     const size_t c = idx % op.chan_in;
     idx /= op.chan_in;
     const size_t b = idx % op.batch;
 
-    const size_t y_plus_p = oh * op.stride + k1;
-    const size_t y = y_plus_p - op.padding;
-    const size_t x_plus_p = ow * op.stride + k2;
-    const size_t x = x_plus_p - op.padding;
+    T *patches_ptr = patches + b * (op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out) + c * (op.kernel * op.kernel * op.h_out * op.w_out) + oh * op.w_out + ow;
+    T *img_ptr = image + b * strides[0] + c * strides[1];
 
-    if (y >= op.h_in || x >= op.w_in) {
-        patches[i] = 0.0;
-    } else {
-        const size_t i_image = b * strides[0] + c * strides[1] + y * strides[2] + x * strides[3];
-        patches[i] = image[i_image];
+    for (int k1 = 0;k1 < op.kernel;k1++) {
+        for (int k2 = 0;k2 < op.kernel;k2++) {
+            const size_t y_plus_p = oh * op.stride + k1;
+            const size_t y = y_plus_p - op.padding;
+            const size_t x_plus_p = ow * op.stride + k2;
+            const size_t x = x_plus_p - op.padding;
+            *patches_ptr = (y >= op.h_in || x >= op.w_in) ? 0.0 : img_ptr[y * strides[2] + x * strides[3]];
+            patches_ptr += op.h_out * op.w_out;
+        }
     }
 }
 
@@ -270,7 +266,7 @@ extern \"C\" __global__ void unfold_output(
     $TY *patches // 6d (Batch, ChanOut, KernelSize, KernelSize, HeightIn, WidthIn)
 ) {
     const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    const size_t item_numel = op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;
+    const size_t item_numel = op.batch * op.chan_out * op.h_in * op.w_in;
     if (i >= item_numel) {
         return;
     }
@@ -280,30 +276,27 @@ extern \"C\" __global__ void unfold_output(
     idx /= op.w_in;
     const size_t y = idx % op.h_in;
     idx /= op.h_in;
-    const size_t k2 = idx % op.kernel;
-    idx /= op.kernel;
-    const size_t k1 = idx % op.kernel;
-    idx /= op.kernel;
     const size_t o = idx % op.chan_out;
+    idx /= op.chan_out;
+    const size_t b = idx % op.batch;
 
-    const size_t oh_ks = y + op.padding;
-    const size_t oh_s = oh_ks - k1;
-    const size_t oh = oh_s / op.stride;
-    const size_t ow_ks = x + op.padding;
-    const size_t ow_s = ow_ks - k2;
-    const size_t ow = ow_s / op.stride;
+    T *patches_ptr = patches + b * (op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in) + o * (op.kernel * op.kernel * op.h_in * op.w_in) + y * op.w_in + x;
+    T *img_ptr = image_out + b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out);
 
-    if (
-        (oh_ks < k1 || oh_s % op.stride != 0 || oh >= op.h_out)
-        || (ow_ks < k2 || ow_s % op.stride != 0 || ow >= op.w_out)
-    ) {
-        for (int b = 0; b < op.batch; b++) {
-            patches[b * item_numel + i] = 0.0;
-        }
-    } else {
-        for (int b = 0; b < op.batch; b++) {
-            size_t image_i = b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out) + oh * (op.w_out)  + ow;
-            patches[b * item_numel + i] = image_out[image_i];
+    for (int k1 = 0;k1 < op.kernel;k1++) {
+        for (int k2 = 0;k2 < op.kernel;k2++) {
+            const size_t oh_ks = y + op.padding;
+            const size_t oh_s = oh_ks - k1;
+            const size_t oh = oh_s / op.stride;
+            const size_t ow_ks = x + op.padding;
+            const size_t ow_s = ow_ks - k2;
+            const size_t ow = ow_s / op.stride;
+        
+            const bool invalid = (oh_ks < k1 || oh_s % op.stride != 0 || oh >= op.h_out)
+                || (ow_ks < k2 || ow_s % op.stride != 0 || ow >= op.w_out);
+
+            *patches_ptr = invalid ? 0.0 : img_ptr[oh * (op.w_out)  + ow];
+            patches_ptr += op.h_out * op.w_out;
         }
     }
 }
