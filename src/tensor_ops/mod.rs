@@ -261,7 +261,7 @@ pub use convtrans2d::{ConvTransAlgebra, TryConvTrans2D, TryConvTrans2DTo};
 
 mod upscale2d;
 pub use upscale2d::{
-    Bilinear, ConstUpscale2D, NearestNeighbor, TryUpscale2D, Upscale2DKernel, UpscaleMethod,
+    Bilinear, ConstUpscale2D, NearestNeighbor, TryUpscale2D, UpscaleMethod,
 };
 
 #[cfg(feature = "nightly")]
