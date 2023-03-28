@@ -168,8 +168,7 @@ impl<C: ConstDim, E: Dtype, D: Device<E>> Default for PReLU1D<C, E, D> {
         Self {
             a: dev
                 .tensor(E::from_f32(0.25).unwrap())
-                .broadcast()
-                .to_owned(),
+                .broadcast(),
         }
     }
 }
