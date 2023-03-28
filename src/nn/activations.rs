@@ -132,8 +132,8 @@ impl<E: Dtype, D: Device<E>> From<E> for PReLU<E, D> {
 
 impl<E: Dtype, D: Device<E>> NonMutableModule for PReLU<E, D> {}
 
-impl<S: ConstShape, E: Dtype, D: Device<E>, T: Tape<E, D>>
-    Module<Tensor<S, E, D, T>> for PReLU<E, D>
+impl<S: ConstShape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
+    for PReLU<E, D>
 {
     type Output = Tensor<S, E, D, T>;
     type Error = D::Err;
@@ -182,8 +182,8 @@ impl<C: ConstDim, E: Dtype, D: Device<E>> From<Tensor<(C,), E, D>> for PReLU1D<C
 
 impl<C: ConstDim, E: Dtype, D: Device<E>> NonMutableModule for PReLU1D<C, E, D> {}
 
-impl<C: ConstDim, E: Dtype, D: Device<E>, T: Tape<E, D>>
-    Module<Tensor<(C,), E, D, T>> for PReLU1D<C, E, D>
+impl<C: ConstDim, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<(C,), E, D, T>>
+    for PReLU1D<C, E, D>
 {
     type Output = Tensor<(C,), E, D, T>;
 
