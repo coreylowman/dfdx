@@ -55,9 +55,11 @@ where
 
         let (dims, strides) = permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
         let num_dims = dims.len();
-        let mut info = Vec::with_capacity(dims.len() * 2);
+
+        let mut info = Vec::with_capacity(num_dims * 2);
         info.extend(dims);
         info.extend(strides);
+        let info = self.dev.htod_copy(info)?;
 
         let physical_numel = inp.data.len();
         let (dst_physical_numel, dst_strides) =
@@ -101,11 +103,11 @@ where
         .unwrap();
 
         let cfg = launch_cfg(physical_numel as u32);
+
         let mut info = Vec::with_capacity(Src::NUM_DIMS * 3);
         info.extend(inp.shape.concrete());
         info.extend(inp.strides);
         info.extend(out_strides);
-
         let info = self.dev.htod_copy(info)?;
 
         let params = (

@@ -70,9 +70,8 @@ __device__ void min_to_fwd(
     const size_t numel,
     const size_t num_dims,
     const size_t chunk_len,
+    const size_t *info,
     const T *inp,
-    const size_t *dims,
-    const size_t *strides,
     T *out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -80,6 +79,9 @@ __device__ void min_to_fwd(
     if (i >= numel) {
         return;
     }
+
+    const size_t *dims = info;
+    const size_t *strides = info + num_dims;
 
     unsigned int inp_i = get_strided_index(i, num_dims, dims, strides);
     chunk_min(numel, chunk_len, inp[inp_i], out);
@@ -92,19 +94,21 @@ __device__ void min_to_bwd(
     const size_t numel,
     const size_t num_dims,
     const T elems_per_thread,
-    const size_t *dims,
+    const size_t *info,
     const T *inp,
     T *grad_inp,
-    const size_t *inp_strides,
     const T *out,
-    const T *grad_out,
-    const size_t *out_strides
+    const T *grad_out
 ) {
     unsigned int inp_i = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (inp_i >= numel) {
         return;
     }
+
+    const size_t *dims = info;
+    const size_t *inp_strides = info + num_dims;
+    const size_t *out_strides = info + 2 * num_dims;
 
     unsigned int out_i = restrided(inp_i, num_dims, dims, inp_strides, out_strides);
 
@@ -117,26 +121,23 @@ extern "C" __global__ void FWD( \
     const size_t numel, \
     const size_t num_dims, \
     const size_t chunk_len, \
+    const size_t *info, \
     const TYPENAME *inp, \
-    const size_t *dims, \
-    const size_t *strides, \
     TYPENAME *out \
 ) { \
-    min_to_fwd(numel, num_dims, chunk_len, inp, dims, strides, out); \
+    min_to_fwd(numel, num_dims, chunk_len, info, inp, out); \
 } \
 extern "C" __global__ void BWD( \
     const size_t numel, \
     const size_t num_dims, \
     const TYPENAME elems_per_thread, \
-    const size_t *dims, \
+    const size_t *info, \
     const TYPENAME *inp, \
     TYPENAME *grad_inp, \
-    const size_t *inp_strides, \
     const TYPENAME *out, \
-    const TYPENAME *grad_out, \
-    const size_t *out_strides \
+    const TYPENAME *grad_out \
 ) { \
-    min_to_bwd(numel, num_dims, elems_per_thread, dims, inp, grad_inp, inp_strides, out, grad_out, out_strides); \
+    min_to_bwd(numel, num_dims, elems_per_thread, info, inp, grad_inp, out, grad_out); \
 }
 
 MIN(float, min_to_fwd_f32, min_to_bwd_f32);
