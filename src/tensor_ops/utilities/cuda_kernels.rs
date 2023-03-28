@@ -180,7 +180,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
             op,
             numel,             // const size_t numel,
             S::NUM_DIMS,       // const size_t num_dims,
-            &info,             // const size_t *dims,
+            &info,             // const size_t *info,
             lhs.data.as_ref(), // const float *lhs,
             rhs.data.as_ref(), // const float *rhs,
             &mut storage,      // float *out,
@@ -247,10 +247,10 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         self.par_stream.wait_for_default()?;
 
         let params_lhs = (
-            op.clone(),  // const OP_STRUCT op,
-            numel,       // const size_t numel,
-            S::NUM_DIMS, // const size_t num_dims,
-            &info,
+            op.clone(),             // const OP_STRUCT op,
+            numel,                  // const size_t numel,
+            S::NUM_DIMS,            // const size_t num_dims,
+            &info,                  // const size_t *info,
             lhs.data.as_ref(),      // const TYPENAME *lhs,
             grad_lhs,               // TYPENAME *grad_lhs,
             numel / lhs.data.len(), // const size_t chunk_len,
@@ -261,10 +261,10 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         unsafe { bwd_lhs_fn.launch_on_stream(&self.par_stream, cfg, params_lhs) }?;
 
         let params_rhs = (
-            op,          // const OP_STRUCT op,
-            numel,       // const size_t numel,
-            S::NUM_DIMS, // const size_t num_dims,
-            &info,
+            op,                     // const OP_STRUCT op,
+            numel,                  // const size_t numel,
+            S::NUM_DIMS,            // const size_t num_dims,
+            &info,                  // const size_T * info,
             lhs.data.as_ref(),      // const TYPENAME *lhs,
             rhs.data.as_ref(),      // const TYPENAME *rhs,
             grad_rhs,               // TYPENAME *grad_rhs,
