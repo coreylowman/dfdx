@@ -1,6 +1,6 @@
-use crate::prelude::{ConstUpscale2D, NearestNeighbor, UpscaleMethod};
 #[cfg(feature = "nightly")]
 use crate::prelude::{Const, Dim, Dtype, HasErr, Tape, Tensor, Upscale2DKernel, ZerosTensor};
+use crate::prelude::{ConstUpscale2D, NearestNeighbor, UpscaleMethod};
 
 #[allow(unused)]
 use super::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
