@@ -15,16 +15,17 @@ __device__ unsigned int get_strided_index(
     return strided_i;
 }
 
-__device__ unsigned int get_unstrided_index(
+__device__ unsigned int restrided(
     const unsigned int strided_i,
     const size_t num_dims,
     const size_t *dims,
-    const size_t *strides
+    const size_t *strides,
+    const size_t *new_strides
 ) {
     unsigned int idx = 0;
-    for (unsigned int d = 0; d < num_dims; d++) {
+    for (int d = 0; d < num_dims; d++) {
         idx *= dims[d];
-        idx += strides[d] == 0 ? 0 : (strided_i / strides[d]) % dims[d];
+        idx += (strides[d] == 0 ? 0 : (strided_i / strides[d]) % dims[d]) * new_strides[d];
     }
     return idx;
 }

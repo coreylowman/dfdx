@@ -42,9 +42,8 @@ __device__ void sum_to_bwd(
         return;
     }
 
-    unsigned int i = get_unstrided_index(inp_i, num_dims, dims, inp_strides);
-    unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
-    auto tmp = grad_out[out_i];
+    unsigned int out_i = restrided(inp_i, num_dims, dims, inp_strides, out_strides);
+    T tmp = grad_out[out_i];
 
     // NOTE: since size of output is less than input, only 1 thread will be writing to inp
     // at a time. this means we don't have to worry about multiple concurrent writes

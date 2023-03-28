@@ -106,8 +106,7 @@ __device__ void min_to_bwd(
         return;
     }
 
-    unsigned int i = get_unstrided_index(inp_i, num_dims, dims, inp_strides);
-    unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
+    unsigned int out_i = restrided(inp_i, num_dims, dims, inp_strides, out_strides);
 
     auto tmp = inp[inp_i] == out[out_i] ? grad_out[out_i] : 0.0;
     grad_inp[inp_i] += tmp * elems_per_thread;
