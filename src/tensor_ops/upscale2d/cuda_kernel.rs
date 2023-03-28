@@ -43,9 +43,13 @@ macro_rules! pool_impl {
                 }
 
                 let inp_strides = self.dev.htod_copy(make_4d::<I>(inp.strides).into())?;
-                let inp_sizes = self.dev.htod_copy(make_4d_shape::<I>(inp.shape.concrete()).into())?;
+                let inp_sizes = self
+                    .dev
+                    .htod_copy(make_4d_shape::<I>(inp.shape.concrete()).into())?;
                 let out_strides = self.dev.htod_copy(make_4d::<O>(out.strides).into())?;
-                let out_sizes = self.dev.htod_copy(make_4d_shape::<O>(out.shape.concrete()).into())?;
+                let out_sizes = self
+                    .dev
+                    .htod_copy(make_4d_shape::<O>(out.shape.concrete()).into())?;
                 let fwd_fn = self.dev.get_func($Fwd, $Fwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(out.shape().num_elements() as u32);
                 let params = (
@@ -69,9 +73,13 @@ macro_rules! pool_impl {
                 grad_out: &Self::Vec<$TypeName>,
             ) -> Result<(), Self::Err> {
                 let inp_strides = self.dev.htod_copy(make_4d::<I>(inp.strides).into())?;
-                let inp_sizes = self.dev.htod_copy(make_4d_shape::<I>(inp.shape.concrete()).into())?;
+                let inp_sizes = self
+                    .dev
+                    .htod_copy(make_4d_shape::<I>(inp.shape.concrete()).into())?;
                 let out_strides = self.dev.htod_copy(make_4d::<O>(out.strides).into())?;
-                let out_sizes = self.dev.htod_copy(make_4d_shape::<O>(out.shape.concrete()).into())?;
+                let out_sizes = self
+                    .dev
+                    .htod_copy(make_4d_shape::<O>(out.shape.concrete()).into())?;
                 let bwd_fn = self.dev.get_func($Fwd, $Bwd).unwrap();
                 let cfg = LaunchConfig::for_num_elems(inp.shape().num_elements() as u32);
                 let params = (

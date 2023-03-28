@@ -1,4 +1,4 @@
-use crate::prelude::{ConstUpscale2D, NearestNeighbor, UpscaleMethod, Upscale2DKernel, Dim, Const};
+use crate::prelude::{Const, ConstUpscale2D, Dim, NearestNeighbor, Upscale2DKernel, UpscaleMethod};
 #[cfg(feature = "nightly")]
 use crate::prelude::{Dtype, HasErr, Tape, Tensor, ZerosTensor};
 
@@ -42,16 +42,16 @@ impl<
         M: UpscaleMethod,
         D: Upscale2DKernel<E, M> + ZerosTensor<E>,
         T: 'static + Tape<E, D>,
-    > Module<Tensor<(C, Const::<IH>, Const::<IW>), E, D, T>> for Upscale2DBy<H, W, M>
+    > Module<Tensor<(C, Const<IH>, Const<IW>), E, D, T>> for Upscale2DBy<H, W, M>
 where
-    Tensor<(C, Const::<{ IH * H }>, Const::<{ IW * W }>), E, D, T>: Sized,
+    Tensor<(C, Const<{ IH * H }>, Const<{ IW * W }>), E, D, T>: Sized,
 {
-    type Output = Tensor<(C, Const::<{ IH * H }>, Const::<{ IW * W }>), E, D, T>;
+    type Output = Tensor<(C, Const<{ IH * H }>, Const<{ IW * W }>), E, D, T>;
     type Error = <Self::Output as HasErr>::Err;
 
     fn try_forward(
         &self,
-        x: Tensor<(C, Const::<IH>, Const::<IW>), E, D, T>,
+        x: Tensor<(C, Const<IH>, Const<IW>), E, D, T>,
     ) -> Result<Self::Output, Self::Error> {
         x.try_upscale2d()
     }
@@ -69,16 +69,16 @@ impl<
         M: UpscaleMethod,
         D: Upscale2DKernel<E, M> + ZerosTensor<E>,
         T: 'static + Tape<E, D>,
-    > Module<Tensor<(B, C, Const::<IH>, Const::<IW>), E, D, T>> for Upscale2DBy<H, W, M>
+    > Module<Tensor<(B, C, Const<IH>, Const<IW>), E, D, T>> for Upscale2DBy<H, W, M>
 where
-    Tensor<(B, C, Const::<{ IH * H }>, Const::<{ IW * W }>), E, D, T>: Sized,
+    Tensor<(B, C, Const<{ IH * H }>, Const<{ IW * W }>), E, D, T>: Sized,
 {
-    type Output = Tensor<(B, C, Const::<{ IH * H }>, Const::<{ IW * W }>), E, D, T>;
+    type Output = Tensor<(B, C, Const<{ IH * H }>, Const<{ IW * W }>), E, D, T>;
     type Error = <Self::Output as HasErr>::Err;
 
     fn try_forward(
         &self,
-        x: Tensor<(B, C, Const::<IH>, Const::<IW>), E, D, T>,
+        x: Tensor<(B, C, Const<IH>, Const<IW>), E, D, T>,
     ) -> Result<Self::Output, Self::Error> {
         x.try_upscale2d()
     }
