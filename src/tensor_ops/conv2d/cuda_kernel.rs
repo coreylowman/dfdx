@@ -230,6 +230,9 @@ extern \"C\" __global__ void unfold_input(
     const size_t *strides, // 4d image strides
     $TY *patches // 6d (Batch, Channels, KernelSize, KernelSize, HeightOut, WidthOut)
 ) {
+    __shared__ $TY cache[128][op.kernel + 1][op.kernel + 1];
+    assert(threadIdx.x < 128);
+
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     size_t item_numel = op.batch * op.chan_in * op.h_out * op.w_out;
     if (i >= item_numel) {
@@ -246,16 +249,24 @@ extern \"C\" __global__ void unfold_input(
     idx /= op.chan_in;
     const size_t b = idx % op.batch;
 
-    $TY *patches_ptr = patches + b * (op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out) + c * (op.kernel * op.kernel * op.h_out * op.w_out) + oh * op.w_out + ow;
     const $TY *img_ptr = image + b * strides[0] + c * strides[1];
-
     for (int k1 = 0;k1 < op.kernel;k1++) {
         for (int k2 = 0;k2 < op.kernel;k2++) {
             const size_t y_plus_p = oh * op.stride + k1;
             const size_t y = y_plus_p - op.padding;
             const size_t x_plus_p = ow * op.stride + k2;
             const size_t x = x_plus_p - op.padding;
-            *patches_ptr = (y >= op.h_in || x >= op.w_in) ? 0.0 : img_ptr[y * strides[2] + x * strides[3]];
+            cache[threadIdx.x][k1][k2] = (y >= op.h_in || x >= op.w_in) ? 0.0 : img_ptr[y * strides[2] + x * strides[3]];
+        }
+    }
+
+    __syncthreads();
+
+    $TY *patches_ptr = patches + b * (op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out) + c * (op.kernel * op.kernel * op.h_out * op.w_out) + oh * op.w_out + ow;
+
+    for (int k1 = 0;k1 < op.kernel;k1++) {
+        for (int k2 = 0;k2 < op.kernel;k2++) {
+            *patches_ptr = cache[threadIdx.x][k1][k2];
             patches_ptr += op.h_out * op.w_out;
         }
     }
@@ -265,6 +276,9 @@ extern \"C\" __global__ void unfold_output(
     const $TY *image_out, // 4d (Batch, ChanOut, HeightOut, WidthOut)
     $TY *patches // 6d (Batch, ChanOut, KernelSize, KernelSize, HeightIn, WidthIn)
 ) {
+    __shared__ $TY cache[128][op.kernel + 1][op.kernel + 1];
+    assert(threadIdx.x < 128);
+
     const unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     const size_t item_numel = op.batch * op.chan_out * op.h_in * op.w_in;
     if (i >= item_numel) {
@@ -280,9 +294,7 @@ extern \"C\" __global__ void unfold_output(
     idx /= op.chan_out;
     const size_t b = idx % op.batch;
 
-    $TY *patches_ptr = patches + b * (op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in) + o * (op.kernel * op.kernel * op.h_in * op.w_in) + y * op.w_in + x;
     const $TY *img_ptr = image_out + b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out);
-
     for (int k1 = 0;k1 < op.kernel;k1++) {
         for (int k2 = 0;k2 < op.kernel;k2++) {
             const size_t oh_ks = y + op.padding;
@@ -295,7 +307,15 @@ extern \"C\" __global__ void unfold_output(
             const bool invalid = (oh_ks < k1 || oh_s % op.stride != 0 || oh >= op.h_out)
                 || (ow_ks < k2 || ow_s % op.stride != 0 || ow >= op.w_out);
 
-            *patches_ptr = invalid ? 0.0 : img_ptr[oh * op.w_out  + ow];
+            cache[threadIdx.x][k1][k2] = invalid ? 0.0 : img_ptr[oh * op.w_out  + ow];
+        }
+    }
+    
+    $TY *patches_ptr = patches + b * (op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in) + o * (op.kernel * op.kernel * op.h_in * op.w_in) + y * op.w_in + x;
+
+    for (int k1 = 0;k1 < op.kernel;k1++) {
+        for (int k2 = 0;k2 < op.kernel;k2++) {
+            *patches_ptr = cache[threadIdx.x][k1][k2];
             patches_ptr += op.h_in * op.w_in;
         }
     }
