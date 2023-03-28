@@ -4,7 +4,7 @@ use crate::{
     tensor_ops::reduction_utils::*,
 };
 
-use cudarc::driver::{CudaSlice, DeviceRepr, DeviceSlice, LaunchAsync, ValidAsZeroBits};
+use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, ValidAsZeroBits};
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/sum_to.ptx"));
 
@@ -43,9 +43,12 @@ where
 
         let (dims, strides) = permute_for_reductions::<_, Ax>(inp.shape.concrete(), inp.strides);
         let num_dims = dims.len();
+
         let mut info = Vec::with_capacity(num_dims * 2);
         info.extend(dims);
         info.extend(strides);
+        let info = self.dev.htod_copy(info)?;
+
         let elems_per_thread = E::from_usize(reduction_elems_per_thread::<_, Src>(
             inp.shape.concrete(),
             inp.strides,
@@ -60,16 +63,15 @@ where
 
         let cfg = launch_cfg(physical_numel as u32);
 
-        let info: CudaSlice<usize> = self.dev.htod_copy(info)?;
         let mut storage = self.dev.alloc_zeros::<E>(dst.num_elements())?;
         let params = (
             physical_numel,    // const size_t numel,
             num_dims,          // const size_t num_dims,
             elems_per_thread,  // const float elems_per_thread,
             chunk_len,         // const size_t chunk_len,
+            &info,             // const size_t *info,
             inp.data.as_ref(), // const float *inp,
-            &info,
-            &mut storage, // float *out
+            &mut storage,      // float *out
         );
         unsafe { fwd_fn.launch(cfg, params) }?;
         Ok(self.build_tensor(dst, dst_strides, storage))
@@ -103,14 +105,13 @@ where
         info.extend(inp.shape.concrete());
         info.extend(inp.strides);
         info.extend(out_strides);
-
         let info = self.dev.htod_copy(info)?;
 
         let params = (
             physical_numel,   // const size_t numel,
             Src::NUM_DIMS,    // const size_t num_dims,
             elems_per_thread, // const float elems_per_thread,
-            &info,            // const size_t *dims,
+            &info,            // const size_t *info,
             grad_inp,         // float *grad_inp,
             grad_out,         // const float *grad_out,
         );

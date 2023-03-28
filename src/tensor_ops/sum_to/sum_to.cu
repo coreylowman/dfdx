@@ -8,8 +8,8 @@ __device__ void sum_to_fwd(
     const size_t num_dims,
     const T elems_per_thread,
     const size_t chunk_len,
-    const T *inp,
     const size_t *info,
+    const T *inp,
     T *out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -60,11 +60,11 @@ extern "C" __global__ void FWD( \
     const size_t num_dims, \
     const TYPENAME elems_per_thread, \
     const size_t chunk_len, \
-    const TYPENAME *inp, \
     const size_t *info, \
+    const TYPENAME *inp, \
     TYPENAME *out \
 ) { \
-    sum_to_fwd(numel, num_dims, elems_per_thread, chunk_len, inp, info, out); \
+    sum_to_fwd(numel, num_dims, elems_per_thread, chunk_len, info, inp, out); \
 } \
 extern "C" __global__ void BWD( \
     const size_t numel, \

@@ -3,7 +3,7 @@ use crate::{
     tensor::{launch_cfg, unique_id, Cuda, Tensor},
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
-use cudarc::driver::{CudaSlice, DeviceRepr, DeviceSlice, LaunchAsync};
+use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync};
 use std::{sync::Arc, vec::Vec};
 
 pub trait UnaryOpCudaKernel<E> {
@@ -173,9 +173,9 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         info.extend(shape.concrete());
         info.extend(lhs.strides);
         info.extend(rhs.strides);
+        let info = self.dev.htod_copy(info)?;
 
         let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
-        let info: CudaSlice<usize> = self.dev.htod_copy(info)?;
         let params = (
             op,
             numel,             // const size_t numel,
@@ -241,7 +241,6 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         info.extend(out_dims2);
         info.extend(out_strides2);
         info.extend(lhs_strides2);
-
         let info = self.dev.htod_copy(info)?;
 
         self.par_stream.wait_for_default()?;
