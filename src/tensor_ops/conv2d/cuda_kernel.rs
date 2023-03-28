@@ -248,6 +248,7 @@ extern \"C\" __global__ void unfold_input(
     const size_t c = idx % op.chan_in;
     idx /= op.chan_in;
     const size_t b = idx % op.batch;
+    idx /= op.batch;
 
     const $TY *img_ptr = image + b * strides[0] + c * strides[1];
     for (int k1 = 0;k1 < op.kernel;k1++) {
@@ -293,6 +294,7 @@ extern \"C\" __global__ void unfold_output(
     const size_t o = idx % op.chan_out;
     idx /= op.chan_out;
     const size_t b = idx % op.batch;
+    idx /= op.batch;
 
     const $TY *img_ptr = image_out + b * (op.chan_out * op.h_out * op.w_out) + o * (op.h_out * op.w_out);
     for (int k1 = 0;k1 < op.kernel;k1++) {
@@ -310,6 +312,8 @@ extern \"C\" __global__ void unfold_output(
             cache[threadIdx.x][k1][k2] = invalid ? 0.0 : img_ptr[oh * op.w_out  + ow];
         }
     }
+
+    __syncthreads();
     
     $TY *patches_ptr = patches + b * (op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in) + o * (op.kernel * op.kernel * op.h_in * op.w_in) + y * op.w_in + x;
 
@@ -337,14 +341,13 @@ extern \"C\" __global__ void transpose_filters(
     idx /= op.kernel;
     const size_t k1 = idx % op.kernel;
     idx /= op.kernel;
-    const size_t c = idx % op.chan_in;
-    idx /= op.chan_in;
     const size_t o = idx % op.chan_out;
+    idx /= op.chan_out;
+    const size_t c = idx % op.chan_in;
 
-    size_t i_tr = c * (op.chan_out * op.kernel * op.kernel) + o * (op.kernel * op.kernel) + k1 * (op.kernel) + k2;
     size_t i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
 
-    filters_tr[i_tr] = filters[i_no];
+    filters_tr[i] = filters[i_no];
 }
 
 extern \"C\" __global__ void sum_transposed_filters(
@@ -370,11 +373,13 @@ extern \"C\" __global__ void sum_transposed_filters(
     size_t i_tr = c * (op.chan_out * op.kernel * op.kernel) + o * (op.kernel * op.kernel) + k1 * (op.kernel) + k2;
     size_t i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
 
+    const $TY *ptr = filters_tr + i_tr;
+
     $TY tmp = 0.0;
     for (int b = 0; b < op.batch; b++) {
-        tmp += filters_tr[b * numel + i_tr];
+        tmp += __ldg(ptr);
+        ptr += numel;
     }
-
     filters[i_no] += tmp;
 }
 ";
