@@ -69,7 +69,6 @@ where
     }
 }
 
-
 /// Create batches of items from an [Iterator]
 pub trait IteratorBatchExt: Iterator {
     /// Return an [Iterator] where the items are either:
