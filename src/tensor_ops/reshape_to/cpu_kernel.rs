@@ -21,9 +21,9 @@ impl<E: Dtype> super::ReshapeKernel<E> for Cpu {
     fn backward<Src: Shape, Dst: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Storage,
         out: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err> {
         let mut inp_idx = NdIndex::new(inp.shape, inp.strides);
         let mut out_idx = NdIndex::new(out.shape, out.strides);

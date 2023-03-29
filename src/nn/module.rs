@@ -1,7 +1,7 @@
 pub use super::build_module::BuildModule;
 pub use super::to_device::*;
 
-use crate::{shapes::Dtype, tensor::DeviceStorage, tensor_ops::Device};
+use crate::{shapes::Dtype, tensor_ops::Device};
 
 use super::tensor_collection::*;
 
@@ -55,7 +55,7 @@ pub trait BuildOnDevice<D: Device<E>, E: Dtype> {
 
 /// An extension trait that allows you to build a module with a device
 /// method. Also allows easy specification of Dtype.
-pub trait DeviceBuildExt: DeviceStorage {
+pub trait DeviceBuildExt {
     fn build_module<M: BuildOnDevice<Self, E>, E: Dtype>(&self) -> M::Built
     where
         Self: Device<E>,
@@ -69,7 +69,7 @@ pub trait DeviceBuildExt: DeviceStorage {
         M::try_build_on_device(self)
     }
 }
-impl<D: DeviceStorage> DeviceBuildExt for D {}
+impl<D> DeviceBuildExt for D {}
 
 /// Marker trait for modules with no updatable parameters. These have
 /// blanket impls for, and [ModuleMut]

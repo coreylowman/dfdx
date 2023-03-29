@@ -76,9 +76,9 @@ where
     fn backward<Src: Shape, Dst: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Storage,
         out: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
         let numel = grad_inp.len();

@@ -7,7 +7,7 @@ pub(super) mod cuda_kernel;
 
 use crate::{
     shapes::{Dim, Dtype, Shape},
-    tensor::{DeviceStorage, HasErr, Merge, PutTape, SplitTape, Tape, Tensor},
+    tensor::{DeviceAllocGrad, HasErr, Merge, PutTape, SplitTape, Tape, Tensor},
 };
 
 /// Matrix * Matrix, Vector * Matrix, Vector * Vector, and broadcasted/batched versions.
@@ -80,11 +80,11 @@ fn try_binary_op<
     Rhs: Shape,
     Out: Shape,
     E: Dtype,
-    D: DeviceStorage,
+    D: DeviceAllocGrad<E>,
     RhsTape: Tape<E, D>,
     LhsTape: Tape<E, D> + Merge<RhsTape>,
     Fwd: 'static + FnMut(&D, &Tensor<Lhs, E, D>, &Tensor<Rhs, E, D>) -> Result<Tensor<Out, E,D>, D::Err>,
-    Bwd: 'static + FnMut(&D, &Tensor<Lhs, E, D>, &mut D::Vec<E>, &Tensor<Rhs, E,D>, &mut D::Vec<E>, &D::Vec<E>) -> Result<(), D::Err>,
+    Bwd: 'static + FnMut(&D, &Tensor<Lhs, E, D>, &mut D::Storage, &Tensor<Rhs, E,D>, &mut D::Storage, &D::Storage) -> Result<(), D::Err>,
 >(
     lhs: Tensor<Lhs, E, D, LhsTape>,
     rhs: Tensor<Rhs, E, D, RhsTape>,
@@ -106,7 +106,7 @@ fn try_binary_op<
     Ok(out.put_tape(tape))
 }
 
-pub trait VecVecKernel<E: Dtype>: DeviceStorage {
+pub trait VecVecKernel<E: Dtype>: DeviceAllocGrad<E> {
     fn forward<M: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(M,), E, Self>,
@@ -116,10 +116,10 @@ pub trait VecVecKernel<E: Dtype>: DeviceStorage {
     fn backward<M: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(M,), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Storage,
         rhs: &Tensor<(N,), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 
@@ -132,7 +132,7 @@ impl<M: Dim, N: Dim, E: Dtype, D: VecVecKernel<E>, T: Tape<E, D> + Merge<R>, R: 
     }
 }
 
-pub trait VecMatKernel<E: Dtype>: DeviceStorage {
+pub trait VecMatKernel<E: Dtype>: DeviceAllocGrad<E> {
     fn forward<K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(K,), E, Self>,
@@ -142,10 +142,10 @@ pub trait VecMatKernel<E: Dtype>: DeviceStorage {
     fn backward<K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(K,), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Storage,
         rhs: &Tensor<(K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 
@@ -159,7 +159,7 @@ impl<K: Dim, N: Dim, E: Dtype, D: VecMatKernel<E>, T: Tape<E, D> + Merge<R>, R: 
     }
 }
 
-pub trait MatMatKernel<E: Dtype>: DeviceStorage {
+pub trait MatMatKernel<E: Dtype>: DeviceAllocGrad<E> {
     fn forward<M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(M, K), E, Self>,
@@ -169,10 +169,10 @@ pub trait MatMatKernel<E: Dtype>: DeviceStorage {
     fn backward<M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Storage,
         rhs: &Tensor<(K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 
@@ -196,7 +196,7 @@ where
     }
 }
 
-pub trait MatMatBrKernel<E: Dtype>: DeviceStorage {
+pub trait MatMatBrKernel<E: Dtype>: DeviceAllocGrad<E> {
     fn forward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
@@ -206,10 +206,10 @@ pub trait MatMatBrKernel<E: Dtype>: DeviceStorage {
     fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Storage,
         rhs: &Tensor<(K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 
@@ -233,7 +233,7 @@ where
     }
 }
 
-pub trait MatMatBatch3Kernel<E: Dtype>: DeviceStorage {
+pub trait MatMatBatch3Kernel<E: Dtype>: DeviceAllocGrad<E> {
     fn forward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
@@ -243,10 +243,10 @@ pub trait MatMatBatch3Kernel<E: Dtype>: DeviceStorage {
     fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Storage,
         rhs: &Tensor<(B, K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 
@@ -272,7 +272,7 @@ where
     }
 }
 
-pub trait MatMatBatch4Kernel<E: Dtype>: DeviceStorage {
+pub trait MatMatBatch4Kernel<E: Dtype>: DeviceAllocGrad<E> {
     fn forward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, S, M, K), E, Self>,
@@ -282,10 +282,10 @@ pub trait MatMatBatch4Kernel<E: Dtype>: DeviceStorage {
     fn backward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
         &self,
         lhs: &Tensor<(B, S, M, K), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Storage,
         rhs: &Tensor<(B, S, K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 

@@ -1,11 +1,11 @@
 use super::tensor_collection::*;
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{DeviceStorage, Tensor},
+    tensor::Tensor,
     tensor_ops::Device,
 };
 
-struct Builder<'a, D: DeviceStorage>(&'a D);
+struct Builder<'a, D>(&'a D);
 impl<'a, E: Dtype, D: Device<E>> TensorVisitor<E, D> for Builder<'a, D> {
     type Viewer = ();
     type Err = D::Err;

@@ -7,7 +7,7 @@ mod cpu_kernels;
 #[cfg(feature = "cuda")]
 mod cuda_kernels;
 
-pub trait CmpKernel<Op, E: Unit>: DeviceStorage {
+pub trait CmpKernel<Op, E: Unit>: DeviceStorage<E> + DeviceStorage<bool> {
     fn forward<S: Shape, T>(
         &self,
         lhs: &Tensor<S, E, Self, T>,
@@ -23,7 +23,7 @@ fn try_cmp_op<Op, S: Shape, E: Unit, D: CmpKernel<Op, E>, T: Tape<E, D>>(
     lhs.device.forward(lhs, rhs)
 }
 
-pub trait ScalarCmpKernel<Op, E: Unit>: DeviceStorage {
+pub trait ScalarCmpKernel<Op, E: Unit>: DeviceStorage<E> + DeviceStorage<bool> {
     fn forward<S: Shape, T>(
         &self,
         tensor: &Tensor<S, E, Self, T>,

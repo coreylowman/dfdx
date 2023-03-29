@@ -55,7 +55,7 @@ pub struct MultiHeadAttention<
     const K_DIM: usize,
     const V_DIM: usize,
     E: Dtype,
-    D: DeviceStorage,
+    D: DeviceStorage<E>,
 > {
     pub w_q: Linear<EMBED_DIM, K_DIM, E, D>,
     pub w_k: Linear<EMBED_DIM, K_DIM, E, D>,

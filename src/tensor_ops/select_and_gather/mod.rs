@@ -7,7 +7,7 @@ mod cuda_kernel;
 
 use crate::{shapes::*, tensor::*};
 
-pub trait ReplaceDimKernel<E: Dtype>: DeviceStorage {
+pub trait ReplaceDimKernel<E: Dtype>: DeviceAllocGrad<E> + DeviceStorage<usize> {
     fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
@@ -18,16 +18,16 @@ pub trait ReplaceDimKernel<E: Dtype>: DeviceStorage {
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut <Self as DeviceStorage<E>>::Storage,
         idx: &Tensor<Idx, usize, Self>,
         out: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &<Self as DeviceStorage<E>>::Storage,
     ) -> Result<(), Self::Err>
     where
         Src: ReplaceDimTo<Dst, Idx>;
 }
 
-pub trait RemoveDimKernel<E: Dtype>: DeviceStorage {
+pub trait RemoveDimKernel<E: Dtype>: DeviceAllocGrad<E> + DeviceStorage<usize> {
     fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
@@ -38,10 +38,10 @@ pub trait RemoveDimKernel<E: Dtype>: DeviceStorage {
     fn backward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut <Self as DeviceStorage<E>>::Storage,
         idx: &Tensor<Idx, usize, Self>,
         out: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &<Self as DeviceStorage<E>>::Storage,
     ) -> Result<(), Self::Err>
     where
         Src: RemoveDimTo<Dst, Idx>;
@@ -49,7 +49,7 @@ pub trait RemoveDimKernel<E: Dtype>: DeviceStorage {
 
 /// Select a single value from a single dimension, removing that dimension
 /// from the shape. Equivalent to `torch.select` from pytorch.
-pub trait SelectTo<D: DeviceStorage>: HasErr + HasShape {
+pub trait SelectTo<D: DeviceStorage<usize>>: HasErr + HasShape {
     /// Select values given indices.
     ///
     /// The shape of the index is the shape of the tensor up to the axis you
@@ -118,7 +118,7 @@ impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<D>
 
 /// Select multiple values from a single axis, replacing that dimension
 /// with a different one. Equivalent to `torch.gather` from pytorch.
-pub trait GatherTo<D: DeviceStorage>: HasErr + HasShape {
+pub trait GatherTo<D: DeviceStorage<usize>>: HasErr + HasShape {
     /// Gather values given indices.
     ///
     /// The shape of the index is the shape of the tensor up to the axis you

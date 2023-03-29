@@ -55,7 +55,7 @@ impl<E: Unit> ZerosTensor<E> for Cpu {
 }
 
 impl<E: Unit> ZeroFillStorage<E> for Cpu {
-    fn try_fill_with_zeros(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err> {
+    fn try_fill_with_zeros(&self, storage: &mut Self::Storage) -> Result<(), Self::Err> {
         storage.fill(Default::default());
         Ok(())
     }
@@ -125,7 +125,7 @@ impl<E: Unit> TriangleTensor<E> for Cpu {
 }
 
 impl<E: Unit> OneFillStorage<E> for Cpu {
-    fn try_fill_with_ones(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err> {
+    fn try_fill_with_ones(&self, storage: &mut Self::Storage) -> Result<(), Self::Err> {
         storage.fill(E::ONE);
         Ok(())
     }
@@ -151,7 +151,7 @@ impl<E: Unit> SampleTensor<E> for Cpu {
     }
     fn try_fill_with_distr<D: Distribution<E>>(
         &self,
-        storage: &mut Self::Vec<E>,
+        storage: &mut Self::Storage,
         distr: D,
     ) -> Result<(), Self::Err> {
         {

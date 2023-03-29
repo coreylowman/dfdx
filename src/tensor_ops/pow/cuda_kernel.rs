@@ -29,8 +29,8 @@ where
         &self,
         op: super::PowiKernelOp,
         inp: &Tensor<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err> {
         self.backward(
             super::PowfKernelOp(E::from_i32(op.0).unwrap()),

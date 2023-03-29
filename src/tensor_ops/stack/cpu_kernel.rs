@@ -48,8 +48,8 @@ impl<E: Dtype> super::StackKernel<E> for Cpu {
     }
     fn backward(
         &self,
-        mut grad_inp: Vec<&mut Self::Vec<E>>,
-        grad_out: &Self::Vec<E>,
+        mut grad_inp: Vec<&mut Self::Storage>,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err> {
         let mut offset = 0;
         for item in grad_inp.drain(..) {

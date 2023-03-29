@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{
     shapes::*,
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tape, Tensor, ZerosTensor},
+    tensor::{DeviceAllocGrad, HasErr, PutTape, SplitTape, Tape, Tensor, ZerosTensor},
 };
 
 #[repr(C)]
@@ -54,7 +54,7 @@ impl Conv2DOp {
     }
 }
 
-pub(super) trait Conv2DKernel<E: Dtype>: DeviceStorage {
+pub(super) trait Conv2DKernel<E: Dtype>: DeviceAllocGrad<E> {
     fn alloc<S: Shape>(&self, s: S) -> Result<Tensor<S, E, Self>, Self::Err>;
 
     fn forward<L: Shape, R: Shape, O: Shape>(
@@ -70,11 +70,11 @@ pub(super) trait Conv2DKernel<E: Dtype>: DeviceStorage {
         &self,
         op: Conv2DOp,
         lhs: &Tensor<L, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Storage,
         rhs: &Tensor<R, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
+        grad_rhs: &mut Self::Storage,
         out: &Tensor<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 

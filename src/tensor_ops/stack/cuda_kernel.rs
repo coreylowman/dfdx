@@ -68,8 +68,8 @@ where
 
     fn backward(
         &self,
-        mut grad_inp: Vec<&mut Self::Vec<E>>,
-        grad_out: &Self::Vec<E>,
+        mut grad_inp: Vec<&mut Self::Storage>,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
             self.dev.load_ptx(PTX.into(), Self::MOD, Self::FNS)?;

@@ -131,6 +131,7 @@ mod gradients;
 mod masks;
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
+pub(crate) mod quant_cpu;
 #[cfg(feature = "safetensors")]
 pub mod safetensors;
 mod unique_id;
@@ -141,6 +142,7 @@ mod tensor_impls;
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 
 pub use cpu::{Cpu, CpuError};
+pub use quant_cpu::QuantizedCpu;
 #[cfg(not(feature = "cuda"))]
 pub type AutoDevice = Cpu;
 
@@ -152,7 +154,7 @@ pub use cuda::{Cuda, CudaError};
 pub type AutoDevice = Cuda;
 
 pub use storage_traits::{AsArray, CopySlice, TensorFrom, TensorFromVec};
-pub use storage_traits::{DeviceStorage, HasErr};
+pub use storage_traits::{DeviceAllocGrad, DeviceStorage, DeviceTensorToVec, HasErr};
 pub use storage_traits::{OnesTensor, SampleTensor, TriangleTensor, ZerosTensor};
 
 pub use tensor_impls::{PutTape, SplitTape, Tensor, Trace, WithEmptyTape};

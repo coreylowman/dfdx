@@ -23,9 +23,9 @@ where
 {
     fn forward(
         &self,
-        a: &mut Self::Vec<E>,
+        a: &mut Self::Storage,
         alpha: E,
-        b: &Self::Vec<E>,
+        b: &Self::Storage,
         beta: E,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::FN, Self::FN) {

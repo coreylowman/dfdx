@@ -13,7 +13,7 @@ use std::ops::{BitAnd, BitOr, BitXor, Not};
 
 use super::Device;
 
-pub trait BooleanKernel: DeviceStorage + OnesTensor<bool> + ZerosTensor<bool> {
+pub trait BooleanKernel: DeviceStorage<bool> + OnesTensor<bool> + ZerosTensor<bool> {
     fn not<S: Shape>(
         &self,
         inp: &Tensor<S, bool, Self>,

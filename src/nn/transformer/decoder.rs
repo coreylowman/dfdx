@@ -64,7 +64,7 @@ pub struct TransformerDecoder<
     const FF_DIM: usize,
     const NUM_LAYERS: usize,
     E: Dtype,
-    D: DeviceStorage,
+    D: DeviceStorage<E>,
 >(pub Repeated<TransformerDecoderBlock<MODEL_DIM, NUM_HEADS, FF_DIM, E, D>, NUM_LAYERS>);
 
 impl<const M: usize, const H: usize, const F: usize, const L: usize, E: Dtype, D: Device<E>>
@@ -127,7 +127,7 @@ pub struct TransformerDecoderBlock<
     const NUM_HEADS: usize,
     const FF_DIM: usize,
     E: Dtype,
-    D: DeviceStorage,
+    D: DeviceStorage<E>,
 > {
     pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, E, D>,
     pub norm1: LayerNorm1D<MODEL_DIM, E, D>,

@@ -65,11 +65,11 @@ where
     fn update(
         &self,
         cfg: &RMSpropConfig<E>,
-        param: &mut Self::Vec<E>,
-        momentum: &mut Self::Vec<E>,
-        square_avg: &mut Self::Vec<E>,
-        grad_avg: &mut Self::Vec<E>,
-        grad: &Self::Vec<E>,
+        param: &mut Self::Storage,
+        momentum: &mut Self::Storage,
+        square_avg: &mut Self::Storage,
+        grad_avg: &mut Self::Storage,
+        grad: &Self::Storage,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FWD) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, &[Self::FWD])?;

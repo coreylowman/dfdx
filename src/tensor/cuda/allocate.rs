@@ -47,7 +47,7 @@ impl<E: Unit> ZerosTensor<E> for Cuda {
 }
 
 impl<E: Unit> ZeroFillStorage<E> for Cuda {
-    fn try_fill_with_zeros(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err> {
+    fn try_fill_with_zeros(&self, storage: &mut Self::Storage) -> Result<(), Self::Err> {
         self.dev.memset_zeros(storage)?;
         Ok(())
     }
@@ -96,7 +96,7 @@ where
 }
 
 impl<E: Unit> OneFillStorage<E> for Cuda {
-    fn try_fill_with_ones(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err> {
+    fn try_fill_with_ones(&self, storage: &mut Self::Storage) -> Result<(), Self::Err> {
         self.dev
             .htod_copy_into(std::vec![E::ONE; storage.len()], storage)?;
         Ok(())
@@ -122,7 +122,7 @@ where
     }
     fn try_fill_with_distr<D: rand_distr::Distribution<E>>(
         &self,
-        storage: &mut Self::Vec<E>,
+        storage: &mut Self::Storage,
         distr: D,
     ) -> Result<(), Self::Err> {
         let mut buf = Vec::with_capacity(storage.len());

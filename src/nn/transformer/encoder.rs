@@ -85,7 +85,7 @@ pub struct TransformerEncoderBlock<
     const NUM_HEADS: usize,
     const FF_DIM: usize,
     E: Dtype,
-    D: DeviceStorage,
+    D: DeviceStorage<E>,
 > {
     pub self_attn: MultiHeadAttention<MODEL_DIM, NUM_HEADS, MODEL_DIM, MODEL_DIM, E, D>,
     pub norm1: LayerNorm1D<MODEL_DIM, E, D>,

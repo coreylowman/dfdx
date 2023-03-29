@@ -50,12 +50,12 @@ where
 /// let _: Tensor<(Const<10>, Const<5>, Const<2>), f32, _> = model.forward(inputs);
 /// ```
 #[derive(Debug, Clone)]
-pub struct Embedding<const VOCAB: usize, const DIM: usize, E: Dtype, D: DeviceStorage> {
+pub struct Embedding<const VOCAB: usize, const DIM: usize, E: Dtype, D: DeviceStorage<E>> {
     /// Transposed weight matrix, shape (I, O)
     pub weight: Tensor<Rank2<VOCAB, DIM>, E, D>,
 }
 
-impl<const V: usize, const M: usize, E: Dtype, D: DeviceStorage> NonMutableModule
+impl<const V: usize, const M: usize, E: Dtype, D: DeviceStorage<E>> NonMutableModule
     for Embedding<V, M, E, D>
 {
 }

@@ -74,7 +74,7 @@ where
     }
 }
 
-pub trait ConcatKernel<E: Dtype>: DeviceStorage {
+pub trait ConcatKernel<E: Dtype>: DeviceAllocGrad<E> {
     fn forward<A: Shape, B: Shape>(
         &self,
         a: &Tensor<A, E, Self>,
@@ -85,11 +85,11 @@ pub trait ConcatKernel<E: Dtype>: DeviceStorage {
     fn backward<A: Shape, B: Shape>(
         &self,
         a: &Tensor<A, E, Self>,
-        grad_a: &mut Self::Vec<E>,
+        grad_a: &mut Self::Storage,
         b: &Tensor<B, E, Self>,
-        grad_b: &mut Self::Vec<E>,
+        grad_b: &mut Self::Storage,
         out: &Tensor<A::Catted, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>
     where
         A: ConcatShape<B>;

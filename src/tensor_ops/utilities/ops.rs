@@ -1,9 +1,9 @@
 use crate::{
     shapes::{Dtype, HasShape, Shape},
-    tensor::{DeviceStorage, Merge, PutTape, SplitTape, Tape, Tensor},
+    tensor::{DeviceAllocGrad, Merge, PutTape, SplitTape, Tape, Tensor},
 };
 
-pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
+pub trait UnaryKernel<Op, E: Dtype>: DeviceAllocGrad<E> {
     fn forward<S: Shape>(
         &self,
         op: Op,
@@ -13,12 +13,12 @@ pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
         &self,
         op: Op,
         inp: &Tensor<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 
-pub trait BinaryKernel<Op, E: Dtype>: DeviceStorage {
+pub trait BinaryKernel<Op, E: Dtype>: DeviceAllocGrad<E> {
     fn forward<S: Shape>(
         &self,
         op: Op,
@@ -30,10 +30,10 @@ pub trait BinaryKernel<Op, E: Dtype>: DeviceStorage {
         &self,
         op: Op,
         lhs: &Tensor<S, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Storage,
         rhs: &Tensor<S, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 

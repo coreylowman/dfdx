@@ -6,7 +6,7 @@ use std::{boxed::Box, vec::Vec};
 
 use super::{
     storage_traits::{AllocGrad, DeviceStorage},
-    unique_id, Tensor, UniqueId,
+    unique_id, DeviceAllocGrad, Tensor, UniqueId,
 };
 use crate::shapes::{Shape, Unit};
 
@@ -19,14 +19,14 @@ use crate::shapes::{Shape, Unit};
 /// 3. Access references to arrays
 /// 4. Access mutable references to arrays
 #[derive(Clone, Debug)]
-pub struct Gradients<E: Unit, D: DeviceStorage> {
+pub struct Gradients<E: Unit, D: DeviceStorage<E>> {
     /// Using BTreeMap for no-std support
-    gradient_by_id: BTreeMap<UniqueId, D::Vec<E>>,
+    gradient_by_id: BTreeMap<UniqueId, D::Storage>,
     /// Using BTreeSet for no-std support
     leaf_ids: Option<BTreeSet<UniqueId>>,
 }
 
-impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
+impl<E: Unit, D: DeviceStorage<E>> Gradients<E, D> {
     /// Creates a [Gradients] object without any leaf tensor ids.
     /// **This will never drop gradients for temporary tensors**.
     ///
@@ -44,12 +44,12 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     }
 }
 
-impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
+impl<E: Unit, D: DeviceAllocGrad<E>> Gradients<E, D> {
     /// Retrieves mutable gradient for `t`, allocating one if it isn't present.
     pub(crate) fn get_or_alloc_mut<S: Shape>(
         &mut self,
         t: &Tensor<S, E, D>,
-    ) -> Result<&mut D::Vec<E>, D::Err> {
+    ) -> Result<&mut D::Storage, D::Err> {
         self.try_alloc_for(t)?;
         Ok(self.get_mut(t))
     }
@@ -82,21 +82,21 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     pub(crate) fn get_ref_checked<S: Shape, T>(
         &self,
         t: &Tensor<S, E, D, T>,
-    ) -> Option<&D::Vec<E>> {
+    ) -> Option<&D::Storage> {
         self.gradient_by_id.get(&t.id)
     }
 
     /// Returns a mutable reference to the data associated with `t`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
-    pub(crate) fn get_mut<S: Shape, T>(&mut self, t: &Tensor<S, E, D, T>) -> &mut D::Vec<E> {
+    pub(crate) fn get_mut<S: Shape, T>(&mut self, t: &Tensor<S, E, D, T>) -> &mut D::Storage {
         self.gradient_by_id.get_mut(&t.id).unwrap()
     }
 
     /// Returns a mutable reference to the data associated with `t`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
-    pub(crate) fn get_ref<S: Shape, T>(&mut self, t: &Tensor<S, E, D, T>) -> &D::Vec<E> {
+    pub(crate) fn get_ref<S: Shape, T>(&mut self, t: &Tensor<S, E, D, T>) -> &D::Storage {
         self.gradient_by_id.get(&t.id).unwrap()
     }
 
@@ -125,7 +125,7 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
         &mut self,
         l: &Tensor<L, E, D>,
         r: &Tensor<R, E, D>,
-    ) -> (&mut D::Vec<E>, &D::Vec<E>) {
+    ) -> (&mut D::Storage, &D::Storage) {
         assert_ne!(l.id, r.id);
         let l_ptr = self.get_mut(l) as *mut _;
         let r_ptr = self.get_ref(r) as *const _;
@@ -140,7 +140,7 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
         l1: &Tensor<L1, E, D>,
         l2: &Tensor<L2, E, D>,
         r: &Tensor<R, E, D>,
-    ) -> (&mut D::Vec<E>, &mut D::Vec<E>, &D::Vec<E>) {
+    ) -> (&mut D::Storage, &mut D::Storage, &D::Storage) {
         assert_ne!(l1.id, l2.id);
         assert_ne!(l1.id, r.id);
         assert_ne!(l2.id, r.id);
@@ -158,17 +158,17 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
         &mut self,
         ls: &Vec<Tensor<L, E, D>>,
         r: &Tensor<R, E, D>,
-    ) -> (Vec<&mut D::Vec<E>>, &D::Vec<E>) {
+    ) -> (Vec<&mut D::Storage>, &D::Storage) {
         for i in 0..ls.len() {
             assert_ne!(ls[i].id, r.id);
             for j in (i + 1)..ls.len() {
                 assert_ne!(ls[i].id, ls[j].id);
             }
         }
-        let l_refs: Vec<&mut D::Vec<E>> = ls
+        let l_refs: Vec<&mut D::Storage> = ls
             .iter()
             .map(|l| {
-                let l_ptr = self.get_mut(l) as *mut D::Vec<E>;
+                let l_ptr = self.get_mut(l) as *mut D::Storage;
                 unsafe { &mut *l_ptr }
             })
             .collect();
@@ -179,14 +179,14 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
 }
 
 /// Contains a [Gradients] and list of backward operations.
-pub struct OwnedTape<E: Unit, D: DeviceStorage> {
+pub struct OwnedTape<E: Unit, D: DeviceStorage<E>> {
     /// A list of (Time, BackwardOp) pairs. The Time is used to ensure operations
     /// from merged tapes are executed in the correct order.
     pub(crate) operations: Vec<(UniqueId, BackwardOp<E, D, D::Err>)>,
     pub(crate) gradients: Gradients<E, D>,
 }
 
-impl<E: Unit, D: DeviceStorage> Default for OwnedTape<E, D> {
+impl<E: Unit, D: DeviceStorage<E>> Default for OwnedTape<E, D> {
     fn default() -> Self {
         Self {
             operations: Default::default(),
@@ -195,7 +195,7 @@ impl<E: Unit, D: DeviceStorage> Default for OwnedTape<E, D> {
     }
 }
 
-impl<E: Unit, D: DeviceStorage> std::fmt::Debug for OwnedTape<E, D> {
+impl<E: Unit, D: DeviceStorage<E>> std::fmt::Debug for OwnedTape<E, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OwnedTape")
             .field("num_operations", &self.operations.len())
@@ -204,7 +204,7 @@ impl<E: Unit, D: DeviceStorage> std::fmt::Debug for OwnedTape<E, D> {
     }
 }
 
-impl<E: Unit, D: DeviceStorage> OwnedTape<E, D> {
+impl<E: Unit, D: DeviceStorage<E>> OwnedTape<E, D> {
     /// Compute the [Gradients]! This just runs all the operations on a new [Gradients] struct.
     ///
     /// Note that this method takes ownership of self, so it can't be called twice!
@@ -227,7 +227,7 @@ type BackwardOp<E, D, Err> = Box<dyn FnOnce(&mut Gradients<E, D>) -> Result<(), 
 pub struct NoneTape;
 
 /// Something that can track backward operations.
-pub trait Tape<E: Unit, D: DeviceStorage>: Default + Merge<Self> + Merge<NoneTape> {
+pub trait Tape<E: Unit, D: DeviceStorage<E>>: Default + Merge<Self> + Merge<NoneTape> {
     /// Whether this object is currently tracking gradients. This is known at compile time.
     const OWNS_TAPE: bool;
     fn add_backward_op<F>(&mut self, operation: F)
@@ -236,7 +236,7 @@ pub trait Tape<E: Unit, D: DeviceStorage>: Default + Merge<Self> + Merge<NoneTap
     fn try_alloc_grad<S: Shape>(&mut self, t: &Tensor<S, E, D>) -> Result<(), D::Err>;
 }
 
-impl<E: Unit, D: DeviceStorage> Tape<E, D> for OwnedTape<E, D> {
+impl<E: Unit, D: DeviceAllocGrad<E>> Tape<E, D> for OwnedTape<E, D> {
     const OWNS_TAPE: bool = true;
     fn add_backward_op<F>(&mut self, operation: F)
     where
@@ -249,7 +249,7 @@ impl<E: Unit, D: DeviceStorage> Tape<E, D> for OwnedTape<E, D> {
     }
 }
 
-impl<E: Unit, D: DeviceStorage> Tape<E, D> for NoneTape {
+impl<E: Unit, D: DeviceStorage<E>> Tape<E, D> for NoneTape {
     const OWNS_TAPE: bool = false;
     fn add_backward_op<F>(&mut self, _: F)
     where
@@ -273,13 +273,13 @@ impl Merge<NoneTape> for NoneTape {
     }
 }
 
-impl<E: Unit, D: DeviceStorage> Merge<NoneTape> for OwnedTape<E, D> {
+impl<E: Unit, D: DeviceStorage<E>> Merge<NoneTape> for OwnedTape<E, D> {
     fn merge(self, _: NoneTape) -> Self {
         self
     }
 }
 
-impl<E: Unit, D: DeviceStorage> Merge<OwnedTape<E, D>> for OwnedTape<E, D> {
+impl<E: Unit, D: DeviceStorage<E>> Merge<OwnedTape<E, D>> for OwnedTape<E, D> {
     fn merge(mut self, mut other: Self) -> Self {
         self.gradients
             .gradient_by_id

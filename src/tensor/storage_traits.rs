@@ -17,17 +17,21 @@ pub trait AsVec<E> {
 }
 
 /// Something that can store nd arrays for a given [Shape] and [Dtype]
-pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
+pub trait DeviceStorage<E: Unit>: 'static + std::fmt::Debug + Default + Clone + HasErr {
     /// Generic storage type
-    type Vec<E: Unit>: 'static + std::fmt::Debug + Clone + Send + Sync;
+    type Storage: 'static + std::fmt::Debug + Clone + Send + Sync;
 
     /// Generates a random u64 number
     fn random_u64(&self) -> u64;
+}
 
+pub trait DeviceAllocGrad<E: Unit>: DeviceStorage<E> {
     /// Allocates a gradient for the given nd array
-    fn try_alloc_grad<E: Unit>(&self, storage: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err>;
+    fn try_alloc_grad(&self, storage: &Self::Storage) -> Result<Self::Storage, Self::Err>;
+}
 
-    fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E>;
+pub trait DeviceTensorToVec<E: Unit>: DeviceStorage<E> {
+    fn tensor_to_vec<S: Shape, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E>;
 }
 
 /// Internal trait - Represents something that can allocate its own gradient.
@@ -36,15 +40,15 @@ pub trait AllocGrad: HasErr {
     fn try_alloc_grad(&self) -> Result<Self::Gradient, Self::Err>;
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage, T> AllocGrad for Tensor<S, E, D, T> {
-    type Gradient = D::Vec<E>;
+impl<S: Shape, E: Unit, D: DeviceAllocGrad<E>, T> AllocGrad for Tensor<S, E, D, T> {
+    type Gradient = D::Storage;
     fn try_alloc_grad(&self) -> Result<Self::Gradient, D::Err> {
         self.device.try_alloc_grad(self.data.as_ref())
     }
 }
 
 /// Enables copying data into and out of tensors
-pub trait CopySlice<E: Unit>: DeviceStorage {
+pub trait CopySlice<E: Unit>: DeviceStorage<E> {
     fn copy_from<S: Shape, T>(dst: &mut Tensor<S, E, Self, T>, src: &[E]);
     fn copy_into<S: Shape, T>(src: &Tensor<S, E, Self, T>, dst: &mut [E]);
 }
@@ -80,7 +84,7 @@ impl<S: Shape, E: Unit, D: CopySlice<E>, T> Tensor<S, E, D, T> {
 }
 
 /// Construct tensors filled with zeros.
-pub trait ZerosTensor<E: Unit>: DeviceStorage {
+pub trait ZerosTensor<E: Unit>: DeviceStorage<E> {
     /// Creates a tensor filled with zeros.
     /// ```rust
     /// # use dfdx::prelude::*;
@@ -120,12 +124,12 @@ pub trait ZerosTensor<E: Unit>: DeviceStorage {
     fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 }
 
-pub trait ZeroFillStorage<E: Unit>: DeviceStorage {
-    fn try_fill_with_zeros(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err>;
+pub trait ZeroFillStorage<E: Unit>: DeviceStorage<E> {
+    fn try_fill_with_zeros(&self, storage: &mut Self::Storage) -> Result<(), Self::Err>;
 }
 
 /// Construct tensors filled with ones.
-pub trait OnesTensor<E: Unit>: DeviceStorage {
+pub trait OnesTensor<E: Unit>: DeviceStorage<E> {
     /// Creates a tensor filled with ones.
     /// ```rust
     /// # use dfdx::prelude::*;
@@ -165,12 +169,12 @@ pub trait OnesTensor<E: Unit>: DeviceStorage {
     fn try_ones_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err>;
 }
 
-pub trait OneFillStorage<E: Unit>: DeviceStorage {
-    fn try_fill_with_ones(&self, storage: &mut Self::Vec<E>) -> Result<(), Self::Err>;
+pub trait OneFillStorage<E: Unit>: DeviceStorage<E> {
+    fn try_fill_with_ones(&self, storage: &mut Self::Storage) -> Result<(), Self::Err>;
 }
 
 /// Build upper & lower triangle tensors.
-pub trait TriangleTensor<E: Unit>: DeviceStorage {
+pub trait TriangleTensor<E: Unit>: DeviceStorage<E> {
     /// Build a tensor containing the upper triangle part of each lowest 2D matrix
     /// set to the given value, along the given diagonal. The other values will be `E::default()`.
     ///
@@ -305,7 +309,7 @@ pub trait TriangleTensor<E: Unit>: DeviceStorage {
 }
 
 /// Constructs tensors filled with random values from a given distribution.
-pub trait SampleTensor<E: Unit>: DeviceStorage {
+pub trait SampleTensor<E: Unit>: DeviceStorage<E> {
     /// Samples a const tensor from a uniform distribution
     fn sample_uniform<S: ConstShape>(&self) -> Tensor<S, E, Self>
     where
@@ -367,12 +371,12 @@ pub trait SampleTensor<E: Unit>: DeviceStorage {
     /// Fills tensor storage with data from a given distribution
     fn try_fill_with_distr<D: Distribution<E>>(
         &self,
-        storage: &mut Self::Vec<E>,
+        storage: &mut Self::Storage,
         distr: D,
     ) -> Result<(), Self::Err>;
 }
 
-pub trait TensorToArray<S: Shape, E: Unit>: DeviceStorage {
+pub trait TensorToArray<S: Shape, E: Unit>: DeviceStorage<E> {
     type Array: std::fmt::Debug + PartialEq;
     fn tensor_to_array<T>(&self, tensor: &Tensor<S, E, Self, T>) -> Self::Array;
 }
@@ -390,14 +394,14 @@ impl<S: Shape, E: Unit, D: TensorToArray<S, E>, T> AsArray for Tensor<S, E, D, T
     }
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage, T> Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceTensorToVec<E>, T> Tensor<S, E, D, T> {
     pub fn as_vec(&self) -> std::vec::Vec<E> {
         self.device.tensor_to_vec(self)
     }
 }
 
 /// Construct tensors from rust vectors. This trait is only used to implement TensorFrom.
-pub trait TensorFromVec<E: Unit>: DeviceStorage {
+pub trait TensorFromVec<E: Unit>: DeviceStorage<E> {
     fn tensor_from_vec<S: Shape>(&self, src: Vec<E>, shape: S) -> Tensor<S, E, Self> {
         self.try_tensor_from_vec::<S>(src, shape).unwrap()
     }
@@ -410,7 +414,7 @@ pub trait TensorFromVec<E: Unit>: DeviceStorage {
 }
 
 /// Construct tensors from rust data
-pub trait TensorFrom<Src, S: Shape, E: Unit>: DeviceStorage {
+pub trait TensorFrom<Src, S: Shape, E: Unit>: DeviceStorage<E> {
     /// Create a tensor from rust data
     /// ```rust
     /// # use dfdx::prelude::*;
@@ -428,22 +432,22 @@ pub trait TensorFrom<Src, S: Shape, E: Unit>: DeviceStorage {
     fn try_tensor(&self, src: Src) -> Result<Tensor<S, E, Self>, Self::Err>;
 }
 
-impl<E: Unit, D: DeviceStorage + TensorFromVec<E>> TensorFrom<E, Rank0, E> for D {
+impl<E: Unit, D: DeviceStorage<E> + TensorFromVec<E>> TensorFrom<E, Rank0, E> for D {
     fn try_tensor(&self, src: E) -> Result<Tensor<Rank0, E, Self>, Self::Err> {
         self.try_tensor_from_vec(vec![src], ())
     }
 }
 
-impl<E: Unit, const M: usize, D: DeviceStorage + TensorFromVec<E>> TensorFrom<[E; M], Rank1<M>, E>
-    for D
+impl<E: Unit, const M: usize, D: DeviceStorage<E> + TensorFromVec<E>>
+    TensorFrom<[E; M], Rank1<M>, E> for D
 {
     fn try_tensor(&self, src: [E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
         self.try_tensor(&src)
     }
 }
 
-impl<E: Unit, const M: usize, D: DeviceStorage + TensorFromVec<E>> TensorFrom<&[E; M], Rank1<M>, E>
-    for D
+impl<E: Unit, const M: usize, D: DeviceStorage<E> + TensorFromVec<E>>
+    TensorFrom<&[E; M], Rank1<M>, E> for D
 {
     fn try_tensor(&self, src: &[E; M]) -> Result<Tensor<Rank1<M>, E, Self>, Self::Err> {
         self.try_tensor_from_vec(src.to_vec(), (Const::<M>,))
@@ -452,7 +456,7 @@ impl<E: Unit, const M: usize, D: DeviceStorage + TensorFromVec<E>> TensorFrom<&[
 
 impl<E: Unit, const M: usize, const N: usize, D> TensorFrom<[[E; N]; M], Rank2<M, N>, E> for D
 where
-    D: DeviceStorage + TensorFromVec<E>,
+    D: DeviceStorage<E> + TensorFromVec<E>,
 {
     fn try_tensor(&self, src: [[E; N]; M]) -> Result<Tensor<Rank2<M, N>, E, Self>, Self::Err> {
         let vec: Vec<E> = src.iter().flat_map(|v| v.iter().copied()).collect();
@@ -464,7 +468,7 @@ where
 impl<E: Unit, const M: usize, const N: usize, const O: usize, D>
     TensorFrom<[[[E; O]; N]; M], Rank3<M, N, O>, E> for D
 where
-    D: DeviceStorage + TensorFromVec<E>,
+    D: DeviceStorage<E> + TensorFromVec<E>,
 {
     fn try_tensor(
         &self,
@@ -483,7 +487,7 @@ where
 impl<E: Unit, const M: usize, const N: usize, const O: usize, const P: usize, D>
     TensorFrom<[[[[E; P]; O]; N]; M], Rank4<M, N, O, P>, E> for D
 where
-    D: DeviceStorage + TensorFromVec<E>,
+    D: DeviceStorage<E> + TensorFromVec<E>,
 {
     fn try_tensor(
         &self,
@@ -500,13 +504,17 @@ where
     }
 }
 
-impl<E: Unit, S: ConstShape, D: DeviceStorage + TensorFromVec<E>> TensorFrom<Vec<E>, S, E> for D {
+impl<E: Unit, S: ConstShape, D: DeviceStorage<E> + TensorFromVec<E>> TensorFrom<Vec<E>, S, E>
+    for D
+{
     fn try_tensor(&self, src: Vec<E>) -> Result<Tensor<S, E, Self>, Self::Err> {
         self.try_tensor_from_vec(src, S::default())
     }
 }
 
-impl<E: Unit, S: Shape, D: DeviceStorage + TensorFromVec<E>> TensorFrom<(Vec<E>, S), S, E> for D {
+impl<E: Unit, S: Shape, D: DeviceStorage<E> + TensorFromVec<E>> TensorFrom<(Vec<E>, S), S, E>
+    for D
+{
     fn try_tensor(&self, (src, shape): (Vec<E>, S)) -> Result<Tensor<S, E, Self>, Self::Err> {
         self.try_tensor_from_vec(src, shape)
     }

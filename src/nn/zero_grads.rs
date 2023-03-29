@@ -50,7 +50,7 @@ pub trait ZeroGrads<E: Dtype, D: Device<E>>: TensorCollection<E, D> {
 }
 impl<E: Dtype, D: Device<E>, M: TensorCollection<E, D>> ZeroGrads<E, D> for M {}
 
-struct ZeroGradOp<'a, E: Unit, D: DeviceStorage> {
+struct ZeroGradOp<'a, E: Unit, D: DeviceStorage<E>> {
     updated: Vec<UniqueId>,
     gradients: &'a mut Gradients<E, D>,
 }

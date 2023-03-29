@@ -4,7 +4,7 @@ mod cuda_kernel;
 
 use crate::prelude::{DeviceStorage, Shape, Tensor, Unit};
 
-pub trait ToDtypeKernel<E1: Unit, E2: Unit>: DeviceStorage {
+pub trait ToDtypeKernel<E1: Unit, E2: Unit>: DeviceStorage<E1> + DeviceStorage<E2> {
     fn forward<S: Shape>(inp: Tensor<S, E1, Self>) -> Result<Tensor<S, E2, Self>, Self::Err>;
 }
 
@@ -28,7 +28,7 @@ pub fn to_dtype<E2: Unit, S: Shape, E1: Unit, D: ToDtypeKernel<E1, E2>>(
     tensor.to_dtype()
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage> Tensor<S, E, D> {
+impl<S: Shape, E: Unit, D: DeviceStorage<E>> Tensor<S, E, D> {
     pub fn try_to_dtype<E2: Unit>(self) -> Result<Tensor<S, E2, D>, D::Err>
     where
         D: ToDtypeKernel<E, E2>,

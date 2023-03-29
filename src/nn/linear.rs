@@ -43,7 +43,7 @@ where
 /// let _: Tensor<Rank2<10, 2>, f32, _> = model.forward(dev.zeros::<Rank2<10, 5>>());
 /// ```
 #[derive(Debug, Clone)]
-pub struct Linear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> {
+pub struct Linear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage<E>> {
     /// Transposed weight matrix, shape (I, O)
     pub weight: Tensor<Rank2<O, I>, E, D>,
 
@@ -51,7 +51,7 @@ pub struct Linear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> {
     pub bias: Tensor<Rank1<O>, E, D>,
 }
 
-impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> NonMutableModule
+impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage<E>> NonMutableModule
     for Linear<I, O, E, D>
 {
 }
@@ -107,7 +107,7 @@ where
 }
 
 #[derive(Clone, Debug)]
-struct Bias1D<'a, const M: usize, E: Dtype, D: DeviceStorage> {
+struct Bias1D<'a, const M: usize, E: Dtype, D: DeviceStorage<E>> {
     beta: &'a Tensor<Rank1<M>, E, D>,
 }
 

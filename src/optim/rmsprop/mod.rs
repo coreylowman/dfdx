@@ -78,7 +78,7 @@ impl<E: Dtype> Default for RMSpropConfig<E> {
 ///     weight_decay: Some(WeightDecay::Decoupled(1e-1)),
 /// });
 #[derive(Debug)]
-pub struct RMSprop<M, E: Dtype, D: DeviceStorage> {
+pub struct RMSprop<M, E: Dtype, D: DeviceStorage<E>> {
     /// Hyperparameter configuration
     pub cfg: RMSpropConfig<E>,
 
@@ -90,7 +90,7 @@ pub struct RMSprop<M, E: Dtype, D: DeviceStorage> {
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype, D: DeviceStorage> RMSprop<M, E, D> {
+impl<M, E: Dtype, D: DeviceStorage<E>> RMSprop<M, E, D> {
     /// Constructs using hyperparameters from `cfg`.
     pub fn new(_model: &M, cfg: RMSpropConfig<E>) -> Self {
         Self {
@@ -104,15 +104,15 @@ impl<M, E: Dtype, D: DeviceStorage> RMSprop<M, E, D> {
     }
 }
 
-pub trait RMSpropKernel<E: Dtype>: DeviceStorage {
+pub trait RMSpropKernel<E: Dtype>: DeviceStorage<E> {
     fn update(
         &self,
         cfg: &RMSpropConfig<E>,
-        param: &mut Self::Vec<E>,
-        momentum: &mut Self::Vec<E>,
-        square_avg: &mut Self::Vec<E>,
-        grad_avg: &mut Self::Vec<E>,
-        grad: &Self::Vec<E>,
+        param: &mut Self::Storage,
+        momentum: &mut Self::Storage,
+        square_avg: &mut Self::Storage,
+        grad_avg: &mut Self::Storage,
+        grad: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 

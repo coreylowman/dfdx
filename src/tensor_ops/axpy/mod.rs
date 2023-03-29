@@ -43,12 +43,12 @@ impl<S: Shape, E: Unit, D: AxpyKernel<E>> Tensor<S, E, D> {
     }
 }
 
-pub trait AxpyKernel<E: Unit>: DeviceStorage {
+pub trait AxpyKernel<E: Unit>: DeviceStorage<E> {
     fn forward(
         &self,
-        a: &mut Self::Vec<E>,
+        a: &mut Self::Storage,
         alpha: E,
-        b: &Self::Vec<E>,
+        b: &Self::Storage,
         beta: E,
     ) -> Result<(), Self::Err>;
 }

@@ -71,7 +71,7 @@ impl<E: Dtype> Default for AdamConfig<E> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Adam<M, E: Dtype, D: DeviceStorage> {
+pub struct Adam<M, E: Dtype, D: DeviceStorage<E>> {
     /// Hyperparameter configuration
     pub cfg: AdamConfig<E>,
 
@@ -82,7 +82,7 @@ pub struct Adam<M, E: Dtype, D: DeviceStorage> {
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype, D: DeviceStorage> Adam<M, E, D> {
+impl<M, E: Dtype, D: DeviceStorage<E>> Adam<M, E, D> {
     /// Constructs using hyperparameters from `cfg`.
     pub fn new(_model: &M, cfg: AdamConfig<E>) -> Self {
         Self {
@@ -95,15 +95,15 @@ impl<M, E: Dtype, D: DeviceStorage> Adam<M, E, D> {
     }
 }
 
-pub trait AdamKernel<E: Dtype>: DeviceStorage {
+pub trait AdamKernel<E: Dtype>: DeviceStorage<E> {
     fn update(
         &self,
         t: i32,
         cfg: &AdamConfig<E>,
-        param: &mut Self::Vec<E>,
-        moment1: &mut Self::Vec<E>,
-        moment2: &mut Self::Vec<E>,
-        grad: &Self::Vec<E>,
+        param: &mut Self::Storage,
+        moment1: &mut Self::Storage,
+        moment2: &mut Self::Storage,
+        grad: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 

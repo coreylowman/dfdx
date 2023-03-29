@@ -44,8 +44,8 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
         &self,
         op: Op,
         inp: &Tensor<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err> {
         debug_assert_eq!(grad_inp.len(), grad_out.len());
         debug_assert_eq!(inp.data.len(), grad_out.len());
@@ -79,10 +79,10 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
         &self,
         op: Op,
         lhs: &Tensor<S, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Storage,
         rhs: &Tensor<S, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_rhs: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err> {
         let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
         let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);

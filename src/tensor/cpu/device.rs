@@ -60,12 +60,8 @@ impl HasErr for Cpu {
     type Err = CpuError;
 }
 
-impl DeviceStorage for Cpu {
-    type Vec<E: Unit> = Vec<E>;
-
-    fn try_alloc_grad<E: Unit>(&self, other: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err> {
-        self.try_alloc_zeros(other.len())
-    }
+impl<E: Unit> DeviceStorage<E> for Cpu {
+    type Storage = Vec<E>;
 
     fn random_u64(&self) -> u64 {
         #[cfg(not(feature = "no-std"))]
@@ -77,8 +73,16 @@ impl DeviceStorage for Cpu {
             self.rng.lock().gen()
         }
     }
+}
 
-    fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
+impl<E: Unit> DeviceAllocGrad<E> for Cpu {
+    fn try_alloc_grad(&self, other: &Self::Storage) -> Result<Self::Storage, Self::Err> {
+        self.try_alloc_zeros(other.len())
+    }
+}
+
+impl<E: Unit> DeviceTensorToVec<E> for Cpu {
+    fn tensor_to_vec<S: Shape, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
         let mut buf = Vec::with_capacity(tensor.shape.num_elements());
         let mut iter = tensor.iter();
         while let Some(v) = iter.next() {

@@ -6,7 +6,7 @@ use crate::{
 use std::vec::Vec;
 
 /// Generates a tensor with ordered data from 0 to `N`.
-pub trait Arange<E: Dtype>: DeviceStorage + ZerosTensor<E> + TensorFromVec<E> {
+pub trait Arange<E: Dtype>: DeviceStorage<E> + ZerosTensor<E> + TensorFromVec<E> {
     /// Generates a tensor with ordered data from 0 to `N`.
     ///
     /// Const sized tensor:

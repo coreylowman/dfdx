@@ -10,9 +10,9 @@ impl<E: Dtype> SgdKernel<E> for Cpu {
     fn update(
         &self,
         cfg: &SgdConfig<E>,
-        param: &mut Self::Vec<E>,
-        velocity: &mut Self::Vec<E>,
-        grad: &Self::Vec<E>,
+        param: &mut Self::Storage,
+        velocity: &mut Self::Storage,
+        grad: &Self::Storage,
     ) -> Result<(), Self::Err> {
         for ((p, mut g), v) in param
             .iter_mut()

@@ -39,9 +39,9 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Storage,
         _: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>
     where
         Src: ReduceShapeTo<Dst, Ax>,

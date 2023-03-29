@@ -50,9 +50,9 @@ macro_rules! pool_impl {
                 &self,
                 op: super::Pool2DOp,
                 inp: &Tensor<I, $TypeName, Self>,
-                grad_inp: &mut Self::Vec<$TypeName>,
+                grad_inp: &mut Self::Storage<$TypeName>,
                 out: &Tensor<O, $TypeName, Self>,
-                grad_out: &Self::Vec<$TypeName>,
+                grad_out: &Self::Storage<$TypeName>,
             ) -> Result<(), Self::Err> {
                 let inp_strides = self.dev.htod_copy(make_4d::<I>(inp.strides).into())?;
                 let out_strides = self.dev.htod_copy(make_4d::<O>(out.strides).into())?;

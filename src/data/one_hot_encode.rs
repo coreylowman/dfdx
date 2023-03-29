@@ -7,7 +7,7 @@ use crate::{
 
 /// One hot encodes an array of class labels into a 2d tensor of probability
 /// vectors. This can be used in tandem with [crate::losses::cross_entropy_with_logits_loss()].
-pub trait OneHotEncode<E: Dtype>: DeviceStorage + ZerosTensor<E> + TensorFromVec<E> {
+pub trait OneHotEncode<E: Dtype>: DeviceStorage<E> + ZerosTensor<E> + TensorFromVec<E> {
     /// One hot encodes an array or vec into a tensor.
     ///
     /// Arguments:
@@ -92,4 +92,4 @@ pub trait OneHotEncode<E: Dtype>: DeviceStorage + ZerosTensor<E> + TensorFromVec
         self.tensor_from_vec(data, (l, n))
     }
 }
-impl<E: Dtype, D: DeviceStorage + ZerosTensor<E> + TensorFromVec<E>> OneHotEncode<E> for D {}
+impl<E: Dtype, D: DeviceStorage<E> + ZerosTensor<E> + TensorFromVec<E>> OneHotEncode<E> for D {}

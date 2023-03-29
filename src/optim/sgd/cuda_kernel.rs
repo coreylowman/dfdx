@@ -55,9 +55,9 @@ where
     fn update(
         &self,
         cfg: &SgdConfig<E>,
-        param: &mut Self::Vec<E>,
-        velocity: &mut Self::Vec<E>,
-        grad: &Self::Vec<E>,
+        param: &mut Self::Storage,
+        velocity: &mut Self::Storage,
+        grad: &Self::Storage,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FWD) {
             self.dev.load_ptx(PTX_SRC.into(), Self::MOD, &[Self::FWD])?;

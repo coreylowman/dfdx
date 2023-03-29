@@ -61,8 +61,8 @@ where
         &self,
         op: super::DropoutKernelOp<E>,
         inp: &Tensor<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err> {
         let noise = {
             let mut rng = StdRng::seed_from_u64(op.seed);

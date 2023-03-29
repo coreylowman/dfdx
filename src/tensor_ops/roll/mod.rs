@@ -14,7 +14,7 @@ pub struct RollOp {
     amount: usize,
 }
 
-pub trait RollKernel<E: Dtype>: DeviceStorage {
+pub trait RollKernel<E: Dtype>: DeviceAllocGrad<E> {
     fn forward<S: Shape>(
         &self,
         op: RollOp,
@@ -24,8 +24,8 @@ pub trait RollKernel<E: Dtype>: DeviceStorage {
         &self,
         op: RollOp,
         inp: &Tensor<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 

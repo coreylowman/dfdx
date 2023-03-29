@@ -112,7 +112,7 @@ impl<E: Dtype> Default for SgdConfig<E> {
 ///
 /// See module level documentation at [crate::optim] for examples of how to actually use an optimizer.
 #[derive(Debug)]
-pub struct Sgd<M, E: Dtype, D: DeviceStorage> {
+pub struct Sgd<M, E: Dtype, D: DeviceStorage<E>> {
     /// Hyperparameter configuration
     pub cfg: SgdConfig<E>,
 
@@ -121,7 +121,7 @@ pub struct Sgd<M, E: Dtype, D: DeviceStorage> {
     marker: PhantomData<*const M>,
 }
 
-impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
+impl<M, E: Dtype, D: DeviceStorage<E>> Sgd<M, E, D> {
     /// Constructs using hyperparameters from `cfg`
     pub fn new(_model: &M, cfg: SgdConfig<E>) -> Self {
         Self {
@@ -132,13 +132,13 @@ impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
     }
 }
 
-pub trait SgdKernel<E: Dtype>: DeviceStorage {
+pub trait SgdKernel<E: Dtype>: DeviceStorage<E> {
     fn update(
         &self,
         cfg: &SgdConfig<E>,
-        param: &mut Self::Vec<E>,
-        velocity: &mut Self::Vec<E>,
-        grad: &Self::Vec<E>,
+        param: &mut Self::Storage,
+        velocity: &mut Self::Storage,
+        grad: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 

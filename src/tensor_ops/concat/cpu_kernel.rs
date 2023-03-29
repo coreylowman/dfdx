@@ -36,11 +36,11 @@ impl<E: Dtype> super::ConcatKernel<E> for Cpu {
     fn backward<A: Shape, B: Shape>(
         &self,
         _: &Tensor<A, E, Self>,
-        grad_a: &mut Self::Vec<E>,
+        grad_a: &mut Self::Storage,
         _: &Tensor<B, E, Self>,
-        grad_b: &mut Self::Vec<E>,
+        grad_b: &mut Self::Storage,
         _: &Tensor<A::Catted, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>
     where
         A: super::ConcatShape<B>,

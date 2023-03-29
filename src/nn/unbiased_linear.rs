@@ -43,12 +43,12 @@ where
 /// let _: Tensor<Rank2<10, 2>, f32, _> = model.forward(dev.zeros::<Rank2<10, 5>>());
 /// ```
 #[derive(Debug, Clone)]
-pub struct UnbiasedLinear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> {
+pub struct UnbiasedLinear<const I: usize, const O: usize, E: Dtype, D: DeviceStorage<E>> {
     /// Transposed weight matrix, shape (I, O)
     pub weight: Tensor<Rank2<O, I>, E, D>,
 }
 
-impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> NonMutableModule
+impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage<E>> NonMutableModule
     for UnbiasedLinear<I, O, E, D>
 {
 }

@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{
     shapes::*,
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tape, Tensor, ZerosTensor},
+    tensor::{DeviceAllocGrad, HasErr, PutTape, SplitTape, Tape, Tensor, ZerosTensor},
 };
 
 use super::conv2d::ConvAlgebra;
@@ -42,7 +42,7 @@ impl Pool2DOp {
 
 macro_rules! pool2d {
     (Kernel=$Kernel:ident, ConstTrait=$ConstTrait:ident, TryTrait=$TryTrait:ident, Meth=$Meth:ident, TryMeth=$TryMeth:ident) => {
-        pub trait $Kernel<E: Unit>: DeviceStorage {
+        pub trait $Kernel<E: Unit>: DeviceAllocGrad<E> {
             fn forward<I: Shape, O: Shape>(
                 &self,
                 op: Pool2DOp,
@@ -54,9 +54,9 @@ macro_rules! pool2d {
                 &self,
                 op: Pool2DOp,
                 inp: &Tensor<I, E, Self>,
-                grad_inp: &mut Self::Vec<E>,
+                grad_inp: &mut Self::Storage,
                 out: &Tensor<O, E, Self>,
-                grad_out: &Self::Vec<E>,
+                grad_out: &Self::Storage,
             ) -> Result<(), Self::Err>;
         }
 

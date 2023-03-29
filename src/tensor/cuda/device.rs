@@ -130,16 +130,20 @@ impl HasErr for Cuda {
 impl DeviceStorage for Cuda {
     type Vec<E: Unit> = CudaSlice<E>;
 
-    fn try_alloc_grad<E: Unit>(&self, other: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err> {
-        let grad = self.dev.alloc_zeros(other.len())?;
-        Ok(grad)
-    }
-
     fn random_u64(&self) -> u64 {
         self.cpu.random_u64()
     }
+}
 
-    fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
+impl<E: Unit> DeviceAllocGrad<E> for Cuda {
+    fn try_alloc_grad(&self, other: &Self::Storage) -> Result<Self::Storage, Self::Err> {
+        let grad = self.dev.alloc_zeros(other.len())?;
+        Ok(grad)
+    }
+}
+
+impl<E: Unit> DeviceTensorToVec<E> for Cuda {
+    fn tensor_to_vec<S: Shape, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
         let buf: Vec<E> = tensor.data.try_clone().unwrap().try_into().unwrap();
         debug_assert_eq!(buf.len(), tensor.data.len());
         let mut idx = NdIndex::new(tensor.shape, tensor.strides);

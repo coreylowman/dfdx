@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{shapes::*, tensor::*};
 
-pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
+pub trait ReshapeKernel<E: Dtype>: DeviceAllocGrad<E> {
     fn forward<Src: Shape, Dst: Shape>(
         &self,
         dst: &Dst,
@@ -14,9 +14,9 @@ pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
     fn backward<Src: Shape, Dst: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Storage,
         out: &Tensor<Dst, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 

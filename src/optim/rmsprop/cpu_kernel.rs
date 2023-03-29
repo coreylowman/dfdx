@@ -6,11 +6,11 @@ impl<E: num_traits::Float + Dtype> RMSpropKernel<E> for Cpu {
     fn update(
         &self,
         cfg: &RMSpropConfig<E>,
-        param: &mut Self::Vec<E>,
-        momentum: &mut Self::Vec<E>,
-        square_avg: &mut Self::Vec<E>,
-        grad_avg: &mut Self::Vec<E>,
-        grad: &Self::Vec<E>,
+        param: &mut Self::Storage,
+        momentum: &mut Self::Storage,
+        square_avg: &mut Self::Storage,
+        grad_avg: &mut Self::Storage,
+        grad: &Self::Storage,
     ) -> Result<(), Self::Err> {
         for ((p, mut g), (s_avg, (g_avg, m))) in param.iter_mut().zip(grad.iter().cloned()).zip(
             square_avg

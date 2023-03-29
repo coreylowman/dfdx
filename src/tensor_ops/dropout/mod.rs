@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{
     shapes::*,
-    tensor::{DeviceStorage, PutTape, SplitTape, Tape, Tensor},
+    tensor::{DeviceAllocGrad, PutTape, SplitTape, Tape, Tensor},
 };
 
 #[repr(C)]
@@ -15,7 +15,7 @@ pub struct DropoutKernelOp<F> {
     pub prob: F,
 }
 
-pub trait DropoutKernel<E: Dtype>: DeviceStorage {
+pub trait DropoutKernel<E: Dtype>: DeviceAllocGrad<E> {
     fn forward<S: Shape>(
         &self,
         op: DropoutKernelOp<E>,
@@ -25,8 +25,8 @@ pub trait DropoutKernel<E: Dtype>: DeviceStorage {
         &self,
         op: DropoutKernelOp<E>,
         inp: &Tensor<S, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
+        grad_inp: &mut Self::Storage,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 
