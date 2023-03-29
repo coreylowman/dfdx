@@ -2,17 +2,17 @@ use crate::shapes::{Const, Dim};
 
 use std::vec::Vec;
 
-pub struct ExactBatcher<Size, I> {
+pub struct Batcher<Size, I> {
     size: Size,
     iter: I,
 }
 
-pub struct Batcher<I> {
+pub struct BatcherWithLast<I> {
     size: usize,
     iter: I,
 }
 
-impl<const N: usize, I: Iterator> Iterator for ExactBatcher<Const<N>, I> {
+impl<const N: usize, I: Iterator> Iterator for Batcher<Const<N>, I> {
     type Item = [I::Item; N];
     fn next(&mut self) -> Option<Self::Item> {
         let items = [(); N].map(|_| self.iter.next());
@@ -24,7 +24,7 @@ impl<const N: usize, I: Iterator> Iterator for ExactBatcher<Const<N>, I> {
     }
 }
 
-impl<I: Iterator> Iterator for ExactBatcher<usize, I> {
+impl<I: Iterator> Iterator for Batcher<usize, I> {
     type Item = Vec<I::Item>;
     fn next(&mut self) -> Option<Self::Item> {
         let mut batch = Vec::with_capacity(self.size);
@@ -35,7 +35,7 @@ impl<I: Iterator> Iterator for ExactBatcher<usize, I> {
     }
 }
 
-impl<I: Iterator> Iterator for Batcher<I> {
+impl<I: Iterator> Iterator for BatcherWithLast<I> {
     type Item = Vec<I::Item>;
     fn next(&mut self) -> Option<Self::Item> {
         let mut batch = Vec::with_capacity(self.size);
@@ -51,7 +51,7 @@ impl<I: Iterator> Iterator for Batcher<I> {
     }
 }
 
-impl<Batch: Dim, I: ExactSizeIterator> ExactSizeIterator for ExactBatcher<Batch, I>
+impl<Batch: Dim, I: ExactSizeIterator> ExactSizeIterator for Batcher<Batch, I>
 where
     Self: Iterator,
 {
@@ -60,7 +60,7 @@ where
     }
 }
 
-impl<I: ExactSizeIterator> ExactSizeIterator for Batcher<I>
+impl<I: ExactSizeIterator> ExactSizeIterator for BatcherWithLast<I>
 where
     Self: Iterator,
 {
@@ -91,11 +91,11 @@ pub trait IteratorBatchExt: Iterator {
     /// let items: Vec<Vec<usize>> = (0..12).batch_exact(5).collect();
     /// assert_eq!(&items, &[[0, 1, 2, 3, 4], [5, 6, 7, 8, 9]]);
     /// ```
-    fn batch_exact<Size: Dim>(self, size: Size) -> ExactBatcher<Size, Self>
+    fn batch_exact<Size: Dim>(self, size: Size) -> Batcher<Size, Self>
     where
         Self: Sized,
     {
-        ExactBatcher { size, iter: self }
+        Batcher { size, iter: self }
     }
 
     /// Returns an [Iterator] containing all data in the input iterator grouped into batches of
@@ -108,20 +108,20 @@ pub trait IteratorBatchExt: Iterator {
     /// let items: Vec<Vec<usize>> = (0..12).batch_with_last(5).collect();
     /// assert_eq!(&items, &[vec![0, 1, 2, 3, 4], vec![5, 6, 7, 8, 9], vec![10, 11]]);
     /// ```
-    fn batch_with_last(self, size: usize) -> Batcher<Self>
+    fn batch_with_last(self, size: usize) -> BatcherWithLast<Self>
     where
         Self: Sized,
     {
-        Batcher { size, iter: self }
+        BatcherWithLast { size, iter: self }
     }
 
     /// Deprecated, use [IteratorBatchExt::batch_exact] instead.
     #[deprecated]
-    fn batch<Size: Dim>(self, size: Size) -> ExactBatcher<Size, Self>
+    fn batch<Size: Dim>(self, size: Size) -> Batcher<Size, Self>
     where
         Self: Sized,
     {
-        ExactBatcher { size, iter: self }
+        Batcher { size, iter: self }
     }
 }
 impl<I: Iterator> IteratorBatchExt for I {}
