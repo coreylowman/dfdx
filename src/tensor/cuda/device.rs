@@ -127,8 +127,8 @@ impl HasErr for Cuda {
     type Err = CudaError;
 }
 
-impl DeviceStorage for Cuda {
-    type Vec<E: Unit> = CudaSlice<E>;
+impl<E: Unit> DeviceStorage<E> for Cuda {
+    type Storage = CudaSlice<E>;
 
     fn random_u64(&self) -> u64 {
         self.cpu.random_u64()
