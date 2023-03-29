@@ -76,7 +76,7 @@ pub trait IteratorBatchExt: Iterator {
     /// - `Vec<Self::Item>`, if `Size` is [usize].
     ///
     /// **If the last batch contains fewer than `size` items, it is not returned.** To include this
-    /// batch, use [IterBatchExt::batch_with_last].
+    /// batch, use [IteratorBatchExt::batch_with_last].
     ///
     /// Const batches:
     /// ```rust
@@ -99,20 +99,29 @@ pub trait IteratorBatchExt: Iterator {
     }
 
     /// Returns an [Iterator] containing all data in the input iterator grouped into batches of
-    /// maximum length `size`. All batches except the last contain exactly `size` elements, all
+    /// maximum length `size`. All batches except the last contain exactly `size` elements, and all
     /// batches contain at least one element.
     ///
     /// Example:
     /// ```rust
     /// # use dfdx::{prelude::*, data::IteratorBatchExt};
-    /// let items: Vec<Vec<usize>> = (0..12).batch(5).collect();
+    /// let items: Vec<Vec<usize>> = (0..12).batch_with_last(5).collect();
     /// assert_eq!(&items, &[vec![0, 1, 2, 3, 4], vec![5, 6, 7, 8, 9], vec![10, 11]]);
     /// ```
-    fn batch(self, size: usize) -> Batcher<Self>
+    fn batch_with_last(self, size: usize) -> Batcher<Self>
     where
         Self: Sized,
     {
         Batcher { size, iter: self }
+    }
+
+    /// Deprecated, use [IteratorBatchExt::batch_exact] instead.
+    #[deprecated]
+    fn batch<Size: Dim>(self, size: Size) -> ExactBatcher<Size, Self>
+    where
+        Self: Sized,
+    {
+        ExactBatcher { size, iter: self }
     }
 }
 impl<I: Iterator> IteratorBatchExt for I {}
