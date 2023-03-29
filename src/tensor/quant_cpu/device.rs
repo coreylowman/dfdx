@@ -5,6 +5,7 @@ use crate::tensor::{storage_traits::*, Tensor};
 
 use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
+use std::simd::Simd;
 use std::vec::Vec;
 
 use super::quantize::{u4, Quantize};
@@ -38,35 +39,43 @@ impl<'q, K: Quantize> Drop for QuantBlockMutRef<'q, K> {
 }
 
 /// A pair of half-byte values stored as one byte.
-#[derive(Copy, Clone, Default, Debug)]
-#[repr(transparent)]
-struct Quant(u8);
-
-impl Quant {
-    fn new(first: u4, second: u4) -> Self {
-        Self((first.0 << 4) & second.0)
-    }
+/// Utilizes a trait to make usage simpler.
+trait HalfBytePair {
+    fn half_byte_pair(first: u4, second: u4) -> Self;
 
     /// Gets the first half-byte.
-    fn first(&self) -> u4 {
-        u4(self.0 >> 4)
-    }
+    fn first(&self) -> u4;
 
     /// Gets the second half-byte.
-    fn second(&self) -> u4 {
-        u4(self.0 & 0b_0000_1111)
-    }
+    fn second(&self) -> u4;
 
     /// Sets the first half-byte, leaving the rest alone.
-    fn set_first(&mut self, value: u4) {
-        self.0 &= 0b_0000_1111;
-        self.0 |= value.0 << 4
-    }
+    fn set_first(&mut self, value: u4);
 
     /// Sets the second half-byte, leaving the rest alone.
+    fn set_second(&mut self, value: u4);
+}
+impl HalfBytePair for u8 {
+    fn half_byte_pair(first: u4, second: u4) -> Self {
+        (first.0 << 4) & second.0
+    }
+
+    fn first(&self) -> u4 {
+        u4(self >> 4)
+    }
+
+    fn second(&self) -> u4 {
+        u4(self & 0b_0000_1111)
+    }
+
+    fn set_first(&mut self, value: u4) {
+        *self &= 0b_0000_1111;
+        *self |= value.0 << 4
+    }
+
     fn set_second(&mut self, value: u4) {
-        self.0 &= 0b_1111_0000;
-        self.0 |= value.0
+        *self &= 0b_1111_0000;
+        *self |= value.0
     }
 }
 
@@ -75,7 +84,7 @@ const BLOCK_SIZE: usize = 32;
 
 #[derive(Copy, Clone, Debug)]
 pub struct QuantBlock<K> {
-    quants: [Quant; BLOCK_SIZE / 2],
+    quants: Simd<u8, { BLOCK_SIZE / 2 }>,
     length: usize,
     kind: K,
 }
@@ -84,13 +93,13 @@ impl<K: Quantize> QuantBlock<K> {
     fn from_block(values: &[K::Value]) -> Self {
         let length = values.len();
         let kind = K::from_values(values);
-        let mut quants = [Quant::default(); BLOCK_SIZE / 2];
+        let mut quants = [0u8; BLOCK_SIZE / 2];
         for (i, values) in values.chunks(2).enumerate() {
             let (v1, v2) = (values[0], values.get(1).copied().unwrap_or_default());
-            quants[i] = Quant::new(kind.quantize(v1), kind.quantize(v2));
+            quants[i] = u8::half_byte_pair(kind.quantize(v1), kind.quantize(v2));
         }
         Self {
-            quants,
+            quants: Simd::from_array(quants),
             length,
             kind,
         }
@@ -98,7 +107,9 @@ impl<K: Quantize> QuantBlock<K> {
 
     fn get_values(&self) -> Vec<K::Value> {
         self.quants
+            .as_array()
             .iter()
+            .copied()
             .take(self.length)
             .flat_map(|quant| [quant.first(), quant.second()])
             .map(|half_byte| self.kind.dequantize(half_byte))

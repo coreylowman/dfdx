@@ -141,10 +141,13 @@ mod test {
         let t: Tensor<Rank2<320, 640>, f32, _> = dev.sample_normal();
         let size_t = t.data.size();
         println!("Quantized bytes: {}", size_t);
-        let v = t.as_vec();
+        let mut v = t.as_vec();
+        for val in v.iter_mut() {
+            *val = val.abs().powf(1.4).tanh()
+        }
         let size_v = std::mem::size_of::<Vec<f32>>() + v.capacity() * std::mem::size_of::<f32>();
         println!("Vec bytes: {}", size_v);
         let t2: Tensor<Rank2<320, 640>, f32, _> = dev.tensor(v);
-        assert_eq!(t.array(), t2.array());
+        assert_eq!(t.abs().powf(1.4).tanh().array(), t2.array());
     }
 }

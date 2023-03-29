@@ -104,6 +104,7 @@
 #![cfg_attr(all(feature = "no-std", not(feature = "std")), no_std)]
 #![allow(incomplete_features)]
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
+#![cfg_attr(feature = "nightly", feature(portable_simd))]
 
 #[cfg(feature = "no-std")]
 #[macro_use]

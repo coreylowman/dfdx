@@ -1,4 +1,7 @@
-use super::ops::{BinaryKernel, UnaryKernel};
+use super::{
+    cpu_kernels::{BinaryDerivative, UnaryDerivative},
+    ops::{BinaryKernel, UnaryKernel},
+};
 use crate::{
     prelude::quant_cpu::Quantize,
     shapes::{Dtype, Shape},
@@ -7,17 +10,6 @@ use crate::{
         unique_id, QuantizedCpu, Tensor, ZerosTensor,
     },
 };
-
-pub trait UnaryDerivative<E> {
-    fn f(&self, x: &E) -> E;
-    fn df(&self, x: &E) -> E;
-}
-
-pub trait BinaryDerivative<E> {
-    fn f(&self, x: &E, y: &E) -> E;
-    fn dfdx(&self, x: &E, y: &E) -> E;
-    fn dfdy(&self, x: &E, y: &E) -> E;
-}
 
 impl<K: 'static + Quantize + std::fmt::Debug + Send + Sync, Op: UnaryDerivative<K::Value>>
     UnaryKernel<Op, K::Value> for QuantizedCpu<K>

@@ -86,7 +86,9 @@ pub trait Trace<E: Unit, D: DeviceStorage<E>>: Clone {
     fn traced(self, gradients: Gradients<E, D>) -> Self::Traced;
 }
 
-impl<S: Shape, E: Unit, F: Unit, D: DeviceStorage<E> + DeviceStorage<F>> Trace<E, D> for Tensor<S, F, D, NoneTape> {
+impl<S: Shape, E: Unit, F: Unit, D: DeviceStorage<E> + DeviceStorage<F>> Trace<E, D>
+    for Tensor<S, F, D, NoneTape>
+{
     type Traced = Tensor<S, F, D, OwnedTape<E, D>>;
     fn leaky_traced(self) -> Self::Traced {
         self.put_tape(Default::default())

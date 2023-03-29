@@ -131,6 +131,7 @@ mod gradients;
 mod masks;
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
+#[cfg(feature = "nightly")]
 pub(crate) mod quant_cpu;
 #[cfg(feature = "safetensors")]
 pub mod safetensors;
@@ -142,6 +143,7 @@ mod tensor_impls;
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 
 pub use cpu::{Cpu, CpuError};
+#[cfg(feature = "nightly")]
 pub use quant_cpu::QuantizedCpu;
 #[cfg(not(feature = "cuda"))]
 pub type AutoDevice = Cpu;
