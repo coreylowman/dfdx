@@ -21,10 +21,7 @@ impl std::error::Error for HalfByteConstructionError {}
 pub struct u4(pub(crate) u8);
 
 impl u4 {
-    fn from_value<E: num_traits::Num + num_traits::NumCast>(
-        value: E,
-    ) -> Result<Self, HalfByteConstructionError> {
-        let byte_value = num_traits::cast::<_, u8>(value).ok_or(HalfByteConstructionError)?;
+    fn from_byte(byte_value: u8) -> Result<Self, HalfByteConstructionError> {
         if byte_value > 0b_0000_1111 {
             Err(HalfByteConstructionError)
         } else {
@@ -79,11 +76,16 @@ impl<E: num_traits::Float + Unit> Quantize for ScaledQuant<E> {
         } else {
             E::one() / self.scaling_factor
         };
-        u4::from_value((value * inv_scaling_factor).round().to_f32().unwrap() as i8 + 8).unwrap()
+        u4::from_byte(
+            ((value * inv_scaling_factor).round().to_f32().unwrap() as i8 + 8)
+                .min(15)
+                .max(0) as u8,
+        )
+        .unwrap()
     }
 
     fn dequantize(&self, half_byte: u4) -> E {
-        E::from(half_byte.0 - 8).unwrap() * self.scaling_factor
+        E::from(half_byte.0 as i8 - 8).unwrap() * self.scaling_factor
     }
 }
 
@@ -112,11 +114,13 @@ impl<E: num_traits::Float + Unit> Quantize for OffsetQuant<E> {
         } else {
             E::one() / self.scaling_factor
         };
-        u4::from_value(
-            ((value - self.offset_factor) * inv_scaling_factor)
+        u4::from_byte(
+            (((value - self.offset_factor) * inv_scaling_factor)
                 .round()
                 .to_f32()
-                .unwrap() as u8,
+                .unwrap() as u8)
+                .min(15)
+                .max(0),
         )
         .unwrap()
     }
@@ -128,26 +132,64 @@ impl<E: num_traits::Float + Unit> Quantize for OffsetQuant<E> {
 
 #[cfg(test)]
 mod test {
-    use crate::prelude::*;
+    use crate::{prelude::*, tests::TestDtype};
 
     use super::*;
 
     #[test]
-    fn test_round_trip() {
-        let dev = QuantizedCpu::<OffsetQuant<f32>>::default();
+    fn test_round_trip_offset() {
+        let dev = QuantizedCpu::<OffsetQuant<TestDtype>>::default();
         // Strangely, if I make the tensor just a little bigger (ex. 640x640)
         // it will fail below with a stack overflow, and if I make it a lot bigger
         // (ex. 640x6400) it will fail here with SIGSEGV: invalid memory reference
-        let t: Tensor<Rank2<320, 640>, f32, _> = dev.sample_normal();
+        let t: Tensor<Rank2<320, 640>, TestDtype, _> = dev.sample_normal();
         let size_t = t.data.size();
         println!("Quantized bytes: {}", size_t);
         let mut v = t.as_vec();
         for val in v.iter_mut() {
             *val = val.abs().powf(1.4).tanh() + 3.0;
         }
-        let size_v = std::mem::size_of::<Vec<f32>>() + v.capacity() * std::mem::size_of::<f32>();
+        let size_v =
+            std::mem::size_of::<Vec<TestDtype>>() + v.capacity() * std::mem::size_of::<TestDtype>();
         println!("Vec bytes: {}", size_v);
-        let t2: Tensor<Rank2<320, 640>, f32, _> = dev.tensor(v);
-        assert_eq!((t.abs().powf(1.4).tanh() + 3.0).array(), t2.array());
+        let t2: Tensor<Rank2<320, 640>, TestDtype, _> = dev.tensor(v);
+        let errs = (t.abs().powf(1.4).tanh() + 3.0)
+            .iter()
+            .zip(t2.iter())
+            .map(|(v1, v2)| (v1 - v2).abs())
+            .collect::<Vec<_>>();
+        let avg_err = errs.iter().sum::<TestDtype>() / errs.len() as TestDtype;
+        let max_err = *errs
+            .iter()
+            .max_by(|f1, f2| f1.partial_cmp(f2).unwrap())
+            .unwrap();
+        assert!(avg_err < 0.05);
+        assert!(max_err < 0.1);
+    }
+
+    #[test]
+    fn test_round_trip_scaled() {
+        let dev = QuantizedCpu::<ScaledQuant<TestDtype>>::default();
+        // Strangely, if I make the tensor just a little bigger (ex. 640x640)
+        // it will fail below with a stack overflow, and if I make it a lot bigger
+        // (ex. 640x6400) it will fail here with SIGSEGV: invalid memory reference
+        let t: Tensor<Rank2<320, 640>, TestDtype, _> = dev.sample_normal();
+        let mut v = t.as_vec();
+        for val in v.iter_mut() {
+            *val = val.abs().powf(1.4).tanh() + 3.0;
+        }
+        let t2: Tensor<Rank2<320, 640>, TestDtype, _> = dev.tensor(v);
+        let errs = (t.abs().powf(1.4).tanh() + 3.0)
+            .iter()
+            .zip(t2.iter())
+            .map(|(v1, v2)| (v1 - v2).abs())
+            .collect::<Vec<_>>();
+        let avg_err = errs.iter().sum::<TestDtype>() / errs.len() as TestDtype;
+        let max_err = *errs
+            .iter()
+            .max_by(|f1, f2| f1.partial_cmp(f2).unwrap())
+            .unwrap();
+        assert!(avg_err < 0.5);
+        assert!(max_err < 1.0);
     }
 }

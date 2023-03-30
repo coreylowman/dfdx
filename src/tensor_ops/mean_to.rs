@@ -1,4 +1,4 @@
-use super::*;
+use super::{div::ScalarDivKernelOp, ops::UnaryKernel, sum_to::SumKernel, *};
 use crate::{shapes::*, tensor::*};
 
 /// Reduction along multiple axes using `mean`.
@@ -34,7 +34,9 @@ pub trait MeanTo: HasErr + HasShape {
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> MeanTo for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: SumKernel<E> + UnaryKernel<ScalarDivKernelOp<E>, E>, T: Tape<E, D>>
+    MeanTo for Tensor<S, E, D, T>
+{
     fn try_mean<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,

@@ -57,7 +57,7 @@ trait HalfBytePair {
 }
 impl HalfBytePair for u8 {
     fn half_byte_pair(first: u4, second: u4) -> Self {
-        (first.0 << 4) & second.0
+        (first.0 << 4) | second.0
     }
 
     fn first(&self) -> u4 {

@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use super::{ops::*, Device};
+use super::ops::*;
 use crate::{shapes::*, tensor::*};
 
 #[repr(C)]
@@ -36,7 +36,13 @@ pub struct BinaryDivKernelOp;
 /// let r = a / 2.0;
 /// assert_eq!(r.array(), [[0.5, 1.0, 1.5], [-0.5, -1.0, -1.5]]);
 /// ```
-pub fn div<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R: Default>(
+pub fn div<
+    S: Shape,
+    E: Dtype,
+    D: BinaryKernel<BinaryDivKernelOp, E>,
+    T: Tape<E, D> + Merge<R>,
+    R: Default,
+>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, R>,
 ) -> Tensor<S, E, D, T> {
@@ -48,8 +54,8 @@ pub trait TryDiv<Rhs = Self>: HasErr {
     fn try_div(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<E, D>, R> TryDiv<Tensor<S, E, D, R>>
-    for Tensor<S, E, D, LhsTape>
+impl<S: Shape, E: Dtype, D: BinaryKernel<BinaryDivKernelOp, E>, LhsTape: Tape<E, D>, R>
+    TryDiv<Tensor<S, E, D, R>> for Tensor<S, E, D, LhsTape>
 where
     LhsTape: Merge<R>,
 {
@@ -59,14 +65,16 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> TryDiv<E> for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarDivKernelOp<E>, E>, T: Tape<E, D>> TryDiv<E>
+    for Tensor<S, E, D, T>
+{
     /// See [div]
     fn try_div(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarDivKernelOp { scalar: rhs }, self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LhsTape: Tape<E, D>, Rhs> std::ops::Div<Rhs>
+impl<S: Shape, E: Dtype, D: DeviceStorage<E>, LhsTape: Tape<E, D>, Rhs> std::ops::Div<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryDiv<Rhs>,
