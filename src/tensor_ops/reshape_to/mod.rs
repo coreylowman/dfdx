@@ -5,7 +5,7 @@ mod cuda_kernel;
 
 use crate::{shapes::*, tensor::*};
 
-pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
+pub trait ReshapeKernel<E: Unit>: DeviceStorage {
     fn forward<Src: Shape, Dst: Shape>(
         &self,
         dst: &Dst,
@@ -17,7 +17,9 @@ pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
         grad_inp: &mut Self::Vec<E>,
         out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Self::Err>
+    where
+        E: Dtype;
 }
 
 /// Change the shape of a tensor moving data around.
@@ -73,7 +75,29 @@ pub trait ReshapeTo: HasErr + HasShape {
     ) -> Option<Result<Self::WithShape<Dst>, Self::Err>>;
 }
 
-impl<S: Shape, E: Dtype, D: ReshapeKernel<E>, T: Tape<E, D>> ReshapeTo for Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: ReshapeKernel<E>> ReshapeTo for Tensor<S, E, D> {
+    fn try_reshape_like<Dst: Shape>(
+        self,
+        dst: &Dst,
+    ) -> Option<Result<Self::WithShape<Dst>, Self::Err>> {
+        (self.shape().num_elements() == dst.shape().num_elements()).then(|| {
+            if self.shape.strides() == self.strides {
+                Ok(Tensor {
+                    id: self.id,
+                    data: self.data,
+                    shape: *dst,
+                    strides: dst.strides(),
+                    device: self.device,
+                    tape: self.tape,
+                })
+            } else {
+                self.device.forward(dst, &self)
+            }
+        })
+    }
+}
+
+impl<S: Shape, E: Dtype, D: ReshapeKernel<E>> ReshapeTo for Tensor<S, E, D, OwnedTape<E, D>> {
     fn try_reshape_like<Dst: Shape>(
         self,
         dst: &Dst,
@@ -117,6 +141,13 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<(usize,), TestDtype, _> = dev.zeros_like(&(5,));
         assert!(t.reshape_like(&(7,)).is_none());
+    }
+
+    #[test]
+    fn test_unit_non_contiguous_reshapes() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank2<2, 3>, usize, _> = dev.zeros::<Rank0>().broadcast();
+        let _: Tensor<Rank1<6>, usize, _> = t.reshape();
     }
 
     #[test]
