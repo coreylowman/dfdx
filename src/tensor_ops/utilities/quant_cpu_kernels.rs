@@ -5,10 +5,7 @@ use super::{
 use crate::{
     prelude::quant_cpu::Quantize,
     shapes::{Dtype, Shape},
-    tensor::{
-        cpu::{LendingIterator, NdIndex},
-        unique_id, QuantizedCpu, Tensor, ZerosTensor,
-    },
+    tensor::{cpu::LendingIterator, unique_id, QuantizedCpu, Tensor, ZerosTensor},
 };
 
 impl<K: 'static + Quantize + std::fmt::Debug + Send + Sync, Op: UnaryDerivative<K::Value>>
@@ -86,12 +83,12 @@ where
     }
     fn backward<S: Shape>(
         &self,
-        op: Op,
-        lhs: &Tensor<S, K::Value, Self>,
-        grad_lhs: &mut Self::Storage,
-        rhs: &Tensor<S, K::Value, Self>,
-        grad_rhs: &mut Self::Storage,
-        grad_out: &Self::Storage,
+        _op: Op,
+        _lhs: &Tensor<S, K::Value, Self>,
+        _grad_lhs: &mut Self::Storage,
+        _rhs: &Tensor<S, K::Value, Self>,
+        _grad_rhs: &mut Self::Storage,
+        _grad_out: &Self::Storage,
     ) -> Result<(), Self::Err> {
         // let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
         // let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
@@ -104,6 +101,7 @@ where
         //     *grad_lhs.get_mut(lhs_i).unwrap() += op.dfdx(&l, &r) * go;
         //     *grad_rhs.get_mut(rhs_i).unwrap() += op.dfdy(&l, &r) * go;
         // }
-        Ok(())
+        // Ok(())
+        unimplemented!()
     }
 }

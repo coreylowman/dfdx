@@ -144,7 +144,7 @@ pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 
 pub use cpu::{Cpu, CpuError};
 #[cfg(feature = "nightly")]
-pub use quant_cpu::QuantizedCpu;
+pub use quant_cpu::{QuantizedCpu, Quantize};
 #[cfg(not(feature = "cuda"))]
 pub type AutoDevice = Cpu;
 

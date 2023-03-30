@@ -1,6 +1,6 @@
 use super::{
     super::Tensor,
-    device::{QuantizedStorage, QuantizedStorageBlocksIter},
+    device::{QuantizedStorage, QuantizedStorageBlocksIter, QuantizedStorageRefIter},
     Quantize, QuantizedCpu,
 };
 use crate::{prelude::cpu::NdIndex, shapes::Shape};
@@ -18,6 +18,11 @@ pub(crate) struct StridedRefIndexIter<'a, S: Shape, K: Quantize> {
 impl<S: Shape, K: 'static + Quantize + std::fmt::Debug + Send + Sync, T>
     Tensor<S, K::Value, QuantizedCpu<K>, T>
 {
+    #[inline]
+    pub(crate) fn buf_iter(&self) -> QuantizedStorageRefIter<K> {
+        self.data.iter()
+    }
+
     #[inline]
     pub(crate) fn iter_blocks_mut(&mut self) -> QuantizedStorageBlocksIter<K> {
         std::sync::Arc::make_mut(&mut self.data).iter_blocks_mut()
