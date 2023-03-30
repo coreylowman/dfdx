@@ -6,6 +6,8 @@ use crate::{
 mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
+#[cfg(feature = "nightly")]
+mod quant_cpu_kernel;
 
 /// Elementwise `a * alpha + b * beta`.
 ///
