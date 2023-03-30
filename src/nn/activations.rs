@@ -1,5 +1,4 @@
 use crate::{
-    prelude::{BuildModule, BuildOnDevice, TensorCollection, TensorOptions},
     shapes::*,
     tensor::*,
     tensor_ops::*,
@@ -64,7 +63,7 @@ where
 mod tests {
     use crate::{
         nn::*,
-        tests::{assert_close, TestDevice},
+        tests::TestDevice,
     };
 
     use super::*;
