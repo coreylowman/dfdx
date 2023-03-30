@@ -28,6 +28,14 @@ pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
     fn try_alloc_grad<E: Unit>(&self, storage: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err>;
 
     fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E>;
+
+    /// Blocks until all work on device to complete. Useful for benchmarking.
+    fn synchronize(&self) {
+        self.try_synchronize().unwrap()
+    }
+
+    /// Blocks until all work on device to complete. Useful for benchmarking.
+    fn try_synchronize(&self) -> Result<(), Self::Err>;
 }
 
 /// Internal trait - Represents something that can allocate its own gradient.

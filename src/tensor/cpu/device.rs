@@ -86,4 +86,8 @@ impl DeviceStorage for Cpu {
         }
         buf
     }
+
+    fn try_synchronize(&self) -> Result<(), Self::Err> {
+        Ok(())
+    }
 }
