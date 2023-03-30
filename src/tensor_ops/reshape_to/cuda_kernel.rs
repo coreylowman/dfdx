@@ -8,7 +8,7 @@ use cudarc::{
     types::CudaTypeName,
 };
 
-impl<E: Unit + CudaTypeName> super::ReshapeKernel<E> for Cuda {
+impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
     fn forward<Src: Shape, Dst: Shape>(
         &self,
         dst: &Dst,
@@ -52,10 +52,7 @@ impl<E: Unit + CudaTypeName> super::ReshapeKernel<E> for Cuda {
         grad_inp: &mut Self::Vec<E>,
         out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>
-    where
-        E: Dtype,
-    {
+    ) -> Result<(), Self::Err> {
         let module = std::format!("reshape_bwd_{}", E::NAME);
         if !self.dev.has_func(&module, "reshape_bwd") {
             let src = BWD_KERNEL.replace("$T", E::NAME);

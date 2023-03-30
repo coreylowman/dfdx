@@ -1,10 +1,10 @@
-use crate::shapes::{Dtype, Shape, Unit};
+use crate::shapes::{Dtype, Shape};
 use crate::tensor::{
     cpu::{LendingIterator, NdIndex},
     Cpu, Tensor, ZerosTensor,
 };
 
-impl<E: Unit> super::ReshapeKernel<E> for Cpu {
+impl<E: Dtype> super::ReshapeKernel<E> for Cpu {
     fn forward<Src: Shape, Dst: Shape>(
         &self,
         dst: &Dst,
@@ -24,10 +24,7 @@ impl<E: Unit> super::ReshapeKernel<E> for Cpu {
         grad_inp: &mut Self::Vec<E>,
         out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>
-    where
-        E: Dtype,
-    {
+    ) -> Result<(), Self::Err> {
         let mut inp_idx = NdIndex::new(inp.shape, inp.strides);
         let mut out_idx = NdIndex::new(out.shape, out.strides);
         while let Some((i, o)) = inp_idx.next().zip(out_idx.next()) {
