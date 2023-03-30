@@ -85,7 +85,11 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
 }
 
 const FWD_KERNEL: &str = "
-#include <cstdint>
+#if __WORDSIZE == 64
+typedef long int intptr_t;
+#else
+typedef int intptr_t;
+#endif
 
 __device__ unsigned int get_strided_index(
     unsigned int idx,
@@ -128,7 +132,11 @@ extern \"C\" __global__ void reshape_fwd(
 ";
 
 const BWD_KERNEL: &str = "
-#include <cstdint>
+#if __WORDSIZE == 64
+typedef long int intptr_t;
+#else
+typedef int intptr_t;
+#endif
 
 __device__ unsigned int get_strided_index(
     unsigned int idx,

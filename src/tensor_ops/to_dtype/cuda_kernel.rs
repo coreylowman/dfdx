@@ -10,7 +10,11 @@ use cudarc::{
 use std::sync::Arc;
 
 const KERNEL: &str = "
-#include <cstdint>
+#if __WORDSIZE == 64
+typedef long int intptr_t;
+#else
+typedef int intptr_t;
+#endif
 extern \"C\" __global__ void kernel(const size_t n, const $Src *inp, $Dst *out) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) { out[i] = inp[i]; }
