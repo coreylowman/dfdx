@@ -118,7 +118,7 @@ mod tests {
         let b: Tensor<Rank2<3, 2>, _, _> = a.clone().slice((1.., ..2)).realize().unwrap();
         assert_eq!(b.array(), [[5., 6.], [9., 10.], [13., 14.]]);
 
-        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((..2, 2..)).realize().unwrap();
+        let b: Tensor<Rank2<2, 2>, _, _> = a.slice((..2, 2..)).realize().unwrap();
         assert_eq!(b.array(), [[3., 4.], [7., 8.]]);
     }
 
@@ -136,7 +136,7 @@ mod tests {
         let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((1..3, 1..3)).realize().unwrap();
         assert_eq!(b.array(), [[2., 3.], [2., 3.]]);
 
-        let b: Tensor<Rank2<3, 3>, _, _> = a.clone().slice((1..4, 1..4)).realize().unwrap();
+        let b: Tensor<Rank2<3, 3>, _, _> = a.slice((1..4, 1..4)).realize().unwrap();
         assert_eq!(b.array(), [[2., 3., 4.]; 3]);
     }
 
@@ -154,7 +154,7 @@ mod tests {
         let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((1..3, 3..)).realize().unwrap();
         assert_eq!(b.array(), [[2., 2.], [3., 3.]]);
 
-        let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((..2, 1..3)).realize().unwrap();
+        let b: Tensor<Rank2<2, 2>, _, _> = a.slice((..2, 1..3)).realize().unwrap();
         assert_eq!(b.array(), [[1., 1.], [2., 2.]]);
     }
 
