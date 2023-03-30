@@ -154,7 +154,7 @@
 //! You can use optimizers to optimize neural networks (or even tensors!). Here's
 //! a simple example of how to do this with [nn::ZeroGrads]:
 //! ```rust
-//! # use dfdx::prelude::*;
+//! # use dfdx::{prelude::*, optim::*};
 //! # let dev: Cpu = Default::default();
 //! type Model = (Linear<3, 5>, ReLU, Linear<5, 10>);
 //! let mut model = dev.build_module::<Model, f32>();

@@ -21,7 +21,7 @@ use crate::{shapes::*, tensor::*};
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<Rank1<1>, f32, _> = dev.zeros();
 /// // It's ambiguous what axes to broadcast here - explicitly say axes 0 and 2
-/// let : Tensor<Rank3<1, 1, 1>, _, _> = a.clone().broadcast::<_, Axes2<0, 2>>();
+/// let _: Tensor<Rank3<1, 1, 1>, _, _> = a.clone().broadcast::<_, Axes2<0, 2>>();
 /// ```
 pub trait BroadcastTo: HasErr + HasShape {
     /// Broadcast into shape `Dst` along axes `Ax`.
