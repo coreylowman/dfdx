@@ -71,7 +71,7 @@ impl<S: Shape, E: Unit, D: SliceKernel<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
         Ok(out.put_tape(tape))
     }
 
-    /// Calls [slice].
+    /// Calls [slice()].
     pub fn slice<Slice>(self, slice: Slice) -> Tensor<S::Sliced, E, D, T>
     where
         S: SliceShape<Slice>,
