@@ -8,9 +8,8 @@ __device__ void sum_to_fwd(
     const size_t num_dims,
     const T elems_per_thread,
     const size_t chunk_len,
+    const size_t *info,
     const T *inp,
-    const size_t *dims,
-    const size_t *strides,
     T *out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -18,6 +17,9 @@ __device__ void sum_to_fwd(
     if (i >= numel) {
         return;
     }
+
+    const size_t *dims = info;
+    const size_t *strides = info + num_dims;
 
     unsigned int inp_i = get_strided_index(i, num_dims, dims, strides);
     chunk_sum(chunk_len, inp[inp_i] * elems_per_thread, out);
@@ -30,11 +32,9 @@ __device__ void sum_to_bwd(
     const size_t numel,
     const size_t num_dims,
     const T elems_per_thread,
-    const size_t *dims,
+    const size_t *info,
     T *grad_inp,
-    const size_t *inp_strides,
-    const T *grad_out,
-    const size_t *out_strides
+    const T *grad_out
 ) {
     unsigned int inp_i = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -42,14 +42,16 @@ __device__ void sum_to_bwd(
         return;
     }
 
-    unsigned int i = get_unstrided_index(inp_i, num_dims, dims, inp_strides);
-    unsigned int out_i = get_strided_index(i, num_dims, dims, out_strides);
-    auto tmp = grad_out[out_i];
+    const size_t *dims = info;
+    const size_t *inp_strides = info + num_dims;
+    const size_t *out_strides = info + 2 * num_dims;
+
+    unsigned int out_i = restrided(inp_i, num_dims, dims, inp_strides, out_strides);
 
     // NOTE: since size of output is less than input, only 1 thread will be writing to inp
     // at a time. this means we don't have to worry about multiple concurrent writes
     // like we do with fwd.
-    grad_inp[inp_i] += tmp * elems_per_thread;
+    grad_inp[inp_i] += grad_out[out_i] * elems_per_thread;
 }
 
 #define SUM(TYPENAME, FWD, BWD) \
@@ -58,24 +60,21 @@ extern "C" __global__ void FWD( \
     const size_t num_dims, \
     const TYPENAME elems_per_thread, \
     const size_t chunk_len, \
+    const size_t *info, \
     const TYPENAME *inp, \
-    const size_t *dims, \
-    const size_t *strides, \
     TYPENAME *out \
 ) { \
-    sum_to_fwd(numel, num_dims, elems_per_thread, chunk_len, inp, dims, strides, out); \
+    sum_to_fwd(numel, num_dims, elems_per_thread, chunk_len, info, inp, out); \
 } \
 extern "C" __global__ void BWD( \
     const size_t numel, \
     const size_t num_dims, \
     const TYPENAME elems_per_thread, \
-    const size_t *dims, \
+    const size_t *info, \
     TYPENAME *grad_inp, \
-    const size_t *inp_strides, \
-    const TYPENAME *grad_out, \
-    const size_t *out_strides \
+    const TYPENAME *grad_out \
 ) { \
-    sum_to_bwd(numel, num_dims, elems_per_thread, dims, grad_inp, inp_strides, grad_out, out_strides); \
+    sum_to_bwd(numel, num_dims, elems_per_thread, info, grad_inp, grad_out); \
 }
 
 SUM(float, sum_to_fwd_f32, sum_to_bwd_f32);

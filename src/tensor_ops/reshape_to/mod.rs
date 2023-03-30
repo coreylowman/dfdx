@@ -121,6 +121,13 @@ mod tests {
     }
 
     #[test]
+    fn test_unit_non_contiguous_reshapes() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank2<2, 3>, usize, _> = dev.zeros::<Rank0>().broadcast();
+        let _: Tensor<Rank1<6>, usize, _> = t.reshape();
+    }
+
+    #[test]
     fn test_valid_reshapes() {
         let dev: TestDevice = Default::default();
 

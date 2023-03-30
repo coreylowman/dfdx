@@ -184,7 +184,7 @@ where
                 [lhs.strides[0], 0],
                 rhs.data.as_ref(),
                 [0, rhs.strides[0]],
-                E::zero(),
+                Default::default(),
                 &mut storage,
                 strides,
             )
@@ -205,6 +205,7 @@ where
         let k = Const::<1>;
         let n = rhs.shape.0;
         let strides = (m, n).strides();
+        self.par_stream.wait_for_default()?;
         unsafe {
             // grad_lhs += grad_out * rhs^T
             self.blas.set_stream(Some(self.par_stream.as_ref()))?;
@@ -232,6 +233,7 @@ where
                 [0, rhs.strides[0]],
             )?;
         }
+        self.dev.wait_for(self.par_stream.as_ref())?;
         Ok(())
     }
 }
@@ -258,7 +260,7 @@ where
                 [0, lhs.strides[0]],
                 rhs.data.as_ref(),
                 rhs.strides,
-                E::zero(),
+                Default::default(),
                 &mut storage,
                 [0, strides[0]],
             )?;
@@ -276,6 +278,7 @@ where
     ) -> Result<(), Self::Err> {
         let m = Const::<1>;
         let (k, n) = rhs.shape;
+        self.par_stream.wait_for_default()?;
         unsafe {
             // grad_lhs += grad_out * rhs^T
             self.blas.set_stream(Some(self.par_stream.as_ref()))?;
@@ -303,6 +306,7 @@ where
                 rhs.strides,
             )?;
         }
+        self.dev.wait_for(self.par_stream.as_ref())?;
         Ok(())
     }
 }
@@ -329,7 +333,7 @@ where
                 lhs.strides,
                 rhs.data.as_ref(),
                 rhs.strides,
-                E::zero(),
+                Default::default(),
                 &mut storage,
                 strides,
             )
@@ -349,6 +353,7 @@ where
         let (m, _) = lhs.shape;
         let (k, n) = rhs.shape;
         let strides = (m, n).strides();
+        self.par_stream.wait_for_default()?;
         unsafe {
             // grad_lhs += grad_out * rhs^T
             self.blas.set_stream(Some(self.par_stream.as_ref()))?;
@@ -376,6 +381,7 @@ where
                 rhs.strides,
             )?;
         }
+        self.dev.wait_for(self.par_stream.as_ref())?;
         Ok(())
     }
 }
@@ -402,7 +408,7 @@ where
                 lhs.strides,
                 rhs.data.as_ref(),
                 [0, rhs.strides[0], rhs.strides[1]],
-                E::zero(),
+                Default::default(),
                 &mut storage,
                 strides,
             )?;
@@ -420,6 +426,7 @@ where
         let (batch, m, _) = lhs.shape;
         let (k, n) = rhs.shape;
         let strides = (batch, m, n).strides();
+        self.par_stream.wait_for_default()?;
         unsafe {
             self.blas.set_stream(Some(self.par_stream.as_ref()))?;
             // grad_rhs += lhs^T * grad_out
@@ -451,6 +458,7 @@ where
                 lhs.strides,
             )?;
         }
+        self.dev.wait_for(self.par_stream.as_ref())?;
         Ok(())
     }
 }
@@ -478,7 +486,7 @@ where
                 lhs.strides,
                 rhs.data.as_ref(),
                 rhs.strides,
-                E::zero(),
+                Default::default(),
                 &mut storage,
                 strides,
             )?;
@@ -496,6 +504,7 @@ where
         let (batch, m, _) = lhs.shape;
         let (_, k, n) = rhs.shape;
         let strides = (batch, m, n).strides();
+        self.par_stream.wait_for_default()?;
         unsafe {
             // grad_lhs += grad_out * rhs^T
             self.blas.set_stream(Some(self.par_stream.as_ref()))?;
@@ -523,6 +532,7 @@ where
                 rhs.strides,
             )?;
         }
+        self.dev.wait_for(self.par_stream.as_ref())?;
         Ok(())
     }
 }
@@ -549,6 +559,8 @@ where
 
         let half_batch = batch.size() / 2;
 
+        self.par_stream.wait_for_default()?;
+
         unsafe {
             // split the batch onto separate streams
             self.blas.set_stream(Some(self.par_stream.as_ref()))?;
@@ -559,7 +571,7 @@ where
                     [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
                     &rhs.data.slice(b * rhs.strides[0]..),
                     [rhs.strides[1], rhs.strides[2], rhs.strides[3]],
-                    E::zero(),
+                    Default::default(),
                     &mut storage.slice_mut(b * strides[0]..),
                     [strides[1], strides[2], strides[3]],
                 )?;
@@ -573,12 +585,13 @@ where
                     [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
                     &rhs.data.slice(b * rhs.strides[0]..),
                     [rhs.strides[1], rhs.strides[2], rhs.strides[3]],
-                    E::zero(),
+                    Default::default(),
                     &mut storage.slice_mut(b * strides[0]..),
                     [strides[1], strides[2], strides[3]],
                 )?;
             }
         }
+        self.dev.wait_for(self.par_stream.as_ref())?;
         Ok(self.build_tensor(shape, strides, storage))
     }
 
@@ -593,6 +606,7 @@ where
         let (batch, seq, m, _) = lhs.shape;
         let (_, _, k, n) = rhs.shape;
         let strides = (batch, seq, m, n).strides();
+        self.par_stream.wait_for_default()?;
         unsafe {
             // gl += go * rhs^T
             self.blas.set_stream(Some(self.par_stream.as_ref()))?;
@@ -624,6 +638,7 @@ where
                 )?;
             }
         }
+        self.dev.wait_for(self.par_stream.as_ref())?;
         Ok(())
     }
 }

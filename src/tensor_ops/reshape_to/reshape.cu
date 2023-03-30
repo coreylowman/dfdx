@@ -4,19 +4,21 @@
 template<typename T>
 __device__ void reshape_fwd(
     const size_t numel,
-    const T *inp,
     const size_t inp_num_dims,
-    const size_t *inp_dims,
-    const size_t *inp_strides,
-    T *out,
     const size_t out_num_dims,
-    const size_t *out_dims,
-    const size_t *out_strides
+    const size_t *info,
+    const T *inp,
+    T *out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= numel) {
         return;
     }
+
+    const size_t *inp_dims = info;
+    const size_t *inp_strides = info + inp_num_dims;
+    const size_t *out_dims = info + 2 * inp_num_dims;
+    const size_t *out_strides = info + 2 * inp_num_dims + out_num_dims;
 
     unsigned int inp_i = get_strided_index(i, inp_num_dims, inp_dims, inp_strides);
     unsigned int out_i = get_strided_index(i, out_num_dims, out_dims, out_strides);
@@ -27,19 +29,21 @@ __device__ void reshape_fwd(
 template<typename T>
 __device__ void reshape_bwd(
     const size_t numel,
-    T *grad_inp,
     const size_t inp_num_dims,
-    const size_t *inp_dims,
-    const size_t *inp_strides,
-    const T *grad_out,
     const size_t out_num_dims,
-    const size_t *out_dims,
-    const size_t *out_strides
+    const size_t *info,
+    T *grad_inp,
+    const T *grad_out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= numel) {
         return;
     }
+
+    const size_t *inp_dims = info;
+    const size_t *inp_strides = info + inp_num_dims;
+    const size_t *out_dims = info + 2 * inp_num_dims;
+    const size_t *out_strides = info + 2 * inp_num_dims + out_num_dims;
 
     unsigned int inp_i = get_strided_index(i, inp_num_dims, inp_dims, inp_strides);
     unsigned int out_i = get_strided_index(i, out_num_dims, out_dims, out_strides);
@@ -50,16 +54,13 @@ __device__ void reshape_bwd(
 #define RESHAPE_FWD(TYPENAME, FN) \
 extern "C" __global__ void FN( \
     const size_t numel, \
-    const TYPENAME *inp, \
     const size_t inp_num_dims, \
-    const size_t *inp_dims, \
-    const size_t *inp_strides, \
-    TYPENAME *out, \
     const size_t out_num_dims, \
-    const size_t *out_dims, \
-    const size_t *out_strides \
+    const size_t *info, \
+    const TYPENAME *inp, \
+    TYPENAME *out \
 ) { \
-    reshape_fwd(numel, inp, inp_num_dims, inp_dims, inp_strides, out, out_num_dims, out_dims, out_strides); \
+    reshape_fwd(numel, inp_num_dims, out_num_dims, info, inp, out); \
 }
 
 #define RESHAPE(TYPENAME, FWD, BWD) \
@@ -67,16 +68,13 @@ RESHAPE_FWD(TYPENAME, FWD) \
 \
 extern "C" __global__ void BWD( \
     const size_t numel, \
-    TYPENAME *grad_inp, \
     const size_t inp_num_dims, \
-    const size_t *inp_dims, \
-    const size_t *inp_strides, \
-    const TYPENAME *grad_out, \
     const size_t out_num_dims, \
-    const size_t *out_dims, \
-    const size_t *out_strides \
+    const size_t *info, \
+    TYPENAME *grad_inp, \
+    const TYPENAME *grad_out \
 ) { \
-    reshape_bwd(numel, grad_inp, inp_num_dims, inp_dims, inp_strides, grad_out, out_num_dims, out_dims, out_strides); \
+    reshape_bwd(numel, inp_num_dims, out_num_dims, info, grad_inp, grad_out); \
 }
 
 RESHAPE(float, reshape_fwd_f32, reshape_bwd_f32);

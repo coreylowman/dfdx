@@ -40,7 +40,7 @@ where
     ) -> Result<Self, <Self as HasErr>::Err> {
         let out = self
             .device
-            .try_lower_tri_like(&self.shape, E::one(), diagonal)?;
+            .try_lower_tri_like(&self.shape, E::ONE, diagonal)?;
         self.try_mul(out)
     }
 
@@ -56,7 +56,7 @@ where
     ) -> Result<Self, <Self as HasErr>::Err> {
         let out = self
             .device
-            .try_upper_tri_like(&self.shape, E::one(), diagonal)?;
+            .try_upper_tri_like(&self.shape, E::ONE, diagonal)?;
         self.try_mul(out)
     }
 
