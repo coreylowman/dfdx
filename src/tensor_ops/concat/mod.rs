@@ -3,6 +3,8 @@ use crate::{shapes::*, tensor::*};
 mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
+#[cfg(feature = "nightly")]
+mod quant_cpu_kernel;
 
 /// Concatenate two tensors along the first dimension.
 ///

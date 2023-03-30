@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{unique_id, Quantize, QuantizedCpu, Tensor},
+    tensor::{cpu::LendingIterator, unique_id, Quantize, QuantizedCpu, Tensor},
 };
 
 use num_traits::Float;
@@ -27,13 +27,16 @@ where
             device: self.clone(),
             tape: Default::default(),
         };
-        for x in out.buf_iter_mut() {
-            let val: K::Value = rng.sample(Standard);
-            *x = if val < op.prob {
-                K::Value::zero()
-            } else {
-                *x / (K::Value::one() - op.prob)
-            };
+        let mut iter = out.iter_blocks_mut();
+        while let Some(mut block) = iter.next() {
+            for x in block.iter_mut() {
+                let val: K::Value = rng.sample(Standard);
+                *x = if val < op.prob {
+                    <K::Value as num_traits::Zero>::zero()
+                } else {
+                    *x / (<K::Value as num_traits::One>::one() - op.prob)
+                };
+            }
         }
         Ok(out)
     }
@@ -48,13 +51,18 @@ where
         let mut rng = StdRng::seed_from_u64(op.seed);
         debug_assert_eq!(grad_inp.len(), grad_out.len());
         debug_assert_eq!(inp.data.len(), grad_out.len());
-        for (i, data_i) in grad_inp.iter_mut().enumerate() {
-            let val: K::Value = rng.sample(Standard);
-            *data_i += if val < op.prob {
-                K::Value::zero()
-            } else {
-                (K::Value::one() - op.prob).recip()
-            } * grad_out[i];
+        let mut iter = grad_inp.iter_blocks_mut();
+        let mut i = 0;
+        while let Some(mut block) = iter.next() {
+            for data_i in block.iter_mut() {
+                let val: K::Value = rng.sample(Standard);
+                *data_i += if val < op.prob {
+                    <K::Value as num_traits::Zero>::zero()
+                } else {
+                    (<K::Value as num_traits::One>::one() - op.prob).recip()
+                } * grad_out.get(i).unwrap();
+                i += 1;
+            }
         }
         Ok(())
     }

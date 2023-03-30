@@ -11,8 +11,6 @@ use crate::{
 
 use std::ops::{BitAnd, BitOr, BitXor, Not};
 
-use super::Device;
-
 pub trait BooleanKernel: DeviceStorage<bool> + OnesTensor<bool> + ZerosTensor<bool> {
     fn not<S: Shape>(
         &self,
@@ -143,7 +141,9 @@ boolean_op_impl!(BitXor, bitxor, xor, scalar_xor);
 /// assert_eq!(r1.array(), [true, false, true]);
 /// assert_eq!(r2.array(), [true, false, true]);
 /// ```
-pub fn bool_not<S: Shape, E: Dtype, D: Device<E>>(inp: &Tensor<S, bool, D>) -> Tensor<S, bool, D> {
+pub fn bool_not<S: Shape, E: Dtype, D: BooleanKernel>(
+    inp: &Tensor<S, bool, D>,
+) -> Tensor<S, bool, D> {
     !inp
 }
 
@@ -175,7 +175,7 @@ pub fn bool_not<S: Shape, E: Dtype, D: Device<E>>(inp: &Tensor<S, bool, D>) -> T
 /// assert_eq!(r1.array(), a.array());
 /// assert_eq!(r2.array(), [false; 3]);
 /// ```
-pub fn bool_and<S: Shape, E: Dtype, D: Device<E>>(
+pub fn bool_and<S: Shape, E: Dtype, D: BooleanKernel>(
     lhs: &Tensor<S, bool, D>,
     rhs: &Tensor<S, bool, D>,
 ) -> Tensor<S, bool, D> {
@@ -210,7 +210,7 @@ pub fn bool_and<S: Shape, E: Dtype, D: Device<E>>(
 /// assert_eq!(r1.array(), [true; 3]);
 /// assert_eq!(r2.array(), a.array());
 /// ```
-pub fn bool_or<S: Shape, E: Dtype, D: Device<E>>(
+pub fn bool_or<S: Shape, E: Dtype, D: BooleanKernel>(
     lhs: &Tensor<S, bool, D>,
     rhs: &Tensor<S, bool, D>,
 ) -> Tensor<S, bool, D> {
@@ -245,7 +245,7 @@ pub fn bool_or<S: Shape, E: Dtype, D: Device<E>>(
 /// assert_eq!(r1.array(), (!&a).array());
 /// assert_eq!(r2.array(), a.array());
 /// ```
-pub fn bool_xor<S: Shape, E: Dtype, D: Device<E>>(
+pub fn bool_xor<S: Shape, E: Dtype, D: BooleanKernel>(
     lhs: &Tensor<S, bool, D>,
     rhs: &Tensor<S, bool, D>,
 ) -> Tensor<S, bool, D> {
