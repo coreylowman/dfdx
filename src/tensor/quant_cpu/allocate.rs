@@ -150,6 +150,20 @@ impl<K: 'static + Quantize + std::fmt::Debug + Send + Sync> SampleTensor<K::Valu
     }
 }
 
+impl<K: 'static + Quantize + std::fmt::Debug + Send + Sync> CopySlice<K::Value>
+    for QuantizedCpu<K>
+{
+    fn copy_from<S: Shape, T>(dst: &mut Tensor<S, K::Value, Self, T>, src: &[K::Value]) {
+        std::sync::Arc::make_mut(&mut dst.data).copy_from_slice(src)
+    }
+    fn copy_into<S: Shape, T>(src: &Tensor<S, K::Value, Self, T>, dst: &mut [K::Value]) {
+        assert_eq!(src.data.len(), dst.len());
+        for (i, v) in src.data.iter().enumerate() {
+            dst[i] = v;
+        }
+    }
+}
+
 impl<K: 'static + Quantize + std::fmt::Debug + Send + Sync> TensorFromVec<K::Value>
     for QuantizedCpu<K>
 {

@@ -177,6 +177,17 @@ impl<K: Quantize> QuantizedStorage<K> {
         res
     }
 
+    pub fn copy_from_slice(&mut self, slice: &[K::Value]) {
+        assert!(slice.len() == self.len());
+        let mut slice_iter = slice.iter();
+        let mut blocks_iter = self.iter_blocks_mut();
+        while let Some(mut block) = blocks_iter.next() {
+            for val in block.iter_mut() {
+                *val = *slice_iter.next().unwrap();
+            }
+        }
+    }
+
     pub fn from_iter(iter: impl Iterator<Item = K::Value>, count: usize) -> Self {
         let mut res = Self::try_with_capacity(count).unwrap();
         let mut iter = iter.take(count).peekable();

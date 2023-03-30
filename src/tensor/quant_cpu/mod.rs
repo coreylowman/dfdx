@@ -7,4 +7,4 @@ mod quantize;
 pub(crate) use index::index_to_i;
 
 pub use device::QuantizedCpu;
-pub use quantize::Quantize;
+pub use quantize::{OffsetQuant, Quantize, ScaledQuant};
