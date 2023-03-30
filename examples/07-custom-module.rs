@@ -19,8 +19,10 @@ struct Mlp<const IN: usize, const INNER: usize, const OUT: usize, E: Dtype, D: D
 
 // TensorCollection lets you do several operations on Modules, including constructing them with
 // randomized parameters, and iterating through or mutating all tensors in a model.
-impl<const IN: usize, const INNER: usize, const OUT: usize, E: Dtype, D: Device<E>>
-    TensorCollection<E, D> for Mlp<IN, INNER, OUT, E, D>
+impl<const IN: usize, const INNER: usize, const OUT: usize, E, D: Device<E>> TensorCollection<E, D>
+    for Mlp<IN, INNER, OUT, E, D>
+where
+    E: Dtype + num_traits::Float,
 {
     // Type alias that specifies the how Mlp's type changes when using a different dtype and/or
     // device.

@@ -189,6 +189,7 @@ mod batchnorm1d;
 mod batchnorm2d;
 mod bias2d;
 mod conv;
+mod convtrans;
 mod dropout;
 mod ema;
 mod embedding;
@@ -208,6 +209,7 @@ mod safetensors;
 mod split_into;
 mod transformer;
 mod unbiased_linear;
+mod upscale;
 
 pub use module::{
     BuildModule, BuildOnDevice, DeviceBuildExt, Module, ModuleMut, NonMutableModule,
@@ -238,6 +240,7 @@ pub mod modules {
     pub use super::bias2d::Bias2D;
     #[cfg(feature = "nightly")]
     pub use super::conv::Conv2D;
+    pub use super::convtrans::ConvTrans2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
     pub use super::embedding::Embedding;
     #[cfg(feature = "nightly")]
@@ -256,6 +259,7 @@ pub mod modules {
         TransformerEncoder, TransformerEncoderBlock,
     };
     pub use super::unbiased_linear::UnbiasedLinear;
+    pub use super::upscale::Upscale2D;
     pub use super::*;
 }
 
@@ -269,6 +273,7 @@ pub mod builders {
     pub use super::bias2d::builder::Bias2D;
     #[cfg(feature = "nightly")]
     pub use super::conv::builder::Conv2D;
+    pub use super::convtrans::builder::ConvTrans2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
     pub use super::embedding::builder::Embedding;
     #[cfg(feature = "nightly")]

@@ -184,7 +184,7 @@ where
                 [lhs.strides[0], 0],
                 rhs.data.as_ref(),
                 [0, rhs.strides[0]],
-                E::zero(),
+                Default::default(),
                 &mut storage,
                 strides,
             )
@@ -260,7 +260,7 @@ where
                 [0, lhs.strides[0]],
                 rhs.data.as_ref(),
                 rhs.strides,
-                E::zero(),
+                Default::default(),
                 &mut storage,
                 [0, strides[0]],
             )?;
@@ -333,7 +333,7 @@ where
                 lhs.strides,
                 rhs.data.as_ref(),
                 rhs.strides,
-                E::zero(),
+                Default::default(),
                 &mut storage,
                 strides,
             )
@@ -408,7 +408,7 @@ where
                 lhs.strides,
                 rhs.data.as_ref(),
                 [0, rhs.strides[0], rhs.strides[1]],
-                E::zero(),
+                Default::default(),
                 &mut storage,
                 strides,
             )?;
@@ -486,7 +486,7 @@ where
                 lhs.strides,
                 rhs.data.as_ref(),
                 rhs.strides,
-                E::zero(),
+                Default::default(),
                 &mut storage,
                 strides,
             )?;
@@ -571,7 +571,7 @@ where
                     [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
                     &rhs.data.slice(b * rhs.strides[0]..),
                     [rhs.strides[1], rhs.strides[2], rhs.strides[3]],
-                    E::zero(),
+                    Default::default(),
                     &mut storage.slice_mut(b * strides[0]..),
                     [strides[1], strides[2], strides[3]],
                 )?;
@@ -585,7 +585,7 @@ where
                     [lhs.strides[1], lhs.strides[2], lhs.strides[3]],
                     &rhs.data.slice(b * rhs.strides[0]..),
                     [rhs.strides[1], rhs.strides[2], rhs.strides[3]],
-                    E::zero(),
+                    Default::default(),
                     &mut storage.slice_mut(b * strides[0]..),
                     [strides[1], strides[2], strides[3]],
                 )?;

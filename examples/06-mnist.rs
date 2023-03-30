@@ -100,7 +100,7 @@ fn main() {
         for (img, lbl) in dataset
             .shuffled(&mut rng)
             .map(preprocess)
-            .batch(Const::<BATCH_SIZE>)
+            .batch_exact(Const::<BATCH_SIZE>)
             .collate()
             .stack()
             .progress()
