@@ -1,8 +1,4 @@
-use crate::{
-    shapes::*,
-    tensor::*,
-    tensor_ops::*,
-};
+use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::module::{Module, NonMutableModule, ZeroSizedModule};
 
@@ -61,10 +57,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        nn::*,
-        tests::TestDevice,
-    };
+    use crate::{nn::*, tests::TestDevice};
 
     use super::*;
 
