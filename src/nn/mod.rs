@@ -240,6 +240,7 @@ pub mod modules {
     pub use super::bias2d::Bias2D;
     #[cfg(feature = "nightly")]
     pub use super::conv::Conv2D;
+    #[cfg(feature = "nightly")]
     pub use super::convtrans::ConvTrans2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
     pub use super::embedding::Embedding;
@@ -273,6 +274,7 @@ pub mod builders {
     pub use super::bias2d::builder::Bias2D;
     #[cfg(feature = "nightly")]
     pub use super::conv::builder::Conv2D;
+    #[cfg(feature = "nightly")]
     pub use super::convtrans::builder::ConvTrans2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
     pub use super::embedding::builder::Embedding;
@@ -292,5 +294,6 @@ pub mod builders {
         TransformerEncoder, TransformerEncoderBlock,
     };
     pub use super::unbiased_linear::builder::UnbiasedLinear;
+    pub use super::upscale::Upscale2D;
     pub use super::*;
 }
