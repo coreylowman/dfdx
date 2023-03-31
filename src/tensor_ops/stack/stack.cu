@@ -24,8 +24,8 @@ extern "C" __global__ void sum_f64(
 
 extern "C" __global__ void sum_usize(
     const size_t numel,
-    const unsigned int *inp,
-    double *out
+    const size_t *inp,
+    size_t *out
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= numel) {
