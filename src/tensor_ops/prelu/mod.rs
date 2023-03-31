@@ -1,5 +1,7 @@
 use core::fmt::Debug;
 
+use num_traits::Zero;
+
 use crate::{shapes::*, tensor::*};
 
 use super::{
@@ -59,7 +61,7 @@ pub trait TryPReLU<T = Self>: HasErr {
     }
 }
 
-impl<S: Shape, E: Dtype, D, LhsTape: Tape<E, D>, R> TryPReLU<Tensor<S, E, D, R>>
+impl<S: Shape, E: Dtype + Zero, D, LhsTape: Tape<E, D>, R> TryPReLU<Tensor<S, E, D, R>>
     for Tensor<S, E, D, LhsTape>
 where
     D: Device<E> + ScalarCmpKernel<LtKernelOp, E>,
@@ -74,7 +76,7 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E> + ScalarCmpKernel<LtKernelOp, E>, T: Tape<E, D>> TryPReLU<E>
+impl<S: Shape, E: Dtype + Zero, D: Device<E> + ScalarCmpKernel<LtKernelOp, E>, T: Tape<E, D>> TryPReLU<E>
     for Tensor<S, E, D, T>
 {
     type Output = Self;
