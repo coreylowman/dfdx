@@ -76,8 +76,8 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype + Zero, D: Device<E> + ScalarCmpKernel<LtKernelOp, E>, T: Tape<E, D>> TryPReLU<E>
-    for Tensor<S, E, D, T>
+impl<S: Shape, E: Dtype + Zero, D: Device<E> + ScalarCmpKernel<LtKernelOp, E>, T: Tape<E, D>>
+    TryPReLU<E> for Tensor<S, E, D, T>
 {
     type Output = Self;
 
