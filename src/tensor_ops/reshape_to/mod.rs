@@ -120,6 +120,13 @@ mod tests {
     }
 
     #[test]
+    fn test_unit_non_contiguous_reshapes() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank2<2, 3>, usize, _> = dev.zeros::<Rank0>().broadcast();
+        let _: Tensor<Rank1<6>, usize, _> = t.reshape();
+    }
+
+    #[test]
     fn test_valid_reshapes() {
         let dev: TestDevice = Default::default();
 
@@ -186,5 +193,19 @@ mod tests {
                 [0.24863747, 0.2747869, 0.3036865],
             ],
         )
+    }
+
+    #[test]
+    fn test_reshape_broadcasted() {
+        let dev: TestDevice = Default::default();
+        let a: Tensor<Rank2<2, 3>, TestDtype, _> = dev.tensor([1., 2., 3.]).broadcast();
+        let b: Tensor<Rank2<3, 2>, TestDtype, _> = a.clone().reshape();
+
+        #[cfg(feature = "cuda")]
+        use cudarc::driver::DeviceSlice;
+
+        assert_eq!(b.data.len(), 6);
+        assert_eq!(a.as_vec(), b.as_vec());
+        assert_eq!(b.array(), [[1., 2.], [3., 1.], [2., 3.]]);
     }
 }

@@ -178,6 +178,7 @@ mod num_params;
 mod reset_params;
 pub mod tensor_collection;
 mod to_device;
+mod to_dtype;
 mod zero_grads;
 
 mod module;
@@ -188,6 +189,7 @@ mod batchnorm1d;
 mod batchnorm2d;
 mod bias2d;
 mod conv;
+mod convtrans;
 mod dropout;
 mod ema;
 mod embedding;
@@ -207,6 +209,7 @@ mod safetensors;
 mod split_into;
 mod transformer;
 mod unbiased_linear;
+mod upscale;
 
 pub use module::{
     BuildModule, BuildOnDevice, DeviceBuildExt, Module, ModuleMut, NonMutableModule,
@@ -223,6 +226,7 @@ pub use npz::{LoadFromNpz, SaveToNpz};
 pub use num_params::NumParams;
 pub use reset_params::ResetParams;
 pub use to_device::ToDevice;
+pub use to_dtype::ToDtype;
 pub use zero_grads::ZeroGrads;
 
 pub mod modules {
@@ -236,6 +240,8 @@ pub mod modules {
     pub use super::bias2d::Bias2D;
     #[cfg(feature = "nightly")]
     pub use super::conv::Conv2D;
+    #[cfg(feature = "nightly")]
+    pub use super::convtrans::ConvTrans2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
     pub use super::embedding::Embedding;
     #[cfg(feature = "nightly")]
@@ -254,6 +260,7 @@ pub mod modules {
         TransformerEncoder, TransformerEncoderBlock,
     };
     pub use super::unbiased_linear::UnbiasedLinear;
+    pub use super::upscale::Upscale2D;
     pub use super::*;
 }
 
@@ -268,6 +275,8 @@ pub mod builders {
     pub use super::bias2d::builder::Bias2D;
     #[cfg(feature = "nightly")]
     pub use super::conv::builder::Conv2D;
+    #[cfg(feature = "nightly")]
+    pub use super::convtrans::builder::ConvTrans2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
     pub use super::embedding::builder::Embedding;
     #[cfg(feature = "nightly")]
@@ -286,5 +295,6 @@ pub mod builders {
         TransformerEncoder, TransformerEncoderBlock,
     };
     pub use super::unbiased_linear::builder::UnbiasedLinear;
+    pub use super::upscale::Upscale2D;
     pub use super::*;
 }

@@ -4,16 +4,10 @@
 fn main() {
     use dfdx::{
         shapes::{Rank0, Rank1, Rank2},
-        tensor::{AsArray, Tensor, TensorFrom, ZerosTensor},
+        tensor::{AsArray, AutoDevice, Tensor, TensorFrom, ZerosTensor},
     };
 
-    #[cfg(not(feature = "cuda"))]
-    type Device = dfdx::tensor::Cpu;
-
-    #[cfg(feature = "cuda")]
-    type Device = dfdx::tensor::Cuda;
-
-    let dev = Device::default();
+    let dev = AutoDevice::default();
 
     dev.tensor(1.234f32)
         .save_to_npy("0d-rs.npy")

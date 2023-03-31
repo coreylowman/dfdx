@@ -2,14 +2,8 @@
 
 #[cfg(feature = "nightly")]
 fn main() {
-    use dfdx::prelude::*;
+    use dfdx::{prelude::*, tensor::AutoDevice};
     use std::time::Instant;
-
-    #[cfg(not(feature = "cuda"))]
-    type Device = Cpu;
-
-    #[cfg(feature = "cuda")]
-    type Device = Cuda;
 
     type BasicBlock<const C: usize> = Residual<(
         Conv2D<C, C, 3, 1, 1>,
@@ -46,7 +40,7 @@ fn main() {
         (AvgPoolGlobal, Linear<512, NUM_CLASSES>),
     );
 
-    let dev = Device::default();
+    let dev = AutoDevice::default();
     let m = dev.build_module::<Resnet18<1000>, f32>();
 
     let x: Tensor<Rank3<3, 224, 224>, f32, _> = dev.sample_normal();

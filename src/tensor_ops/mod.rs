@@ -185,9 +185,11 @@ mod prelu;
 mod realize_to;
 mod relu;
 mod reshape_to;
+mod roll;
 mod select_and_gather;
 mod sigmoid;
 mod sin;
+mod slice;
 mod softmax;
 mod sqrt;
 mod square;
@@ -196,6 +198,8 @@ mod stddev_to;
 mod sub;
 mod sum_to;
 mod tanh;
+mod to_dtype;
+mod tri;
 mod var_to;
 
 pub use abs::abs;
@@ -234,9 +238,11 @@ pub use prelu::{leakyrelu, prelu, LeakyReLUKernelOp, PReLUKernelOp, TryPReLU};
 pub use realize_to::RealizeTo;
 pub use relu::relu;
 pub use reshape_to::ReshapeTo;
+pub use roll::Roll;
 pub use select_and_gather::{GatherTo, SelectTo};
 pub use sigmoid::sigmoid;
 pub use sin::sin;
+pub use slice::slice;
 pub use softmax::softmax;
 pub use sqrt::sqrt;
 pub use square::square;
@@ -245,14 +251,26 @@ pub use stddev_to::StddevTo;
 pub use sub::{sub, TrySub};
 pub use sum_to::SumTo;
 pub use tanh::tanh;
+pub use to_dtype::to_dtype;
+pub use tri::{lower_tri, upper_tri};
 pub use var_to::VarTo;
+
+pub(crate) use to_dtype::ToDtypeKernel;
 
 #[cfg(feature = "nightly")]
 mod conv2d;
 #[cfg(feature = "nightly")]
-pub use conv2d::TryConv2D;
+pub use conv2d::{TryConv2D, TryConv2DTo};
+
 #[cfg(feature = "nightly")]
-pub(crate) use conv2d::TryConv2DTo;
+mod convtrans2d;
+#[cfg(feature = "nightly")]
+pub use convtrans2d::{ConvTransAlgebra, TryConvTrans2D, TryConvTrans2DTo};
+
+mod upscale2d;
+#[cfg(feature = "nightly")]
+pub(crate) use upscale2d::Upscale2DKernel;
+pub use upscale2d::{Bilinear, ConstUpscale2D, NearestNeighbor, TryUpscale2D, UpscaleMethod};
 
 #[cfg(feature = "nightly")]
 mod pool2d;

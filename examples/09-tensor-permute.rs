@@ -2,18 +2,12 @@
 
 use dfdx::{
     shapes::{Axes3, Rank3},
-    tensor::{Tensor, ZerosTensor},
+    tensor::{AutoDevice, Tensor, ZerosTensor},
     tensor_ops::PermuteTo,
 };
 
-#[cfg(not(feature = "cuda"))]
-type Device = dfdx::tensor::Cpu;
-
-#[cfg(feature = "cuda")]
-type Device = dfdx::tensor::Cuda;
-
 fn main() {
-    let dev = Device::default();
+    let dev = AutoDevice::default();
 
     let a: Tensor<Rank3<3, 5, 7>, f32, _> = dev.zeros();
 

@@ -6,13 +6,8 @@ use dfdx::{
     losses::huber_loss,
     optim::{Momentum, Sgd, SgdConfig},
     prelude::*,
+    tensor::AutoDevice,
 };
-
-#[cfg(not(feature = "cuda"))]
-type Device = Cpu;
-
-#[cfg(feature = "cuda")]
-type Device = Cuda;
 
 const BATCH: usize = 64;
 const STATE: usize = 4;
@@ -26,7 +21,7 @@ type QNetwork = (
 );
 
 fn main() {
-    let dev = Device::default();
+    let dev = AutoDevice::default();
     // initialize model
     let mut q_net = dev.build_module::<QNetwork, f32>();
     let mut target_q_net = q_net.clone();

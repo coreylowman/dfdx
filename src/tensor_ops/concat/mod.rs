@@ -102,19 +102,19 @@ pub trait ConcatShape<Rhs: Shape>: Shape {
 
 macro_rules! impl_concat {
     ([$($Dims:tt $Idx:tt),*]) => {
-impl<A: Dim, B: Dim, $($Dims: Dim, )*> ConcatShape<(A, $($Dims, )*)>
-    for (B, $($Dims, )*)
-where
-    A: std::ops::Add<B>,
-    <A as std::ops::Add<B>>::Output: Dim,
-{
-    type Catted = (<A as std::ops::Add<B>>::Output, $($Dims, )*);
+        impl<A: Dim, B: Dim, $($Dims: Dim, )*> ConcatShape<(A, $($Dims, )*)>
+            for (B, $($Dims, )*)
+        where
+            A: std::ops::Add<B>,
+            <A as std::ops::Add<B>>::Output: Dim,
+        {
+            type Catted = (<A as std::ops::Add<B>>::Output, $($Dims, )*);
 
-    fn concat_shape(&self, rhs: &(A, $($Dims, )*)) -> Self::Catted {
-        $(assert_eq!(self.$Idx, rhs.$Idx);)*
-        (rhs.0 + self.0, $(self.$Idx, )*)
-    }
-}
+            fn concat_shape(&self, rhs: &(A, $($Dims, )*)) -> Self::Catted {
+                $(assert_eq!(self.$Idx, rhs.$Idx);)*
+                (rhs.0 + self.0, $(self.$Idx, )*)
+            }
+        }
     };
 }
 
@@ -124,6 +124,20 @@ impl_concat!([D1 1, D2 2]);
 impl_concat!([D1 1, D2 2, D3 3]);
 impl_concat!([D1 1, D2 2, D3 3, D4 4]);
 impl_concat!([D1 1, D2 2, D3 3, D4 4, D5 5]);
+
+impl<const N: usize> ConcatShape<[usize; N]> for [usize; N]
+where
+    [usize; N]: Shape,
+{
+    type Catted = [usize; N];
+
+    fn concat_shape(&self, rhs: &[usize; N]) -> [usize; N] {
+        assert_eq!(self[1..], rhs[1..]);
+        let mut out = *self;
+        out[0] = self[0] + rhs[0];
+        out
+    }
+}
 
 #[cfg(test)]
 mod tests {

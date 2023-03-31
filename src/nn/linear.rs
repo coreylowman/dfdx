@@ -56,8 +56,8 @@ impl<const I: usize, const O: usize, E: Dtype, D: DeviceStorage> NonMutableModul
 {
 }
 
-impl<const I: usize, const O: usize, E: Dtype, D: Device<E>> TensorCollection<E, D>
-    for Linear<I, O, E, D>
+impl<const I: usize, const O: usize, E: Dtype + num_traits::Float, D: Device<E>>
+    TensorCollection<E, D> for Linear<I, O, E, D>
 {
     type To<E2: Dtype, D2: Device<E2>> = Linear<I, O, E2, D2>;
 

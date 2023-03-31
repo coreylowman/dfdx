@@ -53,7 +53,10 @@ pub trait HasUnitType {
     type Unit: Unit;
 }
 
-/// Represents a data type or element of an array.
+/// Represents a data type or element of an array that can have
+/// arithmatic operations applied to it. The main difference
+/// between [Dtype] and [Unit] is that [`bool`] is [Unit], but
+/// not [Dtype].
 pub trait Dtype:
     Unit
     + std::ops::Add<Self, Output = Self>
@@ -65,12 +68,23 @@ pub trait Dtype:
     + std::ops::MulAssign
     + std::ops::DivAssign
     + num_traits::FromPrimitive
-    + num_traits::Float
     + rand_distr::uniform::SampleUniform
 {
 }
 impl Dtype for f32 {}
 impl Dtype for f64 {}
+impl Dtype for i8 {}
+impl Dtype for i16 {}
+impl Dtype for i32 {}
+impl Dtype for i64 {}
+impl Dtype for i128 {}
+impl Dtype for isize {}
+impl Dtype for u8 {}
+impl Dtype for u16 {}
+impl Dtype for u32 {}
+impl Dtype for u64 {}
+impl Dtype for u128 {}
+impl Dtype for usize {}
 
 /// Represents something that has a [Dtype].
 pub trait HasDtype {
@@ -195,7 +209,8 @@ pub trait Shape:
         + Send
         + Sync
         + IntoIterator<Item = usize>
-        + Into<std::vec::Vec<usize>>;
+        + Into<std::vec::Vec<usize>>
+        + AsRef<[usize]>;
 
     /// All the axes of this shape
     type AllAxes: Axes;

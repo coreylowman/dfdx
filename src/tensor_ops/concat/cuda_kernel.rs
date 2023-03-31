@@ -1,8 +1,8 @@
 use crate::{
     shapes::*,
-    tensor::{unique_id, Cuda, Tensor},
+    tensor::{launch_cfg, unique_id, Cuda, Tensor},
 };
-use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
+use cudarc::driver::{DeviceSlice, LaunchAsync};
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/concat.ptx"));
 
@@ -67,14 +67,14 @@ where
         {
             let f = self.dev.get_func(Self::BWD_FN, Self::BWD_FN).unwrap();
             let numel = grad_a.len();
-            let cfg = LaunchConfig::for_num_elems(numel as u32);
+            let cfg = launch_cfg(numel as u32);
             unsafe { f.launch(cfg, (numel, &grad_out.slice(0..numel), grad_a)) }?;
             offset += numel;
         }
         {
             let f = self.dev.get_func(Self::BWD_FN, Self::BWD_FN).unwrap();
             let numel = grad_b.len();
-            let cfg = LaunchConfig::for_num_elems(numel as u32);
+            let cfg = launch_cfg(numel as u32);
             unsafe { f.launch(cfg, (numel, &grad_out.slice(offset..), grad_b)) }?;
         }
         Ok(())

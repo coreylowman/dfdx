@@ -19,13 +19,13 @@ impl ReduceShape<Axis<0>> for () {
 impl<Src: Shape, Dst: Shape + ReduceShapeTo<Src, Ax>, Ax> BroadcastShapeTo<Dst, Ax> for Src {}
 
 macro_rules! broadcast_to_array {
-    ($SrcNum:literal, (), $DstNum:literal, ($($DstDims:tt),*), $Axes:ty) => {
+    ($SrcNum:tt, (), $DstNum:tt, ($($DstDims:tt),*), $Axes:ty) => {
         impl ReduceShapeTo<(), $Axes> for [usize; $DstNum] {}
         impl ReduceShape<$Axes> for [usize; $DstNum] {
             type Reduced = ();
         }
     };
-    ($SrcNum:literal, ($($SrcDims:tt),*), $DstNum:literal, ($($DstDims:tt),*), $Axes:ty) => {
+    ($SrcNum:tt, ($($SrcDims:tt),*), $DstNum:tt, ($($DstDims:tt),*), $Axes:ty) => {
         impl ReduceShapeTo<[usize; $SrcNum], $Axes> for [usize; $DstNum] {}
         impl ReduceShape<$Axes> for [usize; $DstNum] {
             type Reduced = [usize; $SrcNum];
@@ -34,7 +34,9 @@ macro_rules! broadcast_to_array {
 }
 
 macro_rules! broadcast_to {
-    ($SrcNum:literal, ($($SrcDims:tt),*), $DstNum:literal, ($($DstDims:tt),*), $Axes:ty) => {
+    ($SrcNum:tt, ($($SrcDims:tt),*), $DstNum:tt, ($($DstDims:tt),*), ()<>) => {
+    };
+    ($SrcNum:tt, ($($SrcDims:tt),*), $DstNum:tt, ($($DstDims:tt),*), $Axes:ty) => {
         impl<$($DstDims: Dim, )*> ReduceShapeTo<($($SrcDims, )*), $Axes> for ($($DstDims, )*) {}
         impl<$($DstDims: Dim, )*> ReduceShape<$Axes> for ($($DstDims, )*) {
             type Reduced = ($($SrcDims, )*);
@@ -42,50 +44,37 @@ macro_rules! broadcast_to {
         broadcast_to_array!($SrcNum, ($($SrcDims),*), $DstNum, ($($DstDims),*), $Axes);
     };
 }
-broadcast_to!(0, (), 1, (M), Axis<0>);
-broadcast_to!(0, (), 2, (M, N), Axes2<0, 1>);
-broadcast_to!(0, (), 3, (M, N, O), Axes3<0, 1, 2>);
-broadcast_to!(0, (), 4, (M, N, O, P), Axes4<0, 1, 2, 3>);
-broadcast_to!(0, (), 5, (M, N, O, P, Q), Axes5<0, 1, 2, 3, 4>);
-broadcast_to!(0, (), 6, (M, N, O, P, Q, R), Axes6<0, 1, 2, 3, 4, 5>);
 
-broadcast_to!(1, (M), 2, (M, N), Axis<1>);
-broadcast_to!(1, (N), 2, (M, N), Axis<0>);
-broadcast_to!(1, (M), 3, (M, N, O), Axes2<1, 2>);
-broadcast_to!(1, (N), 3, (M, N, O), Axes2<0, 2>);
-broadcast_to!(1, (O), 3, (M, N, O), Axes2<0, 1>);
-broadcast_to!(1, (M), 4, (M, N, O, P), Axes3<1, 2, 3>);
-broadcast_to!(1, (N), 4, (M, N, O, P), Axes3<0, 2, 3>);
-broadcast_to!(1, (O), 4, (M, N, O, P), Axes3<0, 1, 3>);
-broadcast_to!(1, (P), 4, (M, N, O, P), Axes3<0, 1, 2>);
+macro_rules! length {
+    () => {0};
+    ($x:tt $($xs:tt)*) => {1 + length!($($xs)*)};
+}
 
-broadcast_to!(2, (M, N), 3, (M, N, O), Axis<2>);
-broadcast_to!(2, (M, O), 3, (M, N, O), Axis<1>);
-broadcast_to!(2, (N, O), 3, (M, N, O), Axis<0>);
-broadcast_to!(2, (M, N), 4, (M, N, O, P), Axes2<2, 3>);
-broadcast_to!(2, (M, O), 4, (M, N, O, P), Axes2<1, 3>);
-broadcast_to!(2, (N, O), 4, (M, N, O, P), Axes2<0, 3>);
-broadcast_to!(2, (M, P), 4, (M, N, O, P), Axes2<1, 2>);
-broadcast_to!(2, (N, P), 4, (M, N, O, P), Axes2<0, 2>);
-broadcast_to!(2, (O, P), 4, (M, N, O, P), Axes2<0, 1>);
+pub(crate) use length;
 
-broadcast_to!(3, (M, N, O), 4, (M, N, O, P), Axis<3>);
-broadcast_to!(3, (M, N, P), 4, (M, N, O, P), Axis<2>);
-broadcast_to!(3, (M, O, P), 4, (M, N, O, P), Axis<1>);
-broadcast_to!(3, (N, O, P), 4, (M, N, O, P), Axis<0>);
+// Defines all reduce/broadcast rules recursively
+macro_rules! broadcast_to_all {
+    ([$($s1:ident)*] [$($s2:ident)*] [$($ax:tt)*] [] [$axis:tt $($axes:tt)*]) => {
+        broadcast_to!({length!($($s1)*)}, ($($s1),*), {length!($($s2)*)}, ($($s2),*), $axis<$({$ax}),*>);
+    };
+    (
+        [$($s1:ident)*]
+        [$($s2:ident)*]
+        [$($ax:tt)*]
+        [$sh:ident $($shs:ident)*]
+        [$axis:tt $($axes:tt)*]
+    ) => {
+        broadcast_to!({length!($($s1)*)}, ($($s1),*), {length!($($s2)*)}, ($($s2),*), $axis<$({$ax}),*>);
 
-broadcast_to!(4, (M, N, O, P), 5, (M, N, O, P, Q), Axis<4>);
-broadcast_to!(4, (M, N, O, Q), 5, (M, N, O, P, Q), Axis<3>);
-broadcast_to!(4, (M, N, P, Q), 5, (M, N, O, P, Q), Axis<2>);
-broadcast_to!(4, (M, O, P, Q), 5, (M, N, O, P, Q), Axis<1>);
-broadcast_to!(4, (N, O, P, Q), 5, (M, N, O, P, Q), Axis<0>);
+        // Add a broadcasted dimension to the end of s2
+        broadcast_to_all!([$($s1)*] [$($s2)* $sh] [$($ax)* {length!($($s2)*)}] [$($shs)*] [$($axes)*]);
 
-broadcast_to!(5, (M, N, O, P, Q), 6, (M, N, O, P, Q, R), Axis<5>);
-broadcast_to!(5, (M, N, O, P, R), 6, (M, N, O, P, Q, R), Axis<4>);
-broadcast_to!(5, (M, N, O, Q, R), 6, (M, N, O, P, Q, R), Axis<3>);
-broadcast_to!(5, (M, N, P, Q, R), 6, (M, N, O, P, Q, R), Axis<2>);
-broadcast_to!(5, (M, O, P, Q, R), 6, (M, N, O, P, Q, R), Axis<1>);
-broadcast_to!(5, (N, O, P, Q, R), 6, (M, N, O, P, Q, R), Axis<0>);
+        // Add a dimension to both s1 and s2
+        broadcast_to_all!([$($s1)* $sh] [$($s2)* $sh] [$($ax)*] [$($shs)*] [$axis $($axes)*]);
+    }
+}
+
+broadcast_to_all!([] [] [] [A B C D E F] [() Axis Axes2 Axes3 Axes4 Axes5 Axes6]);
 
 /// Internal implementation for broadcasting strides
 pub trait BroadcastStridesTo<S: Shape, Ax>: Shape + BroadcastShapeTo<S, Ax> {

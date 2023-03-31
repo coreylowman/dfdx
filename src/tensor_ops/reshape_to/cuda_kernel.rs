@@ -1,59 +1,45 @@
 use crate::{
     shapes::*,
-    tensor::{Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor},
 };
-use cudarc::driver::{DeviceSlice, LaunchAsync, LaunchConfig};
+use cudarc::{
+    driver::{DeviceSlice, LaunchAsync},
+    nvrtc::compile_ptx,
+    types::CudaTypeName,
+};
 
-const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/reshape.ptx"));
-
-trait HasCudaKernel<E> {
-    const MOD: &'static str;
-    const FNS: &'static [&'static str];
-}
-
-impl HasCudaKernel<f32> for Cuda {
-    const MOD: &'static str = "reshape_f32";
-    const FNS: &'static [&'static str] = &["reshape_fwd_f32", "reshape_bwd_f32"];
-}
-
-impl HasCudaKernel<f64> for Cuda {
-    const MOD: &'static str = "reshape_f64";
-    const FNS: &'static [&'static str] = &["reshape_fwd_f64", "reshape_bwd_f64"];
-}
-
-impl<E: Dtype> super::ReshapeKernel<E> for Cuda
-where
-    Self: HasCudaKernel<E>,
-{
+impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
     fn forward<Src: Shape, Dst: Shape>(
         &self,
         dst: &Dst,
         inp: &Tensor<Src, E, Self>,
     ) -> Result<Tensor<Dst, E, Self>, Self::Err> {
-        if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
-            self.dev.load_ptx(PTX_SRC.into(), Self::MOD, Self::FNS)?;
+        let module = std::format!("reshape_fwd_{}", E::NAME);
+        if !self.dev.has_func(&module, "reshape_fwd") {
+            let src = FWD_KERNEL.replace("$T", E::NAME);
+            let ptx = compile_ptx(src).unwrap();
+            self.dev.load_ptx(ptx, &module, &["reshape_fwd"])?;
         }
+        let fwd_fn = self.dev.get_func(&module, "reshape_fwd").unwrap();
 
-        let numel = inp.data.len();
+        let numel = inp.shape.num_elements();
         let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
-        let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
-        let dst_dims = self.dev.htod_copy(dst.concrete().into())?;
-        let inp_strides = self.dev.htod_copy(inp.strides.into())?;
-        let dst_strides = self.dev.htod_copy(dst.strides().into())?;
+        let mut info = Vec::with_capacity(Src::NUM_DIMS * 2 + Dst::NUM_DIMS * 2);
+        info.extend(inp.shape.concrete());
+        info.extend(inp.strides);
+        info.extend(dst.concrete());
+        info.extend(dst.strides());
+        let info = self.dev.htod_copy(info)?;
 
-        let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (
             numel,             // const size_t numel,
-            inp.data.as_ref(), // const float *inp,
             Src::NUM_DIMS,     // const size_t inp_num_dims,
-            &inp_dims,         // const size_t *inp_dims,
-            &inp_strides,      // const size_t *inp_strides,
-            &mut storage,      // float *out
             Dst::NUM_DIMS,     // const size_t out_num_dims,
-            &dst_dims,         // const size_t *out_dims,
-            &dst_strides,      // const size_t *out_strides,
+            &info,             // const size_t *info,
+            inp.data.as_ref(), // const float *inp,
+            &mut storage,      // float *out
         );
         unsafe { fwd_fn.launch(cfg, params) }?;
 
@@ -67,27 +53,127 @@ where
         out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
+        let module = std::format!("reshape_bwd_{}", E::NAME);
+        if !self.dev.has_func(&module, "reshape_bwd") {
+            let src = BWD_KERNEL.replace("$T", E::NAME);
+            let ptx = compile_ptx(src).unwrap();
+            self.dev.load_ptx(ptx, &module, &["reshape_bwd"])?;
+        }
+        let bwd_fn = self.dev.get_func(&module, "reshape_bwd").unwrap();
+
         let numel = grad_inp.len();
 
-        let inp_dims = self.dev.htod_copy(inp.shape.concrete().into())?;
-        let out_dims = self.dev.htod_copy(out.shape.concrete().into())?;
-        let inp_strides = self.dev.htod_copy(inp.strides.into())?;
-        let out_strides = self.dev.htod_copy(out.strides.into())?;
+        let mut info = Vec::with_capacity(Src::NUM_DIMS * 2 + Dst::NUM_DIMS * 2);
+        info.extend(inp.shape.concrete());
+        info.extend(inp.strides);
+        info.extend(out.shape.concrete());
+        info.extend(out.strides);
+        let info = self.dev.htod_copy(info)?;
 
-        let cfg = LaunchConfig::for_num_elems(numel as u32);
+        let cfg = launch_cfg(numel as u32);
         let params = (
             numel,         // const size_t numel,
-            grad_inp,      // float *grad_inp,
             Src::NUM_DIMS, // const size_t inp_num_dims,
-            &inp_dims,     // const size_t *inp_dims,
-            &inp_strides,  // const size_t *inp_strides,
-            grad_out,      // const float *grad_out,
             Dst::NUM_DIMS, // const size_t out_num_dims,
-            &out_dims,     // const size_t *out_dims,
-            &out_strides,  // const size_t *out_strides
+            &info,         // const size_t *info,
+            grad_inp,      // float *grad_inp,
+            grad_out,      // const float *grad_out,
         );
         unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())
     }
 }
+
+const FWD_KERNEL: &str = "
+#if __WORDSIZE == 64
+typedef long int intptr_t;
+#else
+typedef int intptr_t;
+#endif
+
+__device__ unsigned int get_strided_index(
+    unsigned int idx,
+    const size_t num_dims,
+    const size_t *dims,
+    const size_t *strides
+) {
+    unsigned int strided_i = 0;
+    for (unsigned int d = 0; d < num_dims; d++) {
+        unsigned int dim_idx = num_dims - 1 - d;
+        strided_i += (idx % dims[dim_idx]) * strides[dim_idx];
+        idx /= dims[dim_idx];
+    }
+    return strided_i;
+}
+
+extern \"C\" __global__ void reshape_fwd(
+    const size_t numel,
+    const size_t inp_num_dims,
+    const size_t out_num_dims,
+    const size_t *info,
+    const $T *inp,
+    $T *out
+) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= numel) {
+        return;
+    }
+
+    const size_t *inp_dims = info;
+    const size_t *inp_strides = info + inp_num_dims;
+    const size_t *out_dims = info + 2 * inp_num_dims;
+    const size_t *out_strides = info + 2 * inp_num_dims + out_num_dims;
+
+    unsigned int inp_i = get_strided_index(i, inp_num_dims, inp_dims, inp_strides);
+    unsigned int out_i = get_strided_index(i, out_num_dims, out_dims, out_strides);
+
+    out[out_i] = inp[inp_i];
+}
+";
+
+const BWD_KERNEL: &str = "
+#if __WORDSIZE == 64
+typedef long int intptr_t;
+#else
+typedef int intptr_t;
+#endif
+
+__device__ unsigned int get_strided_index(
+    unsigned int idx,
+    const size_t num_dims,
+    const size_t *dims,
+    const size_t *strides
+) {
+    unsigned int strided_i = 0;
+    for (unsigned int d = 0; d < num_dims; d++) {
+        unsigned int dim_idx = num_dims - 1 - d;
+        strided_i += (idx % dims[dim_idx]) * strides[dim_idx];
+        idx /= dims[dim_idx];
+    }
+    return strided_i;
+}
+
+extern \"C\" __global__ void reshape_bwd(
+    const size_t numel,
+    const size_t inp_num_dims,
+    const size_t out_num_dims,
+    const size_t *info,
+    $T *grad_inp,
+    const $T *grad_out
+) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= numel) {
+        return;
+    }
+
+    const size_t *inp_dims = info;
+    const size_t *inp_strides = info + inp_num_dims;
+    const size_t *out_dims = info + 2 * inp_num_dims;
+    const size_t *out_strides = info + 2 * inp_num_dims + out_num_dims;
+
+    unsigned int inp_i = get_strided_index(i, inp_num_dims, inp_dims, inp_strides);
+    unsigned int out_i = get_strided_index(i, out_num_dims, out_dims, out_strides);
+
+    atomicAdd(grad_inp + inp_i, grad_out[out_i]);
+}
+";

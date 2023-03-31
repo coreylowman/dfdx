@@ -49,32 +49,32 @@ pub trait RemoveDimKernel<E: Dtype>: DeviceStorage {
 
 /// Select a single value from a single dimension, removing that dimension
 /// from the shape. Equivalent to `torch.select` from pytorch.
+///
+/// The shape of the index is the shape of the tensor up to the axis you
+/// want to select from.
+///
+/// For example, given a tensor of shape (M, N, O), here are the required
+/// index shapes to select each axis:
+/// - Axis 0: index shape ()
+/// - Axis 1: index shape (M, )
+/// - Axis 2: index shape (M, N)
+///
+/// Here is an example selecting from a 2d tensor:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a: Tensor<Rank2<3, 5>, f32, _> = dev.zeros();
+///
+/// // select from the 0th axis
+/// let idx: Tensor<Rank0, usize, _> = dev.tensor(0);
+/// let _: Tensor<Rank1<5>, f32, _> = a.clone().select(idx);
+///
+/// // select from the 1st axis
+/// let idx: Tensor<Rank1<3>, usize, _> = dev.tensor([0, 2, 4]);
+/// let _: Tensor<Rank1<3>, f32, _> = a.select(idx);
+///```
 pub trait SelectTo<D: DeviceStorage>: HasErr + HasShape {
     /// Select values given indices.
-    ///
-    /// The shape of the index is the shape of the tensor up to the axis you
-    /// want to select from.
-    ///
-    /// For example, given a tensor of shape (M, N, O), here are the required
-    /// index shapes to select each axis:
-    /// - Axis 0: index shape ()
-    /// - Axis 1: index shape (M, )
-    /// - Axis 2: index shape (M, N)
-    ///
-    /// Here is an example selecting from a 2d tensor:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<3, 5>, f32, _> = dev.zeros();
-    ///
-    /// // select from the 0th axis
-    /// let idx: Tensor<Rank0, usize, _> = dev.tensor(0);
-    /// let _: Tensor<Rank1<5>, f32, _> = a.clone().select(idx);
-    ///
-    /// // select from the 1st axis
-    /// let idx: Tensor<Rank1<3>, usize, _> = dev.tensor([0, 2, 4]);
-    /// let _: Tensor<Rank1<3>, f32, _> = a.select(idx);
-    ///```
     fn select<Dst: Shape, Idx: Shape>(self, idx: Tensor<Idx, usize, D>) -> Self::WithShape<Dst>
     where
         Self::Shape: RemoveDimTo<Dst, Idx>,
@@ -118,34 +118,34 @@ impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<D>
 
 /// Select multiple values from a single axis, replacing that dimension
 /// with a different one. Equivalent to `torch.gather` from pytorch.
+///
+/// The shape of the index is the shape of the tensor up to the axis you
+/// want to select from, plus the size of the new dimension.
+///
+/// For example, given a tensor of shape (M, N, O), here are the required
+/// index shapes to gather each axis:
+/// - Axis 0: index shape (Z, )
+/// - Axis 1: index shape (M, Z)
+/// - Axis 2: index shape (M, N, Z)
+///
+/// where `Z` is the new dimension.
+///
+/// Here is an example gathering from a 2d tensor:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a: Tensor<Rank2<3, 5>, f32, _> = dev.zeros();
+///
+/// // gather from the 0th axis; dimension 0 becomes 4
+/// let idx: Tensor<Rank1<4>, usize, _> = dev.tensor([0, 0, 1, 2]);
+/// let _: Tensor<Rank2<4, 5>, f32, _> = a.clone().gather(idx);
+///
+/// // gather from the 1st axis; dimension 1 becomes 2
+/// let idx: Tensor<Rank2<3, 2>, usize, _> = dev.tensor([[0, 1], [2, 3], [4, 4]]);
+/// let _: Tensor<Rank2<3, 2>, f32, _> = a.gather(idx);
+///```
 pub trait GatherTo<D: DeviceStorage>: HasErr + HasShape {
     /// Gather values given indices.
-    ///
-    /// The shape of the index is the shape of the tensor up to the axis you
-    /// want to select from, plus the size of the new dimension.
-    ///
-    /// For example, given a tensor of shape (M, N, O), here are the required
-    /// index shapes to gather each axis:
-    /// - Axis 0: index shape (Z, )
-    /// - Axis 1: index shape (M, Z)
-    /// - Axis 2: index shape (M, N, Z)
-    ///
-    /// where `Z` is the new dimension.
-    ///
-    /// Here is an example gathering from a 2d tensor:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<3, 5>, f32, _> = dev.zeros();
-    ///
-    /// // gather from the 0th axis; dimension 0 becomes 4
-    /// let idx: Tensor<Rank1<4>, usize, _> = dev.tensor([0, 0, 1, 2]);
-    /// let _: Tensor<Rank2<4, 5>, f32, _> = a.clone().gather(idx);
-    ///
-    /// // gather from the 1st axis; dimension 1 becomes 2
-    /// let idx: Tensor<Rank2<3, 2>, usize, _> = dev.tensor([[0, 1], [2, 3], [4, 4]]);
-    /// let _: Tensor<Rank2<3, 2>, f32, _> = a.gather(idx);
-    ///```
     fn gather<Dst: Shape, Idx: Shape>(self, idx: Tensor<Idx, usize, D>) -> Self::WithShape<Dst>
     where
         Self::Shape: ReplaceDimTo<Dst, Idx>,
@@ -434,5 +434,16 @@ mod tests {
         assert_eq!(r_array[1], [t_array[0], t_array[0], t_array[3]]);
         let g = r.sum().backward();
         assert_eq!(g.get(&t).array(), [[3.; 5], [0.; 5], [1.; 5], [2.; 5]]);
+    }
+
+    #[test]
+    fn test_gather_smaller_output_row() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank2<2, 3>, TestDtype, _> = dev.sample_normal();
+        let t_array = t.array();
+        let r: Tensor<Rank2<2, 2>, _, _> = t.gather(dev.tensor([[0, 1], [0, 1]]));
+        let r_array = r.array();
+        assert_eq!(r_array[0][..], t_array[0][..2]);
+        assert_eq!(r_array[1][..], t_array[1][..2]);
     }
 }

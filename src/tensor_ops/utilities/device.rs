@@ -11,7 +11,9 @@ pub trait Device<E: Dtype>:
     + crate::tensor::TensorFromVec<E>
     + crate::tensor::TensorFromVec<usize>
 
-    + crate::tensor_ops::stack::StackKernel<E>
+    // appends
+    + super::super::stack::StackKernel<E>
+    + super::super::concat::ConcatKernel<E>
 
     // optimizers
     + crate::optim::AdamKernel<E>
@@ -35,6 +37,8 @@ pub trait Device<E: Dtype>:
     + super::super::select_and_gather::ReplaceDimKernel<E>
     + super::super::select_and_gather::RemoveDimKernel<E>
     + super::super::choose::ChooseKernel<E>
+    + super::super::slice::SliceKernel<E>
+    + super::super::roll::RollKernel<E>
 
     // matmuls
     + super::super::matmul::VecMatKernel<E>
@@ -77,6 +81,12 @@ pub trait Device<E: Dtype>:
     + UnaryKernel<super::super::tanh::TanhKernelOp, E>
     + UnaryKernel<super::super::pow::PowfKernelOp<E>, E>
     + UnaryKernel<super::super::pow::PowiKernelOp, E>
+
+    // to_dtype
+    + super::super::to_dtype::ToDtypeKernel<f32, E>
+    + super::super::to_dtype::ToDtypeKernel<f64, E>
+    + super::super::to_dtype::ToDtypeKernel<E, f32>
+    + super::super::to_dtype::ToDtypeKernel<E, f64>
 
     // binary
     + BinaryKernel<super::super::bce::BCEKernelOp, E>

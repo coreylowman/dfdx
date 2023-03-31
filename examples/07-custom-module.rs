@@ -4,15 +4,9 @@ use dfdx::{
     nn::modules::{Linear, Module, ModuleVisitor, ReLU, TensorCollection},
     prelude::BuildModule,
     shapes::{Dtype, Rank1, Rank2},
-    tensor::{SampleTensor, Tape, Tensor, Trace},
+    tensor::{AutoDevice, SampleTensor, Tape, Tensor, Trace},
     tensor_ops::Device,
 };
-
-#[cfg(not(feature = "cuda"))]
-type Dev = dfdx::tensor::Cpu;
-
-#[cfg(feature = "cuda")]
-type Dev = dfdx::tensor::Cuda;
 
 /// Custom model struct
 /// This case is trivial and should be done with a tuple of linears and relus,
@@ -25,8 +19,10 @@ struct Mlp<const IN: usize, const INNER: usize, const OUT: usize, E: Dtype, D: D
 
 // TensorCollection lets you do several operations on Modules, including constructing them with
 // randomized parameters, and iterating through or mutating all tensors in a model.
-impl<const IN: usize, const INNER: usize, const OUT: usize, E: Dtype, D: Device<E>>
-    TensorCollection<E, D> for Mlp<IN, INNER, OUT, E, D>
+impl<const IN: usize, const INNER: usize, const OUT: usize, E, D: Device<E>> TensorCollection<E, D>
+    for Mlp<IN, INNER, OUT, E, D>
+where
+    E: Dtype + num_traits::Float,
 {
     // Type alias that specifies the how Mlp's type changes when using a different dtype and/or
     // device.
@@ -90,10 +86,10 @@ impl<
 
 fn main() {
     // Rng for generating model's params
-    let dev = Dev::default();
+    let dev = AutoDevice::default();
 
     // Construct model
-    let model = Mlp::<10, 512, 20, f32, Dev>::build(&dev);
+    let model = Mlp::<10, 512, 20, f32, AutoDevice>::build(&dev);
 
     // Forward pass with a single sample
     let item: Tensor<Rank1<10>, f32, _> = dev.sample_normal();
