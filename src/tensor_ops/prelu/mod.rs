@@ -3,7 +3,8 @@ use core::fmt::Debug;
 use crate::{shapes::*, tensor::*};
 
 use super::{
-    Device, cmp::{ScalarCmpKernel, LtKernelOp}, ChooseFrom, BroadcastTo,
+    cmp::{LtKernelOp, ScalarCmpKernel},
+    BroadcastTo, ChooseFrom, Device,
 };
 
 #[repr(C)]
@@ -28,32 +29,22 @@ pub struct LeakyReLUKernelOp<E> {
 /// assert_eq!(r.array(), [-0.05, 0.0, 1.0, 2.0]);
 /// ```
 
-pub fn prelu<
-    S: Shape,
-    E: Dtype,
-    D: Device<E>,
-    T: Tape<E, D> + Merge<R>,
-    R: Default,
->
-(
+pub fn prelu<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R: Default>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, R>,
-) -> Tensor<S, E, D, T> 
-where Tensor<S, E, D, T>: TryPReLU<Tensor<S, E, D, R>, Output = Tensor<S, E, D, T>>
+) -> Tensor<S, E, D, T>
+where
+    Tensor<S, E, D, T>: TryPReLU<Tensor<S, E, D, R>, Output = Tensor<S, E, D, T>>,
 {
     lhs.prelu(rhs)
 }
 
-pub fn leakyrelu<
-    S: Shape,
-    E: Dtype,
-    D: Device<E>,
-    T: Tape<E, D>,
->(
+pub fn leakyrelu<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     lhs: Tensor<S, E, D, T>,
     rhs: E,
-) -> Tensor<S, E, D, T> 
-where Tensor<S, E, D, T>: TryPReLU<E, Output = Tensor<S, E, D, T>>
+) -> Tensor<S, E, D, T>
+where
+    Tensor<S, E, D, T>: TryPReLU<E, Output = Tensor<S, E, D, T>>,
 {
     lhs.prelu(rhs)
 }

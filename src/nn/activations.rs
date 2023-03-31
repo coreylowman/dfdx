@@ -1,4 +1,9 @@
-use crate::{shapes::*, tensor::*, tensor_ops::*, prelude::{BuildOnDevice, BuildModule, TensorCollection, TensorOptions}};
+use crate::{
+    prelude::{BuildModule, BuildOnDevice, TensorCollection, TensorOptions},
+    shapes::*,
+    tensor::*,
+    tensor_ops::*,
+};
 
 use super::module::{Module, NonMutableModule, ZeroSizedModule};
 
@@ -68,13 +73,10 @@ impl<E: Dtype> Default for LeakyReLU<E> {
 impl<E: Dtype> ZeroSizedModule for LeakyReLU<E> {}
 impl<E: Dtype> NonMutableModule for LeakyReLU<E> {}
 
-impl<
-        S: ConstShape,
-        E: Dtype,
-        D: Device<E>,
-        T: Tape<E, D>,
-    > Module<Tensor<S, E, D, T>> for LeakyReLU<E>
-    where Tensor<S, E, D, T>: TryPReLU<E, Output = Tensor<S, E, D, T>>
+impl<S: ConstShape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
+    for LeakyReLU<E>
+where
+    Tensor<S, E, D, T>: TryPReLU<E, Output = Tensor<S, E, D, T>>,
 {
     type Output = Tensor<S, E, D, T>;
     type Error = D::Err;
@@ -127,7 +129,8 @@ impl<E: Dtype, D: Device<E>> NonMutableModule for PReLU<E, D> {}
 
 impl<S: ConstShape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
     for PReLU<E, D>
-    where Tensor<S, E, D, T>: TryPReLU<Tensor<S, E, D, NoneTape>, Output = Tensor<S, E, D, T>>
+where
+    Tensor<S, E, D, T>: TryPReLU<Tensor<S, E, D, NoneTape>, Output = Tensor<S, E, D, T>>,
 {
     type Output = Tensor<S, E, D, T>;
     type Error = <Tensor<S, E, D, T> as HasErr>::Err;
@@ -175,7 +178,8 @@ impl<C: ConstDim, E: Dtype, D: Device<E>> NonMutableModule for PReLU1D<C, E, D> 
 
 impl<C: ConstDim, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<(C,), E, D, T>>
     for PReLU1D<C, E, D>
-    where Tensor<(C,), E, D, T>: TryPReLU<Tensor<(C,), E, D, NoneTape>, Output = Tensor<(C,), E, D, T>>,
+where
+    Tensor<(C,), E, D, T>: TryPReLU<Tensor<(C,), E, D, NoneTape>, Output = Tensor<(C,), E, D, T>>,
 {
     type Output = Tensor<(C,), E, D, T>;
 
