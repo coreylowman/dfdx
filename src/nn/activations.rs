@@ -1,12 +1,4 @@
-use crate::{
-    prelude::{
-        ops::{BinaryKernel, UnaryKernel},
-        BuildModule, BuildOnDevice, TensorCollection, TensorOptions,
-    },
-    shapes::*,
-    tensor::*,
-    tensor_ops::*,
-};
+use crate::{shapes::*, tensor::*, tensor_ops::*, prelude::{BuildOnDevice, BuildModule, TensorCollection, TensorOptions}};
 
 use super::module::{Module, NonMutableModule, ZeroSizedModule};
 
@@ -79,9 +71,10 @@ impl<E: Dtype> NonMutableModule for LeakyReLU<E> {}
 impl<
         S: ConstShape,
         E: Dtype,
-        D: Device<E> + UnaryKernel<LeakyReLUKernelOp<E>, E>,
+        D: Device<E>,
         T: Tape<E, D>,
     > Module<Tensor<S, E, D, T>> for LeakyReLU<E>
+    where Tensor<S, E, D, T>: TryPReLU<E, Output = Tensor<S, E, D, T>>
 {
     type Output = Tensor<S, E, D, T>;
     type Error = D::Err;
@@ -134,11 +127,12 @@ impl<E: Dtype, D: Device<E>> NonMutableModule for PReLU<E, D> {}
 
 impl<S: ConstShape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
     for PReLU<E, D>
+    where Tensor<S, E, D, T>: TryPReLU<Tensor<S, E, D, NoneTape>, Output = Tensor<S, E, D, T>>
 {
     type Output = Tensor<S, E, D, T>;
-    type Error = D::Err;
+    type Error = <Tensor<S, E, D, T> as HasErr>::Err;
 
-    fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
+    fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
         input.try_prelu(self.a.clone().broadcast())
     }
 }
@@ -181,10 +175,11 @@ impl<C: ConstDim, E: Dtype, D: Device<E>> NonMutableModule for PReLU1D<C, E, D> 
 
 impl<C: ConstDim, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<(C,), E, D, T>>
     for PReLU1D<C, E, D>
+    where Tensor<(C,), E, D, T>: TryPReLU<Tensor<(C,), E, D, NoneTape>, Output = Tensor<(C,), E, D, T>>,
 {
     type Output = Tensor<(C,), E, D, T>;
 
-    type Error = D::Err;
+    type Error = <Tensor<(C,), E, D, T> as HasErr>::Err;
 
     fn try_forward(&self, input: Tensor<(C,), E, D, T>) -> Result<Self::Output, Self::Error> {
         input.try_prelu(self.a.clone())
@@ -193,13 +188,14 @@ impl<C: ConstDim, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<(C,), E, 
 
 macro_rules! prelu1d {
     (($($InDims:tt),*), $Axes:ty) => {
-        impl<E: Dtype, D: Device<E> + BinaryKernel<PReLUKernelOp, E>, T: Tape<E, D> + Merge<NoneTape>, $($InDims: ConstDim),*> Module<Tensor<($($InDims),*), E, D, T>> for PReLU1D<C,E, D>
-        where ($($InDims),*): ReduceShapeTo<(C,), $Axes>
+        impl<E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<NoneTape>, $($InDims: ConstDim),*> Module<Tensor<($($InDims),*), E, D, T>> for PReLU1D<C,E, D>
+        where ($($InDims),*): ReduceShapeTo<(C,), $Axes>,
+        Tensor<($($InDims),*), E, D, T>: TryPReLU<Tensor<($($InDims),*), E, D, NoneTape>, Output = Tensor<($($InDims),*), E, D, T>>,
         {
             type Output = Tensor<($($InDims),*), E, D, T>;
-            type Error = D::Err;
+            type Error = <Tensor<($($InDims),*), E, D, T> as HasErr>::Err;
 
-            fn try_forward(&self, input: Tensor<($($InDims),*), E, D, T>) -> Result<Self::Output, D::Err> {
+            fn try_forward(&self, input: Tensor<($($InDims),*), E, D, T>) -> Result<Self::Output, Self::Error> {
                 input.try_prelu(self.a.clone().broadcast())
             }
         }

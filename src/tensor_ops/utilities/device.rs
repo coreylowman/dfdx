@@ -77,14 +77,12 @@ pub trait Device<E: Dtype>:
     + UnaryKernel<super::super::tanh::TanhKernelOp, E>
     + UnaryKernel<super::super::pow::PowfKernelOp<E>, E>
     + UnaryKernel<super::super::pow::PowiKernelOp, E>
-    + UnaryKernel<super::super::prelu::LeakyReLUKernelOp<E>, E>
 
     // binary
     + BinaryKernel<super::super::bce::BCEKernelOp, E>
     + BinaryKernel<super::super::huber_error::HuberErrorKernelOp<E>, E>
     + BinaryKernel<super::super::maximum::MaximumKernelOp, E>
     + BinaryKernel<super::super::minimum::MinimumKernelOp, E>
-    + BinaryKernel<super::super::PReLUKernelOp, E>
     + crate::tensor_ops::axpy::AxpyKernel<E>
 {
 }
