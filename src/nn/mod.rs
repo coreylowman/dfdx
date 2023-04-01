@@ -260,7 +260,9 @@ pub mod modules {
         TransformerEncoder, TransformerEncoderBlock,
     };
     pub use super::unbiased_linear::UnbiasedLinear;
-    pub use super::upscale::{Upscale2D, Upscale2DBy};
+    pub use super::upscale::Upscale2D;
+    #[cfg(feature = "nightly")]
+    pub use super::upscale::Upscale2DBy;
     pub use super::*;
 }
 
@@ -296,6 +298,8 @@ pub mod builders {
         TransformerEncoder, TransformerEncoderBlock,
     };
     pub use super::unbiased_linear::builder::UnbiasedLinear;
-    pub use super::upscale::{Upscale2D, Upscale2DBy};
+    pub use super::upscale::Upscale2D;
+    #[cfg(feature = "nightly")]
+    pub use super::upscale::Upscale2DBy;
     pub use super::*;
 }
