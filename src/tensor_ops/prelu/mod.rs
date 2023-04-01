@@ -1,4 +1,4 @@
-use core::fmt::Debug;
+
 
 use num_traits::Zero;
 
@@ -8,16 +8,6 @@ use super::{
     cmp::{LtKernelOp, ScalarCmpKernel},
     BroadcastTo, ChooseFrom, Device,
 };
-
-#[repr(C)]
-#[derive(Debug, Default, Clone, Copy)]
-pub struct PReLUKernelOp;
-
-#[repr(C)]
-#[derive(Debug, Default, Clone, Copy)]
-pub struct LeakyReLUKernelOp<E> {
-    slope: E,
-}
 
 /// [Parametric Rectified Linear Unit (PReLU)](https://pytorch.org/docs/stable/generated/torch.nn.PReLU.html). `max(0, t) + a*min(0, t)`
 ///
@@ -36,7 +26,7 @@ pub fn prelu<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R: Defa
     rhs: Tensor<S, E, D, R>,
 ) -> Tensor<S, E, D, T>
 where
-    Tensor<S, E, D, T>: TryPReLU<Tensor<S, E, D, R>, Output = Tensor<S, E, D, T>>,
+    Tensor<S, E, D, T>: TryPReLU<Tensor<S, E, D, R>>,
 {
     lhs.prelu(rhs)
 }
@@ -46,17 +36,16 @@ pub fn leakyrelu<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     rhs: E,
 ) -> Tensor<S, E, D, T>
 where
-    Tensor<S, E, D, T>: TryPReLU<E, Output = Tensor<S, E, D, T>>,
+    Tensor<S, E, D, T>: TryPReLU<E>,
 {
     lhs.prelu(rhs)
 }
 
 pub trait TryPReLU<T = Self>: HasErr {
-    type Output;
 
-    fn try_prelu(self, rhs: T) -> Result<Self::Output, Self::Err>;
+    fn try_prelu(self, rhs: T) -> Result<Self, Self::Err>;
 
-    fn prelu(self, rhs: T) -> Self::Output {
+    fn prelu(self, rhs: T) -> Self {
         self.try_prelu(rhs).unwrap()
     }
 }
@@ -67,7 +56,6 @@ where
     D: Device<E> + ScalarCmpKernel<LtKernelOp, E>,
     LhsTape: Merge<R>,
 {
-    type Output = Self;
 
     /// See [prelu]
     fn try_prelu(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Self::Err> {
@@ -79,11 +67,10 @@ where
 impl<S: Shape, E: Dtype + Zero, D: Device<E> + ScalarCmpKernel<LtKernelOp, E>, T: Tape<E, D>>
     TryPReLU<E> for Tensor<S, E, D, T>
 {
-    type Output = Self;
 
     /// See [prelu]
     fn try_prelu(self, rhs: E) -> Result<Self, Self::Err> {
-        let dev = D::default();
+        let dev = self.device.clone();
         let scale = dev.tensor(rhs).retaped::<T>().broadcast_like(self.shape());
         let scaled = self.with_empty_tape() * scale;
         Ok(self.scalar_lt(E::zero()).choose(scaled, self))
