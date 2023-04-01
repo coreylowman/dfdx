@@ -89,6 +89,13 @@ where
 pub mod builder {
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     pub struct PReLU;
+
+    use core::marker::PhantomData;
+
+    use crate::prelude::ConstDim;
+
+    #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct PReLU1D<C: ConstDim>(PhantomData<C>);
 }
 
 impl<E: Dtype, D: Device<E>> BuildOnDevice<D, E> for builder::PReLU
@@ -159,6 +166,16 @@ pub struct PReLU1D<C: ConstDim, E: Dtype, D: Device<E>> {
     a: Tensor<(C,), E, D>,
 }
 
+impl<C: ConstDim, E: Dtype, D: Device<E>> BuildOnDevice<D, E> for builder::PReLU1D<C>
+where
+    PReLU1D<C, E, D>: BuildModule<D, E>,
+{
+    type Built = PReLU1D<C, E, D>;
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
+        Self::Built::try_build(device)
+    }
+}
+
 impl<C: ConstDim, E: Dtype, D: Device<E>> Default for PReLU1D<C, E, D> {
     fn default() -> Self {
         let dev = D::default();
@@ -210,7 +227,7 @@ prelu1d!((B, C), Axis<0>);
 prelu1d!((B, C, M), Axes2<0, 2>);
 prelu1d!((B, C, M, N), Axes3<0, 2, 3>);
 
-impl<C: ConstDim + ConstShape, E: Dtype, D: Device<E>> TensorCollection<E, D> for PReLU1D<C, E, D> {
+impl<C: ConstDim, E: Dtype, D: Device<E>> TensorCollection<E, D> for PReLU1D<C, E, D> {
     type To<E2: Dtype, D2: Device<E2>> = PReLU1D<C, E2, D2>;
 
     fn iter_tensors<V: crate::prelude::ModuleVisitor<Self, E, D>>(
@@ -394,11 +411,9 @@ mod tests {
         let r2 = t.prelu(dev.tensor([[0.05, 0.07, 0.09], [0.05, 0.07, 0.09]]));
         assert_eq!(r1.array(), r2.array());
 
-        let model = (
-            Tanh,
-            PReLU1D::from(dev.tensor([0.05, 0.05, 0.05, 0.05, 0.05])),
-        );
+        let mut model = dev.build_module::<(Tanh, builder::PReLU1D<Const::<5>>), f32>();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        model.1.a = dev.tensor([0.05, 0.05, 0.05, 0.05, 0.05]);
         let out = model.forward(t);
         assert_close(
             &out.array(),

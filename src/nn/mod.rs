@@ -260,7 +260,7 @@ pub mod modules {
         TransformerEncoder, TransformerEncoderBlock,
     };
     pub use super::unbiased_linear::UnbiasedLinear;
-    pub use super::upscale::Upscale2D;
+    pub use super::upscale::{Upscale2D, Upscale2DBy};
     pub use super::*;
 }
 
@@ -268,6 +268,7 @@ pub mod builders {
     //! Simple specification of network structure, without
     //! worrying about device or dtype.
     pub use super::activations::builder::PReLU;
+    pub use super::activations::builder::PReLU1D;
     pub use super::activations::*;
     pub use super::add_into::AddInto;
     pub use super::batchnorm1d::builder::BatchNorm1D;
@@ -295,6 +296,6 @@ pub mod builders {
         TransformerEncoder, TransformerEncoderBlock,
     };
     pub use super::unbiased_linear::builder::UnbiasedLinear;
-    pub use super::upscale::Upscale2D;
+    pub use super::upscale::{Upscale2D, Upscale2DBy};
     pub use super::*;
 }
