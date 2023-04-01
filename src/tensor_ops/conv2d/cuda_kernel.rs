@@ -73,23 +73,23 @@ where
             [1, 1],
             cudnn::sys::cudnnConvolutionMode_t::CUDNN_CROSS_CORRELATION,
         )?;
-        let img = self.cudnn.create_tensor4d::<E>(
+        let img = self.cudnn.create_4d_tensor_ex::<E>(
             make_4d::<L>(lhs.shape.concrete(), 1).map(|x| x as i32),
             make_4d::<L>(lhs.strides, 0).map(|x| x as i32),
         )?;
-        let filter = self.cudnn.create_filter4d::<E>(
+        let filter = self.cudnn.create_4d_filter::<E>(
             cudnn::sys::cudnnTensorFormat_t::CUDNN_TENSOR_NCHW,
             make_4d::<R>(rhs.shape.concrete(), 1).map(|x| x as i32),
         )?;
-        let y = self.cudnn.create_tensor4d::<E>(
+        let y = self.cudnn.create_4d_tensor_ex::<E>(
             make_4d::<O>(out.shape.concrete(), 1).map(|x| x as i32),
             make_4d::<O>(out.strides, 0).map(|x| x as i32),
         )?;
         let op = Conv2dForward {
-            conv,
-            img,
-            filter,
-            y,
+            conv: &conv,
+            x: &img,
+            w: &filter,
+            y: &y,
         };
 
         let algo = op.pick_algorithm()?;
@@ -130,15 +130,15 @@ where
             [1, 1],
             cudnn::sys::cudnnConvolutionMode_t::CUDNN_CROSS_CORRELATION,
         )?;
-        let img = self.cudnn.create_tensor4d::<E>(
+        let img = self.cudnn.create_4d_tensor_ex::<E>(
             make_4d::<L>(lhs.shape.concrete(), 1).map(|x| x as i32),
             make_4d::<L>(lhs.strides, 0).map(|x| x as i32),
         )?;
-        let filter = self.cudnn.create_filter4d::<E>(
+        let filter = self.cudnn.create_4d_filter::<E>(
             cudnn::sys::cudnnTensorFormat_t::CUDNN_TENSOR_NCHW,
             make_4d::<R>(rhs.shape.concrete(), 1).map(|x| x as i32),
         )?;
-        let out = self.cudnn.create_tensor4d::<E>(
+        let out = self.cudnn.create_4d_tensor_ex::<E>(
             make_4d::<O>(out.shape.concrete(), 1).map(|x| x as i32),
             make_4d::<O>(out.strides, 0).map(|x| x as i32),
         )?;
@@ -147,7 +147,7 @@ where
             let op = Conv2dBackwardData {
                 conv: &conv,
                 dx: &img,
-                filter: &filter,
+                w: &filter,
                 dy: &out,
             };
             let algo = op.pick_algorithm()?;
@@ -174,7 +174,7 @@ where
             let op = Conv2dBackwardFilter {
                 conv: &conv,
                 x: &img,
-                dfilter: &filter,
+                dw: &filter,
                 dy: &out,
             };
 

@@ -82,7 +82,7 @@ impl Cuda {
         let cpu = Cpu::seed_from_u64(seed);
         let dev = CudaDevice::new(ordinal)?;
         let blas = Arc::new(CudaBlas::new(dev.clone())?);
-        let cudnn = Arc::new(Cudnn::new(dev.clone())?);
+        let cudnn = Cudnn::new(dev.clone())?;
         let par_stream = Arc::new(dev.fork_default_stream()?);
         let workspace = Arc::new(Mutex::new(dev.alloc_zeros::<u8>(0)?));
         Ok(Self {
