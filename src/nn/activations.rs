@@ -346,16 +346,27 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = PReLU{a:dev.tensor(0.05)}.forward_mut(t.clone());
+        let r1 = PReLU {
+            a: dev.tensor(0.05),
+        }
+        .forward_mut(t.clone());
         let r2 = t.prelu(dev.tensor([0.05, 0.05, 0.05, 0.05, 0.05]));
         assert_eq!(r1.array(), r2.array());
 
         let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
-        let r1 = PReLU{a:dev.tensor(0.05)}.forward_mut(t.clone());
+        let r1 = PReLU {
+            a: dev.tensor(0.05),
+        }
+        .forward_mut(t.clone());
         let r2 = t.prelu(dev.tensor([[0.05, 0.05, 0.05], [0.05, 0.05, 0.05]]));
         assert_eq!(r1.array(), r2.array());
 
-        let model = (Tanh, PReLU{a:dev.tensor(0.05)});
+        let model = (
+            Tanh,
+            PReLU {
+                a: dev.tensor(0.05),
+            },
+        );
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let out = model.forward(t);
         assert_close(
@@ -369,16 +380,22 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let r1 = PReLU1D{a:dev.tensor([0.05, 0.06, 0.07, 0.08, 0.09])}.forward_mut(t.clone());
+        let r1 = PReLU1D {
+            a: dev.tensor([0.05, 0.06, 0.07, 0.08, 0.09]),
+        }
+        .forward_mut(t.clone());
         let r2 = t.prelu(dev.tensor([0.05, 0.06, 0.07, 0.08, 0.09]));
         assert_eq!(r1.array(), r2.array());
 
         let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
-        let r1 = PReLU1D{a:dev.tensor([0.05, 0.07, 0.09])}.forward_mut(t.clone());
+        let r1 = PReLU1D {
+            a: dev.tensor([0.05, 0.07, 0.09]),
+        }
+        .forward_mut(t.clone());
         let r2 = t.prelu(dev.tensor([[0.05, 0.07, 0.09], [0.05, 0.07, 0.09]]));
         assert_eq!(r1.array(), r2.array());
 
-        let mut model = dev.build_module::<(Tanh, builder::PReLU1D<Const::<5>>), f32>();
+        let mut model = dev.build_module::<(Tanh, builder::PReLU1D<Const<5>>), f32>();
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         model.1.a = dev.tensor([0.05, 0.05, 0.05, 0.05, 0.05]);
         let out = model.forward(t);

@@ -1,5 +1,3 @@
-
-
 use num_traits::Zero;
 
 use crate::{shapes::*, tensor::*};
@@ -42,7 +40,6 @@ where
 }
 
 pub trait TryPReLU<T = Self>: HasErr {
-
     fn try_prelu(self, rhs: T) -> Result<Self, Self::Err>;
 
     fn prelu(self, rhs: T) -> Self {
@@ -56,7 +53,6 @@ where
     D: Device<E> + ScalarCmpKernel<LtKernelOp, E>,
     LhsTape: Merge<R>,
 {
-
     /// See [prelu]
     fn try_prelu(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Self::Err> {
         let scaled = self.with_empty_tape() * rhs;
@@ -67,7 +63,6 @@ where
 impl<S: Shape, E: Dtype + Zero, D: Device<E> + ScalarCmpKernel<LtKernelOp, E>, T: Tape<E, D>>
     TryPReLU<E> for Tensor<S, E, D, T>
 {
-
     /// See [prelu]
     fn try_prelu(self, rhs: E) -> Result<Self, Self::Err> {
         let dev = self.device.clone();
