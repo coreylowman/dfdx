@@ -58,11 +58,15 @@ impl Cpu {
                 for k1 in 0..op.kernel {
                     for k2 in 0..op.kernel {
                         for oh in 0..op.h_out {
+                            let y = (oh * op.stride + k1).wrapping_sub(op.padding);
                             for ow in 0..op.w_out {
-                                let y = (oh * op.stride + k1).wrapping_sub(op.padding);
                                 let x = (ow * op.stride + k2).wrapping_sub(op.padding);
                                 if y < op.h_in && x < op.w_in {
-                                    buf[i] = img[c * (op.w_in * op.h_in) + y * op.w_in + x];
+                                    unsafe {
+                                        *buf.get_unchecked_mut(i) = *img.get_unchecked(
+                                            c * (op.w_in * op.h_in) + y * op.w_in + x,
+                                        )
+                                    };
                                 }
                                 i += 1;
                             }
@@ -111,8 +115,11 @@ impl Cpu {
                         for y in 0..op.h_in {
                             for x in 0..op.w_in {
                                 if let Some([oh, ow]) = op.unfold_idx([k1, k2, y, x]) {
-                                    buf[i] =
-                                        grad_out[o * (op.h_out * op.w_out) + oh * op.w_out + ow];
+                                    unsafe {
+                                        *buf.get_unchecked_mut(i) = *grad_out.get_unchecked(
+                                            o * (op.h_out * op.w_out) + oh * op.w_out + ow,
+                                        );
+                                    }
                                 }
                                 i += 1;
                             }
