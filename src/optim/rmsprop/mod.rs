@@ -104,7 +104,7 @@ impl<M, E: Dtype, D: DeviceStorage<E>> RMSprop<M, E, D> {
     }
 }
 
-pub trait RMSpropKernel<E: Dtype>: DeviceStorage<E> {
+pub trait RMSpropKernel<E: Dtype>: DeviceStorage<E> + HasErr {
     fn update(
         &self,
         cfg: &RMSpropConfig<E>,

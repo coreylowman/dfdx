@@ -1,4 +1,5 @@
 use crate::{
+    prelude::RandomU64,
     shapes::*,
     tensor::{NoneTape, OwnedTape, Tensor},
     tensor_ops::*,
@@ -63,8 +64,8 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, No
     }
 }
 
-impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<E, D>>>
-    for DropoutOneIn<N>
+impl<const N: usize, S: Shape, E: Dtype, D: Device<E> + RandomU64>
+    ModuleMut<Tensor<S, E, D, OwnedTape<E, D>>> for DropoutOneIn<N>
 {
     type Output = Tensor<S, E, D, OwnedTape<E, D>>;
     type Error = D::Err;
@@ -141,7 +142,9 @@ impl<S: Shape, E: Dtype, D: Device<E>> Module<Tensor<S, E, D, NoneTape>> for Dro
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<E, D>>> for Dropout {
+impl<S: Shape, E: Dtype, D: Device<E> + RandomU64> ModuleMut<Tensor<S, E, D, OwnedTape<E, D>>>
+    for Dropout
+{
     type Output = Tensor<S, E, D, OwnedTape<E, D>>;
     type Error = D::Err;
 

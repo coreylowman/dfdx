@@ -54,7 +54,7 @@ impl<S: Shape, E: Dtype, D: DeviceStorage<E>, T> HasDtype for Tensor<S, E, D, T>
     type Dtype = E;
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage<E>, T> HasErr for Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceStorage<E> + HasErr, T> HasErr for Tensor<S, E, D, T> {
     type Err = D::Err;
 }
 
@@ -86,8 +86,8 @@ pub trait Trace<E: Unit, D: DeviceStorage<E>>: Clone {
     fn traced(self, gradients: Gradients<E, D>) -> Self::Traced;
 }
 
-impl<S: Shape, E: Unit, F: Unit, D: DeviceStorage<E> + DeviceStorage<F>> Trace<E, D>
-    for Tensor<S, F, D, NoneTape>
+impl<S: Shape, E: Unit, F: Unit, D: DeviceStorage<E> + DeviceStorage<F> + Clone + HasErr>
+    Trace<E, D> for Tensor<S, F, D, NoneTape>
 {
     type Traced = Tensor<S, F, D, OwnedTape<E, D>>;
     fn leaky_traced(self) -> Self::Traced {
@@ -101,7 +101,7 @@ impl<S: Shape, E: Unit, F: Unit, D: DeviceStorage<E> + DeviceStorage<F>> Trace<E
     }
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage<E>, T> Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceStorage<E> + Clone + HasErr, T> Tensor<S, E, D, T> {
     /// Clone and insert a new tape of type `New` into the tensor
     pub fn retaped<New: Tape<E, D>>(&self) -> Tensor<S, E, D, New> {
         Tensor {
@@ -158,7 +158,7 @@ pub trait SplitTape {
     fn split_tape(self) -> (Self::NoTape, Self::Tape);
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage<E>, T> SplitTape for Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceStorage<E> + Clone + HasErr, T> SplitTape for Tensor<S, E, D, T> {
     type Tape = T;
     type NoTape = Tensor<S, E, D>;
     fn split_tape(self) -> (Self::NoTape, Self::Tape) {
@@ -182,7 +182,9 @@ pub trait WithEmptyTape {
     fn with_empty_tape(&self) -> Self;
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage<E>, T: Default> WithEmptyTape for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DeviceStorage<E> + Clone + HasErr, T: Default> WithEmptyTape
+    for Tensor<S, E, D, T>
+{
     fn with_empty_tape(&self) -> Self {
         Tensor {
             id: self.id,

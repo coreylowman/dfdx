@@ -1,4 +1,5 @@
 use crate::{
+    prelude::HasErr,
     shapes::{Shape, Unit},
     tensor::{DeviceStorage, Tensor},
 };
@@ -6,8 +7,6 @@ use crate::{
 mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
-#[cfg(feature = "nightly")]
-mod quant_cpu_kernel;
 
 /// Elementwise `a * alpha + b * beta`.
 ///
@@ -45,7 +44,7 @@ impl<S: Shape, E: Unit, D: AxpyKernel<E>> Tensor<S, E, D> {
     }
 }
 
-pub trait AxpyKernel<E: Unit>: DeviceStorage<E> {
+pub trait AxpyKernel<E: Unit>: DeviceStorage<E> + HasErr {
     fn forward(
         &self,
         a: &mut Self::Storage,

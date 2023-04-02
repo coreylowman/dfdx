@@ -22,7 +22,9 @@ pub trait PermuteTo: HasErr + HasShape {
         Self::Shape: PermuteShapeTo<Dst, Ax>;
 }
 
-impl<S: Shape, E: Unit, D: DeviceStorage<E>, T: Tape<E, D>> PermuteTo for Tensor<S, E, D, T> {
+impl<S: Shape, E: Unit, D: DeviceStorage<E> + HasErr, T: Tape<E, D>> PermuteTo
+    for Tensor<S, E, D, T>
+{
     fn try_permute<Dst: Shape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: PermuteShapeTo<Dst, Ax>,

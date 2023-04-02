@@ -1,6 +1,8 @@
 use crate::shapes::{Shape, Unit};
-use crate::tensor::{cpu::LendingIterator, storage_traits::*, Tensor};
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use crate::tensor::{storage_traits::*, Tensor};
+use core::marker::PhantomData;
+use rand::Rng;
+use rand::{rngs::StdRng, SeedableRng};
 use std::{sync::Arc, vec::Vec};
 
 #[cfg(feature = "no-std")]
@@ -15,23 +17,43 @@ use std::sync::Mutex;
 ///
 /// Use [Cpu::seed_from_u64] to control what seed is used.
 #[derive(Clone, Debug)]
-pub struct Cpu {
+pub struct Cpu<S = VecStorage> {
     pub(crate) rng: Arc<Mutex<StdRng>>,
+    _storage: PhantomData<S>,
 }
 
-impl Default for Cpu {
-    fn default() -> Self {
-        Self {
-            rng: Arc::new(Mutex::new(StdRng::seed_from_u64(0))),
+impl<E: Unit, S: DeviceStorage<E>> DeviceStorage<E> for Cpu<S> {
+    type Storage = S::Storage;
+}
+
+impl<S> RandomU64 for Cpu<S> {
+    fn random_u64(&self) -> u64 {
+        #[cfg(not(feature = "no-std"))]
+        {
+            self.rng.lock().unwrap().gen()
+        }
+        #[cfg(feature = "no-std")]
+        {
+            self.rng.lock().gen()
         }
     }
 }
 
-impl Cpu {
+impl<S> Default for Cpu<S> {
+    fn default() -> Self {
+        Self {
+            rng: Arc::new(Mutex::new(StdRng::seed_from_u64(0))),
+            _storage: PhantomData,
+        }
+    }
+}
+
+impl<S> Cpu<S> {
     /// Constructs rng with the given seed.
     pub fn seed_from_u64(seed: u64) -> Self {
         Self {
             rng: Arc::new(Mutex::new(StdRng::seed_from_u64(seed))),
+            _storage: PhantomData,
         }
     }
 }
@@ -56,37 +78,21 @@ impl std::fmt::Display for CpuError {
 #[cfg(feature = "std")]
 impl std::error::Error for CpuError {}
 
-impl HasErr for Cpu {
+impl<G> HasErr for Cpu<G> {
     type Err = CpuError;
 }
 
-impl<E: Unit> DeviceStorage<E> for Cpu {
-    type Storage = Vec<E>;
-
-    fn random_u64(&self) -> u64 {
-        #[cfg(not(feature = "no-std"))]
-        {
-            self.rng.lock().unwrap().gen()
-        }
-        #[cfg(feature = "no-std")]
-        {
-            self.rng.lock().gen()
-        }
-    }
-}
-
-impl<E: Unit> DeviceAllocGrad<E> for Cpu {
-    fn try_alloc_grad(&self, other: &Self::Storage) -> Result<Self::Storage, Self::Err> {
+impl<E: Unit, G: 'static + DeviceStorage<E>> DeviceAllocGrad<E> for Cpu<G> {
+    fn try_alloc_grad(&self, other: &G::Storage) -> Result<G::Storage, Self::Err> {
         self.try_alloc_zeros(other.len())
     }
 }
 
-impl<E: Unit> DeviceTensorToVec<E> for Cpu {
+impl<E: Unit, G: DeviceStorage<E>> DeviceTensorToVec<E> for Cpu<G> {
     fn tensor_to_vec<S: Shape, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
         let mut buf = Vec::with_capacity(tensor.shape.num_elements());
-        let mut iter = tensor.iter();
-        while let Some(v) = iter.next() {
-            buf.push(*v);
+        for v in tensor.iter_copied() {
+            buf.push(v)
         }
         buf
     }

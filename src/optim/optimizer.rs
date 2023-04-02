@@ -72,7 +72,7 @@ pub(super) fn momentum_to_cuda<E: Default>(wd: Option<Momentum<E>>) -> (Momentum
 ///
 /// 3. Optimizer itself is generic over M, not the update method. This means a single optimizer object
 /// can only work on objects of type `M`. This also requires you to specify the model up front for the optimizer.
-pub trait Optimizer<M, D: DeviceStorage<E>, E: Dtype> {
+pub trait Optimizer<M, D: DeviceStorage<E> + HasErr, E: Dtype> {
     /// Updates all of `module`'s parameters using `gradients`.
     ///
     /// Requires a `&mut self` because the optimizer may change some internally

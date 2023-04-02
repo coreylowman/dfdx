@@ -7,6 +7,7 @@ use std::{marker::PhantomData, sync::Arc};
 
 use crate::{
     nn::tensor_collection::*,
+    prelude::HasErr,
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Gradients, Tensor},
     tensor_ops::Device,
@@ -95,7 +96,7 @@ impl<M, E: Dtype, D: DeviceStorage<E>> Adam<M, E, D> {
     }
 }
 
-pub trait AdamKernel<E: Dtype>: DeviceStorage<E> {
+pub trait AdamKernel<E: Dtype>: DeviceStorage<E> + HasErr {
     fn update(
         &self,
         t: i32,

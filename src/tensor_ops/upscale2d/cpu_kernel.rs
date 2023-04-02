@@ -51,9 +51,9 @@ impl<E: Float + Unit + std::ops::AddAssign + std::ops::DivAssign>
         &self,
         op: super::Upscale2DOp,
         inp: &Tensor<I, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Storage,
         out: &Tensor<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);
@@ -145,9 +145,9 @@ impl<E: Float + Unit + std::ops::AddAssign + std::ops::DivAssign>
         &self,
         op: super::Upscale2DOp,
         inp: &Tensor<I, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Storage,
         out: &Tensor<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err> {
         let istr = make_4d::<I>(inp.strides);
         let ostr = make_4d::<O>(out.strides);

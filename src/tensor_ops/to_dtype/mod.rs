@@ -2,9 +2,11 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use crate::prelude::{DeviceStorage, Shape, Tensor, Unit};
+use crate::prelude::{DeviceStorage, HasErr, Shape, Tensor, Unit};
 
-pub trait ToDtypeKernel<E1: Unit, E2: Unit>: DeviceStorage<E1> + DeviceStorage<E2> {
+pub trait ToDtypeKernel<E1: Unit, E2: Unit>:
+    DeviceStorage<E1> + DeviceStorage<E2> + HasErr
+{
     fn forward<S: Shape>(inp: Tensor<S, E1, Self>) -> Result<Tensor<S, E2, Self>, Self::Err>;
 }
 

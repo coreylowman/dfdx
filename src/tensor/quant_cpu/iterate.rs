@@ -1,64 +1,170 @@
+use core::ops::{Deref, DerefMut};
+
+use crate::prelude::cpu::LendingIterator;
+
 use super::{
-    super::Tensor,
-    device::{QuantizedStorage, QuantizedStorageBlocksIter, QuantizedStorageRefIter},
-    Quantize, QuantizedCpu,
+    device::{HalfByteBlock, QuantizedStorage},
+    HalfByteQuantizer,
 };
-use crate::{prelude::cpu::NdIndex, shapes::Shape};
 
-pub(crate) struct StridedRefIter<'a, S: Shape, K: Quantize> {
-    data: &'a QuantizedStorage<K>,
-    index: NdIndex<S>,
+/// A mutable reference to a block of quantized values. Values must be edited as a block because
+/// value changes imply changes to the calculated quantization factors. The new block is computed
+/// when this value is dropped, and stored in the underlying memory.
+pub struct QuantBlockMutRef<'q, K: HalfByteQuantizer> {
+    inner: &'q mut HalfByteBlock<K>,
+    vals: Vec<K::Value>,
 }
 
-pub(crate) struct StridedRefIndexIter<'a, S: Shape, K: Quantize> {
-    data: &'a QuantizedStorage<K>,
-    index: NdIndex<S>,
-}
-
-impl<S: Shape, K: 'static + Quantize + std::fmt::Debug + Send + Sync, T>
-    Tensor<S, K::Value, QuantizedCpu<K>, T>
-{
-    #[inline]
-    pub(crate) fn buf_iter(&self) -> QuantizedStorageRefIter<K> {
-        self.data.iter()
-    }
-
-    #[inline]
-    pub(crate) fn iter_blocks_mut(&mut self) -> QuantizedStorageBlocksIter<K> {
-        std::sync::Arc::make_mut(&mut self.data).iter_blocks_mut()
-    }
-
-    #[inline]
-    pub(crate) fn iter(&self) -> StridedRefIter<S, K> {
-        StridedRefIter {
-            data: self.data.as_ref(),
-            index: NdIndex::new(self.shape, self.strides),
-        }
-    }
-
-    #[inline]
-    pub(crate) fn iter_with_index(&self) -> StridedRefIndexIter<S, K> {
-        StridedRefIndexIter {
-            data: self.data.as_ref(),
-            index: NdIndex::new(self.shape, self.strides),
+impl<'q, K: HalfByteQuantizer> QuantBlockMutRef<'q, K> {
+    pub fn new(block: &'q mut HalfByteBlock<K>) -> Self {
+        Self {
+            vals: block.get_values(),
+            inner: block,
         }
     }
 }
 
-impl<'q, S: Shape, K: Quantize> Iterator for StridedRefIter<'q, S, K> {
+impl<'q, K: HalfByteQuantizer> Deref for QuantBlockMutRef<'q, K> {
+    type Target = Vec<K::Value>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.vals
+    }
+}
+
+impl<'q, K: HalfByteQuantizer> DerefMut for QuantBlockMutRef<'q, K> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.vals
+    }
+}
+
+impl<'q, K: HalfByteQuantizer> Drop for QuantBlockMutRef<'q, K> {
+    fn drop(&mut self) {
+        *self.inner = HalfByteBlock::from_block(&self.vals);
+    }
+}
+
+#[derive(Clone)]
+pub struct QuantBlockRef<'q, K: HalfByteQuantizer> {
+    _inner: &'q HalfByteBlock<K>,
+    vals: Vec<K::Value>,
+}
+
+impl<'q, K: HalfByteQuantizer> QuantBlockRef<'q, K> {
+    pub fn new(block: &'q HalfByteBlock<K>) -> Self {
+        Self {
+            vals: block.get_values(),
+            _inner: block,
+        }
+    }
+}
+
+impl<'q, K: HalfByteQuantizer> Deref for QuantBlockRef<'q, K> {
+    type Target = Vec<K::Value>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.vals
+    }
+}
+
+#[derive(Clone)]
+pub struct QuantizedStorageIter<K: HalfByteQuantizer> {
+    inner: QuantizedStorage<K>,
+    pos: usize,
+}
+
+impl<K: HalfByteQuantizer> QuantizedStorageIter<K> {
+    pub fn new(storage: QuantizedStorage<K>) -> Self {
+        Self {
+            inner: storage,
+            pos: 0,
+        }
+    }
+}
+
+impl<K: HalfByteQuantizer> Iterator for QuantizedStorageIter<K> {
     type Item = K::Value;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.index.next().and_then(|i| self.data.get(i))
+        let res = self.inner.get(self.pos);
+        self.pos += 1;
+        res
     }
 }
 
-impl<'q, S: Shape, K: Quantize> Iterator for StridedRefIndexIter<'q, S, K> {
-    type Item = (K::Value, S::Concrete);
+#[derive(Clone)]
+pub struct QuantizedStorageRefIter<'q, K: HalfByteQuantizer> {
+    blocks: Vec<QuantBlockRef<'q, K>>,
+    block: QuantBlockRef<'q, K>,
+    pos: usize,
+}
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.index
-            .next_with_idx()
-            .and_then(|(i, idx)| self.data.get(i).map(|d| (d, idx)))
+impl<'q, K: HalfByteQuantizer> QuantizedStorageRefIter<'q, K> {
+    pub fn new(storage: &'q QuantizedStorage<K>) -> Self {
+        let mut blocks = storage
+            .blocks
+            .iter()
+            .rev()
+            .map(|b| b.as_ref())
+            .collect::<Vec<_>>();
+        Self {
+            block: blocks.pop().unwrap(),
+            blocks,
+            pos: 0,
+        }
+    }
+}
+
+impl<'q, K: HalfByteQuantizer> LendingIterator for QuantizedStorageRefIter<'q, K> {
+    type Item<'a> = &'a K::Value where Self: 'a;
+
+    fn next(&'_ mut self) -> Option<Self::Item<'_>> {
+        while self.block.get(self.pos).is_none() {
+            if self.blocks.is_empty() {
+                return None;
+            } else {
+                self.pos = 0;
+                self.block = self.blocks.pop().unwrap();
+            }
+        }
+        self.block.get(self.pos)
+    }
+}
+
+pub struct QuantizedStorageMutIter<'q, K: HalfByteQuantizer> {
+    blocks: Vec<QuantBlockMutRef<'q, K>>,
+    block: QuantBlockMutRef<'q, K>,
+    pos: usize,
+}
+
+impl<'q, K: HalfByteQuantizer> QuantizedStorageMutIter<'q, K> {
+    pub fn new(storage: &'q mut QuantizedStorage<K>) -> Self {
+        let mut blocks = storage
+            .blocks
+            .iter_mut()
+            .rev()
+            .map(|b| b.as_mut())
+            .collect::<Vec<_>>();
+        Self {
+            block: blocks.pop().unwrap(),
+            blocks,
+            pos: 0,
+        }
+    }
+}
+
+impl<'q, K: HalfByteQuantizer> LendingIterator for QuantizedStorageMutIter<'q, K> {
+    type Item<'a> = &'a mut K::Value where Self: 'a;
+
+    fn next(&'_ mut self) -> Option<Self::Item<'_>> {
+        while self.block.get(self.pos).is_none() {
+            if self.blocks.is_empty() {
+                return None;
+            } else {
+                self.pos = 0;
+                self.block = self.blocks.pop().unwrap();
+            }
+        }
+        self.block.get_mut(self.pos)
     }
 }

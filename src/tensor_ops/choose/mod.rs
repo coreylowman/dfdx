@@ -8,7 +8,9 @@ use crate::{
     tensor::{DeviceAllocGrad, DeviceStorage, HasErr, Merge, PutTape, SplitTape, Tape, Tensor},
 };
 
-pub trait ChooseKernel<E: Dtype>: DeviceAllocGrad<E> + DeviceStorage<bool> {
+pub trait ChooseKernel<E: Dtype>:
+    DeviceAllocGrad<E> + DeviceStorage<E> + DeviceStorage<bool>
+{
     fn forward<S: Shape>(
         &self,
         cond: &Tensor<S, bool, Self>,

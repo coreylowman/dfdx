@@ -39,9 +39,9 @@ impl<E: Unit> SliceKernel<E> for Cpu {
 
         let start_idx = NdIndex::new(inp.shape, inp.strides)
             .get_strided_index(inp.shape.first_idx_in_slice(slice));
-        let view = &mut grad_inp[start_idx..];
+        let view = &mut grad_inp.as_mut_slice()[start_idx..];
 
-        while let Some((inp_i, o)) = inp_idx.next().zip(out_iter.next()) {
+        while let Some((inp_i, o)) = inp_idx.next().zip(LendingIterator::next(&mut out_iter)) {
             view[inp_i] = *o;
         }
 

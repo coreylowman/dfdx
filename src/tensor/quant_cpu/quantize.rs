@@ -18,6 +18,8 @@ impl std::error::Error for HalfByteConstructionError {}
 /// A Half-byte value. This type exists only for validation purposes, to ensure that
 /// values that get stores are within the range [0..16)
 #[allow(non_camel_case_types)]
+#[repr(transparent)]
+#[derive(Copy, Clone, Default)]
 pub struct u4(pub(crate) u8);
 
 impl u4 {
@@ -27,6 +29,47 @@ impl u4 {
         } else {
             Ok(Self(byte_value))
         }
+    }
+}
+
+/// A pair of half-byte values stored as one byte.
+/// Utilizes a trait to make usage simpler.
+pub(crate) trait HalfBytePair {
+    fn half_byte_pair(first: u4, second: u4) -> Self;
+
+    /// Gets the first half-byte.
+    fn first(&self) -> u4;
+
+    /// Gets the second half-byte.
+    fn second(&self) -> u4;
+
+    /// Sets the first half-byte, leaving the rest alone.
+    fn set_first(&mut self, value: u4);
+
+    /// Sets the second half-byte, leaving the rest alone.
+    fn set_second(&mut self, value: u4);
+}
+impl HalfBytePair for u8 {
+    fn half_byte_pair(first: u4, second: u4) -> Self {
+        (first.0 << 4) | second.0
+    }
+
+    fn first(&self) -> u4 {
+        u4(self >> 4)
+    }
+
+    fn second(&self) -> u4 {
+        u4(self & 0b_0000_1111)
+    }
+
+    fn set_first(&mut self, value: u4) {
+        *self &= 0b_0000_1111;
+        *self |= value.0 << 4
+    }
+
+    fn set_second(&mut self, value: u4) {
+        *self &= 0b_1111_0000;
+        *self |= value.0
     }
 }
 
@@ -44,7 +87,7 @@ pub struct OffsetQuant<E> {
 }
 
 /// Trait that defines how to quantize a value.
-pub trait Quantize: Clone {
+pub trait HalfByteQuantizer: Clone {
     type Value: num_traits::Float + Unit;
 
     fn from_values(values: &[Self::Value]) -> Self
@@ -56,7 +99,7 @@ pub trait Quantize: Clone {
     fn dequantize(&self, half_byte: u4) -> Self::Value;
 }
 
-impl<E: num_traits::Float + Unit> Quantize for ScaledQuant<E> {
+impl<E: num_traits::Float + Unit> HalfByteQuantizer for ScaledQuant<E> {
     type Value = E;
 
     fn from_values(values: &[E]) -> Self {
@@ -89,7 +132,7 @@ impl<E: num_traits::Float + Unit> Quantize for ScaledQuant<E> {
     }
 }
 
-impl<E: num_traits::Float + Unit> Quantize for OffsetQuant<E> {
+impl<E: num_traits::Float + Unit> HalfByteQuantizer for OffsetQuant<E> {
     type Value = E;
 
     fn from_values(values: &[E]) -> Self {
@@ -127,69 +170,5 @@ impl<E: num_traits::Float + Unit> Quantize for OffsetQuant<E> {
 
     fn dequantize(&self, half_byte: u4) -> E {
         E::from(half_byte.0).unwrap() * self.scaling_factor + self.offset_factor
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::{prelude::*, tests::TestDtype};
-
-    use super::*;
-
-    #[test]
-    fn test_round_trip_offset() {
-        let dev = QuantizedCpu::<OffsetQuant<TestDtype>>::default();
-        // Strangely, if I make the tensor just a little bigger (ex. 640x640)
-        // it will fail below with a stack overflow, and if I make it a lot bigger
-        // (ex. 640x6400) it will fail here with SIGSEGV: invalid memory reference
-        let t: Tensor<Rank2<320, 640>, TestDtype, _> = dev.sample_normal();
-        let size_t = t.data.size();
-        println!("Quantized bytes: {}", size_t);
-        let mut v = t.as_vec();
-        for val in v.iter_mut() {
-            *val = val.abs().powf(1.4).tanh() + 3.0;
-        }
-        let size_v =
-            std::mem::size_of::<Vec<TestDtype>>() + v.capacity() * std::mem::size_of::<TestDtype>();
-        println!("Vec bytes: {}", size_v);
-        let t2: Tensor<Rank2<320, 640>, TestDtype, _> = dev.tensor(v);
-        let errs = (t.abs().powf(1.4).tanh() + 3.0)
-            .iter()
-            .zip(t2.iter())
-            .map(|(v1, v2)| (v1 - v2).abs())
-            .collect::<Vec<_>>();
-        let avg_err = errs.iter().sum::<TestDtype>() / errs.len() as TestDtype;
-        let max_err = *errs
-            .iter()
-            .max_by(|f1, f2| f1.partial_cmp(f2).unwrap())
-            .unwrap();
-        assert!(avg_err < 0.05);
-        assert!(max_err < 0.1);
-    }
-
-    #[test]
-    fn test_round_trip_scaled() {
-        let dev = QuantizedCpu::<ScaledQuant<TestDtype>>::default();
-        // Strangely, if I make the tensor just a little bigger (ex. 640x640)
-        // it will fail below with a stack overflow, and if I make it a lot bigger
-        // (ex. 640x6400) it will fail here with SIGSEGV: invalid memory reference
-        let t: Tensor<Rank2<320, 640>, TestDtype, _> = dev.sample_normal();
-        let mut v = t.as_vec();
-        for val in v.iter_mut() {
-            *val = val.abs().powf(1.4).tanh() + 3.0;
-        }
-        let t2: Tensor<Rank2<320, 640>, TestDtype, _> = dev.tensor(v);
-        let errs = (t.abs().powf(1.4).tanh() + 3.0)
-            .iter()
-            .zip(t2.iter())
-            .map(|(v1, v2)| (v1 - v2).abs())
-            .collect::<Vec<_>>();
-        let avg_err = errs.iter().sum::<TestDtype>() / errs.len() as TestDtype;
-        let max_err = *errs
-            .iter()
-            .max_by(|f1, f2| f1.partial_cmp(f2).unwrap())
-            .unwrap();
-        assert!(avg_err < 0.5);
-        assert!(max_err < 1.0);
     }
 }

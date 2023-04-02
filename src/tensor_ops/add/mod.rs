@@ -71,7 +71,7 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarAddKernelOp<E>, E>, T: Tape<E, D>>
     }
 }
 
-impl<S: Shape, E: Dtype, D: DeviceStorage<E>, LhsTape: Tape<E, D>, Rhs> std::ops::Add<Rhs>
+impl<S: Shape, E: Dtype, D: DeviceStorage<E> + HasErr, LhsTape: Tape<E, D>, Rhs> std::ops::Add<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
     Self: TryAdd<Rhs>,

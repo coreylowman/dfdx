@@ -22,10 +22,10 @@ fn classification_train<
     Criterion: FnMut(Model::Output, Lbl) -> Loss,
     // the Loss needs to be able to call backward, and we also use
     // this generic as an output
-    Loss: Backward<E, D, Err = D::Err> + AsArray<Array = E>,
+    Loss: Backward<E, D, Err = D::Err> + AsArray<E, Array = E>,
     // Dtype & Device to tie everything together
     E: Dtype,
-    D: Device<E>,
+    D: Device<E> + std::fmt::Debug,
 >(
     model: &mut Model,
     opt: &mut Opt,

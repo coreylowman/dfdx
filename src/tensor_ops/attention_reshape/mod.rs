@@ -19,7 +19,7 @@ type QkvTuple<const NUM_HEADS: usize, const HEAD_DIM: usize, E, D> = (
 
 /// AttentionReshape qkv + past_key + past_value into (q, k, v) used
 /// in attention layer
-pub trait TryAttentionReshape<E: Dtype>: DeviceStorage<E> {
+pub trait TryAttentionReshape<E: Dtype>: DeviceStorage<E> + HasErr {
     /// This is an inference only kernel:
     /// Within `transformers` architecture, a core component is the `attention`
     /// layer, which can be written in many forms.
@@ -60,7 +60,7 @@ pub trait TryAttentionReshape<E: Dtype>: DeviceStorage<E> {
     ) -> Result<QkvTuple<NUM_HEADS, HEAD_DIM, E, Self>, Self::Err>;
 }
 
-pub trait AttentionReshapeKernel<E: Dtype>: DeviceStorage<E> {
+pub trait AttentionReshapeKernel<E: Dtype>: DeviceStorage<E> + HasErr {
     fn forward<const THREE_HIDDEN_DIM: usize, const NUM_HEADS: usize, const HEAD_DIM: usize>(
         &self,
         qkv: &Tensor<(usize, Const<THREE_HIDDEN_DIM>), E, Self>,

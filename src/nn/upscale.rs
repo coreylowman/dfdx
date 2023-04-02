@@ -1,6 +1,6 @@
 #[cfg(feature = "nightly")]
 use crate::prelude::{Const, Dim, Dtype, HasErr, Tape, Tensor, Upscale2DKernel, ZerosTensor};
-use crate::prelude::{ConstUpscale2D, NearestNeighbor, UpscaleMethod};
+use crate::prelude::{ConstUpscale2D, DeviceAllocGrad, NearestNeighbor, UpscaleMethod};
 
 #[allow(unused)]
 use super::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
@@ -40,7 +40,7 @@ impl<
         C: Dim,
         E: Dtype,
         M: UpscaleMethod,
-        D: Upscale2DKernel<E, M> + ZerosTensor<E>,
+        D: Upscale2DKernel<E, M> + ZerosTensor<E> + DeviceAllocGrad<E>,
         T: 'static + Tape<E, D>,
     > Module<Tensor<(C, Const<IH>, Const<IW>), E, D, T>> for Upscale2DBy<H, W, M>
 where
@@ -67,7 +67,7 @@ impl<
         C: Dim,
         E: Dtype,
         M: UpscaleMethod,
-        D: Upscale2DKernel<E, M> + ZerosTensor<E>,
+        D: Upscale2DKernel<E, M> + ZerosTensor<E> + DeviceAllocGrad<E>,
         T: 'static + Tape<E, D>,
     > Module<Tensor<(B, C, Const<IH>, Const<IW>), E, D, T>> for Upscale2DBy<H, W, M>
 where

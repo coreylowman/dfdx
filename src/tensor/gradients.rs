@@ -8,6 +8,7 @@ use super::{
     storage_traits::{AllocGrad, DeviceStorage},
     unique_id, DeviceAllocGrad, Tensor, UniqueId,
 };
+use crate::prelude::HasErr;
 use crate::shapes::{Shape, Unit};
 
 /// A generic container for keeping gradients of tensors keyed by the
@@ -179,14 +180,14 @@ impl<E: Unit, D: DeviceAllocGrad<E>> Gradients<E, D> {
 }
 
 /// Contains a [Gradients] and list of backward operations.
-pub struct OwnedTape<E: Unit, D: DeviceStorage<E>> {
+pub struct OwnedTape<E: Unit, D: DeviceStorage<E> + HasErr> {
     /// A list of (Time, BackwardOp) pairs. The Time is used to ensure operations
     /// from merged tapes are executed in the correct order.
     pub(crate) operations: Vec<(UniqueId, BackwardOp<E, D, D::Err>)>,
     pub(crate) gradients: Gradients<E, D>,
 }
 
-impl<E: Unit, D: DeviceStorage<E>> Default for OwnedTape<E, D> {
+impl<E: Unit, D: DeviceStorage<E> + HasErr> Default for OwnedTape<E, D> {
     fn default() -> Self {
         Self {
             operations: Default::default(),
@@ -195,7 +196,7 @@ impl<E: Unit, D: DeviceStorage<E>> Default for OwnedTape<E, D> {
     }
 }
 
-impl<E: Unit, D: DeviceStorage<E>> std::fmt::Debug for OwnedTape<E, D> {
+impl<E: Unit, D: DeviceStorage<E> + HasErr + std::fmt::Debug> std::fmt::Debug for OwnedTape<E, D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OwnedTape")
             .field("num_operations", &self.operations.len())
@@ -204,7 +205,7 @@ impl<E: Unit, D: DeviceStorage<E>> std::fmt::Debug for OwnedTape<E, D> {
     }
 }
 
-impl<E: Unit, D: DeviceStorage<E>> OwnedTape<E, D> {
+impl<E: Unit, D: DeviceStorage<E> + HasErr> OwnedTape<E, D> {
     /// Compute the [Gradients]! This just runs all the operations on a new [Gradients] struct.
     ///
     /// Note that this method takes ownership of self, so it can't be called twice!
@@ -227,7 +228,9 @@ type BackwardOp<E, D, Err> = Box<dyn FnOnce(&mut Gradients<E, D>) -> Result<(), 
 pub struct NoneTape;
 
 /// Something that can track backward operations.
-pub trait Tape<E: Unit, D: DeviceStorage<E>>: Default + Merge<Self> + Merge<NoneTape> {
+pub trait Tape<E: Unit, D: DeviceStorage<E> + HasErr>:
+    Default + Merge<Self> + Merge<NoneTape>
+{
     /// Whether this object is currently tracking gradients. This is known at compile time.
     const OWNS_TAPE: bool;
     fn add_backward_op<F>(&mut self, operation: F)
@@ -249,7 +252,7 @@ impl<E: Unit, D: DeviceAllocGrad<E>> Tape<E, D> for OwnedTape<E, D> {
     }
 }
 
-impl<E: Unit, D: DeviceStorage<E>> Tape<E, D> for NoneTape {
+impl<E: Unit, D: DeviceStorage<E> + HasErr> Tape<E, D> for NoneTape {
     const OWNS_TAPE: bool = false;
     fn add_backward_op<F>(&mut self, _: F)
     where
@@ -273,13 +276,13 @@ impl Merge<NoneTape> for NoneTape {
     }
 }
 
-impl<E: Unit, D: DeviceStorage<E>> Merge<NoneTape> for OwnedTape<E, D> {
+impl<E: Unit, D: DeviceStorage<E> + HasErr> Merge<NoneTape> for OwnedTape<E, D> {
     fn merge(self, _: NoneTape) -> Self {
         self
     }
 }
 
-impl<E: Unit, D: DeviceStorage<E>> Merge<OwnedTape<E, D>> for OwnedTape<E, D> {
+impl<E: Unit, D: DeviceStorage<E> + HasErr> Merge<OwnedTape<E, D>> for OwnedTape<E, D> {
     fn merge(mut self, mut other: Self) -> Self {
         self.gradients
             .gradient_by_id

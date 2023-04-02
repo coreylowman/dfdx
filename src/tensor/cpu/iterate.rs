@@ -1,6 +1,8 @@
 use super::{super::Tensor, Cpu};
-use crate::shapes::{Shape, Unit};
-use std::vec::Vec;
+use crate::{
+    prelude::{storage_traits::Storage, DeviceStorage, Unit},
+    shapes::Shape,
+};
 
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) struct NdIndex<S: Shape> {
@@ -95,47 +97,59 @@ impl<S: Shape> NdIndex<S> {
     }
 }
 
-pub(crate) struct StridedRefIter<'a, S: Shape, E> {
-    data: &'a Vec<E>,
+pub(crate) struct StridedRefIter<'a, S: Shape, G: DeviceStorage<E>, E: Unit> {
+    data: &'a G::Storage,
     index: NdIndex<S>,
 }
 
-pub(crate) struct StridedMutIter<'a, S: Shape, E> {
-    data: &'a mut Vec<E>,
+pub(crate) struct StridedMutIter<'a, S: Shape, G: DeviceStorage<E>, E: Unit> {
+    data: &'a mut G::Storage,
     index: NdIndex<S>,
 }
 
-pub(crate) struct StridedRefIndexIter<'a, S: Shape, E> {
-    data: &'a Vec<E>,
+pub(crate) struct StridedRefIndexIter<'a, S: Shape, G: DeviceStorage<E>, E: Unit> {
+    data: &'a G::Storage,
     index: NdIndex<S>,
 }
 
-pub(crate) struct StridedMutIndexIter<'a, S: Shape, E> {
-    data: &'a mut Vec<E>,
+pub(crate) struct StridedMutIndexIter<'a, S: Shape, G: DeviceStorage<E>, E: Unit> {
+    data: &'a mut G::Storage,
     index: NdIndex<S>,
 }
 
-impl<S: Shape, E: Unit, T> Tensor<S, E, Cpu, T> {
+pub(crate) struct StridedIter<'a, S: Shape, G: DeviceStorage<E>, E: Unit> {
+    data: &'a G::Storage,
+    index: NdIndex<S>,
+}
+
+pub(crate) struct StridedIndexIter<'a, S: Shape, G: DeviceStorage<E>, E: Unit> {
+    data: &'a G::Storage,
+    index: NdIndex<S>,
+}
+
+impl<S: Shape, E: Unit, G: DeviceStorage<E>, T> Tensor<S, E, Cpu<G>, T> {
     #[inline]
-    pub(crate) fn buf_iter(&self) -> std::slice::Iter<'_, E> {
+    pub(crate) fn buf_iter(&self) -> <G::Storage as Storage<E>>::Iter<'_> {
         self.data.iter()
     }
 
     #[inline]
-    pub(crate) fn buf_iter_mut(&mut self) -> std::slice::IterMut<'_, E> {
+    pub(crate) fn buf_iter_mut(&mut self) -> <G::Storage as Storage<E>>::IterMut<'_> {
         std::sync::Arc::make_mut(&mut self.data).iter_mut()
     }
+}
 
+impl<S: Shape, E: Unit, G: DeviceStorage<E>, T> Tensor<S, E, Cpu<G>, T> {
     #[inline]
-    pub(crate) fn iter(&self) -> StridedRefIter<S, E> {
+    pub(crate) fn iter(&self) -> StridedRefIter<S, Cpu<G>, E> {
         StridedRefIter {
-            data: self.data.as_ref(),
+            data: &self.data,
             index: NdIndex::new(self.shape, self.strides),
         }
     }
 
     #[inline]
-    pub(crate) fn iter_mut(&mut self) -> StridedMutIter<S, E> {
+    pub(crate) fn iter_mut(&mut self) -> StridedMutIter<S, Cpu<G>, E> {
         StridedMutIter {
             data: std::sync::Arc::make_mut(&mut self.data),
             index: NdIndex::new(self.shape, self.strides),
@@ -143,30 +157,66 @@ impl<S: Shape, E: Unit, T> Tensor<S, E, Cpu, T> {
     }
 
     #[inline]
-    pub(crate) fn iter_with_index(&self) -> StridedRefIndexIter<S, E> {
+    pub(crate) fn iter_with_index(&self) -> StridedRefIndexIter<S, Cpu<G>, E> {
         StridedRefIndexIter {
-            data: self.data.as_ref(),
+            data: &self.data,
             index: NdIndex::new(self.shape, self.strides),
         }
     }
 
     #[inline]
-    pub(crate) fn iter_mut_with_index(&mut self) -> StridedMutIndexIter<S, E> {
+    pub(crate) fn iter_mut_with_index(&mut self) -> StridedMutIndexIter<S, Cpu<G>, E> {
         StridedMutIndexIter {
             data: std::sync::Arc::make_mut(&mut self.data),
             index: NdIndex::new(self.shape, self.strides),
         }
     }
+
+    #[inline]
+    pub(crate) fn iter_copied(&self) -> StridedIter<S, Cpu<G>, E> {
+        StridedIter {
+            data: &self.data,
+            index: NdIndex::new(self.shape, self.strides),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn iter_copied_with_index(&self) -> StridedIndexIter<S, Cpu<G>, E> {
+        StridedIndexIter {
+            data: &self.data,
+            index: NdIndex::new(self.shape, self.strides),
+        }
+    }
 }
 
-pub(crate) trait LendingIterator {
+pub trait LendingIterator {
     type Item<'a>
     where
         Self: 'a;
     fn next(&'_ mut self) -> Option<Self::Item<'_>>;
 }
 
-impl<'q, S: Shape, E> LendingIterator for StridedRefIter<'q, S, E> {
+impl<'q, E> LendingIterator for std::slice::Iter<'q, E> {
+    type Item<'a> = &'a E
+    where
+        Self: 'a;
+
+    fn next(&'_ mut self) -> Option<Self::Item<'_>> {
+        Iterator::next(self)
+    }
+}
+
+impl<'q, E> LendingIterator for std::slice::IterMut<'q, E> {
+    type Item<'a> = &'a mut E
+    where
+        Self: 'a;
+
+    fn next(&'_ mut self) -> Option<Self::Item<'_>> {
+        Iterator::next(self)
+    }
+}
+
+impl<'q, S: Shape, E: Unit> LendingIterator for StridedRefIter<'q, S, Cpu, E> {
     type Item<'a> = &'a E where Self: 'a;
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
@@ -174,7 +224,7 @@ impl<'q, S: Shape, E> LendingIterator for StridedRefIter<'q, S, E> {
     }
 }
 
-impl<'q, S: Shape, E> LendingIterator for StridedMutIter<'q, S, E> {
+impl<'q, S: Shape, E: Unit> LendingIterator for StridedMutIter<'q, S, Cpu, E> {
     type Item<'a> = &'a mut E where Self: 'a;
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
@@ -182,7 +232,7 @@ impl<'q, S: Shape, E> LendingIterator for StridedMutIter<'q, S, E> {
     }
 }
 
-impl<'q, S: Shape, E> LendingIterator for StridedRefIndexIter<'q, S, E> {
+impl<'q, S: Shape, E: Unit> LendingIterator for StridedRefIndexIter<'q, S, Cpu, E> {
     type Item<'a> = (&'a E, S::Concrete) where Self: 'a;
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
@@ -192,13 +242,31 @@ impl<'q, S: Shape, E> LendingIterator for StridedRefIndexIter<'q, S, E> {
     }
 }
 
-impl<'q, S: Shape, E> LendingIterator for StridedMutIndexIter<'q, S, E> {
+impl<'q, S: Shape, E: Unit> LendingIterator for StridedMutIndexIter<'q, S, Cpu, E> {
     type Item<'a> = (&'a mut E, S::Concrete) where Self: 'a;
     #[inline(always)]
     fn next(&'_ mut self) -> Option<Self::Item<'_>> {
         self.index
             .next_with_idx()
             .map(|(i, idx)| (&mut self.data[i], idx))
+    }
+}
+
+impl<'q, S: Shape, G: DeviceStorage<E>, E: Unit> Iterator for StridedIter<'q, S, Cpu<G>, E> {
+    type Item = E;
+    #[inline(always)]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.index.next().map(|i| self.data.index(i))
+    }
+}
+
+impl<'q, S: Shape, G: DeviceStorage<E>, E: Unit> Iterator for StridedIndexIter<'q, S, Cpu<G>, E> {
+    type Item = (E, S::Concrete);
+    #[inline(always)]
+    fn next(&mut self) -> Option<Self::Item> {
+        self.index
+            .next_with_idx()
+            .map(|(i, idx)| (self.data.index(i), idx))
     }
 }
 

@@ -1,9 +1,10 @@
 #![allow(clippy::needless_range_loop)]
 
+use crate::prelude::DeviceStorage;
 use crate::shapes::{Axes, Dtype, RemoveDimTo, ReplaceDimTo, Shape};
 use crate::tensor::{
     cpu::{index_to_i, LendingIterator, NdIndex},
-    Cpu, DeviceStorage, Tensor, ZerosTensor,
+    Cpu, Tensor, ZerosTensor,
 };
 
 impl<E: Dtype> super::ReplaceDimKernel<E> for Cpu {

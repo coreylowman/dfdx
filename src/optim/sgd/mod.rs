@@ -7,6 +7,7 @@ use std::marker::PhantomData;
 
 use crate::{
     nn::tensor_collection::*,
+    prelude::HasErr,
     shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Gradients, Tensor},
     tensor_ops::Device,
@@ -132,7 +133,7 @@ impl<M, E: Dtype, D: DeviceStorage<E>> Sgd<M, E, D> {
     }
 }
 
-pub trait SgdKernel<E: Dtype>: DeviceStorage<E> {
+pub trait SgdKernel<E: Dtype>: DeviceStorage<E> + HasErr {
     fn update(
         &self,
         cfg: &SgdConfig<E>,

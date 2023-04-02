@@ -4,6 +4,7 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 use crate::{
+    prelude::DeviceAllocGrad,
     shapes::*,
     tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tape, Tensor, ZerosTensor},
 };
@@ -52,7 +53,7 @@ pub struct Bilinear;
 
 impl UpscaleMethod for Bilinear {}
 
-pub trait Upscale2DKernel<E: Unit, M: UpscaleMethod>: DeviceStorage {
+pub trait Upscale2DKernel<E: Unit, M: UpscaleMethod>: DeviceStorage<E> + HasErr {
     fn forward<I: Shape, O: Shape>(
         &self,
         op: Upscale2DOp,
@@ -64,9 +65,9 @@ pub trait Upscale2DKernel<E: Unit, M: UpscaleMethod>: DeviceStorage {
         &self,
         op: Upscale2DOp,
         inp: &Tensor<I, E, Self>,
-        grad_inp: &mut Self::Vec<E>,
+        grad_inp: &mut Self::Storage,
         out: &Tensor<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 
@@ -103,7 +104,7 @@ impl<
         const W: usize,
         E: Dtype,
         M: UpscaleMethod,
-        D: Upscale2DKernel<E, M> + ZerosTensor<E>,
+        D: Upscale2DKernel<E, M> + ZerosTensor<E> + DeviceAllocGrad<E>,
         T: 'static + Tape<E, D>,
     > ConstUpscale2D<M> for Tensor<(C, Const<H>, Const<W>), E, D, T>
 {
@@ -138,7 +139,7 @@ impl<
         const W: usize,
         E: Dtype,
         M: UpscaleMethod,
-        D: Upscale2DKernel<E, M> + ZerosTensor<E>,
+        D: Upscale2DKernel<E, M> + ZerosTensor<E> + DeviceAllocGrad<E>,
         T: 'static + Tape<E, D>,
     > ConstUpscale2D<M> for Tensor<(B, C, Const<H>, Const<W>), E, D, T>
 {

@@ -4,6 +4,7 @@ mod cpu_kernel;
 mod cuda_kernel;
 
 use crate::{
+    prelude::DeviceAllocGrad,
     shapes::*,
     tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tape, Tensor, ZerosTensor},
 };
@@ -54,7 +55,7 @@ impl ConvTrans2DOp {
     }
 }
 
-pub(super) trait ConvTrans2DKernel<E: Dtype>: DeviceStorage {
+pub(super) trait ConvTrans2DKernel<E: Dtype>: DeviceStorage<E> + HasErr {
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,
         op: ConvTrans2DOp,
@@ -68,11 +69,11 @@ pub(super) trait ConvTrans2DKernel<E: Dtype>: DeviceStorage {
         &self,
         op: ConvTrans2DOp,
         lhs: &Tensor<L, E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
+        grad_lhs: &mut Self::Storage,
         rhs: &Tensor<R, E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
+        grad_rhs: &mut Self::Storage,
         out: &Tensor<O, E, Self>,
-        grad_out: &Self::Vec<E>,
+        grad_out: &Self::Storage,
     ) -> Result<(), Self::Err>;
 }
 
@@ -125,7 +126,7 @@ impl<
         const S: usize,
         const P: usize,
         E: Dtype,
-        D: ConvTrans2DKernel<E> + ZerosTensor<E>,
+        D: ConvTrans2DKernel<E> + ZerosTensor<E> + DeviceAllocGrad<E>,
         T: 'static + Tape<E, D>,
     > TryConvTrans2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> for Tensor<Rank3<C, H, W>, E, D, T>
 where
@@ -176,7 +177,7 @@ impl<
         const S: usize,
         const P: usize,
         E: Dtype,
-        D: ConvTrans2DKernel<E> + ZerosTensor<E>,
+        D: ConvTrans2DKernel<E> + ZerosTensor<E> + DeviceAllocGrad<E>,
         T: 'static + Tape<E, D>,
     > TryConvTrans2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P>
     for Tensor<(B, Const<C>, Const<H>, Const<W>), E, D, T>

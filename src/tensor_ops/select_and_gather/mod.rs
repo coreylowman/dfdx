@@ -7,7 +7,9 @@ mod cuda_kernel;
 
 use crate::{shapes::*, tensor::*};
 
-pub trait ReplaceDimKernel<E: Dtype>: DeviceAllocGrad<E> + DeviceStorage<usize> {
+pub trait ReplaceDimKernel<E: Dtype>:
+    DeviceAllocGrad<E> + DeviceStorage<E> + DeviceStorage<usize>
+{
     fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
@@ -27,7 +29,9 @@ pub trait ReplaceDimKernel<E: Dtype>: DeviceAllocGrad<E> + DeviceStorage<usize> 
         Src: ReplaceDimTo<Dst, Idx>;
 }
 
-pub trait RemoveDimKernel<E: Dtype>: DeviceAllocGrad<E> + DeviceStorage<usize> {
+pub trait RemoveDimKernel<E: Dtype>:
+    DeviceAllocGrad<E> + DeviceStorage<E> + DeviceStorage<usize>
+{
     fn forward<Src: Shape, Dst: Shape, Idx: Shape>(
         &self,
         inp: &Tensor<Src, E, Self>,
@@ -49,7 +53,7 @@ pub trait RemoveDimKernel<E: Dtype>: DeviceAllocGrad<E> + DeviceStorage<usize> {
 
 /// Select a single value from a single dimension, removing that dimension
 /// from the shape. Equivalent to `torch.select` from pytorch.
-pub trait SelectTo<D: DeviceStorage<usize>>: HasErr + HasShape {
+pub trait SelectTo<E: Unit, D: DeviceStorage<E> + DeviceStorage<usize>>: HasErr + HasShape {
     /// Select values given indices.
     ///
     /// The shape of the index is the shape of the tensor up to the axis you
@@ -91,7 +95,7 @@ pub trait SelectTo<D: DeviceStorage<usize>>: HasErr + HasShape {
         Self::Shape: RemoveDimTo<Dst, Idx>;
 }
 
-impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<D>
+impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<E, D>
     for Tensor<Src, E, D, T>
 {
     fn try_select<Dst: Shape, Idx: Shape>(
@@ -118,7 +122,7 @@ impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<D>
 
 /// Select multiple values from a single axis, replacing that dimension
 /// with a different one. Equivalent to `torch.gather` from pytorch.
-pub trait GatherTo<D: DeviceStorage<usize>>: HasErr + HasShape {
+pub trait GatherTo<E: Unit, D: DeviceStorage<E> + DeviceStorage<usize>>: HasErr + HasShape {
     /// Gather values given indices.
     ///
     /// The shape of the index is the shape of the tensor up to the axis you
@@ -161,7 +165,7 @@ pub trait GatherTo<D: DeviceStorage<usize>>: HasErr + HasShape {
         Self::Shape: ReplaceDimTo<Dst, Idx>;
 }
 
-impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<E, D>> GatherTo<D>
+impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<E, D>> GatherTo<E, D>
     for Tensor<Src, E, D, T>
 {
     fn try_gather<Dst: Shape, Idx: Shape>(

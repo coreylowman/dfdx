@@ -143,8 +143,6 @@ mod tensor_impls;
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 
 pub use cpu::{Cpu, CpuError};
-#[cfg(feature = "nightly")]
-pub use quant_cpu::{QuantizedCpu, Quantize};
 #[cfg(not(feature = "cuda"))]
 pub type AutoDevice = Cpu;
 
@@ -155,7 +153,7 @@ pub use cuda::{Cuda, CudaError};
 #[cfg(feature = "cuda")]
 pub type AutoDevice = Cuda;
 
-pub use storage_traits::{AsArray, CopySlice, TensorFrom, TensorFromVec};
+pub use storage_traits::{AsArray, CopySlice, TensorFrom, TensorFromVec, RandomU64};
 pub use storage_traits::{DeviceAllocGrad, DeviceStorage, DeviceTensorToVec, HasErr};
 pub use storage_traits::{OnesTensor, SampleTensor, TriangleTensor, ZerosTensor};
 

@@ -7,9 +7,9 @@ use crate::{
 /// A [DeviceStorage] that requires all the tensor ops implementations
 pub trait Device<E: Dtype>:
     DeviceStorage<E>
+    + Clone
     + CopySlice<E>
     + crate::tensor::TensorFromVec<E>
-    + crate::tensor::TensorFromVec<usize>
 
     // appends
     + super::super::stack::StackKernel<E>

@@ -1,8 +1,9 @@
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
+    prelude::cpu::LendingIterator,
     shapes::{Dtype, Shape},
     tensor::{
-        cpu::{Cpu, LendingIterator, NdIndex},
+        cpu::{Cpu, NdIndex},
         unique_id, Tensor, ZerosTensor,
     },
 };

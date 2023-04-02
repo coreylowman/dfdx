@@ -1,4 +1,5 @@
 use crate::{
+    prelude::HasErr,
     shapes::{HasShape, Shape, Unit},
     tensor::{DeviceStorage, NoneTape, Tape, Tensor},
 };
@@ -7,7 +8,7 @@ mod cpu_kernels;
 #[cfg(feature = "cuda")]
 mod cuda_kernels;
 
-pub trait CmpKernel<Op, E: Unit>: DeviceStorage<E> + DeviceStorage<bool> {
+pub trait CmpKernel<Op, E: Unit>: DeviceStorage<E> + DeviceStorage<bool> + HasErr {
     fn forward<S: Shape, T>(
         &self,
         lhs: &Tensor<S, E, Self, T>,
@@ -23,7 +24,7 @@ fn try_cmp_op<Op, S: Shape, E: Unit, D: CmpKernel<Op, E>, T: Tape<E, D>>(
     lhs.device.forward(lhs, rhs)
 }
 
-pub trait ScalarCmpKernel<Op, E: Unit>: DeviceStorage<E> + DeviceStorage<bool> {
+pub trait ScalarCmpKernel<Op, E: Unit>: DeviceStorage<E> + DeviceStorage<bool> + HasErr {
     fn forward<S: Shape, T>(
         &self,
         tensor: &Tensor<S, E, Self, T>,
@@ -31,7 +32,7 @@ pub trait ScalarCmpKernel<Op, E: Unit>: DeviceStorage<E> + DeviceStorage<bool> {
     ) -> Result<Tensor<S, bool, Self>, Self::Err>;
 }
 
-fn try_scalar_cmp_op<Op, S: Shape, E: Unit, D: ScalarCmpKernel<Op, E>, T: Tape<E, D>>(
+fn try_scalar_cmp_op<Op, S: Shape, E: Unit, D: ScalarCmpKernel<Op, E> + HasErr, T: Tape<E, D>>(
     tensor: &Tensor<S, E, D, T>,
     scalar: E,
 ) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {

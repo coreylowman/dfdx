@@ -1,8 +1,9 @@
 use crate::{
+    prelude::DeviceStorage,
     shapes::{Dtype, Shape},
     tensor::{
         cpu::{LendingIterator, NdIndex},
-        Cpu, DeviceStorage, Tensor, ZerosTensor,
+        Cpu, Tensor, ZerosTensor,
     },
 };
 

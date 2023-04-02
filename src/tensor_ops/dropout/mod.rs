@@ -1,10 +1,9 @@
 mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
-#[cfg(feature = "nightly")]
-mod quant_cpu_kernel;
 
 use crate::{
+    prelude::RandomU64,
     shapes::*,
     tensor::{DeviceAllocGrad, PutTape, SplitTape, Tape, Tensor},
 };
@@ -50,14 +49,14 @@ pub trait DropoutKernel<E: Dtype>: DeviceAllocGrad<E> {
 /// and then instantiates two identical [rand::rngs::StdRng] with that seed. These rngs
 /// are used in both the forward pass and backward pass to generate identical
 /// random numbers, so the masking is the same for both.
-pub fn dropout<S: Shape, E: Dtype, D: DropoutKernel<E>, T: Tape<E, D>>(
+pub fn dropout<S: Shape, E: Dtype, D: DropoutKernel<E> + RandomU64, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
     prob: E,
 ) -> Tensor<S, E, D, T> {
     t.dropout(prob)
 }
 
-impl<S: Shape, E: Dtype, D: DropoutKernel<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: DropoutKernel<E> + RandomU64, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [dropout]
     pub fn dropout(self, prob: E) -> Self {
         self.try_dropout(prob).unwrap()
