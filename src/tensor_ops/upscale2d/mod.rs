@@ -70,54 +70,88 @@ pub trait Upscale2DKernel<E: Unit, M: UpscaleMethod>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-pub trait ConstUpscale2D<M: UpscaleMethod>: HasErr {
-    type Output<const OH: usize, const OW: usize>;
+pub trait Upscale2DWithMethod<M: UpscaleMethod>: HasErr {
+    type Output<OH: Dim, OW: Dim>;
     fn try_upscale2d<const OH: usize, const OW: usize>(
         self,
+    ) -> Result<Self::Output<Const<OH>, Const<OW>>, Self::Err> {
+        self.try_upscale2d_like(Const::<OH>, Const::<OW>)
+    }
+
+    fn try_upscale2d_like<OH: Dim, OW: Dim>(
+        self,
+        height: OH,
+        width: OW,
     ) -> Result<Self::Output<OH, OW>, Self::Err>;
 }
 
 pub trait TryUpscale2D {
     fn upscale_2d<const OH: usize, const OW: usize, M: UpscaleMethod>(
         self,
-    ) -> <Self as ConstUpscale2D<M>>::Output<OH, OW>
+    ) -> <Self as Upscale2DWithMethod<M>>::Output<Const<OH>, Const<OW>>
     where
-        Self: ConstUpscale2D<M>,
+        Self: Upscale2DWithMethod<M>,
     {
         self.try_upscale2d().unwrap()
     }
     fn try_upscale_2d<const OH: usize, const OW: usize, M: UpscaleMethod>(
         self,
-    ) -> Result<<Self as ConstUpscale2D<M>>::Output<OH, OW>, Self::Err>
+    ) -> Result<<Self as Upscale2DWithMethod<M>>::Output<Const<OH>, Const<OW>>, Self::Err>
     where
-        Self: ConstUpscale2D<M>,
+        Self: Upscale2DWithMethod<M>,
     {
-        ConstUpscale2D::try_upscale2d(self)
+        Upscale2DWithMethod::try_upscale2d(self)
+    }
+    fn upscale_2d_like<OH: Dim, OW: Dim, M: UpscaleMethod>(
+        self,
+        height: OH,
+        width: OW,
+    ) -> <Self as Upscale2DWithMethod<M>>::Output<OH, OW>
+    where
+        Self: Upscale2DWithMethod<M>,
+    {
+        self.try_upscale2d_like(height, width).unwrap()
+    }
+    fn try_upscale_2d_like<OH: Dim, OW: Dim, M: UpscaleMethod>(
+        self,
+        height: OH,
+        width: OW,
+    ) -> Result<<Self as Upscale2DWithMethod<M>>::Output<OH, OW>, Self::Err>
+    where
+        Self: Upscale2DWithMethod<M>,
+    {
+        Upscale2DWithMethod::try_upscale2d_like(self, height, width)
     }
 }
 impl<T> TryUpscale2D for T {}
 
 impl<
         C: Dim,
-        const H: usize,
-        const W: usize,
+        H: Dim,
+        W: Dim,
         E: Dtype,
         M: UpscaleMethod,
         D: Upscale2DKernel<E, M> + ZerosTensor<E>,
         T: 'static + Tape<E, D>,
-    > ConstUpscale2D<M> for Tensor<(C, Const<H>, Const<W>), E, D, T>
+    > Upscale2DWithMethod<M> for Tensor<(C, H, W), E, D, T>
 {
-    type Output<const OH: usize, const OW: usize> = Tensor<(C, Const<OH>, Const<OW>), E, D, T>;
+    type Output<OH: Dim, OW: Dim> = Tensor<(C, OH, OW), E, D, T>;
 
-    fn try_upscale2d<const OH: usize, const OW: usize>(
+    fn try_upscale2d_like<OH: Dim, OW: Dim>(
         self,
+        out_height: OH,
+        out_width: OW,
     ) -> Result<Self::Output<OH, OW>, Self::Err> {
+        let in_height = self.shape.1;
+        let in_width = self.shape.2;
+
         let &(chan, _, _) = self.shape();
-        let op = Upscale2DOp::new([1, chan.size(), H, W], [OH, OW]);
+        let op = Upscale2DOp::new(
+            [1, chan.size(), in_height.size(), in_width.size()],
+            [out_height.size(), out_width.size()],
+        );
         let (inp, mut tape) = self.split_tape();
-        let mut out = inp
-            .device
-            .try_zeros_like(&(chan, Default::default(), Default::default()))?;
+        let mut out = inp.device.try_zeros_like(&(chan, out_height, out_width))?;
         inp.device.forward(op, &inp, &mut out)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&inp)?;
@@ -134,25 +168,33 @@ impl<
 impl<
         B: Dim,
         C: Dim,
-        const H: usize,
-        const W: usize,
+        H: Dim,
+        W: Dim,
         E: Dtype,
         M: UpscaleMethod,
         D: Upscale2DKernel<E, M> + ZerosTensor<E>,
         T: 'static + Tape<E, D>,
-    > ConstUpscale2D<M> for Tensor<(B, C, Const<H>, Const<W>), E, D, T>
+    > Upscale2DWithMethod<M> for Tensor<(B, C, H, W), E, D, T>
 {
-    type Output<const OH: usize, const OW: usize> = Tensor<(B, C, Const<OH>, Const<OW>), E, D, T>;
+    type Output<OH: Dim, OW: Dim> = Tensor<(B, C, OH, OW), E, D, T>;
 
-    fn try_upscale2d<const OH: usize, const OW: usize>(
+    fn try_upscale2d_like<OH: Dim, OW: Dim>(
         self,
+        out_height: OH,
+        out_width: OW,
     ) -> Result<Self::Output<OH, OW>, Self::Err> {
+        let in_height = self.shape.2;
+        let in_width = self.shape.3;
+
         let &(batch, chan, _, _) = self.shape();
-        let op = Upscale2DOp::new([batch.size(), chan.size(), H, W], [OH, OW]);
+        let op = Upscale2DOp::new(
+            [batch.size(), chan.size(), in_height.size(), in_width.size()],
+            [out_height.size(), out_width.size()],
+        );
         let (inp, mut tape) = self.split_tape();
-        let mut out =
-            inp.device
-                .try_zeros_like(&(batch, chan, Default::default(), Default::default()))?;
+        let mut out = inp
+            .device
+            .try_zeros_like(&(batch, chan, out_height, out_width))?;
         inp.device.forward(op, &inp, &mut out)?;
         let phantom_out = out.clone();
         tape.try_alloc_grad(&inp)?;
