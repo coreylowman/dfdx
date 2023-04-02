@@ -41,7 +41,7 @@ mod model {
 }
 
 #[test]
-#[cfg(feature = "nightly")]
+#[cfg(all(feature = "test-integrations", feature = "nightly"))]
 fn test_resnet18_f32_inference() {
     use dfdx::prelude::*;
     let dev: AutoDevice = Default::default();
@@ -60,8 +60,6 @@ fn test_resnet18_f32_inference() {
     let y = y.array();
 
     for i in 0..10 {
-        std::println!("pred: {:?}", p[i]);
-        std::println!("true: {:?}", y[i]);
         for j in 0..1000 {
             assert!(
                 (p[i][j] - y[i][j]).abs() <= 1e-5,

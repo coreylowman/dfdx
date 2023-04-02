@@ -11,4 +11,4 @@ against expected outputs.
 
 1. `cd tests`
 2. `python save_resnet18.py`
-3. `cargo +nightly test -F numpy resnet18`
+3. `cargo +nightly test -F test-integrations,numpy resnet18`
