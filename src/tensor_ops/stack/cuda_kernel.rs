@@ -22,6 +22,11 @@ impl HasCudaKernel<f64> for Cuda {
     const FNS: &'static [&'static str] = &["sum_f64"];
 }
 
+impl HasCudaKernel<usize> for Cuda {
+    const MOD: &'static str = "stack_usize";
+    const FNS: &'static [&'static str] = &["sum_usize"];
+}
+
 impl<E: Dtype> super::StackKernel<E> for Cuda
 where
     Self: HasCudaKernel<E>,
