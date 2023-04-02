@@ -1,6 +1,5 @@
-#[cfg(feature = "nightly")]
-use crate::prelude::{Const, Dim, Dtype, HasErr, Tape, Tensor, Upscale2DKernel, ZerosTensor};
-use crate::prelude::{ConstUpscale2D, NearestNeighbor, UpscaleMethod};
+use crate::prelude::{Const, NearestNeighbor, Upscale2DWithMethod, UpscaleMethod};
+use crate::prelude::{Dim, Dtype, HasErr, Tape, Tensor, Upscale2DKernel, ZerosTensor};
 
 #[allow(unused)]
 use super::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
@@ -11,10 +10,10 @@ pub struct Upscale2D<const OH: usize, const OW: usize = OH, M: UpscaleMethod = N
 impl<const OH: usize, const OW: usize, M: UpscaleMethod> ZeroSizedModule for Upscale2D<OH, OW, M> {}
 impl<const OH: usize, const OW: usize, M: UpscaleMethod> NonMutableModule for Upscale2D<OH, OW, M> {}
 
-impl<const OH: usize, const OW: usize, M: UpscaleMethod, Img: ConstUpscale2D<M>> Module<Img>
+impl<const OH: usize, const OW: usize, M: UpscaleMethod, Img: Upscale2DWithMethod<M>> Module<Img>
     for Upscale2D<OH, OW, M>
 {
-    type Output = Img::Output<OH, OW>;
+    type Output = Img::Output<Const<OH>, Const<OW>>;
     type Error = Img::Err;
 
     fn try_forward(&self, x: Img) -> Result<Self::Output, Img::Err> {
@@ -22,13 +21,10 @@ impl<const OH: usize, const OW: usize, M: UpscaleMethod, Img: ConstUpscale2D<M>>
     }
 }
 
-#[cfg(feature = "nightly")]
 #[derive(Debug, Default, Clone)]
 pub struct Upscale2DBy<const H: usize, const W: usize = H, M: UpscaleMethod = NearestNeighbor>(M);
 
-#[cfg(feature = "nightly")]
 impl<const H: usize, const W: usize, M: UpscaleMethod> ZeroSizedModule for Upscale2DBy<H, W, M> {}
-#[cfg(feature = "nightly")]
 impl<const H: usize, const W: usize, M: UpscaleMethod> NonMutableModule for Upscale2DBy<H, W, M> {}
 
 #[cfg(feature = "nightly")]
@@ -84,6 +80,52 @@ where
     }
 }
 
+impl<
+        const H: usize,
+        const W: usize,
+        C: Dim,
+        E: Dtype,
+        M: UpscaleMethod,
+        D: Upscale2DKernel<E, M> + ZerosTensor<E>,
+        T: 'static + Tape<E, D>,
+    > Module<Tensor<(C, usize, usize), E, D, T>> for Upscale2DBy<H, W, M>
+{
+    type Output = Tensor<(C, usize, usize), E, D, T>;
+    type Error = <Self::Output as HasErr>::Err;
+
+    fn try_forward(
+        &self,
+        x: Tensor<(C, usize, usize), E, D, T>,
+    ) -> Result<Self::Output, Self::Error> {
+        let shape = x.shape;
+        x.try_upscale2d_like(shape.1 * H, shape.2 * W)
+    }
+}
+
+impl<
+        const H: usize,
+        const W: usize,
+        B: Dim,
+        C: Dim,
+        E: Dtype,
+        M: UpscaleMethod,
+        D: Upscale2DKernel<E, M> + ZerosTensor<E>,
+        T: 'static + Tape<E, D>,
+    > Module<Tensor<(B, C, usize, usize), E, D, T>> for Upscale2DBy<H, W, M>
+where
+    Tensor<(B, C, usize, usize), E, D, T>: Sized,
+{
+    type Output = Tensor<(B, C, usize, usize), E, D, T>;
+    type Error = <Self::Output as HasErr>::Err;
+
+    fn try_forward(
+        &self,
+        x: Tensor<(B, C, usize, usize), E, D, T>,
+    ) -> Result<Self::Output, Self::Error> {
+        let shape = x.shape;
+        x.try_upscale2d_like(shape.2 * H, shape.3 * W)
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
