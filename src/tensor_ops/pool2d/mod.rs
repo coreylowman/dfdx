@@ -81,7 +81,7 @@ macro_rules! pool2d {
                 self.try_pool2d()
             }
         }
-        impl<T> $TryTrait for T {}
+        impl<S: Shape, E: Dtype, D: DeviceStorage, T> $TryTrait for Tensor<S, E, D, T> {}
 
         impl<
                 C: Dim,

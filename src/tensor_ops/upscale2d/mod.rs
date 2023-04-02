@@ -123,7 +123,7 @@ pub trait TryUpscale2D {
         Upscale2DWithMethod::try_upscale2d_like(self, height, width)
     }
 }
-impl<T> TryUpscale2D for T {}
+impl<S: Shape, E: Dtype, D: DeviceStorage, T> TryUpscale2D for Tensor<S, E, D, T> {}
 
 impl<
         C: Dim,
