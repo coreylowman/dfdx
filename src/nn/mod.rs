@@ -240,6 +240,7 @@ pub mod modules {
     pub use super::bias2d::Bias2D;
     #[cfg(feature = "nightly")]
     pub use super::conv::Conv2D;
+    #[cfg(feature = "nightly")]
     pub use super::convtrans::ConvTrans2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
     pub use super::embedding::Embedding;
@@ -260,12 +261,16 @@ pub mod modules {
     };
     pub use super::unbiased_linear::UnbiasedLinear;
     pub use super::upscale::Upscale2D;
+    #[cfg(feature = "nightly")]
+    pub use super::upscale::Upscale2DBy;
     pub use super::*;
 }
 
 pub mod builders {
     //! Simple specification of network structure, without
     //! worrying about device or dtype.
+    pub use super::activations::builder::PReLU;
+    pub use super::activations::builder::PReLU1D;
     pub use super::activations::*;
     pub use super::add_into::AddInto;
     pub use super::batchnorm1d::builder::BatchNorm1D;
@@ -273,6 +278,7 @@ pub mod builders {
     pub use super::bias2d::builder::Bias2D;
     #[cfg(feature = "nightly")]
     pub use super::conv::builder::Conv2D;
+    #[cfg(feature = "nightly")]
     pub use super::convtrans::builder::ConvTrans2D;
     pub use super::dropout::{Dropout, DropoutOneIn};
     pub use super::embedding::builder::Embedding;
@@ -292,5 +298,8 @@ pub mod builders {
         TransformerEncoder, TransformerEncoderBlock,
     };
     pub use super::unbiased_linear::builder::UnbiasedLinear;
+    pub use super::upscale::Upscale2D;
+    #[cfg(feature = "nightly")]
+    pub use super::upscale::Upscale2DBy;
     pub use super::*;
 }

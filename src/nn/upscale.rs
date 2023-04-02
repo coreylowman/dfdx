@@ -129,7 +129,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{prelude::Bilinear, shapes::*, tensor::*, tests::*};
+    use crate::{shapes::*, tensor::*, tests::*};
 
     #[test]
     fn test_upscale2d() {
@@ -138,12 +138,13 @@ mod tests {
         let _: Tensor<Rank3<3, 8, 8>, _, _> = Upscale2D::<8>::default().forward(x.clone());
         let _: Tensor<Rank3<3, 8, 12>, _, _> = Upscale2D::<8, 12>::default().forward(x.clone());
         let _: Tensor<Rank3<3, 9, 9>, _, _> =
-            Upscale2D::<9, 9, NearestNeighbor>::default().forward(x.clone());
+            Upscale2D::<9, 9, NearestNeighbor>::default().forward(x);
     }
 
     #[cfg(feature = "nightly")]
     #[test]
     fn test_upscale2dby() {
+        use crate::prelude::Bilinear;
         let dev: TestDevice = Default::default();
         let x: Tensor<Rank3<3, 4, 4>, TestDtype, _> = dev.zeros();
         let _: Tensor<Rank3<3, 8, 8>, _, _> = Upscale2DBy::<2>::default().forward(x.clone());

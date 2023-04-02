@@ -31,10 +31,12 @@ fn main() {
         let start = Instant::now();
         let out = m.forward_mut(img.leaky_traced());
         let loss = out.square().mean();
+        dev.synchronize();
         let fwd_dur = start.elapsed();
 
         let start = Instant::now();
         let _ = loss.backward();
+        dev.synchronize();
         let bwd_dur = start.elapsed();
         println!("fwd={:?} bwd={:?}", fwd_dur, bwd_dur);
     }

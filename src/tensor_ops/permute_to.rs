@@ -1,15 +1,28 @@
 use crate::{shapes::*, tensor::*};
 
-/// Changes order of dimensions/axes
+/// Changes order of dimensions/axes in a tensor.
+///
+/// **pytorch equivalent**: `torch.permute`.
+///
+/// Option 1: Specifying shape generic:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a: Tensor<Rank2<2, 3>, f32, _> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+/// let b: Tensor<Rank2<3, 2>, f32, _> = a.permute::<Rank2<3, 2>, _>();
+/// assert_eq!(b.array(), [[1.0, 4.0], [2.0, 5.0], [3.0, 6.0]]);
+/// ```
+///
+/// Option 2: Specifying axes generic:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a: Tensor<Rank2<2, 3>, f32, _> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+/// let b: Tensor<Rank2<3, 2>, f32, _> = a.permute::<_, Axes2<1, 0>>();
+/// assert_eq!(b.array(), [[1.0, 4.0], [2.0, 5.0], [3.0, 6.0]]);
+/// ```
 pub trait PermuteTo: HasErr + HasShape {
-    /// Permutes the tensor:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank3<1, 2, 3>, f32, _> = dev.zeros();
-    /// let _ = a.clone().permute::<Rank3<3, 2, 1>, _>();
-    /// let _ = a.clone().permute::<_, Axes3<2, 1, 0>>();
-    /// ```
+    /// Permutes the tensor.
     fn permute<Dst: Shape, Ax: Axes>(self) -> Self::WithShape<Dst>
     where
         Self::Shape: PermuteShapeTo<Dst, Ax>,

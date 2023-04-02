@@ -1,19 +1,30 @@
 use crate::{shapes::*, tensor::*};
 
 /// Broadcast self into a new shape.
+///
+/// **pytorch equivalent** `torch.broadcast_to`.
+///
+/// Use shape generic or output type to dictate what shape you want:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a: Tensor<Rank2<3, 7>, f32, _> = dev.zeros();
+/// // broadcast axis 1
+/// let _: Tensor<Rank3<3, 5, 7>, _, _> = a.clone().broadcast();
+/// // broadcast axis 0 and axis 2
+/// let _ = a.clone().broadcast::<Rank4<1, 3, 5, 7>, _>();
+/// ```
+///
+/// Use axes generic to dis-ambiguate:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let a: Tensor<Rank1<1>, f32, _> = dev.zeros();
+/// // It's ambiguous what axes to broadcast here - explicitly say axes 0 and 2
+/// let _: Tensor<Rank3<1, 1, 1>, _, _> = a.clone().broadcast::<_, Axes2<0, 2>>();
+/// ```
 pub trait BroadcastTo: HasErr + HasShape {
-    /// Broadcast into shape `Dst` along axes `Ax`:
-    /// ```rust
-    /// # use dfdx::prelude::*;
-    /// # let dev: Cpu = Default::default();
-    /// let a: Tensor<Rank2<3, 7>, f32, _> = dev.zeros();
-    ///
-    /// // broadcast axis 1
-    /// let _ = a.clone().broadcast::<Rank3<3, 5, 7>, _>();
-    ///
-    /// // broadcast axis 0 and axis 2
-    /// let _ = a.clone().broadcast::<Rank4<1, 3, 5, 7>, _>();
-    /// ```
+    /// Broadcast into shape `Dst` along axes `Ax`.
     fn broadcast<Dst: ConstShape, Ax: Axes>(self) -> Self::WithShape<Dst>
     where
         Self::Shape: BroadcastShapeTo<Dst, Ax>,
