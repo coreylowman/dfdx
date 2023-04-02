@@ -1,6 +1,6 @@
 #![cfg_attr(feature = "nightly", feature(generic_const_exprs))]
 
-#[cfg(feature = "nightly")]
+#[cfg(all(feature = "test-integrations", feature = "nightly"))]
 mod model {
     use dfdx::prelude::*;
 

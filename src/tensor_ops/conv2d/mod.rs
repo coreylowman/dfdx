@@ -130,7 +130,7 @@ pub trait TryConv2D<F> {
     }
 }
 
-impl<T, F> TryConv2D<F> for T {}
+impl<S: Shape, E: Dtype, D: DeviceStorage, T, F> TryConv2D<F> for Tensor<S, E, D, T> {}
 
 impl<
         const C: usize,
