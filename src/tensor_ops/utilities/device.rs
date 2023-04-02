@@ -62,6 +62,12 @@ pub trait Device<E: Dtype>:
 
     // boolean operations
     + super::super::boolean::BooleanKernel
+    + super::super::cmp::ScalarCmpKernel<super::super::cmp::EqKernelOp, E>
+    + super::super::cmp::ScalarCmpKernel<super::super::cmp::NeKernelOp, E>
+    + super::super::cmp::ScalarCmpKernel<super::super::cmp::GtKernelOp, E>
+    + super::super::cmp::ScalarCmpKernel<super::super::cmp::GeKernelOp, E>
+    + super::super::cmp::ScalarCmpKernel<super::super::cmp::LtKernelOp, E>
+    + super::super::cmp::ScalarCmpKernel<super::super::cmp::LeKernelOp, E>
 
     // unary
     + UnaryKernel<super::super::abs::AbsKernelOp, E>

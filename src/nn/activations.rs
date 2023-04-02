@@ -48,19 +48,16 @@ pub struct Softmax;
 impl ZeroSizedModule for Softmax {}
 impl NonMutableModule for Softmax {}
 
-impl<Ax: Axes, S, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Softmax
-where
-    S: Shape<LastAxis = Ax> + ReduceShape<Ax>,
-{
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Softmax {
     type Output = Tensor<S, E, D, T>;
     type Error = D::Err;
 
     fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
-        input.try_softmax::<Ax>()
+        input.try_softmax::<S::LastAxis>()
     }
 }
 
-/// Calls [prelu()] with constant value.
+/// Calls [prelu()] with constant value - defaults to 0.05
 #[derive(Debug, Clone, Copy)]
 pub struct LeakyReLU<E: Dtype>(pub E);
 
@@ -73,11 +70,7 @@ impl<E: Dtype> Default for LeakyReLU<E> {
 impl<E: Dtype> ZeroSizedModule for LeakyReLU<E> {}
 impl<E: Dtype> NonMutableModule for LeakyReLU<E> {}
 
-impl<S: ConstShape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
-    for LeakyReLU<E>
-where
-    Tensor<S, E, D, T>: TryPReLU<E>,
-{
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for LeakyReLU<E> {
     type Output = Tensor<S, E, D, T>;
     type Error = <Tensor<S, E, D, T> as HasErr>::Err;
 
@@ -116,16 +109,13 @@ pub struct PReLU<E: Dtype, D: Device<E>> {
 
 impl<E: Dtype, D: Device<E>> NonMutableModule for PReLU<E, D> {}
 
-impl<S: ConstShape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
-    for PReLU<E, D>
-where
-    Tensor<S, E, D, T>: TryPReLU<Tensor<S, E, D, NoneTape>>,
-{
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for PReLU<E, D> {
     type Output = Tensor<S, E, D, T>;
     type Error = <Tensor<S, E, D, T> as HasErr>::Err;
 
     fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
-        input.try_prelu(self.a.retaped().broadcast())
+        let scale = self.a.retaped::<T>().try_broadcast_like(&input.shape)?;
+        input.try_prelu(scale)
     }
 }
 
@@ -162,29 +152,25 @@ impl<C: ConstDim, E: Dtype, D: Device<E>> NonMutableModule for PReLU1D<C, E, D> 
 
 impl<C: ConstDim, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<(C,), E, D, T>>
     for PReLU1D<C, E, D>
-where
-    Tensor<(C,), E, D, T>: TryPReLU<Tensor<(C,), E, D, NoneTape>>,
 {
     type Output = Tensor<(C,), E, D, T>;
-
     type Error = <Tensor<(C,), E, D, T> as HasErr>::Err;
 
     fn try_forward(&self, input: Tensor<(C,), E, D, T>) -> Result<Self::Output, Self::Error> {
-        input.try_prelu(self.a.retaped())
+        input.try_prelu(self.a.retaped::<T>())
     }
 }
 
 macro_rules! prelu1d {
     (($($InDims:tt),*), $Axes:ty) => {
-        impl<E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<NoneTape>, $($InDims: ConstDim),*> Module<Tensor<($($InDims),*), E, D, T>> for PReLU1D<C,E, D>
+        impl<E: Dtype, D: Device<E>, T: Tape<E, D>, $($InDims: ConstDim),*> Module<Tensor<($($InDims),*), E, D, T>> for PReLU1D<C,E, D>
         where ($($InDims),*): ReduceShapeTo<(C,), $Axes>,
-        Tensor<($($InDims),*), E, D, T>: TryPReLU<Tensor<($($InDims),*), E, D, NoneTape>>,
         {
             type Output = Tensor<($($InDims),*), E, D, T>;
             type Error = <Tensor<($($InDims),*), E, D, T> as HasErr>::Err;
 
             fn try_forward(&self, input: Tensor<($($InDims),*), E, D, T>) -> Result<Self::Output, Self::Error> {
-                input.try_prelu(self.a.retaped().broadcast())
+                input.try_prelu(self.a.retaped::<T>().broadcast())
             }
         }
     };
@@ -401,7 +387,7 @@ mod tests {
         let out = model.forward(t);
         assert_close(
             &out.array(),
-            &[-0.04820138, -0.03807970, 0.0, 0.76159415, 0.96402758],
+            &[-0.04820138, -0.0380797, 0.0, 0.7615941, 0.9640275],
         )
     }
 }
