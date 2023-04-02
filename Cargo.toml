@@ -63,6 +63,7 @@ safetensors = ["dep:safetensors", "std", "dep:memmap2"]
 
 test-cuda = ["cuda"]
 test-f64 = []
+test-integrations = []
 ci-check = ["cudarc?/ci-check"]
 
 [[bench]]
