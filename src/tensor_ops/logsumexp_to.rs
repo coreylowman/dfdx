@@ -42,9 +42,26 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> LogSumExpTo for Tensor<S, 
         Self::Shape: ReduceShapeTo<Dst, Ax>,
     {
         let shape = *self.shape();
-        let max: Tensor<Dst, E, D> = self.retaped().try_max()?;
-        let t = self.try_sub(max.clone().try_broadcast_like::<_, Ax>(&shape)?)?;
-        t.try_exp()?.try_sum::<Dst, Ax>()?.try_ln()?.try_add(max)
+        let (t, tape) = self.split_tape();
+        let max: Tensor<Dst, E, D> = t.clone().try_max()?;
+        let t = {
+            // does normalization outside of backprop graph.
+            // since try_sub will create a new tensor id, we need to reset the id
+            // back to t's id before the subtraction.
+            let keep_id = t.id;
+            let mut t = t.try_sub(max.clone().try_broadcast_like::<_, Ax>(&shape)?)?;
+            t.id = keep_id;
+            t
+        };
+        let dst = t.put_tape(tape).try_exp()?.try_sum::<Dst, Ax>()?.try_ln()?;
+        {
+            // does normalization outside of backprop graph
+            let (dst, tape) = dst.split_tape();
+            let keep_id = dst.id;
+            let mut dst = dst.try_add(max)?;
+            dst.id = keep_id;
+            Ok(dst.put_tape(tape))
+        }
     }
 }
 
