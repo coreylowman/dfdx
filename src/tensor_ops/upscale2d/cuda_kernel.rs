@@ -97,13 +97,13 @@ where
         let bwd_fn = self.dev.get_func(Self::FWD, Self::BWD).unwrap();
         let cfg = LaunchConfig::for_num_elems(out.shape().num_elements() as u32);
         let params = (
-            op,                // const Pool2dOp op,
-            &inp_strides,      // const size_t *inp_strides,
-            &inp_sizes,        // const size_t *inp_sizes,
-            &out_strides,      // const size_t *out_strides,
-            &out_sizes,        // const size_t *out_sizes,
-            grad_inp,          // float *grad_inp,
-            grad_out,          // const float *grad_out
+            op,           // const Pool2dOp op,
+            &inp_strides, // const size_t *inp_strides,
+            &inp_sizes,   // const size_t *inp_sizes,
+            &out_strides, // const size_t *out_strides,
+            &out_sizes,   // const size_t *out_sizes,
+            grad_inp,     // float *grad_inp,
+            grad_out,     // const float *grad_out
         );
         unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())

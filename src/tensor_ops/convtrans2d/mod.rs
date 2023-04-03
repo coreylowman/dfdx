@@ -341,4 +341,36 @@ mod tests {
             ],
         );
     }
+
+    #[test]
+    fn test_batched_convtrans2d() {
+        let dev: TestDevice = Default::default();
+        let x: Tensor<Rank3<3, 28, 28>, TestDtype, _> = dev.sample_normal();
+        let w: Tensor<Rank4<5, 3, 6, 6>, TestDtype, _> = dev.sample_normal();
+
+        let y: Tensor<Rank3<5, 83, 83>, _, _, _> = x.leaky_trace().convtrans2d::<3, 2>(w.clone());
+        let y0 = y.array();
+        let grads0 = y.square().mean().backward();
+        let x0 = grads0.get(&x).array();
+        let w0 = grads0.get(&w).array();
+
+        let x = x
+            .broadcast::<Rank4<10, 3, 28, 28>, _>()
+            .reshape::<Rank4<10, 3, 28, 28>>();
+
+        let y: Tensor<Rank4<10, 5, 83, 83>, _, _, _> =
+            x.leaky_trace().convtrans2d::<3, 2>(w.clone());
+        for i in 0..10 {
+            assert_close(&y0, &y.retaped::<NoneTape>().select(dev.tensor(i)).array());
+        }
+
+        let grads = y.square().mean().backward();
+
+        assert_close(&w0, &(grads.get(&w)).array());
+
+        let x_grad = grads.get(&x) * 10.0;
+        for i in 0..10 {
+            assert_close(&x0, &x_grad.clone().select(dev.tensor(i)).array());
+        }
+    }
 }
