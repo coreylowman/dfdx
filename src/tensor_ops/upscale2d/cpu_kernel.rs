@@ -111,10 +111,6 @@ impl<E: Float + Dtype> super::Upscale2DKernel<E, Bilinear> for Cpu {
                         let yw = E::from_f32(y_frac - y0).unwrap();
 
                         let [x0, x1, y0, y1] = [x0, x1, y0, y1].map(|q| q as usize);
-                        debug_assert!(x0 < op.w_in);
-                        debug_assert!(x1 < op.w_in);
-                        debug_assert!(y0 < op.h_in);
-                        debug_assert!(y1 < op.h_in);
 
                         let p_a = buf[b * istr[0] + c * istr[1] + y0 * istr[2] + x0 * istr[3]];
                         let p_b = buf[b * istr[0] + c * istr[1] + y0 * istr[2] + x1 * istr[3]];
@@ -168,10 +164,6 @@ impl<E: Float + Dtype> super::Upscale2DKernel<E, Bilinear> for Cpu {
                         let yw = E::from_f32(y_frac - y0).unwrap();
 
                         let [x0, x1, y0, y1] = [x0, x1, y0, y1].map(|q| q as usize);
-                        debug_assert!(x0 < op.w_in);
-                        debug_assert!(x1 < op.w_in);
-                        debug_assert!(y0 < op.h_in);
-                        debug_assert!(y1 < op.h_in);
 
                         grad_inp[i_base + y0 * istr[2] + x0 * istr[3]] +=
                             go * (E::ONE - xw) * (E::ONE - yw);
