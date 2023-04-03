@@ -7,10 +7,10 @@ use num_traits::Float;
 
 use super::{Bilinear, NearestNeighbor};
 
-fn make_4d<S: Shape>(items: S::Concrete) -> [usize; 4] {
+fn make_4d<S: Shape>(strides: S::Concrete) -> [usize; 4] {
     match S::NUM_DIMS {
-        3 => [0, items[0], items[1], items[2]],
-        4 => [items[0], items[1], items[2], items[3]],
+        3 => [0, strides[0], strides[1], strides[2]],
+        4 => [strides[0], strides[1], strides[2], strides[3]],
         _ => panic!("Only implemented for 3d & 4d arrays"),
     }
 }

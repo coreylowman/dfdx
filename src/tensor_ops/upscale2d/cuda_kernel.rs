@@ -57,21 +57,13 @@ where
         }
 
         let inp_strides = self.dev.htod_copy(make_4d::<I>(inp.strides, 0).into())?;
-        let inp_sizes = self
-            .dev
-            .htod_copy(make_4d::<I>(inp.shape.concrete(), 1).into())?;
         let out_strides = self.dev.htod_copy(make_4d::<O>(out.strides, 0).into())?;
-        let out_sizes = self
-            .dev
-            .htod_copy(make_4d::<O>(out.shape.concrete(), 1).into())?;
         let fwd_fn = self.dev.get_func(Self::FWD, Self::FWD).unwrap();
         let cfg = LaunchConfig::for_num_elems(out.shape().num_elements() as u32);
         let params = (
             op,                           // const Pool2dOp op,
             &inp_strides,                 // const size_t *inp_strides,
-            &inp_sizes,                   // const size_t *inp_sizes,
             &out_strides,                 // const size_t *out_strides,
-            &out_sizes,                   // const size_t *out_sizes,
             inp.data.as_ref(),            // const float *inp,
             Arc::make_mut(&mut out.data), // float *out
         );
@@ -87,21 +79,13 @@ where
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let inp_strides = self.dev.htod_copy(make_4d::<I>(inp.strides, 0).into())?;
-        let inp_sizes = self
-            .dev
-            .htod_copy(make_4d::<I>(inp.shape.concrete(), 1).into())?;
         let out_strides = self.dev.htod_copy(make_4d::<O>(out.strides, 0).into())?;
-        let out_sizes = self
-            .dev
-            .htod_copy(make_4d::<O>(out.shape.concrete(), 1).into())?;
         let bwd_fn = self.dev.get_func(Self::FWD, Self::BWD).unwrap();
         let cfg = LaunchConfig::for_num_elems(out.shape().num_elements() as u32);
         let params = (
             op,           // const Pool2dOp op,
             &inp_strides, // const size_t *inp_strides,
-            &inp_sizes,   // const size_t *inp_sizes,
             &out_strides, // const size_t *out_strides,
-            &out_sizes,   // const size_t *out_sizes,
             grad_inp,     // float *grad_inp,
             grad_out,     // const float *grad_out
         );
