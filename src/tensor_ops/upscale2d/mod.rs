@@ -23,11 +23,11 @@ impl Upscale2DOp {
     fn new([b, c, h_in, w_in]: [usize; 4], [h_out, w_out]: [usize; 2]) -> Self {
         assert!(
             h_out >= h_in,
-            "Output height must be larger than input height"
+            "Output height {h_out} must be larger than input height {h_in}"
         );
         assert!(
             w_out >= w_in,
-            "Output width must be larger than input width"
+            "Output width {w_out} must be larger than input width {w_in}"
         );
         Self {
             batch: b,
