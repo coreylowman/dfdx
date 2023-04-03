@@ -224,6 +224,7 @@ impl<
 mod tests {
     use super::*;
     use crate::{tensor::*, tensor_ops::*, tests::*};
+    use num_traits::FromPrimitive;
 
     #[test]
     /// TODO
@@ -361,7 +362,10 @@ mod tests {
         let y: Tensor<Rank4<10, 5, 83, 83>, _, _, _> =
             x.leaky_trace().convtrans2d::<3, 2>(w.clone());
         for i in 0..10 {
-            assert_close(&y0, &y.retaped::<NoneTape>().select(dev.tensor(i)).array());
+            y0.assert_close(
+                &y.retaped::<NoneTape>().select(dev.tensor(i)).array(),
+                TestDtype::from_f32(1e-5).unwrap(),
+            );
         }
 
         let grads = y.square().mean().backward();
