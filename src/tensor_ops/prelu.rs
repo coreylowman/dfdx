@@ -1,6 +1,6 @@
 use crate::{shapes::*, tensor::*};
 
-use super::{BroadcastTo, ChooseFrom, Device};
+use super::{BroadcastTo, ChooseFrom, Device, TryMul};
 
 /// [Parametric Rectified Linear Unit (PReLU)](https://pytorch.org/docs/stable/generated/torch.nn.PReLU.html). `max(0, lhs) + rhs*min(0, lhs)`
 ///
@@ -65,8 +65,8 @@ where
 {
     /// See [prelu]
     fn try_prelu(self, rhs: Tensor<S, E, D, R>) -> Result<Self, Self::Err> {
-        let scaled = self.with_empty_tape() * rhs;
-        Ok(self.scalar_lt(E::default()).choose(scaled, self))
+        let scaled = self.with_empty_tape().try_mul(rhs)?;
+        self.try_scalar_lt(E::default())?.try_choose(scaled, self)
     }
 }
 
@@ -75,8 +75,8 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> TryPReLU<E> for Tensor<S, 
     fn try_prelu(self, rhs: E) -> Result<Self, Self::Err> {
         let dev = self.device.clone();
         let scale = dev.tensor(rhs).retaped::<T>().broadcast_like(self.shape());
-        let scaled = self.with_empty_tape() * scale;
-        Ok(self.scalar_lt(E::default()).choose(scaled, self))
+        let scaled = self.with_empty_tape().try_mul(scale)?;
+        self.try_scalar_lt(E::default())?.try_choose(scaled, self)
     }
 }
 
