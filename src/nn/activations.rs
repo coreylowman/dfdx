@@ -1,4 +1,9 @@
-use crate::{shapes::*, tensor::*, tensor_ops::*};
+use crate::{
+    prelude::{BuildModule, BuildOnDevice, TensorCollection, TensorOptions},
+    shapes::*,
+    tensor::*,
+    tensor_ops::*,
+};
 
 use super::module::{Module, NonMutableModule, ZeroSizedModule};
 
@@ -43,15 +48,148 @@ pub struct Softmax;
 impl ZeroSizedModule for Softmax {}
 impl NonMutableModule for Softmax {}
 
-impl<Ax: Axes, S, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Softmax
-where
-    S: Shape<LastAxis = Ax> + ReduceShape<Ax>,
-{
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Softmax {
     type Output = Tensor<S, E, D, T>;
     type Error = D::Err;
 
     fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
-        input.try_softmax::<Ax>()
+        input.try_softmax::<S::LastAxis>()
+    }
+}
+
+/// Calls [prelu()] with constant value - defaults to 0.05
+#[derive(Debug, Clone, Copy)]
+pub struct LeakyReLU<E: Dtype>(pub E);
+
+impl<E: Dtype> Default for LeakyReLU<E> {
+    fn default() -> Self {
+        Self(E::from_f32(0.05).unwrap())
+    }
+}
+
+impl<E: Dtype> ZeroSizedModule for LeakyReLU<E> {}
+impl<E: Dtype> NonMutableModule for LeakyReLU<E> {}
+
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for LeakyReLU<E> {
+    type Output = Tensor<S, E, D, T>;
+    type Error = <Tensor<S, E, D, T> as HasErr>::Err;
+
+    fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
+        input.try_prelu(self.0)
+    }
+}
+
+pub mod builder {
+    #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct PReLU;
+
+    use core::marker::PhantomData;
+
+    use crate::prelude::ConstDim;
+
+    #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct PReLU1D<C: ConstDim>(PhantomData<C>);
+}
+
+impl<E: Dtype, D: Device<E>> BuildOnDevice<D, E> for builder::PReLU
+where
+    PReLU<E, D>: BuildModule<D, E>,
+{
+    type Built = PReLU<E, D>;
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
+        Self::Built::try_build(device)
+    }
+}
+
+/// Calls [prelu()] with learnable value.
+#[derive(Debug, Clone)]
+pub struct PReLU<E: Dtype, D: Device<E>> {
+    pub a: Tensor<(), E, D>,
+}
+
+impl<E: Dtype, D: Device<E>> NonMutableModule for PReLU<E, D> {}
+
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for PReLU<E, D> {
+    type Output = Tensor<S, E, D, T>;
+    type Error = <Tensor<S, E, D, T> as HasErr>::Err;
+
+    fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
+        let scale = self.a.retaped::<T>().try_broadcast_like(&input.shape)?;
+        input.try_prelu(scale)
+    }
+}
+
+impl<E: Dtype, D: Device<E>> TensorCollection<E, D> for PReLU<E, D> {
+    type To<E2: Dtype, D2: Device<E2>> = PReLU<E2, D2>;
+
+    fn iter_tensors<V: crate::prelude::ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            Self::tensor("a", |p| &p.a, |p| &mut p.a, TensorOptions::reset_to_zeros()),
+            |a| PReLU { a },
+        )
+    }
+}
+
+/// Calls [prelu()] with learnable values along second dimension.
+#[derive(Debug, Clone)]
+pub struct PReLU1D<C: ConstDim, E: Dtype, D: Device<E>> {
+    pub a: Tensor<(C,), E, D>,
+}
+
+impl<C: ConstDim, E: Dtype, D: Device<E>> BuildOnDevice<D, E> for builder::PReLU1D<C>
+where
+    PReLU1D<C, E, D>: BuildModule<D, E>,
+{
+    type Built = PReLU1D<C, E, D>;
+    fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
+        Self::Built::try_build(device)
+    }
+}
+
+impl<C: ConstDim, E: Dtype, D: Device<E>> NonMutableModule for PReLU1D<C, E, D> {}
+
+impl<C: ConstDim, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<(C,), E, D, T>>
+    for PReLU1D<C, E, D>
+{
+    type Output = Tensor<(C,), E, D, T>;
+    type Error = <Tensor<(C,), E, D, T> as HasErr>::Err;
+
+    fn try_forward(&self, input: Tensor<(C,), E, D, T>) -> Result<Self::Output, Self::Error> {
+        input.try_prelu(self.a.retaped::<T>())
+    }
+}
+
+macro_rules! prelu1d {
+    (($($InDims:tt),*), $Axes:ty) => {
+        impl<E: Dtype, D: Device<E>, T: Tape<E, D>, $($InDims: ConstDim),*> Module<Tensor<($($InDims),*), E, D, T>> for PReLU1D<C,E, D>
+        where ($($InDims),*): ReduceShapeTo<(C,), $Axes>,
+        {
+            type Output = Tensor<($($InDims),*), E, D, T>;
+            type Error = <Tensor<($($InDims),*), E, D, T> as HasErr>::Err;
+
+            fn try_forward(&self, input: Tensor<($($InDims),*), E, D, T>) -> Result<Self::Output, Self::Error> {
+                input.try_prelu(self.a.retaped::<T>().broadcast())
+            }
+        }
+    };
+}
+
+prelu1d!((B, C), Axis<0>);
+prelu1d!((B, C, M), Axes2<0, 2>);
+prelu1d!((B, C, M, N), Axes3<0, 2, 3>);
+
+impl<C: ConstDim, E: Dtype, D: Device<E>> TensorCollection<E, D> for PReLU1D<C, E, D> {
+    type To<E2: Dtype, D2: Device<E2>> = PReLU1D<C, E2, D2>;
+
+    fn iter_tensors<V: crate::prelude::ModuleVisitor<Self, E, D>>(
+        visitor: &mut V,
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            Self::tensor("a", |p| &p.a, |p| &mut p.a, TensorOptions::reset_to_zeros()),
+            |a| PReLU1D { a },
+        )
     }
 }
 
@@ -83,7 +221,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{nn::*, tests::TestDevice};
+    use crate::{
+        nn::*,
+        tests::{assert_close, TestDevice},
+    };
 
     use super::*;
 

@@ -42,7 +42,10 @@ where
 
     let centered = x.try_sub(mean_chan.try_broadcast_like(&shape)?)?;
 
-    let var_chan = centered.retaped::<T>().square().mean::<Rank1<C>, _>();
+    let var_chan = centered
+        .retaped::<T>()
+        .try_square()?
+        .try_mean::<Rank1<C>, _>()?;
 
     // NOTE: uses unbiased variance in running estimate
     var.try_axpy(E::ONE - momentum, &var_chan, momentum * n / (n - E::ONE))?;
@@ -76,11 +79,10 @@ where
     let shape = *x.shape();
 
     // statistics for normalizing
-    let std = (var.clone() + epsilon).try_sqrt()?;
-    let mean = mean.clone();
+    let std = (var.clone().try_add(epsilon)?).try_sqrt()?;
 
     // normalize & affine
-    let x = x.try_sub(mean.try_broadcast_like(&shape)?)?;
+    let x = x.try_sub(mean.clone().try_broadcast_like(&shape)?)?;
     let x = x.try_div(std.try_broadcast_like(&shape)?)?;
     let x = x.try_mul(scale.clone().try_broadcast_like(&shape)?)?;
     x.try_add(bias.clone().try_broadcast_like(&shape)?)
