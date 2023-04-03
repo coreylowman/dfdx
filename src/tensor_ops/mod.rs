@@ -269,7 +269,7 @@ pub use convtrans2d::{ConvTransAlgebra, TryConvTrans2D, TryConvTrans2DTo};
 
 mod upscale2d;
 pub(crate) use upscale2d::Upscale2DKernel;
-pub use upscale2d::{Bilinear, NearestNeighbor, TryUpscale2D, Upscale2DWithMethod, UpscaleMethod};
+pub use upscale2d::{Bilinear, GenericUpscale2D, NearestNeighbor, TryUpscale2D, UpscaleMethod};
 
 #[cfg(feature = "nightly")]
 mod pool2d;

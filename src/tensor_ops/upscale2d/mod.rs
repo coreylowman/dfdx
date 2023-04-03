@@ -77,16 +77,9 @@ pub trait Upscale2DKernel<E: Unit, M: UpscaleMethod>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-pub trait Upscale2DWithMethod<M: UpscaleMethod>: HasErr {
+pub trait GenericUpscale2D<M: UpscaleMethod>: HasErr {
     type Output<OH: Dim, OW: Dim>;
-    fn try_upscale2d<const OH: usize, const OW: usize>(
-        self,
-        method: M,
-    ) -> Result<Self::Output<Const<OH>, Const<OW>>, Self::Err> {
-        self.try_upscale2d_like(method, Const::<OH>, Const::<OW>)
-    }
-
-    fn try_upscale2d_like<OH: Dim, OW: Dim>(
+    fn generic_upscale2d_like<OH: Dim, OW: Dim>(
         self,
         method: M,
         height: OH,
@@ -116,48 +109,48 @@ pub trait Upscale2DWithMethod<M: UpscaleMethod>: HasErr {
 /// ```
 pub trait TryUpscale2D {
     /// Upscale to compile time known dimensions.
-    fn upscale_2d<const OH: usize, const OW: usize, M: UpscaleMethod>(
+    fn upscale2d<const OH: usize, const OW: usize, M: UpscaleMethod>(
         self,
         method: M,
-    ) -> <Self as Upscale2DWithMethod<M>>::Output<Const<OH>, Const<OW>>
+    ) -> <Self as GenericUpscale2D<M>>::Output<Const<OH>, Const<OW>>
     where
-        Self: Upscale2DWithMethod<M>,
+        Self: GenericUpscale2D<M>,
     {
-        self.try_upscale2d(method).unwrap()
+        self.generic_upscale2d_like(method, Const, Const).unwrap()
     }
     /// Fallibly upscale to compile time known dimensions.
-    fn try_upscale_2d<const OH: usize, const OW: usize, M: UpscaleMethod>(
+    fn try_upscale2d<const OH: usize, const OW: usize, M: UpscaleMethod>(
         self,
         method: M,
-    ) -> Result<<Self as Upscale2DWithMethod<M>>::Output<Const<OH>, Const<OW>>, Self::Err>
+    ) -> Result<<Self as GenericUpscale2D<M>>::Output<Const<OH>, Const<OW>>, Self::Err>
     where
-        Self: Upscale2DWithMethod<M>,
+        Self: GenericUpscale2D<M>,
     {
-        Upscale2DWithMethod::try_upscale2d(self, method)
+        self.generic_upscale2d_like(method, Const, Const)
     }
     /// Upscale to runtime known dimensions.
-    fn upscale_2d_like<OH: Dim, OW: Dim, M: UpscaleMethod>(
+    fn upscale2d_like<OH: Dim, OW: Dim, M: UpscaleMethod>(
         self,
         method: M,
         height: OH,
         width: OW,
-    ) -> <Self as Upscale2DWithMethod<M>>::Output<OH, OW>
+    ) -> <Self as GenericUpscale2D<M>>::Output<OH, OW>
     where
-        Self: Upscale2DWithMethod<M>,
+        Self: GenericUpscale2D<M>,
     {
-        self.try_upscale2d_like(method, height, width).unwrap()
+        self.generic_upscale2d_like(method, height, width).unwrap()
     }
     /// Fallibly upscale to runtime known dimensions.
-    fn try_upscale_2d_like<OH: Dim, OW: Dim, M: UpscaleMethod>(
+    fn try_upscale2d_like<OH: Dim, OW: Dim, M: UpscaleMethod>(
         self,
         method: M,
         height: OH,
         width: OW,
-    ) -> Result<<Self as Upscale2DWithMethod<M>>::Output<OH, OW>, Self::Err>
+    ) -> Result<<Self as GenericUpscale2D<M>>::Output<OH, OW>, Self::Err>
     where
-        Self: Upscale2DWithMethod<M>,
+        Self: GenericUpscale2D<M>,
     {
-        Upscale2DWithMethod::try_upscale2d_like(self, method, height, width)
+        GenericUpscale2D::generic_upscale2d_like(self, method, height, width)
     }
 }
 impl<S: Shape, E: Dtype, D: DeviceStorage, T> TryUpscale2D for Tensor<S, E, D, T> {}
@@ -170,11 +163,11 @@ impl<
         M: UpscaleMethod,
         D: Upscale2DKernel<E, M> + ZerosTensor<E>,
         T: 'static + Tape<E, D>,
-    > Upscale2DWithMethod<M> for Tensor<(C, H, W), E, D, T>
+    > GenericUpscale2D<M> for Tensor<(C, H, W), E, D, T>
 {
     type Output<OH: Dim, OW: Dim> = Tensor<(C, OH, OW), E, D, T>;
 
-    fn try_upscale2d_like<OH: Dim, OW: Dim>(
+    fn generic_upscale2d_like<OH: Dim, OW: Dim>(
         self,
         _method: M,
         out_height: OH,
@@ -212,11 +205,11 @@ impl<
         M: UpscaleMethod,
         D: Upscale2DKernel<E, M> + ZerosTensor<E>,
         T: 'static + Tape<E, D>,
-    > Upscale2DWithMethod<M> for Tensor<(B, C, H, W), E, D, T>
+    > GenericUpscale2D<M> for Tensor<(B, C, H, W), E, D, T>
 {
     type Output<OH: Dim, OW: Dim> = Tensor<(B, C, OH, OW), E, D, T>;
 
-    fn try_upscale2d_like<OH: Dim, OW: Dim>(
+    fn generic_upscale2d_like<OH: Dim, OW: Dim>(
         self,
         _method: M,
         out_height: OH,
@@ -258,7 +251,7 @@ mod tests {
         let dev = TestDevice::default();
 
         let x = dev.tensor([[[1.0, 0.0], [2.0, 3.0]]]);
-        let y = x.leaky_trace().upscale_2d::<4, 4, _>(NearestNeighbor);
+        let y = x.leaky_trace().upscale2d::<4, 4, _>(NearestNeighbor);
         assert_close(
             &y.array(),
             &[[
@@ -281,7 +274,7 @@ mod tests {
         let dev = TestDevice::default();
 
         let x = dev.tensor([[[1.0, 0.0, 2.0], [2.0, 3.0, 4.0]]]);
-        let y = x.leaky_trace().upscale_2d::<2, 7, _>(NearestNeighbor);
+        let y = x.leaky_trace().upscale2d::<2, 7, _>(NearestNeighbor);
         assert_close(
             &y.array(),
             &[[
@@ -308,7 +301,7 @@ mod tests {
         let x: Tensor<Rank3<3, 2, 3>, _, _> = [x.clone(), x.clone(), x].stack();
         let x: Tensor<Rank4<5, 3, 2, 3>, _, _> =
             [x.clone(), x.clone(), x.clone(), x.clone(), x].stack();
-        let y = x.leaky_trace().upscale_2d::<5, 6, _>(NearestNeighbor);
+        let y = x.leaky_trace().upscale2d::<5, 6, _>(NearestNeighbor);
         let y_array = y.array();
         for img in y_array {
             assert_eq!(
@@ -342,7 +335,7 @@ mod tests {
         let dev = TestDevice::default();
 
         let x = dev.tensor([[[1.0, 0.0], [2.0, 3.0]]]);
-        let y = x.leaky_trace().upscale_2d::<4, 4, _>(Bilinear);
+        let y = x.leaky_trace().upscale2d::<4, 4, _>(Bilinear);
         assert_close(
             &y.array(),
             &[[
@@ -365,7 +358,7 @@ mod tests {
         let dev = TestDevice::default();
 
         let x = dev.tensor([[[1.0, 0.0, 2.0], [2.0, 3.0, 4.0]]]);
-        let y = x.leaky_trace().upscale_2d::<2, 7, _>(Bilinear);
+        let y = x.leaky_trace().upscale2d::<2, 7, _>(Bilinear);
         assert_close(
             &y.array(),
             &[[
@@ -392,7 +385,7 @@ mod tests {
         let x: Tensor<Rank3<3, 2, 3>, _, _> = [x.clone(), x.clone(), x].stack();
         let x: Tensor<Rank4<5, 3, 2, 3>, _, _> =
             [x.clone(), x.clone(), x.clone(), x.clone(), x].stack();
-        let y = x.leaky_trace().upscale_2d::<5, 6, _>(Bilinear);
+        let y = x.leaky_trace().upscale2d::<5, 6, _>(Bilinear);
         let y_array = y.array();
         for img in y_array {
             assert_close(
