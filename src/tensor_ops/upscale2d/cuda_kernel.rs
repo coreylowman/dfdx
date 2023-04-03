@@ -102,9 +102,7 @@ where
             &inp_sizes,        // const size_t *inp_sizes,
             &out_strides,      // const size_t *out_strides,
             &out_sizes,        // const size_t *out_sizes,
-            inp.data.as_ref(), // const float *inp,
             grad_inp,          // float *grad_inp,
-            out.data.as_ref(), // const float *out,
             grad_out,          // const float *grad_out
         );
         unsafe { bwd_fn.launch(cfg, params) }?;

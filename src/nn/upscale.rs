@@ -49,7 +49,7 @@ where
         &self,
         x: Tensor<(C, Const<IH>, Const<IW>), E, D, T>,
     ) -> Result<Self::Output, Self::Error> {
-        x.try_upscale2d()
+        x.try_upscale2d(M::default())
     }
 }
 
@@ -76,7 +76,7 @@ where
         &self,
         x: Tensor<(B, C, Const<IH>, Const<IW>), E, D, T>,
     ) -> Result<Self::Output, Self::Error> {
-        x.try_upscale2d()
+        x.try_upscale2d(M::default())
     }
 }
 
