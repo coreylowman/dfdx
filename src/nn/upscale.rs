@@ -17,7 +17,7 @@ impl<const OH: usize, const OW: usize, M: UpscaleMethod, Img: Upscale2DWithMetho
     type Error = Img::Err;
 
     fn try_forward(&self, x: Img) -> Result<Self::Output, Img::Err> {
-        x.try_upscale2d()
+        x.try_upscale2d(M::default())
     }
 }
 
@@ -98,7 +98,7 @@ impl<
         x: Tensor<(C, usize, usize), E, D, T>,
     ) -> Result<Self::Output, Self::Error> {
         let shape = x.shape;
-        x.try_upscale2d_like(shape.1 * H, shape.2 * W)
+        x.try_upscale2d_like(M::default(), shape.1 * H, shape.2 * W)
     }
 }
 
@@ -123,7 +123,7 @@ where
         x: Tensor<(B, C, usize, usize), E, D, T>,
     ) -> Result<Self::Output, Self::Error> {
         let shape = x.shape;
-        x.try_upscale2d_like(shape.2 * H, shape.3 * W)
+        x.try_upscale2d_like(M::default(), shape.2 * H, shape.3 * W)
     }
 }
 #[cfg(test)]
