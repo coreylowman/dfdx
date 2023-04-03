@@ -36,8 +36,8 @@ pub fn leakyrelu<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
 /// [Parametric Rectified Linear Unit (PReLU)](https://pytorch.org/docs/stable/generated/torch.nn.PReLU.html). `max(0, lhs) + rhs*min(0, lhs)`
 ///
 /// In other words, for each element i:
-/// - if lhs[i] < 0, use `lhs[i] * rhs[i]`
-/// - if lhs[i] >= 0, use `lhs[i]`
+/// - if `lhs[i] < 0`, use `lhs[i] * rhs[i]`
+/// - if `lhs[i] >= 0`, use `lhs[i]`
 ///
 ///
 /// Examples:

@@ -270,8 +270,6 @@ pub mod modules {
 pub mod builders {
     //! Simple specification of network structure, without
     //! worrying about device or dtype.
-    pub use super::activations::builder::PReLU;
-    pub use super::activations::builder::PReLU1D;
     pub use super::activations::*;
     pub use super::add_into::AddInto;
     pub use super::batchnorm1d::builder::BatchNorm1D;
