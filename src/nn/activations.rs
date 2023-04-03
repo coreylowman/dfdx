@@ -1,8 +1,4 @@
-use crate::{
-    shapes::*,
-    tensor::*,
-    tensor_ops::*,
-};
+use crate::{shapes::*, tensor::*, tensor_ops::*};
 
 use super::module::{Module, NonMutableModule, ZeroSizedModule};
 
@@ -80,10 +76,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>>
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        nn::*,
-        tests::TestDevice,
-    };
+    use crate::{nn::*, tests::TestDevice};
 
     use super::*;
 
