@@ -141,12 +141,12 @@ __device__ void sum_transposed_filters(
     auto i_tr = c * (op.chan_out * op.kernel * op.kernel) + o * (op.kernel * op.kernel) + k1 * (op.kernel) + k2;
     auto i_no = o * strides[0] + c * strides[1] + k1 * strides[2] + k2 * strides[3];
 
-    const T *ptr = filters_tr + i_tr;
+    filters_tr += i_tr;
 
     T tmp = 0.0;
-    for (auto b = 0; b < op.batch; b++) {
-        tmp += *ptr;
-        ptr += numel;
+    for (int b = 0; b < op.batch; b++) {
+        tmp += *filters_tr;
+        filters_tr += numel;
     }
 
     filters[i_no] += tmp;

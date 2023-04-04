@@ -40,16 +40,23 @@ impl Upscale2DOp {
     }
 }
 
+/// Upscaling method to be used with [TryUpscale2D], can be either
+/// [NearestNeighbor] or [Bilinear].
 pub trait UpscaleMethod: Default {}
 
+/// Upscales images using a pixel's nearest neighbor.
+///
+/// **pytorch equivalent** `F.interpolate(..., mode="nearest")`
 #[derive(Clone, Copy, Default)]
 pub struct NearestNeighbor;
-
 impl UpscaleMethod for NearestNeighbor {}
 
+/// Upscales images using bilinear interpolation between
+/// a pixels neighbors
+///
+/// **pytorch equivalent**: `F.interpolate(..., mode="bilinear", align_corners=True)`
 #[derive(Clone, Copy, Default)]
 pub struct Bilinear;
-
 impl UpscaleMethod for Bilinear {}
 
 pub trait Upscale2DKernel<E: Unit, M: UpscaleMethod>: DeviceStorage {
@@ -70,57 +77,80 @@ pub trait Upscale2DKernel<E: Unit, M: UpscaleMethod>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-pub trait Upscale2DWithMethod<M: UpscaleMethod>: HasErr {
+pub trait GenericUpscale2D<M: UpscaleMethod>: HasErr {
     type Output<OH: Dim, OW: Dim>;
-    fn try_upscale2d<const OH: usize, const OW: usize>(
+    fn generic_upscale2d_like<OH: Dim, OW: Dim>(
         self,
-    ) -> Result<Self::Output<Const<OH>, Const<OW>>, Self::Err> {
-        self.try_upscale2d_like(Const::<OH>, Const::<OW>)
-    }
-
-    fn try_upscale2d_like<OH: Dim, OW: Dim>(
-        self,
+        method: M,
         height: OH,
         width: OW,
     ) -> Result<Self::Output<OH, OW>, Self::Err>;
 }
 
+/// Upscales an image to a new shape. Valid methods of upscaling are:
+///
+/// - [NearestNeighbor] pytorch equivalent: `F.interpolate(..., mode="nearest")`
+/// - [Bilinear] pytorch equivalent: `F.interpolate(..., mode="bilinear", align_corners=True)`
+///
+/// Compile time upscale:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let t: Tensor<Rank3<3, 32, 32>, f32, _> = dev.zeros();
+/// let y: Tensor<Rank3<3, 64, 64>, f32, _> = t.upscale2d(NearestNeighbor);
+/// ```
+///
+/// Runtime upscale:
+/// ```rust
+/// # use dfdx::prelude::*;
+/// # let dev: Cpu = Default::default();
+/// let t: Tensor<Rank3<3, 32, 32>, f32, _> = dev.zeros();
+/// let y: Tensor<(Const<3>, usize, usize), f32, _> = t.upscale2d_like(NearestNeighbor, 64, 64);
+/// ```
 pub trait TryUpscale2D {
-    fn upscale_2d<const OH: usize, const OW: usize, M: UpscaleMethod>(
+    /// Upscale to compile time known dimensions.
+    fn upscale2d<const OH: usize, const OW: usize, M: UpscaleMethod>(
         self,
-    ) -> <Self as Upscale2DWithMethod<M>>::Output<Const<OH>, Const<OW>>
+        method: M,
+    ) -> <Self as GenericUpscale2D<M>>::Output<Const<OH>, Const<OW>>
     where
-        Self: Upscale2DWithMethod<M>,
+        Self: GenericUpscale2D<M>,
     {
-        self.try_upscale2d().unwrap()
+        self.generic_upscale2d_like(method, Const, Const).unwrap()
     }
-    fn try_upscale_2d<const OH: usize, const OW: usize, M: UpscaleMethod>(
+    /// Fallibly upscale to compile time known dimensions.
+    fn try_upscale2d<const OH: usize, const OW: usize, M: UpscaleMethod>(
         self,
-    ) -> Result<<Self as Upscale2DWithMethod<M>>::Output<Const<OH>, Const<OW>>, Self::Err>
+        method: M,
+    ) -> Result<<Self as GenericUpscale2D<M>>::Output<Const<OH>, Const<OW>>, Self::Err>
     where
-        Self: Upscale2DWithMethod<M>,
+        Self: GenericUpscale2D<M>,
     {
-        Upscale2DWithMethod::try_upscale2d(self)
+        self.generic_upscale2d_like(method, Const, Const)
     }
-    fn upscale_2d_like<OH: Dim, OW: Dim, M: UpscaleMethod>(
+    /// Upscale to runtime known dimensions.
+    fn upscale2d_like<OH: Dim, OW: Dim, M: UpscaleMethod>(
         self,
+        method: M,
         height: OH,
         width: OW,
-    ) -> <Self as Upscale2DWithMethod<M>>::Output<OH, OW>
+    ) -> <Self as GenericUpscale2D<M>>::Output<OH, OW>
     where
-        Self: Upscale2DWithMethod<M>,
+        Self: GenericUpscale2D<M>,
     {
-        self.try_upscale2d_like(height, width).unwrap()
+        self.generic_upscale2d_like(method, height, width).unwrap()
     }
-    fn try_upscale_2d_like<OH: Dim, OW: Dim, M: UpscaleMethod>(
+    /// Fallibly upscale to runtime known dimensions.
+    fn try_upscale2d_like<OH: Dim, OW: Dim, M: UpscaleMethod>(
         self,
+        method: M,
         height: OH,
         width: OW,
-    ) -> Result<<Self as Upscale2DWithMethod<M>>::Output<OH, OW>, Self::Err>
+    ) -> Result<<Self as GenericUpscale2D<M>>::Output<OH, OW>, Self::Err>
     where
-        Self: Upscale2DWithMethod<M>,
+        Self: GenericUpscale2D<M>,
     {
-        Upscale2DWithMethod::try_upscale2d_like(self, height, width)
+        GenericUpscale2D::generic_upscale2d_like(self, method, height, width)
     }
 }
 impl<S: Shape, E: Dtype, D: DeviceStorage, T> TryUpscale2D for Tensor<S, E, D, T> {}
@@ -133,12 +163,13 @@ impl<
         M: UpscaleMethod,
         D: Upscale2DKernel<E, M> + ZerosTensor<E>,
         T: 'static + Tape<E, D>,
-    > Upscale2DWithMethod<M> for Tensor<(C, H, W), E, D, T>
+    > GenericUpscale2D<M> for Tensor<(C, H, W), E, D, T>
 {
     type Output<OH: Dim, OW: Dim> = Tensor<(C, OH, OW), E, D, T>;
 
-    fn try_upscale2d_like<OH: Dim, OW: Dim>(
+    fn generic_upscale2d_like<OH: Dim, OW: Dim>(
         self,
+        _method: M,
         out_height: OH,
         out_width: OW,
     ) -> Result<Self::Output<OH, OW>, Self::Err> {
@@ -174,12 +205,13 @@ impl<
         M: UpscaleMethod,
         D: Upscale2DKernel<E, M> + ZerosTensor<E>,
         T: 'static + Tape<E, D>,
-    > Upscale2DWithMethod<M> for Tensor<(B, C, H, W), E, D, T>
+    > GenericUpscale2D<M> for Tensor<(B, C, H, W), E, D, T>
 {
     type Output<OH: Dim, OW: Dim> = Tensor<(B, C, OH, OW), E, D, T>;
 
-    fn try_upscale2d_like<OH: Dim, OW: Dim>(
+    fn generic_upscale2d_like<OH: Dim, OW: Dim>(
         self,
+        _method: M,
         out_height: OH,
         out_width: OW,
     ) -> Result<Self::Output<OH, OW>, Self::Err> {
@@ -215,11 +247,11 @@ mod tests {
     use super::{Bilinear, NearestNeighbor, TryUpscale2D};
 
     #[test]
-    fn nearest_upscale2d_even() {
+    fn test_upscale2d_nearest_even() {
         let dev = TestDevice::default();
 
         let x = dev.tensor([[[1.0, 0.0], [2.0, 3.0]]]);
-        let y = x.leaky_trace().upscale_2d::<4, 4, NearestNeighbor>();
+        let y = x.leaky_trace().upscale2d::<4, 4, _>(NearestNeighbor);
         assert_close(
             &y.array(),
             &[[
@@ -238,11 +270,11 @@ mod tests {
     }
 
     #[test]
-    fn nearest_upscale2d_uneven() {
+    fn test_upscale2d_nearest_uneven() {
         let dev = TestDevice::default();
 
         let x = dev.tensor([[[1.0, 0.0, 2.0], [2.0, 3.0, 4.0]]]);
-        let y = x.leaky_trace().upscale_2d::<2, 7, NearestNeighbor>();
+        let y = x.leaky_trace().upscale2d::<2, 7, _>(NearestNeighbor);
         assert_close(
             &y.array(),
             &[[
@@ -261,20 +293,56 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_upscale2d_nearest_batched() {
+        let dev = TestDevice::default();
+
+        let x: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        let x: Tensor<Rank3<3, 2, 3>, _, _> = [x.clone(), x.clone(), x].stack();
+        let x: Tensor<Rank4<5, 3, 2, 3>, _, _> =
+            [x.clone(), x.clone(), x.clone(), x.clone(), x].stack();
+        let y = x.leaky_trace().upscale2d::<5, 6, _>(NearestNeighbor);
+        let y_array = y.array();
+        for img in y_array {
+            assert_eq!(
+                img,
+                [[
+                    [1., 1., 2., 2., 3., 3.],
+                    [1., 1., 2., 2., 3., 3.],
+                    [1., 1., 2., 2., 3., 3.],
+                    [4., 4., 5., 5., 6., 6.],
+                    [4., 4., 5., 5., 6., 6.]
+                ]; 3]
+            );
+        }
+
+        let grads = y.exp().mean().backward();
+        let x_grad = grads.get(&x).array();
+        for row in x_grad.iter() {
+            assert_close(
+                row,
+                &[[
+                    [0.03624376, 0.09852076, 0.26780716],
+                    [0.48531687, 1.319228, 3.5860338],
+                ]; 3],
+            );
+        }
+    }
+
     // Use align_corners when comparing these
     #[test]
-    fn bilinear_upscale2d_even() {
+    fn test_upscale2d_bilinear_even() {
         let dev = TestDevice::default();
 
         let x = dev.tensor([[[1.0, 0.0], [2.0, 3.0]]]);
-        let y = x.leaky_trace().upscale_2d::<4, 4, Bilinear>();
+        let y = x.leaky_trace().upscale2d::<4, 4, _>(Bilinear);
         assert_close(
             &y.array(),
             &[[
-                [1.0000000, 0.6666666, 0.3333333, 0.0000000],
-                [1.3333333, 1.2222222, 1.1111112, 1.0000000],
-                [1.6666667, 1.7777778, 1.8888890, 2.0000000],
-                [2.0000000, 2.3333333, 2.6666665, 3.0000000],
+                [1.0, 0.66666663, 0.33333331, 0.0],
+                [1.33333325, 1.22222221, 1.11111116, 1.0],
+                [1.66666675, 1.77777779, 1.88888907, 2.0],
+                [2.0, 2.33333325, 2.66666651, 3.0],
             ]],
         );
 
@@ -286,20 +354,16 @@ mod tests {
     }
 
     #[test]
-    fn bilinear_upscale2d_uneven() {
+    fn test_upscale2d_bilinear_uneven() {
         let dev = TestDevice::default();
 
         let x = dev.tensor([[[1.0, 0.0, 2.0], [2.0, 3.0, 4.0]]]);
-        let y = x.leaky_trace().upscale_2d::<2, 7, Bilinear>();
+        let y = x.leaky_trace().upscale2d::<2, 7, _>(Bilinear);
         assert_close(
             &y.array(),
             &[[
-                [
-                    1.0000000, 0.6666666, 0.3333333, 0.0000000, 0.6666667, 1.3333335, 2.0000000,
-                ],
-                [
-                    2.0000000, 2.3333333, 2.6666665, 3.0000000, 3.3333335, 3.6666667, 4.0000000,
-                ],
+                [1.0, 0.6666666, 0.3333333, 0.0, 0.6666667, 1.3333335, 2.0],
+                [2.0, 2.3333333, 2.6666665, 3.0, 3.3333335, 3.6666667, 4.0],
             ]],
         );
 
@@ -311,5 +375,41 @@ mod tests {
                 [1.3615142, 4.6318388, 6.4302063],
             ]],
         );
+    }
+
+    #[test]
+    fn test_bilinear_upscale2d_batched() {
+        let dev = TestDevice::default();
+
+        let x: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        let x: Tensor<Rank3<3, 2, 3>, _, _> = [x.clone(), x.clone(), x].stack();
+        let x: Tensor<Rank4<5, 3, 2, 3>, _, _> =
+            [x.clone(), x.clone(), x.clone(), x.clone(), x].stack();
+        let y = x.leaky_trace().upscale2d::<5, 6, _>(Bilinear);
+        let y_array = y.array();
+        for img in y_array {
+            assert_close(
+                &img,
+                &[[
+                    [1.0, 1.4, 1.8, 2.2, 2.6, 3.0],
+                    [1.75, 2.15, 2.55, 2.95, 3.35, 3.75],
+                    [2.5, 2.9, 3.3, 3.7, 4.1, 4.5],
+                    [3.25, 3.65, 4.05, 4.45, 4.85, 5.25],
+                    [4.0, 4.4, 4.8, 5.2, 5.6, 6.0],
+                ]; 3],
+            );
+        }
+
+        let grads = y.exp().mean().backward();
+        let x_grad = grads.get(&x).array();
+        for row in x_grad.iter() {
+            assert_close(
+                row,
+                &[[
+                    [0.10178878, 0.30509925, 0.47953573],
+                    [0.42368498, 1.2699431, 1.9960163],
+                ]; 3],
+            );
+        }
     }
 }
