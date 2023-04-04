@@ -202,6 +202,7 @@ mod linear;
 mod npz;
 mod pool2d;
 mod pool_global;
+pub mod prelu;
 mod repeated;
 mod residual;
 #[cfg(feature = "safetensors")]
@@ -269,8 +270,6 @@ pub mod modules {
 pub mod builders {
     //! Simple specification of network structure, without
     //! worrying about device or dtype.
-    pub use super::activations::builder::PReLU;
-    pub use super::activations::builder::PReLU1D;
     pub use super::activations::*;
     pub use super::add_into::AddInto;
     pub use super::batchnorm1d::builder::BatchNorm1D;
@@ -290,6 +289,7 @@ pub mod builders {
     #[cfg(feature = "nightly")]
     pub use super::pool2d::{AvgPool2D, MaxPool2D, MinPool2D};
     pub use super::pool_global::{AvgPoolGlobal, MaxPoolGlobal, MinPoolGlobal};
+    pub use super::prelu::builder::{PReLU, PReLU1D};
     pub use super::repeated::Repeated;
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
