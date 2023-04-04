@@ -8,7 +8,13 @@ use crate::{
 };
 
 pub trait UnaryDerivative<E> {
+    /// Whether the [UnaryDerivative::df] function can re-use the output
+    /// from [UnaryDerivative::f].
+    const DF_USES_FX: bool;
     fn f(&self, x: &E) -> E;
+
+    /// Receives `f(x)` if [UnaryDerivative::DF_USES_FX] is true,
+    /// otherwise `x`.
     fn df(&self, x: &E) -> E;
 }
 
@@ -45,12 +51,19 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
         op: Op,
         inp: &Tensor<S, E, Self>,
         grad_inp: &mut Self::Vec<E>,
+        out: &Tensor<S, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         debug_assert_eq!(grad_inp.len(), grad_out.len());
         debug_assert_eq!(inp.data.len(), grad_out.len());
-        for (i, x) in grad_inp.iter_mut().enumerate() {
-            *x += op.df(&inp.data[i]) * grad_out[i];
+        if Op::DF_USES_FX {
+            for (i, x) in grad_inp.iter_mut().enumerate() {
+                *x += op.df(&out.data[i]) * grad_out[i];
+            }
+        } else {
+            for (i, x) in grad_inp.iter_mut().enumerate() {
+                *x += op.df(&inp.data[i]) * grad_out[i];
+            }
         }
         Ok(())
     }
