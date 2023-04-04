@@ -69,12 +69,20 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
         op: K,
         inp: &Tensor<S, E, Self>,
         grad_inp: &mut Self::Vec<E>,
+        out: &Tensor<S, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
         let numel = inp.data.len();
         let cfg = launch_cfg(numel as u32);
-        let params = (op, numel, inp.data.as_ref(), grad_inp, grad_out);
+        let params = (
+            op,
+            numel,
+            inp.data.as_ref(),
+            grad_inp,
+            out.data.as_ref(),
+            grad_out,
+        );
         unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())
     }
