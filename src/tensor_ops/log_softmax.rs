@@ -1,4 +1,4 @@
-use super::{BroadcastTo, Device, LogSumExpTo, TrySub};
+use super::*;
 use crate::{shapes::*, tensor::*};
 
 /// `log(softmax(t))` in numerically stable way across `Ax`. Does `t - logsumexp(t)` under the hood.
@@ -42,15 +42,63 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     where
         S: ReduceShape<Ax>,
     {
-        let logsumexp = self.retaped::<T>().try_logsumexp::<_, Ax>()?;
-        let logsumexp = logsumexp.try_broadcast_like(self.shape())?;
-        self.try_sub(logsumexp)
+        /*
+        # Notes on this reduction
+
+        log_softmax is equivalent to:
+            `t - t.logsumexp()`
+
+        logsumexp can be inlined to:
+            `t - ((t - t.max()).exp().sum().ln() + t.max())`
+
+        we can apply the subtraction in the following way:
+            `t - (t - t.max()).exp().sum().ln() - t.max()`
+            `t - t.max() - (t - t.max()).exp().sum().ln()`
+
+        Notice there is a repeated expression here of `t - t.max()`.
+        So we can re-use this calculation.
+            `tm - tm.exp().sum().ln()`
+        */
+        let shape = *self.shape();
+        let (t, tape) = self.split_tape();
+        let max = t.clone().try_max::<_, Ax>()?;
+        let tm = {
+            // Do this calculation off of the tape
+            let keep_id = t.id;
+            let mut t = t.try_sub(max.try_broadcast_like::<_, Ax>(&shape)?)?;
+            t.id = keep_id;
+            t.put_tape(tape)
+        };
+        let logsumexp = tm.retaped::<T>().try_exp()?.try_sum::<_, Ax>()?.try_ln()?;
+        tm.try_sub(logsumexp.try_broadcast_like(&shape)?)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{shapes::Axis, tensor::*, tensor_ops::*, tests::*};
+    use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
+
+    #[test]
+    fn test_log_softmax_equivalence() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank4<8, 16, 32, 64>, TestDtype, _> = dev.sample_normal();
+        let p = t.leaky_trace().log_softmax::<Axis<3>>();
+        let p_truth = t.leaky_trace() - t.leaky_trace().logsumexp::<_, Axis<3>>().broadcast();
+        // we can't create an array as it will overflow the stack
+        for (p_i, pt_i) in p.as_vec().iter().zip(p_truth.as_vec().iter()) {
+            assert!((p_i - pt_i).abs() <= TestDtype::DEFAULT_TOLERANCE);
+        }
+        let g = p.square().mean().backward();
+        let g_truth = p_truth.square().mean().backward();
+        for (g_i, gt_i) in g
+            .get(&t)
+            .as_vec()
+            .iter()
+            .zip(g_truth.get(&t).as_vec().iter())
+        {
+            assert!((g_i - gt_i).abs() <= TestDtype::DEFAULT_TOLERANCE);
+        }
+    }
 
     #[test]
     fn test_log_softmax_1d() {

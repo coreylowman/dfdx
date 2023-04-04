@@ -1,4 +1,4 @@
-use super::Device;
+use super::*;
 use crate::{shapes::*, tensor::*};
 
 /// Computes the [softmax function](https://en.wikipedia.org/wiki/Softmax_function) across
@@ -37,13 +37,78 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     where
         S: ReduceShape<Ax>,
     {
-        self.try_log_softmax::<Ax>()?.try_exp()
+        /*
+        # Notes on this reduction
+
+        Softmax is equivalent to:
+            `t.log_softmax().exp()`
+
+        which when given the log_softmax reductions is equivalent to:
+            `(t - t.logsumexp()).exp()`
+
+        logsumexp can be inlined to:
+            `(t - ((t - t.max()).exp().sum().ln() + t.max())).exp()`
+
+        we can apply the subtraction in the following way:
+            `(t - (t - t.max()).exp().sum().ln() - t.max()).exp()`
+            `(t - t.max() - (t - t.max()).exp().sum().ln()).exp()`
+
+        Notice there is a repeated expression here of `t - t.max()`.
+        So we can re-use this calculation. Let's denote this expression tm:
+            `(tm - tm.exp().sum().ln()).exp()`
+
+        Another reduction is the identity of the form `e^(x - y)` = `e^x / e^y`.
+            `tm.exp() / tm.exp().sum().ln().exp()`
+
+        First we can re-use the `tm.exp()` calculation - lets call it tme
+            `tme / tme.sum().ln().exp()`
+
+        And finally we know that `t.ln().exp()` is equivalent to `t`. I.e. they are
+        fused
+            `tme / tme.sum()`
+        */
+        let shape = *self.shape();
+        let (t, tape) = self.split_tape();
+        let max = t.clone().try_max::<_, Ax>()?;
+        let t = {
+            // in place subtraction of max since we don't want to record this
+            // on the auto diff graph.
+            let keep_id = t.id;
+            let mut t = t.try_sub(max.try_broadcast_like::<_, Ax>(&shape)?)?;
+            t.id = keep_id;
+            t
+        };
+        let t_exp = t.put_tape(tape).try_exp()?;
+        let t_expsum = t_exp.retaped::<T>().try_sum::<_, Ax>()?;
+        t_exp.try_div(t_expsum.try_broadcast_like(&shape)?)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
+
+    #[test]
+    fn test_softmax_equivalence() {
+        let dev: TestDevice = Default::default();
+        let t: Tensor<Rank4<8, 16, 32, 64>, TestDtype, _> = dev.sample_normal();
+        let p = t.leaky_trace().softmax::<Axis<3>>();
+        let p_truth = t.leaky_trace().log_softmax::<Axis<3>>().exp();
+        // we can't create an array as it will overflow the stack
+        for (p_i, pt_i) in p.as_vec().iter().zip(p_truth.as_vec().iter()) {
+            assert!((p_i - pt_i).abs() <= TestDtype::DEFAULT_TOLERANCE);
+        }
+        let g = p.square().mean().backward();
+        let g_truth = p_truth.square().mean().backward();
+        for (g_i, gt_i) in g
+            .get(&t)
+            .as_vec()
+            .iter()
+            .zip(g_truth.get(&t).as_vec().iter())
+        {
+            assert!((g_i - gt_i).abs() <= TestDtype::DEFAULT_TOLERANCE);
+        }
+    }
 
     #[test]
     fn test_softmax_1d() {
