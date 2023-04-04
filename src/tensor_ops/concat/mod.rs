@@ -63,10 +63,10 @@ where
         let device = lhs.device.clone();
         let out = device.forward(&lhs, &rhs)?;
         let phantom_out = out.clone();
-        tape.try_alloc_grad(&lhs)?;
-        tape.try_alloc_grad(&rhs)?;
-        tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
+            grads.try_alloc_for(&lhs)?;
+            grads.try_alloc_for(&rhs)?;
+            grads.try_alloc_for(&phantom_out)?;
             let (grad_a, grad_b, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
             device.backward(&lhs, grad_a, &rhs, grad_b, &phantom_out, grad_out)
         });

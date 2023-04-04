@@ -150,18 +150,19 @@ where
     let shape = *tensors[0].shape();
     for t in tensors.iter() {
         assert_eq!(t.shape(), &shape);
-        tape.try_alloc_grad(t)?;
     }
 
     // we map to storage refs so kernels don't have to know about tensors
     let out = device.forward(new_dim, &tensors)?;
 
     let phantom_out = out.clone();
-    tape.try_alloc_grad(&out)?;
     tape.add_backward_op(move |grads| {
+        for t in tensors.iter() {
+            grads.try_alloc_for(t)?;
+        }
+        grads.try_alloc_for(&phantom_out)?;
         let (grad_inp, grad_out) = grads.many_and_ref(&tensors, &phantom_out);
-        device.backward(grad_inp, grad_out)?;
-        Ok(())
+        device.backward(grad_inp, grad_out)
     });
     Ok(out.put_tape(tape))
 }
