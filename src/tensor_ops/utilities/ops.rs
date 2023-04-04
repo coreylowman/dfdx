@@ -50,13 +50,15 @@ pub(crate) fn try_unary_op<
 ) -> Result<Tensor<S, E, D, T>, D::Err> {
     let (inp, mut tape) = inp.split_tape();
     let out = inp.device.forward(op.clone(), &inp)?;
-    let phantom_out = out.clone();
+    let inp_ghost = inp.ghost();
+    let out_ghost = out.ghost();
+    let out_clone = out.clone();
     tape.add_backward_op(move |grads| {
-        grads.try_alloc_for(&inp)?;
-        grads.try_alloc_for(&phantom_out)?;
-        let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
+        grads.try_alloc_for(&inp_ghost)?;
+        grads.try_alloc_for(&out_ghost)?;
+        let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
         inp.device
-            .backward(op, &inp, grad_inp, &phantom_out, grad_out)
+            .backward(op, &inp, grad_inp, &out_clone, grad_out)
     });
     Ok(out.put_tape(tape))
 }
@@ -78,12 +80,14 @@ pub(crate) fn try_binary_op<
     let (rhs, rtape) = rhs.split_tape();
     let mut tape = ltape.merge(rtape);
     let out = lhs.device.forward(op, &lhs, &rhs)?;
-    let phantom_out = out.clone();
+    let lhs_ghost = lhs.ghost();
+    let rhs_ghost = rhs.ghost();
+    let out_ghost = out.ghost();
     tape.add_backward_op(move |grads| {
-        grads.try_alloc_for(&lhs)?;
-        grads.try_alloc_for(&rhs)?;
-        grads.try_alloc_for(&phantom_out)?;
-        let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
+        grads.try_alloc_for(&lhs_ghost)?;
+        grads.try_alloc_for(&rhs_ghost)?;
+        grads.try_alloc_for(&out_ghost)?;
+        let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs_ghost, &rhs_ghost, &out_ghost);
         lhs.device
             .backward(op, &lhs, grad_lhs, &rhs, grad_rhs, grad_out)
     });

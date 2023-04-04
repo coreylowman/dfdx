@@ -155,13 +155,14 @@ where
     // we map to storage refs so kernels don't have to know about tensors
     let out = device.forward(new_dim, &tensors)?;
 
-    let phantom_out = out.clone();
+    let inp_ghosts: Vec<_> = tensors.iter().map(|t| t.ghost()).collect();
+    let out_ghost = out.ghost();
     tape.add_backward_op(move |grads| {
-        for t in tensors.iter() {
+        for t in inp_ghosts.iter() {
             grads.try_alloc_for(t)?;
         }
-        grads.try_alloc_for(&phantom_out)?;
-        let (grad_inp, grad_out) = grads.many_and_ref(&tensors, &phantom_out);
+        grads.try_alloc_for(&out_ghost)?;
+        let (grad_inp, grad_out) = grads.many_and_ref(&inp_ghosts, &out_ghost);
         device.backward(grad_inp, grad_out)
     });
     Ok(out.put_tape(tape))

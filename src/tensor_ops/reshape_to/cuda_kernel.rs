@@ -48,9 +48,9 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
 
     fn backward<Src: Shape, Dst: Shape>(
         &self,
+        dst: &Dst,
         inp: &Tensor<Src, E, Self>,
         grad_inp: &mut Self::Vec<E>,
-        out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let module = std::format!("reshape_bwd_{}", E::NAME);
@@ -66,8 +66,8 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
         let mut info = Vec::with_capacity(Src::NUM_DIMS * 2 + Dst::NUM_DIMS * 2);
         info.extend(inp.shape.concrete());
         info.extend(inp.strides);
-        info.extend(out.shape.concrete());
-        info.extend(out.strides);
+        info.extend(dst.concrete());
+        info.extend(dst.strides());
         let info = self.dev.htod_copy(info)?;
 
         let cfg = launch_cfg(numel as u32);

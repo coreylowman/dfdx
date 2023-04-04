@@ -63,8 +63,8 @@ impl HasErr for Cpu {
 impl DeviceStorage for Cpu {
     type Vec<E: Unit> = Vec<E>;
 
-    fn try_alloc_grad<E: Unit>(&self, other: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err> {
-        self.try_alloc_zeros(other.len())
+    fn try_alloc_len<E: Unit>(&self, len: usize) -> Result<Self::Vec<E>, Self::Err> {
+        self.try_alloc_zeros(len)
     }
 
     fn random_u64(&self) -> u64 {

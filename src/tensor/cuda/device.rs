@@ -116,9 +116,8 @@ impl HasErr for Cuda {
 impl DeviceStorage for Cuda {
     type Vec<E: Unit> = CudaSlice<E>;
 
-    fn try_alloc_grad<E: Unit>(&self, other: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err> {
-        let grad = self.dev.alloc_zeros(other.len())?;
-        Ok(grad)
+    fn try_alloc_len<E: Unit>(&self, len: usize) -> Result<Self::Vec<E>, Self::Err> {
+        Ok(self.dev.alloc_zeros(len)?)
     }
 
     fn random_u64(&self) -> u64 {

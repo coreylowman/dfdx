@@ -95,12 +95,14 @@ fn try_binary_op<
     let (rhs, rtape) = rhs.split_tape();
     let mut tape = ltape.merge(rtape);
     let out = fwd(&lhs.device, &lhs, &rhs)?;
-    let phantom_out = out.clone();
+    let lhs_ghost = lhs.ghost();
+    let rhs_ghost = rhs.ghost();
+    let out_ghost = out.ghost();
     tape.add_backward_op(move |grads| {
-        grads.try_alloc_for(&lhs)?;
-        grads.try_alloc_for(&rhs)?;
-        grads.try_alloc_for(&phantom_out)?;
-        let (grad_lhs, grad_rhs, grad_out) =grads.muts_and_ref(&lhs, &rhs, &phantom_out);
+        grads.try_alloc_for(&lhs_ghost)?;
+        grads.try_alloc_for(&rhs_ghost)?;
+        grads.try_alloc_for(&out_ghost)?;
+        let (grad_lhs, grad_rhs, grad_out) =grads.muts_and_ref(&lhs_ghost, &rhs_ghost, &out_ghost);
         bwd(&lhs.device, &lhs, grad_lhs, &rhs, grad_rhs, grad_out)
     });
     Ok(out.put_tape(tape))
