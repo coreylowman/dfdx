@@ -146,7 +146,7 @@ where
                 self.gemm_batch(
                     (op.batch, m, k, n),
                     &f_b1023,
-                    [m * k, k, 1],
+                    [0, k, 1],
                     &patches,
                     [k * n, n, 1],
                     <E>::ONE,

@@ -224,6 +224,7 @@ impl<
 mod tests {
     use super::*;
     use crate::{tensor::*, tensor_ops::*, tests::*};
+    use num_traits::FromPrimitive;
 
     #[test]
     /// TODO
@@ -340,5 +341,40 @@ mod tests {
                 [[[0.1948610, 0.1028565, 0.1976164],[0.0683245, 0.0401628, 0.0643963],[0.1662624, 0.1036348, 0.2046718],],[[0.1715550, 0.0769297, 0.1411840],[0.0654903, 0.0355645, 0.0568618],[0.1351082, 0.0760437, 0.1234931],],],
             ],
         );
+    }
+
+    #[test]
+    fn test_batched_convtrans2d() {
+        let dev: TestDevice = Default::default();
+        let x: Tensor<Rank3<3, 28, 28>, TestDtype, _> = dev.sample_normal();
+        let w: Tensor<Rank4<5, 3, 6, 6>, TestDtype, _> = dev.sample_normal();
+
+        let y: Tensor<Rank3<5, 83, 83>, _, _, _> = x.leaky_trace().convtrans2d::<3, 2>(w.clone());
+        let y0 = y.array();
+        let grads0 = y.square().mean().backward();
+        let x0 = grads0.get(&x).array();
+        let w0 = grads0.get(&w).array();
+
+        let x = x
+            .broadcast::<Rank4<10, 3, 28, 28>, _>()
+            .reshape::<Rank4<10, 3, 28, 28>>();
+
+        let y: Tensor<Rank4<10, 5, 83, 83>, _, _, _> =
+            x.leaky_trace().convtrans2d::<3, 2>(w.clone());
+        for i in 0..10 {
+            y0.assert_close(
+                &y.retaped::<NoneTape>().select(dev.tensor(i)).array(),
+                TestDtype::from_f32(1e-5).unwrap(),
+            );
+        }
+
+        let grads = y.square().mean().backward();
+
+        assert_close(&w0, &(grads.get(&w)).array());
+
+        let x_grad = grads.get(&x) * 10.0;
+        for i in 0..10 {
+            assert_close(&x0, &x_grad.clone().select(dev.tensor(i)).array());
+        }
     }
 }
