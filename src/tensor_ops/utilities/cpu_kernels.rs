@@ -11,11 +11,19 @@ pub trait UnaryDerivative<E> {
     /// Whether the [UnaryDerivative::df] function can re-use the output
     /// from [UnaryDerivative::f].
     const DF_USES_FX: bool;
+    /// Whether the derivative of this op can be computed without
+    /// any data.
+    const HAS_CONST_DF: bool;
+
     fn f(&self, x: &E) -> E;
 
     /// Receives `f(x)` if [UnaryDerivative::DF_USES_FX] is true,
     /// otherwise `x`.
     fn df(&self, x: &E) -> E;
+
+    fn const_df(&self) -> E {
+        unimplemented!()
+    }
 }
 
 pub trait BinaryDerivative<E> {
@@ -25,6 +33,7 @@ pub trait BinaryDerivative<E> {
 }
 
 impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
+    const NO_DATA_REQS: bool = Op::HAS_CONST_DF;
     fn forward<S: Shape>(
         &self,
         op: Op,
@@ -64,6 +73,18 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
             for (i, x) in grad_inp.iter_mut().enumerate() {
                 *x += op.df(&inp.data[i]) * grad_out[i];
             }
+        }
+        Ok(())
+    }
+
+    fn backward_without_data(
+        &self,
+        op: Op,
+        grad_inp: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err> {
+        for (i, x) in grad_inp.iter_mut().enumerate() {
+            *x += op.const_df() * grad_out[i];
         }
         Ok(())
     }

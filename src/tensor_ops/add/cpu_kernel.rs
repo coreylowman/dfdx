@@ -18,12 +18,17 @@ impl<F: Float> BinaryDerivative<F> for super::BinaryAddKernelOp {
 
 impl<F: Float> UnaryDerivative<F> for super::ScalarAddKernelOp<F> {
     const DF_USES_FX: bool = false;
+    const HAS_CONST_DF: bool = true;
     #[inline(always)]
     fn f(&self, &x: &F) -> F {
         x + self.scalar
     }
     #[inline(always)]
     fn df(&self, _: &F) -> F {
+        F::one()
+    }
+    #[inline(always)]
+    fn const_df(&self) -> F {
         F::one()
     }
 }

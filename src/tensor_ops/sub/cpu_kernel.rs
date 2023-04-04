@@ -2,12 +2,17 @@ use crate::tensor_ops::cpu_kernels::{BinaryDerivative, UnaryDerivative};
 
 impl<F: num_traits::Float> UnaryDerivative<F> for super::ScalarSubKernelOp<F> {
     const DF_USES_FX: bool = false;
+    const HAS_CONST_DF: bool = true;
     #[inline(always)]
     fn f(&self, &x: &F) -> F {
         x - self.scalar
     }
     #[inline(always)]
     fn df(&self, _: &F) -> F {
+        F::one()
+    }
+    #[inline(always)]
+    fn const_df(&self) -> F {
         F::one()
     }
 }
