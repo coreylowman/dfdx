@@ -163,10 +163,10 @@ impl<
             .alloc((Const, h.convolve_dim(), w.convolve_dim()))?;
         lhs.device.forward(op, &lhs, &rhs, &mut out)?;
         let phantom_out = out.clone();
-        tape.try_alloc_grad(&lhs)?;
-        tape.try_alloc_grad(&rhs)?;
-        tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
+            grads.try_alloc_for(&lhs)?;
+            grads.try_alloc_for(&rhs)?;
+            grads.try_alloc_for(&phantom_out)?;
             let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
             lhs.device
                 .backward(op, &lhs, grad_lhs, &rhs, grad_rhs, &phantom_out, grad_out)
@@ -207,10 +207,10 @@ impl<
         let mut tape = ltape.merge(rtape);
         lhs.device.forward(op, &lhs, &rhs, &mut out)?;
         let phantom_out = out.clone();
-        tape.try_alloc_grad(&lhs)?;
-        tape.try_alloc_grad(&rhs)?;
-        tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
+            grads.try_alloc_for(&lhs)?;
+            grads.try_alloc_for(&rhs)?;
+            grads.try_alloc_for(&phantom_out)?;
             let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
             lhs.device
                 .backward(op, &lhs, grad_lhs, &rhs, grad_rhs, &phantom_out, grad_out)?;

@@ -109,9 +109,9 @@ macro_rules! pool2d {
                         .try_zeros_like(&(chan, h.convolve_dim(), w.convolve_dim()))?;
                 inp.device.forward(op, &inp, &mut out)?;
                 let phantom_out = out.clone();
-                tape.try_alloc_grad(&inp)?;
-                tape.try_alloc_grad(&out)?;
                 tape.add_backward_op(move |grads| {
+                    grads.try_alloc_for(&inp)?;
+                    grads.try_alloc_for(&phantom_out)?;
                     let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
                     inp.device
                         .backward(op, &inp, grad_inp, &phantom_out, grad_out)
@@ -150,9 +150,9 @@ macro_rules! pool2d {
                 ))?;
                 inp.device.forward(op, &inp, &mut out)?;
                 let phantom_out = out.clone();
-                tape.try_alloc_grad(&inp)?;
-                tape.try_alloc_grad(&out)?;
                 tape.add_backward_op(move |grads| {
+                    grads.try_alloc_for(&inp)?;
+                    grads.try_alloc_for(&phantom_out)?;
                     let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
                     inp.device
                         .backward(op, &inp, grad_inp, &phantom_out, grad_out)
