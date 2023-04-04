@@ -29,6 +29,8 @@ pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
 
     fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E>;
 
+    fn len<E: Unit>(&self, v: &Self::Vec<E>) -> usize;
+
     /// Blocks until all work on device to complete. Useful for benchmarking.
     fn synchronize(&self) {
         self.try_synchronize().unwrap()

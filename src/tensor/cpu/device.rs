@@ -78,6 +78,10 @@ impl DeviceStorage for Cpu {
         }
     }
 
+    fn len<E: Unit>(&self, v: &Self::Vec<E>) -> usize {
+        v.len()
+    }
+
     fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
         let mut buf = Vec::with_capacity(tensor.shape.num_elements());
         let mut iter = tensor.iter();

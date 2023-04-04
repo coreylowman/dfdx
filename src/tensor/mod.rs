@@ -131,6 +131,7 @@ mod gradients;
 mod masks;
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
+mod phantom;
 #[cfg(feature = "safetensors")]
 pub mod safetensors;
 mod unique_id;

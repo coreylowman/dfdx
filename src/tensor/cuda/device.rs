@@ -125,6 +125,10 @@ impl DeviceStorage for Cuda {
         self.cpu.random_u64()
     }
 
+    fn len<E: Unit>(&self, v: &Self::Vec<E>) -> usize {
+        v.len()
+    }
+
     fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
         let buf: Vec<E> = tensor.data.try_clone().unwrap().try_into().unwrap();
         debug_assert_eq!(buf.len(), tensor.data.len());

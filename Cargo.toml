@@ -46,7 +46,7 @@ indicatif = "0.17.3"
 glob = { version = "0.3.1", optional = true }
 
 [features]
-default = ["std", "fast-alloc", "cpu-par-matmul"]
+default = ["std", "fast-alloc", "cpu-par-matmul", "ci-check", "test-cuda"]
 nightly = []
 
 std = ["cudarc?/std", "matrixmultiply?/std"]
