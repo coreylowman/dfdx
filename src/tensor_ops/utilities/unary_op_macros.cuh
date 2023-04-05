@@ -18,6 +18,7 @@ extern "C" __global__ void BACKWARD( \
     const size_t numel, \
     const TYPENAME *inp, \
     TYPENAME *grad_inp, \
+    const TYPENAME *out, \
     const TYPENAME *grad_out \
 ) { \
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; \
@@ -26,6 +27,7 @@ extern "C" __global__ void BACKWARD( \
     } \
     \
     TYPENAME x = inp[i]; \
+    TYPENAME y = out[i]; \
     TYPENAME dx; \
     DERIVATIVE \
     grad_inp[i] += dx * grad_out[i]; \

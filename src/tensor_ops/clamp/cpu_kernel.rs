@@ -2,6 +2,7 @@ use crate::tensor_ops::cpu_kernels::UnaryDerivative;
 use num_traits::{clamp, Float};
 
 impl<F: Float + PartialOrd> UnaryDerivative<F> for super::ClampKernelOp<F> {
+    const DF_USES_FX: bool = false;
     #[inline(always)]
     fn f(&self, &x: &F) -> F {
         clamp(x, self.min, self.max)

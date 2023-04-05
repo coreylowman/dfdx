@@ -7,9 +7,9 @@ struct SigmoidKernelOp {};
 
 UNARY_OP(float, sigmoid_fwd_f32, sigmoid_bwd_f32, SigmoidKernelOp,
         SIGMOID_f32(x),
-        SIGMOID_f32(x) * (1.0 - SIGMOID_f32(x)))
+        y * (1.0 - y))
 
 UNARY_OP(double, sigmoid_fwd_f64, sigmoid_bwd_f64, SigmoidKernelOp,
         SIGMOID_f64(x),
-        SIGMOID_f64(x) * (1.0 - SIGMOID_f64(x)))
+        y * (1.0 - y))
         

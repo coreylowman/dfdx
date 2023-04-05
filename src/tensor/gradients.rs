@@ -233,7 +233,6 @@ pub trait Tape<E: Unit, D: DeviceStorage>: Default + Merge<Self> + Merge<NoneTap
     fn add_backward_op<F>(&mut self, operation: F)
     where
         F: 'static + FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>;
-    fn try_alloc_grad<S: Shape>(&mut self, t: &Tensor<S, E, D>) -> Result<(), D::Err>;
 }
 
 impl<E: Unit, D: DeviceStorage> Tape<E, D> for OwnedTape<E, D> {
@@ -244,9 +243,6 @@ impl<E: Unit, D: DeviceStorage> Tape<E, D> for OwnedTape<E, D> {
     {
         self.operations.push((unique_id(), Box::new(operation)));
     }
-    fn try_alloc_grad<S: Shape>(&mut self, t: &Tensor<S, E, D>) -> Result<(), D::Err> {
-        self.gradients.try_alloc_for(t)
-    }
 }
 
 impl<E: Unit, D: DeviceStorage> Tape<E, D> for NoneTape {
@@ -255,9 +251,6 @@ impl<E: Unit, D: DeviceStorage> Tape<E, D> for NoneTape {
     where
         F: 'static + FnOnce(&mut Gradients<E, D>) -> Result<(), D::Err>,
     {
-    }
-    fn try_alloc_grad<S: Shape>(&mut self, _: &Tensor<S, E, D>) -> Result<(), D::Err> {
-        Ok(())
     }
 }
 

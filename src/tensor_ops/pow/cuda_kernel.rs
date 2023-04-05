@@ -30,12 +30,14 @@ where
         op: super::PowiKernelOp,
         inp: &Tensor<S, E, Self>,
         grad_inp: &mut Self::Vec<E>,
+        out: &Tensor<S, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         self.backward(
             super::PowfKernelOp(E::from_i32(op.0).unwrap()),
             inp,
             grad_inp,
+            out,
             grad_out,
         )
     }

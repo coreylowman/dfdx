@@ -68,12 +68,11 @@ impl<S: Shape, E: Dtype, D: DropoutKernel<E>, T: Tape<E, D>> Tensor<S, E, D, T> 
         let (inp, mut tape) = self.split_tape();
         let out = inp.device.forward(op, &inp)?;
         let phantom_out = out.clone();
-        tape.try_alloc_grad(&inp)?;
-        tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
+            grads.try_alloc_for(&inp)?;
+            grads.try_alloc_for(&phantom_out)?;
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward(op, &inp, grad_inp, grad_out)?;
-            Ok(())
+            inp.device.backward(op, &inp, grad_inp, grad_out)
         });
         Ok(out.put_tape(tape))
     }
