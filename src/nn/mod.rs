@@ -204,6 +204,7 @@ mod pool2d;
 mod pool_global;
 pub mod prelu;
 mod repeated;
+mod reshape;
 mod residual;
 #[cfg(feature = "safetensors")]
 mod safetensors;
@@ -291,6 +292,7 @@ pub mod builders {
     pub use super::pool_global::{AvgPoolGlobal, MaxPoolGlobal, MinPoolGlobal};
     pub use super::prelu::builder::{PReLU, PReLU1D};
     pub use super::repeated::Repeated;
+    pub use super::reshape::Reshape;
     pub use super::residual::Residual;
     pub use super::split_into::SplitInto;
     pub use super::transformer::builder::{
