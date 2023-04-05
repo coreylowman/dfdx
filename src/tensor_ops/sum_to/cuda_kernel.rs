@@ -1,6 +1,6 @@
 use crate::{
     shapes::*,
-    tensor::{launch_cfg, Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, GhostTensor, Tensor},
     tensor_ops::reduction_utils::*,
 };
 
@@ -80,7 +80,7 @@ where
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
-        inp: &Tensor<Src, E, Self>,
+        inp: &GhostTensor<Src, E, Self>,
         grad_inp: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
@@ -91,7 +91,7 @@ where
 
         let out_strides: Src::Concrete =
             BroadcastStridesTo::<Src, Ax>::broadcast_strides(&dst, dst.strides());
-        let physical_numel = inp.data.len();
+        let physical_numel = inp.len;
         let elems_per_thread = E::from_usize(reduction_elems_per_thread::<_, Src>(
             inp.shape.concrete(),
             inp.strides,
