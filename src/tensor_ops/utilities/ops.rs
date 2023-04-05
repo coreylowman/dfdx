@@ -21,7 +21,6 @@ pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
         op: Op,
         inp: &Tensor<S, E, Self>,
         grad_inp: &mut Self::Vec<E>,
-        out: &Tensor<S, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
     fn backward_without_inp<S: Shape>(
@@ -112,13 +111,11 @@ pub(crate) fn try_unary_op<
     } else {
         let out = inp.device.forward(op.clone(), &inp)?;
         let out_ghost = out.ghost();
-        let out_clone = out.clone();
         tape.add_backward_op(move |grads| {
             grads.try_alloc_for(&inp_ghost)?;
             grads.try_alloc_for(&out_ghost)?;
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
-            inp.device
-                .backward(op, &inp, grad_inp, &out_clone, grad_out)
+            inp.device.backward(op, &inp, grad_inp, grad_out)
         });
         Ok(out.put_tape(tape))
     }
