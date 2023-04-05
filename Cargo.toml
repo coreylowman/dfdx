@@ -32,7 +32,7 @@ matrixmultiply = { version = "0.3.2", default-features = false, optional = true 
 zip = { version = "0.6.2", default-features = false, optional = true }
 cblas-sys = { version = "0.1.4", default-features = false, optional = true }
 libc = { version = "0.2", default-features = false, optional = true }
-cudarc = { path = "../cudarc", default-features = false, optional = true, features = ["driver", "cublas", "nvrtc", "cudnn"] }
+cudarc = { version = "0.9.6", default-features = false, optional = true, features = ["driver", "cublas", "nvrtc"] }
 num-traits = { version = "0.2.15", default-features = false }
 safetensors = { version = "0.3", default-features = false, optional = true }
 memmap2 = { version = "0.5", default-features = false, optional = true }
@@ -46,7 +46,7 @@ indicatif = "0.17.3"
 glob = { version = "0.3.1", optional = true }
 
 [features]
-default = ["std", "fast-alloc", "test-cuda", "nightly"]
+default = ["std", "fast-alloc", "test-cuda"]
 nightly = []
 
 std = ["cudarc?/std", "matrixmultiply?/std"]
@@ -56,7 +56,9 @@ no-std = ["no-std-compat", "dep:spin", "cudarc?/no-std"]
 cpu-seq-matmul = ["dep:matrixmultiply"]
 cpu-par-matmul = ["std", "dep:matrixmultiply", "matrixmultiply?/threading"]
 cpu-mkl-matmul = ["dep:cblas-sys", "dep:libc"]
+
 cuda = ["dep:cudarc", "dep:glob"]
+cudnn = ["cuda", "cudarc?/cudnn"]
 
 numpy = ["dep:zip", "std"]
 safetensors = ["dep:safetensors", "std", "dep:memmap2"]

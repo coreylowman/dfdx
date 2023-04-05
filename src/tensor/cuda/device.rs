@@ -2,8 +2,6 @@ use crate::shapes::{Shape, Unit};
 use crate::tensor::cpu::{Cpu, CpuError, NdIndex};
 use crate::tensor::{DeviceStorage, HasErr, Tensor};
 
-use cudarc::cudnn::result::CudnnError;
-use cudarc::cudnn::Cudnn;
 use cudarc::{
     cublas::{result::CublasError, CudaBlas},
     driver::{CudaDevice, CudaSlice, CudaStream, DeviceSlice, DriverError},
@@ -22,7 +20,8 @@ pub struct Cuda {
     pub(crate) cpu: Cpu,
     pub(crate) dev: Arc<CudaDevice>,
     pub(crate) blas: Arc<CudaBlas>,
-    pub(crate) cudnn: Arc<Cudnn>,
+    #[cfg(feature = "cudnn")]
+    pub(crate) cudnn: Arc<cudarc::cudnn::Cudnn>,
     /// A second stream for kernels to optionally execute on.
     pub(crate) par_stream: Arc<CudaStream>,
     pub(crate) workspace: Arc<Mutex<CudaSlice<u8>>>,
@@ -31,7 +30,8 @@ pub struct Cuda {
 #[derive(Debug)]
 pub enum CudaError {
     Blas(CublasError),
-    Cudnn(CudnnError),
+    #[cfg(feature = "cudnn")]
+    Cudnn(cudarc::cudnn::CudnnError),
     Driver(DriverError),
     Cpu(CpuError),
 }
@@ -54,8 +54,9 @@ impl From<DriverError> for CudaError {
     }
 }
 
-impl From<CudnnError> for CudaError {
-    fn from(value: CudnnError) -> Self {
+#[cfg(feature = "cudnn")]
+impl From<cudarc::cudnn::CudnnError> for CudaError {
+    fn from(value: cudarc::cudnn::CudnnError) -> Self {
         Self::Cudnn(value)
     }
 }
@@ -82,13 +83,15 @@ impl Cuda {
         let cpu = Cpu::seed_from_u64(seed);
         let dev = CudaDevice::new(ordinal)?;
         let blas = Arc::new(CudaBlas::new(dev.clone())?);
-        let cudnn = Cudnn::new(dev.clone())?;
+        #[cfg(feature = "cudnn")]
+        let cudnn = cudarc::cudnn::Cudnn::new(dev.clone())?;
         let par_stream = Arc::new(dev.fork_default_stream()?);
         let workspace = Arc::new(Mutex::new(dev.alloc_zeros::<u8>(0)?));
         Ok(Self {
             cpu,
             dev,
             blas,
+            #[cfg(feature = "cudnn")]
             cudnn,
             par_stream,
             workspace,
