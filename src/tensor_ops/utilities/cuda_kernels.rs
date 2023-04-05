@@ -36,6 +36,8 @@ macro_rules! cuda_unary {
 pub(crate) use cuda_unary;
 
 impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda {
+    const BACKWARD_WITHOUT_INP: bool = false;
+    const BACKWARD_WITHOUT_DATA: bool = false;
     fn forward<S: Shape>(
         &self,
         op: K,
@@ -159,6 +161,7 @@ where
 pub(crate) use cuda_binary;
 
 impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E> for Cuda {
+    const BACKWARD_WITHOUT_DATA: bool = false;
     fn forward<S: Shape>(
         &self,
         op: K,
