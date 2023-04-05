@@ -229,6 +229,7 @@ impl<
 mod tests {
     use super::*;
     use crate::{tensor_ops::*, tests::*};
+    use num_traits::FromPrimitive;
 
     #[test]
     /// Produced by
@@ -437,6 +438,7 @@ mod tests {
         let x = x
             .broadcast::<Rank4<10, 3, 28, 28>, _>()
             .reshape::<Rank4<10, 3, 28, 28>>();
+        assert_eq!(x.strides, x.shape.strides());
 
         let y: Tensor<Rank4<10, 5, 9, 9>, _, _, _> = x.leaky_trace().conv2d::<3, 2>(w.clone());
         for i in 0..10 {
@@ -445,7 +447,7 @@ mod tests {
 
         let grads = y.square().mean().backward();
 
-        assert_close(&w0, &(grads.get(&w)).array());
+        w0.assert_close(&(grads.get(&w)).array(), TestDtype::from_f32(1e-3).unwrap());
 
         let x_grad = grads.get(&x) * 10.0;
         for i in 0..10 {
