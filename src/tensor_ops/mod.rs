@@ -151,6 +151,7 @@ pub use utilities::*;
 
 mod abs;
 mod add;
+mod recip;
 mod attention_reshape;
 pub(crate) mod axpy;
 mod bce;
@@ -202,6 +203,7 @@ mod to_dtype;
 mod tri;
 mod var_to;
 
+pub use recip::recip;
 pub use abs::abs;
 pub use add::{add, TryAdd};
 pub use attention_reshape::TryAttentionReshape;
