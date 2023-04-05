@@ -132,20 +132,20 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
                 if lhs_valid || rhs_valid {
                     let lhs_count = std::sync::Arc::strong_count(&lhs.data);
                     let rhs_count = std::sync::Arc::strong_count(&rhs.data);
-                    if lhs_valid && (lhs_count == 1 || !rhs_valid || rhs_count != 1) {
-                        lhs.id = unique_id();
-                        let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
-                        for l in lhs.buf_iter_mut() {
-                            *l = op.f(l, &rhs.data[rhs_idx.next().unwrap()]);
-                        }
-                        Ok(lhs)
-                    } else {
+                    if rhs_valid && (rhs_count == 1 || !lhs_valid || lhs_count != 1) {
                         rhs.id = unique_id();
                         let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
                         for r in rhs.buf_iter_mut() {
                             *r = op.f(&lhs.data[lhs_idx.next().unwrap()], r);
                         }
                         Ok(rhs)
+                    } else {
+                        lhs.id = unique_id();
+                        let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
+                        for l in lhs.buf_iter_mut() {
+                            *l = op.f(l, &rhs.data[rhs_idx.next().unwrap()]);
+                        }
+                        Ok(lhs)
                     }
                 } else {
                     <Self as BinaryKernel<Op, E>>::forward(self, op, Ok(&lhs), Ok(&rhs))
