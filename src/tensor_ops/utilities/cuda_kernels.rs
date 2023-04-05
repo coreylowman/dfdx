@@ -1,12 +1,15 @@
 use crate::{
     shapes::{Dtype, Shape},
-    tensor::{launch_cfg, unique_id, Cuda, Tensor},
+    tensor::*,
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
 use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync};
 use std::{sync::Arc, vec::Vec};
 
 pub trait UnaryOpCudaKernel<E> {
+    const DF_USES_FX: bool;
+    const HAS_CONST_DF: bool;
+
     /// Compiled by build.rs
     const PTX_SRC: &'static str;
 
@@ -25,6 +28,28 @@ pub trait UnaryOpCudaKernel<E> {
 macro_rules! cuda_unary {
     ($Op:path, $TypeName:ty, $Ptx:tt, $Fwd:tt, $Bwd:tt) => {
         impl crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel<$TypeName> for $Op {
+            const DF_USES_FX: bool = false;
+            const HAS_CONST_DF: bool = false;
+            const PTX_SRC: &'static str = $Ptx;
+            const MODULE_NAME: &'static str = $Fwd;
+            const FWD_FN_NAME: &'static str = $Fwd;
+            const BWD_FN_NAME: &'static str = $Bwd;
+        }
+    };
+    (df(f(x)) $Op:path, $TypeName:ty, $Ptx:tt, $Fwd:tt, $Bwd:tt) => {
+        impl crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel<$TypeName> for $Op {
+            const DF_USES_FX: bool = true;
+            const HAS_CONST_DF: bool = false;
+            const PTX_SRC: &'static str = $Ptx;
+            const MODULE_NAME: &'static str = $Fwd;
+            const FWD_FN_NAME: &'static str = $Fwd;
+            const BWD_FN_NAME: &'static str = $Bwd;
+        }
+    };
+    (const_df() $Op:path, $TypeName:ty, $Ptx:tt, $Fwd:tt, $Bwd:tt) => {
+        impl crate::tensor_ops::cuda_kernels::UnaryOpCudaKernel<$TypeName> for $Op {
+            const DF_USES_FX: bool = false;
+            const HAS_CONST_DF: bool = true;
             const PTX_SRC: &'static str = $Ptx;
             const MODULE_NAME: &'static str = $Fwd;
             const FWD_FN_NAME: &'static str = $Fwd;
@@ -36,61 +61,85 @@ macro_rules! cuda_unary {
 pub(crate) use cuda_unary;
 
 impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda {
-    const BACKWARD_WITHOUT_INP: bool = false;
-    const BACKWARD_WITHOUT_DATA: bool = false;
+    const BACKWARD_WITHOUT_INP: bool = K::DF_USES_FX;
+    const BACKWARD_WITHOUT_DATA: bool = K::HAS_CONST_DF;
     fn forward<S: Shape>(
         &self,
         op: K,
-        inp: &Tensor<S, E, Self>,
+        inp: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
         if !self.dev.has_func(K::MODULE_NAME, K::FWD_FN_NAME) {
             self.dev
                 .load_ptx(K::PTX_SRC.into(), K::MODULE_NAME, &K::ALL_FN_NAMES)?;
         }
 
-        let numel = inp.data.len();
-        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
-
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
-        let cfg = launch_cfg(numel as u32);
-        let params = (op, numel, inp.data.as_ref(), &mut storage);
-        unsafe { fwd_fn.launch(cfg, params) }?;
 
-        Ok(Tensor {
-            id: unique_id(),
-            data: Arc::new(storage),
-            shape: inp.shape,
-            strides: inp.strides,
-            device: self.clone(),
-            tape: Default::default(),
-        })
+        match inp {
+            Ok(inp) => {
+                let numel = inp.data.len();
+                let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
+
+                let cfg = launch_cfg(numel as u32);
+                let params = (op, numel, inp.data.as_ref(), &mut storage);
+                unsafe { fwd_fn.launch(cfg, params) }?;
+
+                Ok(Tensor {
+                    id: unique_id(),
+                    data: Arc::new(storage),
+                    shape: inp.shape,
+                    strides: inp.strides,
+                    device: self.clone(),
+                    tape: Default::default(),
+                })
+            }
+            Err(mut inp) => {
+                inp.id = unique_id();
+                let numel = inp.data.len();
+                let cfg = launch_cfg(numel as u32);
+                let params = (op, numel, 0u64, Arc::make_mut(&mut inp.data));
+                unsafe { fwd_fn.launch(cfg, params) }?;
+                Ok(inp)
+            }
+        }
     }
 
     fn backward<S: Shape>(
         &self,
         op: K,
-        inp: &Tensor<S, E, Self>,
+        inp: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
         grad_inp: &mut Self::Vec<E>,
-        out: &Tensor<S, E, Self>,
+        out: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
-        let numel = inp.data.len();
-        let cfg = launch_cfg(numel as u32);
-        let params = (
-            op,
-            numel,
-            inp.data.as_ref(),
-            grad_inp,
-            out.data.as_ref(),
-            grad_out,
-        );
-        unsafe { bwd_fn.launch(cfg, params) }?;
+        match (inp, out) {
+            (Err(inp), Err(_)) => {
+                let cfg = launch_cfg(inp.len as u32);
+                let params = (op, inp.len, 0u64, grad_inp, 0u64, grad_out);
+                unsafe { bwd_fn.launch(cfg, params) }?;
+            }
+            (Err(inp), Ok(out)) => {
+                let cfg = launch_cfg(inp.len as u32);
+                let params = (op, inp.len, 0u64, grad_inp, out.data.as_ref(), grad_out);
+                unsafe { bwd_fn.launch(cfg, params) }?;
+            }
+            (Ok(inp), Err(_)) => {
+                let numel = inp.data.len();
+                let cfg = launch_cfg(numel as u32);
+                let params = (op, numel, inp.data.as_ref(), grad_inp, 0u64, grad_out);
+                unsafe { bwd_fn.launch(cfg, params) }?;
+            }
+            _ => unreachable!(),
+        }
+
         Ok(())
     }
 }
 
 pub trait BinaryOpCudaKernel<E> {
+    const HAS_CONST_DF: bool;
+
     /// Compiled by build.rs
     const PTX_SRC: &'static str;
 
@@ -116,6 +165,17 @@ pub trait BinaryOpCudaKernel<E> {
 macro_rules! cuda_binary {
     ($Op:path, $TypeName:ty, $Ptx:tt, $Fwd:tt, $Bwd_Lhs:tt, $Bwd_Rhs:tt) => {
         impl crate::tensor_ops::cuda_kernels::BinaryOpCudaKernel<$TypeName> for $Op {
+            const HAS_CONST_DF: bool = false;
+            const PTX_SRC: &'static str = $Ptx;
+            const MODULE_NAME: &'static str = $Fwd;
+            const FWD_FN_NAME: &'static str = $Fwd;
+            const BWD_LHS_FN_NAME: &'static str = $Bwd_Lhs;
+            const BWD_RHS_FN_NAME: &'static str = $Bwd_Rhs;
+        }
+    };
+    (const_df() $Op:path, $TypeName:ty, $Ptx:tt, $Fwd:tt, $Bwd_Lhs:tt, $Bwd_Rhs:tt) => {
+        impl crate::tensor_ops::cuda_kernels::BinaryOpCudaKernel<$TypeName> for $Op {
+            const HAS_CONST_DF: bool = true;
             const PTX_SRC: &'static str = $Ptx;
             const MODULE_NAME: &'static str = $Fwd;
             const FWD_FN_NAME: &'static str = $Fwd;
@@ -161,50 +221,121 @@ where
 pub(crate) use cuda_binary;
 
 impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E> for Cuda {
-    const BACKWARD_WITHOUT_DATA: bool = false;
+    const BACKWARD_WITHOUT_DATA: bool = K::HAS_CONST_DF;
     fn forward<S: Shape>(
         &self,
         op: K,
-        lhs: &Tensor<S, E, Self>,
-        rhs: &Tensor<S, E, Self>,
+        lhs: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
+        rhs: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
         if !self.dev.has_func(K::MODULE_NAME, K::FWD_FN_NAME) {
             self.dev
                 .load_ptx(K::PTX_SRC.into(), K::MODULE_NAME, &K::ALL_FN_NAMES)?;
         }
-
-        let shape = lhs.shape;
-        let strides = lhs.shape.strides();
-        let numel = shape.num_elements();
-
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
+
+        let shape = match &lhs {
+            Ok(lhs) => lhs.shape,
+            Err(lhs) => lhs.shape,
+        };
+        let strides = shape.strides();
+        let numel = shape.num_elements();
         let cfg = launch_cfg(numel as u32);
+
+        let lhs_strides = match &lhs {
+            Ok(lhs) => lhs.strides,
+            Err(lhs) => lhs.strides,
+        };
+        let rhs_strides = match &rhs {
+            Ok(rhs) => rhs.strides,
+            Err(rhs) => rhs.strides,
+        };
 
         let mut info: Vec<usize> = Vec::with_capacity(3 * S::NUM_DIMS);
         info.extend(shape.concrete());
-        info.extend(lhs.strides);
-        info.extend(rhs.strides);
+        info.extend(lhs_strides);
+        info.extend(rhs_strides);
         let info = self.dev.htod_copy(info)?;
 
-        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
-        let params = (
-            op,
-            numel,             // const size_t numel,
-            S::NUM_DIMS,       // const size_t num_dims,
-            &info,             // const size_t *info,
-            lhs.data.as_ref(), // const float *lhs,
-            rhs.data.as_ref(), // const float *rhs,
-            &mut storage,      // float *out,
-        );
-        unsafe { fwd_fn.launch(cfg, params) }?;
-        Ok(Tensor {
-            id: unique_id(),
-            data: Arc::new(storage),
-            shape,
-            strides,
-            device: self.clone(),
-            tape: Default::default(),
-        })
+        match (lhs, rhs) {
+            (Ok(lhs), Ok(rhs)) => {
+                let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
+                let params = (
+                    op,
+                    numel,             // const size_t numel,
+                    S::NUM_DIMS,       // const size_t num_dims,
+                    &info,             // const size_t *info,
+                    lhs.data.as_ref(), // const float *lhs,
+                    rhs.data.as_ref(), // const float *rhs,
+                    &mut storage,      // float *out,
+                );
+                unsafe { fwd_fn.launch(cfg, params) }?;
+                Ok(Tensor {
+                    id: unique_id(),
+                    data: Arc::new(storage),
+                    shape,
+                    strides,
+                    device: self.clone(),
+                    tape: Default::default(),
+                })
+            }
+            (Err(mut lhs), Err(mut rhs)) => {
+                let lhs_valid = lhs.strides == lhs.shape.strides();
+                let rhs_valid = rhs.strides == rhs.shape.strides();
+                if lhs_valid || rhs_valid {
+                    let lhs_count = std::sync::Arc::strong_count(&lhs.data);
+                    let rhs_count = std::sync::Arc::strong_count(&rhs.data);
+                    if lhs_valid && (lhs_count == 1 || !rhs_valid || rhs_count != 1) {
+                        lhs.id = unique_id();
+                        let params = (
+                            op,
+                            numel,                        // const size_t numel,
+                            S::NUM_DIMS,                  // const size_t num_dims,
+                            &info,                        // const size_t *info,
+                            0u64,                         // const float *lhs,
+                            rhs.data.as_ref(),            // const float *rhs,
+                            Arc::make_mut(&mut lhs.data), // float *out,
+                        );
+                        unsafe { fwd_fn.launch(cfg, params) }?;
+                        Ok(lhs)
+                    } else {
+                        rhs.id = unique_id();
+                        let params = (
+                            op,
+                            numel,
+                            S::NUM_DIMS,
+                            &info,
+                            lhs.data.as_ref(),
+                            0u64,
+                            Arc::make_mut(&mut rhs.data),
+                        );
+                        unsafe { fwd_fn.launch(cfg, params) }?;
+                        Ok(rhs)
+                    }
+                } else {
+                    let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
+                    let params = (
+                        op,
+                        numel,             // const size_t numel,
+                        S::NUM_DIMS,       // const size_t num_dims,
+                        &info,             // const size_t *info,
+                        lhs.data.as_ref(), // const float *lhs,
+                        rhs.data.as_ref(), // const float *rhs,
+                        &mut storage,      // float *out,
+                    );
+                    unsafe { fwd_fn.launch(cfg, params) }?;
+                    Ok(Tensor {
+                        id: unique_id(),
+                        data: Arc::new(storage),
+                        shape,
+                        strides,
+                        device: self.clone(),
+                        tape: Default::default(),
+                    })
+                }
+            }
+            _ => unreachable!(),
+        }
     }
 
     // NOTE: if it becomes possible for grad_out to be broadcasted, (i.e. if #366 is resolved), we
@@ -212,9 +343,9 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
     fn backward<S: Shape>(
         &self,
         op: K,
-        lhs: &Tensor<S, E, Self>,
+        lhs: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<S, E, Self>,
+        rhs: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
@@ -228,21 +359,34 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
             .get_func(K::MODULE_NAME, K::BWD_RHS_FN_NAME)
             .unwrap();
 
-        let numel = lhs.shape.num_elements();
+        let shape = match lhs {
+            Ok(lhs) => lhs.shape,
+            Err(lhs) => lhs.shape,
+        };
+        let (lhs_strides, lhs_len) = match lhs {
+            Ok(lhs) => (lhs.strides, lhs.data.len()),
+            Err(lhs) => (lhs.strides, lhs.len),
+        };
+        let (rhs_strides, rhs_len) = match rhs {
+            Ok(rhs) => (rhs.strides, rhs.data.len()),
+            Err(rhs) => (rhs.strides, rhs.len),
+        };
+
+        let numel = shape.num_elements();
         let cfg = launch_cfg(numel as u32);
 
         let ((out_dims1, out_strides1), rhs_strides1) = permute_for_binary_backward(
-            lhs.shape.concrete(),
-            lhs.shape.strides(),
-            rhs.strides,
-            lhs.strides,
+            shape.concrete(),
+            shape.strides(),
+            rhs_strides,
+            lhs_strides,
         );
 
         let ((out_dims2, out_strides2), lhs_strides2) = permute_for_binary_backward(
-            lhs.shape.concrete(),
-            lhs.shape.strides(),
-            lhs.strides,
-            rhs.strides,
+            shape.concrete(),
+            shape.strides(),
+            lhs_strides,
+            rhs_strides,
         );
 
         let mut info: Vec<usize> = Vec::with_capacity(6 * S::NUM_DIMS);
@@ -254,37 +398,67 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         info.extend(lhs_strides2);
         let info = self.dev.htod_copy(info)?;
 
-        self.par_stream.wait_for_default()?;
+        match (lhs, rhs) {
+            (Ok(lhs), Ok(rhs)) => {
+                let params_lhs = (
+                    op.clone(),        // const OP_STRUCT op,
+                    numel,             // const size_t numel,
+                    S::NUM_DIMS,       // const size_t num_dims,
+                    &info,             // const size_t *info,
+                    lhs.data.as_ref(), // const TYPENAME *lhs,
+                    grad_lhs,          // TYPENAME *grad_lhs,
+                    numel / lhs_len,   // const size_t chunk_len,
+                    rhs.data.as_ref(), // const TYPENAME *rhs,
+                    grad_out,          // const TYPENAME *grad_out
+                );
+                let params_rhs = (
+                    op,                // const OP_STRUCT op,
+                    numel,             // const size_t numel,
+                    S::NUM_DIMS,       // const size_t num_dims,
+                    &info,             // const size_T * info,
+                    lhs.data.as_ref(), // const TYPENAME *lhs,
+                    rhs.data.as_ref(), // const TYPENAME *rhs,
+                    grad_rhs,          // TYPENAME *grad_rhs,
+                    numel / rhs_len,   // const size_t chunk_len,
+                    grad_out,          // const TYPENAME *grad_out
+                );
 
-        let params_lhs = (
-            op.clone(),             // const OP_STRUCT op,
-            numel,                  // const size_t numel,
-            S::NUM_DIMS,            // const size_t num_dims,
-            &info,                  // const size_t *info,
-            lhs.data.as_ref(),      // const TYPENAME *lhs,
-            grad_lhs,               // TYPENAME *grad_lhs,
-            numel / lhs.data.len(), // const size_t chunk_len,
-            rhs.data.as_ref(),      // const TYPENAME *rhs,
-            grad_out,               // const TYPENAME *grad_out
-        );
+                self.par_stream.wait_for_default()?;
+                unsafe { bwd_lhs_fn.launch_on_stream(&self.par_stream, cfg, params_lhs) }?;
+                unsafe { bwd_rhs_fn.launch(cfg, params_rhs) }?;
+                self.dev.wait_for(&self.par_stream)?;
+            }
+            (Err(_), Err(_)) => {
+                let params_lhs = (
+                    op.clone(),      // const OP_STRUCT op,
+                    numel,           // const size_t numel,
+                    S::NUM_DIMS,     // const size_t num_dims,
+                    &info,           // const size_t *info,
+                    0u64,            // const TYPENAME *lhs,
+                    grad_lhs,        // TYPENAME *grad_lhs,
+                    numel / lhs_len, // const size_t chunk_len,
+                    0u64,            // const TYPENAME *rhs,
+                    grad_out,        // const TYPENAME *grad_out
+                );
+                let params_rhs = (
+                    op,              // const OP_STRUCT op,
+                    numel,           // const size_t numel,
+                    S::NUM_DIMS,     // const size_t num_dims,
+                    &info,           // const size_T * info,
+                    0u64,            // const TYPENAME *lhs,
+                    0u64,            // const TYPENAME *rhs,
+                    grad_rhs,        // TYPENAME *grad_rhs,
+                    numel / rhs_len, // const size_t chunk_len,
+                    grad_out,        // const TYPENAME *grad_out
+                );
 
-        unsafe { bwd_lhs_fn.launch_on_stream(&self.par_stream, cfg, params_lhs) }?;
-
-        let params_rhs = (
-            op,                     // const OP_STRUCT op,
-            numel,                  // const size_t numel,
-            S::NUM_DIMS,            // const size_t num_dims,
-            &info,                  // const size_T * info,
-            lhs.data.as_ref(),      // const TYPENAME *lhs,
-            rhs.data.as_ref(),      // const TYPENAME *rhs,
-            grad_rhs,               // TYPENAME *grad_rhs,
-            numel / rhs.data.len(), // const size_t chunk_len,
-            grad_out,               // const TYPENAME *grad_out
-        );
-
-        unsafe { bwd_rhs_fn.launch(cfg, params_rhs) }?;
-
-        self.dev.wait_for(&self.par_stream)?;
+                self.par_stream.wait_for_default()?;
+                unsafe { bwd_lhs_fn.launch_on_stream(&self.par_stream, cfg, params_lhs) }?;
+                unsafe { bwd_rhs_fn.launch(cfg, params_rhs) }?;
+                self.dev.wait_for(&self.par_stream)?;
+            }
+            _ => unreachable!(),
+        }
 
         Ok(())
     }

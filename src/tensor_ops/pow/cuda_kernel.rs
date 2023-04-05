@@ -1,7 +1,7 @@
 use super::PowfKernelOp;
 use crate::{
     shapes::*,
-    tensor::{Cuda, Tensor},
+    tensor::*,
     tensor_ops::{cuda_kernels::cuda_unary, ops::UnaryKernel},
 };
 
@@ -17,10 +17,14 @@ impl<E: Dtype> UnaryKernel<super::PowiKernelOp, E> for Cuda
 where
     Self: UnaryKernel<super::PowfKernelOp<E>, E>,
 {
+    const BACKWARD_WITHOUT_DATA: bool =
+        <Self as UnaryKernel<super::PowfKernelOp<E>, E>>::BACKWARD_WITHOUT_DATA;
+    const BACKWARD_WITHOUT_INP: bool =
+        <Self as UnaryKernel<super::PowfKernelOp<E>, E>>::BACKWARD_WITHOUT_INP;
     fn forward<S: Shape>(
         &self,
         op: super::PowiKernelOp,
-        inp: &Tensor<S, E, Self>,
+        inp: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
         self.forward(super::PowfKernelOp(E::from_i32(op.0).unwrap()), inp)
     }
@@ -28,9 +32,9 @@ where
     fn backward<S: Shape>(
         &self,
         op: super::PowiKernelOp,
-        inp: &Tensor<S, E, Self>,
+        inp: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
         grad_inp: &mut Self::Vec<E>,
-        out: &Tensor<S, E, Self>,
+        out: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         self.backward(
