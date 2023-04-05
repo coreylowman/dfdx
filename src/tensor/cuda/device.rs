@@ -20,6 +20,8 @@ pub struct Cuda {
     pub(crate) cpu: Cpu,
     pub(crate) dev: Arc<CudaDevice>,
     pub(crate) blas: Arc<CudaBlas>,
+    #[cfg(feature = "cudnn")]
+    pub(crate) cudnn: Arc<cudarc::cudnn::Cudnn>,
     /// A second stream for kernels to optionally execute on.
     pub(crate) par_stream: Arc<CudaStream>,
     pub(crate) workspace: Arc<Mutex<CudaSlice<u8>>>,
@@ -28,6 +30,8 @@ pub struct Cuda {
 #[derive(Debug)]
 pub enum CudaError {
     Blas(CublasError),
+    #[cfg(feature = "cudnn")]
+    Cudnn(cudarc::cudnn::CudnnError),
     Driver(DriverError),
     Cpu(CpuError),
 }
@@ -47,6 +51,13 @@ impl From<CublasError> for CudaError {
 impl From<DriverError> for CudaError {
     fn from(value: DriverError) -> Self {
         Self::Driver(value)
+    }
+}
+
+#[cfg(feature = "cudnn")]
+impl From<cudarc::cudnn::CudnnError> for CudaError {
+    fn from(value: cudarc::cudnn::CudnnError) -> Self {
+        Self::Cudnn(value)
     }
 }
 
@@ -72,12 +83,16 @@ impl Cuda {
         let cpu = Cpu::seed_from_u64(seed);
         let dev = CudaDevice::new(ordinal)?;
         let blas = Arc::new(CudaBlas::new(dev.clone())?);
+        #[cfg(feature = "cudnn")]
+        let cudnn = cudarc::cudnn::Cudnn::new(dev.clone())?;
         let par_stream = Arc::new(dev.fork_default_stream()?);
         let workspace = Arc::new(Mutex::new(dev.alloc_zeros::<u8>(0)?));
         Ok(Self {
             cpu,
             dev,
             blas,
+            #[cfg(feature = "cudnn")]
+            cudnn,
             par_stream,
             workspace,
         })
