@@ -25,9 +25,15 @@ pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
     fn random_u64(&self) -> u64;
 
     /// Allocates a gradient for the given nd array
-    fn try_alloc_grad<E: Unit>(&self, storage: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err>;
+    fn try_alloc_grad<E: Unit>(&self, storage: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err> {
+        self.try_alloc_len(self.len(storage))
+    }
+
+    fn try_alloc_len<E: Unit>(&self, len: usize) -> Result<Self::Vec<E>, Self::Err>;
 
     fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E>;
+
+    fn len<E: Unit>(&self, v: &Self::Vec<E>) -> usize;
 
     /// Blocks until all work on device to complete. Useful for benchmarking.
     fn synchronize(&self) {

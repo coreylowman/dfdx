@@ -3,6 +3,7 @@ use num_traits::{Float, FloatConst};
 
 impl<F: Float + FloatConst> UnaryDerivative<F> for super::GeLUKernelOp {
     const DF_USES_FX: bool = false;
+    const HAS_CONST_DF: bool = false;
     #[inline(always)]
     fn f(&self, &x: &F) -> F {
         let alpha = x + F::from(0.044715).unwrap() * x.powi(3);

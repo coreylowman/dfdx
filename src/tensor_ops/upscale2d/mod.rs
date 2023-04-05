@@ -184,13 +184,15 @@ impl<
         let (inp, mut tape) = self.split_tape();
         let mut out = inp.device.try_zeros_like(&(chan, out_height, out_width))?;
         inp.device.forward(op, &inp, &mut out)?;
-        let phantom_out = out.clone();
+        let inp_ghost = inp.ghost();
+        let out_ghost = out.ghost();
+        let out_clone = out.clone();
         tape.add_backward_op(move |grads| {
-            grads.try_alloc_for(&inp)?;
-            grads.try_alloc_for(&phantom_out)?;
-            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
+            grads.try_alloc_for(&inp_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
             inp.device
-                .backward(op, &inp, grad_inp, &phantom_out, grad_out)
+                .backward(op, &inp, grad_inp, &out_clone, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -228,13 +230,15 @@ impl<
             .device
             .try_zeros_like(&(batch, chan, out_height, out_width))?;
         inp.device.forward(op, &inp, &mut out)?;
-        let phantom_out = out.clone();
+        let inp_ghost = inp.ghost();
+        let out_ghost = out.ghost();
+        let out_clone = out.clone();
         tape.add_backward_op(move |grads| {
-            grads.try_alloc_for(&inp)?;
-            grads.try_alloc_for(&phantom_out)?;
-            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
+            grads.try_alloc_for(&inp_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
             inp.device
-                .backward(op, &inp, grad_inp, &phantom_out, grad_out)
+                .backward(op, &inp, grad_inp, &out_clone, grad_out)
         });
         Ok(out.put_tape(tape))
     }

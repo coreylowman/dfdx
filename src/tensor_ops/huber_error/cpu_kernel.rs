@@ -2,7 +2,8 @@ use crate::tensor_ops::cpu_kernels::BinaryDerivative;
 
 use num_traits::Float;
 
-impl<F: Float> BinaryDerivative<F> for super::HuberErrorKernelOp<F> {
+impl<F: Float + std::fmt::Debug> BinaryDerivative<F> for super::HuberErrorKernelOp<F> {
+    const HAS_CONST_DF: bool = false;
     #[inline(always)]
     fn f(&self, &x: &F, &y: &F) -> F {
         let half = F::from(0.5).unwrap();

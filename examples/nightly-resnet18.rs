@@ -2,7 +2,7 @@
 
 #[cfg(feature = "nightly")]
 fn main() {
-    use dfdx::{prelude::*, tensor::AutoDevice};
+    use dfdx::prelude::*;
     use std::time::Instant;
 
     type BasicBlock<const C: usize> = Residual<(

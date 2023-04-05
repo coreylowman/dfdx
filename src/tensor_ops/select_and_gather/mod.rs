@@ -104,13 +104,15 @@ impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<D>
         self.shape().check(idx.shape());
         let (inp, mut tape) = self.split_tape();
         let out = inp.device.forward(&inp, &idx)?;
-        let phantom_out = out.clone();
+        let inp_ghost = inp.ghost();
+        let out_ghost = out.ghost();
+        let out_clone = out.clone();
         tape.add_backward_op(move |grads| {
-            grads.try_alloc_for(&inp)?;
-            grads.try_alloc_for(&phantom_out)?;
-            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
+            grads.try_alloc_for(&inp_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
             inp.device
-                .backward(&inp, grad_inp, &idx, &phantom_out, grad_out)
+                .backward(&inp, grad_inp, &idx, &out_clone, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -174,13 +176,16 @@ impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<E, D>> GatherTo<D>
         self.shape().check(idx.shape());
         let (inp, mut tape) = self.split_tape();
         let out = inp.device.forward(&inp, &idx)?;
-        let phantom_out = out.clone();
+
+        let inp_ghost = inp.ghost();
+        let out_ghost = out.ghost();
+        let out_clone = out.clone();
         tape.add_backward_op(move |grads| {
-            grads.try_alloc_for(&inp)?;
-            grads.try_alloc_for(&phantom_out)?;
-            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
+            grads.try_alloc_for(&inp_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
             inp.device
-                .backward(&inp, grad_inp, &idx, &phantom_out, grad_out)
+                .backward(&inp, grad_inp, &idx, &out_clone, grad_out)
         });
         Ok(out.put_tape(tape))
     }

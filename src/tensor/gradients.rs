@@ -4,6 +4,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::{boxed::Box, vec::Vec};
 
+use super::ghost::GhostTensor;
 use super::{
     storage_traits::{AllocGrad, DeviceStorage},
     unique_id, Tensor, UniqueId,
@@ -50,12 +51,16 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
         &mut self,
         t: &Tensor<S, E, D>,
     ) -> Result<&mut D::Vec<E>, D::Err> {
-        self.try_alloc_for(t)?;
-        Ok(self.get_mut(t))
+        let ghost = t.ghost();
+        self.try_alloc_for(&ghost)?;
+        Ok(self.get_mut(&ghost))
     }
 
     /// Inserts a gradient for `t`
-    pub(crate) fn try_alloc_for<S: Shape>(&mut self, t: &Tensor<S, E, D>) -> Result<(), D::Err> {
+    pub(crate) fn try_alloc_for<S: Shape>(
+        &mut self,
+        t: &GhostTensor<S, E, D>,
+    ) -> Result<(), D::Err> {
         if let std::collections::btree_map::Entry::Vacant(e) = self.gradient_by_id.entry(t.id) {
             e.insert(t.try_alloc_grad()?);
         }
@@ -89,14 +94,14 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     /// Returns a mutable reference to the data associated with `t`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
-    pub(crate) fn get_mut<S: Shape, T>(&mut self, t: &Tensor<S, E, D, T>) -> &mut D::Vec<E> {
+    pub(crate) fn get_mut<S: Shape>(&mut self, t: &GhostTensor<S, E, D>) -> &mut D::Vec<E> {
         self.gradient_by_id.get_mut(&t.id).unwrap()
     }
 
     /// Returns a mutable reference to the data associated with `t`.
     ///
     /// **Panics** if data associated with `t` is not found. This indicates an unrecoverable bug.
-    pub(crate) fn get_ref<S: Shape, T>(&mut self, t: &Tensor<S, E, D, T>) -> &D::Vec<E> {
+    pub(crate) fn get_ref<S: Shape>(&mut self, t: &GhostTensor<S, E, D>) -> &D::Vec<E> {
         self.gradient_by_id.get(&t.id).unwrap()
     }
 
@@ -123,8 +128,8 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     /// **Panics** if `l` and `r` have the same id.
     pub(crate) fn mut_and_ref<L: Shape, R: Shape>(
         &mut self,
-        l: &Tensor<L, E, D>,
-        r: &Tensor<R, E, D>,
+        l: &GhostTensor<L, E, D>,
+        r: &GhostTensor<R, E, D>,
     ) -> (&mut D::Vec<E>, &D::Vec<E>) {
         assert_ne!(l.id, r.id);
         let l_ptr = self.get_mut(l) as *mut _;
@@ -137,9 +142,9 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     /// Borrows a triplet of gradients `(&mut L1, &mut L2, &R)`.
     pub(crate) fn muts_and_ref<L1: Shape, L2: Shape, R: Shape>(
         &mut self,
-        l1: &Tensor<L1, E, D>,
-        l2: &Tensor<L2, E, D>,
-        r: &Tensor<R, E, D>,
+        l1: &GhostTensor<L1, E, D>,
+        l2: &GhostTensor<L2, E, D>,
+        r: &GhostTensor<R, E, D>,
     ) -> (&mut D::Vec<E>, &mut D::Vec<E>, &D::Vec<E>) {
         assert_ne!(l1.id, l2.id);
         assert_ne!(l1.id, r.id);
@@ -156,8 +161,8 @@ impl<E: Unit, D: DeviceStorage> Gradients<E, D> {
     #[inline]
     pub(crate) fn many_and_ref<L: Shape, R: Shape>(
         &mut self,
-        ls: &Vec<Tensor<L, E, D>>,
-        r: &Tensor<R, E, D>,
+        ls: &Vec<GhostTensor<L, E, D>>,
+        r: &GhostTensor<R, E, D>,
     ) -> (Vec<&mut D::Vec<E>>, &D::Vec<E>) {
         for i in 0..ls.len() {
             assert_ne!(ls[i].id, r.id);
