@@ -42,6 +42,7 @@ pub trait BinaryDerivative<E>: std::fmt::Debug {
 }
 
 impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
+    const BACKWARD_WITHOUT_INP: bool = Op::DF_USES_FX;
     const BACKWARD_WITHOUT_DATA: bool = Op::HAS_CONST_DF;
     fn forward<S: Shape>(
         &self,
@@ -108,6 +109,18 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
     ) -> Result<(), Self::Err> {
         for (i, x) in grad_inp.iter_mut().enumerate() {
             *x += op.const_df() * grad_out[i];
+        }
+        Ok(())
+    }
+    fn backward_without_inp<S: Shape>(
+        &self,
+        op: Op,
+        grad_inp: &mut Self::Vec<E>,
+        out: &Tensor<S, E, Self>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err> {
+        for (i, x) in grad_inp.iter_mut().enumerate() {
+            *x += op.df(&out.data[i]) * grad_out[i];
         }
         Ok(())
     }
