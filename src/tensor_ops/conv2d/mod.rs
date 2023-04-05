@@ -3,10 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use crate::{
-    shapes::*,
-    tensor::{DeviceStorage, HasErr, PutTape, SplitTape, Tape, Tensor, ZerosTensor},
-};
+use crate::{shapes::*, tensor::*};
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -73,7 +70,7 @@ pub(super) trait Conv2DKernel<E: Dtype>: DeviceStorage {
         grad_lhs: &mut Self::Vec<E>,
         rhs: &Tensor<R, E, Self>,
         grad_rhs: &mut Self::Vec<E>,
-        out: &Tensor<O, E, Self>,
+        out: &GhostTensor<O, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
@@ -162,14 +159,17 @@ impl<
             .device
             .alloc((Const, h.convolve_dim(), w.convolve_dim()))?;
         lhs.device.forward(op, &lhs, &rhs, &mut out)?;
-        let phantom_out = out.clone();
+        let lhs_ghost = lhs.ghost();
+        let rhs_ghost = rhs.ghost();
+        let out_ghost = out.ghost();
         tape.add_backward_op(move |grads| {
-            grads.try_alloc_for(&lhs)?;
-            grads.try_alloc_for(&rhs)?;
-            grads.try_alloc_for(&phantom_out)?;
-            let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
+            grads.try_alloc_for(&rhs_ghost)?;
+            grads.try_alloc_for(&lhs_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_lhs, grad_rhs, grad_out) =
+                grads.muts_and_ref(&lhs_ghost, &rhs_ghost, &out_ghost);
             lhs.device
-                .backward(op, &lhs, grad_lhs, &rhs, grad_rhs, &phantom_out, grad_out)
+                .backward(op, &lhs, grad_lhs, &rhs, grad_rhs, &out_ghost, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -206,15 +206,17 @@ impl<
             .alloc((batch, Const, h.convolve_dim(), w.convolve_dim()))?;
         let mut tape = ltape.merge(rtape);
         lhs.device.forward(op, &lhs, &rhs, &mut out)?;
-        let phantom_out = out.clone();
+        let lhs_ghost = lhs.ghost();
+        let rhs_ghost = rhs.ghost();
+        let out_ghost = out.ghost();
         tape.add_backward_op(move |grads| {
-            grads.try_alloc_for(&lhs)?;
-            grads.try_alloc_for(&rhs)?;
-            grads.try_alloc_for(&phantom_out)?;
-            let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
+            grads.try_alloc_for(&rhs_ghost)?;
+            grads.try_alloc_for(&lhs_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_lhs, grad_rhs, grad_out) =
+                grads.muts_and_ref(&lhs_ghost, &rhs_ghost, &out_ghost);
             lhs.device
-                .backward(op, &lhs, grad_lhs, &rhs, grad_rhs, &phantom_out, grad_out)?;
-            Ok(())
+                .backward(op, &lhs, grad_lhs, &rhs, grad_rhs, &out_ghost, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -223,7 +225,7 @@ impl<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{tensor::*, tensor_ops::*, tests::*};
+    use crate::{tensor_ops::*, tests::*};
 
     #[test]
     /// Produced by

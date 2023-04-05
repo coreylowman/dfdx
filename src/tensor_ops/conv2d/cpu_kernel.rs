@@ -1,5 +1,5 @@
 use crate::shapes::{Dtype, Shape};
-use crate::tensor::{cpu::*, Tensor, ZerosTensor};
+use crate::tensor::{cpu::*, GhostTensor, Tensor, ZerosTensor};
 use crate::tensor_ops::matmul::cpu_kernel::MatMulImpl;
 
 use super::{Conv2DKernel, Conv2DOp};
@@ -209,7 +209,7 @@ where
         grad_lhs: &mut Self::Vec<E>,
         rhs: &Tensor<R, E, Self>,
         grad_rhs: &mut Self::Vec<E>,
-        out: &Tensor<O, E, Self>,
+        out: &GhostTensor<O, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let f_tr_shape = op.filters_tr_shape();
