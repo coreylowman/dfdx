@@ -1,7 +1,10 @@
 mod cpu_kernel;
 
-#[cfg(feature = "cuda")]
+#[cfg(all(not(feature = "cudnn"), feature = "cuda"))]
 mod cuda_kernel;
+
+#[cfg(feature = "cudnn")]
+mod cudnn_kernel;
 
 use crate::{shapes::*, tensor::*};
 
