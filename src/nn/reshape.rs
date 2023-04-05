@@ -14,7 +14,6 @@ pub struct Reshape<S: ConstShape>(S);
 impl<S: ConstShape> ZeroSizedModule for Reshape<S> {}
 impl<S: ConstShape> NonMutableModule for Reshape<S> {}
 
-#[cfg(feature = "nightly")]
 impl<Src: Shape, Dst: ConstShape, D: Device<E>, E: Dtype, T: Tape<E, D>>
     Module<Tensor<Src, E, D, T>> for Reshape<Dst>
 {
@@ -33,7 +32,6 @@ impl<Src: Shape, Dst: ConstShape, D: Device<E>, E: Dtype, T: Tape<E, D>>
     }
 }
 
-#[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
     use super::*;
