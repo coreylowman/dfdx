@@ -33,7 +33,7 @@ pub trait BinaryDerivative<E> {
 }
 
 impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
-    const NO_DATA_REQS: bool = Op::HAS_CONST_DF;
+    const BACKWARD_WITHOUT_DATA: bool = Op::HAS_CONST_DF;
     fn forward<S: Shape>(
         &self,
         op: Op,
@@ -75,6 +75,20 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
             }
         }
         Ok(())
+    }
+
+    fn forward_reuse<S: Shape>(
+        &self,
+        op: Op,
+        mut out: Tensor<S, E, Self>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        out.id = unique_id();
+        // NOTE: we can iterate over buf here because we know inp & out
+        // have exact same strides due to clone.
+        for x in out.buf_iter_mut() {
+            *x = op.f(x);
+        }
+        Ok(out)
     }
 
     fn backward_without_data(

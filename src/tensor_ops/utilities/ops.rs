@@ -4,11 +4,16 @@ use crate::{
 };
 
 pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
-    const NO_DATA_REQS: bool;
+    const BACKWARD_WITHOUT_DATA: bool;
     fn forward<S: Shape>(
         &self,
         op: Op,
         inp: &Tensor<S, E, Self>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err>;
+    fn forward_reuse<S: Shape>(
+        &self,
+        op: Op,
+        inp: Tensor<S, E, Self>,
     ) -> Result<Tensor<S, E, Self>, Self::Err>;
     fn backward<S: Shape>(
         &self,
@@ -56,18 +61,20 @@ pub(crate) fn try_unary_op<
     inp: Tensor<S, E, D, T>,
 ) -> Result<Tensor<S, E, D, T>, D::Err> {
     let (inp, mut tape) = inp.split_tape();
-    let out = inp.device.forward(op.clone(), &inp)?;
     let inp_ghost = inp.ghost();
-    let out_ghost = out.ghost();
-    if D::NO_DATA_REQS {
+    if D::BACKWARD_WITHOUT_DATA {
+        let out = inp_ghost.dev.forward_reuse(op.clone(), inp)?;
+        let out_ghost = out.ghost();
         tape.add_backward_op(move |grads| {
             grads.try_alloc_for(&inp_ghost)?;
             grads.try_alloc_for(&out_ghost)?;
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
-            inp.device.backward_without_data(op, grad_inp, grad_out)
+            inp_ghost.dev.backward_without_data(op, grad_inp, grad_out)
         });
         Ok(out.put_tape(tape))
     } else {
+        let out = inp.device.forward(op.clone(), &inp)?;
+        let out_ghost = out.ghost();
         let out_clone = out.clone();
         tape.add_backward_op(move |grads| {
             grads.try_alloc_for(&inp_ghost)?;
