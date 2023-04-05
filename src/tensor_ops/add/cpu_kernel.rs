@@ -9,11 +9,11 @@ impl<F: Float> BinaryDerivative<F> for super::BinaryAddKernelOp {
     }
     #[inline(always)]
     fn dfdx(&self, _: &F, _: &F) -> F {
-        F::one()
+        self.const_dfdx()
     }
     #[inline(always)]
     fn dfdy(&self, _: &F, _: &F) -> F {
-        F::one()
+        self.const_dfdy()
     }
     #[inline(always)]
     fn const_dfdx(&self) -> F {

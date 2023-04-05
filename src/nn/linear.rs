@@ -129,10 +129,8 @@ impl<'a, B: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<E, D>>
     type Error = D::Err;
 
     fn try_forward(&self, input: Tensor<(B, Const<M>), E, D, T>) -> Result<Self::Output, D::Err> {
-        self.beta
-            .retaped::<T>()
-            .try_broadcast_like(input.shape())?
-            .try_add(input)
+        let shape = *input.shape();
+        input.try_add(self.beta.retaped::<T>().try_broadcast_like(&shape)?)
     }
 }
 
@@ -146,10 +144,8 @@ impl<'a, B: Dim, S: Dim, const M: usize, E: Dtype, D: Device<E>, T: Tape<E, D>>
         &self,
         input: Tensor<(B, S, Const<M>), E, D, T>,
     ) -> Result<Self::Output, D::Err> {
-        self.beta
-            .retaped::<T>()
-            .try_broadcast_like(input.shape())?
-            .try_add(input)
+        let shape = *input.shape();
+        input.try_add(self.beta.retaped::<T>().try_broadcast_like(&shape)?)
     }
 }
 
