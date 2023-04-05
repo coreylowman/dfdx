@@ -214,7 +214,7 @@ mod tests {
         let _ = t.leaky_trace().select(dev.zeros_like(&(7, 4)));
     }
 
-    #[cfg(not(feature = "test-cuda"))]
+    #[cfg(not(feature = "cuda"))]
     #[test]
     #[should_panic = "Index out of bounds: index=[7]"]
     fn test_select_index_out_of_bounds() {
@@ -241,7 +241,7 @@ mod tests {
         let _ = t.leaky_trace().gather(dev.zeros_like(&(5, 4, 2)));
     }
 
-    #[cfg(not(feature = "test-cuda"))]
+    #[cfg(not(feature = "cuda"))]
     #[test]
     #[should_panic = "Index out of bounds: index=[7]"]
     fn test_gather_index_out_of_bounds() {
@@ -250,7 +250,7 @@ mod tests {
         let _ = t.leaky_trace().gather(dev.tensor([7, 6, 1, 2]));
     }
 
-    #[cfg(not(feature = "test-cuda"))]
+    #[cfg(not(feature = "cuda"))]
     #[test]
     #[should_panic = "Index out of bounds: index=[5, 0]"]
     fn test_gather_batch_out_of_bounds() {

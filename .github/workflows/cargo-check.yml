@@ -21,4 +21,9 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --features test-cuda,ci-check
+          args: --features cuda,ci-check
+      - name: Check CUDNN
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --features cudnn,ci-check
