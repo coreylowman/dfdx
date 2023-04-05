@@ -285,20 +285,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                 if lhs_valid || rhs_valid {
                     let lhs_count = std::sync::Arc::strong_count(&lhs.data);
                     let rhs_count = std::sync::Arc::strong_count(&rhs.data);
-                    if lhs_valid && (lhs_count == 1 || !rhs_valid || rhs_count != 1) {
-                        lhs.id = unique_id();
-                        let params = (
-                            op,
-                            numel,                        // const size_t numel,
-                            S::NUM_DIMS,                  // const size_t num_dims,
-                            &info,                        // const size_t *info,
-                            0u64,                         // const float *lhs,
-                            rhs.data.as_ref(),            // const float *rhs,
-                            Arc::make_mut(&mut lhs.data), // float *out,
-                        );
-                        unsafe { fwd_fn.launch(cfg, params) }?;
-                        Ok(lhs)
-                    } else {
+                    if rhs_valid && (rhs_count == 1 || !lhs_valid || lhs_count != 1) {
                         rhs.id = unique_id();
                         let params = (
                             op,
@@ -311,6 +298,19 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                         );
                         unsafe { fwd_fn.launch(cfg, params) }?;
                         Ok(rhs)
+                    } else {
+                        lhs.id = unique_id();
+                        let params = (
+                            op,
+                            numel,                        // const size_t numel,
+                            S::NUM_DIMS,                  // const size_t num_dims,
+                            &info,                        // const size_t *info,
+                            0u64,                         // const float *lhs,
+                            rhs.data.as_ref(),            // const float *rhs,
+                            Arc::make_mut(&mut lhs.data), // float *out,
+                        );
+                        unsafe { fwd_fn.launch(cfg, params) }?;
+                        Ok(lhs)
                     }
                 } else {
                     let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
