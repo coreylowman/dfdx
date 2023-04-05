@@ -1,7 +1,7 @@
 //! Demonstrates how to use a transformer module on nightly rust.
 
 fn main() {
-    use dfdx::{prelude::*, tensor::AutoDevice};
+    use dfdx::prelude::*;
 
     let dev = AutoDevice::default();
     type Model = Transformer<16, 4, 3, 3, 8>;

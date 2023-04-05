@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::{boxed::Box, vec::Vec};
 
-use super::phantom::GhostTensor;
+use super::ghost::GhostTensor;
 use super::{
     storage_traits::{AllocGrad, DeviceStorage},
     unique_id, Tensor, UniqueId,
