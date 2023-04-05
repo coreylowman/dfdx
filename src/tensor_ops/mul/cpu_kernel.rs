@@ -19,6 +19,7 @@ impl<F: Float> UnaryDerivative<F> for super::ScalarMulKernelOp<F> {
 }
 
 impl<F: Float> BinaryDerivative<F> for super::BinaryMulKernelOp {
+    const HAS_CONST_DF: bool = false;
     #[inline(always)]
     fn f(&self, &x: &F, &y: &F) -> F {
         x * y

@@ -1,6 +1,7 @@
 use crate::tensor_ops::cpu_kernels::BinaryDerivative;
 
 impl<F: num_traits::Float> BinaryDerivative<F> for super::MaximumKernelOp {
+    const HAS_CONST_DF: bool = false;
     #[inline(always)]
     fn f(&self, &x: &F, &y: &F) -> F {
         x.max(y)

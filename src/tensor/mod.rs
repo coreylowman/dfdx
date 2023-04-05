@@ -139,6 +139,7 @@ mod unique_id;
 pub(crate) mod storage_traits;
 mod tensor_impls;
 
+pub(crate) use phantom::GhostTensor;
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 
 pub use cpu::{Cpu, CpuError};

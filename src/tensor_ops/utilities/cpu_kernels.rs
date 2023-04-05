@@ -3,7 +3,7 @@ use crate::{
     shapes::{Dtype, Shape},
     tensor::{
         cpu::{Cpu, LendingIterator, NdIndex},
-        unique_id, Tensor, ZerosTensor,
+        unique_id, GhostTensor, Tensor, ZerosTensor,
     },
 };
 
@@ -26,10 +26,19 @@ pub trait UnaryDerivative<E> {
     }
 }
 
-pub trait BinaryDerivative<E> {
+pub trait BinaryDerivative<E>: std::fmt::Debug {
+    /// Whether the derivative of this op can be computed without
+    /// any data.
+    const HAS_CONST_DF: bool;
     fn f(&self, x: &E, y: &E) -> E;
     fn dfdx(&self, x: &E, y: &E) -> E;
     fn dfdy(&self, x: &E, y: &E) -> E;
+    fn const_dfdx(&self) -> E {
+        unimplemented!()
+    }
+    fn const_dfdy(&self) -> E {
+        unimplemented!()
+    }
 }
 
 impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
@@ -105,6 +114,7 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
 }
 
 impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
+    const BACKWARD_WITHOUT_DATA: bool = Op::HAS_CONST_DF;
     fn forward<S: Shape>(
         &self,
         op: Op,
@@ -122,6 +132,36 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
             *o = op.f(l, r);
         }
         Ok(out)
+    }
+    fn forward_reuse<S: Shape>(
+        &self,
+        op: Op,
+        mut lhs: Tensor<S, E, Self>,
+        mut rhs: Tensor<S, E, Self>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err> {
+        let lhs_valid = lhs.strides == lhs.shape.strides();
+        let rhs_valid = rhs.strides == rhs.shape.strides();
+        if lhs_valid || rhs_valid {
+            let lhs_count = std::sync::Arc::strong_count(&lhs.data);
+            let rhs_count = std::sync::Arc::strong_count(&rhs.data);
+            if lhs_valid && (lhs_count == 1 || !rhs_valid || rhs_count != 1) {
+                lhs.id = unique_id();
+                let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
+                for l in lhs.buf_iter_mut() {
+                    *l = op.f(l, &rhs.data[rhs_idx.next().unwrap()]);
+                }
+                Ok(lhs)
+            } else {
+                rhs.id = unique_id();
+                let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
+                for r in rhs.buf_iter_mut() {
+                    *r = op.f(&lhs.data[lhs_idx.next().unwrap()], r);
+                }
+                Ok(rhs)
+            }
+        } else {
+            <Self as BinaryKernel<Op, E>>::forward(self, op, &lhs, &rhs)
+        }
     }
     fn backward<S: Shape>(
         &self,
@@ -145,6 +185,26 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
             let r = &rhs_buf[rhs_i];
             grad_lhs[lhs_i] += op.dfdx(l, r) * go;
             grad_rhs[rhs_i] += op.dfdy(l, r) * go;
+        }
+        Ok(())
+    }
+    fn backward_without_data<S: Shape>(
+        &self,
+        op: Op,
+        lhs: &GhostTensor<S, E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &GhostTensor<S, E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err> {
+        assert!(Op::HAS_CONST_DF);
+        let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
+        let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
+        for &go in grad_out.iter() {
+            let lhs_i = lhs_idx.next().unwrap();
+            let rhs_i = rhs_idx.next().unwrap();
+            grad_lhs[lhs_i] += op.const_dfdx() * go;
+            grad_rhs[rhs_i] += op.const_dfdy() * go;
         }
         Ok(())
     }

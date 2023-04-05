@@ -19,13 +19,14 @@ impl<F: Float> UnaryDerivative<F> for super::ScalarDivKernelOp<F> {
 }
 
 impl<F: Float> BinaryDerivative<F> for super::BinaryDivKernelOp {
+    const HAS_CONST_DF: bool = false;
     #[inline(always)]
     fn f(&self, &x: &F, &y: &F) -> F {
         x / y
     }
     #[inline(always)]
     fn dfdx(&self, _: &F, &y: &F) -> F {
-        F::one() / y
+        y.recip()
     }
     #[inline(always)]
     fn dfdy(&self, &x: &F, y: &F) -> F {

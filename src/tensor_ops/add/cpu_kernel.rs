@@ -2,6 +2,7 @@ use crate::tensor_ops::cpu_kernels::{BinaryDerivative, UnaryDerivative};
 use num_traits::Float;
 
 impl<F: Float> BinaryDerivative<F> for super::BinaryAddKernelOp {
+    const HAS_CONST_DF: bool = true;
     #[inline(always)]
     fn f(&self, &x: &F, &y: &F) -> F {
         x + y
@@ -12,6 +13,14 @@ impl<F: Float> BinaryDerivative<F> for super::BinaryAddKernelOp {
     }
     #[inline(always)]
     fn dfdy(&self, _: &F, _: &F) -> F {
+        F::one()
+    }
+    #[inline(always)]
+    fn const_dfdx(&self) -> F {
+        F::one()
+    }
+    #[inline(always)]
+    fn const_dfdy(&self) -> F {
         F::one()
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Dtype, HasShape, Shape},
-    tensor::{DeviceStorage, Merge, PutTape, SplitTape, Tape, Tensor},
+    tensor::{DeviceStorage, GhostTensor, Merge, PutTape, SplitTape, Tape, Tensor},
 };
 
 pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
@@ -32,11 +32,18 @@ pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
 }
 
 pub trait BinaryKernel<Op, E: Dtype>: DeviceStorage {
+    const BACKWARD_WITHOUT_DATA: bool;
     fn forward<S: Shape>(
         &self,
         op: Op,
         lhs: &Tensor<S, E, Self>,
         rhs: &Tensor<S, E, Self>,
+    ) -> Result<Tensor<S, E, Self>, Self::Err>;
+    fn forward_reuse<S: Shape>(
+        &self,
+        op: Op,
+        lhs: Tensor<S, E, Self>,
+        rhs: Tensor<S, E, Self>,
     ) -> Result<Tensor<S, E, Self>, Self::Err>;
 
     fn backward<S: Shape>(
@@ -45,6 +52,15 @@ pub trait BinaryKernel<Op, E: Dtype>: DeviceStorage {
         lhs: &Tensor<S, E, Self>,
         grad_lhs: &mut Self::Vec<E>,
         rhs: &Tensor<S, E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err>;
+    fn backward_without_data<S: Shape>(
+        &self,
+        op: Op,
+        lhs: &GhostTensor<S, E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &GhostTensor<S, E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
@@ -102,18 +118,35 @@ pub(crate) fn try_binary_op<
     assert_eq!(lhs.shape(), rhs.shape());
     let (lhs, ltape) = lhs.split_tape();
     let (rhs, rtape) = rhs.split_tape();
-    let mut tape = ltape.merge(rtape);
-    let out = lhs.device.forward(op, &lhs, &rhs)?;
     let lhs_ghost = lhs.ghost();
     let rhs_ghost = rhs.ghost();
-    let out_ghost = out.ghost();
-    tape.add_backward_op(move |grads| {
-        grads.try_alloc_for(&lhs_ghost)?;
-        grads.try_alloc_for(&rhs_ghost)?;
-        grads.try_alloc_for(&out_ghost)?;
-        let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs_ghost, &rhs_ghost, &out_ghost);
-        lhs.device
-            .backward(op, &lhs, grad_lhs, &rhs, grad_rhs, grad_out)
-    });
-    Ok(out.put_tape(tape))
+    let mut tape = ltape.merge(rtape);
+    if D::BACKWARD_WITHOUT_DATA {
+        let out = lhs_ghost.dev.forward_reuse(op, lhs, rhs)?;
+        let out_ghost = out.ghost();
+        tape.add_backward_op(move |grads| {
+            grads.try_alloc_for(&lhs_ghost)?;
+            grads.try_alloc_for(&rhs_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_lhs, grad_rhs, grad_out) =
+                grads.muts_and_ref(&lhs_ghost, &rhs_ghost, &out_ghost);
+            lhs_ghost
+                .dev
+                .backward_without_data(op, &lhs_ghost, grad_lhs, &rhs_ghost, grad_rhs, grad_out)
+        });
+        Ok(out.put_tape(tape))
+    } else {
+        let out = lhs.device.forward(op, &lhs, &rhs)?;
+        let out_ghost = out.ghost();
+        tape.add_backward_op(move |grads| {
+            grads.try_alloc_for(&lhs_ghost)?;
+            grads.try_alloc_for(&rhs_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_lhs, grad_rhs, grad_out) =
+                grads.muts_and_ref(&lhs_ghost, &rhs_ghost, &out_ghost);
+            lhs.device
+                .backward(op, &lhs, grad_lhs, &rhs, grad_rhs, grad_out)
+        });
+        Ok(out.put_tape(tape))
+    }
 }

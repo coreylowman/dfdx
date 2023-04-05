@@ -2,6 +2,7 @@ use crate::tensor_ops::cpu_kernels::BinaryDerivative;
 use num_traits::Float;
 
 impl<F: Float> BinaryDerivative<F> for super::BCEKernelOp {
+    const HAS_CONST_DF: bool = false;
     #[inline(always)]
     fn f(&self, &logit: &F, &prob: &F) -> F {
         logit.max(F::zero()) - logit * prob + (F::one() + (-logit.abs()).exp()).ln()
