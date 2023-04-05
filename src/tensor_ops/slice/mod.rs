@@ -62,9 +62,9 @@ impl<S: Shape, E: Unit, D: SliceKernel<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
         let out = inp.device.forward(&inp, &slice)?;
         let phantom_out = out.clone();
 
-        tape.try_alloc_grad(&inp)?;
-        tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
+            grads.try_alloc_for(&inp)?;
+            grads.try_alloc_for(&phantom_out)?;
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
             inp.device.backward(&inp, grad_inp, grad_out, &slice)
         });

@@ -74,9 +74,9 @@ impl<S: Shape, E: Dtype, D: RollKernel<E>, T: Tape<E, D>> Roll for Tensor<S, E, 
         let (t, mut tape) = self.split_tape();
         let out = t.device.forward(op, &t)?;
         let phantom_out = out.clone();
-        tape.try_alloc_grad(&t)?;
-        tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
+            grads.try_alloc_for(&t)?;
+            grads.try_alloc_for(&phantom_out)?;
             let (grad_inp, grad_out) = grads.mut_and_ref(&t, &phantom_out);
             t.device.backward(op, &t, grad_inp, grad_out)
         });
