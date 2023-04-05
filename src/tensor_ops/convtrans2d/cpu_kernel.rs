@@ -1,5 +1,5 @@
 use crate::shapes::{Dtype, Shape};
-use crate::tensor::{cpu::*, Tensor};
+use crate::tensor::{cpu::*, GhostTensor, Tensor};
 use crate::tensor_ops::matmul::cpu_kernel::MatMulImpl;
 
 use std::sync::Arc;
@@ -9,15 +9,11 @@ use super::{ConvTrans2DKernel, ConvTrans2DOp};
 impl ConvTrans2DOp {
     #[inline(always)]
     fn unfold_idx(&self, [k1, k2, y, x]: [usize; 4]) -> Option<[usize; 2]> {
-        let mut oh = y * self.stride;
-        oh += k1;
-        oh -= self.padding;
-
-        let mut ow = x * self.stride;
-        ow += k2;
-        ow -= self.padding;
-
-        Some([oh, ow])
+        (y * self.stride + k1)
+            .checked_sub(self.padding)
+            .zip((x * self.stride + k2).checked_sub(self.padding))
+            .filter(|&(oh, ow)| oh < self.h_out && ow < self.w_out)
+            .map(|(oh, ow)| [oh, ow])
     }
 }
 
@@ -204,7 +200,7 @@ where
         grad_lhs: &mut Self::Vec<E>,
         rhs: &Tensor<R, E, Self>,
         grad_rhs: &mut Self::Vec<E>,
-        out: &Tensor<O, E, Self>,
+        out: &GhostTensor<O, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let f_tr_shape = op.filters_tr_shape();

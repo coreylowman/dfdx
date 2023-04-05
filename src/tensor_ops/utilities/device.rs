@@ -62,6 +62,12 @@ pub trait Device<E: Dtype>:
 
     // boolean operations
     + super::super::boolean::BooleanKernel
+    + super::super::cmp::ScalarCmpKernel<super::super::cmp::EqKernelOp, E>
+    + super::super::cmp::ScalarCmpKernel<super::super::cmp::NeKernelOp, E>
+    + super::super::cmp::ScalarCmpKernel<super::super::cmp::GtKernelOp, E>
+    + super::super::cmp::ScalarCmpKernel<super::super::cmp::GeKernelOp, E>
+    + super::super::cmp::ScalarCmpKernel<super::super::cmp::LtKernelOp, E>
+    + super::super::cmp::ScalarCmpKernel<super::super::cmp::LeKernelOp, E>
 
     // unary
     + UnaryKernel<super::super::abs::AbsKernelOp, E>
@@ -81,6 +87,7 @@ pub trait Device<E: Dtype>:
     + UnaryKernel<super::super::tanh::TanhKernelOp, E>
     + UnaryKernel<super::super::pow::PowfKernelOp<E>, E>
     + UnaryKernel<super::super::pow::PowiKernelOp, E>
+    + UnaryKernel<super::super::recip::RecipKernelOp, E>
 
     // to_dtype
     + super::super::to_dtype::ToDtypeKernel<f32, E>

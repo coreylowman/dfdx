@@ -127,6 +127,7 @@
 pub(crate) mod cpu;
 #[cfg(feature = "cuda")]
 pub(crate) mod cuda;
+mod ghost;
 mod gradients;
 mod masks;
 #[cfg(feature = "numpy")]
@@ -138,6 +139,7 @@ mod unique_id;
 pub(crate) mod storage_traits;
 mod tensor_impls;
 
+pub(crate) use ghost::GhostTensor;
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
 
 pub use cpu::{Cpu, CpuError};

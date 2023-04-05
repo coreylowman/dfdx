@@ -20,8 +20,11 @@ impl<S: Shape, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>, T> Tensor
     pub fn write_to_npz<W: Write + Seek>(
         &self,
         w: &mut zip::ZipWriter<W>,
-        filename: String,
+        mut filename: String,
     ) -> ZipResult<()> {
+        if !filename.ends_with(".npy") {
+            filename.push_str(".npy");
+        }
         w.start_file(filename, Default::default())?;
         self.write_to(w)?;
         Ok(())
@@ -31,9 +34,14 @@ impl<S: Shape, E: Dtype + NumpyDtype, D: DeviceStorage + CopySlice<E>, T> Tensor
     pub fn read_from_npz<R: Read + Seek>(
         &mut self,
         r: &mut zip::ZipArchive<R>,
-        filename: String,
+        mut filename: String,
     ) -> Result<(), NpzError> {
-        let mut f = r.by_name(&filename)?;
+        if !filename.ends_with(".npy") {
+            filename.push_str(".npy");
+        }
+        let mut f = r
+            .by_name(&filename)
+            .expect(&std::format!("'{}' not found", filename));
         self.read_from(&mut f)?;
         Ok(())
     }

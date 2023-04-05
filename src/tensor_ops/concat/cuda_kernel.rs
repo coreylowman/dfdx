@@ -46,18 +46,12 @@ where
             tape: Default::default(),
         })
     }
-    fn backward<A: Shape, B: Shape>(
+    fn backward(
         &self,
-        _: &Tensor<A, E, Self>,
         grad_a: &mut Self::Vec<E>,
-        _: &Tensor<B, E, Self>,
         grad_b: &mut Self::Vec<E>,
-        _: &Tensor<A::Catted, E, Self>,
         grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>
-    where
-        A: super::ConcatShape<B>,
-    {
+    ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::BWD_FN, Self::BWD_FN) {
             self.dev
                 .load_ptx(PTX.into(), Self::BWD_FN, &[Self::BWD_FN])?;

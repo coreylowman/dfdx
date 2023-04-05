@@ -62,13 +62,15 @@ where
         let mut tape = a_tape.merge(b_tape);
         let device = lhs.device.clone();
         let out = device.forward(&lhs, &rhs)?;
-        let phantom_out = out.clone();
-        tape.try_alloc_grad(&lhs)?;
-        tape.try_alloc_grad(&rhs)?;
-        tape.try_alloc_grad(&out)?;
+        let lhs_ghost = lhs.ghost();
+        let rhs_ghost = rhs.ghost();
+        let out_ghost = out.ghost();
         tape.add_backward_op(move |grads| {
-            let (grad_a, grad_b, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
-            device.backward(&lhs, grad_a, &rhs, grad_b, &phantom_out, grad_out)
+            grads.try_alloc_for(&lhs_ghost)?;
+            grads.try_alloc_for(&rhs_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_a, grad_b, grad_out) = grads.muts_and_ref(&lhs_ghost, &rhs_ghost, &out_ghost);
+            device.backward(grad_a, grad_b, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -82,17 +84,12 @@ pub trait ConcatKernel<E: Dtype>: DeviceStorage {
     ) -> Result<Tensor<A::Catted, E, Self>, Self::Err>
     where
         A: ConcatShape<B>;
-    fn backward<A: Shape, B: Shape>(
+    fn backward(
         &self,
-        a: &Tensor<A, E, Self>,
         grad_a: &mut Self::Vec<E>,
-        b: &Tensor<B, E, Self>,
         grad_b: &mut Self::Vec<E>,
-        out: &Tensor<A::Catted, E, Self>,
         grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>
-    where
-        A: ConcatShape<B>;
+    ) -> Result<(), Self::Err>;
 }
 
 pub trait ConcatShape<Rhs: Shape>: Shape {

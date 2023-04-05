@@ -4,7 +4,7 @@ use cudarc::driver::{DeviceRepr, DeviceSlice};
 
 use crate::{
     shapes::*,
-    tensor::{unique_id, Cuda, Tensor},
+    tensor::{launch_cfg, unique_id, Cuda, GhostTensor, Tensor},
 };
 
 use std::sync::Arc;
@@ -121,7 +121,7 @@ where
         grad_lhs: &mut Self::Vec<E>,
         rhs: &Tensor<R, E, Self>,
         grad_rhs: &mut Self::Vec<E>,
-        out: &Tensor<O, E, Self>,
+        out: &GhostTensor<O, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let conv = self.cudnn.create_conv2d::<E>(

@@ -29,8 +29,8 @@ extern "C" __global__ void FORWARD( \
         tmp_i /= dims[d]; \
     } \
 \
-    TYPENAME x = lhs[lhs_i]; \
-    TYPENAME y = rhs[rhs_i]; \
+    TYPENAME x = lhs ? lhs[lhs_i] : out[i]; \
+    TYPENAME y = rhs ? rhs[rhs_i] : out[i]; \
     TYPENAME fx; \
 \
     FUNC\
@@ -68,8 +68,8 @@ extern "C" __global__ void BACKWARD_LHS( \
         tmp_i /= dims[d]; \
     } \
     unsigned int lhs_i = i / chunk_len; \
-    TYPENAME x = lhs[lhs_i]; \
-    TYPENAME y = rhs[rhs_i]; \
+    TYPENAME x = lhs ? lhs[lhs_i] : 0; \
+    TYPENAME y = rhs ? rhs[rhs_i] : 0; \
     TYPENAME go = grad_out[out_i]; \
 \
     TYPENAME dfdx = (DFDX); \
@@ -107,8 +107,8 @@ extern "C" __global__ void BACKWARD_RHS( \
     } \
     unsigned int rhs_i = i / chunk_len; \
 \
-    TYPENAME x = lhs[lhs_i]; \
-    TYPENAME y = rhs[rhs_i]; \
+    TYPENAME x = lhs ? lhs[lhs_i] : 0; \
+    TYPENAME y = rhs ? rhs[rhs_i] : 0; \
     TYPENAME go = grad_out[out_i]; \
 \
     TYPENAME dfdy = (DFDY); \

@@ -33,18 +33,12 @@ impl<E: Dtype> super::ConcatKernel<E> for Cpu {
             tape: Default::default(),
         })
     }
-    fn backward<A: Shape, B: Shape>(
+    fn backward(
         &self,
-        _: &Tensor<A, E, Self>,
         grad_a: &mut Self::Vec<E>,
-        _: &Tensor<B, E, Self>,
         grad_b: &mut Self::Vec<E>,
-        _: &Tensor<A::Catted, E, Self>,
         grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>
-    where
-        A: super::ConcatShape<B>,
-    {
+    ) -> Result<(), Self::Err> {
         let mut offset = 0;
         for ga in grad_a.iter_mut() {
             *ga += grad_out[offset];

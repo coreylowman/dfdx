@@ -21,10 +21,10 @@ fn main() {
 
     let dev: Dev = Default::default();
     let mut m = dev.build_module::<Model, Dtype>();
+    let mut grads = m.alloc_grads();
 
     loop {
         let img: Tensor<InputShape, Dtype, _> = dev.sample_normal();
-        let grads = m.alloc_grads();
 
         let start = Instant::now();
         let out = m.forward_mut(img.traced(grads));
@@ -33,7 +33,7 @@ fn main() {
         let fwd_dur = start.elapsed();
 
         let start = Instant::now();
-        let _ = loss.backward();
+        grads = loss.backward();
         dev.synchronize();
         let bwd_dur = start.elapsed();
         println!("fwd={:?} bwd={:?}", fwd_dur, bwd_dur);

@@ -181,7 +181,9 @@ mod negate;
 mod normalize;
 mod permute_to;
 mod pow;
+mod prelu;
 mod realize_to;
+mod recip;
 mod relu;
 mod reshape_to;
 mod roll;
@@ -233,7 +235,9 @@ pub use negate::negate;
 pub use normalize::normalize;
 pub use permute_to::PermuteTo;
 pub use pow::{powf, powi};
+pub use prelu::{leakyrelu, prelu, TryPReLU};
 pub use realize_to::RealizeTo;
+pub use recip::recip;
 pub use relu::relu;
 pub use reshape_to::ReshapeTo;
 pub use roll::Roll;
@@ -266,9 +270,8 @@ mod convtrans2d;
 pub use convtrans2d::{ConvTransAlgebra, TryConvTrans2D, TryConvTrans2DTo};
 
 mod upscale2d;
-#[cfg(feature = "nightly")]
 pub(crate) use upscale2d::Upscale2DKernel;
-pub use upscale2d::{Bilinear, ConstUpscale2D, NearestNeighbor, TryUpscale2D, UpscaleMethod};
+pub use upscale2d::{Bilinear, GenericUpscale2D, NearestNeighbor, TryUpscale2D, UpscaleMethod};
 
 #[cfg(feature = "nightly")]
 mod pool2d;

@@ -43,15 +43,34 @@ pub struct Softmax;
 impl ZeroSizedModule for Softmax {}
 impl NonMutableModule for Softmax {}
 
-impl<Ax: Axes, S, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Softmax
-where
-    S: Shape<LastAxis = Ax> + ReduceShape<Ax>,
-{
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Softmax {
     type Output = Tensor<S, E, D, T>;
     type Error = D::Err;
 
     fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
-        input.try_softmax::<Ax>()
+        input.try_softmax::<S::LastAxis>()
+    }
+}
+
+/// Calls [prelu()] with constant value - defaults to 0.05
+#[derive(Debug, Clone, Copy)]
+pub struct LeakyReLU<E: Dtype>(pub E);
+
+impl<E: Dtype> Default for LeakyReLU<E> {
+    fn default() -> Self {
+        Self(E::from_f32(0.05).unwrap())
+    }
+}
+
+impl<E: Dtype> ZeroSizedModule for LeakyReLU<E> {}
+impl<E: Dtype> NonMutableModule for LeakyReLU<E> {}
+
+impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for LeakyReLU<E> {
+    type Output = Tensor<S, E, D, T>;
+    type Error = <Tensor<S, E, D, T> as HasErr>::Err;
+
+    fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, Self::Error> {
+        input.try_prelu(self.0)
     }
 }
 
@@ -168,6 +187,21 @@ mod tests {
         let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
         let r1 = Softmax.forward_mut(t.clone());
         let r2 = t.softmax::<crate::shapes::Axis<1>>();
+        assert_eq!(r1.array(), r2.array());
+    }
+
+    #[test]
+    fn test_nn_activations_leaky_relu() {
+        let dev: TestDevice = Default::default();
+
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let r1 = LeakyReLU(0.05).forward_mut(t.clone());
+        let r2 = t.prelu(dev.tensor([0.05, 0.05, 0.05, 0.05, 0.05]));
+        assert_eq!(r1.array(), r2.array());
+
+        let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
+        let r1 = LeakyReLU(0.05).forward_mut(t.clone());
+        let r2 = t.prelu(dev.tensor([[0.05, 0.05, 0.05], [0.05, 0.05, 0.05]]));
         assert_eq!(r1.array(), r2.array());
     }
 }

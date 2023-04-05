@@ -73,14 +73,17 @@ impl<
         let (rhs, rhs_tape) = rhs.split_tape();
 
         let out = lhs.device.forward(&self, &lhs, &rhs)?;
-        let phantom_out = out.clone();
 
+        let lhs_ghost = lhs.ghost();
+        let rhs_ghost = rhs.ghost();
+        let out_ghost = out.ghost();
         let mut tape = tape.merge(rhs_tape);
-        tape.try_alloc_grad(&lhs)?;
-        tape.try_alloc_grad(&rhs)?;
-        tape.try_alloc_grad(&out)?;
         tape.add_backward_op(move |grads| {
-            let (grad_lhs, grad_rhs, grad_out) = grads.muts_and_ref(&lhs, &rhs, &phantom_out);
+            grads.try_alloc_for(&lhs_ghost)?;
+            grads.try_alloc_for(&rhs_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_lhs, grad_rhs, grad_out) =
+                grads.muts_and_ref(&lhs_ghost, &rhs_ghost, &out_ghost);
             lhs.device
                 .backward(&self, &lhs, grad_lhs, &rhs, grad_rhs, grad_out)
         });

@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Axes, Dtype, HasAxes, ReduceShapeTo, Shape},
-    tensor::{Cpu, Tensor, ZerosTensor},
+    tensor::{Cpu, GhostTensor, Tensor, ZerosTensor},
     tensor_ops::utilities::reduction_utils::index_for_reductions,
 };
 
@@ -38,9 +38,9 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
     }
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        inp: &Tensor<Src, E, Self>,
+        _dst: Dst,
+        inp: &GhostTensor<Src, E, Self>,
         grad_inp: &mut Self::Vec<E>,
-        _: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where
@@ -49,7 +49,7 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
         if Dst::NUM_DIMS == 0 {
             debug_assert_eq!(grad_out.len(), 1);
             let v = grad_out[0];
-            let scale = E::from_usize(inp.shape.num_elements() / inp.data.len()).unwrap();
+            let scale = E::from_usize(inp.shape.num_elements() / inp.len).unwrap();
             for i in grad_inp.iter_mut() {
                 *i += v * scale;
             }
