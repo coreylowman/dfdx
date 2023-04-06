@@ -83,11 +83,9 @@ where
         let a_strides = inp.strides;
 
         let mut c_dims = a_dims;
-        let mut c_strides = a_strides;
-
+        let c_strides = BroadcastStridesTo::<Src, Ax>::broadcast_strides(&dst, dst.strides());
         for ax in Ax::as_array() {
             c_dims[ax as usize] = 1;
-            c_strides[ax as usize] = 0;
         }
 
         std::println!("{a_dims:?} {a_strides:?}");
