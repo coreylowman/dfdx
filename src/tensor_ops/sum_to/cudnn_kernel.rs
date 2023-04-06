@@ -26,23 +26,26 @@ impl HasCudaKernel<f64> for Cuda {
     const FNS: &'static [&'static str] = &["sum_to_fwd_f64", "sum_to_bwd_f64"];
 }
 
-fn make_at_least_4d<S: Shape>(shape: S, strides: S::Concrete) -> (Vec<i32>, Vec<i32>) {
+fn make_at_least_4d<S: Shape>(
+    _shape: S,
+    dims: S::Concrete,
+    strides: S::Concrete,
+) -> (Vec<i32>, Vec<i32>) {
     if S::NUM_DIMS >= 4 {
         (
-            shape.concrete().into_iter().map(|x| x as i32).collect(),
+            dims.into_iter().map(|x| x as i32).collect(),
             strides.into_iter().map(|x| x as i32).collect(),
         )
     } else {
-        let src = shape.concrete();
-        let mut shape = [1usize; 4];
-        let mut strides = [0usize; 4];
+        let mut padded_dims = [1usize; 4];
+        let mut padded_strides = [0usize; 4];
         for i in 0..S::NUM_DIMS {
-            shape[4 - S::NUM_DIMS + i] = src[i];
-            strides[4 - S::NUM_DIMS + i] = strides[i];
+            padded_dims[4 - S::NUM_DIMS + i] = dims[i];
+            padded_strides[4 - S::NUM_DIMS + i] = strides[i];
         }
         (
-            shape.into_iter().map(|x| x as i32).collect(),
-            strides.into_iter().map(|x| x as i32).collect(),
+            padded_dims.into_iter().map(|x| x as i32).collect(),
+            padded_strides.into_iter().map(|x| x as i32).collect(),
         )
     }
 }
@@ -68,18 +71,38 @@ where
 
         let mut storage = unsafe { self.dev.alloc::<E>(dst.num_elements()) }?;
 
-        let reduce = self.cudnn.create_reduction_no_indices::<E>(
-            cudarc::cudnn::sys::cudnnReduceTensorOp_t::CUDNN_REDUCE_TENSOR_ADD,
-            cudarc::cudnn::sys::cudnnNanPropagation_t::CUDNN_PROPAGATE_NAN,
-        )?;
+        let reduce = self
+            .cudnn
+            .create_reduction_no_indices::<E>(
+                cudarc::cudnn::sys::cudnnReduceTensorOp_t::CUDNN_REDUCE_TENSOR_ADD,
+                cudarc::cudnn::sys::cudnnNanPropagation_t::CUDNN_PROPAGATE_NAN,
+            )
+            .unwrap();
+
+        let a_dims = inp.shape.concrete();
+        let a_strides = inp.strides;
+
+        let mut c_dims = a_dims;
+        let mut c_strides = a_strides;
+
+        for ax in Ax::as_array() {
+            c_dims[ax as usize] = 1;
+            c_strides[ax as usize] = 0;
+        }
+
+        std::println!("{a_dims:?} {a_strides:?}");
+        std::println!("{c_dims:?} {c_strides:?}");
+
         let a = {
-            let (a_dims, a_strides) = make_at_least_4d(inp.shape, inp.strides);
+            let (a_dims, a_strides) = make_at_least_4d(inp.shape, a_dims, a_strides);
             self.cudnn.create_nd_tensor(&a_dims, &a_strides)
-        }?;
+        }
+        .unwrap();
         let c = {
-            let (c_dims, c_strides) = make_at_least_4d(dst, dst.strides());
+            let (c_dims, c_strides) = make_at_least_4d(inp.shape, c_dims, c_strides);
             self.cudnn.create_nd_tensor(&c_dims, &c_strides)
-        }?;
+        }
+        .unwrap();
         let op = ReduceTensor {
             reduce: &reduce,
             a: &a,
@@ -97,7 +120,8 @@ where
                 inp.data.as_ref(),
                 &mut storage,
             )
-        }?;
+        }
+        .unwrap();
         Ok(self.build_tensor(dst, dst.strides(), storage))
     }
 
