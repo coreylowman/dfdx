@@ -5,14 +5,17 @@ use crate::{
     tensor::{masks::triangle_mask, storage_traits::*, unique_id, Tensor},
 };
 
-use super::{Cpu, CpuError, LendingIterator};
+use super::{CachableVec, Cpu, CpuError, LendingIterator};
 
 use rand::{distributions::Distribution, Rng};
 use std::{sync::Arc, vec::Vec};
 
 impl Cpu {
     #[inline]
-    pub(crate) fn try_alloc_zeros<E: Unit>(&self, numel: usize) -> Result<Vec<E>, CpuError> {
+    pub(crate) fn try_alloc_zeros<E: Unit>(
+        &self,
+        numel: usize,
+    ) -> Result<CachableVec<E>, CpuError> {
         self.try_alloc_elem::<E>(numel, Default::default())
     }
 
@@ -21,19 +24,41 @@ impl Cpu {
         &self,
         numel: usize,
         elem: E,
-    ) -> Result<Vec<E>, CpuError> {
-        #[cfg(feature = "fast-alloc")]
-        {
-            Ok(std::vec![elem; numel])
-        }
+    ) -> Result<CachableVec<E>, CpuError> {
+        let num_bytes = std::mem::size_of::<E>() * numel;
+        let reuse = {
+            let cache = self.cache.read().unwrap();
+            cache.contains_key(&num_bytes)
+        };
+        let data = if reuse {
+            let mut cache = self.cache.write().unwrap();
+            let items = cache.get_mut(&num_bytes).unwrap();
+            let allocation: *mut u8 = items.pop().unwrap().0;
+            if items.is_empty() {
+                cache.remove(&num_bytes);
+            }
+            let mut data = unsafe { Vec::from_raw_parts(allocation as *mut E, numel, numel) };
+            data.fill(Default::default());
+            data
+        } else {
+            #[cfg(feature = "fast-alloc")]
+            {
+                std::vec![elem; numel]
+            }
 
-        #[cfg(not(feature = "fast-alloc"))]
-        {
-            let mut data: Vec<E> = Vec::new();
-            data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
-            data.resize(numel, elem);
-            Ok(data)
-        }
+            #[cfg(not(feature = "fast-alloc"))]
+            {
+                let mut data: Vec<E> = Vec::new();
+                data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
+                data.resize(numel, elem);
+                data
+            }
+        };
+
+        Ok(CachableVec {
+            data,
+            destination: self.cache.clone(),
+        })
     }
 }
 
@@ -187,6 +212,10 @@ impl<E: Unit> TensorFromVec<E> for Cpu {
         if src.len() != num_elements {
             Err(CpuError::WrongNumElements)
         } else {
+            let src = CachableVec {
+                data: src,
+                destination: self.cache.clone(),
+            };
             Ok(Tensor {
                 id: unique_id(),
                 data: Arc::new(src),

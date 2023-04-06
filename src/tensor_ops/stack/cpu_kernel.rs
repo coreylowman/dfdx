@@ -1,4 +1,5 @@
 use crate::{
+    prelude::cpu::CachableVec,
     shapes::*,
     tensor::{unique_id, Cpu, Tensor},
 };
@@ -36,6 +37,11 @@ impl<E: Dtype> super::StackKernel<E> for Cpu {
         for i in inp {
             data.extend_from_slice(i.data.as_ref());
         }
+
+        let data = CachableVec {
+            data,
+            destination: self.cache.clone(),
+        };
 
         Ok(Tensor {
             id: unique_id(),
