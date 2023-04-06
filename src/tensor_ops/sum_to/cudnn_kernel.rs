@@ -88,9 +88,6 @@ where
             c_dims[ax as usize] = 1;
         }
 
-        std::println!("{a_dims:?} {a_strides:?}");
-        std::println!("{c_dims:?} {c_strides:?}");
-
         let a = {
             let (a_dims, a_strides) = make_at_least_4d(inp.shape, a_dims, a_strides);
             self.cudnn.create_nd_tensor(&a_dims, &a_strides)
