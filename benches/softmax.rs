@@ -23,10 +23,16 @@ fn main() {
 
     loop {
         let img: Tensor<InputShape, Dtype, _> = dev.sample_normal();
-        let grads = Gradients::leaky();
 
         let start = Instant::now();
-        let y = img.traced(grads).softmax::<Ax>();
+        let _ = img.softmax::<Ax>();
+        dev.synchronize();
+        let infer_dur = start.elapsed();
+
+        let img: Tensor<InputShape, Dtype, _> = dev.sample_normal();
+
+        let start = Instant::now();
+        let y = img.leaky_traced().softmax::<Ax>();
         dev.synchronize();
         let fwd_dur = start.elapsed();
 
@@ -34,6 +40,7 @@ fn main() {
         let _ = y.sum().backward();
         dev.synchronize();
         let bwd_dur = start.elapsed();
-        println!("fwd={:?} bwd={:?}", fwd_dur, bwd_dur);
+
+        println!("infer={infer_dur:?}, fwd={fwd_dur:?} bwd={bwd_dur:?}");
     }
 }

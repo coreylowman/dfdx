@@ -25,6 +25,11 @@ fn main() {
         let grads = Gradients::leaky();
 
         let start = Instant::now();
+        let _ = img.clone().sum::<(), _>();
+        dev.synchronize();
+        let infer_dur = start.elapsed();
+
+        let start = Instant::now();
         let y = img.traced(grads).sum();
         dev.synchronize();
         let fwd_dur = start.elapsed();
@@ -33,6 +38,7 @@ fn main() {
         let _ = y.backward();
         dev.synchronize();
         let bwd_dur = start.elapsed();
-        println!("fwd={:?} bwd={:?}", fwd_dur, bwd_dur);
+
+        println!("infer={infer_dur:?}, fwd={fwd_dur:?} bwd={bwd_dur:?}");
     }
 }
