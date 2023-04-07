@@ -27,6 +27,11 @@ fn main() {
         let img: Tensor<InputShape, Dtype, _> = dev.sample_normal();
 
         let start = Instant::now();
+        let _ = m.forward(img.clone());
+        dev.synchronize();
+        let infer_dur = start.elapsed();
+
+        let start = Instant::now();
         let out = m.forward_mut(img.traced(grads));
         let loss = out.square().mean();
         dev.synchronize();
@@ -36,6 +41,6 @@ fn main() {
         grads = loss.backward();
         dev.synchronize();
         let bwd_dur = start.elapsed();
-        println!("fwd={:?} bwd={:?}", fwd_dur, bwd_dur);
+        println!("infer={infer_dur:?}, fwd={fwd_dur:?} bwd={bwd_dur:?}");
     }
 }

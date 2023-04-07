@@ -53,7 +53,7 @@ pub(crate) fn try_unary_op<
     let (inp, mut tape) = inp.split_tape();
     let inp_ghost = inp.ghost();
     let dev = inp.device.clone();
-    if D::BACKWARD_WITHOUT_DATA {
+    if !T::OWNS_TAPE || D::BACKWARD_WITHOUT_DATA {
         let out = inp_ghost.dev.forward(op.clone(), Err(inp))?;
         let out_ghost = out.ghost();
         tape.add_backward_op(move |grads| {
@@ -105,7 +105,7 @@ pub(crate) fn try_binary_op<
     let lhs_ghost = lhs.ghost();
     let rhs_ghost = rhs.ghost();
     let mut tape = ltape.merge(rtape);
-    if D::BACKWARD_WITHOUT_DATA {
+    if !LhsTape::OWNS_TAPE || D::BACKWARD_WITHOUT_DATA {
         let out = lhs_ghost.dev.forward(op, Err(lhs), Err(rhs))?;
         let out_ghost = out.ghost();
         tape.add_backward_op(move |grads| {
