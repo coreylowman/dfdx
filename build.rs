@@ -52,12 +52,16 @@ mod cuda {
             .collect::<Vec<_>>();
 
         #[cfg(feature = "ci-check")]
-        for mut kernel_path in kernel_paths.into_iter() {
-            kernel_path.set_extension("ptx");
+        {
+            println!("cargo:rustc-env=CUDA_COMPUTE_CAP=ci");
 
-            let mut ptx_path: std::path::PathBuf = out_dir.clone().into();
-            ptx_path.push(kernel_path.as_path().file_name().unwrap());
-            std::fs::File::create(ptx_path).unwrap();
+            for mut kernel_path in kernel_paths.into_iter() {
+                kernel_path.set_extension("ptx");
+
+                let mut ptx_path: std::path::PathBuf = out_dir.clone().into();
+                ptx_path.push(kernel_path.as_path().file_name().unwrap());
+                std::fs::File::create(ptx_path).unwrap();
+            }
         }
 
         #[cfg(not(feature = "ci-check"))]
@@ -75,6 +79,8 @@ mod cuda {
                 assert_eq!(lines.next().unwrap(), "compute_cap");
                 lines.next().unwrap().replace('.', "")
             };
+
+            println!("cargo:rustc-env=CUDA_COMPUTE_CAP=sm_{compute_cap}");
 
             kernel_paths
                 .iter()

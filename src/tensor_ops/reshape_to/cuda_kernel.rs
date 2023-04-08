@@ -4,7 +4,7 @@ use crate::{
 };
 use cudarc::{
     driver::{DeviceSlice, LaunchAsync},
-    nvrtc::compile_ptx,
+    nvrtc::{compile_ptx_with_opts, CompileOptions},
     types::CudaTypeName,
 };
 
@@ -17,7 +17,11 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
         let module = std::format!("reshape_fwd_{}", E::NAME);
         if !self.dev.has_func(&module, "reshape_fwd") {
             let src = FWD_KERNEL.replace("$T", E::NAME);
-            let ptx = compile_ptx(src).unwrap();
+            let opts = CompileOptions {
+                arch: Some(env!("CUDA_COMPUTE_CAP")),
+                ..Default::default()
+            };
+            let ptx = compile_ptx_with_opts(src, opts).unwrap();
             self.dev.load_ptx(ptx, &module, &["reshape_fwd"])?;
         }
         let fwd_fn = self.dev.get_func(&module, "reshape_fwd").unwrap();
@@ -56,7 +60,11 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
         let module = std::format!("reshape_bwd_{}", E::NAME);
         if !self.dev.has_func(&module, "reshape_bwd") {
             let src = BWD_KERNEL.replace("$T", E::NAME);
-            let ptx = compile_ptx(src).unwrap();
+            let opts = CompileOptions {
+                arch: Some(env!("CUDA_COMPUTE_CAP")),
+                ..Default::default()
+            };
+            let ptx = compile_ptx_with_opts(src, opts).unwrap();
             self.dev.load_ptx(ptx, &module, &["reshape_bwd"])?;
         }
         let bwd_fn = self.dev.get_func(&module, "reshape_bwd").unwrap();
