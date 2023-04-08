@@ -79,7 +79,7 @@ impl<const I: usize, const O: usize, E: Dtype + Float + SampleUniform, D: Device
 impl<const I: usize, const O: usize, E: Dtype, D: Device<E>, T> Module<T>
     for UnbiasedLinear<I, O, E, D>
 where
-    T: SplitTape + TryMatMul<Tensor<Rank2<I, O>, E, D, T::Tape>> + HasErr<Err = D::Err>,
+    T: SplitTape + TryStaticMatMul<Tensor<Rank2<I, O>, E, D, T::Tape>> + HasErr<Err = D::Err>,
     T::Tape: Tape<E, D>,
 {
     type Output = T::Output;

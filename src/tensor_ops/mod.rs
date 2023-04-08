@@ -221,7 +221,7 @@ pub use huber_error::huber_error;
 pub use ln::ln;
 pub use log_softmax::log_softmax;
 pub use logsumexp_to::LogSumExpTo;
-pub use matmul::{matmul, TryMatMul};
+pub use matmul::{matmul, TryDynamicMatMul, TryDynamicMatMul1, TryStaticMatMul};
 pub use max_to::MaxTo;
 pub use maximum::maximum;
 pub use mean_to::MeanTo;

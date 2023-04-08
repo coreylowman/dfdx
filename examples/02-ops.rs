@@ -3,7 +3,7 @@
 use dfdx::{
     shapes::{Rank0, Rank1, Rank2},
     tensor::{AsArray, AutoDevice, SampleTensor, Tensor},
-    tensor_ops::{MeanTo, TryMatMul},
+    tensor_ops::{MeanTo, TryStaticMatMul},
 };
 
 fn main() {

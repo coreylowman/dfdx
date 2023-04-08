@@ -20,6 +20,59 @@ where
     }
 }
 
+pub trait AssertLayerMatch<Rhs: Shape> {
+    const TYPE_CHECK: ();
+    fn assert_dim_eq(&self);
+}
+
+impl<const M: usize, const I: usize, const O: usize> AssertLayerMatch<(Const<I>, Const<O>)>
+    for Rank1<M>
+{
+    const TYPE_CHECK: () = assert!(
+        M == I,
+        "You are trying to stack tensors, whose outgoing and ingoing dimensions do not match",
+    );
+    fn assert_dim_eq(&self) {
+        let _ = <Self as AssertLayerMatch<(Const<I>, Const<O>)>>::TYPE_CHECK;
+    }
+}
+
+impl<IN, const OUT: usize, const I: usize, const O: usize> AssertLayerMatch<(Const<I>, Const<O>)>
+    for (IN, Const<OUT>)
+{
+    const TYPE_CHECK: () = assert!(
+        OUT == I,
+        "You are trying to stack tensors, whose outgoing and ingoing dimensions do not match",
+    );
+    fn assert_dim_eq(&self) {
+        let _ = <Self as AssertLayerMatch<(Const<I>, Const<O>)>>::TYPE_CHECK;
+    }
+}
+
+impl<B, IN, const OUT: usize, const I: usize, const O: usize> AssertLayerMatch<(Const<I>, Const<O>)>
+    for (B, IN, Const<OUT>)
+{
+    const TYPE_CHECK: () = assert!(
+        OUT == I,
+        "You are trying to stack tensors, whose outgoing and ingoing dimensions do not match",
+    );
+    fn assert_dim_eq(&self) {
+        let _ = <Self as AssertLayerMatch<(Const<I>, Const<O>)>>::TYPE_CHECK;
+    }
+}
+
+// impl<S1: Dim, const O: usize, const IN: usize, const OUT: usize> AssertLayerMatch<Rank2<S1, O>>
+//     for Rank2<IN, OUT>
+// {
+//     const TYPE_CHECK: () = assert!(
+//         OUT == I,
+//         "You are trying to stack tensors, whose outgoing and ingoing dimensions do not match {I}",
+//     );
+//     fn assert_dim_eq(&self) {
+//         let _ = <Self as AssertLayerMatch<Rank2<I, O>>>::TYPE_CHECK;
+//     }
+// }
+
 /// A linear transformation of the form `weight * x + bias`, where `weight` is a matrix, `x` is a vector or matrix,
 /// and `bias` is a vector.
 ///
@@ -92,8 +145,12 @@ impl<const I: usize, const O: usize, E: Dtype, D: Device<E>> TensorCollection<E,
 
 impl<const I: usize, const O: usize, E: Dtype, D: Device<E>, T> Module<T> for Linear<I, O, E, D>
 where
-    T: SplitTape + TryMatMul<Tensor<Rank2<I, O>, E, D, T::Tape>> + HasErr<Err = D::Err>,
+    T: SplitTape
+        + TryStaticMatMul<Tensor<Rank2<I, O>, E, D, T::Tape>>
+        + HasErr<Err = D::Err>
+        + HasShape,
     T::Tape: Tape<E, D>,
+    T::Shape: AssertLayerMatch<Rank2<I, O>>,
     for<'a> Bias1D<'a, O, E, D>: Module<T::Output, Output = T::Output, Error = D::Err>,
 {
     type Output = T::Output;
@@ -101,6 +158,7 @@ where
 
     /// 1d forward using [matmul()] and [add()].
     fn try_forward(&self, x: T) -> Result<Self::Output, D::Err> {
+        x.shape().assert_dim_eq();
         let o = x.try_matmul(self.weight.retaped::<T::Tape>().try_permute()?)?;
         Bias1D { beta: &self.bias }.try_forward(o)
     }

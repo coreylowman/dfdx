@@ -6,6 +6,7 @@ pub(super) mod cpu_kernel;
 pub(super) mod cuda_kernel;
 
 use crate::{
+    prelude::{Const, Rank1},
     shapes::{Dim, Dtype, Shape},
     tensor::{DeviceStorage, HasErr, Merge, PutTape, SplitTape, Tape, Tensor},
 };
@@ -60,18 +61,34 @@ use crate::{
 ///
 pub fn matmul<Lhs, Rhs>(lhs: Lhs, rhs: Rhs) -> Lhs::Output
 where
-    Lhs: TryMatMul<Rhs>,
+    Lhs: TryStaticMatMul<Rhs>,
 {
     lhs.matmul(rhs)
 }
 
 /// Fallible matrix multiplication. See [matmul] for examples.
-pub trait TryMatMul<Rhs>: HasErr {
+pub trait TryStaticMatMul<Rhs>: HasErr {
     type Output;
     fn matmul(self, rhs: Rhs) -> Self::Output {
         self.try_matmul(rhs).unwrap()
     }
     fn try_matmul(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
+}
+
+pub trait TryDynamicMatMul<Rhs>: HasErr {
+    type Output;
+    fn matmul(self, rhs: Rhs) -> Self::Output {
+        self.try_dynamic_matmul(rhs).unwrap()
+    }
+    fn try_dynamic_matmul(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
+}
+
+pub trait TryDynamicMatMul1<Rhs>: HasErr {
+    type Output;
+    fn matmul(self, rhs: Rhs) -> Self::Output {
+        self.try_dynamic1_matmul(rhs).unwrap()
+    }
+    fn try_dynamic1_matmul(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
 }
 
 #[rustfmt::skip]
@@ -106,6 +123,162 @@ fn try_binary_op<
     Ok(out.put_tape(tape))
 }
 
+pub trait MulStaticDimCheck<Rhs: Shape> {
+    const TYPE_CHECK: ();
+    fn assert_dim_eq(&self);
+}
+
+impl<const L: usize, const R: usize> MulStaticDimCheck<Rank1<R>> for Rank1<L> {
+    const TYPE_CHECK: () = assert!(
+        L == R,
+        "You are trying to multiply vectors whose dimensions don't match."
+    );
+    fn assert_dim_eq(&self) {
+        let _ = <Self as MulStaticDimCheck<Rank1<L>>>::TYPE_CHECK;
+    }
+}
+
+impl<const L: usize, const R: usize, N: Dim> MulStaticDimCheck<(Const<R>, N)> for Const<L> {
+    const TYPE_CHECK: () = assert!(
+        L == R,
+        "You are trying to multiply a vector to a matrix whose row dimension does not match the dimension of the vector."
+    );
+    fn assert_dim_eq(&self) {
+        let _ = <Self as MulStaticDimCheck<(Const<R>, N)>>::TYPE_CHECK;
+    }
+}
+
+impl<M: Dim, const L: usize, const R: usize, N: Dim> MulStaticDimCheck<(Const<R>, N)>
+    for (M, Const<L>)
+{
+    const TYPE_CHECK: () = assert!(
+        L == R,
+        "You are trying to multiply matrices where the column dimension of the first does not match the row dimension of the second."
+    );
+    fn assert_dim_eq(&self) {
+        let _ = <Self as MulStaticDimCheck<(Const<R>, N)>>::TYPE_CHECK;
+    }
+}
+
+// impl<const L: usize, const R: usize> MulDimCheck<(Const<R>, usize)> for (usize, Const<L>) {
+//     const TYPE_CHECK: () = assert!(
+//         L == R,
+//         "You are trying to multiply matrices where the column dimension of the first does not match the row dimension of the second."
+//     );
+//     fn assert_dim_eq(&self) {
+//         let _ = <Self as MulDimCheck<(Const<R>, usize)>>::TYPE_CHECK;
+//     }
+// }
+
+impl<B: Dim, M: Dim, const L: usize, const R: usize, N: Dim> MulStaticDimCheck<(Const<R>, N)>
+    for (B, M, Const<L>)
+{
+    const TYPE_CHECK: () = assert!(
+        L == R,
+        "You are trying to multiply a tensor of rank 3 to a matrix where the last dimension of the first does not match the first dimension of the second."
+    );
+    fn assert_dim_eq(&self) {
+        let _ = <Self as MulStaticDimCheck<(Const<R>, N)>>::TYPE_CHECK;
+    }
+}
+
+impl<B: Dim, M: Dim, const L: usize, const R: usize, N: Dim> MulStaticDimCheck<(B, Const<R>, N)>
+    for (B, M, Const<L>)
+{
+    const TYPE_CHECK: () = assert!(
+        L == R,
+        "You are trying to multiply two tensors of rank 3 for Batch3Mul where the last dimension of the first does not match the second dimension of the second."
+    );
+    fn assert_dim_eq(&self) {
+        let _ = <Self as MulStaticDimCheck<(B, Const<R>, M)>>::TYPE_CHECK;
+    }
+}
+
+// impl<const L: usize, const R: usize> MulDimCheck<(usize, Const<R>, usize)>
+//     for (usize, usize, Const<L>)
+// {
+//     const TYPE_CHECK: () = assert!(
+//         L == R,
+//         "You are trying to multiply two tensors of rank 3 for Batch3Mul where the last dimension of the first does not match the second dimension of the second."
+//     );
+//     fn assert_dim_eq(&self) {
+//         let _ = <Self as MulDimCheck<(usize, Const<R>, usize)>>::TYPE_CHECK;
+//     }
+// }
+
+impl<B: Dim, S: Dim, M: Dim, const L: usize, const R: usize, N: Dim>
+    MulStaticDimCheck<(B, S, Const<R>, N)> for (B, S, M, Const<L>)
+{
+    const TYPE_CHECK: () = assert!(
+        L == R,
+        "You are trying to multiply two tensors of rank 4 for Batch4Mul where the last dimension of the first does not match the second to last dimension of the second."
+    );
+    fn assert_dim_eq(&self) {
+        let _ = <Self as MulStaticDimCheck<(B, S, Const<R>, M)>>::TYPE_CHECK;
+    }
+}
+
+// impl<const L: usize, const R: usize> MulDimCheck<(usize, usize, Const<R>, usize)>
+//     for (usize, usize, usize, Const<L>)
+// {
+//     const TYPE_CHECK: () = assert!(
+//         L == R,
+//         "You are trying to multiply two tensors of rank 4 for Batch4Mul where the last dimension of the first does not match the second to last dimension of the second."
+//     );
+//     fn assert_dim_eq(&self) {
+//         let _ = <Self as MulDimCheck<(usize, usize, Const<R>, usize)>>::TYPE_CHECK;
+//     }
+// }
+
+pub trait MulDynamicDimCheck<Rhs: Shape> {
+    fn assert_dim_eq(&self, rhs: &Rhs);
+}
+
+impl<M: Dim, N: Dim> MulDynamicDimCheck<(usize, N)> for (M, usize) {
+    fn assert_dim_eq(&self, rhs: &(usize, N)) {
+        assert_eq!(self.1, rhs.0);
+    }
+}
+
+// impl<B: Dim, const L: usize, const R: usize> MulDynamicDimCheck<(B, usize, usize, Const<R>)>
+//     for (B, usize, Const<L>, usize)
+// {
+//     fn assert_dim_eq(&self, rhs: &(B, usize, usize, Const<R>)) {
+//         assert_eq!(self.3, rhs.2);
+//     }
+// }
+
+impl<B: Dim, S1: Dim, S2: Dim> MulDynamicDimCheck<(B, usize, S2)> for (B, S1, usize) {
+    fn assert_dim_eq(&self, rhs: &(B, usize, S2)) {
+        assert_eq!(self.2, rhs.1);
+    }
+}
+
+// impl<S1: Dim, S2: Dim> MulDynamicDimCheck<(usize, usize, S2)> for (usize, S1, usize) {
+//     fn assert_dim_eq(&self, rhs: &(usize, usize, S2)) {
+//         assert_eq!(self.0, rhs.0);
+//         assert_eq!(self.2, rhs.1);
+//     }
+// }
+
+// impl<S1: Dim, S2: Dim> MulDynamicDimCheck<(usize, usize, S2)> for (usize, S1, S2) {
+//     fn assert_dim_eq(&self, rhs: &(usize, usize, S2)) {
+//         assert_eq!(self.2, rhs.1);
+//     }
+// }
+
+impl<B: Dim, S1: Dim, S2: Dim> MulDynamicDimCheck<(B, usize, usize, S2)> for (B, usize, S1, usize) {
+    fn assert_dim_eq(&self, rhs: &(B, usize, usize, S2)) {
+        assert_eq!(self.3, rhs.2);
+    }
+}
+
+// impl<B: Dim, S1: Dim, S2: Dim> MulDynamicDimCheck<(B, usize, S2, usize)> for (B, usize, S1, S2) {
+//     fn assert_dim_eq(&self, rhs: &(B, usize, S1, S2)) {
+//         assert_eq!(self.1, rhs.1);
+//     }
+// }
+
 pub trait VecVecKernel<E: Dtype>: DeviceStorage {
     fn forward<M: Dim, N: Dim>(
         &self,
@@ -124,7 +297,7 @@ pub trait VecVecKernel<E: Dtype>: DeviceStorage {
 }
 
 impl<M: Dim, N: Dim, E: Dtype, D: VecVecKernel<E>, T: Tape<E, D> + Merge<R>, R: Tape<E, D>>
-    TryMatMul<Tensor<(N,), E, D, R>> for Tensor<(M,), E, D, T>
+    TryStaticMatMul<Tensor<(N,), E, D, R>> for Tensor<(M,), E, D, T>
 {
     type Output = Tensor<(M, N), E, D, T>;
     fn try_matmul(self, rhs: Tensor<(N,), E, D, R>) -> Result<Self::Output, Self::Err> {
@@ -133,54 +306,72 @@ impl<M: Dim, N: Dim, E: Dtype, D: VecVecKernel<E>, T: Tape<E, D> + Merge<R>, R: 
 }
 
 pub trait VecMatKernel<E: Dtype>: DeviceStorage {
-    fn forward<K: Dim, N: Dim>(
+    fn forward<LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(K,), E, Self>,
-        rhs: &Tensor<(K, N), E, Self>,
-    ) -> Result<Tensor<(N,), E, Self>, Self::Err>;
+        lhs: &Tensor<(LeftK,), E, Self>,
+        rhs: &Tensor<(RightK, N), E, Self>,
+    ) -> Result<Tensor<(N,), E, Self>, Self::Err>
+    where
+        LeftK: MulStaticDimCheck<(RightK, N)>;
 
-    fn backward<K: Dim, N: Dim>(
+    fn backward<LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(K,), E, Self>,
+        lhs: &Tensor<(LeftK,), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(K, N), E, Self>,
+        rhs: &Tensor<(RightK, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Self::Err>
+    where
+        LeftK: MulStaticDimCheck<(RightK, N)>;
 }
 
-impl<K: Dim, N: Dim, E: Dtype, D: VecMatKernel<E>, T: Tape<E, D> + Merge<R>, R: Tape<E, D>>
-    TryMatMul<Tensor<(K, N), E, D, R>> for Tensor<(K,), E, D, T>
+impl<
+        LeftK: Dim,
+        RightK: Dim,
+        N: Dim,
+        E: Dtype,
+        D: VecMatKernel<E>,
+        T: Tape<E, D> + Merge<R>,
+        R: Tape<E, D>,
+    > TryStaticMatMul<Tensor<(RightK, N), E, D, R>> for Tensor<(LeftK,), E, D, T>
+where
+    LeftK: MulStaticDimCheck<(RightK, N)>,
 {
     type Output = Tensor<(N,), E, D, T>;
-    fn try_matmul(self, rhs: Tensor<(K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
-        assert_eq!(self.shape.0, rhs.shape.0);
+    fn try_matmul(self, rhs: Tensor<(RightK, N), E, D, R>) -> Result<Self::Output, Self::Err> {
+        // assert_eq!(self.shape.0, rhs.shape.0);
         try_binary_op(self, rhs, D::forward, D::backward)
     }
 }
 
-pub trait MatMatKernel<E: Dtype>: DeviceStorage {
-    fn forward<M: Dim, K: Dim, N: Dim>(
+pub trait StaticMatMatKernel<E: Dtype>: DeviceStorage {
+    fn forward<M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(M, K), E, Self>,
-        rhs: &Tensor<(K, N), E, Self>,
-    ) -> Result<Tensor<(M, N), E, Self>, Self::Err>;
+        lhs: &Tensor<(M, LeftK), E, Self>,
+        rhs: &Tensor<(RightK, N), E, Self>,
+    ) -> Result<Tensor<(M, N), E, Self>, Self::Err>
+    where
+        (M, LeftK): MulStaticDimCheck<(RightK, N)>;
 
-    fn backward<M: Dim, K: Dim, N: Dim>(
+    fn backward<M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(M, K), E, Self>,
+        lhs: &Tensor<(M, LeftK), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(K, N), E, Self>,
+        rhs: &Tensor<(RightK, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Self::Err>
+    where
+        (M, LeftK): MulStaticDimCheck<(RightK, N)>;
 }
 
-impl<M: Dim, K: Dim, N: Dim, E: Dtype, D: MatMatKernel<E>, T, R> TryMatMul<Tensor<(K, N), E, D, R>>
-    for Tensor<(M, K), E, D, T>
+impl<M: Dim, LeftK: Dim, RightK: Dim, N: Dim, E: Dtype, D: StaticMatMatKernel<E>, T, R>
+    TryStaticMatMul<Tensor<(RightK, N), E, D, R>> for Tensor<(M, LeftK), E, D, T>
 where
     T: Tape<E, D> + Merge<R>,
     R: Tape<E, D>,
+    (M, LeftK): MulStaticDimCheck<(RightK, N)>,
 {
     type Output = Tensor<(M, N), E, D, T>;
     /// ```compile_fail
@@ -190,34 +381,96 @@ where
     /// let y: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
     /// let _: Tensor<Rank2<3, 4>, f32, _> = x.try_matmul(y);
     /// ```
-    fn try_matmul(self, rhs: Tensor<(K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
-        assert_eq!(self.shape.1, rhs.shape.0);
+    fn try_matmul(self, rhs: Tensor<(RightK, N), E, D, R>) -> Result<Self::Output, Self::Err> {
+        // assert_eq!(self.shape.1.size(), rhs.shape.0.size());
+        self.shape.assert_dim_eq();
+        // println!(
+        //     "Left {:?} Right {:?}",
+        //     self.shape.1.size(),
+        //     rhs.shape.0.size()
+        // );
+        try_binary_op(self, rhs, D::forward, D::backward)
+    }
+}
+
+pub trait DynamicMatMatKernel<E: Dtype>: DeviceStorage {
+    fn forward<M: Dim, N: Dim>(
+        &self,
+        lhs: &Tensor<(M, usize), E, Self>,
+        rhs: &Tensor<(usize, N), E, Self>,
+    ) -> Result<Tensor<(M, N), E, Self>, Self::Err>
+    where
+        (M, usize): MulDynamicDimCheck<(usize, M)>;
+
+    fn backward<M: Dim, N: Dim>(
+        &self,
+        lhs: &Tensor<(M, usize), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(usize, N), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err>
+    where
+        (M, usize): MulDynamicDimCheck<(usize, N)>;
+}
+
+impl<M: Dim, N: Dim, E: Dtype, D: DynamicMatMatKernel<E>, T, R>
+    TryDynamicMatMul<Tensor<(usize, N), E, D, R>> for Tensor<(M, usize), E, D, T>
+where
+    T: Tape<E, D> + Merge<R>,
+    R: Tape<E, D>,
+    (M, usize): MulDynamicDimCheck<(usize, N)>,
+{
+    type Output = Tensor<(M, N), E, D, T>;
+    /// ```compile_fail
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let x: Tensor<Rank2<3, 2>, f32, _> = dev.zeros();
+    /// let y: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
+    /// let _: Tensor<Rank2<3, 4>, f32, _> = x.try_matmul(y);
+    /// ```
+    fn try_dynamic_matmul(
+        self,
+        rhs: Tensor<(usize, N), E, D, R>,
+    ) -> Result<Self::Output, Self::Err> {
+        // assert_eq!(self.shape.1.size(), rhs.shape.0.size());
+        self.shape.assert_dim_eq(&rhs.shape);
+        // println!(
+        //     "Left {:?} Right {:?}",
+        //     self.shape.1.size(),
+        //     rhs.shape.0.size()
+        // );
         try_binary_op(self, rhs, D::forward, D::backward)
     }
 }
 
 pub trait MatMatBrKernel<E: Dtype>: DeviceStorage {
-    fn forward<B: Dim, M: Dim, K: Dim, N: Dim>(
+    fn forward<B: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(B, M, K), E, Self>,
-        rhs: &Tensor<(K, N), E, Self>,
-    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err>;
+        lhs: &Tensor<(B, M, LeftK), E, Self>,
+        rhs: &Tensor<(RightK, N), E, Self>,
+    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err>
+    where
+        (B, M, LeftK): MulStaticDimCheck<(RightK, N)>;
 
-    fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
+    fn backward<B: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(B, M, K), E, Self>,
+        lhs: &Tensor<(B, M, LeftK), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(K, N), E, Self>,
+        rhs: &Tensor<(RightK, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Self::Err>
+    where
+        (B, M, LeftK): MulStaticDimCheck<(RightK, N)>;
 }
 
-impl<B: Dim, M: Dim, K: Dim, N: Dim, E: Dtype, D: MatMatBrKernel<E>, T, R>
-    TryMatMul<Tensor<(K, N), E, D, R>> for Tensor<(B, M, K), E, D, T>
+impl<B: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim, E: Dtype, D: MatMatBrKernel<E>, T, R>
+    TryStaticMatMul<Tensor<(RightK, N), E, D, R>> for Tensor<(B, M, LeftK), E, D, T>
 where
     T: Tape<E, D> + Merge<R>,
     R: Tape<E, D>,
+    (B, M, LeftK): MulStaticDimCheck<(RightK, N)>,
 {
     type Output = Tensor<(B, M, N), E, D, T>;
     /// ```compile_fail
@@ -227,35 +480,41 @@ where
     /// let y: Tensor<Rank2<3, 4>, f32, _> = dev.zeros();
     /// let _: Tensor<Rank3<1, 3, 4>, f32, _> = x.try_matmul(y);
     /// ```
-    fn try_matmul(self, rhs: Tensor<(K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
-        assert_eq!(self.shape.2, rhs.shape.0);
+    fn try_matmul(self, rhs: Tensor<(RightK, N), E, D, R>) -> Result<Self::Output, Self::Err> {
+        // assert_eq!(self.shape.2, rhs.shape.0);
+        self.shape.assert_dim_eq();
         try_binary_op(self, rhs, D::forward, D::backward)
     }
 }
 
-pub trait MatMatBatch3Kernel<E: Dtype>: DeviceStorage {
-    fn forward<B: Dim, M: Dim, K: Dim, N: Dim>(
+pub trait StaticMatMatBatch3Kernel<E: Dtype>: DeviceStorage {
+    fn forward<B: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(B, M, K), E, Self>,
-        rhs: &Tensor<(B, K, N), E, Self>,
-    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err>;
+        lhs: &Tensor<(B, M, LeftK), E, Self>,
+        rhs: &Tensor<(B, RightK, N), E, Self>,
+    ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err>
+    where
+        (B, M, LeftK): MulStaticDimCheck<(B, RightK, N)>;
 
-    fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
+    fn backward<B: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(B, M, K), E, Self>,
+        lhs: &Tensor<(B, M, LeftK), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(B, K, N), E, Self>,
+        rhs: &Tensor<(B, RightK, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Self::Err>
+    where
+        (B, M, LeftK): MulStaticDimCheck<(B, RightK, N)>;
 }
 
-impl<B: Dim, M: Dim, K: Dim, N: Dim, E: Dtype, D, T, R> TryMatMul<Tensor<(B, K, N), E, D, R>>
-    for Tensor<(B, M, K), E, D, T>
+impl<B: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim, E: Dtype, D, T, R>
+    TryStaticMatMul<Tensor<(B, RightK, N), E, D, R>> for Tensor<(B, M, LeftK), E, D, T>
 where
-    D: MatMatBatch3Kernel<E>,
+    D: StaticMatMatBatch3Kernel<E>,
     T: Tape<E, D> + Merge<R>,
     R: Tape<E, D>,
+    (B, M, LeftK): MulStaticDimCheck<(B, RightK, N)>,
 {
     type Output = Tensor<(B, M, N), E, D, T>;
     /// ```compile_fail
@@ -265,36 +524,186 @@ where
     /// let y: Tensor<Rank3<1, 3, 4>, f32, _> = dev.zeros();
     /// let _: Tensor<Rank3<1, 3, 4>, f32, _> = x.try_matmul(y);
     /// ```
-    fn try_matmul(self, rhs: Tensor<(B, K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
-        assert_eq!(self.shape.0, rhs.shape.0);
-        assert_eq!(self.shape.2, rhs.shape.1);
+    fn try_matmul(self, rhs: Tensor<(B, RightK, N), E, D, R>) -> Result<Self::Output, Self::Err> {
+        // assert_eq!(self.shape.0, rhs.shape.0);
+        // assert_eq!(self.shape.2, rhs.shape.1);
+        self.shape.assert_dim_eq();
         try_binary_op(self, rhs, D::forward, D::backward)
     }
 }
 
-pub trait MatMatBatch4Kernel<E: Dtype>: DeviceStorage {
-    fn forward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
+pub trait DynamicMatMatBatch3Kernel<E: Dtype>: DeviceStorage {
+    fn forward<B: Dim, S1: Dim, S2: Dim>(
         &self,
-        lhs: &Tensor<(B, S, M, K), E, Self>,
-        rhs: &Tensor<(B, S, K, N), E, Self>,
-    ) -> Result<Tensor<(B, S, M, N), E, Self>, Self::Err>;
+        lhs: &Tensor<(B, S1, usize), E, Self>,
+        rhs: &Tensor<(B, usize, S2), E, Self>,
+    ) -> Result<Tensor<(B, S1, S2), E, Self>, Self::Err>
+    where
+        (B, S1, usize): MulDynamicDimCheck<(B, usize, S2)>;
 
-    fn backward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
+    fn backward<B: Dim, S1: Dim, S2: Dim>(
         &self,
-        lhs: &Tensor<(B, S, M, K), E, Self>,
+        lhs: &Tensor<(B, S1, usize), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(B, S, K, N), E, Self>,
+        rhs: &Tensor<(B, usize, S2), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>;
+    ) -> Result<(), Self::Err>
+    where
+        (B, S1, usize): MulDynamicDimCheck<(B, usize, S2)>;
 }
 
-impl<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim, E: Dtype, D, T, R>
-    TryMatMul<Tensor<(B, S, K, N), E, D, R>> for Tensor<(B, S, M, K), E, D, T>
+impl<B: Dim, S1: Dim, S2: Dim, E: Dtype, D, T, R> TryDynamicMatMul<Tensor<(B, usize, S2), E, D, R>>
+    for Tensor<(B, S1, usize), E, D, T>
 where
-    D: MatMatBatch4Kernel<E>,
+    D: DynamicMatMatBatch3Kernel<E>,
     T: Tape<E, D> + Merge<R>,
     R: Tape<E, D>,
+    (B, S1, usize): MulDynamicDimCheck<(B, usize, S2)>,
+{
+    type Output = Tensor<(B, S1, S2), E, D, T>;
+    /// ```compile_fail
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let x: Tensor<Rank3<1, 3, 2>, f32, _> = dev.zeros();
+    /// let y: Tensor<Rank3<1, 3, 4>, f32, _> = dev.zeros();
+    /// let _: Tensor<Rank3<1, 3, 4>, f32, _> = x.try_matmul(y);
+    /// ```
+    fn try_dynamic_matmul(
+        self,
+        rhs: Tensor<(B, usize, S2), E, D, R>,
+    ) -> Result<Self::Output, Self::Err> {
+        // assert_eq!(self.shape.0, rhs.shape.0);
+        // assert_eq!(self.shape.2, rhs.shape.1);
+        self.shape.assert_dim_eq(&rhs.shape);
+        try_binary_op(self, rhs, D::forward, D::backward)
+    }
+}
+
+pub trait DynamicMatMatBatch3Kernel1<E: Dtype>: DeviceStorage {
+    fn forward<S1: Dim, S2: Dim>(
+        &self,
+        lhs: &Tensor<(usize, S1, usize), E, Self>,
+        rhs: &Tensor<(usize, usize, S2), E, Self>,
+    ) -> Result<Tensor<(usize, S1, S2), E, Self>, Self::Err>
+    where
+        (usize, S1, usize): MulDynamicDimCheck<(usize, usize, S2)>;
+
+    fn backward<S1: Dim, S2: Dim>(
+        &self,
+        lhs: &Tensor<(usize, S1, usize), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(usize, usize, S2), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err>
+    where
+        (usize, S1, usize): MulDynamicDimCheck<(usize, usize, S2)>;
+}
+
+impl<S1: Dim, S2: Dim, E: Dtype, D, T, R> TryDynamicMatMul1<Tensor<(usize, usize, S2), E, D, R>>
+    for Tensor<(usize, S1, usize), E, D, T>
+where
+    D: DynamicMatMatBatch3Kernel1<E>,
+    T: Tape<E, D> + Merge<R>,
+    R: Tape<E, D>,
+    (usize, S1, usize): MulDynamicDimCheck<(usize, usize, S2)>,
+{
+    type Output = Tensor<(usize, S1, S2), E, D, T>;
+    /// ```compile_fail
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let x: Tensor<Rank3<1, 3, 2>, f32, _> = dev.zeros();
+    /// let y: Tensor<Rank3<1, 3, 4>, f32, _> = dev.zeros();
+    /// let _: Tensor<Rank3<1, 3, 4>, f32, _> = x.try_matmul(y);
+    /// ```
+    fn try_dynamic1_matmul(
+        self,
+        rhs: Tensor<(usize, usize, S2), E, D, R>,
+    ) -> Result<Self::Output, Self::Err> {
+        // assert_eq!(self.shape.0, rhs.shape.0);
+        // assert_eq!(self.shape.2, rhs.shape.1);
+        self.shape.assert_dim_eq(&rhs.shape);
+        try_binary_op(self, rhs, D::forward, D::backward)
+    }
+}
+
+// pub trait MatMatBatch3Kernel<E: Dtype>: DeviceStorage {
+//     fn forward<B: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
+//         &self,
+//         lhs: &Tensor<(B, M, LeftK), E, Self>,
+//         rhs: &Tensor<(B, RightK, N), E, Self>,
+//     ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err>;
+//     // where
+//     //     (B, M, LeftK): MulStaticDimCheck<(B, RightK, N)>;
+
+//     fn backward<B: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
+//         &self,
+//         lhs: &Tensor<(B, M, LeftK), E, Self>,
+//         grad_lhs: &mut Self::Vec<E>,
+//         rhs: &Tensor<(B, RightK, N), E, Self>,
+//         grad_rhs: &mut Self::Vec<E>,
+//         grad_out: &Self::Vec<E>,
+//     ) -> Result<(), Self::Err>;
+//     // where
+//     //     (B, M, LeftK): MulStaticDimCheck<(B, RightK, N)>;
+// }
+
+// impl<B: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim, E: Dtype, D, T, R>
+//     TryDynamicMatMul<Tensor<(B, RightK, N), E, D, R>> for Tensor<(B, M, LeftK), E, D, T>
+// where
+//     D: MatMatBatch3Kernel<E>,
+//     T: Tape<E, D> + Merge<R>,
+//     R: Tape<E, D>,
+//     (B, M, LeftK): MulDynamicDimCheck<(B, RightK, N)>,
+// {
+//     type Output = Tensor<(B, M, N), E, D, T>;
+//     /// ```compile_fail
+//     /// # use dfdx::prelude::*;
+//     /// # let dev: Cpu = Default::default();
+//     /// let x: Tensor<Rank3<1, 3, 2>, f32, _> = dev.zeros();
+//     /// let y: Tensor<Rank3<1, 3, 4>, f32, _> = dev.zeros();
+//     /// let _: Tensor<Rank3<1, 3, 4>, f32, _> = x.try_matmul(y);
+//     /// ```
+//     fn try_dynamic_matmul(
+//         self,
+//         rhs: Tensor<(B, RightK, N), E, D, R>,
+//     ) -> Result<Self::Output, Self::Err> {
+//         // assert_eq!(self.shape.0, rhs.shape.0);
+//         // assert_eq!(self.shape.2, rhs.shape.1);
+//         // self.shape.assert_dim_eq();
+//         try_binary_op(self, rhs, D::forward, D::backward)
+//     }
+// }
+
+pub trait StaticMatMatBatch4Kernel<E: Dtype>: DeviceStorage {
+    fn forward<B: Dim, S: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
+        &self,
+        lhs: &Tensor<(B, S, M, LeftK), E, Self>,
+        rhs: &Tensor<(B, S, RightK, N), E, Self>,
+    ) -> Result<Tensor<(B, S, M, N), E, Self>, Self::Err>
+    where
+        (B, S, M, LeftK): MulStaticDimCheck<(B, S, RightK, N)>;
+
+    fn backward<B: Dim, S: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
+        &self,
+        lhs: &Tensor<(B, S, M, LeftK), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(B, S, RightK, N), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err>
+    where
+        (B, S, M, LeftK): MulStaticDimCheck<(B, S, RightK, N)>;
+}
+
+impl<B: Dim, S: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim, E: Dtype, D, T, R>
+    TryStaticMatMul<Tensor<(B, S, RightK, N), E, D, R>> for Tensor<(B, S, M, LeftK), E, D, T>
+where
+    D: StaticMatMatBatch4Kernel<E>,
+    T: Tape<E, D> + Merge<R>,
+    R: Tape<E, D>,
+    (B, S, M, LeftK): MulStaticDimCheck<(B, S, RightK, N)>,
 {
     type Output = Tensor<(B, S, M, N), E, D, T>;
     /// ```compile_fail
@@ -304,10 +713,114 @@ where
     /// let y: Tensor<Rank4<1, 5, 3, 4>, f32, _> = dev.zeros();
     /// let _: Tensor<Rank3<1, 5, 3, 4>, f32, _> = x.try_matmul(y);
     /// ```
-    fn try_matmul(self, rhs: Tensor<(B, S, K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
-        assert_eq!(self.shape.0, rhs.shape.0);
-        assert_eq!(self.shape.1, rhs.shape.1);
-        assert_eq!(self.shape.3, rhs.shape.2);
+    fn try_matmul(
+        self,
+        rhs: Tensor<(B, S, RightK, N), E, D, R>,
+    ) -> Result<Self::Output, Self::Err> {
+        // assert_eq!(self.shape.0, rhs.shape.0);
+        // assert_eq!(self.shape.1, rhs.shape.1);
+        // assert_eq!(self.shape.3, rhs.shape.2);
+        self.shape.assert_dim_eq();
+        try_binary_op(self, rhs, D::forward, D::backward)
+    }
+}
+
+pub trait DynamicMatMatBatch4Kernel<E: Dtype>: DeviceStorage {
+    fn forward<B: Dim, S1: Dim, S2: Dim>(
+        &self,
+        lhs: &Tensor<(B, usize, S1, usize), E, Self>,
+        rhs: &Tensor<(B, usize, usize, S2), E, Self>,
+    ) -> Result<Tensor<(B, usize, S1, S2), E, Self>, Self::Err>;
+    // where
+    //     (usize, usize, usize, LeftK): MulDynamicDimCheck<(usize, usize, RightK, usize)>;
+
+    fn backward<B: Dim, S1: Dim, S2: Dim>(
+        &self,
+        lhs: &Tensor<(B, usize, S1, usize), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(B, usize, usize, S2), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err>;
+    // where
+    //     (usize, usize, usize, LeftK): MulDynamicDimCheck<(usize, usize, RightK, usize)>;
+}
+
+impl<B: Dim, S1: Dim, S2: Dim, E: Dtype, D, T, R>
+    TryDynamicMatMul<Tensor<(B, usize, usize, S2), E, D, R>>
+    for Tensor<(B, usize, S1, usize), E, D, T>
+where
+    D: DynamicMatMatBatch4Kernel<E>,
+    T: Tape<E, D> + Merge<R>,
+    R: Tape<E, D>,
+    // (usize, usize, usize, LeftK): MulDynamicDimCheck<(usize, usize, RightK, usize)>,
+{
+    type Output = Tensor<(B, usize, S1, S2), E, D, T>;
+    /// ```compile_fail
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let x: Tensor<Rank4<1, 5, 3, 2>, f32, _> = dev.zeros();
+    /// let y: Tensor<Rank4<1, 5, 3, 4>, f32, _> = dev.zeros();
+    /// let _: Tensor<Rank3<1, 5, 3, 4>, f32, _> = x.try_matmul(y);
+    /// ```
+    fn try_dynamic_matmul(
+        self,
+        rhs: Tensor<(B, usize, usize, S2), E, D, R>,
+    ) -> Result<Self::Output, Self::Err> {
+        // assert_eq!(self.shape.0, rhs.shape.0);
+        // assert_eq!(self.shape.1, rhs.shape.1);
+        // assert_eq!(self.shape.3, rhs.shape.2);
+        self.shape.assert_dim_eq(&rhs.shape);
+        try_binary_op(self, rhs, D::forward, D::backward)
+    }
+}
+
+pub trait DynamicMatMatBatch4Kernel1<E: Dtype>: DeviceStorage {
+    fn forward<B: Dim, S1: Dim, S2: Dim>(
+        &self,
+        lhs: &Tensor<(B, usize, S1, S2), E, Self>,
+        rhs: &Tensor<(B, usize, S2, usize), E, Self>,
+    ) -> Result<Tensor<(B, usize, S1, usize), E, Self>, Self::Err>;
+    // where
+    //     (usize, usize, usize, LeftK): MulDynamicDimCheck<(usize, usize, RightK, usize)>;
+
+    fn backward<B: Dim, S1: Dim, S2: Dim>(
+        &self,
+        lhs: &Tensor<(B, usize, S1, S2), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(B, usize, S2, usize), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err>;
+    // where
+    //     (usize, usize, usize, LeftK): MulDynamicDimCheck<(usize, usize, RightK, usize)>;
+}
+
+impl<B: Dim, S1: Dim, S2: Dim, E: Dtype, D, T, R>
+    TryDynamicMatMul1<Tensor<(B, usize, S2, usize), E, D, R>>
+    for Tensor<(B, usize, S1, S2), E, D, T>
+where
+    D: DynamicMatMatBatch4Kernel1<E>,
+    T: Tape<E, D> + Merge<R>,
+    R: Tape<E, D>,
+    (B, usize, S1, S2): MulDynamicDimCheck<(B, usize, S2, usize)>,
+{
+    type Output = Tensor<(B, usize, S1, usize), E, D, T>;
+    /// ```compile_fail
+    /// # use dfdx::prelude::*;
+    /// # let dev: Cpu = Default::default();
+    /// let x: Tensor<Rank4<1, 5, 3, 2>, f32, _> = dev.zeros();
+    /// let y: Tensor<Rank4<1, 5, 3, 4>, f32, _> = dev.zeros();
+    /// let _: Tensor<Rank3<1, 5, 3, 4>, f32, _> = x.try_matmul(y);
+    /// ```
+    fn try_dynamic1_matmul(
+        self,
+        rhs: Tensor<(B, usize, S2, usize), E, D, R>,
+    ) -> Result<Self::Output, Self::Err> {
+        // assert_eq!(self.shape.0, rhs.shape.0);
+        // assert_eq!(self.shape.1, rhs.shape.1);
+        // assert_eq!(self.shape.3, rhs.shape.2);
+        self.shape.assert_dim_eq(&rhs.shape);
         try_binary_op(self, rhs, D::forward, D::backward)
     }
 }
@@ -350,14 +863,14 @@ mod tests {
         {
             let a: Tensor<Rank3<10, 5, 3>, TestDtype, _> = dev.zeros();
             let b: Tensor<Rank2<3, 2>, TestDtype, _> = dev.zeros();
-            let _: Tensor<Rank3<10, 5, 2>, TestDtype, _> = a.matmul(b);
+            let _: Tensor<Rank3<10, 5, 2>, TestDtype, _> = matmul::TryStaticMatMul::matmul(a, b);
         }
 
-        {
-            let a: Tensor<Rank3<10, 5, 3>, TestDtype, _> = dev.zeros();
-            let b: Tensor<Rank3<10, 3, 2>, TestDtype, _> = dev.zeros();
-            let _: Tensor<Rank3<10, 5, 2>, TestDtype, _> = a.matmul(b);
-        }
+        // {
+        //     let a: Tensor<Rank3<10, 5, 3>, TestDtype, _> = dev.zeros();
+        //     let b: Tensor<Rank3<10, 3, 2>, TestDtype, _> = dev.zeros();
+        //     let _: Tensor<Rank3<10, 5, 2>, TestDtype, _> = matmul::TryStaticMatMul::matmul(a, b);
+        // }
 
         {
             let a: Tensor<Rank4<10, 20, 5, 3>, TestDtype, _> = dev.zeros();
