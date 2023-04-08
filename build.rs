@@ -76,6 +76,8 @@ mod cuda {
                 lines.next().unwrap().replace('.', "")
             };
 
+            println!("cargo:rustc-env=CUDA_COMPUTE_CAP=sm_{compute_cap}");
+
             kernel_paths
                 .iter()
                 .for_each(|p| println!("cargo:rerun-if-changed={}", p.display()));
