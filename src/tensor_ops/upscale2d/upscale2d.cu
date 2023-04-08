@@ -33,8 +33,8 @@ __device__ void nearest_upscale2d_fwd(
     idx /= op.chan;
     const size_t b = idx % op.batch;
 
-    size_t ih = min(static_cast<size_t>(h_scale * oh), op.h_out - 1);
-    size_t iw = min(static_cast<size_t>(w_scale * ow), op.w_out - 1);
+    size_t ih = min(static_cast<size_t>(h_scale * oh), op.h_in - 1);
+    size_t iw = min(static_cast<size_t>(w_scale * ow), op.w_in - 1);
 
     size_t inp_i = b * inp_strides[0] + c * inp_strides[1] + ih * inp_strides[2] + iw * inp_strides[3];
     
@@ -65,8 +65,8 @@ __device__ void nearest_upscale2d_bwd(
     idx /= op.chan;
     const size_t b = idx % op.batch;
 
-    size_t ih = min(static_cast<size_t>(h_scale * oh), op.h_out - 1);
-    size_t iw = min(static_cast<size_t>(w_scale * ow), op.w_out - 1);
+    size_t ih = min(static_cast<size_t>(h_scale * oh), op.h_in - 1);
+    size_t iw = min(static_cast<size_t>(w_scale * ow), op.w_in - 1);
 
     size_t inp_i = b * inp_strides[0] + c * inp_strides[1] + ih * inp_strides[2] + iw * inp_strides[3];
     atomicAdd(grad_inp + inp_i, grad_out[i]);
@@ -96,10 +96,10 @@ __device__ void bilinear_upscale2d_fwd(
     idx /= op.chan;
     const size_t b = idx % op.batch;
 
-    size_t y0 = min(static_cast<size_t>(h_scale * oh), op.h_out - 1);
-    size_t y1 = min(y0 + 1, op.h_out - 1);
-    size_t x0 = min(static_cast<size_t>(w_scale * ow), op.w_out - 1);
-    size_t x1 = min(x0 + 1, op.w_out - 1);
+    size_t y0 = min(static_cast<size_t>(h_scale * oh), op.h_in - 1);
+    size_t y1 = min(y0 + 1, op.h_in - 1);
+    size_t x0 = min(static_cast<size_t>(w_scale * ow), op.w_in - 1);
+    size_t x1 = min(x0 + 1, op.w_in - 1);
 
     T hs = h_scale * oh - y0;
     T ws = w_scale * ow - x0;
@@ -138,10 +138,10 @@ __device__ void bilinear_upscale2d_bwd(
     idx /= op.chan;
     const size_t b = idx % op.batch;
 
-    size_t y0 = min(static_cast<size_t>(h_scale * oh), op.h_out - 1);
-    size_t y1 = min(y0 + 1, op.h_out - 1);
-    size_t x0 = min(static_cast<size_t>(w_scale * ow), op.w_out - 1);
-    size_t x1 = min(x0 + 1, op.w_out - 1);
+    size_t y0 = min(static_cast<size_t>(h_scale * oh), op.h_in - 1);
+    size_t y1 = min(y0 + 1, op.h_in - 1);
+    size_t x0 = min(static_cast<size_t>(w_scale * ow), op.w_in - 1);
+    size_t x1 = min(x0 + 1, op.w_in - 1);
 
     T hs = h_scale * oh - y0;
     T ws = w_scale * ow - x0;
