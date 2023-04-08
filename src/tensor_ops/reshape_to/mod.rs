@@ -20,7 +20,9 @@ pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
     ) -> Result<(), Self::Err>;
 }
 
-/// Change the shape of a tensor moving data around.
+/// Changes the shape of a tensor without re-ordering axes. If the tensor is contiguous
+/// already, then no data movement will occur. If the tensor is not contiguous, the
+/// result of this will be contiguous.
 ///
 /// Compile time reshapes:
 /// ```rust
