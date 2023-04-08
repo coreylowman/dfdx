@@ -21,6 +21,7 @@ pub struct Cuda {
     pub(crate) dev: Arc<CudaDevice>,
     pub(crate) blas: Arc<CudaBlas>,
     #[cfg(feature = "cudnn")]
+    #[allow(unused)]
     pub(crate) cudnn: Arc<cudarc::cudnn::Cudnn>,
     /// A second stream for kernels to optionally execute on.
     pub(crate) par_stream: Arc<CudaStream>,
