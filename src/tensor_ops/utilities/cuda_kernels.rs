@@ -1,4 +1,5 @@
 use crate::{
+    prelude::cuda::CachableCudaSlice,
     shapes::{Dtype, Shape},
     tensor::*,
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
@@ -84,9 +85,14 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
                 let params = (op, numel, inp.data.as_ref(), &mut storage);
                 unsafe { fwd_fn.launch(cfg, params) }?;
 
+                let out = CachableCudaSlice {
+                    data: storage,
+                    destination: self.cache.clone(),
+                };
+
                 Ok(Tensor {
                     id: unique_id(),
-                    data: Arc::new(storage),
+                    data: Arc::new(out),
                     shape: inp.shape,
                     strides: inp.strides,
                     device: self.clone(),
@@ -270,9 +276,13 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                     &mut storage,      // float *out,
                 );
                 unsafe { fwd_fn.launch(cfg, params) }?;
+                let out = CachableCudaSlice {
+                    data: storage,
+                    destination: self.cache.clone(),
+                };
                 Ok(Tensor {
                     id: unique_id(),
-                    data: Arc::new(storage),
+                    data: Arc::new(out),
                     shape,
                     strides,
                     device: self.clone(),
@@ -324,9 +334,13 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                         &mut storage,      // float *out,
                     );
                     unsafe { fwd_fn.launch(cfg, params) }?;
+                    let out = CachableCudaSlice {
+                        data: storage,
+                        destination: self.cache.clone(),
+                    };
                     Ok(Tensor {
                         id: unique_id(),
-                        data: Arc::new(storage),
+                        data: Arc::new(out),
                         shape,
                         strides,
                         device: self.clone(),

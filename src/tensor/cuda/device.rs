@@ -2,6 +2,7 @@ use crate::shapes::{Shape, Unit};
 use crate::tensor::cpu::{Cpu, CpuError, NdIndex};
 use crate::tensor::{DeviceStorage, HasErr, Tensor};
 
+use cudarc::driver::{DevicePtr, DevicePtrMut, DeviceRepr};
 use cudarc::{
     cublas::{result::CublasError, CudaBlas},
     driver::{CudaDevice, CudaSlice, CudaStream, DeviceSlice, DriverError},
@@ -132,12 +133,12 @@ impl HasErr for Cuda {
 }
 
 #[derive(Debug)]
-pub struct CachableVec<E> {
+pub struct CachableCudaSlice<E> {
     pub(crate) data: CudaSlice<E>,
     pub(crate) destination: Arc<RwLock<BTreeMap<usize, Vec<cudarc::driver::sys::CUdeviceptr>>>>,
 }
 
-impl<E: cudarc::driver::DeviceRepr> Clone for CachableVec<E> {
+impl<E: cudarc::driver::DeviceRepr> Clone for CachableCudaSlice<E> {
     fn clone(&self) -> Self {
         Self {
             data: self.data.clone(),
@@ -146,20 +147,52 @@ impl<E: cudarc::driver::DeviceRepr> Clone for CachableVec<E> {
     }
 }
 
-impl<E> std::ops::Deref for CachableVec<E> {
-    type Target = Vec<E>;
+unsafe impl<E: DeviceRepr> DeviceRepr for &CachableCudaSlice<E> {
+    #[inline(always)]
+    fn as_kernel_param(&self) -> *mut std::ffi::c_void {
+        self.data.device_ptr() as *const cudarc::driver::sys::CUdeviceptr as *mut std::ffi::c_void
+    }
+}
+
+unsafe impl<E: DeviceRepr> DeviceRepr for &mut CachableCudaSlice<E> {
+    #[inline(always)]
+    fn as_kernel_param(&self) -> *mut std::ffi::c_void {
+        self.data.device_ptr() as *const cudarc::driver::sys::CUdeviceptr as *mut std::ffi::c_void
+    }
+}
+
+impl<E> DeviceSlice<E> for CachableCudaSlice<E> {
+    fn len(&self) -> usize {
+        self.data.len()
+    }
+}
+
+impl<E> DevicePtr<E> for CachableCudaSlice<E> {
+    fn device_ptr(&self) -> &cudarc::driver::sys::CUdeviceptr {
+        self.data.device_ptr()
+    }
+}
+
+impl<E> DevicePtrMut<E> for CachableCudaSlice<E> {
+    fn device_ptr_mut(&mut self) -> &mut cudarc::driver::sys::CUdeviceptr {
+        self.data.device_ptr_mut()
+    }
+}
+
+impl<E> std::ops::Deref for CachableCudaSlice<E> {
+    type Target = CudaSlice<E>;
     fn deref(&self) -> &Self::Target {
         &self.data
     }
 }
 
-impl<E> std::ops::DerefMut for CachableVec<E> {
+impl<E> std::ops::DerefMut for CachableCudaSlice<E> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.data
     }
 }
 
-impl<E> Drop for CachableVec<E> {
+impl<E> Drop for CachableCudaSlice<E> {
     fn drop(&mut self) {
         let data = self.data.replace_with_empty();
         let num_bytes = data.num_bytes();
@@ -175,10 +208,13 @@ impl<E> Drop for CachableVec<E> {
 }
 
 impl DeviceStorage for Cuda {
-    type Vec<E: Unit> = CachableVec<E>;
+    type Vec<E: Unit> = CachableCudaSlice<E>;
 
     fn try_alloc_len<E: Unit>(&self, len: usize) -> Result<Self::Vec<E>, Self::Err> {
-        Ok(self.dev.alloc_zeros(len)?)
+        Ok(CachableCudaSlice {
+            data: self.dev.alloc_zeros(len)?,
+            destination: self.cache.clone(),
+        })
     }
 
     fn random_u64(&self) -> u64 {
@@ -190,7 +226,7 @@ impl DeviceStorage for Cuda {
     }
 
     fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
-        let buf: Vec<E> = tensor.data.try_clone().unwrap().try_into().unwrap();
+        let buf: Vec<E> = tensor.data.data.try_clone().unwrap().try_into().unwrap();
         debug_assert_eq!(buf.len(), tensor.data.len());
         let mut idx = NdIndex::new(tensor.shape, tensor.strides);
         let mut contiguous = Vec::with_capacity(tensor.shape.num_elements());

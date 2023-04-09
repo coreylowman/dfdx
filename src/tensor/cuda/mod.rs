@@ -1,6 +1,7 @@
 mod allocate;
 mod device;
 
+pub(crate) use device::CachableCudaSlice;
 pub use device::{Cuda, CudaError};
 
 pub(crate) fn launch_cfg(n: u32) -> cudarc::driver::LaunchConfig {

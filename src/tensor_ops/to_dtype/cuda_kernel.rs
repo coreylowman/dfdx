@@ -1,4 +1,5 @@
 use crate::{
+    prelude::cuda::CachableCudaSlice,
     shapes::{Shape, Unit},
     tensor::{launch_cfg, unique_id, Cuda, Tensor},
 };
@@ -36,6 +37,11 @@ impl<E1: Unit + CudaTypeName, E2: Unit + CudaTypeName> super::ToDtypeKernel<E1, 
         let n = inp.data.len();
         let mut out = unsafe { dev.alloc::<E2>(n) }?;
         unsafe { fwd_fn.launch(launch_cfg(n as u32), (n, inp.data.as_ref(), &mut out)) }?;
+
+        let out = CachableCudaSlice {
+            data: out,
+            destination: inp.device.cache.clone(),
+        };
 
         Ok(Tensor {
             id: unique_id(),

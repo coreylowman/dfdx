@@ -78,8 +78,8 @@ where
     fn backward<Src: Shape + SliceShape<Slice>, Slice>(
         &self,
         inp: &Tensor<Src, E, Self>,
-        grad_inp: &mut CudaSlice<E>,
-        grad_out: &CudaSlice<E>,
+        grad_inp: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
         slice: &Slice,
     ) -> Result<(), Self::Err> {
         if !self.dev.has_func(Self::MOD, Self::FNS[1]) {

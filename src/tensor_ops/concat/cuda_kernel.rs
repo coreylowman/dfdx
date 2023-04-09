@@ -1,6 +1,6 @@
 use crate::{
     shapes::*,
-    tensor::{launch_cfg, unique_id, Cuda, Tensor},
+    tensor::{cuda::CachableCudaSlice, launch_cfg, unique_id, Cuda, Tensor},
 };
 use cudarc::driver::{DeviceSlice, LaunchAsync};
 
@@ -37,9 +37,13 @@ where
             .dtod_copy(a.data.as_ref(), &mut buf.slice_mut(0..a.data.len()))?;
         self.dev
             .dtod_copy(b.data.as_ref(), &mut buf.slice_mut(a.data.len()..))?;
+        let data = CachableCudaSlice {
+            data: buf,
+            destination: self.cache.clone(),
+        };
         Ok(Tensor {
             id: unique_id(),
-            data: std::sync::Arc::new(buf),
+            data: std::sync::Arc::new(data),
             shape,
             strides: shape.strides(),
             device: self.clone(),
