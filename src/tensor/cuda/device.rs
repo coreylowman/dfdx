@@ -2,6 +2,7 @@ use crate::shapes::{Shape, Unit};
 use crate::tensor::cpu::{Cpu, CpuError, NdIndex};
 use crate::tensor::{DeviceStorage, HasErr, Tensor};
 
+use cudarc::driver::sys::CUdeviceptr;
 use cudarc::driver::{DevicePtr, DevicePtrMut, DeviceRepr};
 use cudarc::{
     cublas::{result::CublasError, CudaBlas},
@@ -104,6 +105,28 @@ impl Cuda {
 }
 
 impl Cuda {
+    pub(crate) unsafe fn alloc_empty<E: DeviceRepr>(
+        &self,
+        len: usize,
+    ) -> Result<CudaSlice<E>, CudaError> {
+        let num_bytes = len * std::mem::size_of::<E>();
+        let reuse = {
+            let cache = self.cache.read().unwrap();
+            cache.contains_key(&num_bytes)
+        };
+        if reuse {
+            let mut cache = self.cache.write().unwrap();
+            let items = cache.get_mut(&num_bytes).unwrap();
+            let allocation: CUdeviceptr = items.pop().unwrap();
+            if items.is_empty() {
+                cache.remove(&num_bytes);
+            }
+            Ok(self.dev.upgrade_device_ptr(allocation, len))
+        } else {
+            let out = self.dev.alloc::<E>(len)?;
+            Ok(out)
+        }
+    }
     #[allow(unused)]
     pub(crate) unsafe fn get_workspace<E>(
         &self,
