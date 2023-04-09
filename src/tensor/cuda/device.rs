@@ -7,9 +7,9 @@ use cudarc::{
     driver::{CudaDevice, CudaSlice, CudaStream, DeviceSlice, DriverError},
 };
 
-use std::sync::MutexGuard;
 use std::{
-    sync::{Arc, Mutex},
+    collections::BTreeMap,
+    sync::{Arc, Mutex, MutexGuard, RwLock},
     vec::Vec,
 };
 
@@ -26,6 +26,7 @@ pub struct Cuda {
     /// A second stream for kernels to optionally execute on.
     pub(crate) par_stream: Arc<CudaStream>,
     pub(crate) workspace: Arc<Mutex<CudaSlice<u8>>>,
+    pub(crate) cache: Arc<RwLock<BTreeMap<usize, Vec<cudarc::driver::sys::CUdeviceptr>>>>,
 }
 
 #[derive(Debug)]
@@ -96,6 +97,7 @@ impl Cuda {
             cudnn,
             par_stream,
             workspace,
+            cache: Default::default(),
         })
     }
 }
@@ -129,8 +131,51 @@ impl HasErr for Cuda {
     type Err = CudaError;
 }
 
+#[derive(Debug)]
+pub struct CachableVec<E> {
+    pub(crate) data: CudaSlice<E>,
+    pub(crate) destination: Arc<RwLock<BTreeMap<usize, Vec<cudarc::driver::sys::CUdeviceptr>>>>,
+}
+
+impl<E: cudarc::driver::DeviceRepr> Clone for CachableVec<E> {
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data.clone(),
+            destination: self.destination.clone(),
+        }
+    }
+}
+
+impl<E> std::ops::Deref for CachableVec<E> {
+    type Target = Vec<E>;
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl<E> std::ops::DerefMut for CachableVec<E> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
+    }
+}
+
+impl<E> Drop for CachableVec<E> {
+    fn drop(&mut self) {
+        let data = self.data.replace_with_empty();
+        let num_bytes = data.num_bytes();
+        let ptr = data.leak();
+
+        let mut cache = self.destination.write().unwrap();
+        if let std::collections::btree_map::Entry::Vacant(e) = cache.entry(num_bytes) {
+            e.insert(std::vec![ptr]);
+        } else {
+            cache.get_mut(&num_bytes).unwrap().push(ptr);
+        }
+    }
+}
+
 impl DeviceStorage for Cuda {
-    type Vec<E: Unit> = CudaSlice<E>;
+    type Vec<E: Unit> = CachableVec<E>;
 
     fn try_alloc_len<E: Unit>(&self, len: usize) -> Result<Self::Vec<E>, Self::Err> {
         Ok(self.dev.alloc_zeros(len)?)

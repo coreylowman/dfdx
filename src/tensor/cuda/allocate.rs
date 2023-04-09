@@ -78,7 +78,7 @@ where
         let mut data = self.cpu.try_alloc_elem::<E>(shape.num_elements(), val)?;
         let offset = diagonal.into().unwrap_or(0);
         triangle_mask(&mut data, &shape, true, offset);
-        self.tensor_from_host_buf(shape, data)
+        self.tensor_from_host_buf(shape, data.data)
     }
 
     fn try_lower_tri_like<S: HasShape>(
@@ -91,7 +91,7 @@ where
         let mut data = self.cpu.try_alloc_elem::<E>(shape.num_elements(), val)?;
         let offset = diagonal.into().unwrap_or(0);
         triangle_mask(&mut data, &shape, false, offset);
-        self.tensor_from_host_buf(shape, data)
+        self.tensor_from_host_buf(shape, data.data)
     }
 }
 
@@ -182,7 +182,10 @@ where
 {
     type Array = <Cpu as TensorToArray<S, E>>::Array;
     fn tensor_to_array<T>(&self, tensor: &Tensor<S, E, Self, T>) -> Self::Array {
-        let buf = tensor.data.try_clone().unwrap().try_into().unwrap();
+        let buf = crate::tensor::cpu::CachableVec {
+            data: tensor.data.try_clone().unwrap().try_into().unwrap(),
+            destination: self.cpu.cache.clone(),
+        };
         self.cpu.tensor_to_array::<NoneTape>(&Tensor {
             id: tensor.id,
             data: Arc::new(buf),
