@@ -1,11 +1,7 @@
 use crate::shapes::{Shape, Unit};
-use crate::tensor::{cpu::LendingIterator, storage_traits::*, Tensor};
+use crate::tensor::{cache::TensorCache, cpu::LendingIterator, storage_traits::*, Tensor};
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::{
-    collections::BTreeMap,
-    sync::{Arc, RwLock},
-    vec::Vec,
-};
+use std::{sync::Arc, vec::Vec};
 
 #[cfg(feature = "no-std")]
 use spin::Mutex;
@@ -26,14 +22,14 @@ unsafe impl Sync for BytesPtr {}
 #[derive(Clone, Debug)]
 pub struct Cpu {
     pub(crate) rng: Arc<Mutex<StdRng>>,
-    pub(crate) cache: Arc<RwLock<BTreeMap<usize, Vec<BytesPtr>>>>,
+    pub(crate) cache: Arc<TensorCache<BytesPtr>>,
 }
 
 impl Default for Cpu {
     fn default() -> Self {
         Self {
             rng: Arc::new(Mutex::new(StdRng::seed_from_u64(0))),
-            cache: Arc::new(RwLock::new(BTreeMap::new())),
+            cache: Arc::new(Default::default()),
         }
     }
 }
@@ -43,7 +39,7 @@ impl Cpu {
     pub fn seed_from_u64(seed: u64) -> Self {
         Self {
             rng: Arc::new(Mutex::new(StdRng::seed_from_u64(seed))),
-            cache: Arc::new(RwLock::new(BTreeMap::new())),
+            cache: Arc::new(Default::default()),
         }
     }
 }
@@ -75,34 +71,27 @@ impl HasErr for Cpu {
 #[derive(Debug)]
 pub struct CachableVec<E> {
     pub(crate) data: Vec<E>,
-    pub(crate) destination: Arc<RwLock<BTreeMap<usize, Vec<BytesPtr>>>>,
+    pub(crate) destination: Arc<TensorCache<BytesPtr>>,
 }
 
 impl<E: Clone> Clone for CachableVec<E> {
     fn clone(&self) -> Self {
         let numel = self.data.len();
         let num_bytes = std::mem::size_of::<E>() * numel;
-        let reuse = {
-            let cache = self.destination.read().unwrap();
-            cache.contains_key(&num_bytes)
-        };
-        let data = if reuse {
-            let mut cache = self.destination.write().unwrap();
-            let items = cache.get_mut(&num_bytes).unwrap();
-            let allocation: *mut u8 = items.pop().unwrap().0;
-            if items.is_empty() {
-                cache.remove(&num_bytes);
-            }
-            let mut data = unsafe { Vec::from_raw_parts(allocation as *mut E, numel, numel) };
-            data.clone_from(&self.data);
-            data
-        } else {
-            self.data.clone()
-        };
-        Self {
-            data,
-            destination: self.destination.clone(),
-        }
+        self.destination.try_pop(num_bytes).map_or_else(
+            || Self {
+                data: self.data.clone(),
+                destination: self.destination.clone(),
+            },
+            |allocation| {
+                let mut data = unsafe { Vec::from_raw_parts(allocation.0 as *mut E, numel, numel) };
+                data.clone_from(&self.data);
+                Self {
+                    data,
+                    destination: self.destination.clone(),
+                }
+            },
+        )
     }
 }
 
@@ -115,12 +104,7 @@ impl<E> Drop for CachableVec<E> {
         let ptr = data.as_mut_ptr() as *mut u8;
         std::mem::forget(data);
 
-        let mut cache = self.destination.write().unwrap();
-        if let std::collections::btree_map::Entry::Vacant(e) = cache.entry(num_bytes) {
-            e.insert(std::vec![BytesPtr(ptr)]);
-        } else {
-            cache.get_mut(&num_bytes).unwrap().push(BytesPtr(ptr));
-        }
+        self.destination.insert(num_bytes, BytesPtr(ptr));
     }
 }
 

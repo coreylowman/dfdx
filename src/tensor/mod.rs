@@ -124,6 +124,7 @@
 //! You can also use [Tensor::write_to_npz] and [Tensor::read_from_npz] when working with
 //! zip archives.
 
+pub(crate) mod cache;
 pub(crate) mod cpu;
 #[cfg(feature = "cuda")]
 pub(crate) mod cuda;
