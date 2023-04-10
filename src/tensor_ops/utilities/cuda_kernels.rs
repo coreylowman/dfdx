@@ -235,20 +235,20 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
 
         let shape = match &lhs {
-            Ok(lhs) => lhs.shape,
-            Err(lhs) => lhs.shape,
+            Cow::Borrowed(lhs) => lhs.shape,
+            Cow::Owned(lhs) => lhs.shape,
         };
         let strides = shape.strides();
         let numel = shape.num_elements();
         let cfg = launch_cfg(numel as u32);
 
         let lhs_strides = match &lhs {
-            Ok(lhs) => lhs.strides,
-            Err(lhs) => lhs.strides,
+            Cow::Borrowed(lhs) => lhs.strides,
+            Cow::Owned(lhs) => lhs.strides,
         };
         let rhs_strides = match &rhs {
-            Ok(rhs) => rhs.strides,
-            Err(rhs) => rhs.strides,
+            Cow::Borrowed(rhs) => rhs.strides,
+            Cow::Owned(rhs) => rhs.strides,
         };
 
         let mut info: Vec<usize> = Vec::with_capacity(3 * S::NUM_DIMS);
@@ -360,16 +360,16 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
             .unwrap();
 
         let shape = match lhs {
-            Ok(lhs) => lhs.shape,
-            Err(lhs) => lhs.shape,
+            Cow::Borrowed(lhs) => lhs.shape,
+            Cow::Owned(lhs) => lhs.shape,
         };
         let (lhs_strides, lhs_len) = match lhs {
-            Ok(lhs) => (lhs.strides, lhs.data.len()),
-            Err(lhs) => (lhs.strides, lhs.len),
+            Cow::Borrowed(lhs) => (lhs.strides, lhs.data.len()),
+            Cow::Owned(lhs) => (lhs.strides, lhs.len),
         };
         let (rhs_strides, rhs_len) = match rhs {
-            Ok(rhs) => (rhs.strides, rhs.data.len()),
-            Err(rhs) => (rhs.strides, rhs.len),
+            Cow::Borrowed(rhs) => (rhs.strides, rhs.data.len()),
+            Cow::Owned(rhs) => (rhs.strides, rhs.len),
         };
 
         let numel = shape.num_elements();
@@ -399,7 +399,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         let info = self.dev.htod_copy(info)?;
 
         match (lhs, rhs) {
-            (Ok(lhs), Ok(rhs)) => {
+            (Cow::Borrowed(lhs), Cow::Borrowed(rhs)) => {
                 let params_lhs = (
                     op.clone(),        // const OP_STRUCT op,
                     numel,             // const size_t numel,
@@ -428,7 +428,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                 unsafe { bwd_rhs_fn.launch(cfg, params_rhs) }?;
                 self.dev.wait_for(&self.par_stream)?;
             }
-            (Err(_), Err(_)) => {
+            (Cow::Owned(_), Cow::Owned(_)) => {
                 let params_lhs = (
                     op.clone(),      // const OP_STRUCT op,
                     numel,           // const size_t numel,
