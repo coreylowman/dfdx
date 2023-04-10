@@ -3,7 +3,7 @@ use cudarc::driver::{DeviceRepr, LaunchAsync, ValidAsZeroBits};
 
 use crate::{
     shapes::*,
-    tensor::{launch_cfg, unique_id, Cuda, GhostTensor, Tensor, cuda::CachableCudaSlice},
+    tensor::{cuda::CachableCudaSlice, launch_cfg, unique_id, Cuda, GhostTensor, Tensor},
 };
 
 use std::sync::Arc;
@@ -54,7 +54,7 @@ where
         let data = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
         let data = CachableCudaSlice {
             data,
-            destination: self.cache.clone()
+            destination: self.cache.clone(),
         };
         let data = Arc::new(data);
         Ok(Tensor {
@@ -127,8 +127,8 @@ where
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
 
-        let mut f_b1023 = unsafe { self.dev.alloc::<E>(filters_numel) }?;
-        let mut grad_f_b1023 = unsafe { self.dev.alloc::<E>(op.batch * filters_numel) }?;
+        let mut f_b1023 = unsafe { self.alloc_empty::<E>(filters_numel) }?;
+        let mut grad_f_b1023 = unsafe { self.alloc_empty::<E>(op.batch * filters_numel) }?;
         let f_strides = self.dev.htod_copy(rhs.strides.into())?;
 
         self.par_stream.wait_for_default()?;

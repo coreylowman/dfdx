@@ -175,7 +175,7 @@ where
         let k = Const::<1>;
         let shape = (m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
 
         unsafe {
             self.gemm(
@@ -251,7 +251,7 @@ where
         let (k, n) = rhs.shape;
         let shape = (n,);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
 
         unsafe {
             self.gemm(
@@ -324,7 +324,7 @@ where
         let (k, n) = rhs.shape;
         let shape = (m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
 
         unsafe {
             self.gemm(
@@ -400,7 +400,7 @@ where
         let (k, n) = rhs.shape;
         let shape = (batch, m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
         unsafe {
             self.gemm_batch(
                 (batch, m, k, n),
@@ -478,7 +478,7 @@ where
         let (_, k, n) = rhs.shape;
         let shape = (batch, m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
         unsafe {
             self.gemm_batch(
                 (batch, m, k, n),
@@ -555,7 +555,7 @@ where
         let (_, _, k, n) = rhs.shape;
         let shape = (batch, seq, m, n);
         let strides = shape.strides();
-        let mut storage = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
+        let mut storage = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
 
         let half_batch = batch.size() / 2;
 

@@ -63,7 +63,8 @@ where
 
         let cfg = launch_cfg(physical_numel as u32);
 
-        let mut storage = self.dev.alloc_zeros::<E>(dst.num_elements())?;
+        let mut storage = unsafe { self.alloc_empty::<E>(dst.num_elements()) }?;
+        self.dev.memset_zeros(&mut storage)?;
         let params = (
             physical_numel,    // const size_t numel,
             num_dims,          // const size_t num_dims,

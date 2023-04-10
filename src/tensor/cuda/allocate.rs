@@ -45,7 +45,8 @@ impl<E: Unit> ZerosTensor<E> for Cuda {
     fn try_zeros_like<S: HasShape>(&self, src: &S) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
         let strides = shape.strides();
-        let data = self.dev.alloc_zeros(shape.num_elements())?;
+        let mut data = unsafe { self.alloc_empty(shape.num_elements()) }?;
+        self.dev.memset_zeros(&mut data)?;
         Ok(self.build_tensor(shape, strides, data))
     }
 }

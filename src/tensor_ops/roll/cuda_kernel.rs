@@ -35,7 +35,7 @@ where
         let numel = inp.shape.num_elements();
         let strides = inp.shape.strides();
 
-        let mut out = unsafe { self.dev.alloc::<E>(numel) }?;
+        let mut out = unsafe { self.alloc_empty::<E>(numel) }?;
         let dims = self.dev.htod_copy(inp.shape.concrete().into())?;
         let inp_strides = self.dev.htod_copy(inp.strides.into())?;
         let out_strides = self.dev.htod_copy(strides.into())?;

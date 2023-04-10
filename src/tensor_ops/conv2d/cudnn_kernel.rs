@@ -25,7 +25,7 @@ where
     Self: HasCudnnKernel<E>,
 {
     fn alloc<S: Shape>(&self, shape: S) -> Result<Tensor<S, E, Self>, Self::Err> {
-        let data = Arc::new(unsafe { self.dev.alloc::<E>(shape.num_elements()) }?);
+        let data = Arc::new(unsafe { self.alloc_empty::<E>(shape.num_elements()) }?);
         Ok(Tensor {
             id: unique_id(),
             data,

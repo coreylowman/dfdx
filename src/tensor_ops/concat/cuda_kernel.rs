@@ -31,7 +31,7 @@ where
         debug_assert_eq!(a.strides, a.shape.strides());
         debug_assert_eq!(b.strides, b.shape.strides());
         let shape = a.shape.concat_shape(&b.shape);
-        let mut buf = unsafe { self.dev.alloc::<E>(shape.num_elements()) }?;
+        let mut buf = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
         debug_assert_eq!(buf.len(), a.data.len() + b.data.len());
         self.dev
             .dtod_copy(a.data.as_ref(), &mut buf.slice_mut(0..a.data.len()))?;

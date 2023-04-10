@@ -39,7 +39,7 @@ where
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
+        let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
 
         let dims: CudaSlice<usize> = self.dev.htod_copy(shape.concrete().into())?;
         let cond_strides: CudaSlice<usize> = self.dev.htod_copy(cond.strides.into())?;
