@@ -237,7 +237,9 @@ impl<E> std::ops::DerefMut for CachableCudaSlice<E> {
 
 impl<E> Drop for CachableCudaSlice<E> {
     fn drop(&mut self) {
-        let data = self.data.replace_with_empty();
+        let dev = self.data.device();
+        let null = dev.null().unwrap();
+        let data = std::mem::replace(&mut self.data, null);
         let num_bytes = data.num_bytes();
         let ptr = data.leak();
 
