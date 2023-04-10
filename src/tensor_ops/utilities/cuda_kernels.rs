@@ -4,7 +4,7 @@ use crate::{
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
 use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync};
-use std::{sync::Arc, vec::Vec};
+use std::{borrow::Cow, sync::Arc, vec::Vec};
 
 pub trait UnaryOpCudaKernel<E> {
     const DF_USES_FX: bool;
