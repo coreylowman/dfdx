@@ -91,10 +91,10 @@ where
 
         let out_strides: Src::Concrete =
             BroadcastStridesTo::<Src, Ax>::broadcast_strides(&dst, dst.strides());
-        let physical_numel = inp.len;
+        let physical_numel = inp.len();
         let elems_per_thread = E::from_usize(reduction_elems_per_thread::<_, Src>(
-            inp.shape.concrete(),
-            inp.strides,
+            inp.shape().concrete(),
+            inp.strides(),
             Ax::as_array(),
         ))
         .unwrap();
@@ -102,8 +102,8 @@ where
         let cfg = launch_cfg(physical_numel as u32);
 
         let mut info: Vec<usize> = Vec::with_capacity(3 * Src::NUM_DIMS);
-        info.extend(inp.shape.concrete());
-        info.extend(inp.strides);
+        info.extend(inp.shape().concrete());
+        info.extend(inp.strides());
         info.extend(out_strides);
         let info = self.dev.htod_copy(info)?;
 

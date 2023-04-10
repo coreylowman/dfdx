@@ -115,12 +115,12 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
         match (inp.data(), out.data()) {
             (None, None) => {
-                let cfg = launch_cfg(inp.len as u32);
+                let cfg = launch_cfg(inp.len() as u32);
                 let params = (op, inp.len(), 0u64, grad_inp, 0u64, grad_out);
                 unsafe { bwd_fn.launch(cfg, params) }?;
             }
             (None, Some(out_buf)) => {
-                let cfg = launch_cfg(inp.len as u32);
+                let cfg = launch_cfg(inp.len() as u32);
                 let params = (op, inp.len(), 0u64, grad_inp, out_buf, grad_out);
                 unsafe { bwd_fn.launch(cfg, params) }?;
             }
