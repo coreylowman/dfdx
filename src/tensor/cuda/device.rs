@@ -1,8 +1,7 @@
 use crate::shapes::{Shape, Unit};
 use crate::tensor::cpu::{Cpu, CpuError, NdIndex};
-use crate::tensor::{DeviceStorage, HasErr, Tensor};
+use crate::tensor::{cache::TensorCache, DeviceStorage, HasErr, Tensor};
 
-use cudarc::driver::sys::CUdeviceptr;
 use cudarc::driver::{DevicePtr, DevicePtrMut, DeviceRepr};
 use cudarc::{
     cublas::{result::CublasError, CudaBlas},
@@ -10,8 +9,7 @@ use cudarc::{
 };
 
 use std::{
-    collections::BTreeMap,
-    sync::{Arc, Mutex, MutexGuard, RwLock},
+    sync::{Arc, Mutex, MutexGuard},
     vec::Vec,
 };
 
@@ -28,7 +26,7 @@ pub struct Cuda {
     /// A second stream for kernels to optionally execute on.
     pub(crate) par_stream: Arc<CudaStream>,
     pub(crate) workspace: Arc<Mutex<CudaSlice<u8>>>,
-    pub(crate) cache: Arc<RwLock<BTreeMap<usize, Vec<cudarc::driver::sys::CUdeviceptr>>>>,
+    pub(crate) cache: Arc<TensorCache<cudarc::driver::sys::CUdeviceptr>>,
 }
 
 #[derive(Debug)]
@@ -110,22 +108,11 @@ impl Cuda {
         len: usize,
     ) -> Result<CudaSlice<E>, CudaError> {
         let num_bytes = len * std::mem::size_of::<E>();
-        let reuse = {
-            let cache = self.cache.read().unwrap();
-            cache.contains_key(&num_bytes)
-        };
-        if reuse {
-            let mut cache = self.cache.write().unwrap();
-            let items = cache.get_mut(&num_bytes).unwrap();
-            let allocation: CUdeviceptr = items.pop().unwrap();
-            if items.is_empty() {
-                cache.remove(&num_bytes);
-            }
-            Ok(self.dev.upgrade_device_ptr(allocation, len))
-        } else {
-            let out = self.dev.alloc::<E>(len)?;
-            Ok(out)
-        }
+        let data = self.cache.try_pop(num_bytes).map_or_else(
+            || self.dev.alloc::<E>(len),
+            |ptr| Ok(self.dev.upgrade_device_ptr(ptr, len)),
+        )?;
+        Ok(data)
     }
     #[allow(unused)]
     pub(crate) unsafe fn get_workspace<E>(
@@ -157,32 +144,25 @@ impl HasErr for Cuda {
 
 #[derive(Debug)]
 pub struct CachableCudaSlice<E> {
+    /// The actual data.
     pub(crate) data: CudaSlice<E>,
-    pub(crate) destination: Arc<RwLock<BTreeMap<usize, Vec<cudarc::driver::sys::CUdeviceptr>>>>,
+    /// A cache of device pointers that can be reused.
+    pub(crate) destination: Arc<TensorCache<cudarc::driver::sys::CUdeviceptr>>,
 }
 
 impl<E: cudarc::driver::DeviceRepr> Clone for CachableCudaSlice<E> {
     fn clone(&self) -> Self {
         let len = self.data.len();
         let num_bytes = self.data.num_bytes();
-        let reuse = {
-            let cache = self.destination.read().unwrap();
-            cache.contains_key(&num_bytes)
-        };
-        let data = if reuse {
-            let mut cache = self.destination.write().unwrap();
-            let items = cache.get_mut(&num_bytes).unwrap();
-            let allocation: CUdeviceptr = items.pop().unwrap();
-            if items.is_empty() {
-                cache.remove(&num_bytes);
-            }
-            let dev = self.data.device();
-            let mut slice = unsafe { dev.upgrade_device_ptr(allocation, len) };
-            dev.dtod_copy(&self.data, &mut slice).unwrap();
-            slice
-        } else {
-            self.data.try_clone().unwrap()
-        };
+        let data = self.destination.try_pop(num_bytes).map_or_else(
+            || self.data.try_clone().unwrap(),
+            |ptr| {
+                let dev = self.data.device();
+                let mut slice = unsafe { dev.upgrade_device_ptr(ptr, len) };
+                dev.dtod_copy(&self.data, &mut slice).unwrap();
+                slice
+            },
+        );
         Self {
             data,
             destination: self.destination.clone(),
@@ -242,13 +222,7 @@ impl<E> Drop for CachableCudaSlice<E> {
         let data = std::mem::replace(&mut self.data, null);
         let num_bytes = data.num_bytes();
         let ptr = data.leak();
-
-        let mut cache = self.destination.write().unwrap();
-        if let std::collections::btree_map::Entry::Vacant(e) = cache.entry(num_bytes) {
-            e.insert(std::vec![ptr]);
-        } else {
-            cache.get_mut(&num_bytes).unwrap().push(ptr);
-        }
+        self.destination.insert(num_bytes, ptr);
     }
 }
 
@@ -288,7 +262,7 @@ impl DeviceStorage for Cuda {
     }
 
     fn try_empty_cache(&self) -> Result<(), Self::Err> {
-        let mut cache = self.cache.write().unwrap();
+        let mut cache = self.cache.0.write().unwrap();
         for (&num_bytes, allocations) in cache.iter_mut() {
             for alloc in allocations.drain(..) {
                 let data = unsafe { self.dev.upgrade_device_ptr::<u8>(alloc, num_bytes) };

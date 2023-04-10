@@ -157,7 +157,7 @@ impl DeviceStorage for Cpu {
     }
 
     fn try_empty_cache(&self) -> Result<(), Self::Err> {
-        let mut cache = self.cache.write().unwrap();
+        let mut cache = self.cache.0.write().unwrap();
         for (&num_bytes, allocations) in cache.iter_mut() {
             for alloc in allocations.drain(..) {
                 let data = unsafe { Vec::from_raw_parts(alloc.0 as *mut u8, num_bytes, num_bytes) };

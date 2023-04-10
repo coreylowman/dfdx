@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, sync::RwLock};
 
 #[derive(Debug)]
-pub(crate) struct TensorCache<Ptr>(RwLock<BTreeMap<usize, Vec<Ptr>>>);
+pub(crate) struct TensorCache<Ptr>(pub(crate) RwLock<BTreeMap<usize, Vec<Ptr>>>);
 
 impl<Ptr> Default for TensorCache<Ptr> {
     fn default() -> Self {
