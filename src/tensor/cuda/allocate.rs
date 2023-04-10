@@ -17,7 +17,9 @@ impl Cuda {
         shape: S,
         buf: Vec<E>,
     ) -> Result<Tensor<S, E, Self>, CudaError> {
-        Ok(self.build_tensor(shape, shape.strides(), self.dev.htod_copy(buf)?))
+        let mut slice = unsafe { self.alloc_empty(buf.len()) }?;
+        self.dev.htod_copy_into(buf, &mut slice)?;
+        Ok(self.build_tensor(shape, shape.strides(), slice))
     }
 
     pub(crate) fn build_tensor<S: Shape, E: Unit>(
