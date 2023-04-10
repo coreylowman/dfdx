@@ -4,6 +4,7 @@ use crate::{
     tensor::*,
     tensor_ops::{cuda_kernels::cuda_unary, ops::UnaryKernel},
 };
+use std::borrow::Cow;
 
 unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<f32> {}
 unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<f64> {}

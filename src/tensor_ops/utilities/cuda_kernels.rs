@@ -76,7 +76,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
 
         match inp {
-            Ok(inp) => {
+            Cow::Borrowed(inp) => {
                 let numel = inp.data.len();
                 let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
@@ -93,7 +93,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
                     tape: Default::default(),
                 })
             }
-            Err(mut inp) => {
+            Cow::Owned(mut inp) => {
                 inp.id = unique_id();
                 let numel = inp.data.len();
                 let cfg = launch_cfg(numel as u32);
@@ -258,7 +258,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         let info = self.dev.htod_copy(info)?;
 
         match (lhs, rhs) {
-            (Ok(lhs), Ok(rhs)) => {
+            (Cow::Borrowed(lhs), Cow::Borrowed(rhs)) => {
                 let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
                 let params = (
                     op,
@@ -279,7 +279,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                     tape: Default::default(),
                 })
             }
-            (Err(mut lhs), Err(mut rhs)) => {
+            (Cow::Owned(mut lhs), Cow::Owned(mut rhs)) => {
                 let lhs_valid = lhs.strides == lhs.shape.strides();
                 let rhs_valid = rhs.strides == rhs.shape.strides();
                 if lhs_valid || rhs_valid {
