@@ -72,10 +72,38 @@ impl HasErr for Cpu {
     type Err = CpuError;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct CachableVec<E> {
     pub(crate) data: Vec<E>,
     pub(crate) destination: Arc<RwLock<BTreeMap<usize, Vec<BytesPtr>>>>,
+}
+
+impl<E: Clone> Clone for CachableVec<E> {
+    fn clone(&self) -> Self {
+        let numel = self.data.len();
+        let num_bytes = std::mem::size_of::<E>() * numel;
+        let reuse = {
+            let cache = self.destination.read().unwrap();
+            cache.contains_key(&num_bytes)
+        };
+        let data = if reuse {
+            let mut cache = self.destination.write().unwrap();
+            let items = cache.get_mut(&num_bytes).unwrap();
+            let allocation: *mut u8 = items.pop().unwrap().0;
+            if items.is_empty() {
+                cache.remove(&num_bytes);
+            }
+            let mut data = unsafe { Vec::from_raw_parts(allocation as *mut E, numel, numel) };
+            data.clone_from(&self.data);
+            data
+        } else {
+            self.data.clone()
+        };
+        Self {
+            data,
+            destination: self.destination.clone(),
+        }
+    }
 }
 
 impl<E> Drop for CachableVec<E> {
