@@ -38,7 +38,7 @@ impl Cpu {
                 cache.remove(&num_bytes);
             }
             let mut data = unsafe { Vec::from_raw_parts(allocation as *mut E, numel, numel) };
-            data.fill(Default::default());
+            data.fill(elem);
             data
         } else {
             #[cfg(feature = "fast-alloc")]
