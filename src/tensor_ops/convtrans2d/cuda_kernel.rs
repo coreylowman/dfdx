@@ -3,7 +3,7 @@ use cudarc::driver::{DeviceRepr, LaunchAsync, ValidAsZeroBits};
 
 use crate::{
     shapes::*,
-    tensor::{launch_cfg, Cuda, Tensor, TensorMetadata},
+    tensor::{launch_cfg, Cuda, Tensor, Tensorlike},
 };
 
 use std::sync::Arc;
@@ -99,7 +99,7 @@ where
         grad_lhs: &mut Self::Vec<E>,
         rhs: &Tensor<R, E, Self>,
         grad_rhs: &mut Self::Vec<E>,
-        _: &impl TensorMetadata<O, E, Self>,
+        _: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let patches_numel = op.batch * op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in;

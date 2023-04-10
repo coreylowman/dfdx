@@ -107,9 +107,9 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
     fn backward<S: Shape>(
         &self,
         op: K,
-        inp: &impl TensorMetadata<S, E, Self>,
+        inp: &impl Tensorlike<S, E, Self>,
         grad_inp: &mut Self::Vec<E>,
-        out: &impl TensorMetadata<S, E, Self>,
+        out: &impl Tensorlike<S, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
@@ -343,9 +343,9 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
     fn backward<S: Shape>(
         &self,
         op: K,
-        lhs: &impl TensorMetadata<S, E, Self>,
+        lhs: &impl Tensorlike<S, E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &impl TensorMetadata<S, E, Self>,
+        rhs: &impl Tensorlike<S, E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
