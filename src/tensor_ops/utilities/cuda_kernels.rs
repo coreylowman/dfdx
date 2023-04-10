@@ -360,16 +360,16 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
             .unwrap();
 
         let shape = match lhs {
-            Cow::Borrowed(lhs) => lhs.shape,
-            Cow::Owned(lhs) => lhs.shape,
+            Ok(lhs) => lhs.shape,
+            Err(lhs) => lhs.shape,
         };
         let (lhs_strides, lhs_len) = match lhs {
-            Cow::Borrowed(lhs) => (lhs.strides, lhs.data.len()),
-            Cow::Owned(lhs) => (lhs.strides, lhs.len),
+            Ok(lhs) => (lhs.strides, lhs.data.len()),
+            Err(lhs) => (lhs.strides, lhs.len),
         };
         let (rhs_strides, rhs_len) = match rhs {
-            Cow::Borrowed(rhs) => (rhs.strides, rhs.data.len()),
-            Cow::Owned(rhs) => (rhs.strides, rhs.len),
+            Ok(rhs) => (rhs.strides, rhs.data.len()),
+            Err(rhs) => (rhs.strides, rhs.len),
         };
 
         let numel = shape.num_elements();
@@ -399,7 +399,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         let info = self.dev.htod_copy(info)?;
 
         match (lhs, rhs) {
-            (Cow::Borrowed(lhs), Cow::Borrowed(rhs)) => {
+            (Ok(lhs), Ok(rhs)) => {
                 let params_lhs = (
                     op.clone(),        // const OP_STRUCT op,
                     numel,             // const size_t numel,
@@ -428,7 +428,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                 unsafe { bwd_rhs_fn.launch(cfg, params_rhs) }?;
                 self.dev.wait_for(&self.par_stream)?;
             }
-            (Cow::Owned(_), Cow::Owned(_)) => {
+            (Err(_), Err(_)) => {
                 let params_lhs = (
                     op.clone(),      // const OP_STRUCT op,
                     numel,           // const size_t numel,
