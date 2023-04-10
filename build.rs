@@ -101,12 +101,16 @@ mod cuda {
                     }
                 }
                 codes.sort();
+                if !codes.contains(&compute_cap) {
+                    panic!("nvcc cannot target gpu arch {compute_cap}. Available nvcc targets are {codes:?}.");
+                }
                 *codes.last().unwrap()
             };
 
             // If nvidia-smi compute_cap is higher than the highest gpu code from nvcc,
             // then choose the highest gpu code in nvcc
             if compute_cap > max_nvcc_code {
+                println!("cargo:warning=Lowering gpu arch {compute_cap} to max nvcc target {max_nvcc_code}.");
                 compute_cap = max_nvcc_code;
             }
 
