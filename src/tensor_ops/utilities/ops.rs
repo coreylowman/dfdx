@@ -2,6 +2,7 @@ use crate::{
     shapes::{Dtype, HasShape, Shape},
     tensor::{DeviceStorage, GhostTensor, Merge, PutTape, SplitTape, Tape, Tensor},
 };
+use std::borrow::Cow;
 
 pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
     const BACKWARD_WITHOUT_INP: bool;
@@ -9,7 +10,7 @@ pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
     fn forward<S: Shape>(
         &self,
         op: Op,
-        inp: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
+        inp: Cow<Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err>;
     fn backward<S: Shape>(
         &self,
@@ -26,8 +27,8 @@ pub trait BinaryKernel<Op, E: Dtype>: DeviceStorage {
     fn forward<S: Shape>(
         &self,
         op: Op,
-        lhs: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
-        rhs: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
+        lhs: Cow<Tensor<S, E, Self>>,
+        rhs: Cow<Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err>;
     fn backward<S: Shape>(
         &self,
@@ -54,7 +55,7 @@ pub(crate) fn try_unary_op<
     let inp_ghost = inp.ghost();
     let dev = inp.device.clone();
     if !T::OWNS_TAPE || D::BACKWARD_WITHOUT_DATA {
-        let out = inp_ghost.dev.forward(op.clone(), Err(inp))?;
+        let out = inp_ghost.dev.forward(op.clone(), Cow::Owned(inp))?;
         let out_ghost = out.ghost();
         tape.add_backward_op(move |grads| {
             grads.try_alloc_for(&inp_ghost)?;
@@ -64,7 +65,7 @@ pub(crate) fn try_unary_op<
         });
         Ok(out.put_tape(tape))
     } else if D::BACKWARD_WITHOUT_INP {
-        let out = inp_ghost.dev.forward(op.clone(), Err(inp))?;
+        let out = inp_ghost.dev.forward(op.clone(), Cow::Owned(inp))?;
         let out_ghost = out.ghost();
         let out_clone = out.clone();
         tape.add_backward_op(move |grads| {
@@ -75,7 +76,7 @@ pub(crate) fn try_unary_op<
         });
         Ok(out.put_tape(tape))
     } else {
-        let out = inp.device.forward(op.clone(), Ok(&inp))?;
+        let out = inp.device.forward(op.clone(), Cow::Borrowed(&inp))?;
         let out_ghost = out.ghost();
         tape.add_backward_op(move |grads| {
             grads.try_alloc_for(&inp_ghost)?;
@@ -106,7 +107,9 @@ pub(crate) fn try_binary_op<
     let rhs_ghost = rhs.ghost();
     let mut tape = ltape.merge(rtape);
     if !LhsTape::OWNS_TAPE || D::BACKWARD_WITHOUT_DATA {
-        let out = lhs_ghost.dev.forward(op, Err(lhs), Err(rhs))?;
+        let out = lhs_ghost
+            .dev
+            .forward(op, Cow::Owned(lhs), Cow::Owned(rhs))?;
         let out_ghost = out.ghost();
         tape.add_backward_op(move |grads| {
             grads.try_alloc_for(&lhs_ghost)?;
@@ -125,7 +128,9 @@ pub(crate) fn try_binary_op<
         });
         Ok(out.put_tape(tape))
     } else {
-        let out = lhs.device.forward(op, Ok(&lhs), Ok(&rhs))?;
+        let out = lhs
+            .device
+            .forward(op, Cow::Borrowed(&lhs), Cow::Borrowed(&rhs))?;
         let out_ghost = out.ghost();
         tape.add_backward_op(move |grads| {
             grads.try_alloc_for(&lhs_ghost)?;

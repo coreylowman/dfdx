@@ -4,7 +4,7 @@ use crate::{
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
 };
 use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync};
-use std::{sync::Arc, vec::Vec};
+use std::{borrow::Cow, sync::Arc, vec::Vec};
 
 pub trait UnaryOpCudaKernel<E> {
     const DF_USES_FX: bool;
@@ -66,7 +66,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
     fn forward<S: Shape>(
         &self,
         op: K,
-        inp: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
+        inp: Cow<Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
         if !self.dev.has_func(K::MODULE_NAME, K::FWD_FN_NAME) {
             self.dev
@@ -76,7 +76,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
 
         match inp {
-            Ok(inp) => {
+            Cow::Borrowed(inp) => {
                 let numel = inp.data.len();
                 let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
@@ -93,7 +93,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
                     tape: Default::default(),
                 })
             }
-            Err(mut inp) => {
+            Cow::Owned(mut inp) => {
                 inp.id = unique_id();
                 let numel = inp.data.len();
                 let cfg = launch_cfg(numel as u32);
@@ -225,8 +225,8 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
     fn forward<S: Shape>(
         &self,
         op: K,
-        lhs: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
-        rhs: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
+        lhs: Cow<Tensor<S, E, Self>>,
+        rhs: Cow<Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
         if !self.dev.has_func(K::MODULE_NAME, K::FWD_FN_NAME) {
             self.dev
@@ -235,20 +235,20 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         let fwd_fn = self.dev.get_func(K::MODULE_NAME, K::FWD_FN_NAME).unwrap();
 
         let shape = match &lhs {
-            Ok(lhs) => lhs.shape,
-            Err(lhs) => lhs.shape,
+            Cow::Borrowed(lhs) => lhs.shape,
+            Cow::Owned(lhs) => lhs.shape,
         };
         let strides = shape.strides();
         let numel = shape.num_elements();
         let cfg = launch_cfg(numel as u32);
 
         let lhs_strides = match &lhs {
-            Ok(lhs) => lhs.strides,
-            Err(lhs) => lhs.strides,
+            Cow::Borrowed(lhs) => lhs.strides,
+            Cow::Owned(lhs) => lhs.strides,
         };
         let rhs_strides = match &rhs {
-            Ok(rhs) => rhs.strides,
-            Err(rhs) => rhs.strides,
+            Cow::Borrowed(rhs) => rhs.strides,
+            Cow::Owned(rhs) => rhs.strides,
         };
 
         let mut info: Vec<usize> = Vec::with_capacity(3 * S::NUM_DIMS);
@@ -258,7 +258,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         let info = self.dev.htod_copy(info)?;
 
         match (lhs, rhs) {
-            (Ok(lhs), Ok(rhs)) => {
+            (Cow::Borrowed(lhs), Cow::Borrowed(rhs)) => {
                 let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
                 let params = (
                     op,
@@ -279,7 +279,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                     tape: Default::default(),
                 })
             }
-            (Err(mut lhs), Err(mut rhs)) => {
+            (Cow::Owned(mut lhs), Cow::Owned(mut rhs)) => {
                 let lhs_valid = lhs.strides == lhs.shape.strides();
                 let rhs_valid = rhs.strides == rhs.shape.strides();
                 if lhs_valid || rhs_valid {

@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     shapes::{Dtype, Shape},
@@ -48,10 +50,10 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
     fn forward<S: Shape>(
         &self,
         op: Op,
-        inp: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
+        inp: Cow<Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
         let mut out = match inp {
-            Ok(inp) => {
+            Cow::Borrowed(inp) => {
                 // allocate a new data buffer
                 Tensor {
                     id: unique_id(),
@@ -62,7 +64,7 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
                     tape: Default::default(),
                 }
             }
-            Err(mut inp) => {
+            Cow::Owned(mut inp) => {
                 // re-use the data buffer
                 inp.id = unique_id();
                 inp
@@ -111,11 +113,11 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
     fn forward<S: Shape>(
         &self,
         op: Op,
-        lhs: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
-        rhs: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
+        lhs: Cow<Tensor<S, E, Self>>,
+        rhs: Cow<Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
         match (lhs, rhs) {
-            (Ok(lhs), Ok(rhs)) => {
+            (Cow::Borrowed(lhs), Cow::Borrowed(rhs)) => {
                 let mut out = self.try_zeros_like(&lhs.shape)?;
                 let mut lhs_iter = lhs.iter();
                 let mut rhs_iter = rhs.iter();
@@ -126,7 +128,7 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
                 }
                 Ok(out)
             }
-            (Err(mut lhs), Err(mut rhs)) => {
+            (Cow::Owned(mut lhs), Cow::Owned(mut rhs)) => {
                 let lhs_valid = lhs.strides == lhs.shape.strides();
                 let rhs_valid = rhs.strides == rhs.shape.strides();
                 if lhs_valid || rhs_valid {
@@ -148,7 +150,12 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
                         Ok(lhs)
                     }
                 } else {
-                    <Self as BinaryKernel<Op, E>>::forward(self, op, Ok(&lhs), Ok(&rhs))
+                    <Self as BinaryKernel<Op, E>>::forward(
+                        self,
+                        op,
+                        Cow::Borrowed(&lhs),
+                        Cow::Borrowed(&rhs),
+                    )
                 }
             }
             _ => unreachable!(),
