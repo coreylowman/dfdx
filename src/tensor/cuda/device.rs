@@ -286,4 +286,16 @@ impl DeviceStorage for Cuda {
     fn try_synchronize(&self) -> Result<(), CudaError> {
         self.dev.synchronize().map_err(CudaError::from)
     }
+
+    fn try_empty_cache(&self) -> Result<(), Self::Err> {
+        let mut cache = self.cache.write().unwrap();
+        for (&num_bytes, allocations) in cache.iter_mut() {
+            for alloc in allocations.drain(..) {
+                let data = unsafe { self.dev.upgrade_device_ptr::<u8>(alloc, num_bytes) };
+                drop(data);
+            }
+        }
+        cache.clear();
+        Ok(())
+    }
 }

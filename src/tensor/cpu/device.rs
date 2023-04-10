@@ -155,4 +155,16 @@ impl DeviceStorage for Cpu {
     fn try_synchronize(&self) -> Result<(), Self::Err> {
         Ok(())
     }
+
+    fn try_empty_cache(&self) -> Result<(), Self::Err> {
+        let mut cache = self.cache.write().unwrap();
+        for (&num_bytes, allocations) in cache.iter_mut() {
+            for alloc in allocations.drain(..) {
+                let data = unsafe { Vec::from_raw_parts(alloc.0 as *mut u8, num_bytes, num_bytes) };
+                drop(data);
+            }
+        }
+        cache.clear();
+        Ok(())
+    }
 }

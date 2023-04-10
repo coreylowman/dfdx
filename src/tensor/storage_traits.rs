@@ -42,6 +42,14 @@ pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
 
     /// Blocks until all work on device to complete. Useful for benchmarking.
     fn try_synchronize(&self) -> Result<(), Self::Err>;
+
+    /// Empty the current cache of tensor allocations.
+    fn empty_cache(&self) {
+        self.try_empty_cache().unwrap();
+    }
+
+    /// Empty the current cache of tensor allocations.
+    fn try_empty_cache(&self) -> Result<(), Self::Err>;
 }
 
 /// Internal trait - Represents something that can allocate its own gradient.

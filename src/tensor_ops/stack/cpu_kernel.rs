@@ -1,5 +1,4 @@
 use crate::{
-    prelude::cpu::CachableVec,
     shapes::*,
     tensor::{unique_id, Cpu, Tensor},
 };
@@ -32,16 +31,13 @@ impl<E: Dtype> super::StackKernel<E> for Cpu {
         }
 
         // copy the data
-        let numel = strides[0];
-        let mut data: std::vec::Vec<E> = std::vec::Vec::with_capacity(numel);
-        for i in inp {
-            data.extend_from_slice(i.data.as_ref());
+        let mut data = self.try_alloc_elem(inp.len() * inp[0].data.len(), E::default())?;
+        let mut i = 0;
+        for item in inp {
+            let buf: &[E] = item.data.as_ref();
+            data[i..i + buf.len()].copy_from_slice(buf);
+            i += buf.len();
         }
-
-        let data = CachableVec {
-            data,
-            destination: self.cache.clone(),
-        };
 
         Ok(Tensor {
             id: unique_id(),
