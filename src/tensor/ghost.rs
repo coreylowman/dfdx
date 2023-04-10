@@ -32,12 +32,12 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> Tensor<S, E, D, T> {
 impl<S: Shape, E: Unit, D: DeviceStorage> Clone for GhostTensor<S, E, D> {
     fn clone(&self) -> Self {
         Self {
-            id: self.id.clone(),
-            len: self.len.clone(),
-            shape: self.shape.clone(),
-            strides: self.strides.clone(),
+            id: self.id,
+            len: self.len,
+            shape: self.shape,
+            strides: self.strides,
             dev: self.dev.clone(),
-            marker: self.marker.clone(),
+            marker: self.marker,
         }
     }
 }

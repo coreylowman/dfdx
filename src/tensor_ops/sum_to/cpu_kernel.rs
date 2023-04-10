@@ -54,7 +54,7 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
                 *i += v * scale;
             }
         } else {
-            let num_elems_reduced = <Src as HasAxes<Ax>>::size(&inp.shape());
+            let num_elems_reduced = <Src as HasAxes<Ax>>::size(inp.shape());
             let mut idx = index_for_reductions::<Src, Ax>(*inp.shape(), inp.strides());
             for &o in grad_out.iter() {
                 for _ in 0..num_elems_reduced {
