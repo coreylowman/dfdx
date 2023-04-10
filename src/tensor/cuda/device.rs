@@ -123,6 +123,7 @@ impl Cuda {
             }
             Ok(self.dev.upgrade_device_ptr(allocation, len))
         } else {
+            std::println!("Allocating");
             let out = self.dev.alloc::<E>(len)?;
             Ok(out)
         }
@@ -163,8 +164,27 @@ pub struct CachableCudaSlice<E> {
 
 impl<E: cudarc::driver::DeviceRepr> Clone for CachableCudaSlice<E> {
     fn clone(&self) -> Self {
+        let len = self.data.len();
+        let num_bytes = self.data.num_bytes();
+        let reuse = {
+            let cache = self.destination.read().unwrap();
+            cache.contains_key(&num_bytes)
+        };
+        let data = if reuse {
+            let mut cache = self.destination.write().unwrap();
+            let items = cache.get_mut(&num_bytes).unwrap();
+            let allocation: CUdeviceptr = items.pop().unwrap();
+            if items.is_empty() {
+                cache.remove(&num_bytes);
+            }
+            let dev = self.data.device();
+            unsafe { dev.upgrade_device_ptr(allocation, len) }
+        } else {
+            std::println!("Cloning");
+            self.data.try_clone().unwrap()
+        };
         Self {
-            data: self.data.clone(),
+            data,
             destination: self.destination.clone(),
         }
     }
@@ -234,8 +254,10 @@ impl DeviceStorage for Cuda {
     type Vec<E: Unit> = CachableCudaSlice<E>;
 
     fn try_alloc_len<E: Unit>(&self, len: usize) -> Result<Self::Vec<E>, Self::Err> {
+        let mut data = unsafe { self.alloc_empty(len) }?;
+        self.dev.memset_zeros(&mut data)?;
         Ok(CachableCudaSlice {
-            data: self.dev.alloc_zeros(len)?,
+            data,
             destination: self.cache.clone(),
         })
     }
