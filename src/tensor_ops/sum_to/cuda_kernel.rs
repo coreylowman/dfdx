@@ -1,6 +1,6 @@
 use crate::{
     shapes::*,
-    tensor::{launch_cfg, Cuda, GhostTensor, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor, TensorMetadata},
     tensor_ops::reduction_utils::*,
 };
 
@@ -80,7 +80,7 @@ where
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
-        inp: &GhostTensor<Src, E, Self>,
+        inp: &impl TensorMetadata<Src, E, Self>,
         grad_inp: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>

@@ -1,6 +1,6 @@
 use crate::{
     shapes::{Dtype, HasShape, Shape},
-    tensor::{DeviceStorage, GhostTensor, Merge, PutTape, SplitTape, Tape, Tensor},
+    tensor::{DeviceStorage, Merge, PutTape, SplitTape, Tape, Tensor, Tensorlike},
 };
 use std::borrow::Cow;
 
@@ -15,9 +15,9 @@ pub trait UnaryKernel<Op, E: Dtype>: DeviceStorage {
     fn backward<S: Shape>(
         &self,
         op: Op,
-        inp: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        inp: &impl Tensorlike<S, E, Self>,
         grad_inp: &mut Self::Vec<E>,
-        out: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        out: &impl Tensorlike<S, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
@@ -33,9 +33,9 @@ pub trait BinaryKernel<Op, E: Dtype>: DeviceStorage {
     fn backward<S: Shape>(
         &self,
         op: Op,
-        lhs: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        lhs: &impl Tensorlike<S, E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        rhs: &impl Tensorlike<S, E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
@@ -61,7 +61,7 @@ pub(crate) fn try_unary_op<
             grads.try_alloc_for(&inp_ghost)?;
             grads.try_alloc_for(&out_ghost)?;
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
-            dev.backward(op, Err(&inp_ghost), grad_inp, Err(&out_ghost), grad_out)
+            dev.backward(op, &inp_ghost, grad_inp, &out_ghost, grad_out)
         });
         Ok(out.put_tape(tape))
     } else if D::BACKWARD_WITHOUT_INP {
@@ -72,7 +72,7 @@ pub(crate) fn try_unary_op<
             grads.try_alloc_for(&inp_ghost)?;
             grads.try_alloc_for(&out_ghost)?;
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
-            dev.backward(op, Err(&inp_ghost), grad_inp, Ok(&out_clone), grad_out)
+            dev.backward(op, &inp_ghost, grad_inp, &out_clone, grad_out)
         });
         Ok(out.put_tape(tape))
     } else {
@@ -82,7 +82,7 @@ pub(crate) fn try_unary_op<
             grads.try_alloc_for(&inp_ghost)?;
             grads.try_alloc_for(&out_ghost)?;
             let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
-            dev.backward(op, Ok(&inp), grad_inp, Err(&out_ghost), grad_out)
+            dev.backward(op, &inp, grad_inp, &out_ghost, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -117,14 +117,9 @@ pub(crate) fn try_binary_op<
             grads.try_alloc_for(&out_ghost)?;
             let (grad_lhs, grad_rhs, grad_out) =
                 grads.muts_and_ref(&lhs_ghost, &rhs_ghost, &out_ghost);
-            lhs_ghost.dev.backward(
-                op,
-                Err(&lhs_ghost),
-                grad_lhs,
-                Err(&rhs_ghost),
-                grad_rhs,
-                grad_out,
-            )
+            lhs_ghost
+                .dev
+                .backward(op, &lhs_ghost, grad_lhs, &rhs_ghost, grad_rhs, grad_out)
         });
         Ok(out.put_tape(tape))
     } else {
@@ -139,7 +134,7 @@ pub(crate) fn try_binary_op<
             let (grad_lhs, grad_rhs, grad_out) =
                 grads.muts_and_ref(&lhs_ghost, &rhs_ghost, &out_ghost);
             lhs.device
-                .backward(op, Ok(&lhs), grad_lhs, Ok(&rhs), grad_rhs, grad_out)
+                .backward(op, &lhs, grad_lhs, &rhs, grad_rhs, grad_out)
         });
         Ok(out.put_tape(tape))
     }
