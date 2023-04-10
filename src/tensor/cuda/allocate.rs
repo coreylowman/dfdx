@@ -191,8 +191,10 @@ where
 {
     type Array = <Cpu as TensorToArray<S, E>>::Array;
     fn tensor_to_array<T>(&self, tensor: &Tensor<S, E, Self, T>) -> Self::Array {
+        let slice = tensor.data.data.clone();
+        let data = slice.try_into().unwrap();
         let buf = crate::tensor::cpu::CachableVec {
-            data: tensor.data.data.try_clone().unwrap().try_into().unwrap(),
+            data,
             cache: self.cpu.cache.clone(),
         };
         self.cpu.tensor_to_array::<NoneTape>(&Tensor {

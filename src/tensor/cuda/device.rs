@@ -104,6 +104,9 @@ impl Cuda {
 }
 
 impl Cuda {
+    /// Allocates an empty [CudaSlice] either from the cache or by allocating new memory.
+    /// In either case, the memory will have uninitialized values, meaning the user must
+    /// initialize it before using it.
     pub(crate) unsafe fn alloc_empty<E: DeviceRepr>(
         &self,
         len: usize,
@@ -155,12 +158,12 @@ pub struct CachableCudaSlice<E> {
 
 impl<E: cudarc::driver::DeviceRepr> Clone for CachableCudaSlice<E> {
     fn clone(&self) -> Self {
+        let dev = self.data.device();
         let len = self.data.len();
         let num_bytes = self.data.num_bytes();
         let data = self.cache.try_pop(num_bytes).map_or_else(
             || self.data.try_clone().unwrap(),
             |ptr| {
-                let dev = self.data.device();
                 // SAFETY:
                 // 1. we know that ptr is valid for `num_bytes` because it was registered for that.
                 // 2. we are about to set the memory with dtod_copy
@@ -224,8 +227,11 @@ impl<E> std::ops::DerefMut for CachableCudaSlice<E> {
 impl<E> Drop for CachableCudaSlice<E> {
     fn drop(&mut self) {
         let dev = self.data.device();
+        // Replaces the CudaSlice with a 0 length CudaSlice. This won't take additional
+        // memory, but will give us ownership of the actual data.
         let data = std::mem::replace(&mut self.data, dev.null().unwrap());
         let num_bytes = data.num_bytes();
+        // Get access to the raw pointer without freeing it.
         let ptr = data.leak();
         self.cache.insert(num_bytes, ptr);
     }

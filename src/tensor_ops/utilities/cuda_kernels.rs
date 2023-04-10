@@ -1,5 +1,4 @@
 use crate::{
-    prelude::cuda::CachableCudaSlice,
     shapes::{Dtype, Shape},
     tensor::*,
     tensor_ops::ops::{BinaryKernel, UnaryKernel},
@@ -84,20 +83,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
                 let cfg = launch_cfg(numel as u32);
                 let params = (op, numel, inp.data.as_ref(), &mut storage);
                 unsafe { fwd_fn.launch(cfg, params) }?;
-
-                let out = CachableCudaSlice {
-                    data: storage,
-                    cache: self.cache.clone(),
-                };
-
-                Ok(Tensor {
-                    id: unique_id(),
-                    data: Arc::new(out),
-                    shape: inp.shape,
-                    strides: inp.strides,
-                    device: self.clone(),
-                    tape: Default::default(),
-                })
+                Ok(self.build_tensor(inp.shape, inp.strides, storage))
             }
             Err(mut inp) => {
                 inp.id = unique_id();
@@ -276,18 +262,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                     &mut storage,      // float *out,
                 );
                 unsafe { fwd_fn.launch(cfg, params) }?;
-                let out = CachableCudaSlice {
-                    data: storage,
-                    cache: self.cache.clone(),
-                };
-                Ok(Tensor {
-                    id: unique_id(),
-                    data: Arc::new(out),
-                    shape,
-                    strides,
-                    device: self.clone(),
-                    tape: Default::default(),
-                })
+                Ok(self.build_tensor(shape, strides, storage))
             }
             (Err(mut lhs), Err(mut rhs)) => {
                 let lhs_valid = lhs.strides == lhs.shape.strides();
@@ -334,18 +309,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                         &mut storage,      // float *out,
                     );
                     unsafe { fwd_fn.launch(cfg, params) }?;
-                    let out = CachableCudaSlice {
-                        data: storage,
-                        cache: self.cache.clone(),
-                    };
-                    Ok(Tensor {
-                        id: unique_id(),
-                        data: Arc::new(out),
-                        shape,
-                        strides,
-                        device: self.clone(),
-                        tape: Default::default(),
-                    })
+                    Ok(self.build_tensor(shape, strides, storage))
                 }
             }
             _ => unreachable!(),

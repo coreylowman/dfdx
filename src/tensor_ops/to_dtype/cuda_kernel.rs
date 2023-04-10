@@ -1,14 +1,12 @@
 use crate::{
-    prelude::cuda::CachableCudaSlice,
     shapes::{Shape, Unit},
-    tensor::{launch_cfg, unique_id, Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor},
 };
 use cudarc::{
     driver::{DeviceSlice, LaunchAsync},
     nvrtc::compile_ptx,
     types::CudaTypeName,
 };
-use std::sync::Arc;
 
 const KERNEL: &str = "
 #if __WORDSIZE == 64
@@ -38,18 +36,6 @@ impl<E1: Unit + CudaTypeName, E2: Unit + CudaTypeName> super::ToDtypeKernel<E1, 
         let mut out = unsafe { cuda.alloc_empty::<E2>(n) }?;
         unsafe { fwd_fn.launch(launch_cfg(n as u32), (n, inp.data.as_ref(), &mut out)) }?;
 
-        let out = CachableCudaSlice {
-            data: out,
-            cache: inp.device.cache.clone(),
-        };
-
-        Ok(Tensor {
-            id: unique_id(),
-            data: Arc::new(out),
-            shape: inp.shape,
-            strides: inp.strides,
-            device: inp.device.clone(),
-            tape: Default::default(),
-        })
+        Ok(cuda.build_tensor(inp.shape, inp.strides, out))
     }
 }

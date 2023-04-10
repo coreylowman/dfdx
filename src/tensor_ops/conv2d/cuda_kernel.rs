@@ -3,7 +3,7 @@ use cudarc::driver::{DeviceRepr, LaunchAsync, ValidAsZeroBits};
 
 use crate::{
     shapes::*,
-    tensor::{cuda::CachableCudaSlice, launch_cfg, unique_id, Cuda, GhostTensor, Tensor},
+    tensor::{launch_cfg, Cuda, GhostTensor, Tensor},
 };
 
 use std::sync::Arc;
@@ -52,19 +52,7 @@ where
 {
     fn alloc<S: Shape>(&self, shape: S) -> Result<Tensor<S, E, Self>, Self::Err> {
         let data = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
-        let data = CachableCudaSlice {
-            data,
-            destination: self.cache.clone(),
-        };
-        let data = Arc::new(data);
-        Ok(Tensor {
-            id: unique_id(),
-            data,
-            shape,
-            strides: shape.strides(),
-            device: self.clone(),
-            tape: Default::default(),
-        })
+        Ok(self.build_tensor(shape, shape.strides(), data))
     }
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,

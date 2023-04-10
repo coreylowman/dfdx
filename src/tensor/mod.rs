@@ -123,6 +123,10 @@
 //!
 //! You can also use [Tensor::write_to_npz] and [Tensor::read_from_npz] when working with
 //! zip archives.
+//!
+//! # Allocation Caching
+//!
+//! TODO: document this
 
 pub(crate) mod cache;
 pub(crate) mod cpu;
