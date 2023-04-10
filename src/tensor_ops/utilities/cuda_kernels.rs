@@ -87,7 +87,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
 
                 let out = CachableCudaSlice {
                     data: storage,
-                    destination: self.cache.clone(),
+                    cache: self.cache.clone(),
                 };
 
                 Ok(Tensor {
@@ -278,7 +278,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                 unsafe { fwd_fn.launch(cfg, params) }?;
                 let out = CachableCudaSlice {
                     data: storage,
-                    destination: self.cache.clone(),
+                    cache: self.cache.clone(),
                 };
                 Ok(Tensor {
                     id: unique_id(),
@@ -336,7 +336,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                     unsafe { fwd_fn.launch(cfg, params) }?;
                     let out = CachableCudaSlice {
                         data: storage,
-                        destination: self.cache.clone(),
+                        cache: self.cache.clone(),
                     };
                     Ok(Tensor {
                         id: unique_id(),

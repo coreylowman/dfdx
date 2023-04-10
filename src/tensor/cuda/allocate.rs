@@ -30,7 +30,7 @@ impl Cuda {
     ) -> Tensor<S, E, Self> {
         let data = CachableCudaSlice {
             data: slice,
-            destination: self.cache.clone(),
+            cache: self.cache.clone(),
         };
         Tensor {
             id: unique_id(),
@@ -193,7 +193,7 @@ where
     fn tensor_to_array<T>(&self, tensor: &Tensor<S, E, Self, T>) -> Self::Array {
         let buf = crate::tensor::cpu::CachableVec {
             data: tensor.data.data.try_clone().unwrap().try_into().unwrap(),
-            destination: self.cpu.cache.clone(),
+            cache: self.cpu.cache.clone(),
         };
         self.cpu.tensor_to_array::<NoneTape>(&Tensor {
             id: tensor.id,

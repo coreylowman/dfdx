@@ -9,7 +9,7 @@ impl<E1: Unit + AsPrimitive<E2>, E2: Unit> super::ToDtypeKernel<E1, E2> for Cpu 
         let data: Vec<E2> = data.iter().map(|x| (*x).as_()).collect();
         let data = CachableVec {
             data,
-            destination: inp.device.cache.clone(),
+            cache: inp.device.cache.clone(),
         };
 
         Ok(Tensor {

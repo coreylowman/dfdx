@@ -40,7 +40,7 @@ impl<E1: Unit + CudaTypeName, E2: Unit + CudaTypeName> super::ToDtypeKernel<E1, 
 
         let out = CachableCudaSlice {
             data: out,
-            destination: inp.device.cache.clone(),
+            cache: inp.device.cache.clone(),
         };
 
         Ok(Tensor {

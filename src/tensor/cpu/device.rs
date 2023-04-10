@@ -9,6 +9,7 @@ use spin::Mutex;
 #[cfg(not(feature = "no-std"))]
 use std::sync::Mutex;
 
+/// A pointer to a block of bytes on the heap. Used in conjunction with [TensorCache].
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct BytesPtr(pub(crate) *mut u8);
 unsafe impl Send for BytesPtr {}
@@ -21,7 +22,9 @@ unsafe impl Sync for BytesPtr {}
 /// Use [Cpu::seed_from_u64] to control what seed is used.
 #[derive(Clone, Debug)]
 pub struct Cpu {
+    /// A thread safe random number generator.
     pub(crate) rng: Arc<Mutex<StdRng>>,
+    /// A thread safe cache of memory allocations that can be reused.
     pub(crate) cache: Arc<TensorCache<BytesPtr>>,
 }
 
@@ -68,27 +71,31 @@ impl HasErr for Cpu {
     type Err = CpuError;
 }
 
+/// A [Vec] that can be cloned without allocating new memory.
+/// When [Drop]ed it will insert it's data into the cache.
 #[derive(Debug)]
 pub struct CachableVec<E> {
+    /// The data stored in this vector.
     pub(crate) data: Vec<E>,
-    pub(crate) destination: Arc<TensorCache<BytesPtr>>,
+    /// A cache of memory allocations that can be reused.
+    pub(crate) cache: Arc<TensorCache<BytesPtr>>,
 }
 
 impl<E: Clone> Clone for CachableVec<E> {
     fn clone(&self) -> Self {
         let numel = self.data.len();
         let num_bytes = std::mem::size_of::<E>() * numel;
-        self.destination.try_pop(num_bytes).map_or_else(
+        self.cache.try_pop(num_bytes).map_or_else(
             || Self {
                 data: self.data.clone(),
-                destination: self.destination.clone(),
+                cache: self.cache.clone(),
             },
             |allocation| {
                 let mut data = unsafe { Vec::from_raw_parts(allocation.0 as *mut E, numel, numel) };
                 data.clone_from(&self.data);
                 Self {
                     data,
-                    destination: self.destination.clone(),
+                    cache: self.cache.clone(),
                 }
             },
         )
@@ -104,7 +111,7 @@ impl<E> Drop for CachableVec<E> {
         let ptr = data.as_mut_ptr() as *mut u8;
         std::mem::forget(data);
 
-        self.destination.insert(num_bytes, BytesPtr(ptr));
+        self.cache.insert(num_bytes, BytesPtr(ptr));
     }
 }
 

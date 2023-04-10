@@ -45,7 +45,7 @@ impl Cpu {
 
         Ok(CachableVec {
             data,
-            destination: self.cache.clone(),
+            cache: self.cache.clone(),
         })
     }
 }
@@ -202,7 +202,7 @@ impl<E: Unit> TensorFromVec<E> for Cpu {
         } else {
             let src = CachableVec {
                 data: src,
-                destination: self.cache.clone(),
+                cache: self.cache.clone(),
             };
             Ok(Tensor {
                 id: unique_id(),

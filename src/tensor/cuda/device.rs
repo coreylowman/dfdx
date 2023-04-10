@@ -5,6 +5,7 @@ use crate::tensor::{cache::TensorCache, DeviceStorage, HasErr, Tensor};
 use cudarc::driver::{DevicePtr, DevicePtrMut, DeviceRepr};
 use cudarc::{
     cublas::{result::CublasError, CudaBlas},
+    driver::sys::CUdeviceptr,
     driver::{CudaDevice, CudaSlice, CudaStream, DeviceSlice, DriverError},
 };
 
@@ -26,7 +27,7 @@ pub struct Cuda {
     /// A second stream for kernels to optionally execute on.
     pub(crate) par_stream: Arc<CudaStream>,
     pub(crate) workspace: Arc<Mutex<CudaSlice<u8>>>,
-    pub(crate) cache: Arc<TensorCache<cudarc::driver::sys::CUdeviceptr>>,
+    pub(crate) cache: Arc<TensorCache<CUdeviceptr>>,
 }
 
 #[derive(Debug)]
@@ -142,22 +143,27 @@ impl HasErr for Cuda {
     type Err = CudaError;
 }
 
+/// A [CudaSlice] that can be cloned without allocating new memory.
+/// When [Drop]ed it will insert it's data into the cache.
 #[derive(Debug)]
 pub struct CachableCudaSlice<E> {
     /// The actual data.
     pub(crate) data: CudaSlice<E>,
     /// A cache of device pointers that can be reused.
-    pub(crate) destination: Arc<TensorCache<cudarc::driver::sys::CUdeviceptr>>,
+    pub(crate) cache: Arc<TensorCache<CUdeviceptr>>,
 }
 
 impl<E: cudarc::driver::DeviceRepr> Clone for CachableCudaSlice<E> {
     fn clone(&self) -> Self {
         let len = self.data.len();
         let num_bytes = self.data.num_bytes();
-        let data = self.destination.try_pop(num_bytes).map_or_else(
+        let data = self.cache.try_pop(num_bytes).map_or_else(
             || self.data.try_clone().unwrap(),
             |ptr| {
                 let dev = self.data.device();
+                // SAFETY:
+                // 1. we know that ptr is valid for `num_bytes` because it was registered for that.
+                // 2. we are about to set the memory with dtod_copy
                 let mut slice = unsafe { dev.upgrade_device_ptr(ptr, len) };
                 dev.dtod_copy(&self.data, &mut slice).unwrap();
                 slice
@@ -165,7 +171,7 @@ impl<E: cudarc::driver::DeviceRepr> Clone for CachableCudaSlice<E> {
         );
         Self {
             data,
-            destination: self.destination.clone(),
+            cache: self.cache.clone(),
         }
     }
 }
@@ -218,11 +224,10 @@ impl<E> std::ops::DerefMut for CachableCudaSlice<E> {
 impl<E> Drop for CachableCudaSlice<E> {
     fn drop(&mut self) {
         let dev = self.data.device();
-        let null = dev.null().unwrap();
-        let data = std::mem::replace(&mut self.data, null);
+        let data = std::mem::replace(&mut self.data, dev.null().unwrap());
         let num_bytes = data.num_bytes();
         let ptr = data.leak();
-        self.destination.insert(num_bytes, ptr);
+        self.cache.insert(num_bytes, ptr);
     }
 }
 
@@ -234,7 +239,7 @@ impl DeviceStorage for Cuda {
         self.dev.memset_zeros(&mut data)?;
         Ok(CachableCudaSlice {
             data,
-            destination: self.cache.clone(),
+            cache: self.cache.clone(),
         })
     }
 

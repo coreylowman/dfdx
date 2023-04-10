@@ -39,7 +39,7 @@ where
             .dtod_copy(b.data.as_ref(), &mut buf.slice_mut(a.data.len()..))?;
         let data = CachableCudaSlice {
             data: buf,
-            destination: self.cache.clone(),
+            cache: self.cache.clone(),
         };
         Ok(Tensor {
             id: unique_id(),
