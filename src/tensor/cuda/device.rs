@@ -123,7 +123,6 @@ impl Cuda {
             }
             Ok(self.dev.upgrade_device_ptr(allocation, len))
         } else {
-            std::println!("Allocating");
             let out = self.dev.alloc::<E>(len)?;
             Ok(out)
         }
@@ -178,9 +177,10 @@ impl<E: cudarc::driver::DeviceRepr> Clone for CachableCudaSlice<E> {
                 cache.remove(&num_bytes);
             }
             let dev = self.data.device();
-            unsafe { dev.upgrade_device_ptr(allocation, len) }
+            let mut slice = unsafe { dev.upgrade_device_ptr(allocation, len) };
+            dev.dtod_copy(&self.data, &mut slice).unwrap();
+            slice
         } else {
-            std::println!("Cloning");
             self.data.try_clone().unwrap()
         };
         Self {
