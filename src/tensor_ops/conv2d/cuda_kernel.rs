@@ -80,7 +80,7 @@ where
 
         let img_strides = self.dev.htod_copy(make_4d::<L>(lhs.strides).into())?;
         let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let cfg = launch_cfg((op.batch * op.chan_in * op.h_out * op.w_out) as u32);
+        let cfg = launch_cfg::<128>((op.batch * op.chan_in * op.h_out * op.w_out) as u32);
         let params = (op, lhs.data.as_ref(), &img_strides, &mut patches);
         unsafe { unfold_fn.launch(cfg, params) }?;
 
@@ -131,7 +131,7 @@ where
         {
             // unfold grad_out into patches
             let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
-            let cfg = launch_cfg((op.batch * op.chan_out * op.h_in * op.w_in) as u32);
+            let cfg = launch_cfg::<128>((op.batch * op.chan_out * op.h_in * op.w_in) as u32);
             unsafe { unfold_fn.launch(cfg, (op, grad_out, &mut patches)) }?;
         }
 
@@ -139,7 +139,7 @@ where
             // prepare filters for backward operations by
             // swapping dims 0 and 1
             let tr_fn = self.dev.get_func(Self::MOD, Self::FNS[2]).unwrap();
-            let cfg = launch_cfg(rhs.shape.num_elements() as u32);
+            let cfg = launch_cfg::<128>(rhs.shape.num_elements() as u32);
             unsafe {
                 tr_fn.launch_on_stream(
                     self.par_stream.as_ref(),
@@ -195,7 +195,7 @@ where
             // sum all the gradients collected in our broadcasted grad_f
             // into grad_rhs
             let sum_fn = self.dev.get_func(Self::MOD, Self::FNS[3]).unwrap();
-            let cfg = launch_cfg(rhs.shape.num_elements() as u32);
+            let cfg = launch_cfg::<128>(rhs.shape.num_elements() as u32);
             unsafe { sum_fn.launch(cfg, (op, &grad_f_b1023, grad_rhs, &f_strides)) }?;
         }
 

@@ -80,7 +80,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
                 let numel = inp.data.len();
                 let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
 
-                let cfg = launch_cfg(numel as u32);
+                let cfg = launch_cfg::<128>(numel as u32);
                 let params = (op, numel, inp.data.as_ref(), &mut storage);
                 unsafe { fwd_fn.launch(cfg, params) }?;
 
@@ -96,7 +96,7 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
             Cow::Owned(mut inp) => {
                 inp.id = unique_id();
                 let numel = inp.data.len();
-                let cfg = launch_cfg(numel as u32);
+                let cfg = launch_cfg::<128>(numel as u32);
                 let params = (op, numel, 0u64, Arc::make_mut(&mut inp.data));
                 unsafe { fwd_fn.launch(cfg, params) }?;
                 Ok(inp)
@@ -115,18 +115,18 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
         match (inp, out) {
             (Err(inp), Err(_)) => {
-                let cfg = launch_cfg(inp.len as u32);
+                let cfg = launch_cfg::<128>(inp.len as u32);
                 let params = (op, inp.len, 0u64, grad_inp, 0u64, grad_out);
                 unsafe { bwd_fn.launch(cfg, params) }?;
             }
             (Err(inp), Ok(out)) => {
-                let cfg = launch_cfg(inp.len as u32);
+                let cfg = launch_cfg::<128>(inp.len as u32);
                 let params = (op, inp.len, 0u64, grad_inp, out.data.as_ref(), grad_out);
                 unsafe { bwd_fn.launch(cfg, params) }?;
             }
             (Ok(inp), Err(_)) => {
                 let numel = inp.data.len();
-                let cfg = launch_cfg(numel as u32);
+                let cfg = launch_cfg::<128>(numel as u32);
                 let params = (op, numel, inp.data.as_ref(), grad_inp, 0u64, grad_out);
                 unsafe { bwd_fn.launch(cfg, params) }?;
             }
@@ -240,7 +240,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         };
         let strides = shape.strides();
         let numel = shape.num_elements();
-        let cfg = launch_cfg(numel as u32);
+        let cfg = launch_cfg::<128>(numel as u32);
 
         let lhs_strides = match &lhs {
             Cow::Borrowed(lhs) => lhs.strides,
@@ -373,7 +373,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         };
 
         let numel = shape.num_elements();
-        let cfg = launch_cfg(numel as u32);
+        let cfg = launch_cfg::<128>(numel as u32);
 
         let ((out_dims1, out_strides1), rhs_strides1) = permute_for_binary_backward(
             shape.concrete(),
