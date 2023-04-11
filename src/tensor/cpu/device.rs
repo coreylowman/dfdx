@@ -84,13 +84,21 @@ pub struct CachableVec<E> {
 impl<E: Clone> Clone for CachableVec<E> {
     fn clone(&self) -> Self {
         let numel = self.data.len();
-        let num_bytes = std::mem::size_of::<E>() * numel;
-        self.cache.try_pop(num_bytes).map_or_else(
+        self.cache.try_pop::<E>(numel).map_or_else(
             || Self {
                 data: self.data.clone(),
                 cache: self.cache.clone(),
             },
             |allocation| {
+                assert!(numel < isize::MAX as usize);
+                // SAFETY:
+                // - ✅ "ptr must have been allocated using the global allocator, such as via the alloc::alloc function."
+                // - ✅ handled by tensor cache "T needs to have the same alignment as what ptr was allocated with."
+                // - ✅ handled by tensor cache "The size of T times the capacity needs to be the same size as the pointer was allocated with."
+                // - ✅ "length needs to be less than or equal to capacity."
+                // - ✅ all the dtypes for this are builtin numbers "The first length values must be properly initialized values of type T."
+                // - ✅ "capacity needs to be the capacity that the pointer was allocated with."
+                // - ✅ "The allocated size in bytes must be no larger than isize::MAX. See the safety documentation of pointer::offset."
                 let mut data = unsafe { Vec::from_raw_parts(allocation.0 as *mut E, numel, numel) };
                 data.clone_from(&self.data);
                 Self {
@@ -105,13 +113,13 @@ impl<E: Clone> Clone for CachableVec<E> {
 impl<E> Drop for CachableVec<E> {
     fn drop(&mut self) {
         let mut data = std::mem::take(&mut self.data);
-        let num_bytes = data.len() * std::mem::size_of::<E>();
-
         data.shrink_to_fit();
+
+        let numel = data.len();
         let ptr = data.as_mut_ptr() as *mut u8;
         std::mem::forget(data);
 
-        self.cache.insert(num_bytes, BytesPtr(ptr));
+        self.cache.insert::<E>(numel, BytesPtr(ptr));
     }
 }
 
@@ -165,10 +173,40 @@ impl DeviceStorage for Cpu {
 
     fn try_empty_cache(&self) -> Result<(), Self::Err> {
         let mut cache = self.cache.0.write().unwrap();
-        for (&num_bytes, allocations) in cache.iter_mut() {
+        for (&key, allocations) in cache.iter_mut() {
+            assert!(key.num_bytes % key.size == 0);
+            assert!(key.num_bytes < isize::MAX as usize);
+            let len = key.num_bytes / key.size;
+            let cap = len;
             for alloc in allocations.drain(..) {
-                let data = unsafe { Vec::from_raw_parts(alloc.0 as *mut u8, num_bytes, num_bytes) };
-                drop(data);
+                // SAFETY:
+                // - "ptr must have been allocated using the global allocator, such as via the alloc::alloc function."
+                //    - ✅ cpu uses global allocator
+                // - "T needs to have the same alignment as what ptr was allocated with."
+                //    - ✅ we are matching on the alignment below
+                // - "The size of T times the capacity needs to be the same size as the pointer was allocated with."
+                //    - ✅ covered by `key.num_bytes / key.size` and the `key.num_bytes % key.size == 0` assertion above
+                // - "length needs to be less than or equal to capacity."
+                //    - ✅ they are equal
+                // - "The first length values must be properly initialized values of type T."
+                //    - ✅ any bit pattern is valid for unsigned ints used below
+                // - "capacity needs to be the capacity that the pointer was allocated with."
+                //    - ✅ handled by assertion above (key.num_bytes % key.size == 0)
+                // - "The allocated size in bytes must be no larger than isize::MAX. See the safety documentation of pointer::offset."
+                //    - ✅ handled by assertion above
+                debug_assert_eq!(std::alloc::Layout::new::<u8>().align(), 1);
+                debug_assert_eq!(std::alloc::Layout::new::<u16>().align(), 2);
+                debug_assert_eq!(std::alloc::Layout::new::<u32>().align(), 4);
+                debug_assert_eq!(std::alloc::Layout::new::<u64>().align(), 8);
+                debug_assert_eq!(std::alloc::Layout::new::<u128>().align(), 16);
+                match key.alignment {
+                    1 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u8, len, cap)) },
+                    2 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u16, len, cap)) },
+                    4 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u32, len, cap)) },
+                    8 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u64, len, cap)) },
+                    16 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u128, len, cap)) },
+                    _ => unreachable!(),
+                };
             }
         }
         cache.clear();

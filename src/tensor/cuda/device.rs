@@ -111,8 +111,7 @@ impl Cuda {
         &self,
         len: usize,
     ) -> Result<CudaSlice<E>, CudaError> {
-        let num_bytes = len * std::mem::size_of::<E>();
-        let data = self.cache.try_pop(num_bytes).map_or_else(
+        let data = self.cache.try_pop::<E>(len).map_or_else(
             || self.dev.alloc::<E>(len),
             |ptr| Ok(self.dev.upgrade_device_ptr(ptr, len)),
         )?;
@@ -160,8 +159,7 @@ impl<E: cudarc::driver::DeviceRepr> Clone for CachableCudaSlice<E> {
     fn clone(&self) -> Self {
         let dev = self.data.device();
         let len = self.data.len();
-        let num_bytes = self.data.num_bytes();
-        let data = self.cache.try_pop(num_bytes).map_or_else(
+        let data = self.cache.try_pop::<E>(len).map_or_else(
             || self.data.try_clone().unwrap(),
             |ptr| {
                 // SAFETY:
@@ -230,10 +228,10 @@ impl<E> Drop for CachableCudaSlice<E> {
         // Replaces the CudaSlice with a 0 length CudaSlice. This won't take additional
         // memory, but will give us ownership of the actual data.
         let data = std::mem::replace(&mut self.data, dev.null().unwrap());
-        let num_bytes = data.num_bytes();
+        let numel = data.len();
         // Get access to the raw pointer without freeing it.
         let ptr = data.leak();
-        self.cache.insert(num_bytes, ptr);
+        self.cache.insert::<E>(numel, ptr);
     }
 }
 
@@ -274,9 +272,9 @@ impl DeviceStorage for Cuda {
 
     fn try_empty_cache(&self) -> Result<(), Self::Err> {
         let mut cache = self.cache.0.write().unwrap();
-        for (&num_bytes, allocations) in cache.iter_mut() {
+        for (&key, allocations) in cache.iter_mut() {
             for alloc in allocations.drain(..) {
-                let data = unsafe { self.dev.upgrade_device_ptr::<u8>(alloc, num_bytes) };
+                let data = unsafe { self.dev.upgrade_device_ptr::<u8>(alloc, key.num_bytes) };
                 drop(data);
             }
         }
