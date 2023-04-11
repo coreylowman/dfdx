@@ -71,13 +71,11 @@ pub trait ReshapeTo: HasErr + HasShape {
     /// Ensures the tensor's memory is contiguous.
     ///
     /// If the memory is already contiguous no copying is performed.
-    fn contiguous(self) -> Self::WithShape<Self::Shape>
-    {
+    fn contiguous(self) -> Self::WithShape<Self::Shape> {
         self.try_contiguous().unwrap()
     }
     /// See [`ReshapeTo::contiguous`]
-    fn try_contiguous(self) -> Result<Self::WithShape<Self::Shape>, Self::Err>
-    {
+    fn try_contiguous(self) -> Result<Self::WithShape<Self::Shape>, Self::Err> {
         let shape = *self.shape();
         self.try_reshape_like(&shape).unwrap()
     }
