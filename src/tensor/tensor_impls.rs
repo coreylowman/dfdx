@@ -114,7 +114,7 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> Tensor<S, E, D, T> {
 
     /// Get a reference to the tensor's `DeviceStorage`
     pub fn device(&self) -> &D {
-        return &self.device;
+        &self.device
     }
 }
 
