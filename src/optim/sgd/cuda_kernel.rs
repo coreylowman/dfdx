@@ -66,7 +66,7 @@ where
         let opt_cfg = sgd_config_to_cuda(cfg);
         let numel = param.len();
         let func = self.dev.get_func(Self::MOD, Self::FWD).unwrap();
-        let cfg = launch_cfg(numel as u32);
+        let cfg = launch_cfg::<128>(numel as u32);
         unsafe { func.launch(cfg, (opt_cfg, numel, param, velocity, grad)) }?;
         Ok(())
     }

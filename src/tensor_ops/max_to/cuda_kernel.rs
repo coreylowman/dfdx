@@ -47,7 +47,7 @@ where
         let mut storage = unsafe {
             let mut storage = self.dev.alloc::<E>(dst.num_elements())?;
             fill_fn.launch(
-                launch_cfg(dst.num_elements() as u32),
+                launch_cfg::<128>(dst.num_elements() as u32),
                 (&mut storage, Self::INIT, dst.num_elements()),
             )?;
             storage
@@ -66,7 +66,7 @@ where
             reduction_output_strides::<Ax, Src, Dst>(inp.strides, dst);
         let chunk_len = physical_numel / dst_physical_numel;
 
-        let cfg = launch_cfg(physical_numel as u32);
+        let cfg = launch_cfg::<128>(physical_numel as u32);
 
         let params = (
             physical_numel,    // const size_t numel,
@@ -102,7 +102,7 @@ where
         ))
         .unwrap();
 
-        let cfg = launch_cfg(physical_numel as u32);
+        let cfg = launch_cfg::<128>(physical_numel as u32);
 
         let mut info = Vec::with_capacity(Src::NUM_DIMS * 3);
         info.extend(inp.shape.concrete());
