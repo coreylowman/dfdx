@@ -29,8 +29,29 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> Tensor<S, E, D, T> {
     }
 }
 
+impl<S: Shape, E: Unit, D: DeviceStorage> Clone for GhostTensor<S, E, D> {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id,
+            len: self.len,
+            shape: self.shape,
+            strides: self.strides,
+            dev: self.dev.clone(),
+            marker: self.marker,
+        }
+    }
+}
+
 impl<S: Shape, E: Unit, D: DeviceStorage> super::storage_traits::HasErr for GhostTensor<S, E, D> {
     type Err = D::Err;
+}
+
+impl<S: Shape, E: Unit, D: DeviceStorage> HasShape for GhostTensor<S, E, D> {
+    type WithShape<New: Shape> = GhostTensor<New, E, D>;
+    type Shape = S;
+    fn shape(&self) -> &Self::Shape {
+        &self.shape
+    }
 }
 
 impl<S: Shape, E: Unit, D: DeviceStorage> super::storage_traits::AllocGrad

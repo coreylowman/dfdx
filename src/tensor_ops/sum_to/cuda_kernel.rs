@@ -1,6 +1,6 @@
 use crate::{
     shapes::*,
-    tensor::{launch_cfg, Cuda, GhostTensor, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor, Tensorlike},
     tensor_ops::reduction_utils::*,
 };
 
@@ -80,7 +80,7 @@ where
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
-        inp: &GhostTensor<Src, E, Self>,
+        inp: &impl Tensorlike<Src, E, Self>,
         grad_inp: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
@@ -91,10 +91,10 @@ where
 
         let out_strides: Src::Concrete =
             BroadcastStridesTo::<Src, Ax>::broadcast_strides(&dst, dst.strides());
-        let physical_numel = inp.len;
+        let physical_numel = inp.len();
         let elems_per_thread = E::from_usize(reduction_elems_per_thread::<_, Src>(
-            inp.shape.concrete(),
-            inp.strides,
+            inp.shape().concrete(),
+            inp.strides(),
             Ax::as_array(),
         ))
         .unwrap();
@@ -102,8 +102,8 @@ where
         let cfg = launch_cfg::<128>(physical_numel as u32);
 
         let mut info: Vec<usize> = Vec::with_capacity(3 * Src::NUM_DIMS);
-        info.extend(inp.shape.concrete());
-        info.extend(inp.strides);
+        info.extend(inp.shape().concrete());
+        info.extend(inp.strides());
         info.extend(out_strides);
         let info = self.dev.htod_copy(info)?;
 
