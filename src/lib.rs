@@ -275,6 +275,30 @@ pub(crate) mod tests {
         }
     }
 
+    impl AssertClose for half::f16 {
+        type Elem = Self;
+        const DEFAULT_TOLERANCE: Self::Elem = half::f16::from_f32_const(1e-3);
+        fn get_far_pair(&self, rhs: &Self, tolerance: Self) -> Option<(Self, Self)> {
+            if num_traits::Float::abs(self - rhs) > tolerance {
+                Some((*self, *rhs))
+            } else {
+                None
+            }
+        }
+    }
+
+    impl AssertClose for half::bf16 {
+        type Elem = Self;
+        const DEFAULT_TOLERANCE: Self::Elem = half::bf16::from_f32_const(1e-3);
+        fn get_far_pair(&self, rhs: &Self, tolerance: Self) -> Option<(Self, Self)> {
+            if num_traits::Float::abs(self - rhs) > tolerance {
+                Some((*self, *rhs))
+            } else {
+                None
+            }
+        }
+    }
+
     impl AssertClose for f32 {
         type Elem = f32;
         const DEFAULT_TOLERANCE: Self::Elem = 1e-6;
