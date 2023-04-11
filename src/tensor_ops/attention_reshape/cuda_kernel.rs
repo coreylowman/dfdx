@@ -72,7 +72,7 @@ where
             sequence_length,
             past_length,
         };
-        let cfg = launch_cfg(numel as u32);
+        let cfg = launch_cfg::<128>(numel as u32);
         let params = (
             op,
             qkv.data.as_ref(),

@@ -61,7 +61,7 @@ where
             reduction_output_strides::<Ax, Src, Dst>(inp.strides, dst);
         let chunk_len = physical_numel / dst_physical_numel;
 
-        let cfg = launch_cfg(physical_numel as u32);
+        let cfg = launch_cfg::<128>(physical_numel as u32);
 
         let mut storage = self.dev.alloc_zeros::<E>(dst.num_elements())?;
         let params = (
@@ -99,7 +99,7 @@ where
         ))
         .unwrap();
 
-        let cfg = launch_cfg(physical_numel as u32);
+        let cfg = launch_cfg::<128>(physical_numel as u32);
 
         let mut info: Vec<usize> = Vec::with_capacity(3 * Src::NUM_DIMS);
         info.extend(inp.shape().concrete());

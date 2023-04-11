@@ -70,7 +70,7 @@ impl<E: Dtype + CudaTypeName> super::StackKernel<E> for Cuda {
         for item in grad_inp.drain(..) {
             let f = self.dev.get_func(&module_name, "stack_bwd").unwrap();
             let numel: usize = item.len();
-            let cfg = launch_cfg(numel as u32);
+            let cfg = launch_cfg::<128>(numel as u32);
             let sub = grad_out.slice(offset..offset + numel);
             unsafe { f.launch(cfg, (numel, &sub, item)) }?;
             offset += numel;
