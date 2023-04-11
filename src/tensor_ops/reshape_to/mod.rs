@@ -72,15 +72,11 @@ pub trait ReshapeTo: HasErr + HasShape {
     ///
     /// If the memory is already contiguous no copying is performed.
     fn contiguous(self) -> Self::WithShape<Self::Shape>
-    where
-        Self::Shape: ConstShape,
     {
         self.try_contiguous().unwrap()
     }
     /// See [`ReshapeTo::contiguous`]
     fn try_contiguous(self) -> Result<Self::WithShape<Self::Shape>, Self::Err>
-    where
-        Self::Shape: ConstShape,
     {
         let shape = *self.shape();
         self.try_reshape_like(&shape).unwrap()
