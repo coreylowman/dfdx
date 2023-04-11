@@ -33,7 +33,7 @@ fn main() {
 
     // Even dynamic size is supported;
     let batch_size = 3;
-    let _: Tensor<(usize, Const<2>), f32, _> = m.forward(dev.zeros_like(&(batch_size, Const)));
+    let _: Tensor<(usize, Const<2>), f32, _> = m.forward(dev.zeros_like(&(batch_size, Const::<2>)));
 
     // you can also combine multiple modules with tuples
     type Mlp = (Linear<4, 2>, ReLU, Linear<2, 1>);

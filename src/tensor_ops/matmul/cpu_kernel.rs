@@ -17,6 +17,8 @@ use cblas_sys::{
 ))]
 use matrixmultiply::{dgemm, sgemm};
 
+use super::MulStaticDimCheck;
+
 #[cfg(not(any(
     feature = "cpu-seq-matmul",
     feature = "cpu-par-matmul",
@@ -221,10 +223,10 @@ impl<E: Dtype> super::VecMatKernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
-    fn forward<K: Dim, N: Dim>(
+    fn forward<LeftK: Dim + MulStaticDimCheck<(RightK, N)>, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(K,), E, Self>,
-        rhs: &Tensor<(K, N), E, Self>,
+        lhs: &Tensor<(LeftK,), E, Self>,
+        rhs: &Tensor<(RightK, N), E, Self>,
     ) -> Result<Tensor<(N,), E, Self>, Self::Err> {
         let (k, n) = rhs.shape;
         let mut out = self.try_zeros_like(&(n,))?;
@@ -239,11 +241,11 @@ where
         );
         Ok(out)
     }
-    fn backward<K: Dim, N: Dim>(
+    fn backward<LeftK: Dim + MulStaticDimCheck<(RightK, N)>, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(K,), E, Self>,
+        lhs: &Tensor<(LeftK,), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(K, N), E, Self>,
+        rhs: &Tensor<(RightK, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
@@ -271,15 +273,16 @@ where
     }
 }
 
-impl<E: Dtype> super::MatMatKernel<E> for Cpu
+impl<E: Dtype> super::StaticMatMatKernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
-    fn forward<M: Dim, K: Dim, N: Dim>(
+    fn forward<M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(M, K), E, Self>,
-        rhs: &Tensor<(K, N), E, Self>,
+        lhs: &Tensor<(M, LeftK), E, Self>,
+        rhs: &Tensor<(RightK, N), E, Self>,
     ) -> Result<Tensor<(M, N), E, Self>, Self::Err> {
+        // assert_eq!(lhs.shape.1.size(), rhs.shape.0.size());
         let (m, k) = lhs.shape;
         let n = rhs.shape.1;
         let mut out = self.try_zeros_like(&(m, n))?;
@@ -294,14 +297,15 @@ where
         );
         Ok(out)
     }
-    fn backward<M: Dim, K: Dim, N: Dim>(
+    fn backward<M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(M, K), E, Self>,
+        lhs: &Tensor<(M, LeftK), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(K, N), E, Self>,
+        rhs: &Tensor<(RightK, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
+        // assert_eq!(lhs.shape.1.size(), rhs.shape.0.size());
         let (m, k) = lhs.shape;
         let n = rhs.shape.1;
         let strides = (m, n).strides();
@@ -331,10 +335,10 @@ impl<E: Dtype> super::MatMatBrKernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
-    fn forward<B: Dim, M: Dim, K: Dim, N: Dim>(
+    fn forward<B: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(B, M, K), E, Self>,
-        rhs: &Tensor<(K, N), E, Self>,
+        lhs: &Tensor<(B, M, LeftK), E, Self>,
+        rhs: &Tensor<(RightK, N), E, Self>,
     ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err> {
         let (batch, m, k) = lhs.shape;
         let n = rhs.shape.1;
@@ -353,11 +357,11 @@ where
         }
         Ok(out)
     }
-    fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
+    fn backward<B: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(B, M, K), E, Self>,
+        lhs: &Tensor<(B, M, LeftK), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(K, N), E, Self>,
+        rhs: &Tensor<(RightK, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
@@ -388,14 +392,14 @@ where
     }
 }
 
-impl<E: Dtype> super::MatMatBatch3Kernel<E> for Cpu
+impl<E: Dtype> super::StaticMatMatBatch3Kernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
-    fn forward<B: Dim, M: Dim, K: Dim, N: Dim>(
+    fn forward<B: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(B, M, K), E, Self>,
-        rhs: &Tensor<(B, K, N), E, Self>,
+        lhs: &Tensor<(B, M, LeftK), E, Self>,
+        rhs: &Tensor<(B, RightK, N), E, Self>,
     ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err> {
         let (b, m, k) = lhs.shape;
         let n = rhs.shape.2;
@@ -416,11 +420,11 @@ where
         }
         Ok(out)
     }
-    fn backward<B: Dim, M: Dim, K: Dim, N: Dim>(
+    fn backward<B: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(B, M, K), E, Self>,
+        lhs: &Tensor<(B, M, LeftK), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(B, K, N), E, Self>,
+        rhs: &Tensor<(B, RightK, N), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
@@ -451,14 +455,140 @@ where
     }
 }
 
-impl<E: Dtype> super::MatMatBatch4Kernel<E> for Cpu
+impl<E: Dtype> super::DynamicMatMatBatch3Kernel<E> for Cpu
 where
     Self: MatMulImpl<E>,
 {
-    fn forward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
+    fn forward<B: Dim, S1: Dim, S2: Dim>(
         &self,
-        lhs: &Tensor<(B, S, M, K), E, Self>,
-        rhs: &Tensor<(B, S, K, N), E, Self>,
+        lhs: &Tensor<(B, S1, usize), E, Self>,
+        rhs: &Tensor<(B, usize, S2), E, Self>,
+    ) -> Result<Tensor<(B, S1, S2), E, Self>, Self::Err> {
+        let (b, m, k) = lhs.shape;
+        let n = rhs.shape.2;
+        let mut out = self.try_zeros_like(&(b, m, n))?;
+        let ap = lhs.data.as_ref();
+        let bp = rhs.data.as_ref();
+        let cp = Arc::get_mut(&mut out.data).unwrap();
+        for i in 0..b.size() {
+            Self::matmul(
+                (m, k, n),
+                ap[i * lhs.strides[0]..].as_ptr(),
+                [lhs.strides[1], lhs.strides[2]],
+                bp[i * rhs.strides[0]..].as_ptr(),
+                [rhs.strides[1], rhs.strides[2]],
+                cp[i * out.strides[0]..].as_mut_ptr(),
+                [out.strides[1], out.strides[2]],
+            )
+        }
+        Ok(out)
+    }
+    fn backward<B: Dim, S1: Dim, S2: Dim>(
+        &self,
+        lhs: &Tensor<(B, S1, usize), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(B, usize, S2), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err> {
+        let (b, m, k) = lhs.shape;
+        let n = rhs.shape.2;
+        let strides = (b, m, n).strides();
+        for i in 0..b.size() {
+            Self::matmul(
+                (m, n, k),
+                grad_out[i * strides[0]..].as_ptr(),
+                [strides[1], strides[2]],
+                rhs.data[i * rhs.strides[0]..].as_ptr(),
+                [rhs.strides[2], rhs.strides[1]],
+                grad_lhs[i * lhs.strides[0]..].as_mut_ptr(),
+                [lhs.strides[1], lhs.strides[2]],
+            );
+            Self::matmul(
+                (k, m, n),
+                lhs.data[i * lhs.strides[0]..].as_ptr(),
+                [lhs.strides[2], lhs.strides[1]],
+                grad_out[i * strides[0]..].as_ptr(),
+                [strides[1], strides[2]],
+                grad_rhs[i * rhs.strides[0]..].as_mut_ptr(),
+                [rhs.strides[1], rhs.strides[2]],
+            );
+        }
+        Ok(())
+    }
+}
+
+impl<E: Dtype> super::DynamicMatMatBatch3Kernel1<E> for Cpu
+where
+    Self: MatMulImpl<E>,
+{
+    fn forward<S1: Dim, S2: Dim>(
+        &self,
+        lhs: &Tensor<(usize, S1, usize), E, Self>,
+        rhs: &Tensor<(usize, usize, S2), E, Self>,
+    ) -> Result<Tensor<(usize, S1, S2), E, Self>, Self::Err> {
+        let (b, m, k) = lhs.shape;
+        let n = rhs.shape.2;
+        let mut out = self.try_zeros_like(&(b, m, n))?;
+        let ap = lhs.data.as_ref();
+        let bp = rhs.data.as_ref();
+        let cp = Arc::get_mut(&mut out.data).unwrap();
+        for i in 0..b.size() {
+            Self::matmul(
+                (m, k, n),
+                ap[i * lhs.strides[0]..].as_ptr(),
+                [lhs.strides[1], lhs.strides[2]],
+                bp[i * rhs.strides[0]..].as_ptr(),
+                [rhs.strides[1], rhs.strides[2]],
+                cp[i * out.strides[0]..].as_mut_ptr(),
+                [out.strides[1], out.strides[2]],
+            )
+        }
+        Ok(out)
+    }
+    fn backward<S1: Dim, S2: Dim>(
+        &self,
+        lhs: &Tensor<(usize, S1, usize), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(usize, usize, S2), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err> {
+        let (b, m, k) = lhs.shape;
+        let n = rhs.shape.2;
+        let strides = (b, m, n).strides();
+        for i in 0..b.size() {
+            Self::matmul(
+                (m, n, k),
+                grad_out[i * strides[0]..].as_ptr(),
+                [strides[1], strides[2]],
+                rhs.data[i * rhs.strides[0]..].as_ptr(),
+                [rhs.strides[2], rhs.strides[1]],
+                grad_lhs[i * lhs.strides[0]..].as_mut_ptr(),
+                [lhs.strides[1], lhs.strides[2]],
+            );
+            Self::matmul(
+                (k, m, n),
+                lhs.data[i * lhs.strides[0]..].as_ptr(),
+                [lhs.strides[2], lhs.strides[1]],
+                grad_out[i * strides[0]..].as_ptr(),
+                [strides[1], strides[2]],
+                grad_rhs[i * rhs.strides[0]..].as_mut_ptr(),
+                [rhs.strides[1], rhs.strides[2]],
+            );
+        }
+        Ok(())
+    }
+}
+
+impl<E: Dtype> super::StaticMatMatBatch4Kernel<E> for Cpu
+where
+    Self: MatMulImpl<E>,
+{
+    fn forward<B: Dim, S: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
+        &self,
+        lhs: &Tensor<(B, S, M, LeftK), E, Self>,
+        rhs: &Tensor<(B, S, RightK, N), E, Self>,
     ) -> Result<Tensor<(B, S, M, N), E, Self>, Self::Err> {
         let (b, s, m, k) = lhs.shape;
         let n = rhs.shape.3;
@@ -479,11 +609,141 @@ where
         }
         Ok(out)
     }
-    fn backward<B: Dim, S: Dim, M: Dim, K: Dim, N: Dim>(
+    fn backward<B: Dim, S: Dim, M: Dim, LeftK: Dim, RightK: Dim, N: Dim>(
         &self,
-        lhs: &Tensor<(B, S, M, K), E, Self>,
+        lhs: &Tensor<(B, S, M, LeftK), E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(B, S, K, N), E, Self>,
+        rhs: &Tensor<(B, S, RightK, N), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err> {
+        let (b, s, m, k) = lhs.shape;
+        let n = rhs.shape.3;
+        let strides = (b, s, m, n).strides();
+        for i in 0..b.size() {
+            for j in 0..s.size() {
+                Self::matmul(
+                    (m, n, k),
+                    grad_out[i * strides[0] + j * strides[1]..].as_ptr(),
+                    [strides[2], strides[3]],
+                    rhs.data[i * rhs.strides[0] + j * rhs.strides[1]..].as_ptr(),
+                    [rhs.strides[3], rhs.strides[2]],
+                    grad_lhs[i * lhs.strides[0] + j * lhs.strides[1]..].as_mut_ptr(),
+                    [lhs.strides[2], lhs.strides[3]],
+                );
+                Self::matmul(
+                    (k, m, n),
+                    lhs.data[i * lhs.strides[0] + j * lhs.strides[1]..].as_ptr(),
+                    [lhs.strides[3], lhs.strides[2]],
+                    grad_out[i * strides[0] + j * strides[1]..].as_ptr(),
+                    [strides[2], strides[3]],
+                    grad_rhs[i * rhs.strides[0] + j * rhs.strides[1]..].as_mut_ptr(),
+                    [rhs.strides[2], rhs.strides[3]],
+                );
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<E: Dtype> super::DynamicMatMatBatch4Kernel<E> for Cpu
+where
+    Self: MatMulImpl<E>,
+{
+    fn forward<B: Dim, S1: Dim, S2: Dim>(
+        &self,
+        lhs: &Tensor<(B, usize, S1, usize), E, Self>,
+        rhs: &Tensor<(B, usize, usize, S2), E, Self>,
+    ) -> Result<Tensor<(B, usize, S1, S2), E, Self>, Self::Err> {
+        let (b, s, m, k) = lhs.shape;
+        let n = rhs.shape.3;
+        let mut out = self.try_zeros_like(&(b, s, m, n))?;
+        let cp = Arc::get_mut(&mut out.data).unwrap();
+        for i in 0..b.size() {
+            for j in 0..s.size() {
+                Self::matmul(
+                    (m, k, n),
+                    lhs.data[i * lhs.strides[0] + j * lhs.strides[1]..].as_ptr(),
+                    [lhs.strides[2], lhs.strides[3]],
+                    rhs.data[i * rhs.strides[0] + j * rhs.strides[1]..].as_ptr(),
+                    [rhs.strides[2], rhs.strides[3]],
+                    cp[i * out.strides[0] + j * out.strides[1]..].as_mut_ptr(),
+                    [out.strides[2], out.strides[3]],
+                );
+            }
+        }
+        Ok(out)
+    }
+    fn backward<B: Dim, S1: Dim, S2: Dim>(
+        &self,
+        lhs: &Tensor<(B, usize, S1, usize), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(B, usize, usize, S2), E, Self>,
+        grad_rhs: &mut Self::Vec<E>,
+        grad_out: &Self::Vec<E>,
+    ) -> Result<(), Self::Err> {
+        let (b, s, m, k) = lhs.shape;
+        let n = rhs.shape.3;
+        let strides = (b, s, m, n).strides();
+        for i in 0..b.size() {
+            for j in 0..s.size() {
+                Self::matmul(
+                    (m, n, k),
+                    grad_out[i * strides[0] + j * strides[1]..].as_ptr(),
+                    [strides[2], strides[3]],
+                    rhs.data[i * rhs.strides[0] + j * rhs.strides[1]..].as_ptr(),
+                    [rhs.strides[3], rhs.strides[2]],
+                    grad_lhs[i * lhs.strides[0] + j * lhs.strides[1]..].as_mut_ptr(),
+                    [lhs.strides[2], lhs.strides[3]],
+                );
+                Self::matmul(
+                    (k, m, n),
+                    lhs.data[i * lhs.strides[0] + j * lhs.strides[1]..].as_ptr(),
+                    [lhs.strides[3], lhs.strides[2]],
+                    grad_out[i * strides[0] + j * strides[1]..].as_ptr(),
+                    [strides[2], strides[3]],
+                    grad_rhs[i * rhs.strides[0] + j * rhs.strides[1]..].as_mut_ptr(),
+                    [rhs.strides[2], rhs.strides[3]],
+                );
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<E: Dtype> super::DynamicMatMatBatch4Kernel1<E> for Cpu
+where
+    Self: MatMulImpl<E>,
+{
+    fn forward<B: Dim, S1: Dim, S2: Dim>(
+        &self,
+        lhs: &Tensor<(B, usize, S1, S2), E, Self>,
+        rhs: &Tensor<(B, usize, S2, usize), E, Self>,
+    ) -> Result<Tensor<(B, usize, S1, usize), E, Self>, Self::Err> {
+        let (b, s, m, k) = lhs.shape;
+        let n = rhs.shape.3;
+        let mut out = self.try_zeros_like(&(b, s, m, n))?;
+        let cp = Arc::get_mut(&mut out.data).unwrap();
+        for i in 0..b.size() {
+            for j in 0..s.size() {
+                Self::matmul(
+                    (m, k, n),
+                    lhs.data[i * lhs.strides[0] + j * lhs.strides[1]..].as_ptr(),
+                    [lhs.strides[2], lhs.strides[3]],
+                    rhs.data[i * rhs.strides[0] + j * rhs.strides[1]..].as_ptr(),
+                    [rhs.strides[2], rhs.strides[3]],
+                    cp[i * out.strides[0] + j * out.strides[1]..].as_mut_ptr(),
+                    [out.strides[2], out.strides[3]],
+                );
+            }
+        }
+        Ok(out)
+    }
+    fn backward<B: Dim, S1: Dim, S2: Dim>(
+        &self,
+        lhs: &Tensor<(B, usize, S1, S2), E, Self>,
+        grad_lhs: &mut Self::Vec<E>,
+        rhs: &Tensor<(B, usize, S2, usize), E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {

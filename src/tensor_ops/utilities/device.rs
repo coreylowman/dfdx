@@ -42,11 +42,14 @@ pub trait Device<E: Dtype>:
 
     // matmuls
     + super::super::matmul::VecMatKernel<E>
-    + super::super::matmul::MatMatKernel<E>
+    + super::super::matmul::StaticMatMatKernel<E>
     + super::super::matmul::VecVecKernel<E>
     + super::super::matmul::MatMatBrKernel<E>
-    + super::super::matmul::MatMatBatch3Kernel<E>
-    + super::super::matmul::MatMatBatch4Kernel<E>
+    + super::super::matmul::StaticMatMatBatch3Kernel<E>
+    + super::super::matmul::DynamicMatMatBatch3Kernel<E>
+    + super::super::matmul::StaticMatMatBatch4Kernel<E>
+    + super::super::matmul::DynamicMatMatBatch4Kernel<E>
+    + super::super::matmul::DynamicMatMatBatch4Kernel1<E>
 
     // scalar arithmetic
     + UnaryKernel<super::super::add::ScalarAddKernelOp<E>, E>

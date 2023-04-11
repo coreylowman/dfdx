@@ -127,11 +127,11 @@ where
 
         // Get weights
         let scalar: E = E::ONE / E::from_usize(K / H).unwrap().sqrt();
-        let weights = q.try_matmul(k)?.try_mul(scalar)?;
+        let weights = q.try_dynamic_matmul(k)?.try_mul(scalar)?;
         let weights = weights.try_softmax::<Axis<2>>()?;
 
         // Get new tokens
-        let tokens = weights.try_matmul(v)?;
+        let tokens = weights.try_dynamic_matmul(v)?;
         let tokens = tokens.try_permute::<_, Axes3<1, 0, 2>>()?;
         let tokens = tokens.try_reshape_like(&(s1, Const::<V>)).unwrap()?;
 
@@ -187,11 +187,11 @@ where
 
         // Get weights
         let scalar: E = E::ONE / E::from_usize(K / H).unwrap().sqrt();
-        let weights = q.try_matmul(k)?.try_mul(scalar)?;
+        let weights = q.try_dynamic_matmul(k)?.try_mul(scalar)?;
         let weights = weights.try_softmax::<Axis<3>>()?;
 
         // Get new tokens
-        let tokens = weights.try_matmul(v)?;
+        let tokens = weights.try_dynamic_matmul(v)?;
         let tokens = tokens.try_permute::<_, Axes4<0, 2, 1, 3>>()?;
         let tokens = tokens.try_reshape_like(&(b, s1, Const::<V>)).unwrap()?;
 
