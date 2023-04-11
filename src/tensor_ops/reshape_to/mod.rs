@@ -229,4 +229,17 @@ mod tests {
         assert_eq!(a.as_vec(), b.as_vec());
         assert_eq!(b.array(), [[1., 2.], [3., 1.], [2., 3.]]);
     }
+
+    #[test]
+    fn test_contiguous() {
+        let dev: TestDevice = Default::default();
+
+        let a: Tensor<_, TestDtype, _> = dev.tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
+
+        let b1 = a.clone().contiguous();
+        assert_eq!(a.strides, b1.strides);
+
+        let b2: Tensor<_, TestDtype, _> = a.permute::<Rank2<3, 2>, _>().contiguous();
+        assert_eq!(b2.strides, [2, 1]);
+    }
 }
