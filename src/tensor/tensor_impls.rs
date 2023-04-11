@@ -111,6 +111,11 @@ impl<S: Shape, E: Unit, D: DeviceStorage, T> Tensor<S, E, D, T> {
             tape: Default::default(),
         }
     }
+
+    /// Get a reference to the tensor's `DeviceStorage`
+    pub fn device(&self) -> &D {
+        &self.device
+    }
 }
 
 /// Put a tape of type `T` into the tensor
