@@ -104,6 +104,8 @@ pub trait Device<E: Dtype>:
 {
 }
 
+impl Device<half::f16> for crate::tensor::Cpu {}
+impl Device<half::bf16> for crate::tensor::Cpu {}
 impl Device<f32> for crate::tensor::Cpu {}
 impl Device<f64> for crate::tensor::Cpu {}
 

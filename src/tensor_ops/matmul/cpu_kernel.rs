@@ -17,12 +17,8 @@ use cblas_sys::{
 ))]
 use matrixmultiply::{dgemm, sgemm};
 
-#[cfg(not(any(
-    feature = "cpu-seq-matmul",
-    feature = "cpu-par-matmul",
-    feature = "cpu-mkl-matmul"
-)))]
-fn gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim>(
+#[allow(unused)]
+fn naive_gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim>(
     (m, k, n): (M, K, N),
     ap: *const F,
     a_strides: [usize; 2],
@@ -55,6 +51,36 @@ pub(crate) trait MatMulImpl<E> {
         cp: *mut E,
         c_strides: [usize; 2],
     );
+}
+
+impl MatMulImpl<half::f16> for Cpu {
+    #[inline]
+    fn matmul<M: Dim, K: Dim, N: Dim>(
+        (m, k, n): (M, K, N),
+        ap: *const half::f16,
+        a_strides: [usize; 2],
+        bp: *const half::f16,
+        b_strides: [usize; 2],
+        cp: *mut half::f16,
+        c_strides: [usize; 2],
+    ) {
+        naive_gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
+    }
+}
+
+impl MatMulImpl<half::bf16> for Cpu {
+    #[inline]
+    fn matmul<M: Dim, K: Dim, N: Dim>(
+        (m, k, n): (M, K, N),
+        ap: *const half::bf16,
+        a_strides: [usize; 2],
+        bp: *const half::bf16,
+        b_strides: [usize; 2],
+        cp: *mut half::bf16,
+        c_strides: [usize; 2],
+    ) {
+        naive_gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
+    }
 }
 
 impl MatMulImpl<f32> for Cpu {
@@ -103,7 +129,7 @@ impl MatMulImpl<f32> for Cpu {
             feature = "cpu-par-matmul",
             feature = "cpu-mkl-matmul"
         )))]
-        gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
+        naive_gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
     }
 }
 
@@ -156,7 +182,7 @@ impl MatMulImpl<f64> for Cpu {
             feature = "cpu-par-matmul",
             feature = "cpu-mkl-matmul"
         )))]
-        gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
+        naive_gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
     }
 }
 
