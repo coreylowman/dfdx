@@ -248,8 +248,11 @@ pub(crate) mod tests {
     #[cfg(feature = "cuda")]
     pub type TestDevice = crate::tensor::Cuda;
 
-    #[cfg(not(feature = "test-f64"))]
+    #[cfg(all(not(feature = "test-f16"), not(feature = "test-f64")))]
     pub type TestDtype = f32;
+
+    #[cfg(feature = "test-f16")]
+    pub type TestDtype = half::f16;
 
     #[cfg(feature = "test-f64")]
     pub type TestDtype = f64;
