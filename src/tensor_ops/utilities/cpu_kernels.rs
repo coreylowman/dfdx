@@ -5,7 +5,7 @@ use crate::{
     shapes::{Dtype, Shape},
     tensor::{
         cpu::{Cpu, LendingIterator, NdIndex},
-        unique_id, GhostTensor, Tensor, ZerosTensor,
+        unique_id, Tensor, Tensorlike, ZerosTensor,
     },
 };
 
@@ -80,26 +80,26 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
     fn backward<S: Shape>(
         &self,
         op: Op,
-        inp: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        inp: &impl Tensorlike<S, E, Self>,
         grad_inp: &mut Self::Vec<E>,
-        out: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        out: &impl Tensorlike<S, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        match (inp, out) {
-            (Err(_), Err(_)) => {
+        match (inp.data(), out.data()) {
+            (None, None) => {
                 let df = op.const_df();
                 for (i, x) in grad_inp.iter_mut().enumerate() {
                     *x += df * grad_out[i];
                 }
             }
-            (Err(_), Ok(out)) => {
+            (None, Some(out)) => {
                 for (i, x) in grad_inp.iter_mut().enumerate() {
-                    *x += op.df(&out.data[i]) * grad_out[i];
+                    *x += op.df(&out[i]) * grad_out[i];
                 }
             }
-            (Ok(inp), Err(_)) => {
+            (Some(inp), None) => {
                 for (i, x) in grad_inp.iter_mut().enumerate() {
-                    *x += op.df(&inp.data[i]) * grad_out[i];
+                    *x += op.df(&inp[i]) * grad_out[i];
                 }
             }
             _ => unreachable!(),
@@ -164,18 +164,16 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
     fn backward<S: Shape>(
         &self,
         op: Op,
-        lhs: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        lhs: &impl Tensorlike<S, E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        rhs: &impl Tensorlike<S, E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        match (lhs, rhs) {
-            (Ok(lhs), Ok(rhs)) => {
-                let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
-                let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
-                let lhs_buf = lhs.data.as_ref();
-                let rhs_buf = rhs.data.as_ref();
+        match (lhs.data(), rhs.data()) {
+            (Some(lhs_buf), Some(rhs_buf)) => {
+                let mut lhs_idx = NdIndex::new(*lhs.shape(), lhs.strides());
+                let mut rhs_idx = NdIndex::new(*rhs.shape(), rhs.strides());
                 // NOTE: we can use .buf_iter() here because we know the outcome of this op is
                 // contiguous from forward
                 for &go in grad_out.iter() {
@@ -187,10 +185,10 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
                     grad_rhs[rhs_i] += op.dfdy(l, r) * go;
                 }
             }
-            (Err(lhs), Err(rhs)) => {
+            (None, None) => {
                 assert!(Op::HAS_CONST_DF);
-                let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
-                let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
+                let mut lhs_idx = NdIndex::new(*lhs.shape(), lhs.strides());
+                let mut rhs_idx = NdIndex::new(*rhs.shape(), rhs.strides());
                 let dx = op.const_dfdx();
                 let dy = op.const_dfdy();
                 for &go in grad_out.iter() {

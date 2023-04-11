@@ -16,7 +16,7 @@ pub trait SumKernel<E: Dtype>: DeviceStorage {
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
         dst: Dst,
-        inp: &GhostTensor<Src, E, Self>,
+        inp: &impl Tensorlike<Src, E, Self>,
         grad_inp: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>

@@ -107,27 +107,27 @@ impl<E: Dtype, K: UnaryOpCudaKernel<E> + DeviceRepr> UnaryKernel<K, E> for Cuda 
     fn backward<S: Shape>(
         &self,
         op: K,
-        inp: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        inp: &impl Tensorlike<S, E, Self>,
         grad_inp: &mut Self::Vec<E>,
-        out: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        out: &impl Tensorlike<S, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let bwd_fn = self.dev.get_func(K::MODULE_NAME, K::BWD_FN_NAME).unwrap();
-        match (inp, out) {
-            (Err(inp), Err(_)) => {
-                let cfg = launch_cfg::<128>(inp.len as u32);
-                let params = (op, inp.len, 0u64, grad_inp, 0u64, grad_out);
+        match (inp.data(), out.data()) {
+            (None, None) => {
+                let cfg = launch_cfg::<128>(inp.len() as u32);
+                let params = (op, inp.len(), 0u64, grad_inp, 0u64, grad_out);
                 unsafe { bwd_fn.launch(cfg, params) }?;
             }
-            (Err(inp), Ok(out)) => {
-                let cfg = launch_cfg::<128>(inp.len as u32);
-                let params = (op, inp.len, 0u64, grad_inp, out.data.as_ref(), grad_out);
+            (None, Some(out_buf)) => {
+                let cfg = launch_cfg::<128>(inp.len() as u32);
+                let params = (op, inp.len(), 0u64, grad_inp, out_buf, grad_out);
                 unsafe { bwd_fn.launch(cfg, params) }?;
             }
-            (Ok(inp), Err(_)) => {
-                let numel = inp.data.len();
+            (Some(inp_buf), None) => {
+                let numel = inp.len();
                 let cfg = launch_cfg::<128>(numel as u32);
-                let params = (op, numel, inp.data.as_ref(), grad_inp, 0u64, grad_out);
+                let params = (op, numel, inp_buf, grad_inp, 0u64, grad_out);
                 unsafe { bwd_fn.launch(cfg, params) }?;
             }
             _ => unreachable!(),
@@ -343,9 +343,9 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
     fn backward<S: Shape>(
         &self,
         op: K,
-        lhs: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        lhs: &impl Tensorlike<S, E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        rhs: &impl Tensorlike<S, E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
@@ -359,18 +359,9 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
             .get_func(K::MODULE_NAME, K::BWD_RHS_FN_NAME)
             .unwrap();
 
-        let shape = match lhs {
-            Ok(lhs) => lhs.shape,
-            Err(lhs) => lhs.shape,
-        };
-        let (lhs_strides, lhs_len) = match lhs {
-            Ok(lhs) => (lhs.strides, lhs.data.len()),
-            Err(lhs) => (lhs.strides, lhs.len),
-        };
-        let (rhs_strides, rhs_len) = match rhs {
-            Ok(rhs) => (rhs.strides, rhs.data.len()),
-            Err(rhs) => (rhs.strides, rhs.len),
-        };
+        let shape = lhs.shape();
+        let (lhs_strides, lhs_len) = (lhs.strides(), lhs.len());
+        let (rhs_strides, rhs_len) = (rhs.strides(), rhs.len());
 
         let numel = shape.num_elements();
         let cfg = launch_cfg::<128>(numel as u32);
@@ -398,29 +389,29 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
         info.extend(lhs_strides2);
         let info = self.dev.htod_copy(info)?;
 
-        match (lhs, rhs) {
-            (Ok(lhs), Ok(rhs)) => {
+        match (lhs.data(), rhs.data()) {
+            (Some(lhs_buf), Some(rhs_buf)) => {
                 let params_lhs = (
-                    op.clone(),        // const OP_STRUCT op,
-                    numel,             // const size_t numel,
-                    S::NUM_DIMS,       // const size_t num_dims,
-                    &info,             // const size_t *info,
-                    lhs.data.as_ref(), // const TYPENAME *lhs,
-                    grad_lhs,          // TYPENAME *grad_lhs,
-                    numel / lhs_len,   // const size_t chunk_len,
-                    rhs.data.as_ref(), // const TYPENAME *rhs,
-                    grad_out,          // const TYPENAME *grad_out
+                    op.clone(),      // const OP_STRUCT op,
+                    numel,           // const size_t numel,
+                    S::NUM_DIMS,     // const size_t num_dims,
+                    &info,           // const size_t *info,
+                    lhs_buf,         // const TYPENAME *lhs,
+                    grad_lhs,        // TYPENAME *grad_lhs,
+                    numel / lhs_len, // const size_t chunk_len,
+                    rhs_buf,         // const TYPENAME *rhs,
+                    grad_out,        // const TYPENAME *grad_out
                 );
                 let params_rhs = (
-                    op,                // const OP_STRUCT op,
-                    numel,             // const size_t numel,
-                    S::NUM_DIMS,       // const size_t num_dims,
-                    &info,             // const size_T * info,
-                    lhs.data.as_ref(), // const TYPENAME *lhs,
-                    rhs.data.as_ref(), // const TYPENAME *rhs,
-                    grad_rhs,          // TYPENAME *grad_rhs,
-                    numel / rhs_len,   // const size_t chunk_len,
-                    grad_out,          // const TYPENAME *grad_out
+                    op,              // const OP_STRUCT op,
+                    numel,           // const size_t numel,
+                    S::NUM_DIMS,     // const size_t num_dims,
+                    &info,           // const size_T * info,
+                    lhs_buf,         // const TYPENAME *lhs,
+                    rhs_buf,         // const TYPENAME *rhs,
+                    grad_rhs,        // TYPENAME *grad_rhs,
+                    numel / rhs_len, // const size_t chunk_len,
+                    grad_out,        // const TYPENAME *grad_out
                 );
 
                 self.par_stream.wait_for_default()?;
@@ -428,7 +419,7 @@ impl<E: Dtype, K: BinaryOpCudaKernel<E> + DeviceRepr + Clone> BinaryKernel<K, E>
                 unsafe { bwd_rhs_fn.launch(cfg, params_rhs) }?;
                 self.dev.wait_for(&self.par_stream)?;
             }
-            (Err(_), Err(_)) => {
+            (None, None) => {
                 let params_lhs = (
                     op.clone(),      // const OP_STRUCT op,
                     numel,           // const size_t numel,
