@@ -90,7 +90,7 @@ mod cuda {
                     .unwrap();
                 let out = std::str::from_utf8(&out.stdout).unwrap();
 
-                let out = out.split("\n").collect::<Vec<&str>>();
+                let out = out.lines().collect::<Vec<&str>>();
                 let mut codes = Vec::with_capacity(out.len());
                 for code in out {
                     let code = code.split("_").collect::<Vec<&str>>();
