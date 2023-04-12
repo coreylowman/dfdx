@@ -42,6 +42,12 @@ impl<Ptr> Default for TensorCache<Ptr> {
 }
 
 impl<Ptr> TensorCache<Ptr> {
+    /// Returns the number of allocations in the cache.
+    #[allow(unused)]
+    pub(crate) fn len(&self) -> usize {
+        self.allocations.read().unwrap().len()
+    }
+
     /// Returns `true` if the cache is enabled.
     pub(crate) fn is_enabled(&self) -> bool {
         *self.enabled.read().unwrap()
