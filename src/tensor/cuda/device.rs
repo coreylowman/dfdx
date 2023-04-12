@@ -1,15 +1,16 @@
 use crate::shapes::{Shape, Unit};
 use crate::tensor::cpu::{Cpu, CpuError, NdIndex};
-use crate::tensor::{DeviceStorage, HasErr, Tensor};
+use crate::tensor::{cache::TensorCache, DeviceStorage, HasErr, Tensor};
 
+use cudarc::driver::{DevicePtr, DevicePtrMut, DeviceRepr};
 use cudarc::{
     cublas::{result::CublasError, CudaBlas},
+    driver::sys::CUdeviceptr,
     driver::{CudaDevice, CudaSlice, CudaStream, DeviceSlice, DriverError},
 };
 
-use std::sync::MutexGuard;
 use std::{
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, MutexGuard},
     vec::Vec,
 };
 
@@ -26,6 +27,7 @@ pub struct Cuda {
     /// A second stream for kernels to optionally execute on.
     pub(crate) par_stream: Arc<CudaStream>,
     pub(crate) workspace: Arc<Mutex<CudaSlice<u8>>>,
+    pub(crate) cache: Arc<TensorCache<CUdeviceptr>>,
 }
 
 #[derive(Debug)]
@@ -96,11 +98,25 @@ impl Cuda {
             cudnn,
             par_stream,
             workspace,
+            cache: Default::default(),
         })
     }
 }
 
 impl Cuda {
+    /// Allocates an empty [CudaSlice] either from the cache or by allocating new memory.
+    /// In either case, the memory will have uninitialized values, meaning the user must
+    /// initialize it before using it.
+    pub(crate) unsafe fn alloc_empty<E: DeviceRepr>(
+        &self,
+        len: usize,
+    ) -> Result<CudaSlice<E>, CudaError> {
+        let data = self.cache.try_pop::<E>(len).map_or_else(
+            || self.dev.alloc::<E>(len),
+            |ptr| Ok(self.dev.upgrade_device_ptr(ptr, len)),
+        )?;
+        Ok(data)
+    }
     #[allow(unused)]
     pub(crate) unsafe fn get_workspace<E>(
         &self,
@@ -129,11 +145,108 @@ impl HasErr for Cuda {
     type Err = CudaError;
 }
 
+/// A [CudaSlice] that can be cloned without allocating new memory.
+/// When [Drop]ed it will insert it's data into the cache.
+#[derive(Debug)]
+pub struct CachableCudaSlice<E> {
+    /// The actual data.
+    pub(crate) data: CudaSlice<E>,
+    /// A cache of device pointers that can be reused.
+    pub(crate) cache: Arc<TensorCache<CUdeviceptr>>,
+}
+
+impl<E: cudarc::driver::DeviceRepr> Clone for CachableCudaSlice<E> {
+    fn clone(&self) -> Self {
+        let dev = self.data.device();
+        let len = self.data.len();
+        let data = self.cache.try_pop::<E>(len).map_or_else(
+            || self.data.try_clone().unwrap(),
+            |ptr| {
+                // SAFETY:
+                // 1. we know that ptr is valid for `num_bytes` because it was registered for that.
+                // 2. we are about to set the memory with dtod_copy
+                let mut slice = unsafe { dev.upgrade_device_ptr(ptr, len) };
+                dev.dtod_copy(&self.data, &mut slice).unwrap();
+                slice
+            },
+        );
+        Self {
+            data,
+            cache: self.cache.clone(),
+        }
+    }
+}
+
+unsafe impl<E: DeviceRepr> DeviceRepr for &CachableCudaSlice<E> {
+    #[inline(always)]
+    fn as_kernel_param(&self) -> *mut std::ffi::c_void {
+        self.data.device_ptr() as *const cudarc::driver::sys::CUdeviceptr as *mut std::ffi::c_void
+    }
+}
+
+unsafe impl<E: DeviceRepr> DeviceRepr for &mut CachableCudaSlice<E> {
+    #[inline(always)]
+    fn as_kernel_param(&self) -> *mut std::ffi::c_void {
+        self.data.device_ptr() as *const cudarc::driver::sys::CUdeviceptr as *mut std::ffi::c_void
+    }
+}
+
+impl<E> DeviceSlice<E> for CachableCudaSlice<E> {
+    fn len(&self) -> usize {
+        self.data.len()
+    }
+}
+
+impl<E> DevicePtr<E> for CachableCudaSlice<E> {
+    fn device_ptr(&self) -> &cudarc::driver::sys::CUdeviceptr {
+        self.data.device_ptr()
+    }
+}
+
+impl<E> DevicePtrMut<E> for CachableCudaSlice<E> {
+    fn device_ptr_mut(&mut self) -> &mut cudarc::driver::sys::CUdeviceptr {
+        self.data.device_ptr_mut()
+    }
+}
+
+impl<E> std::ops::Deref for CachableCudaSlice<E> {
+    type Target = CudaSlice<E>;
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl<E> std::ops::DerefMut for CachableCudaSlice<E> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
+    }
+}
+
+impl<E> Drop for CachableCudaSlice<E> {
+    fn drop(&mut self) {
+        if self.cache.is_enabled() {
+            let dev = self.data.device();
+            // Replaces the CudaSlice with a 0 length CudaSlice. This won't take additional
+            // memory, but will give us ownership of the actual data.
+            let data = std::mem::replace(&mut self.data, dev.null().unwrap());
+            let numel = data.len();
+            // Get access to the raw pointer without freeing it.
+            let ptr = data.leak();
+            self.cache.insert::<E>(numel, ptr);
+        }
+    }
+}
+
 impl DeviceStorage for Cuda {
-    type Vec<E: Unit> = CudaSlice<E>;
+    type Vec<E: Unit> = CachableCudaSlice<E>;
 
     fn try_alloc_len<E: Unit>(&self, len: usize) -> Result<Self::Vec<E>, Self::Err> {
-        Ok(self.dev.alloc_zeros(len)?)
+        let mut data = unsafe { self.alloc_empty(len) }?;
+        self.dev.memset_zeros(&mut data)?;
+        Ok(CachableCudaSlice {
+            data,
+            cache: self.cache.clone(),
+        })
     }
 
     fn random_u64(&self) -> u64 {
@@ -145,7 +258,7 @@ impl DeviceStorage for Cuda {
     }
 
     fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
-        let buf: Vec<E> = tensor.data.try_clone().unwrap().try_into().unwrap();
+        let buf: Vec<E> = tensor.data.data.try_clone().unwrap().try_into().unwrap();
         debug_assert_eq!(buf.len(), tensor.data.len());
         let mut idx = NdIndex::new(tensor.shape, tensor.strides);
         let mut contiguous = Vec::with_capacity(tensor.shape.num_elements());
@@ -157,5 +270,25 @@ impl DeviceStorage for Cuda {
 
     fn try_synchronize(&self) -> Result<(), CudaError> {
         self.dev.synchronize().map_err(CudaError::from)
+    }
+
+    fn try_disable_cache(&self) -> Result<(), Self::Err> {
+        self.cache.disable();
+        self.try_empty_cache()
+    }
+
+    fn try_empty_cache(&self) -> Result<(), Self::Err> {
+        #[cfg(not(feature = "no-std"))]
+        let mut cache = self.cache.allocations.write().unwrap();
+        #[cfg(feature = "no-std")]
+        let mut cache = self.cache.allocations.write();
+        for (&key, allocations) in cache.iter_mut() {
+            for alloc in allocations.drain(..) {
+                let data = unsafe { self.dev.upgrade_device_ptr::<u8>(alloc, key.num_bytes) };
+                drop(data);
+            }
+        }
+        cache.clear();
+        Ok(())
     }
 }

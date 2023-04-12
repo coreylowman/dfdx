@@ -13,16 +13,23 @@ impl<E: Dtype> super::ConcatKernel<E> for Cpu {
         A: super::ConcatShape<B>,
     {
         let shape = a.shape.concat_shape(&b.shape);
-        let mut data = std::vec::Vec::with_capacity(shape.num_elements());
+        let mut data = self.try_alloc_elem(shape.num_elements(), E::default())?;
+        let mut i = 0;
         if a.strides == a.shape.strides() {
-            data.extend(a.data.as_ref());
+            let a: &[E] = a.data.as_ref();
+            data.data[0..a.len()].copy_from_slice(a);
+            i += a.len();
         } else {
-            data.extend(a.as_vec());
+            let a_buf = a.as_vec();
+            data.data[0..a_buf.len()].copy_from_slice(&a_buf);
+            i += a_buf.len();
         }
         if b.strides == b.shape.strides() {
-            data.extend(b.data.as_ref());
+            let b: &[E] = b.data.as_ref();
+            data.data[i..i + b.len()].copy_from_slice(b);
         } else {
-            data.extend(b.as_vec());
+            let b_buf = b.as_vec();
+            data.data[i..i + b_buf.len()].copy_from_slice(&b_buf);
         }
         Ok(Tensor {
             id: unique_id(),

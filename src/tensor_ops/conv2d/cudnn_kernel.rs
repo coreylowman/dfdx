@@ -3,7 +3,7 @@ use cudarc::driver::DeviceSlice;
 
 use crate::{
     shapes::*,
-    tensor::{unique_id, Cuda, Tensor, Tensorlike},
+    tensor::{Cuda, Tensor, Tensorlike},
 };
 
 use std::sync::Arc;
@@ -25,15 +25,8 @@ where
     Self: HasCudnnKernel<E>,
 {
     fn alloc<S: Shape>(&self, shape: S) -> Result<Tensor<S, E, Self>, Self::Err> {
-        let data = Arc::new(unsafe { self.dev.alloc::<E>(shape.num_elements()) }?);
-        Ok(Tensor {
-            id: unique_id(),
-            data,
-            shape,
-            strides: shape.strides(),
-            device: self.clone(),
-            tape: Default::default(),
-        })
+        let data = unsafe { self.alloc_empty::<E>(shape.num_elements()) }?;
+        Ok(self.build_tensor(shape, shape.strides(), data))
     }
     fn forward<L: Shape, R: Shape, O: Shape>(
         &self,

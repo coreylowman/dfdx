@@ -36,7 +36,7 @@ impl<E: Dtype + CudaTypeName> super::StackKernel<E> for Cuda {
 
         // copy the data
         let item_numel = strides[0];
-        let mut data = unsafe { self.dev.alloc::<E>(num.size() * item_numel) }?;
+        let mut data = unsafe { self.alloc_empty::<E>(num.size() * item_numel) }?;
         let mut offset = 0;
         for item in inps {
             debug_assert_eq!(item.data.len(), item_numel);
