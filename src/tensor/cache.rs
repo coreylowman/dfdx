@@ -154,9 +154,16 @@ impl<Ptr> TensorCache<Ptr> {
         #[cfg(feature = "no-std")]
         let mut cache = self.allocations.write();
         if let std::collections::btree_map::Entry::Vacant(e) = cache.entry(key) {
-            let mut allocations = Vec::new();
-            allocations.push(allocation);
-            e.insert(allocations);
+            #[cfg(not(feature = "no-std"))]
+            {
+                e.insert(std::vec![allocation]);
+            }
+            #[cfg(feature = "no-std")]
+            {
+                let mut allocations = Vec::new();
+                allocations.push(allocation);
+                e.insert(allocations);
+            }
         } else {
             cache.get_mut(&key).unwrap().push(allocation);
         }
