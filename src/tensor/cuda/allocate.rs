@@ -2,7 +2,7 @@
 
 use crate::{
     shapes::*,
-    tensor::{masks::triangle_mask, storage_traits::*, unique_id, Cpu, CpuError, Tensor},
+    tensor::{masks::triangle_mask, storage_traits::*, unique_id, Cpu, CpuError, NoneTape, Tensor},
 };
 
 use super::{device::CachableCudaSlice, Cuda, CudaError};
@@ -191,11 +191,22 @@ where
 {
     type Array = <Cpu as TensorToArray<S, E>>::Array;
     fn tensor_to_array<T>(&self, tensor: &Tensor<S, E, Self, T>) -> Self::Array {
-        let mut cpu_tensor = self.cpu.zeros_like(&tensor.shape);
+        let buf = self
+            .cpu
+            .try_alloc_elem(tensor.data.data.len(), Default::default())
+            .unwrap();
+        let mut cpu_tensor = Tensor {
+            id: tensor.id,
+            data: Arc::new(buf),
+            shape: tensor.shape,
+            strides: tensor.strides,
+            device: self.cpu.clone(),
+            tape: Default::default(),
+        };
         let buf = std::sync::Arc::make_mut(&mut cpu_tensor.data);
         self.dev
             .dtoh_sync_copy_into(&tensor.data.data, &mut buf.data)
             .unwrap();
-        self.cpu.tensor_to_array(&cpu_tensor)
+        self.cpu.tensor_to_array::<NoneTape>(&cpu_tensor)
     }
 }
