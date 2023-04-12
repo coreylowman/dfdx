@@ -205,13 +205,11 @@ impl DeviceStorage for Cpu {
                 debug_assert_eq!(std::alloc::Layout::new::<u16>().align(), 2);
                 debug_assert_eq!(std::alloc::Layout::new::<u32>().align(), 4);
                 debug_assert_eq!(std::alloc::Layout::new::<u64>().align(), 8);
-                debug_assert_eq!(std::alloc::Layout::new::<u128>().align(), 16);
                 match key.alignment {
                     1 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u8, len, cap)) },
                     2 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u16, len, cap)) },
                     4 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u32, len, cap)) },
                     8 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u64, len, cap)) },
-                    16 => unsafe { drop(Vec::from_raw_parts(alloc.0 as *mut u128, len, cap)) },
                     _ => unreachable!(),
                 };
             }

@@ -37,15 +37,18 @@ mod tests {
     #[test]
     fn test_reuse_allocation_on_new_tensor() {
         let dev: Cpu = Default::default();
+        assert_eq!(dev.cache.len(), 0);
         let tensor: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
+        assert_eq!(dev.cache.len(), 0);
         let ptr = tensor.data.as_ptr();
         drop(tensor); // insert allocation into cache
         assert_eq!(dev.cache.len(), 1);
-        let _: Tensor<Rank2<2, 3>, f64, _> = dev.zeros();
+        let other: Tensor<Rank2<2, 3>, f64, _> = dev.zeros();
         assert_eq!(dev.cache.len(), 1);
         let tensor: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
         assert_eq!(dev.cache.len(), 0);
         assert_eq!(tensor.data.as_ptr(), ptr);
+        drop(other);
     }
 
     #[test]
