@@ -115,11 +115,11 @@ impl<E> Drop for CachableVec<E> {
         if self.cache.is_enabled() {
             let mut data = std::mem::take(&mut self.data);
             data.shrink_to_fit();
-    
+
             let numel = data.len();
             let ptr = data.as_mut_ptr() as *mut u8;
             std::mem::forget(data);
-    
+
             self.cache.insert::<E>(numel, BytesPtr(ptr));
         }
     }
