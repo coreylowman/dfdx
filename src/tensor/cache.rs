@@ -68,7 +68,7 @@ impl<Ptr> TensorCache<Ptr> {
         let layout = Layout::new::<E>();
         let num_bytes = len * std::mem::size_of::<E>();
         let key = AllocationKey {
-            num_bytes: num_bytes,
+            num_bytes,
             size: layout.size(),
             alignment: layout.align(),
         };
@@ -110,7 +110,7 @@ impl<Ptr> TensorCache<Ptr> {
         let layout = Layout::new::<E>();
         let num_bytes = len * std::mem::size_of::<E>();
         let key = AllocationKey {
-            num_bytes: num_bytes,
+            num_bytes,
             size: layout.size(),
             alignment: layout.align(),
         };
