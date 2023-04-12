@@ -42,7 +42,7 @@ impl<Ptr> Default for TensorCache<Ptr> {
     fn default() -> Self {
         Self {
             allocations: Default::default(),
-            enabled: RwLock::new(true),
+            enabled: RwLock::new(false),
         }
     }
 }
@@ -71,6 +71,19 @@ impl<Ptr> TensorCache<Ptr> {
         #[cfg(feature = "no-std")]
         {
             *self.enabled.read()
+        }
+    }
+
+    /// Disables the cache.
+    pub(crate) fn enable(&self) {
+        #[cfg(not(feature = "no-std"))]
+        {
+            *self.enabled.write().unwrap() = true;
+        }
+
+        #[cfg(feature = "no-std")]
+        {
+            *self.enabled.write() = true;
         }
     }
 

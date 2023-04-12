@@ -281,6 +281,11 @@ impl DeviceStorage for Cuda {
         self.dev.synchronize().map_err(CudaError::from)
     }
 
+    fn try_enable_cache(&self) -> Result<(), Self::Err> {
+        self.cache.enable();
+        Ok(())
+    }
+
     fn try_disable_cache(&self) -> Result<(), Self::Err> {
         self.cache.disable();
         self.try_empty_cache()

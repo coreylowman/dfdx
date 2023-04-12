@@ -43,6 +43,14 @@ pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
     /// Blocks until all work on device to complete. Useful for benchmarking.
     fn try_synchronize(&self) -> Result<(), Self::Err>;
 
+    /// Enables the cache of the device.
+    fn enable_cache(&self) {
+        self.try_enable_cache().unwrap()
+    }
+
+    /// Tries to enable the cache of the device.
+    fn try_enable_cache(&self) -> Result<(), Self::Err>;
+
     /// Disables the cache of the device. This will also empty the cache
     /// if there are things in it. See [DeviceStorage::empty_cache] for
     /// more information.
