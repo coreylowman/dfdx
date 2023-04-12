@@ -69,4 +69,7 @@ fn test_resnet18_f32_inference() {
             );
         }
     }
+
+    let p2 = model.forward(x);
+    assert_eq!(p, p2.array());
 }
