@@ -249,6 +249,9 @@ pub(crate) mod tests {
     #[cfg(feature = "cuda")]
     pub type TestDevice = crate::tensor::Cuda;
 
+    #[cfg(all(feature = "test-f64", feature = "test-f16"))]
+    compile_error!("f64 and f16 cannot be tested at the same time");
+
     #[cfg(all(
         not(feature = "test-f16"),
         not(feature = "test-bf16"),
