@@ -17,6 +17,7 @@ pub(crate) fn launch_cfg(n: u32) -> cudarc::driver::LaunchConfig {
 mod tests {
     use super::*;
     use crate::{shapes::*, tensor::*};
+    use cudarc::driver::DevicePtr;
 
     #[test]
     fn test_empty_cache() {
@@ -42,14 +43,15 @@ mod tests {
     fn test_reuse_allocation_on_new_tensor() {
         let dev: Cuda = Default::default();
         let tensor: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
-        let ptr = tensor.data.as_ptr();
+        let ptr = *tensor.data.device_ptr();
         drop(tensor); // insert allocation into cache
         assert_eq!(dev.cache.len(), 1);
-        let _: Tensor<Rank2<2, 3>, f64, _> = dev.zeros();
+        let other: Tensor<Rank2<2, 3>, f64, _> = dev.zeros();
         assert_eq!(dev.cache.len(), 1);
         let tensor: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
         assert_eq!(dev.cache.len(), 0);
-        assert_eq!(tensor.data.as_ptr(), ptr);
+        assert_eq!(*tensor.data.device_ptr(), ptr);
+        drop(other);
     }
 
     #[test]
