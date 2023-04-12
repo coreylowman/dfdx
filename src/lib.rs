@@ -248,11 +248,14 @@ pub(crate) mod tests {
     #[cfg(feature = "cuda")]
     pub type TestDevice = crate::tensor::Cuda;
 
-    #[cfg(all(not(feature = "test-f16"), not(feature = "test-f64")))]
+    #[cfg(all(not(feature = "test-f16"), not(feature = "test-bf16"), not(feature = "test-f64")))]
     pub type TestDtype = f32;
 
     #[cfg(feature = "test-f16")]
     pub type TestDtype = half::f16;
+
+    #[cfg(feature = "test-bf16")]
+    pub type TestDtype = half::bf16;
 
     #[cfg(feature = "test-f64")]
     pub type TestDtype = f64;
@@ -275,6 +278,7 @@ pub(crate) mod tests {
         }
     }
 
+    #[cfg(feature = "f16")]
     impl AssertClose for half::f16 {
         type Elem = Self;
         const DEFAULT_TOLERANCE: Self::Elem = half::f16::from_f32_const(1e-3);
@@ -287,6 +291,7 @@ pub(crate) mod tests {
         }
     }
 
+    #[cfg(feature = "f16")]
     impl AssertClose for half::bf16 {
         type Elem = Self;
         const DEFAULT_TOLERANCE: Self::Elem = half::bf16::from_f32_const(1e-3);

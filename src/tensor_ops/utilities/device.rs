@@ -104,7 +104,9 @@ pub trait Device<E: Dtype>:
 {
 }
 
+#[cfg(feature = "f16")]
 impl Device<half::f16> for crate::tensor::Cpu {}
+#[cfg(feature = "f16")]
 impl Device<half::bf16> for crate::tensor::Cpu {}
 impl Device<f32> for crate::tensor::Cpu {}
 impl Device<f64> for crate::tensor::Cpu {}
