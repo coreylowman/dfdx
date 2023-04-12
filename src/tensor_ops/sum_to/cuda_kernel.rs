@@ -6,6 +6,8 @@ use crate::{
 
 use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, ValidAsZeroBits};
 
+use std::vec::Vec;
+
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/sum_to.ptx"));
 
 trait HasCudaKernel<E> {
@@ -63,7 +65,8 @@ where
 
         let cfg = launch_cfg::<128>(physical_numel as u32);
 
-        let mut storage = self.dev.alloc_zeros::<E>(dst.num_elements())?;
+        let mut storage = unsafe { self.alloc_empty::<E>(dst_physical_numel) }?;
+        self.dev.memset_zeros(&mut storage)?;
         let params = (
             physical_numel,    // const size_t numel,
             num_dims,          // const size_t num_dims,

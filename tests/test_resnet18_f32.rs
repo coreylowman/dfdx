@@ -54,7 +54,7 @@ fn test_resnet18_f32_inference() {
     let mut y: Tensor<Rank2<10, 1000>, f32, _> = dev.zeros();
     y.load_from_npy("./tests/resnet18_y.npy").unwrap();
 
-    let p = model.forward(x);
+    let p = model.forward(x.clone());
 
     let p = p.array();
     let y = y.array();
@@ -69,4 +69,7 @@ fn test_resnet18_f32_inference() {
             );
         }
     }
+
+    let p2 = model.forward(x);
+    assert_eq!(p, p2.array());
 }

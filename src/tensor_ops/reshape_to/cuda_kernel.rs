@@ -8,6 +8,8 @@ use cudarc::{
     types::CudaTypeName,
 };
 
+use std::vec::Vec;
+
 impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
     fn forward<Src: Shape, Dst: Shape>(
         &self,
@@ -27,7 +29,7 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
         let fwd_fn = self.dev.get_func(&module, "reshape_fwd").unwrap();
 
         let numel = inp.shape.num_elements();
-        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
+        let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
 
         let mut info = Vec::with_capacity(Src::NUM_DIMS * 2 + Dst::NUM_DIMS * 2);
         info.extend(inp.shape.concrete());

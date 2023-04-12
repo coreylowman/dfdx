@@ -25,7 +25,7 @@ impl Cuda {
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = unsafe { self.dev.alloc(numel) }?;
+        let mut storage = unsafe { self.alloc_empty(numel) }?;
 
         let dims: CudaSlice<usize> = self.dev.htod_copy(shape.concrete().into())?;
         let lhs_strides: CudaSlice<usize> = self.dev.htod_copy(lhs.strides.into())?;
@@ -59,7 +59,7 @@ impl BooleanKernel for Cuda {
         }
 
         let numel = inp.data.len();
-        let mut storage = unsafe { self.dev.alloc(numel) }?;
+        let mut storage = unsafe { self.alloc_empty(numel) }?;
 
         let fwd_fn = self.dev.get_func(MODULE_NAME, "boolean_not").unwrap();
         let cfg = launch_cfg::<128>(numel as u32);

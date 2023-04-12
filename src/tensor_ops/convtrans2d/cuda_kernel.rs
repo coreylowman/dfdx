@@ -108,8 +108,8 @@ where
         let mut patches = unsafe { self.get_workspace::<E>(patches_numel) }?;
         let mut patches = unsafe { patches.transmute_mut::<E>(patches_numel).unwrap() };
 
-        let mut f_b1023 = unsafe { self.dev.alloc::<E>(filters_numel) }?;
-        let mut grad_f_b1023 = unsafe { self.dev.alloc::<E>(op.batch * filters_numel) }?;
+        let mut f_b1023 = unsafe { self.alloc_empty::<E>(filters_numel) }?;
+        let mut grad_f_b1023 = unsafe { self.alloc_empty::<E>(op.batch * filters_numel) }?;
         let f_strides = self.dev.htod_copy(rhs.strides.into())?;
 
         self.par_stream.wait_for_default()?;

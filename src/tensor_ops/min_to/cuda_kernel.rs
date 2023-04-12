@@ -6,6 +6,8 @@ use crate::{
 
 use cudarc::driver::{DeviceSlice, LaunchAsync};
 
+use std::vec::Vec;
+
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/min_to.ptx"));
 
 trait HasCudaKernel<E> {
@@ -46,7 +48,7 @@ where
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
 
         let mut storage = unsafe {
-            let mut storage = self.dev.alloc::<E>(dst.num_elements())?;
+            let mut storage = self.alloc_empty::<E>(dst.num_elements())?;
             fill_fn.launch(
                 launch_cfg::<128>(dst.num_elements() as u32),
                 (&mut storage, Self::INIT, dst.num_elements()),
