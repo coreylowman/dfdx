@@ -90,54 +90,58 @@ mod tests {
     #[test]
     fn test_add_0d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor(1.0);
-        let b: Tensor<_, TestDtype, _> = dev.tensor(1.0);
+        let a = dev.tensor(1.0f64).to_dtype::<TestDtype>();
+        let b = dev.tensor(1.0f64).to_dtype::<TestDtype>();
 
         let r = a.leaky_trace() + b.clone();
-        assert_eq!(r.array(), 2.0);
+        assert_eq!(r.array(), test_dtype!(2.0));
         let g = r.backward();
-        assert_eq!(g.get(&a).array(), 1.0);
-        assert_eq!(g.get(&b).array(), 1.0);
+        assert_eq!(g.get(&a).array(), test_dtype!(1.0));
+        assert_eq!(g.get(&b).array(), test_dtype!(1.0));
     }
 
     #[test]
     fn test_add_1d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
-        let b: Tensor<_, TestDtype, _> = dev.tensor([1.0, -1.0, 0.0]);
+        let a = dev.tensor([1.0f64, 2.0, 3.0]).to_dtype::<TestDtype>();
+        let b = dev.tensor([1.0f64, -1.0, 0.0]).to_dtype::<TestDtype>();
 
         let r = a.leaky_trace() + b.clone();
-        assert_eq!(r.array(), [2.0, 1.0, 3.0]);
+        assert_eq!(r.array(), test_dtype!([2.0, 1.0, 3.0]));
         let g = r.mean().backward();
-        assert_eq!(g.get(&a).array(), [1.0 / 3.0; 3]);
-        assert_eq!(g.get(&b).array(), [1.0 / 3.0; 3]);
+        assert_eq!(g.get(&a).array(), test_dtype!([1.0 / 3.0; 3]));
+        assert_eq!(g.get(&b).array(), test_dtype!([1.0 / 3.0; 3]));
     }
 
     #[test]
     fn test_add_2d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> =
-            dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b: Tensor<_, TestDtype, _> =
-            dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+        let a = dev
+            .tensor([[0.6570f64, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]])
+            .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([[0.5199f64, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]])
+            .to_dtype::<TestDtype>();
 
         let r = a.leaky_trace() + b.clone();
         assert_eq!(
             r.array(),
-            [[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]
+            test_dtype!([[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]])
         );
         let g = r.mean().backward();
-        assert_eq!(g.get(&a).array(), [[1.0 / 6.0; 3]; 2]);
-        assert_eq!(g.get(&b).array(), [[1.0 / 6.0; 3]; 2]);
+        assert_eq!(g.get(&a).array(), test_dtype!([[1.0 / 6.0; 3]; 2]));
+        assert_eq!(g.get(&b).array(), test_dtype!([[1.0 / 6.0; 3]; 2]));
     }
 
     #[test]
     fn test_add_broadcast_bottom() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> =
-            dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b: Tensor<_, TestDtype, _> =
-            dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+        let a = dev
+            .tensor([[0.6570f64, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]])
+            .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([[0.5199f64, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]])
+            .to_dtype::<TestDtype>();
 
         let a2 = a.broadcast::<Rank3<2, 3, 4>, _>();
         let b2 = b.broadcast::<Rank3<2, 3, 4>, _>();
@@ -145,23 +149,27 @@ mod tests {
         let r = a2.leaky_trace() + b2.clone();
         assert_eq!(
             r.array(),
-            [
+            test_dtype!([
                 [[1.1769; 4], [0.5552; 4], [0.5259; 4]],
                 [[1.3917; 4], [1.0692; 4], [0.873; 4]]
-            ]
+            ])
         );
         let g = r.mean().backward();
-        assert_eq!(g.get(&a2).array(), [[[1.0 / 6.0; 4]; 3]; 2]);
-        assert_eq!(g.get(&b2).array(), [[[1.0 / 6.0; 4]; 3]; 2]);
+        assert_eq!(g.get(&a2).array(), test_dtype!([[[1.0 / 6.0; 4]; 3]; 2]));
+        assert_eq!(g.get(&b2).array(), test_dtype!([[[1.0 / 6.0; 4]; 3]; 2]));
     }
 
     #[test]
     fn test_add_broadcast_top() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> =
-            dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b: Tensor<_, TestDtype, _> =
-            dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+        let a = dev.tensor(test_dtype!([
+            [0.6570, 0.1708, 0.1500],
+            [0.5658, 0.7010, 0.8342]
+        ]));
+        let b = dev.tensor(test_dtype!([
+            [0.5199, 0.3844, 0.3759],
+            [0.8259, 0.3682, 0.0388]
+        ]));
 
         let a2 = a.broadcast::<Rank3<4, 2, 3>, _>();
         let b2 = b.broadcast::<Rank3<4, 2, 3>, _>();
@@ -169,40 +177,43 @@ mod tests {
         let r = a2.leaky_trace() + b2.clone();
         assert_eq!(
             r.array(),
-            [[[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]; 4]
+            test_dtype!([[[1.1769, 0.5552, 0.5259], [1.3917, 1.0692, 0.873]]; 4])
         );
         let g = r.mean().backward();
-        assert_eq!(g.get(&a2).array(), [[[1.0 / 6.0; 3]; 2]; 4]);
-        assert_eq!(g.get(&b2).array(), [[[1.0 / 6.0; 3]; 2]; 4]);
+        assert_eq!(g.get(&a2).array(), test_dtype!([[[1.0 / 6.0; 3]; 2]; 4]));
+        assert_eq!(g.get(&b2).array(), test_dtype!([[[1.0 / 6.0; 3]; 2]; 4]));
     }
 
     #[test]
     fn test_scalar_add_0d() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor(0.0);
-        let r = x.leaky_trace() + 1.0;
-        assert_eq!(r.array(), 1.0);
+        let x: Tensor<(), TestDtype, Cpu> = dev.zeros();
+        let r = x.leaky_trace() + test_dtype!(1.0);
+        assert_eq!(r.array(), test_dtype!(1.0));
         let g = r.exp().backward();
-        assert_eq!(g.get(&x).array(), TestDtype::exp(1.0));
+        assert_eq!(g.get(&x).array(), test_dtype!(1.0f64).exp());
     }
 
     #[test]
     fn test_scalar_add_1d() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([0.0, 1.0, 2.0]);
-        let r = x.leaky_trace() + 0.5;
-        assert_eq!(r.array(), [0.5, 1.5, 2.5]);
+        let x = dev.tensor(test_dtype!([0.0, 1.0, 2.0]));
+        let r = x.leaky_trace() + test_dtype!(0.5);
+        assert_eq!(r.array(), test_dtype!([0.5, 1.5, 2.5]));
         let g = r.exp().sum().backward();
-        assert_close(&g.get(&x).array(), &[1.6487212, 4.481689, 12.182494]);
+        assert_close(
+            &g.get(&x).array(),
+            &test_dtype!([1.6487212, 4.481689, 12.182494]),
+        );
     }
 
     #[test]
     fn test_scalar_add_2d() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([[0.0; 2]; 3]);
-        let r = x.leaky_trace() + 0.5;
-        assert_eq!(r.array(), [[0.5; 2]; 3]);
+        let x: Tensor<Rank2<3, 2>, TestDtype, _> = dev.zeros();
+        let r = x.leaky_trace() + test_dtype!(0.5);
+        assert_eq!(r.array(), test_dtype!([[0.5; 2]; 3]));
         let g = r.exp().sum().backward();
-        assert_close(&g.get(&x).array(), &[[1.6487212; 2]; 3]);
+        assert_close(&g.get(&x).array(), &test_dtype!([[1.6487212; 2]; 3]));
     }
 }

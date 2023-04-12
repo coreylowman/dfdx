@@ -241,6 +241,7 @@ pub fn keep_denormals() {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    pub(crate) use num_traits::Float;
 
     #[cfg(not(feature = "cuda"))]
     pub type TestDevice = crate::tensor::Cpu;
@@ -248,7 +249,11 @@ pub(crate) mod tests {
     #[cfg(feature = "cuda")]
     pub type TestDevice = crate::tensor::Cuda;
 
-    #[cfg(all(not(feature = "test-f16"), not(feature = "test-bf16"), not(feature = "test-f64")))]
+    #[cfg(all(
+        not(feature = "test-f16"),
+        not(feature = "test-bf16"),
+        not(feature = "test-f64")
+    ))]
     pub type TestDtype = f32;
 
     #[cfg(feature = "test-f16")]
@@ -356,4 +361,42 @@ pub(crate) mod tests {
     ) {
         a.assert_close(b, tolerance);
     }
+
+    pub trait NdMap {
+        type Elem;
+        type Mapped<O>;
+        fn ndmap<O, F: Copy + FnMut(Self::Elem) -> O>(&self, f: F) -> Self::Mapped<O>;
+    }
+
+    impl NdMap for f32 {
+        type Elem = Self;
+        type Mapped<O> = O;
+        fn ndmap<O, F: Copy + FnMut(Self::Elem) -> O>(&self, f: F) -> O {
+            f(*self)
+        }
+    }
+
+    impl NdMap for f64 {
+        type Elem = Self;
+        type Mapped<O> = O;
+        fn ndmap<O, F: Copy + FnMut(Self::Elem) -> O>(&self, f: F) -> O {
+            f(*self)
+        }
+    }
+
+    impl<T: NdMap, const M: usize> NdMap for [T; M] {
+        type Elem = T::Elem;
+        type Mapped<O> = [T::Mapped<O>; M];
+        fn ndmap<O, F: Copy + FnMut(Self::Elem) -> O>(&self, f: F) -> Self::Mapped<O> {
+            self.map(|t| t.ndmap(f))
+        }
+    }
+
+    #[macro_export]
+    macro_rules! test_dtype {
+        ($Val:expr) => {
+            $Val.ndmap(TestDtype::from_f64)
+        };
+    }
+    pub(crate) use test_dtype;
 }
