@@ -8,6 +8,8 @@ use cudarc::{
     types::CudaTypeName,
 };
 
+use std::vec::Vec;
+
 impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
     fn forward<Src: Shape, Dst: Shape>(
         &self,

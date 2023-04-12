@@ -6,6 +6,8 @@ use crate::{
 
 use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, ValidAsZeroBits};
 
+use std::vec::Vec;
+
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/sum_to.ptx"));
 
 trait HasCudaKernel<E> {

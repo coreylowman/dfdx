@@ -122,7 +122,10 @@ where
         let shape = *src.shape();
         let mut buf = Vec::with_capacity(shape.num_elements());
         {
+            #[cfg(not(feature = "no-std"))]
             let mut rng = self.cpu.rng.lock().unwrap();
+            #[cfg(feature = "no-std")]
+            let mut rng = self.cpu.rng.lock();
             buf.resize_with(shape.num_elements(), || rng.sample(&distr));
         }
         self.tensor_from_host_buf::<S::Shape, E>(shape, buf)
@@ -134,7 +137,10 @@ where
     ) -> Result<(), Self::Err> {
         let mut buf = Vec::with_capacity(storage.len());
         {
+            #[cfg(not(feature = "no-std"))]
             let mut rng = self.cpu.rng.lock().unwrap();
+            #[cfg(feature = "no-std")]
+            let mut rng = self.cpu.rng.lock();
             buf.resize_with(storage.len(), || rng.sample(&distr));
         }
         self.dev.htod_copy_into(buf, &mut storage.data)?;

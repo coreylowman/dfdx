@@ -1,5 +1,5 @@
 use num_traits::AsPrimitive;
-use std::sync::Arc;
+use std::{sync::Arc, vec::Vec};
 
 use crate::prelude::{cpu::CachableVec, Cpu, Shape, Tensor, Unit};
 

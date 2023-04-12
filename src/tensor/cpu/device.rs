@@ -179,7 +179,10 @@ impl DeviceStorage for Cpu {
     }
 
     fn try_empty_cache(&self) -> Result<(), Self::Err> {
+        #[cfg(not(feature = "no-std"))]
         let mut cache = self.cache.allocations.write().unwrap();
+        #[cfg(feature = "no-std")]
+        let mut cache = self.cache.allocations.write();
         for (&key, allocations) in cache.iter_mut() {
             assert!(key.num_bytes % key.size == 0);
             assert!(key.num_bytes < isize::MAX as usize);

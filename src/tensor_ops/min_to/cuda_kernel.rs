@@ -6,6 +6,8 @@ use crate::{
 
 use cudarc::driver::{DeviceSlice, LaunchAsync};
 
+use std::vec::Vec;
+
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/min_to.ptx"));
 
 trait HasCudaKernel<E> {

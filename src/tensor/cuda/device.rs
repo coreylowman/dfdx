@@ -278,7 +278,10 @@ impl DeviceStorage for Cuda {
     }
 
     fn try_empty_cache(&self) -> Result<(), Self::Err> {
+        #[cfg(not(feature = "no-std"))]
         let mut cache = self.cache.allocations.write().unwrap();
+        #[cfg(feature = "no-std")]
+        let mut cache = self.cache.allocations.write();
         for (&key, allocations) in cache.iter_mut() {
             for alloc in allocations.drain(..) {
                 let data = unsafe { self.dev.upgrade_device_ptr::<u8>(alloc, key.num_bytes) };

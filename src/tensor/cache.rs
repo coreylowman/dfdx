@@ -1,4 +1,10 @@
-use std::{alloc::Layout, collections::BTreeMap, sync::RwLock};
+use std::{alloc::Layout, collections::BTreeMap, vec::Vec};
+
+#[cfg(not(feature = "no-std"))]
+use std::sync::RwLock;
+
+#[cfg(feature = "no-std")]
+use spin::RwLock;
 
 /// A key for the tensor cache. Contains both number of bytes and informatino
 /// about the layout of the allocation.
@@ -45,17 +51,40 @@ impl<Ptr> TensorCache<Ptr> {
     /// Returns the number of allocations in the cache.
     #[allow(unused)]
     pub(crate) fn len(&self) -> usize {
-        self.allocations.read().unwrap().len()
+        #[cfg(not(feature = "no-std"))]
+        {
+            self.allocations.read().unwrap().len()
+        }
+
+        #[cfg(feature = "no-std")]
+        {
+            self.allocations.read().len()
+        }
     }
 
     /// Returns `true` if the cache is enabled.
     pub(crate) fn is_enabled(&self) -> bool {
-        *self.enabled.read().unwrap()
+        #[cfg(not(feature = "no-std"))]
+        {
+            *self.enabled.read().unwrap()
+        }
+        #[cfg(feature = "no-std")]
+        {
+            *self.enabled.read()
+        }
     }
 
     /// Disables the cache.
     pub(crate) fn disable(&self) {
-        *self.enabled.write().unwrap() = false;
+        #[cfg(not(feature = "no-std"))]
+        {
+            *self.enabled.write().unwrap() = false;
+        }
+
+        #[cfg(feature = "no-std")]
+        {
+            *self.enabled.write() = false;
+        }
     }
 
     /// Returns a cached allocation if one exists.
@@ -74,13 +103,19 @@ impl<Ptr> TensorCache<Ptr> {
         };
         // Check if there is a cached allocation.
         let reuse = {
+            #[cfg(not(feature = "no-std"))]
             let cache = self.allocations.read().unwrap();
+            #[cfg(feature = "no-std")]
+            let cache = self.allocations.read();
             cache.contains_key(&key)
         };
         // If there is, remove it from the cache.
         // Otherwise, return `None`.
         if reuse {
+            #[cfg(not(feature = "no-std"))]
             let mut cache = self.allocations.write().unwrap();
+            #[cfg(feature = "no-std")]
+            let mut cache = self.allocations.write();
             // unwrap is safe because we just checked for contains key above.
             let items = cache.get_mut(&key).unwrap();
             // unwrap is safe because reuse is only true if there's at least one item,
@@ -114,9 +149,14 @@ impl<Ptr> TensorCache<Ptr> {
             size: layout.size(),
             alignment: layout.align(),
         };
+        #[cfg(not(feature = "no-std"))]
         let mut cache = self.allocations.write().unwrap();
+        #[cfg(feature = "no-std")]
+        let mut cache = self.allocations.write();
         if let std::collections::btree_map::Entry::Vacant(e) = cache.entry(key) {
-            e.insert(std::vec![allocation]);
+            let mut allocations = Vec::new();
+            allocations.push(allocation);
+            e.insert(allocations);
         } else {
             cache.get_mut(&key).unwrap().push(allocation);
         }
