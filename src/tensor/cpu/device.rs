@@ -173,6 +173,11 @@ impl DeviceStorage for Cpu {
         Ok(())
     }
 
+    fn try_enable_cache(&self) -> Result<(), Self::Err> {
+        self.cache.enable();
+        Ok(())
+    }
+
     fn try_disable_cache(&self) -> Result<(), Self::Err> {
         self.cache.disable();
         self.try_empty_cache()
