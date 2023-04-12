@@ -2,7 +2,7 @@
 
 use crate::{
     shapes::*,
-    tensor::{masks::triangle_mask, storage_traits::*, unique_id, Cpu, CpuError, NoneTape, Tensor},
+    tensor::{masks::triangle_mask, storage_traits::*, unique_id, Cpu, CpuError, Tensor},
 };
 
 use super::{device::CachableCudaSlice, Cuda, CudaError};
@@ -82,10 +82,10 @@ where
         diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
-        let mut data = self.cpu.try_alloc_elem::<E>(shape.num_elements(), val)?;
+        let mut data = std::vec![val; shape.num_elements()];
         let offset = diagonal.into().unwrap_or(0);
         triangle_mask(&mut data, &shape, true, offset);
-        self.tensor_from_host_buf(shape, data.data.clone())
+        self.tensor_from_host_buf(shape, data)
     }
 
     fn try_lower_tri_like<S: HasShape>(
@@ -95,10 +95,10 @@ where
         diagonal: impl Into<Option<isize>>,
     ) -> Result<Tensor<S::Shape, E, Self>, Self::Err> {
         let shape = *src.shape();
-        let mut data = self.cpu.try_alloc_elem::<E>(shape.num_elements(), val)?;
+        let mut data = std::vec![val; shape.num_elements()];
         let offset = diagonal.into().unwrap_or(0);
         triangle_mask(&mut data, &shape, false, offset);
-        self.tensor_from_host_buf(shape, data.data.clone())
+        self.tensor_from_host_buf(shape, data)
     }
 }
 
@@ -191,19 +191,11 @@ where
 {
     type Array = <Cpu as TensorToArray<S, E>>::Array;
     fn tensor_to_array<T>(&self, tensor: &Tensor<S, E, Self, T>) -> Self::Array {
-        let slice = tensor.data.data.clone();
-        let data = slice.try_into().unwrap();
-        let buf = crate::tensor::cpu::CachableVec {
-            data,
-            cache: self.cpu.cache.clone(),
-        };
-        self.cpu.tensor_to_array::<NoneTape>(&Tensor {
-            id: tensor.id,
-            data: Arc::new(buf),
-            shape: tensor.shape,
-            strides: tensor.strides,
-            device: self.cpu.clone(),
-            tape: Default::default(),
-        })
+        let mut cpu_tensor = self.cpu.zeros_like(&tensor.shape);
+        let buf = std::sync::Arc::make_mut(&mut cpu_tensor.data);
+        self.dev
+            .dtoh_sync_copy_into(&tensor.data.data, &mut buf.data)
+            .unwrap();
+        self.cpu.tensor_to_array(&cpu_tensor)
     }
 }
