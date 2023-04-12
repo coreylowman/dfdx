@@ -36,7 +36,7 @@ macro_rules! impl_cuda_kernels {
                 let idx_strides = self.dev.htod_copy(idx.strides.into())?;
 
                 let fwd_fn = self.dev.get_func($GatherMod, $GatherFwd).unwrap();
-                let cfg = launch_cfg(numel as u32);
+                let cfg = launch_cfg::<128>(numel as u32);
                 let params = (
                     numel,             // const size_t numel,
                     inp.data.as_ref(), // const float *inp,
@@ -74,7 +74,7 @@ macro_rules! impl_cuda_kernels {
                 let inp_strides = self.dev.htod_copy(inp.strides.into())?;
                 let idx_strides = self.dev.htod_copy(idx.strides.into())?;
 
-                let cfg = launch_cfg(numel as u32);
+                let cfg = launch_cfg::<128>(numel as u32);
                 let params = (
                     numel,             // const size_t numel,
                     grad_inp,          // float *grad_inp,
@@ -122,7 +122,7 @@ macro_rules! impl_cuda_kernels {
                 let dst_strides = self.dev.htod_copy(dst.strides().into())?;
 
                 let fwd_fn = self.dev.get_func($SelectMod, $SelectFwd).unwrap();
-                let cfg = launch_cfg(numel as u32);
+                let cfg = launch_cfg::<128>(numel as u32);
                 let params = (
                     numel,             // const size_t numel,
                     inp.data.as_ref(), // const float *inp,
@@ -163,7 +163,7 @@ macro_rules! impl_cuda_kernels {
                 let idx_strides = self.dev.htod_copy(idx.strides.into())?;
                 let out_strides = self.dev.htod_copy(out.strides.into())?;
 
-                let cfg = launch_cfg(numel as u32);
+                let cfg = launch_cfg::<128>(numel as u32);
                 let params = (
                     numel,             // const size_t numel,
                     grad_inp,          // float *grad_inp,

@@ -35,7 +35,12 @@ impl<E1: Unit + CudaTypeName, E2: Unit + CudaTypeName> super::ToDtypeKernel<E1, 
 
         let n = inp.data.len();
         let mut out = unsafe { dev.alloc::<E2>(n) }?;
-        unsafe { fwd_fn.launch(launch_cfg(n as u32), (n, inp.data.as_ref(), &mut out)) }?;
+        unsafe {
+            fwd_fn.launch(
+                launch_cfg::<128>(n as u32),
+                (n, inp.data.as_ref(), &mut out),
+            )
+        }?;
 
         Ok(Tensor {
             id: unique_id(),

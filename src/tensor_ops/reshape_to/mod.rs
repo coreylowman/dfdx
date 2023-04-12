@@ -68,6 +68,17 @@ pub trait ReshapeTo: HasErr + HasShape {
     fn reshape_like<Dst: Shape>(self, dst: &Dst) -> Option<Self::WithShape<Dst>> {
         self.try_reshape_like(dst).map(Result::unwrap)
     }
+    /// Ensures the tensor's memory is contiguous.
+    ///
+    /// If the memory is already contiguous no copying is performed.
+    fn contiguous(self) -> Self::WithShape<Self::Shape> {
+        self.try_contiguous().unwrap()
+    }
+    /// See [`ReshapeTo::contiguous`]
+    fn try_contiguous(self) -> Result<Self::WithShape<Self::Shape>, Self::Err> {
+        let shape = *self.shape();
+        self.try_reshape_like(&shape).unwrap()
+    }
     /// Reshapes a tensor to a different runtime shape.
     fn try_reshape_like<Dst: Shape>(
         self,
@@ -211,5 +222,18 @@ mod tests {
         assert_eq!(b.data.len(), 6);
         assert_eq!(a.as_vec(), b.as_vec());
         assert_eq!(b.array(), [[1., 2.], [3., 1.], [2., 3.]]);
+    }
+
+    #[test]
+    fn test_contiguous() {
+        let dev: TestDevice = Default::default();
+
+        let a: Tensor<_, TestDtype, _> = dev.tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
+
+        let b1 = a.clone().contiguous();
+        assert_eq!(a.strides, b1.strides);
+
+        let b2: Tensor<_, TestDtype, _> = a.permute::<Rank2<3, 2>, _>().contiguous();
+        assert_eq!(b2.strides, [2, 1]);
     }
 }

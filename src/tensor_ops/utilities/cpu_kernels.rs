@@ -1,9 +1,11 @@
+use std::borrow::Cow;
+
 use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     shapes::{Dtype, Shape},
     tensor::{
         cpu::{Cpu, LendingIterator, NdIndex},
-        unique_id, GhostTensor, Tensor, ZerosTensor,
+        unique_id, Tensor, Tensorlike, ZerosTensor,
     },
 };
 
@@ -48,10 +50,10 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
     fn forward<S: Shape>(
         &self,
         op: Op,
-        inp: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
+        inp: Cow<Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
         let mut out = match inp {
-            Ok(inp) => {
+            Cow::Borrowed(inp) => {
                 // allocate a new data buffer
                 Tensor {
                     id: unique_id(),
@@ -62,7 +64,7 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
                     tape: Default::default(),
                 }
             }
-            Err(mut inp) => {
+            Cow::Owned(mut inp) => {
                 // re-use the data buffer
                 inp.id = unique_id();
                 inp
@@ -78,26 +80,26 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
     fn backward<S: Shape>(
         &self,
         op: Op,
-        inp: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        inp: &impl Tensorlike<S, E, Self>,
         grad_inp: &mut Self::Vec<E>,
-        out: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        out: &impl Tensorlike<S, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        match (inp, out) {
-            (Err(_), Err(_)) => {
+        match (inp.data(), out.data()) {
+            (None, None) => {
                 let df = op.const_df();
                 for (i, x) in grad_inp.iter_mut().enumerate() {
                     *x += df * grad_out[i];
                 }
             }
-            (Err(_), Ok(out)) => {
+            (None, Some(out)) => {
                 for (i, x) in grad_inp.iter_mut().enumerate() {
-                    *x += op.df(&out.data[i]) * grad_out[i];
+                    *x += op.df(&out[i]) * grad_out[i];
                 }
             }
-            (Ok(inp), Err(_)) => {
+            (Some(inp), None) => {
                 for (i, x) in grad_inp.iter_mut().enumerate() {
-                    *x += op.df(&inp.data[i]) * grad_out[i];
+                    *x += op.df(&inp[i]) * grad_out[i];
                 }
             }
             _ => unreachable!(),
@@ -111,11 +113,11 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
     fn forward<S: Shape>(
         &self,
         op: Op,
-        lhs: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
-        rhs: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
+        lhs: Cow<Tensor<S, E, Self>>,
+        rhs: Cow<Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
         match (lhs, rhs) {
-            (Ok(lhs), Ok(rhs)) => {
+            (Cow::Borrowed(lhs), Cow::Borrowed(rhs)) => {
                 let mut out = self.try_zeros_like(&lhs.shape)?;
                 let mut lhs_iter = lhs.iter();
                 let mut rhs_iter = rhs.iter();
@@ -126,7 +128,7 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
                 }
                 Ok(out)
             }
-            (Err(mut lhs), Err(mut rhs)) => {
+            (Cow::Owned(mut lhs), Cow::Owned(mut rhs)) => {
                 let lhs_valid = lhs.strides == lhs.shape.strides();
                 let rhs_valid = rhs.strides == rhs.shape.strides();
                 if lhs_valid || rhs_valid {
@@ -148,7 +150,12 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
                         Ok(lhs)
                     }
                 } else {
-                    <Self as BinaryKernel<Op, E>>::forward(self, op, Ok(&lhs), Ok(&rhs))
+                    <Self as BinaryKernel<Op, E>>::forward(
+                        self,
+                        op,
+                        Cow::Borrowed(&lhs),
+                        Cow::Borrowed(&rhs),
+                    )
                 }
             }
             _ => unreachable!(),
@@ -157,18 +164,16 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
     fn backward<S: Shape>(
         &self,
         op: Op,
-        lhs: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        lhs: &impl Tensorlike<S, E, Self>,
         grad_lhs: &mut Self::Vec<E>,
-        rhs: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        rhs: &impl Tensorlike<S, E, Self>,
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        match (lhs, rhs) {
-            (Ok(lhs), Ok(rhs)) => {
-                let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
-                let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
-                let lhs_buf = lhs.data.as_ref();
-                let rhs_buf = rhs.data.as_ref();
+        match (lhs.data(), rhs.data()) {
+            (Some(lhs_buf), Some(rhs_buf)) => {
+                let mut lhs_idx = NdIndex::new(*lhs.shape(), lhs.strides());
+                let mut rhs_idx = NdIndex::new(*rhs.shape(), rhs.strides());
                 // NOTE: we can use .buf_iter() here because we know the outcome of this op is
                 // contiguous from forward
                 for &go in grad_out.iter() {
@@ -180,10 +185,10 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
                     grad_rhs[rhs_i] += op.dfdy(l, r) * go;
                 }
             }
-            (Err(lhs), Err(rhs)) => {
+            (None, None) => {
                 assert!(Op::HAS_CONST_DF);
-                let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
-                let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
+                let mut lhs_idx = NdIndex::new(*lhs.shape(), lhs.strides());
+                let mut rhs_idx = NdIndex::new(*rhs.shape(), rhs.strides());
                 let dx = op.const_dfdx();
                 let dy = op.const_dfdy();
                 for &go in grad_out.iter() {

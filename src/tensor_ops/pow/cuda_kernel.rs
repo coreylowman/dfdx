@@ -4,6 +4,7 @@ use crate::{
     tensor::*,
     tensor_ops::{cuda_kernels::cuda_unary, ops::UnaryKernel},
 };
+use std::borrow::Cow;
 
 unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<f32> {}
 unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<f64> {}
@@ -24,7 +25,7 @@ where
     fn forward<S: Shape>(
         &self,
         op: super::PowiKernelOp,
-        inp: Result<&Tensor<S, E, Self>, Tensor<S, E, Self>>,
+        inp: Cow<Tensor<S, E, Self>>,
     ) -> Result<Tensor<S, E, Self>, Self::Err> {
         self.forward(super::PowfKernelOp(E::from_i32(op.0).unwrap()), inp)
     }
@@ -32,9 +33,9 @@ where
     fn backward<S: Shape>(
         &self,
         op: super::PowiKernelOp,
-        inp: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        inp: &impl Tensorlike<S, E, Self>,
         grad_inp: &mut Self::Vec<E>,
-        out: Result<&Tensor<S, E, Self>, &GhostTensor<S, E, Self>>,
+        out: &impl Tensorlike<S, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         self.backward(

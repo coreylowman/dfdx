@@ -33,7 +33,7 @@ where
         }
         let numel = a.len();
         let fwd_fn = self.dev.get_func(Self::FN, Self::FN).unwrap();
-        let cfg = launch_cfg(numel as u32);
+        let cfg = launch_cfg::<128>(numel as u32);
         unsafe { fwd_fn.launch(cfg, (numel, a, alpha, b, beta)) }?;
         Ok(())
     }
