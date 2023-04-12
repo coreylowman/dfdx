@@ -27,18 +27,38 @@ pub(crate) struct AllocationKey {
 /// valid allocation. When the last value is removed from the list, the key
 /// is removed.
 #[derive(Debug)]
-pub(crate) struct TensorCache<Ptr>(pub(crate) RwLock<BTreeMap<AllocationKey, Vec<Ptr>>>);
+pub(crate) struct TensorCache<Ptr> {
+    pub(crate) allocations: RwLock<BTreeMap<AllocationKey, Vec<Ptr>>>,
+    pub(crate) enabled: RwLock<bool>,
+}
 
 impl<Ptr> Default for TensorCache<Ptr> {
     fn default() -> Self {
-        Self(Default::default())
+        Self {
+            allocations: Default::default(),
+            enabled: RwLock::new(true),
+        }
     }
 }
 
 impl<Ptr> TensorCache<Ptr> {
+    /// Returns `true` if the cache is enabled.
+    pub(crate) fn is_enabled(&self) -> bool {
+        *self.enabled.read().unwrap()
+    }
+
+    /// Disables the cache.
+    pub(crate) fn disable(&self) {
+        *self.enabled.write().unwrap() = false;
+    }
+
     /// Returns a cached allocation if one exists.
     /// Otherwise, returns `None`.
     pub(crate) fn try_pop<E>(&self, len: usize) -> Option<Ptr> {
+        if !self.is_enabled() {
+            return None;
+        }
+
         let layout = Layout::new::<E>();
         let num_bytes = len * std::mem::size_of::<E>();
         let key = AllocationKey {
@@ -48,13 +68,13 @@ impl<Ptr> TensorCache<Ptr> {
         };
         // Check if there is a cached allocation.
         let reuse = {
-            let cache = self.0.read().unwrap();
+            let cache = self.allocations.read().unwrap();
             cache.contains_key(&key)
         };
         // If there is, remove it from the cache.
         // Otherwise, return `None`.
         if reuse {
-            let mut cache = self.0.write().unwrap();
+            let mut cache = self.allocations.write().unwrap();
             // unwrap is safe because we just checked for contains key above.
             let items = cache.get_mut(&key).unwrap();
             // unwrap is safe because reuse is only true if there's at least one item,
@@ -76,6 +96,11 @@ impl<Ptr> TensorCache<Ptr> {
 
     /// Inserts an allocation into the cache.
     pub(crate) fn insert<E>(&self, len: usize, allocation: Ptr) {
+        if !self.is_enabled() {
+            // This is a panic because it's a bug in the library.
+            panic!("Tried to insert into a disabled cache.");
+        }
+
         let layout = Layout::new::<E>();
         let num_bytes = len * std::mem::size_of::<E>();
         let key = AllocationKey {
@@ -83,7 +108,7 @@ impl<Ptr> TensorCache<Ptr> {
             size: layout.size(),
             alignment: layout.align(),
         };
-        let mut cache = self.0.write().unwrap();
+        let mut cache = self.allocations.write().unwrap();
         if let std::collections::btree_map::Entry::Vacant(e) = cache.entry(key) {
             e.insert(std::vec![allocation]);
         } else {

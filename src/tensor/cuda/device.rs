@@ -224,14 +224,16 @@ impl<E> std::ops::DerefMut for CachableCudaSlice<E> {
 
 impl<E> Drop for CachableCudaSlice<E> {
     fn drop(&mut self) {
-        let dev = self.data.device();
-        // Replaces the CudaSlice with a 0 length CudaSlice. This won't take additional
-        // memory, but will give us ownership of the actual data.
-        let data = std::mem::replace(&mut self.data, dev.null().unwrap());
-        let numel = data.len();
-        // Get access to the raw pointer without freeing it.
-        let ptr = data.leak();
-        self.cache.insert::<E>(numel, ptr);
+        if self.cache.is_enabled() {
+            let dev = self.data.device();
+            // Replaces the CudaSlice with a 0 length CudaSlice. This won't take additional
+            // memory, but will give us ownership of the actual data.
+            let data = std::mem::replace(&mut self.data, dev.null().unwrap());
+            let numel = data.len();
+            // Get access to the raw pointer without freeing it.
+            let ptr = data.leak();
+            self.cache.insert::<E>(numel, ptr);
+        }
     }
 }
 
@@ -270,8 +272,13 @@ impl DeviceStorage for Cuda {
         self.dev.synchronize().map_err(CudaError::from)
     }
 
+    fn try_disable_cache(&self) -> Result<(), Self::Err> {
+        self.cache.disable();
+        self.try_empty_cache()
+    }
+
     fn try_empty_cache(&self) -> Result<(), Self::Err> {
-        let mut cache = self.cache.0.write().unwrap();
+        let mut cache = self.cache.allocations.write().unwrap();
         for (&key, allocations) in cache.iter_mut() {
             for alloc in allocations.drain(..) {
                 let data = unsafe { self.dev.upgrade_device_ptr::<u8>(alloc, key.num_bytes) };

@@ -112,14 +112,16 @@ impl<E: Clone> Clone for CachableVec<E> {
 
 impl<E> Drop for CachableVec<E> {
     fn drop(&mut self) {
-        let mut data = std::mem::take(&mut self.data);
-        data.shrink_to_fit();
-
-        let numel = data.len();
-        let ptr = data.as_mut_ptr() as *mut u8;
-        std::mem::forget(data);
-
-        self.cache.insert::<E>(numel, BytesPtr(ptr));
+        if self.cache.is_enabled() {
+            let mut data = std::mem::take(&mut self.data);
+            data.shrink_to_fit();
+    
+            let numel = data.len();
+            let ptr = data.as_mut_ptr() as *mut u8;
+            std::mem::forget(data);
+    
+            self.cache.insert::<E>(numel, BytesPtr(ptr));
+        }
     }
 }
 
@@ -171,8 +173,13 @@ impl DeviceStorage for Cpu {
         Ok(())
     }
 
+    fn try_disable_cache(&self) -> Result<(), Self::Err> {
+        self.cache.disable();
+        self.try_empty_cache()
+    }
+
     fn try_empty_cache(&self) -> Result<(), Self::Err> {
-        let mut cache = self.cache.0.write().unwrap();
+        let mut cache = self.cache.allocations.write().unwrap();
         for (&key, allocations) in cache.iter_mut() {
             assert!(key.num_bytes % key.size == 0);
             assert!(key.num_bytes < isize::MAX as usize);
