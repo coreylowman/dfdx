@@ -3,6 +3,7 @@
 use dfdx::{
     shapes::{Const, Rank1, Rank2, Rank3},
     tensor::{AsArray, OnesTensor, SampleTensor, Tensor, TensorFrom, ZerosTensor},
+    tensor_ops::RealizeTo,
 };
 
 #[cfg(not(feature = "cuda"))]
@@ -34,6 +35,11 @@ fn main() {
     let _: Tensor<(usize, usize), f32, _> = dev.zeros_like(&(2, 4));
     let _: Tensor<(usize, usize, usize), f32, _> = dev.ones_like(&(3, 4, 5));
     let _: Tensor<(usize, usize, Const<5>), f32, _> = dev.ones_like(&(3, 4, Const));
+
+    // `realize` method helps us move between dynamic and known size for the dimensions,
+    // if the conversion is incompatible, it may result in runtime error
+    let a: Tensor<(usize, usize), f32, _> = dev.zeros_like(&(2, 3));
+    let _: Tensor<(usize, Const<3>), f32, _> = a.realize().expect("`a` should have 3 columns");
 
     // each of the creation methods also supports specifying the shape on the function
     // note to change the dtype we specify the dtype as the 2nd generic parameter
