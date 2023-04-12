@@ -125,8 +125,16 @@
 //! zip archives.
 //!
 //! # Allocation Caching
-//!
-//! TODO: document this
+//! 
+//! By default, devices will cache allocations to reuse later. For example, the CPU will
+//! cache `Vec<E>` allocations in an hash map, and try to re-use the allocation when
+//! similarly sized data is used. This can result in significant speedups when memory
+//! allocation patterns are repetitive. If this results in extra memory use due to 
+//! irregular allocation patterns there are two things you can do:
+//! 
+//! 1. Call [DeviceStorage::empty_cache()], which will empty out all of the saved allocations.
+//! 2. Disable the cache entirely by calling [DeviceStorage::disable_cache()]. This will
+//! empty out any existing allocations and prevent any new ones from being cached.
 
 pub(crate) mod cache;
 pub(crate) mod cpu;
