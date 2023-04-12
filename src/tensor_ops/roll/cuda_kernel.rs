@@ -41,7 +41,7 @@ where
         let out_strides = self.dev.htod_copy(strides.into())?;
 
         let fwd = self.dev.get_func(Self::FNS[0], Self::FNS[0]).unwrap();
-        let cfg = launch_cfg(inp.shape.num_elements() as u32);
+        let cfg = launch_cfg::<128>(inp.shape.num_elements() as u32);
         let params = (
             op,
             S::NUM_DIMS,
@@ -70,7 +70,7 @@ where
         let out_strides = self.dev.htod_copy(strides.into())?;
 
         let bwd = self.dev.get_func(Self::FNS[0], Self::FNS[1]).unwrap();
-        let cfg = launch_cfg(inp.shape.num_elements() as u32);
+        let cfg = launch_cfg::<128>(inp.shape.num_elements() as u32);
         let params = (
             op,
             S::NUM_DIMS,

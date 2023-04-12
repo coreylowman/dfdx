@@ -58,7 +58,7 @@ where
 
         let strides = self.dev.htod_copy(make_4d::<I>(inp.strides).into())?;
         let fwd_fn = self.dev.get_func(Self::FWD, Self::FWD).unwrap();
-        let cfg = launch_cfg(out.shape().num_elements() as u32);
+        let cfg = launch_cfg::<128>(out.shape().num_elements() as u32);
         let params = (
             op,
             &strides,
@@ -78,7 +78,7 @@ where
     ) -> Result<(), Self::Err> {
         let strides = self.dev.htod_copy(make_4d::<I>(inp.strides).into())?;
         let bwd_fn = self.dev.get_func(Self::FWD, Self::BWD).unwrap();
-        let cfg = launch_cfg(out.shape().num_elements() as u32);
+        let cfg = launch_cfg::<128>(out.shape().num_elements() as u32);
         let params = (op, &strides, grad_inp, grad_out);
         unsafe { bwd_fn.launch(cfg, params) }?;
         Ok(())

@@ -68,7 +68,8 @@ mod cuda {
         {
             let start = std::time::Instant::now();
 
-            let compute_cap = {
+            // Grab compute code from nvidia-smi
+            let mut compute_cap = {
                 let out = std::process::Command::new("nvidia-smi")
                     .arg("--query-gpu=compute_cap")
                     .arg("--format=csv")
@@ -77,8 +78,41 @@ mod cuda {
                 let out = std::str::from_utf8(&out.stdout).unwrap();
                 let mut lines = out.lines();
                 assert_eq!(lines.next().unwrap(), "compute_cap");
-                lines.next().unwrap().replace('.', "")
+                let cap = lines.next().unwrap().replace('.', "");
+                cap.parse::<usize>().unwrap()
             };
+
+            // Grab available GPU codes from nvcc and select the highest one
+            let max_nvcc_code = {
+                let out = std::process::Command::new("nvcc")
+                    .arg("--list-gpu-code")
+                    .output()
+                    .unwrap();
+                let out = std::str::from_utf8(&out.stdout).unwrap();
+
+                let out = out.split("\n").collect::<Vec<&str>>();
+                let mut codes = Vec::with_capacity(out.len());
+                for code in out {
+                    let code = code.split("_").collect::<Vec<&str>>();
+                    if code.len() != 0 && code.contains(&"sm") {
+                        if let Ok(num) = code[1].parse::<usize>() {
+                            codes.push(num);
+                        }
+                    }
+                }
+                codes.sort();
+                if !codes.contains(&compute_cap) {
+                    panic!("nvcc cannot target gpu arch {compute_cap}. Available nvcc targets are {codes:?}.");
+                }
+                *codes.last().unwrap()
+            };
+
+            // If nvidia-smi compute_cap is higher than the highest gpu code from nvcc,
+            // then choose the highest gpu code in nvcc
+            if compute_cap > max_nvcc_code {
+                println!("cargo:warning=Lowering gpu arch {compute_cap} to max nvcc target {max_nvcc_code}.");
+                compute_cap = max_nvcc_code;
+            }
 
             println!("cargo:rustc-env=CUDA_COMPUTE_CAP=sm_{compute_cap}");
 

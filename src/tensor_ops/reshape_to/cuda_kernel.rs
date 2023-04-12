@@ -36,7 +36,7 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
         info.extend(dst.strides());
         let info = self.dev.htod_copy(info)?;
 
-        let cfg = launch_cfg(numel as u32);
+        let cfg = launch_cfg::<128>(numel as u32);
         let params = (
             numel,             // const size_t numel,
             Src::NUM_DIMS,     // const size_t inp_num_dims,
@@ -78,7 +78,7 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
         info.extend(dst.strides());
         let info = self.dev.htod_copy(info)?;
 
-        let cfg = launch_cfg(numel as u32);
+        let cfg = launch_cfg::<128>(numel as u32);
         let params = (
             numel,         // const size_t numel,
             Src::NUM_DIMS, // const size_t inp_num_dims,

@@ -57,7 +57,7 @@ impl<E: Unit, Op: CmpOpCudaKernel<E>> CmpKernel<Op, E> for Cuda {
         let out_strides: CudaSlice<usize> = self.dev.htod_copy(strides.into())?;
 
         let fwd_fn = self.dev.get_func(Op::MODULE_NAME, Op::FWD_FN_NAME).unwrap();
-        let cfg = launch_cfg(numel as u32);
+        let cfg = launch_cfg::<128>(numel as u32);
         let params = (
             numel,             // const size_t numel,
             S::NUM_DIMS,       // const size_t num_dims,
@@ -97,7 +97,7 @@ impl<E: Unit, Op: ScalarCmpOpCudaKernel<E>> ScalarCmpKernel<Op, E> for Cuda {
         let out_strides: CudaSlice<usize> = self.dev.htod_copy(strides.into())?;
 
         let fwd_fn = self.dev.get_func(Op::MODULE_NAME, Op::FWD_FN_NAME).unwrap();
-        let cfg = launch_cfg(numel as u32);
+        let cfg = launch_cfg::<128>(numel as u32);
         let params = (
             numel,             // const size_t numel,
             S::NUM_DIMS,       // const size_t num_dims,

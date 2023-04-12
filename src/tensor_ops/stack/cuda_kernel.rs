@@ -2,35 +2,14 @@ use crate::{
     shapes::*,
     tensor::{launch_cfg, Cuda, Tensor},
 };
-use cudarc::driver::{DeviceSlice, LaunchAsync};
+use cudarc::{
+    driver::{DeviceSlice, LaunchAsync},
+    nvrtc::{compile_ptx_with_opts, CompileOptions},
+    types::CudaTypeName,
+};
 use std::vec::Vec;
 
-const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/stack.ptx"));
-
-trait HasCudaKernel<E> {
-    const MOD: &'static str;
-    const FNS: &'static [&'static str];
-}
-
-impl HasCudaKernel<f32> for Cuda {
-    const MOD: &'static str = "stack_f32";
-    const FNS: &'static [&'static str] = &["sum_f32"];
-}
-
-impl HasCudaKernel<f64> for Cuda {
-    const MOD: &'static str = "stack_f64";
-    const FNS: &'static [&'static str] = &["sum_f64"];
-}
-
-impl HasCudaKernel<usize> for Cuda {
-    const MOD: &'static str = "stack_usize";
-    const FNS: &'static [&'static str] = &["sum_usize"];
-}
-
-impl<E: Dtype> super::StackKernel<E> for Cuda
-where
-    Self: HasCudaKernel<E>,
-{
+impl<E: Dtype + CudaTypeName> super::StackKernel<E> for Cuda {
     fn forward<S: Shape, Num: Dim>(
         &self,
         num: Num,
@@ -76,14 +55,22 @@ where
         mut grad_inp: Vec<&mut Self::Vec<E>>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        if !self.dev.has_func(Self::MOD, Self::FNS[0]) {
-            self.dev.load_ptx(PTX.into(), Self::MOD, Self::FNS)?;
+        let module_name = std::format!("stack_bwd_{}", E::NAME);
+        if !self.dev.has_func(&module_name, "stack_bwd") {
+            let src = BWD_KERNEL.replace("$Ty", E::NAME);
+            let opts = CompileOptions {
+                arch: Some(env!("CUDA_COMPUTE_CAP")),
+                ..Default::default()
+            };
+            let ptx = compile_ptx_with_opts(src, opts).unwrap();
+            self.dev.load_ptx(ptx, &module_name, &["stack_bwd"])?;
         }
+
         let mut offset = 0;
         for item in grad_inp.drain(..) {
-            let f = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
+            let f = self.dev.get_func(&module_name, "stack_bwd").unwrap();
             let numel: usize = item.len();
-            let cfg = launch_cfg(numel as u32);
+            let cfg = launch_cfg::<128>(numel as u32);
             let sub = grad_out.slice(offset..offset + numel);
             unsafe { f.launch(cfg, (numel, &sub, item)) }?;
             offset += numel;
@@ -92,3 +79,10 @@ where
         Ok(())
     }
 }
+
+const BWD_KERNEL: &str = "
+extern \"C\" __global__ void stack_bwd(const size_t numel, const $Ty *inp, $Ty *out) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < numel) { out[i] += inp[i]; }
+}
+";

@@ -147,6 +147,7 @@ mod masks;
 pub(crate) mod numpy;
 #[cfg(feature = "safetensors")]
 pub mod safetensors;
+mod tensorlike;
 mod unique_id;
 
 pub(crate) mod storage_traits;
@@ -154,6 +155,7 @@ mod tensor_impls;
 
 pub(crate) use ghost::GhostTensor;
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
+pub(crate) use tensorlike::Tensorlike;
 
 pub use cpu::{Cpu, CpuError};
 #[cfg(not(feature = "cuda"))]

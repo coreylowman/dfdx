@@ -3,7 +3,7 @@ use cudarc::driver::DeviceSlice;
 
 use crate::{
     shapes::*,
-    tensor::{Cuda, GhostTensor, Tensor},
+    tensor::{Cuda, Tensor, Tensorlike},
 };
 
 use std::sync::Arc;
@@ -89,7 +89,7 @@ where
         grad_lhs: &mut Self::Vec<E>,
         rhs: &Tensor<R, E, Self>,
         grad_rhs: &mut Self::Vec<E>,
-        out: &GhostTensor<O, E, Self>,
+        out: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let conv = self.cudnn.create_conv2d::<E>(
@@ -107,8 +107,8 @@ where
             make_4d::<R>(rhs.shape.concrete(), 1).map(|x| x as i32),
         )?;
         let out = self.cudnn.create_4d_tensor_ex::<E>(
-            make_4d::<O>(out.shape.concrete(), 1).map(|x| x as i32),
-            make_4d::<O>(out.strides, 0).map(|x| x as i32),
+            make_4d::<O>(out.shape().concrete(), 1).map(|x| x as i32),
+            make_4d::<O>(out.strides(), 0).map(|x| x as i32),
         )?;
 
         {
