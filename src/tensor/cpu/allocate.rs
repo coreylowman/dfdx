@@ -27,13 +27,13 @@ impl Cpu {
     ) -> Result<CachableVec<E>, CpuError> {
         let data = self.cache.try_pop::<E>(numel).map_or_else(
             #[cfg(feature = "fast-alloc")]
-            || std::vec![elem; numel],
+            || Ok(std::vec![elem; numel]),
             #[cfg(not(feature = "fast-alloc"))]
             || {
                 let mut data: Vec<E> = Vec::new();
                 data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
                 data.resize(numel, elem);
-                data
+                Ok(data)
             },
             |allocation| {
                 // SAFETY:
@@ -46,9 +46,9 @@ impl Cpu {
                 // - ✅ "The allocated size in bytes must be no larger than isize::MAX. See the safety documentation of pointer::offset."
                 let mut data = unsafe { Vec::from_raw_parts(allocation.0 as *mut E, numel, numel) };
                 data.fill(elem);
-                data
+                Ok(data)
             },
-        );
+        )?;
 
         Ok(CachableVec {
             data,
