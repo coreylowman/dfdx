@@ -22,44 +22,39 @@ __device__ __forceinline__ double atomicMinf(double * addr, double value) {
 // stores the minimums in out[i / chunk_len]
 template<typename T>
 __device__ void chunk_min(
-    const size_t numel,
     const size_t chunk_len,
-    const T data,
+    T data,
     T* out
 ) {
-    __shared__ T buf[1024];
     // assumes that threads where i >= numel have already exited
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    unsigned int block_i = threadIdx.x;
-    buf[block_i] = data;
+    unsigned int warp_i = i % warpSize;
 
-    unsigned int chunk_i = i % chunk_len;
-    unsigned int chunk_start = max((int)(block_i - chunk_i), 0);
-    unsigned int chunk_end = min((unsigned int)(block_i + chunk_len - chunk_i), blockDim.x);
-
-    chunk_i = block_i - chunk_start;
-
-    size_t max_chunk_len = min(chunk_end - chunk_start, blockDim.x);
-    size_t incr = next_power_of_two(max_chunk_len) >> 1;
-
-    __syncthreads();
-
-    // Uses sequential addressing as discussed in
-    // https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf
-    for (; incr > 0; incr >>= 1) {
-        unsigned int block_i_2 = block_i + incr;
-
-        if (block_i_2 < chunk_end && chunk_i < incr) {
-            // This is sound because __syncthreads and the conditions above
-            // ensure that no data races occur
-            buf[block_i] = ming(buf[block_i], buf[block_i_2]);
-        }
-
-        __syncthreads();
+    // Fall back to atomicMinf if chunk_len is small to reduce overhead
+    if (chunk_len <= 4) {
+        atomicMinf(out + i / chunk_len, data);
+        return;
     }
 
-    if (block_i == chunk_start) {
-        atomicMinf(out + i / chunk_len, buf[block_i]);
+    unsigned int chunk_i = i % chunk_len;
+    unsigned int chunk_start = max((int)(warp_i - chunk_i), 0);
+    unsigned int chunk_end = min((unsigned int)(warp_i + chunk_len - chunk_i), warpSize);
+
+    unsigned int mask = (1 << chunk_end) - (1 << chunk_start);
+    unsigned int tail = chunk_end - warp_i;
+    T tmp;
+
+    for (unsigned int j = 16; j > 0; j /= 2) {
+        // get data from thread (warp_i + j)
+        tmp = __shfl_down_sync(mask, data, j);
+        // optimized version of (warp_i + j < chunk_end) 
+        if (j < tail) {
+            data = min(data, tmp);
+        }
+    }
+
+    if (warp_i == chunk_start) {
+        atomicMinf(out + i / chunk_len, data);
     }
 }
 
@@ -84,7 +79,7 @@ __device__ void min_to_fwd(
     const size_t *strides = info + num_dims;
 
     unsigned int inp_i = get_strided_index(i, num_dims, dims, strides);
-    chunk_min(numel, chunk_len, inp[inp_i], out);
+    chunk_min(chunk_len, inp[inp_i], out);
 }
 
 // Accepts pre-broadcasted strides for both input & output.

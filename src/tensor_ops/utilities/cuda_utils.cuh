@@ -29,78 +29,14 @@ __device__ unsigned int restrided(
     return idx;
 }
 
-// Sourced from https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-// Input must be less than or equal to 2 ^ 16
-// used in reductions
-__device__ __forceinline__ unsigned int next_power_of_two(unsigned int v) {
-    v--;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v++;
-    return v;
-}
-
 // Efficiently computes the sum of each chunk in "data" of size chunk_len, and
 // stores the sums in out[i / chunk_len]
-// template<typename T>
-// __device__ void chunk_sum(
-    // const size_t chunk_len,
-    // const T data,
-    // T* out
-// ) {
-    // __shared__ T buf[1024];
-
-    // // assumes that threads where i >= numel have already exited
-    // unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    // unsigned int block_i = threadIdx.x;
-
-    // // Fall back to atomicAdd if chunk_len is small to reduce overhead
-    // if (chunk_len <= 3) {
-        // atomicAdd(out + i / chunk_len, data);
-        // return;
-    // }
-    // buf[block_i] = data;
-
-    // unsigned int chunk_i = i % chunk_len;
-    // unsigned int chunk_start = max((int)(block_i - chunk_i), 0);
-    // unsigned int chunk_end = min((unsigned int)(block_i + chunk_len - chunk_i), blockDim.x);
-
-    // chunk_i = block_i - chunk_start;
-
-    // size_t max_chunk_len = min(chunk_end - chunk_start, blockDim.x);
-    // size_t incr = next_power_of_two(max_chunk_len) >> 1;
-
-    // __syncthreads();
-
-    // // Uses sequential addressing as discussed in
-    // // https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf
-    // for (; incr > 0; incr >>= 1) {
-        // unsigned int block_i_2 = block_i + incr;
-
-        // if (block_i_2 < chunk_end && chunk_i < incr) {
-            // // This is sound because __syncthreads and the conditions above
-            // // ensure that no data races occur
-            // buf[block_i] += buf[block_i_2];
-        // }
-
-        // __syncthreads();
-    // }
-
-    // if (block_i == chunk_start) {
-        // atomicAdd(out + i / chunk_len, buf[block_i]);
-    // }
-// }
-
 template<typename T>
 __device__ void chunk_sum(
     const size_t chunk_len,
     T data,
     T* out
 ) {
-    __shared__ T buf[16];
-
     // assumes that threads where i >= numel have already exited
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int warp_i = i % warpSize;
@@ -115,24 +51,20 @@ __device__ void chunk_sum(
     unsigned int chunk_start = max((int)(warp_i - chunk_i), 0);
     unsigned int chunk_end = min((unsigned int)(warp_i + chunk_len - chunk_i), warpSize);
 
-    chunk_i = warp_i - chunk_start;
-
-    unsigned mask = (1 << chunk_end) - (1 << chunk_start);
+    unsigned int mask = (1 << chunk_end) - (1 << chunk_start);
+    unsigned int tail = chunk_end - warp_i;
     T tmp;
 
-    // tmp is required because otherwise, the compiler will make a breaking optimization
-    tmp = __shfl_down_sync(mask, data, 16);
-    data += warp_i + 16 < chunk_end ? tmp : 0.0;
-    tmp = __shfl_down_sync(mask, data, 8);
-    data += warp_i +  8 < chunk_end ? tmp : 0.0;
-    tmp = __shfl_down_sync(mask, data, 4);
-    data += warp_i +  4 < chunk_end ? tmp : 0.0;
-    tmp = __shfl_down_sync(mask, data, 2);
-    data += warp_i +  2 < chunk_end ? tmp : 0.0;
-    tmp = __shfl_down_sync(mask, data, 1);
-    data += warp_i +  1 < chunk_end ? tmp : 0.0;
+    for (unsigned int j = 16; j > 0; j /= 2) {
+        // get data from thread (warp_i + j)
+        tmp = __shfl_down_sync(mask, data, j);
+        // optimized version of (warp_i + j < chunk_end) 
+        if (j < tail) {
+            data += tmp;
+        }
+    }
 
-    if (chunk_i == 0) {
+    if (warp_i == chunk_start) {
         atomicAdd(out + i / chunk_len, data);
     }
 }
