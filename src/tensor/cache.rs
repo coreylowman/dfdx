@@ -42,7 +42,7 @@ impl<Ptr> Default for TensorCache<Ptr> {
     fn default() -> Self {
         Self {
             allocations: Default::default(),
-            enabled: RwLock::new(true),
+            enabled: RwLock::new(false),
         }
     }
 }
@@ -71,6 +71,19 @@ impl<Ptr> TensorCache<Ptr> {
         #[cfg(feature = "no-std")]
         {
             *self.enabled.read()
+        }
+    }
+
+    /// Disables the cache.
+    pub(crate) fn enable(&self) {
+        #[cfg(not(feature = "no-std"))]
+        {
+            *self.enabled.write().unwrap() = true;
+        }
+
+        #[cfg(feature = "no-std")]
+        {
+            *self.enabled.write() = true;
         }
     }
 
@@ -178,13 +191,13 @@ mod test {
     #[should_panic(expected = "Tried to insert into a disabled cache.")]
     fn test_insert_on_disabled_cache() {
         let cache: TensorCache<usize> = Default::default();
-        cache.disable();
         cache.insert::<f32>(1, 0);
     }
 
     #[test]
     fn test_try_pop_on_disabled_cache() {
         let cache: TensorCache<usize> = Default::default();
+        cache.enable();
         assert!(cache.is_enabled());
         cache.disable();
         assert!(!cache.is_enabled());
@@ -195,6 +208,7 @@ mod test {
     #[test]
     fn test_try_pop_on_empty_cache() {
         let cache: TensorCache<usize> = Default::default();
+        cache.enable();
         assert_eq!(cache.try_pop::<f32>(1), None);
         assert_eq!(cache.try_pop::<f32>(1), None);
     }
@@ -202,6 +216,7 @@ mod test {
     #[test]
     fn test_try_pop_on_cache_with_multiple_sizes_and_alignment() {
         let cache: TensorCache<usize> = Default::default();
+        cache.enable();
         cache.insert::<f32>(1, 0);
         cache.insert::<f32>(1, 1);
         cache.insert::<f32>(1, 2);

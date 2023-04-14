@@ -1,6 +1,6 @@
 use crate::shapes::{Shape, Unit};
-use crate::tensor::cpu::{Cpu, CpuError, NdIndex};
-use crate::tensor::{cache::TensorCache, DeviceStorage, HasErr, Tensor};
+use crate::tensor::cpu::{Cpu, CpuError};
+use crate::tensor::{cache::TensorCache, DeviceStorage, HasErr, NoneTape, Tensor};
 
 use cudarc::driver::{DevicePtr, DevicePtrMut, DeviceRepr};
 use cudarc::{
@@ -258,18 +258,32 @@ impl DeviceStorage for Cuda {
     }
 
     fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E> {
-        let buf: Vec<E> = tensor.data.data.try_clone().unwrap().try_into().unwrap();
-        debug_assert_eq!(buf.len(), tensor.data.len());
-        let mut idx = NdIndex::new(tensor.shape, tensor.strides);
-        let mut contiguous = Vec::with_capacity(tensor.shape.num_elements());
-        while let Some(i) = idx.next() {
-            contiguous.push(buf[i]);
-        }
-        contiguous
+        let buf = self
+            .cpu
+            .try_alloc_elem(tensor.data.data.len(), Default::default())
+            .unwrap();
+        let mut cpu_tensor = Tensor {
+            id: tensor.id,
+            data: Arc::new(buf),
+            shape: tensor.shape,
+            strides: tensor.strides,
+            device: self.cpu.clone(),
+            tape: NoneTape,
+        };
+        let buf = std::sync::Arc::get_mut(&mut cpu_tensor.data).unwrap();
+        self.dev
+            .dtoh_sync_copy_into(&tensor.data.data, &mut buf.data)
+            .unwrap();
+        self.cpu.tensor_to_vec::<S, E, _>(&cpu_tensor)
     }
 
     fn try_synchronize(&self) -> Result<(), CudaError> {
         self.dev.synchronize().map_err(CudaError::from)
+    }
+
+    fn try_enable_cache(&self) -> Result<(), Self::Err> {
+        self.cache.enable();
+        Ok(())
     }
 
     fn try_disable_cache(&self) -> Result<(), Self::Err> {
