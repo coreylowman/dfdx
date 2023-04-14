@@ -40,13 +40,12 @@ __device__ void chunk_max(
     unsigned int chunk_start = max((int)(warp_i - chunk_i), 0);
     unsigned int chunk_end = min((unsigned int)(warp_i + chunk_len - chunk_i), warpSize);
 
-    unsigned int mask = (1 << chunk_end) - (1 << chunk_start);
     unsigned int tail = chunk_end - warp_i;
     T tmp;
 
     for (unsigned int j = 16; j > 0; j /= 2) {
         // get data from thread (warp_i + j)
-        tmp = __shfl_down_sync(mask, data, j);
+        tmp = __shfl_down_sync(SHFL_MASK, data, j);
         // optimized version of (warp_i + j < chunk_end) 
         if (j < tail) {
             data = max(data, tmp);
