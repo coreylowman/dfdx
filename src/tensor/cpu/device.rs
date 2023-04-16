@@ -24,6 +24,11 @@ unsafe impl Sync for BytesPtr {}
 impl<T> CacheStorage for Vec<T> {
     type Output<T2> = Vec<T2>;
 
+    fn size(&self) -> usize {
+        // size in bytes of the underlying allocation
+        Layout::array::<T>(self.capacity()).unwrap().size()
+    }
+
     /// Unsafely converts the elements of a vector to a new type.
     ///
     /// # Safety

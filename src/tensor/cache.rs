@@ -1,4 +1,14 @@
-use std::{alloc::Layout, collections::BTreeMap, vec::Vec};
+use std::{
+    alloc::Layout,
+    collections::{BTreeMap, VecDeque},
+    vec::Vec,
+};
+
+#[cfg(not(feature = "no-std"))]
+use std::vec;
+
+#[cfg(feature = "no-std")]
+use alloc::vec;
 
 #[cfg(not(feature = "no-std"))]
 use std::sync::RwLock;
@@ -6,20 +16,52 @@ use std::sync::RwLock;
 #[cfg(feature = "no-std")]
 use spin::RwLock;
 
-/// A key for the tensor cache. Contains both number of bytes and informatino
+macro_rules! read {
+    ($x:expr) => {{
+        #[cfg(not(feature = "no-std"))]
+        {
+            $x.read().unwrap()
+        }
+        #[cfg(feature = "no-std")]
+        {
+            $x.read()
+        }
+    }};
+}
+
+macro_rules! write {
+    ($x:expr) => {{
+        #[cfg(not(feature = "no-std"))]
+        {
+            $x.write().unwrap()
+        }
+        #[cfg(feature = "no-std")]
+        {
+            $x.write()
+        }
+    }};
+}
+
+/// A key for the tensor cache. Contains both number of bytes and information
 /// about the layout of the allocation.
 ///
 /// Since [Layout] doesn't impl Ord, we can't use it directly as a key
-/// for a hasmap, meaning we need this extra datastructure. Otherwise
+/// for a hashmap, meaning we need this extra datastructure. Otherwise
 /// we could just using `(usize, Layout)` as the key.
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
-pub struct AllocationKey {
+struct AllocationKey {
     /// The size of the allocation in bytes
     num_bytes: usize,
     /// The size of the type in bytes - from [Layout].
     size: usize,
     /// The alignment of the allocation in bytes - from [Layout].
     alignment: usize,
+}
+
+#[derive(Debug)]
+struct AllocationGroup<Ptr: CacheStorage> {
+    ignore_drops: usize,
+    allocations: Vec<CacheWrapper<Ptr>>,
 }
 
 /// A cache of allocations that can be reused.
@@ -30,17 +72,24 @@ pub struct AllocationKey {
 /// allocator assumes memory is allocated & deallocated with the same layout.
 /// The value is a list of allocations of that size.
 ///
-/// The prescense of a key in the map, indicates that there is *at least one*
+/// The presence of a key in the map, indicates that there is *at least one*
 /// valid allocation. When the last value is removed from the list, the key
 /// is removed.
 #[derive(Debug)]
 pub(crate) struct TensorCache<Ptr: CacheStorage> {
-    allocations: RwLock<BTreeMap<AllocationKey, Vec<CacheWrapper<Ptr>>>>,
+    allocations: RwLock<BTreeMap<AllocationKey, AllocationGroup<Ptr>>>,
     enabled: RwLock<bool>,
+
+    drop_queue: RwLock<VecDeque<AllocationKey>>,
+    size: RwLock<usize>,
+    max_size: RwLock<usize>,
 }
 
 pub(crate) trait CacheStorage: Sized {
     type Output<T>: CacheStorage;
+
+    /// returns the allocations's size in bytes
+    fn size(&self) -> usize;
 
     /// Unsafely converts the elements of a contiguous collection type to another type. Note:
     /// **This function is wildly unsafe**, see implementations for details
@@ -60,7 +109,7 @@ pub(crate) trait CacheStorage: Sized {
 }
 
 /// (Mostly) Safe wrapper around CacheStorage implementers
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 struct CacheWrapper<Ptr: CacheStorage> {
     ptr: Option<Ptr>,
     alignment: usize,
@@ -100,6 +149,10 @@ impl<Ptr: CacheStorage> CacheWrapper<Ptr> {
         );
     }
 
+    fn size(&self) -> usize {
+        self.ptr.as_ref().unwrap().size()
+    }
+
     // Safety: Same as slice.align_to, but considered safe internally
     // Produces storage containing uninitialized values
     fn into_storage<T>(mut self) -> Ptr::Output<T> {
@@ -117,6 +170,10 @@ impl<Ptr: CacheStorage> Default for TensorCache<Ptr> {
         Self {
             allocations: Default::default(),
             enabled: RwLock::new(false),
+            drop_queue: Default::default(),
+            size: RwLock::new(0),
+            // TODO: default max size
+            max_size: RwLock::new(1_000_000),
         }
     }
 }
@@ -125,52 +182,65 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
     /// Returns the number of allocations in the cache.
     #[allow(unused)]
     pub(crate) fn len(&self) -> usize {
-        #[cfg(not(feature = "no-std"))]
-        {
-            self.allocations.read().unwrap().len()
-        }
+        read!(self.allocations).len()
+    }
 
-        #[cfg(feature = "no-std")]
-        {
-            self.allocations.read().len()
-        }
+    /// Returns the number of bytes occupied by allocations in the cache.
+    #[allow(unused)]
+    pub(crate) fn size(&self) -> usize {
+        *read!(self.size)
     }
 
     /// Returns `true` if the cache is enabled.
     pub(crate) fn is_enabled(&self) -> bool {
-        #[cfg(not(feature = "no-std"))]
-        {
-            *self.enabled.read().unwrap()
-        }
-        #[cfg(feature = "no-std")]
-        {
-            *self.enabled.read()
-        }
+        *read!(self.enabled)
     }
 
     /// Enables the cache.
     pub(crate) fn enable(&self) {
-        #[cfg(not(feature = "no-std"))]
-        {
-            *self.enabled.write().unwrap() = true;
-        }
-
-        #[cfg(feature = "no-std")]
-        {
-            *self.enabled.write() = true;
-        }
+        *write!(self.enabled) = true;
     }
 
     /// Disables the cache.
     pub(crate) fn disable(&self) {
-        #[cfg(not(feature = "no-std"))]
-        {
-            *self.enabled.write().unwrap() = false;
-        }
+        *write!(self.enabled) = false;
+    }
 
-        #[cfg(feature = "no-std")]
-        {
-            *self.enabled.write() = false;
+    /// Sets the maximum size of the cache
+    #[allow(unused)]
+    pub(crate) fn set_max_size(&self, size: usize) {
+        *write!(self.max_size) = size;
+
+        if size < *read!(self.size) {
+            self.shrink();
+        }
+    }
+
+    /// Shrinks the cache so its buffers contain at most `max_size` bytes
+    fn shrink(&self) {
+        let mut size = write!(self.size);
+        let max_size = read!(self.max_size);
+        let mut drop_queue = write!(self.drop_queue);
+        let mut allocations = write!(self.allocations);
+
+        while *size > *max_size {
+            let key = drop_queue
+                .pop_front()
+                .expect("ignore_drops values were set too high");
+            let Some(alloc_group) = allocations.get_mut(&key) else { continue };
+
+            if alloc_group.ignore_drops > 0 {
+                alloc_group.ignore_drops -= 1;
+            } else {
+                let allocation = alloc_group
+                    .allocations
+                    .pop()
+                    .expect("ignore_drops values were set too low");
+                if alloc_group.allocations.is_empty() {
+                    allocations.remove(&key);
+                }
+                *size -= allocation.size();
+            }
         }
     }
 
@@ -189,34 +259,27 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             alignment: layout.align(),
         };
         // Check if there is a cached allocation.
-        let reuse = {
-            #[cfg(not(feature = "no-std"))]
-            let cache = self.allocations.read().unwrap();
-            #[cfg(feature = "no-std")]
-            let cache = self.allocations.read();
-            cache.contains_key(&key)
-        };
+        let reuse = read!(self.allocations).contains_key(&key);
         // If there is, remove it from the cache.
         // Otherwise, return `None`.
         if reuse {
-            #[cfg(not(feature = "no-std"))]
-            let mut cache = self.allocations.write().unwrap();
-            #[cfg(feature = "no-std")]
-            let mut cache = self.allocations.write();
+            let mut cache = write!(self.allocations);
             // unwrap is safe because we just checked for contains key above.
             let items = cache.get_mut(&key).unwrap();
+            items.ignore_drops += 1;
             // unwrap is safe because reuse is only true if there's at least one item,
             // which is also maintained by the block directly below.
-            let allocation = items.pop().unwrap();
+            let allocation = items.allocations.pop().unwrap();
             // If there are no more cached allocations of this size,
             // remove the entry from the cache.
             // This is important for correctness, because the presence
             // of an entry in the cache indicates that there are valid
             // allocations to use. (see `let reuse = { ... }` above).
-            if items.is_empty() {
+            if items.allocations.is_empty() {
                 cache.remove(&key);
             }
             allocation.check_key(&key);
+            *write!(self.size) -= allocation.size();
             Some(allocation.into_storage())
         } else {
             None
@@ -241,31 +304,25 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             alignment: layout.align(),
         };
         allocation.check_key(&key);
-        #[cfg(not(feature = "no-std"))]
-        let mut cache = self.allocations.write().unwrap();
-        #[cfg(feature = "no-std")]
-        let mut cache = self.allocations.write();
+        *write!(self.size) += allocation.size();
+        write!(self.drop_queue).push_back(key);
+        let mut cache = write!(self.allocations);
         if let std::collections::btree_map::Entry::Vacant(e) = cache.entry(key) {
-            #[cfg(not(feature = "no-std"))]
-            {
-                e.insert(std::vec![allocation]);
-            }
-            #[cfg(feature = "no-std")]
-            {
-                let mut allocations = Vec::new();
-                allocations.push(allocation);
-                e.insert(allocations);
-            }
+            e.insert(AllocationGroup {
+                allocations: vec![allocation],
+                ignore_drops: 0,
+            });
         } else {
-            cache.get_mut(&key).unwrap().push(allocation);
+            cache.get_mut(&key).unwrap().allocations.push(allocation);
         }
+        std::mem::drop(cache);
+        self.shrink();
     }
 
     pub(crate) fn clear(&self) {
-        #[cfg(not(feature = "no-std"))]
-        self.allocations.write().unwrap().clear();
-        #[cfg(feature = "no-std")]
-        self.allocations.write().clear();
+        write!(self.allocations).clear();
+        write!(self.drop_queue).clear();
+        *write!(self.size) = 0;
     }
 }
 

@@ -20,6 +20,10 @@ use std::{
 impl<T> CacheStorage for CudaSlice<T> {
     type Output<T2> = CudaSlice<T2>;
 
+    fn size(&self) -> usize {
+        Layout::array::<T>(self.len()).unwrap().size()
+    }
+
     /// Unsafely converts the elements of a CudaSlice to a new type.
     ///
     /// # Safety
