@@ -1,7 +1,12 @@
 use crate::shapes::{Shape, Unit};
-use crate::tensor::{cache::{TensorCache, CacheStorage}, cpu::LendingIterator, storage_traits::*, Tensor};
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use crate::tensor::{
+    cache::{CacheStorage, TensorCache},
+    cpu::LendingIterator,
+    storage_traits::*,
+    Tensor,
+};
 use core::alloc::Layout;
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{sync::Arc, vec::Vec};
 
 #[cfg(feature = "no-std")]
@@ -37,8 +42,17 @@ impl<T> CacheStorage for Vec<T> {
 
         let dst_size = dst_layout.size();
 
-        assert_eq!(ptr.align_offset(dst_layout.align()), 0, "Allocation is improperly aligned");
-        assert!(byte_len % dst_size == 0 && byte_capacity % dst_size == 0, "Allocation is improperly sized");
+        assert_eq!(
+            ptr.align_offset(dst_layout.align()),
+            0,
+            "Allocation is improperly aligned"
+        );
+        assert_eq!(byte_len % dst_size, 0, "Length is improperly sized");
+        assert_eq!(
+            byte_capacity % dst_size,
+            0,
+            "Allocation is improperly sized"
+        );
 
         let len = byte_len / dst_size;
         let capacity = byte_capacity / dst_size;

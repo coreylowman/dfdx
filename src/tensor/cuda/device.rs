@@ -1,6 +1,9 @@
 use crate::shapes::{Shape, Unit};
 use crate::tensor::cpu::{Cpu, CpuError};
-use crate::tensor::{cache::{TensorCache, CacheStorage}, DeviceStorage, HasErr, NoneTape, Tensor};
+use crate::tensor::{
+    cache::{CacheStorage, TensorCache},
+    DeviceStorage, HasErr, NoneTape, Tensor,
+};
 
 use cudarc::driver::{DevicePtr, DevicePtrMut, DeviceRepr};
 use cudarc::{
@@ -32,7 +35,11 @@ impl<T> CacheStorage for CudaSlice<T> {
         let byte_len = self.len() * src_layout.size();
         let ptr = self.leak();
 
-        assert_eq!(byte_len % dst_layout.size(), 0, "Allocation is improperly sized");
+        assert_eq!(
+            byte_len % dst_layout.size(),
+            0,
+            "Allocation is improperly sized"
+        );
 
         let len = byte_len / dst_layout.size();
 
@@ -137,10 +144,10 @@ impl Cuda {
         &self,
         len: usize,
     ) -> Result<CudaSlice<E>, CudaError> {
-        Ok(self.cache.try_pop::<E>(len).map_or_else(
-            || self.dev.alloc::<E>(len),
-            Ok,
-        )?)
+        Ok(self
+            .cache
+            .try_pop::<E>(len)
+            .map_or_else(|| self.dev.alloc::<E>(len), Ok)?)
     }
     #[allow(unused)]
     pub(crate) unsafe fn get_workspace<E>(

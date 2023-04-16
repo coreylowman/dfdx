@@ -45,7 +45,7 @@ pub(crate) trait CacheStorage: Sized {
     /// **This function is wildly unsafe**, see implementations for details
     unsafe fn transmute_elements<T>(self) -> Self::Output<T>;
 
-    /// Uses transmute_elements to convert to an element type with alignment `align` before dropping. 
+    /// Uses transmute_elements to convert to an element type with alignment `align` before dropping.
     unsafe fn drop_with_alignment(self, align: usize) {
         match align {
             1 => drop(self.transmute_elements::<u8>()),
@@ -53,7 +53,7 @@ pub(crate) trait CacheStorage: Sized {
             4 => drop(self.transmute_elements::<u32>()),
             8 => drop(self.transmute_elements::<u64>()),
             16 => drop(self.transmute_elements::<u128>()),
-            _ => panic!("Invalid alignment")
+            _ => panic!("Invalid alignment"),
         }
     }
 
@@ -175,7 +175,8 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
 
     /// Inserts an allocation into the cache.
     pub(crate) fn insert<E>(&self, len: usize, allocation: Ptr::Output<E>)
-        where Ptr::Output<E>: CacheStorage<Output<u8> = Ptr>
+    where
+        Ptr::Output<E>: CacheStorage<Output<u8> = Ptr>,
     {
         if !self.is_enabled() {
             return;
