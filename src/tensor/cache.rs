@@ -13,12 +13,12 @@ use spin::RwLock;
 /// for a hasmap, meaning we need this extra datastructure. Otherwise
 /// we could just using `(usize, Layout)` as the key.
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
-pub(crate) struct AllocationKey {
-    pub num_bytes: usize,
+pub struct AllocationKey {
+    num_bytes: usize,
     /// The size of the allocation in bytes - from [Layout].
-    pub size: usize,
+    size: usize,
     /// The alignment of the allocation in bytes - from [Layout].
-    pub alignment: usize,
+    alignment: usize,
 }
 
 /// A cache of allocations that can be reused.
@@ -34,8 +34,8 @@ pub(crate) struct AllocationKey {
 /// is removed.
 #[derive(Debug)]
 pub(crate) struct TensorCache<Ptr: CacheStorage> {
-    pub(crate) allocations: RwLock<BTreeMap<AllocationKey, Vec<Ptr>>>,
-    pub(crate) enabled: RwLock<bool>,
+    allocations: RwLock<BTreeMap<AllocationKey, Vec<Ptr>>>,
+    enabled: RwLock<bool>,
 }
 
 pub(crate) trait CacheStorage: Sized {
@@ -69,6 +69,12 @@ impl<Ptr: CacheStorage> Default for TensorCache<Ptr> {
             allocations: Default::default(),
             enabled: RwLock::new(false),
         }
+    }
+}
+
+impl<Ptr: CacheStorage> Drop for TensorCache<Ptr> {
+    fn drop(&mut self) {
+        self.clear();
     }
 }
 
@@ -167,6 +173,10 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             if items.is_empty() {
                 cache.remove(&key);
             }
+            // SAFETY:
+            //
+            // * If inserted with 'insert', this will convert allocation to an element type with
+            // the correct alignment
             Some(unsafe { allocation.transmute_elements() })
         } else {
             None
@@ -182,6 +192,11 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             return;
         }
 
+        // SAFETY:
+        //
+        // * Allocation must be converted back to an element type with the correct alignment before
+        // dropping
+        // * Allocation must not have its capacity modified
         let allocation = unsafe { allocation.transmute_elements::<u8>() };
         let layout = Layout::new::<E>();
         let num_bytes = len * layout.size();
@@ -219,6 +234,10 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             assert!(key.num_bytes % key.size == 0);
             assert!(key.num_bytes < isize::MAX as usize);
             for alloc in allocations.drain(..) {
+                // SAFETY:
+                //
+                // * If inserted with 'insert', this will convert allocation to an element type with
+                // the correct alignment before dropping.
                 unsafe { alloc.drop_with_key(key) };
             }
         }

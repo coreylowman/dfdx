@@ -31,6 +31,8 @@ impl<T> CacheStorage for Vec<T> {
     /// * Has all of the potential pitfalls of slice.align_to
     /// * If converting to a type with a different alignment, the caller must convert back to a
     /// type with the same alignment before dropping
+    /// * If converting to a type with a different alignment, the caller must not grow or shrink
+    /// the allocation of the returned vector
     unsafe fn transmute_elements<T2>(mut self) -> Self::Output<T2> {
         let src_layout = Layout::new::<T>().pad_to_align();
         let dst_layout = Layout::new::<T2>().pad_to_align();

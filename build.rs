@@ -93,8 +93,8 @@ mod cuda {
                 let out = out.lines().collect::<Vec<&str>>();
                 let mut codes = Vec::with_capacity(out.len());
                 for code in out {
-                    let code = code.split("_").collect::<Vec<&str>>();
-                    if code.len() != 0 && code.contains(&"sm") {
+                    let code = code.split('_').collect::<Vec<&str>>();
+                    if !code.is_empty() && code.contains(&"sm") {
                         if let Ok(num) = code[1].parse::<usize>() {
                             codes.push(num);
                         }
