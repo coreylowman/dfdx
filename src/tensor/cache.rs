@@ -74,10 +74,13 @@ impl<Ptr: CacheStorage> Drop for CacheWrapper<Ptr> {
 }
 
 impl<Ptr: CacheStorage> CacheWrapper<Ptr> {
-    fn from_storage<T>(storage: Ptr::Output<T>) -> Self where Ptr::Output<T>: CacheStorage<Output<u8> = Ptr> {
+    fn from_storage<T>(storage: Ptr::Output<T>) -> Self
+    where
+        Ptr::Output<T>: CacheStorage<Output<u8> = Ptr>,
+    {
         Self {
             ptr: Some(unsafe { storage.transmute_elements::<u8>() }),
-            align: Layout::new::<T>().align()
+            align: Layout::new::<T>().align(),
         }
     }
 
