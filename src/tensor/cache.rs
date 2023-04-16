@@ -93,7 +93,11 @@ impl<Ptr: CacheStorage> CacheWrapper<Ptr> {
         assert_eq!(self.size, key.size, "Size does not match");
         // Implicitly assumes that T should not have any padding, but this should always be true of
         // primitive number types.
-        assert_eq!(key.num_bytes % key.size, 0, "Key is invalid or type is padded");
+        assert_eq!(
+            key.num_bytes % key.size,
+            0,
+            "Key is invalid or type is padded"
+        );
     }
 
     // Safety: Same as slice.align_to, but considered safe internally
@@ -144,7 +148,7 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
         }
     }
 
-    /// Disables the cache.
+    /// Enables the cache.
     pub(crate) fn enable(&self) {
         #[cfg(not(feature = "no-std"))]
         {
