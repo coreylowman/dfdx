@@ -14,8 +14,9 @@ use spin::RwLock;
 /// we could just using `(usize, Layout)` as the key.
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct AllocationKey {
+    /// The size of the allocation in bytes
     num_bytes: usize,
-    /// The size of the allocation in bytes - from [Layout].
+    /// The size of the type in bytes - from [Layout].
     size: usize,
     /// The alignment of the allocation in bytes - from [Layout].
     alignment: usize,
@@ -62,13 +63,14 @@ pub(crate) trait CacheStorage: Sized {
 #[derive(Clone, Debug)]
 struct CacheWrapper<Ptr: CacheStorage> {
     ptr: Option<Ptr>,
-    align: usize,
+    alignment: usize,
+    size: usize,
 }
 
 impl<Ptr: CacheStorage> Drop for CacheWrapper<Ptr> {
     fn drop(&mut self) {
         if let Some(ptr) = std::mem::take(&mut self.ptr) {
-            unsafe { ptr.drop_with_alignment(self.align) }
+            unsafe { ptr.drop_with_alignment(self.alignment) }
         }
     }
 }
@@ -78,15 +80,29 @@ impl<Ptr: CacheStorage> CacheWrapper<Ptr> {
     where
         Ptr::Output<T>: CacheStorage<Output<u8> = Ptr>,
     {
+        let layout = Layout::new::<T>();
         Self {
             ptr: Some(unsafe { storage.transmute_elements::<u8>() }),
-            align: Layout::new::<T>().align(),
+            alignment: layout.align(),
+            size: layout.size(),
         }
     }
 
+    fn check_key(&self, key: &AllocationKey) {
+        assert_eq!(self.alignment, key.alignment, "Alignment does not match");
+        assert_eq!(self.size, key.size, "Size does not match");
+        // Implicitly assumes that T should not have any padding, but this should always be true of
+        // primitive number types.
+        assert_eq!(key.num_bytes % key.size, 0, "Key is invalid or type is padded");
+    }
+
     // Safety: Same as slice.align_to, but considered safe internally
+    // Produces storage containing uninitialized values
     fn into_storage<T>(mut self) -> Ptr::Output<T> {
-        assert_eq!(Layout::new::<T>().align(), self.align);
+        let layout = Layout::new::<T>();
+        assert_eq!(layout.align(), self.alignment);
+        assert_eq!(layout.size(), self.size);
+
         let ptr = std::mem::take(&mut self.ptr).unwrap();
         unsafe { ptr.transmute_elements() }
     }
@@ -196,6 +212,7 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             if items.is_empty() {
                 cache.remove(&key);
             }
+            allocation.check_key(&key);
             Some(allocation.into_storage())
         } else {
             None
@@ -219,6 +236,7 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             size: layout.size(),
             alignment: layout.align(),
         };
+        allocation.check_key(&key);
         #[cfg(not(feature = "no-std"))]
         let mut cache = self.allocations.write().unwrap();
         #[cfg(feature = "no-std")]
