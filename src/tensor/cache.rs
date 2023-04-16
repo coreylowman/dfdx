@@ -60,6 +60,9 @@ struct AllocationKey {
 
 #[derive(Debug)]
 struct AllocationGroup<Ptr: CacheStorage> {
+    // Tracks the number of matching 'AllocationKey's in drop_queue to ignore. This is used to
+    // "remove" the next instance of the matching AllocationKey in the drop_queue, without having
+    // to run an O(n)
     ignore_drops: usize,
     allocations: Vec<CacheWrapper<Ptr>>,
 }
@@ -75,6 +78,10 @@ struct AllocationGroup<Ptr: CacheStorage> {
 /// The presence of a key in the map, indicates that there is *at least one*
 /// valid allocation. When the last value is removed from the list, the key
 /// is removed.
+///
+/// Constraint: for a given value of AllocationKey, the following must hold:
+///
+/// (instances in drop_queue) = (group.ignore_drops) + (group.allocations.len())
 #[derive(Debug)]
 pub(crate) struct TensorCache<Ptr: CacheStorage> {
     allocations: RwLock<BTreeMap<AllocationKey, AllocationGroup<Ptr>>>,
@@ -165,6 +172,12 @@ impl<Ptr: CacheStorage> CacheWrapper<Ptr> {
     }
 }
 
+impl<Ptr: CacheStorage> AllocationGroup<Ptr> {
+    fn is_empty(&self) -> bool {
+        self.allocations.is_empty() && self.ignore_drops == 0
+    }
+}
+
 impl<Ptr: CacheStorage> Default for TensorCache<Ptr> {
     fn default() -> Self {
         Self {
@@ -173,7 +186,7 @@ impl<Ptr: CacheStorage> Default for TensorCache<Ptr> {
             drop_queue: Default::default(),
             size: RwLock::new(0),
             // TODO: default max size
-            max_size: RwLock::new(1_000_000),
+            max_size: RwLock::new(1_000_000_000),
         }
     }
 }
@@ -259,7 +272,9 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             alignment: layout.align(),
         };
         // Check if there is a cached allocation.
-        let reuse = read!(self.allocations).contains_key(&key);
+        let reuse = read!(self.allocations)
+            .get(&key)
+            .map_or(false, |group| !group.allocations.is_empty());
         // If there is, remove it from the cache.
         // Otherwise, return `None`.
         if reuse {
@@ -270,14 +285,6 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             // unwrap is safe because reuse is only true if there's at least one item,
             // which is also maintained by the block directly below.
             let allocation = items.allocations.pop().unwrap();
-            // If there are no more cached allocations of this size,
-            // remove the entry from the cache.
-            // This is important for correctness, because the presence
-            // of an entry in the cache indicates that there are valid
-            // allocations to use. (see `let reuse = { ... }` above).
-            if items.allocations.is_empty() {
-                cache.remove(&key);
-            }
             allocation.check_key(&key);
             *write!(self.size) -= allocation.size();
             Some(allocation.into_storage())
