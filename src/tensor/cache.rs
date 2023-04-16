@@ -34,7 +34,7 @@ pub struct AllocationKey {
 /// is removed.
 #[derive(Debug)]
 pub(crate) struct TensorCache<Ptr: CacheStorage> {
-    allocations: RwLock<BTreeMap<AllocationKey, Vec<Ptr>>>,
+    allocations: RwLock<BTreeMap<AllocationKey, Vec<CacheWrapper<Ptr>>>>,
     enabled: RwLock<bool>,
 }
 
@@ -56,10 +56,36 @@ pub(crate) trait CacheStorage: Sized {
             _ => panic!("Invalid alignment"),
         }
     }
+}
 
-    /// calls [CacheStorage::drop_with_alignment], extracting `align` from an [AllocationKey]
-    unsafe fn drop_with_key(self, key: AllocationKey) {
-        self.drop_with_alignment(key.alignment)
+/// (Mostly) Safe wrapper around CacheStorage implementers
+#[derive(Clone, Debug)]
+struct CacheWrapper<Ptr: CacheStorage> {
+    ptr: Option<Ptr>,
+    align: usize,
+}
+
+impl<Ptr: CacheStorage> Drop for CacheWrapper<Ptr> {
+    fn drop(&mut self) {
+        if let Some(ptr) = std::mem::take(&mut self.ptr) {
+            unsafe { ptr.drop_with_alignment(self.align) }
+        }
+    }
+}
+
+impl<Ptr: CacheStorage> CacheWrapper<Ptr> {
+    fn from_storage<T>(storage: Ptr::Output<T>) -> Self where Ptr::Output<T>: CacheStorage<Output<u8> = Ptr> {
+        Self {
+            ptr: Some(unsafe { storage.transmute_elements::<u8>() }),
+            align: Layout::new::<T>().align()
+        }
+    }
+
+    // Safety: Same as slice.align_to, but considered safe internally
+    fn into_storage<T>(mut self) -> Ptr::Output<T> {
+        assert_eq!(Layout::new::<T>().align(), self.align);
+        let ptr = std::mem::take(&mut self.ptr).unwrap();
+        unsafe { ptr.transmute_elements() }
     }
 }
 
@@ -69,12 +95,6 @@ impl<Ptr: CacheStorage> Default for TensorCache<Ptr> {
             allocations: Default::default(),
             enabled: RwLock::new(false),
         }
-    }
-}
-
-impl<Ptr: CacheStorage> Drop for TensorCache<Ptr> {
-    fn drop(&mut self) {
-        self.clear();
     }
 }
 
@@ -173,11 +193,7 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             if items.is_empty() {
                 cache.remove(&key);
             }
-            // SAFETY:
-            //
-            // * If inserted with 'insert', this will convert allocation to an element type with
-            // the correct alignment
-            Some(unsafe { allocation.transmute_elements() })
+            Some(allocation.into_storage())
         } else {
             None
         }
@@ -192,12 +208,7 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             return;
         }
 
-        // SAFETY:
-        //
-        // * Allocation must be converted back to an element type with the correct alignment before
-        // dropping
-        // * Allocation must not have its capacity modified
-        let allocation = unsafe { allocation.transmute_elements::<u8>() };
+        let allocation = CacheWrapper::from_storage(allocation);
         let layout = Layout::new::<E>();
         let num_bytes = len * layout.size();
         let key = AllocationKey {
@@ -227,21 +238,9 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
 
     pub(crate) fn clear(&self) {
         #[cfg(not(feature = "no-std"))]
-        let mut cache = self.allocations.write().unwrap();
+        self.allocations.write().unwrap().clear();
         #[cfg(feature = "no-std")]
-        let mut cache = self.allocations.write();
-        for (&key, allocations) in cache.iter_mut() {
-            assert!(key.num_bytes % key.size == 0);
-            assert!(key.num_bytes < isize::MAX as usize);
-            for alloc in allocations.drain(..) {
-                // SAFETY:
-                //
-                // * If inserted with 'insert', this will convert allocation to an element type with
-                // the correct alignment before dropping.
-                unsafe { alloc.drop_with_key(key) };
-            }
-        }
-        cache.clear();
+        self.allocations.write().clear();
     }
 }
 
