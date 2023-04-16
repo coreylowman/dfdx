@@ -1,18 +1,44 @@
 use crate::shapes::{Shape, Unit};
 use crate::tensor::cpu::{Cpu, CpuError};
-use crate::tensor::{cache::TensorCache, DeviceStorage, HasErr, NoneTape, Tensor};
+use crate::tensor::{cache::{TensorCache, CacheStorage}, DeviceStorage, HasErr, NoneTape, Tensor};
 
 use cudarc::driver::{DevicePtr, DevicePtrMut, DeviceRepr};
 use cudarc::{
     cublas::{result::CublasError, CudaBlas},
-    driver::sys::CUdeviceptr,
     driver::{CudaDevice, CudaSlice, CudaStream, DeviceSlice, DriverError},
 };
 
+use core::alloc::Layout;
 use std::{
     sync::{Arc, Mutex, MutexGuard},
     vec::Vec,
 };
+
+impl<T> CacheStorage for CudaSlice<T> {
+    type Output<T2> = CudaSlice<T2>;
+
+    /// Unsafely converts the elements of a CudaSlice to a new type.
+    ///
+    /// # Safety
+    ///
+    /// Assuming that `self` is a valid [CudaSlice], the main safety concern is that the output
+    /// slice should be assumed to be uninitialized
+    unsafe fn transmute_elements<T2>(self) -> Self::Output<T2> {
+        let dev = self.device();
+
+        let src_layout = Layout::new::<T>().pad_to_align();
+        let dst_layout = Layout::new::<T2>().pad_to_align();
+
+        let byte_len = self.len() * src_layout.size();
+        let ptr = self.leak();
+
+        assert_eq!(byte_len % dst_layout.size(), 0, "Allocation is improperly sized");
+
+        let len = byte_len / dst_layout.size();
+
+        dev.upgrade_device_ptr(ptr, len)
+    }
+}
 
 /// A Cuda device that enables constructing tensors on GPUs
 /// & running GPU kernels.
@@ -27,7 +53,7 @@ pub struct Cuda {
     /// A second stream for kernels to optionally execute on.
     pub(crate) par_stream: Arc<CudaStream>,
     pub(crate) workspace: Arc<Mutex<CudaSlice<u8>>>,
-    pub(crate) cache: Arc<TensorCache<CUdeviceptr>>,
+    pub(crate) cache: Arc<TensorCache<CudaSlice<u8>>>,
 }
 
 #[derive(Debug)]
@@ -111,11 +137,10 @@ impl Cuda {
         &self,
         len: usize,
     ) -> Result<CudaSlice<E>, CudaError> {
-        let data = self.cache.try_pop::<E>(len).map_or_else(
+        Ok(self.cache.try_pop::<E>(len).map_or_else(
             || self.dev.alloc::<E>(len),
-            |ptr| Ok(self.dev.upgrade_device_ptr(ptr, len)),
-        )?;
-        Ok(data)
+            Ok,
+        )?)
     }
     #[allow(unused)]
     pub(crate) unsafe fn get_workspace<E>(
@@ -152,7 +177,7 @@ pub struct CachableCudaSlice<E> {
     /// The actual data.
     pub(crate) data: CudaSlice<E>,
     /// A cache of device pointers that can be reused.
-    pub(crate) cache: Arc<TensorCache<CUdeviceptr>>,
+    pub(crate) cache: Arc<TensorCache<CudaSlice<u8>>>,
 }
 
 impl<E: cudarc::driver::DeviceRepr> Clone for CachableCudaSlice<E> {
@@ -161,11 +186,7 @@ impl<E: cudarc::driver::DeviceRepr> Clone for CachableCudaSlice<E> {
         let len = self.data.len();
         let data = self.cache.try_pop::<E>(len).map_or_else(
             || self.data.try_clone().unwrap(),
-            |ptr| {
-                // SAFETY:
-                // 1. we know that ptr is valid for `num_bytes` because it was registered for that.
-                // 2. we are about to set the memory with dtod_copy
-                let mut slice = unsafe { dev.upgrade_device_ptr(ptr, len) };
+            |mut slice| {
                 dev.dtod_copy(&self.data, &mut slice).unwrap();
                 slice
             },
@@ -224,16 +245,11 @@ impl<E> std::ops::DerefMut for CachableCudaSlice<E> {
 
 impl<E> Drop for CachableCudaSlice<E> {
     fn drop(&mut self) {
-        if self.cache.is_enabled() {
-            let dev = self.data.device();
-            // Replaces the CudaSlice with a 0 length CudaSlice. This won't take additional
-            // memory, but will give us ownership of the actual data.
-            let data = std::mem::replace(&mut self.data, dev.null().unwrap());
-            let numel = data.len();
-            // Get access to the raw pointer without freeing it.
-            let ptr = data.leak();
-            self.cache.insert::<E>(numel, ptr);
-        }
+        let dev = self.data.device();
+        // Replaces the CudaSlice with a 0 length CudaSlice. This won't take additional
+        // memory, but will give us ownership of the actual data.
+        let data = std::mem::replace(&mut self.data, dev.null().unwrap());
+        self.cache.insert::<E>(data.len(), data);
     }
 }
 
@@ -292,17 +308,7 @@ impl DeviceStorage for Cuda {
     }
 
     fn try_empty_cache(&self) -> Result<(), Self::Err> {
-        #[cfg(not(feature = "no-std"))]
-        let mut cache = self.cache.allocations.write().unwrap();
-        #[cfg(feature = "no-std")]
-        let mut cache = self.cache.allocations.write();
-        for (&key, allocations) in cache.iter_mut() {
-            for alloc in allocations.drain(..) {
-                let data = unsafe { self.dev.upgrade_device_ptr::<u8>(alloc, key.num_bytes) };
-                drop(data);
-            }
-        }
-        cache.clear();
+        self.cache.clear();
         Ok(())
     }
 }

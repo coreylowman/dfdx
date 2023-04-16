@@ -33,12 +33,37 @@ pub(crate) struct AllocationKey {
 /// valid allocation. When the last value is removed from the list, the key
 /// is removed.
 #[derive(Debug)]
-pub(crate) struct TensorCache<Ptr> {
+pub(crate) struct TensorCache<Ptr: CacheStorage> {
     pub(crate) allocations: RwLock<BTreeMap<AllocationKey, Vec<Ptr>>>,
     pub(crate) enabled: RwLock<bool>,
 }
 
-impl<Ptr> Default for TensorCache<Ptr> {
+pub(crate) trait CacheStorage: Sized {
+    type Output<T>: CacheStorage;
+
+    /// Unsafely converts the elements of a contiguous collection type to another type. Note:
+    /// **This function is wildly unsafe**, see implementations for details
+    unsafe fn transmute_elements<T>(self) -> Self::Output<T>;
+
+    /// Uses transmute_elements to convert to an element type with alignment `align` before dropping. 
+    unsafe fn drop_with_alignment(self, align: usize) {
+        match align {
+            1 => drop(self.transmute_elements::<u8>()),
+            2 => drop(self.transmute_elements::<u16>()),
+            4 => drop(self.transmute_elements::<u32>()),
+            8 => drop(self.transmute_elements::<u64>()),
+            16 => drop(self.transmute_elements::<u128>()),
+            _ => panic!("Invalid alignment")
+        }
+    }
+
+    /// calls [CacheStorage::drop_with_alignment], extracting `align` from an [AllocationKey]
+    unsafe fn drop_with_key(self, key: AllocationKey) {
+        self.drop_with_alignment(key.alignment)
+    }
+}
+
+impl<Ptr: CacheStorage> Default for TensorCache<Ptr> {
     fn default() -> Self {
         Self {
             allocations: Default::default(),
@@ -47,7 +72,7 @@ impl<Ptr> Default for TensorCache<Ptr> {
     }
 }
 
-impl<Ptr> TensorCache<Ptr> {
+impl<Ptr: CacheStorage> TensorCache<Ptr> {
     /// Returns the number of allocations in the cache.
     #[allow(unused)]
     pub(crate) fn len(&self) -> usize {
@@ -102,7 +127,7 @@ impl<Ptr> TensorCache<Ptr> {
 
     /// Returns a cached allocation if one exists.
     /// Otherwise, returns `None`.
-    pub(crate) fn try_pop<E>(&self, len: usize) -> Option<Ptr> {
+    pub(crate) fn try_pop<E>(&self, len: usize) -> Option<Ptr::Output<E>> {
         if !self.is_enabled() {
             return None;
         }
@@ -142,21 +167,23 @@ impl<Ptr> TensorCache<Ptr> {
             if items.is_empty() {
                 cache.remove(&key);
             }
-            Some(allocation)
+            Some(unsafe { allocation.transmute_elements() })
         } else {
             None
         }
     }
 
     /// Inserts an allocation into the cache.
-    pub(crate) fn insert<E>(&self, len: usize, allocation: Ptr) {
+    pub(crate) fn insert<E>(&self, len: usize, allocation: Ptr::Output<E>)
+        where Ptr::Output<E>: CacheStorage<Output<u8> = Ptr>
+    {
         if !self.is_enabled() {
-            // This is a panic because it's a bug in the library.
-            panic!("Tried to insert into a disabled cache.");
+            return;
         }
 
+        let allocation = unsafe { allocation.transmute_elements::<u8>() };
         let layout = Layout::new::<E>();
-        let num_bytes = len * std::mem::size_of::<E>();
+        let num_bytes = len * layout.size();
         let key = AllocationKey {
             num_bytes,
             size: layout.size(),
@@ -181,6 +208,21 @@ impl<Ptr> TensorCache<Ptr> {
             cache.get_mut(&key).unwrap().push(allocation);
         }
     }
+
+    pub(crate) fn clear(&self) {
+        #[cfg(not(feature = "no-std"))]
+        let mut cache = self.allocations.write().unwrap();
+        #[cfg(feature = "no-std")]
+        let mut cache = self.allocations.write();
+        for (&key, allocations) in cache.iter_mut() {
+            assert!(key.num_bytes % key.size == 0);
+            assert!(key.num_bytes < isize::MAX as usize);
+            for alloc in allocations.drain(..) {
+                unsafe { alloc.drop_with_key(key) };
+            }
+        }
+        cache.clear();
+    }
 }
 
 #[cfg(test)]
@@ -188,15 +230,8 @@ mod test {
     use super::*;
 
     #[test]
-    #[should_panic(expected = "Tried to insert into a disabled cache.")]
-    fn test_insert_on_disabled_cache() {
-        let cache: TensorCache<usize> = Default::default();
-        cache.insert::<f32>(1, 0);
-    }
-
-    #[test]
     fn test_try_pop_on_disabled_cache() {
-        let cache: TensorCache<usize> = Default::default();
+        let cache: TensorCache<Vec<u8>> = Default::default();
         cache.enable();
         assert!(cache.is_enabled());
         cache.disable();
@@ -207,7 +242,7 @@ mod test {
 
     #[test]
     fn test_try_pop_on_empty_cache() {
-        let cache: TensorCache<usize> = Default::default();
+        let cache: TensorCache<Vec<u8>> = Default::default();
         cache.enable();
         assert_eq!(cache.try_pop::<f32>(1), None);
         assert_eq!(cache.try_pop::<f32>(1), None);
@@ -215,35 +250,35 @@ mod test {
 
     #[test]
     fn test_try_pop_on_cache_with_multiple_sizes_and_alignment() {
-        let cache: TensorCache<usize> = Default::default();
+        let cache: TensorCache<Vec<u8>> = Default::default();
         cache.enable();
-        cache.insert::<f32>(1, 0);
-        cache.insert::<f32>(1, 1);
-        cache.insert::<f32>(1, 2);
-        cache.insert::<f32>(2, 3);
-        cache.insert::<f32>(2, 4);
-        cache.insert::<f32>(2, 5);
-        cache.insert::<f64>(1, 6);
-        cache.insert::<f64>(1, 7);
-        cache.insert::<f64>(1, 8);
-        cache.insert::<f64>(2, 9);
-        cache.insert::<f64>(2, 10);
-        cache.insert::<f64>(2, 11);
-        assert_eq!(cache.try_pop::<f32>(1), Some(2));
-        assert_eq!(cache.try_pop::<f32>(1), Some(1));
-        assert_eq!(cache.try_pop::<f32>(1), Some(0));
+        cache.insert::<f32>(1, vec![0.0]);
+        cache.insert::<f32>(1, vec![1.0]);
+        cache.insert::<f32>(1, vec![2.0]);
+        cache.insert::<f32>(2, vec![3.0; 2]);
+        cache.insert::<f32>(2, vec![4.0; 2]);
+        cache.insert::<f32>(2, vec![5.0; 2]);
+        cache.insert::<f64>(1, vec![6.0]);
+        cache.insert::<f64>(1, vec![7.0]);
+        cache.insert::<f64>(1, vec![8.0]);
+        cache.insert::<f64>(2, vec![9.0; 2]);
+        cache.insert::<f64>(2, vec![10.0; 2]);
+        cache.insert::<f64>(2, vec![11.0; 2]);
+        assert_eq!(cache.try_pop::<f32>(1), Some(vec![2.0]));
+        assert_eq!(cache.try_pop::<f32>(1), Some(vec![1.0]));
+        assert_eq!(cache.try_pop::<f32>(1), Some(vec![0.0]));
         assert_eq!(cache.try_pop::<f32>(1), None);
-        assert_eq!(cache.try_pop::<f32>(2), Some(5));
-        assert_eq!(cache.try_pop::<f32>(2), Some(4));
-        assert_eq!(cache.try_pop::<f32>(2), Some(3));
+        assert_eq!(cache.try_pop::<f32>(2), Some(vec![5.0; 2]));
+        assert_eq!(cache.try_pop::<f32>(2), Some(vec![4.0; 2]));
+        assert_eq!(cache.try_pop::<f32>(2), Some(vec![3.0; 2]));
         assert_eq!(cache.try_pop::<f32>(2), None);
-        assert_eq!(cache.try_pop::<f64>(1), Some(8));
-        assert_eq!(cache.try_pop::<f64>(1), Some(7));
-        assert_eq!(cache.try_pop::<f64>(1), Some(6));
+        assert_eq!(cache.try_pop::<f64>(1), Some(vec![8.0]));
+        assert_eq!(cache.try_pop::<f64>(1), Some(vec![7.0]));
+        assert_eq!(cache.try_pop::<f64>(1), Some(vec![6.0]));
         assert_eq!(cache.try_pop::<f64>(1), None);
-        assert_eq!(cache.try_pop::<f64>(2), Some(11));
-        assert_eq!(cache.try_pop::<f64>(2), Some(10));
-        assert_eq!(cache.try_pop::<f64>(2), Some(9));
+        assert_eq!(cache.try_pop::<f64>(2), Some(vec![11.0; 2]));
+        assert_eq!(cache.try_pop::<f64>(2), Some(vec![10.0; 2]));
+        assert_eq!(cache.try_pop::<f64>(2), Some(vec![9.0; 2]));
         assert_eq!(cache.try_pop::<f64>(2), None);
     }
 }
