@@ -195,7 +195,10 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
     /// Returns the number of allocations in the cache.
     #[allow(unused)]
     pub(crate) fn len(&self) -> usize {
-        read!(self.allocations).len()
+        read!(self.allocations)
+            .values()
+            .map(|group| group.allocations.len())
+            .sum()
     }
 
     /// Returns the number of bytes occupied by allocations in the cache.
@@ -236,6 +239,15 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
         let mut drop_queue = write!(self.drop_queue);
         let mut allocations = write!(self.allocations);
 
+        debug_assert_eq!(
+            *size,
+            allocations
+                .values()
+                .flat_map(|group| &group.allocations)
+                .map(|alloc| alloc.size())
+                .sum::<usize>()
+        );
+
         while *size > *max_size {
             let key = drop_queue
                 .pop_front()
@@ -249,7 +261,7 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
                     .allocations
                     .pop()
                     .expect("ignore_drops values were set too low");
-                if alloc_group.allocations.is_empty() {
+                if alloc_group.is_empty() {
                     allocations.remove(&key);
                 }
                 *size -= allocation.size();
