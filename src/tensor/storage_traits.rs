@@ -43,13 +43,13 @@ pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
     /// Blocks until all work on device to complete. Useful for benchmarking.
     fn try_synchronize(&self) -> Result<(), Self::Err>;
 
-    /// Enables the cache of the device.
-    fn enable_cache(&self) {
-        self.try_enable_cache().unwrap()
+    /// Enables the cache of the device, and sets the maximum size to `size`.
+    fn enable_cache(&self, size: usize) {
+        self.try_enable_cache(size).unwrap()
     }
 
-    /// Tries to enable the cache of the device.
-    fn try_enable_cache(&self) -> Result<(), Self::Err>;
+    /// Tries to enable the cache of the device, and sets the maximum size to `size`.
+    fn try_enable_cache(&self, size: usize) -> Result<(), Self::Err>;
 
     /// Disables the cache of the device. This will also empty the cache
     /// if there are things in it. See [DeviceStorage::empty_cache] for
@@ -78,6 +78,14 @@ pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
     /// Tries to empty the cache of the device. See [DeviceStorage::empty_cache] for
     /// details of when this is useful.
     fn try_empty_cache(&self) -> Result<(), Self::Err>;
+
+    /// Sets the maximum size of the cache in bytes, and shrinks the cache until it smaller than `size`.
+    fn set_cache_size(&self, size: usize) {
+        self.try_set_cache_size(size).unwrap()
+    }
+
+    /// Fallible version of [DeviceStorage::set_cache_size]
+    fn try_set_cache_size(&self, size: usize) -> Result<(), Self::Err>;
 }
 
 /// Internal trait - Represents something that can allocate its own gradient.

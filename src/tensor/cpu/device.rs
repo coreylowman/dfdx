@@ -220,8 +220,8 @@ impl DeviceStorage for Cpu {
         Ok(())
     }
 
-    fn try_enable_cache(&self) -> Result<(), Self::Err> {
-        self.cache.enable();
+    fn try_enable_cache(&self, size: usize) -> Result<(), Self::Err> {
+        self.cache.enable(size);
         Ok(())
     }
 
@@ -232,6 +232,11 @@ impl DeviceStorage for Cpu {
 
     fn try_empty_cache(&self) -> Result<(), Self::Err> {
         self.cache.clear();
+        Ok(())
+    }
+
+    fn try_set_cache_size(&self, size: usize) -> Result<(), Self::Err> {
+        self.cache.set_max_size(size);
         Ok(())
     }
 }

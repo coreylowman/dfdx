@@ -147,7 +147,7 @@ impl<Ptr: CacheStorage> CacheWrapper<Ptr> {
     fn check_key(&self, key: &AllocationKey) {
         assert_eq!(self.alignment, key.alignment, "Alignment does not match");
         assert_eq!(self.size, key.size, "Size does not match");
-        // Implicitly assumes that T should not have any padding, but this should always be true of
+        // Implicitly assumes that T does not have any padding, but this should always be true of
         // primitive number types.
         assert_eq!(
             key.num_bytes % key.size,
@@ -185,8 +185,7 @@ impl<Ptr: CacheStorage> Default for TensorCache<Ptr> {
             enabled: RwLock::new(false),
             drop_queue: Default::default(),
             size: RwLock::new(0),
-            // TODO: default max size
-            max_size: RwLock::new(1_000_000_000),
+            max_size: RwLock::new(0),
         }
     }
 }
@@ -213,8 +212,9 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
     }
 
     /// Enables the cache.
-    pub(crate) fn enable(&self) {
+    pub(crate) fn enable(&self, size: usize) {
         *write!(self.enabled) = true;
+        *write!(self.max_size) = size;
     }
 
     /// Disables the cache.
@@ -352,7 +352,7 @@ mod test {
     #[test]
     fn test_try_pop_on_disabled_cache() {
         let cache: TensorCache<Vec<u8>> = Default::default();
-        cache.enable();
+        cache.enable(1000);
         assert!(cache.is_enabled());
         cache.disable();
         assert!(!cache.is_enabled());
@@ -363,7 +363,7 @@ mod test {
     #[test]
     fn test_try_pop_on_empty_cache() {
         let cache: TensorCache<Vec<u8>> = Default::default();
-        cache.enable();
+        cache.enable(1000);
         assert_eq!(cache.try_pop::<f32>(1), None);
         assert_eq!(cache.try_pop::<f32>(1), None);
     }
@@ -371,7 +371,7 @@ mod test {
     #[test]
     fn test_try_pop_on_cache_with_multiple_sizes_and_alignment() {
         let cache: TensorCache<Vec<u8>> = Default::default();
-        cache.enable();
+        cache.enable(1000);
         cache.insert::<f32>(1, vec![0.0]);
         cache.insert::<f32>(1, vec![1.0]);
         cache.insert::<f32>(1, vec![2.0]);
