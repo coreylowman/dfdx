@@ -256,20 +256,20 @@ mod tests {
 
         let x = dev.tensor([[[1.0, 0.0], [2.0, 3.0]]]);
         let y = x.leaky_trace().upscale2d::<4, 4, _>(NearestNeighbor);
-        assert_close(
-            &y.array(),
-            &[[
+        assert_aclose!(
+            y,
+            [[
                 [1.0, 1.0, 0.0, 0.0],
                 [1.0, 1.0, 0.0, 0.0],
                 [2.0, 2.0, 3.0, 3.0],
                 [2.0, 2.0, 3.0, 3.0],
-            ]],
+            ]]
         );
 
         let g = y.exp().mean().backward();
-        assert_close(
-            &g.get(&x).array(),
-            &[[[0.679570457, 0.25], [1.847264025, 5.021384231]]],
+        assert_aclose!(
+            g.get(&x),
+            [[[0.679570457, 0.25], [1.847264025, 5.021384231]]]
         );
     }
 
@@ -279,21 +279,21 @@ mod tests {
 
         let x = dev.tensor([[[1.0, 0.0, 2.0], [2.0, 3.0, 4.0]]]);
         let y = x.leaky_trace().upscale2d::<2, 7, _>(NearestNeighbor);
-        assert_close(
-            &y.array(),
-            &[[
+        assert_aclose!(
+            y,
+            [[
                 [1.0, 1.0, 1.0, 0.0, 0.0, 2.0, 2.0],
                 [2.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0],
-            ]],
+            ]]
         );
 
         let g = y.exp().mean().backward();
-        assert_close(
-            &g.get(&x).array(),
-            &[[
+        assert_aclose!(
+            g.get(&x),
+            [[
                 [0.582488963, 0.142857143, 1.055579443],
                 [1.583369164, 2.869362418, 7.799735719],
-            ]],
+            ]]
         );
     }
 
@@ -340,20 +340,20 @@ mod tests {
 
         let x = dev.tensor([[[1.0, 0.0], [2.0, 3.0]]]);
         let y = x.leaky_trace().upscale2d::<4, 4, _>(Bilinear);
-        assert_close(
-            &y.array(),
-            &[[
+        assert_aclose!(
+            y,
+            [[
                 [1.0, 0.66666663, 0.33333331, 0.0],
                 [1.33333325, 1.22222221, 1.11111116, 1.0],
                 [1.66666675, 1.77777779, 1.88888907, 2.0],
                 [2.0, 2.33333325, 2.66666651, 3.0],
-            ]],
+            ]]
         );
 
         let g = y.exp().mean().backward();
-        assert_close(
-            &g.get(&x).array(),
-            &[[[0.8130764, 0.6928807], [1.8153939, 2.7659647]]],
+        assert_aclose!(
+            g.get(&x),
+            [[[0.8130764, 0.6928807], [1.8153939, 2.7659647]]]
         );
     }
 
@@ -363,21 +363,21 @@ mod tests {
 
         let x = dev.tensor([[[1.0, 0.0, 2.0], [2.0, 3.0, 4.0]]]);
         let y = x.leaky_trace().upscale2d::<2, 7, _>(Bilinear);
-        assert_close(
-            &y.array(),
-            &[[
+        assert_aclose!(
+            y,
+            [[
                 [1.0, 0.6666666, 0.3333333, 0.0, 0.6666667, 1.3333335, 2.0],
                 [2.0, 2.3333333, 2.6666665, 3.0, 3.3333335, 3.6666667, 4.0],
-            ]],
+            ]]
         );
 
         let g = y.exp().mean().backward();
-        assert_close(
-            &g.get(&x).array(),
-            &[[
+        assert_aclose!(
+            g.get(&x),
+            [[
                 [0.3201411, 0.3673356, 0.7548153],
                 [1.3615142, 4.6318388, 6.4302063],
-            ]],
+            ]]
         );
     }
 

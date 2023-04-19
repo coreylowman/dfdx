@@ -317,6 +317,54 @@ pub(crate) mod tests {
         a.assert_close(b, T::DEFAULT_TOLERANCE);
     }
 
+    pub trait NdMap {
+        type Elem;
+        type Mapped<O>;
+        fn ndmap<O, F: Copy + FnMut(Self::Elem) -> O>(self, f: F) -> Self::Mapped<O>;
+    }
+
+    impl NdMap for f32 {
+        type Elem = Self;
+        type Mapped<O> = O;
+        fn ndmap<O, F: Copy + FnMut(Self::Elem) -> O>(self, mut f: F) -> O {
+            f(self)
+        }
+    }
+
+    impl NdMap for f64 {
+        type Elem = Self;
+        type Mapped<O> = O;
+        fn ndmap<O, F: Copy + FnMut(Self::Elem) -> O>(self, mut f: F) -> O {
+            f(self)
+        }
+    }
+
+    impl<T: NdMap, const M: usize> NdMap for [T; M] {
+        type Elem = T::Elem;
+        type Mapped<O> = [T::Mapped<O>; M];
+        fn ndmap<O, F: Copy + FnMut(Self::Elem) -> O>(self, f: F) -> Self::Mapped<O> {
+            self.map(|t| t.ndmap(f))
+        }
+    }
+
+    #[macro_export]
+    macro_rules! assert_aclose {
+        ($Lhs:expr, $Rhs:expr) => {
+            assert_close(
+                &$Lhs.array(),
+                &$Rhs.ndmap(|x| num_traits::FromPrimitive::from_f64(x).unwrap()),
+            )
+        };
+        ($Lhs:expr, $Rhs:expr, $Tolerance:expr) => {
+            assert_close_with_tolerance(
+                &$Lhs.array(),
+                &$Rhs.ndmap(|x| num_traits::FromPrimitive::from_f64(x).unwrap()),
+                num_traits::FromPrimitive::from_f64($Tolerance).unwrap(),
+            )
+        };
+    }
+    pub(crate) use assert_aclose;
+
     pub fn assert_close_with_tolerance<T: AssertClose + std::fmt::Debug>(
         a: &T,
         b: &T,

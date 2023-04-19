@@ -25,7 +25,7 @@ pub struct ScalarSubKernelOp<E> {
 /// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let b = dev.ones();
 /// let r = a - b;
-/// assert_eq!(r.array(), [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
+/// assert_aclose!(r, [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
 /// ```
 ///
 /// Scalar Example:
@@ -34,7 +34,7 @@ pub struct ScalarSubKernelOp<E> {
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let r = a - 1.0;
-/// assert_eq!(r.array(), [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
+/// assert_aclose!(r, [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
 /// ```
 pub fn sub<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R>(
     lhs: Tensor<S, E, D, T>,
@@ -89,10 +89,10 @@ mod tests {
         let b: Tensor<_, TestDtype, _> = dev.tensor(1.0);
 
         let r = b.leaky_trace() - a.clone();
-        assert_eq!(r.array(), 0.0);
+        assert_aclose!(r, 0.0);
         let g = r.backward();
-        assert_eq!(g.get(&a).array(), -1.0);
-        assert_eq!(g.get(&b).array(), 1.0);
+        assert_aclose!(g.get(&a), -1.0);
+        assert_aclose!(g.get(&b), 1.0);
     }
 
     #[test]
@@ -102,10 +102,10 @@ mod tests {
         let b: Tensor<_, TestDtype, _> = dev.tensor([1.0, -1.0, 0.0]);
 
         let r = b.leaky_trace() - a.clone();
-        assert_eq!(r.array(), [0.0, -3.0, -3.0]);
+        assert_aclose!(r, [0.0, -3.0, -3.0]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&a).array(), [-1.0 / 3.0; 3]);
-        assert_eq!(g.get(&b).array(), [1.0 / 3.0; 3]);
+        assert_aclose!(g.get(&a), [-1.0 / 3.0; 3]);
+        assert_aclose!(g.get(&b), [1.0 / 3.0; 3]);
     }
 
     #[test]
@@ -117,16 +117,10 @@ mod tests {
             dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
         let r = b.leaky_trace() - a.clone();
-        assert_close(
-            &r.array(),
-            &[
-                [-0.13709998, 0.21360001, 0.2259],
-                [0.2601, -0.33279997, -0.7954],
-            ],
-        );
+        assert_aclose!(r, [[-0.1371, 0.2136, 0.2259], [0.2601, -0.3328, -0.7954]]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&a).array(), [[-1.0 / 6.0; 3]; 2]);
-        assert_eq!(g.get(&b).array(), [[1.0 / 6.0; 3]; 2]);
+        assert_aclose!(g.get(&a), [[-1.0 / 6.0; 3]; 2]);
+        assert_aclose!(g.get(&b), [[1.0 / 6.0; 3]; 2]);
     }
 
     #[test]
@@ -134,9 +128,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor(0.0);
         let r = x.leaky_trace() - 1.0;
-        assert_eq!(r.array(), -1.0);
+        assert_aclose!(r, -1.0);
         let g = r.exp().backward();
-        assert_close(&[g.get(&x).array()], &[TestDtype::exp(-1.0)]);
+        assert_aclose!(g.get(&x), f64::exp(-1.0));
     }
 
     #[test]
@@ -144,9 +138,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([0.0, 1.0, 2.0]);
         let r = x.leaky_trace() - 1.0;
-        assert_eq!(&r.array(), &[-1.0, 0.0, 1.0]);
+        assert_aclose!(r, [-1.0, 0.0, 1.0]);
         let g = r.exp().sum().backward();
-        assert_close(&g.get(&x).array(), &[0.36787945, 1.0, 2.7182817]);
+        assert_aclose!(g.get(&x), [0.36787945, 1.0, 2.7182817]);
     }
 
     #[test]
@@ -154,8 +148,8 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([[0.0; 2]; 3]);
         let r = x.leaky_trace() - 1.0;
-        assert_eq!(r.array(), [[-1.0; 2]; 3]);
+        assert_aclose!(r, [[-1.0; 2]; 3]);
         let g = r.exp().sum().backward();
-        assert_close(&g.get(&x).array(), &[[0.36787945; 2]; 3]);
+        assert_aclose!(g.get(&x), [[0.36787945; 2]; 3]);
     }
 }

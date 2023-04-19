@@ -75,12 +75,12 @@ mod tests {
         ]);
         let r1 = a.leaky_trace().huber_error(b.leaky_trace(), 1.0);
         let r2 = a.leaky_trace().huber_error(b.leaky_trace(), 100.0);
-        assert_close(
-            &r1.array(),
-            &[
+        assert_aclose!(
+            r1,
+            [
                 [0.8626251, 0.0013595072, 0.37522575],
                 [0.16297975, 0.003332735, 0.79848814],
-            ],
+            ]
         );
         assert_close(&r2.array(), &((a - b).square() / 2.0).array());
     }

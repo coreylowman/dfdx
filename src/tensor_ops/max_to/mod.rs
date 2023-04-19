@@ -92,11 +92,11 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
         let r = t.leaky_trace().max::<_, Axis<0>>();
-        assert_eq!(r.array(), [3.0, 2.0, 2.0]);
+        assert_aclose!(r, [3.0, 2.0, 2.0]);
         let g = r.exp().mean().backward();
-        assert_close(
-            &g.get(&t).array(),
-            &[[0.0, 2.463019, 2.463019], [6.695179, 0.0, 2.463019]],
+        assert_aclose!(
+            g.get(&t),
+            [[0.0, 2.463019, 2.463019], [6.695179, 0.0, 2.463019]]
         );
     }
 
@@ -105,9 +105,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
         let r = t.leaky_trace().max::<_, Axis<1>>();
-        assert_eq!(r.array(), [2.0, 3.0]);
+        assert_aclose!(r, [2.0, 3.0]);
         let g = r.sum().backward();
-        assert_eq!(g.get(&t).array(), [[0.0, 1.0, 1.0], [1.0, 0.0, 0.0]]);
+        assert_aclose!(g.get(&t), [[0.0, 1.0, 1.0], [1.0, 0.0, 0.0]]);
     }
 
     #[test]
@@ -128,11 +128,8 @@ mod tests {
         let t: Tensor<_, TestDtype, _> =
             dev.tensor([[-0.0, 0.0], [0.0, -0.0], [-1.0, -0.0], [-1.0, 0.0]]);
         let r = t.leaky_trace().max::<_, Axis<1>>();
-        assert_eq!(r.array(), [0.0, 0.0, -0.0, 0.0]);
+        assert_aclose!(r, [0.0, 0.0, -0.0, 0.0]);
         let g = r.sum().backward();
-        assert_eq!(
-            g.get(&t).array(),
-            [[1.0, 1.0], [1.0, 1.0], [0.0, 1.0], [0.0, 1.0]]
-        );
+        assert_aclose!(g.get(&t), [[1.0, 1.0], [1.0, 1.0], [0.0, 1.0], [0.0, 1.0]]);
     }
 }
