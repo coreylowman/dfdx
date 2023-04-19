@@ -41,9 +41,7 @@ pub trait Device<E: Dtype>:
     + super::super::roll::RollKernel<E>
 
     // matmuls
-    + super::super::matmul::VecMatKernel<E>
     + super::super::matmul::MatMatKernel<E>
-    + super::super::matmul::VecVecKernel<E>
     + super::super::matmul::MatMatBrKernel<E>
     + super::super::matmul::MatMatBatch3Kernel<E>
     + super::super::matmul::MatMatBatch4Kernel<E>

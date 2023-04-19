@@ -6,9 +6,11 @@ pub(super) mod cpu_kernel;
 pub(super) mod cuda_kernel;
 
 use crate::{
-    shapes::{Dim, Dtype, Shape},
+    shapes::{Const, Dim, Dtype, Shape},
     tensor::{DeviceStorage, HasErr, Merge, PutTape, SplitTape, Tape, Tensor},
 };
+
+use super::reshape_to::{ReshapeKernel, ReshapeTo};
 
 /// Matrix * Matrix, Vector * Matrix, Vector * Vector, and broadcasted/batched versions.
 ///
@@ -108,59 +110,6 @@ fn try_binary_op<
     Ok(out.put_tape(tape))
 }
 
-pub trait VecVecKernel<E: Dtype>: DeviceStorage {
-    fn forward<M: Dim, N: Dim>(
-        &self,
-        lhs: &Tensor<(M,), E, Self>,
-        rhs: &Tensor<(N,), E, Self>,
-    ) -> Result<Tensor<(M, N), E, Self>, Self::Err>;
-
-    fn backward<M: Dim, N: Dim>(
-        &self,
-        lhs: &Tensor<(M,), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(N,), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>;
-}
-
-impl<M: Dim, N: Dim, E: Dtype, D: VecVecKernel<E>, T: Tape<E, D> + Merge<R>, R: Tape<E, D>>
-    TryMatMul<Tensor<(N,), E, D, R>> for Tensor<(M,), E, D, T>
-{
-    type Output = Tensor<(M, N), E, D, T>;
-    fn try_matmul(self, rhs: Tensor<(N,), E, D, R>) -> Result<Self::Output, Self::Err> {
-        try_binary_op(self, rhs, D::forward, D::backward)
-    }
-}
-
-pub trait VecMatKernel<E: Dtype>: DeviceStorage {
-    fn forward<K: Dim, N: Dim>(
-        &self,
-        lhs: &Tensor<(K,), E, Self>,
-        rhs: &Tensor<(K, N), E, Self>,
-    ) -> Result<Tensor<(N,), E, Self>, Self::Err>;
-
-    fn backward<K: Dim, N: Dim>(
-        &self,
-        lhs: &Tensor<(K,), E, Self>,
-        grad_lhs: &mut Self::Vec<E>,
-        rhs: &Tensor<(K, N), E, Self>,
-        grad_rhs: &mut Self::Vec<E>,
-        grad_out: &Self::Vec<E>,
-    ) -> Result<(), Self::Err>;
-}
-
-impl<K: Dim, N: Dim, E: Dtype, D: VecMatKernel<E>, T: Tape<E, D> + Merge<R>, R: Tape<E, D>>
-    TryMatMul<Tensor<(K, N), E, D, R>> for Tensor<(K,), E, D, T>
-{
-    type Output = Tensor<(N,), E, D, T>;
-    fn try_matmul(self, rhs: Tensor<(K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
-        assert_eq!(self.shape.0, rhs.shape.0);
-        try_binary_op(self, rhs, D::forward, D::backward)
-    }
-}
-
 pub trait MatMatKernel<E: Dtype>: DeviceStorage {
     fn forward<M: Dim, K: Dim, N: Dim>(
         &self,
@@ -176,6 +125,50 @@ pub trait MatMatKernel<E: Dtype>: DeviceStorage {
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
+}
+
+impl<M: Dim, N: Dim, E: Dtype, D, T: Tape<E, D> + Merge<R>, R: Tape<E, D>>
+    TryMatMul<Tensor<(N,), E, D, R>> for Tensor<(M,), E, D, T>
+where
+    D: MatMatKernel<E> + ReshapeKernel<E>,
+{
+    type Output = Tensor<(M, N), E, D, T>;
+    fn try_matmul(self, rhs: Tensor<(N,), E, D, R>) -> Result<Self::Output, Self::Err> {
+        let m = self.shape.0;
+        let n = rhs.shape.0;
+        let lhs = self.try_reshape_like(&(m, Const::<1>)).unwrap()?;
+        lhs.try_matmul(rhs.try_reshape_like(&(Const::<1>, n)).unwrap()?)
+    }
+}
+
+impl<K: Dim, N: Dim, E: Dtype, D, T: Tape<E, D> + Merge<R>, R: Tape<E, D>>
+    TryMatMul<Tensor<(K, N), E, D, R>> for Tensor<(K,), E, D, T>
+where
+    D: MatMatKernel<E> + ReshapeKernel<E>,
+{
+    type Output = Tensor<(N,), E, D, T>;
+    fn try_matmul(self, rhs: Tensor<(K, N), E, D, R>) -> Result<Self::Output, Self::Err> {
+        let k1 = self.shape.0;
+        let (k2, n) = rhs.shape;
+        assert_eq!(k1, k2);
+        let lhs = self.try_reshape_like(&(Const::<1>, k1)).unwrap()?;
+        lhs.try_matmul(rhs)?.try_reshape_like(&(n,)).unwrap()
+    }
+}
+
+impl<M: Dim, K: Dim, E: Dtype, D, T: Tape<E, D> + Merge<R>, R: Tape<E, D>>
+    TryMatMul<Tensor<(K,), E, D, R>> for Tensor<(M, K), E, D, T>
+where
+    D: MatMatKernel<E> + ReshapeKernel<E>,
+{
+    type Output = Tensor<(M,), E, D, T>;
+    fn try_matmul(self, rhs: Tensor<(K,), E, D, R>) -> Result<Self::Output, Self::Err> {
+        let (m, k1) = self.shape;
+        let k2 = rhs.shape.0;
+        assert_eq!(k1, k2);
+        let rhs = rhs.try_reshape_like(&(k2, Const::<1>)).unwrap()?;
+        self.try_matmul(rhs)?.try_reshape_like(&(m,)).unwrap()
+    }
 }
 
 impl<M: Dim, K: Dim, N: Dim, E: Dtype, D: MatMatKernel<E>, T, R> TryMatMul<Tensor<(K, N), E, D, R>>
