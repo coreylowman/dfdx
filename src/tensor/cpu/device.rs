@@ -26,7 +26,7 @@ impl<T> CacheStorage for Vec<T> {
 
     fn size(&self) -> usize {
         // size in bytes of the underlying allocation
-        Layout::array::<T>(self.capacity()).unwrap().size()
+        Layout::array::<T>(self.len()).unwrap().size()
     }
 
     /// Unsafely converts the elements of a vector to a new type.
@@ -168,7 +168,7 @@ impl<E: Clone> Clone for CachableVec<E> {
 impl<E> Drop for CachableVec<E> {
     fn drop(&mut self) {
         let data = std::mem::take(&mut self.data);
-        self.cache.insert::<E>(data.len(), data);
+        self.cache.insert::<E>(data);
     }
 }
 

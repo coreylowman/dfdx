@@ -260,7 +260,7 @@ impl<E> Drop for CachableCudaSlice<E> {
         // Replaces the CudaSlice with a 0 length CudaSlice. This won't take additional
         // memory, but will give us ownership of the actual data.
         let data = std::mem::replace(&mut self.data, dev.null().unwrap());
-        self.cache.insert::<E>(data.len(), data);
+        self.cache.insert::<E>(data);
     }
 }
 

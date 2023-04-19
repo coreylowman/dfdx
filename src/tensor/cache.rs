@@ -283,6 +283,7 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             size: layout.size(),
             alignment: layout.align(),
         };
+        println!("{key:?}");
         // Check if there is a cached allocation.
         let reuse = read!(self.allocations)
             .get(&key)
@@ -298,6 +299,7 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             // which is also maintained by the block directly below.
             let allocation = items.allocations.pop().unwrap();
             allocation.check_key(&key);
+            println!("{:?} {}", allocation.size, allocation.alignment);
             *write!(self.size) -= allocation.size();
             Some(allocation.into_storage())
         } else {
@@ -306,7 +308,7 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
     }
 
     /// Inserts an allocation into the cache.
-    pub(crate) fn insert<E>(&self, len: usize, allocation: Ptr::Output<E>)
+    pub(crate) fn insert<E>(&self, allocation: Ptr::Output<E>)
     where
         Ptr::Output<E>: CacheStorage<Output<u8> = Ptr>,
     {
@@ -316,7 +318,7 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
 
         let allocation = CacheWrapper::from_storage(allocation);
         let layout = Layout::new::<E>();
-        let num_bytes = len * layout.size();
+        let num_bytes = allocation.size();
         let key = AllocationKey {
             num_bytes,
             size: layout.size(),
@@ -342,6 +344,10 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
         write!(self.allocations).clear();
         write!(self.drop_queue).clear();
         *write!(self.size) = 0;
+    }
+
+    fn clear_check(&self) {
+        self.set_max_size(0);
     }
 }
 
@@ -372,18 +378,18 @@ mod test {
     fn test_try_pop_on_cache_with_multiple_sizes_and_alignment() {
         let cache: TensorCache<Vec<u8>> = Default::default();
         cache.enable(1000);
-        cache.insert::<f32>(1, vec![0.0]);
-        cache.insert::<f32>(1, vec![1.0]);
-        cache.insert::<f32>(1, vec![2.0]);
-        cache.insert::<f32>(2, vec![3.0; 2]);
-        cache.insert::<f32>(2, vec![4.0; 2]);
-        cache.insert::<f32>(2, vec![5.0; 2]);
-        cache.insert::<f64>(1, vec![6.0]);
-        cache.insert::<f64>(1, vec![7.0]);
-        cache.insert::<f64>(1, vec![8.0]);
-        cache.insert::<f64>(2, vec![9.0; 2]);
-        cache.insert::<f64>(2, vec![10.0; 2]);
-        cache.insert::<f64>(2, vec![11.0; 2]);
+        cache.insert::<f32>(vec![0.0]);
+        cache.insert::<f32>(vec![1.0]);
+        cache.insert::<f32>(vec![2.0]);
+        cache.insert::<f32>(vec![3.0; 2]);
+        cache.insert::<f32>(vec![4.0; 2]);
+        cache.insert::<f32>(vec![5.0; 2]);
+        cache.insert::<f64>(vec![6.0]);
+        cache.insert::<f64>(vec![7.0]);
+        cache.insert::<f64>(vec![8.0]);
+        cache.insert::<f64>(vec![9.0; 2]);
+        cache.insert::<f64>(vec![10.0; 2]);
+        cache.insert::<f64>(vec![11.0; 2]);
         assert_eq!(cache.try_pop::<f32>(1), Some(vec![2.0]));
         assert_eq!(cache.try_pop::<f32>(1), Some(vec![1.0]));
         assert_eq!(cache.try_pop::<f32>(1), Some(vec![0.0]));
@@ -400,5 +406,62 @@ mod test {
         assert_eq!(cache.try_pop::<f64>(2), Some(vec![10.0; 2]));
         assert_eq!(cache.try_pop::<f64>(2), Some(vec![9.0; 2]));
         assert_eq!(cache.try_pop::<f64>(2), None);
+        cache.clear_check();
+    }
+
+    #[test]
+    fn test_shrink() {
+        let cache: TensorCache<Vec<u8>> = Default::default();
+        cache.enable(16);
+        cache.insert::<u8>(vec![1; 1]);
+        cache.insert::<u8>(vec![2; 1]);
+        cache.insert::<u8>(vec![1; 2]);
+        cache.insert::<u8>(vec![1; 4]);
+        cache.insert::<u8>(vec![1; 8]);
+        assert_eq!(cache.len(), 5);
+        assert_eq!(cache.size(), 16);
+        cache.insert::<u8>(vec![2; 8]);
+        assert_eq!(cache.len(), 2);
+        assert_eq!(cache.size(), 16);
+        cache.insert::<u8>(vec![3; 1]);
+        assert_eq!(cache.len(), 2);
+        assert_eq!(cache.size(), 9);
+        cache.insert::<u8>(vec![1; 12]);
+        assert_eq!(cache.len(), 2);
+        assert_eq!(cache.size(), 13);
+        cache.clear_check();
+    }
+
+
+    #[test]
+    fn test_pop_and_shrink() {
+        let cache: TensorCache<Vec<u8>> = Default::default();
+        cache.enable(16);
+        cache.insert::<u8>(vec![1; 1]);
+        cache.insert::<u8>(vec![2; 1]);
+        cache.insert::<u8>(vec![1; 2]);
+        cache.insert::<u8>(vec![1; 4]);
+        cache.insert::<u8>(vec![1; 8]);
+        assert_eq!(cache.len(), 5);
+        assert_eq!(cache.size(), 16);
+        
+        assert_eq!(cache.try_pop::<u8>(1), Some(vec![2]));
+        assert_eq!(cache.try_pop::<u8>(2), Some(vec![1; 2]));
+        assert_eq!(cache.len(), 3);
+        assert_eq!(cache.size(), 13);
+        
+        cache.insert::<u8>(vec![2; 8]);
+        assert_eq!(cache.len(), 2);
+        assert_eq!(cache.size(), 16);
+        
+        assert_eq!(cache.try_pop::<u8>(8), Some(vec![2; 8]));
+        assert_eq!(cache.len(), 1);
+        assert_eq!(cache.size(), 8);
+        
+        cache.insert::<u8>(vec![2; 4]);
+        assert_eq!(cache.len(), 2);
+        assert_eq!(cache.size(), 12);
+        
+        cache.clear_check();
     }
 }
