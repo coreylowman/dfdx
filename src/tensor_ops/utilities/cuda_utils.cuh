@@ -111,19 +111,28 @@ extern "C" __global__ void fill_with_f64(double *buf, double value, const size_t
 
 __device__ __forceinline__ float sqrtg(float a) { return sqrtf(a); }
 __device__ __forceinline__ double sqrtg(double a) { return sqrt(a); }
+__device__ __forceinline__ __half sqrtg(__half a) { return hsqrt(a); }
 __device__ __forceinline__ float powg(float a, float b) { return powf(a, b); }
 __device__ __forceinline__ double powg(double a, double b) { return pow(a, b); }
+__device__ __forceinline__ __half powg(__half a, __half b) { return hexp(__hmul(hlog(a), b)); }
 __device__ __forceinline__ float tanhg(float a) { return tanhf(a); }
 __device__ __forceinline__ double tanhg(double a) { return tanh(a); }
+__device__ __forceinline__ __half tanhg(__half a) { return __hdiv(hsin(a), hcos(a)); }
 __device__ __forceinline__ float maxg(float a, float b) { return fmaxf(a, b); }
 __device__ __forceinline__ double maxg(double a, double b) { return fmax(a, b); }
+__device__ __forceinline__ __half maxg(__half a, __half b) { return __hmax(a, b); } // __hmax_nan
 __device__ __forceinline__ float ming(float a, float b) { return fminf(a, b); }
 __device__ __forceinline__ double ming(double a, double b) { return fmin(a, b); }
+__device__ __forceinline__ __half ming(__half a, __half b) { return __hmin(a, b); } // __hmin_nan
 __device__ __forceinline__ float logg(float a) { return logf(a); }
 __device__ __forceinline__ double logg(double a) { return log(a); }
+__device__ __forceinline__ __half logg(__half a) { return hlog(a); }
 __device__ __forceinline__ float expg(float a) { return expf(a); }
 __device__ __forceinline__ double expg(double a) { return exp(a); }
+__device__ __forceinline__ __half expg(__half a) { return hexp(a); }
 __device__ __forceinline__ float absg(float a) { return fabsf(a); }
 __device__ __forceinline__ double absg(double a) { return fabs(a); }
+__device__ __forceinline__ __half absg(__half a) { return __habs(a); }
 __device__ __forceinline__ float copysigng(float a, float b) { return copysignf(a, b); }
 __device__ __forceinline__ double copysigng(double a, double b) { return copysign(a, b); }
+__device__ __forceinline__ __half copysigng(__half a, __half b) { return __hisnan(a) ? a : (__hge(a, __float2half(0.0f)) ? __habs(b) : __hneg(__habs(b))); }

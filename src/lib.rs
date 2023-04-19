@@ -251,6 +251,10 @@ pub(crate) mod tests {
 
     #[cfg(all(feature = "test-f64", feature = "test-f16"))]
     compile_error!("f64 and f16 cannot be tested at the same time");
+    #[cfg(all(feature = "test-f64", feature = "test-bf16"))]
+    compile_error!("f64 and bf16 cannot be tested at the same time");
+    #[cfg(all(feature = "test-f16", feature = "test-bf16"))]
+    compile_error!("f16 and bf16 cannot be tested at the same time");
 
     #[cfg(all(
         not(feature = "test-f16"),
