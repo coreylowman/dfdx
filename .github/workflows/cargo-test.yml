@@ -19,6 +19,11 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
+      - name: cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --features nightly,safetensors,numpy
       - name: test CPU f32
         uses: actions-rs/cargo@v1
         with:
