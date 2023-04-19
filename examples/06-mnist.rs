@@ -88,7 +88,8 @@ fn main() {
         let mut one_hotted = [0.0; 10];
         one_hotted[lbl] = 1.0;
         (
-            dev.tensor_from_vec(img, (Const::<784>,)).to_dtype::<half::f16>(),
+            dev.tensor_from_vec(img, (Const::<784>,))
+                .to_dtype::<half::f16>(),
             dev.tensor(one_hotted).to_dtype::<half::f16>(),
         )
     };

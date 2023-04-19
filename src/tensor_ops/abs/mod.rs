@@ -46,10 +46,10 @@ mod tests {
     #[test]
     fn test_abs() {
         let dev: TestDevice = Default::default();
-        let x = dev.tensor(test_dtype!([-2.0, -1.0, 0.0, 1.0, 2.0]));
+        let x = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]).to_dtype::<TestDtype>();
         let r = x.leaky_trace().abs();
-        assert_eq!(r.array(), test_dtype!([2.0, 1.0, 0.0, 1.0, 2.0]));
+        assert_close_to_literal!(r, [2.0, 1.0, 0.0, 1.0, 2.0]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&x).array(), test_dtype!([-0.2, -0.2, 0.0, 0.2, 0.2]));
+        assert_close_to_literal!(g.get(&x), [-0.2, -0.2, 0.0, 0.2, 0.2]);
     }
 }

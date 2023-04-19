@@ -203,9 +203,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([[[1.0, 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]]);
         let r = x.leaky_trace().max_pool2d::<2, 1, 0>();
-        assert_close(&r.array(), &[[[1., 1., 1.2]]]);
+        assert_close_to_literal!(r, [[[1., 1., 1.2]]]);
         let g = r.sum().backward();
-        assert_close(&g.get(&x).array(), &[[[1., 2., 0., 0.], [0., 0., 0., 1.]]]);
+        assert_close_to_literal!(g.get(&x), [[[1., 2., 0., 0.], [0., 0., 0., 1.]]]);
     }
 
     #[test]
@@ -213,9 +213,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([[[1., 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]]);
         let r = x.leaky_trace().min_pool2d::<2, 1, 0>();
-        assert_close(&r.array(), &[[[0.2, 0.2, 0.2]]]);
+        assert_close_to_literal!(r, [[[0.2, 0.2, 0.2]]]);
         let g = r.sum().backward();
-        assert_close(&g.get(&x).array(), &[[[0., 0., 0., 1.], [1., 2., 0., 0.]]]);
+        assert_close_to_literal!(g.get(&x), [[[0., 0., 0., 1.], [1., 2., 0., 0.]]]);
     }
 
     #[test]
@@ -223,15 +223,12 @@ mod tests {
         let dev = TestDevice::seed_from_u64(234);
         let x: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let r = x.leaky_trace().max_pool2d::<2, 2, 0>();
-        assert_close(
-            &r.array(),
-            &[[[1.79155397, 1.10126066]], [[1.14464748, 2.26301837]]],
-        );
+        assert_close_to_literal!(r, [[[1.79155397, 1.10126066]], [[1.14464748, 2.26301837]]]);
         let g = r.exp().mean().backward();
         #[rustfmt::skip]
-        assert_close(
-            &g.get(&x).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&x),
+            [
                 [[1.49969184, 0., 0., 0.75198889],[0., 0., 0., 0.],[0., 0., 0., 0.]],
                 [[0., 0., 2.40301466, 0.],[0.78533345, 0., 0., 0.],[0., 0., 0., 0.]]
             ]
@@ -243,18 +240,18 @@ mod tests {
         let dev = TestDevice::seed_from_u64(234);
         let x: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let r = x.leaky_trace().min_pool2d::<2, 2, 0>();
-        assert_close(
-            &r.array(),
-            &[[[-1.09635627, -1.07717276]], [[-0.01996479, -1.82562149]]],
+        assert_close_to_literal!(
+            r,
+            [[[-1.09635627, -1.07717276]], [[-0.01996479, -1.82562149]]]
         );
         let g = r.exp().mean().backward();
         #[rustfmt::skip]
-        assert_close(
-            &g.get(&x).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&x),
+            [
                 [[0., 0., 0., 0.],[0.083521545, 0., 0., 0.08513925],[0., 0., 0., 0.]],
                 [[0., 0.2450583, 0., 0.04027937],[0., 0., 0., 0.],[0., 0., 0., 0.]],
-            ],
+            ]
         );
     }
 
@@ -263,15 +260,12 @@ mod tests {
         let dev = TestDevice::seed_from_u64(234);
         let x: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let r = x.leaky_trace().avg_pool2d::<2, 2, 0>();
-        assert_close(
-            &r.array(),
-            &[[[0.03031558, -0.25052455]], [[0.39499030, 0.04878314]]],
-        );
+        assert_close_to_literal!(r, [[[0.03031558, -0.25052455]], [[0.39499030, 0.04878314]]]);
         let g = r.exp().mean().backward();
         #[rustfmt::skip]
-        assert_close(
-            &g.get(&x).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&x),
+            [
                 [[0.06442373, 0.06442373, 0.048649523, 0.048649523],[0.06442373, 0.06442373, 0.048649523, 0.048649523],[0.0, 0.0, 0.0, 0.0]],
                 [[0.09277311, 0.09277311, 0.06562454, 0.06562454],[0.09277311, 0.09277311, 0.06562454, 0.06562454],[0.0, 0.0, 0.0, 0.0]]
             ]
@@ -283,18 +277,18 @@ mod tests {
         let dev = TestDevice::seed_from_u64(234);
         let x: Tensor<Rank4<2, 4, 2, 2>, TestDtype, _> = dev.sample_normal();
         let r = x.leaky_trace().avg_pool2d::<1, 2, 0>();
-        assert_close(
-            &r.array(),
-            &[
+        assert_close_to_literal!(
+            r,
+            [
                 [[[1.791554]], [[-1.0963563]], [[0.86268073]], [[0.28538525]]],
                 [[[1.1446475]], [[0.2833436]], [[-1.2026008]], [[0.21327473]]],
-            ],
+            ]
         );
         let g = r.exp().mean().backward();
         #[rustfmt::skip]
-        assert_close(
-            &g.get(&x).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&x),
+            [
                 [[[0.7498459, 0.0], [0.0, 0.0]],[[0.041760772, 0.0], [0.0, 0.0]],[[0.29618803, 0.0], [0.0, 0.0]],[[0.16628431, 0.0], [0.0, 0.0]]],
                 [[[0.39266673, 0.0], [0.0, 0.0]],[[0.16594516, 0.0], [0.0, 0.0]],[[0.037551485, 0.0], [0.0, 0.0]],[[0.15471558, 0.0], [0.0, 0.0]]]
             ]

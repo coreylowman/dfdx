@@ -53,9 +53,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, 0.0, 5.0]);
         let r = -(a.leaky_trace());
-        assert_close(&r.array(), &[2.0, 0.0, -5.0]);
+        assert_close_to_literal!(r, [2.0, 0.0, -5.0]);
         // NOTE: .exp() so we can make sure neg is using result grad properly
         let g = r.exp().mean().backward();
-        assert_close(&g.get(&a).array(), &[-2.463019, -0.33333334, -0.0022459824]);
+        assert_close_to_literal!(g.get(&a), [-2.463019, -0.33333334, -0.0022459824]);
     }
 }

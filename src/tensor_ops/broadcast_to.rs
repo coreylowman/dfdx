@@ -136,7 +136,7 @@ mod tests {
         let a: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
         let b: Tensor<Rank2<5, 3>, TestDtype, _> = dev.sample_normal();
         let a_up = a.leaky_trace().broadcast::<Rank2<5, 3>, _>();
-        a_up.array().assert_close(&[a.array(); 5], 1e-4);
+        assert_close!(a_up.array(), [a.array(); 5], 1e-4);
         let r = a_up * b.clone();
         let g = r.exp().mean().backward();
 
@@ -145,8 +145,8 @@ mod tests {
         let a_grad = (b.clone() * (b.clone() * a_up.clone()).exp()).sum::<Rank1<3>, _>() / 15.0;
         // b's gradient: (a * (b * a).exp()) / 15
         let b_grad = (a_up.clone() * (b.clone() * a_up).exp()) / 15.0;
-        g.get(&a).array().assert_close(&a_grad.array(), 1e-4);
-        g.get(&b).array().assert_close(&b_grad.array(), 1e-4);
+        assert_close_to_tensor!(g.get(&a), a_grad, 1e-4);
+        assert_close_to_tensor!(g.get(&b), b_grad, 1e-4);
     }
 
     #[test]
@@ -159,6 +159,6 @@ mod tests {
             .exp()
             .mean()
             .backward();
-        assert_close(&g.get(&a).array(), &a.array().map(|x| x.exp() / 3.0));
+        assert_close_to_tensor!(g.get(&a), a.exp() / 3.0);
     }
 }
