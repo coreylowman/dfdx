@@ -164,7 +164,7 @@ mod tests {
         );
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let out = model.forward(t);
-        assert_aclose!(out, [-0.04820138, -0.03807970, 0.0, 0.76159415, 0.96402758])
+        assert_close_to_literal!(out, [-0.04820138, -0.03807970, 0.0, 0.76159415, 0.96402758])
     }
 
     #[test]
@@ -191,6 +191,6 @@ mod tests {
         let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         model.1.a = dev.tensor([0.05, 0.05, 0.05, 0.05, 0.05]);
         let out = model.forward(t);
-        assert_aclose!(out, [-0.04820138, -0.03807970, 0.0, 0.76159415, 0.96402758])
+        assert_close_to_literal!(out, [-0.04820138, -0.03807970, 0.0, 0.76159415, 0.96402758])
     }
 }

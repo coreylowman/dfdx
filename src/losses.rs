@@ -136,9 +136,9 @@ mod tests {
         let y: Tensor<_, TestDtype, _> =
             dev.tensor([-0.90954804, -1.0193185, -0.39221755, 2.2524886, 1.3035554]);
         let loss = mse_loss(x.leaky_trace(), y);
-        assert_aclose!(loss, 1.0846305);
+        assert_close_to_literal!(loss, 1.0846305);
         let g = loss.backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&x),
             [0.7128116, 0.31071725, -0.24555098, -0.43896183, 0.10037976]
         );
@@ -152,9 +152,9 @@ mod tests {
         let y: Tensor<_, TestDtype, _> =
             dev.tensor([-0.90954804, -1.0193186, -0.39221755, 2.2524886, 1.3035554]);
         let loss = mae_loss(x.leaky_trace(), y);
-        assert_aclose!(loss, 0.9042107);
+        assert_close_to_literal!(loss, 0.9042107);
         let g = loss.backward();
-        assert_aclose!(g.get(&x), [0.2, 0.2, -0.2, -0.2, 0.2]);
+        assert_close_to_literal!(g.get(&x), [0.2, 0.2, -0.2, -0.2, 0.2]);
     }
 
     #[test]
@@ -169,16 +169,16 @@ mod tests {
             [0.15627657, 0.29779273, 0.10897867, 0.2879545, 0.14899758],
         ]);
         let loss = cross_entropy_with_logits_loss(x.leaky_trace(), y.clone());
-        assert_aclose!(loss, 1.9889611);
+        assert_close_to_literal!(loss, 1.9889611);
         let g = loss.backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&x),
             [
                 [-0.0972354, 0.0515665, -0.09250933, 0.07864318, 0.05953507],
                 [0.0035581, 0.1792296, -0.0074167, -0.1233234, -0.0520476],
             ]
         );
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&y),
             [
                 [1.0454637, 0.6836907, 1.4958019, 0.70222294, 0.56051415],
@@ -198,7 +198,7 @@ mod tests {
             targ[i] = 1.0;
             let y = dev.tensor(targ);
             let loss = cross_entropy_with_logits_loss(x.leaky_trace(), y.clone());
-            assert_aclose!(loss, losses[i]);
+            assert_close_to_literal!(loss, losses[i]);
         }
     }
 
@@ -220,9 +220,9 @@ mod tests {
             [0.0166, 0.8512, 0.1322],
         ]);
         let loss = kl_div_with_logits_loss(logits.leaky_trace(), targ);
-        assert_aclose!(loss, 0.40656143);
+        assert_close_to_literal!(loss, 0.40656143);
         let g = loss.backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&logits),
             [
                 [-0.031813223, -0.044453412, 0.07626665],
@@ -248,11 +248,11 @@ mod tests {
             [0.7026833, 0.5563793, 0.6429267],
         ]);
         let loss = binary_cross_entropy_with_logits_loss(logit.leaky_trace(), prob.clone());
-        assert_aclose!(loss, 0.7045728);
+        assert_close_to_literal!(loss, 0.7045728);
 
         let g = loss.backward();
 
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&logit),
             &[
                 [0.003761424, -0.054871976, 0.025817735],
@@ -261,7 +261,7 @@ mod tests {
             ]
         );
 
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&prob),
             &[
                 [0.04546672, 0.07451131, -0.10224107],
@@ -279,11 +279,11 @@ mod tests {
         let targ: Tensor<_, TestDtype, _> = dev.tensor([[0.0, 0.5, 1.0]; 3]);
 
         let loss = binary_cross_entropy_with_logits_loss(logit.leaky_trace(), targ.clone());
-        assert_aclose!(loss, 33.479964);
+        assert_close_to_literal!(loss, 33.479964);
 
         let g = loss.backward();
 
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&logit),
             &[
                 [0.11111111, 0.055555556, 0.0],
@@ -292,7 +292,7 @@ mod tests {
             ]
         );
 
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&targ),
             &[
                 [-11.111112, -11.111112, -11.111112],
@@ -317,10 +317,10 @@ mod tests {
         ]);
 
         let loss = huber_loss(x.leaky_trace(), y.clone(), 0.5);
-        assert_aclose!(loss, 0.24506615);
+        assert_close_to_literal!(loss, 0.24506615);
 
         let g = loss.backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&x),
             &[
                 [-0.016490579, 0.014802615, -0.033333335, -0.012523981, 0.0],
@@ -328,7 +328,7 @@ mod tests {
                 [0.033333335, -0.033333335, -0.02631244, 0.033333335, 0.0],
             ]
         );
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&y),
             &[
                 [0.016490579, -0.014802615, 0.033333335, 0.012523981, 0.0],
@@ -353,10 +353,10 @@ mod tests {
         ]);
 
         let loss = smooth_l1_loss(x.leaky_trace(), y.clone(), 0.5);
-        assert_aclose!(loss, 0.4901323);
+        assert_close_to_literal!(loss, 0.4901323);
 
         let g = loss.backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&x),
             &[
                 [-0.032981157, 0.02960523, -0.06666667, -0.025047962, 0.0],
@@ -364,7 +364,7 @@ mod tests {
                 [0.06666667, -0.06666667, -0.05262488, 0.06666667, 0.0],
             ]
         );
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&y),
             &[
                 [0.032981157, -0.02960523, 0.06666667, 0.025047962, 0.0],

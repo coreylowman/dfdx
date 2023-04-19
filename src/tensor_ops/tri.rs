@@ -83,7 +83,7 @@ mod tests {
                 [1., 2., 3., 4., 5., 6.],
             ]; 4]; 3],
         );
-        assert_aclose!(
+        assert_close_to_literal!(
             t.clone().lower_tri(None),
             [[[
                 [1., 0., 0., 0., 0., 0.],
@@ -93,7 +93,7 @@ mod tests {
                 [1., 2., 3., 4., 5., 0.],
             ]; 4]; 3]
         );
-        assert_aclose!(
+        assert_close_to_literal!(
             t.clone().lower_tri(2),
             [[[
                 [1., 2., 3., 0., 0., 0.],
@@ -103,7 +103,7 @@ mod tests {
                 [1., 2., 3., 4., 5., 6.],
             ]; 4]; 3]
         );
-        assert_aclose!(
+        assert_close_to_literal!(
             t.upper_tri(-1),
             [[[
                 [1., 2., 3., 4., 5., 6.],

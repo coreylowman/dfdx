@@ -49,9 +49,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r = t.leaky_trace().stddev::<Rank1<4>, _>(1e-8);
-        assert_aclose!(r, [0.5, 0.0001, 1.0, 3.0]);
+        assert_close_to_literal!(r, [0.5, 0.0001, 1.0, 3.0]);
         let g = r.mean().backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&t),
             [[0.125, 0.0, -0.125, -0.125], [-0.125, 0.0, 0.125, 0.125]]
         );
@@ -62,9 +62,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
         let r = t.leaky_trace().stddev::<Rank1<2>, _>(0.0);
-        assert_aclose!(r, [1.118034, 3.7666297]);
+        assert_close_to_literal!(r, [1.118034, 3.7666297]);
         let g = r.mean().backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&t),
             [
                 [-0.16770509, -0.0559017, 0.0559017, 0.16770509],

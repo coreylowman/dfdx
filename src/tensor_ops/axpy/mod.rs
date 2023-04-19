@@ -85,7 +85,7 @@ mod tests {
 
         a.axpy(0.01, &b, 0.99);
 
-        assert_aclose!(
+        assert_close_to_literal!(
             a,
             [
                 [-1.505, -1.495, -1.485, -1.475, -1.465],

@@ -147,7 +147,7 @@ mod tests {
 
         let x = dev.tensor([0, 0, 1]);
         let y = model.forward(x.leaky_trace());
-        assert_aclose!(
+        assert_close_to_literal!(
             y,
             [
                 [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
@@ -157,7 +157,7 @@ mod tests {
         );
 
         let g = y.square().mean().backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&model.weight),
             [
                 [
@@ -188,7 +188,7 @@ mod tests {
 
         let x = dev.tensor([[0, 0], [0, 1]]);
         let y = model.forward(x.leaky_trace());
-        assert_aclose!(
+        assert_close_to_literal!(
             y,
             [
                 [
@@ -203,7 +203,7 @@ mod tests {
         );
 
         let g = y.square().mean().backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&model.weight),
             [
                 [

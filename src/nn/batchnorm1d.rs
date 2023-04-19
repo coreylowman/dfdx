@@ -226,7 +226,7 @@ mod tests {
         let mut bn = BatchNorm1D::<2>::build_on_device(&dev);
 
         let y1 = bn.forward_mut(x1.leaky_trace());
-        assert_aclose!(
+        assert_close_to_literal!(
             y1,
             [
                 [1.3168651, 0.19157785],
@@ -236,11 +236,11 @@ mod tests {
         );
 
         let g = y1.exp().mean().backward();
-        assert_aclose!(bn.running_mean, [-0.09994803, 0.07696156]);
-        assert_aclose!(bn.running_var, [1.1536077, 0.9321649]);
-        assert_aclose!(g.get(&bn.scale), [0.72945416, 0.5493023]);
-        assert_aclose!(g.get(&bn.bias), [0.8119954, 0.7564688]);
-        assert_aclose!(
+        assert_close_to_literal!(bn.running_mean, [-0.09994803, 0.07696156]);
+        assert_close_to_literal!(bn.running_var, [1.1536077, 0.9321649]);
+        assert_close_to_literal!(g.get(&bn.scale), [0.72945416, 0.5493023]);
+        assert_close_to_literal!(g.get(&bn.bias), [0.8119954, 0.7564688]);
+        assert_close_to_literal!(
             g.get(&x1),
             [
                 [0.023908734, -0.18436226],
@@ -262,7 +262,7 @@ mod tests {
         let mut bn = BatchNorm1D::<DIMENSION>::build_on_device(&dev);
 
         let y1 = bn.forward_mut(x1.leaky_trace());
-        assert_aclose!(
+        assert_close_to_literal!(
             y1,
             [
                 [[0.059494145, 0.21366562], [-1.0539212, 0.5588659]],
@@ -272,11 +272,11 @@ mod tests {
         );
 
         let g = y1.exp().mean().backward();
-        assert_aclose!(bn.running_mean, [0.065665804, -0.07374697]);
-        assert_aclose!(bn.running_var, [1.0069065, 1.2117702]);
-        assert_aclose!(g.get(&bn.scale), [0.4112549, 0.6407272]);
-        assert_aclose!(g.get(&bn.bias), [0.7071625, 0.78455544]);
-        assert_aclose!(
+        assert_close_to_literal!(bn.running_mean, [0.065665804, -0.07374697]);
+        assert_close_to_literal!(bn.running_var, [1.0069065, 1.2117702]);
+        assert_close_to_literal!(g.get(&bn.scale), [0.4112549, 0.6407272]);
+        assert_close_to_literal!(g.get(&bn.bias), [0.7071625, 0.78455544]);
+        assert_close_to_literal!(
             g.get(&x1),
             [
                 [[-0.035488494, -0.031065114], [0.0067214966, -0.02774144]],

@@ -49,9 +49,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, TestDtype::NAN, -TestDtype::NAN, 4.0]);
         let r = t.leaky_trace().nans_to(0.0);
-        assert_aclose!(r, [1.0, 0.0, 0.0, 4.0]);
+        assert_close_to_literal!(r, [1.0, 0.0, 0.0, 4.0]);
         // NOTE: .exp() so we cover case where nans_to() needs to use result grad
         let g = r.exp().mean().backward();
-        assert_aclose!(g.get(&t), [0.67957044, 0.0, 0.0, 13.649537]);
+        assert_close_to_literal!(g.get(&t), [0.67957044, 0.0, 0.0, 13.649537]);
     }
 }

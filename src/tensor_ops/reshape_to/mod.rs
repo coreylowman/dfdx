@@ -181,9 +181,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]);
         let b = a.leaky_trace().reshape::<Rank2<2, 3>>();
-        assert_aclose!(b, [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
+        assert_close_to_literal!(b, [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
         let g = b.exp().mean().backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&a),
             [0.18419516, 0.20356713, 0.22497648, 0.24863747, 0.2747869, 0.3036865]
         )
@@ -197,9 +197,9 @@ mod tests {
             .leaky_trace()
             .permute::<Rank2<3, 2>, _>()
             .reshape::<Rank1<6>>();
-        assert_aclose!(b, [0.1, 0.4, 0.2, 0.5, 0.3, 0.6]);
+        assert_close_to_literal!(b, [0.1, 0.4, 0.2, 0.5, 0.3, 0.6]);
         let g = b.exp().mean().backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&a),
             [
                 [0.18419516, 0.20356713, 0.22497648],

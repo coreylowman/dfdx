@@ -115,9 +115,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.leaky_trace().powi(3);
-        assert_aclose!(r, [-8., -1., 0., 1., 8.]);
+        assert_close_to_literal!(r, [-8., -1., 0., 1., 8.]);
         let g = r.sum().backward();
-        assert_aclose!(g.get(&t), [12., 3., 0., 3., 12.]);
+        assert_close_to_literal!(g.get(&t), [12., 3., 0., 3., 12.]);
     }
 
     #[test]
@@ -125,8 +125,8 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.leaky_trace().powi(-3);
-        assert_aclose!(r, [-0.125, -1.0, f64::INFINITY, 1.0, 0.125]);
+        assert_close_to_literal!(r, [-0.125, -1.0, f64::INFINITY, 1.0, 0.125]);
         let g = r.sum().backward();
-        assert_aclose!(g.get(&t), [-0.1875, -3., f64::NEG_INFINITY, -3., -0.1875]);
+        assert_close_to_literal!(g.get(&t), [-0.1875, -3., f64::NEG_INFINITY, -3., -0.1875]);
     }
 }

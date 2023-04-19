@@ -180,7 +180,7 @@ mod tests {
         // 3. printing out the output
         // See https://github.com/coreylowman/dfdx/wiki/Exporting-MultiHeadAttention-to-pytorch-for-unit-tests
         #[rustfmt::skip]
-        assert_aclose!(
+        assert_close_to_literal!(
             y,
             [
                 [

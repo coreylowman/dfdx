@@ -293,7 +293,7 @@ mod tests {
         let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
         let y1 = bn.forward_mut(x1.leaky_trace());
-        assert_aclose!(
+        assert_close_to_literal!(
             y1,
             [
                 [[0.66747534, 0.77682495], [-1.698878, 0.25457793]],
@@ -303,11 +303,11 @@ mod tests {
         );
 
         let g = y1.exp().mean().backward();
-        assert_aclose!(bn.running_mean, [-0.0175438, -0.0214163, 0.0268384]);
-        assert_aclose!(bn.running_var, [1.1361228, 1.0889612, 1.3478994]);
-        assert_aclose!(g.get(&bn.scale), [0.2506705, 0.4257624, 0.257648]);
-        assert_aclose!(g.get(&bn.bias), [0.4663894, 0.5239304, 0.4687197]);
-        assert_aclose!(
+        assert_close_to_literal!(bn.running_mean, [-0.0175438, -0.0214163, 0.0268384]);
+        assert_close_to_literal!(bn.running_var, [1.1361228, 1.0889612, 1.3478994]);
+        assert_close_to_literal!(g.get(&bn.scale), [0.2506705, 0.4257624, 0.257648]);
+        assert_close_to_literal!(g.get(&bn.bias), [0.4663894, 0.5239304, 0.4687197]);
+        assert_close_to_literal!(
             g.get(&x1),
             [
                 [[0.0030178577, 0.011973545], [0.0038383976, -0.018829815]],
@@ -326,7 +326,7 @@ mod tests {
 
         let y1 = bn.forward_mut(x1.leaky_trace());
         #[rustfmt::skip]
-        assert_aclose!(
+        assert_close_to_literal!(
             y1,
             [
                 [[[-0.93348885, -2.1979978, 0.19754872],[0.29159376, -0.6282544, -1.0415624]], [[1.1156346, 0.89029306, -1.1608727],[-0.73874927, 0.13254784, -0.77676374]]],
@@ -335,12 +335,12 @@ mod tests {
         );
 
         let g = y1.exp().mean().backward();
-        assert_aclose!(bn.running_mean, [-0.02424082, 0.00407672]);
-        assert_aclose!(bn.running_var, [0.9676103, 1.0458221]);
-        assert_aclose!(g.get(&bn.scale), [0.5582906, 1.1929206]);
-        assert_aclose!(g.get(&bn.bias), [0.7535024, 0.92750454]);
+        assert_close_to_literal!(bn.running_mean, [-0.02424082, 0.00407672]);
+        assert_close_to_literal!(bn.running_var, [0.9676103, 1.0458221]);
+        assert_close_to_literal!(g.get(&bn.scale), [0.5582906, 1.1929206]);
+        assert_close_to_literal!(g.get(&bn.bias), [0.7535024, 0.92750454]);
         #[rustfmt::skip]
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&x1),
             [
                 [[[-0.00378475, 0.05601016, -0.02694868],[-0.02614748, -0.01439525, 0.00047035]],[[-0.05280511, -0.05561727, 0.04425058],[0.01388359, -0.03710236, 0.01651]]],
@@ -357,20 +357,20 @@ mod tests {
         let mut bn = BatchNorm2D::<3>::build_on_device(&dev);
 
         let _ = bn.forward_mut(x1.leaky_trace());
-        assert_aclose!(bn.running_mean, [0.0083191, -0.0370511, -0.0079481]);
-        assert_aclose!(bn.running_var, [1.0344709, 0.9340682, 1.0266376]);
+        assert_close_to_literal!(bn.running_mean, [0.0083191, -0.0370511, -0.0079481]);
+        assert_close_to_literal!(bn.running_var, [1.0344709, 0.9340682, 1.0266376]);
 
         let _ = bn.forward_mut(x1.leaky_trace());
-        assert_aclose!(bn.running_mean, [0.0158063, -0.0703971, -0.0151013]);
-        assert_aclose!(bn.running_var, [1.0654946, 0.87472963, 1.0506116]);
+        assert_close_to_literal!(bn.running_mean, [0.0158063, -0.0703971, -0.0151013]);
+        assert_close_to_literal!(bn.running_var, [1.0654946, 0.87472963, 1.0506116]);
 
         let _ = bn.forward_mut(x1.leaky_trace());
-        assert_aclose!(bn.running_mean, [0.0225448, -0.1004085, -0.0215393]);
-        assert_aclose!(bn.running_var, [1.093416, 0.8213248, 1.0721881]);
+        assert_close_to_literal!(bn.running_mean, [0.0225448, -0.1004085, -0.0215393]);
+        assert_close_to_literal!(bn.running_var, [1.093416, 0.8213248, 1.0721881]);
 
         let _ = bn.forward_mut(x1.leaky_trace());
-        assert_aclose!(bn.running_mean, [0.0286095, -0.1274188, -0.0273335]);
-        assert_aclose!(bn.running_var, [1.1185452, 0.7732605, 1.0916069]);
+        assert_close_to_literal!(bn.running_mean, [0.0286095, -0.1274188, -0.0273335]);
+        assert_close_to_literal!(bn.running_var, [1.1185452, 0.7732605, 1.0916069]);
 
         let m = bn.running_mean.clone();
         let v = bn.running_var.clone();
@@ -380,7 +380,7 @@ mod tests {
         // running stats shouldn't have been updated
         assert_eq!(bn.running_mean.array(), m.array());
         assert_eq!(bn.running_var.array(), v.array());
-        assert_aclose!(
+        assert_close_to_literal!(
             y2,
             [
                 [[0.0897828, -0.01880704], [-0.55082226, -0.50515544]],

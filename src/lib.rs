@@ -313,10 +313,6 @@ pub(crate) mod tests {
         }
     }
 
-    pub fn assert_close<T: AssertClose + std::fmt::Debug>(a: &T, b: &T) {
-        a.assert_close(b, T::DEFAULT_TOLERANCE);
-    }
-
     pub trait NdMap {
         type Elem;
         type Mapped<O>;
@@ -347,8 +343,7 @@ pub(crate) mod tests {
         }
     }
 
-    #[macro_export]
-    macro_rules! assert_aclose {
+    macro_rules! assert_close_to_literal {
         ($Lhs:expr, $Rhs:expr) => {
             assert_close(
                 &$Lhs.array(),
@@ -356,14 +351,31 @@ pub(crate) mod tests {
             )
         };
         ($Lhs:expr, $Rhs:expr, $Tolerance:expr) => {
-            assert_close_with_tolerance(
-                &$Lhs.array(),
+            $Lhs.array().assert_close(
                 &$Rhs.ndmap(|x| num_traits::FromPrimitive::from_f64(x).unwrap()),
                 num_traits::FromPrimitive::from_f64($Tolerance).unwrap(),
             )
         };
     }
-    pub(crate) use assert_aclose;
+    pub(crate) use assert_close_to_literal;
+
+    macro_rules! assert_close_to_tensor {
+        ($Lhs:expr, $Rhs:expr) => {
+            assert_close(&$Lhs.array(), &$Rhs.array())
+        };
+        ($Lhs:expr, $Rhs:expr, $Tolerance:expr) => {
+            assert_close_with_tolerance(
+                &$Lhs.array(),
+                &$Rhs.array(),
+                num_traits::FromPrimitive::from_f64($Tolerance).unwrap(),
+            )
+        };
+    }
+    pub(crate) use assert_close_to_tensor;
+
+    pub fn assert_close<T: AssertClose + std::fmt::Debug>(a: &T, b: &T) {
+        a.assert_close(b, T::DEFAULT_TOLERANCE);
+    }
 
     pub fn assert_close_with_tolerance<T: AssertClose + std::fmt::Debug>(
         a: &T,

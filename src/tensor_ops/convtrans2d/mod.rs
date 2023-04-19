@@ -258,7 +258,7 @@ mod tests {
         ]);
         let y = x.leaky_trace().convtrans2d::<1, 0>(w.clone());
         #[rustfmt::skip]
-        assert_aclose!(
+        assert_close_to_literal!(
             y,
             [
                 [[0.0950315, 0.7752370, 1.4619386, 1.2272182, 0.4955567], [0.9404547, 2.0147018, 2.9196219, 2.3676410, 1.0898490], [0.9427375, 2.4812443, 3.9218845, 3.6057489, 1.6545289], [0.7178541, 1.8030399, 3.0822182, 1.9167527, 1.0201255], [0.1575270, 0.6028528, 0.8236330, 0.8117172, 0.4487746]],
@@ -270,7 +270,7 @@ mod tests {
         let g = y.exp().mean().backward();
 
         #[rustfmt::skip]
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&x),
             [
                 [[2.4066830, 2.4581399, 2.5645943], [3.0028410, 3.2547507, 3.4216807], [2.1464431, 3.0581608, 2.8662176]],
@@ -278,7 +278,7 @@ mod tests {
             ]
         );
         #[rustfmt::skip]
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&w),
             [
                 [[[0.6642238, 1.0354118, 0.9408946], [0.9326871, 1.1026800, 1.0413336], [0.5472590, 0.7134937, 0.7234858]], [[0.5456561, 0.7068147, 0.6173539], [0.8016681, 1.0878984, 1.0714644], [0.8350498, 1.1260045, 0.7775879]]],
@@ -315,7 +315,7 @@ mod tests {
         ]);
         let y = x.leaky_trace().convtrans2d::<2, 0>(w.clone());
         #[rustfmt::skip]
-        assert_aclose!(
+        assert_close_to_literal!(
             y,
             [
                 [[0.0521149, 0.0666962, 0.1576860, 0.2318948, 0.4811018, 0.4908646, 0.3878066,],[0.0572037, 0.1399591, 0.2562388, 0.4253721, 0.8630048, 1.0908685, 0.8445575,],[0.5902850, 0.2447678, 1.3523079, 0.3064790, 1.4716963, 0.5718186, 1.1411824,],[0.4790645, 0.7306364, 0.5590932, 0.3465975, 0.3586293, 0.2446325, 0.1219794,],[0.8389287, 0.7641755, 2.1468871, 0.7580858, 1.6488208, 0.4078493, 0.8917535,],[0.7521397, 1.3120791, 1.5495670, 1.5312154, 1.6393251, 0.9781042, 0.5516644,],[0.3645314, 0.6125304, 1.4806095, 0.7151946, 1.3534986, 0.4565403, 0.5764900,],],
@@ -327,7 +327,7 @@ mod tests {
         let g = y.exp().mean().backward();
 
         #[rustfmt::skip]
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&x),
             [
                 [[0.1513395, 0.1986136, 0.2298895],[0.3779295, 0.3469064, 0.2452929],[0.4825282, 0.5639746, 0.3148936],],
@@ -335,7 +335,7 @@ mod tests {
             ]
         );
         #[rustfmt::skip]
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&w),
             [
                 [[[0.1134962, 0.0483045, 0.1292279],[0.0842974, 0.0839551, 0.0851499],[0.0981565, 0.0517171, 0.1198249],],[[0.0928453, 0.0412302, 0.0897282],[0.0699945, 0.0741750, 0.0777097],[0.0907740, 0.0422520, 0.0901646],],],
@@ -352,10 +352,10 @@ mod tests {
         let w: Tensor<Rank4<5, 3, 6, 6>, TestDtype, _> = dev.sample_normal();
 
         let y: Tensor<Rank3<5, 83, 83>, _, _, _> = x.leaky_trace().convtrans2d::<3, 2>(w.clone());
-        let y0 = y.array();
+        let y0 = y.retaped::<NoneTape>();
         let grads0 = y.square().mean().backward();
-        let x0 = grads0.get(&x).array();
-        let w0 = grads0.get(&w).array();
+        let x0 = grads0.get(&x);
+        let w0 = grads0.get(&w);
 
         let x = x
             .broadcast::<Rank4<10, 3, 28, 28>, _>()
@@ -364,19 +364,16 @@ mod tests {
         let y: Tensor<Rank4<10, 5, 83, 83>, _, _, _> =
             x.leaky_trace().convtrans2d::<3, 2>(w.clone());
         for i in 0..10 {
-            y0.assert_close(
-                &y.retaped::<NoneTape>().select(dev.tensor(i)).array(),
-                TestDtype::from_f32(1e-5).unwrap(),
-            );
+            assert_close_to_tensor!(y0, y.retaped::<NoneTape>().select(dev.tensor(i)), 1e-5);
         }
 
         let grads = y.square().mean().backward();
 
-        assert_close(&w0, &grads.get(&w).array());
+        assert_close_to_tensor!(w0, grads.get(&w));
 
         let x_grad = grads.get(&x) * 10.0;
         for i in 0..10 {
-            assert_close(&x0, &x_grad.clone().select(dev.tensor(i)).array());
+            assert_close_to_tensor!(x0, x_grad.clone().select(dev.tensor(i)));
         }
     }
 }

@@ -84,10 +84,10 @@ mod tests {
         let b: Tensor<_, TestDtype, _> = dev.tensor(3.0);
 
         let r = a.leaky_trace() * b.clone();
-        assert_aclose!(r, 6.0);
+        assert_close_to_literal!(r, 6.0);
         let g = r.backward();
-        assert_aclose!(g.get(&a), 3.0);
-        assert_aclose!(g.get(&b), 2.0);
+        assert_close_to_literal!(g.get(&a), 3.0);
+        assert_close_to_literal!(g.get(&b), 2.0);
     }
 
     #[test]
@@ -97,10 +97,10 @@ mod tests {
         let b: Tensor<_, TestDtype, _> = dev.tensor([1.0, -1.0, 0.0]);
 
         let r = a.leaky_trace() * b.clone();
-        assert_aclose!(r, [1.0, -2.0, 0.0]);
+        assert_close_to_literal!(r, [1.0, -2.0, 0.0]);
         let g = r.mean().backward();
-        assert_aclose!(g.get(&a), [1.0 / 3.0, -1.0 / 3.0, 0.0]);
-        assert_aclose!(g.get(&b), [1.0 / 3.0, 2.0 / 3.0, 1.0]);
+        assert_close_to_literal!(g.get(&a), [1.0 / 3.0, -1.0 / 3.0, 0.0]);
+        assert_close_to_literal!(g.get(&b), [1.0 / 3.0, 2.0 / 3.0, 1.0]);
     }
 
     #[test]
@@ -112,7 +112,7 @@ mod tests {
             dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
         let r = a.leaky_trace() * b.clone();
-        assert_aclose!(
+        assert_close_to_literal!(
             r,
             [
                 [0.3415743, 0.06565552, 0.056385003],
@@ -120,14 +120,14 @@ mod tests {
             ]
         );
         let g = r.mean().backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&a),
             [
                 [0.08665001, 0.06406667, 0.06265],
                 [0.13765001, 0.06136667, 0.006466667],
             ]
         );
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&b),
             [
                 [0.109500006, 0.028466668, 0.025000002],
@@ -141,9 +141,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor(1.0);
         let r = x.leaky_trace() * 0.5;
-        assert_aclose!(r, 0.5);
+        assert_close_to_literal!(r, 0.5);
         let g = r.exp().backward();
-        assert_aclose!(g.get(&x), 0.8243606);
+        assert_close_to_literal!(g.get(&x), 0.8243606);
     }
 
     #[test]
@@ -151,9 +151,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([0.0, 1.0, 2.0]);
         let r = x.leaky_trace() * 0.5;
-        assert_aclose!(r, [0.0, 0.5, 1.0]);
+        assert_close_to_literal!(r, [0.0, 0.5, 1.0]);
         let g = r.exp().sum().backward();
-        assert_aclose!(g.get(&x), [0.5, 0.8243606, 1.3591409]);
+        assert_close_to_literal!(g.get(&x), [0.5, 0.8243606, 1.3591409]);
     }
 
     #[test]
@@ -161,8 +161,8 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([[1.0; 2]; 3]);
         let r = x.leaky_trace() * 0.5;
-        assert_aclose!(r, [[0.5; 2]; 3]);
+        assert_close_to_literal!(r, [[0.5; 2]; 3]);
         let g = r.exp().sum().backward();
-        assert_aclose!(g.get(&x), [[0.8243606; 2]; 3]);
+        assert_close_to_literal!(g.get(&x), [[0.8243606; 2]; 3]);
     }
 }

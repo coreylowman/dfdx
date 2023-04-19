@@ -59,10 +59,10 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, 0.0, 5.0]);
         let r = a.leaky_trace().normalize(1e-5);
-        assert_aclose!(&r, [-1.0190487, -0.3396829, 1.3587316]);
+        assert_close_to_literal!(&r, [-1.0190487, -0.3396829, 1.3587316]);
         // NOTE: .exp() so we can make sure normalize is using result grad properly
         let g = r.exp().mean().backward();
-        assert_aclose!(&g.get(&a), [0.033410847, -0.04677555, 0.013364702]);
+        assert_close_to_literal!(&g.get(&a), [0.033410847, -0.04677555, 0.013364702]);
     }
 
     #[test]
@@ -70,7 +70,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
         let r = a.leaky_trace().normalize::<Axis<1>>(1e-5);
-        assert_aclose!(
+        assert_close_to_literal!(
             r,
             [
                 [-1.0190487, -0.3396829, 1.3587316],
@@ -78,7 +78,7 @@ mod tests {
             ]
         );
         let g = r.exp().mean().backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&a),
             [
                 [0.016705424, -0.023387775, 0.006682351],
@@ -92,7 +92,7 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, 0.0], [1.0, 2.0], [4.0, 5.0]]);
         let r = a.leaky_trace().normalize::<Axis<0>>(1e-5);
-        assert_aclose!(
+        assert_close_to_literal!(
             r,
             [
                 [-1.2247438, -1.1355485],
@@ -101,7 +101,7 @@ mod tests {
             ]
         );
         let g = r.exp().mean().backward();
-        assert_aclose!(
+        assert_close_to_literal!(
             g.get(&a),
             [
                 [0.019245632, 0.025835907],
@@ -116,8 +116,8 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<Rank3<4, 2, 3>, TestDtype, _> = dev.ones();
         let r = a.leaky_trace().normalize::<Axis<2>>(1e-5);
-        assert_aclose!(r, [[[0.0; 3]; 2]; 4]);
+        assert_close_to_literal!(r, [[[0.0; 3]; 2]; 4]);
         let g = r.exp().mean().backward();
-        assert_aclose!(g.get(&a), [[[0.0; 3]; 2]; 4]);
+        assert_close_to_literal!(g.get(&a), [[[0.0; 3]; 2]; 4]);
     }
 }

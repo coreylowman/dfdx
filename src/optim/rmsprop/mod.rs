@@ -194,7 +194,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.leaky_trace() * rate.clone()).square().sum().backward();
             opt.update(&mut t, &gradients).expect("");
-            assert_aclose!(t, e);
+            assert_close_to_literal!(t, e);
         }
     }
 
