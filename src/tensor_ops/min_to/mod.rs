@@ -114,8 +114,7 @@ mod tests {
     fn test_min_axes_3d_to_1d() {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.sample_normal::<Rank3<2, 3, 4>>();
-        let r: Tensor<(Const<4>,), f32, Cpu, OwnedTape<f32, Cpu>> =
-            t.leaky_trace().min::<Rank1<4>, _>();
+        let r = t.leaky_trace().min::<Rank1<4>, _>();
         let r2 = t.leaky_trace().min::<Rank2<3, 4>, _>().min::<Rank1<4>, _>();
         assert_close_to_tensor!(r, r2);
         let g = r.mean().backward();

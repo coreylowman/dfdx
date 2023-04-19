@@ -437,7 +437,7 @@ mod tests {
         let r_array = r.array();
         for i in 0..N {
             let sub_a = dev.tensor(a_array[i]);
-            let sub_c: Tensor<(Const<4>, Const<2>), f32, Cpu> = sub_a.matmul(b.clone());
+            let sub_c = sub_a.matmul(b.clone());
             assert_close!(r_array[i], sub_c.array());
         }
         let gs = r.sum().backward();
