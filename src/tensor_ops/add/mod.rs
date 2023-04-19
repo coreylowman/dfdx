@@ -159,14 +159,12 @@ mod tests {
     #[test]
     fn test_add_broadcast_top() {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor([
-            [0.6570f64, 0.1708, 0.1500],
-            [0.5658, 0.7010, 0.8342]
-        ]).to_dtype::<TestDtype>();
-        let b = dev.tensor([
-            [0.5199f64, 0.3844, 0.3759],
-            [0.8259, 0.3682, 0.0388]
-        ]).to_dtype::<TestDtype>();
+        let a = dev
+            .tensor([[0.6570f64, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]])
+            .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([[0.5199f64, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]])
+            .to_dtype::<TestDtype>();
 
         let a2 = a.broadcast::<Rank3<4, 2, 3>, _>();
         let b2 = b.broadcast::<Rank3<4, 2, 3>, _>();
