@@ -22,9 +22,14 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --features nightly,safetensors,numpy
+          args: --tests --features nightly,safetensors,numpy
       - name: test CPU f64
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --features nightly,test-f64,safetensors,numpy
+          args: --tests --features nightly,test-f64,safetensors,numpy
+      - name: doc tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --doc --features nightly,safetensors,numpy
