@@ -226,7 +226,6 @@ impl<
 mod tests {
     use super::*;
     use crate::{tensor_ops::*, tests::*};
-    use num_traits::FromPrimitive;
 
     #[test]
     /// TODO

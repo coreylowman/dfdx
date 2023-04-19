@@ -257,6 +257,9 @@ pub(crate) mod tests {
     pub trait AssertClose {
         type Elem: std::fmt::Display + std::fmt::Debug + Copy;
         const DEFAULT_TOLERANCE: Self::Elem;
+        fn get_default_tol(&self) -> Self::Elem {
+            Self::DEFAULT_TOLERANCE
+        }
         fn get_far_pair(
             &self,
             rhs: &Self,
@@ -344,32 +347,48 @@ pub(crate) mod tests {
     }
 
     macro_rules! assert_close_to_literal {
-        ($Lhs:expr, $Rhs:expr) => {
-            assert_close(
-                &$Lhs.array(),
+        ($Lhs:expr, $Rhs:expr) => {{
+            let lhs = $Lhs.array();
+            let tol = AssertClose::get_default_tol(&lhs);
+            let far_pair = AssertClose::get_far_pair(
+                &lhs,
                 &$Rhs.ndmap(|x| num_traits::FromPrimitive::from_f64(x).unwrap()),
-            )
-        };
-        ($Lhs:expr, $Rhs:expr, $Tolerance:expr) => {
-            $Lhs.array().assert_close(
+                tol,
+            );
+            if let Some((l, r)) = far_pair {
+                panic!("lhs != rhs | {l} != {r}");
+            }
+        }};
+        ($Lhs:expr, $Rhs:expr, $Tolerance:expr) => {{
+            let far_pair = $Lhs.array().get_far_pair(
                 &$Rhs.ndmap(|x| num_traits::FromPrimitive::from_f64(x).unwrap()),
                 num_traits::FromPrimitive::from_f64($Tolerance).unwrap(),
-            )
-        };
+            );
+            if let Some((l, r)) = far_pair {
+                panic!("lhs != rhs | {l} != {r}");
+            }
+        }};
     }
     pub(crate) use assert_close_to_literal;
 
     macro_rules! assert_close_to_tensor {
         ($Lhs:expr, $Rhs:expr) => {
-            assert_close(&$Lhs.array(), &$Rhs.array())
+            let lhs = $Lhs.array();
+            let tol = AssertClose::get_default_tol(&lhs);
+            let far_pair = AssertClose::get_far_pair(&lhs, &$Rhs.array(), tol);
+            if let Some((l, r)) = far_pair {
+                panic!("lhs != rhs | {l} != {r}");
+            }
         };
-        ($Lhs:expr, $Rhs:expr, $Tolerance:expr) => {
-            assert_close_with_tolerance(
-                &$Lhs.array(),
+        ($Lhs:expr, $Rhs:expr, $Tolerance:expr) => {{
+            let far_pair = $Lhs.array().get_far_pair(
                 &$Rhs.array(),
                 num_traits::FromPrimitive::from_f64($Tolerance).unwrap(),
-            )
-        };
+            );
+            if let Some((l, r)) = far_pair {
+                panic!("lhs != rhs | {l} != {r}");
+            }
+        }};
     }
     pub(crate) use assert_close_to_tensor;
 
