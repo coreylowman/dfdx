@@ -25,7 +25,7 @@ pub struct ScalarSubKernelOp<E> {
 /// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let b = dev.ones();
 /// let r = a - b;
-/// assert_aclose!(r, [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
+/// assert_eq!(r, [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
 /// ```
 ///
 /// Scalar Example:
@@ -34,7 +34,7 @@ pub struct ScalarSubKernelOp<E> {
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let r = a - 1.0;
-/// assert_aclose!(r, [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
+/// assert_eq!(r, [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
 /// ```
 pub fn sub<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R>(
     lhs: Tensor<S, E, D, T>,

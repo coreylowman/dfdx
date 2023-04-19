@@ -27,7 +27,7 @@ pub struct ScalarAddKernelOp<E> {
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let r = a + dev.ones();
-/// assert_fclose!(r.array(), [[2.0, 3.0, 4.0], [0.0, -1.0, -2.0]]);
+/// assert_eq!(r.array(), [[2.0, 3.0, 4.0], [0.0, -1.0, -2.0]]);
 /// ```
 ///
 /// Adding a scalar:
@@ -36,7 +36,7 @@ pub struct ScalarAddKernelOp<E> {
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let r = a + 1.0;
-/// assert_fclose!(r.array(), [[2.0, 3.0, 4.0], [0.0, -1.0, -2.0]]);
+/// assert_eq!(r.array(), [[2.0, 3.0, 4.0], [0.0, -1.0, -2.0]]);
 /// ```
 pub fn add<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R: Default>(
     lhs: Tensor<S, E, D, T>,

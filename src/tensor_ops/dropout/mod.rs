@@ -40,7 +40,7 @@ pub trait DropoutKernel<E: Dtype>: DeviceStorage {
 /// # let dev: Cpu = Default::default();
 /// let t = dev.tensor([1.0f32, 2.0, 3.0, 4.0]);
 /// let r = t.dropout(0.5);
-/// assert_eq!(r, [2.0, 4.0, 6.0, 0.0]);
+/// assert_eq!(r.array(), [2.0, 4.0, 6.0, 0.0]);
 /// ```
 ///
 /// ### Implementation details:
