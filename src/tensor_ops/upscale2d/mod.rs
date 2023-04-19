@@ -256,20 +256,20 @@ mod tests {
 
         let x = dev.tensor([[[1.0, 0.0], [2.0, 3.0]]]);
         let y = x.leaky_trace().upscale2d::<4, 4, _>(NearestNeighbor);
-        assert_close(
-            &y.array(),
-            &[[
+        assert_close_to_literal!(
+            y,
+            [[
                 [1.0, 1.0, 0.0, 0.0],
                 [1.0, 1.0, 0.0, 0.0],
                 [2.0, 2.0, 3.0, 3.0],
                 [2.0, 2.0, 3.0, 3.0],
-            ]],
+            ]]
         );
 
         let g = y.exp().mean().backward();
-        assert_close(
-            &g.get(&x).array(),
-            &[[[0.679570457, 0.25], [1.847264025, 5.021384231]]],
+        assert_close_to_literal!(
+            g.get(&x),
+            [[[0.679570457, 0.25], [1.847264025, 5.021384231]]]
         );
     }
 
@@ -279,21 +279,21 @@ mod tests {
 
         let x = dev.tensor([[[1.0, 0.0, 2.0], [2.0, 3.0, 4.0]]]);
         let y = x.leaky_trace().upscale2d::<2, 7, _>(NearestNeighbor);
-        assert_close(
-            &y.array(),
-            &[[
+        assert_close_to_literal!(
+            y,
+            [[
                 [1.0, 1.0, 1.0, 0.0, 0.0, 2.0, 2.0],
                 [2.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0],
-            ]],
+            ]]
         );
 
         let g = y.exp().mean().backward();
-        assert_close(
-            &g.get(&x).array(),
-            &[[
+        assert_close_to_literal!(
+            g.get(&x),
+            [[
                 [0.582488963, 0.142857143, 1.055579443],
                 [1.583369164, 2.869362418, 7.799735719],
-            ]],
+            ]]
         );
     }
 
@@ -321,16 +321,13 @@ mod tests {
         }
 
         let grads = y.exp().mean().backward();
-        let x_grad = grads.get(&x).array();
-        for row in x_grad.iter() {
-            assert_close(
-                row,
-                &[[
-                    [0.03624376, 0.09852076, 0.26780716],
-                    [0.48531687, 1.319228, 3.5860338],
-                ]; 3],
-            );
-        }
+        assert_close_to_literal!(
+            grads.get(&x),
+            [[[
+                [0.03624376, 0.09852076, 0.26780716],
+                [0.48531687, 1.319228, 3.5860338],
+            ]; 3]; 5]
+        );
     }
 
     // Use align_corners when comparing these
@@ -340,20 +337,20 @@ mod tests {
 
         let x = dev.tensor([[[1.0, 0.0], [2.0, 3.0]]]);
         let y = x.leaky_trace().upscale2d::<4, 4, _>(Bilinear);
-        assert_close(
-            &y.array(),
-            &[[
+        assert_close_to_literal!(
+            y,
+            [[
                 [1.0, 0.66666663, 0.33333331, 0.0],
                 [1.33333325, 1.22222221, 1.11111116, 1.0],
                 [1.66666675, 1.77777779, 1.88888907, 2.0],
                 [2.0, 2.33333325, 2.66666651, 3.0],
-            ]],
+            ]]
         );
 
         let g = y.exp().mean().backward();
-        assert_close(
-            &g.get(&x).array(),
-            &[[[0.8130764, 0.6928807], [1.8153939, 2.7659647]]],
+        assert_close_to_literal!(
+            g.get(&x),
+            [[[0.8130764, 0.6928807], [1.8153939, 2.7659647]]]
         );
     }
 
@@ -363,21 +360,21 @@ mod tests {
 
         let x = dev.tensor([[[1.0, 0.0, 2.0], [2.0, 3.0, 4.0]]]);
         let y = x.leaky_trace().upscale2d::<2, 7, _>(Bilinear);
-        assert_close(
-            &y.array(),
-            &[[
+        assert_close_to_literal!(
+            y,
+            [[
                 [1.0, 0.6666666, 0.3333333, 0.0, 0.6666667, 1.3333335, 2.0],
                 [2.0, 2.3333333, 2.6666665, 3.0, 3.3333335, 3.6666667, 4.0],
-            ]],
+            ]]
         );
 
         let g = y.exp().mean().backward();
-        assert_close(
-            &g.get(&x).array(),
-            &[[
+        assert_close_to_literal!(
+            g.get(&x),
+            [[
                 [0.3201411, 0.3673356, 0.7548153],
                 [1.3615142, 4.6318388, 6.4302063],
-            ]],
+            ]]
         );
     }
 
@@ -390,30 +387,24 @@ mod tests {
         let x: Tensor<Rank4<5, 3, 2, 3>, _, _> =
             [x.clone(), x.clone(), x.clone(), x.clone(), x].stack();
         let y = x.leaky_trace().upscale2d::<5, 6, _>(Bilinear);
-        let y_array = y.array();
-        for img in y_array {
-            assert_close(
-                &img,
-                &[[
-                    [1.0, 1.4, 1.8, 2.2, 2.6, 3.0],
-                    [1.75, 2.15, 2.55, 2.95, 3.35, 3.75],
-                    [2.5, 2.9, 3.3, 3.7, 4.1, 4.5],
-                    [3.25, 3.65, 4.05, 4.45, 4.85, 5.25],
-                    [4.0, 4.4, 4.8, 5.2, 5.6, 6.0],
-                ]; 3],
-            );
-        }
+        assert_close_to_literal!(
+            y,
+            [[[
+                [1.0, 1.4, 1.8, 2.2, 2.6, 3.0],
+                [1.75, 2.15, 2.55, 2.95, 3.35, 3.75],
+                [2.5, 2.9, 3.3, 3.7, 4.1, 4.5],
+                [3.25, 3.65, 4.05, 4.45, 4.85, 5.25],
+                [4.0, 4.4, 4.8, 5.2, 5.6, 6.0],
+            ]; 3]; 5]
+        );
 
         let grads = y.exp().mean().backward();
-        let x_grad = grads.get(&x).array();
-        for row in x_grad.iter() {
-            assert_close(
-                row,
-                &[[
-                    [0.10178878, 0.30509925, 0.47953573],
-                    [0.42368498, 1.2699431, 1.9960163],
-                ]; 3],
-            );
-        }
+        assert_close_to_literal!(
+            grads.get(&x),
+            [[[
+                [0.10178878, 0.30509925, 0.47953573],
+                [0.42368498, 1.2699431, 1.9960163],
+            ]; 3]; 5]
+        );
     }
 }

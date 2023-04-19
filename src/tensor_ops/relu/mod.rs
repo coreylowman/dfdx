@@ -48,9 +48,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.leaky_trace().relu();
-        assert_eq!(r.array(), [0.0, 0.0, 0.0, 1.0, 2.0]);
+        assert_close_to_literal!(r, [0.0, 0.0, 0.0, 1.0, 2.0]);
         // NOTE: call .exp() to make sure we cover cases where .relu() uses the result's gradient
         let g = r.exp().mean().backward();
-        assert_close(&g.get(&x).array(), &[0.0, 0.0, 0.0, 0.54365635, 1.4778112]);
+        assert_close_to_literal!(g.get(&x), [0.0, 0.0, 0.0, 0.54365635, 1.4778112]);
     }
 }
