@@ -432,7 +432,6 @@ mod test {
         cache.clear_check();
     }
 
-
     #[test]
     fn test_pop_and_shrink() {
         let cache: TensorCache<Vec<u8>> = Default::default();
@@ -444,24 +443,24 @@ mod test {
         cache.insert::<u8>(vec![1; 8]);
         assert_eq!(cache.len(), 5);
         assert_eq!(cache.size(), 16);
-        
+
         assert_eq!(cache.try_pop::<u8>(1), Some(vec![2]));
         assert_eq!(cache.try_pop::<u8>(2), Some(vec![1; 2]));
         assert_eq!(cache.len(), 3);
         assert_eq!(cache.size(), 13);
-        
+
         cache.insert::<u8>(vec![2; 8]);
         assert_eq!(cache.len(), 2);
         assert_eq!(cache.size(), 16);
-        
+
         assert_eq!(cache.try_pop::<u8>(8), Some(vec![2; 8]));
         assert_eq!(cache.len(), 1);
         assert_eq!(cache.size(), 8);
-        
+
         cache.insert::<u8>(vec![2; 4]);
         assert_eq!(cache.len(), 2);
         assert_eq!(cache.size(), 12);
-        
+
         cache.clear_check();
     }
 }
