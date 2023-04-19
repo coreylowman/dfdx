@@ -346,6 +346,7 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
         *write!(self.size) = 0;
     }
 
+    #[allow(unused)]
     fn clear_check(&self) {
         self.set_max_size(0);
     }
