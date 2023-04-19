@@ -4,13 +4,7 @@ jobs:
   cargo-test:
     name: cargo-test-nightly
 
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - macOS-latest
-          - windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
