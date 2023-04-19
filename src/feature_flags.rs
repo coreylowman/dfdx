@@ -9,12 +9,12 @@
 //!
 //! Cuda:
 //! ```toml
-//! dfdx = { version = "...", default-features = False, features = ["std", "cuda"]}
+//! dfdx = { version = "...", default-features = false, features = ["std", "cuda"]}
 //! ```
 //!
 //! Cpu:
 //! ```toml
-//! dfdx = { version = "...", default-features = False, features = ["std", "cpu-par-matmul"]}
+//! dfdx = { version = "...", default-features = false, features = ["std", "cpu-par-matmul"]}
 //! ```
 //!
 //! # "std"
