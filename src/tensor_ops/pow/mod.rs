@@ -76,17 +76,17 @@ mod tests {
         let r_array = r.array();
         assert!(r_array[0].is_nan());
         assert!(r_array[1].is_nan());
-        assert_close(&r_array[2], &0.0);
-        assert_close(&r_array[3], &1.0);
-        assert_close(&r_array[4], &11.313708);
+        assert_close!(r_array[2], 0.0);
+        assert_close!(r_array[3], 1.0);
+        assert_close!(r_array[4], 11.313708);
 
         let g = r.sum().backward();
         let grad = g.get(&t).array();
         assert!(grad[0].is_nan());
         assert!(grad[1].is_nan());
-        assert_close(&grad[2], &0.0);
-        assert_close(&grad[3], &3.5);
-        assert_close(&grad[4], &19.79899);
+        assert_close!(grad[2], 0.0);
+        assert_close!(grad[3], 3.5);
+        assert_close!(grad[4], 19.79899);
     }
 
     #[test]
@@ -97,17 +97,17 @@ mod tests {
         let r_array = r.array();
         assert!(r_array[0].is_nan());
         assert!(r_array[1].is_nan());
-        assert_close(&r_array[2], &TestDtype::INFINITY);
-        assert_close(&r_array[3], &1.0);
-        assert_close(&r_array[4], &0.43527526);
+        assert_close!(r_array[2], TestDtype::INFINITY);
+        assert_close!(r_array[3], 1.0);
+        assert_close!(r_array[4], 0.43527526);
 
         let g = r.sum().backward();
         let grad = g.get(&t).array();
         assert!(grad[0].is_nan());
         assert!(grad[1].is_nan());
-        assert_close(&grad[2], &TestDtype::NEG_INFINITY);
-        assert_close(&grad[3], &-1.2);
-        assert_close(&grad[4], &-0.26116517);
+        assert_close!(grad[2], TestDtype::NEG_INFINITY);
+        assert_close!(grad[3], -1.2);
+        assert_close!(grad[4], -0.26116517);
     }
 
     #[test]

@@ -25,7 +25,7 @@ pub struct BinaryDivKernelOp;
 /// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let b = dev.tensor([[1.0, 0.5, 1.0], [0.5, 1.0, 3.0]]);
 /// let r = a / b;
-/// assert_eq!(r, [[1.0, 4.0, 3.0], [-2.0, -2.0, -1.0]]);
+/// assert_eq!(r.array(), [[1.0, 4.0, 3.0], [-2.0, -2.0, -1.0]]);
 /// ```
 ///
 /// Scalar example:
@@ -34,7 +34,7 @@ pub struct BinaryDivKernelOp;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
 /// let r = a / 2.0;
-/// assert_eq!(r, [[0.5, 1.0, 1.5], [-0.5, -1.0, -1.5]]);
+/// assert_eq!(r.array(), [[0.5, 1.0, 1.5], [-0.5, -1.0, -1.5]]);
 /// ```
 pub fn div<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R: Default>(
     lhs: Tensor<S, E, D, T>,

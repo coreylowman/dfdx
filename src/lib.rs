@@ -392,15 +392,24 @@ pub(crate) mod tests {
     }
     pub(crate) use assert_close_to_tensor;
 
-    pub fn assert_close<T: AssertClose + std::fmt::Debug>(a: &T, b: &T) {
-        a.assert_close(b, T::DEFAULT_TOLERANCE);
+    macro_rules! assert_close {
+        ($Lhs:expr, $Rhs:expr) => {
+            let lhs = $Lhs;
+            let tol = AssertClose::get_default_tol(&lhs);
+            let far_pair = AssertClose::get_far_pair(&lhs, &$Rhs, tol);
+            if let Some((l, r)) = far_pair {
+                panic!("lhs != rhs | {l} != {r}");
+            }
+        };
+        ($Lhs:expr, $Rhs:expr, $Tolerance:expr) => {{
+            let far_pair = $Lhs.get_far_pair(
+                &$Rhs,
+                num_traits::FromPrimitive::from_f64($Tolerance).unwrap(),
+            );
+            if let Some((l, r)) = far_pair {
+                panic!("lhs != rhs | {l} != {r}");
+            }
+        }};
     }
-
-    pub fn assert_close_with_tolerance<T: AssertClose + std::fmt::Debug>(
-        a: &T,
-        b: &T,
-        tolerance: T::Elem,
-    ) {
-        a.assert_close(b, tolerance);
-    }
+    pub(crate) use assert_close;
 }

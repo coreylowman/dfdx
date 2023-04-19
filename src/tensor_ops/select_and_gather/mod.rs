@@ -374,7 +374,10 @@ mod tests {
         assert_eq!(r.array(), t_array[0]);
         let g = r.exp().mean().backward();
         let sub_g = dev.tensor(t_array[0]).exp() / 12.0;
-        assert_close(&g.get(&t).array(), &[sub_g.array(), [[0.0; 4]; 3]]);
+        assert_close!(
+            g.get(&t).array(),
+            [sub_g.array(), [[TestDtype::default(); 4]; 3]]
+        );
     }
 
     #[test]
@@ -388,12 +391,12 @@ mod tests {
         let g = r.exp().mean().backward();
         let sub_g = dev.tensor(sub_t).exp() / 8.0;
         let sub_g = sub_g.array();
-        assert_close(
-            &g.get(&t).array(),
-            &[
+        assert_close!(
+            g.get(&t).array(),
+            [
                 [[0.0; 4], sub_g[0], [0.0; 4]],
                 [[0.0; 4], [0.0; 4], sub_g[1]],
-            ],
+            ]
         );
     }
 
@@ -411,9 +414,9 @@ mod tests {
         let g = r.exp().mean().backward();
         let sub_g = dev.tensor(sub_t).exp() / 6.0;
         let sub_g = sub_g.array();
-        assert_close(
-            &g.get(&t).array(),
-            &[
+        assert_close!(
+            g.get(&t).array(),
+            [
                 [
                     [0.0, 0.0, sub_g[0][0], 0.0],
                     [0.0, 0.0, 0.0, sub_g[0][1]],
@@ -424,7 +427,7 @@ mod tests {
                     [0.0, sub_g[1][1], 0.0, 0.0],
                     [sub_g[1][2], 0.0, 0.0, 0.0],
                 ],
-            ],
+            ]
         );
     }
 

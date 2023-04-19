@@ -438,7 +438,7 @@ mod tests {
         for i in 0..N {
             let sub_a = dev.tensor(a_array[i]);
             let sub_c: Tensor<(Const<4>, Const<2>), f32, Cpu> = sub_a.matmul(b.clone());
-            assert_close(&r_array[i], &sub_c.array());
+            assert_close!(r_array[i], sub_c.array());
         }
         let gs = r.sum().backward();
         let a_grad = gs.get(&a).array();
@@ -446,7 +446,7 @@ mod tests {
         for i in 0..N {
             let sub_a = dev.tensor(a_array[i]);
             let sub_gs = sub_a.leaky_trace().matmul(b.clone()).sum().backward();
-            assert_close(&a_grad[i], &sub_gs.get(&sub_a).array());
+            assert_close!(a_grad[i], sub_gs.get(&sub_a).array());
             let sub_b_grad = sub_gs.get(&b).array();
             for x in 0..3 {
                 for y in 0..2 {
@@ -454,7 +454,7 @@ mod tests {
                 }
             }
         }
-        assert_close(&gs.get(&b).array(), &sub_bs_summed);
+        assert_close!(gs.get(&b).array(), sub_bs_summed);
     }
 
     #[test]
@@ -492,10 +492,10 @@ mod tests {
             let sub_a = dev.tensor(a_array[i]);
             let sub_b = dev.tensor(b_array[i]);
             let sub_c = sub_a.leaky_trace().matmul(sub_b.clone());
-            assert_close(&sub_c.array(), &c_array[i]);
+            assert_close!(sub_c.array(), c_array[i]);
             let sub_g = sub_c.exp().sum().backward();
-            assert_close(&sub_g.get(&sub_a).array(), &g_a[i]);
-            sub_g.get(&sub_b).array().assert_close(&g_b[i], 1e-5);
+            assert_close!(sub_g.get(&sub_a).array(), g_a[i]);
+            assert_close!(sub_g.get(&sub_b).array(), g_b[i], 1e-5);
         }
     }
 
@@ -519,10 +519,10 @@ mod tests {
                 let sub_a = dev.tensor(a_array[i][j]);
                 let sub_b = dev.tensor(b_array[i][j]);
                 let sub_c = sub_a.leaky_trace().matmul(sub_b.clone());
-                assert_close(&sub_c.array(), &c_array[i][j]);
+                assert_close!(sub_c.array(), c_array[i][j]);
                 let sub_g = sub_c.exp().sum().backward();
-                assert_close(&sub_g.get(&sub_a).array(), &g_a[i][j]);
-                sub_g.get(&sub_b).array().assert_close(&g_b[i][j], 1e-5);
+                assert_close!(sub_g.get(&sub_a).array(), g_a[i][j]);
+                assert_close!(sub_g.get(&sub_b).array(), g_b[i][j], 1e-5);
             }
         }
     }

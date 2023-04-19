@@ -136,7 +136,7 @@ mod tests {
         let t2 = t1.clone().broadcast::<Rank3<4, 3, 5>, _>();
         let r1 = t1.leaky_trace().sum::<Rank1<4>, _>() * 5.0;
         let r2 = t2.leaky_trace().sum::<Rank1<4>, _>();
-        assert_close_with_tolerance(&r1.array(), &r2.array(), 3e-6);
+        assert_close_to_tensor!(r1, r2, 3e-6);
         let g = r1.sum().backward();
         assert_close_to_literal!(g.get(&t1), [[5.0; 3]; 4]);
     }
