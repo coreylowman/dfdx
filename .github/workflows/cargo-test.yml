@@ -16,8 +16,8 @@ jobs:
       - name: cargo build
         uses: actions-rs/cargo@v1
         with:
-          command: build
-          args: --features nightly,safetensors,numpy
+          command: test
+          args: --no-run --features nightly,safetensors,numpy
       - name: test CPU f32
         uses: actions-rs/cargo@v1
         with:
@@ -33,3 +33,8 @@ jobs:
         with:
           command: test
           args: --doc --features nightly,safetensors,numpy
+      - name: example tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --examples --features nightly,safetensors,numpy
