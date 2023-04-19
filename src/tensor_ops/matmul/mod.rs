@@ -374,32 +374,32 @@ mod tests {
         let b: Tensor<_, TestDtype, _> =
             dev.tensor([[0.4651, 0.9106], [0.3360, 0.5534], [0.8092, 0.3827]]);
         let r = a.leaky_trace().matmul(b.clone());
-        assert_close(
-            &r.array(),
-            &[
+        assert_close_to_literal!(
+            r,
+            [
                 [0.62960154, 0.8554974],
                 [1.4642863, 1.5830379],
                 [1.0090116, 0.82806206],
                 [1.0546886, 1.165766],
-            ],
+            ]
         );
         let g = r.exp().mean().backward();
-        assert_close(
-            &g.get(&a).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&a),
+            [
                 [0.37689444, 0.24156547, 0.30238447],
                 [0.80570966, 0.5184905, 0.6703743],
                 [0.4199963, 0.2735345, 0.38693744],
                 [0.5321113, 0.34252504, 0.4438907],
-            ],
+            ]
         );
-        assert_close(
-            &g.get(&b).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&b),
+            [
                 [0.8737376, 0.9888564],
                 [0.9339924, 0.991189],
                 [1.1659734, 1.2298465],
-            ],
+            ]
         );
     }
 
@@ -415,8 +415,8 @@ mod tests {
         let c2 = b.leaky_trace().permute().matmul(a.leaky_trace().permute());
         let g2 = c2.exp().mean().backward();
 
-        assert_close(&g1.get(&a).array(), &g2.get(&a).array());
-        assert_close(&g1.get(&b).array(), &g2.get(&b).array());
+        assert_close_to_tensor!(g1.get(&a), g2.get(&a));
+        assert_close_to_tensor!(g1.get(&b), g2.get(&b));
     }
 
     #[test]
@@ -431,7 +431,7 @@ mod tests {
         for i in 0..N {
             let sub_a = dev.tensor(a_array[i]);
             let sub_c = sub_a.matmul(b.clone());
-            assert_close(&r_array[i], &sub_c.array());
+            assert_close!(r_array[i], sub_c.array());
         }
         let gs = r.sum().backward();
         let a_grad = gs.get(&a).array();
@@ -439,7 +439,7 @@ mod tests {
         for i in 0..N {
             let sub_a = dev.tensor(a_array[i]);
             let sub_gs = sub_a.leaky_trace().matmul(b.clone()).sum().backward();
-            assert_close(&a_grad[i], &sub_gs.get(&sub_a).array());
+            assert_close!(a_grad[i], sub_gs.get(&sub_a).array());
             let sub_b_grad = sub_gs.get(&b).array();
             for x in 0..3 {
                 for y in 0..2 {
@@ -447,7 +447,7 @@ mod tests {
                 }
             }
         }
-        assert_close(&gs.get(&b).array(), &sub_bs_summed);
+        assert_close!(gs.get(&b).array(), sub_bs_summed);
     }
 
     #[test]
@@ -463,12 +463,7 @@ mod tests {
         let g1 = r1.exp().mean().backward();
         let g2 = r2.exp().mean().backward();
         assert_eq!(g1.get(&a).array(), g2.get(&a).array());
-        assert_close(
-            &dev.tensor(g1.get(&b_up).array())
-                .sum::<_, Axis<0>>()
-                .array(),
-            &g2.get(&b).array(),
-        );
+        assert_close_to_tensor!(g1.get(&b_up).sum::<_, Axis<0>>(), g2.get(&b));
     }
 
     #[test]
@@ -490,10 +485,10 @@ mod tests {
             let sub_a = dev.tensor(a_array[i]);
             let sub_b = dev.tensor(b_array[i]);
             let sub_c = sub_a.leaky_trace().matmul(sub_b.clone());
-            assert_close(&sub_c.array(), &c_array[i]);
+            assert_close!(sub_c.array(), c_array[i]);
             let sub_g = sub_c.exp().sum().backward();
-            assert_close(&sub_g.get(&sub_a).array(), &g_a[i]);
-            sub_g.get(&sub_b).array().assert_close(&g_b[i], 1e-5);
+            assert_close!(sub_g.get(&sub_a).array(), g_a[i]);
+            assert_close!(sub_g.get(&sub_b).array(), g_b[i], 1e-5);
         }
     }
 
@@ -517,10 +512,10 @@ mod tests {
                 let sub_a = dev.tensor(a_array[i][j]);
                 let sub_b = dev.tensor(b_array[i][j]);
                 let sub_c = sub_a.leaky_trace().matmul(sub_b.clone());
-                assert_close(&sub_c.array(), &c_array[i][j]);
+                assert_close!(sub_c.array(), c_array[i][j]);
                 let sub_g = sub_c.exp().sum().backward();
-                assert_close(&sub_g.get(&sub_a).array(), &g_a[i][j]);
-                sub_g.get(&sub_b).array().assert_close(&g_b[i][j], 1e-5);
+                assert_close!(sub_g.get(&sub_a).array(), g_a[i][j]);
+                assert_close!(sub_g.get(&sub_b).array(), g_b[i][j], 1e-5);
             }
         }
     }
@@ -533,16 +528,16 @@ mod tests {
         let b: Tensor<_, TestDtype, _> =
             dev.tensor([[0.7804, 0.5540], [0.5378, 0.8401], [0.5042, 0.8604]]);
         let r = a.leaky_trace().matmul(b.clone());
-        assert_close(&r.array(), &[1.261436, 1.5543157]);
+        assert_close_to_literal!(r, [1.261436, 1.5543157]);
         let g = r.exp().mean().backward();
-        assert_close(&g.get(&a).array(), &[2.6883178, 2.9369607, 2.9256766]);
-        assert_close(
-            &g.get(&b).array(),
-            &[
+        assert_close_to_literal!(g.get(&a), [2.6883178, 2.9369607, 2.9256766]);
+        assert_close_to_literal!(
+            g.get(&b),
+            [
                 [1.2879219, 1.7261779],
                 [0.70150787, 0.94021803],
                 [1.6746868, 2.244552],
-            ],
+            ]
         );
     }
 
@@ -553,15 +548,15 @@ mod tests {
         let b: Tensor<_, TestDtype, _> =
             dev.tensor([[0.7804, 0.5378, 0.5042], [0.5540, 0.8401, 0.8604]]);
         let r = a.leaky_trace().matmul(b.leaky_trace().permute());
-        assert_close(&r.array(), &[1.261436, 1.5543157]);
+        assert_close_to_literal!(r, [1.261436, 1.5543157]);
         let g = r.exp().mean().backward();
-        assert_close(&g.get(&a).array(), &[2.6883178, 2.9369607, 2.9256766]);
-        assert_close(
-            &g.get(&b).array(),
-            &[
+        assert_close_to_literal!(g.get(&a), [2.6883178, 2.9369607, 2.9256766]);
+        assert_close_to_literal!(
+            g.get(&b),
+            [
                 [1.2879219, 0.70150787, 1.6746868],
                 [1.7261779, 0.94021803, 2.244552],
-            ],
+            ]
         );
     }
 
@@ -574,29 +569,24 @@ mod tests {
         let c = a.leaky_trace().matmul(b.clone());
         let c_t = b.leaky_trace().matmul(a.clone()).permute();
         assert_eq!(c.array(), c_t.array());
-        assert_close(
-            &c.array(),
-            &[
+        assert_close_to_literal!(
+            c,
+            [
                 [-0.66041213, 1.4961504, 0.7766599],
                 [0.26427752, -0.5987154, -0.31079647],
                 [-0.3337961, 0.75620836, 0.39255193],
                 [-0.43132398, 0.97715575, 0.507247],
                 [-0.8670264, 1.9642308, 1.0196431],
-            ],
+            ]
         );
 
         let g = c.exp().mean().backward();
-        assert_close(
-            &g.get(&a).array(),
-            &[
-                -0.34898597,
-                -0.02309341,
-                -0.16800028,
-                -0.21024881,
-                -0.54529756,
-            ],
+        #[rustfmt::skip]
+        assert_close_to_literal!(
+            g.get(&a),
+            [-0.34898597, -0.02309341, -0.16800028, -0.21024881, -0.54529756]
         );
-        assert_close(&g.get(&b).array(), &[-0.13630435, -1.6781758, -0.75171506]);
+        assert_close_to_literal!(g.get(&b), &[-0.13630435, -1.6781758, -0.75171506]);
     }
 
     #[test]
@@ -605,10 +595,10 @@ mod tests {
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([2.0]);
         let c = a.leaky_trace().matmul(b.clone());
-        assert_eq!(c.array(), [[1.0]]);
+        assert_close_to_literal!(c, [[1.0]]);
         let g = c.exp().sum().backward();
-        assert_close(&g.get(&a).array(), &[5.4365635]);
-        assert_close(&g.get(&b).array(), &[1.3591409]);
+        assert_close_to_literal!(g.get(&a), [5.4365635]);
+        assert_close_to_literal!(g.get(&b), [1.3591409]);
     }
 
     #[test]
@@ -619,36 +609,36 @@ mod tests {
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0]]);
         let c = a.leaky_trace().matmul(b.clone());
-        assert_eq!(c.array(), [1.0]);
+        assert_close_to_literal!(c, [1.0]);
         let g = c.exp().sum().backward();
-        assert_close(&g.get(&a).array(), &[5.4365635]);
-        assert_close(&g.get(&b).array(), &[[1.3591409]]);
+        assert_close_to_literal!(g.get(&a), [5.4365635]);
+        assert_close_to_literal!(g.get(&b), [[1.3591409]]);
 
         // 1 * 1x1 (permuted)
         let c = a.leaky_trace().matmul(b.leaky_trace().permute());
-        assert_eq!(c.array(), [1.0]);
+        assert_close_to_literal!(c, [1.0]);
         let g = c.exp().sum().backward();
-        assert_close(&g.get(&a).array(), &[5.4365635]);
-        assert_close(&g.get(&b).array(), &[[1.3591409]]);
+        assert_close_to_literal!(g.get(&a), [5.4365635]);
+        assert_close_to_literal!(g.get(&b), [[1.3591409]]);
 
         // 1 * 1x2
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0, 4.0]]);
         let c = a.leaky_trace().matmul(b.clone());
-        let e = [1.0, 2.0];
-        assert_eq!(c.array(), e);
+        let e: [f64; 2] = [1.0, 2.0];
+        assert_close_to_literal!(c, e);
         let g = c.exp().sum().backward();
-        assert_close(&g.get(&a).array(), &[e[0].exp() * 2.0 + e[1].exp() * 4.0]);
-        assert_close(&g.get(&b).array(), &[[1.3591409, 3.694528]]);
+        assert_close_to_literal!(g.get(&a), [e[0].exp() * 2.0 + e[1].exp() * 4.0], 1e-4);
+        assert_close_to_literal!(g.get(&b), [[1.3591409, 3.694528]]);
 
         // 1 * 1x2 (permuted)
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.5]);
         let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0], [4.0]]);
         let c = a.leaky_trace().matmul(b.leaky_trace().permute());
-        assert_eq!(c.array(), e);
+        assert_close_to_literal!(c, e);
         let g = c.exp().sum().backward();
-        assert_close(&g.get(&a).array(), &[e[0].exp() * 2.0 + e[1].exp() * 4.0]);
-        assert_close(&g.get(&b).array(), &[[1.3591409], [3.694528]]);
+        assert_close_to_literal!(g.get(&a), [e[0].exp() * 2.0 + e[1].exp() * 4.0], 1e-4);
+        assert_close_to_literal!(g.get(&b), [[1.3591409], [3.694528]]);
     }
 
     #[test]
@@ -660,10 +650,10 @@ mod tests {
             let a: Tensor<_, TestDtype, _> = dev.tensor([[0.5]]);
             let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0]]);
             let c = a.leaky_trace().matmul(b.clone());
-            assert_eq!(c.array(), [[1.0]]);
+            assert_close_to_literal!(c, [[1.0]]);
             let g = c.exp().sum().backward();
-            assert_close(&g.get(&a).array(), &[[5.4365635]]);
-            assert_close(&g.get(&b).array(), &[[1.3591409]]);
+            assert_close_to_literal!(g.get(&a), [[5.4365635]]);
+            assert_close_to_literal!(g.get(&b), [[1.3591409]]);
         }
 
         {
@@ -671,12 +661,10 @@ mod tests {
             let a: Tensor<_, TestDtype, _> = dev.tensor([[0.5, 0.1]]);
             let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0], [4.0]]);
             let c = a.leaky_trace().matmul(b.clone());
-            assert_eq!(c.array(), [[1.4]]);
+            assert_close_to_literal!(c, [[1.4]]);
             let g = c.exp().sum().backward();
-            g.get(&a).array().assert_close(&[[8.1104, 16.2208]], 1e-5);
-            g.get(&b)
-                .array()
-                .assert_close(&[[2.0276], [0.40552002]], 1e-5);
+            assert_close_to_literal!(g.get(&a), [[8.1104, 16.2208]], 1e-5);
+            assert_close_to_literal!(g.get(&b), [[2.0276], [0.40552002]], 1e-5);
         }
 
         {
@@ -684,12 +672,10 @@ mod tests {
             let a: Tensor<_, TestDtype, _> = dev.tensor([[0.5], [0.1]]);
             let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0], [4.0]]);
             let c = a.leaky_trace().permute().matmul(b.clone());
-            assert_eq!(c.array(), [[1.4]]);
+            assert_close_to_literal!(c, [[1.4]]);
             let g = c.exp().sum().backward();
-            g.get(&a).array().assert_close(&[[8.1104], [16.2208]], 1e-5);
-            g.get(&b)
-                .array()
-                .assert_close(&[[2.0276], [0.40552002]], 1e-5);
+            assert_close_to_literal!(g.get(&a), [[8.1104], [16.2208]], 1e-5);
+            assert_close_to_literal!(g.get(&b), [[2.0276], [0.40552002]], 1e-5);
         }
 
         {
@@ -697,12 +683,10 @@ mod tests {
             let a: Tensor<_, TestDtype, _> = dev.tensor([[0.5, 0.1]]);
             let b: Tensor<_, TestDtype, _> = dev.tensor([[2.0, 4.0]]);
             let c = a.leaky_trace().matmul(b.leaky_trace().permute());
-            assert_eq!(c.array(), [[1.4]]);
+            assert_close_to_literal!(c, [[1.4]]);
             let g = c.exp().sum().backward();
-            g.get(&a).array().assert_close(&[[8.1104, 16.2208]], 1e-5);
-            g.get(&b)
-                .array()
-                .assert_close(&[[2.0276, 0.40552002]], 1e-5);
+            assert_close_to_literal!(g.get(&a), [[8.1104, 16.2208]], 1e-5);
+            assert_close_to_literal!(g.get(&b), [[2.0276, 0.40552002]], 1e-5);
         }
     }
 

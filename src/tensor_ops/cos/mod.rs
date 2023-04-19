@@ -47,14 +47,11 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.leaky_trace().cos();
-        assert_close(
-            &r.array(),
-            &[-0.41614684, 0.5403023, 1.0, 0.5403023, -0.41614684],
-        );
+        assert_close_to_literal!(r, [-0.41614684, 0.5403023, 1.0, 0.5403023, -0.41614684]);
         let g = r.mean().backward();
-        assert_close(
-            &g.get(&x).array(),
-            &[0.18185948, 0.16829419, -0.0, -0.16829419, -0.18185948],
+        assert_close_to_literal!(
+            g.get(&x),
+            [0.18185948, 0.16829419, -0.0, -0.16829419, -0.18185948]
         );
     }
 }

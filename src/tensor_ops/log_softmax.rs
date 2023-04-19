@@ -105,20 +105,20 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = a.leaky_trace().log_softmax();
-        assert_close(
-            &r.array(),
-            &[-4.4519143, -3.4519143, -2.4519143, -1.4519143, -0.4519143],
+        assert_close_to_literal!(
+            r,
+            [-4.4519143, -3.4519143, -2.4519143, -1.4519143, -0.4519143]
         );
         let g = r.mean().backward();
-        assert_close(
-            &g.get(&a).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&a),
+            [
                 0.18834378,
                 0.16831508,
                 0.11387146,
                 -0.034121647,
                 -0.43640864,
-            ],
+            ]
         );
     }
 
@@ -127,20 +127,20 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
         let r = a.leaky_trace().log_softmax::<Axis<1>>();
-        assert_close(
-            &r.array(),
-            &[
+        assert_close_to_literal!(
+            r,
+            [
                 [-2.407606, -1.4076059, -0.40760595],
                 [-6.0509458, -3.0509458, -0.05094576],
-            ],
+            ]
         );
         let g = r.mean().backward();
-        assert_close(
-            &g.get(&a).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&a),
+            [
                 [0.12165138, 0.044302434, -0.1659538],
                 [0.16548885, 0.14300959, -0.30849844],
-            ],
+            ]
         );
     }
 }

@@ -147,19 +147,19 @@ mod tests {
 
         let x = dev.tensor([0, 0, 1]);
         let y = model.forward(x.leaky_trace());
-        assert_close(
-            &y.array(),
-            &[
+        assert_close_to_literal!(
+            y,
+            [
                 [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
                 [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
                 [0.11733949, 0.14059687, -0.10670426, -0.09373143, 0.18974298],
-            ],
+            ]
         );
 
         let g = y.square().mean().backward();
-        assert_close(
-            &g.get(&model.weight).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&model.weight),
+            [
                 [
                     -0.09223715,
                     -0.08099073,
@@ -174,7 +174,7 @@ mod tests {
                     -0.012497525,
                     0.025299065,
                 ],
-            ],
+            ]
         );
     }
 
@@ -188,9 +188,9 @@ mod tests {
 
         let x = dev.tensor([[0, 0], [0, 1]]);
         let y = model.forward(x.leaky_trace());
-        assert_close(
-            &y.array(),
-            &[
+        assert_close_to_literal!(
+            y,
+            [
                 [
                     [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
                     [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
@@ -199,13 +199,13 @@ mod tests {
                     [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
                     [0.11733949, 0.14059687, -0.10670426, -0.09373143, 0.18974298],
                 ],
-            ],
+            ]
         );
 
         let g = y.square().mean().backward();
-        assert_close(
-            &g.get(&model.weight).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&model.weight),
+            [
                 [
                     -0.103766784,
                     -0.091114566,
@@ -220,7 +220,7 @@ mod tests {
                     -0.009373143,
                     0.018974299,
                 ],
-            ],
+            ]
         );
     }
 }

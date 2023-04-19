@@ -48,8 +48,8 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.leaky_trace().abs();
-        assert_eq!(r.array(), [2.0, 1.0, 0.0, 1.0, 2.0]);
+        assert_close_to_literal!(r, [2.0, 1.0, 0.0, 1.0, 2.0]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&x).array(), [-0.2, -0.2, 0.0, 0.2, 0.2]);
+        assert_close_to_literal!(g.get(&x), [-0.2, -0.2, 0.0, 0.2, 0.2]);
     }
 }

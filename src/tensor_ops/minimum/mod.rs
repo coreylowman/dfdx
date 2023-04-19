@@ -57,10 +57,10 @@ mod tests {
         let b: Tensor<_, TestDtype, _> = dev.tensor([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
 
         let result = a.leaky_trace().minimum(b.clone());
-        assert_eq!(result.array(), [[-1., 0., -1.], [3., -4., -5.]]);
+        assert_close_to_literal!(result, [[-1., 0., -1.], [3., -4., -5.]]);
 
         let g = result.sum().backward();
-        assert_eq!(g.get(&a).array(), [[1.0, 0.5, 0.0], [0.5, 0.0, 1.0]]);
-        assert_eq!(g.get(&b).array(), [[0.0, 0.5, 1.0], [0.5, 1.0, 0.0]]);
+        assert_close_to_literal!(g.get(&a), [[1.0, 0.5, 0.0], [0.5, 0.0, 1.0]]);
+        assert_close_to_literal!(g.get(&b), [[0.0, 0.5, 1.0], [0.5, 1.0, 0.0]]);
     }
 }

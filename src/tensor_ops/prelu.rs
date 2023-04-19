@@ -94,13 +94,13 @@ mod tests {
         let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let y: Tensor<_, TestDtype, _> = dev.tensor([0.05, 0.05, 0.05, 0.05, 0.05]);
         let r = x.leaky_trace().prelu(y.clone());
-        assert_eq!(r.array(), [-0.1, -0.05, 0.0, 1.0, 2.0]);
+        assert_close_to_literal!(r, [-0.1, -0.05, 0.0, 1.0, 2.0]);
         // NOTE: call .exp() to make sure we cover cases where .prelu() uses the result's gradient
         let g = r.exp().mean().backward();
-        assert_close(
-            &g.get(&x).array(),
-            &[0.00904837, 0.00951229, 0.2, 0.54365635, 1.4778112],
+        assert_close_to_literal!(
+            g.get(&x),
+            [0.00904837, 0.00951229, 0.2, 0.54365635, 1.4778112]
         );
-        assert_close(&g.get(&y).array(), &[-0.3619348, -0.1902458, 0.0, 0.0, 0.0]);
+        assert_close_to_literal!(g.get(&y), [-0.3619348, -0.1902458, 0.0, 0.0, 0.0]);
     }
 }

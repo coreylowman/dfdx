@@ -194,17 +194,17 @@ mod tests {
 
         let x = dev.tensor([-0.8808001, 2.4185333, 2.2478335, 0.0565211, 2.031299]);
         let y = model.forward(x.leaky_trace());
-        assert_close(&y.array(), &[-0.93430865, 0.08624211]);
+        assert_close_to_literal!(y, [-0.93430865, 0.08624211]);
 
         let g = y.square().mean().backward();
-        assert_close(
-            &g.get(&model.weight).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&model.weight),
+            [
                 [0.82293916, -2.2596567, -2.1001704, -0.05280815, -1.8978603],
                 [-0.07596206, 0.20857942, 0.19385791, 0.004874499, 0.17518352],
-            ],
+            ]
         );
-        assert_close(&g.get(&model.bias).array(), &[-0.93430865, 0.08624211]);
+        assert_close_to_literal!(g.get(&model.bias), [-0.93430865, 0.08624211]);
     }
 
     #[test]
@@ -222,24 +222,24 @@ mod tests {
             [-0.8291412, 0.07691376, -0.26538327, 0.90017676, -1.8790455],
         ]);
         let y = model.forward(x.leaky_trace());
-        assert_close(
-            &y.array(),
-            &[
+        assert_close_to_literal!(
+            y,
+            [
                 [1.3914378, -0.012851536],
                 [-0.005462587, -0.14800104],
                 [0.9177769, -0.7897872],
-            ],
+            ]
         );
 
         let g = y.square().mean().backward();
-        assert_close(
-            &g.get(&model.weight).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&model.weight),
+            [
                 [-1.1541969, 0.6956873, -0.8553807, 0.9289255, 0.04931633],
                 [0.29272807, -0.17702839, 0.08586791, -0.24057935, 0.5286576],
-            ],
+            ]
         );
-        assert_close(&g.get(&model.bias).array(), &[0.7679174, -0.31687993]);
+        assert_close_to_literal!(g.get(&model.bias), [0.7679174, -0.31687993]);
     }
 
     #[test]
@@ -257,9 +257,9 @@ mod tests {
             [[1.2879219, 0.70150787, -1.6746868, 1.7261779, -0.94021803], [-2.6883178, 2.9369607, 2.9256766, 0.27559614, -0.17530347], [0.17499207, -0.11440835, 0.16627812, -0.91773695, 1.1128315]],
         ]);
         let y = model.forward(x.leaky_trace());
-        assert_close(
-            &y.array(),
-            &[
+        assert_close_to_literal!(
+            y,
+            [
                 [
                     [1.3914378, -0.012851536],
                     [-0.005462587, -0.14800104],
@@ -270,15 +270,15 @@ mod tests {
                     [-0.6274954, -0.56451213],
                     [0.12783213, -0.0068387985],
                 ],
-            ],
+            ]
         );
 
         let g = y.square().mean().backward();
         #[rustfmt::skip]
-        assert_close(
-            &g.get(&model.weight).array(),
-            &[[-0.16088384, 0.10978711, -0.9008978, 0.59211355, -0.029177088], [0.35563633, -0.38838047, -0.17600831, -0.2034213, 0.31128058]],
+        assert_close_to_literal!(
+            g.get(&model.weight),
+            [[-0.16088384, 0.10978711, -0.9008978, 0.59211355, -0.029177088], [0.35563633, -0.38838047, -0.17600831, -0.2034213, 0.31128058]]
         );
-        assert_close(&g.get(&model.bias).array(), &[0.40265593, -0.2874091]);
+        assert_close_to_literal!(g.get(&model.bias), [0.40265593, -0.2874091]);
     }
 }

@@ -229,7 +229,6 @@ impl<
 mod tests {
     use super::*;
     use crate::{tensor_ops::*, tests::*};
-    use num_traits::FromPrimitive;
 
     #[test]
     /// Produced by
@@ -251,26 +250,26 @@ mod tests {
         ]]);
         let result = x.leaky_trace().conv2d::<1, 0>(weight.clone())
             + bias.leaky_trace().broadcast::<_, Axes2<1, 2>>();
-        assert_close(
-            &result.array(),
-            &[[[0.24369538, 0.71453357]], [[-0.69169492, -0.06172103]]],
+        assert_close_to_literal!(
+            result,
+            [[[0.24369538, 0.71453357]], [[-0.69169492, -0.06172103]]]
         );
         let g = result.exp().mean().backward();
-        assert_close(
-            &g.get(&x).array(),
-            &[[
+        assert_close_to_literal!(
+            g.get(&x),
+            [[
                 [0.03936806, -0.08457474, -0.26788417],
                 [-0.03140351, -0.04316529, 0.02424446],
-            ]],
+            ]]
         );
-        assert_close(
-            &g.get(&weight).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&weight),
+            [
                 [[[-0.00703794, -0.31814471], [0.19160703, -0.00260070]]],
                 [[[0.01548620, -0.15778227], [0.10209797, -0.01799832]]],
-            ],
+            ]
         );
-        assert_close(&g.get(&bias).array(), &[0.82979727, 0.36021793]);
+        assert_close_to_literal!(g.get(&bias), [0.82979727, 0.36021793]);
     }
 
     #[test]
@@ -294,24 +293,24 @@ mod tests {
 
         let result = x.leaky_trace().conv2d::<2, 0>(weight.clone())
             + bias.leaky_trace().broadcast::<_, Axes2<1, 2>>();
-        assert_close(&result.array(), &[[[-0.29368058]], [[0.30018353]]]);
+        assert_close_to_literal!(result, [[[-0.29368058]], [[0.30018353]]]);
 
         let g = result.exp().mean().backward();
 
-        assert_close(
-            &g.get(&x).array(),
-            &[[[-0.03917716, 0.06006697, 0.], [0.19859464, 0.19576924, 0.]]],
+        assert_close_to_literal!(
+            g.get(&x),
+            [[[-0.03917716, 0.06006697, 0.], [0.19859464, 0.19576924, 0.]]]
         );
 
-        assert_close(
-            &g.get(&weight).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&weight),
+            [
                 [[[0.13829342, -0.22180916], [-0.11759478, 0.21646728]]],
                 [[[0.25044560, -0.40169036], [-0.21296094, 0.39201635]]],
-            ],
+            ]
         );
 
-        assert_close(&g.get(&bias).array(), &[0.37275729, 0.67505330]);
+        assert_close_to_literal!(g.get(&bias), [0.37275729, 0.67505330]);
     }
 
     #[test]
@@ -331,33 +330,33 @@ mod tests {
             + bias.leaky_trace().broadcast::<_, Axes2<1, 2>>();
 
         #[rustfmt::skip]
-        assert_close(
-            &result.array(),
-            &[
+        assert_close_to_literal!(
+            result,
+            [
                 [[-0.37165433, 0.26964033, -0.47000977],[-0.52418506, 0.3161699, -0.56809187]],
                 [[0.10800815, 0.66143924, 0.16603859],[-0.11654915, 0.5421771, 0.21993488]],
                 [[0.26416105, -0.22402346, 0.420797],[-0.23212466, 0.3085245, 0.41083777]],
-            ],
+            ]
         );
 
         let g = result.exp().mean().backward();
 
-        assert_close(
-            &g.get(&x).array(),
-            &[[[0.010052743, 0.038219165]], [[0.0013861917, 0.096129306]]],
+        assert_close_to_literal!(
+            g.get(&x),
+            [[[0.010052743, 0.038219165]], [[0.0013861917, 0.096129306]]]
         );
 
         #[rustfmt::skip]
-        assert_close(
-            &g.get(&weight).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&weight),
+            [
                 [[[-0.03488452, -0.035597768], [-0.03483199, -0.036207683]],[[-0.05705857, 0.03406856], [-0.05008337, 0.024666183]]],
                 [[[-0.053492695, -0.04727108], [-0.05620105, -0.055251926]],[[-0.04363727, 0.033381317], [-0.0607851, 0.030584559]]],
                 [[[-0.051853612, -0.03900232], [-0.04206547, -0.037880093]],[[-0.0073834136, 0.0208545], [0.02886929, -0.040557314]]],
-            ],
+            ]
         );
 
-        assert_close(&g.get(&bias).array(), &[0.28636602, 0.44933242, 0.40484178]);
+        assert_close_to_literal!(g.get(&bias), [0.28636602, 0.44933242, 0.40484178]);
     }
 
     #[test]
@@ -376,32 +375,32 @@ mod tests {
             + bias.leaky_trace().broadcast::<_, Axes2<1, 2>>();
 
         #[rustfmt::skip]
-        assert_close(
-            &result.array(),
-            &[
+        assert_close_to_literal!(
+            result,
+            [
                 [[-0.07123789, -0.07123789, -0.07123789],[-0.07123789, -0.14481398, -0.07123789],[-0.07123789, -0.59748650, -0.07123789],[-0.07123789, -0.07123789, -0.07123789]],
                 [[-0.17244765, -0.17244765, -0.17244765],[-0.17244765, -0.3061839, -0.17244765],[-0.17244765, -0.42046443, -0.17244765],[-0.17244765, -0.17244765, -0.17244765]],
-            ],
+            ]
         );
 
         let g = result.exp().mean().backward();
 
         #[rustfmt::skip]
-        assert_close(
-            &g.get(&x).array(),
-            &[[[-0.009780421, 0.01484663],[0.010391434, 0.0062526874],[0.00032053515, -0.009087289],[-0.0073772445, 0.0105412705]]],
+        assert_close_to_literal!(
+            g.get(&x),
+            [[[-0.009780421, 0.01484663],[0.010391434, 0.0062526874],[0.00032053515, -0.009087289],[-0.0073772445, 0.0105412705]]]
         );
 
         #[rustfmt::skip]
-        assert_close(
-            &g.get(&weight).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&weight),
+            [
                 [[[0.0, 0.019200183, 0.012330416],[0.0, 0.051398464, -0.003175714],[0.0, -0.013860448, 0.0011212977]]],
                 [[[0.0, 0.02291844, 0.01471829],[0.0, 0.05281557, -0.0069562597],[0.0, -0.011794927, 0.00095419877]]],
-            ],
+            ]
         );
 
-        assert_close(&g.get(&bias).array(), &[0.44699076, 0.408709]);
+        assert_close_to_literal!(g.get(&bias), [0.44699076, 0.408709]);
     }
 
     #[test]
@@ -416,7 +415,7 @@ mod tests {
         let out = out + bias.broadcast::<_, Axes2<1, 2>>();
 
         #[rustfmt::skip]
-        assert_close(&out.array(), &[
+        assert_close_to_literal!(out, [
             [[-0.57176435, -0.57176435, -0.57176435],[-0.57176435, 1.0759051, 1.4307989],[-0.57176435, -0.86296344, -1.8794353]],
             [[0.29306656, 0.29306656, 0.29306656],[0.29306656, 0.9771965, 1.467767],[0.29306656, -6.367015, -2.3370528]],
             [[-0.19717735, -0.19717735, -0.19717735],[-0.19717735, 1.3412137, 2.9476144],[-0.19717735, 4.247249, -2.1779637]],
@@ -430,10 +429,10 @@ mod tests {
         let w: Tensor<Rank4<5, 3, 6, 6>, TestDtype, _> = dev.sample_normal();
 
         let y: Tensor<Rank3<5, 9, 9>, _, _, _> = x.leaky_trace().conv2d::<3, 2>(w.clone());
-        let y0 = y.array();
+        let y0 = y.retaped::<NoneTape>();
         let grads0 = y.square().mean().backward();
-        let x0 = grads0.get(&x).array();
-        let w0 = grads0.get(&w).array();
+        let x0 = grads0.get(&x);
+        let w0 = grads0.get(&w);
 
         let x = x
             .broadcast::<Rank4<10, 3, 28, 28>, _>()
@@ -442,16 +441,16 @@ mod tests {
 
         let y: Tensor<Rank4<10, 5, 9, 9>, _, _, _> = x.leaky_trace().conv2d::<3, 2>(w.clone());
         for i in 0..10 {
-            assert_close(&y0, &y.retaped::<NoneTape>().select(dev.tensor(i)).array());
+            assert_close_to_tensor!(y0, y.retaped::<NoneTape>().select(dev.tensor(i)));
         }
 
         let grads = y.square().mean().backward();
 
-        w0.assert_close(&(grads.get(&w)).array(), TestDtype::from_f32(1e-3).unwrap());
+        assert_close_to_tensor!(w0, grads.get(&w), 1e-3);
 
         let x_grad = grads.get(&x) * 10.0;
         for i in 0..10 {
-            assert_close(&x0, &x_grad.clone().select(dev.tensor(i)).array());
+            assert_close_to_tensor!(x0, x_grad.clone().select(dev.tensor(i)));
         }
     }
 }

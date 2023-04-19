@@ -190,7 +190,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.leaky_trace() * rate.clone()).square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
-            assert_close(&t.array(), e);
+            assert_close_to_literal!(t, e);
         }
     }
 
@@ -224,7 +224,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.leaky_trace() * rate.clone()).square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
-            assert_close(&t.array(), e);
+            assert_close_to_literal!(t, e);
         }
     }
 
@@ -257,7 +257,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = t.leaky_trace().exp().square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
-            assert_close(&t.array(), e);
+            assert_close_to_literal!(t, e);
         }
     }
 
@@ -290,7 +290,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = t.leaky_trace().exp().square().mean().backward();
             opt.update(&mut t, &gradients).expect("");
-            assert_close(&t.array(), e);
+            assert_close_to_literal!(t, e);
         }
     }
 

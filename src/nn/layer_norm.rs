@@ -147,16 +147,13 @@ mod tests {
         let mut m = dev.build_module::<builder::LayerNorm1D<5>, TestDtype>();
         let x = dev.sample_normal::<Rank1<5>>();
         let r = m.forward_mut(x.leaky_trace());
-        assert_close(
-            &r.array(),
-            &[0.873304, 0.9879816, -1.6083492, 0.44028836, -0.6932247],
-        );
+        assert_close_to_literal!(r, [0.873304, 0.9879816, -1.6083492, 0.44028836, -0.6932247]);
         let g = r.mean().backward();
-        assert_close(
-            &g.get(&m.gamma).array(),
-            &[0.1746608, 0.19759633, -0.32166985, 0.088057674, -0.13864495],
+        assert_close_to_literal!(
+            g.get(&m.gamma),
+            [0.1746608, 0.19759633, -0.32166985, 0.088057674, -0.13864495]
         );
-        assert_close(&g.get(&m.beta).array(), &[0.2; 5]);
+        assert_close_to_literal!(g.get(&m.beta), [0.2; 5]);
     }
 
     #[test]
@@ -165,19 +162,19 @@ mod tests {
         let m = dev.build_module::<builder::LayerNorm1D<5>, TestDtype>();
         let x = dev.sample_normal::<Rank2<3, 5>>();
         let r = m.forward(x.leaky_trace());
-        assert_close(
-            &r.array(),
-            &[
+        assert_close_to_literal!(
+            r,
+            [
                 [0.873304, 0.9879816, -1.6083492, 0.44028836, -0.6932247],
                 [0.663322, -1.8449169, 0.05217871, 0.056903206, 1.0725129],
                 [1.0343355, -1.5559655, -0.40086073, 1.1405537, -0.21806297],
-            ],
+            ]
         );
         let g = r.mean().backward();
-        assert_close(
-            &g.get(&m.gamma).array(),
-            &[0.1713974, -0.16086, -0.1304687, 0.109183, 0.0107483],
+        assert_close_to_literal!(
+            g.get(&m.gamma),
+            [0.1713974, -0.16086, -0.1304687, 0.109183, 0.0107483]
         );
-        assert_close(&g.get(&m.beta).array(), &[0.2; 5]);
+        assert_close_to_literal!(g.get(&m.beta), [0.2; 5]);
     }
 }

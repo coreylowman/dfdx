@@ -85,11 +85,11 @@ mod tests {
         let y = model.forward(x.leaky_trace());
 
         #[rustfmt::skip]
-        assert_close(&y.array(), &[[0.25372928, -2.4258814],[1.7892148, -2.6242268],[1.5131638, 0.23407778],[3.4201493, 1.597525]]);
+        assert_close_to_literal!(y, [[0.25372928, -2.4258814],[1.7892148, -2.6242268],[1.5131638, 0.23407778],[3.4201493, 1.597525]]);
 
         let g = y.mean().backward();
-        assert_close(&g.get(&model.0.weight).array(), &[[0.475242, -0.075136]; 2]);
-        assert_close(&g.get(&model.0.bias).array(), &[0.5; 2]);
-        assert_close(&g.get(&x).array(), &[[0.18806472, 0.21419683]; 4]);
+        assert_close_to_literal!(g.get(&model.0.weight), [[0.475242, -0.075136]; 2]);
+        assert_close_to_literal!(g.get(&model.0.bias), [0.5; 2]);
+        assert_close_to_literal!(g.get(&x), [[0.18806472, 0.21419683]; 4]);
     }
 }

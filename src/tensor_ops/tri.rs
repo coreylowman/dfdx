@@ -68,16 +68,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        prelude::{AsArray, TensorFrom},
-        tests::TestDevice,
-    };
+    use crate::{tensor::*, tests::*};
 
     #[test]
     fn test_tri() {
         let dev: TestDevice = Default::default();
 
-        let t = dev.tensor(
+        let t: Tensor<_, TestDtype, _> = dev.tensor(
             [[[
                 [1., 2., 3., 4., 5., 6.],
                 [1., 2., 3., 4., 5., 6.],
@@ -86,35 +83,35 @@ mod tests {
                 [1., 2., 3., 4., 5., 6.],
             ]; 4]; 3],
         );
-        assert_eq!(
-            t.clone().lower_tri(None).array(),
+        assert_close_to_literal!(
+            t.clone().lower_tri(None),
             [[[
                 [1., 0., 0., 0., 0., 0.],
                 [1., 2., 0., 0., 0., 0.],
                 [1., 2., 3., 0., 0., 0.],
                 [1., 2., 3., 4., 0., 0.],
                 [1., 2., 3., 4., 5., 0.],
-            ]; 4]; 3],
+            ]; 4]; 3]
         );
-        assert_eq!(
-            t.clone().lower_tri(2).array(),
+        assert_close_to_literal!(
+            t.clone().lower_tri(2),
             [[[
                 [1., 2., 3., 0., 0., 0.],
                 [1., 2., 3., 4., 0., 0.],
                 [1., 2., 3., 4., 5., 0.],
                 [1., 2., 3., 4., 5., 6.],
                 [1., 2., 3., 4., 5., 6.],
-            ]; 4]; 3],
+            ]; 4]; 3]
         );
-        assert_eq!(
-            t.upper_tri(-1).array(),
+        assert_close_to_literal!(
+            t.upper_tri(-1),
             [[[
                 [1., 2., 3., 4., 5., 6.],
                 [1., 2., 3., 4., 5., 6.],
                 [0., 2., 3., 4., 5., 6.],
                 [0., 0., 3., 4., 5., 6.],
                 [0., 0., 0., 4., 5., 6.],
-            ]; 4]; 3],
+            ]; 4]; 3]
         );
     }
 }

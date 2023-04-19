@@ -257,6 +257,9 @@ pub(crate) mod tests {
     pub trait AssertClose {
         type Elem: std::fmt::Display + std::fmt::Debug + Copy;
         const DEFAULT_TOLERANCE: Self::Elem;
+        fn get_default_tol(&self) -> Self::Elem {
+            Self::DEFAULT_TOLERANCE
+        }
         fn get_far_pair(
             &self,
             rhs: &Self,
@@ -313,15 +316,100 @@ pub(crate) mod tests {
         }
     }
 
-    pub fn assert_close<T: AssertClose + std::fmt::Debug>(a: &T, b: &T) {
-        a.assert_close(b, T::DEFAULT_TOLERANCE);
+    pub trait NdMap {
+        type Elem;
+        type Mapped<O>;
+        fn ndmap<O, F: Copy + FnMut(Self::Elem) -> O>(self, f: F) -> Self::Mapped<O>;
     }
 
-    pub fn assert_close_with_tolerance<T: AssertClose + std::fmt::Debug>(
-        a: &T,
-        b: &T,
-        tolerance: T::Elem,
-    ) {
-        a.assert_close(b, tolerance);
+    impl NdMap for f32 {
+        type Elem = Self;
+        type Mapped<O> = O;
+        fn ndmap<O, F: Copy + FnMut(Self::Elem) -> O>(self, mut f: F) -> O {
+            f(self)
+        }
     }
+
+    impl NdMap for f64 {
+        type Elem = Self;
+        type Mapped<O> = O;
+        fn ndmap<O, F: Copy + FnMut(Self::Elem) -> O>(self, mut f: F) -> O {
+            f(self)
+        }
+    }
+
+    impl<T: NdMap, const M: usize> NdMap for [T; M] {
+        type Elem = T::Elem;
+        type Mapped<O> = [T::Mapped<O>; M];
+        fn ndmap<O, F: Copy + FnMut(Self::Elem) -> O>(self, f: F) -> Self::Mapped<O> {
+            self.map(|t| t.ndmap(f))
+        }
+    }
+
+    macro_rules! assert_close_to_literal {
+        ($Lhs:expr, $Rhs:expr) => {{
+            let lhs = $Lhs.array();
+            let tol = AssertClose::get_default_tol(&lhs);
+            let far_pair = AssertClose::get_far_pair(
+                &lhs,
+                &$Rhs.ndmap(|x| num_traits::FromPrimitive::from_f64(x).unwrap()),
+                tol,
+            );
+            if let Some((l, r)) = far_pair {
+                panic!("lhs != rhs | {l} != {r}");
+            }
+        }};
+        ($Lhs:expr, $Rhs:expr, $Tolerance:expr) => {{
+            let far_pair = $Lhs.array().get_far_pair(
+                &$Rhs.ndmap(|x| num_traits::FromPrimitive::from_f64(x).unwrap()),
+                num_traits::FromPrimitive::from_f64($Tolerance).unwrap(),
+            );
+            if let Some((l, r)) = far_pair {
+                panic!("lhs != rhs | {l} != {r}");
+            }
+        }};
+    }
+    pub(crate) use assert_close_to_literal;
+
+    macro_rules! assert_close_to_tensor {
+        ($Lhs:expr, $Rhs:expr) => {
+            let lhs = $Lhs.array();
+            let tol = AssertClose::get_default_tol(&lhs);
+            let far_pair = AssertClose::get_far_pair(&lhs, &$Rhs.array(), tol);
+            if let Some((l, r)) = far_pair {
+                panic!("lhs != rhs | {l} != {r}");
+            }
+        };
+        ($Lhs:expr, $Rhs:expr, $Tolerance:expr) => {{
+            let far_pair = $Lhs.array().get_far_pair(
+                &$Rhs.array(),
+                num_traits::FromPrimitive::from_f64($Tolerance).unwrap(),
+            );
+            if let Some((l, r)) = far_pair {
+                panic!("lhs != rhs | {l} != {r}");
+            }
+        }};
+    }
+    pub(crate) use assert_close_to_tensor;
+
+    macro_rules! assert_close {
+        ($Lhs:expr, $Rhs:expr) => {
+            let lhs = $Lhs;
+            let tol = AssertClose::get_default_tol(&lhs);
+            let far_pair = AssertClose::get_far_pair(&lhs, &$Rhs, tol);
+            if let Some((l, r)) = far_pair {
+                panic!("lhs != rhs | {l} != {r}");
+            }
+        };
+        ($Lhs:expr, $Rhs:expr, $Tolerance:expr) => {{
+            let far_pair = $Lhs.get_far_pair(
+                &$Rhs,
+                num_traits::FromPrimitive::from_f64($Tolerance).unwrap(),
+            );
+            if let Some((l, r)) = far_pair {
+                panic!("lhs != rhs | {l} != {r}");
+            }
+        }};
+    }
+    pub(crate) use assert_close;
 }
