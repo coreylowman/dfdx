@@ -13,6 +13,17 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - run: rustup component add clippy
+      - name: Check Format
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+      - name: Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
       - name: Check CPU
         uses: actions-rs/cargo@v1
         with:
@@ -27,3 +38,8 @@ jobs:
         with:
           command: check
           args: --features cudnn,ci-check
+      - name: cargo doc
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --features ci-check,numpy,safetensors
