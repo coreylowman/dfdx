@@ -54,7 +54,7 @@ mod tests {
         assert!(r_array[1].is_nan());
         assert!(r_array[2].is_infinite() && r_array[2].is_sign_negative());
         assert_eq!(r_array[3], Default::default());
-        assert_eq!(r_array[4], TestDtype::from_f64(2.0f64.ln()).unwrap());
+        assert_eq!(r_array[4], NumCast::from(2.0f64.ln()).unwrap());
         let g = r.mean().backward();
         assert_close_to_literal!(g.get(&x), [-0.1, -0.2, f64::INFINITY, 0.2, 0.1]);
     }

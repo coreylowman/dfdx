@@ -51,7 +51,7 @@ mod tests {
         assert!(r_array[0].is_nan());
         assert_eq!(
             &r_array[1..],
-            [0.0, 1.0, 2.0].map(TestDtype::from_f64).map(Option::unwrap)
+            [0.0, 1.0, 2.0].map(NumCast::from).map(Option::unwrap)
         );
         let g = r.mean().backward();
         let g = g.get(&x).array();
@@ -59,7 +59,7 @@ mod tests {
         assert_eq!(
             &g[1..],
             [f64::INFINITY, 0.5 / 4.0, 0.25 / 4.0]
-                .map(TestDtype::from_f64)
+                .map(NumCast::from)
                 .map(Option::unwrap)
         );
     }

@@ -134,11 +134,11 @@ mod tests {
 
         assert_ne!(
             m.gamma.array(),
-            [1.0; 5].map(TestDtype::from_f64).map(Option::unwrap)
+            [1.0; 5].map(NumCast::from).map(Option::unwrap)
         );
         assert_ne!(
             m.beta.array(),
-            [0.0; 5].map(TestDtype::from_f64).map(Option::unwrap)
+            [0.0; 5].map(NumCast::from).map(Option::unwrap)
         );
 
         m.reset_params();

@@ -241,7 +241,7 @@ pub fn keep_denormals() {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    pub use num_traits::{Float, FromPrimitive, Zero};
+    pub use num_traits::{Float, FromPrimitive, NumCast, Zero};
 
     #[cfg(not(feature = "cuda"))]
     pub type TestDevice = crate::tensor::Cpu;

@@ -239,15 +239,21 @@ mod tests {
     /// ```
     fn test_conv2d_default_stride_and_padding() {
         let dev: TestDevice = Default::default();
-        let weight: Tensor<_, TestDtype, _> = dev.tensor([
-            [[[-0.04958433, -0.43007267], [0.01935136, 0.09778714]]],
-            [[[0.44083858, -0.20507240], [-0.30017477, -0.10937047]]],
-        ]);
-        let bias: Tensor<_, TestDtype, _> = dev.tensor([0.36406237, -0.30981010]);
-        let x: Tensor<_, TestDtype, _> = dev.tensor([[
-            [-0.86713916, 0.52773184, -0.95238322],
-            [-0.64531374, 0.77809018, -0.49099201],
-        ]]);
+        let weight = dev
+            .tensor([
+                [[[-0.04958433, -0.43007267], [0.01935136, 0.09778714]]],
+                [[[0.44083858, -0.20507240], [-0.30017477, -0.10937047]]],
+            ])
+            .to_dtype::<TestDtype>();
+        let bias = dev
+            .tensor([0.36406237, -0.30981010])
+            .to_dtype::<TestDtype>();
+        let x = dev
+            .tensor([[
+                [-0.86713916, 0.52773184, -0.95238322],
+                [-0.64531374, 0.77809018, -0.49099201],
+            ]])
+            .to_dtype::<TestDtype>();
         let result = x.leaky_trace().conv2d::<1, 0>(weight.clone())
             + bias.leaky_trace().broadcast::<_, Axes2<1, 2>>();
         assert_close_to_literal!(
@@ -281,15 +287,21 @@ mod tests {
     /// ```
     fn test_conv2d_stride_2() {
         let dev: TestDevice = Default::default();
-        let weight: Tensor<_, TestDtype, _> = dev.tensor([
-            [[[0.44704646, -0.29563826], [0.29228759, -0.16575140]]],
-            [[[-0.30488998, 0.25222939], [0.13279295, 0.38153177]]],
-        ]);
-        let bias: Tensor<_, TestDtype, _> = dev.tensor([-0.44699109, 0.38371694]);
-        let x: Tensor<_, TestDtype, _> = dev.tensor([[
-            [0.37100124, -0.59504986, -1.19781005],
-            [-0.31547278, 0.58071911, 0.86612970],
-        ]]);
+        let weight = dev
+            .tensor([
+                [[[0.44704646, -0.29563826], [0.29228759, -0.16575140]]],
+                [[[-0.30488998, 0.25222939], [0.13279295, 0.38153177]]],
+            ])
+            .to_dtype::<TestDtype>();
+        let bias = dev
+            .tensor([-0.44699109, 0.38371694])
+            .to_dtype::<TestDtype>();
+        let x = dev
+            .tensor([[
+                [0.37100124, -0.59504986, -1.19781005],
+                [-0.31547278, 0.58071911, 0.86612970],
+            ]])
+            .to_dtype::<TestDtype>();
 
         let result = x.leaky_trace().conv2d::<2, 0>(weight.clone())
             + bias.leaky_trace().broadcast::<_, Axes2<1, 2>>();
@@ -317,14 +329,17 @@ mod tests {
     fn test_conv2d_padding_1() {
         let dev: TestDevice = Default::default();
         #[rustfmt::skip]
-        let weight: Tensor<_, TestDtype, _> = dev.tensor([
+        let weight = dev.tensor([
             [[[0.10215953, 0.06263646], [-0.04124039, -0.09729567]], [[-0.32656857, 0.24254093], [-0.27209827, 0.15361503]]],
             [[[0.03449896, 0.22931078], [-0.17652659, 0.08222872]],[[-0.06016779, 0.29082409], [-0.19154115, 0.13483226]]],
             [[[-0.14262493, 0.19654515], [0.15921101, 0.01759464]],[[0.16749159, 0.33096817], [0.28376505, -0.05524009]]],
-        ]);
-        let bias: Tensor<_, TestDtype, _> = dev.tensor([-0.22854491, 0.28763595, 0.20709404]);
-        let x: Tensor<_, TestDtype, _> =
-            dev.tensor([[[-0.32224107, -0.32800716]], [[-1.13570976, 0.93713200]]]);
+        ]).to_dtype::<TestDtype>();
+        let bias = dev
+            .tensor([-0.22854491, 0.28763595, 0.20709404])
+            .to_dtype::<TestDtype>();
+        let x = dev
+            .tensor([[[-0.32224107, -0.32800716]], [[-1.13570976, 0.93713200]]])
+            .to_dtype::<TestDtype>();
 
         let result = x.leaky_trace().conv2d::<1, 1>(weight.clone())
             + bias.leaky_trace().broadcast::<_, Axes2<1, 2>>();
@@ -363,13 +378,15 @@ mod tests {
     fn test_conv2d_stride_3_padding_4() {
         let dev: TestDevice = Default::default();
         #[rustfmt::skip]
-        let weight: Tensor<_, TestDtype, _> = dev.tensor([
+        let weight = dev.tensor([
             [[[-0.10252278, -0.14387409, -0.14627469],[0.28396228, -0.14590892, 0.29269591],[0.01090384, 0.14785287, 0.29242596]]],
             [[[-0.31163597, 0.13224581, -0.20954299],[0.27902845, -0.14735751, 0.14001134],[-0.05224654, 0.16499066, -0.13981307]]],
-        ]);
-        let bias: Tensor<_, TestDtype, _> = dev.tensor([-0.07123789, -0.17244765]);
+        ]).to_dtype::<TestDtype>();
+        let bias = dev
+            .tensor([-0.07123789, -0.17244765])
+            .to_dtype::<TestDtype>();
         #[rustfmt::skip]
-        let x: Tensor<_, TestDtype, _> = dev.tensor([[[0.69103152, 0.25624934],[-0.38448590, 0.03110456],[0.83753252, 0.53786588],[1.15540242, -0.54148245]]]);
+        let x = dev.tensor([[[0.69103152, 0.25624934],[-0.38448590, 0.03110456],[0.83753252, 0.53786588],[1.15540242, -0.54148245]]]).to_dtype::<TestDtype>();
 
         let result = x.leaky_trace().conv2d::<3, 4>(weight.clone())
             + bias.leaky_trace().broadcast::<_, Axes2<1, 2>>();

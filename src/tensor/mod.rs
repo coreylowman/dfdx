@@ -283,7 +283,7 @@ mod tests {
     #[test]
     fn test_upper_tri() {
         let dev: TestDevice = Default::default();
-        let a: TestDtype = TestDtype::from_f64(42.0).unwrap();
+        let a: TestDtype = NumCast::from(42.0).unwrap();
         let z = TestDtype::zero();
 
         assert_eq!(dev.upper_tri::<Rank0>(a, None).array(), a);
@@ -348,7 +348,7 @@ mod tests {
     #[test]
     fn test_lower_tri() {
         let dev: TestDevice = Default::default();
-        let a: TestDtype = TestDtype::from_f64(42.0).unwrap();
+        let a: TestDtype = NumCast::from(42.0).unwrap();
         let z = TestDtype::zero();
 
         assert_eq!(dev.lower_tri::<Rank0>(a, None).array(), a);
