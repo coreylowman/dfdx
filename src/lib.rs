@@ -306,7 +306,7 @@ pub(crate) mod tests {
         }
     }
 
-    #[cfg(feature = "f16")]
+    #[cfg(feature = "bf16")]
     impl AssertClose for half::bf16 {
         type Elem = Self;
         const DEFAULT_TOLERANCE: Self::Elem = half::bf16::from_f32_const(1e-3);

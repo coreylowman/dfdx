@@ -85,12 +85,10 @@ impl<S: Shape, D: UnaryKernel<ScalarAddKernelOp<half::f16>, half::f16>, T: Tape<
     }
 }
 
-#[cfg(feature = "f16")]
-impl<
-        S: Shape,
-        D: UnaryKernel<ScalarAddKernelOp<half::bf16>, half::bf16>,
-        T: Tape<half::bf16, D>,
-    > TryAdd<f32> for Tensor<S, half::bf16, D, T>
+#[cfg(feature = "bf16")]
+impl<S: Shape, D, T: Tape<half::bf16, D>> TryAdd<f32> for Tensor<S, half::bf16, D, T>
+where
+    D: UnaryKernel<ScalarAddKernelOp<half::bf16>, half::bf16>,
 {
     /// See [add]
     fn try_add(self, rhs: f32) -> Result<Self, Self::Err> {

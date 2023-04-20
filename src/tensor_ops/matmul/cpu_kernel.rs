@@ -69,7 +69,7 @@ impl MatMulImpl<half::f16> for Cpu {
     }
 }
 
-#[cfg(feature = "f16")]
+#[cfg(feature = "bf16")]
 impl MatMulImpl<half::bf16> for Cpu {
     #[inline]
     fn matmul<M: Dim, K: Dim, N: Dim>(

@@ -78,12 +78,10 @@ impl<S: Shape, D: UnaryKernel<ScalarMulKernelOp<half::f16>, half::f16>, T: Tape<
     }
 }
 
-#[cfg(feature = "f16")]
-impl<
-        S: Shape,
-        D: UnaryKernel<ScalarMulKernelOp<half::bf16>, half::bf16>,
-        T: Tape<half::bf16, D>,
-    > TryMul<f32> for Tensor<S, half::bf16, D, T>
+#[cfg(feature = "bf16")]
+impl<S: Shape, D, T: Tape<half::bf16, D>> TryMul<f32> for Tensor<S, half::bf16, D, T>
+where
+    D: UnaryKernel<ScalarMulKernelOp<half::bf16>, half::bf16>,
 {
     fn try_mul(self, rhs: f32) -> Result<Self, Self::Err> {
         let scalar = half::bf16::from_f32(rhs);
