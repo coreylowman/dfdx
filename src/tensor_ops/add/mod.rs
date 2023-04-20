@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use super::{ops::*, Device};
+use super::ops::*;
 use crate::{
     shapes::*,
     tensor::{DeviceStorage, HasErr, Merge, Tape, Tensor},
@@ -38,10 +38,13 @@ pub struct ScalarAddKernelOp<E> {
 /// let r = a + 1.0;
 /// assert_eq!(r.array(), [[2.0, 3.0, 4.0], [0.0, -1.0, -2.0]]);
 /// ```
-pub fn add<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R: Default>(
+pub fn add<S: Shape, E: Dtype, D, T: Tape<E, D> + Merge<R>, R: Default>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, R>,
-) -> Tensor<S, E, D, T> {
+) -> Tensor<S, E, D, T>
+where
+    D: BinaryKernel<BinaryAddKernelOp, E>,
+{
     lhs + rhs
 }
 

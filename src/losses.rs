@@ -47,7 +47,7 @@ pub fn mae_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
 pub fn huber_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
-    delta: E,
+    delta: impl Into<E>,
 ) -> Tensor<Rank0, E, D, T> {
     pred.huber_error(targ, delta).mean()
 }
@@ -62,8 +62,9 @@ pub fn huber_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
 pub fn smooth_l1_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
-    delta: E,
+    delta: impl Into<E>,
 ) -> Tensor<Rank0, E, D, T> {
+    let delta = delta.into();
     huber_loss(pred, targ, delta) / delta
 }
 
