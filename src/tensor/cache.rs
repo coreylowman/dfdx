@@ -283,7 +283,6 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             size: layout.size(),
             alignment: layout.align(),
         };
-        println!("{key:?}");
         // Check if there is a cached allocation.
         let reuse = read!(self.allocations)
             .get(&key)
@@ -299,7 +298,6 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
             // which is also maintained by the block directly below.
             let allocation = items.allocations.pop().unwrap();
             allocation.check_key(&key);
-            println!("{:?} {}", allocation.size, allocation.alignment);
             *write!(self.size) -= allocation.size();
             Some(allocation.into_storage())
         } else {
