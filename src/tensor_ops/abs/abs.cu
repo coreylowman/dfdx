@@ -1,5 +1,4 @@
 #include "unary_op_macros.cuh"
-#include "cuda_utils.cuh"
 
 struct AbsKernelOp {};
 

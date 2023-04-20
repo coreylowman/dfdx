@@ -39,18 +39,19 @@ __device__ void rmsprop_update(
     T s_avg = square_avg[i];
     T g_avg = grad_avg[i];
     T m = momentum[i];
+    T one = 1.0;
 
     if (cfg.weight_decay_type == L2) {
         g += cfg.weight_decay * p;
     }
 
-    s_avg += (1.0 - cfg.alpha) * (g * g - s_avg);
+    s_avg += (one - cfg.alpha) * (g * g - s_avg);
 
     T avg;
 
     if (cfg.centered) {
         // ga = a * ga + (1 - a) * g
-        g_avg += (1.0 - cfg.alpha) * (g - g_avg);
+        g_avg += (one - cfg.alpha) * (g - g_avg);
         avg = sqrtg(s_avg - g_avg * g_avg + cfg.eps);
     } else {
         avg = sqrtg(s_avg + cfg.eps);

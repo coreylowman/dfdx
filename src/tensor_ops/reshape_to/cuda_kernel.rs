@@ -21,6 +21,7 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
             let src = FWD_KERNEL.replace("$T", E::NAME);
             let opts = CompileOptions {
                 arch: Some(env!("CUDA_COMPUTE_CAP")),
+                include_paths: vec!["/usr/include".to_string()],
                 ..Default::default()
             };
             let ptx = compile_ptx_with_opts(src, opts).unwrap();
@@ -64,6 +65,7 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
             let src = BWD_KERNEL.replace("$T", E::NAME);
             let opts = CompileOptions {
                 arch: Some(env!("CUDA_COMPUTE_CAP")),
+                include_paths: vec!["/usr/include".to_string()],
                 ..Default::default()
             };
             let ptx = compile_ptx_with_opts(src, opts).unwrap();
@@ -100,6 +102,8 @@ typedef long int intptr_t;
 #else
 typedef int intptr_t;
 #endif
+
+#include \"cuda_fp16.h\"
 
 __device__ unsigned int get_strided_index(
     unsigned int idx,
@@ -147,6 +151,8 @@ typedef long int intptr_t;
 #else
 typedef int intptr_t;
 #endif
+
+#include \"cuda_fp16.h\"
 
 __device__ unsigned int get_strided_index(
     unsigned int idx,

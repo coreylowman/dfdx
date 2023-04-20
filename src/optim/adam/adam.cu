@@ -36,15 +36,16 @@ __device__ void adam_update(
     T g = grad[i];
     T m = moment1[i];
     T v = moment2[i];
+    T one = 1.0;
 
     if (cfg.weight_decay_type == L2) {
         g += cfg.weight_decay * p;
     }
 
-    m = m * cfg.beta1 + g * (1.0 - cfg.beta1);
-    v = v * cfg.beta2 + g * g * (1.0 - cfg.beta2);
-    T m_hat = m * 1.0 / (1.0 - powg(cfg.beta1, t));
-    T v_hat = v * 1.0 / (1.0 - powg(cfg.beta2, t));
+    m = m * cfg.beta1 + g * (one - cfg.beta1);
+    v = v * cfg.beta2 + g * g * (one - cfg.beta2);
+    T m_hat = m * one / (one - powg(cfg.beta1, t));
+    T v_hat = v * one / (one - powg(cfg.beta2, t));
     g = cfg.lr * m_hat / (sqrtg(v_hat) + cfg.eps);
 
     if (cfg.weight_decay_type == Decoupled) {

@@ -1,3 +1,5 @@
+#include "cuda_fp16.h"
+
 enum MomentumType {
     None,
     Classic,
