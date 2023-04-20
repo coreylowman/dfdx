@@ -25,20 +25,26 @@ pub struct ClampKernelOp<E> {
 /// ```
 pub fn clamp<S: Shape, E: Dtype, D: UnaryKernel<ClampKernelOp<E>, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
-    min: E,
-    max: E,
+    min: impl Into<E>,
+    max: impl Into<E>,
 ) -> Tensor<S, E, D, T> {
     t.clamp(min, max)
 }
 
 impl<S: Shape, E: Dtype, D: UnaryKernel<ClampKernelOp<E>, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [clamp]
-    pub fn clamp(self, min: E, max: E) -> Self {
+    pub fn clamp(self, min: impl Into<E>, max: impl Into<E>) -> Self {
         self.try_clamp(min, max).unwrap()
     }
     /// See [clamp]
-    pub fn try_clamp(self, min: E, max: E) -> Result<Self, D::Err> {
-        try_unary_op(ClampKernelOp { min, max }, self)
+    pub fn try_clamp(self, min: impl Into<E>, max: impl Into<E>) -> Result<Self, D::Err> {
+        try_unary_op(
+            ClampKernelOp {
+                min: min.into(),
+                max: max.into(),
+            },
+            self,
+        )
     }
 }
 
