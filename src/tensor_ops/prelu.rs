@@ -91,8 +91,12 @@ mod tests {
     #[test]
     fn test_prelu() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
-        let y: Tensor<_, TestDtype, _> = dev.tensor([0.05, 0.05, 0.05, 0.05, 0.05]);
+        let x = dev
+            .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+            .to_dtype::<TestDtype>();
+        let y = dev
+            .tensor([0.05, 0.05, 0.05, 0.05, 0.05])
+            .to_dtype::<TestDtype>();
         let r = x.leaky_trace().prelu(y.clone());
         assert_close_to_literal!(r, [-0.1, -0.05, 0.0, 1.0, 2.0]);
         // NOTE: call .exp() to make sure we cover cases where .prelu() uses the result's gradient

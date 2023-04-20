@@ -126,19 +126,19 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         let mut m = dev.build_module::<builder::LayerNorm1D<5>, TestDtype>();
-        assert_eq!(m.gamma.array(), [1.0; 5]);
-        assert_eq!(m.beta.array(), [0.0; 5]);
+        assert_close_to_literal!(m.gamma, [1.0; 5]);
+        assert_close_to_literal!(m.beta, [0.0; 5]);
 
         m.gamma = dev.sample_normal();
         m.beta = dev.sample_normal();
 
-        assert_ne!(m.gamma.array(), [1.0; 5]);
-        assert_ne!(m.beta.array(), [0.0; 5]);
+        assert_ne!(m.gamma.array(), [1.0; 5].map(TestDtype::from_f64));
+        assert_ne!(m.beta.array(), [0.0; 5].map(TestDtype::from_f64));
 
         m.reset_params();
 
-        assert_eq!(m.gamma.array(), [1.0; 5]);
-        assert_eq!(m.beta.array(), [0.0; 5]);
+        assert_close_to_literal!(m.gamma, [1.0; 5]);
+        assert_close_to_literal!(m.beta, [0.0; 5]);
     }
 
     #[test]

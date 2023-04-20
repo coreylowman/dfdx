@@ -45,13 +45,17 @@ mod tests {
     #[test]
     fn test_sqrt() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([-1.0, 0.0, 1.0, 4.0]);
+        let x = dev.tensor([-1.0, 0.0, 1.0, 4.0]).to_dtype::<TestDtype>();
         let r = x.leaky_trace().sqrt();
-        assert!(r.array()[0].is_nan());
-        assert_eq!(r.array()[1..], [0.0, 1.0, 2.0]);
+        let r_array = r.array();
+        assert!(r_array[0].is_nan());
+        assert_close!(&r_array[1..], [0.0, 1.0, 2.0].map(TestDtype::from_f64));
         let g = r.mean().backward();
         let g = g.get(&x).array();
         assert!(g[0].is_nan());
-        assert_eq!(g[1..], [TestDtype::INFINITY, 0.5 / 4.0, 0.25 / 4.0]);
+        assert_close!(
+            &g[1..],
+            [f64::INFINITY, 0.5 / 4.0, 0.25 / 4.0].map(TestDtype::from_f64)
+        );
     }
 }

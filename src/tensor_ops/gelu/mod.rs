@@ -43,7 +43,9 @@ mod tests {
     #[test]
     fn test_gelu() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = dev
+            .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+            .to_dtype::<TestDtype>();
         let r = x.leaky_trace().gelu();
         assert_close_to_literal!(r, [-0.04540229, -0.158808, 0.0, 0.841192, 1.9545977]);
         // NOTE: call .exp() to make sure we cover cases where .gelu() uses the result's gradient

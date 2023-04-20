@@ -207,7 +207,9 @@ mod tests {
                 weight_decay: None,
             },
         );
-        let rate = dev.tensor([1e-4, 1e-3, 1e-2, 1e-1, 1e-0]);
+        let rate = dev
+            .tensor([1e-4, 1e-3, 1e-2, 1e-1, 1e-0])
+            .to_dtype::<TestDtype>();
         let expected = [
             [0.9997143, 0.9990244, 0.99900025, 0.999, 0.999],
             [0.99942863, 0.99804866, 0.9980004, 0.9979999, 0.9979999],
@@ -231,7 +233,9 @@ mod tests {
     #[test]
     fn test_adam_l2_decay() {
         let dev: TestDevice = Default::default();
-        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
+        let mut t = dev
+            .tensor([-0.5, -0.25, 0.1, 0.6, 1.0])
+            .to_dtype::<TestDtype>();
         let mut opt = Adam::new(
             &t,
             AdamConfig {
@@ -264,7 +268,9 @@ mod tests {
     #[test]
     fn test_adam_decoupled_decay() {
         let dev: TestDevice = Default::default();
-        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
+        let mut t = dev
+            .tensor([-0.5, -0.25, 0.1, 0.6, 1.0])
+            .to_dtype::<TestDtype>();
         let mut opt = Adam::new(
             &t,
             AdamConfig {

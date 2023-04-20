@@ -244,16 +244,16 @@ mod tests {
         Tensor<(Const<R>, Const<C>), E, TestDevice>;
 
     fn test_cmp<E: Unit, const R: usize, const C: usize, F>(
-        a: [[E; C]; R],
-        b: [[E; C]; R],
+        a: [[f64; C]; R],
+        b: [[f64; C]; R],
         cmp: F,
         expected: [[bool; C]; R],
     ) where
         F: Fn(&TestTensor<R, C, E>, &TestTensor<R, C, E>) -> [[bool; C]; R],
     {
         let dev: TestDevice = Default::default();
-        let a = dev.tensor(a);
-        let b = dev.tensor(b);
+        let a = dev.tensor(a).to_dtype::<E>();
+        let b = dev.tensor(b).to_dtype::<E>();
         let r = cmp(&a, &b);
         assert_eq!(r, expected);
     }

@@ -71,7 +71,9 @@ mod tests {
     #[test]
     fn test_powf_positive() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let t = dev
+            .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().powf(3.5);
         let r_array = r.array();
         assert!(r_array[0].is_nan());
@@ -92,7 +94,9 @@ mod tests {
     #[test]
     fn test_powf_negative() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let t = dev
+            .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().powf(-1.2);
         let r_array = r.array();
         assert!(r_array[0].is_nan());
@@ -113,7 +117,9 @@ mod tests {
     #[test]
     fn test_powi_positive() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let t = dev
+            .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().powi(3);
         assert_close_to_literal!(r, [-8., -1., 0., 1., 8.]);
         let g = r.sum().backward();
@@ -123,7 +129,9 @@ mod tests {
     #[test]
     fn test_powi_negative() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let t = dev
+            .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().powi(-3);
         assert_close_to_literal!(r, [-0.125, -1.0, f64::INFINITY, 1.0, 0.125]);
         let g = r.sum().backward();

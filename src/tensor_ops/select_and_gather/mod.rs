@@ -323,7 +323,9 @@ mod tests {
     #[test]
     fn test_select_2d_axis_0() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+        let t = dev
+            .tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().select(dev.tensor(0));
         assert_close_to_literal!(r, [1.0, 2.0, 3.0]);
         let g = r.mean().backward();
@@ -333,7 +335,9 @@ mod tests {
     #[test]
     fn test_select_2d_axis_1() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+        let t = dev
+            .tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().select(dev.tensor([1, 1]));
         assert_close_to_literal!(r, [2.0, -2.0]);
         let g = r.mean().backward();
@@ -343,7 +347,7 @@ mod tests {
     #[test]
     fn test_select_2d_broadcasted() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
+        let t = dev.tensor([1.0, 2.0, 3.0]).to_dtype::<TestDtype>();
         let r = t
             .leaky_trace()
             .broadcast::<Rank2<2, 3>, _>()
@@ -356,7 +360,7 @@ mod tests {
     #[test]
     fn test_gather_2d_broadcasted() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
+        let t = dev.tensor([1.0, 2.0, 3.0]).to_dtype::<TestDtype>();
         let idx: Tensor<Rank2<2, 2>, usize, _> = dev.tensor([[0, 1], [1, 2]]);
         let r: Tensor<Rank2<2, 2>, _, _, _> =
             t.leaky_trace().broadcast::<Rank2<2, 3>, _>().gather(idx);

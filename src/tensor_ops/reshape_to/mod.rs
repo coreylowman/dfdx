@@ -179,7 +179,9 @@ mod tests {
     #[test]
     fn test_1d_reshape() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]);
+        let a = dev
+            .tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+            .to_dtype::<TestDtype>();
         let b = a.leaky_trace().reshape::<Rank2<2, 3>>();
         assert_close_to_literal!(b, [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
         let g = b.exp().mean().backward();
@@ -192,7 +194,9 @@ mod tests {
     #[test]
     fn test_1d_reshape_non_contiguous() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
+        let a = dev
+            .tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
+            .to_dtype::<TestDtype>();
         let b = a
             .leaky_trace()
             .permute::<Rank2<3, 2>, _>()
@@ -211,7 +215,8 @@ mod tests {
     #[test]
     fn test_reshape_broadcasted() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<Rank2<2, 3>, TestDtype, _> = dev.tensor([1., 2., 3.]).broadcast();
+        let a: Tensor<Rank2<2, 3>, TestDtype, _> =
+            dev.tensor([1., 2., 3.]).to_dtype::<TestDtype>().broadcast();
         let b: Tensor<Rank2<3, 2>, TestDtype, _> = a.clone().reshape();
 
         #[cfg(feature = "cuda")]
@@ -219,19 +224,21 @@ mod tests {
 
         assert_eq!(b.data.len(), 6);
         assert_eq!(a.as_vec(), b.as_vec());
-        assert_eq!(b.array(), [[1., 2.], [3., 1.], [2., 3.]]);
+        assert_close_to_literal!(b, [[1., 2.], [3., 1.], [2., 3.]]);
     }
 
     #[test]
     fn test_contiguous() {
         let dev: TestDevice = Default::default();
 
-        let a: Tensor<_, TestDtype, _> = dev.tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
+        let a = dev
+            .tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
+            .to_dtype::<TestDtype>();
 
         let b1 = a.clone().contiguous();
         assert_eq!(a.strides, b1.strides);
 
-        let b2: Tensor<_, TestDtype, _> = a.permute::<Rank2<3, 2>, _>().contiguous();
+        let b2 = a.permute::<Rank2<3, 2>, _>().contiguous();
         assert_eq!(b2.strides, [2, 1]);
     }
 }

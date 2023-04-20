@@ -77,6 +77,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
 #[cfg(test)]
 mod tests {
     use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
+    use num_traits::Float;
 
     #[test]
     fn test_log_softmax_equivalence() {
@@ -103,7 +104,9 @@ mod tests {
     #[test]
     fn test_log_softmax_1d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let a = dev
+            .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+            .to_dtype::<TestDtype>();
         let r = a.leaky_trace().log_softmax();
         assert_close_to_literal!(
             r,
@@ -125,7 +128,9 @@ mod tests {
     #[test]
     fn test_log_softmax_2d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
+        let a = dev
+            .tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]])
+            .to_dtype::<TestDtype>();
         let r = a.leaky_trace().log_softmax::<Axis<1>>();
         assert_close_to_literal!(
             r,

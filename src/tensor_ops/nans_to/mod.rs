@@ -47,7 +47,9 @@ mod tests {
     #[test]
     fn test_nans_1d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, TestDtype::NAN, -TestDtype::NAN, 4.0]);
+        let t = dev
+            .tensor([1.0, f64::NAN, -f64::NAN, 4.0])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().nans_to(0.0);
         assert_close_to_literal!(r, [1.0, 0.0, 0.0, 4.0]);
         // NOTE: .exp() so we cover case where nans_to() needs to use result grad

@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn test_sum_1d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
+        let t = dev.tensor([1.0, 2.0, 3.0]).to_dtype::<TestDtype>();
         let r = t.leaky_trace().sum::<Rank0, _>();
         let e = 6.0f64;
         assert_close_to_literal!(r, e);
@@ -98,7 +98,9 @@ mod tests {
     #[test]
     fn test_sum_axis_0_2d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
+        let t = dev
+            .tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().sum::<Rank1<3>, _>();
         let e = [-1.0f64, 6.0, -3.0];
         assert_close_to_literal!(r, e);
@@ -109,7 +111,9 @@ mod tests {
     #[test]
     fn test_sum_axis_1_2d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]]);
+        let t = dev
+            .tensor([[1.0, 2.0, 3.0], [-2.0, 4.0, -6.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().sum::<Rank1<2>, _>();
         let e = [6.0f64, -4.0];
         assert_close_to_literal!(r, e);
@@ -144,7 +148,7 @@ mod tests {
     #[test]
     fn test_sum_chunking() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0; 100]; 60]);
+        let t = dev.tensor([[1.0; 100]; 60]).to_dtype::<TestDtype>();
         let r = t.leaky_trace().sum::<Rank1<60>, _>();
         assert_close_to_literal!(r, [100.0; 60]);
         let g = r.sum().backward();
@@ -154,7 +158,7 @@ mod tests {
     #[test]
     fn test_sum_reduce_to_more_than_physical_elements() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
+        let a = dev.tensor([1.0, 2.0, 3.0]).to_dtype::<TestDtype>();
         let b = a.broadcast::<Rank3<4, 3, 2>, _>();
         let c = b.sum::<Rank2<4, 3>, _>();
         assert_close_to_literal!(c, [[2.0, 4.0, 6.0]; 4]);

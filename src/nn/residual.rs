@@ -71,8 +71,8 @@ mod tests {
     fn test_residual_reset() {
         let dev: TestDevice = Default::default();
         let model = dev.build_module::<Residual<Linear<2, 5>>, TestDtype>();
-        assert_ne!(model.0.weight.array(), [[0.0; 2]; 5]);
-        assert_ne!(model.0.bias.array(), [0.0; 5]);
+        assert_ne!(model.0.weight.array(), [[Default::default(); 2]; 5]);
+        assert_ne!(model.0.bias.array(), [Default::default(); 5]);
     }
 
     #[test]
@@ -81,7 +81,7 @@ mod tests {
 
         let model = <Residual<Linear<2, 2>>>::build_on_device(&dev);
 
-        let x: Tensor<Rank2<4, 2>, f32, TestDevice> = dev.sample_normal();
+        let x: Tensor<Rank2<4, 2>, TestDtype, _> = dev.sample_normal();
         let y = model.forward(x.leaky_trace());
 
         #[rustfmt::skip]

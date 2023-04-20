@@ -188,7 +188,9 @@ mod tests {
 
     fn test_matches_expected(cfg: RMSpropConfig<TestDtype>, expected: [[f64; 5]; 5]) {
         let dev: TestDevice = Default::default();
-        let rate: Tensor<_, TestDtype, _> = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
+        let rate = dev
+            .tensor([0.1, 1.0, 2.0, 10.0, 100.0])
+            .to_dtype::<TestDtype>();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut opt = RMSprop::new(&t, cfg);
         for e in expected.iter() {

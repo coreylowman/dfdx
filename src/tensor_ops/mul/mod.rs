@@ -80,8 +80,8 @@ mod tests {
     #[test]
     fn test_mul_0d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor(2.0);
-        let b: Tensor<_, TestDtype, _> = dev.tensor(3.0);
+        let a = dev.tensor(2.0).to_dtype::<TestDtype>();
+        let b = dev.tensor(3.0).to_dtype::<TestDtype>();
 
         let r = a.leaky_trace() * b.clone();
         assert_close_to_literal!(r, 6.0);
@@ -93,8 +93,8 @@ mod tests {
     #[test]
     fn test_mul_1d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
-        let b: Tensor<_, TestDtype, _> = dev.tensor([1.0, -1.0, 0.0]);
+        let a = dev.tensor([1.0, 2.0, 3.0]).to_dtype::<TestDtype>();
+        let b = dev.tensor([1.0, -1.0, 0.0]).to_dtype::<TestDtype>();
 
         let r = a.leaky_trace() * b.clone();
         assert_close_to_literal!(r, [1.0, -2.0, 0.0]);
@@ -106,10 +106,12 @@ mod tests {
     #[test]
     fn test_mul_2d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> =
-            dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b: Tensor<_, TestDtype, _> =
-            dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+        let a = dev
+            .tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]])
+            .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]])
+            .to_dtype::<TestDtype>();
 
         let r = a.leaky_trace() * b.clone();
         assert_close_to_literal!(
@@ -139,7 +141,7 @@ mod tests {
     #[test]
     fn test_scalar_mul_0d() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor(1.0);
+        let x = dev.tensor(1.0).to_dtype::<TestDtype>();
         let r = x.leaky_trace() * 0.5;
         assert_close_to_literal!(r, 0.5);
         let g = r.exp().backward();
@@ -149,7 +151,7 @@ mod tests {
     #[test]
     fn test_scalar_mul_1d() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([0.0, 1.0, 2.0]);
+        let x = dev.tensor([0.0, 1.0, 2.0]).to_dtype::<TestDtype>();
         let r = x.leaky_trace() * 0.5;
         assert_close_to_literal!(r, [0.0, 0.5, 1.0]);
         let g = r.exp().sum().backward();
@@ -159,7 +161,7 @@ mod tests {
     #[test]
     fn test_scalar_mul_2d() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([[1.0; 2]; 3]);
+        let x = dev.tensor([[1.0; 2]; 3]).to_dtype::<TestDtype>();
         let r = x.leaky_trace() * 0.5;
         assert_close_to_literal!(r, [[0.5; 2]; 3]);
         let g = r.exp().sum().backward();

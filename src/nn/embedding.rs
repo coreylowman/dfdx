@@ -122,7 +122,7 @@ mod tests {
     use super::*;
     use crate::tests::*;
 
-    const W: [[TestDtype; 5]; 2] = [
+    const W: [[f64; 5]; 2] = [
         [-0.3458893, -0.30371523, -0.3712057, 0.14303583, -0.0268966],
         [0.11733949, 0.14059687, -0.10670426, -0.09373143, 0.18974298],
     ];
@@ -131,9 +131,9 @@ mod tests {
     fn test_embedding_initialize() {
         let dev: TestDevice = Default::default();
         let m = dev.build_module::<builder::Embedding<2000, 1>, TestDtype>();
-        let bound = 1.0 / (2000.0.sqrt());
+        let bound = TestDtype::from_f64(1.0 / (2000.0.sqrt()));
         for v in m.weight.as_vec() {
-            assert!(-bound <= v && v <= bound && v != 0.0);
+            assert!(-bound <= v && v <= bound && v != TestDtype::ZERO);
         }
     }
 
@@ -143,7 +143,8 @@ mod tests {
 
         let model = Embedding {
             weight: dev.tensor(W),
-        };
+        }
+        .to_dtype::<TestDtype>();
 
         let x = dev.tensor([0, 0, 1]);
         let y = model.forward(x.leaky_trace());
