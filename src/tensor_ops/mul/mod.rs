@@ -68,6 +68,29 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarMulKernelOp<E>, E>, T: Tape<E, D>>
     }
 }
 
+#[cfg(feature = "f16")]
+impl<S: Shape, D: UnaryKernel<ScalarMulKernelOp<half::f16>, half::f16>, T: Tape<half::f16, D>>
+    TryMul<f32> for Tensor<S, half::f16, D, T>
+{
+    fn try_mul(self, rhs: f32) -> Result<Self, Self::Err> {
+        let scalar = half::f16::from_f32(rhs);
+        try_unary_op(ScalarMulKernelOp { scalar }, self)
+    }
+}
+
+#[cfg(feature = "f16")]
+impl<
+        S: Shape,
+        D: UnaryKernel<ScalarMulKernelOp<half::bf16>, half::bf16>,
+        T: Tape<half::bf16, D>,
+    > TryMul<f32> for Tensor<S, half::bf16, D, T>
+{
+    fn try_mul(self, rhs: f32) -> Result<Self, Self::Err> {
+        let scalar = half::bf16::from_f32(rhs);
+        try_unary_op(ScalarMulKernelOp { scalar }, self)
+    }
+}
+
 impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<E, D>, Rhs> std::ops::Mul<Rhs>
     for Tensor<S, E, D, LhsTape>
 where

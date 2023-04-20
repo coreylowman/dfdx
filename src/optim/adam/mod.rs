@@ -173,7 +173,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut opt = Adam::new(&t, Default::default());
-        let rate = dev.tensor([1e-6, 1e-5, 1e-4, 1e-3, 1e-2]);
+        let rate = dev
+            .tensor([1e-6, 1e-5, 1e-4, 1e-3, 1e-2])
+            .to_dtype::<TestDtype>();
         let expected = [
             [0.99999994, 0.999996, 0.9997143, 0.9990244, 0.99900025],
             [0.9999999, 0.999992, 0.99942863, 0.99804884, 0.9980005],
@@ -201,9 +203,9 @@ mod tests {
         let mut opt = Adam::new(
             &t,
             AdamConfig {
-                lr: 1e-3,
-                betas: [0.5, 0.25],
-                eps: 1e-8,
+                lr: TestDtype::from_f64(1e-3),
+                betas: [0.5, 0.25].map(TestDtype::from_f64),
+                eps: 1e-8.map(TestDtype::from_f64),
                 weight_decay: None,
             },
         );
@@ -239,8 +241,8 @@ mod tests {
         let mut opt = Adam::new(
             &t,
             AdamConfig {
-                betas: [0.5, 0.25],
-                weight_decay: Some(WeightDecay::L2(1.0)),
+                betas: [0.5, 0.25].map(TestDtype::from_f64),
+                weight_decay: Some(WeightDecay::L2(TestDtype::from_f64(1.0))),
                 ..Default::default()
             },
         );
@@ -274,8 +276,8 @@ mod tests {
         let mut opt = Adam::new(
             &t,
             AdamConfig {
-                betas: [0.5, 0.25],
-                weight_decay: Some(WeightDecay::Decoupled(1.0)),
+                betas: [0.5, 0.25].map(TestDtype::from_f64),
+                weight_decay: Some(WeightDecay::Decoupled(TestDtype::from_f64(1.0))),
                 ..Default::default()
             },
         );

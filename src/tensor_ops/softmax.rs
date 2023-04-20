@@ -87,6 +87,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
 #[cfg(test)]
 mod tests {
     use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
+    use num_traits::Float;
 
     #[test]
     fn test_softmax_equivalence() {

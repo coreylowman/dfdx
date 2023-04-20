@@ -194,8 +194,8 @@ impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<E, D>> GatherTo<D>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tensor_ops::*;
-    use crate::tests::*;
+    use crate::{tensor_ops::*, tests::*};
+    use num_traits::Float;
 
     #[test]
     #[should_panic = "dimension 0 not the same"]
@@ -269,7 +269,9 @@ mod tests {
         let t_array = t.array();
         assert_eq!(r.array(), t_array[0]);
         let g = r.exp().backward();
-        assert_eq!(g.get(&t).array(), [t_array[0].exp(), 0.0, 0.0, 0.0, 0.0]);
+        let mut expected = [TestDtype::ZERO; 5];
+        expected[0] = t_array[0].exp();
+        assert_eq!(g.get(&t).array(), expected);
     }
 
     #[test]
@@ -285,9 +287,9 @@ mod tests {
             [
                 t_array[0].exp(),
                 2.0 * (t_array[1]).exp(),
-                0.0,
+                TestDtype::ZERO,
                 t_array[3].exp(),
-                0.0
+                TestDtype::ZERO
             ]
         );
     }
@@ -398,8 +400,8 @@ mod tests {
         assert_close!(
             g.get(&t).array(),
             [
-                [[0.0; 4], sub_g[0], [0.0; 4]],
-                [[0.0; 4], [0.0; 4], sub_g[1]],
+                [[TestDtype::ZERO; 4], sub_g[0], [TestDtype::ZERO; 4]],
+                [[TestDtype::ZERO; 4], [TestDtype::ZERO; 4], sub_g[1]],
             ]
         );
     }
@@ -418,18 +420,19 @@ mod tests {
         let g = r.exp().mean().backward();
         let sub_g = dev.tensor(sub_t).exp() / 6.0;
         let sub_g = sub_g.array();
+        #[rustfmt::skip]
         assert_close!(
             g.get(&t).array(),
             [
                 [
-                    [0.0, 0.0, sub_g[0][0], 0.0],
-                    [0.0, 0.0, 0.0, sub_g[0][1]],
-                    [0.0, 0.0, sub_g[0][2], 0.0],
+                    [TestDtype::ZERO, TestDtype::ZERO, sub_g[0][0], TestDtype::ZERO],
+                    [TestDtype::ZERO, TestDtype::ZERO, TestDtype::ZERO, sub_g[0][1]],
+                    [TestDtype::ZERO, TestDtype::ZERO, sub_g[0][2], TestDtype::ZERO],
                 ],
                 [
-                    [0.0, sub_g[1][0], 0.0, 0.0],
-                    [0.0, sub_g[1][1], 0.0, 0.0],
-                    [sub_g[1][2], 0.0, 0.0, 0.0],
+                    [TestDtype::ZERO, sub_g[1][0], TestDtype::ZERO, TestDtype::ZERO],
+                    [TestDtype::ZERO, sub_g[1][1], TestDtype::ZERO, TestDtype::ZERO],
+                    [sub_g[1][2], TestDtype::ZERO, TestDtype::ZERO, TestDtype::ZERO],
                 ],
             ]
         );

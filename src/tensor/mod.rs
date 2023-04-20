@@ -184,7 +184,7 @@ pub use gradients::{Gradients, Merge, NoneTape, OwnedTape, Tape};
 mod tests {
     use super::*;
     use crate::shapes::*;
-    use crate::tests::{TestDevice, TestDtype};
+    use crate::tests::*;
     use std::collections::HashSet;
 
     #[test]
@@ -283,80 +283,64 @@ mod tests {
     #[test]
     fn test_upper_tri() {
         let dev: TestDevice = Default::default();
-        let vl: TestDtype = 42.0;
+        let a: TestDtype = TestDtype::from_f64(42.0);
+        let z = TestDtype::ZERO;
 
-        assert_eq!(dev.upper_tri::<Rank0>(vl, None).array(), vl);
-        assert_eq!(dev.upper_tri::<Rank0>(vl, 1).array(), 0.);
+        assert_eq!(dev.upper_tri::<Rank0>(a, None).array(), a);
+        assert_eq!(dev.upper_tri::<Rank0>(a, 1).array(), z);
+        assert_eq!(dev.upper_tri::<Rank1<3>>(a, None).array(), [a, a, a]);
+        assert_eq!(dev.upper_tri::<Rank1<3>>(a, 1).array(), [z, a, a]);
 
-        assert_eq!(dev.upper_tri::<Rank1<3>>(vl, None).array(), [vl, vl, vl]);
-        assert_eq!(dev.upper_tri::<Rank1<3>>(vl, 1).array(), [0., vl, vl]);
-
         assert_eq!(
-            dev.upper_tri::<Rank2<3, 4>>(vl, None).array(),
-            [[vl, vl, vl, vl], [0., vl, vl, vl], [0., 0., vl, vl]]
+            dev.upper_tri::<Rank2<3, 4>>(a, None).array(),
+            [[a, a, a, a], [z, a, a, a], [z, z, a, a]]
         );
         assert_eq!(
-            dev.upper_tri::<Rank2<3, 1>>(vl, None).array(),
-            [[vl], [0.], [0.]]
+            dev.upper_tri::<Rank2<3, 1>>(a, None).array(),
+            [[a], [z], [z]]
+        );
+        assert_eq!(dev.upper_tri::<Rank2<3, 1>>(a, 1).array(), [[z], [z], [z]]);
+        assert_eq!(dev.upper_tri::<Rank2<3, 1>>(a, -1).array(), [[a], [a], [z]]);
+        assert_eq!(
+            dev.upper_tri::<Rank2<4, 4>>(a, -1).array(),
+            [[a, a, a, a], [a, a, a, a], [z, a, a, a], [z, z, a, a]]
         );
         assert_eq!(
-            dev.upper_tri::<Rank2<3, 1>>(vl, 1).array(),
-            [[0.], [0.], [0.]]
+            dev.upper_tri::<Rank2<4, 4>>(a, -2).array(),
+            [[a, a, a, a], [a, a, a, a], [a, a, a, a], [z, a, a, a]]
         );
         assert_eq!(
-            dev.upper_tri::<Rank2<3, 1>>(vl, -1).array(),
-            [[vl], [vl], [0.]]
+            dev.upper_tri::<Rank2<4, 3>>(a, 1).array(),
+            [[z, a, a], [z, z, a], [z, z, z], [z, z, z]]
         );
         assert_eq!(
-            dev.upper_tri::<Rank2<4, 4>>(vl, -1).array(),
-            [
-                [vl, vl, vl, vl],
-                [vl, vl, vl, vl],
-                [0., vl, vl, vl],
-                [0., 0., vl, vl]
-            ]
-        );
-        assert_eq!(
-            dev.upper_tri::<Rank2<4, 4>>(vl, -2).array(),
-            [
-                [vl, vl, vl, vl],
-                [vl, vl, vl, vl],
-                [vl, vl, vl, vl],
-                [0., vl, vl, vl]
-            ]
-        );
-        assert_eq!(
-            dev.upper_tri::<Rank2<4, 3>>(vl, 1).array(),
-            [[0., vl, vl], [0., 0., vl], [0., 0., 0.], [0., 0., 0.]]
-        );
-        assert_eq!(
-            dev.upper_tri::<Rank3<2, 5, 5>>(vl, None).array(),
+            dev.upper_tri::<Rank3<2, 5, 5>>(a, None).array(),
             [[
-                [vl, vl, vl, vl, vl],
-                [0., vl, vl, vl, vl],
-                [0., 0., vl, vl, vl],
-                [0., 0., 0., vl, vl],
-                [0., 0., 0., 0., vl]
+                [a, a, a, a, a],
+                [z, a, a, a, a],
+                [z, z, a, a, a],
+                [z, z, z, a, a],
+                [z, z, z, z, a]
             ]; 2]
         );
         assert_eq!(
-            dev.upper_tri::<Rank3<4, 5, 5>>(vl, 2).array(),
+            dev.upper_tri::<Rank3<4, 5, 5>>(a, 2).array(),
             [[
-                [0., 0., vl, vl, vl],
-                [0., 0., 0., vl, vl],
-                [0., 0., 0., 0., vl],
-                [0., 0., 0., 0., 0.],
-                [0., 0., 0., 0., 0.]
+                [z, z, a, a, a],
+                [z, z, z, a, a],
+                [z, z, z, z, a],
+                [z, z, z, z, z],
+                [z, z, z, z, z]
             ]; 4]
         );
         assert_eq!(
-            dev.upper_tri::<Rank4<3, 4, 5, 6>>(vl, None).array(),
+            dev.upper_tri::<Rank4<3, 4, 5, 6>>(a, None).array(),
             [[[
-                [vl, vl, vl, vl, vl, vl],
-                [0., vl, vl, vl, vl, vl],
-                [0., 0., vl, vl, vl, vl],
-                [0., 0., 0., vl, vl, vl],
-                [0., 0., 0., 0., vl, vl]
+                [a, a, a, a, a, a],
+                [z, a, a, a, a, a],
+                [z, z, a, a, a, a],
+                [z, z, z, a, a, a],
+                [z, z, z, z, a, a]
             ]; 4]; 3]
         );
     }
@@ -364,80 +348,64 @@ mod tests {
     #[test]
     fn test_lower_tri() {
         let dev: TestDevice = Default::default();
-        let vl: TestDtype = 42.0;
+        let a: TestDtype = TestDtype::from_f64(42.0);
+        let z = TestDtype::ZERO;
 
-        assert_eq!(dev.lower_tri::<Rank0>(vl, None).array(), vl);
-        assert_eq!(dev.lower_tri::<Rank0>(vl, -1).array(), 0.);
+        assert_eq!(dev.lower_tri::<Rank0>(a, None).array(), a);
+        assert_eq!(dev.lower_tri::<Rank0>(a, -1).array(), z);
+        assert_eq!(dev.lower_tri::<Rank1<3>>(a, None).array(), [a, z, z]);
+        assert_eq!(dev.lower_tri::<Rank1<3>>(a, 1).array(), [a, a, z]);
 
-        assert_eq!(dev.lower_tri::<Rank1<3>>(vl, None).array(), [vl, 0., 0.]);
-        assert_eq!(dev.lower_tri::<Rank1<3>>(vl, 1).array(), [vl, vl, 0.]);
-
         assert_eq!(
-            dev.lower_tri::<Rank2<3, 4>>(vl, None).array(),
-            [[vl, 0., 0., 0.], [vl, vl, 0., 0.], [vl, vl, vl, 0.]]
+            dev.lower_tri::<Rank2<3, 4>>(a, None).array(),
+            [[a, z, z, z], [a, a, z, z], [a, a, a, z]]
         );
         assert_eq!(
-            dev.lower_tri::<Rank2<3, 1>>(vl, None).array(),
-            [[vl], [vl], [vl]]
+            dev.lower_tri::<Rank2<3, 1>>(a, None).array(),
+            [[a], [a], [a]]
+        );
+        assert_eq!(dev.lower_tri::<Rank2<3, 1>>(a, 1).array(), [[a], [a], [a]]);
+        assert_eq!(dev.lower_tri::<Rank2<3, 1>>(a, -1).array(), [[z], [a], [a]]);
+        assert_eq!(
+            dev.lower_tri::<Rank2<4, 4>>(a, -1).array(),
+            [[z, z, z, z], [a, z, z, z], [a, a, z, z], [a, a, a, z]]
         );
         assert_eq!(
-            dev.lower_tri::<Rank2<3, 1>>(vl, 1).array(),
-            [[vl], [vl], [vl]]
+            dev.lower_tri::<Rank2<4, 4>>(a, -2).array(),
+            [[z, z, z, z], [z, z, z, z], [a, z, z, z], [a, a, z, z]]
         );
         assert_eq!(
-            dev.lower_tri::<Rank2<3, 1>>(vl, -1).array(),
-            [[0.], [vl], [vl]]
+            dev.lower_tri::<Rank2<4, 3>>(a, 1).array(),
+            [[a, a, z], [a, a, a], [a, a, a], [a, a, a]]
         );
         assert_eq!(
-            dev.lower_tri::<Rank2<4, 4>>(vl, -1).array(),
-            [
-                [0., 0., 0., 0.],
-                [vl, 0., 0., 0.],
-                [vl, vl, 0., 0.],
-                [vl, vl, vl, 0.]
-            ]
-        );
-        assert_eq!(
-            dev.lower_tri::<Rank2<4, 4>>(vl, -2).array(),
-            [
-                [0., 0., 0., 0.],
-                [0., 0., 0., 0.],
-                [vl, 0., 0., 0.],
-                [vl, vl, 0., 0.]
-            ]
-        );
-        assert_eq!(
-            dev.lower_tri::<Rank2<4, 3>>(vl, 1).array(),
-            [[vl, vl, 0.], [vl, vl, vl], [vl, vl, vl], [vl, vl, vl]]
-        );
-        assert_eq!(
-            dev.lower_tri::<Rank3<2, 5, 5>>(vl, None).array(),
+            dev.lower_tri::<Rank3<2, 5, 5>>(a, None).array(),
             [[
-                [vl, 0., 0., 0., 0.],
-                [vl, vl, 0., 0., 0.],
-                [vl, vl, vl, 0., 0.],
-                [vl, vl, vl, vl, 0.],
-                [vl, vl, vl, vl, vl]
+                [a, z, z, z, z],
+                [a, a, z, z, z],
+                [a, a, a, z, z],
+                [a, a, a, a, z],
+                [a, a, a, a, a]
             ]; 2]
         );
         assert_eq!(
-            dev.lower_tri::<Rank3<4, 5, 5>>(vl, 2).array(),
+            dev.lower_tri::<Rank3<4, 5, 5>>(a, 2).array(),
             [[
-                [vl, vl, vl, 0., 0.],
-                [vl, vl, vl, vl, 0.],
-                [vl, vl, vl, vl, vl],
-                [vl, vl, vl, vl, vl],
-                [vl, vl, vl, vl, vl]
+                [a, a, a, z, z],
+                [a, a, a, a, z],
+                [a, a, a, a, a],
+                [a, a, a, a, a],
+                [a, a, a, a, a]
             ]; 4]
         );
         assert_eq!(
-            dev.lower_tri::<Rank4<3, 4, 5, 6>>(vl, None).array(),
+            dev.lower_tri::<Rank4<3, 4, 5, 6>>(a, None).array(),
             [[[
-                [vl, 0., 0., 0., 0., 0.],
-                [vl, vl, 0., 0., 0., 0.],
-                [vl, vl, vl, 0., 0., 0.],
-                [vl, vl, vl, vl, 0., 0.],
-                [vl, vl, vl, vl, vl, 0.]
+                [a, z, z, z, z, z],
+                [a, a, z, z, z, z],
+                [a, a, a, z, z, z],
+                [a, a, a, a, z, z],
+                [a, a, a, a, a, z]
             ]; 4]; 3]
         );
     }

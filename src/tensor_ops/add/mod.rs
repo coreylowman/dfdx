@@ -74,6 +74,31 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarAddKernelOp<E>, E>, T: Tape<E, D>>
     }
 }
 
+#[cfg(feature = "f16")]
+impl<S: Shape, D: UnaryKernel<ScalarAddKernelOp<half::f16>, half::f16>, T: Tape<half::f16, D>>
+    TryAdd<f32> for Tensor<S, half::f16, D, T>
+{
+    /// See [add]
+    fn try_add(self, rhs: f32) -> Result<Self, Self::Err> {
+        let scalar = half::f16::from_f32(rhs);
+        try_unary_op(ScalarAddKernelOp { scalar }, self)
+    }
+}
+
+#[cfg(feature = "f16")]
+impl<
+        S: Shape,
+        D: UnaryKernel<ScalarAddKernelOp<half::bf16>, half::bf16>,
+        T: Tape<half::bf16, D>,
+    > TryAdd<f32> for Tensor<S, half::bf16, D, T>
+{
+    /// See [add]
+    fn try_add(self, rhs: f32) -> Result<Self, Self::Err> {
+        let scalar = half::bf16::from_f32(rhs);
+        try_unary_op(ScalarAddKernelOp { scalar }, self)
+    }
+}
+
 impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<E, D>, Rhs> std::ops::Add<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
