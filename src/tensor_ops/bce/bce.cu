@@ -5,12 +5,14 @@ struct BCEKernelOp {};
 template<typename T>
 __device__ T op_f(T logit, T prob) {
     T zero = 0.0;
-    return maxg(logit, zero) - logit * prob + logg(1.0 + expg(-absg(logit)));
+    T one = 1.0;
+    return maxg(logit, zero) - logit * prob + logg(one + expg(-absg(logit)));
 }
 
 template<typename T>
 __device__ T op_dfdx(T logit, T prob) {
-    return 1.0 - prob - 1 / (1.0 + expg(logit));
+    T one = 1.0;
+    return one - prob - one / (one + expg(logit));
 }
 
 template<typename T>

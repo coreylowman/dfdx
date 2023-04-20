@@ -117,6 +117,19 @@ extern "C" __global__ void fill_with_f64(double *buf, double value, const size_t
     buf[i] = value;
 }
 
+
+__device__ __forceinline__ bool isnang(float a) { return isnan(a); }
+__device__ __forceinline__ bool isnang(double a) { return isnan(a); }
+__device__ __forceinline__ bool isnang(__half a) { return __hisnan(a); }
+__device__ __forceinline__ float recipg(float a) { return 1.0 / a; }
+__device__ __forceinline__ double recipg(double a) { return 1.0 / a; }
+__device__ __forceinline__ __half recipg(__half a) { __half one = 1.0; return one / a; }
+__device__ __forceinline__ float cosg(float a) { return cosf(a); }
+__device__ __forceinline__ double cosg(double a) { return cos(a); }
+__device__ __forceinline__ __half cosg(__half a) { return hcos(a); }
+__device__ __forceinline__ float sing(float a) { return sinf(a); }
+__device__ __forceinline__ double sing(double a) { return sin(a); }
+__device__ __forceinline__ __half sing(__half a) { return hsin(a); }
 __device__ __forceinline__ float sqrtg(float a) { return sqrtf(a); }
 __device__ __forceinline__ double sqrtg(double a) { return sqrt(a); }
 __device__ __forceinline__ __half sqrtg(__half a) { return hsqrt(a); }

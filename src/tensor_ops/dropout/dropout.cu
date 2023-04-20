@@ -1,3 +1,5 @@
+#include "cuda_fp16.h"
+
 #define DROPOUT(TYPENAME, FWD, BWD) \
 extern "C" __global__ void FWD( \
     const TYPENAME prob, \
@@ -10,7 +12,9 @@ extern "C" __global__ void FWD( \
     if (i >= numel) { \
         return; \
     } \
-    auto scalar = (noise[i] < prob) ? 0.0 : (1.0 / (1.0 - prob)); \
+    TYPENAME zero = 0.0; \
+    TYPENAME one = 1.0; \
+    TYPENAME scalar = (noise[i] < prob) ? zero : (one / (one - prob)); \
     out[i] = inp[i] * scalar; \
 } \
 extern "C" __global__ void BWD( \
@@ -24,7 +28,9 @@ extern "C" __global__ void BWD( \
     if (i >= numel) { \
         return; \
     } \
-    grad_inp[i] += (noise[i] < prob) ? 0.0 : (grad_out[i] / (1.0 - prob)); \
+    TYPENAME zero = 0.0; \
+    TYPENAME one = 1.0; \
+    grad_inp[i] += (noise[i] < prob) ? zero : (grad_out[i] / (one - prob)); \
 }
 
 DROPOUT(__half, dropout_fwd_f16, dropout_bwd_f16);

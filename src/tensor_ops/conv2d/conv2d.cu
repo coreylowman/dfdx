@@ -1,3 +1,5 @@
+#include "cuda_fp16.h"
+
 struct Conv2DOp {
     size_t stride;
     size_t padding;
@@ -37,11 +39,13 @@ __device__ void unfold_input_into_patches(
     patches += c * (op.kernel * op.kernel * op.h_out * op.w_out);
     patches += b * (op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out);
 
+    T zero = 0.0;
+
     for (int k1 = 0;k1 < op.kernel;k1++) {
         const size_t y = oh * op.stride + k1 - op.padding;
         for (int k2 = 0;k2 < op.kernel;k2++) {
             const size_t x = ow * op.stride + k2 - op.padding;
-            *patches = (y >= op.h_in || x >= op.w_in) ? 0.0 : image[y * strides[2] + x * strides[3]];
+            *patches = (y >= op.h_in || x >= op.w_in) ? zero : image[y * strides[2] + x * strides[3]];
             patches += op.h_out * op.w_out;
         }
     }
@@ -72,6 +76,8 @@ __device__ void unfold_output_into_patches(
     patches += o * (op.kernel * op.kernel * op.h_in * op.w_in);
     patches += b * (op.chan_out * op.kernel * op.kernel * op.h_in * op.w_in);
 
+    T zero = 0.0;
+
     for (int k1 = 0;k1 < op.kernel;k1++) {
         const size_t oh_ks = y + op.padding;
         const size_t oh_s = oh_ks - k1;
@@ -83,7 +89,7 @@ __device__ void unfold_output_into_patches(
             const size_t ow = ow_s / op.stride;
         
             const bool invalid = k1_invalid || (ow_ks < k2 || ow_s % op.stride != 0 || ow >= op.w_out);
-            *patches = invalid ? 0.0 : image_out[oh * op.w_out + ow];
+            *patches = invalid ? zero : image_out[oh * op.w_out + ow];
             patches += op.h_in * op.w_in;
         }
     }

@@ -1,5 +1,11 @@
 #include "cuda_utils.cuh"
 
+__device__ __forceinline__ __half atomicMaxf(__half * addr, __half value) {
+    __half zero = 0.0;
+    // TODO
+    return zero;
+}
+
 // atomicMax is not implemented for floats,
 // solution copied https://stackoverflow.com/questions/17399119/how-do-i-use-atomicmax-on-floating-point-values-in-cuda
 __device__ __forceinline__ float atomicMaxf(float * addr, float value) {

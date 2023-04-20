@@ -53,7 +53,9 @@ __device__ void avg_pool2d_fwd(
         }
     }
 
-    tmp /= static_cast<T>(op.kernel * op.kernel);
+    double num_f64 = op.kernel * op.kernel;
+    T num = num_f64;
+    tmp /= num;
     out[i] = tmp;
 }
 
@@ -105,7 +107,9 @@ __device__ void avg_pool2d_bwd(
         }
     }
 
-    grad_inp[i] += tmp / static_cast<T>(op.kernel * op.kernel);
+    double num_f64 = op.kernel * op.kernel;
+    T num = num_f64;
+    grad_inp[i] += tmp / num;
 }
 
 template<typename T>

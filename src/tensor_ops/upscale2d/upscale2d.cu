@@ -106,9 +106,11 @@ __device__ void bilinear_upscale2d_fwd(
 
     inp += b * inp_strides[0] + c * inp_strides[1];
 
-    T ll = inp[y0 * inp_strides[2] + x0 * inp_strides[3]] * (1-hs) * (1-ws);
-    T lh = inp[y0 * inp_strides[2] + x1 * inp_strides[3]] * (1-hs) * ws;
-    T hl = inp[y1 * inp_strides[2] + x0 * inp_strides[3]] * hs * (1-ws);
+    T one = 1.0;
+
+    T ll = inp[y0 * inp_strides[2] + x0 * inp_strides[3]] * (one-hs) * (one-ws);
+    T lh = inp[y0 * inp_strides[2] + x1 * inp_strides[3]] * (one-hs) * ws;
+    T hl = inp[y1 * inp_strides[2] + x0 * inp_strides[3]] * hs * (one-ws);
     T hh = inp[y1 * inp_strides[2] + x1 * inp_strides[3]] * hs * ws;
 
     out[i] = ll + lh + hl + hh;
@@ -150,9 +152,11 @@ __device__ void bilinear_upscale2d_bwd(
 
     grad_inp += b * inp_strides[0] + c * inp_strides[1];
 
-    atomicAdd(grad_inp + y0 * inp_strides[2] + x0 * inp_strides[3], go * (1-hs) * (1-ws));
-    atomicAdd(grad_inp + y0 * inp_strides[2] + x1 * inp_strides[3], go * (1-hs) * ws);
-    atomicAdd(grad_inp + y1 * inp_strides[2] + x0 * inp_strides[3], go * hs * (1-ws));
+    const T one = 1.0;
+
+    atomicAdd(grad_inp + y0 * inp_strides[2] + x0 * inp_strides[3], go * (one-hs) * (one-ws));
+    atomicAdd(grad_inp + y0 * inp_strides[2] + x1 * inp_strides[3], go * (one-hs) * ws);
+    atomicAdd(grad_inp + y1 * inp_strides[2] + x0 * inp_strides[3], go * hs * (one-ws));
     atomicAdd(grad_inp + y1 * inp_strides[2] + x1 * inp_strides[3], go * hs * ws);
 }
 

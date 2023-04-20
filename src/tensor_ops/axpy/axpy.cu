@@ -1,3 +1,5 @@
+#include "cuda_fp16.h"
+
 template<typename T>
 __device__ void axpy(const size_t n, T* a, const T alpha, const T* b, const T beta) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;

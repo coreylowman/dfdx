@@ -7,19 +7,21 @@ struct HuberErrorOp {
 
 template<typename T>
 __device__ T op_f(HuberErrorOp<T> op, T x, T y) {
-    auto a = x - y;
+    T a = x - y;
+    T half = 0.5;
     if (absg(a) < op.delta) {
-        return a * a * 0.5;
+        return a * a * half;
     } else {
-        return op.delta * (absg(a) - 0.5 * op.delta);
+        return op.delta * (absg(a) - half * op.delta);
     }
 }
 
 template<typename T>
 __device__ T op_dfdx(HuberErrorOp<T> op, T x, T y) {
-    auto a = x - y;
-    if (a == 0.0) {
-        return 0.0;
+    T a = x - y;
+    T zero = 0.0;
+    if (a == zero) {
+        return zero;
     } else if (absg(a) < op.delta) {
         return a;
     } else {
