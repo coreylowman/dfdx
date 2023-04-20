@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use super::{ops::*, Device};
+use super::ops::*;
 use crate::{shapes::*, tensor::*};
 
 #[repr(C)]
@@ -36,10 +36,13 @@ pub struct ScalarSubKernelOp<E> {
 /// let r = a - 1.0;
 /// assert_eq!(r.array(), [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
 /// ```
-pub fn sub<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R>(
+pub fn sub<S: Shape, E: Dtype, D, T: Tape<E, D> + Merge<R>, R>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, R>,
-) -> Tensor<S, E, D, T> {
+) -> Tensor<S, E, D, T>
+where
+    D: BinaryKernel<BinarySubKernelOp, E>,
+{
     lhs - rhs
 }
 
@@ -48,8 +51,8 @@ pub trait TrySub<Rhs = Self>: HasErr {
     fn try_sub(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<E, D>, R> TrySub<Tensor<S, E, D, R>>
-    for Tensor<S, E, D, LTape>
+impl<S: Shape, E: Dtype, D: BinaryKernel<BinarySubKernelOp, E>, LTape: Tape<E, D>, R>
+    TrySub<Tensor<S, E, D, R>> for Tensor<S, E, D, LTape>
 where
     LTape: Merge<R>,
 {
@@ -58,13 +61,15 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> TrySub<E> for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarSubKernelOp<E>, E>, T: Tape<E, D>> TrySub<E>
+    for Tensor<S, E, D, T>
+{
     fn try_sub(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarSubKernelOp { scalar: rhs }, self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<E, D>, Rhs> std::ops::Sub<Rhs>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LTape: Tape<E, D>, Rhs> std::ops::Sub<Rhs>
     for Tensor<S, E, D, LTape>
 where
     Self: TrySub<Rhs>,
