@@ -89,7 +89,7 @@ impl<E: Dtype, D: AttentionReshapeKernel<E>> TryAttentionReshape<E> for D {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::*;
+    use crate::{tests::*, tensor_ops::*};
 
     #[test]
     fn test_attention_reshape() {
@@ -100,37 +100,21 @@ mod tests {
         let sequence_length = 1;
         let past_length = 3;
 
-        {
-            let qkv: Tensor<(usize, Const<{ NUM_HEADS * HEAD_DIM * 3 }>), TestDtype, _> =
-                dev.zeros_like(&(sequence_length, Const)) + 1.0;
-            let past_key: Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), TestDtype, _> =
-                dev.zeros_like(&(Const, Const, past_length)) + 2.0;
-            let past_value: Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), TestDtype, _> =
-                dev.zeros_like(&(Const, past_length, Const)) + 3.0;
+        let qkv: Tensor<(usize, Const<{ NUM_HEADS * HEAD_DIM * 3 }>), TestDtype, _> =
+            dev.zeros_like(&(sequence_length, Const)) + 1.0;
+        let past_key: Tensor<(Const<NUM_HEADS>, Const<HEAD_DIM>, usize), TestDtype, _> =
+            dev.zeros_like(&(Const, Const, past_length)) + 2.0;
+        let past_value: Tensor<(Const<NUM_HEADS>, usize, Const<HEAD_DIM>), TestDtype, _> =
+            dev.zeros_like(&(Const, past_length, Const)) + 3.0;
 
-            let (q, k, v) = dev.attention_reshape(&qkv, &past_key, &past_value);
+        let (q, k, v) = dev.attention_reshape(&qkv, &past_key, &past_value);
 
-            assert_eq!(q.as_vec(), std::vec![1.0; 6]);
-            #[rustfmt::skip]
-        assert_eq!(
-            k.as_vec(),
-            std::vec![
-                2.0, 2.0, 2.0, 1.0,
-                2.0, 2.0, 2.0, 1.0,
-                2.0, 2.0, 2.0, 1.0,
-                2.0, 2.0, 2.0, 1.0,
-                2.0, 2.0, 2.0, 1.0,
-                2.0, 2.0, 2.0, 1.0
-            ]
-        );
-            #[rustfmt::skip]
-        assert_eq!(
-            v.as_vec(),
-            std::vec![
-                3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 1.0, 1.0, 1.0,
-                3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 1.0, 1.0, 1.0
-            ]
-        );
-        }
+        let q = q.realize::<(Const::<NUM_HEADS>, Const::<1>, Const::<HEAD_DIM>)>().unwrap();
+        let k = k.realize::<(Const::<NUM_HEADS>, Const::<HEAD_DIM>, Const::<4>)>().unwrap();
+        let v = v.realize::<(Const::<NUM_HEADS>, Const::<4>, Const::<HEAD_DIM>)>().unwrap();
+
+        assert_close_to_literal!(q, [[[1.0; HEAD_DIM]; 1]; NUM_HEADS]);
+        assert_close_to_literal!(k, [[[2.0; 4]; HEAD_DIM]; NUM_HEADS]);
+        assert_close_to_literal!(v, [[[3.0; HEAD_DIM]; 4]; NUM_HEADS]);
     }
 }

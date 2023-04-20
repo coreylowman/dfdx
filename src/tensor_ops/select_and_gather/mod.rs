@@ -286,7 +286,7 @@ mod tests {
             g.get(&t).array(),
             [
                 t_array[0].exp(),
-                2.0 * (t_array[1]).exp(),
+                TestDtype::from_f64(2.0) * (t_array[1]).exp(),
                 TestDtype::ZERO,
                 t_array[3].exp(),
                 TestDtype::ZERO

@@ -205,7 +205,7 @@ mod tests {
             AdamConfig {
                 lr: TestDtype::from_f64(1e-3),
                 betas: [0.5, 0.25].map(TestDtype::from_f64),
-                eps: 1e-8.map(TestDtype::from_f64),
+                eps: TestDtype::from_f64(1e-8),
                 weight_decay: None,
             },
         );

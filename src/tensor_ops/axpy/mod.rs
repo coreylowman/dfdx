@@ -85,8 +85,10 @@ mod tests {
     fn test_axpy() {
         let dev: TestDevice = Default::default();
 
-        let mut a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, -1.0, 0.0, 1.0, 2.0]; 2]);
-        let b: Tensor<_, TestDtype, _> = dev.tensor([[-1.5; 5], [1.5; 5]]);
+        let mut a = dev
+            .tensor([[-2.0, -1.0, 0.0, 1.0, 2.0]; 2])
+            .to_dtype::<TestDtype>();
+        let b = dev.tensor([[-1.5; 5], [1.5; 5]]).to_dtype::<TestDtype>();
 
         a.axpy(0.01, &b, 0.99);
 

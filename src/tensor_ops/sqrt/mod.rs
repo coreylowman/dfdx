@@ -49,11 +49,11 @@ mod tests {
         let r = x.leaky_trace().sqrt();
         let r_array = r.array();
         assert!(r_array[0].is_nan());
-        assert_close!(&r_array[1..], [0.0, 1.0, 2.0].map(TestDtype::from_f64));
+        assert_eq!(&r_array[1..], [0.0, 1.0, 2.0].map(TestDtype::from_f64));
         let g = r.mean().backward();
         let g = g.get(&x).array();
         assert!(g[0].is_nan());
-        assert_close!(
+        assert_eq!(
             &g[1..],
             [f64::INFINITY, 0.5 / 4.0, 0.25 / 4.0].map(TestDtype::from_f64)
         );

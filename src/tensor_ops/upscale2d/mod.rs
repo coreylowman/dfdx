@@ -312,7 +312,6 @@ mod tests {
         let x: Tensor<Rank4<5, 3, 2, 3>, _, _> =
             [x.clone(), x.clone(), x.clone(), x.clone(), x].stack();
         let y = x.leaky_trace().upscale2d::<5, 6, _>(NearestNeighbor);
-        let y_array = y.array();
         assert_close_to_literal!(
             y,
             [[[
