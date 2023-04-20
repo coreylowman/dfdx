@@ -48,6 +48,12 @@ trait HasCudaKernel<E> {
     const FWD: &'static str;
 }
 
+#[cfg(feature = "f16")]
+impl HasCudaKernel<half::f16> for Cuda {
+    const MOD: &'static str = "rmsprop_f16";
+    const FWD: &'static str = "rmsprop_update_f16";
+}
+
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "rmsprop_f32";
     const FWD: &'static str = "rmsprop_update_f32";

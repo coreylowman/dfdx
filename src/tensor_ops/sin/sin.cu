@@ -2,6 +2,10 @@
 
 struct SinKernelOp {};
 
+UNARY_OP(__half, sin_fwd_f16, sin_bwd_f16, SinKernelOp,
+        sinf(x),
+        cosf(x))
+
 UNARY_OP(float, sin_fwd_f32, sin_bwd_f32, SinKernelOp,
         sinf(x),
         cosf(x))

@@ -83,5 +83,6 @@ extern "C" __global__ void BWD( \
     choose_bwd(numel, num_dims, dims, cond, cond_strides, grad_lhs, lhs_strides, grad_rhs, rhs_strides, grad_out); \
 }
 
+CHOOSE(__half, choose_fwd_f16, choose_bwd_f16);
 CHOOSE(float, choose_fwd_f32, choose_bwd_f32);
 CHOOSE(double, choose_fwd_f64, choose_bwd_f64);

@@ -17,6 +17,12 @@ trait HasCudaKernel<E> {
     const FNS: &'static [&'static str];
 }
 
+#[cfg(feature = "f16")]
+impl HasCudaKernel<half::f16> for Cuda {
+    const MOD: &'static str = "dropout_f16";
+    const FNS: &'static [&'static str] = &["dropout_fwd_f16", "dropout_bwd_f16"];
+}
+
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "dropout_f32";
     const FNS: &'static [&'static str] = &["dropout_fwd_f32", "dropout_bwd_f32"];

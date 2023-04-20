@@ -70,5 +70,6 @@ extern "C" __global__ void FN( \
     sgd_update(cfg, numel, param, velocity, grad); \
 }
 
+SGD(__half, sgd_update_f16);
 SGD(float, sgd_update_f32);
 SGD(double, sgd_update_f64);

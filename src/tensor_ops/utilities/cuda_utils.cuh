@@ -93,6 +93,14 @@ __device__ void chunk_sum(
     }
 }
 
+extern "C" __global__ void fill_with_f16(__half *buf, __half value, const size_t numel) {
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= numel) {
+        return;
+    }
+    buf[i] = value;
+}
+
 extern "C" __global__ void fill_with_f32(float *buf, float value, const size_t numel) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= numel) {

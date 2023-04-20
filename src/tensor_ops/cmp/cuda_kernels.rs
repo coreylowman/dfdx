@@ -128,6 +128,19 @@ macro_rules! cmps {
     };
 }
 
+#[cfg(feature = "f16")]
+cmps!(EqKernelOp, half::f16, "eq_fwd_f16", "scalar_eq_fwd_f16");
+#[cfg(feature = "f16")]
+cmps!(NeKernelOp, half::f16, "ne_fwd_f16", "scalar_ne_fwd_f16");
+#[cfg(feature = "f16")]
+cmps!(GtKernelOp, half::f16, "gt_fwd_f16", "scalar_gt_fwd_f16");
+#[cfg(feature = "f16")]
+cmps!(GeKernelOp, half::f16, "ge_fwd_f16", "scalar_ge_fwd_f16");
+#[cfg(feature = "f16")]
+cmps!(LtKernelOp, half::f16, "lt_fwd_f16", "scalar_lt_fwd_f16");
+#[cfg(feature = "f16")]
+cmps!(LeKernelOp, half::f16, "le_fwd_f16", "scalar_le_fwd_f16");
+
 cmps!(EqKernelOp, f32, "eq_fwd_f32", "scalar_eq_fwd_f32");
 cmps!(NeKernelOp, f32, "ne_fwd_f32", "scalar_ne_fwd_f32");
 cmps!(GtKernelOp, f32, "gt_fwd_f32", "scalar_gt_fwd_f32");

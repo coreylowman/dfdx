@@ -5,6 +5,15 @@ unsafe impl cudarc::driver::DeviceRepr for Max {}
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/maximum.ptx"));
 
+#[cfg(feature = "f16")]
+cuda_binary!(
+    Max,
+    half::f16,
+    PTX,
+    "maximum_fwd_f16",
+    "maximum_bwd_lhs_f16",
+    "maximum_bwd_rhs_f16"
+);
 cuda_binary!(
     Max,
     f32,

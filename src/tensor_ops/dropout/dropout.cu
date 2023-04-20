@@ -27,5 +27,6 @@ extern "C" __global__ void BWD( \
     grad_inp[i] += (noise[i] < prob) ? 0.0 : (grad_out[i] / (1.0 - prob)); \
 }
 
+DROPOUT(__half, dropout_fwd_f16, dropout_bwd_f16);
 DROPOUT(float, dropout_fwd_f32, dropout_bwd_f32);
 DROPOUT(double, dropout_fwd_f64, dropout_bwd_f64);

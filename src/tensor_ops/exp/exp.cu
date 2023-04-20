@@ -2,6 +2,10 @@
 
 struct ExpKernelOp {};
 
+UNARY_OP(__half, exp_fwd_f16, exp_bwd_f16, ExpKernelOp,
+        expf(x),
+        y)
+
 UNARY_OP(float, exp_fwd_f32, exp_bwd_f32, ExpKernelOp,
         expf(x),
         y)

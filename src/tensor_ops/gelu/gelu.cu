@@ -34,6 +34,11 @@ __device__ T gelu_bwd(T x) {
     return left_derivative + right_derivative;
 }
 
+UNARY_OP(__half, gelu_fwd_f16, gelu_bwd_f16, GeLUKernelOp,
+    gelu_fwd(x),
+    gelu_bwd(x)
+)
+
 UNARY_OP(float, gelu_fwd_f32, gelu_bwd_f32, GeLUKernelOp,
     gelu_fwd(x),
     gelu_bwd(x)

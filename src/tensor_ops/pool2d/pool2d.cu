@@ -331,6 +331,22 @@ extern "C" __global__ void bwd( \
 }
 
 POOL_OP(
+    __half,
+    avg_pool2d_fwd_f16, avg_pool2d_bwd_f16,
+    avg_pool2d_fwd, avg_pool2d_bwd
+);
+POOL_OP(
+    __half,
+    min_pool2d_fwd_f16, min_pool2d_bwd_f16,
+    min_pool2d_fwd, min_pool2d_bwd
+);
+POOL_OP(
+    __half,
+    max_pool2d_fwd_f16, max_pool2d_bwd_f16,
+    max_pool2d_fwd, max_pool2d_bwd
+);
+
+POOL_OP(
     float,
     avg_pool2d_fwd_f32, avg_pool2d_bwd_f32,
     avg_pool2d_fwd, avg_pool2d_bwd

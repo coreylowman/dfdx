@@ -175,19 +175,30 @@ extern "C" __global__ void bwd( \
 }
 
 UPSCALE_OP(
-    float,
-    nearest_upscale2d_fwd_f32, nearest_upscale2d_bwd_f32,
+    __half,
+    nearest_upscale2d_fwd_f16, nearest_upscale2d_bwd_f16,
     nearest_upscale2d_fwd, nearest_upscale2d_bwd
 );
 UPSCALE_OP(
-    double,
-    nearest_upscale2d_fwd_f64, nearest_upscale2d_bwd_f64,
+    __half,
+    bilinear_upscale2d_fwd_f16, bilinear_upscale2d_bwd_f16,
+    bilinear_upscale2d_fwd, bilinear_upscale2d_bwd
+);
+
+UPSCALE_OP(
+    float,
+    nearest_upscale2d_fwd_f32, nearest_upscale2d_bwd_f32,
     nearest_upscale2d_fwd, nearest_upscale2d_bwd
 );
 UPSCALE_OP(
     float,
     bilinear_upscale2d_fwd_f32, bilinear_upscale2d_bwd_f32,
     bilinear_upscale2d_fwd, bilinear_upscale2d_bwd
+);
+UPSCALE_OP(
+    double,
+    nearest_upscale2d_fwd_f64, nearest_upscale2d_bwd_f64,
+    nearest_upscale2d_fwd, nearest_upscale2d_bwd
 );
 UPSCALE_OP(
     double,

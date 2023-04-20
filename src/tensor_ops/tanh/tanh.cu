@@ -2,6 +2,10 @@
 
 struct TanhKernelOp {};
 
+UNARY_OP(__half, tanh_fwd_f16, tanh_bwd_f16, TanhKernelOp,
+        tanhf(x),
+        1 - y * y)
+
 UNARY_OP(float, tanh_fwd_f32, tanh_bwd_f32, TanhKernelOp,
         tanhf(x),
         1 - y * y)

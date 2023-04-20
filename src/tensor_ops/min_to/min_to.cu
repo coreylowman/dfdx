@@ -140,5 +140,6 @@ extern "C" __global__ void BWD( \
     min_to_bwd(numel, num_dims, elems_per_thread, info, inp, grad_inp, out, grad_out); \
 }
 
+MIN(__half, min_to_fwd_f16, min_to_bwd_f16);
 MIN(float, min_to_fwd_f32, min_to_bwd_f32);
 MIN(double, min_to_fwd_f64, min_to_bwd_f64);

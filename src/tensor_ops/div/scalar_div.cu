@@ -5,6 +5,10 @@ struct ScalarDivKernelOp {
     T scalar;
 };
 
+UNARY_OP(__half, sdiv_fwd_f16, sdiv_bwd_f16, ScalarDivKernelOp<__half>,
+    x / op.scalar,
+    1.0 / op.scalar);
+
 UNARY_OP(float, sdiv_fwd_f32, sdiv_bwd_f32, ScalarDivKernelOp<float>,
     x / op.scalar,
     1.0 / op.scalar);

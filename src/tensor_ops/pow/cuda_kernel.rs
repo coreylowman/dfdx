@@ -6,11 +6,15 @@ use crate::{
 };
 use std::borrow::Cow;
 
+#[cfg(feature = "f16")]
+unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<half::f16> {}
 unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<f32> {}
 unsafe impl cudarc::driver::DeviceRepr for super::PowfKernelOp<f64> {}
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/pow.ptx"));
 
+#[cfg(feature = "f16")]
+cuda_unary!(PowfKernelOp<half::f16>, half::f16, PTX, "pow_fwd_f16", "pow_bwd_f16");
 cuda_unary!(PowfKernelOp<f32>, f32, PTX, "pow_fwd_f32", "pow_bwd_f32");
 cuda_unary!(PowfKernelOp<f64>, f64, PTX, "pow_fwd_f64", "pow_bwd_f64");
 

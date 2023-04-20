@@ -186,6 +186,13 @@ extern "C" __global__ void SUM_TR_FILTERS( \
 }
 
 CONV_OP(
+    __half,
+    unfold_input_into_patches_f16,
+    unfold_output_into_patches_f16,
+    transpose_filters_f16,
+    sum_transposed_filters_f16
+);
+CONV_OP(
     float,
     unfold_input_into_patches_f32,
     unfold_output_into_patches_f32,

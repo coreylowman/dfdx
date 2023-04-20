@@ -69,5 +69,6 @@ extern "C" __global__ void FN( \
     adam_update(cfg, numel, t, param, moment1, moment2, grad); \
 }
 
+ADAM(__half, adam_update_f16);
 ADAM(float, adam_update_f32);
 ADAM(double, adam_update_f64);

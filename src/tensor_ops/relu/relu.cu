@@ -2,6 +2,10 @@
 
 struct ReLUKernelOp {};
 
+UNARY_OP(__half, relu_fwd_f16, relu_bwd_f16, ReLUKernelOp,
+        fmaxf(x, 0.0),
+        x > 0.0 ? 1.0 : 0.0)
+
 UNARY_OP(float, relu_fwd_f32, relu_bwd_f32, ReLUKernelOp,
         fmaxf(x, 0.0),
         x > 0.0 ? 1.0 : 0.0)
