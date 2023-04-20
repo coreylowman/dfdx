@@ -132,8 +132,14 @@ mod tests {
         m.gamma = dev.sample_normal();
         m.beta = dev.sample_normal();
 
-        assert_ne!(m.gamma.array(), [1.0; 5].map(TestDtype::from_f64));
-        assert_ne!(m.beta.array(), [0.0; 5].map(TestDtype::from_f64));
+        assert_ne!(
+            m.gamma.array(),
+            [1.0; 5].map(TestDtype::from_f64).map(Option::unwrap)
+        );
+        assert_ne!(
+            m.beta.array(),
+            [0.0; 5].map(TestDtype::from_f64).map(Option::unwrap)
+        );
 
         m.reset_params();
 

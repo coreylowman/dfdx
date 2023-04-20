@@ -203,9 +203,9 @@ mod tests {
     #[test]
     fn test_rmsprop_default() {
         let cfg = RMSpropConfig {
-            lr: TestDtype::from_f64(1e-2),
-            alpha: TestDtype::from_f64(0.9),
-            eps: TestDtype::from_f64(1e-8),
+            lr: TestDtype::from_f64(1e-2).unwrap(),
+            alpha: TestDtype::from_f64(0.9).unwrap(),
+            eps: TestDtype::from_f64(1e-8).unwrap(),
             momentum: None,
             centered: false,
             weight_decay: None,
@@ -223,10 +223,10 @@ mod tests {
     #[test]
     fn test_rmsprop_momentum() {
         let cfg = RMSpropConfig {
-            lr: TestDtype::from_f64(1e-2),
-            alpha: TestDtype::from_f64(0.9),
-            eps: TestDtype::from_f64(1e-8),
-            momentum: Some(TestDtype::from_f64(0.9)),
+            lr: TestDtype::from_f64(1e-2).unwrap(),
+            alpha: TestDtype::from_f64(0.9).unwrap(),
+            eps: TestDtype::from_f64(1e-8).unwrap(),
+            momentum: Some(TestDtype::from_f64(0.9).unwrap()),
             centered: false,
             weight_decay: None,
         };
@@ -243,9 +243,9 @@ mod tests {
     #[test]
     fn test_rmsprop_diff_alpha() {
         let cfg = RMSpropConfig {
-            lr: TestDtype::from_f64(1e-2),
-            alpha: TestDtype::from_f64(0.5),
-            eps: TestDtype::from_f64(1e-8),
+            lr: TestDtype::from_f64(1e-2).unwrap(),
+            alpha: TestDtype::from_f64(0.5).unwrap(),
+            eps: TestDtype::from_f64(1e-8).unwrap(),
             momentum: None,
             centered: false,
             weight_decay: None,
@@ -263,9 +263,9 @@ mod tests {
     #[test]
     fn test_rmsprop_diff_eps() {
         let cfg = RMSpropConfig {
-            lr: TestDtype::from_f64(1e-2),
-            alpha: TestDtype::from_f64(0.9),
-            eps: TestDtype::from_f64(1e-2),
+            lr: TestDtype::from_f64(1e-2).unwrap(),
+            alpha: TestDtype::from_f64(0.9).unwrap(),
+            eps: TestDtype::from_f64(1e-2).unwrap(),
             momentum: None,
             centered: false,
             weight_decay: None,
@@ -283,9 +283,9 @@ mod tests {
     #[test]
     fn test_rmsprop_centered() {
         let cfg = RMSpropConfig {
-            lr: TestDtype::from_f64(1e-2),
-            alpha: TestDtype::from_f64(0.9),
-            eps: TestDtype::from_f64(1e-8),
+            lr: TestDtype::from_f64(1e-2).unwrap(),
+            alpha: TestDtype::from_f64(0.9).unwrap(),
+            eps: TestDtype::from_f64(1e-8).unwrap(),
             momentum: None,
             centered: true,
             weight_decay: None,
@@ -303,7 +303,7 @@ mod tests {
     #[test]
     fn test_rmsprop_l2_weight_decay() {
         let cfg = RMSpropConfig {
-            weight_decay: Some(WeightDecay::L2(TestDtype::from_f64(0.5))),
+            weight_decay: Some(WeightDecay::L2(TestDtype::from_f64(0.5).unwrap())),
             ..Default::default()
         };
         const EXPECTED: [[f64; 5]; 5] = [
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn test_rmsprop_decoupled_weight_decay() {
         let cfg = RMSpropConfig {
-            weight_decay: Some(WeightDecay::Decoupled(TestDtype::from_f64(0.5))),
+            weight_decay: Some(WeightDecay::Decoupled(TestDtype::from_f64(0.5).unwrap())),
             ..Default::default()
         };
         const EXPECTED: [[f64; 5]; 5] = [

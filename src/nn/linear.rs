@@ -173,12 +173,12 @@ mod tests {
     fn test_linear_initialize() {
         let dev: TestDevice = Default::default();
         let m = dev.build_module::<builder::Linear<2000, 1>, TestDtype>();
-        let bound: TestDtype = TestDtype::from_f64((1.0 / 2000.0f64).sqrt());
+        let bound: TestDtype = TestDtype::from_f64((1.0 / 2000.0f64).sqrt()).unwrap();
         for v in m.weight.as_vec() {
-            assert!(-bound <= v && v <= bound && v != TestDtype::ZERO);
+            assert!(-bound <= v && v <= bound && v != TestDtype::zero());
         }
         for v in m.bias.as_vec() {
-            assert!(-bound <= v && v <= bound && v != TestDtype::ZERO);
+            assert!(-bound <= v && v <= bound && v != TestDtype::zero());
         }
     }
 

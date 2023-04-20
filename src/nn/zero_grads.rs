@@ -100,11 +100,11 @@ mod tests {
         model.zero_grads(&mut grads);
         assert_eq!(
             grads.get(&model.0.weight).array(),
-            [[TestDtype::ZERO; 2]; 5]
+            [[TestDtype::zero(); 2]; 5]
         );
-        assert_eq!(grads.get(&model.0.bias).array(), [TestDtype::ZERO; 5]);
-        assert_eq!(grads.get(&model.1.scale).array(), [TestDtype::ZERO; 3]);
-        assert_eq!(grads.get(&model.1.bias).array(), [TestDtype::ZERO; 3]);
+        assert_eq!(grads.get(&model.0.bias).array(), [TestDtype::zero(); 5]);
+        assert_eq!(grads.get(&model.1.scale).array(), [TestDtype::zero(); 3]);
+        assert_eq!(grads.get(&model.1.bias).array(), [TestDtype::zero(); 3]);
         assert!(grads.get_ref_checked(&model.1.running_mean).is_none());
         assert!(grads.get_ref_checked(&model.1.running_var).is_none());
         assert!(grads.get_ref_checked(&tmp1).is_none());

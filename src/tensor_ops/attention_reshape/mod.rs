@@ -89,7 +89,7 @@ impl<E: Dtype, D: AttentionReshapeKernel<E>> TryAttentionReshape<E> for D {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{tests::*, tensor_ops::*};
+    use crate::{tensor_ops::*, tests::*};
 
     #[test]
     fn test_attention_reshape() {
@@ -109,12 +109,48 @@ mod tests {
 
         let (q, k, v) = dev.attention_reshape(&qkv, &past_key, &past_value);
 
-        let q = q.realize::<(Const::<NUM_HEADS>, Const::<1>, Const::<HEAD_DIM>)>().unwrap();
-        let k = k.realize::<(Const::<NUM_HEADS>, Const::<HEAD_DIM>, Const::<4>)>().unwrap();
-        let v = v.realize::<(Const::<NUM_HEADS>, Const::<4>, Const::<HEAD_DIM>)>().unwrap();
+        let q = q
+            .realize::<(Const<NUM_HEADS>, Const<1>, Const<HEAD_DIM>)>()
+            .unwrap();
+        let k = k
+            .realize::<(Const<NUM_HEADS>, Const<HEAD_DIM>, Const<4>)>()
+            .unwrap();
+        let v = v
+            .realize::<(Const<NUM_HEADS>, Const<4>, Const<HEAD_DIM>)>()
+            .unwrap();
 
         assert_close_to_literal!(q, [[[1.0; HEAD_DIM]; 1]; NUM_HEADS]);
-        assert_close_to_literal!(k, [[[2.0; 4]; HEAD_DIM]; NUM_HEADS]);
-        assert_close_to_literal!(v, [[[3.0; HEAD_DIM]; 4]; NUM_HEADS]);
+        assert_close_to_literal!(
+            k,
+            [
+                [
+                    [2.0, 2.0, 2.0, 1.0],
+                    [2.0, 2.0, 2.0, 1.0],
+                    [2.0, 2.0, 2.0, 1.0]
+                ],
+                [
+                    [2.0, 2.0, 2.0, 1.0],
+                    [2.0, 2.0, 2.0, 1.0],
+                    [2.0, 2.0, 2.0, 1.0]
+                ]
+            ]
+        );
+        assert_close_to_literal!(
+            v,
+            [
+                [
+                    [3.0, 3.0, 3.0],
+                    [3.0, 3.0, 3.0],
+                    [3.0, 3.0, 3.0],
+                    [1.0, 1.0, 1.0]
+                ],
+                [
+                    [3.0, 3.0, 3.0],
+                    [3.0, 3.0, 3.0],
+                    [3.0, 3.0, 3.0],
+                    [1.0, 1.0, 1.0]
+                ]
+            ]
+        );
     }
 }

@@ -131,9 +131,9 @@ mod tests {
     fn test_embedding_initialize() {
         let dev: TestDevice = Default::default();
         let m = dev.build_module::<builder::Embedding<2000, 1>, TestDtype>();
-        let bound = TestDtype::from_f64(1.0 / (2000.0.sqrt()));
+        let bound = TestDtype::from_f64(1.0 / (2000.0.sqrt())).unwrap();
         for v in m.weight.as_vec() {
-            assert!(-bound <= v && v <= bound && v != TestDtype::ZERO);
+            assert!(-bound <= v && v <= bound && v != TestDtype::zero());
         }
     }
 

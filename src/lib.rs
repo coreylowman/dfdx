@@ -241,6 +241,8 @@ pub fn keep_denormals() {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    pub use num_traits::{Float, FromPrimitive, Zero};
+
     #[cfg(not(feature = "cuda"))]
     pub type TestDevice = crate::tensor::Cpu;
 
@@ -391,12 +393,9 @@ pub(crate) mod tests {
     macro_rules! assert_close_to_literal {
         ($Lhs:expr, $Rhs:expr) => {{
             let lhs = $Lhs.array();
+            let rhs = $Rhs.ndmap(|x| num_traits::FromPrimitive::from_f64(x).unwrap());
             let tol = AssertClose::get_default_tol(&lhs);
-            let far_pair = AssertClose::get_far_pair(
-                &lhs,
-                &$Rhs.ndmap(|x| num_traits::FromPrimitive::from_f64(x).unwrap()),
-                tol,
-            );
+            let far_pair = AssertClose::get_far_pair(&lhs, &rhs, tol);
             if let Some((l, r)) = far_pair {
                 panic!("lhs != rhs | {l} != {r}");
             }

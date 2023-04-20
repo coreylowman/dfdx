@@ -195,7 +195,6 @@ impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<E, D>> GatherTo<D>
 mod tests {
     use super::*;
     use crate::{tensor_ops::*, tests::*};
-    use num_traits::Float;
 
     #[test]
     #[should_panic = "dimension 0 not the same"]
@@ -269,7 +268,7 @@ mod tests {
         let t_array = t.array();
         assert_eq!(r.array(), t_array[0]);
         let g = r.exp().backward();
-        let mut expected = [TestDtype::ZERO; 5];
+        let mut expected = [TestDtype::zero(); 5];
         expected[0] = t_array[0].exp();
         assert_eq!(g.get(&t).array(), expected);
     }
@@ -286,10 +285,10 @@ mod tests {
             g.get(&t).array(),
             [
                 t_array[0].exp(),
-                TestDtype::from_f64(2.0) * (t_array[1]).exp(),
-                TestDtype::ZERO,
+                t_array[1].exp() + t_array[1].exp(),
+                TestDtype::zero(),
                 t_array[3].exp(),
-                TestDtype::ZERO
+                TestDtype::zero()
             ]
         );
     }
@@ -397,12 +396,10 @@ mod tests {
         let g = r.exp().mean().backward();
         let sub_g = dev.tensor(sub_t).exp() / 8.0;
         let sub_g = sub_g.array();
+        let z = TestDtype::zero();
         assert_close!(
             g.get(&t).array(),
-            [
-                [[TestDtype::ZERO; 4], sub_g[0], [TestDtype::ZERO; 4]],
-                [[TestDtype::ZERO; 4], [TestDtype::ZERO; 4], sub_g[1]],
-            ]
+            [[[z; 4], sub_g[0], [z; 4]], [[z; 4], [z; 4], sub_g[1]],]
         );
     }
 
@@ -420,19 +417,19 @@ mod tests {
         let g = r.exp().mean().backward();
         let sub_g = dev.tensor(sub_t).exp() / 6.0;
         let sub_g = sub_g.array();
-        #[rustfmt::skip]
+        let z = TestDtype::zero();
         assert_close!(
             g.get(&t).array(),
             [
                 [
-                    [TestDtype::ZERO, TestDtype::ZERO, sub_g[0][0], TestDtype::ZERO],
-                    [TestDtype::ZERO, TestDtype::ZERO, TestDtype::ZERO, sub_g[0][1]],
-                    [TestDtype::ZERO, TestDtype::ZERO, sub_g[0][2], TestDtype::ZERO],
+                    [z, z, sub_g[0][0], z],
+                    [z, z, z, sub_g[0][1]],
+                    [z, z, sub_g[0][2], z],
                 ],
                 [
-                    [TestDtype::ZERO, sub_g[1][0], TestDtype::ZERO, TestDtype::ZERO],
-                    [TestDtype::ZERO, sub_g[1][1], TestDtype::ZERO, TestDtype::ZERO],
-                    [sub_g[1][2], TestDtype::ZERO, TestDtype::ZERO, TestDtype::ZERO],
+                    [z, sub_g[1][0], z, z],
+                    [z, sub_g[1][1], z, z],
+                    [sub_g[1][2], z, z, z],
                 ],
             ]
         );

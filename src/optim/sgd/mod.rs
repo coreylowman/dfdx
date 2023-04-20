@@ -206,7 +206,7 @@ mod tests {
         let mut sgd = Sgd::new(
             &pred,
             SgdConfig {
-                lr: TestDtype::from_f64(1.0),
+                lr: TestDtype::from_f64(1.0).unwrap(),
                 momentum: None,
                 weight_decay: None,
             },
@@ -254,8 +254,8 @@ mod tests {
         let mut sgd = Sgd::new(
             &t,
             SgdConfig {
-                lr: TestDtype::from_f64(1e-2),
-                momentum: Some(Momentum::Classic(TestDtype::from_f64(0.5))),
+                lr: TestDtype::from_f64(1e-2).unwrap(),
+                momentum: Some(Momentum::Classic(TestDtype::from_f64(0.5).unwrap())),
                 weight_decay: None,
             },
         );
@@ -286,8 +286,8 @@ mod tests {
         let mut sgd = Sgd::new(
             &t,
             SgdConfig {
-                lr: TestDtype::from_f64(1e-2),
-                momentum: Some(Momentum::Nesterov(TestDtype::from_f64(0.5))),
+                lr: TestDtype::from_f64(1e-2).unwrap(),
+                momentum: Some(Momentum::Nesterov(TestDtype::from_f64(0.5).unwrap())),
                 weight_decay: None,
             },
         );
@@ -319,17 +319,17 @@ mod tests {
         let mut sgd_l2 = Sgd::new(
             &t,
             SgdConfig {
-                lr: TestDtype::from_f64(1e-2),
+                lr: TestDtype::from_f64(1e-2).unwrap(),
                 momentum: None,
-                weight_decay: Some(WeightDecay::L2(TestDtype::from_f64(1e-1))),
+                weight_decay: Some(WeightDecay::L2(TestDtype::from_f64(1e-1).unwrap())),
             },
         );
         let mut sgd_decoupled = Sgd::new(
             &t,
             SgdConfig {
-                lr: TestDtype::from_f64(1e-2),
+                lr: TestDtype::from_f64(1e-2).unwrap(),
                 momentum: None,
-                weight_decay: Some(WeightDecay::Decoupled(TestDtype::from_f64(1e-1))),
+                weight_decay: Some(WeightDecay::Decoupled(TestDtype::from_f64(1e-1).unwrap())),
             },
         );
 
@@ -364,9 +364,9 @@ mod tests {
         let mut sgd = Sgd::new(
             &t,
             SgdConfig {
-                lr: TestDtype::from_f64(1e-2),
-                momentum: Some(Momentum::Classic(TestDtype::from_f64(0.5))),
-                weight_decay: Some(WeightDecay::Decoupled(TestDtype::from_f64(1e-1))),
+                lr: TestDtype::from_f64(1e-2).unwrap(),
+                momentum: Some(Momentum::Classic(TestDtype::from_f64(0.5).unwrap())),
+                weight_decay: Some(WeightDecay::Decoupled(TestDtype::from_f64(1e-1).unwrap())),
             },
         );
 
@@ -392,21 +392,21 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         // adding l2_weight_decay should be equivalent to adding an L2 term to the loss
-        let weight_decay = TestDtype::from_f64(1e-1);
+        let weight_decay = TestDtype::from_f64(1e-1).unwrap();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut sgd_l2 = Sgd::new(
             &t,
             SgdConfig {
-                lr: TestDtype::from_f64(1e-2),
-                momentum: Some(Momentum::Classic(TestDtype::from_f64(0.5))),
+                lr: TestDtype::from_f64(1e-2).unwrap(),
+                momentum: Some(Momentum::Classic(TestDtype::from_f64(0.5).unwrap())),
                 weight_decay: Some(WeightDecay::L2(weight_decay)),
             },
         );
         let mut sgd = Sgd::new(
             &t,
             SgdConfig {
-                lr: TestDtype::from_f64(1e-2),
-                momentum: Some(Momentum::Classic(TestDtype::from_f64(0.5))),
+                lr: TestDtype::from_f64(1e-2).unwrap(),
+                momentum: Some(Momentum::Classic(TestDtype::from_f64(0.5).unwrap())),
                 weight_decay: None,
             },
         );
@@ -431,7 +431,8 @@ mod tests {
         t = dev.ones();
         for e in expected.iter() {
             let normal_loss = (t.leaky_trace() * rate.clone()).mean();
-            let l2_loss = t.leaky_trace().powi(2).sum() * (weight_decay / TestDtype::from_f64(2.0));
+            let l2_loss =
+                t.leaky_trace().powi(2).sum() * (weight_decay / TestDtype::from_f64(2.0).unwrap());
             let loss = l2_loss + normal_loss;
 
             let gradients = loss.backward();
