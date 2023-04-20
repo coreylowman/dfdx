@@ -24,18 +24,19 @@ pub struct NansToKernelOp<E>(E);
 /// ```
 pub fn nans_to<S: Shape, E: Dtype, D: UnaryKernel<NansToKernelOp<E>, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
-    value: E,
+    value: impl Into<E>,
 ) -> Tensor<S, E, D, T> {
     t.nans_to(value)
 }
 
 impl<S: Shape, E: Dtype, D: UnaryKernel<NansToKernelOp<E>, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [nans_to]
-    pub fn nans_to(self, value: E) -> Self {
+    pub fn nans_to(self, value: impl Into<E>) -> Self {
         self.try_nans_to(value).unwrap()
     }
     /// See [nans_to]
-    pub fn try_nans_to(self, value: E) -> Result<Self, D::Err> {
+    pub fn try_nans_to(self, value: impl Into<E>) -> Result<Self, D::Err> {
+        let value = value.into();
         try_unary_op(NansToKernelOp(value), self)
     }
 }

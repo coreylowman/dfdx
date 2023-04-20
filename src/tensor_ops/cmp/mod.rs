@@ -216,13 +216,13 @@ macro_rules! impl_cmp_kernel_op {
             #[doc = $doc]
             pub fn $try_scalar_op(
                 &self,
-                scalar: E,
+                scalar: impl Into<E>,
             ) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
-                try_scalar_cmp_op(self, scalar)
+                try_scalar_cmp_op(self, scalar.into())
             }
 
             #[doc = $doc]
-            pub fn $scalar_op(&self, scalar: E) -> Tensor<S, bool, D, NoneTape> {
+            pub fn $scalar_op(&self, scalar: impl Into<E>) -> Tensor<S, bool, D, NoneTape> {
                 self.$try_scalar_op(scalar).unwrap()
             }
         }
