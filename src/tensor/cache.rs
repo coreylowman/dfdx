@@ -62,7 +62,7 @@ struct AllocationKey {
 struct AllocationGroup<Ptr: CacheStorage> {
     // Tracks the number of matching 'AllocationKey's in drop_queue to ignore. This is used to
     // "remove" the next instance of the matching AllocationKey in the drop_queue, without having
-    // to run an O(n)
+    // to run an O(n) operation to actually remove the key.
     ignore_drops: usize,
     allocations: Vec<CacheWrapper<Ptr>>,
 }
@@ -79,9 +79,10 @@ struct AllocationGroup<Ptr: CacheStorage> {
 /// valid allocation. When the last value is removed from the list, the key
 /// is removed.
 ///
-/// Constraint: for a given value of AllocationKey, the following must hold:
+/// Constraint: for a given value of AllocationKey, the following must hold for each key value in
+/// `allocations`:
 ///
-/// (instances in drop_queue) = (group.ignore_drops) + (group.allocations.len())
+/// (instances of key in drop_queue) = allocations[key].ignore_drops + allocations[key].allocations.len()
 #[derive(Debug)]
 pub(crate) struct TensorCache<Ptr: CacheStorage> {
     allocations: RwLock<BTreeMap<AllocationKey, AllocationGroup<Ptr>>>,
@@ -103,6 +104,7 @@ pub(crate) trait CacheStorage: Sized {
     unsafe fn transmute_elements<T>(self) -> Self::Output<T>;
 
     /// Uses transmute_elements to convert to an element type with alignment `align` before dropping.
+    /// This **must** be a memory safe way to drop self, given the correct alignment
     unsafe fn drop_with_alignment(self, align: usize) {
         match align {
             1 => drop(self.transmute_elements::<u8>()),
@@ -126,17 +128,24 @@ struct CacheWrapper<Ptr: CacheStorage> {
 impl<Ptr: CacheStorage> Drop for CacheWrapper<Ptr> {
     fn drop(&mut self) {
         if let Some(ptr) = std::mem::take(&mut self.ptr) {
+            // Safety: This operation is memory safe because ptr is guaranteed to have elements
+            // with the correct alignment before being dropped. This is ensured by the CacheWrapper
+            // being constructed with from_storage.
             unsafe { ptr.drop_with_alignment(self.alignment) }
         }
     }
 }
 
 impl<Ptr: CacheStorage> CacheWrapper<Ptr> {
+    /// Safety: Storage must be valid to drop, and Ptr::transmute_elements must produce a storage
+    /// that is valid to drop after being converted to an element type with the same alignment as T
     fn from_storage<T>(storage: Ptr::Output<T>) -> Self
     where
         Ptr::Output<T>: CacheStorage<Output<u8> = Ptr>,
     {
         let layout = Layout::new::<T>();
+        // Safety: Ptr must be converted to an element typw with the correct alignment before
+        // it is dropped. Ptr might not be valid data after this operation
         Self {
             ptr: Some(unsafe { storage.transmute_elements::<u8>() }),
             alignment: layout.align(),
@@ -160,14 +169,17 @@ impl<Ptr: CacheStorage> CacheWrapper<Ptr> {
         self.ptr.as_ref().unwrap().size()
     }
 
-    // Safety: Same as slice.align_to, but considered safe internally
-    // Produces storage containing uninitialized values
+    /// Safety: Same as slice.align_to, but considered safe internally
+    /// Produces storage containing uninitialized values
     fn into_storage<T>(mut self) -> Ptr::Output<T> {
         let layout = Layout::new::<T>();
         assert_eq!(layout.align(), self.alignment);
         assert_eq!(layout.size(), self.size);
 
         let ptr = std::mem::take(&mut self.ptr).unwrap();
+
+        // Safety: This will always construct a storage with correct alignment and element size if
+        // this CacheWrapper was constructed with from_storage.
         unsafe { ptr.transmute_elements() }
     }
 }
