@@ -81,6 +81,24 @@ macro_rules! tuple_impls {
     };
 }
 
+impl<E: Dtype, D: Device<E>, T: TensorCollection<E, D>> TensorCollection<E, D> for (T,) {
+    type To<E2: Dtype, D2: Device<E2>> = (T::To<E2, D2>,);
+
+    #[allow(non_snake_case)]
+    fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
+        visitor: &mut V
+    ) -> Result<Option<Self::To<V::E2, V::D2>>, V::Err> {
+        visitor.visit_fields(
+            ((Self::module(&format!("{}", 0), |s| &s.0, |s| &mut s.0),),),
+            |x| x.0
+        )
+    }
+}
+
+impl<D: Device<E>, E: Dtype, T: BuildOnDevice<D, E>> BuildOnDevice<D, E> for (T,) {
+    type Built = (T::Built,);
+}
+
 tuple_impls!([M1, M2] [0, 1], M2, [M1]);
 tuple_impls!([M1, M2, M3] [0, 1, 2], M3, [M2, M1]);
 tuple_impls!([M1, M2, M3, M4] [0, 1, 2, 3], M4, [M3, M2, M1]);
