@@ -81,7 +81,7 @@ macro_rules! tuple_impls {
     };
 }
 
-tuple_impls!([M1] [0], M1, []);
+tuple_impls!([M1][0], M1, []);
 tuple_impls!([M1, M2] [0, 1], M2, [M1]);
 tuple_impls!([M1, M2, M3] [0, 1, 2], M3, [M2, M1]);
 tuple_impls!([M1, M2, M3, M4] [0, 1, 2, 3], M4, [M3, M2, M1]);
