@@ -137,7 +137,7 @@ impl<S: Shape, E: Unit, T> Tensor<S, E, Cpu, T> {
     #[inline]
     pub(crate) fn iter_mut(&mut self) -> StridedMutIter<S, E> {
         StridedMutIter {
-            data: std::sync::Arc::make_mut(&mut self.data),
+            data: &mut std::sync::Arc::make_mut(&mut self.data).data,
             index: NdIndex::new(self.shape, self.strides),
         }
     }
@@ -153,7 +153,7 @@ impl<S: Shape, E: Unit, T> Tensor<S, E, Cpu, T> {
     #[inline]
     pub(crate) fn iter_mut_with_index(&mut self) -> StridedMutIndexIter<S, E> {
         StridedMutIndexIter {
-            data: std::sync::Arc::make_mut(&mut self.data),
+            data: &mut std::sync::Arc::make_mut(&mut self.data).data,
             index: NdIndex::new(self.shape, self.strides),
         }
     }

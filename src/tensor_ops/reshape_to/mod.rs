@@ -13,14 +13,16 @@ pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
     ) -> Result<Tensor<Dst, E, Self>, Self::Err>;
     fn backward<Src: Shape, Dst: Shape>(
         &self,
+        dst: &Dst,
         inp: &Tensor<Src, E, Self>,
         grad_inp: &mut Self::Vec<E>,
-        out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>;
 }
 
-/// Change the shape of a tensor moving data around.
+/// Changes the shape of a tensor without re-ordering axes. If the tensor is contiguous
+/// already, then no data movement will occur. If the tensor is not contiguous, the
+/// result of this will be contiguous.
 ///
 /// Compile time reshapes:
 /// ```rust
@@ -66,6 +68,17 @@ pub trait ReshapeTo: HasErr + HasShape {
     fn reshape_like<Dst: Shape>(self, dst: &Dst) -> Option<Self::WithShape<Dst>> {
         self.try_reshape_like(dst).map(Result::unwrap)
     }
+    /// Ensures the tensor's memory is contiguous.
+    ///
+    /// If the memory is already contiguous no copying is performed.
+    fn contiguous(self) -> Self::WithShape<Self::Shape> {
+        self.try_contiguous().unwrap()
+    }
+    /// See [`ReshapeTo::contiguous`]
+    fn try_contiguous(self) -> Result<Self::WithShape<Self::Shape>, Self::Err> {
+        let shape = *self.shape();
+        self.try_reshape_like(&shape).unwrap()
+    }
     /// Reshapes a tensor to a different runtime shape.
     fn try_reshape_like<Dst: Shape>(
         self,
@@ -91,12 +104,14 @@ impl<S: Shape, E: Dtype, D: ReshapeKernel<E>, T: Tape<E, D>> ReshapeTo for Tenso
             } else {
                 let (inp, mut tape) = self.split_tape();
                 let out = inp.device.forward(dst, &inp)?;
-                let phantom_out = out.clone();
+                let inp_ghost = inp.ghost();
+                let out_ghost = out.ghost();
+                let dst = *dst;
                 tape.add_backward_op(move |grads| {
-                    grads.try_alloc_for(&inp)?;
-                    grads.try_alloc_for(&phantom_out)?;
-                    let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-                    inp.device.backward(&inp, grad_inp, &phantom_out, grad_out)
+                    grads.try_alloc_for(&inp_ghost)?;
+                    grads.try_alloc_for(&out_ghost)?;
+                    let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
+                    inp.device.backward(&dst, &inp, grad_inp, grad_out)
                 });
                 Ok(out.put_tape(tape))
             }
@@ -166,13 +181,11 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<_, TestDtype, _> = dev.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6]);
         let b = a.leaky_trace().reshape::<Rank2<2, 3>>();
-        assert_eq!(b.array(), [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
+        assert_close_to_literal!(b, [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
         let g = b.exp().mean().backward();
-        assert_close(
-            &g.get(&a).array(),
-            &[
-                0.18419516, 0.20356713, 0.22497648, 0.24863747, 0.2747869, 0.3036865,
-            ],
+        assert_close_to_literal!(
+            g.get(&a),
+            [0.18419516, 0.20356713, 0.22497648, 0.24863747, 0.2747869, 0.3036865]
         )
     }
 
@@ -184,14 +197,14 @@ mod tests {
             .leaky_trace()
             .permute::<Rank2<3, 2>, _>()
             .reshape::<Rank1<6>>();
-        assert_eq!(b.array(), [0.1, 0.4, 0.2, 0.5, 0.3, 0.6]);
+        assert_close_to_literal!(b, [0.1, 0.4, 0.2, 0.5, 0.3, 0.6]);
         let g = b.exp().mean().backward();
-        assert_close(
-            &g.get(&a).array(),
-            &[
+        assert_close_to_literal!(
+            g.get(&a),
+            [
                 [0.18419516, 0.20356713, 0.22497648],
                 [0.24863747, 0.2747869, 0.3036865],
-            ],
+            ]
         )
     }
 
@@ -207,5 +220,18 @@ mod tests {
         assert_eq!(b.data.len(), 6);
         assert_eq!(a.as_vec(), b.as_vec());
         assert_eq!(b.array(), [[1., 2.], [3., 1.], [2., 3.]]);
+    }
+
+    #[test]
+    fn test_contiguous() {
+        let dev: TestDevice = Default::default();
+
+        let a: Tensor<_, TestDtype, _> = dev.tensor([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
+
+        let b1 = a.clone().contiguous();
+        assert_eq!(a.strides, b1.strides);
+
+        let b2: Tensor<_, TestDtype, _> = a.permute::<Rank2<3, 2>, _>().contiguous();
+        assert_eq!(b2.strides, [2, 1]);
     }
 }

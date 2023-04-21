@@ -68,12 +68,14 @@ impl<S: Shape, E: Dtype, D: MaxReduceKernel<E>, T: Tape<E, D>> MaxTo for Tensor<
         let dst: Dst = self.shape().reduced();
         let (inp, mut tape) = self.split_tape();
         let out = inp.device.forward(dst, &inp)?;
-        let phantom_out = out.clone();
+        let inp_ghost = inp.ghost();
+        let out_ghost = out.ghost();
+        let out_clone = out.clone();
         tape.add_backward_op(move |grads| {
-            grads.try_alloc_for(&inp)?;
-            grads.try_alloc_for(&phantom_out)?;
-            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
-            inp.device.backward(&inp, grad_inp, &phantom_out, grad_out)
+            grads.try_alloc_for(&inp_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
+            inp.device.backward(&inp, grad_inp, &out_clone, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -90,11 +92,11 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
         let r = t.leaky_trace().max::<_, Axis<0>>();
-        assert_eq!(r.array(), [3.0, 2.0, 2.0]);
+        assert_close_to_literal!(r, [3.0, 2.0, 2.0]);
         let g = r.exp().mean().backward();
-        assert_close(
-            &g.get(&t).array(),
-            &[[0.0, 2.463019, 2.463019], [6.695179, 0.0, 2.463019]],
+        assert_close_to_literal!(
+            g.get(&t),
+            [[0.0, 2.463019, 2.463019], [6.695179, 0.0, 2.463019]]
         );
     }
 
@@ -103,9 +105,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 2.0], [3.0, -2.0, 2.0]]);
         let r = t.leaky_trace().max::<_, Axis<1>>();
-        assert_eq!(r.array(), [2.0, 3.0]);
+        assert_close_to_literal!(r, [2.0, 3.0]);
         let g = r.sum().backward();
-        assert_eq!(g.get(&t).array(), [[0.0, 1.0, 1.0], [1.0, 0.0, 0.0]]);
+        assert_close_to_literal!(g.get(&t), [[0.0, 1.0, 1.0], [1.0, 0.0, 0.0]]);
     }
 
     #[test]
@@ -114,10 +116,10 @@ mod tests {
         let t: Tensor<_, TestDtype, _> = dev.sample_normal::<Rank3<2, 3, 4>>();
         let r = t.leaky_trace().max::<Rank1<4>, _>();
         let r2 = t.leaky_trace().max::<_, Axis<0>>().max::<_, Axis<0>>();
-        assert_close(&r.array(), &r2.array());
+        assert_close_to_tensor!(r, r2);
         let g = r.mean().backward();
         let g2 = r2.mean().backward();
-        assert_close(&g.get(&t).array(), &g2.get(&t).array());
+        assert_close_to_tensor!(g.get(&t), g2.get(&t));
     }
 
     #[test]
@@ -126,11 +128,8 @@ mod tests {
         let t: Tensor<_, TestDtype, _> =
             dev.tensor([[-0.0, 0.0], [0.0, -0.0], [-1.0, -0.0], [-1.0, 0.0]]);
         let r = t.leaky_trace().max::<_, Axis<1>>();
-        assert_eq!(r.array(), [0.0, 0.0, -0.0, 0.0]);
+        assert_close_to_literal!(r, [0.0, 0.0, -0.0, 0.0]);
         let g = r.sum().backward();
-        assert_eq!(
-            g.get(&t).array(),
-            [[1.0, 1.0], [1.0, 1.0], [0.0, 1.0], [0.0, 1.0]]
-        );
+        assert_close_to_literal!(g.get(&t), [[1.0, 1.0], [1.0, 1.0], [0.0, 1.0], [0.0, 1.0]]);
     }
 }

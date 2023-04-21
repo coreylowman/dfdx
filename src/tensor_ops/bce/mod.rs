@@ -70,12 +70,12 @@ mod tests {
             [0.75429636, 0.66566986, 0.6182751],
         ]);
         let r = a.leaky_trace().bce_with_logits(b);
-        assert_close(
-            &r.array(),
-            &[
+        assert_close_to_literal!(
+            r,
+            [
                 [0.79638255, 0.69238377, 1.161215],
                 [0.561272, 0.63843495, 0.8688978],
-            ],
+            ]
         );
     }
 }

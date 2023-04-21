@@ -13,7 +13,6 @@ template<typename T>
 __device__ void nearest_upscale2d_fwd(
     const Upscale2dOp op,
     const size_t *inp_strides,
-    const size_t *out_strides,
     const T *inp, // 4d (Batch, Channels, Height, Width)
     T *out // 4d (Batch, Channels, HeightOut, WidthOut)
 ) {
@@ -34,8 +33,8 @@ __device__ void nearest_upscale2d_fwd(
     idx /= op.chan;
     const size_t b = idx % op.batch;
 
-    size_t ih = min(static_cast<size_t>(h_scale * oh), op.h_out - 1);
-    size_t iw = min(static_cast<size_t>(w_scale * ow), op.w_out - 1);
+    size_t ih = min(static_cast<size_t>(h_scale * oh), op.h_in - 1);
+    size_t iw = min(static_cast<size_t>(w_scale * ow), op.w_in - 1);
 
     size_t inp_i = b * inp_strides[0] + c * inp_strides[1] + ih * inp_strides[2] + iw * inp_strides[3];
     
@@ -46,7 +45,6 @@ template<typename T>
 __device__ void nearest_upscale2d_bwd(
     const Upscale2dOp op,
     const size_t *inp_strides,
-    const size_t *out_strides,
     T *grad_inp,
     const T *grad_out // 4d (Batch, Channels, HeightOut, WidthOut)
 ) {
@@ -67,8 +65,8 @@ __device__ void nearest_upscale2d_bwd(
     idx /= op.chan;
     const size_t b = idx % op.batch;
 
-    size_t ih = min(static_cast<size_t>(h_scale * oh), op.h_out - 1);
-    size_t iw = min(static_cast<size_t>(w_scale * ow), op.w_out - 1);
+    size_t ih = min(static_cast<size_t>(h_scale * oh), op.h_in - 1);
+    size_t iw = min(static_cast<size_t>(w_scale * ow), op.w_in - 1);
 
     size_t inp_i = b * inp_strides[0] + c * inp_strides[1] + ih * inp_strides[2] + iw * inp_strides[3];
     atomicAdd(grad_inp + inp_i, grad_out[i]);
@@ -78,7 +76,6 @@ template<typename T>
 __device__ void bilinear_upscale2d_fwd(
     const Upscale2dOp op,
     const size_t *inp_strides,
-    const size_t *out_strides,
     const T *inp, // 4d (Batch, Channels, Height, Width)
     T *out // 4d (Batch, Channels, HeightOut, WidthOut)
 ) {
@@ -98,12 +95,11 @@ __device__ void bilinear_upscale2d_fwd(
     const size_t c = idx % op.chan;
     idx /= op.chan;
     const size_t b = idx % op.batch;
-    idx /= op.batch;
 
-    size_t y0 = min(static_cast<size_t>(h_scale * oh), op.h_out - 1);
-    size_t y1 = min(y0 + 1, op.h_out - 1);
-    size_t x0 = min(static_cast<size_t>(w_scale * ow), op.w_out - 1);
-    size_t x1 = min(x0 + 1, op.w_out - 1);
+    size_t y0 = min(static_cast<size_t>(h_scale * oh), op.h_in - 1);
+    size_t y1 = min(y0 + 1, op.h_in - 1);
+    size_t x0 = min(static_cast<size_t>(w_scale * ow), op.w_in - 1);
+    size_t x1 = min(x0 + 1, op.w_in - 1);
 
     T hs = h_scale * oh - y0;
     T ws = w_scale * ow - x0;
@@ -122,7 +118,6 @@ template<typename T>
 __device__ void bilinear_upscale2d_bwd(
     const Upscale2dOp op,
     const size_t *inp_strides,
-    const size_t *out_strides,
     T *grad_inp, // 4d (Batch, Channels, Height, Width)
     const T *grad_out // 4d (Batch, Channels, HeightOut, WidthOut)
 ) {
@@ -142,12 +137,11 @@ __device__ void bilinear_upscale2d_bwd(
     const size_t c = idx % op.chan;
     idx /= op.chan;
     const size_t b = idx % op.batch;
-    idx /= op.batch;
 
-    size_t y0 = min(static_cast<size_t>(h_scale * oh), op.h_out - 1);
-    size_t y1 = min(y0 + 1, op.h_out - 1);
-    size_t x0 = min(static_cast<size_t>(w_scale * ow), op.w_out - 1);
-    size_t x1 = min(x0 + 1, op.w_out - 1);
+    size_t y0 = min(static_cast<size_t>(h_scale * oh), op.h_in - 1);
+    size_t y1 = min(y0 + 1, op.h_in - 1);
+    size_t x0 = min(static_cast<size_t>(w_scale * ow), op.w_in - 1);
+    size_t x1 = min(x0 + 1, op.w_in - 1);
 
     T hs = h_scale * oh - y0;
     T ws = w_scale * ow - x0;
@@ -166,20 +160,18 @@ __device__ void bilinear_upscale2d_bwd(
 extern "C" __global__ void fwd( \
     const Upscale2dOp op, \
     const size_t *inp_strides, \
-    const size_t *out_strides, \
     const TYPENAME *inp, \
     TYPENAME *out \
 ) { \
-    fwd_FN(op, inp_strides, out_strides, inp, out); \
+    fwd_FN(op, inp_strides, inp, out); \
 } \
 extern "C" __global__ void bwd( \
     const Upscale2dOp op, \
     const size_t *inp_strides, \
-    const size_t *out_strides, \
     TYPENAME *grad_inp, \
     const TYPENAME *grad_out \
 ) { \
-    bwd_FN(op, inp_strides, out_strides, grad_inp, grad_out); \
+    bwd_FN(op, inp_strides, grad_inp, grad_out); \
 }
 
 UPSCALE_OP(

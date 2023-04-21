@@ -3,7 +3,7 @@ mod cpu_kernel;
 #[cfg(feature = "cuda")]
 mod cuda_kernel;
 
-use super::{ops::*, Device};
+use super::ops::*;
 use crate::{shapes::*, tensor::*};
 
 #[repr(C)]
@@ -36,10 +36,13 @@ pub struct ScalarSubKernelOp<E> {
 /// let r = a - 1.0;
 /// assert_eq!(r.array(), [[0.0, 1.0, 2.0], [-2.0, -3.0, -4.0]]);
 /// ```
-pub fn sub<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R>(
+pub fn sub<S: Shape, E: Dtype, D, T: Tape<E, D> + Merge<R>, R>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, R>,
-) -> Tensor<S, E, D, T> {
+) -> Tensor<S, E, D, T>
+where
+    D: BinaryKernel<BinarySubKernelOp, E>,
+{
     lhs - rhs
 }
 
@@ -48,8 +51,8 @@ pub trait TrySub<Rhs = Self>: HasErr {
     fn try_sub(self, rhs: Rhs) -> Result<Self, Self::Err>;
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<E, D>, R> TrySub<Tensor<S, E, D, R>>
-    for Tensor<S, E, D, LTape>
+impl<S: Shape, E: Dtype, D: BinaryKernel<BinarySubKernelOp, E>, LTape: Tape<E, D>, R>
+    TrySub<Tensor<S, E, D, R>> for Tensor<S, E, D, LTape>
 where
     LTape: Merge<R>,
 {
@@ -58,13 +61,15 @@ where
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> TrySub<E> for Tensor<S, E, D, T> {
+impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarSubKernelOp<E>, E>, T: Tape<E, D>> TrySub<E>
+    for Tensor<S, E, D, T>
+{
     fn try_sub(self, rhs: E) -> Result<Self, Self::Err> {
         try_unary_op(ScalarSubKernelOp { scalar: rhs }, self)
     }
 }
 
-impl<S: Shape, E: Dtype, D: Device<E>, LTape: Tape<E, D>, Rhs> std::ops::Sub<Rhs>
+impl<S: Shape, E: Dtype, D: DeviceStorage, LTape: Tape<E, D>, Rhs> std::ops::Sub<Rhs>
     for Tensor<S, E, D, LTape>
 where
     Self: TrySub<Rhs>,
@@ -89,10 +94,10 @@ mod tests {
         let b: Tensor<_, TestDtype, _> = dev.tensor(1.0);
 
         let r = b.leaky_trace() - a.clone();
-        assert_eq!(r.array(), 0.0);
+        assert_close_to_literal!(r, 0.0);
         let g = r.backward();
-        assert_eq!(g.get(&a).array(), -1.0);
-        assert_eq!(g.get(&b).array(), 1.0);
+        assert_close_to_literal!(g.get(&a), -1.0);
+        assert_close_to_literal!(g.get(&b), 1.0);
     }
 
     #[test]
@@ -102,10 +107,10 @@ mod tests {
         let b: Tensor<_, TestDtype, _> = dev.tensor([1.0, -1.0, 0.0]);
 
         let r = b.leaky_trace() - a.clone();
-        assert_eq!(r.array(), [0.0, -3.0, -3.0]);
+        assert_close_to_literal!(r, [0.0, -3.0, -3.0]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&a).array(), [-1.0 / 3.0; 3]);
-        assert_eq!(g.get(&b).array(), [1.0 / 3.0; 3]);
+        assert_close_to_literal!(g.get(&a), [-1.0 / 3.0; 3]);
+        assert_close_to_literal!(g.get(&b), [1.0 / 3.0; 3]);
     }
 
     #[test]
@@ -117,16 +122,10 @@ mod tests {
             dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
 
         let r = b.leaky_trace() - a.clone();
-        assert_close(
-            &r.array(),
-            &[
-                [-0.13709998, 0.21360001, 0.2259],
-                [0.2601, -0.33279997, -0.7954],
-            ],
-        );
+        assert_close_to_literal!(r, [[-0.1371, 0.2136, 0.2259], [0.2601, -0.3328, -0.7954]]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&a).array(), [[-1.0 / 6.0; 3]; 2]);
-        assert_eq!(g.get(&b).array(), [[1.0 / 6.0; 3]; 2]);
+        assert_close_to_literal!(g.get(&a), [[-1.0 / 6.0; 3]; 2]);
+        assert_close_to_literal!(g.get(&b), [[1.0 / 6.0; 3]; 2]);
     }
 
     #[test]
@@ -134,9 +133,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor(0.0);
         let r = x.leaky_trace() - 1.0;
-        assert_eq!(r.array(), -1.0);
+        assert_close_to_literal!(r, -1.0);
         let g = r.exp().backward();
-        assert_close(&[g.get(&x).array()], &[TestDtype::exp(-1.0)]);
+        assert_close_to_literal!(g.get(&x), f64::exp(-1.0));
     }
 
     #[test]
@@ -144,9 +143,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([0.0, 1.0, 2.0]);
         let r = x.leaky_trace() - 1.0;
-        assert_eq!(&r.array(), &[-1.0, 0.0, 1.0]);
+        assert_close_to_literal!(r, [-1.0, 0.0, 1.0]);
         let g = r.exp().sum().backward();
-        assert_close(&g.get(&x).array(), &[0.36787945, 1.0, 2.7182817]);
+        assert_close_to_literal!(g.get(&x), [0.36787945, 1.0, 2.7182817]);
     }
 
     #[test]
@@ -154,8 +153,8 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([[0.0; 2]; 3]);
         let r = x.leaky_trace() - 1.0;
-        assert_eq!(r.array(), [[-1.0; 2]; 3]);
+        assert_close_to_literal!(r, [[-1.0; 2]; 3]);
         let g = r.exp().sum().backward();
-        assert_close(&g.get(&x).array(), &[[0.36787945; 2]; 3]);
+        assert_close_to_literal!(g.get(&x), [[0.36787945; 2]; 3]);
     }
 }

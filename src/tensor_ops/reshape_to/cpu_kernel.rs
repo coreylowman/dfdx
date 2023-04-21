@@ -20,13 +20,13 @@ impl<E: Dtype> super::ReshapeKernel<E> for Cpu {
     }
     fn backward<Src: Shape, Dst: Shape>(
         &self,
+        dst: &Dst,
         inp: &Tensor<Src, E, Self>,
         grad_inp: &mut Self::Vec<E>,
-        out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let mut inp_idx = NdIndex::new(inp.shape, inp.strides);
-        let mut out_idx = NdIndex::new(out.shape, out.strides);
+        let mut out_idx = NdIndex::new(*dst, dst.strides());
         while let Some((i, o)) = inp_idx.next().zip(out_idx.next()) {
             grad_inp[i] += grad_out[o];
         }

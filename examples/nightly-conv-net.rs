@@ -4,7 +4,7 @@
 
 #[cfg(feature = "nightly")]
 fn main() {
-    use dfdx::{prelude::*, tensor::AutoDevice};
+    use dfdx::prelude::*;
 
     type Model = (
         (Conv2D<3, 4, 3>, ReLU),

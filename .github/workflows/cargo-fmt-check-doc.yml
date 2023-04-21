@@ -1,0 +1,45 @@
+on: [pull_request]
+
+jobs:
+  cargo-check:
+    name: cargo-check
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: rustup component add clippy
+      - name: Check Format
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+      - name: Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
+      - name: Check CPU
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+      - name: Check CUDA
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --features cuda,ci-check
+      - name: Check CUDNN
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --features cudnn,ci-check
+      - name: cargo doc
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --features ci-check,numpy,safetensors

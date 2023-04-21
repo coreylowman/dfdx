@@ -41,9 +41,7 @@ pub trait Device<E: Dtype>:
     + super::super::roll::RollKernel<E>
 
     // matmuls
-    + super::super::matmul::VecMatKernel<E>
     + super::super::matmul::MatMatKernel<E>
-    + super::super::matmul::VecVecKernel<E>
     + super::super::matmul::MatMatBrKernel<E>
     + super::super::matmul::MatMatBatch3Kernel<E>
     + super::super::matmul::MatMatBatch4Kernel<E>
@@ -87,6 +85,7 @@ pub trait Device<E: Dtype>:
     + UnaryKernel<super::super::tanh::TanhKernelOp, E>
     + UnaryKernel<super::super::pow::PowfKernelOp<E>, E>
     + UnaryKernel<super::super::pow::PowiKernelOp, E>
+    + UnaryKernel<super::super::recip::RecipKernelOp, E>
 
     // to_dtype
     + super::super::to_dtype::ToDtypeKernel<f32, E>

@@ -9,7 +9,7 @@ extern "C" __global__ void FORWARD( \
     if (i >= numel) { \
         return; \
     } \
-    TYPENAME x = inp[i]; \
+    TYPENAME x = inp ? inp[i] : out[i]; \
     FUNC \
 } \
 \
@@ -26,8 +26,8 @@ extern "C" __global__ void BACKWARD( \
         return; \
     } \
     \
-    TYPENAME x = inp[i]; \
-    TYPENAME y = out[i]; \
+    TYPENAME x = inp ? inp[i] : 0; \
+    TYPENAME y = out ? out[i] : 0; \
     TYPENAME dx; \
     DERIVATIVE \
     grad_inp[i] += dx * grad_out[i]; \

@@ -45,16 +45,12 @@ mod tests {
         let dev: TestDevice = Default::default();
         let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = x.leaky_trace().gelu();
-        assert_close(
-            &r.array(),
-            &[-0.04540229, -0.158808, 0.0, 0.841192, 1.9545977],
-        );
-
+        assert_close_to_literal!(r, [-0.04540229, -0.158808, 0.0, 0.841192, 1.9545977]);
         // NOTE: call .exp() to make sure we cover cases where .gelu() uses the result's gradient
         let g = r.exp().mean().backward();
-        assert_close(
-            &g.get(&x).array(),
-            &[-0.016455507, -0.014156329, 0.1, 0.5023068, 1.5338063],
+        assert_close_to_literal!(
+            g.get(&x),
+            [-0.016455507, -0.014156329, 0.1, 0.5023068, 1.5338063]
         );
     }
 }

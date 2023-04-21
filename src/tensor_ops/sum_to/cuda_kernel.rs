@@ -1,10 +1,12 @@
 use crate::{
     shapes::*,
-    tensor::{launch_cfg, Cuda, Tensor},
+    tensor::{launch_cfg, Cuda, Tensor, Tensorlike},
     tensor_ops::reduction_utils::*,
 };
 
 use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync, ValidAsZeroBits};
+
+use std::vec::Vec;
 
 const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/sum_to.ptx"));
 
@@ -61,9 +63,10 @@ where
             reduction_output_strides::<Ax, Src, Dst>(inp.strides, dst);
         let chunk_len = physical_numel / dst_physical_numel;
 
-        let cfg = launch_cfg(physical_numel as u32);
+        let cfg = launch_cfg::<128>(physical_numel as u32);
 
-        let mut storage = self.dev.alloc_zeros::<E>(dst.num_elements())?;
+        let mut storage = unsafe { self.alloc_empty::<E>(dst_physical_numel) }?;
+        self.dev.memset_zeros(&mut storage)?;
         let params = (
             physical_numel,    // const size_t numel,
             num_dims,          // const size_t num_dims,
@@ -79,9 +82,9 @@ where
 
     fn backward<Src: Shape, Dst: Shape, Ax: Axes>(
         &self,
-        inp: &Tensor<Src, E, Self>,
+        dst: Dst,
+        inp: &impl Tensorlike<Src, E, Self>,
         grad_inp: &mut Self::Vec<E>,
-        out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err>
     where
@@ -90,20 +93,20 @@ where
         let bwd_fn = self.dev.get_func(Self::MOD, Self::FNS[1]).unwrap();
 
         let out_strides: Src::Concrete =
-            BroadcastStridesTo::<Src, Ax>::broadcast_strides(&out.shape, out.strides);
-        let physical_numel = inp.data.len();
+            BroadcastStridesTo::<Src, Ax>::broadcast_strides(&dst, dst.strides());
+        let physical_numel = inp.len();
         let elems_per_thread = E::from_usize(reduction_elems_per_thread::<_, Src>(
-            inp.shape.concrete(),
-            inp.strides,
+            inp.shape().concrete(),
+            inp.strides(),
             Ax::as_array(),
         ))
         .unwrap();
 
-        let cfg = launch_cfg(physical_numel as u32);
+        let cfg = launch_cfg::<128>(physical_numel as u32);
 
         let mut info: Vec<usize> = Vec::with_capacity(3 * Src::NUM_DIMS);
-        info.extend(inp.shape.concrete());
-        info.extend(inp.strides);
+        info.extend(inp.shape().concrete());
+        info.extend(inp.strides());
         info.extend(out_strides);
         let info = self.dev.htod_copy(info)?;
 

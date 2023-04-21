@@ -73,11 +73,12 @@ impl<S: Shape, E: Dtype, D: RollKernel<E>, T: Tape<E, D>> Roll for Tensor<S, E, 
         };
         let (t, mut tape) = self.split_tape();
         let out = t.device.forward(op, &t)?;
-        let phantom_out = out.clone();
+        let inp_ghost = t.ghost();
+        let out_ghost = out.ghost();
         tape.add_backward_op(move |grads| {
-            grads.try_alloc_for(&t)?;
-            grads.try_alloc_for(&phantom_out)?;
-            let (grad_inp, grad_out) = grads.mut_and_ref(&t, &phantom_out);
+            grads.try_alloc_for(&inp_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
             t.device.backward(op, &t, grad_inp, grad_out)
         });
         Ok(out.put_tape(tape))
@@ -97,11 +98,11 @@ mod tests {
             .leaky_trace()
             .broadcast::<Rank3<2, 3, 5>, _>()
             .roll::<Axis<2>>(2);
-        assert_eq!(y.array(), [[[0.15, 0.2, -0.3, -0.15, 0.0]; 3]; 2]);
+        assert_close_to_literal!(y, [[[0.15, 0.2, -0.3, -0.15, 0.0]; 3]; 2]);
         let grads = y.exp().mean().backward();
-        assert_close(
-            &grads.get(&t).array(),
-            &[0.14816365, 0.1721416, 0.2, 0.23236685, 0.24428058],
+        assert_close_to_literal!(
+            grads.get(&t),
+            [0.14816365, 0.1721416, 0.2, 0.23236685, 0.24428058]
         );
     }
 
@@ -113,12 +114,12 @@ mod tests {
             .leaky_trace()
             .broadcast::<Rank3<2, 3, 5>, _>()
             .roll::<Axis<0>>(3);
-        assert_eq!(y0.array(), [[[1.0, 2.0, 3.0, 4.0, 5.0]; 3]; 2]);
+        assert_close_to_literal!(y0, [[[1.0, 2.0, 3.0, 4.0, 5.0]; 3]; 2]);
         let y1 = t
             .leaky_trace()
             .broadcast::<Rank3<2, 3, 5>, _>()
             .roll::<Axis<1>>(3);
-        assert_eq!(y1.array(), [[[1.0, 2.0, 3.0, 4.0, 5.0]; 3]; 2]);
+        assert_close_to_literal!(y1, [[[1.0, 2.0, 3.0, 4.0, 5.0]; 3]; 2]);
 
         let g0 = y0.exp().mean().backward();
         let g1 = y1.exp().mean().backward();

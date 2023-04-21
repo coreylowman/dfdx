@@ -8,10 +8,10 @@ unsafe impl cudarc::driver::DeviceRepr for Binary {}
 const SCALAR_PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/scalar_sub.ptx"));
 const BINARY_PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/binary_sub.ptx"));
 
-cuda_unary!(Scalar<f32>, f32, SCALAR_PTX, "ssub_fwd_f32", "ssub_bwd_f32");
-cuda_unary!(Scalar<f64>, f64, SCALAR_PTX, "ssub_fwd_f64", "ssub_bwd_f64");
+cuda_unary!(const_df() Scalar<f32>, f32, SCALAR_PTX, "ssub_fwd_f32", "ssub_bwd_f32");
+cuda_unary!(const_df() Scalar<f64>, f64, SCALAR_PTX, "ssub_fwd_f64", "ssub_bwd_f64");
 cuda_binary!(
-    Binary,
+    const_df() Binary,
     f32,
     BINARY_PTX,
     "bsub_fwd_f32",
@@ -19,7 +19,7 @@ cuda_binary!(
     "bsub_bwd_rhs_f32"
 );
 cuda_binary!(
-    Binary,
+    const_df() Binary,
     f64,
     BINARY_PTX,
     "bsub_fwd_f64",

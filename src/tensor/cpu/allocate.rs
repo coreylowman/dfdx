@@ -5,14 +5,17 @@ use crate::{
     tensor::{masks::triangle_mask, storage_traits::*, unique_id, Tensor},
 };
 
-use super::{Cpu, CpuError, LendingIterator};
+use super::{CachableVec, Cpu, CpuError, LendingIterator};
 
 use rand::{distributions::Distribution, Rng};
 use std::{sync::Arc, vec::Vec};
 
 impl Cpu {
     #[inline]
-    pub(crate) fn try_alloc_zeros<E: Unit>(&self, numel: usize) -> Result<Vec<E>, CpuError> {
+    pub(crate) fn try_alloc_zeros<E: Unit>(
+        &self,
+        numel: usize,
+    ) -> Result<CachableVec<E>, CpuError> {
         self.try_alloc_elem::<E>(numel, Default::default())
     }
 
@@ -21,19 +24,36 @@ impl Cpu {
         &self,
         numel: usize,
         elem: E,
-    ) -> Result<Vec<E>, CpuError> {
-        #[cfg(feature = "fast-alloc")]
-        {
-            Ok(std::vec![elem; numel])
-        }
+    ) -> Result<CachableVec<E>, CpuError> {
+        let data = self.cache.try_pop::<E>(numel).map_or_else(
+            #[cfg(feature = "fast-alloc")]
+            || Ok(std::vec![elem; numel]),
+            #[cfg(not(feature = "fast-alloc"))]
+            || {
+                let mut data: Vec<E> = Vec::new();
+                data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
+                data.resize(numel, elem);
+                Ok(data)
+            },
+            |allocation| {
+                // SAFETY:
+                // - ✅ "ptr must have been allocated using the global allocator, such as via the alloc::alloc function."
+                // - ✅ handled by tensor cache "T needs to have the same alignment as what ptr was allocated with."
+                // - ✅ handled by tensor cache "The size of T times the capacity needs to be the same size as the pointer was allocated with."
+                // - ✅ "length needs to be less than or equal to capacity."
+                // - ✅ all the dtypes for this are builtin numbers "The first length values must be properly initialized values of type T."
+                // - ✅ "capacity needs to be the capacity that the pointer was allocated with."
+                // - ✅ "The allocated size in bytes must be no larger than isize::MAX. See the safety documentation of pointer::offset."
+                let mut data = unsafe { Vec::from_raw_parts(allocation.0 as *mut E, numel, numel) };
+                data.fill(elem);
+                Ok(data)
+            },
+        )?;
 
-        #[cfg(not(feature = "fast-alloc"))]
-        {
-            let mut data: Vec<E> = Vec::new();
-            data.try_reserve(numel).map_err(|_| CpuError::OutOfMemory)?;
-            data.resize(numel, elem);
-            Ok(data)
-        }
+        Ok(CachableVec {
+            data,
+            cache: self.cache.clone(),
+        })
     }
 }
 
@@ -187,6 +207,10 @@ impl<E: Unit> TensorFromVec<E> for Cpu {
         if src.len() != num_elements {
             Err(CpuError::WrongNumElements)
         } else {
+            let src = CachableVec {
+                data: src,
+                cache: self.cache.clone(),
+            };
             Ok(Tensor {
                 id: unique_id(),
                 data: Arc::new(src),

@@ -39,7 +39,7 @@ where
         let strides = lhs.shape.strides();
         let numel = shape.num_elements();
 
-        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
+        let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
 
         let dims: CudaSlice<usize> = self.dev.htod_copy(shape.concrete().into())?;
         let cond_strides: CudaSlice<usize> = self.dev.htod_copy(cond.strides.into())?;
@@ -47,7 +47,7 @@ where
         let rhs_strides: CudaSlice<usize> = self.dev.htod_copy(rhs.strides.into())?;
 
         let fwd_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let cfg = launch_cfg(numel as u32);
+        let cfg = launch_cfg::<128>(numel as u32);
         let params = (
             numel,              // const size_t numel,
             S::NUM_DIMS,        // const size_t num_dims,
@@ -81,7 +81,7 @@ where
         let cond_strides: CudaSlice<usize> = self.dev.htod_copy(cond.strides.into())?;
         let rhs_strides: CudaSlice<usize> = self.dev.htod_copy(rhs.strides.into())?;
 
-        let cfg = launch_cfg(numel as u32);
+        let cfg = launch_cfg::<128>(numel as u32);
         let params = (
             numel,              // const size_t numel,
             S::NUM_DIMS,        // const size_t num_dims,

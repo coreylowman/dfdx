@@ -1,3 +1,4 @@
+use crate::prelude::Tensorlike;
 use crate::shapes::{Dtype, Shape};
 use crate::tensor::{cpu::*, Tensor, ZerosTensor};
 use crate::tensor_ops::matmul::cpu_kernel::MatMulImpl;
@@ -209,7 +210,7 @@ where
         grad_lhs: &mut Self::Vec<E>,
         rhs: &Tensor<R, E, Self>,
         grad_rhs: &mut Self::Vec<E>,
-        out: &Tensor<O, E, Self>,
+        out: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let f_tr_shape = op.filters_tr_shape();
@@ -232,7 +233,7 @@ where
 
         let [lstride, ostride] = match L::NUM_DIMS {
             3 => [0; 2],
-            4 => [lhs.strides[0], out.strides[0]],
+            4 => [lhs.strides[0], out.strides()[0]],
             _ => unreachable!(),
         };
         let lhs = lhs.data.as_ref();

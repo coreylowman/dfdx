@@ -23,18 +23,19 @@ pub struct PowfKernelOp<E>(E);
 /// ```
 pub fn powf<S: Shape, E: Dtype, D: UnaryKernel<PowfKernelOp<E>, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
-    exponent: E,
+    exponent: impl Into<E>,
 ) -> Tensor<S, E, D, T> {
     t.powf(exponent)
 }
 
 impl<S: Shape, E: Dtype, D: UnaryKernel<PowfKernelOp<E>, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [powf]
-    pub fn powf(self, exponent: E) -> Self {
+    pub fn powf(self, exponent: impl Into<E>) -> Self {
         self.try_powf(exponent).unwrap()
     }
     /// See [powf]
-    pub fn try_powf(self, exponent: E) -> Result<Self, D::Err> {
+    pub fn try_powf(self, exponent: impl Into<E>) -> Result<Self, D::Err> {
+        let exponent = exponent.into();
         try_unary_op(PowfKernelOp(exponent), self)
     }
 }
@@ -76,17 +77,17 @@ mod tests {
         let r_array = r.array();
         assert!(r_array[0].is_nan());
         assert!(r_array[1].is_nan());
-        assert_close(&r_array[2], &0.0);
-        assert_close(&r_array[3], &1.0);
-        assert_close(&r_array[4], &11.313708);
+        assert_close!(r_array[2], 0.0);
+        assert_close!(r_array[3], 1.0);
+        assert_close!(r_array[4], 11.313708);
 
         let g = r.sum().backward();
         let grad = g.get(&t).array();
         assert!(grad[0].is_nan());
         assert!(grad[1].is_nan());
-        assert_close(&grad[2], &0.0);
-        assert_close(&grad[3], &3.5);
-        assert_close(&grad[4], &19.79899);
+        assert_close!(grad[2], 0.0);
+        assert_close!(grad[3], 3.5);
+        assert_close!(grad[4], 19.79899);
     }
 
     #[test]
@@ -97,17 +98,17 @@ mod tests {
         let r_array = r.array();
         assert!(r_array[0].is_nan());
         assert!(r_array[1].is_nan());
-        assert_close(&r_array[2], &TestDtype::INFINITY);
-        assert_close(&r_array[3], &1.0);
-        assert_close(&r_array[4], &0.43527526);
+        assert_close!(r_array[2], TestDtype::INFINITY);
+        assert_close!(r_array[3], 1.0);
+        assert_close!(r_array[4], 0.43527526);
 
         let g = r.sum().backward();
         let grad = g.get(&t).array();
         assert!(grad[0].is_nan());
         assert!(grad[1].is_nan());
-        assert_close(&grad[2], &TestDtype::NEG_INFINITY);
-        assert_close(&grad[3], &-1.2);
-        assert_close(&grad[4], &-0.26116517);
+        assert_close!(grad[2], TestDtype::NEG_INFINITY);
+        assert_close!(grad[3], -1.2);
+        assert_close!(grad[4], -0.26116517);
     }
 
     #[test]
@@ -115,9 +116,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.leaky_trace().powi(3);
-        assert_eq!(r.array(), [-8., -1., 0., 1., 8.]);
+        assert_close_to_literal!(r, [-8., -1., 0., 1., 8.]);
         let g = r.sum().backward();
-        assert_eq!(g.get(&t).array(), [12., 3., 0., 3., 12.]);
+        assert_close_to_literal!(g.get(&t), [12., 3., 0., 3., 12.]);
     }
 
     #[test]
@@ -125,11 +126,8 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
         let r = t.leaky_trace().powi(-3);
-        assert_eq!(r.array(), [-0.125, -1.0, TestDtype::INFINITY, 1.0, 0.125]);
+        assert_close_to_literal!(r, [-0.125, -1.0, f64::INFINITY, 1.0, 0.125]);
         let g = r.sum().backward();
-        assert_close(
-            &g.get(&t).array(),
-            &[-0.1875, -3., TestDtype::NEG_INFINITY, -3., -0.1875],
-        );
+        assert_close_to_literal!(g.get(&t), [-0.1875, -3., f64::NEG_INFINITY, -3., -0.1875]);
     }
 }

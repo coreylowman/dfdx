@@ -25,9 +25,15 @@ pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
     fn random_u64(&self) -> u64;
 
     /// Allocates a gradient for the given nd array
-    fn try_alloc_grad<E: Unit>(&self, storage: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err>;
+    fn try_alloc_grad<E: Unit>(&self, storage: &Self::Vec<E>) -> Result<Self::Vec<E>, Self::Err> {
+        self.try_alloc_len(self.len(storage))
+    }
+
+    fn try_alloc_len<E: Unit>(&self, len: usize) -> Result<Self::Vec<E>, Self::Err>;
 
     fn tensor_to_vec<S: Shape, E: Unit, T>(&self, tensor: &Tensor<S, E, Self, T>) -> Vec<E>;
+
+    fn len<E: Unit>(&self, v: &Self::Vec<E>) -> usize;
 
     /// Blocks until all work on device to complete. Useful for benchmarking.
     fn synchronize(&self) {
@@ -36,6 +42,42 @@ pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
 
     /// Blocks until all work on device to complete. Useful for benchmarking.
     fn try_synchronize(&self) -> Result<(), Self::Err>;
+
+    /// Enables the cache of the device.
+    fn enable_cache(&self) {
+        self.try_enable_cache().unwrap()
+    }
+
+    /// Tries to enable the cache of the device.
+    fn try_enable_cache(&self) -> Result<(), Self::Err>;
+
+    /// Disables the cache of the device. This will also empty the cache
+    /// if there are things in it. See [DeviceStorage::empty_cache] for
+    /// more information.
+    fn disable_cache(&self) {
+        self.try_disable_cache().unwrap()
+    }
+
+    /// Tries to disable the cache of the device. See [DeviceStorage::disable_cache] for
+    /// details of when this is useful.
+    fn try_disable_cache(&self) -> Result<(), Self::Err>;
+
+    /// Empties the cache of the device.
+    ///
+    /// Currently devices will cache tensor allocations to avoid
+    /// allocating and deallocating memory. This results is large
+    /// speedups, but may potentially hold on to more memory than
+    /// is actually being used.
+    ///
+    /// This method will empty the cache of the device, freeing
+    /// all memory that is currently being held.
+    fn empty_cache(&self) {
+        self.try_empty_cache().unwrap();
+    }
+
+    /// Tries to empty the cache of the device. See [DeviceStorage::empty_cache] for
+    /// details of when this is useful.
+    fn try_empty_cache(&self) -> Result<(), Self::Err>;
 }
 
 /// Internal trait - Represents something that can allocate its own gradient.

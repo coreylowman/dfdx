@@ -123,22 +123,39 @@
 //!
 //! You can also use [Tensor::write_to_npz] and [Tensor::read_from_npz] when working with
 //! zip archives.
+//!
+//! # Allocation Caching
+//!
+//! By default, devices will cache allocations to reuse later. For example, the CPU will
+//! cache `Vec<E>` allocations in an hash map, and try to re-use the allocation when
+//! similarly sized data is used. This can result in significant speedups when memory
+//! allocation patterns are repetitive. If this results in extra memory use due to
+//! irregular allocation patterns there are two things you can do:
+//!
+//! 1. Call [DeviceStorage::empty_cache()], which will empty out all of the saved allocations.
+//! 2. Disable the cache entirely by calling [DeviceStorage::disable_cache()]. This will
+//! empty out any existing allocations and prevent any new ones from being cached.
 
+pub(crate) mod cache;
 pub(crate) mod cpu;
 #[cfg(feature = "cuda")]
 pub(crate) mod cuda;
+mod ghost;
 mod gradients;
 mod masks;
 #[cfg(feature = "numpy")]
 pub(crate) mod numpy;
 #[cfg(feature = "safetensors")]
 pub mod safetensors;
+mod tensorlike;
 mod unique_id;
 
 pub(crate) mod storage_traits;
 mod tensor_impls;
 
+pub(crate) use ghost::GhostTensor;
 pub(crate) use storage_traits::{OneFillStorage, ZeroFillStorage};
+pub(crate) use tensorlike::Tensorlike;
 
 pub use cpu::{Cpu, CpuError};
 #[cfg(not(feature = "cuda"))]

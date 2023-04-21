@@ -104,13 +104,15 @@ impl<Src: Shape, E: Dtype, D: RemoveDimKernel<E>, T: Tape<E, D>> SelectTo<D>
         self.shape().check(idx.shape());
         let (inp, mut tape) = self.split_tape();
         let out = inp.device.forward(&inp, &idx)?;
-        let phantom_out = out.clone();
+        let inp_ghost = inp.ghost();
+        let out_ghost = out.ghost();
+        let out_clone = out.clone();
         tape.add_backward_op(move |grads| {
-            grads.try_alloc_for(&inp)?;
-            grads.try_alloc_for(&phantom_out)?;
-            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
+            grads.try_alloc_for(&inp_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
             inp.device
-                .backward(&inp, grad_inp, &idx, &phantom_out, grad_out)
+                .backward(&inp, grad_inp, &idx, &out_clone, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -174,13 +176,16 @@ impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<E, D>> GatherTo<D>
         self.shape().check(idx.shape());
         let (inp, mut tape) = self.split_tape();
         let out = inp.device.forward(&inp, &idx)?;
-        let phantom_out = out.clone();
+
+        let inp_ghost = inp.ghost();
+        let out_ghost = out.ghost();
+        let out_clone = out.clone();
         tape.add_backward_op(move |grads| {
-            grads.try_alloc_for(&inp)?;
-            grads.try_alloc_for(&phantom_out)?;
-            let (grad_inp, grad_out) = grads.mut_and_ref(&inp, &phantom_out);
+            grads.try_alloc_for(&inp_ghost)?;
+            grads.try_alloc_for(&out_ghost)?;
+            let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
             inp.device
-                .backward(&inp, grad_inp, &idx, &phantom_out, grad_out)
+                .backward(&inp, grad_inp, &idx, &out_clone, grad_out)
         });
         Ok(out.put_tape(tape))
     }
@@ -209,7 +214,7 @@ mod tests {
         let _ = t.leaky_trace().select(dev.zeros_like(&(7, 4)));
     }
 
-    #[cfg(not(feature = "test-cuda"))]
+    #[cfg(not(feature = "cuda"))]
     #[test]
     #[should_panic = "Index out of bounds: index=[7]"]
     fn test_select_index_out_of_bounds() {
@@ -236,7 +241,7 @@ mod tests {
         let _ = t.leaky_trace().gather(dev.zeros_like(&(5, 4, 2)));
     }
 
-    #[cfg(not(feature = "test-cuda"))]
+    #[cfg(not(feature = "cuda"))]
     #[test]
     #[should_panic = "Index out of bounds: index=[7]"]
     fn test_gather_index_out_of_bounds() {
@@ -245,7 +250,7 @@ mod tests {
         let _ = t.leaky_trace().gather(dev.tensor([7, 6, 1, 2]));
     }
 
-    #[cfg(not(feature = "test-cuda"))]
+    #[cfg(not(feature = "cuda"))]
     #[test]
     #[should_panic = "Index out of bounds: index=[5, 0]"]
     fn test_gather_batch_out_of_bounds() {
@@ -295,7 +300,7 @@ mod tests {
         let r = t.leaky_trace().gather(dev.tensor([0, 3]));
         assert_eq!(r.array(), [t_array[0], t_array[3]]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&t).array(), [0.5, 0.0, 0.0, 0.5, 0.0]);
+        assert_close_to_literal!(g.get(&t), [0.5, 0.0, 0.0, 0.5, 0.0]);
     }
 
     #[test]
@@ -309,8 +314,8 @@ mod tests {
             [_t[0], _t[1], _t[2], _t[3], _t[4], _t[2], _t[4], _t[4]]
         );
         let g = r.mean().backward();
-        assert_eq!(
-            g.get(&t).array(),
+        assert_close_to_literal!(
+            g.get(&t),
             [1.0 / 8.0, 1.0 / 8.0, 2.0 / 8.0, 1.0 / 8.0, 3.0 / 8.0]
         );
     }
@@ -320,9 +325,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
         let r = t.leaky_trace().select(dev.tensor(0));
-        assert_eq!(r.array(), [1.0, 2.0, 3.0]);
+        assert_close_to_literal!(r, [1.0, 2.0, 3.0]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&t).array(), [[1.0 / 3.0; 3], [0.0; 3]]);
+        assert_close_to_literal!(g.get(&t), [[1.0 / 3.0; 3], [0.0; 3]]);
     }
 
     #[test]
@@ -330,9 +335,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
         let r = t.leaky_trace().select(dev.tensor([1, 1]));
-        assert_eq!(r.array(), [2.0, -2.0]);
+        assert_close_to_literal!(r, [2.0, -2.0]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&t).array(), [[0.0, 0.5, 0.0], [0.0, 0.5, 0.0]]);
+        assert_close_to_literal!(g.get(&t), [[0.0, 0.5, 0.0], [0.0, 0.5, 0.0]]);
     }
 
     #[test]
@@ -343,9 +348,9 @@ mod tests {
             .leaky_trace()
             .broadcast::<Rank2<2, 3>, _>()
             .select(dev.tensor([0, 1]));
-        assert_eq!(r.array(), [1.0, 2.0]);
+        assert_close_to_literal!(r, [1.0, 2.0]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&t).array(), [0.5, 0.5, 0.0]);
+        assert_close_to_literal!(g.get(&t), [0.5, 0.5, 0.0]);
     }
 
     #[test]
@@ -355,9 +360,9 @@ mod tests {
         let idx: Tensor<Rank2<2, 2>, usize, _> = dev.tensor([[0, 1], [1, 2]]);
         let r: Tensor<Rank2<2, 2>, _, _, _> =
             t.leaky_trace().broadcast::<Rank2<2, 3>, _>().gather(idx);
-        assert_eq!(r.array(), [[1.0, 2.0], [2.0, 3.0]]);
+        assert_close_to_literal!(r, [[1.0, 2.0], [2.0, 3.0]]);
         let g = r.mean().backward();
-        assert_eq!(g.get(&t).array(), [0.25, 0.5, 0.25]);
+        assert_close_to_literal!(g.get(&t), [0.25, 0.5, 0.25]);
     }
 
     #[test]
@@ -369,7 +374,10 @@ mod tests {
         assert_eq!(r.array(), t_array[0]);
         let g = r.exp().mean().backward();
         let sub_g = dev.tensor(t_array[0]).exp() / 12.0;
-        assert_close(&g.get(&t).array(), &[sub_g.array(), [[0.0; 4]; 3]]);
+        assert_close!(
+            g.get(&t).array(),
+            [sub_g.array(), [[TestDtype::default(); 4]; 3]]
+        );
     }
 
     #[test]
@@ -383,12 +391,12 @@ mod tests {
         let g = r.exp().mean().backward();
         let sub_g = dev.tensor(sub_t).exp() / 8.0;
         let sub_g = sub_g.array();
-        assert_close(
-            &g.get(&t).array(),
-            &[
+        assert_close!(
+            g.get(&t).array(),
+            [
                 [[0.0; 4], sub_g[0], [0.0; 4]],
                 [[0.0; 4], [0.0; 4], sub_g[1]],
-            ],
+            ]
         );
     }
 
@@ -406,9 +414,9 @@ mod tests {
         let g = r.exp().mean().backward();
         let sub_g = dev.tensor(sub_t).exp() / 6.0;
         let sub_g = sub_g.array();
-        assert_close(
-            &g.get(&t).array(),
-            &[
+        assert_close!(
+            g.get(&t).array(),
+            [
                 [
                     [0.0, 0.0, sub_g[0][0], 0.0],
                     [0.0, 0.0, 0.0, sub_g[0][1]],
@@ -419,7 +427,7 @@ mod tests {
                     [0.0, sub_g[1][1], 0.0, 0.0],
                     [sub_g[1][2], 0.0, 0.0, 0.0],
                 ],
-            ],
+            ]
         );
     }
 
@@ -433,7 +441,7 @@ mod tests {
         assert_eq!(r_array[0], [t_array[2], t_array[0], t_array[3]]);
         assert_eq!(r_array[1], [t_array[0], t_array[0], t_array[3]]);
         let g = r.sum().backward();
-        assert_eq!(g.get(&t).array(), [[3.; 5], [0.; 5], [1.; 5], [2.; 5]]);
+        assert_close_to_literal!(g.get(&t), [[3.; 5], [0.; 5], [1.; 5], [2.; 5]]);
     }
 
     #[test]

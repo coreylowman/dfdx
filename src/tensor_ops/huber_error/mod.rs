@@ -31,14 +31,14 @@ pub struct HuberErrorKernelOp<E> {
 pub fn huber_error<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R: Tape<E, D>>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, R>,
-    delta: E,
+    delta: impl Into<E>,
 ) -> Tensor<S, E, D, T> {
     lhs.huber_error(rhs, delta)
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [huber_error]
-    pub fn huber_error<R: Tape<E, D>>(self, rhs: Tensor<S, E, D, R>, delta: E) -> Self
+    pub fn huber_error<R: Tape<E, D>>(self, rhs: Tensor<S, E, D, R>, delta: impl Into<E>) -> Self
     where
         T: Merge<R>,
     {
@@ -49,11 +49,12 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     pub fn try_huber_error<R: Tape<E, D>>(
         self,
         rhs: Tensor<S, E, D, R>,
-        delta: E,
+        delta: impl Into<E>,
     ) -> Result<Self, D::Err>
     where
         T: Merge<R>,
     {
+        let delta = delta.into();
         try_binary_op(HuberErrorKernelOp { delta }, self, rhs)
     }
 }
@@ -75,13 +76,13 @@ mod tests {
         ]);
         let r1 = a.leaky_trace().huber_error(b.leaky_trace(), 1.0);
         let r2 = a.leaky_trace().huber_error(b.leaky_trace(), 100.0);
-        assert_close(
-            &r1.array(),
-            &[
+        assert_close_to_literal!(
+            r1,
+            [
                 [0.8626251, 0.0013595072, 0.37522575],
                 [0.16297975, 0.003332735, 0.79848814],
-            ],
+            ]
         );
-        assert_close(&r2.array(), &((a - b).square() / 2.0).array());
+        assert_close_to_tensor!(r2, (a - b).square() / 2.0);
     }
 }

@@ -218,8 +218,8 @@ mod tests {
             let gradients = loss.backward();
             sgd.update(&mut pred, &gradients).expect("");
         }
-        assert_close(&pred.array(), &[1.0; 5]);
-        assert_close(&targ.array(), &[1.0; 5]);
+        assert_close_to_literal!(pred, [1.0; 5]);
+        assert_close_to_literal!(targ, [1.0; 5]);
     }
 
     #[test]
@@ -240,7 +240,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd.update(&mut t, &gradients).expect("");
-            assert_close(&t.array(), e);
+            assert_close_to_literal!(t, e);
         }
     }
 
@@ -270,7 +270,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd.update(&mut t, &gradients).expect("");
-            assert_close(&t.array(), e);
+            assert_close_to_literal!(t, e);
         }
     }
 
@@ -300,7 +300,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd.update(&mut t, &gradients).expect("");
-            assert_close(&t.array(), e);
+            assert_close_to_literal!(t, e);
         }
     }
 
@@ -338,13 +338,13 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd_l2.update(&mut t, &gradients).expect("");
-            assert_close(&t.array(), e);
+            assert_close_to_literal!(t, e);
         }
         t = dev.ones();
         for e in expected.iter() {
             let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd_decoupled.update(&mut t, &gradients).expect("");
-            assert_close(&t.array(), e);
+            assert_close_to_literal!(t, e);
         }
     }
 
@@ -373,7 +373,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd.update(&mut t, &gradients).expect("");
-            assert_close(&t.array(), e);
+            assert_close_to_literal!(t, e);
         }
     }
 
@@ -412,7 +412,7 @@ mod tests {
         for e in expected.iter() {
             let gradients = (t.leaky_trace() * rate.clone()).mean().backward();
             sgd_l2.update(&mut t, &gradients).expect("");
-            assert_close(&t.array(), e);
+            assert_close_to_literal!(t, e);
         }
 
         // Should be equivalent to l2 regularization, even with momentum
@@ -424,7 +424,7 @@ mod tests {
 
             let gradients = loss.backward();
             sgd.update(&mut t, &gradients).expect("");
-            assert_close(&t.array(), e);
+            assert_close_to_literal!(t, e);
         }
     }
 

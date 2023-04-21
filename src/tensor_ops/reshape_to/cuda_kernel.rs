@@ -4,9 +4,11 @@ use crate::{
 };
 use cudarc::{
     driver::{DeviceSlice, LaunchAsync},
-    nvrtc::compile_ptx,
+    nvrtc::{compile_ptx_with_opts, CompileOptions},
     types::CudaTypeName,
 };
+
+use std::vec::Vec;
 
 impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
     fn forward<Src: Shape, Dst: Shape>(
@@ -17,13 +19,17 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
         let module = std::format!("reshape_fwd_{}", E::NAME);
         if !self.dev.has_func(&module, "reshape_fwd") {
             let src = FWD_KERNEL.replace("$T", E::NAME);
-            let ptx = compile_ptx(src).unwrap();
+            let opts = CompileOptions {
+                arch: Some(env!("CUDA_COMPUTE_CAP")),
+                ..Default::default()
+            };
+            let ptx = compile_ptx_with_opts(src, opts).unwrap();
             self.dev.load_ptx(ptx, &module, &["reshape_fwd"])?;
         }
         let fwd_fn = self.dev.get_func(&module, "reshape_fwd").unwrap();
 
         let numel = inp.shape.num_elements();
-        let mut storage = unsafe { self.dev.alloc::<E>(numel) }?;
+        let mut storage = unsafe { self.alloc_empty::<E>(numel) }?;
 
         let mut info = Vec::with_capacity(Src::NUM_DIMS * 2 + Dst::NUM_DIMS * 2);
         info.extend(inp.shape.concrete());
@@ -32,7 +38,7 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
         info.extend(dst.strides());
         let info = self.dev.htod_copy(info)?;
 
-        let cfg = launch_cfg(numel as u32);
+        let cfg = launch_cfg::<128>(numel as u32);
         let params = (
             numel,             // const size_t numel,
             Src::NUM_DIMS,     // const size_t inp_num_dims,
@@ -48,15 +54,19 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
 
     fn backward<Src: Shape, Dst: Shape>(
         &self,
+        dst: &Dst,
         inp: &Tensor<Src, E, Self>,
         grad_inp: &mut Self::Vec<E>,
-        out: &Tensor<Dst, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let module = std::format!("reshape_bwd_{}", E::NAME);
         if !self.dev.has_func(&module, "reshape_bwd") {
             let src = BWD_KERNEL.replace("$T", E::NAME);
-            let ptx = compile_ptx(src).unwrap();
+            let opts = CompileOptions {
+                arch: Some(env!("CUDA_COMPUTE_CAP")),
+                ..Default::default()
+            };
+            let ptx = compile_ptx_with_opts(src, opts).unwrap();
             self.dev.load_ptx(ptx, &module, &["reshape_bwd"])?;
         }
         let bwd_fn = self.dev.get_func(&module, "reshape_bwd").unwrap();
@@ -66,11 +76,11 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
         let mut info = Vec::with_capacity(Src::NUM_DIMS * 2 + Dst::NUM_DIMS * 2);
         info.extend(inp.shape.concrete());
         info.extend(inp.strides);
-        info.extend(out.shape.concrete());
-        info.extend(out.strides);
+        info.extend(dst.concrete());
+        info.extend(dst.strides());
         let info = self.dev.htod_copy(info)?;
 
-        let cfg = launch_cfg(numel as u32);
+        let cfg = launch_cfg::<128>(numel as u32);
         let params = (
             numel,         // const size_t numel,
             Src::NUM_DIMS, // const size_t inp_num_dims,

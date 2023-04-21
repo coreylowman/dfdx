@@ -35,13 +35,13 @@ where
         let numel = inp.shape.num_elements();
         let strides = inp.shape.strides();
 
-        let mut out = unsafe { self.dev.alloc::<E>(numel) }?;
+        let mut out = unsafe { self.alloc_empty::<E>(numel) }?;
         let dims = self.dev.htod_copy(inp.shape.concrete().into())?;
         let inp_strides = self.dev.htod_copy(inp.strides.into())?;
         let out_strides = self.dev.htod_copy(strides.into())?;
 
         let fwd = self.dev.get_func(Self::FNS[0], Self::FNS[0]).unwrap();
-        let cfg = launch_cfg(inp.shape.num_elements() as u32);
+        let cfg = launch_cfg::<128>(inp.shape.num_elements() as u32);
         let params = (
             op,
             S::NUM_DIMS,
@@ -70,7 +70,7 @@ where
         let out_strides = self.dev.htod_copy(strides.into())?;
 
         let bwd = self.dev.get_func(Self::FNS[0], Self::FNS[1]).unwrap();
-        let cfg = launch_cfg(inp.shape.num_elements() as u32);
+        let cfg = launch_cfg::<128>(inp.shape.num_elements() as u32);
         let params = (
             op,
             S::NUM_DIMS,

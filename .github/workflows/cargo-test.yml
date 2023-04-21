@@ -2,25 +2,39 @@ on: [pull_request]
 
 jobs:
   cargo-test:
-    name: cargo-test
+    name: cargo-test-nightly
 
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - macOS-latest
-          - windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - name: cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-run --features nightly,safetensors,numpy
       - name: test CPU f32
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --features safetensors,numpy
+          args: --tests --features nightly,safetensors,numpy
       - name: test CPU f64
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --features test-f64,safetensors,numpy
+          args: --tests --features nightly,test-f64,safetensors,numpy
+      - name: doc tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --doc --features nightly,safetensors,numpy
+      - name: example tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --examples --features nightly,safetensors,numpy

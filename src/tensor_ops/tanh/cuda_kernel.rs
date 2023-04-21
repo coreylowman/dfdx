@@ -5,5 +5,5 @@ unsafe impl cudarc::driver::DeviceRepr for TanhKernelOp {}
 
 const PTX: &str = include_str!(concat!(env!("OUT_DIR"), "/tanh.ptx"));
 
-cuda_unary!(TanhKernelOp, f32, PTX, "tanh_fwd_f32", "tanh_bwd_f32");
-cuda_unary!(TanhKernelOp, f64, PTX, "tanh_fwd_f64", "tanh_bwd_f64");
+cuda_unary!(df(f(x)) TanhKernelOp, f32, PTX, "tanh_fwd_f32", "tanh_bwd_f32");
+cuda_unary!(df(f(x)) TanhKernelOp, f64, PTX, "tanh_fwd_f64", "tanh_bwd_f64");

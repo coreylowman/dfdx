@@ -12,9 +12,9 @@ mod cuda_kernel;
 /// See [Tensor::axpy] for in place version.
 pub fn axpy<S: Shape, E: Unit, D>(
     a: &Tensor<S, E, D>,
-    alpha: E,
+    alpha: impl Into<E>,
     b: &Tensor<S, E, D>,
-    beta: E,
+    beta: impl Into<E>,
 ) -> Tensor<S, E, D>
 where
     D: AxpyKernel<E>,
@@ -26,19 +26,24 @@ where
 
 impl<S: Shape, E: Unit, D: AxpyKernel<E>> Tensor<S, E, D> {
     /// Updates self with elementwise function `self = self * alpha + b * beta`.
-    pub fn axpy<T>(&mut self, alpha: E, b: &Tensor<S, E, D, T>, beta: E) {
+    pub fn axpy<T>(&mut self, alpha: impl Into<E>, b: &Tensor<S, E, D, T>, beta: impl Into<E>) {
         self.try_axpy(alpha, b, beta).unwrap()
     }
 
     /// Updates self with elementwise function `self = self * alpha + b * beta`.
-    pub fn try_axpy<T>(&mut self, alpha: E, b: &Tensor<S, E, D, T>, beta: E) -> Result<(), D::Err> {
+    pub fn try_axpy<T>(
+        &mut self,
+        alpha: impl Into<E>,
+        b: &Tensor<S, E, D, T>,
+        beta: impl Into<E>,
+    ) -> Result<(), D::Err> {
         assert_eq!(self.shape, b.shape);
         assert_eq!(self.strides, b.strides, "Strides must be equal for axpy");
         self.device.clone().forward(
             std::sync::Arc::make_mut(&mut self.data),
-            alpha,
+            alpha.into(),
             b.data.as_ref(),
-            beta,
+            beta.into(),
         )
     }
 }
@@ -85,12 +90,12 @@ mod tests {
 
         a.axpy(0.01, &b, 0.99);
 
-        assert_close(
-            &a.array(),
-            &[
+        assert_close_to_literal!(
+            a,
+            [
                 [-1.505, -1.495, -1.485, -1.475, -1.465],
                 [1.465, 1.475, 1.485, 1.495, 1.505],
-            ],
+            ]
         );
     }
 }
