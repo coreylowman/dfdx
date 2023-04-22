@@ -15,7 +15,7 @@ pub(crate) fn launch_cfg<const NUM_THREADS: u32>(n: u32) -> cudarc::driver::Laun
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{shapes::*, tensor::*, prelude::storage_traits::CacheSize};
+    use crate::{prelude::storage_traits::CacheSize, shapes::*, tensor::*};
     use cudarc::driver::DevicePtr;
 
     #[test]

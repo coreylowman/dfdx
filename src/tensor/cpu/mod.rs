@@ -12,7 +12,7 @@ pub use device::{Cpu, CpuError};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{shapes::*, tensor::*, prelude::storage_traits::CacheSize};
+    use crate::{prelude::storage_traits::CacheSize, shapes::*, tensor::*};
 
     #[test]
     fn test_empty_cache() {

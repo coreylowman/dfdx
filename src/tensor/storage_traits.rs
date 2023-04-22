@@ -19,7 +19,7 @@ pub trait AsVec<E> {
 /// Expresses the size of the cache in human readable units.
 #[derive(Debug, Clone, Copy)]
 pub enum CacheSize {
-    /// Bytes 
+    /// Bytes
     Bytes(usize),
     /// Kilobytes (10 ^ 3 bytes)
     KB(usize),
