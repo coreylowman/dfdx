@@ -15,13 +15,13 @@ pub(crate) fn launch_cfg<const NUM_THREADS: u32>(n: u32) -> cudarc::driver::Laun
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{shapes::*, tensor::*};
+    use crate::{shapes::*, tensor::*, prelude::storage_traits::CacheSize};
     use cudarc::driver::DevicePtr;
 
     #[test]
     fn test_empty_cache() {
         let dev: Cuda = Default::default();
-        dev.enable_cache(1000);
+        dev.enable_cache(CacheSize::KB(1));
         let tensor: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
         drop(tensor); // insert allocation into cache
         assert_eq!(dev.cache.len(), 1);
@@ -32,7 +32,7 @@ mod tests {
     #[test]
     fn test_disabling_cache_empties_it() {
         let dev: Cuda = Default::default();
-        dev.enable_cache(1000);
+        dev.enable_cache(CacheSize::KB(1));
         let tensor: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
         drop(tensor); // insert allocation into cache
         assert_eq!(dev.cache.len(), 1);
@@ -43,7 +43,7 @@ mod tests {
     #[test]
     fn test_reuse_allocation_on_new_tensor() {
         let dev: Cuda = Default::default();
-        dev.enable_cache(1000);
+        dev.enable_cache(CacheSize::KB(1));
         let tensor: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
         let ptr = *tensor.data.device_ptr();
         drop(tensor); // insert allocation into cache
@@ -59,7 +59,7 @@ mod tests {
     #[test]
     fn test_reuse_allocation_on_clone_tensor() {
         let dev: Cuda = Default::default();
-        dev.enable_cache(1000);
+        dev.enable_cache(CacheSize::KB(1));
         let a: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
         let b: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
         drop(b); // insert allocation into cache

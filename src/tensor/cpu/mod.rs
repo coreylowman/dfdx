@@ -12,12 +12,12 @@ pub use device::{Cpu, CpuError};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{shapes::*, tensor::*};
+    use crate::{shapes::*, tensor::*, prelude::storage_traits::CacheSize};
 
     #[test]
     fn test_empty_cache() {
         let dev: Cpu = Default::default();
-        dev.enable_cache(1000);
+        dev.enable_cache(CacheSize::KB(1));
         let tensor: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
         drop(tensor); // insert allocation into cache
         assert_eq!(dev.cache.len(), 1);
@@ -28,7 +28,7 @@ mod tests {
     #[test]
     fn test_disabling_cache_empties_it() {
         let dev: Cpu = Default::default();
-        dev.enable_cache(1000);
+        dev.enable_cache(CacheSize::KB(1));
         let tensor: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
         drop(tensor); // insert allocation into cache
         assert_eq!(dev.cache.len(), 1);
@@ -39,7 +39,7 @@ mod tests {
     #[test]
     fn test_reuse_allocation_on_new_tensor() {
         let dev: Cpu = Default::default();
-        dev.enable_cache(1000);
+        dev.enable_cache(CacheSize::KB(1));
         assert_eq!(dev.cache.len(), 0);
         let tensor: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
         assert_eq!(dev.cache.len(), 0);
@@ -57,7 +57,7 @@ mod tests {
     #[test]
     fn test_reuse_allocation_on_clone_tensor() {
         let dev: Cpu = Default::default();
-        dev.enable_cache(1000);
+        dev.enable_cache(CacheSize::KB(1));
         let a: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
         let b: Tensor<Rank2<2, 3>, f32, _> = dev.zeros();
         drop(b); // insert allocation into cache

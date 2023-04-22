@@ -16,6 +16,34 @@ pub trait AsVec<E> {
     fn as_vec(&self) -> std::vec::Vec<E>;
 }
 
+/// Expresses the size of the cache in human readable units.
+#[derive(Debug, Clone, Copy)]
+pub enum CacheSize {
+    /// Bytes 
+    Bytes(usize),
+    /// Kilobytes (10 ^ 3 bytes)
+    KB(usize),
+    /// Megabytes (10 ^ 6 bytes)
+    MB(usize),
+    /// Gigabytes (10 ^ 9 bytes)
+    GB(usize),
+    /// Terabytes (10 ^ 12 bytes)
+    TB(usize),
+}
+
+impl CacheSize {
+    /// Returns the number of bytes this CacheSize represents
+    pub fn to_num_bytes(self) -> usize {
+        match self {
+            CacheSize::Bytes(b) => b,
+            CacheSize::KB(b) => b * 1e3 as usize,
+            CacheSize::MB(b) => b * 1e6 as usize,
+            CacheSize::GB(b) => b * 1e9 as usize,
+            CacheSize::TB(b) => b * 1e12 as usize,
+        }
+    }
+}
+
 /// Something that can store nd arrays for a given [Shape] and [Dtype]
 pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
     /// Generic storage type
@@ -44,12 +72,12 @@ pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
     fn try_synchronize(&self) -> Result<(), Self::Err>;
 
     /// Enables the cache of the device, and sets the maximum size in bytes to `size`.
-    fn enable_cache(&self, size: usize) {
+    fn enable_cache(&self, size: CacheSize) {
         self.try_enable_cache(size).unwrap()
     }
 
     /// Tries to enable the cache of the device, and sets the maximum size in bytes to `size`.
-    fn try_enable_cache(&self, size: usize) -> Result<(), Self::Err>;
+    fn try_enable_cache(&self, size: CacheSize) -> Result<(), Self::Err>;
 
     /// Disables the cache of the device. This will also empty the cache
     /// if there are things in it. See [DeviceStorage::empty_cache] for
@@ -80,12 +108,12 @@ pub trait DeviceStorage: 'static + std::fmt::Debug + Default + Clone + HasErr {
     fn try_empty_cache(&self) -> Result<(), Self::Err>;
 
     /// Sets the maximum size of the cache in bytes, and shrinks the cache until it smaller than `size`.
-    fn set_cache_size(&self, size: usize) {
+    fn set_cache_size(&self, size: CacheSize) {
         self.try_set_cache_size(size).unwrap()
     }
 
     /// Fallible version of [DeviceStorage::set_cache_size]
-    fn try_set_cache_size(&self, size: usize) -> Result<(), Self::Err>;
+    fn try_set_cache_size(&self, size: CacheSize) -> Result<(), Self::Err>;
 }
 
 /// Internal trait - Represents something that can allocate its own gradient.
