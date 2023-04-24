@@ -1,11 +1,16 @@
 #include "cuda_utils.cuh"
 
-__device__ __forceinline__ __half atomicMaxf(__half * addr, __half value) {
-    if (signbit(value)) {
-        return __ushort_as_half(atomicMin((unsigned short int *)addr, __half_as_ushort(value)));
-    } else {
-        return __short_as_half(atomicMax((short int*)addr, __half_as_short(value)));
-    }
+// Based on https://docs.nvidia.com/cuda/cuda-c-programming-guide/#atomic-functions
+__device__ __forceinline__ __half atomicMaxf(__half* address, __half val) {
+    unsigned short int* casted_address = (short int*)address;
+    unsigned short int old = *casted_address;
+    unsigned short int assumed;
+    do {
+        assumed = old;
+        old = atomicCAS(casted_address, assumed, __hmax(val, __ushort_as_half(assumed))); // __hmax_nan
+    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
+    } while (assumed != old);
+    return __ushort_as_half(old);
 }
 
 // atomicMax is not implemented for floats,
