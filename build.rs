@@ -141,7 +141,9 @@ mod cuda {
                 let output = child.wait_with_output().unwrap();
                 assert!(
                     output.status.success(),
-                    "nvcc error while compiling {kernel_path:?}: {output:?}",
+                    "nvcc error while compiling {kernel_path:?}:\n\n# stdout\n{:#}\n\n# stderr\n{:#}",
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
                 );
             }
 
