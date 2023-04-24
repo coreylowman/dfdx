@@ -114,7 +114,7 @@ __device__ void rmsprop_update(
 
     s_avg += (one - cfg_f32.alpha) * (g * g - s_avg);
 
-    T avg;
+    float avg;
 
     if (cfg_f32.centered) {
         // ga = a * ga + (1 - a) * g
