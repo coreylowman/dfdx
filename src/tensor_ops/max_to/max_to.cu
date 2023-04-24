@@ -2,12 +2,12 @@
 
 // Based on https://docs.nvidia.com/cuda/cuda-c-programming-guide/#atomic-functions
 __device__ __forceinline__ __half atomicMaxf(__half* address, __half val) {
-    unsigned short int* casted_address = (short int*)address;
+    unsigned short int* casted_address = (unsigned short int*)address;
     unsigned short int old = *casted_address;
     unsigned short int assumed;
     do {
         assumed = old;
-        old = atomicCAS(casted_address, assumed, __hmax(val, __ushort_as_half(assumed))); // __hmax_nan
+        old = atomicCAS(casted_address, assumed, __half_as_ushort(__hmax(val, __ushort_as_half(assumed)))); // __hmax_nan
     // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
     } while (assumed != old);
     return __ushort_as_half(old);

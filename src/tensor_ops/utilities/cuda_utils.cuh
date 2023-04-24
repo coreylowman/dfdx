@@ -135,10 +135,10 @@ __device__ __forceinline__ double sqrtg(double a) { return sqrt(a); }
 __device__ __forceinline__ __half sqrtg(__half a) { return hsqrt(a); }
 __device__ __forceinline__ float powg(float a, float b) { return powf(a, b); }
 __device__ __forceinline__ double powg(double a, double b) { return pow(a, b); }
-__device__ __forceinline__ __half powg(__half a, __half b) { return hexp(__hmul(hlog(a), b)); }
+__device__ __forceinline__ __half powg(__half a, __half b) { return __float2half(powf(__half2float(a), __half2float(b))); }
 __device__ __forceinline__ float tanhg(float a) { return tanhf(a); }
 __device__ __forceinline__ double tanhg(double a) { return tanh(a); }
-__device__ __forceinline__ __half tanhg(__half a) { return __hdiv(hsin(a), hcos(a)); }
+__device__ __forceinline__ __half tanhg(__half a) { return __float2half(tanhf(__half2float(a))); }
 __device__ __forceinline__ float maxg(float a, float b) { return fmaxf(a, b); }
 __device__ __forceinline__ double maxg(double a, double b) { return fmax(a, b); }
 __device__ __forceinline__ __half maxg(__half a, __half b) { return __hmax(a, b); } // __hmax_nan
@@ -156,4 +156,4 @@ __device__ __forceinline__ double absg(double a) { return fabs(a); }
 __device__ __forceinline__ __half absg(__half a) { return __habs(a); }
 __device__ __forceinline__ float copysigng(float a, float b) { return copysignf(a, b); }
 __device__ __forceinline__ double copysigng(double a, double b) { return copysign(a, b); }
-__device__ __forceinline__ __half copysigng(__half a, __half b) { return __hisnan(a) ? a : (__hge(a, __float2half(0.0f)) ? __habs(b) : __hneg(__habs(b))); }
+__device__ __forceinline__ __half copysigng(__half a, __half b) { return __float2half(copysignf(__half2float(a), __half2float(b))); }

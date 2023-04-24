@@ -130,6 +130,8 @@ mod cuda {
                         .args(["--output-directory", &out_dir])
                         .args(&include_options)
                         .arg(p)
+                        .stdout(std::process::Stdio::piped())
+                        .stderr(std::process::Stdio::piped())
                         .spawn()
                         .unwrap()
                 })

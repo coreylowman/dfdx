@@ -2,12 +2,12 @@
 
 // Based on https://docs.nvidia.com/cuda/cuda-c-programming-guide/#atomic-functions
 __device__ __forceinline__ __half atomicMinf(__half* address, __half val) {
-    unsigned short int* casted_address = (short int*)address;
+    unsigned short int* casted_address = (unsigned short int*)address;
     unsigned short int old = *casted_address;
     unsigned short int assumed;
     do {
         assumed = old;
-        old = atomicCAS(casted_address, assumed, __hmin(val, __ushort_as_half(assumed))); // __hmin_nan
+        old = atomicCAS(casted_address, assumed, __half_as_ushort(__hmin(val, __ushort_as_half(assumed)))); // __hmin_nan
     // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
     } while (assumed != old);
     return __ushort_as_half(old);
