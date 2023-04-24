@@ -1,11 +1,14 @@
 #include "cuda_utils.cuh"
 
 __device__ __forceinline__ __half atomicMinf(__half * addr, __half value) {
-    // TODO
-    return 0.0;
+    if (signbit(value)) {
+        return __ushort_as_half(atomicMax((unsigned short int *)addr, __half_as_ushort(value)));
+    } else {
+        return __short_as_half(atomicMin((short int*)addr, __half_as_short(value)));
+    }
 }
 
-// atomicMax is not implemented for floats,
+// atomicMin is not implemented for floats,
 // solution copied https://stackoverflow.com/questions/17399119/how-do-i-use-atomicmax-on-floating-point-values-in-cuda
 __device__ __forceinline__ float atomicMinf(float * addr, float value) {
     if (signbit(value)) {
