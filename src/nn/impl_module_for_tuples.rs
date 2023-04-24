@@ -3,7 +3,7 @@ use crate::{shapes::*, tensor_ops::*};
 use super::*;
 
 macro_rules! tuple_impls {
-    ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),+]) => {
+    ([$($name:ident),+] [$($idx:tt),+], $last:ident, [$($rev_tail:ident),*]) => {
         impl<E: Dtype, D: Device<E>, $($name: TensorCollection<E, D>),+> TensorCollection<E, D> for ($($name,)+) {
             type To<E2: Dtype, D2: Device<E2>> = ($($name::To<E2, D2>,)+);
 
@@ -50,7 +50,7 @@ macro_rules! tuple_impls {
         impl<
             Input,
             $last:
-            $(Module::<$rev_tail ::Output, Error=$rev_tail::Error>, $rev_tail: )+
+            $(Module::<$rev_tail ::Output, Error=$rev_tail::Error>, $rev_tail: )*
             Module<Input>
         > Module<Input> for ($($name,)+) {
             type Output = $last ::Output;
@@ -66,7 +66,7 @@ macro_rules! tuple_impls {
         impl<
             Input,
             $last:
-            $(ModuleMut::<$rev_tail ::Output, Error=$rev_tail::Error>, $rev_tail: )+
+            $(ModuleMut::<$rev_tail ::Output, Error=$rev_tail::Error>, $rev_tail: )*
             ModuleMut<Input>
         > ModuleMut<Input> for ($($name,)+) {
             type Output = $last ::Output;
@@ -81,6 +81,7 @@ macro_rules! tuple_impls {
     };
 }
 
+tuple_impls!([M1][0], M1, []);
 tuple_impls!([M1, M2] [0, 1], M2, [M1]);
 tuple_impls!([M1, M2, M3] [0, 1, 2], M3, [M2, M1]);
 tuple_impls!([M1, M2, M3, M4] [0, 1, 2, 3], M4, [M3, M2, M1]);
