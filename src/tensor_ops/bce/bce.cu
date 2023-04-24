@@ -21,7 +21,7 @@ __device__ T op_dfdy(T logit, T prob) {
 }
 
 BINARY_OP(__half, bce_fwd_f16, bce_bwd_lhs_f16, bce_bwd_rhs_f16, BCEKernelOp,
-    op_f(x, y),
+    __float2half(op_f(__half2float(x), __half2float(y))),
     op_dfdx(x, y),
     op_dfdy(x, y)
 )

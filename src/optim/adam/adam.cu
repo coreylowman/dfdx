@@ -20,7 +20,7 @@ template<typename T>
 __device__ void adam_update(
     const AdamConfig<T> cfg,
     const size_t numel,
-    const T t,
+    const int t_int,
     T* param,
     T* moment1,
     T* moment2,
@@ -37,6 +37,7 @@ __device__ void adam_update(
     T m = moment1[i];
     T v = moment2[i];
     T one = 1.0;
+    T t = t_int;
 
     if (cfg.weight_decay_type == L2) {
         g += cfg.weight_decay * p;
@@ -60,7 +61,7 @@ __device__ void adam_update(
 __device__ void adam_update(
     const AdamConfig<__half> cfg,
     const size_t numel,
-    const __half t,
+    const int t,
     __half* param,
     __half* moment1,
     __half* moment2,
@@ -112,7 +113,7 @@ __device__ void adam_update(
 extern "C" __global__ void FN( \
     const AdamConfig<TYPENAME> cfg, \
     const size_t numel, \
-    const TYPENAME t, \
+    const int t, \
     TYPENAME* param, \
     TYPENAME* moment1, \
     TYPENAME* moment2, \

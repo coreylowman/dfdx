@@ -75,7 +75,6 @@ where
         let numel = param.len();
         let func = self.dev.get_func(Self::MOD, Self::FWD).unwrap();
         let cfg = launch_cfg::<128>(numel as u32);
-        let t = <E>::from_i32(t).unwrap();
         let params = (opt_cfg, numel, t, param, moment1, moment2, grad);
         unsafe { func.launch(cfg, params) }?;
         Ok(())
