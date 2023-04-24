@@ -141,6 +141,8 @@ pub(crate) mod cpu;
 #[cfg(feature = "cuda")]
 pub(crate) mod cuda;
 mod ghost;
+#[cfg(feature = "std")]
+mod global;
 mod gradients;
 mod masks;
 #[cfg(feature = "numpy")]
