@@ -247,6 +247,11 @@ impl<Ptr: CacheStorage> TensorCache<Ptr> {
     fn shrink(&self) {
         let mut size = write!(self.size);
         let max_size = read!(self.max_size);
+
+        if *size < *max_size {
+            return;
+        }
+
         let mut drop_queue = write!(self.drop_queue);
         let mut allocations = write!(self.allocations);
 
