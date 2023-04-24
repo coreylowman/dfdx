@@ -62,7 +62,7 @@ struct AllocationKey {
 struct AllocationGroup<Ptr: CacheStorage> {
     // Tracks the number of matching 'AllocationKey's in drop_queue to ignore. This is used to
     // "remove" the next instance of the matching AllocationKey in the drop_queue, without having
-    // to run an O(n) operation to actually remove the key.
+    // to run an O(n) operation to actually remove the key from the queue.
     ignore_drops: usize,
     allocations: Vec<CacheWrapper<Ptr>>,
 }
@@ -111,7 +111,6 @@ pub(crate) trait CacheStorage: Sized {
             2 => drop(self.transmute_elements::<u16>()),
             4 => drop(self.transmute_elements::<u32>()),
             8 => drop(self.transmute_elements::<u64>()),
-            16 => drop(self.transmute_elements::<u128>()),
             _ => panic!("Invalid alignment"),
         }
     }
