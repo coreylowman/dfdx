@@ -91,14 +91,14 @@ __device__ void rmsprop_update(
     }
 
     RMSpropConfig<float> cfg_f32 = RMSpropConfig<float> {
-        .lr = cfg.lr,
-        .alpha = cfg.alpha,
-        .eps = cfg.eps,
-        .centered = cfg.centered,
-        .has_momentum = cfg.has_momentum,
-        .momentum = cfg.momentum,
-        .weight_decay_type = cfg.weight_decay_type,
-        .weight_decay = cfg.weight_decay,
+        cfg.lr,
+        cfg.alpha,
+        cfg.eps,
+        cfg.centered,
+        cfg.has_momentum,
+        cfg.momentum,
+        cfg.weight_decay_type,
+        cfg.weight_decay,
     };
 
     float p = param[i];
