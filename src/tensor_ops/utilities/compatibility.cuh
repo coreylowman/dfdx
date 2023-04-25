@@ -5,7 +5,13 @@
 
 // FIXME: the minimum compute capabilities are just guesses since the table is not specific enough
 
-#if __CUDA_ARCH__ < 700
+#if __CUDA_ARCH__ <= 800
+__device__ __forceinline__ __half __hmax(__half a, __half b) {
+    return __float2half(fmaxf(__half2float(a), __half2float(b)));
+}
+__device__ __forceinline__ __half __hmin(__half a, __half b) {
+    return __float2half(fminf(__half2float(a), __half2float(b)));
+}
 __device__ __forceinline__ __half __hmax_nan(__half a, __half b) {
     return __hisnan(a) ? a : (__hisnan(b) ? b : __hmax(a, b));
 }
@@ -14,6 +20,12 @@ __device__ __forceinline__ __half __hmin_nan(__half a, __half b) {
 }
 #endif
 
+
+#if __CUDA_ARCH__ < 600
+__device__ double atomicAdd(double* addr, double value) {
+    return __longlong_as_double(atomicAdd((unsigned long long int *)addr, __double_as_longlong(value)));
+}
+#endif
 
 // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#atomicadd
 // > The 16-bit __half floating-point version of atomicAdd() is only supported by devices of compute capability 7.x and higher.
