@@ -5,6 +5,9 @@ fn main() {
     maybe_enable_nightly();
 
     #[cfg(feature = "cuda")]
+    cuda::set_include_dir();
+
+    #[cfg(feature = "cuda")]
     cuda::build_ptx();
 
     #[cfg(feature = "cpu-mkl-matmul")]
@@ -25,6 +28,46 @@ fn maybe_enable_nightly() {
 
 #[cfg(feature = "cuda")]
 mod cuda {
+    pub fn set_include_dir() {
+        // NOTE: copied from cudarc build.rs.
+        // We can't actually set a env!() value from another crate,
+        // so we have to do that here.
+
+        use std::path::PathBuf;
+
+        let env_vars = [
+            "CUDA_PATH",
+            "CUDA_ROOT",
+            "CUDA_TOOLKIT_ROOT_DIR",
+            "CUDNN_LIB",
+        ];
+        let env_vars = env_vars
+            .into_iter()
+            .map(std::env::var)
+            .filter_map(Result::ok);
+
+        let roots = [
+            "/usr",
+            "/usr/local/cuda",
+            "/opt/cuda",
+            "/usr/lib/cuda",
+            "C:/Program Files/NVIDIA GPU Computing Toolkit",
+            "C:/CUDA",
+        ];
+        let roots = roots.into_iter().map(Into::into);
+
+        let root = env_vars
+            .chain(roots)
+            .map(Into::<PathBuf>::into)
+            .find(|path| path.join("include").join("cuda.h").is_file())
+            .unwrap();
+
+        println!(
+            "cargo:rustc-env=CUDA_INCLUDE_DIR={}",
+            root.join("include").display()
+        );
+    }
+
     pub fn build_ptx() {
         let out_dir = std::env::var("OUT_DIR").unwrap();
         let kernel_paths: Vec<std::path::PathBuf> = glob::glob("src/**/*.cu")
