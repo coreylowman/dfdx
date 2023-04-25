@@ -1,4 +1,5 @@
 #include "cuda_fp16.h"
+#include "compatibility.cuh"
 
 __device__ unsigned int get_strided_index(
     unsigned int idx,
@@ -141,10 +142,10 @@ __device__ __forceinline__ double tanhg(double a) { return tanh(a); }
 __device__ __forceinline__ __half tanhg(__half a) { return __float2half(tanhf(__half2float(a))); }
 __device__ __forceinline__ float maxg(float a, float b) { return fmaxf(a, b); }
 __device__ __forceinline__ double maxg(double a, double b) { return fmax(a, b); }
-__device__ __forceinline__ __half maxg(__half a, __half b) { return __hmax(a, b); } // __hmax_nan
+__device__ __forceinline__ __half maxg(__half a, __half b) { return __hmax_nan(a, b); }
 __device__ __forceinline__ float ming(float a, float b) { return fminf(a, b); }
 __device__ __forceinline__ double ming(double a, double b) { return fmin(a, b); }
-__device__ __forceinline__ __half ming(__half a, __half b) { return __hmin(a, b); } // __hmin_nan
+__device__ __forceinline__ __half ming(__half a, __half b) { return __hmin_nan(a, b); }
 __device__ __forceinline__ float logg(float a) { return logf(a); }
 __device__ __forceinline__ double logg(double a) { return log(a); }
 __device__ __forceinline__ __half logg(__half a) { return hlog(a); }
