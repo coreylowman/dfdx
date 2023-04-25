@@ -75,7 +75,7 @@ __device__ void adam_update(
 
     const float t_f32 = t;
 
-    const AdamConfig<float> cfg_f32 = {
+    const AdamConfig<float> cfg_f32 = AdamConfig<float> {
         cfg.lr,
         cfg.beta1,
         cfg.beta2,

@@ -29,15 +29,15 @@ __device__ unsigned short int atomicCAS(
 ) {
     // Read the two shorts that make up the 32 bit int at the aligned memory location.
     unsigned int* aligned_address = (unsigned int*) ((size_t) address & ~2);
-    unsigned int my_short = *address;
+    // unsigned int my_short = *address;
     unsigned int other_short = *(unsigned short int*) ((size_t) address ^ 2);
     // Replace my_short with value in the integer.
     const unsigned int value = val;
     const bool aligned = ((size_t) address & 2) == 0;
-    unsigned int new_whole = aligned ? (value << 16) | other_short : (other_short << 16) | value;
+    unsigned int new_whole = aligned ? (other_short << 16) | value : (value << 16) | other_short;
     
     unsigned int old = atomicCAS(aligned_address, (unsigned int) compare, new_whole);
-    return aligned ? old >> 16 : old & (0xffff);
+    return aligned ? old & (0xffff) : old >> 16;
 }
 
 __device__ __half atomicAdd(__half* address, __half val) {
