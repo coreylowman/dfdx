@@ -29,7 +29,11 @@ impl<E1: Unit + CudaTypeName, E2: Unit + CudaTypeName> super::ToDtypeKernel<E1, 
             let src = KERNEL.replace("$Src", E1::NAME).replace("$Dst", E2::NAME);
             let opts = CompileOptions {
                 arch: Some(env!("CUDA_COMPUTE_CAP")),
-                include_paths: vec!["/usr/include".to_string()],
+                include_paths: vec![
+                    "/usr/include".to_string(),
+                    "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.0\\include"
+                        .to_string(),
+                ],
                 ..Default::default()
             };
             let ptx = compile_ptx_with_opts(src, opts).unwrap();

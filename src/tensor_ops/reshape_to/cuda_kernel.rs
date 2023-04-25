@@ -21,7 +21,11 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
             let src = FWD_KERNEL.replace("$T", E::NAME);
             let opts = CompileOptions {
                 arch: Some(env!("CUDA_COMPUTE_CAP")),
-                include_paths: vec!["/usr/include".to_string()],
+                include_paths: vec![
+                    "/usr/include".to_string(),
+                    "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.0\\include"
+                        .to_string(),
+                ],
                 ..Default::default()
             };
             let ptx = compile_ptx_with_opts(src, opts).unwrap();
@@ -65,7 +69,11 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
             let src = BWD_KERNEL.replace("$T", E::NAME);
             let opts = CompileOptions {
                 arch: Some(env!("CUDA_COMPUTE_CAP")),
-                include_paths: vec!["/usr/include".to_string()],
+                include_paths: vec![
+                    "/usr/include".to_string(),
+                    "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.0\\include"
+                        .to_string(),
+                ],
                 ..Default::default()
             };
             let ptx = compile_ptx_with_opts(src, opts).unwrap();

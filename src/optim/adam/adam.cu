@@ -76,12 +76,12 @@ __device__ void adam_update(
     const float t_f32 = t;
 
     const AdamConfig<float> cfg_f32 = AdamConfig<float> {
-        .lr = cfg.lr,
-        .beta1 = cfg.beta1,
-        .beta2 = cfg.beta2,
-        .eps = cfg.eps,
-        .weight_decay_type = cfg.weight_decay_type,
-        .weight_decay = cfg.weight_decay,
+        cfg.lr,
+        cfg.beta1,
+        cfg.beta2,
+        cfg.eps,
+        cfg.weight_decay_type,
+        cfg.weight_decay,
     };
 
     float p = param[i];
