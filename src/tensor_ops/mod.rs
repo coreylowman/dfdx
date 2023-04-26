@@ -212,7 +212,7 @@ pub use boolean::{bool_and, bool_not, bool_or, bool_xor};
 pub use broadcast_to::BroadcastTo;
 pub use choose::ChooseFrom;
 pub use clamp::clamp;
-pub use cmp::{eq, ge, gt, le, lt, ne};
+pub use cmp::{eq, ge, gt, le, lt, ne, TryEq, TryGe, TryGt, TryLe, TryLt, TryNe};
 pub use concat::TryConcat;
 pub use cos::cos;
 pub use div::{div, TryDiv};
