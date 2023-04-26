@@ -197,7 +197,7 @@ pub fn le<S: Shape, E: Unit, D: CmpKernel<LeKernelOp, E>, T: Tape<E, D>>(
 
 // Macro to reduce boilerplate of implementing comparison methods on Tensor.
 macro_rules! impl_cmp_kernel_op {
-    ($TraitName:tt, $FnName:tt, $TryFnName:tt, $KernelOp:tt, $doc:expr) => {
+    ($TraitName:tt, $FnName:tt, $TryFnName:tt, $KernelOp:tt, $doc:expr, $ScalarFnName:tt, $TryScalarFnName:tt) => {
         pub trait $TraitName<Rhs>: HasErr {
             type Output;
             #[doc = $doc]
@@ -227,15 +227,82 @@ macro_rules! impl_cmp_kernel_op {
                 try_scalar_cmp_op(self, other)
             }
         }
+
+        impl<S: Shape, E: Unit, D: ScalarCmpKernel<$KernelOp, E>, T: Tape<E, D>>
+            Tensor<S, E, D, T>
+        {
+            #[doc = $doc]
+            #[deprecated = "You can now use the non-scalar method for both tensors & scalars."]
+            pub fn $ScalarFnName(&self, other: E) -> Tensor<S, bool, D, NoneTape> {
+                self.$TryScalarFnName(other).unwrap()
+            }
+
+            #[doc = $doc]
+            #[deprecated = "You can now use the non-scalar method for both tensors & scalars."]
+            pub fn $TryScalarFnName(
+                &self,
+                other: E,
+            ) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
+                try_scalar_cmp_op(self, other)
+            }
+        }
     };
 }
 
-impl_cmp_kernel_op!(TryEq, eq, try_eq, EqKernelOp, "See [eq]");
-impl_cmp_kernel_op!(TryNe, ne, try_ne, NeKernelOp, "See [ne]");
-impl_cmp_kernel_op!(TryGt, gt, try_gt, GtKernelOp, "See [gt]");
-impl_cmp_kernel_op!(TryGe, ge, try_ge, GeKernelOp, "See [ge]");
-impl_cmp_kernel_op!(TryLt, lt, try_lt, LtKernelOp, "See [lt]");
-impl_cmp_kernel_op!(TryLe, le, try_le, LeKernelOp, "See [le]");
+impl_cmp_kernel_op!(
+    TryEq,
+    eq,
+    try_eq,
+    EqKernelOp,
+    "See [eq]",
+    scalar_eq,
+    try_scalar_eq
+);
+impl_cmp_kernel_op!(
+    TryNe,
+    ne,
+    try_ne,
+    NeKernelOp,
+    "See [ne]",
+    scalar_ne,
+    try_scalar_ne
+);
+impl_cmp_kernel_op!(
+    TryGt,
+    gt,
+    try_gt,
+    GtKernelOp,
+    "See [gt]",
+    scalar_gt,
+    try_scalar_gt
+);
+impl_cmp_kernel_op!(
+    TryGe,
+    ge,
+    try_ge,
+    GeKernelOp,
+    "See [ge]",
+    scalar_ge,
+    try_scalar_ge
+);
+impl_cmp_kernel_op!(
+    TryLt,
+    lt,
+    try_lt,
+    LtKernelOp,
+    "See [lt]",
+    scalar_lt,
+    try_scalar_lt
+);
+impl_cmp_kernel_op!(
+    TryLe,
+    le,
+    try_le,
+    LeKernelOp,
+    "See [le]",
+    scalar_le,
+    try_scalar_le
+);
 
 #[cfg(test)]
 mod tests {
