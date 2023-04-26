@@ -21,7 +21,10 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
             let src = FWD_KERNEL.replace("$T", E::NAME);
             let opts = CompileOptions {
                 arch: Some(env!("CUDA_COMPUTE_CAP")),
-                include_paths: vec![env!("CUDA_INCLUDE_DIR").to_string()],
+                include_paths: vec![
+                    env!("CUDA_INCLUDE_DIR").to_string(),
+                    env!("OUT_DIR").to_string(),
+                ],
                 ..Default::default()
             };
             let ptx = compile_ptx_with_opts(src, opts).unwrap();
@@ -65,7 +68,10 @@ impl<E: Dtype + CudaTypeName> super::ReshapeKernel<E> for Cuda {
             let src = BWD_KERNEL.replace("$T", E::NAME);
             let opts = CompileOptions {
                 arch: Some(env!("CUDA_COMPUTE_CAP")),
-                include_paths: vec![env!("CUDA_INCLUDE_DIR").to_string()],
+                include_paths: vec![
+                    env!("CUDA_INCLUDE_DIR").to_string(),
+                    env!("OUT_DIR").to_string(),
+                ],
                 ..Default::default()
             };
             let ptx = compile_ptx_with_opts(src, opts).unwrap();
@@ -103,22 +109,7 @@ typedef long int intptr_t;
 typedef int intptr_t;
 #endif
 
-#include \"cuda_fp16.h\"
-
-__device__ unsigned int get_strided_index(
-    unsigned int idx,
-    const size_t num_dims,
-    const size_t *dims,
-    const size_t *strides
-) {
-    unsigned int strided_i = 0;
-    for (unsigned int d = 0; d < num_dims; d++) {
-        unsigned int dim_idx = num_dims - 1 - d;
-        strided_i += (idx % dims[dim_idx]) * strides[dim_idx];
-        idx /= dims[dim_idx];
-    }
-    return strided_i;
-}
+#include \"cuda_utils.cuh\"
 
 extern \"C\" __global__ void reshape_fwd(
     const size_t numel,
@@ -152,22 +143,7 @@ typedef long int intptr_t;
 typedef int intptr_t;
 #endif
 
-#include \"cuda_fp16.h\"
-
-__device__ unsigned int get_strided_index(
-    unsigned int idx,
-    const size_t num_dims,
-    const size_t *dims,
-    const size_t *strides
-) {
-    unsigned int strided_i = 0;
-    for (unsigned int d = 0; d < num_dims; d++) {
-        unsigned int dim_idx = num_dims - 1 - d;
-        strided_i += (idx % dims[dim_idx]) * strides[dim_idx];
-        idx /= dims[dim_idx];
-    }
-    return strided_i;
-}
+#include \"cuda_utils.cuh\"
 
 extern \"C\" __global__ void reshape_bwd(
     const size_t numel,

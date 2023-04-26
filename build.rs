@@ -81,6 +81,10 @@ mod cuda {
 
         for path in &mut include_directories {
             println!("cargo:rerun-if-changed={}", path.display());
+            let destination =
+                std::format!("{out_dir}/{}", path.file_name().unwrap().to_str().unwrap());
+            println!("cargo:rerun-if-changed={}", destination);
+            std::fs::copy(path.clone(), destination).unwrap();
             // remove the filename from the path so it's just the directory
             path.pop();
         }

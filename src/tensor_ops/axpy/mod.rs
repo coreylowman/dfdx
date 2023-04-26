@@ -1,5 +1,5 @@
 use crate::{
-    shapes::{Shape, Dtype},
+    shapes::{Dtype, Shape},
     tensor::{DeviceStorage, Tensor},
 };
 
