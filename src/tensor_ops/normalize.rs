@@ -17,14 +17,14 @@ use super::{BroadcastTo, Device, MeanTo, TryAdd, TryDiv, TrySub};
 /// ```
 pub fn normalize<Ax: Axes, S: Shape + ReduceShape<Ax>, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
-    epsilon: impl Into<E>,
+    epsilon: impl Into<f64>,
 ) -> Tensor<S, E, D, T> {
     t.normalize::<Ax>(epsilon)
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [normalize]
-    pub fn normalize<Ax: Axes>(self, epsilon: impl Into<E>) -> Self
+    pub fn normalize<Ax: Axes>(self, epsilon: impl Into<f64>) -> Self
     where
         S: ReduceShape<Ax>,
     {
@@ -34,7 +34,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [normalize]
     pub fn try_normalize<Ax: Axes>(
         self,
-        epsilon: impl Into<E>,
+        epsilon: impl Into<f64>,
     ) -> Result<Self, <Self as HasErr>::Err>
     where
         S: ReduceShape<Ax>,
@@ -46,7 +46,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
             .retaped::<T>()
             .try_square()?
             .try_mean::<_, Ax>()?
-            .try_add(epsilon.into())?
+            .try_add(E::from_f64(epsilon.into()).unwrap())?
             .try_sqrt()?;
         centered.try_div(std.try_broadcast_like(&shape)?)
     }

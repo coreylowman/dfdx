@@ -1,5 +1,4 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
-use num_traits::FromPrimitive;
 
 use super::*;
 
@@ -40,7 +39,7 @@ where
 pub struct LayerNorm1D<const M: usize, E: Dtype, D: DeviceStorage> {
     pub gamma: Tensor<Rank1<M>, E, D>,
     pub beta: Tensor<Rank1<M>, E, D>,
-    pub epsilon: E,
+    pub epsilon: f64,
 }
 
 impl<const M: usize, E: Dtype, D: DeviceStorage> NonMutableModule for LayerNorm1D<M, E, D> {}
@@ -69,7 +68,7 @@ impl<const M: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for LayerNor
             |(gamma, beta)| LayerNorm1D {
                 gamma,
                 beta,
-                epsilon: V::E2::from_f32(1e-5).unwrap(),
+                epsilon: 1e-5,
             },
         )
     }

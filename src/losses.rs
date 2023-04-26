@@ -47,7 +47,7 @@ pub fn mae_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
 pub fn huber_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
-    delta: impl Into<E>,
+    delta: impl Into<f64>,
 ) -> Tensor<Rank0, E, D, T> {
     pred.huber_error(targ, delta).mean()
 }
@@ -62,10 +62,10 @@ pub fn huber_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
 pub fn smooth_l1_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     pred: Tensor<S, E, D, T>,
     targ: Tensor<S, E, D>,
-    delta: impl Into<E>,
+    delta: impl Into<f64>,
 ) -> Tensor<Rank0, E, D, T> {
-    let delta = delta.into();
-    huber_loss(pred, targ, delta) / delta
+    let delta: f64 = delta.into();
+    huber_loss(pred, targ, delta) / E::from_f64(delta).unwrap()
 }
 
 /// [Cross entropy loss](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression).

@@ -23,19 +23,19 @@ pub struct PowfKernelOp<E>(E);
 /// ```
 pub fn powf<S: Shape, E: Dtype, D: UnaryKernel<PowfKernelOp<E>, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
-    exponent: impl Into<E>,
+    exponent: impl Into<f64>,
 ) -> Tensor<S, E, D, T> {
     t.powf(exponent)
 }
 
 impl<S: Shape, E: Dtype, D: UnaryKernel<PowfKernelOp<E>, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [powf]
-    pub fn powf(self, exponent: impl Into<E>) -> Self {
+    pub fn powf(self, exponent: impl Into<f64>) -> Self {
         self.try_powf(exponent).unwrap()
     }
     /// See [powf]
-    pub fn try_powf(self, exponent: impl Into<E>) -> Result<Self, D::Err> {
-        let exponent = exponent.into();
+    pub fn try_powf(self, exponent: impl Into<f64>) -> Result<Self, D::Err> {
+        let exponent = E::from_f64(exponent.into()).unwrap();
         try_unary_op(PowfKernelOp(exponent), self)
     }
 }

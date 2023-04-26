@@ -31,14 +31,14 @@ pub struct HuberErrorKernelOp<E> {
 pub fn huber_error<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D> + Merge<R>, R: Tape<E, D>>(
     lhs: Tensor<S, E, D, T>,
     rhs: Tensor<S, E, D, R>,
-    delta: impl Into<E>,
+    delta: impl Into<f64>,
 ) -> Tensor<S, E, D, T> {
     lhs.huber_error(rhs, delta)
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [huber_error]
-    pub fn huber_error<R: Tape<E, D>>(self, rhs: Tensor<S, E, D, R>, delta: impl Into<E>) -> Self
+    pub fn huber_error<R: Tape<E, D>>(self, rhs: Tensor<S, E, D, R>, delta: impl Into<f64>) -> Self
     where
         T: Merge<R>,
     {
@@ -49,12 +49,12 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     pub fn try_huber_error<R: Tape<E, D>>(
         self,
         rhs: Tensor<S, E, D, R>,
-        delta: impl Into<E>,
+        delta: impl Into<f64>,
     ) -> Result<Self, D::Err>
     where
         T: Merge<R>,
     {
-        let delta = delta.into();
+        let delta = E::from_f64(delta.into()).unwrap();
         try_binary_op(HuberErrorKernelOp { delta }, self, rhs)
     }
 }

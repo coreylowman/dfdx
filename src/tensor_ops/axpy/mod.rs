@@ -1,5 +1,5 @@
 use crate::{
-    shapes::{Shape, Unit},
+    shapes::{Shape, Dtype},
     tensor::{DeviceStorage, Tensor},
 };
 
@@ -10,11 +10,11 @@ mod cuda_kernel;
 /// Elementwise `a * alpha + b * beta`.
 ///
 /// See [Tensor::axpy] for in place version.
-pub fn axpy<S: Shape, E: Unit, D>(
+pub fn axpy<S: Shape, E: Dtype, D>(
     a: &Tensor<S, E, D>,
-    alpha: impl Into<E>,
+    alpha: impl Into<f64>,
     b: &Tensor<S, E, D>,
-    beta: impl Into<E>,
+    beta: impl Into<f64>,
 ) -> Tensor<S, E, D>
 where
     D: AxpyKernel<E>,
@@ -24,31 +24,31 @@ where
     dst
 }
 
-impl<S: Shape, E: Unit, D: AxpyKernel<E>> Tensor<S, E, D> {
+impl<S: Shape, E: Dtype, D: AxpyKernel<E>> Tensor<S, E, D> {
     /// Updates self with elementwise function `self = self * alpha + b * beta`.
-    pub fn axpy<T>(&mut self, alpha: impl Into<E>, b: &Tensor<S, E, D, T>, beta: impl Into<E>) {
+    pub fn axpy<T>(&mut self, alpha: impl Into<f64>, b: &Tensor<S, E, D, T>, beta: impl Into<f64>) {
         self.try_axpy(alpha, b, beta).unwrap()
     }
 
     /// Updates self with elementwise function `self = self * alpha + b * beta`.
     pub fn try_axpy<T>(
         &mut self,
-        alpha: impl Into<E>,
+        alpha: impl Into<f64>,
         b: &Tensor<S, E, D, T>,
-        beta: impl Into<E>,
+        beta: impl Into<f64>,
     ) -> Result<(), D::Err> {
         assert_eq!(self.shape, b.shape);
         assert_eq!(self.strides, b.strides, "Strides must be equal for axpy");
         self.device.clone().forward(
             std::sync::Arc::make_mut(&mut self.data),
-            alpha.into(),
+            E::from_f64(alpha.into()).unwrap(),
             b.data.as_ref(),
-            beta.into(),
+            E::from_f64(beta.into()).unwrap(),
         )
     }
 }
 
-pub trait AxpyKernel<E: Unit>: DeviceStorage {
+pub trait AxpyKernel<E: Dtype>: DeviceStorage {
     fn forward(
         &self,
         a: &mut Self::Vec<E>,
