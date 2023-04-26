@@ -234,7 +234,7 @@ macro_rules! impl_cmp_kernel_op {
             #[doc = $doc]
             #[deprecated = "You can now use the non-scalar method for both tensors & scalars."]
             pub fn $ScalarFnName(&self, other: E) -> Tensor<S, bool, D, NoneTape> {
-                self.$TryScalarFnName(other).unwrap()
+                try_scalar_cmp_op(self, other).unwrap()
             }
 
             #[doc = $doc]
