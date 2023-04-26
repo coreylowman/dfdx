@@ -7,9 +7,9 @@
 //!
 //! # Quick start
 //!
-//! Cuda:
+//! Cuda (with cudnn):
 //! ```toml
-//! dfdx = { version = "...", default-features = false, features = ["std", "cuda"]}
+//! dfdx = { version = "...", default-features = false, features = ["std", "cuda", "cudnn"]}
 //! ```
 //!
 //! Cpu:
@@ -57,6 +57,17 @@
 //! Example:
 //! ```toml
 //! dfdx = { version = "...", features = ["cuda"] }
+//! ```
+//!
+//! # "cudnn"
+//!
+//! This requires the "cuda" feature, and enables some cudnn optimizations.
+//! **This is purely for performance**, no other methods/structs are introduced
+//! with this feature.
+//!
+//! Example:
+//! ```toml
+//! dfdx = { version = "...", features = ["cudnn"] }
 //! ```
 //!
 //! # "cpu-seq-matmul"

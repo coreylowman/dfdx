@@ -1,6 +1,6 @@
 use crate::{
     shapes::{HasShape, Shape, Unit},
-    tensor::{DeviceStorage, NoneTape, Tape, Tensor},
+    tensor::{DeviceStorage, HasErr, NoneTape, Tape, Tensor},
 };
 
 mod cpu_kernels;
@@ -60,7 +60,7 @@ pub enum LeKernelOp {}
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([-2, -1, 0, 1, 2]);
-/// let r = a.scalar_eq(1);
+/// let r = a.eq(1);
 /// assert_eq!(r.array(), [false, false, false, true, false]);
 /// ```
 pub fn eq<S: Shape, E: Unit, D: CmpKernel<EqKernelOp, E>, T: Tape<E, D>>(
@@ -85,7 +85,7 @@ pub fn eq<S: Shape, E: Unit, D: CmpKernel<EqKernelOp, E>, T: Tape<E, D>>(
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([-2, -1, 0, 1, 2]);
-/// let r = a.scalar_ne(1);
+/// let r = a.ne(1);
 /// assert_eq!(r.array(), [true, true, true, false, true]);
 /// ```
 pub fn ne<S: Shape, E: Unit, D: CmpKernel<NeKernelOp, E>, T: Tape<E, D>>(
@@ -110,7 +110,7 @@ pub fn ne<S: Shape, E: Unit, D: CmpKernel<NeKernelOp, E>, T: Tape<E, D>>(
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([-2, -1, 0, 1, 2]);
-/// let r = a.scalar_gt(-1);
+/// let r = a.gt(-1);
 /// assert_eq!(r.array(), [false, false, true, true, true]);
 /// ```
 pub fn gt<S: Shape, E: Unit, D: CmpKernel<GtKernelOp, E>, T: Tape<E, D>>(
@@ -135,7 +135,7 @@ pub fn gt<S: Shape, E: Unit, D: CmpKernel<GtKernelOp, E>, T: Tape<E, D>>(
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([-2, -1, 0, 1, 2]);
-/// let r = a.scalar_ge(-1);
+/// let r = a.ge(-1);
 /// assert_eq!(r.array(), [false, true, true, true, true]);
 /// ```
 pub fn ge<S: Shape, E: Unit, D: CmpKernel<GeKernelOp, E>, T: Tape<E, D>>(
@@ -160,7 +160,7 @@ pub fn ge<S: Shape, E: Unit, D: CmpKernel<GeKernelOp, E>, T: Tape<E, D>>(
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([-2, -1, 0, 1, 2]);
-/// let r = a.scalar_lt(1);
+/// let r = a.lt(1);
 /// assert_eq!(r.array(), [true, true, true, false, false]);
 /// ```
 pub fn lt<S: Shape, E: Unit, D: CmpKernel<LtKernelOp, E>, T: Tape<E, D>>(
@@ -185,7 +185,7 @@ pub fn lt<S: Shape, E: Unit, D: CmpKernel<LtKernelOp, E>, T: Tape<E, D>>(
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let a = dev.tensor([-2, -1, 0, 1, 2]);
-/// let r = a.scalar_le(1);
+/// let r = a.le(1);
 /// assert_eq!(r.array(), [true, true, true, true, false]);
 /// ```
 pub fn le<S: Shape, E: Unit, D: CmpKernel<LeKernelOp, E>, T: Tape<E, D>>(
@@ -197,44 +197,112 @@ pub fn le<S: Shape, E: Unit, D: CmpKernel<LeKernelOp, E>, T: Tape<E, D>>(
 
 // Macro to reduce boilerplate of implementing comparison methods on Tensor.
 macro_rules! impl_cmp_kernel_op {
-    ($kernel_op:ty, $try_op:ident, $op:ident, $try_scalar_op:ident, $scalar_op:ident, $doc:expr) => {
-        impl<S: Shape, E: Unit, D: CmpKernel<$kernel_op, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
+    ($TraitName:tt, $FnName:tt, $TryFnName:tt, $KernelOp:tt, $doc:expr, $ScalarFnName:tt, $TryScalarFnName:tt) => {
+        pub trait $TraitName<Rhs>: HasErr {
+            type Output;
             #[doc = $doc]
-            pub fn $try_op(&self, other: &Self) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
-                try_cmp_op(self, other)
+            fn $FnName(&self, rhs: Rhs) -> Self::Output {
+                self.$TryFnName(rhs).unwrap()
             }
-
             #[doc = $doc]
-            pub fn $op(&self, other: &Self) -> Tensor<S, bool, D, NoneTape> {
-                self.$try_op(other).unwrap()
+            fn $TryFnName(&self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
+        }
+
+        impl<S: Shape, E: Unit, D: CmpKernel<$KernelOp, E>, T: Tape<E, D>> $TraitName<&Self>
+            for Tensor<S, E, D, T>
+        {
+            type Output = Tensor<S, bool, D, NoneTape>;
+            #[doc = $doc]
+            fn $TryFnName(&self, other: &Self) -> Result<Self::Output, D::Err> {
+                try_cmp_op(self, other)
             }
         }
 
-        impl<S: Shape, E: Unit, D: ScalarCmpKernel<$kernel_op, E>, T: Tape<E, D>>
+        impl<S: Shape, E: Unit, D: ScalarCmpKernel<$KernelOp, E>, T: Tape<E, D>> $TraitName<E>
+            for Tensor<S, E, D, T>
+        {
+            type Output = Tensor<S, bool, D, NoneTape>;
+            #[doc = $doc]
+            fn $TryFnName(&self, other: E) -> Result<Self::Output, D::Err> {
+                try_scalar_cmp_op(self, other)
+            }
+        }
+
+        impl<S: Shape, E: Unit, D: ScalarCmpKernel<$KernelOp, E>, T: Tape<E, D>>
             Tensor<S, E, D, T>
         {
             #[doc = $doc]
-            pub fn $try_scalar_op(
-                &self,
-                scalar: impl Into<E>,
-            ) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
-                try_scalar_cmp_op(self, scalar.into())
+            #[deprecated = "You can now use the non-scalar method for both tensors & scalars."]
+            pub fn $ScalarFnName(&self, other: E) -> Tensor<S, bool, D, NoneTape> {
+                try_scalar_cmp_op(self, other).unwrap()
             }
 
             #[doc = $doc]
-            pub fn $scalar_op(&self, scalar: impl Into<E>) -> Tensor<S, bool, D, NoneTape> {
-                self.$try_scalar_op(scalar).unwrap()
+            #[deprecated = "You can now use the non-scalar method for both tensors & scalars."]
+            pub fn $TryScalarFnName(
+                &self,
+                other: E,
+            ) -> Result<Tensor<S, bool, D, NoneTape>, D::Err> {
+                try_scalar_cmp_op(self, other)
             }
         }
     };
 }
 
-impl_cmp_kernel_op!(EqKernelOp, try_eq, eq, try_scalar_eq, scalar_eq, "See [eq]");
-impl_cmp_kernel_op!(NeKernelOp, try_ne, ne, try_scalar_ne, scalar_ne, "See [ne]");
-impl_cmp_kernel_op!(GtKernelOp, try_gt, gt, try_scalar_gt, scalar_gt, "See [gt]");
-impl_cmp_kernel_op!(GeKernelOp, try_ge, ge, try_scalar_ge, scalar_ge, "See [ge]");
-impl_cmp_kernel_op!(LtKernelOp, try_lt, lt, try_scalar_lt, scalar_lt, "See [lt]");
-impl_cmp_kernel_op!(LeKernelOp, try_le, le, try_scalar_le, scalar_le, "See [le]");
+impl_cmp_kernel_op!(
+    TryEq,
+    eq,
+    try_eq,
+    EqKernelOp,
+    "See [eq]",
+    scalar_eq,
+    try_scalar_eq
+);
+impl_cmp_kernel_op!(
+    TryNe,
+    ne,
+    try_ne,
+    NeKernelOp,
+    "See [ne]",
+    scalar_ne,
+    try_scalar_ne
+);
+impl_cmp_kernel_op!(
+    TryGt,
+    gt,
+    try_gt,
+    GtKernelOp,
+    "See [gt]",
+    scalar_gt,
+    try_scalar_gt
+);
+impl_cmp_kernel_op!(
+    TryGe,
+    ge,
+    try_ge,
+    GeKernelOp,
+    "See [ge]",
+    scalar_ge,
+    try_scalar_ge
+);
+impl_cmp_kernel_op!(
+    TryLt,
+    lt,
+    try_lt,
+    LtKernelOp,
+    "See [lt]",
+    scalar_lt,
+    try_scalar_lt
+);
+impl_cmp_kernel_op!(
+    TryLe,
+    le,
+    try_le,
+    LeKernelOp,
+    "See [le]",
+    scalar_le,
+    try_scalar_le
+);
 
 #[cfg(test)]
 mod tests {
