@@ -228,6 +228,28 @@ macro_rules! impl_cmp_kernel_op {
             }
         }
 
+        #[cfg(feature = "f16")]
+        impl<S: Shape, D: ScalarCmpKernel<$KernelOp, half::f16>, T: Tape<half::f16, D>>
+            $TraitName<f32> for Tensor<S, half::f16, D, T>
+        {
+            type Output = Tensor<S, bool, D, NoneTape>;
+            #[doc = $doc]
+            fn $TryFnName(&self, other: f32) -> Result<Self::Output, D::Err> {
+                try_scalar_cmp_op(self, half::f16::from_f32(other))
+            }
+        }
+
+        #[cfg(feature = "bf16")]
+        impl<S: Shape, D: ScalarCmpKernel<$KernelOp, half::bf16>, T: Tape<half::bf16, D>>
+            $TraitName<f32> for Tensor<S, half::bf16, D, T>
+        {
+            type Output = Tensor<S, bool, D, NoneTape>;
+            #[doc = $doc]
+            fn $TryFnName(&self, other: f32) -> Result<Self::Output, D::Err> {
+                try_scalar_cmp_op(self, half::bf16::from_f32(other))
+            }
+        }
+
         impl<S: Shape, E: Unit, D: ScalarCmpKernel<$KernelOp, E>, T: Tape<E, D>>
             Tensor<S, E, D, T>
         {
@@ -306,6 +328,7 @@ impl_cmp_kernel_op!(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::{tensor::*, tests::*};
 
     #[test]
@@ -335,7 +358,7 @@ mod tests {
         let a = dev
             .tensor([[0.0, 1.2], [3.4, -5.6]])
             .to_dtype::<TestDtype>();
-        let r = a.scalar_eq(1.2);
+        let r = a.eq(1.2);
         assert_eq!(r.array(), [[false, true], [false, false]]);
     }
 
@@ -366,7 +389,7 @@ mod tests {
         let a = dev
             .tensor([[0.0, 1.2], [3.4, -5.6]])
             .to_dtype::<TestDtype>();
-        let r = a.scalar_ne(1.2);
+        let r = a.ne(1.2);
         assert_eq!(r.array(), [[true, false], [true, true]]);
     }
 
@@ -397,7 +420,7 @@ mod tests {
         let a = dev
             .tensor([[0.0, 1.2], [3.4, -5.6]])
             .to_dtype::<TestDtype>();
-        let r = a.scalar_gt(1.2);
+        let r = a.gt(1.2);
         assert_eq!(r.array(), [[false, false], [true, false]]);
     }
 
@@ -428,7 +451,7 @@ mod tests {
         let a = dev
             .tensor([[0.0, 1.2], [3.4, -5.6]])
             .to_dtype::<TestDtype>();
-        let r = a.scalar_ge(1.2);
+        let r = a.ge(1.2);
         assert_eq!(r.array(), [[false, true], [true, false]]);
     }
 
@@ -459,7 +482,7 @@ mod tests {
         let a = dev
             .tensor([[0.0, 1.2], [3.4, -5.6]])
             .to_dtype::<TestDtype>();
-        let r = a.scalar_lt(1.2);
+        let r = a.lt(1.2);
         assert_eq!(r.array(), [[true, false], [false, true]]);
     }
 
@@ -490,7 +513,7 @@ mod tests {
         let a = dev
             .tensor([[0.0, 1.2], [3.4, -5.6]])
             .to_dtype::<TestDtype>();
-        let r = a.scalar_le(1.2);
+        let r = a.le(1.2);
         assert_eq!(r.array(), [[true, true], [false, true]]);
     }
 
