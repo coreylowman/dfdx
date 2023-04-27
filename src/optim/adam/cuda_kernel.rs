@@ -7,18 +7,18 @@ use crate::{
 use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync};
 
 #[repr(C)]
-struct CudaAdamConfig<E> {
-    lr: E,
-    beta1: E,
-    beta2: E,
-    eps: E,
+struct CudaAdamConfig {
+    lr: f64,
+    beta1: f64,
+    beta2: f64,
+    eps: f64,
     weight_decay_type: WeightDecayType,
-    weight_decay: E,
+    weight_decay: f64,
 }
 
-unsafe impl<E: DeviceRepr> DeviceRepr for CudaAdamConfig<E> {}
+unsafe impl DeviceRepr for CudaAdamConfig {}
 
-fn adam_config_to_cuda<E: Default + Copy>(config: &super::AdamConfig<E>) -> CudaAdamConfig<E> {
+fn adam_config_to_cuda(config: &super::AdamConfig) -> CudaAdamConfig {
     let (weight_decay_type, weight_decay) = weight_decay_to_cuda(config.weight_decay);
 
     CudaAdamConfig {
@@ -61,7 +61,7 @@ where
     fn update(
         &self,
         t: i32,
-        cfg: &super::AdamConfig<E>,
+        cfg: &super::AdamConfig,
         param: &mut Self::Vec<E>,
         moment1: &mut Self::Vec<E>,
         moment2: &mut Self::Vec<E>,

@@ -66,21 +66,21 @@ use super::optimizer::*;
 /// };
 /// ```
 #[derive(Debug, Clone, Copy)]
-pub struct SgdConfig<E> {
+pub struct SgdConfig {
     /// Learning rate. Defaults to `1e-2`
-    pub lr: E,
+    pub lr: f64,
 
     /// Optional momentum. Defaults to `None`.
-    pub momentum: Option<Momentum<E>>,
+    pub momentum: Option<Momentum>,
 
     /// Optional weight decay. Defaults to `None`.
-    pub weight_decay: Option<WeightDecay<E>>,
+    pub weight_decay: Option<WeightDecay>,
 }
 
-impl<E: Dtype> Default for SgdConfig<E> {
+impl Default for SgdConfig {
     fn default() -> Self {
         Self {
-            lr: E::from_f32(1e-2).unwrap(),
+            lr: 1e-2,
             momentum: None,
             weight_decay: None,
         }
@@ -114,7 +114,7 @@ impl<E: Dtype> Default for SgdConfig<E> {
 #[derive(Debug)]
 pub struct Sgd<M, E: Dtype, D: DeviceStorage> {
     /// Hyperparameter configuration
-    pub cfg: SgdConfig<E>,
+    pub cfg: SgdConfig,
 
     velocity: Gradients<E, D>,
 
@@ -123,7 +123,7 @@ pub struct Sgd<M, E: Dtype, D: DeviceStorage> {
 
 impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
     /// Constructs using hyperparameters from `cfg`
-    pub fn new(_model: &M, cfg: SgdConfig<E>) -> Self {
+    pub fn new(_model: &M, cfg: SgdConfig) -> Self {
         Self {
             cfg,
             velocity: Gradients::leaky(),
@@ -135,7 +135,7 @@ impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
 pub trait SgdKernel<E: Dtype>: DeviceStorage {
     fn update(
         &self,
-        cfg: &SgdConfig<E>,
+        cfg: &SgdConfig,
         param: &mut Self::Vec<E>,
         velocity: &mut Self::Vec<E>,
         grad: &Self::Vec<E>,
@@ -392,22 +392,21 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         // adding l2_weight_decay should be equivalent to adding an L2 term to the loss
-        let weight_decay: TestDtype = NumCast::from(1e-1).unwrap();
-        let two: TestDtype = NumCast::from(2.0).unwrap();
+
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut sgd_l2 = Sgd::new(
             &t,
             SgdConfig {
-                lr: NumCast::from(1e-2).unwrap(),
-                momentum: Some(Momentum::Classic(NumCast::from(0.5).unwrap())),
-                weight_decay: Some(WeightDecay::L2(weight_decay)),
+                lr: 1e-2,
+                momentum: Some(Momentum::Classic(0.5)),
+                weight_decay: Some(WeightDecay::L2(1e-1)),
             },
         );
         let mut sgd = Sgd::new(
             &t,
             SgdConfig {
-                lr: NumCast::from(1e-2).unwrap(),
-                momentum: Some(Momentum::Classic(NumCast::from(0.5).unwrap())),
+                lr: 1e-2,
+                momentum: Some(Momentum::Classic(0.5)),
                 weight_decay: None,
             },
         );
@@ -432,7 +431,8 @@ mod tests {
         t = dev.ones();
         for e in expected.iter() {
             let normal_loss = (t.leaky_trace() * rate.clone()).mean();
-            let l2_loss = t.leaky_trace().powi(2).sum() * (weight_decay / two);
+            let scale: TestDtype = NumCast::from(1e-1 / 2.0).unwrap();
+            let l2_loss = t.leaky_trace().powi(2).sum() * scale;
             let loss = l2_loss + normal_loss;
 
             let gradients = loss.backward();
