@@ -71,8 +71,8 @@ mod tests {
     fn test_residual_reset() {
         let dev: TestDevice = Default::default();
         let model = dev.build_module::<Residual<Linear<2, 5>>, TestDtype>();
-        assert_ne!(model.0.weight.array(), [[Default::default(); 2]; 5]);
-        assert_ne!(model.0.bias.array(), [Default::default(); 5]);
+        assert_ne!(model.0.weight.array(), [[TestDtype::default(); 2]; 5]);
+        assert_ne!(model.0.bias.array(), [TestDtype::default(); 5]);
     }
 
     #[test]

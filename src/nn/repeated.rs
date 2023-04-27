@@ -97,8 +97,11 @@ mod tests {
         let m = dev.build_module::<Model, TestDtype>();
 
         for i in 0..5 {
-            assert_ne!(m.modules[i].0.weight.array(), [[Default::default(); 3]; 3]);
-            assert_ne!(m.modules[i].0.bias.array(), [Default::default(); 3]);
+            assert_ne!(
+                m.modules[i].0.weight.array(),
+                [[TestDtype::default(); 3]; 3]
+            );
+            assert_ne!(m.modules[i].0.bias.array(), [TestDtype::default(); 3]);
         }
     }
 
