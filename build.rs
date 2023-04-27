@@ -45,7 +45,8 @@ mod cuda {
         let env_vars = env_vars
             .into_iter()
             .map(std::env::var)
-            .filter_map(Result::ok);
+            .filter_map(Result::ok)
+            .map(Into::<PathBuf>::into);
 
         let roots = [
             "/usr",
@@ -64,7 +65,6 @@ mod cuda {
         #[cfg(not(feature = "ci-check"))]
         let root = env_vars
             .chain(roots)
-            .map(Into::<PathBuf>::into)
             .find(|path| path.join("include").join("cuda.h").is_file())
             .unwrap();
 

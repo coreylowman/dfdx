@@ -1,56 +1,5 @@
 #include "cuda_utils.cuh"
 
-__device__ __forceinline__ __half atomicMaxf(__half* address, __half val) {
-#if __CUDA_ARCH__ < 700
-    // On older GPUs we do not have access to atomicCAS for shorts, so we have to do some trickery.
-    // Solution adapted from https://github.com/torch/cutorch/blob/master/lib/THC/THCAtomics.cuh#L96-L119
-    unsigned int *address_as_ui = (unsigned int *) ((char *)address - ((size_t)address & 2));
-    unsigned int old = *address_as_ui;
-    unsigned int assumed;
-    bool unaligned = (size_t) address & 2;
-    do {
-        assumed = old;
-        unsigned int hmax;
-        hmax = unaligned ? (old >> 16) : (old & 0xffff);
-        hmax = __half_as_ushort(__hmax_nan(val, __ushort_as_half(hmax))); 
-        old = atomicCAS(address_as_ui, assumed,
-            unaligned ? (old & 0xffff) | (hmax << 16) : (old & 0xffff0000) | hmax
-        );
-
-   } while (assumed != old);
-   return __ushort_as_half(unaligned ? (old >> 16) : (old & 0xffff));
-#else
-    // Based on https://docs.nvidia.com/cuda/cuda-c-programming-guide/#atomic-functions
-    unsigned short int* casted_address = (unsigned short int*)address;
-    unsigned short int old = *casted_address;
-    unsigned short int assumed;
-    do {
-        assumed = old;
-        old = atomicCAS(casted_address, assumed, __half_as_ushort(__hmax_nan(val, __ushort_as_half(assumed))));
-    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
-    } while (assumed != old);
-    return __ushort_as_half(old);
-#endif
-}
-
-// atomicMax is not implemented for floats,
-// solution copied https://stackoverflow.com/questions/17399119/how-do-i-use-atomicmax-on-floating-point-values-in-cuda
-__device__ __forceinline__ float atomicMaxf(float * addr, float value) {
-    if (signbit(value)) {
-        return __uint_as_float(atomicMin((unsigned int *)addr, __float_as_uint(value)));        
-    } else {
-        return __int_as_float(atomicMax((int *)addr, __float_as_int(value)));
-    }
-}
-
-__device__ __forceinline__ double atomicMaxf(double * addr, double value) {
-    if (signbit(value)) {
-        return __longlong_as_double(atomicMin((unsigned long long int *)addr, __double_as_longlong(value)));
-    } else {
-        return __longlong_as_double(atomicMax((long long int *)addr, __double_as_longlong(value)));
-    }
-}
-
 // Efficiently computes the max of each chunk in "data" of size chunk_len, and
 // stores the maximums in out[i / chunk_len]
 template<typename T>
