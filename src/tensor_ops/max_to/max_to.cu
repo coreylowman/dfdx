@@ -1,7 +1,26 @@
 #include "cuda_utils.cuh"
 
-// Based on https://docs.nvidia.com/cuda/cuda-c-programming-guide/#atomic-functions
 __device__ __forceinline__ __half atomicMaxf(__half* address, __half val) {
+#if __CUDA_ARCH__ < 700
+    // On older GPUs we do not have access to atomicCAS for shorts, so we have to do some trickery.
+    // Solution adapted from https://github.com/torch/cutorch/blob/master/lib/THC/THCAtomics.cuh#L96-L119
+    unsigned int *address_as_ui = (unsigned int *) ((char *)address - ((size_t)address & 2));
+    unsigned int old = *address_as_ui;
+    unsigned int assumed;
+    bool unaligned = (size_t) address & 2;
+    do {
+        assumed = old;
+        unsigned int hmax;
+        hmax = unaligned ? (old >> 16) : (old & 0xffff);
+        hmax = __half_as_ushort(__hmax_nan(val, __ushort_as_half(hmax))); 
+        old = atomicCAS(address_as_ui, assumed,
+            unaligned ? (old & 0xffff) | (hmax << 16) : (old & 0xffff0000) | hmax
+        );
+
+   } while (assumed != old);
+   return __ushort_as_half(unaligned ? (old >> 16) : (old & 0xffff));
+#else
+    // Based on https://docs.nvidia.com/cuda/cuda-c-programming-guide/#atomic-functions
     unsigned short int* casted_address = (unsigned short int*)address;
     unsigned short int old = *casted_address;
     unsigned short int assumed;
@@ -11,6 +30,7 @@ __device__ __forceinline__ __half atomicMaxf(__half* address, __half val) {
     // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
     } while (assumed != old);
     return __ushort_as_half(old);
+#endif
 }
 
 // atomicMax is not implemented for floats,
