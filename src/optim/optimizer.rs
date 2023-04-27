@@ -4,14 +4,14 @@ use crate::{
 };
 
 /// L2 and decoupled regularization methods
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WeightDecay<E> {
+#[derive(Debug, Clone, Copy)]
+pub enum WeightDecay {
     /// Weight decay applied to the gradients before any momentum updates. Equivalent to L2 regularization.
-    L2(E),
+    L2(f64),
 
     /// Weight decay applied after any momentum updates, without modifying the gradients.
     /// See [Decoupled Weight Decay Regularization](https://arxiv.org/abs/1711.05101)
-    Decoupled(E),
+    Decoupled(f64),
 }
 
 /// Used to communicate the "WeightDecay" enum to cuda kernels
@@ -25,7 +25,7 @@ pub(super) enum WeightDecayType {
 }
 
 #[cfg(feature = "cuda")]
-pub(super) fn weight_decay_to_cuda<E: Default>(wd: Option<WeightDecay<E>>) -> (WeightDecayType, E) {
+pub(super) fn weight_decay_to_cuda(wd: Option<WeightDecay>) -> (WeightDecayType, f64) {
     match wd {
         None => (WeightDecayType::None, Default::default()),
         Some(WeightDecay::L2(x)) => (WeightDecayType::L2, x),
@@ -34,13 +34,13 @@ pub(super) fn weight_decay_to_cuda<E: Default>(wd: Option<WeightDecay<E>>) -> (W
 }
 
 /// Momentum used for [super::Sgd] and others
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Momentum<E> {
+#[derive(Debug, Clone, Copy)]
+pub enum Momentum {
     /// Momentum that is applied to the velocity of a parameter directly.
-    Classic(E),
+    Classic(f64),
 
     /// Momentum that is applied to both velocity and gradients. See [super::Sgd] nesterov paper for more.
-    Nesterov(E),
+    Nesterov(f64),
 }
 
 /// Used to communicate the "Momentum" enum to cuda kernels
@@ -54,7 +54,7 @@ pub(super) enum MomentumType {
 }
 
 #[cfg(feature = "cuda")]
-pub(super) fn momentum_to_cuda<E: Default>(wd: Option<Momentum<E>>) -> (MomentumType, E) {
+pub(super) fn momentum_to_cuda(wd: Option<Momentum>) -> (MomentumType, f64) {
     match wd {
         None => (MomentumType::None, Default::default()),
         Some(Momentum::Classic(x)) => (MomentumType::Classic, x),

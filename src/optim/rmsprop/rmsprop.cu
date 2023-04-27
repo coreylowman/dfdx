@@ -6,21 +6,20 @@ enum WeightDecayType {
     Decoupled
 };
 
-template<typename T>
 struct RMSpropConfig {
-    T lr;
-    T alpha;
-    T eps;
+    double lr;
+    double alpha;
+    double eps;
     bool centered;
     bool has_momentum;
-    T momentum;
+    double momentum;
     WeightDecayType weight_decay_type;
-    T weight_decay;
+    double weight_decay;
 };
 
 template<typename T>
 __device__ void rmsprop_update(
-    const RMSpropConfig<T> cfg,
+    const RMSpropConfig cfg,
     const size_t numel,
     T* param,
     T* momentum,
@@ -76,76 +75,9 @@ __device__ void rmsprop_update(
     param[i] -= g;
 }
 
-__device__ void rmsprop_update(
-    const RMSpropConfig<__half> cfg,
-    const size_t numel,
-    __half* param,
-    __half* momentum,
-    __half* square_avg,
-    __half* grad_avg,
-    const __half* grad
-) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) {
-        return;
-    }
-
-    RMSpropConfig<float> cfg_f32 = RMSpropConfig<float> {
-        cfg.lr,
-        cfg.alpha,
-        cfg.eps,
-        cfg.centered,
-        cfg.has_momentum,
-        cfg.momentum,
-        cfg.weight_decay_type,
-        cfg.weight_decay,
-    };
-
-    float p = param[i];
-    float g = grad[i];
-    float s_avg = square_avg[i];
-    float g_avg = grad_avg[i];
-    float m = momentum[i];
-    float one = 1.0;
-
-    if (cfg_f32.weight_decay_type == L2) {
-        g += cfg_f32.weight_decay * p;
-    }
-
-    s_avg += (one - cfg_f32.alpha) * (g * g - s_avg);
-
-    float avg;
-
-    if (cfg_f32.centered) {
-        // ga = a * ga + (1 - a) * g
-        g_avg += (one - cfg_f32.alpha) * (g - g_avg);
-        avg = sqrtg(s_avg - g_avg * g_avg + cfg_f32.eps);
-    } else {
-        avg = sqrtg(s_avg + cfg_f32.eps);
-    };
-
-    g /= avg;
-
-    if (cfg_f32.has_momentum) {
-        m = m * cfg_f32.momentum + g;
-        g = m * cfg_f32.lr;
-    } else {
-        g *= cfg_f32.lr;
-    }
-
-    if (cfg_f32.weight_decay_type == Decoupled) {
-        g += cfg_f32.weight_decay * cfg_f32.lr * p;
-    }
-
-    square_avg[i] = __float2half(s_avg);
-    grad_avg[i] = __float2half(g_avg);
-    momentum[i] = __float2half(m);
-    param[i] -= __float2half(g);
-}
-
 #define RMSPROP(TYPENAME, FN) \
 extern "C" __global__ void FN( \
-    const RMSpropConfig<TYPENAME> cfg, \
+    const RMSpropConfig cfg, \
     const size_t numel, \
     TYPENAME* param, \
     TYPENAME* momentum, \

@@ -12,18 +12,17 @@ enum WeightDecayType {
     Decoupled
 };
 
-template<typename T>
 struct SgdConfig {
-    T lr;
+    double lr;
     MomentumType momentum_type;
-    T momentum;
+    double momentum;
     WeightDecayType weight_decay_type;
-    T weight_decay;
+    double weight_decay;
 };
 
 template<typename T>
 __device__ void sgd_update(
-    const SgdConfig<T> cfg,
+    const SgdConfig cfg,
     const size_t numel,
     T* param,
     T* velocity,
@@ -63,7 +62,7 @@ __device__ void sgd_update(
 
 #define SGD(TYPENAME, FN) \
 extern "C" __global__ void FN( \
-    const SgdConfig<TYPENAME> cfg, \
+    const SgdConfig cfg, \
     const size_t numel, \
     TYPENAME* param, \
     TYPENAME* velocity, \

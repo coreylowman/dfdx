@@ -27,26 +27,26 @@ use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
 /// };
 /// ```
 #[derive(Debug, Clone, Copy)]
-pub struct AdamConfig<E> {
+pub struct AdamConfig {
     /// Learning rate. Defaults to `1e-3`.
-    pub lr: E,
+    pub lr: f64,
 
     /// Betas from Adam paper. Defaults to `[0.9, 0.999]`.
-    pub betas: [E; 2],
+    pub betas: [f64; 2],
 
     /// Epsilon for numerical stability. Defaults to `1e-8`.
-    pub eps: E,
+    pub eps: f64,
 
     /// Optional weight decay. Defaults to `None`.
-    pub weight_decay: Option<WeightDecay<E>>,
+    pub weight_decay: Option<WeightDecay>,
 }
 
-impl<E: Dtype> Default for AdamConfig<E> {
+impl Default for AdamConfig {
     fn default() -> Self {
         Self {
-            lr: E::from_f32(1e-3).unwrap(),
-            betas: [E::from_f32(0.9).unwrap(), E::from_f32(0.999).unwrap()],
-            eps: E::from_f32(1e-8).unwrap(),
+            lr: 1e-3,
+            betas: [0.9, 0.999],
+            eps: 1e-8,
             weight_decay: None,
         }
     }
@@ -73,7 +73,7 @@ impl<E: Dtype> Default for AdamConfig<E> {
 #[derive(Debug)]
 pub struct Adam<M, E: Dtype, D: DeviceStorage> {
     /// Hyperparameter configuration
-    pub cfg: AdamConfig<E>,
+    pub cfg: AdamConfig,
 
     t: i32,
     moment1: Gradients<E, D>,
@@ -84,7 +84,7 @@ pub struct Adam<M, E: Dtype, D: DeviceStorage> {
 
 impl<M, E: Dtype, D: DeviceStorage> Adam<M, E, D> {
     /// Constructs using hyperparameters from `cfg`.
-    pub fn new(_model: &M, cfg: AdamConfig<E>) -> Self {
+    pub fn new(_model: &M, cfg: AdamConfig) -> Self {
         Self {
             cfg,
             t: 0,
@@ -99,7 +99,7 @@ pub trait AdamKernel<E: Dtype>: DeviceStorage {
     fn update(
         &self,
         t: i32,
-        cfg: &AdamConfig<E>,
+        cfg: &AdamConfig,
         param: &mut Self::Vec<E>,
         moment1: &mut Self::Vec<E>,
         moment2: &mut Self::Vec<E>,

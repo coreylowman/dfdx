@@ -8,17 +8,17 @@ use crate::{
 use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync};
 
 #[repr(C)]
-struct CudaSgdConfig<E> {
-    lr: E,
+struct CudaSgdConfig {
+    lr: f64,
     momentum_type: MomentumType,
-    momentum: E,
+    momentum: f64,
     weight_decay_type: WeightDecayType,
-    weight_decay: E,
+    weight_decay: f64,
 }
 
-unsafe impl<E: DeviceRepr> DeviceRepr for CudaSgdConfig<E> {}
+unsafe impl DeviceRepr for CudaSgdConfig {}
 
-fn sgd_config_to_cuda<E: Default + Copy>(config: &SgdConfig<E>) -> CudaSgdConfig<E> {
+fn sgd_config_to_cuda(config: &SgdConfig) -> CudaSgdConfig {
     let (momentum_type, momentum) = momentum_to_cuda(config.momentum);
     let (weight_decay_type, weight_decay) = weight_decay_to_cuda(config.weight_decay);
 
@@ -60,7 +60,7 @@ where
 {
     fn update(
         &self,
-        cfg: &SgdConfig<E>,
+        cfg: &SgdConfig,
         param: &mut Self::Vec<E>,
         velocity: &mut Self::Vec<E>,
         grad: &Self::Vec<E>,
