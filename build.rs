@@ -56,6 +56,10 @@ mod cuda {
         ];
         let roots = roots.into_iter().map(Into::into);
 
+        #[cfg(feature = "ci-check")]
+        let root = "ci";
+
+        #[cfg(not(feature = "ci-check"))]
         let root = env_vars
             .chain(roots)
             .map(Into::<PathBuf>::into)
