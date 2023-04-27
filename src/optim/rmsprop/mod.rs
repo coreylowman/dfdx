@@ -203,9 +203,9 @@ mod tests {
     #[test]
     fn test_rmsprop_default() {
         let cfg = RMSpropConfig {
-            lr: NumCast::from(1e-2).unwrap(),
-            alpha: NumCast::from(0.9).unwrap(),
-            eps: NumCast::from(1e-8).unwrap(),
+            lr: 1e-2,
+            alpha: 0.9,
+            eps: 1e-8,
             momentum: None,
             centered: false,
             weight_decay: None,
@@ -223,10 +223,10 @@ mod tests {
     #[test]
     fn test_rmsprop_momentum() {
         let cfg = RMSpropConfig {
-            lr: NumCast::from(1e-2).unwrap(),
-            alpha: NumCast::from(0.9).unwrap(),
-            eps: NumCast::from(1e-8).unwrap(),
-            momentum: Some(NumCast::from(0.9).unwrap()),
+            lr: 1e-2,
+            alpha: 0.9,
+            eps: 1e-8,
+            momentum: Some(0.9),
             centered: false,
             weight_decay: None,
         };
@@ -243,9 +243,9 @@ mod tests {
     #[test]
     fn test_rmsprop_diff_alpha() {
         let cfg = RMSpropConfig {
-            lr: NumCast::from(1e-2).unwrap(),
-            alpha: NumCast::from(0.5).unwrap(),
-            eps: NumCast::from(1e-8).unwrap(),
+            lr: 1e-2,
+            alpha: 0.5,
+            eps: 1e-8,
             momentum: None,
             centered: false,
             weight_decay: None,
@@ -263,9 +263,9 @@ mod tests {
     #[test]
     fn test_rmsprop_diff_eps() {
         let cfg = RMSpropConfig {
-            lr: NumCast::from(1e-2).unwrap(),
-            alpha: NumCast::from(0.9).unwrap(),
-            eps: NumCast::from(1e-2).unwrap(),
+            lr: 1e-2,
+            alpha: 0.9,
+            eps: 1e-2,
             momentum: None,
             centered: false,
             weight_decay: None,
@@ -283,9 +283,9 @@ mod tests {
     #[test]
     fn test_rmsprop_centered() {
         let cfg = RMSpropConfig {
-            lr: NumCast::from(1e-2).unwrap(),
-            alpha: NumCast::from(0.9).unwrap(),
-            eps: NumCast::from(1e-8).unwrap(),
+            lr: 1e-2,
+            alpha: 0.9,
+            eps: 1e-8,
             momentum: None,
             centered: true,
             weight_decay: None,
@@ -303,7 +303,7 @@ mod tests {
     #[test]
     fn test_rmsprop_l2_weight_decay() {
         let cfg = RMSpropConfig {
-            weight_decay: Some(WeightDecay::L2(NumCast::from(0.5).unwrap())),
+            weight_decay: Some(WeightDecay::L2(0.5)),
             ..Default::default()
         };
         const EXPECTED: [[f64; 5]; 5] = [
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn test_rmsprop_decoupled_weight_decay() {
         let cfg = RMSpropConfig {
-            weight_decay: Some(WeightDecay::Decoupled(NumCast::from(0.5).unwrap())),
+            weight_decay: Some(WeightDecay::Decoupled(0.5)),
             ..Default::default()
         };
         const EXPECTED: [[f64; 5]; 5] = [

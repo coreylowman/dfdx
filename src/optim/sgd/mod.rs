@@ -206,7 +206,7 @@ mod tests {
         let mut sgd = Sgd::new(
             &pred,
             SgdConfig {
-                lr: NumCast::from(1.0).unwrap(),
+                lr: 1.0,
                 momentum: None,
                 weight_decay: None,
             },
@@ -254,8 +254,8 @@ mod tests {
         let mut sgd = Sgd::new(
             &t,
             SgdConfig {
-                lr: NumCast::from(1e-2).unwrap(),
-                momentum: Some(Momentum::Classic(NumCast::from(0.5).unwrap())),
+                lr: 1e-2,
+                momentum: Some(Momentum::Classic(0.5)),
                 weight_decay: None,
             },
         );
@@ -286,8 +286,8 @@ mod tests {
         let mut sgd = Sgd::new(
             &t,
             SgdConfig {
-                lr: NumCast::from(1e-2).unwrap(),
-                momentum: Some(Momentum::Nesterov(NumCast::from(0.5).unwrap())),
+                lr: 1e-2,
+                momentum: Some(Momentum::Nesterov(0.5)),
                 weight_decay: None,
             },
         );
@@ -319,17 +319,17 @@ mod tests {
         let mut sgd_l2 = Sgd::new(
             &t,
             SgdConfig {
-                lr: NumCast::from(1e-2).unwrap(),
+                lr: 1e-2,
                 momentum: None,
-                weight_decay: Some(WeightDecay::L2(NumCast::from(1e-1).unwrap())),
+                weight_decay: Some(WeightDecay::L2(1e-1)),
             },
         );
         let mut sgd_decoupled = Sgd::new(
             &t,
             SgdConfig {
-                lr: NumCast::from(1e-2).unwrap(),
+                lr: 1e-2,
                 momentum: None,
-                weight_decay: Some(WeightDecay::Decoupled(NumCast::from(1e-1).unwrap())),
+                weight_decay: Some(WeightDecay::Decoupled(1e-1)),
             },
         );
 
@@ -364,9 +364,9 @@ mod tests {
         let mut sgd = Sgd::new(
             &t,
             SgdConfig {
-                lr: NumCast::from(1e-2).unwrap(),
-                momentum: Some(Momentum::Classic(NumCast::from(0.5).unwrap())),
-                weight_decay: Some(WeightDecay::Decoupled(NumCast::from(1e-1).unwrap())),
+                lr: 1e-2,
+                momentum: Some(Momentum::Classic(0.5)),
+                weight_decay: Some(WeightDecay::Decoupled(1e-1)),
             },
         );
 

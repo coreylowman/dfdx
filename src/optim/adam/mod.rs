@@ -203,9 +203,9 @@ mod tests {
         let mut opt = Adam::new(
             &t,
             AdamConfig {
-                lr: NumCast::from(1e-3).unwrap(),
-                betas: [0.5, 0.25].map(NumCast::from).map(Option::unwrap),
-                eps: NumCast::from(1e-8).unwrap(),
+                lr: 1e-3,
+                betas: [0.5, 0.25],
+                eps: 1e-8,
                 weight_decay: None,
             },
         );
@@ -241,8 +241,8 @@ mod tests {
         let mut opt = Adam::new(
             &t,
             AdamConfig {
-                betas: [0.5, 0.25].map(NumCast::from).map(Option::unwrap),
-                weight_decay: Some(WeightDecay::L2(NumCast::from(1.0).unwrap())),
+                betas: [0.5, 0.25],
+                weight_decay: Some(WeightDecay::L2(1.0)),
                 ..Default::default()
             },
         );
@@ -276,8 +276,8 @@ mod tests {
         let mut opt = Adam::new(
             &t,
             AdamConfig {
-                betas: [0.5, 0.25].map(NumCast::from).map(Option::unwrap),
-                weight_decay: Some(WeightDecay::Decoupled(NumCast::from(1.0).unwrap())),
+                betas: [0.5, 0.25],
+                weight_decay: Some(WeightDecay::Decoupled(1.0)),
                 ..Default::default()
             },
         );
