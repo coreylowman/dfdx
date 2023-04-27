@@ -63,13 +63,11 @@ cuda = ["dep:cudarc", "dep:glob"]
 cudnn = ["cuda", "cudarc?/cudnn"]
 
 f16 = ["dep:half"]
-bf16 = ["dep:half"]
 
 numpy = ["dep:zip", "std"]
 safetensors = ["dep:safetensors", "std", "dep:memmap2"]
 
 test-f16 = ["f16"]
-test-bf16 = ["bf16"]
 test-f64 = []
 test-integrations = []
 ci-check = ["cudarc?/ci-check"]

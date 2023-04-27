@@ -251,23 +251,12 @@ pub(crate) mod tests {
 
     #[cfg(all(feature = "test-f64", feature = "test-f16"))]
     compile_error!("f64 and f16 cannot be tested at the same time");
-    #[cfg(all(feature = "test-f64", feature = "test-bf16"))]
-    compile_error!("f64 and bf16 cannot be tested at the same time");
-    #[cfg(all(feature = "test-f16", feature = "test-bf16"))]
-    compile_error!("f16 and bf16 cannot be tested at the same time");
 
-    #[cfg(all(
-        not(feature = "test-f16"),
-        not(feature = "test-bf16"),
-        not(feature = "test-f64")
-    ))]
+    #[cfg(all(not(feature = "test-f16"), not(feature = "test-f64")))]
     pub type TestDtype = f32;
 
     #[cfg(feature = "test-f16")]
     pub type TestDtype = half::f16;
-
-    #[cfg(feature = "test-bf16")]
-    pub type TestDtype = half::bf16;
 
     #[cfg(feature = "test-f64")]
     pub type TestDtype = f64;
@@ -297,19 +286,6 @@ pub(crate) mod tests {
     impl AssertClose for half::f16 {
         type Elem = Self;
         const DEFAULT_TOLERANCE: Self::Elem = half::f16::from_f32_const(1e-2);
-        fn get_far_pair(&self, rhs: &Self, tolerance: Self) -> Option<(Self, Self)> {
-            if num_traits::Float::abs(self - rhs) > tolerance {
-                Some((*self, *rhs))
-            } else {
-                None
-            }
-        }
-    }
-
-    #[cfg(feature = "bf16")]
-    impl AssertClose for half::bf16 {
-        type Elem = Self;
-        const DEFAULT_TOLERANCE: Self::Elem = half::bf16::from_f32_const(1e-3);
         fn get_far_pair(&self, rhs: &Self, tolerance: Self) -> Option<(Self, Self)> {
             if num_traits::Float::abs(self - rhs) > tolerance {
                 Some((*self, *rhs))

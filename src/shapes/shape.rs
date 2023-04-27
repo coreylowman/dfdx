@@ -49,8 +49,6 @@ unit!(i128, 1);
 unit!(bool, true);
 #[cfg(feature = "f16")]
 unit!(half::f16, half::f16::ONE);
-#[cfg(feature = "bf16")]
-unit!(half::bf16, half::bf16::ONE);
 
 /// Represents something that has a [Unit].
 pub trait HasUnitType {
@@ -91,8 +89,6 @@ impl Dtype for u128 {}
 impl Dtype for usize {}
 #[cfg(feature = "f16")]
 impl Dtype for half::f16 {}
-#[cfg(feature = "bf16")]
-impl Dtype for half::bf16 {}
 
 /// Represents something that has a [Dtype].
 pub trait HasDtype {

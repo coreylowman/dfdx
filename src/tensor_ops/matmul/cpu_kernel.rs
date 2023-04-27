@@ -69,22 +69,6 @@ impl MatMulImpl<half::f16> for Cpu {
     }
 }
 
-#[cfg(feature = "bf16")]
-impl MatMulImpl<half::bf16> for Cpu {
-    #[inline]
-    fn matmul<M: Dim, K: Dim, N: Dim>(
-        (m, k, n): (M, K, N),
-        ap: *const half::bf16,
-        a_strides: [usize; 2],
-        bp: *const half::bf16,
-        b_strides: [usize; 2],
-        cp: *mut half::bf16,
-        c_strides: [usize; 2],
-    ) {
-        naive_gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
-    }
-}
-
 impl MatMulImpl<f32> for Cpu {
     #[inline]
     fn matmul<M: Dim, K: Dim, N: Dim>(

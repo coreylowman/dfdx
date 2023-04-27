@@ -239,17 +239,6 @@ macro_rules! impl_cmp_kernel_op {
             }
         }
 
-        #[cfg(feature = "bf16")]
-        impl<S: Shape, D: ScalarCmpKernel<$KernelOp, half::bf16>, T: Tape<half::bf16, D>>
-            $TraitName<f32> for Tensor<S, half::bf16, D, T>
-        {
-            type Output = Tensor<S, bool, D, NoneTape>;
-            #[doc = $doc]
-            fn $TryFnName(&self, other: f32) -> Result<Self::Output, D::Err> {
-                try_scalar_cmp_op(self, half::bf16::from_f32(other))
-            }
-        }
-
         impl<S: Shape, E: Unit, D: ScalarCmpKernel<$KernelOp, E>, T: Tape<E, D>>
             Tensor<S, E, D, T>
         {
