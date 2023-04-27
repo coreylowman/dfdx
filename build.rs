@@ -41,6 +41,7 @@ mod cuda {
             "CUDA_TOOLKIT_ROOT_DIR",
             "CUDNN_LIB",
         ];
+        #[allow(unused)]
         let env_vars = env_vars
             .into_iter()
             .map(std::env::var)
@@ -54,10 +55,11 @@ mod cuda {
             "C:/Program Files/NVIDIA GPU Computing Toolkit",
             "C:/CUDA",
         ];
-        let roots = roots.into_iter().map(Into::into);
+        #[allow(unused)]
+        let roots = roots.into_iter().map(Into::<PathBuf>::into);
 
         #[cfg(feature = "ci-check")]
-        let root = "ci";
+        let root: PathBuf = "ci".into();
 
         #[cfg(not(feature = "ci-check"))]
         let root = env_vars
