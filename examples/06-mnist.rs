@@ -76,7 +76,7 @@ fn main() {
     let mut rng = StdRng::seed_from_u64(0);
 
     // initialize model, gradients, and optimizer
-    let mut model = dev.build_module::<Mlp, half::f16>();
+    let mut model = dev.build_module::<Mlp, f32>();
     let mut grads = model.alloc_grads();
     let mut opt = Adam::new(&model, Default::default());
 
@@ -88,14 +88,13 @@ fn main() {
         let mut one_hotted = [0.0; 10];
         one_hotted[lbl] = 1.0;
         (
-            dev.tensor_from_vec(img, (Const::<784>,))
-                .to_dtype::<half::f16>(),
-            dev.tensor(one_hotted).to_dtype::<half::f16>(),
+            dev.tensor_from_vec(img, (Const::<784>,)),
+            dev.tensor(one_hotted),
         )
     };
 
     for i_epoch in 0..10 {
-        let mut total_epoch_loss: f32 = 0.0;
+        let mut total_epoch_loss = 0.0;
         let mut num_batches = 0;
         let start = Instant::now();
         for (img, lbl) in dataset
@@ -109,7 +108,7 @@ fn main() {
             let logits = model.forward_mut(img.traced(grads));
             let loss = cross_entropy_with_logits_loss(logits, lbl);
 
-            total_epoch_loss += loss.array().to_f32();
+            total_epoch_loss += loss.array();
             num_batches += 1;
 
             grads = loss.backward();
