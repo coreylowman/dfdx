@@ -5,6 +5,10 @@ struct ScalarMulKernelOp {
     F scalar;
 };
 
+UNARY_OP(__half, smul_fwd_f16, smul_bwd_f16, ScalarMulKernelOp<__half>,
+    x * op.scalar,
+    op.scalar);
+
 UNARY_OP(float, smul_fwd_f32, smul_bwd_f32, ScalarMulKernelOp<float>,
     x * op.scalar,
     op.scalar);

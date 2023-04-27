@@ -4,7 +4,7 @@ use crate::{
 };
 use cudarc::{
     driver::{DeviceSlice, LaunchAsync},
-    nvrtc::compile_ptx,
+    nvrtc::{compile_ptx_with_opts, CompileOptions},
     types::CudaTypeName,
 };
 
@@ -14,6 +14,7 @@ typedef long int intptr_t;
 #else
 typedef int intptr_t;
 #endif
+#include \"cuda_fp16.h\"
 extern \"C\" __global__ void kernel(const size_t n, const $Src *inp, $Dst *out) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < n) { out[i] = inp[i]; }
@@ -26,7 +27,12 @@ impl<E1: Unit + CudaTypeName, E2: Unit + CudaTypeName> super::ToDtypeKernel<E1, 
 
         if !cuda.dev.has_func(&module, "kernel") {
             let src = KERNEL.replace("$Src", E1::NAME).replace("$Dst", E2::NAME);
-            let ptx = compile_ptx(src).unwrap();
+            let opts = CompileOptions {
+                arch: Some(env!("CUDA_COMPUTE_CAP")),
+                include_paths: vec![env!("CUDA_INCLUDE_DIR").to_string()],
+                ..Default::default()
+            };
+            let ptx = compile_ptx_with_opts(src, opts).unwrap();
             cuda.dev.load_ptx(ptx, &module, &["kernel"])?;
         }
 

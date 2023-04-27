@@ -1,23 +1,5 @@
 #include "cuda_utils.cuh"
 
-// atomicMax is not implemented for floats,
-// solution copied https://stackoverflow.com/questions/17399119/how-do-i-use-atomicmax-on-floating-point-values-in-cuda
-__device__ __forceinline__ float atomicMinf(float * addr, float value) {
-    if (signbit(value)) {
-        return __uint_as_float(atomicMax((unsigned int *)addr, __float_as_uint(value)));
-    } else {
-        return __int_as_float(atomicMin((int *)addr, __float_as_int(value)));
-    }
-}
-
-__device__ __forceinline__ double atomicMinf(double * addr, double value) {
-    if (signbit(value)) {
-        return __longlong_as_double(atomicMax((unsigned long long int *)addr, __double_as_longlong(value)));
-    } else {
-        return __longlong_as_double(atomicMin((long long int *)addr, __double_as_longlong(value)));
-    }
-}
-
 // Efficiently computes the min of each chunk in "data" of size chunk_len, and
 // stores the minimums in out[i / chunk_len]
 template<typename T>
@@ -140,5 +122,6 @@ extern "C" __global__ void BWD( \
     min_to_bwd(numel, num_dims, elems_per_thread, info, inp, grad_inp, out, grad_out); \
 }
 
+MIN(__half, min_to_fwd_f16, min_to_bwd_f16);
 MIN(float, min_to_fwd_f32, min_to_bwd_f32);
 MIN(double, min_to_fwd_f64, min_to_bwd_f64);

@@ -1,5 +1,4 @@
 use crate::{shapes::*, tensor::*, tensor_ops::*};
-use num_traits::FromPrimitive;
 
 use super::{
     batchnorm2d::{infer_fwd, train_fwd},
@@ -66,11 +65,11 @@ pub struct BatchNorm1D<const C: usize, E: Dtype, D: DeviceStorage> {
     /// Spatial variance that is updated during training. Defaults to 1.0
     pub running_var: Tensor<Rank1<C>, E, D>,
     /// Added to variance before taking sqrt for numerical stability. Defaults to 1e-5
-    pub epsilon: E,
+    pub epsilon: f64,
     /// Controls exponential moving average of running stats.Defaults to 0.1
     ///
     /// `running_stat * (1.0 - momentum) + stat * momentum`.
-    pub momentum: E,
+    pub momentum: f64,
 }
 
 impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm1D<C, E, D> {
@@ -206,8 +205,8 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNor
                 bias,
                 running_mean,
                 running_var,
-                epsilon: V::E2::from_f32(1e-5).unwrap(),
-                momentum: V::E2::from_f32(0.1).unwrap(),
+                epsilon: 1e-5,
+                momentum: 0.1,
             },
         )
     }

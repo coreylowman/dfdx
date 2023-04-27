@@ -74,6 +74,25 @@ macro_rules! pool_impl {
     };
 }
 
+#[cfg(feature = "f16")]
+pool_impl!(
+    AvgPool2DKernel<half::f16>,
+    "avg_pool2d_fwd_f16",
+    "avg_pool2d_bwd_f16"
+);
+#[cfg(feature = "f16")]
+pool_impl!(
+    MaxPool2DKernel<half::f16>,
+    "max_pool2d_fwd_f16",
+    "max_pool2d_bwd_f16"
+);
+#[cfg(feature = "f16")]
+pool_impl!(
+    MinPool2DKernel<half::f16>,
+    "min_pool2d_fwd_f16",
+    "min_pool2d_bwd_f16"
+);
+
 pool_impl!(
     AvgPool2DKernel<f32>,
     "avg_pool2d_fwd_f32",

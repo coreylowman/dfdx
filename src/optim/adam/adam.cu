@@ -6,21 +6,20 @@ enum WeightDecayType {
     Decoupled
 };
 
-template<typename T>
 struct AdamConfig {
-    T lr;
-    T beta1;
-    T beta2;
-    T eps;
+    double lr;
+    double beta1;
+    double beta2;
+    double eps;
     WeightDecayType weight_decay_type;
-    T weight_decay;
+    double weight_decay;
 };
 
 template<typename T>
 __device__ void adam_update(
-    const AdamConfig<T> cfg,
+    const AdamConfig cfg,
     const size_t numel,
-    const T t,
+    const int t_int,
     T* param,
     T* moment1,
     T* moment2,
@@ -32,23 +31,31 @@ __device__ void adam_update(
         return;
     }
 
+    T beta1 = cfg.beta1;
+    T beta2 = cfg.beta2;
+    T lr = cfg.lr;
+    T weight_decay = cfg.weight_decay;
+    T eps = cfg.eps;
+
     T p = param[i];
     T g = grad[i];
     T m = moment1[i];
     T v = moment2[i];
+    T one = 1.0;
+    T t = t_int;
 
     if (cfg.weight_decay_type == L2) {
-        g += cfg.weight_decay * p;
+        g += weight_decay * p;
     }
 
-    m = m * cfg.beta1 + g * (1.0 - cfg.beta1);
-    v = v * cfg.beta2 + g * g * (1.0 - cfg.beta2);
-    T m_hat = m * 1.0 / (1.0 - powg(cfg.beta1, t));
-    T v_hat = v * 1.0 / (1.0 - powg(cfg.beta2, t));
-    g = cfg.lr * m_hat / (sqrtg(v_hat) + cfg.eps);
+    m = m * beta1 + g * (one - beta1);
+    v = v * beta2 + g * g * (one - beta2);
+    T m_hat = m * one / (one - powg(beta1, t));
+    T v_hat = v * one / (one - powg(beta2, t));
+    g = lr * m_hat / (sqrtg(v_hat) + eps);
 
     if (cfg.weight_decay_type == Decoupled) {
-        g += cfg.weight_decay * cfg.lr * p;
+        g += (weight_decay * lr) * p;
     }
 
     moment1[i] = m;
@@ -58,9 +65,9 @@ __device__ void adam_update(
 
 #define ADAM(TYPENAME, FN) \
 extern "C" __global__ void FN( \
-    const AdamConfig<TYPENAME> cfg, \
+    const AdamConfig cfg, \
     const size_t numel, \
-    const TYPENAME t, \
+    const int t, \
     TYPENAME* param, \
     TYPENAME* moment1, \
     TYPENAME* moment2, \
@@ -69,5 +76,6 @@ extern "C" __global__ void FN( \
     adam_update(cfg, numel, t, param, moment1, moment2, grad); \
 }
 
+ADAM(__half, adam_update_f16);
 ADAM(float, adam_update_f32);
 ADAM(double, adam_update_f64);

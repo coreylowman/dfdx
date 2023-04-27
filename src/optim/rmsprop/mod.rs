@@ -16,33 +16,33 @@ use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
 
 /// Configuration of hyperparameters for [RMSprop].
 #[derive(Debug, Clone, Copy)]
-pub struct RMSpropConfig<E> {
+pub struct RMSpropConfig {
     /// Learning rate. Defaults to `1e-2`.
-    pub lr: E,
+    pub lr: f64,
 
     /// Value for exponential moving average. Defaults to `0.9`.
-    pub alpha: E,
+    pub alpha: f64,
 
     /// Epsilon for stability. Defaults to `1e-8`.
-    pub eps: E,
+    pub eps: f64,
 
     /// Optional momentum. Defaults to `None`.
-    pub momentum: Option<E>,
+    pub momentum: Option<f64>,
 
     /// Whether the avg should be centered by the grad's avg value.
     /// Defaults to `false`.
     pub centered: bool,
 
     /// Optional weight decay. Defaults to `None`.
-    pub weight_decay: Option<WeightDecay<E>>,
+    pub weight_decay: Option<WeightDecay>,
 }
 
-impl<E: Dtype> Default for RMSpropConfig<E> {
+impl Default for RMSpropConfig {
     fn default() -> Self {
         Self {
-            lr: E::from_f32(1e-2).unwrap(),
-            alpha: E::from_f32(0.9).unwrap(),
-            eps: E::from_f32(1e-8).unwrap(),
+            lr: 1e-2,
+            alpha: 0.9,
+            eps: 1e-8,
             momentum: None,
             centered: false,
             weight_decay: None,
@@ -80,7 +80,7 @@ impl<E: Dtype> Default for RMSpropConfig<E> {
 #[derive(Debug)]
 pub struct RMSprop<M, E: Dtype, D: DeviceStorage> {
     /// Hyperparameter configuration
-    pub cfg: RMSpropConfig<E>,
+    pub cfg: RMSpropConfig,
 
     step: usize,
     momentums: Gradients<E, D>,
@@ -92,7 +92,7 @@ pub struct RMSprop<M, E: Dtype, D: DeviceStorage> {
 
 impl<M, E: Dtype, D: DeviceStorage> RMSprop<M, E, D> {
     /// Constructs using hyperparameters from `cfg`.
-    pub fn new(_model: &M, cfg: RMSpropConfig<E>) -> Self {
+    pub fn new(_model: &M, cfg: RMSpropConfig) -> Self {
         Self {
             cfg,
             step: 0,
@@ -107,7 +107,7 @@ impl<M, E: Dtype, D: DeviceStorage> RMSprop<M, E, D> {
 pub trait RMSpropKernel<E: Dtype>: DeviceStorage {
     fn update(
         &self,
-        cfg: &RMSpropConfig<E>,
+        cfg: &RMSpropConfig,
         param: &mut Self::Vec<E>,
         momentum: &mut Self::Vec<E>,
         square_avg: &mut Self::Vec<E>,
@@ -186,9 +186,11 @@ mod tests {
     use super::*;
     use crate::{shapes::*, tensor_ops::*, tests::*};
 
-    fn test_matches_expected(cfg: RMSpropConfig<TestDtype>, expected: [[f64; 5]; 5]) {
+    fn test_matches_expected(cfg: RMSpropConfig, expected: [[f64; 5]; 5]) {
         let dev: TestDevice = Default::default();
-        let rate: Tensor<_, TestDtype, _> = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
+        let rate = dev
+            .tensor([0.1, 1.0, 2.0, 10.0, 100.0])
+            .to_dtype::<TestDtype>();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut opt = RMSprop::new(&t, cfg);
         for e in expected.iter() {

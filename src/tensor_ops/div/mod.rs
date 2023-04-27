@@ -72,6 +72,17 @@ impl<S: Shape, E: Dtype, D: UnaryKernel<ScalarDivKernelOp<E>, E>, T: Tape<E, D>>
     }
 }
 
+#[cfg(feature = "f16")]
+impl<S: Shape, D: UnaryKernel<ScalarDivKernelOp<half::f16>, half::f16>, T: Tape<half::f16, D>>
+    TryDiv<f32> for Tensor<S, half::f16, D, T>
+{
+    /// See [div]
+    fn try_div(self, rhs: f32) -> Result<Self, Self::Err> {
+        let scalar = half::f16::from_f32(rhs);
+        try_unary_op(ScalarDivKernelOp { scalar }, self)
+    }
+}
+
 impl<S: Shape, E: Dtype, D: DeviceStorage, LhsTape: Tape<E, D>, Rhs> std::ops::Div<Rhs>
     for Tensor<S, E, D, LhsTape>
 where
@@ -94,8 +105,8 @@ mod tests {
     fn test_div_0d() {
         let dev: TestDevice = Default::default();
 
-        let a: Tensor<_, TestDtype, _> = dev.tensor(2.0);
-        let b: Tensor<_, TestDtype, _> = dev.tensor(4.0);
+        let a = dev.tensor(2.0).to_dtype::<TestDtype>();
+        let b = dev.tensor(4.0).to_dtype::<TestDtype>();
 
         let r = b.leaky_trace() / a.clone();
         assert_close_to_literal!(r, 2.0);
@@ -107,8 +118,8 @@ mod tests {
     #[test]
     fn test_div_1d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
-        let b: Tensor<_, TestDtype, _> = dev.tensor([1.0, -1.0, 0.0]);
+        let a = dev.tensor([1.0, 2.0, 3.0]).to_dtype::<TestDtype>();
+        let b = dev.tensor([1.0, -1.0, 0.0]).to_dtype::<TestDtype>();
 
         let r = b.leaky_trace() / a.clone();
         assert_close_to_literal!(r, [1.0, -0.5, 0.0]);
@@ -120,10 +131,12 @@ mod tests {
     #[test]
     fn test_div_2d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> =
-            dev.tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]]);
-        let b: Tensor<_, TestDtype, _> =
-            dev.tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]]);
+        let a = dev
+            .tensor([[0.6570, 0.1708, 0.1500], [0.5658, 0.7010, 0.8342]])
+            .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([[0.5199, 0.3844, 0.3759], [0.8259, 0.3682, 0.0388]])
+            .to_dtype::<TestDtype>();
 
         let r = b.leaky_trace() / a.clone();
         assert_close_to_literal!(
@@ -137,15 +150,15 @@ mod tests {
         assert_close_to_literal!(
             g.get(&a),
             [
-                [-0.20074181, -2.1961217, -2.7844446],
-                [-0.42998204, -0.12488105, -0.009292662],
+                [-0.20074183, -2.19612169, -2.78444433],
+                [-0.42998207, -0.12488105, -0.00929266]
             ]
         );
         assert_close_to_literal!(
             g.get(&b),
             &[
-                [0.25367835, 0.97580016, 1.1111112],
-                [0.29456818, 0.2377556, 0.1997922],
+                [0.25367835, 0.97580016, 1.11111104],
+                [0.29456815, 0.23775560, 0.19979222]
             ]
         );
     }
@@ -153,7 +166,7 @@ mod tests {
     #[test]
     fn test_scalar_div_0d() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor(1.0);
+        let x = dev.tensor(1.0).to_dtype::<TestDtype>();
         let r = x.leaky_trace() / 2.0;
         assert_close_to_literal!(r, 0.5);
         let g = r.exp().backward();
@@ -163,7 +176,7 @@ mod tests {
     #[test]
     fn test_scalar_div_1d() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([0.0, 1.0, 2.0]);
+        let x = dev.tensor([0.0, 1.0, 2.0]).to_dtype::<TestDtype>();
         let r = x.leaky_trace() / 2.0;
         assert_close_to_literal!(r, [0.0, 0.5, 1.0]);
         let g = r.exp().sum().backward();
@@ -173,7 +186,7 @@ mod tests {
     #[test]
     fn test_scalar_div_2d() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([[1.0; 2]; 3]);
+        let x = dev.tensor([[1.0; 2]; 3]).to_dtype::<TestDtype>();
         let r = x.leaky_trace() / 2.0;
         assert_close_to_literal!(r, [[0.5; 2]; 3]);
         let g = r.exp().sum().backward();

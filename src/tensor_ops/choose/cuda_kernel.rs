@@ -11,6 +11,12 @@ pub(crate) trait HasCudaKernel<E> {
     const FNS: &'static [&'static str];
 }
 
+#[cfg(feature = "f16")]
+impl HasCudaKernel<half::f16> for Cuda {
+    const MOD: &'static str = "choose_f16";
+    const FNS: &'static [&'static str] = &["choose_fwd_f16", "choose_bwd_f16"];
+}
+
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "choose_f32";
     const FNS: &'static [&'static str] = &["choose_fwd_f32", "choose_bwd_f32"];

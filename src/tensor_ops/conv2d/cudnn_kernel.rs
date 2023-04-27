@@ -9,6 +9,8 @@ use crate::{
 use std::sync::Arc;
 
 trait HasCudnnKernel<E> {}
+#[cfg(feature = "f16")]
+impl HasCudnnKernel<half::f16> for Cuda {}
 impl HasCudnnKernel<f32> for Cuda {}
 impl HasCudnnKernel<f64> for Cuda {}
 

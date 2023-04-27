@@ -74,7 +74,7 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D,
         &mut self,
         input: Tensor<S, E, D, OwnedTape<E, D>>,
     ) -> Result<Self::Output, D::Err> {
-        input.try_dropout(E::ONE / E::from_usize(N).unwrap())
+        input.try_dropout(1.0 / N as f64)
     }
 }
 
@@ -150,7 +150,7 @@ impl<S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D, OwnedTape<E, D>
         &mut self,
         input: Tensor<S, E, D, OwnedTape<E, D>>,
     ) -> Result<Self::Output, D::Err> {
-        input.try_dropout(E::from_f32(self.p).unwrap())
+        input.try_dropout(self.p)
     }
 }
 

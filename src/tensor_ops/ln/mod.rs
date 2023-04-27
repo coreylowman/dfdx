@@ -45,12 +45,17 @@ mod tests {
     #[test]
     fn test_ln() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let x = dev
+            .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+            .to_dtype::<TestDtype>();
         let r = x.leaky_trace().ln();
         let r_array = r.array();
         assert!(r_array[0].is_nan());
         assert!(r_array[1].is_nan());
-        assert!(r_array[2..] == [TestDtype::NEG_INFINITY, 0.0, TestDtype::ln(2.0)]);
+        assert!(r_array[2].is_infinite() && r_array[2].is_sign_negative());
+        assert_eq!(r_array[3], TestDtype::default());
+        let t: TestDtype = NumCast::from(2.0f64.ln()).unwrap();
+        assert_eq!(r_array[4], t);
         let g = r.mean().backward();
         assert_close_to_literal!(g.get(&x), [-0.1, -0.2, f64::INFINITY, 0.2, 0.1]);
     }

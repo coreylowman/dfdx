@@ -17,14 +17,14 @@ use super::{BroadcastTo, Device, MeanTo, TryAdd, TryDiv, TrySub};
 /// ```
 pub fn normalize<Ax: Axes, S: Shape + ReduceShape<Ax>, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
-    epsilon: impl Into<E>,
+    epsilon: impl Into<f64>,
 ) -> Tensor<S, E, D, T> {
     t.normalize::<Ax>(epsilon)
 }
 
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [normalize]
-    pub fn normalize<Ax: Axes>(self, epsilon: impl Into<E>) -> Self
+    pub fn normalize<Ax: Axes>(self, epsilon: impl Into<f64>) -> Self
     where
         S: ReduceShape<Ax>,
     {
@@ -34,7 +34,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [normalize]
     pub fn try_normalize<Ax: Axes>(
         self,
-        epsilon: impl Into<E>,
+        epsilon: impl Into<f64>,
     ) -> Result<Self, <Self as HasErr>::Err>
     where
         S: ReduceShape<Ax>,
@@ -46,7 +46,7 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
             .retaped::<T>()
             .try_square()?
             .try_mean::<_, Ax>()?
-            .try_add(epsilon.into())?
+            .try_add(E::from_f64(epsilon.into()).unwrap())?
             .try_sqrt()?;
         centered.try_div(std.try_broadcast_like(&shape)?)
     }
@@ -60,7 +60,7 @@ mod tests {
     #[test]
     fn test_1d_normalize_axis_last() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, 0.0, 5.0]);
+        let a = dev.tensor([-2.0, 0.0, 5.0]).to_dtype::<TestDtype>();
         let r = a.leaky_trace().normalize(1e-5);
         assert_close_to_literal!(&r, [-1.0190487, -0.3396829, 1.3587316]);
         // NOTE: .exp() so we can make sure normalize is using result grad properly
@@ -71,7 +71,9 @@ mod tests {
     #[test]
     fn test_2d_normalize_axis_last() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]]);
+        let a = dev
+            .tensor([[-2.0, 0.0, 5.0], [1.0, 2.0, 3.0]])
+            .to_dtype::<TestDtype>();
         let r = a.leaky_trace().normalize::<Axis<1>>(1e-5);
         assert_close_to_literal!(
             r,
@@ -93,7 +95,9 @@ mod tests {
     #[test]
     fn test_2d_normalize_axis_first() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, 0.0], [1.0, 2.0], [4.0, 5.0]]);
+        let a = dev
+            .tensor([[-2.0, 0.0], [1.0, 2.0], [4.0, 5.0]])
+            .to_dtype::<TestDtype>();
         let r = a.leaky_trace().normalize::<Axis<0>>(1e-5);
         assert_close_to_literal!(
             r,

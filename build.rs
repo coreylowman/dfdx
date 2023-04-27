@@ -5,6 +5,9 @@ fn main() {
     maybe_enable_nightly();
 
     #[cfg(feature = "cuda")]
+    cuda::set_include_dir();
+
+    #[cfg(feature = "cuda")]
     cuda::build_ptx();
 
     #[cfg(feature = "cpu-mkl-matmul")]
@@ -25,6 +28,52 @@ fn maybe_enable_nightly() {
 
 #[cfg(feature = "cuda")]
 mod cuda {
+    pub fn set_include_dir() {
+        // NOTE: copied from cudarc build.rs.
+        // We can't actually set a env!() value from another crate,
+        // so we have to do that here.
+
+        use std::path::PathBuf;
+
+        let env_vars = [
+            "CUDA_PATH",
+            "CUDA_ROOT",
+            "CUDA_TOOLKIT_ROOT_DIR",
+            "CUDNN_LIB",
+        ];
+        #[allow(unused)]
+        let env_vars = env_vars
+            .into_iter()
+            .map(std::env::var)
+            .filter_map(Result::ok)
+            .map(Into::<PathBuf>::into);
+
+        let roots = [
+            "/usr",
+            "/usr/local/cuda",
+            "/opt/cuda",
+            "/usr/lib/cuda",
+            "C:/Program Files/NVIDIA GPU Computing Toolkit",
+            "C:/CUDA",
+        ];
+        #[allow(unused)]
+        let roots = roots.into_iter().map(Into::<PathBuf>::into);
+
+        #[cfg(feature = "ci-check")]
+        let root: PathBuf = "ci".into();
+
+        #[cfg(not(feature = "ci-check"))]
+        let root = env_vars
+            .chain(roots)
+            .find(|path| path.join("include").join("cuda.h").is_file())
+            .unwrap();
+
+        println!(
+            "cargo:rustc-env=CUDA_INCLUDE_DIR={}",
+            root.join("include").display()
+        );
+    }
+
     pub fn build_ptx() {
         let out_dir = std::env::var("OUT_DIR").unwrap();
         let kernel_paths: Vec<std::path::PathBuf> = glob::glob("src/**/*.cu")
@@ -38,6 +87,10 @@ mod cuda {
 
         for path in &mut include_directories {
             println!("cargo:rerun-if-changed={}", path.display());
+            let destination =
+                std::format!("{out_dir}/{}", path.file_name().unwrap().to_str().unwrap());
+            println!("cargo:rerun-if-changed={}", destination);
+            std::fs::copy(path.clone(), destination).unwrap();
             // remove the filename from the path so it's just the directory
             path.pop();
         }
@@ -130,6 +183,8 @@ mod cuda {
                         .args(["--output-directory", &out_dir])
                         .args(&include_options)
                         .arg(p)
+                        .stdout(std::process::Stdio::piped())
+                        .stderr(std::process::Stdio::piped())
                         .spawn()
                         .unwrap()
                 })
@@ -139,7 +194,9 @@ mod cuda {
                 let output = child.wait_with_output().unwrap();
                 assert!(
                     output.status.success(),
-                    "nvcc error while compiling {kernel_path:?}: {output:?}",
+                    "nvcc error while compiling {kernel_path:?}:\n\n# stdout\n{:#}\n\n# stderr\n{:#}",
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
                 );
             }
 

@@ -51,20 +51,20 @@ pub trait DropoutKernel<E: Dtype>: DeviceStorage {
 /// random numbers, so the masking is the same for both.
 pub fn dropout<S: Shape, E: Dtype, D: DropoutKernel<E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
-    prob: impl Into<E>,
+    prob: impl Into<f64>,
 ) -> Tensor<S, E, D, T> {
     t.dropout(prob)
 }
 
 impl<S: Shape, E: Dtype, D: DropoutKernel<E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [dropout]
-    pub fn dropout(self, prob: impl Into<E>) -> Self {
+    pub fn dropout(self, prob: impl Into<f64>) -> Self {
         self.try_dropout(prob).unwrap()
     }
     /// See [dropout]
-    pub fn try_dropout(self, prob: impl Into<E>) -> Result<Self, D::Err> {
+    pub fn try_dropout(self, prob: impl Into<f64>) -> Result<Self, D::Err> {
         let seed = self.device.random_u64();
-        let prob = prob.into();
+        let prob = E::from_f64(prob.into()).unwrap();
         let op = DropoutKernelOp { seed, prob };
         let (inp, mut tape) = self.split_tape();
         let out = inp.device.forward(op, &inp)?;

@@ -27,26 +27,26 @@ use super::{Optimizer, OptimizerUpdateError, UnusedTensors, WeightDecay};
 /// };
 /// ```
 #[derive(Debug, Clone, Copy)]
-pub struct AdamConfig<E> {
+pub struct AdamConfig {
     /// Learning rate. Defaults to `1e-3`.
-    pub lr: E,
+    pub lr: f64,
 
     /// Betas from Adam paper. Defaults to `[0.9, 0.999]`.
-    pub betas: [E; 2],
+    pub betas: [f64; 2],
 
     /// Epsilon for numerical stability. Defaults to `1e-8`.
-    pub eps: E,
+    pub eps: f64,
 
     /// Optional weight decay. Defaults to `None`.
-    pub weight_decay: Option<WeightDecay<E>>,
+    pub weight_decay: Option<WeightDecay>,
 }
 
-impl<E: Dtype> Default for AdamConfig<E> {
+impl Default for AdamConfig {
     fn default() -> Self {
         Self {
-            lr: E::from_f32(1e-3).unwrap(),
-            betas: [E::from_f32(0.9).unwrap(), E::from_f32(0.999).unwrap()],
-            eps: E::from_f32(1e-8).unwrap(),
+            lr: 1e-3,
+            betas: [0.9, 0.999],
+            eps: 1e-8,
             weight_decay: None,
         }
     }
@@ -73,7 +73,7 @@ impl<E: Dtype> Default for AdamConfig<E> {
 #[derive(Debug)]
 pub struct Adam<M, E: Dtype, D: DeviceStorage> {
     /// Hyperparameter configuration
-    pub cfg: AdamConfig<E>,
+    pub cfg: AdamConfig,
 
     t: i32,
     moment1: Gradients<E, D>,
@@ -84,7 +84,7 @@ pub struct Adam<M, E: Dtype, D: DeviceStorage> {
 
 impl<M, E: Dtype, D: DeviceStorage> Adam<M, E, D> {
     /// Constructs using hyperparameters from `cfg`.
-    pub fn new(_model: &M, cfg: AdamConfig<E>) -> Self {
+    pub fn new(_model: &M, cfg: AdamConfig) -> Self {
         Self {
             cfg,
             t: 0,
@@ -99,7 +99,7 @@ pub trait AdamKernel<E: Dtype>: DeviceStorage {
     fn update(
         &self,
         t: i32,
-        cfg: &AdamConfig<E>,
+        cfg: &AdamConfig,
         param: &mut Self::Vec<E>,
         moment1: &mut Self::Vec<E>,
         moment2: &mut Self::Vec<E>,
@@ -173,7 +173,9 @@ mod tests {
         let dev: TestDevice = Default::default();
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut opt = Adam::new(&t, Default::default());
-        let rate = dev.tensor([1e-6, 1e-5, 1e-4, 1e-3, 1e-2]);
+        let rate = dev
+            .tensor([1e-6, 1e-5, 1e-4, 1e-3, 1e-2])
+            .to_dtype::<TestDtype>();
         let expected = [
             [0.99999994, 0.999996, 0.9997143, 0.9990244, 0.99900025],
             [0.9999999, 0.999992, 0.99942863, 0.99804884, 0.9980005],
@@ -207,7 +209,9 @@ mod tests {
                 weight_decay: None,
             },
         );
-        let rate = dev.tensor([1e-4, 1e-3, 1e-2, 1e-1, 1e-0]);
+        let rate = dev
+            .tensor([1e-4, 1e-3, 1e-2, 1e-1, 1e-0])
+            .to_dtype::<TestDtype>();
         let expected = [
             [0.9997143, 0.9990244, 0.99900025, 0.999, 0.999],
             [0.99942863, 0.99804866, 0.9980004, 0.9979999, 0.9979999],
@@ -231,7 +235,9 @@ mod tests {
     #[test]
     fn test_adam_l2_decay() {
         let dev: TestDevice = Default::default();
-        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
+        let mut t = dev
+            .tensor([-0.5, -0.25, 0.1, 0.6, 1.0])
+            .to_dtype::<TestDtype>();
         let mut opt = Adam::new(
             &t,
             AdamConfig {
@@ -264,7 +270,9 @@ mod tests {
     #[test]
     fn test_adam_decoupled_decay() {
         let dev: TestDevice = Default::default();
-        let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.tensor([-0.5, -0.25, 0.1, 0.6, 1.0]);
+        let mut t = dev
+            .tensor([-0.5, -0.25, 0.1, 0.6, 1.0])
+            .to_dtype::<TestDtype>();
         let mut opt = Adam::new(
             &t,
             AdamConfig {

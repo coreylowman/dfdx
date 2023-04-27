@@ -71,17 +71,20 @@ mod tests {
     fn test_residual_reset() {
         let dev: TestDevice = Default::default();
         let model = dev.build_module::<Residual<Linear<2, 5>>, TestDtype>();
-        assert_ne!(model.0.weight.array(), [[0.0; 2]; 5]);
-        assert_ne!(model.0.bias.array(), [0.0; 5]);
+        assert_ne!(model.0.weight.array(), [[TestDtype::default(); 2]; 5]);
+        assert_ne!(model.0.bias.array(), [TestDtype::default(); 5]);
     }
 
     #[test]
     fn test_residual_gradients() {
         let dev: TestDevice = Default::default();
 
-        let model = <Residual<Linear<2, 2>>>::build_on_device(&dev);
+        let model = dev
+            .build_module::<Residual<Linear<2, 2>>, f32>()
+            .to_dtype::<TestDtype>();
 
-        let x: Tensor<Rank2<4, 2>, f32, TestDevice> = dev.sample_normal();
+        let x: Tensor<Rank2<4, 2>, f32, _> = dev.sample_normal();
+        let x = x.to_dtype::<TestDtype>();
         let y = model.forward(x.leaky_trace());
 
         #[rustfmt::skip]

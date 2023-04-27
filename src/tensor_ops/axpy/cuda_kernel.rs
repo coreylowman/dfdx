@@ -10,6 +10,10 @@ const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/axpy.ptx"));
 trait HasCudaKernel<E> {
     const FN: &'static str;
 }
+#[cfg(feature = "f16")]
+impl HasCudaKernel<half::f16> for Cuda {
+    const FN: &'static str = "axpy_f16";
+}
 impl HasCudaKernel<f32> for Cuda {
     const FN: &'static str = "axpy_f32";
 }

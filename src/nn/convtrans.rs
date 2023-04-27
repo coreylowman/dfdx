@@ -185,7 +185,10 @@ mod tests {
         let out = m.forward(dev.sample_normal::<Rank4<8, 2, 28, 28>>().leaky_trace());
         let g = out.square().mean().backward();
 
-        assert_ne!(g.get(&m.weight).array(), [[[[0.0; 3]; 3]; 2]; 4]);
+        assert_ne!(
+            g.get(&m.weight).array(),
+            [[[[TestDtype::zero(); 3]; 3]; 2]; 4]
+        );
 
         opt.update(&mut m, &g).expect("unused params");
 

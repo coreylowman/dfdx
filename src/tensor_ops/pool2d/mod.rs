@@ -201,7 +201,9 @@ mod tests {
     #[test]
     fn test_pool2d_3d_max2d_eq_grads() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([[[1.0, 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]]);
+        let x = dev
+            .tensor([[[1.0, 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]])
+            .to_dtype::<TestDtype>();
         let r = x.leaky_trace().max_pool2d::<2, 1, 0>();
         assert_close_to_literal!(r, [[[1., 1., 1.2]]]);
         let g = r.sum().backward();
@@ -211,7 +213,9 @@ mod tests {
     #[test]
     fn test_pool2d_3d_min2d_eq_grads() {
         let dev: TestDevice = Default::default();
-        let x: Tensor<_, TestDtype, _> = dev.tensor([[[1., 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]]);
+        let x = dev
+            .tensor([[[1., 1., 0.5, 0.2], [0.2, 0.2, 0.5, 1.2]]])
+            .to_dtype::<TestDtype>();
         let r = x.leaky_trace().min_pool2d::<2, 1, 0>();
         assert_close_to_literal!(r, [[[0.2, 0.2, 0.2]]]);
         let g = r.sum().backward();

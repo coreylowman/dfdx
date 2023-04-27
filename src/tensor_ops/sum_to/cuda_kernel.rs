@@ -15,6 +15,12 @@ trait HasCudaKernel<E> {
     const FNS: &'static [&'static str];
 }
 
+#[cfg(feature = "f16")]
+impl HasCudaKernel<half::f16> for Cuda {
+    const MOD: &'static str = "sum_f16";
+    const FNS: &'static [&'static str] = &["sum_to_fwd_f16", "sum_to_bwd_f16"];
+}
+
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "sum_f32";
     const FNS: &'static [&'static str] = &["sum_to_fwd_f32", "sum_to_bwd_f32"];

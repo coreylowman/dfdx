@@ -187,6 +187,17 @@ macro_rules! impl_cuda_kernels {
     };
 }
 
+#[cfg(feature = "f16")]
+impl_cuda_kernels!(
+    half::f16,
+    "gather_f16",
+    "gather_fwd_f16",
+    "gather_bwd_f16",
+    "select_f16",
+    "select_fwd_f16",
+    "select_bwd_f16"
+);
+
 impl_cuda_kernels!(
     f32,
     "gather_f32",
