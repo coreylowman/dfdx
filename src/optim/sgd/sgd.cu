@@ -34,26 +34,30 @@ __device__ void sgd_update(
         return;
     }
 
+    T weight_decay = cfg.weight_decay;
+    T lr = cfg.lr;
+    T momentum = cfg.momentum;
+
     T p = param[i];
     T g = grad[i];
     T v = velocity[i];
 
     if (cfg.weight_decay_type == L2) {
-        g += cfg.weight_decay * p;
+        g += weight_decay * p;
     }
 
     if (cfg.momentum_type == Classic) {
-        v = g + cfg.momentum * v;
-        g = v * cfg.lr;
+        v = g + momentum * v;
+        g = v * lr;
     } else if (cfg.momentum_type == Nesterov) {
-        v = g + cfg.momentum * v;
-        g = (g + cfg.momentum * v) * cfg.lr;
+        v = g + momentum * v;
+        g = (g + momentum * v) * lr;
     } else {
-        g *= cfg.lr;
+        g *= lr;
     }
 
     if (cfg.weight_decay_type == Decoupled) {
-        g += cfg.weight_decay * cfg.lr * p;
+        g += weight_decay * lr * p;
     }
 
     velocity[i] = v;
