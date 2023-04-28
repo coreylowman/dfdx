@@ -16,8 +16,11 @@ use dfdx::{
     optim::Adam,
     prelude::{mse_loss, Optimizer},
     shapes::{Const, HasShape, Rank1, Rank2},
-    tensor::{AsArray, AutoDevice, Gradients, SampleTensor, Tensor, TensorFrom, Trace},
-    tensor_ops::{Backward, BroadcastTo, RealizeTo, SelectTo, SumTo},
+    tensor::{
+        AsArray, AutoDevice, Gradients, OnesTensor, SampleTensor, Tensor, TensorFrom, Trace,
+        ZerosTensor,
+    },
+    tensor_ops::{Backward, BroadcastTo, ChooseFrom, RealizeTo, SelectTo, SumTo, TryGt},
 };
 use indicatif::ProgressIterator;
 use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -26,11 +29,12 @@ use rand::{rngs::StdRng, Rng, SeedableRng};
 // Model definition
 // ************************************************************************************************
 
-type Mlp = (
+type MlpStructure = (
     (Linear<2, 32>, ReLU),
     (Linear<32, 32>, ReLU),
     (Linear<32, 1>, Sigmoid),
 );
+type Mlp = <MlpStructure as BuildOnDevice<AutoDevice, f32>>::Built;
 
 // ************************************************************************************************
 // predictor definition
@@ -38,9 +42,9 @@ type Mlp = (
 
 pub struct Predictor {
     device: AutoDevice,
-    model: <Mlp as BuildOnDevice<AutoDevice, f32>>::Built,
+    model: Mlp,
     gradients: Gradients<f32, AutoDevice>,
-    optimizer: Adam<<Mlp as BuildOnDevice<AutoDevice, f32>>::Built, f32, AutoDevice>,
+    optimizer: Adam<Mlp, f32, AutoDevice>,
 }
 
 // ************************************************************************************************
@@ -50,10 +54,9 @@ pub struct Predictor {
 impl Predictor {
     pub fn new(seed: u64) -> Self {
         let device = AutoDevice::seed_from_u64(seed);
-        let model = device.build_module::<Mlp, f32>();
+        let model = device.build_module::<MlpStructure, f32>();
         let gradients = model.alloc_grads();
-        let optimizer: Adam<<Mlp as BuildOnDevice<AutoDevice, f32>>::Built, f32, AutoDevice> =
-            Adam::new(&model, Default::default());
+        let optimizer: Adam<Mlp, f32, AutoDevice> = Adam::new(&model, Default::default());
         Self {
             device,
             model,
@@ -122,12 +125,10 @@ impl Predictor {
 fn function_we_would_like_the_nn_to_mimic(
     input: Tensor<(Const<2>,), f32, AutoDevice>,
 ) -> Tensor<(Const<1>,), f32, AutoDevice> {
-    let distance_from_center: Tensor<(), f32, AutoDevice> = input.powi(2).sum().sqrt();
-    if distance_from_center.as_vec()[0] > 1.0 {
-        AutoDevice::default().tensor([1.0])
-    } else {
-        AutoDevice::default().tensor([0.0])
-    }
+    let dev = input.device().clone();
+    let distance_from_center: Tensor<(Const<1>,), f32, AutoDevice> =
+        input.powi(2).sum().sqrt().broadcast();
+    distance_from_center.gt(1.0).choose(dev.ones(), dev.zeros())
 }
 
 struct XYPointsDataSet {
