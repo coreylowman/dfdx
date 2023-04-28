@@ -96,9 +96,6 @@ extern \"C\" __global__ void fwd(
     const $Ty *rhs,
     $Ty *out
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) { return; }
-
     const size_t numel = info[0];
     const size_t num_dims = info[1];
     const size_t axis = info[2];
@@ -107,6 +104,9 @@ extern \"C\" __global__ void fwd(
     const size_t *rhs_dims = info + 3 + 2 * num_dims;
     const size_t *rhs_strides = info + 3 + 3 * num_dims;
 
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= numel) { return; }
+
     // out_dims will be (..., lhs_dims[ax] + rhs_dims[ax], ...)
 
     // striding lhs & rhs up to the concat'd axis
@@ -114,10 +114,10 @@ extern \"C\" __global__ void fwd(
     size_t lhs_i = 0;
     size_t rhs_i = 0;
     for (int d = num_dims - 1; d > axis; d--) {
-        size_t dim_i = i_tmp % dims[d];
+        size_t dim_i = i_tmp % lhs_dims[d];
         lhs_i += dim_i * lhs_strides[d];
         rhs_i += dim_i * rhs_strides[d];
-        i_tmp /= dims[d];
+        i_tmp /= lhs_dims[d];
     }
 
     // figure out if we are using lhs or rhs for this `i`
@@ -126,10 +126,10 @@ extern \"C\" __global__ void fwd(
 
     // striding lhs & rhs along the rest of the axes
     for (int d = axis - 1; d >= 0;d--) {
-        size_t dim_i = i_tmp % dims[d];
+        size_t dim_i = i_tmp % lhs_dims[d];
         lhs_i += dim_i * lhs_strides[d];
         rhs_i += dim_i * rhs_strides[d];
-        i_tmp /= dims[d];
+        i_tmp /= lhs_dims[d];
     }
 
     if (i_along_axis < lhs_dims[axis]) {
@@ -145,9 +145,6 @@ extern \"C\" __global__ void bwd(
     $Ty *grad_rhs,
     const $Ty *grad_out
 ) {
-    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= numel) { return; }
-
     const size_t numel = info[0];
     const size_t num_dims = info[1];
     const size_t axis = info[2];
@@ -156,6 +153,9 @@ extern \"C\" __global__ void bwd(
     const size_t *rhs_dims = info + 3 + 2 * num_dims;
     const size_t *rhs_strides = info + 3 + 3 * num_dims;
 
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= numel) { return; }    
+
     // out_dims will be (..., lhs_dims[ax] + rhs_dims[ax], ...)
 
     // striding lhs & rhs up to the concat'd axis
@@ -163,10 +163,10 @@ extern \"C\" __global__ void bwd(
     size_t lhs_i = 0;
     size_t rhs_i = 0;
     for (int d = num_dims - 1; d > axis; d--) {
-        size_t dim_i = i_tmp % dims[d];
+        size_t dim_i = i_tmp % lhs_dims[d];
         lhs_i += dim_i * lhs_strides[d];
         rhs_i += dim_i * rhs_strides[d];
-        i_tmp /= dims[d];
+        i_tmp /= lhs_dims[d];
     }
 
     // figure out if we are using lhs or rhs for this `i`
@@ -175,10 +175,10 @@ extern \"C\" __global__ void bwd(
 
     // striding lhs & rhs along the rest of the axes
     for (int d = axis - 1; d >= 0;d--) {
-        size_t dim_i = i_tmp % dims[d];
+        size_t dim_i = i_tmp % lhs_dims[d];
         lhs_i += dim_i * lhs_strides[d];
         rhs_i += dim_i * rhs_strides[d];
-        i_tmp /= dims[d];
+        i_tmp /= lhs_dims[d];
     }
 
     if (i_along_axis < lhs_dims[axis]) {
