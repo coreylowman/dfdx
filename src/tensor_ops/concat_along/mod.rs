@@ -169,6 +169,66 @@ mod tests {
     }
 
     #[test]
+    fn test_concat_ax_1() {
+        let dev: TestDevice = Default::default();
+        let a: Tensor<Rank3<2, 2, 4>, TestDtype, _> = dev.sample_normal();
+        let b: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
+        let a_dyn = a
+            .leaky_trace()
+            .realize::<(Const<2>, usize, Const<4>)>()
+            .unwrap();
+        let b_dyn = b.clone().realize::<(Const<2>, usize, Const<4>)>().unwrap();
+        let c = (a_dyn, b_dyn).concat_along(Axis::<1>);
+        let c = c.realize::<(Const<2>, Const<5>, Const<4>)>().unwrap();
+        let a_arr = a.array();
+        let b_arr = b.array();
+        let c_arr = c.array();
+        for i in 0..2 {
+            assert_eq!(c_arr[i][0], a_arr[i][0]);
+            assert_eq!(c_arr[i][1], a_arr[i][1]);
+            assert_eq!(c_arr[i][2], b_arr[i][0]);
+            assert_eq!(c_arr[i][3], b_arr[i][1]);
+            assert_eq!(c_arr[i][4], b_arr[i][2]);
+        }
+        let concat_grads = c.exp().sum().backward();
+        let a_grads = a.leaky_trace().exp().sum().backward();
+        let b_grads = b.leaky_trace().exp().sum().backward();
+        assert_close_to_tensor!(concat_grads.get(&a), a_grads.get(&a));
+        assert_close_to_tensor!(concat_grads.get(&b), b_grads.get(&b));
+    }
+
+    #[test]
+    fn test_concat_ax_2() {
+        let dev: TestDevice = Default::default();
+        let a: Tensor<Rank3<2, 3, 2>, TestDtype, _> = dev.sample_normal();
+        let b: Tensor<Rank3<2, 3, 3>, TestDtype, _> = dev.sample_normal();
+        let a_dyn = a
+            .leaky_trace()
+            .realize::<(Const<2>, Const<3>, usize)>()
+            .unwrap();
+        let b_dyn = b.clone().realize::<(Const<2>, Const<3>, usize)>().unwrap();
+        let c = (a_dyn, b_dyn).concat_along(Axis::<2>);
+        let c = c.realize::<(Const<2>, Const<3>, Const<5>)>().unwrap();
+        let a_arr = a.array();
+        let b_arr = b.array();
+        let c_arr = c.array();
+        for i in 0..2 {
+            for j in 0..3 {
+                assert_eq!(c_arr[i][j][0], a_arr[i][j][0]);
+                assert_eq!(c_arr[i][j][1], a_arr[i][j][1]);
+                assert_eq!(c_arr[i][j][2], b_arr[i][j][0]);
+                assert_eq!(c_arr[i][j][3], b_arr[i][j][1]);
+                assert_eq!(c_arr[i][j][4], b_arr[i][j][2]);
+            }
+        }
+        let concat_grads = c.exp().sum().backward();
+        let a_grads = a.leaky_trace().exp().sum().backward();
+        let b_grads = b.leaky_trace().exp().sum().backward();
+        assert_close_to_tensor!(concat_grads.get(&a), a_grads.get(&a));
+        assert_close_to_tensor!(concat_grads.get(&b), b_grads.get(&b));
+    }
+
+    #[test]
     fn test_concat_shape() {
         let a: (usize, Const<5>) = (5, Const);
         let b: (usize, Const<5>) = (3, Const);
