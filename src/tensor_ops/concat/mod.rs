@@ -26,15 +26,18 @@ mod cuda_kernel;
 /// let c: Tensor<(usize, Const<3>), f32, _> = a.concat(b);
 /// assert_eq!(c.shape().0, 6);
 /// ```
+#[deprecated = "Use TryConcatAlong instead"]
 pub trait TryConcat<Rhs>: HasErr {
     type Output;
 
     /// Concatenate two tensors along the first dimension.
+    #[deprecated = "Use TryConcatAlong::concat_along instead"]
     fn concat(self, rhs: Rhs) -> Self::Output {
         self.try_concat(rhs).unwrap()
     }
 
     /// Fallible version of [TryConcat::concat].
+    #[deprecated = "Use TryConcatAlong::try_concat_along instead"]
     fn try_concat(self, rhs: Rhs) -> Result<Self::Output, Self::Err>;
 }
 
