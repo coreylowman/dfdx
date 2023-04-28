@@ -200,6 +200,9 @@ mod tests {
         let a_arr = a.array();
         let b_arr = b.array();
         let c_arr = c.array();
+        println!("{a_arr:?}");
+        println!("{b_arr:?}");
+        println!("{c_arr:?}");
         assert_eq!(c_arr[0], a_arr[0]);
         assert_eq!(c_arr[1], a_arr[1]);
         assert_eq!(c_arr[2], b_arr[0]);

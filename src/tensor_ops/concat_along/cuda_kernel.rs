@@ -135,7 +135,7 @@ extern \"C\" __global__ void fwd(
     if (i_along_axis < lhs_dims[axis]) {
         out[i] = lhs[lhs_i + i_along_axis * lhs_strides[axis]];
     } else {
-        out[i] = rhs[rhs_i + i_along_axis * rhs_strides[axis]];
+        out[i] = rhs[rhs_i + (i_along_axis - lhs_dims[axis]) * rhs_strides[axis]];
     }
 }
 
@@ -184,7 +184,7 @@ extern \"C\" __global__ void bwd(
     if (i_along_axis < lhs_dims[axis]) {
         atomicAdd(grad_lhs + lhs_i + i_along_axis * lhs_strides[axis], grad_out[i]);
     } else {
-        atomicAdd(grad_rhs + rhs_i + i_along_axis * rhs_strides[axis], grad_out[i]);
+        atomicAdd(grad_rhs + rhs_i + (i_along_axis - lhs_dims[axis]) * rhs_strides[axis], grad_out[i]);
     }
 }
 ";
