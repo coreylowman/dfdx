@@ -160,6 +160,7 @@ mod choose;
 mod clamp;
 mod cmp;
 mod concat;
+mod concat_along;
 mod cos;
 mod div;
 mod dropout;
@@ -213,7 +214,9 @@ pub use broadcast_to::BroadcastTo;
 pub use choose::ChooseFrom;
 pub use clamp::clamp;
 pub use cmp::{eq, ge, gt, le, lt, ne, TryEq, TryGe, TryGt, TryLe, TryLt, TryNe};
+#[allow(deprecated)]
 pub use concat::TryConcat;
+pub use concat_along::TryConcatAlong;
 pub use cos::cos;
 pub use div::{div, TryDiv};
 pub use dropout::dropout;

@@ -14,6 +14,7 @@ pub trait Device<E: Dtype>:
     // appends
     + super::super::stack::StackKernel<E>
     + super::super::concat::ConcatKernel<E>
+    + super::super::concat_along::ConcatAlongKernel<E>
 
     // optimizers
     + crate::optim::AdamKernel<E>
