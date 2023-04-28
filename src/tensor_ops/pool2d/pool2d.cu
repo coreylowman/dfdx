@@ -53,7 +53,9 @@ __device__ void avg_pool2d_fwd(
         }
     }
 
-    tmp /= static_cast<T>(op.kernel * op.kernel);
+    double num_f64 = op.kernel * op.kernel;
+    T num = num_f64;
+    tmp /= num;
     out[i] = tmp;
 }
 
@@ -105,7 +107,9 @@ __device__ void avg_pool2d_bwd(
         }
     }
 
-    grad_inp[i] += tmp / static_cast<T>(op.kernel * op.kernel);
+    double num_f64 = op.kernel * op.kernel;
+    T num = num_f64;
+    grad_inp[i] += tmp / num;
 }
 
 template<typename T>
@@ -329,6 +333,22 @@ extern "C" __global__ void bwd( \
 ) { \
     bwd_FN(op, inp_strides, out_strides, inp, grad_inp, out, grad_out); \
 }
+
+POOL_OP(
+    __half,
+    avg_pool2d_fwd_f16, avg_pool2d_bwd_f16,
+    avg_pool2d_fwd, avg_pool2d_bwd
+);
+POOL_OP(
+    __half,
+    min_pool2d_fwd_f16, min_pool2d_bwd_f16,
+    min_pool2d_fwd, min_pool2d_bwd
+);
+POOL_OP(
+    __half,
+    max_pool2d_fwd_f16, max_pool2d_bwd_f16,
+    max_pool2d_fwd, max_pool2d_bwd
+);
 
 POOL_OP(
     float,

@@ -8,20 +8,20 @@ use crate::{
 use cudarc::driver::{DeviceRepr, DeviceSlice, LaunchAsync};
 
 #[repr(C)]
-struct CudaRMSpropConfig<E> {
-    lr: E,
-    alpha: E,
-    eps: E,
+struct CudaRMSpropConfig {
+    lr: f64,
+    alpha: f64,
+    eps: f64,
     centered: bool,
     has_momentum: bool,
-    momentum: E,
+    momentum: f64,
     weight_decay_type: WeightDecayType,
-    weight_decay: E,
+    weight_decay: f64,
 }
 
-unsafe impl<E: DeviceRepr> DeviceRepr for CudaRMSpropConfig<E> {}
+unsafe impl DeviceRepr for CudaRMSpropConfig {}
 
-fn rmsprop_config_to_cuda<E: Default + Copy>(config: &RMSpropConfig<E>) -> CudaRMSpropConfig<E> {
+fn rmsprop_config_to_cuda(config: &RMSpropConfig) -> CudaRMSpropConfig {
     let (weight_decay_type, weight_decay) = weight_decay_to_cuda(config.weight_decay);
     let (has_momentum, momentum) = if let Some(m) = config.momentum {
         (true, m)
@@ -48,6 +48,12 @@ trait HasCudaKernel<E> {
     const FWD: &'static str;
 }
 
+#[cfg(feature = "f16")]
+impl HasCudaKernel<half::f16> for Cuda {
+    const MOD: &'static str = "rmsprop_f16";
+    const FWD: &'static str = "rmsprop_update_f16";
+}
+
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "rmsprop_f32";
     const FWD: &'static str = "rmsprop_update_f32";
@@ -64,7 +70,7 @@ where
 {
     fn update(
         &self,
-        cfg: &RMSpropConfig<E>,
+        cfg: &RMSpropConfig,
         param: &mut Self::Vec<E>,
         momentum: &mut Self::Vec<E>,
         square_avg: &mut Self::Vec<E>,

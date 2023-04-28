@@ -25,20 +25,20 @@ pub fn train_fwd<const C: usize, S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>
     mean: &mut Tensor<Rank1<C>, E, D>,
     scale: &Tensor<Rank1<C>, E, D>,
     bias: &Tensor<Rank1<C>, E, D>,
-    epsilon: E,
-    momentum: E,
+    epsilon: f64,
+    momentum: f64,
 ) -> Result<Tensor<S, E, D, T>, D::Err>
 where
     S: HasAxes<Ax> + ReduceShapeTo<Rank1<C>, Ax>,
 {
-    let n = E::from_usize(<S as HasAxes<Ax>>::size(x.shape())).unwrap();
+    let n = f64::from_usize(<S as HasAxes<Ax>>::size(x.shape())).unwrap();
     let shape = *x.shape();
 
     // compute statistics for updating running stats later - on tape
     let mean_chan = x.retaped::<T>().try_mean::<Rank1<C>, _>()?;
 
     // update statistics since we are training - off tape
-    mean.try_axpy(E::ONE - momentum, &mean_chan, momentum)?;
+    mean.try_axpy(1.0 - momentum, &mean_chan, momentum)?;
 
     let centered = x.try_sub(mean_chan.try_broadcast_like(&shape)?)?;
 
@@ -48,10 +48,12 @@ where
         .try_mean::<Rank1<C>, _>()?;
 
     // NOTE: uses unbiased variance in running estimate
-    var.try_axpy(E::ONE - momentum, &var_chan, momentum * n / (n - E::ONE))?;
+    var.try_axpy(1.0 - momentum, &var_chan, momentum * n / (n - 1.0))?;
 
     // statistics for normalizing - on tape
-    let std = var_chan.try_add(epsilon)?.try_sqrt()?;
+    let std = var_chan
+        .try_add(E::from_f64(epsilon).unwrap())?
+        .try_sqrt()?;
 
     // record broadcast of scale & bias - on tape
     let scale = scale
@@ -71,7 +73,7 @@ pub fn infer_fwd<const C: usize, S: Shape, E: Dtype, D: Device<E>, Ax: Axes>(
     mean: &Tensor<Rank1<C>, E, D>,
     scale: &Tensor<Rank1<C>, E, D>,
     bias: &Tensor<Rank1<C>, E, D>,
-    epsilon: E,
+    epsilon: f64,
 ) -> Result<Tensor<S, E, D>, D::Err>
 where
     Rank1<C>: BroadcastShapeTo<S, Ax>,
@@ -79,7 +81,10 @@ where
     let shape = *x.shape();
 
     // statistics for normalizing
-    let std = var.clone().try_add(epsilon)?.try_sqrt()?;
+    let std = var
+        .clone()
+        .try_add(E::from_f64(epsilon).unwrap())?
+        .try_sqrt()?;
 
     let scale = scale.clone().try_div(std)?.try_broadcast_like(&shape)?;
 
@@ -134,11 +139,11 @@ pub struct BatchNorm2D<const C: usize, E: Dtype, D: DeviceStorage> {
     /// Spatial variance that is updated during training. Defaults to 1.0
     pub running_var: Tensor<Rank1<C>, E, D>,
     /// Added to variance before taking sqrt for numerical stability. Defaults to 1e-5
-    pub epsilon: E,
+    pub epsilon: f64,
     /// Controls exponential moving average of running stats.Defaults to 0.1
     ///
     /// `running_stat * (1.0 - momentum) + stat * momentum`.
-    pub momentum: E,
+    pub momentum: f64,
 }
 
 impl<const C: usize, E: Dtype, D: Device<E>> BatchNorm2D<C, E, D> {
@@ -273,8 +278,8 @@ impl<const C: usize, E: Dtype, D: Device<E>> TensorCollection<E, D> for BatchNor
                 bias,
                 running_mean,
                 running_var,
-                epsilon: V::E2::from_f32(1e-5).unwrap(),
-                momentum: V::E2::from_f32(0.1).unwrap(),
+                epsilon: 1e-5,
+                momentum: 0.1,
             },
         )
     }

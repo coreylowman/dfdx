@@ -68,6 +68,7 @@ extern "C" __global__ void BWD( \
     slice_bwd(numel, num_dims, dims, strides, offset, grad_inp, grad_out); \
 }
 
+SLICE(__half, slice_fwd_f16, slice_bwd_f16);
 SLICE(float, slice_fwd_f32, slice_bwd_f32);
 SLICE(double, slice_fwd_f64, slice_bwd_f64);
 SLICE_FWD(uint8_t, slice_fwd_u8);

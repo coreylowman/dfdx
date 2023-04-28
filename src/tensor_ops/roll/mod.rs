@@ -93,7 +93,9 @@ mod tests {
     #[test]
     fn test_roll_3d_axis_2() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<Rank1<5>, TestDtype, _> = dev.tensor([-0.3, -0.15, 0.0, 0.15, 0.2]);
+        let t = dev
+            .tensor([-0.3, -0.15, 0.0, 0.15, 0.2])
+            .to_dtype::<TestDtype>();
         let y = t
             .leaky_trace()
             .broadcast::<Rank3<2, 3, 5>, _>()
@@ -109,7 +111,9 @@ mod tests {
     #[test]
     fn test_roll_3d_first_two_axes() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<Rank1<5>, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0, 4.0, 5.0]);
+        let t = dev
+            .tensor([1.0, 2.0, 3.0, 4.0, 5.0])
+            .to_dtype::<TestDtype>();
         let y0 = t
             .leaky_trace()
             .broadcast::<Rank3<2, 3, 5>, _>()

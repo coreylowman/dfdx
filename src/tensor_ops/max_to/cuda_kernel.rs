@@ -16,6 +16,13 @@ trait HasCudaKernel<E> {
     const FNS: &'static [&'static str];
 }
 
+#[cfg(feature = "f16")]
+impl HasCudaKernel<half::f16> for Cuda {
+    const INIT: half::f16 = half::f16::NEG_INFINITY;
+    const MOD: &'static str = "max_f16";
+    const FNS: &'static [&'static str] = &["max_to_fwd_f16", "max_to_bwd_f16", "fill_with_f16"];
+}
+
 impl HasCudaKernel<f32> for Cuda {
     const INIT: f32 = f32::NEG_INFINITY;
     const MOD: &'static str = "max_f32";

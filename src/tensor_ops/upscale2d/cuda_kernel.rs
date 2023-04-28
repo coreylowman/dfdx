@@ -25,6 +25,16 @@ trait HasCudaKernel<E, Mode> {
     const FWD: &'static str;
     const BWD: &'static str;
 }
+#[cfg(feature = "f16")]
+impl HasCudaKernel<half::f16, NearestNeighbor> for Cuda {
+    const FWD: &'static str = "nearest_upscale2d_fwd_f16";
+    const BWD: &'static str = "nearest_upscale2d_bwd_f16";
+}
+#[cfg(feature = "f16")]
+impl HasCudaKernel<half::f16, Bilinear> for Cuda {
+    const FWD: &'static str = "bilinear_upscale2d_fwd_f16";
+    const BWD: &'static str = "bilinear_upscale2d_bwd_f16";
+}
 impl HasCudaKernel<f32, NearestNeighbor> for Cuda {
     const FWD: &'static str = "nearest_upscale2d_fwd_f32";
     const BWD: &'static str = "nearest_upscale2d_bwd_f32";

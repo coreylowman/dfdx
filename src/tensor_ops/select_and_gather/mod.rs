@@ -194,8 +194,7 @@ impl<Src: Shape, E: Dtype, D: ReplaceDimKernel<E>, T: Tape<E, D>> GatherTo<D>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tensor_ops::*;
-    use crate::tests::*;
+    use crate::{tensor_ops::*, tests::*};
 
     #[test]
     #[should_panic = "dimension 0 not the same"]
@@ -269,7 +268,9 @@ mod tests {
         let t_array = t.array();
         assert_eq!(r.array(), t_array[0]);
         let g = r.exp().backward();
-        assert_eq!(g.get(&t).array(), [t_array[0].exp(), 0.0, 0.0, 0.0, 0.0]);
+        let mut expected = [TestDtype::zero(); 5];
+        expected[0] = t_array[0].exp();
+        assert_eq!(g.get(&t).array(), expected);
     }
 
     #[test]
@@ -284,10 +285,10 @@ mod tests {
             g.get(&t).array(),
             [
                 t_array[0].exp(),
-                2.0 * (t_array[1]).exp(),
-                0.0,
+                t_array[1].exp() + t_array[1].exp(),
+                TestDtype::zero(),
                 t_array[3].exp(),
-                0.0
+                TestDtype::zero()
             ]
         );
     }
@@ -323,7 +324,9 @@ mod tests {
     #[test]
     fn test_select_2d_axis_0() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+        let t = dev
+            .tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().select(dev.tensor(0));
         assert_close_to_literal!(r, [1.0, 2.0, 3.0]);
         let g = r.mean().backward();
@@ -333,7 +336,9 @@ mod tests {
     #[test]
     fn test_select_2d_axis_1() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]]);
+        let t = dev
+            .tensor([[1.0, 2.0, 3.0], [-1.0, -2.0, -3.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().select(dev.tensor([1, 1]));
         assert_close_to_literal!(r, [2.0, -2.0]);
         let g = r.mean().backward();
@@ -343,7 +348,7 @@ mod tests {
     #[test]
     fn test_select_2d_broadcasted() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
+        let t = dev.tensor([1.0, 2.0, 3.0]).to_dtype::<TestDtype>();
         let r = t
             .leaky_trace()
             .broadcast::<Rank2<2, 3>, _>()
@@ -356,7 +361,7 @@ mod tests {
     #[test]
     fn test_gather_2d_broadcasted() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([1.0, 2.0, 3.0]);
+        let t = dev.tensor([1.0, 2.0, 3.0]).to_dtype::<TestDtype>();
         let idx: Tensor<Rank2<2, 2>, usize, _> = dev.tensor([[0, 1], [1, 2]]);
         let r: Tensor<Rank2<2, 2>, _, _, _> =
             t.leaky_trace().broadcast::<Rank2<2, 3>, _>().gather(idx);
@@ -391,12 +396,10 @@ mod tests {
         let g = r.exp().mean().backward();
         let sub_g = dev.tensor(sub_t).exp() / 8.0;
         let sub_g = sub_g.array();
+        let z = TestDtype::zero();
         assert_close!(
             g.get(&t).array(),
-            [
-                [[0.0; 4], sub_g[0], [0.0; 4]],
-                [[0.0; 4], [0.0; 4], sub_g[1]],
-            ]
+            [[[z; 4], sub_g[0], [z; 4]], [[z; 4], [z; 4], sub_g[1]],]
         );
     }
 
@@ -414,18 +417,19 @@ mod tests {
         let g = r.exp().mean().backward();
         let sub_g = dev.tensor(sub_t).exp() / 6.0;
         let sub_g = sub_g.array();
+        let z = TestDtype::zero();
         assert_close!(
             g.get(&t).array(),
             [
                 [
-                    [0.0, 0.0, sub_g[0][0], 0.0],
-                    [0.0, 0.0, 0.0, sub_g[0][1]],
-                    [0.0, 0.0, sub_g[0][2], 0.0],
+                    [z, z, sub_g[0][0], z],
+                    [z, z, z, sub_g[0][1]],
+                    [z, z, sub_g[0][2], z],
                 ],
                 [
-                    [0.0, sub_g[1][0], 0.0, 0.0],
-                    [0.0, sub_g[1][1], 0.0, 0.0],
-                    [sub_g[1][2], 0.0, 0.0, 0.0],
+                    [z, sub_g[1][0], z, z],
+                    [z, sub_g[1][1], z, z],
+                    [sub_g[1][2], z, z, z],
                 ],
             ]
         );

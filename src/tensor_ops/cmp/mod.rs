@@ -228,6 +228,17 @@ macro_rules! impl_cmp_kernel_op {
             }
         }
 
+        #[cfg(feature = "f16")]
+        impl<S: Shape, D: ScalarCmpKernel<$KernelOp, half::f16>, T: Tape<half::f16, D>>
+            $TraitName<f32> for Tensor<S, half::f16, D, T>
+        {
+            type Output = Tensor<S, bool, D, NoneTape>;
+            #[doc = $doc]
+            fn $TryFnName(&self, other: f32) -> Result<Self::Output, D::Err> {
+                try_scalar_cmp_op(self, half::f16::from_f32(other))
+            }
+        }
+
         impl<S: Shape, E: Unit, D: ScalarCmpKernel<$KernelOp, E>, T: Tape<E, D>>
             Tensor<S, E, D, T>
         {
@@ -307,212 +318,192 @@ impl_cmp_kernel_op!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{shapes::*, tensor::*, tests::*};
-
-    type TestTensor<const R: usize, const C: usize, E> =
-        Tensor<(Const<R>, Const<C>), E, TestDevice>;
-
-    fn test_cmp<E: Unit, const R: usize, const C: usize, F>(
-        a: [[E; C]; R],
-        b: [[E; C]; R],
-        cmp: F,
-        expected: [[bool; C]; R],
-    ) where
-        F: Fn(&TestTensor<R, C, E>, &TestTensor<R, C, E>) -> [[bool; C]; R],
-    {
-        let dev: TestDevice = Default::default();
-        let a = dev.tensor(a);
-        let b = dev.tensor(b);
-        let r = cmp(&a, &b);
-        assert_eq!(r, expected);
-    }
-
-    fn test_scalar_cmp<E: Unit, const R: usize, const C: usize, F>(
-        a: [[E; C]; R],
-        cmp: F,
-        expected: [[bool; C]; R],
-    ) where
-        F: Fn(&TestTensor<R, C, E>) -> [[bool; C]; R],
-    {
-        let dev: TestDevice = Default::default();
-        let a = dev.tensor(a);
-        assert_eq!(cmp(&a), expected);
-    }
+    use crate::{tensor::*, tests::*};
 
     #[test]
     fn test_eq() {
         let dev: TestDevice = Default::default();
         let a = dev
-            .tensor([[1.0, 2.0, 0.0], [4.0, 5.0, 0.0]])
+            .tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]])
             .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([[0.0, 2.0, -3.0], [4.0, 0.5, -0.0]])
+            .to_dtype::<TestDtype>();
+        let r = a.eq(&b);
+        assert_eq!(r.array(), [[false, true, false], [true, false, true]]);
 
+        #[cfg(not(feature = "cuda"))]
         {
-            let b = dev
-                .tensor([[0.0, 2.0, -3.0], [4.0, 0.5, -0.0]])
-                .to_dtype::<TestDtype>();
+            let a = dev.tensor([[1, 2, 3], [0, 123, 5]]);
+            let b = dev.tensor([[0, 2, -3], [-4, 123, 6]]);
             let r = a.eq(&b);
-            assert_eq!(r.array(), [[false, true, false], [true, false, true]]);
+            assert_eq!(r.array(), [[false, true, false], [false, true, false]]);
         }
+    }
 
-        {
-            let r = a.eq(0.0);
-            assert_eq!(r.array(), [[false, false, true], [false, false, true]]);
-        }
+    #[test]
+    fn test_scalar_eq() {
+        let dev: TestDevice = Default::default();
+        let a = dev
+            .tensor([[0.0, 1.2], [3.4, -5.6]])
+            .to_dtype::<TestDtype>();
+        let r = a.eq(1.2);
+        assert_eq!(r.array(), [[false, true], [false, false]]);
     }
 
     #[test]
     fn test_ne() {
-        test_cmp::<TestDtype, 2, 3, _>(
-            [[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]],
-            [[0.0, 2.0, -3.0], [4.0, 0.5, -0.0]],
-            |a, b| a.ne(b).array(),
-            [[true, false, true], [false, true, false]],
-        );
-    }
+        let dev: TestDevice = Default::default();
+        let a = dev
+            .tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]])
+            .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([[0.0, 2.0, -3.0], [4.0, 0.5, -0.0]])
+            .to_dtype::<TestDtype>();
+        let r = a.ne(&b);
+        assert_eq!(r.array(), [[true, false, true], [false, true, false]]);
 
-    // TODO Remove this attribute once Cuda supports integers
-    #[cfg(not(feature = "cuda"))]
-    #[test]
-    fn test_ne_not_dtype() {
-        test_cmp(
-            [[1, 2, 3], [0, 123, 5]],
-            [[0, 2, -3], [-4, 123, 6]],
-            |a, b| a.ne(b).array(),
-            [[true, false, true], [true, false, true]],
-        );
+        #[cfg(not(feature = "cuda"))]
+        {
+            let a = dev.tensor([[1, 2, 3], [0, 123, 5]]);
+            let b = dev.tensor([[0, 2, -3], [-4, 123, 6]]);
+            let r = a.ne(&b);
+            assert_eq!(r.array(), [[true, false, true], [true, false, true]]);
+        }
     }
 
     #[test]
     fn test_scalar_ne() {
-        test_scalar_cmp::<TestDtype, 2, 2, _>(
-            [[0.0, 1.2], [3.4, -5.6]],
-            |a| a.ne(1.2).array(),
-            [[true, false], [true, true]],
-        );
+        let dev: TestDevice = Default::default();
+        let a = dev
+            .tensor([[0.0, 1.2], [3.4, -5.6]])
+            .to_dtype::<TestDtype>();
+        let r = a.ne(1.2);
+        assert_eq!(r.array(), [[true, false], [true, true]]);
     }
 
     #[test]
     fn test_gt() {
-        test_cmp::<TestDtype, 2, 3, _>(
-            [[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]],
-            [[0.0, 2.0, 3.1], [-4.0, -5.5, -0.0]],
-            |a, b| a.gt(b).array(),
-            [[true, false, false], [true, true, false]],
-        );
-    }
+        let dev: TestDevice = Default::default();
+        let a = dev
+            .tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]])
+            .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([[0.0, 2.0, 3.1], [-4.0, -5.5, -0.0]])
+            .to_dtype::<TestDtype>();
+        let r = a.gt(&b);
+        assert_eq!(r.array(), [[true, false, false], [true, true, false]]);
 
-    // TODO Remove this attribute once Cuda supports integers
-    #[cfg(not(feature = "cuda"))]
-    #[test]
-    fn test_gt_not_dtype() {
-        test_cmp(
-            [[1, 2, 3], [0, 123, 5]],
-            [[0, 2, -3], [-4, 123, 6]],
-            |a, b| a.gt(b).array(),
-            [[true, false, true], [true, false, false]],
-        );
+        #[cfg(not(feature = "cuda"))]
+        {
+            let a = dev.tensor([[1, 2, 3], [0, 123, 5]]);
+            let b = dev.tensor([[0, 2, -3], [-4, 123, 6]]);
+            let r = a.gt(&b);
+            assert_eq!(r.array(), [[true, false, true], [true, false, false]]);
+        }
     }
 
     #[test]
     fn test_scalar_gt() {
-        test_scalar_cmp::<TestDtype, 2, 2, _>(
-            [[0.0, 1.2], [3.4, -5.6]],
-            |a| a.gt(1.2).array(),
-            [[false, false], [true, false]],
-        );
+        let dev: TestDevice = Default::default();
+        let a = dev
+            .tensor([[0.0, 1.2], [3.4, -5.6]])
+            .to_dtype::<TestDtype>();
+        let r = a.gt(1.2);
+        assert_eq!(r.array(), [[false, false], [true, false]]);
     }
 
     #[test]
     fn test_ge() {
-        test_cmp::<TestDtype, 2, 3, _>(
-            [[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]],
-            [[0.0, 2.0, 3.1], [-4.0, -5.5, -0.0]],
-            |a, b| a.ge(b).array(),
-            [[true, true, false], [true, true, true]],
-        );
-    }
+        let dev: TestDevice = Default::default();
+        let a = dev
+            .tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]])
+            .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([[0.0, 2.0, 3.1], [-4.0, -5.5, -0.0]])
+            .to_dtype::<TestDtype>();
+        let r = a.ge(&b);
+        assert_eq!(r.array(), [[true, true, false], [true, true, true]]);
 
-    // TODO Remove this attribute once Cuda supports integers
-    #[cfg(not(feature = "cuda"))]
-    #[test]
-    fn test_ge_not_dtype() {
-        test_cmp(
-            [[1, 2, 3], [0, 123, 5]],
-            [[0, 2, -3], [-4, 123, 6]],
-            |a, b| a.ge(b).array(),
-            [[true, true, true], [true, true, false]],
-        );
+        #[cfg(not(feature = "cuda"))]
+        {
+            let a = dev.tensor([[1, 2, 3], [0, 123, 5]]);
+            let b = dev.tensor([[0, 2, -3], [-4, 123, 6]]);
+            let r = a.ge(&b);
+            assert_eq!(r.array(), [[true, true, true], [true, true, false]]);
+        }
     }
 
     #[test]
     fn test_scalar_ge() {
-        test_scalar_cmp::<TestDtype, 2, 2, _>(
-            [[0.0, 1.2], [3.4, -5.6]],
-            |a| a.ge(1.2).array(),
-            [[false, true], [true, false]],
-        );
+        let dev: TestDevice = Default::default();
+        let a = dev
+            .tensor([[0.0, 1.2], [3.4, -5.6]])
+            .to_dtype::<TestDtype>();
+        let r = a.ge(1.2);
+        assert_eq!(r.array(), [[false, true], [true, false]]);
     }
 
     #[test]
     fn test_lt() {
-        test_cmp::<TestDtype, 2, 3, _>(
-            [[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]],
-            [[0.0, 2.0, 3.1], [-4.0, -5.5, -0.0]],
-            |a, b| a.lt(b).array(),
-            [[false, false, true], [false, false, false]],
-        );
-    }
+        let dev: TestDevice = Default::default();
+        let a = dev
+            .tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]])
+            .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([[0.0, 2.0, 3.1], [-4.0, -5.5, -0.0]])
+            .to_dtype::<TestDtype>();
+        let r = a.lt(&b);
+        assert_eq!(r.array(), [[false, false, true], [false, false, false]]);
 
-    // TODO Remove this attribute once Cuda supports integers
-    #[cfg(not(feature = "cuda"))]
-    #[test]
-    fn test_lt_not_dtype() {
-        test_cmp(
-            [[1, 2, 3], [0, 123, 5]],
-            [[0, 2, -3], [-4, 123, 6]],
-            |a, b| a.lt(b).array(),
-            [[false, false, false], [false, false, true]],
-        );
+        #[cfg(not(feature = "cuda"))]
+        {
+            let a = dev.tensor([[1, 2, 3], [0, 123, 5]]);
+            let b = dev.tensor([[0, 2, -3], [-4, 123, 6]]);
+            let r = a.lt(&b);
+            assert_eq!(r.array(), [[false, false, false], [false, false, true]]);
+        }
     }
 
     #[test]
     fn test_scalar_lt() {
-        test_scalar_cmp::<TestDtype, 2, 2, _>(
-            [[0.0, 1.2], [3.4, -5.6]],
-            |a| a.lt(1.2).array(),
-            [[true, false], [false, true]],
-        );
+        let dev: TestDevice = Default::default();
+        let a = dev
+            .tensor([[0.0, 1.2], [3.4, -5.6]])
+            .to_dtype::<TestDtype>();
+        let r = a.lt(1.2);
+        assert_eq!(r.array(), [[true, false], [false, true]]);
     }
 
     #[test]
     fn test_le() {
-        test_cmp::<TestDtype, 2, 3, _>(
-            [[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]],
-            [[0.0, 2.0, 3.1], [-4.0, -5.5, -0.0]],
-            |a, b| a.le(b).array(),
-            [[false, true, true], [false, false, true]],
-        );
-    }
+        let dev: TestDevice = Default::default();
+        let a = dev
+            .tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 0.0]])
+            .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([[0.0, 2.0, 3.1], [-4.0, -5.5, -0.0]])
+            .to_dtype::<TestDtype>();
+        let r = a.le(&b);
+        assert_eq!(r.array(), [[false, true, true], [false, false, true]]);
 
-    // TODO Remove this attribute once Cuda supports integers
-    #[cfg(not(feature = "cuda"))]
-    #[test]
-    fn test_le_not_dtype() {
-        test_cmp(
-            [[1, 2, 3], [0, 123, 5]],
-            [[0, 2, -3], [-4, 123, 6]],
-            |a, b| a.le(b).array(),
-            [[false, true, false], [false, true, true]],
-        );
+        #[cfg(not(feature = "cuda"))]
+        {
+            let a = dev.tensor([[1, 2, 3], [0, 123, 5]]);
+            let b = dev.tensor([[0, 2, -3], [-4, 123, 6]]);
+            let r = a.le(&b);
+            assert_eq!(r.array(), [[false, true, false], [false, true, true]]);
+        }
     }
 
     #[test]
     fn test_scalar_le() {
-        test_scalar_cmp::<TestDtype, 2, 2, _>(
-            [[0.0, 1.2], [3.4, -5.6]],
-            |a| a.le(1.2).array(),
-            [[true, true], [false, true]],
-        );
+        let dev: TestDevice = Default::default();
+        let a = dev
+            .tensor([[0.0, 1.2], [3.4, -5.6]])
+            .to_dtype::<TestDtype>();
+        let r = a.le(1.2);
+        assert_eq!(r.array(), [[true, true], [false, true]]);
     }
 
     #[test]

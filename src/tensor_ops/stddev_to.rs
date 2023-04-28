@@ -15,7 +15,7 @@ pub trait StddevTo<E: Dtype>: HasErr + HasShape {
     /// let r = t.stddev::<Rank1<2>, _>(0.0); // or `stddev::<_, Axis<1>>(0.0)`
     /// assert_eq!(r.array(), [0.6666667_f32.sqrt(), 6.0_f32.sqrt()]);
     /// ```
-    fn stddev<Dst: Shape, Ax: Axes>(self, epsilon: impl Into<E>) -> Self::WithShape<Dst>
+    fn stddev<Dst: Shape, Ax: Axes>(self, epsilon: impl Into<f64>) -> Self::WithShape<Dst>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {
@@ -24,7 +24,7 @@ pub trait StddevTo<E: Dtype>: HasErr + HasShape {
     /// Fallible version of [StddevTo::stddev]
     fn try_stddev<Dst: Shape, Ax: Axes>(
         self,
-        epsilon: impl Into<E>,
+        epsilon: impl Into<f64>,
     ) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>;
@@ -33,12 +33,14 @@ pub trait StddevTo<E: Dtype>: HasErr + HasShape {
 impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> StddevTo<E> for Tensor<S, E, D, T> {
     fn try_stddev<Dst: Shape, Ax: Axes>(
         self,
-        epsilon: impl Into<E>,
+        epsilon: impl Into<f64>,
     ) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {
-        self.try_var()?.try_add(epsilon.into())?.try_sqrt()
+        self.try_var()?
+            .try_add(E::from_f64(epsilon.into()).unwrap())?
+            .try_sqrt()
     }
 }
 
@@ -50,7 +52,9 @@ mod tests {
     #[test]
     fn test_std_axis_0_2d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
+        let t = dev
+            .tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().stddev::<Rank1<4>, _>(1e-8);
         assert_close_to_literal!(r, [0.5, 0.0001, 1.0, 3.0]);
         let g = r.mean().backward();
@@ -63,7 +67,9 @@ mod tests {
     #[test]
     fn test_std_axis_1_2d() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]]);
+        let t = dev
+            .tensor([[1.0, 2.0, 3.0, 4.0], [0.0, 2.0, 5.0, 10.0]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().stddev::<Rank1<2>, _>(0.0);
         assert_close_to_literal!(r, [1.118034, 3.7666297]);
         let g = r.mean().backward();

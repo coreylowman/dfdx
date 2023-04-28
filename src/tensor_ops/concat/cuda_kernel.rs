@@ -39,6 +39,7 @@ impl<E: Dtype + CudaTypeName> super::ConcatKernel<E> for Cuda {
             let src = BWD_KERNEL.replace("$Ty", E::NAME);
             let opts = CompileOptions {
                 arch: Some(env!("CUDA_COMPUTE_CAP")),
+                include_paths: vec![env!("CUDA_INCLUDE_DIR").to_string()],
                 ..Default::default()
             };
             let ptx = compile_ptx_with_opts(src, opts).unwrap();
@@ -64,6 +65,7 @@ impl<E: Dtype + CudaTypeName> super::ConcatKernel<E> for Cuda {
 }
 
 const BWD_KERNEL: &str = "
+#include \"cuda_fp16.h\"
 extern \"C\" __global__ void concat_bwd(const size_t numel, const $Ty *inp, $Ty *out) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < numel) { out[i] += inp[i]; }

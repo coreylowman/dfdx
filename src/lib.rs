@@ -241,6 +241,7 @@ pub fn keep_denormals() {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    pub use num_traits::{Float, FromPrimitive, NumCast, Zero};
 
     #[cfg(not(feature = "cuda"))]
     pub type TestDevice = crate::tensor::Cpu;
@@ -248,8 +249,14 @@ pub(crate) mod tests {
     #[cfg(feature = "cuda")]
     pub type TestDevice = crate::tensor::Cuda;
 
-    #[cfg(not(feature = "test-f64"))]
+    #[cfg(all(feature = "test-f64", feature = "test-f16"))]
+    compile_error!("f64 and f16 cannot be tested at the same time");
+
+    #[cfg(all(not(feature = "test-f16"), not(feature = "test-f64")))]
     pub type TestDtype = f32;
+
+    #[cfg(feature = "test-f16")]
+    pub type TestDtype = half::f16;
 
     #[cfg(feature = "test-f64")]
     pub type TestDtype = f64;
@@ -271,6 +278,19 @@ pub(crate) mod tests {
         {
             if let Some((l, r)) = self.get_far_pair(rhs, tolerance) {
                 panic!("lhs != rhs | {l} != {r}\n\n{self:?}\n\n{rhs:?}");
+            }
+        }
+    }
+
+    #[cfg(feature = "f16")]
+    impl AssertClose for half::f16 {
+        type Elem = Self;
+        const DEFAULT_TOLERANCE: Self::Elem = half::f16::from_f32_const(1e-2);
+        fn get_far_pair(&self, rhs: &Self, tolerance: Self) -> Option<(Self, Self)> {
+            if num_traits::Float::abs(self - rhs) > tolerance {
+                Some((*self, *rhs))
+            } else {
+                None
             }
         }
     }
@@ -349,12 +369,9 @@ pub(crate) mod tests {
     macro_rules! assert_close_to_literal {
         ($Lhs:expr, $Rhs:expr) => {{
             let lhs = $Lhs.array();
+            let rhs = $Rhs.ndmap(|x| num_traits::FromPrimitive::from_f64(x).unwrap());
             let tol = AssertClose::get_default_tol(&lhs);
-            let far_pair = AssertClose::get_far_pair(
-                &lhs,
-                &$Rhs.ndmap(|x| num_traits::FromPrimitive::from_f64(x).unwrap()),
-                tol,
-            );
+            let far_pair = AssertClose::get_far_pair(&lhs, &rhs, tol);
             if let Some((l, r)) = far_pair {
                 panic!("lhs != rhs | {l} != {r}");
             }
@@ -411,5 +428,6 @@ pub(crate) mod tests {
             }
         }};
     }
+
     pub(crate) use assert_close;
 }

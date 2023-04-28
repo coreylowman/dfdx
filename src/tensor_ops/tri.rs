@@ -74,15 +74,17 @@ mod tests {
     fn test_tri() {
         let dev: TestDevice = Default::default();
 
-        let t: Tensor<_, TestDtype, _> = dev.tensor(
-            [[[
-                [1., 2., 3., 4., 5., 6.],
-                [1., 2., 3., 4., 5., 6.],
-                [1., 2., 3., 4., 5., 6.],
-                [1., 2., 3., 4., 5., 6.],
-                [1., 2., 3., 4., 5., 6.],
-            ]; 4]; 3],
-        );
+        let t = dev
+            .tensor(
+                [[[
+                    [1., 2., 3., 4., 5., 6.],
+                    [1., 2., 3., 4., 5., 6.],
+                    [1., 2., 3., 4., 5., 6.],
+                    [1., 2., 3., 4., 5., 6.],
+                    [1., 2., 3., 4., 5., 6.],
+                ]; 4]; 3],
+            )
+            .to_dtype::<TestDtype>();
         assert_close_to_literal!(
             t.clone().lower_tri(None),
             [[[

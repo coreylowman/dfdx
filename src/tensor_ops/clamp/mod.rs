@@ -25,23 +25,23 @@ pub struct ClampKernelOp<E> {
 /// ```
 pub fn clamp<S: Shape, E: Dtype, D: UnaryKernel<ClampKernelOp<E>, E>, T: Tape<E, D>>(
     t: Tensor<S, E, D, T>,
-    min: impl Into<E>,
-    max: impl Into<E>,
+    min: impl Into<f64>,
+    max: impl Into<f64>,
 ) -> Tensor<S, E, D, T> {
     t.clamp(min, max)
 }
 
 impl<S: Shape, E: Dtype, D: UnaryKernel<ClampKernelOp<E>, E>, T: Tape<E, D>> Tensor<S, E, D, T> {
     /// See [clamp]
-    pub fn clamp(self, min: impl Into<E>, max: impl Into<E>) -> Self {
+    pub fn clamp(self, min: impl Into<f64>, max: impl Into<f64>) -> Self {
         self.try_clamp(min, max).unwrap()
     }
     /// See [clamp]
-    pub fn try_clamp(self, min: impl Into<E>, max: impl Into<E>) -> Result<Self, D::Err> {
+    pub fn try_clamp(self, min: impl Into<f64>, max: impl Into<f64>) -> Result<Self, D::Err> {
         try_unary_op(
             ClampKernelOp {
-                min: min.into(),
-                max: max.into(),
+                min: E::from_f64(min.into()).unwrap(),
+                max: E::from_f64(max.into()).unwrap(),
             },
             self,
         )
@@ -55,7 +55,9 @@ mod tests {
     #[test]
     fn test_clamp() {
         let dev: TestDevice = Default::default();
-        let t: Tensor<_, TestDtype, _> = dev.tensor([[-1.0, 0.0, 1.0], [-2.0, 2.0, 1.1]]);
+        let t = dev
+            .tensor([[-1.0, 0.0, 1.0], [-2.0, 2.0, 1.1]])
+            .to_dtype::<TestDtype>();
         let r = t.leaky_trace().clamp(-1.0, 1.0);
         assert_close_to_literal!(r, [[-1.0, 0.0, 1.0], [-1.0, 1.0, 1.0]]);
         let g = r.exp().mean().backward();

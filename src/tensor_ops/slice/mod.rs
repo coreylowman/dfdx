@@ -89,12 +89,14 @@ mod tests {
     #[test]
     fn test_slice() {
         let dev = TestDevice::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([
-            [1., 2., 3., 4.],
-            [5., 6., 7., 8.],
-            [9., 10., 11., 12.],
-            [13., 14., 15., 16.],
-        ]);
+        let a = dev
+            .tensor([
+                [1., 2., 3., 4.],
+                [5., 6., 7., 8.],
+                [9., 10., 11., 12.],
+                [13., 14., 15., 16.],
+            ])
+            .to_dtype::<TestDtype>();
 
         let b: Tensor<Rank2<2, 2>, _, _> = a.clone().slice((2.., 2..)).realize().unwrap();
         assert_close_to_literal!(b, [[11., 12.], [15., 16.]]);
@@ -124,7 +126,10 @@ mod tests {
     #[test]
     fn test_slice_broadcast_top() {
         let dev = TestDevice::default();
-        let a: Tensor<Rank2<5, 4>, TestDtype, _> = dev.tensor([1., 2., 3., 4.]).broadcast();
+        let a = dev
+            .tensor([1., 2., 3., 4.])
+            .to_dtype::<TestDtype>()
+            .broadcast::<Rank2<5, 4>, _>();
 
         let b: Tensor<Rank2<3, 4>, _, _> = a.clone().slice((..3, ..)).realize().unwrap();
         assert_close_to_literal!(b, [[1., 2., 3., 4.]; 3]);
@@ -142,7 +147,10 @@ mod tests {
     #[test]
     fn test_slice_broadcast_bottom() {
         let dev = TestDevice::default();
-        let a: Tensor<Rank2<4, 5>, TestDtype, _> = dev.tensor([1., 2., 3., 4.]).broadcast();
+        let a: Tensor<Rank2<4, 5>, TestDtype, _> = dev
+            .tensor([1., 2., 3., 4.])
+            .to_dtype::<TestDtype>()
+            .broadcast();
 
         let b: Tensor<Rank2<2, 5>, _, _> = a.clone().slice((1..3, ..)).realize().unwrap();
         assert_close_to_literal!(b, [[2.; 5], [3.; 5]]);
@@ -160,12 +168,14 @@ mod tests {
     #[test]
     fn test_slice_backward() {
         let dev = TestDevice::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([
-            [1., 2., 3., 4.],
-            [5., 6., 7., 8.],
-            [9., 10., 11., 12.],
-            [13., 14., 15., 16.],
-        ]);
+        let a = dev
+            .tensor([
+                [1., 2., 3., 4.],
+                [5., 6., 7., 8.],
+                [9., 10., 11., 12.],
+                [13., 14., 15., 16.],
+            ])
+            .to_dtype::<TestDtype>();
 
         let b: Tensor<Rank2<2, 2>, _, _, _> = a.leaky_trace().slice((2.., 2..)).realize().unwrap();
         assert_close_to_literal!(b, [[11., 12.], [15., 16.]]);

@@ -1,3 +1,5 @@
+#include "cuda_utils.cuh"
+
 #define LONG_UNARY_OP(TYPENAME, FORWARD, BACKWARD, OP_STRUCT, FUNC, DERIVATIVE) \
 extern "C" __global__ void FORWARD( \
     const OP_STRUCT op, \
@@ -26,8 +28,9 @@ extern "C" __global__ void BACKWARD( \
         return; \
     } \
     \
-    TYPENAME x = inp ? inp[i] : 0; \
-    TYPENAME y = out ? out[i] : 0; \
+    TYPENAME zero = 0.0; \
+    TYPENAME x = inp ? inp[i] : zero; \
+    TYPENAME y = out ? out[i] : zero; \
     TYPENAME dx; \
     DERIVATIVE \
     grad_inp[i] += dx * grad_out[i]; \

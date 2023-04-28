@@ -66,21 +66,21 @@ use super::optimizer::*;
 /// };
 /// ```
 #[derive(Debug, Clone, Copy)]
-pub struct SgdConfig<E> {
+pub struct SgdConfig {
     /// Learning rate. Defaults to `1e-2`
-    pub lr: E,
+    pub lr: f64,
 
     /// Optional momentum. Defaults to `None`.
-    pub momentum: Option<Momentum<E>>,
+    pub momentum: Option<Momentum>,
 
     /// Optional weight decay. Defaults to `None`.
-    pub weight_decay: Option<WeightDecay<E>>,
+    pub weight_decay: Option<WeightDecay>,
 }
 
-impl<E: Dtype> Default for SgdConfig<E> {
+impl Default for SgdConfig {
     fn default() -> Self {
         Self {
-            lr: E::from_f32(1e-2).unwrap(),
+            lr: 1e-2,
             momentum: None,
             weight_decay: None,
         }
@@ -114,7 +114,7 @@ impl<E: Dtype> Default for SgdConfig<E> {
 #[derive(Debug)]
 pub struct Sgd<M, E: Dtype, D: DeviceStorage> {
     /// Hyperparameter configuration
-    pub cfg: SgdConfig<E>,
+    pub cfg: SgdConfig,
 
     velocity: Gradients<E, D>,
 
@@ -123,7 +123,7 @@ pub struct Sgd<M, E: Dtype, D: DeviceStorage> {
 
 impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
     /// Constructs using hyperparameters from `cfg`
-    pub fn new(_model: &M, cfg: SgdConfig<E>) -> Self {
+    pub fn new(_model: &M, cfg: SgdConfig) -> Self {
         Self {
             cfg,
             velocity: Gradients::leaky(),
@@ -135,7 +135,7 @@ impl<M, E: Dtype, D: DeviceStorage> Sgd<M, E, D> {
 pub trait SgdKernel<E: Dtype>: DeviceStorage {
     fn update(
         &self,
-        cfg: &SgdConfig<E>,
+        cfg: &SgdConfig,
         param: &mut Self::Vec<E>,
         velocity: &mut Self::Vec<E>,
         grad: &Self::Vec<E>,
@@ -228,7 +228,9 @@ mod tests {
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut sgd = Sgd::new(&t, Default::default());
 
-        let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
+        let rate = dev
+            .tensor([0.1, 1.0, 2.0, 10.0, 100.0])
+            .to_dtype::<TestDtype>();
         let expected = [
             [0.9998, 0.998, 0.996, 0.98, 0.8],
             [0.99960005, 0.99600005, 0.992, 0.96000004, 0.6],
@@ -258,7 +260,9 @@ mod tests {
             },
         );
 
-        let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
+        let rate = dev
+            .tensor([0.1, 1.0, 2.0, 10.0, 100.0])
+            .to_dtype::<TestDtype>();
         let expected = [
             [0.9998, 0.998, 0.996, 0.98, 0.8],
             [0.99950004, 0.995, 0.99, 0.95000005, 0.5],
@@ -288,7 +292,9 @@ mod tests {
             },
         );
 
-        let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
+        let rate = dev
+            .tensor([0.1, 1.0, 2.0, 10.0, 100.0])
+            .to_dtype::<TestDtype>();
         let expected = [
             [0.9997, 0.997, 0.994, 0.97, 0.70000005],
             [0.99935, 0.9935, 0.987, 0.935, 0.35000005],
@@ -327,7 +333,9 @@ mod tests {
             },
         );
 
-        let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
+        let rate = dev
+            .tensor([0.1, 1.0, 2.0, 10.0, 100.0])
+            .to_dtype::<TestDtype>();
         let expected = [
             [0.9988, 0.997, 0.995, 0.979, 0.799],
             [0.99760115, 0.994003, 0.990005, 0.958021, 0.59820104],
@@ -362,7 +370,9 @@ mod tests {
             },
         );
 
-        let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
+        let rate = dev
+            .tensor([0.1, 1.0, 2.0, 10.0, 100.0])
+            .to_dtype::<TestDtype>();
         let expected = [
             [0.9988, 0.997, 0.995, 0.979, 0.799],
             [0.9975012, 0.993003, 0.988005, 0.948021, 0.498201],
@@ -382,14 +392,14 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         // adding l2_weight_decay should be equivalent to adding an L2 term to the loss
-        let weight_decay = 1e-1;
+
         let mut t: Tensor<Rank1<5>, TestDtype, _> = dev.ones();
         let mut sgd_l2 = Sgd::new(
             &t,
             SgdConfig {
                 lr: 1e-2,
                 momentum: Some(Momentum::Classic(0.5)),
-                weight_decay: Some(WeightDecay::L2(weight_decay)),
+                weight_decay: Some(WeightDecay::L2(1e-1)),
             },
         );
         let mut sgd = Sgd::new(
@@ -401,7 +411,9 @@ mod tests {
             },
         );
 
-        let rate = dev.tensor([0.1, 1.0, 2.0, 10.0, 100.0]);
+        let rate = dev
+            .tensor([0.1, 1.0, 2.0, 10.0, 100.0])
+            .to_dtype::<TestDtype>();
         let expected = [
             [0.9988, 0.997, 0.995, 0.979, 0.799],
             [0.9970012, 0.992503, 0.987505, 0.947521, 0.49770102],
@@ -419,7 +431,8 @@ mod tests {
         t = dev.ones();
         for e in expected.iter() {
             let normal_loss = (t.leaky_trace() * rate.clone()).mean();
-            let l2_loss = t.leaky_trace().powi(2).sum() * (weight_decay / (2.0));
+            let scale: TestDtype = NumCast::from(1e-1 / 2.0).unwrap();
+            let l2_loss = t.leaky_trace().powi(2).sum() * scale;
             let loss = l2_loss + normal_loss;
 
             let gradients = loss.backward();

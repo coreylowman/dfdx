@@ -1,6 +1,6 @@
 [package]
 name = "dfdx"
-version = "0.11.1"
+version = "0.11.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 rust-version = "1.65"
@@ -33,10 +33,11 @@ matrixmultiply = { version = "0.3.2", default-features = false, optional = true 
 zip = { version = "0.6.2", default-features = false, optional = true }
 cblas-sys = { version = "0.1.4", default-features = false, optional = true }
 libc = { version = "0.2", default-features = false, optional = true }
-cudarc = { version = "0.9.7", default-features = false, optional = true, features = ["driver", "cublas", "nvrtc"] }
+cudarc = { git = "https://github.com/coreylowman/cudarc", branch = "dfdx-half", default-features = false, optional = true, features = ["driver", "cublas", "nvrtc", "f16"] }
 num-traits = { version = "0.2.15", default-features = false }
 safetensors = { version = "0.3", default-features = false, optional = true }
 memmap2 = { version = "0.5", default-features = false, optional = true }
+half = { git = "https://github.com/starkat99/half-rs.git", branch = "main", optional = true, features = ["num-traits", "rand_distr"] }
 
 [dev-dependencies]
 tempfile = "3.3.0"
@@ -48,7 +49,7 @@ glob = { version = "0.3.1", optional = true }
 
 [features]
 default = ["std", "fast-alloc", "cpu-par-matmul"]
-nightly = []
+nightly = ["half?/use-intrinsics"]
 
 std = ["cudarc?/std", "matrixmultiply?/std", "rand_distr/std_math"]
 fast-alloc = ["std"]
@@ -61,9 +62,12 @@ cpu-mkl-matmul = ["dep:cblas-sys", "dep:libc"]
 cuda = ["dep:cudarc", "dep:glob"]
 cudnn = ["cuda", "cudarc?/cudnn"]
 
+f16 = ["dep:half"]
+
 numpy = ["dep:zip", "std"]
 safetensors = ["dep:safetensors", "std", "dep:memmap2"]
 
+test-f16 = ["f16"]
 test-f64 = []
 test-integrations = []
 ci-check = ["cudarc?/ci-check"]

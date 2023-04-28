@@ -1,3 +1,5 @@
+#include "cuda_fp16.h"
+
 enum MomentumType {
     None,
     Classic,
@@ -10,18 +12,17 @@ enum WeightDecayType {
     Decoupled
 };
 
-template<typename T>
 struct SgdConfig {
-    T lr;
+    double lr;
     MomentumType momentum_type;
-    T momentum;
+    double momentum;
     WeightDecayType weight_decay_type;
-    T weight_decay;
+    double weight_decay;
 };
 
 template<typename T>
 __device__ void sgd_update(
-    const SgdConfig<T> cfg,
+    const SgdConfig cfg,
     const size_t numel,
     T* param,
     T* velocity,
@@ -33,26 +34,30 @@ __device__ void sgd_update(
         return;
     }
 
+    T weight_decay = cfg.weight_decay;
+    T lr = cfg.lr;
+    T momentum = cfg.momentum;
+
     T p = param[i];
     T g = grad[i];
     T v = velocity[i];
 
     if (cfg.weight_decay_type == L2) {
-        g += cfg.weight_decay * p;
+        g += weight_decay * p;
     }
 
     if (cfg.momentum_type == Classic) {
-        v = g + cfg.momentum * v;
-        g = v * cfg.lr;
+        v = g + momentum * v;
+        g = v * lr;
     } else if (cfg.momentum_type == Nesterov) {
-        v = g + cfg.momentum * v;
-        g = (g + cfg.momentum * v) * cfg.lr;
+        v = g + momentum * v;
+        g = (g + momentum * v) * lr;
     } else {
-        g *= cfg.lr;
+        g *= lr;
     }
 
     if (cfg.weight_decay_type == Decoupled) {
-        g += cfg.weight_decay * cfg.lr * p;
+        g += weight_decay * lr * p;
     }
 
     velocity[i] = v;
@@ -61,7 +66,7 @@ __device__ void sgd_update(
 
 #define SGD(TYPENAME, FN) \
 extern "C" __global__ void FN( \
-    const SgdConfig<TYPENAME> cfg, \
+    const SgdConfig cfg, \
     const size_t numel, \
     TYPENAME* param, \
     TYPENAME* velocity, \
@@ -70,5 +75,6 @@ extern "C" __global__ void FN( \
     sgd_update(cfg, numel, param, velocity, grad); \
 }
 
+SGD(__half, sgd_update_f16);
 SGD(float, sgd_update_f32);
 SGD(double, sgd_update_f64);

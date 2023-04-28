@@ -459,6 +459,22 @@ pub trait TensorFromVec<E: Unit>: DeviceStorage {
     ) -> Result<Tensor<S, E, Self>, Self::Err>;
 }
 
+impl<S: Shape, E: Unit, D: DeviceStorage, T> Tensor<S, E, D, T> {
+    /// Clones the tensor onto a different device.
+    pub fn to_device<Dst: TensorFromVec<E>>(&self, device: &Dst) -> Tensor<S, E, Dst> {
+        self.try_to_device(device).unwrap()
+    }
+
+    /// Fallibly clones the tensor onto a different device.
+    pub fn try_to_device<Dst: TensorFromVec<E>>(
+        &self,
+        device: &Dst,
+    ) -> Result<Tensor<S, E, Dst>, Dst::Err> {
+        let buf = self.as_vec();
+        device.try_tensor_from_vec(buf, self.shape)
+    }
+}
+
 /// Construct tensors from rust data
 pub trait TensorFrom<Src, S: Shape, E: Unit>: DeviceStorage {
     /// Create a tensor from rust data

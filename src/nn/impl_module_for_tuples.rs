@@ -108,7 +108,7 @@ mod tests {
     fn test_2_tuple_update() {
         let dev: TestDevice = Default::default();
         type Model = (Linear<2, 3>, Linear<3, 4>);
-        let mut model = Model::build_on_device(&dev);
+        let mut model = dev.build_module::<Model, f32>();
         assert_ne!(model.0.weight.array(), [[0.0; 2]; 3]);
         assert_ne!(model.0.bias.array(), [0.0; 3]);
         assert_ne!(model.1.weight.array(), [[0.0; 3]; 4]);

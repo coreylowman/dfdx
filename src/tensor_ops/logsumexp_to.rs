@@ -73,7 +73,9 @@ mod tests {
     #[test]
     fn test_logsumexp_1d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let a = dev
+            .tensor([-2.0, -1.0, 0.0, 1.0, 2.0])
+            .to_dtype::<TestDtype>();
         let r = a.leaky_trace().logsumexp();
         assert_close_to_literal!(r, 2.4519143);
         let g = r.backward();
@@ -86,7 +88,9 @@ mod tests {
     #[test]
     fn test_logsumexp_2d() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]]);
+        let a = dev
+            .tensor([[-2.0, -1.0, 0.0], [1.0, 4.0, 7.0]])
+            .to_dtype::<TestDtype>();
         let r = a.leaky_trace().logsumexp::<Rank1<2>, _>();
         assert_close_to_literal!(r, [0.40760595, 7.0509458]);
         let g = r.mean().backward();

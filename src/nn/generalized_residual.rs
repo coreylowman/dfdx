@@ -106,9 +106,10 @@ mod tests {
         let dev: TestDevice = Default::default();
 
         type Model = GeneralizedResidual<Linear<2, 2>, Linear<2, 2>>;
-        let model = dev.build_module::<Model, f32>();
+        let model = dev.build_module::<Model, f32>().to_dtype::<TestDtype>();
 
-        let x = dev.sample_normal::<Rank2<4, 2>>();
+        let x: Tensor<Rank2<4, 2>, f32, _> = dev.sample_normal();
+        let x = x.to_dtype::<TestDtype>();
         let y = model.forward(x.leaky_trace());
 
         #[rustfmt::skip]

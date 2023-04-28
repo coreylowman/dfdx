@@ -53,8 +53,12 @@ mod tests {
     #[test]
     fn test_minimum() {
         let dev: TestDevice = Default::default();
-        let a: Tensor<_, TestDtype, _> = dev.tensor([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]]);
-        let b: Tensor<_, TestDtype, _> = dev.tensor([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]]);
+        let a = dev
+            .tensor([[-1.0, 0.0, 1.0], [3.0, 4.0, -5.0]])
+            .to_dtype::<TestDtype>();
+        let b = dev
+            .tensor([[0.0, 0.0, -1.0], [3.0, -4.0, 5.0]])
+            .to_dtype::<TestDtype>();
 
         let result = a.leaky_trace().minimum(b.clone());
         assert_close_to_literal!(result, [[-1., 0., -1.], [3., -4., -5.]]);

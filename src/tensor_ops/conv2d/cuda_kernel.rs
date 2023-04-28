@@ -17,6 +17,17 @@ trait HasCudaKernel<E> {
     const FNS: &'static [&'static str];
 }
 
+#[cfg(feature = "f16")]
+impl HasCudaKernel<half::f16> for Cuda {
+    const MOD: &'static str = "conv2d_f16";
+    const FNS: &'static [&'static str] = &[
+        "unfold_input_into_patches_f16",
+        "unfold_output_into_patches_f16",
+        "transpose_filters_f16",
+        "sum_transposed_filters_f16",
+    ];
+}
+
 impl HasCudaKernel<f32> for Cuda {
     const MOD: &'static str = "conv2d_f32";
     const FNS: &'static [&'static str] = &[

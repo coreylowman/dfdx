@@ -109,8 +109,8 @@ mod tests {
         let gr = right.mean().backward();
         let l = left.retaped::<NoneTape>();
         let gl = left.mean().backward();
-        assert_ne!(gl.get(&l).array(), [0.0; 1]);
-        assert_ne!(gr.get(&r).array(), [0.0; 1]);
+        assert_ne!(gl.get(&l).array(), [TestDtype::zero(); 1]);
+        assert_ne!(gr.get(&r).array(), [TestDtype::zero(); 1]);
     }
 
     #[test]

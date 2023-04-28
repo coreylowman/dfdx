@@ -12,6 +12,10 @@ const PTX_SRC: &str = include_str!(concat!(env!("OUT_DIR"), "/roll.ptx"));
 trait HasCudaKernel<E> {
     const FNS: &'static [&'static str];
 }
+#[cfg(feature = "f16")]
+impl HasCudaKernel<half::f16> for Cuda {
+    const FNS: &'static [&'static str] = &["roll_fwd_f16", "roll_bwd_f16"];
+}
 impl HasCudaKernel<f32> for Cuda {
     const FNS: &'static [&'static str] = &["roll_fwd_f32", "roll_bwd_f32"];
 }

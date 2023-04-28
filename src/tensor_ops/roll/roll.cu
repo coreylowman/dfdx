@@ -105,5 +105,6 @@ extern "C" __global__ void BWD( \
     const TY *grad_out \
 ) { roll_bwd(op, num_dims, numel, dims, inp_strides, out_strides, grad_inp, grad_out); }
 
+ROLL(__half, roll_fwd_f16, roll_bwd_f16);
 ROLL(float, roll_fwd_f32, roll_bwd_f32);
 ROLL(double, roll_fwd_f64, roll_bwd_f64);
