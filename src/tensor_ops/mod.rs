@@ -160,6 +160,7 @@ mod choose;
 mod clamp;
 mod cmp;
 mod concat;
+mod concat_along;
 mod cos;
 mod div;
 mod dropout;
