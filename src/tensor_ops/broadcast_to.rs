@@ -29,45 +29,46 @@ pub trait BroadcastTo: HasErr + HasShape {
     where
         Self::Shape: BroadcastShapeTo<Dst, Ax>,
     {
-        self.try_broadcast_like(&Default::default()).unwrap()
+        self.try_broadcast_like::<Dst, _>(&Default::default())
+            .unwrap()
     }
     /// Fallible version of [BroadcastTo::broadcast]
     fn try_broadcast<Dst: ConstShape, Ax: Axes>(self) -> Result<Self::WithShape<Dst>, Self::Err>
     where
         Self::Shape: BroadcastShapeTo<Dst, Ax>,
     {
-        self.try_broadcast_like(&Default::default())
+        self.try_broadcast_like::<Dst, _>(&Default::default())
     }
     /// Same as [BroadcastTo::broadcast], but the target shape is given
-    fn broadcast_like<Dst: Shape, Ax: Axes>(self, dst: &Dst) -> Self::WithShape<Dst>
+    fn broadcast_like<Dst: HasShape, Ax: Axes>(self, dst: &Dst) -> Self::WithShape<Dst::Shape>
     where
-        Self::Shape: BroadcastShapeTo<Dst, Ax>,
+        Self::Shape: BroadcastShapeTo<Dst::Shape, Ax>,
     {
         self.try_broadcast_like(dst).unwrap()
     }
     /// fallible version of [BroadcastTo::broadcast_like]
-    fn try_broadcast_like<Dst: Shape, Ax: Axes>(
+    fn try_broadcast_like<Dst: HasShape, Ax: Axes>(
         self,
         dst: &Dst,
-    ) -> Result<Self::WithShape<Dst>, Self::Err>
+    ) -> Result<Self::WithShape<Dst::Shape>, Self::Err>
     where
-        Self::Shape: BroadcastShapeTo<Dst, Ax>;
+        Self::Shape: BroadcastShapeTo<Dst::Shape, Ax>;
 }
 
 impl<S: Shape, E: Unit, D: DeviceStorage, T: Tape<E, D>> BroadcastTo for Tensor<S, E, D, T> {
-    fn try_broadcast_like<Dst: Shape, Ax: Axes>(
+    fn try_broadcast_like<Dst: HasShape, Ax: Axes>(
         self,
         dst: &Dst,
-    ) -> Result<Self::WithShape<Dst>, Self::Err>
+    ) -> Result<Self::WithShape<Dst::Shape>, Self::Err>
     where
-        Self::Shape: BroadcastShapeTo<Dst, Ax>,
+        Self::Shape: BroadcastShapeTo<Dst::Shape, Ax>,
     {
-        self.shape().check(dst);
+        self.shape().check(dst.shape());
 
         Ok(Tensor {
             id: self.id,
             data: self.data,
-            shape: *dst,
+            shape: *dst.shape(),
             strides: self.shape.broadcast_strides(self.strides),
             device: self.device,
             tape: self.tape,
@@ -87,6 +88,15 @@ mod tests {
         let dev: TestDevice = Default::default();
         let a: Tensor<(usize,), TestDtype, _> = dev.zeros_like(&(5,));
         let _: Tensor<(Const<3>, usize), TestDtype, _> = a.broadcast_like(&(Const, 7));
+    }
+
+    #[test]
+    fn test_broadcast_with_tensor() {
+        let dev: TestDevice = Default::default();
+        let a1: Tensor<_, TestDtype, _> = dev.zeros_like(&(5,));
+        let b: Tensor<_, TestDtype, _> = dev.zeros_like(&(2, 5, 3));
+        let a2 = a1.broadcast_like::<_, Axes2<0, 2>>(&b);
+        assert_eq!(a2.shape(), &(2, 5, 3));
     }
 
     #[test]
