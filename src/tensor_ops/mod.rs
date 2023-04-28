@@ -214,6 +214,7 @@ pub use broadcast_to::BroadcastTo;
 pub use choose::ChooseFrom;
 pub use clamp::clamp;
 pub use cmp::{eq, ge, gt, le, lt, ne, TryEq, TryGe, TryGt, TryLe, TryLt, TryNe};
+#[allow(deprecated)]
 pub use concat::TryConcat;
 pub use concat_along::TryConcatAlong;
 pub use cos::cos;
