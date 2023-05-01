@@ -10,6 +10,7 @@ pub trait Device<E: Dtype>:
     + CopySlice<E>
     + crate::tensor::TensorFromVec<E>
     + crate::tensor::TensorFromVec<usize>
+    + crate::tensor::TriangleTensor<E>
 
     // appends
     + super::super::stack::StackKernel<E>
