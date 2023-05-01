@@ -10,6 +10,7 @@ pub trait Device<E: Dtype>:
     + CopySlice<E>
     + crate::tensor::TensorFromVec<E>
     + crate::tensor::TensorFromVec<usize>
+    + crate::tensor::TriangleTensor<E>
 
     // appends
     + super::super::stack::StackKernel<E>
@@ -61,6 +62,12 @@ pub trait Device<E: Dtype>:
 
     // boolean operations
     + super::super::boolean::BooleanKernel
+    + super::super::cmp::CmpKernel<super::super::cmp::EqKernelOp, E>
+    + super::super::cmp::CmpKernel<super::super::cmp::NeKernelOp, E>
+    + super::super::cmp::CmpKernel<super::super::cmp::GtKernelOp, E>
+    + super::super::cmp::CmpKernel<super::super::cmp::GeKernelOp, E>
+    + super::super::cmp::CmpKernel<super::super::cmp::LtKernelOp, E>
+    + super::super::cmp::CmpKernel<super::super::cmp::LeKernelOp, E>
     + super::super::cmp::ScalarCmpKernel<super::super::cmp::EqKernelOp, E>
     + super::super::cmp::ScalarCmpKernel<super::super::cmp::NeKernelOp, E>
     + super::super::cmp::ScalarCmpKernel<super::super::cmp::GtKernelOp, E>
