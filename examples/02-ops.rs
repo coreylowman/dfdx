@@ -47,14 +47,14 @@ fn main() {
     a = a + 0.5;
     let b: Tensor<(usize, Const<5>), f32, _> = dev.sample_uniform_like(&(3, Const));
     // note the use of `realize`
-    let _: Tensor<(Const<3>, usize), f32, _> = a + b.realize().expect("`b` should have 3 rows");
+    let _: Tensor<(Const<3>, usize), f32, _> = a + b.try_realize().expect("`b` should have 3 rows");
 
     // then we have things like matrix and vector multiplication:
     let a: Tensor<(usize, Const<5>), f32, _> = dev.sample_normal_like(&(3, Const));
     let b: Tensor<(usize, usize), f32, _> = dev.sample_normal_like(&(5, 7));
     // if type inference is not possible, we explicitly provide the shape for `realize`
     let _: Tensor<(usize, usize), f32, _> = a.matmul(
-        b.realize::<(Const<5>, usize)>()
+        b.try_realize::<(Const<5>, usize)>()
             .expect("`b` should have 5 rows"),
     );
 

@@ -35,7 +35,7 @@ mod cuda_kernel;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(2, Const));
 /// let b: Tensor<(usize, Const<3>), f32, _> = dev.zeros_like(&(4, Const));
-/// let _: Tensor<Rank2<6, 3>, f32, _> = (a, b).concat_along(Axis::<0>).realize().unwrap();
+/// let _: Tensor<Rank2<6, 3>, f32, _> = (a, b).concat_along(Axis::<0>).realize();
 /// ```
 ///
 /// Along Axis 1:
@@ -44,7 +44,7 @@ mod cuda_kernel;
 /// # let dev: Cpu = Default::default();
 /// let a: Tensor<(Const<2>, usize), f32, _> = dev.zeros_like(&(Const, 2));
 /// let b: Tensor<(Const<2>, usize), f32, _> = dev.zeros_like(&(Const, 4));
-/// let _: Tensor<Rank2<2, 6>, f32, _> = (a, b).concat_along(Axis::<1>).realize().unwrap();
+/// let _: Tensor<Rank2<2, 6>, f32, _> = (a, b).concat_along(Axis::<1>).realize();
 /// ```
 pub trait TryConcatAlong<Ax>: Sized {
     type Output;
@@ -192,11 +192,14 @@ mod tests {
         let b: Tensor<Rank3<3, 3, 4>, TestDtype, _> = dev.sample_normal();
         let a_dyn = a
             .leaky_trace()
-            .realize::<(usize, Const<3>, Const<4>)>()
+            .try_realize::<(usize, Const<3>, Const<4>)>()
             .unwrap();
-        let b_dyn = b.clone().realize::<(usize, Const<3>, Const<4>)>().unwrap();
+        let b_dyn = b
+            .clone()
+            .try_realize::<(usize, Const<3>, Const<4>)>()
+            .unwrap();
         let c = (a_dyn, b_dyn).concat_along(Axis::<0>);
-        let c = c.realize::<(Const<5>, Const<3>, Const<4>)>().unwrap();
+        let c = c.try_realize::<(Const<5>, Const<3>, Const<4>)>().unwrap();
         let a_arr = a.array();
         let b_arr = b.array();
         let c_arr = c.array();
@@ -222,11 +225,14 @@ mod tests {
         let b: Tensor<Rank3<2, 3, 4>, TestDtype, _> = dev.sample_normal();
         let a_dyn = a
             .leaky_trace()
-            .realize::<(Const<2>, usize, Const<4>)>()
+            .try_realize::<(Const<2>, usize, Const<4>)>()
             .unwrap();
-        let b_dyn = b.clone().realize::<(Const<2>, usize, Const<4>)>().unwrap();
+        let b_dyn = b
+            .clone()
+            .try_realize::<(Const<2>, usize, Const<4>)>()
+            .unwrap();
         let c = (a_dyn, b_dyn).concat_along(Axis::<1>);
-        let c = c.realize::<(Const<2>, Const<5>, Const<4>)>().unwrap();
+        let c = c.try_realize::<(Const<2>, Const<5>, Const<4>)>().unwrap();
         let a_arr = a.array();
         let b_arr = b.array();
         let c_arr = c.array();
@@ -251,11 +257,14 @@ mod tests {
         let b: Tensor<Rank3<2, 3, 3>, TestDtype, _> = dev.sample_normal();
         let a_dyn = a
             .leaky_trace()
-            .realize::<(Const<2>, Const<3>, usize)>()
+            .try_realize::<(Const<2>, Const<3>, usize)>()
             .unwrap();
-        let b_dyn = b.clone().realize::<(Const<2>, Const<3>, usize)>().unwrap();
+        let b_dyn = b
+            .clone()
+            .try_realize::<(Const<2>, Const<3>, usize)>()
+            .unwrap();
         let c = (a_dyn, b_dyn).concat_along(Axis::<2>);
-        let c = c.realize::<(Const<2>, Const<3>, Const<5>)>().unwrap();
+        let c = c.try_realize::<(Const<2>, Const<3>, Const<5>)>().unwrap();
         let a_arr = a.array();
         let b_arr = b.array();
         let c_arr = c.array();
