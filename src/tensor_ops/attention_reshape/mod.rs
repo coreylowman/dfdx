@@ -109,15 +109,9 @@ mod tests {
 
         let (q, k, v) = dev.attention_reshape(&qkv, &past_key, &past_value);
 
-        let q = q
-            .realize::<(Const<NUM_HEADS>, Const<1>, Const<HEAD_DIM>)>()
-            .unwrap();
-        let k = k
-            .realize::<(Const<NUM_HEADS>, Const<HEAD_DIM>, Const<4>)>()
-            .unwrap();
-        let v = v
-            .realize::<(Const<NUM_HEADS>, Const<4>, Const<HEAD_DIM>)>()
-            .unwrap();
+        let q = q.realize::<(Const<NUM_HEADS>, Const<1>, Const<HEAD_DIM>)>();
+        let k = k.realize::<(Const<NUM_HEADS>, Const<HEAD_DIM>, Const<4>)>();
+        let v = v.realize::<(Const<NUM_HEADS>, Const<4>, Const<HEAD_DIM>)>();
 
         assert_close_to_literal!(q, [[[1.0; HEAD_DIM]; 1]; NUM_HEADS]);
         assert_close_to_literal!(

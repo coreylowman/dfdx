@@ -73,7 +73,7 @@ impl Predictor {
         let batched: Tensor<Rank2<1, 2>, _, _> = input.clone().broadcast();
 
         // convert static size tensor to variable sized tensor
-        let batched_realized: Tensor<(usize, Const<2>), _, _> = batched.realize().unwrap();
+        let batched_realized: Tensor<(usize, Const<2>), _, _> = batched.try_realize().unwrap();
         assert_eq!(batched_realized.shape(), &(1 as usize, Const::<2>));
 
         // call predict on batches
