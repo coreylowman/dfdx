@@ -89,7 +89,6 @@ mod cuda {
             println!("cargo:rerun-if-changed={}", path.display());
             let destination =
                 std::format!("{out_dir}/{}", path.file_name().unwrap().to_str().unwrap());
-            println!("cargo:rerun-if-changed={}", destination);
             std::fs::copy(path.clone(), destination).unwrap();
             // remove the filename from the path so it's just the directory
             path.pop();
@@ -165,6 +164,12 @@ mod cuda {
             if compute_cap > max_nvcc_code {
                 println!("cargo:warning=Lowering gpu arch {compute_cap} to max nvcc target {max_nvcc_code}.");
                 compute_cap = max_nvcc_code;
+            }
+
+            println!("cargo:rerun-if-env-changed=CUDA_COMPUTE_CAP");
+            if let Ok(compute_cap_str) = std::env::var("CUDA_COMPUTE_CAP") {
+                compute_cap = compute_cap_str.parse::<usize>().unwrap();
+                println!("cargo:warning=Using gpu arch {compute_cap} from $CUDA_COMPUTE_CAP");
             }
 
             println!("cargo:rustc-env=CUDA_COMPUTE_CAP=sm_{compute_cap}");
