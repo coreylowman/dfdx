@@ -39,7 +39,7 @@ fn main() {
     // `realize` method helps us move between dynamic and known size for the dimensions,
     // if the conversion is incompatible, it may result in runtime error
     let a: Tensor<(usize, usize), f32, _> = dev.zeros_like(&(2, 3));
-    let _: Tensor<(usize, Const<3>), f32, _> = a.realize().expect("`a` should have 3 columns");
+    let _: Tensor<(usize, Const<3>), f32, _> = a.try_realize().expect("`a` should have 3 columns");
 
     // each of the creation methods also supports specifying the shape on the function
     // note to change the dtype we specify the dtype as the 2nd generic parameter
