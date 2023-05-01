@@ -5,7 +5,7 @@
 
 // FIXME: the minimum compute capabilities are just guesses since the table is not specific enough
 
-#if __CUDA_ARCH__ < 600
+#if __CUDA_ARCH__ < 800
 __device__ __forceinline__ __half __hmax(__half a, __half b) {
     return __float2half(fmaxf(__half2float(a), __half2float(b)));
 }

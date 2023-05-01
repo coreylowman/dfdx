@@ -167,6 +167,12 @@ mod cuda {
                 compute_cap = max_nvcc_code;
             }
 
+            println!("cargo:rerun-if-env-changed=CUDA_COMPUTE_CAP");
+            if let Ok(compute_cap_str) = std::env::var("CUDA_COMPUTE_CAP") {
+                compute_cap = compute_cap_str.parse::<usize>().unwrap();
+                println!("cargo:warning=Using gpu arch {compute_cap} from $CUDA_COMPUTE_CAP");
+            }
+
             println!("cargo:rustc-env=CUDA_COMPUTE_CAP=sm_{compute_cap}");
 
             kernel_paths
