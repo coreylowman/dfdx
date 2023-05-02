@@ -1,9 +1,9 @@
 # dfdx: shape checked deep learning in rust
 
-[![CUDA](https://badgen.net/badge/CUDA/passing/green)](#)
-[![crates.io](https://img.shields.io/crates/v/dfdx.svg)](https://crates.io/crates/dfdx)
-[![docs.rs](https://img.shields.io/docsrs/dfdx)](https://docs.rs/dfdx)
-[![Discord](https://badgen.net/badge/icon/discord?icon=discord&label)](https://discord.gg/AtUhGqBDP5)
+[![](https://dcbadge.vercel.app/api/server/AtUhGqBDP5)](https://discord.gg/AtUhGqBDP5)
+[![crates.io](https://img.shields.io/crates/v/dfdx?style=for-the-badge)](https://crates.io/crates/dfdx)
+[![docs.rs](https://img.shields.io/docsrs/dfdx?label=docs.rs%20latest&style=for-the-badge)](https://docs.rs/dfdx)
+
 
 Ergonomics & safety focused deep learning in Rust.
 
