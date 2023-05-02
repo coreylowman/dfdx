@@ -65,7 +65,24 @@ impl MatMulImpl<half::f16> for Cpu {
         cp: *mut half::f16,
         c_strides: [usize; 2],
     ) {
-        naive_gemm((m, k, n), ap, a_strides, bp, b_strides, cp, c_strides);
+        for i_m in 0..m.size() {
+            for i_n in 0..n.size() {
+                let c_mn = unsafe { cp.add(c_strides[0] * i_m + c_strides[1] * i_n) };
+                let mut c: f32 = unsafe { *c_mn }.into();
+                for i_k in 0..k.size() {
+                    unsafe {
+                        let a_f16 = *ap.add(a_strides[0] * i_m + a_strides[1] * i_k);
+                        let b_f16 = *bp.add(b_strides[0] * i_k + b_strides[1] * i_n);
+                        let a: f32 = a_f16.into();
+                        let b: f32 = b_f16.into();
+                        c += a * b;
+                    }
+                }
+                unsafe {
+                    *c_mn = half::f16::from_f32(c);
+                }
+            }
+        }
     }
 }
 
