@@ -65,32 +65,86 @@ impl MatMulImpl<half::f16> for Cpu {
         cp: *mut half::f16,
         c_strides: [usize; 2],
     ) {
-        let mut a_ptr = ap;
-        let mut c_ptr = cp;
-        let a_backstride = a_strides[1] * k.size();
-        let b_backstride = b_strides[0] * k.size();
-        let c_backstride = c_strides[1] * n.size();
-        for _ in 0..m.size() {
-            let mut b_ptr = bp;
-            for _ in 0..n.size() {
-                let mut c: f32 = unsafe { *c_ptr }.into();
-                for _ in 0..k.size() {
-                    let a: f32 = unsafe { *a_ptr }.into();
-                    let b: f32 = unsafe { *b_ptr }.into();
-                    c += a * b;
-                    a_ptr = unsafe { a_ptr.add(a_strides[1]) };
-                    b_ptr = unsafe { b_ptr.add(b_strides[0]) };
-                }
-                unsafe { *c_ptr = half::f16::from_f32(c) };
+        const CHUNK_SIZE: usize = 4;
+        let mut a_chunk: [f32; CHUNK_SIZE] = Default::default();
+        let mut b_chunk: [[f32; CHUNK_SIZE]; CHUNK_SIZE] = Default::default();
+        let mut c_chunk: [f32; CHUNK_SIZE] = Default::default();
 
-                a_ptr = unsafe { a_ptr.sub(a_backstride) };
-                b_ptr = unsafe { b_ptr.sub(b_backstride) };
-                b_ptr = unsafe { b_ptr.add(b_strides[1]) };
-                c_ptr = unsafe { c_ptr.add(c_strides[1]) };
+        for i_m in 0..m.size() {
+            for i_n_base in (0..n.size()).step_by(CHUNK_SIZE) {
+                let n_chunk_size = CHUNK_SIZE.min(n.size() - i_n_base);
+
+                // load c into chunk
+                {
+                    for i_chunk_n in 0..n_chunk_size {
+                        c_chunk[i_chunk_n] = unsafe {
+                            *cp.add(c_strides[0] * i_m + c_strides[1] * (i_n_base + i_chunk_n))
+                        }
+                        .into();
+                    }
+                    // pad with 0s
+                    for i_chunk_n in n_chunk_size..CHUNK_SIZE {
+                        c_chunk[i_chunk_n] = 0.0;
+                    }
+                }
+
+                for i_k_base in (0..k.size()).step_by(CHUNK_SIZE) {
+                    let k_chunk_size = CHUNK_SIZE.min(k.size() - i_k_base);
+
+                    // load a into chunk
+                    {
+                        for i_chunk_k in 0..k_chunk_size {
+                            a_chunk[i_chunk_k] = unsafe {
+                                *ap.add(a_strides[0] * i_m + a_strides[1] * (i_k_base + i_chunk_k))
+                            }
+                            .into();
+                        }
+                        // pad with 0s
+                        for i_chunk_k in k_chunk_size..CHUNK_SIZE {
+                            a_chunk[i_chunk_k] = 0.0;
+                        }
+                    }
+
+                    // load b into chunk
+                    {
+                        for i_chunk_k in 0..k_chunk_size {
+                            for i_chunk_n in 0..n_chunk_size {
+                                b_chunk[i_chunk_k][i_chunk_n] = unsafe {
+                                    *bp.add(
+                                        b_strides[0] * (i_k_base + i_chunk_k)
+                                            + b_strides[1] * (i_n_base + i_chunk_n),
+                                    )
+                                }
+                                .into();
+                            }
+                            for i_chunk_n in n_chunk_size..CHUNK_SIZE {
+                                b_chunk[i_chunk_k][i_chunk_n] = 0.0;
+                            }
+                        }
+                        for i_chunk_k in k_chunk_size..CHUNK_SIZE {
+                            for i_chunk_n in 0..CHUNK_SIZE {
+                                b_chunk[i_chunk_k][i_chunk_n] = 0.0;
+                            }
+                        }
+                    }
+
+                    // do the computation
+                    for i_n_chunk in 0..CHUNK_SIZE {
+                        for i_k_chunk in 0..CHUNK_SIZE {
+                            c_chunk[i_n_chunk] +=
+                                a_chunk[i_k_chunk] * b_chunk[i_k_chunk][i_n_chunk];
+                        }
+                    }
+                }
+
+                // store c chunk in memory
+                for i_chunk in 0..n_chunk_size {
+                    let r = half::f16::from_f32(c_chunk[i_chunk]);
+                    unsafe {
+                        *cp.add(c_strides[0] * i_m + c_strides[1] * (i_n_base + i_chunk)) = r
+                    };
+                }
             }
-            a_ptr = unsafe { a_ptr.add(a_strides[0]) };
-            c_ptr = unsafe { c_ptr.sub(c_backstride) };
-            c_ptr = unsafe { c_ptr.add(c_strides[0]) };
         }
     }
 }
