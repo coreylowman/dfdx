@@ -65,24 +65,23 @@ impl MatMulImpl<half::f16> for Cpu {
         cp: *mut half::f16,
         c_strides: [usize; 2],
     ) {
-        const CHUNK_SIZE: usize = 4;
+        const CHUNK_SIZE: usize = 8;
         let mut a_chunk: [f32; CHUNK_SIZE] = Default::default();
         let mut b_chunk: [[f32; CHUNK_SIZE]; CHUNK_SIZE] = Default::default();
         let mut c_chunk: [f32; CHUNK_SIZE] = Default::default();
 
         for i_m in 0..m.size() {
+            let a_m = unsafe { ap.add(a_strides[0] * i_m) };
+            let c_m = unsafe { cp.add(c_strides[0] * i_m) };
             for i_n_base in (0..n.size()).step_by(CHUNK_SIZE) {
                 let n_chunk_size = CHUNK_SIZE.min(n.size() - i_n_base);
 
-                // load c into chunk
                 {
+                    // load c into chunk
                     for i_chunk_n in 0..n_chunk_size {
-                        c_chunk[i_chunk_n] = unsafe {
-                            *cp.add(c_strides[0] * i_m + c_strides[1] * (i_n_base + i_chunk_n))
-                        }
-                        .into();
+                        let c_mn = unsafe { *c_m.add(c_strides[1] * (i_n_base + i_chunk_n)) };
+                        c_chunk[i_chunk_n] = c_mn.into();
                     }
-                    // pad with 0s
                     for i_chunk_n in n_chunk_size..CHUNK_SIZE {
                         c_chunk[i_chunk_n] = 0.0;
                     }
@@ -91,38 +90,29 @@ impl MatMulImpl<half::f16> for Cpu {
                 for i_k_base in (0..k.size()).step_by(CHUNK_SIZE) {
                     let k_chunk_size = CHUNK_SIZE.min(k.size() - i_k_base);
 
-                    // load a into chunk
                     {
+                        // load a & b into chunk
                         for i_chunk_k in 0..k_chunk_size {
-                            a_chunk[i_chunk_k] = unsafe {
-                                *ap.add(a_strides[0] * i_m + a_strides[1] * (i_k_base + i_chunk_k))
-                            }
-                            .into();
-                        }
-                        // pad with 0s
-                        for i_chunk_k in k_chunk_size..CHUNK_SIZE {
-                            a_chunk[i_chunk_k] = 0.0;
-                        }
-                    }
+                            let i_k = i_k_base + i_chunk_k;
 
-                    // load b into chunk
-                    {
-                        for i_chunk_k in 0..k_chunk_size {
+                            // load a
+                            let a_mk = unsafe { *a_m.add(a_strides[1] * i_k) };
+                            a_chunk[i_chunk_k] = a_mk.into();
+
+                            // load b
                             for i_chunk_n in 0..n_chunk_size {
-                                b_chunk[i_chunk_k][i_chunk_n] = unsafe {
-                                    *bp.add(
-                                        b_strides[0] * (i_k_base + i_chunk_k)
-                                            + b_strides[1] * (i_n_base + i_chunk_n),
-                                    )
-                                }
-                                .into();
+                                let i_n = i_n_base + i_chunk_n;
+                                let b_kn =
+                                    unsafe { *bp.add(b_strides[0] * i_k + b_strides[1] * i_n) };
+                                b_chunk[i_chunk_k][i_chunk_n] = b_kn.into();
                             }
                             for i_chunk_n in n_chunk_size..CHUNK_SIZE {
                                 b_chunk[i_chunk_k][i_chunk_n] = 0.0;
                             }
                         }
                         for i_chunk_k in k_chunk_size..CHUNK_SIZE {
-                            for i_chunk_n in 0..CHUNK_SIZE {
+                            a_chunk[i_chunk_k] = 0.0;
+                            for i_chunk_n in n_chunk_size..CHUNK_SIZE {
                                 b_chunk[i_chunk_k][i_chunk_n] = 0.0;
                             }
                         }
@@ -140,9 +130,7 @@ impl MatMulImpl<half::f16> for Cpu {
                 // store c chunk in memory
                 for i_chunk in 0..n_chunk_size {
                     let r = half::f16::from_f32(c_chunk[i_chunk]);
-                    unsafe {
-                        *cp.add(c_strides[0] * i_m + c_strides[1] * (i_n_base + i_chunk)) = r
-                    };
+                    unsafe { *c_m.add(c_strides[1] * (i_n_base + i_chunk)) = r };
                 }
             }
         }
