@@ -65,23 +65,32 @@ impl MatMulImpl<half::f16> for Cpu {
         cp: *mut half::f16,
         c_strides: [usize; 2],
     ) {
-        for i_m in 0..m.size() {
-            for i_n in 0..n.size() {
-                let c_mn = unsafe { cp.add(c_strides[0] * i_m + c_strides[1] * i_n) };
-                let mut c: f32 = unsafe { *c_mn }.into();
-                for i_k in 0..k.size() {
-                    unsafe {
-                        let a_f16 = *ap.add(a_strides[0] * i_m + a_strides[1] * i_k);
-                        let b_f16 = *bp.add(b_strides[0] * i_k + b_strides[1] * i_n);
-                        let a: f32 = a_f16.into();
-                        let b: f32 = b_f16.into();
-                        c += a * b;
-                    }
+        let mut a_ptr = ap;
+        let mut c_ptr = cp;
+        let a_backstride = a_strides[1] * k.size();
+        let b_backstride = b_strides[0] * k.size();
+        let c_backstride = c_strides[1] * n.size();
+        for _ in 0..m.size() {
+            let mut b_ptr = bp;
+            for _ in 0..n.size() {
+                let mut c: f32 = unsafe { *c_ptr }.into();
+                for _ in 0..k.size() {
+                    let a: f32 = unsafe { *a_ptr }.into();
+                    let b: f32 = unsafe { *b_ptr }.into();
+                    c += a * b;
+                    a_ptr = unsafe { a_ptr.add(a_strides[1]) };
+                    b_ptr = unsafe { b_ptr.add(b_strides[0]) };
                 }
-                unsafe {
-                    *c_mn = half::f16::from_f32(c);
-                }
+                unsafe { *c_ptr = half::f16::from_f32(c) };
+
+                a_ptr = unsafe { a_ptr.sub(a_backstride) };
+                b_ptr = unsafe { b_ptr.sub(b_backstride) };
+                b_ptr = unsafe { b_ptr.add(b_strides[1]) };
+                c_ptr = unsafe { c_ptr.add(c_strides[1]) };
             }
+            a_ptr = unsafe { a_ptr.add(a_strides[0]) };
+            c_ptr = unsafe { c_ptr.sub(c_backstride) };
+            c_ptr = unsafe { c_ptr.add(c_strides[0]) };
         }
     }
 }
