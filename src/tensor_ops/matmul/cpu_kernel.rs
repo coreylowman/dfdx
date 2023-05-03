@@ -17,8 +17,6 @@ use cblas_sys::{
 ))]
 use matrixmultiply::{dgemm, sgemm};
 
-use rayon::prelude::*;
-
 #[allow(unused)]
 fn naive_gemm<F: num_traits::Float + std::ops::AddAssign, M: Dim, K: Dim, N: Dim>(
     (m, k, n): (M, K, N),
