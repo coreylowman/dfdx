@@ -243,6 +243,7 @@ impl<E: Dtype, Op: BinaryDerivative<E> + Sync> BinaryKernel<Op, E> for Cpu {
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
+        #[cfg(not(feature = "parallel"))]
         match (lhs.data(), rhs.data()) {
             (Some(lhs_buf), Some(rhs_buf)) => {
                 let mut lhs_idx = NdIndex::new(*lhs.shape(), lhs.strides());
@@ -270,6 +271,47 @@ impl<E: Dtype, Op: BinaryDerivative<E> + Sync> BinaryKernel<Op, E> for Cpu {
                     grad_lhs[lhs_i] += dx * go;
                     grad_rhs[rhs_i] += dy * go;
                 }
+            }
+            _ => unreachable!(),
+        }
+
+        #[cfg(feature = "parallel")]
+        match (lhs.data(), rhs.data()) {
+            (Some(lhs_buf), Some(rhs_buf)) => {
+                let mut lhs_idx = NdIndex::new(*lhs.shape(), lhs.strides());
+                let mut rhs_idx = NdIndex::new(*rhs.shape(), rhs.strides());
+                // NOTE: we can use .buf_iter() here because we know the outcome of this op is
+                // contiguous from forward
+                for &go in grad_out.iter() {
+                    let lhs_i = lhs_idx.next().unwrap();
+                    let rhs_i = rhs_idx.next().unwrap();
+                    let l = &lhs_buf[lhs_i];
+                    let r = &rhs_buf[rhs_i];
+                    grad_lhs[lhs_i] += op.dfdx(l, r) * go;
+                    grad_rhs[rhs_i] += op.dfdy(l, r) * go;
+                }
+            }
+            (None, None) => {
+                assert!(Op::HAS_CONST_DF);
+                let lhs_idx = NdIndex::new(*lhs.shape(), lhs.strides());
+                let rhs_idx = NdIndex::new(*rhs.shape(), rhs.strides());
+                let dx = op.const_dfdx();
+                let dy = op.const_dfdy();
+                let out_strides = lhs.shape().strides();
+                let lhs_scale = E::from_usize(lhs.shape().num_elements() / grad_lhs.len()).unwrap();
+                let rhs_scale = E::from_usize(rhs.shape().num_elements() / grad_rhs.len()).unwrap();
+                rayon::join(
+                    || {
+                        grad_lhs.par_iter_mut().enumerate().for_each(|(i, l)| {
+                            *l += dx * grad_out[lhs_idx.restride(i, out_strides)] * lhs_scale;
+                        });
+                    },
+                    || {
+                        grad_rhs.par_iter_mut().enumerate().for_each(|(i, r)| {
+                            *r += dy * grad_out[rhs_idx.restride(i, out_strides)] * rhs_scale;
+                        });
+                    },
+                );
             }
             _ => unreachable!(),
         }

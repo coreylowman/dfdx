@@ -63,10 +63,11 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
+        let scale = E::from_usize(inp.shape().num_elements() / grad_inp.len()).unwrap();
+
         if Dst::NUM_DIMS == 0 {
             debug_assert_eq!(grad_out.len(), 1);
             let v = grad_out[0];
-            let scale = E::from_usize(inp.shape().num_elements() / inp.len()).unwrap();
             for i in grad_inp.iter_mut() {
                 *i += v * scale;
             }
@@ -86,8 +87,6 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
             {
                 use crate::shapes::{BroadcastStridesTo, ReduceStridesTo};
                 use rayon::prelude::*;
-                let num_broadcasted =
-                    E::from_usize(inp.shape().num_elements() / grad_inp.len()).unwrap();
 
                 let idx = index_for_reductions::<Src, Ax>(*inp.shape(), inp.strides());
                 let dst: Dst = inp.shape().reduced();
@@ -96,7 +95,7 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
                 let out_idx = index_for_reductions::<Src, Ax>(*inp.shape(), out_strides);
                 let out_strides = out_idx.strides;
                 grad_inp.par_iter_mut().enumerate().for_each(|(i, gi)| {
-                    *gi += grad_out[idx.restride(i, out_strides)] * num_broadcasted;
+                    *gi += grad_out[idx.restride(i, out_strides)] * scale;
                 });
             }
         }
