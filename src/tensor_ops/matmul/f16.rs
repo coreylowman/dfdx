@@ -44,16 +44,16 @@ impl MatMulImpl<half::f16> for Cpu {
                         // load a & b into chunk
                         for i_chunk_k in 0..k_chunk_size {
                             let i_k = i_k_base + i_chunk_k;
+                            let a_mk = unsafe { *a_m.add(a_strides[1] * i_k) };
+                            let b_k = unsafe { bp.add(b_strides[0] * i_k) };
 
                             // load a
-                            let a_mk = unsafe { *a_m.add(a_strides[1] * i_k) };
                             a_chunk[i_chunk_k] = a_mk.into();
 
                             // load b
                             for i_chunk_n in 0..n_chunk_size {
                                 let i_n = i_n_base + i_chunk_n;
-                                let b_kn =
-                                    unsafe { *bp.add(b_strides[0] * i_k + b_strides[1] * i_n) };
+                                let b_kn = unsafe { *b_k.add(b_strides[1] * i_n) };
                                 b_chunk[i_chunk_k][i_chunk_n] = b_kn.into();
                             }
                             for i_chunk_n in n_chunk_size..CHUNK_SIZE {
