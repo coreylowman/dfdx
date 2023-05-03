@@ -41,8 +41,8 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
             {
                 use rayon::prelude::*;
                 let idx = index_for_reductions::<Src, Ax>(inp.shape, inp.strides);
-                let buf = std::sync::Arc::make_mut(&mut out.data);
-                buf.par_iter_mut().enumerate().for_each(|(i, o)| {
+                let out_buf = std::sync::Arc::make_mut(&mut out.data);
+                out_buf.par_iter_mut().enumerate().for_each(|(i, o)| {
                     let mut tmp: E = Default::default();
                     for j in 0..num_elems_reduced {
                         tmp += inp_buf[idx.get_strided_index(i * num_elems_reduced + j)];
@@ -71,12 +71,33 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
                 *i += v * scale;
             }
         } else {
-            let num_elems_reduced = <Src as HasAxes<Ax>>::size(inp.shape());
-            let mut idx = index_for_reductions::<Src, Ax>(*inp.shape(), inp.strides());
-            for &o in grad_out.iter() {
-                for _ in 0..num_elems_reduced {
-                    grad_inp[idx.next().unwrap()] += o;
+            #[cfg(not(feature = "parallel"))]
+            {
+                let num_elems_reduced = <Src as HasAxes<Ax>>::size(inp.shape());
+                let mut idx = index_for_reductions::<Src, Ax>(*inp.shape(), inp.strides());
+                for &o in grad_out.iter() {
+                    for _ in 0..num_elems_reduced {
+                        grad_inp[idx.next().unwrap()] += o;
+                    }
                 }
+            }
+
+            #[cfg(feature = "parallel")]
+            {
+                use crate::shapes::{BroadcastStridesTo, ReduceStridesTo};
+                use rayon::prelude::*;
+                let num_broadcasted =
+                    E::from_usize(inp.shape().num_elements() / grad_inp.len()).unwrap();
+
+                let idx = index_for_reductions::<Src, Ax>(*inp.shape(), inp.strides());
+                let dst: Dst = inp.shape().reduced();
+                let out_strides =
+                    BroadcastStridesTo::<Src, Ax>::broadcast_strides(&dst, dst.strides());
+                let out_idx = index_for_reductions::<Src, Ax>(*inp.shape(), out_strides);
+                let out_strides = out_idx.strides;
+                grad_inp.par_iter_mut().enumerate().for_each(|(i, gi)| {
+                    *gi += grad_out[idx.restride(i, out_strides)] * num_broadcasted;
+                });
             }
         }
         Ok(())
