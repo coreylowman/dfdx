@@ -82,9 +82,10 @@ pub fn cross_entropy_with_logits_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<
     logits: Tensor<S, E, D, T>,
     target_probs: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T> {
-    let last_axis_numel = E::from_usize(<S as HasAxes<S::LastAxis>>::size(logits.shape())).unwrap();
+    let inv_last_axis_numel = 1.0 / <S as HasAxes<S::LastAxis>>::size(logits.shape()) as f64;
+    let inv_last_axis_numel = E::from_f64(inv_last_axis_numel).unwrap();
     let probs = logits.log_softmax::<S::LastAxis>();
-    (probs * target_probs).mean().negate() * last_axis_numel
+    (probs * target_probs).mean().negate() / inv_last_axis_numel
 }
 
 /// [KL Divergence loss](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence).
@@ -101,12 +102,13 @@ pub fn kl_div_with_logits_loss<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>>(
     logits: Tensor<S, E, D, T>,
     target_probs: Tensor<S, E, D>,
 ) -> Tensor<Rank0, E, D, T> {
-    let last_axis_numel = E::from_usize(<S as HasAxes<S::LastAxis>>::size(logits.shape())).unwrap();
+    let inv_last_axis_numel = 1.0 / <S as HasAxes<S::LastAxis>>::size(logits.shape()) as f64;
+    let inv_last_axis_numel = E::from_f64(inv_last_axis_numel).unwrap();
     let probs = logits.log_softmax::<S::LastAxis>();
     ((probs - target_probs.clone().ln()) * target_probs)
         .mean()
         .negate()
-        * last_axis_numel
+        / inv_last_axis_numel
 }
 
 /// [Binary Cross Entropy](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression)
