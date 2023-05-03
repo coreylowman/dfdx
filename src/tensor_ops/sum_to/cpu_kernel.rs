@@ -45,7 +45,7 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
                 buf.par_iter_mut().enumerate().for_each(|(i, o)| {
                     let mut tmp: E = Default::default();
                     for j in 0..num_elems_reduced {
-                        tmp += inp_buf[idx.get_strided_index(i + j)];
+                        tmp += inp_buf[idx.get_strided_index(i * num_elems_reduced + j)];
                     }
                     *o = tmp;
                 });
