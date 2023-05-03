@@ -41,6 +41,7 @@ impl<S: Shape> NdIndex<S> {
     }
 
     #[inline(always)]
+    #[allow(unused)]
     pub(crate) fn restride(&self, strided_i: usize, new_strides: S::Concrete) -> usize {
         let mut out = 0;
         for (dim, (old_stride, new_stride)) in self
@@ -49,7 +50,7 @@ impl<S: Shape> NdIndex<S> {
             .zip(self.strides.into_iter().zip(new_strides.into_iter()))
         {
             out += (old_stride == 0)
-                .then(|| 0)
+                .then_some(0)
                 .unwrap_or_else(|| (strided_i / old_stride) % dim)
                 * new_stride;
         }
