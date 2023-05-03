@@ -97,9 +97,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::tensor::*;
-    use crate::tensor_ops::*;
-    use crate::tests::*;
+    use crate::{shapes::*, tensor::*, tensor_ops::*, tests::*};
 
     #[test]
     fn test_div_0d() {
@@ -161,6 +159,19 @@ mod tests {
                 [0.29456815, 0.23775560, 0.19979222]
             ]
         );
+    }
+
+    #[test]
+    fn test_div_broadcasted_differently() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor(1.0).to_dtype::<TestDtype>();
+        let b = dev.tensor([1.0, 2.0, 3.0]).to_dtype::<TestDtype>();
+
+        let r = a.leaky_trace().broadcast::<Rank2<2, 3>, _>() / b.clone().broadcast();
+        assert_close_to_literal!(r, [[1.0, 0.5, 1.0 / 3.0]; 2]);
+        let g = r.mean().backward();
+        assert_close_to_literal!(g.get(&a), (1.0 + 0.5 + 1.0 / 3.0) / 3.0);
+        assert_close_to_literal!(g.get(&b), [-0.3333, -0.0833, -0.0370]);
     }
 
     #[test]

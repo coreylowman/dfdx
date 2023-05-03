@@ -191,6 +191,19 @@ mod tests {
     }
 
     #[test]
+    fn test_add_broadcasted_differently() {
+        let dev: TestDevice = Default::default();
+        let a = dev.tensor(1.0).to_dtype::<TestDtype>();
+        let b = dev.tensor([1.0, 2.0, 3.0]).to_dtype::<TestDtype>();
+
+        let r = a.leaky_trace().broadcast::<Rank2<2, 3>, _>() + b.clone().broadcast();
+        assert_close_to_literal!(r, [[2.0, 3.0, 4.0]; 2]);
+        let g = r.mean().backward();
+        assert_close_to_literal!(g.get(&a), 1.0);
+        assert_close_to_literal!(g.get(&b), [1.0 / 3.0; 3]);
+    }
+
+    #[test]
     fn test_scalar_add_0d() {
         let dev: TestDevice = Default::default();
         let x: Tensor<(), TestDtype, _> = dev.zeros();
