@@ -44,7 +44,7 @@ use super::*;
 /// let grads = dropout.alloc_grads();
 /// let x: Tensor<Rank2<2, 5>, f32, _> = dev.ones();
 /// let r = dropout.forward_mut(x.trace(grads));
-/// assert_eq!(r.array(), [[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
+/// assert_eq!(r.array(), [[2.0, 0.0, 2.0, 0.0, 2.0], [0.0, 2.0, 0.0, 2.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug, Default)]
 pub struct DropoutOneIn<const N: usize>;
@@ -115,7 +115,7 @@ impl<const N: usize, S: Shape, E: Dtype, D: Device<E>> ModuleMut<Tensor<S, E, D,
 /// let grads = dropout.alloc_grads();
 /// let x: Tensor<Rank2<2, 5>, f32, _> = dev.ones();
 /// let r = dropout.forward_mut(x.trace(grads));
-/// assert_eq!(r.array(), [[2.0, 2.0, 2.0, 0.0, 0.0], [2.0, 2.0, 0.0, 0.0, 2.0]]);
+/// assert_eq!(r.array(), [[2.0, 0.0, 2.0, 0.0, 2.0], [0.0, 2.0, 0.0, 2.0, 2.0]]);
 /// ```
 #[derive(Clone, Debug)]
 pub struct Dropout {
