@@ -4,7 +4,7 @@ use super::ops::{BinaryKernel, UnaryKernel};
 use crate::{
     shapes::{Dtype, Shape},
     tensor::{
-        cpu::{Cpu, LendingIterator, NdIndex},
+        cpu::{Cpu, NdIndex},
         unique_id, Tensor, Tensorlike, ZerosTensor,
     },
 };
@@ -140,7 +140,7 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
     }
 }
 
-impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
+impl<E: Dtype, Op: BinaryDerivative<E> + Sync> BinaryKernel<Op, E> for Cpu {
     const BACKWARD_WITHOUT_DATA: bool = Op::HAS_CONST_DF;
     fn forward<S: Shape>(
         &self,
@@ -151,12 +151,28 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
         match (lhs, rhs) {
             (Cow::Borrowed(lhs), Cow::Borrowed(rhs)) => {
                 let mut out = self.try_zeros_like(&lhs.shape)?;
-                let mut lhs_iter = lhs.iter();
-                let mut rhs_iter = rhs.iter();
-                for o in out.buf_iter_mut() {
-                    let l = lhs_iter.next().unwrap();
-                    let r = rhs_iter.next().unwrap();
-                    *o = op.f(l, r);
+
+                #[cfg(not(feature = "parallel"))]
+                {
+                    let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
+                    let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
+                    for o in out.buf_iter_mut() {
+                        let l = &lhs.data[lhs_idx.next().unwrap()];
+                        let r = &rhs.data[rhs_idx.next().unwrap()];
+                        *o = op.f(l, r);
+                    }
+                }
+
+                #[cfg(feature = "parallel")]
+                {
+                    let lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
+                    let rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
+                    let buf = std::sync::Arc::make_mut(&mut out.data);
+                    buf.data.par_iter_mut().enumerate().for_each(|(i, o)| {
+                        let l = &lhs.data[lhs_idx.get_strided_index(i)];
+                        let r = &rhs.data[rhs_idx.get_strided_index(i)];
+                        *o = op.f(l, r);
+                    });
                 }
                 Ok(out)
             }
@@ -168,16 +184,41 @@ impl<E: Dtype, Op: BinaryDerivative<E>> BinaryKernel<Op, E> for Cpu {
                     let rhs_count = std::sync::Arc::strong_count(&rhs.data);
                     if rhs_valid && (rhs_count == 1 || !lhs_valid || lhs_count != 1) {
                         rhs.id = unique_id();
-                        let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
-                        for r in rhs.buf_iter_mut() {
-                            *r = op.f(&lhs.data[lhs_idx.next().unwrap()], r);
+                        #[cfg(not(feature = "parallel"))]
+                        {
+                            let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
+                            for r in rhs.buf_iter_mut() {
+                                *r = op.f(&lhs.data[lhs_idx.next().unwrap()], r);
+                            }
+                        }
+
+                        #[cfg(feature = "parallel")]
+                        {
+                            let lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
+                            let buf = std::sync::Arc::make_mut(&mut rhs.data);
+                            buf.data.par_iter_mut().enumerate().for_each(|(i, r)| {
+                                let l = &lhs.data[lhs_idx.get_strided_index(i)];
+                                *r = op.f(l, r);
+                            });
                         }
                         Ok(rhs)
                     } else {
                         lhs.id = unique_id();
-                        let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
-                        for l in lhs.buf_iter_mut() {
-                            *l = op.f(l, &rhs.data[rhs_idx.next().unwrap()]);
+                        #[cfg(not(feature = "parallel"))]
+                        {
+                            let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
+                            for l in lhs.buf_iter_mut() {
+                                *l = op.f(l, &rhs.data[rhs_idx.next().unwrap()]);
+                            }
+                        }
+                        #[cfg(feature = "parallel")]
+                        {
+                            let rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
+                            let buf = std::sync::Arc::make_mut(&mut lhs.data);
+                            buf.data.par_iter_mut().enumerate().for_each(|(i, l)| {
+                                let r = &rhs.data[rhs_idx.get_strided_index(i)];
+                                *l = op.f(l, r);
+                            });
                         }
                         Ok(lhs)
                     }
