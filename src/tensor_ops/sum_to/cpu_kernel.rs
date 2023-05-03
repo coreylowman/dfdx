@@ -25,13 +25,30 @@ impl<E: Dtype> super::SumKernel<E> for Cpu {
         } else {
             let num_elems_reduced = <Src as HasAxes<Ax>>::size(&inp.shape);
             let inp_buf = inp.data.as_ref();
-            let mut idx = index_for_reductions::<Src, Ax>(inp.shape, inp.strides);
-            for o in out.buf_iter_mut() {
-                let mut tmp: E = Default::default();
-                for _ in 0..num_elems_reduced {
-                    tmp += inp_buf[idx.next().unwrap()];
+            #[cfg(not(feature = "parallel"))]
+            {
+                let mut idx = index_for_reductions::<Src, Ax>(inp.shape, inp.strides);
+                for o in out.buf_iter_mut() {
+                    let mut tmp: E = Default::default();
+                    for _ in 0..num_elems_reduced {
+                        tmp += inp_buf[idx.next().unwrap()];
+                    }
+                    *o = tmp;
                 }
-                *o = tmp;
+            }
+
+            #[cfg(feature = "parallel")]
+            {
+                use rayon::prelude::*;
+                let idx = index_for_reductions::<Src, Ax>(inp.shape, inp.strides);
+                let buf = std::sync::Arc::make_mut(&mut out.data);
+                buf.par_iter_mut().enumerate().for_each(|(i, o)| {
+                    let mut tmp: E = Default::default();
+                    for j in 0..num_elems_reduced {
+                        tmp += inp_buf[idx.get_strided_index(i + j)];
+                    }
+                    *o = tmp;
+                });
             }
         }
         Ok(out)
