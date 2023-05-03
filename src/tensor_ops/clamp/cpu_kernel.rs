@@ -1,7 +1,7 @@
-use crate::tensor_ops::cpu_kernels::UnaryDerivative;
+use crate::{shapes::Dtype, tensor_ops::cpu_kernels::UnaryDerivative};
 use num_traits::{clamp, Float};
 
-impl<F: Float + PartialOrd> UnaryDerivative<F> for super::ClampKernelOp<F> {
+impl<F: Float + PartialOrd + Dtype> UnaryDerivative<F> for super::ClampKernelOp<F> {
     const DF_USES_FX: bool = false;
     const HAS_CONST_DF: bool = false;
     #[inline(always)]

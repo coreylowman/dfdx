@@ -38,6 +38,7 @@ num-traits = { version = "0.2.15", default-features = false }
 safetensors = { version = "0.3", default-features = false, optional = true }
 memmap2 = { version = "0.5", default-features = false, optional = true }
 half = { git = "https://github.com/starkat99/half-rs.git", branch = "main", optional = true, features = ["num-traits", "rand_distr"] }
+rayon = { version = "1.7.0", optional = true }
 
 [dev-dependencies]
 tempfile = "3.3.0"
@@ -48,13 +49,14 @@ indicatif = "0.17.3"
 glob = { version = "0.3.1", optional = true }
 
 [features]
-default = ["std", "fast-alloc", "cpu-par-matmul"]
+default = ["std", "fast-alloc", "cpu-par-matmul", "parallel"]
 nightly = ["half?/use-intrinsics"]
 
 std = ["cudarc?/std", "matrixmultiply?/std", "rand_distr/std_math"]
 fast-alloc = ["std"]
 no-std = ["no-std-compat", "dep:spin", "cudarc?/no-std", "num-traits/libm"]
 
+parallel = ["std", "dep:rayon"]
 cpu-seq-matmul = ["dep:matrixmultiply"]
 cpu-par-matmul = ["std", "dep:matrixmultiply", "matrixmultiply?/threading"]
 cpu-mkl-matmul = ["dep:cblas-sys", "dep:libc"]

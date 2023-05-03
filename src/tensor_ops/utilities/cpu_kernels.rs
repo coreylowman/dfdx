@@ -9,7 +9,10 @@ use crate::{
     },
 };
 
-pub trait UnaryDerivative<E> {
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
+
+pub trait UnaryDerivative<E>: Send + Sync {
     /// Whether the [UnaryDerivative::df] function can re-use the output
     /// from [UnaryDerivative::f].
     const DF_USES_FX: bool;
@@ -72,9 +75,20 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
         };
         // NOTE: we can iterate over buf here because we know inp & out
         // have exact same strides due to clone.
+
+        #[cfg(not(feature = "parallel"))]
         for x in out.buf_iter_mut() {
             *x = op.f(x);
         }
+
+        #[cfg(feature = "parallel")]
+        {
+            let buf = std::sync::Arc::make_mut(&mut out.data);
+            buf.data.par_iter_mut().for_each(|x| {
+                *x = op.f(x);
+            });
+        }
+
         Ok(out)
     }
     fn backward<S: Shape>(
@@ -88,19 +102,37 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
         match (inp.data(), out.data()) {
             (None, None) => {
                 let df = op.const_df();
+                #[cfg(not(feature = "parallel"))]
                 for (i, x) in grad_inp.iter_mut().enumerate() {
                     *x += df * grad_out[i];
                 }
+
+                #[cfg(feature = "parallel")]
+                grad_inp.par_iter_mut().enumerate().for_each(|(i, x)| {
+                    *x += df * grad_out[i];
+                });
             }
             (None, Some(out)) => {
+                #[cfg(not(feature = "parallel"))]
                 for (i, x) in grad_inp.iter_mut().enumerate() {
                     *x += op.df(&out[i]) * grad_out[i];
                 }
+
+                #[cfg(feature = "parallel")]
+                grad_inp.par_iter_mut().enumerate().for_each(|(i, x)| {
+                    *x += op.df(&out[i]) * grad_out[i];
+                });
             }
             (Some(inp), None) => {
+                #[cfg(not(feature = "parallel"))]
                 for (i, x) in grad_inp.iter_mut().enumerate() {
                     *x += op.df(&inp[i]) * grad_out[i];
                 }
+
+                #[cfg(feature = "parallel")]
+                grad_inp.par_iter_mut().enumerate().for_each(|(i, x)| {
+                    *x += op.df(&inp[i]) * grad_out[i];
+                });
             }
             _ => unreachable!(),
         }

@@ -1,6 +1,6 @@
-use crate::tensor_ops::cpu_kernels::UnaryDerivative;
+use crate::{shapes::Dtype, tensor_ops::cpu_kernels::UnaryDerivative};
 
-impl<F: num_traits::Float> UnaryDerivative<F> for super::PowiKernelOp {
+impl<F: num_traits::Float + Dtype> UnaryDerivative<F> for super::PowiKernelOp {
     const DF_USES_FX: bool = false;
     const HAS_CONST_DF: bool = false;
     #[inline(always)]
@@ -13,7 +13,7 @@ impl<F: num_traits::Float> UnaryDerivative<F> for super::PowiKernelOp {
     }
 }
 
-impl<F: num_traits::Float> UnaryDerivative<F> for super::PowfKernelOp<F> {
+impl<F: num_traits::Float + Dtype> UnaryDerivative<F> for super::PowfKernelOp<F> {
     const DF_USES_FX: bool = false;
     const HAS_CONST_DF: bool = false;
     #[inline(always)]

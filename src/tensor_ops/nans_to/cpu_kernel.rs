@@ -1,6 +1,6 @@
-use crate::tensor_ops::cpu_kernels::UnaryDerivative;
+use crate::{shapes::Dtype, tensor_ops::cpu_kernels::UnaryDerivative};
 
-impl<F: num_traits::Float> UnaryDerivative<F> for super::NansToKernelOp<F> {
+impl<F: Dtype + num_traits::Float> UnaryDerivative<F> for super::NansToKernelOp<F> {
     const DF_USES_FX: bool = false;
     const HAS_CONST_DF: bool = false;
     #[inline(always)]

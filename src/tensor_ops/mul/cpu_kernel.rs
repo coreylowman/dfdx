@@ -1,8 +1,11 @@
-use crate::tensor_ops::cpu_kernels::{BinaryDerivative, UnaryDerivative};
+use crate::{
+    shapes::Dtype,
+    tensor_ops::cpu_kernels::{BinaryDerivative, UnaryDerivative},
+};
 
 use num_traits::Float;
 
-impl<F: Float> UnaryDerivative<F> for super::ScalarMulKernelOp<F> {
+impl<F: Float + Dtype> UnaryDerivative<F> for super::ScalarMulKernelOp<F> {
     const DF_USES_FX: bool = false;
     const HAS_CONST_DF: bool = true;
     #[inline(always)]
