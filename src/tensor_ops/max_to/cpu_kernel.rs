@@ -65,22 +65,45 @@ impl<E: Dtype + Float> super::MaxReduceKernel<E> for Cpu {
     where
         Src: ReduceShapeTo<Dst, Ax>,
     {
-        let num_elems_reduced = <Src as HasAxes<Ax>>::size(&inp.shape);
-
         let inp_buf = inp.data.as_ref();
-        let mut inp_idx = index_for_reductions::<Src, Ax>(inp.shape, inp.strides);
 
-        for (&o, &go) in out.buf_iter().zip(grad_out.iter()) {
-            for _ in 0..num_elems_reduced {
-                let inp_i = inp_idx.next().unwrap();
-                let d = if o == inp_buf[inp_i] {
-                    E::one()
-                } else {
-                    E::zero()
-                };
-                grad_inp[inp_i] += go * d;
+        #[cfg(not(feature = "parallel"))]
+        {
+            let num_elems_reduced = <Src as HasAxes<Ax>>::size(&inp.shape);
+            let mut inp_idx = index_for_reductions::<Src, Ax>(inp.shape, inp.strides);
+            for (&o, &go) in out.buf_iter().zip(grad_out.iter()) {
+                for _ in 0..num_elems_reduced {
+                    let inp_i = inp_idx.next().unwrap();
+                    let d = if o == inp_buf[inp_i] {
+                        E::one()
+                    } else {
+                        E::zero()
+                    };
+                    grad_inp[inp_i] += go * d;
+                }
             }
         }
+
+        #[cfg(feature = "parallel")]
+        {
+            use crate::shapes::{BroadcastStridesTo, ReduceStridesTo};
+            use rayon::prelude::*;
+            let num_broadcasted = E::from_usize(inp.shape.num_elements() / grad_inp.len()).unwrap();
+
+            let idx = index_for_reductions::<Src, Ax>(inp.shape, inp.strides);
+            let dst: Dst = inp.shape.reduced();
+            let out_strides = BroadcastStridesTo::<Src, Ax>::broadcast_strides(&dst, dst.strides());
+            let out_idx = index_for_reductions::<Src, Ax>(inp.shape, out_strides);
+            let out_strides = out_idx.strides;
+            grad_inp.par_iter_mut().enumerate().for_each(|(i, gi)| {
+                let out_i = idx.restride(i, out_strides);
+                let go = grad_out[out_i];
+                let o = out.data[out_i];
+                let d = if o == inp_buf[i] { E::one() } else { E::zero() };
+                *gi += go * d * num_broadcasted;
+            });
+        }
+
         Ok(())
     }
 }
