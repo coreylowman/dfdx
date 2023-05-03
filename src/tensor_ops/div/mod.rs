@@ -171,7 +171,7 @@ mod tests {
         assert_close_to_literal!(r, [[1.0, 0.5, 1.0 / 3.0]; 2]);
         let g = r.mean().backward();
         assert_close_to_literal!(g.get(&a), (1.0 + 0.5 + 1.0 / 3.0) / 3.0);
-        assert_close_to_literal!(g.get(&b), [-0.3333, -0.0833, -0.0370]);
+        assert_close_to_literal!(g.get(&b), [-0.33333334, -0.083333336, -0.037037037]);
     }
 
     #[test]

@@ -28,15 +28,10 @@ impl<S: Shape> NdIndex<S> {
     #[inline(always)]
     pub(crate) fn get_strided_index(&self, mut idx: usize) -> usize {
         let mut out = 0;
-
-        let shape = self.shape.as_ref();
-        let strides = self.strides.as_ref();
-
-        for (dim, stride) in shape.iter().zip(strides.iter()).rev() {
-            out += (idx % dim) * stride;
-            idx /= dim;
+        for i in (0..S::NUM_DIMS).rev() {
+            out += (idx % self.shape[i]) * self.strides[i];
+            idx /= self.shape[i];
         }
-
         out
     }
 
@@ -44,15 +39,10 @@ impl<S: Shape> NdIndex<S> {
     #[allow(unused)]
     pub(crate) fn restride(&self, strided_i: usize, new_strides: S::Concrete) -> usize {
         let mut out = 0;
-        for (dim, (old_stride, new_stride)) in self
-            .shape
-            .into_iter()
-            .zip(self.strides.into_iter().zip(new_strides.into_iter()))
-        {
-            out += (old_stride == 0)
-                .then_some(0)
-                .unwrap_or_else(|| (strided_i / old_stride) % dim)
-                * new_stride;
+        for i in 0..S::NUM_DIMS {
+            if self.strides[i] != 0 {
+                out += ((strided_i / self.strides[i]) % self.shape[i]) * new_strides[i];
+            }
         }
         out
     }

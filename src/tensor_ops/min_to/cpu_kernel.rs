@@ -26,7 +26,7 @@ impl<E: Dtype + Float> super::MinReduceKernel<E> for Cpu {
         } else {
             let num_elems_reduced = <Src as HasAxes<Ax>>::size(&inp.shape);
             let inp_buf = inp.data.as_ref();
-            #[cfg(not(feature = "parallel"))]
+            #[cfg(not(feature = "threaded"))]
             {
                 let mut idx = index_for_reductions::<Src, Ax>(inp.shape, inp.strides);
                 for o in out.buf_iter_mut() {
@@ -38,7 +38,7 @@ impl<E: Dtype + Float> super::MinReduceKernel<E> for Cpu {
                 }
             }
 
-            #[cfg(feature = "parallel")]
+            #[cfg(feature = "threaded")]
             {
                 use rayon::prelude::*;
                 let idx = index_for_reductions::<Src, Ax>(inp.shape, inp.strides);
@@ -67,7 +67,7 @@ impl<E: Dtype + Float> super::MinReduceKernel<E> for Cpu {
     {
         let inp_buf = inp.data.as_ref();
 
-        #[cfg(not(feature = "parallel"))]
+        #[cfg(not(feature = "threaded"))]
         {
             let num_elems_reduced = <Src as HasAxes<Ax>>::size(&inp.shape);
             let mut inp_idx = index_for_reductions::<Src, Ax>(inp.shape, inp.strides);
@@ -84,7 +84,7 @@ impl<E: Dtype + Float> super::MinReduceKernel<E> for Cpu {
             }
         }
 
-        #[cfg(feature = "parallel")]
+        #[cfg(feature = "threaded")]
         {
             use crate::shapes::{BroadcastStridesTo, ReduceStridesTo};
             use rayon::prelude::*;

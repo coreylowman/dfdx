@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-#[cfg(feature = "parallel")]
+#[cfg(feature = "threaded")]
 use rayon::prelude::*;
 
 pub trait UnaryDerivative<E>: Send + Sync {
@@ -76,12 +76,12 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
         // NOTE: we can iterate over buf here because we know inp & out
         // have exact same strides due to clone.
 
-        #[cfg(not(feature = "parallel"))]
+        #[cfg(not(feature = "threaded"))]
         for x in out.buf_iter_mut() {
             *x = op.f(x);
         }
 
-        #[cfg(feature = "parallel")]
+        #[cfg(feature = "threaded")]
         {
             let buf = std::sync::Arc::make_mut(&mut out.data);
             buf.data.par_iter_mut().for_each(|x| {
@@ -102,34 +102,34 @@ impl<E: Dtype, Op: UnaryDerivative<E>> UnaryKernel<Op, E> for Cpu {
         match (inp.data(), out.data()) {
             (None, None) => {
                 let df = op.const_df();
-                #[cfg(not(feature = "parallel"))]
+                #[cfg(not(feature = "threaded"))]
                 for (i, x) in grad_inp.iter_mut().enumerate() {
                     *x += df * grad_out[i];
                 }
 
-                #[cfg(feature = "parallel")]
+                #[cfg(feature = "threaded")]
                 grad_inp.par_iter_mut().enumerate().for_each(|(i, x)| {
                     *x += df * grad_out[i];
                 });
             }
             (None, Some(out)) => {
-                #[cfg(not(feature = "parallel"))]
+                #[cfg(not(feature = "threaded"))]
                 for (i, x) in grad_inp.iter_mut().enumerate() {
                     *x += op.df(&out[i]) * grad_out[i];
                 }
 
-                #[cfg(feature = "parallel")]
+                #[cfg(feature = "threaded")]
                 grad_inp.par_iter_mut().enumerate().for_each(|(i, x)| {
                     *x += op.df(&out[i]) * grad_out[i];
                 });
             }
             (Some(inp), None) => {
-                #[cfg(not(feature = "parallel"))]
+                #[cfg(not(feature = "threaded"))]
                 for (i, x) in grad_inp.iter_mut().enumerate() {
                     *x += op.df(&inp[i]) * grad_out[i];
                 }
 
-                #[cfg(feature = "parallel")]
+                #[cfg(feature = "threaded")]
                 grad_inp.par_iter_mut().enumerate().for_each(|(i, x)| {
                     *x += op.df(&inp[i]) * grad_out[i];
                 });
@@ -152,7 +152,7 @@ impl<E: Dtype, Op: BinaryDerivative<E> + Sync> BinaryKernel<Op, E> for Cpu {
             (Cow::Borrowed(lhs), Cow::Borrowed(rhs)) => {
                 let mut out = self.try_zeros_like(&lhs.shape)?;
 
-                #[cfg(not(feature = "parallel"))]
+                #[cfg(not(feature = "threaded"))]
                 {
                     let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
                     let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
@@ -163,7 +163,7 @@ impl<E: Dtype, Op: BinaryDerivative<E> + Sync> BinaryKernel<Op, E> for Cpu {
                     }
                 }
 
-                #[cfg(feature = "parallel")]
+                #[cfg(feature = "threaded")]
                 {
                     let lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
                     let rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
@@ -184,7 +184,7 @@ impl<E: Dtype, Op: BinaryDerivative<E> + Sync> BinaryKernel<Op, E> for Cpu {
                     let rhs_count = std::sync::Arc::strong_count(&rhs.data);
                     if rhs_valid && (rhs_count == 1 || !lhs_valid || lhs_count != 1) {
                         rhs.id = unique_id();
-                        #[cfg(not(feature = "parallel"))]
+                        #[cfg(not(feature = "threaded"))]
                         {
                             let mut lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
                             for r in rhs.buf_iter_mut() {
@@ -192,7 +192,7 @@ impl<E: Dtype, Op: BinaryDerivative<E> + Sync> BinaryKernel<Op, E> for Cpu {
                             }
                         }
 
-                        #[cfg(feature = "parallel")]
+                        #[cfg(feature = "threaded")]
                         {
                             let lhs_idx = NdIndex::new(lhs.shape, lhs.strides);
                             let buf = std::sync::Arc::make_mut(&mut rhs.data);
@@ -204,14 +204,14 @@ impl<E: Dtype, Op: BinaryDerivative<E> + Sync> BinaryKernel<Op, E> for Cpu {
                         Ok(rhs)
                     } else {
                         lhs.id = unique_id();
-                        #[cfg(not(feature = "parallel"))]
+                        #[cfg(not(feature = "threaded"))]
                         {
                             let mut rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
                             for l in lhs.buf_iter_mut() {
                                 *l = op.f(l, &rhs.data[rhs_idx.next().unwrap()]);
                             }
                         }
-                        #[cfg(feature = "parallel")]
+                        #[cfg(feature = "threaded")]
                         {
                             let rhs_idx = NdIndex::new(rhs.shape, rhs.strides);
                             let buf = std::sync::Arc::make_mut(&mut lhs.data);
@@ -243,7 +243,6 @@ impl<E: Dtype, Op: BinaryDerivative<E> + Sync> BinaryKernel<Op, E> for Cpu {
         grad_rhs: &mut Self::Vec<E>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        #[cfg(not(feature = "parallel"))]
         match (lhs.data(), rhs.data()) {
             (Some(lhs_buf), Some(rhs_buf)) => {
                 let mut lhs_idx = NdIndex::new(*lhs.shape(), lhs.strides());
@@ -274,138 +273,6 @@ impl<E: Dtype, Op: BinaryDerivative<E> + Sync> BinaryKernel<Op, E> for Cpu {
             }
             _ => unreachable!(),
         }
-
-        #[cfg(feature = "parallel")]
-        match (lhs.data(), rhs.data()) {
-            (Some(lhs_buf), Some(rhs_buf)) => {
-                let shape = *lhs.shape();
-                let lhs_strides = lhs.strides();
-                let rhs_strides = rhs.strides();
-                let (lhs_idx, lhs_remap) = binary_bwd_permute::<S>(shape, lhs_strides);
-                let (rhs_idx, rhs_remap) = binary_bwd_permute::<S>(shape, rhs_strides);
-                let out_strides_for_lhs = permute::<S>(shape.strides(), lhs_remap);
-                let rhs_strides_for_lhs = permute::<S>(rhs_strides, lhs_remap);
-                let out_strides_for_rhs = permute::<S>(shape.strides(), rhs_remap);
-                let lhs_strides_for_rhs = permute::<S>(lhs_strides, rhs_remap);
-                let lhs_num_br = lhs.shape().num_elements() / grad_lhs.len();
-                let rhs_num_br = rhs.shape().num_elements() / grad_rhs.len();
-                rayon::join(
-                    || {
-                        grad_lhs.par_iter_mut().enumerate().for_each(|(i, gl)| {
-                            let mut tmp = Default::default();
-                            let l = &lhs_buf[i];
-                            for j in 0..lhs_num_br {
-                                let r = &rhs_buf
-                                    [lhs_idx.restride(i * lhs_num_br + j, rhs_strides_for_lhs)];
-                                let d = op.dfdx(l, r);
-                                let go = grad_out
-                                    [lhs_idx.restride(i * lhs_num_br + j, out_strides_for_lhs)];
-                                tmp += d * go;
-                            }
-                            *gl += tmp;
-                        });
-                    },
-                    || {
-                        grad_rhs.par_iter_mut().enumerate().for_each(|(i, gr)| {
-                            let mut tmp = Default::default();
-                            let r = &rhs_buf[i];
-                            for j in 0..rhs_num_br {
-                                let l = &lhs_buf
-                                    [rhs_idx.restride(i * rhs_num_br + j, lhs_strides_for_rhs)];
-                                let d = op.dfdy(l, r);
-                                let go = grad_out
-                                    [rhs_idx.restride(i * rhs_num_br + j, out_strides_for_rhs)];
-                                tmp += d * go;
-                            }
-                            *gr += tmp;
-                        });
-                    },
-                );
-            }
-            (None, None) => {
-                assert!(Op::HAS_CONST_DF);
-                let shape = *lhs.shape();
-                let (lhs_idx, lhs_remap) = binary_bwd_permute::<S>(shape, lhs.strides());
-                let (rhs_idx, rhs_remap) = binary_bwd_permute::<S>(shape, rhs.strides());
-                let out_strides_lhs = permute::<S>(shape.strides(), lhs_remap);
-                let out_strides_rhs = permute::<S>(shape.strides(), rhs_remap);
-                let dx = op.const_dfdx();
-                let dy = op.const_dfdy();
-                let lhs_num_br = lhs.shape().num_elements() / grad_lhs.len();
-                let rhs_num_br = rhs.shape().num_elements() / grad_rhs.len();
-                rayon::join(
-                    || {
-                        grad_lhs.par_iter_mut().enumerate().for_each(|(i, gl)| {
-                            let mut tmp = Default::default();
-                            for j in 0..lhs_num_br {
-                                let out_i = lhs_idx.restride(i * lhs_num_br + j, out_strides_lhs);
-                                tmp += dx * grad_out[out_i];
-                            }
-                            *gl += tmp;
-                        });
-                    },
-                    || {
-                        grad_rhs.par_iter_mut().enumerate().for_each(|(i, gr)| {
-                            let mut tmp = Default::default();
-                            for j in 0..rhs_num_br {
-                                let out_i = rhs_idx.restride(i * rhs_num_br + j, out_strides_rhs);
-                                tmp += dy * grad_out[out_i];
-                            }
-                            *gr += tmp;
-                        });
-                    },
-                );
-            }
-            _ => unreachable!(),
-        }
         Ok(())
     }
-}
-
-#[inline(always)]
-pub(crate) fn binary_bwd_permute<S: Shape>(
-    shape: S,
-    strides: S::Concrete,
-) -> (NdIndex<S>, S::Concrete) {
-    let dims = shape.concrete();
-    let mut new_shape: S::Concrete = Default::default();
-    let mut new_strides: S::Concrete = Default::default();
-    let mut remap: S::Concrete = Default::default();
-    let num_non_br_dims = strides.into_iter().filter(|&x| x != 0).count();
-
-    let mut i_br = 0;
-    let mut i_non_br = 0;
-    for i_src in 0..S::NUM_DIMS {
-        if strides[i_src] == 0 {
-            // this axis is broadcasted
-            new_shape[num_non_br_dims + i_br] = dims[i_src];
-            new_strides[num_non_br_dims + i_br] = strides[i_src];
-            remap[num_non_br_dims + i_br] = i_src;
-            i_br += 1;
-        } else {
-            // this axis is not broadcasted
-            new_shape[i_non_br] = dims[i_src];
-            new_strides[i_non_br] = strides[i_src];
-            remap[i_non_br] = i_src;
-            i_non_br += 1;
-        }
-    }
-    let idx = NdIndex {
-        indices: Default::default(),
-        shape: new_shape,
-        strides: new_strides,
-        next: Some(0),
-        contiguous: (new_shape == dims && new_strides == shape.strides())
-            .then(|| shape.num_elements()),
-    };
-    (idx, remap)
-}
-
-#[inline(always)]
-pub(crate) fn permute<S: Shape>(strides: S::Concrete, remap: S::Concrete) -> S::Concrete {
-    let mut new_strides: S::Concrete = Default::default();
-    for i in 0..S::NUM_DIMS {
-        new_strides[i] = strides[remap[i]];
-    }
-    new_strides
 }
