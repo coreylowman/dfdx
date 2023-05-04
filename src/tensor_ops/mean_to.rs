@@ -39,8 +39,9 @@ impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> MeanTo for Tensor<S, E, D,
     where
         Self::Shape: HasAxes<Ax> + ReduceShapeTo<Dst, Ax>,
     {
-        let num_elements_reduced = E::from_usize(<S as HasAxes<Ax>>::size(self.shape())).unwrap();
-        self.try_sum()?.try_div(num_elements_reduced)
+        let num_elements_reduced = <S as HasAxes<Ax>>::size(self.shape()) as f64;
+        let inv_normalize = E::from_f64(1.0 / num_elements_reduced).unwrap();
+        self.try_sum()?.try_mul(inv_normalize)
     }
 }
 

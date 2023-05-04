@@ -5,7 +5,7 @@ extern "C" __global__ void FWD( \
     const TYPENAME prob, \
     const size_t numel, \
     const TYPENAME *inp, \
-    const TYPENAME *noise, \
+    const bool *mask, \
     TYPENAME *out \
 ) { \
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; \
@@ -14,13 +14,13 @@ extern "C" __global__ void FWD( \
     } \
     TYPENAME zero = 0.0; \
     TYPENAME one = 1.0; \
-    TYPENAME scalar = (noise[i] < prob) ? zero : (one / (one - prob)); \
+    TYPENAME scalar = mask[i] ? zero : (one / (one - prob)); \
     out[i] = inp[i] * scalar; \
 } \
 extern "C" __global__ void BWD( \
     const TYPENAME prob, \
     const size_t numel, \
-    const TYPENAME *noise, \
+    const bool *mask, \
     TYPENAME *grad_inp, \
     const TYPENAME *grad_out \
 ) { \
@@ -30,7 +30,7 @@ extern "C" __global__ void BWD( \
     } \
     TYPENAME zero = 0.0; \
     TYPENAME one = 1.0; \
-    grad_inp[i] += (noise[i] < prob) ? zero : (grad_out[i] / (one - prob)); \
+    grad_inp[i] += mask[i] ? zero : (grad_out[i] / (one - prob)); \
 }
 
 DROPOUT(__half, dropout_fwd_f16, dropout_bwd_f16);
