@@ -144,24 +144,24 @@ impl Cpu {
             }
         }
 
-        // {
-        //     // weight_g^T += img * unfold(patches)^T
-        //     // (G, C, O/G * K * K) += (G, C, H * W) * (G, H * W, O/G * K * K)
-        //     let m = op.chan_in;
-        //     let k = op.h_in * op.w_in;
-        //     let n = (op.chan_out / op.groups) * op.kernel * op.kernel;
-        //     for g in 0..op.groups {
-        //         Self::matmul(
-        //             (m, k, n),
-        //             img[g * m * k..].as_ptr(),
-        //             [k, 1],
-        //             buf[g * k * n..].as_ptr(),
-        //             [1, k],
-        //             grad_filters_tr[g * m * n..].as_mut_ptr(),
-        //             [n, 1],
-        //         );
-        //     }
-        // }
+        {
+            // weight_g^T += img * unfold(patches)^T
+            // (G, C, O/G * K * K) += (G, C, H * W) * (G, H * W, O/G * K * K)
+            let m = op.chan_in;
+            let k = op.h_in * op.w_in;
+            let n = (op.chan_out / op.groups) * op.kernel * op.kernel;
+            for g in 0..op.groups {
+                Self::matmul(
+                    (m, k, n),
+                    img[g * m * k..].as_ptr(),
+                    [k, 1],
+                    buf[g * k * n..].as_ptr(),
+                    [1, k],
+                    grad_filters_tr[g * m * n..].as_mut_ptr(),
+                    [n, 1],
+                );
+            }
+        }
         Ok(())
     }
 }
