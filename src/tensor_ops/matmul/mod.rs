@@ -139,8 +139,8 @@ where
     fn try_matmul(self, rhs: Tensor<(N,), E, D, R>) -> Result<Self::Output, Self::Err> {
         let m = self.shape.0;
         let n = rhs.shape.0;
-        let lhs = self.try_reshape_like(&(m, Const::<1>)).unwrap()?;
-        lhs.try_matmul(rhs.try_reshape_like(&(Const::<1>, n)).unwrap()?)
+        let lhs = self.try_reshape_like(&(m, Const::<1>))?;
+        lhs.try_matmul(rhs.try_reshape_like(&(Const::<1>, n))?)
     }
 }
 
@@ -154,8 +154,8 @@ where
         let k1 = self.shape.0;
         let (k2, n) = rhs.shape;
         assert_eq!(k1, k2);
-        let lhs = self.try_reshape_like(&(Const::<1>, k1)).unwrap()?;
-        lhs.try_matmul(rhs)?.try_reshape_like(&(n,)).unwrap()
+        let lhs = self.try_reshape_like(&(Const::<1>, k1))?;
+        lhs.try_matmul(rhs)?.try_reshape_like(&(n,))
     }
 }
 
@@ -169,8 +169,8 @@ where
         let (m, k1) = self.shape;
         let k2 = rhs.shape.0;
         assert_eq!(k1, k2);
-        let rhs = rhs.try_reshape_like(&(k2, Const::<1>)).unwrap()?;
-        self.try_matmul(rhs)?.try_reshape_like(&(m,)).unwrap()
+        let rhs = rhs.try_reshape_like(&(k2, Const::<1>))?;
+        self.try_matmul(rhs)?.try_reshape_like(&(m,))
     }
 }
 

@@ -44,7 +44,7 @@ where
         input: Tensor<(B, Const<C>, Const<H>, Const<W>), E, D, T>,
     ) -> Result<Self::Output, D::Err> {
         let batch = input.shape.0;
-        input.try_reshape_like(&(batch, Const)).unwrap()
+        input.try_reshape_like(&(batch, Const))
     }
 }
 

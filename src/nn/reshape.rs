@@ -21,14 +21,7 @@ impl<Src: Shape, Dst: ConstShape, D: Device<E>, E: Dtype, T: Tape<E, D>>
     type Error = D::Err;
 
     fn try_forward(&self, input: Tensor<Src, E, D, T>) -> Result<Self::Output, D::Err> {
-        let shape = input.shape.concrete();
-        input.try_reshape_like(&self.0).unwrap_or_else(|| {
-            panic!(
-                "Input shape {:?} could not be coerced into output shape {:?}",
-                shape,
-                self.0.concrete().as_ref()
-            )
-        })
+        input.try_reshape_like(&self.0)
     }
 }
 
