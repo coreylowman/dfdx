@@ -69,8 +69,3 @@ fn test_conv2d_g3() {
 fn test_conv2d_all() {
     test_case!("all", Rank3<9, 15, 15>, Rank4<6, 3, 4, 4>, Rank3<6, 6, 6>, 2, 1, 2, 3);
 }
-
-// #[test]
-// fn test_conv2d_large() {
-//     test_case!("large", Rank3<3, 224, 224>, Rank4<64, 3, 7, 7>, Rank3<64, 112, 112>, 2, 3, 1, 1);
-// }
