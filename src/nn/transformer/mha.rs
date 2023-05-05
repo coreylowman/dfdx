@@ -113,29 +113,11 @@ where
         assert_eq!(k.shape.0, v.shape.0);
         let s1 = q.shape.0;
         let s2 = k.shape.0;
-        let v = self.w_v.try_forward(v.retaped::<T>())?;
-        let v = v.try_reshape_like(&(s2, H, V / H))?;
-        let v = v.try_permute::<_, Axes3<1, 0, 2>>()?;
-
-        let k = self.w_k.try_forward(k.retaped::<T>())?;
-        let k = k.try_reshape_like(&(s2, H, K / H))?;
-        let k = k.try_permute::<_, Axes3<1, 2, 0>>()?;
-
-        let q = self.w_q.try_forward(q)?;
-        let q = q.try_reshape_like(&(s1, H, K / H))?;
-        let q = q.try_permute::<_, Axes3<1, 0, 2>>()?;
-
-        // Get weights
-        let scalar: E = E::from_f64(1.0 / ((K / H) as f64).sqrt()).unwrap();
-        let weights = q.try_matmul(k)?.try_mul(scalar)?;
-        let weights = weights.try_softmax::<Axis<2>>()?;
-
-        // Get new tokens
-        let tokens = weights.try_matmul(v)?;
-        let tokens = tokens.try_permute::<_, Axes3<1, 0, 2>>()?;
-        let tokens = tokens.try_reshape_like(&(s1, Const::<V>))?;
-
-        self.w_o.try_forward(tokens)
+        let q = q.broadcast_like(&(Const::<1>, s1, Const::<M>));
+        let k = k.broadcast_like(&(Const::<1>, s2, Const::<M>));
+        let v = v.broadcast_like(&(Const::<1>, s2, Const::<M>));
+        let out = self.try_forward((q, k, v))?;
+        out.try_reshape_like(&(s1, Const::<M>))
     }
 }
 
