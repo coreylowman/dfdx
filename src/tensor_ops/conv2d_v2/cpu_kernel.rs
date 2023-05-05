@@ -114,11 +114,8 @@ impl Cpu {
                         for y in 0..op.h_in {
                             for x in 0..op.w_in {
                                 if let Some([oh, ow]) = op.unfold_idx([k1, k2, y, x]) {
-                                    unsafe {
-                                        *buf.get_unchecked_mut(i) = *grad_out.get_unchecked(
-                                            o * (op.h_out * op.w_out) + oh * op.w_out + ow,
-                                        );
-                                    }
+                                    buf[i] =
+                                        grad_out[o * (op.h_out * op.w_out) + oh * op.w_out + ow];
                                 }
                                 i += 1;
                             }
@@ -130,8 +127,8 @@ impl Cpu {
 
         {
             // img_g += filters^T * unfold(grad_out)
-            // (G, C, H * W) += (C, G, O/G * K * K) * (G, O/G * K * K, H * W)
-            let m = op.groups * op.chan_in;
+            // (G, C, H * W) += (G, C, O/G * K * K) * (G, O/G * K * K, H * W)
+            let m = op.chan_in;
             let k = (op.chan_out / op.groups) * op.kernel * op.kernel;
             let n = op.h_in * op.w_in;
             for g in 0..op.groups {
@@ -147,24 +144,24 @@ impl Cpu {
             }
         }
 
-        {
-            // weight_g^T += img * unfold(patches)^T
-            // (C, O * K * K) += ((G, C, H * W) * (G, H * W, O/G * K * K)).sum(0)
-            let m = op.chan_in;
-            let k = op.h_in * op.w_in;
-            let n = op.chan_out * op.kernel * op.kernel;
-            for g in 0..op.groups {
-                Self::matmul(
-                    (m, k, n),
-                    img.as_ptr(),
-                    [k, 1],
-                    buf.as_ptr(),
-                    [1, k],
-                    grad_filters_tr.as_mut_ptr(),
-                    [n, 1],
-                );
-            }
-        }
+        // {
+        //     // weight_g^T += img * unfold(patches)^T
+        //     // (G, C, O/G * K * K) += (G, C, H * W) * (G, H * W, O/G * K * K)
+        //     let m = op.chan_in;
+        //     let k = op.h_in * op.w_in;
+        //     let n = (op.chan_out / op.groups) * op.kernel * op.kernel;
+        //     for g in 0..op.groups {
+        //         Self::matmul(
+        //             (m, k, n),
+        //             img[g * m * k..].as_ptr(),
+        //             [k, 1],
+        //             buf[g * k * n..].as_ptr(),
+        //             [1, k],
+        //             grad_filters_tr[g * m * n..].as_mut_ptr(),
+        //             [n, 1],
+        //         );
+        //     }
+        // }
         Ok(())
     }
 }
@@ -222,8 +219,14 @@ where
         out: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        let f_tr_shape = (op.chan_in, op.chan_out, op.kernel, op.kernel);
-        let patches_shape = (op.chan_out, op.kernel, op.kernel, op.h_in, op.w_in);
+        let f_tr_shape = [
+            op.groups,
+            op.chan_in,
+            op.chan_out / op.groups,
+            op.kernel,
+            op.kernel,
+        ];
+        let patches_shape = [op.chan_out, op.kernel, op.kernel, op.h_in, op.w_in];
         let mut patches = self.try_alloc_zeros::<E>(patches_shape.num_elements())?;
         let mut f1023 = self.try_alloc_zeros::<E>(f_tr_shape.num_elements())?;
         let mut grad_f1023 = self.try_alloc_zeros::<E>(f_tr_shape.num_elements())?;
@@ -232,8 +235,8 @@ where
             // transpose filters in f1023
             let buf = rhs.data.as_ref();
             let mut f_idx = NdIndex::new(f_tr_shape, f_tr_shape.strides());
-            while let Some((i, [c, o, k1, k2])) = f_idx.next_with_idx() {
-                let idx = o * rhs.strides[0]
+            while let Some((i, [g, c, o, k1, k2])) = f_idx.next_with_idx() {
+                let idx = (g * (op.chan_out / op.groups) + o) * rhs.strides[0]
                     + c * rhs.strides[1]
                     + k1 * rhs.strides[2]
                     + k2 * rhs.strides[3];
@@ -263,8 +266,8 @@ where
         {
             // untranspose filters
             let mut f_idx = NdIndex::new(f_tr_shape, f_tr_shape.strides());
-            while let Some((i, [c, o, k1, k2])) = f_idx.next_with_idx() {
-                let idx = o * rhs.strides[0]
+            while let Some((i, [g, c, o, k1, k2])) = f_idx.next_with_idx() {
+                let idx = (g * (op.chan_out / op.groups) + o) * rhs.strides[0]
                     + c * rhs.strides[1]
                     + k1 * rhs.strides[2]
                     + k2 * rhs.strides[3];

@@ -227,6 +227,9 @@ where
         let (batch, _, h, w) = img.shape;
         let (out_chan, inp_chan, kernel, _) = filters.shape;
         assert!(out_chan.size() % groups.size() == 0);
+        if img.strides != img.shape.strides() || filters.strides != filters.shape.strides() {
+            panic!("Image & filter inputs to conv2d must be contiguous");
+        }
         let h_out = (h, kernel).conv2d(stride, padding, dilation, groups);
         let w_out = (w, kernel).conv2d(stride, padding, dilation, groups);
         let op = Conv2DOp {
