@@ -282,3 +282,6 @@ mod pool2d;
 pub(crate) use pool2d::{ConstAvgPool2D, ConstMaxPool2D, ConstMinPool2D};
 #[cfg(feature = "nightly")]
 pub use pool2d::{TryAvgPool2D, TryMaxPool2D, TryMinPool2D};
+
+#[cfg(feature = "nightly")]
+mod conv2d_v2;
