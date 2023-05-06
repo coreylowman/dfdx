@@ -37,13 +37,14 @@ where
         rhs: &Tensor<R, E, Self>,
         out: &mut Tensor<O, E, Self>,
     ) -> Result<(), Self::Err> {
-        let conv = self.cudnn.create_conv2d::<E>(
+        let mut conv = self.cudnn.create_conv2d::<E>(
             [op.padding as i32, op.padding as i32],
             [op.stride as i32, op.stride as i32],
             [op.dilation as i32, op.dilation as i32],
             op.groups as i32,
             cudnn::sys::cudnnConvolutionMode_t::CUDNN_CROSS_CORRELATION,
         )?;
+        conv.set_group_count(op.groups as i32)?;
         let img = self.cudnn.create_4d_tensor_ex::<E>(
             make_4d::<L>(lhs.shape.concrete(), 1).map(|x| x as i32),
             make_4d::<L>(lhs.strides, 0).map(|x| x as i32),
@@ -95,13 +96,13 @@ where
         out: &impl Tensorlike<O, E, Self>,
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
-        let conv = self.cudnn.create_conv2d::<E>(
+        let mut conv = self.cudnn.create_conv2d::<E>(
             [op.padding as i32, op.padding as i32],
             [op.stride as i32, op.stride as i32],
             [op.dilation as i32, op.dilation as i32],
-            op.groups as i32,
             cudnn::sys::cudnnConvolutionMode_t::CUDNN_CROSS_CORRELATION,
         )?;
+        conv.set_group_count(op.groups as i32)?;
         let img = self.cudnn.create_4d_tensor_ex::<E>(
             make_4d::<L>(lhs.shape.concrete(), 1).map(|x| x as i32),
             make_4d::<L>(lhs.strides, 0).map(|x| x as i32),
