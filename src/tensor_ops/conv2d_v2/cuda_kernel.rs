@@ -85,7 +85,8 @@ where
 
         let img_strides = self.dev.htod_copy(make_4d::<L>(img.strides).into())?;
         let unfold_fn = self.dev.get_func(Self::MOD, Self::FNS[0]).unwrap();
-        let cfg = launch_cfg::<128>((op.batch * op.chan_in * op.h_out * op.w_out) as u32);
+        let cfg =
+            launch_cfg::<128>((op.batch * op.groups * op.chan_in * op.h_out * op.w_out) as u32);
         let params = (op, img.data.as_ref(), &img_strides, &mut patches);
         unsafe { unfold_fn.launch(cfg, params) }?;
 
@@ -93,6 +94,8 @@ where
         let m = op.chan_out / op.groups;
         let k = op.chan_in * op.kernel * op.kernel;
         let n = op.h_out * op.w_out;
+        // groups = 1, batch stride should be 0
+        //
         unsafe {
             self.gemm_batch(
                 (op.batch * op.groups, m, k, n),

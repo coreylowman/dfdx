@@ -18,9 +18,9 @@ struct Conv2DOp {
 template<typename T>
 __device__ void unfold_input_into_patches(
     const Conv2DOp op,
-    const T *image, // 4d (Batch, Channels, Height, Width)
+    const T *image, // 4d (Batch, Groups * Channels, Height, Width)
     const size_t *strides, // 4d image strides
-    T *patches // 6d (Batch, Channels, KernelSize, KernelSize, HeightOut, WidthOut)
+    T *patches // 6d (Batch, Groups * Channels, KernelSize, KernelSize, HeightOut, WidthOut)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= op.batch * op.chan_in * op.h_out * op.w_out) {
@@ -32,14 +32,14 @@ __device__ void unfold_input_into_patches(
     idx /= op.w_out;
     const size_t oh = idx % op.h_out;
     idx /= op.h_out;
-    const size_t c = idx % op.chan_in;
-    idx /= op.chan_in;
+    const size_t c = idx % (op.chan_in * op.groups);
+    idx /= (op.chan_in * op.groups);
     const size_t b = idx % op.batch;
 
     image += b * strides[0] + c * strides[1];
     patches += oh * op.w_out + ow;
     patches += c * (op.kernel * op.kernel * op.h_out * op.w_out);
-    patches += b * (op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out);
+    patches += b * (op.groups * op.chan_in * op.kernel * op.kernel * op.h_out * op.w_out);
 
     T zero = 0.0;
 
@@ -102,7 +102,7 @@ __device__ void transpose_filters(
     const Conv2DOp op,
     const T *filters, // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
     const size_t *strides, // 4d filters strides
-    T *filters_tr // 4d (ChanIn, ChanOut, KernelSize, KernelSize)
+    T *filters_tr // 5d (Groups, ChanIn, ChanOut/Groups, KernelSize, KernelSize)
 ) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= op.chan_in * op.chan_out * op.kernel * op.kernel) {
@@ -126,7 +126,7 @@ __device__ void transpose_filters(
 template<typename T>
 __device__ void sum_transposed_filters(
     const Conv2DOp op,
-    const T *filters_tr, // 5d (Batch, ChanIn, ChanOut, KernelSize, KernelSize)
+    const T *filters_tr, // 4d (Groups, ChanIn, ChanOut/Groups, KernelSize, KernelSize)
     T *filters, // 4d (ChanOut, ChanIn, KernelSize, KernelSize)
     const size_t *strides // 4d filter strides
 ) {
