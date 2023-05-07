@@ -36,6 +36,7 @@ activation_impls!(Square, try_square, #[doc="Calls [square()]."]);
 activation_impls!(Sqrt, try_sqrt, #[doc="Calls [sqrt()]."]);
 activation_impls!(Abs, try_abs, #[doc="Calls [abs()]."]);
 activation_impls!(Softmax, try_softmax, #[doc="Calls [softmax()]."]);
+activation_impls!(LogSoftmax, try_log_softmax, #[doc="Calls [log_softmax()]."]);
 
 /// Calls [prelu()] with constant value - defaults to 0.05
 #[derive(Debug, Clone, Copy)]
