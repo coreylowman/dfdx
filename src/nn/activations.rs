@@ -35,22 +35,7 @@ activation_impls!(Tanh, try_tanh, #[doc="Calls [tanh()]."]);
 activation_impls!(Square, try_square, #[doc="Calls [square()]."]);
 activation_impls!(Sqrt, try_sqrt, #[doc="Calls [sqrt()]."]);
 activation_impls!(Abs, try_abs, #[doc="Calls [abs()]."]);
-
-/// Calls [softmax()].
-#[derive(Default, Debug, Clone, Copy)]
-pub struct Softmax;
-
-impl ZeroSizedModule for Softmax {}
-impl NonMutableModule for Softmax {}
-
-impl<S: Shape, E: Dtype, D: Device<E>, T: Tape<E, D>> Module<Tensor<S, E, D, T>> for Softmax {
-    type Output = Tensor<S, E, D, T>;
-    type Error = D::Err;
-
-    fn try_forward(&self, input: Tensor<S, E, D, T>) -> Result<Self::Output, D::Err> {
-        input.try_softmax::<S::LastAxis>()
-    }
-}
+activation_impls!(Softmax, try_softmax, #[doc="Calls [softmax()]."]);
 
 /// Calls [prelu()] with constant value - defaults to 0.05
 #[derive(Debug, Clone, Copy)]
@@ -187,6 +172,21 @@ mod tests {
         let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
         let r1 = Softmax.forward_mut(t.clone());
         let r2 = t.softmax::<crate::shapes::Axis<1>>();
+        assert_eq!(r1.array(), r2.array());
+    }
+
+    #[test]
+    fn test_nn_activations_log_softmax() {
+        let dev: TestDevice = Default::default();
+
+        let t = dev.tensor([-2.0, -1.0, 0.0, 1.0, 2.0]);
+        let r1 = LogSoftmax.forward_mut(t.clone());
+        let r2 = t.log_softmax();
+        assert_eq!(r1.array(), r2.array());
+
+        let t = dev.tensor([[-2.0, -1.0, 0.0], [1.0, 2.0, 3.0]]);
+        let r1 = LogSoftmax.forward_mut(t.clone());
+        let r2 = t.log_softmax::<crate::shapes::Axis<1>>();
         assert_eq!(r1.array(), r2.array());
     }
 
