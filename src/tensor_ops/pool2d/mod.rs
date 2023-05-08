@@ -343,6 +343,42 @@ mod tests {
 
     #[test]
     fn test_pool2d_dilated() {
-        todo!()
+        let dev: TestDevice = Default::default();
+        let x = dev
+            .tensor([[
+                [0., 1., 2., 4., 5.],
+                [6., 7., 8., 9., 10.],
+                [11., 12., 13., 14., 15.],
+                [16., 17., 18., 19., 20.],
+            ]])
+            .to_dtype::<TestDtype>();
+        let y_max = x.leaky_trace().pool2d(
+            Pool2DKind::Max,
+            Const::<2>,
+            Const::<1>,
+            Const::<0>,
+            Const::<2>,
+        );
+        assert_eq!(y_max.array(), [[[13., 14., 15.], [18., 19., 20.]]]);
+        let y_min = x.clone().pool2d(
+            Pool2DKind::Min,
+            Const::<2>,
+            Const::<1>,
+            Const::<0>,
+            Const::<2>,
+        );
+        assert_eq!(y_min.array(), [[[0., 1., 2.], [6., 7., 8.]]]);
+
+        let grads = y_max.mean().backward();
+        let v = 1.0 / 6.0;
+        assert_close_to_literal!(
+            grads.get(&x),
+            [[
+                [0., 0., 0., 0., 0.],
+                [0., 0., 0., 0., 0.],
+                [0., 0., v, v, v],
+                [0., 0., v, v, v]
+            ]]
+        );
     }
 }
