@@ -1,7 +1,9 @@
 use num_traits::Float;
 use rand_distr::uniform::SampleUniform;
 
-use crate::{shapes::*, tensor::*, tensor_ops::*};
+use crate::shapes::*;
+use crate::tensor::*;
+use crate::tensor_ops::*;
 
 use super::*;
 
@@ -10,26 +12,41 @@ pub mod builder {
     pub struct Conv2D<
         const IN_CHAN: usize,
         const OUT_CHAN: usize,
-        const KERNEL_SIZE: usize,
-        const STRIDE: usize = 1,
-        const PADDING: usize = 0,
+        const KERNEL_SIZE_X: usize,
+        const KERNEL_SIZE_Y: usize,
+        const STRIDE_X: usize = 1,
+        const STRIDE_Y: usize = 1,
+        const PADDING_X: usize = 0,
+        const PADDING_Y: usize = 0,
     >;
 }
 
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
-    BuildOnDevice<D, E> for builder::Conv2D<I, O, K, S, P>
+impl<
+        const I: usize,
+        const O: usize,
+        const K_X: usize,
+        const K_Y: usize,
+        const S_X: usize,
+        const S_Y: usize,
+        const P_X: usize,
+        const P_Y: usize,
+        E,
+        D,
+    > BuildOnDevice<D, E> for builder::Conv2D<I, O, K_X, K_Y, S_X, S_Y, P_X, P_Y>
 where
     E: Dtype,
     D: Device<E>,
-    Conv2D<I, O, K, S, P, E, D>: BuildModule<D, E>,
+    Conv2D<I, O, K_X, K_Y, S_X, S_Y, P_X, P_Y, E, D>: BuildModule<D, E>,
 {
-    type Built = Conv2D<I, O, K, S, P, E, D>;
+    type Built = Conv2D<I, O, K_X, K_Y, S_X, S_Y, P_X, P_Y, E, D>;
+
     fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
         Self::Built::try_build(device)
     }
 }
 
-/// **Requires Nightly** Performs *unbiased* 2d convolutions on 3d and 4d images.
+/// **Requires Nightly** Performs *unbiased* 2d convolutions on 3d and 4d
+/// images.
 ///
 /// **Pytorch Equivalent**: `torch.nn.Conv2d(..., bias=False)`
 ///
@@ -42,29 +59,44 @@ where
 /// Generics:
 /// - `IN_CHAN`: The number of input channels in an image.
 /// - `OUT_CHAN`: The number of channels in the output of the layer.
-/// - `KERNEL_SIZE`: The size of the kernel applied to both width and height of the images.
+/// - `KERNEL_SIZE`: The size of the kernel applied to both width and height of
+///   the images.
 /// - `STRIDE`: How far to move the kernel each step. Defaults to `1`
-/// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
+/// - `PADDING`: How much zero padding to add around the images. Defaults to
+///   `0`.
 #[derive(Debug, Clone)]
 pub struct Conv2D<
     const IN_CHAN: usize,
     const OUT_CHAN: usize,
-    const KERNEL_SIZE: usize,
-    const STRIDE: usize,
-    const PADDING: usize,
+    const KERNEL_SIZE_X: usize,
+    const KERNEL_SIZE_Y: usize,
+    const STRIDE_X: usize,
+    const STRIDE_Y: usize,
+    const PADDING_X: usize,
+    const PADDING_Y: usize,
     E: Dtype,
     D: DeviceStorage,
 > {
-    pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>, E, D>,
+    pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE_X, KERNEL_SIZE_Y>, E, D>,
 }
 
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
-    TensorCollection<E, D> for Conv2D<I, O, K, S, P, E, D>
+impl<
+        const I: usize,
+        const O: usize,
+        const K_X: usize,
+        const K_Y: usize,
+        const S_X: usize,
+        const S_Y: usize,
+        const P_X: usize,
+        const P_Y: usize,
+        E,
+        D,
+    > TensorCollection<E, D> for Conv2D<I, O, K_X, K_Y, S_X, S_Y, P_X, P_Y, E, D>
 where
     E: Dtype + Float + SampleUniform,
     D: Device<E>,
 {
-    type To<E2: Dtype, D2: Device<E2>> = Conv2D<I, O, K, S, P, E2, D2>;
+    type To<E2: Dtype, D2: Device<E2>> = Conv2D<I, O, K_X, K_Y, S_X, S_Y, P_X, P_Y, E2, D2>;
 
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
@@ -75,7 +107,7 @@ where
                 |s| &s.weight,
                 |s| &mut s.weight,
                 TensorOptions::reset_with(|t| {
-                    let b = E::ONE / E::from_usize(I * K * K).unwrap().sqrt();
+                    let b = E::ONE / E::from_usize(I * K_X * K_Y).unwrap().sqrt();
                     t.try_fill_with_distr(rand_distr::Uniform::new(-b, b))
                 }),
             ),
@@ -85,23 +117,45 @@ where
 }
 
 #[cfg(feature = "nightly")]
-impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D, Img>
-    Module<Img> for Conv2D<C, O, K, S, P, E, D>
+impl<
+        const C: usize,
+        const O: usize,
+        const K_X: usize,
+        const K_Y: usize,
+        const S_X: usize,
+        const S_Y: usize,
+        const P_X: usize,
+        const P_Y: usize,
+        E,
+        D,
+        Img,
+    > Module<Img> for Conv2D<C, O, K_X, K_Y, S_X, S_Y, P_X, P_Y, E, D>
 where
     E: Dtype,
     D: Device<E>,
-    Img: TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> + HasErr<Err = D::Err>,
+    Img:
+        TryConv2DTo<Tensor<Rank4<O, C, K_X, K_Y>, E, D>, S_X, S_Y, P_X, P_Y> + HasErr<Err = D::Err>,
 {
-    type Output = Img::Output;
     type Error = D::Err;
+    type Output = Img::Output;
 
     fn try_forward(&self, x: Img) -> Result<Self::Output, D::Err> {
         x.try_conv2d_to(self.weight.clone())
     }
 }
 
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
-    NonMutableModule for Conv2D<I, O, K, S, P, E, D>
+impl<
+        const I: usize,
+        const O: usize,
+        const K_X: usize,
+        const K_Y: usize,
+        const S_X: usize,
+        const S_Y: usize,
+        const P_X: usize,
+        const P_Y: usize,
+        E,
+        D,
+    > NonMutableModule for Conv2D<I, O, K_X, K_Y, S_X, S_Y, P_X, P_Y, E, D>
 where
     E: Dtype,
     D: DeviceStorage,
@@ -111,28 +165,27 @@ where
 #[cfg(feature = "nightly")]
 #[cfg(test)]
 mod tests {
-    use crate::{
-        optim::*,
-        tensor::{AsArray, SampleTensor, ZerosTensor},
-        tests::*,
-    };
+    use crate::optim::*;
+    use crate::tensor::{AsArray, SampleTensor, ZerosTensor};
+    use crate::tests::*;
 
-    use super::{builder::Conv2D, *};
+    use super::builder::Conv2D;
+    use super::*;
 
     #[rustfmt::skip]
     #[test]
     fn test_forward_3d_sizes() {
         let dev: TestDevice = Default::default();
         let x = dev.zeros::<Rank3<3, 10, 10>>();
-        let _: Tensor<Rank3<2, 8, 8>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank3<4, 8, 8>, _, _, _> = dev.build_module::<Conv2D<3, 4, 3>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank3<4, 9, 9>, _, _, _> = dev.build_module::<Conv2D<3, 4, 2>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank3<4, 7, 7>, _, _, _> = dev.build_module::<Conv2D<3, 4, 4>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank3<2, 4, 4>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 2>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank3<2, 3, 3>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 3>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank3<2, 10, 10>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 1, 1>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank3<2, 12, 12>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 1, 2>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank3<2, 6, 6>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 2, 2>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<2, 8, 8>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 3>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<4, 8, 8>, _, _, _> = dev.build_module::<Conv2D<3, 4, 3, 3>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<4, 9, 9>, _, _, _> = dev.build_module::<Conv2D<3, 4, 2, 2>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<4, 7, 7>, _, _, _> = dev.build_module::<Conv2D<3, 4, 4, 4>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<2, 4, 4>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3,3,2, 2>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<2, 3, 3>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3,3,3, 3>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<2, 10, 10>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 3,1,1,1, 1>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<2, 12, 12>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 3,1,1, 2,2>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank3<2, 6, 6>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 3,2,2,2, 2>, TestDtype>().forward(x.clone());
     }
 
     #[rustfmt::skip]
@@ -140,22 +193,22 @@ mod tests {
     fn test_forward_4d_sizes() {
         let dev: TestDevice = Default::default();
         let x = dev.zeros::<Rank4<5, 3, 10, 10>>();
-        let _: Tensor<Rank4<5, 2, 8, 8>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank4<5, 4, 8, 8>, _, _, _> = dev.build_module::<Conv2D<3, 4, 3>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank4<5, 4, 9, 9>, _, _, _> = dev.build_module::<Conv2D<3, 4, 2>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank4<5, 4, 7, 7>, _, _, _> = dev.build_module::<Conv2D<3, 4, 4>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 4, 4>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 2>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 3, 3>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 3>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 10, 10>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 1, 1>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 12, 12>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 1, 2>, TestDtype>().forward(x.clone());
-        let _: Tensor<Rank4<5, 2, 6, 6>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 2, 2>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 8, 8>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 3>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 8, 8>, _, _, _> = dev.build_module::<Conv2D<3, 4, 3, 3>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 9, 9>, _, _, _> = dev.build_module::<Conv2D<3, 4, 2, 2>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank4<5, 4, 7, 7>, _, _, _> = dev.build_module::<Conv2D<3, 4, 4, 4>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 4, 4>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 3, 2, 2>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 3, 3>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 3, 3, 3>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 10, 10>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3,3, 1,1,1, 1>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 12, 12>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 3,1,1,2, 2>, TestDtype>().forward(x.clone());
+        let _: Tensor<Rank4<5, 2, 6, 6>, _, _, _> = dev.build_module::<Conv2D<3, 2, 3, 3,2,2,2, 2>, TestDtype>().forward(x.clone());
     }
 
     #[test]
     fn test_2_conv_sizes() {
         let dev = Cpu::default();
-        type A = Conv2D<1, 2, 3>;
-        type B = Conv2D<2, 4, 3>;
+        type A = Conv2D<1, 2, 3, 3>;
+        type B = Conv2D<2, 4, 3, 3>;
         let _: Tensor<Rank3<4, 6, 6>, _, _> = dev
             .build_module::<(A, B), TestDtype>()
             .forward(dev.zeros::<Rank3<1, 10, 10>>());
@@ -163,9 +216,9 @@ mod tests {
 
     #[test]
     fn test_3_conv_sizes() {
-        type A = Conv2D<1, 2, 3>;
-        type B = Conv2D<2, 4, 3>;
-        type C = Conv2D<4, 1, 1, 1, 1>;
+        type A = Conv2D<1, 2, 3, 3>;
+        type B = Conv2D<2, 4, 3, 3>;
+        type C = Conv2D<4, 1, 1, 1, 1, 1, 1, 1>;
 
         let dev = Cpu::default();
         let _: Tensor<Rank3<1, 8, 8>, _, _> = dev
@@ -177,7 +230,7 @@ mod tests {
     fn test_conv_with_optimizer() {
         let dev: TestDevice = Default::default();
 
-        let mut m = dev.build_module::<Conv2D<2, 4, 3>, TestDtype>();
+        let mut m = dev.build_module::<Conv2D<2, 4, 3, 3>, TestDtype>();
 
         let weight_init = m.weight.clone();
 
