@@ -12,7 +12,7 @@ fn main() {
     #[cfg(not(feature = "cuda"))]
     type Dev = Cpu;
 
-    type Model = Conv2D<128, 256, 4>;
+    type Model = Conv2D<128, 256, 4, 4>;
     type Dtype = f32;
     type InputShape = Rank4<64, 128, 28, 28>;
 
