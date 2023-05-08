@@ -1,6 +1,7 @@
 use crate::prelude::Tensorlike;
 use crate::shapes::{Dtype, Shape};
-use crate::tensor::{cpu::*, Tensor, ZerosTensor};
+use crate::tensor::cpu::*;
+use crate::tensor::{Tensor, ZerosTensor};
 use crate::tensor_ops::matmul::cpu_kernel::MatMulImpl;
 
 use super::{Conv2DKernel, Conv2DOp};
@@ -10,28 +11,28 @@ use std::sync::Arc;
 impl Conv2DOp {
     #[inline(always)]
     fn unfold_idx(&self, [k1, k2, y, x]: [usize; 4]) -> Option<[usize; 2]> {
-        let mut oh = y + self.padding;
+        let mut oh = y + self.padding_y;
         if oh < k1 {
             return None;
         }
         oh -= k1;
-        if oh % self.stride != 0 {
+        if oh % self.stride_y != 0 {
             return None;
         }
-        oh /= self.stride;
+        oh /= self.stride_y;
         if oh >= self.h_out {
             return None;
         }
 
-        let mut ow = x + self.padding;
+        let mut ow = x + self.padding_x;
         if ow < k2 {
             return None;
         }
         ow -= k2;
-        if ow % self.stride != 0 {
+        if ow % self.stride_x != 0 {
             return None;
         }
-        ow /= self.stride;
+        ow /= self.stride_x;
         if ow >= self.w_out {
             return None;
         }
@@ -56,12 +57,12 @@ impl Cpu {
         {
             let mut i = 0;
             for c in 0..op.chan_in {
-                for k1 in 0..op.kernel {
-                    for k2 in 0..op.kernel {
+                for k1 in 0..op.kernel_y {
+                    for k2 in 0..op.kernel_x {
                         for oh in 0..op.h_out {
-                            let y = (oh * op.stride + k1).wrapping_sub(op.padding);
+                            let y = (oh * op.stride_y + k1).wrapping_sub(op.padding_y);
                             for ow in 0..op.w_out {
-                                let x = (ow * op.stride + k2).wrapping_sub(op.padding);
+                                let x = (ow * op.stride_x + k2).wrapping_sub(op.padding_x);
                                 if y < op.h_in && x < op.w_in {
                                     unsafe {
                                         *buf.get_unchecked_mut(i) = *img.get_unchecked(
@@ -79,7 +80,7 @@ impl Cpu {
 
         // (O, C * K * K) * (C * K * K, OH * OW) = (O, OH * OW)
         let m = op.chan_out;
-        let k = op.chan_in * op.kernel * op.kernel;
+        let k = op.chan_in * op.kernel_x * op.kernel_y;
         let n = op.w_out * op.h_out;
         Self::matmul(
             (m, k, n),
@@ -111,8 +112,8 @@ impl Cpu {
         {
             let mut i = 0;
             for o in 0..op.chan_out {
-                for k1 in 0..op.kernel {
-                    for k2 in 0..op.kernel {
+                for k1 in 0..op.kernel_y {
+                    for k2 in 0..op.kernel_x {
                         for y in 0..op.h_in {
                             for x in 0..op.w_in {
                                 if let Some([oh, ow]) = op.unfold_idx([k1, k2, y, x]) {
@@ -132,9 +133,9 @@ impl Cpu {
 
         {
             // img_g += filters^T * unfold(grad_out)
-            // (C, H * W) += (C, O * K * K) * (O * K * K, H * W)
+            // (C, H * W) += (C, O * K_X * K_Y) * (O * K_X * K_Y, H * W)
             let m = op.chan_in;
-            let k = op.chan_out * op.kernel * op.kernel;
+            let k = op.chan_out * op.kernel_x * op.kernel_y;
             let n = op.h_in * op.w_in;
             Self::matmul(
                 (m, k, n),
@@ -149,10 +150,10 @@ impl Cpu {
 
         {
             // weight_g^T += img * patches^T
-            // (C, O * K * K) += (C, H * W) * (H * W, O * K * K)
+            // (C, O * K_X * K_Y) += (C, H * W) * (H * W, O * K_X * K_Y)
             let m = op.chan_in;
             let k = op.h_in * op.w_in;
-            let n = op.chan_out * op.kernel * op.kernel;
+            let n = op.chan_out * op.kernel_x * op.kernel_y;
             Self::matmul(
                 (m, k, n),
                 img.as_ptr(),

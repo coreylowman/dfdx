@@ -6,14 +6,18 @@ mod cuda_kernel;
 #[cfg(feature = "cudnn")]
 mod cudnn_kernel;
 
-use crate::{shapes::*, tensor::*};
+use crate::shapes::*;
+use crate::tensor::*;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub(super) struct Conv2DOp {
-    pub stride: usize,
-    pub padding: usize,
-    pub kernel: usize,
+    pub stride_x: usize,
+    pub stride_y: usize,
+    pub padding_x: usize,
+    pub padding_y: usize,
+    pub kernel_x: usize,
+    pub kernel_y: usize,
     pub batch: usize,
     pub chan_in: usize,
     pub chan_out: usize,
@@ -24,33 +28,45 @@ pub(super) struct Conv2DOp {
 }
 
 impl Conv2DOp {
-    fn new(s: usize, p: usize, k: usize, [b, c, h_in, w_in]: [usize; 4], o: usize) -> Self {
+    fn new(
+        s_x: usize,
+        s_y: usize,
+        p_x: usize,
+        p_y: usize,
+        k_x: usize,
+        k_y: usize,
+        [b, c, h_in, w_in]: [usize; 4],
+        o: usize,
+    ) -> Self {
         Self {
-            stride: s,
-            padding: p,
-            kernel: k,
+            stride_x: s_x,
+            stride_y: s_y,
+            padding_x: p_x,
+            padding_y: p_y,
+            kernel_x: k_x,
+            kernel_y: k_y,
             batch: b,
             chan_in: c,
             chan_out: o,
             h_in,
-            h_out: (h_in + 2 * p - k) / s + 1,
+            h_out: (h_in + 2 * p_y - k_y) / s_y + 1,
             w_in,
-            w_out: (w_in + 2 * p - k) / s + 1,
+            w_out: (w_in + 2 * p_x - k_x) / s_x + 1,
         }
     }
 
-    #[rustfmt::skip]
+	#[rustfmt::skip]
     pub(super) fn inp_patches_shape(&self) -> (usize, usize, usize, usize, usize) {
-        (self.chan_in, self.kernel, self.kernel, self.h_out, self.w_out)
+        (self.chan_in, self.kernel_x, self.kernel_y, self.h_out, self.w_out)
     }
 
-    #[rustfmt::skip]
+	#[rustfmt::skip]
     pub(super) fn out_patches_shape(&self) -> (usize, usize, usize, usize, usize) {
-        (self.chan_out, self.kernel, self.kernel, self.h_in, self.w_in)
+        (self.chan_out, self.kernel_x, self.kernel_y, self.h_in, self.w_in)
     }
 
     pub(super) fn filters_tr_shape(&self) -> (usize, usize, usize, usize) {
-        (self.chan_in, self.chan_out, self.kernel, self.kernel)
+        (self.chan_in, self.chan_out, self.kernel_x, self.kernel_y)
     }
 }
 
@@ -104,7 +120,9 @@ impl<const K: usize, const S: usize, const P: usize> ConvAlgebra<K, S, P> for us
     }
 }
 
-pub trait TryConv2DTo<F, const S: usize, const P: usize>: HasErr {
+pub trait TryConv2DTo<F, const S_X: usize, const S_Y: usize, const P_X: usize, const P_Y: usize>:
+    HasErr
+{
     type Output;
     fn conv2d_to(self, filters: F) -> Self::Output {
         self.try_conv2d_to(filters).unwrap()
@@ -113,18 +131,21 @@ pub trait TryConv2DTo<F, const S: usize, const P: usize>: HasErr {
 }
 
 pub trait TryConv2D<F> {
-    fn conv2d<const S: usize, const P: usize>(self, filters: F) -> Self::Output
+    fn conv2d<const S_X: usize, const S_Y: usize, const P_X: usize, const P_Y: usize>(
+        self,
+        filters: F,
+    ) -> Self::Output
     where
-        Self: TryConv2DTo<F, S, P>,
+        Self: TryConv2DTo<F, S_X, S_Y, P_X, P_Y>,
     {
         self.conv2d_to(filters)
     }
-    fn try_conv2d<const S: usize, const P: usize>(
+    fn try_conv2d<const S_X: usize, const S_Y: usize, const P_X: usize, const P_Y: usize>(
         self,
         filters: F,
     ) -> Result<Self::Output, Self::Err>
     where
-        Self: TryConv2DTo<F, S, P>,
+        Self: TryConv2DTo<F, S_X, S_Y, P_X, P_Y>,
     {
         self.try_conv2d_to(filters)
     }
@@ -134,27 +155,31 @@ impl<S: Shape, E: Dtype, D: DeviceStorage, T, F> TryConv2D<F> for Tensor<S, E, D
 
 impl<
         const C: usize,
-        H: Dim + ConvAlgebra<K, S, P>,
-        W: Dim + ConvAlgebra<K, S, P>,
+        H: Dim + ConvAlgebra<K_Y, S_Y, P_Y>,
+        W: Dim + ConvAlgebra<K_X, S_X, P_X>,
         const O: usize,
-        const K: usize,
-        const S: usize,
-        const P: usize,
+        const K_X: usize,
+        const K_Y: usize,
+        const S_X: usize,
+        const S_Y: usize,
+        const P_X: usize,
+        const P_Y: usize,
         E: Dtype,
         D: Conv2DKernel<E> + ZerosTensor<E>,
         T: 'static + Tape<E, D>,
-    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> for Tensor<(Const<C>, H, W), E, D, T>
+    > TryConv2DTo<Tensor<Rank4<O, C, K_X, K_Y>, E, D>, S_X, S_Y, P_X, P_Y>
+    for Tensor<(Const<C>, H, W), E, D, T>
 {
     type Output = Tensor<(Const<O>, H::Convolved, W::Convolved), E, D, T>;
 
     fn try_conv2d_to(
         self,
-        filters: Tensor<Rank4<O, C, K, K>, E, D>,
+        filters: Tensor<Rank4<O, C, K_X, K_Y>, E, D>,
     ) -> Result<Self::Output, Self::Err> {
         let h = self.shape.1;
         let w = self.shape.2;
 
-        let op = Conv2DOp::new(S, P, K, [1, C, h.size(), w.size()], O);
+        let op = Conv2DOp::new(S_X, S_Y, P_X, P_Y, K_X, K_Y, [1, C, h.size(), w.size()], O);
         let (lhs, ltape) = self.split_tape();
         let (rhs, rtape) = filters.split_tape();
         let mut tape = ltape.merge(rtape);
@@ -181,27 +206,41 @@ impl<
 impl<
         B: Dim,
         const C: usize,
-        H: Dim + ConvAlgebra<K, S, P>,
-        W: Dim + ConvAlgebra<K, S, P>,
+        H: Dim + ConvAlgebra<K_Y, S_Y, P_Y>,
+        W: Dim + ConvAlgebra<K_X, S_X, P_X>,
         const O: usize,
-        const K: usize,
-        const S: usize,
-        const P: usize,
+        const K_X: usize,
+        const K_Y: usize,
+        const S_X: usize,
+        const S_Y: usize,
+        const P_X: usize,
+        const P_Y: usize,
         E: Dtype,
         D: Conv2DKernel<E> + ZerosTensor<E>,
         T: 'static + Tape<E, D>,
-    > TryConv2DTo<Tensor<Rank4<O, C, K, K>, E, D>, S, P> for Tensor<(B, Const<C>, H, W), E, D, T>
+    > TryConv2DTo<Tensor<Rank4<O, C, K_X, K_Y>, E, D>, S_X, S_Y, P_X, P_Y>
+    for Tensor<(B, Const<C>, H, W), E, D, T>
 {
     type Output = Tensor<(B, Const<O>, H::Convolved, W::Convolved), E, D, T>;
+
     fn try_conv2d_to(
         self,
-        filters: Tensor<Rank4<O, C, K, K>, E, D>,
+        filters: Tensor<Rank4<O, C, K_X, K_Y>, E, D>,
     ) -> Result<Self::Output, Self::Err> {
         let batch = self.shape().0;
         let h = self.shape().2;
         let w = self.shape().3;
 
-        let op = Conv2DOp::new(S, P, K, [batch.size(), C, h.size(), w.size()], O);
+        let op = Conv2DOp::new(
+            S_X,
+            S_Y,
+            P_X,
+            P_Y,
+            K_X,
+            K_Y,
+            [batch.size(), C, h.size(), w.size()],
+            O,
+        );
         let (lhs, ltape) = self.split_tape();
         let (rhs, rtape) = filters.split_tape();
         let mut out = lhs
@@ -228,7 +267,8 @@ impl<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{tensor_ops::*, tests::*};
+    use crate::tensor_ops::*;
+    use crate::tests::*;
 
     #[test]
     /// Produced by
@@ -254,7 +294,7 @@ mod tests {
                 [-0.64531374, 0.77809018, -0.49099201],
             ]])
             .to_dtype::<TestDtype>();
-        let result = x.leaky_trace().conv2d::<1, 0>(weight.clone())
+        let result = x.leaky_trace().conv2d::<1, 1, 0, 0>(weight.clone())
             + bias.leaky_trace().broadcast::<_, Axes2<1, 2>>();
         assert_close_to_literal!(
             result,
@@ -303,7 +343,7 @@ mod tests {
             ]])
             .to_dtype::<TestDtype>();
 
-        let result = x.leaky_trace().conv2d::<2, 0>(weight.clone())
+        let result = x.leaky_trace().conv2d::<2, 2, 0, 0>(weight.clone())
             + bias.leaky_trace().broadcast::<_, Axes2<1, 2>>();
         assert_close_to_literal!(result, [[[-0.29368058]], [[0.30018353]]]);
 
@@ -341,7 +381,7 @@ mod tests {
             .tensor([[[-0.32224107, -0.32800716]], [[-1.13570976, 0.93713200]]])
             .to_dtype::<TestDtype>();
 
-        let result = x.leaky_trace().conv2d::<1, 1>(weight.clone())
+        let result = x.leaky_trace().conv2d::<1, 1, 1, 1>(weight.clone())
             + bias.leaky_trace().broadcast::<_, Axes2<1, 2>>();
 
         #[rustfmt::skip]
@@ -388,7 +428,7 @@ mod tests {
         #[rustfmt::skip]
         let x = dev.tensor([[[0.69103152, 0.25624934],[-0.38448590, 0.03110456],[0.83753252, 0.53786588],[1.15540242, -0.54148245]]]).to_dtype::<TestDtype>();
 
-        let result = x.leaky_trace().conv2d::<3, 4>(weight.clone())
+        let result = x.leaky_trace().conv2d::<3, 3, 4, 4>(weight.clone())
             + bias.leaky_trace().broadcast::<_, Axes2<1, 2>>();
 
         #[rustfmt::skip]
@@ -428,7 +468,7 @@ mod tests {
         let bias: Tensor<Rank1<3>, TestDtype, _> = dev.sample_normal();
         let x: Tensor<Rank3<5, 7, 6>, TestDtype, _> = dev.sample_normal();
 
-        let out = x.conv2d::<4, 3>(weight);
+        let out = x.conv2d::<4, 4, 3, 3>(weight);
         let out = out + bias.broadcast::<_, Axes2<1, 2>>();
 
         #[rustfmt::skip]
@@ -445,7 +485,7 @@ mod tests {
         let x: Tensor<Rank3<3, 28, 28>, TestDtype, _> = dev.sample_normal();
         let w: Tensor<Rank4<5, 3, 6, 6>, TestDtype, _> = dev.sample_normal();
 
-        let y: Tensor<Rank3<5, 9, 9>, _, _, _> = x.leaky_trace().conv2d::<3, 2>(w.clone());
+        let y: Tensor<Rank3<5, 9, 9>, _, _, _> = x.leaky_trace().conv2d::<3, 3, 2, 2>(w.clone());
         let y0 = y.retaped::<NoneTape>();
         let grads0 = y.square().mean().backward();
         let x0 = grads0.get(&x);
@@ -456,7 +496,8 @@ mod tests {
             .reshape::<Rank4<10, 3, 28, 28>>();
         assert_eq!(x.strides, x.shape.strides());
 
-        let y: Tensor<Rank4<10, 5, 9, 9>, _, _, _> = x.leaky_trace().conv2d::<3, 2>(w.clone());
+        let y: Tensor<Rank4<10, 5, 9, 9>, _, _, _> =
+            x.leaky_trace().conv2d::<3, 3, 2, 2>(w.clone());
         for i in 0..10 {
             assert_close_to_tensor!(y0, y.retaped::<NoneTape>().select(dev.tensor(i)));
         }
