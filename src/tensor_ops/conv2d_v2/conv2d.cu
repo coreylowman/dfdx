@@ -44,9 +44,9 @@ __device__ void unfold_input_into_patches(
     T zero = 0.0;
 
     for (int k1 = 0;k1 < op.kernel;k1++) {
-        const size_t y = oh * op.stride + k1 - op.padding;
+        const size_t y = oh * op.stride + op.dilation * k1 - op.padding;
         for (int k2 = 0;k2 < op.kernel;k2++) {
-            const size_t x = ow * op.stride + k2 - op.padding;
+            const size_t x = ow * op.stride + op.dilation * k2 - op.padding;
             *patches = (y >= op.h_in || x >= op.w_in) ? zero : image[y * strides[2] + x * strides[3]];
             patches += op.h_out * op.w_out;
         }
