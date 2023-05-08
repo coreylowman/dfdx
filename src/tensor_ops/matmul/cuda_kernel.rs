@@ -245,7 +245,6 @@ where
         lhs: &Tensor<(B, M, K), E, Self>,
         rhs: &Tensor<(K, N), E, Self>,
     ) -> Result<Tensor<(B, M, N), E, Self>, Self::Err> {
-        assert_ne!(lhs.strides[0], 0);
         let (batch, m, _) = lhs.shape;
         let (k, n) = rhs.shape;
         let shape = (batch, m, n);

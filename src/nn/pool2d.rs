@@ -1,5 +1,8 @@
 #[cfg(feature = "nightly")]
-use crate::tensor_ops::{ConstAvgPool2D, ConstMaxPool2D, ConstMinPool2D};
+use crate::{
+    shapes::Const,
+    tensor_ops::{Pool2DKind, TryPool2D},
+};
 
 #[allow(unused)]
 use super::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
@@ -11,8 +14,14 @@ use super::{BuildModule, Module, NonMutableModule, ZeroSizedModule};
 /// - `KERNEL_SIZE`: The size of the kernel applied to both width and height of the images.
 /// - `STRIDE`: How far to move the kernel each step. Defaults to `1`
 /// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
+/// - `DILATION` How dilated the kernel should be. Defaults to `1`.
 #[derive(Debug, Default, Clone)]
-pub struct AvgPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PADDING: usize = 0>;
+pub struct AvgPool2D<
+    const KERNEL_SIZE: usize,
+    const STRIDE: usize = 1,
+    const PADDING: usize = 0,
+    const DILATION: usize = 1,
+>;
 
 /// Max pool with 2d kernel that operates on images (3d) and batches of images (4d).
 /// Each patch reduces to the maximum value in that patch.
@@ -21,8 +30,14 @@ pub struct AvgPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PA
 /// - `KERNEL_SIZE`: The size of the kernel applied to both width and height of the images.
 /// - `STRIDE`: How far to move the kernel each step. Defaults to `1`
 /// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
+/// - `DILATION` How dilated the kernel should be. Defaults to `1`.
 #[derive(Debug, Default, Clone)]
-pub struct MaxPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PADDING: usize = 0>;
+pub struct MaxPool2D<
+    const KERNEL_SIZE: usize,
+    const STRIDE: usize = 1,
+    const PADDING: usize = 0,
+    const DILATION: usize = 1,
+>;
 
 /// Minimum pool with 2d kernel that operates on images (3d) and batches of images (4d).
 /// Each patch reduces to the minimum of the values in the patch.
@@ -31,31 +46,48 @@ pub struct MaxPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PA
 /// - `KERNEL_SIZE`: The size of the kernel applied to both width and height of the images.
 /// - `STRIDE`: How far to move the kernel each step. Defaults to `1`
 /// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
+/// - `DILATION` How dilated the kernel should be. Defaults to `1`.
 #[derive(Debug, Default, Clone)]
-pub struct MinPool2D<const KERNEL_SIZE: usize, const STRIDE: usize = 1, const PADDING: usize = 0>;
+pub struct MinPool2D<
+    const KERNEL_SIZE: usize,
+    const STRIDE: usize = 1,
+    const PADDING: usize = 0,
+    const DILATION: usize = 1,
+>;
 
 macro_rules! impl_pools {
-    ($PoolTy:tt, $Trait:ident) => {
-        impl<const K: usize, const S: usize, const P: usize> ZeroSizedModule for $PoolTy<K, S, P> {}
-        impl<const K: usize, const S: usize, const P: usize> NonMutableModule for $PoolTy<K, S, P> {}
+    ($PoolTy:tt, $Op:expr) => {
+        impl<const K: usize, const S: usize, const P: usize, const L: usize> ZeroSizedModule
+            for $PoolTy<K, S, P, L>
+        {
+        }
+        impl<const K: usize, const S: usize, const P: usize, const L: usize> NonMutableModule
+            for $PoolTy<K, S, P, L>
+        {
+        }
 
         #[cfg(feature = "nightly")]
-        impl<const K: usize, const S: usize, const P: usize, Img: $Trait<K, S, P>> Module<Img>
-            for $PoolTy<K, S, P>
+        impl<
+                const K: usize,
+                const S: usize,
+                const P: usize,
+                const L: usize,
+                Img: TryPool2D<Const<K>, Const<S>, Const<P>, Const<L>>,
+            > Module<Img> for $PoolTy<K, S, P, L>
         {
-            type Output = Img::Output;
-            type Error = Img::Err;
+            type Output = Img::Pooled;
+            type Error = Img::Error;
 
-            fn try_forward(&self, x: Img) -> Result<Self::Output, Img::Err> {
-                x.try_pool2d()
+            fn try_forward(&self, x: Img) -> Result<Self::Output, Self::Error> {
+                x.try_pool2d($Op, Const, Const, Const, Const)
             }
         }
     };
 }
 
-impl_pools!(AvgPool2D, ConstAvgPool2D);
-impl_pools!(MaxPool2D, ConstMaxPool2D);
-impl_pools!(MinPool2D, ConstMinPool2D);
+impl_pools!(AvgPool2D, Pool2DKind::Avg);
+impl_pools!(MaxPool2D, Pool2DKind::Max);
+impl_pools!(MinPool2D, Pool2DKind::Min);
 
 #[cfg(feature = "nightly")]
 #[cfg(test)]
