@@ -41,7 +41,6 @@ where
             [op.padding as i32, op.padding as i32],
             [op.stride as i32, op.stride as i32],
             [op.dilation as i32, op.dilation as i32],
-            op.groups as i32,
             cudnn::sys::cudnnConvolutionMode_t::CUDNN_CROSS_CORRELATION,
         )?;
         conv.set_group_count(op.groups as i32)?;
