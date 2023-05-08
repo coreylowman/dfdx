@@ -37,35 +37,35 @@ macro_rules! test_case {
 
 #[test]
 fn test_conv2d_default() {
-    test_case!("default", Rank3<3, 15, 15>, Rank4<5, 3, 4, 4>, Rank3<5, 12, 12>, 1, 0, 1, 1);
+    test_case!("default", Rank4<7, 3, 15, 15>, Rank4<5, 3, 4, 4>, Rank4<7, 5, 12, 12>, 1, 0, 1, 1);
 }
 
 #[test]
 fn test_conv2d_s2() {
-    test_case!("s2", Rank3<3, 15, 15>, Rank4<5, 3, 4, 4>, Rank3<5, 6, 6>, 2, 0, 1, 1);
+    test_case!("s2", Rank4<7, 3, 15, 15>, Rank4<5, 3, 4, 4>, Rank4<7, 5, 6, 6>, 2, 0, 1, 1);
 }
 
 #[test]
 fn test_conv2d_p1() {
-    test_case!("p1", Rank3<3, 15, 15>, Rank4<5, 3, 4, 4>, Rank3<5, 14, 14>, 1, 1, 1, 1);
+    test_case!("p1", Rank4<7, 3, 15, 15>, Rank4<5, 3, 4, 4>, Rank4<7, 5, 14, 14>, 1, 1, 1, 1);
 }
 
 #[test]
 fn test_conv2d_d2() {
-    test_case!("d2", Rank3<3, 15, 15>, Rank4<5, 3, 4, 4>, Rank3<5, 9, 9>, 1, 0, 2, 1);
+    test_case!("d2", Rank4<7, 3, 15, 15>, Rank4<5, 3, 4, 4>, Rank4<7, 5, 9, 9>, 1, 0, 2, 1);
 }
 
 #[test]
 fn test_conv2d_g2() {
-    test_case!("g2", Rank3<6, 15, 15>, Rank4<6, 3, 4, 4>, Rank3<6, 12, 12>, 1, 0, 1, 2);
+    test_case!("g2", Rank4<7, 6, 15, 15>, Rank4<6, 3, 4, 4>, Rank4<7, 6, 12, 12>, 1, 0, 1, 2);
 }
 
 #[test]
 fn test_conv2d_g3() {
-    test_case!("g3", Rank3<18, 15, 15>, Rank4<9, 6, 4, 4>, Rank3<9, 12, 12>, 1, 0, 1, 3);
+    test_case!("g3", Rank4<7, 18, 15, 15>, Rank4<9, 6, 4, 4>, Rank4<7, 9, 12, 12>, 1, 0, 1, 3);
 }
 
 #[test]
 fn test_conv2d_all() {
-    test_case!("all", Rank3<9, 15, 15>, Rank4<6, 3, 4, 4>, Rank3<6, 6, 6>, 2, 1, 2, 3);
+    test_case!("all", Rank4<7, 9, 15, 15>, Rank4<6, 3, 4, 4>, Rank4<7, 6, 6, 6>, 2, 1, 2, 3);
 }
