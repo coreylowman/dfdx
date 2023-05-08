@@ -38,8 +38,8 @@ where
         out: &mut Tensor<O, E, Self>,
     ) -> Result<(), Self::Err> {
         let conv = self.cudnn.create_conv2d::<E>(
-            [op.padding as i32, op.padding as i32],
-            [op.stride as i32, op.stride as i32],
+            [op.padding_x as i32, op.padding_y as i32],
+            [op.stride_x as i32, op.stride_y as i32],
             [1, 1],
             cudnn::sys::cudnnConvolutionMode_t::CUDNN_CROSS_CORRELATION,
         )?;
@@ -95,8 +95,8 @@ where
         grad_out: &Self::Vec<E>,
     ) -> Result<(), Self::Err> {
         let conv = self.cudnn.create_conv2d::<E>(
-            [op.padding as i32, op.padding as i32],
-            [op.stride as i32, op.stride as i32],
+            [op.padding_x as i32, op.padding_y as i32],
+            [op.stride_x as i32, op.stride_y as i32],
             [1, 1],
             cudnn::sys::cudnnConvolutionMode_t::CUDNN_CROSS_CORRELATION,
         )?;
