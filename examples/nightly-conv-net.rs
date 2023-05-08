@@ -7,9 +7,9 @@ fn main() {
     use dfdx::prelude::*;
 
     type Model = (
-        (Conv2D<3, 4, 3>, ReLU),
-        (Conv2D<4, 8, 3>, ReLU),
-        (Conv2D<8, 16, 3>, ReLU),
+        (Conv2D<3, 4, 4, 3, 3>, ReLU),
+        (Conv2D<4, 8, 8, 3, 3>, ReLU),
+        (Conv2D<8, 16, 16, 3, 3>, ReLU),
         Flatten2D,
         Linear<7744, 10>,
     );
