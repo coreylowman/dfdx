@@ -359,7 +359,7 @@ mod tests {
             Const::<0>,
             Const::<2>,
         );
-        assert_eq!(y_max.array(), [[[13., 14., 15.], [18., 19., 20.]]]);
+        assert_close_to_literal!(y_max, [[[13., 14., 15.], [18., 19., 20.]]]);
         let y_min = x.clone().pool2d(
             Pool2DKind::Min,
             Const::<2>,
@@ -367,7 +367,7 @@ mod tests {
             Const::<0>,
             Const::<2>,
         );
-        assert_eq!(y_min.array(), [[[0., 1., 2.], [6., 7., 8.]]]);
+        assert_close_to_literal!(y_min, [[[0., 1., 2.], [6., 7., 8.]]]);
 
         let grads = y_max.mean().backward();
         let v = 1.0 / 6.0;
