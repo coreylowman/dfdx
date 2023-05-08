@@ -28,6 +28,7 @@ pub(super) struct Conv2DOp {
 }
 
 impl Conv2DOp {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         s_x: usize,
         s_y: usize,
