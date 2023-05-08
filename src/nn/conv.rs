@@ -13,17 +13,28 @@ pub mod builder {
         const KERNEL_SIZE: usize,
         const STRIDE: usize = 1,
         const PADDING: usize = 0,
+        const DILATION: usize = 1,
+        const GROUPS: usize = 1,
     >;
 }
 
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
-    BuildOnDevice<D, E> for builder::Conv2D<I, O, K, S, P>
+impl<
+        const I: usize,
+        const O: usize,
+        const K: usize,
+        const S: usize,
+        const P: usize,
+        const L: usize,
+        const G: usize,
+        E,
+        D,
+    > BuildOnDevice<D, E> for builder::Conv2D<I, O, K, S, P, L, G>
 where
     E: Dtype,
     D: Device<E>,
-    Conv2D<I, O, K, S, P, E, D>: BuildModule<D, E>,
+    Conv2D<I, O, K, S, P, L, G, E, D>: BuildModule<D, E>,
 {
-    type Built = Conv2D<I, O, K, S, P, E, D>;
+    type Built = Conv2D<I, O, K, S, P, L, G, E, D>;
     fn try_build_on_device(device: &D) -> Result<Self::Built, <D>::Err> {
         Self::Built::try_build(device)
     }
@@ -45,6 +56,12 @@ where
 /// - `KERNEL_SIZE`: The size of the kernel applied to both width and height of the images.
 /// - `STRIDE`: How far to move the kernel each step. Defaults to `1`
 /// - `PADDING`: How much zero padding to add around the images. Defaults to `0`.
+/// - `DILATION`: Controls the spacing between kernel points. Defaults to `1`.
+/// - `GROUPS`: Controls the connections between inputs and outputs.
+///     `IN_CHAN` and `OUT_CHAN` must both be divisible by `GROUPS`. For example,
+///
+/// See [conv animations](https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md) for helpful
+/// visualization of all of these parameters.
 #[derive(Debug, Clone)]
 pub struct Conv2D<
     const IN_CHAN: usize,
@@ -52,19 +69,30 @@ pub struct Conv2D<
     const KERNEL_SIZE: usize,
     const STRIDE: usize,
     const PADDING: usize,
+    const DILATION: usize,
+    const GROUPS: usize,
     E: Dtype,
     D: DeviceStorage,
 > {
     pub weight: Tensor<Rank4<OUT_CHAN, IN_CHAN, KERNEL_SIZE, KERNEL_SIZE>, E, D>,
 }
 
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
-    TensorCollection<E, D> for Conv2D<I, O, K, S, P, E, D>
+impl<
+        const I: usize,
+        const O: usize,
+        const K: usize,
+        const S: usize,
+        const P: usize,
+        const L: usize,
+        const G: usize,
+        E,
+        D,
+    > TensorCollection<E, D> for Conv2D<I, O, K, S, P, L, G, E, D>
 where
     E: Dtype + Float + SampleUniform,
     D: Device<E>,
 {
-    type To<E2: Dtype, D2: Device<E2>> = Conv2D<I, O, K, S, P, E2, D2>;
+    type To<E2: Dtype, D2: Device<E2>> = Conv2D<I, O, K, S, P, L, G, E2, D2>;
 
     fn iter_tensors<V: ModuleVisitor<Self, E, D>>(
         visitor: &mut V,
@@ -85,24 +113,34 @@ where
 }
 
 #[cfg(feature = "nightly")]
-impl<const C: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D, Img>
-    Module<Img> for Conv2D<C, O, K, S, P, E, D>
+impl<
+        const C: usize,
+        const O: usize,
+        const K: usize,
+        const S: usize,
+        const P: usize,
+        const L: usize,
+        const G: usize,
+        E,
+        D,
+        Img,
+    > Module<Img> for Conv2D<C, O, K, S, P, L, G, E, D>
 where
     E: Dtype,
     D: Device<E>,
-    (Img, Tensor<Rank4<O, C, K, K>, E, D>): TryConv2D<Const<S>, Const<P>, Const<1>, Const<1>>,
+    (Img, Tensor<Rank4<O, C, K, K>, E, D>): TryConv2D<Const<S>, Const<P>, Const<L>, Const<G>>,
 {
     type Output = <(Img, Tensor<Rank4<O, C, K, K>, E, D>) as TryConv2D<
         Const<S>,
         Const<P>,
-        Const<1>,
-        Const<1>,
+        Const<L>,
+        Const<G>,
     >>::Convolved;
     type Error = <(Img, Tensor<Rank4<O, C, K, K>, E, D>) as TryConv2D<
         Const<S>,
         Const<P>,
-        Const<1>,
-        Const<1>,
+        Const<L>,
+        Const<G>,
     >>::Error;
 
     fn try_forward(&self, x: Img) -> Result<Self::Output, Self::Error> {
@@ -110,8 +148,17 @@ where
     }
 }
 
-impl<const I: usize, const O: usize, const K: usize, const S: usize, const P: usize, E, D>
-    NonMutableModule for Conv2D<I, O, K, S, P, E, D>
+impl<
+        const I: usize,
+        const O: usize,
+        const K: usize,
+        const S: usize,
+        const P: usize,
+        const L: usize,
+        const G: usize,
+        E,
+        D,
+    > NonMutableModule for Conv2D<I, O, K, S, P, L, G, E, D>
 where
     E: Dtype,
     D: DeviceStorage,
