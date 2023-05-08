@@ -45,7 +45,7 @@ pub trait ReshapeKernel<E: Dtype>: DeviceStorage {
 /// # use dfdx::prelude::*;
 /// # let dev: Cpu = Default::default();
 /// let t: Tensor<Rank2<2, 4>, f32, _> = dev.zeros();
-/// let t: Tensor<(usize, ), f32, _> = t.reshape_like(&(8, )).unwrap();
+/// let t: Tensor<(usize, ), f32, _> = t.reshape_like(&(8, ));
 /// ```
 pub trait ReshapeTo: HasErr + HasShape {
     /// Reshapes a tensor to a different compile time shape.
@@ -62,11 +62,11 @@ pub trait ReshapeTo: HasErr + HasShape {
         Self::Shape: ConstShape,
     {
         <Self::Shape as AssertSameNumel<Dst>>::assert_same_numel();
-        self.try_reshape_like::<Dst>(&Default::default()).unwrap()
+        self.try_reshape_like::<Dst>(&Default::default())
     }
     /// Reshapes a tensor to a different runtime shape.
-    fn reshape_like<Dst: Shape>(self, dst: &Dst) -> Option<Self::WithShape<Dst>> {
-        self.try_reshape_like(dst).map(Result::unwrap)
+    fn reshape_like<Dst: Shape>(self, dst: &Dst) -> Self::WithShape<Dst> {
+        self.try_reshape_like(dst).unwrap()
     }
     /// Ensures the tensor's memory is contiguous.
     ///
@@ -77,45 +77,38 @@ pub trait ReshapeTo: HasErr + HasShape {
     /// See [`ReshapeTo::contiguous`]
     fn try_contiguous(self) -> Result<Self::WithShape<Self::Shape>, Self::Err> {
         let shape = *self.shape();
-        self.try_reshape_like(&shape).unwrap()
+        self.try_reshape_like(&shape)
     }
     /// Reshapes a tensor to a different runtime shape.
-    fn try_reshape_like<Dst: Shape>(
-        self,
-        dst: &Dst,
-    ) -> Option<Result<Self::WithShape<Dst>, Self::Err>>;
+    fn try_reshape_like<Dst: Shape>(self, dst: &Dst) -> Result<Self::WithShape<Dst>, Self::Err>;
 }
 
 impl<S: Shape, E: Dtype, D: ReshapeKernel<E>, T: Tape<E, D>> ReshapeTo for Tensor<S, E, D, T> {
-    fn try_reshape_like<Dst: Shape>(
-        self,
-        dst: &Dst,
-    ) -> Option<Result<Self::WithShape<Dst>, Self::Err>> {
-        (self.shape().num_elements() == dst.shape().num_elements()).then(|| {
-            if self.shape.strides() == self.strides {
-                Ok(Tensor {
-                    id: self.id,
-                    data: self.data,
-                    shape: *dst,
-                    strides: dst.strides(),
-                    device: self.device,
-                    tape: self.tape,
-                })
-            } else {
-                let (inp, mut tape) = self.split_tape();
-                let out = inp.device.forward(dst, &inp)?;
-                let inp_ghost = inp.ghost();
-                let out_ghost = out.ghost();
-                let dst = *dst;
-                tape.add_backward_op(move |grads| {
-                    grads.try_alloc_for(&inp_ghost)?;
-                    grads.try_alloc_for(&out_ghost)?;
-                    let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
-                    inp.device.backward(&dst, &inp, grad_inp, grad_out)
-                });
-                Ok(out.put_tape(tape))
-            }
-        })
+    fn try_reshape_like<Dst: Shape>(self, dst: &Dst) -> Result<Self::WithShape<Dst>, Self::Err> {
+        assert_eq!(self.shape().num_elements(), dst.num_elements());
+        if self.shape.strides() == self.strides {
+            Ok(Tensor {
+                id: self.id,
+                data: self.data,
+                shape: *dst,
+                strides: dst.strides(),
+                device: self.device,
+                tape: self.tape,
+            })
+        } else {
+            let (inp, mut tape) = self.split_tape();
+            let out = inp.device.forward(dst, &inp)?;
+            let inp_ghost = inp.ghost();
+            let out_ghost = out.ghost();
+            let dst = *dst;
+            tape.add_backward_op(move |grads| {
+                grads.try_alloc_for(&inp_ghost)?;
+                grads.try_alloc_for(&out_ghost)?;
+                let (grad_inp, grad_out) = grads.mut_and_ref(&inp_ghost, &out_ghost);
+                inp.device.backward(&dst, &inp, grad_inp, grad_out)
+            });
+            Ok(out.put_tape(tape))
+        }
     }
 }
 
@@ -128,10 +121,11 @@ mod tests {
     use super::*;
 
     #[test]
+    #[should_panic]
     fn test_invalid_reshape() {
         let dev: TestDevice = Default::default();
         let t: Tensor<(usize,), TestDtype, _> = dev.zeros_like(&(5,));
-        assert!(t.reshape_like(&(7,)).is_none());
+        let _ = t.reshape_like(&(7,));
     }
 
     #[test]
